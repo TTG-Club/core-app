@@ -1,0 +1,48 @@
+@use 'sass:map';
+@use 'sass:string';
+@use 'variables' as *;
+
+// Генерация CSS переменных на основе переменных SCSS.
+// Обход по темам.
+@each $theme-name in map.keys($theme-colors) {
+  $theme: map.get($theme-colors, $theme-name);
+  $is-name-success: string.length($theme-name) > 0;
+
+  html#{if($is-name-success, '.#{$theme-name}', '')} {
+    // Обход по цветам в теме
+    @each $name, $color in $theme {
+      --#{$name}: #{$color};
+    }
+
+    // Background image
+    --bg-img: url('/img/#{if($is-name-success, "#{$theme-name}", "dark")}/bg-main.webp');
+    --bg-token: url('/img/#{if($is-name-success, "#{$theme-name}", "dark")}/bg-token.webp');
+  }
+}
+
+html {
+  --xs: 0;
+  --sm: 576px;
+  --md: 768px;
+  --lg: 992px;
+  --xl: 1200px;
+  --xxl: 1400px;
+  --full-hd: 1920px;
+  --retina: 2560px;
+  --ultra-hd: 3840px;
+}
+
+html {
+  --max-vh: 100vh;
+  --max-content: 1320px;
+
+  // Backgrounds
+  --bg-img-bestiary-forest: url('/img/bg-forest.webp');
+  --bg-img-bard: url('/img/bg-bard.webp');
+
+  // Safe area
+  --safe-area-inset-top: env(safe-area-inset-top);
+  --safe-area-inset-left: env(safe-area-inset-left);
+  --safe-area-inset-right: env(safe-area-inset-right);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom);
+}
