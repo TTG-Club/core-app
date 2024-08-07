@@ -1,12 +1,12 @@
 import Link from 'next/link';
 
-export default function Page() {
+export default function Classes() {
   return (
-    <div
+    <h1
       className=""
-      key="class-list-page"
+      key="home-page"
     >
-      class list page <Link href="/classes/goblin_phb">goblin</Link>
-    </div>
+      Classes
+    </h1>
   );
 }

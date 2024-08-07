@@ -7,7 +7,7 @@ export default function Home() {
       key="home-page"
     >
       Home page
-      <Link href="/classes/dasda">Go to Class</Link>
+      <Link href="/classes">Go to Class</Link>
     </div>
   );
 }
