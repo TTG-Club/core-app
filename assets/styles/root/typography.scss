@@ -1,0 +1,26 @@
+:root {
+  // Line height
+  --line-height-main: 19px;
+  --line-height-h1: 52px;
+  --line-height-h2: 38px;
+  --line-height-h3: 34px;
+  --line-height-h4: 28px;
+  --line-height-h5: 19px;
+
+  // Font size
+  --font-size-main: 14px;
+  --font-size-h1: 38px;
+  --font-size-h2: 30px;
+  --font-size-h3: 26px;
+  --font-size-h4: 22px;
+  --font-size-h5: 14px;
+
+  @media (max-width: 800px) {
+    --font-size-main: 14px;
+    --font-size-h1: 32px;
+    --font-size-h2: 28px;
+    --font-size-h3: 24px;
+    --font-size-h4: 20px;
+    --font-size-h5: 14px;
+  }
+}
