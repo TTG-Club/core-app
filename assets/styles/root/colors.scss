@@ -1,4 +1,4 @@
-:root[data-theme='dark'] {
+:root.dark {
   --color-bg-transparent: #ffffff00;
   --color-bg-light-main: rgba(19, 26, 32, 0.3);
   --color-bg-main: #131a20;
@@ -81,7 +81,7 @@
   --color-logo-section-8: #103579;
 }
 
-:root[data-theme='light'] {
+:root.light {
   --color-bg-transparent: #ffffff00;
   --color-bg-light-main: rgba(249, 246, 235, 0.3);
   --color-bg-main: #f9f6f1;

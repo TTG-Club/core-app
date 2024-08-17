@@ -1,4 +1,4 @@
-@use "variables" as *;
+@use 'variables' as *;
 
 @supports (scrollbar-width: thin) {
   * {
@@ -80,9 +80,10 @@ body {
   color: var(--color-text);
 
   background: var(--color-bg-main);
+  background-color: var(--color-bg-main);
   outline: none;
 
   transition:
-          background-color ease-in-out 0.2s,
-          color ease-in-out 0.2s;
+    background-color ease-in-out 0.2s,
+    color ease-in-out 0.2s;
 }

@@ -1,8 +1,0 @@
-{
-  "*.{cjs,js,ts,jsx,tsx,vue}": [
-    "eslint --cache --cache-strategy content --ignore-pattern .eslintignore --quiet --fix"
-  ],
-  "*.{css,scss,vue}": [
-    "stylelint --cache --cache-strategy content --ignore-path .eslintignore --quiet --fix"
-  ]
-}

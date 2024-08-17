@@ -1,7 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
-import { fileURLToPath, URL } from 'node:url';
+import { URL, fileURLToPath } from 'node:url';
+
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
-import checker from 'vite-plugin-checker';
 
 const appName = 'TTG Club';
 
@@ -54,19 +54,33 @@ export default defineNuxtConfig({
     indexable: false, // TODO: Вернуть на релизе для прода
   },
 
+  googleFonts: {
+    display: 'swap',
+    subsets: ['cyrillic', 'cyrillic-ext'],
+    families: {
+      Lora: true,
+      Neucha: true,
+      OpenSans: true,
+    },
+  },
+
   typescript: {
-    typeCheck: false,
+    typeCheck: true,
   },
 
   eslint: {
-    checker: false,
+    config: {
+      standalone: false,
+    },
   },
+
+  css: ['normalize.css/normalize.css'],
 
   vite: {
     css: {
       preprocessorOptions: {
         scss: {
-          additionalData: '@use "~/assets/styles/variables" as *;',
+          additionalData: `@use "${fileURLToPath(new URL('./assets/styles/variables', import.meta.url))}" as *;`,
         },
       },
     },
@@ -89,25 +103,6 @@ export default defineNuxtConfig({
               },
             },
           ],
-        },
-      }),
-      checker({
-        enableBuild: true,
-        terminal: false,
-        vueTsc: true,
-        eslint: {
-          lintCommand:
-            'eslint . --cache --cache-strategy content --ignore-pattern .eslintignore --quiet',
-          dev: {
-            logLevel: ['error'],
-          },
-        },
-        stylelint: {
-          lintCommand:
-            'stylelint "{**/*,*}.{css,scss,vue}" --cache --cache-strategy content --ignore-path .eslintignore --quiet',
-          dev: {
-            logLevel: ['error'],
-          },
         },
       }),
     ],

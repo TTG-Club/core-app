@@ -1,50 +1,50 @@
 <script setup lang="ts">
-  import { getIconName } from '~/utils/icons';
+import { getIconName } from '~/utils/icons';
 
-  export interface SvgIconProps {
-    name: string;
-    size?: string | number;
-    raw?: boolean;
+export interface SvgIconProps {
+  name: string;
+  size?: string | number;
+  raw?: boolean;
+}
+
+const props = withDefaults(defineProps<SvgIconProps>(), {
+  size: '1em',
+  raw: false,
+});
+
+const iconName = computed(() => (!props.raw ? getIconName(props.name) : ''));
+
+const sizeCalculated = computed(() => {
+  if (/^\d+$/.test(String(props.size))) {
+    return `${props.size}px`;
   }
 
-  const props = withDefaults(defineProps<SvgIconProps>(), {
-    size: '1em',
-    raw: false,
-  });
+  if (/^\d+(?:px|em)$/i.test(String(props.size))) {
+    return props.size;
+  }
 
-  const iconName = computed(() => (!props.raw ? getIconName(props.name) : ''));
+  console.error(`[SvgIcon]: size "${String(props.size)}" is incorrect.`);
 
-  const sizeCalculated = computed(() => {
-    if (/^\d+$/.test(String(props.size))) {
-      return `${props.size}px`;
-    }
+  return undefined;
+});
 
-    if (/^\d+(?:px|em)$/i.test(String(props.size))) {
-      return props.size;
-    }
+const error = computed(() => {
+  if (!iconName.value) {
+    return `[SvgIcon]: icon "${String(props.name)}" not found.`;
+  }
 
-    console.error(`[SvgIcon]: size "${String(props.size)}" is incorrect.`);
+  if (!sizeCalculated.value) {
+    return `[SvgIcon]: size "${String(props.size)}" is incorrect.`;
+  }
 
-    return undefined;
-  });
+  return '';
+});
 
-  const error = computed(() => {
-    if (!iconName.value) {
-      return `[SvgIcon]: icon "${String(props.name)}" not found.`;
-    }
-
-    if (!sizeCalculated.value) {
-      return `[SvgIcon]: size "${String(props.size)}" is incorrect.`;
-    }
-
-    return '';
-  });
-
-  const RawSvgIcon = computed(() =>
-    props.raw && props.name
-      ? defineComponent({ template: props.name })
-      : undefined,
-  );
+const RawSvgIcon = computed(() =>
+  props.raw && props.name
+    ? defineComponent({ template: props.name })
+    : undefined,
+);
 </script>
 
 <template>
@@ -78,48 +78,47 @@
 
 <style lang="scss" module>
   .svgIcon {
-    transform: translateZ(0);
+  transform: translateZ(0);
 
-    overflow: hidden;
-    flex-shrink: 0;
+  overflow: hidden;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
 
+  width: 1em;
+  height: 1em;
+
+  font-size: v-bind(sizeCalculated);
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1em;
+  color: currentColor;
+  text-align: center;
+  text-transform: none;
+  text-rendering: optimizeLegibility;
+
+  fill: currentColor;
+
+  svg {
     width: 1em;
     height: 1em;
-
-    font-size: v-bind(sizeCalculated);
-    line-height: 1em;
-    color: currentColor;
-    text-align: center;
-
     fill: currentColor;
 
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-style: normal;
-    text-transform: none;
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-
-    svg {
-      width: 1em;
-      height: 1em;
+    > * {
       fill: currentColor;
-
-      > * {
-        fill: currentColor;
-      }
     }
   }
+}
 
-  .error {
-    overflow: hidden;
-    display: none !important;
+.error {
+  overflow: hidden;
+  display: none !important;
 
-    width: 0;
-    height: 0;
+  width: 0;
+  height: 0;
 
-    visibility: hidden;
-  }
+  visibility: hidden;
+}
 </style>
