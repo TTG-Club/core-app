@@ -1,4 +1,4 @@
-:root.dark {
+html.dark {
   --color-bg-transparent: #ffffff00;
   --color-bg-light-main: rgba(19, 26, 32, 0.3);
   --color-bg-main: #131a20;
@@ -7,8 +7,16 @@
   --color-bg-sub-menu: #1d282f;
   --color-bg-dice: #88aef9;
   --color-bg-homebrew: #5d7e17;
-  --color-bg-homebrew-gradient: linear-gradient(50deg, var(--color-bg-table-list), var(--color-bg-homebrew) 240%);
-  --color-bg-homebrew-gradient-left: linear-gradient(-50deg, var(--color-bg-table-list), var(--color-bg-homebrew) 240%);
+  --color-bg-homebrew-gradient: linear-gradient(
+    50deg,
+    var(--color-bg-table-list),
+    var(--color-bg-homebrew) 240%
+  );
+  --color-bg-homebrew-gradient-left: linear-gradient(
+    -50deg,
+    var(--color-bg-table-list),
+    var(--color-bg-homebrew) 240%
+  );
   --color-bg-advantage: #3dd13d;
   --color-bg-disadvantage: #d36363;
   --color-bg-saving-throw: #fe5e00;
@@ -17,9 +25,17 @@
   --color-bg-inpur-focus: rgba(255, 255, 255, 0.08);
   --color-bg-details-title: rgba(255, 255, 255, 0.05);
   --color-bg-table-list: #1a2127;
-  --color-bg-liner-list: linear-gradient(to right, var(--color-bg-table-list), transparent);
+  --color-bg-liner-list: linear-gradient(
+    to right,
+    var(--color-bg-table-list),
+    transparent
+  );
   --color-bg-liner-menu: linear-gradient(to bottom, #0d1217, transparent);
-  --color-bg-liner-menu-scroll: linear-gradient(to bottom, #0d1217, var(--color-bg-main));
+  --color-bg-liner-menu-scroll: linear-gradient(
+    to bottom,
+    #0d1217,
+    var(--color-bg-main)
+  );
   --color-bg-theme-selected: #f8f8f8;
   --color-text: #c3d1da;
   --color-text-disabled: #c3d1da75;
@@ -81,7 +97,7 @@
   --color-logo-section-8: #103579;
 }
 
-:root.light {
+html.light {
   --color-bg-transparent: #ffffff00;
   --color-bg-light-main: rgba(249, 246, 235, 0.3);
   --color-bg-main: #f9f6f1;
@@ -90,8 +106,16 @@
   --color-bg-sub-menu: #ebe5d0;
   --color-bg-dice: #3567c9;
   --color-bg-homebrew: #5d7e17;
-  --color-bg-homebrew-gradient: linear-gradient(50deg, var(--color-bg-table-list), var(--color-bg-homebrew) 140%);
-  --color-bg-homebrew-gradient-left: linear-gradient(-50deg, var(--color-bg-table-list), var(--color-bg-homebrew) 140%);
+  --color-bg-homebrew-gradient: linear-gradient(
+    50deg,
+    var(--color-bg-table-list),
+    var(--color-bg-homebrew) 140%
+  );
+  --color-bg-homebrew-gradient-left: linear-gradient(
+    -50deg,
+    var(--color-bg-table-list),
+    var(--color-bg-homebrew) 140%
+  );
   --color-bg-advantage: #0cb70c;
   --color-bg-disadvantage: #ff3e3e;
   --color-bg-saving-throw: #fe5e00;
@@ -100,9 +124,17 @@
   --color-bg-inpur-focus: rgba(0, 0, 0, 0.08);
   --color-bg-details-title: rgba(00, 00, 00, 0.08);
   --color-bg-table-list: #ebe7d9;
-  --color-bg-liner-list: linear-gradient(to right, var(--color-bg-table-list), transparent);
+  --color-bg-liner-list: linear-gradient(
+    to right,
+    var(--color-bg-table-list),
+    transparent
+  );
   --color-bg-liner-menu: linear-gradient(to bottom, #c7c5bd, transparent);
-  --color-bg-liner-menu-scroll: linear-gradient(to bottom, #c7c5bd, var(--color-bg-main));
+  --color-bg-liner-menu-scroll: linear-gradient(
+    to bottom,
+    #c7c5bd,
+    var(--color-bg-main)
+  );
   --color-bg-theme-selected: #cdc07c;
   --color-text: #404040;
   --color-text-disabled: #40404075;
@@ -164,7 +196,7 @@
   --color-logo-section-8: #6e2a1c;
 }
 
-:root {
+html {
   --color-discord-base: #5865f2;
   --color-discord-hover: #3f4cd9;
   --color-patreon-base: #ff424d;

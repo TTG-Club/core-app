@@ -1,63 +1,65 @@
 <script setup lang="ts">
-import { getIconName } from '~/utils/icons';
+  import { getIconName } from '~/utils/icons';
 
-export interface SvgIconProps {
-  name: string;
-  size?: string | number;
-  raw?: boolean;
-}
-
-const props = withDefaults(defineProps<SvgIconProps>(), {
-  size: '1em',
-  raw: false,
-});
-
-const iconName = computed(() => (!props.raw ? getIconName(props.name) : ''));
-
-const sizeCalculated = computed(() => {
-  if (/^\d+$/.test(String(props.size))) {
-    return `${props.size}px`;
+  export interface SvgIconProps {
+    name: string;
+    size?: string | number;
+    raw?: boolean;
   }
 
-  if (/^\d+(?:px|em)$/i.test(String(props.size))) {
-    return props.size;
-  }
+  const props = withDefaults(defineProps<SvgIconProps>(), {
+    size: '1em',
+    raw: false,
+  });
 
-  console.error(`[SvgIcon]: size "${String(props.size)}" is incorrect.`);
+  const iconName = computed(() => (!props.raw ? getIconName(props.name) : ''));
 
-  return undefined;
-});
+  const sizeCalculated = computed(() => {
+    if (/^\d+$/.test(String(props.size))) {
+      return `${props.size}px`;
+    }
 
-const error = computed(() => {
-  if (!iconName.value) {
-    return `[SvgIcon]: icon "${String(props.name)}" not found.`;
-  }
+    if (/^\d+(?:px|em)$/i.test(String(props.size))) {
+      return props.size;
+    }
 
-  if (!sizeCalculated.value) {
-    return `[SvgIcon]: size "${String(props.size)}" is incorrect.`;
-  }
+    console.error(`[SvgIcon]: size "${String(props.size)}" is incorrect.`);
 
-  return '';
-});
+    return undefined;
+  });
 
-const RawSvgIcon = computed(() =>
-  props.raw && props.name
-    ? defineComponent({ template: props.name })
-    : undefined,
-);
+  const error = computed(() => {
+    if (!iconName.value) {
+      return `[SvgIcon]: icon "${String(props.name)}" not found.`;
+    }
+
+    if (!sizeCalculated.value) {
+      return `[SvgIcon]: size "${String(props.size)}" is incorrect.`;
+    }
+
+    return '';
+  });
+
+  const RawSvgIcon = computed(() =>
+    props.raw && props.name
+      ? defineComponent({ template: props.name })
+      : undefined,
+  );
 </script>
 
 <template>
   <span
     v-if="name && raw && RawSvgIcon"
-    :class="[$style.svgIcon, 'anticon']"
+    :class="$style.svgIcon"
+    class="anticon"
   >
     <RawSvgIcon />
   </span>
 
   <span
     v-else-if="!error && !raw"
-    :class="[$style.svgIcon, 'anticon']"
+    :class="$style.svgIcon"
+    class="anticon"
   >
     <svg
       aria-hidden="true"
@@ -78,47 +80,36 @@ const RawSvgIcon = computed(() =>
 
 <style lang="scss" module>
   .svgIcon {
-  transform: translateZ(0);
+    transform: translateZ(0);
 
-  overflow: hidden;
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
+    overflow: hidden;
+    display: inline-block;
+    flex-shrink: 0;
 
-  width: 1em;
-  height: 1em;
-
-  font-size: v-bind(sizeCalculated);
-  font-style: normal;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  line-height: 1em;
-  color: currentColor;
-  text-align: center;
-  text-transform: none;
-  text-rendering: optimizeLegibility;
-
-  fill: currentColor;
-
-  svg {
     width: 1em;
     height: 1em;
+
+    font-size: v-bind(sizeCalculated);
+    line-height: 1em;
+    color: currentColor;
+    text-align: center;
+    vertical-align: initial;
+
     fill: currentColor;
 
-    > * {
-      fill: currentColor;
+    svg {
+      width: 1em;
+      height: 1em;
     }
   }
-}
 
-.error {
-  overflow: hidden;
-  display: none !important;
+  .error {
+    overflow: hidden;
+    display: none !important;
 
-  width: 0;
-  height: 0;
+    width: 0;
+    height: 0;
 
-  visibility: hidden;
-}
+    visibility: hidden;
+  }
 </style>

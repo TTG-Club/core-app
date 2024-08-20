@@ -1,12 +1,12 @@
 <script setup lang="ts">
-const props = withDefaults(
-  defineProps<{
-    size?: number;
-  }>(),
-  { size: undefined },
-);
+  const props = withDefaults(
+    defineProps<{
+      size?: number;
+    }>(),
+    { size: undefined },
+  );
 
-const currentSize = computed(() => (props.size ? `${props.size}px` : '100%'));
+  const currentSize = computed(() => (props.size ? `${props.size}px` : '100%'));
 </script>
 
 <template>
@@ -89,8 +89,8 @@ const currentSize = computed(() => (props.size ? `${props.size}px` : '100%'));
 
 <style module>
   .logo {
-  overflow: hidden;
-  display: block;
-  flex-shrink: 0;
-}
+    overflow: hidden;
+    display: block;
+    flex-shrink: 0;
+  }
 </style>

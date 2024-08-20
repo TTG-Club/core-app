@@ -19,18 +19,38 @@ export default defineNuxtConfig({
     head: {
       charset: 'utf-8',
       link: [
-        { rel: 'manifest', url: '/manifest.json', crossorigin: 'anonymous' },
-        { rel: 'preconnect', href: 'https://img.ttg.club', crossorigin: '' },
-        { rel: 'dns-prefetch', href: 'https://img.ttg.club', crossorigin: '' },
-        { type: 'image/svg+xml', url: '/favicon.svg' },
-        { type: 'image/png', url: '/favicon.png' },
-        { sizes: '192x192', url: '/icons/192.png' },
+        {
+          rel: 'manifest',
+          url: '/manifest.json',
+          crossorigin: 'anonymous',
+        },
+        {
+          rel: 'preconnect',
+          href: 'https://img.ttg.club',
+          crossorigin: '',
+        },
+        {
+          rel: 'dns-prefetch',
+          href: 'https://img.ttg.club',
+          crossorigin: '',
+        },
+        {
+          type: 'image/svg+xml',
+          url: '/favicon.svg',
+        },
+        {
+          type: 'image/png',
+          url: '/favicon.png',
+        },
+        {
+          sizes: '192x192',
+          url: '/icons/192.png',
+        },
         ...[48, 72, 96, 144, 192, 256, 384, 512].map((size) => ({
           sizes: `${size}x${size}`,
           url: `/icons/${size}.png`,
         })),
       ],
-      title: `${appName} Oнлайн-справочник`,
       titleTemplate: '%pageTitle %separator %siteName',
       viewport:
         'viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no',
@@ -64,6 +84,12 @@ export default defineNuxtConfig({
     },
   },
 
+  dayjs: {
+    locales: ['ru', 'en'],
+    plugins: ['utc', 'localizedFormat', 'customParseFormat'],
+    defaultLocale: 'ru',
+  },
+
   typescript: {
     typeCheck: true,
   },
@@ -74,7 +100,7 @@ export default defineNuxtConfig({
     },
   },
 
-  css: ['normalize.css/normalize.css'],
+  css: ['ant-design-vue/dist/reset.css'],
 
   vite: {
     css: {
@@ -109,7 +135,6 @@ export default defineNuxtConfig({
   },
 
   modules: [
-    '@ant-design-vue/nuxt',
     '@vueuse/nuxt',
     '@nuxt/eslint',
     '@pinia/nuxt',
@@ -120,5 +145,6 @@ export default defineNuxtConfig({
     '@nuxtjs/robots',
     '@nuxtjs/stylelint-module',
     '@nuxtjs/seo',
+    '@ant-design-vue/nuxt',
   ],
 });

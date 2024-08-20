@@ -1,6 +1,6 @@
 @use '../variables' as *;
 
-:root {
+html {
   --breakpoint-xs: $xs;
   --breakpoint-sm: $sm;
   --breakpoint-md: $md;

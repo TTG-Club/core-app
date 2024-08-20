@@ -4,5 +4,5 @@ export default {
     'eslint --cache --cache-strategy content --quiet --fix',
   '*.{ts,tsx,cts,mts,vue}': () => 'vue-tsc -p tsconfig.json',
   '*.{css,scss,vue}':
-    'stylelint --cache --cache-strategy content --ignore-path .eslintignore --quiet --fix',
+    'stylelint --cache --cache-strategy content --ignore-path .gitignore --quiet --fix',
 };

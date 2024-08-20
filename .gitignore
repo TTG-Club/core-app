@@ -24,13 +24,13 @@ logs
 *.sw?
 
 # Local env files
-.env.local
-.env.*.local
+.env*
 
 # Generated files and dirs
 dist
 .eslintcache
 .stylelintcache
+shared/types/generated
 
 # Custom
 .test

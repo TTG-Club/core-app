@@ -2,7 +2,7 @@
 @use 'typography' as *;
 @use 'colors' as *;
 
-:root {
+html {
   --max-vh: 100vh;
   --max-content: 1320px;
 

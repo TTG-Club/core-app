@@ -10,7 +10,7 @@ export const useTheme = () => {
     maxAge: 60 * 60 * 24 * 365,
   });
 
-  const { store, state } = useColorMode({
+  const { state } = useColorMode({
     storageRef: stored,
   });
 
@@ -19,23 +19,25 @@ export const useTheme = () => {
   });
 
   const change = () => {
-    store.value = next();
+    stored.value = next();
   };
 
   const { defaultAlgorithm, darkAlgorithm } = theme;
 
-  const themeConfig = computed<ThemeConfig>(() => {
-    return {
-      token: {
-        colorPrimary: state.value === 'light' ? '#5e5446' : '#3567c9',
-        colorSuccess: '#67c23a',
-        colorWarning: '#e6a23c',
-        colorError: '#f56c6c',
-        colorInfo: '#909399',
-      },
-      algorithm: state.value === 'light' ? defaultAlgorithm : darkAlgorithm,
-    };
-  });
+  const themeConfig = computed<ThemeConfig>(() => ({
+    token: {
+      colorPrimary: state.value === 'light' ? '#5e5446' : '#3567c9',
+      colorSuccess: '#67c23a',
+      colorWarning: '#e6a23c',
+      colorError: '#f56c6c',
+      colorInfo: '#5990ff',
+      colorBgBase: state.value === 'light' ? '#f9f6f1' : '#131a20',
+      colorTextBase: state.value === 'light' ? '#404040' : '#c3d1da',
+      wireframe: false,
+      fontFamily: '"Open Sans", sans-serif',
+    },
+    algorithm: state.value === 'light' ? defaultAlgorithm : darkAlgorithm,
+  }));
 
   return {
     theme: state,

@@ -11,35 +11,33 @@
 </template>
 
 <style module lang="scss">
-  @use '@/assets/styles/variables' as *;
+  .app {
+    display: flex;
+    flex-flow: column-reverse;
 
-.app {
-  display: flex;
-  flex-flow: column-reverse;
-
-  @include media-min($md) {
-    flex-flow: row;
+    @include media-min($md) {
+      flex-flow: row;
+    }
   }
-}
 
-.container {
-  position: relative;
+  .container {
+    position: relative;
 
-  overflow: auto;
+    overflow: auto;
 
-  width: 100%;
-  height: var(--max-vh);
-  margin: auto;
-  padding: 0 16px;
+    width: 100%;
+    height: var(--max-vh);
+    margin: auto;
+    padding: 0 16px;
 
-  @include media-min($xl) {
-    padding: 0 24px;
+    @include media-min($xl) {
+      padding: 0 24px;
+    }
   }
-}
 
-.wrapper {
-  width: 100%;
-  max-width: var(--max-content);
-  margin: 0 auto;
-}
+  .wrapper {
+    width: 100%;
+    max-width: var(--max-content);
+    margin: 0 auto;
+  }
 </style>

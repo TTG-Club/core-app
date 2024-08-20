@@ -1,0 +1,87 @@
+@use 'variables' as *;
+
+// TODO: Возможно придется включить для заголовков.
+//$typography: '.ant-typography';
+//
+//@for $i from 1 through 6 {
+//  h#{$i}#{$typography},
+//  #{$typography}-h#{$i},
+//  #{$typography} {
+//    margin: 0;
+//
+//    @debug &;
+//
+//    & > textarea,
+//    & h#{$i} {
+//      @debug &;
+//
+//      margin: 0;
+//    }
+//  }
+//}
+
+.ant {
+  $root: &;
+
+  &-modal {
+    width: 100% !important;
+    max-width: $lg - 1px;
+
+    & &-content {
+      padding: 24px;
+    }
+  }
+
+  // .ant-btn.ant-btn-icon-only
+  // .ant-btn.ant-btn-icon-only
+
+  &-btn {
+    $btn: &;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+
+    .anticon {
+      font-size: 1.5714285714285714em;
+    }
+
+    &#{$btn}-icon-only {
+      padding: 0;
+
+      >span {
+        transform: none;
+      }
+    }
+
+    &#{$btn}-sm {
+      padding: 0 8px;
+
+      .anticon {
+        font-size: 1.1428571428571428em;
+      }
+
+      &#{$btn}-icon-only {
+        >span {
+          transform: none;
+        }
+      }
+    }
+
+
+    &#{$btn}-lg {
+      padding: 0 16px;
+
+      .anticon {
+        font-size: 1.5em;
+      }
+
+      &#{$btn}-icon-only {
+        >span {
+          transform: none;
+        }
+      }
+    }
+  }
+}

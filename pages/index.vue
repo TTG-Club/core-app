@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { name } = useSiteConfig();
+  const { name } = useSiteConfig();
 </script>
 
 <template>
@@ -11,14 +11,14 @@ const { name } = useSiteConfig();
 </template>
 
 <style module>
-.siteName {
-  overflow: hidden;
+  .siteName {
+    overflow: hidden;
 
-  height: 0;
-  margin: 0;
+    height: 0;
+    margin: 0;
 
-  line-height: 0;
+    line-height: 0;
 
-  opacity: 0;
-}
+    opacity: 0;
+  }
 </style>

@@ -7,7 +7,12 @@
   height: $height;
 }
 
-@mixin back-img($size: cover, $posX: center, $posY: center, $repeat: no-repeat) {
+@mixin back-img(
+  $size: cover,
+  $posX: center,
+  $posY: center,
+  $repeat: no-repeat
+) {
   background-repeat: $repeat;
   background-position-x: $posX;
   background-position-y: $posY;
@@ -18,7 +23,11 @@
   $transition: ();
 
   @each $property in $item {
-    $transition: append($transition, ($property $time $style), $separator: comma);
+    $transition: append(
+      $transition,
+      ($property $time $style),
+      $separator: comma
+    );
   }
 
   transition: $transition;
