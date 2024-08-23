@@ -25,7 +25,7 @@
           @click.left.exact.prevent="isAuthOpened = true"
         >
           <template #icon>
-            <SvgIcon name="profile/helmet/outline" />
+            <SvgIcon icon="profile/helmet/outline" />
           </template>
         </AButton>
 
@@ -37,7 +37,7 @@
               @click.left.exact.prevent="change"
             >
               <template #icon>
-                <SvgIcon :name="`theme/${theme}`" />
+                <SvgIcon :icon="`theme/${theme}`" />
               </template>
             </AButton>
           </template>
