@@ -2,7 +2,7 @@
   import { getIconName } from '~/utils/icons';
 
   export interface SvgIconProps {
-    name: string;
+    icon: string;
     size?: string | number;
     raw?: boolean;
   }
@@ -12,7 +12,7 @@
     raw: false,
   });
 
-  const iconName = computed(() => (!props.raw ? getIconName(props.name) : ''));
+  const iconName = computed(() => (!props.raw ? getIconName(props.icon) : ''));
 
   const sizeCalculated = computed(() => {
     if (/^\d+$/.test(String(props.size))) {
@@ -30,7 +30,7 @@
 
   const error = computed(() => {
     if (!iconName.value) {
-      return `[SvgIcon]: icon "${String(props.name)}" not found.`;
+      return `[SvgIcon]: icon "${String(props.icon)}" not found.`;
     }
 
     if (!sizeCalculated.value) {
@@ -41,15 +41,15 @@
   });
 
   const RawSvgIcon = computed(() =>
-    props.raw && props.name
-      ? defineComponent({ template: props.name })
+    props.raw && props.icon
+      ? defineComponent({ template: props.icon })
       : undefined,
   );
 </script>
 
 <template>
   <span
-    v-if="name && raw && RawSvgIcon"
+    v-if="icon && raw && RawSvgIcon"
     :class="$style.svgIcon"
     class="anticon"
   >
