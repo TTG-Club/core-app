@@ -106,7 +106,7 @@ export default defineNuxtConfig({
     css: {
       preprocessorOptions: {
         scss: {
-          additionalData: `@use "${fileURLToPath(new URL('./assets/styles/variables', import.meta.url))}" as *;`,
+          additionalData: `@use "~/assets/styles/variables/index.scss" as *;`,
         },
       },
     },
