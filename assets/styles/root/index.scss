@@ -1,6 +1,7 @@
-@use 'breakpoints' as *;
-@use 'typography' as *;
-@use 'colors' as *;
+@forward 'breakpoints';
+@forward 'typography';
+@forward 'colors';
+@forward 'animation';
 
 html {
   --max-vh: 100vh;

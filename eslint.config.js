@@ -92,6 +92,18 @@ export default createConfigForNuxt(
       'vuejs-accessibility/label-has-for': 'off',
       'vuejs-accessibility/no-autofocus': 'off',
       'vuejs-accessibility/form-control-has-label': 'off',
+
+      // Typescript
+      '@typescript-eslint/ban-ts-comment': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          args: 'after-used',
+          ignoreRestSiblings: true,
+          argsIgnorePattern: '^_',
+          caughtErrors: 'none',
+        },
+      ],
     },
   },
   eslintPluginPrettierRecommended,

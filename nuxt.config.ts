@@ -8,6 +8,14 @@ const appName = 'TTG Club';
 export default defineNuxtConfig({
   compatibilityDate: '2024-04-03',
   devtools: { enabled: true },
+
+  runtimeConfig: {
+    serverUrl: import.meta.env.SERVER_URL,
+    apiSecret: import.meta.env.API_SECRET,
+    mailVerifySecret: import.meta.env.MAIL_VERIFY_SECRET,
+    mongodbUri: import.meta.env.MONGODB_URI,
+  },
+
   appId: 'ttg-club',
 
   app: {
@@ -90,6 +98,18 @@ export default defineNuxtConfig({
     defaultLocale: 'ru',
   },
 
+  nodemailer: {
+    host: import.meta.env.MAIL_HOST,
+    port: 465,
+    secure: true,
+    auth: {
+      type: 'login',
+      user: import.meta.env.MAIL_USER,
+      pass: import.meta.env.MAIL_PASS,
+    },
+    from: `"TTG Support" <${import.meta.env.MAIL_USER}>`,
+  },
+
   typescript: {
     typeCheck: true,
   },
@@ -106,7 +126,7 @@ export default defineNuxtConfig({
     css: {
       preprocessorOptions: {
         scss: {
-          additionalData: `@use "${fileURLToPath(new URL('./assets/styles/variables', import.meta.url))}" as *;`,
+          additionalData: `@use "~/assets/styles/variables" as *;`,
         },
       },
     },
@@ -135,16 +155,19 @@ export default defineNuxtConfig({
   },
 
   modules: [
-    '@vueuse/nuxt',
-    '@nuxt/eslint',
-    '@pinia/nuxt',
     '@nuxtjs/google-fonts',
-    'dayjs-nuxt',
     '@nuxtjs/sitemap',
     '@nuxtjs/device',
     '@nuxtjs/robots',
     '@nuxtjs/stylelint-module',
     '@nuxtjs/seo',
+    '@nuxtjs/device',
+    '@nuxt/eslint',
+    '@vueuse/nuxt',
     '@ant-design-vue/nuxt',
+    '@pinia/nuxt',
+    'dayjs-nuxt',
+    'nuxt-mongoose',
+    'nuxt-nodemailer',
   ],
 });

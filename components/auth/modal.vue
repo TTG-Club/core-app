@@ -1,9 +1,15 @@
 <script setup lang="ts">
+  import { AButton, AFlex, SvgIcon } from '#components';
+
   const enum FormType {
-    SIGN_IN,
-    SIGN_UP,
-    CHANGE_PASSWORD,
+    SIGN_IN = 'signIn',
+    SIGN_UP = 'signUp',
+    CHANGE_PASSWORD = 'changePassword',
   }
+
+  const emailVerified = useCookie('emailVerified');
+
+  const { notification } = App.useApp();
 
   const opened = defineModel<boolean>({ default: false });
 
@@ -11,9 +17,51 @@
 
   const isSignIn = computed(() => formType.value === FormType.SIGN_IN);
   const isSignUp = computed(() => formType.value === FormType.SIGN_UP);
-  const _isChangePassword = computed(
-    () => formType.value === FormType.CHANGE_PASSWORD,
-  );
+  // const isChangePassword = computed(
+  //   () => formType.value === FormType.CHANGE_PASSWORD,
+  // );
+
+  const showEmailVerifiedNotify = () => {
+    if (!emailVerified.value) {
+      return;
+    }
+
+    emailVerified.value = null;
+
+    notification.success({
+      key: 'notify-email-verified',
+      message: 'E-Mail подтвержден!',
+      description: h(
+        AFlex,
+        {
+          justify: 'space-between',
+          align: 'center',
+          gap: 12,
+        },
+        [
+          'Теперь вы можете авторизоваться',
+          h(
+            AButton,
+            {
+              type: 'text',
+              onClick: withModifiers(() => {
+                opened.value = true;
+                notification.destroy('notify-email-verified');
+              }, ['left', 'exact', 'prevent']),
+            },
+            {
+              icon: () =>
+                h(SvgIcon, {
+                  name: 'profile/base/move',
+                }),
+            },
+          ),
+        ],
+      ),
+    });
+  };
+
+  onMounted(() => showEmailVerifiedNotify());
 </script>
 
 <template>
