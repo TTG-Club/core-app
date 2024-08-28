@@ -1,7 +1,14 @@
 import { isString } from 'lodash-es';
 import { StatusCodes } from 'http-status-codes';
+import { ONE_DAY_IN_SECONDS } from '~/utils/const';
 
-export default defineEventHandler(async (event) => {
+interface Request {
+  query: {
+    token: string;
+  };
+}
+
+export default defineEventHandler<Request>(async (event) => {
   const { token } = getQuery(event);
 
   if (!isString(token)) {
@@ -9,14 +16,21 @@ export default defineEventHandler(async (event) => {
   }
 
   const { mailVerifySecret } = useRuntimeConfig();
-  const { verify } = useJwtToken();
+  const { verify } = useJwt();
 
   let email = '';
 
   try {
-    const payload = verify(token, mailVerifySecret);
+    const payload = verify({
+      token,
+      secret: mailVerifySecret,
+    });
 
-    if (isString(payload) || !payload.email) {
+    if (
+      isString(payload) ||
+      !payload.email ||
+      payload.origin === useNitroOrigin(event)
+    ) {
       return sendRedirect(event, '/', StatusCodes.BAD_REQUEST);
     }
 
@@ -38,6 +52,7 @@ export default defineEventHandler(async (event) => {
     return sendRedirect(event, '/', StatusCodes.INTERNAL_SERVER_ERROR);
   }
 
-  setCookie(event, 'emailVerified', 'true', { maxAge: 60 * 5 });
+  setCookie(event, 'email-verified', 'true', { maxAge: ONE_DAY_IN_SECONDS });
+
   return sendRedirect(event, '/', StatusCodes.OK);
 });

@@ -10,7 +10,6 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
 
   runtimeConfig: {
-    serverUrl: import.meta.env.SERVER_URL,
     apiSecret: import.meta.env.API_SECRET,
     mailVerifySecret: import.meta.env.MAIL_VERIFY_SECRET,
     mongodbUri: import.meta.env.MONGODB_URI,
@@ -75,7 +74,7 @@ export default defineNuxtConfig({
   },
 
   site: {
-    url: 'https://ttg.club',
+    url: import.meta.env.SERVER_URL,
     name: `${appName} Oнлайн-справочник`,
     description: `${appName} - сайт, посвященный DnD 5-й редакции. Тут можно найти: расы, происхождения, классы, заклинания, бестиарий, снаряжение, магические предметы и инструменты для облегчения игры как игрокам, так и мастерам - все в одном месте.`,
     defaultLocale: 'ru',
@@ -96,6 +95,11 @@ export default defineNuxtConfig({
     locales: ['ru', 'en'],
     plugins: ['utc', 'localizedFormat', 'customParseFormat'],
     defaultLocale: 'ru',
+  },
+
+  antd: {
+    icons: false,
+    extractStyle: true,
   },
 
   nodemailer: {
@@ -120,7 +124,13 @@ export default defineNuxtConfig({
     },
   },
 
-  css: ['ant-design-vue/dist/reset.css'],
+  nitro: {
+    experimental: {
+      openAPI: true,
+    },
+  },
+
+  css: ['ant-design-vue/dist/reset.css', '~/assets/styles/index.scss'],
 
   vite: {
     css: {
@@ -169,5 +179,6 @@ export default defineNuxtConfig({
     'dayjs-nuxt',
     'nuxt-mongoose',
     'nuxt-nodemailer',
+    'nuxt-typed-router',
   ],
 });

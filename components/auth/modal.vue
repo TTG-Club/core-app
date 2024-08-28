@@ -7,7 +7,7 @@
     CHANGE_PASSWORD = 'changePassword',
   }
 
-  const emailVerified = useCookie('emailVerified');
+  const emailVerified = useCookie('email-verified');
 
   const { notification } = App.useApp();
 

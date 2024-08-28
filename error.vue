@@ -21,27 +21,29 @@
     :locale="ruRU"
     :theme="themeConfig"
   >
-    <AStyleProvider>
-      <AApp>
-        <AFlex
-          :class="$style.container"
-          justify="center"
-          align="center"
-        >
-          <AFlex vertical>
-            <h1 :class="$style.title">
-              {{ error.statusCode }}
-            </h1>
+    <AExtractStyle>
+      <AStyleProvider>
+        <AApp>
+          <AFlex
+            :class="$style.container"
+            justify="center"
+            align="center"
+          >
+            <AFlex vertical>
+              <h1 :class="$style.title">
+                {{ error.statusCode }}
+              </h1>
 
-            <h2 :class="$style.message">
-              {{ error.message }}
-            </h2>
+              <h2 :class="$style.message">
+                {{ error.message }}
+              </h2>
 
-            <a href="/">Вернуться на главную</a>
+              <a href="/">Вернуться на главную</a>
+            </AFlex>
           </AFlex>
-        </AFlex>
-      </AApp>
-    </AStyleProvider>
+        </AApp>
+      </AStyleProvider>
+    </AExtractStyle>
   </AConfigProvider>
 </template>
 

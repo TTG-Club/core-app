@@ -2,10 +2,18 @@ import { getReasonPhrase, StatusCodes } from 'http-status-codes';
 import { isString } from 'lodash-es';
 import bcrypt from 'bcrypt';
 
-export default defineEventHandler(async (event) => {
-  const body = await readBody<unknown>(event);
+interface Request {
+  body: {
+    username: string;
+    email: string;
+    password: string;
+  };
+}
 
-  if (await User.isUsernameExist(body.username)) {
+export default defineEventHandler<Request>(async (event) => {
+  const { username, email, password } = await readBody(event);
+
+  if (await User.isUsernameExist(username)) {
     throw createError({
       statusCode: StatusCodes.CONFLICT,
       statusMessage: getReasonPhrase(StatusCodes.CONFLICT),
@@ -13,7 +21,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  if (await User.isEmailExist(body.username)) {
+  if (await User.isEmailExist(username)) {
     throw createError({
       statusCode: StatusCodes.CONFLICT,
       statusMessage: getReasonPhrase(StatusCodes.CONFLICT),
@@ -22,10 +30,10 @@ export default defineEventHandler(async (event) => {
   }
 
   if (
-    !body.password ||
+    !password ||
     !(
-      isString(body.password) &&
-      !/[^\w'\-!"#$%&()*,./:;?@[\]^`{|}~+<=>]+/.test(body.password)
+      isString(password) &&
+      !/[^\w'\-!"#$%&()*,./:;?@[\]^`{|}~+<=>]+/.test(password)
     )
   ) {
     throw createError({
@@ -35,11 +43,13 @@ export default defineEventHandler(async (event) => {
     });
   }
 
+  const newUser = { username, email, password };
+
   const salt = await bcrypt.genSalt(10);
 
-  body.password = await bcrypt.hash(body.password, salt);
+  newUser.password = await bcrypt.hash(password, salt);
 
-  const user = new User(body);
+  const user = new User(newUser);
 
   try {
     await user.validate();
@@ -62,26 +72,28 @@ export default defineEventHandler(async (event) => {
   }
 
   const { sendMail } = useNodeMailer();
-  const { serverUrl, mailVerifySecret } = useRuntimeConfig();
-  const { generate } = useJwtToken();
+  const { mailVerifySecret } = useRuntimeConfig();
+  const { generate } = useJwt();
+  const origin = useNitroOrigin(event);
 
-  const token = generate(
-    {
-      email: body.email,
+  const token = generate({
+    payload: {
+      email: email,
+      origin,
     },
-    mailVerifySecret,
-    {
+    secret: mailVerifySecret,
+    options: {
       expiresIn: '24h',
     },
-  );
+  });
 
-  const verifyUrl = `${serverUrl}/auth/verify?token=${token}`;
+  const verifyUrl = `${origin}/auth/verify?token=${token}`;
 
   try {
     await sendMail({
-      to: body.email,
+      to: email,
       subject: 'Подтверждение пароля',
-      html: `<p>Перейдите по ссылке для подтверждения аккаунта: <a href="${verifyUrl}">${verifyUrl}</a></p>`,
+      html: `<p>Перейдите по ссылке для подтверждения аккаунта: <a href="${verifyUrl}">${verifyUrl}</a></p><p>Ссылка действительна в течение суток.</p>`,
     });
   } catch (err) {
     console.error(err);

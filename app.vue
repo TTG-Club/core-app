@@ -16,14 +16,14 @@
     :locale="ruRU"
     :theme="themeConfig"
   >
-    <AStyleProvider>
-      <AApp>
-        <NuxtLayout>
-          <NuxtPage />
-        </NuxtLayout>
-      </AApp>
-    </AStyleProvider>
+    <AExtractStyle>
+      <AStyleProvider>
+        <AApp>
+          <NuxtLayout>
+            <NuxtPage />
+          </NuxtLayout>
+        </AApp>
+      </AStyleProvider>
+    </AExtractStyle>
   </AConfigProvider>
 </template>
-
-<style lang="scss" src="~/assets/styles/index.scss"></style>
