@@ -52,6 +52,8 @@ const checkUsernameOrEmailExist = async (
   try {
     await $api(`/auth/exist`, {
       method: 'post',
+      watch: false,
+      immediate: false,
       query: {
         [type]: value,
       },
@@ -77,9 +79,7 @@ const checkUsernameOrEmailExist = async (
   }
 };
 
-export const ruleUsername = (
-  config?: BaseRule & { checkExist?: boolean },
-): Rule => {
+export const ruleUsername = (config?: BaseRuleWithCheckExist): Rule => {
   const options: Rule = {
     required: true,
     trigger: ['change'],
@@ -122,7 +122,7 @@ export const ruleUsername = (
 };
 
 export const ruleEmail = (
-  config?: Omit<BaseRule, 'min'> & { checkExist?: boolean },
+  config?: Omit<BaseRuleWithCheckExist, 'min'>,
 ): Rule => {
   const options: Rule = {
     required: true,
@@ -161,9 +161,7 @@ export const ruleEmail = (
   };
 };
 
-export const rulePassword = (
-  config?: Omit<Rule, 'validator' | 'transform' | 'type'>,
-): Rule => {
+export const rulePassword = (config?: BaseRule): Rule => {
   const options: Rule = {
     required: true,
     trigger: ['change'],

@@ -47,6 +47,10 @@
 
   const { execute, status, error } = useApi('/auth/sign-up', {
     body: computed(() => omit(model, 'repeat')),
+    method: 'post',
+    watch: false,
+    retry: false,
+    immediate: false,
   });
 
   const inProgress = computed(() => status.value === 'pending');

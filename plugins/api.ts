@@ -14,8 +14,6 @@ export default defineNuxtPlugin(() => {
 
   const instance = $fetch.create({
     baseURL: '/api/v2',
-    method: 'post',
-    retry: false,
     onRequest({ options }) {
       if (userToken.value) {
         const headers = (options.headers ||= {});
@@ -28,6 +26,8 @@ export default defineNuxtPlugin(() => {
           headers.Authorization = `Bearer ${userToken.value}`;
         }
       }
+
+      console.log(options.headers);
     },
     // async onResponseError({ response }) {
     //   if (response.status === 401) {

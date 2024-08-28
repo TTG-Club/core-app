@@ -20,6 +20,10 @@
 
   const { execute, status, error } = useApi('/auth/sign-in', {
     body: computed(() => model),
+    method: 'post',
+    watch: false,
+    retry: false,
+    immediate: false,
   });
 
   const inProgress = computed(() => status.value === 'pending');

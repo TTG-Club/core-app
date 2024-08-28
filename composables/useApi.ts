@@ -15,8 +15,6 @@ export function useApi<T>(
   >(
     {
       $fetch: $api,
-      watch: false,
-      immediate: false,
     },
     options || {},
   );
