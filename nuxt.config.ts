@@ -15,6 +15,17 @@ export default defineNuxtConfig({
     mongodbUri: import.meta.env.MONGODB_URI,
   },
 
+  security: {
+    headers: {
+      crossOriginEmbedderPolicy:
+        import.meta.env.NODE_ENV === 'development'
+          ? 'unsafe-none'
+          : 'require-corp',
+      contentSecurityPolicy: false,
+      xXSSProtection: '1; mode=block',
+    },
+  },
+
   appId: 'ttg-club',
 
   app: {
@@ -184,5 +195,6 @@ export default defineNuxtConfig({
     'nuxt-mongoose',
     'nuxt-nodemailer',
     'nuxt-typed-router',
+    'nuxt-security',
   ],
 });

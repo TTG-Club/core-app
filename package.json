@@ -62,6 +62,7 @@
     "nuxt": "^3.13.0",
     "nuxt-mongoose": "^1.0.6",
     "nuxt-nodemailer": "^1.1.2",
+    "nuxt-security": "^2.0.0-rc.9",
     "nuxt-typed-router": "^3.6.5",
     "postcss-html": "^1.7.0",
     "postcss-scss": "^4.0.9",
