@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import { getReasonPhrase, StatusCodes } from 'http-status-codes';
 import { ONE_DAY_IN_SECONDS, USER_TOKEN_COOKIE } from '~/utils/const';
+import { getRequestOrigin } from '~/server/utils/getRequestOrigin';
 
 interface Request {
   body: {
@@ -48,7 +49,7 @@ export default defineEventHandler<Request>(async (event) => {
   }
 
   const token = generateAuthJwt({
-    origin: useNitroOrigin(event),
+    origin: getRequestOrigin(event),
     username: user.username,
     remember,
   });

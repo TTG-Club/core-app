@@ -1,6 +1,7 @@
 import { getReasonPhrase, StatusCodes } from 'http-status-codes';
 import { isString } from 'lodash-es';
 import bcrypt from 'bcrypt';
+import { getRequestOrigin } from '~/server/utils/getRequestOrigin';
 
 interface Request {
   body: {
@@ -73,7 +74,7 @@ export default defineEventHandler<Request>(async (event) => {
 
   const { sendMail } = useNodeMailer();
   const { mailVerifySecret } = useRuntimeConfig();
-  const origin = useNitroOrigin(event);
+  const origin = getRequestOrigin(event);
 
   const token = generateJwt({
     payload: {

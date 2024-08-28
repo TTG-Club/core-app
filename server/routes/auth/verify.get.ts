@@ -1,6 +1,7 @@
 import { isString } from 'lodash-es';
 import { StatusCodes } from 'http-status-codes';
 import { ONE_DAY_IN_SECONDS } from '~/utils/const';
+import { getRequestOrigin } from '~/server/utils/getRequestOrigin';
 
 interface Request {
   query: {
@@ -28,7 +29,7 @@ export default defineEventHandler<Request>(async (event) => {
     if (
       isString(payload) ||
       !payload.email ||
-      payload.origin === useNitroOrigin(event)
+      payload.origin !== getRequestOrigin(event)
     ) {
       return sendRedirect(event, '/', StatusCodes.BAD_REQUEST);
     }

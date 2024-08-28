@@ -26,8 +26,6 @@ export default defineNuxtPlugin(() => {
           headers.Authorization = `Bearer ${userToken.value}`;
         }
       }
-
-      console.log(options.headers);
     },
     // async onResponseError({ response }) {
     //   if (response.status === 401) {

@@ -15,9 +15,12 @@ export interface VerifyJwtConfig {
 }
 
 export interface GenerateAuthJwtPayload {
+  /**
+   * string from `getRequestOrigin(event)`
+   */
+  origin: string;
   username: UserDto['username'];
   remember?: boolean;
-  origin: string;
 }
 
 const { apiSecret } = useRuntimeConfig();
