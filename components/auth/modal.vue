@@ -21,6 +21,11 @@
   //   () => formType.value === FormType.CHANGE_PASSWORD,
   // );
 
+  const close = () => {
+    opened.value = false;
+    formType.value = FormType.SIGN_IN;
+  };
+
   const showEmailVerifiedNotify = () => {
     if (!emailVerified.value) {
       return;
@@ -81,9 +86,13 @@
         src="/img/bg-login.png"
       />
 
-      <div :class="$style.body">
+      <div
+        v-if="opened"
+        :class="$style.body"
+      >
         <AuthSignIn
           v-if="isSignIn"
+          @close="close"
           @switch:sign-up="formType = FormType.SIGN_UP"
           @switch:change-password="formType = FormType.CHANGE_PASSWORD"
         />

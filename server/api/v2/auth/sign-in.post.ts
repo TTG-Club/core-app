@@ -47,8 +47,6 @@ export default defineEventHandler<Request>(async (event) => {
     });
   }
 
-  const { generateAuthJwt } = useJwt();
-
   const token = generateAuthJwt({
     origin: useNitroOrigin(event),
     username: user.username,

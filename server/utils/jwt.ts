@@ -1,0 +1,51 @@
+import type { SignOptions, VerifyOptions } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
+import { merge } from 'lodash-es';
+
+export interface GenerateJwtConfig {
+  payload: object | Buffer;
+  secret?: string;
+  options?: SignOptions;
+}
+
+export interface VerifyJwtConfig {
+  token: string;
+  secret?: string;
+  options?: VerifyOptions & { complete?: false };
+}
+
+export interface GenerateAuthJwtPayload {
+  username: UserDto['username'];
+  remember?: boolean;
+  origin: string;
+}
+
+const { apiSecret } = useRuntimeConfig();
+
+export const generateJwt = ({
+  payload,
+  secret,
+  options,
+}: GenerateJwtConfig) => {
+  const currentSecret = secret || apiSecret;
+  const baseOptions: SignOptions = {
+    expiresIn: '30d',
+  };
+
+  const mergedOptions = merge(baseOptions, options);
+
+  return jwt.sign(payload, currentSecret, mergedOptions);
+};
+
+export const verifyJwt = ({ token, secret, options }: VerifyJwtConfig) => {
+  const currentSecret = secret || apiSecret;
+
+  return jwt.verify(token, currentSecret, options);
+};
+
+export const generateAuthJwt = (payload: GenerateAuthJwtPayload) =>
+  jwt.sign(payload, apiSecret, {
+    expiresIn: payload.remember ? '30d' : '24h',
+  });
+
+export const verifyAuthJwt = (token: string) => jwt.verify(token, apiSecret);

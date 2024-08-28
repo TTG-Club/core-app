@@ -45,15 +45,11 @@
     });
   };
 
-  const { execute, status, error } = useApi('/auth/signUp', {
-    method: 'post',
-    retry: false,
-    watch: false,
-    immediate: false,
+  const { execute, status, error } = useApi('/auth/sign-up', {
     body: computed(() => omit(model, 'repeat')),
   });
 
-  const isLoading = computed(() => status.value === 'pending');
+  const inProgress = computed(() => status.value === 'pending');
 
   const onSubmit = async () => {
     await validate();
@@ -62,6 +58,8 @@
     if (error.value) {
       return;
     }
+
+    success.value = true;
 
     emit('switch:sign-in');
     showSuccessNotify();
@@ -135,8 +133,8 @@
       :vertical="false"
     >
       <AButton
+        :loading="inProgress"
         :disabled="success"
-        :loading="isLoading"
         type="primary"
         @click.left.exact.prevent="onSubmit"
       >
@@ -144,6 +142,7 @@
       </AButton>
 
       <AButton
+        :disabled="inProgress"
         type="link"
         @click.left.exact.prevent="$emit('switch:sign-in')"
       >

@@ -14,6 +14,8 @@ export default defineNuxtPlugin(() => {
 
   const instance = $fetch.create({
     baseURL: '/api/v2',
+    method: 'post',
+    retry: false,
     onRequest({ options }) {
       if (userToken.value) {
         const headers = (options.headers ||= {});

@@ -2,12 +2,10 @@ import type { BasicColorMode } from '@vueuse/core';
 import type { ThemeConfig } from 'ant-design-vue/es/config-provider/context';
 import { theme } from 'ant-design-vue';
 
-export const THEME_STORE_KEY = 'ttg-club-theme';
-
 export const useTheme = () => {
   const stored = useCookie<BasicColorMode>(THEME_STORE_KEY, {
     default: () => 'dark',
-    maxAge: 60 * 60 * 24 * 365,
+    maxAge: ONE_DAY_IN_SECONDS * 365,
   });
 
   const { state } = useColorMode({

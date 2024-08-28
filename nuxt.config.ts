@@ -73,6 +73,10 @@ export default defineNuxtConfig({
     fallbackTitle: false,
   },
 
+  robots: {
+    disallow: ['/user', '/admin', '/auth', '/search', '/profile', '/api'],
+  },
+
   site: {
     url: import.meta.env.SERVER_URL,
     name: `${appName} Oнлайн-справочник`,

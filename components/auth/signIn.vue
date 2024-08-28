@@ -1,10 +1,9 @@
 <script setup lang="ts">
-  defineEmits<{
-    (e: 'switch:sign-up' | 'switch:change-password'): void;
+  const emit = defineEmits<{
+    (e: 'switch:sign-up' | 'switch:change-password' | 'close'): void;
   }>();
 
   const success = ref(false);
-  const inProgress = ref(false);
 
   const model = reactive({
     usernameOrEmail: '',
@@ -12,9 +11,31 @@
     remember: true,
   });
 
-  const noSideSpace = (value: string) => !/ /.test(value);
+  const showSuccessNotify = () => {
+    notification.success({
+      key: 'notify-sign-in',
+      message: 'Вы авторизовались!',
+    });
+  };
 
-  const onSubmit = () => {};
+  const { execute, status, error } = useApi('/auth/sign-in', {
+    body: computed(() => model),
+  });
+
+  const inProgress = computed(() => status.value === 'pending');
+
+  const onSubmit = async () => {
+    await execute();
+
+    if (error.value) {
+      return;
+    }
+
+    success.value = true;
+
+    emit('close');
+    showSuccessNotify();
+  };
 </script>
 
 <template>
@@ -37,7 +58,6 @@
         autocorrect="off"
         placeholder="Логин или электронная почта"
         autofocus
-        :allow-input="noSideSpace"
       />
     </AFormItem>
 
@@ -45,15 +65,13 @@
       size="large"
       path="password"
     >
-      <AInput
+      <AInputPassword
         v-model:value="model.password"
         autocapitalize="off"
         autocomplete="current-password"
         autocorrect="off"
         type="password"
         placeholder="Пароль"
-        show-password-on="click"
-        :allow-input="noSideSpace"
       />
     </AFormItem>
 
@@ -66,8 +84,8 @@
       :vertical="false"
     >
       <AButton
-        :disabled="success"
         :loading="inProgress"
+        :disabled="success"
         type="primary"
         @click.left.exact.prevent="onSubmit"
       >
@@ -75,6 +93,7 @@
       </AButton>
 
       <AButton
+        :disabled="inProgress"
         type="link"
         @click.left.exact.prevent="$emit('switch:sign-up')"
       >
@@ -82,6 +101,7 @@
       </AButton>
 
       <AButton
+        :disabled="inProgress"
         type="link"
         @click.left.exact.prevent="$emit('switch:change-password')"
       >

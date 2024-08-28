@@ -16,12 +16,11 @@ export default defineEventHandler<Request>(async (event) => {
   }
 
   const { mailVerifySecret } = useRuntimeConfig();
-  const { verify } = useJwt();
 
   let email = '';
 
   try {
-    const payload = verify({
+    const payload = verifyJwt({
       token,
       secret: mailVerifySecret,
     });

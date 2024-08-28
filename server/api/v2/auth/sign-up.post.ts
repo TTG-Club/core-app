@@ -73,10 +73,9 @@ export default defineEventHandler<Request>(async (event) => {
 
   const { sendMail } = useNodeMailer();
   const { mailVerifySecret } = useRuntimeConfig();
-  const { generate } = useJwt();
   const origin = useNitroOrigin(event);
 
-  const token = generate({
+  const token = generateJwt({
     payload: {
       email: email,
       origin,
