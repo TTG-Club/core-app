@@ -10,6 +10,7 @@ interface Request {
     remember?: boolean;
   };
 }
+
 export default defineEventHandler<Request>(async (event) => {
   const { usernameOrEmail, password, remember } = await readBody(event);
 

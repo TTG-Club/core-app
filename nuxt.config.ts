@@ -140,6 +140,14 @@ export default defineNuxtConfig({
   },
 
   nitro: {
+    routeRules: {
+      '/proxy/**': {
+        proxy: `${import.meta.env.API_URL}/**`,
+        headers: {
+          apiToken: import.meta.env.API_TOKEN,
+        },
+      },
+    },
     experimental: {
       openAPI: true,
     },
