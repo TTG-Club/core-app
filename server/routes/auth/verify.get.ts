@@ -1,7 +1,6 @@
 import { isString } from 'lodash-es';
 import { StatusCodes } from 'http-status-codes';
-import { ONE_DAY_IN_SECONDS } from '~/utils/const';
-import { getRequestOrigin } from '~/server/utils/getRequestOrigin';
+import { ONE_DAY_IN_SECONDS } from '~~/shared/utils/const';
 
 interface Request {
   query: {

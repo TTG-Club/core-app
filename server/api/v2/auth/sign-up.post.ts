@@ -1,7 +1,6 @@
 import { getReasonPhrase, StatusCodes } from 'http-status-codes';
 import { isString } from 'lodash-es';
 import bcrypt from 'bcrypt';
-import { getRequestOrigin } from '~/server/utils/getRequestOrigin';
 
 interface Request {
   body: {

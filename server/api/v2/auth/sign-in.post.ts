@@ -1,7 +1,6 @@
 import bcrypt from 'bcrypt';
 import { getReasonPhrase, StatusCodes } from 'http-status-codes';
-import { ONE_DAY_IN_SECONDS, USER_TOKEN_COOKIE } from '~/utils/const';
-import { getRequestOrigin } from '~/server/utils/getRequestOrigin';
+import { ONE_DAY_IN_SECONDS, USER_TOKEN_COOKIE } from '~~/shared/utils/const';
 
 interface Request {
   body: {

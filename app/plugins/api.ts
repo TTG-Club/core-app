@@ -1,4 +1,4 @@
-import { USER_TOKEN_COOKIE } from '~/utils/const';
+import { USER_TOKEN_COOKIE } from '~~/shared/utils/const';
 import type { $Fetch } from 'nitropack';
 
 declare module '#app' {

@@ -1,4 +1,4 @@
-import type { UseFetchOptions } from 'nuxt/app';
+import type { UseFetchOptions } from '#app';
 import { merge } from 'lodash-es';
 
 export type UseApiOptions<T> = Omit<UseFetchOptions<T>, '$fetch'>;

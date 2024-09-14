@@ -7,7 +7,6 @@
     rulePasswordRepeat,
     ruleUsername,
   } from '~/utils/validation/auth';
-  import { AButton, AFlex } from '#components';
   import { omit } from 'lodash-es';
 
   const emit = defineEmits<{
