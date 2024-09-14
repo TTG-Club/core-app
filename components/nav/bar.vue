@@ -1,9 +1,3 @@
-<script setup lang="ts">
-  const { theme, change } = useTheme();
-
-  const isAuthOpened = ref(false);
-</script>
-
 <template>
   <div :class="$style.navbar">
     <header :class="$style.header">
@@ -19,36 +13,12 @@
       <div :class="$style.actions">
         <div :class="$style.socials" />
 
-        <AButton
-          type="text"
-          size="large"
-          @click.left.exact.prevent="isAuthOpened = true"
-        >
-          <template #icon>
-            <SvgIcon name="profile/helmet/outline" />
-          </template>
-        </AButton>
+        <NavButtonUser />
 
-        <ATooltip placement="right">
-          <template #default>
-            <AButton
-              type="text"
-              size="large"
-              @click.left.exact.prevent="change"
-            >
-              <template #icon>
-                <SvgIcon :name="`theme/${theme}`" />
-              </template>
-            </AButton>
-          </template>
-
-          <template #title> Переключить тему сайта </template>
-        </ATooltip>
+        <NavButtonTheme />
       </div>
     </header>
   </div>
-
-  <AuthModal v-model="isAuthOpened" />
 </template>
 
 <style lang="scss" module>
@@ -78,8 +48,8 @@
 
       width: calc(var(--navbar-width) + 8px);
       min-width: calc(var(--navbar-width) + 8px);
-      height: 100%;
-      min-height: 100%;
+      height: 100vh;
+      min-height: 100vh;
       padding-bottom: 0;
       padding-left: var(--safe-area-inset-left);
 
@@ -137,6 +107,16 @@
 
     height: auto;
     margin-left: 0;
+  }
+
+  .bottomContainer {
+    position: relative;
+    width: 100%;
+    height: 0;
+  }
+
+  .bottomSlot {
+    position: absolute;
   }
 
   .logo {

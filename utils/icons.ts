@@ -22,7 +22,7 @@ const iconAvailList = Object.fromEntries(
 const icons = Object.keys(iconAvailList);
 
 const isIconExist = (path: string | null | undefined): path is string =>
-  !!path && iconAvailList[path];
+  !!path && Boolean(iconAvailList[path]);
 
 const getIconName = (path: string) => {
   if (isIconExist(path)) {

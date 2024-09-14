@@ -1,24 +1,20 @@
 @use 'variables' as *;
 
 // TODO: Возможно придется включить для заголовков.
-//$typography: '.ant-typography';
-//
-//@for $i from 1 through 6 {
-//  h#{$i}#{$typography},
-//  #{$typography}-h#{$i},
-//  #{$typography} {
-//    margin: 0;
-//
-//    @debug &;
-//
-//    & > textarea,
-//    & h#{$i} {
-//      @debug &;
-//
-//      margin: 0;
-//    }
-//  }
-//}
+$typography: '.ant-typography';
+
+@for $i from 1 through 6 {
+  h#{$i}#{$typography},
+  #{$typography}-h#{$i},
+  #{$typography} {
+    margin: 0;
+
+    & > textarea,
+    & h#{$i} {
+      margin: 0;
+    }
+  }
+}
 
 .ant {
   $root: &;

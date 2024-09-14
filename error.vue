@@ -47,8 +47,6 @@
   </AConfigProvider>
 </template>
 
-<style lang="scss" src="~/assets/styles/index.scss"></style>
-
 <style module>
   .container {
     height: 100%;

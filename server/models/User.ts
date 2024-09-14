@@ -70,11 +70,15 @@ const userSchema = new Schema(
       findNotVerified() {
         return this.find({ verified: false }).exec();
       },
-      isUsernameExist(username: string) {
-        return this.exists({ username }).exec();
+      async isUsernameExist(username: string) {
+        const exist = await this.exists({ username }).exec();
+
+        return !!exist;
       },
-      isEmailExist(email: string) {
-        return this.exists({ email }).exec();
+      async isEmailExist(email: string) {
+        const exist = await this.exists({ email }).exec();
+
+        return !!exist;
       },
     },
     query: {

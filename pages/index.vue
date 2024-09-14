@@ -1,5 +1,9 @@
 <script setup lang="ts">
   const { name } = useSiteConfig();
+
+  definePageMeta({
+    layout: 'default',
+  });
 </script>
 
 <template>

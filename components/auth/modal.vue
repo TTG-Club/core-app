@@ -108,7 +108,7 @@
 
 <style module lang="scss">
   .modal {
-    max-width: 652px;
+    max-width: 652px !important;
   }
 
   .background {

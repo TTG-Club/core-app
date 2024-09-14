@@ -12,7 +12,13 @@ interface Request {
 }
 
 export default defineEventHandler<Request>(async (event) => {
-  const { usernameOrEmail, password, remember } = await readBody(event);
+  const { usernameOrEmail, password, remember } = await readValidatedBody<
+    Request['body']
+  >(event, (body) => {
+    console.log(body);
+
+    return true;
+  });
 
   let user;
 
@@ -20,7 +26,12 @@ export default defineEventHandler<Request>(async (event) => {
     user = await User.findOne({
       $or: [{ email: usernameOrEmail }, { username: usernameOrEmail }],
     })
-      .select({ password: true })
+      .select({
+        username: true,
+        email: true,
+        roles: true,
+        password: true,
+      })
       .lean()
       .exec();
   } catch (err) {

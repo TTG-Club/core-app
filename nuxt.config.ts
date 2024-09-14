@@ -6,6 +6,9 @@ import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
 const appName = 'TTG Club';
 
 export default defineNuxtConfig({
+  future: {
+    compatibilityVersion: 4,
+  },
   compatibilityDate: '2024-04-03',
   devtools: { enabled: true },
 
@@ -13,6 +16,13 @@ export default defineNuxtConfig({
     apiSecret: import.meta.env.API_SECRET,
     mailVerifySecret: import.meta.env.MAIL_VERIFY_SECRET,
     mongodbUri: import.meta.env.MONGODB_URI,
+    session: {
+      name: 'ttg-user-token',
+      password: import.meta.env.API_SECRET,
+      cookie: {
+        sameSite: 'strict',
+      },
+    },
   },
 
   security: {
@@ -29,17 +39,12 @@ export default defineNuxtConfig({
   appId: 'ttg-club',
 
   app: {
-    seoMeta: {
-      mobileWebAppCapable: 'yes',
-      appleMobileWebAppCapable: 'yes',
-      applicationName: appName,
-    },
     head: {
       charset: 'utf-8',
       link: [
         {
           rel: 'manifest',
-          url: '/manifest.json',
+          href: '/manifest.json',
           crossorigin: 'anonymous',
         },
         {
@@ -54,19 +59,19 @@ export default defineNuxtConfig({
         },
         {
           type: 'image/svg+xml',
-          url: '/favicon.svg',
+          href: '/favicon.svg',
         },
         {
           type: 'image/png',
-          url: '/favicon.png',
+          href: '/favicon.png',
         },
         {
           sizes: '192x192',
-          url: '/icons/192.png',
+          href: '/icons/192.png',
         },
         ...[48, 72, 96, 144, 192, 256, 384, 512].map((size) => ({
           sizes: `${size}x${size}`,
-          url: `/icons/${size}.png`,
+          href: `/icons/${size}.png`,
         })),
       ],
       titleTemplate: '%pageTitle %separator %siteName',
@@ -139,12 +144,19 @@ export default defineNuxtConfig({
     },
   },
 
+  router: {
+    options: {
+      scrollBehaviorType: 'smooth',
+    },
+  },
+
   nitro: {
     routeRules: {
       '/proxy/**': {
         proxy: `${import.meta.env.API_URL}/**`,
+        cors: true,
         headers: {
-          apiToken: import.meta.env.API_TOKEN,
+          token: import.meta.env.API_TOKEN,
         },
       },
     },
@@ -152,8 +164,6 @@ export default defineNuxtConfig({
       openAPI: true,
     },
   },
-
-  css: ['ant-design-vue/dist/reset.css', '~/assets/styles/index.scss'],
 
   vite: {
     css: {
