@@ -175,7 +175,9 @@ export default defineNuxtConfig({
     },
     plugins: [
       createSvgIconsPlugin({
-        iconDirs: [fileURLToPath(new URL('./assets/icons', import.meta.url))],
+        iconDirs: [
+          fileURLToPath(new URL('./app/assets/icons', import.meta.url)),
+        ],
         symbolId: 'ttg-[dir]-[name]',
         svgoOptions: {
           plugins: [
