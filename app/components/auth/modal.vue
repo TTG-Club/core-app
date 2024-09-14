@@ -67,6 +67,10 @@
   };
 
   onMounted(() => showEmailVerifiedNotify());
+
+  watch(opened, () => {
+    formType.value = FormType.SIGN_IN;
+  });
 </script>
 
 <template>
@@ -74,6 +78,7 @@
     v-model:open="opened"
     :footer="false"
     centered
+    destroy-on-close
     :class="$style.modal"
   >
     <AFlex

@@ -31,6 +31,7 @@ export const generateJwt = ({
   options,
 }: GenerateJwtConfig) => {
   const currentSecret = secret || apiSecret;
+
   const baseOptions: SignOptions = {
     expiresIn: '30d',
   };

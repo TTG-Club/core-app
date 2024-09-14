@@ -67,6 +67,8 @@ const checkUsernameOrEmailExist = async (
           return Promise.reject('Неизвестная ошибка');
       }
     }
+
+    return Promise.resolve();
   } catch (err) {
     throw new Error('Неизвестная ошибка');
   }

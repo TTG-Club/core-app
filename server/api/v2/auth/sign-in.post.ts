@@ -14,6 +14,7 @@ export default defineEventHandler<Request>(async (event) => {
   const { usernameOrEmail, password, remember } = await readValidatedBody<
     Request['body']
   >(event, (body) => {
+    // eslint-disable-next-line no-console
     console.log(body);
 
     return true;

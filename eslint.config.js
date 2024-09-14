@@ -1,4 +1,5 @@
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
+import gitignore from 'eslint-config-flat-gitignore';
 import { createConfigForNuxt } from '@nuxt/eslint-config/flat';
 
 export default createConfigForNuxt(
@@ -9,6 +10,105 @@ export default createConfigForNuxt(
   },
   {
     rules: {
+      'no-debugger': 'error',
+      'no-console': ['error', { allow: ['warn', 'error'] }],
+      'no-underscore-dangle': 'off',
+      'no-use-before-define': 'off',
+      'no-alert': ['error'],
+      'no-multiple-empty-lines': ['error', { max: 2, maxEOF: 1, maxBOF: 1 }],
+      'consistent-return': ['warn'],
+      'no-continue': 'off',
+      'no-await-in-loop': 'off',
+      'no-nested-ternary': ['warn'],
+      'no-return-assign': ['warn'],
+      'no-bitwise': 'off',
+      'no-plusplus': 'off',
+      'no-restricted-syntax': [
+        'error',
+        'ForInStatement',
+        'LabeledStatement',
+        'WithStatement',
+      ],
+      'no-unused-vars': 'off',
+      'no-param-reassign': [
+        'error',
+        { props: true, ignorePropertyModificationsFor: ['state'] },
+      ],
+      'dot-notation': ['error'],
+      'require-await': ['error'],
+      'spaced-comment': ['error', 'always'],
+      'camelcase': ['error'],
+      'curly': ['error', 'all'],
+      'guard-for-in': ['error'],
+      'default-param-last': ['error'],
+      'lines-between-class-members': [
+        'error',
+        'always',
+        { exceptAfterSingleLine: false },
+      ],
+      'padding-line-between-statements': [
+        'error',
+        {
+          blankLine: 'always',
+          prev: [
+            'block-like',
+            'break',
+            'class',
+            'const',
+            'debugger',
+            'directive',
+            'export',
+            'throw',
+            'try',
+            'function',
+            'import',
+          ],
+          next: '*',
+        },
+        {
+          blankLine: 'always',
+          prev: '*',
+          next: [
+            'block-like',
+            'break',
+            'class',
+            'const',
+            'continue',
+            'debugger',
+            'directive',
+            'return',
+            'throw',
+            'try',
+            'export',
+            'function',
+            'import',
+          ],
+        },
+        { blankLine: 'always', prev: 'block', next: 'block' },
+        {
+          blankLine: 'always',
+          prev: '*',
+          next: [
+            'multiline-const',
+            'multiline-expression',
+            'multiline-let',
+            'multiline-var',
+          ],
+        },
+        { blankLine: 'never', prev: 'break', next: 'case' },
+        { blankLine: 'never', prev: 'break', next: 'default' },
+        {
+          blankLine: 'any',
+          prev: 'singleline-const',
+          next: 'singleline-const',
+        },
+        { blankLine: 'any', prev: 'singleline-let', next: 'singleline-let' },
+        { blankLine: 'any', prev: 'singleline-var', next: 'singleline-var' },
+        { blankLine: 'any', prev: 'import', next: 'import' },
+      ],
+      'class-methods-use-this': ['error', { enforceForClassFields: false }],
+
+      // Vue.js
       'vue/require-explicit-emits': ['error'],
       'vue/padding-line-between-tags': [
         'error',
@@ -107,4 +207,5 @@ export default createConfigForNuxt(
     },
   },
   eslintPluginPrettierRecommended,
+  gitignore(),
 );

@@ -16,6 +16,7 @@ export default defineNuxtPlugin(() => {
     baseURL: '/api/v2',
     onRequest({ options }) {
       if (userToken.value) {
+        // eslint-disable-next-line no-param-reassign
         const headers = (options.headers ||= {});
 
         if (Array.isArray(headers)) {
@@ -27,11 +28,6 @@ export default defineNuxtPlugin(() => {
         }
       }
     },
-    // async onResponseError({ response }) {
-    //   if (response.status === 401) {
-    //     await runWithContext(() => navigateTo('/'));
-    //   }
-    // },
   });
 
   return {
