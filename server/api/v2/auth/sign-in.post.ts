@@ -1,7 +1,6 @@
 import bcrypt from 'bcrypt';
 import { getReasonPhrase, StatusCodes } from 'http-status-codes';
-import { ONE_DAY_IN_SECONDS, USER_TOKEN_COOKIE } from '~/utils/const';
-import { getRequestOrigin } from '~/server/utils/getRequestOrigin';
+import { ONE_DAY_IN_SECONDS, USER_TOKEN_COOKIE } from '~~/shared/utils/const';
 
 interface Request {
   body: {
@@ -12,7 +11,13 @@ interface Request {
 }
 
 export default defineEventHandler<Request>(async (event) => {
-  const { usernameOrEmail, password, remember } = await readBody(event);
+  const { usernameOrEmail, password, remember } = await readValidatedBody<
+    Request['body']
+  >(event, (body) => {
+    console.log(body);
+
+    return true;
+  });
 
   let user;
 
@@ -20,7 +25,12 @@ export default defineEventHandler<Request>(async (event) => {
     user = await User.findOne({
       $or: [{ email: usernameOrEmail }, { username: usernameOrEmail }],
     })
-      .select({ password: true })
+      .select({
+        username: true,
+        email: true,
+        roles: true,
+        password: true,
+      })
       .lean()
       .exec();
   } catch (err) {
