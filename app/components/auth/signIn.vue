@@ -43,74 +43,79 @@
 </script>
 
 <template>
-  <ATypographyTitle :level="4"> Авторизация </ATypographyTitle>
-
-  <AForm
-    :model
-    label-placement="left"
-    @submit.prevent.stop="onSubmit"
-    @keyup.enter.exact.prevent.stop="onSubmit"
+  <AFlex
+    :gap="24"
+    vertical
   >
-    <AFormItem
-      size="large"
-      path="usernameOrEmail"
+    <ATypographyTitle :level="4"> Авторизация </ATypographyTitle>
+
+    <AForm
+      :model
+      label-placement="left"
+      @submit.prevent.stop="onSubmit"
+      @keyup.enter.exact.prevent.stop="onSubmit"
     >
-      <AInput
-        v-model:value="model.usernameOrEmail"
-        autocapitalize="off"
-        autocomplete="username"
-        autocorrect="off"
-        placeholder="Логин или электронная почта"
-        autofocus
-      />
-    </AFormItem>
-
-    <AFormItem
-      size="large"
-      path="password"
-    >
-      <AInputPassword
-        v-model:value="model.password"
-        autocapitalize="off"
-        autocomplete="current-password"
-        autocorrect="off"
-        type="password"
-        placeholder="Пароль"
-      />
-    </AFormItem>
-
-    <AFormItem>
-      <ACheckbox v-model:checked="model.remember"> Запомнить меня </ACheckbox>
-    </AFormItem>
-
-    <AFlex
-      :gap="8"
-      :vertical="false"
-    >
-      <AButton
-        :loading="inProgress"
-        :disabled="success"
-        type="primary"
-        @click.left.exact.prevent="onSubmit"
+      <AFormItem
+        size="large"
+        path="usernameOrEmail"
       >
-        Вход
-      </AButton>
+        <AInput
+          v-model:value="model.usernameOrEmail"
+          autocapitalize="off"
+          autocomplete="username"
+          autocorrect="off"
+          placeholder="Логин или электронная почта"
+          autofocus
+        />
+      </AFormItem>
 
-      <AButton
-        :disabled="inProgress"
-        type="link"
-        @click.left.exact.prevent="$emit('switch:sign-up')"
+      <AFormItem
+        size="large"
+        path="password"
       >
-        Регистрация
-      </AButton>
+        <AInputPassword
+          v-model:value="model.password"
+          autocapitalize="off"
+          autocomplete="current-password"
+          autocorrect="off"
+          type="password"
+          placeholder="Пароль"
+        />
+      </AFormItem>
 
-      <AButton
-        :disabled="inProgress"
-        type="link"
-        @click.left.exact.prevent="$emit('switch:change-password')"
+      <AFormItem>
+        <ACheckbox v-model:checked="model.remember"> Запомнить меня </ACheckbox>
+      </AFormItem>
+
+      <AFlex
+        :gap="8"
+        :vertical="false"
       >
-        Забыли пароль?
-      </AButton>
-    </AFlex>
-  </AForm>
+        <AButton
+          :loading="inProgress"
+          :disabled="success"
+          type="primary"
+          @click.left.exact.prevent="onSubmit"
+        >
+          Вход
+        </AButton>
+
+        <AButton
+          :disabled="inProgress"
+          type="link"
+          @click.left.exact.prevent="$emit('switch:sign-up')"
+        >
+          Регистрация
+        </AButton>
+
+        <AButton
+          :disabled="inProgress"
+          type="link"
+          @click.left.exact.prevent="$emit('switch:change-password')"
+        >
+          Забыли пароль?
+        </AButton>
+      </AFlex>
+    </AForm>
+  </AFlex>
 </template>

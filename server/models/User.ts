@@ -2,6 +2,7 @@ import { isString, uniq } from 'lodash-es';
 import { model, Schema } from 'mongoose';
 
 export type ROLE = 'USER' | 'ADMIN' | 'MODERATOR' | 'SUBSCRIBER' | 'WRITER';
+
 export interface UserDto {
   _id: string;
   username: string;

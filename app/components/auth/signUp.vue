@@ -70,87 +70,91 @@
 </script>
 
 <template>
-  <ATypographyTitle :level="4"> Регистрация </ATypographyTitle>
-
-  <AForm
-    :model
-    :style="{ marginTop: '8px' }"
-    label-placement="left"
-    @submit.prevent.stop="onSubmit"
-    @keyup.enter.exact.prevent.stop="onSubmit"
+  <AFlex
+    :gap="24"
+    vertical
   >
-    <AFormItem v-bind="validateInfos.username">
-      <AInput
-        v-model:value="model.username"
-        autocapitalize="off"
-        autocomplete="username"
-        autocorrect="off"
-        placeholder="Имя пользователя"
-        autofocus
-      />
-    </AFormItem>
+    <ATypographyTitle :level="4"> Регистрация </ATypographyTitle>
 
-    <AFormItem v-bind="validateInfos.email">
-      <AInput
-        v-model:value="model.email"
-        autocapitalize="off"
-        autocomplete="email"
-        autocorrect="off"
-        placeholder="Электронная почта"
-      />
-    </AFormItem>
-
-    <AFormItem v-bind="validateInfos.password">
-      <ATooltip trigger="focus">
-        <template #title>
-          Допустимые спец. символы: {{ ALLOWED_SPECIAL_CHARACTERS.join(' ') }}
-        </template>
-
-        <template #default>
-          <AInputPassword
-            v-model:value="model.password"
-            autocapitalize="off"
-            autocomplete="new-password"
-            autocorrect="off"
-            type="password"
-            placeholder="Пароль"
-          />
-        </template>
-      </ATooltip>
-    </AFormItem>
-
-    <AFormItem v-bind="validateInfos.repeat">
-      <AInputPassword
-        v-model:value="model.repeat"
-        autocapitalize="off"
-        autocomplete="new-password"
-        autocorrect="off"
-        type="password"
-        placeholder="Повторите пароль"
-        show-password-on="click"
-      />
-    </AFormItem>
-
-    <AFlex
-      :gap="8"
-      :vertical="false"
+    <AForm
+      :model
+      label-placement="left"
+      @submit.prevent.stop="onSubmit"
+      @keyup.enter.exact.prevent.stop="onSubmit"
     >
-      <AButton
-        :loading="inProgress"
-        :disabled="success"
-        type="primary"
-        @click.left.exact.prevent="onSubmit"
-      >
-        Зарегистрироваться
-      </AButton>
+      <AFormItem v-bind="validateInfos.username">
+        <AInput
+          v-model:value="model.username"
+          autocapitalize="off"
+          autocomplete="username"
+          autocorrect="off"
+          placeholder="Имя пользователя"
+          autofocus
+        />
+      </AFormItem>
 
-      <AButton
-        :disabled="inProgress"
-        type="link"
-        @click.left.exact.prevent="$emit('switch:sign-in')"
+      <AFormItem v-bind="validateInfos.email">
+        <AInput
+          v-model:value="model.email"
+          autocapitalize="off"
+          autocomplete="email"
+          autocorrect="off"
+          placeholder="Электронная почта"
+        />
+      </AFormItem>
+
+      <AFormItem v-bind="validateInfos.password">
+        <ATooltip trigger="focus">
+          <template #title>
+            Допустимые спец. символы: {{ ALLOWED_SPECIAL_CHARACTERS.join(' ') }}
+          </template>
+
+          <template #default>
+            <AInputPassword
+              v-model:value="model.password"
+              autocapitalize="off"
+              autocomplete="new-password"
+              autocorrect="off"
+              type="password"
+              placeholder="Пароль"
+            />
+          </template>
+        </ATooltip>
+      </AFormItem>
+
+      <AFormItem v-bind="validateInfos.repeat">
+        <AInputPassword
+          v-model:value="model.repeat"
+          autocapitalize="off"
+          autocomplete="new-password"
+          autocorrect="off"
+          type="password"
+          placeholder="Повторите пароль"
+          show-password-on="click"
+        />
+      </AFormItem>
+
+      <AFlex
+        :gap="8"
+        :vertical="false"
       >
-        Есть аккаунт?
-      </AButton>
-    </AFlex>
-  </AForm>
+        <AButton
+          :loading="inProgress"
+          :disabled="success"
+          type="primary"
+          @click.left.exact.prevent="onSubmit"
+        >
+          Зарегистрироваться
+        </AButton>
+
+        <AButton
+          :disabled="inProgress"
+          type="link"
+          @click.left.exact.prevent="$emit('switch:sign-in')"
+        >
+          Есть аккаунт?
+        </AButton>
+      </AFlex>
+    </AForm>
+  </AFlex>
 </template>
