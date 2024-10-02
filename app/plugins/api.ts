@@ -13,18 +13,16 @@ export default defineNuxtPlugin(() => {
   });
 
   const instance = $fetch.create({
-    baseURL: '/api/v2',
+    baseURL: '/api',
     onRequest({ options }) {
       if (userToken.value) {
         // eslint-disable-next-line no-param-reassign
-        const headers = (options.headers ||= {});
+        const headers = (options.headers ||= new Headers());
 
         if (Array.isArray(headers)) {
           headers.push(['Authorization', `Bearer ${userToken.value}`]);
         } else if (headers instanceof Headers) {
           headers.set('Authorization', `Bearer ${userToken.value}`);
-        } else {
-          headers.Authorization = `Bearer ${userToken.value}`;
         }
       }
     },

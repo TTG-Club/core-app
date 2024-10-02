@@ -1,15 +1,18 @@
 import { isString } from 'lodash-es';
 import { StatusCodes } from 'http-status-codes';
 import { ONE_DAY_IN_SECONDS } from '~~/shared/utils/const';
+import { z } from 'zod';
+
+const verifySchema = z.object({
+  token: z.string(),
+});
 
 interface Request {
-  query: {
-    token: string;
-  };
+  query: z.infer<typeof verifySchema>;
 }
 
 export default defineEventHandler<Request>(async (event) => {
-  const { token } = getQuery(event);
+  const { token } = await getValidatedQuery(event, verifySchema.parse);
 
   if (!isString(token)) {
     return sendRedirect(event, '/', StatusCodes.BAD_REQUEST);

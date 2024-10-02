@@ -1,13 +1,22 @@
 <script setup lang="ts">
-  definePageMeta({
-    middleware() {
+  import { StatusCodes } from 'http-status-codes';
+  import type { UserProfile } from '~~/shared/types/user';
+
+  const { data, status } = useApi<UserProfile>('/user/profile', {
+    onResponseError(context) {
+      if (context.response.status === StatusCodes.UNAUTHORIZED) {
+        return navigateTo({ name: 'index' });
+      }
+
       return navigateTo({ name: 'index' });
     },
   });
 </script>
 
 <template>
-  <pre>
-    asd
-  </pre>
+  <pre v-if="status === 'success'">{{ data }}</pre>
+
+  <span v-else-if="status === 'error'">error</span>
+
+  <span v-else>loading</span>
 </template>

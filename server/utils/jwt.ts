@@ -1,6 +1,8 @@
-import type { SignOptions, VerifyOptions } from 'jsonwebtoken';
+import type { JwtPayload, SignOptions, VerifyOptions } from 'jsonwebtoken';
 import jwt from 'jsonwebtoken';
 import { merge } from 'lodash-es';
+
+export type TokenExpiredError = jwt.TokenExpiredError;
 
 export interface GenerateJwtConfig {
   payload: object | Buffer;
@@ -19,7 +21,7 @@ export interface GenerateAuthJwtPayload {
    * string from `getRequestOrigin(event)`
    */
   origin: string;
-  username: UserDto['username'];
+  username: string;
   remember?: boolean;
 }
 
@@ -41,10 +43,14 @@ export const generateJwt = ({
   return jwt.sign(payload, currentSecret, mergedOptions);
 };
 
-export const verifyJwt = ({ token, secret, options }: VerifyJwtConfig) => {
+export const verifyJwt = <T = string | JwtPayload>({
+  token,
+  secret,
+  options,
+}: VerifyJwtConfig) => {
   const currentSecret = secret || apiSecret;
 
-  return jwt.verify(token, currentSecret, options);
+  return jwt.verify(token, currentSecret, options) as T;
 };
 
 export const generateAuthJwt = (payload: GenerateAuthJwtPayload) =>
@@ -52,4 +58,5 @@ export const generateAuthJwt = (payload: GenerateAuthJwtPayload) =>
     expiresIn: payload.remember ? '30d' : '24h',
   });
 
-export const verifyAuthJwt = (token: string) => jwt.verify(token, apiSecret);
+export const verifyAuthJwt = (token: string) =>
+  jwt.verify(token, apiSecret) as GenerateAuthJwtPayload;

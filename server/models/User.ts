@@ -1,17 +1,25 @@
-import { isString, uniq } from 'lodash-es';
+import { isString } from 'lodash-es';
+import type { Document, Model } from 'mongoose';
 import { model, Schema } from 'mongoose';
+import { ROLE } from '~~/shared/types/user';
 
-export type ROLE = 'USER' | 'ADMIN' | 'MODERATOR' | 'SUBSCRIBER' | 'WRITER';
-
-export interface UserDto {
-  _id: string;
+export interface UserDocument extends Document {
   username: string;
   email: string;
   password: string;
   verified?: boolean;
   createdAt: number;
   updatedAt: number;
-  roles: Array<ROLE>;
+  role?: ROLE;
+}
+
+interface UserStaticMethods extends Model<UserDocument> {
+  findByUsername(username: string): Promise<UserDocument>;
+  findByEmail(email: string): Promise<UserDocument>;
+  findVerified(): Promise<Array<UserDocument>>;
+  findNotVerified(): Promise<Array<UserDocument>>;
+  isUsernameExist(username: string): Promise<boolean>;
+  isEmailExist(email: string): Promise<boolean>;
 }
 
 const userSchema = new Schema(
@@ -44,20 +52,18 @@ const userSchema = new Schema(
     verified: {
       type: Boolean,
       default: false,
+      select: false,
     },
-    roles: {
-      type: [
-        {
-          type: String,
-          enum: ['USER', 'ADMIN', 'MODERATOR', 'SUBSCRIBER', 'WRITER'],
-        },
-      ],
-      default: ['USER'],
-      set: (value: Array<ROLE>) => uniq(value),
+    role: {
+      type: {
+        type: String,
+        enum: ROLE,
+      },
     },
   },
   {
     timestamps: true,
+    versionKey: false,
     statics: {
       findByUsername(username: string) {
         return this.findOne({ username }).exec();
@@ -83,11 +89,11 @@ const userSchema = new Schema(
       },
     },
     query: {
-      byUsername(username) {
+      byUsername(username: string) {
         return this.where({ username: new RegExp(username, 'i') });
       },
     },
   },
 );
 
-export const User = model('user', userSchema);
+export const User = model<UserDocument, UserStaticMethods>('user', userSchema);

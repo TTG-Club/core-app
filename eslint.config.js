@@ -145,6 +145,12 @@ export default createConfigForNuxt(
       ],
       'vue/attribute-hyphenation': ['error', 'always'],
       'vue/prefer-separate-static-class': 'off',
+      'vue/block-order': [
+        'error',
+        {
+          order: ['script', 'template', 'style'],
+        },
+      ],
       'vue/component-api-style': ['error', ['script-setup']],
       'vue/block-lang': [
         'error',

@@ -1,24 +1,23 @@
 import bcrypt from 'bcrypt';
 import { getReasonPhrase, StatusCodes } from 'http-status-codes';
 import { ONE_DAY_IN_SECONDS, USER_TOKEN_COOKIE } from '~~/shared/utils/const';
+import { z } from 'zod';
+
+const loginSchema = z.object({
+  usernameOrEmail: z.string().min(3),
+  password: z.string().min(8),
+  remember: z.boolean().optional(),
+});
 
 interface Request {
-  body: {
-    usernameOrEmail: string;
-    password: string;
-    remember?: boolean;
-  };
+  body: z.infer<typeof loginSchema>;
 }
 
 export default defineEventHandler<Request>(async (event) => {
-  const { usernameOrEmail, password, remember } = await readValidatedBody<
-    Request['body']
-  >(event, (body) => {
-    // eslint-disable-next-line no-console
-    console.log(body);
-
-    return true;
-  });
+  const { usernameOrEmail, password, remember } = await readValidatedBody(
+    event,
+    loginSchema.parse,
+  );
 
   let user;
 
@@ -31,6 +30,7 @@ export default defineEventHandler<Request>(async (event) => {
         email: true,
         roles: true,
         password: true,
+        verified: true,
       })
       .lean()
       .exec();
@@ -47,6 +47,14 @@ export default defineEventHandler<Request>(async (event) => {
       statusCode: StatusCodes.BAD_REQUEST,
       statusMessage: getReasonPhrase(StatusCodes.BAD_REQUEST),
       message: 'Неправильный логин или пароль',
+    });
+  }
+
+  if (!user.verified) {
+    throw createError({
+      statusCode: StatusCodes.NOT_ACCEPTABLE,
+      statusMessage: getReasonPhrase(StatusCodes.NOT_ACCEPTABLE),
+      message: 'Ваша учетная запись не активирована',
     });
   }
 

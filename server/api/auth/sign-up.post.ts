@@ -1,17 +1,32 @@
 import { getReasonPhrase, StatusCodes } from 'http-status-codes';
-import { isString } from 'lodash-es';
 import bcrypt from 'bcrypt';
+import { z } from 'zod';
+
+const signUpSchema = z.object({
+  username: z
+    .string()
+    .min(3)
+    .refine((string) => string.startsWith(' ') || string.endsWith(' ')),
+  email: z
+    .string()
+    .email()
+    .refine((string) => string.startsWith(' ') || string.endsWith(' ')),
+  password: z
+    .string()
+    .min(8)
+    .regex(/[^\w'\-!"#$%&()*,./:;?@[\]^`{|}~+<=>]+/)
+    .refine((string) => string.startsWith(' ') || string.endsWith(' ')),
+});
 
 interface Request {
-  body: {
-    username: string;
-    email: string;
-    password: string;
-  };
+  body: z.infer<typeof signUpSchema>;
 }
 
 export default defineEventHandler<Request>(async (event) => {
-  const { username, email, password } = await readBody(event);
+  const { username, email, password } = await readValidatedBody(
+    event,
+    signUpSchema.parse,
+  );
 
   if (await User.isUsernameExist(username)) {
     throw createError({
@@ -26,20 +41,6 @@ export default defineEventHandler<Request>(async (event) => {
       statusCode: StatusCodes.CONFLICT,
       statusMessage: getReasonPhrase(StatusCodes.CONFLICT),
       message: 'Электронный адрес занят',
-    });
-  }
-
-  if (
-    !password ||
-    !(
-      isString(password) &&
-      !/[^\w'\-!"#$%&()*,./:;?@[\]^`{|}~+<=>]+/.test(password)
-    )
-  ) {
-    throw createError({
-      statusCode: StatusCodes.BAD_REQUEST,
-      statusMessage: getReasonPhrase(StatusCodes.BAD_REQUEST),
-      message: 'Поля заполнены некорректно',
     });
   }
 

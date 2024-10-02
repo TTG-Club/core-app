@@ -8,6 +8,7 @@ const appName = 'TTG Club';
 export default defineNuxtConfig({
   future: {
     compatibilityVersion: 4,
+    typescriptBundlerResolution: true,
   },
   compatibilityDate: '2024-04-03',
   devtools: { enabled: true },
@@ -169,6 +170,7 @@ export default defineNuxtConfig({
     css: {
       preprocessorOptions: {
         scss: {
+          api: 'modern-compiler',
           additionalData: `@use "~/assets/styles/variables" as *;`,
         },
       },
@@ -211,10 +213,10 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@ant-design-vue/nuxt',
     '@pinia/nuxt',
-    'dayjs-nuxt',
     'nuxt-mongoose',
     'nuxt-nodemailer',
     'nuxt-typed-router',
     'nuxt-security',
+    'dayjs-nuxt',
   ],
 });
