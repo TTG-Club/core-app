@@ -27,14 +27,15 @@ export default defineNuxtConfig({
   },
 
   security: {
-    headers: {
-      crossOriginEmbedderPolicy:
-        import.meta.env.NODE_ENV === 'development'
-          ? 'unsafe-none'
-          : 'require-corp',
-      contentSecurityPolicy: false,
-      xXSSProtection: '1; mode=block',
-    },
+    enabled: false,
+    // headers: {
+    //   crossOriginEmbedderPolicy:
+    //     import.meta.env.NODE_ENV === 'development'
+    //       ? 'unsafe-none'
+    //       : 'require-corp',
+    //   contentSecurityPolicy: false,
+    //   xXSSProtection: '1; mode=block',
+    // },
   },
 
   appId: 'ttg-club',
@@ -152,7 +153,7 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    preset: 'node-server',
+    preset: 'node-cluster',
     routeRules: {
       '/proxy/**': {
         proxy: `${import.meta.env.API_URL}/**`,
