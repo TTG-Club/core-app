@@ -102,6 +102,6 @@ jobs:
               -e API_TOKEN=${{secrets.API_TOKEN}} \
               -e MAIL_HOST=smtp.mail.ru \
               -e MAIL_USER=support@ttg.club \
-              -e MAIL_PASS=${{secrets.EMAIL_PASSWORD}}
+              -e MAIL_PASS=${{secrets.EMAIL_PASSWORD}} \
               ${{needs.env.outputs.CONTAINER_NAME}}
             docker rmi $(docker images --filter "dangling=true" -q --no-trunc) &
