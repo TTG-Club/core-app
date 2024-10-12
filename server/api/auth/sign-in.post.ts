@@ -50,6 +50,24 @@ export default defineEventHandler<Request>(async (event) => {
     });
   }
 
+  const { sendMail } = useNodeMailer();
+
+  try {
+    await sendMail({
+      to: user.email,
+      subject: 'Test',
+      html: `<p>test</p>`,
+    });
+  } catch (err) {
+    console.error(err);
+
+    throw createError({
+      statusCode: StatusCodes.NOT_ACCEPTABLE,
+      statusMessage: getReasonPhrase(StatusCodes.NOT_ACCEPTABLE),
+      message: 'Почта не работает!',
+    });
+  }
+
   if (!user.verified) {
     throw createError({
       statusCode: StatusCodes.NOT_ACCEPTABLE,
