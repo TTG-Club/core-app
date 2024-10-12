@@ -67,7 +67,9 @@ jobs:
 
       # Фикс таймаутов ноды
       - name: Fix timeout
-        run: sed -i -e "/server\.listen/i server.keepAliveTimeout = 62 * 1000;\nserver.headersTimeout = 63 * 1000;" .output/server/chunks/runtime.mjs
+        run: |
+          sed -i -e "/server\.listen/i server.keepAliveTimeout = 62 * 1000;\nserver.headersTimeout = 63 * 1000;" .output/server/chunks/runtime.mjs
+          cat .output/server/chunks/runtime.mjs
 
       - uses: docker/login-action@v3
         with:
