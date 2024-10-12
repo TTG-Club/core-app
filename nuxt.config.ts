@@ -152,6 +152,7 @@ export default defineNuxtConfig({
   },
 
   nitro: {
+    preset: 'node-cluster',
     routeRules: {
       '/proxy/**': {
         proxy: `${import.meta.env.API_URL}/**`,

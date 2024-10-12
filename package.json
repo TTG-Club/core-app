@@ -44,7 +44,7 @@
     "nuxt-nodemailer": "^1.1.2",
     "nuxt-security": "^2.0.0-rc.9",
     "pinia": "^2.2.4",
-    "vue": "^3.5.10",
+    "vue": "^3.5.12",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -60,7 +60,7 @@
     "eslint-config-flat-gitignore": "^0.3.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
-    "eslint-plugin-vue": "^9.28.0",
+    "eslint-plugin-vue": "^9.29.0",
     "husky": "^9.1.6",
     "is-ci": "^3.0.1",
     "lint-staged": "^15.2.10",
@@ -68,10 +68,14 @@
     "postcss-html": "^1.7.0",
     "postcss-scss": "^4.0.9",
     "prettier": "^3.3.3",
-    "sass-embedded": "^1.79.4",
+    "sass-embedded": "^1.79.5",
     "stylelint-config-clean-order": "^6.1.0",
-    "typescript": "^5.6.2",
+    "typescript": "^5.6.3",
     "vite-plugin-svg-icons": "^2.0.1",
     "vue-tsc": "^2.1.6"
+  },
+  "engines": {
+    "node": ">=20.16",
+    "npm": ">=10.8"
   }
 }
