@@ -31,13 +31,30 @@ jobs:
     steps:
       - run: echo "env is updated"
 
-  ssh:
-    name: Update Server
+  build:
+    name: Build to Docker Hub
     needs: env
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - uses: docker/login-action@v3
+        with:
+          username: ${{secrets.DOCKER_HUB_USERNAME}}
+          password: ${{secrets.DOCKER_HUB_TOKEN}}
+
+      - uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{needs.env.outputs.IMAGE_NAME}}
+
+  ssh:
+    name: Update Server
+    needs: [ env, build ]
+    runs-on: ubuntu-latest
+    steps:
       - uses: appleboy/ssh-action@master
         with:
           host: ${{secrets.TMWEB_SSH_HOST}}
@@ -52,14 +69,14 @@ jobs:
               --name ${{needs.env.outputs.CONTAINER_NAME}} \
               --network-alias ${{secrets.DOCKER_APP_HOST}} \
               --restart on-failure \
-              -it $(docker build -q .)
-              -e SERVER_URL=https://app.${{needs.env.outputs.BASE_NEXT_DOMAIN}}
-              -e API_SECRET=${{secrets.API_SECRET}}
-              -e MAIL_VERIFY_SECRET=${{secrets.MAIL_VERIFY_SECRET}}
-              -e MONGODB_URI=mongodb://${{secrets.DOCKER_MONGO_USER}}:${{secrets.DOCKER_MONGO_PASSWORD}}@${{secrets.DOCKER_MONGO_HOST}}:27017/${{secrets.DOCKER_MONGO_DB}}?authSource=${{secrets.DOCKER_MONGO_DB}}
-              -e API_URL=//${{secrets.DOCKER_API_HOST}}
-              -e API_TOKEN=${{secrets.API_TOKEN}}
-              -e MAIL_HOST=smtp.mail.ru
-              -e MAIL_USER=support@ttg.club
-              -e MAIL_PASS=${{secrets.EMAIL_PASSWORD}}
+              -e SERVER_URL=https://app.${{needs.env.outputs.BASE_NEXT_DOMAIN}} \
+              -e API_SECRET=${{secrets.API_SECRET}} \
+              -e MAIL_VERIFY_SECRET=${{secrets.MAIL_VERIFY_SECRET}} \
+              -e MONGODB_URI=mongodb://${{secrets.DOCKER_MONGO_USER}}:${{secrets.DOCKER_MONGO_PASSWORD}}@${{secrets.DOCKER_MONGO_HOST}}:27017/${{secrets.DOCKER_MONGO_DB}}?authSource=${{secrets.DOCKER_MONGO_DB}} \
+              -e API_URL=//${{secrets.DOCKER_API_HOST}} \
+              -e API_TOKEN=${{secrets.API_TOKEN}} \
+              -e MAIL_HOST=smtp.mail.ru \
+              -e MAIL_USER=support@ttg.club \
+              -e MAIL_PASS=${{secrets.EMAIL_PASSWORD}} \
+              ${{needs.env.outputs.IMAGE_NAME}}
             docker rmi $(docker images --filter "dangling=true" -q --no-trunc) &
