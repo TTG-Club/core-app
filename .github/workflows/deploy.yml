@@ -31,57 +31,13 @@ jobs:
     steps:
       - run: echo "env is updated"
 
-  build:
-    name: Build to Docker Hub
+  ssh:
+    name: Update Server
     needs: env
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: 'package.json'
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
-
-      - name: Prepare .env
-        run: |
-          touch .env
-          echo "SERVER_URL=https://app.${{needs.env.outputs.BASE_NEXT_DOMAIN}}" >> .env
-          echo "API_SECRET=${{secrets.API_SECRET}}" >> .env
-          echo "MAIL_VERIFY_SECRET=${{secrets.MAIL_VERIFY_SECRET}}" >> .env
-          echo "MONGODB_URI=mongodb://${{secrets.DOCKER_MONGO_USER}}:${{secrets.DOCKER_MONGO_PASSWORD}}@${{secrets.DOCKER_MONGO_HOST}}:27017/${{secrets.DOCKER_MONGO_DB}}?authSource=${{secrets.DOCKER_MONGO_DB}}" >> .env
-          echo "API_URL=//${{secrets.DOCKER_API_HOST}}" >> .env
-          echo "API_TOKEN=${{secrets.API_TOKEN}}" >> .env
-          echo "MAIL_HOST=smtp.mail.ru" >> .env
-          echo "MAIL_USER=support@ttg.club" >> .env
-          echo "MAIL_PASS=${{secrets.EMAIL_PASSWORD}}" >> .env
-          echo "NITRO_NODE_KEEPALIVE_TIMEOUT=62000" >> .env
-          echo "NITRO_NODE_HEADERS_TIMEOUT=63000" >> .env
-
-      - name: Install dependencies
-        run: npm ci --cache .npm
-
-      - name: Build
-        run: npm run build
-
-      - uses: docker/login-action@v3
-        with:
-          username: ${{secrets.DOCKER_HUB_USERNAME}}
-          password: ${{secrets.DOCKER_HUB_TOKEN}}
-
-      - uses: docker/build-push-action@v3
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{needs.env.outputs.IMAGE_NAME}}
-
-  ssh:
-    name: Update Server
-    needs: [ env, build ]
-    runs-on: ubuntu-latest
-    steps:
       - uses: appleboy/ssh-action@master
         with:
           host: ${{secrets.TMWEB_SSH_HOST}}
@@ -90,12 +46,20 @@ jobs:
           port: ${{secrets.TMWEB_SSH_PORT}}
           script: |
             docker stop ${{needs.env.outputs.CONTAINER_NAME}} && docker rm ${{needs.env.outputs.CONTAINER_NAME}}
-            docker pull ${{needs.env.outputs.IMAGE_NAME}}
             docker run \
               --network ${{needs.env.outputs.NETWORK_NAME}} \
               --ip ${{secrets.DOCKER_APP_CONTAINER_IP}} \
               --name ${{needs.env.outputs.CONTAINER_NAME}} \
               --network-alias ${{secrets.DOCKER_APP_HOST}} \
               --restart on-failure \
-              -d ${{needs.env.outputs.IMAGE_NAME}}
+              -it $(docker build -q .)
+              -e SERVER_URL=https://app.${{needs.env.outputs.BASE_NEXT_DOMAIN}}
+              -e API_SECRET=${{secrets.API_SECRET}}
+              -e MAIL_VERIFY_SECRET=${{secrets.MAIL_VERIFY_SECRET}}
+              -e MONGODB_URI=mongodb://${{secrets.DOCKER_MONGO_USER}}:${{secrets.DOCKER_MONGO_PASSWORD}}@${{secrets.DOCKER_MONGO_HOST}}:27017/${{secrets.DOCKER_MONGO_DB}}?authSource=${{secrets.DOCKER_MONGO_DB}}
+              -e API_URL=//${{secrets.DOCKER_API_HOST}}
+              -e API_TOKEN=${{secrets.API_TOKEN}}
+              -e MAIL_HOST=smtp.mail.ru
+              -e MAIL_USER=support@ttg.club
+              -e MAIL_PASS=${{secrets.EMAIL_PASSWORD}}
             docker rmi $(docker images --filter "dangling=true" -q --no-trunc) &
