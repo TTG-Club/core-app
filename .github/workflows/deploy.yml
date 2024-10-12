@@ -70,6 +70,7 @@ jobs:
           username: ${{secrets.TMWEB_SSH_USER}}
           key: ${{secrets.TMWEB_SSH_KEY}}
           port: ${{secrets.TMWEB_SSH_PORT}}
+          rm: true
           source: ".output, Dockerfile"
           target: ${{secrets.TMWEB_SSH_PATH}}/${{env.ENVIRONMENT_NAME}}/app
 
