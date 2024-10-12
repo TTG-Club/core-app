@@ -13,10 +13,6 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-04-03',
   devtools: { enabled: true },
 
-  experimental: {
-    writeEarlyHints: false,
-  },
-
   runtimeConfig: {
     apiSecret: import.meta.env.API_SECRET,
     mailVerifySecret: import.meta.env.MAIL_VERIFY_SECRET,
