@@ -66,10 +66,15 @@ export default defineEventHandler<Request>(async (event) => {
     await user.save();
   } catch (err) {
     throw createError({
-      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+      statusCode: StatusCodes.METHOD_NOT_ALLOWED,
       statusMessage: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR),
-      message: 'Неизвестная ошибка при сохранении',
+      message: String(err) || 'Неизвестная ошибка при сохранении',
     });
+    // throw createError({
+    //   statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+    //   statusMessage: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR),
+    //   message: 'Неизвестная ошибка при сохранении',
+    // });
   }
 
   const { sendMail } = useNodeMailer();
