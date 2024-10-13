@@ -77,44 +77,44 @@ export default defineEventHandler<Request>(async (event) => {
     // });
   }
 
-  const { sendMail } = useNodeMailer();
-  const { mailVerifySecret } = useRuntimeConfig();
-  const origin = getRequestOrigin(event);
-
-  const token = generateJwt({
-    payload: {
-      email: email,
-      origin,
-    },
-    secret: mailVerifySecret,
-    options: {
-      expiresIn: '24h',
-    },
-  });
-
-  const verifyUrl = `${origin}/auth/verify?token=${token}`;
-
-  try {
-    await sendMail({
-      to: email,
-      subject: 'Подтверждение пароля',
-      html: `<p>Перейдите по ссылке для подтверждения аккаунта: <a href="${verifyUrl}">${verifyUrl}</a></p><p>Ссылка действительна в течение суток.</p>`,
-    });
-  } catch (err) {
-    console.error(err);
-
-    await user.deleteOne().exec();
-
-    throw createError({
-      statusCode: StatusCodes.METHOD_NOT_ALLOWED,
-      statusMessage: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR),
-      message: String(err) || 'Неизвестная ошибка при сохранении',
-    });
-
-    // throw createError({
-    //   statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-    //   statusMessage: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR),
-    //   message: 'Неизвестная ошибка при сохранении',
-    // });
-  }
+  // const { sendMail } = useNodeMailer();
+  // const { mailVerifySecret } = useRuntimeConfig();
+  // const origin = getRequestOrigin(event);
+  //
+  // const token = generateJwt({
+  //   payload: {
+  //     email: email,
+  //     origin,
+  //   },
+  //   secret: mailVerifySecret,
+  //   options: {
+  //     expiresIn: '24h',
+  //   },
+  // });
+  //
+  // const verifyUrl = `${origin}/auth/verify?token=${token}`;
+  //
+  // try {
+  //   await sendMail({
+  //     to: email,
+  //     subject: 'Подтверждение пароля',
+  //     html: `<p>Перейдите по ссылке для подтверждения аккаунта: <a href="${verifyUrl}">${verifyUrl}</a></p><p>Ссылка действительна в течение суток.</p>`,
+  //   });
+  // } catch (err) {
+  //   console.error(err);
+  //
+  //   // await user.deleteOne().exec();
+  //
+  //   throw createError({
+  //     statusCode: StatusCodes.METHOD_NOT_ALLOWED,
+  //     statusMessage: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR),
+  //     message: String(err) || 'Неизвестная ошибка при сохранении',
+  //   });
+  //
+  //   // throw createError({
+  //   //   statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+  //   //   statusMessage: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR),
+  //   //   message: 'Неизвестная ошибка при сохранении',
+  //   // });
+  // }
 });
