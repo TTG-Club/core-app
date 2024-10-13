@@ -133,6 +133,9 @@ export default defineNuxtConfig({
       user: import.meta.env.MAIL_USER,
       pass: import.meta.env.MAIL_PASS,
     },
+    tls: {
+      rejectUnauthorized: false,
+    },
     from: `"TTG Support" <${import.meta.env.MAIL_USER}>`,
   },
 
