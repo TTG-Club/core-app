@@ -4,4 +4,4 @@ WORKDIR /app
 
 COPY . .
 
-ENTRYPOINT ["node", ".output/server/index.mjs"]
+ENTRYPOINT ["npm", "start"]

@@ -71,7 +71,7 @@ jobs:
           key: ${{secrets.TMWEB_SSH_KEY}}
           port: ${{secrets.TMWEB_SSH_PORT}}
           rm: true
-          source: ".output, Dockerfile"
+          source: ".output, package.json, .env, Dockerfile"
           target: ${{secrets.TMWEB_SSH_PATH}}/${{env.ENVIRONMENT_NAME}}/app
 
   ssh:
@@ -94,15 +94,5 @@ jobs:
               --name ${{needs.env.outputs.CONTAINER_NAME}} \
               --network-alias ${{secrets.DOCKER_APP_HOST}} \
               --restart on-failure \
-              -d \
-              -e SERVER_URL=https://app.${{needs.env.outputs.BASE_NEXT_DOMAIN}} \
-              -e API_SECRET=${{secrets.API_SECRET}} \
-              -e MAIL_VERIFY_SECRET=${{secrets.MAIL_VERIFY_SECRET}} \
-              -e MONGODB_URI=mongodb://${{secrets.DOCKER_MONGO_USER}}:${{secrets.DOCKER_MONGO_PASSWORD}}@${{secrets.DOCKER_MONGO_HOST}}:27017/${{secrets.DOCKER_MONGO_DB}}?authSource=${{secrets.DOCKER_MONGO_DB}} \
-              -e API_URL=//${{secrets.DOCKER_API_HOST}} \
-              -e API_TOKEN=${{secrets.API_TOKEN}} \
-              -e MAIL_HOST=smtp.mail.ru \
-              -e MAIL_USER=support@ttg.club \
-              -e MAIL_PASS=${{secrets.EMAIL_PASSWORD}} \
-              ${{needs.env.outputs.CONTAINER_NAME}}
+              -d ${{needs.env.outputs.CONTAINER_NAME}}
             docker rmi $(docker images --filter "dangling=true" -q --no-trunc) &
