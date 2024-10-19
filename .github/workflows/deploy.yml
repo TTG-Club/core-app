@@ -87,8 +87,9 @@ jobs:
           port: ${{secrets.TMWEB_SSH_PORT}}
           script: |
             docker stop ${{needs.env.outputs.CONTAINER_NAME}} && docker rm ${{needs.env.outputs.CONTAINER_NAME}}
-            cd ${{secrets.TMWEB_SSH_PATH}}/${{env.ENVIRONMENT_NAME}}/app
-            docker build -t ${{needs.env.outputs.CONTAINER_NAME}} . && docker run \
+            cd ${{secrets.TMWEB_SSH_PATH}}/${{env.ENVIRONMENT_NAME}}/app \
+            && docker build -t ${{needs.env.outputs.CONTAINER_NAME}} . \
+            && docker run \
               --network ${{needs.env.outputs.NETWORK_NAME}} \
               --ip ${{secrets.DOCKER_APP_CONTAINER_IP}} \
               --name ${{needs.env.outputs.CONTAINER_NAME}} \
