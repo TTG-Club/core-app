@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "nuxt dev --host",
     "build": "nuxt build",
-    "start": "node .output/server/index.mjs",
+    "start": "node .output/server/index.mjs > my_app_log.log 2> my_app_err.log",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
