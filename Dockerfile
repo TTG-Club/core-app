@@ -4,4 +4,4 @@ WORKDIR /app
 
 COPY . .
 
-ENTRYPOINT ["npm", "start"]
+ENTRYPOINT ["npm", "start", " --verbose"]
