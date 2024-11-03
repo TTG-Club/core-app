@@ -1,0 +1,101 @@
+name: Deploy
+run-name: Deploy ${{github.ref_name == 'main' && 'Production' || 'Development'}} by @${{ github.actor }}
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+  workflow_dispatch:
+
+env:
+  ENVIRONMENT_NAME: ${{github.ref_name == 'main' && 'prod' || 'dev'}}
+  BASE_DOMAIN: ttg.club
+
+concurrency:
+  group: deploy-${{github.ref_name}}
+  cancel-in-progress: false
+
+jobs:
+  env:
+    name: Update env
+    runs-on: ubuntu-latest
+    env:
+      CONTAINER_NAME: ttg-next-app-${{github.ref_name == 'main' && 'prod' || 'dev'}}
+    outputs:
+      CONTAINER_NAME: ${{env.CONTAINER_NAME}}
+      NETWORK_NAME: ttg-next-network-${{env.ENVIRONMENT_NAME}}
+      BASE_NEXT_DOMAIN: next.${{env.BASE_DOMAIN}}
+      IMAGE_NAME: magistrus/${{env.CONTAINER_NAME}}
+    steps:
+      - run: echo "env is updated"
+
+  build:
+    name: Build to Docker Hub
+    needs: env
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci --cache .npm
+
+      - name: Build app
+        run: npm run build
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{secrets.DOCKER_HUB_USERNAME}}
+          password: ${{secrets.DOCKER_HUB_TOKEN}}
+
+      - uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{needs.env.outputs.IMAGE_NAME}}
+
+  ssh:
+    name: Update Server
+    needs: [ env, build ]
+    runs-on: ubuntu-latest
+    env:
+      INDEXABLE: ${{github.ref_name == 'main' && 'true' || 'false'}}
+      SERVER_URL: https://app.${{needs.env.outputs.BASE_NEXT_DOMAIN}}
+      EMAIL_USERNAME: support@ttg.club
+      MONGOOSE_URI: mongodb://${{secrets.DOCKER_MONGO_USER}}:${{secrets.DOCKER_MONGO_PASSWORD}}@${{secrets.DOCKER_MONGO_HOST}}:27017/${{secrets.DOCKER_MONGO_DB}}?authSource=${{secrets.DOCKER_MONGO_DB}}
+    steps:
+      - uses: appleboy/ssh-action@master
+        with:
+          host: ${{secrets.TMWEB_SSH_HOST}}
+          username: ${{secrets.TMWEB_SSH_USER}}
+          key: ${{secrets.TMWEB_SSH_KEY}}
+          port: ${{secrets.TMWEB_SSH_PORT}}
+          script: |
+            docker stop ${{needs.env.outputs.CONTAINER_NAME}} && docker rm ${{needs.env.outputs.CONTAINER_NAME}}
+            docker pull ${{needs.env.outputs.IMAGE_NAME}}
+            docker run \
+              --network ${{needs.env.outputs.NETWORK_NAME}} \
+              --ip ${{secrets.DOCKER_APP_CONTAINER_IP}} \
+              --name ${{needs.env.outputs.CONTAINER_NAME}} \
+              --network-alias ${{secrets.DOCKER_APP_HOST}} \
+              --restart on-failure \
+              -e NUXT_SERVER_URL=${{env.SERVER_URL}} \
+              -e NUXT_API_URL=//${{secrets.DOCKER_API_HOST}} \
+              -e NUXT_API_TOKEN=${{secrets.API_TOKEN}} \
+              -e NUXT_API_SECRET=${{secrets.API_SECRET}} \
+              -e NUXT_MONGOOSE_URI=${{env.MONGOOSE_URI}} \
+              -e NUXT_MAIL_VERIFY_SECRET=${{secrets.MAIL_VERIFY_SECRET}} \
+              -e NUXT_NODEMAILER_AUTH_USER=${{env.EMAIL_USERNAME}} \
+              -e NUXT_NODEMAILER_AUTH_PASS=${{secrets.EMAIL_PASSWORD}} \
+              -e NUXT_NODEMAILER_FROM='"TTG Support" <${{env.EMAIL_USERNAME}}>' \
+              -e NUXT_INDEXABLE=${{env.INDEXABLE}} \
+              -d ${{needs.env.outputs.IMAGE_NAME}}
+            docker rmi $(docker images --filter "dangling=true" -q --no-trunc) &

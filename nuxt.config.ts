@@ -10,28 +10,30 @@ export default defineNuxtConfig({
     compatibilityVersion: 4,
     typescriptBundlerResolution: true,
   },
+
   compatibilityDate: '2024-04-03',
   devtools: { enabled: true },
 
   runtimeConfig: {
-    apiSecret: import.meta.env.API_SECRET,
-    mailVerifySecret: import.meta.env.MAIL_VERIFY_SECRET,
-    mongodbUri: import.meta.env.MONGODB_URI,
-    session: {
-      name: 'ttg-user-token',
-      password: import.meta.env.API_SECRET,
-      cookie: {
-        sameSite: 'strict',
+    apiSecret: process.env.NUXT_API_SECRET,
+    mailVerifySecret: process.env.NUXT_MAIL_VERIFY_SECRET,
+    mongoose: {
+      uri: process.env.NUXT_MONGOOSE_URI,
+    },
+    nodemailer: {
+      auth: {
+        type: 'login',
+        user: process.env.NUXT_NODEMAILER_AUTH_USER,
+        pass: process.env.NUXT_NODEMAILER_AUTH_PASS,
       },
+      from: process.env.NUXT_NODEMAILER_FROM,
     },
   },
 
   security: {
     headers: {
       crossOriginEmbedderPolicy:
-        import.meta.env.NODE_ENV === 'development'
-          ? 'unsafe-none'
-          : 'require-corp',
+        process.env.NODE_ENV === 'development' ? 'unsafe-none' : 'require-corp',
       contentSecurityPolicy: false,
       xXSSProtection: '1; mode=block',
     },
@@ -95,11 +97,11 @@ export default defineNuxtConfig({
   },
 
   site: {
-    url: import.meta.env.SERVER_URL,
+    url: process.env.NUXT_SERVER_URL,
     name: `${appName} Oнлайн-справочник`,
     description: `${appName} - сайт, посвященный DnD 5-й редакции. Тут можно найти: расы, происхождения, классы, заклинания, бестиарий, снаряжение, магические предметы и инструменты для облегчения игры как игрокам, так и мастерам - все в одном месте.`,
     defaultLocale: 'ru',
-    indexable: false, // TODO: Вернуть на релизе для прода
+    indexable: process.env.NUXT_INDEXABLE === 'true',
   },
 
   googleFonts: {
@@ -124,15 +126,22 @@ export default defineNuxtConfig({
   },
 
   nodemailer: {
-    host: import.meta.env.MAIL_HOST,
+    host: 'smtp.mail.ru',
     port: 465,
     secure: true,
+    from: process.env.NUXT_NODEMAILER_FROM,
+    tls: {
+      rejectUnauthorized: false,
+    },
     auth: {
       type: 'login',
-      user: import.meta.env.MAIL_USER,
-      pass: import.meta.env.MAIL_PASS,
+      user: process.env.NUXT_NODEMAILER_AUTH_USER || '',
+      pass: process.env.NUXT_NODEMAILER_AUTH_PASS || '',
     },
-    from: `"TTG Support" <${import.meta.env.MAIL_USER}>`,
+  },
+
+  mongoose: {
+    uri: process.env.NUXT_MONGOOSE_URI,
   },
 
   typescript: {
@@ -152,12 +161,13 @@ export default defineNuxtConfig({
   },
 
   nitro: {
+    preset: 'node-cluster',
     routeRules: {
       '/proxy/**': {
-        proxy: `${import.meta.env.API_URL}/**`,
+        proxy: `${process.env.NUXT_API_URL}/**`,
         cors: true,
         headers: {
-          token: import.meta.env.API_TOKEN,
+          token: process.env.NUXT_API_TOKEN,
         },
       },
     },

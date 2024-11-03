@@ -1,21 +1,21 @@
 import { getReasonPhrase, StatusCodes } from 'http-status-codes';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 
 const signUpSchema = z.object({
   username: z
     .string()
     .min(3)
-    .refine((string) => string.startsWith(' ') || string.endsWith(' ')),
+    .refine((string) => !string.startsWith(' ') && !string.endsWith(' ')),
   email: z
     .string()
     .email()
-    .refine((string) => string.startsWith(' ') || string.endsWith(' ')),
+    .refine((string) => !string.startsWith(' ') && !string.endsWith(' ')),
   password: z
     .string()
     .min(8)
-    .regex(/[^\w'\-!"#$%&()*,./:;?@[\]^`{|}~+<=>]+/)
-    .refine((string) => string.startsWith(' ') || string.endsWith(' ')),
+    .refine((string) => !/[^\w'\-!"#$%&()*,./:;?@[\]^`{|}~+<=>]+/.test(string))
+    .refine((string) => !string.startsWith(' ') && !string.endsWith(' ')),
 });
 
 interface Request {

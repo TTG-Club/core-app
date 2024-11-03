@@ -24,7 +24,7 @@ logs
 *.sw?
 
 # Local env files
-.env*
+.env
 
 # Generated files and dirs
 dist

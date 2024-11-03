@@ -1,0 +1,34 @@
+name: PR Check
+
+on:
+  pull_request:
+    types:
+      - opened
+      - ready_for_review
+      - reopened
+      - synchronize
+
+    branches:
+      - main
+      - dev
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+concurrency:
+  group: pr-check-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze PR
+    if: ${{ !github.event.pull_request.draft }}
+    uses: ./.github/workflows/codeql.yml
+
+  build:
+   name: Code Check PR
+   needs: analyze
+   if: ${{ !github.event.pull_request.draft }}
+   uses: ./.github/workflows/code-check.yml
