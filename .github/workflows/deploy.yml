@@ -70,7 +70,7 @@ jobs:
       INDEXABLE: ${{github.ref_name == 'main' && 'true' || 'false'}}
       SERVER_URL: https://app.${{needs.env.outputs.BASE_NEXT_DOMAIN}}
       EMAIL_USERNAME: support@ttg.club
-      MONGOOSE_URI: mongodb://${{secrets.DOCKER_MONGO_USER}}:${{secrets.DOCKER_MONGO_PASSWORD}}@${{secrets.DOCKER_MONGO_HOST}}:27017/${{secrets.DOCKER_MONGO_DB}}?authSource=${{secrets.DOCKER_MONGO_DB}}
+      MONGOOSE_URI: mongodb://${{secrets.DOCKER_MONGO_USER}}:${{secrets.DOCKER_MONGO_PASSWORD}}@${{secrets.DOCKER_MONGO_HOST}}:${{github.ref_name == 'dev' && '27117' || '27017'}}/${{secrets.DOCKER_MONGO_DB}}?authSource=${{secrets.DOCKER_MONGO_DB}}
     steps:
       - uses: appleboy/ssh-action@master
         with:
@@ -87,12 +87,11 @@ jobs:
               --name ${{needs.env.outputs.CONTAINER_NAME}} \
               --network-alias ${{secrets.DOCKER_APP_HOST}} \
               --restart on-failure \
-              --tmpfs /tmp \
               -e NUXT_SERVER_URL=${{env.SERVER_URL}} \
               -e NUXT_API_URL=//${{secrets.DOCKER_API_HOST}} \
               -e NUXT_API_TOKEN=${{secrets.API_TOKEN}} \
               -e NUXT_API_SECRET=${{secrets.API_SECRET}} \
-              -e NUXT_MONGOOSE_URI="${{env.MONGOOSE_URI}}" \
+              -e NUXT_MONGOOSE_URI=${{env.MONGOOSE_URI}} \
               -e NUXT_MAIL_VERIFY_SECRET=${{secrets.MAIL_VERIFY_SECRET}} \
               -e NUXT_NODEMAILER_AUTH_USER=${{env.EMAIL_USERNAME}} \
               -e NUXT_NODEMAILER_AUTH_PASS=${{secrets.EMAIL_PASSWORD}} \

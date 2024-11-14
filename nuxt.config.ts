@@ -225,4 +225,6 @@ export default defineNuxtConfig({
     'nuxt-security',
     'dayjs-nuxt',
   ],
+
+  compatibilityDate: '2024-11-15',
 });
