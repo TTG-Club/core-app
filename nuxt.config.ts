@@ -11,7 +11,6 @@ export default defineNuxtConfig({
     typescriptBundlerResolution: true,
   },
 
-  compatibilityDate: '2024-04-03',
   devtools: { enabled: true },
 
   runtimeConfig: {
@@ -161,7 +160,6 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    preset: 'node-cluster',
     routeRules: {
       '/proxy/**': {
         proxy: `${process.env.NUXT_API_URL}/**`,
