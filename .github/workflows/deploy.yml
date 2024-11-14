@@ -91,7 +91,7 @@ jobs:
               -e NUXT_API_URL=//${{secrets.DOCKER_API_HOST}} \
               -e NUXT_API_TOKEN=${{secrets.API_TOKEN}} \
               -e NUXT_API_SECRET=${{secrets.API_SECRET}} \
-              -e NUXT_MONGOOSE_URI=${{env.MONGOOSE_URI}} \
+              -e NUXT_MONGOOSE_URI="${{env.MONGOOSE_URI}}" \
               -e NUXT_MAIL_VERIFY_SECRET=${{secrets.MAIL_VERIFY_SECRET}} \
               -e NUXT_NODEMAILER_AUTH_USER=${{env.EMAIL_USERNAME}} \
               -e NUXT_NODEMAILER_AUTH_PASS=${{secrets.EMAIL_PASSWORD}} \
