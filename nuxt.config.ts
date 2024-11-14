@@ -68,10 +68,6 @@ export default defineNuxtConfig({
           type: 'image/png',
           href: '/favicon.png',
         },
-        {
-          sizes: '192x192',
-          href: '/icons/192.png',
-        },
         ...[48, 72, 96, 144, 192, 256, 384, 512].map((size) => ({
           sizes: `${size}x${size}`,
           href: `/icons/${size}.png`,
@@ -90,6 +86,10 @@ export default defineNuxtConfig({
   seo: {
     redirectToCanonicalSiteUrl: true,
     fallbackTitle: false,
+  },
+
+  ogImage: {
+    enabled: false,
   },
 
   robots: {
@@ -213,12 +213,10 @@ export default defineNuxtConfig({
 
   modules: [
     '@nuxtjs/google-fonts',
-    '@nuxtjs/sitemap',
     '@nuxtjs/device',
-    '@nuxtjs/robots',
     '@nuxtjs/stylelint-module',
-    '@nuxtjs/seo',
     '@nuxtjs/device',
+    '@nuxtjs/seo',
     '@nuxt/eslint',
     '@vueuse/nuxt',
     '@ant-design-vue/nuxt',

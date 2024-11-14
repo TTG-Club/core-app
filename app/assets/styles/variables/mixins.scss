@@ -1,5 +1,7 @@
 @use 'breakpoints' as *;
 
+@use 'sass:list';
+
 @mixin empty-block($width, $height: $width, $display: block) {
   content: '';
   display: $display;
@@ -23,7 +25,7 @@
   $transition: ();
 
   @each $property in $item {
-    $transition: append(
+    $transition: list.append(
       $transition,
       ($property $time $style),
       $separator: comma
