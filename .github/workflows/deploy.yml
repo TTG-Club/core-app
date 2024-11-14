@@ -70,7 +70,7 @@ jobs:
       INDEXABLE: ${{github.ref_name == 'main' && 'true' || 'false'}}
       SERVER_URL: https://app.${{needs.env.outputs.BASE_NEXT_DOMAIN}}
       EMAIL_USERNAME: support@ttg.club
-      MONGOOSE_URI: mongodb://${{secrets.DOCKER_MONGO_USER}}:${{secrets.DOCKER_MONGO_PASSWORD}}@${{secrets.DOCKER_MONGO_HOST}}:27017/${{secrets.DOCKER_MONGO_DB}}?authSource=${{secrets.DOCKER_MONGO_DB}}
+      MONGOOSE_URI: mongodb://${{secrets.DOCKER_MONGO_USER}}:${{secrets.DOCKER_MONGO_PASSWORD}}@${{secrets.DOCKER_MONGO_HOST}}:27017/${{secrets.DOCKER_MONGO_DB}}?directConnection=true&authSource=${{secrets.DOCKER_MONGO_DB}}
     steps:
       - uses: appleboy/ssh-action@master
         with:
