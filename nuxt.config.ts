@@ -23,8 +23,8 @@ export default defineNuxtConfig({
     nodemailer: {
       auth: {
         type: 'login',
-        user: process.env.NUXT_NODEMAILER_AUTH_USER,
-        pass: process.env.NUXT_NODEMAILER_AUTH_PASS,
+        user: process.env.NUXT_NODEMAILER_AUTH_USER || '',
+        pass: process.env.NUXT_NODEMAILER_AUTH_PASS || '',
       },
       from: process.env.NUXT_NODEMAILER_FROM,
     },
