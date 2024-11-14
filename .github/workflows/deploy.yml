@@ -87,6 +87,7 @@ jobs:
               --name ${{needs.env.outputs.CONTAINER_NAME}} \
               --network-alias ${{secrets.DOCKER_APP_HOST}} \
               --restart on-failure \
+              --tmpfs /tmp \
               -e NUXT_SERVER_URL=${{env.SERVER_URL}} \
               -e NUXT_API_URL=//${{secrets.DOCKER_API_HOST}} \
               -e NUXT_API_TOKEN=${{secrets.API_TOKEN}} \
