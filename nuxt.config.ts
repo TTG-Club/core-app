@@ -221,9 +221,10 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
     'nuxt-mongoose',
     'nuxt-nodemailer',
-    'nuxt-typed-router',
     'nuxt-security',
+    'nuxt-typed-router',
     'dayjs-nuxt',
+    '@nuxt/image',
   ],
 
   compatibilityDate: '2024-11-15',

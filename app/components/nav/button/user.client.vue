@@ -56,11 +56,11 @@
     @click.left.exact.prevent="onClick"
   >
     <template #icon>
-      <SvgIcon name="profile/helmet/outline" />
+      <SvgIcon icon="profile/helmet/outline" />
     </template>
   </AButton>
 
-  <APopover
+  <LazyAPopover
     v-else
     v-model:open="tooltipOpened"
     :arrow="false"
@@ -79,10 +79,9 @@
       <AButton
         type="text"
         size="large"
-        @click.left.exact.prevent="onClick"
       >
         <template #icon>
-          <SvgIcon name="profile/helmet/filled" />
+          <SvgIcon icon="profile/helmet/filled" />
         </template>
       </AButton>
     </template>
@@ -118,11 +117,11 @@
           @click.left.exact.prevent="logout"
         >
           Выйти
-          <SvgIcon name="logout" />
+          <SvgIcon icon="logout" />
         </AButton>
       </AFlex>
     </template>
-  </APopover>
+  </LazyAPopover>
 
   <AuthModal v-model="isAuthOpened" />
 </template>

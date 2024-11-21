@@ -24,11 +24,9 @@
           <div :class="['ttg-app', $style.app]">
             <NavBar />
 
-            <div :class="$style.container">
-              <NuxtLayout>
-                <NuxtPage />
-              </NuxtLayout>
-            </div>
+            <NuxtLayout>
+              <NuxtPage />
+            </NuxtLayout>
           </div>
         </AApp>
       </AStyleProvider>
@@ -43,21 +41,6 @@
 
     @include media-min($md) {
       flex-flow: row;
-    }
-  }
-
-  .container {
-    position: relative;
-
-    overflow: auto;
-
-    width: 100%;
-    height: var(--max-vh);
-    margin: auto;
-    padding: 0 16px;
-
-    @include media-min($xl) {
-      padding: 0 24px;
     }
   }
 </style>

@@ -34,6 +34,15 @@ export default createConfigForNuxt(
         'error',
         { props: true, ignorePropertyModificationsFor: ['state'] },
       ],
+      'no-irregular-whitespace': [
+        'error',
+        {
+          skipStrings: true,
+          skipTemplates: true,
+          skipJSXText: true,
+          skipComments: true,
+        },
+      ],
       'dot-notation': ['error'],
       'require-await': ['error'],
       'spaced-comment': ['error', 'always'],
@@ -120,7 +129,18 @@ export default createConfigForNuxt(
           },
         ],
       ],
-      'vue/html-self-closing': ['error'],
+      'vue/html-self-closing': [
+        'error',
+        {
+          html: {
+            void: 'never',
+            normal: 'always',
+            component: 'always',
+          },
+          svg: 'always',
+          math: 'always',
+        },
+      ],
       'vue/html-closing-bracket-spacing': [
         'error',
         {

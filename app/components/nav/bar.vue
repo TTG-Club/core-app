@@ -26,8 +26,8 @@
     --navbar-height: calc(56px + var(--safe-area-inset-bottom));
     --navbar-width: calc(56px + var(--safe-area-inset-left));
 
-    position: relative;
-    z-index: 100;
+    position: sticky;
+    top: 0;
 
     display: flex;
     flex-direction: row;

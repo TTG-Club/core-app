@@ -3,7 +3,7 @@
 </script>
 
 <template>
-  <ATooltip placement="right">
+  <LazyATooltip placement="right">
     <template #default>
       <AButton
         type="text"
@@ -11,11 +11,11 @@
         @click.left.exact.prevent="change"
       >
         <template #icon>
-          <SvgIcon :name="`theme/${theme}`" />
+          <SvgIcon :icon="`theme/${theme}`" />
         </template>
       </AButton>
     </template>
 
     <template #title> Переключить тему сайта </template>
-  </ATooltip>
+  </LazyATooltip>
 </template>
