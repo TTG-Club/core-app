@@ -63,12 +63,8 @@ body,
 .ttg-club,
 .ant-app,
 .ttg-app {
-  overflow: hidden;
-
-  width: 100%;
-  height: var(--max-vh);
+  width: 100vw;
   min-height: var(--max-vh);
-  max-height: var(--max-vh);
 }
 
 body {

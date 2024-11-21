@@ -1,45 +1,48 @@
 import { z } from 'zod';
-import { nameSchema, sourceSchema } from '~~/shared/zod/base';
+import {
+  nameSchema,
+  sourceSchema,
+  speedSchema,
+  tagsSchema,
+} from '~~/shared/zod/base';
 
 export const specieLinkSchema = z.object({
   name: nameSchema,
   url: z.string().url(),
+  image: z.string().url().optional(),
 });
 
-export const specieTagsSchema = z.object({
-  magic: z.string(),
-  aasimar: z.string(),
-  light: z.string(),
+export const specieRelatedSchema = z.object({
+  name: nameSchema,
+  url: z.string(),
 });
 
 export const specieFeatureSchema = z.object({
   url: z.string(),
-  imageUrl: z.string().url(),
+  image: z.string().url().optional(),
   name: nameSchema,
-  description: z.string().optional(),
+  description: z.string(),
   source: sourceSchema,
-  tags: specieTagsSchema,
+  tags: tagsSchema,
 });
 
 export const speciePropertiesSchema = z.object({
+  speed: speedSchema,
   size: z.string(),
   type: z.string(),
-  speed: z.number(),
-  fly: z.number(),
-  climb: z.number(),
-  swim: z.number(),
   darkVision: z.number(),
 });
 
 export const specieSchema = z.object({
   url: z.string(),
-  imageUrl: z.string().url(),
+  image: z.string().url(),
+  gallery: z.array(z.string()).optional(),
   name: nameSchema,
-  description: z.string().optional(),
+  description: z.string(),
   source: sourceSchema,
-  creatureProperties: speciePropertiesSchema,
-  parentUrl: z.string().optional(),
-  subSpeciesUrls: z.array(z.string()),
+  properties: speciePropertiesSchema,
+  parent: specieRelatedSchema.optional(),
+  subspecies: z.array(specieRelatedSchema).optional(),
   features: z.array(specieFeatureSchema),
-  detail: z.boolean(),
+  updatedAt: z.string().datetime({ precision: 0, offset: false }),
 });

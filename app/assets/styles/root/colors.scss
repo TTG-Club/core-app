@@ -4,6 +4,7 @@ html.dark {
   --color-bg-main: #131a20;
   --color-bg-secondary: #172026;
   --color-bg-secondary-gradient: linear-gradient(135deg, #222c33, #172026);
+  --color-bg-layout: #F5F5F5;
   --color-bg-sub-menu: #1d282f;
   --color-bg-dice: #88aef9;
   --color-bg-homebrew: #5d7e17;
@@ -72,12 +73,12 @@ html.dark {
   --color-artifact: #ff8900;
   --color-bg-gradient: linear-gradient(135deg, #23323bc7, #19141fc7);
   --color-border-gradient: #1c386b;
-  --color-card-shadow: rgba(0, 0, 0, 0.05);
+  --color-card-shadow: rgba(255, 255, 255, 0.05);
 
   // Badge
   --color-badge-hb: #405710;
   --color-badge-3rd: #483475;
-  --color-badge-basic: var(--color-bg-table-list);
+  --color-badge-basic: var(--color-primary);
   --color-badge-ua: var(--color-bg-table-list);
 
   // Scroll
@@ -103,6 +104,7 @@ html.light {
   --color-bg-main: #f9f6f1;
   --color-bg-secondary: #f3f1db;
   --color-bg-secondary-gradient: linear-gradient(135deg, #f5f2cf, #f3f1db);
+  --color-bg-layout: #F5F5F5;
   --color-bg-sub-menu: #ebe5d0;
   --color-bg-dice: #3567c9;
   --color-bg-homebrew: #5d7e17;
@@ -171,12 +173,12 @@ html.light {
   --color-artifact: #ff8900;
   --color-bg-gradient: linear-gradient(135deg, #f7f2c5c7, #f7f1e5c7);
   --color-border-gradient: #f8c6bb;
-  --color-card-shadow: rgba(0, 0, 0, 0.05);
+  --color-card-shadow: rgba(0, 0, 0, 0.12);
 
   // Badge
   --color-badge-hb: #97ca28;
   --color-badge-3rd: #d4cbe9;
-  --color-badge-basic: var(--color-bg-table-list);
+  --color-badge-basic: var(--color-primary);
   --color-badge-ua: var(--color-bg-table-list);
 
   // Scroll

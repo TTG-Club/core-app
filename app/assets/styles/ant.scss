@@ -46,7 +46,7 @@ $typography: '.ant-typography';
     &#{$btn}-icon-only {
       padding: 0;
 
-      >span {
+      > span {
         transform: none;
       }
     }
@@ -59,7 +59,7 @@ $typography: '.ant-typography';
       }
 
       &#{$btn}-icon-only {
-        >span {
+        > span {
           transform: none;
         }
       }
@@ -74,10 +74,49 @@ $typography: '.ant-typography';
       }
 
       &#{$btn}-icon-only {
-        >span {
+        > span {
           transform: none;
         }
       }
     }
+  }
+
+  &-collapse {
+    $collapse: &;
+
+    & > &-item {
+      & > #{$collapse}-header {
+        align-items: center;
+      }
+    }
+  }
+
+  &-spin {
+    $spin: &;
+
+    &-nested {
+      &-loading {
+        min-height: var(--max-vh);
+
+        > div {
+          #{$spin} {
+            max-height: initial;
+          }
+        }
+      }
+    }
+
+    &-container {
+      min-height: var(--max-vh);
+    }
+  }
+
+  &-result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    min-height: var(--max-vh);
   }
 }

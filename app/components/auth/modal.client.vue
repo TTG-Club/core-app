@@ -57,7 +57,7 @@
             {
               icon: () =>
                 h(SvgIcon, {
-                  name: 'profile/base/move',
+                  icon: 'profile/base/move',
                 }),
             },
           ),
