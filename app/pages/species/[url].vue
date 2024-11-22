@@ -13,13 +13,16 @@
     error,
     status,
     refresh,
-  } = useProxy<Specie>(`/species/${url}`);
+  } = await useProxy<Specie>(`/species/${url}`);
 
   watch(
     specie,
     (value) => {
-      activeFeatures.value =
-        value?.features.map((feature) => feature.url) || [];
+      if (!value) {
+        return;
+      }
+
+      activeFeatures.value = value.features.map((feature) => feature.url);
     },
     {
       immediate: true,
