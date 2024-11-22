@@ -27,6 +27,7 @@
       <ATypographyTitle
         :level="2"
         content="Виды"
+        data-allow-mismatch
         ellipsis
       />
 

@@ -88,7 +88,7 @@ jobs:
               --network-alias ${{secrets.DOCKER_APP_HOST}} \
               --restart on-failure \
               -e NUXT_SERVER_URL=${{env.SERVER_URL}} \
-              -e NUXT_API_URL=//${{secrets.DOCKER_API_HOST}} \
+              -e NUXT_API_URL=http://${{secrets.DOCKER_API_HOST}}:8080 \
               -e NUXT_API_TOKEN=${{secrets.API_TOKEN}} \
               -e NUXT_API_SECRET=${{secrets.API_SECRET}} \
               -e NUXT_MONGOOSE_URI=${{env.MONGOOSE_URI}} \

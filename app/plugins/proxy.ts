@@ -8,7 +8,7 @@ declare module '#app' {
 
 export default defineNuxtPlugin(() => {
   const instance = $fetch.create({
-    baseURL: `/proxy/api/v2`,
+    baseURL: `/api/v2`,
   });
 
   return {

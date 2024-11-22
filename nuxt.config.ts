@@ -14,18 +14,32 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
 
   runtimeConfig: {
+    apiUrl: process.env.NUXT_API_URL,
     apiSecret: process.env.NUXT_API_SECRET,
     mailVerifySecret: process.env.NUXT_MAIL_VERIFY_SECRET,
     mongoose: {
       uri: process.env.NUXT_MONGOOSE_URI,
     },
     nodemailer: {
+      host: 'smtp.mail.ru',
+      port: 465,
+      secure: true,
+      tls: {
+        rejectUnauthorized: false,
+      },
       auth: {
         type: 'login',
         user: process.env.NUXT_NODEMAILER_AUTH_USER || '',
         pass: process.env.NUXT_NODEMAILER_AUTH_PASS || '',
       },
       from: process.env.NUXT_NODEMAILER_FROM,
+    },
+    site: {
+      url: process.env.NUXT_SERVER_URL,
+      name: `${appName} Oнлайн-справочник`,
+      description: `${appName} - сайт, посвященный DnD 5-й редакции. Тут можно найти: расы, происхождения, классы, заклинания, бестиарий, снаряжение, магические предметы и инструменты для облегчения игры как игрокам, так и мастерам - все в одном месте.`,
+      defaultLocale: 'ru',
+      indexable: process.env.NUXT_INDEXABLE === 'true',
     },
   },
 
@@ -95,14 +109,6 @@ export default defineNuxtConfig({
     disallow: ['/user', '/admin', '/auth', '/search', '/profile', '/api'],
   },
 
-  site: {
-    url: process.env.NUXT_SERVER_URL,
-    name: `${appName} Oнлайн-справочник`,
-    description: `${appName} - сайт, посвященный DnD 5-й редакции. Тут можно найти: расы, происхождения, классы, заклинания, бестиарий, снаряжение, магические предметы и инструменты для облегчения игры как игрокам, так и мастерам - все в одном месте.`,
-    defaultLocale: 'ru',
-    indexable: process.env.NUXT_INDEXABLE === 'true',
-  },
-
   googleFonts: {
     display: 'swap',
     subsets: ['cyrillic', 'cyrillic-ext'],
@@ -124,25 +130,6 @@ export default defineNuxtConfig({
     extractStyle: true,
   },
 
-  nodemailer: {
-    host: 'smtp.mail.ru',
-    port: 465,
-    secure: true,
-    from: process.env.NUXT_NODEMAILER_FROM,
-    tls: {
-      rejectUnauthorized: false,
-    },
-    auth: {
-      type: 'login',
-      user: process.env.NUXT_NODEMAILER_AUTH_USER || '',
-      pass: process.env.NUXT_NODEMAILER_AUTH_PASS || '',
-    },
-  },
-
-  mongoose: {
-    uri: process.env.NUXT_MONGOOSE_URI,
-  },
-
   typescript: {
     typeCheck: true,
   },
@@ -160,18 +147,13 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    routeRules: {
-      '/proxy/**': {
-        proxy: `${process.env.NUXT_API_URL}/**`,
-        cors: true,
-        headers: {
-          token: process.env.NUXT_API_TOKEN,
-        },
-      },
-    },
     experimental: {
       openAPI: true,
     },
+  },
+
+  mongoose: {
+    uri: process.env.NUXT_MONGOOSE_URI,
   },
 
   vite: {
