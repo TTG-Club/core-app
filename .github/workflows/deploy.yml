@@ -87,7 +87,7 @@ jobs:
               --name ${{needs.env.outputs.CONTAINER_NAME}} \
               --network-alias ${{secrets.DOCKER_APP_HOST}} \
               --restart on-failure \
-              -e NUXT_SERVER_URL=${{env.SERVER_URL}} \
+              -e NUXT_SITE_URL=${{env.SERVER_URL}} \
               -e NUXT_API_URL=http://${{secrets.DOCKER_API_HOST}}:8080 \
               -e NUXT_API_TOKEN=${{secrets.API_TOKEN}} \
               -e NUXT_API_SECRET=${{secrets.API_SECRET}} \
@@ -96,6 +96,6 @@ jobs:
               -e NUXT_NODEMAILER_AUTH_USER=${{env.EMAIL_USERNAME}} \
               -e NUXT_NODEMAILER_AUTH_PASS=${{secrets.EMAIL_PASSWORD}} \
               -e NUXT_NODEMAILER_FROM='"TTG Support" <${{env.EMAIL_USERNAME}}>' \
-              -e NUXT_INDEXABLE=${{env.INDEXABLE}} \
+              -e NUXT_SITE_INDEXABLE=${{env.INDEXABLE}} \
               -d ${{needs.env.outputs.IMAGE_NAME}}
             docker rmi $(docker images --filter "dangling=true" -q --no-trunc) &

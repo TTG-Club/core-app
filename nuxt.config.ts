@@ -35,11 +35,11 @@ export default defineNuxtConfig({
       from: process.env.NUXT_NODEMAILER_FROM,
     },
     site: {
-      url: process.env.NUXT_SERVER_URL,
+      url: process.env.NUXT_SITE_URL,
       name: `${appName} Oнлайн-справочник`,
-      description: `${appName} - сайт, посвященный DnD 5-й редакции. Тут можно найти: расы, происхождения, классы, заклинания, бестиарий, снаряжение, магические предметы и инструменты для облегчения игры как игрокам, так и мастерам - все в одном месте.`,
+      description: `${appName} — сайт, посвященный DnD 5-й редакции. Тут можно найти: расы, происхождения, классы, заклинания, бестиарий, снаряжение, магические предметы и инструменты для облегчения игры как игрокам, так и мастерам — все в одном месте.`,
       defaultLocale: 'ru',
-      indexable: process.env.NUXT_INDEXABLE === 'true',
+      indexable: process.env.NUXT_SITE_INDEXABLE === 'true',
     },
   },
 
@@ -198,6 +198,7 @@ export default defineNuxtConfig({
     '@nuxtjs/stylelint-module',
     '@nuxtjs/device',
     '@nuxtjs/seo',
+    '@nuxt/image',
     '@nuxt/eslint',
     '@vueuse/nuxt',
     '@ant-design-vue/nuxt',
@@ -207,7 +208,6 @@ export default defineNuxtConfig({
     'nuxt-security',
     'nuxt-typed-router',
     'dayjs-nuxt',
-    '@nuxt/image',
   ],
 
   compatibilityDate: '2024-11-15',

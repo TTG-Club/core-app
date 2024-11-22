@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import type { Specie } from '~~/shared/types/character/species';
-  import type { UseSeoMetaInput } from '@unhead/vue';
 
   const {
     params: { url },
@@ -29,20 +28,15 @@
     },
   );
 
-  const getSeoMeta = (): UseSeoMetaInput => {
-    if (!specie.value) {
-      return {};
-    }
-
-    return {
-      title: `${specie.value.name.rus} (${specie.value.name.eng})`,
-      description:
-        `${specie.value.name.rus} (${specie.value.name.eng}) - вид персонажа по D&D 2024 редакции. ${specie.value.description || ''}`.trim(),
-      author: specie.value.source.name.rus,
-    };
-  };
-
-  useSeoMeta(getSeoMeta());
+  useSeoMeta({
+    title: () =>
+      specie.value ? `${specie.value.name.rus} (${specie.value.name.eng})` : '',
+    description: () =>
+      specie.value
+        ? `${specie.value.name.rus} (${specie.value.name.eng}) — вид персонажа по D&D 2024 редакции. ${specie.value.description || ''}`.trim()
+        : '',
+    author: () => (specie.value ? specie.value.source.name.rus : ''),
+  });
 
   const showRelated = ref(false);
 
