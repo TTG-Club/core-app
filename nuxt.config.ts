@@ -1,5 +1,5 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
-import { URL, fileURLToPath } from 'node:url';
+import { fileURLToPath, URL } from 'node:url';
 
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
 
@@ -79,6 +79,7 @@ export default defineNuxtConfig({
           href: '/favicon.svg',
         },
         {
+          rel: 'icon',
           type: 'image/png',
           href: '/favicon.png',
         },

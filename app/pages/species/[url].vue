@@ -36,6 +36,7 @@
         ? `${specie.value.name.rus} (${specie.value.name.eng}) — вид персонажа по D&D 2024 редакции. ${specie.value.description || ''}`.trim()
         : '',
     author: () => (specie.value ? specie.value.source.name.rus : ''),
+    ogImage: () => (specie.value ? specie.value.image : ''),
   });
 
   const showRelated = ref(false);
