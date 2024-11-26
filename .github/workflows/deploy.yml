@@ -93,7 +93,7 @@ jobs:
           script: |
             docker compose -f ${{ env.CONFIG_FILE }} pull app && \
               docker compose -f ${{ env.CONFIG_FILE }} build app && \
-              docker compose -f ${{ env.CONFIG_FILE }} up \
+              docker compose -f ${{ env.CONFIG_FILE }} up app \
                 --no-deps \
                 --detach
             docker rmi $(docker images --filter "dangling=true" -q --no-trunc) &
