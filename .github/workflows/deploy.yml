@@ -8,10 +8,6 @@ on:
       - dev
 
   pull_request:
-    branches-ignore:
-      - main
-      - dev
-
     types:
       - opened
       - reopened
@@ -27,8 +23,9 @@ env:
 
 jobs:
   build:
-    name: Build to ${{ env.REGISTRY }}
+    name: Build docker image
     runs-on: ubuntu-latest
+    if: ${{ github.head_ref != 'main' && github.head_ref != 'dev' }}
     concurrency:
       group: build-${{ github.ref_name }}
       cancel-in-progress: true
