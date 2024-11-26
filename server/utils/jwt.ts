@@ -25,7 +25,9 @@ export interface GenerateAuthJwtPayload {
   remember?: boolean;
 }
 
-const { apiSecret } = useRuntimeConfig();
+const {
+  api: { secret: apiSecret },
+} = useRuntimeConfig();
 
 export const generateJwt = ({
   payload,

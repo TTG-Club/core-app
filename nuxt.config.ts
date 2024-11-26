@@ -14,11 +14,13 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
 
   runtimeConfig: {
-    apiUrl: process.env.NUXT_API_URL,
-    apiSecret: process.env.NUXT_API_SECRET,
-    mailVerifySecret: process.env.NUXT_MAIL_VERIFY_SECRET,
-    mongoose: {
-      uri: process.env.NUXT_MONGOOSE_URI,
+    api: {
+      url: process.env.NUXT_API_URL,
+      token: process.env.NUXT_API_TOKEN,
+      secret: process.env.NUXT_API_SECRET,
+    },
+    email: {
+      secret: process.env.NUXT_EMAIL_SECRET,
     },
     nodemailer: {
       host: 'smtp.mail.ru',
@@ -154,10 +156,6 @@ export default defineNuxtConfig({
     },
   },
 
-  mongoose: {
-    uri: process.env.NUXT_MONGOOSE_URI,
-  },
-
   vite: {
     css: {
       preprocessorOptions: {
@@ -204,7 +202,6 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@ant-design-vue/nuxt',
     '@pinia/nuxt',
-    'nuxt-mongoose',
     'nuxt-nodemailer',
     'nuxt-security',
     'nuxt-typed-router',

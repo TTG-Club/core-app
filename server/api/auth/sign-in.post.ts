@@ -22,23 +22,22 @@ export default defineEventHandler<Request>(async (event) => {
   let user;
 
   try {
-    user = await User.findOne({
-      $or: [{ email: usernameOrEmail }, { username: usernameOrEmail }],
-    })
-      .select({
+    user = await prisma.user.findFirstOrThrow({
+      where: {
+        OR: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
+      },
+      select: {
         username: true,
-        email: true,
-        roles: true,
-        password: true,
         verified: true,
-      })
-      .lean()
-      .exec();
+        password: true,
+      },
+    });
   } catch (err) {
     throw createError({
       statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
       statusMessage: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR),
       message: 'Неизвестная ошибка',
+      data: err,
     });
   }
 

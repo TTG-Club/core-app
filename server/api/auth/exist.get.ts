@@ -1,9 +1,17 @@
-import { isString } from 'lodash-es';
 import { z } from 'zod';
 
 const existSchema = z.object({
-  email: z.string().email().optional(),
-  username: z.string().optional(),
+  username: z
+    .string()
+    .min(3)
+    .max(1000)
+    .refine((string) => !string.startsWith(' ') && !string.endsWith(' '))
+    .optional(),
+  email: z
+    .string()
+    .email()
+    .refine((string) => !string.startsWith(' ') && !string.endsWith(' '))
+    .optional(),
 });
 
 interface Request {
@@ -13,10 +21,24 @@ interface Request {
 export default defineEventHandler<Request>(async (event) => {
   const { email, username } = await getValidatedQuery(event, existSchema.parse);
 
-  const emailExist = isString(email) && (await User.isEmailExist(email));
+  try {
+    await Promise.any([
+      prisma.user.findUniqueOrThrow({
+        where: {
+          username,
+        },
+      }),
+      prisma.user.findUniqueOrThrow({
+        where: {
+          email,
+        },
+      }),
+    ]);
 
-  const usernameExist =
-    isString(username) && (await User.isUsernameExist(username));
+    return true;
+  } catch (err) {
+    console.error(err);
 
-  return emailExist || usernameExist;
+    return false;
+  }
 });

@@ -2,15 +2,15 @@ name: PR Check
 
 on:
   pull_request:
+    branches:
+      - main
+      - dev
+
     types:
       - opened
       - ready_for_review
       - reopened
       - synchronize
-
-    branches:
-      - main
-      - dev
 
 permissions:
   actions: read
