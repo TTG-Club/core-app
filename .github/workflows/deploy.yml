@@ -52,14 +52,13 @@ jobs:
             type=ref,event=branch,enbled=${{ github.event_name != 'pull_request' }}
             type=raw,value=latest,enabled=${{ github.ref_name == 'main' }}
           labels: |
+            org.opencontainers.image.title=${{ github.repository }}
+            org.opencontainers.image.vendor=${{ github.repository_owner }}
             org.opencontainers.image.created=${{ github.event.repository.updated_at }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.vendor=TTG Club
-            org.opencontainers.image.title=${{ github.repository }}
-            org.opencontainers.image.base.name=${{ env.REGISTRY }}/${{ github.repository }}
 
-      - uses: docker/build-push-action@v3
+      - uses: docker/build-push-action@v6
         id: push
         with:
           context: .
@@ -82,6 +81,8 @@ jobs:
     concurrency:
       group: update-${{ github.ref_name == 'main' && 'prod' || 'dev' }}-server
       cancel-in-progress: false
+    env:
+      CONFIG_FILE: ${{ secrets.TMWEB_SSH_PATH }}/${{ github.ref_name == 'main' && 'prod' || 'dev' }}/core/compose.core.yaml
     steps:
       - uses: appleboy/ssh-action@master
         with:
@@ -90,5 +91,9 @@ jobs:
           key: ${{secrets.TMWEB_SSH_KEY}}
           port: ${{secrets.TMWEB_SSH_PORT}}
           script: |
-            docker compose up --pull --build --detach app
+            docker compose -f ${{ env.CONFIG_FILE }} pull app && \
+              docker compose -f ${{ env.CONFIG_FILE }} build app && \
+              docker compose -f ${{ env.CONFIG_FILE }} up \
+                --no-deps \
+                --detach
             docker rmi $(docker images --filter "dangling=true" -q --no-trunc) &
