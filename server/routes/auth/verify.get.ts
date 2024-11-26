@@ -18,14 +18,16 @@ export default defineEventHandler<Request>(async (event) => {
     return sendRedirect(event, '/', StatusCodes.BAD_REQUEST);
   }
 
-  const { mailVerifySecret } = useRuntimeConfig();
+  const {
+    email: { secret },
+  } = useRuntimeConfig();
 
   let email = '';
 
   try {
     const payload = verifyJwt({
       token,
-      secret: mailVerifySecret,
+      secret,
     });
 
     if (
@@ -42,14 +44,20 @@ export default defineEventHandler<Request>(async (event) => {
   }
 
   try {
-    const user = await User.findByEmail(email);
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { email },
+    });
 
     if (!user || user.verified) {
       return sendRedirect(event, '/', StatusCodes.BAD_REQUEST);
     }
 
-    await user.updateOne({ verified: true });
-    await user.save();
+    await prisma.user.update({
+      where: { email },
+      data: {
+        verified: true,
+      },
+    });
   } catch (err) {
     return sendRedirect(event, '/', StatusCodes.INTERNAL_SERVER_ERROR);
   }

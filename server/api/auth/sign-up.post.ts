@@ -6,6 +6,7 @@ const signUpSchema = z.object({
   username: z
     .string()
     .min(3)
+    .max(1000)
     .refine((string) => !string.startsWith(' ') && !string.endsWith(' ')),
   email: z
     .string()
@@ -14,6 +15,7 @@ const signUpSchema = z.object({
   password: z
     .string()
     .min(8)
+    .max(256)
     .refine((string) => !/[^\w'\-!"#$%&()*,./:;?@[\]^`{|}~+<=>]+/.test(string))
     .refine((string) => !string.startsWith(' ') && !string.endsWith(' ')),
 });
@@ -28,7 +30,13 @@ export default defineEventHandler<Request>(async (event) => {
     signUpSchema.parse,
   );
 
-  if (await User.isUsernameExist(username)) {
+  if (
+    await prisma.user.findUnique({
+      where: {
+        username,
+      },
+    })
+  ) {
     throw createError({
       statusCode: StatusCodes.CONFLICT,
       statusMessage: getReasonPhrase(StatusCodes.CONFLICT),
@@ -36,7 +44,13 @@ export default defineEventHandler<Request>(async (event) => {
     });
   }
 
-  if (await User.isEmailExist(username)) {
+  if (
+    await prisma.user.findUnique({
+      where: {
+        email,
+      },
+    })
+  ) {
     throw createError({
       statusCode: StatusCodes.CONFLICT,
       statusMessage: getReasonPhrase(StatusCodes.CONFLICT),
@@ -50,30 +64,25 @@ export default defineEventHandler<Request>(async (event) => {
 
   newUser.password = await bcrypt.hash(password, salt);
 
-  const user = new User(newUser);
-
   try {
-    await user.validate();
-  } catch (err) {
-    throw createError({
-      statusCode: StatusCodes.BAD_REQUEST,
-      statusMessage: getReasonPhrase(StatusCodes.BAD_REQUEST),
-      message: 'Поля заполнены некорректно',
+    await prisma.user.create({
+      data: newUser,
     });
-  }
-
-  try {
-    await user.save();
   } catch (err) {
     throw createError({
       statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
       statusMessage: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR),
       message: 'Неизвестная ошибка при сохранении',
+      data: err,
     });
   }
 
   const { sendMail } = useNodeMailer();
-  const { mailVerifySecret } = useRuntimeConfig();
+
+  const {
+    email: { secret },
+  } = useRuntimeConfig();
+
   const origin = getRequestOrigin(event);
 
   const token = generateJwt({
@@ -81,7 +90,7 @@ export default defineEventHandler<Request>(async (event) => {
       email: email,
       origin,
     },
-    secret: mailVerifySecret,
+    secret,
     options: {
       expiresIn: '24h',
     },
@@ -96,9 +105,11 @@ export default defineEventHandler<Request>(async (event) => {
       html: `<p>Перейдите по ссылке для подтверждения аккаунта: <a href="${verifyUrl}">${verifyUrl}</a></p><p>Ссылка действительна в течение суток.</p>`,
     });
   } catch (err) {
-    console.error(err);
-
-    await user.deleteOne().exec();
+    await prisma.user.delete({
+      where: {
+        username,
+      },
+    });
 
     throw createError({
       statusCode: StatusCodes.INTERNAL_SERVER_ERROR,

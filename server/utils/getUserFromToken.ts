@@ -1,9 +1,6 @@
 import type { H3Event } from 'h3';
-import { ROLE, type UserProfile } from '~~/shared/types/user';
 
-export const getUserFromToken = async (
-  event: H3Event,
-): Promise<UserProfile> => {
+export const getUserFromToken = (event: H3Event) => {
   const authHeader =
     getHeader(event, 'authorization') || getHeader(event, 'Authorization');
 
@@ -15,14 +12,14 @@ export const getUserFromToken = async (
 
   try {
     const payload = verifyAuthJwt(authToken);
-    const user = await User.findByUsername(payload.username);
-    const flatUser = user.toObject();
 
-    if (!flatUser.role) {
-      flatUser.role = ROLE.USER;
-    }
-
-    return flatUser;
+    return prisma.user.findUniqueOrThrow({
+      where: { username: payload.username },
+      omit: {
+        password: true,
+        verified: true,
+      },
+    });
   } catch (err) {
     return Promise.reject(err);
   }

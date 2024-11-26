@@ -1,7 +1,23 @@
-FROM node:lts-alpine
+FROM node:lts-alpine AS base
 
 WORKDIR /app
 
-COPY .output/ ./
+FROM base AS build
 
-ENTRYPOINT ["node", "server/index.mjs"]
+COPY --link . .
+
+RUN npm ci
+RUN npx prisma generate
+RUN npm run build
+
+FROM base
+
+COPY --from=build /app/.output/ ./
+COPY --from=build /app/server/prisma/ ./prisma/
+COPY --from=build /app/docker-entrypoint.sh ./docker-entrypoint.sh
+
+RUN chmod +x ./docker-entrypoint.sh
+
+CMD ["node", "server/index.mjs"]
+
+ENTRYPOINT ["/bin/sh", "./docker-entrypoint.sh"]
