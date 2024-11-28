@@ -79,7 +79,15 @@ body {
   background-color: var(--color-bg-main);
   outline: none;
 
-  transition:
-    background-color ease-in-out 0.2s,
-    color ease-in-out 0.2s;
+  transition: background-color ease-in-out 0.2s,
+  color ease-in-out 0.2s;
+}
+
+.ttg-app {
+  display: flex;
+  flex-flow: column-reverse;
+
+  @include media-min($md) {
+    flex-flow: row;
+  }
 }

@@ -21,7 +21,7 @@
     <AExtractStyle>
       <AStyleProvider>
         <AApp>
-          <div :class="['ttg-app', $style.app]">
+          <div class="ttg-app">
             <NavBar />
 
             <NuxtLayout>
@@ -33,14 +33,3 @@
     </AExtractStyle>
   </AConfigProvider>
 </template>
-
-<style module lang="scss">
-  .app {
-    display: flex;
-    flex-flow: column-reverse;
-
-    @include media-min($md) {
-      flex-flow: row;
-    }
-  }
-</style>

@@ -22,9 +22,16 @@ export default defineEventHandler<Request>(async (event) => {
   let user;
 
   try {
-    user = await prisma.user.findFirstOrThrow({
+    user = await prisma.user.findFirst({
       where: {
-        OR: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
+        OR: [
+          {
+            username: usernameOrEmail,
+          },
+          {
+            email: usernameOrEmail,
+          },
+        ],
       },
       select: {
         username: true,
@@ -75,6 +82,7 @@ export default defineEventHandler<Request>(async (event) => {
 
   setCookie(event, USER_TOKEN_COOKIE, token, {
     maxAge: ONE_DAY_IN_SECONDS * (remember ? 30 : 1),
+    secure: !import.meta.dev,
     sameSite: true,
   });
 });

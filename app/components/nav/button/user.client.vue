@@ -1,11 +1,14 @@
 <script setup lang="ts">
   const dayjs = useDayjs();
+  const userStore = useUserStore();
 
   const { href: profileHref, navigate: navigateToProfile } = useLink({
     to: {
       name: 'user-profile',
     },
   });
+
+  const { isLoggedIn, isLoading, user } = storeToRefs(userStore);
 
   const isAuthOpened = ref(false);
   const tooltipOpened = ref(false);
@@ -17,8 +20,8 @@
   const greetingText = computed(() => {
     const hours = dayjs().hour();
 
-    const getString = (prefix: string) => prefix;
-    // `${prefix}${user.value?.username ? ', ' : ''}${user.value?.username}!`;
+    const getString = (prefix: string) =>
+      `${prefix}${user.value?.username ? `, ${user.value.username}` : ''}!`;
 
     if (hours < 6) {
       return getString('Доброй ночи');
@@ -50,7 +53,8 @@
 
 <template>
   <AButton
-    v-if="true"
+    v-if="!isLoggedIn"
+    :loading="isLoading"
     type="text"
     size="large"
     @click.left.exact.prevent="onClick"
@@ -60,7 +64,7 @@
     </template>
   </AButton>
 
-  <LazyAPopover
+  <APopover
     v-else
     v-model:open="tooltipOpened"
     :arrow="false"
@@ -71,7 +75,7 @@
         adjustY: true,
       },
     }"
-    placement="rightTop"
+    placement="rightBottom"
     trigger="click"
     destroy-tooltip-on-hide
   >
@@ -121,7 +125,7 @@
         </AButton>
       </AFlex>
     </template>
-  </LazyAPopover>
+  </APopover>
 
   <AuthModal v-model="isAuthOpened" />
 </template>

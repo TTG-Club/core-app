@@ -49,11 +49,12 @@
       </AFlex>
     </div>
 
-    <NuxtImg
+    <img
       v-if="specie.image"
-      :src="specie.image"
-      :class="$style.image"
       :alt="specie.name.rus"
+      :class="$style.image"
+      :src="specie.image"
+      loading="lazy"
     />
   </NuxtLink>
 </template>

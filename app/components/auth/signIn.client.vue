@@ -3,7 +3,7 @@
     (e: 'switch:sign-up' | 'switch:change-password' | 'close'): void;
   }>();
 
-  const success = ref(false);
+  const { fetch } = useUserStore();
 
   const model = reactive({
     usernameOrEmail: '',
@@ -35,7 +35,7 @@
       return;
     }
 
-    success.value = true;
+    fetch().finally();
 
     emit('close');
     showSuccessNotify();
@@ -93,7 +93,7 @@
       >
         <AButton
           :loading="inProgress"
-          :disabled="success"
+          :disabled="status === 'success'"
           type="primary"
           @click.left.exact.prevent="onSubmit"
         >

@@ -11,9 +11,17 @@
     },
   });
 
-  defineProps<{
+  const { error } = defineProps<{
     error: NuxtError;
   }>();
+
+  const message = computed(() => getStatusMessage(error.statusCode));
+
+  const handleError = () => clearError({ redirect: '/' });
+
+  const reload = () => {
+    window.location.reload();
+  };
 </script>
 
 <template>
@@ -24,50 +32,42 @@
     <AExtractStyle>
       <AStyleProvider>
         <AApp>
-          <AFlex
-            :class="$style.container"
-            justify="center"
-            align="center"
-          >
-            <AFlex vertical>
-              <h1 :class="$style.title">
-                {{ error.statusCode }}
-              </h1>
+          <div class="ttg-app">
+            <NavBar />
 
-              <h2 :class="$style.message">
-                {{ error.message }}
-              </h2>
+            <NuxtLayout>
+              <AFlex
+                :style="{ minHeight: 'var(--max-vh)' }"
+                :gap="8"
+                justify="center"
+                vertical
+              >
+                <ATypographyTitle :level="1">
+                  {{ error.statusCode }}
+                </ATypographyTitle>
 
-              <a href="/">Вернуться на главную</a>
-            </AFlex>
-          </AFlex>
+                <ATypographyText>
+                  {{ message }}
+                </ATypographyText>
+
+                <AFlex :gap="12">
+                  <AButton
+                    type="primary"
+                    href="/"
+                    @click.left.exact.prevent="handleError"
+                  >
+                    Вернуться на главную
+                  </AButton>
+
+                  <AButton @click.left.exact.prevent="reload">
+                    Обновить страницу
+                  </AButton>
+                </AFlex>
+              </AFlex>
+            </NuxtLayout>
+          </div>
         </AApp>
       </AStyleProvider>
     </AExtractStyle>
   </AConfigProvider>
 </template>
-
-<style module>
-  .container {
-    height: 100%;
-    padding: 64px 0;
-  }
-
-  .title {
-    margin: 0;
-
-    font-size: var(--font-size-h1);
-    font-weight: 300;
-    line-height: var(--line-height-h1);
-    color: var(--color-text-title);
-  }
-
-  .message {
-    margin: 24px 0 12px;
-
-    font-size: var(--font-size-h4);
-    font-weight: 300;
-    line-height: var(--line-height-h4);
-    color: var(--color-text-title);
-  }
-</style>

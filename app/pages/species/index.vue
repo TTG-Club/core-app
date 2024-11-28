@@ -6,7 +6,7 @@
     description: 'Виды и подвиды персонажей по D&D 2024 редакции',
   });
 
-  const { data, status, error, refresh } = useProxy<Array<SpecieLink>>(
+  const { data, status, error, refresh } = await useProxy<Array<SpecieLink>>(
     '/species/search',
     {
       method: 'post',
@@ -20,9 +20,9 @@
     :gap="16"
   >
     <AFlex
-      vertical
       :style="{ paddingTop: '32px' }"
       :gap="16"
+      vertical
     >
       <ATypographyTitle
         :level="2"
@@ -31,7 +31,7 @@
         ellipsis
       />
 
-      <AFlex :gap="16">
+      <AFlex :gap="8">
         <AInput
           placeholder="Введите текст..."
           allow-clear
