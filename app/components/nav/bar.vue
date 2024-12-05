@@ -3,8 +3,8 @@
     <header :class="$style.header">
       <div :class="$style.main">
         <NuxtLink
-          :to="{ name: 'index' }"
           :class="$style.logo"
+          to="/"
         >
           <SvgLogo />
         </NuxtLink>
@@ -23,11 +23,9 @@
 
 <style lang="scss" module>
   .navbar {
-    --navbar-height: calc(56px + var(--safe-area-inset-bottom));
-    --navbar-width: calc(56px + var(--safe-area-inset-left));
-
-    position: sticky;
-    top: 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
 
     display: flex;
     flex-direction: row;
@@ -35,7 +33,6 @@
 
     width: 100%;
     height: var(--navbar-height);
-    min-height: 56px;
     padding-bottom: var(--safe-area-inset-bottom);
 
     background-color: var(--color-bg-main);
@@ -43,13 +40,14 @@
     border-right: 0;
 
     @include media-min($md) {
+      top: 0;
+      bottom: initial;
+
       flex-direction: column;
       flex-wrap: nowrap;
 
-      width: calc(var(--navbar-width) + 8px);
-      min-width: calc(var(--navbar-width) + 8px);
+      width: var(--navbar-width);
       height: 100vh;
-      min-height: 100vh;
       padding-bottom: 0;
       padding-left: var(--safe-area-inset-left);
 

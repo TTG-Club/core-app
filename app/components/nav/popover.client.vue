@@ -93,7 +93,7 @@
       transform: translate3d(0, 0, 0);
 
       width: 100vw;
-      height: var(--max-vh);
+      height: 100vh;
 
       background-color: var(--bg-light-main);
     }
@@ -114,7 +114,7 @@
       display: inline-block;
 
       max-width: calc(100vw - 16px);
-      max-height: calc(var(--max-vh) - 72px - var(--safe-area-inset-bottom));
+      max-height: calc(100vh - 72px - var(--safe-area-inset-bottom));
 
       background-image: var(--bg-gradient);
       -webkit-backdrop-filter: blur(16px);

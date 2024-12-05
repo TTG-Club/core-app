@@ -86,11 +86,10 @@
     display: inline-block;
     flex-shrink: 0;
 
-    width: 1em;
-    height: 1em;
+    width: v-bind(sizeCalculated);
+    height: v-bind(sizeCalculated);
 
-    font-size: v-bind(sizeCalculated);
-    line-height: 1em;
+    line-height: v-bind(sizeCalculated);
     color: currentColor;
     text-align: center;
     vertical-align: initial;
@@ -98,8 +97,8 @@
     fill: currentColor;
 
     svg {
-      width: 1em;
-      height: 1em;
+      width: v-bind(sizeCalculated);
+      height: v-bind(sizeCalculated);
     }
   }
 

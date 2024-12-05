@@ -21,6 +21,11 @@
     <AExtractStyle>
       <AStyleProvider>
         <AApp>
+          <NuxtLoadingIndicator
+            color="var(--color-primary)"
+            error-color="var(--color-error)"
+          />
+
           <div class="ttg-app">
             <NavBar />
 

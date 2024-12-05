@@ -96,7 +96,7 @@ $typography: '.ant-typography';
 
     &-nested {
       &-loading {
-        min-height: var(--max-vh);
+        flex: 1 1 auto;
 
         > div {
           #{$spin} {
@@ -107,7 +107,7 @@ $typography: '.ant-typography';
     }
 
     &-container {
-      min-height: var(--max-vh);
+      min-height: 100%;
     }
   }
 
@@ -117,6 +117,6 @@ $typography: '.ant-typography';
     align-items: center;
     justify-content: center;
 
-    min-height: var(--max-vh);
+    min-height: 100vh;
   }
 }

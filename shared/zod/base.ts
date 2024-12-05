@@ -8,15 +8,15 @@ export const nameSchema = z.object({
 });
 
 export const sourceSchema = z.object({
-  page: z.number(),
-  homebrew: z.boolean(),
-  thirdParty: z.boolean(),
   name: nameSchema.extend({
     short: z.string(),
   }),
   group: nameSchema.extend({
     short: z.string(),
   }),
+  page: z.number().optional(),
+  homebrew: z.boolean().optional(),
+  thirdParty: z.boolean().optional(),
 });
 
 export const speedSchema = z.object({
@@ -31,4 +31,4 @@ export const tagSchema = z.object({
   value: z.string(),
 });
 
-export const tagsSchema = z.array(tagSchema);
+export const tagsSchema = z.array(z.string());

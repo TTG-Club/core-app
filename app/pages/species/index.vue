@@ -6,11 +6,10 @@
     description: 'Виды и подвиды персонажей по D&D 2024 редакции',
   });
 
-  const { data, status, error, refresh } = await useProxy<Array<SpecieLink>>(
-    '/species/search',
-    {
+  const { data, status, error, refresh } = await useAsyncData('species', () =>
+    $fetch<Array<SpecieLink>>('/api/v2/species/search', {
       method: 'post',
-    },
+    }),
   );
 </script>
 

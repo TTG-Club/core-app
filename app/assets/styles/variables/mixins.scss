@@ -34,6 +34,10 @@
 
   transition: $transition;
 
+  &:active {
+    transition: $transition;
+  }
+
   @include media-min($md) {
     &:hover {
       transition: $transition;

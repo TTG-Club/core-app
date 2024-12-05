@@ -7,8 +7,6 @@
 <style lang="scss" module>
   .empty {
     overflow: auto;
-    height: var(--max-vh);
-    min-height: var(--max-vh);
-    max-height: var(--max-vh);
+    min-height: 100vh;
   }
 </style>

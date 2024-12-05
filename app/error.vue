@@ -37,7 +37,7 @@
 
             <NuxtLayout>
               <AFlex
-                :style="{ minHeight: 'var(--max-vh)' }"
+                :style="{ minHeight: '100vh' }"
                 :gap="8"
                 justify="center"
                 vertical

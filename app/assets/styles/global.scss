@@ -63,12 +63,14 @@ body,
 .ttg-club,
 .ant-app,
 .ttg-app {
-  width: 100vw;
-  min-height: var(--max-vh);
+  overflow: hidden auto;
+  width: 100%;
 }
 
 body {
   z-index: 1;
+
+  min-height: 100vh;
 
   font-family: 'Open Sans', sans-serif;
   font-size: var(--font-size-main);
@@ -86,8 +88,11 @@ body {
 .ttg-app {
   display: flex;
   flex-flow: column-reverse;
+  padding-bottom: var(--navbar-height);
 
   @include media-min($md) {
     flex-flow: row;
+    padding-bottom: 0;
+    padding-left: var(--navbar-width);
   }
 }

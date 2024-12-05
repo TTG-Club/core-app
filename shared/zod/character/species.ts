@@ -19,11 +19,10 @@ export const specieRelatedSchema = z.object({
 
 export const specieFeatureSchema = z.object({
   url: z.string(),
-  image: z.string().url().optional(),
   name: nameSchema,
-  description: z.string(),
-  source: sourceSchema,
-  tags: tagsSchema,
+  description: z.string().optional(),
+  source: sourceSchema.optional(),
+  tags: tagsSchema.optional(),
 });
 
 export const speciePropertiesSchema = z.object({
