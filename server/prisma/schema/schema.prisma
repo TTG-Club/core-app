@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters", "fullTextIndex", "fullTextSearch", "prismaSchemaFolder", "omitApi"]
+  previewFeatures = ["driverAdapters", "prismaSchemaFolder", "omitApi"]
 }
 
 datasource db {
