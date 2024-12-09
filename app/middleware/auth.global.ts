@@ -6,9 +6,12 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return true;
   }
 
-  const preventRouting = () => {
+  const preventRouting = (code: StatusCodes) => {
     if (import.meta.server) {
-      return navigateTo('/');
+      return createError({
+        statusCode: code,
+        message: getStatusMessage(code),
+      });
     }
 
     notification.error({
@@ -22,7 +25,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const cookie = useCookie(USER_TOKEN_COOKIE);
 
   if (!cookie.value) {
-    return preventRouting();
+    return preventRouting(StatusCodes.UNAUTHORIZED);
   }
 
   const requestFetch = useRequestFetch();
@@ -31,11 +34,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
     const role = await requestFetch('/api/user/role');
 
     if (!to.meta.auth.roles.includes(role || ROLE.USER)) {
-      return preventRouting();
+      return preventRouting(StatusCodes.FORBIDDEN);
     }
 
     return true;
   } catch (err) {
-    return preventRouting();
+    return preventRouting(StatusCodes.BAD_REQUEST);
   }
 });
