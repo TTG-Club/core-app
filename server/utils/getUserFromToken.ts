@@ -5,12 +5,6 @@ import { StatusCodes } from 'http-status-codes';
 export const getUserFromToken = async (event: H3Event) => {
   const cookie = getCookie(event, USER_TOKEN_COOKIE);
 
-  // console.log(
-  //   getCookies(
-  //     (headers.cookie || '').split(';').map((entry) => entry.trim().split('=')),
-  //   ),
-  // );
-
   if (!cookie) {
     throw createError(getErrorResponse(StatusCodes.UNAUTHORIZED));
   }

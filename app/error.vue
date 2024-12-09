@@ -15,9 +15,9 @@
     error: NuxtError;
   }>();
 
-  const message = computed(() => getStatusMessage(error.statusCode));
-
-  const handleError = () => clearError({ redirect: '/' });
+  const handleError = () => {
+    window.location.href = '/';
+  };
 
   const reload = () => {
     window.location.reload();
@@ -42,12 +42,22 @@
                 justify="center"
                 vertical
               >
-                <ATypographyTitle :level="1">
+                <ATypographyTitle
+                  :level="1"
+                  data-allow-mismatch
+                >
                   {{ error.statusCode }}
                 </ATypographyTitle>
 
-                <ATypographyText>
-                  {{ message }}
+                <ATypographyText
+                  data-allow-mismatch
+                  type="secondary"
+                >
+                  {{ error.statusMessage }}
+                </ATypographyText>
+
+                <ATypographyText data-allow-mismatch>
+                  {{ error.message }}
                 </ATypographyText>
 
                 <AFlex :gap="12">

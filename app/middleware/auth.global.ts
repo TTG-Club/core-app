@@ -1,4 +1,4 @@
-import { StatusCodes } from 'http-status-codes';
+import { getReasonPhrase, StatusCodes } from 'http-status-codes';
 import { notification } from 'ant-design-vue';
 
 export default defineNuxtRouteMiddleware(async (to) => {
@@ -8,18 +8,33 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   const preventRouting = (code: StatusCodes) => {
     if (import.meta.server) {
-      return createError({
-        statusCode: code,
-        message: getStatusMessage(code),
-      });
+      return abortNavigation(
+        createError({
+          statusCode: code,
+          statusMessage: getReasonPhrase(code),
+          message: getStatusMessage(code),
+        }),
+      );
+    }
+
+    const nuxtApp = useNuxtApp();
+
+    if (nuxtApp.isHydrating) {
+      return abortNavigation();
     }
 
     notification.error({
       message: 'Ошибка доступа',
-      description: getStatusMessage(StatusCodes.FORBIDDEN),
+      description: getStatusMessage(code),
     });
 
-    return abortNavigation();
+    return abortNavigation(
+      createError({
+        statusCode: code,
+        statusMessage: getReasonPhrase(code),
+        message: getStatusMessage(code),
+      }),
+    );
   };
 
   const cookie = useCookie(USER_TOKEN_COOKIE);
@@ -33,7 +48,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   try {
     const role = await requestFetch('/api/user/role');
 
-    if (!to.meta.auth.roles.includes(role || ROLE.USER)) {
+    if (!to.meta.auth.roles.includes(role)) {
       return preventRouting(StatusCodes.FORBIDDEN);
     }
 
