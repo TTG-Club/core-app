@@ -4,6 +4,7 @@
   }>();
 
   const { fetch } = useUserStore();
+  const { notification } = App.useApp();
 
   const model = reactive({
     usernameOrEmail: '',
@@ -11,14 +12,7 @@
     remember: true,
   });
 
-  const showSuccessNotify = () => {
-    notification.success({
-      key: 'notify-sign-in',
-      message: 'Вы авторизовались!',
-    });
-  };
-
-  const { execute, status, error } = useApi('/auth/sign-in', {
+  const { execute, status, error } = useFetch('/api/auth/sign-in', {
     body: computed(() => model),
     method: 'post',
     watch: false,
@@ -32,13 +26,21 @@
     await execute();
 
     if (error.value) {
+      notification.error({
+        message: 'Ошибка авторизации',
+        description: error.value.data.message,
+      });
+
       return;
     }
 
     fetch().finally();
 
     emit('close');
-    showSuccessNotify();
+
+    notification.success({
+      message: 'Вы авторизовались!',
+    });
   };
 </script>
 

@@ -1,4 +1,4 @@
-import { getReasonPhrase, StatusCodes } from 'http-status-codes';
+import { StatusCodes } from 'http-status-codes';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 
@@ -25,10 +25,20 @@ interface Request {
 }
 
 export default defineEventHandler<Request>(async (event) => {
-  const { username, email, password } = await readValidatedBody(
-    event,
-    signUpSchema.parse,
-  );
+  let username, email, password;
+
+  try {
+    ({ username, email, password } = await readValidatedBody(
+      event,
+      signUpSchema.parse,
+    ));
+  } catch (err) {
+    throw createError(
+      getErrorResponse(StatusCodes.BAD_REQUEST, {
+        message: 'Поля заполнены неверно',
+      }),
+    );
+  }
 
   if (
     await prisma.user.findUnique({
@@ -37,11 +47,11 @@ export default defineEventHandler<Request>(async (event) => {
       },
     })
   ) {
-    throw createError({
-      statusCode: StatusCodes.CONFLICT,
-      statusMessage: getReasonPhrase(StatusCodes.CONFLICT),
-      message: 'Имя пользователя занято',
-    });
+    throw createError(
+      getErrorResponse(StatusCodes.CONFLICT, {
+        message: 'Имя пользователя занято',
+      }),
+    );
   }
 
   if (
@@ -51,11 +61,11 @@ export default defineEventHandler<Request>(async (event) => {
       },
     })
   ) {
-    throw createError({
-      statusCode: StatusCodes.CONFLICT,
-      statusMessage: getReasonPhrase(StatusCodes.CONFLICT),
-      message: 'Электронный адрес занят',
-    });
+    throw createError(
+      getErrorResponse(StatusCodes.CONFLICT, {
+        message: 'Электронный адрес занят',
+      }),
+    );
   }
 
   const newUser = { username, email, password };
@@ -69,12 +79,12 @@ export default defineEventHandler<Request>(async (event) => {
       data: newUser,
     });
   } catch (err) {
-    throw createError({
-      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-      statusMessage: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR),
-      message: 'Неизвестная ошибка при сохранении',
-      data: err,
-    });
+    throw createError(
+      getErrorResponse(StatusCodes.INTERNAL_SERVER_ERROR, {
+        message: 'Неизвестная ошибка при сохранении',
+        data: err,
+      }),
+    );
   }
 
   const { sendMail } = useNodeMailer();
@@ -111,10 +121,11 @@ export default defineEventHandler<Request>(async (event) => {
       },
     });
 
-    throw createError({
-      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-      statusMessage: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR),
-      message: 'Неизвестная ошибка при сохранении',
-    });
+    throw createError(
+      getErrorResponse(StatusCodes.INTERNAL_SERVER_ERROR, {
+        message: 'Неизвестная ошибка при сохранении',
+        data: err,
+      }),
+    );
   }
 });

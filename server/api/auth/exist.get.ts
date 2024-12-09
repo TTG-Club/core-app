@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { StatusCodes } from 'http-status-codes';
 
 const existSchema = z.object({
   username: z
@@ -19,26 +20,30 @@ interface Request {
 }
 
 export default defineEventHandler<Request>(async (event) => {
-  const { email, username } = await getValidatedQuery(event, existSchema.parse);
+  let email, username;
 
   try {
-    await Promise.any([
-      prisma.user.findUniqueOrThrow({
-        where: {
-          username,
-        },
-      }),
-      prisma.user.findUniqueOrThrow({
-        where: {
-          email,
-        },
-      }),
-    ]);
-
-    return true;
+    ({ email, username } = await getValidatedQuery(event, existSchema.parse));
   } catch (err) {
-    console.error(err);
+    throw createError(
+      getErrorResponse(StatusCodes.BAD_REQUEST, {
+        message: 'Неверно заполнено поле',
+      }),
+    );
+  }
 
-    return false;
+  try {
+    return !!(await prisma.user.findFirst({
+      where: {
+        OR: [{ username }, { email }],
+      },
+    }));
+  } catch (err) {
+    throw createError(
+      getErrorResponse(StatusCodes.INTERNAL_SERVER_ERROR, {
+        message: 'Неизвестная ошибка ',
+        data: err,
+      }),
+    );
   }
 });

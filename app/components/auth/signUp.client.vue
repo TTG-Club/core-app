@@ -13,6 +13,8 @@
     (e: 'switch:sign-in'): void;
   }>();
 
+  const { notification } = App.useApp();
+
   const success = ref(false);
 
   const model = reactive({
@@ -35,15 +37,6 @@
     },
   });
 
-  const showSuccessNotify = () => {
-    notification.success({
-      key: 'notify-sign-up',
-      message: 'Регистрация прошла успешно!',
-      description:
-        'Пожалуйста, подтвердите почту пройдя по ссылке в письме на электронной почте. Ссылка действительна в течение суток.',
-    });
-  };
-
   const { execute, status, error } = useApi('/auth/sign-up', {
     body: computed(() => omit(model, 'repeat')),
     method: 'post',
@@ -59,13 +52,23 @@
     await execute();
 
     if (error.value) {
+      notification.error({
+        message: 'Ошибка авторизации',
+        description: error.value.data.message,
+      });
+
       return;
     }
 
     success.value = true;
 
     emit('switch:sign-in');
-    showSuccessNotify();
+
+    notification.success({
+      message: 'Регистрация прошла успешно!',
+      description:
+        'Пожалуйста, подтвердите почту пройдя по ссылке в письме на электронной почте. Ссылка действительна в течение суток.',
+    });
   };
 </script>
 

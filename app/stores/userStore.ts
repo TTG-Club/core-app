@@ -5,10 +5,17 @@ export const useUserStore = defineStore('userStore', () => {
     data: user,
     status,
     execute: fetch,
+    clear,
   } = useFetch<UserProfile>('/api/user/profile');
 
   const isLoggedIn = computed(() => !!(cookie.value && user.value));
   const isLoading = computed(() => status.value === 'pending');
+
+  const logout = () => {
+    cookie.value = null;
+
+    clear();
+  };
 
   return {
     isLoading,
@@ -18,6 +25,7 @@ export const useUserStore = defineStore('userStore', () => {
     user,
 
     fetch,
+    logout,
   };
 });
 

@@ -50,13 +50,17 @@
                 </ATypographyTitle>
 
                 <ATypographyText
+                  v-if="error.statusMessage"
                   data-allow-mismatch
                   type="secondary"
                 >
                   {{ error.statusMessage }}
                 </ATypographyText>
 
-                <ATypographyText data-allow-mismatch>
+                <ATypographyText
+                  v-if="error.message"
+                  data-allow-mismatch
+                >
                   {{ error.message }}
                 </ATypographyText>
 

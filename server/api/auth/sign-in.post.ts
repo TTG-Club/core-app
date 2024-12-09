@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { getReasonPhrase, StatusCodes } from 'http-status-codes';
+import { StatusCodes } from 'http-status-codes';
 import { ONE_DAY_IN_SECONDS, USER_TOKEN_COOKIE } from '~~/shared/utils/const';
 import { z } from 'zod';
 
@@ -14,10 +14,20 @@ interface Request {
 }
 
 export default defineEventHandler<Request>(async (event) => {
-  const { usernameOrEmail, password, remember } = await readValidatedBody(
-    event,
-    loginSchema.parse,
-  );
+  let usernameOrEmail, password, remember;
+
+  try {
+    ({ usernameOrEmail, password, remember } = await readValidatedBody(
+      event,
+      loginSchema.parse,
+    ));
+  } catch (err) {
+    throw createError(
+      getErrorResponse(StatusCodes.BAD_REQUEST, {
+        message: 'Неправильный логин или пароль',
+      }),
+    );
+  }
 
   let user;
 
@@ -40,38 +50,37 @@ export default defineEventHandler<Request>(async (event) => {
       },
     });
   } catch (err) {
-    throw createError({
-      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-      statusMessage: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR),
-      message: 'Неизвестная ошибка',
-      data: err,
-    });
+    throw createError(
+      getErrorResponse(StatusCodes.INTERNAL_SERVER_ERROR, {
+        data: err,
+      }),
+    );
   }
 
   if (!user) {
-    throw createError({
-      statusCode: StatusCodes.BAD_REQUEST,
-      statusMessage: getReasonPhrase(StatusCodes.BAD_REQUEST),
-      message: 'Неправильный логин или пароль',
-    });
+    throw createError(
+      getErrorResponse(StatusCodes.BAD_REQUEST, {
+        message: 'Неправильный логин или пароль',
+      }),
+    );
   }
 
   if (!user.verified) {
-    throw createError({
-      statusCode: StatusCodes.NOT_ACCEPTABLE,
-      statusMessage: getReasonPhrase(StatusCodes.NOT_ACCEPTABLE),
-      message: 'Ваша учетная запись не активирована',
-    });
+    throw createError(
+      getErrorResponse(StatusCodes.NOT_ACCEPTABLE, {
+        message: 'Ваша учетная запись не активирована',
+      }),
+    );
   }
 
   try {
     await bcrypt.compare(password, user.password);
   } catch (err) {
-    throw createError({
-      statusCode: StatusCodes.BAD_REQUEST,
-      statusMessage: getReasonPhrase(StatusCodes.BAD_REQUEST),
-      message: 'Неправильный логин или пароль',
-    });
+    throw createError(
+      getErrorResponse(StatusCodes.BAD_REQUEST, {
+        message: 'Неправильный логин или пароль',
+      }),
+    );
   }
 
   const token = generateAuthJwt({

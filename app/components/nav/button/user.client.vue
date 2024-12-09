@@ -45,9 +45,8 @@
   };
 
   const logout = () => {
-    // clear();
-
-    navigateTo({ name: 'index' });
+    userStore.logout();
+    window.location.reload();
   };
 </script>
 

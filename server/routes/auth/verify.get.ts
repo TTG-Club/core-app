@@ -12,10 +12,12 @@ interface Request {
 }
 
 export default defineEventHandler<Request>(async (event) => {
-  const { token } = await getValidatedQuery(event, verifySchema.parse);
+  let token;
 
-  if (!isString(token)) {
-    return sendRedirect(event, '/', StatusCodes.BAD_REQUEST);
+  try {
+    ({ token } = await getValidatedQuery(event, verifySchema.parse));
+  } catch (err) {
+    throw createError(getErrorResponse(StatusCodes.BAD_REQUEST));
   }
 
   const {
@@ -35,12 +37,12 @@ export default defineEventHandler<Request>(async (event) => {
       !payload.email ||
       payload.origin !== getRequestOrigin(event)
     ) {
-      return sendRedirect(event, '/', StatusCodes.BAD_REQUEST);
+      return createError(getErrorResponse(StatusCodes.BAD_REQUEST));
     }
 
     email = payload.email;
   } catch (err) {
-    return sendRedirect(event, '/', StatusCodes.BAD_REQUEST);
+    throw createError(getErrorResponse(StatusCodes.BAD_REQUEST));
   }
 
   try {
@@ -48,8 +50,8 @@ export default defineEventHandler<Request>(async (event) => {
       where: { email },
     });
 
-    if (!user || user.verified) {
-      return sendRedirect(event, '/', StatusCodes.BAD_REQUEST);
+    if (user.verified) {
+      return sendRedirect(event, '/', StatusCodes.MOVED_PERMANENTLY);
     }
 
     await prisma.user.update({
@@ -59,10 +61,10 @@ export default defineEventHandler<Request>(async (event) => {
       },
     });
   } catch (err) {
-    return sendRedirect(event, '/', StatusCodes.INTERNAL_SERVER_ERROR);
+    return createError(getErrorResponse(StatusCodes.INTERNAL_SERVER_ERROR));
   }
 
   setCookie(event, 'email-verified', 'true', { maxAge: ONE_DAY_IN_SECONDS });
 
-  return sendRedirect(event, '/', StatusCodes.OK);
+  return sendRedirect(event, '/', StatusCodes.MOVED_PERMANENTLY);
 });
