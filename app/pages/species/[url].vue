@@ -110,13 +110,16 @@
           vertical
           :gap="24"
         >
-          <DetailHeader
+          <PageHeader
             :title="specie.name.rus"
             :subtitle="specie.name.eng"
             :source="specie.source"
             :date-time="specie.updatedAt"
-            @close="navigateTo('/species')"
-          />
+          >
+            <template #actions>
+              <DetailActions @close="navigateTo('/species')" />
+            </template>
+          </PageHeader>
 
           <AFlex :gap="28">
             <AFlex

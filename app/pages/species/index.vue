@@ -18,27 +18,16 @@
     vertical
     :gap="16"
   >
-    <AFlex
-      :style="{ paddingTop: '32px' }"
-      :gap="16"
-      vertical
-    >
-      <ATypographyTitle
-        :level="2"
-        content="Виды"
-        data-allow-mismatch
-        ellipsis
-      />
-
-      <AFlex :gap="8">
+    <PageHeader title="Виды">
+      <template #filter>
         <AInput
           placeholder="Введите текст..."
           allow-clear
         />
 
         <AButton type="primary">Фильтр</AButton>
-      </AFlex>
-    </AFlex>
+      </template>
+    </PageHeader>
 
     <ASpin
       data-allow-mismatch
