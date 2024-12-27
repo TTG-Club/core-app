@@ -119,4 +119,12 @@ $typography: '.ant-typography';
 
     min-height: 100vh;
   }
+
+  &-input {
+    width: 100%;
+
+    &-number {
+      width: 100%;
+    }
+  }
 }

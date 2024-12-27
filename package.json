@@ -44,6 +44,7 @@
     "nuxt-security": "^2.1.5",
     "nuxt-typed-router": "^3.7.2",
     "pinia": "^2.3.0",
+    "transliteration": "^2.3.5",
     "vue": "^3.5.13",
     "zod": "^3.24.1"
   },
