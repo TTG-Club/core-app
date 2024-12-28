@@ -1,14 +1,22 @@
 FROM node:lts-alpine AS base
 
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable pnpm && corepack install -g pnpm@latest-9
+
 WORKDIR /app
 
 FROM base AS build
 
-COPY --link . .
+COPY .npmrc package.json pnpm-lock.yaml ./
+COPY server/prisma/schema ./server/prisma/schema
 
-RUN npm ci
-RUN npx prisma generate
-RUN npm run build
+RUN pnpm install --frozen-lockfile
+
+COPY . .
+
+RUN pnpx prisma generate
+RUN pnpm run build
 
 FROM base
 
