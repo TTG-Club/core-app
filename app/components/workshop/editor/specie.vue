@@ -249,22 +249,29 @@
     callback();
   };
 
-  const getSlugifyUrl = (value: string) =>
-    slugify(value, {
+  const getSlugifyUrl = (value: string, source?: string) => {
+    const sourcePostfix = source ? `-${source}` : '';
+
+    const slug = slugify(value, {
       lowercase: true,
       trim: true,
       allowedChars: 'a-zA-Z0-9-_',
-    });
+    })
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    return `${slug}${sourcePostfix}`;
+  };
 
   const handleEngNameChange = (name: string) => {
     form.value.name.eng = name;
-    form.value.url = getSlugifyUrl(name);
+    form.value.url = getSlugifyUrl(name, form.value.source.url);
 
     formRef.value?.validateFields(['url']);
   };
 
   const handleUrlChange = (url: string) => {
-    form.value.url = getSlugifyUrl(url);
+    form.value.url = getSlugifyUrl(url, form.value.source.url);
   };
 
   const submit = () => {
