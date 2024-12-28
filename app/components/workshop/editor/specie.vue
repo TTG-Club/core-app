@@ -547,7 +547,7 @@
             <ASelect
               v-model:value="form.parent"
               :loading="speciesStatus === 'pending'"
-              :options="species"
+              :options="species || []"
               placeholder="Выбери основной вид"
               show-search
               @dropdown-visible-change="
@@ -566,7 +566,7 @@
             <ASelect
               v-model:value="form.properties.size"
               :loading="sizesStatus === 'pending'"
-              :options="sizes"
+              :options="sizes || []"
               placeholder="Выбери размер существа"
               show-search
               @dropdown-visible-change="
@@ -585,7 +585,7 @@
             <ASelect
               v-model:value="form.properties.type"
               :loading="creatureTypesStatus === 'pending'"
-              :options="creatureTypes"
+              :options="creatureTypes || []"
               placeholder="Выбери тип существа"
               show-search
               @dropdown-visible-change="

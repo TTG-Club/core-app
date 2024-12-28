@@ -6,7 +6,9 @@ export const useUserStore = defineStore('userStore', () => {
     status,
     execute: fetch,
     clear,
-  } = useFetch<UserProfile>('/api/user/profile');
+  } = useFetch<UserProfile>('/api/user/profile', {
+    immediate: false,
+  });
 
   const isLoggedIn = computed(() => !!(cookie.value && user.value));
   const isLoading = computed(() => status.value === 'pending');
