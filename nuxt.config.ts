@@ -2,6 +2,7 @@
 import { fileURLToPath, URL } from 'node:url';
 
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
+import bytes from 'bytes';
 
 const appName = 'TTG Club';
 
@@ -36,6 +37,13 @@ export default defineNuxtConfig({
       },
       from: process.env.NUXT_NODEMAILER_FROM,
     },
+    s3: {
+      url: process.env.NUXT_S3_URL,
+      region: process.env.NUXT_S3_REGION,
+      bucket: process.env.NUXT_S3_BUCKET,
+      accessKeyId: process.env.NUXT_S3_ACCESS_KEY_ID,
+      secretAccessKey: process.env.NUXT_S3_SECRET_ACCESS_KEY,
+    },
     site: {
       url: process.env.NUXT_SITE_URL,
       name: `${appName} Oнлайн-справочник`,
@@ -52,6 +60,10 @@ export default defineNuxtConfig({
         'media-src': false,
       },
       xXSSProtection: '1; mode=block',
+    },
+
+    requestSizeLimiter: {
+      maxUploadFileRequestInBytes: bytes('30MB') || 8000000,
     },
   },
 

@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import { Dictionaries } from '~/shared';
-  import { slugify } from 'transliteration';
   import {
     chain,
     difference,
@@ -17,6 +16,8 @@
   import { Button, type FormInstance } from 'ant-design-vue';
   import { SvgIcon } from '#components';
   import { ValidationBase, ValidationSpecie } from '~/utils/validation/';
+  import { getSlug } from '#shared/utils/getSlug';
+  import type { BookDetail } from '#shared/types/wiki/books';
 
   withDefaults(
     defineProps<{
@@ -33,7 +34,7 @@
     data: species,
     status: speciesStatus,
     refresh: refreshSpecies,
-  } = await useAsyncData('species', async () => {
+  } = await useAsyncData('species-select', async () => {
     const specieLinks = await $fetch<Array<SpecieLink>>(
       '/api/v2/species/search',
       {
@@ -44,6 +45,24 @@
     return specieLinks.map((specie) => ({
       label: `${specie.name.rus} [${specie.name.eng}]`,
       value: specie.url,
+    }));
+  });
+
+  const {
+    data: books,
+    status: booksStatus,
+    refresh: refreshBooks,
+  } = await useAsyncData('books-select', async () => {
+    const specieLinks = await $fetch<Array<BookDetail>>(
+      '/api/v2/books/search',
+      {
+        method: 'post',
+      },
+    );
+
+    return specieLinks.map((specie) => ({
+      label: `${specie.name.rus} [${specie.name.eng}]`,
+      value: specie.name.short,
     }));
   });
 
@@ -144,6 +163,15 @@
       value: tag,
     })),
   );
+
+  const specieLinkPreview = computed<SpecieLink>(() => ({
+    name: {
+      rus: form.value.name.rus,
+      eng: form.value.name.eng,
+    },
+    url: form.value.url,
+    image: form.value.linkImage,
+  }));
 
   const handleTagsChange = (value: SelectValue) => {
     if (isString(value)) {
@@ -252,15 +280,7 @@
   const getSlugifyUrl = (value: string, source?: string) => {
     const sourcePostfix = source ? `-${source}` : '';
 
-    const slug = slugify(value, {
-      lowercase: true,
-      trim: true,
-      allowedChars: 'a-zA-Z0-9-_',
-    })
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
-
-    return `${slug}${sourcePostfix}`;
+    return `${getSlug(value)}${sourcePostfix}`;
   };
 
   const handleEngNameChange = (name: string) => {
@@ -283,17 +303,6 @@
   <PageContainer>
     <PageHeader title="Создание нового вида">
       <template #actions>
-        <AButton
-          type="primary"
-          @click.left.exact.prevent="submit"
-        >
-          <template #icon>
-            <SvgIcon icon="check" />
-          </template>
-
-          <template #default> Создать </template>
-        </AButton>
-
         <ATooltip title="Закрыть">
           <AButton
             type="text"
@@ -375,11 +384,16 @@
           >
             <ASelect
               v-model:value="form.source.url"
+              :loading="booksStatus === 'pending'"
+              :options="books || []"
               placeholder="Выбери книгу"
               allow-clear
               show-search
               @change="
                 form.source.page = !$event ? undefined : form.source.page
+              "
+              @dropdown-visible-change="
+                handleDropdownOpening($event, refreshBooks)
               "
             />
           </AFormItem>
@@ -455,90 +469,6 @@
       <ADivider orientation="left">
         <ATypographyText
           type="secondary"
-          content="Изображения"
-          strong
-        />
-      </ADivider>
-
-      <ARow :gutter="16">
-        <ACol :span="8">
-          <AFormItem
-            label="Основное"
-            tooltip="Эта картинка отображается при просмотре страницы вида"
-          >
-            <AUploadDragger
-              name="specie-image"
-              :show-upload-list="false"
-            >
-              <AFlex
-                :class="$style.upload"
-                :gap="8"
-                justify="center"
-                align="center"
-                vertical
-              >
-                <SvgIcon
-                  size="24"
-                  icon="download"
-                />
-
-                <span type="secondary">
-                  Перетащите или нажмите сюда, чтобы загрузить картинку в
-                  форматах: .webp, .jpg, .jpeg, .png
-                </span>
-              </AFlex>
-            </AUploadDragger>
-          </AFormItem>
-        </ACol>
-
-        <ACol :span="8">
-          <AFormItem
-            label="Для ссылки"
-            tooltip="Эта картинка отображается на странице списка видов"
-          >
-            <AUploadDragger
-              name="specie-image"
-              :show-upload-list="false"
-            >
-              <AFlex
-                :class="$style.upload"
-                :gap="8"
-                justify="center"
-                align="center"
-                vertical
-              >
-                <SvgIcon
-                  size="24"
-                  icon="download"
-                />
-
-                <span type="secondary">
-                  Перетащите или нажмите сюда, чтобы загрузить картинку в
-                  форматах: .webp, .jpg, .jpeg, .png
-                </span>
-              </AFlex>
-            </AUploadDragger>
-          </AFormItem>
-        </ACol>
-
-        <ACol :span="8">
-          <AFormItem label="Галерея">
-            <AFlex :gap="16">
-              <ASkeletonImage />
-
-              <ASkeletonImage />
-
-              <ASkeletonImage />
-
-              <ASkeletonImage />
-            </AFlex>
-          </AFormItem>
-        </ACol>
-      </ARow>
-
-      <ADivider orientation="left">
-        <ATypographyText
-          type="secondary"
           content="Характеристики"
           strong
         />
@@ -575,6 +505,8 @@
               :loading="sizesStatus === 'pending'"
               :options="sizes || []"
               placeholder="Выбери размер существа"
+              max-tag-count="responsive"
+              mode="multiple"
               show-search
               @dropdown-visible-change="
                 handleDropdownOpening($event, refreshSizes)
@@ -712,7 +644,7 @@
               label="Название (англ.)"
               tooltip="Английское название"
               :name="['features', featIndex, 'name', 'eng']"
-              :rules="[ValidationBase.ruleRusName()]"
+              :rules="[ValidationBase.ruleEngName()]"
             >
               <AInput
                 v-model:value="feature.name.eng"
@@ -731,11 +663,18 @@
             >
               <ASelect
                 v-model:value="feature.source.url"
+                :loading="booksStatus === 'pending'"
+                :options="books || []"
                 placeholder="Выбери источник"
+                allow-clear
+                show-search
                 @change="
                   feature.source.page = !$event
                     ? undefined
                     : feature.source.page
+                "
+                @dropdown-visible-change="
+                  handleDropdownOpening($event, refreshBooks)
                 "
               />
             </AFormItem>
@@ -795,12 +734,83 @@
 
         <ADivider v-if="featIndex !== form.features.length - 1" />
       </template>
+
+      <ADivider orientation="left">
+        <ATypographyText
+          type="secondary"
+          content="Изображения"
+          strong
+        />
+      </ADivider>
+
+      <ARow :gutter="16">
+        <ACol :span="8">
+          <AFormItem
+            label="Основное"
+            tooltip="Эта картинка отображается при просмотре страницы вида"
+          >
+            <WorkshopEditorUiUploadImage
+              v-model="form.image"
+              path="/species"
+              max-size="480"
+            />
+          </AFormItem>
+        </ACol>
+
+        <ACol :span="8">
+          <AFormItem
+            label="Для ссылки"
+            tooltip="Эта картинка отображается на странице со списком видов"
+          >
+            <WorkshopEditorUiUploadImage
+              v-model="form.linkImage"
+              path="/species"
+              max-size="190"
+            >
+              <template #preview>
+                <CharacterSpeciesLink
+                  :specie="specieLinkPreview"
+                  disabled
+                />
+              </template>
+            </WorkshopEditorUiUploadImage>
+          </AFormItem>
+        </ACol>
+
+        <ACol :span="8">
+          <AFormItem label="Галерея">
+            <WorkshopEditorUiUploadGallery
+              v-model="form.gallery"
+              path="/species"
+            />
+          </AFormItem>
+        </ACol>
+      </ARow>
     </AForm>
+
+    <AFlex
+      :class="$style.actions"
+      :gap="16"
+      justify="flex-end"
+    >
+      <AButton
+        type="primary"
+        @click.left.exact.prevent="submit"
+      >
+        <template #icon>
+          <SvgIcon icon="check" />
+        </template>
+
+        <template #default> Создать </template>
+      </AButton>
+    </AFlex>
   </PageContainer>
 </template>
 
 <style module lang="scss">
-  .upload {
-    color: currentColor;
+  .actions {
+    position: sticky;
+    bottom: 0;
+    padding: 16px;
   }
 </style>

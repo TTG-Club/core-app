@@ -34,8 +34,8 @@ export const ruleUrl = (): Rule => ({
 export const ruleSize = (): Rule => ({
   required: true,
   trigger: ['change', 'blur'],
-  type: 'string',
-  validator: async (rule: Rule, value: string) => {
+  type: 'array',
+  validator: async (rule: Rule, value: Array<string> | undefined) => {
     if (!value) {
       throw new Error('Поле обязательно для заполнения');
     }
@@ -49,8 +49,10 @@ export const ruleSize = (): Rule => ({
       },
     });
 
-    if (!getEnumFromDictionary(sizes).includes(value)) {
-      throw new Error('Такое значение недоступно');
+    for (const size of value) {
+      if (!getEnumFromDictionary(sizes).includes(size)) {
+        throw new Error('Недопустимое значение');
+      }
     }
   },
 });
@@ -59,7 +61,7 @@ export const ruleCreatureType = (): Rule => ({
   required: true,
   trigger: ['change', 'blur'],
   type: 'string',
-  validator: async (rule: Rule, value: string) => {
+  validator: async (rule: Rule, value: string | undefined) => {
     if (!value) {
       throw new Error('Поле обязательно для заполнения');
     }
@@ -74,7 +76,7 @@ export const ruleCreatureType = (): Rule => ({
     });
 
     if (!getEnumFromDictionary(creatureTypes).includes(value)) {
-      throw new Error('Такое значение недоступно');
+      throw new Error('Недопустимое значение');
     }
   },
 });

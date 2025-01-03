@@ -5,13 +5,13 @@ import { isNumber } from 'lodash-es';
  * Ищет нерусские буквы и все остальное, кроме пробела, апострофа, дефисов, тире и цифр.
  */
 export const onlyRusString =
-  /[^0-9\u{0410}-\u{044F}\u{401}\u{0451}\u{0020}\u{0027}\u{2010}-\u{2014}\u{002D}]/u;
+  /[^0-9\u{0410}-\u{044F}\u{401}\u{0451}\u{0020}\u{0027}\u{2010}-\u{2014}\u{002D}\u{0028}\u{0029}]/u;
 
 /**
  * Ищет неанглийские буквы и все остальное, кроме пробела, апострофа, дефисов, тире и цифр.
  */
 export const onlyEngString =
-  /[^0-9\u{0041}-\u{005A}\u{0061}-\u{007A}\u{0020}\u{0027}\u{2010}-\u{2014}\u{002D}]/u;
+  /[^0-9\u{0041}-\u{005A}\u{0061}-\u{007A}\u{0020}\u{0027}\u{2010}-\u{2014}\u{002D}\u{0028}\u{0029}]/u;
 
 export const baseStringCheck = (str: string, min?: number, max?: number) => {
   if (!str) {
@@ -47,7 +47,7 @@ export const ruleRusName = (): Rule => {
 
       if (onlyRusString.test(value)) {
         throw new Error(
-          'Допустимы только русские буквы, арабские цифры, дефис, апостроф и пробел',
+          'Допустимы только русские буквы, арабские цифры, круглые скобки, дефис, апостроф и пробел',
         );
       }
 
@@ -72,7 +72,7 @@ export const ruleEngName = (): Rule => {
 
       if (onlyEngString.test(value)) {
         throw new Error(
-          'Допустимы только английские буквы, арабские цифры, дефис, апостроф и пробел',
+          'Допустимы только английские буквы, арабские цифры, круглые скобки, дефис, апостроф и пробел',
         );
       }
 
@@ -91,11 +91,17 @@ export const ruleSourcePage = (isBookSelected: boolean = false): Rule => ({
     }
 
     if (!isBookSelected) {
-      return;
+      return Promise.resolve();
     }
 
-    if (value < 1) {
-      throw new Error('Страница не может быть меньше 1');
+    if (!value) {
+      throw new Error('Необходимо указать страницу');
     }
+
+    if (value > 1000) {
+      throw new Error('Таких больших справочников не бывает');
+    }
+
+    return Promise.resolve();
   },
 });

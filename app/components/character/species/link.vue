@@ -5,15 +5,18 @@
     defineProps<{
       specie: SpecieLink;
       showSubspecies?: boolean;
+      disabled?: boolean;
     }>(),
     {
       showSubspecies: false,
+      disabled: false,
     },
   );
 </script>
 
 <template>
-  <NuxtLink
+  <component
+    :is="disabled ? 'div' : 'NuxtLink'"
     :class="$style.link"
     :to="`/species/${specie.url}`"
   >
@@ -45,7 +48,7 @@
           Разновидности
         </AButton>
 
-        <ATag> PHB</ATag>
+        <ATag> PHB </ATag>
       </AFlex>
     </div>
 
@@ -56,7 +59,7 @@
       :src="specie.image"
       loading="lazy"
     />
-  </NuxtLink>
+  </component>
 </template>
 
 <style module lang="scss">

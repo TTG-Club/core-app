@@ -25,7 +25,7 @@ export interface SpecieCreate {
     page: number | undefined;
   };
   properties: {
-    size: string | undefined;
+    size: Array<string> | undefined;
     type: string | undefined;
     darkVision: number;
     speed: {
