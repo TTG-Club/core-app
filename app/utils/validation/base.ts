@@ -105,3 +105,16 @@ export const ruleSourcePage = (isBookSelected: boolean = false): Rule => ({
     return Promise.resolve();
   },
 });
+
+export const ruleImage = (): Rule => ({
+  required: true,
+  trigger: ['change', 'blur'],
+  type: 'url',
+  validator: (rule: Rule, value: string) => {
+    if (!value) {
+      throw new Error('Необходимо добавить превью для страницы');
+    }
+
+    return Promise.resolve();
+  },
+});

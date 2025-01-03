@@ -294,8 +294,44 @@
     form.value.url = getSlugifyUrl(url, form.value.source.url);
   };
 
-  const submit = () => {
-    formRef.value?.validate();
+  const resetBookPage = (index?: number) => {
+    if (typeof index !== 'number') {
+      form.value.source.page = undefined;
+
+      return;
+    }
+
+    if (!form.value.features[index]) {
+      return;
+    }
+
+    form.value.features[index].source.page = undefined;
+  };
+
+  const handleBookChange = (value: SelectValue, index?: number) => {
+    if (typeof value !== 'string' && value !== undefined) {
+      return;
+    }
+
+    if (value === undefined) {
+      resetBookPage(index);
+    }
+
+    if (typeof index !== 'number') {
+      form.value.source.url = value;
+
+      return;
+    }
+
+    if (!form.value.features[index]) {
+      return;
+    }
+
+    form.value.features[index].source.url = value;
+  };
+
+  const submit = async () => {
+    await formRef.value?.validate();
   };
 </script>
 
@@ -383,15 +419,13 @@
             :name="['source', 'url']"
           >
             <ASelect
-              v-model:value="form.source.url"
+              :value="form.source.url"
               :loading="booksStatus === 'pending'"
               :options="books || []"
               placeholder="Выбери книгу"
               allow-clear
               show-search
-              @change="
-                form.source.page = !$event ? undefined : form.source.page
-              "
+              @update:value="handleBookChange"
               @dropdown-visible-change="
                 handleDropdownOpening($event, refreshBooks)
               "
@@ -662,17 +696,13 @@
               :name="['features', featIndex, 'source', 'url']"
             >
               <ASelect
-                v-model:value="feature.source.url"
+                :value="feature.source.url"
                 :loading="booksStatus === 'pending'"
                 :options="books || []"
                 placeholder="Выбери источник"
                 allow-clear
                 show-search
-                @change="
-                  feature.source.page = !$event
-                    ? undefined
-                    : feature.source.page
-                "
+                @update:value="handleBookChange($event, featIndex)"
                 @dropdown-visible-change="
                   handleDropdownOpening($event, refreshBooks)
                 "
@@ -748,6 +778,8 @@
           <AFormItem
             label="Основное"
             tooltip="Эта картинка отображается при просмотре страницы вида"
+            :name="['image']"
+            :rules="[ValidationBase.ruleImage()]"
           >
             <WorkshopEditorUiUploadImage
               v-model="form.image"
@@ -761,6 +793,8 @@
           <AFormItem
             label="Для ссылки"
             tooltip="Эта картинка отображается на странице со списком видов"
+            :name="['linkImage']"
+            :rules="[ValidationBase.ruleImage()]"
           >
             <WorkshopEditorUiUploadImage
               v-model="form.linkImage"
@@ -778,7 +812,10 @@
         </ACol>
 
         <ACol :span="8">
-          <AFormItem label="Галерея">
+          <AFormItem
+            label="Галерея"
+            :name="['gallery']"
+          >
             <WorkshopEditorUiUploadGallery
               v-model="form.gallery"
               path="/species"
