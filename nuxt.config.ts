@@ -18,31 +18,6 @@ export default defineNuxtConfig({
     api: {
       url: process.env.NUXT_API_URL,
       token: process.env.NUXT_API_TOKEN,
-      secret: process.env.NUXT_API_SECRET,
-    },
-    email: {
-      secret: process.env.NUXT_EMAIL_SECRET,
-    },
-    nodemailer: {
-      host: 'smtp.mail.ru',
-      port: 465,
-      secure: true,
-      tls: {
-        rejectUnauthorized: false,
-      },
-      auth: {
-        type: 'login',
-        user: process.env.NUXT_NODEMAILER_AUTH_USER || '',
-        pass: process.env.NUXT_NODEMAILER_AUTH_PASS || '',
-      },
-      from: process.env.NUXT_NODEMAILER_FROM,
-    },
-    s3: {
-      url: process.env.NUXT_S3_URL,
-      region: process.env.NUXT_S3_REGION,
-      bucket: process.env.NUXT_S3_BUCKET,
-      accessKeyId: process.env.NUXT_S3_ACCESS_KEY_ID,
-      secretAccessKey: process.env.NUXT_S3_SECRET_ACCESS_KEY,
     },
     site: {
       url: process.env.NUXT_SITE_URL,
@@ -214,7 +189,6 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@ant-design-vue/nuxt',
     '@pinia/nuxt',
-    'nuxt-nodemailer',
     'nuxt-security',
     'nuxt-typed-router',
     'dayjs-nuxt',

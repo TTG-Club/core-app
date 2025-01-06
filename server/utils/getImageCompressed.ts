@@ -1,23 +1,24 @@
 import type { ResizeOptions } from 'sharp';
 import sharp from 'sharp';
 import bytes from 'bytes';
-import type { S3UploadFile } from '~~/server/types/s3';
 import { StatusCodes } from 'http-status-codes';
 
-const getNewExtension = (string: string) => string.replace(/\..+$/g, `.webp`);
-
 export const getImageCompressed = async (
-  file: S3UploadFile,
+  file:
+    | Buffer
+    | ArrayBuffer
+    | Uint8Array
+    | Uint8ClampedArray
+    | Int8Array
+    | Uint16Array
+    | Int16Array
+    | Uint32Array
+    | Int32Array
+    | Float32Array
+    | Float64Array
+    | string,
   resize: ResizeOptions = {},
-): Promise<S3UploadFile> => {
-  if (!file.type?.startsWith('image/')) {
-    throw createError(
-      getErrorResponse(StatusCodes.BAD_REQUEST, {
-        message: 'Недопустимый тип данных',
-      }),
-    );
-  }
-
+) => {
   const resizeOptions = Object.assign<ResizeOptions, ResizeOptions>(
     {
       width: 2048,
@@ -28,7 +29,7 @@ export const getImageCompressed = async (
     resize,
   );
 
-  const { data, info } = await sharp(file.data)
+  const { data, info } = await sharp(file)
     .webp()
     .resize(resizeOptions)
     .toBuffer({ resolveWithObject: true });
@@ -43,8 +44,6 @@ export const getImageCompressed = async (
   }
 
   return {
-    name: getNewExtension(file.name),
-    path: getNewExtension(file.path),
     type: `image/${info.format}`,
     data,
   };
