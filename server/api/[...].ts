@@ -1,16 +1,3 @@
-export default defineEventHandler((event) => {
-  const token = getCookie(event, USER_TOKEN_COOKIE);
+import { proxy } from '~~/server/utils/proxy';
 
-  const {
-    api: { url },
-  } = useRuntimeConfig();
-
-  const target = url + event.path;
-  const headers = getHeaders(event);
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  return proxyRequest(event, target, { headers });
-});
+export default defineEventHandler(proxy);

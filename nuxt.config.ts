@@ -18,6 +18,7 @@ export default defineNuxtConfig({
     api: {
       url: process.env.NUXT_API_URL,
       token: process.env.NUXT_API_TOKEN,
+      secret: process.env.NUXT_API_SECRET,
     },
     site: {
       url: process.env.NUXT_SITE_URL,
