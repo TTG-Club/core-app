@@ -7,8 +7,8 @@
     url: string;
   }>();
 
-  const { data, status, execute } = useProxy<Array<SpecieLink>>(
-    '/species/related',
+  const { data, status, execute } = useFetch<Array<SpecieLink>>(
+    '/api/v2/species/related',
     {
       immediate: false,
       query: {

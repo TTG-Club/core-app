@@ -45,10 +45,8 @@ const checkUsernameOrEmailExist = async (
   value: string,
   type: 'username' | 'email',
 ) => {
-  const { $api } = useNuxtApp();
-
   try {
-    const isExist = await $api<boolean>(`/auth/exist`, {
+    const isExist = await $fetch<boolean>(`/api/auth/exist`, {
       method: 'get',
       query: {
         [type]: value,

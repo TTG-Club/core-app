@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import type { SpecieLink } from '#shared/types/character/species';
+  import { NuxtLink } from '#components';
 
   withDefaults(
     defineProps<{
@@ -16,7 +17,7 @@
 
 <template>
   <component
-    :is="disabled ? 'div' : 'NuxtLink'"
+    :is="disabled ? 'div' : NuxtLink"
     :class="$style.link"
     :to="`/species/${specie.url}`"
   >

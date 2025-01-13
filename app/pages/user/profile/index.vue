@@ -2,7 +2,7 @@
   import { StatusCodes } from 'http-status-codes';
   import type { UserProfile } from '~~/shared/types/user';
 
-  const { data, status } = useApi<UserProfile>('/user/profile', {
+  const { data, status } = useFetch<UserProfile>('/api/user/profile', {
     onResponseError(context) {
       if (context.response.status === StatusCodes.UNAUTHORIZED) {
         return navigateTo({ name: 'index' });

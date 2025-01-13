@@ -12,7 +12,7 @@
     error,
     status,
     refresh,
-  } = await useProxy<Specie>(`/species/${url}`);
+  } = await useFetch<Specie>(`/api/v2/species/${url}`);
 
   watch(
     specie,

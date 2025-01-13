@@ -37,7 +37,7 @@
     },
   });
 
-  const { execute, status, error } = useApi('/auth/sign-up', {
+  const { execute, status, error } = useFetch('/api/auth/sign-up', {
     body: computed(() => omit(model, 'repeat')),
     method: 'post',
     watch: false,
