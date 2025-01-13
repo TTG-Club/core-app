@@ -1,6 +1,4 @@
 export const useUserStore = defineStore('userStore', () => {
-  const cookie = useCookie(USER_TOKEN_COOKIE);
-
   const {
     data: user,
     status,
@@ -10,20 +8,23 @@ export const useUserStore = defineStore('userStore', () => {
     immediate: false,
   });
 
-  const isLoggedIn = computed(() => !!(cookie.value && user.value));
+  const isLoggedIn = computed(() => !!user.value);
   const isLoading = computed(() => status.value === 'pending');
 
-  const logout = () => {
-    cookie.value = null;
+  const logout = async () => {
+    try {
+      await $fetch('/api/auth/logout');
 
-    clear();
+      clear();
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return {
     isLoading,
     isLoggedIn,
 
-    cookie,
     user,
 
     fetch,

@@ -8,19 +8,15 @@
     },
   });
 
-  const cookie = useCookie(USER_TOKEN_COOKIE);
-
   const { isLoggedIn, isLoading, user } = storeToRefs(userStore);
 
   const isAuthOpened = ref(false);
   const tooltipOpened = ref(false);
 
-  if (cookie.value) {
-    try {
-      await userStore.fetch();
-    } catch (err) {
-      console.error(err);
-    }
+  try {
+    await userStore.fetch();
+  } catch (err) {
+    console.error(err);
   }
 
   const onClick = () => {
@@ -55,8 +51,9 @@
   };
 
   const logout = () => {
-    userStore.logout();
-    window.location.reload();
+    userStore.logout().finally(() => {
+      window.location.reload();
+    });
   };
 </script>
 

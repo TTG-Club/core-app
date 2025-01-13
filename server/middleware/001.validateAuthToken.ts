@@ -8,8 +8,8 @@ export default defineEventHandler((event) => {
   }
 
   try {
-    verifyAuthJwt(cookie);
+    getUserFromToken(cookie);
   } catch (err) {
-    setCookie(event, USER_TOKEN_COOKIE, '');
+    deleteCookie(event, USER_TOKEN_COOKIE);
   }
 });

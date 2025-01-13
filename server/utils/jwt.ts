@@ -1,64 +1,45 @@
 import type { JwtPayload, SignOptions, VerifyOptions } from 'jsonwebtoken';
 import jwt from 'jsonwebtoken';
-import { merge } from 'lodash-es';
-
-export type TokenExpiredError = jwt.TokenExpiredError;
+import { StatusCodes } from 'http-status-codes';
 
 export interface GenerateJwtConfig {
   payload: object | Buffer;
-  secret?: string;
   options?: SignOptions;
 }
 
 export interface VerifyJwtConfig {
   token: string;
-  secret?: string;
-  options?: VerifyOptions & { complete?: false };
+  options?: Omit<VerifyOptions, 'complete'>;
 }
 
-export interface GenerateAuthJwtPayload {
-  /**
-   * string from `getRequestOrigin(event)`
-   */
-  origin: string;
+export interface AuthJwtPayload extends JwtPayload {
   username: string;
-  remember?: boolean;
+  roles: Array<{
+    id: number;
+    name: string;
+  }>;
 }
 
 const {
   api: { secret: apiSecret },
 } = useRuntimeConfig();
 
-export const generateJwt = ({
-  payload,
-  secret,
-  options,
-}: GenerateJwtConfig) => {
-  const currentSecret = secret || apiSecret;
+export const generateJwt = ({ payload, options }: GenerateJwtConfig) =>
+  jwt.sign(payload, apiSecret, options);
 
-  const baseOptions: SignOptions = {
-    expiresIn: '30d',
-  };
-
-  const mergedOptions = merge(baseOptions, options);
-
-  return jwt.sign(payload, currentSecret, mergedOptions);
-};
-
-export const verifyJwt = <T = string | JwtPayload>({
+export const verifyJwt = <T extends JwtPayload>({
   token,
-  secret,
   options,
-}: VerifyJwtConfig) => {
-  const currentSecret = secret || apiSecret;
+}: VerifyJwtConfig) => jwt.verify(token, apiSecret, options) as T;
 
-  return jwt.verify(token, currentSecret, options) as T;
+export const getUserFromToken = (token: string) => {
+  try {
+    return jwt.verify(token, apiSecret) as AuthJwtPayload;
+  } catch (err) {
+    if (err instanceof jwt.TokenExpiredError) {
+      throw createError(getErrorResponse(StatusCodes.UNAUTHORIZED));
+    }
+
+    throw createError(getErrorResponse(StatusCodes.BAD_REQUEST));
+  }
 };
-
-export const generateAuthJwt = (payload: GenerateAuthJwtPayload) =>
-  jwt.sign(payload, apiSecret, {
-    expiresIn: payload.remember ? '30d' : '24h',
-  });
-
-export const verifyAuthJwt = (token: string) =>
-  jwt.verify(token, apiSecret) as GenerateAuthJwtPayload;

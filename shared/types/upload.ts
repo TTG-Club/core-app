@@ -1,3 +1,4 @@
-import type { S3UploadResponse } from '~~/server/types/s3';
-
-export type UploadResponse = S3UploadResponse;
+export interface UploadResponse {
+  filename: string;
+  url: string;
+}
