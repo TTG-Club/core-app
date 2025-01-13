@@ -2,6 +2,7 @@
 import { fileURLToPath, URL } from 'node:url';
 
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
+import bytes from 'bytes';
 
 const appName = 'TTG Club';
 
@@ -19,23 +20,6 @@ export default defineNuxtConfig({
       token: process.env.NUXT_API_TOKEN,
       secret: process.env.NUXT_API_SECRET,
     },
-    email: {
-      secret: process.env.NUXT_EMAIL_SECRET,
-    },
-    nodemailer: {
-      host: 'smtp.mail.ru',
-      port: 465,
-      secure: true,
-      tls: {
-        rejectUnauthorized: false,
-      },
-      auth: {
-        type: 'login',
-        user: process.env.NUXT_NODEMAILER_AUTH_USER || '',
-        pass: process.env.NUXT_NODEMAILER_AUTH_PASS || '',
-      },
-      from: process.env.NUXT_NODEMAILER_FROM,
-    },
     site: {
       url: process.env.NUXT_SITE_URL,
       name: `${appName} Oнлайн-справочник`,
@@ -52,6 +36,10 @@ export default defineNuxtConfig({
         'media-src': false,
       },
       xXSSProtection: '1; mode=block',
+    },
+
+    requestSizeLimiter: {
+      maxUploadFileRequestInBytes: bytes('30MB') || 8000000,
     },
   },
 
@@ -202,7 +190,6 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@ant-design-vue/nuxt',
     '@pinia/nuxt',
-    'nuxt-nodemailer',
     'nuxt-security',
     'nuxt-typed-router',
     'dayjs-nuxt',

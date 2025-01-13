@@ -104,7 +104,9 @@ export const ruleUsername = (config?: BaseRuleWithCheckExist): Rule => {
       }
 
       if (/[^\w\-.]/.test(value)) {
-        throw new Error('Допустимы латинские буквы, 0-9 - _ .');
+        throw new Error(
+          'Допустимы латинские буквы, арабские цифры, подчеркивание, дефис, точка',
+        );
       }
 
       if (config?.checkExist) {

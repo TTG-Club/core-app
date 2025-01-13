@@ -13,6 +13,12 @@
   const isAuthOpened = ref(false);
   const tooltipOpened = ref(false);
 
+  try {
+    await userStore.fetch();
+  } catch (err) {
+    console.error(err);
+  }
+
   const onClick = () => {
     isAuthOpened.value = true;
   };
@@ -45,8 +51,9 @@
   };
 
   const logout = () => {
-    userStore.logout();
-    window.location.reload();
+    userStore.logout().finally(() => {
+      window.location.reload();
+    });
   };
 </script>
 

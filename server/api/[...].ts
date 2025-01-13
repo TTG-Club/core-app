@@ -1,9 +1,3 @@
-export default defineEventHandler((event) => {
-  const {
-    api: { url },
-  } = useRuntimeConfig();
+import { proxy } from '~~/server/utils/proxy';
 
-  const target = url + event.path;
-
-  return proxyRequest(event, target);
-});
+export default defineEventHandler(proxy);

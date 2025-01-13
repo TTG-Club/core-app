@@ -37,23 +37,19 @@ export default defineNuxtRouteMiddleware(async (to) => {
     );
   };
 
-  const cookie = useCookie(USER_TOKEN_COOKIE);
-
-  if (!cookie.value) {
-    return preventRouting(StatusCodes.UNAUTHORIZED);
-  }
-
   const requestFetch = useRequestFetch();
 
   try {
-    const role = await requestFetch('/api/user/role');
+    const roles = await requestFetch<Array<string>>('/api/user/roles');
 
-    if (!to.meta.auth.roles.includes(role)) {
-      return preventRouting(StatusCodes.FORBIDDEN);
+    for (const role of roles) {
+      if (to.meta.auth.roles.includes(role)) {
+        return true;
+      }
     }
 
-    return true;
+    return preventRouting(StatusCodes.FORBIDDEN);
   } catch (err) {
-    return preventRouting(StatusCodes.BAD_REQUEST);
+    return preventRouting(StatusCodes.FORBIDDEN);
   }
 });
