@@ -1,10 +1,18 @@
 <script setup lang="ts">
+  import type { NavigationFailure } from 'vue-router';
+
   const dayjs = useDayjs();
   const userStore = useUserStore();
 
   const { href: profileHref, navigate: navigateToProfile } = useLink({
     to: {
       name: 'user-profile',
+    },
+  });
+
+  const { href: workshopHref, navigate: navigateToWorkshop } = useLink({
+    to: {
+      name: 'workshop',
     },
   });
 
@@ -44,8 +52,11 @@
     return getString('Добрый вечер');
   });
 
-  const goToProfile = () => {
-    navigateToProfile();
+  const onNavigate = (
+    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+    callback: (e?: MouseEvent) => Promise<NavigationFailure | void>,
+  ) => {
+    callback();
 
     tooltipOpened.value = false;
   };
@@ -58,17 +69,20 @@
 </script>
 
 <template>
-  <AButton
-    v-if="!isLoggedIn"
-    :loading="isLoading"
-    type="text"
-    size="large"
-    @click.left.exact.prevent="onClick"
-  >
-    <template #icon>
-      <SvgIcon icon="profile/helmet/outline" />
-    </template>
-  </AButton>
+  <template v-if="!isLoggedIn">
+    <AButton
+      :loading="isLoading"
+      type="text"
+      size="large"
+      @click.left.exact.prevent="onClick"
+    >
+      <template #icon>
+        <SvgIcon icon="profile/helmet/outline" />
+      </template>
+    </AButton>
+
+    <AuthModal v-model="isAuthOpened" />
+  </template>
 
   <APopover
     v-else
@@ -112,8 +126,16 @@
 
         <AButton
           block
+          :href="workshopHref"
+          @click.left.exact.prevent="onNavigate(navigateToWorkshop)"
+        >
+          Мастерская
+        </AButton>
+
+        <AButton
+          block
           :href="profileHref"
-          @click.left.exact.prevent="goToProfile"
+          @click.left.exact.prevent="onNavigate(navigateToProfile)"
         >
           Личный кабинет
         </AButton>
@@ -132,6 +154,4 @@
       </AFlex>
     </template>
   </APopover>
-
-  <AuthModal v-model="isAuthOpened" />
 </template>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
   definePageMeta({
-    auth: { roles: [ROLE.USER] },
+    auth: { roles: [ROLE.ADMIN] },
   });
 
   useSeoMeta({
