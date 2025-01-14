@@ -27,7 +27,7 @@ export const specieFeatureSchema = z.object({
 
 export const speciePropertiesSchema = z.object({
   speed: speedSchema,
-  size: z.string(),
+  sizes: z.array(z.string()),
   type: z.string(),
   darkVision: z.number(),
 });

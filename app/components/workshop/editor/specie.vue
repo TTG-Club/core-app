@@ -109,7 +109,7 @@
       page: undefined,
     },
     properties: {
-      size: undefined,
+      sizes: undefined,
       type: undefined,
       darkVision: 0,
       speed: {
@@ -330,8 +330,32 @@
     form.value.features[index].source.url = value;
   };
 
+  const isCreating = ref(false);
+
   const submit = async () => {
-    await formRef.value?.validate();
+    isCreating.value = true;
+
+    try {
+      const payload = await formRef.value?.validate();
+
+      await $fetch('/api/v2/species/new', {
+        method: 'POST',
+        body: payload,
+        onRequestError: () => {
+          isCreating.value = false;
+        },
+        onResponseError: (error) => {
+          isCreating.value = false;
+
+          notification.error({
+            message: 'Ошибка создания вида',
+            description: error.response._data.message,
+          });
+        },
+      });
+    } finally {
+      isCreating.value = false;
+    }
   };
 </script>
 
@@ -531,11 +555,11 @@
         <ACol :span="6">
           <AFormItem
             label="Размер"
-            :name="['properties', 'size']"
+            :name="['properties', 'sizes']"
             :rules="[ValidationSpecie.ruleSize()]"
           >
             <ASelect
-              v-model:value="form.properties.size"
+              v-model:value="form.properties.sizes"
               :loading="sizesStatus === 'pending'"
               :options="sizes || []"
               placeholder="Выбери размер существа"
@@ -832,6 +856,7 @@
     >
       <AButton
         type="primary"
+        :loading="isCreating"
         @click.left.exact.prevent="submit"
       >
         <template #icon>

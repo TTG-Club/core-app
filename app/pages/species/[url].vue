@@ -185,7 +185,7 @@
 
                   <ATypographyText
                     :class="$style.value"
-                    :content="specie.properties.size"
+                    :content="specie.properties.sizes.join(', ')"
                   />
                 </div>
 
