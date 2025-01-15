@@ -1,8 +1,10 @@
 <script setup lang="ts">
   import type { NavigationFailure } from 'vue-router';
+  import { useUserRoles } from '~/composables/useUserRoles';
 
   const dayjs = useDayjs();
   const userStore = useUserStore();
+  const { isAdmin } = useUserRoles();
 
   const { href: profileHref, navigate: navigateToProfile } = useLink({
     to: {
@@ -125,6 +127,7 @@
         />
 
         <AButton
+          v-if="isAdmin"
           block
           :href="workshopHref"
           @click.left.exact.prevent="onNavigate(navigateToWorkshop)"

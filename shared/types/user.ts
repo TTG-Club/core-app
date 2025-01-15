@@ -1,5 +1,4 @@
-import type { z } from 'zod';
-import type { userSchema } from '~~/shared/zod/user';
+import type { Timestamp } from '#shared/types/base';
 
 export enum ROLE {
   ADMIN = 'ADMIN',
@@ -9,4 +8,8 @@ export enum ROLE {
   USER = 'USER',
 }
 
-export type UserProfile = z.infer<typeof userSchema>;
+export interface UserProfile extends Timestamp {
+  email: string;
+  username: string;
+  roles: ROLE[];
+}

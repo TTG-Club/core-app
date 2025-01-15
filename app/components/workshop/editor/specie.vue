@@ -277,21 +277,29 @@
     callback();
   };
 
-  const getSlugifyUrl = (value: string, source?: string) => {
+  const getSlugifyUrl = (value: string) =>
+    getSlug(value, {
+      trim: true,
+      lowercase: true,
+      allowedChars: 'a-zA-Z0-9-',
+    });
+
+  const getUrl = (engName: string, source?: string) => {
     const sourcePostfix = source ? `-${source}` : '';
 
-    return `${getSlug(value)}${sourcePostfix}`;
+    return getSlugifyUrl(`${engName}${sourcePostfix}`);
   };
 
-  const handleEngNameChange = (name: string) => {
-    form.value.name.eng = name;
-    form.value.url = getSlugifyUrl(name, form.value.source.url);
+  const handleUrlChange = (url: string) => {
+    form.value.url = getSlugifyUrl(url);
 
     formRef.value?.validateFields(['url']);
   };
 
-  const handleUrlChange = (url: string) => {
-    form.value.url = getSlugifyUrl(url, form.value.source.url);
+  const handleEngNameChange = (name: string) => {
+    form.value.name.eng = name;
+
+    handleUrlChange(getUrl(name, form.value.source.url));
   };
 
   const resetBookPage = (index?: number) => {
@@ -319,6 +327,8 @@
 
     if (typeof index !== 'number') {
       form.value.source.url = value;
+
+      handleUrlChange(getUrl(form.value.url, value));
 
       return;
     }
@@ -554,6 +564,25 @@
 
         <ACol :span="6">
           <AFormItem
+            label="Тип"
+            :name="['properties', 'type']"
+            :rules="[ValidationSpecie.ruleCreatureType()]"
+          >
+            <ASelect
+              v-model:value="form.properties.type"
+              :loading="creatureTypesStatus === 'pending'"
+              :options="creatureTypes || []"
+              placeholder="Выбери тип существа"
+              show-search
+              @dropdown-visible-change="
+                handleDropdownOpening($event, refreshCreatureTypes)
+              "
+            />
+          </AFormItem>
+        </ACol>
+
+        <ACol :span="6">
+          <AFormItem
             label="Размер"
             :name="['properties', 'sizes']"
             :rules="[ValidationSpecie.ruleSize()]"
@@ -568,25 +597,6 @@
               show-search
               @dropdown-visible-change="
                 handleDropdownOpening($event, refreshSizes)
-              "
-            />
-          </AFormItem>
-        </ACol>
-
-        <ACol :span="6">
-          <AFormItem
-            label="Тип"
-            :name="['properties', 'type']"
-            :rules="[ValidationSpecie.ruleCreatureType()]"
-          >
-            <ASelect
-              v-model:value="form.properties.type"
-              :loading="creatureTypesStatus === 'pending'"
-              :options="creatureTypes || []"
-              placeholder="Выбери тип существа"
-              show-search
-              @dropdown-visible-change="
-                handleDropdownOpening($event, refreshCreatureTypes)
               "
             />
           </AFormItem>
