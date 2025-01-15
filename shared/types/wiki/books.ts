@@ -1,15 +1,9 @@
-export interface BookDetail {
+export interface BookLink {
   name: {
     rus: string;
     eng: string;
-    alt?: string;
     short: string;
   };
-  description?: string;
-  year: number;
+  url: string;
   type: string;
-  image?: string;
-  author: Array<string>;
-  translation: Array<string>;
-  tags: Array<string>;
 }

@@ -17,7 +17,7 @@
   import { SvgIcon } from '#components';
   import { ValidationBase, ValidationSpecie } from '~/utils/validation/';
   import { getSlug } from '#shared/utils/getSlug';
-  import type { BookDetail } from '#shared/types/wiki/books';
+  import type { BookLink } from '#shared/types/wiki/books';
 
   withDefaults(
     defineProps<{
@@ -53,16 +53,13 @@
     status: booksStatus,
     refresh: refreshBooks,
   } = await useAsyncData('books-select', async () => {
-    const specieLinks = await $fetch<Array<BookDetail>>(
-      '/api/v2/books/search',
-      {
-        method: 'post',
-      },
-    );
+    const bookLinks = await $fetch<Array<BookLink>>('/api/v2/books/search', {
+      method: 'post',
+    });
 
-    return specieLinks.map((specie) => ({
-      label: `${specie.name.rus} [${specie.name.eng}]`,
-      value: specie.name.short,
+    return bookLinks.map((book) => ({
+      label: `${book.name.rus} [${book.name.eng}]`,
+      value: book.url,
     }));
   });
 
