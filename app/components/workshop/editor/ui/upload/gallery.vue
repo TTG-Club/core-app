@@ -18,7 +18,7 @@
   );
 
   const maxFileWeight = bytes('5MB')!;
-  const maxFileSize = 4096;
+  const maxFileSize = 2048;
 
   const { notification } = App.useApp();
 
@@ -40,10 +40,9 @@
   };
 
   const fileList = ref<Array<UploadFile<UploadResponse>>>([]);
-  const previewList = ref<Array<UploadResponse>>([]);
   const imagesUploaded = defineModel<Array<string>>();
 
-  const chunkedPreview = computed(() => chunk(previewList.value, 3));
+  const chunkedPreview = computed(() => chunk(imagesUploaded.value, 3));
 
   const bufferToBase64 = (buf: ArrayBuffer) => {
     const chunks = [];
@@ -159,7 +158,6 @@
       images.push(file.response);
     }
 
-    previewList.value = images;
     imagesUploaded.value = images.map((image) => image.url);
   });
 </script>
@@ -214,14 +212,13 @@
         >
           <ACol
             v-for="image in row"
-            :key="image.url"
+            :key="image"
             :span="8"
           >
             <div :class="$style.preview">
               <div :class="$style.imageContainer">
                 <AImage
-                  :src="image.url || '/img/no-img.webp'"
-                  :alt="image.filename"
+                  :src="image || '/img/no-img.webp'"
                   :class="$style.image"
                   fallback="/img/no-img.webp"
                   width="100%"

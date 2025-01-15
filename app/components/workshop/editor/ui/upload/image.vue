@@ -32,7 +32,7 @@
   }
 
   const maxFileWeight = bytes('5MB')!;
-  const maxFileSize = 4096;
+  const maxFileSize = 2048;
 
   const { notification } = App.useApp();
 
