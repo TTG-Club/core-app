@@ -226,6 +226,8 @@
               <ATypographyText
                 v-if="specie.description"
                 :content="specie.description"
+                :style="{ whiteSpace: 'pre-wrap' }"
+                data-allow-mismatch
               />
 
               <ACollapse
@@ -240,13 +242,20 @@
                   data-allow-mismatch
                 >
                   <template #header>
-                    <ATypographyTitle :level="4">
+                    <ATypographyTitle
+                      :level="4"
+                      data-allow-mismatch
+                    >
                       {{ feature.name.rus }}
                     </ATypographyTitle>
                   </template>
 
                   <template #default>
-                    {{ feature.description }}
+                    <ATypographyText
+                      :content="feature.description"
+                      :style="{ whiteSpace: 'pre-wrap' }"
+                      data-allow-mismatch
+                    />
                   </template>
                 </ACollapsePanel>
               </ACollapse>
