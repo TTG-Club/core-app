@@ -59,7 +59,8 @@
 
     return bookLinks.map((book) => ({
       label: `${book.name.rus} [${book.name.eng}]`,
-      value: book.name.short,
+      value: book.url,
+      shortName: book.name.short,
     }));
   });
 
@@ -274,6 +275,20 @@
     callback();
   };
 
+  const getBookShortName = (url: string | undefined): string => {
+    if (!url) {
+      return '';
+    }
+
+    const book = books.value?.find((item) => item.value === url);
+
+    if (!book) {
+      return '';
+    }
+
+    return book.shortName;
+  };
+
   const getSlugifyUrl = (value: string) =>
     getSlug(value, {
       trim: true,
@@ -296,7 +311,7 @@
   const handleEngNameChange = (name: string) => {
     form.value.name.eng = name;
 
-    handleUrlChange(getUrl(name, form.value.source.url));
+    handleUrlChange(getUrl(name, getBookShortName(form.value.source.url)));
   };
 
   const resetBookPage = (index?: number) => {
@@ -325,7 +340,7 @@
     if (typeof index !== 'number') {
       form.value.source.url = value;
 
-      handleUrlChange(getUrl(form.value.url, value));
+      handleUrlChange(getUrl(form.value.name.eng, getBookShortName(value)));
 
       return;
     }
