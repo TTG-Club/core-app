@@ -1,6 +1,8 @@
 import type { JwtPayload, SignOptions, VerifyOptions } from 'jsonwebtoken';
 import jwt from 'jsonwebtoken';
 import { StatusCodes } from 'http-status-codes';
+import type { H3Event } from 'h3';
+import { getTokenFromCookie } from '~~/server/utils/getTokenFromCookie';
 
 export interface GenerateJwtConfig {
   payload: object | Buffer;
@@ -32,7 +34,9 @@ export const verifyJwt = <T extends JwtPayload>({
   options,
 }: VerifyJwtConfig) => jwt.verify(token, apiSecret, options) as T;
 
-export const getUserFromToken = (token: string) => {
+export const getUserFromToken = (event: H3Event) => {
+  const token = getTokenFromCookie(event);
+
   try {
     return jwt.verify(token, apiSecret) as AuthJwtPayload;
   } catch (err) {
@@ -42,4 +46,8 @@ export const getUserFromToken = (token: string) => {
 
     throw createError(getErrorResponse(StatusCodes.BAD_REQUEST));
   }
+};
+
+export const verifyToken = (event: H3Event) => {
+  getUserFromToken(event);
 };

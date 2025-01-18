@@ -20,6 +20,13 @@ export default defineNuxtConfig({
       token: process.env.NUXT_API_TOKEN,
       secret: process.env.NUXT_API_SECRET,
     },
+    s3: {
+      endpoint: process.env.NUXT_S3_ENDPOINT,
+      region: process.env.NUXT_S3_REGION,
+      bucket: process.env.NUXT_S3_BUCKET,
+      accessKeyId: process.env.NUXT_S3_ACCESS_KEY_ID,
+      secretAccessKey: process.env.NUXT_S3_SECRET_ACCESS_KEY,
+    },
     site: {
       url: process.env.NUXT_SITE_URL,
       name: `${appName} Oнлайн-справочник`,
