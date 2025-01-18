@@ -1,13 +1,6 @@
 <script setup lang="ts">
   import { Dictionaries } from '~/shared';
-  import {
-    chain,
-    difference,
-    isArray,
-    isEqual,
-    isString,
-    trim,
-  } from 'lodash-es';
+  import { isEqual } from 'lodash-es';
   import type { SelectValue } from 'ant-design-vue/es/select';
   import type {
     SpecieCreate,
@@ -121,46 +114,8 @@
     tags: [],
   });
 
-  const altNames = ref<Array<string>>([]);
-
-  const computedAltNames = computed<Array<SelectOption>>(() =>
-    altNames.value.map((name) => ({
-      label: name,
-      value: name,
-    })),
-  );
-
-  const handleAltNamesChange = (value: SelectValue) => {
-    if (isString(value)) {
-      const trimmed = value.trim();
-
-      altNames.value = [trimmed];
-      form.value.name.alt = [trimmed];
-
-      return;
-    }
-
-    if (!isArray(value)) {
-      form.value.name.alt = [];
-
-      return;
-    }
-
-    const collection = chain(value).filter(isString).map(trim).union().value();
-
-    form.value.name.alt = collection;
-
-    altNames.value.push(...difference(collection, altNames.value));
-  };
-
-  const tags = ref<Array<string>>([]);
-
-  const computedTags = computed<Array<SelectOption>>(() =>
-    tags.value.map((tag) => ({
-      label: tag,
-      value: tag,
-    })),
-  );
+  const { options: altNames, updateTags: updateAltNames } = useTagsInput();
+  const { options: tags, updateTags } = useTagsInput();
 
   const specieLinkPreview = computed<SpecieLink>(() => ({
     name: {
@@ -170,29 +125,6 @@
     url: form.value.url,
     image: form.value.linkImage,
   }));
-
-  const handleTagsChange = (value: SelectValue) => {
-    if (isString(value)) {
-      const trimmed = value.trim();
-
-      tags.value = [trimmed];
-      form.value.tags = [trimmed];
-
-      return;
-    }
-
-    if (!isArray(value)) {
-      form.value.tags = [];
-
-      return;
-    }
-
-    const collection = chain(value).filter(isString).map(trim).union().value();
-
-    form.value.tags = collection;
-
-    tags.value.push(...difference(collection, tags.value));
-  };
 
   const getFeatButtons = (index: number): Array<() => VNode> => {
     const empty = getEmptyFeature();
@@ -447,11 +379,12 @@
             :name="['name', 'alt']"
           >
             <ASelect
-              :value="form.name.alt"
-              :options="computedAltNames"
+              v-model:value="form.name.alt"
+              :options="altNames"
+              :token-separators="[',']"
               placeholder="Введи альтернативные названия"
               mode="tags"
-              @change="handleAltNamesChange"
+              @change="updateAltNames"
             />
           </AFormItem>
         </ACol>
@@ -520,11 +453,12 @@
             :name="['tags']"
           >
             <ASelect
-              :value="form.tags"
-              :options="computedTags"
+              v-model:value="form.tags"
+              :options="tags"
+              :token-separators="[',']"
               placeholder="Введи теги"
               mode="tags"
-              @change="handleTagsChange"
+              @change="updateTags"
             />
           </AFormItem>
         </ACol>
