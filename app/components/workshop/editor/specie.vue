@@ -59,7 +59,7 @@
 
     return bookLinks.map((book) => ({
       label: `${book.name.rus} [${book.name.eng}]`,
-      value: book.url,
+      value: book.name.short,
     }));
   });
 
@@ -97,9 +97,9 @@
       alt: [],
     },
     description: '',
-    image: undefined,
-    linkImage: undefined,
-    gallery: [],
+    image: undefined, // TODO: удалить предыдущий файл перед заменой
+    linkImage: undefined, // TODO: удалить предыдущий файл перед заменой
+    gallery: [], // TODO: удалить предыдущий файл перед заменой
     parent: undefined,
     source: {
       url: undefined,
