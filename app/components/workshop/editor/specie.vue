@@ -567,6 +567,7 @@
               :options="species || []"
               placeholder="Выбери основной вид"
               show-search
+              allow-clear
               @dropdown-visible-change="
                 handleDropdownOpening($event, refreshSpecies)
               "
@@ -616,8 +617,7 @@
 
         <ACol :span="6">
           <AFormItem
-            label="ТЗ"
-            tooltip="Темное зрение"
+            label="Темное зрение"
             :name="['properties', 'darkVision']"
           >
             <AInputNumber
