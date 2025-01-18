@@ -47,7 +47,7 @@
       url.set('maxSize', props.maxSize.toString());
     }
 
-    return `/api/s3/upload?${url.toString()}`;
+    return `/api/s3?${url.toString()}`;
   });
 
   const onError = (error: Error, responseError: NuxtError) => {
