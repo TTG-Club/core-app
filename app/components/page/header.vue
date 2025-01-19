@@ -136,6 +136,8 @@
           <ATooltip
             v-if="source"
             :title="`${source.name.rus} [${source.name.eng}]`"
+            placement="topRight"
+            arrow-point-at-center
           >
             <ATag
               :color="`var(--color-badge-${source.group.short.toLowerCase()})`"
