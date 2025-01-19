@@ -31,6 +31,13 @@ export const baseStringCheck = (str: string, min?: number, max?: number) => {
   }
 };
 
+export const ruleString = (): Rule => ({
+  required: true,
+  type: 'string',
+  trigger: ['blur', 'change'],
+  message: 'Поле обязательно для заполнения',
+});
+
 export const ruleRusName = (): Rule => {
   const min = 3;
   const max = 1000;

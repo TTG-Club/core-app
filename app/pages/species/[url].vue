@@ -234,11 +234,14 @@
                 v-if="specie.features.length"
                 v-model:active-key="activeFeatures"
                 ghost
+                expand-icon-position="end"
+                :class="$style.collapse"
               >
                 <ACollapsePanel
                   v-for="feature in specie.features"
                   :id="feature.url"
                   :key="feature.url"
+                  :class="$style.panel"
                   data-allow-mismatch
                 >
                   <template #header>
@@ -331,6 +334,17 @@
 
       min-height: 48px;
       padding: 4px;
+    }
+  }
+
+  .collapse {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    .panel {
+      background-color: var(--color-bg-secondary);
+      border-radius: 4px;
     }
   }
 </style>

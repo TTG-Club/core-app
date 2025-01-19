@@ -1,16 +1,13 @@
 <script setup lang="ts">
-  import { Dictionaries } from '~/shared';
   import { isEqual } from 'lodash-es';
   import type { SelectValue } from 'ant-design-vue/es/select';
   import type {
     SpecieCreate,
     SpecieLink,
   } from '#shared/types/character/species';
-  import { Button, type FormInstance } from 'ant-design-vue';
+  import type { FormInstance } from 'ant-design-vue';
   import { SvgIcon } from '#components';
-  import { ValidationBase, ValidationSpecie } from '~/utils/validation/';
-  import { getSlug } from '#shared/utils/getSlug';
-  import type { BookLink } from '#shared/types/wiki/books';
+  import { ValidationBase, ValidationSpecie } from '~/utils/validation';
 
   withDefaults(
     defineProps<{
@@ -22,54 +19,6 @@
   );
 
   const formRef = useTemplateRef<FormInstance>('formRef');
-
-  const {
-    data: species,
-    status: speciesStatus,
-    refresh: refreshSpecies,
-  } = await useAsyncData('species-select', async () => {
-    const specieLinks = await $fetch<Array<SpecieLink>>(
-      '/api/v2/species/search',
-      {
-        method: 'post',
-      },
-    );
-
-    return specieLinks.map((specie) => ({
-      label: `${specie.name.rus} [${specie.name.eng}]`,
-      value: specie.url,
-    }));
-  });
-
-  const {
-    data: books,
-    status: booksStatus,
-    refresh: refreshBooks,
-  } = await useAsyncData('books-select', async () => {
-    const bookLinks = await $fetch<Array<BookLink>>('/api/v2/books/search', {
-      method: 'post',
-    });
-
-    return bookLinks.map((book) => ({
-      label: `${book.name.rus} [${book.name.eng}]`,
-      value: book.url,
-      shortName: book.name.short,
-    }));
-  });
-
-  const {
-    data: sizes,
-    status: sizesStatus,
-    refresh: refreshSizes,
-  } = await useAsyncData('dictionaries-sizes', () => Dictionaries.sizes());
-
-  const {
-    data: creatureTypes,
-    status: creatureTypesStatus,
-    refresh: refreshCreatureTypes,
-  } = await useAsyncData('dictionaries-creature-types', () =>
-    Dictionaries.creatureTypes(),
-  );
 
   const getEmptyFeature = (): SpecieCreate['features'][number] => ({
     name: {
@@ -114,9 +63,6 @@
     tags: [],
   });
 
-  const { options: altNames, updateTags: updateAltNames } = useTagsInput();
-  const { options: tags, updateTags } = useTagsInput();
-
   const specieLinkPreview = computed<SpecieLink>(() => ({
     name: {
       rus: form.value.name.rus,
@@ -126,125 +72,11 @@
     image: form.value.linkImage,
   }));
 
-  const getFeatButtons = (index: number): Array<() => VNode> => {
-    const empty = getEmptyFeature();
-    const feats = form.value.features;
-    const el = feats[index];
+  const isFeatureEmpty = (feat: SpecieCreate['features'][number]) =>
+    isEqual(feat, getEmptyFeature());
 
-    if (!el) {
-      return [];
-    }
-
-    if (index === feats.length - 1) {
-      if (isEqual(empty, el)) {
-        return [
-          () =>
-            h(
-              Button,
-              {
-                disabled: true,
-                icon: h(SvgIcon, { icon: 'plus' }),
-              },
-              () => 'Добавить черту',
-            ),
-        ];
-      }
-
-      return [
-        () =>
-          h(
-            Button,
-            {
-              danger: true,
-              icon: h(SvgIcon, { icon: 'clear' }),
-              onClick: withModifiers(
-                () => (feats[index] = getEmptyFeature()),
-                ['left', 'exact', 'prevent'],
-              ),
-            },
-            () => 'Очистить',
-          ),
-        () =>
-          h(
-            Button,
-            {
-              icon: h(SvgIcon, { icon: 'plus' }),
-              onClick: withModifiers(
-                () => feats.push(getEmptyFeature()),
-                ['left', 'exact', 'prevent'],
-              ),
-            },
-            () => 'Добавить черту',
-          ),
-      ];
-    }
-
-    return [
-      () =>
-        h(
-          Button,
-          {
-            danger: true,
-            icon: h(SvgIcon, { icon: 'remove' }),
-            onClick: withModifiers(
-              () => feats.splice(index, 1),
-              ['left', 'exact', 'prevent'],
-            ),
-          },
-          () => 'Удалить черту',
-        ),
-    ];
-  };
-
-  const handleDropdownOpening = (
-    state: boolean,
-    callback: () => Promise<void>,
-  ) => {
-    if (!state) {
-      return;
-    }
-
-    callback();
-  };
-
-  const getBookShortName = (url: string | undefined): string => {
-    if (!url) {
-      return '';
-    }
-
-    const book = books.value?.find((item) => item.value === url);
-
-    if (!book) {
-      return '';
-    }
-
-    return book.shortName;
-  };
-
-  const getSlugifyUrl = (value: string) =>
-    getSlug(value, {
-      trim: true,
-      lowercase: true,
-      allowedChars: 'a-zA-Z0-9-',
-    });
-
-  const getUrl = (engName: string, source?: string) => {
-    const sourcePostfix = source ? `-${source}` : '';
-
-    return getSlugifyUrl(`${engName}${sourcePostfix}`);
-  };
-
-  const handleUrlChange = (url: string) => {
-    form.value.url = getSlugifyUrl(url);
-
-    formRef.value?.validateFields(['url']);
-  };
-
-  const handleEngNameChange = (name: string) => {
-    form.value.name.eng = name;
-
-    handleUrlChange(getUrl(name, getBookShortName(form.value.source.url)));
-  };
+  const isLastFeature = (index: number) =>
+    index === form.value.features.length - 1;
 
   const resetBookPage = (index?: number) => {
     if (typeof index !== 'number') {
@@ -271,8 +103,6 @@
 
     if (typeof index !== 'number') {
       form.value.source.url = value;
-
-      handleUrlChange(getUrl(form.value.name.eng, getBookShortName(value)));
 
       return;
     }
@@ -365,9 +195,8 @@
             :rules="[ValidationBase.ruleEngName()]"
           >
             <AInput
-              :value="form.name.eng"
+              v-model:value="form.name.eng"
               placeholder="Введи английское название"
-              @update:value="handleEngNameChange"
             />
           </AFormItem>
         </ACol>
@@ -378,13 +207,9 @@
             tooltip="Альтернативные названия. Используется для поиска и СЕО."
             :name="['name', 'alt']"
           >
-            <ASelect
-              v-model:value="form.name.alt"
-              :options="altNames"
-              :token-separators="[',']"
+            <WorkshopEditorSpecieUiTags
+              v-model="form.name.alt"
               placeholder="Введи альтернативные названия"
-              mode="tags"
-              @change="updateAltNames"
             />
           </AFormItem>
         </ACol>
@@ -397,17 +222,9 @@
             tooltip="Книга, из которой взята информация о виде, если она существует"
             :name="['source', 'url']"
           >
-            <ASelect
-              :value="form.source.url"
-              :loading="booksStatus === 'pending'"
-              :options="books || []"
-              placeholder="Выбери книгу"
-              allow-clear
-              show-search
-              @update:value="handleBookChange"
-              @dropdown-visible-change="
-                handleDropdownOpening($event, refreshBooks)
-              "
+            <WorkshopEditorSpecieUiSource
+              :model-value="form.source.url"
+              @update:model-value="handleBookChange"
             />
           </AFormItem>
         </ACol>
@@ -452,13 +269,9 @@
             tooltip="Используются для поиска и СЕО"
             :name="['tags']"
           >
-            <ASelect
-              v-model:value="form.tags"
-              :options="tags"
-              :token-separators="[',']"
+            <WorkshopEditorSpecieUiTags
+              v-model="form.tags"
               placeholder="Введи теги"
-              mode="tags"
-              @change="updateTags"
             />
           </AFormItem>
         </ACol>
@@ -470,11 +283,11 @@
             :name="['url']"
             :rules="[ValidationSpecie.ruleUrl()]"
           >
-            <AInput
-              :value="form.url"
+            <WorkshopEditorSpecieUiUrl
+              v-model="form.url"
+              :eng-name="form.name.eng"
+              :source-url="form.source.url"
               addon-before="https://ttg.club/species/"
-              placeholder="Сгенерированный URL"
-              @update:value="handleUrlChange"
             />
           </AFormItem>
         </ACol>
@@ -492,20 +305,10 @@
         <ACol :span="6">
           <AFormItem
             label="Основной вид"
-            tooltip="Необходимо указать, если создаешь новый подвид"
+            tooltip="Необходимо указать, если создаешь происхождение вида"
             :name="['parent']"
           >
-            <ASelect
-              v-model:value="form.parent"
-              :loading="speciesStatus === 'pending'"
-              :options="species || []"
-              placeholder="Выбери основной вид"
-              show-search
-              allow-clear
-              @dropdown-visible-change="
-                handleDropdownOpening($event, refreshSpecies)
-              "
-            />
+            <WorkshopEditorSpecieUiParent v-model="form.parent" />
           </AFormItem>
         </ACol>
 
@@ -515,16 +318,7 @@
             :name="['properties', 'type']"
             :rules="[ValidationSpecie.ruleCreatureType()]"
           >
-            <ASelect
-              v-model:value="form.properties.type"
-              :loading="creatureTypesStatus === 'pending'"
-              :options="creatureTypes || []"
-              placeholder="Выбери тип существа"
-              show-search
-              @dropdown-visible-change="
-                handleDropdownOpening($event, refreshCreatureTypes)
-              "
-            />
+            <WorkshopEditorSpecieUiType v-model="form.properties.type" />
           </AFormItem>
         </ACol>
 
@@ -534,18 +328,7 @@
             :name="['properties', 'sizes']"
             :rules="[ValidationSpecie.ruleSize()]"
           >
-            <ASelect
-              v-model:value="form.properties.sizes"
-              :loading="sizesStatus === 'pending'"
-              :options="sizes || []"
-              placeholder="Выбери размер существа"
-              max-tag-count="responsive"
-              mode="multiple"
-              show-search
-              @dropdown-visible-change="
-                handleDropdownOpening($event, refreshSizes)
-              "
-            />
+            <WorkshopEditorSpecieUiSizes v-model="form.properties.sizes" />
           </AFormItem>
         </ACol>
 
@@ -630,7 +413,7 @@
       <ADivider orientation="left">
         <ATypographyText
           type="secondary"
-          content="Черты"
+          content="Особенности"
           strong
         />
       </ADivider>
@@ -675,17 +458,9 @@
               tooltip="Книга, из которой взята информация о черте, если она существует"
               :name="['features', featIndex, 'source', 'url']"
             >
-              <ASelect
-                :value="feature.source.url"
-                :loading="booksStatus === 'pending'"
-                :options="books || []"
-                placeholder="Выбери источник"
-                allow-clear
-                show-search
-                @update:value="handleBookChange($event, featIndex)"
-                @dropdown-visible-change="
-                  handleDropdownOpening($event, refreshBooks)
-                "
+              <WorkshopEditorSpecieUiSource
+                :model-value="feature.source.url"
+                @update:model-value="handleBookChange($event, featIndex)"
               />
             </AFormItem>
           </ACol>
@@ -713,14 +488,7 @@
             <AFormItem
               label="Описание"
               :name="['features', featIndex, 'description']"
-              :rules="[
-                {
-                  required: true,
-                  type: 'string',
-                  trigger: ['blur', 'change'],
-                  message: 'Поле обязательно для заполнения',
-                },
-              ]"
+              :rules="[ValidationBase.ruleString()]"
             >
               <ATextarea
                 v-model:value="feature.description"
@@ -735,11 +503,19 @@
           justify="flex-end"
           :gap="16"
         >
-          <component
-            :is="btn"
-            v-for="(btn, btnIndex) in getFeatButtons(featIndex)"
-            :key="btnIndex"
-          />
+          <AButton v-if="!isLastFeature(featIndex) && !isFeatureEmpty(feature)">
+            Удалить особенность
+          </AButton>
+
+          <template v-if="isLastFeature(featIndex)">
+            <AButton v-if="!isFeatureEmpty(feature)">
+              Очистить особенность
+            </AButton>
+
+            <AButton :disabled="isFeatureEmpty(feature)">
+              Добавить особенность
+            </AButton>
+          </template>
         </AFlex>
 
         <ADivider v-if="featIndex !== form.features.length - 1" />
@@ -761,7 +537,7 @@
             :name="['image']"
             :rules="[ValidationBase.ruleImage()]"
           >
-            <WorkshopEditorUiUploadImage
+            <WorkshopEditorSpecieUiUploadImage
               v-model="form.image"
               path="/species"
               max-size="480"
@@ -776,7 +552,7 @@
             :name="['linkImage']"
             :rules="[ValidationBase.ruleImage()]"
           >
-            <WorkshopEditorUiUploadImage
+            <WorkshopEditorSpecieUiUploadImage
               v-model="form.linkImage"
               path="/species"
               max-size="190"
@@ -787,7 +563,7 @@
                   disabled
                 />
               </template>
-            </WorkshopEditorUiUploadImage>
+            </WorkshopEditorSpecieUiUploadImage>
           </AFormItem>
         </ACol>
 
@@ -796,7 +572,7 @@
             label="Галерея"
             :name="['gallery']"
           >
-            <WorkshopEditorUiUploadGallery
+            <WorkshopEditorSpecieUiUploadGallery
               v-model="form.gallery"
               path="/species"
             />
