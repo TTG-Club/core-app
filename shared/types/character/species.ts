@@ -36,10 +36,7 @@ export interface SpecieCreate {
     };
   };
   features: Array<{
-    name: {
-      rus: string;
-      eng: string;
-    };
+    name: string;
     description: string;
     source: {
       url: string | undefined;

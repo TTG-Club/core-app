@@ -21,10 +21,7 @@
   const formRef = useTemplateRef<FormInstance>('formRef');
 
   const getEmptyFeature = (): SpecieCreate['features'][number] => ({
-    name: {
-      rus: '',
-      eng: '',
-    },
+    name: '',
     description: '',
     source: {
       url: undefined,
@@ -423,36 +420,20 @@
         :key="featIndex"
       >
         <ARow :gutter="16">
-          <ACol :span="12">
+          <ACol :span="8">
             <AFormItem
               label="Название"
-              :name="['features', featIndex, 'name', 'rus']"
+              :name="['features', featIndex, 'name']"
               :rules="[ValidationBase.ruleRusName()]"
             >
               <AInput
-                v-model:value="feature.name.rus"
+                v-model:value="feature.name"
                 placeholder="Введи название"
               />
             </AFormItem>
           </ACol>
 
-          <ACol :span="12">
-            <AFormItem
-              label="Название (англ.)"
-              tooltip="Английское название"
-              :name="['features', featIndex, 'name', 'eng']"
-              :rules="[ValidationBase.ruleEngName()]"
-            >
-              <AInput
-                v-model:value="feature.name.eng"
-                placeholder="Введи английское название"
-              />
-            </AFormItem>
-          </ACol>
-        </ARow>
-
-        <ARow :gutter="16">
-          <ACol :span="16">
+          <ACol :span="8">
             <AFormItem
               label="Источник"
               tooltip="Книга, из которой взята информация о черте, если она существует"
