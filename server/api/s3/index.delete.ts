@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { EventHandlerRequest } from 'h3';
 import { StatusCodes } from 'http-status-codes';
-import { deleteFromS3 } from '~~/server/utils/s3';
+import { getErrorResponse } from '~~/shared/utils';
 
 const requestSchema = z.object({
   key: z.string().min(3, 'Слишком короткий ключ объекта'),

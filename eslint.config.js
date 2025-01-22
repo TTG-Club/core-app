@@ -202,6 +202,11 @@ export default createConfigForNuxt(
       'vue/require-typed-ref': ['error'],
       'vue/v-for-delimiter-style': ['error', 'in'],
       'vue/no-restricted-v-bind': 'off',
+      'vue/match-component-file-name': [
+        'error',
+        { extensions: ['tsx', 'ts', 'vue'], shouldMatchCase: true },
+      ],
+      'vue/component-options-name-casing': ['error', 'PascalCase'],
       'vue/component-name-in-template-casing': [
         'error',
         'PascalCase',
@@ -210,6 +215,7 @@ export default createConfigForNuxt(
         },
       ],
       'vue/custom-event-name-casing': 'off',
+      'vue/padding-line-between-blocks': ['error'],
 
       // Vue.js Accessibility
       'vuejs-accessibility/anchor-has-content': 'off',

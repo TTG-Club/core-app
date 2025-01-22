@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { StatusCodes } from 'http-status-codes';
-  import type { UserProfile } from '~~/shared/types/user';
+  import type { UserProfile } from '~/shared/types';
 
   const { data, status } = useFetch<UserProfile>('/api/user/profile', {
     onResponseError(context) {

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-  const { name } = useSiteConfig();
+  const {
+    site: { name },
+  } = useRuntimeConfig();
 
   definePageMeta({
     layout: 'default',

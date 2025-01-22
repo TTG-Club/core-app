@@ -1,3 +1,8 @@
+<script setup lang="ts">
+  import { SvgIcon } from '~/shared/ui';
+  import { PageHeader } from '~/features/page';
+</script>
+
 <template>
   <PageHeader title="Мастерская видов">
     <template #actions>

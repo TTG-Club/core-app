@@ -2,9 +2,9 @@ import type { S3ClientConfig } from '@aws-sdk/client-s3';
 import { S3 } from '@aws-sdk/client-s3';
 import type { MultiPartData } from 'h3';
 import type { S3UploadFile, S3UploadResponse } from '~~/server/types/s3';
-import { getSlug } from '#shared/utils/getSlug';
 import ms from 'ms';
 import { StatusCodes } from 'http-status-codes';
+import { getErrorResponse, getSlug } from '~~/shared/utils';
 
 export const createS3Client = () => {
   const {

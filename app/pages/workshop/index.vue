@@ -1,3 +1,8 @@
+<script setup lang="ts">
+  import { PageHeader } from '~/features/page';
+  import { SectionSpecies, SectionSpells } from '~/features/workshop';
+</script>
+
 <template>
   <AFlex
     :gap="16"
@@ -6,7 +11,9 @@
     <PageHeader title="Мастерская" />
 
     <div :class="$style.workshop">
-      <WorkshopSectionSpecies />
+      <SectionSpecies />
+
+      <SectionSpells />
     </div>
   </AFlex>
 </template>
