@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { ThemeSwitch, UserButton } from './ui';
   import { SvgLogo } from '~/shared/ui';
+  import { AppMenu } from '~/features/menu';
 </script>
 
 <template>
@@ -13,6 +14,8 @@
         >
           <SvgLogo />
         </NuxtLink>
+
+        <AppMenu />
       </div>
 
       <div :class="$style.actions">
