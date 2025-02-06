@@ -34,6 +34,7 @@
 <style lang="scss" module>
   .navbar {
     position: fixed;
+    z-index: 2;
     bottom: 0;
     left: 0;
 

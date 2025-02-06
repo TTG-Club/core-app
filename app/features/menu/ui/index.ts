@@ -1,1 +1,1 @@
-export { default as ContentMenu } from './ContentMenu.vue';
+export { default as PopoverMenu } from './PopoverMenu.vue';

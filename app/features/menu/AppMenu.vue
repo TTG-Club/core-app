@@ -1,18 +1,17 @@
 <script setup lang="ts">
   import { SvgIcon } from '~/shared/ui';
-  import { ContentMenu } from './ui';
+  import { PopoverMenu } from './ui';
+
+  const isShowMenu = ref(false);
 </script>
 
 <template>
-  <ContentMenu
-    :model-value="false"
-    placement="right"
-    :offset="20"
-  >
-    <template #default>
+  <PopoverMenu v-model="isShowMenu">
+    <template #trigger>
       <AButton
         type="text"
         size="large"
+        @click.left.exact.prevent="isShowMenu = !isShowMenu"
       >
         <template #icon>
           <SvgIcon icon="hamburger-menu" />
@@ -20,7 +19,7 @@
       </AButton>
     </template>
 
-    <template #content>
+    <template #default>
       <h4>Онлайн справочник по D&D 5e</h4>
 
       <h1>TTG Club</h1>
@@ -53,7 +52,7 @@
         </ul>
       </AFlex>
     </template>
-  </ContentMenu>
+  </PopoverMenu>
 </template>
 
 <style lang="scss" module>
