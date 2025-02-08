@@ -1,50 +1,27 @@
 <script setup lang="ts">
-  import { watch } from 'vue';
-  import { useVModel } from '@vueuse/core';
-
-  // Определение пропсов
-  const props = withDefaults(
-    defineProps<{
-      modelValue?: boolean; // Управление видимостью через v-model
-    }>(),
-    {
-      modelValue: false,
-    },
-  );
-
-  // Определение событий
   const emit = defineEmits<{
     (e: 'close'): void;
-    (e: 'update:modelValue', value: boolean): void;
   }>();
 
-  const isShow = useVModel(props, 'modelValue', emit);
+  const isShow = defineModel<boolean>({ default: false });
 
-  // Следим за изменением состояния
-  watch(isShow, (newVal) => {
-    if (!newVal) {
-      emit('close'); // Автоматически эмитим при закрытии
-    }
-  });
-
-  // Упрощенный обработчик
-  const onClose = () => {
+  function onClose() {
     isShow.value = false;
-  };
+
+    emit('close');
+  }
 </script>
 
 <template>
   <div :class="$style.navPopover">
-    <!-- Триггер -->
-    <div :class="[$style.trigger, { isActive: isShow }]">
+    <div :class="[$style.trigger, { [$style.isActive]: isShow }]">
       <slot
-        :is-active="isShow"
+        :is-show="isShow"
         name="trigger"
       />
     </div>
 
-    <!-- Фон -->
-    <Transition>
+    <Transition name="fade">
       <div
         v-if="isShow"
         :class="$style.background"
@@ -52,8 +29,7 @@
       />
     </Transition>
 
-    <!-- Тело попапа -->
-    <Transition name="navPopoverAnimation">
+    <Transition name="nav-popover-animation">
       <AFlex
         v-if="isShow"
         :class="$style.body"
@@ -84,6 +60,10 @@
     width: 100%;
     height: 100%;
     font-size: 24px;
+
+    &.isActive {
+      z-index: 200;
+    }
   }
 
   .background {
@@ -138,27 +118,5 @@
       width: calc(100vw - 80px);
       max-width: 1170px;
     }
-  }
-
-  // Анимация попапа (глобальные стили)
-  :global(.navPopoverAnimation-enter-from),
-  :global(.navPopoverAnimation-leave-to) {
-    z-index: -1;
-    transform: scale(0) translate3d(0, 0, 0);
-    opacity: 0;
-  }
-
-  :global(.navPopoverAnimation-enter-to),
-  :global(.navPopoverAnimation-leave-from) {
-    transform: scale(1) translate3d(0, 0, 0);
-    opacity: 1;
-  }
-
-  :global(.navPopoverAnimation-enter-active),
-  :global(.navPopoverAnimation-leave-active) {
-    @include css-anim(
-      $time: 0.25s,
-      $style: cubic-bezier(0.215, 0.61, 0.355, 1)
-    );
   }
 </style>

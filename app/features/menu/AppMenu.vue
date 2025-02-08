@@ -7,11 +7,10 @@
 
 <template>
   <PopoverMenu v-model="isShowMenu">
-    <template #trigger="{ isActive }">
+    <template #trigger>
       <AButton
         type="text"
         size="large"
-        :class="{ [$style.isActive]: isActive }"
         @click.left.exact.prevent="isShowMenu = !isShowMenu"
       >
         <template #icon>
@@ -90,10 +89,6 @@
     margin: 0;
     padding: 0;
     list-style: none;
-  }
-
-  .isActive {
-    z-index: 200;
   }
 
   .header {
