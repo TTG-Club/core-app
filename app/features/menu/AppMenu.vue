@@ -7,16 +7,17 @@
 
 <template>
   <PopoverMenu v-model="isShowMenu">
-    <template #trigger>
-      <AButton
-        type="text"
-        size="large"
+    <template #trigger="{ isShow }">
+      <div
+        :class="[$style.hamburger, { [$style.isActive]: isShow }]"
         @click.left.exact.prevent="isShowMenu = !isShowMenu"
       >
-        <template #icon>
-          <SvgIcon icon="menu/hamburger" />
-        </template>
-      </AButton>
+        <span :class="$style.line" />
+
+        <span :class="$style.line" />
+
+        <span :class="$style.line" />
+      </div>
     </template>
 
     <template #default>
@@ -43,7 +44,7 @@
         </AFlex>
       </AFlex>
 
-      <ADivider />
+      <ADivider :class="$style.dividerHorizontal" />
 
       <AFlex
         wrap="wrap"
@@ -92,7 +93,7 @@
         </AFlex>
       </AFlex>
 
-      <ADivider />
+      <ADivider :class="$style.dividerHorizontal" />
 
       <AFlex
         :class="$style.footer"
@@ -145,7 +146,10 @@
           </AButton>
         </AFlex>
 
-        <ADivider type="vertical" />
+        <ADivider
+          type="vertical"
+          :class="$style.dividerVertical"
+        />
 
         <AFlex
           gap="small"
@@ -182,7 +186,7 @@
 
 <style lang="scss" module>
   .header {
-    padding: 24px 24px 0 24px;
+    padding: 24px 24px 12px 24px;
   }
 
   .logo {
@@ -202,7 +206,7 @@
   }
 
   .content {
-    padding: 0 16px;
+    padding: 12px 16px;
   }
 
   .menuList {
@@ -235,6 +239,76 @@
   }
 
   .footer {
-    padding: 0 24px 24px 24px;
+    padding: 0 24px 12px 24px;
+  }
+
+  .dividerVertical {
+    height: 32px;
+  }
+
+  .dividerHorizontal {
+    margin: 12px 0;
+  }
+
+  .hamburger {
+    position: relative;
+    display: block;
+    height: auto;
+    padding: 9px 9px;
+
+    .line {
+      display: block;
+
+      width: 20px;
+      height: 2px;
+      margin: 4px auto;
+
+      background-color: var(--color-background-thumb);
+      border-radius: 2px;
+
+      -webkit-transition: all 0.3s ease-in-out;
+      -o-transition: all 0.3s ease-in-out;
+      transition: all 0.3s ease-in-out;
+
+      @include css-anim();
+    }
+
+    &.isActive {
+      .line {
+        &:nth-child(2) {
+          opacity: 0;
+        }
+
+        &:nth-child(1) {
+          transform: translateY(6px) rotate(45deg) translate3d(0, 0, 0);
+        }
+
+        &:nth-child(3) {
+          transform: translateY(-6px) rotate(-45deg) translate3d(0, 0, 0);
+        }
+      }
+    }
+
+    &:hover {
+      cursor: pointer;
+
+      .line {
+        background-color: #fff;
+
+        &:nth-child(1) {
+          transform: translateX(-6px) translate3d(0, 0, 0);
+          width: 14px;
+        }
+      }
+
+      &.isActive {
+        .line {
+          &:nth-child(1) {
+            transform: translateY(6px) rotate(45deg) translate3d(0, 0, 0);
+            width: 20px;
+          }
+        }
+      }
+    }
   }
 </style>
