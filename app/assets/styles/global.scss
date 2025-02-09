@@ -46,7 +46,10 @@
 *,
 *:before,
 *:after {
+  overscroll-behavior: contain;
+
   box-sizing: border-box;
+
   appearance: none;
   outline: none;
 
