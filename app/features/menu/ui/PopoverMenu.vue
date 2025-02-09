@@ -94,6 +94,7 @@
     transform-origin: bottom left;
 
     overflow: auto;
+    overscroll-behavior-y: contain;
     display: inline-block;
 
     width: calc(100vw - 16px);
