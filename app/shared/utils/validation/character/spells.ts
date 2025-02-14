@@ -1,6 +1,5 @@
 import type { Rule } from 'ant-design-vue/es/form';
-import { Dictionaries } from '~/shared/api';
-import { baseStringCheck, getEnumFromDictionary } from '../base';
+import { baseStringCheck } from '../base';
 import { StatusCodes } from 'http-status-codes';
 import type { SpellMaterialComponent } from '~/shared/types';
 
@@ -25,30 +24,8 @@ export const ruleUrl = (): Rule => ({
         );
       },
     });
-  },
-});
 
-export const ruleSchool = (): Rule => ({
-  required: true,
-  trigger: ['change', 'blur'],
-  type: 'string',
-  validator: async (rule: Rule, value: string | undefined) => {
-    if (!value) {
-      throw new Error('Поле обязательно для заполнения');
-    }
-
-    const creatureTypes = await Dictionaries.schools({
-      onRequestError: () => {
-        throw new Error('Неизвестная ошибка');
-      },
-      onResponseError: () => {
-        throw new Error('Неизвестная ошибка');
-      },
-    });
-
-    if (!getEnumFromDictionary(creatureTypes).includes(value)) {
-      throw new Error('Недопустимое значение');
-    }
+    return Promise.resolve();
   },
 });
 
@@ -67,30 +44,8 @@ export const ruleMaterialComponentName = (
       if (required && !value) {
         throw new Error('Необходимо заполнить название');
       }
+
+      return Promise.resolve();
     },
   };
 };
-
-export const ruleTimeType = (): Rule => ({
-  required: true,
-  trigger: ['change', 'blur'],
-  type: 'string',
-  validator: async (rule: Rule, value: string | undefined) => {
-    if (!value) {
-      throw new Error('Поле обязательно для заполнения');
-    }
-
-    const creatureTypes = await Dictionaries.timeTypes({
-      onRequestError: () => {
-        throw new Error('Неизвестная ошибка');
-      },
-      onResponseError: () => {
-        throw new Error('Неизвестная ошибка');
-      },
-    });
-
-    if (!getEnumFromDictionary(creatureTypes).includes(value)) {
-      throw new Error('Недопустимое значение');
-    }
-  },
-});

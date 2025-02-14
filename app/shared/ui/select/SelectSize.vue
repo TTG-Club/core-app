@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { Dictionaries } from '~/shared/api';
+  import { Form } from 'ant-design-vue';
 
   withDefaults(
     defineProps<{
@@ -9,6 +10,8 @@
       multiple: false,
     },
   );
+
+  const context = Form.useInjectFormItemContext();
 
   const model = defineModel<string | Array<string>>();
 
@@ -24,6 +27,10 @@
 
     refresh();
   };
+
+  watch(model, () => {
+    context.onFieldChange();
+  });
 </script>
 
 <template>

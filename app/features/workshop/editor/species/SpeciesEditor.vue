@@ -4,18 +4,22 @@
   import type { SelectValue } from 'ant-design-vue/es/select';
   import type { SpecieCreate, SpecieLink } from '~/shared/types';
   import type { FormInstance } from 'ant-design-vue';
-  import { SvgIcon } from '~/shared/ui';
-  import { ValidationBase, ValidationSpecie } from '~/shared/utils';
-  import { SpeciesLink } from '~/features/wiki';
-  import { SpecieGallery, SpecieImage } from './ui';
   import {
-    InputUrl,
+    SvgIcon,
     SelectCreatureType,
     SelectSize,
     SelectSource,
     SelectSpecie,
     SelectTags,
-  } from '../ui';
+  } from '~/shared/ui';
+  import {
+    ValidationBase,
+    ValidationSpecie,
+    ValidationDictionaries,
+  } from '~/shared/utils';
+  import { SpeciesLink } from '~/features/wiki';
+  import { SpecieGallery, SpecieImage } from './ui';
+  import { InputUrl, EditorActions } from '../ui';
 
   withDefaults(
     defineProps<{
@@ -333,7 +337,7 @@
           <AFormItem
             label="Тип"
             :name="['properties', 'type']"
-            :rules="[ValidationSpecie.ruleCreatureType()]"
+            :rules="[ValidationDictionaries.ruleCreatureType()]"
           >
             <SelectCreatureType v-model="form.properties.type" />
           </AFormItem>
@@ -343,7 +347,7 @@
           <AFormItem
             label="Размер"
             :name="['properties', 'sizes']"
-            :rules="[ValidationSpecie.ruleSize()]"
+            :rules="[ValidationDictionaries.ruleSize()]"
           >
             <SelectSize v-model="form.properties.sizes" />
           </AFormItem>
@@ -591,30 +595,9 @@
       </ARow>
     </AForm>
 
-    <AFlex
-      :class="$style.actions"
-      :gap="16"
-      justify="flex-end"
-    >
-      <AButton
-        type="primary"
-        :loading="isCreating"
-        @click.left.exact.prevent="submit"
-      >
-        <template #icon>
-          <SvgIcon icon="check" />
-        </template>
-
-        <template #default> Создать </template>
-      </AButton>
-    </AFlex>
+    <EditorActions
+      :is-submitting="isCreating"
+      :submit
+    />
   </PageContainer>
 </template>
-
-<style module lang="scss">
-  .actions {
-    position: sticky;
-    bottom: 0;
-    padding: 16px;
-  }
-</style>

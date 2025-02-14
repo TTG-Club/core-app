@@ -1,22 +1,18 @@
 <script setup lang="ts">
   import { Dictionaries } from '~/shared/api';
+  import { Form } from 'ant-design-vue';
 
-  withDefaults(
-    defineProps<{
-      disabled?: boolean;
-      multiple?: boolean;
-    }>(),
-    {
-      disabled: false,
-      multiple: false,
-    },
-  );
+  defineProps<{
+    disabled?: boolean;
+  }>();
 
-  const model = defineModel<string | Array<string>>();
+  const context = Form.useInjectFormItemContext();
+
+  const model = defineModel<string>();
 
   const { data, status, refresh } = await useAsyncData(
-    'dictionaries-distance-types',
-    () => Dictionaries.distanceTypes(),
+    'dictionaries-comparison-operators',
+    () => Dictionaries.comparisonOperators(),
   );
 
   const handleDropdownOpening = (state: boolean) => {
@@ -26,6 +22,10 @@
 
     refresh();
   };
+
+  watch(model, () => {
+    context.onFieldChange();
+  });
 </script>
 
 <template>
@@ -33,13 +33,11 @@
     v-model:value="model"
     :loading="status === 'pending'"
     :options="data || []"
-    :mode="multiple ? 'multiple' : undefined"
     :disabled
-    placeholder="Выбери тип дистанции"
-    max-tag-count="responsive"
+    placeholder="Выбери тип цены"
     show-search
-    show-arrow
     allow-clear
+    show-arrow
     @dropdown-visible-change="handleDropdownOpening"
   />
 </template>

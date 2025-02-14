@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { BookLink } from '~/shared/types';
   import { getSlug } from '~~/shared/utils';
+  import { Form } from 'ant-design-vue';
 
   const props = withDefaults(
     defineProps<{
@@ -15,6 +16,8 @@
     },
   );
 
+  const context = Form.useInjectFormItemContext();
+
   const model = defineModel<string>();
 
   const acronym = ref<string>();
@@ -28,6 +31,8 @@
 
   const handleUrlChange = (url: string) => {
     model.value = getSlugifyUrl(url);
+
+    context.onFieldChange();
   };
 
   const getBookAcronym = async (): Promise<string> => {

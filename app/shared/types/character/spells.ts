@@ -30,20 +30,20 @@ export interface SpellSource {
 }
 
 export interface SpellDistance {
-  type: string | undefined; // тип дистанции
+  unit: string | undefined; // единицы измерения
   value: number | undefined; // значение дистанции
   custom: string | undefined; // кастомное значение (666 световых лет)
 }
 
 export interface SpellDuration {
   value: number | undefined; // значение длительности
-  type: string | undefined; // тип длительности (минута/час)
+  unit: string | undefined; // единицы измерения (минута/час)
   custom: string | undefined; // кастомное значение (666 веков)
 }
 
 export interface SpellCastingTime {
   value: number | undefined; // значение времени
-  type: string | undefined; // тип времени (час/минута/действие)
+  unit: string | undefined; // единицы измерения (час/минута/действие)
   custom: string | undefined; // кастомное значение (666 миллисекунд)
 }
 

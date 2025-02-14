@@ -1,42 +1,31 @@
 <script setup lang="ts">
-  import { SvgIcon } from '~/shared/ui';
-  import { PageHeader, PageContainer } from '~/features/page';
-  import type {
-    SpellCastingTime,
-    SpellCreate,
-    SpellMaterialComponent,
-  } from '~/shared/types';
-  import { ValidationBase, ValidationSpell } from '~/shared/utils';
-  import type { SelectValue } from 'ant-design-vue/es/select';
-  import { isEqual } from 'lodash-es';
-  import type { FormInstance } from 'ant-design-vue';
-
   import {
+    SvgIcon,
     SelectSource,
     SelectTags,
-    InputUrl,
-    SelectComparison,
-    SelectDistanceType,
-    SelectDurationType,
-    SelectSchool,
+    SelectMagicSchool,
     SelectSpecie,
-    SelectTimeType,
-  } from '../ui';
+  } from '~/shared/ui';
+  import { PageHeader, PageContainer } from '~/features/page';
+  import type { SpellCreate } from '~/shared/types';
+  import {
+    ValidationBase,
+    ValidationSpell,
+    ValidationDictionaries,
+  } from '~/shared/utils';
+  import type { SelectValue } from 'ant-design-vue/es/select';
+  import type { FormInstance } from 'ant-design-vue';
+
+  import { EditorActions, InputUrl } from '../ui';
+
+  import {
+    CastingTimes,
+    MaterialComponents,
+    SpellDistance,
+    SpellDuration,
+  } from './ui';
 
   const formRef = useTemplateRef<FormInstance>('formRef');
-
-  const getEmptyCastingTime = (): SpellCastingTime => ({
-    value: undefined,
-    type: undefined,
-    custom: undefined,
-  });
-
-  const getEmptyMaterialComponent = (): SpellMaterialComponent => ({
-    name: '',
-    price: undefined,
-    comparison: undefined,
-    consumable: false,
-  });
 
   const form = ref<SpellCreate>({
     url: '',
@@ -56,20 +45,20 @@
     ritual: false,
     concentration: false,
     distance: {
-      type: undefined,
+      unit: undefined,
       value: undefined,
       custom: undefined,
     },
     duration: {
       value: undefined,
-      type: undefined,
+      unit: undefined,
       custom: undefined,
     },
-    time: [getEmptyCastingTime()],
+    time: [],
     components: {
       v: false,
       s: false,
-      m: [getEmptyMaterialComponent()],
+      m: [],
     },
     affiliation: {
       classes: [],
@@ -85,16 +74,6 @@
     value: index,
   }));
 
-  const isCustomDisabled = computed(() => ({
-    distance: !!form.value.distance.value || !!form.value.distance.type,
-    duration: !!form.value.duration.value || !!form.value.duration.type,
-  }));
-
-  const isDefaultDisabled = computed(() => ({
-    distance: !!form.value.distance.custom,
-    duration: !!form.value.duration.custom,
-  }));
-
   const handleBookChange = (value: SelectValue) => {
     if (typeof value !== 'string' && value !== undefined) {
       return;
@@ -107,9 +86,33 @@
     form.value.source.url = value;
   };
 
-  onMounted(() => {
-    formRef.value?.validate();
-  });
+  const isCreating = ref(false);
+
+  const submit = async () => {
+    isCreating.value = true;
+
+    try {
+      const payload = await formRef.value?.validate();
+
+      await $fetch('/api/v2/spells/new', {
+        method: 'POST',
+        body: payload,
+        onRequestError: () => {
+          isCreating.value = false;
+        },
+        onResponseError: (error) => {
+          isCreating.value = false;
+
+          notification.error({
+            message: 'Ошибка создания заклинания',
+            description: error.response._data.message,
+          });
+        },
+      });
+    } finally {
+      isCreating.value = false;
+    }
+  };
 </script>
 
 <template>
@@ -265,9 +268,9 @@
           <AFormItem
             label="Школа"
             :name="['school']"
-            :rules="[ValidationSpell.ruleSchool()]"
+            :rules="[ValidationDictionaries.ruleMagicSchool()]"
           >
-            <SelectSchool v-model="form.school" />
+            <SelectMagicSchool v-model="form.school" />
           </AFormItem>
         </ACol>
 
@@ -314,312 +317,13 @@
         </ACol>
       </ARow>
 
-      <ADivider orientation="left">
-        <ATypographyText
-          type="secondary"
-          content="Материальные компоненты"
-          strong
-        />
-      </ADivider>
+      <MaterialComponents v-model="form.components.m" />
 
-      <ARow
-        v-for="(component, componentIndex) in form.components.m"
-        :key="componentIndex"
-        :gutter="16"
-      >
-        <ACol :span="8">
-          <AFormItem
-            label="Название"
-            :name="['components', 'm', componentIndex, 'name']"
-            :rules="[ValidationSpell.ruleMaterialComponentName(component)]"
-          >
-            <AInput
-              v-model:value="component.name"
-              placeholder="Введи название"
-              allow-clear
-            />
-          </AFormItem>
-        </ACol>
+      <CastingTimes v-model="form.time" />
 
-        <ACol :span="4">
-          <AFormItem
-            label="Цена"
-            :name="['components', 'm', componentIndex, 'price']"
-          >
-            <AInputNumber
-              v-model:value="component.price"
-              placeholder="Введи цену"
-              allow-clear
-              @change="
-                typeof $event === 'number' || (component.comparison = undefined)
-              "
-            />
-          </AFormItem>
-        </ACol>
+      <SpellDistance v-model="form.distance" />
 
-        <ACol :span="4">
-          <AFormItem
-            label="Тип цены"
-            :name="['components', 'm', componentIndex, 'comparison']"
-          >
-            <SelectComparison
-              v-model="component.comparison"
-              :disabled="!component.price"
-            />
-          </AFormItem>
-        </ACol>
-
-        <ACol :span="4">
-          <AFormItem
-            label="Расходуемый компонент"
-            :name="['components', 'm', componentIndex, 'consumable']"
-          >
-            <ACheckbox
-              v-model:checked="component.consumable"
-              allow-clear
-            >
-              Расходуемый
-            </ACheckbox>
-          </AFormItem>
-        </ACol>
-
-        <ACol :span="4">
-          <AFormItem label="Управление">
-            <AFlex :gap="8">
-              <AButton
-                @click.left.exact.prevent="
-                  form.components.m.splice(
-                    componentIndex + 1,
-                    0,
-                    getEmptyMaterialComponent(),
-                  )
-                "
-              >
-                Добавить
-              </AButton>
-
-              <AButton
-                v-if="componentIndex === form.components.m.length - 1"
-                :disabled="isEqual(component, getEmptyMaterialComponent())"
-                danger
-                @click.left.exact.prevent="
-                  form.components.m.splice(
-                    componentIndex,
-                    1,
-                    getEmptyMaterialComponent(),
-                  )
-                "
-              >
-                Очистить
-              </AButton>
-
-              <AButton
-                v-else
-                danger
-                @click.left.exact.prevent="
-                  form.components.m.splice(componentIndex, 1)
-                "
-              >
-                Удалить
-              </AButton>
-            </AFlex>
-          </AFormItem>
-        </ACol>
-      </ARow>
-
-      <ADivider orientation="left">
-        <ATypographyText
-          type="secondary"
-          content="Время накладывания"
-          strong
-        />
-      </ADivider>
-
-      <ARow
-        v-for="(time, timeIndex) in form.time"
-        :key="timeIndex"
-        :gutter="16"
-      >
-        <ACol :span="6">
-          <AFormItem
-            label="Время накладывания"
-            :name="['time', timeIndex, 'value']"
-            :rules="[ValidationBase.ruleNumber()]"
-          >
-            <AInputNumber
-              v-model:value="time.value"
-              :disabled="!!time.custom"
-              :precision="0"
-              :min="0"
-              placeholder="Введи значение"
-              allow-clear
-            />
-          </AFormItem>
-        </ACol>
-
-        <ACol :span="6">
-          <AFormItem
-            label="Тип времени"
-            :name="['time', timeIndex, 'type']"
-          >
-            <SelectTimeType
-              v-model="time.type"
-              :disabled="!!time.custom"
-            />
-          </AFormItem>
-        </ACol>
-
-        <ACol :span="8">
-          <AFormItem
-            label="Собственное значение"
-            :name="['time', timeIndex, 'custom']"
-          >
-            <AInput
-              v-model:value="time.custom"
-              :disabled="!!time.value || !!time.type"
-              placeholder="Введи значение"
-              allow-clear
-            />
-          </AFormItem>
-        </ACol>
-
-        <ACol :span="4">
-          <AFormItem label="Управление">
-            <AFlex :gap="8">
-              <AButton
-                @click.left.exact.prevent="
-                  form.time.splice(timeIndex + 1, 0, getEmptyCastingTime())
-                "
-              >
-                Добавить
-              </AButton>
-
-              <AButton
-                v-if="timeIndex === form.time.length - 1"
-                :disabled="isEqual(time, getEmptyCastingTime())"
-                danger
-                @click.left.exact.prevent="
-                  form.time.splice(timeIndex, 1, getEmptyCastingTime())
-                "
-              >
-                Очистить
-              </AButton>
-
-              <AButton
-                v-else
-                danger
-                @click.left.exact.prevent="form.time.splice(timeIndex, 1)"
-              >
-                Удалить
-              </AButton>
-            </AFlex>
-          </AFormItem>
-        </ACol>
-      </ARow>
-
-      <ADivider orientation="left">
-        <ATypographyText
-          type="secondary"
-          content="Дистанция"
-          strong
-        />
-      </ADivider>
-
-      <ARow :gutter="16">
-        <ACol :span="8">
-          <AFormItem
-            label="Дистанция"
-            :name="['distance', 'value']"
-          >
-            <AInputNumber
-              v-model:value="form.distance.value"
-              :disabled="isDefaultDisabled.distance"
-              :precision="0"
-              :min="0"
-              placeholder="Введи значение"
-              allow-clear
-            />
-          </AFormItem>
-        </ACol>
-
-        <ACol :span="8">
-          <AFormItem
-            label="Тип дистанции"
-            :name="['distance', 'type']"
-          >
-            <SelectDistanceType
-              v-model="form.distance.type"
-              :disabled="isDefaultDisabled.distance"
-            />
-          </AFormItem>
-        </ACol>
-
-        <ACol :span="8">
-          <AFormItem
-            label="Собственное значение"
-            :name="['distance', 'custom']"
-          >
-            <AInput
-              v-model:value="form.distance.custom"
-              :disabled="isCustomDisabled.distance"
-              placeholder="Введи значение"
-              allow-clear
-            />
-          </AFormItem>
-        </ACol>
-      </ARow>
-
-      <ADivider orientation="left">
-        <ATypographyText
-          type="secondary"
-          content="Длительность"
-          strong
-        />
-      </ADivider>
-
-      <ARow :gutter="16">
-        <ACol :span="8">
-          <AFormItem
-            label="Длительность"
-            :name="['duration', 'value']"
-          >
-            <AInputNumber
-              v-model:value="form.duration.value"
-              :disabled="isDefaultDisabled.duration"
-              :precision="0"
-              :min="0"
-              placeholder="Введи значение"
-              allow-clear
-            />
-          </AFormItem>
-        </ACol>
-
-        <ACol :span="8">
-          <AFormItem
-            label="Тип длительности"
-            :name="['duration', 'type']"
-          >
-            <SelectDurationType
-              v-model="form.duration.type"
-              :disabled="isDefaultDisabled.duration"
-            />
-          </AFormItem>
-        </ACol>
-
-        <ACol :span="8">
-          <AFormItem
-            label="Собственное значение"
-            :name="['duration', 'custom']"
-          >
-            <AInput
-              v-model:value="form.duration.custom"
-              :disabled="isCustomDisabled.duration"
-              placeholder="Введи значение"
-              allow-clear
-            />
-          </AFormItem>
-        </ACol>
-      </ARow>
+      <SpellDuration v-model="form.duration" />
 
       <ADivider orientation="left">
         <ATypographyText
@@ -716,5 +420,10 @@
         </ACol>
       </ARow>
     </AForm>
+
+    <EditorActions
+      :is-submitting="isCreating"
+      :submit
+    />
   </PageContainer>
 </template>

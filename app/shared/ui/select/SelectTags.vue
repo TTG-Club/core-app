@@ -2,10 +2,13 @@
   import type { DefaultOptionType } from 'ant-design-vue/es/vc-select/Select';
   import type { SelectValue } from 'ant-design-vue/es/select';
   import { chain, difference, isArray, isString, trim } from 'lodash-es';
+  import { Form } from 'ant-design-vue';
 
   defineProps<{
     placeholder?: string;
   }>();
+
+  const context = Form.useInjectFormItemContext();
 
   const model = defineModel<Array<string>>();
 
@@ -31,6 +34,10 @@
 
     tags.value.push(...difference(collection, tags.value));
   };
+
+  watch(model, () => {
+    context.onFieldChange();
+  });
 </script>
 
 <template>

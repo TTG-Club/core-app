@@ -9,10 +9,10 @@ export const sizes = <R extends NitroFetchRequest>(
     method: 'get',
   });
 
-export const schools = <R extends NitroFetchRequest>(
+export const magicSchools = <R extends NitroFetchRequest>(
   config?: Omit<NitroFetchOptions<R>, 'method'>,
 ) =>
-  $fetch<Array<SelectOption>>('/api/v2/dictionaries/schools', {
+  $fetch<Array<SelectOption>>('/api/v2/dictionaries/magic-schools', {
     ...config,
     method: 'get',
   });
@@ -33,18 +33,18 @@ export const distanceTypes = <R extends NitroFetchRequest>(
     method: 'get',
   });
 
-export const durationTypes = <R extends NitroFetchRequest>(
+export const timeUnits = <R extends NitroFetchRequest>(
   config?: Omit<NitroFetchOptions<R>, 'method'>,
 ) =>
-  $fetch<Array<SelectOption>>('/api/v2/dictionaries/duration/types', {
+  $fetch<Array<SelectOption>>('/api/v2/dictionaries/time-units', {
     ...config,
     method: 'get',
   });
 
-export const timeTypes = <R extends NitroFetchRequest>(
+export const comparisonOperators = <R extends NitroFetchRequest>(
   config?: Omit<NitroFetchOptions<R>, 'method'>,
 ) =>
-  $fetch<Array<SelectOption>>('/api/v2/dictionaries/time/types', {
+  $fetch<Array<SelectOption>>('/api/v2/dictionaries/comparison-operators', {
     ...config,
     method: 'get',
   });

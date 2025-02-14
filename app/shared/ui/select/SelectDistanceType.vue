@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { Dictionaries } from '~/shared/api';
+  import { Form } from 'ant-design-vue';
 
   withDefaults(
     defineProps<{
@@ -12,11 +13,13 @@
     },
   );
 
+  const context = Form.useInjectFormItemContext();
+
   const model = defineModel<string | Array<string>>();
 
   const { data, status, refresh } = await useAsyncData(
-    'dictionaries-creature-types',
-    () => Dictionaries.creatureTypes(),
+    'dictionaries-distance-types',
+    () => Dictionaries.distanceTypes(),
   );
 
   const handleDropdownOpening = (state: boolean) => {
@@ -26,6 +29,10 @@
 
     refresh();
   };
+
+  watch(model, () => {
+    context.onFieldChange();
+  });
 </script>
 
 <template>
@@ -34,10 +41,12 @@
     :loading="status === 'pending'"
     :options="data || []"
     :mode="multiple ? 'multiple' : undefined"
-    placeholder="Выбери тип существа"
+    :disabled
+    placeholder="Выбери единицу дистанции"
     max-tag-count="responsive"
     show-search
     show-arrow
+    allow-clear
     @dropdown-visible-change="handleDropdownOpening"
   />
 </template>
