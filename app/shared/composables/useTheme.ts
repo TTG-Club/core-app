@@ -23,15 +23,25 @@ export const useTheme = () => {
 
   const { defaultAlgorithm, darkAlgorithm } = theme;
 
+  // Положение цветов светлая/темная тема
   const themeConfig = computed<ThemeConfig>(() => ({
     token: {
-      colorPrimary: state.value === 'light' ? '#5e5446' : '#3567c9',
+      colorPrimary: state.value === 'light' ? '#5e5446' : '#447cc7',
       colorSuccess: '#67c23a',
       colorWarning: '#e6a23c',
       colorError: '#f56c6c',
       colorInfo: '#5990ff',
-      colorBgBase: state.value === 'light' ? '#f9f6f1' : '#131a20',
-      colorTextBase: state.value === 'light' ? '#404040' : '#c3d1da',
+      colorBorder:
+        state.value === 'light'
+          ? 'rgba(0, 0, 0, 0.08)'
+          : 'rgba(255, 255, 255, 0.08)',
+      colorBorderSecondary:
+        state.value === 'light'
+          ? 'rgba(0, 0, 0, 0.08)'
+          : 'rgba(255, 255, 255, 0.08)',
+      colorBgBase: state.value === 'light' ? '#f9f6f1' : '#0F1018',
+      colorBgContainer: state.value === 'light' ? '#8e8273' : '#0D1519',
+      colorTextBase: state.value === 'light' ? '#404040' : '#b9d7e6',
       wireframe: false,
       fontFamily: '"Open Sans", sans-serif',
     },
