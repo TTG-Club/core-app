@@ -264,6 +264,33 @@
                 </template>
               </ACollapsePanel>
             </ACollapse>
+
+            <ACollapse
+              v-for="feature in specie.features"
+              :id="feature.url"
+              :key="feature.url"
+              expand-icon-position="end"
+              :bordered="false"
+            >
+              <ACollapsePanel data-allow-mismatch>
+                <template #header>
+                  <ATypographyTitle
+                    :level="4"
+                    data-allow-mismatch
+                  >
+                    {{ feature.name.rus }}
+                  </ATypographyTitle>
+                </template>
+
+                <template #default>
+                  <ATypographyText
+                    :content="feature.description"
+                    :style="{ whiteSpace: 'pre-wrap' }"
+                    data-allow-mismatch
+                  />
+                </template>
+              </ACollapsePanel>
+            </ACollapse>
           </AFlex>
         </AFlex>
       </AFlex>
@@ -318,7 +345,7 @@
 
     text-align: center;
 
-    background-color: var(--color-hover);
+    background-color: var(--color-bg-secondary);
     border-radius: 8px;
 
     .title {
