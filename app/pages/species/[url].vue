@@ -1,5 +1,8 @@
 <script setup lang="ts">
-  import type { Specie } from '~~/shared/types/character/species';
+  import { PageActions, PageHeader } from '~/features/page';
+  import type { Specie } from '~/shared/types';
+  import { UiGallery } from '~/shared/ui';
+  import { SpeciesRelatedDrawer } from '~/features/wiki';
 
   const {
     params: { url },
@@ -95,199 +98,197 @@
 </script>
 
 <template>
-  <NavPage>
-    <ASpin
-      data-allow-mismatch
-      size="large"
-      :spinning="status === 'pending'"
+  <ASpin
+    data-allow-mismatch
+    size="large"
+    :spinning="status === 'pending'"
+  >
+    <div
+      v-if="specie"
+      id="specie-base"
+      :class="$style.specie"
     >
-      <div
-        v-if="specie"
-        id="specie-base"
-        :class="$style.specie"
+      <AFlex
+        vertical
+        :gap="24"
       >
-        <AFlex
-          vertical
-          :gap="24"
+        <PageHeader
+          :title="specie.name.rus"
+          :subtitle="specie.name.eng"
+          :source="specie.source"
+          :date-time="specie.updatedAt"
         >
-          <PageHeader
-            :title="specie.name.rus"
-            :subtitle="specie.name.eng"
-            :source="specie.source"
-            :date-time="specie.updatedAt"
+          <template #actions>
+            <PageActions @close="navigateTo('/species')" />
+          </template>
+        </PageHeader>
+
+        <AFlex :gap="28">
+          <AFlex
+            :gap="16"
+            :class="$style.left"
+            vertical
           >
-            <template #actions>
-              <DetailActions @close="navigateTo('/species')" />
-            </template>
-          </PageHeader>
+            <UiGallery
+              :preview="specie.image || '/img/no-img.webp'"
+              :images="specie.gallery"
+            />
 
-          <AFlex :gap="28">
-            <AFlex
-              :gap="16"
-              :class="$style.left"
-              vertical
+            <AButton
+              type="primary"
+              @click.left.exact.prevent="showRelated = true"
             >
-              <ImageGallery
-                :preview="specie.image || '/img/no-img.webp'"
-                :images="specie.gallery"
+              Разновидности
+            </AButton>
+
+            <ClientOnly>
+              <SpeciesRelatedDrawer
+                v-model="showRelated"
+                :url="specie.url"
               />
+            </ClientOnly>
 
-              <AButton
-                type="primary"
-                @click.left.exact.prevent="showRelated = true"
-              >
-                Разновидности
-              </AButton>
+            <AAnchor
+              :items="anchors"
+              :offset-top="24"
+              :bounds="24"
+            />
+          </AFlex>
 
-              <ClientOnly>
-                <CharacterSpeciesRelated
-                  v-model="showRelated"
-                  :url="specie.url"
+          <AFlex
+            :gap="16"
+            :class="$style.right"
+            vertical
+          >
+            <div :class="$style.stats">
+              <div :class="$style.stat">
+                <ATooltip title="Тип существа">
+                  <ATypographyTitle
+                    :level="5"
+                    :class="$style.title"
+                    content="ТИП"
+                  />
+                </ATooltip>
+
+                <ATypographyText
+                  :class="$style.value"
+                  :content="specie.properties.type"
                 />
-              </ClientOnly>
-
-              <AAnchor
-                :items="anchors"
-                :offset-top="24"
-                :bounds="24"
-              />
-            </AFlex>
-
-            <AFlex
-              :gap="16"
-              :class="$style.right"
-              vertical
-            >
-              <div :class="$style.stats">
-                <div :class="$style.stat">
-                  <ATooltip title="Тип существа">
-                    <ATypographyTitle
-                      :level="5"
-                      :class="$style.title"
-                      content="ТИП"
-                    />
-                  </ATooltip>
-
-                  <ATypographyText
-                    :class="$style.value"
-                    :content="specie.properties.type"
-                  />
-                </div>
-
-                <div :class="$style.stat">
-                  <ATooltip title="Размер">
-                    <ATypographyTitle
-                      :level="5"
-                      :class="$style.title"
-                      content="РАЗ"
-                    />
-                  </ATooltip>
-
-                  <ATypographyText
-                    :class="$style.value"
-                    :content="specie.properties.sizes.join(', ')"
-                  />
-                </div>
-
-                <div :class="$style.stat">
-                  <ATooltip title="Скорость">
-                    <ATypographyTitle
-                      :level="5"
-                      :class="$style.title"
-                      content="СКР"
-                    />
-                  </ATooltip>
-
-                  <ATypographyText
-                    :class="$style.value"
-                    :content="speed"
-                  />
-                </div>
-
-                <div
-                  v-if="darkVision"
-                  :class="$style.stat"
-                >
-                  <ATooltip title="Темное зрение">
-                    <ATypographyTitle
-                      :level="5"
-                      :class="$style.title"
-                      content="ТЗ"
-                    />
-                  </ATooltip>
-
-                  <ATypographyText
-                    :class="$style.value"
-                    :content="darkVision"
-                  />
-                </div>
               </div>
 
-              <ATypographyText
-                v-if="specie.description"
-                :content="specie.description"
-                :style="{ whiteSpace: 'pre-wrap' }"
-                data-allow-mismatch
-              />
+              <div :class="$style.stat">
+                <ATooltip title="Размер">
+                  <ATypographyTitle
+                    :level="5"
+                    :class="$style.title"
+                    content="РАЗ"
+                  />
+                </ATooltip>
 
-              <ACollapse
-                v-if="specie.features.length"
-                v-model:active-key="activeFeatures"
-                ghost
-                expand-icon-position="end"
-                :class="$style.collapse"
+                <ATypographyText
+                  :class="$style.value"
+                  :content="specie.properties.sizes.join(', ')"
+                />
+              </div>
+
+              <div :class="$style.stat">
+                <ATooltip title="Скорость">
+                  <ATypographyTitle
+                    :level="5"
+                    :class="$style.title"
+                    content="СКР"
+                  />
+                </ATooltip>
+
+                <ATypographyText
+                  :class="$style.value"
+                  :content="speed"
+                />
+              </div>
+
+              <div
+                v-if="darkVision"
+                :class="$style.stat"
               >
-                <ACollapsePanel
-                  v-for="feature in specie.features"
-                  :id="feature.url"
-                  :key="feature.url"
-                  :class="$style.panel"
-                  data-allow-mismatch
-                >
-                  <template #header>
-                    <ATypographyTitle
-                      :level="4"
-                      data-allow-mismatch
-                    >
-                      {{ feature.name.rus }}
-                    </ATypographyTitle>
-                  </template>
+                <ATooltip title="Темное зрение">
+                  <ATypographyTitle
+                    :level="5"
+                    :class="$style.title"
+                    content="ТЗ"
+                  />
+                </ATooltip>
 
-                  <template #default>
-                    <ATypographyText
-                      :content="feature.description"
-                      :style="{ whiteSpace: 'pre-wrap' }"
-                      data-allow-mismatch
-                    />
-                  </template>
-                </ACollapsePanel>
-              </ACollapse>
-            </AFlex>
+                <ATypographyText
+                  :class="$style.value"
+                  :content="darkVision"
+                />
+              </div>
+            </div>
+
+            <ATypographyText
+              v-if="specie.description"
+              :content="specie.description"
+              :style="{ whiteSpace: 'pre-wrap' }"
+              data-allow-mismatch
+            />
+
+            <ACollapse
+              v-if="specie.features.length"
+              v-model:active-key="activeFeatures"
+              ghost
+              expand-icon-position="end"
+              :class="$style.collapse"
+            >
+              <ACollapsePanel
+                v-for="feature in specie.features"
+                :id="feature.url"
+                :key="feature.url"
+                :class="$style.panel"
+                data-allow-mismatch
+              >
+                <template #header>
+                  <ATypographyTitle
+                    :level="4"
+                    data-allow-mismatch
+                  >
+                    {{ feature.name.rus }}
+                  </ATypographyTitle>
+                </template>
+
+                <template #default>
+                  <ATypographyText
+                    :content="feature.description"
+                    :style="{ whiteSpace: 'pre-wrap' }"
+                    data-allow-mismatch
+                  />
+                </template>
+              </ACollapsePanel>
+            </ACollapse>
           </AFlex>
         </AFlex>
-      </div>
+      </AFlex>
+    </div>
 
-      <AResult
-        v-else
-        status="error"
-        title="Ошибка"
-        :sub-title="error"
-      >
-        <template #extra>
-          <AButton
-            type="primary"
-            @click.left.exact.prevent="refresh()"
-          >
-            Обновить
-          </AButton>
+    <AResult
+      v-else
+      status="error"
+      title="Ошибка"
+      :sub-title="error"
+    >
+      <template #extra>
+        <AButton
+          type="primary"
+          @click.left.exact.prevent="refresh()"
+        >
+          Обновить
+        </AButton>
 
-          <AButton @click.left.exact.prevent="navigateTo('/species')">
-            Вернуться в список
-          </AButton>
-        </template>
-      </AResult>
-    </ASpin>
-  </NavPage>
+        <AButton @click.left.exact.prevent="navigateTo('/species')">
+          Вернуться в список
+        </AButton>
+      </template>
+    </AResult>
+  </ASpin>
 </template>
 
 <style module lang="scss">

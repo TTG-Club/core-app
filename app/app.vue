@@ -3,6 +3,8 @@
   import ruRU from 'ant-design-vue/locale/ru_RU';
   import 'ant-design-vue/dist/reset.css';
   import '~/assets/styles/index.scss';
+  import { useTheme } from '~/shared/composables';
+  import { SidebarPanel } from '~/features/sidebar';
 
   const { theme, themeConfig } = useTheme();
 
@@ -27,7 +29,7 @@
           />
 
           <div class="ttg-app">
-            <NavBar />
+            <SidebarPanel />
 
             <NuxtLayout>
               <NuxtPage />

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import type { EventHandlerRequest } from 'h3';
 import { H3Error } from 'h3';
 import { toNumber } from 'lodash-es';
-import { uploadDefault, uploadImage } from '~~/server/utils/upload';
+import { getErrorResponse } from '~~/shared/utils';
 
 const requestSchema = z
   .object({

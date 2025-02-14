@@ -1,5 +1,6 @@
 import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod';
+import { getErrorResponse } from '~~/shared/utils';
 
 const verifySchema = z.object({
   token: z.string().uuid(),

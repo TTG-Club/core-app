@@ -1,5 +1,4 @@
-import { USER_TOKEN_COOKIE } from '~~/shared/utils/const';
-import { verifyToken } from '~~/server/utils/jwt';
+import { USER_TOKEN_COOKIE } from '~~/shared/consts';
 
 export default defineEventHandler((event) => {
   try {

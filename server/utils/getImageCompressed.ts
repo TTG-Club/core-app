@@ -2,6 +2,7 @@ import type { ResizeOptions } from 'sharp';
 import sharp from 'sharp';
 import bytes from 'bytes';
 import { StatusCodes } from 'http-status-codes';
+import { getErrorResponse } from '~~/shared/utils';
 
 export const getImageCompressed = async (
   file:

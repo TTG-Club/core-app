@@ -2,6 +2,8 @@
   import 'virtual:svg-icons-register';
   import ruRU from 'ant-design-vue/locale/ru_RU';
   import type { NuxtError } from '#app';
+  import { useTheme } from '~/shared/composables';
+  import { SidebarPanel } from '~/features/sidebar';
 
   const { theme, themeConfig } = useTheme();
 
@@ -33,7 +35,7 @@
       <AStyleProvider>
         <AApp>
           <div class="ttg-app">
-            <NavBar />
+            <SidebarPanel />
 
             <NuxtLayout>
               <AFlex

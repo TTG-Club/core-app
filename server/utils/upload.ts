@@ -2,6 +2,7 @@ import type { S3UploadFile } from '~~/server/types/s3';
 import { StatusCodes } from 'http-status-codes';
 import { H3Error } from 'h3';
 import type { ResizeOptions } from 'sharp';
+import { getErrorResponse } from '~~/shared/utils';
 
 const baseCheck = (file?: S3UploadFile) => {
   if (!file?.name || !file?.data) {

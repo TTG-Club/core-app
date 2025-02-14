@@ -1,6 +1,7 @@
 import type { H3Event } from 'h3';
-import { USER_TOKEN_COOKIE } from '#shared/utils/const';
 import { StatusCodes } from 'http-status-codes';
+import { getErrorResponse } from '~~/shared/utils';
+import { USER_TOKEN_COOKIE } from '~~/shared/consts';
 
 export const getTokenFromCookie = (event: H3Event) => {
   const token = getCookie(event, USER_TOKEN_COOKIE);

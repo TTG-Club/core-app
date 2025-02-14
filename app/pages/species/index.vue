@@ -1,5 +1,7 @@
 <script setup lang="ts">
-  import type { SpecieLink } from '#shared/types/character/species';
+  import type { SpecieLink } from '~/shared/types';
+  import { PageHeader } from '~/features/page';
+  import { SpeciesLink } from '~/features/wiki';
 
   useSeoMeta({
     title: 'Виды (Species)',
@@ -38,13 +40,13 @@
         v-if="data?.length"
         :class="$style.species"
       >
-        <CharacterSpeciesLink
+        <SpeciesLink
           v-for="link in data"
           :key="link.url"
           :specie="link"
         >
           {{ link.url }}
-        </CharacterSpeciesLink>
+        </SpeciesLink>
       </div>
 
       <AResult

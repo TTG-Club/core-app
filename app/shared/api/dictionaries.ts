@@ -1,4 +1,4 @@
-import type { SelectOption } from '#shared/types/dictionaries';
+import type { SelectOption } from '~/shared/types';
 import type { NitroFetchOptions, NitroFetchRequest } from 'nitropack';
 
 export const sizes = <R extends NitroFetchRequest>(
@@ -9,10 +9,42 @@ export const sizes = <R extends NitroFetchRequest>(
     method: 'get',
   });
 
+export const magicSchools = <R extends NitroFetchRequest>(
+  config?: Omit<NitroFetchOptions<R>, 'method'>,
+) =>
+  $fetch<Array<SelectOption>>('/api/v2/dictionaries/magic-schools', {
+    ...config,
+    method: 'get',
+  });
+
 export const creatureTypes = <R extends NitroFetchRequest>(
   config?: Omit<NitroFetchOptions<R>, 'method'>,
 ) =>
   $fetch<Array<SelectOption>>('/api/v2/dictionaries/creature/types', {
+    ...config,
+    method: 'get',
+  });
+
+export const distanceTypes = <R extends NitroFetchRequest>(
+  config?: Omit<NitroFetchOptions<R>, 'method'>,
+) =>
+  $fetch<Array<SelectOption>>('/api/v2/dictionaries/distance/types', {
+    ...config,
+    method: 'get',
+  });
+
+export const timeUnits = <R extends NitroFetchRequest>(
+  config?: Omit<NitroFetchOptions<R>, 'method'>,
+) =>
+  $fetch<Array<SelectOption>>('/api/v2/dictionaries/time-units', {
+    ...config,
+    method: 'get',
+  });
+
+export const comparisonOperators = <R extends NitroFetchRequest>(
+  config?: Omit<NitroFetchOptions<R>, 'method'>,
+) =>
+  $fetch<Array<SelectOption>>('/api/v2/dictionaries/comparison-operators', {
     ...config,
     method: 'get',
   });
