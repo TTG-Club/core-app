@@ -136,6 +136,7 @@
 
             <AButton
               type="primary"
+              :style="{ boxShadow: 'none' }"
               @click.left.exact.prevent="showRelated = true"
             >
               Разновидности
@@ -160,7 +161,10 @@
             :class="$style.right"
             vertical
           >
-            <div :class="$style.stats">
+            <AFlex
+              gap="16"
+              wrap="wrap"
+            >
               <div :class="$style.stat">
                 <ATooltip title="Тип существа">
                   <ATypographyTitle
@@ -223,7 +227,7 @@
                   :content="darkVision"
                 />
               </div>
-            </div>
+            </AFlex>
 
             <ATypographyText
               v-if="specie.description"
@@ -233,46 +237,17 @@
             />
 
             <ACollapse
-              v-if="specie.features.length"
-              v-model:active-key="activeFeatures"
-              ghost
-              expand-icon-position="end"
-              :class="$style.collapse"
-            >
-              <ACollapsePanel
-                v-for="feature in specie.features"
-                :id="feature.url"
-                :key="feature.url"
-                :class="$style.panel"
-                data-allow-mismatch
-              >
-                <template #header>
-                  <ATypographyTitle
-                    :level="4"
-                    data-allow-mismatch
-                  >
-                    {{ feature.name.rus }}
-                  </ATypographyTitle>
-                </template>
-
-                <template #default>
-                  <ATypographyText
-                    :content="feature.description"
-                    :style="{ whiteSpace: 'pre-wrap' }"
-                    data-allow-mismatch
-                  />
-                </template>
-              </ACollapsePanel>
-            </ACollapse>
-
-            <ACollapse
               v-for="feature in specie.features"
-              :id="feature.url"
               :key="feature.url"
+              v-model:active-key="activeFeatures"
               expand-icon-position="end"
               :bordered="false"
             >
-              <ACollapsePanel data-allow-mismatch>
+              <ACollapsePanel
+                :id="feature.url"
+                :key="feature.url"
+                data-allow-mismatch
+              >
                 <template #header>
                   <ATypographyTitle
                     :level="4"
@@ -332,16 +307,12 @@
     flex: 1 1 auto;
   }
 
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(108px, 1fr));
-    gap: 8px;
-  }
-
   .stat {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+
+    min-width: 120px;
 
     text-align: center;
 
@@ -350,7 +321,7 @@
 
     .title {
       flex-shrink: 0;
-      padding: 4px 0;
+      padding: 6px 8px;
       background-color: var(--color-hover);
     }
 
@@ -361,18 +332,7 @@
       justify-content: center;
 
       min-height: 48px;
-      padding: 4px;
-    }
-  }
-
-  .collapse {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-
-    .panel {
-      background-color: var(--color-bg-secondary);
-      border-radius: 4px;
+      padding: 4px 16px;
     }
   }
 </style>

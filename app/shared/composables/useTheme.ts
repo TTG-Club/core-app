@@ -28,6 +28,7 @@ export const useTheme = () => {
     token: {
       colorPrimary: state.value === 'light' ? '#5e5446' : '#447cc7',
       colorBgElevated: state.value === 'light' ? '#F4F1EC' : '#181921',
+      colorBgContainer: state.value === 'light' ? '#e1e0dd' : '#1f202b',
       colorSuccess: '#67c23a',
       colorWarning: '#e6a23c',
       colorError: '#f56c6c',
