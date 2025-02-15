@@ -36,9 +36,9 @@
           vertical
           justify="space-around"
         >
-          <span :class="$style.description"
-            >Онлайн справочник по D&D 5e 2024</span
-          >
+          <span :class="$style.description">
+            Онлайн справочник по D&D 5e 2024
+          </span>
 
           <span :class="$style.title">TTG Club</span>
         </AFlex>
@@ -60,7 +60,7 @@
           <AFlex
             align="center"
             gap="8"
-            :class="$style.menuTitle"
+            :class="$style.title"
           >
             <SvgIcon icon="menu/filled/character" />
 
@@ -68,28 +68,32 @@
           </AFlex>
 
           <a
-            :class="$style.menuItem"
+            :class="$style.item"
             href="/"
-            >Главная</a
           >
+            Главная
+          </a>
 
           <a
-            :class="$style.menuItem"
+            :class="$style.item"
             href="/workshop"
-            >Мастерская</a
           >
+            Мастерская
+          </a>
 
           <a
-            :class="$style.menuItem"
+            :class="$style.item"
             href="/species"
-            >Виды</a
           >
+            Виды
+          </a>
 
           <a
-            :class="$style.menuItem"
+            :class="$style.item"
             href="/"
-            >Заклинания</a
           >
+            Заклинания
+          </a>
         </AFlex>
       </AFlex>
 
@@ -104,7 +108,8 @@
           gap="small"
           align="center"
         >
-          Контакты:
+          <span>Контакты:</span>
+
           <AButton
             type="text"
             href="https://vk.com/ttg.club"
@@ -156,7 +161,8 @@
           align="center"
           wrap="wrap"
         >
-          Поддержка:
+          <span>Поддержка:</span>
+
           <AButton
             type="text"
             href="https://boosty.to/dnd5club"
@@ -165,7 +171,8 @@
             <template #icon>
               <SvgIcon icon="boosty" />
             </template>
-            TTG Club
+
+            <template #default> TTG Club </template>
           </AButton>
 
           <AButton
@@ -176,7 +183,8 @@
             <template #icon>
               <SvgIcon icon="boosty" />
             </template>
-            Magistrus
+
+            <template #default>Magistrus</template>
           </AButton>
         </AFlex>
       </AFlex>
@@ -194,15 +202,11 @@
     height: 70px;
   }
 
-  .description {
-    color: #ffffff;
-  }
-
   .title {
     font-size: 26px;
     font-weight: 600;
     line-height: 36px;
-    color: #fff;
+    color: var(--color-text-title);
   }
 
   .content {
@@ -217,24 +221,27 @@
     padding: 0;
 
     list-style: none;
-  }
 
-  .menuTitle {
-    margin-bottom: 4px;
-    padding: 0 8px;
-    font-size: 13px;
-  }
+    .title {
+      margin-bottom: 4px;
+      padding: 0 8px;
 
-  .menuItem {
-    margin-left: 14px;
-    padding: 6px 16px;
-    color: #fff;
-    border-radius: 6px;
+      font-size: 13px;
+      font-weight: 200;
+      color: var(--color-text-g);
+    }
 
-    &:hover {
-      color: #fff;
-      background-color: #ffffff0a;
-      transition: all 0.15s ease-in-out;
+    .item {
+      margin-left: 14px;
+      padding: 6px 16px;
+      color: var(--color-text);
+      border-radius: 6px;
+
+      &:hover {
+        color: var(--color-text);
+        background-color: var(--color-hover);
+        transition: all 0.15s ease-in-out;
+      }
     }
   }
 
@@ -269,8 +276,6 @@
       -webkit-transition: all 0.3s ease-in-out;
       -o-transition: all 0.3s ease-in-out;
       transition: all 0.3s ease-in-out;
-
-      @include css-anim();
     }
 
     &.isActive {

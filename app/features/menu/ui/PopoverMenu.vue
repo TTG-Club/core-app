@@ -100,11 +100,7 @@
     max-width: calc(100vw - 16px);
     max-height: calc(var(--max-vh) - 72px - var(--safe-area-inset-bottom));
 
-    background-image: linear-gradient(
-      135deg,
-      rgba(35, 50, 59, 0.78),
-      rgba(25, 20, 31, 0.78)
-    );
+    background-image: var(--color-bg-gradient);
     backdrop-filter: blur(16px);
     border-radius: 12px;
     box-shadow: 0 22px 122px rgb(0 0 0 / 78%);
