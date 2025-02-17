@@ -3,6 +3,38 @@
   import { PopoverMenu } from './ui';
 
   const isShowMenu = ref(false);
+
+  const socialLinks = [
+    {
+      url: 'https://vk.com/ttg.club',
+      icon: 'vk',
+    },
+    {
+      url: 'https://discord.gg/JqFKMKRtxv',
+      icon: 'discord',
+    },
+    {
+      url: 'https://t.me/ttgclubnews',
+      icon: 'telegram',
+    },
+    {
+      url: 'https://www.youtube.com/channel/UCpFse6-P2IBXYfkesAxZbfA',
+      icon: 'youtube',
+    },
+  ];
+
+  const supportLinks = [
+    {
+      url: 'https://boosty.to/dnd5club',
+      icon: 'boosty',
+      label: 'TTG Club',
+    },
+    {
+      url: 'https://boosty.to/dnd5eclub',
+      icon: 'boosty',
+      label: 'Magistrus',
+    },
+  ];
 </script>
 
 <template>
@@ -111,42 +143,14 @@
           <span>Контакты:</span>
 
           <AButton
+            v-for="(link, index) in socialLinks"
+            :key="index"
             type="text"
-            href="https://vk.com/ttg.club"
+            :href="link.url"
             target="_blank"
           >
             <template #icon>
-              <SvgIcon icon="vk" />
-            </template>
-          </AButton>
-
-          <AButton
-            type="text"
-            href="https://discord.gg/JqFKMKRtxv"
-            target="_blank"
-          >
-            <template #icon>
-              <SvgIcon icon="discord" />
-            </template>
-          </AButton>
-
-          <AButton
-            type="text"
-            href="https://t.me/ttgclubnews"
-            target="_blank"
-          >
-            <template #icon>
-              <SvgIcon icon="telegram" />
-            </template>
-          </AButton>
-
-          <AButton
-            type="text"
-            href="https://www.youtube.com/channel/UCpFse6-P2IBXYfkesAxZbfA"
-            target="_blank"
-          >
-            <template #icon>
-              <SvgIcon icon="youtube" />
+              <SvgIcon :icon="link.icon" />
             </template>
           </AButton>
         </AFlex>
@@ -164,27 +168,17 @@
           <span>Поддержка:</span>
 
           <AButton
+            v-for="(item, index) in supportLinks"
+            :key="index"
             type="text"
-            href="https://boosty.to/dnd5club"
+            :href="item.url"
             target="_blank"
           >
             <template #icon>
-              <SvgIcon icon="boosty" />
+              <SvgIcon :icon="item.icon" />
             </template>
 
-            <template #default> TTG Club </template>
-          </AButton>
-
-          <AButton
-            type="text"
-            href="https://boosty.to/dnd5eclub"
-            target="_blank"
-          >
-            <template #icon>
-              <SvgIcon icon="boosty" />
-            </template>
-
-            <template #default>Magistrus</template>
+            <template #default>{{ item.label }}</template>
           </AButton>
         </AFlex>
       </AFlex>
