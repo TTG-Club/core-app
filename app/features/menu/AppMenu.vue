@@ -44,7 +44,7 @@
         </AFlex>
       </AFlex>
 
-      <ADivider :class="$style.dividerHorizontal" />
+      <ADivider :style="{ margin: '12px 0' }" />
 
       <AFlex
         wrap="wrap"
@@ -54,7 +54,7 @@
         <AFlex
           v-for="item in new Array(6)"
           :key="item"
-          :class="$style.menuList"
+          :class="$style.menu"
           vertical
         >
           <AFlex
@@ -97,7 +97,7 @@
         </AFlex>
       </AFlex>
 
-      <ADivider :class="$style.dividerHorizontal" />
+      <ADivider :style="{ margin: '12px 0' }" />
 
       <AFlex
         :class="$style.footer"
@@ -153,7 +153,7 @@
 
         <ADivider
           type="vertical"
-          :class="$style.dividerVertical"
+          :style="{ height: '32px' }"
         />
 
         <AFlex
@@ -213,7 +213,7 @@
     padding: 12px 16px;
   }
 
-  .menuList {
+  .menu {
     width: 100%;
     min-width: 200px;
     max-width: 240px;
@@ -249,14 +249,6 @@
     padding: 0 24px 12px 24px;
   }
 
-  .dividerVertical {
-    height: 32px;
-  }
-
-  .dividerHorizontal {
-    margin: 12px 0;
-  }
-
   .hamburger {
     position: relative;
     display: block;
@@ -273,8 +265,6 @@
       background-color: var(--color-background-thumb);
       border-radius: 2px;
 
-      -webkit-transition: all 0.3s ease-in-out;
-      -o-transition: all 0.3s ease-in-out;
       transition: all 0.3s ease-in-out;
     }
 

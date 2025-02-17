@@ -20,7 +20,6 @@
     :is="disabled ? 'div' : NuxtLink"
     :class="$style.link"
     :to="`/species/${specie.url}`"
-    0
   >
     <ACard hoverable>
       <template #cover>

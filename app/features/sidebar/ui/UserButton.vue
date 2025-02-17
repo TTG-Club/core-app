@@ -136,41 +136,40 @@
           block
           type="text"
           :href="workshopHref"
+          :style="{ justifyContent: 'start' }"
           @click.left.exact.prevent="onNavigate(navigateToWorkshop)"
         >
-          <AFlex :style="{ width: '100%' }">Мастерская</AFlex>
+          Мастерская
         </AButton>
 
         <AButton
           block
           :href="profileHref"
           type="text"
+          :style="{ justifyContent: 'start' }"
           @click.left.exact.prevent="onNavigate(navigateToProfile)"
         >
-          <AFlex :style="{ width: '100%' }"> Личный кабинет</AFlex>
+          Личный кабинет
         </AButton>
 
         <AButton
           block
           disabled
           type="text"
+          :style="{ justifyContent: 'start' }"
         >
-          <AFlex :style="{ width: '100%' }">Сменить пароль</AFlex>
+          Сменить пароль
         </AButton>
 
         <AButton
           block
           danger
           type="text"
+          :style="{ justifyContent: 'start' }"
           @click.left.exact.prevent="logout"
         >
-          <AFlex
-            gap="8"
-            :style="{ width: '100%' }"
-          >
-            <SvgIcon icon="logout" />
-            Выйти
-          </AFlex>
+          <SvgIcon icon="logout" />
+          Выйти
         </AButton>
       </AFlex>
     </template>
