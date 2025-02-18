@@ -8,7 +8,9 @@
 
 <template>
   <div>
-    <h1 :class="$style.siteName">ttgclub</h1>
+    <h1 :class="$style.siteName">
+      {{ name }}
+    </h1>
   </div>
 </template>
 
