@@ -1,20 +1,14 @@
 <script setup lang="ts">
-  const props = defineProps<{
-    modelValue: boolean;
-  }>();
-
-  const emit = defineEmits<{
-    (e: 'update:modelValue', value: boolean): void;
-  }>();
+  const model = defineModel<boolean>({ default: false });
 
   const toggle = () => {
-    emit('update:modelValue', !props.modelValue);
+    model.value = !model.value;
   };
 </script>
 
 <template>
   <div
-    :class="[$style.hamburger, { [$style.isActive]: modelValue }]"
+    :class="[$style.hamburger, { [$style.isActive]: model }]"
     @click.left.exact.prevent="toggle"
   >
     <span :class="$style.line" />
