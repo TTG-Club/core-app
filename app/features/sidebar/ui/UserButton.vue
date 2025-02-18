@@ -168,8 +168,11 @@
           :style="{ justifyContent: 'start' }"
           @click.left.exact.prevent="logout"
         >
-          <SvgIcon icon="logout" />
-          Выйти
+          <template #icon>
+            <SvgIcon icon="logout" />
+          </template>
+
+          <span>Выйти</span>
         </AButton>
       </AFlex>
     </template>

@@ -1,4 +1,4 @@
-export const socialLinks = [
+export const MENU_LINKS = [
   {
     url: 'https://vk.com/ttg.club',
     icon: 'vk',
@@ -17,7 +17,7 @@ export const socialLinks = [
   },
 ];
 
-export const supportLinks = [
+export const MENU_SUPPORT = [
   {
     url: 'https://boosty.to/dnd5club',
     icon: 'boosty',

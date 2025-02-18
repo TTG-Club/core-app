@@ -136,7 +136,6 @@
 
             <AButton
               type="primary"
-              :style="{ boxShadow: 'none' }"
               @click.left.exact.prevent="showRelated = true"
             >
               Разновидности

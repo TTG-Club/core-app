@@ -79,6 +79,7 @@
   .coverCard {
     overflow: hidden;
     height: 240px;
+    object-fit: contain;
   }
 
   .image {
