@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { ThemeSwitch, UserButton } from './ui';
   import { SvgLogo } from '~/shared/ui';
+  import { AppMenu } from '~/features/menu';
 </script>
 
 <template>
@@ -13,6 +14,8 @@
         >
           <SvgLogo />
         </NuxtLink>
+
+        <AppMenu />
       </div>
 
       <div :class="$style.actions">
@@ -31,6 +34,7 @@
 <style lang="scss" module>
   .navbar {
     position: fixed;
+    z-index: 100;
     bottom: 0;
     left: 0;
 

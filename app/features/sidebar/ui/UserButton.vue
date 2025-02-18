@@ -125,14 +125,18 @@
         <ATypographyText
           ellipsis
           strong
-          :style="{ paddingBottom: '8px' }"
+          :style="{ padding: '6px 16px 8px 16px' }"
           :content="greetingText"
         />
+
+        <ADivider :style="{ margin: '0' }" />
 
         <AButton
           v-if="isAdmin"
           block
+          type="text"
           :href="workshopHref"
+          :style="{ justifyContent: 'start' }"
           @click.left.exact.prevent="onNavigate(navigateToWorkshop)"
         >
           Мастерская
@@ -141,23 +145,43 @@
         <AButton
           block
           :href="profileHref"
+          type="text"
+          :style="{ justifyContent: 'start' }"
           @click.left.exact.prevent="onNavigate(navigateToProfile)"
         >
           Личный кабинет
         </AButton>
 
-        <AButton block> Сменить пароль </AButton>
+        <AButton
+          block
+          disabled
+          type="text"
+          :style="{ justifyContent: 'start' }"
+        >
+          Сменить пароль
+        </AButton>
 
         <AButton
           block
           danger
-          type="primary"
+          type="text"
+          :style="{ justifyContent: 'start' }"
           @click.left.exact.prevent="logout"
         >
-          Выйти
-          <SvgIcon icon="logout" />
+          <template #icon>
+            <SvgIcon icon="logout" />
+          </template>
+
+          <span>Выйти</span>
         </AButton>
       </AFlex>
     </template>
   </APopover>
 </template>
+
+<style lang="scss" module>
+  .popup {
+    padding: 50px;
+    background: var(--color-bg-secondary);
+  }
+</style>

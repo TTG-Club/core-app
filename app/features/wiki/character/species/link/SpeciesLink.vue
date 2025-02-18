@@ -21,54 +21,42 @@
     :class="$style.link"
     :to="`/species/${specie.url}`"
   >
-    <div :class="$style.container">
-      <ATypographyText
-        data-allow-mismatch
-        :content="specie.name.rus"
-        ellipsis
-      />
+    <ACard hoverable>
+      <template #cover>
+        <div :class="$style.coverCard">
+          <img
+            v-if="specie.image"
+            :alt="specie.name.rus"
+            :src="specie.image"
+            :class="$style.image"
+            height="240px"
+            width="252px"
+            loading="lazy"
+          />
+        </div>
+      </template>
 
-      <ATypographyText
-        data-allow-mismatch
-        :content="specie.name.eng"
-        type="secondary"
-        ellipsis
-      />
+      <ACardMeta :title="`${specie.name.eng} (${specie.name.rus})`">
+        <template #description>
+          <ATag> PHB </ATag>
 
-      <AFlex
-        :class="$style.bottom"
-        justify="space-between"
-        align="center"
-      >
-        <AButton
-          v-if="showSubspecies"
-          type="default"
-          size="small"
-          @click.left.exact.prevent.stop
-        >
-          Разновидности
-        </AButton>
-
-        <ATag> PHB </ATag>
-      </AFlex>
-    </div>
-
-    <img
-      v-if="specie.image"
-      :alt="specie.name.rus"
-      :class="$style.image"
-      :src="specie.image"
-      loading="lazy"
-    />
+          <AButton
+            v-if="showSubspecies"
+            type="default"
+            size="small"
+            @click.left.exact.prevent.stop
+          >
+            Разновидности
+          </AButton>
+        </template>
+      </ACardMeta>
+    </ACard>
   </component>
 </template>
 
 <style module lang="scss">
   .link {
     position: relative;
-    overflow: hidden;
-    width: 100%;
-    border-radius: 8px;
   }
 
   .container {
@@ -88,18 +76,16 @@
     margin-top: auto;
   }
 
+  .coverCard {
+    overflow: hidden;
+    height: 240px;
+    object-fit: contain;
+  }
+
   .image {
     pointer-events: none;
-
-    position: absolute;
-    top: 0;
-    right: 0;
-    transform-origin: top right 1px;
-
-    width: 60%;
-
-    opacity: 0.3;
-
-    transition: transform 0.6s ease-in-out;
+    display: block;
+    height: 100%;
+    opacity: 0.8;
   }
 </style>
