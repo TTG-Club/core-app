@@ -126,37 +126,6 @@
         <AFlex :gap="28">
           <AFlex
             :gap="16"
-            :class="$style.left"
-            vertical
-          >
-            <UiGallery
-              :preview="specie.image || '/img/no-img.webp'"
-              :images="specie.gallery"
-            />
-
-            <AButton
-              type="primary"
-              @click.left.exact.prevent="showRelated = true"
-            >
-              Разновидности
-            </AButton>
-
-            <ClientOnly>
-              <SpeciesRelatedDrawer
-                v-model="showRelated"
-                :url="specie.url"
-              />
-            </ClientOnly>
-
-            <AAnchor
-              :items="anchors"
-              :offset-top="24"
-              :bounds="24"
-            />
-          </AFlex>
-
-          <AFlex
-            :gap="16"
             :class="$style.right"
             vertical
           >
@@ -265,6 +234,37 @@
                 </template>
               </ACollapsePanel>
             </ACollapse>
+          </AFlex>
+
+          <AFlex
+            :gap="16"
+            :class="$style.left"
+            vertical
+          >
+            <UiGallery
+              :preview="specie.image || '/img/no-img.webp'"
+              :images="specie.gallery"
+            />
+
+            <AButton
+              type="primary"
+              @click.left.exact.prevent="showRelated = true"
+            >
+              Разновидности
+            </AButton>
+
+            <ClientOnly>
+              <SpeciesRelatedDrawer
+                v-model="showRelated"
+                :url="specie.url"
+              />
+            </ClientOnly>
+
+            <AAnchor
+              :items="anchors"
+              :offset-top="24"
+              :bounds="24"
+            />
           </AFlex>
         </AFlex>
       </AFlex>
