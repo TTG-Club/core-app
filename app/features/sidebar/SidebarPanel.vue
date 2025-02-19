@@ -111,9 +111,7 @@
 
   .actions {
     display: flex;
-    flex-direction: column;
     gap: 8px;
-
     height: auto;
     margin-left: 0;
   }
