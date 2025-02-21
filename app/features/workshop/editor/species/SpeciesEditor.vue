@@ -143,7 +143,7 @@
     try {
       const payload = await formRef.value?.validate();
 
-      await $fetch('/api/v2/species/new', {
+      await $fetch('/api/v2/species', {
         method: 'POST',
         body: payload,
         onRequestError: () => {
@@ -349,7 +349,10 @@
             :name="['properties', 'sizes']"
             :rules="[ValidationDictionaries.ruleSize()]"
           >
-            <SelectSize v-model="form.properties.sizes" />
+            <SelectSize
+              v-model="form.properties.sizes"
+              multiple
+            />
           </AFormItem>
         </ACol>
 

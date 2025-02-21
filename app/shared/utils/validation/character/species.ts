@@ -17,7 +17,7 @@ export const ruleUrl = (): Rule => ({
       },
       onResponseError: (response) => {
         throw new Error(
-          response.response.status === StatusCodes.CONFLICT
+          response.response.status === StatusCodes.NOT_FOUND
             ? 'Такой вид уже существует'
             : 'Неизвестная ошибка сервера',
         );
