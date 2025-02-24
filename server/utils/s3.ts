@@ -1,37 +1,13 @@
-import type { S3ClientConfig } from '@aws-sdk/client-s3';
-import { S3 } from '@aws-sdk/client-s3';
 import type { MultiPartData } from 'h3';
-import type { S3UploadFile, S3UploadResponse } from '~~/server/types/s3';
-import ms from 'ms';
+import type { S3UploadFile } from '~~/server/types/s3';
+import { getErrorResponse, getSlug } from '#shared/utils';
 import { StatusCodes } from 'http-status-codes';
-import { getErrorResponse, getSlug } from '~~/shared/utils';
 
-export const createS3Client = () => {
-  const {
-    s3: { endpoint, region, accessKeyId, secretAccessKey },
-  } = useRuntimeConfig();
-
-  const params: S3ClientConfig = {
-    region,
-    endpoint,
-    credentials: {
-      accessKeyId,
-      secretAccessKey,
-    },
-    apiVersion: 'latest',
-    requestHandler: {
-      connectionTimeout: ms('5s'),
-    },
-  };
-
-  return new S3(params);
-};
-
-export const getFileForUpload = (
+export function getFileForUpload(
   file: MultiPartData,
   username: string,
   path?: string,
-): S3UploadFile => {
+): S3UploadFile {
   if (!file.type) {
     throw createError(
       getErrorResponse(StatusCodes.BAD_REQUEST, {
@@ -50,12 +26,7 @@ export const getFileForUpload = (
 
   let fullPath = `${Date.now()}-${getSlug(file.filename)}`;
 
-  const pathFormatted = path
-    ?.replace(/^\/|\/$/, '')
-    .split('/')
-    .map((folder) => getSlug(folder).trim())
-    .filter((folder) => !!folder)
-    .join('/');
+  const pathFormatted = getPathFormatted(path);
 
   if (pathFormatted?.length) {
     fullPath = `${pathFormatted}/${getSlug(username)}/${fullPath}`;
@@ -67,72 +38,34 @@ export const getFileForUpload = (
     path: fullPath,
     type: file.type,
   };
-};
+}
 
-export const uploadToS3 = async (
-  file: S3UploadFile | undefined,
-): Promise<S3UploadResponse> => {
-  if (!file) {
-    throw new Error('Отсутствуют данные для загрузки');
-  }
-
-  if (getStringByteSize(file.path) > 1024) {
-    throw createError(
-      getErrorResponse(StatusCodes.BAD_REQUEST, {
-        message:
-          'Слишком длинный путь файла. Попробуй сократить название файла',
-      }),
-    );
-  }
-
+export function getKeyFromUrl(keyOrUrl: string) {
   const {
     s3: { endpoint, bucket },
   } = useRuntimeConfig();
 
-  const s3 = createS3Client();
+  const regex = new RegExp(`^${endpoint}/${bucket}/`);
 
-  await s3.putObject({
-    Bucket: bucket,
-    Key: file.path,
-    Body: file.data,
-    ContentType: file.type,
-    CacheControl:
-      'public, must-revalidate, proxy-revalidate, max-age=31536000, s-maxage=31536000',
-  });
+  return keyOrUrl.replace(regex, '');
+}
 
-  return {
-    filename: file.name,
-    url: `${endpoint}/${bucket}/${file.path}`,
-  };
-};
-
-export const deleteFromS3 = async (key: string) => {
-  if (!key) {
-    throw createError(
-      getErrorResponse(StatusCodes.BAD_REQUEST, {
-        message: 'Неизвестный ключ объекта',
-      }),
-    );
+export function hasUserAccess(key: string, username: string, path?: string) {
+  if (!key || !username) {
+    return false;
   }
 
-  const {
-    s3: { bucket },
-  } = useRuntimeConfig();
+  const pathFormatted = getPathFormatted(path);
+  const keyFormatted = pathFormatted ? key.replace(pathFormatted, '') : key;
 
-  const s3 = createS3Client();
+  return keyFormatted.replace(/^\//g, '').startsWith(getSlug(username));
+}
 
-  try {
-    await s3.deleteObject({
-      Key: key,
-      Bucket: bucket,
-    });
-  } catch (err) {
-    console.error(err);
-
-    throw createError(
-      getErrorResponse(StatusCodes.INTERNAL_SERVER_ERROR, {
-        message: 'Неизвестная ошибка',
-      }),
-    );
-  }
-};
+function getPathFormatted(path?: string) {
+  return path
+    ?.replace(/^\/|\/$/, '')
+    .split('/')
+    .map((folder) => getSlug(folder).trim())
+    .filter((folder) => !!folder)
+    .join('/');
+}

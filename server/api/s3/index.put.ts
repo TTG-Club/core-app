@@ -3,14 +3,15 @@ import type { S3UploadFile, S3UploadResponse } from '~~/server/types/s3';
 import { z } from 'zod';
 import type { EventHandlerRequest } from 'h3';
 import { H3Error } from 'h3';
-import { toNumber } from 'lodash-es';
+import { toSafeInteger } from 'lodash-es';
 import { getErrorResponse } from '~~/shared/utils';
+import { CompressionService, S3Service } from '~~/server/services';
 
 const requestSchema = z
   .object({
     path: z
       .string()
-      .regex(/^[a-z0-9/][a-z0-9-/]+[a-z0-9/]$/i)
+      .regex(/^[a-z0-9][a-z0-9-/]+[a-z0-9]$/i)
       .optional(),
     maxSize: z.string().regex(/^\d+$/).optional(),
   })
@@ -32,7 +33,7 @@ export default defineEventHandler<Request, Promise<S3UploadResponse>>(
       const query = await getValidatedQuery(event, requestSchema.parse);
 
       path = query?.path;
-      maxSize = toNumber(query?.maxSize);
+      maxSize = toSafeInteger(query?.maxSize);
     } catch (err) {
       throw createError(
         getErrorResponse(StatusCodes.BAD_REQUEST, {
@@ -71,8 +72,13 @@ export default defineEventHandler<Request, Promise<S3UploadResponse>>(
     let fileForUpload: S3UploadFile;
 
     try {
-      fileForUpload = getFileForUpload(file, username, path);
+      fileForUpload = await CompressionService.compress(
+        getFileForUpload(file, username, path),
+        maxSize,
+      );
     } catch (err) {
+      console.error(err);
+
       if (err instanceof H3Error) {
         throw err;
       }
@@ -80,10 +86,6 @@ export default defineEventHandler<Request, Promise<S3UploadResponse>>(
       throw createError(getErrorResponse(StatusCodes.INTERNAL_SERVER_ERROR));
     }
 
-    if (fileForUpload.type.startsWith('image/')) {
-      return uploadImage(fileForUpload, maxSize);
-    }
-
-    return uploadDefault(fileForUpload);
+    return S3Service.upload(fileForUpload);
   },
 );
