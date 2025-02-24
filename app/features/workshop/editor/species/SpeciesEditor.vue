@@ -74,11 +74,11 @@
 
   const specieLinkPreview = computed<SpecieLink>(() => ({
     name: {
-      rus: form.value.name.rus,
-      eng: form.value.name.eng,
+      rus: form.value.name.rus || 'Название вида',
+      eng: form.value.name.eng || "Specie's name",
     },
     url: form.value.url,
-    image: form.value.linkImage,
+    image: form.value.linkImage || '',
   }));
 
   const isFeatureEmpty = (feat: SpecieCreate['features'][number]) =>
@@ -143,7 +143,7 @@
     try {
       const payload = await formRef.value?.validate();
 
-      await $fetch('/api/v2/species/new', {
+      await $fetch('/api/v2/species', {
         method: 'POST',
         body: payload,
         onRequestError: () => {
@@ -349,7 +349,10 @@
             :name="['properties', 'sizes']"
             :rules="[ValidationDictionaries.ruleSize()]"
           >
-            <SelectSize v-model="form.properties.sizes" />
+            <SelectSize
+              v-model="form.properties.sizes"
+              multiple
+            />
           </AFormItem>
         </ACol>
 
@@ -553,7 +556,7 @@
           >
             <SpecieImage
               v-model="form.image"
-              path="/species"
+              path="species"
               max-size="480"
             />
           </AFormItem>
@@ -568,7 +571,7 @@
           >
             <SpecieImage
               v-model="form.linkImage"
-              path="/species"
+              path="species"
               max-size="190"
             >
               <template #preview>
@@ -588,7 +591,7 @@
           >
             <SpecieGallery
               v-model="form.gallery"
-              path="/species"
+              path="species"
             />
           </AFormItem>
         </ACol>

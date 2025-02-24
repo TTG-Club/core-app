@@ -148,6 +148,27 @@
 
   const isImageLoading = ref(false);
 
+  async function removeLoadedImage(link: string) {
+    try {
+      await $fetch('/api/s3', {
+        method: 'delete',
+        query: {
+          path: props.path,
+          keyOrUrl: link,
+        },
+      });
+
+      fileList.value = fileList.value.filter(
+        (file) => file.response?.url !== link,
+      );
+    } catch (e) {
+      notification.error({
+        message: 'Ошибка при удалении',
+        description: 'Не удалось удалить изображение',
+      });
+    }
+  }
+
   watch(fileList, (value) => {
     const images: Array<UploadResponse> = [];
 
@@ -227,11 +248,15 @@
                 />
               </div>
 
-              <div :class="$style.controls">
+              <div
+                v-if="image"
+                :class="$style.controls"
+              >
                 <AButton
                   size="small"
                   type="primary"
                   danger
+                  @click.left.exact.prevent="removeLoadedImage(image)"
                 >
                   <template #icon>
                     <SvgIcon icon="remove" />

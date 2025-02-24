@@ -35,7 +35,7 @@ export const verifyJwt = <T extends JwtPayload>({
 }: VerifyJwtConfig) => jwt.verify(token, apiSecret, options) as T;
 
 export const getUserFromToken = (event: H3Event) => {
-  const token = getTokenFromCookie(event);
+  const token = getTokenFromRequest(event);
 
   try {
     return jwt.verify(token, apiSecret) as AuthJwtPayload;

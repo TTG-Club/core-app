@@ -61,7 +61,7 @@ export const ruleSize = (): Rule => ({
   trigger: ['change', 'blur'],
   type: 'array',
   validator: async (rule: Rule, value: Array<string> | undefined) => {
-    if (!value) {
+    if (!value?.length) {
       throw new Error('Поле обязательно для заполнения');
     }
 

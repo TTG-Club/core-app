@@ -114,6 +114,16 @@
       };
     });
 
+  function removeLoadedImage() {
+    return $fetch('/api/s3', {
+      method: 'delete',
+      query: {
+        path: props.path,
+        keyOrUrl: imageUploaded.value,
+      },
+    });
+  }
+
   const beforeUpload: UploadProps['beforeUpload'] = async (file) => {
     const isExtensionSuccess =
       file.type === 'image/jpeg' ||
@@ -163,17 +173,16 @@
 
   const isImageLoading = ref(false);
 
-  const handleImageChange = (
+  const handleImageChange = async (
     info: UploadChangeParam<UploadFile<UploadResponse>>,
   ) => {
-    isImageLoading.value = false;
-    imageUploaded.value = undefined;
-
-    if (info.file.status === 'uploading') {
-      isImageLoading.value = true;
-    }
+    isImageLoading.value = info.file.status === 'uploading';
 
     if (info.file.status === 'done') {
+      if (imageUploaded.value) {
+        await removeLoadedImage();
+      }
+
       imageUploaded.value = info.file.response?.url;
     }
   };
@@ -221,16 +230,28 @@
       </AFlex>
     </AUploadDragger>
 
-    <slot name="preview">
-      <div :class="$style.preview">
-        <AImage
-          :preview="false"
-          :src="imageUploaded || '/img/no-img.webp'"
-          width="100%"
-          fallback="/img/no-img.webp"
-        />
-      </div>
-    </slot>
+    <div :class="$style.preview">
+      <slot name="preview">
+        <div :class="$style.img">
+          <AImage
+            :preview="false"
+            :src="imageUploaded || '/img/no-img.webp'"
+            width="100%"
+            fallback="/img/no-img.webp"
+          />
+        </div>
+      </slot>
+
+      <AButton
+        :class="$style.remove"
+        type="primary"
+        danger
+      >
+        <template #icon>
+          <SvgIcon icon="remove" />
+        </template>
+      </AButton>
+    </div>
   </AFlex>
 </template>
 
@@ -240,8 +261,29 @@
   }
 
   .preview {
+    position: relative;
+
+    &:not(:hover) {
+      .remove {
+        pointer-events: none;
+        opacity: 0;
+      }
+    }
+  }
+
+  .img {
     overflow: hidden;
     background-color: var(--color-hover);
     border-radius: 8px;
+  }
+
+  .remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+
+    & {
+      @include css-anim();
+    }
   }
 </style>
