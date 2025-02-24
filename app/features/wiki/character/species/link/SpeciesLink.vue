@@ -18,10 +18,9 @@
 <template>
   <component
     :is="disabled ? 'div' : NuxtLink"
-    :class="$style.link"
     :to="`/species/${specie.url}`"
   >
-    <ACard hoverable>
+    <ACard :hoverable="!disabled">
       <template #cover>
         <div :class="$style.coverCard">
           <img
@@ -29,36 +28,36 @@
             :alt="specie.name.rus"
             :src="specie.image"
             :class="$style.image"
-            height="240px"
-            width="252px"
             loading="lazy"
           />
         </div>
       </template>
 
-      <ACardMeta :title="`${specie.name.eng} (${specie.name.rus})`">
-        <template #description>
-          <ATag> PHB </ATag>
+      <ACardMeta>
+        <template #title>
+          <AFlex justify="space-between">
+            <span> {{ specie.name.rus }} [{{ specie.name.eng }}] </span>
 
-          <AButton
-            v-if="showSubspecies"
-            type="default"
-            size="small"
-            @click.left.exact.prevent.stop
-          >
-            Разновидности
-          </AButton>
+            <ATag> PHB </ATag>
+          </AFlex>
         </template>
       </ACardMeta>
+
+      <template #actions>
+        <span @click.left.exact.prevent.stop> Предпросмотр </span>
+
+        <span
+          v-if="!showSubspecies"
+          @click.left.exact.prevent.stop
+        >
+          Разновидности
+        </span>
+      </template>
     </ACard>
   </component>
 </template>
 
 <style module lang="scss">
-  .link {
-    position: relative;
-  }
-
   .container {
     display: flex;
     flex-direction: column;
@@ -79,13 +78,10 @@
   .coverCard {
     overflow: hidden;
     height: 240px;
-    object-fit: contain;
   }
 
   .image {
-    pointer-events: none;
-    display: block;
-    height: 100%;
+    width: 100%;
     opacity: 0.8;
   }
 </style>
