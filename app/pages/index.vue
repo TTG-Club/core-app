@@ -23,6 +23,13 @@
       <SearchPanel />
 
       <HomeSections />
+
+      <AImage
+        alt="roadmap"
+        loading="lazy"
+        :class="$style.roadmap"
+        src="https://s3.timeweb.cloud/1f63c517-f215af24-4c0a-4ac8-aba5-c6a08af65777/sections/home-link/roadmap.png"
+      />
     </AFlex>
   </div>
 </template>
@@ -42,5 +49,15 @@
   .bodyContent {
     width: 100%;
     max-width: var(--max-content);
+  }
+
+  .roadmap {
+    width: 100%;
+    margin-top: 24px;
+
+    opacity: 0.8;
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    box-shadow: 0 0.625rem 0.75rem 0 var(--color-card-shadow);
   }
 </style>
