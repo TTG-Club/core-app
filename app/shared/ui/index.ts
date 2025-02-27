@@ -5,3 +5,5 @@ export * from './select';
 export * from './gallery';
 
 export * from './link';
+
+export * from './page';

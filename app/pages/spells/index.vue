@@ -1,6 +1,11 @@
 <script setup lang="ts">
   import { SpellLink } from '~/features/wiki';
-  import { PageContainer, PageGrid, PageHeader } from '~/features/page';
+  import { PageContainer, PageGrid, PageHeader } from '~/shared/ui';
+
+  useSeoMeta({
+    title: 'Заклинания (Spells)',
+    description: 'Заклинания по D&D 2024 редакции',
+  });
 
   const spells = ref([
     {
@@ -28,7 +33,7 @@
 
 <template>
   <PageContainer>
-    <PageHeader title="Виды">
+    <PageHeader title="Заклинания">
       <template #filter>
         <AButton
           type="primary"

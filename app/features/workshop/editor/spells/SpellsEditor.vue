@@ -5,8 +5,9 @@
     SelectTags,
     SelectMagicSchool,
     SelectSpecie,
+    PageHeader,
+    PageContainer,
   } from '~/shared/ui';
-  import { PageHeader, PageContainer } from '~/features/page';
   import type { SpellCreate } from '~/shared/types';
   import {
     ValidationBase,
