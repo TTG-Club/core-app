@@ -28,7 +28,7 @@
         alt="roadmap"
         loading="lazy"
         :class="$style.roadmap"
-        src="https://s3.timeweb.cloud/1f63c517-f215af24-4c0a-4ac8-aba5-c6a08af65777/sections/home-link/roadmap.png"
+        src="https://s3.timeweb.cloud/1f63c517-f215af24-4c0a-4ac8-aba5-c6a08af65777/roadmap.webp"
       />
     </AFlex>
   </div>
