@@ -7,15 +7,6 @@ on:
       - main
       - dev
 
-  pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
-      - ready_for_review
-      - review_requested
-      - auto_merge_enabled
-
   workflow_dispatch:
 
 env:
@@ -25,7 +16,6 @@ jobs:
   build:
     name: Build docker image
     runs-on: ubuntu-latest
-    if: ${{ github.head_ref != 'main' && github.head_ref != 'dev' }}
     concurrency:
       group: build-${{ github.ref_name }}
       cancel-in-progress: true
@@ -48,8 +38,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository }}
           tags: |
-            type=ref,event=pr,enbled=${{ github.event_name == 'pull_request' }}
-            type=ref,event=branch,enbled=${{ github.event_name != 'pull_request' }}
+            type=ref,event=branch,enbled=true
             type=raw,value=latest,enabled=${{ github.ref_name == 'main' }}
           labels: |
             org.opencontainers.image.title=${{ github.repository }}
@@ -77,7 +66,6 @@ jobs:
     name: Update Server
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ github.ref_name == 'main' || github.ref_name == 'dev' }}
     concurrency:
       group: update-${{ github.ref_name == 'main' && 'prod' || 'dev' }}-server
       cancel-in-progress: false

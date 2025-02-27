@@ -8,9 +8,11 @@ on:
 
     types:
       - opened
-      - ready_for_review
       - reopened
       - synchronize
+      - ready_for_review
+      - review_requested
+      - auto_merge_enabled
 
 permissions:
   actions: read
@@ -29,6 +31,5 @@ jobs:
 
   build:
    name: Code Check PR
-   needs: analyze
    if: ${{ !github.event.pull_request.draft }}
    uses: ./.github/workflows/code-check.yml
