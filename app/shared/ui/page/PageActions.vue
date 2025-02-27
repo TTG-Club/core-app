@@ -89,6 +89,7 @@
 
   <ATooltip title="Открыть окно печати">
     <AButton
+      disabled
       type="text"
       @click.left.exact.prevent="openPrintWindow"
     >

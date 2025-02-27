@@ -1,7 +1,6 @@
 <script setup lang="ts">
-  import { PageActions, PageHeader } from '~/features/page';
+  import { PageActions, PageHeader, UiGallery } from '~/shared/ui';
   import type { Specie } from '~/shared/types';
-  import { UiGallery } from '~/shared/ui';
   import { SpeciesRelatedDrawer } from '~/features/wiki';
 
   const {

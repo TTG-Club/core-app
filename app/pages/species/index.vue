@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import type { SpecieLink } from '~/shared/types';
-  import { PageHeader } from '~/features/page';
+  import { PageHeader } from '~/shared/ui';
   import { SpeciesLink } from '~/features/wiki';
 
   useSeoMeta({

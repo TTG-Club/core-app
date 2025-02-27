@@ -1,13 +1,13 @@
 <script setup lang="ts">
   import type { Dayjs } from 'dayjs';
-  import type { Source } from '~/shared/types';
+  import type { PageHeaderSource } from '~/shared/types';
 
   export interface PageHeaderProps {
     title: string;
     subtitle?: string;
     dateTime?: string | number | Date | Dayjs | null;
     dateTimeFormat?: string;
-    source?: Source;
+    source?: PageHeaderSource;
   }
 
   const props = withDefaults(defineProps<PageHeaderProps>(), {
@@ -133,19 +133,30 @@
             type="secondary"
           />
 
-          <ATooltip
-            v-if="source"
-            :title="`${source.name.rus} [${source.name.eng}]`"
-            placement="topRight"
-            arrow-point-at-center
-          >
-            <ATag
-              :color="`var(--color-badge-${source.group.short.toLowerCase()})`"
-              :style="{ marginInlineEnd: 0 }"
+          <template v-if="source">
+            <ATooltip
+              :title="source.group.name"
+              placement="bottomRight"
+              arrow-point-at-center
             >
-              {{ source.name.short }}
-            </ATag>
-          </ATooltip>
+              <ATag :style="{ marginInlineEnd: 0 }">
+                {{ source.group.label }}
+              </ATag>
+            </ATooltip>
+
+            <ATooltip
+              :title="`${source.name.rus} [${source.name.eng}]`"
+              placement="bottomRight"
+              arrow-point-at-center
+            >
+              <ATag
+                :color="`var(--color-badge-${source.group.label.toLowerCase()})`"
+                :style="{ marginInlineEnd: 0 }"
+              >
+                {{ source.name.short }}
+              </ATag>
+            </ATooltip>
+          </template>
         </AFlex>
       </AFlex>
     </AFlex>
