@@ -122,7 +122,7 @@
       transform-origin: top left;
 
       width: calc(100vw - 80px);
-      max-width: 1170px;
+      max-width: 1100px;
     }
   }
 </style>

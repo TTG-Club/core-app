@@ -42,7 +42,7 @@
 
       <AFlex
         wrap="wrap"
-        gap="40"
+        gap="20"
         :class="$style.content"
       >
         <MenuSection
