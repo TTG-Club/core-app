@@ -47,12 +47,42 @@
       >
         <MenuSection
           icon="menu/filled/character"
-          title="Заголовок"
+          title="Персонаж"
           :items="[
-            { href: '/', label: 'Главная' },
-            { href: '/workshop', label: 'Мастерская' },
+            { href: '/', label: 'Классы', disabled: true },
             { href: '/species', label: 'Виды' },
+            { href: '/', label: 'Черты', disabled: true },
+            { href: '/', label: 'Предыстории', disabled: true },
             { href: '/spells', label: 'Заклинания' },
+          ]"
+        />
+
+        <MenuSection
+          icon="menu/filled/inventory"
+          title="Предметы"
+          :items="[
+            { href: '/', label: 'Снаряжение', disabled: true },
+            { href: '/', label: 'Магические предметы', disabled: true },
+          ]"
+        />
+
+        <MenuSection
+          icon="menu/filled/workshop"
+          title="Мастерская"
+          :items="[
+            { href: '/', label: 'Бестиарий', disabled: true },
+            { href: '/', label: 'Справочник', disabled: true },
+            { href: '/', label: 'Источники', disabled: true },
+          ]"
+        />
+
+        <MenuSection
+          icon="menu/filled/wiki"
+          title="Интрукции"
+          :items="[
+            { href: '/', label: 'Discord Bot', disabled: true },
+            { href: '/', label: 'Telegram Spell Bot', disabled: true },
+            { href: '/', label: 'Управление закладками', disabled: true },
           ]"
         />
       </AFlex>

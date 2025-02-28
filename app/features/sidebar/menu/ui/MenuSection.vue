@@ -4,7 +4,7 @@
   defineProps<{
     icon: string;
     title: string;
-    items: { href: string; label: string }[]; // Массив ссылок
+    items: { href: string; label: string; disabled?: boolean }[]; // Массив ссылок
   }>();
 </script>
 
@@ -26,7 +26,7 @@
     <NuxtLink
       v-for="(item, index) in items"
       :key="index"
-      :class="$style.item"
+      :class="[$style.item, item.disabled && $style.disabled]"
       :to="item.href"
     >
       {{ item.label }}
@@ -62,5 +62,10 @@
       background-color: var(--color-hover);
       transition: all 0.15s ease-in-out;
     }
+  }
+
+  .disabled {
+    pointer-events: none;
+    opacity: 0.4;
   }
 </style>
