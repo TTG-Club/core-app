@@ -15,10 +15,7 @@
       return '';
     }
 
-    return getSlicedString(
-      `${spell.value.name.rus} (${spell.value.name.eng})`,
-      60,
-    );
+    return getSlicedString(spell.value.name.rus, 36);
   });
 
   const seoDescription = computed(() => {
@@ -26,8 +23,14 @@
       return '';
     }
 
+    const level = spell.value.level
+      ? `заклинание ${spell.value.level}-го уровня`
+      : 'магический заговор';
+
+    const school = `школы «${spell.value.school}»`;
+
     return getSlicedString(
-      `${spell.value.name.rus} (${spell.value.name.eng}) — заклинание по D&D 2024 редакции. ${spell.value.description || ''}`,
+      `${spell.value.name.rus} (${spell.value.name.eng}) — ${level} ${school} D&D 5 2024 редакции`,
       200,
     );
   });
@@ -36,6 +39,7 @@
     title: () => seoTitle.value,
     description: () => seoDescription.value,
     author: () => (spell.value ? spell.value.source.name.rus : ''),
+    titleTemplate: '%pageTitle %separator Заклинания D&D 5 2024',
   });
 </script>
 
