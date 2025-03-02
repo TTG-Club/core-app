@@ -1,9 +1,11 @@
-export interface SpellLink {
+import type { SourceResponse } from '../../base';
+
+export interface SpellLinkResponse {
   url: string;
   name: SpellLinkName;
   level: number;
   school: string;
-  group: SpellLinkGroup;
+  source: SourceResponse;
   concentration?: boolean;
   ritual?: boolean;
   components: SpellLinkComponents;

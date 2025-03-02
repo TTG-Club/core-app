@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import type { Dayjs } from 'dayjs';
-  import type { PageHeaderSource } from '~/shared/types';
+  import type { SourceResponse } from '~/shared/types';
   import { useCopy } from '~/shared/composables';
 
   export interface PageHeaderProps {
@@ -8,7 +8,7 @@
     subtitle?: string;
     dateTime?: string | number | Date | Dayjs | null;
     dateTimeFormat?: string;
-    source?: PageHeaderSource;
+    source?: SourceResponse;
   }
 
   const props = withDefaults(defineProps<PageHeaderProps>(), {

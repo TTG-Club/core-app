@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import type { SpellLink } from '~/shared/types';
+  import type { SpellLinkResponse } from '~/shared/types';
 
-  defineProps<Pick<SpellLink, 'ritual' | 'concentration'>>();
+  defineProps<Pick<SpellLinkResponse, 'ritual' | 'concentration'>>();
 </script>
 
 <template>

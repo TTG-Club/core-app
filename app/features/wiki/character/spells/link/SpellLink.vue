@@ -1,12 +1,12 @@
 <script setup lang="ts">
   import { SmallLink } from '~/shared/ui';
-  import type { SpellLink } from '~/shared/types';
+  import type { SpellLinkResponse } from '~/shared/types';
   import { SpellLinkComponents, SpellLinkFlags, SpellLinkDrawer } from './ui';
   import { Breakpoint, useBreakpoints } from '~/shared/composables';
 
   const props = withDefaults(
     defineProps<{
-      spell: SpellLink;
+      spell: SpellLinkResponse;
       onlyDrawer?: boolean;
     }>(),
     {
@@ -57,8 +57,8 @@
       @click.left.exact.prevent.stop="openSpell"
     >
       <SmallLink
-        :tag-tooltip="spell.group.name"
-        :tag-color="spell.group.label"
+        :tag-tooltip="spell.source.group.name"
+        :tag-color="spell.source.group.label"
       >
         <template #icon>
           <ATooltip
@@ -78,7 +78,7 @@
           {{ spell.name.eng }}
         </template>
 
-        <template #tag> {{ spell.group.label }} </template>
+        <template #tag> {{ spell.source.group.label }} </template>
 
         <template #caption>
           <SpellLinkFlags

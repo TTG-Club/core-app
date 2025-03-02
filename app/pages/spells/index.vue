@@ -6,6 +6,7 @@
     PageHeader,
     SmallLinkSkeleton,
   } from '~/shared/ui';
+  import type { SpellLinkResponse } from '~/shared/types';
 
   useSeoMeta({
     title: 'Заклинания (Spells)',
@@ -13,7 +14,7 @@
   });
 
   const { data: spells } = await useAsyncData('spells', () =>
-    $fetch('/api/v2/spells/search', {
+    $fetch<Array<SpellLinkResponse>>('/api/v2/spells/search', {
       method: 'POST',
     }),
   );

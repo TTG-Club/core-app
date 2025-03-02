@@ -3,7 +3,7 @@ import type { tagSchema } from '~/shared/zod/base';
 
 export type Tag = z.infer<typeof tagSchema>;
 
-export interface PageHeaderSource {
+export interface SourceResponse {
   name: {
     rus: string;
     eng: string;
@@ -15,7 +15,7 @@ export interface PageHeaderSource {
   };
 }
 
-export interface Timestamp {
+export interface TimestampResponse {
   createdAt: string;
   updatedAt: string;
 }

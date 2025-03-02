@@ -1,4 +1,4 @@
-import type { PageHeaderSource } from '~/shared/types';
+import type { SourceResponse } from '~/shared/types';
 
 export interface SpellDetail {
   url: string;
@@ -9,7 +9,7 @@ export interface SpellDetail {
   level: number;
   school: string;
   additionalType?: string;
-  source: PageHeaderSource;
+  source: SourceResponse;
   castingTime: string;
   ritual?: boolean;
   concentration?: boolean;
