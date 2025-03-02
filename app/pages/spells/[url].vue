@@ -1,7 +1,8 @@
 <script setup lang="ts">
-  import { PageActions, PageContainer, PageHeader } from '~/shared/ui';
   import { SpellBody } from '~/features/wiki';
+  import { getSlicedString } from '~/shared/utils';
   import type { SpellDetail } from '~/shared/types';
+  import { PageActions, PageContainer, PageHeader } from '~/shared/ui';
 
   const route = useRoute();
 
@@ -9,13 +10,31 @@
     $fetch<SpellDetail>(`/api/v2/spells/${route.params.url}`),
   );
 
+  const seoTitle = computed(() => {
+    if (!spell.value) {
+      return '';
+    }
+
+    return getSlicedString(
+      `${spell.value.name.rus} (${spell.value.name.eng})`,
+      60,
+    );
+  });
+
+  const seoDescription = computed(() => {
+    if (!spell.value) {
+      return '';
+    }
+
+    return getSlicedString(
+      `${spell.value.name.rus} (${spell.value.name.eng}) — заклинание по D&D 2024 редакции. ${spell.value.description || ''}`,
+      200,
+    );
+  });
+
   useSeoMeta({
-    title: () =>
-      spell.value ? `${spell.value.name.rus} (${spell.value.name.eng})` : '',
-    description: () =>
-      spell.value
-        ? `${spell.value.name.rus} (${spell.value.name.eng}) — заклинание по D&D 2024 редакции. ${spell.value.description || ''}`.trim()
-        : '',
+    title: () => seoTitle.value,
+    description: () => seoDescription.value,
     author: () => (spell.value ? spell.value.source.name.rus : ''),
   });
 </script>

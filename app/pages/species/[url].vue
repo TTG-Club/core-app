@@ -1,7 +1,8 @@
 <script setup lang="ts">
-  import { PageActions, PageHeader, UiGallery } from '~/shared/ui';
   import type { Specie } from '~/shared/types';
+  import { getSlicedString } from '~/shared/utils';
   import { SpeciesRelatedDrawer } from '~/features/wiki';
+  import { PageActions, PageHeader, UiGallery } from '~/shared/ui';
 
   const {
     params: { url },
@@ -30,15 +31,33 @@
     },
   );
 
+  const seoTitle = computed(() => {
+    if (!specie.value) {
+      return '';
+    }
+
+    return getSlicedString(
+      `${specie.value.name.rus} (${specie.value.name.eng})`,
+      60,
+    );
+  });
+
+  const seoDescription = computed(() => {
+    if (!specie.value) {
+      return '';
+    }
+
+    return getSlicedString(
+      `${specie.value.name.rus} (${specie.value.name.eng}) — заклинание по D&D 2024 редакции. ${specie.value.description || ''}`,
+      200,
+    );
+  });
+
   useSeoMeta({
-    title: () =>
-      specie.value ? `${specie.value.name.rus} (${specie.value.name.eng})` : '',
-    description: () =>
-      specie.value
-        ? `${specie.value.name.rus} (${specie.value.name.eng}) — вид персонажа по D&D 2024 редакции. ${specie.value.description || ''}`.trim()
-        : '',
-    author: () => (specie.value ? specie.value.source.name.rus : ''),
+    title: () => seoTitle.value,
+    description: () => seoDescription.value,
     ogImage: () => (specie.value ? specie.value.image : ''),
+    author: () => (specie.value ? specie.value.source.name.rus : ''),
   });
 
   const showRelated = ref(false);
