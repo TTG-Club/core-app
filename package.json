@@ -21,6 +21,7 @@
   "dependencies": {
     "@ant-design-vue/nuxt": "^1.4.6",
     "@aws-sdk/client-s3": "^3.731.1",
+    "@faker-js/faker": "^9.5.1",
     "@nuxt/image": "^1.9.0",
     "@nuxtjs/device": "^3.2.4",
     "@nuxtjs/google-fonts": "^3.2.0",
@@ -42,7 +43,6 @@
     "normalize.css": "^8.0.1",
     "nuxt": "^3.15.2",
     "nuxt-security": "^2.1.5",
-    "nuxt-typed-router": "^3.7.3",
     "pinia": "^2.3.1",
     "sharp": "^0.33.5",
     "transliteration": "^2.3.5",

@@ -50,6 +50,7 @@
         </span>
 
         <ATooltip
+          v-if="$slots.tag"
           :mouse-enter-delay="0.7"
           :title="tagTooltip"
           destroy-tooltip-on-hide

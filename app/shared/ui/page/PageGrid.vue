@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { useBreakpoints } from '~/shared/composables';
+  import { Breakpoint, useBreakpoints } from '~/shared/composables';
 
   const { columns } = defineProps<{
     columns:
@@ -18,11 +18,11 @@
       return columns > 0 ? columns : 1;
     }
 
-    if (columns.xl && columns.xl > 0 && bp.greaterOrEqual('xl')) {
+    if (columns.xl && columns.xl > 0 && bp.greaterOrEqual(Breakpoint.XL)) {
       return columns.xl;
     }
 
-    if (columns.md > 0 && bp.greaterOrEqual('md')) {
+    if (columns.md > 0 && bp.greaterOrEqual(Breakpoint.MD)) {
       return columns.md;
     }
 
@@ -32,7 +32,7 @@
 
 <template>
   <div :class="$style.grid">
-    <slot name="default"></slot>
+    <slot name="default" />
   </div>
 </template>
 
@@ -40,6 +40,10 @@
   .grid {
     display: grid;
     grid-gap: 8px;
-    grid-template-columns: repeat(v-bind(calcColumns), 1fr);
+    grid-template-columns: repeat(
+      v-bind(calcColumns),
+      calc((100% - (8px * (v-bind(calcColumns) - 1))) / v-bind(calcColumns))
+    );
+    width: 100%;
   }
 </style>

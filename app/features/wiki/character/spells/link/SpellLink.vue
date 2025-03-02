@@ -1,119 +1,103 @@
 <script setup lang="ts">
   import { SmallLink } from '~/shared/ui';
-  import type { RoutesNamedLocationsResolved } from '@typed-router';
   import type { SpellLink } from '~/shared/types';
+  import { SpellLinkComponents, SpellLinkFlags, SpellLinkDrawer } from './ui';
+  import { Breakpoint, useBreakpoints } from '~/shared/composables';
 
-  const { spell } = defineProps<{
-    spell: SpellLink;
-  }>();
+  const props = withDefaults(
+    defineProps<{
+      spell: SpellLink;
+      onlyDrawer?: boolean;
+    }>(),
+    {
+      onlyDrawer: false,
+    },
+  );
 
-  const route = computed<RoutesNamedLocationsResolved>(() => ({
+  const { greaterOrEqual } = useBreakpoints();
+
+  const isLargeScreen = greaterOrEqual(Breakpoint.LG);
+
+  const isDrawerVisible = ref(false);
+
+  const isDrawerEnabled = computed(
+    () => props.onlyDrawer || isLargeScreen.value,
+  );
+
+  const route = computed(() => ({
     name: 'spells-url',
     params: {
-      url: spell.url,
+      url: props.spell.url,
     },
   }));
+
+  const levelTooltip = computed(() =>
+    props.spell.level ? undefined : 'Заговор',
+  );
+
+  function openSpell() {
+    if (isDrawerEnabled.value) {
+      isDrawerVisible.value = true;
+
+      return;
+    }
+
+    navigateTo(route.value);
+  }
 </script>
 
 <template>
-  <NuxtLink :to="route">
-    <SmallLink
-      :tag-tooltip="spell.group.name"
-      :tag-color="spell.group.label"
+  <NuxtLink
+    v-slot="{ href }"
+    :to="route"
+    custom
+  >
+    <a
+      :href
+      @click.left.exact.prevent.stop="openSpell"
     >
-      <template #icon>
-        <ATooltip
-          :title="spell.level ? undefined : 'Заговор'"
-          :mouse-enter-delay="0.7"
-          destroy-tooltip-on-hide
-        >
-          {{ spell.level || '◐' }}
-        </ATooltip>
-      </template>
-
-      <template #default>
-        {{ spell.name.rus }}
-      </template>
-
-      <template #english>
-        {{ spell.name.eng }}
-      </template>
-
-      <template #tag> {{ spell.group.label }} </template>
-
-      <template #caption>
-        <div>
+      <SmallLink
+        :tag-tooltip="spell.group.name"
+        :tag-color="spell.group.label"
+      >
+        <template #icon>
           <ATooltip
+            :title="levelTooltip"
             :mouse-enter-delay="0.7"
-            title="Концентрация"
             destroy-tooltip-on-hide
           >
-            <ATag v-if="spell.concentration">К</ATag>
+            {{ spell.level || '◐' }}
           </ATooltip>
+        </template>
 
-          <ATooltip
-            :mouse-enter-delay="0.7"
-            title="Ритуал"
-            destroy-tooltip-on-hide
-          >
-            <ATag v-if="spell.ritual">Р</ATag>
-          </ATooltip>
-        </div>
+        <template #default>
+          {{ spell.name.rus }}
+        </template>
 
-        <span :class="$style.school">
-          {{ spell.school }}
-        </span>
+        <template #english>
+          {{ spell.name.eng }}
+        </template>
 
-        <AFlex
-          :class="$style.components"
-          :gap="4"
-        >
-          <ATooltip
-            :mouse-enter-delay="0.7"
-            title="Вербальный компонент"
-            destroy-tooltip-on-hide
-          >
-            <span :class="$style.component">
-              {{ spell.components.v ? 'В' : '·' }}
-            </span>
-          </ATooltip>
+        <template #tag> {{ spell.group.label }} </template>
 
-          <ATooltip
-            :mouse-enter-delay="0.7"
-            title="Соматический компонент"
-            destroy-tooltip-on-hide
-          >
-            <span :class="$style.component">
-              {{ spell.components.s ? 'С' : '·' }}
-            </span>
-          </ATooltip>
+        <template #caption>
+          <SpellLinkFlags
+            :ritual="spell.ritual"
+            :concentration="spell.concentration"
+          />
 
-          <ATooltip
-            :mouse-enter-delay="0.7"
-            title="Материальный компонент"
-            destroy-tooltip-on-hide
-          >
-            <span :class="$style.component">
-              {{ spell.components.m ? 'М' : '·' }}
-            </span>
-          </ATooltip>
-        </AFlex>
-      </template>
-    </SmallLink>
+          <span :style="{ color: 'var(--color-text-g)' }">
+            {{ spell.school }}
+          </span>
+
+          <SpellLinkComponents :components="spell.components" />
+        </template>
+      </SmallLink>
+
+      <SpellLinkDrawer
+        v-model="isDrawerVisible"
+        :url="spell.url"
+      />
+    </a>
   </NuxtLink>
 </template>
-
-<style module lang="scss">
-  .school {
-    color: var(--color-text-g);
-  }
-
-  .components {
-    margin-left: auto;
-  }
-
-  .component {
-    width: 12px;
-    text-align: center;
-  }
-</style>

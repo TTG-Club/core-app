@@ -79,7 +79,7 @@ html.dark {
   --color-badge-hb: #405710;
   --color-badge-3rd: #483475;
   --color-badge-basic: var(--color-primary);
-  --color-badge-ua: var(--color-bg-table-list);
+  --color-badge-ua: var(--color-hover);
 
   // Scroll
   --color-background-thumb: rgba(255, 255, 255, 0.6);
@@ -173,7 +173,7 @@ html.light {
   --color-badge-hb: #97ca28;
   --color-badge-3rd: #d4cbe9;
   --color-badge-basic: var(--color-primary);
-  --color-badge-ua: var(--color-bg-table-list);
+  --color-badge-ua: var(--color-hover);
 
   // Scroll
   --color-background-thumb: rgba(0, 0, 0, 0.6);

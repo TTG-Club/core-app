@@ -21,7 +21,7 @@ export interface SpellDetail {
     m?: string;
   };
   description: string;
-  upper: string;
+  upper?: string;
   affiliation?: SpellDetailAffiliation;
   updatedAt: string;
 }

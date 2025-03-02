@@ -1,58 +1,20 @@
 <script setup lang="ts">
   import { SvgIcon } from '~/shared/ui';
+  import { CopyButton } from '../copy-button';
 
   defineEmits<{
     (e: 'close'): void;
   }>();
 
   const route = useRoute();
-  const clipboard = useClipboard();
-  const { notification } = App.useApp();
 
-  const isBookmarkDisabled = ref(true);
-
-  const urlForCopy = computed(() => window.location.origin + route.path);
-
-  function copyURL() {
-    if (!clipboard.isSupported) {
-      notification.error({
-        message: 'Ошибка при копировании',
-        description: 'Ваш браузер не поддерживает копирование',
-      });
+  const urlForCopy = computed(() => {
+    if (import.meta.browser) {
+      return window.location.origin + route.path;
     }
 
-    clipboard
-      .copy(urlForCopy.value)
-      .then(() => {
-        notification.success({
-          message: 'Копирование',
-          description: 'Ссылка успешно скопирована',
-        });
-
-        // sendShareMetrics({
-        //   method: 'link_copy',
-        //   id: route.path,
-        // });
-      })
-      .catch(() => {
-        notification.error({
-          message: 'Ошибка при копировании',
-          description: () =>
-            h('span', [
-              'Произошла какая-то ошибка... попробуйте еще раз или обратитесь за помощью на нашем ',
-              h(
-                'a',
-                {
-                  target: '_blank',
-                  href: 'https://discord.gg/JqFKMKRtxv',
-                  rel: 'noopener',
-                },
-                'Discord-канале',
-              ),
-            ]),
-        });
-      });
-  }
+    return undefined;
+  });
 
   const openPrintWindow = () => {
     window.print();
@@ -65,20 +27,11 @@
 </script>
 
 <template>
-  <ATooltip title="Скопировать ссылку">
-    <AButton
-      type="text"
-      @click.left.exact.prevent="copyURL"
-    >
-      <template #icon>
-        <SvgIcon icon="copy" />
-      </template>
-    </AButton>
-  </ATooltip>
+  <CopyButton :url="urlForCopy" />
 
-  <ATooltip :title="!isBookmarkDisabled ? 'Закладка' : ''">
+  <ATooltip title="Закладка">
     <AButton
-      :disabled="isBookmarkDisabled"
+      disabled
       type="text"
     >
       <template #icon>

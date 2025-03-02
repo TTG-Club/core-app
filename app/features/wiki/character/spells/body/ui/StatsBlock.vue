@@ -63,6 +63,7 @@
 
 <style module lang="scss">
   .stats {
+    container-type: inline-size;
     overflow: hidden;
     display: flex;
     flex-wrap: wrap;
@@ -71,20 +72,20 @@
     border-radius: 8px;
 
     .item {
-      flex: 1 0 calc(100% / 3);
+      flex: 1 0 50%;
 
-      min-width: calc(100% / 3);
+      min-width: 50%;
       margin-right: -1px;
       margin-bottom: -1px;
-      padding: 10px 24px;
+      padding: 10px 16px;
 
       border-right: 1px solid var(--color-border);
       border-bottom: 1px solid var(--color-border);
 
-      p {
-        margin-bottom: 4px;
-        font-weight: 500;
-        color: var(--color-text-title);
+      @container (width > 600px) {
+        flex: 1 0 calc(100% / 3);
+        min-width: calc(100% / 3);
+        padding: 10px 24px;
       }
 
       &.block {
@@ -95,6 +96,12 @@
 
       &.duration {
         border-right: none;
+      }
+
+      p {
+        margin-bottom: 4px;
+        font-weight: 500;
+        color: var(--color-text-title);
       }
     }
   }
