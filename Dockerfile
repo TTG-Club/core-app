@@ -12,7 +12,8 @@ COPY .npmrc package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY . .
-RUN pnpm run build
+RUN pnpx nuxi cleanup
+RUN pnpx nuxi build
 
 FROM base
 
