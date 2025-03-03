@@ -11,18 +11,21 @@
       | number;
   }>();
 
-  const bp = useBreakpoints();
+  const { greaterOrEqual } = useBreakpoints();
+
+  const isXlOrGreater = greaterOrEqual(Breakpoint.XL);
+  const isMdOrGreater = greaterOrEqual(Breakpoint.MD);
 
   const calcColumns = computed(() => {
     if (typeof columns === 'number') {
       return columns > 0 ? columns : 1;
     }
 
-    if (columns.xl && columns.xl > 0 && bp.greaterOrEqual(Breakpoint.XL)) {
+    if (columns.xl && columns.xl > 0 && isXlOrGreater.value) {
       return columns.xl;
     }
 
-    if (columns.md > 0 && bp.greaterOrEqual(Breakpoint.MD)) {
+    if (columns.md > 0 && isMdOrGreater.value) {
       return columns.md;
     }
 

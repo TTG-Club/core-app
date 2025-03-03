@@ -50,64 +50,69 @@
       </template>
     </PageHeader>
 
-    <PageGrid
-      v-if="status !== 'success' && status !== 'error'"
-      :columns
+    <Transition
+      name="fade"
+      mode="out-in"
     >
-      <SmallLinkSkeleton
-        v-for="uuid in skeletonItems"
-        :key="uuid"
-      />
-    </PageGrid>
+      <PageGrid
+        v-if="status !== 'success' && status !== 'error'"
+        :columns
+      >
+        <SmallLinkSkeleton
+          v-for="uuid in skeletonItems"
+          :key="uuid"
+        />
+      </PageGrid>
 
-    <PageGrid
-      v-if="status === 'success' && spells?.length"
-      :columns
-    >
-      <SpellLink
-        v-for="spell in spells"
-        :key="spell.url"
-        :spell="spell"
-      />
-    </PageGrid>
+      <PageGrid
+        v-else-if="status === 'success' && spells?.length"
+        :columns
+      >
+        <SpellLink
+          v-for="spell in spells"
+          :key="spell.url"
+          :spell="spell"
+        />
+      </PageGrid>
 
-    <AResult
-      v-if="status === 'success' && !spells?.length"
-      title="Ничего не нашлось"
-      sub-title="По вашему запросу ничего не нашлось. Попробуйте изменить фильтр или строку поиска"
-    >
-      <template #extra>
-        <AButton
-          type="primary"
-          @click.left.exact.prevent="refresh()"
-        >
-          Обновить
-        </AButton>
+      <AResult
+        v-else-if="status === 'success' && !spells?.length"
+        title="Ничего не нашлось"
+        sub-title="По вашему запросу ничего не нашлось. Попробуйте изменить фильтр или строку поиска"
+      >
+        <template #extra>
+          <AButton
+            type="primary"
+            @click.left.exact.prevent="refresh()"
+          >
+            Обновить
+          </AButton>
 
-        <AButton @click.left.exact.prevent="navigateTo('/')">
-          Вернуться на главную
-        </AButton>
-      </template>
-    </AResult>
+          <AButton @click.left.exact.prevent="navigateTo('/')">
+            Вернуться на главную
+          </AButton>
+        </template>
+      </AResult>
 
-    <AResult
-      v-if="status === 'error'"
-      :sub-title="error"
-      status="error"
-      title="Ошибка"
-    >
-      <template #extra>
-        <AButton
-          type="primary"
-          @click.left.exact.prevent="refresh()"
-        >
-          Обновить
-        </AButton>
+      <AResult
+        v-else-if="status === 'error'"
+        :sub-title="error"
+        status="error"
+        title="Ошибка"
+      >
+        <template #extra>
+          <AButton
+            type="primary"
+            @click.left.exact.prevent="refresh()"
+          >
+            Обновить
+          </AButton>
 
-        <AButton @click.left.exact.prevent="navigateTo('/')">
-          Вернуться на главную
-        </AButton>
-      </template>
-    </AResult>
+          <AButton @click.left.exact.prevent="navigateTo('/')">
+            Вернуться на главную
+          </AButton>
+        </template>
+      </AResult>
+    </Transition>
   </PageContainer>
 </template>
