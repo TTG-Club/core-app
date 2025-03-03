@@ -1,8 +1,24 @@
 <script setup lang="ts">
-  import { SvgLogo } from '~/shared/ui';
   import { AppMenu } from '../menu';
-  import { ThemeSwitcher } from '../theme-switcher';
   import { UserHelmet } from '../user-helmet';
+  import { ThemeSwitcher } from '../theme-switcher';
+  import { SvgLogo } from '~/shared/ui';
+  import { useSidebarPopover } from '~/shared/composables';
+
+  const route = useRoute();
+  const { close } = useSidebarPopover();
+
+  watch(
+    () => route.fullPath,
+    () => {
+      close();
+    },
+    {
+      immediate: true,
+      flush: 'pre',
+      deep: true,
+    },
+  );
 </script>
 
 <template>
@@ -16,7 +32,9 @@
           <SvgLogo />
         </NuxtLink>
 
-        <AppMenu />
+        <ClientOnly>
+          <AppMenu />
+        </ClientOnly>
       </div>
 
       <div :class="$style.actions">

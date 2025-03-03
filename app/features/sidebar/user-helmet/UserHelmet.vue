@@ -1,13 +1,13 @@
 <script setup lang="ts">
   import { SvgIcon } from '~/shared/ui';
-  import type { NavigationFailure } from 'vue-router';
   import { AuthModal } from '~/features/user';
-  import { useUserRoles } from '~/shared/composables';
+  import { useSidebarPopover, useUserRoles } from '~/shared/composables';
   import { useUserStore } from '~/shared/stores';
 
   const dayjs = useDayjs();
   const userStore = useUserStore();
   const { isAdmin } = useUserRoles();
+  const { toggle, isOpened } = useSidebarPopover('user-helmet');
 
   const { href: profileHref, navigate: navigateToProfile } = useLink({
     to: {
@@ -24,7 +24,6 @@
   const { isLoggedIn, isLoading, user } = storeToRefs(userStore);
 
   const isAuthOpened = ref(false);
-  const tooltipOpened = ref(false);
 
   try {
     await userStore.fetch();
@@ -57,15 +56,6 @@
     return getString('Добрый вечер');
   });
 
-  const onNavigate = (
-    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-    callback: (e?: MouseEvent) => Promise<NavigationFailure | void>,
-  ) => {
-    callback();
-
-    tooltipOpened.value = false;
-  };
-
   const logout = () => {
     userStore.logout().finally(() => {
       window.location.reload();
@@ -91,7 +81,7 @@
 
   <APopover
     v-else
-    v-model:open="tooltipOpened"
+    :open="isOpened"
     :arrow="false"
     :align="{
       offset: [24, 0],
@@ -108,6 +98,7 @@
       <AButton
         type="text"
         size="large"
+        @click.left.exact.prevent="toggle()"
       >
         <template #icon>
           <SvgIcon icon="profile/helmet/filled" />
@@ -137,7 +128,7 @@
           type="text"
           :href="workshopHref"
           :style="{ justifyContent: 'start' }"
-          @click.left.exact.prevent="onNavigate(navigateToWorkshop)"
+          @click.left.exact.prevent="navigateToWorkshop()"
         >
           Мастерская
         </AButton>
@@ -147,7 +138,7 @@
           :href="profileHref"
           type="text"
           :style="{ justifyContent: 'start' }"
-          @click.left.exact.prevent="onNavigate(navigateToProfile)"
+          @click.left.exact.prevent="navigateToProfile()"
         >
           Личный кабинет
         </AButton>

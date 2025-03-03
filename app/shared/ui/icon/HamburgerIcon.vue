@@ -1,16 +1,11 @@
 <script setup lang="ts">
-  const model = defineModel<boolean>({ default: false });
-
-  const toggle = () => {
-    model.value = !model.value;
-  };
+  defineProps<{
+    isActive?: boolean;
+  }>();
 </script>
 
 <template>
-  <div
-    :class="[$style.hamburger, { [$style.isActive]: model }]"
-    @click.left.exact.prevent="toggle"
-  >
+  <div :class="[$style.hamburger, { [$style.isActive]: isActive }]">
     <span :class="$style.line" />
 
     <span :class="$style.line" />

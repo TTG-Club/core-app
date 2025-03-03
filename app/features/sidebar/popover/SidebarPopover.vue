@@ -1,43 +1,53 @@
 <script setup lang="ts">
-  const emit = defineEmits<{
-    (e: 'close'): void;
+  import { onKeyDown } from '@vueuse/core';
+  import { useSidebarPopover } from '~/shared/composables';
+
+  const { popoverKey } = defineProps<{
+    popoverKey: string;
   }>();
 
-  const isShow = defineModel<boolean>({ default: false });
+  const { close, open, toggle, isOpened } = useSidebarPopover(popoverKey);
 
-  function onClose() {
-    isShow.value = false;
+  onKeyDown('Escape', (e: KeyboardEvent) => {
+    if (!isOpened.value) {
+      return;
+    }
 
-    emit('close');
-  }
+    e.stopPropagation();
+    e.preventDefault();
+
+    close();
+  });
 </script>
 
 <template>
   <div :class="$style.navPopover">
-    <div :class="[$style.trigger, { [$style.isActive]: isShow }]">
+    <div :class="[$style.trigger, { [$style.isActive]: isOpened }]">
       <slot
-        :is-show="isShow"
+        :open="() => open()"
+        :is-opened="isOpened"
+        :close="() => close()"
+        :toggle="() => toggle()"
         name="trigger"
       />
     </div>
 
     <Transition name="fade">
       <div
-        v-if="isShow"
+        v-if="isOpened"
         :class="$style.background"
-        @click.left.exact.self.prevent.stop="onClose"
+        @click.left.exact.self.prevent.stop="close()"
       />
     </Transition>
 
     <Transition name="nav-popover-animation">
       <AFlex
-        v-if="isShow"
+        v-if="isOpened"
         :class="$style.body"
         vertical
-        @keydown.esc="onClose"
       >
         <slot
-          :close="onClose"
+          :close="() => close()"
           name="default"
         />
       </AFlex>
