@@ -1,7 +1,7 @@
 html.dark {
   --color-bg-transparent: #ffffff00;
   --color-bg-light-main: rgba(19, 26, 32, 0.3);
-  --color-bg-main: #1D1E23;
+  --color-bg-main: #141B1F;
   --color-bg-secondary: #22232A;
   --color-bg-secondary-gradient: linear-gradient(135deg, #222c33, #172026);
   --color-bg-layout: #F5F5F5;
@@ -38,8 +38,8 @@ html.dark {
     var(--color-bg-main)
   );
   --color-bg-theme-selected: #f8f8f8;
-  --color-text: #b9d7e6;
-  --color-text-disabled: #b9d7e675;
+  --color-text: #d9d9d9;
+  --color-text-disabled: #d9d9d975;
   --color-text-active: #ffffff;
   --color-text-title: #ffffff;
   --color-text-b: #ffffff;
@@ -132,8 +132,8 @@ html.light {
     var(--color-bg-main)
   );
   --color-bg-theme-selected: #cdc07c;
-  --color-text: #404040;
-  --color-text-disabled: #40404075;
+  --color-text: #1F1E1E;
+  --color-text-disabled: #1F1E1E75;
   --color-text-active: #922610;
   --color-text-title: #042a12;
   --color-text-b: #313131;

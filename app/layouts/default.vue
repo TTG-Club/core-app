@@ -16,7 +16,7 @@
   .wrapper {
     width: 100%;
     max-width: var(--max-content);
-    margin: 0 24px 24px 24px;
+    padding: 0 24px 0 24px;
 
     @include media-min($xxl) {
       margin: 0 auto 24px;

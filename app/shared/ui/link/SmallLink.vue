@@ -87,7 +87,7 @@
     background: var(--color-bg-table-list);
 
     &:hover {
-      background-color: #262c32; // TODO: поправить цвет
+      background-color: var(--color-hover);
     }
 
     & {

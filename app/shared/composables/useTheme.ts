@@ -29,7 +29,7 @@ export const useTheme = () => {
       colorPrimary: state.value === 'light' ? '#5e5446' : '#447cc7',
       colorBgElevated: state.value === 'light' ? '#F4F1EC' : '#22232A',
       colorBgContainer: state.value === 'light' ? '#e1e0dd' : '#24262E',
-      colorTextBase: state.value === 'light' ? '#00000014' : '#E3E4E8',
+      colorTextBase: state.value === 'light' ? '#1F1E1E' : '#d9d9d9',
       colorSuccess: '#67c23a',
       colorWarning: '#e6a23c',
       colorError: '#f56c6c',
