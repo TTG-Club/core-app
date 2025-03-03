@@ -1,10 +1,7 @@
 <script setup lang="ts">
-  import { SvgIcon } from '~/shared/ui';
-
   defineProps<{
-    icon: string;
     title: string;
-    items: { href: string; label: string }[]; // Массив ссылок
+    items: { href: string; label: string; disabled?: boolean }[]; // Массив ссылок
   }>();
 </script>
 
@@ -13,20 +10,12 @@
     :class="$style.menu"
     vertical
   >
-    <AFlex
-      align="center"
-      gap="8"
-      :class="$style.title"
-    >
-      <SvgIcon :icon="icon" />
-
-      <span>{{ title }}</span>
-    </AFlex>
+    <span :class="$style.title">{{ title }}</span>
 
     <NuxtLink
       v-for="(item, index) in items"
       :key="index"
-      :class="$style.item"
+      :class="[$style.item, item.disabled && $style.disabled]"
       :to="item.href"
     >
       {{ item.label }}
@@ -46,14 +35,13 @@
   }
   .title {
     margin-bottom: 4px;
-    padding: 0 8px;
+    padding: 0 16px;
 
     font-size: 13px;
     font-weight: 200;
     color: var(--color-text-g);
   }
   .item {
-    margin-left: 14px;
     padding: 6px 16px;
     color: var(--color-text);
     border-radius: 6px;
@@ -62,5 +50,10 @@
       background-color: var(--color-hover);
       transition: all 0.15s ease-in-out;
     }
+  }
+
+  .disabled {
+    pointer-events: none;
+    opacity: 0.4;
   }
 </style>
