@@ -46,7 +46,7 @@
 *,
 *:before,
 *:after {
-  overscroll-behavior: contain;
+  overscroll-behavior: contain; // FIXME: не работает переходы по страницам вперед/назад при свайпе на Apple Trackpad
 
   box-sizing: border-box;
 
@@ -97,4 +97,8 @@ body {
     padding-bottom: 0;
     padding-left: var(--navbar-width);
   }
+}
+
+ol, ul, dl {
+  margin: 0;
 }

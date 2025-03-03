@@ -1,8 +1,8 @@
 <script setup lang="ts">
-  import { PageActions, PageHeader } from '~/features/page';
   import type { Specie } from '~/shared/types';
-  import { UiGallery } from '~/shared/ui';
+  import { getSlicedString } from '~/shared/utils';
   import { SpeciesRelatedDrawer } from '~/features/wiki';
+  import { PageActions, PageHeader, UiGallery } from '~/shared/ui';
 
   const {
     params: { url },
@@ -15,7 +15,9 @@
     error,
     status,
     refresh,
-  } = await useFetch<Specie>(`/api/v2/species/${url}`);
+  } = await useAsyncData(`specie-${url}`, () =>
+    $fetch<Specie>(`/api/v2/species/${url}`),
+  );
 
   watch(
     specie,
@@ -31,15 +33,35 @@
     },
   );
 
+  const seoTitle = computed(() => {
+    if (!specie.value) {
+      return '';
+    }
+
+    return getSlicedString(specie.value.name.rus, 28);
+  });
+
+  const seoDescription = computed(() => {
+    if (!specie.value) {
+      return '';
+    }
+
+    const type = specie.value.parent
+      ? `происхождение вида ${specie.value.parent.name.rus}`
+      : 'вид';
+
+    return getSlicedString(
+      `${specie.value.name.rus} (${specie.value.name.eng}) — ${type} D&D 5 2024 редакции. ${specie.value.description}`,
+      200,
+    );
+  });
+
   useSeoMeta({
-    title: () =>
-      specie.value ? `${specie.value.name.rus} (${specie.value.name.eng})` : '',
-    description: () =>
-      specie.value
-        ? `${specie.value.name.rus} (${specie.value.name.eng}) — вид персонажа по D&D 2024 редакции. ${specie.value.description || ''}`.trim()
-        : '',
-    author: () => (specie.value ? specie.value.source.name.rus : ''),
+    title: () => seoTitle.value,
+    description: () => seoDescription.value,
     ogImage: () => (specie.value ? specie.value.image : ''),
+    author: () => (specie.value ? specie.value.source.name.rus : ''),
+    titleTemplate: '%pageTitle %separator Виды и происхождения D&D 5 2024',
   });
 
   const showRelated = ref(false);

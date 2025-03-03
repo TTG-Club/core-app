@@ -51,7 +51,7 @@
             { href: '/', label: 'Главная' },
             { href: '/workshop', label: 'Мастерская' },
             { href: '/species', label: 'Виды' },
-            { href: '/', label: 'Заклинания' },
+            { href: '/spells', label: 'Заклинания' },
           ]"
         />
       </AFlex>

@@ -1,16 +1,18 @@
 <script setup lang="ts">
   import type { Dayjs } from 'dayjs';
-  import type { Source } from '~/shared/types';
+  import type { SourceResponse } from '~/shared/types';
+  import { useCopy } from '~/shared/composables';
 
   export interface PageHeaderProps {
-    title: string;
+    title?: string;
     subtitle?: string;
     dateTime?: string | number | Date | Dayjs | null;
     dateTimeFormat?: string;
-    source?: Source;
+    source?: SourceResponse;
   }
 
   const props = withDefaults(defineProps<PageHeaderProps>(), {
+    title: '',
     subtitle: '',
     source: undefined,
     dateTime: undefined,
@@ -18,7 +20,7 @@
   });
 
   const dayjs = useDayjs();
-  const clipboard = useClipboard();
+  const { copy } = useCopy();
 
   const formattedDateTime = computed(() => {
     const dateTime = dayjs(props.dateTime);
@@ -33,46 +35,6 @@
 
     return dateTime.local().format(props.dateTimeFormat);
   });
-
-  const copyText = (text?: string) => {
-    if (!text) {
-      return;
-    }
-
-    if (!clipboard.isSupported) {
-      notification.error({
-        message: 'Ошибка при копировании',
-        description: 'Ваш браузер не поддерживает копирование',
-      });
-    }
-
-    clipboard
-      .copy(text)
-      .then(() => {
-        notification.success({
-          message: 'Копирование',
-          description: 'Текст успешно скопирован',
-        });
-      })
-      .catch(() => {
-        notification.error({
-          message: 'Ошибка при копировании',
-          description: () =>
-            h('span', [
-              'Произошла какая-то ошибка... попробуйте еще раз или обратитесь за помощью на нашем ',
-              h(
-                'a',
-                {
-                  target: '_blank',
-                  href: 'https://discord.gg/JqFKMKRtxv',
-                  rel: 'noopener',
-                },
-                'Discord-канале',
-              ),
-            ]),
-        });
-      });
-  };
 </script>
 
 <template>
@@ -85,16 +47,25 @@
       :style="{ paddingTop: '32px' }"
     >
       <AFlex
-        :gap="4"
+        justify="center"
+        flex="1"
         vertical
       >
         <ATypographyTitle
-          data-allow-mismatch
-          :level="2"
+          v-if="title"
+          :style="{ cursor: 'pointer', lineHeight: '32px' }"
           :content="title"
-          :style="{ cursor: 'pointer' }"
+          :level="2"
+          data-allow-mismatch
           ellipsis
-          @click.left.exact.prevent="copyText(title)"
+          @click.left.exact.prevent="copy(title)"
+        />
+
+        <ASkeleton
+          v-else
+          :paragraph="{ rows: 1 }"
+          :title="false"
+          data-allow-mismatch
         />
 
         <ATypographyText
@@ -104,7 +75,7 @@
           type="secondary"
           :style="{ cursor: 'pointer' }"
           ellipsis
-          @click.left.exact.prevent="copyText(subtitle)"
+          @click.left.exact.prevent="copy(subtitle)"
         />
       </AFlex>
 
@@ -133,19 +104,30 @@
             type="secondary"
           />
 
-          <ATooltip
-            v-if="source"
-            :title="`${source.name.rus} [${source.name.eng}]`"
-            placement="topRight"
-            arrow-point-at-center
-          >
-            <ATag
-              :color="`var(--color-badge-${source.group.short.toLowerCase()})`"
-              :style="{ marginInlineEnd: 0 }"
+          <template v-if="source">
+            <ATooltip
+              :title="source.group.name"
+              placement="bottomRight"
+              arrow-point-at-center
             >
-              {{ source.name.short }}
-            </ATag>
-          </ATooltip>
+              <ATag :style="{ marginInlineEnd: 0 }">
+                {{ source.group.label }}
+              </ATag>
+            </ATooltip>
+
+            <ATooltip
+              :title="`${source.name.rus} [${source.name.eng}]`"
+              placement="bottomRight"
+              arrow-point-at-center
+            >
+              <ATag
+                :color="`var(--color-badge-${source.group.label.toLowerCase()})`"
+                :style="{ marginInlineEnd: 0 }"
+              >
+                {{ source.name.short }}
+              </ATag>
+            </ATooltip>
+          </template>
         </AFlex>
       </AFlex>
     </AFlex>

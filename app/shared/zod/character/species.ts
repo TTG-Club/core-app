@@ -38,7 +38,17 @@ export const specieSchema = z.object({
   gallery: z.array(z.string()).optional(),
   name: nameSchema,
   description: z.string(),
-  source: sourceSchema,
+  source: z.object({
+    group: z.object({
+      name: z.string(),
+      label: z.string(),
+    }),
+    name: z.object({
+      rus: z.string(),
+      eng: z.string(),
+      short: z.string(),
+    }),
+  }),
   properties: speciePropertiesSchema,
   parent: specieRelatedSchema.optional(),
   subspecies: z.array(specieRelatedSchema).optional(),

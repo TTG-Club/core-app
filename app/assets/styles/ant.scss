@@ -130,4 +130,19 @@ $typography: '.ant-typography';
       width: 100%;
     }
   }
+
+  &-drawer {
+    &-title {
+      overflow: hidden;
+      display: flex;
+    }
+  }
+
+  &-skeleton {
+    $skeleton: &;
+
+    #{$skeleton}-header {
+      padding: 0;
+    }
+  }
 }

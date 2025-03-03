@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { PageHeader } from '~/features/page';
+  import { PageHeader } from '~/shared/ui';
   import { SectionSpecies, SectionSpells } from '~/features/workshop';
 </script>
 

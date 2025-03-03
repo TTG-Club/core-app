@@ -12,7 +12,9 @@ export default defineNuxtConfig({
     typescriptBundlerResolution: true,
   },
 
-  devtools: { enabled: true },
+  devtools: {
+    enabled: true,
+  },
 
   runtimeConfig: {
     api: {
@@ -198,7 +200,6 @@ export default defineNuxtConfig({
     '@ant-design-vue/nuxt',
     '@pinia/nuxt',
     'nuxt-security',
-    'nuxt-typed-router',
     'dayjs-nuxt',
   ],
 

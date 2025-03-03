@@ -1,10 +1,7 @@
 <script setup lang="ts">
-  import { PageHeader, PageContainer } from '~/features/page';
-  import { isEqual } from 'lodash-es';
-  import type { SelectValue } from 'ant-design-vue/es/select';
-  import type { SpecieCreate, SpecieLink } from '~/shared/types';
-  import type { FormInstance } from 'ant-design-vue';
   import {
+    PageHeader,
+    PageContainer,
     SvgIcon,
     SelectCreatureType,
     SelectSize,
@@ -12,6 +9,10 @@
     SelectSpecie,
     SelectTags,
   } from '~/shared/ui';
+  import { isEqual } from 'lodash-es';
+  import type { SelectValue } from 'ant-design-vue/es/select';
+  import type { SpecieCreate, SpecieLink } from '~/shared/types';
+  import type { FormInstance } from 'ant-design-vue';
   import {
     ValidationBase,
     ValidationSpecie,

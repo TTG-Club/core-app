@@ -14,6 +14,9 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.731.1
         version: 3.731.1
+      '@faker-js/faker':
+        specifier: ^9.5.1
+        version: 9.5.1
       '@nuxt/image':
         specifier: ^1.9.0
         version: 1.9.0(db0@0.2.1)(ioredis@5.4.2)(magicast@0.3.5)(rollup@4.29.1)
@@ -77,9 +80,6 @@ importers:
       nuxt-security:
         specifier: ^2.1.5
         version: 2.1.5(magicast@0.3.5)(rollup@4.29.1)
-      nuxt-typed-router:
-        specifier: ^3.7.3
-        version: 3.7.3(magicast@0.3.5)(prettier@3.4.2)(rollup@4.29.1)
       pinia:
         specifier: ^2.3.1
         version: 2.3.1(typescript@5.7.2)(vue@3.5.13(typescript@5.7.2))
@@ -888,6 +888,10 @@ packages:
   '@eslint/plugin-kit@0.2.4':
     resolution: {integrity: sha512-zSkKow6H5Kdm0ZUQUB2kV5JIXqoG0+uH5YADhaEHswm664N9Db8dXSi0nMJpacpMf+MyyglF1vnZohpEg5yUtg==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@faker-js/faker@9.5.1':
+    resolution: {integrity: sha512-0fzMEDxkExR2cn731kpDaCCnBGBUOIXEi2S1N5l8Hltp6aPf4soTMJ+g4k8r2sI5oB+rpwIW8Uy/6jkwGpnWPg==}
+    engines: {node: '>=18.0.0', npm: '>=9.0.0'}
 
   '@fastify/accept-negotiator@1.1.0':
     resolution: {integrity: sha512-OIHZrb2ImZ7XG85HXOONLcJWGosv7sIvM2ifAPQVhg9Lv7qdmMBNVaai4QTdyuaqbKM5eO6sLSQOYI7wEQeCJQ==}
@@ -4412,10 +4416,6 @@ packages:
   lodash@4.17.21:
     resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==}
 
-  log-symbols@7.0.0:
-    resolution: {integrity: sha512-zrc91EDk2M+2AXo/9BTvK91pqb7qrPg2nX/Hy+u8a5qQlbaOflCKO+6SqgZ+M+xUFxGdKTgwnGiL96b1W3ikRA==}
-    engines: {node: '>=18'}
-
   log-update@6.1.0:
     resolution: {integrity: sha512-9ie8ItPR6tjY5uYJh8K/Zrv/RMZ5VOlOWvtZdEHYSTFKZfIBPQa9tOAEeAWhd+AnIneLJ22w5fjOYtoutpWq5w==}
     engines: {node: '>=18'}
@@ -4737,11 +4737,6 @@ packages:
   nuxt-site-config@3.0.6:
     resolution: {integrity: sha512-Mkyen81br21/nA2sxlLCOtJZ2L8sGL+YzxHlsVhLhEnC355CP2SwKVtYqJNJ4aYFbxeusqZXJFiD4KbveHhk0w==}
 
-  nuxt-typed-router@3.7.3:
-    resolution: {integrity: sha512-x6cxFKGmdjT2/Ii5iZAPFPeJFEy5vvqGTQhNd2hcAG3pu/KCHOGwCq7CDuhqTzfx9oVjyYZam/mwfGhgbgAElQ==}
-    peerDependencies:
-      prettier: ^2.5.x || 3.x
-
   nuxt@3.15.2:
     resolution: {integrity: sha512-1EiQ5wYYVhgkRyaMCyuc4R5lhJtOPJTdOe3LwYNbIol3pmcO1urhNDNKfhiy9zdcA3G14zzN0W/+TqXXidchRw==}
     engines: {node: ^18.20.5 || ^20.9.0 || >=22.0.0}
@@ -4971,9 +4966,6 @@ packages:
 
   pathe@1.1.2:
     resolution: {integrity: sha512-whLdWMYL2TwI08hn8/ZqAbrVemu0LNaNNJZX73O6qaIdCTfXutsLhMkjdENX0qhsQ9uIimo4/aQOmXkoon2nDQ==}
-
-  pathe@2.0.0:
-    resolution: {integrity: sha512-G7n4uhtk9qJt2hlD+UFfsIGY854wpF+zs2bUbQ3CQEUTcn7v25LRsrmurOxTo4bJgjE4qkyshd9ldsEuY9M6xg==}
 
   pathe@2.0.2:
     resolution: {integrity: sha512-15Ztpk+nov8DR524R4BF7uEuzESgzUEAV4Ah7CUMNGXdE5ELuvxElxGXndBl32vMSsWa1jpNf22Z+Er3sKwq+w==}
@@ -7819,6 +7811,8 @@ snapshots:
   '@eslint/plugin-kit@0.2.4':
     dependencies:
       levn: 0.4.1
+
+  '@faker-js/faker@9.5.1': {}
 
   '@fastify/accept-negotiator@1.1.0':
     optional: true
@@ -12204,11 +12198,6 @@ snapshots:
 
   lodash@4.17.21: {}
 
-  log-symbols@7.0.0:
-    dependencies:
-      is-unicode-supported: 2.1.0
-      yoctocolors: 2.1.1
-
   log-update@6.1.0:
     dependencies:
       ansi-escapes: 7.0.0
@@ -12727,22 +12716,6 @@ snapshots:
       - vite
       - vue
 
-  nuxt-typed-router@3.7.3(magicast@0.3.5)(prettier@3.4.2)(rollup@4.29.1):
-    dependencies:
-      '@nuxt/kit': 3.15.2(magicast@0.3.5)(rollup@4.29.1)
-      chalk: 5.4.1
-      defu: 6.1.4
-      lodash-es: 4.17.21
-      log-symbols: 7.0.0
-      mkdirp: 3.0.1
-      nanoid: 5.0.9
-      pathe: 2.0.0
-      prettier: 3.4.2
-    transitivePeerDependencies:
-      - magicast
-      - rollup
-      - supports-color
-
   nuxt@3.15.2(@parcel/watcher@2.5.0)(@types/node@22.10.2)(db0@0.2.1)(eslint@9.17.0(jiti@2.4.2))(ioredis@5.4.2)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.29.1)(sass-embedded@1.83.0)(stylelint@16.12.0(typescript@5.7.2))(terser@5.37.0)(typescript@5.7.2)(vite@6.0.11(@types/node@22.10.2)(jiti@2.4.2)(sass-embedded@1.83.0)(terser@5.37.0)(yaml@2.6.1))(vue-tsc@2.2.0(typescript@5.7.2))(xml2js@0.6.2)(yaml@2.6.1):
     dependencies:
       '@nuxt/cli': 3.20.0(magicast@0.3.5)
@@ -13098,8 +13071,6 @@ snapshots:
   pathe@0.2.0: {}
 
   pathe@1.1.2: {}
-
-  pathe@2.0.0: {}
 
   pathe@2.0.2: {}
 

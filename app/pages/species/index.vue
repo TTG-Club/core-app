@@ -1,11 +1,11 @@
 <script setup lang="ts">
   import type { SpecieLink } from '~/shared/types';
-  import { PageHeader } from '~/features/page';
+  import { PageHeader } from '~/shared/ui';
   import { SpeciesLink } from '~/features/wiki';
 
   useSeoMeta({
     title: 'Виды (Species)',
-    description: 'Виды и подвиды персонажей по D&D 2024 редакции',
+    description: 'Виды и происхождения персонажей по D&D 2024 редакции',
   });
 
   const { data, status, error, refresh } = await useAsyncData('species', () =>

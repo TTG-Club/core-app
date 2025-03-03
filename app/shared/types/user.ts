@@ -1,4 +1,4 @@
-import type { Timestamp } from './base';
+import type { TimestampResponse } from './base';
 
 export enum ROLE {
   ADMIN = 'ADMIN',
@@ -8,7 +8,7 @@ export enum ROLE {
   USER = 'USER',
 }
 
-export interface UserProfile extends Timestamp {
+export interface UserProfile extends TimestampResponse {
   email: string;
   username: string;
   roles: ROLE[];
