@@ -9,15 +9,15 @@ WORKDIR /app
 FROM base AS build
 
 COPY .npmrc package.json pnpm-lock.yaml ./
-
 RUN pnpm install --frozen-lockfile
 
 COPY . .
-
 RUN pnpm run build
 
 FROM base
 
 COPY --from=build /app/.output/ ./
 
-ENTRYPOINT ["node", "server/index.mjs"]
+EXPOSE 3000
+
+CMD ["node", "server/index.mjs"]
