@@ -27,11 +27,11 @@
 <style module lang="scss">
   .topBar {
     padding: 12px;
+    border-radius: 8px;
 
     font-style: italic;
     text-transform: lowercase;
 
     background: var(--color-hover);
-    border-radius: 8px;
   }
 </style>

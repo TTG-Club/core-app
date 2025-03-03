@@ -123,9 +123,9 @@
     flex-shrink: 0;
 
     width: 220px;
+    border-radius: 8px;
 
     object-fit: cover;
-    border-radius: 8px;
 
     @include media-min($md) {
       display: block;

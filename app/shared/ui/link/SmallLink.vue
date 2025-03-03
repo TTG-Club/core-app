@@ -80,11 +80,11 @@
     width: 100%;
     min-height: 38px;
     padding: 6px 12px;
+    border-radius: 12px;
 
     color: var(--color-text);
 
     background: var(--color-bg-table-list);
-    border-radius: 12px;
 
     &:hover {
       background-color: #262c32; // TODO: поправить цвет
@@ -101,13 +101,12 @@
     width: 42px;
     height: 42px;
     margin-left: -8px;
+    border-right: 1px solid var(--color-border);
 
     font-size: 16px;
     line-height: 16px;
     color: var(--color-text);
     text-align: center;
-
-    border-right: 1px solid var(--color-border);
   }
 
   .body {

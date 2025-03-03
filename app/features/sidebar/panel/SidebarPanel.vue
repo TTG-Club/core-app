@@ -64,10 +64,10 @@
     width: 100%;
     height: var(--navbar-height);
     padding-bottom: var(--safe-area-inset-bottom);
-
-    background-color: var(--color-bg-main);
     border-top: 1px solid var(--color-border);
     border-right: 0;
+
+    background-color: var(--color-bg-main);
 
     @include media-min($md) {
       top: 0;
@@ -80,7 +80,6 @@
       height: 100vh;
       padding-bottom: 0;
       padding-left: var(--safe-area-inset-left);
-
       border-top: 0;
       border-right: 1px solid var(--color-border);
     }
@@ -156,7 +155,6 @@
     height: 36px;
     margin: 0 8px 0 0;
     padding: 0 16px 0 0;
-
     border-right: 1px solid var(--border);
     border-bottom: 0;
 
@@ -165,7 +163,6 @@
       height: 60px;
       margin: 0 0 8px 0;
       padding: 0 0 12px 0;
-
       border-right: 0;
       border-bottom: 1px solid var(--border);
     }
@@ -187,9 +184,9 @@
       height: 40px;
       margin: 8px 0 8px 0;
       padding: 0;
+      border-radius: 8px;
 
       opacity: 70%;
-      border-radius: 8px;
 
       &.is-discord {
         color: var(--text-btn-color);

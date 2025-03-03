@@ -109,10 +109,10 @@
     width: calc(100vw - 16px);
     max-width: calc(100vw - 16px);
     max-height: calc(var(--max-vh) - 72px - var(--safe-area-inset-bottom));
+    border-radius: 12px;
 
     background-image: var(--color-bg-gradient);
     backdrop-filter: blur(16px);
-    border-radius: 12px;
     box-shadow: 0 22px 122px rgb(0 0 0 / 78%);
 
     @include media-min($md) {

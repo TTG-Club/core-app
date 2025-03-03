@@ -273,8 +273,8 @@
 
   .img {
     overflow: hidden;
-    background-color: var(--color-hover);
     border-radius: 8px;
+    background-color: var(--color-hover);
   }
 
   .remove {

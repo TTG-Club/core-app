@@ -27,9 +27,9 @@
       width: 20px;
       height: 2px;
       margin: 4px auto;
+      border-radius: 2px;
 
       background-color: var(--color-background-thumb);
-      border-radius: 2px;
 
       transition: all 0.3s ease-in-out;
     }

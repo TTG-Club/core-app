@@ -43,8 +43,8 @@
   }
   .item {
     padding: 6px 16px;
-    color: var(--color-text);
     border-radius: 6px;
+    color: var(--color-text);
     &:hover {
       color: var(--color-text);
       background-color: var(--color-hover);

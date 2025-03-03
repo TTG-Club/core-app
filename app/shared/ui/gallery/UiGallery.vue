@@ -59,7 +59,7 @@
   .gallery {
     overflow: hidden;
     width: 100%;
-    background-color: var(--color-hover);
     border-radius: 8px;
+    background-color: var(--color-hover);
   }
 </style>

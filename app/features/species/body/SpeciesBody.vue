@@ -168,11 +168,11 @@
     flex-direction: column;
 
     min-width: 120px;
+    border-radius: 8px;
 
     text-align: center;
 
     background-color: var(--color-bg-secondary);
-    border-radius: 8px;
 
     .title {
       flex-shrink: 0;
