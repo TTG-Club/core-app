@@ -54,10 +54,10 @@
   .roadmap {
     width: 100%;
     margin-top: 24px;
-
-    opacity: 0.8;
     border: 1px solid var(--color-border);
     border-radius: 16px;
+
+    opacity: 0.8;
     box-shadow: 0 0.625rem 0.75rem 0 var(--color-card-shadow);
   }
 </style>

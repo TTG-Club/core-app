@@ -44,11 +44,11 @@
     min-width: 40%;
     height: 56px;
     padding: 0 12px;
+    border-radius: 12px;
 
     text-decoration: none;
 
     background-color: var(--color-bg-secondary);
-    border-radius: 12px;
     box-shadow: 0 0.625rem 0.75rem 0 var(--color-card-shadow);
 
     .img {

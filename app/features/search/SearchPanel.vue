@@ -84,10 +84,10 @@
     max-width: 600px;
     height: 46px;
     padding: 0 16px;
-
-    background-color: var(--color-bg-secondary);
     border: 1px solid var(--color-border);
     border-radius: 36px;
+
+    background-color: var(--color-bg-secondary);
 
     p {
       margin: 0;
@@ -95,15 +95,15 @@
 
     .key {
       padding: 0 8px;
+      border-color: var(--color-border);
+      border-style: solid;
+      border-width: 1px;
+      border-radius: 4px;
 
       font-weight: 600;
       color: var(--color-text-color-title);
 
       background-color: var(--color-bg-sub-menu);
-      border-color: var(--color-border);
-      border-style: solid;
-      border-width: 1px;
-      border-radius: 4px;
     }
   }
 
