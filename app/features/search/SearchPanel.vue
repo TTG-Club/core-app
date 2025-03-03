@@ -25,13 +25,35 @@
 
     <AModal
       v-model:open="open"
-      title="Basic Modal"
+      :closable="false"
+      :footer="null"
     >
-      <p>Some contents...</p>
+      <AInput
+        autofocus
+        placeholder="Поиск по сайту"
+        size="large"
+      ></AInput>
 
-      <p>Some contents...</p>
+      <ASpace
+        direction="vertical"
+        :class="$style.result"
+      >
+        <span>Результат ответа</span>
 
-      <p>Some contents...</p>
+        <span>Результат ответа</span>
+
+        <span>Результат ответа</span>
+
+        <span>Результат ответа</span>
+
+        <span>Результат ответа</span>
+
+        <span>Результат ответа</span>
+
+        <span>Результат ответа</span>
+
+        <span>Результат ответа</span>
+      </ASpace>
     </AModal>
   </AFlex>
 </template>
@@ -83,5 +105,10 @@
       border-width: 1px;
       border-radius: 4px;
     }
+  }
+
+  .result {
+    width: 100%;
+    margin-top: 16px;
   }
 </style>
