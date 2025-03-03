@@ -7,7 +7,7 @@
     "build": "nuxi build",
     "preview": "nuxi preview",
     "server": "node .output/server/index.mjs",
-    "postinstall": "pnpx nuxi cleanup && nuxt prepare",
+    "postinstall": "nuxi cleanup && nuxi prepare",
     "type-check": "vue-tsc -p tsconfig.json",
     "lint:check": "eslint . --cache --cache-strategy content",
     "lint:write": "eslint . --cache --cache-strategy content --fix",
