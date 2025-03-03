@@ -12,8 +12,6 @@
     align="center"
     :class="$style.head"
   >
-    <span :class="$style.title">D&D 2024 СПРАВОЧНИК</span>
-
     <div
       :class="$style.search"
       @click="showModal"
@@ -62,12 +60,6 @@
   .head {
     width: 100%;
     margin: 5vw 0 0 0;
-
-    .title {
-      display: none;
-      margin-bottom: 16px;
-      font-size: 3rem;
-    }
   }
 
   .search {
