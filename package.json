@@ -3,9 +3,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "pnpx nuxi cleanup && nuxt dev --host",
-    "build": "pnpx nuxi cleanup && nuxt build",
-    "preview": "nuxt preview",
+    "dev": "nuxi dev --host",
+    "build": "nuxi build",
+    "preview": "nuxi preview",
     "server": "node .output/server/index.mjs",
     "postinstall": "pnpx nuxi cleanup && nuxt prepare",
     "type-check": "vue-tsc -p tsconfig.json",
