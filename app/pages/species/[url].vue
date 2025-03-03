@@ -1,36 +1,24 @@
 <script setup lang="ts">
   import type { Specie } from '~/shared/types';
   import { getSlicedString } from '~/shared/utils';
-  import { SpeciesRelatedDrawer } from '~/features/wiki';
-  import { PageActions, PageHeader, UiGallery } from '~/shared/ui';
+  import {
+    PageActions,
+    PageContainer,
+    PageHeader,
+    UiGallery,
+  } from '~/shared/ui';
+  import { SpeciesRelatedDrawer, SpeciesBody } from '~/features/species';
 
   const {
     params: { url },
   } = useRoute();
 
-  const activeFeatures = ref<Array<string>>([]);
-
   const {
     data: specie,
     error,
-    status,
     refresh,
   } = await useAsyncData(`specie-${url}`, () =>
     $fetch<Specie>(`/api/v2/species/${url}`),
-  );
-
-  watch(
-    specie,
-    (value) => {
-      if (!value) {
-        return;
-      }
-
-      activeFeatures.value = value.features.map((feature) => feature.url);
-    },
-    {
-      immediate: true,
-    },
   );
 
   const seoTitle = computed(() => {
@@ -66,34 +54,6 @@
 
   const showRelated = ref(false);
 
-  const speed = computed(() => {
-    if (!specie.value) {
-      return '';
-    }
-
-    const acc = [`${specie.value.properties.speed.base} фт.`];
-
-    if (specie.value.properties.speed.climb) {
-      acc.push(`лазая ${specie.value.properties.speed.climb} фт.`);
-    }
-
-    if (specie.value.properties.speed.swim) {
-      acc.push(`плавая ${specie.value.properties.speed.swim} фт.`);
-    }
-
-    if (specie.value.properties.speed.fly) {
-      acc.push(`летая ${specie.value.properties.speed.fly} фт.`);
-    }
-
-    return acc.join(', ');
-  });
-
-  const darkVision = computed(() =>
-    specie.value?.properties.darkVision
-      ? `${specie.value.properties.darkVision} фт.`
-      : '',
-  );
-
   const anchors = computed(() => {
     if (!specie.value?.features.length) {
       return [];
@@ -120,183 +80,65 @@
 </script>
 
 <template>
-  <ASpin
-    data-allow-mismatch
-    size="large"
-    :spinning="status === 'pending'"
-  >
-    <div
-      v-if="specie"
-      id="specie-base"
-      :class="$style.specie"
+  <PageContainer id="specie-base">
+    <PageHeader
+      :title="specie?.name.rus"
+      :subtitle="specie?.name.eng"
+      :source="specie?.source"
+      :date-time="specie?.updatedAt"
     >
+      <template #actions>
+        <PageActions @close="navigateTo('/species')" />
+      </template>
+    </PageHeader>
+
+    <AFlex
+      v-if="specie"
+      :class="$style.specie"
+      :gap="28"
+    >
+      <SpeciesBody
+        :class="$style.right"
+        :specie="specie"
+      />
+
       <AFlex
+        :class="$style.left"
+        :gap="16"
         vertical
-        :gap="24"
       >
-        <PageHeader
-          :title="specie.name.rus"
-          :subtitle="specie.name.eng"
-          :source="specie.source"
-          :date-time="specie.updatedAt"
+        <UiGallery
+          :preview="specie.image || '/img/no-img.webp'"
+          :images="specie.gallery"
+        />
+
+        <AButton
+          type="primary"
+          @click.left.exact.prevent="showRelated = true"
         >
-          <template #actions>
-            <PageActions @close="navigateTo('/species')" />
-          </template>
-        </PageHeader>
+          Разновидности
+        </AButton>
 
-        <AFlex :gap="28">
-          <AFlex
-            :gap="16"
-            :class="$style.right"
-            vertical
-          >
-            <AFlex
-              gap="16"
-              wrap="wrap"
-            >
-              <div :class="$style.stat">
-                <ATooltip title="Тип существа">
-                  <ATypographyTitle
-                    :level="5"
-                    :class="$style.title"
-                    content="ТИП"
-                  />
-                </ATooltip>
+        <ClientOnly>
+          <SpeciesRelatedDrawer
+            v-model="showRelated"
+            :url="specie.url"
+          />
+        </ClientOnly>
 
-                <ATypographyText
-                  :class="$style.value"
-                  :content="specie.properties.type"
-                />
-              </div>
-
-              <div :class="$style.stat">
-                <ATooltip title="Размер">
-                  <ATypographyTitle
-                    :level="5"
-                    :class="$style.title"
-                    content="РАЗ"
-                  />
-                </ATooltip>
-
-                <ATypographyText
-                  :class="$style.value"
-                  :content="specie.properties.sizes.join(', ')"
-                />
-              </div>
-
-              <div :class="$style.stat">
-                <ATooltip title="Скорость">
-                  <ATypographyTitle
-                    :level="5"
-                    :class="$style.title"
-                    content="СКР"
-                  />
-                </ATooltip>
-
-                <ATypographyText
-                  :class="$style.value"
-                  :content="speed"
-                />
-              </div>
-
-              <div
-                v-if="darkVision"
-                :class="$style.stat"
-              >
-                <ATooltip title="Темное зрение">
-                  <ATypographyTitle
-                    :level="5"
-                    :class="$style.title"
-                    content="ТЗ"
-                  />
-                </ATooltip>
-
-                <ATypographyText
-                  :class="$style.value"
-                  :content="darkVision"
-                />
-              </div>
-            </AFlex>
-
-            <ATypographyText
-              v-if="specie.description"
-              :content="specie.description"
-              :style="{ whiteSpace: 'pre-wrap' }"
-              data-allow-mismatch
-            />
-
-            <ACollapse
-              v-for="feature in specie.features"
-              :key="feature.url"
-              v-model:active-key="activeFeatures"
-              expand-icon-position="end"
-              :bordered="false"
-            >
-              <ACollapsePanel
-                :id="feature.url"
-                :key="feature.url"
-                data-allow-mismatch
-              >
-                <template #header>
-                  <ATypographyTitle
-                    :level="4"
-                    data-allow-mismatch
-                  >
-                    {{ feature.name.rus }}
-                  </ATypographyTitle>
-                </template>
-
-                <template #default>
-                  <ATypographyText
-                    :content="feature.description"
-                    :style="{ whiteSpace: 'pre-wrap' }"
-                    data-allow-mismatch
-                  />
-                </template>
-              </ACollapsePanel>
-            </ACollapse>
-          </AFlex>
-
-          <AFlex
-            :gap="16"
-            :class="$style.left"
-            vertical
-          >
-            <UiGallery
-              :preview="specie.image || '/img/no-img.webp'"
-              :images="specie.gallery"
-            />
-
-            <AButton
-              type="primary"
-              @click.left.exact.prevent="showRelated = true"
-            >
-              Разновидности
-            </AButton>
-
-            <ClientOnly>
-              <SpeciesRelatedDrawer
-                v-model="showRelated"
-                :url="specie.url"
-              />
-            </ClientOnly>
-
-            <AAnchor
-              :items="anchors"
-              :offset-top="24"
-              :bounds="24"
-            />
-          </AFlex>
-        </AFlex>
+        <AAnchor
+          :items="anchors"
+          :offset-top="24"
+          :bounds="24"
+        />
       </AFlex>
-    </div>
+    </AFlex>
 
     <AResult
       v-else
+      :sub-title="error"
       status="error"
       title="Ошибка"
-      :sub-title="error"
     >
       <template #extra>
         <AButton
@@ -311,14 +153,10 @@
         </AButton>
       </template>
     </AResult>
-  </ASpin>
+  </PageContainer>
 </template>
 
 <style module lang="scss">
-  .specie {
-    position: relative;
-  }
-
   .left {
     flex-shrink: 0;
     width: 288px;
@@ -326,34 +164,5 @@
 
   .right {
     flex: 1 1 auto;
-  }
-
-  .stat {
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-
-    min-width: 120px;
-
-    text-align: center;
-
-    background-color: var(--color-bg-secondary);
-    border-radius: 8px;
-
-    .title {
-      flex-shrink: 0;
-      padding: 6px 8px;
-      background-color: var(--color-hover);
-    }
-
-    .value {
-      display: flex;
-      flex: 1 1 auto;
-      align-items: center;
-      justify-content: center;
-
-      min-height: 48px;
-      padding: 4px 16px;
-    }
   }
 </style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { SpellBody } from '~/features/wiki';
+  import { SpellBody } from '~/features/spells';
   import { getSlicedString } from '~/shared/utils';
   import type { SpellDetail } from '~/shared/types';
   import { PageActions, PageContainer, PageHeader } from '~/shared/ui';

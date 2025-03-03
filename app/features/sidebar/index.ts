@@ -1,1 +1,1 @@
-export { default as SidebarPanel } from './SidebarPanel.vue';
+export * from './panel';

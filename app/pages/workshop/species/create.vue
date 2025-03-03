@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { SpeciesEditor } from '~/features/workshop';
+  import { SpeciesEditor } from '~/features/species';
 </script>
 
 <template>

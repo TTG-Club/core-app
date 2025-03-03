@@ -4,8 +4,8 @@
     tagTooltip?: string;
   }>();
 
-  const badgeColor = computed(
-    () => `var(--color-badge-${tagColor || 'basic'})`,
+  const badgeColor = computed(() =>
+    `var(--color-badge-${tagColor || 'basic'})`.toLowerCase(),
   );
 </script>
 

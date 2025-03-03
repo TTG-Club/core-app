@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { SpecieLink } from '~/shared/types';
-  import { PageHeader } from '~/shared/ui';
-  import { SpeciesLink } from '~/features/wiki';
+  import { PageGrid, PageHeader } from '~/shared/ui';
+  import { SpeciesLink } from '~/features/species';
 
   useSeoMeta({
     title: 'Виды (Species)',
@@ -23,8 +23,9 @@
     <PageHeader title="Виды">
       <template #filter>
         <AButton
-          type="primary"
           :style="{ boxShadow: 'none' }"
+          type="primary"
+          disabled
         >
           Фильтры
         </AButton>
@@ -32,6 +33,7 @@
         <AInput
           placeholder="Введите текст..."
           allow-clear
+          disabled
         />
       </template>
     </PageHeader>
@@ -41,9 +43,9 @@
       size="large"
       :spinning="status === 'pending'"
     >
-      <div
+      <PageGrid
         v-if="data?.length"
-        :class="$style.species"
+        :columns="{ xl: 5, md: 3, xs: 1 }"
       >
         <SpeciesLink
           v-for="link in data"
@@ -52,7 +54,7 @@
         >
           {{ link.url }}
         </SpeciesLink>
-      </div>
+      </PageGrid>
 
       <AResult
         v-else-if="error"
