@@ -15,7 +15,11 @@
   >
     <strong v-if="!level">Улучшение заговора. </strong>
 
-    <strong v-else>Накладывание более высокой ячейкой. </strong>
+    <strong
+      v-else
+      :style="{ color: 'var(--color-text-bold)' }"
+      >Накладывание более высокой ячейкой.
+    </strong>
 
     <span>{{ upper }}</span>
   </div>

@@ -14,7 +14,27 @@
 
 <template>
   <div :class="$style.container">
+    <TopBar
+      :additional-type="spell.additionalType"
+      :ritual="spell.ritual"
+      :school="spell.school"
+      :level="spell.level"
+    />
+
     <div :class="$style.body">
+      <AFlex
+        vertical
+        :gap="12"
+        :class="$style.info"
+      >
+        <StatsBlock
+          :casting-time="spell.castingTime"
+          :components="spell.components"
+          :duration="spell.duration"
+          :range="spell.range"
+        />
+      </AFlex>
+
       <AFlex
         vertical
         :gap="12"
@@ -50,26 +70,6 @@
           label="Происхождения"
         />
       </AFlex>
-
-      <AFlex
-        vertical
-        :gap="12"
-        :class="$style.info"
-      >
-        <TopBar
-          :additional-type="spell.additionalType"
-          :ritual="spell.ritual"
-          :school="spell.school"
-          :level="spell.level"
-        />
-
-        <StatsBlock
-          :casting-time="spell.castingTime"
-          :components="spell.components"
-          :duration="spell.duration"
-          :range="spell.range"
-        />
-      </AFlex>
     </div>
   </div>
 </template>
@@ -77,15 +77,19 @@
 <style module lang="scss">
   .container {
     container-type: inline-size;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
 
   .body {
     display: flex;
-    flex-direction: column-reverse;
+    flex-direction: column;
     gap: 12px;
 
     @container (width > 800px) {
       flex-direction: row;
+      gap: 28px;
     }
   }
 
@@ -94,7 +98,7 @@
     max-width: 100%;
 
     @container (width > 800px) {
-      max-width: 360px;
+      max-width: 320px;
     }
   }
 </style>
