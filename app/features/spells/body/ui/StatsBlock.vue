@@ -68,13 +68,15 @@
     display: flex;
     flex-wrap: wrap;
 
+    width: 100%;
+    min-width: 320px;
     border: 1px solid var(--color-border);
     border-radius: 8px;
 
     .item {
-      flex: 1 0 50%;
+      flex: 1 0 100%;
 
-      min-width: 50%;
+      min-width: 100%;
       margin-right: -1px;
       margin-bottom: -1px;
       padding: 10px 16px;
