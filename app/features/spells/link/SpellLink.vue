@@ -57,7 +57,7 @@
       @click.left.exact.prevent.stop="openSpell"
     >
       <SmallLink
-        :tag-tooltip="spell.source.group.name"
+        :tag-tooltip="spell.source.group.rus"
         :tag-color="spell.source.group.label"
       >
         <template #icon>

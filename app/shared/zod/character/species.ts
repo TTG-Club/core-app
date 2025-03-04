@@ -40,13 +40,13 @@ export const specieSchema = z.object({
   description: z.string(),
   source: z.object({
     group: z.object({
-      name: z.string(),
+      rus: z.string(),
       label: z.string(),
     }),
     name: z.object({
       rus: z.string(),
       eng: z.string(),
-      short: z.string(),
+      label: z.string(),
     }),
   }),
   properties: speciePropertiesSchema,

@@ -7,10 +7,10 @@ export interface SourceResponse {
   name: {
     rus: string;
     eng: string;
-    short: string;
+    label: string;
   };
   group: {
-    name: string;
+    rus: string;
     label: string;
   };
 }

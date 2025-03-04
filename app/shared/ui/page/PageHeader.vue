@@ -106,7 +106,7 @@
 
           <template v-if="source">
             <ATooltip
-              :title="source.group.name"
+              :title="source.group.rus"
               placement="bottomRight"
               arrow-point-at-center
             >
@@ -124,7 +124,7 @@
                 :color="`var(--color-badge-${source.group.label.toLowerCase()})`"
                 :style="{ marginInlineEnd: 0 }"
               >
-                {{ source.name.short }}
+                {{ source.name.label }}
               </ATag>
             </ATooltip>
           </template>

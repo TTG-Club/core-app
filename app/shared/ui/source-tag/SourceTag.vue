@@ -1,15 +1,15 @@
 <script setup lang="ts">
-  import type { SourceInfo } from './types';
+  import type { SourceResponse } from '~/shared/types';
 
   defineProps<{
-    source: SourceInfo;
+    source: SourceResponse;
   }>();
 </script>
 
 <template>
   <AFlex :gap="8">
     <ATooltip
-      :title="source.group.name"
+      :title="source.group.rus"
       placement="bottomRight"
       arrow-point-at-center
     >
@@ -27,7 +27,7 @@
         :color="`var(--color-badge-${source.group.label.toLowerCase()})`"
         :style="{ marginInlineEnd: 0 }"
       >
-        {{ source.name.short }}
+        {{ source.name.label }}
       </ATag>
     </ATooltip>
   </AFlex>
