@@ -114,13 +114,21 @@
       };
     });
 
-  function removeLoadedImage() {
-    return $fetch('/api/s3', {
-      method: 'delete',
-      query: {
-        path: props.path,
-        keyOrUrl: imageUploaded.value,
-      },
+  function removeLoadedImage(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      $fetch('/api/s3', {
+        method: 'delete',
+        query: {
+          path: props.path,
+          keyOrUrl: imageUploaded.value,
+        },
+      })
+        .then(() => {
+          imageUploaded.value = undefined;
+
+          resolve();
+        })
+        .catch(reject);
     });
   }
 
@@ -246,6 +254,7 @@
         :class="$style.remove"
         type="primary"
         danger
+        @click.left.exact.prevent="removeLoadedImage"
       >
         <template #icon>
           <SvgIcon icon="remove" />
