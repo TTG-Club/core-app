@@ -84,7 +84,7 @@
 
     color: var(--color-text);
 
-    background: var(--color-bg-table-list);
+    background: var(--color-bg-secondary);
 
     &:hover {
       background-color: var(--color-hover);
@@ -120,7 +120,7 @@
 
     width: 100%;
 
-    color: var(--color-text-g);
+    color: var(--color-text-gray);
     text-overflow: ellipsis;
     white-space: nowrap;
 

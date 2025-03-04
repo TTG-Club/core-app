@@ -29,7 +29,7 @@
       margin: 4px auto;
       border-radius: 2px;
 
-      background-color: var(--color-background-thumb);
+      background-color: var(--color-thumb-bg);
 
       transition: all 0.3s ease-in-out;
     }
@@ -52,7 +52,7 @@
       cursor: pointer;
 
       .line {
-        background-color: var(--color-text-b);
+        background-color: var(--color-text-bold);
 
         &:nth-child(1) {
           transform: translateX(-6px) translate3d(0, 0, 0);

@@ -27,9 +27,10 @@ export const useTheme = () => {
   const themeConfig = computed<ThemeConfig>(() => ({
     token: {
       colorPrimary: state.value === 'light' ? '#5e5446' : '#447cc7',
-      colorBgElevated: state.value === 'light' ? '#F4F1EC' : '#22232A',
+      colorBgElevated: state.value === 'light' ? '#F4F1EC' : '#152228',
       colorBgContainer: state.value === 'light' ? '#e1e0dd' : '#24262E',
-      colorTextBase: state.value === 'light' ? '#1F1E1E' : '#d9d9d9',
+      colorText: state.value === 'light' ? '#1F1E1E' : '#BFBFBF',
+      colorTextHeading: state.value === 'light' ? '#1F1E1E' : '#e5e5e5',
       colorSuccess: '#67c23a',
       colorWarning: '#e6a23c',
       colorError: '#f56c6c',

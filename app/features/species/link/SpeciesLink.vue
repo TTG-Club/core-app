@@ -64,23 +64,6 @@
 </template>
 
 <style module lang="scss">
-  .container {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-
-    width: 100%;
-    min-height: 120px;
-    padding: 8px;
-
-    background: var(--color-bg-liner-list);
-  }
-
-  .bottom {
-    width: 100%;
-    margin-top: auto;
-  }
-
   .coverCard {
     overflow: hidden;
     height: 240px;
