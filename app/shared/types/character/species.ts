@@ -1,12 +1,37 @@
-import type { z } from 'zod';
-import type {
-  specieLinkSchema,
-  specieSchema,
-} from '~/shared/zod/character/species';
+import type { NameResponse, SourceResponse } from '~/shared/types';
 
-export type SpecieLink = z.infer<typeof specieLinkSchema>;
+export interface SpecieLinkResponse {
+  url: string;
+  name: Pick<NameResponse, 'rus' | 'eng'>;
+  source: SourceResponse;
+  image: string;
+  updatedAt: string;
+}
 
-export type Specie = z.infer<typeof specieSchema>;
+export interface SpecieDetailResponse {
+  url: string;
+  parent?: {
+    url: string;
+    name: Pick<NameResponse, 'rus' | 'eng'>;
+  };
+  name: Pick<NameResponse, 'rus' | 'eng'>;
+  source: SourceResponse;
+  properties: {
+    size: string;
+    type: string;
+    speed: string;
+  };
+  description: string;
+  image: string;
+  gallery?: Array<string>;
+  features: Array<{
+    url: string;
+    name: Pick<NameResponse, 'rus' | 'eng'>;
+    description: string;
+  }>;
+  username: string;
+  updatedAt: string;
+}
 
 export interface SpecieCreate {
   url: string;
@@ -33,6 +58,7 @@ export interface SpecieCreate {
       fly: number;
       climb: number;
       swim: number;
+      hover: boolean;
     };
   };
   features: Array<{

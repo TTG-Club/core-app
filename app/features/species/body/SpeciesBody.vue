@@ -1,35 +1,9 @@
 <script setup lang="ts">
-  import type { Specie } from '~/shared/types';
+  import type { SpecieDetailResponse } from '~/shared/types';
 
   const { specie } = defineProps<{
-    specie: Specie;
+    specie: SpecieDetailResponse;
   }>();
-
-  const speed = computed(() => {
-    if (!specie) {
-      return '';
-    }
-
-    const acc = [`${specie.properties.speed.base} фт.`];
-
-    if (specie.properties.speed.climb) {
-      acc.push(`лазая ${specie.properties.speed.climb} фт.`);
-    }
-
-    if (specie.properties.speed.swim) {
-      acc.push(`плавая ${specie.properties.speed.swim} фт.`);
-    }
-
-    if (specie.properties.speed.fly) {
-      acc.push(`летая ${specie.properties.speed.fly} фт.`);
-    }
-
-    return acc.join(', ');
-  });
-
-  const darkVision = computed(() =>
-    specie?.properties.darkVision ? `${specie.properties.darkVision} фт.` : '',
-  );
 
   const activeFeatures = ref<Array<string>>([]);
 
@@ -83,7 +57,7 @@
 
         <ATypographyText
           :class="$style.value"
-          :content="specie.properties.sizes.join(', ')"
+          :content="specie.properties.size"
         />
       </div>
 
@@ -98,25 +72,7 @@
 
         <ATypographyText
           :class="$style.value"
-          :content="speed"
-        />
-      </div>
-
-      <div
-        v-if="darkVision"
-        :class="$style.stat"
-      >
-        <ATooltip title="Темное зрение">
-          <ATypographyTitle
-            :level="5"
-            :class="$style.title"
-            content="ТЗ"
-          />
-        </ATooltip>
-
-        <ATypographyText
-          :class="$style.value"
-          :content="darkVision"
+          :content="specie.properties.speed"
         />
       </div>
     </AFlex>

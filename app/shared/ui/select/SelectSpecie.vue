@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SpecieLink } from '~/shared/types';
+  import type { SpecieLinkResponse } from '~/shared/types';
   import { Form } from 'ant-design-vue';
 
   withDefaults(
@@ -18,7 +18,7 @@
   const { data, status, refresh } = await useAsyncData(
     'species-select',
     async () => {
-      const specieLinks = await $fetch<Array<SpecieLink>>(
+      const specieLinks = await $fetch<Array<SpecieLinkResponse>>(
         '/api/v2/species/search',
         {
           method: 'post',

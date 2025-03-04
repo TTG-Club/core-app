@@ -13,7 +13,7 @@
   } from '~/shared/ui';
   import { isEqual } from 'lodash-es';
   import type { SelectValue } from 'ant-design-vue/es/select';
-  import type { SpecieCreate, SpecieLink } from '~/shared/types';
+  import type { SpecieCreate, SpecieLinkResponse } from '~/shared/types';
   import type { FormInstance } from 'ant-design-vue';
   import {
     ValidationBase,
@@ -68,19 +68,34 @@
         fly: 0,
         climb: 0,
         swim: 0,
+        hover: false,
       },
     },
     features: [getEmptyFeature()],
     tags: [],
   });
 
-  const specieLinkPreview = computed<SpecieLink>(() => ({
+  const specieLinkPreview = computed<SpecieLinkResponse>(() => ({
     name: {
       rus: form.value.name.rus || 'Название вида',
       eng: form.value.name.eng || "Specie's name",
     },
     url: form.value.url,
     image: form.value.linkImage || '',
+    source: {
+      name: {
+        rus: '',
+        eng: '',
+        label: '',
+      },
+      group: {
+        rus: '',
+        eng: '',
+        label: '',
+      },
+      page: 0,
+    },
+    updatedAt: new Date().toISOString(),
   }));
 
   const isFeatureEmpty = (feat: SpecieCreate['features'][number]) =>

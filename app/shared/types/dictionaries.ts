@@ -1,14 +1,12 @@
-import type { z } from 'zod';
-import type {
-  selectOptionScheme,
-  diceSelectOptionScheme,
-  spellcasterSelectOptionScheme,
-} from '~/shared/zod/dictionaries';
+export interface SelectOption {
+  label: string;
+  value: string;
+}
 
-export type SelectOption = z.infer<typeof selectOptionScheme>;
+export interface DiceSelectOption extends SelectOption {
+  maxValue: number;
+}
 
-export type DiceSelectOption = z.infer<typeof diceSelectOptionScheme>;
-
-export type SpellcasterSelectOption = z.infer<
-  typeof spellcasterSelectOptionScheme
->;
+export interface SpellcasterSelectOption extends SelectOption {
+  levels: number;
+}

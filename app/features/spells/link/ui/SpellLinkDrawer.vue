@@ -4,7 +4,7 @@
     BREAKPOINTS,
     useBreakpoints,
   } from '~/shared/composables';
-  import type { SpellDetail } from '~/shared/types';
+  import type { SpellDetailResponse } from '~/shared/types';
   import { SpellBody } from '../../body';
   import {
     DrawerActions,
@@ -27,7 +27,7 @@
     status,
   } = await useAsyncData(
     `spell-${props.url}`,
-    () => $fetch<SpellDetail>(`/api/v2/spells/${props.url}`),
+    () => $fetch<SpellDetailResponse>(`/api/v2/spells/${props.url}`),
     {
       server: false,
       immediate: false,

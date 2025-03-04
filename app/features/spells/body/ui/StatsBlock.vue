@@ -1,9 +1,12 @@
 <script setup lang="ts">
-  import type { SpellDetail } from '~/shared/types';
+  import type { SpellDetailResponse } from '~/shared/types';
   import { COMPONENT_TOOLTIP_TEXT } from '../model';
 
   defineProps<
-    Pick<SpellDetail, 'castingTime' | 'range' | 'duration' | 'components'>
+    Pick<
+      SpellDetailResponse,
+      'castingTime' | 'range' | 'duration' | 'components'
+    >
   >();
 </script>
 

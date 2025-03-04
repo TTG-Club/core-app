@@ -1,10 +1,10 @@
 <script setup lang="ts">
-  import type { SpecieLink } from '~/shared/types';
+  import type { SpecieLinkResponse } from '~/shared/types';
   import { NuxtLink } from '#components';
 
   withDefaults(
     defineProps<{
-      specie: SpecieLink;
+      specie: SpecieLinkResponse;
       showSubspecies?: boolean;
       disabled?: boolean;
     }>(),

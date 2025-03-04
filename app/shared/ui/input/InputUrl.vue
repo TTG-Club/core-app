@@ -47,7 +47,7 @@
     try {
       const book = await $fetch<BookLink>(`/api/v2/books/${props.sourceUrl}`);
 
-      return book.name.short;
+      return book.name.label;
     } catch (error) {
       return '';
     }

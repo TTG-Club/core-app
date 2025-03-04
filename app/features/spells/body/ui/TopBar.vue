@@ -1,8 +1,8 @@
 <script setup lang="ts">
-  import type { SpellDetail } from '~/shared/types';
+  import type { SpellDetailResponse } from '~/shared/types';
 
   defineProps<
-    Pick<SpellDetail, 'level' | 'school' | 'additionalType' | 'ritual'>
+    Pick<SpellDetailResponse, 'level' | 'school' | 'additionalType' | 'ritual'>
   >();
 </script>
 
