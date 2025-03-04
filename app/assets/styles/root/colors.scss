@@ -1,17 +1,16 @@
 html.dark {
   --color-bg-main: #131A20;
   --color-bg-secondary: #152228;
-  --color-bg-sub-menu: #1d282f;
+  --color-bg-menu: linear-gradient(135deg, #23323bc7, #19141fc7);
 
   --color-text: #d9d9d9;
   --color-text-title: #ffffff;
   --color-text-bold: #ffffff;
   --color-text-gray: #a4a4a4;
-  --color-text-btn: #f8f8f8;
+  --color-text-selected: #f8f8f8;
   --color-hover: rgba(255, 255, 255, 0.05);
   --color-border: rgba(255, 255, 255, 0.08);
   --color-primary: #447cc7;
-  --color-bg-menu: linear-gradient(135deg, #23323bc7, #19141fc7);
 
   // Badge
   --color-badge-hb: #405710;
@@ -20,8 +19,8 @@ html.dark {
   --color-badge-ua: var(--color-hover);
 
   // Scroll
-  --color-background-thumb: rgba(255, 255, 255, 0.6);
-  --color-background-thumb-hover: rgba(255, 255, 255, 0.8);
+  --color-thumb-bg: rgba(255, 255, 255, 0.6);
+  --color-thumb-bg-hover: rgba(255, 255, 255, 0.8);
 
   // Logo
   --color-logo-stroke: #2F4262;
@@ -33,17 +32,16 @@ html.dark {
 html.light {
   --color-bg-main: #fdfaf9;
   --color-bg-secondary: #dceee5;
-  --color-bg-sub-menu: #ebe5d0;
+  --color-bg-menu: linear-gradient(135deg, #f7f2c5c7, #f7f1e5c7);
 
   --color-text: #1F1E1E;
   --color-text-title: #042a12;
   --color-text-bold: #313131;
   --color-text-gray: #6a6a6a;
-  --color-text-btn: #f8f8f8;
+  --color-text-selected: #f8f8f8;
   --color-hover: rgba(00, 00, 00, 0.08);
   --color-border: rgba(0, 0, 0, 0.08);
   --color-primary: #5e5446;
-  --color-bg-menu: linear-gradient(135deg, #f7f2c5c7, #f7f1e5c7);
 
   // Badge
   --color-badge-hb: #97ca28;
@@ -52,8 +50,8 @@ html.light {
   --color-badge-ua: var(--color-hover);
 
   // Scroll
-  --color-background-thumb: rgba(0, 0, 0, 0.6);
-  --color-background-thumb-hover: rgba(0, 0, 0, 0.8);
+  --color-thumb-bg: rgba(0, 0, 0, 0.6);
+  --color-thumb-bg-hover: rgba(0, 0, 0, 0.8);
 
   // Logo
   --color-logo-stroke: #353430;

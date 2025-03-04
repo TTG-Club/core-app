@@ -2,7 +2,7 @@
 
 @supports (scrollbar-width: thin) {
   * {
-    scrollbar-color: var(--color-background-thumb) var(--color-hover);
+    scrollbar-color: var(--color-thumb-bg) var(--color-hover);
     scrollbar-width: thin;
   }
 }
@@ -25,10 +25,10 @@
     border: 5px solid transparent;
     border-radius: 10px;
     background-clip: content-box;
-    box-shadow: inset 0 0 0 10px var(--color-background-thumb);
+    box-shadow: inset 0 0 0 10px var(--color-thumb-bg);
 
     &:hover {
-      box-shadow: inset 0 0 0 10px var(--color-background-thumb-hover);
+      box-shadow: inset 0 0 0 10px var(--color-thumb-bg-hover);
     }
   }
 
@@ -56,7 +56,7 @@
   -webkit-overflow-scrolling: touch;
 
   &::selection {
-    color: var(--color-text-btn);
+    color: var(--color-text-selected);
     background: var(--color-primary);
   }
 }
