@@ -110,14 +110,17 @@ export default defineNuxtConfig({
     disallow: ['/user', '/admin', '/auth', '/search', '/profile', '/api'],
   },
 
-  googleFonts: {
-    display: 'swap',
-    subsets: ['cyrillic', 'cyrillic-ext'],
-    families: {
-      Lora: true,
-      Neucha: true,
-      OpenSans: true,
+  fonts: {
+    defaults: {
+      subsets: ['cyrillic-ext', 'cyrillic'],
     },
+    providers: {
+      adobe: false,
+      bunny: false,
+      local: false,
+    },
+    priority: ['google', 'fontshare', 'fontsource'],
+    families: [{ name: 'Open Sans' }],
   },
 
   dayjs: {
@@ -189,7 +192,7 @@ export default defineNuxtConfig({
   },
 
   modules: [
-    '@nuxtjs/google-fonts',
+    '@nuxt/fonts',
     '@nuxtjs/device',
     '@nuxtjs/stylelint-module',
     '@nuxtjs/device',
