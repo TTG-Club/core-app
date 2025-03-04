@@ -86,7 +86,7 @@
             :concentration="spell.concentration"
           />
 
-          <span :style="{ color: 'var(--color-text-g)' }">
+          <span :style="{ color: 'var(--color-text-gray)' }">
             {{ spell.school }}
           </span>
 

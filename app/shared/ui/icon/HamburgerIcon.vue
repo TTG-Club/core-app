@@ -52,7 +52,7 @@
       cursor: pointer;
 
       .line {
-        background-color: var(--color-text-b);
+        background-color: var(--color-text-bold);
 
         &:nth-child(1) {
           transform: translateX(-6px) translate3d(0, 0, 0);

@@ -39,7 +39,7 @@
 
     font-size: 13px;
     font-weight: 200;
-    color: var(--color-text-g);
+    color: var(--color-text-gray);
   }
   .item {
     padding: 6px 16px;
