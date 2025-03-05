@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import type { SpecieDetailResponse } from '~/shared/types';
+  import { SpecieLineages } from '../lineages';
 
   const { specie } = defineProps<{
     specie: SpecieDetailResponse;
@@ -114,6 +115,11 @@
         </template>
       </ACollapsePanel>
     </ACollapse>
+
+    <SpecieLineages
+      v-if="!specie.parent"
+      :url="specie.url"
+    />
   </AFlex>
 </template>
 

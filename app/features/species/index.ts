@@ -5,3 +5,5 @@ export * from './related-drawer';
 export * from './editor';
 
 export * from './body';
+
+export * from './lineages';
