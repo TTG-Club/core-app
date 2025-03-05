@@ -126,7 +126,7 @@ $typography: '.ant-typography';
   &-input {
     width: 100%;
 
-    &-number {
+    &-number, &-number-group-wrapper {
       width: 100%;
     }
   }

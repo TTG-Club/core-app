@@ -1,4 +1,6 @@
-export interface SelectOption {
+import type { DefaultOptionType } from 'ant-design-vue/es/vc-select/Select';
+
+export interface SelectOption extends DefaultOptionType {
   label: string;
   value: string;
 }

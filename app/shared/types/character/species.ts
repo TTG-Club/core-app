@@ -40,34 +40,37 @@ export interface SpecieCreate {
     eng: string;
     alt: Array<string>;
   };
-  description: string;
-  image: string | undefined;
-  linkImage: string | undefined;
-  gallery: Array<string> | undefined;
-  parent: string | undefined;
   source: {
     url: string | undefined;
     page: number | undefined;
+    homebrew: boolean;
   };
+  description: string;
+  image: string | undefined;
+  linkImage: string | undefined;
+  gallery: Array<string>;
+  parent: string | undefined;
   properties: {
-    sizes: Array<string> | undefined;
+    sizes: Array<{
+      type: string | undefined;
+      from: number | undefined;
+      to: number | undefined;
+    }>;
     type: string | undefined;
-    darkVision: number;
     speed: {
       base: number;
-      fly: number;
-      climb: number;
-      swim: number;
+      fly: number | undefined;
+      climb: number | undefined;
+      swim: number | undefined;
       hover: boolean;
     };
   };
   features: Array<{
-    name: string;
-    description: string;
-    source: {
-      url: string | undefined;
-      page: number | undefined;
+    name: {
+      rus: string;
+      eng: string;
     };
+    description: string;
   }>;
   tags: Array<string>;
 }

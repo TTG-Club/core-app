@@ -2,12 +2,14 @@
   import { Dictionaries } from '~/shared/api';
   import { Form } from 'ant-design-vue';
 
-  withDefaults(
+  const props = withDefaults(
     defineProps<{
       multiple?: boolean;
+      disabledKeys?: Array<string>;
     }>(),
     {
       multiple: false,
+      disabledKeys: () => [],
     },
   );
 
@@ -19,6 +21,17 @@
     'dictionaries-sizes',
     () => Dictionaries.sizes(),
   );
+
+  const options = computed(() => {
+    if (!data.value?.length) {
+      return [];
+    }
+
+    return data.value.map((size) => ({
+      ...size,
+      disabled: props.disabledKeys.includes(size.value),
+    }));
+  });
 
   const handleDropdownOpening = (state: boolean) => {
     if (!state) {
@@ -37,9 +50,9 @@
   <ASelect
     v-model:value="model"
     :loading="status === 'pending'"
-    :options="data || []"
+    :options="options"
     :mode="multiple ? 'multiple' : undefined"
-    placeholder="Выбери размер"
+    :placeholder="`Выбери размер${multiple ? 'ы' : ''}`"
     max-tag-count="responsive"
     show-arrow
     show-search
