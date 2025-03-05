@@ -9,7 +9,7 @@
   }>();
 
   const { data, status, execute } = useFetch<Array<SpeciesLinkResponse>>(
-    `/api/v2/species/lineages/${url}/search`,
+    `/api/v2/species/${url}/lineages/search`,
     { immediate: false },
   );
 

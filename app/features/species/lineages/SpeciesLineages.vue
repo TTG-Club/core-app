@@ -6,8 +6,8 @@
     url: SpeciesDetailResponse['url'];
   }>();
 
-  const { data: lineages } = await useAsyncData(`species-lineages-${url}`, () =>
-    $fetch<Array<SpeciesDetailResponse>>(`/api/v2/species/lineages/${url}`),
+  const { data: lineages } = await useAsyncData(`species-${url}-lineages`, () =>
+    $fetch<Array<SpeciesDetailResponse>>(`/api/v2/species/${url}/lineages`),
   );
 </script>
 
