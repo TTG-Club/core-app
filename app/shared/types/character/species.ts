@@ -1,12 +1,37 @@
-import type { z } from 'zod';
-import type {
-  specieLinkSchema,
-  specieSchema,
-} from '~/shared/zod/character/species';
+import type { NameResponse, SourceResponse } from '~/shared/types';
 
-export type SpecieLink = z.infer<typeof specieLinkSchema>;
+export interface SpecieLinkResponse {
+  url: string;
+  name: Pick<NameResponse, 'rus' | 'eng'>;
+  source: SourceResponse;
+  image: string;
+  updatedAt: string;
+}
 
-export type Specie = z.infer<typeof specieSchema>;
+export interface SpecieDetailResponse {
+  url: string;
+  parent?: {
+    url: string;
+    name: Pick<NameResponse, 'rus' | 'eng'>;
+  };
+  name: Pick<NameResponse, 'rus' | 'eng'>;
+  source: SourceResponse;
+  properties: {
+    size: string;
+    type: string;
+    speed: string;
+  };
+  description: string;
+  image: string;
+  gallery?: Array<string>;
+  features: Array<{
+    url: string;
+    name: Pick<NameResponse, 'rus' | 'eng'>;
+    description: string;
+  }>;
+  username: string;
+  updatedAt: string;
+}
 
 export interface SpecieCreate {
   url: string;
@@ -15,33 +40,37 @@ export interface SpecieCreate {
     eng: string;
     alt: Array<string>;
   };
-  description: string;
-  image: string | undefined;
-  linkImage: string | undefined;
-  gallery: Array<string> | undefined;
-  parent: string | undefined;
   source: {
     url: string | undefined;
     page: number | undefined;
+    homebrew: boolean;
   };
+  description: string;
+  image: string | undefined;
+  linkImage: string | undefined;
+  gallery: Array<string>;
+  parent: string | undefined;
   properties: {
-    sizes: Array<string> | undefined;
+    sizes: Array<{
+      type: string | undefined;
+      from: number | undefined;
+      to: number | undefined;
+    }>;
     type: string | undefined;
-    darkVision: number;
     speed: {
       base: number;
-      fly: number;
-      climb: number;
-      swim: number;
+      fly: number | undefined;
+      climb: number | undefined;
+      swim: number | undefined;
+      hover: boolean;
     };
   };
   features: Array<{
-    name: string;
-    description: string;
-    source: {
-      url: string | undefined;
-      page: number | undefined;
+    name: {
+      rus: string;
+      eng: string;
     };
+    description: string;
   }>;
   tags: Array<string>;
 }

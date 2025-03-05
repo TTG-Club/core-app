@@ -59,17 +59,15 @@ export const ruleMagicSchool = (): Rule => ({
 export const ruleSize = (): Rule => ({
   required: true,
   trigger: ['change', 'blur'],
-  type: 'array',
-  validator: async (rule: Rule, value: Array<string> | undefined) => {
-    if (!value?.length) {
+  type: 'string',
+  validator: async (rule: Rule, value: string | undefined) => {
+    if (!value) {
       throw new Error('Поле обязательно для заполнения');
     }
 
     const sizes = await Dictionaries.sizes(fetchConfig);
 
-    for (const size of value) {
-      validateFromDictionary(size, sizes);
-    }
+    validateFromDictionary(value, sizes);
   },
 });
 

@@ -1,9 +1,7 @@
+import type { NameResponse } from '~/shared/types';
+
 export interface BookLink {
-  name: {
-    rus: string;
-    eng: string;
-    short: string;
-  };
+  name: NameResponse;
   url: string;
   type: string;
 }

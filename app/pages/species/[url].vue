@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import type { Specie } from '~/shared/types';
   import { getSlicedString } from '~/shared/utils';
   import {
     PageActions,
@@ -8,6 +7,7 @@
     UiGallery,
   } from '~/shared/ui';
   import { SpeciesRelatedDrawer, SpeciesBody } from '~/features/species';
+  import type { SpecieDetailResponse } from '~/shared/types';
 
   const {
     params: { url },
@@ -18,7 +18,7 @@
     error,
     refresh,
   } = await useAsyncData(`specie-${url}`, () =>
-    $fetch<Specie>(`/api/v2/species/${url}`),
+    $fetch<SpecieDetailResponse>(`/api/v2/species/${url}`),
   );
 
   const seoTitle = computed(() => {

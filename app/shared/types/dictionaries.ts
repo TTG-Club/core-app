@@ -1,14 +1,14 @@
-import type { z } from 'zod';
-import type {
-  selectOptionScheme,
-  diceSelectOptionScheme,
-  spellcasterSelectOptionScheme,
-} from '~/shared/zod/dictionaries';
+import type { DefaultOptionType } from 'ant-design-vue/es/vc-select/Select';
 
-export type SelectOption = z.infer<typeof selectOptionScheme>;
+export interface SelectOption extends DefaultOptionType {
+  label: string;
+  value: string;
+}
 
-export type DiceSelectOption = z.infer<typeof diceSelectOptionScheme>;
+export interface DiceSelectOption extends SelectOption {
+  maxValue: number;
+}
 
-export type SpellcasterSelectOption = z.infer<
-  typeof spellcasterSelectOptionScheme
->;
+export interface SpellcasterSelectOption extends SelectOption {
+  levels: number;
+}

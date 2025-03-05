@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SpecieLink } from '~/shared/types';
+  import type { SpecieLinkResponse } from '~/shared/types';
   import { SpeciesLink } from '../link';
 
   const open = defineModel<boolean>();
@@ -8,7 +8,7 @@
     url: string;
   }>();
 
-  const { data, status, execute } = useFetch<Array<SpecieLink>>(
+  const { data, status, execute } = useFetch<Array<SpecieLinkResponse>>(
     '/api/v2/species/related',
     {
       immediate: false,

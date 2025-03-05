@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import type { SpellDetail } from '~/shared/types';
+  import type { SpellDetailResponse } from '~/shared/types';
 
-  defineProps<Pick<SpellDetail, 'description' | 'level' | 'upper'>>();
+  defineProps<Pick<SpellDetailResponse, 'description' | 'level' | 'upper'>>();
 </script>
 
 <template>

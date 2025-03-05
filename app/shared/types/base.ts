@@ -1,18 +1,15 @@
-import type { z } from 'zod';
-import type { tagSchema } from '~/shared/zod/base';
+export interface NameResponse {
+  rus: string;
+  eng: string;
+  label: string;
+}
 
-export type Tag = z.infer<typeof tagSchema>;
+export type SourceGroupResponse = Pick<NameResponse, 'rus' | 'label'>;
 
 export interface SourceResponse {
-  name: {
-    rus: string;
-    eng: string;
-    label: string;
-  };
-  group: {
-    rus: string;
-    label: string;
-  };
+  name: NameResponse;
+  group: SourceGroupResponse;
+  page: number;
 }
 
 export interface TimestampResponse {

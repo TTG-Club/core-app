@@ -1,6 +1,6 @@
 import type { SourceResponse } from '~/shared/types';
 
-export interface SpellDetail {
+export interface SpellDetailResponse {
   url: string;
   name: {
     rus: string;

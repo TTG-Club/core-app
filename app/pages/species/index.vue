@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SpecieLink } from '~/shared/types';
+  import type { SpecieLinkResponse } from '~/shared/types';
   import { PageGrid, PageHeader } from '~/shared/ui';
   import { SpeciesLink } from '~/features/species';
 
@@ -9,7 +9,7 @@
   });
 
   const { data, status, error, refresh } = await useAsyncData('species', () =>
-    $fetch<Array<SpecieLink>>('/api/v2/species/search', {
+    $fetch<Array<SpecieLinkResponse>>('/api/v2/species/search', {
       method: 'post',
     }),
   );

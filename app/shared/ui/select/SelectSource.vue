@@ -25,7 +25,7 @@
       return bookLinks.map((book) => ({
         label: `${book.name.rus} [${book.name.eng}]`,
         value: book.url,
-        shortName: book.name.short,
+        shortName: book.name.label,
       }));
     },
   );

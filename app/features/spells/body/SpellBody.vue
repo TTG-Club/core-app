@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SpellDetail } from '~/shared/types';
+  import type { SpellDetailResponse } from '~/shared/types';
   import {
     TopBar,
     StatsBlock,
@@ -8,7 +8,7 @@
   } from './ui';
 
   defineProps<{
-    spell: SpellDetail;
+    spell: SpellDetailResponse;
   }>();
 </script>
 

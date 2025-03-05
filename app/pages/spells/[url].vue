@@ -1,13 +1,13 @@
 <script setup lang="ts">
   import { SpellBody } from '~/features/spells';
   import { getSlicedString } from '~/shared/utils';
-  import type { SpellDetail } from '~/shared/types';
+  import type { SpellDetailResponse } from '~/shared/types';
   import { PageActions, PageContainer, PageHeader } from '~/shared/ui';
 
   const route = useRoute();
 
   const { data: spell } = await useAsyncData(`spell-${route.params.url}`, () =>
-    $fetch<SpellDetail>(`/api/v2/spells/${route.params.url}`),
+    $fetch<SpellDetailResponse>(`/api/v2/spells/${route.params.url}`),
   );
 
   const seoTitle = computed(() => {

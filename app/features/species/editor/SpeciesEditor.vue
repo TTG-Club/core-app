@@ -4,44 +4,29 @@
     PageContainer,
     SvgIcon,
     SelectCreatureType,
-    SelectSize,
     SelectSource,
     SelectSpecie,
     SelectTags,
     InputUrl,
     EditorActions,
   } from '~/shared/ui';
-  import { isEqual } from 'lodash-es';
   import type { SelectValue } from 'ant-design-vue/es/select';
-  import type { SpecieCreate, SpecieLink } from '~/shared/types';
+  import type { SpecieCreate } from '~/shared/types';
   import type { FormInstance } from 'ant-design-vue';
   import {
     ValidationBase,
     ValidationSpecie,
     ValidationDictionaries,
   } from '~/shared/utils';
-  import { SpeciesLink } from '../link';
-  import { SpecieGallery, SpecieImage } from './ui';
-
-  withDefaults(
-    defineProps<{
-      isEditing?: boolean;
-    }>(),
-    {
-      isEditing: false,
-    },
-  );
+  import {
+    SpecieGallery,
+    SpecieImage,
+    SpecieLinkPreview,
+    SpecieFeatures,
+    SpecieSizes,
+  } from './ui';
 
   const formRef = useTemplateRef<FormInstance>('formRef');
-
-  const getEmptyFeature = (): SpecieCreate['features'][number] => ({
-    name: '',
-    description: '',
-    source: {
-      url: undefined,
-      page: undefined,
-    },
-  });
 
   const form = ref<SpecieCreate>({
     url: '',
@@ -51,95 +36,49 @@
       alt: [],
     },
     description: '',
-    image: undefined, // TODO: удалить предыдущий файл перед заменой
-    linkImage: undefined, // TODO: удалить предыдущий файл перед заменой
-    gallery: [], // TODO: удалить предыдущий файл перед заменой
+    image: undefined,
+    linkImage: undefined,
+    gallery: [],
     parent: undefined,
     source: {
       url: undefined,
       page: undefined,
+      homebrew: false,
     },
     properties: {
-      sizes: undefined,
+      sizes: [],
       type: undefined,
-      darkVision: 0,
       speed: {
         base: 30,
-        fly: 0,
-        climb: 0,
-        swim: 0,
+        fly: undefined,
+        climb: undefined,
+        swim: undefined,
+        hover: false,
       },
     },
-    features: [getEmptyFeature()],
+    features: [],
     tags: [],
   });
 
-  const specieLinkPreview = computed<SpecieLink>(() => ({
-    name: {
-      rus: form.value.name.rus || 'Название вида',
-      eng: form.value.name.eng || "Specie's name",
-    },
-    url: form.value.url,
-    image: form.value.linkImage || '',
-  }));
+  function resetBookPage() {
+    form.value.source.page = undefined;
+  }
 
-  const isFeatureEmpty = (feat: SpecieCreate['features'][number]) =>
-    isEqual(feat, getEmptyFeature());
-
-  const isLastFeature = (index: number) =>
-    index === form.value.features.length - 1;
-
-  const addFeature = (indexOfNewFeature: number) => {
-    form.value.features.splice(indexOfNewFeature, 0, getEmptyFeature());
-  };
-
-  const clearFeature = (index: number) => {
-    form.value.features.splice(index, 1, getEmptyFeature());
-  };
-
-  const removeFeature = (index: number) => {
-    form.value.features.splice(index, 1);
-  };
-
-  const resetBookPage = (index?: number) => {
-    if (typeof index !== 'number') {
-      form.value.source.page = undefined;
-
-      return;
-    }
-
-    if (!form.value.features[index]) {
-      return;
-    }
-
-    form.value.features[index].source.page = undefined;
-  };
-
-  const handleBookChange = (value: SelectValue, index?: number) => {
+  function handleBookChange(value: SelectValue) {
     if (typeof value !== 'string' && value !== undefined) {
       return;
     }
 
     if (value === undefined) {
-      resetBookPage(index);
+      resetBookPage();
     }
 
-    if (typeof index !== 'number') {
-      form.value.source.url = value;
-
-      return;
-    }
-
-    if (!form.value.features[index]) {
-      return;
-    }
-
-    form.value.features[index].source.url = value;
-  };
+    form.value.source.url = value;
+  }
 
   const isCreating = ref(false);
 
-  const submit = async () => {
+  async function submit() {
     isCreating.value = true;
 
     try {
@@ -163,7 +102,7 @@
     } finally {
       isCreating.value = false;
     }
-  };
+  }
 </script>
 
 <template>
@@ -325,7 +264,7 @@
       </ADivider>
 
       <ARow :gutter="16">
-        <ACol :span="6">
+        <ACol :span="12">
           <AFormItem
             label="Основной вид"
             tooltip="Необходимо указать, если создаешь происхождение вида"
@@ -335,7 +274,7 @@
           </AFormItem>
         </ACol>
 
-        <ACol :span="6">
+        <ACol :span="12">
           <AFormItem
             label="Тип"
             :name="['properties', 'type']"
@@ -344,35 +283,9 @@
             <SelectCreatureType v-model="form.properties.type" />
           </AFormItem>
         </ACol>
-
-        <ACol :span="6">
-          <AFormItem
-            label="Размер"
-            :name="['properties', 'sizes']"
-            :rules="[ValidationDictionaries.ruleSize()]"
-          >
-            <SelectSize
-              v-model="form.properties.sizes"
-              multiple
-            />
-          </AFormItem>
-        </ACol>
-
-        <ACol :span="6">
-          <AFormItem
-            label="Темное зрение"
-            :name="['properties', 'darkVision']"
-          >
-            <AInputNumber
-              v-model:value="form.properties.darkVision"
-              :precision="0"
-              placeholder="Введи дистанцию ночного зрения"
-              default-value="0"
-              min="0"
-            />
-          </AFormItem>
-        </ACol>
       </ARow>
+
+      <SpecieSizes v-model="form.properties.sizes" />
 
       <ARow :gutter="16">
         <ACol :span="6">
@@ -391,18 +304,32 @@
         </ACol>
 
         <ACol :span="6">
-          <AFormItem
-            label="Скорость полета"
-            :name="['properties', 'speed', 'fly']"
-          >
-            <AInputNumber
-              v-model:value="form.properties.speed.fly"
-              :precision="0"
-              placeholder="Введи скорость полета"
-              default-value="0"
-              min="0"
-            />
-          </AFormItem>
+          <ARow :gutter="16">
+            <ACol :span="16">
+              <AFormItem
+                label="Скорость полета"
+                :name="['properties', 'speed', 'fly']"
+              >
+                <AInputNumber
+                  v-model:value="form.properties.speed.fly"
+                  :precision="0"
+                  placeholder="Введи скорость полета"
+                  min="0"
+                />
+              </AFormItem>
+            </ACol>
+
+            <ACol :span="8">
+              <AFormItem
+                label="Парит"
+                :name="['properties', 'speed', 'hover']"
+              >
+                <ACheckbox v-model:checked="form.properties.speed.hover">
+                  Да
+                </ACheckbox>
+              </AFormItem>
+            </ACol>
+          </ARow>
         </ACol>
 
         <ACol :span="6">
@@ -414,7 +341,6 @@
               v-model:value="form.properties.speed.climb"
               :precision="0"
               placeholder="Введи скорость лазания"
-              default-value="0"
               min="0"
             />
           </AFormItem>
@@ -429,7 +355,6 @@
               v-model:value="form.properties.speed.swim"
               :precision="0"
               placeholder="Введи скорость плавания"
-              default-value="0"
               min="0"
             />
           </AFormItem>
@@ -444,101 +369,7 @@
         />
       </ADivider>
 
-      <template
-        v-for="(feature, featIndex) in form.features"
-        :key="featIndex"
-      >
-        <ARow :gutter="16">
-          <ACol :span="8">
-            <AFormItem
-              label="Название"
-              :name="['features', featIndex, 'name']"
-              :rules="[ValidationBase.ruleRusName()]"
-            >
-              <AInput
-                v-model:value="feature.name"
-                placeholder="Введи название"
-              />
-            </AFormItem>
-          </ACol>
-
-          <ACol :span="8">
-            <AFormItem
-              label="Источник"
-              tooltip="Книга, из которой взята информация о черте, если она существует"
-              :name="['features', featIndex, 'source', 'url']"
-            >
-              <SelectSource
-                :model-value="feature.source.url"
-                @update:model-value="handleBookChange($event, featIndex)"
-              />
-            </AFormItem>
-          </ACol>
-
-          <ACol :span="8">
-            <AFormItem
-              label="Страница в источнике"
-              tooltip="Номер страницы книги, откуда была взята информация о черте, если выбрана сама книга"
-              :name="['features', featIndex, 'source', 'page']"
-              :rules="[ValidationBase.ruleSourcePage(!!feature.source.url)]"
-            >
-              <AInputNumber
-                v-model:value="feature.source.page"
-                :disabled="!feature.source.url"
-                :precision="0"
-                placeholder="Введи номер страницы"
-                min="0"
-              />
-            </AFormItem>
-          </ACol>
-        </ARow>
-
-        <ARow>
-          <ACol :span="24">
-            <AFormItem
-              label="Описание"
-              :name="['features', featIndex, 'description']"
-              :rules="[ValidationBase.ruleString()]"
-            >
-              <ATextarea
-                v-model:value="feature.description"
-                :auto-size="{ minRows: 3, maxRows: 8 }"
-                placeholder="Введи описание"
-              />
-            </AFormItem>
-          </ACol>
-        </ARow>
-
-        <AFlex
-          justify="flex-end"
-          :gap="16"
-        >
-          <AFlex :gap="8">
-            <AButton @click.left.exact.prevent="addFeature(featIndex + 1)">
-              Добавить особенность
-            </AButton>
-
-            <AButton
-              v-if="isLastFeature(featIndex)"
-              :disabled="isFeatureEmpty(feature)"
-              danger
-              @click.left.exact.prevent="clearFeature(featIndex)"
-            >
-              Очистить особенность
-            </AButton>
-
-            <AButton
-              v-else
-              danger
-              @click.left.exact.prevent="removeFeature(featIndex)"
-            >
-              Удалить особенность
-            </AButton>
-          </AFlex>
-        </AFlex>
-
-        <ADivider v-if="!isLastFeature(featIndex)" />
-      </template>
+      <SpecieFeatures v-model="form.features" />
 
       <ADivider orientation="left">
         <ATypographyText
@@ -577,9 +408,10 @@
               max-size="190"
             >
               <template #preview>
-                <SpeciesLink
-                  :specie="specieLinkPreview"
-                  disabled
+                <SpecieLinkPreview
+                  :name="form.name"
+                  :url="form.url"
+                  :image="form.linkImage"
                 />
               </template>
             </SpecieImage>
