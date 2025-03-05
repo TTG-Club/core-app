@@ -43,7 +43,6 @@
     source: {
       url: undefined,
       page: undefined,
-      homebrew: false,
     },
     properties: {
       sizes: [],

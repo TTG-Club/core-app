@@ -43,7 +43,6 @@ export interface SpecieCreate {
   source: {
     url: string | undefined;
     page: number | undefined;
-    homebrew: boolean;
   };
   description: string;
   image: string | undefined;
