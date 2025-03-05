@@ -18,7 +18,8 @@
     <strong
       v-else
       :style="{ color: 'var(--color-text-bold)' }"
-      >Накладывание более высокой ячейкой.
+    >
+      Накладывание более высокой ячейкой.
     </strong>
 
     <span>{{ upper }}</span>
