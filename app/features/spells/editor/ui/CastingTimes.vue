@@ -57,7 +57,7 @@
     <ACol :span="6">
       <AFormItem
         label="Время накладывания"
-        :name="['time', index, 'value']"
+        :name="['castingTime', index, 'value']"
       >
         <AInputNumber
           v-model:value="time.value"
@@ -73,7 +73,7 @@
     <ACol :span="6">
       <AFormItem
         label="Единица времени"
-        :name="['time', index, 'unit']"
+        :name="['castingTime', index, 'unit']"
       >
         <SelectTimeUnit
           v-model="time.unit"
@@ -82,10 +82,10 @@
       </AFormItem>
     </ACol>
 
-    <ACol :span="8">
+    <ACol :span="6">
       <AFormItem
         label="Собственное значение"
-        :name="['time', index, 'custom']"
+        :name="['castingTime', index, 'custom']"
       >
         <AInput
           v-model:value="time.custom"
@@ -96,15 +96,21 @@
       </AFormItem>
     </ACol>
 
-    <ACol :span="4">
+    <ACol :span="6">
       <AFormItem label="Управление">
         <AFlex :gap="8">
-          <AButton @click.left.exact.prevent="add(index)"> Добавить </AButton>
+          <AButton
+            block
+            @click.left.exact.prevent="add(index)"
+          >
+            Добавить
+          </AButton>
 
           <AButton
             v-if="index === times.length - 1"
             :disabled="isEqual(time, getEmpty())"
             danger
+            block
             @click.left.exact.prevent="clear(index)"
           >
             Очистить
@@ -113,6 +119,7 @@
           <AButton
             v-else
             danger
+            block
             @click.left.exact.prevent="remove(index)"
           >
             Удалить

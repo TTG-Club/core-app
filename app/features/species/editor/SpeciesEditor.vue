@@ -26,6 +26,8 @@
     SpecieSizes,
   } from './ui';
 
+  const siteConfig = useSiteConfig();
+
   const formRef = useTemplateRef<FormInstance>('formRef');
 
   const form = ref<SpecieCreate>({
@@ -248,7 +250,7 @@
               v-model="form.url"
               :eng-name="form.name.eng"
               :source-url="form.source.url"
-              addon-before="https://ttg.club/species/"
+              :addon-before="`${siteConfig.url}/species/`"
             />
           </AFormItem>
         </ACol>

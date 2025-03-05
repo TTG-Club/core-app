@@ -15,20 +15,17 @@
 
   const model = defineModel<string | Array<string>>();
 
-  const { data, status, refresh } = await useAsyncData(
-    'books-select',
-    async () => {
-      const bookLinks = await $fetch<Array<BookLink>>('/api/v2/books/search', {
-        method: 'post',
-      });
+  const { data, status, refresh } = await useAsyncData('books', async () => {
+    const bookLinks = await $fetch<Array<BookLink>>('/api/v2/books/search', {
+      method: 'post',
+    });
 
-      return bookLinks.map((book) => ({
-        label: `${book.name.rus} [${book.name.eng}]`,
-        value: book.url,
-        shortName: book.name.label,
-      }));
-    },
-  );
+    return bookLinks.map((book) => ({
+      label: `${book.name.rus} [${book.name.eng}]`,
+      value: book.url,
+      shortName: book.name.label,
+    }));
+  });
 
   const handleDropdownOpening = (state: boolean) => {
     if (!state) {

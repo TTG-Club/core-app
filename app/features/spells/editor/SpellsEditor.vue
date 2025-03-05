@@ -26,6 +26,8 @@
     SpellDuration,
   } from './ui';
 
+  const siteConfig = useSiteConfig();
+
   const formRef = useTemplateRef<FormInstance>('formRef');
 
   const form = ref<SpellCreate>({
@@ -45,27 +47,23 @@
     school: undefined,
     ritual: false,
     concentration: false,
-    distance: {
-      unit: undefined,
-      value: undefined,
-      custom: undefined,
-    },
-    duration: {
-      value: undefined,
-      unit: undefined,
-      custom: undefined,
-    },
-    time: [],
+    range: [],
+    duration: [],
+    castingTime: [],
     components: {
       v: false,
       s: false,
-      m: [],
+      m: {
+        text: undefined,
+        withCost: false,
+        consumable: false,
+      },
     },
-    affiliation: {
+    affiliations: {
       classes: [],
-      archetypes: [],
+      subclasses: [],
       species: [],
-      origins: [],
+      lineages: [],
     },
     tags: [],
   });
@@ -245,7 +243,7 @@
               v-model="form.url"
               :eng-name="form.name.eng"
               :source-url="form.source.url"
-              addon-before="https://ttg.club/spells/"
+              :addon-before="`${siteConfig.url}/spells/`"
             />
           </AFormItem>
         </ACol>
@@ -278,7 +276,7 @@
         <ACol :span="4">
           <AFormItem
             label="Ритуал"
-            :name="['time', 'ritual']"
+            :name="['ritual']"
           >
             <ACheckbox v-model:checked="form.ritual"> Возможен </ACheckbox>
           </AFormItem>
@@ -287,7 +285,7 @@
         <ACol :span="4">
           <AFormItem
             label="Концентрация"
-            :name="['duration', 'concentration']"
+            :name="['concentration']"
           >
             <ACheckbox v-model:checked="form.concentration">
               Требуется
@@ -320,9 +318,9 @@
 
       <MaterialComponents v-model="form.components.m" />
 
-      <CastingTimes v-model="form.time" />
+      <CastingTimes v-model="form.castingTime" />
 
-      <SpellDistance v-model="form.distance" />
+      <SpellDistance v-model="form.range" />
 
       <SpellDuration v-model="form.duration" />
 
@@ -375,10 +373,10 @@
         <ACol :span="6">
           <AFormItem
             label="Классы"
-            :name="['affiliation', 'classes']"
+            :name="['affiliations', 'classes']"
           >
             <SelectSpecie
-              v-model="form.affiliation.classes"
+              v-model="form.affiliations.classes"
               multiple
             />
           </AFormItem>
@@ -387,10 +385,10 @@
         <ACol :span="6">
           <AFormItem
             label="Архетипы"
-            :name="['affiliation', 'archetypes']"
+            :name="['affiliations', 'subclasses']"
           >
             <SelectSpecie
-              v-model="form.affiliation.archetypes"
+              v-model="form.affiliations.subclasses"
               multiple
             />
           </AFormItem>
@@ -399,10 +397,10 @@
         <ACol :span="6">
           <AFormItem
             label="Виды"
-            :name="['affiliation', 'species']"
+            :name="['affiliations', 'species']"
           >
             <SelectSpecie
-              v-model="form.affiliation.species"
+              v-model="form.affiliations.species"
               multiple
             />
           </AFormItem>
@@ -411,10 +409,10 @@
         <ACol :span="6">
           <AFormItem
             label="Происхождения"
-            :name="['affiliation', 'origins']"
+            :name="['affiliations', 'lineages']"
           >
             <SelectSpecie
-              v-model="form.affiliation.origins"
+              v-model="form.affiliations.lineages"
               multiple
             />
           </AFormItem>

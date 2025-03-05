@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import type { BookLink } from '~/shared/types';
   import { getSlug } from '~~/shared/utils';
   import { Form } from 'ant-design-vue';
+  import type { BookLink } from '~/shared/types';
 
   const props = withDefaults(
     defineProps<{
@@ -18,42 +18,39 @@
 
   const context = Form.useInjectFormItemContext();
 
+  const { data: books } = useNuxtData<Array<BookLink>>('books');
+
   const model = defineModel<string>();
 
-  const acronym = ref<string>();
+  const acronym = computed(() => {
+    if (!props.sourceUrl || !books.value?.length) {
+      return undefined;
+    }
 
-  const getSlugifyUrl = (value: string) =>
-    getSlug(value, {
+    const index = books.value.findIndex((el) => el.url === props.sourceUrl);
+
+    if (index < 0) {
+      return undefined;
+    }
+
+    return books.value[index]?.name.label;
+  });
+
+  function getSlugifyUrl(value: string) {
+    return getSlug(value, {
       trim: true,
       lowercase: true,
       allowedChars: 'a-zA-Z0-9-',
     });
+  }
 
-  const handleUrlChange = (url: string) => {
-    model.value = getSlugifyUrl(url);
+  function handleUrlChange(url: string | undefined) {
+    model.value = url ? getSlugifyUrl(url) : undefined;
 
     context.onFieldChange();
-  };
+  }
 
-  const getBookAcronym = async (): Promise<string> => {
-    if (!props.sourceUrl) {
-      return '';
-    }
-
-    if (acronym.value) {
-      return acronym.value;
-    }
-
-    try {
-      const book = await $fetch<BookLink>(`/api/v2/books/${props.sourceUrl}`);
-
-      return book.name.label;
-    } catch (error) {
-      return '';
-    }
-  };
-
-  const setUrlWithAcronym = () => {
+  function setUrlWithAcronym() {
     if (!props.engName) {
       return;
     }
@@ -61,20 +58,12 @@
     const sourcePostfix = acronym.value ? `-${acronym.value}` : '';
 
     handleUrlChange(`${props.engName}${sourcePostfix}`);
-  };
+  }
 
-  watch(
-    () => props.sourceUrl,
-    async (value) => {
-      acronym.value = undefined;
-
-      if (value) {
-        acronym.value = await getBookAcronym();
-      }
-
-      setUrlWithAcronym();
-    },
-  );
+  watch(acronym, setUrlWithAcronym, {
+    immediate: true,
+    flush: 'pre',
+  });
 
   watch(
     () => props.engName,

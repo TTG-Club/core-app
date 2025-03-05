@@ -1,27 +1,43 @@
 <script setup lang="ts">
   import { SelectTimeUnit } from '~/shared/ui';
-  import type { SpellDuration } from '~/shared/types';
-  import { Form } from 'ant-design-vue';
+  import type { SpellCastingTime, SpellDuration } from '~/shared/types';
+  import { isEqual } from 'lodash-es';
 
-  const context = Form.useInjectFormItemContext();
+  const durations = defineModel<Array<SpellDuration>>({
+    default: () => [],
+  });
 
-  const model = defineModel<SpellDuration>({
-    default: (): SpellDuration => ({
-      unit: undefined,
+  function add(index: number) {
+    durations.value.splice(index + 1, 0, getEmpty());
+  }
+
+  function clear(index: number) {
+    durations.value.splice(index, 1, getEmpty());
+  }
+
+  function remove(index: number) {
+    durations.value.splice(index, 1);
+  }
+
+  function getEmpty(): SpellCastingTime {
+    return {
       value: undefined,
+      unit: undefined,
       custom: undefined,
-    }),
-  });
+    };
+  }
 
-  const isDefaultDisabled = computed(() => !!model.value.custom);
-
-  const isCustomDisabled = computed(
-    () => !!model.value.value || !!model.value.unit,
+  watch(
+    durations,
+    (value) => {
+      if (!value.length) {
+        durations.value.push(getEmpty());
+      }
+    },
+    {
+      immediate: true,
+    },
   );
-
-  watch(model, () => {
-    context.onFieldChange();
-  });
 </script>
 
 <template>
@@ -33,15 +49,19 @@
     />
   </ADivider>
 
-  <ARow :gutter="16">
-    <ACol :span="8">
+  <ARow
+    v-for="(duration, index) in durations"
+    :key="`${index}-${Date.now()}`"
+    :gutter="16"
+  >
+    <ACol :span="6">
       <AFormItem
         label="Длительность"
-        :name="['duration', 'value']"
+        :name="['duration', index, 'value']"
       >
         <AInputNumber
-          v-model:value="model.value"
-          :disabled="isDefaultDisabled"
+          v-model:value="duration.value"
+          :disabled="!!duration.custom"
           :precision="0"
           :min="0"
           placeholder="Введи значение"
@@ -50,29 +70,61 @@
       </AFormItem>
     </ACol>
 
-    <ACol :span="8">
+    <ACol :span="6">
       <AFormItem
         label="Единица времени"
-        :name="['duration', 'unit']"
+        :name="['duration', index, 'unit']"
       >
         <SelectTimeUnit
-          v-model="model.unit"
-          :disabled="isDefaultDisabled"
+          v-model="duration.unit"
+          :disabled="!!duration.custom"
         />
       </AFormItem>
     </ACol>
 
-    <ACol :span="8">
+    <ACol :span="6">
       <AFormItem
         label="Собственное значение"
-        :name="['duration', 'custom']"
+        :name="['duration', index, 'custom']"
       >
         <AInput
-          v-model:value="model.custom"
-          :disabled="isCustomDisabled"
+          v-model:value="duration.custom"
+          :disabled="!!duration.value || !!duration.unit"
           placeholder="Введи значение"
           allow-clear
         />
+      </AFormItem>
+    </ACol>
+
+    <ACol :span="6">
+      <AFormItem label="Управление">
+        <AFlex :gap="8">
+          <AButton
+            block
+            @click.left.exact.prevent="add(index)"
+          >
+            Добавить
+          </AButton>
+
+          <AButton
+            v-if="index === durations.length - 1"
+            :disabled="isEqual(duration, getEmpty())"
+            danger
+            block
+            @click.left.exact.prevent="clear(index)"
+          >
+            Очистить
+          </AButton>
+
+          <AButton
+            v-else
+            danger
+            block
+            @click.left.exact.prevent="remove(index)"
+          >
+            Удалить
+          </AButton>
+        </AFlex>
       </AFormItem>
     </ACol>
   </ARow>

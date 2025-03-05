@@ -1,7 +1,6 @@
 import type { Rule } from 'ant-design-vue/es/form';
 import { baseStringCheck } from '../base';
 import { StatusCodes } from 'http-status-codes';
-import type { SpellMaterialComponent } from '~/shared/types';
 
 export const ruleUrl = (): Rule => ({
   required: true,
@@ -27,24 +26,3 @@ export const ruleUrl = (): Rule => ({
       }).then(() => reject('Такое заклинание уже существует'));
     }),
 });
-
-export const ruleMaterialComponentName = (
-  component: SpellMaterialComponent,
-): Rule => {
-  const { price, comparison, consumable } = component;
-  const required = typeof price === 'number' || !!comparison || consumable;
-
-  return {
-    required,
-    trigger: ['change', 'blur'],
-    type: 'string',
-    transform: (value) => value.trim(),
-    validator: (rule: Rule, value: string | undefined) => {
-      if (required && !value) {
-        throw new Error('Необходимо заполнить название');
-      }
-
-      return Promise.resolve();
-    },
-  };
-};

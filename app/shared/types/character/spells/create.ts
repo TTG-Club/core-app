@@ -1,5 +1,3 @@
-import type { Comparison } from '~/shared/enums/comparison';
-
 export interface SpellCreate {
   url: string; // урл заклинания
   name: SpellName; // название
@@ -8,13 +6,13 @@ export interface SpellCreate {
   upper: string | undefined; // "На более высоких уровнях"
   level: number; // уровень заклинания, 0 - заговор
   school: string | undefined; // школа
-  distance: SpellDistance; // дистанция
-  duration: SpellDuration; // длительность
-  time: Array<SpellCastingTime>; // время накладывания
+  range: Array<SpellRange>; // дистанция
+  duration: Array<SpellDuration>; // длительность
+  castingTime: Array<SpellCastingTime>; // время накладывания
   ritual: boolean; // ритуал да/нет
   concentration: boolean; // концентрация да/нет
   components: SpellComponents; // компоненты
-  affiliation: SpellAffiliation; // привязка заклинания к сущностям
+  affiliations: SpellAffiliation; // привязка заклинания к сущностям
   tags: Array<string>; // теги
 }
 
@@ -29,7 +27,7 @@ export interface SpellSource {
   page: number | undefined; // номер страницы, если указана книга
 }
 
-export interface SpellDistance {
+export interface SpellRange {
   unit: string | undefined; // единицы измерения
   value: number | undefined; // значение дистанции
   custom: string | undefined; // кастомное значение (666 световых лет)
@@ -50,19 +48,18 @@ export interface SpellCastingTime {
 export interface SpellComponents {
   v: boolean; // вербальный компонент
   s: boolean; // соматический компонент
-  m: Array<SpellMaterialComponent>; // материальные компоненты
+  m: SpellMaterialComponent; // материальные компоненты
 }
 
 export interface SpellMaterialComponent {
-  name: string; // название
-  price: number | undefined; // цена
-  comparison: Comparison | undefined; // сравнение
+  text: string | undefined; // название
+  withCost: boolean; // имеет стоимость
   consumable: boolean; // расходуемый да/нет
 }
 
 export interface SpellAffiliation {
   classes: Array<string>; // урлы классов
-  archetypes: Array<string>; // урлы архетипов классов
+  subclasses: Array<string>; // урлы архетипов классов
   species: Array<string>; // урлы видов
-  origins: Array<string>; // урлы происхождений видов
+  lineages: Array<string>; // урлы происхождений видов
 }
