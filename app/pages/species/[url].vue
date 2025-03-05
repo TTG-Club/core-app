@@ -150,7 +150,7 @@
           type="primary"
           @click.left.exact.prevent="showRelated = true"
         >
-          Проихождения
+          Происхождения
         </AButton>
 
         <ClientOnly>
