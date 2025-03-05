@@ -14,19 +14,19 @@
 
 <template>
   <div :class="$style.container">
-    <TopBar
-      :additional-type="spell.additionalType"
-      :ritual="spell.ritual"
-      :school="spell.school"
-      :level="spell.level"
-    />
-
     <div :class="$style.body">
       <AFlex
         vertical
         :gap="12"
         :class="$style.info"
       >
+        <TopBar
+          :additional-type="spell.additionalType"
+          :ritual="spell.ritual"
+          :school="spell.school"
+          :level="spell.level"
+        />
+
         <StatsBlock
           :casting-time="spell.castingTime"
           :components="spell.components"
