@@ -62,11 +62,13 @@
       </template>
     </ACard>
 
-    <SpeciesLineagesDrawer
-      v-if="species.hasLineages"
-      v-model="showLineages"
-      :url="species.url"
-    />
+    <ClientOnly>
+      <SpeciesLineagesDrawer
+        v-if="species.hasLineages"
+        v-model="showLineages"
+        :url="species.url"
+      />
+    </ClientOnly>
   </component>
 </template>
 

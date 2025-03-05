@@ -156,6 +156,7 @@
 
         <ClientOnly>
           <SpeciesLineagesDrawer
+            v-if="species.hasLineages"
             v-model="showRelated"
             :url="species.url"
           />
