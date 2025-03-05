@@ -1,15 +1,15 @@
 <script setup lang="ts">
-  import type { SpecieDetailResponse } from '~/shared/types';
-  import { SpecieLineages } from '../lineages';
+  import type { SpeciesDetailResponse } from '~/shared/types';
+  import { SpeciesLineages } from '../lineages';
 
-  const { specie } = defineProps<{
-    specie: SpecieDetailResponse;
+  const { species } = defineProps<{
+    species: SpeciesDetailResponse;
   }>();
 
   const activeFeatures = ref<Array<string>>([]);
 
   watch(
-    () => specie,
+    () => species,
     (value) => {
       if (!value) {
         return;
@@ -29,14 +29,14 @@
     vertical
   >
     <ATypographyText
-      v-if="specie.description"
-      :content="specie.description"
+      v-if="species.description"
+      :content="species.description"
       :style="{ whiteSpace: 'pre-wrap' }"
       data-allow-mismatch
     />
 
     <ACollapse
-      v-for="feature in specie.features"
+      v-for="feature in species.features"
       :key="feature.url"
       v-model:active-key="activeFeatures"
       expand-icon-position="end"
@@ -66,9 +66,9 @@
       </ACollapsePanel>
     </ACollapse>
 
-    <SpecieLineages
-      v-if="!specie.parent && specie.hasLineages"
-      :url="specie.url"
+    <SpeciesLineages
+      v-if="!species.parent && species.hasLineages"
+      :url="species.url"
     />
   </AFlex>
 </template>

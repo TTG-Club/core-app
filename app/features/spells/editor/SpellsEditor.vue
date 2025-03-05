@@ -4,7 +4,7 @@
     SelectSource,
     SelectTags,
     SelectMagicSchool,
-    SelectSpecie,
+    SelectSpecies,
     PageHeader,
     PageContainer,
     InputUrl,
@@ -375,7 +375,7 @@
             label="Классы"
             :name="['affiliations', 'classes']"
           >
-            <SelectSpecie
+            <SelectSpecies
               v-model="form.affiliations.classes"
               multiple
             />
@@ -387,7 +387,7 @@
             label="Архетипы"
             :name="['affiliations', 'subclasses']"
           >
-            <SelectSpecie
+            <SelectSpecies
               v-model="form.affiliations.subclasses"
               multiple
             />
@@ -399,7 +399,7 @@
             label="Виды"
             :name="['affiliations', 'species']"
           >
-            <SelectSpecie
+            <SelectSpecies
               v-model="form.affiliations.species"
               multiple
             />
@@ -411,7 +411,7 @@
             label="Происхождения"
             :name="['affiliations', 'lineages']"
           >
-            <SelectSpecie
+            <SelectSpecies
               v-model="form.affiliations.lineages"
               multiple
             />

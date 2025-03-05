@@ -6,40 +6,40 @@
     PageHeader,
     UiGallery,
   } from '~/shared/ui';
-  import { SpeciesBody, SpecieLineagesDrawer } from '~/features/species';
-  import type { SpecieDetailResponse } from '~/shared/types';
+  import { SpeciesBody, SpeciesLineagesDrawer } from '~/features/species';
+  import type { SpeciesDetailResponse } from '~/shared/types';
 
   const {
     params: { url },
   } = useRoute();
 
   const {
-    data: specie,
+    data: species,
     error,
     refresh,
-  } = await useAsyncData(`specie-${url}`, () =>
-    $fetch<SpecieDetailResponse>(`/api/v2/species/${url}`),
+  } = await useAsyncData(`species-${url}`, () =>
+    $fetch<SpeciesDetailResponse>(`/api/v2/species/${url}`),
   );
 
   const seoTitle = computed(() => {
-    if (!specie.value) {
+    if (!species.value) {
       return '';
     }
 
-    return getSlicedString(specie.value.name.rus, 28);
+    return getSlicedString(species.value.name.rus, 28);
   });
 
   const seoDescription = computed(() => {
-    if (!specie.value) {
+    if (!species.value) {
       return '';
     }
 
-    const type = specie.value.parent
-      ? `происхождение вида ${specie.value.parent.name.rus}`
+    const type = species.value.parent
+      ? `происхождение вида ${species.value.parent.name.rus}`
       : 'вид';
 
     return getSlicedString(
-      `${specie.value.name.rus} (${specie.value.name.eng}) — ${type} D&D 5 2024 редакции. ${specie.value.description}`,
+      `${species.value.name.rus} (${species.value.name.eng}) — ${type} D&D 5 2024 редакции. ${species.value.description}`,
       200,
     );
   });
@@ -47,27 +47,27 @@
   useSeoMeta({
     title: () => seoTitle.value,
     description: () => seoDescription.value,
-    ogImage: () => (specie.value ? specie.value.image : ''),
-    author: () => (specie.value ? specie.value.source.name.rus : ''),
+    ogImage: () => (species.value ? species.value.image : ''),
+    author: () => (species.value ? species.value.source.name.rus : ''),
     titleTemplate: '%pageTitle %separator Виды и происхождения D&D 5 2024',
   });
 
   const showRelated = ref(false);
 
   const anchors = computed(() => {
-    if (!specie.value?.features.length) {
+    if (!species.value?.features.length) {
       return [];
     }
 
     const list = [
       {
-        key: 'specie-top',
-        href: '#specie-base',
+        key: 'species-top',
+        href: '#species-base',
         title: 'Основная часть',
       },
     ];
 
-    for (const feature of specie.value.features) {
+    for (const feature of species.value.features) {
       list.push({
         key: feature.url,
         href: `#${feature.url}`,
@@ -80,12 +80,12 @@
 </script>
 
 <template>
-  <PageContainer id="specie-base">
+  <PageContainer id="species-base">
     <PageHeader
-      :title="specie?.name.rus"
-      :subtitle="specie?.name.eng"
-      :source="specie?.source"
-      :date-time="specie?.updatedAt"
+      :title="species?.name.rus"
+      :subtitle="species?.name.eng"
+      :source="species?.source"
+      :date-time="species?.updatedAt"
     >
       <template #actions>
         <PageActions @close="navigateTo('/species')" />
@@ -93,8 +93,8 @@
     </PageHeader>
 
     <AFlex
-      v-if="specie"
-      :class="$style.specie"
+      v-if="species"
+      :class="$style.species"
       :gap="28"
     >
       <AFlex
@@ -104,8 +104,8 @@
       >
         <div :class="$style.galleryImg">
           <UiGallery
-            :preview="specie.image || '/img/no-img.webp'"
-            :images="specie.gallery"
+            :preview="species.image || '/img/no-img.webp'"
+            :images="species.gallery"
           />
 
           <div :class="$style.stats">
@@ -122,7 +122,7 @@
 
               <ATypographyText
                 :class="$style.value"
-                :content="specie.properties.type"
+                :content="species.properties.type"
               />
             </div>
 
@@ -131,7 +131,7 @@
 
               <ATypographyText
                 :class="$style.value"
-                :content="specie.properties.size"
+                :content="species.properties.size"
               />
             </div>
 
@@ -140,14 +140,14 @@
 
               <ATypographyText
                 :class="$style.value"
-                :content="specie.properties.speed"
+                :content="species.properties.speed"
               />
             </div>
           </div>
         </div>
 
         <AButton
-          v-if="specie.hasLineages"
+          v-if="species.hasLineages"
           type="primary"
           @click.left.exact.prevent="showRelated = true"
         >
@@ -155,9 +155,9 @@
         </AButton>
 
         <ClientOnly>
-          <SpecieLineagesDrawer
+          <SpeciesLineagesDrawer
             v-model="showRelated"
-            :url="specie.url"
+            :url="species.url"
           />
         </ClientOnly>
 
@@ -170,7 +170,7 @@
 
       <SpeciesBody
         :class="$style.right"
-        :specie="specie"
+        :species="species"
       />
     </AFlex>
 

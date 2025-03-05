@@ -1,9 +1,9 @@
 <script setup lang="ts">
-  import type { SpecieCreate } from '~/shared/types';
+  import type { SpeciesCreate } from '~/shared/types';
   import { isEqual } from 'lodash-es';
   import { ValidationBase } from '~/shared/utils';
 
-  type Features = SpecieCreate['features'];
+  type Features = SpeciesCreate['features'];
 
   function getEmptyFeature(): Features[number] {
     return {

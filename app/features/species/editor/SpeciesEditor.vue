@@ -5,32 +5,32 @@
     SvgIcon,
     SelectCreatureType,
     SelectSource,
-    SelectSpecie,
+    SelectSpecies,
     SelectTags,
     InputUrl,
     EditorActions,
   } from '~/shared/ui';
   import type { SelectValue } from 'ant-design-vue/es/select';
-  import type { SpecieCreate } from '~/shared/types';
+  import type { SpeciesCreate } from '~/shared/types';
   import type { FormInstance } from 'ant-design-vue';
   import {
     ValidationBase,
-    ValidationSpecie,
+    ValidationSpecies,
     ValidationDictionaries,
   } from '~/shared/utils';
   import {
-    SpecieGallery,
-    SpecieImage,
-    SpecieLinkPreview,
-    SpecieFeatures,
-    SpecieSizes,
+    SpeciesGallery,
+    SpeciesImage,
+    SpeciesLinkPreview,
+    SpeciesFeatures,
+    SpeciesSizes,
   } from './ui';
 
   const siteConfig = useSiteConfig();
 
   const formRef = useTemplateRef<FormInstance>('formRef');
 
-  const form = ref<SpecieCreate>({
+  const form = ref<SpeciesCreate>({
     url: '',
     name: {
       rus: '',
@@ -244,7 +244,7 @@
             label="URL"
             tooltip="Менять только при необходимости, т.к. URL генерируется автоматически при вводе английского названия"
             :name="['url']"
-            :rules="[ValidationSpecie.ruleUrl()]"
+            :rules="[ValidationSpecies.ruleUrl()]"
           >
             <InputUrl
               v-model="form.url"
@@ -271,7 +271,7 @@
             tooltip="Необходимо указать, если создаешь происхождение вида"
             :name="['parent']"
           >
-            <SelectSpecie v-model="form.parent" />
+            <SelectSpecies v-model="form.parent" />
           </AFormItem>
         </ACol>
 
@@ -286,7 +286,7 @@
         </ACol>
       </ARow>
 
-      <SpecieSizes v-model="form.properties.sizes" />
+      <SpeciesSizes v-model="form.properties.sizes" />
 
       <ARow :gutter="16">
         <ACol :span="6">
@@ -370,7 +370,7 @@
         />
       </ADivider>
 
-      <SpecieFeatures v-model="form.features" />
+      <SpeciesFeatures v-model="form.features" />
 
       <ADivider orientation="left">
         <ATypographyText
@@ -388,7 +388,7 @@
             :name="['image']"
             :rules="[ValidationBase.ruleImage()]"
           >
-            <SpecieImage
+            <SpeciesImage
               v-model="form.image"
               path="species"
               max-size="480"
@@ -403,19 +403,19 @@
             :name="['linkImage']"
             :rules="[ValidationBase.ruleImage()]"
           >
-            <SpecieImage
+            <SpeciesImage
               v-model="form.linkImage"
               path="species"
               max-size="190"
             >
               <template #preview>
-                <SpecieLinkPreview
+                <SpeciesLinkPreview
                   :name="form.name"
                   :url="form.url"
                   :image="form.linkImage"
                 />
               </template>
-            </SpecieImage>
+            </SpeciesImage>
           </AFormItem>
         </ACol>
 
@@ -424,7 +424,7 @@
             label="Галерея"
             :name="['gallery']"
           >
-            <SpecieGallery
+            <SpeciesGallery
               v-model="form.gallery"
               path="species"
             />

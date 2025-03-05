@@ -1,13 +1,13 @@
 <script setup lang="ts">
-  import type { SpecieDetailResponse } from '~/shared/types';
+  import type { SpeciesDetailResponse } from '~/shared/types';
   import { SpeciesBody } from '../body';
 
   const { url } = defineProps<{
-    url: SpecieDetailResponse['url'];
+    url: SpeciesDetailResponse['url'];
   }>();
 
   const { data: lineages } = await useAsyncData(`species-lineages-${url}`, () =>
-    $fetch<Array<SpecieDetailResponse>>(`/api/v2/species/lineages/${url}`),
+    $fetch<Array<SpeciesDetailResponse>>(`/api/v2/species/lineages/${url}`),
   );
 </script>
 
@@ -23,8 +23,8 @@
     />
 
     <ACollapse
-      v-for="specie in lineages"
-      :key="specie.url"
+      v-for="species in lineages"
+      :key="species.url"
       :bordered="false"
       expand-icon-position="end"
     >
@@ -34,12 +34,12 @@
             :level="4"
             data-allow-mismatch
           >
-            {{ specie.name.rus }}
+            {{ species.name.rus }}
           </ATypographyTitle>
         </template>
 
         <template #default>
-          <SpeciesBody :specie />
+          <SpeciesBody :species />
         </template>
       </ACollapsePanel>
     </ACollapse>

@@ -1,9 +1,9 @@
-export { default as SpecieImage } from './SpecieImage.vue';
+export { default as SpeciesImage } from './SpeciesImage.vue';
 
-export { default as SpecieGallery } from './SpecieGallery.vue';
+export { default as SpeciesGallery } from './SpeciesGallery.vue';
 
-export { default as SpecieLinkPreview } from './SpecieLinkPreview.vue';
+export { default as SpeciesLinkPreview } from './SpeciesLinkPreview.vue';
 
-export { default as SpecieFeatures } from './SpecieFeatures.vue';
+export { default as SpeciesFeatures } from './SpeciesFeatures.vue';
 
-export { default as SpecieSizes } from './SpecieSizes.vue';
+export { default as SpeciesSizes } from './SpeciesSizes.vue';

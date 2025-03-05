@@ -1,1 +1,1 @@
-export { default as SpecieLineages } from './SpecieLineages.vue';
+export { default as SpeciesLineages } from './SpeciesLineages.vue';

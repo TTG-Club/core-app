@@ -1,6 +1,6 @@
 import type { NameResponse, SourceResponse } from '~/shared/types';
 
-export interface SpecieLinkResponse {
+export interface SpeciesLinkResponse {
   url: string;
   name: Pick<NameResponse, 'rus' | 'eng'>;
   source: SourceResponse;
@@ -9,7 +9,7 @@ export interface SpecieLinkResponse {
   hasLineages?: boolean;
 }
 
-export interface SpecieDetailResponse {
+export interface SpeciesDetailResponse {
   url: string;
   parent?: {
     url: string;
@@ -35,7 +35,7 @@ export interface SpecieDetailResponse {
   updatedAt: string;
 }
 
-export interface SpecieCreate {
+export interface SpeciesCreate {
   url: string;
   name: {
     rus: string;

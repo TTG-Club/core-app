@@ -10,7 +10,7 @@ export { default as SelectSize } from './SelectSize.vue';
 
 export { default as SelectSource } from './SelectSource.vue';
 
-export { default as SelectSpecie } from './SelectSpecie.vue';
+export { default as SelectSpecies } from './SelectSpecies.vue';
 
 export { default as SelectTags } from './SelectTags.vue';
 

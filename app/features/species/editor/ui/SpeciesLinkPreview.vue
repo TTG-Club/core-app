@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { NameResponse, SpecieLinkResponse } from '~/shared/types';
+  import type { NameResponse, SpeciesLinkResponse } from '~/shared/types';
   import { SpeciesLink } from '../../link';
 
   const { name, url, image } = defineProps<{
@@ -8,7 +8,7 @@
     image: string | undefined;
   }>();
 
-  const specieLinkPreview = computed<SpecieLinkResponse>(() => ({
+  const speciesLinkPreview = computed<SpeciesLinkResponse>(() => ({
     url,
     name: {
       rus: name.rus || 'Название вида',
@@ -33,5 +33,5 @@
 </script>
 
 <template>
-  <SpeciesLink :specie="specieLinkPreview" />
+  <SpeciesLink :species="speciesLinkPreview" />
 </template>

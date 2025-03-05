@@ -1,31 +1,32 @@
 <script setup lang="ts">
-  import type { SpecieLinkResponse } from '~/shared/types';
+  import type { SpeciesLinkResponse } from '~/shared/types';
   import { NuxtLink } from '#components';
+  import { SpeciesLineagesDrawer } from '~/features/species';
 
   withDefaults(
     defineProps<{
-      specie: SpecieLinkResponse;
-      showSubspecies?: boolean;
+      species: SpeciesLinkResponse;
       disabled?: boolean;
     }>(),
     {
-      showSubspecies: false,
       disabled: false,
     },
   );
+
+  const showLineages = ref(false);
 </script>
 
 <template>
   <component
     :is="disabled ? 'div' : NuxtLink"
-    :to="`/species/${specie.url}`"
+    :to="`/species/${species.url}`"
   >
     <ACard :hoverable="!disabled">
       <template #cover>
         <div :class="$style.coverCard">
           <AImage
-            :src="specie.image || '/img/no-img.webp'"
-            :alt="specie.name.rus"
+            :src="species.image || '/img/no-img.webp'"
+            :alt="species.name.rus"
             :class="$style.image"
             :preview="false"
             fallback="/img/no-img.webp"
@@ -42,7 +43,7 @@
             align="center"
             gap="4"
           >
-            <span> {{ specie.name.rus }} [{{ specie.name.eng }}] </span>
+            <span> {{ species.name.rus }} [{{ species.name.eng }}] </span>
 
             <ATag :style="{ margin: 0 }"> PHB </ATag>
           </AFlex>
@@ -53,13 +54,19 @@
         <span @click.left.exact.prevent.stop> Предпросмотр </span>
 
         <span
-          v-if="!showSubspecies && specie.hasLineages"
-          @click.left.exact.prevent.stop
+          v-if="species.hasLineages"
+          @click.left.exact.prevent.stop="showLineages = true"
         >
           Разновидности
         </span>
       </template>
     </ACard>
+
+    <SpeciesLineagesDrawer
+      v-if="species.hasLineages"
+      v-model="showLineages"
+      :url="species.url"
+    />
   </component>
 </template>
 

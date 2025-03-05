@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SpecieLinkResponse } from '~/shared/types';
+  import type { SpeciesLinkResponse } from '~/shared/types';
   import { SpeciesLink } from '../link';
 
   const open = defineModel<boolean>();
@@ -8,14 +8,9 @@
     url: string;
   }>();
 
-  const { data, status, execute } = useFetch<Array<SpecieLinkResponse>>(
-    '/api/v2/species/related',
-    {
-      immediate: false,
-      query: {
-        subSpeciesUrl: url,
-      },
-    },
+  const { data, status, execute } = useFetch<Array<SpeciesLinkResponse>>(
+    `/api/v2/species/lineages/${url}/search`,
+    { immediate: false },
   );
 
   watch(open, (value) => {
@@ -40,7 +35,7 @@
         <SpeciesLink
           v-for="link in data"
           :key="link.url"
-          :specie="link"
+          :species="link"
         >
           {{ link.url }}
         </SpeciesLink>

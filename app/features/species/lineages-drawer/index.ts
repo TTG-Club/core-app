@@ -1,1 +1,1 @@
-export { default as SpecieLineagesDrawer } from './SpecieLineagesDrawer.vue';
+export { default as SpeciesLineagesDrawer } from './SpeciesLineagesDrawer.vue';
