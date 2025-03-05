@@ -1,9 +1,14 @@
 <template>
-  <AFlex
-    :gap="16"
-    :style="{ paddingBottom: '32px' }"
-    vertical
-  >
+  <div :class="$style.page">
     <slot name="default" />
-  </AFlex>
+  </div>
 </template>
+
+<style module lang="scss">
+  .page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-bottom: 32px;
+  }
+</style>
