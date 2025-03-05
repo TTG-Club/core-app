@@ -53,7 +53,7 @@
         <span @click.left.exact.prevent.stop> Предпросмотр </span>
 
         <span
-          v-if="!showSubspecies"
+          v-if="!showSubspecies && specie.hasLineages"
           @click.left.exact.prevent.stop
         >
           Разновидности

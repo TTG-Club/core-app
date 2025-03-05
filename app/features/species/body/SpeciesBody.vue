@@ -67,7 +67,7 @@
     </ACollapse>
 
     <SpecieLineages
-      v-if="!specie.parent"
+      v-if="!specie.parent && specie.hasLineages"
       :url="specie.url"
     />
   </AFlex>

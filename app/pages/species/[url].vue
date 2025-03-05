@@ -147,6 +147,7 @@
         </div>
 
         <AButton
+          v-if="specie.hasLineages"
           type="primary"
           @click.left.exact.prevent="showRelated = true"
         >

@@ -6,6 +6,7 @@ export interface SpecieLinkResponse {
   source: SourceResponse;
   image: string;
   updatedAt: string;
+  hasLineages?: boolean;
 }
 
 export interface SpecieDetailResponse {
@@ -14,6 +15,7 @@ export interface SpecieDetailResponse {
     url: string;
     name: Pick<NameResponse, 'rus' | 'eng'>;
   };
+  hasLineages?: boolean;
   name: Pick<NameResponse, 'rus' | 'eng'>;
   source: SourceResponse;
   properties: {
