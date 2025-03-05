@@ -80,13 +80,8 @@
 
     .item {
       flex: 1 0 100%;
-
       min-width: 100%;
-      margin-right: -1px;
-      margin-bottom: -1px;
       padding: 10px 16px;
-      border-right: 1px solid var(--color-border);
-      border-bottom: 1px solid var(--color-border);
 
       @container (width > 600px) {
         flex: 1 0 calc(100% / 3);

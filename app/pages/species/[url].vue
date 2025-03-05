@@ -97,20 +97,53 @@
       :class="$style.specie"
       :gap="28"
     >
-      <SpeciesBody
-        :class="$style.right"
-        :specie="specie"
-      />
-
       <AFlex
         :class="$style.left"
         :gap="16"
         vertical
       >
-        <UiGallery
-          :preview="specie.image || '/img/no-img.webp'"
-          :images="specie.gallery"
-        />
+        <div :class="$style.galleryImg">
+          <UiGallery
+            :preview="specie.image || '/img/no-img.webp'"
+            :images="specie.gallery"
+          />
+
+          <div :class="$style.stats">
+            <ADivider
+              orientation="left"
+              :style="{ marginBottom: '0px' }"
+            >
+              Особенности
+            </ADivider>
+
+            <div :class="$style.item">
+              <p>Тип:</p>
+
+              <ATypographyText
+                :class="$style.value"
+                :content="specie.properties.type"
+              />
+            </div>
+
+            <div :class="$style.item">
+              <p>Размер:</p>
+
+              <ATypographyText
+                :class="$style.value"
+                :content="specie.properties.size"
+              />
+            </div>
+
+            <div :class="$style.item">
+              <p>Скорость:</p>
+
+              <ATypographyText
+                :class="$style.value"
+                :content="specie.properties.speed"
+              />
+            </div>
+          </div>
+        </div>
 
         <AButton
           type="primary"
@@ -132,6 +165,11 @@
           :bounds="24"
         />
       </AFlex>
+
+      <SpeciesBody
+        :class="$style.right"
+        :specie="specie"
+      />
     </AFlex>
 
     <AResult
@@ -159,10 +197,40 @@
 <style module lang="scss">
   .left {
     flex-shrink: 0;
-    width: 288px;
+    width: 100%;
+    min-width: 288px;
+    max-width: 320px;
   }
 
   .right {
     flex: 1 1 auto;
+  }
+
+  .galleryImg {
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+  }
+
+  .stats {
+    overflow: hidden;
+    display: flex;
+    flex-wrap: wrap;
+
+    min-width: 288px;
+
+    background: var(--color-bg-secondary);
+
+    .item {
+      flex: 1 0 calc(100% / 2);
+      min-width: calc(100% / 2);
+      padding: 10px 16px;
+
+      p {
+        margin-bottom: 4px;
+        font-weight: 500;
+        color: var(--color-text-title);
+      }
+    }
   }
 </style>
