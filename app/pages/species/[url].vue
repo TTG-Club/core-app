@@ -111,7 +111,8 @@
           <div :class="$style.stats">
             <ADivider
               orientation="left"
-              :style="{ marginBottom: '0px' }"
+              :style="{ marginBottom: '4px' }"
+              :orientation-margin="16"
             >
               Особенности
             </ADivider>
@@ -149,7 +150,7 @@
           type="primary"
           @click.left.exact.prevent="showRelated = true"
         >
-          Разновидности
+          Проихождения
         </AButton>
 
         <ClientOnly>
@@ -214,20 +215,19 @@
 
   .stats {
     overflow: hidden;
-    display: flex;
-    flex-wrap: wrap;
-
     min-width: 288px;
-
+    padding: 0 0 4px 0;
     background: var(--color-bg-secondary);
 
     .item {
-      flex: 1 0 calc(100% / 2);
-      min-width: calc(100% / 2);
-      padding: 10px 16px;
+      display: flex;
+      padding: 6px 16px;
 
       p {
-        margin-bottom: 4px;
+        min-width: 80px;
+        margin-bottom: 0;
+
+        font-size: 14px;
         font-weight: 500;
         color: var(--color-text-title);
       }
