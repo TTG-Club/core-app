@@ -1,6 +1,6 @@
 export * from './link';
 
-export * from './related-drawer';
+export * from './lineages-drawer';
 
 export * from './editor';
 

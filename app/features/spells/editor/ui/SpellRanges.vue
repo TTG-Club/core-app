@@ -110,7 +110,7 @@
       >
         <AInputNumber
           v-model:value="range.value"
-          :disabled="!!range.custom || isValueDisabled(range.unit)"
+          :disabled="isValueDisabled(range.unit)"
           :precision="0"
           :min="0"
           placeholder="Введи значение"
@@ -128,7 +128,6 @@
           :value="range.unit"
           :loading="status === 'pending'"
           :options="units || []"
-          :disabled="!!range.custom"
           placeholder="Выбери тип дистанции"
           show-search
           show-arrow
@@ -145,7 +144,6 @@
       >
         <AInput
           v-model:value="range.custom"
-          :disabled="!!range.value || !!range.unit"
           placeholder="Введи значение"
           allow-clear
         />

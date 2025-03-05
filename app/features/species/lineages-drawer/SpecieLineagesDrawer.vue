@@ -4,7 +4,7 @@
 
   const open = defineModel<boolean>();
 
-  const props = defineProps<{
+  const { url } = defineProps<{
     url: string;
   }>();
 
@@ -13,7 +13,7 @@
     {
       immediate: false,
       query: {
-        subSpeciesUrl: props.url,
+        subSpeciesUrl: url,
       },
     },
   );

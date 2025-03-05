@@ -110,7 +110,7 @@
       >
         <AInputNumber
           v-model:value="duration.value"
-          :disabled="!!duration.custom || isValueDisabled(duration.unit)"
+          :disabled="isValueDisabled(duration.unit)"
           :precision="0"
           :min="0"
           placeholder="Введи значение"
@@ -128,7 +128,6 @@
           :value="duration.unit"
           :loading="status === 'pending'"
           :options="units || []"
-          :disabled="!!duration.custom"
           placeholder="Выбери единицу времени"
           show-search
           show-arrow
@@ -145,7 +144,6 @@
       >
         <AInput
           v-model:value="duration.custom"
-          :disabled="!!duration.value || !!duration.unit"
           placeholder="Введи значение"
           allow-clear
         />

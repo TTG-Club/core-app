@@ -2,7 +2,16 @@
   import type { SpellMaterialComponent } from '~/shared/types';
 
   const component = defineModel<SpellMaterialComponent>({
-    default: () => [],
+    required: true,
+  });
+
+  watch(component, (value) => {
+    if (value) {
+      return;
+    }
+
+    component.value.withCost = false;
+    component.value.consumable = false;
   });
 </script>
 
@@ -34,7 +43,12 @@
         label="Имеет цену"
         :name="['components', 'm', 'withCost']"
       >
-        <ACheckbox v-model:checked="component.withCost"> Да </ACheckbox>
+        <ACheckbox
+          v-model:checked="component.withCost"
+          :disabled="!component.text"
+        >
+          Да
+        </ACheckbox>
       </AFormItem>
     </ACol>
 
@@ -43,7 +57,12 @@
         label="Расходуемые материалы"
         :name="['components', 'm', 'consumable']"
       >
-        <ACheckbox v-model:checked="component.consumable"> Да </ACheckbox>
+        <ACheckbox
+          v-model:checked="component.consumable"
+          :disabled="!component.text"
+        >
+          Да
+        </ACheckbox>
       </AFormItem>
     </ACol>
   </ARow>

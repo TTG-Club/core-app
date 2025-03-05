@@ -6,7 +6,7 @@
     PageHeader,
     UiGallery,
   } from '~/shared/ui';
-  import { SpeciesRelatedDrawer, SpeciesBody } from '~/features/species';
+  import { SpeciesBody, SpecieLineagesDrawer } from '~/features/species';
   import type { SpecieDetailResponse } from '~/shared/types';
 
   const {
@@ -155,7 +155,7 @@
         </AButton>
 
         <ClientOnly>
-          <SpeciesRelatedDrawer
+          <SpecieLineagesDrawer
             v-model="showRelated"
             :url="specie.url"
           />

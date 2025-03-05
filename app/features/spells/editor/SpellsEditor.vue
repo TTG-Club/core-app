@@ -93,7 +93,7 @@
     try {
       const payload = await formRef.value?.validate();
 
-      await $fetch('/api/v2/spells/new', {
+      await $fetch('/api/v2/spells', {
         method: 'POST',
         body: payload,
         onRequestError: () => {

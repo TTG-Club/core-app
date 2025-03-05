@@ -110,7 +110,7 @@
       >
         <AInputNumber
           v-model:value="time.value"
-          :disabled="!!time.custom || isValueDisabled(time.unit)"
+          :disabled="isValueDisabled(time.unit)"
           :precision="0"
           :min="0"
           placeholder="Введи значение"
@@ -128,7 +128,6 @@
           :value="time.unit"
           :loading="status === 'pending'"
           :options="units || []"
-          :disabled="!!time.custom"
           placeholder="Выбери единицу времени"
           show-search
           show-arrow
@@ -145,7 +144,6 @@
       >
         <AInput
           v-model:value="time.custom"
-          :disabled="!!time.value || !!time.unit"
           placeholder="Введи значение"
           allow-clear
         />
