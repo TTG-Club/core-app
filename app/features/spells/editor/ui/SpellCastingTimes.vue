@@ -1,11 +1,60 @@
 <script setup lang="ts">
-  import { isEqual } from 'lodash-es';
-  import { SelectTimeUnit } from '~/shared/ui';
+  import { Dictionaries } from '~/shared/api';
+  import { isEqual, isString } from 'lodash-es';
   import type { SpellCastingTime } from '~/shared/types';
+  import type { SelectValue } from 'ant-design-vue/es/select';
 
   const times = defineModel<Array<SpellCastingTime>>({
     default: () => [],
   });
+
+  const { data: units, status } = await useAsyncData(
+    'dictionaries-time-units',
+    () => Dictionaries.timeUnits(),
+  );
+
+  function getUnitOption(unitValue: string | undefined) {
+    if (!units.value?.length) {
+      return undefined;
+    }
+
+    if (!unitValue) {
+      return undefined;
+    }
+
+    return units.value.find((el) => el.value === unitValue);
+  }
+
+  function isValueDisabled(unit: string | undefined) {
+    const unitSelected = getUnitOption(unit);
+
+    if (!unitSelected) {
+      return false;
+    }
+
+    return !unitSelected.measurable;
+  }
+
+  function updateUnit(value: SelectValue, index: number) {
+    if (!isString(value) && value !== undefined) {
+      return;
+    }
+
+    const unitOption = getUnitOption(value);
+    const time = times.value[index];
+
+    if (!time) {
+      return;
+    }
+
+    times.value[index]!.unit = value;
+
+    if (unitOption?.measurable) {
+      return;
+    }
+
+    times.value[index]!.value = undefined;
+  }
 
   function add(index: number) {
     times.value.splice(index + 1, 0, getEmpty());
@@ -61,7 +110,7 @@
       >
         <AInputNumber
           v-model:value="time.value"
-          :disabled="!!time.custom"
+          :disabled="!!time.custom || isValueDisabled(time.unit)"
           :precision="0"
           :min="0"
           placeholder="Введи значение"
@@ -75,9 +124,16 @@
         label="Единица времени"
         :name="['castingTime', index, 'unit']"
       >
-        <SelectTimeUnit
-          v-model="time.unit"
+        <ASelect
+          :value="time.unit"
+          :loading="status === 'pending'"
+          :options="units || []"
           :disabled="!!time.custom"
+          placeholder="Выбери единицу времени"
+          show-search
+          show-arrow
+          allow-clear
+          @update:value="updateUnit($event, index)"
         />
       </AFormItem>
     </ACol>

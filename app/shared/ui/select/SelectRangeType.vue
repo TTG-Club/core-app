@@ -1,12 +1,14 @@
 <script setup lang="ts">
-  import type { BookLink, SelectOptionWithShortName } from '~/shared/types';
+  import { Dictionaries } from '~/shared/api';
   import { Form } from 'ant-design-vue';
 
   withDefaults(
     defineProps<{
+      disabled?: boolean;
       multiple?: boolean;
     }>(),
     {
+      disabled: false,
       multiple: false,
     },
   );
@@ -15,19 +17,10 @@
 
   const model = defineModel<string | Array<string>>();
 
-  const { data, status, refresh } = await useAsyncData<
-    Array<SelectOptionWithShortName>
-  >('books', async () => {
-    const bookLinks = await $fetch<Array<BookLink>>('/api/v2/books/search', {
-      method: 'post',
-    });
-
-    return bookLinks.map((book) => ({
-      label: `${book.name.rus} [${book.name.eng}]`,
-      value: book.url,
-      shortName: book.name.label,
-    }));
-  });
+  const { data, status, refresh } = await useAsyncData(
+    'dictionaries-range-types',
+    () => Dictionaries.rangeTypes(),
+  );
 
   const handleDropdownOpening = (state: boolean) => {
     if (!state) {
@@ -48,11 +41,12 @@
     :loading="status === 'pending'"
     :options="data || []"
     :mode="multiple ? 'multiple' : undefined"
-    placeholder="Выбери книгу"
+    :disabled
+    placeholder="Выбери единицу дистанции"
     max-tag-count="responsive"
-    allow-clear
     show-search
     show-arrow
+    allow-clear
     @dropdown-visible-change="handleDropdownOpening"
   />
 </template>

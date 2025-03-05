@@ -5,6 +5,14 @@ export interface SelectOption extends DefaultOptionType {
   value: string;
 }
 
+export interface SelectOptionWithShortName extends SelectOption {
+  shortName: string;
+}
+
+export interface SelectOptionWithMeasurable extends SelectOption {
+  measurable: boolean;
+}
+
 export interface DiceSelectOption extends SelectOption {
   maxValue: number;
 }

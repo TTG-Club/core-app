@@ -20,10 +20,10 @@
   import type { FormInstance } from 'ant-design-vue';
 
   import {
-    CastingTimes,
-    MaterialComponents,
-    SpellDistance,
-    SpellDuration,
+    SpellCastingTimes,
+    SpellMaterialComponent,
+    SpellRanges,
+    SpellDurations,
   } from './ui';
 
   const siteConfig = useSiteConfig();
@@ -316,13 +316,13 @@
         </ACol>
       </ARow>
 
-      <MaterialComponents v-model="form.components.m" />
+      <SpellMaterialComponent v-model="form.components.m" />
 
-      <CastingTimes v-model="form.castingTime" />
+      <SpellCastingTimes v-model="form.castingTime" />
 
-      <SpellDistance v-model="form.range" />
+      <SpellRanges v-model="form.range" />
 
-      <SpellDuration v-model="form.duration" />
+      <SpellDurations v-model="form.duration" />
 
       <ADivider orientation="left">
         <ATypographyText

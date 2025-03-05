@@ -1,11 +1,60 @@
 <script setup lang="ts">
-  import { SelectTimeUnit } from '~/shared/ui';
+  import { Dictionaries } from '~/shared/api';
   import type { SpellCastingTime, SpellDuration } from '~/shared/types';
-  import { isEqual } from 'lodash-es';
+  import { isEqual, isString } from 'lodash-es';
+  import type { SelectValue } from 'ant-design-vue/es/select';
 
   const durations = defineModel<Array<SpellDuration>>({
     default: () => [],
   });
+
+  const { data: units, status } = await useAsyncData(
+    'dictionaries-duration-units',
+    () => Dictionaries.durationUnits(),
+  );
+
+  function getUnitOption(unitValue: string | undefined) {
+    if (!units.value?.length) {
+      return undefined;
+    }
+
+    if (!unitValue) {
+      return undefined;
+    }
+
+    return units.value.find((el) => el.value === unitValue);
+  }
+
+  function isValueDisabled(unit: string | undefined) {
+    const unitSelected = getUnitOption(unit);
+
+    if (!unitSelected) {
+      return false;
+    }
+
+    return !unitSelected.measurable;
+  }
+
+  function updateUnit(value: SelectValue, index: number) {
+    if (!isString(value) && value !== undefined) {
+      return;
+    }
+
+    const unitOption = getUnitOption(value);
+    const time = durations.value[index];
+
+    if (!time) {
+      return;
+    }
+
+    durations.value[index]!.unit = value;
+
+    if (unitOption?.measurable) {
+      return;
+    }
+
+    durations.value[index]!.value = undefined;
+  }
 
   function add(index: number) {
     durations.value.splice(index + 1, 0, getEmpty());
@@ -61,7 +110,7 @@
       >
         <AInputNumber
           v-model:value="duration.value"
-          :disabled="!!duration.custom"
+          :disabled="!!duration.custom || isValueDisabled(duration.unit)"
           :precision="0"
           :min="0"
           placeholder="Введи значение"
@@ -75,9 +124,16 @@
         label="Единица времени"
         :name="['duration', index, 'unit']"
       >
-        <SelectTimeUnit
-          v-model="duration.unit"
+        <ASelect
+          :value="duration.unit"
+          :loading="status === 'pending'"
+          :options="units || []"
           :disabled="!!duration.custom"
+          placeholder="Выбери единицу времени"
+          show-search
+          show-arrow
+          allow-clear
+          @update:value="updateUnit($event, index)"
         />
       </AFormItem>
     </ACol>

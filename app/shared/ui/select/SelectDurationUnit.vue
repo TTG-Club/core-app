@@ -18,8 +18,8 @@
   const model = defineModel<string | Array<string>>();
 
   const { data, status, refresh } = await useAsyncData(
-    'dictionaries-distance-types',
-    () => Dictionaries.distanceTypes(),
+    'dictionaries-duration-units',
+    () => Dictionaries.durationUnits(),
   );
 
   const handleDropdownOpening = (state: boolean) => {
@@ -42,7 +42,7 @@
     :options="data || []"
     :mode="multiple ? 'multiple' : undefined"
     :disabled
-    placeholder="Выбери единицу дистанции"
+    placeholder="Выбери единицу времени"
     max-tag-count="responsive"
     show-search
     show-arrow

@@ -1,11 +1,60 @@
 <script setup lang="ts">
-  import { SelectDistanceType } from '~/shared/ui';
+  import { Dictionaries } from '~/shared/api';
   import type { SpellCastingTime, SpellRange } from '~/shared/types';
-  import { isEqual } from 'lodash-es';
+  import { isEqual, isString } from 'lodash-es';
+  import type { SelectValue } from 'ant-design-vue/es/select';
 
   const ranges = defineModel<Array<SpellRange>>({
     default: () => [],
   });
+
+  const { data: units, status } = await useAsyncData(
+    'dictionaries-range-types',
+    () => Dictionaries.rangeTypes(),
+  );
+
+  function getUnitOption(unitValue: string | undefined) {
+    if (!units.value?.length) {
+      return undefined;
+    }
+
+    if (!unitValue) {
+      return undefined;
+    }
+
+    return units.value.find((el) => el.value === unitValue);
+  }
+
+  function isValueDisabled(unit: string | undefined) {
+    const unitSelected = getUnitOption(unit);
+
+    if (!unitSelected) {
+      return false;
+    }
+
+    return !unitSelected.measurable;
+  }
+
+  function updateUnit(value: SelectValue, index: number) {
+    if (!isString(value) && value !== undefined) {
+      return;
+    }
+
+    const unitOption = getUnitOption(value);
+    const time = ranges.value[index];
+
+    if (!time) {
+      return;
+    }
+
+    ranges.value[index]!.unit = value;
+
+    if (unitOption?.measurable) {
+      return;
+    }
+
+    ranges.value[index]!.value = undefined;
+  }
 
   function add(index: number) {
     ranges.value.splice(index + 1, 0, getEmpty());
@@ -61,7 +110,7 @@
       >
         <AInputNumber
           v-model:value="range.value"
-          :disabled="!!range.custom"
+          :disabled="!!range.custom || isValueDisabled(range.unit)"
           :precision="0"
           :min="0"
           placeholder="Введи значение"
@@ -72,12 +121,19 @@
 
     <ACol :span="6">
       <AFormItem
-        label="Единицы дистанции"
+        label="Тип дистанции"
         :name="['range', index, 'unit']"
       >
-        <SelectDistanceType
-          v-model="range.unit"
+        <ASelect
+          :value="range.unit"
+          :loading="status === 'pending'"
+          :options="units || []"
           :disabled="!!range.custom"
+          placeholder="Выбери тип дистанции"
+          show-search
+          show-arrow
+          allow-clear
+          @update:value="updateUnit($event, index)"
         />
       </AFormItem>
     </ACol>

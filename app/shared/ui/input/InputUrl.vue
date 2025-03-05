@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { getSlug } from '~~/shared/utils';
   import { Form } from 'ant-design-vue';
-  import type { BookLink } from '~/shared/types';
+  import type { SelectOptionWithShortName } from '~/shared/types';
 
   const props = withDefaults(
     defineProps<{
@@ -18,7 +18,8 @@
 
   const context = Form.useInjectFormItemContext();
 
-  const { data: books } = useNuxtData<Array<BookLink>>('books');
+  const { data: books } =
+    useNuxtData<Array<SelectOptionWithShortName>>('books');
 
   const model = defineModel<string>();
 
@@ -27,13 +28,13 @@
       return undefined;
     }
 
-    const index = books.value.findIndex((el) => el.url === props.sourceUrl);
+    const index = books.value.findIndex((el) => el.value === props.sourceUrl);
 
     if (index < 0) {
       return undefined;
     }
 
-    return books.value[index]?.name.label;
+    return books.value[index]?.shortName;
   });
 
   function getSlugifyUrl(value: string) {

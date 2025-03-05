@@ -2,7 +2,7 @@ export { default as SelectComparison } from './SelectComparison.vue';
 
 export { default as SelectCreatureType } from './SelectCreatureType.vue';
 
-export { default as SelectDistanceType } from './SelectDistanceType.vue';
+export { default as SelectRangeType } from './SelectRangeType.vue';
 
 export { default as SelectMagicSchool } from './SelectMagicSchool.vue';
 

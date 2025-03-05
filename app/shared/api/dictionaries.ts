@@ -1,4 +1,4 @@
-import type { SelectOption } from '~/shared/types';
+import type { SelectOption, SelectOptionWithMeasurable } from '~/shared/types';
 import type { NitroFetchOptions, NitroFetchRequest } from 'nitropack';
 
 export const sizes = <R extends NitroFetchRequest>(
@@ -25,21 +25,35 @@ export const creatureTypes = <R extends NitroFetchRequest>(
     method: 'get',
   });
 
-export const distanceTypes = <R extends NitroFetchRequest>(
+export const rangeTypes = <R extends NitroFetchRequest>(
   config?: Omit<NitroFetchOptions<R>, 'method'>,
 ) =>
-  $fetch<Array<SelectOption>>('/api/v2/dictionaries/distance/types', {
-    ...config,
-    method: 'get',
-  });
+  $fetch<Array<SelectOptionWithMeasurable>>(
+    '/api/v2/dictionaries/distance/types',
+    {
+      ...config,
+      method: 'get',
+    },
+  );
 
 export const timeUnits = <R extends NitroFetchRequest>(
   config?: Omit<NitroFetchOptions<R>, 'method'>,
 ) =>
-  $fetch<Array<SelectOption>>('/api/v2/dictionaries/time-units', {
+  $fetch<Array<SelectOptionWithMeasurable>>('/api/v2/dictionaries/time-units', {
     ...config,
     method: 'get',
   });
+
+export const durationUnits = <R extends NitroFetchRequest>(
+  config?: Omit<NitroFetchOptions<R>, 'method'>,
+) =>
+  $fetch<Array<SelectOptionWithMeasurable>>(
+    '/api/v2/dictionaries/duration-units',
+    {
+      ...config,
+      method: 'get',
+    },
+  );
 
 export const comparisonOperators = <R extends NitroFetchRequest>(
   config?: Omit<NitroFetchOptions<R>, 'method'>,

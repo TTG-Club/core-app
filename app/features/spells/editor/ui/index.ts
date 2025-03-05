@@ -1,7 +1,7 @@
-export { default as MaterialComponents } from './MaterialComponents.vue';
+export { default as SpellMaterialComponent } from './SpellMaterialComponent.vue';
 
-export { default as CastingTimes } from './CastingTimes.vue';
+export { default as SpellCastingTimes } from './SpellCastingTimes.vue';
 
-export { default as SpellDistance } from './SpellDistance.vue';
+export { default as SpellRanges } from './SpellRanges.vue';
 
-export { default as SpellDuration } from './SpellDuration.vue';
+export { default as SpellDurations } from './SpellDurations.vue';
