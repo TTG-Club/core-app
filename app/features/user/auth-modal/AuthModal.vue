@@ -82,7 +82,6 @@
     centered
     destroy-on-close
     :class="$style.modal"
-    wrap-class-name="$style.modal1"
   >
     <AFlex
       :gap="24"
