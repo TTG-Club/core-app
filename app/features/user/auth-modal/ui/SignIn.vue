@@ -113,8 +113,8 @@
         </AButton>
 
         <AButton
-          :disabled="inProgress"
           type="link"
+          disabled
           @click.left.exact.prevent="$emit('switch:change-password')"
         >
           Забыли пароль?
