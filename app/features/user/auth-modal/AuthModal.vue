@@ -82,6 +82,7 @@
     centered
     destroy-on-close
     :class="$style.modal"
+    wrap-class-name="$style.modal1"
   >
     <AFlex
       :gap="24"
@@ -116,15 +117,22 @@
 <style module lang="scss">
   .modal {
     max-width: 652px !important;
+    :global {
+      .ant-modal-content {
+        overflow: hidden;
+        padding: 24px;
+
+        @include media-min($md) {
+          padding: 0 24px 0 0;
+        }
+      }
+    }
   }
 
   .background {
     display: none;
     flex-shrink: 0;
-
     width: 220px;
-    border-radius: 8px;
-
     object-fit: cover;
 
     @include media-min($md) {
