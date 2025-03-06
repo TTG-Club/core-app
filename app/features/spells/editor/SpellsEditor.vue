@@ -21,9 +21,9 @@
 
   import {
     SpellCastingTimes,
-    SpellMaterialComponent,
     SpellRanges,
     SpellDurations,
+    SpellComponents,
   } from './ui';
 
   const siteConfig = useSiteConfig();
@@ -45,19 +45,13 @@
     upper: undefined,
     level: 0,
     school: undefined,
-    ritual: false,
-    concentration: false,
     range: [],
     duration: [],
     castingTime: [],
     components: {
       v: false,
       s: false,
-      m: {
-        text: undefined,
-        withCost: false,
-        consumable: false,
-      },
+      m: undefined,
     },
     affiliations: {
       classes: [],
@@ -250,7 +244,7 @@
       </ARow>
 
       <ARow :gutter="16">
-        <ACol :span="4">
+        <ACol :span="12">
           <AFormItem
             label="Уровень заклинания"
             :name="['level']"
@@ -263,7 +257,7 @@
           </AFormItem>
         </ACol>
 
-        <ACol :span="4">
+        <ACol :span="12">
           <AFormItem
             label="Школа"
             :name="['school']"
@@ -272,55 +266,13 @@
             <SelectMagicSchool v-model="form.school" />
           </AFormItem>
         </ACol>
-
-        <ACol :span="4">
-          <AFormItem
-            label="Ритуал"
-            :name="['ritual']"
-          >
-            <ACheckbox v-model:checked="form.ritual"> Возможен </ACheckbox>
-          </AFormItem>
-        </ACol>
-
-        <ACol :span="4">
-          <AFormItem
-            label="Концентрация"
-            :name="['concentration']"
-          >
-            <ACheckbox v-model:checked="form.concentration">
-              Требуется
-            </ACheckbox>
-          </AFormItem>
-        </ACol>
-
-        <ACol :span="4">
-          <AFormItem
-            label="Вербальный компонент"
-            :name="['components', 'v']"
-          >
-            <ACheckbox v-model:checked="form.components.v">
-              Требуется
-            </ACheckbox>
-          </AFormItem>
-        </ACol>
-
-        <ACol :span="4">
-          <AFormItem
-            label="Соматический компонент"
-            :name="['components', 's']"
-          >
-            <ACheckbox v-model:checked="form.components.s">
-              Требуется
-            </ACheckbox>
-          </AFormItem>
-        </ACol>
       </ARow>
-
-      <SpellMaterialComponent v-model="form.components.m" />
 
       <SpellCastingTimes v-model="form.castingTime" />
 
       <SpellRanges v-model="form.range" />
+
+      <SpellComponents v-model="form.components" />
 
       <SpellDurations v-model="form.duration" />
 
@@ -341,8 +293,9 @@
           >
             <ATextarea
               v-model:value="form.description"
-              placeholder="Введи описание"
               :rows="8"
+              placeholder="Введи описание"
+              allow-clear
             />
           </AFormItem>
         </ACol>
@@ -354,8 +307,9 @@
           >
             <ATextarea
               v-model:value="form.upper"
-              placeholder="Введи описание"
               :rows="8"
+              placeholder="Введи описание"
+              allow-clear
             />
           </AFormItem>
         </ACol>

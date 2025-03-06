@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { Dictionaries } from '~/shared/api';
-  import type { SpellCastingTime, SpellDuration } from '~/shared/types';
+  import type { SpellDuration } from '~/shared/types';
   import { isEqual, isString } from 'lodash-es';
   import type { SelectValue } from 'ant-design-vue/es/select';
 
@@ -68,11 +68,12 @@
     durations.value.splice(index, 1);
   }
 
-  function getEmpty(): SpellCastingTime {
+  function getEmpty(): SpellDuration {
     return {
       value: undefined,
       unit: undefined,
       custom: undefined,
+      concentration: false,
     };
   }
 
@@ -103,7 +104,7 @@
     :key="`${index}-${Date.now()}`"
     :gutter="16"
   >
-    <ACol :span="6">
+    <ACol :span="4">
       <AFormItem
         label="Длительность"
         :name="['duration', index, 'value']"
@@ -119,7 +120,7 @@
       </AFormItem>
     </ACol>
 
-    <ACol :span="6">
+    <ACol :span="4">
       <AFormItem
         label="Единица времени"
         :name="['duration', index, 'unit']"
@@ -128,12 +129,23 @@
           :value="duration.unit"
           :loading="status === 'pending'"
           :options="units || []"
-          placeholder="Выбери единицу времени"
+          placeholder="Выбери из списка"
           show-search
           show-arrow
           allow-clear
           @update:value="updateUnit($event, index)"
         />
+      </AFormItem>
+    </ACol>
+
+    <ACol :span="4">
+      <AFormItem
+        label="Концентрация"
+        :name="['concentration']"
+      >
+        <ACheckbox v-model:checked="duration.concentration">
+          Требуется
+        </ACheckbox>
       </AFormItem>
     </ACol>
 

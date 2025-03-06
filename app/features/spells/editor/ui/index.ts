@@ -1,4 +1,4 @@
-export { default as SpellMaterialComponent } from './SpellMaterialComponent.vue';
+export { default as SpellComponents } from './SpellComponents.vue';
 
 export { default as SpellCastingTimes } from './SpellCastingTimes.vue';
 

@@ -9,6 +9,8 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+
+    min-height: 100%;
     padding-bottom: 32px;
   }
 </style>

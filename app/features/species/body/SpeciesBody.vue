@@ -39,8 +39,9 @@
       v-for="feature in species.features"
       :key="feature.url"
       v-model:active-key="activeFeatures"
-      expand-icon-position="end"
       :bordered="false"
+      expand-icon-position="end"
+      destroy-inactive-panel
     >
       <ACollapsePanel
         :id="feature.url"

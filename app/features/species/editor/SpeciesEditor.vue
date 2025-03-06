@@ -362,14 +362,6 @@
         </ACol>
       </ARow>
 
-      <ADivider orientation="left">
-        <ATypographyText
-          type="secondary"
-          content="Особенности"
-          strong
-        />
-      </ADivider>
-
       <SpeciesFeatures v-model="form.features" />
 
       <ADivider orientation="left">

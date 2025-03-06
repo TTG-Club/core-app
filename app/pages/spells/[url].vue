@@ -50,6 +50,7 @@
       :subtitle="spell?.name.eng"
       :source="spell?.source"
       :date-time="spell?.updatedAt"
+      copy-title
     >
       <template #actions>
         <PageActions @close="navigateTo({ name: 'spells' })" />

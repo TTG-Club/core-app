@@ -1,9 +1,7 @@
 <script setup lang="ts">
-  import 'virtual:svg-icons-register';
   import ruRU from 'ant-design-vue/locale/ru_RU';
   import type { NuxtError } from '#app';
   import { useTheme } from '~/shared/composables';
-  import { SidebarPanel } from '~/features/sidebar';
 
   const { theme, themeConfig } = useTheme();
 
@@ -18,10 +16,14 @@
   }>();
 
   const handleError = () => {
+    clearError();
+
     window.location.href = '/';
   };
 
   const reload = () => {
+    clearError();
+
     window.location.reload();
   };
 </script>
@@ -35,8 +37,6 @@
       <AStyleProvider>
         <AApp>
           <div class="ttg-app">
-            <SidebarPanel />
-
             <NuxtLayout>
               <AFlex
                 :style="{ minHeight: '100vh' }"
