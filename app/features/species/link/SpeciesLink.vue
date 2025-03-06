@@ -22,7 +22,10 @@
     :is="disabled ? 'div' : NuxtLink"
     :to="`/species/${species.url}`"
   >
-    <ACard :hoverable="!disabled">
+    <ACard
+      :hoverable="!disabled"
+      :body-style="{ padding: '24px 16px 16px 16px' }"
+    >
       <template #cover>
         <div :class="$style.coverCard">
           <AImage
@@ -44,11 +47,13 @@
             align="center"
             gap="4"
           >
-            <span> {{ species.name.rus }} [{{ species.name.eng }}] </span>
+            <span> {{ species.name.rus }}</span>
 
             <ATag :style="{ margin: 0 }"> PHB </ATag>
           </AFlex>
         </template>
+
+        <template #description>{{ species.name.eng }}</template>
       </ACardMeta>
 
       <template #actions>
