@@ -141,7 +141,7 @@
     <ACol :span="4">
       <AFormItem
         label="Концентрация"
-        :name="['concentration']"
+        :name="['concentration', index, 'concentration']"
       >
         <ACheckbox v-model:checked="duration.concentration">
           Требуется
