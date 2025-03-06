@@ -47,7 +47,7 @@
             align="center"
             gap="4"
           >
-            <span> {{ species.name.rus }}</span>
+            <span>{{ species.name.rus }}</span>
 
             <ATag :style="{ margin: 0 }"> PHB </ATag>
           </AFlex>
