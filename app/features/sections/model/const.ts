@@ -25,7 +25,7 @@ export const CARD_LINKS = [
   },
   {
     name: 'Заклинания',
-    url: '/',
+    url: '/spells',
     img: 'https://s3.timeweb.cloud/1f63c517-f215af24-4c0a-4ac8-aba5-c6a08af65777/sections/home-link/button_spells.webp',
     disable: false,
   },
