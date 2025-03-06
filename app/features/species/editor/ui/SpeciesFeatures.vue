@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import type { SpeciesCreate } from '~/shared/types';
-  import { isEqual } from 'lodash-es';
   import { ValidationBase } from '~/shared/utils';
 
   type Features = SpeciesCreate['features'];
@@ -19,10 +18,6 @@
     default: () => [],
   });
 
-  function isFeatureEmpty(feat: Features[number]) {
-    return isEqual(feat, getEmptyFeature());
-  }
-
   function isLastFeature(index: number) {
     return index === model.value.length - 1;
   }
@@ -31,35 +26,26 @@
     model.value.splice(indexOfNewFeature, 0, getEmptyFeature());
   }
 
-  function clearFeature(index: number) {
-    model.value.splice(index, 1, getEmptyFeature());
-  }
-
   function removeFeature(index: number) {
     model.value.splice(index, 1);
   }
-
-  watch(
-    model,
-    (value) => {
-      if (!value.length) {
-        model.value.push(getEmptyFeature());
-      }
-    },
-    {
-      immediate: true,
-      flush: 'pre',
-    },
-  );
 </script>
 
 <template>
+  <ADivider orientation="left">
+    <ATypographyText
+      content="Умения"
+      type="secondary"
+      strong
+    />
+  </ADivider>
+
   <template
     v-for="(feature, featIndex) in model"
     :key="featIndex"
   >
     <ARow :gutter="16">
-      <ACol :span="12">
+      <ACol :span="8">
         <AFormItem
           label="Название"
           :name="['features', featIndex, 'name', 'rus']"
@@ -72,7 +58,7 @@
         </AFormItem>
       </ACol>
 
-      <ACol :span="12">
+      <ACol :span="8">
         <AFormItem
           label="Название (англ.)"
           tooltip="Английское название"
@@ -83,6 +69,31 @@
             v-model:value="feature.name.eng"
             placeholder="Введи английское название"
           />
+        </AFormItem>
+      </ACol>
+
+      <ACol :span="8">
+        <AFormItem label="Управление">
+          <ARow :gutter="16">
+            <ACol :span="12">
+              <AButton
+                block
+                @click.left.exact.prevent="addFeature(featIndex + 1)"
+              >
+                Добавить умение
+              </AButton>
+            </ACol>
+
+            <ACol :span="12">
+              <AButton
+                danger
+                block
+                @click.left.exact.prevent="removeFeature(featIndex)"
+              >
+                Удалить умение
+              </AButton>
+            </ACol>
+          </ARow>
         </AFormItem>
       </ACol>
     </ARow>
@@ -103,34 +114,15 @@
       </ACol>
     </ARow>
 
-    <AFlex
-      justify="flex-end"
-      :gap="16"
-    >
-      <AFlex :gap="8">
-        <AButton @click.left.exact.prevent="addFeature(featIndex + 1)">
-          Добавить особенность
-        </AButton>
-
-        <AButton
-          v-if="isLastFeature(featIndex)"
-          :disabled="isFeatureEmpty(feature)"
-          danger
-          @click.left.exact.prevent="clearFeature(featIndex)"
-        >
-          Очистить особенность
-        </AButton>
-
-        <AButton
-          v-else
-          danger
-          @click.left.exact.prevent="removeFeature(featIndex)"
-        >
-          Удалить особенность
-        </AButton>
-      </AFlex>
-    </AFlex>
-
     <ADivider v-if="!isLastFeature(featIndex)" />
   </template>
+
+  <AFlex
+    v-if="!model.length"
+    justify="center"
+  >
+    <AButton @click.left.exact.prevent="addFeature(0)">
+      Добавить первое умение
+    </AButton>
+  </AFlex>
 </template>
