@@ -65,22 +65,9 @@
       transition: transform 0.6s;
     }
 
-    &:hover {
-      .img {
-        transform: scale(1.15);
-        transition: transform 0.6s;
-      }
-    }
-
     &.disabled {
       pointer-events: none;
       opacity: 0.4;
-    }
-
-    .name {
-      z-index: 1;
-      font-weight: 600;
-      color: var(--color-text);
     }
 
     @include media-min($md) {
@@ -89,6 +76,19 @@
 
     @include media-min($xl) {
       min-width: 16%;
+    }
+
+    &:hover {
+      .img {
+        transform: scale(1.15);
+        transition: transform 0.6s;
+      }
+    }
+
+    .name {
+      z-index: 1;
+      font-weight: 600;
+      color: var(--color-text);
     }
   }
 </style>
