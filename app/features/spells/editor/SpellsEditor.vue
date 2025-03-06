@@ -268,11 +268,11 @@
         </ACol>
       </ARow>
 
-      <SpellComponents v-model="form.components" />
-
       <SpellCastingTimes v-model="form.castingTime" />
 
       <SpellRanges v-model="form.range" />
+
+      <SpellComponents v-model="form.components" />
 
       <SpellDurations v-model="form.duration" />
 
