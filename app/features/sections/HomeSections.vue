@@ -51,18 +51,11 @@
     background-color: var(--color-bg-secondary);
     box-shadow: 0 0.625rem 0.75rem 0 var(--color-card-shadow);
 
-    .img {
-      position: absolute;
-      top: 0;
-      right: 0;
-
-      display: block;
-
-      width: 220px;
-
-      opacity: 0.7;
-
-      transition: transform 0.6s;
+    &:hover {
+      .img {
+        transform: scale(1.15);
+        transition: transform 0.6s;
+      }
     }
 
     &.disabled {
@@ -78,11 +71,18 @@
       min-width: 16%;
     }
 
-    &:hover {
-      .img {
-        transform: scale(1.15);
-        transition: transform 0.6s;
-      }
+    .img {
+      position: absolute;
+      top: 0;
+      right: 0;
+
+      display: block;
+
+      width: 220px;
+
+      opacity: 0.7;
+
+      transition: transform 0.6s;
     }
 
     .name {
