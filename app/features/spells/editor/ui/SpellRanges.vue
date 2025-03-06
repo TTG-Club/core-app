@@ -103,7 +103,7 @@
     :key="`${index}-${Date.now()}`"
     :gutter="16"
   >
-    <ACol :span="6">
+    <ACol :span="4">
       <AFormItem
         label="Дистанция"
         :name="['range', index, 'value']"
@@ -119,7 +119,7 @@
       </AFormItem>
     </ACol>
 
-    <ACol :span="6">
+    <ACol :span="4">
       <AFormItem
         label="Тип дистанции"
         :name="['range', index, 'unit']"
@@ -128,7 +128,7 @@
           :value="range.unit"
           :loading="status === 'pending'"
           :options="units || []"
-          placeholder="Выбери тип дистанции"
+          placeholder="Выбери из списка"
           show-search
           show-arrow
           allow-clear
@@ -137,7 +137,7 @@
       </AFormItem>
     </ACol>
 
-    <ACol :span="6">
+    <ACol :span="10">
       <AFormItem
         label="Собственное значение"
         :name="['range', index, 'custom']"

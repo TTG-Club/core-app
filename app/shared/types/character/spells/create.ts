@@ -9,8 +9,6 @@ export interface SpellCreate {
   range: Array<SpellRange>; // дистанция
   duration: Array<SpellDuration>; // длительность
   castingTime: Array<SpellCastingTime>; // время накладывания
-  ritual: boolean; // ритуал да/нет
-  concentration: boolean; // концентрация да/нет
   components: SpellComponents; // компоненты
   affiliations: SpellAffiliation; // привязка заклинания к сущностям
   tags: Array<string>; // теги
@@ -34,6 +32,7 @@ export interface SpellRange {
 }
 
 export interface SpellDuration {
+  concentration: boolean;
   value: number | undefined; // значение длительности
   unit: string | undefined; // единицы измерения (минута/час)
   custom: string | undefined; // кастомное значение (666 веков)
@@ -48,11 +47,11 @@ export interface SpellCastingTime {
 export interface SpellComponents {
   v: boolean; // вербальный компонент
   s: boolean; // соматический компонент
-  m: SpellMaterialComponent; // материальные компоненты
+  m: SpellMaterialComponent | undefined; // материальные компоненты
 }
 
 export interface SpellMaterialComponent {
-  text: string | undefined; // название
+  text: string; // название
   withCost: boolean; // имеет стоимость
   consumable: boolean; // расходуемый да/нет
 }
