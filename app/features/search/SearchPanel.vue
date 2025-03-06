@@ -63,6 +63,7 @@
   }
 
   .search {
+    pointer-events: none;
     cursor: pointer;
 
     position: relative;
@@ -79,6 +80,7 @@
     border: 1px solid var(--color-border);
     border-radius: 36px;
 
+    opacity: 0.6;
     background-color: var(--color-bg-secondary);
 
     p {
