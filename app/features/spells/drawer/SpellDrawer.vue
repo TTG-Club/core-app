@@ -5,7 +5,7 @@
     useBreakpoints,
   } from '~/shared/composables';
   import type { SpellDetailResponse } from '~/shared/types';
-  import { SpellBody } from '../../body';
+  import { SpellBody } from '../body';
   import {
     DrawerActions,
     DrawerBody,

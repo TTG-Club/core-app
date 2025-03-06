@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { SpeciesLinkResponse } from '~/shared/types';
   import { NuxtLink } from '#components';
-  import { SpeciesLineagesDrawer } from '~/features/species';
+  import { SpeciesLineagesDrawer, SpeciesDrawer } from '~/features/species';
 
   withDefaults(
     defineProps<{
@@ -14,6 +14,7 @@
   );
 
   const showLineages = ref(false);
+  const isDrawerVisible = ref(false);
 </script>
 
 <template>
@@ -51,7 +52,9 @@
       </ACardMeta>
 
       <template #actions>
-        <span @click.left.exact.prevent.stop> Предпросмотр </span>
+        <span @click.left.exact.prevent.stop="isDrawerVisible = true">
+          Предпросмотр
+        </span>
 
         <span
           v-if="species.hasLineages"
@@ -63,6 +66,11 @@
     </ACard>
 
     <ClientOnly>
+      <SpeciesDrawer
+        v-model="isDrawerVisible"
+        :url="species.url"
+      />
+
       <SpeciesLineagesDrawer
         v-if="species.hasLineages"
         v-model="showLineages"

@@ -1,8 +1,9 @@
 <script setup lang="ts">
   import { SmallLink } from '~/shared/ui';
   import type { SpellLinkResponse } from '~/shared/types';
-  import { SpellLinkComponents, SpellLinkFlags, SpellLinkDrawer } from './ui';
+  import { SpellLinkComponents, SpellLinkFlags } from './ui';
   import { Breakpoint, useBreakpoints } from '~/shared/composables';
+  import { SpellDrawer } from '../drawer';
 
   const props = withDefaults(
     defineProps<{
@@ -94,7 +95,7 @@
         </template>
       </SmallLink>
 
-      <SpellLinkDrawer
+      <SpellDrawer
         v-model="isDrawerVisible"
         :url="spell.url"
       />
