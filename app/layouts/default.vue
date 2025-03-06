@@ -16,6 +16,7 @@
   .wrapper {
     width: 100%;
     max-width: var(--max-content);
+    min-height: 100%;
     padding: 0 24px 0 24px;
 
     @include media-min($xxl) {
