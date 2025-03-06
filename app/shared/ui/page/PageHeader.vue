@@ -9,6 +9,7 @@
     dateTime?: string | number | Date | Dayjs | null;
     dateTimeFormat?: string;
     source?: SourceResponse;
+    copyTitle?: boolean;
   }
 
   const props = withDefaults(defineProps<PageHeaderProps>(), {
@@ -17,10 +18,19 @@
     source: undefined,
     dateTime: undefined,
     dateTimeFormat: 'DD.MM.YYYY HH:mm',
+    copyTitle: false,
   });
 
   const dayjs = useDayjs();
   const { copy } = useCopy();
+
+  function handleCopy(text: string) {
+    if (!props.copyTitle) {
+      return;
+    }
+
+    copy(text);
+  }
 
   const formattedDateTime = computed(() => {
     const dateTime = dayjs(props.dateTime);
@@ -53,12 +63,15 @@
       >
         <ATypographyTitle
           v-if="title"
-          :style="{ cursor: 'pointer', lineHeight: '32px' }"
+          :style="{
+            cursor: copyTitle ? 'pointer' : 'default',
+            lineHeight: '32px',
+          }"
           :content="title"
           :level="2"
           data-allow-mismatch
           ellipsis
-          @click.left.exact.prevent="copy(title)"
+          @click.left.exact.prevent="handleCopy(title)"
         />
 
         <ASkeleton
@@ -73,9 +86,9 @@
           data-allow-mismatch
           :content="subtitle"
           type="secondary"
-          :style="{ cursor: 'pointer' }"
+          :style="{ cursor: copyTitle ? 'pointer' : 'default' }"
           ellipsis
-          @click.left.exact.prevent="copy(subtitle)"
+          @click.left.exact.prevent="handleCopy(subtitle)"
         />
       </AFlex>
 
@@ -85,12 +98,14 @@
         align="flex-end"
         vertical
       >
-        <AFlex
-          v-if="$slots.actions"
-          :gap="4"
-        >
-          <slot name="actions" />
-        </AFlex>
+        <ClientOnly>
+          <AFlex
+            v-if="$slots.actions"
+            :gap="4"
+          >
+            <slot name="actions" />
+          </AFlex>
+        </ClientOnly>
 
         <AFlex
           v-if="source || formattedDateTime"
@@ -132,11 +147,13 @@
       </AFlex>
     </AFlex>
 
-    <AFlex
-      v-if="$slots.filter"
-      :gap="8"
-    >
-      <slot name="filter" />
-    </AFlex>
+    <ClientOnly>
+      <AFlex
+        v-if="$slots.filter"
+        :gap="8"
+      >
+        <slot name="filter" />
+      </AFlex>
+    </ClientOnly>
   </AFlex>
 </template>

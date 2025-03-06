@@ -86,6 +86,7 @@
       :subtitle="species?.name.eng"
       :source="species?.source"
       :date-time="species?.updatedAt"
+      copy-title
     >
       <template #actions>
         <PageActions @close="navigateTo('/species')" />
