@@ -13,6 +13,8 @@
     description: 'Заклинания по D&D 2024 редакции',
   });
 
+  const search = ref<string>('');
+
   const {
     data: spells,
     error,
@@ -21,6 +23,9 @@
   } = await useAsyncData('spells', () =>
     $fetch<Array<SpellLinkResponse>>('/api/v2/spells/search', {
       method: 'POST',
+      query: {
+        search: search.value,
+      },
     }),
   );
 
@@ -28,6 +33,14 @@
   const count = 5;
 
   const skeletonItems = ref(Array.from({ length: count }, faker.string.uuid));
+
+  const onSearch = useDebounceFn(() => {
+    if (search.value && search.value.length < 3) {
+      return;
+    }
+
+    refresh();
+  }, 1000);
 </script>
 
 <template>
@@ -43,9 +56,10 @@
         </AButton>
 
         <AInput
+          v-model:value="search"
           placeholder="Введите текст..."
           allow-clear
-          disabled
+          @change="onSearch"
         />
       </template>
     </PageHeader>
