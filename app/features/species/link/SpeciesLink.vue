@@ -2,6 +2,7 @@
   import type { SpeciesLinkResponse } from '~/shared/types';
   import { NuxtLink } from '#components';
   import { SpeciesLineagesDrawer, SpeciesDrawer } from '~/features/species';
+  import { GroupTag } from '~/shared/ui';
 
   withDefaults(
     defineProps<{
@@ -49,7 +50,7 @@
           >
             <span>{{ species.name.rus }}</span>
 
-            <ATag :style="{ margin: 0 }"> PHB </ATag>
+            <GroupTag :group="species.source.group" />
           </AFlex>
         </template>
 
@@ -93,6 +94,6 @@
 
   .image {
     width: 100%;
-    opacity: 0.8;
+    opacity: 0.9;
   }
 </style>

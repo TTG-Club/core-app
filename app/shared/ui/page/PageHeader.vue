@@ -2,6 +2,7 @@
   import type { Dayjs } from 'dayjs';
   import type { SourceResponse } from '~/shared/types';
   import { useCopy } from '~/shared/composables';
+  import { SourceTag } from '~/shared/ui';
 
   export interface PageHeaderProps {
     title?: string;
@@ -120,28 +121,7 @@
           />
 
           <template v-if="source">
-            <ATooltip
-              :title="source.group.rus"
-              placement="bottomRight"
-              arrow-point-at-center
-            >
-              <ATag :style="{ marginInlineEnd: 0 }">
-                {{ source.group.label }}
-              </ATag>
-            </ATooltip>
-
-            <ATooltip
-              :title="`${source.name.rus} [${source.name.eng}]`"
-              placement="bottomRight"
-              arrow-point-at-center
-            >
-              <ATag
-                :color="`var(--color-badge-${source.group.label.toLowerCase()})`"
-                :style="{ marginInlineEnd: 0 }"
-              >
-                {{ source.name.label }}
-              </ATag>
-            </ATooltip>
+            <SourceTag :source="source" />
           </template>
         </AFlex>
       </AFlex>

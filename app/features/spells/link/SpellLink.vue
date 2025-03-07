@@ -57,10 +57,7 @@
       :href
       @click.left.exact.prevent.stop="openSpell"
     >
-      <SmallLink
-        :tag-tooltip="spell.source.group.rus"
-        :tag-color="spell.source.group.label"
-      >
+      <SmallLink :group="spell.source.group">
         <template #icon>
           <ATooltip
             :title="levelTooltip"
@@ -78,8 +75,6 @@
         <template #english>
           {{ spell.name.eng }}
         </template>
-
-        <template #tag> {{ spell.source.group.label }} </template>
 
         <template #caption>
           <SpellLinkFlags

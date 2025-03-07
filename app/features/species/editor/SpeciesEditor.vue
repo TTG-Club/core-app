@@ -125,7 +125,7 @@
                 },
                 target: '_blank',
               },
-              'страницу',
+              () => 'страницу',
             ),
           ]),
         onClose: () => navigateTo({ name: 'workshop-species' }),

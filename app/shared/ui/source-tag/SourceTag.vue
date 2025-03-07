@@ -10,8 +10,10 @@
   <AFlex :gap="8">
     <ATooltip
       :title="source.group.rus"
+      :mouse-enter-delay="0.7"
       placement="bottomRight"
       arrow-point-at-center
+      destroy-tooltip-on-hide
     >
       <ATag :style="{ marginInlineEnd: 0 }">
         {{ source.group.label }}
@@ -20,8 +22,10 @@
 
     <ATooltip
       :title="`${source.name.rus} [${source.name.eng}]`"
+      :mouse-enter-delay="0.7"
       placement="bottomRight"
       arrow-point-at-center
+      destroy-tooltip-on-hide
     >
       <ATag
         :color="`var(--color-badge-${source.group.label.toLowerCase()})`"

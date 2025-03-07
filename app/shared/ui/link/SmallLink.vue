@@ -1,12 +1,10 @@
 <script setup lang="ts">
-  const { tagColor, tagTooltip } = defineProps<{
-    tagColor?: string;
-    tagTooltip?: string;
-  }>();
+  import { GroupTag } from '~/shared/ui';
+  import type { SourceGroupResponse } from '~/shared/types';
 
-  const badgeColor = computed(() =>
-    `var(--color-badge-${tagColor || 'basic'})`.toLowerCase(),
-  );
+  const { group } = defineProps<{
+    group?: SourceGroupResponse;
+  }>();
 </script>
 
 <template>
@@ -49,19 +47,12 @@
           </span>
         </span>
 
-        <ATooltip
-          v-if="$slots.tag"
-          :mouse-enter-delay="0.7"
-          :title="tagTooltip"
-          destroy-tooltip-on-hide
+        <div
+          v-if="group"
+          :class="$style.tag"
         >
-          <ATag
-            :class="$style.tag"
-            :color="badgeColor"
-          >
-            <slot name="tag" />
-          </ATag>
-        </ATooltip>
+          <GroupTag :group="group" />
+        </div>
       </AFlex>
 
       <AFlex

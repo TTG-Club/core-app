@@ -15,8 +15,8 @@
 <template>
   <ATooltip
     v-if="url"
+    :mouse-enter-delay="0.7"
     title="Скопировать ссылку"
-    arrow-point-at-center
   >
     <AButton
       :disabled
