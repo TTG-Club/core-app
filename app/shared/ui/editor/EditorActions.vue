@@ -5,9 +5,11 @@
     defineProps<{
       submit: () => void;
       isSubmitting?: boolean;
+      disabled?: boolean;
     }>(),
     {
       isSubmitting: false,
+      disabled: false,
     },
   );
 </script>
@@ -20,6 +22,7 @@
   >
     <AButton
       type="primary"
+      :disabled="disabled"
       :loading="isSubmitting"
       @click.left.exact.prevent="submit"
     >

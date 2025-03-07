@@ -25,8 +25,10 @@
     SpeciesFeatures,
     SpeciesSizes,
   } from './ui';
+  import { NuxtLink } from '#components';
 
   const siteConfig = useSiteConfig();
+  const { notification } = App.useApp();
 
   const formRef = useTemplateRef<FormInstance>('formRef');
 
@@ -78,6 +80,7 @@
   }
 
   const isCreating = ref(false);
+  const isCreated = ref(false);
 
   async function submit() {
     isCreating.value = true;
@@ -85,7 +88,7 @@
     try {
       const payload = await formRef.value?.validate();
 
-      await $fetch('/api/v2/species', {
+      await $fetch<string>('/api/v2/species', {
         method: 'POST',
         body: payload,
         onRequestError: () => {
@@ -100,7 +103,34 @@
           });
         },
       });
-    } finally {
+
+      isCreated.value = true;
+
+      notification.success({
+        message: () =>
+          !form.value.parent
+            ? 'Вид успешно создан'
+            : 'Происхождение успешно создано',
+        description: () =>
+          h('span', [
+            'Можешь перейти на его ',
+            h(
+              NuxtLink,
+              {
+                to: {
+                  name: 'species-url',
+                  params: {
+                    url: form.value.url,
+                  },
+                },
+                target: '_blank',
+              },
+              'страницу',
+            ),
+          ]),
+        onClose: () => navigateTo({ name: 'workshop-species' }),
+      });
+    } catch (err) {
       isCreating.value = false;
     }
   }
@@ -127,6 +157,7 @@
       ref="formRef"
       layout="vertical"
       :model="form"
+      :disabled="isCreated"
     >
       <ADivider orientation="left">
         <ATypographyText
@@ -427,6 +458,7 @@
 
     <EditorActions
       :is-submitting="isCreating"
+      :disabled="isCreated"
       :submit
     />
   </PageContainer>
