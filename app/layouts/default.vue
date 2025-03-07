@@ -1,26 +1,14 @@
 <template>
-  <AFlex :class="$style.container">
-    <div :class="$style.wrapper">
-      <slot />
-    </div>
-  </AFlex>
+  <div :class="$style.container">
+    <slot />
+  </div>
 </template>
 
 <style module lang="scss">
   .container {
-    position: relative;
+    display: flex;
+    flex-direction: column;
     width: 100%;
     min-height: 100vh;
-  }
-
-  .wrapper {
-    width: 100%;
-    max-width: var(--max-content);
-    min-height: 100%;
-    padding: 0 24px 0 24px;
-
-    @include media-min($xxl) {
-      margin: 0 auto 24px;
-    }
   }
 </style>

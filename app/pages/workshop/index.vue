@@ -1,21 +1,22 @@
 <script setup lang="ts">
-  import { PageHeader } from '~/shared/ui';
+  import { PageContainer, PageHeader } from '~/shared/ui';
   import { SectionSpecies, SectionSpells } from '~/features/workshop';
 </script>
 
 <template>
-  <AFlex
-    :gap="16"
-    vertical
-  >
-    <PageHeader title="Мастерская" />
+  <PageContainer>
+    <template #header>
+      <PageHeader title="Мастерская" />
+    </template>
 
-    <div :class="$style.workshop">
-      <SectionSpecies />
+    <template #default>
+      <div :class="$style.workshop">
+        <SectionSpecies />
 
-      <SectionSpells />
-    </div>
-  </AFlex>
+        <SectionSpells />
+      </div>
+    </template>
+  </PageContainer>
 </template>
 
 <style module lang="scss">

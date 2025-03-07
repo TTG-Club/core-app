@@ -15,59 +15,63 @@
 
 <template>
   <PageContainer>
-    <PageHeader title="Профиль пользователя" />
+    <template #header>
+      <PageHeader title="Профиль пользователя" />
+    </template>
 
-    <AFlex
-      :gap="28"
-      align="flex-start"
-    >
+    <template #default>
       <AFlex
-        :gap="16"
-        :class="$style.left"
+        :gap="28"
+        align="flex-start"
       >
-        <div :class="$style.gallery">
-          <UiGallery preview="/img/no-img.webp" />
-        </div>
-      </AFlex>
-
-      <AFlex
-        :class="$style.right"
-        :gap="16"
-        vertical
-      >
-        <ACollapse
-          v-model:active-key="activeKeys"
-          :bordered="false"
-          expand-icon-position="end"
+        <AFlex
+          :gap="16"
+          :class="$style.left"
         >
-          <ACollapsePanel key="default">
-            <template #header>
-              <ATypographyTitle :level="5">
-                Основная информация
-              </ATypographyTitle>
-            </template>
+          <div :class="$style.gallery">
+            <UiGallery preview="/img/no-img.webp" />
+          </div>
+        </AFlex>
 
-            <template #default>
-              <ASkeleton :loading="!data">
-                <AFlex
-                  v-if="!!data"
-                  :gap="8"
-                  vertical
-                >
-                  <span>
-                    <strong>Имя пользователя: </strong>
+        <AFlex
+          :class="$style.right"
+          :gap="16"
+          vertical
+        >
+          <ACollapse
+            v-model:active-key="activeKeys"
+            :bordered="false"
+            expand-icon-position="end"
+          >
+            <ACollapsePanel key="default">
+              <template #header>
+                <ATypographyTitle :level="5">
+                  Основная информация
+                </ATypographyTitle>
+              </template>
 
+              <template #default>
+                <ASkeleton :loading="!data">
+                  <AFlex
+                    v-if="!!data"
+                    :gap="8"
+                    vertical
+                  >
                     <span>
-                      {{ data.username }}
+                      <strong>Имя пользователя: </strong>
+
+                      <span>
+                        {{ data.username }}
+                      </span>
                     </span>
-                  </span>
-                </AFlex>
-              </ASkeleton>
-            </template>
-          </ACollapsePanel>
-        </ACollapse>
+                  </AFlex>
+                </ASkeleton>
+              </template>
+            </ACollapsePanel>
+          </ACollapse>
+        </AFlex>
       </AFlex>
-    </AFlex>
+    </template>
   </PageContainer>
 </template>
 

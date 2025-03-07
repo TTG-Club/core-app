@@ -81,120 +81,124 @@
 
 <template>
   <PageContainer id="species-base">
-    <PageHeader
-      :title="species?.name.rus"
-      :subtitle="species?.name.eng"
-      :source="species?.source"
-      :date-time="species?.updatedAt"
-      copy-title
-    >
-      <template #actions>
-        <PageActions @close="navigateTo('/species')" />
-      </template>
-    </PageHeader>
-
-    <AFlex
-      v-if="species"
-      :class="$style.species"
-      :gap="28"
-    >
-      <AFlex
-        :class="$style.left"
-        :gap="16"
-        vertical
+    <template #header>
+      <PageHeader
+        :title="species?.name.rus"
+        :subtitle="species?.name.eng"
+        :source="species?.source"
+        :date-time="species?.updatedAt"
+        copy-title
       >
-        <div :class="$style.galleryImg">
-          <UiGallery
-            :preview="species.image || '/img/no-img.webp'"
-            :images="species.gallery"
-          />
+        <template #actions>
+          <PageActions @close="navigateTo('/species')" />
+        </template>
+      </PageHeader>
+    </template>
 
-          <div :class="$style.stats">
-            <ADivider
-              orientation="left"
-              :style="{ marginBottom: '4px' }"
-              :orientation-margin="16"
-            >
-              Особенности
-            </ADivider>
+    <template #default>
+      <AFlex
+        v-if="species"
+        :class="$style.species"
+        :gap="28"
+      >
+        <AFlex
+          :class="$style.left"
+          :gap="16"
+          vertical
+        >
+          <div :class="$style.galleryImg">
+            <UiGallery
+              :preview="species.image || '/img/no-img.webp'"
+              :images="species.gallery"
+            />
 
-            <div :class="$style.item">
-              <p>Тип:</p>
+            <div :class="$style.stats">
+              <ADivider
+                orientation="left"
+                :style="{ marginBottom: '4px' }"
+                :orientation-margin="16"
+              >
+                Особенности
+              </ADivider>
 
-              <ATypographyText
-                :class="$style.value"
-                :content="species.properties.type"
-              />
-            </div>
+              <div :class="$style.item">
+                <p>Тип:</p>
 
-            <div :class="$style.item">
-              <p>Размер:</p>
+                <ATypographyText
+                  :class="$style.value"
+                  :content="species.properties.type"
+                />
+              </div>
 
-              <ATypographyText
-                :class="$style.value"
-                :content="species.properties.size"
-              />
-            </div>
+              <div :class="$style.item">
+                <p>Размер:</p>
 
-            <div :class="$style.item">
-              <p>Скорость:</p>
+                <ATypographyText
+                  :class="$style.value"
+                  :content="species.properties.size"
+                />
+              </div>
 
-              <ATypographyText
-                :class="$style.value"
-                :content="species.properties.speed"
-              />
+              <div :class="$style.item">
+                <p>Скорость:</p>
+
+                <ATypographyText
+                  :class="$style.value"
+                  :content="species.properties.speed"
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        <AButton
-          v-if="species.hasLineages"
-          type="primary"
-          @click.left.exact.prevent="showRelated = true"
-        >
-          Происхождения
-        </AButton>
-
-        <ClientOnly>
-          <SpeciesLineagesDrawer
+          <AButton
             v-if="species.hasLineages"
-            v-model="showRelated"
-            :url="species.url"
-          />
-        </ClientOnly>
+            type="primary"
+            @click.left.exact.prevent="showRelated = true"
+          >
+            Происхождения
+          </AButton>
 
-        <AAnchor
-          :items="anchors"
-          :offset-top="24"
-          :bounds="24"
+          <ClientOnly>
+            <SpeciesLineagesDrawer
+              v-if="species.hasLineages"
+              v-model="showRelated"
+              :url="species.url"
+            />
+          </ClientOnly>
+
+          <AAnchor
+            :items="anchors"
+            :offset-top="24"
+            :bounds="24"
+          />
+        </AFlex>
+
+        <SpeciesBody
+          :class="$style.right"
+          :species="species"
         />
       </AFlex>
 
-      <SpeciesBody
-        :class="$style.right"
-        :species="species"
-      />
-    </AFlex>
+      <AResult
+        v-else
+        :sub-title="error"
+        status="error"
+        title="Ошибка"
+      >
+        <template #extra>
+          <AButton
+            type="primary"
+            @click.left.exact.prevent="refresh()"
+          >
+            Обновить
+          </AButton>
 
-    <AResult
-      v-else
-      :sub-title="error"
-      status="error"
-      title="Ошибка"
-    >
-      <template #extra>
-        <AButton
-          type="primary"
-          @click.left.exact.prevent="refresh()"
-        >
-          Обновить
-        </AButton>
-
-        <AButton @click.left.exact.prevent="navigateTo('/species')">
-          Вернуться в список
-        </AButton>
-      </template>
-    </AResult>
+          <AButton @click.left.exact.prevent="navigateTo('/species')">
+            Вернуться в список
+          </AButton>
+        </template>
+      </AResult>
+    </template>
   </PageContainer>
 </template>
 

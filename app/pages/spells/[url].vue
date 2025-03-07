@@ -45,27 +45,31 @@
 
 <template>
   <PageContainer>
-    <PageHeader
-      :title="spell?.name.rus"
-      :subtitle="spell?.name.eng"
-      :source="spell?.source"
-      :date-time="spell?.updatedAt"
-      copy-title
-    >
-      <template #actions>
-        <PageActions @close="navigateTo({ name: 'spells' })" />
-      </template>
-    </PageHeader>
+    <template #header>
+      <PageHeader
+        :title="spell?.name.rus"
+        :subtitle="spell?.name.eng"
+        :source="spell?.source"
+        :date-time="spell?.updatedAt"
+        copy-title
+      >
+        <template #actions>
+          <PageActions @close="navigateTo({ name: 'spells' })" />
+        </template>
+      </PageHeader>
+    </template>
 
-    <SpellBody
-      v-if="spell"
-      :spell
-    />
+    <template #default>
+      <SpellBody
+        v-if="spell"
+        :spell
+      />
 
-    <ASkeleton
-      v-else
-      :title="false"
-      :paragraph="{ rows: 4 }"
-    />
+      <ASkeleton
+        v-else
+        :title="false"
+        :paragraph="{ rows: 4 }"
+      />
+    </template>
   </PageContainer>
 </template>
