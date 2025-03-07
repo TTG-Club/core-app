@@ -29,7 +29,11 @@
 <template>
   <CopyButton :url="urlForCopy" />
 
-  <ATooltip title="Закладка">
+  <ATooltip
+    title="Закладка"
+    :mouse-enter-delay="0.7"
+    destroy-tooltip-on-hide
+  >
     <AButton
       disabled
       type="text"
@@ -40,7 +44,11 @@
     </AButton>
   </ATooltip>
 
-  <ATooltip title="Открыть окно печати">
+  <ATooltip
+    title="Открыть окно печати"
+    :mouse-enter-delay="0.7"
+    destroy-tooltip-on-hide
+  >
     <AButton
       disabled
       type="text"
@@ -52,7 +60,11 @@
     </AButton>
   </ATooltip>
 
-  <ATooltip title="Закрыть">
+  <ATooltip
+    title="Закрыть"
+    :mouse-enter-delay="0.7"
+    destroy-tooltip-on-hide
+  >
     <AButton
       type="text"
       @click.left.exact.prevent="$emit('close')"

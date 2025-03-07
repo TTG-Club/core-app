@@ -9,10 +9,7 @@
     {{ description }}
   </div>
 
-  <div
-    v-if="upper"
-    :style="{ whiteSpace: 'pre-wrap' }"
-  >
+  <div v-if="upper">
     <strong v-if="!level">Улучшение заговора. </strong>
 
     <strong
@@ -22,6 +19,6 @@
       Накладывание более высокой ячейкой.
     </strong>
 
-    <span>{{ upper }}</span>
+    <span :style="{ whiteSpace: 'pre-wrap' }">{{ upper }}</span>
   </div>
 </template>

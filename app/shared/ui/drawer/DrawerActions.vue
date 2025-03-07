@@ -18,7 +18,11 @@
       size="small"
     />
 
-    <ATooltip title="Закладка">
+    <ATooltip
+      title="Закладка"
+      :mouse-enter-delay="0.7"
+      destroy-tooltip-on-hide
+    >
       <AButton
         size="small"
         type="text"

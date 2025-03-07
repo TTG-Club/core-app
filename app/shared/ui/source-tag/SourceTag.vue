@@ -1,8 +1,10 @@
 <script setup lang="ts">
   import type { SourceResponse } from '~/shared/types';
+  import type { TooltipPlacement } from 'ant-design-vue/es/tooltip';
 
   defineProps<{
     source: SourceResponse;
+    placement?: TooltipPlacement;
   }>();
 </script>
 
@@ -10,8 +12,10 @@
   <AFlex :gap="8">
     <ATooltip
       :title="source.group.rus"
-      placement="bottomRight"
+      :mouse-enter-delay="0.7"
+      :placement="placement"
       arrow-point-at-center
+      destroy-tooltip-on-hide
     >
       <ATag :style="{ marginInlineEnd: 0 }">
         {{ source.group.label }}
@@ -20,8 +24,10 @@
 
     <ATooltip
       :title="`${source.name.rus} [${source.name.eng}]`"
-      placement="bottomRight"
+      :mouse-enter-delay="0.7"
+      :placement="placement"
       arrow-point-at-center
+      destroy-tooltip-on-hide
     >
       <ATag
         :color="`var(--color-badge-${source.group.label.toLowerCase()})`"

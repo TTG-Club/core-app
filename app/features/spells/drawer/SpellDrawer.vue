@@ -81,7 +81,10 @@
             :url="urlForCopy"
           />
 
-          <SourceTag :source="spell.source" />
+          <SourceTag
+            :source="spell.source"
+            placement="bottomRight"
+          />
         </AFlex>
       </template>
 

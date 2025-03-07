@@ -25,8 +25,10 @@
     SpellDurations,
     SpellComponents,
   } from './ui';
+  import { NuxtLink } from '#components';
 
   const siteConfig = useSiteConfig();
+  const { notification } = App.useApp();
 
   const formRef = useTemplateRef<FormInstance>('formRef');
 
@@ -80,6 +82,7 @@
   };
 
   const isCreating = ref(false);
+  const isCreated = ref(false);
 
   const submit = async () => {
     isCreating.value = true;
@@ -87,7 +90,7 @@
     try {
       const payload = await formRef.value?.validate();
 
-      await $fetch('/api/v2/spells', {
+      await $fetch<string>('/api/v2/spells', {
         method: 'POST',
         body: payload,
         onRequestError: () => {
@@ -102,7 +105,31 @@
           });
         },
       });
-    } finally {
+
+      // isCreated.value = true; // TODO: вернуть в будущем
+
+      notification.success({
+        message: 'Заклинание успешно создано',
+        description: () =>
+          h('span', [
+            'Можешь перейти на его ',
+            h(
+              NuxtLink,
+              {
+                to: {
+                  name: 'spells-url',
+                  params: {
+                    url: form.value.url,
+                  },
+                },
+                target: '_blank',
+              },
+              () => 'страницу',
+            ),
+          ]),
+        // onClose: () => navigateTo({ name: 'workshop-spells' }), // TODO: вернуть в будущем
+      });
+    } catch (err) {
       isCreating.value = false;
     }
   };
@@ -112,7 +139,11 @@
   <PageContainer>
     <PageHeader title="Создание нового заклинания">
       <template #actions>
-        <ATooltip title="Закрыть">
+        <ATooltip
+          title="Закрыть"
+          :mouse-enter-delay="0.7"
+          destroy-tooltip-on-hide
+        >
           <AButton
             type="text"
             @click.left.exact.prevent="navigateTo('/workshop/spells')"
@@ -129,6 +160,7 @@
       ref="formRef"
       layout="vertical"
       :model="form"
+      :disabled="isCreating"
     >
       <ADivider orientation="left">
         <ATypographyText
@@ -376,6 +408,7 @@
 
     <EditorActions
       :is-submitting="isCreating"
+      :disabled="isCreated"
       :submit
     />
   </PageContainer>
