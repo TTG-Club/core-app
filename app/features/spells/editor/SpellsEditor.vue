@@ -131,6 +131,8 @@
       });
     } catch (err) {
       isCreating.value = false;
+    } finally {
+      isCreating.value = false; // TODO: удалить в будущем
     }
   };
 </script>
