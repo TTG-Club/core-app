@@ -9,35 +9,17 @@
     :class="$style.components"
     :gap="4"
   >
-    <ATooltip
-      :mouse-enter-delay="0.7"
-      title="Вербальный компонент"
-      destroy-tooltip-on-hide
-    >
-      <span :class="$style.component">
-        {{ components.v ? 'В' : '·' }}
-      </span>
-    </ATooltip>
+    <span :class="$style.component">
+      {{ components.v ? 'В' : '·' }}
+    </span>
 
-    <ATooltip
-      :mouse-enter-delay="0.7"
-      title="Соматический компонент"
-      destroy-tooltip-on-hide
-    >
-      <span :class="$style.component">
-        {{ components.s ? 'С' : '·' }}
-      </span>
-    </ATooltip>
+    <span :class="$style.component">
+      {{ components.s ? 'С' : '·' }}
+    </span>
 
-    <ATooltip
-      :mouse-enter-delay="0.7"
-      title="Материальный компонент"
-      destroy-tooltip-on-hide
-    >
-      <span :class="$style.component">
-        {{ components.m ? 'М' : '·' }}
-      </span>
-    </ATooltip>
+    <span :class="$style.component">
+      {{ components.m ? 'М' : '·' }}
+    </span>
   </AFlex>
 </template>
 

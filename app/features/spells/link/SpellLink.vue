@@ -32,10 +32,6 @@
     },
   }));
 
-  const levelTooltip = computed(() =>
-    props.spell.level ? undefined : 'Заговор',
-  );
-
   function openSpell() {
     if (isDrawerEnabled.value) {
       isDrawerVisible.value = true;
@@ -59,13 +55,7 @@
     >
       <SmallLink :group="spell.source.group">
         <template #icon>
-          <ATooltip
-            :title="levelTooltip"
-            :mouse-enter-delay="0.7"
-            destroy-tooltip-on-hide
-          >
-            {{ spell.level || '◐' }}
-          </ATooltip>
+          {{ spell.level || '◐' }}
         </template>
 
         <template #default>
@@ -90,10 +80,12 @@
         </template>
       </SmallLink>
 
-      <SpellDrawer
-        v-model="isDrawerVisible"
-        :url="spell.url"
-      />
+      <ClientOnly>
+        <SpellDrawer
+          v-model="isDrawerVisible"
+          :url="spell.url"
+        />
+      </ClientOnly>
     </a>
   </NuxtLink>
 </template>

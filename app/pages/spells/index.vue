@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { SpellLink } from '~/features/spells';
+  import { SpellLegend, SpellLink } from '~/features/spells';
   import {
     PageContainer,
     PageGrid,
@@ -61,6 +61,10 @@
           allow-clear
           @change="onSearch"
         />
+      </template>
+
+      <template #legend>
+        <SpellLegend />
       </template>
     </PageHeader>
 
