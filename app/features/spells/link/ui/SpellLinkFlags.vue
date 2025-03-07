@@ -6,22 +6,18 @@
 
 <template>
   <AFlex :gap="4">
-    <ATooltip
+    <ATag
       v-if="concentration"
-      :mouse-enter-delay="0.7"
-      title="Концентрация"
-      destroy-tooltip-on-hide
+      :style="{ margin: 0 }"
     >
-      <ATag :style="{ margin: 0 }">К</ATag>
-    </ATooltip>
+      К
+    </ATag>
 
-    <ATooltip
+    <ATag
       v-if="ritual"
-      :mouse-enter-delay="0.7"
-      title="Ритуал"
-      destroy-tooltip-on-hide
+      :style="{ margin: 0 }"
     >
-      <ATag :style="{ margin: 0 }">Р</ATag>
-    </ATooltip>
+      Р
+    </ATag>
   </AFlex>
 </template>

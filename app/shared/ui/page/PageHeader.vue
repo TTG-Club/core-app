@@ -137,6 +137,15 @@
       >
         <slot name="filter" />
       </AFlex>
+
+      <AFlex
+        v-if="$slots.legend"
+        justify="flex-end"
+        align="center"
+        gap="8"
+      >
+        <slot name="legend" />
+      </AFlex>
     </ClientOnly>
   </AFlex>
 </template>

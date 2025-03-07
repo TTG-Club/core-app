@@ -2,6 +2,7 @@
   import type { SpeciesLinkResponse } from '~/shared/types';
   import { PageGrid, PageHeader } from '~/shared/ui';
   import { SpeciesLink } from '~/features/species';
+  import { SpeciesLegend } from '~/features/species/legend';
 
   useSeoMeta({
     title: 'Виды (Species)',
@@ -49,6 +50,10 @@
           allow-clear
           @change="onSearch"
         />
+      </template>
+
+      <template #legend>
+        <SpeciesLegend />
       </template>
     </PageHeader>
 

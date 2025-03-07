@@ -23,18 +23,10 @@
 </script>
 
 <template>
-  <ATooltip
-    :title="group.rus"
-    :mouse-enter-delay="0.7"
-    :placement="placement"
-    arrow-point-at-center
-    destroy-tooltip-on-hide
+  <ATag
+    :style="{ marginInlineEnd: 0 }"
+    :color="tagColor"
   >
-    <ATag
-      :style="{ marginInlineEnd: 0 }"
-      :color="tagColor"
-    >
-      {{ group.label }}
-    </ATag>
-  </ATooltip>
+    {{ group.label }}
+  </ATag>
 </template>
