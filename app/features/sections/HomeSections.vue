@@ -86,7 +86,7 @@
     }
 
     .name {
-      z-index: 1;
+      z-index: 10;
       font-weight: 600;
       color: var(--color-text);
     }

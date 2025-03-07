@@ -28,8 +28,12 @@
 
   .header {
     pointer-events: none;
+
+    z-index: 10;
+
     width: 100%;
     padding-bottom: 16px;
+
     background: linear-gradient(
       180deg,
       var(--color-bg-main) 0,
