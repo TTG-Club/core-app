@@ -8,6 +8,8 @@
 
 <template>
   <PageContainer>
-    <PageHeader title="Личный кабинет" />
+    <template #header>
+      <PageHeader title="Личный кабинет" />
+    </template>
   </PageContainer>
 </template>

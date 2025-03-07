@@ -44,93 +44,97 @@
 </script>
 
 <template>
-  <PageContainer>
-    <PageHeader title="Заклинания">
-      <template #filter>
-        <AButton
-          :style="{ boxShadow: 'none' }"
-          type="primary"
-          disabled
+  <PageContainer fixed-header>
+    <template #header>
+      <PageHeader title="Заклинания">
+        <template #filter>
+          <AButton
+            :style="{ boxShadow: 'none' }"
+            type="primary"
+            disabled
+          >
+            Фильтры
+          </AButton>
+
+          <AInput
+            v-model:value="search"
+            placeholder="Введите текст..."
+            allow-clear
+            @change="onSearch"
+          />
+        </template>
+
+        <template #legend>
+          <SpellLegend />
+        </template>
+      </PageHeader>
+    </template>
+
+    <template #default>
+      <Transition
+        name="fade"
+        mode="out-in"
+      >
+        <PageGrid
+          v-if="status !== 'success' && status !== 'error'"
+          :columns
         >
-          Фильтры
-        </AButton>
+          <SmallLinkSkeleton
+            v-for="uuid in skeletonItems"
+            :key="uuid"
+          />
+        </PageGrid>
 
-        <AInput
-          v-model:value="search"
-          placeholder="Введите текст..."
-          allow-clear
-          @change="onSearch"
-        />
-      </template>
+        <PageGrid
+          v-else-if="status === 'success' && spells?.length"
+          :columns
+        >
+          <SpellLink
+            v-for="spell in spells"
+            :key="spell.url"
+            :spell="spell"
+          />
+        </PageGrid>
 
-      <template #legend>
-        <SpellLegend />
-      </template>
-    </PageHeader>
+        <AResult
+          v-else-if="status === 'success' && !spells?.length"
+          title="Ничего не нашлось"
+          sub-title="По вашему запросу ничего не нашлось. Попробуйте изменить фильтр или строку поиска"
+        >
+          <template #extra>
+            <AButton
+              type="primary"
+              @click.left.exact.prevent="refresh()"
+            >
+              Обновить
+            </AButton>
 
-    <Transition
-      name="fade"
-      mode="out-in"
-    >
-      <PageGrid
-        v-if="status !== 'success' && status !== 'error'"
-        :columns
-      >
-        <SmallLinkSkeleton
-          v-for="uuid in skeletonItems"
-          :key="uuid"
-        />
-      </PageGrid>
+            <AButton @click.left.exact.prevent="navigateTo('/')">
+              Вернуться на главную
+            </AButton>
+          </template>
+        </AResult>
 
-      <PageGrid
-        v-else-if="status === 'success' && spells?.length"
-        :columns
-      >
-        <SpellLink
-          v-for="spell in spells"
-          :key="spell.url"
-          :spell="spell"
-        />
-      </PageGrid>
+        <AResult
+          v-else-if="status === 'error'"
+          :sub-title="error"
+          status="error"
+          title="Ошибка"
+        >
+          <template #extra>
+            <AButton
+              type="primary"
+              @click.left.exact.prevent="refresh()"
+            >
+              Обновить
+            </AButton>
 
-      <AResult
-        v-else-if="status === 'success' && !spells?.length"
-        title="Ничего не нашлось"
-        sub-title="По вашему запросу ничего не нашлось. Попробуйте изменить фильтр или строку поиска"
-      >
-        <template #extra>
-          <AButton
-            type="primary"
-            @click.left.exact.prevent="refresh()"
-          >
-            Обновить
-          </AButton>
-
-          <AButton @click.left.exact.prevent="navigateTo('/')">
-            Вернуться на главную
-          </AButton>
-        </template>
-      </AResult>
-
-      <AResult
-        v-else-if="status === 'error'"
-        :sub-title="error"
-        status="error"
-        title="Ошибка"
-      >
-        <template #extra>
-          <AButton
-            type="primary"
-            @click.left.exact.prevent="refresh()"
-          >
-            Обновить
-          </AButton>
-
-          <AButton @click.left.exact.prevent="navigateTo('/')">
-            Вернуться на главную
-          </AButton>
-        </template>
-      </AResult>
-    </Transition>
+            <AButton @click.left.exact.prevent="navigateTo('/')">
+              Вернуться на главную
+            </AButton>
+          </template>
+        </AResult>
+      </Transition>
+    </template>
   </PageContainer>
 </template>

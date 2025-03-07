@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { SearchPanel } from '~/features/search';
   import { HomeSections } from '~/features/sections';
+  import { PageContainer } from '~/shared/ui';
 
   definePageMeta({
     layout: 'default',
@@ -10,7 +11,7 @@
 </script>
 
 <template>
-  <div :class="$style.bodyContent">
+  <PageContainer>
     <h1 :class="$style.siteName">
       {{ name }}
     </h1>
@@ -31,7 +32,7 @@
         src="https://s3.timeweb.cloud/1f63c517-f215af24-4c0a-4ac8-aba5-c6a08af65777/roadmap.webp"
       />
     </AFlex>
-  </div>
+  </PageContainer>
 </template>
 
 <style module>
@@ -44,11 +45,6 @@
     line-height: 0;
 
     opacity: 0;
-  }
-
-  .bodyContent {
-    width: 100%;
-    max-width: var(--max-content);
   }
 
   .roadmap {
