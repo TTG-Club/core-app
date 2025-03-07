@@ -8,11 +8,24 @@
     description: 'Виды и происхождения персонажей по D&D 2024 редакции',
   });
 
+  const search = ref<string>('');
+
   const { data, status, error, refresh } = await useAsyncData('species', () =>
     $fetch<Array<SpeciesLinkResponse>>('/api/v2/species/search', {
       method: 'post',
+      query: {
+        search: search.value,
+      },
     }),
   );
+
+  const onSearch = useDebounceFn(() => {
+    if (search.value && search.value.length < 3) {
+      return;
+    }
+
+    refresh();
+  }, 1000);
 </script>
 
 <template>
@@ -31,9 +44,10 @@
         </AButton>
 
         <AInput
+          v-model:value="search"
           placeholder="Введите текст..."
           allow-clear
-          disabled
+          @change="onSearch"
         />
       </template>
     </PageHeader>
