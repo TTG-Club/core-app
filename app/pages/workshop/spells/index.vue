@@ -16,7 +16,11 @@
         </template>
       </AButton>
 
-      <ATooltip title="Вернуться в мастерскую">
+      <ATooltip
+        title="Вернуться в мастерскую"
+        :mouse-enter-delay="0.7"
+        destroy-tooltip-on-hide
+      >
         <AButton
           type="text"
           @click.left.exact.prevent="navigateTo('/workshop')"

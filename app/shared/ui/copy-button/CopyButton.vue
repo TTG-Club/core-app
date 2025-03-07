@@ -17,6 +17,7 @@
     v-if="url"
     :mouse-enter-delay="0.7"
     title="Скопировать ссылку"
+    destroy-tooltip-on-hide
   >
     <AButton
       :disabled

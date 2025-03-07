@@ -121,7 +121,10 @@
           />
 
           <template v-if="source">
-            <SourceTag :source="source" />
+            <SourceTag
+              :source="source"
+              placement="bottomRight"
+            />
           </template>
         </AFlex>
       </AFlex>

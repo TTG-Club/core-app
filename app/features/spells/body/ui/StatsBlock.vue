@@ -37,6 +37,7 @@
         v-if="components.v"
         :title="COMPONENT_TOOLTIP_TEXT.v"
         :mouse-enter-delay="0.7"
+        destroy-tooltip-on-hide
       >
         <span>Вербальный</span>
 
@@ -47,6 +48,7 @@
         v-if="components.s"
         :title="COMPONENT_TOOLTIP_TEXT.s"
         :mouse-enter-delay="0.7"
+        destroy-tooltip-on-hide
       >
         <span>Соматический</span>
 
@@ -57,6 +59,7 @@
         v-if="components.m"
         :title="COMPONENT_TOOLTIP_TEXT.m"
         :mouse-enter-delay="0.7"
+        destroy-tooltip-on-hide
       >
         <span>Материальный ({{ components.m }})</span>
       </ATooltip>

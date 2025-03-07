@@ -139,7 +139,11 @@
   <PageContainer>
     <PageHeader title="Создание нового заклинания">
       <template #actions>
-        <ATooltip title="Закрыть">
+        <ATooltip
+          title="Закрыть"
+          :mouse-enter-delay="0.7"
+          destroy-tooltip-on-hide
+        >
           <AButton
             type="text"
             @click.left.exact.prevent="navigateTo('/workshop/spells')"

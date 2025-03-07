@@ -1,8 +1,10 @@
 <script setup lang="ts">
   import type { SourceResponse } from '~/shared/types';
+  import type { TooltipPlacement } from 'ant-design-vue/es/tooltip';
 
   defineProps<{
     source: SourceResponse;
+    placement?: TooltipPlacement;
   }>();
 </script>
 
@@ -11,7 +13,7 @@
     <ATooltip
       :title="source.group.rus"
       :mouse-enter-delay="0.7"
-      placement="bottomRight"
+      :placement="placement"
       arrow-point-at-center
       destroy-tooltip-on-hide
     >
@@ -23,7 +25,7 @@
     <ATooltip
       :title="`${source.name.rus} [${source.name.eng}]`"
       :mouse-enter-delay="0.7"
-      placement="bottomRight"
+      :placement="placement"
       arrow-point-at-center
       destroy-tooltip-on-hide
     >

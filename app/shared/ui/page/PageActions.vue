@@ -32,6 +32,7 @@
   <ATooltip
     title="Закладка"
     :mouse-enter-delay="0.7"
+    destroy-tooltip-on-hide
   >
     <AButton
       disabled
@@ -46,6 +47,7 @@
   <ATooltip
     title="Открыть окно печати"
     :mouse-enter-delay="0.7"
+    destroy-tooltip-on-hide
   >
     <AButton
       disabled
@@ -61,6 +63,7 @@
   <ATooltip
     title="Закрыть"
     :mouse-enter-delay="0.7"
+    destroy-tooltip-on-hide
   >
     <AButton
       type="text"
