@@ -106,7 +106,7 @@
         },
       });
 
-      isCreated.value = true;
+      // isCreated.value = true; // TODO: вернуть в будущем
 
       notification.success({
         message: 'Заклинание успешно создано',
@@ -127,7 +127,7 @@
               () => 'страницу',
             ),
           ]),
-        onClose: () => navigateTo({ name: 'workshop-spells' }),
+        // onClose: () => navigateTo({ name: 'workshop-spells' }), // TODO: вернуть в будущем
       });
     } catch (err) {
       isCreating.value = false;

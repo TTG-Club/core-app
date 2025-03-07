@@ -104,7 +104,7 @@
         },
       });
 
-      isCreated.value = true;
+      // isCreated.value = true; // TODO: вернуть в будущем
 
       notification.success({
         message: () =>
@@ -128,7 +128,7 @@
               () => 'страницу',
             ),
           ]),
-        onClose: () => navigateTo({ name: 'workshop-species' }),
+        // onClose: () => navigateTo({ name: 'workshop-species' }), // TODO: вернуть в будущем
       });
     } catch (err) {
       isCreating.value = false;
