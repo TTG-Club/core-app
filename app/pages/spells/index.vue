@@ -23,8 +23,8 @@
   } = await useAsyncData('spells', () =>
     $fetch<Array<SpellLinkResponse>>('/api/v2/spells/search', {
       method: 'POST',
-      query: {
-        search: search.value,
+      params: {
+        query: search.value || undefined,
       },
     }),
   );

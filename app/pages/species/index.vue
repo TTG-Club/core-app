@@ -13,8 +13,8 @@
   const { data, status, error, refresh } = await useAsyncData('species', () =>
     $fetch<Array<SpeciesLinkResponse>>('/api/v2/species/search', {
       method: 'post',
-      query: {
-        search: search.value,
+      params: {
+        query: search.value || undefined,
       },
     }),
   );
