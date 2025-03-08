@@ -53,7 +53,11 @@
       width: 100%;
       max-width: var(--max-content);
       margin: 0 auto;
-      padding: 0 24px;
+      padding: 0 16px;
+
+      @include media-min($lg) {
+        padding: 0 24px;
+      }
     }
   }
 
@@ -65,6 +69,10 @@
     width: 100%;
     max-width: var(--max-content);
     margin: 0 auto;
-    padding: 0 24px 24px 24px;
+    padding: 0 16px 16px 16px;
+
+    @include media-min($lg) {
+      padding: 0 24px 24px 24px;
+    }
   }
 </style>

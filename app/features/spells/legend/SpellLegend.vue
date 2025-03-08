@@ -12,6 +12,13 @@
   <span>Легенда:</span>
 
   <ATooltip
+    title="Заговор"
+    v-bind="TOOLTIP_CONFIG"
+  >
+    <ATag :class="$style.tag">◐</ATag>
+  </ATooltip>
+
+  <ATooltip
     title="Концентрация"
     v-bind="TOOLTIP_CONFIG"
   >
@@ -26,31 +33,10 @@
   </ATooltip>
 
   <ATooltip
-    title="Вербальный компонент"
+    title="Вербальный компонент, Соматический компонент, Материальный компонент"
     v-bind="TOOLTIP_CONFIG"
   >
-    <ATag :class="$style.tag">В</ATag>
-  </ATooltip>
-
-  <ATooltip
-    title="Соматический компонент"
-    v-bind="TOOLTIP_CONFIG"
-  >
-    <ATag :class="$style.tag">С</ATag>
-  </ATooltip>
-
-  <ATooltip
-    title="Материальный компонент"
-    v-bind="TOOLTIP_CONFIG"
-  >
-    <ATag :class="$style.tag">М</ATag>
-  </ATooltip>
-
-  <ATooltip
-    title="Заговор"
-    v-bind="TOOLTIP_CONFIG"
-  >
-    <ATag :class="$style.tag">◐</ATag>
+    <ATag :class="$style.tag"> В С М </ATag>
   </ATooltip>
 
   <ATooltip

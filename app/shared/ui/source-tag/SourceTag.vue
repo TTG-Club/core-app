@@ -9,7 +9,7 @@
 </script>
 
 <template>
-  <AFlex :gap="8">
+  <AFlex :gap="4">
     <ATooltip
       :title="source.group.rus"
       :mouse-enter-delay="0.7"

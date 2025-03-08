@@ -49,86 +49,65 @@
 </script>
 
 <template>
-  <AFlex
-    :gap="16"
-    vertical
-  >
-    <AFlex
-      justify="space-between"
-      :style="{ paddingTop: '32px' }"
-    >
-      <AFlex
-        justify="center"
-        flex="1"
-        vertical
+  <div :class="$style.header">
+    <div :class="$style.row">
+      <h2
+        v-if="title"
+        :class="[$style.title, { [$style.copy]: copyTitle }]"
+        @click.left.exact.prevent="handleCopy(title)"
       >
-        <ATypographyTitle
-          v-if="title"
-          :style="{
-            cursor: copyTitle ? 'pointer' : 'default',
-            lineHeight: '32px',
-          }"
-          :content="title"
-          :level="2"
-          data-allow-mismatch
-          ellipsis
-          @click.left.exact.prevent="handleCopy(title)"
-        />
+        {{ title }}
+      </h2>
 
-        <ASkeleton
-          v-else
-          :paragraph="{ rows: 1 }"
-          :title="false"
-          data-allow-mismatch
-        />
+      <ASkeleton
+        v-else
+        :paragraph="{ rows: 1 }"
+        :title="false"
+        data-allow-mismatch
+      />
 
-        <ATypographyText
-          v-if="subtitle"
-          data-allow-mismatch
-          :content="subtitle"
-          type="secondary"
-          :style="{ cursor: copyTitle ? 'pointer' : 'default' }"
-          ellipsis
-          @click.left.exact.prevent="handleCopy(subtitle)"
-        />
-      </AFlex>
-
-      <AFlex
-        v-if="$slots.actions || source || formattedDateTime"
-        :gap="4"
-        align="flex-end"
-        vertical
-      >
-        <ClientOnly>
-          <AFlex
-            v-if="$slots.actions"
-            :gap="4"
-          >
-            <slot name="actions" />
-          </AFlex>
-        </ClientOnly>
-
+      <ClientOnly>
         <AFlex
-          v-if="source || formattedDateTime"
-          :gap="8"
+          v-if="$slots.actions"
+          :class="$style.actions"
+          :gap="4"
         >
-          <ATypographyText
-            v-if="formattedDateTime"
-            data-allow-mismatch
-            :content="formattedDateTime"
-            ellipsis
-            type="secondary"
-          />
-
-          <template v-if="source">
-            <SourceTag
-              :source="source"
-              placement="bottomRight"
-            />
-          </template>
+          <slot name="actions" />
         </AFlex>
+      </ClientOnly>
+    </div>
+
+    <div
+      v-if="subtitle || source || formattedDateTime"
+      :class="$style.row"
+    >
+      <span
+        v-if="subtitle"
+        :class="[$style.subtitle, { [$style.copy]: copyTitle }]"
+        @click.left.exact.prevent="handleCopy(subtitle)"
+      >
+        {{ subtitle }}
+      </span>
+
+      <AFlex
+        v-if="source || formattedDateTime"
+        :class="$style.info"
+        :gap="4"
+      >
+        <template v-if="formattedDateTime">
+          <span :class="$style.time">
+            {{ formattedDateTime }}
+          </span>
+        </template>
+
+        <template v-if="source">
+          <SourceTag
+            :source="source"
+            placement="bottomRight"
+          />
+        </template>
       </AFlex>
-    </AFlex>
+    </div>
 
     <ClientOnly>
       <AFlex
@@ -147,5 +126,76 @@
         <slot name="legend" />
       </AFlex>
     </ClientOnly>
-  </AFlex>
+  </div>
 </template>
+
+<style module lang="scss">
+  .header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 16px;
+
+    @include media-min($lg) {
+      gap: 16px;
+      padding-top: 32px;
+    }
+  }
+
+  .row {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .title {
+    overflow: hidden;
+    display: inline-block;
+
+    width: 100%;
+    margin: 0;
+
+    font-size: 24px;
+    line-height: 32px;
+    color: var(--color-text-title);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    @include media-min($lg) {
+      font-size: 28px;
+    }
+  }
+
+  .subtitle {
+    overflow: hidden;
+    display: inline-block;
+
+    width: 100%;
+
+    color: var(--color-text-gray);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .title,
+  .subtitle {
+    &.copy {
+      cursor: pointer;
+    }
+  }
+
+  .actions,
+  .info {
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .time {
+    display: none;
+    color: var(--color-text-gray);
+
+    @include media-min($lg) {
+      display: block;
+    }
+  }
+</style>
