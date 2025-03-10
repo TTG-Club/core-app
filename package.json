@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "pnpx nuxi dev --host",
+    "dev": "pnpx nuxi dev --host --no-qr",
     "build": "pnpx nuxi build",
     "preview": "pnpx nuxi preview",
     "server": "node .output/server/index.mjs",

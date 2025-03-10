@@ -1,50 +1,34 @@
-import type { BasicColorMode } from '@vueuse/core';
-import type { ThemeConfig } from 'ant-design-vue/es/config-provider/context';
-import { theme } from 'ant-design-vue';
 import { ONE_DAY_IN_SECONDS, THEME_STORE_KEY } from '~~/shared/consts';
+import type { ColorMode, ComputedThemeConfig } from '~/shared/utils';
+import { getThemeConfig } from '~/shared/utils';
 
-export const useTheme = () => {
-  const stored = useCookie<BasicColorMode>(THEME_STORE_KEY, {
-    default: () => 'dark',
-    maxAge: ONE_DAY_IN_SECONDS * 365,
-  });
-
-  const { state } = useColorMode({
-    storageRef: stored,
-  });
-
-  const { next } = useCycleList<BasicColorMode>(['dark', 'light'], {
-    initialValue: stored,
-  });
-
-  const change = () => {
-    stored.value = next();
-  };
-
-  const { defaultAlgorithm, darkAlgorithm } = theme;
-
-  // Положение цветов светлая/темная тема
-  const themeConfig = computed<ThemeConfig>(() => ({
-    token: {
-      colorPrimary: state.value === 'light' ? '#5e5446' : '#447cc7',
-      colorBgElevated: state.value === 'light' ? '#F4F1EC' : '#152228',
-      colorBgContainer: state.value === 'light' ? '#e1e0dd' : '#24262E',
-      colorText: state.value === 'light' ? '#1F1E1E' : '#BFBFBF',
-      colorTextHeading: state.value === 'light' ? '#1F1E1E' : '#e5e5e5',
-      colorSuccess: '#67c23a',
-      colorWarning: '#e6a23c',
-      colorError: '#f56c6c',
-      colorInfo: '#5990ff',
-      colorBorder: state.value === 'light' ? '#00000014' : '#ffffff14',
-      wireframe: false,
-      fontFamily: '"Open Sans", sans-serif',
+export const useTheme = createSharedComposable(() => {
+  const { state: themeName, store } = useColorMode<ColorMode>({
+    storageKey: null,
+    modes: {
+      svifty7: 'svifty7',
     },
-    algorithm: state.value === 'light' ? defaultAlgorithm : darkAlgorithm,
-  }));
+    storageRef: useCookie<ColorMode | 'auto'>(THEME_STORE_KEY, {
+      maxAge: ONE_DAY_IN_SECONDS * 365,
+      default: () => 'auto',
+    }),
+  });
+
+  const themeConfig = computed<ComputedThemeConfig>(() =>
+    getThemeConfig(themeName.value),
+  );
+
+  const metaThemeColor = computed(() => themeConfig.value.token.colorBgLayout);
+
+  function change(name: ColorMode) {
+    store.value = name;
+  }
 
   return {
-    theme: state,
+    themeName,
     themeConfig,
+    metaThemeColor,
+
     change,
   };
-};
+});

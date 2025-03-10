@@ -1,24 +1,31 @@
 <script setup lang="ts">
   import { SvgIcon } from '~/shared/ui';
   import { useTheme } from '~/shared/composables';
+  import { SidebarPopover } from '../popover';
 
-  const { theme, change } = useTheme();
+  const { change } = useTheme();
 </script>
 
 <template>
-  <LazyATooltip placement="right">
-    <template #default>
+  <SidebarPopover popover-key="theme-switcher">
+    <template #trigger="{ toggle }">
       <AButton
         type="text"
         size="large"
-        @click.left.exact.prevent="change"
+        @click.left.exact.prevent="toggle"
       >
         <template #icon>
-          <SvgIcon :icon="`theme/${theme}`" />
+          <SvgIcon icon="dice/outline/d20" />
         </template>
       </AButton>
     </template>
 
-    <template #title> Переключить тему сайта </template>
-  </LazyATooltip>
+    <template #default>
+      <AFlex gap="8">
+        <AButton @click="change('light')"> light </AButton>
+
+        <AButton @click="change('dark')"> dark </AButton>
+      </AFlex>
+    </template>
+  </SidebarPopover>
 </template>

@@ -1,1 +1,1 @@
-export * as Dictionaries from './dictionaries';
+export * from './dictionaries';
