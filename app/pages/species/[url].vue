@@ -111,42 +111,42 @@
               :preview="species.image || '/img/no-img.webp'"
               :images="species.gallery"
             />
+          </div>
 
-            <div :class="$style.stats">
-              <ADivider
-                orientation="left"
-                :style="{ marginBottom: '4px' }"
-                :orientation-margin="16"
-              >
-                Особенности
-              </ADivider>
+          <div :class="$style.stats">
+            <ADivider
+              orientation="left"
+              :style="{ marginBottom: '4px' }"
+              :orientation-margin="16"
+            >
+              Особенности
+            </ADivider>
 
-              <div :class="$style.item">
-                <p>Тип:</p>
+            <div :class="$style.item">
+              <p>Тип:</p>
 
-                <ATypographyText
-                  :class="$style.value"
-                  :content="species.properties.type"
-                />
-              </div>
+              <ATypographyText
+                :class="$style.value"
+                :content="species.properties.type"
+              />
+            </div>
 
-              <div :class="$style.item">
-                <p>Размер:</p>
+            <div :class="$style.item">
+              <p>Размер:</p>
 
-                <ATypographyText
-                  :class="$style.value"
-                  :content="species.properties.size"
-                />
-              </div>
+              <ATypographyText
+                :class="$style.value"
+                :content="species.properties.size"
+              />
+            </div>
 
-              <div :class="$style.item">
-                <p>Скорость:</p>
+            <div :class="$style.item">
+              <p>Скорость:</p>
 
-                <ATypographyText
-                  :class="$style.value"
-                  :content="species.properties.speed"
-                />
-              </div>
+              <ATypographyText
+                :class="$style.value"
+                :content="species.properties.speed"
+              />
             </div>
           </div>
 
@@ -170,6 +170,7 @@
             :items="anchors"
             :offset-top="24"
             :bounds="24"
+            :class="$style.anchors"
           />
         </AFlex>
 
@@ -203,11 +204,23 @@
 </template>
 
 <style module lang="scss">
+  .species {
+    flex-direction: column;
+
+    @include media-min($md) {
+      flex-direction: row;
+    }
+  }
   .left {
     flex-shrink: 0;
+    align-items: center;
     width: 100%;
-    min-width: 288px;
-    max-width: 320px;
+    max-width: 100%;
+
+    @include media-min($md) {
+      align-items: normal;
+      max-width: 320px;
+    }
   }
 
   .right {
@@ -216,19 +229,40 @@
 
   .galleryImg {
     overflow: hidden;
+    max-width: 160px;
     border: 1px solid var(--color-border);
     border-radius: 8px;
+
+    @include media-min($md) {
+      max-width: 100%;
+    }
+  }
+
+  .anchors {
+    display: none;
+
+    @include media-min($md) {
+      display: block;
+    }
   }
 
   .stats {
     overflow: hidden;
-    min-width: 288px;
+
+    width: 100%;
     padding: 0 0 4px 0;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+
     background: var(--color-bg-secondary);
 
     .item {
-      display: flex;
+      display: block;
       padding: 6px 16px;
+
+      @include media-min($sm) {
+        display: flex;
+      }
 
       p {
         min-width: 80px;
