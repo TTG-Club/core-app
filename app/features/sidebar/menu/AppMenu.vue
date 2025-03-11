@@ -113,12 +113,12 @@
   }
 
   .logo {
-    width: 70px;
-    height: 70px;
+    width: 100px;
+    height: 100px;
   }
 
   .title {
-    font-size: 26px;
+    font-size: 40px;
     font-weight: 600;
     line-height: 36px;
     color: var(--color-text-title);
