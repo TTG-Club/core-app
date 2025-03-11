@@ -4,6 +4,9 @@
 
   const { popoverKey } = defineProps<{
     popoverKey: string;
+    bottom?: boolean;
+    isMenu?: boolean;
+    innerScroll?: boolean;
   }>();
 
   const { close, open, toggle, isOpened } = useSidebarPopover(popoverKey);
@@ -43,7 +46,14 @@
     <Transition name="nav-popover-animation">
       <AFlex
         v-if="isOpened"
-        :class="$style.body"
+        :class="[
+          $style.body,
+          {
+            [$style.isMenu]: isMenu,
+            [$style.bottom]: bottom,
+            [$style.innerScroll]: innerScroll,
+          },
+        ]"
         vertical
       >
         <slot
@@ -58,6 +68,9 @@
 <style lang="scss" module>
   @use 'assets/styles/variables/breakpoints' as *;
   @use 'assets/styles/variables/mixins' as *;
+
+  $horizontalMargin: 72px;
+  $verticalMargin: 16px;
 
   .navPopover {
     flex-shrink: 0;
@@ -88,7 +101,7 @@
     width: 100vw;
     height: var(--max-vh);
 
-    background-color: rgba(19, 26, 32, 0.3);
+    background-color: var(--color-overlay);
   }
 
   .body {
@@ -106,23 +119,51 @@
     overflow: auto;
     display: inline-block;
 
-    width: calc(100vw - 16px);
+    width: fit-content;
     max-width: calc(100vw - 16px);
     max-height: calc(var(--max-vh) - 72px - var(--safe-area-inset-bottom));
     border-radius: 12px;
 
     background-image: var(--color-bg-menu);
     backdrop-filter: blur(16px);
-    box-shadow: 0 22px 122px rgb(0 0 0 / 78%);
+    box-shadow: 0 22px 122px var(--color-shadow);
 
     @include media-min($md) {
-      top: 16px;
+      top: $verticalMargin;
       bottom: inherit;
-      left: 72px;
+      left: $horizontalMargin;
       transform-origin: top left;
 
-      width: calc(100vw - 80px);
       max-width: 1100px;
+    }
+
+    &.isMenu {
+      width: calc(100vw - 16px);
+
+      @include media-min($md) {
+        width: calc(100vw - 56px - 24px);
+      }
+    }
+
+    &.innerScroll {
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    &.bottom {
+      top: initial;
+      right: 8px;
+      left: initial;
+      transform-origin: bottom right;
+
+      @include media-min($md) {
+        top: auto;
+        right: initial;
+        bottom: $verticalMargin;
+        left: $horizontalMargin;
+        transform-origin: bottom left;
+      }
     }
   }
 </style>

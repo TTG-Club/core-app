@@ -39,7 +39,7 @@
     title: () => seoTitle.value,
     description: () => seoDescription.value,
     author: () => (spell.value ? spell.value.source.name.rus : ''),
-    titleTemplate: '%pageTitle %separator Заклинания D&D 5 2024',
+    titleTemplate: (title) => `${title} | Заклинания D&D 5 2024`,
   });
 </script>
 

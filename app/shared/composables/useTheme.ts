@@ -1,50 +1,49 @@
-import type { BasicColorMode } from '@vueuse/core';
-import type { ThemeConfig } from 'ant-design-vue/es/config-provider/context';
-import { theme } from 'ant-design-vue';
 import { ONE_DAY_IN_SECONDS, THEME_STORE_KEY } from '~~/shared/consts';
+import type { ThemeConfig } from 'ant-design-vue/es/config-provider/context';
+import type { AliasToken } from 'ant-design-vue/es/theme/interface';
+import type { MaybeRefOrGetter } from 'vue';
+import { toValue } from 'vue';
+import { theme } from 'ant-design-vue';
+import type { ThemeName, ColorMode } from '~/shared/consts';
+import { THEME_VARIANTS } from '~/shared/consts';
 
-export const useTheme = () => {
-  const stored = useCookie<BasicColorMode>(THEME_STORE_KEY, {
-    default: () => 'dark',
+export interface ComputedThemeConfig extends Omit<ThemeConfig, 'token'> {
+  token: Partial<AliasToken>;
+}
+
+export function useTheme() {
+  const themeName = useCookie<ColorMode>(THEME_STORE_KEY, {
     maxAge: ONE_DAY_IN_SECONDS * 365,
+    default: () => 'dark' as const,
   });
 
-  const { state } = useColorMode({
-    storageRef: stored,
+  const themeConfig = computed<ComputedThemeConfig>(() => {
+    const token = THEME_VARIANTS[themeName.value];
+
+    const algorithm =
+      themeName.value === 'light'
+        ? theme.defaultAlgorithm
+        : theme.darkAlgorithm;
+
+    return { token, algorithm };
   });
 
-  const { next } = useCycleList<BasicColorMode>(['dark', 'light'], {
-    initialValue: stored,
-  });
+  function change(name: MaybeRefOrGetter<ThemeName>) {
+    const newMode = toValue(name);
 
-  const change = () => {
-    stored.value = next();
-  };
+    if (!(newMode in THEME_VARIANTS)) {
+      console.warn(`Неизвестная тема: ${newMode}.`);
 
-  const { defaultAlgorithm, darkAlgorithm } = theme;
+      return;
+    }
 
-  // Положение цветов светлая/темная тема
-  const themeConfig = computed<ThemeConfig>(() => ({
-    token: {
-      colorPrimary: state.value === 'light' ? '#5e5446' : '#447cc7',
-      colorBgElevated: state.value === 'light' ? '#F4F1EC' : '#152228',
-      colorBgContainer: state.value === 'light' ? '#e1e0dd' : '#24262E',
-      colorText: state.value === 'light' ? '#1F1E1E' : '#BFBFBF',
-      colorTextHeading: state.value === 'light' ? '#1F1E1E' : '#e5e5e5',
-      colorSuccess: '#67c23a',
-      colorWarning: '#e6a23c',
-      colorError: '#f56c6c',
-      colorInfo: '#5990ff',
-      colorBorder: state.value === 'light' ? '#00000014' : '#ffffff14',
-      wireframe: false,
-      fontFamily: '"Open Sans", sans-serif',
-    },
-    algorithm: state.value === 'light' ? defaultAlgorithm : darkAlgorithm,
-  }));
+    themeName.value = newMode;
+  }
 
   return {
-    theme: state,
+    themeName,
     themeConfig,
+
     change,
   };
-};
+}

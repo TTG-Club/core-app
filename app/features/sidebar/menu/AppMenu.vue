@@ -6,7 +6,11 @@
 </script>
 
 <template>
-  <SidebarPopover popover-key="app-menu">
+  <SidebarPopover
+    popover-key="app-menu"
+    inner-scroll
+    is-menu
+  >
     <template #trigger="{ isOpened, toggle }">
       <HamburgerIcon
         :is-active="isOpened"
