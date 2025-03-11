@@ -138,7 +138,7 @@
   </svg>
 </template>
 
-<style module>
+<style module lang="scss">
   .logo {
     overflow: hidden;
     display: block;

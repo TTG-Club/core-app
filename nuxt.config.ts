@@ -2,7 +2,6 @@
 import { fileURLToPath, URL } from 'node:url';
 import bytes from 'bytes';
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
-import { extractStyles } from './scripts/extractStyles';
 
 const appName = 'TTG Club';
 
@@ -63,10 +62,6 @@ export default defineNuxtConfig({
       charset: 'utf-8',
       link: [
         {
-          rel: 'stylesheet',
-          href: '/css/ant-themes.css',
-        },
-        {
           rel: 'manifest',
           href: '/manifest.json',
           crossorigin: 'anonymous',
@@ -95,7 +90,6 @@ export default defineNuxtConfig({
           href: `/icons/${size}.png`,
         })),
       ],
-      titleTemplate: '%pageTitle %separator %siteName',
       viewport:
         'viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no',
     },
@@ -115,7 +109,15 @@ export default defineNuxtConfig({
   },
 
   robots: {
-    disallow: ['/user', '/admin', '/auth', '/search', '/profile', '/api'],
+    disallow: [
+      '/user',
+      '/admin',
+      '/auth',
+      '/search',
+      '/profile',
+      '/api',
+      '/auth',
+    ],
   },
 
   fonts: {
@@ -197,10 +199,6 @@ export default defineNuxtConfig({
         },
       }),
     ],
-  },
-
-  hooks: {
-    'build:before': extractStyles,
   },
 
   modules: [

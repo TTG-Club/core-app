@@ -30,9 +30,6 @@
   );
 
   const columns = { xl: 3, md: 2, xs: 1 };
-  const count = 5;
-
-  const skeletonItems = ref(Array.from({ length: count }, faker.string.uuid));
 
   const onSearch = useDebounceFn(() => {
     if (search.value && search.value.length < 3) {
@@ -80,8 +77,8 @@
           :columns
         >
           <SmallLinkSkeleton
-            v-for="uuid in skeletonItems"
-            :key="uuid"
+            v-for="index in 5"
+            :key="index"
           />
         </PageGrid>
 

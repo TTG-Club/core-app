@@ -49,7 +49,7 @@
     description: () => seoDescription.value,
     ogImage: () => (species.value ? species.value.image : ''),
     author: () => (species.value ? species.value.source.name.rus : ''),
-    titleTemplate: '%pageTitle %separator Виды и происхождения D&D 5 2024',
+    titleTemplate: (title) => `${title} | Виды и происхождения D&D 5 2024`,
   });
 
   const showRelated = ref(false);

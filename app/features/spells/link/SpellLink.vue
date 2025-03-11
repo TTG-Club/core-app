@@ -53,7 +53,10 @@
       :href
       @click.left.exact.prevent.stop="openSpell"
     >
-      <SmallLink :group="spell.source.group">
+      <SmallLink
+        :group="spell.source.group"
+        :title="`${spell.name.rus} [${spell.name.eng}]`"
+      >
         <template #icon>
           {{ spell.level || '◐' }}
         </template>
