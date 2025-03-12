@@ -5,7 +5,7 @@
   const siteConfig = useSiteConfig();
   const { themeName, themeConfig } = useTheme();
 
-  const metaThemeColor = computed(() => themeConfig.value.token.colorBgLayout);
+  const metaThemeColor = computed(() => themeConfig.value.token.colorBgBase);
 
   useHead({
     meta: [

@@ -21,6 +21,7 @@ export const BASE_TOKEN_CONFIG: Partial<AliasToken> = {
 // Конфигурации тем (разбиты для читаемости)
 export const LIGHT_TOKEN_CONFIG: Partial<AliasToken> = {
   ...BASE_TOKEN_CONFIG,
+  colorBgBase: '#fdfaf9',
   colorBgLayout: '#fdfaf9',
   colorBgElevated: '#F4F1EC',
   colorBgContainer: '#e1e0dd',
@@ -32,6 +33,7 @@ export const LIGHT_TOKEN_CONFIG: Partial<AliasToken> = {
 
 export const DARK_TOKEN_CONFIG: Partial<AliasToken> = {
   ...BASE_TOKEN_CONFIG,
+  colorBgBase: '#131A20',
   colorBgLayout: '#131A20',
   colorBgElevated: '#152228',
   colorBgContainer: '#24262E',
