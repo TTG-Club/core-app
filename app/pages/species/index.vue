@@ -63,7 +63,7 @@
       >
         <PageGrid
           v-if="status === 'success' && data?.length"
-          :columns="{ xl: 5, md: 3, xs: 1 }"
+          :columns="5"
         >
           <SpeciesLink
             v-for="link in data"

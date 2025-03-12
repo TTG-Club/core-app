@@ -29,8 +29,6 @@
     }),
   );
 
-  const columns = { xl: 3, md: 2, xs: 1 };
-
   const onSearch = useDebounceFn(() => {
     if (search.value && search.value.length < 3) {
       return;
@@ -74,7 +72,7 @@
       >
         <PageGrid
           v-if="status !== 'success' && status !== 'error'"
-          :columns
+          :columns="3"
         >
           <SmallLinkSkeleton
             v-for="index in 5"
@@ -84,7 +82,7 @@
 
         <PageGrid
           v-else-if="status === 'success' && spells?.length"
-          :columns
+          :columns="3"
         >
           <SpellLink
             v-for="spell in spells"

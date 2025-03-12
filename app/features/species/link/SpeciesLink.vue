@@ -98,7 +98,6 @@
 <style module lang="scss">
   .coverCard {
     overflow: hidden;
-    height: 240px;
   }
 
   .image {
