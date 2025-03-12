@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { Dayjs } from 'dayjs';
   import type { SourceResponse } from '~/shared/types';
-  import { useCopy } from '~/shared/composables';
+  import { useCopy, useDayjs } from '~/shared/composables';
   import { SourceTag } from '~/shared/ui';
 
   export interface PageHeaderProps {
