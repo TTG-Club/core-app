@@ -4,6 +4,7 @@
 
   const { group } = defineProps<{
     group?: SourceGroupResponse;
+    title?: string;
   }>();
 </script>
 
@@ -34,7 +35,10 @@
         justify="space-between"
         align="center"
       >
-        <span :class="$style.label">
+        <span
+          :class="$style.label"
+          :title
+        >
           <span :class="$style.rus">
             <slot name="default" />
           </span>

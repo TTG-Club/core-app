@@ -80,3 +80,46 @@ html {
   --color-info: #909399;
   --color-info-hover: darken(#909399, 7%);
 }
+
+html.svifty7 {
+  --color-bg-main: #1F1F22;
+  --color-bg-secondary: #2C2C30;
+  --color-bg-menu: linear-gradient(135deg, #252528c7, #1F1F22c7);
+
+  --color-overlay: #25222580;
+  --color-shadow: #0f0f1280;
+
+  --color-text: #B8B6A8;
+  --color-text-title: #C2C0B2;
+  --color-text-bold: #C9C7B9;
+  --color-text-gray: #8F8D82;
+  --color-text-selected: #A68F60;
+  --color-hover: #F7F7F718;
+  --color-border: #3A3A4011;
+  --color-primary: #A54D42;
+
+  // Badge
+  --color-badge-hb: #405710;
+  --color-badge-3rd: #483475;
+  --color-badge-basic: var(--color-primary);
+  --color-badge-ua: var(--color-hover);
+
+  // Scroll
+  --color-thumb-bg: rgba(255, 255, 255, 0.6);
+  --color-thumb-bg-hover: rgba(255, 255, 255, 0.8);
+
+  // Logo
+  --color-logo-stroke: #A68F60;
+  --color-logo-dice: #A68F60;
+  --color-logo-tree-top: #A54D42;
+  --color-logo-tree-bottom: #A54D42;
+
+  --color-success: #6BA854;
+  --color-success-hover: lighten(#6BA854, 7%);
+  --color-warning: #B58F4D;
+  --color-warning-hover: lighten(#B58F4D, 7%);
+  --color-error: #B85454;
+  --color-error-hover: lighten(#B85454, 7%);
+  --color-info: #4D88B8;
+  --color-info-hover: lighten(#4D88B8, 7%);
+}

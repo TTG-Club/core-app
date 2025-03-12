@@ -1,14 +1,43 @@
-<template>
-  <div :class="$style.container">
-    <slot />
-  </div>
-</template>
+<script setup lang="ts">
+  import ruRU from 'ant-design-vue/locale/ru_RU';
+  import { useTheme } from '~/shared/composables';
 
-<style module lang="scss">
-  .container {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    min-height: 100vh;
-  }
-</style>
+  const siteConfig = useSiteConfig();
+  const { themeName, themeConfig } = useTheme();
+
+  const metaThemeColor = computed(() => themeConfig.value.token.colorBgLayout);
+
+  useHead({
+    meta: [
+      {
+        name: 'theme-color',
+        content: toValue(metaThemeColor),
+      },
+    ],
+    htmlAttrs: {
+      class: themeName,
+    },
+    titleTemplate: (title) =>
+      title ? `${title} | ${siteConfig.name}` : siteConfig.name,
+  });
+</script>
+
+<template>
+  <AExtractStyle>
+    <AConfigProvider
+      :locale="ruRU"
+      :theme="themeConfig"
+    >
+      <AApp>
+        <NuxtLoadingIndicator
+          color="var(--color-primary)"
+          error-color="var(--color-error)"
+        />
+
+        <div class="ttg-app">
+          <slot />
+        </div>
+      </AApp>
+    </AConfigProvider>
+  </AExtractStyle>
+</template>

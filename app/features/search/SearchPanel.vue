@@ -59,7 +59,7 @@
 <style lang="scss" module>
   .head {
     width: 100%;
-    margin: 5vw 0 0 0;
+    margin: 3vw 0 0 0;
   }
 
   .search {

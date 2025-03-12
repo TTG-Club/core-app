@@ -1,8 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import { fileURLToPath, URL } from 'node:url';
-
-import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
 import bytes from 'bytes';
+import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
 
 const appName = 'TTG Club';
 
@@ -14,6 +13,10 @@ export default defineNuxtConfig({
 
   devtools: {
     enabled: true,
+  },
+
+  devServer: {
+    https: process.env.NUXT_DEV_SSL === 'true',
   },
 
   runtimeConfig: {
@@ -87,7 +90,6 @@ export default defineNuxtConfig({
           href: `/icons/${size}.png`,
         })),
       ],
-      titleTemplate: '%pageTitle %separator %siteName',
       viewport:
         'viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no',
     },
@@ -107,7 +109,15 @@ export default defineNuxtConfig({
   },
 
   robots: {
-    disallow: ['/user', '/admin', '/auth', '/search', '/profile', '/api'],
+    disallow: [
+      '/user',
+      '/admin',
+      '/auth',
+      '/search',
+      '/profile',
+      '/api',
+      '/auth',
+    ],
   },
 
   fonts: {
