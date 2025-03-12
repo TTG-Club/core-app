@@ -75,7 +75,7 @@
     flex-wrap: wrap;
 
     width: 100%;
-    min-width: 288px;
+    min-width: 272px;
     border: 1px solid var(--color-border);
     border-radius: 8px;
 

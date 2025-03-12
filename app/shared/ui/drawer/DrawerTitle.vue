@@ -1,34 +1,12 @@
 <script setup lang="ts">
   import { useCopy } from '~/shared/composables';
+  import type { DrawerTitleName } from './types';
 
-  const { name } = defineProps<{
-    name?:
-      | string
-      | {
-          rus: string;
-          eng?: string;
-        };
+  const { title } = defineProps<{
+    title: DrawerTitleName;
   }>();
 
   const { copy } = useCopy();
-
-  const nameForCopy = computed(() => {
-    if (!name) {
-      return '';
-    }
-
-    if (typeof name === 'string') {
-      return name;
-    }
-
-    let str = name.rus;
-
-    if (name.eng) {
-      str += ` [${name.eng}]`;
-    }
-
-    return str;
-  });
 </script>
 
 <template>
@@ -36,19 +14,38 @@
     name="fade"
     mode="out-in"
   >
-    <span
-      v-if="name"
+    <AFlex
+      v-if="title"
       :class="$style.name"
-      @click="copy(nameForCopy)"
+      align="flex-start"
+      gap="8"
+      vertical
     >
-      <span v-if="typeof name === 'string'">{{ name }}</span>
+      <span
+        v-if="typeof title === 'string'"
+        :class="$style.rus"
+        @click="copy(title)"
+      >
+        {{ title }}
+      </span>
 
       <template v-else>
-        <span>{{ name.rus }}</span>
+        <span
+          :class="$style.rus"
+          @click="copy(title.rus)"
+        >
+          {{ title.rus }}
+        </span>
 
-        <span v-if="name.eng"> [{{ name.eng }}]</span>
+        <span
+          v-if="title.eng"
+          :class="$style.eng"
+          @click="copy(title.eng)"
+        >
+          {{ title.eng }}
+        </span>
       </template>
-    </span>
+    </AFlex>
 
     <ASkeleton
       v-else
@@ -67,17 +64,28 @@
   }
 
   .name {
-    overflow: hidden;
-    display: inline-block;
-
     width: 100%;
 
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    .rus,
+    .eng {
+      overflow: hidden;
+      display: inline-block;
 
-    span {
-      display: inline;
       max-width: 100%;
+
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .rus {
+      font-size: 16px;
+      line-height: 24px;
+    }
+
+    .eng {
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 22px;
     }
   }
 

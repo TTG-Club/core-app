@@ -55,7 +55,7 @@
   const showRelated = ref(false);
 
   const anchors = computed(() => {
-    if (!species.value?.features.length) {
+    if (!species.value?.features?.length) {
       return [];
     }
 

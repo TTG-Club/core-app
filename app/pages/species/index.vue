@@ -57,68 +57,62 @@
     </template>
 
     <template #default>
-      <ASpin
-        data-allow-mismatch
-        size="large"
-        :spinning="status === 'pending'"
+      <Transition
+        name="fade"
+        mode="out-in"
       >
-        <Transition
-          name="fade"
-          mode="out-in"
+        <PageGrid
+          v-if="status === 'success' && data?.length"
+          :columns="{ xl: 5, md: 3, xs: 1 }"
         >
-          <PageGrid
-            v-if="status === 'success' && data?.length"
-            :columns="{ xl: 5, md: 3, xs: 1 }"
+          <SpeciesLink
+            v-for="link in data"
+            :key="link.url"
+            :species="link"
           >
-            <SpeciesLink
-              v-for="link in data"
-              :key="link.url"
-              :species="link"
+            {{ link.url }}
+          </SpeciesLink>
+        </PageGrid>
+
+        <AResult
+          v-else-if="status === 'success' && !data?.length"
+          title="Ничего не нашлось"
+          sub-title="По вашему запросу ничего не нашлось. Попробуйте изменить фильтр или строку поиска"
+        >
+          <template #extra>
+            <AButton
+              type="primary"
+              @click.left.exact.prevent="refresh()"
             >
-              {{ link.url }}
-            </SpeciesLink>
-          </PageGrid>
+              Обновить
+            </AButton>
 
-          <AResult
-            v-else-if="status === 'success' && !data?.length"
-            title="Ничего не нашлось"
-            sub-title="По вашему запросу ничего не нашлось. Попробуйте изменить фильтр или строку поиска"
-          >
-            <template #extra>
-              <AButton
-                type="primary"
-                @click.left.exact.prevent="refresh()"
-              >
-                Обновить
-              </AButton>
+            <AButton @click.left.exact.prevent="navigateTo('/')">
+              Вернуться на главную
+            </AButton>
+          </template>
+        </AResult>
 
-              <AButton @click.left.exact.prevent="navigateTo('/')">
-                Вернуться на главную
-              </AButton>
-            </template>
-          </AResult>
+        <AResult
+          v-else-if="error"
+          status="error"
+          title="Ошибка"
+          :sub-title="error"
+        >
+          <template #extra>
+            <AButton
+              type="primary"
+              @click.left.exact.prevent="refresh()"
+            >
+              Обновить
+            </AButton>
 
-          <AResult
-            v-else-if="error"
-            status="error"
-            title="Ошибка"
-            :sub-title="error"
-          >
-            <template #extra>
-              <AButton
-                type="primary"
-                @click.left.exact.prevent="refresh()"
-              >
-                Обновить
-              </AButton>
-
-              <AButton @click.left.exact.prevent="navigateTo('/')">
-                Вернуться на главную
-              </AButton>
-            </template>
-          </AResult>
-        </Transition>
-      </ASpin>
+            <AButton @click.left.exact.prevent="navigateTo('/')">
+              Вернуться на главную
+            </AButton>
+          </template>
+        </AResult>
+      </Transition>
     </template>
   </PageContainer>
 </template>

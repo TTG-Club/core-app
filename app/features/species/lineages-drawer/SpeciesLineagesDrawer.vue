@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { SpeciesLinkResponse } from '~/shared/types';
   import { SpeciesLink } from '../link';
-  import { DrawerBody, DrawerTitle } from '~/shared/ui';
+  import { DrawerComponent } from '~/shared/ui';
 
   const open = defineModel<boolean>();
 
@@ -24,37 +24,27 @@
 </script>
 
 <template>
-  <ADrawer
+  <DrawerComponent
     v-model:open="open"
-    :content-wrapper-style="{
-      minWidth: '296px',
-      maxWidth: '552px',
-    }"
+    title="Разновидности"
+    :min-width="296"
+    :max-width="552"
+    :is-loading="status === 'pending'"
+    :is-error="status === 'error'"
     width="auto"
-    destroy-on-close
   >
-    <template #title>
-      <DrawerTitle name="Разновидности" />
-    </template>
-
-    <template #default>
-      <DrawerBody :is-loading="status === 'pending'">
-        <template #body>
-          <div :class="$style.container">
-            <div :class="$style.grid">
-              <SpeciesLink
-                v-for="link in data"
-                :key="link.url"
-                :species="link"
-              >
-                {{ link.url }}
-              </SpeciesLink>
-            </div>
-          </div>
-        </template>
-      </DrawerBody>
-    </template>
-  </ADrawer>
+    <div :class="$style.container">
+      <div :class="$style.grid">
+        <SpeciesLink
+          v-for="link in data"
+          :key="link.url"
+          :species="link"
+        >
+          {{ link.url }}
+        </SpeciesLink>
+      </div>
+    </div>
+  </DrawerComponent>
 </template>
 
 <style module lang="scss">

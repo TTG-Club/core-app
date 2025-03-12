@@ -2,6 +2,10 @@
   import { CopyButton } from '../copy-button';
   import { SvgIcon } from '~/shared/ui';
 
+  defineEmits<{
+    (e: 'close'): void;
+  }>();
+
   defineProps<{
     url?: string;
   }>();
@@ -12,6 +16,28 @@
     :gap="8"
     justify="flex-end"
   >
+    <AButton
+      v-if="url"
+      :href="url"
+      size="small"
+      type="text"
+      @click.left.exact.prevent="
+        navigateTo(url, {
+          open: {
+            target: '_blank',
+            windowFeatures: {
+              noreferrer: true,
+              noopener: true,
+            },
+          },
+        })
+      "
+    >
+      <template #icon>
+        <SvgIcon icon="new-page" />
+      </template>
+    </AButton>
+
     <CopyButton
       v-if="url"
       :url
@@ -33,5 +59,15 @@
         </template>
       </AButton>
     </ATooltip>
+
+    <AButton
+      size="small"
+      type="text"
+      @click.left.exact.prevent="$emit('close')"
+    >
+      <template #icon>
+        <SvgIcon icon="close" />
+      </template>
+    </AButton>
   </AFlex>
 </template>

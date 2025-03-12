@@ -1,25 +1,14 @@
 <script setup lang="ts">
-  import {
-    Breakpoint,
-    BREAKPOINTS,
-    useBreakpoints,
-  } from '~/shared/composables';
+  import { Breakpoint, BREAKPOINTS } from '~/shared/composables';
   import type { SpellDetailResponse } from '~/shared/types';
   import { SpellBody } from '../body';
-  import {
-    DrawerActions,
-    DrawerBody,
-    DrawerTitle,
-    SourceTag,
-  } from '~/shared/ui';
+  import { DrawerComponent } from '~/shared/ui';
 
   const props = defineProps<{
     url: string;
   }>();
 
   const model = defineModel<boolean>();
-
-  const { greaterOrEqual } = useBreakpoints();
 
   const {
     data: spell,
@@ -39,8 +28,6 @@
     () => `${window.location.origin}/spells/${props.url}`,
   );
 
-  const isTabletOrGreater = greaterOrEqual(Breakpoint.MD);
-
   watch(
     model,
     (value) => {
@@ -57,54 +44,20 @@
 </script>
 
 <template>
-  <ClientOnly>
-    <ADrawer
-      v-model:open="model"
-      :content-wrapper-style="{
-        minWidth: '320px',
-        maxWidth: `${BREAKPOINTS[Breakpoint.MD]}px`,
-      }"
-      width="100%"
-      destroy-on-close
-    >
-      <template #title>
-        <DrawerTitle :name="spell?.name" />
-      </template>
-
-      <template
-        v-if="spell?.source"
-        #extra
-      >
-        <AFlex :gap="8">
-          <DrawerActions
-            v-if="isTabletOrGreater"
-            :url="urlForCopy"
-          />
-
-          <SourceTag
-            :source="spell.source"
-            placement="bottomRight"
-          />
-        </AFlex>
-      </template>
-
-      <template #default>
-        <DrawerBody :is-loading="status === 'pending'">
-          <template
-            v-if="spell"
-            #body
-          >
-            <SpellBody :spell />
-          </template>
-        </DrawerBody>
-      </template>
-
-      <template
-        v-if="!isTabletOrGreater"
-        #footer
-      >
-        <DrawerActions :url="urlForCopy" />
-      </template>
-    </ADrawer>
-  </ClientOnly>
+  <DrawerComponent
+    v-model:open="model"
+    :min-width="320"
+    :max-width="BREAKPOINTS[Breakpoint.MD]"
+    :title="spell?.name"
+    :source="spell?.source"
+    :url="urlForCopy"
+    :is-loading="status === 'pending'"
+    :is-error="status === 'error'"
+    width="100%"
+  >
+    <SpellBody
+      v-if="spell"
+      :spell
+    />
+  </DrawerComponent>
 </template>

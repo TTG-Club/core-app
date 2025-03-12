@@ -133,11 +133,11 @@
   .header {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
     padding-top: 16px;
 
     @include media-min($lg) {
-      gap: 16px;
+      gap: 12px;
       padding-top: 32px;
     }
   }
@@ -160,10 +160,6 @@
     color: var(--color-text-title);
     text-overflow: ellipsis;
     white-space: nowrap;
-
-    @include media-min($lg) {
-      font-size: 28px;
-    }
   }
 
   .subtitle {
