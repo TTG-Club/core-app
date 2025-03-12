@@ -1,17 +1,7 @@
 import type { Rule } from 'ant-design-vue/es/form';
 import { Dictionaries } from '~/shared/api';
 import { getEnumFromDictionary } from '~/shared/utils/validation/base';
-import type { NitroFetchOptions, NitroFetchRequest } from 'nitropack';
 import type { SelectOption } from '~/shared/types';
-
-const fetchConfig: Omit<NitroFetchOptions<NitroFetchRequest>, 'method'> = {
-  onRequestError: () => {
-    throw new Error('Неизвестная ошибка');
-  },
-  onResponseError: () => {
-    throw new Error('Неизвестная ошибка');
-  },
-};
 
 function validateFromDictionary(
   value: string,
@@ -35,7 +25,7 @@ export const ruleTimeUnit = (required = true): Rule => ({
       throw new Error('Поле обязательно для заполнения');
     }
 
-    const timeUnits = await Dictionaries.timeUnits(fetchConfig);
+    const timeUnits = await Dictionaries.timeUnits();
 
     validateFromDictionary(value, timeUnits);
   },
@@ -50,7 +40,7 @@ export const ruleMagicSchool = (): Rule => ({
       throw new Error('Поле обязательно для заполнения');
     }
 
-    const magicSchools = await Dictionaries.magicSchools(fetchConfig);
+    const magicSchools = await Dictionaries.magicSchools();
 
     validateFromDictionary(value, magicSchools);
   },
@@ -65,7 +55,7 @@ export const ruleSize = (): Rule => ({
       throw new Error('Поле обязательно для заполнения');
     }
 
-    const sizes = await Dictionaries.sizes(fetchConfig);
+    const sizes = await Dictionaries.sizes();
 
     validateFromDictionary(value, sizes);
   },
@@ -80,7 +70,7 @@ export const ruleCreatureType = (): Rule => ({
       throw new Error('Поле обязательно для заполнения');
     }
 
-    const creatureTypes = await Dictionaries.creatureTypes(fetchConfig);
+    const creatureTypes = await Dictionaries.creatureTypes();
 
     validateFromDictionary(value, creatureTypes);
   },

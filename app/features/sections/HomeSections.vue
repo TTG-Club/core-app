@@ -44,6 +44,7 @@
     min-width: 40%;
     height: 56px;
     padding: 0 12px;
+    border: 1px solid var(--color-border);
     border-radius: 12px;
 
     text-decoration: none;
@@ -80,7 +81,7 @@
 
       width: 220px;
 
-      opacity: 0.7;
+      opacity: 0.8;
 
       transition: transform 0.6s;
     }

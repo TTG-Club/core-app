@@ -48,13 +48,22 @@
             align="center"
             gap="4"
           >
-            <span>{{ species.name.rus }}</span>
+            <span
+              :class="$style.name"
+              :title="species.name.rus"
+            >
+              {{ species.name.rus }}
+            </span>
 
             <GroupTag :group="species.source.group" />
           </AFlex>
         </template>
 
-        <template #description>{{ species.name.eng }}</template>
+        <template #description>
+          <span :title="species.name.rus">
+            {{ species.name.eng }}
+          </span>
+        </template>
       </ACardMeta>
 
       <template #actions>
@@ -95,5 +104,14 @@
   .image {
     width: 100%;
     opacity: 0.9;
+  }
+
+  .name {
+    overflow: hidden;
+    display: inline-block;
+    flex: 1;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 </style>

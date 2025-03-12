@@ -6,7 +6,11 @@
 </script>
 
 <template>
-  <SidebarPopover popover-key="app-menu">
+  <SidebarPopover
+    popover-key="app-menu"
+    inner-scroll
+    is-menu
+  >
     <template #trigger="{ isOpened, toggle }">
       <HamburgerIcon
         :is-active="isOpened"
@@ -113,12 +117,12 @@
   }
 
   .logo {
-    width: 70px;
-    height: 70px;
+    width: 100px;
+    height: 100px;
   }
 
   .title {
-    font-size: 26px;
+    font-size: 40px;
     font-weight: 600;
     line-height: 36px;
     color: var(--color-text-title);
