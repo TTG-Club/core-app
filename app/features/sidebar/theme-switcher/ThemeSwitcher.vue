@@ -1,8 +1,8 @@
 <script setup lang="ts">
-  import { SvgIcon } from '~/shared/ui';
   import { useTheme } from '~/shared/composables';
-  import { SidebarPopover } from '../popover';
   import { ThemeName } from '~/shared/consts';
+  import { SidebarPopover } from '~sidebar/popover';
+  import { SvgIcon } from '~ui/icon';
 
   const { themeName, change } = useTheme();
 

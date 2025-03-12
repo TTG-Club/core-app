@@ -1,9 +1,9 @@
 <script setup lang="ts">
-  import { SmallLink } from '~/shared/ui';
   import type { SpellLinkResponse } from '~/shared/types';
   import { SpellLinkComponents, SpellLinkFlags } from './ui';
   import { Breakpoint, useBreakpoints } from '~/shared/composables';
-  import { SpellDrawer } from '../drawer';
+  import { SpellDrawer } from '~spells/drawer';
+  import { SmallLink } from '~ui/link';
 
   const props = withDefaults(
     defineProps<{

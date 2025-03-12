@@ -1,9 +1,7 @@
-export { default as DrawerTitle } from './DrawerTitle.vue';
+export * from './actions';
 
-export { default as DrawerBody } from './DrawerBody.vue';
+export * from './body';
 
-export { default as DrawerActions } from './DrawerActions.vue';
+export * from './title';
 
-export { default as DrawerComponent } from './DrawerComponent.vue';
-
-export * from './types';
+export * from './component';

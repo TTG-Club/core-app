@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { SvgIcon } from '~/shared/ui';
+  import { SvgIcon } from '~ui/icon';
 
   defineProps<{
     socialLinks: { url: string; icon: string }[]; // Массив ссылок на социальные сети

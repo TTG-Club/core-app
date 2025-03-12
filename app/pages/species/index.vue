@@ -1,8 +1,8 @@
 <script setup lang="ts">
   import type { SpeciesLinkResponse } from '~/shared/types';
-  import { PageContainer, PageGrid, PageHeader } from '~/shared/ui';
-  import { SpeciesLink } from '~/features/species';
-  import { SpeciesLegend } from '~/features/species/legend';
+  import { SpeciesLegend } from '~species/legend';
+  import { SpeciesLink } from '~species/link';
+  import { PageContainer, PageGrid, PageHeader } from '~ui/page';
 
   useSeoMeta({
     title: 'Виды (Species)',

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import SmallLink from './SmallLink.vue';
+  import { SmallLink } from '../link';
 </script>
 
 <template>

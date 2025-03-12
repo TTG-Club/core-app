@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import { PageContainer, PageHeader } from '~/shared/ui';
-  import { SectionSpecies, SectionSpells } from '~/features/workshop';
+  import { SectionSpecies, SectionSpells } from '~workshop/section';
+  import { PageContainer, PageHeader } from '~ui/page';
 </script>
 
 <template>

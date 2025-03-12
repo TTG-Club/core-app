@@ -1,8 +1,9 @@
 <script setup lang="ts">
   import type { SpeciesLinkResponse } from '~/shared/types';
   import { NuxtLink } from '#components';
-  import { SpeciesLineagesDrawer, SpeciesDrawer } from '~/features/species';
-  import { GroupTag } from '~/shared/ui';
+  import { SpeciesDrawer } from '~species/drawer';
+  import { SpeciesLineagesDrawer } from '~species/lineages-drawer';
+  import { GroupTag } from '~ui/source-tag';
 
   withDefaults(
     defineProps<{

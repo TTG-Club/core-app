@@ -1,8 +1,8 @@
 <script setup lang="ts">
   import { Breakpoint, BREAKPOINTS } from '~/shared/composables';
   import type { SpellDetailResponse } from '~/shared/types';
-  import { SpellBody } from '../body';
-  import { DrawerComponent } from '~/shared/ui';
+  import { SpellBody } from '~spells/body';
+  import { DrawerComponent } from '~ui/drawer';
 
   const props = defineProps<{
     url: string;

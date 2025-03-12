@@ -1,12 +1,6 @@
 <script setup lang="ts">
   const { columns } = defineProps<{
-    columns:
-      | {
-          xl?: number;
-          md: number;
-          xs: number;
-        }
-      | number;
+    columns: number;
   }>();
 </script>
 

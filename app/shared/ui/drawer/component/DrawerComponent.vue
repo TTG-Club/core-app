@@ -1,12 +1,9 @@
 <script setup lang="ts">
-  import {
-    DrawerActions,
-    DrawerBody,
-    DrawerTitle,
-    SourceTag,
-  } from '~/shared/ui';
-  import type { DrawerTitleName } from './types';
   import type { SourceResponse } from '~/shared/types';
+  import { DrawerTitle, type DrawerTitleName } from '../title';
+  import { DrawerActions } from '../actions';
+  import { DrawerBody } from '../body';
+  import { SourceTag } from '../../source-tag';
 
   const { minWidth, maxWidth } = defineProps<{
     source?: SourceResponse;

@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import 'virtual:svg-icons-register';
   import '~/assets/styles/index.scss';
-  import { SidebarPanel } from '~/features/sidebar';
+  import { SidebarPanel } from '~sidebar/panel';
 </script>
 
 <template>

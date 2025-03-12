@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { SpeciesLinkResponse } from '~/shared/types';
-  import { SpeciesLink } from '../link';
-  import { DrawerComponent } from '~/shared/ui';
+  import { SpeciesLink } from '~species/link';
+  import { DrawerComponent } from '~ui/drawer';
 
   const open = defineModel<boolean>();
 

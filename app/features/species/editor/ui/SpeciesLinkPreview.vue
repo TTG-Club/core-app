@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import type { NameResponse, SpeciesLinkResponse } from '~/shared/types';
-  import { SpeciesLink } from '../../link';
+  import { SpeciesLink } from '~species/link';
 
   const { name, url, image } = defineProps<{
     name: Pick<NameResponse, 'rus' | 'eng'>;

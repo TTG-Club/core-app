@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { SvgIcon } from '~/shared/ui';
+  import { SvgIcon } from '~ui/icon';
 
   defineProps<{
     supportItems: { url: string; icon: string; label: string }[]; // Массив элементов поддержки

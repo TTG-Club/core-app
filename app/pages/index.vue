@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { SearchPanel } from '~/features/search';
-  import { HomeSections } from '~/features/sections';
-  import { PageContainer } from '~/shared/ui';
+  import { SearchPanel } from '~search/panel';
+  import { HomeSections } from '~home/sections';
+  import { PageContainer } from '~ui/page';
 
   definePageMeta({
     layout: 'default',
