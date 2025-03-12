@@ -312,7 +312,6 @@
             v-model:value="form.properties.speed.base"
             :precision="0"
             placeholder="Введи скорость передвижения"
-            default-value="30"
             min="0"
           />
         </AFormItem>

@@ -133,12 +133,6 @@ export default defineNuxtConfig({
     families: [{ name: 'Open Sans' }],
   },
 
-  dayjs: {
-    locales: ['ru', 'en'],
-    plugins: ['utc', 'localizedFormat', 'customParseFormat'],
-    defaultLocale: 'ru',
-  },
-
   antd: {
     icons: false,
     extractStyle: true,
@@ -213,7 +207,6 @@ export default defineNuxtConfig({
     '@ant-design-vue/nuxt',
     '@pinia/nuxt',
     'nuxt-security',
-    'dayjs-nuxt',
   ],
 
   compatibilityDate: '2024-11-15',
