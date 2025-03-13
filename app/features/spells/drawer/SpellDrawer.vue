@@ -4,7 +4,7 @@
   import { SpellBody } from '~spells/body';
   import { DrawerComponent } from '~ui/drawer';
 
-  const props = defineProps<{
+  const { url } = defineProps<{
     url: string;
   }>();
 
@@ -12,35 +12,26 @@
 
   const {
     data: spell,
-    execute,
     status,
+    execute,
   } = await useAsyncData(
-    `spell-${props.url}`,
-    () => $fetch<SpellDetailResponse>(`/api/v2/spells/${props.url}`),
+    `spell-${url}`,
+    () => $fetch<SpellDetailResponse>(`/api/v2/spells/${url}`),
     {
       server: false,
       immediate: false,
-      lazy: true,
     },
   );
 
-  const urlForCopy = computed(
-    () => `${window.location.origin}/spells/${props.url}`,
-  );
+  const urlForCopy = computed(() => `${window.location.origin}/spells/${url}`);
 
-  watch(
-    model,
-    (value) => {
-      if (!value) {
-        return;
-      }
+  watch(model, (value) => {
+    if (!value) {
+      return;
+    }
 
-      execute();
-    },
-    {
-      immediate: true,
-    },
-  );
+    execute();
+  });
 </script>
 
 <template>

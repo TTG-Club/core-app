@@ -15,15 +15,11 @@
     },
   );
 
-  const { greaterOrEqual } = useBreakpoints();
-
-  const isLargeScreen = greaterOrEqual(Breakpoint.LG);
+  const link = useTemplateRef('link');
+  const isDrawerEnabled = useElementVisibility(link);
+  const { isGreaterOrEqual } = useBreakpoints();
 
   const isDrawerVisible = ref(false);
-
-  const isDrawerEnabled = computed(
-    () => props.onlyDrawer || isLargeScreen.value,
-  );
 
   const route = computed(() => ({
     name: 'spells-url',
@@ -33,13 +29,17 @@
   }));
 
   function openSpell() {
-    if (isDrawerEnabled.value) {
+    if (isDrawerOpening()) {
       isDrawerVisible.value = true;
 
       return;
     }
 
     navigateTo(route.value);
+  }
+
+  function isDrawerOpening() {
+    return isGreaterOrEqual(Breakpoint.LG) || props.onlyDrawer;
   }
 </script>
 
@@ -50,6 +50,7 @@
     custom
   >
     <a
+      ref="link"
       :href
       @click.left.exact.prevent.stop="openSpell"
     >
@@ -85,6 +86,7 @@
 
       <ClientOnly>
         <SpellDrawer
+          v-if="isDrawerEnabled"
           v-model="isDrawerVisible"
           :url="spell.url"
         />

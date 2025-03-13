@@ -9,9 +9,16 @@
     url: string;
   }>();
 
-  const { data, status, execute } = useFetch<Array<SpeciesLinkResponse>>(
-    `/api/v2/species/${url}/lineages/search`,
-    { immediate: false },
+  const { data, status, execute } = await useAsyncData(
+    `lineages-drawer-${url}`,
+    () =>
+      $fetch<Array<SpeciesLinkResponse>>(
+        `/api/v2/species/${url}/lineages/search`,
+      ),
+    {
+      server: false,
+      immediate: false,
+    },
   );
 
   watch(open, (value) => {

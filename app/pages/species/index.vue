@@ -11,13 +11,16 @@
 
   const search = ref<string>('');
 
-  const { data, status, error, refresh } = await useAsyncData('species', () =>
-    $fetch<Array<SpeciesLinkResponse>>('/api/v2/species/search', {
-      method: 'post',
-      params: {
-        query: search.value || undefined,
-      },
-    }),
+  const { data, status, error, refresh } = await useAsyncData(
+    'species',
+    () =>
+      $fetch<Array<SpeciesLinkResponse>>('/api/v2/species/search', {
+        method: 'post',
+        params: {
+          query: search.value || undefined,
+        },
+      }),
+    { deep: false },
   );
 
   const onSearch = useDebounceFn(() => {

@@ -5,95 +5,96 @@
   import { SpeciesLineagesDrawer } from '~species/lineages-drawer';
   import { GroupTag } from '~ui/source-tag';
 
-  withDefaults(
-    defineProps<{
-      species: SpeciesLinkResponse;
-      disabled?: boolean;
-    }>(),
-    {
-      disabled: false,
-    },
-  );
+  defineProps<{
+    species: SpeciesLinkResponse;
+  }>();
+
+  const link = useTemplateRef('link');
+  const isDrawerEnabled = useElementVisibility(link);
 
   const showLineages = ref(false);
   const isDrawerVisible = ref(false);
 </script>
 
 <template>
-  <component
-    :is="disabled ? 'div' : NuxtLink"
+  <NuxtLink
+    v-slot="{ href }"
     :to="`/species/${species.url}`"
+    custom
   >
-    <ACard
-      :hoverable="!disabled"
-      :body-style="{ padding: '24px 16px 16px 16px' }"
+    <a
+      ref="link"
+      :href
     >
-      <template #cover>
-        <div :class="$style.coverCard">
-          <AImage
-            :src="species.image || '/img/no-img.webp'"
-            :alt="species.name.rus"
-            :class="$style.image"
-            :preview="false"
-            fallback="/img/no-img.webp"
-            loading="lazy"
-            width="100%"
-          />
-        </div>
-      </template>
-
-      <ACardMeta>
-        <template #title>
-          <AFlex
-            justify="space-between"
-            align="center"
-            gap="4"
-          >
-            <span
-              :class="$style.name"
-              :title="species.name.rus"
-            >
-              {{ species.name.rus }}
-            </span>
-
-            <GroupTag :group="species.source.group" />
-          </AFlex>
+      <ACard :body-style="{ padding: '24px 16px 16px 16px' }">
+        <template #cover>
+          <div :class="$style.coverCard">
+            <AImage
+              :src="species.image || '/img/no-img.webp'"
+              :alt="species.name.rus"
+              :class="$style.image"
+              :preview="false"
+              fallback="/img/no-img.webp"
+              loading="lazy"
+              width="100%"
+            />
+          </div>
         </template>
 
-        <template #description>
-          <span :title="species.name.rus">
-            {{ species.name.eng }}
+        <ACardMeta>
+          <template #title>
+            <AFlex
+              justify="space-between"
+              align="center"
+              gap="4"
+            >
+              <span
+                :class="$style.name"
+                :title="species.name.rus"
+              >
+                {{ species.name.rus }}
+              </span>
+
+              <GroupTag :group="species.source.group" />
+            </AFlex>
+          </template>
+
+          <template #description>
+            <span :title="species.name.rus">
+              {{ species.name.eng }}
+            </span>
+          </template>
+        </ACardMeta>
+
+        <template #actions>
+          <span @click.left.exact.prevent.stop="isDrawerVisible = true">
+            Предпросмотр
+          </span>
+
+          <span
+            v-if="species.hasLineages"
+            @click.left.exact.prevent.stop="showLineages = true"
+          >
+            Разновидности
           </span>
         </template>
-      </ACardMeta>
+      </ACard>
 
-      <template #actions>
-        <span @click.left.exact.prevent.stop="isDrawerVisible = true">
-          Предпросмотр
-        </span>
+      <ClientOnly>
+        <SpeciesDrawer
+          v-if="isDrawerEnabled"
+          v-model="isDrawerVisible"
+          :url="species.url"
+        />
 
-        <span
-          v-if="species.hasLineages"
-          @click.left.exact.prevent.stop="showLineages = true"
-        >
-          Разновидности
-        </span>
-      </template>
-    </ACard>
-
-    <ClientOnly>
-      <SpeciesDrawer
-        v-model="isDrawerVisible"
-        :url="species.url"
-      />
-
-      <SpeciesLineagesDrawer
-        v-if="species.hasLineages"
-        v-model="showLineages"
-        :url="species.url"
-      />
-    </ClientOnly>
-  </component>
+        <SpeciesLineagesDrawer
+          v-if="species.hasLineages && isDrawerEnabled"
+          v-model="showLineages"
+          :url="species.url"
+        />
+      </ClientOnly>
+    </a>
+  </NuxtLink>
 </template>
 
 <style module lang="scss">

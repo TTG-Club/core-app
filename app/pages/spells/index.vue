@@ -17,13 +17,16 @@
     error,
     status,
     refresh,
-  } = await useAsyncData('spells', () =>
-    $fetch<Array<SpellLinkResponse>>('/api/v2/spells/search', {
-      method: 'POST',
-      params: {
-        query: search.value || undefined,
-      },
-    }),
+  } = await useAsyncData(
+    'spells',
+    () =>
+      $fetch<Array<SpellLinkResponse>>('/api/v2/spells/search', {
+        method: 'POST',
+        params: {
+          query: search.value || undefined,
+        },
+      }),
+    { deep: false },
   );
 
   const onSearch = useDebounceFn(() => {

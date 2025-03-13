@@ -20,7 +20,6 @@
     {
       server: false,
       immediate: false,
-      lazy: true,
     },
   );
 
