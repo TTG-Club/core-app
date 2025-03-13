@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import { CopyButton } from '../copy-button';
-  import { SvgIcon } from '~/shared/ui';
+  import { CopyButton } from '../../copy-button';
+  import { SvgIcon } from '../../icon';
 
   defineEmits<{
     (e: 'close'): void;

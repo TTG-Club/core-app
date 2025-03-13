@@ -1,13 +1,10 @@
 <script setup lang="ts">
   import { getSlicedString } from '~/shared/utils';
-  import {
-    PageActions,
-    PageContainer,
-    PageHeader,
-    UiGallery,
-  } from '~/shared/ui';
-  import { SpeciesBody, SpeciesLineagesDrawer } from '~/features/species';
   import type { SpeciesDetailResponse } from '~/shared/types';
+  import { SpeciesLineagesDrawer } from '~species/lineages-drawer';
+  import { SpeciesBody } from '~species/body';
+  import { PageActions, PageContainer, PageHeader } from '~ui/page';
+  import { UiGallery } from '~ui/gallery';
 
   const {
     params: { url },

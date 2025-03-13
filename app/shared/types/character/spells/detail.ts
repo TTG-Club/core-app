@@ -1,4 +1,4 @@
-import type { SourceResponse } from '~/shared/types';
+import type { SourceResponse } from '../../base';
 
 export interface SpellDetailResponse {
   url: string;

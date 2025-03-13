@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { SvgIcon, SvgLoading } from '~/shared/ui';
   import type { UploadProps } from 'ant-design-vue/es/upload';
   import bytes from 'bytes';
   import type { UploadChangeParam, UploadFile } from 'ant-design-vue';
@@ -8,6 +7,7 @@
   import type { FileType } from 'ant-design-vue/es/upload/interface';
   import { toNumber } from 'lodash-es';
   import { getStatusMessage } from '#shared/utils';
+  import { SvgIcon, SvgLoading } from '~ui/icon';
 
   const props = withDefaults(
     defineProps<{

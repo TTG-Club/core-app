@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import type { SpeciesDetailResponse } from '~/shared/types';
-  import { SpeciesLineages } from '../lineages';
+  import { SpeciesLineages } from '~species/lineages';
 
   const { species } = defineProps<{
     species: SpeciesDetailResponse;

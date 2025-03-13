@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { PageContainer, PageHeader } from '~/shared/ui';
+  import { PageContainer, PageHeader } from '~ui/page';
 
   useSeoMeta({
     title: 'Личный кабинет',

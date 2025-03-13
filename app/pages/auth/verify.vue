@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import { PageContainer } from '~/shared/ui';
   import { StatusCodes } from 'http-status-codes';
+  import { PageContainer } from '~ui/page';
 
   const {
     query: { token },

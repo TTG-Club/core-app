@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { SvgIcon } from '~/shared/ui';
+  import { SvgIcon } from '../icon';
   import { CopyButton } from '../copy-button';
 
   defineEmits<{

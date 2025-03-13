@@ -1,9 +1,9 @@
 <script setup lang="ts">
-  import { AppMenu } from '../menu';
-  import { UserHelmet } from '../user-helmet';
-  import { ThemeSwitcher } from '../theme-switcher';
-  import { SvgLogo } from '~/shared/ui';
   import { useSidebarPopover } from '~/shared/composables';
+  import { AppMenu } from '~sidebar/menu';
+  import { ThemeSwitcher } from '~sidebar/theme-switcher';
+  import { UserHelmet } from '~sidebar/user-helmet';
+  import { SvgLogo } from '~ui/icon';
 
   const route = useRoute();
   const { close } = useSidebarPopover();

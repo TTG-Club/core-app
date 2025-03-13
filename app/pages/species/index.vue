@@ -1,8 +1,8 @@
 <script setup lang="ts">
   import type { SpeciesLinkResponse } from '~/shared/types';
-  import { PageContainer, PageGrid, PageHeader } from '~/shared/ui';
-  import { SpeciesLink } from '~/features/species';
-  import { SpeciesLegend } from '~/features/species/legend';
+  import { SpeciesLegend } from '~species/legend';
+  import { SpeciesLink } from '~species/link';
+  import { PageContainer, PageGrid, PageHeader } from '~ui/page';
 
   useSeoMeta({
     title: 'Виды (Species)',
@@ -11,13 +11,16 @@
 
   const search = ref<string>('');
 
-  const { data, status, error, refresh } = await useAsyncData('species', () =>
-    $fetch<Array<SpeciesLinkResponse>>('/api/v2/species/search', {
-      method: 'post',
-      params: {
-        query: search.value || undefined,
-      },
-    }),
+  const { data, status, error, refresh } = await useAsyncData(
+    'species',
+    () =>
+      $fetch<Array<SpeciesLinkResponse>>('/api/v2/species/search', {
+        method: 'post',
+        params: {
+          query: search.value || undefined,
+        },
+      }),
+    { deep: false },
   );
 
   const onSearch = useDebounceFn(() => {

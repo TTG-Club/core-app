@@ -1,8 +1,8 @@
 <script setup lang="ts">
   import { Breakpoint, BREAKPOINTS } from '~/shared/composables';
   import type { SpeciesDetailResponse } from '~/shared/types';
-  import { SpeciesBody } from '../body';
-  import { DrawerComponent } from '~/shared/ui';
+  import { SpeciesBody } from '~species/body';
+  import { DrawerComponent } from '~ui/drawer';
 
   const props = defineProps<{
     url: string;
@@ -20,7 +20,6 @@
     {
       server: false,
       immediate: false,
-      lazy: true,
     },
   );
 

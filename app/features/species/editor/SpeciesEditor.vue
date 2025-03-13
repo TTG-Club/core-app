@@ -1,12 +1,4 @@
 <script setup lang="ts">
-  import {
-    SelectCreatureType,
-    SelectSource,
-    SelectSpecies,
-    SelectTags,
-    InputUrl,
-    EditorActions,
-  } from '~/shared/ui';
   import type { SelectValue } from 'ant-design-vue/es/select';
   import type { SpeciesCreate } from '~/shared/types';
   import type { FormInstance } from 'ant-design-vue';
@@ -23,6 +15,14 @@
     SpeciesSizes,
   } from './ui';
   import { NuxtLink } from '#components';
+  import {
+    SelectCreatureType,
+    SelectSource,
+    SelectSpecies,
+    SelectTags,
+  } from '~ui/select';
+  import { InputUrl } from '~ui/input';
+  import { EditorActions } from '~ui/editor';
 
   const siteConfig = useSiteConfig();
   const { notification } = App.useApp();

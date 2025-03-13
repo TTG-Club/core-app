@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { AButton, AFlex } from '#components';
-  import { SvgIcon } from '~/shared/ui';
   import { SignIn, SignUp } from './ui';
+  import { SvgIcon } from '~ui/icon';
 
   const enum FormType {
     SIGN_IN = 'signIn',

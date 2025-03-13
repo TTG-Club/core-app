@@ -1,12 +1,4 @@
 <script setup lang="ts">
-  import {
-    SelectSource,
-    SelectTags,
-    SelectMagicSchool,
-    SelectSpecies,
-    InputUrl,
-    EditorActions,
-  } from '~/shared/ui';
   import type { SpellCreate } from '~/shared/types';
   import {
     ValidationBase,
@@ -23,6 +15,14 @@
     SpellComponents,
   } from './ui';
   import { NuxtLink } from '#components';
+  import {
+    SelectMagicSchool,
+    SelectSource,
+    SelectSpecies,
+    SelectTags,
+  } from '~ui/select';
+  import { InputUrl } from '~ui/input';
+  import { EditorActions } from '~ui/editor';
 
   const siteConfig = useSiteConfig();
   const { notification } = App.useApp();
