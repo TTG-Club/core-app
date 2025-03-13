@@ -1,17 +1,13 @@
 <script setup lang="ts">
-  import {
-    useDayjs,
-    useSidebarPopover,
-    useUserRoles,
-  } from '~/shared/composables';
+  import { useDayjs, useUserRoles } from '~/shared/composables';
   import { useUserStore } from '~/shared/stores';
   import { AuthModal } from '~user/auth-modal';
   import { SvgIcon } from '~ui/icon';
+  import { SidebarPopover } from '~sidebar/popover';
 
   const dayjs = useDayjs();
   const userStore = useUserStore();
   const { isAdmin } = useUserRoles();
-  const { toggle, isOpened } = useSidebarPopover('user-helmet');
 
   const { href: profileHref, navigate: navigateToProfile } = useLink({
     to: {
@@ -83,26 +79,16 @@
     <AuthModal v-model="isAuthOpened" />
   </template>
 
-  <APopover
+  <SidebarPopover
     v-else
-    :open="isOpened"
-    :arrow="false"
-    :align="{
-      offset: [24, 0],
-      overflow: {
-        adjustX: true,
-        adjustY: true,
-      },
-    }"
-    placement="rightBottom"
-    trigger="click"
-    destroy-tooltip-on-hide
+    popover-key="user-helmet"
+    bottom
   >
-    <template #default>
+    <template #trigger="{ toggle }">
       <AButton
         type="text"
         size="large"
-        @click.left.exact.prevent="toggle()"
+        @click.left.exact.prevent="toggle"
       >
         <template #icon>
           <SvgIcon icon="profile/helmet/filled" />
@@ -110,57 +96,57 @@
       </AButton>
     </template>
 
-    <template #content>
+    <template #default>
+      <ATypographyText
+        :style="{ padding: '8px 16px' }"
+        :content="greetingText"
+        ellipsis
+        strong
+      />
+
+      <ADivider :style="{ margin: '0' }" />
+
       <AFlex
+        :style="{ minWidth: '128px', maxWidth: '256px', padding: '8px' }"
         align="center"
+        gap="4"
         vertical
-        :gap="8"
-        :style="{ minWidth: '128px', maxWidth: '256px' }"
       >
-        <ATypographyText
-          ellipsis
-          strong
-          :style="{ padding: '6px 16px 8px 16px' }"
-          :content="greetingText"
-        />
-
-        <ADivider :style="{ margin: '0' }" />
-
         <AButton
           v-if="isAdmin"
-          block
-          type="text"
-          :href="workshopHref"
           :style="{ justifyContent: 'start' }"
+          :href="workshopHref"
+          type="text"
+          block
           @click.left.exact.prevent="navigateToWorkshop()"
         >
           Мастерская
         </AButton>
 
         <AButton
-          block
+          :style="{ justifyContent: 'start' }"
           :href="profileHref"
           type="text"
-          :style="{ justifyContent: 'start' }"
+          block
           @click.left.exact.prevent="navigateToProfile()"
         >
           Личный кабинет
         </AButton>
 
         <AButton
-          block
-          disabled
-          type="text"
           :style="{ justifyContent: 'start' }"
+          type="text"
+          disabled
+          block
         >
           Сменить пароль
         </AButton>
 
         <AButton
-          block
-          danger
-          type="text"
           :style="{ justifyContent: 'start' }"
+          type="text"
+          danger
+          block
           @click.left.exact.prevent="logout"
         >
           <template #icon>
@@ -171,12 +157,5 @@
         </AButton>
       </AFlex>
     </template>
-  </APopover>
+  </SidebarPopover>
 </template>
-
-<style lang="scss" module>
-  .popup {
-    padding: 50px;
-    background: var(--color-bg-secondary);
-  }
-</style>
