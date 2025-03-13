@@ -4,11 +4,14 @@
   import { SpellLink } from '~spells/link';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
+  import { SpellDrawer } from '~spells/drawer';
 
   useSeoMeta({
     title: 'Заклинания (Spells)',
     description: 'Заклинания по D&D 2024 редакции',
   });
+
+  const { isDesktop } = useDevice();
 
   const search = ref<string>('');
 
@@ -130,6 +133,10 @@
           </template>
         </AResult>
       </Transition>
+
+      <ClientOnly>
+        <SpellDrawer v-if="isDesktop" />
+      </ClientOnly>
     </template>
   </PageContainer>
 </template>

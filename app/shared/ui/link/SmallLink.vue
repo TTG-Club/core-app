@@ -3,36 +3,20 @@
   import type { SourceGroupResponse } from '~/shared/types';
   import type { RouteLocationRaw } from 'vue-router';
 
-  const { group, to, isDrawerOpened } = defineProps<{
+  const { group, to } = defineProps<{
     group?: SourceGroupResponse;
     title?: string;
     to?: RouteLocationRaw;
-    isDrawerOpened?: boolean;
   }>();
 
   const emit = defineEmits<{
     (e: 'open-drawer' | 'navigate'): void;
   }>();
 
-  const link = useTemplateRef<HTMLLinkElement>('link');
-
   const { isDesktop } = useDevice();
-  const isLinkVisible = useElementVisibility(link);
-
-  const isDrawerEnabled = computed(() => {
-    if (isDrawerOpened) {
-      return true;
-    }
-
-    if (!isDesktop) {
-      return false;
-    }
-
-    return isLinkVisible.value;
-  });
 
   function handleClick() {
-    if (isDrawerEnabled.value) {
+    if (isDesktop) {
       return emit('open-drawer');
     }
 
@@ -49,7 +33,6 @@
     :to
   >
     <a
-      ref="link"
       :href
       @click.exact.prevent.stop="handleClick"
     >
@@ -111,13 +94,6 @@
             <slot name="caption" />
           </AFlex>
         </AFlex>
-
-        <ClientOnly>
-          <slot
-            v-if="isDrawerEnabled"
-            name="drawer"
-          />
-        </ClientOnly>
       </AFlex>
     </a>
   </NuxtLink>

@@ -44,31 +44,23 @@
       &-3,
       &-4,
       &-5 {
-        @container (width >= 744px) {
-          grid-template-columns: repeat(3, calc((100% - 4px * 2) / 3));
+        @container (width >= 812px) {
+          grid-template-columns: repeat(3, calc((100% - 8px * 2) / 3));
         }
       }
 
       &-4,
       &-5 {
-        @container (width >= 920px) {
-          grid-template-columns: repeat(4, calc((100% - 4px * 3) / 4));
+        @container (width >= 1024px) {
+          grid-template-columns: repeat(4, calc((100% - 8px * 3) / 4));
         }
       }
 
       &-5 {
-        @container (width >= 1200px) {
-          grid-template-columns: repeat(5, calc((100% - 4px * 4) / 5));
+        @container (width >= 1272px) {
+          grid-template-columns: repeat(5, calc((100% - 8px * 4) / 5));
         }
       }
-      //
-      //@for $i from 2 through 5 {
-      //  $colSize: calc((100% - (8px * ($i - 1))) / $i);
-      //
-      //  &-#{$i} {
-      //    grid-template-columns: repeat($i, $colSize);
-      //  }
-      //}
     }
   }
 </style>

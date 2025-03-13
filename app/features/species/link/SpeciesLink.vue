@@ -1,19 +1,19 @@
 <script setup lang="ts">
   import type { SpeciesLinkResponse } from '~/shared/types';
   import { NuxtLink } from '#components';
-  import { SpeciesDrawer } from '~species/drawer';
-  import { SpeciesLineagesDrawer } from '~species/lineages-drawer';
   import { GroupTag } from '~ui/source-tag';
+  import { useDrawer } from '~/shared/composables';
 
-  defineProps<{
+  const { inLineagesDrawer } = defineProps<{
     species: SpeciesLinkResponse;
+    inLineagesDrawer?: boolean;
   }>();
 
-  const link = useTemplateRef('link');
-  const isDrawerEnabled = useElementVisibility(link);
+  const { open: openLineages } = useDrawer('species-lineages');
 
-  const showLineages = ref(false);
-  const isDrawerVisible = ref(false);
+  const { open: openPreview } = useDrawer(
+    inLineagesDrawer ? 'species-lineage-detail' : 'species-detail',
+  );
 </script>
 
 <template>
@@ -22,10 +22,7 @@
     :to="`/species/${species.url}`"
     custom
   >
-    <a
-      ref="link"
-      :href
-    >
+    <a :href>
       <ACard :body-style="{ padding: '24px 16px 16px 16px' }">
         <template #cover>
           <div :class="$style.coverCard">
@@ -67,32 +64,18 @@
         </ACardMeta>
 
         <template #actions>
-          <span @click.left.exact.prevent.stop="isDrawerVisible = true">
+          <span @click.left.exact.prevent.stop="openPreview(species.url)">
             Предпросмотр
           </span>
 
           <span
             v-if="species.hasLineages"
-            @click.left.exact.prevent.stop="showLineages = true"
+            @click.left.exact.prevent.stop="openLineages(species.url)"
           >
             Разновидности
           </span>
         </template>
       </ACard>
-
-      <ClientOnly>
-        <SpeciesDrawer
-          v-if="isDrawerEnabled"
-          v-model="isDrawerVisible"
-          :url="species.url"
-        />
-
-        <SpeciesLineagesDrawer
-          v-if="species.hasLineages && isDrawerEnabled"
-          v-model="showLineages"
-          :url="species.url"
-        />
-      </ClientOnly>
     </a>
   </NuxtLink>
 </template>

@@ -2,43 +2,56 @@
   import type { SpeciesLinkResponse } from '~/shared/types';
   import { SpeciesLink } from '~species/link';
   import { DrawerComponent } from '~ui/drawer';
+  import { useDrawer } from '~/shared/composables';
+  import { SpeciesDrawer } from '~species/drawer';
 
-  const open = defineModel<boolean>();
+  const { url, isOpened, close } = useDrawer('species-lineages');
 
-  const { url } = defineProps<{
-    url: string;
-  }>();
+  const { data, status, execute, clear } = await useAsyncData(
+    `species-lineages-drawer`,
+    () => {
+      if (!url.value) {
+        return Promise.reject();
+      }
 
-  const { data, status, execute } = await useAsyncData(
-    `lineages-drawer-${url}`,
-    () =>
-      $fetch<Array<SpeciesLinkResponse>>(
-        `/api/v2/species/${url}/lineages/search`,
-      ),
+      return $fetch<Array<SpeciesLinkResponse>>(
+        `/api/v2/species/${url.value}/lineages/search`,
+      );
+    },
     {
       server: false,
       immediate: false,
     },
   );
 
-  watch(open, (value) => {
+  function handleUpdate(opened: boolean) {
+    if (opened) {
+      return;
+    }
+
+    close();
+  }
+
+  watch(isOpened, (value) => {
     if (!value) {
       return;
     }
 
+    clear();
     execute();
   });
 </script>
 
 <template>
   <DrawerComponent
-    v-model:open="open"
+    :open="isOpened"
     title="Разновидности"
     :min-width="296"
     :max-width="552"
     :is-loading="status === 'pending'"
     :is-error="status === 'error'"
     width="auto"
+    @update:open="handleUpdate"
   >
     <div :class="$style.container">
       <div :class="$style.grid">
@@ -46,11 +59,16 @@
           v-for="link in data"
           :key="link.url"
           :species="link"
+          in-lineages-drawer
         >
           {{ link.url }}
         </SpeciesLink>
       </div>
     </div>
+
+    <ClientOnly>
+      <SpeciesDrawer in-lineages-drawer />
+    </ClientOnly>
   </DrawerComponent>
 </template>
 

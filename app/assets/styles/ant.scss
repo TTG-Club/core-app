@@ -136,6 +136,11 @@ $typography: '.ant-typography';
       overflow: hidden;
       display: flex;
     }
+
+    & &-extra {
+      min-height: 100%;
+      padding-left: 8px;
+    }
   }
 
   &-skeleton {

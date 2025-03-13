@@ -1,50 +1,64 @@
 <script setup lang="ts">
-  import { Breakpoint, BREAKPOINTS } from '~/shared/composables';
+  import { Breakpoint, BREAKPOINTS, useDrawer } from '~/shared/composables';
   import type { SpeciesDetailResponse } from '~/shared/types';
   import { SpeciesBody } from '~species/body';
   import { DrawerComponent } from '~ui/drawer';
 
-  const props = defineProps<{
-    url: string;
+  const { inLineagesDrawer } = defineProps<{
+    inLineagesDrawer?: boolean;
   }>();
 
-  const model = defineModel<boolean>();
+  const { url, isOpened, close } = useDrawer(
+    inLineagesDrawer ? 'species-lineage-detail' : 'species-detail',
+  );
 
   const {
     data: species,
-    execute,
     status,
+    execute,
+    clear,
   } = await useAsyncData(
-    `spell-${props.url}`,
-    () => $fetch<SpeciesDetailResponse>(`/api/v2/species/${props.url}`),
+    'species-detail-drawer',
+    () => {
+      if (!url.value) {
+        return Promise.reject();
+      }
+
+      return $fetch<SpeciesDetailResponse>(`/api/v2/species/${url.value}`);
+    },
     {
       server: false,
       immediate: false,
     },
   );
 
-  const urlForCopy = computed(
-    () => `${window.location.origin}/species/${props.url}`,
+  const urlForCopy = computed(() =>
+    isOpened.value
+      ? `${window.location.origin}/species/${url.value}`
+      : undefined,
   );
 
-  watch(
-    model,
-    (value) => {
-      if (!value) {
-        return;
-      }
+  function handleUpdate(opened: boolean) {
+    if (opened) {
+      return;
+    }
 
-      execute();
-    },
-    {
-      immediate: true,
-    },
-  );
+    close();
+  }
+
+  watch(isOpened, (value) => {
+    if (!value) {
+      return;
+    }
+
+    clear();
+    execute();
+  });
 </script>
 
 <template>
   <DrawerComponent
-    v-model:open="model"
+    :open="isOpened"
     :min-width="320"
     :max-width="BREAKPOINTS[Breakpoint.MD]"
     :title="species?.name"
@@ -53,6 +67,7 @@
     :is-loading="status === 'pending'"
     :is-error="status === 'error'"
     width="100%"
+    @update:open="handleUpdate"
   >
     <SpeciesBody
       v-if="species"
