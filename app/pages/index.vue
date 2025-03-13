@@ -7,7 +7,12 @@
     layout: 'default',
   });
 
-  const { name } = useSiteConfig();
+  const { name, description } = useSiteConfig();
+
+  useSeoMeta({
+    title: name,
+    description,
+  });
 </script>
 
 <template>
