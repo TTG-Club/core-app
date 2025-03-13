@@ -21,23 +21,29 @@ export const BASE_TOKEN_CONFIG: Partial<AliasToken> = {
 // Конфигурации тем (разбиты для читаемости)
 export const LIGHT_TOKEN_CONFIG: Partial<AliasToken> = {
   ...BASE_TOKEN_CONFIG,
+  colorBgBase: '#fdfaf9',
   colorBgLayout: '#fdfaf9',
   colorBgElevated: '#F4F1EC',
   colorBgContainer: '#e1e0dd',
   colorText: '#1F1E1E',
   colorTextHeading: '#1F1E1E',
   colorBorder: '#00000014',
+  colorBorderBg: '#00000014',
+  colorBorderSecondary: '#00000014',
   colorPrimary: '#5e5446',
 } as const;
 
 export const DARK_TOKEN_CONFIG: Partial<AliasToken> = {
   ...BASE_TOKEN_CONFIG,
+  colorBgBase: '#131A20',
   colorBgLayout: '#131A20',
   colorBgElevated: '#152228',
   colorBgContainer: '#24262E',
   colorText: '#BFBFBF',
   colorTextHeading: '#e5e5e5',
   colorBorder: '#ffffff14',
+  colorBorderBg: '#ffffff14',
+  colorBorderSecondary: '#ffffff14',
   colorPrimary: '#447cc7',
 } as const;
 

@@ -1,12 +1,9 @@
 <script setup lang="ts">
-  import { SpellLegend, SpellLink } from '~/features/spells';
-  import {
-    PageContainer,
-    PageGrid,
-    PageHeader,
-    SmallLinkSkeleton,
-  } from '~/shared/ui';
   import type { SpellLinkResponse } from '~/shared/types';
+  import { SpellLegend } from '~spells/legend';
+  import { SpellLink } from '~spells/link';
+  import { PageContainer, PageGrid, PageHeader } from '~ui/page';
+  import { SmallLinkSkeleton } from '~ui/skeleton';
 
   useSeoMeta({
     title: 'Заклинания (Spells)',
@@ -20,16 +17,17 @@
     error,
     status,
     refresh,
-  } = await useAsyncData('spells', () =>
-    $fetch<Array<SpellLinkResponse>>('/api/v2/spells/search', {
-      method: 'POST',
-      params: {
-        query: search.value || undefined,
-      },
-    }),
+  } = await useAsyncData(
+    'spells',
+    () =>
+      $fetch<Array<SpellLinkResponse>>('/api/v2/spells/search', {
+        method: 'POST',
+        params: {
+          query: search.value || undefined,
+        },
+      }),
+    { deep: false },
   );
-
-  const columns = { xl: 3, md: 2, xs: 1 };
 
   const onSearch = useDebounceFn(() => {
     if (search.value && search.value.length < 3) {
@@ -74,7 +72,7 @@
       >
         <PageGrid
           v-if="status !== 'success' && status !== 'error'"
-          :columns
+          :columns="3"
         >
           <SmallLinkSkeleton
             v-for="index in 5"
@@ -84,7 +82,7 @@
 
         <PageGrid
           v-else-if="status === 'success' && spells?.length"
-          :columns
+          :columns="3"
         >
           <SpellLink
             v-for="spell in spells"

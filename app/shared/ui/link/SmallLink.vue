@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { GroupTag } from '~/shared/ui';
+  import { GroupTag } from '../source-tag';
   import type { SourceGroupResponse } from '~/shared/types';
 
   const { group } = defineProps<{

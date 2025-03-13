@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import type { SpeciesDetailResponse } from '~/shared/types';
-  import { SpeciesBody } from '../body';
+  import { SpeciesBody } from '~species/body';
 
   const { url } = defineProps<{
     url: SpeciesDetailResponse['url'];

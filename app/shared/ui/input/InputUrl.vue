@@ -6,11 +6,10 @@
   const props = withDefaults(
     defineProps<{
       engName: string;
-      sourceUrl: string | undefined;
+      sourceUrl?: string | undefined;
       addonBefore?: string;
     }>(),
     {
-      enName: '',
       sourceUrl: '',
       addonBefore: '',
     },

@@ -26,7 +26,7 @@ export interface SpeciesDetailResponse {
   description: string;
   image: string;
   gallery?: Array<string>;
-  features: Array<{
+  features?: Array<{
     url: string;
     name: Pick<NameResponse, 'rus' | 'eng'>;
     description: string;

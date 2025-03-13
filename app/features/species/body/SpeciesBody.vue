@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import type { SpeciesDetailResponse } from '~/shared/types';
-  import { SpeciesLineages } from '../lineages';
+  import { SpeciesLineages } from '~species/lineages';
 
   const { species } = defineProps<{
     species: SpeciesDetailResponse;
@@ -12,6 +12,12 @@
     () => species,
     (value) => {
       if (!value) {
+        return;
+      }
+
+      if (!value.features) {
+        activeFeatures.value = [];
+
         return;
       }
 
@@ -28,44 +34,46 @@
     :gap="16"
     vertical
   >
-    <ATypographyText
+    <span
       v-if="species.description"
-      :content="species.description"
       :style="{ whiteSpace: 'pre-wrap' }"
-      data-allow-mismatch
-    />
-
-    <ACollapse
-      v-for="feature in species.features"
-      :key="feature.url"
-      v-model:active-key="activeFeatures"
-      :bordered="false"
-      expand-icon-position="end"
-      destroy-inactive-panel
     >
-      <ACollapsePanel
-        :id="feature.url"
-        :key="feature.url"
-        data-allow-mismatch
-      >
-        <template #header>
-          <ATypographyTitle
-            :level="4"
-            data-allow-mismatch
-          >
-            {{ feature.name.rus }}
-          </ATypographyTitle>
-        </template>
+      {{ species.description }}
+    </span>
 
-        <template #default>
-          <ATypographyText
-            :content="feature.description"
-            :style="{ whiteSpace: 'pre-wrap' }"
-            data-allow-mismatch
-          />
-        </template>
-      </ACollapsePanel>
-    </ACollapse>
+    <template v-if="species.features">
+      <ACollapse
+        v-for="feature in species.features"
+        :key="feature.url"
+        v-model:active-key="activeFeatures"
+        :bordered="false"
+        expand-icon-position="end"
+        destroy-inactive-panel
+      >
+        <ACollapsePanel
+          :id="feature.url"
+          :key="feature.url"
+          data-allow-mismatch
+        >
+          <template #header>
+            <ATypographyTitle
+              :level="4"
+              data-allow-mismatch
+            >
+              {{ feature.name.rus }}
+            </ATypographyTitle>
+          </template>
+
+          <template #default>
+            <ATypographyText
+              :content="feature.description"
+              :style="{ whiteSpace: 'pre-wrap' }"
+              data-allow-mismatch
+            />
+          </template>
+        </ACollapsePanel>
+      </ACollapse>
+    </template>
 
     <SpeciesLineages
       v-if="!species.parent && species.hasLineages"

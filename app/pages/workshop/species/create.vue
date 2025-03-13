@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import { SpeciesEditor } from '~/features/species';
-  import { PageContainer, PageHeader, SvgIcon } from '~/shared/ui';
+  import { SpeciesEditor } from '~species/editor';
+  import { PageContainer, PageHeader } from '~ui/page';
+  import { SvgIcon } from '~ui/icon';
 </script>
 
 <template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { UserProfile } from '~/shared/types';
-  import { PageContainer, PageHeader, UiGallery } from '~/shared/ui';
+  import { PageContainer, PageHeader } from '~ui/page';
+  import { UiGallery } from '~ui/gallery';
 
   const { data } = await useAsyncData('user-profile', () =>
     $fetch<UserProfile>('/api/user/profile'),

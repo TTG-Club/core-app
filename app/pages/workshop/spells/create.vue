@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import { SpellsEditor } from '~/features/spells';
-  import { PageContainer, PageHeader, SvgIcon } from '~/shared/ui';
+  import { SpellsEditor } from '~spells/editor';
+  import { PageContainer, PageHeader } from '~ui/page';
+  import { SvgIcon } from '~ui/icon';
 </script>
 
 <template>

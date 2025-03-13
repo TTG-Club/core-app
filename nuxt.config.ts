@@ -160,6 +160,10 @@ export default defineNuxtConfig({
     },
   },
 
+  alias: {
+    '~ui': fileURLToPath(new URL('./app/shared/ui', import.meta.url)),
+  },
+
   vite: {
     css: {
       preprocessorOptions: {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { SpeciesLinkResponse } from '~/shared/types';
-  import { SpeciesLink } from '../link';
-  import { DrawerBody, DrawerTitle } from '~/shared/ui';
+  import { SpeciesLink } from '~species/link';
+  import { DrawerComponent } from '~ui/drawer';
 
   const open = defineModel<boolean>();
 
@@ -9,9 +9,16 @@
     url: string;
   }>();
 
-  const { data, status, execute } = useFetch<Array<SpeciesLinkResponse>>(
-    `/api/v2/species/${url}/lineages/search`,
-    { immediate: false },
+  const { data, status, execute } = await useAsyncData(
+    `lineages-drawer-${url}`,
+    () =>
+      $fetch<Array<SpeciesLinkResponse>>(
+        `/api/v2/species/${url}/lineages/search`,
+      ),
+    {
+      server: false,
+      immediate: false,
+    },
   );
 
   watch(open, (value) => {
@@ -24,37 +31,27 @@
 </script>
 
 <template>
-  <ADrawer
+  <DrawerComponent
     v-model:open="open"
-    :content-wrapper-style="{
-      minWidth: '296px',
-      maxWidth: '552px',
-    }"
+    title="Разновидности"
+    :min-width="296"
+    :max-width="552"
+    :is-loading="status === 'pending'"
+    :is-error="status === 'error'"
     width="auto"
-    destroy-on-close
   >
-    <template #title>
-      <DrawerTitle name="Разновидности" />
-    </template>
-
-    <template #default>
-      <DrawerBody :is-loading="status === 'pending'">
-        <template #body>
-          <div :class="$style.container">
-            <div :class="$style.grid">
-              <SpeciesLink
-                v-for="link in data"
-                :key="link.url"
-                :species="link"
-              >
-                {{ link.url }}
-              </SpeciesLink>
-            </div>
-          </div>
-        </template>
-      </DrawerBody>
-    </template>
-  </ADrawer>
+    <div :class="$style.container">
+      <div :class="$style.grid">
+        <SpeciesLink
+          v-for="link in data"
+          :key="link.url"
+          :species="link"
+        >
+          {{ link.url }}
+        </SpeciesLink>
+      </div>
+    </div>
+  </DrawerComponent>
 </template>
 
 <style module lang="scss">
