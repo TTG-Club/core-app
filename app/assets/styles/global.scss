@@ -66,6 +66,16 @@ body,
   width: 100%;
 }
 
+html {
+  --scrollbar-width: 0;
+
+  &[style*="overflow:hidden"],
+  &[style*="overflow: hidden"] {
+      padding-right: var(--scrollbar-width);
+      //padding-right: 16px;
+  }
+}
+
 body {
   z-index: 1;
 
