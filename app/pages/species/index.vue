@@ -3,8 +3,6 @@
   import { SpeciesLegend } from '~species/legend';
   import { SpeciesLink } from '~species/link';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
-  import { SpeciesLineagesDrawer } from '~species/lineages-drawer';
-  import { SpeciesDrawer } from '~species/drawer';
 
   useSeoMeta({
     title: 'Виды (Species)',
@@ -118,12 +116,6 @@
           </template>
         </AResult>
       </Transition>
-
-      <ClientOnly>
-        <SpeciesDrawer />
-
-        <SpeciesLineagesDrawer />
-      </ClientOnly>
     </template>
   </PageContainer>
 </template>

@@ -66,9 +66,7 @@
       </div>
     </div>
 
-    <ClientOnly>
-      <SpeciesDrawer in-lineages-drawer />
-    </ClientOnly>
+    <SpeciesDrawer in-lineages-drawer />
   </DrawerComponent>
 </template>
 
