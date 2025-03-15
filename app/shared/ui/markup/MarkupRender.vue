@@ -1,15 +1,29 @@
 <script setup lang="ts">
-  import { markupService } from './renderer';
+  import { parseString } from './renderer';
 
   const { entries } = defineProps<{
-    entries: string | Array<string>;
+    entries: Array<string>;
   }>();
 
-  const renderedEntries = markupService.render(entries);
+  const parsed = computed(() => getParsed());
+
+  function getParsed() {
+    try {
+      return entries.map(parseString);
+    } catch (error) {
+      console.error(error);
+
+      return [];
+    }
+  }
 </script>
 
 <template>
-  <ClientOnly>
-    <component :is="renderedEntries" />
-  </ClientOnly>
+  <pre
+    v-for="(json, index) in parsed"
+    :key="index"
+  >
+     {{ json }}
+    </pre
+  >
 </template>

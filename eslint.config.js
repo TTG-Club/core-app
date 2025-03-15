@@ -30,10 +30,7 @@ export default createConfigForNuxt(
         'WithStatement',
       ],
       'no-unused-vars': 'off',
-      'no-param-reassign': [
-        'error',
-        { props: true, ignorePropertyModificationsFor: ['state'] },
-      ],
+      'no-param-reassign': ['error', { props: false }],
       'no-irregular-whitespace': [
         'error',
         {
