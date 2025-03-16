@@ -10,15 +10,32 @@
     $fetch<SpellDetailResponse>(`/api/v2/spells/${route.params.url}`),
   );
 
-  const seoTitle = computed(() => {
+  useSeoMeta({
+    title: getSeoTitle,
+    ogTitle: getOgTitle,
+    twitterTitle: getOgTitle,
+    description: getSeoDescription,
+    ogDescription: getSeoDescription,
+    twitterDescription: getSeoDescription,
+    author: () => (spell.value ? spell.value.source.name.rus : undefined),
+    titleTemplate: '%s | Заклинания D&D 5 2024',
+  });
+
+  function getSeoTitle() {
     if (!spell.value) {
       return '';
     }
 
     return getSlicedString(spell.value.name.rus, 36);
-  });
+  }
 
-  const seoDescription = computed(() => {
+  function getOgTitle() {
+    const title = getSeoTitle();
+
+    return `${title} | Заклинания D&D 5 2024`;
+  }
+
+  function getSeoDescription() {
     if (!spell.value) {
       return '';
     }
@@ -31,16 +48,9 @@
 
     return getSlicedString(
       `${spell.value.name.rus} (${spell.value.name.eng}) — ${level} ${school} D&D 5 2024 редакции`,
-      200,
+      160,
     );
-  });
-
-  useSeoMeta({
-    title: () => seoTitle.value,
-    description: () => seoDescription.value,
-    author: () => (spell.value ? spell.value.source.name.rus : ''),
-    titleTemplate: (title) => `${title} | Заклинания D&D 5 2024`,
-  });
+  }
 </script>
 
 <template>

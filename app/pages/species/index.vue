@@ -6,7 +6,11 @@
 
   useSeoMeta({
     title: 'Виды (Species)',
+    ogTitle: 'Виды (Species) | TTG Club Онлайн-справочник',
+    twitterTitle: 'Виды (Species) | TTG Club Онлайн-справочник',
     description: 'Виды и происхождения персонажей по D&D 2024 редакции',
+    ogDescription: 'Виды и происхождения персонажей по D&D 2024 редакции',
+    twitterDescription: 'Виды и происхождения персонажей по D&D 2024 редакции',
   });
 
   const search = ref<string>('');
