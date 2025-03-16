@@ -1,15 +1,16 @@
 <script setup lang="ts">
-  import { parseString } from './renderer';
+  import { parse } from './parser';
+  import { render } from './renderer';
 
   const { entries } = defineProps<{
     entries: Array<string>;
   }>();
 
-  const parsed = computed(() => getParsed());
+  const rendered = ref(getRendered());
 
-  function getParsed() {
+  function getRendered() {
     try {
-      return entries.map(parseString);
+      return entries.map((entry) => render(parse(entry)));
     } catch (error) {
       console.error(error);
 
@@ -19,11 +20,11 @@
 </script>
 
 <template>
-  <pre
-    v-for="(json, index) in parsed"
-    :key="index"
-  >
-     {{ json }}
-    </pre
-  >
+  <div>
+    <component
+      :is="entry"
+      v-for="(entry, index) in rendered"
+      :key="index"
+    />
+  </div>
 </template>

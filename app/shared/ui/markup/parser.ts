@@ -1,61 +1,39 @@
-// Наивысшая допустимая глубина вложенности.
-const MAX_DEPTH = 7;
-// Максимальный размер строки.
-const MAX_STRING_LENGTH = 65536;
-// Первый символ маркера
-const LEADING_CHARACTER = '@';
-
-// Разрешенные маркеры и их алиасы.
-export const enum MarkerType {
-  Bold = 'bold',
-  Italic = 'italic',
-  Underline = 'underline',
-  Strikethrough = 'strikethrough',
-  Link = 'link',
-  Br = 'br',
-}
+import type {
+  MarkerNode,
+  TextNode,
+  EmptyNode,
+  MarkerAttributes,
+  SimpleTextNode,
+  ParamValue,
+  RichNode,
+  MarkerName,
+  RichMarker,
+  EmptyMarker,
+  TextMarker,
+} from './types';
+import { SimpleText, Marker } from './types';
+import { MAX_STRING_LENGTH, MAX_DEPTH, LEADING_CHARACTER } from './consts';
+import { isEmptyMarker, isRichMarker, isTextMarker } from './utils';
 
 // Разрешенные алиасы для маркеров
-const MARKERS = new Map<string, MarkerType>([
-  ['bold', MarkerType.Bold],
-  ['b', MarkerType.Bold],
-  ['italic', MarkerType.Italic],
-  ['i', MarkerType.Italic],
-  ['underline', MarkerType.Underline],
-  ['u', MarkerType.Underline],
-  ['strikethrough', MarkerType.Strikethrough],
-  ['s', MarkerType.Strikethrough],
-  ['link', MarkerType.Link],
-  ['br', MarkerType.Br],
-]);
+const MARKERS: { [key: string]: MarkerName } = {
+  bold: Marker.Bold,
+  b: Marker.Bold,
+  italic: Marker.Italic,
+  i: Marker.Italic,
+  underline: Marker.Underline,
+  u: Marker.Underline,
+  strikethrough: Marker.Strikethrough,
+  s: Marker.Strikethrough,
+  link: Marker.Link,
+  br: Marker.Break,
+  break: Marker.Break,
+  sup: Marker.Superscript,
+  sub: Marker.Subscript,
+  highlight: Marker.Highlight,
+};
 
-// Типы данных для параметров атрибутов.
-export type ParamValue = string | number | boolean | null;
-
-// Тип для параметров маркера.
-export type MarkerAttributes = Record<string, ParamValue>;
-
-export interface TextMarkerNode {
-  type: 'text';
-  text: string;
-}
-
-export interface EmptyMarkerNode {
-  type: MarkerType;
-}
-
-export interface CustomizedMarkerNode extends EmptyMarkerNode {
-  attrs?: MarkerAttributes;
-  content: Array<MarkerNode>;
-}
-
-// Типы узлов TipTap.
-export type MarkerNode =
-  | TextMarkerNode
-  | EmptyMarkerNode
-  | CustomizedMarkerNode;
-
-export function parseString(text: string): MarkerNode[] {
+export function parse(text: string): MarkerNode[] {
   if (text.length > MAX_STRING_LENGTH) {
     throw new Error('[Markup] String is too long');
   }
@@ -94,40 +72,41 @@ function recursiveParse(text: string, depth: number): MarkerNode[] {
 }
 
 function convertMarker(
-  marker: MarkerType,
+  marker: MarkerName,
   textWithParams: string,
   depth: number,
 ): MarkerNode {
-  switch (marker) {
-    case MarkerType.Bold:
-    case MarkerType.Italic:
-    case MarkerType.Underline:
-    case MarkerType.Strikethrough:
-    case MarkerType.Link:
-      return convertMarkerSimple(marker, textWithParams, depth);
-    case MarkerType.Br:
-      return convertBr();
-    default:
-      throw new Error(`[Markup] Unknown marker: ${marker}`);
+  if (isTextMarker(marker)) {
+    return convertTextMarker(marker, textWithParams, depth);
   }
+
+  if (isRichMarker(marker)) {
+    return convertRichMarker(marker, textWithParams, depth);
+  }
+
+  if (isEmptyMarker(marker)) {
+    return convertEmptyMarker(marker);
+  }
+
+  throw new Error(`[Markup] Unknown marker: ${marker}`);
 }
 
-function convertText(text: string | undefined): TextMarkerNode {
+function convertText(text: string | undefined): SimpleTextNode {
   if (!text) {
     throw new Error(`[Markup] Text marker must have text`);
   }
 
   return {
-    type: 'text',
+    type: SimpleText.Text,
     text,
   };
 }
 
-function convertMarkerSimple(
-  marker: MarkerType,
+function convertTextMarker(
+  marker: TextMarker,
   textWithParams: string,
   depth: number,
-): CustomizedMarkerNode {
+): TextNode {
   const { text, params } = splitByPipeBase(textWithParams);
 
   if (!text) {
@@ -143,9 +122,29 @@ function convertMarkerSimple(
   };
 }
 
-function convertBr(): EmptyMarkerNode {
+function convertRichMarker(
+  marker: RichMarker,
+  textWithParams: string,
+  depth: number,
+): RichNode {
+  const { text, params } = splitByPipeBase(textWithParams);
+
+  if (!text) {
+    throw new Error(
+      `[Markup] ${marker.charAt(0).toUpperCase() + marker.slice(1)} marker must have text`,
+    );
+  }
+
   return {
-    type: MarkerType.Br,
+    type: marker,
+    attrs: splitAttrs(params),
+    content: recursiveParse(text, depth),
+  };
+}
+
+function convertEmptyMarker(marker: EmptyMarker): EmptyNode {
+  return {
+    type: marker,
   };
 }
 
@@ -282,10 +281,10 @@ function splitByPipeBase(string: string): { text?: string; params: string[] } {
   return { text: text?.trim(), params: params.map((param) => param.trim()) };
 }
 
-function splitFirstSpace(string: string): [MarkerType, string] {
+function splitFirstSpace(string: string): [MarkerName, string] {
   const index = string.indexOf(' ');
   const rawMarker = index < 0 ? string : string.substring(0, index);
-  const marker = MARKERS.get(rawMarker.replace(/^@/, ''));
+  const marker = MARKERS[rawMarker.replace(/^@/, '')];
 
   if (!marker) {
     throw new Error(`[Markup] Unknown marker: ${rawMarker}`);
