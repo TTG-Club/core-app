@@ -85,7 +85,6 @@
 
     &:not(:has(.actions:hover)) {
       &:hover {
-        //box-shadow: 0 4px 8px 0 var(--color-shadow);
         background-color: var(--color-hover);
       }
     }
