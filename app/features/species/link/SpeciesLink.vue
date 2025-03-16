@@ -17,66 +17,60 @@
 </script>
 
 <template>
-  <NuxtLink
-    v-slot="{ href }"
-    :to="`/species/${species.url}`"
-    custom
-  >
-    <a :href>
-      <ACard :body-style="{ padding: '24px 16px 16px 16px' }">
-        <template #cover>
-          <div :class="$style.coverCard">
-            <AImage
-              :src="species.image || '/img/no-img.webp'"
-              :alt="species.name.rus"
-              :class="$style.image"
-              :preview="false"
-              fallback="/img/no-img.webp"
-              loading="lazy"
-              width="100%"
-            />
-          </div>
-        </template>
+  <NuxtLink :to="`/species/${species.url}`">
+    <ACard :body-style="{ padding: '24px 16px 16px 16px' }">
+      <template #cover>
+        <div :class="$style.coverCard">
+          <AImage
+            :src="species.image || '/img/no-img.webp'"
+            :alt="species.name.rus"
+            :class="$style.image"
+            :preview="false"
+            fallback="/img/no-img.webp"
+            loading="lazy"
+            width="100%"
+          />
+        </div>
+      </template>
 
-        <ACardMeta>
-          <template #title>
-            <AFlex
-              justify="space-between"
-              align="center"
-              gap="4"
-            >
-              <span
-                :class="$style.name"
-                :title="species.name.rus"
-              >
-                {{ species.name.rus }}
-              </span>
-
-              <GroupTag :group="species.source.group" />
-            </AFlex>
-          </template>
-
-          <template #description>
-            <span :title="species.name.rus">
-              {{ species.name.eng }}
-            </span>
-          </template>
-        </ACardMeta>
-
-        <template #actions>
-          <span @click.left.exact.prevent.stop="openPreview(species.url)">
-            Предпросмотр
-          </span>
-
-          <span
-            v-if="species.hasLineages"
-            @click.left.exact.prevent.stop="openLineages(species.url)"
+      <ACardMeta>
+        <template #title>
+          <AFlex
+            justify="space-between"
+            align="center"
+            gap="4"
           >
-            Разновидности
+            <span
+              :class="$style.name"
+              :title="species.name.rus"
+            >
+              {{ species.name.rus }}
+            </span>
+
+            <GroupTag :group="species.source.group" />
+          </AFlex>
+        </template>
+
+        <template #description>
+          <span :title="species.name.rus">
+            {{ species.name.eng }}
           </span>
         </template>
-      </ACard>
-    </a>
+      </ACardMeta>
+
+      <template #actions>
+        <span @click.left.exact.prevent.stop="openPreview(species.url)">
+          Предпросмотр
+        </span>
+
+        <span
+          v-if="species.hasLineages"
+          @click.left.exact.prevent.stop="openLineages(species.url)"
+        >
+          Разновидности
+        </span>
+      </template>
+    </ACard>
   </NuxtLink>
 </template>
 
