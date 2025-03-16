@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import type { SpeciesLinkResponse } from '~/shared/types';
-  import { NuxtLink } from '#components';
   import { GroupTag } from '~ui/source-tag';
   import { useDrawer } from '~/shared/composables';
 
@@ -18,70 +17,120 @@
 
 <template>
   <NuxtLink :to="`/species/${species.url}`">
-    <ACard :body-style="{ padding: '24px 16px 16px 16px' }">
-      <template #cover>
-        <div :class="$style.coverCard">
-          <AImage
-            :src="species.image || '/img/no-img.webp'"
-            :alt="species.name.rus"
-            :class="$style.image"
-            :preview="false"
-            fallback="/img/no-img.webp"
-            loading="lazy"
-            width="100%"
-          />
-        </div>
-      </template>
+    <div :class="$style.link">
+      <div :class="$style.image">
+        <img
+          :src="species.image"
+          :alt="species.name.rus"
+        />
+      </div>
 
-      <ACardMeta>
-        <template #title>
-          <AFlex
-            justify="space-between"
-            align="center"
-            gap="4"
+      <div :class="$style.info">
+        <div :class="$style.main">
+          <span
+            :class="[$style.name, $style.rus]"
+            :title="species.name.rus"
           >
-            <span
-              :class="$style.name"
-              :title="species.name.rus"
-            >
-              {{ species.name.rus }}
-            </span>
+            {{ species.name.rus }}
+          </span>
 
-            <GroupTag :group="species.source.group" />
-          </AFlex>
-        </template>
+          <GroupTag :group="species.source.group" />
+        </div>
 
-        <template #description>
-          <span :title="species.name.rus">
+        <div :class="$style.common">
+          <span
+            :class="[$style.name, $style.eng]"
+            :title="species.name.eng"
+          >
             {{ species.name.eng }}
           </span>
-        </template>
-      </ACardMeta>
+        </div>
+      </div>
 
-      <template #actions>
-        <span @click.left.exact.prevent.stop="openPreview(species.url)">
+      <div :class="$style.actions">
+        <button
+          :class="$style.btn"
+          @click.left.exact.prevent.stop="openPreview(species.url)"
+        >
           Предпросмотр
-        </span>
+        </button>
 
-        <span
+        <button
           v-if="species.hasLineages"
+          :class="$style.btn"
           @click.left.exact.prevent.stop="openLineages(species.url)"
         >
           Разновидности
-        </span>
-      </template>
-    </ACard>
+        </button>
+      </div>
+    </div>
   </NuxtLink>
 </template>
 
 <style module lang="scss">
-  .coverCard {
+  .link {
+    will-change: box-shadow;
+
     overflow: hidden;
+
+    border-radius: 16px;
+
+    color: var(--color-text);
+
+    background-color: var(--color-bg-secondary);
+
+    & {
+      @include css-anim($time: 0.23s);
+    }
+
+    &:not(:has(.actions:hover)) {
+      &:hover {
+        //box-shadow: 0 4px 8px 0 var(--color-shadow);
+        background-color: var(--color-hover);
+      }
+    }
   }
 
   .image {
-    width: 100%;
-    opacity: 0.9;
+    position: relative;
+
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:before {
+      pointer-events: none;
+      content: '';
+
+      display: block;
+
+      width: 100%;
+      padding-bottom: 100%;
+    }
+
+    img {
+      position: absolute;
+      height: 100%;
+      opacity: 0.9;
+    }
+  }
+
+  .info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+
+    .main {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .common {
+      color: var(--color-text-gray);
+    }
   }
 
   .name {
@@ -91,5 +140,41 @@
 
     text-overflow: ellipsis;
     white-space: nowrap;
+
+    &.rus {
+      font-weight: 600;
+    }
+
+    &.eng {
+      max-width: 100%;
+    }
+  }
+
+  .actions {
+    display: flex;
+    border-top: 1px solid var(--color-border);
+
+    .btn {
+      cursor: pointer;
+
+      flex: 1 1 auto;
+
+      padding: 12px 0;
+      border: none;
+
+      background-color: transparent;
+
+      & {
+        @include css-anim();
+      }
+
+      &:not(:first-child) {
+        border-left: 1px solid var(--color-border);
+      }
+
+      &:hover {
+        background-color: var(--color-hover);
+      }
+    }
   }
 </style>

@@ -108,14 +108,14 @@
 
     color: var(--color-text);
 
-    background: var(--color-bg-secondary);
-
-    &:hover {
-      background-color: var(--color-hover);
-    }
+    background-color: var(--color-bg-secondary);
 
     & {
       @include css-anim();
+    }
+
+    &:hover {
+      background-color: var(--color-hover);
     }
   }
 
