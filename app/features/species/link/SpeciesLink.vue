@@ -125,7 +125,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 16px;
+    padding: 16px 16px 8px;
 
     .main {
       display: flex;
