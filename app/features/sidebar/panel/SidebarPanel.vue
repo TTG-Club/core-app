@@ -15,7 +15,6 @@
     },
     {
       immediate: true,
-      flush: 'pre',
       deep: true,
     },
   );
@@ -155,7 +154,7 @@
     height: 36px;
     margin: 0 8px 0 0;
     padding: 0 16px 0 0;
-    border-right: 1px solid var(--border);
+    border-right: 1px solid var(--color-border);
     border-bottom: 0;
 
     @include media-min($md) {
@@ -164,7 +163,7 @@
       margin: 0 0 8px 0;
       padding: 0 0 12px 0;
       border-right: 0;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid var(--color-border);
     }
   }
 
@@ -189,26 +188,26 @@
       opacity: 70%;
 
       &.is-discord {
-        color: var(--text-btn-color);
+        color: var(--color-text);
 
         &:hover {
-          background-color: var(--discord-hover);
+          background-color: var(--color-discord-hover);
         }
       }
 
       &.is-boosty {
-        color: var(--text-btn-color);
+        color: var(--color-text);
 
         &:hover {
-          background-color: var(--boosty-hover);
+          background-color: var(--color-boosty-hover);
         }
       }
 
       &.is-vk {
-        color: var(--text-btn-color);
+        color: var(--color-text);
 
         &:hover {
-          background-color: var(--vk-hover);
+          background-color: var(--color-vk-hover);
         }
       }
 

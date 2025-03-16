@@ -1,14 +1,16 @@
 <script setup lang="ts">
   import { getSlicedString } from '~/shared/utils';
   import type { SpeciesDetailResponse } from '~/shared/types';
-  import { SpeciesLineagesDrawer } from '~species/lineages-drawer';
   import { SpeciesBody } from '~species/body';
   import { PageActions, PageContainer, PageHeader } from '~ui/page';
   import { UiGallery } from '~ui/gallery';
+  import { useDrawer } from '~/shared/composables';
 
   const {
     params: { url },
   } = useRoute();
+
+  const { open: openLineages } = useDrawer('species-lineages');
 
   const {
     data: species,
@@ -48,8 +50,6 @@
     author: () => (species.value ? species.value.source.name.rus : ''),
     titleTemplate: (title) => `${title} | Виды и происхождения D&D 5 2024`,
   });
-
-  const showRelated = ref(false);
 
   const anchors = computed(() => {
     if (!species.value?.features?.length) {
@@ -150,18 +150,10 @@
           <AButton
             v-if="species.hasLineages"
             type="primary"
-            @click.left.exact.prevent="showRelated = true"
+            @click.left.exact.prevent="openLineages(species.url)"
           >
             Происхождения
           </AButton>
-
-          <ClientOnly>
-            <SpeciesLineagesDrawer
-              v-if="species.hasLineages"
-              v-model="showRelated"
-              :url="species.url"
-            />
-          </ClientOnly>
 
           <AAnchor
             :items="anchors"

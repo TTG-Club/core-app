@@ -43,7 +43,6 @@
     },
     {
       immediate: true,
-      flush: 'pre',
     },
   );
 </script>

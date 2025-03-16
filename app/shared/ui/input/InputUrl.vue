@@ -62,7 +62,6 @@
 
   watch(acronym, setUrlWithAcronym, {
     immediate: true,
-    flush: 'pre',
   });
 
   watch(

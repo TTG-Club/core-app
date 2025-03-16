@@ -1,73 +1,102 @@
 <script setup lang="ts">
   import { GroupTag } from '../source-tag';
   import type { SourceGroupResponse } from '~/shared/types';
+  import type { RouteLocationRaw } from 'vue-router';
 
-  const { group } = defineProps<{
+  const { group, to } = defineProps<{
     group?: SourceGroupResponse;
     title?: string;
+    to?: RouteLocationRaw;
   }>();
+
+  const emit = defineEmits<{
+    (e: 'open-drawer' | 'navigate'): void;
+  }>();
+
+  const { isDesktop } = useDevice();
+
+  function handleClick() {
+    if (isDesktop) {
+      return emit('open-drawer');
+    }
+
+    navigateTo(to);
+
+    return emit('navigate');
+  }
 </script>
 
 <template>
-  <AFlex
-    :class="$style.link"
-    :gap="12"
-    align="center"
+  <NuxtLink
+    v-slot="{ href }"
+    custom
+    :to
   >
-    <AFlex
-      v-if="$slots.icon"
-      :class="$style.icon"
-      justify="center"
-      align="center"
-    >
-      <slot name="icon" />
-    </AFlex>
-
-    <AFlex
-      :class="$style.body"
-      :gap="4"
-      justify="center"
-      vertical
+    <a
+      :href
+      @click.exact.prevent.stop="handleClick"
     >
       <AFlex
-        :class="$style.main"
-        :gap="4"
-        justify="space-between"
+        :class="$style.link"
+        :gap="12"
         align="center"
       >
-        <span
-          :class="$style.label"
-          :title
+        <AFlex
+          v-if="$slots.icon"
+          :class="$style.icon"
+          justify="center"
+          align="center"
         >
-          <span :class="$style.rus">
-            <slot name="default" />
-          </span>
+          <slot name="icon" />
+        </AFlex>
 
-          <span
-            v-if="$slots.english"
-            :class="$style.eng"
+        <AFlex
+          :class="$style.body"
+          :gap="4"
+          justify="center"
+          vertical
+        >
+          <AFlex
+            :class="$style.main"
+            :gap="4"
+            justify="space-between"
+            align="center"
           >
-            [<slot name="english" />]
-          </span>
-        </span>
+            <span
+              :class="$style.label"
+              :title
+            >
+              <span :class="$style.rus">
+                <slot name="default" />
+              </span>
 
-        <div
-          v-if="group"
-          :class="$style.tag"
-        >
-          <GroupTag :group="group" />
-        </div>
-      </AFlex>
+              <span
+                v-if="$slots.english"
+                :class="$style.eng"
+              >
+                [<slot name="english" />]
+              </span>
+            </span>
 
-      <AFlex
-        v-if="$slots.caption"
-        :gap="4"
-        align="center"
-      >
-        <slot name="caption" />
+            <div
+              v-if="group"
+              :class="$style.tag"
+            >
+              <GroupTag :group="group" />
+            </div>
+          </AFlex>
+
+          <AFlex
+            v-if="$slots.caption"
+            :gap="4"
+            align="center"
+          >
+            <slot name="caption" />
+          </AFlex>
+        </AFlex>
       </AFlex>
-    </AFlex>
-  </AFlex>
+    </a>
+  </NuxtLink>
 </template>
 
 <style module lang="scss">
@@ -79,14 +108,14 @@
 
     color: var(--color-text);
 
-    background: var(--color-bg-secondary);
-
-    &:hover {
-      background-color: var(--color-hover);
-    }
+    background-color: var(--color-bg-secondary);
 
     & {
       @include css-anim();
+    }
+
+    &:hover {
+      background-color: var(--color-hover);
     }
   }
 

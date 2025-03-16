@@ -16,7 +16,9 @@
     width?: string;
   }>();
 
-  const open = defineModel<boolean>('open');
+  const open = defineModel<boolean>('open', {
+    default: false,
+  });
 
   const contentWrapperStyle = computed(() => {
     if (!minWidth && !maxWidth) {
@@ -31,46 +33,50 @@
 </script>
 
 <template>
-  <ClientOnly>
-    <ADrawer
-      v-model:open="open"
-      :content-wrapper-style="contentWrapperStyle"
-      :closable="false"
-      :width="width || 'auto'"
-      destroy-on-close
-      mask-closable
-    >
-      <template #title>
-        <DrawerTitle :title="title" />
-      </template>
+  <ADrawer
+    v-model:open="open"
+    :content-wrapper-style="contentWrapperStyle"
+    :closable="false"
+    :width="width || 'auto'"
+    destroy-on-close
+    mask-closable
+  >
+    <template #title>
+      <DrawerTitle :title="title" />
+    </template>
 
-      <template #extra>
-        <AFlex
-          align="flex-end"
-          gap="8"
-          vertical
+    <template #extra>
+      <AFlex
+        justify="flex-start"
+        align="flex-end"
+        gap="8"
+        vertical
+      >
+        <DrawerActions
+          :url
+          @close="open = false"
+        />
+
+        <Transition
+          name="fade"
+          mode="out-in"
         >
-          <DrawerActions
-            :url
-            @close="open = false"
-          />
-
           <SourceTag
             v-if="source"
             placement="bottomRight"
             :source
           />
-        </AFlex>
-      </template>
+        </Transition>
+      </AFlex>
+    </template>
 
-      <template #default>
-        <DrawerBody
-          :is-loading="isLoading"
-          :is-error="isError"
-        >
-          <slot name="default" />
-        </DrawerBody>
-      </template>
-    </ADrawer>
-  </ClientOnly>
+    <template #default>
+      <DrawerBody
+        :is-loading="isLoading"
+        :is-error="isError"
+      >
+        <slot name="default" />
+      </DrawerBody>
+    </template>
+  </ADrawer>
 </template>

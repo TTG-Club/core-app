@@ -10,51 +10,46 @@
 </script>
 
 <template>
-  <Transition
-    name="fade"
-    mode="out-in"
+  <AFlex
+    v-if="title"
+    :class="$style.name"
+    align="flex-start"
+    gap="8"
+    vertical
   >
-    <AFlex
-      v-if="title"
-      :class="$style.name"
-      align="flex-start"
-      gap="8"
-      vertical
+    <span
+      v-if="typeof title === 'string'"
+      :class="$style.rus"
+      @click="copy(title)"
     >
+      {{ title }}
+    </span>
+
+    <template v-else>
       <span
-        v-if="typeof title === 'string'"
         :class="$style.rus"
-        @click="copy(title)"
+        @click="copy(title.rus)"
       >
-        {{ title }}
+        {{ title.rus }}
       </span>
 
-      <template v-else>
-        <span
-          :class="$style.rus"
-          @click="copy(title.rus)"
-        >
-          {{ title.rus }}
-        </span>
+      <span
+        v-if="title.eng"
+        :class="$style.eng"
+        @click="copy(title.eng)"
+      >
+        {{ title.eng }}
+      </span>
+    </template>
+  </AFlex>
 
-        <span
-          v-if="title.eng"
-          :class="$style.eng"
-          @click="copy(title.eng)"
-        >
-          {{ title.eng }}
-        </span>
-      </template>
-    </AFlex>
-
-    <ASkeleton
-      v-else
-      :paragraph="{ rows: 1 }"
-      :avatar="false"
-      :title="false"
-      active
-    />
-  </Transition>
+  <ASkeleton
+    v-else
+    :paragraph="{ rows: 2 }"
+    :avatar="false"
+    :title="false"
+    active
+  />
 </template>
 
 <style module lang="scss">

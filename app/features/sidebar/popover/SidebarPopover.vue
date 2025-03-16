@@ -6,9 +6,9 @@
     popoverKey: string;
     bottom?: boolean;
     isMenu?: boolean;
-    innerScroll?: boolean;
   }>();
 
+  const isScrollLocked = useScrollLock(window);
   const { close, open, toggle, isOpened } = useSidebarPopover(popoverKey);
 
   onKeyDown('Escape', (e: KeyboardEvent) => {
@@ -21,6 +21,17 @@
 
     close();
   });
+
+  watch(
+    isOpened,
+    (value) => {
+      isScrollLocked.value = value;
+    },
+    {
+      immediate: true,
+      flush: 'post',
+    },
+  );
 </script>
 
 <template>
@@ -51,7 +62,6 @@
           {
             [$style.isMenu]: isMenu,
             [$style.bottom]: bottom,
-            [$style.innerScroll]: innerScroll,
           },
         ]"
         vertical
@@ -98,8 +108,10 @@
     left: 0;
     transform: translate3d(0, 0, 0);
 
+    overscroll-behavior: contain;
+
     width: 100vw;
-    height: var(--max-vh);
+    height: 100dvh;
 
     background-color: var(--color-overlay);
   }
@@ -117,11 +129,12 @@
     transform-origin: bottom left;
 
     overflow: auto;
+    overscroll-behavior: contain;
     display: inline-block;
 
     width: fit-content;
     max-width: calc(100vw - 16px);
-    max-height: calc(var(--max-vh) - 72px - var(--safe-area-inset-bottom));
+    max-height: calc(100dvh - 72px - var(--safe-area-inset-bottom));
     border-radius: 12px;
 
     background-image: var(--color-bg-menu);
@@ -143,12 +156,6 @@
       @include media-min($md) {
         width: calc(100vw - 56px - 24px);
       }
-    }
-
-    &.innerScroll {
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
     }
 
     &.bottom {

@@ -1,42 +1,58 @@
 <script setup lang="ts">
-  import { Breakpoint, BREAKPOINTS } from '~/shared/composables';
+  import { Breakpoint, BREAKPOINTS, useDrawer } from '~/shared/composables';
   import type { SpellDetailResponse } from '~/shared/types';
   import { SpellBody } from '~spells/body';
   import { DrawerComponent } from '~ui/drawer';
 
-  const { url } = defineProps<{
-    url: string;
-  }>();
-
-  const model = defineModel<boolean>();
+  const { url, isOpened, close } = useDrawer('spell-detail');
 
   const {
     data: spell,
     status,
     execute,
+    clear,
   } = await useAsyncData(
-    `spell-${url}`,
-    () => $fetch<SpellDetailResponse>(`/api/v2/spells/${url}`),
+    `spell-detail-drawer`,
+    () => {
+      if (!url.value) {
+        return Promise.reject();
+      }
+
+      return $fetch<SpellDetailResponse>(`/api/v2/spells/${url.value}`);
+    },
     {
       server: false,
       immediate: false,
     },
   );
 
-  const urlForCopy = computed(() => `${window.location.origin}/spells/${url}`);
+  const urlForCopy = computed(() =>
+    isOpened.value
+      ? `${window.location.origin}/spells/${url.value}`
+      : undefined,
+  );
 
-  watch(model, (value) => {
+  function handleUpdate(opened: boolean) {
+    if (opened) {
+      return;
+    }
+
+    close();
+  }
+
+  watch(isOpened, (value) => {
     if (!value) {
       return;
     }
 
+    clear();
     execute();
   });
 </script>
 
 <template>
   <DrawerComponent
-    v-model:open="model"
+    :open="isOpened"
     :min-width="320"
     :max-width="BREAKPOINTS[Breakpoint.MD]"
     :title="spell?.name"
@@ -45,6 +61,7 @@
     :is-loading="status === 'pending'"
     :is-error="status === 'error'"
     width="100%"
+    @update:open="handleUpdate"
   >
     <SpellBody
       v-if="spell"

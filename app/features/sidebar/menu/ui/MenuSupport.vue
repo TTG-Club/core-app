@@ -7,19 +7,16 @@
 </script>
 
 <template>
-  <AFlex
-    gap="small"
-    align="center"
-    wrap="wrap"
-  >
-    <span>Поддержка:</span>
+  <div :class="$style.container">
+    <span :class="$style.label">Поддержка:</span>
 
     <AButton
       v-for="(item, index) in supportItems"
       :key="index"
-      type="text"
+      :class="$style.btn"
       :href="item.url"
       target="_blank"
+      type="text"
     >
       <template #icon>
         <SvgIcon :icon="item.icon" />
@@ -27,5 +24,15 @@
 
       <template #default>{{ item.label }}</template>
     </AButton>
-  </AFlex>
+  </div>
 </template>
+
+<style module lang="scss">
+  .container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+</style>
