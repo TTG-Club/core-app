@@ -4,12 +4,10 @@
 
   const { description } =
     defineProps<Pick<SpellDetailResponse, 'description' | 'level' | 'upper'>>();
-
-  const descriptionEntries = computed(() => description.split('\n\n'));
 </script>
 
 <template>
-  <MarkupRender :entries="descriptionEntries" />
+  <MarkupRender :entries="description" />
 
   <div v-if="upper">
     <strong v-if="!level">Улучшение заговора. </strong>
@@ -21,6 +19,6 @@
       Накладывание более высокой ячейкой.
     </strong>
 
-    <span :style="{ whiteSpace: 'pre-wrap' }">{{ upper }}</span>
+    <MarkupRender :entries="upper" />
   </div>
 </template>

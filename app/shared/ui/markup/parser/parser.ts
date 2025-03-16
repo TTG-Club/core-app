@@ -10,10 +10,10 @@ import type {
   RichMarker,
   EmptyMarker,
   TextMarker,
-} from './types';
-import { SimpleText, Marker } from './types';
-import { MAX_STRING_LENGTH, MAX_DEPTH, LEADING_CHARACTER } from './consts';
-import { isEmptyMarker, isRichMarker, isTextMarker } from './utils';
+} from '../types';
+import { SimpleText, Marker } from '../types';
+import { MAX_STRING_LENGTH, MAX_DEPTH, LEADING_CHARACTER } from '../consts';
+import { isEmptyMarker, isRichMarker, isTextMarker } from '../utils';
 
 // Разрешенные алиасы для маркеров
 const MARKERS: { [key: string]: MarkerName } = {

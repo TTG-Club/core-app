@@ -23,13 +23,13 @@ export interface SpeciesDetailResponse {
     type: string;
     speed: string;
   };
-  description: string;
+  description: Array<string>;
   image: string;
   gallery?: Array<string>;
   features?: Array<{
     url: string;
     name: Pick<NameResponse, 'rus' | 'eng'>;
-    description: string;
+    description: Array<string>;
   }>;
   username: string;
   updatedAt: string;
