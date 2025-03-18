@@ -85,6 +85,13 @@
 
     return list;
   });
+
+  function handleAnchorClick(e: Event, { href }: { href: string }) {
+    navigateTo({
+      hash: href,
+      replace: true,
+    });
+  }
 </script>
 
 <template>
@@ -171,6 +178,7 @@
             :offset-top="24"
             :bounds="24"
             :class="$style.anchors"
+            @click.left.exact.prevent="handleAnchorClick"
           />
         </AFlex>
 
