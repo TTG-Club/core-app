@@ -4,39 +4,56 @@
   import type { ToastPosition, ToastProps } from '../types';
   import { useToastState } from '../state';
   import ToastGroup from './ToastGroup.vue';
+  import { Breakpoint, useBreakpoints } from '~/shared/composables';
 
   const { maxToasts = 6 } = defineProps<{
     maxToasts?: number;
   }>();
 
+  const { toasts } = useToastState();
+  const { smaller } = useBreakpoints();
+
   const verticalGroups: Array<'bottom' | 'top'> = ['bottom', 'top'];
   const horizontalGroups: Array<'left' | 'right'> = ['left', 'right'];
 
-  const { toasts } = useToastState();
+  const isOnlyTopRight = smaller(Breakpoint.LG);
 
-  const getToastsByPosition = (position: ToastPosition) => {
-    const positionFilter = (toast: ToastProps) => {
-      if (position === 'top-right') {
-        return toast.position === 'top-right' || !toast.position;
-      }
-
-      return toast.position === position;
-    };
-
-    const filtered = toasts.value.filter(positionFilter);
-    const sorted = orderBy(filtered, (toast) => toast.id);
-
-    return sorted.slice(0, maxToasts);
-  };
-
-  const getGroupProps = (
+  function getGroupProps(
     vertical: 'top' | 'bottom',
     horizontal: 'left' | 'right',
-  ) => ({
-    vertical,
-    horizontal,
-    toasts: getToastsByPosition(`${vertical}-${horizontal}`),
-  });
+  ) {
+    return {
+      vertical,
+      horizontal,
+      toasts: getToastsByPosition(`${vertical}-${horizontal}`),
+    };
+  }
+
+  function getToastsByPosition(position: ToastPosition) {
+    const filtered = toasts.value.filter((toast) =>
+      positionFilter(toast, position),
+    );
+
+    return getSortedSlice(filtered);
+  }
+
+  function positionFilter(toast: ToastProps, position: ToastPosition) {
+    if (isOnlyTopRight.value) {
+      return position === 'top-right';
+    }
+
+    if (position === 'top-right') {
+      return toast.position === 'top-right' || !toast.position;
+    }
+
+    return toast.position === position;
+  }
+
+  function getSortedSlice(list: Array<ToastProps>) {
+    const sorted = orderBy(list, (toast) => toast.id);
+
+    return sorted.slice(0, maxToasts);
+  }
 </script>
 
 <template>

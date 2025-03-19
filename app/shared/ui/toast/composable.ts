@@ -108,21 +108,7 @@ export function useToast() {
     prop: ToastConfig['icon'],
     type: ToastTypes | undefined,
   ): string | undefined {
-    if (!prop) {
-      return undefined;
-    }
-
-    const name = toValue(prop);
-
-    switch (type) {
-      case 'info':
-      case 'success':
-      case 'warning':
-      case 'error':
-        return type;
-      default:
-        return name || undefined;
-    }
+    return toValue(prop) || type;
   }
 
   function getTitle(prop: ToastConfig['title']): string | VNode {
