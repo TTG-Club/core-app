@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import ruRU from 'ant-design-vue/locale/ru_RU';
   import { useTheme } from '~/shared/composables';
+  import { ToastsWrapper } from '~ui/toast';
 
   const siteConfig = useSiteConfig();
   const { themeName, themeConfig } = useTheme();
@@ -37,6 +38,8 @@
         <div class="ttg-app">
           <slot />
         </div>
+
+        <ToastsWrapper />
       </AApp>
     </AConfigProvider>
   </AExtractStyle>
