@@ -46,6 +46,15 @@
 
     return dateTime.local().format(props.dateTimeFormat);
   });
+
+  function preventSelect(e: Event) {
+    if (!props.copyTitle) {
+      return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+  }
 </script>
 
 <template>
@@ -55,6 +64,8 @@
         v-if="title"
         :class="[$style.title, { [$style.copy]: copyTitle }]"
         @click.left.exact.prevent="handleCopy(title)"
+        @selectstart="preventSelect"
+        @select="preventSelect"
       >
         {{ title }}
       </h2>
