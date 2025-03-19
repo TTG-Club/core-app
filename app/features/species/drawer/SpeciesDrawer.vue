@@ -67,6 +67,7 @@
     :is-loading="status === 'pending'"
     :is-error="status === 'error'"
     width="100%"
+    copy-title
     @update:open="handleUpdate"
   >
     <SpeciesBody

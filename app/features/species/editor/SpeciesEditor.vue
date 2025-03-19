@@ -23,9 +23,10 @@
   } from '~ui/select';
   import { InputUrl } from '~ui/input';
   import { EditorActions } from '~ui/editor';
+  import { useToast } from '~ui/toast';
 
   const siteConfig = useSiteConfig();
-  const { notification } = App.useApp();
+  const $toast = useToast();
 
   const formRef = useTemplateRef<FormInstance>('formRef');
 
@@ -94,8 +95,8 @@
         onResponseError: (error) => {
           isCreating.value = false;
 
-          notification.error({
-            message: 'Ошибка создания вида',
+          $toast.error({
+            title: 'Ошибка создания вида',
             description: error.response._data.message,
           });
         },
@@ -103,8 +104,8 @@
 
       // isCreated.value = true; // TODO: вернуть в будущем
 
-      notification.success({
-        message: () =>
+      $toast.success({
+        title: () =>
           !form.value.parent
             ? 'Вид успешно создан'
             : 'Происхождение успешно создано',

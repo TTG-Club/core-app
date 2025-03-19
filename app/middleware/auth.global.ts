@@ -1,6 +1,6 @@
 import { getReasonPhrase, StatusCodes } from 'http-status-codes';
-import { notification } from 'ant-design-vue';
 import { getStatusMessage } from '~~/shared/utils';
+import { useToast } from '~ui/toast';
 
 export default defineNuxtRouteMiddleware(async (to) => {
   if (!to.meta.auth?.roles?.length) {
@@ -24,8 +24,10 @@ export default defineNuxtRouteMiddleware(async (to) => {
       return abortNavigation();
     }
 
-    notification.error({
-      message: 'Ошибка доступа',
+    const $toast = useToast();
+
+    $toast.error({
+      title: 'Ошибка доступа',
       description: getStatusMessage(code),
     });
 

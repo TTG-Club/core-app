@@ -2,6 +2,7 @@
   import { AButton, AFlex } from '#components';
   import { SignIn, SignUp } from './ui';
   import { SvgIcon } from '~ui/icon';
+  import { useToast } from '~ui/toast';
 
   const enum FormType {
     SIGN_IN = 'signIn',
@@ -11,7 +12,7 @@
 
   const emailVerified = useCookie('email-verified');
 
-  const { notification } = App.useApp();
+  const $toast = useToast();
 
   const opened = defineModel<boolean>({ default: false });
 
@@ -35,36 +36,36 @@
 
     emailVerified.value = null;
 
-    notification.success({
-      key: 'notify-email-verified',
-      message: 'E-Mail подтвержден!',
-      description: h(
-        AFlex,
-        {
-          justify: 'space-between',
-          align: 'center',
-          gap: 12,
-        },
-        [
-          'Теперь вы можете авторизоваться',
-          h(
-            AButton,
-            {
-              type: 'text',
-              onClick: withModifiers(() => {
-                opened.value = true;
-                notification.destroy('notify-email-verified');
-              }, ['left', 'exact', 'prevent']),
-            },
-            {
-              icon: () =>
-                h(SvgIcon, {
-                  icon: 'profile/base/move',
-                }),
-            },
-          ),
-        ],
-      ),
+    const { close } = $toast.success({
+      title: 'E-Mail подтвержден!',
+      description: () =>
+        h(
+          AFlex,
+          {
+            justify: 'space-between',
+            align: 'center',
+            gap: 12,
+          },
+          [
+            'Теперь вы можете авторизоваться',
+            h(
+              AButton,
+              {
+                type: 'text',
+                onClick: withModifiers(() => {
+                  opened.value = true;
+                  close();
+                }, ['left', 'exact', 'prevent']),
+              },
+              {
+                icon: () =>
+                  h(SvgIcon, {
+                    icon: 'profile/base/move',
+                  }),
+              },
+            ),
+          ],
+        ),
     });
   };
 

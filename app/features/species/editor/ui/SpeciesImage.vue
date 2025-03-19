@@ -8,6 +8,7 @@
   import { toNumber } from 'lodash-es';
   import { getStatusMessage } from '#shared/utils';
   import { SvgIcon, SvgLoading } from '~ui/icon';
+  import { useToast } from '~ui/toast';
 
   const props = withDefaults(
     defineProps<{
@@ -35,7 +36,7 @@
   const maxFileWeight = bytes('5MB')!;
   const maxFileSize = 2048;
 
-  const { notification } = App.useApp();
+  const $toast = useToast();
 
   const actionUrl = computed(() => {
     const url = new URLSearchParams();
@@ -52,8 +53,8 @@
   });
 
   const onError = (error: Error, responseError: NuxtError) => {
-    notification.error({
-      message: 'Неизвестная ошибка',
+    $toast.error({
+      title: 'Неизвестная ошибка',
       description: getStatusMessage(responseError.statusCode),
     });
   };
@@ -139,8 +140,8 @@
       file.type === 'image/webp';
 
     if (!isExtensionSuccess) {
-      notification.error({
-        message: 'Ошибка при загрузке файла',
+      $toast.error({
+        title: 'Ошибка при загрузке файла',
         description: 'Недопустимый формат изображения',
       });
 
@@ -148,8 +149,8 @@
     }
 
     if (file.size > maxFileWeight) {
-      notification.error({
-        message: 'Ошибка при загрузке файла',
+      $toast.error({
+        title: 'Ошибка при загрузке файла',
         description: `Размер изображения не должен превышать ${bytes(maxFileWeight)}`,
       });
 
@@ -160,8 +161,8 @@
       const imageSize = await getImageSize(file);
 
       if (imageSize.width > maxFileSize || imageSize.height > maxFileSize) {
-        notification.error({
-          message: 'Ошибка при загрузке файла',
+        $toast.error({
+          title: 'Ошибка при загрузке файла',
           description: `Изображение должно быть меньше ${maxFileSize}px по длинной стороне`,
         });
 
@@ -170,8 +171,8 @@
 
       return true;
     } catch (err) {
-      notification.error({
-        message: 'Ошибка при загрузке файла',
+      $toast.error({
+        title: 'Ошибка при загрузке файла',
         description: 'Неизвестная ошибка',
       });
 
