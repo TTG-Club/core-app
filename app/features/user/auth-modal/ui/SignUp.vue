@@ -2,12 +2,13 @@
   import { Form } from 'ant-design-vue';
   import { ValidationAuth } from '~/shared/utils';
   import { omit } from 'lodash-es';
+  import { useToast } from '~ui/toast';
 
   const emit = defineEmits<{
     (e: 'switch:sign-in'): void;
   }>();
 
-  const { notification } = App.useApp();
+  const $toast = useToast();
 
   const success = ref(false);
 
@@ -46,8 +47,8 @@
     await execute();
 
     if (error.value) {
-      notification.error({
-        message: 'Ошибка авторизации',
+      $toast.error({
+        title: 'Ошибка авторизации',
         description: error.value.data.message,
       });
 
@@ -58,8 +59,8 @@
 
     emit('switch:sign-in');
 
-    notification.success({
-      message: 'Регистрация прошла успешно!',
+    $toast.success({
+      title: 'Регистрация прошла успешно!',
       description:
         'Пожалуйста, подтвердите почту пройдя по ссылке в письме на электронной почте. Ссылка действительна в течение суток.',
     });

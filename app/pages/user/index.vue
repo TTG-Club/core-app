@@ -3,6 +3,8 @@
 
   useSeoMeta({
     title: 'Личный кабинет',
+    ogTitle: 'Личный кабинет | TTG Club Онлайн-справочник',
+    twitterTitle: 'Личный кабинет | TTG Club Онлайн-справочник',
   });
 </script>
 

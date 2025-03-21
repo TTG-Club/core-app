@@ -1,12 +1,13 @@
 <script setup lang="ts">
   import { useUserStore } from '~/shared/stores';
+  import { useToast } from '~ui/toast';
 
   const emit = defineEmits<{
     (e: 'switch:sign-up' | 'switch:change-password' | 'close'): void;
   }>();
 
   const { fetch } = useUserStore();
-  const { notification } = App.useApp();
+  const $toast = useToast();
 
   const model = reactive({
     usernameOrEmail: '',
@@ -28,8 +29,8 @@
     await execute();
 
     if (error.value) {
-      notification.error({
-        message: 'Ошибка авторизации',
+      $toast.error({
+        title: 'Ошибка авторизации',
         description: error.value.data.message,
       });
 
@@ -40,8 +41,8 @@
 
     emit('close');
 
-    notification.success({
-      message: 'Вы авторизовались!',
+    $toast.success({
+      title: 'Вы авторизовались!',
     });
   };
 </script>

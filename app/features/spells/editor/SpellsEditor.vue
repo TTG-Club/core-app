@@ -23,9 +23,10 @@
   } from '~ui/select';
   import { InputUrl } from '~ui/input';
   import { EditorActions } from '~ui/editor';
+  import { useToast } from '~ui/toast';
 
   const siteConfig = useSiteConfig();
-  const { notification } = App.useApp();
+  const $toast = useToast();
 
   const formRef = useTemplateRef<FormInstance>('formRef');
 
@@ -96,8 +97,8 @@
         onResponseError: (error) => {
           isCreating.value = false;
 
-          notification.error({
-            message: 'Ошибка создания заклинания',
+          $toast.error({
+            title: 'Ошибка создания заклинания',
             description: error.response._data.message,
           });
         },
@@ -105,8 +106,8 @@
 
       // isCreated.value = true; // TODO: вернуть в будущем
 
-      notification.success({
-        message: 'Заклинание успешно создано',
+      $toast.success({
+        title: 'Заклинание успешно создано',
         description: () =>
           h('span', [
             'Можешь перейти на его ',

@@ -7,7 +7,11 @@
 
   useSeoMeta({
     title: 'Заклинания (Spells)',
+    ogTitle: 'Заклинания (Spells) | TTG Club Онлайн-справочник',
+    twitterTitle: 'Заклинания (Spells) | TTG Club Онлайн-справочник',
     description: 'Заклинания по D&D 2024 редакции',
+    ogDescription: 'Заклинания по D&D 2024 редакции',
+    twitterDescription: 'Заклинания по D&D 2024 редакции',
   });
 
   const search = ref<string>('');

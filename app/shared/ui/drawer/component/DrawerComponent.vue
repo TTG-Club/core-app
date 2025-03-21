@@ -5,7 +5,11 @@
   import { DrawerBody } from '../body';
   import { SourceTag } from '../../source-tag';
 
-  const { minWidth, maxWidth } = defineProps<{
+  const {
+    minWidth,
+    maxWidth,
+    copyTitle = false,
+  } = defineProps<{
     source?: SourceResponse;
     title: DrawerTitleName;
     isLoading?: boolean;
@@ -14,6 +18,7 @@
     maxWidth?: number;
     url?: string;
     width?: string;
+    copyTitle?: boolean;
   }>();
 
   const open = defineModel<boolean>('open', {
@@ -42,7 +47,10 @@
     mask-closable
   >
     <template #title>
-      <DrawerTitle :title="title" />
+      <DrawerTitle
+        :copy-title="copyTitle"
+        :title="title"
+      />
     </template>
 
     <template #extra>

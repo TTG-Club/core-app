@@ -117,6 +117,7 @@ export default defineNuxtConfig({
       '/profile',
       '/api',
       '/auth',
+      '/workshop/*',
     ],
   },
 

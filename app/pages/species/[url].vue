@@ -20,15 +20,34 @@
     $fetch<SpeciesDetailResponse>(`/api/v2/species/${url}`),
   );
 
-  const seoTitle = computed(() => {
+  useSeoMeta({
+    title: getSeoTitle,
+    ogTitle: getOgTitle,
+    twitterTitle: getOgTitle,
+    description: getSeoDescription,
+    ogDescription: getSeoDescription,
+    twitterDescription: getSeoDescription,
+    ogImage: () => (species.value ? species.value.image : undefined),
+    twitterImage: () => (species.value ? species.value.image : undefined),
+    author: () => (species.value ? species.value.source.name.rus : undefined),
+    titleTemplate: '%s | Виды и происхождения D&D 5 2024',
+  });
+
+  function getSeoTitle() {
     if (!species.value) {
       return '';
     }
 
-    return getSlicedString(species.value.name.rus, 28);
-  });
+    return getSlicedString(species.value.name.rus, 26);
+  }
 
-  const seoDescription = computed(() => {
+  function getOgTitle() {
+    const title = getSeoTitle();
+
+    return `${title} | Виды и происхождения D&D 5 2024`;
+  }
+
+  function getSeoDescription() {
     if (!species.value) {
       return '';
     }
@@ -39,17 +58,9 @@
 
     return getSlicedString(
       `${species.value.name.rus} (${species.value.name.eng}) — ${type} D&D 5 2024 редакции. ${species.value.description}`,
-      200,
+      160,
     );
-  });
-
-  useSeoMeta({
-    title: () => seoTitle.value,
-    description: () => seoDescription.value,
-    ogImage: () => (species.value ? species.value.image : ''),
-    author: () => (species.value ? species.value.source.name.rus : ''),
-    titleTemplate: (title) => `${title} | Виды и происхождения D&D 5 2024`,
-  });
+  }
 
   const anchors = computed(() => {
     if (!species.value?.features?.length) {
@@ -74,6 +85,13 @@
 
     return list;
   });
+
+  function handleAnchorClick(e: Event, { href }: { href: string }) {
+    navigateTo({
+      hash: href,
+      replace: true,
+    });
+  }
 </script>
 
 <template>
@@ -160,6 +178,7 @@
             :offset-top="24"
             :bounds="24"
             :class="$style.anchors"
+            @click.left.exact.prevent="handleAnchorClick"
           />
         </AFlex>
 

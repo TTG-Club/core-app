@@ -2,11 +2,29 @@
   import { useCopy } from '~/shared/composables';
   import type { DrawerTitleName } from './types';
 
-  const { title } = defineProps<{
+  const { title, copyTitle = false } = defineProps<{
     title: DrawerTitleName;
+    copyTitle?: boolean;
   }>();
 
   const { copy } = useCopy();
+
+  function handleCopy(text: string) {
+    if (!copyTitle) {
+      return;
+    }
+
+    copy(text);
+  }
+
+  function preventSelect(e: Event) {
+    if (!copyTitle) {
+      return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+  }
 </script>
 
 <template>
@@ -19,24 +37,30 @@
   >
     <span
       v-if="typeof title === 'string'"
-      :class="$style.rus"
-      @click="copy(title)"
+      :class="[$style.rus, { [$style.copy]: copyTitle }]"
+      @click="handleCopy(title)"
+      @selectstart="preventSelect"
+      @select="preventSelect"
     >
       {{ title }}
     </span>
 
     <template v-else>
       <span
-        :class="$style.rus"
-        @click="copy(title.rus)"
+        :class="[$style.rus, { [$style.copy]: copyTitle }]"
+        @click="handleCopy(title.rus)"
+        @selectstart="preventSelect"
+        @select="preventSelect"
       >
         {{ title.rus }}
       </span>
 
       <span
         v-if="title.eng"
-        :class="$style.eng"
-        @click="copy(title.eng)"
+        :class="[$style.eng, { [$style.copy]: copyTitle }]"
+        @click="handleCopy(title.eng)"
+        @selectstart="preventSelect"
+        @select="preventSelect"
       >
         {{ title.eng }}
       </span>
@@ -70,6 +94,10 @@
 
       text-overflow: ellipsis;
       white-space: nowrap;
+
+      &.copy {
+        cursor: pointer;
+      }
     }
 
     .rus {

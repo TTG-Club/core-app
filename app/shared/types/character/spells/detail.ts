@@ -20,8 +20,8 @@ export interface SpellDetailResponse {
     s?: boolean;
     m?: string;
   };
-  description: string;
-  upper?: string;
+  description: Array<string>;
+  upper?: Array<string>;
   affiliation?: SpellDetailAffiliation;
   updatedAt: string;
 }

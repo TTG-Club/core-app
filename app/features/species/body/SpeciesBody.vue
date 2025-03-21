@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { SpeciesDetailResponse } from '~/shared/types';
   import { SpeciesLineages } from '~species/lineages';
+  import { MarkupRender } from '~ui/markup';
 
   const { species } = defineProps<{
     species: SpeciesDetailResponse;
@@ -34,12 +35,10 @@
     :gap="16"
     vertical
   >
-    <span
+    <MarkupRender
       v-if="species.description"
-      :style="{ whiteSpace: 'pre-wrap' }"
-    >
-      {{ species.description }}
-    </span>
+      :entries="species.description"
+    />
 
     <template v-if="species.features">
       <ACollapse
@@ -65,11 +64,7 @@
           </template>
 
           <template #default>
-            <ATypographyText
-              :content="feature.description"
-              :style="{ whiteSpace: 'pre-wrap' }"
-              data-allow-mismatch
-            />
+            <MarkupRender :entries="feature.description" />
           </template>
         </ACollapsePanel>
       </ACollapse>
