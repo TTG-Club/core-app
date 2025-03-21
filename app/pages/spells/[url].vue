@@ -12,11 +12,7 @@
 
   useSeoMeta({
     title: getSeoTitle,
-    ogTitle: getOgTitle,
-    twitterTitle: getOgTitle,
     description: getSeoDescription,
-    ogDescription: getSeoDescription,
-    twitterDescription: getSeoDescription,
     author: () => (spell.value ? spell.value.source.name.rus : undefined),
     titleTemplate: '%s | Заклинания D&D 5 2024',
   });
@@ -27,12 +23,6 @@
     }
 
     return getSlicedString(spell.value.name.rus, 36);
-  }
-
-  function getOgTitle() {
-    const title = getSeoTitle();
-
-    return `${title} | Заклинания D&D 5 2024`;
   }
 
   function getSeoDescription() {
@@ -47,7 +37,7 @@
     const school = `школы «${spell.value.school}»`;
 
     return getSlicedString(
-      `${spell.value.name.rus} (${spell.value.name.eng}) — ${level} ${school} D&D 5 2024 редакции`,
+      `${spell.value.name.rus} [${spell.value.name.eng}] — ${level} ${school} D&D 5 2024 редакции`,
       160,
     );
   }

@@ -22,13 +22,8 @@
 
   useSeoMeta({
     title: getSeoTitle,
-    ogTitle: getOgTitle,
-    twitterTitle: getOgTitle,
     description: getSeoDescription,
-    ogDescription: getSeoDescription,
-    twitterDescription: getSeoDescription,
     ogImage: () => (species.value ? species.value.image : undefined),
-    twitterImage: () => (species.value ? species.value.image : undefined),
     author: () => (species.value ? species.value.source.name.rus : undefined),
     titleTemplate: '%s | Виды и происхождения D&D 5 2024',
   });
@@ -41,12 +36,6 @@
     return getSlicedString(species.value.name.rus, 26);
   }
 
-  function getOgTitle() {
-    const title = getSeoTitle();
-
-    return `${title} | Виды и происхождения D&D 5 2024`;
-  }
-
   function getSeoDescription() {
     if (!species.value) {
       return '';
@@ -57,7 +46,7 @@
       : 'вид';
 
     return getSlicedString(
-      `${species.value.name.rus} (${species.value.name.eng}) — ${type} D&D 5 2024 редакции. ${species.value.description}`,
+      `${species.value.name.rus} [${species.value.name.eng}] — ${type} D&D 5 2024 редакции. ${species.value.description}`,
       160,
     );
   }

@@ -90,6 +90,7 @@ export default defineNuxtConfig({
           href: `/icons/${size}.png`,
         })),
       ],
+      titleTemplate: '%s %separator %siteName',
       viewport:
         'viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no',
     },
@@ -101,7 +102,16 @@ export default defineNuxtConfig({
 
   seo: {
     redirectToCanonicalSiteUrl: true,
-    fallbackTitle: false,
+    // fallbackTitle: false,
+    automaticOgAndTwitterTags: true,
+    automaticDefaults: true,
+    canonicalLowercase: true,
+  },
+
+  unhead: {
+    renderSSRHeadOptions: {
+      omitLineBreaks: true,
+    },
   },
 
   ogImage: {
@@ -204,7 +214,6 @@ export default defineNuxtConfig({
     '@nuxt/fonts',
     '@nuxtjs/device',
     '@nuxtjs/stylelint-module',
-    '@nuxtjs/device',
     '@nuxtjs/seo',
     '@nuxt/image',
     '@nuxt/eslint',
