@@ -33,9 +33,7 @@
   );
 
   const urlForCopy = computed(() =>
-    isOpened.value
-      ? `${window.location.origin}/species/${url.value}`
-      : undefined,
+    isOpened.value ? `${getOrigin()}/species/${url.value}` : undefined,
   );
 
   function handleUpdate(opened: boolean) {

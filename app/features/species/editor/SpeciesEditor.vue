@@ -25,7 +25,6 @@
   import { EditorActions } from '~ui/editor';
   import { useToast } from '~ui/toast';
 
-  const siteConfig = useSiteConfig();
   const $toast = useToast();
 
   const formRef = useTemplateRef<FormInstance>('formRef');
@@ -265,7 +264,7 @@
             v-model="form.url"
             :eng-name="form.name.eng"
             :source-url="form.source.url"
-            :addon-before="`${siteConfig.url}/species/`"
+            :addon-before="`${getOrigin()}/species/`"
           />
         </AFormItem>
       </ACol>
