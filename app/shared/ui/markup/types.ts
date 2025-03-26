@@ -1,4 +1,6 @@
 // Разрешенные маркеры и их алиасы.
+import type { LinkNode } from './renderer';
+
 export enum SimpleText {
   Text = 'text',
 }
@@ -17,14 +19,9 @@ export enum RichMarker {
   Link = 'link',
 }
 
-export enum EmptyMarker {
-  Break = 'break',
-}
-
 export const Marker = {
   ...TextMarker,
   ...RichMarker,
-  ...EmptyMarker,
 } as const;
 
 export const TextWithMarker = {
@@ -38,15 +35,12 @@ export type TextMarkerName = (typeof TextWithMarker)[keyof typeof TextMarker];
 
 export type RichMarkerName = (typeof TextWithMarker)[keyof typeof RichMarker];
 
-export type EmptyMarkerName = (typeof TextWithMarker)[keyof typeof EmptyMarker];
-
-export type MarkerName = TextMarkerName | RichMarkerName | EmptyMarkerName;
+export type MarkerName = TextMarkerName | RichMarkerName;
 
 export type TextWithMarkerName =
   | SimpleTextName
   | TextMarkerName
-  | RichMarkerName
-  | EmptyMarkerName;
+  | RichMarkerName;
 
 // Типы данных для параметров атрибутов.
 export type ParamValue = string | number | boolean | null;
@@ -55,15 +49,11 @@ export type ParamValue = string | number | boolean | null;
 export type MarkerAttributes = Record<string, ParamValue>;
 
 // Типы узлов TipTap.
-export type MarkerNode = SimpleTextNode | EmptyNode | TextNode | RichNode;
+export type MarkerNode = SimpleTextNode | TextNode | RichNode;
 
 export interface SimpleTextNode {
   type: SimpleText.Text;
   text: string;
-}
-
-export interface EmptyNode {
-  type: EmptyMarker;
 }
 
 export interface TextNode {
@@ -77,11 +67,3 @@ export type RichNodes = {
 };
 
 export type RichNode = RichNodes[RichMarker];
-
-export interface LinkNode {
-  type: RichMarker.Link;
-  attrs: {
-    url?: string;
-  };
-  content: Array<MarkerNode>;
-}

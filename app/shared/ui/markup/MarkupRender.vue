@@ -1,16 +1,16 @@
 <script setup lang="ts">
-  import { parse } from './parser';
   import { render } from './renderer';
+  import type { MarkerNode } from './types';
 
   const { entries } = defineProps<{
-    entries: Array<string>;
+    entries: Array<string | MarkerNode>;
   }>();
 
   const rendered = ref(getRendered());
 
   function getRendered() {
     try {
-      return entries.map((entry) => render(parse(entry)));
+      return render(entries);
     } catch (error) {
       console.error(error);
 

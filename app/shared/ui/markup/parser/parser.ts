@@ -1,19 +1,17 @@
 import type {
   MarkerNode,
   TextNode,
-  EmptyNode,
   MarkerAttributes,
   SimpleTextNode,
   ParamValue,
   RichNode,
   MarkerName,
   RichMarker,
-  EmptyMarker,
   TextMarker,
 } from '../types';
 import { SimpleText, Marker } from '../types';
 import { MAX_STRING_LENGTH, MAX_DEPTH, LEADING_CHARACTER } from '../consts';
-import { isEmptyMarker, isRichMarker, isTextMarker } from '../utils';
+import { isRichMarker, isTextMarker } from '../utils';
 
 // Разрешенные алиасы для маркеров
 const MARKERS: { [key: string]: MarkerName } = {
@@ -25,12 +23,10 @@ const MARKERS: { [key: string]: MarkerName } = {
   u: Marker.Underline,
   strikethrough: Marker.Strikethrough,
   s: Marker.Strikethrough,
-  link: Marker.Link,
-  br: Marker.Break,
-  break: Marker.Break,
   sup: Marker.Superscript,
   sub: Marker.Subscript,
   highlight: Marker.Highlight,
+  link: Marker.Link,
 };
 
 export function parse(text: string): MarkerNode[] {
@@ -84,10 +80,6 @@ function convertMarker(
     return convertRichMarker(marker, textWithParams, depth);
   }
 
-  if (isEmptyMarker(marker)) {
-    return convertEmptyMarker(marker);
-  }
-
   throw new Error(`[Markup] Unknown marker: ${marker}`);
 }
 
@@ -139,12 +131,6 @@ function convertRichMarker(
     type: marker,
     attrs: splitAttrs(params),
     content: recursiveParse(text, depth),
-  };
-}
-
-function convertEmptyMarker(marker: EmptyMarker): EmptyNode {
-  return {
-    type: marker,
   };
 }
 
