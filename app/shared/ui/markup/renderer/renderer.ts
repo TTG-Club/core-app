@@ -2,20 +2,15 @@ import {
   type TextNode,
   type MarkerNode,
   type RichNode,
-  type EmptyNode,
   type RichNodes,
   TextMarker,
-  EmptyMarker,
   RichMarker,
 } from '../types';
-import {
-  isEmptyNode,
-  isRichNode,
-  isSimpleTextNode,
-  isTextNode,
-} from '../utils';
-import { renderLinkNode } from './renderLink';
+import { isRichNode, isSimpleTextNode, isTextNode } from '../utils';
+import { parse } from '../parser';
+import { renderLinkNode } from './link/renderLink';
 import { createTextVNode } from 'vue';
+import { isString } from 'lodash-es';
 
 const TextMarkerTag: Record<TextMarker, string> = {
   [TextMarker.Bold]: 'b',
@@ -25,10 +20,6 @@ const TextMarkerTag: Record<TextMarker, string> = {
   [TextMarker.Subscript]: 'sub',
   [TextMarker.Superscript]: 'sup',
   [TextMarker.Highlight]: 'mark',
-};
-
-const EmptyMarkerTag: Record<EmptyMarker, string> = {
-  [EmptyMarker.Break]: 'br',
 };
 
 const RICH_NODE_RENDERERS: {
@@ -41,11 +32,14 @@ const RICH_NODE_RENDERERS: {
 };
 
 // Функция для рендера контента — принимает массив узлов
-export function render(content: MarkerNode[]) {
-  return h(
-    'p',
-    content.map((node) => renderNode(node)),
-  );
+export function render(entries: Array<string | MarkerNode>) {
+  return entries.map((entry) => {
+    if (isString(entry)) {
+      return h('p', parse(entry).map(renderNode));
+    }
+
+    return renderNode(entry);
+  });
 }
 
 function renderNode(node: MarkerNode): VNode {
@@ -65,10 +59,6 @@ function renderNode(node: MarkerNode): VNode {
     return renderRichNode(node);
   }
 
-  if (isEmptyNode(node)) {
-    return renderEmptyNode(node);
-  }
-
   throw new Error(`[Markup] Unknown node`);
 }
 
@@ -86,16 +76,6 @@ function renderTextNode(node: TextNode): VNode {
   }
 
   return h(tag, child);
-}
-
-function renderEmptyNode(node: EmptyNode): VNode {
-  const tag = EmptyMarkerTag[node.type];
-
-  if (!tag) {
-    throw new Error(`[Markup] Unknown tag for text node`);
-  }
-
-  return h(tag);
 }
 
 function renderRichNode(node: RichNode): VNode {
