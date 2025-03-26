@@ -8,7 +8,7 @@ import { slugify } from 'transliteration';
  * @param options Настройка конвертера. По умолчанию: `{
  *   lowercase: true,
  *   trim: true,
- *   allowedChars: 'a-zA-Z0-9-_.',
+ *   allowedChars: 'a-zA-Z0-9-',
  * }`
  */
 export const getSlug = (string: string, options?: OptionsSlugify) => {
@@ -16,7 +16,7 @@ export const getSlug = (string: string, options?: OptionsSlugify) => {
     {
       lowercase: true,
       trim: true,
-      allowedChars: 'a-zA-Z0-9-_.',
+      allowedChars: 'a-zA-Z0-9-',
     },
     options,
   );

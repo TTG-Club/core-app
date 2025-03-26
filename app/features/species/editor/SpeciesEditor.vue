@@ -395,7 +395,7 @@
         >
           <SpeciesImage
             v-model="form.image"
-            path="species"
+            section="species"
             max-size="480"
           />
         </AFormItem>
@@ -410,7 +410,7 @@
         >
           <SpeciesImage
             v-model="form.linkImage"
-            path="species"
+            section="species"
             max-size="190"
           >
             <template #preview>
@@ -431,7 +431,7 @@
         >
           <SpeciesGallery
             v-model="form.gallery"
-            path="species"
+            section="species"
           />
         </AFormItem>
       </ACol>

@@ -10,29 +10,16 @@
   import { SvgIcon, SvgLoading } from '~ui/icon';
   import { useToast } from '~ui/toast';
 
-  const props = withDefaults(
-    defineProps<{
-      path?: string;
-    }>(),
-    {
-      path: '',
-    },
-  );
+  const { section } = defineProps<{
+    section: string;
+  }>();
 
   const maxFileWeight = bytes('5MB')!;
   const maxFileSize = 2048;
 
   const $toast = useToast();
 
-  const actionUrl = computed(() => {
-    const url = new URLSearchParams();
-
-    if (props.path) {
-      url.set('path', props.path);
-    }
-
-    return `/api/s3?${url.toString()}`;
-  });
+  const actionUrl = computed(() => `/s3/${section}`);
 
   const onError = (error: Error, responseError: NuxtError) => {
     $toast.error({
@@ -143,7 +130,7 @@
         description: 'Неизвестная ошибка',
       });
 
-      throw err;
+      return false;
     }
   };
 
@@ -151,13 +138,7 @@
 
   async function removeLoadedImage(link: string) {
     try {
-      await $fetch('/api/s3', {
-        method: 'delete',
-        query: {
-          path: props.path,
-          keyOrUrl: link,
-        },
-      });
+      await $fetch(link, { method: 'delete' });
 
       fileList.value = fileList.value.filter(
         (file) => file.response?.url !== link,
@@ -193,12 +174,11 @@
     <AUploadDragger
       v-model:file-list="fileList"
       :action="actionUrl"
-      method="put"
-      accept=".webp, .jpg, .jpeg, .png"
       :multiple="true"
       :show-upload-list="false"
       :disabled="isImageLoading"
       :before-upload="beforeUpload"
+      accept=".webp, .jpg, .jpeg, .png"
       @error="onError"
     >
       <AFlex

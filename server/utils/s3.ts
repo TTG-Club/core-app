@@ -1,12 +1,11 @@
 import type { MultiPartData } from 'h3';
 import type { S3UploadFile } from '~~/server/types/s3';
-import { getErrorResponse, getSlug } from '#shared/utils';
 import { StatusCodes } from 'http-status-codes';
 
 export function getFileForUpload(
+  section: string | undefined,
+  username: string | undefined,
   file: MultiPartData,
-  username: string,
-  path?: string,
 ): S3UploadFile {
   if (!file.type) {
     throw createError(
@@ -24,48 +23,65 @@ export function getFileForUpload(
     );
   }
 
-  let fullPath = `${Date.now()}-${getSlug(file.filename)}`;
-
-  const pathFormatted = getPathFormatted(path);
-
-  if (pathFormatted?.length) {
-    fullPath = `${pathFormatted}/${getSlug(username)}/${fullPath}`;
-  }
-
   return {
     name: file.filename,
     data: file.data,
-    path: fullPath,
+    path: getFileKey(section, username, file.filename),
     type: file.type,
   };
 }
 
-export function getKeyFromUrl(keyOrUrl: string) {
-  const {
-    s3: { endpoint, bucket },
-  } = useRuntimeConfig();
+export function getFileKey(
+  section: string | undefined,
+  username: string | undefined,
+  filename: string | undefined,
+): string {
+  const _section = section?.trim();
+  const _username = username?.trim();
+  const _filename = filename?.trim();
 
-  const regex = new RegExp(`^${endpoint}/${bucket}/`);
-
-  return keyOrUrl.replace(regex, '');
-}
-
-export function hasUserAccess(key: string, username: string, path?: string) {
-  if (!key || !username) {
-    return false;
+  if (!_section) {
+    throw createError(
+      getErrorResponse(StatusCodes.BAD_REQUEST, {
+        message: 'Отсутствует название раздела',
+      }),
+    );
   }
 
-  const pathFormatted = getPathFormatted(path);
-  const keyFormatted = pathFormatted ? key.replace(pathFormatted, '') : key;
+  if (!_username) {
+    throw createError(
+      getErrorResponse(StatusCodes.BAD_REQUEST, {
+        message: 'Отсутствует имя пользователя',
+      }),
+    );
+  }
 
-  return keyFormatted.replace(/^\//g, '').startsWith(getSlug(username));
+  const sectionSlug = getSlug(_section);
+  const usernameSlug = getSlug(_username);
+  const filenameSlug = getFilenameSlug(_filename);
+
+  return `${sectionSlug}/${usernameSlug}/${filenameSlug}`;
 }
 
-function getPathFormatted(path?: string) {
-  return path
-    ?.replace(/^\/|\/$/, '')
-    .split('/')
-    .map((folder) => getSlug(folder).trim())
-    .filter((folder) => !!folder)
-    .join('/');
+function getFilenameSlug(raw: string | undefined): string {
+  const _raw = raw?.trim();
+
+  if (!_raw) {
+    throw createError(
+      getErrorResponse(StatusCodes.BAD_REQUEST, {
+        message: 'Отсутствует имя файла',
+      }),
+    );
+  }
+
+  const lastDotIndex = _raw.lastIndexOf('.');
+
+  if (lastDotIndex < 0) {
+    return `${Date.now()}-${getSlug(_raw)}`;
+  }
+
+  const filenameSlug = getSlug(_raw.substring(0, lastDotIndex));
+  const extensionSlug = getSlug(_raw.substring(lastDotIndex + 1, _raw.length));
+
+  return `${Date.now()}-${getSlug(filenameSlug)}.${extensionSlug}`;
 }

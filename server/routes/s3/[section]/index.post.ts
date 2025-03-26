@@ -4,15 +4,10 @@ import { z } from 'zod';
 import type { EventHandlerRequest } from 'h3';
 import { H3Error } from 'h3';
 import { toSafeInteger } from 'lodash-es';
-import { getErrorResponse } from '~~/shared/utils';
-import { CompressionService, S3Service } from '~~/server/services';
+import { S3Service } from '~~/server/services';
 
 const requestSchema = z
   .object({
-    path: z
-      .string()
-      .regex(/^[a-z0-9][a-z0-9-/]+[a-z0-9]$/i)
-      .optional(),
     maxSize: z.string().regex(/^\d+$/).optional(),
   })
   .optional();
@@ -26,19 +21,16 @@ export default defineEventHandler<Request, Promise<S3UploadResponse>>(
     const { username } = getUserFromToken(event);
     const form = await readMultipartFormData(event);
 
-    let path: string | undefined;
     let maxSize: number | undefined;
 
     try {
       const query = await getValidatedQuery(event, requestSchema.parse);
 
-      path = query?.path;
       maxSize = toSafeInteger(query?.maxSize);
     } catch (err) {
       throw createError(
         getErrorResponse(StatusCodes.BAD_REQUEST, {
-          message:
-            'Неправильный формат пути. Путь может состоять только из латинских букв, цифр, дефиса. В начале и конце пути нельзя использовать дефис. Подкаталоги разделяются косой чертой.',
+          message: 'Максимальный размер имеет неверный формат',
         }),
       );
     }
@@ -71,9 +63,11 @@ export default defineEventHandler<Request, Promise<S3UploadResponse>>(
 
     let fileForUpload: S3UploadFile;
 
+    const section = getRouterParam(event, 'section');
+
     try {
-      fileForUpload = await CompressionService.compress(
-        getFileForUpload(file, username, path),
+      fileForUpload = await getCompressed(
+        getFileForUpload(section, username, file),
         maxSize,
       );
     } catch (err) {

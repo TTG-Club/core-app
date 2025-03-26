@@ -1,6 +1,5 @@
 import type { H3Event } from 'h3';
 import { StatusCodes } from 'http-status-codes';
-import { getErrorResponse } from '~~/shared/utils';
 import { USER_TOKEN_COOKIE } from '~~/shared/consts';
 
 function getTokenFromCookie(event: H3Event) {
