@@ -2,18 +2,18 @@ FROM node:22-alpine AS base
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable pnpm && corepack install -g pnpm@latest-9
+RUN corepack enable pnpm && corepack install -g pnpm@latest
 
 WORKDIR /app
 
 FROM base AS build
 
-COPY .npmrc package.json pnpm-lock.yaml ./
+COPY .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY . .
-RUN pnpx nuxi cleanup
-RUN pnpx nuxi build
+RUN pnpm nuxt cleanup
+RUN pnpm nuxt build
 
 FROM base
 

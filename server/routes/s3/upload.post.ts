@@ -8,6 +8,10 @@ import { S3Service } from '~~/server/services';
 
 const requestSchema = z
   .object({
+    section: z
+      .string()
+      .regex(/^[a-z0-9][a-z0-9-]+[a-z0-9]$/)
+      .optional(),
     maxSize: z.string().regex(/^\d+$/).optional(),
   })
   .optional();
@@ -22,11 +26,13 @@ export default defineEventHandler<Request, Promise<S3UploadResponse>>(
     const form = await readMultipartFormData(event);
 
     let maxSize: number | undefined;
+    let section: string | undefined;
 
     try {
       const query = await getValidatedQuery(event, requestSchema.parse);
 
       maxSize = toSafeInteger(query?.maxSize);
+      section = query?.section;
     } catch (err) {
       throw createError(
         getErrorResponse(StatusCodes.BAD_REQUEST, {
@@ -62,8 +68,6 @@ export default defineEventHandler<Request, Promise<S3UploadResponse>>(
     }
 
     let fileForUpload: S3UploadFile;
-
-    const section = getRouterParam(event, 'section');
 
     try {
       fileForUpload = await getCompressed(

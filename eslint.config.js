@@ -180,7 +180,7 @@ export default createConfigForNuxt(
       'vue/valid-v-slot': 'off',
       'vue/define-props-declaration': ['error', 'type-based'],
       'vue/define-emits-declaration': ['error', 'type-based'],
-      'vue/no-ref-object-reactivity-loss': ['warn'],
+      'vue/no-ref-object-reactivity-loss': ['error'],
       'vue/match-component-import-name': ['error'],
       'vue/no-empty-component-block': ['error'],
       'vue/no-multiple-objects-in-class': ['error'],
@@ -211,8 +211,19 @@ export default createConfigForNuxt(
           registeredComponentsOnly: false,
         },
       ],
-      'vue/custom-event-name-casing': 'off',
       'vue/padding-line-between-blocks': ['error'],
+      'vue/prefer-true-attribute-shorthand': ['error'],
+      'vue/no-deprecated-delete-set': ['error'],
+      'vue/no-deprecated-model-definition': ['error'],
+      'vue/no-required-prop-with-default': [
+        'error',
+        {
+          autofix: true,
+        },
+      ],
+      'vue/valid-define-options': ['error'],
+      'vue/valid-define-emits': ['error'],
+      'vue/valid-define-props': ['error'],
 
       // Vue.js Accessibility
       'vuejs-accessibility/anchor-has-content': 'off',

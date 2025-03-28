@@ -19,7 +19,7 @@
 
   const $toast = useToast();
 
-  const actionUrl = computed(() => `/s3/${section}`);
+  const actionUrl = computed(() => `/s3/upload?section=${getSlug(section)}`);
 
   const onError = (error: Error, responseError: NuxtError) => {
     $toast.error({
@@ -174,11 +174,11 @@
     <AUploadDragger
       v-model:file-list="fileList"
       :action="actionUrl"
-      :multiple="true"
       :show-upload-list="false"
       :disabled="isImageLoading"
       :before-upload="beforeUpload"
       accept=".webp, .jpg, .jpeg, .png"
+      multiple
       @error="onError"
     >
       <AFlex
