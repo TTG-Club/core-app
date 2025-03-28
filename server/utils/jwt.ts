@@ -2,7 +2,6 @@ import type { JwtPayload, SignOptions, VerifyOptions } from 'jsonwebtoken';
 import jwt from 'jsonwebtoken';
 import { StatusCodes } from 'http-status-codes';
 import type { H3Event } from 'h3';
-import { getErrorResponse } from '~~/shared/utils';
 
 export interface GenerateJwtConfig {
   payload: object | Buffer;

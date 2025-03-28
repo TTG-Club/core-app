@@ -1,5 +1,6 @@
 import type { LinkNode } from '../types';
 import { NuxtLink } from '#components';
+import { useRouter } from 'vue-router';
 
 export function renderLinkNode(node: LinkNode, renderChildren: () => VNode[]) {
   const { url } = node.attrs;
@@ -8,5 +9,37 @@ export function renderLinkNode(node: LinkNode, renderChildren: () => VNode[]) {
     throw new Error('[Markup] Link node must have a `url`');
   }
 
-  return h(NuxtLink, { to: url }, renderChildren);
+  const external = isExternal(url);
+
+  return h(
+    NuxtLink,
+    {
+      external,
+      to: url,
+      target: external ? '_blank' : '_self',
+    },
+    renderChildren,
+  );
+}
+
+function isExternal(url: string) {
+  try {
+    const parsedUrl = new URL(url, getOrigin());
+
+    if (parsedUrl.origin !== getOrigin()) {
+      return true;
+    }
+
+    const router = useRouter();
+
+    if (router) {
+      const resolvedRoute = router.resolve(parsedUrl.pathname);
+
+      return !resolvedRoute.matched.length;
+    }
+
+    return false;
+  } catch {
+    return true;
+  }
 }

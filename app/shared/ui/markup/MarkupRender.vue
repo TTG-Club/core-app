@@ -20,7 +20,7 @@
 </script>
 
 <template>
-  <div>
+  <div :class="$style.markup">
     <component
       :is="entry"
       v-for="(entry, index) in rendered"
@@ -28,3 +28,13 @@
     />
   </div>
 </template>
+
+<style module lang="scss">
+  .markup {
+    :global {
+      p {
+        margin-bottom: 0.5em;
+      }
+    }
+  }
+</style>

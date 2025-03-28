@@ -25,7 +25,6 @@
   import { EditorActions } from '~ui/editor';
   import { useToast } from '~ui/toast';
 
-  const siteConfig = useSiteConfig();
   const $toast = useToast();
 
   const formRef = useTemplateRef<FormInstance>('formRef');
@@ -265,7 +264,7 @@
             v-model="form.url"
             :eng-name="form.name.eng"
             :source-url="form.source.url"
-            :addon-before="`${siteConfig.url}/species/`"
+            :addon-before="`${getOrigin()}/species/`"
           />
         </AFormItem>
       </ACol>
@@ -396,7 +395,7 @@
         >
           <SpeciesImage
             v-model="form.image"
-            path="species"
+            section="species"
             max-size="480"
           />
         </AFormItem>
@@ -411,7 +410,7 @@
         >
           <SpeciesImage
             v-model="form.linkImage"
-            path="species"
+            section="species"
             max-size="190"
           >
             <template #preview>
@@ -432,7 +431,7 @@
         >
           <SpeciesGallery
             v-model="form.gallery"
-            path="species"
+            section="species"
           />
         </AFormItem>
       </ACol>

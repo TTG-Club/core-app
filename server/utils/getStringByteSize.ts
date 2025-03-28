@@ -1,1 +1,3 @@
-export const getStringByteSize = (string: string) => new Blob([string]).size;
+export function getStringByteSize(str: string) {
+  return Buffer.byteLength(str, 'utf8');
+}

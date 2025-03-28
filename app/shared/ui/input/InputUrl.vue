@@ -36,16 +36,8 @@
     return books.value[index]?.shortName;
   });
 
-  function getSlugifyUrl(value: string) {
-    return getSlug(value, {
-      trim: true,
-      lowercase: true,
-      allowedChars: 'a-zA-Z0-9-',
-    });
-  }
-
   function handleUrlChange(url: string | undefined) {
-    model.value = url ? getSlugifyUrl(url) : undefined;
+    model.value = url ? getSlug(url) : undefined;
 
     context.onFieldChange();
   }

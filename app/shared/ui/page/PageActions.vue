@@ -9,11 +9,7 @@
   const route = useRoute();
 
   const urlForCopy = computed(() => {
-    if (import.meta.browser) {
-      return window.location.origin + route.path;
-    }
-
-    return undefined;
+    return getOrigin() + route.path;
   });
 
   const openPrintWindow = () => {

@@ -10,26 +10,20 @@
   import { SvgIcon, SvgLoading } from '~ui/icon';
   import { useToast } from '~ui/toast';
 
-  const props = withDefaults(
-    defineProps<{
-      path?: string;
+  const { section, maxSize = undefined } = defineProps<{
+    section: string;
 
-      /**
-       * Максимальная длина короткой стороны
-       */
-      maxSize?: string | number;
-    }>(),
-    {
-      path: '',
-      maxSize: undefined,
-    },
-  );
+    /**
+     * Максимальная длина короткой стороны
+     */
+    maxSize?: string | number;
+  }>();
 
-  if (typeof props.maxSize === 'string' && !/\d+/.test(props.maxSize)) {
+  if (typeof maxSize === 'string' && !/\d+/.test(maxSize)) {
     throw new Error('maxSize must be a Number or number in String');
   }
 
-  if (props.maxSize && toNumber(props.maxSize) > 2048) {
+  if (maxSize && toNumber(maxSize) > 2048) {
     throw new Error('maxSize must be lower or equal to 2048');
   }
 
@@ -41,15 +35,11 @@
   const actionUrl = computed(() => {
     const url = new URLSearchParams();
 
-    if (props.path) {
-      url.set('path', props.path);
+    if (maxSize) {
+      url.set('maxSize', maxSize.toString());
     }
 
-    if (props.maxSize) {
-      url.set('maxSize', props.maxSize.toString());
-    }
-
-    return `/api/s3?${url.toString()}`;
+    return `/s3/${section}?${url.toString()}`;
   });
 
   const onError = (error: Error, responseError: NuxtError) => {
@@ -117,13 +107,13 @@
 
   function removeLoadedImage(): Promise<void> {
     return new Promise((resolve, reject) => {
-      $fetch('/api/s3', {
-        method: 'delete',
-        query: {
-          path: props.path,
-          keyOrUrl: imageUploaded.value,
-        },
-      })
+      if (!imageUploaded.value) {
+        resolve();
+
+        return;
+      }
+
+      $fetch(imageUploaded.value, { method: 'delete' })
         .then(() => {
           imageUploaded.value = undefined;
 
@@ -176,7 +166,7 @@
         description: 'Неизвестная ошибка',
       });
 
-      throw err;
+      return false;
     }
   };
 
@@ -204,13 +194,12 @@
   >
     <AUploadDragger
       :action="actionUrl"
-      method="put"
-      accept=".webp, .jpg, .jpeg, .png"
       :multiple="false"
       :max-count="1"
       :show-upload-list="false"
       :disabled="isImageLoading"
       :before-upload="beforeUpload"
+      accept=".webp, .jpg, .jpeg, .png"
       @error="onError"
       @change="handleImageChange"
     >

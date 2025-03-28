@@ -1,39 +1,43 @@
+import type { GetObjectCommandOutput } from '@aws-sdk/client-s3';
 import { S3 } from '@aws-sdk/client-s3';
 import type { S3UploadFile, S3UploadResponse } from '~~/server/types/s3';
 import ms from 'ms';
 import { StatusCodes } from 'http-status-codes';
-import { getErrorResponse } from '~~/shared/utils';
 
-class S3Service {
-  private s3: S3;
+export const createS3Service = () => {
+  const {
+    s3: { endpoint, region, accessKeyId, secretAccessKey, bucket },
+  } = useRuntimeConfig();
 
-  private readonly endpoint: string;
+  const s3 = new S3({
+    region,
+    endpoint,
+    credentials: {
+      accessKeyId,
+      secretAccessKey,
+    },
+    apiVersion: 'latest',
+    requestHandler: {
+      connectionTimeout: ms('5s'),
+    },
+  });
 
-  private readonly bucket: string;
+  function get(key: string | undefined): Promise<GetObjectCommandOutput> {
+    if (!key) {
+      throw new Error('Некорректный путь файла');
+    }
 
-  constructor() {
-    const {
-      s3: { endpoint, region, accessKeyId, secretAccessKey, bucket },
-    } = useRuntimeConfig();
-
-    this.endpoint = endpoint;
-    this.bucket = bucket;
-
-    this.s3 = new S3({
-      region,
-      endpoint,
-      credentials: {
-        accessKeyId,
-        secretAccessKey,
-      },
-      apiVersion: 'latest',
-      requestHandler: {
-        connectionTimeout: ms('5s'),
-      },
+    return s3.getObject({
+      Bucket: bucket,
+      Key: key,
+      ResponseCacheControl:
+        'public, must-revalidate, proxy-revalidate, max-age=31536000, s-maxage=31536000',
     });
   }
 
-  async upload(file: S3UploadFile | undefined): Promise<S3UploadResponse> {
+  async function upload(
+    file: S3UploadFile | undefined,
+  ): Promise<S3UploadResponse> {
     if (!file || !file.name || !file.data || !file.type || !file.path) {
       throw new Error('Отсутствуют данные для загрузки');
     }
@@ -47,8 +51,8 @@ class S3Service {
       );
     }
 
-    await this.s3.putObject({
-      Bucket: this.bucket,
+    await s3.putObject({
+      Bucket: bucket,
       Key: file.path,
       Body: file.data,
       ContentType: file.type,
@@ -58,11 +62,11 @@ class S3Service {
 
     return {
       filename: file.name,
-      url: `${this.endpoint}/${this.bucket}/${file.path}`,
+      url: `/s3/${file.path}`,
     };
   }
 
-  async delete(key: string) {
+  async function remove(key: string) {
     if (!key) {
       throw createError(
         getErrorResponse(StatusCodes.BAD_REQUEST, {
@@ -72,9 +76,9 @@ class S3Service {
     }
 
     try {
-      await this.s3.deleteObject({
+      await s3.deleteObject({
         Key: key,
-        Bucket: this.bucket,
+        Bucket: bucket,
       });
     } catch (err) {
       console.error(err);
@@ -86,6 +90,12 @@ class S3Service {
       );
     }
   }
-}
 
-export default new S3Service();
+  return {
+    get,
+    upload,
+    delete: remove,
+  };
+};
+
+export const S3Service = createS3Service();

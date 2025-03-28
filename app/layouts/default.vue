@@ -3,7 +3,6 @@
   import { useTheme } from '~/shared/composables';
   import { ToastsWrapper } from '~ui/toast';
 
-  const siteConfig = useSiteConfig();
   const { themeName, themeConfig } = useTheme();
 
   const metaThemeColor = computed(() => themeConfig.value.token.colorBgBase);
@@ -18,8 +17,6 @@
     htmlAttrs: {
       class: themeName,
     },
-    titleTemplate: (title) =>
-      title ? `${title} | ${siteConfig.name}` : siteConfig.name,
   });
 </script>
 

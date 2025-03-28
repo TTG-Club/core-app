@@ -10,11 +10,7 @@
   const { name, description } = useSiteConfig();
 
   useSeoMeta({
-    ogTitle: 'TTG Club Онлайн-справочник',
-    twitterTitle: 'TTG Club Онлайн-справочник',
     description,
-    ogDescription: description,
-    twitterDescription: description,
   });
 </script>
 
