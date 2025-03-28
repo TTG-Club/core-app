@@ -22,16 +22,16 @@
     "@ant-design-vue/nuxt": "^1.4.6",
     "@aws-sdk/client-s3": "^3.731.1",
     "@faker-js/faker": "^9.5.1",
-    "@nuxt/fonts": "^0.10.3",
+    "@nuxt/fonts": "^0.11.0",
     "@nuxt/image": "^1.9.0",
     "@nuxtjs/device": "^3.2.4",
     "@nuxtjs/seo": "^3.0.1",
     "@pinia/nuxt": "^0.10.1",
-    "@vueuse/core": "^12.7.0",
+    "@vueuse/core": "^13.0.0",
     "@vueuse/gesture": "^2.0.0",
-    "@vueuse/math": "^12.7.0",
-    "@vueuse/nuxt": "^12.7.0",
-    "@vueuse/shared": "^12.7.0",
+    "@vueuse/math": "^13.0.0",
+    "@vueuse/nuxt": "^13.0.0",
+    "@vueuse/shared": "^13.0.0",
     "ant-design-vue": "^4.2.6",
     "bytes": "^3.1.2",
     "dayjs": "^1.11.13",
@@ -59,12 +59,12 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/lint-staged": "^13.3.0",
     "@types/lodash-es": "^4.17.12",
-    "@types/ms": "^0.7.34",
+    "@types/ms": "^2.1.0",
     "eslint": "^9.21.0",
     "eslint-config-flat-gitignore": "^2.1.0",
     "eslint-config-prettier": "^10.0.2",
     "eslint-plugin-prettier": "^5.2.3",
-    "eslint-plugin-vue": "^9.32.0",
+    "eslint-plugin-vue": "^10.0.0",
     "husky": "^9.1.7",
     "is-ci": "^4.1.0",
     "lint-staged": "^15.4.3",
@@ -79,7 +79,7 @@
   },
   "engines": {
     "node": ">=20.16",
-    "pnpm": ">=9.15.2"
+    "pnpm": ">=10.7.0"
   },
-  "packageManager": "pnpm@9.15.2+sha512.93e57b0126f0df74ce6bff29680394c0ba54ec47246b9cf321f0121d8d9bb03f750a705f24edc3c1180853afd7c2c3b94196d0a3d53d3e069d9e2793ef11f321"
+  "packageManager": "pnpm@10.7.0+sha512.6b865ad4b62a1d9842b61d674a393903b871d9244954f652b8842c2b553c72176b278f64c463e52d40fff8aba385c235c8c9ecf5cc7de4fd78b8bb6d49633ab6"
 }

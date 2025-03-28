@@ -33,13 +33,17 @@
   const $toast = useToast();
 
   const actionUrl = computed(() => {
-    const url = new URLSearchParams();
+    const params = new URLSearchParams();
 
-    if (maxSize) {
-      url.set('maxSize', maxSize.toString());
+    if (section) {
+      params.set('section', getSlug(section));
     }
 
-    return `/s3/${section}?${url.toString()}`;
+    if (maxSize) {
+      params.set('maxSize', maxSize.toString());
+    }
+
+    return `/s3/upload?${params.toString()}`;
   });
 
   const onError = (error: Error, responseError: NuxtError) => {
