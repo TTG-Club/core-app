@@ -67,6 +67,14 @@ function useDictionaries() {
       method: 'get',
     });
 
+  const featCategories = <R extends NitroFetchRequest>(
+      config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+      $fetch<Array<SelectOption>>('/api/v2/dictionaries/feat/types', {
+          ...config,
+          method: 'get',
+      });
+
   return {
     sizes,
     magicSchools,
