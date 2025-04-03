@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import type { FeatDetailResponse } from '~/shared/types';
-  import { TopBar, DescriptionsBlock } from './ui';
+  import { TopBar, StatsBlock, DescriptionsBlock } from './ui';
 
   defineProps<{
     feat: FeatDetailResponse;
@@ -16,6 +16,11 @@
         :class="$style.info"
       >
         <TopBar :category="feat.category" />
+
+        <StatsBlock
+          v-if="feat.prerequisite"
+          :prerequisite="feat.prerequisite"
+        />
       </AFlex>
 
       <AFlex
