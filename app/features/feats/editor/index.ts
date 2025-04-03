@@ -1,1 +1,1 @@
-export { default as FeatEditor } from './FeatEditor.vue';
+export { default as FeatsEditor } from './FeatsEditor.vue';

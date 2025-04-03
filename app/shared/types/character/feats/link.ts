@@ -5,5 +5,4 @@ export interface FeatLinkResponse {
   name: Pick<NameResponse, 'rus' | 'eng'>;
   category: string;
   source: SourceResponse;
-  concentration?: boolean;
 }

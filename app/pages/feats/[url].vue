@@ -31,7 +31,7 @@
     }
 
     return getSlicedString(
-      `${feat.value.name.rus} [${feat.value.name.eng}] — ${category} D&D 5 2024 редакции`,
+      `${feat.value.name.rus} [${feat.value.name.eng}] — ${feat.value.category} D&D 5 2024 редакции`,
       160,
     );
   }

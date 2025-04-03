@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import type { FeatLinkResponse } from '~/shared/types';
-  import { FeatLinkComponents, FeatLinkFlags } from './ui';
   import { SmallLink } from '~ui/link';
   import { useDrawer } from '~/shared/composables';
 
@@ -18,7 +17,6 @@
     :group="feat.source.group"
     @open-drawer="open(feat.url)"
   >
-
     <template #default>
       {{ feat.name.rus }}
     </template>
@@ -28,12 +26,9 @@
     </template>
 
     <template #caption>
-
       <span :style="{ color: 'var(--color-text-gray)' }">
         {{ feat.category }}
       </span>
-
-      <FeatLinkComponents :components="feat.components" />
     </template>
   </SmallLink>
 </template>

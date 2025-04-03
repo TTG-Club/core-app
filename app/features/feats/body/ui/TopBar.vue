@@ -1,9 +1,7 @@
 <script setup lang="ts">
   import type { FeatDetailResponse } from '~/shared/types';
 
-  defineProps<
-    Pick<FeatDetailResponse, 'category' | 'prerequsit'>
-  >();
+  defineProps<Pick<FeatDetailResponse, 'category'>>();
 </script>
 
 <template>
@@ -12,11 +10,7 @@
     :gap="4"
     wrap="wrap"
   >
-    <span>{{ school }}</span>
-
-    <span v-if="additionalType">[{{ additionalType }}]</span>
-
-    <span v-if="ritual">(ритуал)</span>
+    <span>{{ category }}</span>
   </AFlex>
 </template>
 

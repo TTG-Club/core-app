@@ -75,3 +75,18 @@ export const ruleCreatureType = (): Rule => ({
     validateFromDictionary(value, creatureTypes);
   },
 });
+
+export const ruleFeatCategories = (): Rule => ({
+  required: true,
+  trigger: ['change', 'blur'],
+  type: 'string',
+  validator: async (rule: Rule, value: string | undefined) => {
+    if (!value) {
+      throw new Error('Поле обязательно для заполнения');
+    }
+
+    const featCategories = await Dictionaries.featCategories();
+
+    validateFromDictionary(value, featCategories);
+  },
+});

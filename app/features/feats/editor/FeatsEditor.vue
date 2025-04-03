@@ -7,13 +7,9 @@
   } from '~/shared/utils';
   import type { SelectValue } from 'ant-design-vue/es/select';
   import type { FormInstance } from 'ant-design-vue';
-  
+
   import { NuxtLink } from '#components';
-  import {
-    SelectMagicSchool,
-    SelectSource,
-    SelectTags,
-  } from '~ui/select';
+  import { SelectFeatCategory, SelectSource, SelectTags } from '~ui/select';
   import { InputUrl } from '~ui/input';
   import { EditorActions } from '~ui/editor';
   import { useToast } from '~ui/toast';
@@ -33,8 +29,10 @@
       url: undefined,
       page: undefined,
     },
+    prerequisite: '',
     description: '',
-    category: undefined,
+    category: '',
+    repeatability: false,
     tags: [],
   });
 
@@ -227,25 +225,16 @@
     </ARow>
 
     <ARow :gutter="16">
-
       <ACol :span="12">
         <AFormItem
           label="Категория"
           :name="['category']"
-          :rules="[ValidationDictionaries.ruleMagicSchool()]"
+          :rules="[ValidationDictionaries.ruleFeatCategories()]"
         >
-          <SelectMagicSchool v-model="form.school" />
+          <SelectFeatCategory v-model="form.category" />
         </AFormItem>
       </ACol>
     </ARow>
-
-    <FeatCastingTimes v-model="form.castingTime" />
-
-    <FeatRanges v-model="form.range" />
-
-    <FeatComponents v-model="form.components" />
-
-    <FeatDurations v-model="form.duration" />
 
     <ADivider orientation="left">
       <ATypographyText
@@ -254,6 +243,22 @@
         strong
       />
     </ADivider>
+
+    <ARow :gutter="16">
+      <ACol :span="12">
+        <AFormItem
+          label="Предварительное условие"
+          :name="['prerequisite']"
+        >
+          <ATextarea
+            v-model:value="form.prerequisite"
+            :auto-size="{ minRows: 1, maxRows: 8 }"
+            placeholder="Введи предварительное условие если есть"
+            allow-clear
+          />
+        </AFormItem>
+      </ACol>
+    </ARow>
 
     <ARow :gutter="16">
       <ACol :span="12">
@@ -270,80 +275,21 @@
           />
         </AFormItem>
       </ACol>
-
-      <ACol :span="12">
-        <AFormItem
-          label="На более высоких уровнях"
-          :name="['upper']"
-        >
-          <ATextarea
-            v-model:value="form.upper"
-            :rows="8"
-            placeholder="Введи описание"
-            allow-clear
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Принадлежность"
-        strong
-      />
-    </ADivider>
-
-    <ARow :gutter="16">
-      <ACol :span="6">
-        <AFormItem
-          label="Классы"
-          :name="['affiliations', 'classes']"
-        >
-          <SelectSpecies
-            v-model="form.affiliations.classes"
-            multiple
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="6">
-        <AFormItem
-          label="Архетипы"
-          :name="['affiliations', 'subclasses']"
-        >
-          <SelectSpecies
-            v-model="form.affiliations.subclasses"
-            multiple
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="6">
-        <AFormItem
-          label="Виды"
-          :name="['affiliations', 'species']"
-        >
-          <SelectSpecies
-            v-model="form.affiliations.species"
-            multiple
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="6">
-        <AFormItem
-          label="Происхождения"
-          :name="['affiliations', 'lineages']"
-        >
-          <SelectSpecies
-            v-model="form.affiliations.lineages"
-            multiple
-          />
-        </AFormItem>
-      </ACol>
     </ARow>
   </AForm>
+
+  <ARow :gutter="16">
+    <ACol :span="8">
+      <AFormItem
+        label="Повторяемость"
+        :name="['components', 'v']"
+      >
+        <ACheckbox v-model:checked="form.repeatability">
+          Можно брать несколько раз
+        </ACheckbox>
+      </AFormItem>
+    </ACol>
+  </ARow>
 
   <EditorActions
     :is-submitting="isCreating"

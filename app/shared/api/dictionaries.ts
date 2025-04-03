@@ -68,12 +68,12 @@ function useDictionaries() {
     });
 
   const featCategories = <R extends NitroFetchRequest>(
-      config?: Omit<NitroFetchOptions<R>, 'method'>,
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
   ) =>
-      $fetch<Array<SelectOption>>('/api/v2/dictionaries/feat/types', {
-          ...config,
-          method: 'get',
-      });
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/feat/types', {
+      ...config,
+      method: 'get',
+    });
 
   return {
     sizes,
@@ -83,6 +83,7 @@ function useDictionaries() {
     timeUnits,
     durationUnits,
     comparisonOperators,
+    featCategories,
   };
 }
 

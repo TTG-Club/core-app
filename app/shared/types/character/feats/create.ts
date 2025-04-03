@@ -4,6 +4,8 @@ export interface FeatCreate {
   source: FeatSource; // источник
   description: string; // описание маркап
   category: string; // категория (общая, боевые стили, эпическая)
+  prerequisite: string; // требования для получения черты
+  repeatability: boolean; // повторяемость
   tags: Array<string>; // теги
 }
 
@@ -17,4 +19,3 @@ export interface FeatSource {
   url: string | undefined; // урл книги
   page: number | undefined; // номер страницы, если указана книга
 }
-

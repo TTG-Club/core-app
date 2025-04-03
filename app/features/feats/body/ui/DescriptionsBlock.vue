@@ -3,10 +3,9 @@
   import { MarkupRender } from '~ui/markup';
 
   const { description } =
-    defineProps<Pick<FeatDetailResponse, 'description' | 'category' | 'prerequsit'>>();
+    defineProps<Pick<FeatDetailResponse, 'description'>>();
 </script>
 
 <template>
-  <MarkupRender :entries="prerequsit" />
   <MarkupRender :entries="description" />
 </template>

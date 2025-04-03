@@ -7,6 +7,7 @@ export interface FeatDetailResponse {
     eng: string;
   };
   category: string;
+  prerequisite: Array<string>;
   source: SourceResponse;
   description: Array<string>;
   updatedAt: string;

@@ -1,13 +1,9 @@
 <script setup lang="ts">
   import type { FeatDetailResponse } from '~/shared/types';
-  import {
-    TopBar,
-    StatsBlock,
-    DescriptionsBlock,
-  } from './ui';
+  import { TopBar, DescriptionsBlock } from './ui';
 
   defineProps<{
-    spell: FeatDetailResponse;
+    feat: FeatDetailResponse;
   }>();
 </script>
 
@@ -19,19 +15,7 @@
         :gap="12"
         :class="$style.info"
       >
-        <TopBar
-          :additional-type="spell.additionalType"
-          :ritual="spell.ritual"
-          :school="spell.school"
-          :level="spell.level"
-        />
-
-        <StatsBlock
-          :casting-time="spell.castingTime"
-          :components="spell.components"
-          :duration="spell.duration"
-          :range="spell.range"
-        />
+        <TopBar :category="feat.category" />
       </AFlex>
 
       <AFlex
@@ -39,13 +23,8 @@
         :gap="12"
         flex="1 1 auto"
       >
-        <DescriptionsBlock
-          :description="spell.description"
-          :level="spell.level"
-          :upper="spell.upper"
-        />
-
-       </AFlex>
+        <DescriptionsBlock :description="feat.description" />
+      </AFlex>
     </div>
   </div>
 </template>

@@ -1,26 +1,25 @@
 <script setup lang="ts">
-  import type { SpellLinkResponse } from '~/shared/types';
-  import { SpellLegend } from '~spells/legend';
-  import { SpellLink } from '~spells/link';
+  import type { FeatLinkResponse } from '~/shared/types';
+  import { FeatLink } from '~feats/link';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
   useSeoMeta({
-    title: 'Заклинания [Spells]',
-    description: 'Заклинания по D&D 2024 редакции',
+    title: 'Черты [Feats]',
+    description: 'Черты по D&D 2024 редакции',
   });
 
   const search = ref<string>('');
 
   const {
-    data: spells,
+    data: feats,
     error,
     status,
     refresh,
   } = await useAsyncData(
-    'spells',
+    'feats',
     () =>
-      $fetch<Array<SpellLinkResponse>>('/api/v2/spells/search', {
+      $fetch<Array<FeatLinkResponse>>('/api/v2/feats/search', {
         method: 'POST',
         params: {
           query: search.value || undefined,
@@ -41,7 +40,7 @@
 <template>
   <PageContainer fixed-header>
     <template #header>
-      <PageHeader title="Заклинания">
+      <PageHeader title="Черты">
         <template #filter>
           <AButton
             :style="{ boxShadow: 'none' }"
@@ -57,10 +56,6 @@
             allow-clear
             @change="onSearch"
           />
-        </template>
-
-        <template #legend>
-          <SpellLegend />
         </template>
       </PageHeader>
     </template>
@@ -81,18 +76,18 @@
         </PageGrid>
 
         <PageGrid
-          v-else-if="status === 'success' && spells?.length"
+          v-else-if="status === 'success' && feats?.length"
           :columns="3"
         >
-          <SpellLink
-            v-for="spell in spells"
-            :key="spell.url"
-            :spell="spell"
+          <FeatLink
+            v-for="feat in feats"
+            :key="feat.url"
+            :feat="feat"
           />
         </PageGrid>
 
         <AResult
-          v-else-if="status === 'success' && !spells?.length"
+          v-else-if="status === 'success' && !feats?.length"
           title="Ничего не нашлось"
           sub-title="По вашему запросу ничего не нашлось. Попробуйте изменить фильтр или строку поиска"
         >
