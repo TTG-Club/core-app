@@ -236,14 +236,6 @@
       </ACol>
     </ARow>
 
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Описание"
-        strong
-      />
-    </ADivider>
-
     <ARow :gutter="16">
       <ACol :span="12">
         <AFormItem
@@ -259,6 +251,14 @@
         </AFormItem>
       </ACol>
     </ARow>
+
+    <ADivider orientation="left">
+      <ATypographyText
+        type="secondary"
+        content="Описание"
+        strong
+      />
+    </ADivider>
 
     <ARow :gutter="16">
       <ACol :span="12">
