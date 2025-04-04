@@ -10,7 +10,7 @@
       v-if="category"
       :style="{ margin: 0 }"
     >
-      {category}
+      {{ category }}
     </ATag>
   </AFlex>
 </template>
