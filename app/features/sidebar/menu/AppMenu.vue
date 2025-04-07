@@ -51,7 +51,7 @@
           :items="[
             { href: '/', label: 'Классы', disabled: true },
             { href: '/species', label: 'Виды' },
-            { href: '/', label: 'Черты', disabled: true },
+            { href: '/feats', label: 'Черты', disabled: false },
             { href: '/', label: 'Предыстории', disabled: true },
             { href: '/spells', label: 'Заклинания' },
           ]"
