@@ -31,7 +31,7 @@
     },
     prerequisite: '',
     description: '',
-    category: '',
+    category: undefined,
     repeatability: false,
     tags: [],
   });
@@ -224,8 +224,16 @@
       </ACol>
     </ARow>
 
+    <ADivider orientation="left">
+      <ATypographyText
+        type="secondary"
+        content="Подробности"
+        strong
+      />
+    </ADivider>
+
     <ARow :gutter="16">
-      <ACol :span="12">
+      <ACol :span="6">
         <AFormItem
           label="Категория"
           :name="['category']"
@@ -234,20 +242,28 @@
           <SelectFeatCategory v-model="form.category" />
         </AFormItem>
       </ACol>
-    </ARow>
 
-    <ARow :gutter="16">
       <ACol :span="12">
         <AFormItem
           label="Предварительное условие"
           :name="['prerequisite']"
         >
-          <ATextarea
+          <AInput
             v-model:value="form.prerequisite"
-            :auto-size="{ minRows: 1, maxRows: 8 }"
             placeholder="Введи предварительное условие если есть"
             allow-clear
           />
+        </AFormItem>
+      </ACol>
+
+      <ACol :span="6">
+        <AFormItem
+          label="Повторяемость"
+          :name="['repeatability']"
+        >
+          <ACheckbox v-model:checked="form.repeatability">
+            Можно брать несколько раз
+          </ACheckbox>
         </AFormItem>
       </ACol>
     </ARow>
@@ -261,7 +277,7 @@
     </ADivider>
 
     <ARow :gutter="16">
-      <ACol :span="12">
+      <ACol :span="24">
         <AFormItem
           label="Описание"
           :name="['description']"
@@ -277,19 +293,6 @@
       </ACol>
     </ARow>
   </AForm>
-
-  <ARow :gutter="16">
-    <ACol :span="8">
-      <AFormItem
-        label="Повторяемость"
-        :name="['components', 'v']"
-      >
-        <ACheckbox v-model:checked="form.repeatability">
-          Можно брать несколько раз
-        </ACheckbox>
-      </AFormItem>
-    </ACol>
-  </ARow>
 
   <EditorActions
     :is-submitting="isCreating"

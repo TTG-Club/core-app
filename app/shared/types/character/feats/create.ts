@@ -3,7 +3,7 @@ export interface FeatCreate {
   name: FeatName; // название
   source: FeatSource; // источник
   description: string; // описание маркап
-  category: string; // категория (общая, боевые стили, эпическая)
+  category: string | undefined; // категория (общая, боевые стили, эпическая)
   prerequisite: string; // требования для получения черты
   repeatability: boolean; // повторяемость
   tags: Array<string>; // теги
