@@ -22,11 +22,9 @@
     SelectTags,
   } from '~ui/select';
   import { InputUrl } from '~ui/input';
-  import { EditorActions } from '~ui/editor';
   import { useToast } from '~ui/toast';
 
   const $toast = useToast();
-
   const formRef = useTemplateRef<FormInstance>('formRef');
 
   const form = ref<SpellCreate>({
@@ -66,7 +64,7 @@
     value: index,
   }));
 
-  const handleBookChange = (value: SelectValue) => {
+  function handleBookChange(value: SelectValue) {
     if (typeof value !== 'string' && value !== undefined) {
       return;
     }
@@ -76,12 +74,12 @@
     }
 
     form.value.source.url = value;
-  };
+  }
 
   const isCreating = ref(false);
   const isCreated = ref(false);
 
-  const submit = async () => {
+  async function submit() {
     isCreating.value = true;
 
     try {
@@ -131,7 +129,14 @@
     } finally {
       isCreating.value = false; // TODO: удалить в будущем
     }
-  };
+  }
+
+  defineExpose({
+    isCreating,
+    isCreated,
+
+    submit,
+  });
 </script>
 
 <template>
@@ -384,10 +389,4 @@
       </ACol>
     </ARow>
   </AForm>
-
-  <EditorActions
-    :is-submitting="isCreating"
-    :disabled="isCreated"
-    :submit
-  />
 </template>

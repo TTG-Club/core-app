@@ -11,11 +11,9 @@
   import { NuxtLink } from '#components';
   import { SelectFeatCategory, SelectSource, SelectTags } from '~ui/select';
   import { InputUrl } from '~ui/input';
-  import { EditorActions } from '~ui/editor';
   import { useToast } from '~ui/toast';
 
   const $toast = useToast();
-
   const formRef = useTemplateRef<FormInstance>('formRef');
 
   const form = ref<FeatCreate>({
@@ -102,6 +100,13 @@
       isCreating.value = false; // TODO: удалить в будущем
     }
   };
+
+  defineExpose({
+    isCreating,
+    isCreated,
+
+    submit,
+  });
 </script>
 
 <template>
@@ -293,10 +298,4 @@
       </ACol>
     </ARow>
   </AForm>
-
-  <EditorActions
-    :is-submitting="isCreating"
-    :disabled="isCreated"
-    :submit
-  />
 </template>
