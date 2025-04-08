@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import { SvgIcon } from '../icon';
   import { CopyButton } from '../copy-button';
+  import { SvgIcon } from '../icon';
 
   defineEmits<{
     (e: 'close'): void;

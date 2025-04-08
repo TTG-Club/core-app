@@ -1,8 +1,9 @@
 <script setup lang="ts">
-  import type { FeatLinkResponse } from '~/shared/types';
   import { FeatLink } from '~feats/link';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
+
+  import type { FeatLinkResponse } from '~/shared/types';
 
   useSeoMeta({
     title: 'Черты [Feats]',

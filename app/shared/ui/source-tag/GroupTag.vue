@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import type { SourceGroupResponse } from '~/shared/types';
   import type { PresetColorType } from 'ant-design-vue/es/_util/colors';
   import type { TooltipPlacement } from 'ant-design-vue/es/tooltip';
+  import type { SourceGroupResponse } from '~/shared/types';
 
   const { group } = defineProps<{
     group: SourceGroupResponse;

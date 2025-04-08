@@ -1,8 +1,9 @@
 <script setup lang="ts">
   import { getSlicedString } from '~/shared/utils';
-  import type { SpellDetailResponse } from '~/shared/types';
   import { SpellBody } from '~spells/body';
   import { PageActions, PageContainer, PageHeader } from '~ui/page';
+
+  import type { SpellDetailResponse } from '~/shared/types';
 
   const route = useRoute();
 

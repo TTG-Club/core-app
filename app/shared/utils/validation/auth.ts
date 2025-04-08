@@ -1,5 +1,6 @@
-import type { Rule } from 'ant-design-vue/es/form';
 import { isNumber, omit, uniq } from 'lodash-es';
+
+import type { Rule } from 'ant-design-vue/es/form';
 
 export type BaseRule = Omit<Rule, 'validator' | 'transform' | 'type'>;
 

@@ -1,6 +1,8 @@
-import type { Rule } from 'ant-design-vue/es/form';
-import { baseStringCheck } from '../base';
 import { StatusCodes } from 'http-status-codes';
+
+import { baseStringCheck } from '../base';
+
+import type { Rule } from 'ant-design-vue/es/form';
 
 export const ruleUrl = (): Rule => ({
   required: true,

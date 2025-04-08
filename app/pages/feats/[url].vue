@@ -1,8 +1,9 @@
 <script setup lang="ts">
   import { getSlicedString } from '~/shared/utils';
-  import type { FeatDetailResponse } from '~/shared/types';
   import { FeatBody } from '~feats/body';
   import { PageActions, PageContainer, PageHeader } from '~ui/page';
+
+  import type { FeatDetailResponse } from '~/shared/types';
 
   const route = useRoute();
 

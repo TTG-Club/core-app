@@ -1,9 +1,11 @@
-import type { OutputInfo, ResizeOptions } from 'sharp';
-import sharp from 'sharp';
+import path from 'node:path';
+
 import bytes from 'bytes';
 import { StatusCodes } from 'http-status-codes';
 import mime from 'mime';
-import path from 'node:path';
+import sharp from 'sharp';
+
+import type { OutputInfo, ResizeOptions } from 'sharp';
 import type { S3UploadFile } from '~~/server/types/s3';
 
 type FileType =

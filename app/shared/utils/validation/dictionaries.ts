@@ -1,6 +1,7 @@
-import type { Rule } from 'ant-design-vue/es/form';
 import { Dictionaries } from '~/shared/api';
 import { getEnumFromDictionary } from '~/shared/utils/validation/base';
+
+import type { Rule } from 'ant-design-vue/es/form';
 import type { SelectOption } from '~/shared/types';
 
 function validateFromDictionary(

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-  import { getSlicedString } from '~/shared/utils';
-  import type { SpeciesDetailResponse } from '~/shared/types';
-  import { SpeciesBody } from '~species/body';
-  import { PageActions, PageContainer, PageHeader } from '~ui/page';
-  import { UiGallery } from '~ui/gallery';
   import { useDrawer } from '~/shared/composables';
+  import { getSlicedString } from '~/shared/utils';
+  import { SpeciesBody } from '~species/body';
+  import { UiGallery } from '~ui/gallery';
+  import { PageActions, PageContainer, PageHeader } from '~ui/page';
+
+  import type { SpeciesDetailResponse } from '~/shared/types';
 
   const {
     params: { url },

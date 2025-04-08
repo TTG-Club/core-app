@@ -1,8 +1,9 @@
 <script setup lang="ts">
   import { Breakpoint, BREAKPOINTS, useDrawer } from '~/shared/composables';
-  import type { SpellDetailResponse } from '~/shared/types';
   import { SpellBody } from '~spells/body';
   import { DrawerComponent } from '~ui/drawer';
+
+  import type { SpellDetailResponse } from '~/shared/types';
 
   const { url, isOpened, close } = useDrawer('spell-detail');
 

@@ -1,7 +1,8 @@
 <script setup lang="ts">
   import { GroupTag } from '../source-tag';
-  import type { SourceGroupResponse } from '~/shared/types';
+
   import type { RouteLocationRaw } from 'vue-router';
+  import type { SourceGroupResponse } from '~/shared/types';
 
   const { group, to } = defineProps<{
     group?: SourceGroupResponse;

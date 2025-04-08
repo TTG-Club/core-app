@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { onKeyDown } from '@vueuse/core';
+
   import { useSidebarPopover } from '~/shared/composables';
 
   const { popoverKey } = defineProps<{

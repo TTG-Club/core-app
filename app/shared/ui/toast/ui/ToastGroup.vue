@@ -1,8 +1,9 @@
 <script setup lang="ts">
   import { animate } from 'motion';
 
-  import type { ToastProps } from '../types';
   import ToastItem from './ToastItem.vue';
+
+  import type { ToastProps } from '../types';
 
   const { vertical, horizontal, toasts } = defineProps<{
     vertical: 'top' | 'bottom';

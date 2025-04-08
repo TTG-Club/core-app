@@ -1,38 +1,23 @@
 <script setup lang="ts">
-  import type { FeatCreate } from '~/shared/types';
   import {
     ValidationBase,
     ValidationFeat,
     ValidationDictionaries,
   } from '~/shared/utils';
-  import type { SelectValue } from 'ant-design-vue/es/select';
-  import type { FormInstance } from 'ant-design-vue';
-
-  import { NuxtLink } from '#components';
-  import { SelectFeatCategory, SelectSource, SelectTags } from '~ui/select';
   import { InputUrl } from '~ui/input';
-  import { useToast } from '~ui/toast';
+  import { SelectFeatCategory, SelectSource, SelectTags } from '~ui/select';
 
-  const $toast = useToast();
+  import type { FormInstance } from 'ant-design-vue';
+  import type { SelectValue } from 'ant-design-vue/es/select';
+  import type { FeatCreate } from '~/shared/types';
+
+  const { isCreating } = defineProps<{
+    isCreating: boolean;
+  }>();
+
+  const form = defineModel<FeatCreate>({ required: true });
+
   const formRef = useTemplateRef<FormInstance>('formRef');
-
-  const form = ref<FeatCreate>({
-    url: '',
-    name: {
-      rus: '',
-      eng: '',
-      alt: [],
-    },
-    source: {
-      url: undefined,
-      page: undefined,
-    },
-    prerequisite: '',
-    description: '',
-    category: undefined,
-    repeatability: false,
-    tags: [],
-  });
 
   const handleBookChange = (value: SelectValue) => {
     if (typeof value !== 'string' && value !== undefined) {
@@ -46,66 +31,8 @@
     form.value.source.url = value;
   };
 
-  const isCreating = ref(false);
-  const isCreated = ref(false);
-
-  const submit = async () => {
-    isCreating.value = true;
-
-    try {
-      const payload = await formRef.value?.validate();
-
-      await $fetch<string>('/api/v2/feats', {
-        method: 'POST',
-        body: payload,
-        onRequestError: () => {
-          isCreating.value = false;
-        },
-        onResponseError: (error) => {
-          isCreating.value = false;
-
-          $toast.error({
-            title: 'Ошибка создания черты',
-            description: error.response._data.message,
-          });
-        },
-      });
-
-      // isCreated.value = true; // TODO: вернуть в будущем
-
-      $toast.success({
-        title: 'Черта успешно создана',
-        description: () =>
-          h('span', [
-            'Можешь перейти на нее ',
-            h(
-              NuxtLink,
-              {
-                to: {
-                  name: 'feats-url',
-                  params: {
-                    url: form.value.url,
-                  },
-                },
-                target: '_blank',
-              },
-              () => 'страницу',
-            ),
-          ]),
-        // onClose: () => navigateTo({ name: 'workshop-feats' }), // TODO: вернуть в будущем
-      });
-    } catch (err) {
-      isCreating.value = false;
-    } finally {
-      isCreating.value = false; // TODO: удалить в будущем
-    }
-  };
-
   defineExpose({
-    isCreating,
-    isCreated,
-
-    submit,
+    validate: formRef.value?.validate,
   });
 </script>
 

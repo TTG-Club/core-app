@@ -1,8 +1,10 @@
 <script setup lang="ts">
-  import { Dictionaries } from '~/shared/api';
-  import type { SpellDuration } from '~/shared/types';
   import { isEqual, isString } from 'lodash-es';
+
+  import { Dictionaries } from '~/shared/api';
+
   import type { SelectValue } from 'ant-design-vue/es/select';
+  import type { SpellDuration } from '~/shared/types';
 
   const durations = defineModel<Array<SpellDuration>>({
     default: () => [],

@@ -1,8 +1,9 @@
 <script setup lang="ts">
   import { Breakpoint, BREAKPOINTS, useDrawer } from '~/shared/composables';
-  import type { FeatDetailResponse } from '~/shared/types';
   import { FeatBody } from '~feats/body';
   import { DrawerComponent } from '~ui/drawer';
+
+  import type { FeatDetailResponse } from '~/shared/types';
 
   const { url, isOpened, close } = useDrawer('feat-detail');
 

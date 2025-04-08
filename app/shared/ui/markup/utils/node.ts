@@ -1,3 +1,5 @@
+import { EmptyMarker, RichMarker, TextMarker, SimpleText } from '../types';
+
 import type {
   EmptyNode,
   MarkerNode,
@@ -5,8 +7,6 @@ import type {
   SimpleTextNode,
   RichNode,
 } from '../types';
-
-import { EmptyMarker, RichMarker, TextMarker, SimpleText } from '../types';
 
 export function isSimpleTextNode(node: MarkerNode): node is SimpleTextNode {
   return Object.values(SimpleText).includes(node.type as SimpleText);

@@ -1,4 +1,6 @@
+import { isString } from 'lodash-es';
 import { v7 as uuid } from 'uuid';
+import { createTextVNode } from 'vue';
 
 import { useToastState } from './state';
 
@@ -8,8 +10,6 @@ import type {
   ToastControls,
   ToastTypes,
 } from './types';
-import { isString } from 'lodash-es';
-import { createTextVNode } from 'vue';
 
 const BASE_CONFIG: Omit<
   ToastConfig,

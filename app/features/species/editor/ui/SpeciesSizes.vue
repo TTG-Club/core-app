@@ -1,8 +1,10 @@
 <script setup lang="ts">
-  import { ValidationBase, ValidationDictionaries } from '~/shared/utils';
-  import type { SpeciesCreate } from '~/shared/types';
   import { isEqual, isString } from 'lodash-es';
+
+  import { ValidationBase, ValidationDictionaries } from '~/shared/utils';
   import { SelectSize } from '~ui/select';
+
+  import type { SpeciesCreate } from '~/shared/types';
 
   type Sizes = SpeciesCreate['properties']['sizes'];
 

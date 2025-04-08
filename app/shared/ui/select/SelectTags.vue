@@ -1,8 +1,9 @@
 <script setup lang="ts">
-  import type { DefaultOptionType } from 'ant-design-vue/es/vc-select/Select';
-  import type { SelectValue } from 'ant-design-vue/es/select';
-  import { chain, difference, isArray, isString, trim } from 'lodash-es';
   import { Form } from 'ant-design-vue';
+  import { chain, difference, isArray, isString, trim } from 'lodash-es';
+
+  import type { SelectValue } from 'ant-design-vue/es/select';
+  import type { DefaultOptionType } from 'ant-design-vue/es/vc-select/Select';
 
   defineProps<{
     placeholder?: string;

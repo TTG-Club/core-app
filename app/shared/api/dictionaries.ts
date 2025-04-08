@@ -1,5 +1,5 @@
-import type { SelectOption, SelectOptionWithMeasurable } from '~/shared/types';
 import type { NitroFetchOptions, NitroFetchRequest } from 'nitropack';
+import type { SelectOption, SelectOptionWithMeasurable } from '~/shared/types';
 
 function useDictionaries() {
   const sizes = <R extends NitroFetchRequest>(

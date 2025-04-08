@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import { PageContainer, PageHeader } from '~ui/page';
   import { SvgIcon } from '~ui/icon';
+  import { PageContainer, PageHeader } from '~ui/page';
 </script>
 
 <template>

@@ -1,8 +1,9 @@
 <script setup lang="ts">
   import { Breakpoint, BREAKPOINTS, useDrawer } from '~/shared/composables';
-  import type { SpeciesDetailResponse } from '~/shared/types';
   import { SpeciesBody } from '~species/body';
   import { DrawerComponent } from '~ui/drawer';
+
+  import type { SpeciesDetailResponse } from '~/shared/types';
 
   const { inLineagesDrawer } = defineProps<{
     inLineagesDrawer?: boolean;

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import type { SpeciesCreate } from '~/shared/types';
   import { ValidationBase } from '~/shared/utils';
+
+  import type { SpeciesCreate } from '~/shared/types';
 
   type Features = SpeciesCreate['features'];
 

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-  import type { SpeciesLinkResponse } from '~/shared/types';
-  import { GroupTag } from '~ui/source-tag';
   import { useDrawer } from '~/shared/composables';
+  import { GroupTag } from '~ui/source-tag';
+
+  import type { SpeciesLinkResponse } from '~/shared/types';
 
   const { inLineagesDrawer } = defineProps<{
     species: SpeciesLinkResponse;

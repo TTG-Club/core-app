@@ -1,9 +1,104 @@
 <script setup lang="ts">
+  import { NuxtLink } from '#components';
   import { SpellsEditor } from '~spells/editor';
-  import { PageContainer, PageHeader } from '~ui/page';
   import { SvgIcon } from '~ui/icon';
+  import { PageContainer, PageHeader } from '~ui/page';
+  import { useToast } from '~ui/toast';
 
+  import type { SpellCreate } from '~/shared/types';
+
+  const $toast = useToast();
   const editor = useTemplateRef<InstanceType<typeof SpellsEditor>>('editor');
+
+  const form = ref<SpellCreate>({
+    url: '',
+    name: {
+      rus: '',
+      eng: '',
+      alt: [],
+    },
+    source: {
+      url: undefined,
+      page: undefined,
+    },
+    description: '',
+    upper: undefined,
+    level: 0,
+    school: undefined,
+    range: [],
+    duration: [],
+    castingTime: [],
+    components: {
+      v: false,
+      s: false,
+      m: undefined,
+    },
+    affiliations: {
+      classes: [],
+      subclasses: [],
+      species: [],
+      lineages: [],
+    },
+    tags: [],
+  });
+
+  const isCreating = ref(false);
+  const isCreated = ref(false);
+
+  async function submit() {
+    isCreating.value = true;
+
+    try {
+      const payload = await editor.value?.validate?.();
+
+      await $fetch<string>('/api/v2/spells', {
+        method: 'POST',
+        body: payload,
+        onRequestError: () => {
+          isCreating.value = false;
+        },
+        onResponseError: (error) => {
+          isCreating.value = false;
+
+          $toast.error({
+            title: 'Ошибка создания заклинания',
+            description: error.response._data.message,
+          });
+        },
+      });
+
+      // isCreated.value = true; // TODO: вернуть в будущем
+
+      $toast.success({
+        title: 'Заклинание успешно создано',
+        description: getLink,
+        // onClose: () => navigateTo({ name: 'workshop-spells' }), // TODO: вернуть в будущем
+      });
+    } catch (err) {
+      isCreating.value = false;
+    } finally {
+      isCreating.value = false; // TODO: удалить в будущем
+    }
+  }
+
+  function getLink() {
+    return h('span', [
+      'Можешь перейти на его ',
+      h(
+        NuxtLink,
+        {
+          to: {
+            name: 'spells-url',
+            params: {
+              url: form.value.url,
+            },
+          },
+          target: '_blank',
+        },
+        () => 'страницу',
+      ),
+    ]);
+  }
 </script>
 
 <template>
@@ -13,9 +108,9 @@
         <template #actions>
           <AButton
             type="primary"
-            :disabled="editor?.isCreated"
+            :disabled="isCreated"
             :loading="editor?.isCreating"
-            @click.left.exact.prevent="editor?.submit()"
+            @click.left.exact.prevent="submit"
           >
             <template #icon>
               <SvgIcon icon="check" />
@@ -44,7 +139,11 @@
 
     <template #default>
       <ClientOnly>
-        <SpellsEditor ref="editor" />
+        <SpellsEditor
+          ref="editor"
+          v-model="form"
+          :is-creating="isCreating"
+        />
       </ClientOnly>
     </template>
   </PageContainer>

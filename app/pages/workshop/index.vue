@@ -1,10 +1,10 @@
 <script setup lang="ts">
+  import { PageContainer, PageHeader } from '~ui/page';
   import {
     SectionSpecies,
     SectionSpells,
     SectionFeats,
   } from '~workshop/section';
-  import { PageContainer, PageHeader } from '~ui/page';
 </script>
 
 <template>

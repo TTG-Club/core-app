@@ -1,5 +1,6 @@
-import { S3Service } from '~~/server/services';
 import { StatusCodes } from 'http-status-codes';
+
+import { S3Service } from '~~/server/services';
 
 export default defineEventHandler(async (event) => {
   const path = getRouterParam(event, 'slug');

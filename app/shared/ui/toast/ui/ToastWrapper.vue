@@ -1,10 +1,13 @@
 <script setup lang="ts">
   import { orderBy } from 'lodash-es';
 
-  import type { ToastPosition, ToastProps } from '../types';
   import { useToastState } from '../state';
+
   import ToastGroup from './ToastGroup.vue';
+
   import { Breakpoint, useBreakpoints } from '~/shared/composables';
+
+  import type { ToastPosition, ToastProps } from '../types';
 
   const { maxToasts = 6 } = defineProps<{
     maxToasts?: number;

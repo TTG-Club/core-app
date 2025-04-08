@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import { SvgIcon } from '../icon';
+
   import { useCopy } from '~/shared/composables';
+
   import type { ButtonProps } from 'ant-design-vue';
 
   const { url } = defineProps<{

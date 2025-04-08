@@ -1,9 +1,10 @@
 <script setup lang="ts">
-  import type { SourceResponse } from '~/shared/types';
-  import { DrawerTitle, type DrawerTitleName } from '../title';
+  import { SourceTag } from '../../source-tag';
   import { DrawerActions } from '../actions';
   import { DrawerBody } from '../body';
-  import { SourceTag } from '../../source-tag';
+  import { DrawerTitle, type DrawerTitleName } from '../title';
+
+  import type { SourceResponse } from '~/shared/types';
 
   const {
     minWidth,
