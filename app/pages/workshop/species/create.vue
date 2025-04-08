@@ -44,7 +44,7 @@
 
     <template #default>
       <ClientOnly>
-        <SpeciesEditor />
+        <SpeciesEditor ref="editor" />
       </ClientOnly>
     </template>
   </PageContainer>

@@ -44,7 +44,7 @@
 
     <template #default>
       <ClientOnly>
-        <FeatsEditor />
+        <FeatsEditor ref="editor" />
       </ClientOnly>
     </template>
   </PageContainer>
