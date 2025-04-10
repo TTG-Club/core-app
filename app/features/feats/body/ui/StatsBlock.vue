@@ -16,7 +16,9 @@
         :mouse-enter-delay="0.7"
         destroy-tooltip-on-hide
       >
-        <p>Предварительное условие:</p>
+        <div :class="$style.name">
+          Предварительное условие:
+        </div>
       </ATooltip>
 
       <MarkupRender :entries="prerequisite" />
@@ -59,7 +61,7 @@
         border-right: none;
       }
 
-      > p {
+      .name {
         margin-bottom: 4px;
         font-weight: 500;
         color: var(--color-text-title);
