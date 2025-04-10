@@ -38,10 +38,6 @@
 
     background-color: var(--color-bg-secondary);
 
-    p {
-      margin-bottom: 0;
-    }
-
     .item {
       flex: 1 0 100%;
       min-width: 100%;
