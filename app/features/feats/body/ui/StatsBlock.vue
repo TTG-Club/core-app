@@ -16,9 +16,7 @@
         :mouse-enter-delay="0.7"
         destroy-tooltip-on-hide
       >
-        <div :class="$style.name">
-          Предварительное условие:
-        </div>
+        <div :class="$style.name">Предварительное условие:</div>
       </ATooltip>
 
       <MarkupRender :entries="prerequisite" />
@@ -39,6 +37,10 @@
     border-radius: 8px;
 
     background-color: var(--color-bg-secondary);
+
+    p {
+      margin-bottom: 0;
+    }
 
     .item {
       flex: 1 0 100%;
