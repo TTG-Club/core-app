@@ -59,7 +59,7 @@
         border-right: none;
       }
 
-      p {
+      > p {
         margin-bottom: 4px;
         font-weight: 500;
         color: var(--color-text-title);
