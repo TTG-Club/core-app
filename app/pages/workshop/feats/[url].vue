@@ -19,10 +19,12 @@
   const { status } = await useAsyncData(`feat-${route.params.url}-raw`, () =>
     $fetch<FeatCreate>(`/api/v2/feats/${route.params.url}/raw`, {
       onResponse: (ctx) => {
-        const merged = merge(getInitialState(), ctx.response._data);
+        const initialState = getInitialState();
 
-        form.value = cloneDeep(merged);
-        backup.value = cloneDeep(merged);
+        merge(initialState, ctx.response._data);
+
+        form.value = cloneDeep(initialState);
+        backup.value = cloneDeep(initialState);
       },
     }),
   );
@@ -34,16 +36,19 @@
   const isCreating = ref(false);
   const isCreated = ref(false);
 
-  const isEdited = computed(
-    () => !isEqual(toRaw(backup.value), toRaw(form.value)),
-  );
-
   async function submit() {
-    isCreating.value = true;
+    if (!checkIsEdited()) {
+      $toast.error({
+        title: 'Ошибка сохранения черты',
+        description: 'Измени хотя бы одно поле, чтобы сохранить',
+      });
+
+      throw new Error('Form is equal with initial state');
+    }
 
     if (!editor.value?.validate) {
       $toast.error({
-        title: 'Ошибка сохранения заклинания',
+        title: 'Ошибка сохранения черты',
         description: () =>
           h('span', null, [
             'Произошла какая-то ошибка... попробуй еще раз или обратись за помощью на нашем ',
@@ -61,6 +66,8 @@
 
       throw new Error('Validation method was not found');
     }
+
+    isCreating.value = true;
 
     try {
       const payload = await editor.value.validate();
@@ -115,6 +122,10 @@
     };
   }
 
+  function checkIsEdited() {
+    return !isEqual(toRaw(backup.value), toRaw(form.value));
+  }
+
   function getLink() {
     return h('span', [
       'Можешь перейти на ее ',
@@ -143,7 +154,7 @@
           <AButton
             v-if="!rawIncorrect"
             type="primary"
-            :disabled="isCreated || !isEdited"
+            :disabled="isCreated"
             :loading="editor?.isCreating"
             @click.left.exact.prevent="submit"
           >

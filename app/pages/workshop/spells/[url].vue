@@ -19,10 +19,12 @@
   const { status } = await useAsyncData(`spell-${route.params.url}-raw`, () =>
     $fetch<SpellCreate>(`/api/v2/spells/${route.params.url}/raw`, {
       onResponse: (ctx) => {
-        const merged = merge(getInitialState(), ctx.response._data);
+        const initialState = getInitialState();
 
-        form.value = cloneDeep(merged);
-        backup.value = cloneDeep(merged);
+        merge(initialState, ctx.response._data);
+
+        form.value = cloneDeep(initialState);
+        backup.value = cloneDeep(initialState);
       },
     }),
   );
@@ -34,12 +36,15 @@
   const isCreating = ref(false);
   const isCreated = ref(false);
 
-  const isEdited = computed(
-    () => !isEqual(toRaw(backup.value), toRaw(form.value)),
-  );
-
   async function submit() {
-    isCreating.value = true;
+    if (!checkIsEdited()) {
+      $toast.error({
+        title: 'Ошибка сохранения заклинания',
+        description: 'Измени хотя бы одно поле, чтобы сохранить',
+      });
+
+      throw new Error('Form is equal with initial state');
+    }
 
     if (!editor.value?.validate) {
       $toast.error({
@@ -61,6 +66,8 @@
 
       throw new Error('Validation method was not found');
     }
+
+    isCreating.value = true;
 
     try {
       const payload = await editor.value.validate();
@@ -129,6 +136,10 @@
     };
   }
 
+  function checkIsEdited() {
+    return !isEqual(toRaw(backup.value), toRaw(form.value));
+  }
+
   function getLink() {
     return h('span', [
       'Можешь перейти на его ',
@@ -156,7 +167,7 @@
         <template #actions>
           <AButton
             type="primary"
-            :disabled="isCreated || !isEdited"
+            :disabled="isCreated"
             :loading="editor?.isCreating"
             @click.left.exact.prevent="submit"
           >
