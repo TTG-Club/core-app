@@ -16,17 +16,20 @@
   const form = useState<FeatCreate>(getInitialState);
   const backup = useState<FeatCreate>(getInitialState);
 
-  const { status } = await useAsyncData(`feat-${route.params.url}-raw`, () =>
-    $fetch<FeatCreate>(`/api/v2/feats/${route.params.url}/raw`, {
-      onResponse: (ctx) => {
-        const initialState = getInitialState();
+  const { status } = await useAsyncData(
+    `feat-${route.params.url}-raw`,
+    () =>
+      $fetch<FeatCreate>(`/api/v2/feats/${route.params.url}/raw`, {
+        onResponse: (ctx) => {
+          const initialState = getInitialState();
 
-        merge(initialState, ctx.response._data);
+          merge(initialState, ctx.response._data);
 
-        form.value = cloneDeep(initialState);
-        backup.value = cloneDeep(initialState);
-      },
-    }),
+          form.value = cloneDeep(initialState);
+          backup.value = cloneDeep(initialState);
+        },
+      }),
+    { server: false },
   );
 
   const rawIncorrect = computed(

@@ -16,17 +16,20 @@
   const form = useState<SpellCreate>(getInitialState);
   const backup = useState<SpellCreate>(getInitialState);
 
-  const { status } = await useAsyncData(`spell-${route.params.url}-raw`, () =>
-    $fetch<SpellCreate>(`/api/v2/spells/${route.params.url}/raw`, {
-      onResponse: (ctx) => {
-        const initialState = getInitialState();
+  const { status } = await useAsyncData(
+    `spell-${route.params.url}-raw`,
+    () =>
+      $fetch<SpellCreate>(`/api/v2/spells/${route.params.url}/raw`, {
+        onResponse: (ctx) => {
+          const initialState = getInitialState();
 
-        merge(initialState, ctx.response._data);
+          merge(initialState, ctx.response._data);
 
-        form.value = cloneDeep(initialState);
-        backup.value = cloneDeep(initialState);
-      },
-    }),
+          form.value = cloneDeep(initialState);
+          backup.value = cloneDeep(initialState);
+        },
+      }),
+    { server: false },
   );
 
   const rawIncorrect = computed(
