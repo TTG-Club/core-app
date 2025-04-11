@@ -257,7 +257,6 @@
     .item {
       display: flex;
       flex: 1 0 100%;
-      flex-direction: column;
       gap: 4px;
 
       min-width: 100%;
