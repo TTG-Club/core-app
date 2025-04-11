@@ -6,6 +6,5 @@ declare module '#vue-router' {
     auth?: {
       roles?: Array<ROLE>;
     };
-    backUrl?: string;
   }
 }
