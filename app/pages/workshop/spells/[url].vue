@@ -174,7 +174,7 @@
           >
             <AButton
               type="text"
-              @click.left.exact.prevent="navigateTo('/workshop/spells')"
+              @click.left.exact.prevent="navigateTo('/spells')"
             >
               <template #icon>
                 <SvgIcon icon="close" />

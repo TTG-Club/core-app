@@ -152,6 +152,13 @@ export default defineNuxtConfig({
 
   typescript: {
     typeCheck: true,
+    tsConfig: {
+      compilerOptions: {
+        typeRoots: [
+          fileURLToPath(new URL('./app/shared/types/global', import.meta.url)),
+        ],
+      },
+    },
   },
 
   eslint: {
