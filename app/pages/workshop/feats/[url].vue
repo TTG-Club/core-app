@@ -19,7 +19,7 @@
   const { status } = await useAsyncData(`feat-${route.params.url}-raw`, () =>
     $fetch<FeatCreate>(`/api/v2/feats/${route.params.url}/raw`, {
       onResponse: (ctx) => {
-        const merged = merge(form.value, ctx.response._data);
+        const merged = merge(getInitialState(), ctx.response._data);
 
         form.value = cloneDeep(merged);
         backup.value = cloneDeep(merged);

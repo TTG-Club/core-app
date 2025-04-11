@@ -19,7 +19,7 @@
   const { status } = await useAsyncData(`species-${route.params.url}-raw`, () =>
     $fetch<SpeciesCreate>(`/api/v2/species/${route.params.url}/raw`, {
       onResponse: (ctx) => {
-        const merged = merge(form.value, ctx.response._data);
+        const merged = merge(getInitialState(), ctx.response._data);
 
         form.value = cloneDeep(merged);
         backup.value = cloneDeep(merged);

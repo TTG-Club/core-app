@@ -19,7 +19,7 @@
   const { status } = await useAsyncData(`spell-${route.params.url}-raw`, () =>
     $fetch<SpellCreate>(`/api/v2/spells/${route.params.url}/raw`, {
       onResponse: (ctx) => {
-        const merged = merge(form.value, ctx.response._data);
+        const merged = merge(getInitialState(), ctx.response._data);
 
         form.value = cloneDeep(merged);
         backup.value = cloneDeep(merged);
