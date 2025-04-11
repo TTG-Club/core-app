@@ -30,6 +30,10 @@
 
   const form = defineModel<SpeciesCreate>({ required: true });
 
+  const {
+    params: { url: oldUrl },
+  } = useRoute();
+
   const formRef = useTemplateRef<FormInstance>('formRef');
 
   function resetBookPage() {
@@ -176,7 +180,7 @@
           label="URL"
           tooltip="Менять только при необходимости, т.к. URL генерируется автоматически при вводе английского названия"
           :name="['url']"
-          :rules="[ValidationSpecies.ruleUrl()]"
+          :rules="[ValidationSpecies.ruleUrl(oldUrl)]"
         >
           <InputUrl
             v-model="form.url"

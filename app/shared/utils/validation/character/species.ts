@@ -1,15 +1,31 @@
 import { StatusCodes } from 'http-status-codes';
+import { isArray } from 'lodash-es';
 
 import { baseStringCheck } from '../base';
 
 import type { Rule } from 'ant-design-vue/es/form';
+import type { RouteParamValue } from 'vue-router';
 
-export const ruleUrl = (): Rule => ({
+export const ruleUrl = (
+  oldUrl?: RouteParamValue | RouteParamValue[],
+): Rule => ({
   required: true,
   trigger: ['change', 'blur'],
   type: 'string',
   validator: (rule: Rule, value: string) =>
     new Promise((resolve, reject) => {
+      if (isArray(oldUrl)) {
+        reject('Неизвестная ошибка');
+
+        return;
+      }
+
+      if (oldUrl === value) {
+        resolve();
+
+        return;
+      }
+
       baseStringCheck(value, 3);
 
       $fetch(`/api/v2/species/${value}`, {

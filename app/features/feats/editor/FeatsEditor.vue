@@ -17,6 +17,10 @@
 
   const form = defineModel<FeatCreate>({ required: true });
 
+  const {
+    params: { url: oldUrl },
+  } = useRoute();
+
   const formRef = useTemplateRef<FormInstance>('formRef');
 
   const handleBookChange = (value: SelectValue) => {
@@ -144,7 +148,7 @@
           label="URL"
           tooltip="Менять только при необходимости, т.к. URL генерируется автоматически при вводе английского названия"
           :name="['url']"
-          :rules="[ValidationFeat.ruleUrl()]"
+          :rules="[ValidationFeat.ruleUrl(oldUrl)]"
         >
           <InputUrl
             v-model="form.url"
