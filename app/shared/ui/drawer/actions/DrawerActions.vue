@@ -8,6 +8,7 @@
 
   defineProps<{
     url?: string;
+    editUrl?: string;
   }>();
 </script>
 
@@ -16,6 +17,34 @@
     :gap="8"
     justify="flex-end"
   >
+    <ATooltip
+      v-if="editUrl"
+      title="Редактировать"
+      :mouse-enter-delay="0.7"
+      destroy-tooltip-on-hide
+    >
+      <AButton
+        :href="editUrl"
+        size="small"
+        type="text"
+        @click.left.exact.prevent="
+          navigateTo(editUrl, {
+            open: {
+              target: '_blank',
+              windowFeatures: {
+                noreferrer: true,
+                noopener: true,
+              },
+            },
+          })
+        "
+      >
+        <template #icon>
+          <SvgIcon icon="edit" />
+        </template>
+      </AButton>
+    </ATooltip>
+
     <AButton
       v-if="url"
       :href="url"

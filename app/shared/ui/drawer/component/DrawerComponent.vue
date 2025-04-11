@@ -18,6 +18,7 @@
     minWidth?: number;
     maxWidth?: number;
     url?: string;
+    editUrl?: string;
     width?: string;
     copyTitle?: boolean;
   }>();
@@ -62,6 +63,7 @@
         vertical
       >
         <DrawerActions
+          :edit-url="editUrl"
           :url
           @close="open = false"
         />

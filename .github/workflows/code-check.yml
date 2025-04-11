@@ -1,9 +1,19 @@
 name: Code Check
 
 on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+      - review_requested
+      - auto_merge_enabled
+
   workflow_call:
 
 permissions:
+  contents: read
   security-events: write
 
 concurrency:
@@ -13,6 +23,7 @@ concurrency:
 jobs:
   check:
     name: Build and Check
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
