@@ -2,12 +2,12 @@
   import { cloneDeep, isEqual, merge } from 'lodash-es';
 
   import { NuxtLink } from '#components';
+  import { FeatsEditor } from '~feats/editor';
   import { SvgIcon } from '~ui/icon';
   import { PageContainer, PageHeader } from '~ui/page';
   import { useToast } from '~ui/toast';
 
   import type { FeatCreate } from '~/shared/types';
-  import type { FeatsEditor } from '~feats/editor';
 
   const route = useRoute();
   const $toast = useToast();
