@@ -52,6 +52,8 @@
     );
   }
 
+  const editUrl = computed(() => `/workshop/species/${url}`);
+
   const anchors = computed(() => {
     if (!species.value?.features?.length) {
       return [];
@@ -95,7 +97,10 @@
         copy-title
       >
         <template #actions>
-          <PageActions @close="navigateTo('/species')" />
+          <PageActions
+            :edit-url="editUrl"
+            @close="navigateTo('/species')"
+          />
         </template>
       </PageHeader>
     </template>

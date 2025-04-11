@@ -2,6 +2,8 @@
   import { CopyButton } from '../../copy-button';
   import { SvgIcon } from '../../icon';
 
+  import { useUserStore } from '~/shared/stores';
+
   defineEmits<{
     (e: 'close'): void;
   }>();
@@ -10,6 +12,8 @@
     url?: string;
     editUrl?: string;
   }>();
+
+  const { isAdmin } = storeToRefs(useUserStore());
 </script>
 
 <template>
@@ -18,7 +22,7 @@
     justify="flex-end"
   >
     <ATooltip
-      v-if="editUrl"
+      v-if="editUrl && isAdmin"
       title="Редактировать"
       :mouse-enter-delay="0.7"
       destroy-tooltip-on-hide

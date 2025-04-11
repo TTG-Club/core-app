@@ -37,6 +37,8 @@
     isOpened.value ? `${getOrigin()}/species/${url.value}` : undefined,
   );
 
+  const editUrl = computed(() => `/workshop/species/${url.value}`);
+
   function handleUpdate(opened: boolean) {
     if (opened) {
       return;
@@ -63,6 +65,7 @@
     :title="species?.name"
     :source="species?.source"
     :url="urlForCopy"
+    :edit-url="editUrl"
     :is-loading="status === 'pending'"
     :is-error="status === 'error'"
     width="100%"

@@ -2,83 +2,81 @@
   import { cloneDeep, isEqual, merge } from 'lodash-es';
 
   import { NuxtLink } from '#components';
-  import { SpellsEditor } from '~spells/editor';
+  import { SpeciesEditor } from '~species/editor';
   import { SvgIcon } from '~ui/icon';
   import { PageContainer, PageHeader } from '~ui/page';
   import { useToast } from '~ui/toast';
 
-  import type { SpellCreate } from '~/shared/types';
+  import type { SpeciesCreate } from '~/shared/types';
 
   const route = useRoute();
   const $toast = useToast();
-  const editor = useTemplateRef<InstanceType<typeof SpellsEditor>>('editor');
+  const editor = useTemplateRef<InstanceType<typeof SpeciesEditor>>('editor');
 
-  const form = useState<SpellCreate>(() => ({
+  const form = ref<SpeciesCreate>({
     url: '',
     name: {
       rus: '',
       eng: '',
       alt: [],
     },
+    description: '',
+    image: undefined,
+    linkImage: undefined,
+    gallery: [],
+    parent: undefined,
     source: {
       url: undefined,
       page: undefined,
     },
-    description: '',
-    upper: undefined,
-    level: 0,
-    school: undefined,
-    range: [],
-    duration: [],
-    castingTime: [],
-    components: {
-      v: false,
-      s: false,
-      m: undefined,
+    properties: {
+      sizes: [],
+      type: undefined,
+      speed: {
+        base: 30,
+        fly: undefined,
+        climb: undefined,
+        swim: undefined,
+        hover: false,
+      },
     },
-    affiliations: {
-      classes: [],
-      subclasses: [],
-      species: [],
-      lineages: [],
-    },
+    features: [],
     tags: [],
-  }));
+  });
 
-  const backup = useState<SpellCreate>(() => ({
+  const backup = useState<SpeciesCreate>(() => ({
     url: '',
     name: {
       rus: '',
       eng: '',
       alt: [],
     },
+    description: '',
+    image: undefined,
+    linkImage: undefined,
+    gallery: [],
+    parent: undefined,
     source: {
       url: undefined,
       page: undefined,
     },
-    description: '',
-    upper: undefined,
-    level: 0,
-    school: undefined,
-    range: [],
-    duration: [],
-    castingTime: [],
-    components: {
-      v: false,
-      s: false,
-      m: undefined,
+    properties: {
+      sizes: [],
+      type: undefined,
+      speed: {
+        base: 30,
+        fly: undefined,
+        climb: undefined,
+        swim: undefined,
+        hover: false,
+      },
     },
-    affiliations: {
-      classes: [],
-      subclasses: [],
-      species: [],
-      lineages: [],
-    },
+    features: [],
     tags: [],
   }));
 
-  await useAsyncData(`spell-${route.params.url}-raw`, () =>
-    $fetch<SpellCreate>(`/api/v2/spells/${route.params.url}/raw`, {
+  await useAsyncData(`species-${route.params.url}-raw`, () =>
+    $fetch<SpeciesCreate>(`/api/v2/species/${route.params.url}/raw`, {
       onResponse: (ctx) => {
         const merged = merge(form.value, ctx.response._data);
 
@@ -99,7 +97,7 @@
     try {
       const payload = await editor.value?.validate?.();
 
-      await $fetch<string>(`/api/v2/spells/${route.params.url}`, {
+      await $fetch<string>(`/api/v2/species/${route.params.url}`, {
         method: 'PUT',
         body: payload,
         onRequestError: () => {
@@ -109,7 +107,9 @@
           isCreating.value = false;
 
           $toast.error({
-            title: 'Ошибка сохранения заклинания',
+            title: !backup.value.parent
+              ? 'Ошибка сохранения вида'
+              : 'Ошибка сохранения происхождения',
             description: error.response._data.message,
           });
         },
@@ -118,7 +118,9 @@
       // isCreated.value = true; // TODO: вернуть в будущем
 
       $toast.success({
-        title: 'Заклинание успешно сохранено',
+        title: !backup.value.parent
+          ? 'Вид успешно сохранен'
+          : 'Происхождение успешно сохранено',
         description: getLink,
         // onClose: () => navigateTo({ name: 'workshop-spells' }), // TODO: вернуть в будущем
       });
@@ -152,7 +154,9 @@
 <template>
   <PageContainer fixed-header>
     <template #header>
-      <PageHeader title="Редактирование заклинания">
+      <PageHeader
+        :title="`Редактирование ${!backup.parent ? 'вида' : 'происхождения'}`"
+      >
         <template #actions>
           <AButton
             type="primary"
@@ -174,7 +178,7 @@
           >
             <AButton
               type="text"
-              @click.left.exact.prevent="navigateTo('/workshop/spells')"
+              @click.left.exact.prevent="navigateTo('/workshop/species')"
             >
               <template #icon>
                 <SvgIcon icon="close" />
@@ -187,7 +191,7 @@
 
     <template #default>
       <ClientOnly>
-        <SpellsEditor
+        <SpeciesEditor
           ref="editor"
           v-model="form"
           :is-creating="isCreating"

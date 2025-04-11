@@ -2,6 +2,8 @@
   import { CopyButton } from '../copy-button';
   import { SvgIcon } from '../icon';
 
+  import { useUserStore } from '~/shared/stores';
+
   defineProps<{
     editUrl?: string;
   }>();
@@ -11,6 +13,7 @@
   }>();
 
   const route = useRoute();
+  const { isAdmin } = storeToRefs(useUserStore());
 
   const urlForCopy = computed(() => {
     return getOrigin() + route.path;
@@ -28,7 +31,7 @@
 
 <template>
   <ATooltip
-    v-if="editUrl"
+    v-if="editUrl && isAdmin"
     title="Редактировать"
     :mouse-enter-delay="0.7"
     destroy-tooltip-on-hide
