@@ -53,7 +53,7 @@
   }
 
   defineExpose({
-    validate: formRef.value?.validate,
+    validate: computed(() => formRef.value?.validate),
   });
 </script>
 

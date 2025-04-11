@@ -13,43 +13,10 @@
   const $toast = useToast();
   const editor = useTemplateRef<InstanceType<typeof FeatsEditor>>('editor');
 
-  const form = useState<FeatCreate>(() => ({
-    url: '',
-    name: {
-      rus: '',
-      eng: '',
-      alt: [],
-    },
-    source: {
-      url: undefined,
-      page: undefined,
-    },
-    prerequisite: '',
-    description: '',
-    category: undefined,
-    repeatability: false,
-    tags: [],
-  }));
+  const form = useState<FeatCreate>(getInitialState);
+  const backup = useState<FeatCreate>(getInitialState);
 
-  const backup = useState<FeatCreate>(() => ({
-    url: '',
-    name: {
-      rus: '',
-      eng: '',
-      alt: [],
-    },
-    source: {
-      url: undefined,
-      page: undefined,
-    },
-    prerequisite: '',
-    description: '',
-    category: undefined,
-    repeatability: false,
-    tags: [],
-  }));
-
-  await useAsyncData(`feat-${route.params.url}-raw`, () =>
+  const { status } = await useAsyncData(`feat-${route.params.url}-raw`, () =>
     $fetch<FeatCreate>(`/api/v2/feats/${route.params.url}/raw`, {
       onResponse: (ctx) => {
         const merged = merge(form.value, ctx.response._data);
@@ -60,6 +27,10 @@
     }),
   );
 
+  const rawIncorrect = computed(
+    () => status.value === 'error' || !backup.value,
+  );
+
   const isCreating = ref(false);
   const isCreated = ref(false);
 
@@ -68,8 +39,29 @@
   async function submit() {
     isCreating.value = true;
 
+    if (!editor.value?.validate) {
+      $toast.error({
+        title: 'Ошибка сохранения заклинания',
+        description: () =>
+          h('span', null, [
+            'Произошла какая-то ошибка... попробуй еще раз или обратись за помощью на нашем ',
+            h(
+              'a',
+              {
+                target: '_blank',
+                href: 'https://discord.gg/JqFKMKRtxv',
+                rel: 'noreferrer noopener',
+              },
+              'Discord-канале',
+            ),
+          ]),
+      });
+
+      throw new Error('Validation method was not found');
+    }
+
     try {
-      const payload = await editor.value?.validate?.();
+      const payload = await editor.value.validate();
 
       await $fetch<string>(`/api/v2/feats/${route.params.url}`, {
         method: 'PUT',
@@ -101,6 +93,26 @@
     }
   }
 
+  function getInitialState(): FeatCreate {
+    return {
+      url: '',
+      name: {
+        rus: '',
+        eng: '',
+        alt: [],
+      },
+      source: {
+        url: undefined,
+        page: undefined,
+      },
+      prerequisite: '',
+      description: '',
+      category: undefined,
+      repeatability: false,
+      tags: [],
+    };
+  }
+
   function getLink() {
     return h('span', [
       'Можешь перейти на ее ',
@@ -127,6 +139,7 @@
       <PageHeader title="Редактирование черты">
         <template #actions>
           <AButton
+            v-if="!rawIncorrect"
             type="primary"
             :disabled="isCreated || !isEdited"
             :loading="editor?.isCreating"
@@ -159,7 +172,15 @@
 
     <template #default>
       <ClientOnly>
+        <AResult
+          v-if="rawIncorrect"
+          status="error"
+          title="Некорректные данные"
+          sub-title="Не найдена черта для редактирования"
+        />
+
         <FeatsEditor
+          v-else
           ref="editor"
           v-model="form"
           :is-creating="isCreating"
