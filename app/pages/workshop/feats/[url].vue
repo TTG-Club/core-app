@@ -2,81 +2,55 @@
   import { cloneDeep, isEqual, merge } from 'lodash-es';
 
   import { NuxtLink } from '#components';
-  import { SpeciesEditor } from '~species/editor';
   import { SvgIcon } from '~ui/icon';
   import { PageContainer, PageHeader } from '~ui/page';
   import { useToast } from '~ui/toast';
 
-  import type { SpeciesCreate } from '~/shared/types';
+  import type { FeatCreate } from '~/shared/types';
+  import type { FeatsEditor } from '~feats/editor';
 
   const route = useRoute();
   const $toast = useToast();
-  const editor = useTemplateRef<InstanceType<typeof SpeciesEditor>>('editor');
+  const editor = useTemplateRef<InstanceType<typeof FeatsEditor>>('editor');
 
-  const form = ref<SpeciesCreate>({
+  const form = useState<FeatCreate>(() => ({
     url: '',
     name: {
       rus: '',
       eng: '',
       alt: [],
     },
-    description: '',
-    image: undefined,
-    linkImage: undefined,
-    gallery: [],
-    parent: undefined,
     source: {
       url: undefined,
       page: undefined,
     },
-    properties: {
-      sizes: [],
-      type: undefined,
-      speed: {
-        base: 30,
-        fly: undefined,
-        climb: undefined,
-        swim: undefined,
-        hover: false,
-      },
-    },
-    features: [],
-    tags: [],
-  });
-
-  const backup = useState<SpeciesCreate>(() => ({
-    url: '',
-    name: {
-      rus: '',
-      eng: '',
-      alt: [],
-    },
+    prerequisite: '',
     description: '',
-    image: undefined,
-    linkImage: undefined,
-    gallery: [],
-    parent: undefined,
-    source: {
-      url: undefined,
-      page: undefined,
-    },
-    properties: {
-      sizes: [],
-      type: undefined,
-      speed: {
-        base: 30,
-        fly: undefined,
-        climb: undefined,
-        swim: undefined,
-        hover: false,
-      },
-    },
-    features: [],
+    category: undefined,
+    repeatability: false,
     tags: [],
   }));
 
-  await useAsyncData(`species-${route.params.url}-raw`, () =>
-    $fetch<SpeciesCreate>(`/api/v2/species/${route.params.url}/raw`, {
+  const backup = useState<FeatCreate>(() => ({
+    url: '',
+    name: {
+      rus: '',
+      eng: '',
+      alt: [],
+    },
+    source: {
+      url: undefined,
+      page: undefined,
+    },
+    prerequisite: '',
+    description: '',
+    category: undefined,
+    repeatability: false,
+    tags: [],
+  }));
+
+  await useAsyncData(`feat-${route.params.url}-raw`, () =>
+    $fetch<FeatCreate>(`/api/v2/feats/${route.params.url}/raw`, {
       onResponse: (ctx) => {
         const merged = merge(form.value, ctx.response._data);
 
@@ -97,7 +71,7 @@
     try {
       const payload = await editor.value?.validate?.();
 
-      await $fetch<string>(`/api/v2/species/${route.params.url}`, {
+      await $fetch<string>(`/api/v2/feats/${route.params.url}`, {
         method: 'PUT',
         body: payload,
         onRequestError: () => {
@@ -107,9 +81,7 @@
           isCreating.value = false;
 
           $toast.error({
-            title: !backup.value.parent
-              ? 'Ошибка сохранения вида'
-              : 'Ошибка сохранения происхождения',
+            title: 'Ошибка сохранения черты',
             description: error.response._data.message,
           });
         },
@@ -118,11 +90,9 @@
       // isCreated.value = true; // TODO: вернуть в будущем
 
       $toast.success({
-        title: !backup.value.parent
-          ? 'Вид успешно сохранен'
-          : 'Происхождение успешно сохранено',
+        title: 'Черта успешно сохранена',
         description: getLink,
-        // onClose: () => navigateTo({ name: 'workshop-species' }), // TODO: вернуть в будущем
+        // onClose: () => navigateTo({ name: 'workshop-feats' }), // TODO: вернуть в будущем
       });
     } catch (err) {
       isCreating.value = false;
@@ -133,12 +103,12 @@
 
   function getLink() {
     return h('span', [
-      'Можешь перейти на его ',
+      'Можешь перейти на ее ',
       h(
         NuxtLink,
         {
           to: {
-            name: 'species-url',
+            name: 'feats-url',
             params: {
               url: form.value.url,
             },
@@ -154,9 +124,7 @@
 <template>
   <PageContainer fixed-header>
     <template #header>
-      <PageHeader
-        :title="`Редактирование ${!backup.parent ? 'вида' : 'происхождения'}`"
-      >
+      <PageHeader title="Редактирование черты">
         <template #actions>
           <AButton
             type="primary"
@@ -178,7 +146,7 @@
           >
             <AButton
               type="text"
-              @click.left.exact.prevent="navigateTo('/workshop/species')"
+              @click.left.exact.prevent="navigateTo('/workshop/feats')"
             >
               <template #icon>
                 <SvgIcon icon="close" />
@@ -191,7 +159,7 @@
 
     <template #default>
       <ClientOnly>
-        <SpeciesEditor
+        <FeatsEditor
           ref="editor"
           v-model="form"
           :is-creating="isCreating"
