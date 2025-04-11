@@ -1,8 +1,6 @@
 <script setup lang="ts">
   import { COMPONENT_TOOLTIP_TEXT } from '../model';
 
-  import { MarkupRender } from '~ui/markup';
-
   import type { FeatDetailResponse } from '~/shared/types';
 
   defineProps<Pick<FeatDetailResponse, 'prerequisite'>>();
@@ -19,7 +17,7 @@
         <div :class="$style.name">Предварительное условие:</div>
       </ATooltip>
 
-      <MarkupRender :entries="prerequisite" />
+      <span>{{ prerequisite }}</span>
     </div>
   </div>
 </template>
@@ -39,7 +37,11 @@
     background-color: var(--color-bg-secondary);
 
     .item {
+      display: flex;
       flex: 1 0 100%;
+      flex-direction: column;
+      gap: 4px;
+
       min-width: 100%;
       padding: 10px 16px;
 
@@ -60,7 +62,6 @@
       }
 
       .name {
-        margin-bottom: 4px;
         font-weight: 500;
         color: var(--color-text-title);
       }
