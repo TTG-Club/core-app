@@ -34,7 +34,9 @@
   const isCreating = ref(false);
   const isCreated = ref(false);
 
-  const isEdited = computed(() => !isEqual(backup.value, form.value));
+  const isEdited = computed(
+    () => !isEqual(toRaw(backup.value), toRaw(form.value)),
+  );
 
   async function submit() {
     isCreating.value = true;
