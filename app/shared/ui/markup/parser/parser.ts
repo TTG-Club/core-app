@@ -1,3 +1,7 @@
+import { MAX_STRING_LENGTH, MAX_DEPTH, LEADING_CHARACTER } from '../consts';
+import { SimpleText, Marker } from '../types';
+import { isEmptyMarker, isRichMarker, isTextMarker } from '../utils';
+
 import type {
   MarkerNode,
   TextNode,
@@ -11,9 +15,6 @@ import type {
   EmptyMarker,
   TextMarker,
 } from '../types';
-import { SimpleText, Marker } from '../types';
-import { MAX_STRING_LENGTH, MAX_DEPTH, LEADING_CHARACTER } from '../consts';
-import { isEmptyMarker, isRichMarker, isTextMarker } from '../utils';
 
 // Разрешенные алиасы для маркеров
 const MARKERS: { [key: string]: MarkerName } = {
@@ -60,9 +61,9 @@ function recursiveParse(text: string, depth: number): MarkerNode[] {
     }
 
     if (str.startsWith(`{${LEADING_CHARACTER}`)) {
-      const [marker, text] = splitFirstSpace(str.slice(1, -1));
+      const [marker, rawText] = splitFirstSpace(str.slice(1, -1));
 
-      result.push(convertMarker(marker, text, depth));
+      result.push(convertMarker(marker, rawText, depth));
     } else {
       result.push(convertText(str));
     }

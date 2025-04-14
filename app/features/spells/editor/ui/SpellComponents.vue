@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { ValidationBase } from '~/shared/utils';
+
   import type { SpellComponents, SpellMaterialComponent } from '~/shared/types';
 
   const components = defineModel<SpellComponents>({

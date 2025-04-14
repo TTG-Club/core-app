@@ -1,8 +1,9 @@
 <script setup lang="ts">
   import { Breakpoint, BREAKPOINTS, useDrawer } from '~/shared/composables';
-  import type { SpellDetailResponse } from '~/shared/types';
   import { SpellBody } from '~spells/body';
   import { DrawerComponent } from '~ui/drawer';
+
+  import type { SpellDetailResponse } from '~/shared/types';
 
   const { url, isOpened, close } = useDrawer('spell-detail');
 
@@ -30,6 +31,8 @@
     isOpened.value ? `${getOrigin()}/spells/${url.value}` : undefined,
   );
 
+  const editUrl = computed(() => `/workshop/spells/${url.value}`);
+
   function handleUpdate(opened: boolean) {
     if (opened) {
       return;
@@ -56,6 +59,7 @@
     :title="spell?.name"
     :source="spell?.source"
     :url="urlForCopy"
+    :edit-url="editUrl"
     :is-loading="status === 'pending'"
     :is-error="status === 'error'"
     width="100%"

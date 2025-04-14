@@ -1,5 +1,6 @@
-import type { Rule } from 'ant-design-vue/es/form';
 import { isNumber } from 'lodash-es';
+
+import type { Rule } from 'ant-design-vue/es/form';
 import type { SelectOption } from '~/shared/types';
 
 export const getEnumFromDictionary = <T extends SelectOption>(

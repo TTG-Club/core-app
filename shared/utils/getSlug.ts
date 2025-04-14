@@ -1,5 +1,6 @@
-import type { OptionsSlugify } from 'transliteration';
 import { slugify } from 'transliteration';
+
+import type { OptionsSlugify } from 'transliteration';
 
 /**
  * Конвертирование строки в url-friendly строку

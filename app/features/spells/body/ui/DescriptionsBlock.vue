@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import type { SpellDetailResponse } from '~/shared/types';
   import { MarkupRender } from '~ui/markup';
+
+  import type { SpellDetailResponse } from '~/shared/types';
 
   const { description } =
     defineProps<Pick<SpellDetailResponse, 'description' | 'level' | 'upper'>>();

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-  import type { SpeciesLinkResponse } from '~/shared/types';
-  import { SpeciesLink } from '~species/link';
-  import { DrawerComponent } from '~ui/drawer';
   import { useDrawer } from '~/shared/composables';
   import { SpeciesDrawer } from '~species/drawer';
+  import { SpeciesLink } from '~species/link';
+  import { DrawerComponent } from '~ui/drawer';
+
+  import type { SpeciesLinkResponse } from '~/shared/types';
 
   const { url, isOpened, close } = useDrawer('species-lineages');
 

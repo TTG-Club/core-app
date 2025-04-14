@@ -1,12 +1,4 @@
 <script setup lang="ts">
-  import type { SelectValue } from 'ant-design-vue/es/select';
-  import type { SpeciesCreate } from '~/shared/types';
-  import type { FormInstance } from 'ant-design-vue';
-  import {
-    ValidationBase,
-    ValidationSpecies,
-    ValidationDictionaries,
-  } from '~/shared/utils';
   import {
     SpeciesGallery,
     SpeciesImage,
@@ -14,51 +6,35 @@
     SpeciesFeatures,
     SpeciesSizes,
   } from './ui';
-  import { NuxtLink } from '#components';
+
+  import {
+    ValidationBase,
+    ValidationSpecies,
+    ValidationDictionaries,
+  } from '~/shared/utils';
+  import { InputUrl } from '~ui/input';
   import {
     SelectCreatureType,
     SelectSource,
     SelectSpecies,
     SelectTags,
   } from '~ui/select';
-  import { InputUrl } from '~ui/input';
-  import { EditorActions } from '~ui/editor';
-  import { useToast } from '~ui/toast';
 
-  const $toast = useToast();
+  import type { FormInstance } from 'ant-design-vue';
+  import type { SelectValue } from 'ant-design-vue/es/select';
+  import type { SpeciesCreate } from '~/shared/types';
+
+  const { isCreating } = defineProps<{
+    isCreating: boolean;
+  }>();
+
+  const form = defineModel<SpeciesCreate>({ required: true });
+
+  const {
+    params: { url: oldUrl },
+  } = useRoute();
 
   const formRef = useTemplateRef<FormInstance>('formRef');
-
-  const form = ref<SpeciesCreate>({
-    url: '',
-    name: {
-      rus: '',
-      eng: '',
-      alt: [],
-    },
-    description: '',
-    image: undefined,
-    linkImage: undefined,
-    gallery: [],
-    parent: undefined,
-    source: {
-      url: undefined,
-      page: undefined,
-    },
-    properties: {
-      sizes: [],
-      type: undefined,
-      speed: {
-        base: 30,
-        fly: undefined,
-        climb: undefined,
-        swim: undefined,
-        hover: false,
-      },
-    },
-    features: [],
-    tags: [],
-  });
 
   function resetBookPage() {
     form.value.source.page = undefined;
@@ -76,63 +52,9 @@
     form.value.source.url = value;
   }
 
-  const isCreating = ref(false);
-  const isCreated = ref(false);
-
-  async function submit() {
-    isCreating.value = true;
-
-    try {
-      const payload = await formRef.value?.validate();
-
-      await $fetch<string>('/api/v2/species', {
-        method: 'POST',
-        body: payload,
-        onRequestError: () => {
-          isCreating.value = false;
-        },
-        onResponseError: (error) => {
-          isCreating.value = false;
-
-          $toast.error({
-            title: 'Ошибка создания вида',
-            description: error.response._data.message,
-          });
-        },
-      });
-
-      // isCreated.value = true; // TODO: вернуть в будущем
-
-      $toast.success({
-        title: () =>
-          !form.value.parent
-            ? 'Вид успешно создан'
-            : 'Происхождение успешно создано',
-        description: () =>
-          h('span', [
-            'Можешь перейти на его ',
-            h(
-              NuxtLink,
-              {
-                to: {
-                  name: 'species-url',
-                  params: {
-                    url: form.value.url,
-                  },
-                },
-                target: '_blank',
-              },
-              () => 'страницу',
-            ),
-          ]),
-        // onClose: () => navigateTo({ name: 'workshop-species' }), // TODO: вернуть в будущем
-      });
-    } catch (err) {
-      isCreating.value = false;
-    } finally {
-      isCreating.value = false; // TODO: удалить в будущем
-    }
-  }
+  defineExpose({
+    validate: computed(() => formRef.value?.validate),
+  });
 </script>
 
 <template>
@@ -140,7 +62,7 @@
     ref="formRef"
     layout="vertical"
     :model="form"
-    :disabled="isCreated"
+    :disabled="isCreating"
   >
     <ADivider orientation="left">
       <ATypographyText
@@ -258,7 +180,7 @@
           label="URL"
           tooltip="Менять только при необходимости, т.к. URL генерируется автоматически при вводе английского названия"
           :name="['url']"
-          :rules="[ValidationSpecies.ruleUrl()]"
+          :rules="[ValidationSpecies.ruleUrl(oldUrl)]"
         >
           <InputUrl
             v-model="form.url"
@@ -437,10 +359,4 @@
       </ACol>
     </ARow>
   </AForm>
-
-  <EditorActions
-    :is-submitting="isCreating"
-    :disabled="isCreated"
-    :submit
-  />
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import { SpeciesLineagesDrawer } from '~species/lineages-drawer';
+  import { FeatDrawer } from '~feats/drawer';
   import { SpeciesDrawer } from '~species/drawer';
+  import { SpeciesLineagesDrawer } from '~species/lineages-drawer';
   import { SpellDrawer } from '~spells/drawer';
 </script>
 
@@ -10,4 +11,6 @@
   <SpeciesLineagesDrawer />
 
   <SpellDrawer />
+
+  <FeatDrawer />
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import type { SpellDetailResponse } from '~/shared/types';
   import { COMPONENT_TOOLTIP_TEXT } from '../model';
+
+  import type { SpellDetailResponse } from '~/shared/types';
 
   defineProps<
     Pick<
@@ -13,56 +14,58 @@
 <template>
   <div :class="$style.stats">
     <div :class="$style.item">
-      <p>Время накладывания:</p>
+      <span :class="$style.name">Время накладывания:</span>
 
       <span>{{ castingTime }}</span>
     </div>
 
     <div :class="$style.item">
-      <p>Дистанция:</p>
+      <span :class="$style.name">Дистанция:</span>
 
       <span>{{ range }}</span>
     </div>
 
     <div :class="[$style.item, $style.duration]">
-      <p>Длительность:</p>
+      <span :class="$style.name">Длительность:</span>
 
       <span>{{ duration }}</span>
     </div>
 
     <div :class="[$style.item, $style.block]">
-      <p>Компоненты:</p>
+      <span :class="$style.name">Компоненты:</span>
 
-      <ATooltip
-        v-if="components.v"
-        :title="COMPONENT_TOOLTIP_TEXT.v"
-        :mouse-enter-delay="0.7"
-        destroy-tooltip-on-hide
-      >
-        <span>Вербальный</span>
+      <span>
+        <ATooltip
+          v-if="components.v"
+          :title="COMPONENT_TOOLTIP_TEXT.v"
+          :mouse-enter-delay="0.7"
+          destroy-tooltip-on-hide
+        >
+          <span>Вербальный</span>
 
-        <span v-if="components.s || components.m">, </span>
-      </ATooltip>
+          <span v-if="components.s || components.m">, </span>
+        </ATooltip>
 
-      <ATooltip
-        v-if="components.s"
-        :title="COMPONENT_TOOLTIP_TEXT.s"
-        :mouse-enter-delay="0.7"
-        destroy-tooltip-on-hide
-      >
-        <span>Соматический</span>
+        <ATooltip
+          v-if="components.s"
+          :title="COMPONENT_TOOLTIP_TEXT.s"
+          :mouse-enter-delay="0.7"
+          destroy-tooltip-on-hide
+        >
+          <span>Соматический</span>
 
-        <span v-if="components.m">, </span>
-      </ATooltip>
+          <span v-if="components.m">, </span>
+        </ATooltip>
 
-      <ATooltip
-        v-if="components.m"
-        :title="COMPONENT_TOOLTIP_TEXT.m"
-        :mouse-enter-delay="0.7"
-        destroy-tooltip-on-hide
-      >
-        <span>Материальный ({{ components.m }})</span>
-      </ATooltip>
+        <ATooltip
+          v-if="components.m"
+          :title="COMPONENT_TOOLTIP_TEXT.m"
+          :mouse-enter-delay="0.7"
+          destroy-tooltip-on-hide
+        >
+          <span>Материальный ({{ components.m }})</span>
+        </ATooltip>
+      </span>
     </div>
   </div>
 </template>
@@ -82,7 +85,11 @@
     background-color: var(--color-bg-secondary);
 
     .item {
+      display: flex;
       flex: 1 0 100%;
+      flex-direction: column;
+      gap: 4px;
+
       min-width: 100%;
       padding: 10px 16px;
 
@@ -102,8 +109,7 @@
         border-right: none;
       }
 
-      p {
-        margin-bottom: 4px;
+      .name {
         font-weight: 500;
         color: var(--color-text-title);
       }

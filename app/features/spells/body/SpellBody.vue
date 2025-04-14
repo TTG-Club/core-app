@@ -1,11 +1,12 @@
 <script setup lang="ts">
-  import type { SpellDetailResponse } from '~/shared/types';
   import {
     TopBar,
     StatsBlock,
     AffiliationBlock,
     DescriptionsBlock,
   } from './ui';
+
+  import type { SpellDetailResponse } from '~/shared/types';
 
   defineProps<{
     spell: SpellDetailResponse;

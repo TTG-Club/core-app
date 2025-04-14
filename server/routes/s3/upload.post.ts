@@ -1,10 +1,12 @@
-import { StatusCodes } from 'http-status-codes';
-import type { S3UploadFile, S3UploadResponse } from '~~/server/types/s3';
-import { z } from 'zod';
-import type { EventHandlerRequest } from 'h3';
 import { H3Error } from 'h3';
+import { StatusCodes } from 'http-status-codes';
 import { toSafeInteger } from 'lodash-es';
+import { z } from 'zod';
+
 import { S3Service } from '~~/server/services';
+
+import type { EventHandlerRequest } from 'h3';
+import type { S3UploadFile, S3UploadResponse } from '~~/server/types/s3';
 
 const requestSchema = z
   .object({

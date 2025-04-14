@@ -1,5 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import { fileURLToPath, URL } from 'node:url';
+
 import bytes from 'bytes';
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
 
@@ -151,6 +152,13 @@ export default defineNuxtConfig({
 
   typescript: {
     typeCheck: true,
+    tsConfig: {
+      compilerOptions: {
+        typeRoots: [
+          fileURLToPath(new URL('./app/shared/types/global', import.meta.url)),
+        ],
+      },
+    },
   },
 
   eslint: {

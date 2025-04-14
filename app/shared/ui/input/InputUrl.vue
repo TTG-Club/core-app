@@ -1,6 +1,8 @@
 <script setup lang="ts">
-  import { getSlug } from '~~/shared/utils';
   import { Form } from 'ant-design-vue';
+
+  import { getSlug } from '~~/shared/utils';
+
   import type { SelectOptionWithShortName } from '~/shared/types';
 
   const props = withDefaults(

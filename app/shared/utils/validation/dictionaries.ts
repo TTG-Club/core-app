@@ -1,6 +1,7 @@
-import type { Rule } from 'ant-design-vue/es/form';
 import { Dictionaries } from '~/shared/api';
 import { getEnumFromDictionary } from '~/shared/utils/validation/base';
+
+import type { Rule } from 'ant-design-vue/es/form';
 import type { SelectOption } from '~/shared/types';
 
 function validateFromDictionary(
@@ -73,5 +74,20 @@ export const ruleCreatureType = (): Rule => ({
     const creatureTypes = await Dictionaries.creatureTypes();
 
     validateFromDictionary(value, creatureTypes);
+  },
+});
+
+export const ruleFeatCategories = (): Rule => ({
+  required: true,
+  trigger: ['change', 'blur'],
+  type: 'string',
+  validator: async (rule: Rule, value: string | undefined) => {
+    if (!value) {
+      throw new Error('Поле обязательно для заполнения');
+    }
+
+    const featCategories = await Dictionaries.featCategories();
+
+    validateFromDictionary(value, featCategories);
   },
 });

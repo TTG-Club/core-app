@@ -13,9 +13,9 @@ export const CARD_LINKS = [
   },
   {
     name: 'Черты',
-    url: '/',
+    url: '/feats',
     img: '/s3/sections/home-link/button_traits.webp',
-    disable: true,
+    disable: false,
   },
   {
     name: 'Предыстории',

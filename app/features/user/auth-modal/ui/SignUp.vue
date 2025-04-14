@@ -1,7 +1,8 @@
 <script setup lang="ts">
   import { Form } from 'ant-design-vue';
-  import { ValidationAuth } from '~/shared/utils';
   import { omit } from 'lodash-es';
+
+  import { ValidationAuth } from '~/shared/utils';
   import { useToast } from '~ui/toast';
 
   const emit = defineEmits<{

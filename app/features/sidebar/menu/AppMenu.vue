@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import { MenuSection, MenuContacts, MenuSupport } from './ui';
   import { MENU_SUPPORT, MENU_LINKS } from './model';
+  import { MenuSection, MenuContacts, MenuSupport } from './ui';
+
   import { SidebarPopover } from '~sidebar/popover';
   import { HamburgerIcon, SvgLogo } from '~ui/icon';
 </script>
@@ -51,7 +52,7 @@
           :items="[
             { href: '/', label: 'Классы', disabled: true },
             { href: '/species', label: 'Виды' },
-            { href: '/', label: 'Черты', disabled: true },
+            { href: '/feats', label: 'Черты', disabled: false },
             { href: '/', label: 'Предыстории', disabled: true },
             { href: '/spells', label: 'Заклинания' },
           ]"

@@ -1,8 +1,9 @@
 <script setup lang="ts">
   import { getSlicedString } from '~/shared/utils';
-  import type { SpellDetailResponse } from '~/shared/types';
   import { SpellBody } from '~spells/body';
   import { PageActions, PageContainer, PageHeader } from '~ui/page';
+
+  import type { SpellDetailResponse } from '~/shared/types';
 
   const route = useRoute();
 
@@ -16,6 +17,8 @@
     author: () => (spell.value ? spell.value.source.name.rus : undefined),
     titleTemplate: '%s | Заклинания D&D 5 2024',
   });
+
+  const editUrl = computed(() => `/workshop/spells/${route.params.url}`);
 
   function getSeoTitle() {
     if (!spell.value) {
@@ -54,7 +57,10 @@
         copy-title
       >
         <template #actions>
-          <PageActions @close="navigateTo({ name: 'spells' })" />
+          <PageActions
+            :edit-url="editUrl"
+            @close="navigateTo({ name: 'spells' })"
+          />
         </template>
       </PageHeader>
     </template>

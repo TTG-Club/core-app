@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import { AButton, AFlex } from '#components';
   import { SignIn, SignUp } from './ui';
+
+  import { AButton, AFlex } from '#components';
   import { SvgIcon } from '~ui/icon';
   import { useToast } from '~ui/toast';
 
@@ -36,7 +37,7 @@
 
     emailVerified.value = null;
 
-    const { close } = $toast.success({
+    const { close: closeToast } = $toast.success({
       title: 'E-Mail подтвержден!',
       description: () =>
         h(
@@ -54,7 +55,7 @@
                 type: 'text',
                 onClick: withModifiers(() => {
                   opened.value = true;
-                  close();
+                  closeToast();
                 }, ['left', 'exact', 'prevent']),
               },
               {

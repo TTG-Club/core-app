@@ -1,3 +1,5 @@
+import { createTextVNode } from 'vue';
+
 import {
   type TextNode,
   type MarkerNode,
@@ -14,8 +16,8 @@ import {
   isSimpleTextNode,
   isTextNode,
 } from '../utils';
+
 import { renderLinkNode } from './renderLink';
-import { createTextVNode } from 'vue';
 
 const TextMarkerTag: Record<TextMarker, string> = {
   [TextMarker.Bold]: 'b',
@@ -79,7 +81,7 @@ function renderTextNode(node: TextNode): VNode {
     throw new Error(`[Markup] Unknown tag for text node`);
   }
 
-  const child = node.content.map((child) => renderNode(child));
+  const child = node.content.map((item) => renderNode(item));
 
   if (!child?.length) {
     throw new Error(`[Markup] Text node must have content`);
@@ -99,7 +101,7 @@ function renderEmptyNode(node: EmptyNode): VNode {
 }
 
 function renderRichNode(node: RichNode): VNode {
-  const child = node.content?.map((child) => renderNode(child));
+  const child = node.content?.map((item) => renderNode(item));
 
   if (!child.length) {
     throw new Error(`[Markup] Rich node must have content`);

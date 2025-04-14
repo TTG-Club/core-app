@@ -1,6 +1,8 @@
-import type { LinkNode } from '../types';
-import { NuxtLink } from '#components';
 import { useRouter } from 'vue-router';
+
+import { NuxtLink } from '#components';
+
+import type { LinkNode } from '../types';
 
 export function renderLinkNode(node: LinkNode, renderChildren: () => VNode[]) {
   const { url } = node.attrs;

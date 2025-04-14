@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import { Dictionaries } from '~/shared/api';
   import { Form } from 'ant-design-vue';
+
+  import { Dictionaries } from '~/shared/api';
 
   withDefaults(
     defineProps<{

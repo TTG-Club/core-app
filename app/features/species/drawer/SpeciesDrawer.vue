@@ -1,8 +1,9 @@
 <script setup lang="ts">
   import { Breakpoint, BREAKPOINTS, useDrawer } from '~/shared/composables';
-  import type { SpeciesDetailResponse } from '~/shared/types';
   import { SpeciesBody } from '~species/body';
   import { DrawerComponent } from '~ui/drawer';
+
+  import type { SpeciesDetailResponse } from '~/shared/types';
 
   const { inLineagesDrawer } = defineProps<{
     inLineagesDrawer?: boolean;
@@ -36,6 +37,8 @@
     isOpened.value ? `${getOrigin()}/species/${url.value}` : undefined,
   );
 
+  const editUrl = computed(() => `/workshop/species/${url.value}`);
+
   function handleUpdate(opened: boolean) {
     if (opened) {
       return;
@@ -62,6 +65,7 @@
     :title="species?.name"
     :source="species?.source"
     :url="urlForCopy"
+    :edit-url="editUrl"
     :is-loading="status === 'pending'"
     :is-error="status === 'error'"
     width="100%"

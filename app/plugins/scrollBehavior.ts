@@ -1,4 +1,5 @@
 import { get } from 'lodash-es';
+
 import type { Router } from 'vue-router';
 
 export default defineNuxtPlugin(function (nuxtApp) {
