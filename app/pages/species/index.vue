@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { SpeciesLegend } from '~species/legend';
   import { SpeciesLink } from '~species/link';
+  import { SvgIcon } from '~ui/icon';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
 
   import type { SpeciesLinkResponse } from '~/shared/types';
@@ -38,20 +39,24 @@
     <template #header>
       <PageHeader title="Виды">
         <template #filter>
-          <AButton
-            :style="{ boxShadow: 'none' }"
-            type="primary"
-            disabled
-          >
-            Фильтры
-          </AButton>
-
           <AInput
             v-model:value="search"
             placeholder="Введите текст..."
             allow-clear
             @change="onSearch"
           />
+
+          <AButton
+            :style="{ boxShadow: 'none' }"
+            type="primary"
+            disabled
+          >
+            <span>Фильтры</span>
+
+            <template #icon>
+              <SvgIcon icon="filter/outline" />
+            </template>
+          </AButton>
         </template>
 
         <template #legend>

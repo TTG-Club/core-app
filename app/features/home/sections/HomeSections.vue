@@ -6,7 +6,7 @@
   <AFlex
     :class="$style.cards"
     wrap="wrap"
-    gap="16"
+    gap="12"
   >
     <NuxtLink
       v-for="(link, index) in CARD_LINKS"
@@ -90,6 +90,7 @@
       z-index: 10;
       font-weight: 600;
       color: var(--color-text);
+      text-shadow: 0 2px 4px #0000006e;
     }
   }
 </style>
