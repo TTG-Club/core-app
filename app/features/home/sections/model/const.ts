@@ -19,9 +19,9 @@ export const CARD_LINKS = [
   },
   {
     name: 'Предыстории',
-    url: '/',
+    url: '/backgrounds',
     img: '/s3/sections/home-link/button_backgrounds.webp',
-    disable: true,
+    disable: false,
   },
   {
     name: 'Заклинания',

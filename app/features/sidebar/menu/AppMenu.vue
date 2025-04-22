@@ -53,7 +53,7 @@
             { href: '/', label: 'Классы', disabled: true },
             { href: '/species', label: 'Виды' },
             { href: '/feats', label: 'Черты', disabled: false },
-            { href: '/', label: 'Предыстории', disabled: true },
+            { href: '/backgrounds', label: 'Предыстории', disabled: false },
             { href: '/spells', label: 'Заклинания' },
           ]"
         />
