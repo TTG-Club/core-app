@@ -16,6 +16,7 @@
       :to="link.url"
       :class="[$style.card, { [$style.disabled]: link.disable }]"
       :style="{ backgroundColor: link.backgroundColor }"
+      target="_blank"
     >
       <SvgIcon
         :class="$style.icon"
@@ -50,11 +51,15 @@
     color: #ffffff;
     text-decoration: none;
 
-    background-color: var(--color-bg-secondary);
     box-shadow: 0 0.625rem 0.75rem 0 var(--color-card-shadow);
 
     &:hover {
       color: #ffffff;
+
+      .name {
+        font-size: 18px;
+        transition: all 200ms;
+      }
     }
 
     &.disabled {
@@ -63,8 +68,8 @@
     }
 
     .name {
-      z-index: 10;
       font-weight: 600;
+      transition: all 200ms;
     }
 
     .icon,
