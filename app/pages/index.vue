@@ -1,5 +1,9 @@
 <script setup lang="ts">
-  import { HomeSections, SocialBlock } from '~home/sections';
+  import {
+    HomeSections,
+    SocialSections,
+    StatisticsSections,
+  } from '~home/sections';
   import { SearchPanel } from '~search/panel';
   import { PageContainer } from '~ui/page';
 
@@ -52,7 +56,9 @@
           :lg="6"
           :xl="8"
         >
-          <SocialBlock />
+          <StatisticsSections />
+
+          <SocialSections />
         </ACol>
       </ARow>
     </div>
