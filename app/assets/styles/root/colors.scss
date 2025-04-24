@@ -1,5 +1,6 @@
 html.dark {
   --color-bg-main: #0d1a22;
+  --color-bg-main-gradient: linear-gradient(to bottom, #0d1a22 0%, #0d1a22 40%, #12212c 100%);
   --color-bg-secondary: #19222A;
   --color-bg-menu: linear-gradient(135deg, #23323bc7, rgba(11, 30, 43, 0.87));
 
@@ -31,6 +32,7 @@ html.dark {
 
 html.light {
   --color-bg-main: #fdfaf9;
+  --color-bg-main-gradient: linear-gradient(to bottom, #fdfaf9 0%, #fdfaf9 40%, #F0F0F0 100%);
   --color-bg-secondary: #dceee5;
   --color-bg-menu: linear-gradient(135deg, #f7f2c5c7, #f7f1e5c7);
 
@@ -85,6 +87,7 @@ html {
 
 html.svifty7 {
   --color-bg-main: #1F1F22;
+  --color-bg-main-gradient: linear-gradient(to bottom, #1F1F22 0%, #1F1F22 40%, #2B2B2B 100%);
   --color-bg-secondary: #2C2C30;
   --color-bg-menu: linear-gradient(135deg, #252528c7, #1F1F22c7);
 

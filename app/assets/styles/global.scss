@@ -94,6 +94,8 @@ body {
 
   background: var(--color-bg-main);
   background-color: var(--color-bg-main);
+  background-image: var(--color-bg-main-gradient);
+  background-attachment: fixed;
   outline: none;
 
   transition: background-color ease-in-out 0.2s,
