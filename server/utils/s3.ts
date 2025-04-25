@@ -1,6 +1,7 @@
+import { StatusCodes } from 'http-status-codes';
+
 import type { MultiPartData } from 'h3';
 import type { S3UploadFile } from '~~/server/types/s3';
-import { StatusCodes } from 'http-status-codes';
 
 export function getFileForUpload(
   section: string | undefined,

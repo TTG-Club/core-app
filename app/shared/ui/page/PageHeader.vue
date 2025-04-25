@@ -1,8 +1,10 @@
 <script setup lang="ts">
+  import { SourceTag } from '../source-tag';
+
+  import { useCopy, useDayjs } from '~/shared/composables';
+
   import type { Dayjs } from 'dayjs';
   import type { SourceResponse } from '~/shared/types';
-  import { useCopy, useDayjs } from '~/shared/composables';
-  import { SourceTag } from '../source-tag';
 
   export interface PageHeaderProps {
     title?: string;

@@ -1,14 +1,16 @@
 <script setup lang="ts">
-  import type { UploadProps } from 'ant-design-vue/es/upload';
   import bytes from 'bytes';
-  import type { UploadFile } from 'ant-design-vue';
-  import type { UploadResponse } from '~/shared/types';
-  import type { NuxtError } from '#app';
-  import type { FileType } from 'ant-design-vue/es/upload/interface';
   import { chunk } from 'lodash-es';
+
   import { getStatusMessage } from '#shared/utils';
   import { SvgIcon, SvgLoading } from '~ui/icon';
   import { useToast } from '~ui/toast';
+
+  import type { NuxtError } from '#app';
+  import type { UploadFile } from 'ant-design-vue';
+  import type { UploadProps } from 'ant-design-vue/es/upload';
+  import type { FileType } from 'ant-design-vue/es/upload/interface';
+  import type { UploadResponse } from '~/shared/types';
 
   const { section } = defineProps<{
     section: string;
@@ -39,9 +41,12 @@
     const chunkSize = 0x8000;
 
     for (let i = 0; i < uint8.length; i += chunkSize) {
-      const chunk = uint8.subarray(i, Math.min(i + chunkSize, uint8.length));
+      const chunkItem = uint8.subarray(
+        i,
+        Math.min(i + chunkSize, uint8.length),
+      );
 
-      chunks.push(String.fromCharCode(...chunk));
+      chunks.push(String.fromCharCode(...chunkItem));
     }
 
     return btoa(chunks.join(''));

@@ -1,8 +1,10 @@
 <script setup lang="ts">
-  import type { SpellLinkResponse } from '~/shared/types';
   import { SpellLinkComponents, SpellLinkFlags } from './ui';
-  import { SmallLink } from '~ui/link';
+
   import { useDrawer } from '~/shared/composables';
+  import { SmallLink } from '~ui/link';
+
+  import type { SpellLinkResponse } from '~/shared/types';
 
   const { spell } = defineProps<{
     spell: SpellLinkResponse;

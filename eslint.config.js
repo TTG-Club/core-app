@@ -1,6 +1,6 @@
-import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
+import { createConfigForNuxt } from '@nuxt/eslint-config';
 import gitignore from 'eslint-config-flat-gitignore';
-import { createConfigForNuxt } from '@nuxt/eslint-config/flat';
+import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 
 export default createConfigForNuxt(
   {
@@ -234,14 +234,67 @@ export default createConfigForNuxt(
       'vuejs-accessibility/form-control-has-label': 'off',
 
       // Typescript
+      '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/ban-ts-comment': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/consistent-type-assertions': 'error',
+      '@typescript-eslint/unified-signatures': 'off',
+      '@typescript-eslint/no-shadow': 'error',
+      '@typescript-eslint/no-extraneous-class': 'error',
+      '@typescript-eslint/no-unsafe-function-type': 'error',
+      '@typescript-eslint/prefer-literal-enum-member': 'error',
+      '@typescript-eslint/no-dynamic-delete': 'error',
+      '@typescript-eslint/no-use-before-define': [
+        'error',
+        {
+          functions: false,
+          enums: false,
+          typedefs: false,
+          ignoreTypeReferences: true,
+        },
+      ],
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
           args: 'after-used',
-          ignoreRestSiblings: true,
           argsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+          vars: 'all',
+          varsIgnorePattern: '^_',
           caughtErrors: 'none',
+        },
+      ],
+
+      // Import
+      'import/first': 'error',
+      'import/no-duplicates': 'error',
+      'import/no-mutable-exports': 'error',
+      'import/no-named-default': 'error',
+      'import/no-self-import': 'error',
+      'import/newline-after-import': ['error', { count: 1 }],
+      'import/no-named-as-default-member': 'off',
+      'import/order': [
+        'error',
+        {
+          'newlines-between': 'always',
+          'warnOnUnassignedImports': false,
+          'pathGroupsExcludedImportTypes': ['builtin'],
+          'alphabetize': {
+            order: 'asc',
+            orderImportKind: 'asc',
+            caseInsensitive: true,
+          },
+          'groups': [
+            'builtin',
+            'external',
+            'internal',
+            'parent',
+            'sibling',
+            'index',
+            'unknown',
+            'type',
+            'object',
+          ],
         },
       ],
     },

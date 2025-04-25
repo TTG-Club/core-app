@@ -1,9 +1,9 @@
 <script setup lang="ts">
   import { useDayjs, useUserRoles } from '~/shared/composables';
   import { useUserStore } from '~/shared/stores';
-  import { AuthModal } from '~user/auth-modal';
-  import { SvgIcon } from '~ui/icon';
   import { SidebarPopover } from '~sidebar/popover';
+  import { SvgIcon } from '~ui/icon';
+  import { AuthModal } from '~user/auth-modal';
 
   const dayjs = useDayjs();
   const userStore = useUserStore();

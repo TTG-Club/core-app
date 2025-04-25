@@ -1,14 +1,16 @@
 <script setup lang="ts">
-  import type { UploadProps } from 'ant-design-vue/es/upload';
   import bytes from 'bytes';
-  import type { UploadChangeParam, UploadFile } from 'ant-design-vue';
-  import type { UploadResponse } from '~/shared/types';
-  import type { NuxtError } from '#app';
-  import type { FileType } from 'ant-design-vue/es/upload/interface';
   import { toNumber } from 'lodash-es';
+
   import { getStatusMessage } from '#shared/utils';
   import { SvgIcon, SvgLoading } from '~ui/icon';
   import { useToast } from '~ui/toast';
+
+  import type { NuxtError } from '#app';
+  import type { UploadChangeParam, UploadFile } from 'ant-design-vue';
+  import type { UploadProps } from 'ant-design-vue/es/upload';
+  import type { FileType } from 'ant-design-vue/es/upload/interface';
+  import type { UploadResponse } from '~/shared/types';
 
   const { section, maxSize = undefined } = defineProps<{
     section: string;

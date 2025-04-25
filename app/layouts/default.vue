@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import ruRU from 'ant-design-vue/locale/ru_RU';
+
   import { useTheme } from '~/shared/composables';
   import { ToastsWrapper } from '~ui/toast';
 

@@ -1,8 +1,9 @@
-import type { GetObjectCommandOutput } from '@aws-sdk/client-s3';
 import { S3 } from '@aws-sdk/client-s3';
-import type { S3UploadFile, S3UploadResponse } from '~~/server/types/s3';
-import ms from 'ms';
 import { StatusCodes } from 'http-status-codes';
+import ms from 'ms';
+
+import type { GetObjectCommandOutput } from '@aws-sdk/client-s3';
+import type { S3UploadFile, S3UploadResponse } from '~~/server/types/s3';
 
 export const createS3Service = () => {
   const {

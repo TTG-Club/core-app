@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import type { ToastProps } from '../types';
   import { SvgIcon } from '~ui/icon';
+
+  import type { ToastProps } from '../types';
 
   const props = defineProps<ToastProps>();
 

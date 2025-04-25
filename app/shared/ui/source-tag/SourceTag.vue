@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import type { SourceResponse } from '~/shared/types';
   import type { TooltipPlacement } from 'ant-design-vue/es/tooltip';
+  import type { SourceResponse } from '~/shared/types';
 
   defineProps<{
     source: SourceResponse;

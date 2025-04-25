@@ -1,6 +1,10 @@
 <script setup lang="ts">
-  import { SectionSpecies, SectionSpells } from '~workshop/section';
   import { PageContainer, PageHeader } from '~ui/page';
+  import {
+    SectionSpecies,
+    SectionSpells,
+    SectionFeats,
+  } from '~workshop/section';
 </script>
 
 <template>
@@ -14,6 +18,8 @@
         <SectionSpecies />
 
         <SectionSpells />
+
+        <SectionFeats />
       </div>
     </template>
   </PageContainer>

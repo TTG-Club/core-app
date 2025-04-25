@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import type { BookLink, SelectOptionWithShortName } from '~/shared/types';
   import { Form } from 'ant-design-vue';
+
+  import type { BookLink, SelectOptionWithShortName } from '~/shared/types';
 
   withDefaults(
     defineProps<{

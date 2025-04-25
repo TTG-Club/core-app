@@ -1,8 +1,10 @@
 <script setup lang="ts">
-  import { Dictionaries } from '~/shared/api';
   import { isEqual, isString } from 'lodash-es';
-  import type { SpellCastingTime } from '~/shared/types';
+
+  import { Dictionaries } from '~/shared/api';
+
   import type { SelectValue } from 'ant-design-vue/es/select';
+  import type { SpellCastingTime } from '~/shared/types';
 
   const times = defineModel<Array<SpellCastingTime>>({
     default: () => [],

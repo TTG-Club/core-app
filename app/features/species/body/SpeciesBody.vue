@@ -1,7 +1,8 @@
 <script setup lang="ts">
-  import type { SpeciesDetailResponse } from '~/shared/types';
   import { SpeciesLineages } from '~species/lineages';
   import { MarkupRender } from '~ui/markup';
+
+  import type { SpeciesDetailResponse } from '~/shared/types';
 
   const { species } = defineProps<{
     species: SpeciesDetailResponse;

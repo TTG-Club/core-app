@@ -1,72 +1,46 @@
 <script setup lang="ts">
-  import type { SpellCreate } from '~/shared/types';
-  import {
-    ValidationBase,
-    ValidationSpell,
-    ValidationDictionaries,
-  } from '~/shared/utils';
-  import type { SelectValue } from 'ant-design-vue/es/select';
-  import type { FormInstance } from 'ant-design-vue';
-
   import {
     SpellCastingTimes,
     SpellRanges,
     SpellDurations,
     SpellComponents,
   } from './ui';
-  import { NuxtLink } from '#components';
+
+  import {
+    ValidationBase,
+    ValidationSpell,
+    ValidationDictionaries,
+  } from '~/shared/utils';
+  import { InputUrl } from '~ui/input';
   import {
     SelectMagicSchool,
     SelectSource,
     SelectSpecies,
     SelectTags,
   } from '~ui/select';
-  import { InputUrl } from '~ui/input';
-  import { EditorActions } from '~ui/editor';
-  import { useToast } from '~ui/toast';
 
-  const $toast = useToast();
+  import type { FormInstance } from 'ant-design-vue';
+  import type { SelectValue } from 'ant-design-vue/es/select';
+  import type { SpellCreate } from '~/shared/types';
+
+  const { isCreating } = defineProps<{
+    isCreating: boolean;
+  }>();
+
+  const form = defineModel<SpellCreate>({ required: true });
+
+  const {
+    params: { url: oldUrl },
+  } = useRoute();
 
   const formRef = useTemplateRef<FormInstance>('formRef');
-
-  const form = ref<SpellCreate>({
-    url: '',
-    name: {
-      rus: '',
-      eng: '',
-      alt: [],
-    },
-    source: {
-      url: undefined,
-      page: undefined,
-    },
-    description: '',
-    upper: undefined,
-    level: 0,
-    school: undefined,
-    range: [],
-    duration: [],
-    castingTime: [],
-    components: {
-      v: false,
-      s: false,
-      m: undefined,
-    },
-    affiliations: {
-      classes: [],
-      subclasses: [],
-      species: [],
-      lineages: [],
-    },
-    tags: [],
-  });
 
   const spellLevels = Array.from(Array(10)).map((_, index) => ({
     label: !index ? 'Заговор' : `${index} круг`,
     value: index,
   }));
 
-  const handleBookChange = (value: SelectValue) => {
+  function handleBookChange(value: SelectValue) {
     if (typeof value !== 'string' && value !== undefined) {
       return;
     }
@@ -76,62 +50,11 @@
     }
 
     form.value.source.url = value;
-  };
+  }
 
-  const isCreating = ref(false);
-  const isCreated = ref(false);
-
-  const submit = async () => {
-    isCreating.value = true;
-
-    try {
-      const payload = await formRef.value?.validate();
-
-      await $fetch<string>('/api/v2/spells', {
-        method: 'POST',
-        body: payload,
-        onRequestError: () => {
-          isCreating.value = false;
-        },
-        onResponseError: (error) => {
-          isCreating.value = false;
-
-          $toast.error({
-            title: 'Ошибка создания заклинания',
-            description: error.response._data.message,
-          });
-        },
-      });
-
-      // isCreated.value = true; // TODO: вернуть в будущем
-
-      $toast.success({
-        title: 'Заклинание успешно создано',
-        description: () =>
-          h('span', [
-            'Можешь перейти на его ',
-            h(
-              NuxtLink,
-              {
-                to: {
-                  name: 'spells-url',
-                  params: {
-                    url: form.value.url,
-                  },
-                },
-                target: '_blank',
-              },
-              () => 'страницу',
-            ),
-          ]),
-        // onClose: () => navigateTo({ name: 'workshop-spells' }), // TODO: вернуть в будущем
-      });
-    } catch (err) {
-      isCreating.value = false;
-    } finally {
-      isCreating.value = false; // TODO: удалить в будущем
-    }
-  };
+  defineExpose({
+    validate: computed(() => formRef.value?.validate),
+  });
 </script>
 
 <template>
@@ -242,7 +165,7 @@
           label="URL"
           tooltip="Менять только при необходимости, т.к. URL генерируется автоматически при вводе английского названия"
           :name="['url']"
-          :rules="[ValidationSpell.ruleUrl()]"
+          :rules="[ValidationSpell.ruleUrl(oldUrl)]"
         >
           <InputUrl
             v-model="form.url"
@@ -384,10 +307,4 @@
       </ACol>
     </ARow>
   </AForm>
-
-  <EditorActions
-    :is-submitting="isCreating"
-    :disabled="isCreated"
-    :submit
-  />
 </template>

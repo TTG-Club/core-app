@@ -15,3 +15,5 @@ export { default as SelectSpecies } from './SelectSpecies.vue';
 export { default as SelectTags } from './SelectTags.vue';
 
 export { default as SelectTimeUnit } from './SelectTimeUnit.vue';
+
+export { default as SelectFeatCategory } from './SelectFeatCategory.vue';

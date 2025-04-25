@@ -1,7 +1,8 @@
-import type { JwtPayload, SignOptions, VerifyOptions } from 'jsonwebtoken';
-import jwt from 'jsonwebtoken';
 import { StatusCodes } from 'http-status-codes';
+import jwt from 'jsonwebtoken';
+
 import type { H3Event } from 'h3';
+import type { JwtPayload, SignOptions, VerifyOptions } from 'jsonwebtoken';
 
 export interface GenerateJwtConfig {
   payload: object | Buffer;

@@ -1,5 +1,5 @@
-import type { SelectOption, SelectOptionWithMeasurable } from '~/shared/types';
 import type { NitroFetchOptions, NitroFetchRequest } from 'nitropack';
+import type { SelectOption, SelectOptionWithMeasurable } from '~/shared/types';
 
 function useDictionaries() {
   const sizes = <R extends NitroFetchRequest>(
@@ -67,6 +67,14 @@ function useDictionaries() {
       method: 'get',
     });
 
+  const featCategories = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/feat/types', {
+      ...config,
+      method: 'get',
+    });
+
   return {
     sizes,
     magicSchools,
@@ -75,6 +83,7 @@ function useDictionaries() {
     timeUnits,
     durationUnits,
     comparisonOperators,
+    featCategories,
   };
 }
 

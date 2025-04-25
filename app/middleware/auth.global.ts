@@ -1,6 +1,7 @@
 import { getReasonPhrase, StatusCodes } from 'http-status-codes';
-import { getStatusMessage } from '~~/shared/utils';
+
 import { useToast } from '~ui/toast';
+import { getStatusMessage } from '~~/shared/utils';
 
 export default defineNuxtRouteMiddleware(async (to) => {
   if (!to.meta.auth?.roles?.length) {
