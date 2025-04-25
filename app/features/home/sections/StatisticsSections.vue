@@ -1,6 +1,6 @@
 <template>
   <div :class="$style.card">
-    <h3>Статистика сайта</h3>
+    <h3>Статистика</h3>
 
     <p>
       В настоящее время на сайте представлено следующее количество материалов:
@@ -16,6 +16,7 @@
 
     overflow: hidden;
     display: flex;
+    flex: 1 1 100%;
     flex-direction: column;
 
     margin-bottom: 12px;

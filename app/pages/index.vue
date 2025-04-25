@@ -3,6 +3,7 @@
     HomeSections,
     SocialSections,
     StatisticsSections,
+    DnD2014Sections,
   } from '~home/sections';
   import { SearchPanel } from '~search/panel';
   import { PageContainer } from '~ui/page';
@@ -35,9 +36,7 @@
       >
         <ACol
           :xs="24"
-          :sm="24"
           :md="18"
-          :lg="18"
           :xl="16"
         >
           <div :class="$style.roadmap">
@@ -51,12 +50,14 @@
 
         <ACol
           :xs="24"
-          :sm="24"
           :md="6"
-          :lg="6"
           :xl="8"
         >
-          <StatisticsSections />
+          <AFlex gap="12">
+            <StatisticsSections />
+
+            <DnD2014Sections />
+          </AFlex>
 
           <SocialSections />
         </ACol>

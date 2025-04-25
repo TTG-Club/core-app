@@ -59,7 +59,7 @@
     &:hover {
       .img {
         transform: scale(1.15);
-        transition: transform 0.6s;
+        transition: transform 200ms;
       }
     }
 
@@ -79,7 +79,7 @@
 
       opacity: 0.8;
 
-      transition: transform 0.6s;
+      transition: transform 200ms;
     }
 
     .name {
