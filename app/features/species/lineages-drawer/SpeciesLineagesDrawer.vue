@@ -74,7 +74,7 @@
 <style module lang="scss">
   .grid {
     display: grid;
-    grid-gap: 8px;
+    grid-gap: 16px;
     grid-template-columns: repeat(1, 248px);
 
     @include media-min($sm) {

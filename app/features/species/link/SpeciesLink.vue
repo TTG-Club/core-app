@@ -74,6 +74,7 @@
 
     overflow: hidden;
 
+    border: 1px solid var(--color-border);
     border-radius: 16px;
 
     color: var(--color-text);
@@ -125,12 +126,12 @@
   .info {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 16px 16px 8px;
+    gap: 2px;
+    padding: 12px 16px 4px;
 
     .main {
       display: flex;
-      gap: 8px;
+      gap: 2px;
       align-items: center;
     }
 
