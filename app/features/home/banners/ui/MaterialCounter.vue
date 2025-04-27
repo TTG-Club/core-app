@@ -1,3 +1,9 @@
+<script setup lang="ts">
+  const { data: counter } = await useAsyncData('material-counter', () =>
+    $fetch<number>('https://ttg-club.free.beeceptor.com/counter'),
+  );
+</script>
+
 <template>
   <div :class="$style.card">
     <h3>Статистика</h3>
@@ -6,7 +12,7 @@
       В настоящее время на сайте представлено следующее количество материалов:
     </p>
 
-    <span :class="$style.stats">8,548</span>
+    <span :class="$style.stats">{{ counter }}</span>
   </div>
 </template>
 
