@@ -1,28 +1,27 @@
 <script setup lang="ts">
-  import { FeatLegend } from '~feats/legend';
-  import { FeatLink } from '~feats/link';
-  import { SvgIcon } from '~ui/icon';
+  import { BackgroundLegend } from '~backgrounds/legend';
+  import { BackgroundLink } from '~backgrounds/link';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
-  import type { FeatLinkResponse } from '~/shared/types';
+  import type { BackgroundLinkResponse } from '~/shared/types';
 
   useSeoMeta({
-    title: 'Черты [Feats]',
-    description: 'Черты по D&D 2024 редакции',
+    title: 'Предыстории [Backgrounds]',
+    description: 'Предыстории по D&D 2024 редакции',
   });
 
   const search = ref<string>('');
 
   const {
-    data: feats,
+    data: backgrounds,
     error,
     status,
     refresh,
   } = await useAsyncData(
-    'feats',
+    'backgrounds',
     () =>
-      $fetch<Array<FeatLinkResponse>>('/api/v2/feats/search', {
+      $fetch<Array<BackgroundLinkResponse>>('/api/v2/backgrounds/search', {
         method: 'POST',
         params: {
           query: search.value || undefined,
@@ -43,7 +42,7 @@
 <template>
   <PageContainer fixed-header>
     <template #header>
-      <PageHeader title="Черты">
+      <PageHeader title="Предыстории">
         <template #filter>
           <AInput
             v-model:value="search"
@@ -51,22 +50,18 @@
             allow-clear
             @change="onSearch"
           />
+
+          <AButton
+            :style="{ boxShadow: 'none' }"
+            type="primary"
+            disabled
+          >
+            Фильтры
+          </AButton>
         </template>
 
-        <AButton
-          :style="{ boxShadow: 'none' }"
-          type="primary"
-          disabled
-        >
-          <span>Фильтры</span>
-
-          <template #icon>
-            <SvgIcon icon="filter/outline" />
-          </template>
-        </AButton>
-
         <template #legend>
-          <FeatLegend />
+          <BackgroundLegend />
         </template>
       </PageHeader>
     </template>
@@ -87,18 +82,18 @@
         </PageGrid>
 
         <PageGrid
-          v-else-if="status === 'success' && feats?.length"
+          v-else-if="status === 'success' && backgrounds?.length"
           :columns="3"
         >
-          <FeatLink
-            v-for="feat in feats"
-            :key="feat.url"
-            :feat="feat"
+          <BackgroundLink
+            v-for="background in backgrounds"
+            :key="background.url"
+            :background="background"
           />
         </PageGrid>
 
         <AResult
-          v-else-if="status === 'success' && !feats?.length"
+          v-else-if="status === 'success' && !backgrounds?.length"
           title="Ничего не нашлось"
           sub-title="По вашему запросу ничего не нашлось. Попробуйте изменить фильтр или строку поиска"
         >

@@ -75,6 +75,22 @@ function useDictionaries() {
       method: 'get',
     });
 
+  const abilities = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/abilities', {
+      ...config,
+      method: 'get',
+    });
+
+  const skills = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/skills', {
+      ...config,
+      method: 'get',
+    });
+
   return {
     sizes,
     magicSchools,
@@ -84,6 +100,8 @@ function useDictionaries() {
     durationUnits,
     comparisonOperators,
     featCategories,
+    abilities,
+    skills,
   };
 }
 
