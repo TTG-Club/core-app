@@ -28,7 +28,7 @@ export const ruleUrl = (
 
       baseStringCheck(value, 3);
 
-      $fetch(`/api/v2/background/${value}`, {
+      $fetch(`/api/v2/backgrounds/${value}`, {
         method: 'head',
         retry: false,
         onRequestError: () => {

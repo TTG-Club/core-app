@@ -7,13 +7,13 @@
   import { useToast } from '~ui/toast';
 
   import type { BackgroundCreate } from '~/shared/types';
-  import type { BackgroundEditor } from '~backgrounds/editor';
+  import type { BackgroundsEditor } from '~backgrounds/editor';
 
   const route = useRoute();
   const $toast = useToast();
 
   const editor =
-    useTemplateRef<InstanceType<typeof BackgroundEditor>>('editor');
+    useTemplateRef<InstanceType<typeof BackgroundsEditor>>('editor');
 
   const form = useState<BackgroundCreate>(getInitialState);
   const backup = useState<BackgroundCreate>(getInitialState);
@@ -77,7 +77,7 @@
     try {
       const payload = await editor.value.validate();
 
-      await $fetch<string>(`/api/v2/background/${route.params.url}`, {
+      await $fetch<string>(`/api/v2/backgrounds/${route.params.url}`, {
         method: 'PUT',
         body: payload,
         onRequestError: () => {

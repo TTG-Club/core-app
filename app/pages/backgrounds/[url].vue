@@ -11,7 +11,7 @@
     `background-${route.params.url}`,
     () =>
       $fetch<BackgroundDetailResponse>(
-        `/api/v2/background/${route.params.url}`,
+        `/api/v2/backgrounds/${route.params.url}`,
       ),
   );
 

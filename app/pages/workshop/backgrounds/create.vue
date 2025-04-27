@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { NuxtLink } from '#components';
-  import { BackgroundEditor } from '~backgrounds/editor';
+  import { BackgroundsEditor } from '~backgrounds/editor';
   import { SvgIcon } from '~ui/icon';
   import { PageContainer, PageHeader } from '~ui/page';
   import { useToast } from '~ui/toast';
@@ -10,7 +10,7 @@
   const $toast = useToast();
 
   const editor =
-    useTemplateRef<InstanceType<typeof BackgroundEditor>>('editor');
+    useTemplateRef<InstanceType<typeof BackgroundsEditor>>('editor');
 
   const form = ref<BackgroundCreate>({
     url: '',
@@ -129,7 +129,7 @@
 
     <template #default>
       <ClientOnly>
-        <BackgroundEditor
+        <BackgroundsEditor
           ref="editor"
           v-model="form"
           :is-creating="isCreating"

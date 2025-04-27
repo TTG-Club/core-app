@@ -21,7 +21,7 @@
   } = await useAsyncData(
     'backgrounds',
     () =>
-      $fetch<Array<BackgroundLinkResponse>>('/api/v2/background/search', {
+      $fetch<Array<BackgroundLinkResponse>>('/api/v2/backgrounds/search', {
         method: 'POST',
         params: {
           query: search.value || undefined,
@@ -44,6 +44,13 @@
     <template #header>
       <PageHeader title="Предыстории">
         <template #filter>
+          <AInput
+            v-model:value="search"
+            placeholder="Введите текст..."
+            allow-clear
+            @change="onSearch"
+          />
+
           <AButton
             :style="{ boxShadow: 'none' }"
             type="primary"
@@ -51,13 +58,6 @@
           >
             Фильтры
           </AButton>
-
-          <AInput
-            v-model:value="search"
-            placeholder="Введите текст..."
-            allow-clear
-            @change="onSearch"
-          />
         </template>
 
         <template #legend>

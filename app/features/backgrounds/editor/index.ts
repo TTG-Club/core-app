@@ -1,1 +1,1 @@
-export { default as BackgroundEditor } from './BackgroundEditor.vue';
+export { default as BackgroundsEditor } from './BackgroundsEditor.vue';

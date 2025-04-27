@@ -10,11 +10,11 @@
     >
       <ACardMeta title="Мастерская предысторий" />
 
-      <div>Создано: <NuxtLink to="/workshop/feats">0</NuxtLink></div>
+      <div>Создано: <NuxtLink to="/workshop/backgrounds">0</NuxtLink></div>
 
-      <div>На модерации: <NuxtLink to="/workshop/feats">0</NuxtLink></div>
+      <div>На модерации: <NuxtLink to="/workshop/backgrounds">0</NuxtLink></div>
 
-      <div>Черновики: <NuxtLink to="/workshop/feats">0</NuxtLink></div>
+      <div>Черновики: <NuxtLink to="/workshop/backgrounds">0</NuxtLink></div>
     </AFlex>
 
     <AFlex
