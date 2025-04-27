@@ -41,7 +41,7 @@
     try {
       const payload = await editor.value?.validate?.();
 
-      await $fetch<string>('/api/v2/background', {
+      await $fetch<string>('/api/v2/backgrounds', {
         method: 'POST',
         body: payload,
         onRequestError: () => {

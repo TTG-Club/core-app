@@ -20,7 +20,7 @@
       }
 
       return $fetch<BackgroundDetailResponse>(
-        `/api/v2/background/${url.value}`,
+        `/api/v2/backgrounds/${url.value}`,
       );
     },
     {
