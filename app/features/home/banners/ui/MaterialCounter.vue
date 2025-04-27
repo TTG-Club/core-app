@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { AnimatedNumber } from '~ui/animated-number';
+
   const { data: counter } = await useAsyncData('material-counter', () =>
     $fetch<number>('https://ttg-club.free.beeceptor.com/counter'),
   );
@@ -12,7 +14,10 @@
       В настоящее время на сайте представлено следующее количество материалов:
     </p>
 
-    <span :class="$style.stats">{{ counter }}</span>
+    <AnimatedNumber
+      :class="$style.stats"
+      :value="counter"
+    />
   </div>
 </template>
 
