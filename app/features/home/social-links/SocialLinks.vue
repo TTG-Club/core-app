@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { SOCIAL_LINKS } from './model';
+  import { SOCIAL_LINKS } from '../sections/model';
 
   import { SvgIcon } from '~ui/icon';
 </script>

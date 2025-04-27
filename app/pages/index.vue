@@ -1,10 +1,7 @@
 <script setup lang="ts">
-  import {
-    HomeSections,
-    SocialSections,
-    StatisticsSections,
-    DnD2014Sections,
-  } from '~home/sections';
+  import { HomeBanners } from '~home/banners';
+  import { HomeSections } from '~home/sections';
+  import { SocialLinks } from '~home/social-links';
   import { SearchPanel } from '~search/panel';
   import { PageContainer } from '~ui/page';
 
@@ -53,13 +50,9 @@
           :md="6"
           :xl="8"
         >
-          <AFlex gap="12">
-            <StatisticsSections />
+          <HomeBanners />
 
-            <DnD2014Sections />
-          </AFlex>
-
-          <SocialSections />
+          <SocialLinks />
         </ACol>
       </ARow>
     </div>

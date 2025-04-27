@@ -6,7 +6,7 @@
   >
     <h2 :class="$style.name">D&D 2014</h2>
 
-    <p :class="$style.description">Прошлая редакция Denguan and Dragon</p>
+    <p :class="$style.description">Предыдущая редакция Dungeon and Dragons</p>
   </NuxtLink>
 </template>
 
@@ -42,8 +42,8 @@
       width: 100%;
       height: 100%;
 
-      opacity: 0.6;
-      background-image: url('https://new.ttg.club/s3/sections/fon.png');
+      opacity: 0.4;
+      background-image: url('/s3/sections/fon.png');
       background-repeat: no-repeat;
       background-position: center;
       background-size: cover;
