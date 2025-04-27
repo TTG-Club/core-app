@@ -33,7 +33,7 @@
       >
         <ACol
           :xs="24"
-          :md="18"
+          :md="12"
           :xl="16"
         >
           <div :class="$style.roadmap">
@@ -47,7 +47,7 @@
 
         <ACol
           :xs="24"
-          :md="6"
+          :md="12"
           :xl="8"
         >
           <HomeBanners />
