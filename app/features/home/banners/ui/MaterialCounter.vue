@@ -2,7 +2,7 @@
   import { AnimatedNumber } from '~ui/animated-number';
 
   const { data: counter } = await useAsyncData('material-counter', () =>
-    $fetch<number>('https://ttg-club.free.beeceptor.com/counter'),
+    $fetch<number>('/api/v2/statistics/count-all'),
   );
 </script>
 
