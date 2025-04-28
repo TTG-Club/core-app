@@ -78,12 +78,19 @@ export default defineNuxtConfig({
           crossorigin: '',
         },
         {
-          type: 'image/svg+xml',
-          href: '/favicon.svg',
+          rel: 'icon',
+          type: 'image/x-icon',
+          href: '/favicons/favicon.ico',
         },
-        ...[48, 72, 96, 144, 192, 256, 384, 512].map((size) => ({
+        {
+          rel: 'apple-touch-icon',
+          href: '/favicons/apple-touch-icon.png',
+        },
+        ...[32, 96, 192, 512].map((size) => ({
+          rel: 'icon',
+          type: 'image/png',
           sizes: `${size}x${size}`,
-          href: `/icons/${size}.png`,
+          href: `/favicons/${size}x${size}.png`,
         })),
       ],
       titleTemplate: '%s %separator %siteName',
