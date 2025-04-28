@@ -7,7 +7,9 @@ import type { S3UploadFile, S3UploadResponse } from '~~/server/types/s3';
 
 export const createS3Service = () => {
   const {
-    s3: { endpoint, region, accessKeyId, secretAccessKey, bucket },
+    private: {
+      s3: { endpoint, region, accessKeyId, secretAccessKey, bucket },
+    },
   } = useRuntimeConfig();
 
   const s3 = new S3({
