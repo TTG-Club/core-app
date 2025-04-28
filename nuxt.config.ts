@@ -50,8 +50,8 @@ export default defineNuxtConfig({
   security: {
     headers: {
       contentSecurityPolicy: {
-        'img-src': ["'self'", 'https:'],
-        'media-src': ["'self'", 'https:'],
+        'img-src': ["'self'", 'https:', 'data:'],
+        'media-src': ["'self'", 'https:', 'data:'],
       },
       strictTransportSecurity: {
         preload: true,
