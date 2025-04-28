@@ -1,3 +1,11 @@
+<script setup lang="ts">
+  import { AnimatedNumber } from '~ui/animated-number';
+
+  const { data: counter } = await useAsyncData('material-counter', () =>
+    $fetch<number>('/api/v2/statistics/count-all'),
+  );
+</script>
+
 <template>
   <div :class="$style.card">
     <h3>Статистика</h3>
@@ -6,7 +14,10 @@
       В настоящее время на сайте представлено следующее количество материалов:
     </p>
 
-    <span :class="$style.stats">8,548</span>
+    <AnimatedNumber
+      :class="$style.stats"
+      :value="counter"
+    />
   </div>
 </template>
 
