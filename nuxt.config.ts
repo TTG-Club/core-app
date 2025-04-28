@@ -65,28 +65,25 @@ export default defineNuxtConfig({
         {
           rel: 'manifest',
           href: '/manifest.json',
-          crossorigin: 'anonymous',
         },
         {
           rel: 'preconnect',
           href: 'https://img.ttg.club',
-          crossorigin: '',
         },
         {
           rel: 'dns-prefetch',
           href: 'https://img.ttg.club',
-          crossorigin: '',
         },
         {
           rel: 'icon',
           type: 'image/x-icon',
-          href: '/favicons/favicon.ico',
+          href: '/favicon.ico',
         },
         {
           rel: 'apple-touch-icon',
           href: '/favicons/apple-touch-icon.png',
         },
-        ...[32, 96, 192, 512].map((size) => ({
+        ...[32, 96].map((size) => ({
           rel: 'icon',
           type: 'image/png',
           sizes: `${size}x${size}`,
