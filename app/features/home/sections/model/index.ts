@@ -1,1 +1,1 @@
-export { CARD_LINKS, SOCIAL_LINKS } from './const';
+export { CARD_LINKS } from './const';
