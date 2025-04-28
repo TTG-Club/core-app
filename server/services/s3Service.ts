@@ -6,11 +6,8 @@ import type { GetObjectCommandOutput } from '@aws-sdk/client-s3';
 import type { S3UploadFile, S3UploadResponse } from '~~/server/types/s3';
 
 export const createS3Service = () => {
-  const {
-    private: {
-      s3: { endpoint, region, accessKeyId, secretAccessKey, bucket },
-    },
-  } = useRuntimeConfig();
+  const { endpoint, region, accessKeyId, secretAccessKey, bucket } =
+    getS3Secrets();
 
   const s3 = new S3({
     region,

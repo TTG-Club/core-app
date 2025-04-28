@@ -22,25 +22,27 @@ export interface AuthJwtPayload extends JwtPayload {
   }>;
 }
 
-const {
-  private: {
-    api: { secret: apiSecret },
-  },
-} = useRuntimeConfig();
+export function generateJwt({ payload, options }: GenerateJwtConfig) {
+  const { secret } = getApiSecrets();
 
-export const generateJwt = ({ payload, options }: GenerateJwtConfig) =>
-  jwt.sign(payload, apiSecret, options);
+  return jwt.sign(payload, secret, options);
+}
 
-export const verifyJwt = <T extends JwtPayload>({
+export function verifyJwt<T extends JwtPayload>({
   token,
   options,
-}: VerifyJwtConfig) => jwt.verify(token, apiSecret, options) as T;
+}: VerifyJwtConfig) {
+  const { secret } = getApiSecrets();
 
-export const getUserFromToken = (event: H3Event) => {
+  return jwt.verify(token, secret, options) as T;
+}
+
+export function getUserFromToken(event: H3Event) {
+  const { secret } = getApiSecrets();
   const token = getTokenFromRequest(event);
 
   try {
-    return jwt.verify(token, apiSecret) as AuthJwtPayload;
+    return jwt.verify(token, secret) as AuthJwtPayload;
   } catch (err) {
     if (err instanceof jwt.TokenExpiredError) {
       throw createError(getErrorResponse(StatusCodes.UNAUTHORIZED));
@@ -48,8 +50,8 @@ export const getUserFromToken = (event: H3Event) => {
 
     throw createError(getErrorResponse(StatusCodes.BAD_REQUEST));
   }
-};
+}
 
-export const verifyToken = (event: H3Event) => {
+export function verifyToken(event: H3Event) {
   getUserFromToken(event);
-};
+}

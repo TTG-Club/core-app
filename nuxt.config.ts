@@ -22,28 +22,12 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
-    api: {
-      url: process.env.NUXT_API_URL,
-    },
     site: {
-      url: process.env.NUXT_SITE_URL,
+      url: '',
       name: `${appName} Oнлайн-справочник`,
       description: `${appName} — сайт, посвященный DnD 5-й редакции. Тут можно найти: расы, происхождения, классы, заклинания, бестиарий, снаряжение, магические предметы и инструменты для облегчения игры как игрокам, так и мастерам — все в одном месте.`,
       defaultLocale: 'ru',
-      indexable: process.env.NUXT_SITE_INDEXABLE === 'true',
-    },
-    private: {
-      api: {
-        token: process.env.NUXT_API_TOKEN || '',
-        secret: process.env.NUXT_API_SECRET || '',
-      },
-      s3: {
-        endpoint: process.env.NUXT_S3_ENDPOINT || '',
-        region: process.env.NUXT_S3_REGION || '',
-        bucket: process.env.NUXT_S3_BUCKET || '',
-        accessKeyId: process.env.NUXT_S3_ACCESS_KEY_ID || '',
-        secretAccessKey: process.env.NUXT_S3_SECRET_ACCESS_KEY || '',
-      },
+      indexable: false,
     },
   },
 
