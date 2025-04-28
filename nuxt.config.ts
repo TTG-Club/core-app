@@ -2,6 +2,7 @@
 import { fileURLToPath, URL } from 'node:url';
 
 import bytes from 'bytes';
+import ms from 'ms';
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
 
 const appName = 'TTG Club';
@@ -23,15 +24,6 @@ export default defineNuxtConfig({
   runtimeConfig: {
     api: {
       url: process.env.NUXT_API_URL,
-      token: process.env.NUXT_API_TOKEN,
-      secret: process.env.NUXT_API_SECRET,
-    },
-    s3: {
-      endpoint: process.env.NUXT_S3_ENDPOINT,
-      region: process.env.NUXT_S3_REGION,
-      bucket: process.env.NUXT_S3_BUCKET,
-      accessKeyId: process.env.NUXT_S3_ACCESS_KEY_ID,
-      secretAccessKey: process.env.NUXT_S3_SECRET_ACCESS_KEY,
     },
     site: {
       url: process.env.NUXT_SITE_URL,
@@ -40,15 +32,41 @@ export default defineNuxtConfig({
       defaultLocale: 'ru',
       indexable: process.env.NUXT_SITE_INDEXABLE === 'true',
     },
+    private: {
+      api: {
+        token: process.env.NUXT_API_TOKEN,
+        secret: process.env.NUXT_API_SECRET,
+      },
+      s3: {
+        endpoint: process.env.NUXT_S3_ENDPOINT,
+        region: process.env.NUXT_S3_REGION,
+        bucket: process.env.NUXT_S3_BUCKET,
+        accessKeyId: process.env.NUXT_S3_ACCESS_KEY_ID,
+        secretAccessKey: process.env.NUXT_S3_SECRET_ACCESS_KEY,
+      },
+    },
   },
 
   security: {
     headers: {
       contentSecurityPolicy: {
-        'img-src': false,
-        'media-src': false,
+        'img-src': ["'self'", 'https:'],
+        'media-src': ["'self'", 'https:'],
       },
+      strictTransportSecurity: {
+        preload: true,
+        maxAge: 31536000,
+        includeSubdomains: true,
+      },
+      xContentTypeOptions: 'nosniff',
       xXSSProtection: '1; mode=block',
+      referrerPolicy: 'strict-origin-when-cross-origin',
+      permissionsPolicy: {
+        geolocation: [],
+        microphone: [],
+        camera: [],
+        fullscreen: ['self'],
+      },
     },
 
     requestSizeLimiter: {
@@ -126,7 +144,6 @@ export default defineNuxtConfig({
       '/search',
       '/profile',
       '/api',
-      '/auth',
       '/workshop/*',
     ],
   },
@@ -175,6 +192,30 @@ export default defineNuxtConfig({
   nitro: {
     experimental: {
       openAPI: true,
+    },
+
+    // TODO: Поиграть с лимитами в будущем, если не будет хватать
+    routeRules: {
+      '/api/**': {
+        security: {
+          enabled: true,
+          rateLimiter: {
+            tokensPerInterval: 50,
+            interval: ms('1m'),
+            headers: true,
+          },
+        },
+      },
+      '/s3/**': {
+        security: {
+          enabled: true,
+          rateLimiter: {
+            tokensPerInterval: 50,
+            interval: ms('1m'),
+            headers: true,
+          },
+        },
+      },
     },
   },
 

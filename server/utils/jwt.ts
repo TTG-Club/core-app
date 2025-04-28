@@ -23,7 +23,9 @@ export interface AuthJwtPayload extends JwtPayload {
 }
 
 const {
-  api: { secret: apiSecret },
+  private: {
+    api: { secret: apiSecret },
+  },
 } = useRuntimeConfig();
 
 export const generateJwt = ({ payload, options }: GenerateJwtConfig) =>
