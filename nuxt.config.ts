@@ -81,11 +81,6 @@ export default defineNuxtConfig({
           type: 'image/svg+xml',
           href: '/favicon.svg',
         },
-        {
-          rel: 'icon',
-          type: 'image/png',
-          href: '/favicon.png',
-        },
         ...[48, 72, 96, 144, 192, 256, 384, 512].map((size) => ({
           sizes: `${size}x${size}`,
           href: `/icons/${size}.png`,
