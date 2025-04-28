@@ -85,7 +85,7 @@ export default defineNuxtConfig({
           rel: 'apple-touch-icon',
           href: '/favicons/apple-touch-icon.png',
         },
-        ...[32, 96].map((size) => ({
+        ...[32, 96, 192, 512].map((size) => ({
           rel: 'icon',
           type: 'image/png',
           sizes: `${size}x${size}`,
