@@ -5,7 +5,21 @@ import bytes from 'bytes';
 import ms from 'ms';
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
 
-const appName = 'TTG Club';
+const application = {
+  name: {
+    short: 'TTG',
+    base: 'TTG Club',
+    long: 'TTG Club Oнлайн-справочник',
+  },
+  description:
+    'TTG Club — сайт, посвященный DnD 5-й редакции. Тут можно найти: расы, происхождения, классы, заклинания, бестиарий, снаряжение, магические предметы и инструменты для облегчения игры как игрокам, так и мастерам — все в одном месте.',
+  favicons: [48, 72, 96, 128, 192, 384, 512],
+  themeColor: {
+    light: '#131A20',
+    dark: '#131A21',
+    svifty7: '#131A22',
+  },
+};
 
 export default defineNuxtConfig({
   future: {
@@ -22,10 +36,13 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    app: {
+      pwa: application,
+    },
     site: {
       url: '',
-      name: `${appName} Oнлайн-справочник`,
-      description: `${appName} — сайт, посвященный DnD 5-й редакции. Тут можно найти: расы, происхождения, классы, заклинания, бестиарий, снаряжение, магические предметы и инструменты для облегчения игры как игрокам, так и мастерам — все в одном месте.`,
+      name: application.name.long,
+      description: application.description,
       defaultLocale: 'ru',
       indexable: false,
     },
@@ -65,10 +82,6 @@ export default defineNuxtConfig({
       charset: 'utf-8',
       link: [
         {
-          rel: 'manifest',
-          href: '/manifest.json',
-        },
-        {
           rel: 'preconnect',
           href: 'https://img.ttg.club',
         },
@@ -76,21 +89,21 @@ export default defineNuxtConfig({
           rel: 'dns-prefetch',
           href: 'https://img.ttg.club',
         },
-        {
-          rel: 'icon',
-          type: 'image/svg+xml',
-          href: '/favicons/favicon.svg',
-        },
-        {
-          rel: 'apple-touch-icon',
-          href: '/favicons/apple-touch-icon.png',
-        },
-        ...[32, 96, 192, 512].map((size) => ({
-          rel: 'icon',
-          type: 'image/png',
-          sizes: `${size}x${size}`,
-          href: `/favicons/${size}x${size}.png`,
-        })),
+        // {
+        //   rel: 'icon',
+        //   type: 'image/svg+xml',
+        //   href: '/favicons/favicon.svg',
+        // },
+        // {
+        //   rel: 'apple-touch-icon',
+        //   href: '/favicons/apple-touch-icon.png',
+        // },
+        // ...application.favicons.map((size) => ({
+        //   rel: 'icon',
+        //   type: 'image/png',
+        //   sizes: `${size}x${size}`,
+        //   href: `/favicons/${size}x${size}.png`,
+        // })),
       ],
       titleTemplate: '%s %separator %siteName',
       viewport:

@@ -1,12 +1,15 @@
 <script setup lang="ts">
   import 'virtual:svg-icons-register';
   import '~/assets/styles/index.scss';
+  import { PwaConfig } from '~pwa/config';
   import { SidebarPanel } from '~sidebar/panel';
   import { DrawerCollection } from '~ui/drawer';
 </script>
 
 <template>
   <NuxtLayout>
+    <PwaConfig />
+
     <SidebarPanel />
 
     <div :class="$style.container">
