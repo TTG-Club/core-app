@@ -80,31 +80,6 @@ export default defineNuxtConfig({
   app: {
     head: {
       charset: 'utf-8',
-      link: [
-        {
-          rel: 'preconnect',
-          href: 'https://img.ttg.club',
-        },
-        {
-          rel: 'dns-prefetch',
-          href: 'https://img.ttg.club',
-        },
-        // {
-        //   rel: 'icon',
-        //   type: 'image/svg+xml',
-        //   href: '/favicons/favicon.svg',
-        // },
-        // {
-        //   rel: 'apple-touch-icon',
-        //   href: '/favicons/apple-touch-icon.png',
-        // },
-        // ...application.favicons.map((size) => ({
-        //   rel: 'icon',
-        //   type: 'image/png',
-        //   sizes: `${size}x${size}`,
-        //   href: `/favicons/${size}x${size}.png`,
-        // })),
-      ],
       titleTemplate: '%s %separator %siteName',
       viewport:
         'viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no',
