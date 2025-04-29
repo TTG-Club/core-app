@@ -3,8 +3,9 @@
 
   import { Dictionaries } from '~/shared/api';
 
-  defineProps<{
+  const { limit = 0 } = defineProps<{
     disabled?: boolean;
+    limit?: number;
   }>();
 
   const context = Form.useInjectFormItemContext();
@@ -14,6 +15,17 @@
   const { data, refresh } = await useAsyncData('dictionaries-abilities', () =>
     Dictionaries.abilities(),
   );
+
+  const options = computed(() => {
+    if (!data.value) return [];
+
+    const disabled = !!model.value && !!limit && model.value.length >= limit;
+
+    return data.value.map((ability) => ({
+      ...ability,
+      disabled: disabled && !model.value?.includes(ability.value),
+    }));
+  });
 
   const handleDropdownOpening = (state: boolean) => {
     if (!state) {
@@ -31,10 +43,14 @@
 <template>
   <ASelect
     v-model:value="model"
-    :options="data || []"
+    :options="options"
     :token-separators="[',']"
+    placeholder="Выбери характеристики"
     max-tag-count="responsive"
-    mode="tags"
+    mode="multiple"
+    allow-clear
+    show-search
+    show-arrow
     @dropdown-visible-change="handleDropdownOpening"
   />
 </template>

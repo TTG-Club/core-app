@@ -14,21 +14,18 @@
 
   const context = Form.useInjectFormItemContext();
   const model = defineModel<string | Array<string>>();
-  const searchQuery = ref(''); // введённый текст поиска
+  const searchQuery = ref('');
 
   const { data, status, refresh } = await useAsyncData(
     'feat-select',
     async () => {
-      const queryParams =
-        searchQuery.value.length >= 3
-          ? { query: searchQuery.value }
-          : undefined;
-
       const featLinks = await $fetch<Array<FeatLinkResponse>>(
         '/api/v2/feats/search',
         {
           method: 'post',
-          query: queryParams,
+          params: {
+            query: searchQuery.value || undefined,
+          },
         },
       );
 
@@ -37,7 +34,7 @@
         value: feat.url,
       }));
     },
-    { watch: [searchQuery] }, // автоматически обновлять при изменении
+    { watch: [searchQuery] },
   );
 
   const handleDropdownOpening = (state: boolean) => {
@@ -55,10 +52,6 @@
   watch(model, () => {
     context.onFieldChange();
   });
-
-  watch(model, () => {
-    context.onFieldChange();
-  });
 </script>
 
 <template>
@@ -67,12 +60,13 @@
     :loading="status === 'pending'"
     :options="data || []"
     :mode="multiple ? 'multiple' : undefined"
-    placeholder="Выбери вид"
+    :filter-option="false"
+    placeholder="Выбери черту"
     max-tag-count="responsive"
     show-search
     allow-clear
     show-arrow
-    @dropdown-visible-change="handleDropdownOpening($event)"
+    @dropdown-visible-change="handleDropdownOpening"
     @search="handleSearch"
   />
 </template>

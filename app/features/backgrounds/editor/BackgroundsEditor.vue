@@ -171,7 +171,7 @@
     </ADivider>
 
     <ARow :gutter="16">
-      <ACol :span="24">
+      <ACol :span="8">
         <AFormItem
           label="Характеристики"
           tooltip="В предыстории перечислены 3 из ваших характеристик персонажа. Увеличьте одну из них на 2, а другую на 1; или увеличьте каждую из 3 на 1."
@@ -179,25 +179,12 @@
         >
           <SelectAbilities
             v-model="form.abilityScores"
-            placeholder="Выбери три характиристики"
+            :limit="3"
           />
         </AFormItem>
       </ACol>
 
-      <ACol :span="24">
-        <AFormItem
-          label="Черта"
-          tooltip=""
-          :name="['featUrl']"
-        >
-          <SelectFeat
-            v-model="form.featUrl"
-            placeholder="Выбери черту"
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="24">
+      <ACol :span="8">
         <AFormItem
           label="Навыки"
           tooltip="Предыстория даёт вашему персонажу владение двумя определёнными навыками."
@@ -205,8 +192,18 @@
         >
           <SelectSkill
             v-model="form.skillsProficiencies"
-            placeholder="Выбери два навыка"
+            :limit="2"
           />
+        </AFormItem>
+      </ACol>
+
+      <ACol :span="8">
+        <AFormItem
+          label="Черта"
+          tooltip=""
+          :name="['featUrl']"
+        >
+          <SelectFeat v-model="form.featUrl" />
         </AFormItem>
       </ACol>
     </ARow>
@@ -220,7 +217,7 @@
         >
           <ATextarea
             v-model:value="form.toolProficiency"
-            :rows="1"
+            :rows="3"
             placeholder="Введи инструменты"
             allow-clear
           />
@@ -237,7 +234,7 @@
         >
           <ATextarea
             v-model:value="form.equipment"
-            :rows="2"
+            :rows="3"
             placeholder="Введи снаряжение"
             allow-clear
           />

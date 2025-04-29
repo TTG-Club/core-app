@@ -121,7 +121,7 @@
       },
       description: '',
       abilityScores: [],
-      featUrl: '',
+      featUrl: undefined,
       skillsProficiencies: [],
       toolProficiency: '',
       equipment: '',
