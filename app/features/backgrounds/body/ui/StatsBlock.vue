@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { COMPONENT_TOOLTIP_TEXT } from '~backgrounds/body/model';
   import { MarkupRender } from '~ui/markup';
 
   defineProps<{
@@ -13,25 +14,49 @@
 <template>
   <div :class="$style.stats">
     <div :class="$style.item">
-      <div :class="$style.name">Характеристики:</div>
+      <ATooltip
+        :title="COMPONENT_TOOLTIP_TEXT.abilities"
+        :mouse-enter-delay="0.7"
+        destroy-tooltip-on-hide
+      >
+        <div :class="$style.name">Характеристики:</div>
+      </ATooltip>
 
       <span>{{ abilityScores }}</span>
     </div>
 
     <div :class="$style.item">
-      <span :class="$style.name">Черта:</span>
+      <ATooltip
+        :title="COMPONENT_TOOLTIP_TEXT.feat"
+        :mouse-enter-delay="0.7"
+        destroy-tooltip-on-hide
+      >
+        <span :class="$style.name">Черта:</span>
+      </ATooltip>
 
       <span>{{ feat }}</span>
     </div>
 
     <div :class="$style.item">
-      <span :class="$style.name">Навыки:</span>
+      <ATooltip
+        :title="COMPONENT_TOOLTIP_TEXT.skills"
+        :mouse-enter-delay="0.7"
+        destroy-tooltip-on-hide
+      >
+        <span :class="$style.name">Навыки:</span>
+      </ATooltip>
 
       <span>{{ skillProficiencies }}</span>
     </div>
 
     <div :class="$style.item">
-      <span :class="$style.name">Владение инструментами:</span>
+      <ATooltip
+        :title="COMPONENT_TOOLTIP_TEXT.tool"
+        :mouse-enter-delay="0.7"
+        destroy-tooltip-on-hide
+      >
+        <span :class="$style.name">Владение инструментами:</span>
+      </ATooltip>
 
       <span>{{ toolProficiency }}</span>
     </div>
