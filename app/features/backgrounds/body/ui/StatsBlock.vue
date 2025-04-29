@@ -1,10 +1,12 @@
 <script setup lang="ts">
+  import { MarkupRender } from '~ui/markup';
+
   defineProps<{
     abilityScores: string;
     feat: string;
     skillProficiencies: string;
     toolProficiency: string;
-    equipment: string;
+    equipment: string[];
   }>();
 </script>
 
@@ -37,7 +39,7 @@
     <div :class="[$style.item, $style.block]">
       <span :class="$style.name">Снаряжение:</span>
 
-      <span>{{ equipment }}</span>
+      <span><MarkupRender :entries="equipment" /></span>
     </div>
   </div>
 </template>

@@ -10,7 +10,7 @@ export interface BackgroundDetailResponse {
   feat: string; // черта
   skillProficiencies: string; // навыки
   toolProficiency: string; // владение инструментов
-  equipment: string; // снаряжение
+  equipment: string[]; // снаряжение
   source: SourceResponse;
   description: Array<string>;
   updatedAt: string;
