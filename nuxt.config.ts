@@ -81,8 +81,7 @@ export default defineNuxtConfig({
     head: {
       charset: 'utf-8',
       titleTemplate: '%s %separator %siteName',
-      viewport:
-        'viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no',
+      viewport: 'width=device-width, initial-scale=1.0, viewport-fit=cover',
       meta: [
         {
           name: 'mobile-web-app-capable',
