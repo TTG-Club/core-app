@@ -1,4 +1,26 @@
-export default defineEventHandler(() => {
+import { z } from 'zod';
+
+import type { EventHandlerRequest } from 'h3';
+
+const requestSchema = z.object({
+  theme: z.string().optional(),
+});
+
+interface Request extends EventHandlerRequest {
+  query?: z.infer<typeof requestSchema>;
+}
+
+export default defineEventHandler<Request>(async (event) => {
+  let themeName;
+
+  try {
+    const query = await getValidatedQuery(event, requestSchema.parse);
+
+    themeName = query?.theme || 'dark';
+  } catch (err) {
+    themeName = 'dark';
+  }
+
   const {
     app: { pwa },
     site: { url },
@@ -31,6 +53,8 @@ export default defineEventHandler(() => {
     ]),
   ];
 
+  setHeader(event, 'Content-Type', 'application/manifest+json');
+
   /* eslint-disable camelcase */
   return {
     name: pwa.name.base,
@@ -38,8 +62,8 @@ export default defineEventHandler(() => {
     description: pwa.description,
     id: url,
     start_url: '/',
-    theme_color: '#131A20',
-    background_color: '#131A20',
+    theme_color: pwa.themeColor[themeName] || pwa.themeColor.dark,
+    background_color: pwa.themeColor[themeName] || pwa.themeColor.dark,
     display: 'standalone',
     orientation: 'portrait-primary',
     icons,

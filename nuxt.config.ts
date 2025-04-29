@@ -83,6 +83,16 @@ export default defineNuxtConfig({
       titleTemplate: '%s %separator %siteName',
       viewport:
         'viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no',
+      meta: [
+        {
+          name: 'apple-mobile-web-app-capable',
+          content: 'yes',
+        },
+        {
+          name: 'apple-mobile-web-app-status-bar-style',
+          content: 'default',
+        },
+      ],
     },
     rootAttrs: {
       id: 'ttg-club',
