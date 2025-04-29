@@ -2,12 +2,12 @@
   import { cloneDeep, isEqual, merge } from 'lodash-es';
 
   import { NuxtLink } from '#components';
+  import { BackgroundsEditor } from '~backgrounds/editor';
   import { SvgIcon } from '~ui/icon';
   import { PageContainer, PageHeader } from '~ui/page';
   import { useToast } from '~ui/toast';
 
   import type { BackgroundCreate } from '~/shared/types';
-  import type { BackgroundsEditor } from '~backgrounds/editor';
 
   const route = useRoute();
   const $toast = useToast();
