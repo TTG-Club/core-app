@@ -39,7 +39,7 @@
     <div :class="[$style.item, $style.block]">
       <span :class="$style.name">Снаряжение:</span>
 
-      <span><MarkupRender :entries="equipment" /></span>
+      <MarkupRender :entries="equipment" />
     </div>
   </div>
 </template>
