@@ -6,9 +6,14 @@ export const useUserStore = defineStore('userStore', () => {
     status,
     execute: fetch,
     clear,
-  } = useFetch<UserProfile>('/api/user/profile', {
-    immediate: false,
-  });
+  } = useAsyncData(
+    'user-profile',
+    () => $fetch<UserProfile>('/api/user/profile'),
+    {
+      immediate: false,
+      dedupe: 'defer',
+    },
+  );
 
   const isLoggedIn = computed(() => !!user.value);
   const isLoading = computed(() => status.value === 'pending');
