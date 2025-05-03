@@ -26,6 +26,7 @@
     <AConfigProvider
       :locale="ruRU"
       :theme="themeConfig"
+      :wave="{ disabled: true }"
     >
       <AApp>
         <NuxtLoadingIndicator

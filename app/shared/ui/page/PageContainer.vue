@@ -6,14 +6,26 @@
 
 <template>
   <div :class="$style.page">
-    <div :class="[$style.header, { [$style.fixed]: fixedHeader }]">
+    <div
+      v-if="$slots.header"
+      :class="[$style.header, { [$style.fixed]: fixedHeader }]"
+    >
       <div :class="$style.container">
         <slot name="header" />
       </div>
     </div>
 
     <div :class="$style.body">
-      <slot name="default" />
+      <div :class="$style.content">
+        <slot name="default" />
+      </div>
+
+      <div
+        v-if="$slots.controls"
+        :class="$style.controls"
+      >
+        <slot name="controls" />
+      </div>
     </div>
   </div>
 </template>
@@ -63,7 +75,6 @@
 
   .body {
     display: flex;
-    flex-direction: column;
     gap: 16px;
 
     width: 100%;
@@ -73,6 +84,23 @@
 
     @include media-min($lg) {
       padding: 0 24px 24px 24px;
+    }
+
+    .content {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .controls {
+      display: flex;
+      flex: 1 0 auto;
+      flex-direction: column;
+      gap: 16px;
+
+      min-width: 288px;
+      max-width: 320px;
     }
   }
 </style>
