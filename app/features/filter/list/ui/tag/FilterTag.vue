@@ -17,35 +17,31 @@
     return 'default';
   });
 
-  const { state, next } = useCycleList([null, true, false], {
-    initialValue: model,
-  });
-
-  function onClick() {
+  function getNextValue() {
     if (onlyReset) {
-      state.value = null;
-
-      return;
+      return null;
     }
 
-    next();
+    switch (model.value) {
+      case null:
+        return true;
+      case true:
+        return false;
+      case false:
+        return null;
+      default:
+        return null;
+    }
   }
 
-  watchDebounced(
-    state,
-    (value, oldValue) => {
-      if (value === oldValue) {
-        return;
-      }
-
-      model.value = value;
-    },
-    { debounce: 300 },
-  );
+  function onClick() {
+    model.value = getNextValue();
+  }
 </script>
 
 <template>
   <ATag
+    v-if="!onlyReset || model !== null"
     :class="$style.tag"
     :bordered="false"
     :color

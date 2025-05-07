@@ -1,7 +1,5 @@
 <script setup lang="ts">
-  import { cloneDeep } from 'lodash-es';
-
-  import { FilterTag } from '../tag';
+  import { FilterList } from '../list';
 
   import { Breakpoint, BREAKPOINTS } from '~/shared/composables';
   import { DrawerComponent } from '~ui/drawer';
@@ -13,11 +11,10 @@
 
   const { cloned, sync } = useCloned(filter, {
     manual: true,
-    deep: true,
   });
 
   function saveFilter() {
-    filter.value = cloneDeep(cloned.value);
+    filter.value = cloned.value;
     opened.value = false;
   }
 
@@ -44,26 +41,8 @@
     width="100%"
     title="Фильтры"
   >
-    <template
-      v-for="group in cloned.groups"
-      :key="group.key + group.name"
-    >
-      <ADivider orientation="left">
-        {{ group.name }}
-      </ADivider>
-
-      <AFlex
-        wrap="wrap"
-        gap="12"
-      >
-        <FilterTag
-          v-for="item in group.filters"
-          :key="item.key + item.name"
-          v-model="item.selected"
-        >
-          {{ item.name }}
-        </FilterTag>
-      </AFlex>
+    <template #default>
+      <FilterList v-model="cloned" />
     </template>
 
     <template #footer>
