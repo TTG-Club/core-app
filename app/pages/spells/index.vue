@@ -17,23 +17,20 @@
   const search = ref<string>('');
   const debouncedSearch = refDebounced(search, 700);
 
-  const { filter, isPending: isFilterPending } = await useFilter(
-    'spells-filters',
-    '/api/v2/spells/filters',
-  );
+  const {
+    filter,
+    isPending: isFilterPending,
+    isShowedPreview: isFilterPreviewShowed,
+  } = await useFilter('spells-filters', '/api/v2/spells/filters');
 
   const searchBody = computed(() => {
     const body: SearchBody = {};
 
-    if (filter.value) {
+    if (filter) {
       body.filter = filter.value;
     }
 
-    if (Object.keys(body).length === 0) {
-      return undefined;
-    }
-
-    return body;
+    return Object.keys(body).length ? body : undefined;
   });
 
   const {
@@ -59,6 +56,8 @@
       watch: [debouncedSearch, filter],
     },
   );
+
+  const isShowedControls = computed(() => isFilterPreviewShowed.value);
 </script>
 
 <template>
@@ -79,13 +78,19 @@
         </template>
 
         <template #legend>
-          <SpellLegend />
+          <SpellLegend v-once />
         </template>
       </PageHeader>
     </template>
 
-    <template #controls>
-      <FilterPreview :filter />
+    <template
+      v-if="isShowedControls"
+      #controls
+    >
+      <FilterPreview
+        v-if="filter"
+        v-model="filter"
+      />
     </template>
 
     <template #default>
