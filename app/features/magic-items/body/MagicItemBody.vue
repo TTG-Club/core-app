@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import { DescriptionsBlock, TopBar } from './ui';
 
+  import { UiGallery } from '~ui/gallery';
+
   import type { MagicItemDetailResponse } from '~magic-items/types';
 
   defineProps<{
@@ -16,6 +18,10 @@
         :gap="12"
         :class="$style.info"
       >
+        <div :class="$style.galleryImg">
+          <UiGallery :preview="magicItem.image || '/img/no-img.webp'" />
+        </div>
+
         <TopBar :subtitle="magicItem.subtitle" />
       </AFlex>
 
@@ -55,6 +61,17 @@
 
     @container (width > 800px) {
       max-width: 320px;
+    }
+  }
+
+  .galleryImg {
+    overflow: hidden;
+    max-width: 160px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+
+    @include media-min($md) {
+      max-width: 100%;
     }
   }
 </style>
