@@ -6,8 +6,8 @@
   } from '@vueuse/core';
   import { computed, ref, watch, type StyleValue } from 'vue';
 
-  const wrapper = ref<HTMLElement | null>(null);
-  const body = ref<HTMLElement | null>(null);
+  const wrapper = useTemplateRef('wrapper');
+  const body = useTemplateRef('body');
 
   const { top: wrapperTop } = useElementBounding(wrapper);
 
