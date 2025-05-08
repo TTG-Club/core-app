@@ -125,7 +125,7 @@
       varies: undefined,
       attunement: {
         requires: false,
-        description: undefined,
+        description: null,
       },
       charges: 0,
       curse: false,

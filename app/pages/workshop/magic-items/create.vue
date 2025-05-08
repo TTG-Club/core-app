@@ -31,7 +31,7 @@
     curse: false,
     attunement: {
       requires: false,
-      description: undefined,
+      description: null,
     },
     image: undefined,
     tags: [],

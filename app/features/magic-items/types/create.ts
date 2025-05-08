@@ -27,5 +27,5 @@ export interface MagicItemSource {
 
 export interface Attunement {
   requires: boolean; // требуется ли настройка
-  description: string | undefined; // особенности настройки
+  description: string | null; // особенности настройки
 }

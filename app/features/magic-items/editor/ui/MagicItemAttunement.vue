@@ -1,26 +1,18 @@
 <script setup lang="ts">
   import type { Attunement } from '~magic-items/types';
 
-  const attunement = defineModel<Attunement | undefined>({
+  const attunement = defineModel<Attunement>({
     required: true,
   });
 
-  function updateAttunement(value: boolean) {
-    if (!value) {
-      attunement.value = undefined;
-
-      return;
-    }
-
-    attunement.value = getEmptyAttunement();
-  }
-
-  function getEmptyAttunement(): Attunement {
-    return {
-      description: undefined,
-      requires: false,
-    };
-  }
+  watch(
+    () => attunement.value.requires,
+    (value) => {
+      if (!value) {
+        attunement.value.description = null;
+      }
+    },
+  );
 </script>
 
 <template>
@@ -30,27 +22,18 @@
         label="Требуется настройка"
         :name="['attunement', 'requires']"
       >
-        <ACheckbox
-          v-model="attunement"
-          :checked="!!attunement"
-          @update:checked="updateAttunement"
-        >
-          Требуется
-        </ACheckbox>
+        <ACheckbox v-model:checked="attunement.requires"> Требуется </ACheckbox>
       </AFormItem>
     </ACol>
 
-    <ACol
-      v-if="attunement"
-      :span="20"
-    >
+    <ACol :span="20">
       <AFormItem
         label="Особенности настройки"
         :name="['attunement', 'description']"
       >
-        <ATextarea
+        <AInput
           v-model:value="attunement.description"
-          :auto-size="{ minRows: 1, maxRows: 8 }"
+          :disabled="!attunement.requires"
           placeholder="Введи особенности настройки (если есть)"
           allow-clear
         />
