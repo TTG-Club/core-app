@@ -91,3 +91,33 @@ export const ruleFeatCategories = (): Rule => ({
     validateFromDictionary(value, featCategories);
   },
 });
+
+export const ruleMagicItemCategory = (): Rule => ({
+  required: true,
+  trigger: ['change', 'blur'],
+  type: 'string',
+  validator: async (rule: Rule, value: string | undefined) => {
+    if (!value) {
+      throw new Error('Поле обязательно для заполнения');
+    }
+
+    const magicCategory = await Dictionaries.magicItemCategory();
+
+    validateFromDictionary(value, magicCategory);
+  },
+});
+
+export const ruleRarity = (): Rule => ({
+  required: true,
+  trigger: ['change', 'blur'],
+  type: 'string',
+  validator: async (rule: Rule, value: string | undefined) => {
+    if (!value) {
+      throw new Error('Поле обязательно для заполнения');
+    }
+
+    const rarity = await Dictionaries.rarity();
+
+    validateFromDictionary(value, rarity);
+  },
+});

@@ -43,9 +43,9 @@ export const CARD_LINKS = [
   },
   {
     name: 'Магические предметы',
-    url: '/',
+    url: '/magic-items',
     img: '/s3/sections/home-link/button_items_magic.webp',
-    disable: true,
+    disable: false,
   },
   {
     name: 'Бестиарий',

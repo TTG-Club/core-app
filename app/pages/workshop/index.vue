@@ -5,6 +5,7 @@
     SectionSpells,
     SectionFeats,
     SectionBackgrounds,
+    SectionMagicItem,
   } from '~workshop/section';
 </script>
 
@@ -23,6 +24,8 @@
         <SectionFeats />
 
         <SectionBackgrounds />
+
+        <SectionMagicItem />
       </div>
     </template>
   </PageContainer>
