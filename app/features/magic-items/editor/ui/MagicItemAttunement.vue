@@ -5,6 +5,11 @@
     required: true,
   });
 
+  const description = computed({
+    get: (): string | undefined => attunement.value.description || undefined,
+    set: (value: string | undefined) => value || null,
+  });
+
   watch(
     () => attunement.value.requires,
     (value) => {
@@ -32,7 +37,7 @@
         :name="['attunement', 'description']"
       >
         <AInput
-          v-model:value="attunement.description"
+          v-model:value="description"
           :disabled="!attunement.requires"
           placeholder="Введи особенности настройки (если есть)"
           allow-clear
