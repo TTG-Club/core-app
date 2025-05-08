@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { PageControls } from './ui';
+
   defineProps<{
     fixedHeader?: boolean;
   }>();
@@ -20,12 +22,11 @@
         <slot name="default" />
       </div>
 
-      <div
-        v-if="$slots.controls"
-        :class="$style.controls"
-      >
-        <slot name="controls" />
-      </div>
+      <ClientOnly>
+        <PageControls v-if="$slots.controls">
+          <slot name="controls" />
+        </PageControls>
+      </ClientOnly>
     </div>
   </div>
 </template>
@@ -40,12 +41,8 @@
 
   .header {
     pointer-events: none;
-
     z-index: 10;
-
     width: 100%;
-    padding-bottom: 16px;
-
     background: linear-gradient(
       180deg,
       var(--color-bg-main) 0,
@@ -65,10 +62,10 @@
       width: 100%;
       max-width: var(--max-content);
       margin: 0 auto;
-      padding: 0 16px;
+      padding: 0 16px 16px;
 
       @include media-min($lg) {
-        padding: 0 24px;
+        padding: 0 24px 24px;
       }
     }
   }
@@ -91,16 +88,6 @@
       flex: 1 1 auto;
       flex-direction: column;
       gap: 16px;
-    }
-
-    .controls {
-      display: flex;
-      flex: 1 0 auto;
-      flex-direction: column;
-      gap: 16px;
-
-      min-width: 288px;
-      max-width: 320px;
     }
   }
 </style>

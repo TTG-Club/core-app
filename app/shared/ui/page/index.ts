@@ -1,4 +1,4 @@
-export { default as PageContainer } from './PageContainer.vue';
+export * from './container';
 
 export { default as PageHeader } from './PageHeader.vue';
 
