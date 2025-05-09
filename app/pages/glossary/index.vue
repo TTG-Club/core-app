@@ -1,7 +1,7 @@
 <script setup lang="ts">
+  import { GlossaryLink } from '~/features/glossary/link';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
-  import { GlossaryLink } from '~/features/glossary/link';
 
   import type { GlossaryLinkResponse } from '~/shared/types';
 

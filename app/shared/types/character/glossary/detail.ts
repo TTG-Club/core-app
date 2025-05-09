@@ -10,4 +10,5 @@ export interface GlossaryDetailResponse {
   description: Array<string>;
   updatedAt: string;
   tags: string;
+  tagCategory: string;
 }

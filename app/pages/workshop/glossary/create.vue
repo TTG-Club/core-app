@@ -23,6 +23,7 @@
     },
     description: '',
     tags: [],
+    tagCategory: '',
   });
 
   const isCreating = ref(false);
@@ -44,7 +45,7 @@
           isCreating.value = false;
 
           $toast.error({
-            title: 'Ошибка создания записи глоссария',
+            title: 'Ошибка создания глоссария',
             description: error.response._data.message,
           });
         },
@@ -57,7 +58,7 @@
     } catch (err) {
       isCreating.value = false;
     } finally {
-      isCreating.value = false; 
+      isCreating.value = false;
     }
   };
 
@@ -84,7 +85,7 @@
 <template>
   <PageContainer fixed-header>
     <template #header>
-      <PageHeader title="Создание новой черты">
+      <PageHeader title="Создание новой записи глоссария">
         <template #actions>
           <AButton
             type="primary"

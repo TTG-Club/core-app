@@ -1,10 +1,7 @@
 <script setup lang="ts">
-  import {
-    ValidationBase,
-    ValidationFeat,
-  } from '~/shared/utils';
+  import { ValidationBase, ValidationFeat } from '~/shared/utils';
   import { InputUrl } from '~ui/input';
-  import { SelectSource, SelectTags } from '~ui/select';
+  import { SelectSource, SelectTags, SelectTagCategory } from '~ui/select';
 
   import type { FormInstance } from 'ant-design-vue';
   import type { SelectValue } from 'ant-design-vue/es/select';
@@ -30,20 +27,19 @@
     form.value.source.url = value;
   };
 
-  // defineExpose({
-  //   validate: formRef.value?.validate,
-  // });
   defineExpose({
-  async validate() {
-    try {
-      await formRef.value?.validate();
-      return form.value;
-    } catch (e) {
-      console.error('Validation failed:', e);
-      throw e;
-    }
-  }
-});
+    async validate() {
+      try {
+        await formRef.value?.validate();
+
+        return form.value;
+      } catch (e) {
+        console.error('Validation failed:', e);
+
+        throw e;
+      }
+    },
+  });
 </script>
 
 <template>
@@ -169,10 +165,24 @@
     <ADivider orientation="left">
       <ATypographyText
         type="secondary"
-        content="Описание"
+        content="Подробная информация"
         strong
       />
     </ADivider>
+
+    <ACol :span="12">
+      <AFormItem
+        label="Категория тегов"
+        tooltip="Категория для записей глоссария"
+        :name="['tagCategory']"
+        :rules="[ValidationBase.ruleString()]"
+      >
+        <SelectTagCategory
+          v-model="form.tagCategory"
+          placeholder="Введите категорию тегов"
+        />
+      </AFormItem>
+    </ACol>
 
     <ARow :gutter="16">
       <ACol :span="24">

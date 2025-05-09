@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import GlossaryDrawer from '~/features/glossary/drawer/GlossaryDrawer.vue';
   import { FeatDrawer } from '~feats/drawer';
   import { SpeciesDrawer } from '~species/drawer';
   import { SpeciesLineagesDrawer } from '~species/lineages-drawer';
@@ -13,4 +14,6 @@
   <SpellDrawer />
 
   <FeatDrawer />
+
+  <GlossaryDrawer />
 </template>

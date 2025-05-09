@@ -16,7 +16,7 @@
         :gap="12"
         :class="$style.info"
       >
-        <TopBar :tags="glossary.tags" />
+        <TopBar :tags="glossary.tagCategory" />
       </AFlex>
 
       <AFlex

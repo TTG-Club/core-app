@@ -28,7 +28,7 @@
 
     <template #caption>
       <span :style="{ color: 'var(--color-text-gray)' }">
-        {{ glossary.tags ?? '—' }}
+        {{ glossary.tagCategory ?? '—' }}
       </span>
     </template>
   </SmallLink>

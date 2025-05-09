@@ -4,4 +4,4 @@ export * from './spells';
 
 export * from './feats';
 
-export * from './glossary'
+export * from './glossary';

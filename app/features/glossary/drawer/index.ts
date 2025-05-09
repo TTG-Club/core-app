@@ -1,1 +1,1 @@
-export { default as GlossaryDrawer} from './GlossaryDrawer.vue';
+export { default as GlossaryDrawer } from './GlossaryDrawer.vue';

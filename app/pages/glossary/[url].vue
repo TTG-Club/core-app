@@ -7,17 +7,17 @@
 
   const route = useRoute();
 
-  const { data: glossary } = await useAsyncData(`glossary-${route.params.url}`, () =>
-    $fetch<GlossaryDetailResponse>(`/api/v2/glossary/${route.params.url}`),
+  const { data: glossary } = await useAsyncData(
+    `glossary-${route.params.url}`,
+    () =>
+      $fetch<GlossaryDetailResponse>(`/api/v2/glossary/${route.params.url}`),
   );
 
-  console.log(glossary.value)
-  
   useSeoMeta({
     title: getSeoTitle,
     description: getSeoDescription,
     author: () => (glossary.value ? glossary.value.source.name.rus : undefined),
-    titleTemplate: '%s | Черты D&D 5 2024',
+    titleTemplate: '%s | Глоссарий D&D 5 2024',
   });
 
   function getSeoTitle() {

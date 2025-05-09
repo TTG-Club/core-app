@@ -5,4 +5,5 @@ export interface GlossaryLinkResponse {
   name: Pick<NameResponse, 'rus' | 'eng'>;
   source: SourceResponse;
   tags: string;
+  tagCategory: string;
 }
