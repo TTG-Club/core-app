@@ -76,7 +76,7 @@
           title="Мастерская"
           :items="[
             { href: '/', label: 'Бестиарий', disabled: true },
-            { href: '/', label: 'Справочник', disabled: true },
+            { href: '/glossary', label: 'Справочник', disabled: false },
             { href: '/', label: 'Источники', disabled: true },
           ]"
         />
