@@ -16,7 +16,7 @@
 
   <FeatDrawer />
 
-  <BackgroundDrawer />
-
   <GlossaryDrawer />
+
+  <BackgroundDrawer />
 </template>
