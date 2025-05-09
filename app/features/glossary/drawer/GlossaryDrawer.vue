@@ -31,6 +31,8 @@
     isOpened.value ? `${getOrigin()}/glossary/${url.value}` : undefined,
   );
 
+  const editUrl = computed(() => `/workshop/glossary/${url.value}`);
+
   function handleUpdate(opened: boolean) {
     if (opened) {
       return;
@@ -57,6 +59,7 @@
     :title="glossary?.name"
     :source="glossary?.source"
     :url="urlForCopy"
+    :edit-url="editUrl"
     :is-loading="status === 'pending'"
     :is-error="status === 'error'"
     width="100%"
