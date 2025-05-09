@@ -4,6 +4,7 @@
     SectionSpecies,
     SectionSpells,
     SectionFeats,
+    SectionGlossary,
     SectionBackgrounds,
   } from '~workshop/section';
 </script>
@@ -21,6 +22,8 @@
         <SectionSpells />
 
         <SectionFeats />
+
+        <SectionGlossary />
 
         <SectionBackgrounds />
       </div>

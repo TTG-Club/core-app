@@ -55,9 +55,9 @@ export const CARD_LINKS = [
   },
   {
     name: 'Глоссарий правил',
-    url: '/',
+    url: '/glossary',
     img: '/s3/sections/home-link/button_screens.webp',
-    disable: true,
+    disable: false,
   },
   {
     name: 'В разработке',
