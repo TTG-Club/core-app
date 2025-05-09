@@ -7,7 +7,9 @@
 
   const description = computed({
     get: (): string | undefined => attunement.value.description || undefined,
-    set: (value: string | undefined) => value || null,
+    set: (value: string | undefined) => {
+      attunement.value.description = value || null;
+    },
   });
 
   watch(

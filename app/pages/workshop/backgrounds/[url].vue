@@ -159,7 +159,6 @@
       <PageHeader title="Редактирование предыстории">
         <template #actions>
           <AButton
-            v-if="!rawIncorrect"
             type="primary"
             :disabled="isCreated"
             :loading="editor?.isCreating"

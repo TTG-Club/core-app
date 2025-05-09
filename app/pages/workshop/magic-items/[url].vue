@@ -2,16 +2,15 @@
   import { cloneDeep, isEqual, merge } from 'lodash-es';
 
   import { NuxtLink } from '#components';
+  import { MagicItemEditor } from '~magic-items/editor';
   import { SvgIcon } from '~ui/icon';
   import { PageContainer, PageHeader } from '~ui/page';
   import { useToast } from '~ui/toast';
 
-  import type { MagicItemEditor } from '~magic-items/editor';
   import type { MagicItemCreate } from '~magic-items/types';
 
   const route = useRoute();
   const $toast = useToast();
-
   const editor = useTemplateRef<InstanceType<typeof MagicItemEditor>>('editor');
 
   const form = useState<MagicItemCreate>(getInitialState);
@@ -43,7 +42,7 @@
   async function submit() {
     if (!checkIsEdited()) {
       $toast.error({
-        title: 'Ошибка сохранения предыстории',
+        title: 'Ошибка сохранения магического предмета',
         description: 'Измени хотя бы одно поле, чтобы сохранить',
       });
 
@@ -52,7 +51,7 @@
 
     if (!editor.value?.validate) {
       $toast.error({
-        title: 'Ошибка сохранения предыстории',
+        title: 'Ошибка сохранения магического предмета',
         description: () =>
           h('span', null, [
             'Произошла какая-то ошибка... попробуй еще раз или обратись за помощью на нашем ',
@@ -86,7 +85,7 @@
           isCreating.value = false;
 
           $toast.error({
-            title: 'Ошибка сохранения предыстории',
+            title: 'Ошибка сохранения магического предмета',
             description: error.response._data.message,
           });
         },
@@ -165,7 +164,6 @@
       <PageHeader title="Редактирование магического предмета">
         <template #actions>
           <AButton
-            v-if="!rawIncorrect"
             type="primary"
             :disabled="isCreated"
             :loading="editor?.isCreating"
@@ -202,10 +200,10 @@
           v-if="rawIncorrect"
           status="error"
           title="Некорректные данные"
-          sub-title="Не найдена предыстория для редактирования"
+          sub-title="Не найден магический предмет для редактирования"
         />
 
-        <MagicItemsEditor
+        <MagicItemEditor
           v-else
           ref="editor"
           v-model="form"
