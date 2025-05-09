@@ -175,7 +175,6 @@
         label="Категория тегов"
         tooltip="Категория для записей глоссария"
         :name="['tagCategory']"
-        :rules="[ValidationBase.ruleString()]"
       >
         <SelectTagCategory
           v-model="form.tagCategory"

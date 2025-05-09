@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import GlossaryDrawer from '~/features/glossary/drawer/GlossaryDrawer.vue';
+  import { GlossaryDrawer } from '~glossary/drawer';
   import { BackgroundDrawer } from '~backgrounds/drawer';
   import { FeatDrawer } from '~feats/drawer';
   import { MagicItemDrawer } from '~magic-items/drawer';
