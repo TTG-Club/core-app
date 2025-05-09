@@ -2,27 +2,61 @@
   import { CopyButton } from '../copy-button';
   import { SvgIcon } from '../icon';
 
+  import { useUserStore } from '~/shared/stores';
+
+  defineProps<{
+    editUrl?: string;
+  }>();
+
   defineEmits<{
     (e: 'close'): void;
   }>();
 
   const route = useRoute();
+  const { isAdmin } = storeToRefs(useUserStore());
 
   const urlForCopy = computed(() => {
     return getOrigin() + route.path;
   });
 
-  const openPrintWindow = () => {
+  function openPrintWindow() {
     window.print();
 
     // sendShareMetrics({
     //   method: 'page_print',
     //   id: route.path,
     // });
-  };
+  }
 </script>
 
 <template>
+  <ATooltip
+    v-if="editUrl && isAdmin"
+    title="Редактировать"
+    :mouse-enter-delay="0.7"
+    destroy-tooltip-on-hide
+  >
+    <AButton
+      :href="editUrl"
+      type="text"
+      @click.left.exact.prevent="
+        navigateTo(editUrl, {
+          open: {
+            target: '_blank',
+            windowFeatures: {
+              noreferrer: true,
+              noopener: true,
+            },
+          },
+        })
+      "
+    >
+      <template #icon>
+        <SvgIcon icon="edit" />
+      </template>
+    </AButton>
+  </ATooltip>
+
   <CopyButton :url="urlForCopy" />
 
   <ATooltip

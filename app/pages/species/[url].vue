@@ -52,6 +52,8 @@
     );
   }
 
+  const editUrl = computed(() => `/workshop/species/${url}`);
+
   const anchors = computed(() => {
     if (!species.value?.features?.length) {
       return [];
@@ -95,7 +97,10 @@
         copy-title
       >
         <template #actions>
-          <PageActions @close="navigateTo('/species')" />
+          <PageActions
+            :edit-url="editUrl"
+            @close="navigateTo('/species')"
+          />
         </template>
       </PageHeader>
     </template>
@@ -128,7 +133,7 @@
             </ADivider>
 
             <div :class="$style.item">
-              <p>Тип:</p>
+              <span :class="$style.name">Тип:</span>
 
               <ATypographyText
                 :class="$style.value"
@@ -137,7 +142,7 @@
             </div>
 
             <div :class="$style.item">
-              <p>Размер:</p>
+              <span :class="$style.name">Размер:</span>
 
               <ATypographyText
                 :class="$style.value"
@@ -146,7 +151,7 @@
             </div>
 
             <div :class="$style.item">
-              <p>Скорость:</p>
+              <span :class="$style.name">Скорость:</span>
 
               <ATypographyText
                 :class="$style.value"
@@ -255,17 +260,19 @@
     background: var(--color-bg-secondary);
 
     .item {
-      display: block;
+      display: flex;
+      flex: 1 0 100%;
+      gap: 4px;
+
+      min-width: 100%;
       padding: 6px 16px;
 
       @include media-min($sm) {
         display: flex;
       }
 
-      p {
+      .name {
         min-width: 80px;
-        margin-bottom: 0;
-
         font-size: 14px;
         font-weight: 500;
         color: var(--color-text-title);

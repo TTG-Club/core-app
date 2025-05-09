@@ -105,6 +105,7 @@
     width: 100%;
     min-height: 38px;
     padding: 6px 12px;
+    border: 1px solid var(--color-border);
     border-radius: 12px;
 
     color: var(--color-text);

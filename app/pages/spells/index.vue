@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { SpellLegend } from '~spells/legend';
   import { SpellLink } from '~spells/link';
+  import { SvgIcon } from '~ui/icon';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
@@ -44,20 +45,24 @@
     <template #header>
       <PageHeader title="Заклинания">
         <template #filter>
-          <AButton
-            :style="{ boxShadow: 'none' }"
-            type="primary"
-            disabled
-          >
-            Фильтры
-          </AButton>
-
           <AInput
             v-model:value="search"
             placeholder="Введите текст..."
             allow-clear
             @change="onSearch"
           />
+
+          <AButton
+            :style="{ boxShadow: 'none' }"
+            type="primary"
+            disabled
+          >
+            <span>Фильтры</span>
+
+            <template #icon>
+              <SvgIcon icon="filter/outline" />
+            </template>
+          </AButton>
         </template>
 
         <template #legend>

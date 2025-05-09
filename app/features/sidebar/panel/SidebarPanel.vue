@@ -1,12 +1,49 @@
 <script setup lang="ts">
-  import { useSidebarPopover } from '~/shared/composables';
+  import {
+    Breakpoint,
+    useBreakpoints,
+    useSidebarPopover,
+  } from '~/shared/composables';
   import { AppMenu } from '~sidebar/menu';
   import { ThemeSwitcher } from '~sidebar/theme-switcher';
   import { UserHelmet } from '~sidebar/user-helmet';
   import { SvgLogo } from '~ui/icon';
 
   const route = useRoute();
+  const { y } = useWindowScroll();
+  const { smaller } = useBreakpoints();
   const { close } = useSidebarPopover();
+
+  const isMobile = smaller(Breakpoint.MD);
+  const hidden = useState('navbar-hidden', () => false);
+
+  watchThrottled(
+    y,
+    (scroll, oldScroll) => {
+      if (!isMobile.value) {
+        return;
+      }
+
+      if (scroll < 56) {
+        if (hidden.value) {
+          hidden.value = false;
+        }
+
+        return;
+      }
+
+      hidden.value = scroll > oldScroll;
+    },
+    { throttle: 300 },
+  );
+
+  watch(isMobile, (value) => {
+    if (value) {
+      return;
+    }
+
+    hidden.value = false;
+  });
 
   watch(
     () => route.fullPath,
@@ -21,7 +58,7 @@
 </script>
 
 <template>
-  <div :class="$style.navbar">
+  <div :class="[$style.navbar, { [$style.hidden]: hidden }]">
     <header :class="$style.header">
       <div :class="$style.main">
         <NuxtLink
@@ -68,6 +105,8 @@
 
     background-color: var(--color-bg-main);
 
+    transition: bottom ease-in-out 0.2s;
+
     @include media-min($md) {
       top: 0;
       bottom: initial;
@@ -81,6 +120,15 @@
       padding-left: var(--safe-area-inset-left);
       border-top: 0;
       border-right: 1px solid var(--color-border);
+    }
+
+    &.hidden {
+      bottom: calc(var(--navbar-height) * -1);
+      transition: bottom ease-in-out 0.2s;
+
+      @include media-min($md) {
+        bottom: initial;
+      }
     }
   }
 

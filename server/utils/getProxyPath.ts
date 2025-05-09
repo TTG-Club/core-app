@@ -1,9 +1,7 @@
 import type { H3Event } from 'h3';
 
-export const getProxyPath = (event: H3Event) => {
-  const {
-    api: { url },
-  } = useRuntimeConfig();
+export function getProxyPath(event: H3Event) {
+  const { url } = getApiSecrets();
 
   return url + event.path;
-};
+}
