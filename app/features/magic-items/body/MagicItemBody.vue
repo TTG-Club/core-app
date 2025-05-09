@@ -69,9 +69,5 @@
     max-width: 160px;
     border: 1px solid var(--color-border);
     border-radius: 8px;
-
-    @include media-min($md) {
-      max-width: 100%;
-    }
   }
 </style>

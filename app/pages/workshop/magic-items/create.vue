@@ -29,6 +29,7 @@
     varies: undefined,
     charges: 0,
     curse: false,
+    consumable: false,
     attunement: {
       requires: false,
       description: null,

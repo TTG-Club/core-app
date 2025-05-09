@@ -10,6 +10,7 @@ export interface MagicItemCreate {
   attunement: Attunement;
   charges: number; // заряды
   curse: boolean; // проклятие
+  consumable: boolean; // расходуемый
   image: string | undefined;
   tags: Array<string>; // теги
 }

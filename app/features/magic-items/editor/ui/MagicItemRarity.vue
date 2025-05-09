@@ -36,7 +36,7 @@
       :name="['varies']"
     >
       <AInput
-        v-model:value="varies"
+        v-model="varies"
         placeholder="Введи текст для варьеативной редкости"
         allow-clear
       />

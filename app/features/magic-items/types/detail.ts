@@ -6,7 +6,7 @@ export interface MagicItemDetailResponse {
     rus: string;
     eng: string;
   };
-  image?: string;
+  image: string;
   subtitle: string;
   source: SourceResponse;
   description: Array<string>;

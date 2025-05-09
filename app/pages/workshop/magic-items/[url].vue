@@ -18,7 +18,7 @@
   const backup = useState<MagicItemCreate>(getInitialState);
 
   const { status } = await useAsyncData(
-    `background-${route.params.url}-raw`,
+    `magic-item-${route.params.url}-raw`,
     () =>
       $fetch<MagicItemCreate>(`/api/v2/magic-item/${route.params.url}/raw`, {
         onResponse: (ctx) => {
@@ -129,6 +129,7 @@
       },
       charges: 0,
       curse: false,
+      consumable: false,
       image: undefined,
       tags: [],
     };
@@ -161,7 +162,7 @@
 <template>
   <PageContainer fixed-header>
     <template #header>
-      <PageHeader title="Редактирование предыстории">
+      <PageHeader title="Редактирование магического предмета">
         <template #actions>
           <AButton
             v-if="!rawIncorrect"
@@ -184,7 +185,7 @@
           >
             <AButton
               type="text"
-              @click.left.exact.prevent="navigateTo('/backgrounds')"
+              @click.left.exact.prevent="navigateTo('/magic-items')"
             >
               <template #icon>
                 <SvgIcon icon="close" />

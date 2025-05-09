@@ -41,6 +41,15 @@
   defineExpose({
     validate: computed(() => formRef.value?.validate),
   });
+
+  watch(
+    () => form.value.category,
+    (newVal, oldVal) => {
+      if (newVal !== oldVal) {
+        form.value.typeClarification = '';
+      }
+    },
+  );
 </script>
 
 <template>
@@ -223,12 +232,13 @@
 
       <ACol :span="4">
         <AFormItem label="Проклятие">
-          <ACheckbox
-            v-model="form.curse"
-            :checked="!!form.curse"
-          >
-            Есть
-          </ACheckbox>
+          <ACheckbox v-model:checked="form.curse"> Есть </ACheckbox>
+        </AFormItem></ACol
+      >
+
+      <ACol :span="4">
+        <AFormItem label="Расходуемый">
+          <ACheckbox v-model:checked="form.consumable"> Да </ACheckbox>
         </AFormItem></ACol
       >
     </ARow>
