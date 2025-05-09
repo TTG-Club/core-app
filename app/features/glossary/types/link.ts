@@ -1,4 +1,4 @@
-import type { NameResponse, SourceResponse } from '../../base';
+import type { NameResponse, SourceResponse } from '../../../shared/types/base';
 
 export interface GlossaryLinkResponse {
   url: string;
