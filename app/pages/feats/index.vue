@@ -1,5 +1,7 @@
 <script setup lang="ts">
+  import { FeatLegend } from '~feats/legend';
   import { FeatLink } from '~feats/link';
+  import { SvgIcon } from '~ui/icon';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
@@ -43,20 +45,28 @@
     <template #header>
       <PageHeader title="Черты">
         <template #filter>
-          <AButton
-            :style="{ boxShadow: 'none' }"
-            type="primary"
-            disabled
-          >
-            Фильтры
-          </AButton>
-
           <AInput
             v-model:value="search"
             placeholder="Введите текст..."
             allow-clear
             @change="onSearch"
           />
+        </template>
+
+        <AButton
+          :style="{ boxShadow: 'none' }"
+          type="primary"
+          disabled
+        >
+          <span>Фильтры</span>
+
+          <template #icon>
+            <SvgIcon icon="filter/outline" />
+          </template>
+        </AButton>
+
+        <template #legend>
+          <FeatLegend />
         </template>
       </PageHeader>
     </template>

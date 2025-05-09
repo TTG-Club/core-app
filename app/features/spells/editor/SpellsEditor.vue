@@ -29,6 +29,10 @@
 
   const form = defineModel<SpellCreate>({ required: true });
 
+  const {
+    params: { url: oldUrl },
+  } = useRoute();
+
   const formRef = useTemplateRef<FormInstance>('formRef');
 
   const spellLevels = Array.from(Array(10)).map((_, index) => ({
@@ -49,7 +53,7 @@
   }
 
   defineExpose({
-    validate: formRef.value?.validate,
+    validate: computed(() => formRef.value?.validate),
   });
 </script>
 
@@ -161,7 +165,7 @@
           label="URL"
           tooltip="Менять только при необходимости, т.к. URL генерируется автоматически при вводе английского названия"
           :name="['url']"
-          :rules="[ValidationSpell.ruleUrl()]"
+          :rules="[ValidationSpell.ruleUrl(oldUrl)]"
         >
           <InputUrl
             v-model="form.url"

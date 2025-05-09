@@ -19,3 +19,9 @@ export { default as SelectTimeUnit } from './SelectTimeUnit.vue';
 export { default as SelectFeatCategory } from './SelectFeatCategory.vue';
 
 export { default as SelectTagCategory } from './SelectTagCategory.vue';
+
+export { default as SelectAbilities } from './SelectAbilities.vue';
+
+export { default as SelectSkill } from './SelectSkills.vue';
+
+export { default as SelectFeat } from './SelectFeat.vue';

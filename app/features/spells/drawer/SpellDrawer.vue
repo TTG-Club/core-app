@@ -31,6 +31,8 @@
     isOpened.value ? `${getOrigin()}/spells/${url.value}` : undefined,
   );
 
+  const editUrl = computed(() => `/workshop/spells/${url.value}`);
+
   function handleUpdate(opened: boolean) {
     if (opened) {
       return;
@@ -57,6 +59,7 @@
     :title="spell?.name"
     :source="spell?.source"
     :url="urlForCopy"
+    :edit-url="editUrl"
     :is-loading="status === 'pending'"
     :is-error="status === 'error'"
     width="100%"

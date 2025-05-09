@@ -3,32 +3,38 @@
 </script>
 
 <template>
-  <AFlex
+  <ARow
+    :gutter="[12, 12]"
     :class="$style.cards"
-    wrap="wrap"
-    gap="16"
   >
-    <NuxtLink
+    <ACol
       v-for="(link, index) in CARD_LINKS"
       :key="index"
-      :to="link.url"
-      :class="[$style.card, { [$style.disabled]: link.disable }]"
+      class="gutter-row"
+      :xs="12"
+      :sm="12"
+      :md="6"
+      :xl="4"
     >
-      <span :class="$style.name">{{ link.name }}</span>
+      <NuxtLink
+        :to="link.url"
+        :class="[$style.card, { [$style.disabled]: link.disable }]"
+      >
+        <span :class="$style.name">{{ link.name }}</span>
 
-      <img
-        :class="$style.img"
-        :src="link.img"
-        :alt="link.name"
-        loading="lazy"
-      />
-    </NuxtLink>
-  </AFlex>
+        <img
+          :class="$style.img"
+          :src="link.img"
+          :alt="link.name"
+          loading="lazy"
+        />
+      </NuxtLink>
+    </ACol>
+  </ARow>
 </template>
 
 <style lang="scss" module>
   .cards {
-    width: 100%;
     margin: 32px 0 0 0;
   }
 
@@ -37,15 +43,13 @@
 
     overflow: hidden;
     display: grid;
-    flex: 1 1 15%;
     align-items: center;
     justify-content: start;
 
-    min-width: 40%;
     height: 56px;
     padding: 0 12px;
     border: 1px solid var(--color-border);
-    border-radius: 12px;
+    border-radius: 10px;
 
     text-decoration: none;
 
@@ -55,21 +59,13 @@
     &:hover {
       .img {
         transform: scale(1.15);
-        transition: transform 0.6s;
+        transition: transform 200ms;
       }
     }
 
     &.disabled {
       pointer-events: none;
       opacity: 0.4;
-    }
-
-    @include media-min($md) {
-      min-width: 19%;
-    }
-
-    @include media-min($xl) {
-      min-width: 16%;
     }
 
     .img {
@@ -83,13 +79,14 @@
 
       opacity: 0.8;
 
-      transition: transform 0.6s;
+      transition: transform 200ms;
     }
 
     .name {
       z-index: 10;
       font-weight: 600;
       color: var(--color-text);
+      text-shadow: 0 2px 4px #0000006e;
     }
   }
 </style>

@@ -31,6 +31,8 @@
     isOpened.value ? `${getOrigin()}/feats/${url.value}` : undefined,
   );
 
+  const editUrl = computed(() => `/workshop/feats/${url.value}`);
+
   function handleUpdate(opened: boolean) {
     if (opened) {
       return;
@@ -57,6 +59,7 @@
     :title="feat?.name"
     :source="feat?.source"
     :url="urlForCopy"
+    :edit-url="editUrl"
     :is-loading="status === 'pending'"
     :is-error="status === 'error'"
     width="100%"

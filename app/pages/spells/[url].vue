@@ -18,6 +18,8 @@
     titleTemplate: '%s | Заклинания D&D 5 2024',
   });
 
+  const editUrl = computed(() => `/workshop/spells/${route.params.url}`);
+
   function getSeoTitle() {
     if (!spell.value) {
       return '';
@@ -55,7 +57,10 @@
         copy-title
       >
         <template #actions>
-          <PageActions @close="navigateTo({ name: 'spells' })" />
+          <PageActions
+            :edit-url="editUrl"
+            @close="navigateTo({ name: 'spells' })"
+          />
         </template>
       </PageHeader>
     </template>

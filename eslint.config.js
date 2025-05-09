@@ -2,7 +2,7 @@ import { createConfigForNuxt } from '@nuxt/eslint-config';
 import gitignore from 'eslint-config-flat-gitignore';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 
-const co = createConfigForNuxt(
+export default createConfigForNuxt(
   {
     features: {
       tooling: true,
@@ -302,5 +302,3 @@ const co = createConfigForNuxt(
   eslintPluginPrettierRecommended,
   gitignore(),
 );
-
-export default co;
