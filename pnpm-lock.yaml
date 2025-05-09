@@ -77,9 +77,6 @@ importers:
       normalize.css:
         specifier: ^8.0.1
         version: 8.0.1
-      nuxt:
-        specifier: ^3.16.0
-        version: 3.16.1(@parcel/watcher@2.5.1)(@types/node@22.13.14)(db0@0.3.1)(eslint@9.23.0(jiti@2.4.2))(ioredis@5.6.0)(magicast@0.3.5)(meow@13.2.0)(optionator@0.9.4)(rollup@4.37.0)(sass-embedded@1.86.0)(stylelint@16.17.0(typescript@5.8.2))(terser@5.39.0)(typescript@5.8.2)(vite@6.2.3(@types/node@22.13.14)(jiti@2.4.2)(sass-embedded@1.86.0)(terser@5.39.0)(yaml@2.7.0))(vue-tsc@2.2.8(typescript@5.8.2))(yaml@2.7.0)
       nuxt-security:
         specifier: ^2.2.0
         version: 2.2.0(magicast@0.3.5)(rollup@4.37.0)
@@ -150,6 +147,12 @@ importers:
       lint-staged:
         specifier: ^15.4.3
         version: 15.5.0
+      nuxt:
+        specifier: ^3.16.1
+        version: 3.16.1(@parcel/watcher@2.5.1)(@types/node@22.13.14)(db0@0.3.1)(eslint@9.23.0(jiti@2.4.2))(ioredis@5.6.0)(magicast@0.3.5)(meow@13.2.0)(optionator@0.9.4)(rollup@4.37.0)(sass-embedded@1.86.0)(stylelint@16.17.0(typescript@5.8.2))(terser@5.39.0)(typescript@5.8.2)(vite@6.2.3(@types/node@22.13.14)(jiti@2.4.2)(sass-embedded@1.86.0)(terser@5.39.0)(yaml@2.7.0))(vue-tsc@2.2.8(typescript@5.8.2))(yaml@2.7.0)
+      postcss:
+        specifier: '8'
+        version: 8.5.3
       postcss-html:
         specifier: ^1.8.0
         version: 1.8.0
