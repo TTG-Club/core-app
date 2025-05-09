@@ -4,6 +4,6 @@ export * from './spells';
 
 export * from './feats';
 
-export * from './glossary';
+export * from '~/features/glossary/types';
 
 export * from './backgrounds';
