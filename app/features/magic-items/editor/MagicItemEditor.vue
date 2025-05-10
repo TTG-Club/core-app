@@ -1,12 +1,15 @@
 <script setup lang="ts">
-  import { MagicItemRarity, MagicItemAttunement } from './ui';
+  import {
+    MagicItemRarity,
+    MagicItemAttunement,
+    MagicItemCategory,
+  } from './ui';
   import { ruleUrl } from './validators';
 
   import { ValidationBase } from '~/shared/utils';
-  import { MagicItemCategory } from '~magic-items/editor/ui';
-  import { SpeciesImage } from '~species/editor/ui';
   import { InputUrl } from '~ui/input';
   import { SelectSource, SelectTags } from '~ui/select';
+  import { UploadImage } from '~ui/upload';
 
   import type { FormInstance } from 'ant-design-vue';
   import type { SelectValue } from 'ant-design-vue/es/select';
@@ -250,7 +253,7 @@
           tooltip="Эта картинка отображается при просмотре страницы магического предмета"
           :name="['image']"
         >
-          <SpeciesImage
+          <UploadImage
             v-model="form.image"
             section="magic-item"
             max-size="480"

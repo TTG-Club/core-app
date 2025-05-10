@@ -1,11 +1,5 @@
 <script setup lang="ts">
-  import {
-    SpeciesGallery,
-    SpeciesImage,
-    SpeciesLinkPreview,
-    SpeciesFeatures,
-    SpeciesSizes,
-  } from './ui';
+  import { SpeciesLinkPreview, SpeciesFeatures, SpeciesSizes } from './ui';
 
   import {
     ValidationBase,
@@ -19,6 +13,7 @@
     SelectSpecies,
     SelectTags,
   } from '~ui/select';
+  import { UploadImage, UploadGallery } from '~ui/upload';
 
   import type { FormInstance } from 'ant-design-vue';
   import type { SelectValue } from 'ant-design-vue/es/select';
@@ -315,7 +310,7 @@
           :name="['image']"
           :rules="[ValidationBase.ruleImage()]"
         >
-          <SpeciesImage
+          <UploadImage
             v-model="form.image"
             section="species"
             max-size="480"
@@ -330,7 +325,7 @@
           :name="['linkImage']"
           :rules="[ValidationBase.ruleImage()]"
         >
-          <SpeciesImage
+          <UploadImage
             v-model="form.linkImage"
             section="species"
             max-size="190"
@@ -342,7 +337,7 @@
                 :image="form.linkImage"
               />
             </template>
-          </SpeciesImage>
+          </UploadImage>
         </AFormItem>
       </ACol>
 
@@ -351,7 +346,7 @@
           label="Галерея"
           :name="['gallery']"
         >
-          <SpeciesGallery
+          <UploadGallery
             v-model="form.gallery"
             section="species"
           />
