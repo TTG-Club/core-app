@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { GlossaryLink } from '~/features/glossary/link';
+  import { GlossaryLink } from '~glossary/link';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 

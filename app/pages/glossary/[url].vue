@@ -34,7 +34,7 @@
     }
 
     return getSlicedString(
-      `${glossary.value.name.rus} [${glossary.value.name.eng}] — ${glossary.value.tags} D&D 5 2024 редакции`,
+      `${glossary.value.name.rus} [${glossary.value.name.eng}] — ${glossary.value.tagCategory} D&D 5 2024 редакции`,
       160,
     );
   }

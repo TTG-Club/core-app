@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { NuxtLink } from '#components';
-  import { GlossaryEditor } from '~/features/glossary/editor';
+  import { GlossaryEditor } from '~glossary/editor';
   import { SvgIcon } from '~ui/icon';
   import { PageContainer, PageHeader } from '~ui/page';
   import { useToast } from '~ui/toast';

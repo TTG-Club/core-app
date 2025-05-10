@@ -28,17 +28,7 @@
   };
 
   defineExpose({
-    async validate() {
-      try {
-        await formRef.value?.validate();
-
-        return form.value;
-      } catch (e) {
-        console.error('Validation failed:', e);
-
-        throw e;
-      }
-    },
+    validate: computed(() => formRef.value?.validate),
   });
 </script>
 
