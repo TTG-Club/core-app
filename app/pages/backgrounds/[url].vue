@@ -37,7 +37,7 @@
     }
 
     return getSlicedString(
-      `${background.value.name.rus} [${background.value.name.eng}] D&D 5 2024 редакции`,
+      `${background.value.name.rus} [${background.value.name.eng}] — предыстория D&D 5 2024 редакции`,
       160,
     );
   }
