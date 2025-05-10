@@ -144,7 +144,7 @@
 
   function getLink() {
     return h('span', [
-      'Можешь перейти на него ',
+      'Можешь перейти на его ',
       h(
         NuxtLink,
         {

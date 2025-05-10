@@ -35,7 +35,7 @@
     }
 
     return getSlicedString(
-      `${magicItem.value.name.rus} [${magicItem.value.name.eng}] D&D 5 2024 редакции`,
+      `${magicItem.value.name.rus} [${magicItem.value.name.eng}] — ${magicItem.value.subtitle} D&D 5 2024 редакции`,
       160,
     );
   }
