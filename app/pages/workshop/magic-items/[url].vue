@@ -2,26 +2,24 @@
   import { cloneDeep, isEqual, merge } from 'lodash-es';
 
   import { NuxtLink } from '#components';
-  import { BackgroundsEditor } from '~backgrounds/editor';
+  import { MagicItemEditor } from '~magic-items/editor';
   import { SvgIcon } from '~ui/icon';
   import { PageContainer, PageHeader } from '~ui/page';
   import { useToast } from '~ui/toast';
 
-  import type { BackgroundCreate } from '~/shared/types';
+  import type { MagicItemCreate } from '~magic-items/types';
 
   const route = useRoute();
   const $toast = useToast();
+  const editor = useTemplateRef<InstanceType<typeof MagicItemEditor>>('editor');
 
-  const editor =
-    useTemplateRef<InstanceType<typeof BackgroundsEditor>>('editor');
-
-  const form = useState<BackgroundCreate>(getInitialState);
-  const backup = useState<BackgroundCreate>(getInitialState);
+  const form = useState<MagicItemCreate>(getInitialState);
+  const backup = useState<MagicItemCreate>(getInitialState);
 
   const { status } = await useAsyncData(
-    `background-${route.params.url}-raw`,
+    `magic-item-${route.params.url}-raw`,
     () =>
-      $fetch<BackgroundCreate>(`/api/v2/backgrounds/${route.params.url}/raw`, {
+      $fetch<MagicItemCreate>(`/api/v2/magic-item/${route.params.url}/raw`, {
         onResponse: (ctx) => {
           const initialState = getInitialState();
 
@@ -44,7 +42,7 @@
   async function submit() {
     if (!checkIsEdited()) {
       $toast.error({
-        title: 'Ошибка сохранения предыстории',
+        title: 'Ошибка сохранения магического предмета',
         description: 'Измени хотя бы одно поле, чтобы сохранить',
       });
 
@@ -53,7 +51,7 @@
 
     if (!editor.value?.validate) {
       $toast.error({
-        title: 'Ошибка сохранения предыстории',
+        title: 'Ошибка сохранения магического предмета',
         description: () =>
           h('span', null, [
             'Произошла какая-то ошибка... попробуй еще раз или обратись за помощью на нашем ',
@@ -77,7 +75,7 @@
     try {
       const payload = await editor.value.validate();
 
-      await $fetch<string>(`/api/v2/backgrounds/${route.params.url}`, {
+      await $fetch<string>(`/api/v2/magic-item/${route.params.url}`, {
         method: 'PUT',
         body: payload,
         onRequestError: () => {
@@ -87,7 +85,7 @@
           isCreating.value = false;
 
           $toast.error({
-            title: 'Ошибка сохранения предыстории',
+            title: 'Ошибка сохранения магического предмета',
             description: error.response._data.message,
           });
         },
@@ -96,7 +94,7 @@
       // isCreated.value = true; // TODO: вернуть в будущем
 
       $toast.success({
-        title: 'Предыстория успешно сохранена',
+        title: 'Магический предмет успешно сохранен',
         description: getLink,
         // onClose: () => navigateTo({ name: 'workshop-backgrounds' }), // TODO: вернуть в будущем
       });
@@ -107,7 +105,7 @@
     }
   }
 
-  function getInitialState(): BackgroundCreate {
+  function getInitialState(): MagicItemCreate {
     return {
       url: '',
       name: {
@@ -120,11 +118,22 @@
         page: undefined,
       },
       description: '',
-      abilityScores: [],
-      featUrl: undefined,
-      skillsProficiencies: [],
-      toolProficiency: '',
-      equipment: '',
+      category: {
+        type: undefined,
+        clarification: undefined,
+      },
+      rarity: {
+        type: undefined,
+        varies: undefined,
+      },
+      attunement: {
+        requires: false,
+        description: null,
+      },
+      charges: 0,
+      curse: false,
+      consumable: false,
+      image: undefined,
       tags: [],
     };
   }
@@ -135,12 +144,12 @@
 
   function getLink() {
     return h('span', [
-      'Можешь перейти на ее ',
+      'Можешь перейти на его ',
       h(
         NuxtLink,
         {
           to: {
-            name: 'backgrounds-url',
+            name: 'magic-items-url',
             params: {
               url: form.value.url,
             },
@@ -156,7 +165,7 @@
 <template>
   <PageContainer fixed-header>
     <template #header>
-      <PageHeader title="Редактирование предыстории">
+      <PageHeader title="Редактирование магического предмета">
         <template #actions>
           <AButton
             type="primary"
@@ -178,7 +187,7 @@
           >
             <AButton
               type="text"
-              @click.left.exact.prevent="navigateTo('/backgrounds')"
+              @click.left.exact.prevent="navigateTo('/magic-items')"
             >
               <template #icon>
                 <SvgIcon icon="close" />
@@ -195,10 +204,10 @@
           v-if="rawIncorrect"
           status="error"
           title="Некорректные данные"
-          sub-title="Не найдена предыстория для редактирования"
+          sub-title="Не найден магический предмет для редактирования"
         />
 
-        <BackgroundsEditor
+        <MagicItemEditor
           v-else
           ref="editor"
           v-model="form"
