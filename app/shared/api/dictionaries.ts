@@ -91,6 +91,22 @@ function useDictionaries() {
       method: 'get',
     });
 
+  const magicItemCategory = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/magic-items/category', {
+      ...config,
+      method: 'get',
+    });
+
+  const rarity = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/rarity', {
+      ...config,
+      method: 'get',
+    });
+
   return {
     sizes,
     magicSchools,
@@ -102,6 +118,8 @@ function useDictionaries() {
     featCategories,
     abilities,
     skills,
+    magicItemCategory,
+    rarity,
   };
 }
 

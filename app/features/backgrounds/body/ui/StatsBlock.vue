@@ -1,5 +1,6 @@
 <script setup lang="ts">
-  import { COMPONENT_TOOLTIP_TEXT } from '~backgrounds/body/model';
+  import { COMPONENT_TOOLTIP_TEXT } from '../model';
+
   import { MarkupRender } from '~ui/markup';
 
   defineProps<{

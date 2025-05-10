@@ -1,4 +1,4 @@
-import type { ToastProps } from '~ui/toast/types';
+import type { ToastProps } from './types';
 
 const state = ref<Map<string, ToastProps>>(new Map());
 

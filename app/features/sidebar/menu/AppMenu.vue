@@ -63,7 +63,11 @@
           title="Предметы"
           :items="[
             { href: '/', label: 'Снаряжение', disabled: true },
-            { href: '/', label: 'Магические предметы', disabled: true },
+            {
+              href: '/magic-items',
+              label: 'Магические предметы',
+              disabled: false,
+            },
           ]"
         />
 
