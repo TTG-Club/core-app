@@ -1,5 +1,5 @@
 export { default as MagicItemAttunement } from './MagicItemAttunement.vue';
 
-export { default as SelectMagicItemCategory } from './SelectMagicItemCategory.vue';
+export * from './category';
 
-export { default as SelectRarity } from './SelectRarity.vue';
+export * from './rarity';

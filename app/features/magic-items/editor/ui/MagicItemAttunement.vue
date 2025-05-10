@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import type { Attunement } from '~magic-items/types';
+  import type { MagicItemAttunement } from '~magic-items/types';
 
-  const attunement = defineModel<Attunement>({
+  const attunement = defineModel<MagicItemAttunement>({
     required: true,
   });
 
@@ -12,19 +12,20 @@
     },
   });
 
-  watch(
-    () => attunement.value.requires,
-    (value) => {
-      if (!value) {
-        attunement.value.description = null;
-      }
-    },
-  );
+  const isRequires = computed(() => attunement.value.requires);
+
+  watch(isRequires, (value) => {
+    if (value) {
+      return;
+    }
+
+    attunement.value.description = null;
+  });
 </script>
 
 <template>
   <ARow :gutter="16">
-    <ACol :span="4">
+    <ACol :span="8">
       <AFormItem
         label="Требуется настройка"
         :name="['attunement', 'requires']"
@@ -33,14 +34,14 @@
       </AFormItem>
     </ACol>
 
-    <ACol :span="20">
+    <ACol :span="16">
       <AFormItem
         label="Особенности настройки"
         :name="['attunement', 'description']"
       >
         <AInput
           v-model:value="description"
-          :disabled="!attunement.requires"
+          :disabled="!isRequires"
           placeholder="Введи особенности настройки (если есть)"
           allow-clear
         />

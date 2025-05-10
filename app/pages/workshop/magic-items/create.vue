@@ -23,10 +23,14 @@
       page: undefined,
     },
     description: '',
-    category: '',
-    typeClarification: '',
-    rarity: '',
-    varies: undefined,
+    category: {
+      type: undefined,
+      clarification: undefined,
+    },
+    rarity: {
+      type: undefined,
+      varies: undefined,
+    },
     charges: 0,
     curse: false,
     consumable: false,

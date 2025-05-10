@@ -1,4 +1,4 @@
-import type { NameResponse, SourceResponse } from '../../../shared/types/base';
+import type { NameResponse, SourceResponse } from '~/shared/types';
 
 export interface MagicItemLinkResponse {
   url: string;

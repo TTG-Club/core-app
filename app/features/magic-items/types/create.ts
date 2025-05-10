@@ -3,16 +3,14 @@ export interface MagicItemCreate {
   name: MagicItemName; // название
   source: MagicItemSource; // источник
   description: string; // описание маркап
-  category: string; // категория
-  typeClarification: string; // уточнение категории (например все мечи)
-  rarity: string; // редкость
-  varies: string | undefined; // текст для магических предметов с варьируемой редкостью
-  attunement: Attunement;
+  attunement: MagicItemAttunement;
   charges: number; // заряды
   curse: boolean; // проклятие
   consumable: boolean; // расходуемый
   image: string | undefined;
   tags: Array<string>; // теги
+  rarity: MagicItemRarity;
+  category: MagicItemCategory;
 }
 
 export interface MagicItemName {
@@ -26,7 +24,17 @@ export interface MagicItemSource {
   page: number | undefined; // номер страницы, если указана книга
 }
 
-export interface Attunement {
+export interface MagicItemAttunement {
   requires: boolean; // требуется ли настройка
   description: string | null; // особенности настройки
+}
+
+export interface MagicItemCategory {
+  type: string | undefined; // категория
+  clarification: string | undefined; // описание категории
+}
+
+export interface MagicItemRarity {
+  type: string | undefined; // редкость
+  varies: string | undefined; // текст для магических предметов с варьируемой редкостью
 }

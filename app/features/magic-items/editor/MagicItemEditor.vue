@@ -1,11 +1,9 @@
 <script setup lang="ts">
-  import { ValidationDictionaries, ValidationBase } from '~/shared/utils';
-  import {
-    MagicItemAttunement,
-    SelectMagicItemCategory,
-  } from '~magic-items/editor/ui';
-  import MagicItemRarity from '~magic-items/editor/ui/MagicItemRarity.vue';
-  import { ValidationMagicItem } from '~magic-items/editor/validators';
+  import { MagicItemRarity, MagicItemAttunement } from './ui';
+  import { ruleUrl } from './validators';
+
+  import { ValidationBase } from '~/shared/utils';
+  import { MagicItemCategory } from '~magic-items/editor/ui';
   import { SpeciesImage } from '~species/editor/ui';
   import { InputUrl } from '~ui/input';
   import { SelectSource, SelectTags } from '~ui/select';
@@ -41,15 +39,6 @@
   defineExpose({
     validate: computed(() => formRef.value?.validate),
   });
-
-  watch(
-    () => form.value.category,
-    (newVal, oldVal) => {
-      if (newVal !== oldVal) {
-        form.value.typeClarification = '';
-      }
-    },
-  );
 </script>
 
 <template>
@@ -166,7 +155,7 @@
             :eng-name="form.name.eng"
             :source-url="form.source.url"
             :addon-before="`${getOrigin()}/magic-items/`"
-            :rules="[ValidationMagicItem.ruleUrl(oldUrl)]"
+            :rules="[ruleUrl(oldUrl)]"
           />
         </AFormItem>
       </ACol>
@@ -180,41 +169,31 @@
       />
     </ADivider>
 
-    <ARow :gutter="16">
-      <ACol :span="4">
-        <AFormItem
-          label="Категория"
-          :name="['category']"
-          :rules="[ValidationDictionaries.ruleMagicItemCategory()]"
-        >
-          <SelectMagicItemCategory
-            v-model:value="form.category"
-            placeholder="Выбери категорию"
-          />
-        </AFormItem>
-      </ACol>
+    <MagicItemCategory v-model="form.category" />
 
-      <ACol :span="8">
-        <AFormItem
-          label="Уточнение категории"
-          :name="['typeClarification']"
-        >
-          <AInput
-            v-model:value="form.typeClarification"
-            placeholder="Введи название"
-          />
-        </AFormItem>
-      </ACol>
-
-      <MagicItemRarity
-        v-model:rarity="form.rarity"
-        v-model:varies="form.varies"
-      />
-    </ARow>
+    <MagicItemRarity v-model="form.rarity" />
 
     <MagicItemAttunement v-model="form.attunement" />
 
     <ARow :gutter="16">
+      <ACol :span="4">
+        <AFormItem
+          label="Проклятие"
+          :name="['curse']"
+        >
+          <ACheckbox v-model:checked="form.curse"> Есть </ACheckbox>
+        </AFormItem>
+      </ACol>
+
+      <ACol :span="4">
+        <AFormItem
+          label="Расходуемый"
+          :name="['consumable']"
+        >
+          <ACheckbox v-model:checked="form.consumable"> Да </ACheckbox>
+        </AFormItem>
+      </ACol>
+
       <ACol :span="4">
         <AFormItem
           label="Количество зарядов"
@@ -229,18 +208,6 @@
           />
         </AFormItem>
       </ACol>
-
-      <ACol :span="4">
-        <AFormItem label="Проклятие">
-          <ACheckbox v-model:checked="form.curse"> Есть </ACheckbox>
-        </AFormItem></ACol
-      >
-
-      <ACol :span="4">
-        <AFormItem label="Расходуемый">
-          <ACheckbox v-model:checked="form.consumable"> Да </ACheckbox>
-        </AFormItem></ACol
-      >
     </ARow>
 
     <ADivider orientation="left">

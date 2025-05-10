@@ -3,22 +3,17 @@
 
   import { Dictionaries } from '~/shared/api';
 
-  withDefaults(
-    defineProps<{
-      multiple?: boolean;
-    }>(),
-    {
-      multiple: false,
-    },
-  );
+  defineProps<{
+    disabled?: boolean;
+  }>();
 
   const context = Form.useInjectFormItemContext();
 
-  const model = defineModel<string | Array<string>>();
+  const model = defineModel<string>();
 
   const { data, status, refresh } = await useAsyncData(
-    'dictionaries-rarity',
-    () => Dictionaries.rarity(),
+    'dictionaries-magic-items-category',
+    () => Dictionaries.magicItemCategory(),
   );
 
   const handleDropdownOpening = (state: boolean) => {
@@ -39,9 +34,8 @@
     v-model:value="model"
     :loading="status === 'pending'"
     :options="data || []"
-    :mode="multiple ? 'multiple' : undefined"
-    max-tag-count="responsive"
-    placeholder="Выбери редкость"
+    :disabled
+    placeholder="Выбери категорию"
     show-search
     show-arrow
     @dropdown-visible-change="handleDropdownOpening"

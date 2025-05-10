@@ -4,7 +4,7 @@ import { getEnumFromDictionary } from '~/shared/utils/validation/base';
 import type { Rule } from 'ant-design-vue/es/form';
 import type { SelectOption } from '~/shared/types';
 
-function validateFromDictionary(
+export function validateFromDictionary(
   value: string,
   dictionary: Array<SelectOption>,
 ) {
@@ -89,21 +89,6 @@ export const ruleFeatCategories = (): Rule => ({
     const featCategories = await Dictionaries.featCategories();
 
     validateFromDictionary(value, featCategories);
-  },
-});
-
-export const ruleMagicItemCategory = (): Rule => ({
-  required: true,
-  trigger: ['change', 'blur'],
-  type: 'string',
-  validator: async (rule: Rule, value: string | undefined) => {
-    if (!value) {
-      throw new Error('Поле обязательно для заполнения');
-    }
-
-    const magicCategory = await Dictionaries.magicItemCategory();
-
-    validateFromDictionary(value, magicCategory);
   },
 });
 
