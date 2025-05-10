@@ -30,6 +30,7 @@
 <template>
   <NuxtLink
     v-slot="{ href }"
+    v-memo="[to]"
     custom
     :to
   >
