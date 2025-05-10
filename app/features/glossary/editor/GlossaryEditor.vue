@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { ValidationBase, ValidationFeat } from '~/shared/utils';
   import { InputUrl } from '~ui/input';
-  import { SelectSource, SelectTags, SelectTagCategory } from '~ui/select';
+  import { SelectSource, SelectTags } from '~ui/select';
 
   import type { FormInstance } from 'ant-design-vue';
   import type { SelectValue } from 'ant-design-vue/es/select';
@@ -166,8 +166,8 @@
         tooltip="Категория для записей глоссария"
         :name="['tagCategory']"
       >
-        <SelectTagCategory
-          v-model="form.tagCategory"
+        <AInput
+          v-model:value="form.tagCategory"
           placeholder="Введите категорию тегов"
         />
       </AFormItem>
