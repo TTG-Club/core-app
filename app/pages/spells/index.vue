@@ -1,11 +1,13 @@
 <script setup lang="ts">
+  import { FilterButton } from '~filter/button';
+  import { useFilter } from '~filter/composable';
+  import { FilterPreview } from '~filter/preview';
   import { SpellLegend } from '~spells/legend';
   import { SpellLink } from '~spells/link';
-  import { SvgIcon } from '~ui/icon';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
-  import type { SpellLinkResponse } from '~/shared/types';
+  import type { SearchBody, SpellLinkResponse } from '~/shared/types';
 
   useSeoMeta({
     title: 'Заклинания [Spells]',
@@ -13,6 +15,23 @@
   });
 
   const search = ref<string>('');
+  const debouncedSearch = refDebounced(search, 700);
+
+  const {
+    filter,
+    isPending: isFilterPending,
+    isShowedPreview: isFilterPreviewShowed,
+  } = await useFilter('spells-filters', '/api/v2/spells/filters');
+
+  const searchBody = computed(() => {
+    const body: SearchBody = {};
+
+    if (filter) {
+      body.filter = filter.value;
+    }
+
+    return Object.keys(body).length ? body : undefined;
+  });
 
   const {
     data: spells,
@@ -25,19 +44,20 @@
       $fetch<Array<SpellLinkResponse>>('/api/v2/spells/search', {
         method: 'POST',
         params: {
-          query: search.value || undefined,
+          query:
+            debouncedSearch.value && debouncedSearch.value.length >= 3
+              ? debouncedSearch.value
+              : undefined,
         },
+        body: searchBody.value,
       }),
-    { deep: false },
+    {
+      deep: false,
+      watch: [debouncedSearch, filter],
+    },
   );
 
-  const onSearch = useDebounceFn(() => {
-    if (search.value && search.value.length < 3) {
-      return;
-    }
-
-    refresh();
-  }, 1000);
+  const isShowedControls = computed(() => isFilterPreviewShowed.value);
 </script>
 
 <template>
@@ -49,26 +69,28 @@
             v-model:value="search"
             placeholder="Введите текст..."
             allow-clear
-            @change="onSearch"
           />
 
-          <AButton
-            :style="{ boxShadow: 'none' }"
-            type="primary"
-            disabled
-          >
-            <span>Фильтры</span>
-
-            <template #icon>
-              <SvgIcon icon="filter/outline" />
-            </template>
-          </AButton>
+          <FilterButton
+            v-model="filter"
+            :is-pending="isFilterPending"
+          />
         </template>
 
         <template #legend>
-          <SpellLegend />
+          <SpellLegend v-once />
         </template>
       </PageHeader>
+    </template>
+
+    <template
+      v-if="isShowedControls"
+      #controls
+    >
+      <FilterPreview
+        v-if="filter"
+        v-model="filter"
+      />
     </template>
 
     <template #default>
