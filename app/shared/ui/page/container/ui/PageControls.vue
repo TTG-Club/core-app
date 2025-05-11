@@ -10,12 +10,7 @@
   const body = useTemplateRef('body');
 
   const { top: wrapperTop } = useElementBounding(wrapper);
-
-  const {
-    top: bodyTop,
-    bottom: bodyBottom,
-    height: bodyHeight,
-  } = useElementBounding(body);
+  const { height: bodyHeight } = useElementBounding(body);
 
   const { height: windowHeight } = useWindowSize();
   const { y: scrollY } = useWindowScroll();
@@ -32,7 +27,6 @@
   const maxTop = computed(() => {
     if (!body.value || !wrapper.value) return 0;
 
-    // Рассчитываем maxTop на основе wrapperTop и scrollY
     return wrapperTop.value + scrollY.value;
   });
 
@@ -47,14 +41,12 @@
 
     const deltaY = scrollY.value - lastKnownY.value;
 
-    // Определяем направление скролла и обновляем позицию
     if (scrollY.value < lastKnownY.value) {
-      currentTop.value -= deltaY; // Скролл вверх
+      currentTop.value -= deltaY;
     } else {
-      currentTop.value += -deltaY; // Скролл вниз
+      currentTop.value += -deltaY;
     }
 
-    // Ограничиваем позицию в пределах minTop и maxTop
     currentTop.value = Math.min(
       Math.max(currentTop.value, -minTop.value),
       maxTop.value,
@@ -62,11 +54,9 @@
 
     lastKnownY.value = scrollY.value;
 
-    // Обновляем sticky состояние
     isSticky.value = currentTop.value !== 0 || scrollY.value > wrapperTop.value;
   }
 
-  // Реактивно обновляем позицию при изменении скролла или размеров
   watch(
     [scrollY, wrapperTop, bodyHeight, windowHeight],
     () => {
@@ -86,10 +76,6 @@
       ref="body"
       :class="$style.body"
       :style="styles"
-      :data-bt="bodyTop"
-      :data-bb="bodyBottom"
-      :data-max-bt="maxTop"
-      :data-max-bb="minTop"
     >
       <slot />
     </div>
