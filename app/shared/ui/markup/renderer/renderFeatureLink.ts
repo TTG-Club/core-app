@@ -1,4 +1,3 @@
-import { NuxtLink } from '#components';
 import { useDrawer } from '~/shared/composables';
 
 import type { FeatureMarker, FeatureNode } from '../types';
@@ -47,12 +46,12 @@ export function renderFeatureNode(
   };
 
   return h(
-    NuxtLink,
+    'a',
     {
-      to: `/${path}/${url}`,
+      href: `/${path}/${url}`,
       target: '_self',
-      onClick: withModifiers(() => handleClick(), ['left', 'exact', 'prevent']),
+      onClick: withModifiers(handleClick, ['left', 'exact', 'prevent', 'stop']),
     },
-    renderChildren,
+    renderChildren() ? renderChildren() : 'Ошибка рендринга Child элемента',
   );
 }
