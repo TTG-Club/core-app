@@ -12,7 +12,7 @@ import type {
   TextNode,
   SimpleTextNode,
   RichNode,
-  DrawerNode,
+  FeatureLinkNode,
 } from '../types';
 
 export function isSimpleTextNode(node: MarkerNode): node is SimpleTextNode {
@@ -31,6 +31,6 @@ export function isRichNode(node: MarkerNode): node is RichNode {
   return Object.values(RichMarker).includes(node.type as RichMarker);
 }
 
-export function isFeatureNode(node: MarkerNode): node is DrawerNode {
+export function isFeatureNode(node: MarkerNode): node is FeatureLinkNode {
   return Object.values(FeatureMarker).includes(node.type as FeatureMarker);
 }

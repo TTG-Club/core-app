@@ -32,8 +32,7 @@ export function renderFeatureNode(
 
   const { open } = drawerFactory();
 
-  const handleClick = (e: MouseEvent) => {
-    e.preventDefault();
+  const handleClick = () => {
     open(url);
   };
 
@@ -42,7 +41,7 @@ export function renderFeatureNode(
     {
       to: `/${node.type}/${url}`,
       target: '_self',
-      onClick: handleClick,
+      onClick: withModifiers(() => handleClick(), ['left', 'exact', 'prevent']),
     },
     renderChildren,
   );

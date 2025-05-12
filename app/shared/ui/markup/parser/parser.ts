@@ -11,7 +11,7 @@ import type {
   MarkerNode,
   TextNode,
   EmptyNode,
-  DrawerNode,
+  FeatureLinkNode,
   MarkerAttributes,
   SimpleTextNode,
   ParamValue,
@@ -36,6 +36,9 @@ const MARKERS: { [key: string]: MarkerName } = {
   link: Marker.Link,
   spell: Marker.Spell,
   feat: Marker.Feat,
+  background: Marker.Background,
+  magicItem: Marker.MagicItem,
+  bestiary: Marker.Bestiary,
   glossary: Marker.Glossary,
   br: Marker.Break,
   break: Marker.Break,
@@ -161,7 +164,7 @@ function convertFeatureMarker(
   marker: FeatureMarker,
   textWithParams: string,
   depth: number,
-): DrawerNode {
+): FeatureLinkNode {
   const { text, params } = splitByPipeBase(textWithParams);
 
   if (!text) {

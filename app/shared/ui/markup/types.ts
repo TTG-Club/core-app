@@ -78,7 +78,7 @@ export type MarkerNode =
   | EmptyNode
   | TextNode
   | RichNode
-  | DrawerNode;
+  | FeatureLinkNode;
 
 export interface SimpleTextNode {
   type: SimpleText.Text;
@@ -118,7 +118,7 @@ export type FeatureNodes = {
   [FeatureMarker.Glossary]: FeatureNode;
 };
 
-export type DrawerNode = FeatureNodes[FeatureMarker];
+export type FeatureLinkNode = FeatureNodes[FeatureMarker];
 
 export interface FeatureNode {
   type: FeatureMarker;

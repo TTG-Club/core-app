@@ -6,7 +6,7 @@ import {
   type RichNode,
   type EmptyNode,
   type RichNodes,
-  type DrawerNode,
+  type FeatureLinkNode,
   type FeatureNodes,
   TextMarker,
   EmptyMarker,
@@ -87,7 +87,7 @@ function renderNode(node: MarkerNode): VNode {
   }
 
   if (isFeatureNode(node)) {
-    return renderDrawerNode(node);
+    return renderFeatureLinkNode(node);
   }
 
   if (isEmptyNode(node)) {
@@ -139,7 +139,7 @@ function renderRichNode(node: RichNode): VNode {
   return renderFn(node, () => child);
 }
 
-function renderDrawerNode(node: DrawerNode): VNode {
+function renderFeatureLinkNode(node: FeatureLinkNode): VNode {
   const child = node.content?.map((item) => renderNode(item));
 
   if (!child.length) {
