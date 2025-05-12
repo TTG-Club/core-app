@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { GlossaryLegend } from '~glossary/legend';
   import { GlossaryLink } from '~glossary/link';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
@@ -64,7 +65,7 @@
         </template>
 
         <template #legend>
-          <SpellLegend />
+          <GlossaryLegend />
         </template>
       </PageHeader>
     </template>
