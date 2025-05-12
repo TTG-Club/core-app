@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { GlossaryLegend } from '~glossary/legend';
   import { GlossaryLink } from '~glossary/link';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
@@ -43,20 +44,28 @@
     <template #header>
       <PageHeader title="Глоссарий">
         <template #filter>
-          <AButton
-            :style="{ boxShadow: 'none' }"
-            type="primary"
-            disabled
-          >
-            Фильтры
-          </AButton>
-
           <AInput
             v-model:value="search"
             placeholder="Введите текст..."
             allow-clear
             @change="onSearch"
           />
+
+          <AButton
+            :style="{ boxShadow: 'none' }"
+            type="primary"
+            disabled
+          >
+            <span>Фильтры</span>
+
+            <template #icon>
+              <SvgIcon icon="filter/outline" />
+            </template>
+          </AButton>
+        </template>
+
+        <template #legend>
+          <GlossaryLegend />
         </template>
       </PageHeader>
     </template>
