@@ -43,20 +43,28 @@
     <template #header>
       <PageHeader title="Глоссарий">
         <template #filter>
-          <AButton
-            :style="{ boxShadow: 'none' }"
-            type="primary"
-            disabled
-          >
-            Фильтры
-          </AButton>
-
           <AInput
             v-model:value="search"
             placeholder="Введите текст..."
             allow-clear
             @change="onSearch"
           />
+
+          <AButton
+            :style="{ boxShadow: 'none' }"
+            type="primary"
+            disabled
+          >
+            <span>Фильтры</span>
+
+            <template #icon>
+              <SvgIcon icon="filter/outline" />
+            </template>
+          </AButton>
+        </template>
+
+        <template #legend>
+          <SpellLegend />
         </template>
       </PageHeader>
     </template>
