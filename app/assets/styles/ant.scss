@@ -150,4 +150,12 @@ $typography: '.ant-typography';
       padding: 0;
     }
   }
+
+  &-tag {
+    &#{$root}-tooltip,
+    &#{$root}-tooltip-open
+    {
+      font-size: 12px;
+    }
+  }
 }

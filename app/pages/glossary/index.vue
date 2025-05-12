@@ -55,6 +55,7 @@
             type="primary"
             disabled
           >
+
             <span>Фильтры</span>
 
             <template #icon>
@@ -65,6 +66,17 @@
 
         <template #legend>
           <SpellLegend />
+
+            Фильтры
+          </AButton>
+
+          <AInput
+            v-model:value="search"
+            placeholder="Введите текст..."
+            allow-clear
+            @change="onSearch"
+          />
+
         </template>
       </PageHeader>
     </template>
