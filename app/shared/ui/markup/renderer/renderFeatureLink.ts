@@ -6,12 +6,21 @@ import type { FeatureMarker, FeatureNode } from '../types';
 const drawerMap: Partial<
   Record<FeatureMarker, () => ReturnType<typeof useDrawer>>
 > = {
-  'spell': () => useDrawer('spell-detail'),
-  'feat': () => useDrawer('feat-detail'),
-  'background': () => useDrawer('background-detail'),
-  'magic-item': () => useDrawer('magic-item-detail'),
-  'bestiary': () => useDrawer('bestiary-detail'),
-  'glossary': () => useDrawer('glossary-detail'),
+  spell: () => useDrawer('spell-detail'),
+  feat: () => useDrawer('feat-detail'),
+  background: () => useDrawer('background-detail'),
+  magicItem: () => useDrawer('magic-item-detail'),
+  bestiary: () => useDrawer('bestiary-detail'),
+  glossary: () => useDrawer('glossary-detail'),
+};
+
+const markerToUrlPath: Record<FeatureMarker, string> = {
+  spell: 'spells',
+  feat: 'feats',
+  bestiary: 'bestiary',
+  background: 'backgrounds',
+  magicItem: 'magic-item',
+  glossary: 'glossary',
 };
 
 export function renderFeatureNode(
@@ -25,6 +34,7 @@ export function renderFeatureNode(
   }
 
   const drawerFactory = drawerMap[node.type as FeatureMarker];
+  const path = markerToUrlPath[node.type as FeatureMarker];
 
   if (!drawerFactory) {
     throw new Error(`[Markup] No drawer registered for: ${node.type}`);
@@ -39,7 +49,7 @@ export function renderFeatureNode(
   return h(
     NuxtLink,
     {
-      to: `/${node.type}/${url}`,
+      to: `/${path}/${url}`,
       target: '_self',
       onClick: withModifiers(() => handleClick(), ['left', 'exact', 'prevent']),
     },

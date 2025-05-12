@@ -25,7 +25,7 @@ export enum FeatureMarker {
   Spell = 'spell',
   Feat = 'feat',
   Background = 'background',
-  MagicItem = 'magic-item',
+  MagicItem = 'magicItem',
   Bestiary = 'bestiary',
   Glossary = 'glossary',
 }
