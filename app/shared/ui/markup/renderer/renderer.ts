@@ -6,17 +6,22 @@ import {
   type RichNode,
   type EmptyNode,
   type RichNodes,
+  type FeatureLinkNode,
+  type FeatureNodes,
   TextMarker,
   EmptyMarker,
   RichMarker,
+  FeatureMarker,
 } from '../types';
 import {
   isEmptyNode,
+  isFeatureNode,
   isRichNode,
   isSimpleTextNode,
   isTextNode,
 } from '../utils';
 
+import { renderFeatureNode } from './renderFeatureLink';
 import { renderLinkNode } from './renderLink';
 
 const TextMarkerTag: Record<TextMarker, string> = {
@@ -42,6 +47,20 @@ const RICH_NODE_RENDERERS: {
   [RichMarker.Link]: renderLinkNode,
 };
 
+const FEATURE_NODE_RENDERERS: {
+  [K in FeatureMarker]: (
+    node: FeatureNodes[K],
+    renderChildren: () => VNode[],
+  ) => VNode;
+} = {
+  [FeatureMarker.Spell]: renderFeatureNode,
+  [FeatureMarker.Background]: renderFeatureNode,
+  [FeatureMarker.Feat]: renderFeatureNode,
+  [FeatureMarker.Bestiary]: renderFeatureNode,
+  [FeatureMarker.MagicItem]: renderFeatureNode,
+  [FeatureMarker.Glossary]: renderFeatureNode,
+};
+
 // Функция для рендера контента — принимает массив узлов
 export function render(content: MarkerNode[]) {
   return h(
@@ -65,6 +84,10 @@ function renderNode(node: MarkerNode): VNode {
 
   if (isRichNode(node)) {
     return renderRichNode(node);
+  }
+
+  if (isFeatureNode(node)) {
+    return renderFeatureLinkNode(node);
   }
 
   if (isEmptyNode(node)) {
@@ -108,6 +131,22 @@ function renderRichNode(node: RichNode): VNode {
   }
 
   const renderFn = RICH_NODE_RENDERERS[node.type];
+
+  if (!renderFn) {
+    throw new Error(`[Markup] Unknown tag for rich node: ${node.type}`);
+  }
+
+  return renderFn(node, () => child);
+}
+
+function renderFeatureLinkNode(node: FeatureLinkNode): VNode {
+  const child = node.content?.map((item) => renderNode(item));
+
+  if (!child.length) {
+    throw new Error(`[Markup] Drawer Link node must have content`);
+  }
+
+  const renderFn = FEATURE_NODE_RENDERERS[node.type];
 
   if (!renderFn) {
     throw new Error(`[Markup] Unknown tag for rich node: ${node.type}`);
