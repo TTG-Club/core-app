@@ -4,8 +4,10 @@
 
   import type { UserProfile } from '~/shared/types';
 
-  const { data } = await useAsyncData('user-profile', () =>
-    $fetch<UserProfile>('/api/user/profile'),
+  const { data } = await useAsyncData(
+    'user-profile',
+    () => $fetch<UserProfile>('/api/user/profile'),
+    { dedupe: 'defer' },
   );
 
   useSeoMeta({

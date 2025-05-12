@@ -78,6 +78,7 @@
     />
 
     <ATooltip
+      v-if="url"
       title="Закладка"
       :mouse-enter-delay="0.7"
       destroy-tooltip-on-hide
