@@ -18,7 +18,7 @@ const markerToUrlPath: Record<FeatureMarker, string> = {
   feat: 'feats',
   bestiary: 'bestiary',
   background: 'backgrounds',
-  magicItem: 'magic-item',
+  magicItem: 'magic-items',
   glossary: 'glossary',
 };
 
