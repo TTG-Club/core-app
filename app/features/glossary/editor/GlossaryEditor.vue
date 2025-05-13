@@ -15,12 +15,6 @@
 
   const form = defineModel<GlossaryCreate>({ required: true });
 
-  watchEffect(() => {
-    if (form.value.tagCategory === '' || form.value.tagCategory == null) {
-      form.value.tagCategory = 'Общее';
-    }
-  });
-
   const formRef = useTemplateRef<FormInstance>('formRef');
 
   const handleBookChange = (value: SelectValue) => {
