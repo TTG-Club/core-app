@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import { watchEffect } from 'vue';
-
   import { ValidationBase, ValidationFeat } from '~/shared/utils';
   import { InputUrl } from '~ui/input';
   import { SelectSource, SelectTags } from '~ui/select';
@@ -14,12 +12,6 @@
   }>();
 
   const form = defineModel<GlossaryCreate>({ required: true });
-
-  watchEffect(() => {
-    if (form.value.tagCategory === '' || form.value.tagCategory == null) {
-      form.value.tagCategory = 'Общее';
-    }
-  });
 
   const formRef = useTemplateRef<FormInstance>('formRef');
 
