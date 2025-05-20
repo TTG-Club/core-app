@@ -30,17 +30,7 @@ export async function useFilter(key: string, url: string) {
       return undefined;
     }
 
-    // return cloneDeep(_payload);
-    return {
-      groups: cloneDeep(_payload).groups.map((group) => ({
-        ...group,
-        filters: group.filters.map((item, index) => ({
-          ...item,
-          selected: index % 2 ? true : index % 3 ? false : null,
-        })),
-      })),
-      version: _payload.version,
-    };
+    return cloneDeep(_payload);
   }
 
   watch(
