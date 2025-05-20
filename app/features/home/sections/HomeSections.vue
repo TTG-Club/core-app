@@ -12,7 +12,7 @@
       :key="index"
       class="gutter-row"
       :xs="12"
-      :sm="12"
+      :sm="8"
       :md="6"
       :xl="4"
     >
@@ -58,9 +58,33 @@
 
     &:hover {
       .img {
-        transform: scale(1.15);
+        transform: scale(1.05);
         transition: transform 200ms;
       }
+
+      &:after {
+        left: -200px;
+        transition: left 200ms;
+      }
+    }
+
+    &:after {
+      content: '';
+
+      position: absolute;
+      left: 0;
+
+      width: 100%;
+      height: 100%;
+
+      background: linear-gradient(
+        90deg,
+        rgb(18, 18, 18) 0%,
+        rgba(18, 18, 18, 0.75) 20%,
+        rgba(255, 255, 255, 0) 100%
+      );
+
+      transition: left 200ms;
     }
 
     &.disabled {
@@ -77,7 +101,7 @@
 
       width: 220px;
 
-      opacity: 0.8;
+      opacity: 0.9;
 
       transition: transform 200ms;
     }
@@ -85,7 +109,7 @@
     .name {
       z-index: 10;
       font-weight: 600;
-      color: var(--color-text);
+      color: var(--color-white);
       text-shadow: 0 2px 4px #0000006e;
     }
   }

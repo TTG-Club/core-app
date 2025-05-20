@@ -12,6 +12,7 @@ html.dark {
   --color-hover: rgba(255, 255, 255, 0.05);
   --color-border: rgba(255, 255, 255, 0.08);
   --color-primary: #447cc7;
+  --color-white: #ffffff;
 
   // Badge
   --color-badge-hb: #405710;
@@ -31,8 +32,8 @@ html.dark {
 }
 
 html.light {
-  --color-bg-main: #fdfaf9;
-  --color-bg-main-gradient: linear-gradient(to bottom, #fdfaf9 0%, #fdfaf9 40%, #F0F0F0 100%);
+  --color-bg-main: #F4EDE5;
+  --color-bg-main-gradient: linear-gradient(to bottom, #F4EDE5 0%, #F4EDE5 40%, #f2e8d5 100%);
   --color-bg-secondary: #dceee5;
   --color-bg-menu: linear-gradient(135deg, #f7f2c5c7, #f7f1e5c7);
 
@@ -46,6 +47,7 @@ html.light {
   --color-hover: rgba(00, 00, 00, 0.08);
   --color-border: rgba(0, 0, 0, 0.08);
   --color-primary: #5e5446;
+  --color-white: #ffffff;
 
   // Badge
   --color-badge-hb: #97ca28;
@@ -102,6 +104,7 @@ html.svifty7 {
   --color-hover: #F7F7F718;
   --color-border: #74748040;
   --color-primary: #A54D42;
+  --color-white: #ffffff;
 
   // Badge
   --color-badge-hb: #405710;
