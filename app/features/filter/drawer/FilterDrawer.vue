@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { cloneDeep } from 'lodash-es';
+
   import { FilterList } from '../list';
 
   import { Breakpoint, BREAKPOINTS } from '~/shared/composables';
@@ -17,23 +19,15 @@
 
   const opened = defineModel<boolean>();
 
-  const { cloned, sync } = useCloned(filter, {
-    manual: true,
+  const cloned = ref<Filter>(filter);
+
+  watch(opened, (value) => {
+    if (!value) {
+      return;
+    }
+
+    cloned.value = cloneDeep(filter);
   });
-
-  watch(
-    opened,
-    (value) => {
-      if (!value) {
-        return;
-      }
-
-      sync();
-    },
-    {
-      immediate: true,
-    },
-  );
 </script>
 
 <template>

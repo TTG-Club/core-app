@@ -54,7 +54,7 @@
       data-allow-mismatch
     >
       <div
-        v-if="isControlInBody"
+        v-if="isControlInBody && $slots.controls"
         :class="$style.controls"
         :style="{
           top: `${headerHeightDelta}px`,
