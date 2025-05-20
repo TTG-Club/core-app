@@ -36,7 +36,7 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
-    app: {
+    public: {
       pwa: application,
     },
     site: {

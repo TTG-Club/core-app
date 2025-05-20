@@ -2,6 +2,7 @@
   import ruRU from 'ant-design-vue/locale/ru_RU';
 
   import { useTheme } from '~/shared/composables';
+  import { DrawerCollection } from '~ui/drawer';
   import { ToastsWrapper } from '~ui/toast';
 
   const { themeName, themeConfig } = useTheme();
@@ -37,6 +38,10 @@
         <div class="ttg-app">
           <slot />
         </div>
+
+        <ClientOnly>
+          <DrawerCollection />
+        </ClientOnly>
 
         <ToastsWrapper />
       </AApp>

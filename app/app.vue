@@ -3,7 +3,6 @@
   import '~/assets/styles/index.scss';
   import { PwaConfig } from '~pwa/config';
   import { SidebarPanel } from '~sidebar/panel';
-  import { DrawerCollection } from '~ui/drawer';
 </script>
 
 <template>
@@ -15,10 +14,6 @@
     <div :class="$style.container">
       <NuxtPage />
     </div>
-
-    <ClientOnly>
-      <DrawerCollection />
-    </ClientOnly>
   </NuxtLayout>
 </template>
 

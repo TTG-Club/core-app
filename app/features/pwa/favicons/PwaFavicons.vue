@@ -1,6 +1,6 @@
 <script setup lang="ts">
   const {
-    app: { pwa },
+    public: { pwa },
   } = useRuntimeConfig();
 
   const favicons = computed(() => [

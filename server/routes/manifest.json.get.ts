@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { EventHandlerRequest } from 'h3';
 
 const requestSchema = z.object({
-  theme: z.string().optional(),
+  theme: z.enum(['dark', 'light', 'svifty7']),
 });
 
 interface Request extends EventHandlerRequest {
@@ -11,7 +11,7 @@ interface Request extends EventHandlerRequest {
 }
 
 export default defineEventHandler<Request>(async (event) => {
-  let themeName;
+  let themeName: 'dark' | 'light' | 'svifty7';
 
   try {
     const query = await getValidatedQuery(event, requestSchema.parse);
@@ -22,7 +22,7 @@ export default defineEventHandler<Request>(async (event) => {
   }
 
   const {
-    app: { pwa },
+    public: { pwa },
     site: { url },
   } = useRuntimeConfig();
 

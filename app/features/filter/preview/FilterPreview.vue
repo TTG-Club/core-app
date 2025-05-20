@@ -18,10 +18,7 @@
 
 <template>
   <div :class="$style.list">
-    <ATypographyTitle
-      :level="5"
-      content="Фильтр"
-    />
+    <span> Примененные фильтры: </span>
 
     <FilterList
       v-model="cloned"

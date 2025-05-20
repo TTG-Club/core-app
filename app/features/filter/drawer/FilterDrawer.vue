@@ -6,17 +6,20 @@
 
   import type { Filter } from '../types';
 
-  const opened = defineModel<boolean>('opened');
-  const filter = defineModel<Filter>({ required: true });
+  defineEmits<{
+    (e: 'save', v: Filter): void;
+    (e: 'reset'): void;
+  }>();
+
+  const { filter } = defineProps<{
+    filter: Filter;
+  }>();
+
+  const opened = defineModel<boolean>();
 
   const { cloned, sync } = useCloned(filter, {
     manual: true,
   });
-
-  function saveFilter() {
-    filter.value = cloned.value;
-    opened.value = false;
-  }
 
   watch(
     opened,
@@ -46,12 +49,16 @@
     </template>
 
     <template #footer>
-      <AButton
-        type="primary"
-        @click.left.exact.prevent="saveFilter"
-      >
-        apply
-      </AButton>
+      <AFlex gap="8">
+        <AButton
+          type="primary"
+          @click.left.exact.prevent="$emit('save', cloned)"
+        >
+          Применить
+        </AButton>
+
+        <AButton @click.left.exact.prevent="$emit('reset')"> Сбросить </AButton>
+      </AFlex>
     </template>
   </DrawerComponent>
 </template>

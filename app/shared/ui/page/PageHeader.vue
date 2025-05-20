@@ -126,24 +126,6 @@
         </template>
       </AFlex>
     </div>
-
-    <ClientOnly>
-      <AFlex
-        v-if="$slots.filter"
-        :gap="8"
-      >
-        <slot name="filter" />
-      </AFlex>
-
-      <AFlex
-        v-if="$slots.legend"
-        justify="flex-end"
-        align="center"
-        gap="8"
-      >
-        <slot name="legend" />
-      </AFlex>
-    </ClientOnly>
   </div>
 </template>
 

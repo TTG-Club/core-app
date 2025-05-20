@@ -4,7 +4,7 @@
   const { themeName } = useTheme();
 
   const {
-    app: { pwa },
+    public: { pwa },
   } = useRuntimeConfig();
 
   const themeColor = computed<string>(() => pwa.themeColor[themeName.value]);

@@ -21,12 +21,26 @@ export async function useFilter(key: string, url: string) {
     ),
   );
 
-  function getClone(payload: Filter | undefined): Filter | undefined {
-    if (!payload) {
+  function getClone(
+    payload: MaybeRefOrGetter<Filter | undefined>,
+  ): Filter | undefined {
+    const _payload = toValue(payload);
+
+    if (!_payload) {
       return undefined;
     }
 
-    return cloneDeep(payload);
+    // return cloneDeep(_payload);
+    return {
+      groups: cloneDeep(_payload).groups.map((group) => ({
+        ...group,
+        filters: group.filters.map((item, index) => ({
+          ...item,
+          selected: index % 2 ? true : index % 3 ? false : null,
+        })),
+      })),
+      version: _payload.version,
+    };
   }
 
   watch(

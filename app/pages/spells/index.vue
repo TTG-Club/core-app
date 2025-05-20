@@ -1,7 +1,6 @@
 <script setup lang="ts">
-  import { FilterButton } from '~filter/button';
   import { useFilter } from '~filter/composable';
-  import { FilterPreview } from '~filter/preview';
+  import { FilterControls } from '~filter/controls';
   import { SpellLegend } from '~spells/legend';
   import { SpellLink } from '~spells/link';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
@@ -15,7 +14,6 @@
   });
 
   const search = ref<string>('');
-  const debouncedSearch = refDebounced(search, 700);
 
   const {
     filter,
@@ -45,52 +43,34 @@
         method: 'POST',
         params: {
           query:
-            debouncedSearch.value && debouncedSearch.value.length >= 3
-              ? debouncedSearch.value
-              : undefined,
+            search.value && search.value.length >= 3 ? search.value : undefined,
         },
         body: searchBody.value,
       }),
     {
       deep: false,
-      watch: [debouncedSearch, filter],
+      watch: [search, filter],
     },
   );
-
-  const isShowedControls = computed(() => isFilterPreviewShowed.value);
 </script>
 
 <template>
   <PageContainer fixed-header>
     <template #header>
-      <PageHeader title="Заклинания">
-        <template #filter>
-          <AInput
-            v-model:value="search"
-            placeholder="Введите текст..."
-            allow-clear
-          />
-
-          <FilterButton
-            v-model="filter"
-            :is-pending="isFilterPending"
-          />
-        </template>
-
-        <template #legend>
-          <SpellLegend v-once />
-        </template>
-      </PageHeader>
+      <PageHeader title="Заклинания" />
     </template>
 
-    <template
-      v-if="isShowedControls"
-      #controls
-    >
-      <FilterPreview
-        v-if="filter"
-        v-model="filter"
-      />
+    <template #controls>
+      <FilterControls
+        v-model:search="search"
+        v-model:filter="filter"
+        :is-pending="isFilterPending"
+        :show-preview="isFilterPreviewShowed"
+      >
+        <template #legend>
+          <SpellLegend />
+        </template>
+      </FilterControls>
     </template>
 
     <template #default>

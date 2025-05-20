@@ -55,7 +55,13 @@
   .tag {
     cursor: pointer;
     user-select: none;
+
+    overflow: hidden;
+
+    max-width: 100%;
     margin: 0;
+
+    text-overflow: ellipsis;
 
     @include media-min($lg) {
       &:hover:not(:active) {
