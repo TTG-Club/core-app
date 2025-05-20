@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { BackgroundLegend } from '~backgrounds/legend';
   import { BackgroundLink } from '~backgrounds/link';
+  import { FilterControls } from '~filter/controls';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
@@ -24,46 +25,29 @@
       $fetch<Array<BackgroundLinkResponse>>('/api/v2/backgrounds/search', {
         method: 'POST',
         params: {
-          query: search.value || undefined,
+          query:
+            search.value && search.value.length >= 3 ? search.value : undefined,
         },
       }),
-    { deep: false },
+    {
+      deep: false,
+      watch: [search],
+    },
   );
-
-  const onSearch = useDebounceFn(() => {
-    if (search.value && search.value.length < 3) {
-      return;
-    }
-
-    refresh();
-  }, 1000);
 </script>
 
 <template>
   <PageContainer fixed-header>
     <template #header>
-      <PageHeader title="Предыстории">
-        <template #filter>
-          <AInput
-            v-model:value="search"
-            placeholder="Введите текст..."
-            allow-clear
-            @change="onSearch"
-          />
+      <PageHeader title="Предыстории" />
+    </template>
 
-          <AButton
-            :style="{ boxShadow: 'none' }"
-            type="primary"
-            disabled
-          >
-            Фильтры
-          </AButton>
-        </template>
-
+    <template #controls>
+      <FilterControls v-model:search="search">
         <template #legend>
           <BackgroundLegend />
         </template>
-      </PageHeader>
+      </FilterControls>
     </template>
 
     <template #default>

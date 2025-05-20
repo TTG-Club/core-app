@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { FilterControls } from '~filter/controls';
   import { GlossaryLegend } from '~glossary/legend';
   import { GlossaryLink } from '~glossary/link';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
@@ -24,50 +25,29 @@
       $fetch<Array<GlossaryLinkResponse>>('/api/v2/glossary/search', {
         method: 'POST',
         params: {
-          query: search.value || undefined,
+          query:
+            search.value && search.value.length >= 3 ? search.value : undefined,
         },
       }),
-    { deep: false },
+    {
+      deep: false,
+      watch: [search],
+    },
   );
-
-  const onSearch = useDebounceFn(() => {
-    if (search.value && search.value.length < 3) {
-      return;
-    }
-
-    refresh();
-  }, 1000);
 </script>
 
 <template>
   <PageContainer fixed-header>
     <template #header>
-      <PageHeader title="Глоссарий">
-        <template #filter>
-          <AInput
-            v-model:value="search"
-            placeholder="Введите текст..."
-            allow-clear
-            @change="onSearch"
-          />
+      <PageHeader title="Глоссарий" />
+    </template>
 
-          <AButton
-            :style="{ boxShadow: 'none' }"
-            type="primary"
-            disabled
-          >
-            <span>Фильтры</span>
-
-            <template #icon>
-              <SvgIcon icon="filter/outline" />
-            </template>
-          </AButton>
-        </template>
-
+    <template #controls>
+      <FilterControls v-model:search="search">
         <template #legend>
           <GlossaryLegend />
         </template>
-      </PageHeader>
+      </FilterControls>
     </template>
 
     <template #default>

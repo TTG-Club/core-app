@@ -30,7 +30,7 @@
 <template>
   <div :class="$style.page">
     <div
-      v-if="$slots.header"
+      v-if="$slots.header || (!isControlInBody && $slots.controls)"
       ref="header"
       :class="[$style.header, { [$style.fixed]: fixedHeader }]"
     >
@@ -135,6 +135,7 @@
 
     @include media-min($lg) {
       flex-direction: row;
+      padding: 0 24px;
     }
 
     .controls {
