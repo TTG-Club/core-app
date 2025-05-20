@@ -83,13 +83,7 @@
     pointer-events: none;
     z-index: 10;
     width: 100%;
-    background: linear-gradient(
-      180deg,
-      var(--color-bg-main) 0,
-      var(--color-bg-main) 93%,
-      transparent 99%,
-      transparent 100%
-    );
+    background: var(--color-bg-main);
 
     &.fixed {
       position: sticky;
@@ -110,7 +104,6 @@
 
       @include media-min($lg) {
         gap: 12px;
-        padding: 0 24px 24px;
       }
     }
 
@@ -135,7 +128,6 @@
 
     @include media-min($lg) {
       flex-direction: row;
-      padding: 0 24px;
     }
 
     .controls {
@@ -150,7 +142,7 @@
 
       max-width: 240px;
       height: 100%;
-      padding: 16px 16px 16px 0;
+      padding: 0 16px 16px 0;
       border-right: 1px solid var(--color-border);
 
       -ms-overflow-style: none;
@@ -166,7 +158,7 @@
       flex-direction: column;
       gap: 16px;
 
-      padding: 16px 0;
+      padding: 0 0 16px 0;
     }
   }
 </style>
