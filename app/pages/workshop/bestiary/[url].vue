@@ -129,9 +129,10 @@
       },
       alignment: undefined, // мировоззрение
       ac: '', // класс доспеха
-      initiative: '', // инициатива
+      initiative: 0, // инициатива
       hit: {
         hit: 0, // среднее количество хитов или абсолютное значение
+        formula: '',
         countHitDice: undefined, // количество костей хитов
         text: undefined, // текстовое описание хитов
       },
