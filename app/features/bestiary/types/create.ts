@@ -10,7 +10,7 @@ export interface BeastCreate {
   size: BeastSize; // размеры существа
   alignment: string | undefined; // мировоззрение
   ac: string; // класс доспеха
-  initiative: string; // инициатива
+  initiative: number; // модификатор инициативы
   hit: CreateHit;
   speed: CreateSpeeds;
   abilities: CreateAbilities;
@@ -56,6 +56,7 @@ export interface BeastSize {
 
 export interface CreateHit {
   hit: number; // среднее количество хитов или абсолютное значение
+  formula: string;
   countHitDice: number | undefined; // количество костей хитов
   text: string | undefined; // текстовое описание хитов
 }

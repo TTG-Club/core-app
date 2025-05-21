@@ -1,5 +1,9 @@
 <script setup lang="ts">
-  import { ValidationBase, ValidationBackground } from '~/shared/utils';
+  import {
+    ValidationBase,
+    ValidationBackground,
+    modifier,
+  } from '~/shared/utils';
   import { BeastType } from '~bestiary/editor/ui';
   import BeastAbilities from '~bestiary/editor/ui/BeastAbilities.vue';
   import BeastHit from '~bestiary/editor/ui/BeastHit.vue';
@@ -45,6 +49,46 @@
   defineExpose({
     validate: computed(() => formRef.value?.validate),
   });
+
+  watch(
+    () => form.value.abilities.dex.value,
+    (val) => {
+      form.value.initiative = modifier(val);
+    },
+  );
+
+  const hitDieSizeMap: Record<string, number> = {
+    TINY: 4,
+    SMALL: 6,
+    MEDIUM: 8,
+    LARGE: 10,
+    HUGE: 12,
+    GARGANTUAN: 20,
+  };
+
+  watch(
+    () => [
+      form.value.hit.countHitDice,
+      form.value.abilities.con.value,
+      form.value.size.size?.[0],
+    ],
+    ([count, conValue, sizeKey]) => {
+      const dieSize = hitDieSizeMap[sizeKey ?? 'MEDIUM'] || 8;
+
+      const conMod = modifier(
+        typeof conValue === 'number'
+          ? conValue
+          : Number.parseInt(conValue || '0', 10),
+      );
+
+      if (typeof count === 'number') {
+        const bonus = count * conMod;
+
+        form.value.hit.formula = `${count}к${dieSize}${bonus > 0 ? ` + ${bonus}` : ''}`;
+      }
+    },
+    { immediate: true },
+  );
 </script>
 
 <template>
@@ -217,14 +261,16 @@
             :precision="0"
             placeholder="Введи инициативу"
             min="0"
+            addon-before="+"
+            :addon-after="10 + form.initiative"
           />
         </AFormItem>
       </ACol>
-
-      <BeastHit v-model="form" />
-
-      <BeastSpeed v-model="form.speed" />
     </ARow>
+
+    <BeastHit v-model="form" />
+
+    <BeastSpeed v-model="form.speed" />
 
     <BeastAbilities v-model="form.abilities" />
 
@@ -233,11 +279,13 @@
       :abilities="form.abilities"
     />
 
-    <SelectVurnulability v-model="form.resistance" />
+    <ARow :gutter="16">
+      <SelectVurnulability v-model="form.resistance" />
 
-    <SelectResistence v-model="form.resistance" />
+      <SelectResistence v-model="form.resistance" />
 
-    <SelectDamageImmunities v-model="form.immunityToDamage" />
+      <SelectDamageImmunities v-model="form.immunityToDamage" />
+    </ARow>
 
     <SelectConditionImmunities v-model="form.immunityToCondition" />
 
