@@ -1,17 +1,11 @@
 <script setup lang="ts">
+  import { getModifier } from '~/shared/utils';
+
   import type { CreateAbilities } from '~bestiary/types';
 
   const model = defineModel<CreateAbilities>({
     required: true,
   });
-
-  function modifier(value?: number): number {
-    return value != null ? Math.floor((value - 10) / 2) : 0;
-  }
-
-  function formatModifier(mod: number): string {
-    return mod >= 0 ? `+${mod}` : `${mod}`;
-  }
 </script>
 
 <template>
@@ -26,7 +20,7 @@
           :precision="0"
           min="0"
           max="30"
-          :addon-after="formatModifier(modifier(model.str.value))"
+          :addon-after="getModifier(model.str.value)"
         >
           <template #addonBefore>
             <ASelect>
@@ -47,7 +41,7 @@
         <AInputNumber
           v-model:value="model.dex.value"
           :precision="0"
-          :addon-after="formatModifier(modifier(model.dex.value))"
+          :addon-after="getModifier(model.dex.value)"
           min="0"
           max="30"
         >
@@ -69,7 +63,7 @@
       >
         <AInputNumber
           v-model:value="model.con.value"
-          :addon-after="formatModifier(modifier(model.con.value))"
+          :addon-after="getModifier(model.con.value)"
           :precision="0"
           min="0"
           max="30"
@@ -94,7 +88,7 @@
       >
         <AInputNumber
           v-model:value="model.int.value"
-          :addon-after="formatModifier(modifier(model.int.value))"
+          :addon-after="getModifier(model.int.value)"
           :precision="0"
           min="0"
           max="30"
@@ -117,7 +111,7 @@
       >
         <AInputNumber
           v-model:value="model.wis.value"
-          :addon-after="formatModifier(modifier(model.wis.value))"
+          :addon-after="getModifier(model.wis.value)"
           :precision="0"
           min="0"
           max="30"
@@ -140,7 +134,7 @@
       >
         <AInputNumber
           v-model:value="model.chr.value"
-          :addon-after="formatModifier(modifier(model.chr.value))"
+          :addon-after="getModifier(model.chr.value)"
           :precision="0"
           min="0"
           max="30"
