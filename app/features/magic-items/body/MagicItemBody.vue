@@ -18,11 +18,11 @@
         :gap="12"
         :class="$style.info"
       >
+        <TopBar :subtitle="magicItem.subtitle" />
+
         <div :class="$style.galleryImg">
           <UiGallery :preview="magicItem.image || '/img/no-img.webp'" />
         </div>
-
-        <TopBar :subtitle="magicItem.subtitle" />
       </AFlex>
 
       <AFlex
