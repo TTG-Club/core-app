@@ -180,6 +180,7 @@
           <SelectAbilities
             v-model="form.abilityScores"
             :limit="3"
+            multiple
           />
         </AFormItem>
       </ACol>

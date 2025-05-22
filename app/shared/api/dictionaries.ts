@@ -26,6 +26,22 @@ function useDictionaries() {
       method: 'get',
     });
 
+  const damageTypes = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/damage/types', {
+      ...config,
+      method: 'get',
+    });
+
+  const healTypes = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/heal/types', {
+      ...config,
+      method: 'get',
+    });
+
   const rangeTypes = <R extends NitroFetchRequest>(
     config?: Omit<NitroFetchOptions<R>, 'method'>,
   ) =>
@@ -111,6 +127,8 @@ function useDictionaries() {
     sizes,
     magicSchools,
     creatureTypes,
+    damageTypes,
+    healTypes,
     rangeTypes,
     timeUnits,
     durationUnits,

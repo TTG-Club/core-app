@@ -4,6 +4,7 @@
   import { Dictionaries } from '~/shared/api';
 
   const { limit = 0 } = defineProps<{
+    multiple?: boolean;
     disabled?: boolean;
     limit?: number;
   }>();
@@ -43,11 +44,11 @@
 <template>
   <ASelect
     v-model:value="model"
-    :options="options"
+    :placeholder="`Выбери характеристик${multiple ? 'и' : 'у'}`"
+    :mode="multiple ? 'multiple' : undefined"
     :token-separators="[',']"
-    placeholder="Выбери характеристики"
+    :options="options"
     max-tag-count="responsive"
-    mode="multiple"
     allow-clear
     show-search
     show-arrow

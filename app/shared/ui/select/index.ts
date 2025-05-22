@@ -23,3 +23,7 @@ export { default as SelectAbilities } from './SelectAbilities.vue';
 export { default as SelectSkill } from './SelectSkills.vue';
 
 export { default as SelectFeat } from './SelectFeat.vue';
+
+export { default as SelectDamageType } from './SelectDamageType.vue';
+
+export { default as SelectHealType } from './SelectHealType.vue';

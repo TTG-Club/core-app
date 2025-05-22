@@ -40,6 +40,10 @@
       lineages: [],
     },
     tags: [],
+    upcastable: false,
+    savingThrow: [],
+    healingType: [],
+    damageType: [],
   });
 
   const isCreating = ref(false);
