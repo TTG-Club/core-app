@@ -3,9 +3,9 @@
 
   import type { FilterItems } from '~filter/types';
 
-  const { label, onlyReset = false } = defineProps<{
+  const { label, preview = false } = defineProps<{
     label: string;
-    onlyReset?: boolean;
+    preview?: boolean;
   }>();
 
   const filters = defineModel<FilterItems>({
@@ -13,32 +13,39 @@
   });
 
   const isVisible = computed(
-    () =>
-      !onlyReset || filters.value.some((filter) => filter.selected !== null),
+    () => !preview || filters.value.some((filter) => filter.selected !== null),
   );
 </script>
 
 <template>
   <template v-if="isVisible">
-    <ADivider
-      orientation="left"
-      plain
-    >
-      {{ label }}
-    </ADivider>
-
     <AFlex
-      wrap="wrap"
-      gap="12"
+      vertical
+      gap="8"
     >
-      <FilterTag
-        v-for="item in filters"
-        :key="item.key + item.name"
-        v-model="item.selected"
-        :only-reset="onlyReset"
+      <span v-if="preview">{{ label }}:</span>
+
+      <ADivider
+        v-else
+        orientation="left"
+        :style="{ margin: 0 }"
       >
-        {{ item.name }}
-      </FilterTag>
+        {{ label }}
+      </ADivider>
+
+      <AFlex
+        wrap="wrap"
+        gap="12"
+      >
+        <FilterTag
+          v-for="item in filters"
+          :key="item.key + item.name"
+          v-model="item.selected"
+          :preview
+        >
+          {{ item.name }}
+        </FilterTag>
+      </AFlex>
     </AFlex>
   </template>
 </template>

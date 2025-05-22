@@ -3,8 +3,8 @@
 
   import type { Filter } from '../types';
 
-  const { onlyReset = false } = defineProps<{
-    onlyReset?: boolean;
+  const { preview = false } = defineProps<{
+    preview?: boolean;
   }>();
 
   const filter = defineModel<Filter>({
@@ -13,11 +13,16 @@
 </script>
 
 <template>
-  <FilterGroup
-    v-for="group in filter.groups"
-    :key="group.key + group.name"
-    v-model="group.filters"
-    :label="group.name"
-    :only-reset="onlyReset"
-  />
+  <AFlex
+    vertical
+    :gap="preview ? 16 : 24"
+  >
+    <FilterGroup
+      v-for="group in filter.groups"
+      :key="group.key + group.name"
+      v-model="group.filters"
+      :label="group.name"
+      :preview
+    />
+  </AFlex>
 </template>
