@@ -20,11 +20,14 @@ export interface BeastCreate {
   immunityToDamage: Array<string>;
   immunityToCondition: Array<string>;
   equipments: Array<Equipment>;
+  senses: BeastSenses;
   languages: {
     languages: Array<CreateLanguage>;
     text: string | undefined;
     telepathy: string | undefined;
   };
+  proficiencyBonus: number;
+  experience: CreateExperience;
   traits: Array<CreateTrait>;
   actions: Array<CreateAction>;
   bonusActions: Array<CreateAction>;
@@ -99,7 +102,7 @@ export interface CreateAbility {
 
 export interface CreateSkill {
   skill: string;
-  type: string;
+  multiplier: 0 | 1 | 2;
   text: string;
 }
 
@@ -112,6 +115,22 @@ export interface Equipment {
   url: string;
   name: string;
   quantity: string;
+}
+
+export interface CreateExperience {
+  value: number;
+  inLair: number | undefined;
+  suffix: string | undefined;
+}
+
+export interface BeastSenses {
+  senses: Array<BeastSense>;
+  passivePerception: number;
+}
+
+export interface BeastSense {
+  type: string;
+  value: number;
 }
 
 export interface CreateTrait {
