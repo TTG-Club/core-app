@@ -147,6 +147,14 @@ function useDictionaries() {
       method: 'get',
     });
 
+  const challengeRating = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/cr', {
+      ...config,
+      method: 'get',
+    });
+
   return {
     sizes,
     magicSchools,
@@ -165,6 +173,7 @@ function useDictionaries() {
     alignments,
     damageTypes,
     conditions,
+    challengeRating,
   };
 }
 

@@ -81,10 +81,25 @@
     immunityToDamage: [],
     immunityToCondition: [],
     equipments: [],
+    senses: {
+      senses: [
+        {
+          type: 'DARKVISION',
+          value: 0,
+        },
+      ],
+      passivePerception: 10,
+    },
     languages: {
       languages: [],
       text: undefined,
       telepathy: undefined,
+    },
+    proficiencyBonus: 2,
+    experience: {
+      value: 0,
+      inLair: undefined,
+      suffix: undefined,
     },
     traits: [],
     actions: [],
