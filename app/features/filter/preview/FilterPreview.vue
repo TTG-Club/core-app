@@ -22,7 +22,7 @@
 
     <FilterList
       v-model="cloned"
-      only-reset
+      preview
     />
   </div>
 </template>

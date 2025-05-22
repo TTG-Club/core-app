@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  const { onlyReset = false } = defineProps<{
-    onlyReset?: boolean;
+  const { preview = false } = defineProps<{
+    preview?: boolean;
   }>();
 
   const model = defineModel<boolean | null>({ required: true });
@@ -18,7 +18,7 @@
   });
 
   function getNextValue() {
-    if (onlyReset) {
+    if (preview) {
       return null;
     }
 
@@ -41,7 +41,7 @@
 
 <template>
   <ATag
-    v-if="!onlyReset || model !== null"
+    v-if="!preview || model !== null"
     :class="$style.tag"
     :bordered="false"
     :color
