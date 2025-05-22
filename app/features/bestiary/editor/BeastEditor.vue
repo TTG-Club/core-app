@@ -7,13 +7,15 @@
   import { BeastType } from '~bestiary/editor/ui';
   import BeastAbilities from '~bestiary/editor/ui/BeastAbilities.vue';
   import BeastHit from '~bestiary/editor/ui/BeastHit.vue';
+  import BeastSenses from '~bestiary/editor/ui/BeastSenses.vue';
   import BeastSkills from '~bestiary/editor/ui/BeastSkills.vue';
   import BeastSpeed from '~bestiary/editor/ui/BeastSpeed.vue';
+  import ChallengeRating from '~bestiary/editor/ui/ChallengeRating.vue';
   import SelectAlignment from '~bestiary/editor/ui/SelectAlignments.vue';
   import SelectConditionImmunities from '~bestiary/editor/ui/SelectConditionImmunities.vue';
   import SelectDamageImmunities from '~bestiary/editor/ui/SelectDamageImmunities.vue';
-  import SelectResistence from '~bestiary/editor/ui/SelectResistence.vue';
-  import SelectVurnulability from '~bestiary/editor/ui/SelectVurnulability.vue';
+  import SelectResistance from '~bestiary/editor/ui/SelectResistence.vue';
+  import SelectVulnerability from '~bestiary/editor/ui/SelectVurnulability.vue';
   import { BeastSize } from '~bestiary/editor/ui/size';
   import { InputUrl } from '~ui/input';
   import { SelectSource, SelectTags } from '~ui/select';
@@ -86,6 +88,23 @@
 
         form.value.hit.formula = `${count}к${dieSize}${bonus > 0 ? ` + ${bonus}` : ''}`;
       }
+    },
+    { immediate: true },
+  );
+
+  watch(
+    () => form.value.experience.value,
+    (cr) => {
+      if (typeof cr !== 'number') return;
+
+      if (cr <= 4) form.value.proficiencyBonus = 2;
+      else if (cr <= 8) form.value.proficiencyBonus = 3;
+      else if (cr <= 12) form.value.proficiencyBonus = 4;
+      else if (cr <= 16) form.value.proficiencyBonus = 5;
+      else if (cr <= 20) form.value.proficiencyBonus = 6;
+      else if (cr <= 24) form.value.proficiencyBonus = 7;
+      else if (cr <= 28) form.value.proficiencyBonus = 8;
+      else form.value.proficiencyBonus = 9;
     },
     { immediate: true },
   );
@@ -277,17 +296,25 @@
     <BeastSkills
       v-model:model="form.skills"
       :abilities="form.abilities"
+      :proficiency-bonus="form.proficiencyBonus"
     />
 
     <ARow :gutter="16">
-      <SelectVurnulability v-model="form.resistance" />
+      <SelectVulnerability v-model="form.resistance" />
 
-      <SelectResistence v-model="form.resistance" />
+      <SelectResistance v-model="form.resistance" />
 
       <SelectDamageImmunities v-model="form.immunityToDamage" />
     </ARow>
 
     <SelectConditionImmunities v-model="form.immunityToCondition" />
+
+    <BeastSenses v-model="form.senses" />
+
+    <ChallengeRating
+      v-model="form.experience"
+      :proficiency-bonus="form.proficiencyBonus"
+    />
 
     <ADivider orientation="left">
       <ATypographyText

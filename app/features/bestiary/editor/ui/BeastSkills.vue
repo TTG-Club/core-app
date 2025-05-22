@@ -1,11 +1,14 @@
 <script setup lang="ts">
   import { computed } from 'vue';
 
+  import AbilityBonusModeSelect from '~bestiary/editor/ui/type/AbilityBonusModeSelect.vue';
+
   import type { CreateAbilities, CreateSkill } from '~bestiary/types';
 
   const props = defineProps<{
     model: Array<CreateSkill>;
     abilities?: CreateAbilities;
+    proficiencyBonus: number;
   }>();
 
   const emit = defineEmits<{
@@ -34,7 +37,6 @@
   } as const;
 
   type SkillKey = keyof typeof skillMap;
-
   type GroupedSkills = Record<string, SkillKey[]>;
 
   const abilityLabels: Record<string, string> = {
@@ -60,19 +62,6 @@
     return groups;
   });
 
-  const selected = computed({
-    get: () => props.model.map((s) => s.skill),
-    set: (value: string[]) => {
-      const result: CreateSkill[] = value.map((key) => ({
-        skill: key,
-        type: skillMap[key as SkillKey].ability,
-        text: '',
-      }));
-
-      emit('update:model', result);
-    },
-  });
-
   const abilitiesMap: Record<string, keyof CreateAbilities> = {
     STRENGTH: 'str',
     DEXTERITY: 'dex',
@@ -82,46 +71,85 @@
     CHARISMA: 'chr',
   };
 
-  function getModifier(ability: string): string {
-    const key = abilitiesMap[ability];
+  function getModifier(key: string): string {
+    const abilityKey = skillMap[key as SkillKey].ability;
+    const ability = abilitiesMap[abilityKey];
 
-    if (!key) return '';
+    if (!ability) return ''; // если нет подходящего ключа, возвращаем пустую строку
 
-    const val = props.abilities?.[key]?.value;
+    const base = props.abilities?.[ability]?.value ?? 10;
+    const mod = Math.floor((base - 10) / 2);
 
-    if (typeof val !== 'number') return '';
+    const multiplier =
+      props.model.find((s) => s.skill === key)?.multiplier ?? 0;
 
-    const mod = Math.floor((val - 10) / 2);
+    const bonus = props.proficiencyBonus * multiplier;
+    const total = mod + bonus;
 
-    return mod >= 0 ? `+${mod}` : `${mod}`;
+    return total >= 0 ? `+${total}` : `${total}`;
+  }
+
+  function updateSkill(key: string, multiplier: 0 | 1 | 2) {
+    const updated = [...props.model.filter((s) => s.skill !== key)];
+
+    const abilityKey = skillMap[key as SkillKey].ability;
+    const ability = abilitiesMap[abilityKey];
+
+    if (!ability) return;
+
+    const base = props.abilities?.[ability]?.value ?? 10;
+    const mod = Math.floor((base - 10) / 2);
+    const bonus = props.proficiencyBonus * multiplier;
+    const total = mod + bonus;
+    const text = total >= 0 ? `+${total}` : `${total}`;
+
+    updated.push({
+      skill: key,
+      multiplier,
+      text,
+    });
+
+    emit('update:model', updated);
   }
 </script>
 
 <template>
-  <ACheckboxGroup v-model:value="selected">
-    <ARow :gutter="24">
-      <ACol
-        v-for="(keys, ability) in groupedSkills"
-        :key="ability"
-        :span="8"
-      >
-        <strong>{{ abilityLabels[ability] ?? ability }}</strong>
+  <ARow :gutter="24">
+    <span>Бонус Мастерства: {{ props.proficiencyBonus }}</span>
+  </ARow>
 
+  <ARow :gutter="24">
+    <ACol
+      v-for="(keys, ability) in groupedSkills"
+      :key="ability"
+      :span="4"
+    >
+      <strong>{{ abilityLabels[ability] ?? ability }}</strong>
+
+      <AFlex
+        vertical
+        gap="8"
+      >
         <AFlex
-          vertical
+          v-for="key in keys"
+          :key="key"
+          align="center"
           gap="8"
         >
-          <ACheckbox
-            v-for="key in keys"
-            :key="key"
-            :value="key"
-          >
+          <AbilityBonusModeSelect
+            :model-value="
+              props.model.find((s) => s.skill === key)?.multiplier ?? 0
+            "
+            @update:model-value="(val: 0 | 1 | 2) => updateSkill(key, val)"
+          />
+
+          <span>
             <strong>{{ skillMap[key].label }}</strong>
 
-            <span>({{ getModifier(skillMap[key].ability) }})</span>
-          </ACheckbox>
+            <span>({{ getModifier(key) }})</span>
+          </span>
         </AFlex>
-      </ACol>
-    </ARow>
-  </ACheckboxGroup>
+      </AFlex>
+    </ACol>
+  </ARow>
 </template>
