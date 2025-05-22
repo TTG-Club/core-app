@@ -18,7 +18,7 @@
 
 <template>
   <div :class="$style.list">
-    <ADivider />
+    <ADivider :class="$style.divider" />
 
     <FilterList
       v-model="cloned"
@@ -31,5 +31,9 @@
   .list {
     display: flex;
     flex-direction: column;
+  }
+
+  .divider {
+    margin: 4px 0 12px 0;
   }
 </style>
