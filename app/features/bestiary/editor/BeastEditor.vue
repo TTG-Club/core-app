@@ -6,10 +6,12 @@
   } from '~/shared/utils';
   import { BeastType } from '~bestiary/editor/ui';
   import BeastAbilities from '~bestiary/editor/ui/BeastAbilities.vue';
+  import BeastAction from '~bestiary/editor/ui/BeastAction.vue';
   import BeastHit from '~bestiary/editor/ui/BeastHit.vue';
   import BeastSenses from '~bestiary/editor/ui/BeastSenses.vue';
   import BeastSkills from '~bestiary/editor/ui/BeastSkills.vue';
   import BeastSpeed from '~bestiary/editor/ui/BeastSpeed.vue';
+  import BeastTrait from '~bestiary/editor/ui/BeastTrait.vue';
   import ChallengeRating from '~bestiary/editor/ui/ChallengeRating.vue';
   import SelectAlignment from '~bestiary/editor/ui/SelectAlignments.vue';
   import SelectConditionImmunities from '~bestiary/editor/ui/SelectConditionImmunities.vue';
@@ -320,6 +322,28 @@
     <ChallengeRating
       v-model="form.experience"
       :proficiency-bonus="form.proficiencyBonus"
+    />
+
+    <BeastTrait v-model="form.traits" />
+
+    <BeastAction
+      v-model="form.actions"
+      name="actions"
+    />
+
+    <BeastAction
+      v-model="form.bonusActions"
+      name="bonusActions"
+    />
+
+    <BeastAction
+      v-model="form.reactions"
+      name="reactions"
+    />
+
+    <BeastAction
+      v-model="form.legendaryActions"
+      name="legendaryActions"
     />
 
     <ADivider orientation="left">
