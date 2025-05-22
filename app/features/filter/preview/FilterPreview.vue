@@ -18,7 +18,7 @@
 
 <template>
   <div :class="$style.list">
-    <span> Примененные фильтры: </span>
+    <ADivider />
 
     <FilterList
       v-model="cloned"
