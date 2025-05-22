@@ -136,14 +136,18 @@ export interface BeastSense {
 }
 
 export interface CreateTrait {
-  name: string;
-  english: string;
+  name: {
+    rus: string;
+    eng: string;
+  };
   description: string;
 }
 
 export interface CreateAction {
-  name: string;
-  english: string;
+  name: {
+    rus: string;
+    eng: string;
+  };
   description: string;
   attackType: string;
   sawingThrows: Array<SavingThrow>;
