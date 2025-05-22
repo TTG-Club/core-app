@@ -155,6 +155,14 @@ function useDictionaries() {
       method: 'get',
     });
 
+  const languages = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/languages', {
+      ...config,
+      method: 'get',
+    });
+
   return {
     sizes,
     magicSchools,
@@ -174,6 +182,7 @@ function useDictionaries() {
     damageTypes,
     conditions,
     challengeRating,
+    languages,
   };
 }
 

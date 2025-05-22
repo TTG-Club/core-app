@@ -14,6 +14,7 @@
   import SelectAlignment from '~bestiary/editor/ui/SelectAlignments.vue';
   import SelectConditionImmunities from '~bestiary/editor/ui/SelectConditionImmunities.vue';
   import SelectDamageImmunities from '~bestiary/editor/ui/SelectDamageImmunities.vue';
+  import SelectLanguages from '~bestiary/editor/ui/SelectLanguages.vue';
   import SelectResistance from '~bestiary/editor/ui/SelectResistence.vue';
   import SelectVulnerability from '~bestiary/editor/ui/SelectVurnulability.vue';
   import { BeastSize } from '~bestiary/editor/ui/size';
@@ -291,7 +292,10 @@
 
     <BeastSpeed v-model="form.speed" />
 
-    <BeastAbilities v-model="form.abilities" />
+    <BeastAbilities
+      v-model="form.abilities"
+      :proficiency-bonus="form.proficiencyBonus"
+    />
 
     <BeastSkills
       v-model:model="form.skills"
@@ -300,7 +304,7 @@
     />
 
     <ARow :gutter="16">
-      <SelectVulnerability v-model="form.resistance" />
+      <SelectVulnerability v-model="form.vulnerabilities" />
 
       <SelectResistance v-model="form.resistance" />
 
@@ -310,6 +314,8 @@
     <SelectConditionImmunities v-model="form.immunityToCondition" />
 
     <BeastSenses v-model="form.senses" />
+
+    <SelectLanguages v-model="form.languages" />
 
     <ChallengeRating
       v-model="form.experience"

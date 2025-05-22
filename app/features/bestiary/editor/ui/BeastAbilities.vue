@@ -1,152 +1,80 @@
 <script setup lang="ts">
-  import { getModifier } from '~/shared/utils';
+  import { Dictionaries } from '~/shared/api';
+  import { modifier } from '~/shared/utils';
+  import AbilityBonusModeSelect from '~bestiary/editor/ui/type/AbilityBonusModeSelect.vue';
 
   import type { CreateAbilities } from '~bestiary/types';
 
-  const model = defineModel<CreateAbilities>({
-    required: true,
+  const props = defineProps<{
+    proficiencyBonus: number;
+  }>();
+
+  const model = defineModel<CreateAbilities>({ required: true });
+
+  const keys = ['str', 'dex', 'con', 'int', 'wis', 'chr'] as const;
+
+  const abilityMap: Record<(typeof keys)[number], string> = {
+    str: 'STRENGTH',
+    dex: 'DEXTERITY',
+    con: 'CONSTITUTION',
+    int: 'INTELLIGENCE',
+    wis: 'WISDOM',
+    chr: 'CHARISMA',
+  };
+
+  const { data: abilities } = await useAsyncData('dictionaries-abilities', () =>
+    Dictionaries.abilities(),
+  );
+
+  const labels = computed(() => {
+    const raw = abilities.value ?? [];
+    const result: Partial<Record<(typeof keys)[number], string>> = {};
+
+    for (const [key, sysName] of Object.entries(abilityMap)) {
+      const entry = raw.find((a) => a.value === sysName);
+
+      result[key as (typeof keys)[number]] = entry?.label ?? key.toUpperCase();
+    }
+
+    return result as Record<(typeof keys)[number], string>;
   });
+
+  /**
+   * Расчёт модификатора с учётом бонуса мастерства и режима (0 | 1 | 2)
+   */
+  function calculateTotalModifier(baseValue: number, mod: number): string {
+    const abilityMod = modifier(baseValue);
+
+    const total = abilityMod + props.proficiencyBonus * mod;
+
+    return total >= 0 ? `+${total}` : `${total}`;
+  }
 </script>
 
 <template>
   <ARow :gutter="16">
-    <ACol :span="4">
+    <ACol
+      v-for="key in keys"
+      :key="key"
+      :span="4"
+    >
       <AFormItem
-        label="Сила"
-        :name="['abilities', 'str', 'value']"
+        :label="labels[key]"
+        :name="['abilities', key, 'value']"
       >
         <AInputNumber
-          v-model:value="model.str.value"
+          v-model:value="model[key].value"
           :precision="0"
           min="0"
           max="30"
-          :addon-after="getModifier(model.str.value)"
+          :addon-after="
+            calculateTotalModifier(model[key].value, model[key].multiplier)
+          "
         >
           <template #addonBefore>
-            <ASelect>
-              <ASelectOption>БМ</ASelectOption>
-
-              <ASelectOption>2БМ</ASelectOption>
-            </ASelect>
+            <AbilityBonusModeSelect v-model="model[key].multiplier" />
           </template>
         </AInputNumber>
-      </AFormItem>
-    </ACol>
-
-    <ACol :span="4">
-      <AFormItem
-        label="Ловкость"
-        :name="['speed', 'fly', 'value']"
-      >
-        <AInputNumber
-          v-model:value="model.dex.value"
-          :precision="0"
-          :addon-after="getModifier(model.dex.value)"
-          min="0"
-          max="30"
-        >
-          <template #addonBefore>
-            <ASelect>
-              <ASelectOption>БМ</ASelectOption>
-
-              <ASelectOption>2БМ</ASelectOption>
-            </ASelect>
-          </template></AInputNumber
-        >
-      </AFormItem>
-    </ACol>
-
-    <ACol :span="4">
-      <AFormItem
-        label="Телосложение"
-        :name="['speed', 'climb', 'value']"
-      >
-        <AInputNumber
-          v-model:value="model.con.value"
-          :addon-after="getModifier(model.con.value)"
-          :precision="0"
-          min="0"
-          max="30"
-        >
-          <template #addonBefore>
-            <ASelect>
-              <ASelectOption>БМ</ASelectOption>
-
-              <ASelectOption>2БМ</ASelectOption>
-            </ASelect>
-          </template></AInputNumber
-        >
-      </AFormItem>
-    </ACol>
-  </ARow>
-
-  <ARow :gutter="16">
-    <ACol :span="4">
-      <AFormItem
-        label="Интеллект"
-        :name="['speed', 'swim', 'value']"
-      >
-        <AInputNumber
-          v-model:value="model.int.value"
-          :addon-after="getModifier(model.int.value)"
-          :precision="0"
-          min="0"
-          max="30"
-        >
-          <template #addonBefore>
-            <ASelect>
-              <ASelectOption>БМ</ASelectOption>
-
-              <ASelectOption>2БМ</ASelectOption>
-            </ASelect>
-          </template></AInputNumber
-        >
-      </AFormItem>
-    </ACol>
-
-    <ACol :span="4">
-      <AFormItem
-        label="Мудрость"
-        :name="['speed', 'swim', 'value']"
-      >
-        <AInputNumber
-          v-model:value="model.wis.value"
-          :addon-after="getModifier(model.wis.value)"
-          :precision="0"
-          min="0"
-          max="30"
-        >
-          <template #addonBefore>
-            <ASelect>
-              <ASelectOption>БМ</ASelectOption>
-
-              <ASelectOption>2БМ</ASelectOption>
-            </ASelect>
-          </template></AInputNumber
-        >
-      </AFormItem>
-    </ACol>
-
-    <ACol :span="4">
-      <AFormItem
-        label="Харизма"
-        :name="['speed', 'swim', 'value']"
-      >
-        <AInputNumber
-          v-model:value="model.chr.value"
-          :addon-after="getModifier(model.chr.value)"
-          :precision="0"
-          min="0"
-          max="30"
-        >
-          <template #addonBefore>
-            <ASelect>
-              <ASelectOption>БМ</ASelectOption>
-
-              <ASelectOption>2БМ</ASelectOption>
-            </ASelect>
-          </template></AInputNumber
-        >
       </AFormItem>
     </ACol>
   </ARow>
