@@ -123,6 +123,46 @@ function useDictionaries() {
       method: 'get',
     });
 
+  const alignments = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/alignments', {
+      ...config,
+      method: 'get',
+    });
+
+  const damageTypes = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/damage/types', {
+      ...config,
+      method: 'get',
+    });
+
+  const conditions = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/conditions', {
+      ...config,
+      method: 'get',
+    });
+
+  const challengeRating = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/cr', {
+      ...config,
+      method: 'get',
+    });
+
+  const languages = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/languages', {
+      ...config,
+      method: 'get',
+    });
+
   return {
     sizes,
     magicSchools,
@@ -138,6 +178,11 @@ function useDictionaries() {
     skills,
     magicItemCategory,
     rarity,
+    alignments,
+    damageTypes,
+    conditions,
+    challengeRating,
+    languages,
   };
 }
 

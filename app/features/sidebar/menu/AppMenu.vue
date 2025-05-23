@@ -75,7 +75,7 @@
           icon="menu/filled/workshop"
           title="Мастерская"
           :items="[
-            { href: '/', label: 'Бестиарий', disabled: true },
+            { href: '/bestiary', label: 'Бестиарий', disabled: false },
             { href: '/glossary', label: 'Глоссарий', disabled: false },
             { href: '/', label: 'Источники', disabled: true },
           ]"
