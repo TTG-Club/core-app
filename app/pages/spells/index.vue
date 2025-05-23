@@ -1,10 +1,12 @@
 <script setup lang="ts">
+  import { useFilter } from '~filter/composable';
+  import { FilterControls } from '~filter/controls';
   import { SpellLegend } from '~spells/legend';
   import { SpellLink } from '~spells/link';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
-  import type { SpellLinkResponse } from '~/shared/types';
+  import type { SearchBody, SpellLinkResponse } from '~/shared/types';
 
   useSeoMeta({
     title: 'Заклинания [Spells]',
@@ -12,6 +14,22 @@
   });
 
   const search = ref<string>('');
+
+  const {
+    filter,
+    isPending: isFilterPending,
+    isShowedPreview: isFilterPreviewShowed,
+  } = await useFilter('spells-filters', '/api/v2/spells/filters');
+
+  const searchBody = computed(() => {
+    const body: SearchBody = {};
+
+    if (filter) {
+      body.filter = filter.value;
+    }
+
+    return Object.keys(body).length ? body : undefined;
+  });
 
   const {
     data: spells,
@@ -24,46 +42,35 @@
       $fetch<Array<SpellLinkResponse>>('/api/v2/spells/search', {
         method: 'POST',
         params: {
-          query: search.value || undefined,
+          query:
+            search.value && search.value.length >= 3 ? search.value : undefined,
         },
+        body: searchBody.value,
       }),
-    { deep: false },
+    {
+      deep: false,
+      watch: [search, filter],
+    },
   );
-
-  const onSearch = useDebounceFn(() => {
-    if (search.value && search.value.length < 3) {
-      return;
-    }
-
-    refresh();
-  }, 1000);
 </script>
 
 <template>
   <PageContainer fixed-header>
     <template #header>
-      <PageHeader title="Заклинания">
-        <template #filter>
-          <AButton
-            :style="{ boxShadow: 'none' }"
-            type="primary"
-            disabled
-          >
-            Фильтры
-          </AButton>
+      <PageHeader title="Заклинания" />
+    </template>
 
-          <AInput
-            v-model:value="search"
-            placeholder="Введите текст..."
-            allow-clear
-            @change="onSearch"
-          />
-        </template>
-
+    <template #controls>
+      <FilterControls
+        v-model:search="search"
+        v-model:filter="filter"
+        :is-pending="isFilterPending"
+        :show-preview="isFilterPreviewShowed"
+      >
         <template #legend>
           <SpellLegend />
         </template>
-      </PageHeader>
+      </FilterControls>
     </template>
 
     <template #default>

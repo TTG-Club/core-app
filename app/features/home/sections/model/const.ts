@@ -19,15 +19,21 @@ export const CARD_LINKS = [
   },
   {
     name: 'Предыстории',
-    url: '/',
+    url: '/backgrounds',
     img: '/s3/sections/home-link/button_backgrounds.webp',
-    disable: true,
+    disable: false,
   },
   {
     name: 'Заклинания',
     url: '/spells',
     img: '/s3/sections/home-link/button_spells.webp',
     disable: false,
+  },
+  {
+    name: 'В разработке',
+    url: '/',
+    img: '/s3/sections/home-link/button_development.webp',
+    disable: true,
   },
   {
     name: 'Снаряжение',
@@ -37,9 +43,9 @@ export const CARD_LINKS = [
   },
   {
     name: 'Магические предметы',
-    url: '/',
+    url: '/magic-items',
     img: '/s3/sections/home-link/button_items_magic.webp',
-    disable: true,
+    disable: false,
   },
   {
     name: 'Бестиарий',
@@ -49,8 +55,14 @@ export const CARD_LINKS = [
   },
   {
     name: 'Глоссарий правил',
-    url: '/',
+    url: '/glossary',
     img: '/s3/sections/home-link/button_screens.webp',
+    disable: false,
+  },
+  {
+    name: 'В разработке',
+    url: '/',
+    img: '/s3/sections/home-link/button_development.webp',
     disable: true,
   },
   {

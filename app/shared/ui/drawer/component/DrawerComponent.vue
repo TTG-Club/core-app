@@ -89,5 +89,12 @@
         <slot name="default" />
       </DrawerBody>
     </template>
+
+    <template
+      v-if="$slots.footer"
+      #footer
+    >
+      <slot name="footer" />
+    </template>
   </ADrawer>
 </template>

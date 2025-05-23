@@ -2,9 +2,24 @@
 import { fileURLToPath, URL } from 'node:url';
 
 import bytes from 'bytes';
+import ms from 'ms';
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
 
-const appName = 'TTG Club';
+const application = {
+  name: {
+    short: 'TTG',
+    base: 'TTG Club',
+    long: 'TTG Club Oнлайн-справочник',
+  },
+  description:
+    'TTG Club — сайт, посвященный DnD 5-й редакции. Тут можно найти: расы, происхождения, классы, заклинания, бестиарий, снаряжение, магические предметы и инструменты для облегчения игры как игрокам, так и мастерам — все в одном месте.',
+  favicons: [48, 72, 96, 128, 192, 384, 512],
+  themeColor: {
+    light: '#fdfaf9',
+    dark: '#0d1a22',
+    svifty7: '#1f1f22',
+  },
+};
 
 export default defineNuxtConfig({
   future: {
@@ -21,34 +36,38 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
-    api: {
-      url: process.env.NUXT_API_URL,
-      token: process.env.NUXT_API_TOKEN,
-      secret: process.env.NUXT_API_SECRET,
-    },
-    s3: {
-      endpoint: process.env.NUXT_S3_ENDPOINT,
-      region: process.env.NUXT_S3_REGION,
-      bucket: process.env.NUXT_S3_BUCKET,
-      accessKeyId: process.env.NUXT_S3_ACCESS_KEY_ID,
-      secretAccessKey: process.env.NUXT_S3_SECRET_ACCESS_KEY,
+    public: {
+      pwa: application,
     },
     site: {
-      url: process.env.NUXT_SITE_URL,
-      name: `${appName} Oнлайн-справочник`,
-      description: `${appName} — сайт, посвященный DnD 5-й редакции. Тут можно найти: расы, происхождения, классы, заклинания, бестиарий, снаряжение, магические предметы и инструменты для облегчения игры как игрокам, так и мастерам — все в одном месте.`,
+      url: '',
+      name: application.name.long,
+      description: application.description,
       defaultLocale: 'ru',
-      indexable: process.env.NUXT_SITE_INDEXABLE === 'true',
+      indexable: false,
     },
   },
 
   security: {
     headers: {
       contentSecurityPolicy: {
-        'img-src': false,
-        'media-src': false,
+        'img-src': ["'self'", 'https:', 'data:'],
+        'media-src': ["'self'", 'https:', 'data:'],
       },
+      strictTransportSecurity: {
+        preload: true,
+        maxAge: 31536000,
+        includeSubdomains: true,
+      },
+      xContentTypeOptions: 'nosniff',
       xXSSProtection: '1; mode=block',
+      referrerPolicy: 'strict-origin-when-cross-origin',
+      permissionsPolicy: {
+        geolocation: [],
+        microphone: [],
+        camera: [],
+        fullscreen: ['self'],
+      },
     },
 
     requestSizeLimiter: {
@@ -61,39 +80,18 @@ export default defineNuxtConfig({
   app: {
     head: {
       charset: 'utf-8',
-      link: [
-        {
-          rel: 'manifest',
-          href: '/manifest.json',
-          crossorigin: 'anonymous',
-        },
-        {
-          rel: 'preconnect',
-          href: 'https://img.ttg.club',
-          crossorigin: '',
-        },
-        {
-          rel: 'dns-prefetch',
-          href: 'https://img.ttg.club',
-          crossorigin: '',
-        },
-        {
-          type: 'image/svg+xml',
-          href: '/favicon.svg',
-        },
-        {
-          rel: 'icon',
-          type: 'image/png',
-          href: '/favicon.png',
-        },
-        ...[48, 72, 96, 144, 192, 256, 384, 512].map((size) => ({
-          sizes: `${size}x${size}`,
-          href: `/icons/${size}.png`,
-        })),
-      ],
       titleTemplate: '%s %separator %siteName',
-      viewport:
-        'viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no',
+      viewport: 'width=device-width, initial-scale=1.0, viewport-fit=cover',
+      meta: [
+        {
+          name: 'mobile-web-app-capable',
+          content: 'yes',
+        },
+        {
+          name: 'apple-mobile-web-app-status-bar-style',
+          content: 'default',
+        },
+      ],
     },
     rootAttrs: {
       id: 'ttg-club',
@@ -127,7 +125,6 @@ export default defineNuxtConfig({
       '/search',
       '/profile',
       '/api',
-      '/auth',
       '/workshop/*',
     ],
   },
@@ -176,6 +173,30 @@ export default defineNuxtConfig({
   nitro: {
     experimental: {
       openAPI: true,
+    },
+
+    // TODO: Поиграть с лимитами в будущем, если не будет хватать
+    routeRules: {
+      '/api/**': {
+        security: {
+          enabled: true,
+          rateLimiter: {
+            tokensPerInterval: 50,
+            interval: ms('1m'),
+            headers: true,
+          },
+        },
+      },
+      '/s3/**': {
+        security: {
+          enabled: true,
+          rateLimiter: {
+            tokensPerInterval: 50,
+            interval: ms('1m'),
+            headers: true,
+          },
+        },
+      },
     },
   },
 

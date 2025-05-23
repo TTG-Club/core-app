@@ -119,8 +119,6 @@ $typography: '.ant-typography';
     flex-direction: column;
     align-items: center;
     justify-content: center;
-
-    min-height: 100vh;
   }
 
   &-input {
@@ -148,6 +146,14 @@ $typography: '.ant-typography';
 
     #{$skeleton}-header {
       padding: 0;
+    }
+  }
+
+  &-tag {
+    &#{$root}-tooltip,
+    &#{$root}-tooltip-open
+    {
+      font-size: 12px;
     }
   }
 }

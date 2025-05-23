@@ -13,6 +13,9 @@
   } from '~/shared/utils';
   import { InputUrl } from '~ui/input';
   import {
+    SelectAbilities,
+    SelectDamageType,
+    SelectHealType,
     SelectMagicSchool,
     SelectSource,
     SelectSpecies,
@@ -209,6 +212,52 @@
     <SpellComponents v-model="form.components" />
 
     <SpellDurations v-model="form.duration" />
+
+    <ADivider orientation="left">
+      <ATypographyText
+        type="secondary"
+        content="Дополнительные фильтры"
+        strong
+      />
+    </ADivider>
+
+    <ARow :gutter="16">
+      <ACol :span="8">
+        <AFormItem
+          label="Типы урона"
+          :name="['damageType']"
+        >
+          <SelectDamageType
+            v-model="form.damageType"
+            multiple
+          />
+        </AFormItem>
+      </ACol>
+
+      <ACol :span="8">
+        <AFormItem
+          label="Спасброски"
+          :name="['savingThrow']"
+        >
+          <SelectAbilities
+            v-model="form.savingThrow"
+            multiple
+          />
+        </AFormItem>
+      </ACol>
+
+      <ACol :span="8">
+        <AFormItem
+          label="Типы лечения"
+          :name="['healingType']"
+        >
+          <SelectHealType
+            v-model="form.healingType"
+            multiple
+          />
+        </AFormItem>
+      </ACol>
+    </ARow>
 
     <ADivider orientation="left">
       <ATypographyText

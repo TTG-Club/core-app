@@ -1,7 +1,8 @@
 html.dark {
-  --color-bg-main: #131A20;
+  --color-bg-main: #0d1a22;
+  --color-bg-main-gradient: linear-gradient(to bottom, #0d1a22 0%, #0d1a22 40%, #12212c 100%);
   --color-bg-secondary: #19222A;
-  --color-bg-menu: linear-gradient(135deg, #23323bc7, #19141fc7);
+  --color-bg-menu: linear-gradient(135deg, #23323bc7, rgba(11, 30, 43, 0.87));
 
   --color-text: #d9d9d9;
   --color-text-title: #ffffff;
@@ -11,6 +12,7 @@ html.dark {
   --color-hover: rgba(255, 255, 255, 0.05);
   --color-border: rgba(255, 255, 255, 0.08);
   --color-primary: #447cc7;
+  --color-white: #ffffff;
 
   // Badge
   --color-badge-hb: #405710;
@@ -30,7 +32,8 @@ html.dark {
 }
 
 html.light {
-  --color-bg-main: #fdfaf9;
+  --color-bg-main: #F4EDE5;
+  --color-bg-main-gradient: linear-gradient(to bottom, #F4EDE5 0%, #F4EDE5 40%, #f2e8d5 100%);
   --color-bg-secondary: #dceee5;
   --color-bg-menu: linear-gradient(135deg, #f7f2c5c7, #f7f1e5c7);
 
@@ -44,6 +47,7 @@ html.light {
   --color-hover: rgba(00, 00, 00, 0.08);
   --color-border: rgba(0, 0, 0, 0.08);
   --color-primary: #5e5446;
+  --color-white: #ffffff;
 
   // Badge
   --color-badge-hb: #97ca28;
@@ -85,6 +89,7 @@ html {
 
 html.svifty7 {
   --color-bg-main: #1F1F22;
+  --color-bg-main-gradient: linear-gradient(to bottom, #1F1F22 0%, #1F1F22 40%, #2B2B2B 100%);
   --color-bg-secondary: #2C2C30;
   --color-bg-menu: linear-gradient(135deg, #252528c7, #1F1F22c7);
 
@@ -99,6 +104,7 @@ html.svifty7 {
   --color-hover: #F7F7F718;
   --color-border: #74748040;
   --color-primary: #A54D42;
+  --color-white: #ffffff;
 
   // Badge
   --color-badge-hb: #405710;

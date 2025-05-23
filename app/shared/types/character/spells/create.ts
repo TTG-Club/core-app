@@ -12,6 +12,9 @@ export interface SpellCreate {
   components: SpellComponents; // компоненты
   affiliations: SpellAffiliation; // привязка заклинания к сущностям
   tags: Array<string>; // теги
+  savingThrow: Array<string> | undefined;
+  healingType: Array<string> | undefined;
+  damageType: Array<string> | undefined;
 }
 
 export interface SpellName {

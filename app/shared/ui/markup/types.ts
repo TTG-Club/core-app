@@ -21,10 +21,20 @@ export enum EmptyMarker {
   Break = 'break',
 }
 
+export enum FeatureMarker {
+  Spell = 'spell',
+  Feat = 'feat',
+  Background = 'background',
+  MagicItem = 'magicItem',
+  Bestiary = 'bestiary',
+  Glossary = 'glossary',
+}
+
 export const Marker = {
   ...TextMarker,
   ...RichMarker,
   ...EmptyMarker,
+  ...FeatureMarker,
 } as const;
 
 export const TextWithMarker = {
@@ -38,15 +48,23 @@ export type TextMarkerName = (typeof TextWithMarker)[keyof typeof TextMarker];
 
 export type RichMarkerName = (typeof TextWithMarker)[keyof typeof RichMarker];
 
+export type FeatureMarkerName =
+  (typeof TextWithMarker)[keyof typeof FeatureMarker];
+
 export type EmptyMarkerName = (typeof TextWithMarker)[keyof typeof EmptyMarker];
 
-export type MarkerName = TextMarkerName | RichMarkerName | EmptyMarkerName;
+export type MarkerName =
+  | TextMarkerName
+  | RichMarkerName
+  | EmptyMarkerName
+  | FeatureMarkerName;
 
 export type TextWithMarkerName =
   | SimpleTextName
   | TextMarkerName
   | RichMarkerName
-  | EmptyMarkerName;
+  | EmptyMarkerName
+  | FeatureMarkerName;
 
 // Типы данных для параметров атрибутов.
 export type ParamValue = string | number | boolean | null;
@@ -55,7 +73,12 @@ export type ParamValue = string | number | boolean | null;
 export type MarkerAttributes = Record<string, ParamValue>;
 
 // Типы узлов TipTap.
-export type MarkerNode = SimpleTextNode | EmptyNode | TextNode | RichNode;
+export type MarkerNode =
+  | SimpleTextNode
+  | EmptyNode
+  | TextNode
+  | RichNode
+  | FeatureLinkNode;
 
 export interface SimpleTextNode {
   type: SimpleText.Text;
@@ -80,6 +103,25 @@ export type RichNode = RichNodes[RichMarker];
 
 export interface LinkNode {
   type: RichMarker.Link;
+  attrs: {
+    url?: string;
+  };
+  content: Array<MarkerNode>;
+}
+
+export type FeatureNodes = {
+  [FeatureMarker.Spell]: FeatureNode;
+  [FeatureMarker.Background]: FeatureNode;
+  [FeatureMarker.Feat]: FeatureNode;
+  [FeatureMarker.MagicItem]: FeatureNode;
+  [FeatureMarker.Bestiary]: FeatureNode;
+  [FeatureMarker.Glossary]: FeatureNode;
+};
+
+export type FeatureLinkNode = FeatureNodes[FeatureMarker];
+
+export interface FeatureNode {
+  type: FeatureMarker;
   attrs: {
     url?: string;
   };

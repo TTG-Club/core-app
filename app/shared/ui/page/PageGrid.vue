@@ -13,6 +13,30 @@
 </template>
 
 <style module lang="scss">
+  @mixin create-grid() {
+    @for $cols from 1 through 5 {
+      &-#{$cols} {
+        grid-template-columns: repeat(1, 100%);
+
+        @if $cols > 1 {
+          @for $col from 2 through $cols {
+            $cell: 244px;
+            $gap: 12px;
+
+            $container: $col * $cell + $gap * ($col - 1);
+
+            @container (width >= #{$container}) {
+              grid-template-columns: repeat(
+                $col,
+                calc((100% - $gap * ($col - 1)) / $col)
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+
   .container {
     container-type: inline-size;
     width: 100%;
@@ -20,47 +44,11 @@
 
   .grid {
     display: grid;
-    grid-gap: 8px;
+    grid-gap: 12px;
     width: 100%;
 
     &.cols {
-      &-1,
-      &-2,
-      &-3,
-      &-4,
-      &-5 {
-        grid-template-columns: repeat(1, 100%);
-      }
-
-      &-2,
-      &-3,
-      &-4,
-      &-5 {
-        @container (width >= 528px) {
-          grid-template-columns: repeat(2, calc(50% - 4px));
-        }
-      }
-
-      &-3,
-      &-4,
-      &-5 {
-        @container (width >= 812px) {
-          grid-template-columns: repeat(3, calc((100% - 8px * 2) / 3));
-        }
-      }
-
-      &-4,
-      &-5 {
-        @container (width >= 1024px) {
-          grid-template-columns: repeat(4, calc((100% - 8px * 3) / 4));
-        }
-      }
-
-      &-5 {
-        @container (width >= 1272px) {
-          grid-template-columns: repeat(5, calc((100% - 8px * 4) / 5));
-        }
-      }
+      @include create-grid;
     }
   }
 </style>

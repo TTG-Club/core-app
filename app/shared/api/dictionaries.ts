@@ -26,6 +26,22 @@ function useDictionaries() {
       method: 'get',
     });
 
+  const damageTypes = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/damage/types', {
+      ...config,
+      method: 'get',
+    });
+
+  const healTypes = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/heal/types', {
+      ...config,
+      method: 'get',
+    });
+
   const rangeTypes = <R extends NitroFetchRequest>(
     config?: Omit<NitroFetchOptions<R>, 'method'>,
   ) =>
@@ -75,15 +91,53 @@ function useDictionaries() {
       method: 'get',
     });
 
+  const abilities = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/abilities', {
+      ...config,
+      method: 'get',
+    });
+
+  const skills = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/skills', {
+      ...config,
+      method: 'get',
+    });
+
+  const magicItemCategory = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/magic-items/category', {
+      ...config,
+      method: 'get',
+    });
+
+  const rarity = <R extends NitroFetchRequest>(
+    config?: Omit<NitroFetchOptions<R>, 'method'>,
+  ) =>
+    $fetch<Array<SelectOption>>('/api/v2/dictionaries/rarity', {
+      ...config,
+      method: 'get',
+    });
+
   return {
     sizes,
     magicSchools,
     creatureTypes,
+    damageTypes,
+    healTypes,
     rangeTypes,
     timeUnits,
     durationUnits,
     comparisonOperators,
     featCategories,
+    abilities,
+    skills,
+    magicItemCategory,
+    rarity,
   };
 }
 

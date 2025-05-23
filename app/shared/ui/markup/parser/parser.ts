@@ -1,11 +1,17 @@
 import { MAX_STRING_LENGTH, MAX_DEPTH, LEADING_CHARACTER } from '../consts';
 import { SimpleText, Marker } from '../types';
-import { isEmptyMarker, isRichMarker, isTextMarker } from '../utils';
+import {
+  isEmptyMarker,
+  isRichMarker,
+  isTextMarker,
+  isFeatureMarker,
+} from '../utils';
 
 import type {
   MarkerNode,
   TextNode,
   EmptyNode,
+  FeatureLinkNode,
   MarkerAttributes,
   SimpleTextNode,
   ParamValue,
@@ -14,6 +20,7 @@ import type {
   RichMarker,
   EmptyMarker,
   TextMarker,
+  FeatureMarker,
 } from '../types';
 
 // Разрешенные алиасы для маркеров
@@ -27,6 +34,12 @@ const MARKERS: { [key: string]: MarkerName } = {
   strikethrough: Marker.Strikethrough,
   s: Marker.Strikethrough,
   link: Marker.Link,
+  spell: Marker.Spell,
+  feat: Marker.Feat,
+  background: Marker.Background,
+  magicItem: Marker.MagicItem,
+  bestiary: Marker.Bestiary,
+  glossary: Marker.Glossary,
   br: Marker.Break,
   break: Marker.Break,
   sup: Marker.Superscript,
@@ -85,6 +98,10 @@ function convertMarker(
     return convertRichMarker(marker, textWithParams, depth);
   }
 
+  if (isFeatureMarker(marker)) {
+    return convertFeatureMarker(marker, textWithParams, depth);
+  }
+
   if (isEmptyMarker(marker)) {
     return convertEmptyMarker(marker);
   }
@@ -128,6 +145,26 @@ function convertRichMarker(
   textWithParams: string,
   depth: number,
 ): RichNode {
+  const { text, params } = splitByPipeBase(textWithParams);
+
+  if (!text) {
+    throw new Error(
+      `[Markup] ${marker.charAt(0).toUpperCase() + marker.slice(1)} marker must have text`,
+    );
+  }
+
+  return {
+    type: marker,
+    attrs: splitAttrs(params),
+    content: recursiveParse(text, depth),
+  };
+}
+
+function convertFeatureMarker(
+  marker: FeatureMarker,
+  textWithParams: string,
+  depth: number,
+): FeatureLinkNode {
   const { text, params } = splitByPipeBase(textWithParams);
 
   if (!text) {

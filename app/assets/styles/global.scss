@@ -78,7 +78,6 @@ html {
   &[style*="overflow:hidden"],
   &[style*="overflow: hidden"] {
       padding-right: var(--scrollbar-width);
-      //padding-right: 16px;
   }
 }
 
@@ -94,6 +93,8 @@ body {
 
   background: var(--color-bg-main);
   background-color: var(--color-bg-main);
+  background-image: var(--color-bg-main-gradient);
+  background-attachment: fixed;
   outline: none;
 
   transition: background-color ease-in-out 0.2s,

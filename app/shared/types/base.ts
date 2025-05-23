@@ -1,3 +1,5 @@
+import type { Filter } from '~filter/types';
+
 export interface NameResponse {
   rus: string;
   eng: string;
@@ -15,4 +17,8 @@ export interface SourceResponse {
 export interface TimestampResponse {
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SearchBody {
+  filter?: Filter;
 }

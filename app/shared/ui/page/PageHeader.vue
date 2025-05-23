@@ -26,6 +26,7 @@
 
   const dayjs = useDayjs();
   const { copy } = useCopy();
+  const navbarHidden = useState('navbar-hidden');
 
   function handleCopy(text: string) {
     if (!props.copyTitle) {
@@ -82,7 +83,11 @@
       <ClientOnly>
         <AFlex
           v-if="$slots.actions"
-          :class="$style.actions"
+          :class="[
+            $style.actions,
+            $style.fixed,
+            { [$style.withoutNavbar]: navbarHidden },
+          ]"
           :gap="4"
         >
           <slot name="actions" />
@@ -104,7 +109,7 @@
 
       <AFlex
         v-if="source || formattedDateTime"
-        :class="$style.info"
+        :class="[$style.info, $style.fixed]"
         :gap="4"
       >
         <template v-if="formattedDateTime">
@@ -121,24 +126,6 @@
         </template>
       </AFlex>
     </div>
-
-    <ClientOnly>
-      <AFlex
-        v-if="$slots.filter"
-        :gap="8"
-      >
-        <slot name="filter" />
-      </AFlex>
-
-      <AFlex
-        v-if="$slots.legend"
-        justify="flex-end"
-        align="center"
-        gap="8"
-      >
-        <slot name="legend" />
-      </AFlex>
-    </ClientOnly>
   </div>
 </template>
 
@@ -190,6 +177,43 @@
   .subtitle {
     &.copy {
       cursor: pointer;
+    }
+  }
+
+  .actions {
+    &.fixed {
+      position: fixed;
+      right: 8px;
+      bottom: var(--navbar-height);
+
+      display: flex;
+
+      margin-bottom: 8px;
+      padding: 4px;
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+
+      background: var(--color-bg-main);
+
+      transition: bottom ease-in-out 0.2s;
+
+      &.withoutNavbar {
+        bottom: 0;
+        transition: bottom ease-in-out 0.2s;
+      }
+
+      @include media-min($md) {
+        position: initial;
+        //bottom: var(--navbar-height);
+        //left: 8px;
+
+        margin-bottom: initial;
+        padding: initial;
+        border: initial;
+        border-radius: initial;
+
+        background: initial;
+      }
     }
   }
 

@@ -136,6 +136,9 @@
         lineages: [],
       },
       tags: [],
+      savingThrow: [],
+      healingType: [],
+      damageType: [],
     };
   }
 

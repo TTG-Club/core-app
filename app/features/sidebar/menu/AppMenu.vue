@@ -53,7 +53,7 @@
             { href: '/', label: 'Классы', disabled: true },
             { href: '/species', label: 'Виды' },
             { href: '/feats', label: 'Черты', disabled: false },
-            { href: '/', label: 'Предыстории', disabled: true },
+            { href: '/backgrounds', label: 'Предыстории', disabled: false },
             { href: '/spells', label: 'Заклинания' },
           ]"
         />
@@ -63,7 +63,11 @@
           title="Предметы"
           :items="[
             { href: '/', label: 'Снаряжение', disabled: true },
-            { href: '/', label: 'Магические предметы', disabled: true },
+            {
+              href: '/magic-items',
+              label: 'Магические предметы',
+              disabled: false,
+            },
           ]"
         />
 
@@ -72,7 +76,7 @@
           title="Мастерская"
           :items="[
             { href: '/', label: 'Бестиарий', disabled: true },
-            { href: '/', label: 'Справочник', disabled: true },
+            { href: '/glossary', label: 'Глоссарий', disabled: false },
             { href: '/', label: 'Источники', disabled: true },
           ]"
         />
