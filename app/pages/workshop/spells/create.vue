@@ -40,7 +40,6 @@
       lineages: [],
     },
     tags: [],
-    upcastable: false,
     savingThrow: [],
     healingType: [],
     damageType: [],

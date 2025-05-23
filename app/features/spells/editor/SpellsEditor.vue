@@ -224,15 +224,6 @@
     <ARow :gutter="16">
       <ACol :span="6">
         <AFormItem
-          label="Использование более высокой ячейкой"
-          :name="['upcastable']"
-        >
-          <ACheckbox v-model:checked="form.upcastable"> Возможно </ACheckbox>
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="6">
-        <AFormItem
           label="Типы урона"
           :name="['damageType']"
         >
