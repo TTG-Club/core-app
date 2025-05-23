@@ -222,7 +222,7 @@
     </ADivider>
 
     <ARow :gutter="16">
-      <ACol :span="6">
+      <ACol :span="8">
         <AFormItem
           label="Типы урона"
           :name="['damageType']"
@@ -234,7 +234,7 @@
         </AFormItem>
       </ACol>
 
-      <ACol :span="6">
+      <ACol :span="8">
         <AFormItem
           label="Спасброски"
           :name="['savingThrow']"
@@ -246,7 +246,7 @@
         </AFormItem>
       </ACol>
 
-      <ACol :span="6">
+      <ACol :span="8">
         <AFormItem
           label="Типы лечения"
           :name="['healingType']"
