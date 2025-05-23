@@ -12,7 +12,6 @@ export interface SpellCreate {
   components: SpellComponents; // компоненты
   affiliations: SpellAffiliation; // привязка заклинания к сущностям
   tags: Array<string>; // теги
-  upcastable: boolean;
   savingThrow: Array<string> | undefined;
   healingType: Array<string> | undefined;
   damageType: Array<string> | undefined;
