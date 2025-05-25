@@ -52,7 +52,7 @@
 <template>
   <ARow
     v-for="(size, index) in sizes"
-    :key="`${index}-${Date.now()}`"
+    :key="index"
     :gutter="16"
   >
     <ACol :span="6">

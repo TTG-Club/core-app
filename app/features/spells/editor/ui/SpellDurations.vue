@@ -103,7 +103,7 @@
 
   <ARow
     v-for="(duration, index) in durations"
-    :key="`${index}-${Date.now()}`"
+    :key="index"
     :gutter="16"
   >
     <ACol :span="4">
