@@ -52,7 +52,7 @@
 
   <ARow
     v-for="(item, index) in model.languages"
-    :key="`${Date.now()}-${index}`"
+    :key="index"
     :gutter="16"
   >
     <ACol :span="8">
