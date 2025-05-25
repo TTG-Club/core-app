@@ -1,4 +1,5 @@
 import type { NameResponse, SourceResponse } from '~/shared/types';
+import type { EditorBaseInfoState } from '~ui/editor';
 
 export interface SpeciesLinkResponse {
   url: string;
@@ -35,17 +36,7 @@ export interface SpeciesDetailResponse {
   updatedAt: string;
 }
 
-export interface SpeciesCreate {
-  url: string;
-  name: {
-    rus: string;
-    eng: string;
-    alt: Array<string>;
-  };
-  source: {
-    url: string | undefined;
-    page: number | undefined;
-  };
+export interface SpeciesCreate extends EditorBaseInfoState {
   description: string;
   image: string | undefined;
   linkImage: string | undefined;
@@ -58,13 +49,7 @@ export interface SpeciesCreate {
       to: number | undefined;
     }>;
     type: string | undefined;
-    speed: {
-      base: number;
-      fly: number | undefined;
-      climb: number | undefined;
-      swim: number | undefined;
-      hover: boolean;
-    };
+    speed: SpeciesCreateSpeed;
   };
   features: Array<{
     name: {
@@ -73,5 +58,12 @@ export interface SpeciesCreate {
     };
     description: string;
   }>;
-  tags: Array<string>;
+}
+
+export interface SpeciesCreateSpeed {
+  base: number;
+  fly: number | undefined;
+  climb: number | undefined;
+  swim: number | undefined;
+  hover: boolean;
 }

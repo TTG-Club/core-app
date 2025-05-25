@@ -2,18 +2,18 @@
   import { useDrawer } from '~/shared/composables';
   import { SmallLink } from '~ui/link';
 
-  import type { BeastLinkResponse } from '~/features/bestiary/types';
+  import type { CreatureLinkResponse } from '~/features/bestiary/types';
 
   const { bestiary } = defineProps<{
-    bestiary: BeastLinkResponse;
+    bestiary: CreatureLinkResponse;
   }>();
 
-  const { open } = useDrawer('beastiary-detail');
+  const { open } = useDrawer('bestiary-detail');
 </script>
 
 <template>
   <SmallLink
-    :to="{ name: 'beastiary-url', params: { url: bestiary.url } }"
+    :to="{ name: 'bestiary-url', params: { url: bestiary.url } }"
     :title="`${bestiary.name.rus} [${bestiary.name.eng}]`"
     :group="bestiary.source.group"
     @open-drawer="open(bestiary.url)"

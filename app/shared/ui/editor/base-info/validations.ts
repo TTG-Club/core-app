@@ -1,12 +1,13 @@
 import { StatusCodes } from 'http-status-codes';
-import { isArray } from 'lodash-es';
+import { isString } from 'lodash-es';
 
-import { baseStringCheck } from '../base';
+import { ValidationBase } from '~/shared/utils';
 
 import type { Rule } from 'ant-design-vue/es/form';
 import type { RouteParamValue } from 'vue-router';
 
 export const ruleUrl = (
+  section: string,
   oldUrl?: RouteParamValue | RouteParamValue[],
 ): Rule => ({
   required: true,
@@ -14,7 +15,7 @@ export const ruleUrl = (
   type: 'string',
   validator: (rule: Rule, value: string) =>
     new Promise((resolve, reject) => {
-      if (isArray(oldUrl)) {
+      if (!isString(oldUrl)) {
         reject('Неизвестная ошибка');
 
         return;
@@ -26,9 +27,9 @@ export const ruleUrl = (
         return;
       }
 
-      baseStringCheck(value, 3);
+      ValidationBase.baseStringCheck(value, 3);
 
-      $fetch(`/api/v2/backgrounds/${value}`, {
+      $fetch(`/api/v2/${section}/${value}`, {
         method: 'head',
         retry: false,
         onRequestError: () => {
@@ -41,6 +42,6 @@ export const ruleUrl = (
 
           return reject('Неизвестная ошибка');
         },
-      }).then(() => reject('Такая предыстория уже существует'));
+      }).then(() => reject('Такая url уже существует'));
     }),
 });

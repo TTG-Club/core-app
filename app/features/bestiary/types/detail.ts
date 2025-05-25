@@ -1,6 +1,6 @@
 import type { SourceResponse } from '~/shared/types';
 
-export interface BeastDetailResponse {
+export interface CreatureDetailResponse {
   url: string;
   name: {
     rus: string;

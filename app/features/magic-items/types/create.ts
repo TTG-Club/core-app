@@ -1,27 +1,14 @@
-export interface MagicItemCreate {
-  url: string; // url магического предмета
-  name: MagicItemName; // название
-  source: MagicItemSource; // источник
+import type { EditorBaseInfoState } from '~ui/editor';
+
+export interface MagicItemCreate extends EditorBaseInfoState {
   description: string; // описание маркап
   attunement: MagicItemAttunement;
   charges: number; // заряды
   curse: boolean; // проклятие
   consumable: boolean; // расходуемый
   image: string | undefined;
-  tags: Array<string>; // теги
   rarity: MagicItemRarity;
   category: MagicItemCategory;
-}
-
-export interface MagicItemName {
-  rus: string; // русское название
-  eng: string; // английское название
-  alt: Array<string>; // альтернативные названия
-}
-
-export interface MagicItemSource {
-  url: string | undefined; // урл книги
-  page: number | undefined; // номер страницы, если указана книга
 }
 
 export interface MagicItemAttunement {

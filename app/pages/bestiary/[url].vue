@@ -1,15 +1,16 @@
 <script setup lang="ts">
   import { getSlicedString } from '~/shared/utils';
-  import { BeastBody } from '~bestiary/body';
+  import { CreatureBody } from '~bestiary/body';
   import { PageActions, PageContainer, PageHeader } from '~ui/page';
 
-  import type { BeastDetailResponse } from '~bestiary/types';
+  import type { CreatureDetailResponse } from '~bestiary/types';
 
   const route = useRoute();
 
   const { data: bestiary } = await useAsyncData(
     `bestiary-${route.params.url}`,
-    () => $fetch<BeastDetailResponse>(`/api/v2/bestiary/${route.params.url}`),
+    () =>
+      $fetch<CreatureDetailResponse>(`/api/v2/bestiary/${route.params.url}`),
   );
 
   useSeoMeta({
@@ -61,7 +62,7 @@
     </template>
 
     <template #default>
-      <BeastBody
+      <CreatureBody
         v-if="bestiary"
         :bestiary
       />

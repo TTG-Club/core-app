@@ -1,10 +1,10 @@
 <script setup lang="ts">
-  import { BeastLegend } from '~bestiary/legend';
-  import { BeastLink } from '~bestiary/link';
+  import { CreatureLegend } from '~bestiary/legend';
+  import { CreatureLink } from '~bestiary/link';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
-  import type { BeastLinkResponse } from '~bestiary/types';
+  import type { CreatureLinkResponse } from '~bestiary/types';
 
   useSeoMeta({
     title: 'Бестиарий [Bestiary]',
@@ -21,7 +21,7 @@
   } = await useAsyncData(
     'magicItems',
     () =>
-      $fetch<Array<BeastLinkResponse>>('/api/v2/bestiary/search', {
+      $fetch<Array<CreatureLinkResponse>>('/api/v2/bestiary/search', {
         method: 'POST',
         params: {
           query: search.value || undefined,
@@ -61,7 +61,7 @@
         </template>
 
         <template #legend>
-          <BeastLegend />
+          <CreatureLegend />
         </template>
       </PageHeader>
     </template>
@@ -85,10 +85,10 @@
           v-else-if="status === 'success' && bestiary?.length"
           :columns="3"
         >
-          <BeastLink
-            v-for="beast in bestiary"
-            :key="beast.url"
-            :bestiary="beast"
+          <CreatureLink
+            v-for="creature in bestiary"
+            :key="creature.url"
+            :bestiary="creature"
           />
         </PageGrid>
 

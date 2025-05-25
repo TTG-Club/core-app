@@ -1,10 +1,10 @@
 <script setup lang="ts">
-  import { SelectBeastType } from './ui';
-  import { BeastTypeRule } from './validators';
+  import { ValidationDictionaries } from '~/shared/utils';
+  import { SelectCreatureType } from '~ui/select';
 
-  import type { BeastCategory } from '~bestiary/types';
+  import type { CreatureCategory } from '~bestiary/types';
 
-  const model = defineModel<BeastCategory>({
+  const model = defineModel<CreatureCategory>({
     required: true,
   });
 
@@ -23,9 +23,9 @@
     <AFormItem
       label="Типы существа"
       :name="['type', 'type']"
-      :rules="[BeastTypeRule()]"
+      :rules="[ValidationDictionaries.ruleCreatureType()]"
     >
-      <SelectBeastType v-model="model.type" />
+      <SelectCreatureType v-model="model.type" />
     </AFormItem>
   </ACol>
 

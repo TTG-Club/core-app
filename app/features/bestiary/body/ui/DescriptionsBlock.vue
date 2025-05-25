@@ -1,10 +1,10 @@
 <script setup lang="ts">
   import { MarkupRender } from '~ui/markup';
 
-  import type { BeastDetailResponse } from '~/features/bestiary/types';
+  import type { CreatureDetailResponse } from '~/features/bestiary/types';
 
   const { description } =
-    defineProps<Pick<BeastDetailResponse, 'description'>>();
+    defineProps<Pick<CreatureDetailResponse, 'description'>>();
 </script>
 
 <template>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { Form } from 'ant-design-vue';
 
-  import { Dictionaries } from '~/shared/api';
+  import { DictionaryService } from '~/shared/api';
 
   const { limit = 0 } = defineProps<{
     disabled?: boolean;
@@ -12,8 +12,10 @@
 
   const model = defineModel<Array<string>>();
 
-  const { data, refresh } = await useAsyncData('dictionaries-skills', () =>
-    Dictionaries.skills(),
+  const { data, refresh } = await useAsyncData(
+    'dictionaries-skills',
+    () => DictionaryService.skills(),
+    { dedupe: 'defer' },
   );
 
   const options = computed(() => {

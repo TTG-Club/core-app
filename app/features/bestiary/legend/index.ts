@@ -1,1 +1,1 @@
-export { default as BeastLegend } from './BeastLegend.vue';
+export { default as CreatureLegend } from './CreatureLegend.vue';

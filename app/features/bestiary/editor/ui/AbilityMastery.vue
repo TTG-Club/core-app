@@ -1,0 +1,82 @@
+<script setup lang="ts">
+  const model = defineModel<0 | 1 | 2>({ required: true });
+
+  const { state, next } = useCycleList<0 | 1 | 2>([0, 1, 2], {
+    initialValue: model,
+  });
+
+  syncRef(model, state);
+
+  const css = useCssModule();
+
+  const masteryClass = computed(() => {
+    const classes: Array<string> = [css.mastery];
+
+    if (state.value > 0) {
+      classes.push(css.proficiency);
+    }
+
+    if (state.value > 1) {
+      classes.push(css.expertise);
+    }
+
+    return classes;
+  });
+</script>
+
+<template>
+  <div
+    :class="masteryClass"
+    @click.left.exact.prevent="next()"
+  />
+</template>
+
+<style module lang="scss">
+  .mastery {
+    cursor: pointer;
+    content: '';
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: {
+      width: 1px;
+      color: var(--color-text);
+
+      style: solid;
+    }
+
+    &:after {
+      content: '';
+
+      display: block;
+
+      border-radius: 50%;
+
+      opacity: 0;
+      background: var(--color-text);
+    }
+
+    &.proficiency {
+      border-style: hidden;
+
+      &:after {
+        width: 8px;
+        height: 8px;
+        opacity: 1;
+      }
+    }
+
+    &.expertise {
+      border-style: solid;
+      &:after {
+        width: 6px;
+        height: 6px;
+      }
+    }
+  }
+</style>

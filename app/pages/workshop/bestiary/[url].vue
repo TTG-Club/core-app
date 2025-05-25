@@ -2,24 +2,24 @@
   import { cloneDeep, isEqual, merge } from 'lodash-es';
 
   import { NuxtLink } from '#components';
-  import { BeastEditor } from '~bestiary/editor';
+  import { CreatureEditor } from '~bestiary/editor';
   import { SvgIcon } from '~ui/icon';
   import { PageContainer, PageHeader } from '~ui/page';
   import { useToast } from '~ui/toast';
 
-  import type { BeastCreate } from '~bestiary/types';
+  import type { CreatureCreate } from '~bestiary/types';
 
   const route = useRoute();
   const $toast = useToast();
-  const editor = useTemplateRef<InstanceType<typeof BeastEditor>>('editor');
+  const editor = useTemplateRef<InstanceType<typeof CreatureEditor>>('editor');
 
-  const form = useState<BeastCreate>(getInitialState);
-  const backup = useState<BeastCreate>(getInitialState);
+  const form = useState<CreatureCreate>(getInitialState);
+  const backup = useState<CreatureCreate>(getInitialState);
 
   const { status } = await useAsyncData(
     `bestiary-${route.params.url}-raw`,
     () =>
-      $fetch<BeastCreate>(`/api/v2/bestiary/${route.params.url}/raw`, {
+      $fetch<CreatureCreate>(`/api/v2/bestiary/${route.params.url}/raw`, {
         onResponse: (ctx) => {
           const initialState = getInitialState();
 
@@ -105,7 +105,7 @@
     }
   }
 
-  function getInitialState(): BeastCreate {
+  function getInitialState(): CreatureCreate {
     return {
       url: '',
       name: {
@@ -288,7 +288,7 @@
           sub-title="Не найдено существо для редактирования"
         />
 
-        <BeastEditor
+        <CreatureEditor
           v-else
           ref="editor"
           v-model="form"

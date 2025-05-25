@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import type { BeastSenses } from '~bestiary/types';
+  import type { CreatureSenses } from '~bestiary/types';
 
-  const model = defineModel<BeastSenses>({ required: true });
+  const model = defineModel<CreatureSenses>({ required: true });
 
   const senseTypes = [
     { label: 'Тёмное зрение', value: 'DARKVISION' },

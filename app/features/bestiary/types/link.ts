@@ -1,6 +1,6 @@
 import type { NameResponse, SourceResponse } from '~/shared/types';
 
-export interface BeastLinkResponse {
+export interface CreatureLinkResponse {
   url: string;
   name: Pick<NameResponse, 'rus' | 'eng'>;
   source: SourceResponse;

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { Dictionaries } from '~/shared/api';
-  import { modifier } from '~/shared/utils';
-  import AbilityBonusModeSelect from '~bestiary/editor/ui/type/AbilityBonusModeSelect.vue';
+  import { DictionaryService } from '~/shared/api';
+  import { getModifier } from '~/shared/utils';
+  import AbilityMastery from '~bestiary/editor/ui/AbilityMastery.vue';
 
   import type { CreateAbilities } from '~bestiary/types';
 
@@ -23,7 +23,7 @@
   };
 
   const { data: abilities } = await useAsyncData('dictionaries-abilities', () =>
-    Dictionaries.abilities(),
+    DictionaryService.abilities(),
   );
 
   const labels = computed(() => {
@@ -43,7 +43,7 @@
    * Расчёт модификатора с учётом бонуса мастерства и режима (0 | 1 | 2)
    */
   function calculateTotalModifier(baseValue: number, mod: number): string {
-    const abilityMod = modifier(baseValue);
+    const abilityMod = getModifier(baseValue);
 
     const total = abilityMod + props.proficiencyBonus * mod;
 
@@ -67,12 +67,15 @@
           :precision="0"
           min="0"
           max="30"
-          :addon-after="
-            calculateTotalModifier(model[key].value, model[key].multiplier)
-          "
         >
           <template #addonBefore>
-            <AbilityBonusModeSelect v-model="model[key].multiplier" />
+            <AbilityMastery v-model="model[key].multiplier" />
+          </template>
+
+          <template #addonAfter>
+            {{
+              calculateTotalModifier(model[key].value, model[key].multiplier)
+            }}
           </template>
         </AInputNumber>
       </AFormItem>

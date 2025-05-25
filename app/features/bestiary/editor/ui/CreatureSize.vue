@@ -1,11 +1,10 @@
 <script setup lang="ts">
-  import { SelectBeastSize } from './ui';
+  import { ValidationDictionaries } from '~/shared/utils';
+  import { SelectSize } from '~ui/select';
 
-  import { BeastSizeRule } from '~bestiary/editor/ui/size/validators';
+  import type { CreatureSize } from '~bestiary/types';
 
-  import type { BeastSize } from '~bestiary/types';
-
-  const model = defineModel<BeastSize>({
+  const model = defineModel<CreatureSize>({
     required: true,
   });
 
@@ -23,10 +22,13 @@
   <ACol :span="6">
     <AFormItem
       label="Размеры существа"
-      :name="['category', 'type']"
-      :rules="[BeastSizeRule()]"
+      :name="['size', 'value']"
+      :rules="[ValidationDictionaries.ruleSize()]"
     >
-      <SelectBeastSize v-model="model.size" />
+      <SelectSize
+        v-model="model.size"
+        multiple
+      />
     </AFormItem>
   </ACol>
 

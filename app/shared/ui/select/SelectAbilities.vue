@@ -1,20 +1,26 @@
-<script setup lang="ts">
+<script
+  setup
+  lang="ts"
+  generic="T extends boolean, U extends T extends true ? Array<string> : string"
+>
   import { Form } from 'ant-design-vue';
 
-  import { Dictionaries } from '~/shared/api';
+  import { DictionaryService } from '~/shared/api';
 
-  const { limit = 0 } = defineProps<{
-    multiple?: boolean;
+  const { multiple = false, limit = 0 } = defineProps<{
+    multiple?: T;
     disabled?: boolean;
     limit?: number;
   }>();
 
   const context = Form.useInjectFormItemContext();
 
-  const model = defineModel<Array<string>>();
+  const model = defineModel<U>();
 
-  const { data, refresh } = await useAsyncData('dictionaries-abilities', () =>
-    Dictionaries.abilities(),
+  const { data, refresh } = await useAsyncData(
+    'dictionaries-abilities',
+    () => DictionaryService.abilities(),
+    { dedupe: 'defer' },
   );
 
   const options = computed(() => {

@@ -1,1 +1,1 @@
-export { default as BeastEditor } from './BeastEditor.vue';
+export { default as CreatureEditor } from './CreatureEditor.vue';

@@ -1,26 +1,26 @@
-<script setup lang="ts">
+<script
+  setup
+  lang="ts"
+  generic="T extends boolean, U extends T extends true ? Array<string> : string"
+>
   import { Form } from 'ant-design-vue';
 
-  import { Dictionaries } from '~/shared/api';
+  import { DictionaryService } from '~/shared/api';
 
-  const props = withDefaults(
-    defineProps<{
-      multiple?: boolean;
-      disabledKeys?: Array<string>;
-    }>(),
-    {
-      multiple: false,
-      disabledKeys: () => [],
-    },
-  );
+  const { multiple = false, disabledKeys = [] } = defineProps<{
+    disabled?: boolean;
+    multiple?: T;
+    disabledKeys?: Array<string>;
+  }>();
 
   const context = Form.useInjectFormItemContext();
 
-  const model = defineModel<string | Array<string>>();
+  const model = defineModel<U>();
 
   const { data, status, refresh } = await useAsyncData(
     'dictionaries-sizes',
-    () => Dictionaries.sizes(),
+    () => DictionaryService.sizes(),
+    { dedupe: 'defer' },
   );
 
   const options = computed(() => {
@@ -30,7 +30,7 @@
 
     return data.value.map((size) => ({
       ...size,
-      disabled: props.disabledKeys.includes(size.value),
+      disabled: disabledKeys.includes(size.value),
     }));
   });
 

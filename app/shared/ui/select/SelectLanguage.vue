@@ -8,6 +8,7 @@
   import { DictionaryService } from '~/shared/api';
 
   const { multiple = false } = defineProps<{
+    disabled?: boolean;
     multiple?: T;
   }>();
 
@@ -16,8 +17,8 @@
   const model = defineModel<U>();
 
   const { data, status, refresh } = await useAsyncData(
-    'dictionaries-magic-schools',
-    () => DictionaryService.magicSchools(),
+    'dictionaries-languages',
+    () => DictionaryService.languages(),
     { dedupe: 'defer' },
   );
 
@@ -37,11 +38,12 @@
 <template>
   <ASelect
     v-model:value="model"
+    :placeholder="`Выбери язык${multiple ? 'и' : ''}`"
+    :mode="multiple ? 'multiple' : undefined"
     :loading="status === 'pending'"
     :options="data || []"
-    :mode="multiple ? 'multiple' : undefined"
+    :disabled
     max-tag-count="responsive"
-    placeholder="Выбери школу"
     show-search
     show-arrow
     @dropdown-visible-change="handleDropdownOpening"
