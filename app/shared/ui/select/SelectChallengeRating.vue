@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { Form } from 'ant-design-vue';
 
-  import { Dictionaries } from '~/shared/api';
+  import { DictionaryService } from '~/shared/api';
 
   defineProps<{
     disabled?: boolean;
@@ -9,11 +9,12 @@
 
   const context = Form.useInjectFormItemContext();
 
-  const model = defineModel<Array<string>>();
+  const model = defineModel<number>();
 
   const { data, status, refresh } = await useAsyncData(
-    'dictionaries-beast-types-category',
-    () => Dictionaries.sizes(),
+    'dictionaries-challenge-rating',
+    () => DictionaryService.challengeRating(),
+    { dedupe: 'defer' },
   );
 
   const handleDropdownOpening = (state: boolean) => {
@@ -32,11 +33,10 @@
 <template>
   <ASelect
     v-model:value="model"
-    mode="multiple"
     :loading="status === 'pending'"
     :options="data || []"
     :disabled
-    placeholder="Выбери размеры существа"
+    placeholder="Выбери показатель опасности"
     show-search
     show-arrow
     @dropdown-visible-change="handleDropdownOpening"

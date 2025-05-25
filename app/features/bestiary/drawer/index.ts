@@ -1,1 +1,1 @@
-export { default as BeastDrawer } from './BeastDrawer.vue';
+export { default as CreatureDrawer } from './CreatureDrawer.vue';

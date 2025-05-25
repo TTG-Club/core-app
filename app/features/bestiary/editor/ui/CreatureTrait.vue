@@ -1,9 +1,9 @@
 <script setup lang="ts">
   import { ValidationBase } from '~/shared/utils';
 
-  import type { BeastCreate, CreateTrait } from '~bestiary/types';
+  import type { CreatureCreate, CreateTrait } from '~bestiary/types';
 
-  type Traits = BeastCreate['traits'];
+  type Traits = CreatureCreate['traits'];
 
   function getEmptyFeature(): Traits[number] {
     return {

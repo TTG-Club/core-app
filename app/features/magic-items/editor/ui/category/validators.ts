@@ -1,4 +1,4 @@
-import { Dictionaries } from '~/shared/api';
+import { DictionaryService } from '~/shared/api';
 import { ValidationDictionaries } from '~/shared/utils';
 
 import type { Rule } from 'ant-design-vue/es/form';
@@ -12,7 +12,7 @@ export const ruleMagicItemCategory = (): Rule => ({
       throw new Error('Поле обязательно для заполнения');
     }
 
-    const magicCategory = await Dictionaries.magicItemCategory();
+    const magicCategory = await DictionaryService.magicItemCategory();
 
     ValidationDictionaries.validateFromDictionary(value, magicCategory);
   },

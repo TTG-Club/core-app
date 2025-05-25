@@ -1,13 +1,11 @@
-export interface BeastCreate {
-  url: string; // url магического предмета
-  name: BeastName; // название
-  source: BeastSource; // источник
+import type { EditorBaseInfoState } from '~ui/editor';
+
+export interface CreatureCreate extends EditorBaseInfoState {
   description: string; // описание маркап
   image: string | undefined;
-  tags: Array<string>; // теги
 
-  type: BeastCategory; // типы существа
-  size: BeastSize; // размеры существа
+  type: CreatureCategory; // типы существа
+  size: CreatureSize; // размеры существа
   alignment: string | undefined; // мировоззрение
   ac: string; // класс доспеха
   initiative: number; // модификатор инициативы
@@ -20,7 +18,7 @@ export interface BeastCreate {
   immunityToDamage: Array<string>;
   immunityToCondition: Array<string>;
   equipments: Array<Equipment>;
-  senses: BeastSenses;
+  senses: CreatureSenses;
   languages: CreatureLanguages;
   proficiencyBonus: number;
   experience: CreateExperience;
@@ -31,23 +29,12 @@ export interface BeastCreate {
   legendaryActions: Array<CreateAction>;
 }
 
-export interface BeastName {
-  rus: string; // русское название
-  eng: string; // английское название
-  alt: Array<string>; // альтернативные названия
-}
-
-export interface BeastSource {
-  url: string | undefined; // урл книги
-  page: number | undefined; // номер страницы; если указана книга
-}
-
-export interface BeastCategory {
+export interface CreatureCategory {
   type: Array<string>;
   text: string | undefined;
 }
 
-export interface BeastSize {
+export interface CreatureSize {
   size: Array<string> | undefined;
   text: string | undefined;
   sizeString: string | undefined;
@@ -125,12 +112,12 @@ export interface CreateExperience {
   suffix: string | undefined;
 }
 
-export interface BeastSenses {
-  senses: Array<BeastSense>;
+export interface CreatureSenses {
+  senses: Array<CreatureSense>;
   passivePerception: number;
 }
 
-export interface BeastSense {
+export interface CreatureSense {
   type: string;
   value: number;
 }

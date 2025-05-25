@@ -1,1 +1,1 @@
-export { default as BeastLink } from './BeastLink.vue';
+export { default as CreatureLink } from './CreatureLink.vue';

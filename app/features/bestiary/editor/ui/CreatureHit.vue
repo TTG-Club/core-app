@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import type { BeastCreate } from '~bestiary/types';
+  import type { CreatureCreate } from '~bestiary/types';
 
-  const model = defineModel<BeastCreate>({
+  const model = defineModel<CreatureCreate>({
     required: true,
   });
 </script>

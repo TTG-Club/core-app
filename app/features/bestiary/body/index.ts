@@ -1,1 +1,1 @@
-export { default as BeastBody } from './BeastBody.vue';
+export { default as CreatureBody } from './CreatureBody.vue';

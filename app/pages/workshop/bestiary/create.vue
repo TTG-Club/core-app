@@ -1,17 +1,17 @@
 <script setup lang="ts">
   import { NuxtLink } from '#components';
-  import { BeastEditor } from '~bestiary/editor';
+  import { CreatureEditor } from '~bestiary/editor';
   import { SvgIcon } from '~ui/icon';
   import { PageContainer, PageHeader } from '~ui/page';
   import { useToast } from '~ui/toast';
 
-  import type { BeastCreate } from '~bestiary/types';
+  import type { CreatureCreate } from '~bestiary/types';
 
   const $toast = useToast();
 
-  const editor = useTemplateRef<InstanceType<typeof BeastEditor>>('editor');
+  const editor = useTemplateRef<InstanceType<typeof CreatureEditor>>('editor');
 
-  const form = ref<BeastCreate>({
+  const form = ref<CreatureCreate>({
     url: '',
     name: {
       rus: '',
@@ -215,7 +215,7 @@
 
     <template #default>
       <ClientOnly>
-        <BeastEditor
+        <CreatureEditor
           ref="editor"
           v-model="form"
           :is-creating="isCreating"

@@ -1,10 +1,10 @@
 <script setup lang="ts">
   import { StatsBlock, DescriptionsBlock } from './ui';
 
-  import type { BeastDetailResponse } from '~/features/bestiary/types';
+  import type { CreatureDetailResponse } from '~/features/bestiary/types';
 
   defineProps<{
-    bestiary: BeastDetailResponse;
+    bestiary: CreatureDetailResponse;
   }>();
 </script>
 

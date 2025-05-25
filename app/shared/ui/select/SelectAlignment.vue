@@ -1,19 +1,25 @@
-<script setup lang="ts">
+<script
+  setup
+  lang="ts"
+  generic="T extends boolean, U extends T extends true ? Array<string> : string"
+>
   import { Form } from 'ant-design-vue';
 
-  import { Dictionaries } from '~/shared/api';
+  import { DictionaryService } from '~/shared/api';
 
-  defineProps<{
+  const { multiple = false } = defineProps<{
     disabled?: boolean;
+    multiple?: T;
   }>();
 
   const context = Form.useInjectFormItemContext();
 
-  const model = defineModel<Array<string>>();
+  const model = defineModel<string>();
 
   const { data, status, refresh } = await useAsyncData(
-    'dictionaries-beast-types-category',
-    () => Dictionaries.creatureTypes(),
+    'dictionaries-alignments',
+    () => DictionaryService.alignments(),
+    { dedupe: 'defer' },
   );
 
   const handleDropdownOpening = (state: boolean) => {
@@ -32,11 +38,12 @@
 <template>
   <ASelect
     v-model:value="model"
-    mode="multiple"
+    :placeholder="`Выбери мировоззрени${multiple ? 'я' : 'е'}`"
+    :mode="multiple ? 'multiple' : undefined"
     :loading="status === 'pending'"
     :options="data || []"
     :disabled
-    placeholder="Выбери типы существа"
+    max-tag-count="responsive"
     show-search
     show-arrow
     @dropdown-visible-change="handleDropdownOpening"

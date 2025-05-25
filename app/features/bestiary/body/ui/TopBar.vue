@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import type { BeastDetailResponse } from '~/features/bestiary/types';
+  import type { CreatureDetailResponse } from '~/features/bestiary/types';
 
-  defineProps<Pick<BeastDetailResponse, 'header'>>();
+  defineProps<Pick<CreatureDetailResponse, 'header'>>();
 </script>
 
 <template>

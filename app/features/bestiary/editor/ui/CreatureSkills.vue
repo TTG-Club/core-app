@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { computed } from 'vue';
 
-  import AbilityBonusModeSelect from '~bestiary/editor/ui/type/AbilityBonusModeSelect.vue';
+  import AbilityMastery from '~bestiary/editor/ui/AbilityMastery.vue';
 
   import type { CreateAbilities, CreateSkill } from '~bestiary/types';
 
@@ -136,7 +136,7 @@
           align="center"
           gap="8"
         >
-          <AbilityBonusModeSelect
+          <AbilityMastery
             :model-value="
               props.model.find((s) => s.skill === key)?.multiplier ?? 0
             "

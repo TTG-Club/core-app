@@ -1,20 +1,19 @@
-<script setup lang="ts">
+<script
+  setup
+  lang="ts"
+  generic="T extends boolean, U extends T extends true ? Array<string> : string"
+>
   import { Form } from 'ant-design-vue';
 
   import type { SpeciesLinkResponse } from '~/shared/types';
 
-  withDefaults(
-    defineProps<{
-      multiple?: boolean;
-    }>(),
-    {
-      multiple: false,
-    },
-  );
+  const { multiple = false } = defineProps<{
+    multiple?: T;
+  }>();
 
   const context = Form.useInjectFormItemContext();
 
-  const model = defineModel<string | Array<string>>();
+  const model = defineModel<U>();
 
   const { data, status, refresh } = await useAsyncData(
     'species-select',
@@ -31,6 +30,7 @@
         value: species.url,
       }));
     },
+    { dedupe: 'defer' },
   );
 
   const handleDropdownOpening = (state: boolean) => {

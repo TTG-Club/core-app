@@ -1,4 +1,4 @@
-import { Dictionaries } from '~/shared/api';
+import { DictionaryService } from '~/shared/api';
 import { getEnumFromDictionary } from '~/shared/utils/validation/base';
 
 import type { Rule } from 'ant-design-vue/es/form';
@@ -26,7 +26,7 @@ export const ruleTimeUnit = (required = true): Rule => ({
       throw new Error('Поле обязательно для заполнения');
     }
 
-    const timeUnits = await Dictionaries.timeUnits();
+    const timeUnits = await DictionaryService.timeUnits();
 
     validateFromDictionary(value, timeUnits);
   },
@@ -41,7 +41,7 @@ export const ruleMagicSchool = (): Rule => ({
       throw new Error('Поле обязательно для заполнения');
     }
 
-    const magicSchools = await Dictionaries.magicSchools();
+    const magicSchools = await DictionaryService.magicSchools();
 
     validateFromDictionary(value, magicSchools);
   },
@@ -56,7 +56,7 @@ export const ruleSize = (): Rule => ({
       throw new Error('Поле обязательно для заполнения');
     }
 
-    const sizes = await Dictionaries.sizes();
+    const sizes = await DictionaryService.sizes();
 
     validateFromDictionary(value, sizes);
   },
@@ -71,7 +71,7 @@ export const ruleCreatureType = (): Rule => ({
       throw new Error('Поле обязательно для заполнения');
     }
 
-    const creatureTypes = await Dictionaries.creatureTypes();
+    const creatureTypes = await DictionaryService.creatureTypes();
 
     validateFromDictionary(value, creatureTypes);
   },
@@ -86,7 +86,7 @@ export const ruleFeatCategories = (): Rule => ({
       throw new Error('Поле обязательно для заполнения');
     }
 
-    const featCategories = await Dictionaries.featCategories();
+    const featCategories = await DictionaryService.featCategories();
 
     validateFromDictionary(value, featCategories);
   },
@@ -101,7 +101,7 @@ export const ruleRarity = (): Rule => ({
       throw new Error('Поле обязательно для заполнения');
     }
 
-    const rarity = await Dictionaries.rarity();
+    const rarity = await DictionaryService.rarity();
 
     validateFromDictionary(value, rarity);
   },

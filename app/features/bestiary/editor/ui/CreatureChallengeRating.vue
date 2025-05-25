@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { watch } from 'vue';
 
-  import SelectChallengeRating from '~bestiary/editor/ui/SelectChallengeRating.vue';
+  import { SelectChallengeRating } from '~ui/select';
 
   import type { CreateExperience } from '~bestiary/types';
 
@@ -30,13 +30,19 @@
         emit('update:proficiencyBonus', crToProficiencyBonus(val));
       }
     },
-    { immediate: true },
   );
 </script>
 
 <template>
   <ARow :gutter="12">
-    <SelectChallengeRating v-model="model.value" />
+    <ACol :span="8">
+      <AFormItem
+        label="Показатель опасности"
+        :name="['immunityToDamage']"
+      >
+        <SelectChallengeRating v-model="model.value" />
+      </AFormItem>
+    </ACol>
 
     <ACol :span="8">
       <AFormItem label="ПО в логове">
