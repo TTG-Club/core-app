@@ -102,7 +102,7 @@
 
   <ARow
     v-for="(range, index) in ranges"
-    :key="`${index}-${Date.now()}`"
+    :key="index"
     :gutter="16"
   >
     <ACol :span="4">
