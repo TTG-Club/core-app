@@ -19,7 +19,7 @@
     status,
     refresh,
   } = await useAsyncData(
-    'magicItems',
+    'bestiary',
     () =>
       $fetch<Array<CreatureLinkResponse>>('/api/v2/bestiary/search', {
         method: 'POST',
@@ -42,7 +42,7 @@
 <template>
   <PageContainer fixed-header>
     <template #header>
-      <PageHeader title="Магические предметы">
+      <PageHeader title="Бестиарий>">
         <template #filter>
           <AInput
             v-model:value="search"

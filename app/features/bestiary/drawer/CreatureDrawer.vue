@@ -1,25 +1,25 @@
 <script setup lang="ts">
   import { Breakpoint, BREAKPOINTS, useDrawer } from '~/shared/composables';
-  import { BackgroundBody } from '~backgrounds/body';
+  import { CreatureBody } from '~bestiary/body';
   import { DrawerComponent } from '~ui/drawer';
 
-  import type { BackgroundDetailResponse } from '~/shared/types';
+  import type { CreatureDetailResponse } from '~bestiary/types';
 
-  const { url, isOpened, close } = useDrawer('background-detail');
+  const { url, isOpened, close } = useDrawer('bestiary-detail');
 
   const {
-    data: background,
+    data: creature,
     status,
     execute,
     clear,
   } = await useAsyncData(
-    `background-detail-drawer`,
+    `bestiary-detail-drawer`,
     () => {
       if (!url.value) {
         return Promise.reject();
       }
 
-      return $fetch<BackgroundDetailResponse>(`/api/v2/bestiary/${url.value}`);
+      return $fetch<CreatureDetailResponse>(`/api/v2/bestiary/${url.value}`);
     },
     {
       server: false,
@@ -56,8 +56,8 @@
     :open="isOpened"
     :min-width="320"
     :max-width="BREAKPOINTS[Breakpoint.MD]"
-    :title="background?.name"
-    :source="background?.source"
+    :title="creature?.name"
+    :source="creature?.source"
     :url="urlForCopy"
     :edit-url="editUrl"
     :is-loading="status === 'pending'"
@@ -66,9 +66,9 @@
     copy-title
     @update:open="handleUpdate"
   >
-    <BackgroundBody
-      v-if="background"
-      :background
+    <CreatureBody
+      v-if="creature"
+      :creature
     />
   </DrawerComponent>
 </template>
