@@ -31,7 +31,7 @@
     isOpened.value ? `${getOrigin()}/bestiary/${url.value}` : undefined,
   );
 
-  const editUrl = computed(() => `/workshop/backgrounds/${url.value}`);
+  const editUrl = computed(() => `/workshop/bestiary/${url.value}`);
 
   function handleUpdate(opened: boolean) {
     if (opened) {
