@@ -1,19 +1,16 @@
-<script
-  setup
-  lang="ts"
-  generic="T extends boolean, U extends T extends true ? Array<string> : string"
->
+<script setup lang="ts">
   import { Form } from 'ant-design-vue';
 
   import type { SpeciesLinkResponse } from '~/shared/types';
 
   const { multiple = false } = defineProps<{
-    multiple?: T;
+    disabled?: boolean;
+    multiple?: boolean;
   }>();
 
   const context = Form.useInjectFormItemContext();
 
-  const model = defineModel<U>();
+  const model = defineModel<string | Array<string>>();
 
   const { data, status, refresh } = await useAsyncData(
     'species-select',
@@ -52,6 +49,7 @@
     :loading="status === 'pending'"
     :options="data || []"
     :mode="multiple ? 'multiple' : undefined"
+    :disabled
     placeholder="Выбери вид"
     max-tag-count="responsive"
     show-search
