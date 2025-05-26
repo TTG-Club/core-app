@@ -60,7 +60,7 @@
     <ACol :span="4">
       <AFormItem
         label="Пассивная Внимательность"
-        :name="['passivePerception']"
+        :name="['senses', 'passivePerception']"
       >
         <AInputNumber
           v-model:value="model.passivePerception"

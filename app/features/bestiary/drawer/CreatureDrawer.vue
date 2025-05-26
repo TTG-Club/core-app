@@ -19,9 +19,7 @@
         return Promise.reject();
       }
 
-      return $fetch<BackgroundDetailResponse>(
-        `/api/v2/backgrounds/${url.value}`,
-      );
+      return $fetch<BackgroundDetailResponse>(`/api/v2/bestiary/${url.value}`);
     },
     {
       server: false,
@@ -30,7 +28,7 @@
   );
 
   const urlForCopy = computed(() =>
-    isOpened.value ? `${getOrigin()}/backgrounds/${url.value}` : undefined,
+    isOpened.value ? `${getOrigin()}/bestiary/${url.value}` : undefined,
   );
 
   const editUrl = computed(() => `/workshop/backgrounds/${url.value}`);

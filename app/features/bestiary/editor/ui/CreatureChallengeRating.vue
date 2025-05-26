@@ -38,14 +38,17 @@
     <ACol :span="8">
       <AFormItem
         label="Показатель опасности"
-        :name="['immunityToDamage']"
+        :name="['experience', 'value']"
       >
         <SelectChallengeRating v-model="model.value" />
       </AFormItem>
     </ACol>
 
     <ACol :span="8">
-      <AFormItem label="ПО в логове">
+      <AFormItem
+        label="ПО в логове"
+        :name="['experience', 'inLair']"
+      >
         <AInputNumber
           v-model:value="model.inLair"
           :precision="0"
@@ -56,7 +59,10 @@
     </ACol>
 
     <ACol :span="8">
-      <AFormItem label="Суффикс">
+      <AFormItem
+        label="Суффикс"
+        :name="['experience', 'suffix']"
+      >
         <AInput
           v-model:value="model.suffix"
           placeholder="Доп. текст"
