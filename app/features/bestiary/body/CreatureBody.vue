@@ -4,7 +4,7 @@
   import type { CreatureDetailResponse } from '~/features/bestiary/types';
 
   defineProps<{
-    bestiary: CreatureDetailResponse;
+    creature: CreatureDetailResponse;
   }>();
 </script>
 
@@ -17,9 +17,9 @@
         :class="$style.info"
       >
         <StatsBlock
-          :ac="bestiary.AC"
-          :hit="bestiary.hit"
-          :initiative="bestiary.initiative"
+          :ac="creature.AC"
+          :hit="creature.hit"
+          :initiative="creature.initiative"
         />
       </AFlex>
 
@@ -28,7 +28,7 @@
         :gap="12"
         flex="1 1 auto"
       >
-        <DescriptionsBlock :description="bestiary.description" />
+        <DescriptionsBlock :description="creature.description" />
       </AFlex>
     </div>
   </div>

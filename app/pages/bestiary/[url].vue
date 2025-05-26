@@ -7,7 +7,7 @@
 
   const route = useRoute();
 
-  const { data: bestiary } = await useAsyncData(
+  const { data: creature } = await useAsyncData(
     `bestiary-${route.params.url}`,
     () =>
       $fetch<CreatureDetailResponse>(`/api/v2/bestiary/${route.params.url}`),
@@ -16,25 +16,25 @@
   useSeoMeta({
     title: getSeoTitle,
     description: getSeoDescription,
-    author: () => (bestiary.value ? bestiary.value.source.name.rus : undefined),
+    author: () => (creature.value ? creature.value.source.name.rus : undefined),
     titleTemplate: '%s | Бестиарий D&D 5 2025',
   });
 
   function getSeoTitle() {
-    if (!bestiary.value) {
+    if (!creature.value) {
       return '';
     }
 
-    return getSlicedString(bestiary.value.name.rus, 36);
+    return getSlicedString(creature.value.name.rus, 36);
   }
 
   function getSeoDescription() {
-    if (!bestiary.value) {
+    if (!creature.value) {
       return '';
     }
 
     return getSlicedString(
-      `${bestiary.value.name.rus} [${bestiary.value.name.eng}] D&D 5 2024 редакции`,
+      `${creature.value.name.rus} [${creature.value.name.eng}] D&D 5 2024 редакции`,
       160,
     );
   }
@@ -46,10 +46,10 @@
   <PageContainer>
     <template #header>
       <PageHeader
-        :title="bestiary?.name.rus"
-        :subtitle="bestiary?.name.eng"
-        :source="bestiary?.source"
-        :date-time="bestiary?.updatedAt"
+        :title="creature?.name.rus"
+        :subtitle="creature?.name.eng"
+        :source="creature?.source"
+        :date-time="creature?.updatedAt"
         copy-title
       >
         <template #actions>
@@ -63,8 +63,8 @@
 
     <template #default>
       <CreatureBody
-        v-if="bestiary"
-        :bestiary
+        v-if="creature"
+        :creature
       />
 
       <ASkeleton
