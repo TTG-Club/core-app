@@ -1,50 +1,38 @@
 <script setup lang="ts">
-  import { watch } from 'vue';
-
   import { SelectChallengeRating } from '~ui/select';
 
   import type { CreateExperience } from '~bestiary/types';
 
   const model = defineModel<CreateExperience>({ required: true });
 
-  const emit = defineEmits<{
-    (e: 'update:proficiencyBonus', value: number): void;
-  }>();
-
-  const crToProficiencyBonus = (cr: number): number => {
-    if (cr >= 29) return 9;
-    if (cr >= 25) return 8;
-    if (cr >= 21) return 7;
-    if (cr >= 17) return 6;
-    if (cr >= 13) return 5;
-    if (cr >= 9) return 4;
-    if (cr >= 5) return 3;
-
-    return 2;
-  };
-
-  watch(
-    () => model.value?.value,
-    (val) => {
-      if (typeof val === 'number') {
-        emit('update:proficiencyBonus', crToProficiencyBonus(val));
-      }
-    },
-  );
+  const proficiencyBonus = defineModel<number>('proficiency-bonus', {
+    required: true,
+  });
 </script>
 
 <template>
+  <ADivider orientation="left">
+    <ATypographyText
+      type="secondary"
+      content="Уровень опасности"
+      strong
+    />
+  </ADivider>
+
   <ARow :gutter="12">
-    <ACol :span="8">
+    <ACol :span="4">
       <AFormItem
         label="Показатель опасности"
         :name="['experience', 'value']"
       >
-        <SelectChallengeRating v-model="model.value" />
+        <SelectChallengeRating
+          v-model="model.value"
+          v-model:proficiency-bonus="proficiencyBonus"
+        />
       </AFormItem>
     </ACol>
 
-    <ACol :span="8">
+    <ACol :span="4">
       <AFormItem
         label="ПО в логове"
         :name="['experience', 'inLair']"
@@ -58,7 +46,7 @@
       </AFormItem>
     </ACol>
 
-    <ACol :span="8">
+    <ACol :span="16">
       <AFormItem
         label="Суффикс"
         :name="['experience', 'suffix']"

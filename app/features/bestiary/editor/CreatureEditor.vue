@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import { isNumber } from 'lodash-es';
-
   import {
     CreatureChallengeRating,
     CreatureAbilities,
@@ -44,60 +42,6 @@
       form.value.initiative = getModifier(val);
     },
   );
-
-  const hitDieSizeMap: Record<string, number> = {
-    TINY: 4,
-    SMALL: 6,
-    MEDIUM: 8,
-    LARGE: 10,
-    HUGE: 12,
-    GARGANTUAN: 20,
-  };
-
-  watch(
-    () => [
-      form.value.hit.countHitDice,
-      form.value.abilities.con.value,
-      form.value.size.size?.[0],
-    ],
-    ([count, conValue, sizeKey]) => {
-      const dieSize = hitDieSizeMap[sizeKey ?? 'MEDIUM'] || 8;
-
-      const conMod = getModifier(
-        typeof conValue === 'number'
-          ? conValue
-          : Number.parseInt(conValue || '0', 10),
-      );
-
-      if (typeof count === 'number') {
-        const bonus = count * conMod;
-
-        form.value.hit.formula = `${count}к${dieSize}${bonus > 0 ? ` + ${bonus}` : ''}`;
-      }
-    },
-  );
-
-  /**
-   * Получение Бонуса Мастерства в зависимости от Показателя Опасности.
-   *
-   * @param cr показатель опасности.
-   */
-  function getProficiencyBonus(cr: number | unknown): number {
-    if (!isNumber(cr)) {
-      return 2;
-    }
-
-    const clampedCR = Math.max(0, Math.min(30, cr));
-
-    return Math.min(9, 2 + Math.floor((clampedCR - 1) / 4));
-  }
-
-  watch(
-    () => form.value.experience.value,
-    (cr) => {
-      form.value.proficiencyBonus = getProficiencyBonus(cr);
-    },
-  );
 </script>
 
 <template>
@@ -123,9 +67,7 @@
     <ARow :gutter="16">
       <CreatureType v-model="form.type" />
 
-      <CreatureSize v-model="form.size" />
-
-      <ACol :span="4">
+      <ACol :span="8">
         <AFormItem
           label="Мировоззрение существа"
           :name="['alignment']"
@@ -135,16 +77,30 @@
       </ACol>
     </ARow>
 
-    <ARow :gutter="16">
-      <ADivider orientation="left">
-        <ATypographyText
-          type="secondary"
-          content="Статблок"
-          strong
-        />
-      </ADivider>
+    <CreatureSize v-model="form.size" />
 
-      <ACol :span="4">
+    <CreatureHit
+      v-model="form.hit"
+      :size="form.size"
+      :constitution="form.abilities.con"
+      :proficiency-bonus="form.proficiencyBonus"
+    />
+
+    <CreatureChallengeRating
+      v-model="form.experience"
+      v-model:proficiency-bonus="form.proficiencyBonus"
+    />
+
+    <ADivider orientation="left">
+      <ATypographyText
+        type="secondary"
+        content="Статблок"
+        strong
+      />
+    </ADivider>
+
+    <ARow :gutter="16">
+      <ACol :span="3">
         <AFormItem
           label="КД"
           tooltip="Класс доспеха"
@@ -153,13 +109,13 @@
           <AInputNumber
             v-model:value="form.ac"
             :precision="0"
-            placeholder="Введи класс доспеха"
+            placeholder="Введи КД"
             min="0"
           />
         </AFormItem>
       </ACol>
 
-      <ACol :span="4">
+      <ACol :span="3">
         <AFormItem
           label="Инициатива"
           :name="['initiative']"
@@ -174,22 +130,9 @@
           />
         </AFormItem>
       </ACol>
+
+      <CreatureSpeed v-model="form.speed" />
     </ARow>
-
-    <CreatureHit v-model="form" />
-
-    <CreatureSpeed v-model="form.speed" />
-
-    <CreatureAbilities
-      v-model="form.abilities"
-      :proficiency-bonus="form.proficiencyBonus"
-    />
-
-    <CreatureSkills
-      v-model:model="form.skills"
-      :abilities="form.abilities"
-      :proficiency-bonus="form.proficiencyBonus"
-    />
 
     <ARow :gutter="16">
       <ACol :span="6">
@@ -241,14 +184,20 @@
       </ACol>
     </ARow>
 
+    <CreatureAbilities
+      v-model="form.abilities"
+      :proficiency-bonus="form.proficiencyBonus"
+    />
+
+    <CreatureSkills
+      v-model="form.skills"
+      :abilities="form.abilities"
+      :proficiency-bonus="form.proficiencyBonus"
+    />
+
     <CreatureSenses v-model="form.senses" />
 
     <CreatureLanguages v-model="form.languages" />
-
-    <CreatureChallengeRating
-      v-model="form.experience"
-      :proficiency-bonus="form.proficiencyBonus"
-    />
 
     <CreatureTrait v-model="form.traits" />
 

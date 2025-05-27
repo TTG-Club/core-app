@@ -9,8 +9,8 @@
 
   const css = useCssModule();
 
-  const masteryClass = computed(() => {
-    const classes: Array<string> = [css.mastery];
+  const dotClass = computed(() => {
+    const classes: Array<string> = [css.dot];
 
     if (state.value > 0) {
       classes.push(css.proficiency);
@@ -26,13 +26,26 @@
 
 <template>
   <div
-    :class="masteryClass"
+    :class="$style.mastery"
     @click.left.exact.prevent="next()"
-  />
+  >
+    <div :class="dotClass" />
+
+    <slot name="default" />
+  </div>
 </template>
 
 <style module lang="scss">
   .mastery {
+    cursor: pointer;
+    user-select: none;
+
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .dot {
     cursor: pointer;
     content: '';
 

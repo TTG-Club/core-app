@@ -1,5 +1,3 @@
-export { default as AbilityMastery } from './AbilityMastery.vue';
-
 export { default as CreatureChallengeRating } from './CreatureChallengeRating.vue';
 
 export { default as CreatureAbilities } from './CreatureAbilities.vue';

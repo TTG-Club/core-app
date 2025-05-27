@@ -29,7 +29,7 @@
     </AFormItem>
   </ACol>
 
-  <ACol :span="4">
+  <ACol :span="8">
     <AFormItem
       label="Уточнение типа"
       :name="['category', 'text']"

@@ -1,80 +1,59 @@
 <script setup lang="ts">
-  import { DictionaryService } from '~/shared/api';
+  import { ABILITIES } from '~/shared/types';
   import { getModifier } from '~/shared/utils';
-  import AbilityMastery from '~bestiary/editor/ui/AbilityMastery.vue';
+  import { AbilityMastery } from '~ui/editor';
 
   import type { CreateAbilities } from '~bestiary/types';
 
-  const props = defineProps<{
+  const { proficiencyBonus } = defineProps<{
     proficiencyBonus: number;
   }>();
 
   const model = defineModel<CreateAbilities>({ required: true });
 
-  const keys = ['str', 'dex', 'con', 'int', 'wis', 'chr'] as const;
-
-  const abilityMap: Record<(typeof keys)[number], string> = {
-    str: 'STRENGTH',
-    dex: 'DEXTERITY',
-    con: 'CONSTITUTION',
-    int: 'INTELLIGENCE',
-    wis: 'WISDOM',
-    chr: 'CHARISMA',
-  };
-
-  const { data: abilities } = await useAsyncData('dictionaries-abilities', () =>
-    DictionaryService.abilities(),
-  );
-
-  const labels = computed(() => {
-    const raw = abilities.value ?? [];
-    const result: Partial<Record<(typeof keys)[number], string>> = {};
-
-    for (const [key, sysName] of Object.entries(abilityMap)) {
-      const entry = raw.find((a) => a.value === sysName);
-
-      result[key as (typeof keys)[number]] = entry?.label ?? key.toUpperCase();
-    }
-
-    return result as Record<(typeof keys)[number], string>;
-  });
-
-  /**
-   * Расчёт модификатора с учётом бонуса мастерства и режима (0 | 1 | 2)
-   */
-  function calculateTotalModifier(baseValue: number, mod: number): string {
-    const abilityMod = getModifier(baseValue);
-
-    const total = abilityMod + props.proficiencyBonus * mod;
+  function calcModifier(ability: number, multiplier: number): string {
+    const abilityMod = getModifier(ability);
+    const total = abilityMod + proficiencyBonus * multiplier;
 
     return total >= 0 ? `+${total}` : `${total}`;
   }
 </script>
 
 <template>
+  <ADivider orientation="left">
+    <ATypographyText
+      type="secondary"
+      content="Характеристики"
+      strong
+    />
+  </ADivider>
+
   <ARow :gutter="16">
     <ACol
-      v-for="key in keys"
-      :key="key"
+      v-for="ability in ABILITIES"
+      :key="ability.key"
       :span="4"
     >
       <AFormItem
-        :label="labels[key]"
-        :name="['abilities', key, 'value']"
+        :name="['abilities', ability.shortKey, 'value']"
+        :label="ability.label"
       >
         <AInputNumber
-          v-model:value="model[key].value"
+          v-model:value="model[ability.shortKey].value"
           :precision="0"
           min="0"
           max="30"
         >
           <template #addonBefore>
-            <AbilityMastery v-model="model[key].multiplier" />
+            <AbilityMastery v-model="model[ability.shortKey].multiplier" />
           </template>
 
           <template #addonAfter>
             {{
-              calculateTotalModifier(model[key].value, model[key].multiplier)
+              calcModifier(
+                model[ability.shortKey].value,
+                model[ability.shortKey].multiplier,
+              )
             }}
           </template>
         </AInputNumber>

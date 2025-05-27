@@ -35,3 +35,5 @@ export { default as SelectCondition } from './SelectCondition.vue';
 export { default as SelectLanguage } from './SelectLanguage.vue';
 
 export { default as SelectChallengeRating } from './SelectChallengeRating.vue';
+
+export { default as SelectMastery } from './SelectMastery.vue';

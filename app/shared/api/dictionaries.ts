@@ -1,5 +1,11 @@
 import type { NitroFetchOptions, NitroFetchRequest } from 'nitropack';
-import type { SelectOption, SelectOptionWithMeasurable } from '~/shared/types';
+import type {
+  AbilitySelectOption,
+  SelectOption,
+  SelectOptionWithMeasurable,
+  ChallengeRatingSelectOption,
+  SkillSelectOption,
+} from '~/shared/types';
 
 // Эндпоинты API
 enum DictionaryEndpoints {
@@ -116,7 +122,7 @@ class Dictionaries {
 
   public abilities = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
-  ): Promise<Array<SelectOption>> => {
+  ): Promise<Array<AbilitySelectOption>> => {
     return $fetch(DictionaryEndpoints.ABILITIES, {
       ...config,
       method: 'get',
@@ -125,7 +131,7 @@ class Dictionaries {
 
   public skills = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
-  ): Promise<Array<SelectOption>> => {
+  ): Promise<Array<SkillSelectOption>> => {
     return $fetch(DictionaryEndpoints.SKILLS, {
       ...config,
       method: 'get',
@@ -170,7 +176,7 @@ class Dictionaries {
 
   public challengeRating = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
-  ): Promise<Array<SelectOption>> => {
+  ): Promise<Array<ChallengeRatingSelectOption>> => {
     return $fetch(DictionaryEndpoints.CHALLENGE_RATING, {
       ...config,
       method: 'get',

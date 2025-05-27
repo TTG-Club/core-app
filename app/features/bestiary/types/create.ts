@@ -1,3 +1,4 @@
+import type { AbilityKey, AbilityShortKey } from '~/shared/types';
 import type { EditorBaseInfoState } from '~ui/editor';
 
 export interface CreatureCreate extends EditorBaseInfoState {
@@ -35,14 +36,14 @@ export interface CreatureCategory {
 }
 
 export interface CreatureSize {
-  size: Array<string> | undefined;
+  size: Array<'GARGANTUAN' | 'HUGE' | 'LARGE' | 'MEDIUM' | 'SMALL' | 'TINY'>;
   text: string | undefined;
   sizeString: string | undefined;
 }
 
 export interface CreateHit {
   hit: number; // среднее количество хитов или абсолютное значение
-  formula: string;
+  formula: string | undefined;
   countHitDice: number | undefined; // количество костей хитов
   text: string | undefined; // текстовое описание хитов
 }
@@ -67,26 +68,18 @@ export interface CreateFlySpeed {
   hover: boolean | undefined;
 }
 
-export interface CreateAbilities {
-  str: CreateAbility;
-  dex: CreateAbility;
-  con: CreateAbility;
-  int: CreateAbility;
-  wis: CreateAbility;
-  chr: CreateAbility;
-}
+export type CreateAbilities = Record<AbilityShortKey, CreateAbility>;
 
 export interface CreateAbility {
-  ability: string;
+  ability: AbilityKey;
   value: number;
   multiplier: 0 | 1 | 2;
-  mod: string | undefined;
 }
 
 export interface CreateSkill {
-  skill: string;
+  skill: string | undefined;
   multiplier: 0 | 1 | 2;
-  text: string;
+  text: string | undefined;
 }
 
 export interface CreatureLanguages {

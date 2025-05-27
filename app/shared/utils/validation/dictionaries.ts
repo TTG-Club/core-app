@@ -47,11 +47,15 @@ export const ruleMagicSchool = (): Rule => ({
   },
 });
 
-export const ruleSize = (): Rule => ({
-  required: true,
+export const ruleSize = (required = true): Rule => ({
+  required,
   trigger: ['change', 'blur'],
   type: 'string',
   validator: async (rule: Rule, value: string | undefined) => {
+    if (!required && !value) {
+      return;
+    }
+
     if (!value) {
       throw new Error('Поле обязательно для заполнения');
     }
