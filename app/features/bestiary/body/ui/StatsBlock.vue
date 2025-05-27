@@ -83,7 +83,7 @@
     <div :class="$style.item">
       <div :class="$style.name">Чувства:</div>
 
-      <span></span>
+      <span>{{ creature.sense }}</span>
     </div>
 
     <div :class="$style.item">

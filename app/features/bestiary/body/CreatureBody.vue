@@ -30,7 +30,7 @@
         flex="1 1 auto"
       >
         <ADivider
-          v-if="creature.traits.length > 0"
+          v-if="creature.traits?.length"
           orientation="left"
         >
           <ATypographyText
@@ -45,12 +45,14 @@
           :key="trait.name.eng"
         >
           <ACol>
-            {{ trait.name.rus }}. <MarkupRender :entries="trait.description" />
+            <strong>{{ trait.name.rus }}.</strong>
+
+            <MarkupRender :entries="trait.description" />
           </ACol>
         </ARow>
 
         <ADivider
-          v-if="creature.traits.length > 0"
+          v-if="creature.traits?.length"
           orientation="left"
         >
           <ATypographyText
@@ -65,13 +67,14 @@
           :key="action.name.eng"
         >
           <ACol>
-            {{ action.name.rus }}.
+            <strong>{{ action.name.rus }}.</strong>
+
             <MarkupRender :entries="action.description" />
           </ACol>
         </ARow>
 
         <ADivider
-          v-if="creature.bonusActions.length > 0"
+          v-if="creature.bonusActions?.length"
           orientation="left"
         >
           <ATypographyText
@@ -86,13 +89,14 @@
           :key="action.name.eng"
         >
           <ACol>
-            {{ action.name.rus }}.
+            <strong>{{ action.name.rus }}.</strong>
+
             <MarkupRender :entries="action.description" />
           </ACol>
         </ARow>
 
         <ADivider
-          v-if="creature.reactions.length > 0"
+          v-if="creature.reactions?.length"
           orientation="left"
         >
           <ATypographyText
@@ -107,13 +111,14 @@
           :key="action.name.eng"
         >
           <ACol>
-            {{ action.name.rus }}.
+            <strong>{{ action.name.rus }}.</strong>
+
             <MarkupRender :entries="action.description" />
           </ACol>
         </ARow>
 
         <ADivider
-          v-if="creature.legendaryActions.length > 0"
+          v-if="creature.legendaryActions?.length"
           orientation="left"
         >
           <ATypographyText
@@ -123,15 +128,31 @@
           />
         </ADivider>
 
-        <ARow
-          v-for="action in creature.legendaryActions"
-          :key="action.name.eng"
-        >
-          <ACol>
-            {{ action.name.rus }}.
-            <MarkupRender :entries="action.description" />
-          </ACol>
+        <ARow v-if="creature.legendaryActions?.length">
+          <ACol
+            ><strong>Использования легендарных действий:</strong>
+
+            {{ creature.legendaryAction }}
+            <span v-if="creature.legendaryActionInLair">
+              ({{ creature.legendaryActionInLair }} в логове)</span
+            >
+            . Сразу после хода другого существа {{ creature.name.rus }} может
+            потратить 1 использование, чтобы выполнить одно из следующих
+            действий. {{ creature.name.rus }} восстанавливает все потраченные
+            использования в начале своего хода.</ACol
+          >
         </ARow>
+
+        <ul>
+          <li
+            v-for="action in creature.legendaryActions"
+            :key="action.name.eng"
+          >
+            <strong>{{ action.name.rus }}.</strong>
+
+            <MarkupRender :entries="action.description" />
+          </li>
+        </ul>
 
         <ADivider
           v-if="creature.description.length > 0"

@@ -29,10 +29,13 @@ export interface CreatureDetailResponse {
   resistance: string;
   immunity: string;
   languages: string;
+  sense: string;
   traits: Array<Trait>;
   actions: Array<Action>;
   reactions: Array<Action>;
   bonusActions: Array<Action>;
+  legendaryAction: number;
+  legendaryActionInLair: number;
   legendaryActions: Array<Action>;
 }
 
