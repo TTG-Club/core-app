@@ -18,6 +18,10 @@
     :group="bestiary.source.group"
     @open-drawer="open(bestiary.url)"
   >
+    <template #icon>
+      {{ bestiary.challengeRailing }}
+    </template>
+
     <template #default>
       {{ bestiary.name.rus }}
     </template>
@@ -28,7 +32,7 @@
 
     <template #caption>
       <span :style="{ color: 'var(--color-text-gray)' }">
-        {{ bestiary.CR }}
+        {{ bestiary.type }}
       </span>
     </template>
   </SmallLink>
