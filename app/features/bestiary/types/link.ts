@@ -4,6 +4,6 @@ export interface CreatureLinkResponse {
   url: string;
   name: Pick<NameResponse, 'rus' | 'eng'>;
   source: SourceResponse;
-  CR: string; // уровень опасности
+  challengeRailing: string; // уровень опасности
   type: string; // типы существа
 }

@@ -42,7 +42,7 @@
 <template>
   <PageContainer fixed-header>
     <template #header>
-      <PageHeader title="Бестиарий>">
+      <PageHeader title="Бестиарий">
         <template #filter>
           <AInput
             v-model:value="search"
