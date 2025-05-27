@@ -1,10 +1,10 @@
 <script setup lang="ts">
-  import type { Hit } from '~bestiary/types';
+  import CreatureAbilitiesTable from '~bestiary/body/ui/CreatureAbilitiesTable.vue';
+
+  import type { CreatureDetailResponse } from '~bestiary/types';
 
   defineProps<{
-    ac: string;
-    initiative: string;
-    hit: Hit;
+    creature: CreatureDetailResponse;
   }>();
 </script>
 
@@ -13,12 +13,89 @@
     <div :class="$style.item">
       <ATooltip
         :mouse-enter-delay="0.7"
+        title="Класс доспеха"
         destroy-tooltip-on-hide
       >
         <div :class="$style.name">КД:</div>
       </ATooltip>
 
-      <span>{{ ac }}</span>
+      <span>{{ creature.AC }}</span>
+
+      <div :class="$style.name">Инициатива:</div>
+
+      <span>{{ creature.initiative }}</span>
+    </div>
+
+    <div :class="$style.item">
+      <div :class="$style.name">Хиты:</div>
+
+      <span
+        >{{ creature.hit.hit }} ({{ creature.hit.formula }}){{
+          creature.hit.text
+        }}</span
+      >
+    </div>
+
+    <div :class="$style.item">
+      <div :class="$style.name">Скорость:</div>
+
+      <span>{{ creature.speed }}</span>
+    </div>
+
+    <CreatureAbilitiesTable :abilities="creature.abilities" />
+
+    <div
+      v-if="creature.skills.length > 0"
+      :class="$style.item"
+    >
+      <div :class="$style.name">Навыки:</div>
+
+      <span>{{ creature.skills }}</span>
+    </div>
+
+    <div
+      v-if="creature.vulnerability.length > 0"
+      :class="$style.item"
+    >
+      <div :class="$style.name">Уязвимость:</div>
+
+      <span>{{ creature.vulnerability }}</span>
+    </div>
+
+    <div
+      v-if="creature.resistance.length > 0"
+      :class="$style.item"
+    >
+      <div :class="$style.name">Сопротивление:</div>
+
+      <span>{{ creature.resistance }}</span>
+    </div>
+
+    <div
+      v-if="creature.immunity.length > 0"
+      :class="$style.item"
+    >
+      <div :class="$style.name">Иммунитет:</div>
+
+      <span>{{ creature.immunity }}</span>
+    </div>
+
+    <div :class="$style.item">
+      <div :class="$style.name">Чувства:</div>
+
+      <span></span>
+    </div>
+
+    <div :class="$style.item">
+      <div :class="$style.name">Языки:</div>
+
+      <span>{{ creature.languages }}</span>
+    </div>
+
+    <div :class="$style.item">
+      <div :class="$style.name">ПО:</div>
+
+      <span>{{ creature.CR }}</span>
     </div>
   </div>
 </template>
@@ -39,27 +116,18 @@
 
     .item {
       display: flex;
-      flex: 1 0 100%;
-      flex-direction: column;
-      gap: 4px;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
 
       min-width: 100%;
-      padding: 10px 16px;
+      padding: 3px 16px;
 
       @container (width > 600px) {
         flex: 1 0 calc(100% / 3);
         min-width: calc(100% / 3);
         padding: 10px 24px;
-      }
-
-      &.block {
-        flex: 1 0 100%;
-        min-width: 100%;
-        border-right: none;
-      }
-
-      &.duration {
-        border-right: none;
       }
 
       .name {

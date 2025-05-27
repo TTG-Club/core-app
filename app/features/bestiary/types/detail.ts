@@ -17,13 +17,17 @@ export interface CreatureDetailResponse {
   hit: Hit;
   speed: string;
   abilities: {
-    strength: Ability;
-    dexterity: Ability;
-    constitution: Ability;
-    intelligence: Ability;
-    wisdom: Ability;
-    charisma: Ability;
+    str: Ability;
+    dex: Ability;
+    con: Ability;
+    int: Ability;
+    wis: Ability;
+    chr: Ability;
   };
+  skills: string;
+  vulnerability: string;
+  resistance: string;
+  immunity: string;
   languages: string;
   traits: Array<Trait>;
   actions: Array<Action>;
@@ -45,13 +49,19 @@ export interface Ability {
 }
 
 export interface Trait {
-  name: string;
+  name: {
+    rus: string;
+    eng: string;
+  };
   english: string;
-  description: string;
+  description: Array<string>;
 }
 
 export interface Action {
-  name: string;
+  name: {
+    rus: string;
+    eng: string;
+  };
   english: string;
-  description: string;
+  description: Array<string>;
 }
