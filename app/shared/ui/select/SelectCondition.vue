@@ -34,7 +34,7 @@
 <template>
   <ASelect
     v-model:value="model"
-    :placeholder="`Выбери состояни${multiple ? 'е' : 'я'}`"
+    :placeholder="`Выбери состояни${multiple ? 'я' : 'е'}`"
     :mode="multiple ? 'multiple' : undefined"
     :loading="status === 'pending'"
     :options="data || []"

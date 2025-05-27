@@ -45,7 +45,7 @@
   <ADivider orientation="left">
     <ATypographyText
       type="secondary"
-      content="Способы коммуникации"
+      content="Языки"
       strong
     />
   </ADivider>
@@ -55,7 +55,7 @@
     :key="index"
     :gutter="16"
   >
-    <ACol :span="8">
+    <ACol :span="6">
       <AFormItem
         label="Язык"
         :name="['languages', 'languages', index, 'language']"
@@ -64,7 +64,7 @@
       </AFormItem>
     </ACol>
 
-    <ACol :span="8">
+    <ACol :span="12">
       <AFormItem
         label="Пояснение"
         :name="['languages', 'languages', index, 'text']"
@@ -76,7 +76,7 @@
       </AFormItem>
     </ACol>
 
-    <ACol :span="8">
+    <ACol :span="6">
       <AFormItem label="Управление">
         <AFlex :gap="8">
           <AButton

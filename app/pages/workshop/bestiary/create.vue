@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { NuxtLink } from '#components';
+  import { AbilityKey, AbilityShortKey } from '~/shared/types';
   import { CreatureEditor } from '~bestiary/editor';
   import { SvgIcon } from '~ui/icon';
   import { PageContainer, PageHeader } from '~ui/page';
@@ -30,7 +31,7 @@
       text: undefined, // уточнение типа
     },
     size: {
-      size: undefined,
+      size: [],
       text: undefined,
       sizeString: undefined,
     },
@@ -68,22 +69,36 @@
       text: undefined,
     },
     abilities: {
-      str: { ability: 'STRENGTH', value: 10, multiplier: 0, mod: undefined },
-      dex: { ability: 'DEXTERITY', value: 10, multiplier: 0, mod: undefined },
-      con: {
-        ability: 'CONSTITUTION',
+      [AbilityShortKey.STRENGTH]: {
+        ability: AbilityKey.STRENGTH,
         value: 10,
         multiplier: 0,
-        mod: undefined,
       },
-      int: {
-        ability: 'INTELLIGENCE',
+      [AbilityShortKey.DEXTERITY]: {
+        ability: AbilityKey.DEXTERITY,
         value: 10,
         multiplier: 0,
-        mod: undefined,
       },
-      wis: { ability: 'WISDOM', value: 10, multiplier: 0, mod: undefined },
-      chr: { ability: 'CHARISMA', value: 10, multiplier: 0, mod: undefined },
+      [AbilityShortKey.CONSTITUTION]: {
+        ability: AbilityKey.CONSTITUTION,
+        value: 10,
+        multiplier: 0,
+      },
+      [AbilityShortKey.INTELLIGENCE]: {
+        ability: AbilityKey.INTELLIGENCE,
+        value: 10,
+        multiplier: 0,
+      },
+      [AbilityShortKey.WISDOM]: {
+        ability: AbilityKey.WISDOM,
+        value: 10,
+        multiplier: 0,
+      },
+      [AbilityShortKey.CHARISMA]: {
+        ability: AbilityKey.CHARISMA,
+        value: 10,
+        multiplier: 0,
+      },
     },
     skills: [],
     vulnerabilities: [],

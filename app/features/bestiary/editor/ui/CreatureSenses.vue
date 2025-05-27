@@ -34,6 +34,14 @@
 </script>
 
 <template>
+  <ADivider orientation="left">
+    <ATypographyText
+      type="secondary"
+      content="Чувства"
+      strong
+    />
+  </ADivider>
+
   <ARow :gutter="16">
     <ACol
       v-for="sense in senseTypes"
@@ -53,11 +61,13 @@
             (v) =>
               updateSense(sense.value, typeof v === 'number' ? v : undefined)
           "
-        />
+        >
+          <template #addonAfter> фт. </template>
+        </AInputNumber>
       </AFormItem>
     </ACol>
 
-    <ACol :span="4">
+    <ACol :span="8">
       <AFormItem
         label="Пассивная Внимательность"
         :name="['senses', 'passivePerception']"

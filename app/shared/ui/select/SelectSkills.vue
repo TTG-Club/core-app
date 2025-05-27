@@ -3,14 +3,15 @@
 
   import { DictionaryService } from '~/shared/api';
 
-  const { limit = 0 } = defineProps<{
+  const { mode = undefined, limit = 0 } = defineProps<{
     disabled?: boolean;
     limit?: number;
+    mode?: 'multiple' | 'tags';
   }>();
 
   const context = Form.useInjectFormItemContext();
 
-  const model = defineModel<Array<string>>();
+  const model = defineModel<string | Array<string>>();
 
   const { data, refresh } = await useAsyncData(
     'dictionaries-skills',
@@ -18,8 +19,14 @@
     { dedupe: 'defer' },
   );
 
+  const isMultiple = computed(() => Boolean(mode));
+
   const options = computed(() => {
     if (!data.value) return [];
+
+    if (!isMultiple.value) {
+      return data.value;
+    }
 
     const disabled = !!model.value && !!limit && model.value.length >= limit;
 
@@ -40,15 +47,29 @@
   watch(model, () => {
     context.onFieldChange();
   });
+
+  const placeholder = computed(() => {
+    if (!isMultiple.value) {
+      return 'Выбери навык';
+    }
+
+    if (!limit) {
+      return 'Выбери навыки';
+    }
+
+    const plural = getPlural(limit, ['навык', 'навыка', 'навыков']);
+
+    return `Выбери ${limit} ${plural}`;
+  });
 </script>
 
 <template>
   <ASelect
     v-model:value="model"
     :options="options"
-    placeholder="Выбери два навыка"
     max-tag-count="responsive"
-    mode="multiple"
+    :placeholder
+    :mode
     show-search
     allow-clear
     show-arrow

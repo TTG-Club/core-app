@@ -8,39 +8,65 @@
     required: true,
   });
 
-  watch(
-    () => model.value.text,
-    (newVal, oldVal) => {
-      if (newVal !== oldVal) {
+  watchDebounced(
+    () => [model.value.size, model.value.text],
+    ([size, text], [oldSize, oldText]) => {
+      if (size !== oldSize || text !== oldText) {
+        model.value.sizeString = undefined;
+      }
+    },
+    { debounce: 300 },
+  );
+
+  watchDebounced(
+    () => model.value.sizeString,
+    (sizeString, oldSizeString) => {
+      if (sizeString !== oldSizeString) {
+        model.value.size = [];
         model.value.text = undefined;
       }
     },
+    { debounce: 300 },
   );
 </script>
 
 <template>
-  <ACol :span="6">
-    <AFormItem
-      label="Размеры существа"
-      :name="['size', 'value']"
-      :rules="[ValidationDictionaries.ruleSize()]"
-    >
-      <SelectSize
-        v-model="model.size"
-        multiple
-      />
-    </AFormItem>
-  </ACol>
+  <ARow :gutter="16">
+    <ACol :span="8">
+      <AFormItem
+        label="Размеры существа"
+        :name="['size', 'value']"
+        :rules="[ValidationDictionaries.ruleSize(Boolean(model.sizeString))]"
+      >
+        <SelectSize
+          v-model="model.size"
+          multiple
+        />
+      </AFormItem>
+    </ACol>
 
-  <ACol :span="6">
-    <AFormItem
-      label="Уточнение размера"
-      :name="['size', 'text']"
-    >
-      <AInput
-        v-model:value="model.text"
-        placeholder="Введи уточнение размера"
-      />
-    </AFormItem>
-  </ACol>
+    <ACol :span="8">
+      <AFormItem
+        label="Уточнение размера"
+        :name="['size', 'text']"
+      >
+        <AInput
+          v-model:value="model.text"
+          placeholder="Введи уточнение размера"
+        />
+      </AFormItem>
+    </ACol>
+
+    <ACol :span="8">
+      <AFormItem
+        label="Нестандартный размер"
+        :name="['size', 'sizeString']"
+      >
+        <AInput
+          v-model:value="model.sizeString"
+          placeholder="Введи нестандартный размер"
+        />
+      </AFormItem>
+    </ACol>
+  </ARow>
 </template>
