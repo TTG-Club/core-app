@@ -80,7 +80,6 @@
       v-model="form.hit"
       :size="form.size"
       :constitution="form.abilities.con"
-      :proficiency-bonus="form.proficiencyBonus"
     />
 
     <CreatureChallengeRating

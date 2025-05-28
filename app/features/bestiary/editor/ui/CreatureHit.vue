@@ -7,10 +7,9 @@
     required: true,
   });
 
-  const { size, constitution, proficiencyBonus } = defineProps<{
+  const { size, constitution } = defineProps<{
     size: CreatureSize;
     constitution: CreateAbility;
-    proficiencyBonus: number;
   }>();
 
   const diceSize = computed(() => {
@@ -34,11 +33,7 @@
     }
   });
 
-  const modifier = computed(
-    () =>
-      getModifier(constitution.value) +
-      proficiencyBonus * constitution.multiplier,
-  );
+  const modifier = computed(() => getModifier(constitution.value));
 
   const bonus = computed(() => {
     const count = model.value.countHitDice;
