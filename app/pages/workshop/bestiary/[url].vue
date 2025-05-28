@@ -200,12 +200,10 @@
       immunityToCondition: [],
       equipments: [],
       senses: {
-        senses: [
-          {
-            type: '',
-            value: 0,
-          },
-        ],
+        darkvision: undefined,
+        truesight: undefined,
+        blindsight: undefined,
+        tremorsense: undefined,
         passivePerception: 10,
       },
       languages: {

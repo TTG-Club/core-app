@@ -106,7 +106,10 @@ export interface CreateExperience {
 }
 
 export interface CreatureSenses {
-  senses: Array<CreatureSense>;
+  darkvision: number | undefined;
+  truesight: number | undefined;
+  blindsight: number | undefined;
+  tremorsense: number | undefined;
   passivePerception: number;
 }
 
