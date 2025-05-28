@@ -11,10 +11,10 @@
     CreatureSpeed,
     CreatureTrait,
     CreatureType,
+    CreatureDefenses,
   } from './ui';
 
   import { ValidationBase, getModifier } from '~/shared/utils';
-  import { CreatureDefenses } from '~bestiary/editor/ui';
   import { EditorBaseInfo } from '~ui/editor';
   import { SelectAlignment } from '~ui/select';
 

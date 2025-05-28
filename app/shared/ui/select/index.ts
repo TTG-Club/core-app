@@ -36,4 +36,6 @@ export { default as SelectLanguage } from './SelectLanguage.vue';
 
 export { default as SelectChallengeRating } from './SelectChallengeRating.vue';
 
+export { default as SelectSkills } from './SelectSkills.vue';
+
 export { default as SelectMastery } from './SelectMastery.vue';

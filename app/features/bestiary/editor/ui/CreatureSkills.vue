@@ -4,8 +4,7 @@
   import { DictionaryService } from '~/shared/api';
   import { getAbilityInfo } from '~/shared/types';
   import { getModifier } from '~/shared/utils';
-  import { SelectMastery } from '~ui/select';
-  import SelectSkills from '~ui/select/SelectSkills.vue';
+  import { SelectMastery, SelectSkills } from '~ui/select';
 
   import type { CreateAbilities, CreateSkill } from '~bestiary/types';
 
