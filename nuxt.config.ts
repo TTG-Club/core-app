@@ -179,7 +179,7 @@ export default defineNuxtConfig({
     routeRules: {
       '/api/**': {
         security: {
-          enabled: true,
+          enabled: process.env.NODE_ENV !== 'development',
           rateLimiter: {
             tokensPerInterval: 50,
             interval: ms('1m'),
@@ -189,7 +189,7 @@ export default defineNuxtConfig({
       },
       '/s3/**': {
         security: {
-          enabled: true,
+          enabled: process.env.NODE_ENV !== 'development',
           rateLimiter: {
             tokensPerInterval: 50,
             interval: ms('1m'),
