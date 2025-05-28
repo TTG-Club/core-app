@@ -96,60 +96,50 @@
 </script>
 
 <template>
-  <ADivider orientation="left">
-    <ATypographyText
-      type="secondary"
-      content="Хиты"
-      strong
-    />
-  </ADivider>
+  <ACol :span="4">
+    <AFormItem
+      label="Количество костей хитов"
+      :name="['hit', 'countHitDice']"
+    >
+      <AInputNumber
+        v-model:value="model.countHitDice"
+        placeholder="Введи количество"
+        min="0"
+      />
+    </AFormItem>
+  </ACol>
 
-  <ARow :gutter="16">
-    <ACol :span="4">
-      <AFormItem
-        label="Количество костей хитов"
-        :name="['hit', 'countHitDice']"
-      >
-        <AInputNumber
-          v-model:value="model.countHitDice"
-          placeholder="Введи количество"
-          min="0"
-        />
-      </AFormItem>
-    </ACol>
+  <ACol :span="4">
+    <AFormItem label="Формула">
+      <AInput
+        :value="formula"
+        disabled
+      />
+    </AFormItem>
+  </ACol>
 
-    <ACol :span="4">
-      <AFormItem label="Формула">
-        <AInput
-          :value="formula"
-          disabled
-        />
-      </AFormItem>
-    </ACol>
+  <ACol :span="4">
+    <AFormItem
+      label="Среднее количество хитов"
+      :name="['hit', 'value']"
+    >
+      <AInputNumber
+        v-model:value="model.value"
+        placeholder="Введи количество хитов"
+        min="1"
+      />
+    </AFormItem>
+  </ACol>
 
-    <ACol :span="4">
-      <AFormItem
-        label="Среднее количество хитов"
-        :name="['hit', 'value']"
-      >
-        <AInputNumber
-          v-model:value="model.value"
-          placeholder="Введи количество хитов"
-          min="1"
-        />
-      </AFormItem>
-    </ACol>
-
-    <ACol :span="12">
-      <AFormItem
-        label="Текстовое описание"
-        :name="['hit', 'text']"
-      >
-        <AInput
-          v-model:value="model.text"
-          placeholder="Текстовое описани хитов"
-        />
-      </AFormItem>
-    </ACol>
-  </ARow>
+  <ACol :span="6">
+    <AFormItem
+      label="Текстовое описание"
+      :name="['hit', 'text']"
+    >
+      <AInput
+        v-model:value="model.text"
+        placeholder="Текстовое описани хитов"
+      />
+    </AFormItem>
+  </ACol>
 </template>

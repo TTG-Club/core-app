@@ -48,17 +48,26 @@ export interface CreateHit {
   text: string | undefined; // текстовое описание хитов
 }
 
+export enum SpeedType {
+  WALK = 'walk',
+  FLY = 'fly',
+  SWIM = 'swim',
+  CLIMB = 'climb',
+  BURROW = 'burrow',
+}
+
 export interface CreateSpeeds {
-  walk: CreateSpeed;
-  burrow: CreateSpeed;
-  fly: CreateFlySpeed;
-  swim: CreateSpeed;
-  climb: CreateSpeed;
+  [SpeedType.WALK]: Array<CreateSpeed>;
+  [SpeedType.FLY]: Array<CreateSpeed>;
+  [SpeedType.SWIM]: Array<CreateSpeed>;
+  [SpeedType.CLIMB]: Array<CreateSpeed>;
+  [SpeedType.BURROW]: Array<CreateSpeed>;
 }
 
 export interface CreateSpeed {
   value: number;
   text: string | undefined;
+  hover?: boolean;
 }
 
 export interface CreateFlySpeed {
@@ -171,27 +180,16 @@ export function getInitialState(): CreatureCreate {
       countHitDice: undefined, // количество костей хитов
     },
     speeds: {
-      walk: {
-        value: 30,
-        text: undefined,
-      },
-      burrow: {
-        value: 0,
-        text: undefined,
-      },
-      fly: {
-        value: 0,
-        text: undefined,
-        hover: false,
-      },
-      swim: {
-        value: 0,
-        text: undefined,
-      },
-      climb: {
-        value: 0,
-        text: undefined,
-      },
+      walk: [
+        {
+          value: 30,
+          text: undefined,
+        },
+      ],
+      burrow: [],
+      fly: [],
+      swim: [],
+      climb: [],
     },
     abilities: {
       [AbilityShortKey.STRENGTH]: {
