@@ -1,5 +1,5 @@
 import { StatusCodes } from 'http-status-codes';
-import { isString } from 'lodash-es';
+import { isString, isUndefined } from 'lodash-es';
 
 import { ValidationBase } from '~/shared/utils';
 
@@ -15,7 +15,7 @@ export const ruleUrl = (
   type: 'string',
   validator: (rule: Rule, value: string) =>
     new Promise((resolve, reject) => {
-      if (!isString(oldUrl)) {
+      if (!isString(oldUrl) && !isUndefined(oldUrl)) {
         reject('Неизвестная ошибка');
 
         return;
@@ -42,6 +42,6 @@ export const ruleUrl = (
 
           return reject('Неизвестная ошибка');
         },
-      }).then(() => reject('Такая url уже существует'));
+      }).then(() => reject('Такой url уже существует'));
     }),
 });
