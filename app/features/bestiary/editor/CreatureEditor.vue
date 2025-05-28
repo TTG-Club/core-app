@@ -62,7 +62,7 @@
     </ADivider>
 
     <ARow :gutter="16">
-      <CreatureType v-model="form.type" />
+      <CreatureType v-model="form.types" />
 
       <ACol :span="8">
         <AFormItem
@@ -74,11 +74,11 @@
       </ACol>
     </ARow>
 
-    <CreatureSize v-model="form.size" />
+    <CreatureSize v-model="form.sizes" />
 
     <CreatureHit
       v-model="form.hit"
-      :size="form.size"
+      :sizes="form.sizes"
       :constitution="form.abilities.con"
     />
 
@@ -126,7 +126,7 @@
         </AFormItem>
       </ACol>
 
-      <CreatureSpeed v-model="form.speed" />
+      <CreatureSpeed v-model="form.speeds" />
     </ARow>
 
     <CreatureDefenses

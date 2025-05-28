@@ -2,14 +2,14 @@
   import { ValidationDictionaries } from '~/shared/utils';
   import { SelectCreatureType } from '~ui/select';
 
-  import type { CreatureCategory } from '~bestiary/types';
+  import type { CreatureTypes } from '~bestiary/types';
 
-  const model = defineModel<CreatureCategory>({
+  const model = defineModel<CreatureTypes>({
     required: true,
   });
 
   watch(
-    () => model.value.type,
+    () => model.value.values,
     (newVal, oldVal) => {
       if (newVal !== oldVal) {
         model.value.text = undefined;
@@ -22,11 +22,11 @@
   <ACol :span="8">
     <AFormItem
       label="Типы существа"
-      :name="['type', 'type']"
+      :name="['types', 'values']"
       :rules="[ValidationDictionaries.ruleCreatureType()]"
     >
       <SelectCreatureType
-        v-model="model.type"
+        v-model="model.values"
         multiple
       />
     </AFormItem>
@@ -35,7 +35,7 @@
   <ACol :span="8">
     <AFormItem
       label="Уточнение типа"
-      :name="['type', 'text']"
+      :name="['types', 'text']"
     >
       <AInput
         v-model:value="model.text"

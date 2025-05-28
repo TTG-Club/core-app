@@ -8,15 +8,15 @@
   const model = defineModel<CreatureLanguages>({ required: true });
 
   function add(index: number) {
-    model.value.languages.splice(index + 1, 0, getEmpty());
+    model.value.values.splice(index + 1, 0, getEmpty());
   }
 
   function clear(index: number) {
-    model.value.languages.splice(index, 1, getEmpty());
+    model.value.values.splice(index, 1, getEmpty());
   }
 
   function remove(index: number) {
-    model.value.languages.splice(index, 1);
+    model.value.values.splice(index, 1);
   }
 
   function getEmpty(): CreateLanguage {
@@ -29,11 +29,11 @@
   watch(
     model,
     (value) => {
-      if (value.languages.length > 0) {
+      if (value.values.length > 0) {
         return;
       }
 
-      model.value.languages.push(getEmpty());
+      model.value.values.push(getEmpty());
     },
     {
       immediate: true,
@@ -51,14 +51,14 @@
   </ADivider>
 
   <ARow
-    v-for="(item, index) in model.languages"
+    v-for="(item, index) in model.values"
     :key="index"
     :gutter="16"
   >
     <ACol :span="6">
       <AFormItem
         label="Язык"
-        :name="['languages', 'languages', index, 'language']"
+        :name="['languages', 'values', index, 'language']"
       >
         <SelectLanguage v-model="item.language" />
       </AFormItem>
@@ -67,7 +67,7 @@
     <ACol :span="12">
       <AFormItem
         label="Пояснение"
-        :name="['languages', 'languages', index, 'text']"
+        :name="['languages', 'values', index, 'text']"
       >
         <AInput
           v-model:value="item.text"
@@ -87,7 +87,7 @@
           </AButton>
 
           <AButton
-            v-if="index === model.languages.length - 1"
+            v-if="index === model.values.length - 1"
             :disabled="isEqual(item, getEmpty())"
             danger
             block
