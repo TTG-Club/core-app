@@ -35,7 +35,7 @@
     <ACol :span="8">
       <AFormItem
         label="Размеры существа"
-        :name="['size', 'value']"
+        :name="['size', 'size']"
         :rules="[ValidationDictionaries.ruleSize(Boolean(model.sizeString))]"
       >
         <SelectSize

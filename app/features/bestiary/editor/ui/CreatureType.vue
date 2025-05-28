@@ -32,7 +32,7 @@
   <ACol :span="8">
     <AFormItem
       label="Уточнение типа"
-      :name="['category', 'text']"
+      :name="['type', 'text']"
     >
       <AInput
         v-model:value="model.text"

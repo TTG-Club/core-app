@@ -105,7 +105,10 @@
     </ACol>
 
     <ACol :span="4">
-      <AFormItem label="Формула">
+      <AFormItem
+        label="Формула"
+        :name="['hit', 'formula']"
+      >
         <AInput
           v-model:value="model.formula"
           disabled

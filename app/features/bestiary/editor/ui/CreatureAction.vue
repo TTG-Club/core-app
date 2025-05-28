@@ -9,7 +9,7 @@
     | 'reactions'
     | 'legendaryActions';
 
-  const props = defineProps<{
+  defineProps<{
     name: ActionKey;
   }>();
 
@@ -55,7 +55,7 @@
 <template>
   <ADivider orientation="left">
     <ATypographyText
-      :content="labelMap[props.name] ?? 'Особенности'"
+      :content="labelMap[name] ?? 'Особенности'"
       type="secondary"
       strong
     />
@@ -69,7 +69,7 @@
       <ACol :span="8">
         <AFormItem
           label="Название"
-          :name="[props.name, actionIndex, 'name', 'rus']"
+          :name="[name, actionIndex, 'name', 'rus']"
           :rules="[ValidationBase.ruleRusName()]"
         >
           <AInput
@@ -82,7 +82,7 @@
       <ACol :span="8">
         <AFormItem
           label="Название (англ.)"
-          :name="[props.name, actionIndex, 'name', 'eng']"
+          :name="[name, actionIndex, 'name', 'eng']"
           :rules="[ValidationBase.ruleEngName()]"
         >
           <AInput
@@ -122,7 +122,7 @@
       <ACol :span="24">
         <AFormItem
           label="Описание"
-          :name="[props.name, actionIndex, 'description']"
+          :name="[name, actionIndex, 'description']"
           :rules="[ValidationBase.ruleString()]"
         >
           <ATextarea
