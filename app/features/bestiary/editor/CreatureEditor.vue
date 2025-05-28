@@ -121,8 +121,7 @@
             :precision="0"
             placeholder="Введи инициативу"
             min="0"
-            addon-before="+"
-            :addon-after="10 + form.initiative"
+            :addon-after="`+${10 + form.initiative}`"
           />
         </AFormItem>
       </ACol>
