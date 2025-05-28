@@ -63,7 +63,7 @@
         <AFormItem
           label="Название (англ.)"
           tooltip="Английское название"
-          :name="['features', featIndex, 'name', 'eng']"
+          :name="['traits', featIndex, 'name', 'eng']"
           :rules="[ValidationBase.ruleEngName()]"
         >
           <AInput
@@ -103,7 +103,7 @@
       <ACol :span="24">
         <AFormItem
           label="Описание"
-          :name="['features', featIndex, 'description']"
+          :name="['traits', featIndex, 'description']"
           :rules="[ValidationBase.ruleString()]"
         >
           <ATextarea

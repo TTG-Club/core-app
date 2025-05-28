@@ -83,7 +83,7 @@
   <ACol :span="3">
     <AFormItem
       label="Скорость копания"
-      :name="['speed', 'swim', 'value']"
+      :name="['speed', 'burrow', 'value']"
     >
       <AInputNumber
         v-model:value="model.burrow.value"

@@ -113,11 +113,6 @@ export interface CreatureSenses {
   passivePerception: number;
 }
 
-export interface CreatureSense {
-  type: string;
-  value: number;
-}
-
 export interface CreateTrait {
   name: {
     rus: string;
