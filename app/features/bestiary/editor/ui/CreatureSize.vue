@@ -36,7 +36,12 @@
       <AFormItem
         label="Размеры существа"
         :name="['size', 'size']"
-        :rules="[ValidationDictionaries.ruleSize(Boolean(model.sizeString))]"
+        :rules="[
+          ValidationDictionaries.ruleSize({
+            required: !Boolean(model.sizeString),
+            array: true,
+          }),
+        ]"
       >
         <SelectSize
           v-model="model.size"
