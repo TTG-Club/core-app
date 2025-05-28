@@ -19,3 +19,5 @@ export { default as CreatureTrait } from './CreatureTrait.vue';
 export { default as CreatureType } from './CreatureType.vue';
 
 export { default as CreatureLanguages } from './CreatureLanguages.vue';
+
+export { default as CreatureDefenses } from './CreatureDefenses.vue';

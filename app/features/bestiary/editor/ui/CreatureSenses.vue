@@ -3,20 +3,20 @@
 
   import type {
     CreatureSenses,
-    CreateAbilities,
     CreateSkill,
+    CreateAbility,
   } from '~bestiary/types';
 
   const model = defineModel<CreatureSenses>({ required: true });
 
-  const { abilities, skills, proficiencyBonus } = defineProps<{
-    abilities: CreateAbilities;
+  const { wisdom, skills, proficiencyBonus } = defineProps<{
+    wisdom: CreateAbility;
     skills: Array<CreateSkill>;
     proficiencyBonus: number;
   }>();
 
   watchEffect(() => {
-    const wisdom = getModifier(abilities.wis.value);
+    const wisdomModificator = getModifier(wisdom.value);
 
     const perception = skills.find(
       (skill) => skill.skill === 'PERCEPTION',
@@ -28,7 +28,7 @@
       bonus = perception * proficiencyBonus;
     }
 
-    model.value.passivePerception = 10 + wisdom + bonus;
+    model.value.passivePerception = 10 + wisdomModificator + bonus;
   });
 </script>
 
