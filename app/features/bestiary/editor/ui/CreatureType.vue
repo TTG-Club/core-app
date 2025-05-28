@@ -25,7 +25,10 @@
       :name="['type', 'type']"
       :rules="[ValidationDictionaries.ruleCreatureType()]"
     >
-      <SelectCreatureType v-model="model.type" />
+      <SelectCreatureType
+        v-model="model.type"
+        multiple
+      />
     </AFormItem>
   </ACol>
 
