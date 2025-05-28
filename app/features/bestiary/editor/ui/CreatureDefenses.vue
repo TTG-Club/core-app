@@ -60,7 +60,7 @@
     <ACol :span="6">
       <AFormItem
         label="Иммунитет к состояниям"
-        :name="['immunityToDamage']"
+        :name="['immunityToCondition']"
       >
         <SelectCondition
           v-model="immunityToCondition"

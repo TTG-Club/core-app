@@ -76,17 +76,6 @@
 
     <CreatureSize v-model="form.sizes" />
 
-    <CreatureHit
-      v-model="form.hit"
-      :sizes="form.sizes"
-      :constitution="form.abilities.con"
-    />
-
-    <CreatureChallengeRating
-      v-model="form.experience"
-      v-model:proficiency-bonus="form.proficiencyBonus"
-    />
-
     <ADivider orientation="left">
       <ATypographyText
         type="secondary"
@@ -126,15 +115,14 @@
         </AFormItem>
       </ACol>
 
-      <CreatureSpeed v-model="form.speeds" />
+      <CreatureHit
+        v-model="form.hit"
+        :sizes="form.sizes"
+        :constitution="form.abilities.con"
+      />
     </ARow>
 
-    <CreatureDefenses
-      v-model:vulnerabilities="form.vulnerabilities"
-      v-model:resistance="form.resistance"
-      v-model:immunity-to-damage="form.immunityToDamage"
-      v-model:immunity-to-condition="form.immunityToCondition"
-    />
+    <CreatureSpeed v-model="form.speeds" />
 
     <CreatureAbilities
       v-model="form.abilities"
@@ -147,6 +135,13 @@
       :proficiency-bonus="form.proficiencyBonus"
     />
 
+    <CreatureDefenses
+      v-model:vulnerabilities="form.vulnerabilities"
+      v-model:resistance="form.resistance"
+      v-model:immunity-to-damage="form.immunityToDamage"
+      v-model:immunity-to-condition="form.immunityToCondition"
+    />
+
     <CreatureSenses
       v-model="form.senses"
       :wisdom="form.abilities.wis"
@@ -155,6 +150,11 @@
     />
 
     <CreatureLanguages v-model="form.languages" />
+
+    <CreatureChallengeRating
+      v-model="form.experience"
+      v-model:proficiency-bonus="form.proficiencyBonus"
+    />
 
     <CreatureTrait v-model="form.traits" />
 
