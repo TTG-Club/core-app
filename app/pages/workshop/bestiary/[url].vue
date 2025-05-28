@@ -3,6 +3,7 @@
 
   import { NuxtLink } from '#components';
   import { CreatureEditor } from '~bestiary/editor';
+  import { CreaturePreview } from '~bestiary/preview';
   import { type CreatureCreate, getInitialState } from '~bestiary/types';
   import { SvgIcon } from '~ui/icon';
   import { PageContainer, PageHeader } from '~ui/page';
@@ -14,6 +15,7 @@
 
   const form = useState<CreatureCreate>(getInitialState);
   const backup = useState<CreatureCreate>(getInitialState);
+  const preview = ref(false);
 
   const { status } = await useAsyncData(
     `bestiary-${route.params.url}-raw`,
@@ -133,18 +135,27 @@
     <template #header>
       <PageHeader title="Редактирование существа">
         <template #actions>
-          <AButton
-            type="primary"
-            :disabled="isCreated"
-            :loading="editor?.isCreating"
-            @click.left.exact.prevent="submit"
-          >
-            <template #icon>
-              <SvgIcon icon="check" />
-            </template>
+          <template v-if="!rawIncorrect">
+            <AButton
+              :disabled="preview"
+              @click.left.exact.prevent="preview = true"
+            >
+              <template #default>Предпросмотр </template>
+            </AButton>
 
-            <template #default> Сохранить </template>
-          </AButton>
+            <AButton
+              type="primary"
+              :disabled="isCreated"
+              :loading="editor?.isCreating"
+              @click.left.exact.prevent="submit"
+            >
+              <template #icon>
+                <SvgIcon icon="check" />
+              </template>
+
+              <template #default> Сохранить </template>
+            </AButton>
+          </template>
 
           <ATooltip
             title="Закрыть"
@@ -173,12 +184,18 @@
           sub-title="Не найдено существо для редактирования"
         />
 
-        <CreatureEditor
-          v-else
-          ref="editor"
-          v-model="form"
-          :is-creating="isCreating"
-        />
+        <template v-else>
+          <CreatureEditor
+            ref="editor"
+            v-model="form"
+            :is-creating="isCreating"
+          />
+
+          <CreaturePreview
+            v-model="preview"
+            :form
+          />
+        </template>
       </ClientOnly>
     </template>
   </PageContainer>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { NuxtLink } from '#components';
   import { CreatureEditor } from '~bestiary/editor';
+  import { CreaturePreview } from '~bestiary/preview';
   import { type CreatureCreate, getInitialState } from '~bestiary/types';
   import { SvgIcon } from '~ui/icon';
   import { PageContainer, PageHeader } from '~ui/page';
@@ -14,6 +15,7 @@
 
   const isCreating = ref(false);
   const isCreated = ref(false);
+  const preview = ref(false);
 
   const submit = async () => {
     isCreating.value = true;
@@ -77,6 +79,13 @@
       <PageHeader title="Создание нового существа">
         <template #actions>
           <AButton
+            :disabled="preview"
+            @click.left.exact.prevent="preview = true"
+          >
+            <template #default>Предпросмотр </template>
+          </AButton>
+
+          <AButton
             type="primary"
             :disabled="isCreated"
             :loading="isCreating"
@@ -113,6 +122,11 @@
           ref="editor"
           v-model="form"
           :is-creating="isCreating"
+        />
+
+        <CreaturePreview
+          v-model="preview"
+          :form
         />
       </ClientOnly>
     </template>
