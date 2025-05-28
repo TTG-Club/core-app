@@ -195,7 +195,12 @@
       :proficiency-bonus="form.proficiencyBonus"
     />
 
-    <CreatureSenses v-model="form.senses" />
+    <CreatureSenses
+      v-model="form.senses"
+      :abilities="form.abilities"
+      :skills="form.skills"
+      :proficiency-bonus="form.proficiencyBonus"
+    />
 
     <CreatureLanguages v-model="form.languages" />
 
