@@ -1,17 +1,18 @@
-import type { AbilityKey, AbilityShortKey } from '~/shared/types';
+import { AbilityKey, AbilityShortKey } from '~/shared/types';
+
 import type { EditorBaseInfoState } from '~ui/editor';
 
 export interface CreatureCreate extends EditorBaseInfoState {
   description: string; // описание маркап
   image: string | undefined;
 
-  type: CreatureCategory; // типы существа
-  size: CreatureSize; // размеры существа
+  types: CreatureTypes; // типы существа
+  sizes: CreatureSizes; // размеры существа
   alignment: string | undefined; // мировоззрение
   ac: string; // класс доспеха
   initiative: number; // модификатор инициативы
   hit: CreateHit;
-  speed: CreateSpeeds;
+  speeds: CreateSpeeds;
   abilities: CreateAbilities;
   skills: Array<CreateSkill>;
   vulnerabilities: Array<string>;
@@ -30,20 +31,19 @@ export interface CreatureCreate extends EditorBaseInfoState {
   legendaryActions: Array<CreateAction>;
 }
 
-export interface CreatureCategory {
-  type: Array<string>;
+export interface CreatureTypes {
+  values: Array<string>;
   text: string | undefined;
 }
 
-export interface CreatureSize {
-  size: Array<'GARGANTUAN' | 'HUGE' | 'LARGE' | 'MEDIUM' | 'SMALL' | 'TINY'>;
+export interface CreatureSizes {
+  values: Array<'GARGANTUAN' | 'HUGE' | 'LARGE' | 'MEDIUM' | 'SMALL' | 'TINY'>;
   text: string | undefined;
   sizeString: string | undefined;
 }
 
 export interface CreateHit {
-  hit: number; // среднее количество хитов или абсолютное значение
-  formula: string | undefined;
+  value: number; // среднее количество хитов или абсолютное значение
   countHitDice: number | undefined; // количество костей хитов
   text: string | undefined; // текстовое описание хитов
 }
@@ -54,7 +54,6 @@ export interface CreateSpeeds {
   fly: CreateFlySpeed;
   swim: CreateSpeed;
   climb: CreateSpeed;
-  text: string | undefined;
 }
 
 export interface CreateSpeed {
@@ -83,7 +82,7 @@ export interface CreateSkill {
 }
 
 export interface CreatureLanguages {
-  languages: Array<CreateLanguage>;
+  values: Array<CreateLanguage>;
   text: string | undefined;
   telepathy: string | undefined;
 }
@@ -137,4 +136,123 @@ export interface CreateAction {
 export interface SavingThrow {
   ability: string;
   dc: string;
+}
+
+export function getInitialState(): CreatureCreate {
+  return {
+    url: '',
+    name: {
+      rus: '',
+      eng: '',
+      alt: [],
+    },
+    source: {
+      url: undefined,
+      page: undefined,
+    },
+    description: '',
+    image: undefined,
+    tags: [],
+    types: {
+      values: [], // типы существа
+      text: undefined, // уточнение типа
+    },
+    sizes: {
+      values: [],
+      text: undefined,
+      sizeString: undefined,
+    },
+    alignment: undefined, // мировоззрение
+    ac: '', // класс доспеха
+    initiative: 0, // инициатива
+    hit: {
+      value: 0, // среднее количество хитов или абсолютное значение
+      text: undefined, // текстовое описание хитов
+      countHitDice: undefined, // количество костей хитов
+    },
+    speeds: {
+      walk: {
+        value: 30,
+        text: undefined,
+      },
+      burrow: {
+        value: 0,
+        text: undefined,
+      },
+      fly: {
+        value: 0,
+        text: undefined,
+        hover: false,
+      },
+      swim: {
+        value: 0,
+        text: undefined,
+      },
+      climb: {
+        value: 0,
+        text: undefined,
+      },
+    },
+    abilities: {
+      [AbilityShortKey.STRENGTH]: {
+        ability: AbilityKey.STRENGTH,
+        value: 10,
+        multiplier: 0,
+      },
+      [AbilityShortKey.DEXTERITY]: {
+        ability: AbilityKey.DEXTERITY,
+        value: 10,
+        multiplier: 0,
+      },
+      [AbilityShortKey.CONSTITUTION]: {
+        ability: AbilityKey.CONSTITUTION,
+        value: 10,
+        multiplier: 0,
+      },
+      [AbilityShortKey.INTELLIGENCE]: {
+        ability: AbilityKey.INTELLIGENCE,
+        value: 10,
+        multiplier: 0,
+      },
+      [AbilityShortKey.WISDOM]: {
+        ability: AbilityKey.WISDOM,
+        value: 10,
+        multiplier: 0,
+      },
+      [AbilityShortKey.CHARISMA]: {
+        ability: AbilityKey.CHARISMA,
+        value: 10,
+        multiplier: 0,
+      },
+    },
+    skills: [],
+    vulnerabilities: [],
+    resistance: [],
+    immunityToDamage: [],
+    immunityToCondition: [],
+    equipments: [],
+    senses: {
+      darkvision: undefined,
+      truesight: undefined,
+      blindsight: undefined,
+      tremorsense: undefined,
+      passivePerception: 10,
+    },
+    languages: {
+      values: [],
+      text: undefined,
+      telepathy: undefined,
+    },
+    proficiencyBonus: 2,
+    experience: {
+      value: 0,
+      inLair: undefined,
+      suffix: undefined,
+    },
+    traits: [],
+    actions: [],
+    bonusActions: [],
+    reactions: [],
+    legendaryActions: [],
+  };
 }

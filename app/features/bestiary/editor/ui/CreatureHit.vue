@@ -1,19 +1,27 @@
 <script setup lang="ts">
   import { getModifier } from '~/shared/utils';
 
-  import type { CreateAbility, CreateHit, CreatureSize } from '~bestiary/types';
+  import type {
+    CreateAbility,
+    CreateHit,
+    CreatureSizes,
+  } from '~bestiary/types';
 
   const model = defineModel<CreateHit>({
     required: true,
   });
 
-  const { size, constitution } = defineProps<{
-    size: CreatureSize;
+  const { sizes, constitution } = defineProps<{
+    sizes: CreatureSizes;
     constitution: CreateAbility;
   }>();
 
   const diceSize = computed(() => {
-    const currentSize = size.size[0] ?? 'MEDIUM';
+    if (!sizes.values.length) {
+      return undefined;
+    }
+
+    const currentSize = sizes.values[sizes.values.length - 1];
 
     switch (currentSize) {
       case 'GARGANTUAN':
@@ -29,7 +37,7 @@
       case 'TINY':
         return 4;
       default:
-        return 8;
+        return undefined;
     }
   });
 
@@ -58,13 +66,19 @@
     return `${count}к${diceSize.value}${formated}`;
   });
 
-  const diceAvg = computed(() => (diceSize.value + 1) / 2);
+  const diceAvg = computed(() => {
+    if (!diceSize.value) {
+      return undefined;
+    }
+
+    return (diceSize.value + 1) / 2;
+  });
 
   const avgHit = computed(() => {
     const count = model.value.countHitDice;
 
-    if (!count) {
-      return 0;
+    if (!count || !diceAvg.value) {
+      return undefined;
     }
 
     const total = count * diceAvg.value + bonus.value;
@@ -72,12 +86,12 @@
     return Math.floor(total);
   });
 
-  watchImmediate(formula, (value) => {
-    model.value.formula = value;
-  });
-
   watchImmediate(avgHit, (value) => {
-    model.value.hit = value;
+    if (!value) {
+      return;
+    }
+
+    model.value.value = value;
   });
 </script>
 
@@ -105,12 +119,9 @@
     </ACol>
 
     <ACol :span="4">
-      <AFormItem
-        label="Формула"
-        :name="['hit', 'formula']"
-      >
+      <AFormItem label="Формула">
         <AInput
-          v-model:value="model.formula"
+          :value="formula"
           disabled
         />
       </AFormItem>
@@ -119,10 +130,10 @@
     <ACol :span="4">
       <AFormItem
         label="Среднее количество хитов"
-        :name="['hit', 'hit']"
+        :name="['hit', 'value']"
       >
         <AInputNumber
-          v-model:value="model.hit"
+          v-model:value="model.value"
           placeholder="Введи количество хитов"
           min="1"
         />

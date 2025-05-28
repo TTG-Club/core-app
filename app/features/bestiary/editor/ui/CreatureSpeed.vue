@@ -10,7 +10,7 @@
   <ACol :span="3">
     <AFormItem
       label="Скорость"
-      :name="['speed', 'walk', 'value']"
+      :name="['speeds', 'walk', 'value']"
     >
       <AInputNumber
         v-model:value="model.walk.value"
@@ -27,7 +27,7 @@
       <ACol :span="12">
         <AFormItem
           label="Скорость полета"
-          :name="['speed', 'fly', 'value']"
+          :name="['speeds', 'fly', 'value']"
         >
           <AInputNumber
             v-model:value="model.fly.value"
@@ -42,7 +42,7 @@
       <ACol :span="12">
         <AFormItem
           label="Парит"
-          :name="['speed', 'fly', 'hover']"
+          :name="['speeds', 'fly', 'hover']"
         >
           <ACheckbox v-model:checked="model.fly.hover"> Да </ACheckbox>
         </AFormItem>
@@ -53,7 +53,7 @@
   <ACol :span="3">
     <AFormItem
       label="Скорость лазания"
-      :name="['speed', 'climb', 'value']"
+      :name="['speeds', 'climb', 'value']"
     >
       <AInputNumber
         v-model:value="model.climb.value"
@@ -68,7 +68,7 @@
   <ACol :span="3">
     <AFormItem
       label="Скорость плавания"
-      :name="['speed', 'swim', 'value']"
+      :name="['speeds', 'swim', 'value']"
     >
       <AInputNumber
         v-model:value="model.swim.value"
@@ -83,7 +83,7 @@
   <ACol :span="3">
     <AFormItem
       label="Скорость копания"
-      :name="['speed', 'burrow', 'value']"
+      :name="['speeds', 'burrow', 'value']"
     >
       <AInputNumber
         v-model:value="model.burrow.value"

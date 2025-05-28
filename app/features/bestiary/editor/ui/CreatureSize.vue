@@ -2,14 +2,14 @@
   import { ValidationDictionaries } from '~/shared/utils';
   import { SelectSize } from '~ui/select';
 
-  import type { CreatureSize } from '~bestiary/types';
+  import type { CreatureSizes } from '~bestiary/types';
 
-  const model = defineModel<CreatureSize>({
+  const model = defineModel<CreatureSizes>({
     required: true,
   });
 
   watchDebounced(
-    () => [model.value.size, model.value.text],
+    () => [model.value.values, model.value.text],
     ([size, text], [oldSize, oldText]) => {
       if (size !== oldSize || text !== oldText) {
         model.value.sizeString = undefined;
@@ -22,7 +22,7 @@
     () => model.value.sizeString,
     (sizeString, oldSizeString) => {
       if (sizeString !== oldSizeString) {
-        model.value.size = [];
+        model.value.values = [];
         model.value.text = undefined;
       }
     },
@@ -35,7 +35,7 @@
     <ACol :span="8">
       <AFormItem
         label="Размеры существа"
-        :name="['size', 'size']"
+        :name="['sizes', 'values']"
         :rules="[
           ValidationDictionaries.ruleSize({
             required: !Boolean(model.sizeString),
@@ -44,7 +44,7 @@
         ]"
       >
         <SelectSize
-          v-model="model.size"
+          v-model="model.values"
           multiple
         />
       </AFormItem>
@@ -53,7 +53,7 @@
     <ACol :span="8">
       <AFormItem
         label="Уточнение размера"
-        :name="['size', 'text']"
+        :name="['sizes', 'text']"
       >
         <AInput
           v-model:value="model.text"
@@ -65,7 +65,7 @@
     <ACol :span="8">
       <AFormItem
         label="Нестандартный размер"
-        :name="['size', 'sizeString']"
+        :name="['sizes', 'sizeString']"
       >
         <AInput
           v-model:value="model.sizeString"
