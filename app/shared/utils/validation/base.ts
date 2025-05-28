@@ -42,15 +42,15 @@ export const baseStringCheck = (str: string, min?: number, max?: number) => {
   }
 };
 
-export const ruleString = (): Rule => ({
-  required: true,
+export const ruleString = (required = true): Rule => ({
+  required,
   type: 'string',
   trigger: ['blur', 'change'],
   message: 'Поле обязательно для заполнения',
 });
 
-export const ruleNumber = (): Rule => ({
-  required: true,
+export const ruleNumber = (required = true): Rule => ({
+  required,
   type: 'integer',
   trigger: ['blur', 'change'],
   message: 'Поле обязательно для заполнения',

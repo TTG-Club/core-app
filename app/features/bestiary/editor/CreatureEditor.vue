@@ -191,7 +191,7 @@
         <AFormItem
           label="Описание"
           :name="['description']"
-          :rules="[ValidationBase.ruleString()]"
+          :rules="[ValidationBase.ruleString(false)]"
         >
           <ATextarea
             v-model:value="form.description"
