@@ -1,14 +1,23 @@
+import { isArray, isUndefined } from 'lodash-es';
+
 import { DictionaryService } from '~/shared/api';
 import { getEnumFromDictionary } from '~/shared/utils/validation/base';
 
 import type { Rule } from 'ant-design-vue/es/form';
-import type { SelectOption } from '~/shared/types';
+import type {
+  SelectOption,
+  SelectOptionWithNumericValue,
+} from '~/shared/types';
 
 export function validateFromDictionary(
-  value: string,
-  dictionary: Array<SelectOption>,
+  value: string | number | Array<string | number>,
+  dictionary: Array<SelectOption | SelectOptionWithNumericValue>,
 ) {
-  if (!getEnumFromDictionary(dictionary).includes(value)) {
+  const _value = !isArray(value) ? [value] : value;
+
+  if (
+    _value.some((item) => !getEnumFromDictionary(dictionary).includes(item))
+  ) {
     throw new Error('Недопустимое значение');
   }
 }
@@ -47,24 +56,35 @@ export const ruleMagicSchool = (): Rule => ({
   },
 });
 
-export const ruleSize = (required = true): Rule => ({
-  required,
-  trigger: ['change', 'blur'],
-  type: 'string',
-  validator: async (rule: Rule, value: string | undefined) => {
-    if (!required && !value) {
-      return;
-    }
+export const ruleSize = (options?: {
+  required?: boolean;
+  array?: boolean;
+}): Rule => {
+  const required = isUndefined(options?.required) ? true : options.required;
+  const array = isUndefined(options?.array) ? false : options.array;
 
-    if (!value) {
-      throw new Error('Поле обязательно для заполнения');
-    }
+  return {
+    required: required,
+    trigger: ['change', 'blur'],
+    type: !array ? 'string' : 'array',
+    validator: async (
+      rule: Rule,
+      value: string | Array<string> | undefined,
+    ) => {
+      if (!required && !value) {
+        return;
+      }
 
-    const sizes = await DictionaryService.sizes();
+      if (!value) {
+        throw new Error('Поле обязательно для заполнения');
+      }
 
-    validateFromDictionary(value, sizes);
-  },
-});
+      const sizes = await DictionaryService.sizes();
+
+      validateFromDictionary(value, sizes);
+    },
+  };
+};
 
 export const ruleCreatureType = (): Rule => ({
   required: true,

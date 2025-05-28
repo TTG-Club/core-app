@@ -1,9 +1,14 @@
 import { isNumber } from 'lodash-es';
 
 import type { Rule } from 'ant-design-vue/es/form';
-import type { SelectOption } from '~/shared/types';
+import type {
+  SelectOption,
+  SelectOptionWithNumericValue,
+} from '~/shared/types';
 
-export const getEnumFromDictionary = <T extends SelectOption>(
+export const getEnumFromDictionary = <
+  T extends SelectOption | SelectOptionWithNumericValue,
+>(
   dictionary: Array<T>,
 ): Array<T['value']> => dictionary.map((option) => option.value);
 
