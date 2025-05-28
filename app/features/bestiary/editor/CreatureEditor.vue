@@ -14,12 +14,9 @@
   } from './ui';
 
   import { ValidationBase, getModifier } from '~/shared/utils';
+  import { CreatureDefenses } from '~bestiary/editor/ui';
   import { EditorBaseInfo } from '~ui/editor';
-  import {
-    SelectAlignment,
-    SelectCondition,
-    SelectDamageType,
-  } from '~ui/select';
+  import { SelectAlignment } from '~ui/select';
 
   import type { FormInstance } from 'ant-design-vue';
   import type { CreatureCreate } from '~bestiary/types';
@@ -134,55 +131,12 @@
       <CreatureSpeed v-model="form.speed" />
     </ARow>
 
-    <ARow :gutter="16">
-      <ACol :span="6">
-        <AFormItem
-          label="Уязвимость к урону"
-          :name="['vulnerabilities']"
-        >
-          <SelectDamageType
-            v-model="form.vulnerabilities"
-            multiple
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="6">
-        <AFormItem
-          label="Сопротивление к урону"
-          :name="['resistance']"
-        >
-          <SelectDamageType
-            v-model="form.resistance"
-            multiple
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="6">
-        <AFormItem
-          label="Иммунитет к урону"
-          :name="['immunityToDamage']"
-        >
-          <SelectDamageType
-            v-model="form.immunityToDamage"
-            multiple
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="6">
-        <AFormItem
-          label="Иммунитет к состояниям"
-          :name="['immunityToDamage']"
-        >
-          <SelectCondition
-            v-model="form.immunityToCondition"
-            multiple
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
+    <CreatureDefenses
+      v-model:vulnerabilities="form.vulnerabilities"
+      v-model:resistance="form.resistance"
+      v-model:immunity-to-damage="form.immunityToDamage"
+      v-model:immunity-to-condition="form.immunityToCondition"
+    />
 
     <CreatureAbilities
       v-model="form.abilities"
@@ -197,7 +151,7 @@
 
     <CreatureSenses
       v-model="form.senses"
-      :abilities="form.abilities"
+      :wisdom="form.abilities.wis"
       :skills="form.skills"
       :proficiency-bonus="form.proficiencyBonus"
     />
