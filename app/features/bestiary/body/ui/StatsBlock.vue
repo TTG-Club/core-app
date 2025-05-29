@@ -10,16 +10,18 @@
 
 <template>
   <div :class="$style.stats">
-    <div :class="$style.item">
-      <span :class="$style.name">Класс доспеха (КД): </span>
+    <div :class="$style.row">
+      <div :class="$style.item">
+        <span :class="$style.name">КД: </span>
 
-      <span>{{ creature.AC }}</span>
-    </div>
+        <span>{{ creature.AC }}</span>
+      </div>
 
-    <div :class="$style.item">
-      <span :class="$style.name">Инициатива: </span>
+      <div :class="$style.item">
+        <span :class="$style.name">Инициатива: </span>
 
-      <span>{{ creature.initiative }}</span>
+        <span>{{ creature.initiative }}</span>
+      </div>
     </div>
 
     <div :class="$style.item">
@@ -112,6 +114,21 @@
     border-radius: 8px;
 
     background-color: var(--color-bg-secondary);
+
+    .row {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      width: 100%;
+
+      @container (width > 600px) {
+        justify-content: left;
+      }
+
+      .item {
+        min-width: 0;
+      }
+    }
 
     .item {
       min-width: 100%;
