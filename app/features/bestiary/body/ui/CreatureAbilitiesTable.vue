@@ -14,101 +14,104 @@
 </script>
 
 <template>
-  <AFlex vertical>
-    <AFlex
-      ><AFlex class="empty"></AFlex>
+  <div :class="$style.block">
+    <div :class="$style.title">
+      <div></div>
 
-      <AFlex class="header">Мод</AFlex>
+      <div>Мод</div>
 
-      <AFlex class="header">Спас</AFlex>
+      <div>Спас</div>
 
-      <AFlex class="empty"></AFlex>
+      <div></div>
 
-      <AFlex class="header">Мод</AFlex>
+      <div>Мод</div>
 
-      <AFlex class="header">Спас</AFlex>
+      <div>Спас</div>
+    </div>
 
-      <AFlex class="empty"></AFlex>
+    <div :class="$style.ability">
+      <div :class="$style.stat">Сил</div>
 
-      <AFlex class="header">Мод</AFlex>
+      <div>{{ props.abilities.str.mod }}</div>
 
-      <AFlex class="header">Спас</AFlex>
-    </AFlex>
-
-    <AFlex
-      ><AFlex class="ability">Сил</AFlex>
-
-      <AFlex class="cell">{{ props.abilities.str.mod }}</AFlex>
-
-      <AFlex
+      <div
         class="cell"
         :class="{ boxed: abilities.str.mod !== abilities.str.sav }"
-        >{{ props.abilities.str.sav }}</AFlex
       >
+        {{ props.abilities.str.sav }}
+      </div>
 
-      <AFlex class="ability">Лов</AFlex>
+      <div :class="$style.stat">Инт</div>
 
-      <AFlex class="cell">{{ props.abilities.dex.mod }}</AFlex>
+      <div>{{ props.abilities.int.mod }}</div>
 
-      <AFlex class="cell">{{ props.abilities.dex.sav }}</AFlex>
+      <div>{{ props.abilities.int.sav }}</div>
+    </div>
 
-      <AFlex class="ability">Тел</AFlex>
+    <div :class="$style.ability">
+      <div :class="$style.stat">Лов</div>
 
-      <AFlex class="cell">{{ props.abilities.con.mod }}</AFlex>
+      <div>{{ props.abilities.dex.mod }}</div>
 
-      <AFlex class="cell">{{ props.abilities.con.sav }}</AFlex>
-    </AFlex>
+      <div>{{ props.abilities.dex.sav }}</div>
 
-    <AFlex
-      ><AFlex class="ability"><strong>Инт</strong></AFlex>
+      <div :class="$style.stat">Мдр</div>
 
-      <AFlex class="cell">{{ props.abilities.int.mod }}</AFlex>
+      <div>{{ props.abilities.wis.mod }}</div>
 
-      <AFlex class="cell">{{ props.abilities.int.sav }}</AFlex>
+      <div>{{ props.abilities.wis.sav }}</div>
+    </div>
 
-      <AFlex class="ability">Мдр</AFlex>
+    <div :class="$style.ability">
+      <div :class="$style.stat">Тел</div>
 
-      <AFlex class="cell">{{ props.abilities.wis.mod }}</AFlex>
+      <div>{{ props.abilities.con.mod }}</div>
 
-      <AFlex class="cell">{{ props.abilities.wis.sav }}</AFlex>
+      <div>{{ props.abilities.con.sav }}</div>
 
-      <AFlex class="ability">Хар</AFlex>
+      <div :class="$style.stat">Хар</div>
 
-      <AFlex class="cell">{{ props.abilities.chr.mod }}</AFlex>
+      <div>{{ props.abilities.chr.mod }}</div>
 
-      <AFlex class="cell">{{ props.abilities.chr.sav }}</AFlex>
-    </AFlex>
-  </AFlex>
+      <div>{{ props.abilities.chr.sav }}</div>
+    </div>
+  </div>
 </template>
 
-<style scoped>
-  .ability {
-    min-width: 40px;
-    padding: 4px 4px;
-    border: 2px solid #999;
+<style module lang="scss">
+  .block {
+    display: flex;
+    flex-direction: column;
 
-    font-family: serif;
-    font-size: 15px;
-    text-align: left;
-  }
-  .cell {
-    width: 33px;
-    padding: 7px 4px;
-    border: 1px solid #999;
+    width: 100%;
+    padding: 12px 16px;
 
-    color: var(--color-text-title);
-    text-align: center;
-  }
-  .header {
-    font-weight: bold;
-  }
-  .empty {
-    width: 40px;
-    min-width: 40px;
-    min-height: 40px;
-    margin-left: 40px;
-  }
-  .boxed {
-    border: 2px solid #ca5b5b;
+    background: var(--color-hover);
+
+    .title {
+      display: flex;
+      width: 100%;
+      font-size: 12px;
+
+      div {
+        display: flex;
+        flex: 1;
+      }
+    }
+
+    .ability {
+      display: flex;
+
+      .stat {
+        font-weight: 600;
+        color: var(--color-text-bold);
+        text-align: left;
+      }
+
+      div {
+        display: flex;
+        flex: 1;
+      }
+    }
   }
 </style>
