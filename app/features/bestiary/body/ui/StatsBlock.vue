@@ -10,21 +10,20 @@
 
 <template>
   <div :class="$style.stats">
-    <div :class="$style.row">
-      <div :class="$style.item">
-        <div :class="$style.name">Класс доспеха:</div>
+    <div :class="$style.item">
+      <span :class="$style.name">Класс доспеха (КД): </span>
 
-        <span>{{ creature.AC }}</span>
-      </div>
+      <span>{{ creature.AC }}</span>
+    </div>
 
-      <div :class="$style.item">
-        <div :class="$style.name">Инициатива:</div>
+    <div :class="$style.item">
+      <span :class="$style.name">Инициатива: </span>
 
-        <span>{{ creature.initiative }}</span>
-      </div>
+      <span>{{ creature.initiative }}</span>
+    </div>
 
-      <div :class="$style.item">
-        <div :class="$style.name">Хиты:</div>
+    <div :class="$style.item">
+      <span :class="$style.name">Хиты: </span>
 
         <span
           >
@@ -35,67 +34,64 @@
         >
       </div>
 
-      <div :class="$style.item">
-        <div :class="$style.name">Скорость:</div>
+    <div :class="$style.item">
+      <span :class="$style.name">Скорость: </span>
 
-        <span>{{ creature.speed }}</span>
-      </div>
+      <span>{{ creature.speed }}</span>
     </div>
 
     <CreatureAbilitiesTable :abilities="creature.abilities" />
 
-    <div :class="$style.row">
-      <div
-        v-if="creature.skills?.length"
-        :class="$style.item"
-      >
-        <div :class="$style.name">Навыки:</div>
+    <div
+      v-if="creature.skills?.length"
+      :class="$style.item"
+    >
+      <span :class="$style.name">Навыки: </span>
 
-        <span>{{ creature.skills }}</span>
-      </div>
+      <span>{{ creature.skills }}</span>
+    </div>
 
-      <div
-        v-if="creature.vulnerability?.length"
-        :class="$style.item"
-      >
-        <div :class="$style.name">Уязвимость:</div>
+    <div
+      v-if="creature.vulnerability?.length"
+      :class="$style.item"
+    >
+      <span :class="$style.name">Уязвимость: </span>
 
-        <span>{{ creature.vulnerability }}</span>
-      </div>
+      <span>{{ creature.vulnerability }}</span>
+    </div>
 
-      <div
-        v-if="creature.resistance?.length"
-        :class="$style.item"
-      >
-        <div :class="$style.name">Сопротивление:</div>
+    <div
+      v-if="creature.resistance?.length"
+      :class="$style.item"
+    >
+      <span :class="$style.name">Сопротивление: </span>
 
-        <span>{{ creature.resistance }}</span>
-      </div>
+      <span>{{ creature.resistance }}</span>
     </div>
 
     <div
       v-if="creature.immunity?.length"
       :class="$style.item"
     >
-      <div :class="$style.name">Иммунитет:</div>
+      <span :class="$style.name">Иммунитет: </span>
 
       <span>{{ creature.immunity }}</span>
     </div>
 
-    <div :class="[$style.item, $style.w50]">
-      <div :class="$style.name">Чувства:</div>
+    <span :class="$style.item">
+      <span :class="$style.name">Чувства: </span>
 
       <span>{{ creature.sense }}</span>
-    </div>
+    </span>
 
     <div :class="$style.item">
-      <div :class="$style.name">Языки:</div>
+      <span :class="$style.name">Языки: </span>
 
       <span>{{ creature.languages }}</span>
     </div>
 
     <div :class="$style.item">
-      <div :class="$style.name">ПО:</div>
+      <span :class="$style.name">ПО: </span>
 
       <span>{{ creature.CR }}</span>
     </div>
@@ -117,34 +113,7 @@
 
     background-color: var(--color-bg-secondary);
 
-    .row {
-      display: flex;
-      flex-wrap: wrap;
-      width: 100%;
-
-      @container (width > 600px) {
-        flex-wrap: nowrap;
-      }
-
-      .item {
-        flex: 1;
-        min-width: 50%;
-
-        @container (width > 600px) {
-          min-width: 0;
-        }
-
-        &.w50 {
-          min-width: 50%;
-        }
-      }
-    }
-
     .item {
-      display: flex;
-      flex: 1 0 100%;
-      flex-direction: column;
-
       min-width: 100%;
       padding: 6px 16px;
 

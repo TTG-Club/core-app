@@ -84,6 +84,7 @@
     flex-direction: column;
 
     width: 100%;
+    margin: 6px 0;
     padding: 12px 16px;
 
     background: var(--color-hover);
