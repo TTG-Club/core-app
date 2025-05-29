@@ -45,7 +45,7 @@
     <CreatureAbilitiesTable :abilities="creature.abilities" />
 
     <div
-      v-if="creature.skills.length > 0"
+      v-if="creature.skills?.length"
       :class="$style.item"
     >
       <div :class="$style.name">Навыки:</div>
@@ -54,7 +54,7 @@
     </div>
 
     <div
-      v-if="creature.vulnerability.length > 0"
+      v-if="creature.vulnerability?.length"
       :class="$style.item"
     >
       <div :class="$style.name">Уязвимость:</div>
@@ -63,7 +63,7 @@
     </div>
 
     <div
-      v-if="creature.resistance.length > 0"
+      v-if="creature.resistance?.length"
       :class="$style.item"
     >
       <div :class="$style.name">Сопротивление:</div>
@@ -72,7 +72,7 @@
     </div>
 
     <div
-      v-if="creature.immunity.length > 0"
+      v-if="creature.immunity?.length"
       :class="$style.item"
     >
       <div :class="$style.name">Иммунитет:</div>
