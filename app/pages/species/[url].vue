@@ -124,14 +124,6 @@
           </div>
 
           <div :class="$style.stats">
-            <ADivider
-              orientation="left"
-              :style="{ marginBottom: '4px' }"
-              :orientation-margin="16"
-            >
-              Особенности
-            </ADivider>
-
             <div :class="$style.item">
               <span :class="$style.name">Тип:</span>
 
@@ -253,7 +245,7 @@
     overflow: hidden;
 
     width: 100%;
-    padding: 0 0 4px 0;
+    padding: 6px 0;
     border: 1px solid var(--color-border);
     border-radius: 8px;
 
@@ -262,7 +254,7 @@
     .item {
       display: flex;
       flex: 1 0 100%;
-      gap: 4px;
+      gap: 0;
 
       min-width: 100%;
       padding: 6px 16px;
