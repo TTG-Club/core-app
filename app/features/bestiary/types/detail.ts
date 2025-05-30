@@ -12,46 +12,48 @@ export interface CreatureDetailResponse {
   updatedAt: string;
   header: string;
   initiative: string;
-  AC: string;
-  CR: string;
-  hit: Hit;
+  ac: string;
+  cr: string;
+  hit: CreatureHitResponse;
   speed: string;
-  abilities: {
-    str: Ability;
-    dex: Ability;
-    con: Ability;
-    int: Ability;
-    wis: Ability;
-    chr: Ability;
-  };
+  abilities: CreatureAbilitiesResponse;
   skills: string;
   vulnerability: string;
   resistance: string;
   immunity: string;
   languages: string;
   sense: string;
-  traits: Array<Trait>;
-  actions: Array<Action>;
-  reactions: Array<Action>;
-  bonusActions: Array<Action>;
+  traits: Array<CreatureTraitResponse>;
+  actions: Array<CreatureActionResponse>;
+  reactions: Array<CreatureActionResponse>;
+  bonusActions: Array<CreatureActionResponse>;
   legendaryAction: number;
   legendaryActionInLair: number;
-  legendaryActions: Array<Action>;
+  legendaryActions: Array<CreatureActionResponse>;
 }
 
-export interface Hit {
+export interface CreatureAbilitiesResponse {
+  str: CreatureAbilityResponse;
+  dex: CreatureAbilityResponse;
+  con: CreatureAbilityResponse;
+  int: CreatureAbilityResponse;
+  wis: CreatureAbilityResponse;
+  chr: CreatureAbilityResponse;
+}
+
+export interface CreatureHitResponse {
   hit: number;
   formula: string;
   text: string;
 }
 
-export interface Ability {
+export interface CreatureAbilityResponse {
   value: string;
   mod: string;
   sav: string;
 }
 
-export interface Trait {
+export interface CreatureTraitResponse {
   name: {
     rus: string;
     eng: string;
@@ -60,7 +62,7 @@ export interface Trait {
   description: Array<string>;
 }
 
-export interface Action {
+export interface CreatureActionResponse {
   name: {
     rus: string;
     eng: string;
