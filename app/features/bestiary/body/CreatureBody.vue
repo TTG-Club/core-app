@@ -1,7 +1,6 @@
 <script setup lang="ts">
-  import { StatsBlock, DescriptionsBlock } from './ui';
+  import { StatsBlock, DescriptionsBlock, TopBar } from './ui';
 
-  import TopBar from '~bestiary/body/ui/TopBar.vue';
   import { MarkupRender } from '~ui/markup';
   import { RatingWidget } from '~ui/rating';
 
@@ -27,7 +26,7 @@
           :url="creature.url"
         />
 
-        <StatsBlock :creature="creature" />
+        <StatsBlock v-bind="creature" />
       </AFlex>
 
       <AFlex
@@ -129,18 +128,18 @@
           </ADivider>
 
           <ARow>
-            <ACol
-              ><strong>Использования легендарных действий:</strong>
+            <ACol>
+              <strong>Использования легендарных действий:</strong>
 
               {{ creature.legendaryAction }}
               <span v-if="creature.legendaryActionInLair">
-                ({{ creature.legendaryActionInLair }} в логове)</span
-              >
+                ({{ creature.legendaryActionInLair }} в логове)
+              </span>
               . Сразу после хода другого существа {{ creature.name.rus }} может
               потратить 1 использование, чтобы выполнить одно из следующих
               действий. {{ creature.name.rus }} восстанавливает все потраченные
-              использования в начале своего хода.</ACol
-            >
+              использования в начале своего хода.
+            </ACol>
           </ARow>
         </template>
 

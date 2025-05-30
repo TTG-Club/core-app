@@ -1,11 +1,25 @@
 <script setup lang="ts">
-  import CreatureAbilitiesTable from '~bestiary/body/ui/CreatureAbilitiesTable.vue';
+  import { CreatureAbilitiesTable } from './ui';
 
   import type { CreatureDetailResponse } from '~bestiary/types';
 
-  defineProps<{
-    creature: CreatureDetailResponse;
-  }>();
+  defineProps<
+    Pick<
+      CreatureDetailResponse,
+      | 'ac'
+      | 'cr'
+      | 'initiative'
+      | 'hit'
+      | 'speed'
+      | 'abilities'
+      | 'skills'
+      | 'vulnerability'
+      | 'resistance'
+      | 'immunity'
+      | 'sense'
+      | 'languages'
+    >
+  >();
 </script>
 
 <template>
@@ -14,85 +28,82 @@
       <div :class="$style.item">
         <span :class="$style.name">КД: </span>
 
-        <span>{{ creature.AC }}</span>
+        <span>{{ ac }}</span>
       </div>
 
       <div :class="$style.item">
         <span :class="$style.name">Инициатива: </span>
 
-        <span>{{ creature.initiative }}</span>
+        <span>{{ initiative }}</span>
       </div>
     </div>
 
     <div :class="$style.item">
       <span :class="$style.name">Хиты: </span>
 
-      <span>
-        {{ creature.hit.hit }} ({{ creature.hit.formula }})
-        {{ creature.hit.text }}
-      </span>
+      <span> {{ hit.hit }} ({{ hit.formula }}) {{ hit.text }} </span>
     </div>
 
     <div :class="$style.item">
       <span :class="$style.name">Скорость: </span>
 
-      <span>{{ creature.speed }}</span>
+      <span>{{ speed }}</span>
     </div>
 
-    <CreatureAbilitiesTable :abilities="creature.abilities" />
+    <CreatureAbilitiesTable v-bind="abilities" />
 
     <div
-      v-if="creature.skills?.length"
+      v-if="skills?.length"
       :class="$style.item"
     >
       <span :class="$style.name">Навыки: </span>
 
-      <span>{{ creature.skills }}</span>
+      <span>{{ skills }}</span>
     </div>
 
     <div
-      v-if="creature.vulnerability?.length"
+      v-if="vulnerability?.length"
       :class="$style.item"
     >
       <span :class="$style.name">Уязвимость: </span>
 
-      <span>{{ creature.vulnerability }}</span>
+      <span>{{ vulnerability }}</span>
     </div>
 
     <div
-      v-if="creature.resistance?.length"
+      v-if="resistance?.length"
       :class="$style.item"
     >
       <span :class="$style.name">Сопротивление: </span>
 
-      <span>{{ creature.resistance }}</span>
+      <span>{{ resistance }}</span>
     </div>
 
     <div
-      v-if="creature.immunity?.length"
+      v-if="immunity?.length"
       :class="$style.item"
     >
       <span :class="$style.name">Иммунитет: </span>
 
-      <span>{{ creature.immunity }}</span>
+      <span>{{ immunity }}</span>
     </div>
 
     <span :class="$style.item">
       <span :class="$style.name">Чувства: </span>
 
-      <span>{{ creature.sense }}</span>
+      <span>{{ sense }}</span>
     </span>
 
     <div :class="$style.item">
       <span :class="$style.name">Языки: </span>
 
-      <span>{{ creature.languages }}</span>
+      <span>{{ languages }}</span>
     </div>
 
     <div :class="$style.item">
       <span :class="$style.name">ПО: </span>
 
-      <span>{{ creature.CR }}</span>
+      <span>{{ cr }}</span>
     </div>
   </div>
 </template>

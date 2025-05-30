@@ -1,16 +1,7 @@
 <script setup lang="ts">
-  import type { Ability } from '~bestiary/types'; // или путь к твоим типам
+  import type { CreatureAbilitiesResponse } from '~bestiary/types'; // или путь к твоим типам
 
-  const props = defineProps<{
-    abilities: {
-      str: Ability;
-      dex: Ability;
-      con: Ability;
-      int: Ability;
-      wis: Ability;
-      chr: Ability;
-    };
-  }>();
+  defineProps<CreatureAbilitiesResponse>();
 </script>
 
 <template>
@@ -40,39 +31,39 @@
         <div>
           <div :class="$style.stat">Сил</div>
 
-          <div>{{ props.abilities.str.mod }}</div>
+          <div>{{ str.mod }}</div>
 
           <div
-            :class="{ [$style.boxed]: abilities.str.mod !== abilities.str.sav }"
-            :data-is-sav="abilities.str.mod !== abilities.str.sav"
+            :class="{ [$style.boxed]: str.mod !== str.sav }"
+            :data-is-sav="str.mod !== str.sav"
           >
-            {{ props.abilities.str.sav }}
+            {{ str.sav }}
           </div>
         </div>
 
         <div>
           <div :class="$style.stat">Лов</div>
 
-          <div>{{ props.abilities.dex.mod }}</div>
+          <div>{{ dex.mod }}</div>
 
           <div
-            :class="{ [$style.boxed]: abilities.str.mod !== abilities.str.sav }"
-            :data-is-sav="abilities.str.mod !== abilities.str.sav"
+            :class="{ [$style.boxed]: str.mod !== str.sav }"
+            :data-is-sav="str.mod !== str.sav"
           >
-            {{ props.abilities.dex.sav }}
+            {{ dex.sav }}
           </div>
         </div>
 
         <div>
           <div :class="$style.stat">Тел</div>
 
-          <div>{{ props.abilities.con.mod }}</div>
+          <div>{{ con.mod }}</div>
 
           <div
-            :class="{ [$style.boxed]: abilities.str.mod !== abilities.str.sav }"
-            :data-is-sav="abilities.str.mod !== abilities.str.sav"
+            :class="{ [$style.boxed]: str.mod !== str.sav }"
+            :data-is-sav="str.mod !== str.sav"
           >
-            {{ props.abilities.con.sav }}
+            {{ con.sav }}
           </div>
         </div>
       </div>
@@ -81,39 +72,39 @@
         <div>
           <div :class="$style.stat">Инт</div>
 
-          <div>{{ props.abilities.int.mod }}</div>
+          <div>{{ int.mod }}</div>
 
           <div
-            :class="{ [$style.boxed]: abilities.str.mod !== abilities.str.sav }"
-            :data-is-sav="abilities.str.mod !== abilities.str.sav"
+            :class="{ [$style.boxed]: str.mod !== str.sav }"
+            :data-is-sav="str.mod !== str.sav"
           >
-            {{ props.abilities.int.sav }}
+            {{ int.sav }}
           </div>
         </div>
 
         <div>
           <div :class="$style.stat">Мдр</div>
 
-          <div>{{ props.abilities.wis.mod }}</div>
+          <div>{{ wis.mod }}</div>
 
           <div
-            :class="{ [$style.boxed]: abilities.str.mod !== abilities.str.sav }"
-            :data-is-sav="abilities.str.mod !== abilities.str.sav"
+            :class="{ [$style.boxed]: str.mod !== str.sav }"
+            :data-is-sav="str.mod !== str.sav"
           >
-            {{ props.abilities.wis.sav }}
+            {{ wis.sav }}
           </div>
         </div>
 
         <div>
           <div :class="$style.stat">Хар</div>
 
-          <div>{{ props.abilities.chr.mod }}</div>
+          <div>{{ chr.mod }}</div>
 
           <div
-            :class="{ [$style.boxed]: abilities.str.mod !== abilities.str.sav }"
-            :data-is-sav="abilities.str.mod !== abilities.str.sav"
+            :class="{ [$style.boxed]: str.mod !== str.sav }"
+            :data-is-sav="str.mod !== str.sav"
           >
-            {{ props.abilities.chr.sav }}
+            {{ chr.sav }}
           </div>
         </div>
       </div>
