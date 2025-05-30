@@ -11,9 +11,6 @@
     `bestiary-${route.params.url}`,
     () =>
       $fetch<CreatureDetailResponse>(`/api/v2/bestiary/${route.params.url}`),
-    {
-      server: false,
-    },
   );
 
   useSeoMeta({
