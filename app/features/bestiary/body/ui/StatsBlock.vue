@@ -10,34 +10,31 @@
 
 <template>
   <div :class="$style.stats">
-    <div :class="$style.item">
-      <ATooltip
-        :mouse-enter-delay="0.7"
-        title="Класс доспеха"
-        destroy-tooltip-on-hide
-      >
-        <div :class="$style.name">КД:</div>
-      </ATooltip>
+    <div :class="$style.row">
+      <div :class="$style.item">
+        <span :class="$style.name">КД: </span>
 
-      <span>{{ creature.AC }}</span>
+        <span>{{ creature.AC }}</span>
+      </div>
 
-      <div :class="$style.name">Инициатива:</div>
+      <div :class="$style.item">
+        <span :class="$style.name">Инициатива: </span>
 
-      <span>{{ creature.initiative }}</span>
+        <span>{{ creature.initiative }}</span>
+      </div>
     </div>
 
     <div :class="$style.item">
-      <div :class="$style.name">Хиты:</div>
+      <span :class="$style.name">Хиты: </span>
 
-      <span
-        >{{ creature.hit.hit }} ({{ creature.hit.formula }}){{
-          creature.hit.text
-        }}</span
-      >
+      <span>
+        {{ creature.hit.hit }} ({{ creature.hit.formula }})
+        {{ creature.hit.text }}
+      </span>
     </div>
 
     <div :class="$style.item">
-      <div :class="$style.name">Скорость:</div>
+      <span :class="$style.name">Скорость: </span>
 
       <span>{{ creature.speed }}</span>
     </div>
@@ -48,7 +45,7 @@
       v-if="creature.skills?.length"
       :class="$style.item"
     >
-      <div :class="$style.name">Навыки:</div>
+      <span :class="$style.name">Навыки: </span>
 
       <span>{{ creature.skills }}</span>
     </div>
@@ -57,7 +54,7 @@
       v-if="creature.vulnerability?.length"
       :class="$style.item"
     >
-      <div :class="$style.name">Уязвимость:</div>
+      <span :class="$style.name">Уязвимость: </span>
 
       <span>{{ creature.vulnerability }}</span>
     </div>
@@ -66,7 +63,7 @@
       v-if="creature.resistance?.length"
       :class="$style.item"
     >
-      <div :class="$style.name">Сопротивление:</div>
+      <span :class="$style.name">Сопротивление: </span>
 
       <span>{{ creature.resistance }}</span>
     </div>
@@ -75,25 +72,25 @@
       v-if="creature.immunity?.length"
       :class="$style.item"
     >
-      <div :class="$style.name">Иммунитет:</div>
+      <span :class="$style.name">Иммунитет: </span>
 
       <span>{{ creature.immunity }}</span>
     </div>
 
-    <div :class="$style.item">
-      <div :class="$style.name">Чувства:</div>
+    <span :class="$style.item">
+      <span :class="$style.name">Чувства: </span>
 
       <span>{{ creature.sense }}</span>
-    </div>
+    </span>
 
     <div :class="$style.item">
-      <div :class="$style.name">Языки:</div>
+      <span :class="$style.name">Языки: </span>
 
       <span>{{ creature.languages }}</span>
     </div>
 
     <div :class="$style.item">
-      <div :class="$style.name">ПО:</div>
+      <span :class="$style.name">ПО: </span>
 
       <span>{{ creature.CR }}</span>
     </div>
@@ -109,26 +106,30 @@
 
     width: 100%;
     min-width: 272px;
+    padding: 8px 0;
     border: 1px solid var(--color-border);
     border-radius: 8px;
 
     background-color: var(--color-bg-secondary);
 
-    .item {
+    .row {
       display: flex;
       flex-direction: row;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-
-      min-width: 100%;
-      padding: 3px 16px;
+      justify-content: space-between;
+      width: 100%;
 
       @container (width > 600px) {
-        flex: 1 0 calc(100% / 3);
-        min-width: calc(100% / 3);
-        padding: 10px 24px;
+        justify-content: left;
       }
+
+      .item {
+        min-width: 0;
+      }
+    }
+
+    .item {
+      min-width: 100%;
+      padding: 6px 16px;
 
       .name {
         font-weight: 500;
