@@ -163,6 +163,14 @@
             />
           </ADivider>
 
+          <ARow
+            ><i> {{ creature.subtitle }} </i>
+          </ARow>
+
+          <ARow><strong>Среда обитания:</strong> {{ creature.habitats }}</ARow>
+
+          <ARow><strong>Сокровища:</strong> {{ creature.treasures }}</ARow>
+
           <DescriptionsBlock :description="creature.description" />
         </template>
       </AFlex>

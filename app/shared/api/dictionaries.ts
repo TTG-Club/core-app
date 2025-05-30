@@ -27,6 +27,8 @@ enum DictionaryEndpoints {
   CONDITIONS = '/api/v2/dictionaries/conditions',
   CHALLENGE_RATING = '/api/v2/dictionaries/cr',
   LANGUAGES = '/api/v2/dictionaries/languages',
+  HABITATS = '/api/v2/dictionaries/habitats',
+  TREASURES = '/api/v2/dictionaries/treasures',
 }
 
 class Dictionaries {
@@ -187,6 +189,24 @@ class Dictionaries {
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.LANGUAGES, {
+      ...config,
+      method: 'get',
+    });
+  };
+
+  public habitats = <R extends NitroFetchRequest>(
+    config: Omit<NitroFetchOptions<R>, 'method'> = {},
+  ): Promise<Array<SelectOption>> => {
+    return $fetch(DictionaryEndpoints.HABITATS, {
+      ...config,
+      method: 'get',
+    });
+  };
+
+  public treasures = <R extends NitroFetchRequest>(
+    config: Omit<NitroFetchOptions<R>, 'method'> = {},
+  ): Promise<Array<SelectOption>> => {
+    return $fetch(DictionaryEndpoints.TREASURES, {
       ...config,
       method: 'get',
     });

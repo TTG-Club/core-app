@@ -29,6 +29,13 @@ export interface CreatureCreate extends EditorBaseInfoState {
   bonusActions: Array<CreateAction>;
   reactions: Array<CreateAction>;
   legendaryActions: Array<CreateAction>;
+  section: CreatureSection;
+}
+
+export interface CreatureSection {
+  subtitle: string;
+  habitats: Array<string>;
+  treasures: Array<string>;
 }
 
 export interface CreatureTypes {
@@ -252,5 +259,10 @@ export function getInitialState(): CreatureCreate {
     bonusActions: [],
     reactions: [],
     legendaryActions: [],
+    section: {
+      subtitle: '',
+      habitats: [],
+      treasures: [],
+    },
   };
 }

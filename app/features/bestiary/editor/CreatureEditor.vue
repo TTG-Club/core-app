@@ -15,6 +15,7 @@
   } from './ui';
 
   import { ValidationBase, getModifier } from '~/shared/utils';
+  import CreatureSection from '~bestiary/editor/ui/CreatureSection.vue';
   import { EditorBaseInfo } from '~ui/editor';
   import { SelectAlignment } from '~ui/select';
 
@@ -177,6 +178,8 @@
       v-model="form.legendaryActions"
       name="legendaryActions"
     />
+
+    <CreatureSection v-model="form.section" />
 
     <ADivider orientation="left">
       <ATypographyText
