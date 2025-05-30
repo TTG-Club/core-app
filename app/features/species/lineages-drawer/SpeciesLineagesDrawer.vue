@@ -46,7 +46,7 @@
 <template>
   <DrawerComponent
     :open="isOpened"
-    title="Разновидности"
+    title="Происхождения"
     :min-width="296"
     :max-width="552"
     :is-loading="status === 'pending'"
