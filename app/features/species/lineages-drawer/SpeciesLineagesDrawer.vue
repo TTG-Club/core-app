@@ -12,7 +12,9 @@
     `species-lineages-drawer`,
     () => {
       if (!url.value) {
-        return Promise.reject();
+        return Promise.reject(
+          new Error('[SpeciesLineagesDrawer] url is not defined'),
+        );
       }
 
       return $fetch<Array<SpeciesLinkResponse>>(

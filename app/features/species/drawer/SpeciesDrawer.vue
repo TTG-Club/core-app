@@ -19,10 +19,14 @@
     execute,
     clear,
   } = await useAsyncData(
-    'species-detail-drawer',
+    computed(() =>
+      inLineagesDrawer
+        ? 'species-lineage-detail-drawer'
+        : 'species-detail-drawer',
+    ),
     () => {
       if (!url.value) {
-        return Promise.reject();
+        throw new Error('[SpeciesDrawer] url is not defined');
       }
 
       return $fetch<SpeciesDetailResponse>(`/api/v2/species/${url.value}`);
