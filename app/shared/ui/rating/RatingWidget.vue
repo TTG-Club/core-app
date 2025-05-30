@@ -2,22 +2,22 @@
   import { message } from 'ant-design-vue';
   import { ref, watchEffect } from 'vue';
 
-  import { useAsyncData } from '#app'; // если ты в Nuxt 3
+  import { useAsyncData } from '#app';
 
   const props = defineProps<{
     section: string;
     url: string;
   }>();
 
-  const rate = ref<number | undefined>(undefined);
   const submitting = ref(false);
+  const rate = ref<number>(0);
+  const total = ref<number>(0);
 
-  // Загружаем рейтинг с сервера при изменении props.url или props.section
   watchEffect(async () => {
     const { data } = await useAsyncData(
       `rating-${props.section}-${props.url}`,
       () =>
-        $fetch<number>('/api/v2/rating', {
+        $fetch<{ value: number; total: number }>('/api/v2/rating', {
           params: {
             section: props.section,
             url: props.url,
@@ -26,10 +26,12 @@
       { watch: [() => props.url, () => props.section] },
     );
 
-    rate.value = data.value;
+    if (data.value) {
+      rate.value = data.value.value;
+      total.value = data.value.total;
+    }
   });
 
-  // Отправляем рейтинг
   function submitRating(value: number) {
     submitting.value = true;
 
@@ -58,7 +60,6 @@
   <span :class="$style.blockRate">
     <ARate
       :value="rate"
-      :disabled="submitting"
       allow-half
       @change="submitRating"
     />
@@ -68,7 +69,7 @@
     <span :class="$style.info">
       <span :class="$style.text">Оценок:</span>
 
-      <span :class="$style.text">542</span>
+      <span :class="$style.text">{{ total }}</span>
     </span>
   </span>
 </template>
