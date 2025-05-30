@@ -42,7 +42,10 @@
 
           <div>{{ props.abilities.str.mod }}</div>
 
-          <div :class="{ boxed: abilities.str.mod !== abilities.str.sav }">
+          <div
+            :class="{ [$style.boxed]: abilities.str.mod !== abilities.str.sav }"
+            :data-is-sav="abilities.str.mod !== abilities.str.sav"
+          >
             {{ props.abilities.str.sav }}
           </div>
         </div>
@@ -52,7 +55,12 @@
 
           <div>{{ props.abilities.dex.mod }}</div>
 
-          <div>{{ props.abilities.dex.sav }}</div>
+          <div
+            :class="{ [$style.boxed]: abilities.str.mod !== abilities.str.sav }"
+            :data-is-sav="abilities.str.mod !== abilities.str.sav"
+          >
+            {{ props.abilities.dex.sav }}
+          </div>
         </div>
 
         <div>
@@ -60,7 +68,12 @@
 
           <div>{{ props.abilities.con.mod }}</div>
 
-          <div>{{ props.abilities.con.sav }}</div>
+          <div
+            :class="{ [$style.boxed]: abilities.str.mod !== abilities.str.sav }"
+            :data-is-sav="abilities.str.mod !== abilities.str.sav"
+          >
+            {{ props.abilities.con.sav }}
+          </div>
         </div>
       </div>
 
@@ -70,7 +83,12 @@
 
           <div>{{ props.abilities.int.mod }}</div>
 
-          <div>{{ props.abilities.int.sav }}</div>
+          <div
+            :class="{ [$style.boxed]: abilities.str.mod !== abilities.str.sav }"
+            :data-is-sav="abilities.str.mod !== abilities.str.sav"
+          >
+            {{ props.abilities.int.sav }}
+          </div>
         </div>
 
         <div>
@@ -78,7 +96,12 @@
 
           <div>{{ props.abilities.wis.mod }}</div>
 
-          <div>{{ props.abilities.wis.sav }}</div>
+          <div
+            :class="{ [$style.boxed]: abilities.str.mod !== abilities.str.sav }"
+            :data-is-sav="abilities.str.mod !== abilities.str.sav"
+          >
+            {{ props.abilities.wis.sav }}
+          </div>
         </div>
 
         <div>
@@ -86,7 +109,12 @@
 
           <div>{{ props.abilities.chr.mod }}</div>
 
-          <div>{{ props.abilities.chr.sav }}</div>
+          <div
+            :class="{ [$style.boxed]: abilities.str.mod !== abilities.str.sav }"
+            :data-is-sav="abilities.str.mod !== abilities.str.sav"
+          >
+            {{ props.abilities.chr.sav }}
+          </div>
         </div>
       </div>
     </div>
@@ -101,7 +129,7 @@
     width: 100%;
     margin: 6px 12px;
     padding: 12px 16px;
-    border-radius: 12px;
+    border-radius: 8px;
 
     background: var(--color-hover);
 
@@ -157,6 +185,11 @@
         display: flex;
         flex: 1;
       }
+    }
+
+    .boxed {
+      font-weight: 500;
+      color: var(--color-text-bold);
     }
   }
 </style>

@@ -55,9 +55,63 @@
 </script>
 
 <template>
-  <ARate
-    :value="rate"
-    :disabled="submitting"
-    @change="submitRating"
-  />
+  <span :class="$style.blockRate">
+    <ARate
+      :value="rate"
+      :disabled="submitting"
+      allow-half
+      @change="submitRating"
+    />
+
+    <span :class="$style.result">{{ rate }}</span>
+
+    <span :class="$style.info">
+      <span :class="$style.text">Оценок:</span>
+
+      <span :class="$style.text">542</span>
+    </span>
+  </span>
 </template>
+
+<style module lang="scss">
+  .blockRate {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+
+    padding: 2px 12px 6px 12px;
+    border-radius: 8px;
+
+    background: var(--color-hover);
+
+    @container (width > 600px) {
+      max-width: 320px;
+    }
+  }
+
+  .result {
+    display: flex;
+    align-items: flex-end;
+
+    margin-top: 4px;
+    margin-left: auto;
+    padding: 0 12px;
+    border-radius: 8px;
+
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--color-text-bold);
+
+    background: var(--color-hover);
+  }
+
+  .info {
+    display: flex;
+    flex-direction: column;
+    margin-top: 4px;
+  }
+
+  .text {
+    font-size: 10px;
+  }
+</style>
