@@ -25,31 +25,33 @@
     { watch: [() => url, () => section] },
   );
 
-  function isHighlighted(star: number, half: number, isHovering = false) {
-    const value = !isHovering ? rating.value?.value : hoverRating.value;
+  const safeRating = computed(() => rating.value?.value ?? 0);
 
-    if (isUndefined(value)) {
-      return false;
-    }
+  function isHighlighted(star: number, part: number) {
+    const value = isUndefined(hoverRating.value)
+      ? safeRating.value
+      : hoverRating.value;
 
-    const result = getRating(star, half);
+    const targetRating = getRating(star, part);
 
-    return Math.round(value * 4) / 4 >= result;
+    return value >= targetRating;
   }
 
-  function getRating(star: number, half: number) {
-    return star - 1 + half * 0.25;
+  function getRating(star: number, part: number) {
+    return Math.round((star - 1 + part * 0.25) * 4) / 4;
   }
 
-  function rate(star: number, half: number) {
+  function rate(star: number, part: number) {
     return $fetch('/api/v2/rating', {
       method: 'POST',
       body: {
         section: section,
         url: url,
-        value: getRating(star, half),
+        value: getRating(star, part),
       },
       onResponse: () => {
+        hoverRating.value = undefined;
+
         $toast.success({
           title: 'Спасибо за оценку!',
         });
@@ -77,10 +79,7 @@
 </script>
 
 <template>
-  <div
-    v-if="rating"
-    :class="$style.rating"
-  >
+  <div :class="$style.rating">
     <div :class="$style.stars">
       <div
         v-for="star in 5"
@@ -88,38 +87,44 @@
         :class="$style.star"
       >
         <div
-          v-for="half in 4"
-          :key="half"
+          v-for="part in 4"
+          :key="part"
           :class="[
-            $style.half,
-            {
-              [$style.rated]: isHighlighted(star, half) && !hoverRating,
-              [$style.hover]: isHighlighted(star, half, true),
-            },
+            $style.part,
+            { [$style.highlight]: isHighlighted(star, part) },
           ]"
-          @mouseover="hoverRating = getRating(star, half)"
+          @mouseover="hoverRating = getRating(star, part)"
           @mouseleave="hoverRating = undefined"
-          @click.left.exact.prevent="rate(star, half)"
+          @click.left.exact.prevent="rate(star, part)"
         >
           <SvgIcon
-            icon="dice/d20"
-            size="28"
+            :class="[$style.icon, $style.outline]"
+            icon="star/outline/default"
+            size="24"
+          />
+
+          <SvgIcon
+            :class="[$style.icon, $style.filled]"
+            icon="star/filled/default"
+            size="24"
           />
         </div>
       </div>
     </div>
 
-    <div :class="$style.result">{{ rating.value }}</div>
+    <div :class="$style.result">{{ safeRating }}</div>
 
     <div :class="$style.info">
       <div>Оценок:</div>
 
-      <div>{{ rating.total }}</div>
+      <div>{{ rating?.total || 0 }}</div>
     </div>
   </div>
 </template>
 
 <style module lang="scss">
+  @use 'sass:math';
+
   .rating {
     display: flex;
     gap: 8px;
@@ -142,16 +147,14 @@
     .star {
       cursor: pointer;
       display: flex;
-      width: 28px;
-      height: 28px;
+      width: 24px;
+      height: 24px;
     }
 
-    .half {
+    .part {
       position: relative;
 
       overflow: hidden;
-      display: flex;
-      align-items: center;
 
       width: 25%;
       height: 100%;
@@ -162,20 +165,41 @@
         @include css-anim($time: 0.1s);
       }
 
-      &.hover,
-      &.rated {
-        color: var(--color-primary);
-      }
-
-      svg {
-        position: absolute;
-        top: 0;
-      }
-
       @for $i from 1 through 4 {
         &:nth-child(#{ $i }) {
-          svg {
-            left: calc(($i - 1) * -25%);
+          $index: $i - 1;
+          $part: math.div(24, -4);
+          $delta: $index * $part;
+
+          .icon {
+            left: #{$delta}px;
+          }
+        }
+      }
+
+      .icon {
+        position: absolute;
+        top: 0;
+
+        & {
+          @include css-anim($time: 0.1s);
+        }
+
+        &.filled {
+          opacity: 0;
+        }
+      }
+
+      &.highlight {
+        color: var(--color-primary);
+
+        .icon {
+          &.outline {
+            opacity: 0;
+          }
+
+          &.filled {
+            opacity: 1;
           }
         }
       }

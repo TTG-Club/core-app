@@ -1,0 +1,17 @@
+<svg width="24" height="24" viewBox="0 0 24 24"
+     xmlns="http://www.w3.org/2000/svg">
+  <path fill-rule="evenodd" clip-rule="evenodd"
+        d="M11 2.78571C11 2.35178 11.3518 2 11.7857 2C17.4269 2 22 6.57309 22 12.2143C22 12.6482 21.6482 13 21.2143 13C20.7804 13 20.4286 12.6482 20.4286 12.2143C20.4286 7.44097 16.559 3.57143 11.7857 3.57143C11.3518 3.57143 11 3.21965 11 2.78571Z"
+  >
+    <animateTransform
+      attributeName="transform"
+      type="rotate"
+      from="0 12 12"
+      to="360 12 12"
+      dur="1s"
+      repeatCount="indefinite"
+      additive="replace"
+      accumulate="none"
+    />
+  </path>
+</svg>
