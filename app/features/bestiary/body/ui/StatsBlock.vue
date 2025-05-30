@@ -27,14 +27,11 @@
     <div :class="$style.item">
       <span :class="$style.name">Хиты: </span>
 
-        <span
-          >
-          {{ creature.hit.hit }} ({{ creature.hit.formula }}) {{
-            creature.hit.text
-          }}
-        </span
-        >
-      </div>
+      <span>
+        {{ creature.hit.hit }} ({{ creature.hit.formula }})
+        {{ creature.hit.text }}
+      </span>
+    </div>
 
     <div :class="$style.item">
       <span :class="$style.name">Скорость: </span>
