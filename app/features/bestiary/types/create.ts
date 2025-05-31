@@ -10,8 +10,7 @@ export interface CreatureCreate extends EditorBaseInfoState {
   sizes: CreatureSizes; // размеры существа
   alignment: string | undefined; // мировоззрение
   ac: ArmorClass; // класс доспеха
-  initiative: number; // модификатор инициативы
-  initiativeMod: number; // модификатор инициативы
+  initiative: CreateInitiative; // модификатор инициативы
   hit: CreateHit;
   speeds: CreateSpeeds;
   abilities: CreateAbilities;
@@ -37,6 +36,11 @@ export interface CreatureSection {
   subtitle: string;
   habitats: Array<string>;
   treasures: Array<string>;
+}
+
+export interface CreateInitiative {
+  value: number;
+  multiplier: number;
 }
 
 export interface CreatureTypes {
@@ -189,8 +193,10 @@ export function getInitialState(): CreatureCreate {
       value: 10, // класс доспеха
       text: '',
     },
-    initiative: 0, // инициатива
-    initiativeMod: 0,
+    initiative: {
+      value: 0,
+      multiplier: 0,
+    },
     hit: {
       value: 0, // среднее количество хитов или абсолютное значение
       text: undefined, // текстовое описание хитов

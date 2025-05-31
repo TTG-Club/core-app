@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import {
+    CreatureSection,
     CreatureChallengeRating,
     CreatureAbilities,
     CreatureAction,
@@ -12,12 +13,12 @@
     CreatureTrait,
     CreatureType,
     CreatureDefenses,
+    CreatureInitiative,
   } from './ui';
 
-  import { ValidationBase, getModifier } from '~/shared/utils';
-  import CreatureSection from '~bestiary/editor/ui/CreatureSection.vue';
+  import { ValidationBase } from '~/shared/utils';
   import { EditorBaseInfo } from '~ui/editor';
-  import { SelectAlignment, SelectMastery } from '~ui/select';
+  import { SelectAlignment } from '~ui/select';
 
   import type { FormInstance } from 'ant-design-vue';
   import type { CreatureCreate } from '~bestiary/types';
@@ -33,26 +34,6 @@
   defineExpose({
     validate: computed(() => formRef.value?.validate),
   });
-
-  watch(
-    () => form.value.abilities.dex.value,
-    (val) => {
-      form.value.initiative =
-        getModifier(val) +
-        form.value.initiativeMod * form.value.proficiencyBonus;
-    },
-  );
-
-  watch(
-    () => form.value.initiativeMod,
-    () => {
-      const dex = form.value.abilities.dex.value;
-
-      form.value.initiative =
-        getModifier(dex) +
-        form.value.initiativeMod * form.value.proficiencyBonus;
-    },
-  );
 </script>
 
 <template>
@@ -126,26 +107,11 @@
         </AFormItem>
       </ACol>
 
-      <ACol :span="4">
-        <AFormItem
-          label="Инициатива"
-          :name="['initiative']"
-        >
-          <AInputNumber
-            v-model:value="form.initiative"
-            :precision="0"
-            placeholder="Введи инициативу"
-            min="0"
-            :addon-after="`+${10 + form.initiative}`"
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="4">
-        <AFormItem label="Уровень владения">
-          <SelectMastery v-model="form.initiativeMod" />
-        </AFormItem>
-      </ACol>
+      <CreatureInitiative
+        v-model="form.initiative"
+        :dex="form.abilities.dex"
+        :proficiency-bonus="form.proficiencyBonus"
+      />
 
       <CreatureHit
         v-model="form.hit"

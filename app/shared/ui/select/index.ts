@@ -39,3 +39,7 @@ export { default as SelectChallengeRating } from './SelectChallengeRating.vue';
 export { default as SelectSkills } from './SelectSkills.vue';
 
 export { default as SelectMastery } from './SelectMastery.vue';
+
+export { default as SelectHabitat } from './SelectHabitat.vue';
+
+export { default as SelectTreasure } from './SelectTreasure.vue';

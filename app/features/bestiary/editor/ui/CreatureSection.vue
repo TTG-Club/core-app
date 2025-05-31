@@ -1,6 +1,5 @@
 <script setup lang="ts">
-  import SelectHabitat from '~ui/select/SelectHabitat.vue';
-  import SelectTreasure from '~ui/select/SelectTreasure.vue';
+  import { SelectHabitat, SelectTreasure } from '~ui/select';
 
   import type { CreatureSection } from '~bestiary/types';
 
