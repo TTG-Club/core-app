@@ -27,7 +27,7 @@ export const ruleUrl = (
         return;
       }
 
-      ValidationBase.baseStringCheck(value, 3);
+      ValidationBase.baseStringCheck(value, true, 3);
 
       $fetch(`/api/v2/${section}/${value}`, {
         method: 'head',

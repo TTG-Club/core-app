@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { ValidationBase } from '~/shared/utils';
+  import { ValidationBase, ValidationDictionaries } from '~/shared/utils';
   import { SelectHabitat, SelectTreasure } from '~ui/select';
 
   import type { CreatureSection } from '~bestiary/types';
@@ -21,10 +21,12 @@
       <AFormItem
         label="Название секции"
         :name="['section', 'name', 'rus']"
+        :rules="[ValidationBase.ruleRusName(false)]"
+        tooltip="Например, Золотые драконы"
       >
         <AInput
           v-model:value="model.name.rus"
-          :placeholder="`Например, Неумолимый страж Нижних планов`"
+          placeholder="Введи название секции"
         />
       </AFormItem>
     </ACol>
@@ -32,11 +34,13 @@
     <ACol :span="8">
       <AFormItem
         label="Название секции (англ.)"
-        :name="['section', 'name', 'rus']"
+        :name="['section', 'name', 'eng']"
+        :rules="[ValidationBase.ruleEngName(false)]"
+        tooltip="Например, Gold Dragons"
       >
         <AInput
           v-model:value="model.name.eng"
-          :placeholder="`Например, Неумолимый страж Нижних планов`"
+          placeholder="Введи название секции"
         />
       </AFormItem>
     </ACol>
@@ -45,10 +49,12 @@
       <AFormItem
         label="Подзаголовок"
         :name="['section', 'subtitle']"
+        :rules="[ValidationBase.ruleString(false)]"
+        tooltip="Например, Драконы надежды и величия"
       >
         <AInput
           v-model:value="model.subtitle"
-          :placeholder="`Например, Неумолимый страж Нижних планов`"
+          placeholder="Введи подзаголовок"
         />
       </AFormItem>
     </ACol>
@@ -59,6 +65,12 @@
       <AFormItem
         label="Среда обитания"
         :name="['section', 'habitats']"
+        :rules="[
+          ValidationDictionaries.ruleHabitats({
+            required: false,
+            array: true,
+          }),
+        ]"
       >
         <SelectHabitat
           v-model="model.habitats"
@@ -71,6 +83,12 @@
       <AFormItem
         label="Сокровища"
         :name="['section', 'treasures']"
+        :rules="[
+          ValidationDictionaries.ruleTreasures({
+            required: false,
+            array: true,
+          }),
+        ]"
       >
         <SelectTreasure
           v-model="model.treasures"

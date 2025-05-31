@@ -38,6 +38,12 @@ export const ruleLanguage = (options?: Options): Rule =>
 export const ruleSkill = (options?: Options): Rule =>
   validator(DictionaryService.skills, options);
 
+export const ruleHabitats = (options?: Options): Rule =>
+  validator(DictionaryService.habitats, options);
+
+export const ruleTreasures = (options?: Options): Rule =>
+  validator(DictionaryService.treasures, options);
+
 function validator(
   dictionaryCallback: () => Promise<
     Array<SelectOption> | Array<SelectOptionWithNumericValue>

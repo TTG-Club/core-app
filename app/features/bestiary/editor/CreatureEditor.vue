@@ -43,24 +43,17 @@
     :model="form"
     :disabled="isCreating"
   >
+    <CreatureSection v-model="form.section" />
+
     <EditorBaseInfo
       v-model="form"
       section="bestiary"
     />
 
-    <CreatureSection v-model="form.section" />
-
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Описание существа"
-        strong
-      />
-    </ADivider>
-
     <ARow :gutter="16">
       <ACol :span="24">
         <AFormItem
+          label="Описание"
           :name="['description']"
           :rules="[ValidationBase.ruleString(false)]"
         >
