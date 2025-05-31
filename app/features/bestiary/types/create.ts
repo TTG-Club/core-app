@@ -33,9 +33,14 @@ export interface CreatureCreate extends EditorBaseInfoState {
 }
 
 export interface CreatureSection {
+  name: {
+    rus: string;
+    eng: string;
+  };
   subtitle: string;
   habitats: Array<string>;
   treasures: Array<string>;
+  description: string;
 }
 
 export interface CreateInitiative {
@@ -276,9 +281,14 @@ export function getInitialState(): CreatureCreate {
     reactions: [],
     legendaryActions: [],
     section: {
+      name: {
+        rus: '',
+        eng: '',
+      },
       subtitle: '',
       habitats: [],
       treasures: [],
+      description: '',
     },
   };
 }

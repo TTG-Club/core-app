@@ -48,6 +48,32 @@
       section="bestiary"
     />
 
+    <CreatureSection v-model="form.section" />
+
+    <ADivider orientation="left">
+      <ATypographyText
+        type="secondary"
+        content="Описание существа"
+        strong
+      />
+    </ADivider>
+
+    <ARow :gutter="16">
+      <ACol :span="24">
+        <AFormItem
+          :name="['description']"
+          :rules="[ValidationBase.ruleString(false)]"
+        >
+          <ATextarea
+            v-model:value="form.description"
+            :rows="4"
+            placeholder="Введи описание"
+            allow-clear
+          />
+        </AFormItem>
+      </ACol>
+    </ARow>
+
     <ADivider orientation="left">
       <ATypographyText
         type="secondary"
@@ -175,32 +201,5 @@
       v-model="form.legendaryActions"
       name="legendaryActions"
     />
-
-    <CreatureSection v-model="form.section" />
-
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Описание"
-        strong
-      />
-    </ADivider>
-
-    <ARow :gutter="16">
-      <ACol :span="24">
-        <AFormItem
-          label="Описание"
-          :name="['description']"
-          :rules="[ValidationBase.ruleString(false)]"
-        >
-          <ATextarea
-            v-model:value="form.description"
-            :rows="8"
-            placeholder="Введи описание"
-            allow-clear
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
   </AForm>
 </template>
