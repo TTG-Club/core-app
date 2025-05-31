@@ -49,9 +49,9 @@ export const CARD_LINKS = [
   },
   {
     name: 'Бестиарий',
-    url: '/',
+    url: '/bestiary',
     img: '/s3/sections/home-link/button_bestiary.webp',
-    disable: true,
+    disable: false,
   },
   {
     name: 'Глоссарий правил',

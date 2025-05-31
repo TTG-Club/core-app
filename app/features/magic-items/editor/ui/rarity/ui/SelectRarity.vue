@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { Form } from 'ant-design-vue';
 
-  import { Dictionaries } from '~/shared/api';
+  import { DictionaryService } from '~/shared/api';
 
   withDefaults(
     defineProps<{
@@ -18,7 +18,7 @@
 
   const { data, status, refresh } = await useAsyncData(
     'dictionaries-rarity',
-    () => Dictionaries.rarity(),
+    () => DictionaryService.rarity(),
   );
 
   const handleDropdownOpening = (state: boolean) => {

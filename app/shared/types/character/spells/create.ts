@@ -1,7 +1,6 @@
-export interface SpellCreate {
-  url: string; // урл заклинания
-  name: SpellName; // название
-  source: SpellSource; // источник
+import type { EditorBaseInfoState } from '~ui/editor';
+
+export interface SpellCreate extends EditorBaseInfoState {
   description: string; // описание маркап
   upper: string | undefined; // "На более высоких уровнях"
   level: number; // уровень заклинания, 0 - заговор
@@ -11,21 +10,9 @@ export interface SpellCreate {
   castingTime: Array<SpellCastingTime>; // время накладывания
   components: SpellComponents; // компоненты
   affiliations: SpellAffiliation; // привязка заклинания к сущностям
-  tags: Array<string>; // теги
   savingThrow: Array<string> | undefined;
   healingType: Array<string> | undefined;
   damageType: Array<string> | undefined;
-}
-
-export interface SpellName {
-  rus: string; // русское название
-  eng: string; // английское название
-  alt: Array<string>; // альтернативные названия
-}
-
-export interface SpellSource {
-  url: string | undefined; // урл книги
-  page: number | undefined; // номер страницы, если указана книга
 }
 
 export interface SpellRange {

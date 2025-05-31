@@ -1,18 +1,13 @@
 <script setup lang="ts">
   import { Form } from 'ant-design-vue';
 
-  import { Dictionaries } from '~/shared/api';
+  import { DictionaryService } from '~/shared/api';
 
-  const props = withDefaults(
-    defineProps<{
-      multiple?: boolean;
-      disabledKeys?: Array<string>;
-    }>(),
-    {
-      multiple: false,
-      disabledKeys: () => [],
-    },
-  );
+  const { multiple = false, disabledKeys = [] } = defineProps<{
+    disabled?: boolean;
+    multiple?: boolean;
+    disabledKeys?: Array<string>;
+  }>();
 
   const context = Form.useInjectFormItemContext();
 
@@ -20,7 +15,8 @@
 
   const { data, status, refresh } = await useAsyncData(
     'dictionaries-sizes',
-    () => Dictionaries.sizes(),
+    () => DictionaryService.sizes(),
+    { dedupe: 'defer' },
   );
 
   const options = computed(() => {
@@ -30,7 +26,7 @@
 
     return data.value.map((size) => ({
       ...size,
-      disabled: props.disabledKeys.includes(size.value),
+      disabled: disabledKeys.includes(size.value),
     }));
   });
 

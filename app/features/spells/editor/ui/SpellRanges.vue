@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { isEqual, isString } from 'lodash-es';
 
-  import { Dictionaries } from '~/shared/api';
+  import { DictionaryService } from '~/shared/api';
 
   import type { SelectValue } from 'ant-design-vue/es/select';
   import type { SpellCastingTime, SpellRange } from '~/shared/types';
@@ -12,7 +12,7 @@
 
   const { data: units, status } = await useAsyncData(
     'dictionaries-range-types',
-    () => Dictionaries.rangeTypes(),
+    () => DictionaryService.rangeTypes(),
   );
 
   function getUnitOption(unitValue: string | undefined) {

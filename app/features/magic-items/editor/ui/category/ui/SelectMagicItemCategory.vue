@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { Form } from 'ant-design-vue';
 
-  import { Dictionaries } from '~/shared/api';
+  import { DictionaryService } from '~/shared/api';
 
   defineProps<{
     disabled?: boolean;
@@ -13,7 +13,7 @@
 
   const { data, status, refresh } = await useAsyncData(
     'dictionaries-magic-items-category',
-    () => Dictionaries.magicItemCategory(),
+    () => DictionaryService.magicItemCategory(),
   );
 
   const handleDropdownOpening = (state: boolean) => {

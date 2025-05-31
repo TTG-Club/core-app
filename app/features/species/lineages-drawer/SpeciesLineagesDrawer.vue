@@ -12,7 +12,9 @@
     `species-lineages-drawer`,
     () => {
       if (!url.value) {
-        return Promise.reject();
+        return Promise.reject(
+          new Error('[SpeciesLineagesDrawer] url is not defined'),
+        );
       }
 
       return $fetch<Array<SpeciesLinkResponse>>(
@@ -46,7 +48,7 @@
 <template>
   <DrawerComponent
     :open="isOpened"
-    title="Разновидности"
+    title="Происхождения"
     :min-width="296"
     :max-width="552"
     :is-loading="status === 'pending'"

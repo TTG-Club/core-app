@@ -61,7 +61,7 @@
           :class="$style.btn"
           @click.left.exact.prevent.stop="openLineages(species.url)"
         >
-          Разновидности
+          Происхождения
         </button>
       </div>
     </div>

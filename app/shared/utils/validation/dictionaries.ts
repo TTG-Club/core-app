@@ -1,108 +1,86 @@
-import { Dictionaries } from '~/shared/api';
+import { isArray, isUndefined } from 'lodash-es';
+
+import { DictionaryService } from '~/shared/api';
 import { getEnumFromDictionary } from '~/shared/utils/validation/base';
 
 import type { Rule } from 'ant-design-vue/es/form';
-import type { SelectOption } from '~/shared/types';
+import type {
+  SelectOption,
+  SelectOptionWithNumericValue,
+} from '~/shared/types';
+
+interface Options {
+  required?: boolean;
+  array?: boolean;
+}
+
+export const ruleTimeUnit = (options?: Options): Rule =>
+  validator(DictionaryService.timeUnits, options);
+
+export const ruleMagicSchool = (options?: Options): Rule =>
+  validator(DictionaryService.magicSchools, options);
+
+export const ruleSize = (options?: Options): Rule =>
+  validator(DictionaryService.sizes, options);
+
+export const ruleCreatureType = (options?: Options): Rule =>
+  validator(DictionaryService.creatureTypes, options);
+
+export const ruleFeatCategories = (options?: Options): Rule =>
+  validator(DictionaryService.featCategories, options);
+
+export const ruleRarity = (options?: Options): Rule =>
+  validator(DictionaryService.rarity, options);
+
+export const ruleLanguage = (options?: Options): Rule =>
+  validator(DictionaryService.languages, options);
+
+export const ruleSkill = (options?: Options): Rule =>
+  validator(DictionaryService.skills, options);
+
+export const ruleHabitats = (options?: Options): Rule =>
+  validator(DictionaryService.habitats, options);
+
+export const ruleTreasures = (options?: Options): Rule =>
+  validator(DictionaryService.treasures, options);
+
+function validator(
+  dictionaryCallback: () => Promise<
+    Array<SelectOption> | Array<SelectOptionWithNumericValue>
+  >,
+  options: Options | undefined,
+): Rule {
+  const required = isUndefined(options?.required) ? true : options.required;
+  const array = isUndefined(options?.array) ? false : options.array;
+
+  return {
+    required,
+    trigger: ['change', 'blur'],
+    type: !array ? 'string' : 'array',
+    validator: async (
+      rule: Rule,
+      value: string | Array<string> | undefined,
+    ) => {
+      if (!value) {
+        throw new Error('Поле обязательно для заполнения');
+      }
+
+      const dictionary = await dictionaryCallback();
+
+      validateFromDictionary(value, dictionary);
+    },
+  };
+}
 
 export function validateFromDictionary(
-  value: string,
-  dictionary: Array<SelectOption>,
+  value: string | number | Array<string | number>,
+  dictionary: Array<SelectOption | SelectOptionWithNumericValue>,
 ) {
-  if (!getEnumFromDictionary(dictionary).includes(value)) {
+  const _value = !isArray(value) ? [value] : value;
+
+  if (
+    _value.some((item) => !getEnumFromDictionary(dictionary).includes(item))
+  ) {
     throw new Error('Недопустимое значение');
   }
 }
-
-export const ruleTimeUnit = (required = true): Rule => ({
-  required,
-  trigger: ['change', 'blur'],
-  type: 'string',
-  validator: async (rule: Rule, value: string | undefined) => {
-    if (!required && !value) {
-      return;
-    }
-
-    if (!value) {
-      throw new Error('Поле обязательно для заполнения');
-    }
-
-    const timeUnits = await Dictionaries.timeUnits();
-
-    validateFromDictionary(value, timeUnits);
-  },
-});
-
-export const ruleMagicSchool = (): Rule => ({
-  required: true,
-  trigger: ['change', 'blur'],
-  type: 'string',
-  validator: async (rule: Rule, value: string | undefined) => {
-    if (!value) {
-      throw new Error('Поле обязательно для заполнения');
-    }
-
-    const magicSchools = await Dictionaries.magicSchools();
-
-    validateFromDictionary(value, magicSchools);
-  },
-});
-
-export const ruleSize = (): Rule => ({
-  required: true,
-  trigger: ['change', 'blur'],
-  type: 'string',
-  validator: async (rule: Rule, value: string | undefined) => {
-    if (!value) {
-      throw new Error('Поле обязательно для заполнения');
-    }
-
-    const sizes = await Dictionaries.sizes();
-
-    validateFromDictionary(value, sizes);
-  },
-});
-
-export const ruleCreatureType = (): Rule => ({
-  required: true,
-  trigger: ['change', 'blur'],
-  type: 'string',
-  validator: async (rule: Rule, value: string | undefined) => {
-    if (!value) {
-      throw new Error('Поле обязательно для заполнения');
-    }
-
-    const creatureTypes = await Dictionaries.creatureTypes();
-
-    validateFromDictionary(value, creatureTypes);
-  },
-});
-
-export const ruleFeatCategories = (): Rule => ({
-  required: true,
-  trigger: ['change', 'blur'],
-  type: 'string',
-  validator: async (rule: Rule, value: string | undefined) => {
-    if (!value) {
-      throw new Error('Поле обязательно для заполнения');
-    }
-
-    const featCategories = await Dictionaries.featCategories();
-
-    validateFromDictionary(value, featCategories);
-  },
-});
-
-export const ruleRarity = (): Rule => ({
-  required: true,
-  trigger: ['change', 'blur'],
-  type: 'string',
-  validator: async (rule: Rule, value: string | undefined) => {
-    if (!value) {
-      throw new Error('Поле обязательно для заполнения');
-    }
-
-    const rarity = await Dictionaries.rarity();
-
-    validateFromDictionary(value, rarity);
-  },
-});

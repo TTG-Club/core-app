@@ -1,9 +1,14 @@
 import { isNumber } from 'lodash-es';
 
 import type { Rule } from 'ant-design-vue/es/form';
-import type { SelectOption } from '~/shared/types';
+import type {
+  SelectOption,
+  SelectOptionWithNumericValue,
+} from '~/shared/types';
 
-export const getEnumFromDictionary = <T extends SelectOption>(
+export const getEnumFromDictionary = <
+  T extends SelectOption | SelectOptionWithNumericValue,
+>(
   dictionary: Array<T>,
 ): Array<T['value']> => dictionary.map((option) => option.value);
 
@@ -19,7 +24,16 @@ export const onlyRusString =
 export const onlyEngString =
   /[^0-9\u{0041}-\u{005A}\u{0061}-\u{007A}\u{0020}\u{0027}\u{2010}-\u{2014}\u{002D}\u{0028}\u{0029}\u{002F}\u{002B}\u{002C}]/u;
 
-export const baseStringCheck = (str: string, min?: number, max?: number) => {
+export const baseStringCheck = (
+  str: string,
+  required: boolean,
+  min?: number,
+  max?: number,
+) => {
+  if (!required && !str) {
+    return;
+  }
+
   if (!str) {
     throw new Error('Поле обязательно для заполнения');
   }
@@ -37,33 +51,33 @@ export const baseStringCheck = (str: string, min?: number, max?: number) => {
   }
 };
 
-export const ruleString = (): Rule => ({
-  required: true,
+export const ruleString = (required = true): Rule => ({
+  required,
   type: 'string',
   trigger: ['blur', 'change'],
   message: 'Поле обязательно для заполнения',
 });
 
-export const ruleNumber = (): Rule => ({
-  required: true,
+export const ruleNumber = (required = true): Rule => ({
+  required,
   type: 'integer',
   trigger: ['blur', 'change'],
   message: 'Поле обязательно для заполнения',
 });
 
-export const ruleRusName = (): Rule => {
+export const ruleRusName = (required = true): Rule => {
   const min = 3;
   const max = 1000;
 
   return {
     min,
     max,
-    required: true,
+    required,
     trigger: ['change', 'blur'],
     type: 'string',
     transform: (value: string) => value.trim(),
     validator: (rule: Rule, value: string) => {
-      baseStringCheck(value, min, max);
+      baseStringCheck(value, required, min, max);
 
       if (onlyRusString.test(value)) {
         throw new Error(
@@ -76,19 +90,19 @@ export const ruleRusName = (): Rule => {
   };
 };
 
-export const ruleEngName = (): Rule => {
+export const ruleEngName = (required = true): Rule => {
   const min = 3;
   const max = 1000;
 
   return {
     min,
     max,
-    required: true,
+    required,
     trigger: ['change', 'blur'],
     type: 'string',
     transform: (value: string) => value.trim(),
     validator: (rule: Rule, value: string) => {
-      baseStringCheck(value, min, max);
+      baseStringCheck(value, required, min, max);
 
       if (onlyEngString.test(value)) {
         throw new Error(

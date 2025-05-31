@@ -3,17 +3,15 @@
 
   import type { FeatLinkResponse } from '~/shared/types';
 
-  withDefaults(
-    defineProps<{
-      multiple?: boolean;
-    }>(),
-    {
-      multiple: false,
-    },
-  );
+  const { multiple = false } = defineProps<{
+    disabled?: boolean;
+    multiple?: boolean;
+  }>();
 
   const context = Form.useInjectFormItemContext();
+
   const model = defineModel<string | Array<string>>();
+
   const searchQuery = ref('');
 
   const { data, status, refresh } = await useAsyncData(
@@ -34,7 +32,10 @@
         value: feat.url,
       }));
     },
-    { watch: [searchQuery] },
+    {
+      watch: [searchQuery],
+      dedupe: 'defer',
+    },
   );
 
   const handleDropdownOpening = (state: boolean) => {
@@ -61,6 +62,7 @@
     :options="data || []"
     :mode="multiple ? 'multiple' : undefined"
     :filter-option="false"
+    :disabled
     placeholder="Выбери черту"
     max-tag-count="responsive"
     show-search
