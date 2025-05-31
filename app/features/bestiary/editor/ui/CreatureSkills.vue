@@ -1,9 +1,8 @@
 <script setup lang="ts">
-  import { isEqual } from 'lodash-es';
-
   import { DictionaryService } from '~/shared/api';
   import { getAbilityInfo } from '~/shared/types';
-  import { getModifier } from '~/shared/utils';
+  import { getModifier, ValidationDictionaries } from '~/shared/utils';
+  import { EditorArrayControls } from '~ui/editor';
   import { SelectMastery, SelectSkills } from '~ui/select';
 
   import type { CreateAbilities, CreateSkill } from '~bestiary/types';
@@ -21,18 +20,6 @@
     { dedupe: 'defer' },
   );
 
-  function add(index: number) {
-    model.value.splice(index + 1, 0, getEmpty());
-  }
-
-  function clear(index: number) {
-    model.value.splice(index, 1, getEmpty());
-  }
-
-  function remove(index: number) {
-    model.value.splice(index, 1);
-  }
-
   function getEmpty(): CreateSkill {
     return {
       skill: undefined,
@@ -40,18 +27,6 @@
       multiplier: 0,
     };
   }
-
-  watch(
-    model,
-    (value) => {
-      if (value.length > 0) {
-        return;
-      }
-
-      model.value.push(getEmpty());
-    },
-    { immediate: true },
-  );
 
   function getSkill(key: string | undefined) {
     if (!key) {
@@ -98,6 +73,7 @@
       <AFormItem
         label="Навык"
         :name="['skills', index, 'skill']"
+        :rules="[ValidationDictionaries.ruleSkill()]"
       >
         <AInputGroup
           :style="{ display: 'flex' }"
@@ -146,36 +122,22 @@
       </AFormItem>
     </ACol>
 
-    <ACol :span="6">
-      <AFormItem label="Управление">
-        <AFlex :gap="8">
-          <AButton
-            block
-            @click.left.exact.prevent="add(index)"
-          >
-            Добавить
-          </AButton>
-
-          <AButton
-            v-if="index === model.length - 1"
-            :disabled="isEqual(item, getEmpty())"
-            danger
-            block
-            @click.left.exact.prevent="clear(index)"
-          >
-            Очистить
-          </AButton>
-
-          <AButton
-            v-else
-            danger
-            block
-            @click.left.exact.prevent="remove(index)"
-          >
-            Удалить
-          </AButton>
-        </AFlex>
-      </AFormItem>
-    </ACol>
+    <EditorArrayControls
+      v-model="model"
+      :empty-object="getEmpty()"
+      :index
+      :item
+      only-remove
+    />
   </ARow>
+
+  <AFlex
+    v-if="!model.length"
+    :style="{ marginBottom: '24px' }"
+    justify="center"
+  >
+    <AButton @click.left.exact.prevent="model.push(getEmpty())">
+      Добавить первый
+    </AButton>
+  </AFlex>
 </template>

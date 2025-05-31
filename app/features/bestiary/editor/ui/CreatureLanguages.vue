@@ -1,23 +1,11 @@
 <script setup lang="ts">
-  import { isEqual } from 'lodash-es';
-
+  import { ValidationDictionaries } from '~/shared/utils';
+  import { EditorArrayControls } from '~ui/editor';
   import { SelectLanguage } from '~ui/select';
 
   import type { CreateLanguage, CreatureLanguages } from '~bestiary/types';
 
   const model = defineModel<CreatureLanguages>({ required: true });
-
-  function add(index: number) {
-    model.value.values.splice(index + 1, 0, getEmpty());
-  }
-
-  function clear(index: number) {
-    model.value.values.splice(index, 1, getEmpty());
-  }
-
-  function remove(index: number) {
-    model.value.values.splice(index, 1);
-  }
 
   function getEmpty(): CreateLanguage {
     return {
@@ -25,20 +13,6 @@
       text: undefined,
     };
   }
-
-  watch(
-    model,
-    (value) => {
-      if (value.values.length > 0) {
-        return;
-      }
-
-      model.value.values.push(getEmpty());
-    },
-    {
-      immediate: true,
-    },
-  );
 </script>
 
 <template>
@@ -59,6 +33,7 @@
       <AFormItem
         label="Язык"
         :name="['languages', 'values', index, 'language']"
+        :rules="[ValidationDictionaries.ruleLanguage()]"
       >
         <SelectLanguage v-model="item.language" />
       </AFormItem>
@@ -76,38 +51,24 @@
       </AFormItem>
     </ACol>
 
-    <ACol :span="6">
-      <AFormItem label="Управление">
-        <AFlex :gap="8">
-          <AButton
-            block
-            @click.left.exact.prevent="add(index)"
-          >
-            Добавить
-          </AButton>
-
-          <AButton
-            v-if="index === model.values.length - 1"
-            :disabled="isEqual(item, getEmpty())"
-            danger
-            block
-            @click.left.exact.prevent="clear(index)"
-          >
-            Очистить
-          </AButton>
-
-          <AButton
-            v-else
-            danger
-            block
-            @click.left.exact.prevent="remove(index)"
-          >
-            Удалить
-          </AButton>
-        </AFlex>
-      </AFormItem>
-    </ACol>
+    <EditorArrayControls
+      v-model="model.values"
+      :empty-object="getEmpty()"
+      :index
+      :item
+      only-remove
+    />
   </ARow>
+
+  <AFlex
+    v-if="!model.values.length"
+    :style="{ marginBottom: '24px' }"
+    justify="center"
+  >
+    <AButton @click.left.exact.prevent="model.values.push(getEmpty())">
+      Добавить первый
+    </AButton>
+  </AFlex>
 
   <ARow :gutter="16">
     <ACol :span="12">
