@@ -164,7 +164,7 @@
           >
             <AButton
               type="text"
-              @click.left.exact.prevent="navigateTo('/magic-items')"
+              @click.left.exact.prevent="navigateTo('/bestiary')"
             >
               <template #icon>
                 <SvgIcon icon="close" />

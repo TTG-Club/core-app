@@ -80,7 +80,10 @@
 
 <template>
   <div :class="$style.rating">
-    <div :class="$style.stars">
+    <div
+      :class="$style.stars"
+      @mouseleave="hoverRating = undefined"
+    >
       <div
         v-for="star in 5"
         :key="star"
@@ -94,19 +97,12 @@
             { [$style.highlight]: isHighlighted(star, part) },
           ]"
           @mouseover="hoverRating = getRating(star, part)"
-          @mouseleave="hoverRating = undefined"
           @click.left.exact.prevent="rate(star, part)"
         >
           <SvgIcon
-            :class="[$style.icon, $style.outline]"
-            icon="star/outline/default"
-            size="24"
-          />
-
-          <SvgIcon
-            :class="[$style.icon, $style.filled]"
-            icon="star/filled/default"
-            size="24"
+            :class="$style.icon"
+            icon="star/filled/no-padding"
+            size="20"
           />
         </div>
       </div>
@@ -143,12 +139,13 @@
   .stars {
     display: flex;
     flex: 1 1 auto;
+    gap: 4px;
 
     .star {
       cursor: pointer;
       display: flex;
-      width: 24px;
-      height: 24px;
+      width: 20px;
+      height: 20px;
     }
 
     .part {
@@ -159,7 +156,7 @@
       width: 25%;
       height: 100%;
 
-      color: var(--color-text);
+      color: var(--color-hover);
 
       & {
         @include css-anim($time: 0.1s);
@@ -168,7 +165,7 @@
       @for $i from 1 through 4 {
         &:nth-child(#{ $i }) {
           $index: $i - 1;
-          $part: math.div(24, -4);
+          $part: math.div(20, -4);
           $delta: $index * $part;
 
           .icon {
@@ -184,24 +181,10 @@
         & {
           @include css-anim($time: 0.1s);
         }
-
-        &.filled {
-          opacity: 0;
-        }
       }
 
       &.highlight {
-        color: var(--color-primary);
-
-        .icon {
-          &.outline {
-            opacity: 0;
-          }
-
-          &.filled {
-            opacity: 1;
-          }
-        }
+        color: var(--color-text-bold);
       }
     }
   }
