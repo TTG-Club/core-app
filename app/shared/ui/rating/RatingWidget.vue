@@ -2,14 +2,41 @@
   import { isUndefined } from 'lodash-es';
 
   import { SvgIcon } from '~ui/icon';
-  import { useToast } from '~ui/toast';
 
   const { section, url } = defineProps<{
     section: string;
     url: string;
   }>();
 
-  const $toast = useToast();
+  const isTooltipShown = refAutoReset(false, 3000);
+  const tooltipMessage = ref<string>();
+  const tooltipType = ref<'success' | 'error'>();
+
+  function showSuccess(msg: string) {
+    tooltipType.value = 'success';
+
+    showTooltip(msg);
+  }
+
+  function showError(msg: string) {
+    tooltipType.value = 'error';
+
+    showTooltip(msg);
+  }
+
+  function showTooltip(msg: string) {
+    tooltipMessage.value = msg;
+    isTooltipShown.value = true;
+  }
+
+  function clearMessage(visibility: boolean) {
+    if (visibility) {
+      return;
+    }
+
+    tooltipMessage.value = undefined;
+    tooltipType.value = undefined;
+  }
 
   const hoverRating = ref<number>();
 
@@ -49,30 +76,27 @@
         url: url,
         value: getRating(star, part),
       },
-      onResponse: () => {
-        hoverRating.value = undefined;
+      onResponse: (res) => {
+        if (!res.response.ok) {
+          return;
+        }
 
-        $toast.success({
-          title: 'Спасибо за оценку!',
+        refresh().finally(() => {
+          showSuccess('Спасибо за оценку!');
+
+          hoverRating.value = undefined;
         });
-
-        refresh();
       },
       onResponseError: (error) => {
         if (error.response.status === 403) {
-          $toast.error({
-            title: 'Ошибка сохранения оценки',
-            description:
-              'Зарегистрируйтесь или войдите в свой аккаунт, чтобы оставлять оценки.',
-          });
+          showError(
+            'Зарегистрируйтесь или войдите в свой аккаунт, чтобы оставлять оценки.',
+          );
 
           return;
         }
 
-        $toast.error({
-          title: 'Ошибка сохранения оценки',
-          description: 'Обратитесь за помощью на наш Discord сервер.',
-        });
+        showError('Ошибка сохранения оценки');
       },
     });
   }
@@ -80,41 +104,59 @@
 
 <template>
   <div :class="$style.rating">
-    <div
-      :class="$style.stars"
-      @mouseleave="hoverRating = undefined"
+    <ATooltip
+      :open="isTooltipShown"
+      :trigger="[]"
+      :color="`var(--color-${tooltipType})`"
+      @open-change="clearMessage"
     >
-      <div
-        v-for="star in 5"
-        :key="star"
-        :class="$style.star"
-      >
+      <template #default>
         <div
-          v-for="part in 4"
-          :key="part"
-          :class="[
-            $style.part,
-            { [$style.highlight]: isHighlighted(star, part) },
-          ]"
-          @mouseover="hoverRating = getRating(star, part)"
-          @click.left.exact.prevent="rate(star, part)"
+          :class="$style.stars"
+          @mouseleave="hoverRating = undefined"
         >
-          <SvgIcon
-            :class="$style.icon"
-            icon="star/filled/no-padding"
-            size="20"
-          />
+          <div
+            v-for="star in 5"
+            :key="star"
+            :class="$style.star"
+          >
+            <div
+              v-for="part in 4"
+              :key="part"
+              :class="[
+                $style.part,
+                { [$style.highlight]: isHighlighted(star, part) },
+              ]"
+              @mouseover="hoverRating = getRating(star, part)"
+              @click.left.exact.prevent="rate(star, part)"
+            >
+              <SvgIcon
+                :class="$style.icon"
+                icon="star/filled/no-padding"
+                size="20"
+              />
+            </div>
+          </div>
         </div>
+      </template>
+
+      <template #title>
+        {{ tooltipMessage }}
+      </template>
+    </ATooltip>
+
+    <AFlex
+      align="center"
+      gap="8"
+    >
+      <div :class="$style.result">{{ safeRating }}</div>
+
+      <div :class="$style.info">
+        <div>Оценок:</div>
+
+        <div>{{ rating?.total || 0 }}</div>
       </div>
-    </div>
-
-    <div :class="$style.result">{{ safeRating }}</div>
-
-    <div :class="$style.info">
-      <div>Оценок:</div>
-
-      <div>{{ rating?.total || 0 }}</div>
-    </div>
+    </AFlex>
   </div>
 </template>
 
@@ -125,6 +167,7 @@
     display: flex;
     gap: 8px;
     align-items: center;
+    justify-content: space-between;
 
     padding: 4px 12px;
     border-radius: 8px;
@@ -138,7 +181,6 @@
 
   .stars {
     display: flex;
-    flex: 1 1 auto;
     gap: 4px;
 
     .star {
