@@ -30,8 +30,8 @@
       attackType: '',
       sawingThrows: [],
       damageTypes: [],
-      recharge: '',
-      restrictionOfUse: '',
+      recharge: undefined,
+      restrictionOfUse: undefined,
     };
   }
 

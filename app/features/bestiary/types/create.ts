@@ -9,7 +9,7 @@ export interface CreatureCreate extends EditorBaseInfoState {
   types: CreatureTypes; // типы существа
   sizes: CreatureSizes; // размеры существа
   alignment: string | undefined; // мировоззрение
-  ac: string; // класс доспеха
+  ac: ArmorClass; // класс доспеха
   initiative: number; // модификатор инициативы
   hit: CreateHit;
   speeds: CreateSpeeds;
@@ -47,6 +47,11 @@ export interface CreatureSizes {
   values: Array<'GARGANTUAN' | 'HUGE' | 'LARGE' | 'MEDIUM' | 'SMALL' | 'TINY'>;
   text: string | undefined;
   sizeString: string | undefined;
+}
+
+export interface ArmorClass {
+  value: number;
+  text: string;
 }
 
 export interface CreateHit {
@@ -145,8 +150,8 @@ export interface CreateAction {
   attackType: string;
   sawingThrows: Array<SavingThrow>;
   damageTypes: Array<string>;
-  recharge: string;
-  restrictionOfUse: string;
+  recharge: string | undefined;
+  restrictionOfUse: string | undefined;
 }
 
 export interface SavingThrow {
@@ -179,7 +184,10 @@ export function getInitialState(): CreatureCreate {
       sizeString: undefined,
     },
     alignment: undefined, // мировоззрение
-    ac: '', // класс доспеха
+    ac: {
+      value: 10, // класс доспеха
+      text: '',
+    },
     initiative: 0, // инициатива
     hit: {
       value: 0, // среднее количество хитов или абсолютное значение

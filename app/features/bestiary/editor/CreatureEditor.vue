@@ -86,14 +86,14 @@
     </ADivider>
 
     <ARow :gutter="16">
-      <ACol :span="3">
+      <ACol :span="8">
         <AFormItem
           label="КД"
           tooltip="Класс доспеха"
-          :name="['ac']"
+          :name="['ac', 'value']"
         >
           <AInputNumber
-            v-model:value="form.ac"
+            v-model:value="form.ac.value"
             :precision="0"
             placeholder="Введи КД"
             min="0"
@@ -101,7 +101,19 @@
         </AFormItem>
       </ACol>
 
-      <ACol :span="3">
+      <ACol :span="8">
+        <AFormItem
+          label="Текст к КД"
+          :name="['ac', 'text']"
+        >
+          <AInput
+            v-model:value="form.ac.text"
+            placeholder="Введи текст"
+          />
+        </AFormItem>
+      </ACol>
+
+      <ACol :span="8">
         <AFormItem
           label="Инициатива"
           :name="['initiative']"

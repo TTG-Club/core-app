@@ -118,7 +118,7 @@
     </AFormItem>
   </ACol>
 
-  <ACol :span="4">
+  <ACol :span="8">
     <AFormItem
       label="Среднее количество хитов"
       :name="['hit', 'value']"
@@ -131,7 +131,7 @@
     </AFormItem>
   </ACol>
 
-  <ACol :span="6">
+  <ACol :span="8">
     <AFormItem
       label="Текстовое описание"
       :name="['hit', 'text']"
