@@ -17,7 +17,7 @@
   import { ValidationBase, getModifier } from '~/shared/utils';
   import CreatureSection from '~bestiary/editor/ui/CreatureSection.vue';
   import { EditorBaseInfo } from '~ui/editor';
-  import { SelectAlignment } from '~ui/select';
+  import { SelectAlignment, SelectMastery } from '~ui/select';
 
   import type { FormInstance } from 'ant-design-vue';
   import type { CreatureCreate } from '~bestiary/types';
@@ -37,7 +37,20 @@
   watch(
     () => form.value.abilities.dex.value,
     (val) => {
-      form.value.initiative = getModifier(val);
+      form.value.initiative =
+        getModifier(val) +
+        form.value.initiativeMod * form.value.proficiencyBonus;
+    },
+  );
+
+  watch(
+    () => form.value.initiativeMod,
+    () => {
+      const dex = form.value.abilities.dex.value;
+
+      form.value.initiative =
+        getModifier(dex) +
+        form.value.initiativeMod * form.value.proficiencyBonus;
     },
   );
 </script>
@@ -113,7 +126,7 @@
         </AFormItem>
       </ACol>
 
-      <ACol :span="8">
+      <ACol :span="4">
         <AFormItem
           label="Инициатива"
           :name="['initiative']"
@@ -125,6 +138,12 @@
             min="0"
             :addon-after="`+${10 + form.initiative}`"
           />
+        </AFormItem>
+      </ACol>
+
+      <ACol :span="4">
+        <AFormItem label="Уровень владения">
+          <SelectMastery v-model="form.initiativeMod" />
         </AFormItem>
       </ACol>
 

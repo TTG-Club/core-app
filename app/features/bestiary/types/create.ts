@@ -11,6 +11,7 @@ export interface CreatureCreate extends EditorBaseInfoState {
   alignment: string | undefined; // мировоззрение
   ac: ArmorClass; // класс доспеха
   initiative: number; // модификатор инициативы
+  initiativeMod: number; // модификатор инициативы
   hit: CreateHit;
   speeds: CreateSpeeds;
   abilities: CreateAbilities;
@@ -189,6 +190,7 @@ export function getInitialState(): CreatureCreate {
       text: '',
     },
     initiative: 0, // инициатива
+    initiativeMod: 0,
     hit: {
       value: 0, // среднее количество хитов или абсолютное значение
       text: undefined, // текстовое описание хитов
