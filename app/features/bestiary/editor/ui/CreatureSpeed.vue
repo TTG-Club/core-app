@@ -97,7 +97,7 @@
     <ARow :gutter="16">
       <ACol :span="24">
         <AFlex
-          v-if="!model[key].length"
+          v-if="!model[key]?.length"
           justify="center"
         >
           <AButton @click.left.exact.prevent="model[key].push(getEmpty(key))">
