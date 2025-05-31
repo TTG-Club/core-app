@@ -53,7 +53,7 @@
     <CreatureAbilitiesTable v-bind="abilities" />
 
     <div
-      v-if="skills?.length"
+      v-if="skills"
       :class="$style.item"
     >
       <span :class="$style.name">Навыки: </span>
@@ -62,7 +62,7 @@
     </div>
 
     <div
-      v-if="vulnerability?.length"
+      v-if="vulnerability"
       :class="$style.item"
     >
       <span :class="$style.name">Уязвимость: </span>
@@ -71,7 +71,7 @@
     </div>
 
     <div
-      v-if="resistance?.length"
+      v-if="resistance"
       :class="$style.item"
     >
       <span :class="$style.name">Сопротивление: </span>
@@ -80,7 +80,7 @@
     </div>
 
     <div
-      v-if="immunity?.length"
+      v-if="immunity"
       :class="$style.item"
     >
       <span :class="$style.name">Иммунитет: </span>
@@ -88,13 +88,19 @@
       <span>{{ immunity }}</span>
     </div>
 
-    <span :class="$style.item">
+    <span
+      v-if="sense"
+      :class="$style.item"
+    >
       <span :class="$style.name">Чувства: </span>
 
       <span>{{ sense }}</span>
     </span>
 
-    <div :class="$style.item">
+    <div
+      v-if="languages"
+      :class="$style.item"
+    >
       <span :class="$style.name">Языки: </span>
 
       <span>{{ languages }}</span>
