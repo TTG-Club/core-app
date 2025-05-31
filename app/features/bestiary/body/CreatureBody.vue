@@ -55,7 +55,7 @@
           </ARow>
         </template>
 
-        <template v-if="creature.traits?.length">
+        <template v-if="creature.actions?.length">
           <ADivider orientation="left">
             <ATypographyText
               type="secondary"
