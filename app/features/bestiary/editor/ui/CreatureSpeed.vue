@@ -37,6 +37,14 @@
         return 'Скорость передвижения';
     }
   }
+
+  function createFirstSpeed(key: SpeedType) {
+    if (!model.value[key]) {
+      model.value[key] = [];
+    }
+
+    model.value[key].push(getEmpty(key));
+  }
 </script>
 
 <template>
@@ -73,7 +81,19 @@
         </AFormItem>
       </ACol>
 
-      <ACol :span="12">
+      <ACol
+        v-if="key === 'fly'"
+        :span="2"
+      >
+        <AFormItem
+          label="Парит"
+          :name="['speeds', key, index, 'hover']"
+        >
+          <ACheckbox v-model:checked="item.hover"> Да </ACheckbox>
+        </AFormItem>
+      </ACol>
+
+      <ACol :span="key !== 'fly' ? 12 : 10">
         <AFormItem
           label="Пояснение к скорости"
           :name="['speeds', key, index, 'text']"
@@ -100,7 +120,7 @@
           v-if="!model[key]?.length"
           justify="center"
         >
-          <AButton @click.left.exact.prevent="model[key].push(getEmpty(key))">
+          <AButton @click.left.exact.prevent="createFirstSpeed(key)">
             Добавить первую
           </AButton>
         </AFlex>
