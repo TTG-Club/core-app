@@ -154,6 +154,29 @@
           </li>
         </ul>
 
+        <template v-if="creature.section">
+          <template v-if="creature.section.name.eng !== creature.name.eng">
+            <ARow> {{ creature.section.name.rus }} </ARow>
+
+            <ARow>{{ creature.section.name.eng }} </ARow>
+          </template>
+
+          <ARow v-if="creature.section?.subtitle"
+            ><i> {{ creature.section.subtitle }} </i>
+          </ARow>
+
+          <ARow
+            ><strong>Среда обитания:</strong>
+            {{ creature.section.habitats }}</ARow
+          >
+
+          <ARow v-if="creature.section?.treasures"
+            ><strong>Сокровища:</strong> {{ creature.section.treasures }}</ARow
+          >
+
+          <DescriptionsBlock :description="creature.section?.description" />
+        </template>
+
         <template v-if="creature.description?.length">
           <ADivider orientation="left">
             <ATypographyText
@@ -162,14 +185,6 @@
               strong
             />
           </ADivider>
-
-          <ARow
-            ><i> {{ creature.subtitle }} </i>
-          </ARow>
-
-          <ARow><strong>Среда обитания:</strong> {{ creature.habitats }}</ARow>
-
-          <ARow><strong>Сокровища:</strong> {{ creature.treasures }}</ARow>
 
           <DescriptionsBlock :description="creature.description" />
         </template>

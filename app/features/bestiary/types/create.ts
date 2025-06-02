@@ -29,10 +29,10 @@ export interface CreatureCreate extends EditorBaseInfoState {
   bonusActions: Array<CreateAction>;
   reactions: Array<CreateAction>;
   legendaryActions: Array<CreateAction>;
-  section: CreatureSection;
+  section: CreateSection;
 }
 
-export interface CreatureSection {
+export interface CreateSection {
   name: {
     rus: string;
     eng: string;

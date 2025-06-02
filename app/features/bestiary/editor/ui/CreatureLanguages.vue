@@ -61,7 +61,7 @@
   </ARow>
 
   <AFlex
-    v-if="!model.values.length"
+    v-if="!model.values?.length"
     :style="{ marginBottom: '24px' }"
     justify="center"
   >

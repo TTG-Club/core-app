@@ -30,9 +30,18 @@ export interface CreatureDetailResponse {
   legendaryAction: number;
   legendaryActionInLair: number;
   legendaryActions: Array<CreatureActionResponse>;
+  section: CreatureSection;
+}
+
+export interface CreatureSection {
+  name: {
+    rus: string;
+    eng: string;
+  };
   subtitle: string;
   habitats: string;
   treasures: string;
+  description: Array<string>;
 }
 
 export interface CreatureAbilitiesResponse {

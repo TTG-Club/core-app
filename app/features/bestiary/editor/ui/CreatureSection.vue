@@ -2,9 +2,9 @@
   import { ValidationBase, ValidationDictionaries } from '~/shared/utils';
   import { SelectHabitat, SelectTreasure } from '~ui/select';
 
-  import type { CreatureSection } from '~bestiary/types';
+  import type { CreateSection } from '~bestiary/types';
 
-  const model = defineModel<CreatureSection>({ required: true });
+  const model = defineModel<CreateSection>({ required: true });
 </script>
 
 <template>
