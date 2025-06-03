@@ -170,7 +170,7 @@
             ><i> {{ creature.section.subtitle }} </i>
           </ARow>
 
-          <ARow
+          <ARow v-if="creature.section?.habitats"
             ><strong>Среда обитания:</strong>
             {{ creature.section.habitats }}</ARow
           >
