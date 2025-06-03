@@ -65,7 +65,7 @@
       v-if="vulnerability"
       :class="$style.item"
     >
-      <span :class="$style.name">Уязвимость: </span>
+      <span :class="$style.name">Уязвимости: </span>
 
       <span>{{ vulnerability }}</span>
     </div>
@@ -74,7 +74,7 @@
       v-if="resistance"
       :class="$style.item"
     >
-      <span :class="$style.name">Сопротивление: </span>
+      <span :class="$style.name">Сопротивления: </span>
 
       <span>{{ resistance }}</span>
     </div>
@@ -83,7 +83,7 @@
       v-if="immunity"
       :class="$style.item"
     >
-      <span :class="$style.name">Иммунитет: </span>
+      <span :class="$style.name">Иммунитеты: </span>
 
       <span>{{ immunity }}</span>
     </div>
@@ -107,7 +107,13 @@
     </div>
 
     <div :class="$style.item">
-      <span :class="$style.name">ПО: </span>
+      <ATooltip
+        title="Показатель опасности (CR)"
+        :mouse-enter-delay="0.7"
+        destroy-tooltip-on-hide
+      >
+        <span :class="$style.name">ПО: </span>
+      </ATooltip>
 
       <span>{{ cr }}</span>
     </div>
