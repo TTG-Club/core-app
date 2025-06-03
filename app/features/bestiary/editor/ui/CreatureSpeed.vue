@@ -28,7 +28,7 @@
       case SpeedType.FLY:
         return 'Скорость полета';
       case SpeedType.CLIMB:
-        return 'Скорость ползания';
+        return 'Скорость лазания';
       case SpeedType.SWIM:
         return 'Скорость плавания';
       case SpeedType.BURROW:
