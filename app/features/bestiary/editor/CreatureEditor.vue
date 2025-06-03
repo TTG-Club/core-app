@@ -19,6 +19,7 @@
   import { ValidationBase } from '~/shared/utils';
   import { EditorBaseInfo } from '~ui/editor';
   import { SelectAlignment } from '~ui/select';
+  import { UploadImage } from '~ui/upload';
 
   import type { FormInstance } from 'ant-design-vue';
   import type { CreatureCreate } from '~bestiary/types';
@@ -195,4 +196,28 @@
       name="legendaryActions"
     />
   </AForm>
+
+  <ADivider orientation="left">
+    <ATypographyText
+      type="secondary"
+      content="Изображения"
+      strong
+    />
+  </ADivider>
+
+  <ARow :gutter="16">
+    <ACol :span="8">
+      <AFormItem
+        label="Основное"
+        tooltip="Эта картинка отображается при просмотре страницы существа"
+        :name="['image']"
+      >
+        <UploadImage
+          v-model="form.image"
+          section="bestiary"
+          max-size="480"
+        />
+      </AFormItem>
+    </ACol>
+  </ARow>
 </template>

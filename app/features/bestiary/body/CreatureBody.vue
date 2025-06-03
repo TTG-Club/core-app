@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { StatsBlock, DescriptionsBlock, TopBar } from './ui';
 
+  import { UiGallery } from '~ui/gallery';
   import { MarkupRender } from '~ui/markup';
   import { RatingWidget } from '~ui/rating';
 
@@ -27,6 +28,10 @@
         />
 
         <StatsBlock v-bind="creature" />
+
+        <div :class="$style.galleryImg">
+          <UiGallery :preview="creature.image || '/img/no-img.webp'" />
+        </div>
       </AFlex>
 
       <AFlex
