@@ -41,7 +41,10 @@
     <div :class="$style.item">
       <span :class="$style.name">Хиты: </span>
 
-      <span> {{ hit.hit }} ({{ hit.formula }}) {{ hit.text }} </span>
+      <span>
+        {{ hit.hit }} <span v-if="hit.formula">({{ hit.formula }})</span>
+        {{ hit.text }}
+      </span>
     </div>
 
     <div :class="$style.item">
