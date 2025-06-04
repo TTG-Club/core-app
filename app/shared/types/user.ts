@@ -1,6 +1,6 @@
 import type { TimestampResponse } from './base';
 
-export enum ROLE {
+export enum Role {
   ADMIN = 'ADMIN',
   MODERATOR = 'MODERATOR',
   WRITER = 'WRITER',
@@ -11,5 +11,5 @@ export enum ROLE {
 export interface UserProfile extends TimestampResponse {
   email: string;
   username: string;
-  roles: ROLE[];
+  roles: Role[];
 }

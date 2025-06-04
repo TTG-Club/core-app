@@ -1,9 +1,14 @@
 <script setup lang="ts">
+  import { Role } from '~/shared/types';
   import { getSlicedString } from '~/shared/utils';
   import { CreatureBody } from '~bestiary/body';
   import { PageActions, PageContainer, PageHeader } from '~ui/page';
 
   import type { CreatureDetailResponse } from '~bestiary/types';
+
+  definePageMeta({
+    auth: { roles: [Role.ADMIN] },
+  });
 
   const route = useRoute();
 

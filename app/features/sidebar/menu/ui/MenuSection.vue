@@ -1,8 +1,38 @@
 <script setup lang="ts">
-  defineProps<{
-    title: string;
-    items: { href: string; label: string; disabled?: boolean }[]; // Массив ссылок
+  import { isArray } from 'lodash-es';
+
+  import { useUserStore } from '~/shared/stores';
+
+  import type { Role } from '~/shared/types';
+
+  const { items } = defineProps<{
+    label: string;
+    items: Array<{
+      href: string;
+      label: string;
+      disabled?: boolean;
+      roles?: Array<Role>;
+    }>;
   }>();
+
+  const { user } = storeToRefs(useUserStore());
+
+  const links = computed(() =>
+    items.map((link) => {
+      if (!isArray(link.roles)) {
+        return link;
+      }
+
+      const available = link.roles.some((role) =>
+        user.value?.roles.includes(role),
+      );
+
+      return {
+        ...link,
+        disabled: link.disabled || !available,
+      };
+    }),
+  );
 </script>
 
 <template>
@@ -10,15 +40,15 @@
     :class="$style.menu"
     vertical
   >
-    <span :class="$style.title">{{ title }}</span>
+    <span :class="$style.title">{{ label }}</span>
 
     <NuxtLink
-      v-for="(item, index) in items"
-      :key="index"
-      :class="[$style.item, item.disabled && $style.disabled]"
-      :to="item.href"
+      v-for="link in links"
+      :key="link.href"
+      :class="[$style.item, { [$style.disabled]: link.disabled }]"
+      :to="link.href"
     >
-      {{ item.label }}
+      {{ link.label }}
     </NuxtLink>
   </AFlex>
 </template>

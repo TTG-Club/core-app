@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { MENU_SUPPORT, MENU_LINKS } from './model';
+  import { MENU_SUPPORT, MENU_LINKS, MENU_SECTIONS } from './model';
   import { MenuSection, MenuContacts, MenuSupport } from './ui';
 
   import { SidebarPopover } from '~sidebar/popover';
@@ -47,48 +47,9 @@
         :class="$style.content"
       >
         <MenuSection
-          icon="menu/filled/character"
-          title="Персонаж"
-          :items="[
-            { href: '/', label: 'Классы', disabled: true },
-            { href: '/species', label: 'Виды' },
-            { href: '/feats', label: 'Черты', disabled: false },
-            { href: '/backgrounds', label: 'Предыстории', disabled: false },
-            { href: '/spells', label: 'Заклинания' },
-          ]"
-        />
-
-        <MenuSection
-          icon="menu/filled/inventory"
-          title="Предметы"
-          :items="[
-            { href: '/', label: 'Снаряжение', disabled: true },
-            {
-              href: '/magic-items',
-              label: 'Магические предметы',
-              disabled: false,
-            },
-          ]"
-        />
-
-        <MenuSection
-          icon="menu/filled/workshop"
-          title="Мастерская"
-          :items="[
-            { href: '/bestiary', label: 'Бестиарий', disabled: false },
-            { href: '/glossary', label: 'Глоссарий', disabled: false },
-            { href: '/', label: 'Источники', disabled: true },
-          ]"
-        />
-
-        <MenuSection
-          icon="menu/filled/wiki"
-          title="Интрукции"
-          :items="[
-            { href: '/', label: 'Discord Bot', disabled: true },
-            { href: '/', label: 'Telegram Spell Bot', disabled: true },
-            { href: '/', label: 'Управление закладками', disabled: true },
-          ]"
+          v-for="section in MENU_SECTIONS"
+          :key="section.label"
+          v-bind="section"
         />
       </AFlex>
 

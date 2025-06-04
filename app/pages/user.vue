@@ -1,8 +1,8 @@
 <script setup lang="ts">
-  import { ROLE } from '~/shared/types';
+  import { Role } from '~/shared/types';
 
   definePageMeta({
-    auth: { roles: [ROLE.USER] },
+    auth: { roles: [Role.USER] },
   });
 </script>
 
