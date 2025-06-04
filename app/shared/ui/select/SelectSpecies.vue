@@ -3,14 +3,10 @@
 
   import type { SpeciesLinkResponse } from '~/shared/types';
 
-  withDefaults(
-    defineProps<{
-      multiple?: boolean;
-    }>(),
-    {
-      multiple: false,
-    },
-  );
+  const { multiple = false } = defineProps<{
+    disabled?: boolean;
+    multiple?: boolean;
+  }>();
 
   const context = Form.useInjectFormItemContext();
 
@@ -31,6 +27,7 @@
         value: species.url,
       }));
     },
+    { dedupe: 'defer' },
   );
 
   const handleDropdownOpening = (state: boolean) => {
@@ -52,6 +49,7 @@
     :loading="status === 'pending'"
     :options="data || []"
     :mode="multiple ? 'multiple' : undefined"
+    :disabled
     placeholder="Выбери вид"
     max-tag-count="responsive"
     show-search

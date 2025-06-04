@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { Form } from 'ant-design-vue';
 
-  import { Dictionaries } from '~/shared/api';
+  import { DictionaryService } from '~/shared/api';
 
   defineProps<{
     disabled?: boolean;
@@ -13,7 +13,8 @@
 
   const { data, status, refresh } = await useAsyncData(
     'dictionaries-comparison-operators',
-    () => Dictionaries.comparisonOperators(),
+    () => DictionaryService.comparisonOperators(),
+    { dedupe: 'defer' },
   );
 
   const handleDropdownOpening = (state: boolean) => {

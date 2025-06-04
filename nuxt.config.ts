@@ -28,7 +28,7 @@ export default defineNuxtConfig({
   },
 
   devtools: {
-    enabled: true,
+    enabled: process.env.NUXT_DEVTOOLS === 'true',
   },
 
   devServer: {
@@ -149,13 +149,13 @@ export default defineNuxtConfig({
 
   typescript: {
     typeCheck: true,
-    tsConfig: {
-      compilerOptions: {
-        typeRoots: [
-          fileURLToPath(new URL('./app/shared/types/global', import.meta.url)),
-        ],
-      },
-    },
+    // tsConfig: {
+    //   compilerOptions: {
+    //     typeRoots: [
+    //       fileURLToPath(new URL('./app/shared/types/global', import.meta.url)),
+    //     ],
+    //   },
+    // },
   },
 
   eslint: {
@@ -179,7 +179,7 @@ export default defineNuxtConfig({
     routeRules: {
       '/api/**': {
         security: {
-          enabled: true,
+          enabled: process.env.NODE_ENV !== 'development',
           rateLimiter: {
             tokensPerInterval: 50,
             interval: ms('1m'),
@@ -189,7 +189,7 @@ export default defineNuxtConfig({
       },
       '/s3/**': {
         security: {
-          enabled: true,
+          enabled: process.env.NODE_ENV !== 'development',
           rateLimiter: {
             tokensPerInterval: 50,
             interval: ms('1m'),

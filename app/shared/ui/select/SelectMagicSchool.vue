@@ -1,16 +1,12 @@
 <script setup lang="ts">
   import { Form } from 'ant-design-vue';
 
-  import { Dictionaries } from '~/shared/api';
+  import { DictionaryService } from '~/shared/api';
 
-  withDefaults(
-    defineProps<{
-      multiple?: boolean;
-    }>(),
-    {
-      multiple: false,
-    },
-  );
+  const { multiple = false } = defineProps<{
+    disabled?: boolean;
+    multiple?: boolean;
+  }>();
 
   const context = Form.useInjectFormItemContext();
 
@@ -18,7 +14,8 @@
 
   const { data, status, refresh } = await useAsyncData(
     'dictionaries-magic-schools',
-    () => Dictionaries.magicSchools(),
+    () => DictionaryService.magicSchools(),
+    { dedupe: 'defer' },
   );
 
   const handleDropdownOpening = (state: boolean) => {
@@ -40,6 +37,7 @@
     :loading="status === 'pending'"
     :options="data || []"
     :mode="multiple ? 'multiple' : undefined"
+    :disabled
     max-tag-count="responsive"
     placeholder="Выбери школу"
     show-search

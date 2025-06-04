@@ -1,5 +1,28 @@
 <script setup lang="ts">
+  import { isArray } from 'lodash-es';
+
   import { CARD_LINKS } from './model';
+
+  import { useUserStore } from '~/shared/stores';
+
+  const { user } = storeToRefs(useUserStore());
+
+  const sections = computed(() =>
+    CARD_LINKS.map((link) => {
+      if (!isArray(link.roles)) {
+        return link;
+      }
+
+      const available = link.roles.some((role) =>
+        user.value?.roles.includes(role),
+      );
+
+      return {
+        ...link,
+        disabled: link.disabled || !available,
+      };
+    }),
+  );
 </script>
 
 <template>
@@ -8,7 +31,7 @@
     :class="$style.cards"
   >
     <ACol
-      v-for="(link, index) in CARD_LINKS"
+      v-for="(link, index) in sections"
       :key="index"
       class="gutter-row"
       :xs="12"
@@ -18,7 +41,7 @@
     >
       <NuxtLink
         :to="link.url"
-        :class="[$style.card, { [$style.disabled]: link.disable }]"
+        :class="[$style.card, { [$style.disabled]: link.disabled }]"
       >
         <span :class="$style.name">{{ link.name }}</span>
 

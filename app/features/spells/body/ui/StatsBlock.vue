@@ -79,6 +79,7 @@
 
     width: 100%;
     min-width: 272px;
+    padding: 8px 0;
     border: 1px solid var(--color-border);
     border-radius: 8px;
 
@@ -88,10 +89,9 @@
       display: flex;
       flex: 1 0 100%;
       flex-direction: column;
-      gap: 4px;
 
       min-width: 100%;
-      padding: 10px 16px;
+      padding: 6px 16px;
 
       @container (width > 600px) {
         flex: 1 0 calc(100% / 3);

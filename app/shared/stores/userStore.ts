@@ -1,4 +1,4 @@
-import { ROLE, type UserProfile } from '~/shared/types';
+import { Role, type UserProfile } from '~/shared/types';
 
 export const useUserStore = defineStore('userStore', () => {
   const {
@@ -28,7 +28,7 @@ export const useUserStore = defineStore('userStore', () => {
     }
   };
 
-  const isAdmin = computed(() => !!user.value?.roles.includes(ROLE.ADMIN));
+  const isAdmin = computed(() => !!user.value?.roles.includes(Role.ADMIN));
 
   return {
     isLoading,

@@ -1,20 +1,20 @@
 import { useUserStore } from '~/shared/stores';
-import { ROLE } from '~/shared/types';
+import { Role } from '~/shared/types';
 
 export const useUserRoles = () => {
   const { user } = storeToRefs(useUserStore());
 
   const isSubscriber = computed(
-    () => !!user.value?.roles.includes(ROLE.SUBSCRIBER),
+    () => !!user.value?.roles.includes(Role.SUBSCRIBER),
   );
 
-  const isWriter = computed(() => !!user.value?.roles.includes(ROLE.WRITER));
+  const isWriter = computed(() => !!user.value?.roles.includes(Role.WRITER));
 
   const isModerator = computed(
-    () => !!user.value?.roles.includes(ROLE.MODERATOR),
+    () => !!user.value?.roles.includes(Role.MODERATOR),
   );
 
-  const isAdmin = computed(() => !!user.value?.roles.includes(ROLE.ADMIN));
+  const isAdmin = computed(() => !!user.value?.roles.includes(Role.ADMIN));
 
   return {
     isSubscriber,

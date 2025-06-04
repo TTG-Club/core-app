@@ -9,3 +9,5 @@ export * from './user';
 export * from './upload';
 
 export * from './dictionaries';
+
+export * from './abilities';

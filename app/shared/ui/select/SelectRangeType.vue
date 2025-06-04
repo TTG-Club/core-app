@@ -1,18 +1,12 @@
 <script setup lang="ts">
   import { Form } from 'ant-design-vue';
 
-  import { Dictionaries } from '~/shared/api';
+  import { DictionaryService } from '~/shared/api';
 
-  withDefaults(
-    defineProps<{
-      disabled?: boolean;
-      multiple?: boolean;
-    }>(),
-    {
-      disabled: false,
-      multiple: false,
-    },
-  );
+  const { multiple = false } = defineProps<{
+    disabled?: boolean;
+    multiple?: boolean;
+  }>();
 
   const context = Form.useInjectFormItemContext();
 
@@ -20,7 +14,8 @@
 
   const { data, status, refresh } = await useAsyncData(
     'dictionaries-range-types',
-    () => Dictionaries.rangeTypes(),
+    () => DictionaryService.rangeTypes(),
+    { dedupe: 'defer' },
   );
 
   const handleDropdownOpening = (state: boolean) => {

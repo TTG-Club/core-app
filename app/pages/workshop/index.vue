@@ -7,6 +7,7 @@
     SectionGlossary,
     SectionBackgrounds,
     SectionMagicItem,
+    SectionBestiary,
   } from '~workshop/section';
 </script>
 
@@ -29,6 +30,8 @@
         <SectionBackgrounds />
 
         <SectionMagicItem />
+
+        <SectionBestiary />
       </div>
     </template>
   </PageContainer>
