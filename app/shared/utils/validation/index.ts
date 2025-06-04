@@ -1,5 +1,5 @@
-export * as ValidationBase from './base';
+export * from './base';
 
-export * as ValidationAuth from './auth';
+export * from './auth';
 
-export * as ValidationDictionaries from './dictionaries';
+export * from './dictionaries';

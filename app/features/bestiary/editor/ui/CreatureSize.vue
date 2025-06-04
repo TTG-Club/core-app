@@ -37,7 +37,7 @@
         label="Размеры существа"
         :name="['sizes', 'values']"
         :rules="[
-          ValidationDictionaries.ruleSize({
+          ValidationDictionaries.ruleSizes({
             required: !Boolean(model.sizeString),
             array: true,
           }),

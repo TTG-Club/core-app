@@ -58,7 +58,7 @@
     <ACol :span="6">
       <AFormItem
         :name="['properties', 'sizes', index, 'type']"
-        :rules="[ValidationDictionaries.ruleSize()]"
+        :rules="[ValidationDictionaries.ruleSizes()]"
         label="Размер"
       >
         <SelectSize

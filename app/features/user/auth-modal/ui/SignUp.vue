@@ -106,7 +106,7 @@
         <ATooltip trigger="focus">
           <template #title>
             Допустимые спец. символы:
-            {{ ValidationAuth.ALLOWED_SPECIAL_CHARACTERS.join(' ') }}
+            {{ ValidationAuth.allowedSpecialCharacters.join(' ') }}
           </template>
 
           <template #default>

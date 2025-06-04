@@ -16,7 +16,7 @@
     CreatureInitiative,
   } from './ui';
 
-  import { ValidationBase } from '~/shared/utils';
+  import { ValidationBase, ValidationDictionaries } from '~/shared/utils';
   import { EditorBaseInfo } from '~ui/editor';
   import { SelectAlignment } from '~ui/select';
   import { UploadImage } from '~ui/upload';
@@ -83,6 +83,7 @@
         <AFormItem
           label="Мировоззрение существа"
           :name="['alignment']"
+          :rules="[ValidationDictionaries.ruleAlignments()]"
         >
           <SelectAlignment v-model="form.alignment" />
         </AFormItem>

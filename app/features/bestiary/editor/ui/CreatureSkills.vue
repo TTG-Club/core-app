@@ -73,7 +73,7 @@
       <AFormItem
         label="Навык"
         :name="['skills', index, 'skill']"
-        :rules="[ValidationDictionaries.ruleSkill()]"
+        :rules="[ValidationDictionaries.ruleSkills()]"
       >
         <AInputGroup
           :style="{ display: 'flex' }"

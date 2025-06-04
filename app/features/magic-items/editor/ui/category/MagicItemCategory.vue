@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { SelectMagicItemCategory } from './ui';
-  import { ruleMagicItemCategory } from './validators';
+
+  import { ValidationDictionaries } from '~/shared/utils';
 
   import type { MagicItemCategory } from '~magic-items/types';
 
@@ -24,7 +25,7 @@
       <AFormItem
         label="Категория"
         :name="['category', 'type']"
-        :rules="[ruleMagicItemCategory()]"
+        :rules="[ValidationDictionaries.ruleMagicItemCategories()]"
       >
         <SelectMagicItemCategory v-model="model.type" />
       </AFormItem>
