@@ -58,7 +58,7 @@
         <AFormItem
           label="Тип"
           :name="['properties', 'type']"
-          :rules="[ValidationDictionaries.ruleCreatureType()]"
+          :rules="[ValidationDictionaries.ruleCreatureTypes()]"
         >
           <SelectCreatureType v-model="form.properties.type" />
         </AFormItem>

@@ -103,6 +103,7 @@
       <AFormItem
         label="Описание секции"
         :name="['section', 'description']"
+        :rules="[ValidationBase.ruleString(false)]"
       >
         <ATextarea
           v-model:value="model.description"

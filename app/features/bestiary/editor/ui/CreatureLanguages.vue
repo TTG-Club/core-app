@@ -33,7 +33,7 @@
       <AFormItem
         label="Язык"
         :name="['languages', 'values', index, 'language']"
-        :rules="[ValidationDictionaries.ruleLanguage()]"
+        :rules="[ValidationDictionaries.ruleLanguages()]"
       >
         <SelectLanguage v-model="item.language" />
       </AFormItem>

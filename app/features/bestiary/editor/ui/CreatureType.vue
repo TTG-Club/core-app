@@ -23,7 +23,7 @@
     <AFormItem
       label="Типы существа"
       :name="['types', 'values']"
-      :rules="[ValidationDictionaries.ruleCreatureType()]"
+      :rules="[ValidationDictionaries.ruleCreatureTypes()]"
     >
       <SelectCreatureType
         v-model="model.values"

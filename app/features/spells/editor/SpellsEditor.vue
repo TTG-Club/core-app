@@ -67,7 +67,7 @@
         <AFormItem
           label="Школа"
           :name="['school']"
-          :rules="[ValidationDictionaries.ruleMagicSchool()]"
+          :rules="[ValidationDictionaries.ruleMagicSchools()]"
         >
           <SelectMagicSchool v-model="form.school" />
         </AFormItem>

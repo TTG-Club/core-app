@@ -1,7 +1,6 @@
 import { isArray, isUndefined } from 'lodash-es';
 
 import { DictionaryService } from '~/shared/api';
-import { getEnumFromDictionary } from '~/shared/utils/validation/base';
 
 import type { Rule } from 'ant-design-vue/es/form';
 import type {
@@ -14,73 +13,91 @@ interface Options {
   array?: boolean;
 }
 
-export const ruleTimeUnit = (options?: Options): Rule =>
-  validator(DictionaryService.timeUnits, options);
+class ValidationService {
+  ruleTimeUnits = (options?: Options): Rule =>
+    this.validator(DictionaryService.timeUnits, options);
 
-export const ruleMagicSchool = (options?: Options): Rule =>
-  validator(DictionaryService.magicSchools, options);
+  ruleMagicSchools = (options?: Options): Rule =>
+    this.validator(DictionaryService.magicSchools, options);
 
-export const ruleSize = (options?: Options): Rule =>
-  validator(DictionaryService.sizes, options);
+  ruleSizes = (options?: Options): Rule =>
+    this.validator(DictionaryService.sizes, options);
 
-export const ruleCreatureType = (options?: Options): Rule =>
-  validator(DictionaryService.creatureTypes, options);
+  ruleCreatureTypes = (options?: Options): Rule =>
+    this.validator(DictionaryService.creatureTypes, options);
 
-export const ruleFeatCategories = (options?: Options): Rule =>
-  validator(DictionaryService.featCategories, options);
+  ruleFeatCategories = (options?: Options): Rule =>
+    this.validator(DictionaryService.featCategories, options);
 
-export const ruleRarity = (options?: Options): Rule =>
-  validator(DictionaryService.rarity, options);
+  ruleRarity = (options?: Options): Rule =>
+    this.validator(DictionaryService.rarity, options);
 
-export const ruleLanguage = (options?: Options): Rule =>
-  validator(DictionaryService.languages, options);
+  ruleLanguages = (options?: Options): Rule =>
+    this.validator(DictionaryService.languages, options);
 
-export const ruleSkill = (options?: Options): Rule =>
-  validator(DictionaryService.skills, options);
+  ruleSkills = (options?: Options): Rule =>
+    this.validator(DictionaryService.skills, options);
 
-export const ruleHabitats = (options?: Options): Rule =>
-  validator(DictionaryService.habitats, options);
+  ruleHabitats = (options?: Options): Rule =>
+    this.validator(DictionaryService.habitats, options);
 
-export const ruleTreasures = (options?: Options): Rule =>
-  validator(DictionaryService.treasures, options);
+  ruleTreasures = (options?: Options): Rule =>
+    this.validator(DictionaryService.treasures, options);
 
-function validator(
-  dictionaryCallback: () => Promise<
-    Array<SelectOption> | Array<SelectOptionWithNumericValue>
-  >,
-  options: Options | undefined,
-): Rule {
-  const required = isUndefined(options?.required) ? true : options.required;
-  const array = isUndefined(options?.array) ? false : options.array;
+  ruleAlignments = (options?: Options): Rule =>
+    this.validator(DictionaryService.alignments, options);
 
-  return {
-    required,
-    trigger: ['change', 'blur'],
-    type: !array ? 'string' : 'array',
-    validator: async (
-      rule: Rule,
-      value: string | Array<string> | undefined,
-    ) => {
-      if (!value) {
-        throw new Error('Поле обязательно для заполнения');
-      }
+  ruleMagicItemCategories = (options?: Options): Rule =>
+    this.validator(DictionaryService.magicItemCategory, options);
 
-      const dictionary = await dictionaryCallback();
+  private validator = (
+    dictionaryCallback: () => Promise<
+      Array<SelectOption> | Array<SelectOptionWithNumericValue>
+    >,
+    options?: Options,
+  ): Rule => {
+    const required = isUndefined(options?.required) ? true : options.required;
+    const array = isUndefined(options?.array) ? false : options.array;
 
-      validateFromDictionary(value, dictionary);
-    },
+    return {
+      required,
+      trigger: ['change', 'blur'],
+      type: !array ? 'string' : 'array',
+      validator: async (
+        rule: Rule,
+        value: string | Array<string> | undefined,
+      ) => {
+        if (!value) {
+          throw new Error('Поле обязательно для заполнения');
+        }
+
+        const dictionary = await dictionaryCallback();
+
+        this.validateFromDictionary(value, dictionary);
+      },
+    };
   };
+
+  private validateFromDictionary = (
+    value: string | number | Array<string | number>,
+    dictionary: Array<SelectOption | SelectOptionWithNumericValue>,
+  ) => {
+    const _value = !isArray(value) ? [value] : value;
+
+    if (
+      _value.some(
+        (item) => !this.getEnumFromDictionary(dictionary).includes(item),
+      )
+    ) {
+      throw new Error('Недопустимое значение');
+    }
+  };
+
+  private getEnumFromDictionary = <
+    T extends SelectOption | SelectOptionWithNumericValue,
+  >(
+    dictionary: Array<T>,
+  ): Array<T['value']> => dictionary.map((option) => option.value);
 }
 
-export function validateFromDictionary(
-  value: string | number | Array<string | number>,
-  dictionary: Array<SelectOption | SelectOptionWithNumericValue>,
-) {
-  const _value = !isArray(value) ? [value] : value;
-
-  if (
-    _value.some((item) => !getEnumFromDictionary(dictionary).includes(item))
-  ) {
-    throw new Error('Недопустимое значение');
-  }
-}
+export const ValidationDictionaries = new ValidationService();
