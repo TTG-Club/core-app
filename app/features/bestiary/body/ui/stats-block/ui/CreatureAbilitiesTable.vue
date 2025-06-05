@@ -9,9 +9,13 @@
     <div :class="$style.title">
       <div :class="$style.first"></div>
 
+      <div :class="$style.first"></div>
+
       <div :class="$style.first">Мод</div>
 
       <div :class="$style.first">Спас</div>
+
+      <div :class="$style.first"></div>
 
       <div :class="$style.first"></div>
 
@@ -31,6 +35,8 @@
         <div>
           <div :class="$style.stat">Сил</div>
 
+          <div>{{ str.value }}</div>
+
           <div>{{ str.mod }}</div>
 
           <div
@@ -44,6 +50,8 @@
         <div>
           <div :class="$style.stat">Лов</div>
 
+          <div>{{ dex.value }}</div>
+
           <div>{{ dex.mod }}</div>
 
           <div
@@ -56,6 +64,8 @@
 
         <div>
           <div :class="$style.stat">Тел</div>
+
+          <div>{{ con.value }}</div>
 
           <div>{{ con.mod }}</div>
 
@@ -72,6 +82,8 @@
         <div>
           <div :class="$style.stat">Инт</div>
 
+          <div>{{ int.value }}</div>
+
           <div>{{ int.mod }}</div>
 
           <div
@@ -85,6 +97,8 @@
         <div>
           <div :class="$style.stat">Мдр</div>
 
+          <div>{{ wis.value }}</div>
+
           <div>{{ wis.mod }}</div>
 
           <div
@@ -97,6 +111,8 @@
 
         <div>
           <div :class="$style.stat">Хар</div>
+
+          <div>{{ chr.value }}</div>
 
           <div>{{ chr.mod }}</div>
 
