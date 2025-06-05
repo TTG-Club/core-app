@@ -104,59 +104,54 @@
 
 <template>
   <div :class="$style.rating">
-    <ATooltip
-      :open="isTooltipShown"
-      :trigger="[]"
-      :color="`var(--color-${tooltipType})`"
-      @open-change="clearMessage"
-    >
-      <template #default>
-        <div
-          :class="$style.stars"
-          @mouseleave="hoverRating = undefined"
-        >
-          <div
-            v-for="star in 5"
-            :key="star"
-            :class="$style.star"
-          >
-            <div
-              v-for="part in 4"
-              :key="part"
-              :class="[
-                $style.part,
-                { [$style.highlight]: isHighlighted(star, part) },
-              ]"
-              @mouseover="hoverRating = getRating(star, part)"
-              @click.left.exact.prevent="rate(star, part)"
-            >
-              <SvgIcon
-                :class="$style.icon"
-                icon="star/filled/no-padding"
-                size="20"
-              />
-            </div>
-          </div>
-        </div>
-      </template>
+    <span><b>Рейтинг</b></span>
 
-      <template #title>
-        {{ tooltipMessage }}
-      </template>
-    </ATooltip>
-
-    <AFlex
-      align="center"
-      gap="8"
-    >
+    <div :class="$style.block">
       <div :class="$style.result">{{ safeRating }}</div>
 
-      <div :class="$style.info">
-        <div>Оценок:</div>
+      <ATooltip
+        :open="isTooltipShown"
+        :trigger="[]"
+        :color="`var(--color-${tooltipType})`"
+        @open-change="clearMessage"
+      >
+        <template #default>
+          <div
+            :class="$style.stars"
+            @mouseleave="hoverRating = undefined"
+          >
+            <div
+              v-for="star in 5"
+              :key="star"
+              :class="$style.star"
+            >
+              <div
+                v-for="part in 4"
+                :key="part"
+                :class="[
+                  $style.part,
+                  { [$style.highlight]: isHighlighted(star, part) },
+                ]"
+                @mouseover="hoverRating = getRating(star, part)"
+                @click.left.exact.prevent="rate(star, part)"
+              >
+                <SvgIcon
+                  :class="$style.icon"
+                  icon="star/filled/no-padding"
+                  size="20"
+                />
+              </div>
+            </div>
+          </div>
+        </template>
 
-        <div>{{ rating?.total || 0 }}</div>
-      </div>
-    </AFlex>
+        <template #title>
+          {{ tooltipMessage }}
+        </template>
+      </ATooltip>
+    </div>
+
+    <div :class="$style.total">Оценок: {{ rating?.total || 0 }}</div>
   </div>
 </template>
 
@@ -165,17 +160,19 @@
 
   .rating {
     display: flex;
-    gap: 8px;
-    align-items: center;
+    flex-direction: column;
+    gap: 4px;
     justify-content: space-between;
 
-    padding: 4px 12px;
+    width: 100%;
+    height: 110px;
+    padding: 12px 12px;
     border-radius: 8px;
 
     background: var(--color-hover);
 
     @container (width > 600px) {
-      max-width: 320px;
+      max-width: 200px;
     }
   }
 
@@ -235,6 +232,12 @@
     flex: 1 1 100%;
   }
 
+  .block {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
   .result {
     display: flex;
     flex-shrink: 0;
@@ -250,8 +253,7 @@
 
     background: var(--color-hover);
   }
-
-  .info {
-    font-size: 10px;
+  .total {
+    font-size: 12px;
   }
 </style>

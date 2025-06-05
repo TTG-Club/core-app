@@ -158,8 +158,8 @@
       padding: 6px 16px;
 
       .name {
-        font-weight: 500;
-        color: var(--color-text-title);
+        font-weight: 600;
+        color: var(--color-text-bold);
       }
     }
   }
