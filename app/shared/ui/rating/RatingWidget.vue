@@ -234,7 +234,7 @@
 
   .block {
     display: flex;
-    gap: 8px;
+    gap: 4px;
     align-items: center;
     justify-content: space-between;
   }
@@ -247,7 +247,7 @@
     padding: 0 8px;
     border-radius: 8px;
 
-    font-size: 20px;
+    font-size: 16px;
     font-weight: 500;
     line-height: 32px;
     color: var(--color-text-bold);
