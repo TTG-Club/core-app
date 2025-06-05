@@ -107,8 +107,6 @@
     <span><b>Рейтинг</b></span>
 
     <div :class="$style.block">
-      <div :class="$style.result">{{ safeRating }}</div>
-
       <ATooltip
         :open="isTooltipShown"
         :trigger="[]"
@@ -149,6 +147,8 @@
           {{ tooltipMessage }}
         </template>
       </ATooltip>
+
+      <div :class="$style.result">{{ safeRating }}</div>
     </div>
 
     <div :class="$style.total">Оценок: {{ rating?.total || 0 }}</div>
@@ -236,6 +236,7 @@
     display: flex;
     gap: 8px;
     align-items: center;
+    justify-content: space-between;
   }
 
   .result {
@@ -243,7 +244,7 @@
     flex-shrink: 0;
     align-items: flex-end;
 
-    padding: 0 12px;
+    padding: 0 8px;
     border-radius: 8px;
 
     font-size: 20px;
