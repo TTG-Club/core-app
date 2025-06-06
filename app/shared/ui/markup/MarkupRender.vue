@@ -20,13 +20,13 @@
 </script>
 
 <template>
-  <div :class="$style.markup">
+  <span :class="$style.markup">
     <component
       :is="entry"
       v-for="(entry, index) in rendered"
       :key="index"
     />
-  </div>
+  </span>
 </template>
 
 <style module lang="scss">
