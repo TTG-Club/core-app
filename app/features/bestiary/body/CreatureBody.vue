@@ -17,6 +17,7 @@
     'bonusActions',
     'description',
     'legendaryActions',
+    'section',
   ]);
 </script>
 
@@ -68,16 +69,14 @@
               </template>
 
               <template #default>
-                <ARow
+                <p
                   v-for="trait in creature.traits"
                   :key="trait.name.eng"
                 >
-                  <ACol>
-                    <strong>{{ trait.name.rus }}.</strong>
+                  <strong>{{ trait.name.rus }}. </strong>
 
-                    <MarkupRender :entries="trait.description" />
-                  </ACol>
-                </ARow>
+                  <MarkupRender :entries="trait.description" />
+                </p>
               </template>
             </ACollapsePanel>
           </ACollapse>
@@ -104,16 +103,14 @@
               </template>
 
               <template #default>
-                <ARow
+                <p
                   v-for="trait in creature.actions"
                   :key="trait.name.eng"
                 >
-                  <ACol>
-                    <strong>{{ trait.name.rus }}.</strong>
+                  <strong>{{ trait.name.rus }}. </strong>
 
-                    <MarkupRender :entries="trait.description" />
-                  </ACol>
-                </ARow>
+                  <MarkupRender :entries="trait.description" />
+                </p>
               </template>
             </ACollapsePanel>
           </ACollapse>
@@ -140,16 +137,14 @@
               </template>
 
               <template #default>
-                <ARow
+                <p
                   v-for="trait in creature.bonusActions"
                   :key="trait.name.eng"
                 >
-                  <ACol>
-                    <strong>{{ trait.name.rus }}.</strong>
+                  <strong>{{ trait.name.rus }}. </strong>
 
-                    <MarkupRender :entries="trait.description" />
-                  </ACol>
-                </ARow>
+                  <MarkupRender :entries="trait.description" />
+                </p>
               </template>
             </ACollapsePanel>
           </ACollapse>
@@ -176,16 +171,14 @@
               </template>
 
               <template #default>
-                <ARow
+                <p
                   v-for="trait in creature.reactions"
                   :key="trait.name.eng"
                 >
-                  <ACol>
-                    <strong>{{ trait.name.rus }}.</strong>
+                  <strong>{{ trait.name.rus }}. </strong>
 
-                    <MarkupRender :entries="trait.description" />
-                  </ACol>
-                </ARow>
+                  <MarkupRender :entries="trait.description" />
+                </p>
               </template>
             </ACollapsePanel>
           </ACollapse>
@@ -231,9 +224,11 @@
                     v-for="action in creature.legendaryActions"
                     :key="action.name.eng"
                   >
-                    <strong>{{ action.name.rus }}.</strong>
+                    <p>
+                      <strong>{{ action.name.rus }}. </strong>
 
-                    <MarkupRender :entries="action.description" />
+                      <MarkupRender :entries="action.description" />
+                    </p>
                   </li>
                 </ul>
               </template>
@@ -242,26 +237,43 @@
         </template>
 
         <template v-if="creature.section">
-          <template v-if="creature.section.name.eng !== creature.name.eng">
-            <ARow> {{ creature.section.name.rus }} </ARow>
-
-            <ARow>{{ creature.section.name.eng }} </ARow>
-          </template>
-
-          <ARow v-if="creature.section?.subtitle"
-            ><i> {{ creature.section.subtitle }} </i>
-          </ARow>
-
-          <ARow v-if="creature.section?.habitats"
-            ><strong>Среда обитания:</strong>
-            {{ creature.section.habitats }}</ARow
+          <ACollapse
+            v-model:active-key="expanded"
+            :bordered="false"
+            destroy-inactive-panel
+            ghost
           >
+            <ACollapsePanel
+              key="section"
+              data-allow-mismatch
+            >
+              <template #header>
+                <ATypographyTitle
+                  :level="4"
+                  data-allow-mismatch
+                  content="Эффекты местности"
+                >
+                </ATypographyTitle>
+              </template>
 
-          <ARow v-if="creature.section?.treasures"
-            ><strong>Сокровища:</strong> {{ creature.section.treasures }}</ARow
-          >
+              <template #default>
+                <p v-if="creature.section">
+                  <strong>Среда обитания: </strong>
+                  {{ creature.section.habitats }}
+                </p>
 
-          <DescriptionsBlock :description="creature.section?.description" />
+                <p v-if="creature.section?.treasures">
+                  <strong>Сокровища:</strong> {{ creature.section.treasures }}
+                </p>
+
+                <template v-if="creature.section">
+                  <DescriptionsBlock
+                    :description="creature.section?.description"
+                  />
+                </template>
+              </template>
+            </ACollapsePanel>
+          </ACollapse>
         </template>
 
         <template v-if="creature.description?.length">
@@ -284,6 +296,20 @@
               </template>
 
               <template #default>
+                <p>
+                  <template
+                    v-if="creature.section.name.eng !== creature.name.eng"
+                  >
+                    <ARow> {{ creature.section.name.rus }} </ARow>
+
+                    <ARow>{{ creature.section.name.eng }} </ARow>
+                  </template>
+
+                  <ARow v-if="creature.section?.subtitle">
+                    <i> {{ creature.section.subtitle }} </i>
+                  </ARow>
+                </p>
+
                 <DescriptionsBlock :description="creature.description" />
               </template>
             </ACollapsePanel>
