@@ -16,6 +16,7 @@
     'actions',
     'bonusActions',
     'description',
+    'legendaryActions',
   ]);
 </script>
 
