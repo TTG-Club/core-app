@@ -265,12 +265,6 @@
                 <p v-if="creature.section?.treasures">
                   <strong>Сокровища:</strong> {{ creature.section.treasures }}
                 </p>
-
-                <template v-if="creature.section">
-                  <DescriptionsBlock
-                    :description="creature.section?.description"
-                  />
-                </template>
               </template>
             </ACollapsePanel>
           </ACollapse>
@@ -311,6 +305,12 @@
                 </p>
 
                 <DescriptionsBlock :description="creature.description" />
+
+                <template v-if="creature.section">
+                  <DescriptionsBlock
+                    :description="creature.section?.description"
+                  />
+                </template>
               </template>
             </ACollapsePanel>
           </ACollapse>
