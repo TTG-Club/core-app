@@ -1,7 +1,9 @@
 <script setup lang="ts">
-  import { Role } from '~/shared/types';
+  import { Role, type SearchBody } from '~/shared/types';
   import { CreatureLegend } from '~bestiary/legend';
   import { CreatureLink } from '~bestiary/link';
+  import { useFilter } from '~filter/composable';
+  import { FilterControls } from '~filter/controls';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
@@ -19,6 +21,22 @@
   const search = ref<string>('');
 
   const {
+    filter,
+    isPending: isFilterPending,
+    isShowedPreview: isFilterPreviewShowed,
+  } = await useFilter('bestiary-filters', '/api/v2/bestiary/filters');
+
+  const searchBody = computed(() => {
+    const body: SearchBody = {};
+
+    if (filter) {
+      body.filter = filter.value;
+    }
+
+    return Object.keys(body).length ? body : undefined;
+  });
+
+  const {
     data: bestiary,
     error,
     status,
@@ -31,44 +49,29 @@
         params: {
           query: search.value || undefined,
         },
+        body: searchBody.value,
       }),
-    { deep: false },
+    { deep: false, watch: [search, filter] },
   );
-
-  const onSearch = useDebounceFn(() => {
-    if (search.value && search.value.length < 3) {
-      return;
-    }
-
-    refresh();
-  }, 1000);
 </script>
 
 <template>
   <PageContainer fixed-header>
     <template #header>
-      <PageHeader title="Бестиарий">
-        <template #filter>
-          <AInput
-            v-model:value="search"
-            placeholder="Введите текст..."
-            allow-clear
-            @change="onSearch"
-          />
+      <PageHeader title="Бестиарий" />
+    </template>
 
-          <AButton
-            :style="{ boxShadow: 'none' }"
-            type="primary"
-            disabled
-          >
-            Фильтры
-          </AButton>
-        </template>
-
+    <template #controls>
+      <FilterControls
+        v-model:search="search"
+        v-model:filter="filter"
+        :is-pending="isFilterPending"
+        :show-preview="isFilterPreviewShowed"
+      >
         <template #legend>
           <CreatureLegend />
         </template>
-      </PageHeader>
+      </FilterControls>
     </template>
 
     <template #default>
