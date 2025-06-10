@@ -10,6 +10,15 @@
   defineProps<{
     creature: CreatureDetailResponse;
   }>();
+
+  const expanded = useState(() => [
+    'traits',
+    'actions',
+    'bonusActions',
+    'description',
+    'legendaryActions',
+    'section',
+  ]);
 </script>
 
 <template>
@@ -40,158 +49,271 @@
         flex="1 1 auto"
       >
         <template v-if="creature.traits?.length">
-          <ADivider orientation="left">
-            <ATypographyText
-              type="secondary"
-              content="Особенности"
-              strong
-            />
-          </ADivider>
-
-          <ARow
-            v-for="trait in creature.traits"
-            :key="trait.name.eng"
+          <ACollapse
+            v-model:active-key="expanded"
+            :bordered="false"
+            destroy-inactive-panel
+            ghost
           >
-            <ACol>
-              <strong>{{ trait.name.rus }}.</strong>
+            <ACollapsePanel
+              key="traits"
+              data-allow-mismatch
+            >
+              <template #header>
+                <ATypographyTitle
+                  :level="4"
+                  data-allow-mismatch
+                  content="Особенности"
+                >
+                </ATypographyTitle>
+              </template>
 
-              <MarkupRender :entries="trait.description" />
-            </ACol>
-          </ARow>
+              <template #default>
+                <p
+                  v-for="trait in creature.traits"
+                  :key="trait.name.eng"
+                >
+                  <strong>{{ trait.name.rus }}. </strong>
+
+                  <MarkupRender :entries="trait.description" />
+                </p>
+              </template>
+            </ACollapsePanel>
+          </ACollapse>
         </template>
 
         <template v-if="creature.actions?.length">
-          <ADivider orientation="left">
-            <ATypographyText
-              type="secondary"
-              content="Действия"
-              strong
-            />
-          </ADivider>
-
-          <ARow
-            v-for="action in creature.actions"
-            :key="action.name.eng"
+          <ACollapse
+            v-model:active-key="expanded"
+            :bordered="false"
+            destroy-inactive-panel
+            ghost
           >
-            <ACol>
-              <strong>{{ action.name.rus }}.</strong>
+            <ACollapsePanel
+              key="actions"
+              data-allow-mismatch
+            >
+              <template #header>
+                <ATypographyTitle
+                  :level="4"
+                  data-allow-mismatch
+                  content="Действия"
+                >
+                </ATypographyTitle>
+              </template>
 
-              <MarkupRender :entries="action.description" />
-            </ACol>
-          </ARow>
+              <template #default>
+                <p
+                  v-for="trait in creature.actions"
+                  :key="trait.name.eng"
+                >
+                  <strong>{{ trait.name.rus }}. </strong>
+
+                  <MarkupRender :entries="trait.description" />
+                </p>
+              </template>
+            </ACollapsePanel>
+          </ACollapse>
         </template>
 
         <template v-if="creature.bonusActions?.length">
-          <ADivider orientation="left">
-            <ATypographyText
-              type="secondary"
-              content="Бонусные действия"
-              strong
-            />
-          </ADivider>
-
-          <ARow
-            v-for="action in creature.bonusActions"
-            :key="action.name.eng"
+          <ACollapse
+            v-model:active-key="expanded"
+            :bordered="false"
+            destroy-inactive-panel
+            ghost
           >
-            <ACol>
-              <strong>{{ action.name.rus }}.</strong>
+            <ACollapsePanel
+              key="bonusActions"
+              data-allow-mismatch
+            >
+              <template #header>
+                <ATypographyTitle
+                  :level="4"
+                  data-allow-mismatch
+                  content="Бонусные действия"
+                >
+                </ATypographyTitle>
+              </template>
 
-              <MarkupRender :entries="action.description" />
-            </ACol>
-          </ARow>
+              <template #default>
+                <p
+                  v-for="trait in creature.bonusActions"
+                  :key="trait.name.eng"
+                >
+                  <strong>{{ trait.name.rus }}. </strong>
+
+                  <MarkupRender :entries="trait.description" />
+                </p>
+              </template>
+            </ACollapsePanel>
+          </ACollapse>
         </template>
 
         <template v-if="creature.reactions?.length">
-          <ADivider orientation="left">
-            <ATypographyText
-              type="secondary"
-              content="Реакции"
-              strong
-            />
-          </ADivider>
-
-          <ARow
-            v-for="action in creature.reactions"
-            :key="action.name.eng"
+          <ACollapse
+            v-model:active-key="expanded"
+            :bordered="false"
+            destroy-inactive-panel
+            ghost
           >
-            <ACol>
-              <strong>{{ action.name.rus }}.</strong>
+            <ACollapsePanel
+              key="reactions"
+              data-allow-mismatch
+            >
+              <template #header>
+                <ATypographyTitle
+                  :level="4"
+                  data-allow-mismatch
+                  content="Реакции"
+                >
+                </ATypographyTitle>
+              </template>
 
-              <MarkupRender :entries="action.description" />
-            </ACol>
-          </ARow>
+              <template #default>
+                <p
+                  v-for="trait in creature.reactions"
+                  :key="trait.name.eng"
+                >
+                  <strong>{{ trait.name.rus }}. </strong>
+
+                  <MarkupRender :entries="trait.description" />
+                </p>
+              </template>
+            </ACollapsePanel>
+          </ACollapse>
         </template>
 
         <template v-if="creature.legendaryActions?.length">
-          <ADivider orientation="left">
-            <ATypographyText
-              type="secondary"
-              content="Легендарные действия"
-              strong
-            />
-          </ADivider>
+          <ACollapse
+            v-model:active-key="expanded"
+            :bordered="false"
+            destroy-inactive-panel
+            ghost
+          >
+            <ACollapsePanel
+              key="legendaryActions"
+              data-allow-mismatch
+            >
+              <template #header>
+                <ATypographyTitle
+                  :level="4"
+                  data-allow-mismatch
+                  content="Легендарные действия"
+                >
+                </ATypographyTitle>
+              </template>
 
-          <ARow>
-            <ACol>
-              <strong>Использования легендарных действий:</strong>
+              <template #default>
+                <p>
+                  <strong>Использования легендарных действий:</strong>
 
-              {{ creature.legendaryAction }}
-              <span v-if="creature.legendaryActionInLair">
-                ({{ creature.legendaryActionInLair }} в логове)
-              </span>
-              . Сразу после хода другого существа {{ creature.name.rus }} может
-              потратить 1 использование, чтобы выполнить одно из следующих
-              действий. {{ creature.name.rus }} восстанавливает все потраченные
-              использования в начале своего хода.
-            </ACol>
-          </ARow>
+                  {{ creature.legendaryAction }}
+                  <span v-if="creature.legendaryActionInLair">
+                    ({{ creature.legendaryActionInLair }} в логове)
+                  </span>
+                  . Сразу после хода другого существа
+                  {{ creature.name.rus }} может потратить 1 использование, чтобы
+                  выполнить одно из следующих действий.
+                  {{ creature.name.rus }} восстанавливает все потраченные
+                  использования в начале своего хода.
+                </p>
+
+                <ul v-if="creature.legendaryActions?.length">
+                  <li
+                    v-for="action in creature.legendaryActions"
+                    :key="action.name.eng"
+                  >
+                    <p>
+                      <strong>{{ action.name.rus }}. </strong>
+
+                      <MarkupRender :entries="action.description" />
+                    </p>
+                  </li>
+                </ul>
+              </template>
+            </ACollapsePanel>
+          </ACollapse>
         </template>
 
-        <ul v-if="creature.legendaryActions?.length">
-          <li
-            v-for="action in creature.legendaryActions"
-            :key="action.name.eng"
-          >
-            <strong>{{ action.name.rus }}.</strong>
-
-            <MarkupRender :entries="action.description" />
-          </li>
-        </ul>
-
         <template v-if="creature.section">
-          <template v-if="creature.section.name.eng !== creature.name.eng">
-            <ARow> {{ creature.section.name.rus }} </ARow>
-
-            <ARow>{{ creature.section.name.eng }} </ARow>
-          </template>
-
-          <ARow v-if="creature.section?.subtitle"
-            ><i> {{ creature.section.subtitle }} </i>
-          </ARow>
-
-          <ARow v-if="creature.section?.habitats"
-            ><strong>Среда обитания:</strong>
-            {{ creature.section.habitats }}</ARow
+          <ACollapse
+            v-model:active-key="expanded"
+            :bordered="false"
+            destroy-inactive-panel
+            ghost
           >
+            <ACollapsePanel
+              key="section"
+              data-allow-mismatch
+            >
+              <template #header>
+                <ATypographyTitle
+                  :level="4"
+                  data-allow-mismatch
+                  content="Эффекты местности"
+                >
+                </ATypographyTitle>
+              </template>
 
-          <ARow v-if="creature.section?.treasures"
-            ><strong>Сокровища:</strong> {{ creature.section.treasures }}</ARow
-          >
+              <template #default>
+                <p v-if="creature.section">
+                  <strong>Среда обитания: </strong>
+                  {{ creature.section.habitats }}
+                </p>
 
-          <DescriptionsBlock :description="creature.section?.description" />
+                <p v-if="creature.section?.treasures">
+                  <strong>Сокровища:</strong> {{ creature.section.treasures }}
+                </p>
+              </template>
+            </ACollapsePanel>
+          </ACollapse>
         </template>
 
         <template v-if="creature.description?.length">
-          <ADivider orientation="left">
-            <ATypographyText
-              type="secondary"
-              content="Описание"
-              strong
-            />
-          </ADivider>
+          <ACollapse
+            v-model:active-key="expanded"
+            :bordered="false"
+            destroy-inactive-panel
+          >
+            <ACollapsePanel
+              key="description"
+              data-allow-mismatch
+            >
+              <template #header>
+                <ATypographyTitle
+                  :level="4"
+                  data-allow-mismatch
+                  content="Описание"
+                >
+                </ATypographyTitle>
+              </template>
 
-          <DescriptionsBlock :description="creature.description" />
+              <template #default>
+                <p>
+                  <template
+                    v-if="creature.section.name.eng !== creature.name.eng"
+                  >
+                    <ARow> {{ creature.section.name.rus }} </ARow>
+
+                    <ARow>{{ creature.section.name.eng }} </ARow>
+                  </template>
+
+                  <ARow v-if="creature.section?.subtitle">
+                    <i> {{ creature.section.subtitle }} </i>
+                  </ARow>
+                </p>
+
+                <DescriptionsBlock :description="creature.description" />
+
+                <template v-if="creature.section">
+                  <DescriptionsBlock
+                    :description="creature.section?.description"
+                  />
+                </template>
+              </template>
+            </ACollapsePanel>
+          </ACollapse>
         </template>
       </AFlex>
     </div>
