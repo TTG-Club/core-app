@@ -31,16 +31,18 @@
       >
         <TopBar :header="creature.header" />
 
-        <RatingWidget
-          section="bestiary"
-          :url="creature.url"
-        />
+        <div :class="$style.block">
+          <div :class="$style.portrait">
+            <UiGallery :preview="creature.image || '/img/no-img.webp'" />
+          </div>
+
+          <RatingWidget
+            section="bestiary"
+            :url="creature.url"
+          />
+        </div>
 
         <StatsBlock v-bind="creature" />
-
-        <div :class="$style.galleryImg">
-          <UiGallery :preview="creature.image || '/img/no-img.webp'" />
-        </div>
       </AFlex>
 
       <AFlex
@@ -345,6 +347,22 @@
 
     @container (width > 800px) {
       max-width: 320px;
+    }
+
+    .block {
+      display: flex;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .portrait {
+      overflow: hidden;
+
+      width: 110px;
+      min-width: 110px;
+      height: 110px;
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
     }
   }
 </style>
