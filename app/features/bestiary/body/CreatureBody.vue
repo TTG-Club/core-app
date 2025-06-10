@@ -32,7 +32,7 @@
         <TopBar :header="creature.header" />
 
         <div :class="$style.block">
-          <div :class="$style.portret">
+          <div :class="$style.portrait">
             <UiGallery :preview="creature.image || '/img/no-img.webp'" />
           </div>
 
@@ -355,7 +355,7 @@
       width: 100%;
     }
 
-    .portret {
+    .portrait {
       overflow: hidden;
 
       width: 110px;
