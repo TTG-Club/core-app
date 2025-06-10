@@ -321,10 +321,6 @@
 </template>
 
 <style module lang="scss">
-  :deep(.ant-collapse-header) {
-    position: absolute;
-    display: flex;
-  }
   .container {
     container-type: inline-size;
     display: flex;
