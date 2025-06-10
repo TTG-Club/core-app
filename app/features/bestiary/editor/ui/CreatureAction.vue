@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { computed } from 'vue';
+
   import { ValidationBase } from '~/shared/utils';
 
   import type { CreateAction } from '~bestiary/types';
@@ -7,17 +9,21 @@
     | 'actions'
     | 'bonusActions'
     | 'reactions'
-    | 'legendaryActions';
+    | 'legendaryActions'
+    | 'lairEffects';
 
-  defineProps<{
+  const props = defineProps<{
     name: ActionKey;
   }>();
+
+  const isLegendary = computed(() => props.name === 'legendaryActions');
 
   const labelMap: Record<ActionKey, string> = {
     actions: 'Действия',
     bonusActions: 'Бонусные действия',
     reactions: 'Реакции',
     legendaryActions: 'Легендарные действия',
+    lairEffects: 'Эффекты логова',
   };
 
   function getEmptyFeature(): CreateAction {
@@ -35,20 +41,39 @@
     };
   }
 
-  const model = defineModel<Array<CreateAction>>({
-    default: () => [],
+  const model = defineModel<any>({ default: () => [] });
+
+  const actionsList = computed<Array<CreateAction>>({
+    get: () => (isLegendary.value ? model.value.legendaryActions : model.value),
+    set: (val) => {
+      if (isLegendary.value) {
+        model.value.legendaryActions = val;
+      } else {
+        model.value = val;
+      }
+    },
+  });
+
+  const legendaryCount = computed({
+    get: () => model.value.legendaryActionCount,
+    set: (val) => (model.value.legendaryActionCount = val),
+  });
+
+  const lairCount = computed({
+    get: () => model.value.legendaryActionInLairCount,
+    set: (val) => (model.value.legendaryActionInLairCount = val),
   });
 
   function isLastAction(index: number) {
-    return index === model.value.length - 1;
+    return index === actionsList.value.length - 1;
   }
 
   function addAction(indexOfNewFeature: number) {
-    model.value.splice(indexOfNewFeature, 0, getEmptyFeature());
+    actionsList.value.splice(indexOfNewFeature, 0, getEmptyFeature());
   }
 
   function removeFeature(index: number) {
-    model.value.splice(index, 1);
+    actionsList.value.splice(index, 1);
   }
 </script>
 
@@ -61,15 +86,51 @@
     />
   </ADivider>
 
+  <template v-if="isLegendary">
+    <ARow :gutter="16">
+      <ACol :span="12">
+        <AFormItem
+          label="Количество легендарных действий"
+          :name="['legendaryAction']"
+        >
+          <AInputNumber
+            v-model:value="legendaryCount"
+            placeholder="Введи количество"
+            min="1"
+          />
+        </AFormItem>
+      </ACol>
+
+      <ACol :span="12">
+        <AFormItem
+          label="Количество легендарных действий в логове"
+          :name="['legendaryActionInLair']"
+        >
+          <AInputNumber
+            v-model:value="lairCount"
+            placeholder="Введи количество"
+            min="1"
+          />
+        </AFormItem>
+      </ACol>
+    </ARow>
+  </template>
+
   <template
-    v-for="(action, actionIndex) in model"
+    v-for="(action, actionIndex) in actionsList"
     :key="actionIndex"
   >
     <ARow :gutter="16">
       <ACol :span="8">
         <AFormItem
           label="Название"
-          :name="[name, actionIndex, 'name', 'rus']"
+          :name="[
+            name,
+            ...(isLegendary ? ['legendaryActions'] : []),
+            actionIndex,
+            'name',
+            'rus',
+          ]"
           :rules="[ValidationBase.ruleRusName()]"
         >
           <AInput
@@ -82,7 +143,13 @@
       <ACol :span="8">
         <AFormItem
           label="Название (англ.)"
-          :name="[name, actionIndex, 'name', 'eng']"
+          :name="[
+            name,
+            ...(isLegendary ? ['legendaryActions'] : []),
+            actionIndex,
+            'name',
+            'eng',
+          ]"
           :rules="[ValidationBase.ruleEngName()]"
         >
           <AInput
@@ -122,7 +189,12 @@
       <ACol :span="24">
         <AFormItem
           label="Описание"
-          :name="[name, actionIndex, 'description']"
+          :name="[
+            name,
+            ...(isLegendary ? ['legendaryActions'] : []),
+            actionIndex,
+            'description',
+          ]"
           :rules="[ValidationBase.ruleString()]"
         >
           <ATextarea
@@ -138,7 +210,7 @@
   </template>
 
   <AFlex
-    v-if="!model.length"
+    v-if="!actionsList.length"
     justify="center"
   >
     <AButton @click.left.exact.prevent="addAction(0)">
