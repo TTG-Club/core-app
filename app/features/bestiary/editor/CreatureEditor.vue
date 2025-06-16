@@ -193,8 +193,16 @@
     />
 
     <CreatureAction
-      v-model="form.legendaryActions"
+      v-model="form.legendary.actions"
+      v-model:description="form.legendary.description"
+      v-model:legendary-count="form.legendary.count"
+      v-model:legendary-lair-count="form.legendary.inLair"
       name="legendaryActions"
+    />
+
+    <CreatureAction
+      v-model="form.lairEffects"
+      name="lairEffects"
     />
   </AForm>
 
