@@ -43,7 +43,7 @@
   async function submit() {
     if (!checkIsEdited()) {
       $toast.error({
-        title: 'Ошибка сохранения магического предмета',
+        title: 'Ошибка сохранения существа',
         description: 'Измени хотя бы одно поле, чтобы сохранить',
       });
 

@@ -36,6 +36,7 @@ export interface CreatureCreate extends EditorBaseInfoState {
 export interface LegendaryActions {
   count: number;
   inLair: number | undefined;
+  description: string | undefined;
   actions: Array<CreateAction>;
 }
 
@@ -289,6 +290,7 @@ export function getInitialState(): CreatureCreate {
     legendary: {
       count: 0,
       inLair: 0,
+      description: '',
       actions: [],
     },
     lairEffects: [],

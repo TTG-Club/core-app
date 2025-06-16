@@ -14,7 +14,40 @@
 
   const props = defineProps<{
     name: ActionKey;
+    modelValue: CreateAction[];
+    description?: string;
+    legendaryCount?: number;
+    legendaryLairCount?: number;
+    legendaryDescription?: string;
   }>();
+
+  const emit = defineEmits<{
+    (e: 'update:modelValue', value: CreateAction[]): void;
+    (e: 'update:description', value: string): void;
+    (e: 'update:legendaryCount', value: number): void;
+    (e: 'update:legendaryLairCount', value: number): void;
+    (e: 'update:legendaryDescription', value: string): void;
+  }>();
+
+  const model = computed({
+    get: () => props.modelValue,
+    set: (val) => emit('update:modelValue', val),
+  });
+
+  const legendaryDescription = computed({
+    get: () => props.description ?? '',
+    set: (val) => emit('update:legendaryDescription', val),
+  });
+
+  const legendaryCount = computed({
+    get: () => props.legendaryCount ?? 0,
+    set: (val) => emit('update:legendaryCount', val),
+  });
+
+  const lairCount = computed({
+    get: () => props.legendaryLairCount ?? 0,
+    set: (val) => emit('update:legendaryLairCount', val),
+  });
 
   const isLegendary = computed(() => props.name === 'legendaryActions');
 
@@ -41,39 +74,16 @@
     };
   }
 
-  const model = defineModel<any>({ default: () => [] });
-
-  const actionsList = computed<Array<CreateAction>>({
-    get: () => (isLegendary.value ? model.value.legendaryActions : model.value),
-    set: (val) => {
-      if (isLegendary.value) {
-        model.value.legendaryActions = val;
-      } else {
-        model.value = val;
-      }
-    },
-  });
-
-  const legendaryCount = computed({
-    get: () => model.value.legendaryActionCount,
-    set: (val) => (model.value.legendaryActionCount = val),
-  });
-
-  const lairCount = computed({
-    get: () => model.value.legendaryActionInLairCount,
-    set: (val) => (model.value.legendaryActionInLairCount = val),
-  });
-
   function isLastAction(index: number) {
-    return index === actionsList.value.length - 1;
+    return index === model.value.length - 1;
   }
 
   function addAction(indexOfNewFeature: number) {
-    actionsList.value.splice(indexOfNewFeature, 0, getEmptyFeature());
+    model.value.splice(indexOfNewFeature, 0, getEmptyFeature());
   }
 
-  function removeFeature(index: number) {
-    actionsList.value.splice(index, 1);
+  function removeAction(index: number) {
+    model.value.splice(index, 1);
   }
 </script>
 
@@ -91,7 +101,7 @@
       <ACol :span="12">
         <AFormItem
           label="Количество легендарных действий"
-          :name="['legendaryAction']"
+          :name="['legendary.count']"
         >
           <AInputNumber
             v-model:value="legendaryCount"
@@ -104,7 +114,7 @@
       <ACol :span="12">
         <AFormItem
           label="Количество легендарных действий в логове"
-          :name="['legendaryActionInLair']"
+          :name="['legendary.inLair']"
         >
           <AInputNumber
             v-model:value="lairCount"
@@ -114,10 +124,25 @@
         </AFormItem>
       </ACol>
     </ARow>
+
+    <ARow>
+      <ACol :span="24">
+        <AFormItem
+          label="Описание легендарных действий"
+          :name="['legendary.description']"
+        >
+          <ATextarea
+            v-model:value="legendaryDescription"
+            :auto-size="{ minRows: 2, maxRows: 6 }"
+            placeholder="Введите описание легендарных действий (необязательно)"
+          />
+        </AFormItem>
+      </ACol>
+    </ARow>
   </template>
 
   <template
-    v-for="(action, actionIndex) in actionsList"
+    v-for="(action, actionIndex) in model"
     :key="actionIndex"
   >
     <ARow :gutter="16">
@@ -126,7 +151,7 @@
           label="Название"
           :name="[
             name,
-            ...(isLegendary ? ['legendaryActions'] : []),
+            ...(isLegendary ? ['legendary.actions'] : []),
             actionIndex,
             'name',
             'rus',
@@ -145,7 +170,7 @@
           label="Название (англ.)"
           :name="[
             name,
-            ...(isLegendary ? ['legendaryActions'] : []),
+            ...(isLegendary ? ['legendary.actions'] : []),
             actionIndex,
             'name',
             'eng',
@@ -175,7 +200,7 @@
               <AButton
                 danger
                 block
-                @click.left.exact.prevent="removeFeature(actionIndex)"
+                @click.left.exact.prevent="removeAction(actionIndex)"
               >
                 Удалить
               </AButton>
@@ -191,7 +216,7 @@
           label="Описание"
           :name="[
             name,
-            ...(isLegendary ? ['legendaryActions'] : []),
+            ...(isLegendary ? ['legendary.actions'] : []),
             actionIndex,
             'description',
           ]"
@@ -210,7 +235,7 @@
   </template>
 
   <AFlex
-    v-if="!actionsList.length"
+    v-if="!model.length"
     justify="center"
   >
     <AButton @click.left.exact.prevent="addAction(0)">

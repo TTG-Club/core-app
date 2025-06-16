@@ -193,7 +193,10 @@
     />
 
     <CreatureAction
-      v-model="form.legendary"
+      v-model="form.legendary.actions"
+      v-model:description="form.legendary.description"
+      v-model:legendary-count="form.legendary.count"
+      v-model:legendary-lair-count="form.legendary.inLair"
       name="legendaryActions"
     />
 

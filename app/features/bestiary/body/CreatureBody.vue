@@ -186,7 +186,7 @@
           </ACollapse>
         </template>
 
-        <template v-if="creature.legendaryActions?.length">
+        <template v-if="creature.legendary.actions?.length">
           <ACollapse
             v-model:active-key="expanded"
             :bordered="false"
@@ -210,20 +210,23 @@
                 <p>
                   <strong>Использования легендарных действий:</strong>
 
-                  {{ creature.legendaryAction }}
-                  <span v-if="creature.legendaryActionInLair">
-                    ({{ creature.legendaryActionInLair }} в логове)
-                  </span>
-                  . Сразу после хода другого существа
-                  {{ creature.name.rus }} может потратить 1 использование, чтобы
-                  выполнить одно из следующих действий.
-                  {{ creature.name.rus }} восстанавливает все потраченные
-                  использования в начале своего хода.
+                  {{ creature.legendary.count }}
+                  <span v-if="creature.legendary?.description?.length">{{
+                    creature.legendary.description
+                  }}</span>
+
+                  <span v-else>
+                    . Сразу после хода другого существа
+                    {{ creature.name.rus }} может потратить 1 использование,
+                    чтобы выполнить одно из следующих действий.
+                    {{ creature.name.rus }} восстанавливает все потраченные
+                    использования в начале своего хода.</span
+                  >
                 </p>
 
-                <ul v-if="creature.legendaryActions?.length">
+                <ul v-if="creature.legendary.actions?.length">
                   <li
-                    v-for="action in creature.legendaryActions"
+                    v-for="action in creature.legendary.actions"
                     :key="action.name.eng"
                   >
                     <p>
@@ -259,7 +262,7 @@
               </template>
 
               <template #default>
-                <p v-if="creature.section">
+                <p v-if="creature.section?.habitats">
                   <strong>Среда обитания: </strong>
                   {{ creature.section.habitats }}
                 </p>
@@ -294,7 +297,7 @@
               <template #default>
                 <p>
                   <template
-                    v-if="creature.section.name.eng !== creature.name.eng"
+                    v-if="creature?.section?.name.eng !== creature.name.eng"
                   >
                     <ARow> {{ creature.section.name.rus }} </ARow>
 

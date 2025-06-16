@@ -29,7 +29,11 @@ export interface CreatureDetailResponse {
   bonusActions: Array<CreatureActionResponse>;
   legendaryAction: number;
   legendaryActionInLair: number;
-  legendaryActions: Array<CreatureActionResponse>;
+  legendary: {
+    actions: Array<CreatureActionResponse>;
+    count: string;
+    description: string;
+  };
   lair: string;
   lairEffects: Array<CreatureActionResponse>;
   section: CreatureSection;
