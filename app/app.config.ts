@@ -31,6 +31,17 @@ export default defineAppConfig({
       plus: 'i-ttg-plus',
       search: 'i-ttg-search',
     },
+    button: {
+      slots: {
+        base: 'cursor-pointer',
+      },
+    },
+    checkbox: {
+      slots: {
+        wrapper: 'w-auto',
+        label: 'cursor-pointer',
+      },
+    },
     input: {
       slots: {
         root: 'w-full',

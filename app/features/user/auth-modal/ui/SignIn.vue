@@ -8,6 +8,8 @@
   const { fetch } = useUserStore();
   const $toast = useToast();
 
+  const showPwd = ref(false);
+
   const state = reactive({
     usernameOrEmail: '',
     password: '',
@@ -51,13 +53,12 @@
 </script>
 
 <template>
-  <div class="flex flex-col gap-6 text-2xl">
-    <h4>Авторизация</h4>
+  <div class="flex flex-col gap-6">
+    <h4 class="text-2xl">Авторизация</h4>
 
     <UForm
       class="flex flex-col gap-4"
       :state
-      label-placement="left"
       @submit.prevent.stop="onSubmit"
       @keyup.enter.exact.prevent.stop="onSubmit"
     >
@@ -78,9 +79,27 @@
           autocapitalize="off"
           autocomplete="current-password"
           autocorrect="off"
-          type="password"
           placeholder="Пароль"
-        />
+          :type="showPwd ? 'text' : 'password'"
+          :ui="{ trailing: 'pe-1' }"
+        >
+          <template #trailing>
+            <UButton
+              color="neutral"
+              variant="link"
+              size="sm"
+              :icon="
+                showPwd
+                  ? 'i-fluent-eye-off-16-filled'
+                  : 'i-fluent-eye-16-filled'
+              "
+              :aria-label="showPwd ? 'Скрыть пароль' : 'Показать пароль'"
+              :aria-pressed="showPwd"
+              aria-controls="password"
+              @click="showPwd = !showPwd"
+            />
+          </template>
+        </UInput>
       </UFormField>
 
       <UFormField>
@@ -93,8 +112,10 @@
 
       <div class="flex flex-col gap-2 md:flex-row">
         <UButton
-          :loading="inProgress"
           :disabled="status === 'success'"
+          :loading="inProgress"
+          class="md:w-auto"
+          block
           @click.left.exact.prevent="onSubmit"
         >
           Вход
@@ -102,17 +123,19 @@
 
         <UButton
           :disabled="inProgress"
-          color="neutral"
-          variant="link"
+          class="md:w-auto"
+          variant="soft"
+          block
           @click.left.exact.prevent="$emit('switch:sign-up')"
         >
           Регистрация
         </UButton>
 
         <UButton
-          color="neutral"
-          variant="link"
+          class="md:w-auto"
+          variant="soft"
           disabled
+          block
           @click.left.exact.prevent="$emit('switch:change-password')"
         >
           Забыли пароль?

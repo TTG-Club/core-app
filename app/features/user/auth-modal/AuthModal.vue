@@ -72,10 +72,7 @@
 <template>
   <UModal
     v-model:open="opened"
-    :ui="{
-      content: 'overflow-hidden max-w-163 w-full rounded-none md:rounded-lg',
-    }"
-    aria-describedby="undefined"
+    class="w-full max-w-sm overflow-hidden md:max-w-163"
   >
     <template #content>
       <div class="flex items-center">
@@ -85,7 +82,7 @@
           src="/img/bg-login.png"
         />
 
-        <div class="w-full px-6 py-12">
+        <div class="w-full p-8 md:py-12 md:pr-16 md:pl-6">
           <SignIn
             v-if="isSignIn"
             @close="close"
@@ -102,7 +99,7 @@
 
       <UButton
         class="absolute top-3 right-3"
-        icon="i-ttg-close"
+        icon="i-ttg-x"
         variant="ghost"
         @click.left.exact.prevent="close"
       />
