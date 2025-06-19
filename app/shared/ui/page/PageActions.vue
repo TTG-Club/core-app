@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import { CopyButton } from '../copy-button';
-  import { SvgIcon } from '../icon';
 
   import { useUserStore } from '~/shared/stores';
 
@@ -30,78 +29,47 @@
 </script>
 
 <template>
-  <ATooltip
+  <UTooltip
     v-if="editUrl && isAdmin"
-    title="Редактировать"
-    :mouse-enter-delay="0.7"
-    destroy-tooltip-on-hide
+    text="Редактировать"
   >
-    <AButton
+    <UButton
       :href="editUrl"
-      type="text"
-      @click.left.exact.prevent="
-        navigateTo(editUrl, {
-          open: {
-            target: '_blank',
-            windowFeatures: {
-              noreferrer: true,
-              noopener: true,
-            },
-          },
-        })
-      "
-    >
-      <template #icon>
-        <SvgIcon icon="edit" />
-      </template>
-    </AButton>
-  </ATooltip>
+      icon="i-ttg-edit"
+      variant="ghost"
+      target="_blank"
+      color="neutral"
+      no-rel
+    />
+  </UTooltip>
 
   <CopyButton :url="urlForCopy" />
 
-  <ATooltip
-    title="Закладка"
-    :mouse-enter-delay="0.7"
-    destroy-tooltip-on-hide
-  >
-    <AButton
+  <UTooltip text="Закладка">
+    <UButton
+      icon="i-fluent-bookmark-16-regular"
+      variant="ghost"
+      color="neutral"
       disabled
-      type="text"
-    >
-      <template #icon>
-        <SvgIcon icon="bookmark/outline" />
-      </template>
-    </AButton>
-  </ATooltip>
+    />
+  </UTooltip>
 
-  <ATooltip
-    title="Открыть окно печати"
-    :mouse-enter-delay="0.7"
-    destroy-tooltip-on-hide
-  >
-    <AButton
+  <UTooltip text="Открыть окно печати">
+    <UButton
+      icon="i-ttg-print"
+      variant="ghost"
+      color="neutral"
       disabled
-      type="text"
-      @click.left.exact.prevent="openPrintWindow"
-    >
-      <template #icon>
-        <SvgIcon icon="print" />
-      </template>
-    </AButton>
-  </ATooltip>
+      @click="openPrintWindow"
+    />
+  </UTooltip>
 
-  <ATooltip
-    title="Закрыть"
-    :mouse-enter-delay="0.7"
-    destroy-tooltip-on-hide
-  >
-    <AButton
-      type="text"
-      @click.left.exact.prevent="$emit('close')"
-    >
-      <template #icon>
-        <SvgIcon icon="x" />
-      </template>
-    </AButton>
-  </ATooltip>
+  <UTooltip text="Закрыть">
+    <UButton
+      variant="ghost"
+      color="neutral"
+      icon="i-ttg-x"
+      @click="$emit('close')"
+    />
+  </UTooltip>
 </template>

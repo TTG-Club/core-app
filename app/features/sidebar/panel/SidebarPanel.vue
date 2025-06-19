@@ -129,12 +129,11 @@
     justify-content: space-between;
 
     width: 100%;
-    height: auto;
+    height: 100%;
     padding: 0 16px;
 
     @include media-min($md) {
       flex-direction: column;
-      height: 100%;
       padding: 24px 0;
     }
   }

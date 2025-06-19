@@ -74,7 +74,7 @@
     <CopyButton
       v-if="url"
       :url
-      size="small"
+      size="sm"
     />
 
     <ATooltip

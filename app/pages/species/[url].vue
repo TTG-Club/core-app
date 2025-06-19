@@ -3,7 +3,7 @@
   import { getSlicedString } from '~/shared/utils';
   import { SpeciesBody } from '~species/body';
   import { UiGallery } from '~ui/gallery';
-  import { PageActions, PageContainer, PageHeader } from '~ui/page';
+  import { PageActions } from '~ui/page';
 
   import type { SpeciesDetailResponse } from '~/shared/types';
 
@@ -87,22 +87,19 @@
 </script>
 
 <template>
-  <PageContainer id="species-base">
-    <template #header>
-      <PageHeader
-        :title="species?.name.rus"
-        :subtitle="species?.name.eng"
-        :source="species?.source"
-        :date-time="species?.updatedAt"
-        copy-title
-      >
-        <template #actions>
-          <PageActions
-            :edit-url="editUrl"
-            @close="navigateTo('/species')"
-          />
-        </template>
-      </PageHeader>
+  <NuxtLayout
+    name="detail"
+    :title="species?.name.rus"
+    :subtitle="species?.name.eng"
+    :source="species?.source"
+    :date-time="species?.updatedAt"
+    copy-text
+  >
+    <template #actions>
+      <PageActions
+        :edit-url="editUrl"
+        @close="navigateTo('/species')"
+      />
     </template>
 
     <template #default>
@@ -195,7 +192,7 @@
         </template>
       </AResult>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>
 
 <style module lang="scss">

@@ -2,7 +2,7 @@
   import { Role } from '~/shared/types';
   import { getSlicedString } from '~/shared/utils';
   import { CreatureBody } from '~bestiary/body';
-  import { PageActions, PageContainer, PageHeader } from '~ui/page';
+  import { PageActions } from '~ui/page';
 
   import type { CreatureDetailResponse } from '~bestiary/types';
 
@@ -48,22 +48,19 @@
 </script>
 
 <template>
-  <PageContainer>
-    <template #header>
-      <PageHeader
-        :title="creature?.name.rus"
-        :subtitle="creature?.name.eng"
-        :source="creature?.source"
-        :date-time="creature?.updatedAt"
-        copy-title
-      >
-        <template #actions>
-          <PageActions
-            :edit-url="editUrl"
-            @close="navigateTo({ name: 'bestiary' })"
-          />
-        </template>
-      </PageHeader>
+  <NuxtLayout
+    name="detail"
+    :title="creature?.name.rus"
+    :subtitle="creature?.name.eng"
+    :source="creature?.source"
+    :date-time="creature?.updatedAt"
+    copy-text
+  >
+    <template #actions>
+      <PageActions
+        :edit-url="editUrl"
+        @close="navigateTo({ name: 'bestiary' })"
+      />
     </template>
 
     <template #default>
@@ -78,5 +75,5 @@
         :paragraph="{ rows: 4 }"
       />
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

@@ -1,11 +1,9 @@
 <script setup lang="ts">
-  import { SvgIcon } from '../icon';
-
   import { useCopy } from '~/shared/composables';
 
-  import type { ButtonProps } from 'ant-design-vue';
+  import type { ButtonProps } from '@nuxt/ui';
 
-  const { url } = defineProps<{
+  const { url = '', size = undefined } = defineProps<{
     url?: string;
     disabled?: boolean;
     size?: ButtonProps['size'];
@@ -15,21 +13,17 @@
 </script>
 
 <template>
-  <ATooltip
+  <UTooltip
     v-if="url"
-    :mouse-enter-delay="0.7"
-    title="Скопировать ссылку"
-    destroy-tooltip-on-hide
+    text="Скопировать ссылку"
   >
-    <AButton
+    <UButton
+      icon="i-ttg-copy"
+      variant="ghost"
+      color="neutral"
       :disabled
       :size
-      type="text"
-      @click.left.exact.prevent="copy(url, 'Ссылка успешно скопирована')"
-    >
-      <template #icon>
-        <SvgIcon icon="copy" />
-      </template>
-    </AButton>
-  </ATooltip>
+      @click="copy(url, 'Ссылка успешно скопирована')"
+    />
+  </UTooltip>
 </template>

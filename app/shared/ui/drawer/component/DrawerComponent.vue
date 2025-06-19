@@ -7,9 +7,13 @@
   import type { SourceResponse } from '~/shared/types';
 
   const {
-    minWidth,
-    maxWidth,
     copyTitle = false,
+    minWidth = undefined,
+    maxWidth = undefined,
+    source = undefined,
+    url = undefined,
+    editUrl = undefined,
+    width = undefined,
   } = defineProps<{
     source?: SourceResponse;
     title: DrawerTitleName;

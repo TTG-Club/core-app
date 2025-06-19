@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { getSlicedString } from '~/shared/utils';
   import { MagicItemBody } from '~magic-items/body';
-  import { PageActions, PageContainer, PageHeader } from '~ui/page';
+  import { PageActions } from '~ui/page';
 
   import type { MagicItemDetailResponse } from '~magic-items/types';
 
@@ -44,22 +44,19 @@
 </script>
 
 <template>
-  <PageContainer>
-    <template #header>
-      <PageHeader
-        :title="magicItem?.name.rus"
-        :subtitle="magicItem?.name.eng"
-        :source="magicItem?.source"
-        :date-time="magicItem?.updatedAt"
-        copy-title
-      >
-        <template #actions>
-          <PageActions
-            :edit-url="editUrl"
-            @close="navigateTo({ name: 'magic-items' })"
-          />
-        </template>
-      </PageHeader>
+  <NuxtLayout
+    name="detail"
+    :title="magicItem?.name.rus"
+    :subtitle="magicItem?.name.eng"
+    :source="magicItem?.source"
+    :date-time="magicItem?.updatedAt"
+    copy-text
+  >
+    <template #actions>
+      <PageActions
+        :edit-url="editUrl"
+        @close="navigateTo({ name: 'magic-items' })"
+      />
     </template>
 
     <template #default>
@@ -74,5 +71,5 @@
         :paragraph="{ rows: 4 }"
       />
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>
