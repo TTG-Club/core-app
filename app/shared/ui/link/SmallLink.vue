@@ -38,43 +38,33 @@
       :href
       @click.exact.prevent.stop="handleClick"
     >
-      <AFlex
-        :class="$style.link"
-        :gap="12"
-        align="center"
+      <div
+        class="flex min-h-12.5 w-full items-center gap-3 rounded-xl border-(--color-border) bg-(--color-bg-secondary) px-3 py-1.5 hover:bg-(--color-hover)"
       >
-        <AFlex
+        <div
           v-if="$slots.icon"
-          :class="$style.icon"
-          justify="center"
-          align="center"
+          class="-ml-2 flex size-11 shrink-0 items-center justify-center border-r border-(--color-border)"
         >
-          <slot name="icon" />
-        </AFlex>
+          <div class="text-center text-base leading-none">
+            <slot name="icon" />
+          </div>
+        </div>
 
-        <AFlex
-          :class="$style.body"
-          :gap="4"
-          justify="center"
-          vertical
+        <div
+          class="flex flex-[1_1_auto] flex-col justify-center gap-1 overflow-hidden"
         >
-          <AFlex
-            :class="$style.main"
-            :gap="4"
-            justify="space-between"
-            align="center"
-          >
+          <div class="flex items-center justify-between gap-1">
             <span
-              :class="$style.label"
               :title
+              class="inline-block w-full overflow-hidden text-nowrap text-ellipsis text-(--color-text-gray)"
             >
-              <span :class="$style.rus">
+              <span class="inline max-w-full text-(--color-text-title)">
                 <slot name="default" />
               </span>
 
               <span
                 v-if="$slots.english"
-                :class="$style.eng"
+                class="inline"
               >
                 [<slot name="english" />]
               </span>
@@ -82,88 +72,20 @@
 
             <div
               v-if="group"
-              :class="$style.tag"
+              class="shrink-0"
             >
               <GroupTag :group="group" />
             </div>
-          </AFlex>
+          </div>
 
-          <AFlex
+          <div
             v-if="$slots.caption"
-            :gap="4"
-            align="center"
+            class="flex items-center gap-1"
           >
             <slot name="caption" />
-          </AFlex>
-        </AFlex>
-      </AFlex>
+          </div>
+        </div>
+      </div>
     </a>
   </NuxtLink>
 </template>
-
-<style module lang="scss">
-  .link {
-    width: 100%;
-    min-height: 38px;
-    padding: 6px 12px;
-    border: 1px solid var(--color-border);
-    border-radius: 12px;
-
-    color: var(--color-text);
-
-    background-color: var(--color-bg-secondary);
-
-    & {
-      @include css-anim();
-    }
-
-    &:hover {
-      background-color: var(--color-hover);
-    }
-  }
-
-  .icon {
-    flex-shrink: 0;
-
-    width: 42px;
-    height: 42px;
-    margin-left: -8px;
-    border-right: 1px solid var(--color-border);
-
-    font-size: 16px;
-    line-height: 16px;
-    color: var(--color-text);
-    text-align: center;
-  }
-
-  .body {
-    overflow: hidden;
-    flex: 1 1 100%;
-  }
-
-  .label {
-    overflow: hidden;
-    display: inline-block;
-
-    width: 100%;
-
-    color: var(--color-text-gray);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    .rus {
-      display: inline;
-      max-width: 100%;
-      color: var(--color-text-title);
-    }
-
-    .eng {
-      display: inline;
-    }
-  }
-
-  .tag {
-    flex-shrink: 0;
-    margin: 0;
-  }
-</style>

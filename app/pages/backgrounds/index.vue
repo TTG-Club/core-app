@@ -2,7 +2,7 @@
   import { BackgroundLegend } from '~backgrounds/legend';
   import { BackgroundLink } from '~backgrounds/link';
   import { FilterControls } from '~filter/controls';
-  import { PageContainer, PageGrid, PageHeader } from '~ui/page';
+  import { PageGrid } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
   import type { BackgroundLinkResponse } from '~/shared/types';
@@ -37,11 +37,10 @@
 </script>
 
 <template>
-  <PageContainer fixed-header>
-    <template #header>
-      <PageHeader title="Предыстории" />
-    </template>
-
+  <NuxtLayout
+    name="section"
+    title="Предыстории"
+  >
     <template #controls>
       <FilterControls v-model:search="search">
         <template #legend>
@@ -116,5 +115,5 @@
         </AResult>
       </Transition>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

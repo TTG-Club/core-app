@@ -4,7 +4,7 @@
   import { CreatureLink } from '~bestiary/link';
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
-  import { PageContainer, PageGrid, PageHeader } from '~ui/page';
+  import { PageGrid } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
   import type { CreatureLinkResponse } from '~bestiary/types';
@@ -56,11 +56,10 @@
 </script>
 
 <template>
-  <PageContainer fixed-header>
-    <template #header>
-      <PageHeader title="Бестиарий" />
-    </template>
-
+  <NuxtLayout
+    name="section"
+    title="Бестиарий"
+  >
     <template #controls>
       <FilterControls
         v-model:search="search"
@@ -140,5 +139,5 @@
         </AResult>
       </Transition>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

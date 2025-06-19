@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import { SvgIcon } from '~ui/icon';
-
   defineProps<{
     supportItems: { url: string; icon: string; label: string }[]; // Массив элементов поддержки
   }>();
@@ -10,20 +8,16 @@
   <div :class="$style.container">
     <span :class="$style.label">Поддержка:</span>
 
-    <AButton
+    <UButton
       v-for="(item, index) in supportItems"
       :key="index"
-      :class="$style.btn"
+      :label="item.label"
+      :icon="item.icon"
       :href="item.url"
       target="_blank"
-      type="text"
-    >
-      <template #icon>
-        <SvgIcon :icon="item.icon" />
-      </template>
-
-      <template #default>{{ item.label }}</template>
-    </AButton>
+      variant="link"
+      color="neutral"
+    />
   </div>
 </template>
 

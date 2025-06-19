@@ -201,7 +201,7 @@
               @click.left.exact.prevent="navigateTo('/species')"
             >
               <template #icon>
-                <SvgIcon icon="close" />
+                <SvgIcon icon="x" />
               </template>
             </AButton>
           </ATooltip>

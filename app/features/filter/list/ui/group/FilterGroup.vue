@@ -19,24 +19,17 @@
 
 <template>
   <template v-if="isVisible">
-    <AFlex
-      vertical
-      gap="8"
-    >
+    <div class="flex flex-col gap-4">
       <span v-if="preview">{{ label }}:</span>
 
-      <ADivider
+      <USeparator
         v-else
-        orientation="left"
-        :style="{ margin: 0 }"
+        decorative
       >
         {{ label }}
-      </ADivider>
+      </USeparator>
 
-      <AFlex
-        wrap="wrap"
-        gap="12"
-      >
+      <div class="flex flex-wrap gap-3">
         <FilterTag
           v-for="item in filters"
           :key="item.key + item.name"
@@ -45,7 +38,7 @@
         >
           {{ item.name }}
         </FilterTag>
-      </AFlex>
-    </AFlex>
+      </div>
+    </div>
   </template>
 </template>

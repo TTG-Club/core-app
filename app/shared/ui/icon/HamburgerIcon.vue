@@ -5,35 +5,23 @@
 </script>
 
 <template>
-  <div :class="[$style.hamburger, { [$style.isActive]: isActive }]">
-    <span :class="$style.line" />
-
-    <span :class="$style.line" />
-
-    <span :class="$style.line" />
-  </div>
+  <UButton
+    variant="ghost"
+    color="neutral"
+    class="block size-full cursor-pointer"
+    :class="[$style.hamburger, { [$style.isActive]: isActive }]"
+  >
+    <span
+      v-for="key in 3"
+      :key
+      :class="$style.line"
+      class="mx-auto my-1 block aspect-20/2 h-0.5 rounded-sm bg-[currentColor] transition-all duration-300 ease-in-out"
+    />
+  </UButton>
 </template>
 
 <style lang="scss" module>
   .hamburger {
-    position: relative;
-    display: block;
-    height: auto;
-    padding: 9px 9px;
-
-    .line {
-      display: block;
-
-      width: 20px;
-      height: 2px;
-      margin: 4px auto;
-      border-radius: 2px;
-
-      background-color: var(--color-thumb-bg);
-
-      transition: all 0.3s ease-in-out;
-    }
-
     &.isActive {
       .line {
         &:nth-child(2) {
@@ -48,24 +36,11 @@
       }
     }
 
-    &:hover {
-      cursor: pointer;
-
+    &:hover:not(.isActive) {
       .line {
-        background-color: var(--color-text-bold);
-
         &:nth-child(1) {
           transform: translateX(-6px) translate3d(0, 0, 0);
           width: 14px;
-        }
-      }
-
-      &.isActive {
-        .line {
-          &:nth-child(1) {
-            transform: translateY(6px) rotate(45deg) translate3d(0, 0, 0);
-            width: 20px;
-          }
         }
       }
     }

@@ -2,7 +2,7 @@
   import { FilterControls } from '~filter/controls';
   import { GlossaryLegend } from '~glossary/legend';
   import { GlossaryLink } from '~glossary/link';
-  import { PageContainer, PageGrid, PageHeader } from '~ui/page';
+  import { PageGrid } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
   import type { GlossaryLinkResponse } from '~/shared/types';
@@ -37,11 +37,10 @@
 </script>
 
 <template>
-  <PageContainer fixed-header>
-    <template #header>
-      <PageHeader title="Глоссарий" />
-    </template>
-
+  <NuxtLayout
+    name="section"
+    title="Глоссарий"
+  >
     <template #controls>
       <FilterControls v-model:search="search">
         <template #legend>
@@ -116,5 +115,5 @@
         </AResult>
       </Transition>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

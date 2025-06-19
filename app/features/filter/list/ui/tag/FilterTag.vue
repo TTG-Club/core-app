@@ -7,14 +7,14 @@
 
   const color = computed(() => {
     if (model.value === true) {
-      return 'var(--color-success)';
+      return 'success';
     }
 
     if (model.value === false) {
-      return 'var(--color-error)';
+      return 'error';
     }
 
-    return 'default';
+    return 'neutral';
   });
 
   function getNextValue() {
@@ -40,37 +40,14 @@
 </script>
 
 <template>
-  <ATag
+  <UBadge
     v-if="!preview || model !== null"
-    :class="$style.tag"
-    :bordered="false"
+    class="max-w-full min-w-8 cursor-pointer justify-center overflow-hidden overflow-ellipsis select-none hover:brightness-93 active:brightness-83"
+    variant="soft"
+    size="lg"
     :color
     @click.left.exact.prevent="onClick"
   >
     <slot />
-  </ATag>
+  </UBadge>
 </template>
-
-<style module lang="scss">
-  .tag {
-    cursor: pointer;
-    user-select: none;
-
-    overflow: hidden;
-
-    max-width: 100%;
-    margin: 0;
-
-    text-overflow: ellipsis;
-
-    @include media-min($lg) {
-      &:hover:not(:active) {
-        filter: brightness(93%);
-      }
-
-      &:active {
-        filter: brightness(73%);
-      }
-    }
-  }
-</style>

@@ -1,12 +1,8 @@
-$xs: 0;
 $sm: 576px;
 $md: 768px;
 $lg: 992px;
 $xl: 1200px;
 $xxl: 1400px;
-$full-hd: 1920px;
-$retina: 2560px;
-$ultra-hd: 3840px;
 
 @mixin media-min($breakpoint) {
   @if $breakpoint != all {

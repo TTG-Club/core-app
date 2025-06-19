@@ -94,31 +94,31 @@ export const MENU_SECTIONS = [
 export const MENU_LINKS = [
   {
     url: 'https://vk.com/ttg.club',
-    icon: 'vk',
+    icon: 'i-ttg-vk',
   },
   {
     url: 'https://discord.gg/JqFKMKRtxv',
-    icon: 'discord',
+    icon: 'i-ttg-discord',
   },
   {
     url: 'https://t.me/ttgclubnews',
-    icon: 'telegram',
+    icon: 'i-ttg-telegram',
   },
   {
     url: 'https://www.youtube.com/channel/UCpFse6-P2IBXYfkesAxZbfA',
-    icon: 'youtube',
+    icon: 'i-ttg-youtube',
   },
 ];
 
 export const MENU_SUPPORT = [
   {
     url: 'https://boosty.to/dnd5club',
-    icon: 'boosty',
+    icon: 'i-ttg-boosty',
     label: 'TTG Club',
   },
   {
     url: 'https://boosty.to/dnd5eclub',
-    icon: 'boosty',
+    icon: 'i-ttg-boosty',
     label: 'Magistrus',
   },
 ];

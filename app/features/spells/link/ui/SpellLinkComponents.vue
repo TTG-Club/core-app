@@ -5,22 +5,19 @@
 </script>
 
 <template>
-  <AFlex
-    :class="$style.components"
-    :gap="4"
-  >
-    <span :class="$style.component">
+  <div class="ml-auto flex gap-1">
+    <span class="w-3 text-center">
       {{ components.v ? 'В' : '·' }}
     </span>
 
-    <span :class="$style.component">
+    <span class="w-3 text-center">
       {{ components.s ? 'С' : '·' }}
     </span>
 
-    <span :class="$style.component">
+    <span class="w-3 text-center">
       {{ components.m ? 'М' : '·' }}
     </span>
-  </AFlex>
+  </div>
 </template>
 
 <style module lang="scss">

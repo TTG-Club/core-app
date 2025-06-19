@@ -36,9 +36,9 @@
 </script>
 
 <template>
-  <AFlex
+  <div
+    class="flex flex-col"
     :class="$style.menu"
-    vertical
   >
     <span :class="$style.title">{{ label }}</span>
 
@@ -50,7 +50,7 @@
     >
       {{ link.label }}
     </NuxtLink>
-  </AFlex>
+  </div>
 </template>
 
 <style lang="scss" module>

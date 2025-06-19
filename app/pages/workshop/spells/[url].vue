@@ -194,7 +194,7 @@
               @click.left.exact.prevent="navigateTo('/spells')"
             >
               <template #icon>
-                <SvgIcon icon="close" />
+                <SvgIcon icon="x" />
               </template>
             </AButton>
           </ATooltip>

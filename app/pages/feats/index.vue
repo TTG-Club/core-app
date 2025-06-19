@@ -2,7 +2,7 @@
   import { FeatLegend } from '~feats/legend';
   import { FeatLink } from '~feats/link';
   import { FilterControls } from '~filter/controls';
-  import { PageContainer, PageGrid, PageHeader } from '~ui/page';
+  import { PageGrid } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
   import type { FeatLinkResponse } from '~/shared/types';
@@ -37,11 +37,10 @@
 </script>
 
 <template>
-  <PageContainer fixed-header>
-    <template #header>
-      <PageHeader title="Черты" />
-    </template>
-
+  <NuxtLayout
+    name="section"
+    title="Черты"
+  >
     <template #controls>
       <FilterControls v-model:search="search">
         <template #legend>
@@ -116,5 +115,5 @@
         </AResult>
       </Transition>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

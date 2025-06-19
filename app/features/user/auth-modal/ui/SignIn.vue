@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import { useUserStore } from '~/shared/stores';
-  import { useToast } from '~ui/toast';
 
   const emit = defineEmits<{
     (e: 'switch:sign-up' | 'switch:change-password' | 'close'): void;
@@ -9,14 +8,14 @@
   const { fetch } = useUserStore();
   const $toast = useToast();
 
-  const model = reactive({
+  const state = reactive({
     usernameOrEmail: '',
     password: '',
     remember: true,
   });
 
   const { execute, status, error } = useFetch('/api/auth/sign-in', {
-    body: computed(() => model),
+    body: computed(() => state),
     method: 'post',
     watch: false,
     retry: false,
@@ -29,9 +28,11 @@
     await execute();
 
     if (error.value) {
-      $toast.error({
+      $toast.add({
         title: 'Ошибка авторизации',
         description: error.value.data.message,
+        color: 'error',
+        icon: 'i-fluent-person-warning-16-regular',
       });
 
       return;
@@ -41,86 +42,82 @@
 
     emit('close');
 
-    $toast.success({
+    $toast.add({
       title: 'Вы авторизовались!',
+      color: 'success',
+      icon: 'i-fluent-person-available-16-regular',
     });
   };
 </script>
 
 <template>
-  <AFlex
-    :gap="24"
-    vertical
-  >
-    <ATypographyTitle :level="4"> Авторизация </ATypographyTitle>
+  <div class="flex flex-col gap-6 text-2xl">
+    <h4>Авторизация</h4>
 
-    <AForm
-      :model
+    <UForm
+      class="flex flex-col gap-4"
+      :state
       label-placement="left"
       @submit.prevent.stop="onSubmit"
       @keyup.enter.exact.prevent.stop="onSubmit"
     >
-      <AFormItem
-        size="large"
-        path="usernameOrEmail"
-      >
-        <AInput
-          v-model:value="model.usernameOrEmail"
+      <UFormField path="usernameOrEmail">
+        <UInput
+          v-model="state.usernameOrEmail"
           autocapitalize="off"
           autocomplete="username"
           autocorrect="off"
           placeholder="Логин или электронная почта"
           autofocus
         />
-      </AFormItem>
+      </UFormField>
 
-      <AFormItem
-        size="large"
-        path="password"
-      >
-        <AInputPassword
-          v-model:value="model.password"
+      <UFormField path="password">
+        <UInput
+          v-model="state.password"
           autocapitalize="off"
           autocomplete="current-password"
           autocorrect="off"
           type="password"
           placeholder="Пароль"
         />
-      </AFormItem>
+      </UFormField>
 
-      <AFormItem>
-        <ACheckbox v-model:checked="model.remember"> Запомнить меня </ACheckbox>
-      </AFormItem>
+      <UFormField>
+        <UCheckbox
+          v-model="state.remember"
+          label="Запомнить меня"
+          default-value
+        />
+      </UFormField>
 
-      <AFlex
-        :gap="8"
-        :vertical="false"
-      >
-        <AButton
+      <div class="flex flex-col gap-2 md:flex-row">
+        <UButton
           :loading="inProgress"
           :disabled="status === 'success'"
-          type="primary"
           @click.left.exact.prevent="onSubmit"
         >
           Вход
-        </AButton>
+        </UButton>
 
-        <AButton
+        <UButton
           :disabled="inProgress"
-          type="link"
+          color="neutral"
+          variant="link"
           @click.left.exact.prevent="$emit('switch:sign-up')"
         >
           Регистрация
-        </AButton>
+        </UButton>
 
-        <AButton
-          type="link"
+        <UButton
+          color="neutral"
+          variant="link"
           disabled
           @click.left.exact.prevent="$emit('switch:change-password')"
         >
           Забыли пароль?
-        </AButton>
-      </AFlex>
-    </AForm>
-  </AFlex>
+        </UButton>
+      </div>
+    </UForm>
+  </div>
 </template>

@@ -19,10 +19,7 @@
     </template>
 
     <template #default>
-      <AFlex
-        :class="$style.header"
-        gap="middle"
-      >
+      <div class="flex gap-4 p-6 pb-3">
         <NuxtLink
           :class="$style.logo"
           to="/"
@@ -37,13 +34,12 @@
 
           <span :class="$style.title">TTG Club</span>
         </div>
-      </AFlex>
+      </div>
 
-      <ADivider :style="{ margin: '12px 0' }" />
+      <USeparator class="my-3" />
 
-      <AFlex
-        wrap="wrap"
-        gap="20"
+      <div
+        class="flex flex-wrap gap-5"
         :class="$style.content"
       >
         <MenuSection
@@ -51,18 +47,18 @@
           :key="section.label"
           v-bind="section"
         />
-      </AFlex>
+      </div>
 
-      <ADivider :style="{ margin: '12px 0' }" />
+      <USeparator class="my-3" />
 
       <div :class="$style.footer">
         <div :class="$style.contacts">
           <MenuContacts :social-links="MENU_LINKS" />
 
-          <ADivider
-            :style="{ height: '32px' }"
+          <USeparator
             :class="$style.divider"
-            type="vertical"
+            orientation="vertical"
+            class="my-3 h-8"
           />
 
           <MenuSupport :support-items="MENU_SUPPORT" />

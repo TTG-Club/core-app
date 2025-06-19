@@ -13,9 +13,12 @@
 </script>
 
 <template>
-  <AFlex
-    vertical
-    :gap="preview ? 16 : 24"
+  <div
+    class="flex flex-col"
+    :class="{
+      'gap-2': preview,
+      'gap-6': !preview,
+    }"
   >
     <FilterGroup
       v-for="group in filter.groups"
@@ -24,5 +27,5 @@
       :label="group.name"
       :preview
     />
-  </AFlex>
+  </div>
 </template>

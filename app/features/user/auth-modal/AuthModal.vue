@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { SignIn, SignUp } from './ui';
 
-  import { AButton, AFlex } from '#components';
+  import { UButton } from '#components';
   import { SvgIcon } from '~ui/icon';
   import { useToast } from '~ui/toast';
 
@@ -40,33 +40,25 @@
     const { close: closeToast } = $toast.success({
       title: 'E-Mail подтвержден!',
       description: () =>
-        h(
-          AFlex,
-          {
-            justify: 'space-between',
-            align: 'center',
-            gap: 12,
-          },
-          [
-            'Теперь вы можете авторизоваться',
-            h(
-              AButton,
-              {
-                type: 'text',
-                onClick: withModifiers(() => {
-                  opened.value = true;
-                  closeToast();
-                }, ['left', 'exact', 'prevent']),
-              },
-              {
-                icon: () =>
-                  h(SvgIcon, {
-                    icon: 'profile/base/move',
-                  }),
-              },
-            ),
-          ],
-        ),
+        h('div', { class: 'flex justify-between items-center gap-12' }, [
+          'Теперь вы можете авторизоваться',
+          h(
+            UButton,
+            {
+              variant: 'ghost',
+              onClick: withModifiers(() => {
+                opened.value = true;
+                closeToast();
+              }, ['left', 'exact', 'prevent']),
+            },
+            {
+              icon: () =>
+                h(SvgIcon, {
+                  icon: 'profile/base/move',
+                }),
+            },
+          ),
+        ]),
     });
   };
 
@@ -78,70 +70,42 @@
 </script>
 
 <template>
-  <AModal
+  <UModal
     v-model:open="opened"
-    :footer="false"
-    centered
-    destroy-on-close
-    :class="$style.modal"
+    :ui="{
+      content: 'overflow-hidden max-w-163 w-full rounded-none md:rounded-lg',
+    }"
+    aria-describedby="undefined"
   >
-    <AFlex
-      :gap="24"
-      align="center"
-    >
-      <img
-        :class="$style.background"
-        alt="auth-background-image"
-        src="/img/bg-login.png"
-      />
-
-      <div
-        v-if="opened"
-        :class="$style.body"
-      >
-        <SignIn
-          v-if="isSignIn"
-          @close="close"
-          @switch:sign-up="formType = FormType.SIGN_UP"
-          @switch:change-password="formType = FormType.CHANGE_PASSWORD"
+    <template #content>
+      <div class="flex items-center">
+        <img
+          class="hidden w-55 shrink-0 object-cover md:block"
+          alt="auth-background-image"
+          src="/img/bg-login.png"
         />
 
-        <SignUp
-          v-else-if="isSignUp"
-          @switch:sign-in="formType = FormType.SIGN_IN"
-        />
+        <div class="w-full px-6 py-12">
+          <SignIn
+            v-if="isSignIn"
+            @close="close"
+            @switch:sign-up="formType = FormType.SIGN_UP"
+            @switch:change-password="formType = FormType.CHANGE_PASSWORD"
+          />
+
+          <SignUp
+            v-else-if="isSignUp"
+            @switch:sign-in="formType = FormType.SIGN_IN"
+          />
+        </div>
       </div>
-    </AFlex>
-  </AModal>
+
+      <UButton
+        class="absolute top-3 right-3"
+        icon="i-ttg-close"
+        variant="ghost"
+        @click.left.exact.prevent="close"
+      />
+    </template>
+  </UModal>
 </template>
-
-<style module lang="scss">
-  .modal {
-    max-width: 652px !important;
-    :global {
-      .ant-modal-content {
-        overflow: hidden;
-        padding: 24px;
-
-        @include media-min($md) {
-          padding: 0 24px 0 0;
-        }
-      }
-    }
-  }
-
-  .background {
-    display: none;
-    flex-shrink: 0;
-    width: 220px;
-    object-fit: cover;
-
-    @include media-min($md) {
-      display: block;
-    }
-  }
-
-  .body {
-    width: 100%;
-  }
-</style>

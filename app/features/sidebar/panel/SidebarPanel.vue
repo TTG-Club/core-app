@@ -11,6 +11,12 @@
 
   const route = useRoute();
   const { y } = useWindowScroll();
+  const { height: windowHeight } = useWindowSize();
+
+  const { height: bodyHeight } = useElementBounding(
+    computed(() => document?.body),
+  );
+
   const { smaller } = useBreakpoints();
   const { close } = useSidebarPopover();
 
@@ -18,13 +24,21 @@
   const hidden = useState('navbar-hidden', () => false);
 
   watchThrottled(
-    y,
-    (scroll, oldScroll) => {
+    [y, windowHeight, bodyHeight],
+    ([scroll, currentWindowHeight, currentBodyHeight], [oldScroll]) => {
       if (!isMobile.value) {
         return;
       }
 
       if (scroll < 56) {
+        if (hidden.value) {
+          hidden.value = false;
+        }
+
+        return;
+      }
+
+      if (scroll + currentWindowHeight >= currentBodyHeight - 56) {
         if (hidden.value) {
           hidden.value = false;
         }
@@ -58,7 +72,10 @@
 </script>
 
 <template>
-  <div :class="[$style.navbar, { [$style.hidden]: hidden }]">
+  <div
+    class="navbar"
+    :class="{ hidden }"
+  >
     <header :class="$style.header">
       <div :class="$style.main">
         <NuxtLink
@@ -86,52 +103,25 @@
   </div>
 </template>
 
-<style lang="scss" module>
+<style scoped>
+  @reference '~tw';
+
   .navbar {
-    position: fixed;
-    z-index: 100;
-    bottom: 0;
-    left: 0;
-
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-
-    width: 100%;
-    height: var(--navbar-height);
-    padding-bottom: var(--safe-area-inset-bottom);
-    border-top: 1px solid var(--color-border);
-    border-right: 0;
-
-    background-color: var(--color-bg-main);
-
-    transition: bottom ease-in-out 0.2s;
-
-    @include media-min($md) {
-      top: 0;
-      bottom: initial;
-
-      flex-direction: column;
-      flex-wrap: nowrap;
-
-      width: var(--navbar-width);
-      height: 100vh;
-      padding-bottom: 0;
-      padding-left: var(--safe-area-inset-left);
-      border-top: 0;
-      border-right: 1px solid var(--color-border);
-    }
+    @apply fixed bottom-0 left-0 z-100 h-(--navbar-height) w-full md:top-0 md:bottom-auto md:h-dvh md:w-(--navbar-width);
+    @apply backdrop-blur-lg;
+    @apply flex flex-nowrap md:flex-col;
+    @apply border-t border-(--color-border) md:border-t-0 md:border-r;
+    @apply pb-(--safe-area-inset-bottom) md:pb-0 md:pl-(--safe-area-inset-left);
+    @apply transition-[bottom] duration-200 ease-in-out md:transition-none;
 
     &.hidden {
-      bottom: calc(var(--navbar-height) * -1);
-      transition: bottom ease-in-out 0.2s;
-
-      @include media-min($md) {
-        bottom: initial;
-      }
+      @apply -bottom-(--navbar-height) md:bottom-auto;
+      @apply transition-[bottom] duration-200 ease-in-out md:transition-none;
     }
   }
+</style>
 
+<style lang="scss" module>
   .header {
     display: flex;
     flex-direction: row;
@@ -227,8 +217,8 @@
       display: flex;
       justify-content: center;
 
-      width: 40px;
-      height: 40px;
+      width: 44px;
+      height: 44px;
       margin: 8px 0 8px 0;
       padding: 0;
       border-radius: 8px;

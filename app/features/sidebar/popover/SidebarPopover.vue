@@ -56,7 +56,7 @@
     </Transition>
 
     <Transition name="nav-popover-animation">
-      <AFlex
+      <div
         v-if="isOpened"
         :class="[
           $style.body,
@@ -65,20 +65,20 @@
             [$style.bottom]: bottom,
           },
         ]"
-        vertical
+        class="flex flex-col"
       >
         <slot
           :close="() => close()"
           name="default"
         />
-      </AFlex>
+      </div>
     </Transition>
   </div>
 </template>
 
 <style lang="scss" module>
-  @use 'assets/styles/variables/breakpoints' as *;
-  @use 'assets/styles/variables/mixins' as *;
+  @use 'assets/css/variables/breakpoints' as *;
+  @use 'assets/css/variables/mixins' as *;
 
   $horizontalMargin: 72px;
   $verticalMargin: 16px;

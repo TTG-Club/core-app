@@ -1,12 +1,9 @@
 <script setup lang="ts">
   import { cloneDeep } from 'lodash-es';
 
-  import { FilterButton } from './ui';
-
   import { Breakpoint, useBreakpoints } from '~/shared/composables';
   import { FilterDrawer } from '~filter/drawer';
   import { FilterPreview } from '~filter/preview';
-  import { SvgIcon } from '~ui/icon';
 
   import type { Filter } from '~filter/types';
 
@@ -22,7 +19,7 @@
 
   const opened = ref(false);
   const localSearch = ref(toValue(search) ?? '');
-  const isFullWidth = greaterOrEqual(Breakpoint.LG);
+  const isLarge = greaterOrEqual(Breakpoint.LG);
 
   const isEdited = computed(
     () =>
@@ -76,43 +73,43 @@
 </script>
 
 <template>
-  <div :class="$style.controls">
-    <AInput
-      v-model:value="localSearch"
+  <div class="flex gap-2 lg:flex-col lg:gap-4">
+    <UInput
+      v-model="localSearch"
       placeholder="Введите текст..."
       allow-clear
     />
 
-    <div :class="$style.filter">
-      <FilterButton
-        :full-width="isFullWidth"
-        :pending="isPending"
-        :disabled="!filter"
-        :edited="isEdited"
-        @open="opened = true"
-      />
-
-      <AButton
-        v-if="isEdited"
-        :style="{ flexShrink: 0 }"
-        type="primary"
-        @click.left.exact.prevent="reset"
+    <div class="flex gap-2">
+      <UChip
+        :show="isEdited"
+        class="lg:flex-[1_1_auto]"
       >
-        <template #icon>
-          <SvgIcon icon="clear" />
-        </template>
-      </AButton>
+        <UButton
+          :disabled="!filter"
+          :loading="isPending"
+          icon="i-fluent-filter-16-regular"
+          label="Фильтр"
+          block
+          @click.left.exact.prevent="opened = true"
+        />
+      </UChip>
+
+      <UButton
+        v-if="isEdited"
+        title="Очистить фильтр"
+        icon="i-ttg-remove"
+        @click.left.exact.prevent="reset"
+      />
     </div>
 
-    <template v-if="isFullWidth">
+    <template v-if="isLarge">
       <slot name="legend" />
 
-      <ClientOnly>
-        <FilterPreview
-          v-if="showPreview && filter"
-          v-model="filter"
-        />
-      </ClientOnly>
+      <FilterPreview
+        v-if="showPreview && filter"
+        v-model="filter"
+      />
     </template>
   </div>
 
@@ -124,20 +121,3 @@
     @reset="reset"
   />
 </template>
-
-<style module lang="scss">
-  .controls {
-    display: flex;
-    gap: 8px;
-
-    @include media-min($lg) {
-      flex-direction: column;
-      gap: 16px;
-    }
-  }
-
-  .filter {
-    display: flex;
-    gap: 8px;
-  }
-</style>

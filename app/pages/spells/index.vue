@@ -3,7 +3,7 @@
   import { FilterControls } from '~filter/controls';
   import { SpellLegend } from '~spells/legend';
   import { SpellLink } from '~spells/link';
-  import { PageContainer, PageGrid, PageHeader } from '~ui/page';
+  import { PageGrid } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
   import type { SearchBody, SpellLinkResponse } from '~/shared/types';
@@ -55,11 +55,10 @@
 </script>
 
 <template>
-  <PageContainer fixed-header>
-    <template #header>
-      <PageHeader title="Заклинания" />
-    </template>
-
+  <NuxtLayout
+    name="section"
+    title="Заклинания"
+  >
     <template #controls>
       <FilterControls
         v-model:search="search"
@@ -139,5 +138,5 @@
         </AResult>
       </Transition>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

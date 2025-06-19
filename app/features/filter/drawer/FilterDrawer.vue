@@ -3,9 +3,6 @@
 
   import { FilterList } from '../list';
 
-  import { Breakpoint, BREAKPOINTS } from '~/shared/composables';
-  import { DrawerComponent } from '~ui/drawer';
-
   import type { Filter } from '../types';
 
   defineEmits<{
@@ -31,28 +28,35 @@
 </script>
 
 <template>
-  <DrawerComponent
+  <USlideover
     v-model:open="opened"
-    :max-width="BREAKPOINTS[Breakpoint.MD]"
-    :min-width="320"
-    width="100%"
     title="Фильтры"
+    :content="{
+      trapFocus: true,
+    }"
+    :ui="{
+      content: 'w-full max-w-192 min-w-80',
+    }"
   >
-    <template #default>
+    <template #body>
       <FilterList v-model="cloned" />
     </template>
 
     <template #footer>
-      <AFlex gap="8">
-        <AButton
-          type="primary"
-          @click.left.exact.prevent="$emit('save', cloned)"
-        >
+      <div class="flex gap-2">
+        <UButton @click.left.exact.prevent="$emit('save', cloned)">
           Применить
-        </AButton>
+        </UButton>
 
-        <AButton @click.left.exact.prevent="$emit('reset')"> Сбросить </AButton>
-      </AFlex>
+        <UButton
+          variant="ghost"
+          color="error"
+          trailing-icon="i-ttg-remove"
+          @click.left.exact.prevent="$emit('reset')"
+        >
+          Сбросить
+        </UButton>
+      </div>
     </template>
-  </DrawerComponent>
+  </USlideover>
 </template>

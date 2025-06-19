@@ -2,7 +2,7 @@
   import { FilterControls } from '~filter/controls';
   import { SpeciesLegend } from '~species/legend';
   import { SpeciesLink } from '~species/link';
-  import { PageContainer, PageGrid, PageHeader } from '~ui/page';
+  import { PageGrid } from '~ui/page';
 
   import type { SpeciesLinkResponse } from '~/shared/types';
 
@@ -31,11 +31,10 @@
 </script>
 
 <template>
-  <PageContainer fixed-header>
-    <template #header>
-      <PageHeader title="Виды" />
-    </template>
-
+  <NuxtLayout
+    name="section"
+    title="Виды"
+  >
     <template #controls>
       <FilterControls v-model:search="search">
         <template #legend>
@@ -102,5 +101,5 @@
         </AResult>
       </Transition>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

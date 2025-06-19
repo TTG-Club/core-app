@@ -2,7 +2,7 @@
   import { FilterControls } from '~filter/controls';
   import { MagicItemLegend } from '~magic-items/legend';
   import { MagicItemLink } from '~magic-items/link';
-  import { PageContainer, PageGrid, PageHeader } from '~ui/page';
+  import { PageGrid } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
   import type { MagicItemLinkResponse } from '~magic-items/types';
@@ -37,11 +37,10 @@
 </script>
 
 <template>
-  <PageContainer fixed-header>
-    <template #header>
-      <PageHeader title="Магические предметы" />
-    </template>
-
+  <NuxtLayout
+    name="section"
+    title="Магические предметы"
+  >
     <template #controls>
       <FilterControls v-model:search="search">
         <template #legend>
@@ -116,5 +115,5 @@
         </AResult>
       </Transition>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

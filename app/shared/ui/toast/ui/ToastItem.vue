@@ -134,7 +134,7 @@
       @click.left.exact.prevent="close"
     >
       <template #icon>
-        <SvgIcon icon="close" />
+        <SvgIcon icon="x" />
       </template>
     </AButton>
   </div>

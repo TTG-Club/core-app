@@ -173,7 +173,7 @@
               @click.left.exact.prevent="navigateTo('/glossary')"
             >
               <template #icon>
-                <SvgIcon icon="close" />
+                <SvgIcon icon="x" />
               </template>
             </AButton>
           </ATooltip>

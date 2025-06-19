@@ -119,7 +119,7 @@
               @click.left.exact.prevent="navigateTo('/workshop/backgrounds')"
             >
               <template #icon>
-                <SvgIcon icon="close" />
+                <SvgIcon icon="x" />
               </template>
             </AButton>
           </ATooltip>
