@@ -14,7 +14,7 @@
 
   &-enter-active,
   &-leave-active {
-    @include css-anim;
+    @include css-anim($time: 0.05s);
   }
 }
 

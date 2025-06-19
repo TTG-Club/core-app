@@ -16,7 +16,7 @@
   <div
     class="flex flex-col"
     :class="{
-      'gap-2': preview,
+      'gap-3': preview,
       'gap-6': !preview,
     }"
   >

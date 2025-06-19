@@ -42,9 +42,10 @@
 <template>
   <UBadge
     v-if="!preview || model !== null"
-    class="max-w-full min-w-8 cursor-pointer justify-center overflow-hidden overflow-ellipsis select-none hover:brightness-93 active:brightness-83"
+    class="max-w-full cursor-pointer justify-center overflow-hidden overflow-ellipsis select-none hover:brightness-93 active:brightness-83"
+    :class="!preview ? 'min-w-8' : undefined"
     variant="soft"
-    size="lg"
+    :size="!preview ? 'lg' : undefined"
     :color
     @click.left.exact.prevent="onClick"
   >

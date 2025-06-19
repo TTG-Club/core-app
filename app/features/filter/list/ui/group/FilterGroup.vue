@@ -19,7 +19,7 @@
 
 <template>
   <template v-if="isVisible">
-    <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-3">
       <span v-if="preview">{{ label }}:</span>
 
       <USeparator
@@ -29,7 +29,10 @@
         {{ label }}
       </USeparator>
 
-      <div class="flex flex-wrap gap-3">
+      <div
+        class="flex flex-wrap"
+        :class="!preview ? 'gap-3' : 'gap-2'"
+      >
         <FilterTag
           v-for="item in filters"
           :key="item.key + item.name"

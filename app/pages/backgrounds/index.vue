@@ -2,7 +2,7 @@
   import { BackgroundLegend } from '~backgrounds/legend';
   import { BackgroundLink } from '~backgrounds/link';
   import { FilterControls } from '~filter/controls';
-  import { PageGrid } from '~ui/page';
+  import { PageGrid, PageResult } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
   import type { BackgroundLinkResponse } from '~/shared/types';
@@ -75,44 +75,13 @@
           />
         </PageGrid>
 
-        <AResult
-          v-else-if="status === 'success' && !backgrounds?.length"
-          title="Ничего не нашлось"
-          sub-title="По вашему запросу ничего не нашлось. Попробуйте изменить фильтр или строку поиска"
-        >
-          <template #extra>
-            <AButton
-              type="primary"
-              @click.left.exact.prevent="refresh()"
-            >
-              Обновить
-            </AButton>
-
-            <AButton @click.left.exact.prevent="navigateTo('/')">
-              Вернуться на главную
-            </AButton>
-          </template>
-        </AResult>
-
-        <AResult
-          v-else-if="status === 'error'"
-          :sub-title="error"
-          status="error"
-          title="Ошибка"
-        >
-          <template #extra>
-            <AButton
-              type="primary"
-              @click.left.exact.prevent="refresh()"
-            >
-              Обновить
-            </AButton>
-
-            <AButton @click.left.exact.prevent="navigateTo('/')">
-              Вернуться на главную
-            </AButton>
-          </template>
-        </AResult>
+        <PageResult
+          v-else
+          :items="backgrounds"
+          :status
+          :error
+          @refresh="refresh"
+        />
       </Transition>
     </template>
   </NuxtLayout>

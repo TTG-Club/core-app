@@ -27,12 +27,14 @@
     </template>
 
     <template #caption>
-      <ATag
+      <UBadge
         v-if="magicItem.attunement"
-        :style="{ margin: 0 }"
+        variant="subtle"
+        color="neutral"
+        size="sm"
       >
         Н
-      </ATag>
+      </UBadge>
 
       <span :style="{ color: 'var(--color-text-gray)' }">
         {{ magicItem.rarity }}
