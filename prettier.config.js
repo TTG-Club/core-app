@@ -17,4 +17,6 @@ export default {
   vueIndentScriptAndStyle: true,
   endOfLine: 'lf',
   singleAttributePerLine: true,
+  tailwindStylesheet: './app/assets/css/tailwind.css',
+  plugins: ['prettier-plugin-tailwindcss'],
 };

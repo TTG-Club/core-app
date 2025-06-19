@@ -178,7 +178,7 @@
               @click.left.exact.prevent="navigateTo('/feats')"
             >
               <template #icon>
-                <SvgIcon icon="close" />
+                <SvgIcon icon="x" />
               </template>
             </AButton>
           </ATooltip>

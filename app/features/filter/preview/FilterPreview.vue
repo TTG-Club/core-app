@@ -17,8 +17,8 @@
 </script>
 
 <template>
-  <div :class="$style.list">
-    <ADivider :class="$style.divider" />
+  <div class="flex flex-col gap-2 lg:gap-4">
+    <USeparator />
 
     <FilterList
       v-model="cloned"
@@ -26,14 +26,3 @@
     />
   </div>
 </template>
-
-<style module lang="scss">
-  .list {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .divider {
-    margin: 4px 0 12px 0;
-  }
-</style>

@@ -31,7 +31,7 @@
     </template>
 
     <template #caption>
-      <span :style="{ color: 'var(--color-text-gray)' }">
+      <span class="text-(--color-text-gray)">
         {{ bestiary.type }}
       </span>
     </template>

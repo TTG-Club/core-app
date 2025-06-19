@@ -26,34 +26,25 @@
 </script>
 
 <template>
-  <ARow
-    :gutter="[12, 12]"
-    :class="$style.cards"
+  <div
+    class="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6"
   >
-    <ACol
+    <NuxtLink
       v-for="(link, index) in sections"
       :key="index"
-      class="gutter-row"
-      :xs="12"
-      :sm="8"
-      :md="6"
-      :xl="4"
+      :to="link.url"
+      :class="[$style.card, { [$style.disabled]: link.disabled }]"
     >
-      <NuxtLink
-        :to="link.url"
-        :class="[$style.card, { [$style.disabled]: link.disabled }]"
-      >
-        <span :class="$style.name">{{ link.name }}</span>
+      <span :class="$style.name">{{ link.name }}</span>
 
-        <img
-          :class="$style.img"
-          :src="link.img"
-          :alt="link.name"
-          loading="lazy"
-        />
-      </NuxtLink>
-    </ACol>
-  </ARow>
+      <img
+        :class="$style.img"
+        :src="link.img"
+        :alt="link.name"
+        loading="lazy"
+      />
+    </NuxtLink>
+  </div>
 </template>
 
 <style lang="scss" module>

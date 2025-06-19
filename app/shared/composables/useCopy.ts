@@ -1,7 +1,5 @@
 import { omit } from 'lodash-es';
 
-import { useToast } from '~ui/toast';
-
 export function useCopy() {
   const $toast = useToast();
   const clipboard = useClipboard();
@@ -12,9 +10,10 @@ export function useCopy() {
   ): Promise<string> {
     return new Promise((resolve, reject) => {
       if (!clipboard.isSupported.value) {
-        $toast.error({
+        $toast.add({
           title: 'Ошибка при копировании',
           description: 'Ваш браузер не поддерживает копирование',
+          color: 'error',
         });
 
         reject();
@@ -25,16 +24,18 @@ export function useCopy() {
       clipboard
         .copy(text)
         .then(() => {
-          $toast.success({
+          $toast.add({
             title: 'Копирование',
             description: successText,
+            color: 'neutral',
           });
 
           resolve(text);
         })
         .catch(() => {
-          $toast.error({
+          $toast.add({
             title: 'Ошибка при копировании',
+            color: 'error',
             description: () =>
               h('span', [
                 'Произошла какая-то ошибка... попробуйте еще раз или обратитесь за помощью на нашем ',

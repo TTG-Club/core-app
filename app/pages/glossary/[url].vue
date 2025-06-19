@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { getSlicedString } from '~/shared/utils';
   import { GlossaryBody } from '~glossary/body';
-  import { PageActions, PageContainer, PageHeader } from '~ui/page';
+  import { PageActions } from '~ui/page';
 
   import type { GlossaryDetailResponse } from '~/shared/types';
 
@@ -41,19 +41,16 @@
 </script>
 
 <template>
-  <PageContainer>
-    <template #header>
-      <PageHeader
-        :title="glossary?.name.rus"
-        :subtitle="glossary?.name.eng"
-        :source="glossary?.source"
-        :date-time="glossary?.updatedAt"
-        copy-title
-      >
-        <template #actions>
-          <PageActions @close="navigateTo({ name: 'glossary' })" />
-        </template>
-      </PageHeader>
+  <NuxtLayout
+    name="detail"
+    :title="glossary?.name.rus"
+    :subtitle="glossary?.name.eng"
+    :source="glossary?.source"
+    :date-time="glossary?.updatedAt"
+    copy-text
+  >
+    <template #actions>
+      <PageActions @close="navigateTo({ name: 'glossary' })" />
     </template>
 
     <template #default>
@@ -68,5 +65,5 @@
         :paragraph="{ rows: 4 }"
       />
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

@@ -41,7 +41,7 @@
       <AImagePreviewGroup
         :preview="{
           visible,
-          onVisibleChange: (vis) => (visible = vis),
+          // onVisibleChange: (vis) => (visible = vis),
         }"
       >
         <AImage

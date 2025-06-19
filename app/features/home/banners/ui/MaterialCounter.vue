@@ -8,7 +8,7 @@
 
 <template>
   <div :class="$style.card">
-    <h3>Статистика</h3>
+    <h3 class="text-base leading-none font-medium">Статистика</h3>
 
     <p>
       В настоящее время на сайте представлено следующее количество материалов:
@@ -29,8 +29,8 @@
     display: flex;
     flex: 1 1 100%;
     flex-direction: column;
+    gap: 12px;
 
-    margin-bottom: 12px;
     padding: 12px 12px;
     border: 1px solid var(--color-border);
     border-radius: 10px;

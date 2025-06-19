@@ -1,20 +1,45 @@
 <script setup lang="ts">
-  import 'virtual:svg-icons-register';
-  import '~/assets/styles/index.scss';
+  import 'assets/css/index.scss';
+  import { ru } from '@nuxt/ui/locale';
+
+  import { useTheme } from '~/shared/composables';
   import { PwaConfig } from '~pwa/config';
   import { SidebarPanel } from '~sidebar/panel';
+
+  const { name } = useTheme();
+
+  useHead({
+    htmlAttrs: {
+      class: name,
+    },
+  });
 </script>
 
 <template>
-  <NuxtLayout>
-    <PwaConfig />
+  <UApp
+    :locale="ru"
+    :tooltip="{
+      disableHoverableContent: true,
+    }"
+    :toaster="{
+      position: 'top-right',
+    }"
+  >
+    <NuxtLoadingIndicator
+      color="var(--color-primary)"
+      error-color="var(--color-error)"
+    />
 
-    <SidebarPanel />
+    <div class="ttg-app">
+      <PwaConfig />
 
-    <div :class="$style.container">
-      <NuxtPage />
+      <SidebarPanel />
+
+      <div class="min-h-dvh w-full">
+        <NuxtPage />
+      </div>
     </div>
-  </NuxtLayout>
+  </UApp>
 </template>
 
 <style module lang="scss">

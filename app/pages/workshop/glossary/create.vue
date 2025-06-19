@@ -110,7 +110,7 @@
               @click.left.exact.prevent="navigateTo('/workshop/glossary')"
             >
               <template #icon>
-                <SvgIcon icon="close" />
+                <SvgIcon icon="x" />
               </template>
             </AButton>
           </ATooltip>

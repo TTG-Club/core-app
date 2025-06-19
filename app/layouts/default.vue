@@ -1,50 +1,7 @@
-<script setup lang="ts">
-  import ruRU from 'ant-design-vue/locale/ru_RU';
-
-  import { useTheme } from '~/shared/composables';
-  import { DrawerCollection } from '~ui/drawer';
-  import { ToastsWrapper } from '~ui/toast';
-
-  const { themeName, themeConfig } = useTheme();
-
-  const metaThemeColor = computed(() => themeConfig.value.token.colorBgBase);
-
-  useHead({
-    meta: [
-      {
-        name: 'theme-color',
-        content: toValue(metaThemeColor),
-      },
-    ],
-    htmlAttrs: {
-      class: themeName,
-    },
-  });
-</script>
-
 <template>
-  <AExtractStyle>
-    <AConfigProvider
-      :locale="ruRU"
-      :theme="themeConfig"
-      :wave="{ disabled: true }"
-    >
-      <AApp>
-        <NuxtLoadingIndicator
-          color="var(--color-primary)"
-          error-color="var(--color-error)"
-        />
-
-        <div class="ttg-app">
-          <slot />
-        </div>
-
-        <ClientOnly>
-          <DrawerCollection />
-        </ClientOnly>
-
-        <ToastsWrapper />
-      </AApp>
-    </AConfigProvider>
-  </AExtractStyle>
+  <div class="mx-auto flex min-h-dvh w-full flex-col lg:max-w-330 lg:flex-row">
+    <div class="min-h-dvh flex-[1_1_auto] px-4 pb-4 lg:pt-4">
+      <slot name="default" />
+    </div>
+  </div>
 </template>

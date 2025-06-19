@@ -3,7 +3,6 @@ import { fileURLToPath, URL } from 'node:url';
 
 import bytes from 'bytes';
 import ms from 'ms';
-import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
 
 const application = {
   name: {
@@ -22,61 +21,34 @@ const application = {
 };
 
 export default defineNuxtConfig({
+  // Общие настройки проекта
   future: {
     compatibilityVersion: 4,
     typescriptBundlerResolution: true,
   },
+  compatibilityDate: '2024-11-15',
 
-  devtools: {
-    enabled: process.env.NUXT_DEVTOOLS === 'true',
-  },
-
+  // Конфигурация среды разработки
   devServer: {
     https: process.env.NUXT_DEV_SSL === 'true',
   },
 
-  runtimeConfig: {
-    public: {
-      pwa: application,
-    },
-    site: {
-      url: '',
-      name: application.name.long,
-      description: application.description,
-      defaultLocale: 'ru',
-      indexable: false,
-    },
-  },
+  // Модули и зависимости
+  modules: [
+    '@nuxt/ui',
+    '@nuxt/fonts',
+    '@nuxtjs/device',
+    '@nuxtjs/stylelint-module',
+    '@nuxtjs/seo',
+    '@nuxt/image',
+    '@nuxt/eslint',
+    '@vueuse/nuxt',
+    '@pinia/nuxt',
+    'nuxt-security',
+  ],
 
-  security: {
-    headers: {
-      contentSecurityPolicy: {
-        'img-src': ["'self'", 'https:', 'data:'],
-        'media-src': ["'self'", 'https:', 'data:'],
-      },
-      strictTransportSecurity: {
-        preload: true,
-        maxAge: 31536000,
-        includeSubdomains: true,
-      },
-      xContentTypeOptions: 'nosniff',
-      xXSSProtection: '1; mode=block',
-      referrerPolicy: 'strict-origin-when-cross-origin',
-      permissionsPolicy: {
-        geolocation: [],
-        microphone: [],
-        camera: [],
-        fullscreen: ['self'],
-      },
-    },
-
-    requestSizeLimiter: {
-      maxUploadFileRequestInBytes: bytes('30MB') || 8000000,
-    },
-  },
-
+  // Конфигурация приложения
   appId: 'ttg-club',
-
   app: {
     head: {
       charset: 'utf-8',
@@ -99,24 +71,21 @@ export default defineNuxtConfig({
     },
   },
 
+  // SEO и метаданные
   seo: {
     redirectToCanonicalSiteUrl: true,
-    // fallbackTitle: false,
     automaticOgAndTwitterTags: true,
     automaticDefaults: true,
     canonicalLowercase: true,
   },
-
   unhead: {
     renderSSRHeadOptions: {
       omitLineBreaks: true,
     },
   },
-
   ogImage: {
     enabled: false,
   },
-
   robots: {
     disallow: [
       '/user',
@@ -129,6 +98,49 @@ export default defineNuxtConfig({
     ],
   },
 
+  // Безопасность
+  security: {
+    headers: {
+      contentSecurityPolicy: {
+        'img-src': ["'self'", 'https:', 'data:'],
+        'media-src': ["'self'", 'https:', 'data:'],
+      },
+      strictTransportSecurity: {
+        preload: true,
+        maxAge: 31536000,
+        includeSubdomains: true,
+      },
+      xContentTypeOptions: 'nosniff',
+      xXSSProtection: '1; mode=block',
+      referrerPolicy: 'strict-origin-when-cross-origin',
+      permissionsPolicy: {
+        geolocation: [],
+        microphone: [],
+        camera: [],
+        fullscreen: ['self'],
+      },
+    },
+    requestSizeLimiter: {
+      maxUploadFileRequestInBytes: bytes('30MB') || 8000000,
+    },
+  },
+
+  // Стили и UI
+  css: ['~/assets/css/tailwind.css'],
+  ui: {
+    colorMode: false,
+  },
+  icon: {
+    serverBundle: {
+      collections: ['lucide', 'fluent'],
+    },
+    customCollections: [
+      {
+        prefix: 'ttg',
+        dir: fileURLToPath(new URL('./app/assets/icons', import.meta.url)),
+      },
+    ],
+  },
   fonts: {
     defaults: {
       subsets: ['cyrillic-ext', 'cyrillic'],
@@ -137,45 +149,32 @@ export default defineNuxtConfig({
       adobe: false,
       bunny: false,
       local: false,
+      fontshare: false,
     },
-    priority: ['google', 'fontshare', 'fontsource'],
+    priority: ['google', 'fontsource'],
     families: [{ name: 'Open Sans' }],
   },
 
-  antd: {
-    icons: false,
-    extractStyle: true,
-  },
-
+  // TypeScript и линтеры
   typescript: {
     typeCheck: true,
-    // tsConfig: {
-    //   compilerOptions: {
-    //     typeRoots: [
-    //       fileURLToPath(new URL('./app/shared/types/global', import.meta.url)),
-    //     ],
-    //   },
-    // },
   },
-
   eslint: {
     config: {
       standalone: false,
     },
   },
 
+  // Роутинг и сервер
   router: {
     options: {
       scrollBehaviorType: 'smooth',
     },
   },
-
   nitro: {
     experimental: {
       openAPI: true,
     },
-
-    // TODO: Поиграть с лимитами в будущем, если не будет хватать
     routeRules: {
       '/api/**': {
         security: {
@@ -200,57 +199,35 @@ export default defineNuxtConfig({
     },
   },
 
-  alias: {
-    '~ui': fileURLToPath(new URL('./app/shared/ui', import.meta.url)),
-  },
-
+  // Сборщик и пути
   vite: {
     css: {
       preprocessorOptions: {
         scss: {
           api: 'modern-compiler',
-          additionalData: `@use "~/assets/styles/variables" as *;`,
+          additionalData: `@use "~/assets/css/variables" as *;`,
         },
       },
     },
-    plugins: [
-      createSvgIconsPlugin({
-        iconDirs: [
-          fileURLToPath(new URL('./app/assets/icons', import.meta.url)),
-        ],
-        symbolId: 'ttg-[dir]-[name]',
-        svgoOptions: {
-          plugins: [
-            {
-              name: 'preset-default',
-              params: {
-                overrides: { removeViewBox: false },
-              },
-            },
-            {
-              name: 'removeAttrs',
-              params: {
-                attrs: '(width|height|style|color|fill|stroke)',
-              },
-            },
-          ],
-        },
-      }),
-    ],
+  },
+  alias: {
+    '~ui': fileURLToPath(new URL('./app/shared/ui', import.meta.url)),
+    '~tw': fileURLToPath(
+      new URL('./app/assets/css/tailwind.css', import.meta.url),
+    ),
   },
 
-  modules: [
-    '@nuxt/fonts',
-    '@nuxtjs/device',
-    '@nuxtjs/stylelint-module',
-    '@nuxtjs/seo',
-    '@nuxt/image',
-    '@nuxt/eslint',
-    '@vueuse/nuxt',
-    '@ant-design-vue/nuxt',
-    '@pinia/nuxt',
-    'nuxt-security',
-  ],
-
-  compatibilityDate: '2024-11-15',
+  // Конфигурация runtime
+  runtimeConfig: {
+    public: {
+      pwa: application,
+    },
+    site: {
+      url: '',
+      name: application.name.long,
+      description: application.description,
+      defaultLocale: 'ru',
+      indexable: false,
+    },
+  },
 });

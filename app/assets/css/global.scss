@@ -67,7 +67,6 @@
 html,
 body,
 .ttg-club,
-.ant-app,
 .ttg-app {
   width: 100%;
 }
@@ -83,22 +82,8 @@ html {
 
 body {
   z-index: 1;
-
   min-height: 100vh;
-
-  font-family: 'Open Sans', sans-serif;
   font-size: var(--font-size-main);
-  line-height: var(--line-height-main);
-  color: var(--color-text);
-
-  background: var(--color-bg-main);
-  background-color: var(--color-bg-main);
-  background-image: var(--color-bg-main-gradient);
-  background-attachment: fixed;
-  outline: none;
-
-  transition: background-color ease-in-out 0.2s,
-  color ease-in-out 0.2s;
 }
 
 .ttg-app {

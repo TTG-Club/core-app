@@ -74,7 +74,7 @@
     <CopyButton
       v-if="url"
       :url
-      size="small"
+      size="sm"
     />
 
     <ATooltip
@@ -100,7 +100,7 @@
       @click.left.exact.prevent="$emit('close')"
     >
       <template #icon>
-        <SvgIcon icon="close" />
+        <SvgIcon icon="x" />
       </template>
     </AButton>
   </AFlex>

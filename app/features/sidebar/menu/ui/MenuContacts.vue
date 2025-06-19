@@ -1,28 +1,21 @@
 <script setup lang="ts">
-  import { SvgIcon } from '~ui/icon';
-
   defineProps<{
     socialLinks: { url: string; icon: string }[]; // Массив ссылок на социальные сети
   }>();
 </script>
 
 <template>
-  <AFlex
-    gap="small"
-    align="center"
-  >
+  <div class="flex items-center gap-2">
     <span>Контакты:</span>
 
-    <AButton
+    <UButton
       v-for="(link, index) in socialLinks"
       :key="index"
-      type="text"
       :href="link.url"
+      :icon="link.icon"
+      variant="link"
       target="_blank"
-    >
-      <template #icon>
-        <SvgIcon :icon="link.icon" />
-      </template>
-    </AButton>
-  </AFlex>
+      color="neutral"
+    />
+  </div>
 </template>

@@ -4,7 +4,12 @@
     :class="$style.card"
     target="_blank"
   >
-    <h2 :class="$style.name">D&D 2014</h2>
+    <h2
+      :class="$style.name"
+      class="text-2xl"
+    >
+      D&D 2014
+    </h2>
 
     <p :class="$style.description">Предыдущая редакция Dungeon and Dragons</p>
   </NuxtLink>
@@ -18,8 +23,8 @@
     display: flex;
     flex: 1 1 100%;
     flex-direction: column;
+    gap: 12px;
 
-    margin-bottom: 12px;
     padding: 12px 12px;
     border: 1px solid var(--color-border);
     border-radius: 10px;

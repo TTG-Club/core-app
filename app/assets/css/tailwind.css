@@ -1,0 +1,29 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --font-sans: 'Open Sans', ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+  --ui-text: var(--color-text);
+}
+
+@variant svifty7 (&:where(.svifty7, .svifty7 *));
+
+@utility hidden-scrollbar {
+  @apply overflow-auto;
+
+  scrollbar-width: none !important;
+
+  -ms-overflow-style: none !important;
+
+  &::-webkit-scrollbar {
+    display: none !important;
+  }
+}
+
+body {
+  @apply antialiased text-default bg-default scheme-light dark:scheme-dark svifty7:scheme-dark
+}

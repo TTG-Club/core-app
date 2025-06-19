@@ -28,34 +28,29 @@
 </script>
 
 <template>
-  <div :class="$style.page">
+  <div class="page-container">
     <div
       v-if="$slots.header || (!isControlInBody && $slots.controls)"
       ref="header"
-      :class="[$style.header, { [$style.fixed]: fixedHeader }]"
+      class="header"
+      :class="{ fixed: fixedHeader }"
     >
-      <div
-        :class="$style.container"
-        data-allow-mismatch
-      >
+      <div class="container">
         <slot name="header" />
 
         <div
           v-if="!isControlInBody"
-          :class="$style.controls"
+          class="flex w-full flex-col gap-[16px]"
         >
           <slot name="controls" />
         </div>
       </div>
     </div>
 
-    <div
-      :class="$style.body"
-      data-allow-mismatch
-    >
+    <div class="body">
       <div
         v-if="isControlInBody && $slots.controls"
-        :class="$style.controls"
+        class="controls"
         :style="{
           top: `${headerHeightDelta}px`,
           maxHeight: `${maxControlsHeight}px`,
@@ -64,101 +59,49 @@
         <slot name="controls" />
       </div>
 
-      <div :class="$style.content">
+      <div class="content">
         <slot name="default" />
       </div>
     </div>
   </div>
 </template>
 
-<style module lang="scss">
-  .page {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    min-height: 100%;
-  }
+<style scoped>
+  @reference '~tw';
 
-  .header {
-    pointer-events: none;
-    z-index: 10;
-    width: 100%;
-    background: var(--color-bg-main);
+  .page-container {
+    @apply flex min-h-full w-full flex-col;
 
-    &.fixed {
-      position: sticky;
-      top: 0;
-    }
+    .header {
+      @apply pointer-events-none z-10 w-full bg-(--color-bg-main);
 
-    .container {
-      pointer-events: auto;
+      &.fixed {
+        @apply sticky top-0;
+      }
 
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+      .container {
+        @apply pointer-events-auto flex w-full max-w-(--max-content);
+        @apply mx-auto px-4 py-4;
+        @apply flex-col gap-2 lg:gap-3;
+      }
 
-      width: 100%;
-      max-width: var(--max-content);
-      margin: 0 auto;
-      padding: 0 16px 16px;
-
-      @include media-min($lg) {
-        gap: 12px;
+      .controls {
+        @apply flex w-full flex-col gap-4;
       }
     }
 
-    .controls {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      width: 100%;
-    }
-  }
+    .body {
+      @apply w-full max-w-(--max-content);
+      @apply flex flex-[1_1_auto] flex-col lg:flex-row;
+      @apply mx-auto gap-4 px-4;
 
-  .body {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    gap: 16px;
-
-    width: 100%;
-    max-width: var(--max-content);
-    margin: 0 auto;
-    padding: 0 16px;
-
-    @include media-min($lg) {
-      flex-direction: row;
-    }
-
-    .controls {
-      scrollbar-width: none;
-
-      position: sticky;
-
-      overflow: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-
-      max-width: 240px;
-      height: 100%;
-      padding: 0 16px 16px 0;
-      border-right: 1px solid var(--color-border);
-
-      -ms-overflow-style: none;
-
-      &::-webkit-scrollbar {
-        display: none;
+      .controls {
+        @apply sticky hidden-scrollbar flex h-full w-60 shrink-0 flex-col gap-4 border-r border-(--color-border) pr-4 pb-4;
       }
-    }
 
-    .content {
-      display: flex;
-      flex: 1 1 auto;
-      flex-direction: column;
-      gap: 16px;
-
-      padding: 0 0 16px 0;
+      .content {
+        @apply flex flex-[1_1_auto] flex-col gap-4 pb-4;
+      }
     }
   }
 </style>
