@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { Breakpoint, BREAKPOINTS } from '~/shared/composables';
   import { CreatureBody } from '~bestiary/body';
-  import { DrawerComponent } from '~ui/drawer';
+  import { UiDrawer } from '~ui/drawer';
 
   import type { CreatureCreate, CreatureDetailResponse } from '~bestiary/types';
 
@@ -34,7 +34,7 @@
 </script>
 
 <template>
-  <DrawerComponent
+  <UiDrawer
     v-model:open="opened"
     :min-width="320"
     :max-width="BREAKPOINTS[Breakpoint.MD]"
@@ -48,5 +48,5 @@
       v-if="creature"
       :creature
     />
-  </DrawerComponent>
+  </UiDrawer>
 </template>

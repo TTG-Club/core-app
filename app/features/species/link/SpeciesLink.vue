@@ -1,5 +1,6 @@
 <script setup lang="ts">
-  import { LinkLineages, LinkPreview } from '~species/link/ui';
+  import { LinkLineages, LinkPreview } from './ui';
+
   import { GroupTag } from '~ui/source-tag';
 
   import type { SpeciesLinkResponse } from '~/shared/types';

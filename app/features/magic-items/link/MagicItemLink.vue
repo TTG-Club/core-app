@@ -1,14 +1,51 @@
 <script setup lang="ts">
-  import { useDrawer } from '~/shared/composables';
+  import { MagicItemDrawer } from '~magic-items/drawer';
   import { SmallLink } from '~ui/link';
 
-  import type { MagicItemLinkResponse } from '~magic-items/types';
+  import type {
+    MagicItemDetailResponse,
+    MagicItemLinkResponse,
+  } from '~magic-items/types';
 
   const { magicItem } = defineProps<{
     magicItem: MagicItemLinkResponse;
   }>();
 
-  const { open } = useDrawer('magic-item-detail');
+  const overlay = useOverlay();
+
+  const {
+    data: detail,
+    status,
+    execute,
+  } = await useAsyncData(
+    computed(() => `magic-item-${magicItem.url}`),
+    () =>
+      $fetch<MagicItemDetailResponse>(`/api/v2/magic-item/${magicItem.url}`),
+    {
+      server: false,
+      immediate: false,
+    },
+  );
+
+  const drawer = overlay.create(MagicItemDrawer, {
+    props: computed(() => ({
+      magicItem: detail.value,
+      isError: status.value === 'error',
+      isLoading: status.value === 'pending',
+      onClose: () => drawer.close(),
+    })),
+    destroyOnClose: true,
+  });
+
+  const isOpened = computed(() => overlay.isOpen(drawer.id));
+
+  async function open() {
+    if (status.value !== 'success') {
+      await execute();
+    }
+
+    drawer.open();
+  }
 </script>
 
 <template>
@@ -16,7 +53,8 @@
     :to="{ name: 'magic-items-url', params: { url: magicItem.url } }"
     :title="`${magicItem.name.rus} [${magicItem.name.eng}]`"
     :group="magicItem.source.group"
-    @open-drawer="open(magicItem.url)"
+    :is-opened
+    @open-drawer="open"
   >
     <template #default>
       {{ magicItem.name.rus }}

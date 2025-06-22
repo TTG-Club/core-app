@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { SpeciesBody } from '~species/body';
-  import { DrawerComponent } from '~ui/drawer';
+  import { UiDrawer } from '~ui/drawer';
 
   import type { SpeciesDetailResponse } from '~/shared/types';
 
@@ -24,7 +24,7 @@
 </script>
 
 <template>
-  <DrawerComponent
+  <UiDrawer
     :title="species?.name"
     :source="species?.source"
     :date-time="species?.updatedAt"
@@ -39,5 +39,5 @@
       v-if="species"
       :species
     />
-  </DrawerComponent>
+  </UiDrawer>
 </template>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { SpellBody } from '~spells/body';
-  import { DrawerComponent } from '~ui/drawer';
+  import { UiDrawer } from '~ui/drawer';
 
   import type { SpellDetailResponse } from '~/shared/types';
 
@@ -24,7 +24,7 @@
 </script>
 
 <template>
-  <DrawerComponent
+  <UiDrawer
     :title="spell?.name"
     :source="spell?.source"
     :date-time="spell?.updatedAt"
@@ -39,5 +39,5 @@
       v-if="spell"
       :spell
     />
-  </DrawerComponent>
+  </UiDrawer>
 </template>

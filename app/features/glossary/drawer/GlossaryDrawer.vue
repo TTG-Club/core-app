@@ -1,74 +1,43 @@
 <script setup lang="ts">
-  import { Breakpoint, BREAKPOINTS, useDrawer } from '~/shared/composables';
   import { GlossaryBody } from '~glossary/body';
-  import { DrawerComponent } from '~ui/drawer';
+  import { UiDrawer } from '~ui/drawer';
 
   import type { GlossaryDetailResponse } from '~/shared/types';
 
-  const { url, isOpened, close } = useDrawer('glossary-detail');
+  const { glossary = undefined } = defineProps<{
+    glossary?: GlossaryDetailResponse;
+    isError?: boolean;
+    isLoading?: boolean;
+  }>();
 
-  const {
-    data: glossary,
-    status,
-    execute,
-    clear,
-  } = await useAsyncData(
-    `glossary-detail-drawer`,
-    () => {
-      if (!url.value) {
-        return Promise.reject();
-      }
-
-      return $fetch<GlossaryDetailResponse>(`/api/v2/glossary/${url.value}`);
-    },
-    {
-      server: false,
-      immediate: false,
-    },
-  );
+  defineEmits<{
+    (e: 'close'): void;
+  }>();
 
   const urlForCopy = computed(() =>
-    isOpened.value ? `${getOrigin()}/glossary/${url.value}` : undefined,
+    glossary ? `${getOrigin()}/glossary/${glossary.url}` : undefined,
   );
 
-  const editUrl = computed(() => `/workshop/glossary/${url.value}`);
-
-  function handleUpdate(opened: boolean) {
-    if (opened) {
-      return;
-    }
-
-    close();
-  }
-
-  watch(isOpened, (value) => {
-    if (!value) {
-      return;
-    }
-
-    clear();
-    execute();
-  });
+  const editUrl = computed(() =>
+    glossary ? `/workshop/glossary/${glossary.url}` : undefined,
+  );
 </script>
 
 <template>
-  <DrawerComponent
-    :open="isOpened"
-    :min-width="320"
-    :max-width="BREAKPOINTS[Breakpoint.MD]"
+  <UiDrawer
     :title="glossary?.name"
     :source="glossary?.source"
+    :date-time="glossary?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
-    :is-loading="status === 'pending'"
-    :is-error="status === 'error'"
-    width="100%"
+    :is-loading
+    :is-error
     copy-title
-    @update:open="handleUpdate"
+    @close="$emit('close')"
   >
     <GlossaryBody
       v-if="glossary"
       :glossary
     />
-  </DrawerComponent>
+  </UiDrawer>
 </template>

@@ -1,11 +1,13 @@
 <script setup lang="ts">
-  import { DrawerActions } from '../actions';
-  import { DrawerBody } from '../body';
+  import {
+    DrawerHeader,
+    DrawerActions,
+    DrawerBody,
+    type DrawerTitleName,
+  } from './ui';
 
   import { Breakpoint, useBreakpoints } from '~/shared/composables';
-  import { DrawerHeader } from '~ui/drawer';
 
-  import type { DrawerTitleName } from '../title';
   import type { Dayjs } from 'dayjs';
   import type { SourceResponse } from '~/shared/types';
 

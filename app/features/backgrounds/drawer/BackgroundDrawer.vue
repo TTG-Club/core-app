@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { Breakpoint, BREAKPOINTS, useDrawer } from '~/shared/composables';
   import { BackgroundBody } from '~backgrounds/body';
-  import { DrawerComponent } from '~ui/drawer';
+  import { UiDrawer } from '~ui/drawer';
 
   import type { BackgroundDetailResponse } from '~/shared/types';
 
@@ -54,7 +54,7 @@
 </script>
 
 <template>
-  <DrawerComponent
+  <UiDrawer
     :open="isOpened"
     :min-width="320"
     :max-width="BREAKPOINTS[Breakpoint.MD]"
@@ -72,5 +72,5 @@
       v-if="background"
       :background
     />
-  </DrawerComponent>
+  </UiDrawer>
 </template>

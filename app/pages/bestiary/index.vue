@@ -95,7 +95,7 @@
           <CreatureLink
             v-for="creature in bestiary"
             :key="creature.url"
-            :bestiary="creature"
+            :creature
           />
         </PageGrid>
 

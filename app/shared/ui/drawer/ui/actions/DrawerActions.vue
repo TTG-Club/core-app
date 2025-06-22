@@ -1,7 +1,6 @@
 <script setup lang="ts">
-  import { CopyButton } from '../../copy-button';
-
   import { useUserStore } from '~/shared/stores';
+  import { CopyButton } from '~ui/copy-button';
 
   defineEmits<{
     (e: 'close'): void;
@@ -30,34 +29,23 @@
     />
   </UTooltip>
 
-  <UButton
-    v-if="url"
-    :href="url"
-    variant="ghost"
-    target="_blank"
-    color="neutral"
-    icon="i-ttg-new-page"
-    size="sm"
-  />
+  <UTooltip text="Открыть в новой вкладке">
+    <UButton
+      v-if="url"
+      :href="url"
+      variant="ghost"
+      target="_blank"
+      color="neutral"
+      icon="i-ttg-new-page"
+      size="sm"
+    />
+  </UTooltip>
 
   <CopyButton
     v-if="url"
     :url
     size="sm"
   />
-
-  <UTooltip
-    v-if="url"
-    text="Закладка"
-  >
-    <UButton
-      variant="ghost"
-      color="neutral"
-      icon="i-fluent-bookmark-16-regular"
-      size="sm"
-      disabled
-    />
-  </UTooltip>
 
   <UButton
     variant="ghost"

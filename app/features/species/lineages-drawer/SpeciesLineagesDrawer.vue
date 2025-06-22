@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { SpeciesLink } from '~species/link';
-  import { DrawerComponent } from '~ui/drawer';
+  import { UiDrawer } from '~ui/drawer';
 
   import type { SpeciesLinkResponse } from '~/shared/types';
 
@@ -16,7 +16,7 @@
 </script>
 
 <template>
-  <DrawerComponent
+  <UiDrawer
     title="Происхождения"
     :is-loading
     :is-error
@@ -32,7 +32,7 @@
         </SpeciesLink>
       </div>
     </div>
-  </DrawerComponent>
+  </UiDrawer>
 </template>
 
 <style module lang="scss">

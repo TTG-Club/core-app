@@ -1,74 +1,43 @@
 <script setup lang="ts">
-  import { Breakpoint, BREAKPOINTS, useDrawer } from '~/shared/composables';
   import { MagicItemBody } from '~magic-items/body';
-  import { DrawerComponent } from '~ui/drawer';
+  import { UiDrawer } from '~ui/drawer';
 
   import type { MagicItemDetailResponse } from '~magic-items/types';
 
-  const { url, isOpened, close } = useDrawer('magic-item-detail');
+  const { magicItem = undefined } = defineProps<{
+    magicItem?: MagicItemDetailResponse;
+    isError?: boolean;
+    isLoading?: boolean;
+  }>();
 
-  const {
-    data: magicItem,
-    status,
-    execute,
-    clear,
-  } = await useAsyncData(
-    `magicItem`,
-    () => {
-      if (!url.value) {
-        return Promise.reject();
-      }
-
-      return $fetch<MagicItemDetailResponse>(`/api/v2/magic-item/${url.value}`);
-    },
-    {
-      server: false,
-      immediate: false,
-    },
-  );
+  defineEmits<{
+    (e: 'close'): void;
+  }>();
 
   const urlForCopy = computed(() =>
-    isOpened.value ? `${getOrigin()}/magic-items/${url.value}` : undefined,
+    magicItem ? `${getOrigin()}/magic-item/${magicItem.url}` : undefined,
   );
 
-  const editUrl = computed(() => `/workshop/magic-items/${url.value}`);
-
-  function handleUpdate(opened: boolean) {
-    if (opened) {
-      return;
-    }
-
-    close();
-  }
-
-  watch(isOpened, (value) => {
-    if (!value) {
-      return;
-    }
-
-    clear();
-    execute();
-  });
+  const editUrl = computed(() =>
+    magicItem ? `/workshop/magic-item/${magicItem.url}` : undefined,
+  );
 </script>
 
 <template>
-  <DrawerComponent
-    :open="isOpened"
-    :min-width="320"
-    :max-width="BREAKPOINTS[Breakpoint.MD]"
-    :title="magicItem?.name"
+  <UiDrawer
+    :date-time="magicItem?.updatedAt"
     :source="magicItem?.source"
-    :url="urlForCopy"
+    :title="magicItem?.name"
     :edit-url="editUrl"
-    :is-loading="status === 'pending'"
-    :is-error="status === 'error'"
-    width="100%"
+    :url="urlForCopy"
+    :is-loading
+    :is-error
     copy-title
-    @update:open="handleUpdate"
+    @close="$emit('close')"
   >
     <MagicItemBody
       v-if="magicItem"
       :magic-item="magicItem"
     />
-  </DrawerComponent>
+  </UiDrawer>
 </template>
