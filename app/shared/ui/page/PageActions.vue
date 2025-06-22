@@ -17,15 +17,6 @@
   const urlForCopy = computed(() => {
     return getOrigin() + route.path;
   });
-
-  function openPrintWindow() {
-    window.print();
-
-    // sendShareMetrics({
-    //   method: 'page_print',
-    //   id: route.path,
-    // });
-  }
 </script>
 
 <template>
@@ -44,25 +35,6 @@
   </UTooltip>
 
   <CopyButton :url="urlForCopy" />
-
-  <UTooltip text="Закладка">
-    <UButton
-      icon="i-fluent-bookmark-16-regular"
-      variant="ghost"
-      color="neutral"
-      disabled
-    />
-  </UTooltip>
-
-  <UTooltip text="Открыть окно печати">
-    <UButton
-      icon="i-ttg-print"
-      variant="ghost"
-      color="neutral"
-      disabled
-      @click="openPrintWindow"
-    />
-  </UTooltip>
 
   <UTooltip text="Закрыть">
     <UButton

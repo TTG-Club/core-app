@@ -1,16 +1,49 @@
 <script setup lang="ts">
   import { SpellLinkComponents, SpellLinkFlags } from './ui';
 
-  import { useDrawer } from '~/shared/composables';
+  import { SpellDrawer } from '~spells/drawer';
   import { SmallLink } from '~ui/link';
 
-  import type { SpellLinkResponse } from '~/shared/types';
+  import type { SpellDetailResponse, SpellLinkResponse } from '~/shared/types';
 
   const { spell } = defineProps<{
     spell: SpellLinkResponse;
   }>();
 
-  const { open } = useDrawer('spell-detail');
+  const overlay = useOverlay();
+
+  const {
+    data: detail,
+    status,
+    execute,
+  } = await useAsyncData(
+    computed(() => `spell-${spell.url}`),
+    () => $fetch<SpellDetailResponse>(`/api/v2/spells/${spell.url}`),
+    {
+      server: false,
+      immediate: false,
+    },
+  );
+
+  const drawer = overlay.create(SpellDrawer, {
+    props: computed(() => ({
+      spell: detail.value,
+      isError: status.value === 'error',
+      isLoading: status.value === 'pending',
+      onClose: () => drawer.close(),
+    })),
+    destroyOnClose: true,
+  });
+
+  const isOpened = computed(() => overlay.isOpen(drawer.id));
+
+  async function open() {
+    if (status.value !== 'success') {
+      await execute();
+    }
+
+    drawer.open();
+  }
 </script>
 
 <template>
@@ -18,7 +51,8 @@
     :to="{ name: 'spells-url', params: { url: spell.url } }"
     :title="`${spell.name.rus} [${spell.name.eng}]`"
     :group="spell.source.group"
-    @open-drawer="open(spell.url)"
+    :is-opened
+    @open-drawer="open"
   >
     <template #icon>
       {{ spell.level || '◐' }}

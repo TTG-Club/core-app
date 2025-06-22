@@ -20,12 +20,12 @@
   } = defineProps<Props>();
 
   const iconMap = {
-    'success': 'i-fluent-checkmark-circle-16-filled',
-    'error': 'i-fluent-dismiss-circle-16-filled',
-    'info': 'i-fluent-info-16-filled',
-    'warning': 'i-fluent-warning-16-filled',
-    '404': 'i-fluent-dismiss-circle-16-filled',
-    '403': 'i-fluent-dismiss-circle-16-filled',
+    'success': 'i-ttg-success',
+    'error': 'i-ttg-error',
+    'info': 'i-ttg-info',
+    'warning': 'i-ttg-warning',
+    '404': 'i-ttg-error',
+    '403': 'i-ttg-error',
   };
 
   const computedStatus = computed(() => {

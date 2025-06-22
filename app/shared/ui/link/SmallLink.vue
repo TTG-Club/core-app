@@ -4,10 +4,15 @@
   import type { RouteLocationRaw } from 'vue-router';
   import type { SourceGroupResponse } from '~/shared/types';
 
-  const { group, to } = defineProps<{
+  const {
+    group = undefined,
+    title = undefined,
+    to = undefined,
+  } = defineProps<{
     group?: SourceGroupResponse;
     title?: string;
     to?: RouteLocationRaw;
+    isOpened?: boolean;
   }>();
 
   const emit = defineEmits<{
@@ -39,7 +44,8 @@
       @click.exact.prevent.stop="handleClick"
     >
       <div
-        class="flex min-h-12.5 w-full items-center gap-3 rounded-xl border-(--color-border) bg-(--color-bg-secondary) px-3 py-1.5 hover:bg-(--color-hover)"
+        class="flex min-h-12.5 w-full items-center gap-3 rounded-xl border-(--color-border) px-3 py-1.5 hover:bg-(--color-hover)"
+        :class="isOpened ? 'bg-accented' : 'bg-(--color-bg-secondary)'"
       >
         <div
           v-if="$slots.icon"

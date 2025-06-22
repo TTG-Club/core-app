@@ -24,7 +24,7 @@
 
         <USkeleton
           v-else
-          class="w-48"
+          class="h-6 w-48"
         />
       </div>
     </div>

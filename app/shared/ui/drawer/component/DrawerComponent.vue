@@ -1,91 +1,80 @@
 <script setup lang="ts">
-  import { SourceTag } from '../../source-tag';
   import { DrawerActions } from '../actions';
   import { DrawerBody } from '../body';
-  import { DrawerTitle, type DrawerTitleName } from '../title';
 
+  import { Breakpoint, useBreakpoints } from '~/shared/composables';
+  import { DrawerHeader } from '~ui/drawer';
+
+  import type { DrawerTitleName } from '../title';
+  import type { Dayjs } from 'dayjs';
   import type { SourceResponse } from '~/shared/types';
 
   const {
+    title,
     copyTitle = false,
-    minWidth = undefined,
-    maxWidth = undefined,
     source = undefined,
     url = undefined,
     editUrl = undefined,
-    width = undefined,
+    dateTime = undefined,
+    dateTimeFormat = undefined,
   } = defineProps<{
-    source?: SourceResponse;
     title: DrawerTitleName;
+    source?: SourceResponse;
     isLoading?: boolean;
     isError?: boolean;
-    minWidth?: number;
-    maxWidth?: number;
     url?: string;
     editUrl?: string;
-    width?: string;
     copyTitle?: boolean;
+    dateTime?: string | number | Date | Dayjs | null;
+    dateTimeFormat?: string;
+    notDetail?: boolean;
   }>();
 
-  const open = defineModel<boolean>('open', {
-    default: false,
-  });
+  defineEmits<{
+    (e: 'close'): void;
+  }>();
 
-  const contentWrapperStyle = computed(() => {
-    if (!minWidth && !maxWidth) {
-      return undefined;
-    }
+  const { greaterOrEqual } = useBreakpoints();
 
-    return {
-      minWidth: minWidth ? `${minWidth}px` : undefined,
-      maxWidth: maxWidth ? `${maxWidth}px` : undefined,
-    };
-  });
+  const isTabletOrGreater = greaterOrEqual(Breakpoint.MD);
+
+  const computedTitle = computed(() =>
+    typeof title === 'string' ? title : title?.rus,
+  );
+
+  const computedSubtitle = computed(() =>
+    typeof title === 'string' ? undefined : title?.eng,
+  );
 </script>
 
 <template>
-  <ADrawer
-    v-model:open="open"
-    :content-wrapper-style="contentWrapperStyle"
-    :closable="false"
-    :width="width || 'auto'"
-    destroy-on-close
-    mask-closable
+  <UDrawer
+    :handle="isTabletOrGreater && !notDetail"
+    :inset="isTabletOrGreater"
+    direction="right"
+    :class="notDetail ? 'w-xl' : 'w-2xl'"
+    @close="$emit('close')"
   >
-    <template #title>
-      <DrawerTitle
-        :copy-title="copyTitle"
-        :title="title"
-      />
-    </template>
-
-    <template #extra>
-      <AFlex
-        justify="flex-start"
-        align="flex-end"
-        gap="8"
-        vertical
+    <template #header>
+      <DrawerHeader
+        :title="computedTitle"
+        :subtitle="computedSubtitle"
+        :source="source"
+        :date-time="dateTime"
+        :date-time-format="dateTimeFormat"
+        :copy-text="copyTitle"
       >
-        <DrawerActions
-          :edit-url="editUrl"
-          :url
-          @close="open = false"
-        />
-
-        <Transition
-          name="fade"
-          mode="out-in"
-        >
-          <SourceTag
-            v-if="source"
-            placement="bottomRight"
-            :source
+        <template #actions>
+          <DrawerActions
+            :edit-url="editUrl"
+            :url
+            @close="$emit('close')"
           />
-        </Transition>
-      </AFlex>
+        </template>
+      </DrawerHeader>
     </template>
 
-    <template #default>
+    <template #body>
       <DrawerBody
         :is-loading="isLoading"
         :is-error="isError"
@@ -93,12 +82,5 @@
         <slot name="default" />
       </DrawerBody>
     </template>
-
-    <template
-      v-if="$slots.footer"
-      #footer
-    >
-      <slot name="footer" />
-    </template>
-  </ADrawer>
+  </UDrawer>
 </template>

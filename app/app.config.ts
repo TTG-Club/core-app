@@ -47,6 +47,33 @@ export default defineAppConfig({
         root: 'w-full',
       },
     },
+    popover: {
+      slots: {
+        content: [
+          'max-w-(--reka-popover-content-available-width) md:max-w-md h-auto',
+          'flex flex-col gap-2 py-2 px-4',
+          'text-xs text-highlighted',
+        ],
+      },
+    },
+    tooltip: {
+      slots: {
+        content: [
+          'max-w-(--reka-tooltip-content-available-width) md:max-w-md h-auto',
+          'flex flex-col gap-2',
+        ],
+        text: 'whitespace-normal',
+      },
+    },
+    drawer: {
+      slots: {
+        content: 'w-2xl overflow-hidden max-md:rounded-none',
+        container: 'gap-0 p-0',
+        header: 'bg-default sticky top-0 p-4',
+        body: 'px-4 pb-4',
+        overlay: 'bg-elevated/45',
+      },
+    },
     toast: {
       variants: {
         color: {

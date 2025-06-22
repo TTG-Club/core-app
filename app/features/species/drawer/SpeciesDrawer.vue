@@ -1,80 +1,39 @@
 <script setup lang="ts">
-  import { Breakpoint, BREAKPOINTS, useDrawer } from '~/shared/composables';
   import { SpeciesBody } from '~species/body';
   import { DrawerComponent } from '~ui/drawer';
 
   import type { SpeciesDetailResponse } from '~/shared/types';
 
-  const { inLineagesDrawer } = defineProps<{
-    inLineagesDrawer?: boolean;
+  const { species = undefined } = defineProps<{
+    species?: SpeciesDetailResponse;
+    isError?: boolean;
+    isLoading?: boolean;
   }>();
 
-  const { url, isOpened, close } = useDrawer(
-    inLineagesDrawer ? 'species-lineage-detail' : 'species-detail',
-  );
-
-  const {
-    data: species,
-    status,
-    execute,
-    clear,
-  } = await useAsyncData(
-    computed(() =>
-      inLineagesDrawer
-        ? 'species-lineage-detail-drawer'
-        : 'species-detail-drawer',
-    ),
-    () => {
-      if (!url.value) {
-        throw new Error('[SpeciesDrawer] url is not defined');
-      }
-
-      return $fetch<SpeciesDetailResponse>(`/api/v2/species/${url.value}`);
-    },
-    {
-      server: false,
-      immediate: false,
-    },
-  );
+  defineEmits<{
+    (e: 'close'): void;
+  }>();
 
   const urlForCopy = computed(() =>
-    isOpened.value ? `${getOrigin()}/species/${url.value}` : undefined,
+    species ? `${getOrigin()}/species/${species.url}` : undefined,
   );
 
-  const editUrl = computed(() => `/workshop/species/${url.value}`);
-
-  function handleUpdate(opened: boolean) {
-    if (opened) {
-      return;
-    }
-
-    close();
-  }
-
-  watch(isOpened, (value) => {
-    if (!value) {
-      return;
-    }
-
-    clear();
-    execute();
-  });
+  const editUrl = computed(() =>
+    species ? `/workshop/species/${species.url}` : undefined,
+  );
 </script>
 
 <template>
   <DrawerComponent
-    :open="isOpened"
-    :min-width="320"
-    :max-width="BREAKPOINTS[Breakpoint.MD]"
     :title="species?.name"
     :source="species?.source"
+    :date-time="species?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
-    :is-loading="status === 'pending'"
-    :is-error="status === 'error'"
-    width="100%"
+    :is-loading
+    :is-error
     copy-title
-    @update:open="handleUpdate"
+    @close="$emit('close')"
   >
     <SpeciesBody
       v-if="species"

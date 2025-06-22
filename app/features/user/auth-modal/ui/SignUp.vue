@@ -111,10 +111,7 @@
         <UPopover
           :content="{ side: 'top' }"
           :open="focused"
-          :ui="{
-            content:
-              'w-(--reka-popper-anchor-width) py-2 px-4 text-xs text-highlighted text-center flex flex-col gap-2',
-          }"
+          :ui="{ content: 'text-center' }"
         >
           <template #content>
             <p>Допустимые спец. символы:</p>

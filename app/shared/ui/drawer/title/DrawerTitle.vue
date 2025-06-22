@@ -29,12 +29,10 @@
 </script>
 
 <template>
-  <AFlex
+  <div
     v-if="title"
+    class="flex flex-col items-start gap-2"
     :class="$style.name"
-    align="flex-start"
-    gap="8"
-    vertical
   >
     <span
       v-if="typeof title === 'string'"
@@ -66,14 +64,11 @@
         {{ title.eng }}
       </span>
     </template>
-  </AFlex>
+  </div>
 
-  <ASkeleton
+  <USkeleton
     v-else
-    :paragraph="{ rows: 2 }"
-    :avatar="false"
-    :title="false"
-    active
+    class="h-8 w-1/3"
   />
 </template>
 

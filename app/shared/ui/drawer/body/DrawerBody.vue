@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { UiResult } from '~ui/result';
+
   defineProps<{
     isLoading?: boolean;
     isError?: boolean;
@@ -6,17 +8,16 @@
 </script>
 
 <template>
-  <ASkeleton
-    v-if="isLoading"
-    :paragraph="{ rows: 4 }"
-    :avatar="false"
-    :title="false"
-    active
-  />
+  <template v-if="isLoading">
+    <USkeleton
+      v-for="index in 3"
+      :key="index"
+      :class="`w-1/${index + 1} h-6`"
+    />
+  </template>
 
-  <AResult
+  <UiResult
     v-else-if="isError"
-    :style="{ minHeight: '100%' }"
     title="Неизвестная ошибка"
     status="error"
   />

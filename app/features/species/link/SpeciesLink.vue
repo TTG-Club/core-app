@@ -1,19 +1,12 @@
 <script setup lang="ts">
-  import { useDrawer } from '~/shared/composables';
+  import { LinkLineages, LinkPreview } from '~species/link/ui';
   import { GroupTag } from '~ui/source-tag';
 
   import type { SpeciesLinkResponse } from '~/shared/types';
 
-  const { inLineagesDrawer } = defineProps<{
+  const { species } = defineProps<{
     species: SpeciesLinkResponse;
-    inLineagesDrawer?: boolean;
   }>();
-
-  const { open: openLineages } = useDrawer('species-lineages');
-
-  const { open: openPreview } = useDrawer(
-    inLineagesDrawer ? 'species-lineage-detail' : 'species-detail',
-  );
 </script>
 
 <template>
@@ -49,20 +42,12 @@
       </div>
 
       <div :class="$style.actions">
-        <button
-          :class="$style.btn"
-          @click.left.exact.prevent.stop="openPreview(species.url)"
-        >
-          Предпросмотр
-        </button>
+        <LinkPreview :url="species.url" />
 
-        <button
+        <LinkLineages
           v-if="species.hasLineages"
-          :class="$style.btn"
-          @click.left.exact.prevent.stop="openLineages(species.url)"
-        >
-          Происхождения
-        </button>
+          :url="species.url"
+        />
       </div>
     </div>
   </NuxtLink>

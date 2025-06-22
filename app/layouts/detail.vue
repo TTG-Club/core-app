@@ -12,7 +12,7 @@
     dateTime = undefined,
     dateTimeFormat = 'LLL',
   } = defineProps<{
-    title: string;
+    title: string | undefined;
     copyText?: boolean;
     subtitle?: string;
     dateTime?: string | number | Date | Dayjs | null;
@@ -61,10 +61,11 @@
 
           <USkeleton
             v-else
-            class="w-1/4"
+            class="h-8 w-1/4"
           />
 
           <div
+            v-if="$slots.actions"
             class="actions flex"
             :class="{ 'navbar-hidden': navbarHidden }"
           >
@@ -72,7 +73,10 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-1">
+        <div
+          v-if="subtitle || formattedDateTime || source"
+          class="flex items-center gap-1"
+        >
           <span
             v-if="subtitle"
             class="truncate text-secondary"
