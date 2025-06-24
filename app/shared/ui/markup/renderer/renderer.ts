@@ -6,12 +6,12 @@ import {
   type RichNode,
   type EmptyNode,
   type RichNodes,
-  type FeatureLinkNode,
-  type FeatureNodes,
+  type SectionLinkNode,
+  type SectionNodes,
   TextMarker,
   EmptyMarker,
   RichMarker,
-  FeatureMarker,
+  SectionMarker,
 } from '../types';
 import {
   isEmptyNode,
@@ -21,8 +21,8 @@ import {
   isTextNode,
 } from '../utils';
 
-import { renderFeatureNode } from './renderFeatureLink';
 import { renderLinkNode } from './renderLink';
+import { renderSectionLinkNode } from './renderSectionLink';
 
 const TextMarkerTag: Record<TextMarker, string> = {
   [TextMarker.Bold]: 'b',
@@ -48,25 +48,22 @@ const RICH_NODE_RENDERERS: {
 };
 
 const FEATURE_NODE_RENDERERS: {
-  [K in FeatureMarker]: (
-    node: FeatureNodes[K],
+  [K in SectionMarker]: (
+    node: SectionNodes[K],
     renderChildren: () => VNode[],
   ) => VNode;
 } = {
-  [FeatureMarker.Spell]: renderFeatureNode,
-  [FeatureMarker.Background]: renderFeatureNode,
-  [FeatureMarker.Feat]: renderFeatureNode,
-  [FeatureMarker.Bestiary]: renderFeatureNode,
-  [FeatureMarker.MagicItem]: renderFeatureNode,
-  [FeatureMarker.Glossary]: renderFeatureNode,
+  [SectionMarker.Spell]: renderSectionLinkNode,
+  [SectionMarker.Background]: renderSectionLinkNode,
+  [SectionMarker.Feat]: renderSectionLinkNode,
+  [SectionMarker.Creature]: renderSectionLinkNode,
+  [SectionMarker.MagicItem]: renderSectionLinkNode,
+  [SectionMarker.Glossary]: renderSectionLinkNode,
 };
 
 // Функция для рендера контента — принимает массив узлов
 export function render(content: MarkerNode[]) {
-  return h(
-    'p',
-    content.map((node) => renderNode(node)),
-  );
+  return content.map((node) => renderNode(node));
 }
 
 function renderNode(node: MarkerNode): VNode {
@@ -139,7 +136,7 @@ function renderRichNode(node: RichNode): VNode {
   return renderFn(node, () => child);
 }
 
-function renderFeatureLinkNode(node: FeatureLinkNode): VNode {
+function renderFeatureLinkNode(node: SectionLinkNode): VNode {
   const child = node.content?.map((item) => renderNode(item));
 
   if (!child.length) {

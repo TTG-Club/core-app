@@ -4,30 +4,34 @@
 
   import type { CreatureDetailResponse } from '~bestiary/types';
 
-  const { creature = undefined } = defineProps<{
-    creature?: CreatureDetailResponse;
-    isError?: boolean;
-    isLoading?: boolean;
+  const { url } = defineProps<{
+    url: string;
   }>();
 
   defineEmits<{
     (e: 'close'): void;
   }>();
 
-  const urlForCopy = computed(() =>
-    creature ? `${getOrigin()}/bestiary/${creature.url}` : undefined,
+  const { data: detail, status } = await useAsyncData(
+    computed(() => `creature-${url}`),
+    () => $fetch<CreatureDetailResponse>(`/api/v2/bestiary/${url}`),
+    {
+      server: false,
+      immediate: true,
+    },
   );
 
-  const editUrl = computed(() =>
-    creature ? `/workshop/bestiary/${creature.url}` : undefined,
-  );
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+  const urlForCopy = computed(() => `${getOrigin()}/bestiary/${url}`);
+  const editUrl = computed(() => `/workshop/bestiary/${url}`);
 </script>
 
 <template>
   <UiDrawer
-    :title="creature?.name"
-    :source="creature?.source"
-    :date-time="creature?.updatedAt"
+    :title="detail?.name"
+    :source="detail?.source"
+    :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
     :is-loading
@@ -36,8 +40,8 @@
     @close="$emit('close')"
   >
     <CreatureBody
-      v-if="creature"
-      :creature
+      v-if="detail"
+      :creature="detail"
     />
   </UiDrawer>
 </template>

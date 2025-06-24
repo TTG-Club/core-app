@@ -11,7 +11,7 @@ import type {
   MarkerNode,
   TextNode,
   EmptyNode,
-  FeatureLinkNode,
+  SectionLinkNode,
   MarkerAttributes,
   SimpleTextNode,
   ParamValue,
@@ -20,7 +20,7 @@ import type {
   RichMarker,
   EmptyMarker,
   TextMarker,
-  FeatureMarker,
+  SectionMarker,
 } from '../types';
 
 // Разрешенные алиасы для маркеров
@@ -38,7 +38,7 @@ const MARKERS: { [key: string]: MarkerName } = {
   feat: Marker.Feat,
   background: Marker.Background,
   magicItem: Marker.MagicItem,
-  bestiary: Marker.Bestiary,
+  bestiary: Marker.Creature,
   glossary: Marker.Glossary,
   br: Marker.Break,
   break: Marker.Break,
@@ -161,10 +161,10 @@ function convertRichMarker(
 }
 
 function convertFeatureMarker(
-  marker: FeatureMarker,
+  marker: SectionMarker,
   textWithParams: string,
   depth: number,
-): FeatureLinkNode {
+): SectionLinkNode {
   const { text, params } = splitByPipeBase(textWithParams);
 
   if (!text) {

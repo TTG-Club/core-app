@@ -4,30 +4,34 @@
 
   import type { FeatDetailResponse } from '~/shared/types';
 
-  const { feat = undefined } = defineProps<{
-    feat?: FeatDetailResponse;
-    isError?: boolean;
-    isLoading?: boolean;
+  const { url } = defineProps<{
+    url: string;
   }>();
 
   defineEmits<{
     (e: 'close'): void;
   }>();
 
-  const urlForCopy = computed(() =>
-    feat ? `${getOrigin()}/feats/${feat.url}` : undefined,
+  const { data: detail, status } = await useAsyncData(
+    computed(() => `feat-${url}`),
+    () => $fetch<FeatDetailResponse>(`/api/v2/feats/${url}`),
+    {
+      server: false,
+      immediate: true,
+    },
   );
 
-  const editUrl = computed(() =>
-    feat ? `/workshop/feats/${feat.url}` : undefined,
-  );
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+  const urlForCopy = computed(() => `${getOrigin()}/feats/${url}`);
+  const editUrl = computed(() => `/workshop/feats/${url}`);
 </script>
 
 <template>
   <UiDrawer
-    :title="feat?.name"
-    :source="feat?.source"
-    :date-time="feat?.updatedAt"
+    :title="detail?.name"
+    :source="detail?.source"
+    :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
     :is-loading
@@ -36,8 +40,8 @@
     @close="$emit('close')"
   >
     <FeatBody
-      v-if="feat"
-      :feat
+      v-if="detail"
+      :feat="detail"
     />
   </UiDrawer>
 </template>

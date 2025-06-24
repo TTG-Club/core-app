@@ -4,30 +4,34 @@
 
   import type { SpeciesDetailResponse } from '~/shared/types';
 
-  const { species = undefined } = defineProps<{
-    species?: SpeciesDetailResponse;
-    isError?: boolean;
-    isLoading?: boolean;
+  const { url } = defineProps<{
+    url: string;
   }>();
 
   defineEmits<{
     (e: 'close'): void;
   }>();
 
-  const urlForCopy = computed(() =>
-    species ? `${getOrigin()}/species/${species.url}` : undefined,
+  const { data: detail, status } = await useAsyncData(
+    computed(() => `species-${url}`),
+    () => $fetch<SpeciesDetailResponse>(`/api/v2/species/${url}`),
+    {
+      server: false,
+      immediate: true,
+    },
   );
 
-  const editUrl = computed(() =>
-    species ? `/workshop/species/${species.url}` : undefined,
-  );
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+  const urlForCopy = computed(() => `${getOrigin()}/species/${url}`);
+  const editUrl = computed(() => `/workshop/species/${url}`);
 </script>
 
 <template>
   <UiDrawer
-    :title="species?.name"
-    :source="species?.source"
-    :date-time="species?.updatedAt"
+    :title="detail?.name"
+    :source="detail?.source"
+    :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
     :is-loading
@@ -36,8 +40,8 @@
     @close="$emit('close')"
   >
     <SpeciesBody
-      v-if="species"
-      :species
+      v-if="detail"
+      :species="detail"
     />
   </UiDrawer>
 </template>

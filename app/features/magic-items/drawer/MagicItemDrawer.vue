@@ -4,40 +4,44 @@
 
   import type { MagicItemDetailResponse } from '~magic-items/types';
 
-  const { magicItem = undefined } = defineProps<{
-    magicItem?: MagicItemDetailResponse;
-    isError?: boolean;
-    isLoading?: boolean;
+  const { url } = defineProps<{
+    url: string;
   }>();
 
   defineEmits<{
     (e: 'close'): void;
   }>();
 
-  const urlForCopy = computed(() =>
-    magicItem ? `${getOrigin()}/magic-item/${magicItem.url}` : undefined,
+  const { data: detail, status } = await useAsyncData(
+    computed(() => `magic-item-${url}`),
+    () => $fetch<MagicItemDetailResponse>(`/api/v2/magic-item/${url}`),
+    {
+      server: false,
+      immediate: true,
+    },
   );
 
-  const editUrl = computed(() =>
-    magicItem ? `/workshop/magic-item/${magicItem.url}` : undefined,
-  );
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+  const urlForCopy = computed(() => `${getOrigin()}/magic-item/${url}`);
+  const editUrl = computed(() => `/workshop/magic-item/${url}`);
 </script>
 
 <template>
   <UiDrawer
-    :date-time="magicItem?.updatedAt"
-    :source="magicItem?.source"
-    :title="magicItem?.name"
-    :edit-url="editUrl"
+    :title="detail?.name"
+    :source="detail?.source"
+    :date-time="detail?.updatedAt"
     :url="urlForCopy"
+    :edit-url="editUrl"
     :is-loading
     :is-error
     copy-title
     @close="$emit('close')"
   >
     <MagicItemBody
-      v-if="magicItem"
-      :magic-item="magicItem"
+      v-if="detail"
+      :magic-item="detail"
     />
   </UiDrawer>
 </template>

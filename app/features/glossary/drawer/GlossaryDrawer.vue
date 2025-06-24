@@ -4,30 +4,34 @@
 
   import type { GlossaryDetailResponse } from '~/shared/types';
 
-  const { glossary = undefined } = defineProps<{
-    glossary?: GlossaryDetailResponse;
-    isError?: boolean;
-    isLoading?: boolean;
+  const { url } = defineProps<{
+    url: string;
   }>();
 
   defineEmits<{
     (e: 'close'): void;
   }>();
 
-  const urlForCopy = computed(() =>
-    glossary ? `${getOrigin()}/glossary/${glossary.url}` : undefined,
+  const { data: detail, status } = await useAsyncData(
+    computed(() => `glossary-${url}`),
+    () => $fetch<GlossaryDetailResponse>(`/api/v2/glossary/${url}`),
+    {
+      server: false,
+      immediate: true,
+    },
   );
 
-  const editUrl = computed(() =>
-    glossary ? `/workshop/glossary/${glossary.url}` : undefined,
-  );
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+  const urlForCopy = computed(() => `${getOrigin()}/glossary/${url}`);
+  const editUrl = computed(() => `/workshop/glossary/${url}`);
 </script>
 
 <template>
   <UiDrawer
-    :title="glossary?.name"
-    :source="glossary?.source"
-    :date-time="glossary?.updatedAt"
+    :title="detail?.name"
+    :source="detail?.source"
+    :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
     :is-loading
@@ -36,8 +40,8 @@
     @close="$emit('close')"
   >
     <GlossaryBody
-      v-if="glossary"
-      :glossary
+      v-if="detail"
+      :glossary="detail"
     />
   </UiDrawer>
 </template>

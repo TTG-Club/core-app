@@ -2,10 +2,7 @@
   import { BackgroundDrawer } from '~backgrounds/drawer';
   import { SmallLink } from '~ui/link';
 
-  import type {
-    BackgroundDetailResponse,
-    BackgroundLinkResponse,
-  } from '~/shared/types';
+  import type { BackgroundLinkResponse } from '~/shared/types';
 
   const { background } = defineProps<{
     background: BackgroundLinkResponse;
@@ -13,39 +10,15 @@
 
   const overlay = useOverlay();
 
-  const {
-    data: detail,
-    status,
-    execute,
-  } = await useAsyncData(
-    computed(() => `background-${background.url}`),
-    () =>
-      $fetch<BackgroundDetailResponse>(`/api/v2/backgrounds/${background.url}`),
-    {
-      server: false,
-      immediate: false,
-    },
-  );
-
   const drawer = overlay.create(BackgroundDrawer, {
-    props: computed(() => ({
-      spell: detail.value,
-      isError: status.value === 'error',
-      isLoading: status.value === 'pending',
+    props: {
+      url: background.url,
       onClose: () => drawer.close(),
-    })),
+    },
     destroyOnClose: true,
   });
 
   const isOpened = computed(() => overlay.isOpen(drawer.id));
-
-  async function open() {
-    if (status.value !== 'success') {
-      await execute();
-    }
-
-    drawer.open();
-  }
 </script>
 
 <template>
@@ -54,7 +27,7 @@
     :title="`${background.name.rus} [${background.name.eng}]`"
     :group="background.source.group"
     :is-opened
-    @open-drawer="open"
+    @open-drawer="drawer.open()"
   >
     <template #default>
       {{ background.name.rus }}

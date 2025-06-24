@@ -4,15 +4,27 @@
 
   import type { SpeciesLinkResponse } from '~/shared/types';
 
-  const { specieses = [] } = defineProps<{
-    specieses?: SpeciesLinkResponse[];
-    isError?: boolean;
-    isLoading?: boolean;
+  const { url } = defineProps<{
+    url: string;
   }>();
 
   defineEmits<{
     (e: 'close'): void;
   }>();
+
+  const { data, status } = await useAsyncData(
+    computed(() => `species-${url}-lineages`),
+    () =>
+      $fetch<Array<SpeciesLinkResponse>>(
+        `/api/v2/species/${url}/lineages/search`,
+      ),
+    {
+      server: false,
+    },
+  );
+
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
 </script>
 
 <template>
@@ -24,7 +36,7 @@
     <div :class="$style.container">
       <div :class="$style.grid">
         <SpeciesLink
-          v-for="link in specieses"
+          v-for="link in data"
           :key="link.url"
           :species="link"
         >

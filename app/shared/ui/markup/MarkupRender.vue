@@ -1,40 +1,19 @@
 <script setup lang="ts">
-  import { parse } from './parser';
-  import { render } from './renderer';
+  import { RowRender } from './ui';
 
   const { entries } = defineProps<{
     entries: Array<string>;
   }>();
-
-  const rendered = ref(getRendered());
-
-  function getRendered() {
-    try {
-      return entries.map((entry) => render(parse(entry)));
-    } catch (error) {
-      console.error(error);
-
-      return [];
-    }
-  }
 </script>
 
 <template>
-  <div :class="$style.markup">
-    <component
-      :is="entry"
-      v-for="(entry, index) in rendered"
+  <ClientOnly>
+    <p
+      v-for="(entry, index) in entries"
       :key="index"
-    />
-  </div>
+      class="mb-1"
+    >
+      <RowRender :entry />
+    </p>
+  </ClientOnly>
 </template>
-
-<style module lang="scss">
-  .markup {
-    :global {
-      p {
-        margin-bottom: 0.5em;
-      }
-    }
-  }
-</style>

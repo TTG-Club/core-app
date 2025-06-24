@@ -4,30 +4,34 @@
 
   import type { BackgroundDetailResponse } from '~/shared/types';
 
-  const { background = undefined } = defineProps<{
-    background?: BackgroundDetailResponse;
-    isError?: boolean;
-    isLoading?: boolean;
+  const { url } = defineProps<{
+    url: string;
   }>();
 
   defineEmits<{
     (e: 'close'): void;
   }>();
 
-  const urlForCopy = computed(() =>
-    background ? `${getOrigin()}/backgrounds/${background.url}` : undefined,
+  const { data: detail, status } = await useAsyncData(
+    computed(() => `background-${url}`),
+    () => $fetch<BackgroundDetailResponse>(`/api/v2/backgrounds/${url}`),
+    {
+      server: false,
+      immediate: true,
+    },
   );
 
-  const editUrl = computed(() =>
-    background ? `/workshop/backgrounds/${background.url}` : undefined,
-  );
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+  const urlForCopy = computed(() => `${getOrigin()}/backgrounds/${url}`);
+  const editUrl = computed(() => `/workshop/backgrounds/${url}`);
 </script>
 
 <template>
   <UiDrawer
-    :title="background?.name"
-    :source="background?.source"
-    :date-time="background?.updatedAt"
+    :title="detail?.name"
+    :source="detail?.source"
+    :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
     :is-loading
@@ -36,8 +40,8 @@
     @close="$emit('close')"
   >
     <BackgroundBody
-      v-if="background"
-      :background
+      v-if="detail"
+      :background="detail"
     />
   </UiDrawer>
 </template>

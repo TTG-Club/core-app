@@ -4,30 +4,34 @@
 
   import type { SpellDetailResponse } from '~/shared/types';
 
-  const { spell = undefined } = defineProps<{
-    spell?: SpellDetailResponse;
-    isError?: boolean;
-    isLoading?: boolean;
+  const { url } = defineProps<{
+    url: string;
   }>();
 
   defineEmits<{
     (e: 'close'): void;
   }>();
 
-  const urlForCopy = computed(() =>
-    spell ? `${getOrigin()}/spells/${spell.url}` : undefined,
+  const { data: detail, status } = await useAsyncData(
+    computed(() => `spell-${url}`),
+    () => $fetch<SpellDetailResponse>(`/api/v2/spells/${url}`),
+    {
+      server: false,
+      immediate: true,
+    },
   );
 
-  const editUrl = computed(() =>
-    spell ? `/workshop/spells/${spell.url}` : undefined,
-  );
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+  const urlForCopy = computed(() => `${getOrigin()}/spells/${url}`);
+  const editUrl = computed(() => `/workshop/spells/${url}`);
 </script>
 
 <template>
   <UiDrawer
-    :title="spell?.name"
-    :source="spell?.source"
-    :date-time="spell?.updatedAt"
+    :title="detail?.name"
+    :source="detail?.source"
+    :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
     :is-loading
@@ -36,8 +40,8 @@
     @close="$emit('close')"
   >
     <SpellBody
-      v-if="spell"
-      :spell
+      v-if="detail"
+      :spell="detail"
     />
   </UiDrawer>
 </template>
