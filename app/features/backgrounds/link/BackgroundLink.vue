@@ -1,14 +1,51 @@
 <script setup lang="ts">
-  import { useDrawer } from '~/shared/composables';
+  import { BackgroundDrawer } from '~backgrounds/drawer';
   import { SmallLink } from '~ui/link';
 
-  import type { BackgroundLinkResponse } from '~/shared/types';
+  import type {
+    BackgroundDetailResponse,
+    BackgroundLinkResponse,
+  } from '~/shared/types';
 
   const { background } = defineProps<{
     background: BackgroundLinkResponse;
   }>();
 
-  const { open } = useDrawer('background-detail');
+  const overlay = useOverlay();
+
+  const {
+    data: detail,
+    status,
+    execute,
+  } = await useAsyncData(
+    computed(() => `background-${background.url}`),
+    () =>
+      $fetch<BackgroundDetailResponse>(`/api/v2/backgrounds/${background.url}`),
+    {
+      server: false,
+      immediate: false,
+    },
+  );
+
+  const drawer = overlay.create(BackgroundDrawer, {
+    props: computed(() => ({
+      spell: detail.value,
+      isError: status.value === 'error',
+      isLoading: status.value === 'pending',
+      onClose: () => drawer.close(),
+    })),
+    destroyOnClose: true,
+  });
+
+  const isOpened = computed(() => overlay.isOpen(drawer.id));
+
+  async function open() {
+    if (status.value !== 'success') {
+      await execute();
+    }
+
+    drawer.open();
+  }
 </script>
 
 <template>
@@ -16,7 +53,8 @@
     :to="{ name: 'backgrounds-url', params: { url: background.url } }"
     :title="`${background.name.rus} [${background.name.eng}]`"
     :group="background.source.group"
-    @open-drawer="open(background.url)"
+    :is-opened
+    @open-drawer="open"
   >
     <template #default>
       {{ background.name.rus }}
