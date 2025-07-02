@@ -186,7 +186,7 @@
           </ACollapse>
         </template>
 
-        <template v-if="creature.legendary.actions?.length">
+        <template v-if="creature.legendary">
           <ACollapse
             v-model:active-key="expanded"
             :bordered="false"
@@ -210,21 +210,22 @@
                 <p>
                   <strong>Использования легендарных действий:</strong>
 
-                  {{ creature.legendary.count }}
-                  <span v-if="creature.legendary?.description?.length">{{
-                    creature.legendary.description
-                  }}</span>
+                  <span> &nbsp;{{ creature.legendary.count }} </span>
+
+                  <span v-if="creature.legendary?.description?.length">
+                    {{ creature.legendary.description }}
+                  </span>
 
                   <span v-else>
                     . Сразу после хода другого существа
                     {{ creature.name.rus }} может потратить 1 использование,
                     чтобы выполнить одно из следующих действий.
                     {{ creature.name.rus }} восстанавливает все потраченные
-                    использования в начале своего хода.</span
-                  >
+                    использования в начале своего хода.
+                  </span>
                 </p>
 
-                <ul v-if="creature.legendary.actions?.length">
+                <ul>
                   <li
                     v-for="action in creature.legendary.actions"
                     :key="action.name.eng"
@@ -241,7 +242,7 @@
           </ACollapse>
         </template>
 
-        <template v-if="creature.section">
+        <template v-if="creature.lair">
           <ACollapse
             v-model:active-key="expanded"
             :bordered="false"
@@ -259,23 +260,23 @@
                   content="Эффекты местности"
                 >
                 </ATypographyTitle>
-              </template>
 
-              <template #default>
-                <p v-if="creature.section?.habitats">
-                  <strong>Среда обитания: </strong>
-                  {{ creature.section.habitats }}
-                </p>
+                <MarkupRender :entries="creature.lair.description" />
 
-                <p v-if="creature.section?.treasures">
-                  <strong>Сокровища:</strong> {{ creature.section.treasures }}
-                </p>
+                <template
+                  v-for="effect in creature.lair.effects"
+                  :key="effect.name.eng"
+                >
+                  <strong>{{ effect.name.rus }}. </strong>
+
+                  <MarkupRender :entries="effect.description" />
+                </template>
               </template>
             </ACollapsePanel>
           </ACollapse>
         </template>
 
-        <template v-if="creature.description?.length">
+        <template v-if="creature.description || creature.section">
           <ACollapse
             v-model:active-key="expanded"
             :bordered="false"
@@ -295,6 +296,16 @@
               </template>
 
               <template #default>
+                <p v-if="creature.section?.habitats">
+                  <strong>Среда обитания: </strong>
+
+                  <span>{{ creature.section.habitats }}</span>
+                </p>
+
+                <p v-if="creature.section?.treasures">
+                  <strong>Сокровища:</strong> {{ creature.section.treasures }}
+                </p>
+
                 <p>
                   <template
                     v-if="creature?.section?.name.eng !== creature.name.eng"

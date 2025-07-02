@@ -17,6 +17,8 @@
   } from './ui';
 
   import { ValidationBase, ValidationDictionaries } from '~/shared/utils';
+  import CreatureLairEffect from '~bestiary/editor/ui/CreatureLairEffect.vue';
+  import CreatureLegendary from '~bestiary/editor/ui/CreatureLegendary.vue';
   import { EditorBaseInfo } from '~ui/editor';
   import { SelectAlignment } from '~ui/select';
   import { UploadImage } from '~ui/upload';
@@ -192,18 +194,9 @@
       name="reactions"
     />
 
-    <CreatureAction
-      v-model="form.legendary.actions"
-      v-model:description="form.legendary.description"
-      v-model:legendary-count="form.legendary.count"
-      v-model:legendary-lair-count="form.legendary.inLair"
-      name="legendaryActions"
-    />
+    <CreatureLegendary v-model="form.legendary" />
 
-    <CreatureAction
-      v-model="form.lairEffects"
-      name="lairEffects"
-    />
+    <CreatureLairEffect v-model="form.lair" />
   </AForm>
 
   <ADivider orientation="left">

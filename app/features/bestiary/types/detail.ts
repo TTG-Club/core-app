@@ -34,8 +34,10 @@ export interface CreatureDetailResponse {
     count: string;
     description: string;
   };
-  lair: string;
-  lairEffects: Array<CreatureActionResponse>;
+  lair: {
+    description: Array<string>;
+    effects: Array<CreatureActionResponse>;
+  };
   section: CreatureSection;
 }
 
