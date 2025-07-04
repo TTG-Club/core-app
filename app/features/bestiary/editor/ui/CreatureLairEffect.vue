@@ -19,7 +19,7 @@
       name: { rus: '', eng: '' },
       description: '',
       attackType: '',
-      sawingThrows: [],
+      savingThrows: [],
       damageTypes: [],
       recharge: undefined,
       restrictionOfUse: undefined,
@@ -107,8 +107,9 @@
                 danger
                 block
                 @click.left.exact.prevent="removeAction(index)"
-                >Удалить</AButton
               >
+                Удалить
+              </AButton>
             </ACol>
           </ARow>
         </AFormItem>

@@ -171,7 +171,7 @@ export interface CreateAction {
   };
   description: string;
   attackType: string;
-  sawingThrows: Array<SavingThrow>;
+  savingThrows: Array<SavingThrow>;
   damageTypes: Array<string>;
   recharge: string | undefined;
   restrictionOfUse: string | undefined;

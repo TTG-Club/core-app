@@ -35,7 +35,7 @@
       },
       description: '',
       attackType: '',
-      sawingThrows: [],
+      savingThrows: [],
       damageTypes: [],
       recharge: undefined,
       restrictionOfUse: undefined,

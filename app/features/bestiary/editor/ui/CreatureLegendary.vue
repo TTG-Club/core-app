@@ -29,7 +29,7 @@
       name: { rus: '', eng: '' },
       description: '',
       attackType: '',
-      sawingThrows: [],
+      savingThrows: [],
       damageTypes: [],
       recharge: undefined,
       restrictionOfUse: undefined,
@@ -136,8 +136,9 @@
               <AButton
                 block
                 @click.left.exact.prevent="addAction(index + 1)"
-                >Добавить</AButton
               >
+                Добавить
+              </AButton>
             </ACol>
 
             <ACol :span="12">
@@ -145,8 +146,9 @@
                 danger
                 block
                 @click.left.exact.prevent="removeAction(index)"
-                >Удалить</AButton
               >
+                Удалить
+              </AButton>
             </ACol>
           </ARow>
         </AFormItem>
