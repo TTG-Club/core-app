@@ -44,9 +44,9 @@ export const MENU_SECTIONS: Array<{
     icon: 'menu/filled/inventory',
     items: [
       {
-        href: '/',
+        href: '/items',
         label: 'Снаряжение',
-        disabled: true,
+        disabled: false,
       },
       {
         href: '/magic-items',
