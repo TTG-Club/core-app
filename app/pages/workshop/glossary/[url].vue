@@ -19,7 +19,7 @@
   const { status } = await useAsyncData(
     `glossary-${route.params.url}-raw`,
     () =>
-      $fetch<GlossaryCreate>(`/api/v2/glossary/${route.params.url}`, {
+      $fetch<GlossaryCreate>(`/api/v2/glossary/${route.params.url}/raw`, {
         onResponse: (ctx) => {
           const initialState = getInitialState();
 
