@@ -8,21 +8,21 @@
   import type { MagicItemLinkResponse } from '~magic-items/types';
 
   useSeoMeta({
-    title: 'Магические предметы [Magic Items]',
-    description: 'Магические предметы по D&D 2024 редакции',
+    title: 'Предметы [Items]',
+    description: 'Предметы по D&D 2024 редакции',
   });
 
   const search = ref<string>('');
 
   const {
-    data: magicItems,
+    data: items,
     error,
     status,
     refresh,
   } = await useAsyncData(
-    'magicItems',
+    'items',
     () =>
-      $fetch<Array<MagicItemLinkResponse>>('/api/v2/magic-item/search', {
+      $fetch<Array<MagicItemLinkResponse>>('/api/v2/item/search', {
         method: 'POST',
         params: {
           query:
@@ -39,7 +39,7 @@
 <template>
   <PageContainer fixed-header>
     <template #header>
-      <PageHeader title="Магические предметы" />
+      <PageHeader title="Предметы" />
     </template>
 
     <template #controls>
@@ -66,18 +66,18 @@
         </PageGrid>
 
         <PageGrid
-          v-else-if="status === 'success' && magicItems?.length"
+          v-else-if="status === 'success' && items?.length"
           :columns="3"
         >
           <MagicItemLink
-            v-for="magicItem in magicItems"
+            v-for="magicItem in items"
             :key="magicItem.url"
             :magic-item="magicItem"
           />
         </PageGrid>
 
         <AResult
-          v-else-if="status === 'success' && !magicItems?.length"
+          v-else-if="status === 'success' && !items?.length"
           title="Ничего не нашлось"
           sub-title="По вашему запросу ничего не нашлось. Попробуйте изменить фильтр или строку поиска"
         >
