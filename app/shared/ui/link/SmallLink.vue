@@ -57,7 +57,7 @@
         </div>
 
         <div
-          class="flex flex-[1_1_auto] flex-col justify-center gap-1 overflow-hidden"
+          class="flex flex-auto flex-col justify-center gap-1 overflow-hidden"
         >
           <div class="flex items-center justify-between gap-1">
             <span

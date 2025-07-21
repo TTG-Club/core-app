@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import { Form } from 'ant-design-vue';
-
   import { getSlug } from '~~/shared/utils';
 
   import type { SelectOptionWithShortName } from '~/shared/types';
@@ -9,15 +7,13 @@
     defineProps<{
       engName: string;
       sourceUrl?: string | undefined;
-      addonBefore?: string;
+      leading?: string;
     }>(),
     {
       sourceUrl: '',
-      addonBefore: '',
+      leading: '',
     },
   );
-
-  const context = Form.useInjectFormItemContext();
 
   const { data: books } =
     useNuxtData<Array<SelectOptionWithShortName>>('books');
@@ -40,8 +36,6 @@
 
   function handleUrlChange(url: string | undefined) {
     model.value = url ? getSlug(url) : undefined;
-
-    context.onFieldChange();
   }
 
   function setUrlWithAcronym() {
@@ -53,6 +47,8 @@
 
     handleUrlChange(`${props.engName}${sourcePostfix}`);
   }
+
+  watch(model, handleUrlChange);
 
   watch(acronym, setUrlWithAcronym, {
     immediate: true,
@@ -67,10 +63,15 @@
 </script>
 
 <template>
-  <AInput
-    :value="model"
-    :addon-before="addonBefore || ''"
+  <UInput
+    :model-value="model"
     placeholder="Сгенерированный URL"
-    @update:value="handleUrlChange"
-  />
+  >
+    <template
+      v-if="leading"
+      #leading
+    >
+      {{ leading }}
+    </template>
+  </UInput>
 </template>

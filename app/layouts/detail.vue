@@ -54,7 +54,7 @@
             v-if="title"
             class="truncate text-2xl text-(--color-text-title)"
             :class="{ 'cursor-pointer': copyText }"
-            @click="handleCopy(title)"
+            @click.left.exact.prevent="handleCopy(title)"
           >
             {{ title }}
           </h2>
@@ -81,7 +81,7 @@
             v-if="subtitle"
             class="truncate text-secondary"
             :class="{ 'cursor-pointer': copyText }"
-            @click="handleCopy(subtitle)"
+            @click.left.exact.prevent="handleCopy(subtitle)"
           >
             {{ subtitle }}
           </span>

@@ -4,10 +4,9 @@
   import { NuxtLink } from '#components';
   import { CreatureEditor } from '~bestiary/editor';
   import { CreaturePreview } from '~bestiary/preview';
-  import { type CreatureCreate, getInitialState } from '~bestiary/types';
-  import { SvgIcon } from '~ui/icon';
-  import { PageContainer, PageHeader } from '~ui/page';
-  import { useToast } from '~ui/toast';
+  import { getInitialState } from '~bestiary/types';
+  import type { CreatureCreate } from '~bestiary/types';
+  import { UiResult } from '~ui/result';
 
   const route = useRoute();
   const $toast = useToast();
@@ -42,7 +41,8 @@
 
   async function submit() {
     if (!checkIsEdited()) {
-      $toast.error({
+      $toast.add({
+        color: 'error',
         title: 'Ошибка сохранения магического предмета',
         description: 'Измени хотя бы одно поле, чтобы сохранить',
       });
@@ -51,7 +51,8 @@
     }
 
     if (!editor.value?.validate) {
-      $toast.error({
+      $toast.add({
+        color: 'error',
         title: 'Ошибка сохранения магического предмета',
         description: () =>
           h('span', null, [
@@ -85,7 +86,8 @@
         onResponseError: (error) => {
           isCreating.value = false;
 
-          $toast.error({
+          $toast.add({
+            color: 'error',
             title: 'Ошибка сохранения существа',
             description: error.response._data.message,
           });
@@ -94,7 +96,8 @@
 
       // isCreated.value = true; // TODO: вернуть в будущем
 
-      $toast.success({
+      $toast.add({
+        color: 'success',
         title: 'Существо успешно сохранено',
         description: getLink,
         // onClose: () => navigateTo({ name: 'workshop-backgrounds' }), // TODO: вернуть в будущем
@@ -131,53 +134,46 @@
 </script>
 
 <template>
-  <PageContainer fixed-header>
-    <template #header>
-      <PageHeader title="Редактирование существа">
-        <template #actions>
-          <template v-if="!rawIncorrect">
-            <AButton
-              :disabled="preview"
-              @click.left.exact.prevent="preview = true"
-            >
-              <template #default>Предпросмотр </template>
-            </AButton>
+  <NuxtLayout
+    title="Редактирование существа"
+    name="detail"
+  >
+    <template #actions>
+      <template v-if="!rawIncorrect">
+        <UButton
+          :disabled="preview"
+          variant="ghost"
+          color="neutral"
+          @click.left.exact.prevent="preview = true"
+        >
+          Предпросмотр
+        </UButton>
 
-            <AButton
-              type="primary"
-              :disabled="isCreated"
-              :loading="editor?.isCreating"
-              @click.left.exact.prevent="submit"
-            >
-              <template #icon>
-                <SvgIcon icon="check" />
-              </template>
+        <UButton
+          :disabled="isCreated"
+          :loading="editor?.isCreating"
+          icon="i-ttg-check"
+          variant="ghost"
+          color="neutral"
+          @click.left.exact.prevent="submit"
+        >
+          Сохранить
+        </UButton>
+      </template>
 
-              <template #default> Сохранить </template>
-            </AButton>
-          </template>
-
-          <ATooltip
-            title="Закрыть"
-            :mouse-enter-delay="0.7"
-            destroy-tooltip-on-hide
-          >
-            <AButton
-              type="text"
-              @click.left.exact.prevent="navigateTo('/bestiary')"
-            >
-              <template #icon>
-                <SvgIcon icon="x" />
-              </template>
-            </AButton>
-          </ATooltip>
-        </template>
-      </PageHeader>
+      <UTooltip text="Закрыть">
+        <UButton
+          icon="i-ttg-x"
+          variant="ghost"
+          color="neutral"
+          @click.left.exact.prevent="navigateTo('/bestiary')"
+        />
+      </UTooltip>
     </template>
 
     <template #default>
       <ClientOnly>
-        <AResult
+        <UiResult
           v-if="rawIncorrect"
           status="error"
           title="Некорректные данные"
@@ -198,5 +194,5 @@
         </template>
       </ClientOnly>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

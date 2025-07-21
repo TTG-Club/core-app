@@ -1,10 +1,10 @@
 import { toValue } from 'vue';
 
-import { THEME_VARIANTS } from '~/shared/consts';
 import { ONE_DAY_IN_SECONDS, THEME_STORE_KEY } from '~~/shared/consts';
+import { ThemeName } from '~/shared/consts';
 
 import type { MaybeRefOrGetter } from 'vue';
-import type { ThemeName, ColorMode } from '~/shared/consts';
+import type { ColorMode } from '~/shared/consts';
 
 export function useTheme() {
   const {
@@ -23,7 +23,7 @@ export function useTheme() {
   function change(name: MaybeRefOrGetter<ThemeName>) {
     const newMode = toValue(name);
 
-    if (!(newMode in THEME_VARIANTS)) {
+    if (!(newMode in Object.values(ThemeName))) {
       console.warn(`Неизвестная тема: ${newMode}.`);
 
       return;

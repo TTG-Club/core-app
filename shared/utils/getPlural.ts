@@ -1,9 +1,9 @@
 /**
  * Получение правильного окончания слова в зависимости от числа (пример: 1 день, 2 дня, 5 дней).
  *
- * @param {number} number - Число перед словом с окончанием.
- * @param {[string, string, string]} strings - Варианты окончаний слов (для чисел 1, 2, 5).
- * @returns {string}
+ * @param {number} number Число перед словом с окончанием.
+ * @param {[string, string, string]} strings Варианты окончаний слов (для чисел 1, 2, 5).
+ * @returns {string} Правильный вариант слова.
  */
 export function getPlural(
   number: number,

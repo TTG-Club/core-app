@@ -2,8 +2,6 @@
   import { SignIn, SignUp } from './ui';
 
   import { UButton } from '#components';
-  import { SvgIcon } from '~ui/icon';
-  import { useToast } from '~ui/toast';
 
   const enum FormType {
     SIGN_IN = 'signIn',
@@ -37,28 +35,24 @@
 
     emailVerified.value = null;
 
-    const { close: closeToast } = $toast.success({
+    const { id: toastId } = $toast.add({
+      color: 'success',
       title: 'E-Mail подтвержден!',
-      description: () =>
-        h('div', { class: 'flex justify-between items-center gap-12' }, [
-          'Теперь вы можете авторизоваться',
-          h(
-            UButton,
-            {
-              variant: 'ghost',
-              onClick: withModifiers(() => {
-                opened.value = true;
-                closeToast();
-              }, ['left', 'exact', 'prevent']),
-            },
-            {
-              icon: () =>
-                h(SvgIcon, {
-                  icon: 'profile/base/move',
-                }),
-            },
-          ),
-        ]),
+      description: 'Теперь вы можете авторизоваться',
+      actions: [
+        {
+          icon: 'i-fluent-person-16-regular',
+          label: 'Авторизоваться',
+          variant: 'ghost',
+          onClick: (e) => {
+            e?.stopPropagation();
+
+            opened.value = true;
+
+            $toast.remove(toastId);
+          },
+        },
+      ],
     });
   };
 

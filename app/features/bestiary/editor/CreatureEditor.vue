@@ -16,12 +16,10 @@
     CreatureInitiative,
   } from './ui';
 
-  import { ValidationBase, ValidationDictionaries } from '~/shared/utils';
   import { EditorBaseInfo } from '~ui/editor';
   import { SelectAlignment } from '~ui/select';
   import { UploadImage } from '~ui/upload';
 
-  import type { FormInstance } from 'ant-design-vue';
   import type { CreatureCreate } from '~bestiary/types';
 
   const { isCreating } = defineProps<{
@@ -30,19 +28,23 @@
 
   const form = defineModel<CreatureCreate>({ required: true });
 
-  const formRef = useTemplateRef<FormInstance>('formRef');
+  const formRef = useTemplateRef('formRef');
+
+  const validate = () => {
+    return formRef.value?.validate();
+  };
 
   defineExpose({
-    validate: computed(() => formRef.value?.validate),
+    validate,
   });
 </script>
 
 <template>
-  <AForm
+  <UForm
     ref="formRef"
-    layout="vertical"
-    :model="form"
+    :state="form"
     :disabled="isCreating"
+    class="grid grid-cols-24 gap-4"
   >
     <CreatureSection v-model="form.section" />
 
@@ -51,95 +53,77 @@
       section="bestiary"
     />
 
-    <ARow :gutter="16">
-      <ACol :span="24">
-        <AFormItem
-          label="Описание"
-          :name="['description']"
-          :rules="[ValidationBase.ruleString(false)]"
-        >
-          <ATextarea
-            v-model:value="form.description"
-            :rows="4"
-            placeholder="Введи описание"
-            allow-clear
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Заголовок"
-        strong
+    <UFormField
+      class="col-span-24"
+      label="Описание"
+      name="description"
+    >
+      <UTextarea
+        v-model="form.description"
+        :rows="4"
+        placeholder="Введи описание"
       />
-    </ADivider>
+    </UFormField>
 
-    <ARow :gutter="16">
-      <CreatureType v-model="form.types" />
+    <USeparator>
+      <span class="font-bold text-secondary">Заголовок</span>
+    </USeparator>
 
-      <ACol :span="8">
-        <AFormItem
-          label="Мировоззрение существа"
-          :name="['alignment']"
-          :rules="[ValidationDictionaries.ruleAlignments()]"
-        >
-          <SelectAlignment v-model="form.alignment" />
-        </AFormItem>
-      </ACol>
-    </ARow>
+    <CreatureType v-model="form.types" />
+
+    <UFormField
+      class="col-span-6"
+      label="Мировоззрение существа"
+      name="alignment"
+    >
+      <SelectAlignment v-model="form.alignment" />
+    </UFormField>
 
     <CreatureSize v-model="form.sizes" />
 
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Статблок"
-        strong
+    <USeparator>
+      <span class="font-bold text-secondary">Статблок</span>
+    </USeparator>
+
+    <UFormField
+      class="col-span-4"
+      label="КД"
+      help="Класс доспеха"
+      name="ac.value"
+    >
+      <UInput
+        v-model="form.ac.value"
+        type="number"
+        placeholder="Введи КД"
+        min="0"
+        step="1"
       />
-    </ADivider>
+    </UFormField>
 
-    <ARow :gutter="16">
-      <ACol :span="8">
-        <AFormItem
-          label="КД"
-          tooltip="Класс доспеха"
-          :name="['ac', 'value']"
-        >
-          <AInputNumber
-            v-model:value="form.ac.value"
-            :precision="0"
-            placeholder="Введи КД"
-            min="0"
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="8">
-        <AFormItem
-          label="Текст к КД"
-          :name="['ac', 'text']"
-        >
-          <AInput
-            v-model:value="form.ac.text"
-            placeholder="Введи текст"
-          />
-        </AFormItem>
-      </ACol>
-
-      <CreatureInitiative
-        v-model="form.initiative"
-        :dex="form.abilities.dex"
-        :proficiency-bonus="form.proficiencyBonus"
+    <UFormField
+      class="col-span-12"
+      label="Текст к КД"
+      name="ac.text"
+    >
+      <UInput
+        v-model="form.ac.text"
+        placeholder="Введи текст"
       />
+    </UFormField>
 
-      <CreatureHit
-        v-model="form.hit"
-        :sizes="form.sizes"
-        :constitution="form.abilities.con"
-      />
-    </ARow>
+    <CreatureInitiative
+      v-model="form.initiative"
+      :dex="form.abilities.dex"
+      :proficiency-bonus="form.proficiencyBonus"
+      class="col-span-8"
+    />
+
+    <CreatureHit
+      v-model="form.hit"
+      :sizes="form.sizes"
+      :constitution="form.abilities.con"
+      class="col-span-full"
+    />
 
     <CreatureSpeed v-model="form.speeds" />
 
@@ -196,29 +180,48 @@
       v-model="form.legendaryActions"
       name="legendaryActions"
     />
-  </AForm>
 
-  <ADivider orientation="left">
-    <ATypographyText
-      type="secondary"
-      content="Изображения"
-      strong
-    />
-  </ADivider>
+    <USeparator>
+      <span class="font-bold text-secondary">Изображения</span>
+    </USeparator>
 
-  <ARow :gutter="16">
-    <ACol :span="8">
-      <AFormItem
-        label="Основное"
-        tooltip="Эта картинка отображается при просмотре страницы существа"
-        :name="['image']"
+    <UFormField
+      class="col-span-8"
+      label="Основное"
+      help="Эта картинка отображается при просмотре страницы существа"
+      name="image"
+    >
+      <UploadImage
+        v-model="form.image"
+        section="bestiary"
+        max-size="480"
       >
-        <UploadImage
-          v-model="form.image"
-          section="bestiary"
-          max-size="480"
-        />
-      </AFormItem>
-    </ACol>
-  </ARow>
+        <template #preview>
+          <NuxtImg
+            v-slot="{ src, isLoaded, imgAttrs }"
+            :key="form.image"
+            :src="form.image"
+            custom
+          >
+            <!-- Show the actual image when loaded -->
+            <img
+              v-if="isLoaded"
+              v-bind="imgAttrs"
+              class="w-full rounded-lg object-contain"
+              :src="src"
+              :alt="form.name.rus"
+            />
+
+            <!-- Show a placeholder while loading -->
+            <img
+              v-else
+              class="w-full rounded-lg object-contain"
+              src="/img/no-img.webp"
+              alt="no image"
+            />
+          </NuxtImg>
+        </template>
+      </UploadImage>
+    </UFormField>
+  </UForm>
 </template>

@@ -1,40 +1,26 @@
-<script setup lang="ts">
-  import { SvgIcon } from '~ui/icon';
-  import { PageContainer, PageHeader } from '~ui/page';
-</script>
-
 <template>
-  <PageContainer>
-    <template #header>
-      <PageHeader title="Мастерская видов">
-        <template #actions>
-          <AButton
-            type="primary"
-            @click.left.exact.prevent="navigateTo('/workshop/species/create')"
-          >
-            <template #default> Создать новый вид </template>
+  <NuxtLayout
+    name="detail"
+    title="Мастерская видов"
+  >
+    <template #actions>
+      <UButton
+        icon="i-ttg-plus"
+        color="neutral"
+        variant="ghost"
+        @click.left.exact.prevent="navigateTo('/workshop/species/create')"
+      >
+        Создать новый вид
+      </UButton>
 
-            <template #icon>
-              <SvgIcon icon="plus" />
-            </template>
-          </AButton>
-
-          <ATooltip
-            title="Вернуться в мастерскую"
-            :mouse-enter-delay="0.7"
-            destroy-tooltip-on-hide
-          >
-            <AButton
-              type="text"
-              @click.left.exact.prevent="navigateTo('/workshop')"
-            >
-              <template #icon>
-                <SvgIcon icon="x" />
-              </template>
-            </AButton>
-          </ATooltip>
-        </template>
-      </PageHeader>
+      <UTooltip text="Вернуться в мастерскую">
+        <UButton
+          variant="ghost"
+          color="neutral"
+          icon="i-ttg-x"
+          @click.left.exact.prevent="navigateTo('/workshop')"
+        />
+      </UTooltip>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

@@ -18,5 +18,5 @@ export default {
   endOfLine: 'lf',
   singleAttributePerLine: true,
   tailwindStylesheet: './app/assets/css/tailwind.css',
-  plugins: ['prettier-plugin-tailwindcss'],
+  plugins: ['prettier-plugin-tailwindcss', '@prettier/plugin-oxc'],
 };

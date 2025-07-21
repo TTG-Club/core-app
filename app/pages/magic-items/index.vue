@@ -20,7 +20,7 @@
     status,
     refresh,
   } = await useAsyncData(
-    'magicItems',
+    'magic-items',
     () =>
       $fetch<Array<MagicItemLinkResponse>>('/api/v2/magic-item/search', {
         method: 'POST',

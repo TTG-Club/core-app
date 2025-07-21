@@ -49,7 +49,7 @@ function drawerFactory(marker: SectionMarker, url: string) {
   };
 }
 
-export function renderSectionLinkNode(
+export function renderSectionLink(
   node: SectionNode,
   renderChildren: () => VNode[],
 ) {
@@ -74,10 +74,7 @@ export function renderSectionLinkNode(
       }, ['left', 'exact', 'prevent', 'stop']),
     },
     {
-      default: () =>
-        renderChildren()
-          ? renderChildren()
-          : 'Ошибка рендеринга дочернего элемента',
+      default: renderChildren,
     },
   );
 }

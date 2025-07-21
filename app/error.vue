@@ -48,7 +48,7 @@
         class="mx-auto flex min-h-dvh w-full flex-col lg:max-w-330 lg:flex-row"
       >
         <div
-          class="flex min-h-dvh flex-[1_1_auto] flex-col justify-center gap-4 px-4 pb-4 lg:pt-4"
+          class="flex min-h-dvh flex-auto flex-col justify-center gap-4 px-4 pb-4 lg:pt-4"
         >
           <h1 class="font-mono text-7xl font-semibold">
             {{ error.statusCode }}

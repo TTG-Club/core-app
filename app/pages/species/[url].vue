@@ -1,17 +1,30 @@
 <script setup lang="ts">
-  import { useDrawer } from '~/shared/composables';
   import { getSlicedString } from '~/shared/utils';
   import { SpeciesBody } from '~species/body';
+  import { SpeciesLineagesDrawer } from '~species/lineages-drawer';
   import { UiGallery } from '~ui/gallery';
   import { PageActions } from '~ui/page';
+  import { UiResult } from '~ui/result';
 
+  import type { NavigationMenuItem } from '#ui/components/NavigationMenu.vue';
   import type { SpeciesDetailResponse } from '~/shared/types';
 
   const {
     params: { url },
   } = useRoute();
 
-  const { open: openLineages } = useDrawer('species-lineages');
+  const overlay = useOverlay();
+
+  const drawer = overlay.create(SpeciesLineagesDrawer, {
+    destroyOnClose: true,
+  });
+
+  function openLineages(speciesUrl: string) {
+    drawer.open({
+      url: speciesUrl,
+      onClose: () => drawer.close(),
+    });
+  }
 
   const {
     data: species,
@@ -54,40 +67,34 @@
 
   const editUrl = computed(() => `/workshop/species/${url}`);
 
-  const anchors = computed(() => {
+  const anchors = computed<NavigationMenuItem[]>(() => {
     if (!species.value?.features?.length) {
       return [];
     }
 
-    const list = [
+    const list: NavigationMenuItem[] = [
       {
-        key: 'species-top',
-        href: '#species-base',
-        title: 'Основная часть',
+        to: '#species-base',
+        label: 'Основная часть',
+        type: 'link',
       },
     ];
 
     for (const feature of species.value.features) {
       list.push({
-        key: feature.url,
-        href: `#${feature.url}`,
-        title: feature.name.rus,
+        to: `#${feature.url}`,
+        label: feature.name.rus,
+        type: 'link',
       });
     }
 
     return list;
   });
-
-  function handleAnchorClick(e: Event, { href }: { href: string }) {
-    navigateTo({
-      hash: href,
-      replace: true,
-    });
-  }
 </script>
 
 <template>
   <NuxtLayout
+    id="species-base"
     name="detail"
     :title="species?.name.rus"
     :subtitle="species?.name.eng"
@@ -103,94 +110,86 @@
     </template>
 
     <template #default>
-      <AFlex
+      <div
         v-if="species"
         :class="$style.species"
-        :gap="28"
+        class="flex gap-7"
       >
-        <AFlex
+        <div
           :class="$style.left"
-          :gap="16"
-          vertical
+          class="flex flex-col gap-4"
         >
-          <div :class="$style.galleryImg">
-            <UiGallery
-              :preview="species.image || '/img/no-img.webp'"
-              :images="species.gallery"
-            />
-          </div>
+          <UiGallery
+            :preview="species.image"
+            :images="species.gallery"
+          />
 
           <div :class="$style.stats">
             <div :class="$style.item">
               <span :class="$style.name">Тип:</span>
 
-              <ATypographyText
-                :class="$style.value"
-                :content="species.properties.type"
-              />
+              <span :class="$style.value">
+                {{ species.properties.type }}
+              </span>
             </div>
 
             <div :class="$style.item">
               <span :class="$style.name">Размер:</span>
 
-              <ATypographyText
-                :class="$style.value"
-                :content="species.properties.size"
-              />
+              <span :class="$style.value">
+                {{ species.properties.size }}
+              </span>
             </div>
 
             <div :class="$style.item">
               <span :class="$style.name">Скорость:</span>
 
-              <ATypographyText
-                :class="$style.value"
-                :content="species.properties.speed"
-              />
+              <span :class="$style.value">
+                {{ species.properties.speed }}
+              </span>
             </div>
           </div>
 
-          <AButton
+          <UButton
             v-if="species.hasLineages"
-            type="primary"
+            block
             @click.left.exact.prevent="openLineages(species.url)"
           >
             Происхождения
-          </AButton>
+          </UButton>
 
-          <AAnchor
-            :items="anchors"
-            :offset-top="24"
-            :bounds="24"
+          <UNavigationMenu
+            v-if="false"
             :class="$style.anchors"
-            @click.left.exact.prevent="handleAnchorClick"
+            :items="anchors"
+            orientation="vertical"
+            variant="link"
           />
-        </AFlex>
+        </div>
 
         <SpeciesBody
           :class="$style.right"
           :species="species"
         />
-      </AFlex>
+      </div>
 
-      <AResult
+      <UiResult
         v-else
-        :sub-title="error"
+        :error
         status="error"
         title="Ошибка"
       >
         <template #extra>
-          <AButton
-            type="primary"
-            @click.left.exact.prevent="refresh()"
-          >
-            Обновить
-          </AButton>
+          <UButton @click.left.exact.prevent="refresh()"> Обновить </UButton>
 
-          <AButton @click.left.exact.prevent="navigateTo('/species')">
+          <UButton
+            variant="ghost"
+            @click.left.exact.prevent="navigateTo('/species')"
+          >
             Вернуться в список
-          </AButton>
+          </UButton>
         </template>
-      </AResult>
+      </UiResult>
     </template>
   </NuxtLayout>
 </template>

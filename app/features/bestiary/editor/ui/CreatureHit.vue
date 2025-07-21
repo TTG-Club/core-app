@@ -96,50 +96,54 @@
 </script>
 
 <template>
-  <ACol :span="4">
-    <AFormItem
+  <UForm
+    class="grid grid-cols-24 gap-4"
+    attach
+    :state="model"
+  >
+    <UFormField
+      class="col-span-4"
       label="Количество костей хитов"
-      :name="['hit', 'countHitDice']"
+      name="countHitDice"
     >
-      <AInputNumber
-        v-model:value="model.countHitDice"
+      <UInputNumber
+        v-model="model.countHitDice"
         placeholder="Введи количество"
-        min="0"
+        :min="0"
       />
-    </AFormItem>
-  </ACol>
+    </UFormField>
 
-  <ACol :span="4">
-    <AFormItem label="Формула">
-      <AInput
-        :value="formula"
+    <UFormField
+      class="col-span-4"
+      label="Формула"
+    >
+      <UInput
+        :model-value="formula"
         disabled
       />
-    </AFormItem>
-  </ACol>
+    </UFormField>
 
-  <ACol :span="8">
-    <AFormItem
+    <UFormField
+      class="col-span-8"
       label="Среднее количество хитов"
-      :name="['hit', 'value']"
+      name="value"
     >
-      <AInputNumber
-        v-model:value="model.value"
+      <UInputNumber
+        v-model="model.value"
         placeholder="Введи количество хитов"
-        min="1"
+        :min="1"
       />
-    </AFormItem>
-  </ACol>
+    </UFormField>
 
-  <ACol :span="8">
-    <AFormItem
+    <UFormField
+      class="col-span-8"
       label="Текстовое описание"
-      :name="['hit', 'text']"
+      name="text"
     >
-      <AInput
-        v-model:value="model.text"
-        placeholder="Текстовое описани хитов"
+      <UInput
+        v-model="model.text"
+        placeholder="Текстовое описание хитов"
       />
-    </AFormItem>
-  </ACol>
+    </UFormField>
+  </UForm>
 </template>

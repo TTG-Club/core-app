@@ -1,4 +1,5 @@
 import type { EditorBaseInfoState } from '~ui/editor';
+import type { AbilityKey } from '~/shared/types';
 
 export interface SpellCreate extends EditorBaseInfoState {
   description: string; // описание маркап
@@ -10,7 +11,7 @@ export interface SpellCreate extends EditorBaseInfoState {
   castingTime: Array<SpellCastingTime>; // время накладывания
   components: SpellComponents; // компоненты
   affiliations: SpellAffiliation; // привязка заклинания к сущностям
-  savingThrow: Array<string> | undefined;
+  savingThrow: Array<AbilityKey> | undefined;
   healingType: Array<string> | undefined;
   damageType: Array<string> | undefined;
 }

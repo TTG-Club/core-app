@@ -1,9 +1,6 @@
 <script setup lang="ts">
   import { NuxtLink } from '#components';
   import { GlossaryEditor } from '~glossary/editor';
-  import { SvgIcon } from '~ui/icon';
-  import { PageContainer, PageHeader } from '~ui/page';
-  import { useToast } from '~ui/toast';
 
   import type { GlossaryCreate } from '~/shared/types';
 
@@ -29,7 +26,7 @@
   const isCreating = ref(false);
   const isCreated = ref(false);
 
-  const submit = async () => {
+  async function submit() {
     isCreating.value = true;
 
     try {
@@ -44,23 +41,25 @@
         onResponseError: (error) => {
           isCreating.value = false;
 
-          $toast.error({
+          $toast.add({
             title: 'Ошибка создания глоссария',
             description: error.response._data.message,
+            color: 'error',
           });
         },
       });
 
-      $toast.success({
+      $toast.add({
         title: 'Запись глоссария успешно создана',
         description: getLink,
+        color: 'success',
       });
     } catch (err) {
       isCreating.value = false;
     } finally {
       isCreating.value = false;
     }
-  };
+  }
 
   function getLink() {
     return h('span', [
@@ -83,39 +82,30 @@
 </script>
 
 <template>
-  <PageContainer fixed-header>
-    <template #header>
-      <PageHeader title="Создание новой записи глоссария">
-        <template #actions>
-          <AButton
-            type="primary"
-            :disabled="isCreated"
-            :loading="isCreating"
-            @click.left.exact.prevent="submit"
-          >
-            <template #icon>
-              <SvgIcon icon="check" />
-            </template>
+  <NuxtLayout
+    title="Создание новой записи глоссария"
+    name="detail"
+  >
+    <template #actions>
+      <UButton
+        :disabled="isCreated"
+        :loading="isCreating"
+        icon="i-ttg-check"
+        variant="ghost"
+        color="neutral"
+        @click.left.exact.prevent="submit"
+      >
+        Создать
+      </UButton>
 
-            <template #default> Создать </template>
-          </AButton>
-
-          <ATooltip
-            title="Закрыть"
-            :mouse-enter-delay="0.7"
-            destroy-tooltip-on-hide
-          >
-            <AButton
-              type="text"
-              @click.left.exact.prevent="navigateTo('/workshop/glossary')"
-            >
-              <template #icon>
-                <SvgIcon icon="x" />
-              </template>
-            </AButton>
-          </ATooltip>
-        </template>
-      </PageHeader>
+      <UTooltip text="Закрыть">
+        <UButton
+          variant="ghost"
+          color="neutral"
+          icon="i-ttg-x"
+          @click.left.exact.prevent="navigateTo('/workshop/glossary')"
+        />
+      </UTooltip>
     </template>
 
     <template #default>
@@ -127,5 +117,5 @@
         />
       </ClientOnly>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

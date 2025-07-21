@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { ValidationDictionaries } from '~/shared/utils';
   import { EditorArrayControls } from '~ui/editor';
   import { SelectLanguage } from '~ui/select';
 
@@ -16,40 +15,35 @@
 </script>
 
 <template>
-  <ADivider orientation="left">
-    <ATypographyText
-      type="secondary"
-      content="Языки"
-      strong
-    />
-  </ADivider>
+  <USeparator>
+    <span class="font-bold text-secondary">Языки</span>
+  </USeparator>
 
-  <ARow
+  <UForm
     v-for="(item, index) in model.values"
     :key="index"
-    :gutter="16"
+    class="col-span-full grid grid-cols-24 gap-4"
+    attach
+    :state="item"
   >
-    <ACol :span="6">
-      <AFormItem
-        label="Язык"
-        :name="['languages', 'values', index, 'language']"
-        :rules="[ValidationDictionaries.ruleLanguages()]"
-      >
-        <SelectLanguage v-model="item.language" />
-      </AFormItem>
-    </ACol>
+    <UFormField
+      class="col-span-6"
+      label="Язык"
+      name="language"
+    >
+      <SelectLanguage v-model="item.language" />
+    </UFormField>
 
-    <ACol :span="12">
-      <AFormItem
-        label="Пояснение"
-        :name="['languages', 'values', index, 'text']"
-      >
-        <AInput
-          v-model:value="item.text"
-          :placeholder="`Например, только понимает или древний диалект`"
-        />
-      </AFormItem>
-    </ACol>
+    <UFormField
+      class="col-span-12"
+      label="Пояснение"
+      name="text"
+    >
+      <UInput
+        v-model="item.text"
+        placeholder="Например, только понимает или древний диалект"
+      />
+    </UFormField>
 
     <EditorArrayControls
       v-model="model.values"
@@ -58,41 +52,42 @@
       :item
       only-remove
     />
-  </ARow>
+  </UForm>
 
-  <AFlex
+  <div
     v-if="!model.values?.length"
-    :style="{ marginBottom: '24px' }"
-    justify="center"
+    class="col-span-full flex justify-center"
   >
-    <AButton @click.left.exact.prevent="model.values.push(getEmpty())">
+    <UButton @click.left.exact.prevent="model.values.push(getEmpty())">
       Добавить первый
-    </AButton>
-  </AFlex>
+    </UButton>
+  </div>
 
-  <ARow :gutter="16">
-    <ACol :span="12">
-      <AFormItem
-        label="Телепатия"
-        :name="['languages', 'telepathy']"
-      >
-        <AInput
-          v-model:value="model.telepathy"
-          placeholder="Например, 60 футов"
-        />
-      </AFormItem>
-    </ACol>
+  <UForm
+    class="col-span-full grid grid-cols-24 gap-4"
+    attach
+    :state="model"
+  >
+    <UFormField
+      class="col-span-12"
+      label="Телепатия"
+      name="telepathy"
+    >
+      <UInput
+        v-model="model.telepathy"
+        placeholder="Например, 60 футов"
+      />
+    </UFormField>
 
-    <ACol :span="12">
-      <AFormItem
-        label="Доп. описание"
-        :name="['languages', 'text']"
-      >
-        <AInput
-          v-model:value="model.text"
-          placeholder="Например, понимает язык природы"
-        />
-      </AFormItem>
-    </ACol>
-  </ARow>
+    <UFormField
+      class="col-span-12"
+      label="Доп. описание"
+      name="text"
+    >
+      <UInput
+        v-model="model.text"
+        placeholder="Например, понимает язык природы"
+      />
+    </UFormField>
+  </UForm>
 </template>

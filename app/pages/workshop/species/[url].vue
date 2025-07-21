@@ -3,11 +3,9 @@
 
   import { NuxtLink } from '#components';
   import { SpeciesEditor } from '~species/editor';
-  import { SvgIcon } from '~ui/icon';
-  import { PageContainer, PageHeader } from '~ui/page';
-  import { useToast } from '~ui/toast';
 
   import type { SpeciesCreate } from '~/shared/types';
+  import { UiResult } from '~ui/result';
 
   const route = useRoute();
   const $toast = useToast();
@@ -41,7 +39,8 @@
 
   async function submit() {
     if (!checkIsEdited()) {
-      $toast.error({
+      $toast.add({
+        color: 'error',
         title: !backup.value?.parent
           ? 'Ошибка сохранения вида'
           : 'Ошибка сохранения происхождения',
@@ -52,7 +51,8 @@
     }
 
     if (!editor.value?.validate) {
-      $toast.error({
+      $toast.add({
+        color: 'error',
         title: !backup.value?.parent
           ? 'Ошибка сохранения вида'
           : 'Ошибка сохранения происхождения',
@@ -88,7 +88,8 @@
         onResponseError: (error) => {
           isCreating.value = false;
 
-          $toast.error({
+          $toast.add({
+            color: 'error',
             title: !backup.value?.parent
               ? 'Ошибка сохранения вида'
               : 'Ошибка сохранения происхождения',
@@ -99,7 +100,8 @@
 
       // isCreated.value = true; // TODO: вернуть в будущем
 
-      $toast.success({
+      $toast.add({
+        color: 'success',
         title: !backup.value?.parent
           ? 'Вид успешно сохранен'
           : 'Происхождение успешно сохранено',
@@ -171,47 +173,35 @@
 </script>
 
 <template>
-  <PageContainer fixed-header>
-    <template #header>
-      <PageHeader
-        :title="`Редактирование ${!backup?.parent ? 'вида' : 'происхождения'}`"
+  <NuxtLayout
+    :title="`Редактирование ${!backup?.parent ? 'вида' : 'происхождения'}`"
+    name="detail"
+  >
+    <template #actions>
+      <UButton
+        :disabled="isCreated"
+        :loading="editor?.isCreating"
+        icon="i-ttg-check"
+        variant="ghost"
+        color="neutral"
+        @click.left.exact.prevent="submit"
       >
-        <template #actions>
-          <AButton
-            v-if="!rawIncorrect"
-            type="primary"
-            :disabled="isCreated"
-            :loading="editor?.isCreating"
-            @click.left.exact.prevent="submit"
-          >
-            <template #icon>
-              <SvgIcon icon="check" />
-            </template>
+        Сохранить
+      </UButton>
 
-            <template #default> Сохранить </template>
-          </AButton>
-
-          <ATooltip
-            title="Закрыть"
-            :mouse-enter-delay="0.7"
-            destroy-tooltip-on-hide
-          >
-            <AButton
-              type="text"
-              @click.left.exact.prevent="navigateTo('/species')"
-            >
-              <template #icon>
-                <SvgIcon icon="x" />
-              </template>
-            </AButton>
-          </ATooltip>
-        </template>
-      </PageHeader>
+      <UTooltip text="Закрыть">
+        <UButton
+          icon="i-ttg-x"
+          variant="ghost"
+          color="neutral"
+          @click.left.exact.prevent="navigateTo('/species')"
+        />
+      </UTooltip>
     </template>
 
     <template #default>
       <ClientOnly>
-        <AResult
+        <UiResult
           v-if="rawIncorrect"
           status="error"
           title="Некорректные данные"
@@ -226,5 +216,5 @@
         />
       </ClientOnly>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

@@ -1,9 +1,8 @@
 <script setup lang="ts">
-  import { isEqual, isString } from 'lodash-es';
+  import { isString } from 'lodash-es';
 
   import { DictionaryService } from '~/shared/api';
-
-  import type { SelectValue } from 'ant-design-vue/es/select';
+  import { EditorArrayControls } from '~ui/editor';
   import type { SpellCastingTime } from '~/shared/types';
 
   const times = defineModel<Array<SpellCastingTime>>({
@@ -37,7 +36,7 @@
     return !unitSelected.measurable;
   }
 
-  function updateUnit(value: SelectValue, index: number) {
+  function updateUnit(value: string | undefined, index: number) {
     if (!isString(value) && value !== undefined) {
       return;
     }
@@ -56,18 +55,6 @@
     }
 
     times.value[index]!.value = undefined;
-  }
-
-  function add(index: number) {
-    times.value.splice(index + 1, 0, getEmpty());
-  }
-
-  function clear(index: number) {
-    times.value.splice(index, 1, getEmpty());
-  }
-
-  function remove(index: number) {
-    times.value.splice(index, 1);
   }
 
   function getEmpty(): SpellCastingTime {
@@ -92,96 +79,65 @@
 </script>
 
 <template>
-  <ADivider orientation="left">
-    <ATypographyText
-      type="secondary"
-      content="Время накладывания"
-      strong
-    />
-  </ADivider>
+  <USeparator>
+    <span class="font-bold text-secondary">Время накладывания</span>
+  </USeparator>
 
-  <ARow
+  <UForm
     v-for="(time, index) in times"
     :key="index"
-    :gutter="16"
+    class="col-span-full grid grid-cols-24 gap-4"
+    attach
+    :state="time"
   >
-    <ACol :span="4">
-      <AFormItem
-        label="Время накладывания"
-        :name="['castingTime', index, 'value']"
-      >
-        <AInputNumber
-          v-model:value="time.value"
-          :disabled="isValueDisabled(time.unit)"
-          :precision="0"
-          :min="0"
-          placeholder="Введи значение"
-          allow-clear
-        />
-      </AFormItem>
-    </ACol>
+    <UFormField
+      class="col-span-4"
+      label="Время накладывания"
+      name="value"
+    >
+      <UInput
+        v-model="time.value"
+        type="number"
+        :disabled="isValueDisabled(time.unit)"
+        :min="0"
+        placeholder="Введи значение"
+        clearable
+      />
+    </UFormField>
 
-    <ACol :span="4">
-      <AFormItem
-        label="Единица времени"
-        :name="['castingTime', index, 'unit']"
-      >
-        <ASelect
-          :value="time.unit"
-          :loading="status === 'pending'"
-          :options="units || []"
-          placeholder="Выбери из списка"
-          show-search
-          show-arrow
-          allow-clear
-          @update:value="updateUnit($event, index)"
-        />
-      </AFormItem>
-    </ACol>
+    <UFormField
+      class="col-span-4"
+      label="Единица времени"
+      name="unit"
+    >
+      <USelect
+        v-model="time.unit"
+        :loading="status === 'pending'"
+        :items="units || []"
+        placeholder="Выбери из списка"
+        searchable
+        clearable
+        @update:model-value="updateUnit($event, index)"
+      />
+    </UFormField>
 
-    <ACol :span="10">
-      <AFormItem
-        label="Собственное значение"
-        :name="['castingTime', index, 'custom']"
-      >
-        <AInput
-          v-model:value="time.custom"
-          placeholder="Введи значение"
-          allow-clear
-        />
-      </AFormItem>
-    </ACol>
+    <UFormField
+      class="col-span-10"
+      label="Собственное значение"
+      name="custom"
+    >
+      <UInput
+        v-model="time.custom"
+        placeholder="Введи значение"
+        clearable
+      />
+    </UFormField>
 
-    <ACol :span="6">
-      <AFormItem label="Управление">
-        <AFlex :gap="8">
-          <AButton
-            block
-            @click.left.exact.prevent="add(index)"
-          >
-            Добавить
-          </AButton>
-
-          <AButton
-            v-if="index === times.length - 1"
-            :disabled="isEqual(time, getEmpty())"
-            danger
-            block
-            @click.left.exact.prevent="clear(index)"
-          >
-            Очистить
-          </AButton>
-
-          <AButton
-            v-else
-            danger
-            block
-            @click.left.exact.prevent="remove(index)"
-          >
-            Удалить
-          </AButton>
-        </AFlex>
-      </AFormItem>
-    </ACol>
-  </ARow>
+    <EditorArrayControls
+      v-model="times"
+      :item="time"
+      :empty-object="getEmpty()"
+      :index
+    />
+  </UForm>
 </template>

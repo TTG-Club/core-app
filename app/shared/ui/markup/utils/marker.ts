@@ -1,15 +1,17 @@
 import {
   EmptyMarker,
-  type EmptyMarkerName,
   SectionMarker,
-  type SectionMarkerName,
   RichMarker,
-  type RichMarkerName,
   SimpleText,
-  type SimpleTextName,
   TextMarker,
-  type TextMarkerName,
-  type TextWithMarkerName,
+} from '../types';
+import type {
+  EmptyMarkerName,
+  SectionMarkerName,
+  RichMarkerName,
+  SimpleTextName,
+  TextMarkerName,
+  TextWithMarkerName,
 } from '../types';
 
 export function isSimpleText(

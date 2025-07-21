@@ -1,8 +1,6 @@
 <script setup lang="ts">
-  import { ValidationBase } from '~/shared/utils';
   import { EditorBaseInfo } from '~ui/editor';
 
-  import type { FormInstance } from 'ant-design-vue';
   import type { GlossaryCreate } from '~/shared/types';
 
   const { isCreating } = defineProps<{
@@ -11,61 +9,55 @@
 
   const form = defineModel<GlossaryCreate>({ required: true });
 
-  const formRef = useTemplateRef<FormInstance>('formRef');
+  const formRef = useTemplateRef('formRef');
+
+  function validate() {
+    return formRef.value?.validate();
+  }
 
   defineExpose({
-    validate: computed(() => formRef.value?.validate),
+    validate,
   });
 </script>
 
 <template>
-  <AForm
+  <UForm
     ref="formRef"
-    layout="vertical"
-    :model="form"
+    class="grid grid-cols-24 gap-4"
     :disabled="isCreating"
+    :state="form"
   >
     <EditorBaseInfo
       v-model="form"
       section="glossary"
     />
 
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Подробная информация"
-        strong
+    <USeparator>
+      <span class="font-bold text-secondary">Подробная информация</span>
+    </USeparator>
+
+    <UFormField
+      class="col-span-24"
+      label="Категория тегов"
+      help="Категория для записей глоссария"
+    >
+      <UInput
+        v-model="form.tagCategory"
+        placeholder="Введите категорию тегов"
       />
-    </ADivider>
+    </UFormField>
 
-    <ACol :span="12">
-      <AFormItem
-        label="Категория тегов"
-        tooltip="Категория для записей глоссария"
-        :name="['tagCategory']"
-      >
-        <AInput
-          v-model:value="form.tagCategory"
-          placeholder="Введите категорию тегов"
-        />
-      </AFormItem>
-    </ACol>
-
-    <ARow :gutter="16">
-      <ACol :span="24">
-        <AFormItem
-          label="Описание"
-          :name="['description']"
-          :rules="[ValidationBase.ruleString()]"
-        >
-          <ATextarea
-            v-model:value="form.description"
-            :rows="8"
-            placeholder="Введи описание"
-            allow-clear
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-  </AForm>
+    <UFormField
+      class="col-span-24"
+      label="Описание"
+      name="description"
+      required
+    >
+      <UTextarea
+        v-model="form.description"
+        :rows="8"
+        placeholder="Введи описание"
+      />
+    </UFormField>
+  </UForm>
 </template>

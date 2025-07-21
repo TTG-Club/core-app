@@ -1,10 +1,6 @@
 <script setup lang="ts">
-  import {
-    DrawerHeader,
-    DrawerActions,
-    DrawerBody,
-    type DrawerTitleName,
-  } from './ui';
+  import { DrawerHeader, DrawerActions, DrawerBody } from './ui';
+  import type { DrawerTitleName } from './ui';
 
   import { Breakpoint, useBreakpoints } from '~/shared/composables';
 
@@ -53,8 +49,9 @@
   <UDrawer
     :handle="isTabletOrGreater && !notDetail"
     :inset="isTabletOrGreater"
-    direction="right"
     :class="notDetail ? 'w-xl' : 'w-2xl'"
+    direction="right"
+    handle-only
     @close="$emit('close')"
   >
     <template #header>

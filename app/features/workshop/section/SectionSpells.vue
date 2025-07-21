@@ -1,36 +1,10 @@
 <script setup lang="ts">
-  import { SvgIcon } from '~ui/icon';
+  import { CardWorkshop } from '~ui/card';
 </script>
 
 <template>
-  <ACard>
-    <AFlex
-      :gap="8"
-      vertical
-    >
-      <ACardMeta title="Мастерская заклинаний" />
-
-      <div>Создано: <NuxtLink to="/workshop/spells">0</NuxtLink></div>
-
-      <div>На модерации: <NuxtLink to="/workshop/spells">0</NuxtLink></div>
-
-      <div>Черновики: <NuxtLink to="/workshop/spells">0</NuxtLink></div>
-    </AFlex>
-
-    <AFlex
-      :style="{ marginTop: 'auto' }"
-      justify="end"
-    >
-      <AButton
-        type="primary"
-        @click.left.exact.prevent="navigateTo('/workshop/spells/create')"
-      >
-        <template #default> Создать заклинание </template>
-
-        <template #icon>
-          <SvgIcon icon="plus" />
-        </template>
-      </AButton>
-    </AFlex>
-  </ACard>
+  <CardWorkshop
+    title="Мастерская заклинаний"
+    section="spells"
+  />
 </template>

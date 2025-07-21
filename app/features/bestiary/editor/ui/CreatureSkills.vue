@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { DictionaryService } from '~/shared/api';
   import { getAbilityInfo } from '~/shared/types';
-  import { getModifier, ValidationDictionaries } from '~/shared/utils';
+  import { getModifier } from '~/shared/utils';
   import { EditorArrayControls } from '~ui/editor';
   import { SelectMastery, SelectSkills } from '~ui/select';
 
@@ -56,71 +56,52 @@
 </script>
 
 <template>
-  <ADivider orientation="left">
-    <ATypographyText
-      type="secondary"
-      content="Навыки"
-      strong
-    />
-  </ADivider>
+  <USeparator>
+    <span class="font-bold text-secondary">Навыки</span>
+  </USeparator>
 
-  <ARow
+  <UForm
     v-for="(item, index) in model"
     :key="index"
-    :gutter="16"
+    class="col-span-full grid grid-cols-24 gap-4"
+    attach
+    :state="item"
   >
-    <ACol :span="6">
-      <AFormItem
-        label="Навык"
-        :name="['skills', index, 'skill']"
-        :rules="[ValidationDictionaries.ruleSkills()]"
-      >
-        <AInputGroup
-          :style="{ display: 'flex' }"
-          compact
+    <UFormField
+      class="col-span-6"
+      label="Навык"
+      name="skill"
+    >
+      <div class="flex">
+        <SelectSkills
+          v-model="item.skill"
+          class="flex-grow"
         >
-          <SelectSkills
-            v-model="item.skill"
-            :style="{ flex: '1 1 100%' }"
-          />
-
-          <div
-            :style="{
-              display: 'table-cell',
-              textAlign: 'center',
-              backgroundColor: 'rgba(255, 255, 255, 0.04)',
-              border: '1px solid #74748040',
-              padding: '0 11px',
-              lineHeight: '30px',
-              verticalAlign: 'middle',
-            }"
-          >
+          <template #trailing>
             {{ calcModifier(item.skill, item.multiplier) }}
-          </div>
-        </AInputGroup>
-      </AFormItem>
-    </ACol>
+          </template>
+        </SelectSkills>
+      </div>
+    </UFormField>
 
-    <ACol :span="4">
-      <AFormItem
-        label="Уровень владения"
-        :name="['skills', index, 'multiplier']"
-      >
-        <SelectMastery v-model="item.multiplier" />
-      </AFormItem>
-    </ACol>
+    <UFormField
+      class="col-span-4"
+      label="Уровень владения"
+      name="multiplier"
+    >
+      <SelectMastery v-model="item.multiplier" />
+    </UFormField>
 
-    <ACol :span="8">
-      <AFormItem
-        label="Пояснение"
-        :name="['skills', index, 'text']"
-      >
-        <AInput
-          v-model:value="item.text"
-          :placeholder="`Например, только понимает или древний диалект`"
-        />
-      </AFormItem>
-    </ACol>
+    <UFormField
+      class="col-span-8"
+      label="Пояснение"
+      name="text"
+    >
+      <UInput
+        v-model="item.text"
+        placeholder="Например, только понимает или древний диалект"
+      />
+    </UFormField>
 
     <EditorArrayControls
       v-model="model"
@@ -129,15 +110,14 @@
       :item
       only-remove
     />
-  </ARow>
+  </UForm>
 
-  <AFlex
+  <div
     v-if="!model.length"
-    :style="{ marginBottom: '24px' }"
-    justify="center"
+    class="col-span-full flex justify-center"
   >
-    <AButton @click.left.exact.prevent="model.push(getEmpty())">
+    <UButton @click.left.exact.prevent="model.push(getEmpty())">
       Добавить первый
-    </AButton>
-  </AFlex>
+    </UButton>
+  </div>
 </template>

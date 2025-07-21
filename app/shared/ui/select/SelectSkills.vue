@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import { Form } from 'ant-design-vue';
-
   import { DictionaryService } from '~/shared/api';
 
   const { mode = undefined, limit = 0 } = defineProps<{
@@ -8,8 +6,6 @@
     limit?: number;
     mode?: 'multiple' | 'tags';
   }>();
-
-  const context = Form.useInjectFormItemContext();
 
   const model = defineModel<string | Array<string>>();
 
@@ -44,10 +40,6 @@
     refresh();
   };
 
-  watch(model, () => {
-    context.onFieldChange();
-  });
-
   const placeholder = computed(() => {
     if (!isMultiple.value) {
       return 'Выбери навык';
@@ -64,15 +56,18 @@
 </script>
 
 <template>
-  <ASelect
-    v-model:value="model"
-    :options="options"
-    max-tag-count="responsive"
-    :placeholder
-    :mode
-    show-search
-    allow-clear
-    show-arrow
-    @dropdown-visible-change="handleDropdownOpening"
-  />
+  <USelect
+    v-model="model"
+    :items="options"
+    :placeholder="placeholder"
+    :multiple="isMultiple"
+    :disabled="disabled"
+    searchable
+    clearable
+    @open="handleDropdownOpening(true)"
+  >
+    <template #trailing>
+      <slot name="trailing" />
+    </template>
+  </USelect>
 </template>

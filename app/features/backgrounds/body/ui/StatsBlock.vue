@@ -15,49 +15,33 @@
 <template>
   <div :class="$style.stats">
     <div :class="$style.item">
-      <ATooltip
-        :title="COMPONENT_TOOLTIP_TEXT.abilities"
-        :mouse-enter-delay="0.7"
-        destroy-tooltip-on-hide
-      >
+      <UTooltip :text="COMPONENT_TOOLTIP_TEXT.abilities">
         <div :class="$style.name">Характеристики:</div>
-      </ATooltip>
+      </UTooltip>
 
       <span>{{ abilityScores }}</span>
     </div>
 
     <div :class="$style.item">
-      <ATooltip
-        :title="COMPONENT_TOOLTIP_TEXT.feat"
-        :mouse-enter-delay="0.7"
-        destroy-tooltip-on-hide
-      >
+      <UTooltip :text="COMPONENT_TOOLTIP_TEXT.feat">
         <span :class="$style.name">Черта:</span>
-      </ATooltip>
+      </UTooltip>
 
       <span>{{ feat }}</span>
     </div>
 
     <div :class="$style.item">
-      <ATooltip
-        :title="COMPONENT_TOOLTIP_TEXT.skills"
-        :mouse-enter-delay="0.7"
-        destroy-tooltip-on-hide
-      >
+      <UTooltip :text="COMPONENT_TOOLTIP_TEXT.skills">
         <span :class="$style.name">Навыки:</span>
-      </ATooltip>
+      </UTooltip>
 
       <span>{{ skillProficiencies }}</span>
     </div>
 
     <div :class="$style.item">
-      <ATooltip
-        :title="COMPONENT_TOOLTIP_TEXT.tool"
-        :mouse-enter-delay="0.7"
-        destroy-tooltip-on-hide
-      >
+      <UTooltip :text="COMPONENT_TOOLTIP_TEXT.tool">
         <span :class="$style.name">Владение инструментами:</span>
-      </ATooltip>
+      </UTooltip>
 
       <span>{{ toolProficiency }}</span>
     </div>

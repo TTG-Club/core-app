@@ -18,7 +18,7 @@
 
 <template>
   <button
-    class="flex-[1_1_auto] cursor-pointer border-l border-(--color-border) bg-transparent py-3 hover:bg-(--color-hover)"
+    class="flex-auto cursor-pointer border-l border-(--color-border) bg-transparent py-3 hover:bg-(--color-hover)"
     @click.left.exact.prevent.stop="drawer.open()"
   >
     Происхождения

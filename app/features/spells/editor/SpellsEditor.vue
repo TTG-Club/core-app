@@ -6,17 +6,16 @@
     SpellComponents,
   } from './ui';
 
-  import { ValidationBase, ValidationDictionaries } from '~/shared/utils';
   import { EditorBaseInfo } from '~ui/editor';
   import {
     SelectAbilities,
     SelectDamageType,
     SelectHealType,
+    SelectLevel,
     SelectMagicSchool,
     SelectSpecies,
   } from '~ui/select';
 
-  import type { FormInstance } from 'ant-design-vue';
   import type { SpellCreate } from '~/shared/types';
 
   const { isCreating } = defineProps<{
@@ -25,54 +24,44 @@
 
   const form = defineModel<SpellCreate>({ required: true });
 
-  const formRef = useTemplateRef<FormInstance>('formRef');
+  const formRef = useTemplateRef('formRef');
 
-  const spellLevels = Array.from(Array(10)).map((_, index) => ({
-    label: !index ? 'Заговор' : `${index} круг`,
-    value: index,
-  }));
+  const validate = () => {
+    return formRef.value?.validate();
+  };
 
   defineExpose({
-    validate: computed(() => formRef.value?.validate),
+    validate,
   });
 </script>
 
 <template>
-  <AForm
+  <UForm
     ref="formRef"
-    layout="vertical"
-    :model="form"
+    :state="form"
     :disabled="isCreating"
+    class="grid grid-cols-24 gap-4"
   >
     <EditorBaseInfo
       v-model="form"
       section="spells"
     />
 
-    <ARow :gutter="16">
-      <ACol :span="12">
-        <AFormItem
-          label="Уровень заклинания"
-          :name="['level']"
-        >
-          <ASelect
-            v-model:value="form.level"
-            placeholder="Выбери уровень"
-            :options="spellLevels"
-          />
-        </AFormItem>
-      </ACol>
+    <UFormField
+      class="col-span-12"
+      label="Уровень заклинания"
+      name="level"
+    >
+      <SelectLevel v-model="form.level" />
+    </UFormField>
 
-      <ACol :span="12">
-        <AFormItem
-          label="Школа"
-          :name="['school']"
-          :rules="[ValidationDictionaries.ruleMagicSchools()]"
-        >
-          <SelectMagicSchool v-model="form.school" />
-        </AFormItem>
-      </ACol>
-    </ARow>
+    <UFormField
+      class="col-span-12"
+      label="Школа"
+      name="school"
+    >
+      <SelectMagicSchool v-model="form.school" />
+    </UFormField>
 
     <SpellCastingTimes v-model="form.castingTime" />
 
@@ -82,147 +71,117 @@
 
     <SpellDurations v-model="form.duration" />
 
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Дополнительные фильтры"
-        strong
+    <USeparator>
+      <span class="font-bold text-secondary">Дополнительные фильтры</span>
+    </USeparator>
+
+    <UFormField
+      label="Типы урона"
+      name="damageType"
+      class="col-span-8"
+    >
+      <SelectDamageType
+        v-model="form.damageType"
+        multiple
       />
-    </ADivider>
+    </UFormField>
 
-    <ARow :gutter="16">
-      <ACol :span="8">
-        <AFormItem
-          label="Типы урона"
-          :name="['damageType']"
-        >
-          <SelectDamageType
-            v-model="form.damageType"
-            multiple
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="8">
-        <AFormItem
-          label="Спасброски"
-          :name="['savingThrow']"
-        >
-          <SelectAbilities
-            v-model="form.savingThrow"
-            multiple
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="8">
-        <AFormItem
-          label="Типы лечения"
-          :name="['healingType']"
-        >
-          <SelectHealType
-            v-model="form.healingType"
-            multiple
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Описание"
-        strong
+    <UFormField
+      class="col-span-8"
+      label="Спасброски"
+      name="savingThrow"
+    >
+      <SelectAbilities
+        v-model="form.savingThrow"
+        multiple
       />
-    </ADivider>
+    </UFormField>
 
-    <ARow :gutter="16">
-      <ACol :span="12">
-        <AFormItem
-          label="Описание"
-          :name="['description']"
-          :rules="[ValidationBase.ruleString()]"
-        >
-          <ATextarea
-            v-model:value="form.description"
-            :rows="8"
-            placeholder="Введи описание"
-            allow-clear
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="12">
-        <AFormItem
-          label="На более высоких уровнях"
-          :name="['upper']"
-        >
-          <ATextarea
-            v-model:value="form.upper"
-            :rows="8"
-            placeholder="Введи описание"
-            allow-clear
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Принадлежность"
-        strong
+    <UFormField
+      class="col-span-8"
+      label="Типы лечения"
+      name="healingType"
+    >
+      <SelectHealType
+        v-model="form.healingType"
+        multiple
       />
-    </ADivider>
+    </UFormField>
 
-    <ARow :gutter="16">
-      <ACol :span="6">
-        <AFormItem
-          label="Классы"
-          :name="['affiliations', 'classes']"
-        >
-          <SelectSpecies
-            v-model="form.affiliations.classes"
-            multiple
-          />
-        </AFormItem>
-      </ACol>
+    <USeparator>
+      <span class="font-bold text-secondary">Описание</span>
+    </USeparator>
 
-      <ACol :span="6">
-        <AFormItem
-          label="Архетипы"
-          :name="['affiliations', 'subclasses']"
-        >
-          <SelectSpecies
-            v-model="form.affiliations.subclasses"
-            multiple
-          />
-        </AFormItem>
-      </ACol>
+    <UFormField
+      label="Описание"
+      name="description"
+      class="col-span-12"
+    >
+      <UTextarea
+        v-model="form.description"
+        :rows="8"
+        placeholder="Введи описание"
+      />
+    </UFormField>
 
-      <ACol :span="6">
-        <AFormItem
-          label="Виды"
-          :name="['affiliations', 'species']"
-        >
-          <SelectSpecies
-            v-model="form.affiliations.species"
-            multiple
-          />
-        </AFormItem>
-      </ACol>
+    <UFormField
+      label="На более высоких уровнях"
+      name="upper"
+      class="col-span-12"
+    >
+      <UTextarea
+        v-model="form.upper"
+        :rows="8"
+        placeholder="Введи описание"
+      />
+    </UFormField>
 
-      <ACol :span="6">
-        <AFormItem
-          label="Происхождения"
-          :name="['affiliations', 'lineages']"
-        >
-          <SelectSpecies
-            v-model="form.affiliations.lineages"
-            multiple
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-  </AForm>
+    <USeparator>
+      <span class="font-bold text-secondary">Принадлежность</span>
+    </USeparator>
+
+    <UFormField
+      label="Классы"
+      name="affiliations.classes"
+      class="col-span-6"
+    >
+      <SelectSpecies
+        v-model="form.affiliations.classes"
+        multiple
+      />
+    </UFormField>
+
+    <UFormField
+      class="col-span-6"
+      label="Архетипы"
+      name="affiliations.subclasses"
+    >
+      <SelectSpecies
+        v-model="form.affiliations.subclasses"
+        multiple
+      />
+    </UFormField>
+
+    <UFormField
+      class="col-span-6"
+      label="Виды"
+      name="affiliations.species"
+    >
+      <SelectSpecies
+        v-model="form.affiliations.species"
+        multiple
+      />
+    </UFormField>
+
+    <UFormField
+      class="col-span-6"
+      label="Происхождения"
+      name="affiliations.lineages"
+    >
+      <SelectSpecies
+        v-model="form.affiliations.lineages"
+        multiple
+      />
+    </UFormField>
+  </UForm>
 </template>

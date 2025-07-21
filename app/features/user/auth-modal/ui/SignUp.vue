@@ -1,8 +1,5 @@
 <script setup lang="ts">
-  import { Form } from 'ant-design-vue';
   import { omit } from 'lodash-es';
-
-  import { ValidationAuth } from '~/shared/utils';
 
   const emit = defineEmits<{
     (e: 'switch:sign-in'): void;
@@ -11,7 +8,42 @@
   const $toast = useToast();
   const passwordField = useTemplateRef<HTMLDivElement>('passwordField');
   const { focused } = useFocusWithin(passwordField);
-  const charList = ValidationAuth.allowedSpecialCharacters.join(' ');
+
+  const ALLOWED_SPECIAL_CHARACTERS = [
+    "'",
+    '-',
+    '!',
+    '"',
+    '#',
+    '$',
+    '%',
+    '&',
+    '(',
+    ')',
+    '*',
+    ',',
+    '.',
+    '/',
+    ':',
+    ';',
+    '?',
+    '@',
+    '[',
+    ']',
+    '^',
+    '_',
+    '`',
+    '{',
+    '|',
+    '}',
+    '~',
+    '+',
+    '<',
+    '=',
+    '>',
+  ];
+
+  const charList = ALLOWED_SPECIAL_CHARACTERS.join(' ');
 
   const success = ref(false);
   const showPwd = ref(false);
@@ -22,19 +54,6 @@
     email: '',
     password: '',
     repeat: '',
-  });
-
-  const rules = computed(() => ({
-    username: [ValidationAuth.ruleUsername({ checkExist: true })],
-    email: [ValidationAuth.ruleEmail({ checkExist: true })],
-    password: [ValidationAuth.rulePassword()],
-    repeat: [ValidationAuth.rulePasswordRepeat(state.password)],
-  }));
-
-  const { validate, validateInfos } = Form.useForm(state, rules, {
-    debounce: {
-      wait: 500,
-    },
   });
 
   const { execute, status, error } = useFetch('/api/auth/sign-up', {
@@ -48,7 +67,6 @@
   const inProgress = computed(() => status.value === 'pending');
 
   const onSubmit = async () => {
-    await validate();
     await execute();
 
     if (error.value) {
@@ -86,7 +104,7 @@
       @submit.prevent.stop="onSubmit"
       @keyup.enter.exact.prevent.stop="onSubmit"
     >
-      <AFormItem v-bind="validateInfos.username">
+      <UFormField name="username">
         <UInput
           v-model="state.username"
           autocapitalize="off"
@@ -95,9 +113,9 @@
           placeholder="Имя пользователя"
           autofocus
         />
-      </AFormItem>
+      </UFormField>
 
-      <AFormItem v-bind="validateInfos.email">
+      <UFormField name="email">
         <UInput
           v-model="state.email"
           autocapitalize="off"
@@ -105,9 +123,9 @@
           autocorrect="off"
           placeholder="Электронная почта"
         />
-      </AFormItem>
+      </UFormField>
 
-      <AFormItem v-bind="validateInfos.password">
+      <UFormField name="password">
         <UPopover
           :content="{ side: 'top' }"
           :open="focused"
@@ -127,7 +145,6 @@
             autocorrect="off"
             placeholder="Пароль"
             :type="showPwd ? 'text' : 'password'"
-            :ui="{ trailing: 'pe-1' }"
           >
             <template #trailing>
               <UButton
@@ -142,14 +159,14 @@
                 :aria-label="showPwd ? 'Скрыть пароль' : 'Показать пароль'"
                 :aria-pressed="showPwd"
                 aria-controls="password"
-                @click="showPwd = !showPwd"
+                @click.left.exact.prevent="showPwd = !showPwd"
               />
             </template>
           </UInput>
         </UPopover>
-      </AFormItem>
+      </UFormField>
 
-      <AFormItem v-bind="validateInfos.repeat">
+      <UFormField name="repeat">
         <UInput
           v-model="state.repeat"
           autocapitalize="off"
@@ -157,7 +174,6 @@
           autocorrect="off"
           placeholder="Повторите пароль"
           :type="showPwdRepeat ? 'text' : 'password'"
-          :ui="{ trailing: 'pe-1' }"
         >
           <template #trailing>
             <UButton
@@ -172,11 +188,11 @@
               :aria-label="showPwdRepeat ? 'Скрыть пароля' : 'Показать пароль'"
               :aria-pressed="showPwdRepeat"
               aria-controls="password"
-              @click="showPwdRepeat = !showPwdRepeat"
+              @click.left.exact.prevent="showPwdRepeat = !showPwdRepeat"
             />
           </template>
         </UInput>
-      </AFormItem>
+      </UFormField>
 
       <div class="flex flex-col gap-2 md:flex-row">
         <UButton

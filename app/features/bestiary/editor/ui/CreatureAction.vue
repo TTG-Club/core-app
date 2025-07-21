@@ -1,7 +1,6 @@
 <script setup lang="ts">
-  import { ValidationBase } from '~/shared/utils';
-
   import type { CreateAction } from '~bestiary/types';
+  import { EditorArrayControls } from '~ui/editor';
 
   type ActionKey =
     | 'actions'
@@ -20,7 +19,7 @@
     legendaryActions: 'Легендарные действия',
   };
 
-  function getEmptyFeature(): CreateAction {
+  function getEmpty(): CreateAction {
     return {
       name: {
         rus: '',
@@ -44,105 +43,79 @@
   }
 
   function addAction(indexOfNewFeature: number) {
-    model.value.splice(indexOfNewFeature, 0, getEmptyFeature());
-  }
-
-  function removeFeature(index: number) {
-    model.value.splice(index, 1);
+    model.value.splice(indexOfNewFeature, 0, getEmpty());
   }
 </script>
 
 <template>
-  <ADivider orientation="left">
-    <ATypographyText
-      :content="labelMap[name] ?? 'Особенности'"
-      type="secondary"
-      strong
-    />
-  </ADivider>
+  <USeparator>
+    <span class="font-bold text-secondary">
+      {{ labelMap[name] ?? 'Особенности' }}
+    </span>
+  </USeparator>
 
   <template
     v-for="(action, actionIndex) in model"
     :key="actionIndex"
   >
-    <ARow :gutter="16">
-      <ACol :span="8">
-        <AFormItem
-          label="Название"
-          :name="[name, actionIndex, 'name', 'rus']"
-          :rules="[ValidationBase.ruleRusName()]"
-        >
-          <AInput
-            v-model:value="action.name.rus"
-            placeholder="Введи название"
-          />
-        </AFormItem>
-      </ACol>
+    <UForm
+      class="col-span-full grid grid-cols-24 gap-4"
+      attach
+      :state="action"
+    >
+      <UFormField
+        class="col-span-8"
+        label="Название"
+        name="name.rus"
+      >
+        <UInput
+          v-model="action.name.rus"
+          placeholder="Введи название"
+        />
+      </UFormField>
 
-      <ACol :span="8">
-        <AFormItem
-          label="Название (англ.)"
-          :name="[name, actionIndex, 'name', 'eng']"
-          :rules="[ValidationBase.ruleEngName()]"
-        >
-          <AInput
-            v-model:value="action.name.eng"
-            placeholder="Введи английское название"
-          />
-        </AFormItem>
-      </ACol>
+      <UFormField
+        class="col-span-8"
+        label="Название (англ.)"
+        name="name.eng"
+      >
+        <UInput
+          v-model="action.name.eng"
+          placeholder="Введи английское название"
+        />
+      </UFormField>
 
-      <ACol :span="8">
-        <AFormItem label="Управление">
-          <ARow :gutter="16">
-            <ACol :span="12">
-              <AButton
-                block
-                @click.left.exact.prevent="addAction(actionIndex + 1)"
-              >
-                Добавить
-              </AButton>
-            </ACol>
+      <EditorArrayControls
+        v-model="model"
+        :item="action"
+        :empty-object="getEmpty()"
+        :index="actionIndex"
+        cols="8"
+        only-remove
+      />
 
-            <ACol :span="12">
-              <AButton
-                danger
-                block
-                @click.left.exact.prevent="removeFeature(actionIndex)"
-              >
-                Удалить
-              </AButton>
-            </ACol>
-          </ARow>
-        </AFormItem>
-      </ACol>
-    </ARow>
+      <UFormField
+        class="col-span-24"
+        label="Описание"
+        name="description"
+      >
+        <UTextarea
+          v-model="action.description"
+          :rows="3"
+          placeholder="Введи описание"
+        />
+      </UFormField>
+    </UForm>
 
-    <ARow>
-      <ACol :span="24">
-        <AFormItem
-          label="Описание"
-          :name="[name, actionIndex, 'description']"
-          :rules="[ValidationBase.ruleString()]"
-        >
-          <ATextarea
-            v-model:value="action.description"
-            :auto-size="{ minRows: 3, maxRows: 8 }"
-            placeholder="Введи описание"
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-
-    <ADivider v-if="!isLastAction(actionIndex)" />
+    <USeparator v-if="!isLastAction(actionIndex)" />
   </template>
 
-  <AFlex
+  <div
     v-if="!model.length"
-    justify="center"
+    class="col-span-full flex justify-center"
   >
-    <AButton @click.left.exact.prevent="addAction(0)">
+    <UButton @click.left.exact.prevent="addAction(0)">
       Добавить первое
-    </AButton>
-  </AFlex>
+    </UButton>
+  </div>
 </template>

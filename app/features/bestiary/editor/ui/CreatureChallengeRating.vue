@@ -11,51 +11,48 @@
 </script>
 
 <template>
-  <ADivider orientation="left">
-    <ATypographyText
-      type="secondary"
-      content="Уровень опасности"
-      strong
-    />
-  </ADivider>
+  <USeparator>
+    <span class="font-bold text-secondary"> Уровень опасности </span>
+  </USeparator>
 
-  <ARow :gutter="12">
-    <ACol :span="4">
-      <AFormItem
-        label="Показатель опасности"
-        :name="['experience', 'value']"
-      >
-        <SelectChallengeRating
-          v-model="model.value"
-          v-model:proficiency-bonus="proficiencyBonus"
-        />
-      </AFormItem>
-    </ACol>
+  <UForm
+    class="col-span-full grid grid-cols-24 gap-4"
+    attach
+    :state="model"
+  >
+    <UFormField
+      class="col-span-4"
+      label="Показатель опасности"
+      name="value"
+    >
+      <SelectChallengeRating
+        v-model="model.value"
+        v-model:proficiency-bonus="proficiencyBonus"
+      />
+    </UFormField>
 
-    <ACol :span="4">
-      <AFormItem
-        label="ПО в логове"
-        :name="['experience', 'inLair']"
-      >
-        <AInputNumber
-          v-model:value="model.inLair"
-          :precision="0"
-          :min="0"
-          placeholder="Значение в логове"
-        />
-      </AFormItem>
-    </ACol>
+    <UFormField
+      class="col-span-4"
+      label="ПО в логове"
+      name="inLair"
+    >
+      <UInputNumber
+        v-model="model.inLair"
+        :precision="0"
+        :min="0"
+        placeholder="Значение в логове"
+      />
+    </UFormField>
 
-    <ACol :span="16">
-      <AFormItem
-        label="Суффикс"
-        :name="['experience', 'suffix']"
-      >
-        <AInput
-          v-model:value="model.suffix"
-          placeholder="Доп. текст"
-        />
-      </AFormItem>
-    </ACol>
-  </ARow>
+    <UFormField
+      class="col-span-16"
+      label="Суффикс"
+      name="suffix"
+    >
+      <UInput
+        v-model="model.suffix"
+        placeholder="Доп. текст"
+      />
+    </UFormField>
+  </UForm>
 </template>

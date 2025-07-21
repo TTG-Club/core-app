@@ -4,7 +4,7 @@ import { NuxtLink } from '#components';
 
 import type { LinkNode } from '../types';
 
-export function renderLinkNode(node: LinkNode, renderChildren: () => VNode[]) {
+export function renderLink(node: LinkNode, renderChildren: () => VNode[]) {
   const { url } = node.attrs;
 
   if (!url) {

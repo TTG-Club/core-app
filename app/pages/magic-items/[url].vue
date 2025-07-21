@@ -8,7 +8,7 @@
   const route = useRoute();
 
   const { data: magicItem } = await useAsyncData(
-    `magicItem-${route.params.url}`,
+    `magic-item-${route.params.url}`,
     () =>
       $fetch<MagicItemDetailResponse>(`/api/v2/magic-item/${route.params.url}`),
   );
@@ -65,11 +65,13 @@
         :magic-item
       />
 
-      <ASkeleton
-        v-else
-        :title="false"
-        :paragraph="{ rows: 4 }"
-      />
+      <template v-else>
+        <USkeleton
+          v-for="index in 3"
+          :key="index"
+          :class="`w-1/${index + 1} h-6`"
+        />
+      </template>
     </template>
   </NuxtLayout>
 </template>

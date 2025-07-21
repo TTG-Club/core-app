@@ -31,6 +31,6 @@ export function isRichNode(node: MarkerNode): node is RichNode {
   return Object.values(RichMarker).includes(node.type as RichMarker);
 }
 
-export function isFeatureNode(node: MarkerNode): node is SectionLinkNode {
+export function isSectionNode(node: MarkerNode): node is SectionLinkNode {
   return Object.values(SectionMarker).includes(node.type as SectionMarker);
 }

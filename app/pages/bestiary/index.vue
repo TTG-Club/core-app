@@ -1,5 +1,6 @@
 <script setup lang="ts">
-  import { Role, type SearchBody } from '~/shared/types';
+  import { Role } from '~/shared/types';
+  import type { SearchBody } from '~/shared/types';
   import { CreatureLegend } from '~bestiary/legend';
   import { CreatureLink } from '~bestiary/link';
   import { useFilter } from '~filter/composable';

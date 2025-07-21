@@ -32,48 +32,44 @@
 </script>
 
 <template>
-  <AFlex
-    :gap="16"
-    vertical
-  >
+  <div class="flex flex-col gap-4">
     <MarkupRender
       v-if="species.description"
       :entries="species.description"
     />
 
     <template v-if="species.features">
-      <ACollapse
+      <UCollapsible
         v-for="feature in species.features"
+        :id="feature.url"
         :key="feature.url"
-        v-model:active-key="activeFeatures"
-        :bordered="false"
-        expand-icon-position="end"
-        destroy-inactive-panel
+        default-open
       >
-        <ACollapsePanel
-          :id="feature.url"
-          :key="feature.url"
-          data-allow-mismatch
-        >
-          <template #header>
-            <ATypographyTitle
-              :level="4"
-              data-allow-mismatch
-            >
+        <template #default="{ open }">
+          <h4
+            class="flex cursor-pointer items-center justify-between text-xl font-semibold"
+          >
+            <span>
               {{ feature.name.rus }}
-            </ATypographyTitle>
-          </template>
+            </span>
 
-          <template #default>
-            <MarkupRender :entries="feature.description" />
-          </template>
-        </ACollapsePanel>
-      </ACollapse>
+            <UIcon
+              name="i-fluent-chevron-down-16-regular"
+              class="transition-transform duration-150 ease-in-out"
+              :class="open ? '-rotate-180' : ''"
+            />
+          </h4>
+        </template>
+
+        <template #content>
+          <MarkupRender :entries="feature.description" />
+        </template>
+      </UCollapsible>
     </template>
 
     <SpeciesLineages
       v-if="!species.parent && species.hasLineages"
       :url="species.url"
     />
-  </AFlex>
+  </div>
 </template>

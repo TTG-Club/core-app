@@ -83,7 +83,7 @@
     <div class="flex gap-2">
       <UChip
         :show="isEdited"
-        class="lg:flex-[1_1_auto]"
+        class="lg:flex-auto"
       >
         <UButton
           :disabled="!filter"

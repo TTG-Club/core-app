@@ -9,13 +9,9 @@
 <template>
   <div :class="$style.stats">
     <div :class="$style.item">
-      <ATooltip
-        :title="COMPONENT_TOOLTIP_TEXT.prerequisite"
-        :mouse-enter-delay="0.7"
-        destroy-tooltip-on-hide
-      >
+      <UTooltip :text="COMPONENT_TOOLTIP_TEXT.prerequisite">
         <div :class="$style.name">Предварительное условие:</div>
-      </ATooltip>
+      </UTooltip>
 
       <span>{{ prerequisite }}</span>
     </div>

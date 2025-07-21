@@ -21,27 +21,32 @@
 </script>
 
 <template>
-  <ACol :span="4">
-    <AFormItem
+  <UForm
+    class="col-span-8 grid grid-cols-24 gap-4"
+    attach
+    :state="model"
+  >
+    <UFormField
+      class="col-span-12"
       label="Инициатива"
-      :name="['initiative', 'value']"
+      name="value"
     >
-      <AInputNumber
-        v-model:value="model.value"
+      <UInputNumber
+        v-model="model.value"
         :precision="0"
         placeholder="Введи инициативу"
-        min="0"
-        :addon-after="`+${10 + model.value}`"
-      />
-    </AFormItem>
-  </ACol>
+        :min="0"
+      >
+        <template #trailing> +{{ 10 + model.value }} </template>
+      </UInputNumber>
+    </UFormField>
 
-  <ACol :span="4">
-    <AFormItem
+    <UFormField
+      class="col-span-12"
       label="Уровень владения"
-      :name="['initiative', 'multiplier']"
+      name="multiplier"
     >
       <SelectMastery v-model="model.multiplier" />
-    </AFormItem>
-  </ACol>
+    </UFormField>
+  </UForm>
 </template>

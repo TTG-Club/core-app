@@ -23,7 +23,7 @@
       color="neutral"
       :disabled
       :size
-      @click="copy(url, 'Ссылка успешно скопирована')"
+      @click.left.exact.prevent="copy(url, 'Ссылка успешно скопирована')"
     />
   </UTooltip>
 </template>

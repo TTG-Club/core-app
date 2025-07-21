@@ -37,7 +37,7 @@
     <span
       v-if="typeof title === 'string'"
       :class="[$style.rus, { [$style.copy]: copyTitle }]"
-      @click="handleCopy(title)"
+      @click.left.exact.prevent="handleCopy(title)"
       @selectstart="preventSelect"
       @select="preventSelect"
     >
@@ -47,7 +47,7 @@
     <template v-else>
       <span
         :class="[$style.rus, { [$style.copy]: copyTitle }]"
-        @click="handleCopy(title.rus)"
+        @click.left.exact.prevent="handleCopy(title.rus)"
         @selectstart="preventSelect"
         @select="preventSelect"
       >
@@ -57,7 +57,7 @@
       <span
         v-if="title.eng"
         :class="[$style.eng, { [$style.copy]: copyTitle }]"
-        @click="handleCopy(title.eng)"
+        @click.left.exact.prevent="handleCopy(title.eng)"
         @selectstart="preventSelect"
         @select="preventSelect"
       >

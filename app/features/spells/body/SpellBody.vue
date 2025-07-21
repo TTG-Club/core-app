@@ -35,7 +35,7 @@
         />
       </div>
 
-      <div class="flex flex-[1_1_auto] flex-col gap-3">
+      <div class="flex flex-auto flex-col gap-3">
         <DescriptionsBlock
           :description="spell.description"
           :level="spell.level"

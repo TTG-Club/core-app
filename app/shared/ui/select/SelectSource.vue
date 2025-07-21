@@ -1,14 +1,10 @@
 <script setup lang="ts">
-  import { Form } from 'ant-design-vue';
-
   import type { BookLink, SelectOptionWithShortName } from '~/shared/types';
 
-  const { multiple = false } = defineProps<{
+  const { multiple = false, disabled } = defineProps<{
     disabled?: boolean;
     multiple?: boolean;
   }>();
-
-  const context = Form.useInjectFormItemContext();
 
   const model = defineModel<string | Array<string>>();
 
@@ -37,24 +33,18 @@
 
     refresh();
   };
-
-  watch(model, () => {
-    context.onFieldChange();
-  });
 </script>
 
 <template>
-  <ASelect
-    v-model:value="model"
+  <USelect
+    v-model="model"
     :loading="status === 'pending'"
-    :options="data || []"
-    :mode="multiple ? 'multiple' : undefined"
-    :disabled
+    :items="data || []"
+    :multiple="multiple"
+    :disabled="disabled"
     placeholder="Выбери книгу"
-    max-tag-count="responsive"
-    allow-clear
-    show-search
-    show-arrow
-    @dropdown-visible-change="handleDropdownOpening"
+    searchable
+    clearable
+    @open="handleDropdownOpening(true)"
   />
 </template>

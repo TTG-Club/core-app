@@ -1,28 +1,25 @@
 import { createTextVNode } from 'vue';
 
-import {
-  type TextNode,
-  type MarkerNode,
-  type RichNode,
-  type EmptyNode,
-  type RichNodes,
-  type SectionLinkNode,
-  type SectionNodes,
-  TextMarker,
-  EmptyMarker,
-  RichMarker,
-  SectionMarker,
+import { TextMarker, EmptyMarker, RichMarker, SectionMarker } from '../types';
+import type {
+  TextNode,
+  MarkerNode,
+  RichNode,
+  EmptyNode,
+  RichNodes,
+  SectionLinkNode,
+  SectionNodes,
 } from '../types';
 import {
   isEmptyNode,
-  isFeatureNode,
+  isSectionNode,
   isRichNode,
   isSimpleTextNode,
   isTextNode,
 } from '../utils';
 
-import { renderLinkNode } from './renderLink';
-import { renderSectionLinkNode } from './renderSectionLink';
+import { renderLink } from './renderLink';
+import { renderSectionLink } from './renderSectionLink';
 
 const TextMarkerTag: Record<TextMarker, string> = {
   [TextMarker.Bold]: 'b',
@@ -44,7 +41,7 @@ const RICH_NODE_RENDERERS: {
     renderChildren: () => VNode[],
   ) => VNode;
 } = {
-  [RichMarker.Link]: renderLinkNode,
+  [RichMarker.Link]: renderLink,
 };
 
 const FEATURE_NODE_RENDERERS: {
@@ -53,12 +50,12 @@ const FEATURE_NODE_RENDERERS: {
     renderChildren: () => VNode[],
   ) => VNode;
 } = {
-  [SectionMarker.Spell]: renderSectionLinkNode,
-  [SectionMarker.Background]: renderSectionLinkNode,
-  [SectionMarker.Feat]: renderSectionLinkNode,
-  [SectionMarker.Creature]: renderSectionLinkNode,
-  [SectionMarker.MagicItem]: renderSectionLinkNode,
-  [SectionMarker.Glossary]: renderSectionLinkNode,
+  [SectionMarker.Spell]: renderSectionLink,
+  [SectionMarker.Background]: renderSectionLink,
+  [SectionMarker.Feat]: renderSectionLink,
+  [SectionMarker.Creature]: renderSectionLink,
+  [SectionMarker.MagicItem]: renderSectionLink,
+  [SectionMarker.Glossary]: renderSectionLink,
 };
 
 // Функция для рендера контента — принимает массив узлов
@@ -83,8 +80,8 @@ function renderNode(node: MarkerNode): VNode {
     return renderRichNode(node);
   }
 
-  if (isFeatureNode(node)) {
-    return renderFeatureLinkNode(node);
+  if (isSectionNode(node)) {
+    return renderSectionLinkNode(node);
   }
 
   if (isEmptyNode(node)) {
@@ -136,7 +133,7 @@ function renderRichNode(node: RichNode): VNode {
   return renderFn(node, () => child);
 }
 
-function renderFeatureLinkNode(node: SectionLinkNode): VNode {
+function renderSectionLinkNode(node: SectionLinkNode): VNode {
   const child = node.content?.map((item) => renderNode(item));
 
   if (!child.length) {

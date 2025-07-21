@@ -96,7 +96,7 @@
               :aria-label="showPwd ? 'Скрыть пароль' : 'Показать пароль'"
               :aria-pressed="showPwd"
               aria-controls="password"
-              @click="showPwd = !showPwd"
+              @click.left.exact.prevent="showPwd = !showPwd"
             />
           </template>
         </UInput>

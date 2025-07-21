@@ -1,8 +1,8 @@
 <script setup lang="ts">
-  import { isEqual, isString } from 'lodash-es';
+  import { isString } from 'lodash-es';
 
-  import { ValidationBase, ValidationDictionaries } from '~/shared/utils';
   import { SelectSize } from '~ui/select';
+  import { EditorArrayControls } from '~ui/editor';
 
   import type { SpeciesCreate } from '~/shared/types';
 
@@ -15,18 +15,6 @@
   const disabledKeys = computed(() =>
     sizes.value.map((size) => size.type).filter((size) => isString(size)),
   );
-
-  function add(index: number) {
-    sizes.value.splice(index + 1, 0, getEmpty());
-  }
-
-  function clear(index: number) {
-    sizes.value.splice(index, 1, getEmpty());
-  }
-
-  function remove(index: number) {
-    sizes.value.splice(index, 1);
-  }
 
   function getEmpty(): Sizes[number] {
     return {
@@ -50,85 +38,57 @@
 </script>
 
 <template>
-  <ARow
+  <UForm
     v-for="(size, index) in sizes"
     :key="index"
-    :gutter="16"
+    class="col-span-full grid grid-cols-24 gap-4"
+    attach
+    :state="size"
   >
-    <ACol :span="6">
-      <AFormItem
-        :name="['properties', 'sizes', index, 'type']"
-        :rules="[ValidationDictionaries.ruleSizes()]"
-        label="Размер"
+    <UFormField
+      name="type"
+      label="Размер"
+      class="col-span-6"
+    >
+      <SelectSize
+        v-model="size.type"
+        :disabled-keys="disabledKeys"
+      />
+    </UFormField>
+
+    <UFormField
+      class="col-span-6"
+      label="Высота от"
+      name="from"
+    >
+      <UInputNumber
+        v-model="size.from"
+        :min="0"
+        placeholder="Введи минимальную высоту"
       >
-        <SelectSize
-          v-model="size.type"
-          :disabled-keys="disabledKeys"
-        />
-      </AFormItem>
-    </ACol>
+        <template #trailing> фт. </template>
+      </UInputNumber>
+    </UFormField>
 
-    <ACol :span="6">
-      <AFormItem
-        label="Высота от"
-        :name="['properties', 'sizes', index, 'from']"
-        :rules="[ValidationBase.ruleNumber()]"
+    <UFormField
+      label="Высота до"
+      name="to"
+      class="col-span-6"
+    >
+      <UInputNumber
+        v-model="size.to"
+        :min="0"
+        placeholder="Введи максимальную высоту"
       >
-        <AInputNumber
-          v-model:value="size.from"
-          :precision="0"
-          :min="0"
-          placeholder="Введи минимальную высоту"
-          addon-after="футов"
-        />
-      </AFormItem>
-    </ACol>
+        <template #trailing> фт. </template>
+      </UInputNumber>
+    </UFormField>
 
-    <ACol :span="6">
-      <AFormItem
-        label="Высота до"
-        :name="['properties', 'sizes', index, 'to']"
-        :rules="[ValidationBase.ruleNumber()]"
-      >
-        <AInputNumber
-          v-model:value="size.to"
-          :precision="0"
-          :min="0"
-          placeholder="Введи максимальную высоту"
-          addon-after="футов"
-        />
-      </AFormItem>
-    </ACol>
-
-    <ACol :span="6">
-      <AFormItem label="Управление">
-        <AFlex :gap="8">
-          <AButton
-            block
-            @click.left.exact.prevent="add(index)"
-          >
-            Добавить
-          </AButton>
-
-          <AButton
-            v-if="index === sizes.length - 1 && !isEqual(size, getEmpty())"
-            danger
-            block
-            @click.left.exact.prevent="clear(index)"
-          >
-            Очистить
-          </AButton>
-
-          <AButton
-            v-else
-            danger
-            block
-            @click.left.exact.prevent="remove(index)"
-          >
-            Удалить
-          </AButton>
-        </AFlex>
-      </AFormItem>
-    </ACol>
-  </ARow>
+    <EditorArrayControls
+      v-model="sizes"
+      :item="size"
+      :empty-object="getEmpty()"
+      :index="index"
+    />
+  </UForm>
 </template>

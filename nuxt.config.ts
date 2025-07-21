@@ -2,7 +2,6 @@
 import { fileURLToPath, URL } from 'node:url';
 
 import bytes from 'bytes';
-import ms from 'ms';
 
 const application = {
   name: {
@@ -38,7 +37,6 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@nuxt/fonts',
     '@nuxtjs/device',
-    '@nuxtjs/stylelint-module',
     '@nuxtjs/seo',
     '@nuxt/image',
     '@nuxt/eslint',
@@ -120,6 +118,7 @@ export default defineNuxtConfig({
         fullscreen: ['self'],
       },
     },
+    rateLimiter: false,
     requestSizeLimiter: {
       maxUploadFileRequestInBytes: bytes('30MB') || 8000000,
     },
@@ -154,6 +153,15 @@ export default defineNuxtConfig({
     priority: ['google', 'fontsource'],
     families: [{ name: 'Open Sans' }],
   },
+  image: {
+    optimize: false,
+    provider: 'beget',
+    providers: {
+      beget: {
+        provider: '~/providers/beget.ts',
+      },
+    },
+  },
 
   // TypeScript и линтеры
   typescript: {
@@ -175,28 +183,6 @@ export default defineNuxtConfig({
     experimental: {
       openAPI: true,
     },
-    routeRules: {
-      '/api/**': {
-        security: {
-          enabled: process.env.NODE_ENV !== 'development',
-          rateLimiter: {
-            tokensPerInterval: 50,
-            interval: ms('1m'),
-            headers: true,
-          },
-        },
-      },
-      '/s3/**': {
-        security: {
-          enabled: process.env.NODE_ENV !== 'development',
-          rateLimiter: {
-            tokensPerInterval: 50,
-            interval: ms('1m'),
-            headers: true,
-          },
-        },
-      },
-    },
   },
 
   // Сборщик и пути
@@ -204,7 +190,6 @@ export default defineNuxtConfig({
     css: {
       preprocessorOptions: {
         scss: {
-          api: 'modern-compiler',
           additionalData: `@use "~/assets/css/variables" as *;`,
         },
       },

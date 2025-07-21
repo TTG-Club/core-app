@@ -13,36 +13,38 @@
 </script>
 
 <template>
-  <AFlex
+  <div
     v-if="lineages?.length"
-    gap="16"
-    vertical
+    class="flex flex-col gap-4"
   >
-    <ATypographyTitle
-      :level="3"
-      content="Происхождения"
-    />
+    <h3 class="text-xl font-semibold">Происхождения</h3>
 
-    <ACollapse
+    <UCollapsible
       v-for="species in lineages"
       :key="species.url"
-      :bordered="false"
-      expand-icon-position="end"
+      :ui="{
+        root: 'px-4 py-3 flex flex-col gap-4 rounded bg-elevated/65 hover:bg-elevated/75 transition-bg duration-150 ease-in-out',
+      }"
     >
-      <ACollapsePanel>
-        <template #header>
-          <ATypographyTitle
-            :level="4"
-            data-allow-mismatch
-          >
+      <template #default="{ open }">
+        <h4
+          class="flex cursor-pointer items-center justify-between text-xl font-semibold"
+        >
+          <span>
             {{ species.name.rus }}
-          </ATypographyTitle>
-        </template>
+          </span>
 
-        <template #default>
-          <SpeciesBody :species />
-        </template>
-      </ACollapsePanel>
-    </ACollapse>
-  </AFlex>
+          <UIcon
+            name="i-fluent-chevron-down-16-regular"
+            class="transition-transform duration-150 ease-in-out"
+            :class="open ? '-rotate-180' : ''"
+          />
+        </h4>
+      </template>
+
+      <template #content>
+        <SpeciesBody :species />
+      </template>
+    </UCollapsible>
+  </div>
 </template>

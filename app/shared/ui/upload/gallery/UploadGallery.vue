@@ -1,15 +1,8 @@
 <script setup lang="ts">
   import bytes from 'bytes';
   import { chunk } from 'lodash-es';
-
   import { getStatusMessage } from '#shared/utils';
-  import { SvgIcon, SvgLoading } from '~ui/icon';
-  import { useToast } from '~ui/toast';
-
   import type { NuxtError } from '#app';
-  import type { UploadFile } from 'ant-design-vue';
-  import type { UploadProps } from 'ant-design-vue/es/upload';
-  import type { FileType } from 'ant-design-vue/es/upload/interface';
   import type { UploadResponse } from '~/shared/types';
 
   const { section } = defineProps<{
@@ -23,42 +16,37 @@
 
   const actionUrl = computed(() => `/s3/upload?section=${getSlug(section)}`);
 
-  const onError = (error: Error, responseError: NuxtError) => {
-    $toast.error({
+  function onError(error: Error, responseError: NuxtError) {
+    $toast.add({
+      color: 'error',
       title: 'Неизвестная ошибка',
       description: getStatusMessage(responseError.statusCode),
     });
-  };
+  }
 
-  const fileList = ref<Array<UploadFile<UploadResponse>>>([]);
-  const imagesUploaded = defineModel<Array<string>>();
+  const imagesUploaded = defineModel<string[]>();
 
   const chunkedPreview = computed(() => chunk(imagesUploaded.value, 3));
 
-  const bufferToBase64 = (buf: ArrayBuffer) => {
+  function bufferToBase64(buf: ArrayBuffer) {
     const chunks = [];
     const uint8 = new Uint8Array(buf);
     const chunkSize = 0x8000;
 
     for (let i = 0; i < uint8.length; i += chunkSize) {
-      const chunkItem = uint8.subarray(
-        i,
-        Math.min(i + chunkSize, uint8.length),
-      );
+      const item = uint8.subarray(i, Math.min(i + chunkSize, uint8.length));
 
-      chunks.push(String.fromCharCode(...chunkItem));
+      chunks.push(String.fromCharCode(...item));
     }
 
     return btoa(chunks.join(''));
-  };
+  }
 
-  const getImageSize = (
-    provideFile: FileType,
-  ): Promise<{
+  function getImageSize(provideFile: File): Promise<{
     width: number;
     height: number;
-  }> =>
-    new Promise((resolve, reject) => {
+  }> {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
 
       reader.readAsDataURL(provideFile);
@@ -91,15 +79,17 @@
         };
       };
     });
+  }
 
-  const beforeUpload: UploadProps['beforeUpload'] = async (file) => {
+  async function beforeUpload(file: File) {
     const isExtensionSuccess =
       file.type === 'image/jpeg' ||
       file.type === 'image/png' ||
       file.type === 'image/webp';
 
     if (!isExtensionSuccess) {
-      $toast.error({
+      $toast.add({
+        color: 'error',
         title: 'Ошибка при загрузке файла',
         description: 'Недопустимый формат изображения',
       });
@@ -108,7 +98,8 @@
     }
 
     if (file.size > maxFileWeight) {
-      $toast.error({
+      $toast.add({
+        color: 'error',
         title: 'Ошибка при загрузке файла',
         description: `Размер изображения не должен превышать ${bytes(maxFileWeight)}`,
       });
@@ -120,7 +111,8 @@
       const imageSize = await getImageSize(file);
 
       if (imageSize.width > maxFileSize || imageSize.height > maxFileSize) {
-        $toast.error({
+        $toast.add({
+          color: 'error',
           title: 'Ошибка при загрузке файла',
           description: `Изображение должно быть меньше ${maxFileSize}px по длинной стороне`,
         });
@@ -130,226 +122,153 @@
 
       return true;
     } catch (err) {
-      $toast.error({
+      $toast.add({
+        color: 'error',
         title: 'Ошибка при загрузке файла',
         description: 'Неизвестная ошибка',
       });
 
       return false;
     }
-  };
+  }
 
   const isImageLoading = ref(false);
 
   async function removeLoadedImage(link: string) {
     try {
-      await $fetch(link, { method: 'delete' });
+      await $fetch(link, { method: 'DELETE' });
 
-      fileList.value = fileList.value.filter(
-        (file) => file.response?.url !== link,
-      );
+      imagesUploaded.value =
+        imagesUploaded.value?.filter((url) => url !== link) || [];
+
+      $toast.add({
+        color: 'success',
+        title: 'Успех',
+        description: 'Изображение успешно удалено',
+      });
     } catch (e) {
-      $toast.error({
+      $toast.add({
+        color: 'error',
         title: 'Ошибка при удалении',
         description: 'Не удалось удалить изображение',
       });
     }
   }
 
-  watch(fileList, (value) => {
-    const images: Array<UploadResponse> = [];
+  async function handleFiles(files: File[] | FileList) {
+    const fileArray = Array.from(files);
 
-    for (const file of value) {
-      if (!file.response) {
-        continue;
+    if (!fileArray.length) return;
+
+    isImageLoading.value = true;
+
+    for (const file of fileArray) {
+      const isValid = await beforeUpload(file);
+
+      if (!isValid) continue;
+
+      try {
+        const formData = new FormData();
+
+        formData.append('file', file);
+
+        const response = await $fetch<UploadResponse>(actionUrl.value, {
+          method: 'POST',
+          body: formData,
+        });
+
+        imagesUploaded.value = [...(imagesUploaded.value || []), response.url];
+
+        $toast.add({
+          color: 'success',
+          title: 'Успех',
+          description: 'Изображение успешно загружено',
+        });
+      } catch (err) {
+        onError(err as Error, err as NuxtError);
       }
-
-      images.push(file.response);
     }
 
-    imagesUploaded.value = images.map((image) => image.url);
+    isImageLoading.value = false;
+  }
+
+  const dropZoneRef = useTemplateRef<HTMLElement>('dropZoneRef');
+
+  const { open: openDialog, onChange } = useFileDialog({
+    accept: 'image/webp,image/jpeg,image/png',
+    multiple: true,
+  });
+
+  onChange((files) => handleFiles(files || []));
+
+  const { isOverDropZone } = useDropZone(dropZoneRef, {
+    dataTypes: ['image/webp', 'image/jpeg', 'image/png'],
+    multiple: true,
+    onDrop: (files) => handleFiles(files || []),
   });
 </script>
 
 <template>
-  <AFlex
-    vertical
-    :gap="16"
+  <div
+    ref="dropZoneRef"
+    class="w-full rounded-lg border-2 border-dashed border-(--color-border) bg-(--color-bg-secondary) p-6 text-center transition-colors hover:border-primary"
+    :class="isOverDropZone ? 'hover:border-primary' : undefined"
+    @click.left.exact.prevent="() => openDialog()"
   >
-    <AUploadDragger
-      v-model:file-list="fileList"
-      :action="actionUrl"
-      :show-upload-list="false"
-      :disabled="isImageLoading"
-      :before-upload="beforeUpload"
-      accept=".webp, .jpg, .jpeg, .png"
-      multiple
-      @error="onError"
-    >
-      <AFlex
-        :class="$style.upload"
-        :gap="8"
-        justify="center"
-        align="center"
-        vertical
-      >
-        <SvgLoading
-          v-if="isImageLoading"
-          size="24"
-        />
+    <span class="text-sm">
+      Перетащи или нажми сюда, чтобы загрузить картинку в форматах: .webp, .jpg,
+      .jpeg, .png
+    </span>
+  </div>
 
-        <SvgIcon
-          v-else
-          size="24"
-          icon="download"
-        />
-
-        <span type="secondary">
-          Перетащите или нажмите сюда, чтобы загрузить картинку в форматах:
-          .webp, .jpg, .jpeg, .png
-        </span>
-      </AFlex>
-    </AUploadDragger>
-
-    <template v-if="chunkedPreview?.length">
-      <AImagePreviewGroup>
-        <ARow
-          v-for="(row, index) in chunkedPreview"
-          :key="index"
-          :gutter="16"
-        >
-          <ACol
-            v-for="image in row"
-            :key="image"
-            :span="8"
-          >
-            <div :class="$style.preview">
-              <div :class="$style.imageContainer">
-                <AImage
-                  :src="image || '/img/no-img.webp'"
-                  :class="$style.image"
-                  fallback="/img/no-img.webp"
-                  width="100%"
-                  height="100%"
-                />
-              </div>
-
-              <div
-                v-if="image"
-                :class="$style.controls"
-              >
-                <AButton
-                  size="small"
-                  type="primary"
-                  danger
-                  @click.left.exact.prevent="removeLoadedImage(image)"
-                >
-                  <template #icon>
-                    <SvgIcon icon="remove" />
-                  </template>
-                </AButton>
-              </div>
-            </div>
-          </ACol>
-        </ARow>
-      </AImagePreviewGroup>
-    </template>
-
-    <AFlex
-      v-else
-      :gap="16"
+  <div
+    v-if="chunkedPreview?.length"
+    class="mt-4"
+  >
+    <div
+      v-for="(row, index) in chunkedPreview"
+      :key="index"
+      class="grid grid-cols-3 gap-4"
     >
       <div
-        v-for="(image, index) in Array.from(Array(3))"
-        :key="index"
-        :class="$style.preview"
+        v-for="image in row"
+        :key="image"
+        class="relative overflow-hidden rounded-lg"
       >
-        <div :class="$style.imageContainer">
-          <AImage
-            :class="$style.image"
-            :preview="false"
-            src="/img/no-img.webp"
-            width="100%"
-            height="100%"
+        <img
+          :src="image || '/img/no-img.webp'"
+          alt="Uploaded image"
+          class="h-full w-full object-contain"
+        />
+
+        <div
+          class="absolute top-0 right-0 p-2 opacity-0 transition-opacity hover:opacity-100"
+        >
+          <UButton
+            icon="i-ttg-remove"
+            color="error"
+            size="xs"
+            @click.left.exact.prevent="removeLoadedImage(image)"
           />
         </div>
       </div>
-    </AFlex>
-  </AFlex>
+    </div>
+  </div>
+
+  <div
+    v-else
+    class="mt-4 grid grid-cols-3 gap-4"
+  >
+    <div
+      v-for="index in 3"
+      :key="index"
+      class="relative overflow-hidden rounded-lg"
+    >
+      <img
+        src="/img/no-img.webp"
+        alt="Placeholder"
+        class="h-full w-full object-contain"
+      />
+    </div>
+  </div>
 </template>
-
-<style module lang="scss">
-  .upload {
-    color: currentColor;
-  }
-
-  .preview {
-    position: relative;
-
-    overflow: hidden;
-
-    width: 100%;
-    border-radius: 8px;
-
-    background-color: var(--color-hover);
-
-    &:before {
-      pointer-events: none;
-      content: '';
-      user-select: none;
-
-      position: relative;
-
-      display: block;
-
-      width: 100%;
-      padding-bottom: 75%;
-    }
-
-    .imageContainer {
-      position: absolute;
-      top: 0;
-      left: 0;
-
-      width: 100%;
-      height: 100%;
-
-      .image {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-      }
-    }
-
-    .controls {
-      pointer-events: none;
-
-      position: absolute;
-      top: 0;
-      left: 0;
-
-      display: flex;
-      gap: 4px;
-      justify-content: flex-end;
-
-      width: 100%;
-      padding: 4px;
-
-      opacity: 0;
-
-      & {
-        @include css-anim();
-      }
-    }
-
-    &:hover {
-      .controls {
-        opacity: 1;
-
-        & > * {
-          pointer-events: auto;
-        }
-      }
-    }
-  }
-</style>

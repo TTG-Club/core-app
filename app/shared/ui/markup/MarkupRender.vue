@@ -8,12 +8,13 @@
 
 <template>
   <ClientOnly>
-    <p
+    <template
       v-for="(entry, index) in entries"
       :key="index"
-      class="mb-1"
     >
-      <RowRender :entry />
-    </p>
+      <p class="mb-1">
+        <RowRender :entry />
+      </p>
+    </template>
   </ClientOnly>
 </template>

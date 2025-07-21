@@ -1,8 +1,6 @@
 <script setup lang="ts">
   import { isUndefined } from 'lodash-es';
 
-  import { SvgIcon } from '~ui/icon';
-
   const { section, url } = defineProps<{
     section: string;
     url: string;
@@ -107,46 +105,40 @@
     <span><b>Рейтинг</b></span>
 
     <div :class="$style.block">
-      <ATooltip
+      <UTooltip
+        :text="tooltipMessage"
         :open="isTooltipShown"
-        :trigger="[]"
         :color="`var(--color-${tooltipType})`"
         @open-change="clearMessage"
       >
-        <template #default>
+        <div
+          :class="$style.stars"
+          @mouseleave="hoverRating = undefined"
+        >
           <div
-            :class="$style.stars"
-            @mouseleave="hoverRating = undefined"
+            v-for="star in 5"
+            :key="star"
+            :class="$style.star"
           >
             <div
-              v-for="star in 5"
-              :key="star"
-              :class="$style.star"
+              v-for="part in 4"
+              :key="part"
+              :class="[
+                $style.part,
+                { [$style.highlight]: isHighlighted(star, part) },
+              ]"
+              @mouseover="hoverRating = getRating(star, part)"
+              @click.left.exact.prevent="rate(star, part)"
             >
-              <div
-                v-for="part in 4"
-                :key="part"
-                :class="[
-                  $style.part,
-                  { [$style.highlight]: isHighlighted(star, part) },
-                ]"
-                @mouseover="hoverRating = getRating(star, part)"
-                @click.left.exact.prevent="rate(star, part)"
-              >
-                <SvgIcon
-                  :class="$style.icon"
-                  icon="star/filled/no-padding"
-                  size="20"
-                />
-              </div>
+              <UIcon
+                :class="$style.icon"
+                name="i-fluent-star-16-filled"
+                size="20"
+              />
             </div>
           </div>
-        </template>
-
-        <template #title>
-          {{ tooltipMessage }}
-        </template>
-      </ATooltip>
+        </div>
+      </UTooltip>
 
       <div :class="$style.result">{{ safeRating }}</div>
     </div>

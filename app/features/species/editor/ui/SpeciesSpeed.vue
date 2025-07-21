@@ -5,74 +5,70 @@
 </script>
 
 <template>
-  <ARow :gutter="16">
-    <ACol :span="6">
-      <AFormItem
-        label="Скорость передвижения"
-        :name="['properties', 'speed', 'base']"
+  <UForm
+    class="col-span-full grid grid-cols-24 gap-4"
+    attach
+    :state="speed"
+  >
+    <UFormField
+      class="col-span-6"
+      label="Скорость передвижения"
+      name="base"
+    >
+      <UInputNumber
+        v-model="speed.base"
+        placeholder="Введи скорость передвижения"
+        :min="0"
+      />
+    </UFormField>
+
+    <div class="col-span-6 grid grid-cols-12 gap-4">
+      <UFormField
+        class="col-span-8"
+        label="Скорость полета"
+        name="fly"
       >
-        <AInputNumber
-          v-model:value="speed.base"
-          :precision="0"
-          placeholder="Введи скорость передвижения"
-          min="0"
+        <UInputNumber
+          v-model="speed.fly"
+          placeholder="Введи скорость полета"
+          :min="0"
         />
-      </AFormItem>
-    </ACol>
+      </UFormField>
 
-    <ACol :span="6">
-      <ARow :gutter="16">
-        <ACol :span="16">
-          <AFormItem
-            label="Скорость полета"
-            :name="['properties', 'speed', 'fly']"
-          >
-            <AInputNumber
-              v-model:value="speed.fly"
-              :precision="0"
-              placeholder="Введи скорость полета"
-              min="0"
-            />
-          </AFormItem>
-        </ACol>
-
-        <ACol :span="8">
-          <AFormItem
-            label="Парит"
-            :name="['properties', 'speed', 'hover']"
-          >
-            <ACheckbox v-model:checked="speed.hover"> Да </ACheckbox>
-          </AFormItem>
-        </ACol>
-      </ARow>
-    </ACol>
-
-    <ACol :span="6">
-      <AFormItem
-        label="Скорость лазания"
-        :name="['properties', 'speed', 'climb']"
+      <UFormField
+        class="col-span-4"
+        label="Парит"
+        name="hover"
       >
-        <AInputNumber
-          v-model:value="speed.climb"
-          :precision="0"
-          placeholder="Введи скорость лазания"
-          min="0"
+        <UCheckbox
+          v-model="speed.hover"
+          label="Да"
         />
-      </AFormItem>
-    </ACol>
+      </UFormField>
+    </div>
 
-    <ACol :span="6">
-      <AFormItem
-        label="Скорость плавания"
-        :name="['properties', 'speed', 'swim']"
-      >
-        <AInputNumber
-          v-model:value="speed.swim"
-          :precision="0"
-          placeholder="Введи скорость плавания"
-          min="0"
-        />
-      </AFormItem>
-    </ACol>
-  </ARow>
+    <UFormField
+      class="col-span-6"
+      label="Скорость лазания"
+      name="climb"
+    >
+      <UInputNumber
+        v-model="speed.climb"
+        placeholder="Введи скорость лазания"
+        :min="0"
+      />
+    </UFormField>
+
+    <UFormField
+      class="col-span-6"
+      label="Скорость плавания"
+      name="swim"
+    >
+      <UInputNumber
+        v-model="speed.swim"
+        placeholder="Введи скорость плавания"
+        :min="0"
+      />
+    </UFormField>
+  </UForm>
 </template>

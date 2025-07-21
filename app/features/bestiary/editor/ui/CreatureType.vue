@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { ValidationDictionaries } from '~/shared/utils';
   import { SelectCreatureType } from '~ui/select';
 
   import type { CreatureTypes } from '~bestiary/types';
@@ -19,28 +18,31 @@
 </script>
 
 <template>
-  <ACol :span="8">
-    <AFormItem
+  <UForm
+    class="col-span-full grid grid-cols-24 gap-4"
+    attach
+    :state="model"
+  >
+    <UFormField
       label="Типы существа"
-      :name="['types', 'values']"
-      :rules="[ValidationDictionaries.ruleCreatureTypes()]"
+      class="col-span-8"
+      name="values"
     >
       <SelectCreatureType
         v-model="model.values"
         multiple
       />
-    </AFormItem>
-  </ACol>
+    </UFormField>
 
-  <ACol :span="8">
-    <AFormItem
+    <UFormField
+      class="col-span-16"
       label="Уточнение типа"
-      :name="['types', 'text']"
+      name="text"
     >
-      <AInput
-        v-model:value="model.text"
+      <UInput
+        v-model="model.text"
         placeholder="Введи уточнение типа"
       />
-    </AFormItem>
-  </ACol>
+    </UFormField>
+  </UForm>
 </template>

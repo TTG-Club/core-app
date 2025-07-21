@@ -1,9 +1,9 @@
-import type { DefaultOptionType } from 'ant-design-vue/es/vc-select/Select';
 import type { AbilityKey, AbilityShortKey } from '~/shared/types';
 
-export interface SelectOption extends DefaultOptionType {
+export interface SelectOption {
   label: string;
   value: string;
+  [p: string]: unknown;
 }
 
 export type SelectOptionWithNumericValue = Omit<SelectOption, 'value'> & {

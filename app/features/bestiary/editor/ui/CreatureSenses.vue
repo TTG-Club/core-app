@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { getModifier, ValidationBase } from '~/shared/utils';
+  import { getModifier } from '~/shared/utils';
 
   import type {
     CreatureSenses,
@@ -33,92 +33,81 @@
 </script>
 
 <template>
-  <ADivider orientation="left">
-    <ATypographyText
-      type="secondary"
-      content="Чувства"
-      strong
-    />
-  </ADivider>
+  <USeparator>
+    <span class="font-bold text-secondary">Чувства</span>
+  </USeparator>
 
-  <ARow :gutter="16">
-    <ACol :span="4">
-      <AFormItem
-        label="Тёмное зрение"
-        :name="['senses', 'darkvision']"
+  <UForm
+    class="col-span-full grid grid-cols-5 gap-4"
+    attach
+    :state="model"
+  >
+    <UFormField
+      label="Тёмное зрение"
+      name="darkvision"
+    >
+      <UInputNumber
+        v-model="model.darkvision"
+        :min="0"
+        :precision="0"
+        placeholder="Введите значение"
       >
-        <AInputNumber
-          v-model:value="model.darkvision"
-          :min="0"
-          :precision="0"
-          placeholder="Введите значение"
-        >
-          <template #addonAfter> фт. </template>
-        </AInputNumber>
-      </AFormItem>
-    </ACol>
+        <template #trailing> фт. </template>
+      </UInputNumber>
+    </UFormField>
 
-    <ACol :span="4">
-      <AFormItem
-        label="Истинное зрение"
-        :name="['senses', 'truesight']"
+    <UFormField
+      label="Истинное зрение"
+      name="truesight"
+    >
+      <UInputNumber
+        v-model="model.truesight"
+        :min="0"
+        :precision="0"
+        placeholder="Введите значение"
       >
-        <AInputNumber
-          v-model:value="model.truesight"
-          :min="0"
-          :precision="0"
-          placeholder="Введите значение"
-        >
-          <template #addonAfter> фт. </template>
-        </AInputNumber>
-      </AFormItem>
-    </ACol>
+        <template #trailing> фт. </template>
+      </UInputNumber>
+    </UFormField>
 
-    <ACol :span="4">
-      <AFormItem
-        label="Слепое зрение"
-        :name="['senses', 'blindsight']"
+    <UFormField
+      label="Слепое зрение"
+      name="blindsight"
+    >
+      <UInputNumber
+        v-model="model.blindsight"
+        :min="0"
+        :precision="0"
+        placeholder="Введите значение"
       >
-        <AInputNumber
-          v-model:value="model.blindsight"
-          :min="0"
-          :precision="0"
-          placeholder="Введите значение"
-        >
-          <template #addonAfter> фт. </template>
-        </AInputNumber>
-      </AFormItem>
-    </ACol>
+        <template #trailing> фт. </template>
+      </UInputNumber>
+    </UFormField>
 
-    <ACol :span="4">
-      <AFormItem
-        label="Чувство вибрации"
-        :name="['senses', 'tremorsense']"
+    <UFormField
+      label="Чувство вибрации"
+      name="tremorsense"
+    >
+      <UInputNumber
+        v-model="model.tremorsense"
+        :min="0"
+        :precision="0"
+        placeholder="Введите значение"
       >
-        <AInputNumber
-          v-model:value="model.tremorsense"
-          :min="0"
-          :precision="0"
-          placeholder="Введите значение"
-        >
-          <template #addonAfter> фт. </template>
-        </AInputNumber>
-      </AFormItem>
-    </ACol>
+        <template #trailing> фт. </template>
+      </UInputNumber>
+    </UFormField>
 
-    <ACol :span="8">
-      <AFormItem
-        label="Пассивная Внимательность"
-        :name="['senses', 'passivePerception']"
-        :rules="[ValidationBase.ruleNumber()]"
-      >
-        <AInputNumber
-          v-model:value="model.passivePerception"
-          :min="0"
-          :precision="0"
-          placeholder="Введите значение"
-        />
-      </AFormItem>
-    </ACol>
-  </ARow>
+    <UFormField
+      label="Пассивная Внимательность"
+      name="passivePerception"
+    >
+      <UInputNumber
+        v-model="model.passivePerception"
+        :min="0"
+        :precision="0"
+        placeholder="Введите значение"
+      />
+    </UFormField>
+  </UForm>
 </template>

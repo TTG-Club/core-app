@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { Form } from 'ant-design-vue';
-
   import { DictionaryService } from '~/shared/api';
+
+  import type { AbilityKey } from '~/shared/types';
 
   const { multiple = false, limit = 0 } = defineProps<{
     disabled?: boolean;
@@ -9,9 +9,7 @@
     limit?: number;
   }>();
 
-  const context = Form.useInjectFormItemContext();
-
-  const model = defineModel<string | Array<string>>();
+  const model = defineModel<AbilityKey | Array<AbilityKey>>();
 
   const { data, refresh } = await useAsyncData(
     'dictionaries-abilities',
@@ -37,23 +35,17 @@
 
     refresh();
   };
-
-  watch(model, () => {
-    context.onFieldChange();
-  });
 </script>
 
 <template>
-  <ASelect
-    v-model:value="model"
+  <USelect
+    v-model="model"
     :placeholder="`Выбери характеристик${multiple ? 'и' : 'у'}`"
-    :mode="multiple ? 'multiple' : undefined"
-    :token-separators="[',']"
-    :options="options"
-    max-tag-count="responsive"
-    allow-clear
-    show-search
-    show-arrow
-    @dropdown-visible-change="handleDropdownOpening"
+    :multiple="multiple"
+    :items="options"
+    :disabled="disabled"
+    clearable
+    searchable
+    @open="handleDropdownOpening(true)"
   />
 </template>

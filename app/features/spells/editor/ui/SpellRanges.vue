@@ -1,10 +1,10 @@
 <script setup lang="ts">
-  import { isEqual, isString } from 'lodash-es';
+  import { isString } from 'lodash-es';
 
   import { DictionaryService } from '~/shared/api';
 
-  import type { SelectValue } from 'ant-design-vue/es/select';
-  import type { SpellCastingTime, SpellRange } from '~/shared/types';
+  import type { SpellRange } from '~/shared/types';
+  import { EditorArrayControls } from '~ui/editor';
 
   const ranges = defineModel<Array<SpellRange>>({
     default: () => [],
@@ -37,7 +37,7 @@
     return !unitSelected.measurable;
   }
 
-  function updateUnit(value: SelectValue, index: number) {
+  function updateUnit(value: string | undefined, index: number) {
     if (!isString(value) && value !== undefined) {
       return;
     }
@@ -58,19 +58,7 @@
     ranges.value[index]!.value = undefined;
   }
 
-  function add(index: number) {
-    ranges.value.splice(index + 1, 0, getEmpty());
-  }
-
-  function clear(index: number) {
-    ranges.value.splice(index, 1, getEmpty());
-  }
-
-  function remove(index: number) {
-    ranges.value.splice(index, 1);
-  }
-
-  function getEmpty(): SpellCastingTime {
+  function getEmpty(): SpellRange {
     return {
       value: undefined,
       unit: undefined,
@@ -92,96 +80,61 @@
 </script>
 
 <template>
-  <ADivider orientation="left">
-    <ATypographyText
-      type="secondary"
-      content="Дистанция"
-      strong
-    />
-  </ADivider>
+  <USeparator>
+    <span class="font-bold text-secondary">Дистанция</span>
+  </USeparator>
 
-  <ARow
+  <UForm
     v-for="(range, index) in ranges"
     :key="index"
-    :gutter="16"
+    class="col-span-full grid grid-cols-24 gap-4"
+    attach
+    :state="range"
   >
-    <ACol :span="4">
-      <AFormItem
-        label="Дистанция"
-        :name="['range', index, 'value']"
-      >
-        <AInputNumber
-          v-model:value="range.value"
-          :disabled="isValueDisabled(range.unit)"
-          :precision="0"
-          :min="0"
-          placeholder="Введи значение"
-          allow-clear
-        />
-      </AFormItem>
-    </ACol>
+    <UFormField
+      label="Дистанция"
+      name="value"
+      class="col-span-4"
+    >
+      <UInputNumber
+        v-model="range.value"
+        :disabled="isValueDisabled(range.unit)"
+        :precision="0"
+        :min="0"
+        placeholder="Введи значение"
+      />
+    </UFormField>
 
-    <ACol :span="4">
-      <AFormItem
-        label="Тип дистанции"
-        :name="['range', index, 'unit']"
-      >
-        <ASelect
-          :value="range.unit"
-          :loading="status === 'pending'"
-          :options="units || []"
-          placeholder="Выбери из списка"
-          show-search
-          show-arrow
-          allow-clear
-          @update:value="updateUnit($event, index)"
-        />
-      </AFormItem>
-    </ACol>
+    <UFormField
+      label="Тип дистанции"
+      name="unit"
+      class="col-span-4"
+    >
+      <USelect
+        :model-value="range.unit"
+        :loading="status === 'pending'"
+        :items="units || []"
+        placeholder="Выбери из списка"
+        @update:model-value="updateUnit($event, index)"
+      />
+    </UFormField>
 
-    <ACol :span="10">
-      <AFormItem
-        label="Собственное значение"
-        :name="['range', index, 'custom']"
-      >
-        <AInput
-          v-model:value="range.custom"
-          placeholder="Введи значение"
-          allow-clear
-        />
-      </AFormItem>
-    </ACol>
+    <UFormField
+      class="col-span-10"
+      label="Собственное значение"
+      name="custom"
+    >
+      <UInput
+        v-model="range.custom"
+        placeholder="Введи значение"
+      />
+    </UFormField>
 
-    <ACol :span="6">
-      <AFormItem label="Управление">
-        <AFlex :gap="8">
-          <AButton
-            block
-            @click.left.exact.prevent="add(index)"
-          >
-            Добавить
-          </AButton>
-
-          <AButton
-            v-if="index === ranges.length - 1"
-            :disabled="isEqual(range, getEmpty())"
-            danger
-            block
-            @click.left.exact.prevent="clear(index)"
-          >
-            Очистить
-          </AButton>
-
-          <AButton
-            v-else
-            danger
-            block
-            @click.left.exact.prevent="remove(index)"
-          >
-            Удалить
-          </AButton>
-        </AFlex>
-      </AFormItem>
-    </ACol>
-  </ARow>
+    <EditorArrayControls
+      v-model="ranges"
+      :item="range"
+      :empty-object="getEmpty()"
+      :index
+    />
+  </UForm>
 </template>

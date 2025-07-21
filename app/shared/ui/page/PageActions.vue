@@ -41,7 +41,7 @@
       variant="ghost"
       color="neutral"
       icon="i-ttg-x"
-      @click="$emit('close')"
+      @click.left.exact.prevent="$emit('close')"
     />
   </UTooltip>
 </template>

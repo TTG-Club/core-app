@@ -31,9 +31,37 @@ export default defineAppConfig({
       plus: 'i-ttg-plus',
       search: 'i-ttg-search',
     },
+    link: {
+      base: 'text-(--color-primary)',
+      variants: {
+        active: {
+          false: 'text-(--color-primary)',
+          true: 'text-(--color-primary)',
+        },
+      },
+      compoundVariants: [
+        {
+          active: false,
+          disabled: false,
+          class: [
+            'text-(--color-primary)',
+            'hover:text-(--color-primary)',
+            'hover:underline',
+            'active:brightness-80',
+            'transition-[filter]',
+          ],
+        },
+      ],
+    },
     button: {
       slots: {
         base: 'cursor-pointer',
+      },
+    },
+    formField: {
+      slots: {
+        help: 'text-xs text-secondary',
+        description: 'text-xs text-secondary',
       },
     },
     checkbox: {
@@ -45,6 +73,26 @@ export default defineAppConfig({
     input: {
       slots: {
         root: 'w-full',
+      },
+      variants: {
+        defaultVariants: {
+          variant: 'soft',
+        },
+      },
+    },
+    inputNumber: {
+      slots: {
+        root: 'w-full',
+      },
+    },
+    textarea: {
+      slots: {
+        root: 'w-full',
+      },
+    },
+    select: {
+      slots: {
+        base: 'w-full',
       },
     },
     popover: {
@@ -71,7 +119,28 @@ export default defineAppConfig({
         container: 'gap-0 p-0',
         header: 'bg-default sticky top-0 p-4',
         body: 'px-4 pb-4',
-        overlay: 'bg-elevated/45',
+        overlay: 'bg-elevated/45 cursor-pointer',
+        handle: 'cursor-grab active:cursor-grabbing',
+      },
+    },
+    collapsible: {
+      slots: {
+        root: [
+          'px-4 py-3 flex flex-col gap-4 rounded',
+          'bg-elevated/65 hover:bg-elevated/85',
+          'transition-bg duration-150 ease-in-out',
+        ],
+      },
+    },
+    carousel: {
+      slots: {
+        root: 'border-none',
+        dot: 'w-6 h-1',
+      },
+    },
+    separator: {
+      slots: {
+        root: 'col-span-full',
       },
     },
     toast: {
