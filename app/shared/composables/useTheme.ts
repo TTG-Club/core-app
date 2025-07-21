@@ -23,7 +23,7 @@ export function useTheme() {
   function change(name: MaybeRefOrGetter<ThemeName>) {
     const newMode = toValue(name);
 
-    if (!(newMode in Object.values(ThemeName))) {
+    if (!Object.values(ThemeName).find((value) => value === newMode)) {
       console.warn(`Неизвестная тема: ${newMode}.`);
 
       return;
