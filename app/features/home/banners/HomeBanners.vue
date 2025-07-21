@@ -3,9 +3,9 @@
 </script>
 
 <template>
-  <AFlex gap="12">
+  <div class="flex gap-3">
     <MaterialCounter />
 
     <LegacyTtgLink />
-  </AFlex>
+  </div>
 </template>

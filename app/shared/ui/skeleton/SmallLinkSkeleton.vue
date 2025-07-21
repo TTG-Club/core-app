@@ -5,30 +5,15 @@
 <template>
   <SmallLink>
     <template #icon>
-      <ASkeleton
-        :title="false"
-        :paragraph="false"
-        :avatar="{ size: 16 }"
-        active
-      />
+      <USkeleton class="size-4 rounded-full bg-(--color-hover)" />
     </template>
 
     <template #default>
-      <ASkeleton
-        :title="false"
-        :avatar="false"
-        :paragraph="{ rows: 1, width: '100%' }"
-        active
-      />
+      <USkeleton class="h-4 w-full bg-(--color-hover)" />
     </template>
 
     <template #caption>
-      <ASkeleton
-        :title="false"
-        :avatar="false"
-        :paragraph="{ rows: 1, width: '75%' }"
-        active
-      />
+      <USkeleton class="h-4 w-24 bg-(--color-hover)" />
     </template>
   </SmallLink>
 </template>

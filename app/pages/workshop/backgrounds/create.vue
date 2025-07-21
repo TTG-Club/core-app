@@ -1,9 +1,6 @@
 <script setup lang="ts">
   import { NuxtLink } from '#components';
   import { BackgroundsEditor } from '~backgrounds/editor';
-  import { SvgIcon } from '~ui/icon';
-  import { PageContainer, PageHeader } from '~ui/page';
-  import { useToast } from '~ui/toast';
 
   import type { BackgroundCreate } from '~/shared/types';
 
@@ -50,7 +47,8 @@
         onResponseError: (error) => {
           isCreating.value = false;
 
-          $toast.error({
+          $toast.add({
+            color: 'error',
             title: 'Ошибка создания предыстории',
             description: error.response._data.message,
           });
@@ -59,7 +57,8 @@
 
       // isCreated.value = true; // TODO: вернуть в будущем
 
-      $toast.success({
+      $toast.add({
+        color: 'success',
         title: 'Черта успешно создана',
         description: getLink,
         // onClose: () => navigateTo({ name: 'workshop-backgrounds' }), // TODO: вернуть в будущем
@@ -92,39 +91,30 @@
 </script>
 
 <template>
-  <PageContainer fixed-header>
-    <template #header>
-      <PageHeader title="Создание новой предыстории">
-        <template #actions>
-          <AButton
-            type="primary"
-            :disabled="isCreated"
-            :loading="isCreating"
-            @click.left.exact.prevent="submit"
-          >
-            <template #icon>
-              <SvgIcon icon="check" />
-            </template>
+  <NuxtLayout
+    title="Создание новой предыстории"
+    name="detail"
+  >
+    <template #actions>
+      <UButton
+        :disabled="isCreated"
+        :loading="editor?.isCreating"
+        icon="i-ttg-check"
+        variant="ghost"
+        color="neutral"
+        @click.left.exact.prevent="submit"
+      >
+        Сохранить
+      </UButton>
 
-            <template #default> Создать </template>
-          </AButton>
-
-          <ATooltip
-            title="Закрыть"
-            :mouse-enter-delay="0.7"
-            destroy-tooltip-on-hide
-          >
-            <AButton
-              type="text"
-              @click.left.exact.prevent="navigateTo('/workshop/backgrounds')"
-            >
-              <template #icon>
-                <SvgIcon icon="close" />
-              </template>
-            </AButton>
-          </ATooltip>
-        </template>
-      </PageHeader>
+      <UTooltip text="Закрыть">
+        <UButton
+          icon="i-ttg-x"
+          variant="ghost"
+          color="neutral"
+          @click.left.exact.prevent="navigateTo('/workshop/backgrounds')"
+        />
+      </UTooltip>
     </template>
 
     <template #default>
@@ -136,5 +126,5 @@
         />
       </ClientOnly>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

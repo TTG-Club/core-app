@@ -1,12 +1,10 @@
 <script setup lang="ts">
-  import { ruleUrl } from './validations';
+  import { z } from 'zod/v4';
 
-  import { ValidationBase } from '~/shared/utils';
   import { InputUrl } from '~ui/input';
   import { SelectSource, SelectTags } from '~ui/select';
 
   import type { EditorBaseInfoState } from './types';
-  import type { SelectValue } from 'ant-design-vue/es/select';
 
   defineProps<{
     section: string;
@@ -18,7 +16,7 @@
 
   const form = defineModel<EditorBaseInfoState>({ required: true });
 
-  function handleBookChange(value: SelectValue) {
+  function handleBookChange(value: string | Array<string> | undefined) {
     if (typeof value !== 'string' && value !== undefined) {
       return;
     }
@@ -29,111 +27,143 @@
 
     form.value.source.url = value;
   }
+
+  const schema = z.object({
+    url: z.string().trim().nonempty(),
+    tags: z.array(z.string().trim().nonempty()).optional(),
+  });
+
+  const nameSchema = z.object({
+    rus: z.string().trim().nonempty(),
+    eng: z.string().trim().nonempty(),
+    alt: z.array(z.string().trim().nonempty()).optional(),
+  });
+
+  const sourceSchema = z.object({
+    url: z
+      .string()
+      .trim()
+      .nonempty()
+      .optional()
+      .refine(
+        (value) => {
+          if (!oldUrl) {
+            return true;
+          }
+
+          return oldUrl === value;
+        },
+        {
+          error: 'URL не совпадает со старым',
+        },
+      ),
+    page: z.number().positive().optional(),
+  });
 </script>
 
 <template>
-  <ADivider orientation="left">
-    <ATypographyText
-      type="secondary"
-      content="Основная информация"
-      strong
-    />
-  </ADivider>
+  <div class="col-span-full flex flex-col gap-4">
+    <USeparator>
+      <span class="font-bold text-secondary">Основная информация</span>
+    </USeparator>
 
-  <ARow :gutter="16">
-    <ACol :span="8">
-      <AFormItem
+    <UForm
+      class="col-span-full grid grid-cols-3 place-items-stretch gap-4"
+      :schema="nameSchema"
+      :state="form.name"
+      attach
+    >
+      <UFormField
         label="Название"
-        :name="['name', 'rus']"
-        :rules="[ValidationBase.ruleRusName()]"
+        name="rus"
+        required
       >
-        <AInput
-          v-model:value="form.name.rus"
+        <UInput
+          v-model="form.name.rus"
           placeholder="Введи название"
         />
-      </AFormItem>
-    </ACol>
+      </UFormField>
 
-    <ACol :span="8">
-      <AFormItem
+      <UFormField
         label="Название (англ.)"
-        tooltip="Английское название"
-        :name="['name', 'eng']"
-        :rules="[ValidationBase.ruleEngName()]"
+        name="eng"
+        help="Английское название"
+        required
       >
-        <AInput
-          v-model:value="form.name.eng"
+        <UInput
+          v-model="form.name.eng"
           placeholder="Введи английское название"
         />
-      </AFormItem>
-    </ACol>
+      </UFormField>
 
-    <ACol :span="8">
-      <AFormItem
+      <UFormField
         label="Название (альт.)"
-        tooltip="Альтернативные названия. Используется для поиска и СЕО."
-        :name="['name', 'alt']"
+        name="alt"
+        help="Альтернативные названия. Используется для поиска и СЕО."
       >
         <SelectTags
           v-model="form.name.alt"
           placeholder="Введи альтернативные названия"
         />
-      </AFormItem>
-    </ACol>
-  </ARow>
+      </UFormField>
+    </UForm>
 
-  <ARow :gutter="16">
-    <ACol :span="16">
-      <AFormItem
+    <UForm
+      class="col-span-full grid grid-cols-6 place-items-stretch gap-4"
+      :schema="sourceSchema"
+      :state="form.source"
+      attach
+    >
+      <UFormField
         label="Источник"
-        tooltip="Книга, из которой взята информация о виде, если она существует"
-        :name="['source', 'url']"
+        help="Книга, из которой взята информация о виде, если она существует"
+        name="url"
+        class="col-span-4"
       >
         <SelectSource
           :model-value="form.source.url"
           @update:model-value="handleBookChange"
         />
-      </AFormItem>
-    </ACol>
+      </UFormField>
 
-    <ACol :span="8">
-      <AFormItem
+      <UFormField
         label="Страница в источнике"
-        tooltip="Номер страницы книги, откуда была взята информация о виде, если выбрана сама книга"
-        :name="['source', 'page']"
-        :rules="[ValidationBase.ruleSourcePage(!!form.source.url)]"
+        help="Номер страницы книги, откуда была взята информация о виде, если выбрана сама книга"
+        name="page"
+        class="col-span-2"
+        :required="!!form.source.url"
       >
-        <AInputNumber
-          v-model:value="form.source.page"
-          :disabled="!form.source.url"
-          :precision="0"
+        <UInputNumber
+          v-model="form.source.page"
           placeholder="Введи номер страницы"
-          min="0"
+          :disabled="!form.source.url"
+          :min="1"
         />
-      </AFormItem>
-    </ACol>
-  </ARow>
+      </UFormField>
+    </UForm>
 
-  <ARow :gutter="16">
-    <ACol :span="12">
-      <AFormItem
+    <UForm
+      class="col-span-full grid grid-cols-2 place-items-stretch gap-4"
+      :schema="schema"
+      :state="form"
+      attach
+    >
+      <UFormField
         label="Теги"
-        tooltip="Используются для поиска и СЕО"
-        :name="['tags']"
+        help="Используются для поиска и СЕО"
+        name="tags"
       >
         <SelectTags
           v-model="form.tags"
           placeholder="Введи теги"
         />
-      </AFormItem>
-    </ACol>
+      </UFormField>
 
-    <ACol :span="12">
-      <AFormItem
+      <UFormField
         label="URL"
-        tooltip="Менять только при необходимости, т.к. URL генерируется автоматически при вводе английского названия"
-        :name="['url']"
-        :rules="[ruleUrl(section, oldUrl)]"
+        help="Менять только при необходимости, т.к. URL генерируется автоматически при вводе английского названия"
+        name="url"
+        required
       >
         <InputUrl
           v-model="form.url"
@@ -141,7 +171,7 @@
           :source-url="form.source.url"
           :addon-before="`${getOrigin()}/${section}/`"
         />
-      </AFormItem>
-    </ACol>
-  </ARow>
+      </UFormField>
+    </UForm>
+  </div>
 </template>

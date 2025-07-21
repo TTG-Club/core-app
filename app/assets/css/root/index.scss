@@ -1,0 +1,17 @@
+@forward 'typography';
+@forward 'colors';
+@forward 'animation';
+
+html {
+  --max-content: 1320px;
+
+  // NavBar
+  --navbar-width: calc(64px + var(--safe-area-inset-left));
+  --navbar-height: calc(56px + var(--safe-area-inset-bottom));
+
+  // Safe area
+  --safe-area-inset-top: env(safe-area-inset-top);
+  --safe-area-inset-left: env(safe-area-inset-left);
+  --safe-area-inset-right: env(safe-area-inset-right);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom);
+}

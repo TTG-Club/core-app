@@ -10,23 +10,13 @@
   defineProps<{
     creature: CreatureDetailResponse;
   }>();
-
-  const expanded = useState(() => [
-    'traits',
-    'actions',
-    'bonusActions',
-    'description',
-    'legendaryActions',
-    'section',
-  ]);
 </script>
 
 <template>
   <div :class="$style.container">
     <div :class="$style.body">
-      <AFlex
-        vertical
-        :gap="12"
+      <div
+        class="flex flex-col gap-3"
         :class="$style.info"
       >
         <TopBar :header="creature.header" />
@@ -43,281 +33,243 @@
         </div>
 
         <StatsBlock v-bind="creature" />
-      </AFlex>
+      </div>
 
-      <AFlex
-        vertical
-        :gap="12"
-        flex="1 1 auto"
-      >
+      <div class="flex flex-auto flex-col gap-3">
         <template v-if="creature.traits?.length">
-          <ACollapse
-            v-model:active-key="expanded"
-            :bordered="false"
-            destroy-inactive-panel
-            ghost
-          >
-            <ACollapsePanel
-              key="traits"
-              data-allow-mismatch
-            >
-              <template #header>
-                <ATypographyTitle
-                  :level="4"
-                  data-allow-mismatch
-                  content="Особенности"
-                >
-                </ATypographyTitle>
-              </template>
+          <UCollapsible default-open>
+            <template #default="{ open }">
+              <h4
+                class="flex cursor-pointer items-center justify-between text-xl font-semibold"
+              >
+                <span> Особенности </span>
 
-              <template #default>
-                <p
-                  v-for="trait in creature.traits"
-                  :key="trait.name.eng"
-                >
-                  <strong>{{ trait.name.rus }}. </strong>
+                <UIcon
+                  name="i-fluent-chevron-down-16-regular"
+                  class="transition-transform duration-150 ease-in-out"
+                  :class="open ? '-rotate-180' : ''"
+                />
+              </h4>
+            </template>
 
-                  <MarkupRender :entries="trait.description" />
-                </p>
-              </template>
-            </ACollapsePanel>
-          </ACollapse>
+            <template #content>
+              <p
+                v-for="trait in creature.traits"
+                :key="trait.name.eng"
+              >
+                <strong>{{ trait.name.rus }}. </strong>
+
+                <MarkupRender :entries="trait.description" />
+              </p>
+            </template>
+          </UCollapsible>
         </template>
 
         <template v-if="creature.actions?.length">
-          <ACollapse
-            v-model:active-key="expanded"
-            :bordered="false"
-            destroy-inactive-panel
-            ghost
-          >
-            <ACollapsePanel
-              key="actions"
-              data-allow-mismatch
-            >
-              <template #header>
-                <ATypographyTitle
-                  :level="4"
-                  data-allow-mismatch
-                  content="Действия"
-                >
-                </ATypographyTitle>
-              </template>
+          <UCollapsible default-open>
+            <template #default="{ open }">
+              <h4
+                class="flex cursor-pointer items-center justify-between text-xl font-semibold"
+              >
+                <span> Действия </span>
 
-              <template #default>
-                <p
-                  v-for="trait in creature.actions"
-                  :key="trait.name.eng"
-                >
-                  <strong>{{ trait.name.rus }}. </strong>
+                <UIcon
+                  name="i-fluent-chevron-down-16-regular"
+                  class="transition-transform duration-150 ease-in-out"
+                  :class="open ? '-rotate-180' : ''"
+                />
+              </h4>
+            </template>
 
-                  <MarkupRender :entries="trait.description" />
-                </p>
-              </template>
-            </ACollapsePanel>
-          </ACollapse>
+            <template #content>
+              <p
+                v-for="trait in creature.actions"
+                :key="trait.name.eng"
+              >
+                <strong>{{ trait.name.rus }}. </strong>
+
+                <MarkupRender :entries="trait.description" />
+              </p>
+            </template>
+          </UCollapsible>
         </template>
 
         <template v-if="creature.bonusActions?.length">
-          <ACollapse
-            v-model:active-key="expanded"
-            :bordered="false"
-            destroy-inactive-panel
-            ghost
-          >
-            <ACollapsePanel
-              key="bonusActions"
-              data-allow-mismatch
-            >
-              <template #header>
-                <ATypographyTitle
-                  :level="4"
-                  data-allow-mismatch
-                  content="Бонусные действия"
-                >
-                </ATypographyTitle>
-              </template>
+          <UCollapsible default-open>
+            <template #default="{ open }">
+              <h4
+                class="flex cursor-pointer items-center justify-between text-xl font-semibold"
+              >
+                <span> Бонусные действия </span>
 
-              <template #default>
-                <p
-                  v-for="trait in creature.bonusActions"
-                  :key="trait.name.eng"
-                >
-                  <strong>{{ trait.name.rus }}. </strong>
+                <UIcon
+                  name="i-fluent-chevron-down-16-regular"
+                  class="transition-transform duration-150 ease-in-out"
+                  :class="open ? '-rotate-180' : ''"
+                />
+              </h4>
+            </template>
 
-                  <MarkupRender :entries="trait.description" />
-                </p>
-              </template>
-            </ACollapsePanel>
-          </ACollapse>
+            <template #content>
+              <p
+                v-for="trait in creature.bonusActions"
+                :key="trait.name.eng"
+              >
+                <strong>{{ trait.name.rus }}. </strong>
+
+                <MarkupRender :entries="trait.description" />
+              </p>
+            </template>
+          </UCollapsible>
         </template>
 
         <template v-if="creature.reactions?.length">
-          <ACollapse
-            v-model:active-key="expanded"
-            :bordered="false"
-            destroy-inactive-panel
-            ghost
-          >
-            <ACollapsePanel
-              key="reactions"
-              data-allow-mismatch
-            >
-              <template #header>
-                <ATypographyTitle
-                  :level="4"
-                  data-allow-mismatch
-                  content="Реакции"
-                >
-                </ATypographyTitle>
-              </template>
+          <UCollapsible default-open>
+            <template #default="{ open }">
+              <h4
+                class="flex cursor-pointer items-center justify-between text-xl font-semibold"
+              >
+                <span> Реакции </span>
 
-              <template #default>
-                <p
-                  v-for="trait in creature.reactions"
-                  :key="trait.name.eng"
-                >
-                  <strong>{{ trait.name.rus }}. </strong>
+                <UIcon
+                  name="i-fluent-chevron-down-16-regular"
+                  class="transition-transform duration-150 ease-in-out"
+                  :class="open ? '-rotate-180' : ''"
+                />
+              </h4>
+            </template>
 
-                  <MarkupRender :entries="trait.description" />
-                </p>
-              </template>
-            </ACollapsePanel>
-          </ACollapse>
+            <template #content>
+              <p
+                v-for="trait in creature.reactions"
+                :key="trait.name.eng"
+              >
+                <strong>{{ trait.name.rus }}. </strong>
+
+                <MarkupRender :entries="trait.description" />
+              </p>
+            </template>
+          </UCollapsible>
         </template>
 
         <template v-if="creature.legendaryActions?.length">
-          <ACollapse
-            v-model:active-key="expanded"
-            :bordered="false"
-            destroy-inactive-panel
-            ghost
-          >
-            <ACollapsePanel
-              key="legendaryActions"
-              data-allow-mismatch
-            >
-              <template #header>
-                <ATypographyTitle
-                  :level="4"
-                  data-allow-mismatch
-                  content="Легендарные действия"
+          <UCollapsible default-open>
+            <template #default="{ open }">
+              <h4
+                class="flex cursor-pointer items-center justify-between text-xl font-semibold"
+              >
+                <span> Легендарные действия </span>
+
+                <UIcon
+                  name="i-fluent-chevron-down-16-regular"
+                  class="transition-transform duration-150 ease-in-out"
+                  :class="open ? '-rotate-180' : ''"
+                />
+              </h4>
+            </template>
+
+            <template #content>
+              <p>
+                <strong>Использования легендарных действий:</strong>
+
+                {{ creature.legendaryAction }}
+                <span v-if="creature.legendaryActionInLair">
+                  ({{ creature.legendaryActionInLair }} в логове)
+                </span>
+                . Сразу после хода другого существа
+                {{ creature.name.rus }} может потратить 1 использование, чтобы
+                выполнить одно из следующих действий.
+                {{ creature.name.rus }} восстанавливает все потраченные
+                использования в начале своего хода.
+              </p>
+
+              <ul v-if="creature.legendaryActions?.length">
+                <li
+                  v-for="action in creature.legendaryActions"
+                  :key="action.name.eng"
                 >
-                </ATypographyTitle>
-              </template>
+                  <p>
+                    <strong>{{ action.name.rus }}. </strong>
 
-              <template #default>
-                <p>
-                  <strong>Использования легендарных действий:</strong>
-
-                  {{ creature.legendaryAction }}
-                  <span v-if="creature.legendaryActionInLair">
-                    ({{ creature.legendaryActionInLair }} в логове)
-                  </span>
-                  . Сразу после хода другого существа
-                  {{ creature.name.rus }} может потратить 1 использование, чтобы
-                  выполнить одно из следующих действий.
-                  {{ creature.name.rus }} восстанавливает все потраченные
-                  использования в начале своего хода.
-                </p>
-
-                <ul v-if="creature.legendaryActions?.length">
-                  <li
-                    v-for="action in creature.legendaryActions"
-                    :key="action.name.eng"
-                  >
-                    <p>
-                      <strong>{{ action.name.rus }}. </strong>
-
-                      <MarkupRender :entries="action.description" />
-                    </p>
-                  </li>
-                </ul>
-              </template>
-            </ACollapsePanel>
-          </ACollapse>
+                    <MarkupRender :entries="action.description" />
+                  </p>
+                </li>
+              </ul>
+            </template>
+          </UCollapsible>
         </template>
 
         <template v-if="creature.section">
-          <ACollapse
-            v-model:active-key="expanded"
-            :bordered="false"
-            destroy-inactive-panel
-            ghost
-          >
-            <ACollapsePanel
-              key="section"
-              data-allow-mismatch
-            >
-              <template #header>
-                <ATypographyTitle
-                  :level="4"
-                  data-allow-mismatch
-                  content="Эффекты местности"
-                >
-                </ATypographyTitle>
-              </template>
+          <UCollapsible default-open>
+            <template #default="{ open }">
+              <h4
+                class="flex cursor-pointer items-center justify-between text-xl font-semibold"
+              >
+                <span> Эффекты местности </span>
 
-              <template #default>
-                <p v-if="creature.section">
-                  <strong>Среда обитания: </strong>
-                  {{ creature.section.habitats }}
-                </p>
+                <UIcon
+                  name="i-fluent-chevron-down-16-regular"
+                  class="transition-transform duration-150 ease-in-out"
+                  :class="open ? '-rotate-180' : ''"
+                />
+              </h4>
+            </template>
 
-                <p v-if="creature.section?.treasures">
-                  <strong>Сокровища:</strong> {{ creature.section.treasures }}
-                </p>
-              </template>
-            </ACollapsePanel>
-          </ACollapse>
+            <template #content>
+              <p v-if="creature.section">
+                <strong>Среда обитания: </strong>
+                {{ creature.section.habitats }}
+              </p>
+
+              <p v-if="creature.section?.treasures">
+                <strong>Сокровища:</strong> {{ creature.section.treasures }}
+              </p>
+            </template>
+          </UCollapsible>
         </template>
 
         <template v-if="creature.description?.length">
-          <ACollapse
-            v-model:active-key="expanded"
-            :bordered="false"
-            destroy-inactive-panel
-          >
-            <ACollapsePanel
-              key="description"
-              data-allow-mismatch
-            >
-              <template #header>
-                <ATypographyTitle
-                  :level="4"
-                  data-allow-mismatch
-                  content="Описание"
+          <UCollapsible default-open>
+            <template #default="{ open }">
+              <h4
+                class="flex cursor-pointer items-center justify-between text-xl font-semibold"
+              >
+                <span> Описание </span>
+
+                <UIcon
+                  name="i-fluent-chevron-down-16-regular"
+                  class="transition-transform duration-150 ease-in-out"
+                  :class="open ? '-rotate-180' : ''"
+                />
+              </h4>
+            </template>
+
+            <template #content>
+              <p>
+                <template
+                  v-if="creature.section.name.eng !== creature.name.eng"
                 >
-                </ATypographyTitle>
-              </template>
+                  <span> {{ creature.section.name.rus }} </span>
 
-              <template #default>
-                <p>
-                  <template
-                    v-if="creature.section.name.eng !== creature.name.eng"
-                  >
-                    <ARow> {{ creature.section.name.rus }} </ARow>
-
-                    <ARow>{{ creature.section.name.eng }} </ARow>
-                  </template>
-
-                  <ARow v-if="creature.section?.subtitle">
-                    <i> {{ creature.section.subtitle }} </i>
-                  </ARow>
-                </p>
-
-                <DescriptionsBlock :description="creature.description" />
-
-                <template v-if="creature.section">
-                  <DescriptionsBlock
-                    :description="creature.section?.description"
-                  />
+                  <span>{{ creature.section.name.eng }} </span>
                 </template>
+
+                <span v-if="creature.section?.subtitle">
+                  <i> {{ creature.section.subtitle }} </i>
+                </span>
+              </p>
+
+              <DescriptionsBlock :description="creature.description" />
+
+              <template v-if="creature.section">
+                <DescriptionsBlock
+                  :description="creature.section?.description"
+                />
               </template>
-            </ACollapsePanel>
-          </ACollapse>
+            </template>
+          </UCollapsible>
         </template>
-      </AFlex>
+      </div>
     </div>
   </div>
 </template>

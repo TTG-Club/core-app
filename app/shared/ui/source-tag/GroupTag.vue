@@ -1,32 +1,31 @@
 <script setup lang="ts">
-  import type { PresetColorType } from 'ant-design-vue/es/_util/colors';
-  import type { TooltipPlacement } from 'ant-design-vue/es/tooltip';
   import type { SourceGroupResponse } from '~/shared/types';
 
   const { group } = defineProps<{
     group: SourceGroupResponse;
-    placement?: TooltipPlacement;
   }>();
 
-  const tagColor = computed<PresetColorType | undefined>(() => {
+  const tagColor = computed(() => {
     switch (group.label?.toLowerCase()) {
       case '3rd':
-        return 'purple';
+        return 'secondary';
       case 'hb':
-        return 'green';
+        return 'success';
       case 'basic':
       case 'ua':
       default:
-        return undefined;
+        return 'neutral';
     }
   });
 </script>
 
 <template>
-  <ATag
+  <UBadge
     :style="{ marginInlineEnd: 0 }"
     :color="tagColor"
+    variant="subtle"
+    size="sm"
   >
     {{ group.label }}
-  </ATag>
+  </UBadge>
 </template>

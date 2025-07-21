@@ -1,14 +1,10 @@
 <script setup lang="ts">
-  import { Form } from 'ant-design-vue';
-
   import { DictionaryService } from '~/shared/api';
 
-  const { multiple = false } = defineProps<{
+  const { multiple = false, disabled } = defineProps<{
     disabled?: boolean;
     multiple?: boolean;
   }>();
-
-  const context = Form.useInjectFormItemContext();
 
   const model = defineModel<string | Array<string>>();
 
@@ -25,23 +21,17 @@
 
     refresh();
   };
-
-  watch(model, () => {
-    context.onFieldChange();
-  });
 </script>
 
 <template>
-  <ASelect
-    v-model:value="model"
+  <USelect
+    v-model="model"
     :placeholder="`Выбери сред${multiple ? 'ы' : 'у'} обитания`"
-    :mode="multiple ? 'multiple' : undefined"
+    :multiple="multiple"
     :loading="status === 'pending'"
-    :options="data || []"
-    :disabled
-    max-tag-count="responsive"
-    show-search
-    show-arrow
-    @dropdown-visible-change="handleDropdownOpening"
+    :items="data || []"
+    :disabled="disabled"
+    searchable
+    @open="handleDropdownOpening(true)"
   />
 </template>

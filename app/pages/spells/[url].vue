@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { getSlicedString } from '~/shared/utils';
   import { SpellBody } from '~spells/body';
-  import { PageActions, PageContainer, PageHeader } from '~ui/page';
+  import { PageActions } from '~ui/page';
 
   import type { SpellDetailResponse } from '~/shared/types';
 
@@ -47,22 +47,19 @@
 </script>
 
 <template>
-  <PageContainer>
-    <template #header>
-      <PageHeader
-        :title="spell?.name.rus"
-        :subtitle="spell?.name.eng"
-        :source="spell?.source"
-        :date-time="spell?.updatedAt"
-        copy-title
-      >
-        <template #actions>
-          <PageActions
-            :edit-url="editUrl"
-            @close="navigateTo({ name: 'spells' })"
-          />
-        </template>
-      </PageHeader>
+  <NuxtLayout
+    name="detail"
+    :title="spell?.name.rus"
+    :subtitle="spell?.name.eng"
+    :source="spell?.source"
+    :date-time="spell?.updatedAt"
+    copy-text
+  >
+    <template #actions>
+      <PageActions
+        :edit-url="editUrl"
+        @close="navigateTo({ name: 'spells' })"
+      />
     </template>
 
     <template #default>
@@ -71,11 +68,13 @@
         :spell
       />
 
-      <ASkeleton
-        v-else
-        :title="false"
-        :paragraph="{ rows: 4 }"
-      />
+      <template v-else>
+        <USkeleton
+          v-for="index in 3"
+          :key="index"
+          :class="`w-1/${index + 1} h-6`"
+        />
+      </template>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

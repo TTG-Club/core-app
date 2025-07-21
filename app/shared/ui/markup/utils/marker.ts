@@ -1,15 +1,17 @@
 import {
   EmptyMarker,
-  type EmptyMarkerName,
-  FeatureMarker,
-  type FeatureMarkerName,
+  SectionMarker,
   RichMarker,
-  type RichMarkerName,
   SimpleText,
-  type SimpleTextName,
   TextMarker,
-  type TextMarkerName,
-  type TextWithMarkerName,
+} from '../types';
+import type {
+  EmptyMarkerName,
+  SectionMarkerName,
+  RichMarkerName,
+  SimpleTextName,
+  TextMarkerName,
+  TextWithMarkerName,
 } from '../types';
 
 export function isSimpleText(
@@ -38,6 +40,6 @@ export function isRichMarker(
 
 export function isFeatureMarker(
   marker: TextWithMarkerName,
-): marker is FeatureMarkerName {
-  return Object.values(FeatureMarker).includes(marker as FeatureMarker);
+): marker is SectionMarkerName {
+  return Object.values(SectionMarker).includes(marker as SectionMarker);
 }

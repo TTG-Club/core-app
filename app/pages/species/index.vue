@@ -2,7 +2,7 @@
   import { FilterControls } from '~filter/controls';
   import { SpeciesLegend } from '~species/legend';
   import { SpeciesLink } from '~species/link';
-  import { PageContainer, PageGrid, PageHeader } from '~ui/page';
+  import { PageGrid, PageResult } from '~ui/page';
 
   import type { SpeciesLinkResponse } from '~/shared/types';
 
@@ -31,11 +31,10 @@
 </script>
 
 <template>
-  <PageContainer fixed-header>
-    <template #header>
-      <PageHeader title="Виды" />
-    </template>
-
+  <NuxtLayout
+    name="section"
+    title="Виды"
+  >
     <template #controls>
       <FilterControls v-model:search="search">
         <template #legend>
@@ -57,50 +56,17 @@
             v-for="link in data"
             :key="link.url"
             :species="link"
-          >
-            {{ link.url }}
-          </SpeciesLink>
+          />
         </PageGrid>
 
-        <AResult
-          v-else-if="status === 'success' && !data?.length"
-          title="Ничего не нашлось"
-          sub-title="По вашему запросу ничего не нашлось. Попробуйте изменить фильтр или строку поиска"
-        >
-          <template #extra>
-            <AButton
-              type="primary"
-              @click.left.exact.prevent="refresh()"
-            >
-              Обновить
-            </AButton>
-
-            <AButton @click.left.exact.prevent="navigateTo('/')">
-              Вернуться на главную
-            </AButton>
-          </template>
-        </AResult>
-
-        <AResult
-          v-else-if="error"
-          status="error"
-          title="Ошибка"
-          :sub-title="error"
-        >
-          <template #extra>
-            <AButton
-              type="primary"
-              @click.left.exact.prevent="refresh()"
-            >
-              Обновить
-            </AButton>
-
-            <AButton @click.left.exact.prevent="navigateTo('/')">
-              Вернуться на главную
-            </AButton>
-          </template>
-        </AResult>
+        <PageResult
+          v-else
+          :items="data"
+          :status
+          :error
+          @refresh="refresh"
+        />
       </Transition>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

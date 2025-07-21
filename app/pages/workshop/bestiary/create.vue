@@ -2,10 +2,8 @@
   import { NuxtLink } from '#components';
   import { CreatureEditor } from '~bestiary/editor';
   import { CreaturePreview } from '~bestiary/preview';
-  import { type CreatureCreate, getInitialState } from '~bestiary/types';
-  import { SvgIcon } from '~ui/icon';
-  import { PageContainer, PageHeader } from '~ui/page';
-  import { useToast } from '~ui/toast';
+  import { getInitialState } from '~bestiary/types';
+  import type { CreatureCreate } from '~bestiary/types';
 
   const $toast = useToast();
 
@@ -32,7 +30,8 @@
         onResponseError: (error) => {
           isCreating.value = false;
 
-          $toast.error({
+          $toast.add({
+            color: 'error',
             title: 'Ошибка создания существа',
             description: error.response._data.message,
           });
@@ -41,9 +40,10 @@
 
       // isCreated.value = true; // TODO: вернуть в будущем
 
-      $toast.success({
+      $toast.add({
         title: 'Существо успешно создано',
         description: getLink,
+        color: 'success',
         // onClose: () => navigateTo({ name: 'workshop-magic-items' }), // TODO: вернуть в будущем
       });
     } catch (err) {
@@ -74,46 +74,37 @@
 </script>
 
 <template>
-  <PageContainer fixed-header>
-    <template #header>
-      <PageHeader title="Создание нового существа">
-        <template #actions>
-          <AButton
-            :disabled="preview"
-            @click.left.exact.prevent="preview = true"
-          >
-            <template #default>Предпросмотр </template>
-          </AButton>
+  <NuxtLayout
+    title="Создание нового существа"
+    name="detail"
+  >
+    <template #actions>
+      <UButton
+        :disabled="preview"
+        @click.left.exact.prevent="preview = true"
+      >
+        Предпросмотр
+      </UButton>
 
-          <AButton
-            type="primary"
-            :disabled="isCreated"
-            :loading="isCreating"
-            @click.left.exact.prevent="submit"
-          >
-            <template #icon>
-              <SvgIcon icon="check" />
-            </template>
+      <UButton
+        :disabled="isCreated"
+        :loading="isCreating"
+        icon="i-ttg-check"
+        variant="ghost"
+        color="neutral"
+        @click.left.exact.prevent="submit"
+      >
+        Создать
+      </UButton>
 
-            <template #default> Создать </template>
-          </AButton>
-
-          <ATooltip
-            title="Закрыть"
-            :mouse-enter-delay="0.7"
-            destroy-tooltip-on-hide
-          >
-            <AButton
-              type="text"
-              @click.left.exact.prevent="navigateTo('/workshop/bestiary')"
-            >
-              <template #icon>
-                <SvgIcon icon="close" />
-              </template>
-            </AButton>
-          </ATooltip>
-        </template>
-      </PageHeader>
+      <UTooltip text="Закрыть">
+        <UButton
+          icon="i-ttg-x"
+          variant="ghost"
+          color="neutral"
+          @click.left.exact.prevent="navigateTo('/workshop/bestiary')"
+        />
+      </UTooltip>
     </template>
 
     <template #default>
@@ -130,5 +121,5 @@
         />
       </ClientOnly>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

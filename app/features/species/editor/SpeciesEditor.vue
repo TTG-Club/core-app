@@ -1,13 +1,11 @@
 <script setup lang="ts">
   import { SpeciesLinkPreview, SpeciesFeatures, SpeciesSizes } from './ui';
 
-  import { ValidationBase, ValidationDictionaries } from '~/shared/utils';
   import { SpeciesSpeed } from '~species/editor/ui';
   import { EditorBaseInfo } from '~ui/editor';
   import { SelectCreatureType, SelectSpecies } from '~ui/select';
   import { UploadImage, UploadGallery } from '~ui/upload';
 
-  import type { FormInstance } from 'ant-design-vue';
   import type { SpeciesCreate } from '~/shared/types';
 
   const { isCreating } = defineProps<{
@@ -16,54 +14,49 @@
 
   const form = defineModel<SpeciesCreate>({ required: true });
 
-  const formRef = useTemplateRef<FormInstance>('formRef');
+  const formRef = useTemplateRef('formRef');
+
+  const validate = () => {
+    return formRef.value?.validate();
+  };
 
   defineExpose({
-    validate: computed(() => formRef.value?.validate),
+    validate,
   });
 </script>
 
 <template>
-  <AForm
+  <UForm
     ref="formRef"
-    layout="vertical"
-    :model="form"
+    :state="form"
     :disabled="isCreating"
+    class="grid grid-cols-24 gap-4"
   >
     <EditorBaseInfo
       v-model="form"
       section="species"
     />
 
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Характеристики"
-        strong
-      />
-    </ADivider>
+    <USeparator>
+      <span class="font-bold text-secondary">Характеристики</span>
+    </USeparator>
 
-    <ARow :gutter="16">
-      <ACol :span="12">
-        <AFormItem
-          label="Основной вид"
-          tooltip="Необходимо указать, если создаешь происхождение вида"
-          :name="['parent']"
-        >
-          <SelectSpecies v-model="form.parent" />
-        </AFormItem>
-      </ACol>
+    <UFormField
+      class="col-span-12"
+      label="Основной вид"
+      help="Необходимо указать, если создаешь происхождение вида"
+      name="parent"
+    >
+      <SelectSpecies v-model="form.parent" />
+    </UFormField>
 
-      <ACol :span="12">
-        <AFormItem
-          label="Тип"
-          :name="['properties', 'type']"
-          :rules="[ValidationDictionaries.ruleCreatureTypes()]"
-        >
-          <SelectCreatureType v-model="form.properties.type" />
-        </AFormItem>
-      </ACol>
-    </ARow>
+    <UFormField
+      class="col-span-12"
+      label="Тип"
+      name="properties.type"
+    >
+      <SelectCreatureType v-model="form.properties.type" />
+    </UFormField>
 
     <SpeciesSizes v-model="form.properties.sizes" />
 
@@ -71,64 +64,79 @@
 
     <SpeciesFeatures v-model="form.features" />
 
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Изображения"
-        strong
-      />
-    </ADivider>
+    <USeparator>
+      <span class="font-bold text-secondary">Изображения</span>
+    </USeparator>
 
-    <ARow :gutter="16">
-      <ACol :span="8">
-        <AFormItem
-          label="Основное"
-          tooltip="Эта картинка отображается при просмотре страницы вида"
-          :name="['image']"
-          :rules="[ValidationBase.ruleImage()]"
-        >
-          <UploadImage
-            v-model="form.image"
-            section="species"
-            max-size="480"
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="8">
-        <AFormItem
-          label="Для ссылки"
-          tooltip="Эта картинка отображается на странице со списком видов"
-          :name="['linkImage']"
-          :rules="[ValidationBase.ruleImage()]"
-        >
-          <UploadImage
-            v-model="form.linkImage"
-            section="species"
-            max-size="190"
+    <UFormField
+      class="col-span-8"
+      label="Основное"
+      help="Эта картинка отображается при просмотре страницы вида"
+      name="image"
+    >
+      <UploadImage
+        v-model="form.image"
+        section="species"
+        max-size="480"
+      >
+        <template #preview>
+          <NuxtImg
+            v-slot="{ src, isLoaded, imgAttrs }"
+            :key="form.image"
+            :src="form.image"
+            custom
           >
-            <template #preview>
-              <SpeciesLinkPreview
-                :name="form.name"
-                :url="form.url"
-                :image="form.linkImage"
-              />
-            </template>
-          </UploadImage>
-        </AFormItem>
-      </ACol>
+            <!-- Show the actual image when loaded -->
+            <img
+              v-if="isLoaded"
+              v-bind="imgAttrs"
+              class="w-full rounded-lg object-contain"
+              :src="src"
+              :alt="form.name.rus"
+            />
 
-      <ACol :span="8">
-        <AFormItem
-          label="Галерея"
-          :name="['gallery']"
-        >
-          <UploadGallery
-            v-model="form.gallery"
-            section="species"
+            <!-- Show a placeholder while loading -->
+            <img
+              v-else
+              class="w-full rounded-lg object-contain"
+              src="/img/no-img.webp"
+              alt="no image"
+            />
+          </NuxtImg>
+        </template>
+      </UploadImage>
+    </UFormField>
+
+    <UFormField
+      class="col-span-8"
+      label="Для ссылки"
+      help="Эта картинка отображается на странице со списком видов"
+      name="linkImage"
+    >
+      <UploadImage
+        v-model="form.linkImage"
+        section="species"
+        max-size="190"
+      >
+        <template #preview>
+          <SpeciesLinkPreview
+            :name="form.name"
+            :url="form.url"
+            :image="form.linkImage"
           />
-        </AFormItem>
-      </ACol>
-    </ARow>
-  </AForm>
+        </template>
+      </UploadImage>
+    </UFormField>
+
+    <UFormField
+      class="col-span-8"
+      label="Галерея"
+      name="gallery"
+    >
+      <UploadGallery
+        v-model="form.gallery"
+        section="species"
+      />
+    </UFormField>
+  </UForm>
 </template>

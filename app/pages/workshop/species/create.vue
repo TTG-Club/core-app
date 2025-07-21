@@ -1,9 +1,6 @@
 <script setup lang="ts">
   import { NuxtLink } from '#components';
   import { SpeciesEditor } from '~species/editor';
-  import { SvgIcon } from '~ui/icon';
-  import { PageContainer, PageHeader } from '~ui/page';
-  import { useToast } from '~ui/toast';
 
   import type { SpeciesCreate } from '~/shared/types';
 
@@ -59,7 +56,8 @@
         onResponseError: (error) => {
           isCreating.value = false;
 
-          $toast.error({
+          $toast.add({
+            color: 'error',
             title: 'Ошибка создания вида',
             description: error.response._data.message,
           });
@@ -68,11 +66,13 @@
 
       // isCreated.value = true; // TODO: вернуть в будущем
 
-      $toast.success({
-        title: () =>
+      $toast.add({
+        color: 'success',
+        title: h('span', () =>
           !form.value.parent
             ? 'Вид успешно создан'
             : 'Происхождение успешно создано',
+        ),
         description: getLink,
         // onClose: () => navigateTo({ name: 'workshop-species' }), // TODO: вернуть в будущем
       });
@@ -104,39 +104,30 @@
 </script>
 
 <template>
-  <PageContainer fixed-header>
-    <template #header>
-      <PageHeader title="Создание нового вида">
-        <template #actions>
-          <AButton
-            type="primary"
-            :disabled="isCreated"
-            :loading="isCreating"
-            @click.left.exact.prevent="submit"
-          >
-            <template #icon>
-              <SvgIcon icon="check" />
-            </template>
+  <NuxtLayout
+    title="Создание нового вида"
+    name="detail"
+  >
+    <template #actions>
+      <UButton
+        :disabled="isCreated"
+        :loading="isCreating"
+        icon="i-ttg-check"
+        variant="ghost"
+        color="neutral"
+        @click.left.exact.prevent="submit"
+      >
+        Создать
+      </UButton>
 
-            <template #default> Создать </template>
-          </AButton>
-
-          <ATooltip
-            title="Закрыть"
-            :mouse-enter-delay="0.7"
-            destroy-tooltip-on-hide
-          >
-            <AButton
-              type="text"
-              @click.left.exact.prevent="navigateTo('/workshop/species')"
-            >
-              <template #icon>
-                <SvgIcon icon="close" />
-              </template>
-            </AButton>
-          </ATooltip>
-        </template>
-      </PageHeader>
+      <UTooltip text="Закрыть">
+        <UButton
+          icon="i-ttg-x"
+          variant="ghost"
+          color="neutral"
+          @click.left.exact.prevent="navigateTo('/workshop/species')"
+        />
+      </UTooltip>
     </template>
 
     <template #default>
@@ -148,5 +139,5 @@
         />
       </ClientOnly>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

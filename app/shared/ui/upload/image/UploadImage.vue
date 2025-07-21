@@ -1,20 +1,12 @@
 <script setup lang="ts">
   import bytes from 'bytes';
   import { toNumber } from 'lodash-es';
-
   import { getStatusMessage } from '#shared/utils';
-  import { SvgIcon, SvgLoading } from '~ui/icon';
-  import { useToast } from '~ui/toast';
-
   import type { NuxtError } from '#app';
-  import type { UploadChangeParam, UploadFile } from 'ant-design-vue';
-  import type { UploadProps } from 'ant-design-vue/es/upload';
-  import type { FileType } from 'ant-design-vue/es/upload/interface';
   import type { UploadResponse } from '~/shared/types';
 
   const { section, maxSize = undefined } = defineProps<{
     section: string;
-
     /**
      * Максимальная длина короткой стороны
      */
@@ -48,16 +40,17 @@
     return `/s3/upload?${params.toString()}`;
   });
 
-  const onError = (error: Error, responseError: NuxtError) => {
-    $toast.error({
-      title: 'Неизвестная ошибка',
-      description: getStatusMessage(responseError.statusCode),
-    });
-  };
+  // function onError(error: Error, responseError: NuxtError) {
+  //   $toast.add({
+  //     color: 'error',
+  //     title: 'Неизвестная ошибка',
+  //     description: getStatusMessage(responseError.statusCode),
+  //   });
+  // }
 
   const imageUploaded = defineModel<string>();
 
-  const bufferToBase64 = (buf: ArrayBuffer) => {
+  function bufferToBase64(buf: ArrayBuffer) {
     const chunks = [];
     const uint8 = new Uint8Array(buf);
     const chunkSize = 0x8000;
@@ -69,15 +62,13 @@
     }
 
     return btoa(chunks.join(''));
-  };
+  }
 
-  const getImageSize = (
-    provideFile: FileType,
-  ): Promise<{
+  function getImageSize(provideFile: File): Promise<{
     width: number;
     height: number;
-  }> =>
-    new Promise((resolve, reject) => {
+  }> {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
 
       reader.readAsDataURL(provideFile);
@@ -110,6 +101,7 @@
         };
       };
     });
+  }
 
   function removeLoadedImage(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -122,21 +114,21 @@
       $fetch(imageUploaded.value, { method: 'delete' })
         .then(() => {
           imageUploaded.value = undefined;
-
           resolve();
         })
         .catch(reject);
     });
   }
 
-  const beforeUpload: UploadProps['beforeUpload'] = async (file) => {
+  async function beforeUpload(file: File) {
     const isExtensionSuccess =
       file.type === 'image/jpeg' ||
       file.type === 'image/png' ||
       file.type === 'image/webp';
 
     if (!isExtensionSuccess) {
-      $toast.error({
+      $toast.add({
+        color: 'error',
         title: 'Ошибка при загрузке файла',
         description: 'Недопустимый формат изображения',
       });
@@ -145,7 +137,8 @@
     }
 
     if (file.size > maxFileWeight) {
-      $toast.error({
+      $toast.add({
+        color: 'error',
         title: 'Ошибка при загрузке файла',
         description: `Размер изображения не должен превышать ${bytes(maxFileWeight)}`,
       });
@@ -157,7 +150,8 @@
       const imageSize = await getImageSize(file);
 
       if (imageSize.width > maxFileSize || imageSize.height > maxFileSize) {
-        $toast.error({
+        $toast.add({
+          color: 'error',
           title: 'Ошибка при загрузке файла',
           description: `Изображение должно быть меньше ${maxFileSize}px по длинной стороне`,
         });
@@ -167,128 +161,98 @@
 
       return true;
     } catch (err) {
-      $toast.error({
+      $toast.add({
+        color: 'error',
         title: 'Ошибка при загрузке файла',
         description: 'Неизвестная ошибка',
       });
 
       return false;
     }
-  };
+  }
 
   const isImageLoading = ref(false);
 
-  const handleImageChange = async (
-    info: UploadChangeParam<UploadFile<UploadResponse>>,
-  ) => {
-    isImageLoading.value = info.file.status === 'uploading';
+  async function handleFiles(files: File[] | FileList) {
+    const file = Array.from(files)[0];
 
-    if (info.file.status === 'done') {
+    if (!file) return;
+
+    const isValid = await beforeUpload(file);
+
+    if (!isValid) return;
+
+    isImageLoading.value = true;
+
+    try {
+      const formData = new FormData();
+
+      formData.append('file', file);
+
+      const response = await $fetch<UploadResponse>(actionUrl.value, {
+        method: 'POST',
+        body: formData,
+      });
+
       if (imageUploaded.value) {
         await removeLoadedImage();
       }
 
-      imageUploaded.value = info.file.response?.url;
+      imageUploaded.value = response.url;
+
+      $toast.add({
+        color: 'success',
+        title: 'Успех',
+        description: 'Изображение успешно загружено',
+      });
+    } catch (err) {
+      const error = err as NuxtError;
+
+      $toast.add({
+        color: 'error',
+        title: 'Ошибка при загрузке файла',
+        description: getStatusMessage(error.statusCode),
+      });
+    } finally {
+      isImageLoading.value = false;
     }
-  };
+  }
+
+  const dropZoneRef = useTemplateRef<HTMLElement>('dropZoneRef');
+
+  const { open: openDialog, onChange } = useFileDialog({
+    accept: 'image/webp, image/jpeg, image/png',
+    multiple: false,
+  });
+
+  onChange((files) => handleFiles(files || []));
+
+  const { isOverDropZone } = useDropZone(dropZoneRef, {
+    dataTypes: ['image/webp', 'image/jpeg', 'image/png'],
+    multiple: false,
+    onDrop: (files) => handleFiles(files || []),
+  });
 </script>
 
 <template>
-  <AFlex
-    vertical
-    :gap="16"
-  >
-    <AUploadDragger
-      :action="actionUrl"
-      :multiple="false"
-      :max-count="1"
-      :show-upload-list="false"
-      :disabled="isImageLoading"
-      :before-upload="beforeUpload"
-      accept=".webp, .jpg, .jpeg, .png"
-      @error="onError"
-      @change="handleImageChange"
+  <div class="flex flex-col gap-4">
+    <div
+      ref="dropZoneRef"
+      class="w-full rounded-lg border-2 border-dashed border-(--color-border) bg-(--color-bg-secondary) p-6 text-center transition-colors hover:border-primary"
+      :class="isOverDropZone ? 'hover:border-primary' : undefined"
+      @click.left.exact.prevent="() => openDialog()"
     >
-      <AFlex
-        :class="$style.upload"
-        :gap="8"
-        justify="center"
-        align="center"
-        vertical
-      >
-        <SvgLoading
-          v-if="isImageLoading"
-          size="24"
-        />
-
-        <SvgIcon
-          v-else
-          size="24"
-          icon="download"
-        />
-
-        <span type="secondary">
-          Перетащите или нажмите сюда, чтобы загрузить картинку в форматах:
-          .webp, .jpg, .jpeg, .png
-        </span>
-      </AFlex>
-    </AUploadDragger>
-
-    <div :class="$style.preview">
-      <slot name="preview">
-        <div :class="$style.img">
-          <AImage
-            :preview="false"
-            :src="imageUploaded || '/img/no-img.webp'"
-            width="100%"
-            fallback="/img/no-img.webp"
-          />
-        </div>
-      </slot>
-
-      <AButton
-        :class="$style.remove"
-        type="primary"
-        danger
-        @click.left.exact.prevent="removeLoadedImage"
-      >
-        <template #icon>
-          <SvgIcon icon="remove" />
-        </template>
-      </AButton>
+      <span class="text-sm">
+        Перетащи или нажми сюда, чтобы загрузить картинку в форматах: .webp,
+        .jpg, .jpeg, .png
+      </span>
     </div>
-  </AFlex>
+
+    <div
+      v-if="$slots.preview"
+      class="w-full"
+    >
+      <slot name="preview" />
+    </div>
+  </div>
 </template>
-
-<style module lang="scss">
-  .upload {
-    color: currentColor;
-  }
-
-  .preview {
-    position: relative;
-
-    &:not(:hover) {
-      .remove {
-        pointer-events: none;
-        opacity: 0;
-      }
-    }
-  }
-
-  .img {
-    overflow: hidden;
-    border-radius: 8px;
-    background-color: var(--color-hover);
-  }
-
-  .remove {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-
-    & {
-      @include css-anim();
-    }
-  }
-</style>

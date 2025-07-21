@@ -43,3 +43,5 @@ export { default as SelectMastery } from './SelectMastery.vue';
 export { default as SelectHabitat } from './SelectHabitat.vue';
 
 export { default as SelectTreasure } from './SelectTreasure.vue';
+
+export { default as SelectLevel } from './SelectLevel.vue';

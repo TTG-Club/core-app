@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { ValidationBase, ValidationDictionaries } from '~/shared/utils';
   import { SelectHabitat, SelectTreasure } from '~ui/select';
 
   import type { CreateSection } from '~bestiary/types';
@@ -8,110 +7,84 @@
 </script>
 
 <template>
-  <ADivider orientation="left">
-    <ATypographyText
-      type="secondary"
-      content="Секция"
-      strong
-    />
-  </ADivider>
+  <USeparator>
+    <span class="font-bold text-secondary">Секция</span>
+  </USeparator>
 
-  <ARow :gutter="16">
-    <ACol :span="8">
-      <AFormItem
-        label="Название секции"
-        :name="['section', 'name', 'rus']"
-        :rules="[ValidationBase.ruleRusName(false)]"
-        tooltip="Например, Золотые драконы"
-      >
-        <AInput
-          v-model:value="model.name.rus"
-          placeholder="Введи название секции"
-        />
-      </AFormItem>
-    </ACol>
+  <UForm
+    class="col-span-full grid grid-cols-24 gap-4"
+    attach
+    :state="model"
+  >
+    <UFormField
+      class="col-span-8"
+      label="Название секции"
+      name="name.rus"
+      help="Например, Золотые драконы"
+    >
+      <UInput
+        v-model="model.name.rus"
+        placeholder="Введи название секции"
+      />
+    </UFormField>
 
-    <ACol :span="8">
-      <AFormItem
-        label="Название секции (англ.)"
-        :name="['section', 'name', 'eng']"
-        :rules="[ValidationBase.ruleEngName(false)]"
-        tooltip="Например, Gold Dragons"
-      >
-        <AInput
-          v-model:value="model.name.eng"
-          placeholder="Введи название секции"
-        />
-      </AFormItem>
-    </ACol>
+    <UFormField
+      class="col-span-8"
+      label="Название секции (англ.)"
+      name="name.eng"
+      help="Например, Gold Dragons"
+    >
+      <UInput
+        v-model="model.name.eng"
+        placeholder="Введи название секции"
+      />
+    </UFormField>
 
-    <ACol :span="8">
-      <AFormItem
-        label="Подзаголовок"
-        :name="['section', 'subtitle']"
-        :rules="[ValidationBase.ruleString(false)]"
-        tooltip="Например, Драконы надежды и величия"
-      >
-        <AInput
-          v-model:value="model.subtitle"
-          placeholder="Введи подзаголовок"
-        />
-      </AFormItem>
-    </ACol>
-  </ARow>
+    <UFormField
+      class="col-span-8"
+      label="Подзаголовок"
+      name="subtitle"
+      help="Например, Драконы надежды и величия"
+    >
+      <UInput
+        v-model="model.subtitle"
+        placeholder="Введи подзаголовок"
+      />
+    </UFormField>
 
-  <ARow :gutter="16">
-    <ACol :span="12">
-      <AFormItem
-        label="Среда обитания"
-        :name="['section', 'habitats']"
-        :rules="[
-          ValidationDictionaries.ruleHabitats({
-            required: false,
-            array: true,
-          }),
-        ]"
-      >
-        <SelectHabitat
-          v-model="model.habitats"
-          multiple
-        />
-      </AFormItem>
-    </ACol>
+    <UFormField
+      class="col-span-12"
+      label="Среда обитания"
+      name="habitats"
+    >
+      <SelectHabitat
+        v-model="model.habitats"
+        multiple
+      />
+    </UFormField>
 
-    <ACol :span="12">
-      <AFormItem
-        label="Сокровища"
-        :name="['section', 'treasures']"
-        :rules="[
-          ValidationDictionaries.ruleTreasures({
-            required: false,
-            array: true,
-          }),
-        ]"
-      >
-        <SelectTreasure
-          v-model="model.treasures"
-          multiple
-        />
-      </AFormItem>
-    </ACol>
-  </ARow>
+    <UFormField
+      class="col-span-12"
+      label="Сокровища"
+      name="treasures"
+    >
+      <SelectTreasure
+        v-model="model.treasures"
+        multiple
+      />
+    </UFormField>
 
-  <ARow :gutter="16">
-    <ACol :span="24">
-      <AFormItem
-        label="Описание секции"
-        :name="['section', 'description']"
-        :rules="[ValidationBase.ruleString(false)]"
-      >
-        <ATextarea
-          v-model:value="model.description"
-          :rows="8"
-          placeholder="Введи описание"
-          allow-clear
-        />
-      </AFormItem>
-    </ACol>
-  </ARow>
+    <UFormField
+      class="col-span-24"
+      label="Описание секции"
+      name="description"
+    >
+      <UTextarea
+        v-model="model.description"
+        :rows="8"
+        placeholder="Введи описание"
+        clearable
+      />
+    </UFormField>
+  </UForm>
 </template>

@@ -1,74 +1,47 @@
 <script setup lang="ts">
-  import { Breakpoint, BREAKPOINTS, useDrawer } from '~/shared/composables';
   import { SpellBody } from '~spells/body';
-  import { DrawerComponent } from '~ui/drawer';
+  import { UiDrawer } from '~ui/drawer';
 
   import type { SpellDetailResponse } from '~/shared/types';
 
-  const { url, isOpened, close } = useDrawer('spell-detail');
+  const { url } = defineProps<{
+    url: string;
+  }>();
 
-  const {
-    data: spell,
-    status,
-    execute,
-    clear,
-  } = await useAsyncData(
-    `spell-detail-drawer`,
-    () => {
-      if (!url.value) {
-        return Promise.reject();
-      }
+  defineEmits<{
+    (e: 'close'): void;
+  }>();
 
-      return $fetch<SpellDetailResponse>(`/api/v2/spells/${url.value}`);
-    },
+  const { data: detail, status } = await useAsyncData(
+    computed(() => `spell-${url}`),
+    () => $fetch<SpellDetailResponse>(`/api/v2/spells/${url}`),
     {
       server: false,
-      immediate: false,
+      immediate: true,
     },
   );
 
-  const urlForCopy = computed(() =>
-    isOpened.value ? `${getOrigin()}/spells/${url.value}` : undefined,
-  );
-
-  const editUrl = computed(() => `/workshop/spells/${url.value}`);
-
-  function handleUpdate(opened: boolean) {
-    if (opened) {
-      return;
-    }
-
-    close();
-  }
-
-  watch(isOpened, (value) => {
-    if (!value) {
-      return;
-    }
-
-    clear();
-    execute();
-  });
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+  const urlForCopy = computed(() => `${getOrigin()}/spells/${url}`);
+  const editUrl = computed(() => `/workshop/spells/${url}`);
 </script>
 
 <template>
-  <DrawerComponent
-    :open="isOpened"
-    :min-width="320"
-    :max-width="BREAKPOINTS[Breakpoint.MD]"
-    :title="spell?.name"
-    :source="spell?.source"
+  <UiDrawer
+    :title="detail?.name"
+    :source="detail?.source"
+    :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
-    :is-loading="status === 'pending'"
-    :is-error="status === 'error'"
-    width="100%"
+    :is-loading
+    :is-error
     copy-title
-    @update:open="handleUpdate"
+    @close="$emit('close')"
   >
     <SpellBody
-      v-if="spell"
-      :spell
+      v-if="detail"
+      :spell="detail"
     />
-  </DrawerComponent>
+  </UiDrawer>
 </template>

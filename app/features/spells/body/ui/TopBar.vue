@@ -7,11 +7,7 @@
 </script>
 
 <template>
-  <AFlex
-    :class="$style.topBar"
-    :gap="4"
-    wrap="wrap"
-  >
+  <div class="flex flex-wrap gap-1 rounded-lg bg-(--color-hover) p-3 italic">
     <span v-if="!level">Заговор,</span>
 
     <span v-else> {{ level }}-й уровень,</span>
@@ -21,14 +17,5 @@
     <span v-if="additionalType">[{{ additionalType }}]</span>
 
     <span v-if="ritual">(ритуал)</span>
-  </AFlex>
+  </div>
 </template>
-
-<style module lang="scss">
-  .topBar {
-    padding: 12px;
-    border-radius: 8px;
-    font-style: italic;
-    background: var(--color-hover);
-  }
-</style>

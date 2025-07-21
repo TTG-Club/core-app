@@ -20,53 +20,53 @@
 </script>
 
 <template>
-  <ARow :gutter="16">
-    <ACol :span="6">
-      <AFormItem
-        label="Уязвимость к урону"
-        :name="['vulnerabilities']"
-      >
-        <SelectDamageType
-          v-model="vulnerabilities"
-          multiple
-        />
-      </AFormItem>
-    </ACol>
+  <USeparator>
+    <span class="font-bold text-secondary">Защита</span>
+  </USeparator>
 
-    <ACol :span="6">
-      <AFormItem
-        label="Сопротивление к урону"
-        :name="['resistance']"
-      >
-        <SelectDamageType
-          v-model="resistance"
-          multiple
-        />
-      </AFormItem>
-    </ACol>
+  <div class="col-span-full grid grid-cols-24 gap-4">
+    <UFormField
+      class="col-span-6"
+      label="Уязвимость к урону"
+      name="vulnerabilities"
+    >
+      <SelectDamageType
+        v-model="vulnerabilities"
+        multiple
+      />
+    </UFormField>
 
-    <ACol :span="6">
-      <AFormItem
-        label="Иммунитет к урону"
-        :name="['immunityToDamage']"
-      >
-        <SelectDamageType
-          v-model="immunityToDamage"
-          multiple
-        />
-      </AFormItem>
-    </ACol>
+    <UFormField
+      class="col-span-6"
+      label="Сопротивление к урону"
+      name="resistance"
+    >
+      <SelectDamageType
+        v-model="resistance"
+        multiple
+      />
+    </UFormField>
 
-    <ACol :span="6">
-      <AFormItem
-        label="Иммунитет к состояниям"
-        :name="['immunityToCondition']"
-      >
-        <SelectCondition
-          v-model="immunityToCondition"
-          multiple
-        />
-      </AFormItem>
-    </ACol>
-  </ARow>
+    <UFormField
+      class="col-span-6"
+      label="Иммунитет к урону"
+      name="immunityToDamage"
+    >
+      <SelectDamageType
+        v-model="immunityToDamage"
+        multiple
+      />
+    </UFormField>
+
+    <UFormField
+      class="col-span-6"
+      label="Иммунитет к состояниям"
+      name="immunityToCondition"
+    >
+      <SelectCondition
+        v-model="immunityToCondition"
+        multiple
+      />
+    </UFormField>
+  </div>
 </template>

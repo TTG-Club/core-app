@@ -1,9 +1,6 @@
 <script setup lang="ts">
-  import {
-    type CreateSpeed,
-    type CreateSpeeds,
-    SpeedType,
-  } from '~bestiary/types';
+  import { SpeedType } from '~bestiary/types';
+  import type { CreateSpeed, CreateSpeeds } from '~bestiary/types';
   import { EditorArrayControls } from '~ui/editor';
 
   const model = defineModel<CreateSpeeds>({
@@ -52,58 +49,54 @@
     v-for="key in SpeedType"
     :key
   >
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        :content="getDividerContent(key)"
-        strong
-      />
-    </ADivider>
+    <USeparator>
+      <span class="font-bold text-secondary">{{ getDividerContent(key) }}</span>
+    </USeparator>
 
-    <ARow
+    <UForm
       v-for="(item, index) in model[key]"
       :key="index"
-      :gutter="16"
+      class="col-span-full grid grid-cols-24 gap-4"
+      attach
+      :state="item"
     >
-      <ACol :span="6">
-        <AFormItem
-          label="Скорость"
-          :name="['speeds', key, index, 'value']"
-        >
-          <AInputNumber
-            v-model:value="item.value"
-            :precision="0"
-            placeholder="Введи скорость"
-            min="0"
-          >
-            <template #addonAfter> фт. </template>
-          </AInputNumber>
-        </AFormItem>
-      </ACol>
-
-      <ACol
-        v-if="key === 'fly'"
-        :span="2"
+      <UFormField
+        class="col-span-6"
+        label="Скорость"
+        :name="`${key}.${index}.value`"
       >
-        <AFormItem
-          label="Парит"
-          :name="['speeds', key, index, 'hover']"
+        <UInputNumber
+          v-model="item.value"
+          :precision="0"
+          placeholder="Введи скорость"
+          :min="0"
         >
-          <ACheckbox v-model:checked="item.hover"> Да </ACheckbox>
-        </AFormItem>
-      </ACol>
+          <template #trailing> фт. </template>
+        </UInputNumber>
+      </UFormField>
 
-      <ACol :span="key !== 'fly' ? 12 : 10">
-        <AFormItem
-          label="Пояснение к скорости"
-          :name="['speeds', key, index, 'text']"
-        >
-          <AInput
-            v-model:value="item.text"
-            placeholder="Например, только в форме медведя"
-          />
-        </AFormItem>
-      </ACol>
+      <UFormField
+        v-if="key === 'fly'"
+        class="col-span-2"
+        label="Парит"
+        :name="`${key}.${index}.hover`"
+      >
+        <UCheckbox
+          v-model="item.hover"
+          label="Да"
+        />
+      </UFormField>
+
+      <UFormField
+        :class="key !== 'fly' ? 'col-span-12' : 'col-span-10'"
+        label="Пояснение к скорости"
+        :name="`${key}.${index}.text`"
+      >
+        <UInput
+          v-model="item.text"
+          placeholder="Например, только в форме медведя"
+        />
+      </UFormField>
 
       <EditorArrayControls
         v-model="model[key]"
@@ -112,19 +105,15 @@
         :index
         :item
       />
-    </ARow>
+    </UForm>
 
-    <ARow :gutter="16">
-      <ACol :span="24">
-        <AFlex
-          v-if="!model[key]?.length"
-          justify="center"
-        >
-          <AButton @click.left.exact.prevent="createFirstSpeed(key)">
-            Добавить первую
-          </AButton>
-        </AFlex>
-      </ACol>
-    </ARow>
+    <div
+      v-if="!model[key]?.length"
+      class="col-span-full flex justify-center"
+    >
+      <UButton @click.left.exact.prevent="createFirstSpeed(key)">
+        Добавить первую
+      </UButton>
+    </div>
   </template>
 </template>

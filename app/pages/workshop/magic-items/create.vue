@@ -1,9 +1,6 @@
 <script setup lang="ts">
   import { NuxtLink } from '#components';
   import { MagicItemEditor } from '~magic-items/editor';
-  import { SvgIcon } from '~ui/icon';
-  import { PageContainer, PageHeader } from '~ui/page';
-  import { useToast } from '~ui/toast';
 
   import type { MagicItemCreate } from '~magic-items/types';
 
@@ -60,7 +57,8 @@
         onResponseError: (error) => {
           isCreating.value = false;
 
-          $toast.error({
+          $toast.add({
+            color: 'error',
             title: 'Ошибка создания магического предмета',
             description: error.response._data.message,
           });
@@ -69,7 +67,8 @@
 
       // isCreated.value = true; // TODO: вернуть в будущем
 
-      $toast.success({
+      $toast.add({
+        color: 'success',
         title: 'Магический предмет успешно создан',
         description: getLink,
         // onClose: () => navigateTo({ name: 'workshop-magic-items' }), // TODO: вернуть в будущем
@@ -102,39 +101,30 @@
 </script>
 
 <template>
-  <PageContainer fixed-header>
-    <template #header>
-      <PageHeader title="Создание нового магического предмета">
-        <template #actions>
-          <AButton
-            type="primary"
-            :disabled="isCreated"
-            :loading="isCreating"
-            @click.left.exact.prevent="submit"
-          >
-            <template #icon>
-              <SvgIcon icon="check" />
-            </template>
+  <NuxtLayout
+    title="Создание нового магического предмета"
+    name="detail"
+  >
+    <template #actions>
+      <UButton
+        :disabled="isCreated"
+        :loading="isCreating"
+        icon="i-ttg-check"
+        variant="ghost"
+        color="neutral"
+        @click.left.exact.prevent="submit"
+      >
+        Создать
+      </UButton>
 
-            <template #default> Создать </template>
-          </AButton>
-
-          <ATooltip
-            title="Закрыть"
-            :mouse-enter-delay="0.7"
-            destroy-tooltip-on-hide
-          >
-            <AButton
-              type="text"
-              @click.left.exact.prevent="navigateTo('/workshop/magic-items')"
-            >
-              <template #icon>
-                <SvgIcon icon="close" />
-              </template>
-            </AButton>
-          </ATooltip>
-        </template>
-      </PageHeader>
+      <UTooltip text="Закрыть">
+        <UButton
+          icon="i-ttg-x"
+          variant="ghost"
+          color="neutral"
+          @click.left.exact.prevent="navigateTo('/workshop/magic-items')"
+        />
+      </UTooltip>
     </template>
 
     <template #default>
@@ -146,5 +136,5 @@
         />
       </ClientOnly>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

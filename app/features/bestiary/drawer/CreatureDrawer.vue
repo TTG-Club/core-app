@@ -1,74 +1,47 @@
 <script setup lang="ts">
-  import { Breakpoint, BREAKPOINTS, useDrawer } from '~/shared/composables';
   import { CreatureBody } from '~bestiary/body';
-  import { DrawerComponent } from '~ui/drawer';
+  import { UiDrawer } from '~ui/drawer';
 
   import type { CreatureDetailResponse } from '~bestiary/types';
 
-  const { url, isOpened, close } = useDrawer('bestiary-detail');
+  const { url } = defineProps<{
+    url: string;
+  }>();
 
-  const {
-    data: creature,
-    status,
-    execute,
-    clear,
-  } = await useAsyncData(
-    `bestiary-detail-drawer`,
-    () => {
-      if (!url.value) {
-        return Promise.reject();
-      }
+  defineEmits<{
+    (e: 'close'): void;
+  }>();
 
-      return $fetch<CreatureDetailResponse>(`/api/v2/bestiary/${url.value}`);
-    },
+  const { data: detail, status } = await useAsyncData(
+    computed(() => `creature-${url}`),
+    () => $fetch<CreatureDetailResponse>(`/api/v2/bestiary/${url}`),
     {
       server: false,
-      immediate: false,
+      immediate: true,
     },
   );
 
-  const urlForCopy = computed(() =>
-    isOpened.value ? `${getOrigin()}/bestiary/${url.value}` : undefined,
-  );
-
-  const editUrl = computed(() => `/workshop/bestiary/${url.value}`);
-
-  function handleUpdate(opened: boolean) {
-    if (opened) {
-      return;
-    }
-
-    close();
-  }
-
-  watch(isOpened, (value) => {
-    if (!value) {
-      return;
-    }
-
-    clear();
-    execute();
-  });
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+  const urlForCopy = computed(() => `${getOrigin()}/bestiary/${url}`);
+  const editUrl = computed(() => `/workshop/bestiary/${url}`);
 </script>
 
 <template>
-  <DrawerComponent
-    :open="isOpened"
-    :min-width="320"
-    :max-width="BREAKPOINTS[Breakpoint.MD]"
-    :title="creature?.name"
-    :source="creature?.source"
+  <UiDrawer
+    :title="detail?.name"
+    :source="detail?.source"
+    :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
-    :is-loading="status === 'pending'"
-    :is-error="status === 'error'"
-    width="100%"
+    :is-loading
+    :is-error
     copy-title
-    @update:open="handleUpdate"
+    @close="$emit('close')"
   >
     <CreatureBody
-      v-if="creature"
-      :creature
+      v-if="detail"
+      :creature="detail"
     />
-  </DrawerComponent>
+  </UiDrawer>
 </template>

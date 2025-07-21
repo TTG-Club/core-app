@@ -1,14 +1,14 @@
 <script setup lang="ts">
   import { getSlicedString } from '~/shared/utils';
   import { MagicItemBody } from '~magic-items/body';
-  import { PageActions, PageContainer, PageHeader } from '~ui/page';
+  import { PageActions } from '~ui/page';
 
   import type { MagicItemDetailResponse } from '~magic-items/types';
 
   const route = useRoute();
 
   const { data: magicItem } = await useAsyncData(
-    `magicItem-${route.params.url}`,
+    `magic-item-${route.params.url}`,
     () =>
       $fetch<MagicItemDetailResponse>(`/api/v2/magic-item/${route.params.url}`),
   );
@@ -44,22 +44,19 @@
 </script>
 
 <template>
-  <PageContainer>
-    <template #header>
-      <PageHeader
-        :title="magicItem?.name.rus"
-        :subtitle="magicItem?.name.eng"
-        :source="magicItem?.source"
-        :date-time="magicItem?.updatedAt"
-        copy-title
-      >
-        <template #actions>
-          <PageActions
-            :edit-url="editUrl"
-            @close="navigateTo({ name: 'magic-items' })"
-          />
-        </template>
-      </PageHeader>
+  <NuxtLayout
+    name="detail"
+    :title="magicItem?.name.rus"
+    :subtitle="magicItem?.name.eng"
+    :source="magicItem?.source"
+    :date-time="magicItem?.updatedAt"
+    copy-text
+  >
+    <template #actions>
+      <PageActions
+        :edit-url="editUrl"
+        @close="navigateTo({ name: 'magic-items' })"
+      />
     </template>
 
     <template #default>
@@ -68,11 +65,13 @@
         :magic-item
       />
 
-      <ASkeleton
-        v-else
-        :title="false"
-        :paragraph="{ rows: 4 }"
-      />
+      <template v-else>
+        <USkeleton
+          v-for="index in 3"
+          :key="index"
+          :class="`w-1/${index + 1} h-6`"
+        />
+      </template>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

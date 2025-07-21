@@ -1,76 +1,47 @@
 <script setup lang="ts">
-  import { Breakpoint, BREAKPOINTS, useDrawer } from '~/shared/composables';
   import { BackgroundBody } from '~backgrounds/body';
-  import { DrawerComponent } from '~ui/drawer';
+  import { UiDrawer } from '~ui/drawer';
 
   import type { BackgroundDetailResponse } from '~/shared/types';
 
-  const { url, isOpened, close } = useDrawer('background-detail');
+  const { url } = defineProps<{
+    url: string;
+  }>();
 
-  const {
-    data: background,
-    status,
-    execute,
-    clear,
-  } = await useAsyncData(
-    `background-detail-drawer`,
-    () => {
-      if (!url.value) {
-        return Promise.reject();
-      }
+  defineEmits<{
+    (e: 'close'): void;
+  }>();
 
-      return $fetch<BackgroundDetailResponse>(
-        `/api/v2/backgrounds/${url.value}`,
-      );
-    },
+  const { data: detail, status } = await useAsyncData(
+    computed(() => `background-${url}`),
+    () => $fetch<BackgroundDetailResponse>(`/api/v2/backgrounds/${url}`),
     {
       server: false,
-      immediate: false,
+      immediate: true,
     },
   );
 
-  const urlForCopy = computed(() =>
-    isOpened.value ? `${getOrigin()}/backgrounds/${url.value}` : undefined,
-  );
-
-  const editUrl = computed(() => `/workshop/backgrounds/${url.value}`);
-
-  function handleUpdate(opened: boolean) {
-    if (opened) {
-      return;
-    }
-
-    close();
-  }
-
-  watch(isOpened, (value) => {
-    if (!value) {
-      return;
-    }
-
-    clear();
-    execute();
-  });
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+  const urlForCopy = computed(() => `${getOrigin()}/backgrounds/${url}`);
+  const editUrl = computed(() => `/workshop/backgrounds/${url}`);
 </script>
 
 <template>
-  <DrawerComponent
-    :open="isOpened"
-    :min-width="320"
-    :max-width="BREAKPOINTS[Breakpoint.MD]"
-    :title="background?.name"
-    :source="background?.source"
+  <UiDrawer
+    :title="detail?.name"
+    :source="detail?.source"
+    :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
-    :is-loading="status === 'pending'"
-    :is-error="status === 'error'"
-    width="100%"
+    :is-loading
+    :is-error
     copy-title
-    @update:open="handleUpdate"
+    @close="$emit('close')"
   >
     <BackgroundBody
-      v-if="background"
-      :background
+      v-if="detail"
+      :background="detail"
     />
-  </DrawerComponent>
+  </UiDrawer>
 </template>

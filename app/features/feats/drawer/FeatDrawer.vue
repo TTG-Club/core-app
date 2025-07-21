@@ -1,74 +1,47 @@
 <script setup lang="ts">
-  import { Breakpoint, BREAKPOINTS, useDrawer } from '~/shared/composables';
   import { FeatBody } from '~feats/body';
-  import { DrawerComponent } from '~ui/drawer';
+  import { UiDrawer } from '~ui/drawer';
 
   import type { FeatDetailResponse } from '~/shared/types';
 
-  const { url, isOpened, close } = useDrawer('feat-detail');
+  const { url } = defineProps<{
+    url: string;
+  }>();
 
-  const {
-    data: feat,
-    status,
-    execute,
-    clear,
-  } = await useAsyncData(
-    `feat-detail-drawer`,
-    () => {
-      if (!url.value) {
-        return Promise.reject();
-      }
+  defineEmits<{
+    (e: 'close'): void;
+  }>();
 
-      return $fetch<FeatDetailResponse>(`/api/v2/feats/${url.value}`);
-    },
+  const { data: detail, status } = await useAsyncData(
+    computed(() => `feat-${url}`),
+    () => $fetch<FeatDetailResponse>(`/api/v2/feats/${url}`),
     {
       server: false,
-      immediate: false,
+      immediate: true,
     },
   );
 
-  const urlForCopy = computed(() =>
-    isOpened.value ? `${getOrigin()}/feats/${url.value}` : undefined,
-  );
-
-  const editUrl = computed(() => `/workshop/feats/${url.value}`);
-
-  function handleUpdate(opened: boolean) {
-    if (opened) {
-      return;
-    }
-
-    close();
-  }
-
-  watch(isOpened, (value) => {
-    if (!value) {
-      return;
-    }
-
-    clear();
-    execute();
-  });
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+  const urlForCopy = computed(() => `${getOrigin()}/feats/${url}`);
+  const editUrl = computed(() => `/workshop/feats/${url}`);
 </script>
 
 <template>
-  <DrawerComponent
-    :open="isOpened"
-    :min-width="320"
-    :max-width="BREAKPOINTS[Breakpoint.MD]"
-    :title="feat?.name"
-    :source="feat?.source"
+  <UiDrawer
+    :title="detail?.name"
+    :source="detail?.source"
+    :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
-    :is-loading="status === 'pending'"
-    :is-error="status === 'error'"
-    width="100%"
+    :is-loading
+    :is-error
     copy-title
-    @update:open="handleUpdate"
+    @close="$emit('close')"
   >
     <FeatBody
-      v-if="feat"
-      :feat
+      v-if="detail"
+      :feat="detail"
     />
-  </DrawerComponent>
+  </UiDrawer>
 </template>

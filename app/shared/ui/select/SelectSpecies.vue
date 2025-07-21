@@ -1,14 +1,10 @@
 <script setup lang="ts">
-  import { Form } from 'ant-design-vue';
-
   import type { SpeciesLinkResponse } from '~/shared/types';
 
-  const { multiple = false } = defineProps<{
+  const { multiple = false, disabled } = defineProps<{
     disabled?: boolean;
     multiple?: boolean;
   }>();
-
-  const context = Form.useInjectFormItemContext();
 
   const model = defineModel<string | Array<string>>();
 
@@ -37,24 +33,18 @@
 
     refresh();
   };
-
-  watch(model, () => {
-    context.onFieldChange();
-  });
 </script>
 
 <template>
-  <ASelect
-    v-model:value="model"
+  <USelect
+    v-model="model"
     :loading="status === 'pending'"
-    :options="data || []"
-    :mode="multiple ? 'multiple' : undefined"
-    :disabled
+    :items="data || []"
+    :multiple="multiple"
+    :disabled="disabled"
     placeholder="Выбери вид"
-    max-tag-count="responsive"
-    show-search
-    allow-clear
-    show-arrow
-    @dropdown-visible-change="handleDropdownOpening($event)"
+    clearable
+    searchable
+    @open="handleDropdownOpening(true)"
   />
 </template>

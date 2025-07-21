@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { ValidationDictionaries } from '~/shared/utils';
   import { SelectSize } from '~ui/select';
 
   import type { CreatureSizes } from '~bestiary/types';
@@ -31,47 +30,42 @@
 </script>
 
 <template>
-  <ARow :gutter="16">
-    <ACol :span="8">
-      <AFormItem
-        label="Размеры существа"
-        :name="['sizes', 'values']"
-        :rules="[
-          ValidationDictionaries.ruleSizes({
-            required: !Boolean(model.sizeString),
-            array: true,
-          }),
-        ]"
-      >
-        <SelectSize
-          v-model="model.values"
-          multiple
-        />
-      </AFormItem>
-    </ACol>
+  <UForm
+    class="col-span-18 grid grid-cols-24 gap-4"
+    attach
+    :state="model"
+  >
+    <UFormField
+      class="col-span-8"
+      label="Размеры существа"
+      name="values"
+    >
+      <SelectSize
+        v-model="model.values"
+        multiple
+      />
+    </UFormField>
 
-    <ACol :span="8">
-      <AFormItem
-        label="Уточнение размера"
-        :name="['sizes', 'text']"
-      >
-        <AInput
-          v-model:value="model.text"
-          placeholder="Введи уточнение размера"
-        />
-      </AFormItem>
-    </ACol>
+    <UFormField
+      class="col-span-8"
+      label="Уточнение размера"
+      name="text"
+    >
+      <UInput
+        v-model="model.text"
+        placeholder="Введи уточнение размера"
+      />
+    </UFormField>
 
-    <ACol :span="8">
-      <AFormItem
-        label="Нестандартный размер"
-        :name="['sizes', 'sizeString']"
-      >
-        <AInput
-          v-model:value="model.sizeString"
-          placeholder="Введи нестандартный размер"
-        />
-      </AFormItem>
-    </ACol>
-  </ARow>
+    <UFormField
+      class="col-span-8"
+      label="Нестандартный размер"
+      name="sizeString"
+    >
+      <UInput
+        v-model="model.sizeString"
+        placeholder="Введи нестандартный размер"
+      />
+    </UFormField>
+  </UForm>
 </template>

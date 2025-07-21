@@ -1,13 +1,15 @@
 <script setup lang="ts">
-  import { ValidationBase } from '~/shared/utils';
-
   import type { SpellComponents, SpellMaterialComponent } from '~/shared/types';
 
   const components = defineModel<SpellComponents>({
     required: true,
   });
 
-  function updateUseMaterialComponent(value: boolean) {
+  function updateUseMaterialComponent(value: boolean | 'indeterminate') {
+    if (value === 'indeterminate') {
+      return;
+    }
+
     if (!value) {
       components.value.m = undefined;
 
@@ -27,90 +29,84 @@
 </script>
 
 <template>
-  <ADivider orientation="left">
-    <ATypographyText
-      content="Компоненты"
-      type="secondary"
-      strong
-    />
-  </ADivider>
+  <USeparator>
+    <span class="font-bold text-secondary">Компоненты</span>
+  </USeparator>
 
-  <ARow :gutter="16">
-    <ACol :span="8">
-      <AFormItem
-        label="Вербальный компонент"
-        :name="['components', 'v']"
-      >
-        <ACheckbox v-model:checked="components.v"> Требуется </ACheckbox>
-      </AFormItem>
-    </ACol>
-
-    <ACol :span="8">
-      <AFormItem
-        label="Соматический компонент"
-        :name="['components', 's']"
-      >
-        <ACheckbox v-model:checked="components.s"> Требуется </ACheckbox>
-      </AFormItem>
-    </ACol>
-
-    <ACol :span="8">
-      <AFormItem label="Материальный компонент">
-        <ACheckbox
-          :checked="!!components.m"
-          @update:checked="updateUseMaterialComponent"
-        >
-          Требуется
-        </ACheckbox>
-      </AFormItem>
-    </ACol>
-  </ARow>
-
-  <ARow
-    v-if="components.m"
-    :gutter="16"
+  <UForm
+    class="col-span-full grid grid-cols-24 gap-4"
+    attach
+    :state="components"
   >
-    <ACol :span="16">
-      <AFormItem
-        label="Список материалов"
-        :name="['components', 'm', 'text']"
-        :rules="[ValidationBase.ruleString()]"
+    <div class="col-span-8">
+      <UFormField
+        label="Вербальный компонент"
+        name="v"
       >
-        <ATextarea
-          v-model:value="components.m.text"
-          :auto-size="{ minRows: 1, maxRows: 8 }"
-          placeholder="Введи список материалов"
-          allow-clear
+        <UCheckbox
+          v-model="components.v"
+          label="Требуется"
         />
-      </AFormItem>
-    </ACol>
+      </UFormField>
+    </div>
 
-    <ACol :span="4">
-      <AFormItem
+    <div class="col-span-8">
+      <UFormField
+        label="Соматический компонент"
+        name="s"
+      >
+        <UCheckbox
+          v-model="components.s"
+          label="Требуется"
+        />
+      </UFormField>
+    </div>
+
+    <div class="col-span-8">
+      <UFormField label="Материальный компонент">
+        <UCheckbox
+          :model-value="!!components.m"
+          label="Требуется"
+          @update:model-value="updateUseMaterialComponent"
+        />
+      </UFormField>
+    </div>
+
+    <template v-if="components.m">
+      <UFormField
+        class="col-span-16"
+        label="Список материалов"
+        name="m.text"
+      >
+        <UInput
+          v-model="components.m.text"
+          placeholder="Введи список материалов"
+        />
+      </UFormField>
+
+      <UFormField
+        class="col-span-4"
         label="Материалы имеют цену"
-        :name="['components', 'm', 'withCost']"
+        name="m.withCost"
       >
-        <ACheckbox
-          v-model:checked="components.m.withCost"
+        <UCheckbox
+          v-model="components.m.withCost"
           :disabled="!components.m.text"
-        >
-          Да
-        </ACheckbox>
-      </AFormItem>
-    </ACol>
+          label="Да"
+        />
+      </UFormField>
 
-    <ACol :span="4">
-      <AFormItem
+      <UFormField
+        class="col-span-4"
         label="Материалы расходуются"
-        :name="['components', 'm', 'consumable']"
+        name="m.consumable"
       >
-        <ACheckbox
-          v-model:checked="components.m.consumable"
-          :disabled="!components.m?.text"
-        >
-          Да
-        </ACheckbox>
-      </AFormItem>
-    </ACol>
-  </ARow>
+        <UCheckbox
+          v-model="components.m.consumable"
+          :disabled="!components.m.text"
+          label="Да"
+        />
+      </UFormField>
+    </template>
+  </UForm>
 </template>

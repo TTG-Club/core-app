@@ -5,77 +5,108 @@
 
   const success = ref(false);
   const inProgress = ref(false);
+  const showPwd = ref(false);
 
-  const model = reactive({
+  const state = reactive({
     usernameOrEmail: '',
     password: '',
     remember: true,
   });
 
-  const noSideSpace = (value: string) => !/ /.test(value);
+  const rules = {
+    usernameOrEmail: (value: string) => {
+      if (!value) return 'Поле обязательно для заполнения';
+      if (value.includes(' ')) return 'Поле не должно содержать пробелы';
+
+      return true;
+    },
+    password: (value: string) => {
+      if (!value) return 'Поле обязательно для заполнения';
+      if (value.includes(' ')) return 'Поле не должно содержать пробелы';
+
+      return true;
+    },
+  };
 
   const onSubmit = () => {};
 </script>
 
 <template>
-  <ATypographyTitle :level="4"> Изменение пароля </ATypographyTitle>
+  <div class="flex flex-col gap-6">
+    <h4 class="text-2xl">Изменение пароля</h4>
 
-  <AForm
-    :model
-    label-placement="left"
-    @submit.prevent.stop="onSubmit"
-    @keyup.enter.exact.prevent.stop="onSubmit"
-  >
-    <AFormItem
-      size="large"
-      path="usernameOrEmail"
+    <UForm
+      class="flex flex-col gap-4"
+      :state
+      @submit.prevent.stop="onSubmit"
+      @keyup.enter.exact.prevent.stop="onSubmit"
     >
-      <AInput
-        v-model:value="model.usernameOrEmail"
-        autocapitalize="off"
-        autocomplete="username"
-        autocorrect="off"
-        placeholder="Логин или электронная почта"
-        autofocus
-        :allow-input="noSideSpace"
-      />
-    </AFormItem>
-
-    <AFormItem
-      size="large"
-      path="password"
-    >
-      <AInput
-        v-model:value="model.password"
-        autocapitalize="off"
-        autocomplete="current-password"
-        autocorrect="off"
-        type="password"
-        placeholder="Пароль"
-        show-password-on="click"
-        :allow-input="noSideSpace"
-      />
-    </AFormItem>
-
-    <AFlex
-      :gap="8"
-      :vertical="false"
-    >
-      <AButton
-        :disabled="success"
-        :loading="inProgress"
-        type="primary"
-        @click.left.exact.prevent="onSubmit"
+      <UFormField
+        name="usernameOrEmail"
+        :validate="rules.usernameOrEmail"
       >
-        Изменить пароль
-      </AButton>
+        <UInput
+          v-model="state.usernameOrEmail"
+          autocapitalize="off"
+          autocomplete="username"
+          autocorrect="off"
+          placeholder="Логин или электронная почта"
+          autofocus
+        />
+      </UFormField>
 
-      <AButton
-        type="link"
-        @click.left.exact.prevent="$emit('switch:sign-in')"
+      <UFormField
+        name="password"
+        :validate="rules.password"
       >
-        Авторизация
-      </AButton>
-    </AFlex>
-  </AForm>
+        <UInput
+          v-model="state.password"
+          autocapitalize="off"
+          autocomplete="current-password"
+          autocorrect="off"
+          placeholder="Пароль"
+          :type="showPwd ? 'text' : 'password'"
+          :ui="{ trailing: 'pe-1' }"
+        >
+          <template #trailing>
+            <UButton
+              color="neutral"
+              variant="link"
+              size="sm"
+              :icon="
+                showPwd
+                  ? 'i-fluent-eye-off-16-filled'
+                  : 'i-fluent-eye-16-filled'
+              "
+              :aria-label="showPwd ? 'Скрыть пароль' : 'Показать пароль'"
+              :aria-pressed="showPwd"
+              aria-controls="password"
+              @click.left.exact.prevent="showPwd = !showPwd"
+            />
+          </template>
+        </UInput>
+      </UFormField>
+
+      <div class="flex flex-col gap-2 md:flex-row">
+        <UButton
+          :disabled="success"
+          :loading="inProgress"
+          class="md:w-auto"
+          block
+          @click.left.exact.prevent="onSubmit"
+        >
+          Изменить пароль
+        </UButton>
+
+        <UButton
+          class="md:w-auto"
+          variant="soft"
+          block
+          @click.left.exact.prevent="$emit('switch:sign-in')"
+        >
+          Авторизация
+        </UButton>
+      </div>
+    </UForm>
+  </div>
 </template>

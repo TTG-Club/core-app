@@ -20,85 +20,66 @@
 </script>
 
 <template>
-  <ADivider orientation="left">
-    <ATypographyText
-      type="secondary"
-      content="Характеристики"
-      strong
-    />
-  </ADivider>
+  <USeparator>
+    <span class="font-bold text-secondary">Характеристики</span>
+  </USeparator>
 
-  <ARow :gutter="16">
-    <ACol
+  <UForm
+    class="col-span-full grid grid-cols-24 gap-4"
+    attach
+    :state="model"
+  >
+    <UFormField
       v-for="ability in ABILITIES"
       :key="ability.key"
-      :span="4"
+      class="col-span-4"
+      :label="ability.label"
+      :name="ability.shortKey + '.value'"
     >
-      <AFormItem
-        :name="['abilities', ability.shortKey, 'value']"
-        :label="ability.label"
+      <UInputNumber
+        v-model="model[ability.shortKey].value"
+        :precision="0"
+        :min="0"
+        :max="30"
       >
-        <AInputNumber
-          v-model:value="model[ability.shortKey].value"
-          :precision="0"
-          min="0"
-          max="30"
-        >
-          <template #addonAfter>
-            {{ getFormattedModifier(model[ability.shortKey].value) }}
-          </template>
-        </AInputNumber>
-      </AFormItem>
-    </ACol>
-  </ARow>
+        <template #trailing>
+          {{ getFormattedModifier(model[ability.shortKey].value) }}
+        </template>
+      </UInputNumber>
+    </UFormField>
+  </UForm>
 
-  <ADivider orientation="left">
-    <ATypographyText
-      type="secondary"
-      content="Спасброски"
-      strong
-    />
-  </ADivider>
+  <USeparator>
+    <span class="font-bold text-secondary">Спасброски</span>
+  </USeparator>
 
-  <ARow :gutter="16">
-    <ACol
+  <UForm
+    class="col-span-full grid grid-cols-24 gap-4"
+    attach
+    :state="model"
+  >
+    <UFormField
       v-for="ability in ABILITIES"
       :key="ability.key"
-      :span="4"
+      class="col-span-4"
+      :label="ability.label"
+      :name="ability.shortKey + '.multiplier'"
     >
-      <AFormItem
-        :label="ability.label"
-        :name="['abilities', ability.shortKey, 'multiplier']"
-      >
-        <AInputGroup
-          :style="{ display: 'flex' }"
-          compact
+      <div class="flex">
+        <SelectMastery
+          v-model="model[ability.shortKey].multiplier"
+          class="flex-grow"
         >
-          <SelectMastery
-            v-model="model[ability.shortKey].multiplier"
-            :style="{ flex: '1 1 100%' }"
-          />
-
-          <div
-            :style="{
-              display: 'table-cell',
-              textAlign: 'center',
-              backgroundColor: 'rgba(255, 255, 255, 0.04)',
-              border: '1px solid #74748040',
-              padding: '0 11px',
-              lineHeight: '30px',
-              verticalAlign: 'middle',
-            }"
-          >
+          <template #trailing>
             {{
               calcModifier(
                 model[ability.shortKey].value,
                 model[ability.shortKey].multiplier,
               )
             }}
-          </div>
-        </AInputGroup>
-      </AFormItem>
-    </ACol>
-  </ARow>
+          </template>
+        </SelectMastery>
+      </div>
+    </UFormField>
+  </UForm>
 </template>

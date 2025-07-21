@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { useDrawer } from '~/shared/composables';
+  import { GlossaryDrawer } from '~glossary/drawer';
   import { SmallLink } from '~ui/link';
 
   import type { GlossaryLinkResponse } from '~/shared/types';
@@ -8,7 +8,17 @@
     glossary: GlossaryLinkResponse;
   }>();
 
-  const { open } = useDrawer('glossary-detail');
+  const overlay = useOverlay();
+
+  const drawer = overlay.create(GlossaryDrawer, {
+    props: {
+      url: glossary.url,
+      onClose: () => drawer.close(),
+    },
+    destroyOnClose: true,
+  });
+
+  const isOpened = computed(() => overlay.isOpen(drawer.id));
 </script>
 
 <template>
@@ -16,7 +26,8 @@
     :to="{ name: 'glossary-url', params: { url: glossary.url } }"
     :title="`${glossary.name.rus} [${glossary.name.eng}]`"
     :group="glossary.source?.group"
-    @open-drawer="open(glossary.url)"
+    :is-opened
+    @open-drawer="drawer.open()"
   >
     <template #default>
       {{ glossary.name.rus }}

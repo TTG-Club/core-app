@@ -110,13 +110,9 @@
     </div>
 
     <div :class="$style.item">
-      <ATooltip
-        title="Показатель опасности (CR)"
-        :mouse-enter-delay="0.7"
-        destroy-tooltip-on-hide
-      >
+      <UTooltip text="Показатель опасности (CR)">
         <span :class="$style.name">ПО: </span>
-      </ATooltip>
+      </UTooltip>
 
       <span>{{ cr }}</span>
     </div>

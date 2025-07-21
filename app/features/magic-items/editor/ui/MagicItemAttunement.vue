@@ -24,28 +24,33 @@
 </script>
 
 <template>
-  <ARow :gutter="16">
-    <ACol :span="8">
-      <AFormItem
-        label="Требуется настройка"
-        :name="['attunement', 'requires']"
-      >
-        <ACheckbox v-model:checked="attunement.requires"> Требуется </ACheckbox>
-      </AFormItem>
-    </ACol>
+  <UForm
+    class="col-span-full grid grid-cols-24 gap-4"
+    attach
+    :state="attunement"
+  >
+    <UFormField
+      class="col-span-8"
+      label="Требуется настройка"
+      name="requires"
+    >
+      <UCheckbox
+        v-model="attunement.requires"
+        label="Требуется"
+      />
+    </UFormField>
 
-    <ACol :span="16">
-      <AFormItem
-        label="Особенности настройки"
-        :name="['attunement', 'description']"
-      >
-        <AInput
-          v-model:value="description"
-          :disabled="!isRequires"
-          placeholder="Введи особенности настройки (если есть)"
-          allow-clear
-        />
-      </AFormItem>
-    </ACol>
-  </ARow>
+    <UFormField
+      class="col-span-16"
+      label="Особенности настройки"
+      name="description"
+    >
+      <UInput
+        v-model="description"
+        :disabled="!isRequires"
+        placeholder="Введи особенности настройки (если есть)"
+        clearable
+      />
+    </UFormField>
+  </UForm>
 </template>

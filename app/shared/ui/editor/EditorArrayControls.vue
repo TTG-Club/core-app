@@ -3,15 +3,22 @@
 
   const model = defineModel<Array<T>>({ required: true });
 
-  const { emptyObject, item, index } = defineProps<{
+  const {
+    emptyObject,
+    item,
+    index,
+    cols = 6,
+  } = defineProps<{
     item: T;
     emptyObject: T;
     index: number;
     onlyRemove?: boolean;
+    cols?: number | `${number}`;
   }>();
 
   const isEmpty = computed(() => isEqual(item, emptyObject));
   const isLast = computed(() => index === model.value.length - 1);
+  const colsClass = computed(() => `col-span-${cols}`);
 
   function add() {
     model.value.splice(index + 1, 0, getEmpty());
@@ -31,35 +38,39 @@
 </script>
 
 <template>
-  <ACol :span="6">
-    <AFormItem label="Управление">
-      <AFlex :gap="8">
-        <AButton
-          block
-          @click.left.exact.prevent="add"
-        >
-          Добавить
-        </AButton>
+  <UFormField
+    label="Управление"
+    :class="colsClass"
+  >
+    <div class="flex gap-2">
+      <UButton
+        variant="subtle"
+        block
+        @click.left.exact.prevent="add"
+      >
+        Добавить
+      </UButton>
 
-        <AButton
-          v-if="isLast && !onlyRemove"
-          :disabled="isEmpty"
-          danger
-          block
-          @click.left.exact.prevent="clear"
-        >
-          Очистить
-        </AButton>
+      <UButton
+        v-if="isLast && !onlyRemove"
+        :disabled="isEmpty"
+        variant="subtle"
+        color="error"
+        block
+        @click.left.exact.prevent="clear"
+      >
+        Очистить
+      </UButton>
 
-        <AButton
-          v-else
-          danger
-          block
-          @click.left.exact.prevent="remove"
-        >
-          Удалить
-        </AButton>
-      </AFlex>
-    </AFormItem>
-  </ACol>
+      <UButton
+        v-else
+        variant="subtle"
+        color="error"
+        block
+        @click.left.exact.prevent="remove"
+      >
+        Удалить
+      </UButton>
+    </div>
+  </UFormField>
 </template>

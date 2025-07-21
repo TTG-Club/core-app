@@ -1,40 +1,63 @@
 <script setup lang="ts">
-  import { Form } from 'ant-design-vue';
   import { omit } from 'lodash-es';
-
-  import { ValidationAuth } from '~/shared/utils';
-  import { useToast } from '~ui/toast';
 
   const emit = defineEmits<{
     (e: 'switch:sign-in'): void;
   }>();
 
   const $toast = useToast();
+  const passwordField = useTemplateRef<HTMLDivElement>('passwordField');
+  const { focused } = useFocusWithin(passwordField);
+
+  const ALLOWED_SPECIAL_CHARACTERS = [
+    "'",
+    '-',
+    '!',
+    '"',
+    '#',
+    '$',
+    '%',
+    '&',
+    '(',
+    ')',
+    '*',
+    ',',
+    '.',
+    '/',
+    ':',
+    ';',
+    '?',
+    '@',
+    '[',
+    ']',
+    '^',
+    '_',
+    '`',
+    '{',
+    '|',
+    '}',
+    '~',
+    '+',
+    '<',
+    '=',
+    '>',
+  ];
+
+  const charList = ALLOWED_SPECIAL_CHARACTERS.join(' ');
 
   const success = ref(false);
+  const showPwd = ref(false);
+  const showPwdRepeat = ref(false);
 
-  const model = reactive({
+  const state = reactive({
     username: '',
     email: '',
     password: '',
     repeat: '',
   });
 
-  const rules = computed(() => ({
-    username: [ValidationAuth.ruleUsername({ checkExist: true })],
-    email: [ValidationAuth.ruleEmail({ checkExist: true })],
-    password: [ValidationAuth.rulePassword()],
-    repeat: [ValidationAuth.rulePasswordRepeat(model.password)],
-  }));
-
-  const { validate, validateInfos } = Form.useForm(model, rules, {
-    debounce: {
-      wait: 500,
-    },
-  });
-
   const { execute, status, error } = useFetch('/api/auth/sign-up', {
-    body: computed(() => omit(model, 'repeat')),
+    body: computed(() => omit(state, 'repeat')),
     method: 'post',
     watch: false,
     retry: false,
@@ -44,13 +67,14 @@
   const inProgress = computed(() => status.value === 'pending');
 
   const onSubmit = async () => {
-    await validate();
     await execute();
 
     if (error.value) {
-      $toast.error({
-        title: 'Ошибка авторизации',
+      $toast.add({
+        title: 'Ошибка регистрации',
         description: error.value.data.message,
+        color: 'error',
+        icon: 'i-fluent-person-warning-16-regular',
       });
 
       return;
@@ -60,101 +84,136 @@
 
     emit('switch:sign-in');
 
-    $toast.success({
+    $toast.add({
       title: 'Регистрация прошла успешно!',
       description:
         'Пожалуйста, подтвердите почту пройдя по ссылке в письме на электронной почте. Ссылка действительна в течение суток.',
+      color: 'success',
+      icon: 'i-fluent-person-available-16-regular',
     });
   };
 </script>
 
 <template>
-  <AFlex
-    :gap="24"
-    vertical
-  >
-    <ATypographyTitle :level="4"> Регистрация </ATypographyTitle>
+  <div class="flex flex-col gap-6">
+    <h4 class="text-2xl">Регистрация</h4>
 
-    <AForm
-      :model
-      label-placement="left"
+    <UForm
+      class="flex flex-col gap-4"
+      :state
       @submit.prevent.stop="onSubmit"
       @keyup.enter.exact.prevent.stop="onSubmit"
     >
-      <AFormItem v-bind="validateInfos.username">
-        <AInput
-          v-model:value="model.username"
+      <UFormField name="username">
+        <UInput
+          v-model="state.username"
           autocapitalize="off"
           autocomplete="username"
           autocorrect="off"
           placeholder="Имя пользователя"
           autofocus
         />
-      </AFormItem>
+      </UFormField>
 
-      <AFormItem v-bind="validateInfos.email">
-        <AInput
-          v-model:value="model.email"
+      <UFormField name="email">
+        <UInput
+          v-model="state.email"
           autocapitalize="off"
           autocomplete="email"
           autocorrect="off"
           placeholder="Электронная почта"
         />
-      </AFormItem>
+      </UFormField>
 
-      <AFormItem v-bind="validateInfos.password">
-        <ATooltip trigger="focus">
-          <template #title>
-            Допустимые спец. символы:
-            {{ ValidationAuth.allowedSpecialCharacters.join(' ') }}
+      <UFormField name="password">
+        <UPopover
+          :content="{ side: 'top' }"
+          :open="focused"
+          :ui="{ content: 'text-center' }"
+        >
+          <template #content>
+            <p>Допустимые спец. символы:</p>
+
+            <p>{{ charList }}</p>
           </template>
 
-          <template #default>
-            <AInputPassword
-              v-model:value="model.password"
-              autocapitalize="off"
-              autocomplete="new-password"
-              autocorrect="off"
-              type="password"
-              placeholder="Пароль"
-            />
-          </template>
-        </ATooltip>
-      </AFormItem>
+          <UInput
+            ref="passwordField"
+            v-model="state.password"
+            autocapitalize="off"
+            autocomplete="new-password"
+            autocorrect="off"
+            placeholder="Пароль"
+            :type="showPwd ? 'text' : 'password'"
+          >
+            <template #trailing>
+              <UButton
+                color="neutral"
+                variant="link"
+                size="sm"
+                :icon="
+                  showPwd
+                    ? 'i-fluent-eye-off-16-filled'
+                    : 'i-fluent-eye-16-filled'
+                "
+                :aria-label="showPwd ? 'Скрыть пароль' : 'Показать пароль'"
+                :aria-pressed="showPwd"
+                aria-controls="password"
+                @click.left.exact.prevent="showPwd = !showPwd"
+              />
+            </template>
+          </UInput>
+        </UPopover>
+      </UFormField>
 
-      <AFormItem v-bind="validateInfos.repeat">
-        <AInputPassword
-          v-model:value="model.repeat"
+      <UFormField name="repeat">
+        <UInput
+          v-model="state.repeat"
           autocapitalize="off"
           autocomplete="new-password"
           autocorrect="off"
-          type="password"
           placeholder="Повторите пароль"
-          show-password-on="click"
-        />
-      </AFormItem>
+          :type="showPwdRepeat ? 'text' : 'password'"
+        >
+          <template #trailing>
+            <UButton
+              color="neutral"
+              variant="link"
+              size="sm"
+              :icon="
+                showPwdRepeat
+                  ? 'i-fluent-eye-off-16-filled'
+                  : 'i-fluent-eye-16-filled'
+              "
+              :aria-label="showPwdRepeat ? 'Скрыть пароля' : 'Показать пароль'"
+              :aria-pressed="showPwdRepeat"
+              aria-controls="password"
+              @click.left.exact.prevent="showPwdRepeat = !showPwdRepeat"
+            />
+          </template>
+        </UInput>
+      </UFormField>
 
-      <AFlex
-        :gap="8"
-        :vertical="false"
-      >
-        <AButton
+      <div class="flex flex-col gap-2 md:flex-row">
+        <UButton
           :loading="inProgress"
           :disabled="success"
-          type="primary"
+          class="md:w-auto"
+          block
           @click.left.exact.prevent="onSubmit"
         >
           Зарегистрироваться
-        </AButton>
+        </UButton>
 
-        <AButton
-          :disabled="inProgress"
-          type="link"
+        <UButton
+          class="md:w-auto"
+          variant="soft"
+          block
           @click.left.exact.prevent="$emit('switch:sign-in')"
         >
           Есть аккаунт?
-        </AButton>
-      </AFlex>
-    </AForm>
-  </AFlex>
+        </UButton>
+      </div>
+    </UForm>
+  </div>
 </template>

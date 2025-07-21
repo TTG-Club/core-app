@@ -3,11 +3,9 @@
 
   import { NuxtLink } from '#components';
   import { GlossaryEditor } from '~glossary/editor';
-  import { SvgIcon } from '~ui/icon';
-  import { PageContainer, PageHeader } from '~ui/page';
-  import { useToast } from '~ui/toast';
 
   import type { GlossaryCreate } from '~/shared/types';
+  import { UiResult } from '~ui/result';
 
   const route = useRoute();
   const $toast = useToast();
@@ -19,7 +17,7 @@
   const { status } = await useAsyncData(
     `glossary-${route.params.url}-raw`,
     () =>
-      $fetch<GlossaryCreate>(`/api/v2/glossary/${route.params.url}`, {
+      $fetch<GlossaryCreate>(`/api/v2/glossary/${route.params.url}/raw`, {
         onResponse: (ctx) => {
           const initialState = getInitialState();
 
@@ -41,16 +39,18 @@
 
   async function submit() {
     if (!checkIsEdited()) {
-      $toast.error({
+      $toast.add({
         title: 'Ошибка сохранения записи глоссария',
         description: 'Измени хотя бы одно поле, чтобы сохранить',
+        color: 'error',
       });
 
       throw new Error('Form is equal with initial state');
     }
 
     if (!editor.value?.validate) {
-      $toast.error({
+      $toast.add({
+        color: 'error',
         title: 'Ошибка сохранения записи глоссария',
         description: () =>
           h('span', null, [
@@ -84,14 +84,16 @@
         onResponseError: (error) => {
           isCreating.value = false;
 
-          $toast.error({
+          $toast.add({
+            color: 'error',
             title: 'Ошибка сохранения черты',
             description: error.response._data.message,
           });
         },
       });
 
-      $toast.success({
+      $toast.add({
+        color: 'success',
         title: 'Запись глоссария успешно сохранена',
         description: getLink,
       });
@@ -145,45 +147,36 @@
 </script>
 
 <template>
-  <PageContainer fixed-header>
-    <template #header>
-      <PageHeader title="Редактирование записи глоссария">
-        <template #actions>
-          <AButton
-            v-if="!rawIncorrect"
-            type="primary"
-            :disabled="isCreated"
-            :loading="editor?.isCreating"
-            @click.left.exact.prevent="submit"
-          >
-            <template #icon>
-              <SvgIcon icon="check" />
-            </template>
+  <NuxtLayout
+    title="Редактирование записи глоссария"
+    name="detail"
+  >
+    <template #actions>
+      <UButton
+        v-if="!rawIncorrect"
+        :disabled="isCreated"
+        :loading="isCreating"
+        icon="i-ttg-check"
+        variant="ghost"
+        color="neutral"
+        @click.left.exact.prevent="submit"
+      >
+        Сохранить
+      </UButton>
 
-            <template #default> Сохранить </template>
-          </AButton>
-
-          <ATooltip
-            title="Закрыть"
-            :mouse-enter-delay="0.7"
-            destroy-tooltip-on-hide
-          >
-            <AButton
-              type="text"
-              @click.left.exact.prevent="navigateTo('/glossary')"
-            >
-              <template #icon>
-                <SvgIcon icon="close" />
-              </template>
-            </AButton>
-          </ATooltip>
-        </template>
-      </PageHeader>
+      <UTooltip text="Закрыть">
+        <UButton
+          variant="ghost"
+          color="neutral"
+          icon="i-ttg-x"
+          @click.left.exact.prevent="navigateTo('/glossary')"
+        />
+      </UTooltip>
     </template>
 
     <template #default>
       <ClientOnly>
-        <AResult
+        <UiResult
           v-if="rawIncorrect"
           status="error"
           title="Некорректные данные"
@@ -198,5 +191,5 @@
         />
       </ClientOnly>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

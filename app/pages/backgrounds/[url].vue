@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { getSlicedString } from '~/shared/utils';
   import { BackgroundBody } from '~backgrounds/body';
-  import { PageActions, PageContainer, PageHeader } from '~ui/page';
+  import { PageActions } from '~ui/page';
 
   import type { BackgroundDetailResponse } from '~/shared/types';
 
@@ -46,22 +46,19 @@
 </script>
 
 <template>
-  <PageContainer>
-    <template #header>
-      <PageHeader
-        :title="background?.name.rus"
-        :subtitle="background?.name.eng"
-        :source="background?.source"
-        :date-time="background?.updatedAt"
-        copy-title
-      >
-        <template #actions>
-          <PageActions
-            :edit-url="editUrl"
-            @close="navigateTo({ name: 'backgrounds' })"
-          />
-        </template>
-      </PageHeader>
+  <NuxtLayout
+    name="detail"
+    :title="background?.name.rus"
+    :subtitle="background?.name.eng"
+    :source="background?.source"
+    :date-time="background?.updatedAt"
+    copy-text
+  >
+    <template #actions>
+      <PageActions
+        :edit-url="editUrl"
+        @close="navigateTo({ name: 'backgrounds' })"
+      />
     </template>
 
     <template #default>
@@ -70,11 +67,13 @@
         :background
       />
 
-      <ASkeleton
-        v-else
-        :title="false"
-        :paragraph="{ rows: 4 }"
-      />
+      <template v-else>
+        <USkeleton
+          v-for="index in 3"
+          :key="index"
+          :class="`w-1/${index + 1} h-6`"
+        />
+      </template>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

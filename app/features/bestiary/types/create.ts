@@ -45,7 +45,7 @@ export interface CreateSection {
 
 export interface CreateInitiative {
   value: number;
-  multiplier: number;
+  multiplier: 0 | 1 | 2;
 }
 
 export interface CreatureTypes {

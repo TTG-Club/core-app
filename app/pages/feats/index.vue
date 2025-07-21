@@ -2,7 +2,7 @@
   import { FeatLegend } from '~feats/legend';
   import { FeatLink } from '~feats/link';
   import { FilterControls } from '~filter/controls';
-  import { PageContainer, PageGrid, PageHeader } from '~ui/page';
+  import { PageGrid, PageResult } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
   import type { FeatLinkResponse } from '~/shared/types';
@@ -37,11 +37,10 @@
 </script>
 
 <template>
-  <PageContainer fixed-header>
-    <template #header>
-      <PageHeader title="Черты" />
-    </template>
-
+  <NuxtLayout
+    name="section"
+    title="Черты"
+  >
     <template #controls>
       <FilterControls v-model:search="search">
         <template #legend>
@@ -76,45 +75,14 @@
           />
         </PageGrid>
 
-        <AResult
-          v-else-if="status === 'success' && !feats?.length"
-          title="Ничего не нашлось"
-          sub-title="По вашему запросу ничего не нашлось. Попробуйте изменить фильтр или строку поиска"
-        >
-          <template #extra>
-            <AButton
-              type="primary"
-              @click.left.exact.prevent="refresh()"
-            >
-              Обновить
-            </AButton>
-
-            <AButton @click.left.exact.prevent="navigateTo('/')">
-              Вернуться на главную
-            </AButton>
-          </template>
-        </AResult>
-
-        <AResult
-          v-else-if="status === 'error'"
-          :sub-title="error"
-          status="error"
-          title="Ошибка"
-        >
-          <template #extra>
-            <AButton
-              type="primary"
-              @click.left.exact.prevent="refresh()"
-            >
-              Обновить
-            </AButton>
-
-            <AButton @click.left.exact.prevent="navigateTo('/')">
-              Вернуться на главную
-            </AButton>
-          </template>
-        </AResult>
+        <PageResult
+          v-else
+          :items="feats"
+          :status
+          :error
+          @refresh="refresh"
+        />
       </Transition>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

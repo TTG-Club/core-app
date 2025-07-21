@@ -5,11 +5,9 @@
     MagicItemCategory,
   } from './ui';
 
-  import { ValidationBase } from '~/shared/utils';
   import { EditorBaseInfo } from '~ui/editor';
   import { UploadImage } from '~ui/upload';
 
-  import type { FormInstance } from 'ant-design-vue';
   import type { MagicItemCreate } from '~magic-items/types';
 
   const { isCreating } = defineProps<{
@@ -18,32 +16,32 @@
 
   const form = defineModel<MagicItemCreate>({ required: true });
 
-  const formRef = useTemplateRef<FormInstance>('formRef');
+  const formRef = useTemplateRef('formRef');
+
+  const validate = () => {
+    return formRef.value?.validate();
+  };
 
   defineExpose({
-    validate: computed(() => formRef.value?.validate),
+    validate,
   });
 </script>
 
 <template>
-  <AForm
+  <UForm
     ref="formRef"
-    layout="vertical"
-    :model="form"
+    :state="form"
     :disabled="isCreating"
+    class="grid grid-cols-24 gap-4"
   >
     <EditorBaseInfo
       v-model="form"
       section="magic-item"
     />
 
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Подробности"
-        strong
-      />
-    </ADivider>
+    <USeparator>
+      <span class="font-bold text-secondary">Подробности</span>
+    </USeparator>
 
     <MagicItemCategory v-model="form.category" />
 
@@ -51,88 +49,74 @@
 
     <MagicItemAttunement v-model="form.attunement" />
 
-    <ARow :gutter="16">
-      <ACol :span="4">
-        <AFormItem
-          label="Проклятие"
-          :name="['curse']"
-        >
-          <ACheckbox v-model:checked="form.curse"> Есть </ACheckbox>
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="4">
-        <AFormItem
-          label="Расходуемый"
-          :name="['consumable']"
-        >
-          <ACheckbox v-model:checked="form.consumable"> Да </ACheckbox>
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="4">
-        <AFormItem
-          label="Количество зарядов"
-          tooltip="Введите количество зарядов магического предмета (если есть)"
-          :name="['charges']"
-        >
-          <AInputNumber
-            v-model:value="form.charges"
-            :precision="0"
-            placeholder="Введи количество зарядов"
-            min="0"
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Описание"
-        strong
+    <UFormField
+      class="col-span-4"
+      label="Проклятие"
+      name="curse"
+    >
+      <UCheckbox
+        v-model="form.curse"
+        label="Есть"
       />
-    </ADivider>
+    </UFormField>
 
-    <ARow :gutter="16">
-      <ACol :span="24">
-        <AFormItem
-          label="Описание"
-          :name="['description']"
-          :rules="[ValidationBase.ruleString()]"
-        >
-          <ATextarea
-            v-model:value="form.description"
-            :rows="8"
-            placeholder="Введи описание"
-            allow-clear
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Изображения"
-        strong
+    <UFormField
+      class="col-span-4"
+      label="Расходуемый"
+      name="consumable"
+    >
+      <UCheckbox
+        v-model="form.consumable"
+        label="Да"
       />
-    </ADivider>
+    </UFormField>
 
-    <ARow :gutter="16">
-      <ACol :span="8">
-        <AFormItem
-          label="Основное"
-          tooltip="Эта картинка отображается при просмотре страницы магического предмета"
-          :name="['image']"
-        >
-          <UploadImage
-            v-model="form.image"
-            section="magic-item"
-            max-size="480"
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-  </AForm>
+    <UFormField
+      class="col-span-4"
+      label="Количество зарядов"
+      help="Введите количество зарядов магического предмета (если есть)"
+      name="charges"
+    >
+      <UInput
+        v-model="form.charges"
+        type="number"
+        placeholder="Введи количество зарядов"
+        min="0"
+        step="1"
+      />
+    </UFormField>
+
+    <USeparator>
+      <span class="font-bold text-secondary">Описание</span>
+    </USeparator>
+
+    <UFormField
+      class="col-span-24"
+      label="Описание"
+      name="description"
+    >
+      <UTextarea
+        v-model="form.description"
+        :rows="8"
+        placeholder="Введи описание"
+      />
+    </UFormField>
+
+    <USeparator>
+      <span class="font-bold text-secondary">Изображения</span>
+    </USeparator>
+
+    <UFormField
+      class="col-span-8"
+      label="Основное"
+      help="Эта картинка отображается при просмотре страницы магического предмета"
+      name="image"
+    >
+      <UploadImage
+        v-model="form.image"
+        section="magic-item"
+        max-size="480"
+      />
+    </UFormField>
+  </UForm>
 </template>

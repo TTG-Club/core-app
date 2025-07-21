@@ -1,11 +1,10 @@
 <script setup lang="ts">
-  import { ValidationBase } from '~/shared/utils';
-
   import type { CreatureCreate, CreateTrait } from '~bestiary/types';
+  import { EditorArrayControls } from '~ui/editor';
 
   type Traits = CreatureCreate['traits'];
 
-  function getEmptyFeature(): Traits[number] {
+  function getEmptyTrait(): Traits[number] {
     return {
       name: {
         rus: '',
@@ -19,111 +18,83 @@
     default: () => [],
   });
 
-  function isLastFeature(index: number) {
+  function isLastTrait(index: number) {
     return index === model.value.length - 1;
   }
 
-  function addFeature(indexOfNewFeature: number) {
-    model.value.splice(indexOfNewFeature, 0, getEmptyFeature());
-  }
-
-  function removeFeature(index: number) {
-    model.value.splice(index, 1);
+  function addTrait(indexOfNewTrait: number) {
+    model.value.splice(indexOfNewTrait, 0, getEmptyTrait());
   }
 </script>
 
 <template>
-  <ADivider orientation="left">
-    <ATypographyText
-      content="Особенности"
-      type="secondary"
-      strong
-    />
-  </ADivider>
+  <USeparator>
+    <span class="font-bold text-secondary">Особенности</span>
+  </USeparator>
 
   <template
-    v-for="(trait, featIndex) in model"
-    :key="featIndex"
+    v-for="(trait, traitIndex) in model"
+    :key="traitIndex"
   >
-    <ARow :gutter="16">
-      <ACol :span="8">
-        <AFormItem
-          label="Название"
-          :name="['traits', featIndex, 'name', 'rus']"
-          :rules="[ValidationBase.ruleRusName()]"
-        >
-          <AInput
-            v-model:value="trait.name.rus"
-            placeholder="Введи название"
-          />
-        </AFormItem>
-      </ACol>
+    <UForm
+      class="col-span-full grid grid-cols-24 gap-4"
+      attach
+      :state="trait"
+    >
+      <UFormField
+        class="col-span-8"
+        label="Название"
+        name="name.rus"
+      >
+        <UInput
+          v-model="trait.name.rus"
+          placeholder="Введи название"
+        />
+      </UFormField>
 
-      <ACol :span="8">
-        <AFormItem
-          label="Название (англ.)"
-          tooltip="Английское название"
-          :name="['traits', featIndex, 'name', 'eng']"
-          :rules="[ValidationBase.ruleEngName()]"
-        >
-          <AInput
-            v-model:value="trait.name.eng"
-            placeholder="Введи английское название"
-          />
-        </AFormItem>
-      </ACol>
+      <UFormField
+        class="col-span-8"
+        label="Название (англ.)"
+        help="Английское название"
+        name="name.eng"
+      >
+        <UInput
+          v-model="trait.name.eng"
+          placeholder="Введи английское название"
+        />
+      </UFormField>
 
-      <ACol :span="8">
-        <AFormItem label="Управление">
-          <ARow :gutter="16">
-            <ACol :span="12">
-              <AButton
-                block
-                @click.left.exact.prevent="addFeature(featIndex + 1)"
-              >
-                Добавить особенность
-              </AButton>
-            </ACol>
+      <EditorArrayControls
+        v-model="model"
+        :item="trait"
+        :empty-object="getEmptyTrait()"
+        :index="traitIndex"
+        cols="8"
+        only-remove
+      />
 
-            <ACol :span="12">
-              <AButton
-                danger
-                block
-                @click.left.exact.prevent="removeFeature(featIndex)"
-              >
-                Удалить особенность
-              </AButton>
-            </ACol>
-          </ARow>
-        </AFormItem>
-      </ACol>
-    </ARow>
+      <UFormField
+        class="col-span-24"
+        label="Описание"
+        name="description"
+      >
+        <UTextarea
+          v-model="trait.description"
+          :rows="3"
+          placeholder="Введи описание"
+        />
+      </UFormField>
+    </UForm>
 
-    <ARow>
-      <ACol :span="24">
-        <AFormItem
-          label="Описание"
-          :name="['traits', featIndex, 'description']"
-          :rules="[ValidationBase.ruleString()]"
-        >
-          <ATextarea
-            v-model:value="trait.description"
-            :auto-size="{ minRows: 3, maxRows: 8 }"
-            placeholder="Введи описание"
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-
-    <ADivider v-if="!isLastFeature(featIndex)" />
+    <USeparator v-if="!isLastTrait(traitIndex)" />
   </template>
 
-  <AFlex
+  <div
     v-if="!model.length"
-    justify="center"
+    class="col-span-full flex justify-center"
   >
-    <AButton @click.left.exact.prevent="addFeature(0)">
+    <UButton @click.left.exact.prevent="addTrait(0)">
       Добавить первое умение
-    </AButton>
-  </AFlex>
+    </UButton>
+  </div>
 </template>

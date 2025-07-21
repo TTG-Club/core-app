@@ -1,10 +1,11 @@
 <script setup lang="ts">
-  import { Role, type SearchBody } from '~/shared/types';
+  import { Role } from '~/shared/types';
+  import type { SearchBody } from '~/shared/types';
   import { CreatureLegend } from '~bestiary/legend';
   import { CreatureLink } from '~bestiary/link';
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
-  import { PageContainer, PageGrid, PageHeader } from '~ui/page';
+  import { PageGrid, PageResult } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
   import type { CreatureLinkResponse } from '~bestiary/types';
@@ -56,11 +57,10 @@
 </script>
 
 <template>
-  <PageContainer fixed-header>
-    <template #header>
-      <PageHeader title="Бестиарий" />
-    </template>
-
+  <NuxtLayout
+    name="section"
+    title="Бестиарий"
+  >
     <template #controls>
       <FilterControls
         v-model:search="search"
@@ -96,49 +96,18 @@
           <CreatureLink
             v-for="creature in bestiary"
             :key="creature.url"
-            :bestiary="creature"
+            :creature
           />
         </PageGrid>
 
-        <AResult
-          v-else-if="status === 'success' && !bestiary?.length"
-          title="Ничего не нашлось"
-          sub-title="По вашему запросу ничего не нашлось. Попробуйте изменить фильтр или строку поиска"
-        >
-          <template #extra>
-            <AButton
-              type="primary"
-              @click.left.exact.prevent="refresh()"
-            >
-              Обновить
-            </AButton>
-
-            <AButton @click.left.exact.prevent="navigateTo('/')">
-              Вернуться на главную
-            </AButton>
-          </template>
-        </AResult>
-
-        <AResult
-          v-else-if="status === 'error'"
-          :sub-title="error"
-          status="error"
-          title="Ошибка"
-        >
-          <template #extra>
-            <AButton
-              type="primary"
-              @click.left.exact.prevent="refresh()"
-            >
-              Обновить
-            </AButton>
-
-            <AButton @click.left.exact.prevent="navigateTo('/')">
-              Вернуться на главную
-            </AButton>
-          </template>
-        </AResult>
+        <PageResult
+          v-else
+          :items="bestiary"
+          :status
+          :error
+          @refresh="refresh"
+        />
       </Transition>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

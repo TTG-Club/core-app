@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { useDrawer } from '~/shared/composables';
+  import { BackgroundDrawer } from '~backgrounds/drawer';
   import { SmallLink } from '~ui/link';
 
   import type { BackgroundLinkResponse } from '~/shared/types';
@@ -8,7 +8,17 @@
     background: BackgroundLinkResponse;
   }>();
 
-  const { open } = useDrawer('background-detail');
+  const overlay = useOverlay();
+
+  const drawer = overlay.create(BackgroundDrawer, {
+    props: {
+      url: background.url,
+      onClose: () => drawer.close(),
+    },
+    destroyOnClose: true,
+  });
+
+  const isOpened = computed(() => overlay.isOpen(drawer.id));
 </script>
 
 <template>
@@ -16,7 +26,8 @@
     :to="{ name: 'backgrounds-url', params: { url: background.url } }"
     :title="`${background.name.rus} [${background.name.eng}]`"
     :group="background.source.group"
-    @open-drawer="open(background.url)"
+    :is-opened
+    @open-drawer="drawer.open()"
   >
     <template #default>
       {{ background.name.rus }}

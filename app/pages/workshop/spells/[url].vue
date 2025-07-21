@@ -3,11 +3,9 @@
 
   import { NuxtLink } from '#components';
   import { SpellsEditor } from '~spells/editor';
-  import { SvgIcon } from '~ui/icon';
-  import { PageContainer, PageHeader } from '~ui/page';
-  import { useToast } from '~ui/toast';
 
   import type { SpellCreate } from '~/shared/types';
+  import { UiResult } from '~ui/result';
 
   const route = useRoute();
   const $toast = useToast();
@@ -41,7 +39,8 @@
 
   async function submit() {
     if (!checkIsEdited()) {
-      $toast.error({
+      $toast.add({
+        color: 'error',
         title: 'Ошибка сохранения заклинания',
         description: 'Измени хотя бы одно поле, чтобы сохранить',
       });
@@ -50,7 +49,8 @@
     }
 
     if (!editor.value?.validate) {
-      $toast.error({
+      $toast.add({
+        color: 'error',
         title: 'Ошибка сохранения заклинания',
         description: () =>
           h('span', null, [
@@ -84,7 +84,8 @@
         onResponseError: (error) => {
           isCreating.value = false;
 
-          $toast.error({
+          $toast.add({
+            color: 'error',
             title: 'Ошибка сохранения заклинания',
             description: error.response._data.message,
           });
@@ -93,7 +94,8 @@
 
       // isCreated.value = true; // TODO: вернуть в будущем
 
-      $toast.success({
+      $toast.add({
+        color: 'success',
         title: 'Заклинание успешно сохранено',
         description: getLink,
         // onClose: () => navigateTo({ name: 'workshop-spells' }), // TODO: вернуть в будущем
@@ -167,44 +169,35 @@
 </script>
 
 <template>
-  <PageContainer fixed-header>
-    <template #header>
-      <PageHeader title="Редактирование заклинания">
-        <template #actions>
-          <AButton
-            type="primary"
-            :disabled="isCreated"
-            :loading="editor?.isCreating"
-            @click.left.exact.prevent="submit"
-          >
-            <template #icon>
-              <SvgIcon icon="check" />
-            </template>
+  <NuxtLayout
+    title="Редактирование заклинания"
+    name="detail"
+  >
+    <template #actions>
+      <UButton
+        :disabled="isCreated"
+        :loading="editor?.isCreating"
+        icon="i-ttg-check"
+        variant="ghost"
+        color="neutral"
+        @click.left.exact.prevent="submit"
+      >
+        Сохранить
+      </UButton>
 
-            <template #default> Сохранить </template>
-          </AButton>
-
-          <ATooltip
-            title="Закрыть"
-            :mouse-enter-delay="0.7"
-            destroy-tooltip-on-hide
-          >
-            <AButton
-              type="text"
-              @click.left.exact.prevent="navigateTo('/spells')"
-            >
-              <template #icon>
-                <SvgIcon icon="close" />
-              </template>
-            </AButton>
-          </ATooltip>
-        </template>
-      </PageHeader>
+      <UTooltip text="Закрыть">
+        <UButton
+          icon="i-ttg-x"
+          variant="ghost"
+          color="neutral"
+          @click.left.exact.prevent="navigateTo('/spells')"
+        />
+      </UTooltip>
     </template>
 
     <template #default>
       <ClientOnly>
-        <AResult
+        <UiResult
           v-if="rawIncorrect"
           status="error"
           title="Некорректные данные"
@@ -219,5 +212,5 @@
         />
       </ClientOnly>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>
