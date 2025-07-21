@@ -123,6 +123,11 @@ export default defineAppConfig({
         handle: 'cursor-grab active:cursor-grabbing',
       },
     },
+    dropdownMenu: {
+      slots: {
+        item: 'cursor-pointer',
+      },
+    },
     collapsible: {
       slots: {
         root: [
