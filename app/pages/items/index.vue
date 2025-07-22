@@ -1,11 +1,11 @@
 <script setup lang="ts">
   import { FilterControls } from '~filter/controls';
+  import { ItemLink } from '~items/link';
   import { MagicItemLegend } from '~magic-items/legend';
-  import { MagicItemLink } from '~magic-items/link';
   import { PageContainer, PageGrid, PageHeader } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
-  import type { MagicItemLinkResponse } from '~magic-items/types';
+  import type { ItemLinkResponse } from '~items/types';
 
   useSeoMeta({
     title: 'Предметы [Items]',
@@ -22,7 +22,7 @@
   } = await useAsyncData(
     'items',
     () =>
-      $fetch<Array<MagicItemLinkResponse>>('/api/v2/item/search', {
+      $fetch<Array<ItemLinkResponse>>('/api/v2/item/search', {
         method: 'POST',
         params: {
           query:
@@ -69,10 +69,10 @@
           v-else-if="status === 'success' && items?.length"
           :columns="3"
         >
-          <MagicItemLink
-            v-for="magicItem in items"
-            :key="magicItem.url"
-            :magic-item="magicItem"
+          <ItemLink
+            v-for="item in items"
+            :key="item.url"
+            :item="item"
           />
         </PageGrid>
 

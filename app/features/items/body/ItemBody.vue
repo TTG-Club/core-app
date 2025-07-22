@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { DescriptionsBlock, TopBar } from './ui';
 
-  import { UiGallery } from '~ui/gallery';
+  import StatsBlock from '~items/body/ui/StatsBlock.vue';
 
   import type { ItemDetailResponse } from '~items/types';
 
@@ -18,11 +18,12 @@
         :gap="12"
         :class="$style.info"
       >
-        <TopBar :subtitle="item.subtitle" />
+        <TopBar :types="item.types" />
 
-        <div :class="$style.galleryImg">
-          <UiGallery :preview="item.image || '/img/no-img.webp'" />
-        </div>
+        <StatsBlock
+          :cost="item.cost"
+          :weight="item.weight"
+        />
       </AFlex>
 
       <AFlex

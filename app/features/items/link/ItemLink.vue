@@ -4,11 +4,11 @@
 
   import type { ItemLinkResponse } from '~items/types';
 
-  const { magicItem: item } = defineProps<{
-    magicItem: ItemLinkResponse;
+  const { item: item } = defineProps<{
+    item: ItemLinkResponse;
   }>();
 
-  const { open } = useDrawer('magic-item-detail');
+  const { open } = useDrawer('item-detail');
 </script>
 
 <template>
@@ -26,6 +26,15 @@
       {{ item.name.eng }}
     </template>
 
-    <template #caption> </template>
+    <template #caption>
+      {{ item.cost }}
+    </template>
   </SmallLink>
 </template>
+
+<style module lang="scss">
+  .component {
+    width: 12px;
+    text-align: right;
+  }
+</style>

@@ -3,18 +3,17 @@
 
   import { DictionaryService } from '~/shared/api';
 
-  const { multiple = false } = defineProps<{
+  defineProps<{
     disabled?: boolean;
-    multiple?: boolean;
   }>();
 
   const context = Form.useInjectFormItemContext();
 
-  const model = defineModel<Array<string>>();
+  const model = defineModel<string>();
 
   const { data, status, refresh } = await useAsyncData(
-    'dictionaries-items-type',
-    () => DictionaryService.itemType(),
+    'dictionaries-coins-type',
+    () => DictionaryService.coinType(),
   );
 
   const handleDropdownOpening = (state: boolean) => {
@@ -32,19 +31,17 @@
 
 <template>
   <AFormItem
-    label="Типы предмета"
-    tooltip="Введите типы"
-    :name="['types']"
+    label="Номинал монет"
+    tooltip="Выберите номинал"
+    :name="['coin']"
   >
     <ASelect
       v-model:value="model"
-      :mode="multiple ? 'multiple' : undefined"
       :loading="status === 'pending'"
       :options="data || []"
       :disabled
       placeholder="Выбери типы"
       show-search
-      show-arrow
       @dropdown-visible-change="handleDropdownOpening"
     />
   </AFormItem>
