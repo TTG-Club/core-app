@@ -32,6 +32,7 @@
     title="Происхождения"
     :is-loading
     :is-error
+    @close="$emit('close')"
   >
     <div :class="$style.container">
       <div :class="$style.grid">

@@ -1,4 +1,15 @@
 <script setup lang="ts">
+  import { computed } from 'vue';
+  import Lightgallery from 'lightgallery/vue';
+  import lgThumbnail from 'lightgallery/plugins/thumbnail';
+  import lgZoom from 'lightgallery/plugins/zoom';
+  import lgFullscreen from 'lightgallery/plugins/fullscreen';
+  import 'lightgallery/css/lightgallery.css';
+  import 'lightgallery/css/lg-zoom.css';
+  import 'lightgallery/css/lg-thumbnail.css';
+  import 'lightgallery/css/lg-fullscreen.css';
+  import type { LightGallerySettings } from 'lightgallery/lg-settings';
+
   const {
     preview,
     images = [],
@@ -9,52 +20,56 @@
     alt?: string;
   }>();
 
+  const {
+    public: {
+      lightGallery: { licenseKey },
+    },
+  } = useRuntimeConfig();
+
   const items = computed(() => {
     if (!images.length) {
-      return [preview];
+      return [{ src: preview, thumb: preview, alt }];
     }
 
-    return [preview, ...images];
+    return [
+      { src: preview, thumb: preview, alt },
+      ...images.map((img) => ({ src: img, thumb: img, alt })),
+    ];
   });
 
-  const active = computed(() => items.value.length > 1);
+  const settings = computed<LightGallerySettings>(() => ({
+    licenseKey,
+    speed: 500,
+    plugins: [lgThumbnail, lgZoom, lgFullscreen],
+    thumbnail: true,
+    actualSize: false,
+    showZoomInOutIcons: true,
+    allowMediaOverlap: true,
+    toggleThumb: true,
+    mobileSettings: {
+      controls: true,
+      showCloseIcon: true,
+      download: false,
+    },
+  }));
 </script>
 
 <template>
-  <UCarousel
-    ref="carousel"
-    v-slot="{ item }"
-    wheel-gestures
-    :active
-    :items
-    loop
-    dots
-    :ui="{
-      viewport: 'rounded',
-      dots: 'static mt-3',
-    }"
-  >
-    <NuxtImg
-      v-slot="{ src, isLoaded, imgAttrs }"
-      :src="item"
-      custom
-    >
-      <!-- Show the actual image when loaded -->
-      <img
-        v-if="isLoaded"
-        v-bind="imgAttrs"
-        class="aspect-square w-full object-contain"
-        :src="src"
-        :alt
-      />
-
-      <!-- Show a placeholder while loading -->
-      <img
-        v-else
-        class="aspect-square w-full object-contain"
-        src="https://placehold.co/400x400"
-        alt="placeholder"
-      />
-    </NuxtImg>
-  </UCarousel>
+  <div>
+    <Lightgallery :settings="settings">
+      <div
+        v-for="(item, index) in items"
+        :key="item.src"
+        :data-src="item.src"
+        :class="!!index ? 'hidden' : undefined"
+        class="cursor-zoom-in"
+      >
+        <img
+          class="aspect-square w-full rounded-lg object-cover"
+          :src="item.src"
+          :alt="item.alt || undefined"
+        />
+      </div>
+    </Lightgallery>
+  </div>
 </template>

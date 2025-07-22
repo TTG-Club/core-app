@@ -25,6 +25,8 @@ export default defineNuxtConfig({
     typescriptBundlerResolution: true,
   },
 
+  compatibilityDate: '2025-07-22',
+
   // Конфигурация среды разработки
   devServer: {
     https: process.env.NUXT_DEV_SSL === 'true',
@@ -204,6 +206,10 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       pwa: application,
+      lightGallery: {
+        licenseKey:
+          process.env.NUXT_LIGHT_GALLERY_LICENSE_KEY || '0000-0000-000-0000',
+      },
     },
     site: {
       url: '',
