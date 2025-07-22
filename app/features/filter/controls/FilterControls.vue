@@ -1,7 +1,6 @@
 <script setup lang="ts">
   import { cloneDeep } from 'lodash-es';
 
-  import { Breakpoint, useBreakpoints } from '~/shared/composables';
   import { FilterDrawer } from '~filter/drawer';
   import { FilterPreview } from '~filter/preview';
 

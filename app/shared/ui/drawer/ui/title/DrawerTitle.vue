@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import { useCopy } from '~/shared/composables';
-
   import type { DrawerTitleName } from './types';
 
   const { title, copyTitle = false } = defineProps<{

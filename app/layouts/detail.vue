@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { useCopy, useDayjs } from '~/shared/composables';
   import { SourceTag } from '~ui/source-tag';
 
   import type { Dayjs } from 'dayjs';
@@ -66,8 +65,14 @@
 
           <div
             v-if="$slots.actions"
-            class="actions flex"
-            :class="{ 'navbar-hidden': navbarHidden }"
+            :class="[
+              'fixed ml-auto flex shrink-0 gap-1 md:static',
+              'right-2 bottom-(--navbar-height) max-md:mb-2',
+              'transition-[bottom] duration-200 ease-in-out',
+              'max-md:rounded-md max-md:border max-md:border-default',
+              'max-md:p-1 max-md:shadow-md max-md:backdrop-blur-lg',
+              navbarHidden ? 'bottom-0' : undefined,
+            ]"
           >
             <slot name="actions" />
           </div>
@@ -112,19 +117,3 @@
     </div>
   </div>
 </template>
-
-<style scoped>
-  @reference '~tw';
-
-  .actions {
-    @apply fixed ml-auto flex shrink-0 gap-1 md:static;
-    @apply right-2 bottom-(--navbar-height) max-md:mb-2;
-    @apply transition-[bottom] duration-200 ease-in-out;
-    @apply max-md:rounded-md max-md:border max-md:border-default;
-    @apply max-md:p-1 max-md:shadow-md max-md:backdrop-blur-lg;
-
-    &.navbar-hidden {
-      @apply bottom-0;
-    }
-  }
-</style>

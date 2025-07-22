@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { useCopy, useDayjs } from '~/shared/composables';
   import { SourceTag } from '~ui/source-tag';
 
   import type { Dayjs } from 'dayjs';

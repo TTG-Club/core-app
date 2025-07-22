@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { Breakpoint, useBreakpoints, useTheme } from '~/shared/composables';
   import { ThemeName } from '~/shared/consts';
 
   import type { DropdownMenuItem } from '@nuxt/ui';

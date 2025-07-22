@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { Breakpoint, BREAKPOINTS } from '~/shared/composables';
   import { CreatureBody } from '~bestiary/body';
   import { UiDrawer } from '~ui/drawer';
 

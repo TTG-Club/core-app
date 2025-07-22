@@ -197,9 +197,6 @@ export default defineNuxtConfig({
   },
   alias: {
     '~ui': fileURLToPath(new URL('./app/shared/ui', import.meta.url)),
-    '~tw': fileURLToPath(
-      new URL('./app/assets/css/tailwind.css', import.meta.url),
-    ),
   },
 
   // Конфигурация runtime

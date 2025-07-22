@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import { useCopy } from '~/shared/composables';
-
   import type { ButtonProps } from '@nuxt/ui';
 
   const { url = '', size = undefined } = defineProps<{

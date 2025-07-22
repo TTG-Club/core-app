@@ -1,9 +1,4 @@
 <script setup lang="ts">
-  import {
-    Breakpoint,
-    useBreakpoints,
-    useSidebarPopover,
-  } from '~/shared/composables';
   import { AppMenu } from '~sidebar/menu';
   import { ThemeSwitcher } from '~sidebar/theme-switcher';
   import { UserHelmet } from '~sidebar/user-helmet';

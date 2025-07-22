@@ -1,10 +1,4 @@
 <script setup lang="ts">
-  import {
-    Breakpoint,
-    useBreakpoints,
-    useDayjs,
-    useUserRoles,
-  } from '~/shared/composables';
   import { useUserStore } from '~/shared/stores';
   import { AuthModal } from '~user/auth-modal';
 

@@ -2,8 +2,6 @@
   import { DrawerHeader, DrawerActions, DrawerBody } from './ui';
   import type { DrawerTitleName } from './ui';
 
-  import { Breakpoint, useBreakpoints } from '~/shared/composables';
-
   import type { Dayjs } from 'dayjs';
   import type { SourceResponse } from '~/shared/types';
 

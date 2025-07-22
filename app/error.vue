@@ -1,7 +1,6 @@
 <script setup lang="ts">
   import 'assets/css/index.scss';
   import { ru } from '#ui/locale';
-  import { useTheme } from '~/shared/composables';
   import { PwaConfig } from '~pwa/config';
 
   import type { NuxtError } from '#app';
