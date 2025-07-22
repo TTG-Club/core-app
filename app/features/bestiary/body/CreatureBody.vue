@@ -4,6 +4,7 @@
   import { UiGallery } from '~ui/gallery';
   import { MarkupRender } from '~ui/markup';
   import { RatingWidget } from '~ui/rating';
+  import { UiCollapse } from '~ui/collapse';
 
   import type { CreatureDetailResponse } from '~/features/bestiary/types';
 
@@ -37,20 +38,8 @@
 
       <div class="flex flex-auto flex-col gap-3">
         <template v-if="creature.traits?.length">
-          <UCollapsible default-open>
-            <template #default="{ open }">
-              <h4
-                class="flex cursor-pointer items-center gap-4 text-xl font-semibold"
-              >
-                <UIcon
-                  name="i-fluent-chevron-down-16-regular"
-                  class="transition-transform duration-150 ease-in-out"
-                  :class="open ? '-rotate-180' : ''"
-                />
-
-                <span> Особенности </span>
-              </h4>
-            </template>
+          <UiCollapse default-open>
+            <template #default> Особенности </template>
 
             <template #content>
               <p
@@ -62,24 +51,12 @@
                 <MarkupRender :entries="trait.description" />
               </p>
             </template>
-          </UCollapsible>
+          </UiCollapse>
         </template>
 
         <template v-if="creature.actions?.length">
-          <UCollapsible default-open>
-            <template #default="{ open }">
-              <h4
-                class="flex cursor-pointer items-center gap-4 text-xl font-semibold"
-              >
-                <UIcon
-                  name="i-fluent-chevron-down-16-regular"
-                  class="transition-transform duration-150 ease-in-out"
-                  :class="open ? '-rotate-180' : ''"
-                />
-
-                <span> Действия </span>
-              </h4>
-            </template>
+          <UiCollapse default-open>
+            <template #default> Действия </template>
 
             <template #content>
               <p
@@ -91,24 +68,12 @@
                 <MarkupRender :entries="trait.description" />
               </p>
             </template>
-          </UCollapsible>
+          </UiCollapse>
         </template>
 
         <template v-if="creature.bonusActions?.length">
-          <UCollapsible default-open>
-            <template #default="{ open }">
-              <h4
-                class="flex cursor-pointer items-center gap-4 text-xl font-semibold"
-              >
-                <UIcon
-                  name="i-fluent-chevron-down-16-regular"
-                  class="transition-transform duration-150 ease-in-out"
-                  :class="open ? '-rotate-180' : ''"
-                />
-
-                <span> Бонусные действия </span>
-              </h4>
-            </template>
+          <UiCollapse default-open>
+            <template #default> Бонусные действия </template>
 
             <template #content>
               <p
@@ -120,24 +85,12 @@
                 <MarkupRender :entries="trait.description" />
               </p>
             </template>
-          </UCollapsible>
+          </UiCollapse>
         </template>
 
         <template v-if="creature.reactions?.length">
-          <UCollapsible default-open>
-            <template #default="{ open }">
-              <h4
-                class="flex cursor-pointer items-center gap-4 text-xl font-semibold"
-              >
-                <UIcon
-                  name="i-fluent-chevron-down-16-regular"
-                  class="transition-transform duration-150 ease-in-out"
-                  :class="open ? '-rotate-180' : ''"
-                />
-
-                <span> Реакции </span>
-              </h4>
-            </template>
+          <UiCollapse default-open>
+            <template #default> Реакции </template>
 
             <template #content>
               <p
@@ -149,24 +102,12 @@
                 <MarkupRender :entries="trait.description" />
               </p>
             </template>
-          </UCollapsible>
+          </UiCollapse>
         </template>
 
         <template v-if="creature.legendaryActions?.length">
-          <UCollapsible default-open>
-            <template #default="{ open }">
-              <h4
-                class="flex cursor-pointer items-center gap-4 text-xl font-semibold"
-              >
-                <UIcon
-                  name="i-fluent-chevron-down-16-regular"
-                  class="transition-transform duration-150 ease-in-out"
-                  :class="open ? '-rotate-180' : ''"
-                />
-
-                <span> Легендарные действия </span>
-              </h4>
-            </template>
+          <UiCollapse default-open>
+            <template #default> Легендарные действия </template>
 
             <template #content>
               <p>
@@ -196,24 +137,12 @@
                 </li>
               </ul>
             </template>
-          </UCollapsible>
+          </UiCollapse>
         </template>
 
         <template v-if="creature.section">
-          <UCollapsible default-open>
-            <template #default="{ open }">
-              <h4
-                class="flex cursor-pointer items-center gap-4 text-xl font-semibold"
-              >
-                <UIcon
-                  name="i-fluent-chevron-down-16-regular"
-                  class="transition-transform duration-150 ease-in-out"
-                  :class="open ? '-rotate-180' : ''"
-                />
-
-                <span> Эффекты местности </span>
-              </h4>
-            </template>
+          <UiCollapse default-open>
+            <template #default> Эффекты местности </template>
 
             <template #content>
               <p v-if="creature.section">
@@ -225,24 +154,12 @@
                 <strong>Сокровища:</strong> {{ creature.section.treasures }}
               </p>
             </template>
-          </UCollapsible>
+          </UiCollapse>
         </template>
 
         <template v-if="creature.description?.length">
-          <UCollapsible default-open>
-            <template #default="{ open }">
-              <h4
-                class="flex cursor-pointer items-center gap-4 text-xl font-semibold"
-              >
-                <UIcon
-                  name="i-fluent-chevron-down-16-regular"
-                  class="transition-transform duration-150 ease-in-out"
-                  :class="open ? '-rotate-180' : ''"
-                />
-
-                <span> Описание </span>
-              </h4>
-            </template>
+          <UiCollapse default-open>
+            <template #default> Описание </template>
 
             <template #content>
               <p>
@@ -267,7 +184,7 @@
                 />
               </template>
             </template>
-          </UCollapsible>
+          </UiCollapse>
         </template>
       </div>
     </div>

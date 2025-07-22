@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { SpeciesBody } from '~species/body';
+  import { UiCollapse } from '~ui/collapse';
 
   import type { SpeciesDetailResponse } from '~/shared/types';
 
@@ -19,29 +20,17 @@
   >
     <h3 class="text-xl font-semibold">Происхождения</h3>
 
-    <UCollapsible
+    <UiCollapse
       v-for="species in lineages"
       :key="species.url"
     >
-      <template #default="{ open }">
-        <h4
-          class="flex cursor-pointer items-center gap-4 text-xl font-semibold"
-        >
-          <UIcon
-            name="i-fluent-chevron-down-16-regular"
-            class="transition-transform duration-150 ease-in-out"
-            :class="open ? '-rotate-180' : ''"
-          />
-
-          <span>
-            {{ species.name.rus }}
-          </span>
-        </h4>
+      <template #default>
+        {{ species.name.rus }}
       </template>
 
       <template #content>
         <SpeciesBody :species />
       </template>
-    </UCollapsible>
+    </UiCollapse>
   </div>
 </template>
