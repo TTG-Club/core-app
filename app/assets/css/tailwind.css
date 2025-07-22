@@ -6,8 +6,6 @@
 @theme {
   --font-sans: 'Open Sans', ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-
-  --ui-text: var(--color-text);
 }
 
 @variant svifty7 (&:where(.svifty7, .svifty7 *));
@@ -24,6 +22,10 @@
   }
 }
 
+@utility bg-accented {
+  @apply bg-(--ui-bg-accented);
+}
+
 body {
-  @apply antialiased text-default bg-default scheme-light dark:scheme-dark svifty7:scheme-dark
+  @apply scheme-light dark:scheme-dark svifty7:scheme-dark
 }

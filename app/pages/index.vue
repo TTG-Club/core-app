@@ -28,7 +28,7 @@
 
       <div class="flex w-full flex-col gap-3 lg:items-start xl:flex-row">
         <div
-          class="w-full overflow-hidden rounded-lg border border-(--color-border) opacity-80 xl:w-1/2 2xl:w-2/3"
+          class="w-full overflow-hidden rounded-lg border border-default opacity-80 xl:w-1/2 2xl:w-2/3"
         >
           <img
             :src="'/s3/roadmap.webp'"

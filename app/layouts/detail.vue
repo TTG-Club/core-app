@@ -120,7 +120,7 @@
     @apply fixed ml-auto flex shrink-0 gap-1 md:static;
     @apply right-2 bottom-(--navbar-height) max-md:mb-2;
     @apply transition-[bottom] duration-200 ease-in-out;
-    @apply max-md:rounded-md max-md:border max-md:border-(--color-border);
+    @apply max-md:rounded-md max-md:border max-md:border-default;
     @apply max-md:p-1 max-md:shadow-md max-md:backdrop-blur-lg;
 
     &.navbar-hidden {

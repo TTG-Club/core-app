@@ -16,9 +16,7 @@
       <div class="flex w-full flex-col gap-3 @min-[800px]:max-w-80">
         <TopBar :subtitle="magicItem.subtitle" />
 
-        <div
-          class="max-w-40 overflow-hidden rounded-md border border-(--color-border)"
-        >
+        <div class="max-w-40 overflow-hidden rounded-md border border-default">
           <UiGallery :preview="magicItem.image || '/img/no-img.webp'" />
         </div>
       </div>

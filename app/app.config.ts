@@ -73,10 +73,14 @@ export default defineAppConfig({
     input: {
       slots: {
         root: 'w-full',
+        base: 'bg-accented',
       },
       variants: {
         defaultVariants: {
           variant: 'soft',
+        },
+        variant: {
+          outline: 'bg-accented text-default',
         },
       },
     },
@@ -84,15 +88,39 @@ export default defineAppConfig({
       slots: {
         root: 'w-full',
       },
+      variants: {
+        defaultVariants: {
+          variant: 'soft',
+        },
+        variant: {
+          outline: 'bg-accented text-default',
+        },
+      },
     },
     textarea: {
       slots: {
         root: 'w-full',
       },
+      variants: {
+        defaultVariants: {
+          variant: 'soft',
+        },
+        variant: {
+          outline: 'bg-accented text-default',
+        },
+      },
     },
     select: {
       slots: {
         base: 'w-full',
+      },
+      variants: {
+        defaultVariants: {
+          variant: 'soft',
+        },
+        variant: {
+          outline: 'bg-accented text-default',
+        },
       },
     },
     popover: {

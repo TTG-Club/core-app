@@ -1,0 +1,32 @@
+html.light {
+  // Nuxt UI variables
+  --ui-text-dimmed: #6a6a6a; // Matches --color-text-gray
+  --ui-text-muted: #1F1E1E; // Matches --color-text
+  --ui-text-toned: #313131; // Matches --color-text-bold
+  --ui-text: #042a12; // Matches --color-text-title
+  --ui-text-highlighted: #042a12; // Matches --color-text-title
+  --ui-text-inverted: #ffffff; // Matches --color-white
+  --ui-bg: #ffffff; // Matches --color-white
+  --ui-bg-muted: #F4EDE5; // Matches --color-bg-main
+  --ui-bg-elevated: #dceee5; // Matches --color-bg-secondary
+  --ui-bg-accented: #f2e8d5; // From gradient in --color-bg-main-gradient
+  --ui-bg-inverted: #042a12; // Matches --color-text-title
+  --ui-border: rgba(0, 0, 0, 0.08); // Matches --color-border
+  --ui-border-muted: rgba(0, 0, 0, 0.08); // Matches --color-border
+  --ui-border-accented: rgba(0, 0, 0, 0.12); // Slightly darker border
+  --ui-border-inverted: #042a12; // Matches --color-text-title
+
+  // Nuxt UI accent colors
+  --ui-primary: #5e5446; // Matches --color-primary
+  --ui-secondary: #6a6a6a; // Matches --color-text-gray
+  --ui-success: #67c23a; // Matches --color-success
+  --ui-info: #909399; // Matches --color-info
+  --ui-warning: #e6a23c; // Matches --color-warning
+  --ui-error: #f56c6c; // Matches --color-error
+
+  // Logo
+  --color-logo-stroke: #353430;
+  --color-logo-dice: #353430;
+  --color-logo-tree-top: #B34536;
+  --color-logo-tree-bottom: #B34536;
+}

@@ -7,7 +7,7 @@
 </script>
 
 <template>
-  <div class="flex flex-wrap gap-1 rounded-lg bg-(--color-hover) p-3 italic">
+  <div class="flex flex-wrap gap-1 rounded-lg bg-elevated p-3 italic">
     <span v-if="!level">Заговор,</span>
 
     <span v-else> {{ level }}-й уровень,</span>

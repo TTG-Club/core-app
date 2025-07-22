@@ -5,7 +5,7 @@
 </script>
 
 <template>
-  <div class="flex flex-wrap gap-1 rounded-md bg-(--color-hover) p-3 italic">
+  <div class="flex flex-wrap gap-1 rounded-md bg-elevated p-3 italic">
     <span>{{ tags }}</span>
   </div>
 </template>
