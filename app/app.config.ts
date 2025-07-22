@@ -159,8 +159,7 @@ export default defineAppConfig({
     collapsible: {
       slots: {
         root: [
-          'px-4 py-3 flex flex-col gap-4 rounded',
-          'bg-elevated/65 hover:bg-elevated/85',
+          'px-4 py-3 flex flex-col gap-4 rounded hover:bg-elevated/85',
           'transition-bg duration-150 ease-in-out',
         ],
       },

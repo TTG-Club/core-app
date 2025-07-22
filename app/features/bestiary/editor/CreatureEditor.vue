@@ -194,7 +194,7 @@
       <UploadImage
         v-model="form.image"
         section="bestiary"
-        max-size="480"
+        max-size="640"
       >
         <template #preview>
           <NuxtImg

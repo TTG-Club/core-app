@@ -22,23 +22,20 @@
     <UCollapsible
       v-for="species in lineages"
       :key="species.url"
-      :ui="{
-        root: 'px-4 py-3 flex flex-col gap-4 rounded bg-elevated/65 hover:bg-elevated/75 transition-bg duration-150 ease-in-out',
-      }"
     >
       <template #default="{ open }">
         <h4
-          class="flex cursor-pointer items-center justify-between text-xl font-semibold"
+          class="flex cursor-pointer items-center gap-4 text-xl font-semibold"
         >
-          <span>
-            {{ species.name.rus }}
-          </span>
-
           <UIcon
             name="i-fluent-chevron-down-16-regular"
             class="transition-transform duration-150 ease-in-out"
             :class="open ? '-rotate-180' : ''"
           />
+
+          <span>
+            {{ species.name.rus }}
+          </span>
         </h4>
       </template>
 

@@ -40,15 +40,15 @@
           <UCollapsible default-open>
             <template #default="{ open }">
               <h4
-                class="flex cursor-pointer items-center justify-between text-xl font-semibold"
+                class="flex cursor-pointer items-center gap-4 text-xl font-semibold"
               >
-                <span> Особенности </span>
-
                 <UIcon
                   name="i-fluent-chevron-down-16-regular"
                   class="transition-transform duration-150 ease-in-out"
                   :class="open ? '-rotate-180' : ''"
                 />
+
+                <span> Особенности </span>
               </h4>
             </template>
 
@@ -69,15 +69,15 @@
           <UCollapsible default-open>
             <template #default="{ open }">
               <h4
-                class="flex cursor-pointer items-center justify-between text-xl font-semibold"
+                class="flex cursor-pointer items-center gap-4 text-xl font-semibold"
               >
-                <span> Действия </span>
-
                 <UIcon
                   name="i-fluent-chevron-down-16-regular"
                   class="transition-transform duration-150 ease-in-out"
                   :class="open ? '-rotate-180' : ''"
                 />
+
+                <span> Действия </span>
               </h4>
             </template>
 
@@ -98,15 +98,15 @@
           <UCollapsible default-open>
             <template #default="{ open }">
               <h4
-                class="flex cursor-pointer items-center justify-between text-xl font-semibold"
+                class="flex cursor-pointer items-center gap-4 text-xl font-semibold"
               >
-                <span> Бонусные действия </span>
-
                 <UIcon
                   name="i-fluent-chevron-down-16-regular"
                   class="transition-transform duration-150 ease-in-out"
                   :class="open ? '-rotate-180' : ''"
                 />
+
+                <span> Бонусные действия </span>
               </h4>
             </template>
 
@@ -127,15 +127,15 @@
           <UCollapsible default-open>
             <template #default="{ open }">
               <h4
-                class="flex cursor-pointer items-center justify-between text-xl font-semibold"
+                class="flex cursor-pointer items-center gap-4 text-xl font-semibold"
               >
-                <span> Реакции </span>
-
                 <UIcon
                   name="i-fluent-chevron-down-16-regular"
                   class="transition-transform duration-150 ease-in-out"
                   :class="open ? '-rotate-180' : ''"
                 />
+
+                <span> Реакции </span>
               </h4>
             </template>
 
@@ -156,15 +156,15 @@
           <UCollapsible default-open>
             <template #default="{ open }">
               <h4
-                class="flex cursor-pointer items-center justify-between text-xl font-semibold"
+                class="flex cursor-pointer items-center gap-4 text-xl font-semibold"
               >
-                <span> Легендарные действия </span>
-
                 <UIcon
                   name="i-fluent-chevron-down-16-regular"
                   class="transition-transform duration-150 ease-in-out"
                   :class="open ? '-rotate-180' : ''"
                 />
+
+                <span> Легендарные действия </span>
               </h4>
             </template>
 
@@ -203,15 +203,15 @@
           <UCollapsible default-open>
             <template #default="{ open }">
               <h4
-                class="flex cursor-pointer items-center justify-between text-xl font-semibold"
+                class="flex cursor-pointer items-center gap-4 text-xl font-semibold"
               >
-                <span> Эффекты местности </span>
-
                 <UIcon
                   name="i-fluent-chevron-down-16-regular"
                   class="transition-transform duration-150 ease-in-out"
                   :class="open ? '-rotate-180' : ''"
                 />
+
+                <span> Эффекты местности </span>
               </h4>
             </template>
 
@@ -232,15 +232,15 @@
           <UCollapsible default-open>
             <template #default="{ open }">
               <h4
-                class="flex cursor-pointer items-center justify-between text-xl font-semibold"
+                class="flex cursor-pointer items-center gap-4 text-xl font-semibold"
               >
-                <span> Описание </span>
-
                 <UIcon
                   name="i-fluent-chevron-down-16-regular"
                   class="transition-transform duration-150 ease-in-out"
                   :class="open ? '-rotate-180' : ''"
                 />
+
+                <span> Описание </span>
               </h4>
             </template>
 

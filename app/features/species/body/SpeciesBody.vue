@@ -47,17 +47,17 @@
       >
         <template #default="{ open }">
           <h4
-            class="flex cursor-pointer items-center justify-between text-xl font-semibold"
+            class="flex cursor-pointer items-center gap-4 text-xl font-semibold"
           >
-            <span>
-              {{ feature.name.rus }}
-            </span>
-
             <UIcon
               name="i-fluent-chevron-down-16-regular"
               class="transition-transform duration-150 ease-in-out"
               :class="open ? '-rotate-180' : ''"
             />
+
+            <span>
+              {{ feature.name.rus }}
+            </span>
           </h4>
         </template>
 

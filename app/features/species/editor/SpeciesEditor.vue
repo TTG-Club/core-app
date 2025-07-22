@@ -37,6 +37,18 @@
       section="species"
     />
 
+    <UFormField
+      class="col-span-full"
+      label="Описание"
+      name="description"
+    >
+      <UTextarea
+        v-model:value="form.description"
+        placeholder="Введи описание"
+        :rows="8"
+      />
+    </UFormField>
+
     <USeparator>
       <span class="font-bold text-secondary">Характеристики</span>
     </USeparator>
@@ -77,7 +89,7 @@
       <UploadImage
         v-model="form.image"
         section="species"
-        max-size="480"
+        max-size="640"
       >
         <template #preview>
           <NuxtImg
@@ -116,7 +128,7 @@
       <UploadImage
         v-model="form.linkImage"
         section="species"
-        max-size="190"
+        max-size="256"
       >
         <template #preview>
           <SpeciesLinkPreview
