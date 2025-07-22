@@ -4,4 +4,5 @@ export interface ItemLinkResponse {
   url: string;
   name: Pick<NameResponse, 'rus' | 'eng'>;
   source: SourceResponse;
+  cost: string;
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { ItemDetailResponse } from '~items/types';
 
-  defineProps<Pick<ItemDetailResponse, 'subtitle'>>();
+  const { types } = defineProps<Pick<ItemDetailResponse, 'types'>>();
 </script>
 
 <template>
@@ -10,7 +10,7 @@
     :gap="4"
     wrap="wrap"
   >
-    <span>{{ subtitle }}</span>
+    <span>{{ types }}</span>
   </AFlex>
 </template>
 

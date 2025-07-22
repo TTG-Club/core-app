@@ -11,6 +11,7 @@ export interface ItemDetailResponse {
   source: SourceResponse;
   description: Array<string>;
   updatedAt: string;
+  types: string;
   cost: string | undefined; // стоимость
   weight: string | undefined; // вес
 }

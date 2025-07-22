@@ -2,6 +2,7 @@
   import { ItemType } from './ui';
 
   import { ValidationBase } from '~/shared/utils';
+  import CoinsType from '~items/editor/ui/CoinsType.vue';
   import { EditorBaseInfo } from '~ui/editor';
   import { UploadImage } from '~ui/upload';
 
@@ -15,6 +16,12 @@
   const form = defineModel<ItemCreate>({ required: true });
 
   const formRef = useTemplateRef<FormInstance>('formRef');
+
+  watchEffect(() => {
+    if (!form.value.category) {
+      form.value.category = 'ITEM';
+    }
+  });
 
   defineExpose({
     validate: computed(() => formRef.value?.validate),
@@ -41,7 +48,52 @@
       />
     </ADivider>
 
-    <ItemType v-model="form.types" />
+    <AFormItem :name="['category']">
+      <input
+        v-model="form.category"
+        type="hidden"
+      />
+    </AFormItem>
+
+    <ARow :gutter="16">
+      <ACol :span="8">
+        <ItemType
+          v-model="form.types"
+          multiple
+        />
+      </ACol>
+
+      <ACol :span="4">
+        <AFormItem
+          label="Количество монет"
+          tooltip="Введите количество монет"
+          :name="['cost']"
+        >
+          <AInputNumber
+            v-model:value="form.cost"
+            :precision="0"
+            placeholder="Введи количество монет"
+            min="0"
+          />
+        </AFormItem>
+      </ACol>
+
+      <ACol :span="4">
+        <CoinsType v-model="form.coin" />
+      </ACol>
+
+      <ACol :span="8">
+        <AFormItem
+          label="Вес"
+          :name="['weight']"
+        >
+          <AInput
+            v-model:value="form.weight"
+            placeholder="Введи вес"
+          />
+        </AFormItem>
+      </ACol>
+    </ARow>
 
     <ADivider orientation="left">
       <ATypographyText
