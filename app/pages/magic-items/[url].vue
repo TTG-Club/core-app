@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { getSlicedString } from '~/shared/utils';
   import { MagicItemBody } from '~magic-items/body';
   import { PageActions } from '~ui/page';
 

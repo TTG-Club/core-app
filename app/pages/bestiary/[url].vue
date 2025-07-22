@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import { Role } from '~/shared/types';
-  import { getSlicedString } from '~/shared/utils';
   import { CreatureBody } from '~bestiary/body';
   import { PageActions } from '~ui/page';
 

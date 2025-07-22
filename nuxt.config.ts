@@ -22,10 +22,8 @@ const application = {
 export default defineNuxtConfig({
   // Общие настройки проекта
   future: {
-    compatibilityVersion: 4,
     typescriptBundlerResolution: true,
   },
-  compatibilityDate: '2024-11-15',
 
   // Конфигурация среды разработки
   devServer: {

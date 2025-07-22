@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { getSlicedString } from '~/shared/utils';
   import { SpeciesBody } from '~species/body';
   import { SpeciesLineagesDrawer } from '~species/lineages-drawer';
   import { UiGallery } from '~ui/gallery';

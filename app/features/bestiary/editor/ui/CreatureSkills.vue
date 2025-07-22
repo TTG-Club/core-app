@@ -1,7 +1,6 @@
 <script setup lang="ts">
   import { DictionaryService } from '~/shared/api';
   import { getAbilityInfo } from '~/shared/types';
-  import { getModifier } from '~/shared/utils';
   import { EditorArrayControls } from '~ui/editor';
   import { SelectMastery, SelectSkills } from '~ui/select';
 

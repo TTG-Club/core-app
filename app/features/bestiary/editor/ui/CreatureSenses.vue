@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import { getModifier } from '~/shared/utils';
-
   import type {
     CreatureSenses,
     CreateSkill,

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { getModifier } from '~/shared/utils';
   import { SelectMastery } from '~ui/select';
 
   import type { CreateAbility, CreateInitiative } from '~bestiary/types';

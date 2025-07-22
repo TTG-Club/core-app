@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { getSlicedString } from '~/shared/utils';
   import { FeatBody } from '~feats/body';
   import { PageActions } from '~ui/page';
 
