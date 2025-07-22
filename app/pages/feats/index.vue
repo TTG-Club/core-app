@@ -1,11 +1,12 @@
 <script setup lang="ts">
   import { FeatLegend } from '~feats/legend';
   import { FeatLink } from '~feats/link';
+  import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
   import { PageGrid, PageResult } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
-  import type { FeatLinkResponse } from '~/shared/types';
+  import type { FeatLinkResponse, SearchBody } from '~/shared/types';
 
   useSeoMeta({
     title: 'Черты [Feats]',
@@ -13,6 +14,22 @@
   });
 
   const search = ref<string>('');
+
+  const {
+    filter,
+    isPending: isFilterPending,
+    isShowedPreview: isFilterPreviewShowed,
+  } = await useFilter('feats-filters', '/api/v2/feats/filters');
+
+  const searchBody = computed(() => {
+    const body: SearchBody = {};
+
+    if (filter) {
+      body.filter = filter.value;
+    }
+
+    return Object.keys(body).length ? body : undefined;
+  });
 
   const {
     data: feats,
@@ -28,10 +45,11 @@
           query:
             search.value && search.value.length >= 3 ? search.value : undefined,
         },
+        body: searchBody.value,
       }),
     {
       deep: false,
-      watch: [search],
+      watch: [search, filter],
     },
   );
 </script>
@@ -42,7 +60,12 @@
     title="Черты"
   >
     <template #controls>
-      <FilterControls v-model:search="search">
+      <FilterControls
+        v-model:search="search"
+        v-model:filter="filter"
+        :is-pending="isFilterPending"
+        :show-preview="isFilterPreviewShowed"
+      >
         <template #legend>
           <FeatLegend />
         </template>

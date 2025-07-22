@@ -1,10 +1,12 @@
 <script setup lang="ts">
+  import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
   import { SpeciesLegend } from '~species/legend';
   import { SpeciesLink } from '~species/link';
   import { PageGrid, PageResult } from '~ui/page';
+  import { SmallLinkSkeleton } from '~ui/skeleton';
 
-  import type { SpeciesLinkResponse } from '~/shared/types';
+  import type { SearchBody, SpeciesLinkResponse } from '~/shared/types';
 
   useSeoMeta({
     title: 'Виды [Species]',
@@ -12,6 +14,22 @@
   });
 
   const search = ref<string>('');
+
+  const {
+    filter,
+    isPending: isFilterPending,
+    isShowedPreview: isFilterPreviewShowed,
+  } = await useFilter('species-filters', '/api/v2/species/filters');
+
+  const searchBody = computed(() => {
+    const body: SearchBody = {};
+
+    if (filter) {
+      body.filter = filter.value;
+    }
+
+    return Object.keys(body).length ? body : undefined;
+  });
 
   const { data, status, error, refresh } = await useAsyncData(
     'species',
@@ -22,10 +40,11 @@
           query:
             search.value && search.value.length >= 3 ? search.value : undefined,
         },
+        body: searchBody.value,
       }),
     {
       deep: false,
-      watch: [search],
+      watch: [search, filter],
     },
   );
 </script>
@@ -36,7 +55,12 @@
     title="Виды"
   >
     <template #controls>
-      <FilterControls v-model:search="search">
+      <FilterControls
+        v-model:search="search"
+        v-model:filter="filter"
+        :is-pending="isFilterPending"
+        :show-preview="isFilterPreviewShowed"
+      >
         <template #legend>
           <SpeciesLegend />
         </template>
@@ -49,7 +73,17 @@
         mode="out-in"
       >
         <PageGrid
-          v-if="status === 'success' && data?.length"
+          v-if="status !== 'success' && status !== 'error'"
+          :columns="5"
+        >
+          <SmallLinkSkeleton
+            v-for="index in 5"
+            :key="index"
+          />
+        </PageGrid>
+
+        <PageGrid
+          v-else-if="status === 'success' && data?.length"
           :columns="5"
         >
           <SpeciesLink

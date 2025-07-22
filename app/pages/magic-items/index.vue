@@ -1,10 +1,12 @@
 <script setup lang="ts">
+  import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
   import { MagicItemLegend } from '~magic-items/legend';
   import { MagicItemLink } from '~magic-items/link';
   import { PageGrid, PageResult } from '~ui/page';
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
+  import type { SearchBody } from '~/shared/types';
   import type { MagicItemLinkResponse } from '~magic-items/types';
 
   useSeoMeta({
@@ -13,6 +15,22 @@
   });
 
   const search = ref<string>('');
+
+  const {
+    filter,
+    isPending: isFilterPending,
+    isShowedPreview: isFilterPreviewShowed,
+  } = await useFilter('magic-items-filters', '/api/v2/magic-item/filters');
+
+  const searchBody = computed(() => {
+    const body: SearchBody = {};
+
+    if (filter) {
+      body.filter = filter.value;
+    }
+
+    return Object.keys(body).length ? body : undefined;
+  });
 
   const {
     data: magicItems,
@@ -28,10 +46,11 @@
           query:
             search.value && search.value.length >= 3 ? search.value : undefined,
         },
+        body: searchBody.value,
       }),
     {
       deep: false,
-      watch: [search],
+      watch: [search, filter],
     },
   );
 </script>
@@ -42,7 +61,12 @@
     title="Магические предметы"
   >
     <template #controls>
-      <FilterControls v-model:search="search">
+      <FilterControls
+        v-model:search="search"
+        v-model:filter="filter"
+        :is-pending="isFilterPending"
+        :show-preview="isFilterPreviewShowed"
+      >
         <template #legend>
           <MagicItemLegend />
         </template>
