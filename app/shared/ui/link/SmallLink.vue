@@ -44,7 +44,7 @@
       @click.exact.prevent.stop="handleClick"
     >
       <div
-        class="flex min-h-12.5 w-full items-center gap-3 rounded-xl border border-default px-3 py-1.5 hover:bg-elevated/50"
+        class="flex min-h-12.5 w-full items-center gap-3 rounded-xl border border-default px-3 py-1.5 hover:bg-accented"
         :class="isOpened ? 'bg-accented' : 'bg-elevated'"
       >
         <div

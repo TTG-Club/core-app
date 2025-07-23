@@ -13,4 +13,8 @@ html {
   --color-boosty-hover: #d84613;
   --color-youtube-base: #ff0000;
   --color-youtube-hover: #a80000;
+
+  /* Gradients */
+  --color-bg-main-gradient: to top, var(--ui-bg) 0%, var(--ui-bg) 40%, var(--ui-bg-muted) 100%;
+  --color-bg-menu: linear-gradient(135deg, #23323bc7, rgba(11,30,43,0.87));
 }

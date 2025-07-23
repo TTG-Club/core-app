@@ -145,7 +145,7 @@ export default defineAppConfig({
       slots: {
         content: 'w-2xl overflow-hidden max-md:rounded-none',
         container: 'gap-0 p-0',
-        header: 'bg-default sticky top-0 p-4',
+        header: 'bg-default sticky top-0 p-4 z-1',
         body: 'px-4 pb-4',
         overlay: 'bg-elevated/45 cursor-pointer',
         handle: 'cursor-grab active:cursor-grabbing',

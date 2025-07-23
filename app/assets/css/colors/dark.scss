@@ -90,19 +90,6 @@ html.dark {
   --color-neutral-900: oklch(0.50 0.015 100.0);
   --color-neutral-950: oklch(0.45 0.015 100.0);
 
-  /* Background */
-  --color-background-50: oklch(0.22 0.02 270.0);
-  --color-background-100: oklch(0.235 0.02 270.0);
-  --color-background-200: oklch(0.25 0.02 270.0);
-  --color-background-300: oklch(0.265 0.02 270.0);
-  --color-background-400: oklch(0.28 0.02 270.0);
-  --color-background-500: oklch(0.295 0.02 270.0);
-  --color-background-600: oklch(0.31 0.02 270.0);
-  --color-background-700: oklch(0.325 0.02 270.0);
-  --color-background-800: oklch(0.34 0.02 270.0);
-  --color-background-900: oklch(0.355 0.02 270.0);
-  --color-background-950: oklch(0.37 0.02 270.0);
-
   /* UI Primary */
   --ui-color-primary-50: var(--color-primary-50);
   --ui-color-primary-100: var(--color-primary-100);
@@ -201,19 +188,15 @@ html.dark {
   --ui-text: var(--color-neutral-100); /* #f8f8f8 */
   --ui-text-highlighted: var(--color-neutral-50); /* #ffffff */
   --ui-text-inverted: var(--color-neutral-50); /* #0d1a22 */
-  --ui-bg: var(--color-background-50); /* #0d1a22 */
-  --ui-bg-muted: var(--color-background-100); /* #19222A */
-  --ui-bg-elevated: var(--color-background-100); /* #19222A */
-  --ui-bg-accented: var(--color-background-500); /* #12212c */
+  --ui-bg: oklch(0.22 0.02 270.0); /* #0d1a22 */
+  --ui-bg-muted: oklch(0.245 0.02 270.0); /* #19222A */
+  --ui-bg-elevated: oklch(0.245 0.02 270.0); /* #19222A */
+  --ui-bg-accented: oklch(0.295 0.02 270.0); /* #12212c */
   --ui-bg-inverted: var(--color-neutral-50); /* #ffffff */
   --ui-border: var(--color-gray-950); /* rgba(255, 255, 255, 0.08) */
   --ui-border-muted: var(--color-gray-50); /* rgba(255, 255, 255, 0.05) */
   --ui-border-accented: var(--color-gray-950); /* rgba(255, 255, 255, 0.05) */
   --ui-border-inverted: var(--color-neutral-50); /* #ffffff */
-
-  /* Gradients */
-  --color-bg-main-gradient: linear-gradient(to bottom, var(--ui-bg) 0%, var(--ui-bg) 40%, var(--ui-bg-accented) 100%);
-  --color-bg-menu: linear-gradient(135deg, #23323bc7, rgba(11,30,43,0.87));
 
   --color-hover: hsla(0, 0%, 100%, .05);
 
