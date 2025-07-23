@@ -158,7 +158,7 @@ export default defineAppConfig({
     },
     collapsible: {
       slots: {
-        root: ['flex flex-col gap-4 rounded'],
+        root: ['flex flex-col gap-2 rounded'],
       },
     },
     carousel: {

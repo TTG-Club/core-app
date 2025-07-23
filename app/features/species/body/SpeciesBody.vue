@@ -33,7 +33,7 @@
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-6">
     <MarkupRender
       v-if="species.description"
       :entries="species.description"

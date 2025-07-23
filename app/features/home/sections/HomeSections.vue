@@ -113,9 +113,11 @@
 
       display: block;
 
-      width: 220px;
+      width: 100%;
+      height: 100%;
 
       opacity: 0.9;
+      object-fit: cover;
 
       transition: transform 200ms;
     }
