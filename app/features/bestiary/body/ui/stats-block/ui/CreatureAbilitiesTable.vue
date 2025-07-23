@@ -175,7 +175,7 @@
 
       .stat {
         font-weight: 600;
-        color: var(--color-text-bold);
+        color: var(--ui-text-bold);
         text-align: left;
       }
 
@@ -196,7 +196,7 @@
 
     .boxed {
       font-weight: 500;
-      color: var(--color-text-bold);
+      color: var(--ui-text-bold);
     }
   }
 </style>

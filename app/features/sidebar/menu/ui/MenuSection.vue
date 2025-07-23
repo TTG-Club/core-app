@@ -69,7 +69,7 @@
 
     font-size: 13px;
     font-weight: 200;
-    color: var(--ui-text-highlighted);
+    color: var(--ui-text-toned);
   }
   .item {
     padding: 6px 16px;

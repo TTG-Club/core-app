@@ -58,7 +58,7 @@
     border-radius: 50%;
     border: {
       width: 1px;
-      color: var(--color-text);
+      color: var(--ui-text);
 
       style: solid;
     }
@@ -71,7 +71,7 @@
       border-radius: 50%;
 
       opacity: 0;
-      background: var(--color-text);
+      background: var(--ui-text);
     }
 
     &.proficiency {

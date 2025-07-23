@@ -238,7 +238,7 @@
   <div class="flex flex-col gap-4">
     <div
       ref="dropZoneRef"
-      class="w-full rounded-lg border-2 border-dashed bg-(--color-bg-secondary) p-6 text-center transition-colors hover:border-primary"
+      class="w-full rounded-lg border-2 border-dashed bg-(--ui-bg-muted) p-6 text-center transition-colors hover:border-primary"
       :class="isOverDropZone ? 'hover:border-primary' : undefined"
       @click.left.exact.prevent="() => openDialog()"
     >

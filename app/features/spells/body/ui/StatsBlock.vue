@@ -84,7 +84,7 @@
     border: 1px solid var(--ui-border);
     border-radius: 8px;
 
-    background-color: var(--color-bg-secondary);
+    background-color: var(--ui-bg-muted);
 
     .item {
       display: flex;
@@ -112,7 +112,7 @@
 
       .name {
         font-weight: 600;
-        color: var(--color-text-bold);
+        color: var(--ui-text-bold);
       }
     }
   }

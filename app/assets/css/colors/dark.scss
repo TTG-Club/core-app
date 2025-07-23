@@ -75,7 +75,7 @@ html.dark {
   --color-gray-700: oklch(0.50 0.015 260.0);
   --color-gray-800: oklch(0.45 0.015 260.0);
   --color-gray-900: oklch(0.40 0.015 260.0);
-  --color-gray-950: oklch(0.35 0.015 260.0);
+  --color-gray-950: oklch(0.30 0.015 260.0);
 
   /* Neutral */
   --color-neutral-50: oklch(0.95 0 0);
@@ -199,7 +199,7 @@ html.dark {
   --ui-text-muted: var(--color-neutral-600); /* #d9d9d9 */
   --ui-text-toned: var(--color-neutral-500); /* #d9d9d9 */
   --ui-text: var(--color-neutral-100); /* #f8f8f8 */
-  --ui-text-highlighted: var(--color-neutral-500); /* #ffffff */
+  --ui-text-highlighted: var(--color-neutral-50); /* #ffffff */
   --ui-text-inverted: var(--color-neutral-950); /* #0d1a22 */
   --ui-bg: var(--color-background-50); /* #0d1a22 */
   --ui-bg-muted: var(--color-background-100); /* #19222A */

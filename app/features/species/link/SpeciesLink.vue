@@ -63,9 +63,9 @@
     border: 1px solid var(--ui-border);
     border-radius: 16px;
 
-    color: var(--color-text);
+    color: var(--ui-text);
 
-    background-color: var(--color-bg-secondary);
+    background-color: var(--ui-bg-muted);
 
     & {
       @include css-anim($time: 0.23s);

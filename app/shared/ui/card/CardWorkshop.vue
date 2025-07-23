@@ -8,7 +8,7 @@
 <template>
   <UCard variant="subtle">
     <template #header>
-      <h2 class="text-lg text-(--color-text-title)">{{ title }}</h2>
+      <h2 class="text-lg text-(--ui-text-highlighted)">{{ title }}</h2>
     </template>
 
     <div class="flex flex-col gap-2">

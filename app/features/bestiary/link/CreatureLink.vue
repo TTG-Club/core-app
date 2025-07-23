@@ -42,7 +42,7 @@
     </template>
 
     <template #caption>
-      <span class="text-(--color-text-gray)">
+      <span class="text-(--ui-text-gray)">
         {{ creature.type }}
       </span>
     </template>

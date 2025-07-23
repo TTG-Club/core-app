@@ -215,7 +215,7 @@
       opacity: 70%;
 
       &.is-discord {
-        color: var(--color-text);
+        color: var(--ui-text);
 
         &:hover {
           background-color: var(--color-discord-hover);
@@ -223,7 +223,7 @@
       }
 
       &.is-boosty {
-        color: var(--color-text);
+        color: var(--ui-text);
 
         &:hover {
           background-color: var(--color-boosty-hover);
@@ -231,7 +231,7 @@
       }
 
       &.is-vk {
-        color: var(--color-text);
+        color: var(--ui-text);
 
         &:hover {
           background-color: var(--color-vk-hover);

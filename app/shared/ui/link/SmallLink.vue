@@ -62,9 +62,9 @@
           <div class="flex items-center justify-between gap-1">
             <span
               :title
-              class="inline-block w-full overflow-hidden text-nowrap text-ellipsis text-(--color-text-gray)"
+              class="inline-block w-full overflow-hidden text-nowrap text-ellipsis text-(--ui-text-gray)"
             >
-              <span class="inline max-w-full text-(--color-text-title)">
+              <span class="inline max-w-full text-(--ui-text-highlighted)">
                 <slot name="default" />
               </span>
 

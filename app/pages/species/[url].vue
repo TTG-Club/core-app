@@ -244,7 +244,7 @@
     border: 1px solid var(--ui-border);
     border-radius: 8px;
 
-    background: var(--color-bg-secondary);
+    background: var(--ui-bg-muted);
 
     .item {
       display: flex;
@@ -262,7 +262,7 @@
         min-width: 80px;
         font-size: 14px;
         font-weight: 500;
-        color: var(--color-text-title);
+        color: var(--ui-text-highlighted);
       }
     }
   }
