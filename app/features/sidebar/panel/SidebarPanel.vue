@@ -181,7 +181,7 @@
     height: 36px;
     margin: 0 8px 0 0;
     padding: 0 16px 0 0;
-    border-right: 1px solid var(--color-border);
+    border-right: 1px solid var(--ui-border);
     border-bottom: 0;
 
     @include media-min($md) {
@@ -190,7 +190,7 @@
       margin: 0 0 8px 0;
       padding: 0 0 12px 0;
       border-right: 0;
-      border-bottom: 1px solid var(--color-border);
+      border-bottom: 1px solid var(--ui-border);
     }
   }
 

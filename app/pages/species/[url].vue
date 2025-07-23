@@ -220,7 +220,7 @@
   .galleryImg {
     overflow: hidden;
     max-width: 160px;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--ui-border);
     border-radius: 8px;
 
     @include media-min($md) {
@@ -241,7 +241,7 @@
 
     width: 100%;
     padding: 6px 0;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--ui-border);
     border-radius: 8px;
 
     background: var(--color-bg-secondary);

@@ -62,7 +62,7 @@
 
     height: 56px;
     padding: 0 12px;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--ui-border);
     border-radius: 10px;
 
     text-decoration: none;

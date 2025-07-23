@@ -204,7 +204,7 @@ html.svifty7 {
   --ui-bg: var(--color-background-600); /* #1F1F22 */
   --ui-bg-muted: var(--color-background-500); /* #2C2C30 */
   --ui-bg-elevated: var(--color-background-500); /* #2C2C30 */
-  --ui-bg-accented: oklch(0.27 0.006 260.0); /* --ui-bg-accented: #2B2B2B */
+  --ui-bg-accented: var(--color-background-300); /* --ui-bg-accented: #2B2B2B */
   --ui-bg-inverted: var(--color-neutral-500); /* #C2C0B2 */
   --ui-border: var(--color-gray-800); /* #747480 */
   --ui-border-muted: var(--color-gray-950); /* #F7F7F7 */

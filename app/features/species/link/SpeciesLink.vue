@@ -60,7 +60,7 @@
 
     overflow: hidden;
 
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--ui-border);
     border-radius: 16px;
 
     color: var(--color-text);
@@ -145,7 +145,7 @@
 
   .actions {
     display: flex;
-    border-top: 1px solid var(--color-border);
+    border-top: 1px solid var(--ui-border);
 
     .btn {
       cursor: pointer;
@@ -162,7 +162,7 @@
       }
 
       &:not(:first-child) {
-        border-left: 1px solid var(--color-border);
+        border-left: 1px solid var(--ui-border);
       }
 
       &:hover {

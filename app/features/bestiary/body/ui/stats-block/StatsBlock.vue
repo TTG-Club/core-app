@@ -129,7 +129,7 @@
     width: 100%;
     min-width: 272px;
     padding: 8px 0;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--ui-border);
     border-radius: 8px;
 
     background-color: var(--color-bg-secondary);

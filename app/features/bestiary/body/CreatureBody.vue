@@ -230,7 +230,7 @@
       width: 110px;
       min-width: 110px;
       height: 110px;
-      border: 1px solid var(--color-border);
+      border: 1px solid var(--ui-border);
       border-radius: 8px;
     }
   }
