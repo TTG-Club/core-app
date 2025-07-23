@@ -4,7 +4,7 @@ html.light {
   --color-primary-100: oklch(0.90 0.040 100.0);
   --color-primary-200: oklch(0.80 0.060 100.0);
   --color-primary-300: oklch(0.70 0.080 100.0);
-  --color-primary-400: oklch(0.65 0.100 100.0); /* --ui-primary: #5e5446 */
+  --color-primary-400: oklch(0.65 0.100 100.0);
   --color-primary-500: oklch(0.60 0.110 100.0);
   --color-primary-600: oklch(0.55 0.120 100.0);
   --color-primary-700: oklch(0.50 0.130 100.0);
@@ -13,12 +13,12 @@ html.light {
   --color-primary-950: oklch(0.35 0.120 100.0);
 
   /* Red */
-  --color-red-50: oklch(0.95 0.020 25.0); /* Lightest shade */
+  --color-red-50: oklch(0.95 0.020 25.0);
   --color-red-100: oklch(0.90 0.040 25.0);
   --color-red-200: oklch(0.80 0.080 25.0);
   --color-red-300: oklch(0.70 0.100 25.0);
-  --color-red-400: oklch(0.65 0.130 25.0); /* --ui-error: #f56c6c */
-  --color-red-500: oklch(0.60 0.140 25.0); /* --color-logo-tree-top, --color-logo-tree-bottom: #B34536 */
+  --color-red-400: oklch(0.65 0.130 25.0);
+  --color-red-500: oklch(0.60 0.140 25.0);
   --color-red-600: oklch(0.55 0.135 25.0);
   --color-red-700: oklch(0.50 0.150 25.0);
   --color-red-800: oklch(0.45 0.160 25.0);
@@ -31,7 +31,7 @@ html.light {
   --color-yellow-200: oklch(0.80 0.060 80.0);
   --color-yellow-300: oklch(0.70 0.070 80.0);
   --color-yellow-400: oklch(0.65 0.100 80.0);
-  --color-yellow-500: oklch(0.60 0.120 80.0); /* --ui-warning: #e6a23c */
+  --color-yellow-500: oklch(0.60 0.120 80.0);
   --color-yellow-600: oklch(0.55 0.110 80.0);
   --color-yellow-700: oklch(0.50 0.100 80.0);
   --color-yellow-800: oklch(0.45 0.090 80.0);
@@ -44,7 +44,7 @@ html.light {
   --color-green-200: oklch(0.80 0.080 145.0);
   --color-green-300: oklch(0.75 0.100 145.0);
   --color-green-400: oklch(0.70 0.120 145.0);
-  --color-green-500: oklch(0.65 0.130 145.0); /* --ui-success: #67c23a */
+  --color-green-500: oklch(0.65 0.130 145.0);
   --color-green-600: oklch(0.60 0.140 145.0);
   --color-green-700: oklch(0.55 0.130 145.0);
   --color-green-800: oklch(0.50 0.120 145.0);
@@ -57,7 +57,7 @@ html.light {
   --color-blue-200: oklch(0.80 0.080 260.0);
   --color-blue-300: oklch(0.70 0.100 260.0);
   --color-blue-400: oklch(0.65 0.110 260.0);
-  --color-blue-500: oklch(0.60 0.120 260.0); /* --ui-info: #909399 */
+  --color-blue-500: oklch(0.60 0.120 260.0);
   --color-blue-600: oklch(0.55 0.130 260.0);
   --color-blue-700: oklch(0.50 0.140 260.0);
   --color-blue-800: oklch(0.45 0.150 260.0);
@@ -65,11 +65,11 @@ html.light {
   --color-blue-950: oklch(0.35 0.130 260.0);
 
   /* Gray */
-  --color-gray-50: oklch(0.98 0.002 260.0); /* --ui-border-muted, --ui-border-accented: rgba(0, 0, 0, 0.08) */
+  --color-gray-50: oklch(0.98 0.002 260.0);
   --color-gray-100: oklch(0.90 0.005 260.0);
   --color-gray-200: oklch(0.80 0.010 260.0);
   --color-gray-300: oklch(0.70 0.012 260.0);
-  --color-gray-400: oklch(0.60 0.015 260.0); /* --ui-text-dimmed, --ui-secondary: #6a6a6a */
+  --color-gray-400: oklch(0.60 0.015 260.0);
   --color-gray-500: oklch(0.55 0.015 260.0);
   --color-gray-600: oklch(0.50 0.015 260.0);
   --color-gray-700: oklch(0.45 0.015 260.0);
@@ -78,23 +78,23 @@ html.light {
   --color-gray-950: oklch(0.30 0.015 260.0);
 
   /* Neutral */
-  --color-neutral-50: oklch(0.95 0 0); /* --ui-text-inverted: #ffffff */
+  --color-neutral-50: oklch(0.95 0 0);
   --color-neutral-100: oklch(0.85 0.005 100.0);
   --color-neutral-200: oklch(0.80 0.010 100.0);
   --color-neutral-300: oklch(0.75 0.012 100.0);
-  --color-neutral-400: oklch(0.70 0.015 100.0); /* --ui-text-toned: #313131 */
-  --color-neutral-500: oklch(0.68 0.015 100.0); /* --ui-text, --ui-bg-inverted, --ui-border-inverted: #042a12 */
-  --color-neutral-600: oklch(0.65 0.015 100.0); /* --ui-text-muted: #1F1E1E */
+  --color-neutral-400: oklch(0.70 0.015 100.0);
+  --color-neutral-500: oklch(0.68 0.015 100.0);
+  --color-neutral-600: oklch(0.65 0.015 100.0);
   --color-neutral-700: oklch(0.60 0.015 100.0);
   --color-neutral-800: oklch(0.55 0.015 100.0);
   --color-neutral-900: oklch(0.50 0.015 100.0);
   --color-neutral-950: oklch(0.45 0.015 100.0);
 
   /* Background */
-  --color-background-50: oklch(0.98 0.006 80.0); /* --ui-bg: rgba(255, 252, 245) */
-  --color-background-100: oklch(0.95 0.006 80.0); /* --ui-bg-muted: #F4EDE5 */
-  --color-background-200: oklch(0.90 0.006 80.0); /* --ui-bg-elevated: #dceee5 */
-  --color-background-300: oklch(0.85 0.006 80.0); /* --ui-bg-accented: #f2e8d5 */
+  --color-background-50: oklch(0.98 0.006 80.0);
+  --color-background-100: oklch(0.95 0.006 80.0);
+  --color-background-200: oklch(0.90 0.006 80.0);
+  --color-background-300: oklch(0.85 0.006 80.0);
   --color-background-400: oklch(0.80 0.006 80.0);
   --color-background-500: oklch(0.75 0.006 80.0);
   --color-background-600: oklch(0.70 0.006 80.0);
@@ -121,7 +121,7 @@ html.light {
   --ui-color-secondary-100: var(--color-gray-100);
   --ui-color-secondary-200: var(--color-gray-200);
   --ui-color-secondary-300: var(--color-gray-300);
-  --ui-color-secondary-400: var(--color-gray-400); /* --ui-secondary: #6a6a6a */
+  --ui-color-secondary-400: var(--color-gray-400);
   --ui-color-secondary-500: var(--color-gray-500);
   --ui-color-secondary-600: var(--color-gray-600);
   --ui-color-secondary-700: var(--color-gray-700);
@@ -135,7 +135,7 @@ html.light {
   --ui-color-success-200: var(--color-green-200);
   --ui-color-success-300: var(--color-green-300);
   --ui-color-success-400: var(--color-green-400);
-  --ui-color-success-500: var(--color-green-500); /* --ui-success: #67c23a */
+  --ui-color-success-500: var(--color-green-500);
   --ui-color-success-600: var(--color-green-600);
   --ui-color-success-700: var(--color-green-700);
   --ui-color-success-800: var(--color-green-800);
@@ -148,7 +148,7 @@ html.light {
   --ui-color-info-200: var(--color-blue-200);
   --ui-color-info-300: var(--color-blue-300);
   --ui-color-info-400: var(--color-blue-400);
-  --ui-color-info-500: var(--color-blue-500); /* --ui-info: #909399 */
+  --ui-color-info-500: var(--color-blue-500);
   --ui-color-info-600: var(--color-blue-600);
   --ui-color-info-700: var(--color-blue-700);
   --ui-color-info-800: var(--color-blue-800);
@@ -161,7 +161,7 @@ html.light {
   --ui-color-warning-200: var(--color-yellow-200);
   --ui-color-warning-300: var(--color-yellow-300);
   --ui-color-warning-400: var(--color-yellow-400);
-  --ui-color-warning-500: var(--color-yellow-500); /* --ui-warning: #e6a23c */
+  --ui-color-warning-500: var(--color-yellow-500);
   --ui-color-warning-600: var(--color-yellow-600);
   --ui-color-warning-700: var(--color-yellow-700);
   --ui-color-warning-800: var(--color-yellow-800);
@@ -173,7 +173,7 @@ html.light {
   --ui-color-error-100: var(--color-red-100);
   --ui-color-error-200: var(--color-red-200);
   --ui-color-error-300: var(--color-red-300);
-  --ui-color-error-400: var(--color-red-400); /* --ui-error: #f56c6c */
+  --ui-color-error-400: var(--color-red-400);
   --ui-color-error-500: var(--color-red-500);
   --ui-color-error-600: var(--color-red-600);
   --ui-color-error-700: var(--color-red-700);
@@ -186,9 +186,9 @@ html.light {
   --ui-color-neutral-100: var(--color-neutral-100);
   --ui-color-neutral-200: var(--color-neutral-200);
   --ui-color-neutral-300: var(--color-neutral-300);
-  --ui-color-neutral-400: var(--color-neutral-400); /* --ui-text-toned: #313131 */
-  --ui-color-neutral-500: var(--color-neutral-500); /* --ui-text, --ui-bg-inverted: #042a12 */
-  --ui-color-neutral-600: var(--color-neutral-600); /* --ui-text-muted: #1F1E1E */
+  --ui-color-neutral-400: var(--color-neutral-400);
+  --ui-color-neutral-500: var(--color-neutral-500);
+  --ui-color-neutral-600: var(--color-neutral-600);
   --ui-color-neutral-700: var(--color-neutral-700);
   --ui-color-neutral-800: var(--color-neutral-800);
   --ui-color-neutral-900: var(--color-neutral-900);
