@@ -1,10 +1,23 @@
 html.svifty7 {
+  /* Primary */
+  --color-primary-50: oklch(0.95 0.020 25.0);
+  --color-primary-100: oklch(0.90 0.040 25.0);
+  --color-primary-200: oklch(0.80 0.080 25.0);
+  --color-primary-300: oklch(0.65 0.110 25.0);
+  --color-primary-400: oklch(0.50 0.140 25.0); /* --ui-primary, --color-primary: #A54D42 */
+  --color-primary-500: oklch(0.55 0.140 25.0); 
+  --color-primary-600: oklch(0.60 0.135 25.0);
+  --color-primary-700: oklch(0.45 0.160 25.0);
+  --color-primary-800: oklch(0.40 0.180 25.0);
+  --color-primary-900: oklch(0.35 0.160 25.0);
+  --color-primary-950: oklch(0.30 0.140 25.0);
+
   /* Red */
   --color-red-50: oklch(0.95 0.020 25.0);
   --color-red-100: oklch(0.90 0.040 25.0);
   --color-red-200: oklch(0.80 0.080 25.0);
   --color-red-300: oklch(0.65 0.110 25.0);
-  --color-red-400: oklch(0.50 0.140 25.0); /* --ui-primary, --color-primary: #A54D42 */
+  --color-red-400: oklch(0.50 0.140 25.0);
   --color-red-500: oklch(0.55 0.140 25.0); /* --color-error: #B85454 */
   --color-red-600: oklch(0.60 0.135 25.0); /* --color-error-hover */
   --color-red-700: oklch(0.45 0.160 25.0);
@@ -90,20 +103,20 @@ html.svifty7 {
   --color-background-900: oklch(0.20 0.006 260.0);
   --color-background-950: oklch(0.15 0.006 260.0); /* --color-shadow: #0f0f12 */
 
-  /* UI Primary (based on red) */
-  --ui-color-primary-50: var(--color-red-50);
-  --ui-color-primary-100: var(--color-red-100);
-  --ui-color-primary-200: var(--color-red-200);
-  --ui-color-primary-300: var(--color-red-300);
-  --ui-color-primary-400: var(--color-red-400); /* #A54D42 */
-  --ui-color-primary-500: var(--color-red-500);
-  --ui-color-primary-600: var(--color-red-600);
-  --ui-color-primary-700: var(--color-red-700);
-  --ui-color-primary-800: var(--color-red-800);
-  --ui-color-primary-900: var(--color-red-900);
-  --ui-color-primary-950: var(--color-red-950);
+  /* UI Primary */
+  --ui-color-primary-50: var(--color-primary-50);
+  --ui-color-primary-100: var(--color-primary-100);
+  --ui-color-primary-200: var(--color-primary-200);
+  --ui-color-primary-300: var(--color-primary-300);
+  --ui-color-primary-400: var(--color-primary-400); /* #A54D42 */
+  --ui-color-primary-500: var(--color-primary-500);
+  --ui-color-primary-600: var(--color-primary-600);
+  --ui-color-primary-700: var(--color-primary-700);
+  --ui-color-primary-800: var(--color-primary-800);
+  --ui-color-primary-900: var(--color-primary-900);
+  --ui-color-primary-950: var(--color-primary-950);
 
-  /* UI Secondary (based on gray) */
+  /* UI Secondary */
   --ui-color-secondary-50: var(--color-gray-50);
   --ui-color-secondary-100: var(--color-gray-100);
   --ui-color-secondary-200: var(--color-gray-200);
@@ -116,7 +129,7 @@ html.svifty7 {
   --ui-color-secondary-900: var(--color-gray-900);
   --ui-color-secondary-950: var(--color-gray-950);
 
-  /* UI Success (based on green) */
+  /* UI Success */
   --ui-color-success-50: var(--color-green-50);
   --ui-color-success-100: var(--color-green-100);
   --ui-color-success-200: var(--color-green-200);
@@ -129,7 +142,7 @@ html.svifty7 {
   --ui-color-success-900: var(--color-green-900);
   --ui-color-success-950: var(--color-green-950);
 
-  /* UI Info (based on blue) */
+  /* UI Info */
   --ui-color-info-50: var(--color-blue-50);
   --ui-color-info-100: var(--color-blue-100);
   --ui-color-info-200: var(--color-blue-200);
@@ -142,7 +155,7 @@ html.svifty7 {
   --ui-color-info-900: var(--color-blue-900);
   --ui-color-info-950: var(--color-blue-950);
 
-  /* UI Warning (based on yellow) */
+  /* UI Warning */
   --ui-color-warning-50: var(--color-yellow-50);
   --ui-color-warning-100: var(--color-yellow-100);
   --ui-color-warning-200: var(--color-yellow-200);
@@ -155,7 +168,7 @@ html.svifty7 {
   --ui-color-warning-900: var(--color-yellow-900);
   --ui-color-warning-950: var(--color-yellow-950);
 
-  /* UI Error (based on red) */
+  /* UI Error */
   --ui-color-error-50: var(--color-red-50);
   --ui-color-error-100: var(--color-red-100);
   --ui-color-error-200: var(--color-red-200);
@@ -168,7 +181,7 @@ html.svifty7 {
   --ui-color-error-900: var(--color-red-900);
   --ui-color-error-950: var(--color-red-950);
 
-  /* UI Neutral (based on neutral) */
+  /* UI Neutral */
   --ui-color-neutral-50: var(--color-neutral-50);
   --ui-color-neutral-100: var(--color-neutral-100);
   --ui-color-neutral-200: var(--color-neutral-200);
@@ -201,6 +214,8 @@ html.svifty7 {
   /* Gradients */
   --color-bg-main-gradient: linear-gradient(to bottom, #1F1F22 0%, #1F1F22 40%, #2B2B2B 100%);
   --color-bg-menu: linear-gradient(135deg, #252528c7, #1F1F22c7);
+
+  --color-hover: #f7f7f718;
 
   // Logo
   --color-logo-stroke: #A68F60;

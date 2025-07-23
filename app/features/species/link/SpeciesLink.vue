@@ -122,7 +122,7 @@
     }
 
     .common {
-      color: var(--color-text-gray);
+      color: var(--ui-text-highlighted);
     }
   }
 
