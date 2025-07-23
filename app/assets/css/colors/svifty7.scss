@@ -198,11 +198,13 @@ html.svifty7 {
   --ui-border-accented: var(--color-gray-800); /* #F7F7F7 */
   --ui-border-inverted: var(--color-neutral-50); /* #ffffff */
 
-  --color-hover: #f7f7f718;
+  --color-bg-menu: 135deg, oklch(0.266 0.006 286.018 / 0.78), oklch(0.241 0.006 285.966 / 0.78);
+
+  --color-hover: oklch(0.976 0 89.876 / 0.09);
 
   // Logo
-  --color-logo-stroke: #A68F60;
-  --color-logo-dice: #A68F60;
-  --color-logo-tree-top: #A54D42;
-  --color-logo-tree-bottom: #A54D42;
+  --color-logo-stroke: oklch(0.66 0.07 84.542);
+  --color-logo-dice: oklch(0.66 0.07 84.542);
+  --color-logo-tree-top: oklch(0.529 0.119 28.939);
+  --color-logo-tree-bottom: oklch(0.529 0.119 28.939);
 }

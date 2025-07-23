@@ -68,27 +68,6 @@ export const MENU_SECTIONS = [
       },
     ],
   },
-  {
-    label: 'Инструкции',
-    icon: 'menu/filled/wiki',
-    items: [
-      {
-        href: '/',
-        label: 'Discord Bot',
-        disabled: true,
-      },
-      {
-        href: '/',
-        label: 'Telegram Spell Bot',
-        disabled: true,
-      },
-      {
-        href: '/',
-        label: 'Управление закладками',
-        disabled: true,
-      },
-    ],
-  },
 ];
 
 export const MENU_LINKS = [

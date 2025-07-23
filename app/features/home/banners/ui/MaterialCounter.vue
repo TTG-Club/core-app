@@ -7,7 +7,10 @@
 </script>
 
 <template>
-  <div :class="$style.card">
+  <div
+    :class="$style.card"
+    class="shadow-lg"
+  >
     <h3 class="text-base leading-none font-medium">Статистика</h3>
 
     <p>
@@ -39,7 +42,6 @@
     text-decoration: none;
 
     background: var(--ui-bg-muted);
-    box-shadow: 0 0.625rem 0.75rem 0 var(--color-card-shadow);
 
     .stats {
       font-size: 32px;

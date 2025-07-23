@@ -63,7 +63,7 @@
             [$style.bottom]: bottom,
           },
         ]"
-        class="flex flex-col border border-default shadow-2xl backdrop-blur-lg"
+        class="flex flex-col border border-default bg-linear-(--color-bg-menu) shadow-2xl backdrop-blur-lg"
       >
         <slot
           :close="() => close()"
@@ -135,9 +135,6 @@
     max-width: calc(100vw - 16px);
     max-height: calc(100dvh - 72px - var(--safe-area-inset-bottom));
     border-radius: 12px;
-
-    background-image: var(--color-bg-menu);
-    //box-shadow: 0 22px 122px var(--color-shadow);
 
     @include media-min($md) {
       top: $verticalMargin;

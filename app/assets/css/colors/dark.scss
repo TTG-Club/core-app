@@ -198,11 +198,13 @@ html.dark {
   --ui-border-accented: var(--color-gray-950); /* rgba(255, 255, 255, 0.05) */
   --ui-border-inverted: var(--color-neutral-50); /* #ffffff */
 
-  --color-hover: hsla(0, 0%, 100%, .05);
+  --color-bg-menu: 135deg, oklch(0.308 0.026 235.045 / 0.78), oklch(0.226 0.036 240.705 / 0.87);
+
+  --color-hover: oklch(1 0 89.876 / 0.05);
 
   /* Logo */
-  --color-logo-stroke: #2F4262;
-  --color-logo-dice: #38B1C6;
-  --color-logo-tree-top: #4AC2D3;
-  --color-logo-tree-bottom: #1D577D;
+  --color-logo-stroke: oklch(0.378 0.06 260.467);
+  --color-logo-dice: oklch(0.704 0.107 211.694);
+  --color-logo-tree-top: oklch(0.754 0.108 208.294);
+  --color-logo-tree-bottom: oklch(0.438 0.086 241.626);
 }

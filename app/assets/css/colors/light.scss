@@ -198,11 +198,13 @@ html.light {
   --ui-border-accented: var(--color-gray-100); /* rgba(0, 0, 0, 0.12) */
   --ui-border-inverted: var(--color-neutral-500); /* #042a12 */
 
-  --color-hover: rgba(0,0,0,.08);
+  --color-bg-menu: 135deg, oklch(0.991 0.01 87.47 / 0.65), oklch(0.973 0.011 89.722 / 0.65);
+
+  --color-hover: oklch(0 0 0 / 0.08);
 
   /* Logo */
-  --color-logo-stroke: #353430;
-  --color-logo-dice: #353430;
-  --color-logo-tree-top: #B34536;
-  --color-logo-tree-bottom: #B34536;
+  --color-logo-stroke: oklch(0.325 0.007 95.278);
+  --color-logo-dice: oklch(0.325 0.007 95.278);
+  --color-logo-tree-top: oklch(0.537 0.146 30.314);
+  --color-logo-tree-bottom: oklch(0.537 0.146 30.314);
 }

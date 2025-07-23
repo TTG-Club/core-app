@@ -2,6 +2,7 @@
   <NuxtLink
     to="https://ttg.club/"
     :class="$style.card"
+    class="shadow-lg"
     target="_blank"
   >
     <h2
@@ -33,7 +34,6 @@
     text-decoration: none;
 
     background: var(--ui-bg-muted);
-    box-shadow: 0 0.625rem 0.75rem 0 var(--color-card-shadow);
 
     &:before {
       content: '';
