@@ -220,7 +220,7 @@
   .galleryImg {
     overflow: hidden;
     max-width: 160px;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--ui-border);
     border-radius: 8px;
 
     @include media-min($md) {
@@ -241,10 +241,10 @@
 
     width: 100%;
     padding: 6px 0;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--ui-border);
     border-radius: 8px;
 
-    background: var(--color-bg-secondary);
+    background: var(--ui-bg-muted);
 
     .item {
       display: flex;
@@ -262,7 +262,7 @@
         min-width: 80px;
         font-size: 14px;
         font-weight: 500;
-        color: var(--color-text-title);
+        color: var(--ui-text-highlighted);
       }
     }
   }

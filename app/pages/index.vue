@@ -3,6 +3,7 @@
   import { HomeSections } from '~home/sections';
   import { SocialLinks } from '~home/social-links';
   import { SearchPanel } from '~search/panel';
+  import { UiGallery } from '~ui/gallery';
 
   definePageMeta({
     layout: 'default',
@@ -30,10 +31,9 @@
         <div
           class="w-full overflow-hidden rounded-lg border border-default opacity-80 xl:w-1/2 2xl:w-2/3"
         >
-          <img
-            :src="'/s3/roadmap.webp'"
-            loading="lazy"
-            alt="roadmap"
+          <UiGallery
+            preview="/s3/roadmap.webp"
+            disable-square
           />
         </div>
 

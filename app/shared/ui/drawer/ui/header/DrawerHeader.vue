@@ -46,7 +46,7 @@
     <div class="flex items-center gap-1">
       <h2
         v-if="title"
-        class="truncate text-lg text-(--color-text-title)"
+        class="truncate text-lg text-(--ui-text-highlighted)"
         :class="{ 'cursor-pointer': copyText }"
         @click.left.exact.prevent="handleCopy(title)"
       >

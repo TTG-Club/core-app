@@ -10,6 +10,7 @@
       :to="link.url"
       :class="[$style.card, { [$style.disabled]: link.disable }]"
       :style="{ backgroundColor: link.backgroundColor }"
+      class="shadow-lg"
       target="_blank"
     >
       <UIcon
@@ -35,13 +36,11 @@
 
     height: 48px;
     padding: 0 12px;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--ui-border);
     border-radius: 10px;
 
     color: #ffffff;
     text-decoration: none;
-
-    box-shadow: 0 0.625rem 0.75rem 0 var(--color-card-shadow);
 
     &:hover {
       color: #ffffff;

@@ -7,7 +7,10 @@
 </script>
 
 <template>
-  <div :class="$style.card">
+  <div
+    :class="$style.card"
+    class="shadow-lg"
+  >
     <h3 class="text-base leading-none font-medium">Статистика</h3>
 
     <p>
@@ -32,14 +35,13 @@
     gap: 12px;
 
     padding: 12px 12px;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--ui-border);
     border-radius: 10px;
 
-    color: var(--color-text);
+    color: var(--ui-text);
     text-decoration: none;
 
-    background: var(--color-bg-secondary);
-    box-shadow: 0 0.625rem 0.75rem 0 var(--color-card-shadow);
+    background: var(--ui-bg-muted);
 
     .stats {
       font-size: 32px;

@@ -92,7 +92,7 @@
     font-size: 28px;
     font-weight: 600;
     line-height: 28px;
-    color: var(--color-text-title);
+    color: var(--ui-text-highlighted);
 
     @container (width >= 248px) {
       font-size: 40px;

@@ -60,12 +60,12 @@
 
     overflow: hidden;
 
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--ui-border);
     border-radius: 16px;
 
-    color: var(--color-text);
+    color: var(--ui-text);
 
-    background-color: var(--color-bg-secondary);
+    background-color: var(--ui-bg-muted);
 
     & {
       @include css-anim($time: 0.23s);
@@ -122,7 +122,7 @@
     }
 
     .common {
-      color: var(--color-text-gray);
+      color: var(--ui-text-highlighted);
     }
   }
 
@@ -145,7 +145,7 @@
 
   .actions {
     display: flex;
-    border-top: 1px solid var(--color-border);
+    border-top: 1px solid var(--ui-border);
 
     .btn {
       cursor: pointer;
@@ -162,7 +162,7 @@
       }
 
       &:not(:first-child) {
-        border-left: 1px solid var(--color-border);
+        border-left: 1px solid var(--ui-border);
       }
 
       &:hover {

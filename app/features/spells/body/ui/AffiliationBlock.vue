@@ -35,7 +35,7 @@
 
   .label {
     margin-bottom: 2px;
-    color: var(--color-text-title);
+    color: var(--ui-text-highlighted);
   }
 
   .item {

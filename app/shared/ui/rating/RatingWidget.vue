@@ -215,7 +215,7 @@
       }
 
       &.highlight {
-        color: var(--color-text-bold);
+        color: var(--ui-text-bold);
       }
     }
   }
@@ -242,7 +242,7 @@
     font-size: 16px;
     font-weight: 500;
     line-height: 32px;
-    color: var(--color-text-bold);
+    color: var(--ui-text-bold);
 
     background: var(--color-hover);
   }

@@ -14,10 +14,12 @@
     preview,
     images = [],
     alt = '',
+    disableSquare = false,
   } = defineProps<{
     preview: string;
     images?: Array<string>;
     alt?: string;
+    disableSquare?: boolean;
   }>();
 
   const {
@@ -55,21 +57,20 @@
 </script>
 
 <template>
-  <div>
-    <Lightgallery :settings="settings">
-      <div
-        v-for="(item, index) in items"
-        :key="item.src"
-        :data-src="item.src"
-        :class="!!index ? 'hidden' : undefined"
-        class="cursor-zoom-in"
-      >
-        <img
-          class="aspect-square w-full rounded-lg object-cover"
-          :src="item.src"
-          :alt="item.alt || undefined"
-        />
-      </div>
-    </Lightgallery>
-  </div>
+  <Lightgallery :settings="settings">
+    <div
+      v-for="(item, index) in items"
+      :key="item.src"
+      :data-src="item.src"
+      :class="!!index ? 'hidden' : undefined"
+      class="cursor-zoom-in"
+    >
+      <img
+        class="w-full rounded-lg object-cover"
+        :class="!disableSquare ? 'aspect-square' : undefined"
+        :src="item.src"
+        :alt="item.alt || undefined"
+      />
+    </div>
+  </Lightgallery>
 </template>

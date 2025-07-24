@@ -38,7 +38,7 @@
     </template>
 
     <template #caption>
-      <span :style="{ color: 'var(--color-text-gray)' }">
+      <span :style="{ color: 'var(--ui-text-highlighted)' }">
         {{ glossary.tagCategory ?? '—' }}
       </span>
     </template>

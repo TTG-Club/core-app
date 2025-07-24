@@ -69,14 +69,12 @@
 
     font-size: 13px;
     font-weight: 200;
-    color: var(--color-text-gray);
+    color: var(--ui-text-toned);
   }
   .item {
     padding: 6px 16px;
     border-radius: 6px;
-    color: var(--color-text);
     &:hover {
-      color: var(--color-text);
       background-color: var(--color-hover);
       transition: all 0.15s ease-in-out;
     }

@@ -36,7 +36,7 @@
         <StatsBlock v-bind="creature" />
       </div>
 
-      <div class="flex flex-auto flex-col gap-3">
+      <div class="flex flex-auto flex-col gap-6">
         <template v-if="creature.traits?.length">
           <UiCollapse default-open>
             <template #default> Особенности </template>
@@ -230,7 +230,7 @@
       width: 110px;
       min-width: 110px;
       height: 110px;
-      border: 1px solid var(--color-border);
+      border: 1px solid var(--ui-border);
       border-radius: 8px;
     }
   }

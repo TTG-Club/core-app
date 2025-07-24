@@ -70,18 +70,12 @@
   <div
     class="navbar"
     :class="[
-      'fixed bottom-0 left-0 z-100 h-(--navbar-height) w-full md:top-0 md:bottom-auto md:h-dvh md:w-(--navbar-width)',
-      'border-t border-default md:border-t-0 md:border-r',
+      'fixed left-0 z-100 h-(--navbar-height) w-full md:top-0 md:bottom-auto md:h-dvh md:w-(--navbar-width)',
+      'border-t border-default max-md:bg-default md:border-t-0 md:border-r',
       'pb-(--safe-area-inset-bottom) md:pb-0 md:pl-(--safe-area-inset-left)',
       'transition-[bottom] duration-200 ease-in-out md:transition-none',
       'flex flex-nowrap md:flex-col',
-
-      ...(hidden
-        ? [
-            '-bottom-(--navbar-height) md:bottom-auto',
-            'transition-[bottom] duration-200 ease-in-out md:transition-none',
-          ]
-        : []),
+      hidden ? '-bottom-(--navbar-height)' : 'bottom-0',
     ]"
   >
     <header :class="$style.header">
@@ -181,7 +175,7 @@
     height: 36px;
     margin: 0 8px 0 0;
     padding: 0 16px 0 0;
-    border-right: 1px solid var(--color-border);
+    border-right: 1px solid var(--ui-border);
     border-bottom: 0;
 
     @include media-min($md) {
@@ -190,7 +184,7 @@
       margin: 0 0 8px 0;
       padding: 0 0 12px 0;
       border-right: 0;
-      border-bottom: 1px solid var(--color-border);
+      border-bottom: 1px solid var(--ui-border);
     }
   }
 
@@ -215,7 +209,7 @@
       opacity: 70%;
 
       &.is-discord {
-        color: var(--color-text);
+        color: var(--ui-text);
 
         &:hover {
           background-color: var(--color-discord-hover);
@@ -223,7 +217,7 @@
       }
 
       &.is-boosty {
-        color: var(--color-text);
+        color: var(--ui-text);
 
         &:hover {
           background-color: var(--color-boosty-hover);
@@ -231,7 +225,7 @@
       }
 
       &.is-vk {
-        color: var(--color-text);
+        color: var(--ui-text);
 
         &:hover {
           background-color: var(--color-vk-hover);
