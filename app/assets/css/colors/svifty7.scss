@@ -1,29 +1,29 @@
 html.svifty7 {
   /* Primary */
-  --color-primary-50: oklch(0.95 0.020 25.0);
-  --color-primary-100: oklch(0.90 0.040 25.0);
-  --color-primary-200: oklch(0.80 0.080 25.0);
-  --color-primary-300: oklch(0.65 0.110 25.0);
-  --color-primary-400: oklch(0.50 0.140 25.0);
-  --color-primary-500: oklch(0.55 0.140 25.0); 
-  --color-primary-600: oklch(0.60 0.135 25.0);
-  --color-primary-700: oklch(0.45 0.160 25.0);
-  --color-primary-800: oklch(0.40 0.180 25.0);
-  --color-primary-900: oklch(0.35 0.160 25.0);
-  --color-primary-950: oklch(0.30 0.140 25.0);
+  --color-primary-50: oklch(0.97 0.020 25.0);
+  --color-primary-100: oklch(0.92 0.035 25.0);
+  --color-primary-200: oklch(0.85 0.060 25.0);
+  --color-primary-300: oklch(0.78 0.080 25.0);
+  --color-primary-400: oklch(0.70 0.100 25.0);
+  --color-primary-500: oklch(0.55 0.140 25.0);
+  --color-primary-600: oklch(0.55 0.115 25.0);
+  --color-primary-700: oklch(0.48 0.120 25.0);
+  --color-primary-800: oklch(0.42 0.125 25.0);
+  --color-primary-900: oklch(0.36 0.120 25.0);
+  --color-primary-950: oklch(0.30 0.115 25.0);
 
-  /* Red */
-  --color-red-50: oklch(0.95 0.020 25.0);
-  --color-red-100: oklch(0.90 0.040 25.0);
-  --color-red-200: oklch(0.80 0.080 25.0);
-  --color-red-300: oklch(0.65 0.110 25.0);
-  --color-red-400: oklch(0.50 0.140 25.0);
-  --color-red-500: oklch(0.55 0.140 25.0);
-  --color-red-600: oklch(0.60 0.135 25.0);
-  --color-red-700: oklch(0.45 0.160 25.0);
-  --color-red-800: oklch(0.40 0.180 25.0);
-  --color-red-900: oklch(0.35 0.160 25.0);
-  --color-red-950: oklch(0.30 0.140 25.0);
+  /* Red (Error) */
+  --color-red-50: oklch(0.97 0.050 15.0);
+  --color-red-100: oklch(0.92 0.070 15.0);
+  --color-red-200: oklch(0.85 0.090 15.0);
+  --color-red-300: oklch(0.78 0.110 15.0);
+  --color-red-400: oklch(0.70 0.130 15.0);
+  --color-red-500: oklch(0.62 0.140 15.0);
+  --color-red-600: oklch(0.57 0.135 15.0);
+  --color-red-700: oklch(0.50 0.125 15.0);
+  --color-red-800: oklch(0.44 0.115 15.0);
+  --color-red-900: oklch(0.38 0.105 15.0);
+  --color-red-950: oklch(0.32 0.095 15.0);
 
   /* Yellow */
   --color-yellow-50: oklch(0.95 0.020 80.0);
@@ -65,30 +65,30 @@ html.svifty7 {
   --color-blue-950: oklch(0.35 0.130 260.0);
 
   /* Gray */
-  --color-gray-50: oklch(0.98 0.002 260.0);
-  --color-gray-100: oklch(0.90 0.005 260.0);
-  --color-gray-200: oklch(0.80 0.010 260.0);
-  --color-gray-300: oklch(0.70 0.012 260.0);
-  --color-gray-400: oklch(0.60 0.015 100.0);
-  --color-gray-500: oklch(0.55 0.015 260.0);
-  --color-gray-600: oklch(0.50 0.015 260.0);
-  --color-gray-700: oklch(0.45 0.015 260.0);
-  --color-gray-800: oklch(0.40 0.015 260.0);
-  --color-gray-900: oklch(0.35 0.015 260.0);
-  --color-gray-950: oklch(0.30 0.015 260.0);
+  --color-gray-50: oklch(0.98 0.002 85.0);
+  --color-gray-100: oklch(0.92 0.005 85.0);
+  --color-gray-200: oklch(0.82 0.010 85.0);
+  --color-gray-300: oklch(0.72 0.012 85.0);
+  --color-gray-400: oklch(0.62 0.015 85.0);
+  --color-gray-500: oklch(0.57 0.015 85.0);
+  --color-gray-600: oklch(0.52 0.015 85.0);
+  --color-gray-700: oklch(0.47 0.015 85.0);
+  --color-gray-800: oklch(0.42 0.015 85.0);
+  --color-gray-900: oklch(0.37 0.015 85.0);
+  --color-gray-950: oklch(0.32 0.015 85.0);
 
   /* Neutral */
-  --color-neutral-50: oklch(1.00 0 0);
-  --color-neutral-100: oklch(0.95 0.005 100.0);
-  --color-neutral-200: oklch(0.90 0.010 100.0);
-  --color-neutral-300: oklch(0.85 0.012 100.0);
-  --color-neutral-400: oklch(0.80 0.015 100.0);
-  --color-neutral-500: oklch(0.78 0.015 100.0);
-  --color-neutral-600: oklch(0.75 0.015 100.0);
-  --color-neutral-700: oklch(0.70 0.015 100.0);
-  --color-neutral-800: oklch(0.65 0.015 100.0);
-  --color-neutral-900: oklch(0.60 0.015 100.0);
-  --color-neutral-950: oklch(0.55 0.015 100.0);
+  --color-neutral-50: oklch(1.00 0 85.0);
+  --color-neutral-100: oklch(0.95 0.005 85.0);
+  --color-neutral-200: oklch(0.90 0.010 85.0);
+  --color-neutral-300: oklch(0.85 0.012 85.0);
+  --color-neutral-400: oklch(0.80 0.015 85.0);
+  --color-neutral-500: oklch(0.78 0.015 85.0);
+  --color-neutral-600: oklch(0.75 0.015 85.0);
+  --color-neutral-700: oklch(0.70 0.015 85.0);
+  --color-neutral-800: oklch(0.65 0.015 85.0);
+  --color-neutral-900: oklch(0.60 0.015 85.0);
+  --color-neutral-950: oklch(0.55 0.015 85.0);
 
   /* UI Primary */
   --ui-color-primary-50: var(--color-primary-50);
@@ -182,21 +182,21 @@ html.svifty7 {
   --ui-color-neutral-950: var(--color-neutral-950);
 
   /* Nuxt UI variables */
-  --ui-text-dimmed: var(--color-gray-400); /* #8F8D82 */
-  --ui-text-muted: var(--color-neutral-600); /* #B8B6A8 */
-  --ui-text-toned: var(--color-neutral-900); /* #C9C7B9 */
-  --ui-text: var(--color-neutral-500); /* #C2C0B2 */
-  --ui-text-highlighted: var(--color-neutral-200); /* #A68F60 */
-  --ui-text-inverted: var(--color-neutral-50); /* #ffffff */
-  --ui-bg: oklch(0.26 0.006 260.0); /* #1F1F22 */
-  --ui-bg-muted: oklch(0.29 0.006 260.0); /* #2C2C30 */
-  --ui-bg-elevated: oklch(0.29 0.006 260.0); /* #2C2C30 */
-  --ui-bg-accented: oklch(0.35 0.006 260.0); /* --ui-bg-accented: #2B2B2B */
-  --ui-bg-inverted: var(--color-neutral-500); /* #C2C0B2 */
-  --ui-border: var(--color-gray-800); /* #747480 */
-  --ui-border-muted: var(--color-gray-950); /* #F7F7F7 */
-  --ui-border-accented: var(--color-gray-800); /* #F7F7F7 */
-  --ui-border-inverted: var(--color-neutral-50); /* #ffffff */
+  --ui-text: oklch(0.78 0.015 85.0);
+  --ui-text-dimmed: oklch(0.70 0.012 85.0);
+  --ui-text-muted: oklch(0.75 0.013 85.0);
+  --ui-text-toned: oklch(0.80 0.014 85.0);
+  --ui-text-highlighted: oklch(0.85 0.016 85.0);
+  --ui-text-inverted: oklch(0.90 0.017 85.0);
+  --ui-bg: oklch(0.25 0.006 50.0);
+  --ui-bg-muted: oklch(0.28 0.006 50.0);
+  --ui-bg-elevated: oklch(0.31 0.006 50.0);
+  --ui-bg-accented: oklch(0.37 0.006 50.0);
+  --ui-bg-inverted: oklch(0.78 0.015 50.0);
+  --ui-border: var(--color-gray-800);
+  --ui-border-muted: var(--color-gray-950);
+  --ui-border-accented: var(--color-gray-800);
+  --ui-border-inverted: var(--color-gray-50);
 
   --color-bg-menu: 135deg, oklch(0.266 0.006 286.018 / 0.78), oklch(0.241 0.006 285.966 / 0.78);
 

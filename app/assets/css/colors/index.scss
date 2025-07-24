@@ -3,16 +3,16 @@
 @forward 'svifty7';
 
 html {
-  --color-discord-base: #5865f2;
-  --color-discord-hover: #3f4cd9;
-  --color-patreon-base: #ff424d;
-  --color-patreon-hover: #e62934;
-  --color-vk-base: #0077ff;
-  --color-vk-hover: #005ee6;
-  --color-boosty-base: #f15f2c;
-  --color-boosty-hover: #d84613;
-  --color-youtube-base: #ff0000;
-  --color-youtube-hover: #a80000;
+  --color-discord-base: oklch(0.577 0.209 273.85);
+  --color-discord-hover: oklch(0.499 0.213 271.928);
+  --color-patreon-base: oklch(0.663 0.224 22.977);
+  --color-patreon-hover: oklch(0.598 0.221 24.829);
+  --color-vk-base: oklch(0.597 0.221 258.03);
+  --color-vk-hover: oklch(0.527 0.219 260.392);
+  --color-boosty-base: oklch(0.667 0.191 38.385);
+  --color-boosty-hover: oklch(0.596 0.191 36.966);
+  --color-youtube-base: oklch(0.628 0.258 29.234);
+  --color-youtube-hover: oklch(0.459 0.189 29.234);
 
   /* Gradients */
   --color-bg-main-gradient: to top, var(--ui-bg) 0%, var(--ui-bg) 40%, var(--ui-bg-muted) 100%;
