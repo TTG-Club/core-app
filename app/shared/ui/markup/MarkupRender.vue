@@ -12,7 +12,7 @@
       v-for="(entry, index) in entries"
       :key="index"
     >
-      <p class="mb-1">
+      <p class="mb-2">
         <RowRender :entry />
       </p>
     </template>
