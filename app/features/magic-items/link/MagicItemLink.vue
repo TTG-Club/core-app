@@ -47,7 +47,7 @@
         Н
       </UBadge>
 
-      <span :style="{ color: 'var(--ui-text-highlighted)' }">
+      <span>
         {{ magicItem.rarity }}
       </span>
     </template>

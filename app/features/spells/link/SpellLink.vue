@@ -49,7 +49,7 @@
         :concentration="spell.concentration"
       />
 
-      <span class="text-(--ui-text-toned)">
+      <span>
         {{ spell.school }}
       </span>
 

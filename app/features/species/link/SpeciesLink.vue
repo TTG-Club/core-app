@@ -120,10 +120,6 @@
       gap: 2px;
       align-items: center;
     }
-
-    .common {
-      color: var(--ui-text-highlighted);
-    }
   }
 
   .name {
@@ -136,6 +132,7 @@
 
     &.rus {
       font-weight: 600;
+      color: var(--ui-text-highlighted);
     }
 
     &.eng {

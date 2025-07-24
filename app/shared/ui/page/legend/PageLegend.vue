@@ -19,7 +19,7 @@
       >
         <UBadge
           color="neutral"
-          variant="soft"
+          variant="subtle"
         >
           {{ item.label }}
         </UBadge>
