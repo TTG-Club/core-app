@@ -188,14 +188,14 @@ html.dark {
   --ui-text: var(--color-neutral-100); /* #f8f8f8 */
   --ui-text-highlighted: var(--color-neutral-50); /* #ffffff */
   --ui-text-inverted: var(--color-neutral-50); /* #0d1a22 */
-  --ui-bg: oklch(0.22 0.02 270.0); /* #0d1a22 */
+  --ui-bg: oklch(0.200 0.02 270.0); /* #0d1a22 */
   --ui-bg-muted: oklch(0.245 0.02 270.0); /* #19222A */
-  --ui-bg-elevated: oklch(0.245 0.02 270.0); /* #19222A */
+  --ui-bg-elevated: oklch(0.255 0.02 270.0); /* #19222A */
   --ui-bg-accented: oklch(0.295 0.02 270.0); /* #12212c */
   --ui-bg-inverted: var(--color-neutral-50); /* #ffffff */
   --ui-border: var(--color-gray-950); /* rgba(255, 255, 255, 0.08) */
   --ui-border-muted: var(--color-gray-50); /* rgba(255, 255, 255, 0.05) */
-  --ui-border-accented: var(--color-gray-950); /* rgba(255, 255, 255, 0.05) */
+  --ui-border-accented: var(--color-gray-900); /* rgba(255, 255, 255, 0.05) */
   --ui-border-inverted: var(--color-neutral-50); /* #ffffff */
 
   --color-bg-menu: 135deg, oklch(0.308 0.026 235.045 / 0.78), oklch(0.226 0.036 240.705 / 0.87);
