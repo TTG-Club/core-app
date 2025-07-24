@@ -70,7 +70,7 @@
               'right-2 bottom-(--navbar-height) max-md:mb-2',
               'transition-[bottom] duration-200 ease-in-out',
               'max-md:rounded-md max-md:border max-md:border-default',
-              'max-md:p-1 max-md:shadow-md max-md:backdrop-blur-lg',
+              'max-md:bg-default/50 max-md:p-1 max-md:shadow-md max-md:backdrop-blur-lg',
               navbarHidden ? 'bottom-0' : undefined,
             ]"
           >
@@ -110,7 +110,7 @@
 
     <div class="w-full shrink-0">
       <div
-        class="mx-auto flex w-full max-w-(--max-content) flex-col gap-2 px-4 lg:gap-3"
+        class="mx-auto flex w-full max-w-(--max-content) flex-col gap-2 px-4 pb-8 lg:gap-3"
       >
         <slot name="default" />
       </div>

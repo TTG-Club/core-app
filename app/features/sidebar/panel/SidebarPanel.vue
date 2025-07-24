@@ -70,18 +70,12 @@
   <div
     class="navbar"
     :class="[
-      'fixed bottom-0 left-0 z-100 h-(--navbar-height) w-full md:top-0 md:bottom-auto md:h-dvh md:w-(--navbar-width)',
-      'border-t border-default md:border-t-0 md:border-r',
+      'fixed left-0 z-100 h-(--navbar-height) w-full md:top-0 md:bottom-auto md:h-dvh md:w-(--navbar-width)',
+      'border-t border-default max-md:bg-default md:border-t-0 md:border-r',
       'pb-(--safe-area-inset-bottom) md:pb-0 md:pl-(--safe-area-inset-left)',
       'transition-[bottom] duration-200 ease-in-out md:transition-none',
       'flex flex-nowrap md:flex-col',
-
-      ...(hidden
-        ? [
-            '-bottom-(--navbar-height) md:bottom-auto',
-            'transition-[bottom] duration-200 ease-in-out md:transition-none',
-          ]
-        : []),
+      hidden ? '-bottom-(--navbar-height)' : 'bottom-0',
     ]"
   >
     <header :class="$style.header">

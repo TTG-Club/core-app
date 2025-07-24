@@ -182,23 +182,23 @@ html.svifty7 {
   --ui-color-neutral-950: var(--color-neutral-950);
 
   /* Nuxt UI variables */
-  --ui-text: oklch(0.78 0.015 85.0);
-  --ui-text-dimmed: oklch(0.70 0.012 85.0);
-  --ui-text-muted: oklch(0.75 0.013 85.0);
-  --ui-text-toned: oklch(0.80 0.014 85.0);
-  --ui-text-highlighted: oklch(0.85 0.016 85.0);
-  --ui-text-inverted: oklch(0.90 0.017 85.0);
-  --ui-bg: oklch(0.25 0.006 50.0);
-  --ui-bg-muted: oklch(0.28 0.006 50.0);
-  --ui-bg-elevated: oklch(0.31 0.006 50.0);
-  --ui-bg-accented: oklch(0.37 0.006 50.0);
-  --ui-bg-inverted: oklch(0.78 0.015 50.0);
-  --ui-border: var(--color-gray-800);
-  --ui-border-muted: var(--color-gray-950);
-  --ui-border-accented: var(--color-gray-800);
-  --ui-border-inverted: var(--color-gray-50);
+  --ui-text: oklch(0.72 0.023 75.0);
+  --ui-text-dimmed: oklch(0.70 0.012 75.0);
+  --ui-text-muted: oklch(0.75 0.013 75.0);
+  --ui-text-toned: oklch(0.80 0.014 75.0);
+  --ui-text-highlighted: oklch(0.85 0.016 75.0);
+  --ui-text-inverted: oklch(0.98 0.017 75.0);
+  --ui-bg: oklch(0.27 0.006 75.0);
+  --ui-bg-muted: oklch(0.30 0.006 75.0);
+  --ui-bg-elevated: oklch(0.33 0.006 75.0);
+  --ui-bg-accented: oklch(0.38 0.006 75.0);
+  --ui-bg-inverted: oklch(0.78 0.015 75.0);
+  --ui-border: oklch(0.42 0.015 85.0);
+  --ui-border-muted: oklch(0.45 0.015 85.0);
+  --ui-border-accented: oklch(0.48 0.015 85.0);
+  --ui-border-inverted: oklch(0.98 0.002 85.0);
 
-  --color-bg-menu: 135deg, oklch(0.266 0.006 286.018 / 0.78), oklch(0.241 0.006 285.966 / 0.78);
+  --color-bg-menu: 135deg, oklch(0.38 0.006 75.0 / 0.78), oklch(0.27 0.006 75.0 / 0.78);
 
   --color-hover: oklch(0.976 0 89.876 / 0.09);
 

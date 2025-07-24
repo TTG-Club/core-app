@@ -44,12 +44,12 @@
       @click.exact.prevent.stop="handleClick"
     >
       <div
-        class="flex min-h-12.5 w-full items-center gap-3 rounded-xl border border-default px-3 py-1.5 hover:bg-accented"
+        class="flex min-h-12.5 w-full items-center gap-3 rounded-xl border border-default px-3 py-1.5 hover:border-accented hover:bg-accented"
         :class="isOpened ? 'bg-accented' : 'bg-elevated'"
       >
         <div
           v-if="$slots.icon"
-          class="-ml-2 flex size-11 shrink-0 items-center justify-center border-r border-default"
+          class="-ml-2 flex size-11 shrink-0 items-center justify-center border-r border-inherit"
         >
           <div class="text-center text-base leading-none">
             <slot name="icon" />
