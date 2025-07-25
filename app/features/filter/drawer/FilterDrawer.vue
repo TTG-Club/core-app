@@ -31,9 +31,6 @@
   <USlideover
     v-model:open="opened"
     title="Фильтры"
-    :content="{
-      trapFocus: true,
-    }"
     :ui="{
       content: 'w-full max-w-192 min-w-80',
     }"
