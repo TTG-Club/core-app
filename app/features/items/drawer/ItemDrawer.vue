@@ -1,74 +1,47 @@
 <script setup lang="ts">
-  import { Breakpoint, BREAKPOINTS, useDrawer } from '~/shared/composables';
-  import { ItemBody } from '~items/body';
-  import { DrawerComponent } from '~ui/drawer';
+  import { ItemBody } from '~/features/items/body';
+  import { UiDrawer } from '~ui/drawer';
 
-  import type { ItemDetailResponse } from '~items/types';
+  import type { ItemDetailResponse } from '~/features/items/types';
 
-  const { url, isOpened, close } = useDrawer('item-detail');
+  const { url } = defineProps<{
+    url: string;
+  }>();
 
-  const {
-    data: item,
-    status,
-    execute,
-    clear,
-  } = await useAsyncData(
-    `item`,
-    () => {
-      if (!url.value) {
-        return Promise.reject();
-      }
+  defineEmits<{
+    (e: 'close'): void;
+  }>();
 
-      return $fetch<ItemDetailResponse>(`/api/v2/item/${url.value}`);
-    },
+  const { data: detail, status } = await useAsyncData(
+    computed(() => `item-${url}`),
+    () => $fetch<ItemDetailResponse>(`/api/v2/item/${url}`),
     {
       server: false,
-      immediate: false,
+      immediate: true,
     },
   );
 
-  const urlForCopy = computed(() =>
-    isOpened.value ? `${getOrigin()}/items/${url.value}` : undefined,
-  );
-
-  const editUrl = computed(() => `/workshop/items/${url.value}`);
-
-  function handleUpdate(opened: boolean) {
-    if (opened) {
-      return;
-    }
-
-    close();
-  }
-
-  watch(isOpened, (value) => {
-    if (!value) {
-      return;
-    }
-
-    clear();
-    execute();
-  });
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+  const urlForCopy = computed(() => `${getOrigin()}/item/${url}`);
+  const editUrl = computed(() => `/workshop/item/${url}`);
 </script>
 
 <template>
-  <DrawerComponent
-    :open="isOpened"
-    :min-width="320"
-    :max-width="BREAKPOINTS[Breakpoint.MD]"
-    :title="item?.name"
-    :source="item?.source"
+  <UiDrawer
+    :title="detail?.name"
+    :source="detail?.source"
+    :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
-    :is-loading="status === 'pending'"
-    :is-error="status === 'error'"
-    width="100%"
+    :is-loading
+    :is-error
     copy-title
-    @update:open="handleUpdate"
+    @close="$emit('close')"
   >
     <ItemBody
-      v-if="item"
-      :item="item"
+      v-if="detail"
+      :item="detail"
     />
-  </DrawerComponent>
+  </UiDrawer>
 </template>
