@@ -1,13 +1,9 @@
 <script setup lang="ts">
-  import { Form } from 'ant-design-vue';
-
   import { DictionaryService } from '~/shared/api';
 
   defineProps<{
     disabled?: boolean;
   }>();
-
-  const context = Form.useInjectFormItemContext();
 
   const model = defineModel<string>();
 
@@ -23,19 +19,15 @@
 
     refresh();
   };
-
-  watch(model, () => {
-    context.onFieldChange();
-  });
 </script>
 
 <template>
-  <AFormItem
+  <UFormField
     label="Номинал монет"
     tooltip="Выберите номинал"
-    :name="['coin']"
+    name="coin"
   >
-    <ASelect
+    <USelect
       v-model:value="model"
       :loading="status === 'pending'"
       :options="data || []"
@@ -44,5 +36,5 @@
       show-search
       @dropdown-visible-change="handleDropdownOpening"
     />
-  </AFormItem>
+  </UFormField>
 </template>

@@ -1,13 +1,11 @@
 <script setup lang="ts">
   import { ItemType } from './ui';
 
-  import { ValidationBase } from '~/shared/utils';
-  import CoinsType from '~items/editor/ui/CoinsType.vue';
+  import CoinsType from '~/features/items/editor/ui/CoinsType.vue';
   import { EditorBaseInfo } from '~ui/editor';
   import { UploadImage } from '~ui/upload';
 
-  import type { FormInstance } from 'ant-design-vue';
-  import type { ItemCreate } from '~items/types';
+  import type { ItemCreate } from '~/features/items/types';
 
   const { isCreating } = defineProps<{
     isCreating: boolean;
@@ -15,7 +13,7 @@
 
   const form = defineModel<ItemCreate>({ required: true });
 
-  const formRef = useTemplateRef<FormInstance>('formRef');
+  const formRef = useTemplateRef('formRef');
 
   watchEffect(() => {
     if (!form.value.category) {
@@ -29,7 +27,7 @@
 </script>
 
 <template>
-  <AForm
+  <UForm
     ref="formRef"
     layout="vertical"
     :model="form"
@@ -40,108 +38,78 @@
       section="item"
     />
 
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Подробности"
-        strong
-      />
-    </ADivider>
+    <USeparator>
+      <span class="font-bold text-secondary">Подробности</span>
+    </USeparator>
 
-    <AFormItem :name="['category']">
+    <UFormField>
       <input
         v-model="form.category"
         type="hidden"
+        name="['category']"
       />
-    </AFormItem>
+    </UFormField>
 
-    <ARow :gutter="16">
-      <ACol :span="8">
-        <ItemType
-          v-model="form.types"
-          multiple
-        />
-      </ACol>
+    <ItemType
+      v-model="form.types"
+      multiple
+    />
 
-      <ACol :span="4">
-        <AFormItem
-          label="Количество монет"
-          tooltip="Введите количество монет"
-          :name="['cost']"
-        >
-          <AInputNumber
-            v-model:value="form.cost"
-            :precision="0"
-            placeholder="Введи количество монет"
-            min="0"
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="4">
-        <CoinsType v-model="form.coin" />
-      </ACol>
-
-      <ACol :span="8">
-        <AFormItem
-          label="Вес"
-          :name="['weight']"
-        >
-          <AInput
-            v-model:value="form.weight"
-            placeholder="Введи вес"
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Описание"
-        strong
+    <UFormField
+      label="Количество монет"
+      tooltip="Введите количество монет"
+      name="['cost']"
+    >
+      <UInput
+        v-model:value="form.cost"
+        :precision="0"
+        placeholder="Введи количество монет"
+        min="0"
       />
-    </ADivider>
+    </UFormField>
 
-    <ARow :gutter="16">
-      <ACol :span="24">
-        <AFormItem
-          label="Описание"
-          :name="['description']"
-          :rules="[ValidationBase.ruleString()]"
-        >
-          <ATextarea
-            v-model:value="form.description"
-            :rows="8"
-            placeholder="Введи описание"
-            allow-clear
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
+    <CoinsType v-model="form.coin" />
 
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Изображения"
-        strong
+    <UFormField
+      label="Вес"
+      name="weight"
+    >
+      <UInput
+        v-model:value="form.weight"
+        placeholder="Введи вес"
       />
-    </ADivider>
+    </UFormField>
 
-    <ARow :gutter="16">
-      <ACol :span="8">
-        <AFormItem
-          label="Основное"
-          tooltip="Эта картинка отображается при просмотре страницы предмета"
-          :name="['image']"
-        >
-          <UploadImage
-            v-model="form.image"
-            section="item"
-            max-size="480"
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-  </AForm>
+    <USeparator>
+      <span class="font-bold text-secondary">Описание</span>
+    </USeparator>
+
+    <UFormField
+      label="Описание"
+      name="description"
+    >
+      <UTextarea
+        v-model:value="form.description"
+        :rows="8"
+        placeholder="Введи описание"
+        allow-clear
+      />
+    </UFormField>
+
+    <USeparator>
+      <span class="font-bold text-secondary">Изображения</span>
+    </USeparator>
+
+    <UFormField
+      label="Основное"
+      tooltip="Эта картинка отображается при просмотре страницы предмета"
+      name="image"
+    >
+      <UploadImage
+        v-model="form.image"
+        section="item"
+        max-size="480"
+      />
+    </UFormField>
+  </UForm>
 </template>

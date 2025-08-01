@@ -1,19 +1,14 @@
 <script setup lang="ts">
-  import { Form } from 'ant-design-vue';
-
   import { DictionaryService } from '~/shared/api';
 
   const { multiple = false } = defineProps<{
-    disabled?: boolean;
     multiple?: boolean;
   }>();
 
-  const context = Form.useInjectFormItemContext();
-
-  const model = defineModel<Array<string>>();
+  const model = defineModel<string | Array<string>>();
 
   const { data, status, refresh } = await useAsyncData(
-    'dictionaries-items-type',
+    'dictionaries-item-type',
     () => DictionaryService.itemType(),
   );
 
@@ -24,28 +19,23 @@
 
     refresh();
   };
-
-  watch(model, () => {
-    context.onFieldChange();
-  });
 </script>
 
 <template>
-  <AFormItem
+  <UFormField
     label="Типы предмета"
     tooltip="Введите типы"
-    :name="['types']"
+    name="types"
   >
-    <ASelect
+    <USelect
       v-model:value="model"
       :mode="multiple ? 'multiple' : undefined"
       :loading="status === 'pending'"
       :options="data || []"
-      :disabled
       placeholder="Выбери типы"
       show-search
       show-arrow
       @dropdown-visible-change="handleDropdownOpening"
     />
-  </AFormItem>
+  </UFormField>
 </template>
