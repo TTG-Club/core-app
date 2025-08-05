@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { useGlobalSearch } from '~/features/search/model/composable';
   import { AppMenu } from '~sidebar/menu';
   import { ThemeSwitcher } from '~sidebar/theme-switcher';
   import { UserHelmet } from '~sidebar/user-helmet';
@@ -14,6 +15,7 @@
 
   const { smaller } = useBreakpoints();
   const { close } = useSidebarPopover();
+  const { open } = useGlobalSearch();
 
   const isMobile = smaller(Breakpoint.MD);
   const hidden = useState('navbar-hidden', () => false);
@@ -89,6 +91,14 @@
 
         <ClientOnly>
           <AppMenu />
+
+          <UButton
+            variant="ghost"
+            icon="i-ttg-search"
+            size="xl"
+            color="neutral"
+            @click="open"
+          />
         </ClientOnly>
       </div>
 
