@@ -4,7 +4,6 @@
 
   import { PwaConfig } from '~pwa/config';
   import { SidebarPanel } from '~sidebar/panel';
-  import { GlobalSearch } from './features/search/command-palette';
 
   const { name } = useTheme();
 
@@ -38,8 +37,6 @@
       <div class="min-h-dvh w-full">
         <NuxtPage />
       </div>
-
-      <GlobalSearch />
     </div>
   </UApp>
 </template>

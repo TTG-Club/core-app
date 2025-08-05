@@ -1,47 +1,39 @@
 import type { GlobalSearchRes } from '~/features/search/model/types';
-import { watchDebounced } from '@vueuse/core';
+import { GlobalSearch } from '../../command-palette';
 
-export const useGlobalSearch = () => {
-  const isOpen = useState('isGlobalSearchOpen', () => false);
+export const useGlobalSearch = async () => {
   const searchTerm = ref('');
-  const data = ref<GlobalSearchRes>();
-  const loading = ref(false);
 
-  const open = () => {
-    isOpen.value = true;
-  };
+  const overlay = useOverlay();
 
-  const close = () => {
-    isOpen.value = false;
-  };
+  const modal = overlay.create(GlobalSearch);
 
-  watchDebounced(
-    searchTerm,
-    async (q) => {
-      if (!q) {
-        data.value = undefined;
+  const isOpen = computed(() => overlay.isOpen(modal.id));
 
-        return;
-      }
+  function open() {
+    if (isOpen.value) {
+      return;
+    }
 
-      loading.value = true;
+    modal.open();
+  }
 
-      try {
-        const { data: res } = await useAsyncData<GlobalSearchRes>(
-          `full-text-search-${q}`,
-          () =>
-            $fetch('/api/v2/full-text-search', {
-              params: { query: q },
-            }),
-        );
+  function close() {
+    modal.close();
+  }
 
-        data.value = res.value;
-      } finally {
-        loading.value = false;
-      }
-    },
-    { debounce: 400 },
+  const { data, execute, status } = await useAsyncData<GlobalSearchRes>(
+    'full-text-search',
+    () =>
+      $fetch('/api/v2/full-text-search', {
+        params: { query: searchTerm.value },
+      }),
+    { server: false, immediate: false, watch: [searchTerm] },
   );
+
+  const loading = computed(() => status.value === 'pending');
+
+  watchDebounced(searchTerm, async () => await execute(), { debounce: 700 });
 
   return { isOpen, searchTerm, data, close, open, loading };
 };

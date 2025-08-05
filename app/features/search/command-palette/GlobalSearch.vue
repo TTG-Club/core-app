@@ -3,7 +3,7 @@
   import { getPathBySearchItem, getTypeNameBySearchItem } from '../model/utils';
   import { GroupTag } from '~/shared/ui/source-tag';
 
-  const { isOpen, loading, data, searchTerm, close } = useGlobalSearch();
+  const { isOpen, loading, data, searchTerm, close } = await useGlobalSearch();
 
   function onSelect() {
     searchTerm.value = '';

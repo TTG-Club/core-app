@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { useGlobalSearch } from '~/features/search/model/composable';
 
-  const { open, isOpen } = useGlobalSearch();
+  const { open, isOpen } = await useGlobalSearch();
 </script>
 
 <template>

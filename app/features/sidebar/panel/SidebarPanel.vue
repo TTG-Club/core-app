@@ -15,7 +15,7 @@
 
   const { smaller } = useBreakpoints();
   const { close } = useSidebarPopover();
-  const { open } = useGlobalSearch();
+  const { open } = await useGlobalSearch();
 
   const isMobile = smaller(Breakpoint.MD);
   const hidden = useState('navbar-hidden', () => false);
