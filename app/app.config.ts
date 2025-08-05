@@ -53,6 +53,13 @@ export default defineAppConfig({
         },
       ],
     },
+    buttonGroup: {
+      variants: {
+        orientation: {
+          horizontal: 'w-full',
+        },
+      },
+    },
     button: {
       slots: {
         base: 'cursor-pointer',
@@ -71,6 +78,20 @@ export default defineAppConfig({
       },
     },
     input: {
+      slots: {
+        root: 'w-full',
+        base: 'bg-accented',
+      },
+      variants: {
+        defaultVariants: {
+          variant: 'soft',
+        },
+        variant: {
+          outline: 'bg-accented text-default',
+        },
+      },
+    },
+    inputTags: {
       slots: {
         root: 'w-full',
         base: 'bg-accented',
@@ -176,25 +197,25 @@ export default defineAppConfig({
       variants: {
         color: {
           primary: {
-            title: 'text-primary',
+            title: 'font-bold text-highlighted',
           },
           secondary: {
-            title: 'text-secondary',
+            title: 'font-bold text-highlighted',
           },
           success: {
-            title: 'text-success',
+            title: 'font-bold text-highlighted',
           },
           info: {
-            title: 'text-info',
+            title: 'font-bold text-highlighted',
           },
           warning: {
-            title: 'text-warning',
+            title: 'font-bold text-highlighted',
           },
           error: {
-            title: 'text-error',
+            title: 'font-bold text-highlighted',
           },
           neutral: {
-            title: 'text-highlighted',
+            title: 'font-bold text-highlighted',
           },
         },
       },

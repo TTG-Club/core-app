@@ -2,32 +2,56 @@
   import { EditorBaseInfo } from '~ui/editor';
 
   import type { GlossaryCreate } from '~/shared/types';
+  import type { FormErrorEvent, FormSubmitEvent } from '#ui/types';
+  import { z } from 'zod/v4';
 
-  const { isCreating } = defineProps<{
-    isCreating: boolean;
+  const emit = defineEmits<{
+    (e: 'submit', v: GlossaryCreate): void;
+    (e: 'error', v: FormErrorEvent): void;
   }>();
 
   const form = defineModel<GlossaryCreate>({ required: true });
 
   const formRef = useTemplateRef('formRef');
+  const $toast = useToast();
 
-  function validate() {
-    return formRef.value?.validate();
-  }
+  const schema = z.object({
+    tagCategory: z.string().nonempty(),
+    description: z.string().nonempty(),
+  });
 
   defineExpose({
-    validate,
+    submit: () => formRef.value!.submit(),
   });
+
+  function onSubmit(payload: GlossaryCreate) {
+    consola.log(payload);
+  }
+
+  function onError(err: FormErrorEvent) {
+    consola.error(err);
+
+    $toast.add({
+      title: 'Ошибка валидации',
+      description: 'Некоторые поля формы заполнены с ошибкой',
+      color: 'error',
+    });
+  }
 </script>
 
 <template>
   <UForm
     ref="formRef"
     class="grid grid-cols-24 gap-4"
-    :disabled="isCreating"
     :state="form"
+    :schema
+    @submit="onSubmit($event.data)"
+    @error="onError"
   >
+    <UButton type="submit">asd</UButton>
+
     <EditorBaseInfo
+      ref="baseInfo"
       v-model="form"
       section="glossary"
     />
@@ -40,6 +64,8 @@
       class="col-span-24"
       label="Категория тегов"
       help="Категория для записей глоссария"
+      name="tagCategory"
+      required
     >
       <UInput
         v-model="form.tagCategory"

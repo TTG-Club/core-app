@@ -37,73 +37,49 @@
   const isCreating = ref(false);
   const isCreated = ref(false);
 
-  async function submit() {
-    if (!checkIsEdited()) {
-      $toast.add({
-        title: 'Ошибка сохранения записи глоссария',
-        description: 'Измени хотя бы одно поле, чтобы сохранить',
-        color: 'error',
-      });
-
-      throw new Error('Form is equal with initial state');
-    }
-
-    if (!editor.value?.validate) {
-      $toast.add({
-        color: 'error',
-        title: 'Ошибка сохранения записи глоссария',
-        description: () =>
-          h('span', null, [
-            'Произошла какая-то ошибка... попробуй еще раз или обратись за помощью на нашем ',
-            h(
-              'a',
-              {
-                target: '_blank',
-                href: 'https://discord.gg/JqFKMKRtxv',
-                rel: 'noreferrer noopener',
-              },
-              'Discord-канале',
-            ),
-          ]),
-      });
-
-      throw new Error('Validation method was not found');
-    }
-
-    isCreating.value = true;
-
-    try {
-      const payload = await editor.value.validate();
-
-      await $fetch<string>(`/api/v2/glossary/${route.params.url}`, {
-        method: 'PUT',
-        body: payload,
-        onRequestError: () => {
-          isCreating.value = false;
-        },
-        onResponseError: (error) => {
-          isCreating.value = false;
-
-          $toast.add({
-            color: 'error',
-            title: 'Ошибка сохранения черты',
-            description: error.response._data.message,
-          });
-        },
-      });
-
-      $toast.add({
-        color: 'success',
-        title: 'Запись глоссария успешно сохранена',
-        description: getLink,
-      });
-    } catch (err) {
-      isCreating.value = false;
-    } finally {
-      isCreating.value = false;
-    }
-  }
-
+  // async function submit() {
+  //   if (!checkIsEdited()) {
+  //     $toast.add({
+  //       title: 'Ошибка сохранения записи глоссария',
+  //       description: 'Измени хотя бы одно поле, чтобы сохранить',
+  //       color: 'error',
+  //     });
+  //
+  //     throw new Error('Form is equal with initial state');
+  //   }
+  //
+  //   isCreating.value = true;
+  //
+  //   try {
+  //     await $fetch<string>(`/api/v2/glossary/${route.params.url}`, {
+  //       method: 'PUT',
+  //       body: payload,
+  //       onRequestError: () => {
+  //         isCreating.value = false;
+  //       },
+  //       onResponseError: (error) => {
+  //         isCreating.value = false;
+  //
+  //         $toast.add({
+  //           color: 'error',
+  //           title: 'Ошибка сохранения черты',
+  //           description: error.response._data.message,
+  //         });
+  //       },
+  //     });
+  //
+  //     $toast.add({
+  //       color: 'success',
+  //       title: 'Запись глоссария успешно сохранена',
+  //       description: getLink,
+  //     });
+  //   } catch (err) {
+  //     isCreating.value = false;
+  //   } finally {
+  //     isCreating.value = false;
+  //   }
+  // }
+  //
   function getInitialState(): GlossaryCreate {
     return {
       url: '',
@@ -121,29 +97,29 @@
       tagCategory: '',
     };
   }
-
-  function checkIsEdited() {
-    return !isEqual(toRaw(backup.value), toRaw(form.value));
-  }
-
-  function getLink() {
-    return h('span', [
-      'Можешь перейти на ее ',
-      h(
-        NuxtLink,
-        {
-          to: {
-            name: 'glossary-url',
-            params: {
-              url: form.value.url,
-            },
-          },
-          target: '_blank',
-        },
-        () => 'страницу',
-      ),
-    ]);
-  }
+  //
+  // function checkIsEdited() {
+  //   return !isEqual(toRaw(backup.value), toRaw(form.value));
+  // }
+  //
+  // function getLink() {
+  //   return h('span', [
+  //     'Можешь перейти на ее ',
+  //     h(
+  //       NuxtLink,
+  //       {
+  //         to: {
+  //           name: 'glossary-url',
+  //           params: {
+  //             url: form.value.url,
+  //           },
+  //         },
+  //         target: '_blank',
+  //       },
+  //       () => 'страницу',
+  //     ),
+  //   ]);
+  // }
 </script>
 
 <template>
@@ -152,18 +128,6 @@
     name="detail"
   >
     <template #actions>
-      <UButton
-        v-if="!rawIncorrect"
-        :disabled="isCreated"
-        :loading="isCreating"
-        icon="i-ttg-check"
-        variant="ghost"
-        color="neutral"
-        @click.left.exact.prevent="submit"
-      >
-        Сохранить
-      </UButton>
-
       <UTooltip text="Закрыть">
         <UButton
           variant="ghost"

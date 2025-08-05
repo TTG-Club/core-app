@@ -26,58 +26,51 @@
   const isCreating = ref(false);
   const isCreated = ref(false);
 
-  async function submit() {
+  function submit(body: GlossaryCreate) {
     isCreating.value = true;
 
-    try {
-      const payload = await editor.value?.validate?.();
-
-      await $fetch<string>('/api/v2/glossary', {
-        method: 'POST',
-        body: payload,
-        onRequestError: () => {
-          isCreating.value = false;
-        },
-        onResponseError: (error) => {
-          isCreating.value = false;
-
-          $toast.add({
-            title: 'Ошибка создания глоссария',
-            description: error.response._data.message,
-            color: 'error',
-          });
-        },
+    $fetch<string>('/api/v2/glossary', {
+      method: 'POST',
+      body,
+      onResponseError: (error) => {
+        $toast.add({
+          title: 'Ошибка создания глоссария',
+          description: error.response._data.message,
+          color: 'error',
+        });
+      },
+    })
+      .then(() => {
+        showSuccessToast();
+        isCreated.value = true;
+      })
+      .finally(() => {
+        isCreating.value = false;
       });
-
-      $toast.add({
-        title: 'Запись глоссария успешно создана',
-        description: getLink,
-        color: 'success',
-      });
-    } catch (err) {
-      isCreating.value = false;
-    } finally {
-      isCreating.value = false;
-    }
   }
 
-  function getLink() {
-    return h('span', [
-      'Можешь перейти на нее ',
-      h(
-        NuxtLink,
-        {
-          to: {
-            name: 'glossary-url',
-            params: {
-              url: form.value.url,
+  function showSuccessToast() {
+    $toast.add({
+      title: 'Запись глоссария успешно создана',
+      description: () =>
+        h('span', [
+          'Можешь перейти на нее ',
+          h(
+            NuxtLink,
+            {
+              to: {
+                name: 'glossary-url',
+                params: {
+                  url: form.value.url,
+                },
+              },
+              target: '_blank',
             },
-          },
-          target: '_blank',
-        },
-        () => 'страницу',
-      ),
-    ]);
+            () => 'страницу',
+          ),
+        ]),
+      color: 'success',
+    });
   }
 </script>
 
@@ -87,17 +80,6 @@
     name="detail"
   >
     <template #actions>
-      <UButton
-        :disabled="isCreated"
-        :loading="isCreating"
-        icon="i-ttg-check"
-        variant="ghost"
-        color="neutral"
-        @click.left.exact.prevent="submit"
-      >
-        Создать
-      </UButton>
-
       <UTooltip text="Закрыть">
         <UButton
           variant="ghost"
@@ -114,6 +96,8 @@
           ref="editor"
           v-model="form"
           :is-creating="isCreating"
+          @submit="submit"
+          @error="consola.error($event)"
         />
       </ClientOnly>
     </template>
