@@ -5,16 +5,10 @@
     MagicItemCategory,
   } from './ui';
 
-  import { EditorBaseInfo } from '~ui/editor';
+  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { UploadImage } from '~ui/upload';
 
   import type { MagicItemCreate } from '~magic-items/types';
-
-  const { isCreating } = defineProps<{
-    isCreating: boolean;
-  }>();
-
-  const form = defineModel<MagicItemCreate>({ required: true });
 
   const formRef = useTemplateRef('formRef');
 
@@ -25,17 +19,58 @@
   defineExpose({
     validate,
   });
+
+  function getInitialState(): MagicItemCreate {
+    return {
+      url: '',
+      name: {
+        rus: '',
+        eng: '',
+        alt: [],
+      },
+      source: {
+        url: undefined,
+        page: undefined,
+      },
+      description: '',
+      category: {
+        type: undefined,
+        clarification: undefined,
+      },
+      rarity: {
+        type: undefined,
+        varies: undefined,
+      },
+      attunement: {
+        requires: false,
+        description: null,
+      },
+      charges: 0,
+      curse: false,
+      consumable: false,
+      image: undefined,
+      tags: [],
+    };
+  }
+
+  const { state, onError, onSubmit } = await useWorkshopForm<MagicItemCreate>(
+    computed(() => ({
+      actionUrl: '/api/v2/magic-items',
+      getInitialState,
+    })),
+  );
 </script>
 
 <template>
   <UForm
     ref="formRef"
-    :state="form"
-    :disabled="isCreating"
+    :state
     class="grid grid-cols-24 gap-4"
+    @error="onError"
+    @submit="onSubmit"
   >
     <EditorBaseInfo
-      v-model="form"
+      v-model="state"
       section="magic-item"
     />
 
@@ -43,11 +78,11 @@
       <span class="font-bold text-secondary">Подробности</span>
     </USeparator>
 
-    <MagicItemCategory v-model="form.category" />
+    <MagicItemCategory v-model="state.category" />
 
-    <MagicItemRarity v-model="form.rarity" />
+    <MagicItemRarity v-model="state.rarity" />
 
-    <MagicItemAttunement v-model="form.attunement" />
+    <MagicItemAttunement v-model="state.attunement" />
 
     <UFormField
       class="col-span-4"
@@ -55,7 +90,7 @@
       name="curse"
     >
       <UCheckbox
-        v-model="form.curse"
+        v-model="state.curse"
         label="Есть"
       />
     </UFormField>
@@ -66,7 +101,7 @@
       name="consumable"
     >
       <UCheckbox
-        v-model="form.consumable"
+        v-model="state.consumable"
         label="Да"
       />
     </UFormField>
@@ -78,7 +113,7 @@
       name="charges"
     >
       <UInput
-        v-model="form.charges"
+        v-model="state.charges"
         type="number"
         placeholder="Введи количество зарядов"
         min="0"
@@ -96,7 +131,7 @@
       name="description"
     >
       <UTextarea
-        v-model="form.description"
+        v-model="state.description"
         :rows="8"
         placeholder="Введи описание"
       />
@@ -113,10 +148,12 @@
       name="image"
     >
       <UploadImage
-        v-model="form.image"
+        v-model="state.image"
         section="magic-item"
         max-size="480"
       />
     </UFormField>
+
+    <EditorFormControls />
   </UForm>
 </template>

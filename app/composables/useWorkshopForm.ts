@@ -1,89 +1,99 @@
 import type { FormErrorEvent } from '#ui/types';
 import { cloneDeep, isEqual, merge } from 'lodash-es';
+import type { CreatureDetailResponse } from '~bestiary/types';
 
-interface WorkshopBaseFormOptions<T> {
-  actionUrl: MaybeRefOrGetter<string>;
+export type WorkshopFormOptions<T> = MaybeRefOrGetter<{
+  actionUrl: string;
   getInitialState: () => T;
-}
+}>;
 
-interface WorkshopEditFormOptions<T> extends WorkshopBaseFormOptions<T> {
-  type: MaybeRefOrGetter<'edit'>;
-  entryUrl: MaybeRefOrGetter<string>;
-  rawUrl: MaybeRefOrGetter<string>;
-}
-
-interface WorkshopCreateFormOptions<T> extends WorkshopBaseFormOptions<T> {
-  type: MaybeRefOrGetter<'create'>;
-}
-
-type WorkshopFormOptions<T> = MaybeRefOrGetter<
-  WorkshopEditFormOptions<T> | WorkshopCreateFormOptions<T>
->;
-
-export function useWorkshopForm<T extends Record<string, any>>(
+export async function useWorkshopForm<T extends Record<string, any>>(
   options: WorkshopFormOptions<T>,
 ) {
   const _options = toValue(options);
   const $toast = useToast();
+  const route = useRoute();
 
   const state = useState<T>(_options.getInitialState);
   const prevState = useState<T>(_options.getInitialState);
+  const isPreviewShowed = useState<boolean>(() => false);
 
-  const { status, refresh: reset } = useAsyncData<T>(
-    computed(
-      () =>
-        `workshop-${_options.type}${_options.type === 'edit' && _options.entryUrl ? `-${_options.entryUrl}` : ''}`,
-    ),
-    async () => {
-      const mutatedState = _options.getInitialState();
+  const isEdit = computed(() => !!route.params.url);
 
-      if (_options.type === 'edit') {
-        try {
-          const resp = await $fetch<T>(_options.rawUrl);
+  const actionUrl = computed(() => {
+    if (isEdit.value) {
+      return `${_options.actionUrl}/${route.params.url}`;
+    }
 
-          merge(mutatedState, resp);
-        } catch (error) {
-          consola.error(error);
-
-          $toast.add({
-            title: 'Ошибка данных',
-            description: 'При попытке отобразить форму произошла ошибка',
-            color: 'error',
-            actions: [
-              {
-                label: 'i-ttg-center-axis',
-                icon: 'refresh',
-                onClick: withModifiers(reset, ['left', 'exact', 'prevent']),
-              },
-            ],
-          });
-        }
-      }
-
-      return mutatedState;
-    },
-  );
-
-  const rawIncorrect = computed(() => status.value === 'error');
+    return _options.actionUrl;
+  });
 
   const isEdited = computed(
     () => !isEqual(toRaw(prevState.value), toRaw(state.value)),
   );
 
-  async function onSubmit(body: T) {
+  const { refresh: reset } = useAsyncData(async () => {
+    const mutatedState = _options.getInitialState();
+
+    if (isEdit.value) {
+      try {
+        const resp = await $fetch<T>(`${actionUrl.value}/raw`);
+
+        merge(mutatedState, resp);
+      } catch (error) {
+        consola.error(error);
+
+        $toast.add({
+          title: 'Ошибка данных',
+          description: 'При попытке отобразить форму произошла ошибка',
+          color: 'error',
+          actions: [
+            {
+              icon: 'i-ttg-center-axis',
+              label: 'Перезагрузить',
+              onClick: withModifiers(reset, ['left', 'exact', 'prevent']),
+            },
+          ],
+        });
+      }
+    }
+
+    state.value = cloneDeep(mutatedState);
+    prevState.value = cloneDeep(mutatedState);
+  });
+
+  const { execute } = await useFetch(actionUrl, {
+    method: computed(() => (isEdit.value ? 'put' : 'post')),
+    body: state,
+    lazy: true,
+    server: false,
+    immediate: false,
+    watch: false,
+  });
+
+  async function onSubmit() {
     if (!isEdited.value) {
       $toast.add({
         title: 'Нечего сохранять',
         description: 'Отредактируй форму, чтобы выполнить сохранение',
         color: 'warning',
       });
+
+      return;
     }
 
     try {
-      await $fetch(_options.actionUrl, {
-        method: _options.type === 'edit' ? 'put' : 'post',
-        body,
+      await execute();
+
+      $toast.add({
+        title: 'Сохранено',
+        description: 'Запись успешно сохранена!',
+        color: 'success',
       });
+
+      if (isEdit.value) {
+        await reset();
+      }
     } catch (error) {
       console.error(error);
 
@@ -105,17 +115,50 @@ export function useWorkshopForm<T extends Record<string, any>>(
     });
   }
 
-  watch(() => options);
+  const {
+    data: preview,
+    status,
+    execute: loadPreview,
+    clear,
+  } = await useFetch<CreatureDetailResponse>(
+    computed(() => `${_options.actionUrl}/preview`),
+    {
+      method: 'POST',
+      body: state,
+      lazy: true,
+      server: false,
+      immediate: false,
+    },
+  );
+
+  function showPreview() {
+    isPreviewShowed.value = true;
+  }
+
+  watch(isPreviewShowed, (value) => {
+    clear();
+
+    if (!value) {
+      return;
+    }
+
+    loadPreview();
+  });
 
   return {
     state,
+    prevState,
+    preview,
 
     isEdited,
-    rawIncorrect,
+    isPreviewShowed,
+    isPreviewLoading: computed(() => status.value === 'pending'),
+    isPreviewError: computed(() => status.value === 'error'),
 
     onSubmit,
     onError,
 
     reset,
+    showPreview,
   };
 }
