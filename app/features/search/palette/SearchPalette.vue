@@ -16,7 +16,7 @@
       $fetch<GlobalSearchRes>('/api/v2/full-text-search', {
         params: {
           query:
-            searchQuery.value && searchQuery.value.length >= 1
+            searchQuery.value && searchQuery.value.length >= 2
               ? searchQuery.value
               : undefined,
         },
