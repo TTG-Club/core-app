@@ -11,19 +11,31 @@
   const searchQuery = refDebounced(searchTerm, 700);
 
   const { data, status } = await useAsyncData(
-    computed(() => `full-text-search-${searchQuery.value}`),
-    () =>
-      $fetch<GlobalSearchRes>('/api/v2/full-text-search', {
+    computed(
+      () =>
+        `full-text-search${
+          searchQuery.value.length >= 2 ? `-${searchQuery.value}` : ''
+        }`,
+    ),
+    () => {
+      if (searchQuery.value.length < 2) {
+        return Promise.resolve({
+          items: [],
+          total: 0,
+          filtered: 0,
+        });
+      }
+
+      return $fetch<GlobalSearchRes>('/api/v2/full-text-search', {
         params: {
-          query:
-            searchQuery.value && searchQuery.value.length >= 2
-              ? searchQuery.value
-              : undefined,
+          query: searchQuery.value,
         },
-      }),
+      });
+    },
     {
       watch: [searchQuery],
       deep: false,
+      lazy: true,
       default: () => ({
         items: [],
         total: 0,
