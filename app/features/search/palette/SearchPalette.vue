@@ -1,9 +1,13 @@
 <script setup lang="ts">
   import { useGlobalSearch } from '~search/composable';
   import { SourceTag } from '~ui/source-tag';
-  import { getPathBySearchItem, getTypeNameBySearchItem } from './model';
-  import type { GlobalSearchRes, SearchItemsType } from './model';
-  import { groupBy } from 'lodash-es';
+  import {
+    getPathBySearchItem,
+    getTypeNameBySearchItem,
+    SearchItems,
+  } from './model';
+  import type { GlobalSearchRes } from './model';
+  import { sortBy } from 'lodash-es';
 
   const { isOpen, close } = useGlobalSearch();
 
@@ -49,19 +53,21 @@
       return [];
     }
 
-    const grouped = groupBy(data.value.items, (item) => item.type);
-
-    return Object.entries(grouped).map(([id, group]) => ({
-      id,
-      label: getTypeNameBySearchItem(id as SearchItemsType),
+    const results = Object.values(SearchItems).map((type) => ({
+      id: type,
+      label: getTypeNameBySearchItem(type),
       ignoreFilter: true,
-      items: group.map((item) => ({
-        label: item.name.rus,
-        suffix: item.name.eng ? `[${item.name.eng}]` : undefined,
-        source: item.source,
-        to: `/${getPathBySearchItem(item.type)}/${item.url}`,
-      })),
+      items: data.value.items
+        .filter((item) => item.type === type)
+        .map((item) => ({
+          label: item.name.rus,
+          suffix: item.name.eng ? `[${item.name.eng}]` : undefined,
+          source: item.source,
+          to: `/${getPathBySearchItem(item.type)}/${item.url}`,
+        })),
     }));
+
+    return sortBy(results, 'label');
   });
 
   const isLoading = computed(() => status.value === 'pending');

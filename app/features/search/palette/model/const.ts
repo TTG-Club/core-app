@@ -1,6 +1,6 @@
 type ValueOf<T> = T[keyof T];
 
-const SearchItems = {
+export const SearchItems = {
   BACKGROUND: 'background',
   FEAT: 'feat',
   SPECIES: 'species',
