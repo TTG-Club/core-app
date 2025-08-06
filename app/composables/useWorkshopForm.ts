@@ -18,24 +18,24 @@ export async function useWorkshopForm<T extends Record<string, any>>(
   const prevState = useState<T>(_options.getInitialState);
   const isPreviewShowed = useState<boolean>(() => false);
 
-  const isEdit = computed(() => !!route.params.url);
+  const isEditForm = computed(() => !!route.params.url);
 
   const actionUrl = computed(() => {
-    if (isEdit.value) {
+    if (isEditForm.value) {
       return `${_options.actionUrl}/${route.params.url}`;
     }
 
     return _options.actionUrl;
   });
 
-  const isEdited = computed(
+  const isFormEdited = computed(
     () => !isEqual(toRaw(prevState.value), toRaw(state.value)),
   );
 
   const { refresh: reset } = useAsyncData(async () => {
     const mutatedState = _options.getInitialState();
 
-    if (isEdit.value) {
+    if (isEditForm.value) {
       try {
         const resp = await $fetch<T>(`${actionUrl.value}/raw`);
 
@@ -63,7 +63,7 @@ export async function useWorkshopForm<T extends Record<string, any>>(
   });
 
   const { execute } = await useFetch(actionUrl, {
-    method: computed(() => (isEdit.value ? 'put' : 'post')),
+    method: computed(() => (isEditForm.value ? 'put' : 'post')),
     body: state,
     lazy: true,
     server: false,
@@ -72,7 +72,7 @@ export async function useWorkshopForm<T extends Record<string, any>>(
   });
 
   async function onSubmit() {
-    if (!isEdited.value) {
+    if (!isFormEdited.value) {
       $toast.add({
         title: 'Нечего сохранять',
         description: 'Отредактируй форму, чтобы выполнить сохранение',
@@ -91,7 +91,7 @@ export async function useWorkshopForm<T extends Record<string, any>>(
         color: 'success',
       });
 
-      if (isEdit.value) {
+      if (isEditForm.value) {
         await reset();
       }
     } catch (error) {
@@ -150,7 +150,7 @@ export async function useWorkshopForm<T extends Record<string, any>>(
     prevState,
     preview,
 
-    isEdited,
+    isFormEdited,
     isPreviewShowed,
     isPreviewLoading: computed(() => status.value === 'pending'),
     isPreviewError: computed(() => status.value === 'error'),
