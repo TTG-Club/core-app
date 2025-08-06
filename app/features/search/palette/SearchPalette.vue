@@ -96,7 +96,10 @@
         @update:model-value="onClose"
       >
         <template #item-trailing="{ item }">
-          <SourceTag :source="item.source" />
+          <SourceTag
+            :source="item.source"
+            show-group
+          />
         </template>
 
         <template

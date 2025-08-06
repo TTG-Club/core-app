@@ -26,19 +26,6 @@
 <template>
   <div class="flex gap-1">
     <UTooltip
-      v-if="showGroup"
-      :text="source.group.rus"
-      :disabled="!showTooltip"
-    >
-      <UBadge
-        variant="subtle"
-        size="sm"
-      >
-        {{ source.group.label }}
-      </UBadge>
-    </UTooltip>
-
-    <UTooltip
       :text="`${source.name.rus} [${source.name.eng}]`"
       :disabled="!showTooltip"
     >
@@ -48,6 +35,19 @@
         :color
       >
         {{ source.name.label }}
+      </UBadge>
+    </UTooltip>
+
+    <UTooltip
+      v-if="showGroup"
+      :text="source.group.rus"
+      :disabled="!showTooltip"
+    >
+      <UBadge
+        variant="subtle"
+        size="sm"
+      >
+        {{ source.group.label }}
       </UBadge>
     </UTooltip>
   </div>
