@@ -87,7 +87,10 @@
           <SourceTag :source="item.source" />
         </template>
 
-        <template #footer>
+        <template
+          v-if="data.items && data.total"
+          #footer
+        >
           <div class="flex items-center justify-between gap-2 text-xs">
             <span class="text-secondary">
               Показано {{ data.filtered }} из {{ data.total }}
