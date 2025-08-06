@@ -25,7 +25,7 @@
   <SmallLink
     :to="{ name: 'glossary-url', params: { url: glossary.url } }"
     :title="`${glossary.name.rus} [${glossary.name.eng}]`"
-    :group="glossary.source?.group"
+    :source="glossary.source"
     :is-opened
     @open-drawer="drawer.open()"
   >

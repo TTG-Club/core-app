@@ -1,8 +1,10 @@
 <script setup lang="ts">
   import { AppMenu } from '~sidebar/menu';
   import { ThemeSwitcher } from '~sidebar/theme-switcher';
-  import { UserHelmet } from '~sidebar/user-helmet';
+  import { UserHelmet } from '~user/helmet';
   import { SvgLogo } from '~ui/icon';
+  import { SearchButton } from '~search/button';
+  import { useGlobalSearch } from '~search/composable';
 
   const route = useRoute();
   const { y } = useWindowScroll();
@@ -14,6 +16,13 @@
 
   const { smaller } = useBreakpoints();
   const { close } = useSidebarPopover();
+  const { open } = useGlobalSearch();
+
+  defineShortcuts({
+    '/': open,
+    '\\': open,
+    'meta_k': open,
+  });
 
   const isMobile = smaller(Breakpoint.MD);
   const hidden = useState('navbar-hidden', () => false);
@@ -89,6 +98,8 @@
 
         <ClientOnly>
           <AppMenu />
+
+          <SearchButton />
         </ClientOnly>
       </div>
 

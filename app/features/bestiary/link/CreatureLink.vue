@@ -25,7 +25,7 @@
   <SmallLink
     :to="{ name: 'bestiary-url', params: { url: creature.url } }"
     :title="`${creature.name.rus} [${creature.name.eng}]`"
-    :group="creature.source.group"
+    :source="creature.source"
     :is-opened
     @open-drawer="drawer.open()"
   >

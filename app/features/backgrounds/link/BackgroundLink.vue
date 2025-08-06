@@ -25,7 +25,7 @@
   <SmallLink
     :to="{ name: 'backgrounds-url', params: { url: background.url } }"
     :title="`${background.name.rus} [${background.name.eng}]`"
-    :group="background.source.group"
+    :source="background.source"
     :is-opened
     @open-drawer="drawer.open()"
   >
