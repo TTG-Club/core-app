@@ -27,7 +27,7 @@
   <SmallLink
     :to="{ name: 'spells-url', params: { url: spell.url } }"
     :title="`${spell.name.rus} [${spell.name.eng}]`"
-    :group="spell.source.group"
+    :source="spell.source"
     :is-opened
     @open-drawer="drawer.open()"
   >

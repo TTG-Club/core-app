@@ -25,7 +25,7 @@
   <SmallLink
     :to="{ name: 'feats-url', params: { url: feat.url } }"
     :title="`${feat.name.rus} [${feat.name.eng}]`"
-    :group="feat.source.group"
+    :source="feat.source"
     :is-opened
     @open-drawer="drawer.open()"
   >

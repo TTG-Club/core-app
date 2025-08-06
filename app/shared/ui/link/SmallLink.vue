@@ -1,15 +1,14 @@
 <script setup lang="ts">
-  import { GroupTag } from '../source-tag';
-
   import type { RouteLocationRaw } from 'vue-router';
-  import type { SourceGroupResponse } from '~/shared/types';
+  import type { SourceResponse } from '~/shared/types';
+  import { SourceTag } from '~ui/source-tag';
 
   const {
-    group = undefined,
+    source = undefined,
     title = undefined,
     to = undefined,
   } = defineProps<{
-    group?: SourceGroupResponse;
+    source?: SourceResponse;
     title?: string;
     to?: RouteLocationRaw;
     isOpened?: boolean;
@@ -77,10 +76,10 @@
             </span>
 
             <div
-              v-if="group"
+              v-if="source"
               class="shrink-0"
             >
-              <GroupTag :group="group" />
+              <SourceTag :source />
             </div>
           </div>
 

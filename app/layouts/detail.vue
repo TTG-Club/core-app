@@ -102,6 +102,8 @@
             <SourceTag
               v-if="source"
               :source="source"
+              show-tooltip
+              show-group
             />
           </div>
         </div>

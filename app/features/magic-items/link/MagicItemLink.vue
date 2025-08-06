@@ -25,7 +25,7 @@
   <SmallLink
     :to="{ name: 'magic-items-url', params: { url: magicItem.url } }"
     :title="`${magicItem.name.rus} [${magicItem.name.eng}]`"
-    :group="magicItem.source.group"
+    :source="magicItem.source"
     :is-opened
     @open-drawer="drawer.open()"
   >

@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { LinkLineages, LinkPreview } from './ui';
 
-  import { GroupTag } from '~ui/source-tag';
+  import { SourceTag } from '~ui/source-tag';
 
   import type { SpeciesLinkResponse } from '~/shared/types';
 
@@ -29,7 +29,7 @@
             {{ species.name.rus }}
           </span>
 
-          <GroupTag :group="species.source.group" />
+          <SourceTag :source="species.source" />
         </div>
 
         <div :class="$style.common">

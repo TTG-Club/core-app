@@ -5,6 +5,7 @@ const SearchItems = {
   FEAT: 'feat',
   SPECIES: 'species',
   SPELL: 'spell',
+  BESTIARY: 'bestiary',
 } as const;
 
 export type SearchItemsType = ValueOf<typeof SearchItems>;
@@ -14,6 +15,7 @@ export const mapSearchItemsToPaths = new Map<SearchItemsType, string>([
   [SearchItems.FEAT, 'feats'],
   [SearchItems.SPECIES, 'species'],
   [SearchItems.SPELL, 'spells'],
+  [SearchItems.BESTIARY, 'bestiary'],
 ]);
 
 export const mapSearchItemsToTypeNames = new Map<SearchItemsType, string>([
@@ -21,4 +23,5 @@ export const mapSearchItemsToTypeNames = new Map<SearchItemsType, string>([
   [SearchItems.FEAT, 'Черты'],
   [SearchItems.SPECIES, 'Виды'],
   [SearchItems.SPELL, 'Заклинания'],
+  [SearchItems.BESTIARY, 'Бестиарий'],
 ]);
