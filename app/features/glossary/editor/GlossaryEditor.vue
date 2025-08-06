@@ -1,34 +1,58 @@
 <script setup lang="ts">
-  import { EditorBaseInfo } from '~ui/editor';
+  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
 
   import type { GlossaryCreate } from '~/shared/types';
-
-  const { isCreating } = defineProps<{
-    isCreating: boolean;
-  }>();
-
-  const form = defineModel<GlossaryCreate>({ required: true });
+  import { z } from 'zod/v4';
 
   const formRef = useTemplateRef('formRef');
 
-  function validate() {
-    return formRef.value?.validate();
-  }
+  const schema = z.object({
+    tagCategory: z.string().nonempty(),
+    description: z.string().nonempty(),
+  });
 
   defineExpose({
-    validate,
+    submit: () => formRef.value!.submit(),
   });
+
+  function getInitialState(): GlossaryCreate {
+    return {
+      url: '',
+      name: {
+        rus: '',
+        eng: '',
+        alt: [],
+      },
+      source: {
+        url: undefined,
+        page: undefined,
+      },
+      description: '',
+      tags: [],
+      tagCategory: '',
+    };
+  }
+
+  const { state, onSubmit, onError } = await useWorkshopForm<GlossaryCreate>(
+    computed(() => ({
+      actionUrl: '/api/v2/glossary',
+      getInitialState,
+    })),
+  );
 </script>
 
 <template>
   <UForm
     ref="formRef"
     class="grid grid-cols-24 gap-4"
-    :disabled="isCreating"
-    :state="form"
+    :schema
+    :state
+    @submit="onSubmit"
+    @error="onError"
   >
     <EditorBaseInfo
-      v-model="form"
+      ref="baseInfo"
+      v-model="state"
       section="glossary"
     />
 
@@ -40,9 +64,11 @@
       class="col-span-24"
       label="Категория тегов"
       help="Категория для записей глоссария"
+      name="tagCategory"
+      required
     >
       <UInput
-        v-model="form.tagCategory"
+        v-model="state.tagCategory"
         placeholder="Введите категорию тегов"
       />
     </UFormField>
@@ -54,10 +80,12 @@
       required
     >
       <UTextarea
-        v-model="form.description"
+        v-model="state.description"
         :rows="8"
         placeholder="Введи описание"
       />
     </UFormField>
+
+    <EditorFormControls />
   </UForm>
 </template>

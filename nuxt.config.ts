@@ -2,6 +2,7 @@
 import { fileURLToPath, URL } from 'node:url';
 
 import bytes from 'bytes';
+import ms from 'ms';
 
 const application = {
   name: {
@@ -193,6 +194,30 @@ export default defineNuxtConfig({
   nitro: {
     experimental: {
       openAPI: true,
+    },
+
+    // TODO: Поиграть с лимитами в будущем, если не будет хватать
+    routeRules: {
+      '/api/**': {
+        security: {
+          enabled: process.env.NODE_ENV !== 'development',
+          rateLimiter: {
+            tokensPerInterval: 75,
+            interval: ms('1m'),
+            headers: true,
+          },
+        },
+      },
+      '/s3/**': {
+        security: {
+          enabled: process.env.NODE_ENV !== 'development',
+          rateLimiter: {
+            tokensPerInterval: 75,
+            interval: ms('1m'),
+            headers: true,
+          },
+        },
+      },
     },
   },
 

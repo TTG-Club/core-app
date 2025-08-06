@@ -1,14 +1,8 @@
 <script setup lang="ts">
-  import { EditorBaseInfo } from '~ui/editor';
+  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectAbilities, SelectFeat, SelectSkill } from '~ui/select';
 
   import type { BackgroundCreate } from '~/shared/types';
-
-  const { isCreating } = defineProps<{
-    isCreating: boolean;
-  }>();
-
-  const form = defineModel<BackgroundCreate>({ required: true });
 
   const formRef = useTemplateRef('formRef');
 
@@ -19,17 +13,47 @@
   defineExpose({
     validate,
   });
+
+  function getInitialState(): BackgroundCreate {
+    return {
+      url: '',
+      name: {
+        rus: '',
+        eng: '',
+        alt: [],
+      },
+      source: {
+        url: undefined,
+        page: undefined,
+      },
+      description: '',
+      abilityScores: [],
+      featUrl: undefined,
+      skillsProficiencies: [],
+      toolProficiency: '',
+      equipment: '',
+      tags: [],
+    };
+  }
+
+  const { state, onSubmit, onError } = await useWorkshopForm<BackgroundCreate>(
+    computed(() => ({
+      actionUrl: '/api/v2/backgrounds',
+      getInitialState,
+    })),
+  );
 </script>
 
 <template>
   <UForm
     ref="formRef"
-    :state="form"
-    :disabled="isCreating"
+    :state
     class="grid grid-cols-24 gap-4"
+    @submit="onSubmit"
+    @error="onError"
   >
     <EditorBaseInfo
-      v-model="form"
+      v-model="state"
       section="backgrounds"
     />
 
@@ -44,7 +68,7 @@
       name="abilityScores"
     >
       <SelectAbilities
-        v-model="form.abilityScores"
+        v-model="state.abilityScores"
         :limit="3"
         multiple
       />
@@ -57,7 +81,7 @@
       name="skillsProficiencies"
     >
       <SelectSkill
-        v-model="form.skillsProficiencies"
+        v-model="state.skillsProficiencies"
         :limit="2"
       />
     </UFormField>
@@ -67,7 +91,7 @@
       label="Черта"
       name="featUrl"
     >
-      <SelectFeat v-model="form.featUrl" />
+      <SelectFeat v-model="state.featUrl" />
     </UFormField>
 
     <UFormField
@@ -76,7 +100,7 @@
       name="toolProficiency"
     >
       <UTextarea
-        v-model="form.toolProficiency"
+        v-model="state.toolProficiency"
         :rows="3"
         placeholder="Введи инструменты"
       />
@@ -88,7 +112,7 @@
       name="equipment"
     >
       <UTextarea
-        v-model="form.equipment"
+        v-model="state.equipment"
         :rows="3"
         placeholder="Введи снаряжение"
       />
@@ -104,10 +128,12 @@
       name="description"
     >
       <UTextarea
-        v-model="form.description"
+        v-model="state.description"
         :rows="8"
         placeholder="Введи описание"
       />
     </UFormField>
+
+    <EditorFormControls />
   </UForm>
 </template>

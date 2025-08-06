@@ -2,34 +2,15 @@
   import { CreatureBody } from '~bestiary/body';
   import { UiDrawer } from '~ui/drawer';
 
-  import type { CreatureCreate, CreatureDetailResponse } from '~bestiary/types';
+  import type { CreatureDetailResponse } from '~bestiary/types';
 
   const opened = defineModel<boolean>({ required: true });
 
-  const { form } = defineProps<{
-    form: CreatureCreate;
+  defineProps<{
+    creature: CreatureDetailResponse | undefined;
+    isLoading: boolean;
+    isError: boolean;
   }>();
-
-  const {
-    data: creature,
-    status,
-    execute,
-    clear,
-  } = await useFetch<CreatureDetailResponse>(() => `/api/v2/bestiary/preview`, {
-    method: 'POST',
-    body: computed(() => form),
-    server: false,
-    immediate: false,
-  });
-
-  watch(opened, (value) => {
-    if (!value) {
-      return;
-    }
-
-    clear();
-    execute();
-  });
 </script>
 
 <template>
@@ -39,8 +20,8 @@
     :max-width="BREAKPOINTS[Breakpoint.MD]"
     :title="creature?.name"
     :source="creature?.source"
-    :is-loading="status === 'pending'"
-    :is-error="status === 'error'"
+    :is-loading
+    :is-error
     width="100%"
   >
     <CreatureBody

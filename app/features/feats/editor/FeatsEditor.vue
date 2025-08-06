@@ -1,35 +1,53 @@
 <script setup lang="ts">
-  import { EditorBaseInfo } from '~ui/editor';
+  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectFeatCategory } from '~ui/select';
 
   import type { FeatCreate } from '~/shared/types';
 
-  const { isCreating } = defineProps<{
-    isCreating: boolean;
-  }>();
-
-  const form = defineModel<FeatCreate>({ required: true });
-
   const formRef = useTemplateRef('formRef');
 
-  const validate = () => {
-    return formRef.value?.validate();
-  };
-
   defineExpose({
-    validate,
+    submit: () => formRef.value!.submit(),
   });
+
+  function getInitialState(): FeatCreate {
+    return {
+      url: '',
+      name: {
+        rus: '',
+        eng: '',
+        alt: [],
+      },
+      source: {
+        url: undefined,
+        page: undefined,
+      },
+      prerequisite: '',
+      description: '',
+      category: undefined,
+      repeatability: false,
+      tags: [],
+    };
+  }
+
+  const { state, onSubmit, onError } = await useWorkshopForm<FeatCreate>(
+    computed(() => ({
+      actionUrl: '/api/v2/feats',
+      getInitialState,
+    })),
+  );
 </script>
 
 <template>
   <UForm
     ref="formRef"
-    :state="form"
-    :disabled="isCreating"
+    :state
     class="grid grid-cols-24 gap-4"
+    @submit="onSubmit"
+    @error="onError"
   >
     <EditorBaseInfo
-      v-model="form"
+      v-model="state"
       section="feats"
     />
 
@@ -42,7 +60,7 @@
       label="Категория"
       name="category"
     >
-      <SelectFeatCategory v-model="form.category" />
+      <SelectFeatCategory v-model="state.category" />
     </UFormField>
 
     <UFormField
@@ -51,7 +69,7 @@
       name="prerequisite"
     >
       <UInput
-        v-model="form.prerequisite"
+        v-model="state.prerequisite"
         placeholder="Введи предварительное условие если есть"
       />
     </UFormField>
@@ -62,7 +80,7 @@
       name="repeatability"
     >
       <UCheckbox
-        v-model="form.repeatability"
+        v-model="state.repeatability"
         label="Можно брать несколько раз"
       />
     </UFormField>
@@ -77,10 +95,12 @@
       name="description"
     >
       <UTextarea
-        v-model="form.description"
+        v-model="state.description"
         :rows="8"
         placeholder="Введи описание"
       />
     </UFormField>
+
+    <EditorFormControls />
   </UForm>
 </template>

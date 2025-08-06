@@ -16,17 +16,12 @@
     CreatureInitiative,
   } from './ui';
 
-  import { EditorBaseInfo } from '~ui/editor';
+  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectAlignment } from '~ui/select';
   import { UploadImage } from '~ui/upload';
 
-  import type { CreatureCreate } from '~bestiary/types';
-
-  const { isCreating } = defineProps<{
-    isCreating: boolean;
-  }>();
-
-  const form = defineModel<CreatureCreate>({ required: true });
+  import { type CreatureCreate, getInitialState } from '~bestiary/types';
+  import { CreaturePreview } from '~bestiary/preview';
 
   const formRef = useTemplateRef('formRef');
 
@@ -37,19 +32,36 @@
   defineExpose({
     validate,
   });
+
+  const {
+    state,
+    preview,
+    isPreviewShowed,
+    isPreviewLoading,
+    isPreviewError,
+    onError,
+    onSubmit,
+    showPreview,
+  } = await useWorkshopForm<CreatureCreate>(
+    computed(() => ({
+      actionUrl: '/api/v2/bestiary',
+      getInitialState,
+    })),
+  );
 </script>
 
 <template>
   <UForm
     ref="formRef"
-    :state="form"
-    :disabled="isCreating"
+    :state
     class="grid grid-cols-24 gap-4"
+    @error="onError"
+    @submit="onSubmit"
   >
-    <CreatureSection v-model="form.section" />
+    <CreatureSection v-model="state.section" />
 
     <EditorBaseInfo
-      v-model="form"
+      v-model="state"
       section="bestiary"
     />
 
@@ -59,7 +71,7 @@
       name="description"
     >
       <UTextarea
-        v-model="form.description"
+        v-model="state.description"
         :rows="4"
         placeholder="Введи описание"
       />
@@ -69,17 +81,17 @@
       <span class="font-bold text-secondary">Заголовок</span>
     </USeparator>
 
-    <CreatureType v-model="form.types" />
+    <CreatureType v-model="state.types" />
 
     <UFormField
       class="col-span-6"
       label="Мировоззрение существа"
       name="alignment"
     >
-      <SelectAlignment v-model="form.alignment" />
+      <SelectAlignment v-model="state.alignment" />
     </UFormField>
 
-    <CreatureSize v-model="form.sizes" />
+    <CreatureSize v-model="state.sizes" />
 
     <USeparator>
       <span class="font-bold text-secondary">Статблок</span>
@@ -92,7 +104,7 @@
       name="ac.value"
     >
       <UInput
-        v-model="form.ac.value"
+        v-model="state.ac.value"
         type="number"
         placeholder="Введи КД"
         min="0"
@@ -106,78 +118,78 @@
       name="ac.text"
     >
       <UInput
-        v-model="form.ac.text"
+        v-model="state.ac.text"
         placeholder="Введи текст"
       />
     </UFormField>
 
     <CreatureInitiative
-      v-model="form.initiative"
-      :dex="form.abilities.dex"
-      :proficiency-bonus="form.proficiencyBonus"
+      v-model="state.initiative"
+      :dex="state.abilities.dex"
+      :proficiency-bonus="state.proficiencyBonus"
       class="col-span-8"
     />
 
     <CreatureHit
-      v-model="form.hit"
-      :sizes="form.sizes"
-      :constitution="form.abilities.con"
+      v-model="state.hit"
+      :sizes="state.sizes"
+      :constitution="state.abilities.con"
       class="col-span-full"
     />
 
-    <CreatureSpeed v-model="form.speeds" />
+    <CreatureSpeed v-model="state.speeds" />
 
     <CreatureAbilities
-      v-model="form.abilities"
-      :proficiency-bonus="form.proficiencyBonus"
+      v-model="state.abilities"
+      :proficiency-bonus="state.proficiencyBonus"
     />
 
     <CreatureSkills
-      v-model="form.skills"
-      :abilities="form.abilities"
-      :proficiency-bonus="form.proficiencyBonus"
+      v-model="state.skills"
+      :abilities="state.abilities"
+      :proficiency-bonus="state.proficiencyBonus"
     />
 
     <CreatureDefenses
-      v-model:vulnerabilities="form.vulnerabilities"
-      v-model:resistance="form.resistance"
-      v-model:immunity-to-damage="form.immunityToDamage"
-      v-model:immunity-to-condition="form.immunityToCondition"
+      v-model:vulnerabilities="state.vulnerabilities"
+      v-model:resistance="state.resistance"
+      v-model:immunity-to-damage="state.immunityToDamage"
+      v-model:immunity-to-condition="state.immunityToCondition"
     />
 
     <CreatureSenses
-      v-model="form.senses"
-      :wisdom="form.abilities.wis"
-      :skills="form.skills"
-      :proficiency-bonus="form.proficiencyBonus"
+      v-model="state.senses"
+      :wisdom="state.abilities.wis"
+      :skills="state.skills"
+      :proficiency-bonus="state.proficiencyBonus"
     />
 
-    <CreatureLanguages v-model="form.languages" />
+    <CreatureLanguages v-model="state.languages" />
 
     <CreatureChallengeRating
-      v-model="form.experience"
-      v-model:proficiency-bonus="form.proficiencyBonus"
+      v-model="state.experience"
+      v-model:proficiency-bonus="state.proficiencyBonus"
     />
 
-    <CreatureTrait v-model="form.traits" />
+    <CreatureTrait v-model="state.traits" />
 
     <CreatureAction
-      v-model="form.actions"
+      v-model="state.actions"
       name="actions"
     />
 
     <CreatureAction
-      v-model="form.bonusActions"
+      v-model="state.bonusActions"
       name="bonusActions"
     />
 
     <CreatureAction
-      v-model="form.reactions"
+      v-model="state.reactions"
       name="reactions"
     />
 
     <CreatureAction
-      v-model="form.legendaryActions"
+      v-model="state.legendaryActions"
       name="legendaryActions"
     />
 
@@ -192,15 +204,15 @@
       name="image"
     >
       <UploadImage
-        v-model="form.image"
+        v-model="state.image"
         section="bestiary"
         max-size="640"
       >
         <template #preview>
           <NuxtImg
             v-slot="{ src, isLoaded, imgAttrs }"
-            :key="form.image"
-            :src="form.image"
+            :key="state.image"
+            :src="state.image"
             custom
           >
             <!-- Show the actual image when loaded -->
@@ -209,7 +221,7 @@
               v-bind="imgAttrs"
               class="w-full rounded-lg object-contain"
               :src="src"
-              :alt="form.name.rus"
+              :alt="state.name.rus"
             />
 
             <!-- Show a placeholder while loading -->
@@ -223,5 +235,14 @@
         </template>
       </UploadImage>
     </UFormField>
+
+    <EditorFormControls @preview="showPreview" />
   </UForm>
+
+  <CreaturePreview
+    v-model="isPreviewShowed"
+    :creature="preview"
+    :is-loading="isPreviewLoading"
+    :is-error="isPreviewError"
+  />
 </template>

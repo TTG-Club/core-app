@@ -6,7 +6,7 @@
     SpellComponents,
   } from './ui';
 
-  import { EditorBaseInfo } from '~ui/editor';
+  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import {
     SelectAbilities,
     SelectDamageType,
@@ -18,12 +18,6 @@
 
   import type { SpellCreate } from '~/shared/types';
 
-  const { isCreating } = defineProps<{
-    isCreating: boolean;
-  }>();
-
-  const form = defineModel<SpellCreate>({ required: true });
-
   const formRef = useTemplateRef('formRef');
 
   const validate = () => {
@@ -33,17 +27,62 @@
   defineExpose({
     validate,
   });
+
+  function getInitialState(): SpellCreate {
+    return {
+      url: '',
+      name: {
+        rus: '',
+        eng: '',
+        alt: [],
+      },
+      source: {
+        url: undefined,
+        page: undefined,
+      },
+      description: '',
+      upper: undefined,
+      level: 0,
+      school: undefined,
+      range: [],
+      duration: [],
+      castingTime: [],
+      components: {
+        v: false,
+        s: false,
+        m: undefined,
+      },
+      affiliations: {
+        classes: [],
+        subclasses: [],
+        species: [],
+        lineages: [],
+      },
+      tags: [],
+      savingThrow: [],
+      healingType: [],
+      damageType: [],
+    };
+  }
+
+  const { state, onError, onSubmit } = await useWorkshopForm<SpellCreate>(
+    computed(() => ({
+      actionUrl: '/api/v2/spells',
+      getInitialState,
+    })),
+  );
 </script>
 
 <template>
   <UForm
     ref="formRef"
-    :state="form"
-    :disabled="isCreating"
+    :state
     class="grid grid-cols-24 gap-4"
+    @error="onError"
+    @submit="onSubmit"
   >
     <EditorBaseInfo
-      v-model="form"
+      v-model="state"
       section="spells"
     />
 
@@ -52,7 +91,7 @@
       label="Уровень заклинания"
       name="level"
     >
-      <SelectLevel v-model="form.level" />
+      <SelectLevel v-model="state.level" />
     </UFormField>
 
     <UFormField
@@ -60,16 +99,16 @@
       label="Школа"
       name="school"
     >
-      <SelectMagicSchool v-model="form.school" />
+      <SelectMagicSchool v-model="state.school" />
     </UFormField>
 
-    <SpellCastingTimes v-model="form.castingTime" />
+    <SpellCastingTimes v-model="state.castingTime" />
 
-    <SpellRanges v-model="form.range" />
+    <SpellRanges v-model="state.range" />
 
-    <SpellComponents v-model="form.components" />
+    <SpellComponents v-model="state.components" />
 
-    <SpellDurations v-model="form.duration" />
+    <SpellDurations v-model="state.duration" />
 
     <USeparator>
       <span class="font-bold text-secondary">Дополнительные фильтры</span>
@@ -81,7 +120,7 @@
       class="col-span-8"
     >
       <SelectDamageType
-        v-model="form.damageType"
+        v-model="state.damageType"
         multiple
       />
     </UFormField>
@@ -92,7 +131,7 @@
       name="savingThrow"
     >
       <SelectAbilities
-        v-model="form.savingThrow"
+        v-model="state.savingThrow"
         multiple
       />
     </UFormField>
@@ -103,7 +142,7 @@
       name="healingType"
     >
       <SelectHealType
-        v-model="form.healingType"
+        v-model="state.healingType"
         multiple
       />
     </UFormField>
@@ -118,7 +157,7 @@
       class="col-span-12"
     >
       <UTextarea
-        v-model="form.description"
+        v-model="state.description"
         :rows="8"
         placeholder="Введи описание"
       />
@@ -130,7 +169,7 @@
       class="col-span-12"
     >
       <UTextarea
-        v-model="form.upper"
+        v-model="state.upper"
         :rows="8"
         placeholder="Введи описание"
       />
@@ -146,7 +185,7 @@
       class="col-span-6"
     >
       <SelectSpecies
-        v-model="form.affiliations.classes"
+        v-model="state.affiliations.classes"
         multiple
       />
     </UFormField>
@@ -157,7 +196,7 @@
       name="affiliations.subclasses"
     >
       <SelectSpecies
-        v-model="form.affiliations.subclasses"
+        v-model="state.affiliations.subclasses"
         multiple
       />
     </UFormField>
@@ -168,7 +207,7 @@
       name="affiliations.species"
     >
       <SelectSpecies
-        v-model="form.affiliations.species"
+        v-model="state.affiliations.species"
         multiple
       />
     </UFormField>
@@ -179,9 +218,11 @@
       name="affiliations.lineages"
     >
       <SelectSpecies
-        v-model="form.affiliations.lineages"
+        v-model="state.affiliations.lineages"
         multiple
       />
     </UFormField>
+
+    <EditorFormControls />
   </UForm>
 </template>

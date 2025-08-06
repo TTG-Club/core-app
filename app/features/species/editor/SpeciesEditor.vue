@@ -2,17 +2,11 @@
   import { SpeciesLinkPreview, SpeciesFeatures, SpeciesSizes } from './ui';
 
   import { SpeciesSpeed } from '~species/editor/ui';
-  import { EditorBaseInfo } from '~ui/editor';
+  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectCreatureType, SelectSpecies } from '~ui/select';
   import { UploadImage, UploadGallery } from '~ui/upload';
 
   import type { SpeciesCreate } from '~/shared/types';
-
-  const { isCreating } = defineProps<{
-    isCreating: boolean;
-  }>();
-
-  const form = defineModel<SpeciesCreate>({ required: true });
 
   const formRef = useTemplateRef('formRef');
 
@@ -23,17 +17,58 @@
   defineExpose({
     validate,
   });
+
+  function getInitialState() {
+    return {
+      url: '',
+      name: {
+        rus: '',
+        eng: '',
+        alt: [],
+      },
+      description: '',
+      image: undefined,
+      linkImage: undefined,
+      gallery: [],
+      parent: undefined,
+      source: {
+        url: undefined,
+        page: undefined,
+      },
+      properties: {
+        sizes: [],
+        type: undefined,
+        speed: {
+          base: 30,
+          fly: undefined,
+          climb: undefined,
+          swim: undefined,
+          hover: false,
+        },
+      },
+      features: [],
+      tags: [],
+    };
+  }
+
+  const { state, onError, onSubmit } = await useWorkshopForm<SpeciesCreate>(
+    computed(() => ({
+      actionUrl: '/api/v2/species',
+      getInitialState,
+    })),
+  );
 </script>
 
 <template>
   <UForm
     ref="formRef"
-    :state="form"
-    :disabled="isCreating"
+    :state
     class="grid grid-cols-24 gap-4"
+    @submit="onSubmit"
+    @error="onError"
   >
     <EditorBaseInfo
-      v-model="form"
+      v-model="state"
       section="species"
     />
 
@@ -43,7 +78,7 @@
       name="description"
     >
       <UTextarea
-        v-model:value="form.description"
+        v-model:value="state.description"
         placeholder="Введи описание"
         :rows="8"
       />
@@ -59,7 +94,7 @@
       help="Необходимо указать, если создаешь происхождение вида"
       name="parent"
     >
-      <SelectSpecies v-model="form.parent" />
+      <SelectSpecies v-model="state.parent" />
     </UFormField>
 
     <UFormField
@@ -67,14 +102,14 @@
       label="Тип"
       name="properties.type"
     >
-      <SelectCreatureType v-model="form.properties.type" />
+      <SelectCreatureType v-model="state.properties.type" />
     </UFormField>
 
-    <SpeciesSizes v-model="form.properties.sizes" />
+    <SpeciesSizes v-model="state.properties.sizes" />
 
-    <SpeciesSpeed v-model="form.properties.speed" />
+    <SpeciesSpeed v-model="state.properties.speed" />
 
-    <SpeciesFeatures v-model="form.features" />
+    <SpeciesFeatures v-model="state.features" />
 
     <USeparator>
       <span class="font-bold text-secondary">Изображения</span>
@@ -87,15 +122,15 @@
       name="image"
     >
       <UploadImage
-        v-model="form.image"
+        v-model="state.image"
         section="species"
         max-size="640"
       >
         <template #preview>
           <NuxtImg
             v-slot="{ src, isLoaded, imgAttrs }"
-            :key="form.image"
-            :src="form.image"
+            :key="state.image"
+            :src="state.image"
             custom
           >
             <!-- Show the actual image when loaded -->
@@ -104,7 +139,7 @@
               v-bind="imgAttrs"
               class="w-full rounded-lg object-contain"
               :src="src"
-              :alt="form.name.rus"
+              :alt="state.name.rus"
             />
 
             <!-- Show a placeholder while loading -->
@@ -126,15 +161,15 @@
       name="linkImage"
     >
       <UploadImage
-        v-model="form.linkImage"
+        v-model="state.linkImage"
         section="species"
         max-size="256"
       >
         <template #preview>
           <SpeciesLinkPreview
-            :name="form.name"
-            :url="form.url"
-            :image="form.linkImage"
+            :name="state.name"
+            :url="state.url"
+            :image="state.linkImage"
           />
         </template>
       </UploadImage>
@@ -146,9 +181,11 @@
       name="gallery"
     >
       <UploadGallery
-        v-model="form.gallery"
+        v-model="state.gallery"
         section="species"
       />
     </UFormField>
+
+    <EditorFormControls />
   </UForm>
 </template>

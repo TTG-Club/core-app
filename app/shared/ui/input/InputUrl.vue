@@ -7,11 +7,9 @@
     defineProps<{
       engName: string;
       sourceUrl?: string | undefined;
-      leading?: string;
     }>(),
     {
       sourceUrl: '',
-      leading: '',
     },
   );
 
@@ -66,12 +64,5 @@
   <UInput
     :model-value="model"
     placeholder="Сгенерированный URL"
-  >
-    <template
-      v-if="leading"
-      #leading
-    >
-      {{ leading }}
-    </template>
-  </UInput>
+  />
 </template>
