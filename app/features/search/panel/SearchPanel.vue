@@ -5,8 +5,8 @@
 </script>
 
 <template>
-  <div class="mt-[3dvw] flex w-full flex-col items-center md:w-1/2">
-    <div class="px-2">Text massage</div>
+  <div class="mt-[1dvw] flex w-full flex-col items-center md:w-1/2">
+    <div :class="$style['greeter']"></div>
 
     <UButton
       class="relative mb-6 rounded-full py-4 hover:bg-accented"
@@ -25,6 +25,19 @@
 </template>
 
 <style module lang="scss">
+  .greeter {
+    position: relative;
+    z-index: -1;
+
+    display: block;
+
+    width: 200px;
+    height: 200px;
+
+    background-image: url('/s3/sections/greeter.png');
+    background-repeat: no-repeat;
+    background-size: cover;
+  }
   .glow-button {
     &:before {
       content: '';
