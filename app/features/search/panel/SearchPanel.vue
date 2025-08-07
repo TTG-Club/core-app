@@ -5,9 +5,11 @@
 </script>
 
 <template>
-  <div class="mt-[3dvw] flex w-1/2 flex-col items-center">
+  <div class="mt-[3dvw] flex w-full flex-col items-center md:w-1/2">
+    <div class="px-2">Text massage</div>
+
     <UButton
-      class="relative rounded-full hover:bg-accented"
+      class="relative mb-6 rounded-full py-4 hover:bg-accented"
       :class="$style['glow-button']"
       variant="subtle"
       color="neutral"
@@ -35,52 +37,54 @@
 
       background: conic-gradient(
         from var(--gradient-angle),
-        #87bfdb,
-        #77abc8,
-        #6797b5,
-        #577f9d,
-        #476684,
-        #43668a,
-        #3e668f,
-        #304a66,
-        #212e3d,
-        #304a66,
-        #3e668f,
-        #43668a,
-        #476684,
-        #577f9d,
-        #6797b5,
-        #77abc8,
-        #87bfdb
+        var(--ui-color-primary-100),
+        var(--ui-color-primary-200),
+        var(--ui-color-primary-300),
+        var(--ui-color-primary-400),
+        var(--ui-color-primary-500),
+        var(--ui-color-primary-600),
+        var(--ui-color-primary-700),
+        var(--ui-color-primary-800),
+        var(--ui-color-primary-900),
+        var(--ui-color-primary-950),
+        var(--ui-color-primary-900),
+        var(--ui-color-primary-800),
+        var(--ui-color-primary-700),
+        var(--ui-color-primary-600),
+        var(--ui-color-primary-500),
+        var(--ui-color-primary-400),
+        var(--ui-color-primary-300),
+        var(--ui-color-primary-200),
+        var(--ui-color-primary-100)
       );
-      filter: blur(4px);
+      filter: blur(8px);
 
       animation: gradient-rotate 10s linear infinite;
     }
 
-    :hover {
+    &:hover {
       &:before {
         background: conic-gradient(
           from var(--gradient-angle),
-          #120d0e,
-          #321d13,
-          #512d19,
-          #713d1e,
-          #90571d,
-          #b0701b,
-          #cf8a1a,
-          #de9822,
-          #eea529,
-          #fdb331,
-          #eea529,
-          #de9822,
-          #cf8a1a,
-          #b0701b,
-          #90571d,
-          #713d1e,
-          #512d19,
-          #321d13,
-          #120d0e
+          var(--ui-color-secondary-100),
+          var(--ui-color-secondary-200),
+          var(--ui-color-secondary-300),
+          var(--ui-color-secondary-400),
+          var(--ui-color-secondary-500),
+          var(--ui-color-secondary-600),
+          var(--ui-color-secondary-700),
+          var(--ui-color-secondary-800),
+          var(--ui-color-secondary-900),
+          var(--ui-color-secondary-950),
+          var(--ui-color-secondary-900),
+          var(--ui-color-secondary-800),
+          var(--ui-color-secondary-700),
+          var(--ui-color-secondary-600),
+          var(--ui-color-secondary-500),
+          var(--ui-color-secondary-400),
+          var(--ui-color-secondary-300),
+          var(--ui-color-secondary-200),
+          var(--ui-color-secondary-100)
         );
       }
     }
