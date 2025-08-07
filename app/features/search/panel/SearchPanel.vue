@@ -5,9 +5,9 @@
 </script>
 
 <template>
-  <div class="flex w-full flex-col items-center md:w-1/2">
+  <div class="flex w-full flex-col items-center max-sm:mt-[3dvw] lg:w-1/2">
     <div
-      class="flex w-full items-center justify-center px-8"
+      class="flex w-full items-center justify-center px-8 max-sm:hidden"
       :class="$style['message-block']"
     >
       <div
@@ -63,7 +63,7 @@
     .greeter {
       display: block;
 
-      width: 200px;
+      width: 220px;
       height: 200px;
 
       background-image: url('/s3/sections/greeter.png');
