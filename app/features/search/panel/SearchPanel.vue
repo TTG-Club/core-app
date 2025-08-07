@@ -5,8 +5,21 @@
 </script>
 
 <template>
-  <div class="mt-[1dvw] flex w-full flex-col items-center md:w-1/2">
-    <div :class="$style['greeter']"></div>
+  <div class="flex w-full flex-col items-center md:w-1/2">
+    <div
+      class="flex w-full items-center justify-center px-8"
+      :class="$style['message-block']"
+    >
+      <div
+        class="relative flex w-1/2 items-center justify-center rounded-2xl border-1 border-blue-500 px-5 py-6 shadow-md"
+        :class="$style['message']"
+      >
+        Смотри-ка, новый паладин правил! Брось на харизму, чтобы не утонуть в
+        деталях.
+      </div>
+
+      <div :class="$style['greeter']"></div>
+    </div>
 
     <UButton
       class="relative mb-6 rounded-full py-4 hover:bg-accented"
@@ -25,18 +38,38 @@
 </template>
 
 <style module lang="scss">
-  .greeter {
-    position: relative;
+  .message-block {
     z-index: -1;
+    .message {
+      color: #000;
+      background-color: #f5eaea;
 
-    display: block;
+      &:after {
+        content: '';
 
-    width: 200px;
-    height: 200px;
+        position: absolute;
+        top: 30%;
+        right: -10px;
+        transform: translateY(-50%);
 
-    background-image: url('/s3/sections/greeter.png');
-    background-repeat: no-repeat;
-    background-size: cover;
+        width: 0;
+        height: 0;
+        border-top: 10px solid transparent;
+        border-bottom: 10px solid transparent;
+        border-left: 10px solid var(--color-blue-500); /* Цвет фона */
+      }
+    }
+
+    .greeter {
+      display: block;
+
+      width: 200px;
+      height: 200px;
+
+      background-image: url('/s3/sections/greeter.png');
+      background-repeat: no-repeat;
+      background-size: cover;
+    }
   }
   .glow-button {
     &:before {
