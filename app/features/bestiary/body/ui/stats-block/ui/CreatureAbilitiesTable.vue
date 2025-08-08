@@ -25,6 +25,8 @@
 
       <div :class="$style.third"></div>
 
+      <div :class="$style.third"></div>
+
       <div :class="$style.third">Мод</div>
 
       <div :class="$style.third">Спас</div>

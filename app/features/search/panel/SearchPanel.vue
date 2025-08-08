@@ -5,10 +5,26 @@
 </script>
 
 <template>
-  <div class="mt-[3dvw] flex w-1/2 flex-col items-center">
+  <div class="flex w-full flex-col items-center max-sm:mt-[3dvw] lg:w-1/2">
+    <div
+      class="-z-1 flex w-full items-center justify-center px-8 max-sm:hidden"
+    >
+      <div
+        class="relative flex w-1/2 items-center justify-center rounded-2xl border-1 border-blue-500 bg-(--color-message) px-5 py-6 text-black shadow-md"
+        :class="$style.message"
+      >
+        Смотри-ка, новый паладин правил! Брось на харизму, чтобы не утонуть в
+        деталях.
+      </div>
+
+      <div
+        class="block h-[200px] w-[220px] bg-[url('/s3/sections/greeter.png')] bg-cover bg-no-repeat"
+      />
+    </div>
+
     <UButton
-      class="relative rounded-full hover:bg-accented"
-      :class="$style['glow-button']"
+      class="relative mb-6 rounded-full py-4 hover:bg-accented"
+      :class="$style.glowButton"
       variant="subtle"
       color="neutral"
       size="xl"
@@ -23,7 +39,24 @@
 </template>
 
 <style module lang="scss">
-  .glow-button {
+  .message {
+    &:after {
+      content: '';
+
+      position: absolute;
+      top: 30%;
+      right: -10px;
+      transform: translateY(-50%);
+
+      width: 0;
+      height: 0;
+      border-top: 10px solid transparent;
+      border-bottom: 10px solid transparent;
+      border-left: 10px solid var(--color-blue-500); /* Цвет фона */
+    }
+  }
+
+  .glowButton {
     &:before {
       content: '';
 
@@ -35,52 +68,54 @@
 
       background: conic-gradient(
         from var(--gradient-angle),
-        #87bfdb,
-        #77abc8,
-        #6797b5,
-        #577f9d,
-        #476684,
-        #43668a,
-        #3e668f,
-        #304a66,
-        #212e3d,
-        #304a66,
-        #3e668f,
-        #43668a,
-        #476684,
-        #577f9d,
-        #6797b5,
-        #77abc8,
-        #87bfdb
+        var(--ui-color-primary-100),
+        var(--ui-color-primary-200),
+        var(--ui-color-primary-300),
+        var(--ui-color-primary-400),
+        var(--ui-color-primary-500),
+        var(--ui-color-primary-600),
+        var(--ui-color-primary-700),
+        var(--ui-color-primary-800),
+        var(--ui-color-primary-900),
+        var(--ui-color-primary-950),
+        var(--ui-color-primary-900),
+        var(--ui-color-primary-800),
+        var(--ui-color-primary-700),
+        var(--ui-color-primary-600),
+        var(--ui-color-primary-500),
+        var(--ui-color-primary-400),
+        var(--ui-color-primary-300),
+        var(--ui-color-primary-200),
+        var(--ui-color-primary-100)
       );
-      filter: blur(4px);
+      filter: blur(8px);
 
       animation: gradient-rotate 10s linear infinite;
     }
 
-    :hover {
+    &:hover {
       &:before {
         background: conic-gradient(
           from var(--gradient-angle),
-          #120d0e,
-          #321d13,
-          #512d19,
-          #713d1e,
-          #90571d,
-          #b0701b,
-          #cf8a1a,
-          #de9822,
-          #eea529,
-          #fdb331,
-          #eea529,
-          #de9822,
-          #cf8a1a,
-          #b0701b,
-          #90571d,
-          #713d1e,
-          #512d19,
-          #321d13,
-          #120d0e
+          var(--ui-color-secondary-100),
+          var(--ui-color-secondary-200),
+          var(--ui-color-secondary-300),
+          var(--ui-color-secondary-400),
+          var(--ui-color-secondary-500),
+          var(--ui-color-secondary-600),
+          var(--ui-color-secondary-700),
+          var(--ui-color-secondary-800),
+          var(--ui-color-secondary-900),
+          var(--ui-color-secondary-950),
+          var(--ui-color-secondary-900),
+          var(--ui-color-secondary-800),
+          var(--ui-color-secondary-700),
+          var(--ui-color-secondary-600),
+          var(--ui-color-secondary-500),
+          var(--ui-color-secondary-400),
+          var(--ui-color-secondary-300),
+          var(--ui-color-secondary-200),
+          var(--ui-color-secondary-100)
         );
       }
     }
