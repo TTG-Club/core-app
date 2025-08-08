@@ -34,10 +34,12 @@
 
 <template>
   <div class="flex flex-col gap-6">
-    <MarkupRender
-      v-if="species.description"
-      :entries="species.description"
-    />
+    <div>
+      <MarkupRender
+        v-if="species.description"
+        :entries="species.description"
+      />
+    </div>
 
     <template v-if="species.features">
       <UiCollapse
