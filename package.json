@@ -14,7 +14,8 @@
     "lint:workflow": "eslint . --cache --cache-strategy content --quiet",
     "stylelint:check": "stylelint \"{**/*,*}.{css,scss,vue}\" --cache --cache-strategy content --ignore-path .gitignore",
     "stylelint:write": "stylelint \"{**/*,*}.{css,scss,vue}\" --cache --cache-strategy content --ignore-path .gitignore --fix",
-    "stylelint:workflow": "stylelint \"{**/*,*}.{css,scss,vue}\" --cache --cache-strategy content --ignore-path .gitignore --quiet"
+    "stylelint:workflow": "stylelint \"{**/*,*}.{css,scss,vue}\" --cache --cache-strategy content --ignore-path .gitignore --quiet",
+    "prepare": "pnpx simple-git-hooks"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.850.0",
