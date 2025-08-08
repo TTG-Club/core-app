@@ -4,7 +4,13 @@
 
   const { open } = useGlobalSearch();
 
-  const { selectedCharacter, currentMessage } = useCharacterSelection();
+  const { selectedCharacter, currentMessage, selectRandomCharacterAndMessage } =
+    useCharacterSelection();
+
+  // Вызываем выбор персонажа при монтировании
+  onMounted(() => {
+    selectRandomCharacterAndMessage();
+  });
 </script>
 
 <template>
