@@ -7,23 +7,24 @@
 <template>
   <div class="flex w-full flex-col items-center max-sm:mt-[3dvw] lg:w-1/2">
     <div
-      class="flex w-full items-center justify-center px-8 max-sm:hidden"
-      :class="$style['message-block']"
+      class="-z-1 flex w-full items-center justify-center px-8 max-sm:hidden"
     >
       <div
-        class="relative flex w-1/2 items-center justify-center rounded-2xl border-1 border-blue-500 px-5 py-6 shadow-md"
-        :class="$style['message']"
+        class="relative flex w-1/2 items-center justify-center rounded-2xl border-1 border-blue-500 bg-(--color-message) px-5 py-6 text-black shadow-md"
+        :class="$style.message"
       >
         Смотри-ка, новый паладин правил! Брось на харизму, чтобы не утонуть в
         деталях.
       </div>
 
-      <div :class="$style['greeter']"></div>
+      <div
+        class="block h-[200px] w-[220px] bg-[url('/s3/sections/greeter.png')] bg-cover bg-no-repeat"
+      />
     </div>
 
     <UButton
       class="relative mb-6 rounded-full py-4 hover:bg-accented"
-      :class="$style['glow-button']"
+      :class="$style.glowButton"
       variant="subtle"
       color="neutral"
       size="xl"
@@ -38,40 +39,24 @@
 </template>
 
 <style module lang="scss">
-  .message-block {
-    z-index: -1;
-    .message {
-      color: #000;
-      background-color: #f5eaea;
+  .message {
+    &:after {
+      content: '';
 
-      &:after {
-        content: '';
+      position: absolute;
+      top: 30%;
+      right: -10px;
+      transform: translateY(-50%);
 
-        position: absolute;
-        top: 30%;
-        right: -10px;
-        transform: translateY(-50%);
-
-        width: 0;
-        height: 0;
-        border-top: 10px solid transparent;
-        border-bottom: 10px solid transparent;
-        border-left: 10px solid var(--color-blue-500); /* Цвет фона */
-      }
-    }
-
-    .greeter {
-      display: block;
-
-      width: 220px;
-      height: 200px;
-
-      background-image: url('/s3/sections/greeter.png');
-      background-repeat: no-repeat;
-      background-size: cover;
+      width: 0;
+      height: 0;
+      border-top: 10px solid transparent;
+      border-bottom: 10px solid transparent;
+      border-left: 10px solid var(--color-blue-500); /* Цвет фона */
     }
   }
-  .glow-button {
+
+  .glowButton {
     &:before {
       content: '';
 

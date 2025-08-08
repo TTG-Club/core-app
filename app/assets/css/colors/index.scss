@@ -14,6 +14,8 @@ html {
   --color-youtube-base: oklch(0.628 0.258 29.234);
   --color-youtube-hover: oklch(0.459 0.189 29.234);
 
+  --color-message: oklch(0.946 0.012 17.368);
+
   /* Gradients */
   --color-bg-main-gradient: to top, var(--ui-bg) 0%, var(--ui-bg) 40%, var(--ui-bg-muted) 100%;
 }
