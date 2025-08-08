@@ -83,6 +83,7 @@
       <SelectSkill
         v-model="state.skillsProficiencies"
         :limit="2"
+        multiple
       />
     </UFormField>
 

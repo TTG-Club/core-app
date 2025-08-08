@@ -29,7 +29,10 @@
             {{ species.name.rus }}
           </span>
 
-          <SourceTag :source="species.source" />
+          <SourceTag
+            v-if="species.source?.name?.label"
+            :source="species.source"
+          />
         </div>
 
         <div :class="$style.common">

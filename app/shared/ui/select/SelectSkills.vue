@@ -1,10 +1,10 @@
 <script setup lang="ts">
   import { DictionaryService } from '~/shared/api';
 
-  const { mode = undefined, limit = 0 } = defineProps<{
+  const { multiple = false, limit = 0 } = defineProps<{
     disabled?: boolean;
     limit?: number;
-    mode?: 'multiple' | 'tags';
+    multiple?: boolean;
   }>();
 
   const model = defineModel<string | Array<string>>();
@@ -15,12 +15,10 @@
     { dedupe: 'defer' },
   );
 
-  const isMultiple = computed(() => Boolean(mode));
-
   const options = computed(() => {
     if (!data.value) return [];
 
-    if (!isMultiple.value) {
+    if (!multiple) {
       return data.value;
     }
 
@@ -41,7 +39,7 @@
   };
 
   const placeholder = computed(() => {
-    if (!isMultiple.value) {
+    if (!multiple) {
       return 'Выбери навык';
     }
 
@@ -60,8 +58,8 @@
     v-model="model"
     :items="options"
     :placeholder="placeholder"
-    :multiple="isMultiple"
     :disabled="disabled"
+    :multiple
     searchable
     clearable
     @open="handleDropdownOpening(true)"

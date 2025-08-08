@@ -69,21 +69,10 @@ export async function useWorkshopForm<T extends Record<string, any>>(
     server: false,
     immediate: false,
     watch: false,
-  });
-
-  async function onSubmit() {
-    if (!isFormEdited.value) {
-      $toast.add({
-        title: 'Нечего сохранять',
-        description: 'Отредактируй форму, чтобы выполнить сохранение',
-        color: 'warning',
-      });
-
-      return;
-    }
-
-    try {
-      await execute();
+    onResponse: async ({ response }) => {
+      if (!response.ok) {
+        return;
+      }
 
       $toast.add({
         title: 'Сохранено',
@@ -94,15 +83,30 @@ export async function useWorkshopForm<T extends Record<string, any>>(
       if (isEditForm.value) {
         await reset();
       }
-    } catch (error) {
-      console.error(error);
-
+    },
+    onResponseError: () => {
       $toast.add({
         title: 'Ошибка сохранения',
         description: 'При попытке отправить форму произошла ошибка',
         color: 'error',
       });
+    },
+  });
+
+  function onSubmit() {
+    if (!isFormEdited.value) {
+      consola.error('[useWorkshopForm] Nothing to save!');
+
+      $toast.add({
+        title: 'Нечего сохранять',
+        description: 'Отредактируй форму, чтобы выполнить сохранение',
+        color: 'warning',
+      });
+
+      return Promise.resolve();
     }
+
+    return execute();
   }
 
   function onError(error: FormErrorEvent) {

@@ -18,7 +18,7 @@
     validate,
   });
 
-  function getInitialState() {
+  function getInitialState(): SpeciesCreate {
     return {
       url: '',
       name: {
@@ -78,7 +78,7 @@
       name="description"
     >
       <UTextarea
-        v-model:value="state.description"
+        v-model="state.description"
         placeholder="Введи описание"
         :rows="8"
       />
@@ -170,6 +170,7 @@
             :name="state.name"
             :url="state.url"
             :image="state.linkImage"
+            :source="state.source"
           />
         </template>
       </UploadImage>
