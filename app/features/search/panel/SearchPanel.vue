@@ -20,7 +20,7 @@
     >
       <div
         v-if="selectedCharacter"
-        class="relative flex w-1/2 items-center justify-center rounded-2xl border-1 border-blue-500 bg-(--color-message) px-5 py-6 text-black shadow-md"
+        class="relative flex w-1/2 items-center justify-center rounded-2xl border-1 border-blue-500 bg-(--color-message) px-5 py-6 font-semibold text-black shadow-md"
         :class="$style.message"
       >
         {{ currentMessage }}
