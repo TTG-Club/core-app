@@ -20,10 +20,10 @@ export default defineEventHandler((event) => {
   return S3Service.delete(slug);
 });
 
-function isUserHasAccess(event: H3Event, username: string) {
+function isUserHasAccess(event: H3Event, username: string | undefined) {
   const { username: usernameFromToken, roles } = getUserFromToken(event);
 
-  if (!usernameFromToken) {
+  if (!usernameFromToken || !username) {
     return false;
   }
 
