@@ -13,33 +13,25 @@ export default defineEventHandler((event) => {
 
   const [, username] = slug.split('/');
 
-  try {
-    checkUserAccess(event, username);
-  } catch (e) {
+  if (!isUserHasAccess(event, username)) {
     throw createError(getErrorResponse(StatusCodes.FORBIDDEN));
   }
 
   return S3Service.delete(slug);
 });
 
-function checkUserAccess(event: H3Event, username: string) {
+function isUserHasAccess(event: H3Event, username: string) {
   const { username: usernameFromToken, roles } = getUserFromToken(event);
 
   if (!usernameFromToken) {
-    throw createError(getErrorResponse(StatusCodes.UNAUTHORIZED));
+    return false;
   }
 
   if (usernameFromToken === username) {
-    return;
+    return true;
   }
 
-  if (
-    !roles.some(
-      (role) => role.name === Role.ADMIN || role.name === Role.MODERATOR,
-    )
-  ) {
-    return;
-  }
-
-  throw createError(getErrorResponse(StatusCodes.FORBIDDEN));
+  return roles.some((role) => {
+    return role.name === Role.ADMIN || role.name === Role.MODERATOR;
+  });
 }
