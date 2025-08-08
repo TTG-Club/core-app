@@ -1,24 +1,29 @@
 <script setup lang="ts">
   import { useGlobalSearch } from '~search/composable';
+  import { useCharacterSelection } from './model';
 
   const { open } = useGlobalSearch();
+
+  const { selectedCharacter, currentMessage } = useCharacterSelection();
 </script>
 
 <template>
   <div class="flex w-full flex-col items-center max-sm:mt-[3dvw] lg:w-1/2">
     <div
-      class="-z-1 flex w-full items-center justify-center px-8 max-sm:hidden"
+      class="-z-1 flex w-full items-center justify-center px-8 max-sm:hidden sm:h-[200px]"
     >
       <div
+        v-if="selectedCharacter"
         class="relative flex w-1/2 items-center justify-center rounded-2xl border-1 border-blue-500 bg-(--color-message) px-5 py-6 text-black shadow-md"
         :class="$style.message"
       >
-        Смотри-ка, новый паладин правил! Брось на харизму, чтобы не утонуть в
-        деталях.
+        {{ currentMessage }}
       </div>
 
       <div
-        class="block h-[200px] w-[220px] bg-[url('/s3/sections/greeter.png')] bg-cover bg-no-repeat"
+        v-if="selectedCharacter"
+        class="block h-[200px] w-[220px] bg-cover bg-no-repeat"
+        :style="{ backgroundImage: `url(${selectedCharacter.image})` }"
       />
     </div>
 

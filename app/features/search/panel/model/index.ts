@@ -1,0 +1,1 @@
+export { useCharacterSelection } from './const';
