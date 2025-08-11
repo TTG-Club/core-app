@@ -7,9 +7,11 @@
   const route = useRoute();
 
   const { data: magicItem } = await useAsyncData(
-    `magic-item-${route.params.url}`,
+    `magic-items-${route.params.url}`,
     () =>
-      $fetch<MagicItemDetailResponse>(`/api/v2/magic-item/${route.params.url}`),
+      $fetch<MagicItemDetailResponse>(
+        `/api/v2/magic-items/${route.params.url}`,
+      ),
   );
 
   useSeoMeta({

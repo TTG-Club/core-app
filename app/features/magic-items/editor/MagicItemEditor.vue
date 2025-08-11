@@ -71,7 +71,7 @@
   >
     <EditorBaseInfo
       v-model="state"
-      section="magic-item"
+      section="magic-items"
     />
 
     <USeparator>
@@ -149,7 +149,7 @@
     >
       <UploadImage
         v-model="state.image"
-        section="magic-item"
+        section="magic-items"
         max-size="480"
       />
     </UFormField>

@@ -20,7 +20,7 @@
     filter,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
-  } = await useFilter('magic-items-filters', '/api/v2/magic-item/filters');
+  } = await useFilter('magic-items-filters', '/api/v2/magic-items/filters');
 
   const searchBody = computed(() => {
     const body: SearchBody = {};
@@ -40,7 +40,7 @@
   } = await useAsyncData(
     'magic-items',
     () =>
-      $fetch<Array<MagicItemLinkResponse>>('/api/v2/magic-item/search', {
+      $fetch<Array<MagicItemLinkResponse>>('/api/v2/magic-items/search', {
         method: 'POST',
         params: {
           query:

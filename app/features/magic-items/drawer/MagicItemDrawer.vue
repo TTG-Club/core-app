@@ -13,8 +13,8 @@
   }>();
 
   const { data: detail, status } = await useAsyncData(
-    computed(() => `magic-item-${url}`),
-    () => $fetch<MagicItemDetailResponse>(`/api/v2/magic-item/${url}`),
+    computed(() => `magic-items-${url}`),
+    () => $fetch<MagicItemDetailResponse>(`/api/v2/magic-items/${url}`),
     {
       server: false,
       immediate: true,
@@ -23,8 +23,8 @@
 
   const isLoading = computed(() => status.value === 'pending');
   const isError = computed(() => status.value === 'error');
-  const urlForCopy = computed(() => `${getOrigin()}/magic-item/${url}`);
-  const editUrl = computed(() => `/workshop/magic-item/${url}`);
+  const urlForCopy = computed(() => `${getOrigin()}/magic-items/${url}`);
+  const editUrl = computed(() => `/workshop/magic-items/${url}`);
 </script>
 
 <template>
