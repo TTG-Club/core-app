@@ -1,6 +1,7 @@
 import type { FormErrorEvent } from '#ui/types';
 import { cloneDeep, isEqual, merge } from 'lodash-es';
 import type { CreatureDetailResponse } from '~bestiary/types';
+import type { FetchResponse } from 'ofetch';
 
 export type WorkshopFormOptions<T> = MaybeRefOrGetter<{
   actionUrl: string;
@@ -13,6 +14,7 @@ export async function useWorkshopForm<T extends Record<string, any>>(
   const _options = toValue(options);
   const $toast = useToast();
   const route = useRoute();
+  const router = useRouter();
 
   const state = useState<T>(_options.getInitialState);
   const prevState = useState<T>(_options.getInitialState);
@@ -62,38 +64,7 @@ export async function useWorkshopForm<T extends Record<string, any>>(
     prevState.value = cloneDeep(mutatedState);
   });
 
-  const { execute } = await useFetch(actionUrl, {
-    method: computed(() => (isEditForm.value ? 'put' : 'post')),
-    body: state,
-    lazy: true,
-    server: false,
-    immediate: false,
-    watch: false,
-    onResponse: async ({ response }) => {
-      if (!response.ok) {
-        return;
-      }
-
-      $toast.add({
-        title: 'Сохранено',
-        description: 'Запись успешно сохранена!',
-        color: 'success',
-      });
-
-      if (isEditForm.value) {
-        await reset();
-      }
-    },
-    onResponseError: () => {
-      $toast.add({
-        title: 'Ошибка сохранения',
-        description: 'При попытке отправить форму произошла ошибка',
-        color: 'error',
-      });
-    },
-  });
-
-  function onSubmit() {
+  async function onSubmit(): Promise<void> {
     if (!isFormEdited.value) {
       consola.error('[useWorkshopForm] Nothing to save!');
 
@@ -106,7 +77,64 @@ export async function useWorkshopForm<T extends Record<string, any>>(
       return Promise.resolve();
     }
 
-    return execute();
+    try {
+      await $fetch(toValue(actionUrl), {
+        method: toValue(isEditForm) ? 'put' : 'post',
+        body: toValue(state),
+        onResponse,
+      });
+    } catch (err) {
+      $toast.add({
+        title: 'Ошибка сохранения',
+        description: 'При попытке отправить форму произошла ошибка',
+        color: 'error',
+      });
+
+      consola.error(err);
+    }
+
+    return Promise.resolve();
+  }
+
+  async function onResponse({
+    response,
+  }: {
+    response: FetchResponse<{ url?: string; [p: string]: unknown }>;
+  }) {
+    if (!response.ok) {
+      $toast.add({
+        title: 'Ошибка сохранения',
+        description: 'При попытке отправить форму произошла ошибка',
+        color: 'error',
+      });
+
+      consola.error('[useWorkshopForm] Error on response');
+
+      return;
+    }
+
+    if (!response._data?.url) {
+      $toast.add({
+        title: 'Ошибка ответа сервера',
+        description:
+          'Возможно форма сохранилась, но пришел некорректный ответ сервера...',
+        color: 'error',
+      });
+
+      consola.error('[useWorkshopForm] Incorrect response from server');
+
+      return;
+    }
+
+    $toast.add({
+      title: 'Сохранено',
+      description: 'Запись успешно сохранена!',
+      color: 'success',
+    });
+
+    if (isEditForm.value) {
+      await router.replace({ params: { url: response._data.url } });
+    }
   }
 
   function onError(error: FormErrorEvent) {
