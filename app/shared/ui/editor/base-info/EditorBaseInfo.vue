@@ -8,10 +8,6 @@
     section: string;
   }>();
 
-  const {
-    params: { url: oldUrl },
-  } = useRoute();
-
   const form = defineModel<EditorBaseInfoState>({ required: true });
 
   function handleBookChange(value: string | Array<string> | undefined) {
@@ -71,15 +67,7 @@
 
   const schema = computed(() =>
     z.object({
-      url: oldUrl
-        ? z
-            .string()
-            .trim()
-            .nonempty()
-            .refine((value) => oldUrl === value, {
-              error: 'URL не совпадает со старым',
-            })
-        : z.string().trim().nonempty(),
+      url: z.string().trim().nonempty(),
       tags: z.array(z.string().trim().nonempty()).optional(),
       name: nameSchema,
     }),
