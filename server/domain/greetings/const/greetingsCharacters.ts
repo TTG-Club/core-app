@@ -1,4 +1,4 @@
-import type { GreetingsCharacter } from '~~/server/types/greetings';
+import type { GreetingsCharacter } from '../model';
 
 export const GREETINGS_CHARACTERS: Array<GreetingsCharacter> = [
   {

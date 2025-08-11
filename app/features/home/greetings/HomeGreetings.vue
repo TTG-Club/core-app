@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { GreetingsResponse } from '~~/server/types/greetings';
+  import type { GreetingsResponse } from '~~/server/domain/greetings';
 
   const { data: greeting } = await useAsyncData<GreetingsResponse>(
     'home-greetings',
