@@ -48,7 +48,7 @@
       height: 100%;
 
       opacity: 0.4;
-      background-image: url('/s3/sections/fon.png');
+      background-image: url('/s3/home/legacy-site.webp');
       background-repeat: no-repeat;
       background-position: center;
       background-size: cover;
