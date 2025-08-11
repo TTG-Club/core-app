@@ -1,15 +1,8 @@
-import { ref } from 'vue';
+import type { GreetingsCharacter } from '~~/server/types/greetings';
 
-// Интерфейс для персонажа
-interface Character {
-  image: string;
-  messages: string[];
-}
-
-// Массив персонажей с их репликами
-const characters: Character[] = [
+export const GREETINGS_CHARACTERS: Array<GreetingsCharacter> = [
   {
-    image: '/s3/sections/greeter.webp',
+    image: '/s3/home/greetings/greeter.webp',
     messages: [
       'Смотри-ка, новый паладин правил! Брось на харизму, чтобы не утонуть в деталях.',
       'Смелый шаг, смертный! Без +5 к интеллекту тут легко заблудиться в таблицах.',
@@ -22,7 +15,7 @@ const characters: Character[] = [
     ],
   },
   {
-    image: '/s3/sections/greeter2.webp',
+    image: '/s3/home/greetings/greeter2.webp',
     messages: [
       'Вперед, легенда начинается здесь!',
       'Ворвался в мир подвигов? Брось d20 на отвагу и начни свою великую сагу!',
@@ -35,34 +28,4 @@ const characters: Character[] = [
       'Судьба зовет, а я тут с подсказками!',
     ],
   },
-];
-
-export function useCharacterSelection() {
-  // Реактивные переменные для текущего персонажа и сообщения
-  const selectedCharacter = ref<Character | null>(null);
-  const currentMessage = ref<string>('');
-
-  // Функция для случайного выбора персонажа и сообщения
-  function selectRandomCharacterAndMessage() {
-    if (characters.length > 0) {
-      const randomCharacterIndex = Math.floor(
-        Math.random() * characters.length,
-      );
-
-      const character = characters[randomCharacterIndex]!;
-
-      const randomMessageIndex = Math.floor(
-        Math.random() * character.messages.length,
-      );
-
-      selectedCharacter.value = character;
-      currentMessage.value = character.messages[randomMessageIndex]!;
-    }
-  }
-
-  return {
-    selectedCharacter,
-    currentMessage,
-    selectRandomCharacterAndMessage,
-  };
-}
+] as const;
