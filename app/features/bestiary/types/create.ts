@@ -28,8 +28,21 @@ export interface CreatureCreate extends EditorBaseInfoState {
   actions: Array<CreateAction>;
   bonusActions: Array<CreateAction>;
   reactions: Array<CreateAction>;
-  legendaryActions: Array<CreateAction>;
+  legendary: LegendaryActions;
+  lair: CreatureLair;
   section: CreateSection;
+}
+
+export interface LegendaryActions {
+  count: number;
+  inLair: number | undefined;
+  description: string | undefined;
+  actions: Array<CreateAction>;
+}
+
+export interface CreatureLair {
+  description: string;
+  effects: Array<CreateAction>;
 }
 
 export interface CreateSection {
@@ -158,7 +171,7 @@ export interface CreateAction {
   };
   description: string;
   attackType: string;
-  sawingThrows: Array<SavingThrow>;
+  savingThrows: Array<SavingThrow>;
   damageTypes: Array<string>;
   recharge: string | undefined;
   restrictionOfUse: string | undefined;
@@ -279,7 +292,16 @@ export function getInitialState(): CreatureCreate {
     actions: [],
     bonusActions: [],
     reactions: [],
-    legendaryActions: [],
+    legendary: {
+      count: 0,
+      inLair: 0,
+      actions: [],
+      description: '',
+    },
+    lair: {
+      effects: [],
+      description: '',
+    },
     section: {
       name: {
         rus: '',

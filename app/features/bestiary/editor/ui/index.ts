@@ -4,6 +4,10 @@ export { default as CreatureAbilities } from './CreatureAbilities.vue';
 
 export { default as CreatureAction } from './CreatureAction.vue';
 
+export { default as CreatureLairEffects } from './CreatureLairEffects.vue';
+
+export { default as CreatureLegendaryActions } from './CreatureLegendaryActions.vue';
+
 export { default as CreatureHit } from './CreatureHit.vue';
 
 export { default as CreatureSenses } from './CreatureSenses.vue';

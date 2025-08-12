@@ -17,19 +17,27 @@ export interface CreatureDetailResponse {
   hit: CreatureHitResponse;
   speed: string;
   abilities: CreatureAbilitiesResponse;
-  skills: string;
-  vulnerability: string;
-  resistance: string;
-  immunity: string;
-  languages: string;
-  sense: string;
+  skills?: string;
+  vulnerability?: string;
+  resistance?: string;
+  immunity?: string;
+  languages?: string;
+  sense?: string;
   traits: Array<CreatureTraitResponse>;
   actions: Array<CreatureActionResponse>;
   reactions: Array<CreatureActionResponse>;
   bonusActions: Array<CreatureActionResponse>;
   legendaryAction: number;
   legendaryActionInLair: number;
-  legendaryActions: Array<CreatureActionResponse>;
+  legendary: {
+    actions: Array<CreatureActionResponse>;
+    count: string;
+    description: string;
+  };
+  lair: {
+    description: Array<string>;
+    effects: Array<CreatureActionResponse>;
+  };
   section: CreatureSection;
 }
 

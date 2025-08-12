@@ -6,19 +6,17 @@
   defineProps<
     Pick<
       CreatureDetailResponse,
-      | 'ac'
-      | 'cr'
-      | 'initiative'
-      | 'hit'
-      | 'speed'
-      | 'abilities'
-      | 'skills'
-      | 'vulnerability'
-      | 'resistance'
-      | 'immunity'
-      | 'sense'
-      | 'languages'
-    >
+      'ac' | 'cr' | 'initiative' | 'hit' | 'speed' | 'abilities'
+    > &
+      Pick<
+        Partial<CreatureDetailResponse>,
+        | 'skills'
+        | 'vulnerability'
+        | 'resistance'
+        | 'immunity'
+        | 'sense'
+        | 'languages'
+      >
   >();
 </script>
 

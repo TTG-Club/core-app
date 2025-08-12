@@ -22,6 +22,10 @@
 
   import { type CreatureCreate, getInitialState } from '~bestiary/types';
   import { CreaturePreview } from '~bestiary/preview';
+  import {
+    CreatureLairEffects,
+    CreatureLegendaryActions,
+  } from '~bestiary/editor/ui';
 
   const formRef = useTemplateRef('formRef');
 
@@ -188,10 +192,9 @@
       name="reactions"
     />
 
-    <CreatureAction
-      v-model="state.legendaryActions"
-      name="legendaryActions"
-    />
+    <CreatureLegendaryActions v-model="state.legendary" />
+
+    <CreatureLairEffects v-model="state.lair" />
 
     <USeparator>
       <span class="font-bold text-secondary">Изображения</span>

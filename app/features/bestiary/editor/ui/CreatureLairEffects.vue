@@ -1,18 +1,6 @@
 <script setup lang="ts">
-  import type { CreateAction } from '~bestiary/types';
+  import type { CreateAction, CreatureLair } from '~bestiary/types';
   import { EditorArrayControls } from '~ui/editor';
-
-  type ActionKey = 'actions' | 'bonusActions' | 'reactions';
-
-  defineProps<{
-    name: ActionKey;
-  }>();
-
-  const labelMap: Record<ActionKey, string> = {
-    actions: 'Действия',
-    bonusActions: 'Бонусные действия',
-    reactions: 'Реакции',
-  };
 
   function getEmpty(): CreateAction {
     return {
@@ -29,40 +17,57 @@
     };
   }
 
-  const model = defineModel<Array<CreateAction>>({ default: () => [] });
+  const model = defineModel<CreatureLair>({ required: true });
 
   function isLastAction(index: number) {
-    return index === model.value.length - 1;
+    return index === model.value.effects.length - 1;
   }
 
   function addAction(index: number) {
-    model.value.splice(index, 0, getEmpty());
+    model.value.effects.splice(index, 0, getEmpty());
   }
 </script>
 
 <template>
   <USeparator>
-    <span class="font-bold text-secondary">
-      {{ labelMap[name] ?? 'Особенности' }}
-    </span>
+    <span class="font-bold text-secondary"> Логово </span>
   </USeparator>
 
+  <UForm
+    class="col-span-full grid grid-cols-24 gap-4"
+    attach
+    :state="model"
+  >
+    <UFormField
+      class="col-span-full"
+      label="Описание логова"
+      name="lair.description"
+    >
+      <UTextarea
+        v-model="model.description"
+        :maxrows="6"
+        :rows="2"
+        placeholder="Введите описание (необязательно)"
+      />
+    </UFormField>
+  </UForm>
+
   <template
-    v-for="(action, actionIndex) in model"
-    :key="actionIndex"
+    v-for="(effect, effectIndex) in model.effects"
+    :key="effectIndex"
   >
     <UForm
       class="col-span-full grid grid-cols-24 gap-4"
       attach
-      :state="action"
+      :state="effect"
     >
       <UFormField
         class="col-span-8"
         label="Название"
-        :name="`${name}.${actionIndex}.name.rus`"
+        name="name.rus"
       >
         <UInput
-          v-model="action.name.rus"
+          v-model="effect.name.rus"
           placeholder="Введи название"
         />
       </UFormField>
@@ -70,19 +75,19 @@
       <UFormField
         class="col-span-8"
         label="Название (англ.)"
-        :name="`${name}.${actionIndex}.name.eng`"
+        name="name.eng"
       >
         <UInput
-          v-model="action.name.eng"
+          v-model="effect.name.eng"
           placeholder="Введи английское название"
         />
       </UFormField>
 
       <EditorArrayControls
-        v-model="model"
-        :item="action"
+        v-model="model.effects"
+        :item="effect"
         :empty-object="getEmpty()"
-        :index="actionIndex"
+        :index="effectIndex"
         cols="8"
         only-remove
       />
@@ -90,21 +95,21 @@
       <UFormField
         class="col-span-24"
         label="Описание"
-        :name="`${name}.${actionIndex}.description`"
+        name="description"
       >
         <UTextarea
-          v-model="action.description"
+          v-model="effect.description"
           :rows="3"
           placeholder="Введи описание"
         />
       </UFormField>
     </UForm>
 
-    <USeparator v-if="!isLastAction(actionIndex)" />
+    <USeparator v-if="!isLastAction(effectIndex)" />
   </template>
 
   <div
-    v-if="!model.length"
+    v-if="!model.effects.length"
     class="col-span-full flex justify-center"
   >
     <UButton @click.left.exact.prevent="addAction(0)">
