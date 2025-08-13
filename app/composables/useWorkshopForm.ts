@@ -35,13 +35,13 @@ export async function useWorkshopForm<T extends Record<string, any>>(
   );
 
   const { refresh: reset } = useAsyncData(async () => {
-    const mutatedState = _options.getInitialState();
-
     if (isEditForm.value) {
       try {
         const resp = await $fetch<T>(`${actionUrl.value}/raw`);
+        const merged = merge({}, _options.getInitialState(), resp);
 
-        merge(mutatedState, resp);
+        state.value = cloneDeep(merged);
+        prevState.value = cloneDeep(merged);
       } catch (error) {
         consola.error(error);
 
@@ -59,9 +59,6 @@ export async function useWorkshopForm<T extends Record<string, any>>(
         });
       }
     }
-
-    state.value = cloneDeep(mutatedState);
-    prevState.value = cloneDeep(mutatedState);
   });
 
   async function onSubmit(): Promise<void> {
