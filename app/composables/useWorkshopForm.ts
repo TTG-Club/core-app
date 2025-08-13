@@ -96,11 +96,7 @@ export async function useWorkshopForm<T extends Record<string, any>>(
     return Promise.resolve();
   }
 
-  async function onResponse({
-    response,
-  }: {
-    response: FetchResponse<{ url?: string; [p: string]: unknown }>;
-  }) {
+  async function onResponse({ response }: { response: FetchResponse<string> }) {
     if (!response.ok) {
       $toast.add({
         title: 'Ошибка сохранения',
@@ -113,7 +109,7 @@ export async function useWorkshopForm<T extends Record<string, any>>(
       return;
     }
 
-    if (!response._data?.url) {
+    if (!response._data) {
       $toast.add({
         title: 'Ошибка ответа сервера',
         description:
@@ -133,7 +129,7 @@ export async function useWorkshopForm<T extends Record<string, any>>(
     });
 
     if (isEditForm.value) {
-      await router.replace({ params: { url: response._data.url } });
+      await router.replace({ params: { url: response._data } });
     }
   }
 
