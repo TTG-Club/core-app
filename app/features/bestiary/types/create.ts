@@ -41,8 +41,10 @@ export interface LegendaryActions {
 }
 
 export interface CreatureLair {
+  name: string;
   description: string;
   effects: Array<CreateAction>;
+  ending: string;
 }
 
 export interface CreateSection {
@@ -299,8 +301,10 @@ export function getInitialState(): CreatureCreate {
       description: '',
     },
     lair: {
+      name: '',
       effects: [],
       description: '',
+      ending: '',
     },
     section: {
       name: {

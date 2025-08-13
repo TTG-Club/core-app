@@ -40,6 +40,17 @@
   >
     <UFormField
       class="col-span-full"
+      label="Название логова"
+      name="lair.name"
+    >
+      <UInput
+        v-model="model.name"
+        placeholder="Название логова (необязательно)"
+      />
+    </UFormField>
+
+    <UFormField
+      class="col-span-full"
       label="Описание логова"
       name="lair.description"
     >
@@ -113,7 +124,26 @@
     class="col-span-full flex justify-center"
   >
     <UButton @click.left.exact.prevent="addAction(0)">
-      Добавить первое
+      Добавить первый
     </UButton>
   </div>
+
+  <UForm
+    class="col-span-full grid grid-cols-24 gap-4"
+    attach
+    :state="model"
+  >
+    <UFormField
+      class="col-span-full"
+      label="Описание окончания действия логова"
+      name="lair.ending"
+    >
+      <UTextarea
+        v-model="model.ending"
+        :maxrows="6"
+        :rows="2"
+        placeholder="Описание окончания действия логова (необязательно)"
+      />
+    </UFormField>
+  </UForm>
 </template>

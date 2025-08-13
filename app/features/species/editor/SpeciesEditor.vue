@@ -124,7 +124,7 @@
       <UploadImage
         v-model="state.image"
         section="species"
-        max-size="640"
+        max-size="1024"
       >
         <template #preview>
           <NuxtImg

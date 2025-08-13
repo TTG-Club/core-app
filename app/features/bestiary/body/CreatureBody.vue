@@ -144,11 +144,25 @@
           </UiCollapse>
         </template>
 
-        <template
-          v-if="creature.lair?.effects?.length || creature.lair?.description"
+        <UiCollapse
+          v-if="creature.description"
+          default-open
         >
+          <template #default> Описание </template>
+
+          <template #content>
+            <DescriptionsBlock
+              v-if="creature.description"
+              :description="creature.description"
+            />
+          </template>
+        </UiCollapse>
+
+        <template v-if="creature.lair">
           <UiCollapse default-open>
-            <template #default> Эффекты местности </template>
+            <template #default>
+              {{ creature.lair.name || 'Описание логова' }}
+            </template>
 
             <template #content>
               <MarkupRender
@@ -156,23 +170,45 @@
                 :entries="creature.lair.description"
               />
 
-              <template
-                v-for="effect in creature.lair.effects"
-                :key="effect.name.eng"
-              >
-                <strong>{{ effect.name.rus }}. </strong>
+              <template v-if="creature.lair?.effects?.length">
+                <template
+                  v-for="effect in creature.lair.effects"
+                  :key="effect.name.eng"
+                >
+                  <strong>{{ effect.name.rus }}. </strong>
 
-                <MarkupRender :entries="effect.description" />
+                  <MarkupRender :entries="effect.description" />
+                </template>
               </template>
+
+              <MarkupRender
+                v-if="creature.lair.ending"
+                :entries="creature.lair.ending"
+              />
             </template>
           </UiCollapse>
         </template>
 
-        <template v-if="creature.description || creature.section">
-          <UiCollapse default-open>
-            <template #default> Описание </template>
+        <UiCollapse
+          v-if="creature?.section"
+          default-open
+        >
+          <template #default>
+            {{ creature.section.name.rus }} [{{ creature.section.name.eng }}]
+          </template>
 
-            <template #content>
+          <template
+            v-if="creature.section.subtitle"
+            #subtitle
+          >
+            {{ creature.section.subtitle }}
+          </template>
+
+          <template #content>
+            <div
+              v-if="creature.section?.habitats || creature.section?.treasures"
+              class="mb-2"
+            >
               <p v-if="creature.section?.habitats">
                 <strong>Среда обитания: </strong>
 
@@ -180,33 +216,18 @@
               </p>
 
               <p v-if="creature.section?.treasures">
-                <strong>Сокровища:</strong> {{ creature.section.treasures }}
+                <strong>Сокровища: </strong>
+
+                <span>{{ creature.section.treasures }}</span>
               </p>
+            </div>
 
-              <p>
-                <template
-                  v-if="creature?.section?.name.eng !== creature.name.eng"
-                >
-                  <span> {{ creature.section.name.rus }} </span>
-
-                  <span>{{ creature.section.name.eng }} </span>
-                </template>
-
-                <span v-if="creature.section?.subtitle">
-                  <i> {{ creature.section.subtitle }} </i>
-                </span>
-              </p>
-
-              <DescriptionsBlock :description="creature.description" />
-
-              <template v-if="creature.section">
-                <DescriptionsBlock
-                  :description="creature.section?.description"
-                />
-              </template>
-            </template>
-          </UiCollapse>
-        </template>
+            <DescriptionsBlock
+              v-if="creature.section.description"
+              :description="creature.section.description"
+            />
+          </template>
+        </UiCollapse>
       </div>
     </div>
   </div>
