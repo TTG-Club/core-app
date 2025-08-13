@@ -119,6 +119,8 @@ export async function useWorkshopForm<T extends Record<string, any>>(
 
       consola.error('[useWorkshopForm] Incorrect response from server');
 
+      await reset();
+
       return;
     }
 
@@ -128,7 +130,13 @@ export async function useWorkshopForm<T extends Record<string, any>>(
       color: 'success',
     });
 
-    if (isEditForm.value) {
+    if (!isEditForm.value) {
+      return;
+    }
+
+    if (response._data === state.value.url) {
+      await reset();
+    } else {
       await router.replace({ params: { url: response._data } });
     }
   }
