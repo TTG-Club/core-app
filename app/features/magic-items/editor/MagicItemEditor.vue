@@ -150,8 +150,34 @@
       <UploadImage
         v-model="state.image"
         section="magic-items"
-        max-size="480"
-      />
+        max-size="1024"
+      >
+        <template #preview>
+          <NuxtImg
+            v-slot="{ src, isLoaded, imgAttrs }"
+            :key="state.image"
+            :src="state.image"
+            custom
+          >
+            <!-- Show the actual image when loaded -->
+            <img
+              v-if="isLoaded"
+              v-bind="imgAttrs"
+              class="w-full rounded-lg object-contain"
+              :src="src"
+              :alt="state.name.rus"
+            />
+
+            <!-- Show a placeholder while loading -->
+            <img
+              v-else
+              class="w-full rounded-lg object-contain"
+              src="/img/no-img.webp"
+              alt="no image"
+            />
+          </NuxtImg>
+        </template>
+      </UploadImage>
     </UFormField>
 
     <EditorFormControls />

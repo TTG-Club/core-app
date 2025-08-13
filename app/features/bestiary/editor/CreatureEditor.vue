@@ -209,7 +209,7 @@
       <UploadImage
         v-model="state.image"
         section="bestiary"
-        max-size="640"
+        max-size="1024"
       >
         <template #preview>
           <NuxtImg
