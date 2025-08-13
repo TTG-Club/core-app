@@ -2,6 +2,9 @@
   defineProps<{
     title: string;
   }>();
+
+  const route = useRoute();
+  const alert = computed(() => route.meta.alert);
 </script>
 
 <template>
@@ -16,8 +19,20 @@
       </div>
     </div>
 
-    <div class="min-h-dvh flex-auto px-4 pb-8 lg:pt-4">
-      <slot name="default" />
+    <div class="flex min-h-dvh flex-auto flex-col gap-4 px-4 pb-8 lg:pt-4">
+      <UAlert
+        v-if="alert?.description"
+        class="shrink-0"
+        variant="soft"
+        :color="alert.color || 'info'"
+        :icon="alert.icon || undefined"
+        :title="alert.title || undefined"
+        :description="alert.description"
+      />
+
+      <div class="flex-auto">
+        <slot name="default" />
+      </div>
     </div>
   </div>
 </template>

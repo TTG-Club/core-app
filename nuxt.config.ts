@@ -168,16 +168,6 @@ export default defineNuxtConfig({
   // TypeScript и линтеры
   typescript: {
     typeCheck: true,
-    tsConfig: {
-      compilerOptions: {
-        plugins: [
-          {
-            name: '@vue/typescript-plugin',
-            enable: true,
-          },
-        ],
-      },
-    },
   },
   eslint: {
     config: {

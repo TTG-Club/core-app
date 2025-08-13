@@ -3,6 +3,19 @@ declare module '#app' {
     auth?: {
       roles?: Array<string>;
     };
+    alert?: {
+      icon?: string;
+      title?: string;
+      description: string;
+      color?:
+        | 'error'
+        | 'info'
+        | 'primary'
+        | 'secondary'
+        | 'success'
+        | 'warning'
+        | 'neutral';
+    };
   }
 }
 
