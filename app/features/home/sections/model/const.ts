@@ -1,6 +1,12 @@
-import { Role } from '~/shared/types';
+import type { Role } from '~/shared/types';
 
-export const CARD_LINKS = [
+export const CARD_LINKS: Array<{
+  name: string;
+  url: string;
+  img: string;
+  disabled?: boolean;
+  roles?: Array<Role>;
+}> = [
   {
     name: 'Классы',
     url: '/',
@@ -48,7 +54,6 @@ export const CARD_LINKS = [
     name: 'Бестиарий',
     url: '/bestiary',
     img: '/s3/home/section-link/bestiary.webp',
-    roles: [Role.ADMIN],
   },
   {
     name: 'Глоссарий правил',

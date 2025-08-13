@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { Role } from '~/shared/types';
   import type { SearchBody } from '~/shared/types';
   import { CreatureLegend } from '~bestiary/legend';
   import { CreatureLink } from '~bestiary/link';
@@ -9,10 +8,6 @@
   import { SmallLinkSkeleton } from '~ui/skeleton';
 
   import type { CreatureLinkResponse } from '~bestiary/types';
-
-  definePageMeta({
-    auth: { roles: [Role.ADMIN] },
-  });
 
   useSeoMeta({
     title: 'Бестиарий [Bestiary]',

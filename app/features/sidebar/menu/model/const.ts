@@ -1,6 +1,15 @@
-import { Role } from '~/shared/types';
+import type { Role } from '~/shared/types';
 
-export const MENU_SECTIONS = [
+export const MENU_SECTIONS: Array<{
+  label: string;
+  icon: string;
+  items: Array<{
+    label: string;
+    href: string;
+    disabled?: boolean;
+    roles?: Array<Role>;
+  }>;
+}> = [
   {
     label: 'Персонаж',
     icon: 'menu/filled/character',
@@ -54,7 +63,6 @@ export const MENU_SECTIONS = [
         href: '/bestiary',
         label: 'Бестиарий',
         disabled: false,
-        roles: [Role.ADMIN],
       },
       {
         href: '/glossary',
@@ -70,7 +78,10 @@ export const MENU_SECTIONS = [
   },
 ];
 
-export const MENU_LINKS = [
+export const MENU_LINKS: Array<{
+  url: string;
+  icon: string;
+}> = [
   {
     url: 'https://vk.com/ttg.club',
     icon: 'i-ttg-vk',
@@ -89,7 +100,11 @@ export const MENU_LINKS = [
   },
 ];
 
-export const MENU_SUPPORT = [
+export const MENU_SUPPORT: Array<{
+  url: string;
+  icon: string;
+  label: string;
+}> = [
   {
     url: 'https://boosty.to/dnd5club',
     icon: 'i-ttg-boosty',
