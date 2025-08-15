@@ -4,262 +4,182 @@
     MagicItemAttunement,
     MagicItemCategory,
   } from './ui';
-  import { ruleUrl } from './validators';
 
-  import { ValidationBase } from '~/shared/utils';
-  import { InputUrl } from '~ui/input';
-  import { SelectSource, SelectTags } from '~ui/select';
+  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { UploadImage } from '~ui/upload';
 
-  import type { FormInstance } from 'ant-design-vue';
-  import type { SelectValue } from 'ant-design-vue/es/select';
   import type { MagicItemCreate } from '~magic-items/types';
 
-  const { isCreating } = defineProps<{
-    isCreating: boolean;
-  }>();
+  const formRef = useTemplateRef('formRef');
 
-  const form = defineModel<MagicItemCreate>({ required: true });
-
-  const {
-    params: { url: oldUrl },
-  } = useRoute();
-
-  const formRef = useTemplateRef<FormInstance>('formRef');
-
-  const handleBookChange = (value: SelectValue) => {
-    if (typeof value !== 'string' && value !== undefined) {
-      return;
-    }
-
-    if (value === undefined) {
-      form.value.source.page = undefined;
-    }
-
-    form.value.source.url = value;
+  const validate = () => {
+    return formRef.value?.validate();
   };
 
   defineExpose({
-    validate: computed(() => formRef.value?.validate),
+    validate,
   });
+
+  function getInitialState(): MagicItemCreate {
+    return {
+      url: '',
+      name: {
+        rus: '',
+        eng: '',
+        alt: [],
+      },
+      source: {
+        url: undefined,
+        page: undefined,
+      },
+      description: '',
+      category: {
+        type: undefined,
+        clarification: undefined,
+      },
+      rarity: {
+        type: undefined,
+        varies: undefined,
+      },
+      attunement: {
+        requires: false,
+        description: null,
+      },
+      charges: 0,
+      curse: false,
+      consumable: false,
+      image: undefined,
+      tags: [],
+    };
+  }
+
+  const { state, onError, onSubmit } = await useWorkshopForm<MagicItemCreate>(
+    computed(() => ({
+      actionUrl: '/api/v2/magic-items',
+      getInitialState,
+    })),
+  );
 </script>
 
 <template>
-  <AForm
+  <UForm
     ref="formRef"
-    layout="vertical"
-    :model="form"
-    :disabled="isCreating"
+    :state
+    class="grid grid-cols-24 gap-4"
+    @error="onError"
+    @submit="onSubmit"
   >
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Основная информация"
-        strong
+    <EditorBaseInfo
+      v-model="state"
+      section="magic-items"
+    />
+
+    <USeparator>
+      <span class="font-bold text-secondary">Подробности</span>
+    </USeparator>
+
+    <MagicItemCategory v-model="state.category" />
+
+    <MagicItemRarity v-model="state.rarity" />
+
+    <MagicItemAttunement v-model="state.attunement" />
+
+    <UFormField
+      class="col-span-4"
+      label="Проклятие"
+      name="curse"
+    >
+      <UCheckbox
+        v-model="state.curse"
+        label="Есть"
       />
-    </ADivider>
+    </UFormField>
 
-    <ARow :gutter="16">
-      <ACol :span="8">
-        <AFormItem
-          label="Название"
-          :name="['name', 'rus']"
-          :rules="[ValidationBase.ruleRusName()]"
-        >
-          <AInput
-            v-model:value="form.name.rus"
-            placeholder="Введи название"
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="8">
-        <AFormItem
-          label="Название (англ.)"
-          tooltip="Английское название"
-          :name="['name', 'eng']"
-          :rules="[ValidationBase.ruleEngName()]"
-        >
-          <AInput
-            v-model:value="form.name.eng"
-            placeholder="Введи английское название"
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="8">
-        <AFormItem
-          label="Название (альт.)"
-          tooltip="Альтернативные названия. Используется для поиска и СЕО."
-          :name="['name', 'alt']"
-        >
-          <SelectTags
-            v-model="form.name.alt"
-            placeholder="Введи альтернативные названия"
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-
-    <ARow :gutter="16">
-      <ACol :span="16">
-        <AFormItem
-          label="Источник"
-          tooltip="Книга, из которой взята информация о виде, если она существует"
-          :name="['source', 'url']"
-        >
-          <SelectSource
-            :model-value="form.source.url"
-            @update:model-value="handleBookChange"
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="8">
-        <AFormItem
-          label="Страница в источнике"
-          tooltip="Номер страницы книги, откуда была взята информация о виде, если выбрана сама книга"
-          :name="['source', 'page']"
-          :rules="[ValidationBase.ruleSourcePage(!!form.source.url)]"
-        >
-          <AInputNumber
-            v-model:value="form.source.page"
-            :disabled="!form.source.url"
-            :precision="0"
-            placeholder="Введи номер страницы"
-            min="0"
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-
-    <ARow :gutter="16">
-      <ACol :span="12">
-        <AFormItem
-          label="Теги"
-          tooltip="Используются для поиска и СЕО"
-          :name="['tags']"
-        >
-          <SelectTags
-            v-model="form.tags"
-            placeholder="Введи теги"
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="12">
-        <AFormItem
-          label="URL"
-          tooltip="Менять только при необходимости, т.к. URL генерируется автоматически при вводе английского названия"
-          :name="['url']"
-        >
-          <InputUrl
-            v-model="form.url"
-            :eng-name="form.name.eng"
-            :source-url="form.source.url"
-            :addon-before="`${getOrigin()}/magic-items/`"
-            :rules="[ruleUrl(oldUrl)]"
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Подробности"
-        strong
+    <UFormField
+      class="col-span-4"
+      label="Расходуемый"
+      name="consumable"
+    >
+      <UCheckbox
+        v-model="state.consumable"
+        label="Да"
       />
-    </ADivider>
+    </UFormField>
 
-    <MagicItemCategory v-model="form.category" />
-
-    <MagicItemRarity v-model="form.rarity" />
-
-    <MagicItemAttunement v-model="form.attunement" />
-
-    <ARow :gutter="16">
-      <ACol :span="4">
-        <AFormItem
-          label="Проклятие"
-          :name="['curse']"
-        >
-          <ACheckbox v-model:checked="form.curse"> Есть </ACheckbox>
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="4">
-        <AFormItem
-          label="Расходуемый"
-          :name="['consumable']"
-        >
-          <ACheckbox v-model:checked="form.consumable"> Да </ACheckbox>
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="4">
-        <AFormItem
-          label="Количество зарядов"
-          tooltip="Введите количество зарядов магического предмета (если есть)"
-          :name="['charges']"
-        >
-          <AInputNumber
-            v-model:value="form.charges"
-            :precision="0"
-            placeholder="Введи количество зарядов"
-            min="0"
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Описание"
-        strong
+    <UFormField
+      class="col-span-4"
+      label="Количество зарядов"
+      help="Введите количество зарядов магического предмета (если есть)"
+      name="charges"
+    >
+      <UInput
+        v-model="state.charges"
+        type="number"
+        placeholder="Введи количество зарядов"
+        min="0"
+        step="1"
       />
-    </ADivider>
+    </UFormField>
 
-    <ARow :gutter="16">
-      <ACol :span="24">
-        <AFormItem
-          label="Описание"
-          :name="['description']"
-          :rules="[ValidationBase.ruleString()]"
-        >
-          <ATextarea
-            v-model:value="form.description"
-            :rows="8"
-            placeholder="Введи описание"
-            allow-clear
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
+    <USeparator>
+      <span class="font-bold text-secondary">Описание</span>
+    </USeparator>
 
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Изображения"
-        strong
+    <UFormField
+      class="col-span-24"
+      label="Описание"
+      name="description"
+    >
+      <UTextarea
+        v-model="state.description"
+        :rows="8"
+        placeholder="Введи описание"
       />
-    </ADivider>
+    </UFormField>
 
-    <ARow :gutter="16">
-      <ACol :span="8">
-        <AFormItem
-          label="Основное"
-          tooltip="Эта картинка отображается при просмотре страницы магического предмета"
-          :name="['image']"
-        >
-          <UploadImage
-            v-model="form.image"
-            section="magic-item"
-            max-size="480"
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-  </AForm>
+    <USeparator>
+      <span class="font-bold text-secondary">Изображения</span>
+    </USeparator>
+
+    <UFormField
+      class="col-span-8"
+      label="Основное"
+      help="Эта картинка отображается при просмотре страницы магического предмета"
+      name="image"
+    >
+      <UploadImage
+        v-model="state.image"
+        section="magic-items"
+        max-size="1024"
+      >
+        <template #preview>
+          <NuxtImg
+            v-slot="{ src, isLoaded, imgAttrs }"
+            :key="state.image"
+            :src="state.image"
+            custom
+          >
+            <!-- Show the actual image when loaded -->
+            <img
+              v-if="isLoaded"
+              v-bind="imgAttrs"
+              class="w-full rounded-lg object-contain"
+              :src="src"
+              :alt="state.name.rus"
+            />
+
+            <!-- Show a placeholder while loading -->
+            <img
+              v-else
+              class="w-full rounded-lg object-contain"
+              src="/img/no-img.webp"
+              alt="no image"
+            />
+          </NuxtImg>
+        </template>
+      </UploadImage>
+    </UFormField>
+
+    <EditorFormControls />
+  </UForm>
 </template>

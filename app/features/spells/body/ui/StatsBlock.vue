@@ -35,36 +35,37 @@
       <span :class="$style.name">Компоненты:</span>
 
       <span>
-        <ATooltip
+        <UTooltip
           v-if="components.v"
-          :title="COMPONENT_TOOLTIP_TEXT.v"
-          :mouse-enter-delay="0.7"
-          destroy-tooltip-on-hide
+          :text="COMPONENT_TOOLTIP_TEXT.v"
+          disable-hoverable-content
         >
-          <span>Вербальный</span>
+          <span>
+            <span>Вербальный</span>
 
-          <span v-if="components.s || components.m">, </span>
-        </ATooltip>
+            <span v-if="components.s || components.m">, </span>
+          </span>
+        </UTooltip>
 
-        <ATooltip
+        <UTooltip
           v-if="components.s"
-          :title="COMPONENT_TOOLTIP_TEXT.s"
-          :mouse-enter-delay="0.7"
-          destroy-tooltip-on-hide
+          :text="COMPONENT_TOOLTIP_TEXT.s"
+          disable-hoverable-content
         >
-          <span>Соматический</span>
+          <span>
+            <span>Соматический</span>
 
-          <span v-if="components.m">, </span>
-        </ATooltip>
+            <span v-if="components.m">, </span>
+          </span>
+        </UTooltip>
 
-        <ATooltip
+        <UTooltip
           v-if="components.m"
-          :title="COMPONENT_TOOLTIP_TEXT.m"
-          :mouse-enter-delay="0.7"
-          destroy-tooltip-on-hide
+          :text="COMPONENT_TOOLTIP_TEXT.m"
+          disable-hoverable-content
         >
-          <span>Материальный ({{ components.m }})</span>
-        </ATooltip>
+          <span> Материальный ({{ components.m }}) </span>
+        </UTooltip>
       </span>
     </div>
   </div>
@@ -79,19 +80,19 @@
 
     width: 100%;
     min-width: 272px;
-    border: 1px solid var(--color-border);
+    padding: 8px 0;
+    border: 1px solid var(--ui-border);
     border-radius: 8px;
 
-    background-color: var(--color-bg-secondary);
+    background-color: var(--ui-bg-muted);
 
     .item {
       display: flex;
       flex: 1 0 100%;
       flex-direction: column;
-      gap: 4px;
 
       min-width: 100%;
-      padding: 10px 16px;
+      padding: 6px 16px;
 
       @container (width > 600px) {
         flex: 1 0 calc(100% / 3);
@@ -110,8 +111,8 @@
       }
 
       .name {
-        font-weight: 500;
-        color: var(--color-text-title);
+        font-weight: 600;
+        color: var(--ui-text-bold);
       }
     }
   }

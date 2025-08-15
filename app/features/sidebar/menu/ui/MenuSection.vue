@@ -1,26 +1,56 @@
 <script setup lang="ts">
-  defineProps<{
-    title: string;
-    items: { href: string; label: string; disabled?: boolean }[]; // Массив ссылок
+  import { isArray } from 'lodash-es';
+
+  import { useUserStore } from '~/shared/stores';
+
+  import type { Role } from '~/shared/types';
+
+  const { items } = defineProps<{
+    label: string;
+    items: Array<{
+      href: string;
+      label: string;
+      disabled?: boolean;
+      roles?: Array<Role>;
+    }>;
   }>();
+
+  const { user } = storeToRefs(useUserStore());
+
+  const links = computed(() =>
+    items.map((link) => {
+      if (!isArray(link.roles)) {
+        return link;
+      }
+
+      const available = link.roles.some((role) =>
+        user.value?.roles.includes(role),
+      );
+
+      return {
+        ...link,
+        disabled: link.disabled || !available,
+      };
+    }),
+  );
 </script>
 
 <template>
-  <AFlex
+  <div
+    class="flex flex-col"
     :class="$style.menu"
-    vertical
   >
-    <span :class="$style.title">{{ title }}</span>
+    <span :class="$style.title">{{ label }}</span>
 
     <NuxtLink
-      v-for="(item, index) in items"
-      :key="index"
-      :class="[$style.item, item.disabled && $style.disabled]"
-      :to="item.href"
+      v-for="link in links"
+      :key="link.href"
+      :class="[$style.item, { [$style.disabled]: link.disabled }]"
+      :to="link.href"
     >
-      {{ item.label }}
+      {{ link.label }}
     </NuxtLink>
-  </AFlex>
+  </div>
 </template>
 
 <style lang="scss" module>
@@ -39,14 +69,12 @@
 
     font-size: 13px;
     font-weight: 200;
-    color: var(--color-text-gray);
+    color: var(--ui-text-toned);
   }
   .item {
     padding: 6px 16px;
     border-radius: 6px;
-    color: var(--color-text);
     &:hover {
-      color: var(--color-text);
       background-color: var(--color-hover);
       transition: all 0.15s ease-in-out;
     }

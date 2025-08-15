@@ -1,19 +1,13 @@
 <script setup lang="ts">
-  import { useDrawer } from '~/shared/composables';
-  import { GroupTag } from '~ui/source-tag';
+  import { LinkLineages, LinkPreview } from './ui';
+
+  import { SourceTag } from '~ui/source-tag';
 
   import type { SpeciesLinkResponse } from '~/shared/types';
 
-  const { inLineagesDrawer } = defineProps<{
+  const { species } = defineProps<{
     species: SpeciesLinkResponse;
-    inLineagesDrawer?: boolean;
   }>();
-
-  const { open: openLineages } = useDrawer('species-lineages');
-
-  const { open: openPreview } = useDrawer(
-    inLineagesDrawer ? 'species-lineage-detail' : 'species-detail',
-  );
 </script>
 
 <template>
@@ -35,7 +29,10 @@
             {{ species.name.rus }}
           </span>
 
-          <GroupTag :group="species.source.group" />
+          <SourceTag
+            v-if="species.source?.name?.label"
+            :source="species.source"
+          />
         </div>
 
         <div :class="$style.common">
@@ -49,20 +46,12 @@
       </div>
 
       <div :class="$style.actions">
-        <button
-          :class="$style.btn"
-          @click.left.exact.prevent.stop="openPreview(species.url)"
-        >
-          Предпросмотр
-        </button>
+        <LinkPreview :url="species.url" />
 
-        <button
+        <LinkLineages
           v-if="species.hasLineages"
-          :class="$style.btn"
-          @click.left.exact.prevent.stop="openLineages(species.url)"
-        >
-          Разновидности
-        </button>
+          :url="species.url"
+        />
       </div>
     </div>
   </NuxtLink>
@@ -74,12 +63,12 @@
 
     overflow: hidden;
 
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--ui-border);
     border-radius: 16px;
 
-    color: var(--color-text);
+    color: var(--ui-text);
 
-    background-color: var(--color-bg-secondary);
+    background-color: var(--ui-bg-muted);
 
     & {
       @include css-anim($time: 0.23s);
@@ -134,10 +123,6 @@
       gap: 2px;
       align-items: center;
     }
-
-    .common {
-      color: var(--color-text-gray);
-    }
   }
 
   .name {
@@ -150,6 +135,7 @@
 
     &.rus {
       font-weight: 600;
+      color: var(--ui-text-highlighted);
     }
 
     &.eng {
@@ -159,7 +145,7 @@
 
   .actions {
     display: flex;
-    border-top: 1px solid var(--color-border);
+    border-top: 1px solid var(--ui-border);
 
     .btn {
       cursor: pointer;
@@ -176,7 +162,7 @@
       }
 
       &:not(:first-child) {
-        border-left: 1px solid var(--color-border);
+        border-left: 1px solid var(--ui-border);
       }
 
       &:hover {

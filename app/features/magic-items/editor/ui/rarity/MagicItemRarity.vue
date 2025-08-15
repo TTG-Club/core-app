@@ -1,8 +1,6 @@
 <script setup lang="ts">
   import { SelectRarity } from './ui';
 
-  import { ValidationDictionaries } from '~/shared/utils';
-
   import type { MagicItemRarity } from '~magic-items/types';
 
   const model = defineModel<MagicItemRarity>({
@@ -21,32 +19,33 @@
 </script>
 
 <template>
-  <ARow :gutter="16">
-    <ACol :span="8">
-      <AFormItem
-        label="Редкость"
-        :name="['rarity', 'type']"
-        :rules="[ValidationDictionaries.ruleRarity()]"
-      >
-        <SelectRarity
-          v-model="model.type"
-          placeholder="Выбери редкость"
-        />
-      </AFormItem>
-    </ACol>
+  <UForm
+    class="col-span-full grid grid-cols-24 gap-4"
+    attach
+    :state="model"
+  >
+    <UFormField
+      class="col-span-8"
+      label="Редкость"
+      name="type"
+    >
+      <SelectRarity
+        v-model="model.type"
+        placeholder="Выбери редкость"
+      />
+    </UFormField>
 
-    <ACol :span="16">
-      <AFormItem
-        label="Текст редкости"
-        :name="['rarity', 'varies']"
-      >
-        <AInput
-          v-model:value="model.varies"
-          :disabled="!isVaries"
-          placeholder="Введи текст для варьируемой редкости"
-          allow-clear
-        />
-      </AFormItem>
-    </ACol>
-  </ARow>
+    <UFormField
+      class="col-span-16"
+      label="Текст редкости"
+      name="varies"
+    >
+      <UInput
+        v-model="model.varies"
+        :disabled="!isVaries"
+        placeholder="Введи текст для варьируемой редкости"
+        clearable
+      />
+    </UFormField>
+  </UForm>
 </template>

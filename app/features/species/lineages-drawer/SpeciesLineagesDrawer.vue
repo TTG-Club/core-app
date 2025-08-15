@@ -1,58 +1,38 @@
 <script setup lang="ts">
-  import { useDrawer } from '~/shared/composables';
-  import { SpeciesDrawer } from '~species/drawer';
   import { SpeciesLink } from '~species/link';
-  import { DrawerComponent } from '~ui/drawer';
+  import { UiDrawer } from '~ui/drawer';
 
   import type { SpeciesLinkResponse } from '~/shared/types';
 
-  const { url, isOpened, close } = useDrawer('species-lineages');
+  const { url } = defineProps<{
+    url: string;
+  }>();
 
-  const { data, status, execute, clear } = await useAsyncData(
-    `species-lineages-drawer`,
-    () => {
-      if (!url.value) {
-        return Promise.reject();
-      }
+  defineEmits<{
+    (e: 'close'): void;
+  }>();
 
-      return $fetch<Array<SpeciesLinkResponse>>(
-        `/api/v2/species/${url.value}/lineages/search`,
-      );
-    },
+  const { data, status } = await useAsyncData(
+    computed(() => `species-${url}-lineages`),
+    () =>
+      $fetch<Array<SpeciesLinkResponse>>(
+        `/api/v2/species/${url}/lineages/search`,
+      ),
     {
       server: false,
-      immediate: false,
     },
   );
 
-  function handleUpdate(opened: boolean) {
-    if (opened) {
-      return;
-    }
-
-    close();
-  }
-
-  watch(isOpened, (value) => {
-    if (!value) {
-      return;
-    }
-
-    clear();
-    execute();
-  });
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
 </script>
 
 <template>
-  <DrawerComponent
-    :open="isOpened"
-    title="Разновидности"
-    :min-width="296"
-    :max-width="552"
-    :is-loading="status === 'pending'"
-    :is-error="status === 'error'"
-    width="auto"
-    @update:open="handleUpdate"
+  <UiDrawer
+    title="Происхождения"
+    :is-loading
+    :is-error
+    @close="$emit('close')"
   >
     <div :class="$style.container">
       <div :class="$style.grid">
@@ -60,15 +40,12 @@
           v-for="link in data"
           :key="link.url"
           :species="link"
-          in-lineages-drawer
         >
           {{ link.url }}
         </SpeciesLink>
       </div>
     </div>
-
-    <SpeciesDrawer in-lineages-drawer />
-  </DrawerComponent>
+  </UiDrawer>
 </template>
 
 <style module lang="scss">

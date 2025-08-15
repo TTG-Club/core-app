@@ -1,30 +1,48 @@
 <script setup lang="ts">
-  import {
-    Breakpoint,
-    useBreakpoints,
-    useSidebarPopover,
-  } from '~/shared/composables';
   import { AppMenu } from '~sidebar/menu';
   import { ThemeSwitcher } from '~sidebar/theme-switcher';
-  import { UserHelmet } from '~sidebar/user-helmet';
+  import { UserHelmet } from '~user/helmet';
   import { SvgLogo } from '~ui/icon';
+  import { SearchButton } from '~search/button';
+  import { useGlobalSearch } from '~search/composable';
 
   const route = useRoute();
   const { y } = useWindowScroll();
+  const { height: windowHeight } = useWindowSize();
+
+  const { height: bodyHeight } = useElementBounding(
+    computed(() => document?.body),
+  );
+
   const { smaller } = useBreakpoints();
   const { close } = useSidebarPopover();
+  const { open } = useGlobalSearch();
+
+  defineShortcuts({
+    '/': open,
+    '\\': open,
+    'meta_k': open,
+  });
 
   const isMobile = smaller(Breakpoint.MD);
   const hidden = useState('navbar-hidden', () => false);
 
   watchThrottled(
-    y,
-    (scroll, oldScroll) => {
+    [y, windowHeight, bodyHeight],
+    ([scroll, currentWindowHeight, currentBodyHeight], [oldScroll]) => {
       if (!isMobile.value) {
         return;
       }
 
       if (scroll < 56) {
+        if (hidden.value) {
+          hidden.value = false;
+        }
+
+        return;
+      }
+
+      if (scroll + currentWindowHeight >= currentBodyHeight - 56) {
         if (hidden.value) {
           hidden.value = false;
         }
@@ -58,7 +76,17 @@
 </script>
 
 <template>
-  <div :class="[$style.navbar, { [$style.hidden]: hidden }]">
+  <div
+    class="navbar"
+    :class="[
+      'fixed left-0 z-100 h-(--navbar-height) w-full md:top-0 md:bottom-auto md:h-dvh md:w-(--navbar-width)',
+      'border-t border-default max-md:bg-default md:border-t-0 md:border-r',
+      'pb-(--safe-area-inset-bottom) md:pb-0 md:pl-(--safe-area-inset-left)',
+      'transition-[bottom] duration-200 ease-in-out md:transition-none',
+      'flex flex-nowrap md:flex-col',
+      hidden ? '-bottom-(--navbar-height)' : 'bottom-0',
+    ]"
+  >
     <header :class="$style.header">
       <div :class="$style.main">
         <NuxtLink
@@ -70,6 +98,8 @@
 
         <ClientOnly>
           <AppMenu />
+
+          <SearchButton />
         </ClientOnly>
       </div>
 
@@ -87,51 +117,6 @@
 </template>
 
 <style lang="scss" module>
-  .navbar {
-    position: fixed;
-    z-index: 100;
-    bottom: 0;
-    left: 0;
-
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-
-    width: 100%;
-    height: var(--navbar-height);
-    padding-bottom: var(--safe-area-inset-bottom);
-    border-top: 1px solid var(--color-border);
-    border-right: 0;
-
-    background-color: var(--color-bg-main);
-
-    transition: bottom ease-in-out 0.2s;
-
-    @include media-min($md) {
-      top: 0;
-      bottom: initial;
-
-      flex-direction: column;
-      flex-wrap: nowrap;
-
-      width: var(--navbar-width);
-      height: 100vh;
-      padding-bottom: 0;
-      padding-left: var(--safe-area-inset-left);
-      border-top: 0;
-      border-right: 1px solid var(--color-border);
-    }
-
-    &.hidden {
-      bottom: calc(var(--navbar-height) * -1);
-      transition: bottom ease-in-out 0.2s;
-
-      @include media-min($md) {
-        bottom: initial;
-      }
-    }
-  }
-
   .header {
     display: flex;
     flex-direction: row;
@@ -139,12 +124,11 @@
     justify-content: space-between;
 
     width: 100%;
-    height: auto;
+    height: 100%;
     padding: 0 16px;
 
     @include media-min($md) {
       flex-direction: column;
-      height: 100%;
       padding: 24px 0;
     }
   }
@@ -202,7 +186,7 @@
     height: 36px;
     margin: 0 8px 0 0;
     padding: 0 16px 0 0;
-    border-right: 1px solid var(--color-border);
+    border-right: 1px solid var(--ui-border);
     border-bottom: 0;
 
     @include media-min($md) {
@@ -211,7 +195,7 @@
       margin: 0 0 8px 0;
       padding: 0 0 12px 0;
       border-right: 0;
-      border-bottom: 1px solid var(--color-border);
+      border-bottom: 1px solid var(--ui-border);
     }
   }
 
@@ -227,8 +211,8 @@
       display: flex;
       justify-content: center;
 
-      width: 40px;
-      height: 40px;
+      width: 44px;
+      height: 44px;
       margin: 8px 0 8px 0;
       padding: 0;
       border-radius: 8px;
@@ -236,7 +220,7 @@
       opacity: 70%;
 
       &.is-discord {
-        color: var(--color-text);
+        color: var(--ui-text);
 
         &:hover {
           background-color: var(--color-discord-hover);
@@ -244,7 +228,7 @@
       }
 
       &.is-boosty {
-        color: var(--color-text);
+        color: var(--ui-text);
 
         &:hover {
           background-color: var(--color-boosty-hover);
@@ -252,7 +236,7 @@
       }
 
       &.is-vk {
-        color: var(--color-text);
+        color: var(--ui-text);
 
         &:hover {
           background-color: var(--color-vk-hover);

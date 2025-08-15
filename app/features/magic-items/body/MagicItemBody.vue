@@ -11,63 +11,19 @@
 </script>
 
 <template>
-  <div :class="$style.container">
-    <div :class="$style.body">
-      <AFlex
-        vertical
-        :gap="12"
-        :class="$style.info"
-      >
+  <div class="@container flex flex-col gap-4">
+    <div class="flex flex-col gap-3 @min-[800px]:flex-row @min-[800px]:gap-7">
+      <div class="flex w-full flex-col gap-3 @min-[800px]:max-w-80">
         <TopBar :subtitle="magicItem.subtitle" />
 
-        <div :class="$style.galleryImg">
+        <div class="max-w-40 overflow-hidden rounded-md border border-default">
           <UiGallery :preview="magicItem.image || '/img/no-img.webp'" />
         </div>
-      </AFlex>
+      </div>
 
-      <AFlex
-        vertical
-        :gap="12"
-        flex="1 1 auto"
-      >
+      <div class="flex flex-auto flex-col gap-3">
         <DescriptionsBlock :description="magicItem.description" />
-      </AFlex>
+      </div>
     </div>
   </div>
 </template>
-
-<style module lang="scss">
-  .container {
-    container-type: inline-size;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .body {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-
-    @container (width > 800px) {
-      flex-direction: row;
-      gap: 28px;
-    }
-  }
-
-  .info {
-    width: 100%;
-    max-width: 100%;
-
-    @container (width > 800px) {
-      max-width: 320px;
-    }
-  }
-
-  .galleryImg {
-    overflow: hidden;
-    max-width: 160px;
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-  }
-</style>

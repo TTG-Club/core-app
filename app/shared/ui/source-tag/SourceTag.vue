@@ -1,40 +1,54 @@
 <script setup lang="ts">
-  import type { TooltipPlacement } from 'ant-design-vue/es/tooltip';
   import type { SourceResponse } from '~/shared/types';
 
-  defineProps<{
+  const {
+    source,
+    showGroup = false,
+    showTooltip = false,
+  } = defineProps<{
     source: SourceResponse;
-    placement?: TooltipPlacement;
+    showGroup?: boolean;
+    showTooltip?: boolean;
   }>();
+
+  const color = computed(() => {
+    switch (source.group.label?.toLowerCase()) {
+      case '3rd':
+        return 'secondary';
+      case 'hb':
+        return 'success';
+      default:
+        return 'neutral';
+    }
+  });
 </script>
 
 <template>
-  <AFlex :gap="4">
-    <ATooltip
-      :title="source.group.rus"
-      :mouse-enter-delay="0.7"
-      :placement="placement"
-      arrow-point-at-center
-      destroy-tooltip-on-hide
+  <div class="flex gap-1">
+    <UTooltip
+      :text="`${source.name.rus} [${source.name.eng}]`"
+      :disabled="!showTooltip"
     >
-      <ATag :style="{ marginInlineEnd: 0 }">
-        {{ source.group.label }}
-      </ATag>
-    </ATooltip>
-
-    <ATooltip
-      :title="`${source.name.rus} [${source.name.eng}]`"
-      :mouse-enter-delay="0.7"
-      :placement="placement"
-      arrow-point-at-center
-      destroy-tooltip-on-hide
-    >
-      <ATag
-        :color="`var(--color-badge-${source.group.label.toLowerCase()})`"
-        :style="{ marginInlineEnd: 0 }"
+      <UBadge
+        variant="subtle"
+        size="sm"
+        :color
       >
         {{ source.name.label }}
-      </ATag>
-    </ATooltip>
-  </AFlex>
+      </UBadge>
+    </UTooltip>
+
+    <UTooltip
+      v-if="showGroup"
+      :text="source.group.rus"
+      :disabled="!showTooltip"
+    >
+      <UBadge
+        variant="subtle"
+        size="sm"
+      >
+        {{ source.group.label }}
+      </UBadge>
+    </UTooltip>
+  </div>
 </template>

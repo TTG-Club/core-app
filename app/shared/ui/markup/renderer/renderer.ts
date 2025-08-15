@@ -1,28 +1,25 @@
 import { createTextVNode } from 'vue';
 
-import {
-  type TextNode,
-  type MarkerNode,
-  type RichNode,
-  type EmptyNode,
-  type RichNodes,
-  type FeatureLinkNode,
-  type FeatureNodes,
-  TextMarker,
-  EmptyMarker,
-  RichMarker,
-  FeatureMarker,
+import { TextMarker, EmptyMarker, RichMarker, SectionMarker } from '../types';
+import type {
+  TextNode,
+  MarkerNode,
+  RichNode,
+  EmptyNode,
+  RichNodes,
+  SectionLinkNode,
+  SectionNodes,
 } from '../types';
 import {
   isEmptyNode,
-  isFeatureNode,
+  isSectionNode,
   isRichNode,
   isSimpleTextNode,
   isTextNode,
 } from '../utils';
 
-import { renderFeatureNode } from './renderFeatureLink';
-import { renderLinkNode } from './renderLink';
+import { renderLink } from './renderLink';
+import { renderSectionLink } from './renderSectionLink';
 
 const TextMarkerTag: Record<TextMarker, string> = {
   [TextMarker.Bold]: 'b',
@@ -44,29 +41,26 @@ const RICH_NODE_RENDERERS: {
     renderChildren: () => VNode[],
   ) => VNode;
 } = {
-  [RichMarker.Link]: renderLinkNode,
+  [RichMarker.Link]: renderLink,
 };
 
 const FEATURE_NODE_RENDERERS: {
-  [K in FeatureMarker]: (
-    node: FeatureNodes[K],
+  [K in SectionMarker]: (
+    node: SectionNodes[K],
     renderChildren: () => VNode[],
   ) => VNode;
 } = {
-  [FeatureMarker.Spell]: renderFeatureNode,
-  [FeatureMarker.Background]: renderFeatureNode,
-  [FeatureMarker.Feat]: renderFeatureNode,
-  [FeatureMarker.Bestiary]: renderFeatureNode,
-  [FeatureMarker.MagicItem]: renderFeatureNode,
-  [FeatureMarker.Glossary]: renderFeatureNode,
+  [SectionMarker.Spell]: renderSectionLink,
+  [SectionMarker.Background]: renderSectionLink,
+  [SectionMarker.Feat]: renderSectionLink,
+  [SectionMarker.Creature]: renderSectionLink,
+  [SectionMarker.MagicItem]: renderSectionLink,
+  [SectionMarker.Glossary]: renderSectionLink,
 };
 
 // Функция для рендера контента — принимает массив узлов
 export function render(content: MarkerNode[]) {
-  return h(
-    'p',
-    content.map((node) => renderNode(node)),
-  );
+  return content.map((node) => renderNode(node));
 }
 
 function renderNode(node: MarkerNode): VNode {
@@ -86,8 +80,8 @@ function renderNode(node: MarkerNode): VNode {
     return renderRichNode(node);
   }
 
-  if (isFeatureNode(node)) {
-    return renderFeatureLinkNode(node);
+  if (isSectionNode(node)) {
+    return renderSectionLinkNode(node);
   }
 
   if (isEmptyNode(node)) {
@@ -139,7 +133,7 @@ function renderRichNode(node: RichNode): VNode {
   return renderFn(node, () => child);
 }
 
-function renderFeatureLinkNode(node: FeatureLinkNode): VNode {
+function renderSectionLinkNode(node: SectionLinkNode): VNode {
   const child = node.content?.map((item) => renderNode(item));
 
   if (!child.length) {

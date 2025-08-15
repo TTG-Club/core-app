@@ -5,20 +5,7 @@
 </script>
 
 <template>
-  <AFlex
-    :class="$style.topBar"
-    :gap="4"
-    wrap="wrap"
-  >
+  <div class="flex flex-wrap gap-1 rounded-md bg-elevated p-3 italic">
     <span>{{ category }}</span>
-  </AFlex>
+  </div>
 </template>
-
-<style module lang="scss">
-  .topBar {
-    padding: 12px;
-    border-radius: 8px;
-    font-style: italic;
-    background: var(--color-hover);
-  }
-</style>

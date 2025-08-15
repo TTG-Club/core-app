@@ -1,0 +1,1 @@
+export { useGlobalSearch } from './useGlobalSearch';

@@ -1,64 +1,78 @@
 <script setup lang="ts">
-  const props = withDefaults(
-    defineProps<{
-      preview: string;
-      images?: Array<string>;
-      alt?: string;
-    }>(),
-    {
-      images: () => [],
-      alt: '',
+  import { computed } from 'vue';
+  import Lightgallery from 'lightgallery/vue';
+  import lgThumbnail from 'lightgallery/plugins/thumbnail';
+  import lgZoom from 'lightgallery/plugins/zoom';
+  import lgFullscreen from 'lightgallery/plugins/fullscreen';
+  import type { LightGallerySettings } from 'lightgallery/lg-settings';
+
+  const {
+    preview,
+    images = [],
+    alt = '',
+    disableSquare = false,
+  } = defineProps<{
+    preview: string;
+    images?: Array<string>;
+    alt?: string;
+    disableSquare?: boolean;
+  }>();
+
+  const {
+    public: {
+      lightGallery: { licenseKey },
     },
-  );
+  } = useRuntimeConfig();
 
-  const visible = defineModel<boolean>({ default: false });
+  const opened = useState<boolean>('ui-gallery-opened', () => false);
 
-  const gallery = computed(() => {
-    if (!props.images.length) {
-      return [props.preview];
+  const items = computed(() => {
+    if (!images.length) {
+      return [{ src: preview, thumb: preview, alt }];
     }
 
-    return props.images;
+    return [
+      { src: preview, thumb: preview, alt },
+      ...images.map((img) => ({ src: img, thumb: img, alt })),
+    ];
   });
+
+  const settings = computed<LightGallerySettings>(() => ({
+    licenseKey,
+    speed: 500,
+    plugins: [lgThumbnail, lgZoom, lgFullscreen],
+    thumbnail: true,
+    actualSize: false,
+    showZoomInOutIcons: true,
+    allowMediaOverlap: true,
+    toggleThumb: true,
+    mobileSettings: {
+      controls: true,
+      showCloseIcon: true,
+      download: false,
+    },
+  }));
 </script>
 
 <template>
-  <div :class="$style.gallery">
-    <AImage
-      :preview="{ visible: false }"
-      :src="preview"
-      :alt
-      fallback="/img/no-img.webp"
-      @click.left.exact.prevent="visible = !!gallery.length"
-    />
-  </div>
-
-  <ClientOnly>
+  <Lightgallery
+    :settings="settings"
+    @before-open="opened = true"
+    @after-close="opened = false"
+  >
     <div
-      v-if="gallery.length"
-      v-show="false"
+      v-for="(item, index) in items"
+      :key="item.src"
+      :data-src="item.src"
+      :class="!!index ? 'hidden' : undefined"
+      class="cursor-zoom-in"
     >
-      <AImagePreviewGroup
-        :preview="{
-          visible,
-          onVisibleChange: (vis) => (visible = vis),
-        }"
-      >
-        <AImage
-          v-for="image in gallery"
-          :key="image"
-          :src="image"
-          fallback="/img/no-img.webp"
-        />
-      </AImagePreviewGroup>
+      <img
+        class="w-full rounded-lg object-cover"
+        :class="!disableSquare ? 'aspect-square' : undefined"
+        :src="item.src"
+        :alt="item.alt || undefined"
+      />
     </div>
-  </ClientOnly>
+  </Lightgallery>
 </template>
-
-<style module>
-  .gallery {
-    overflow: hidden;
-    width: 100%;
-    background-color: var(--color-hover);
-  }
-</style>

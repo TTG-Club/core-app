@@ -21,12 +21,12 @@ export enum EmptyMarker {
   Break = 'break',
 }
 
-export enum FeatureMarker {
+export enum SectionMarker {
   Spell = 'spell',
   Feat = 'feat',
   Background = 'background',
   MagicItem = 'magicItem',
-  Bestiary = 'bestiary',
+  Creature = 'creature',
   Glossary = 'glossary',
 }
 
@@ -34,7 +34,7 @@ export const Marker = {
   ...TextMarker,
   ...RichMarker,
   ...EmptyMarker,
-  ...FeatureMarker,
+  ...SectionMarker,
 } as const;
 
 export const TextWithMarker = {
@@ -48,8 +48,8 @@ export type TextMarkerName = (typeof TextWithMarker)[keyof typeof TextMarker];
 
 export type RichMarkerName = (typeof TextWithMarker)[keyof typeof RichMarker];
 
-export type FeatureMarkerName =
-  (typeof TextWithMarker)[keyof typeof FeatureMarker];
+export type SectionMarkerName =
+  (typeof TextWithMarker)[keyof typeof SectionMarker];
 
 export type EmptyMarkerName = (typeof TextWithMarker)[keyof typeof EmptyMarker];
 
@@ -57,14 +57,14 @@ export type MarkerName =
   | TextMarkerName
   | RichMarkerName
   | EmptyMarkerName
-  | FeatureMarkerName;
+  | SectionMarkerName;
 
 export type TextWithMarkerName =
   | SimpleTextName
   | TextMarkerName
   | RichMarkerName
   | EmptyMarkerName
-  | FeatureMarkerName;
+  | SectionMarkerName;
 
 // Типы данных для параметров атрибутов.
 export type ParamValue = string | number | boolean | null;
@@ -78,7 +78,7 @@ export type MarkerNode =
   | EmptyNode
   | TextNode
   | RichNode
-  | FeatureLinkNode;
+  | SectionLinkNode;
 
 export interface SimpleTextNode {
   type: SimpleText.Text;
@@ -109,19 +109,19 @@ export interface LinkNode {
   content: Array<MarkerNode>;
 }
 
-export type FeatureNodes = {
-  [FeatureMarker.Spell]: FeatureNode;
-  [FeatureMarker.Background]: FeatureNode;
-  [FeatureMarker.Feat]: FeatureNode;
-  [FeatureMarker.MagicItem]: FeatureNode;
-  [FeatureMarker.Bestiary]: FeatureNode;
-  [FeatureMarker.Glossary]: FeatureNode;
+export type SectionNodes = {
+  [SectionMarker.Spell]: SectionNode;
+  [SectionMarker.Background]: SectionNode;
+  [SectionMarker.Feat]: SectionNode;
+  [SectionMarker.MagicItem]: SectionNode;
+  [SectionMarker.Creature]: SectionNode;
+  [SectionMarker.Glossary]: SectionNode;
 };
 
-export type FeatureLinkNode = FeatureNodes[FeatureMarker];
+export type SectionLinkNode = SectionNodes[SectionMarker];
 
-export interface FeatureNode {
-  type: FeatureMarker;
+export interface SectionNode {
+  type: SectionMarker;
   attrs: {
     url?: string;
   };

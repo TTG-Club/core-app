@@ -1,26 +1,17 @@
 <script setup lang="ts">
-  import { Form } from 'ant-design-vue';
+  import { DictionaryService } from '~/shared/api';
 
-  import { Dictionaries } from '~/shared/api';
-
-  withDefaults(
-    defineProps<{
-      disabled?: boolean;
-      multiple?: boolean;
-    }>(),
-    {
-      disabled: false,
-      multiple: false,
-    },
-  );
-
-  const context = Form.useInjectFormItemContext();
+  const { multiple = false } = defineProps<{
+    disabled?: boolean;
+    multiple?: boolean;
+  }>();
 
   const model = defineModel<string | Array<string>>();
 
   const { data, status, refresh } = await useAsyncData(
     'dictionaries-time-units',
-    () => Dictionaries.timeUnits(),
+    () => DictionaryService.timeUnits(),
+    { dedupe: 'defer' },
   );
 
   const handleDropdownOpening = (state: boolean) => {
@@ -30,24 +21,18 @@
 
     refresh();
   };
-
-  watch(model, () => {
-    context.onFieldChange();
-  });
 </script>
 
 <template>
-  <ASelect
-    v-model:value="model"
+  <USelect
+    v-model="model"
     :loading="status === 'pending'"
-    :options="data || []"
-    :mode="multiple ? 'multiple' : undefined"
+    :items="data || []"
+    :multiple="multiple"
     :disabled
     placeholder="Выбери единицу времени"
-    max-tag-count="responsive"
-    show-search
-    show-arrow
-    allow-clear
+    searchable
+    clearable
     @dropdown-visible-change="handleDropdownOpening"
   />
 </template>

@@ -16,9 +16,8 @@
 <template>
   <div :class="$style.container">
     <div :class="$style.body">
-      <AFlex
-        vertical
-        :gap="12"
+      <div
+        class="flex flex-col gap-3"
         :class="$style.info"
       >
         <TopBar
@@ -34,13 +33,9 @@
           :duration="spell.duration"
           :range="spell.range"
         />
-      </AFlex>
+      </div>
 
-      <AFlex
-        vertical
-        :gap="12"
-        flex="1 1 auto"
-      >
+      <div class="flex flex-auto flex-col gap-3">
         <DescriptionsBlock
           :description="spell.description"
           :level="spell.level"
@@ -70,7 +65,7 @@
           :items="spell.affiliation.lineages"
           label="Происхождения"
         />
-      </AFlex>
+      </div>
     </div>
   </div>
 </template>

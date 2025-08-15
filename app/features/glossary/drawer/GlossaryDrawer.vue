@@ -1,74 +1,47 @@
 <script setup lang="ts">
-  import { Breakpoint, BREAKPOINTS, useDrawer } from '~/shared/composables';
   import { GlossaryBody } from '~glossary/body';
-  import { DrawerComponent } from '~ui/drawer';
+  import { UiDrawer } from '~ui/drawer';
 
   import type { GlossaryDetailResponse } from '~/shared/types';
 
-  const { url, isOpened, close } = useDrawer('glossary-detail');
+  const { url } = defineProps<{
+    url: string;
+  }>();
 
-  const {
-    data: glossary,
-    status,
-    execute,
-    clear,
-  } = await useAsyncData(
-    `glossary-detail-drawer`,
-    () => {
-      if (!url.value) {
-        return Promise.reject();
-      }
+  defineEmits<{
+    (e: 'close'): void;
+  }>();
 
-      return $fetch<GlossaryDetailResponse>(`/api/v2/glossary/${url.value}`);
-    },
+  const { data: detail, status } = await useAsyncData(
+    computed(() => `glossary-${url}`),
+    () => $fetch<GlossaryDetailResponse>(`/api/v2/glossary/${url}`),
     {
       server: false,
-      immediate: false,
+      immediate: true,
     },
   );
 
-  const urlForCopy = computed(() =>
-    isOpened.value ? `${getOrigin()}/glossary/${url.value}` : undefined,
-  );
-
-  const editUrl = computed(() => `/workshop/glossary/${url.value}`);
-
-  function handleUpdate(opened: boolean) {
-    if (opened) {
-      return;
-    }
-
-    close();
-  }
-
-  watch(isOpened, (value) => {
-    if (!value) {
-      return;
-    }
-
-    clear();
-    execute();
-  });
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+  const urlForCopy = computed(() => `${getOrigin()}/glossary/${url}`);
+  const editUrl = computed(() => `/workshop/glossary/${url}`);
 </script>
 
 <template>
-  <DrawerComponent
-    :open="isOpened"
-    :min-width="320"
-    :max-width="BREAKPOINTS[Breakpoint.MD]"
-    :title="glossary?.name"
-    :source="glossary?.source"
+  <UiDrawer
+    :title="detail?.name"
+    :source="detail?.source"
+    :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
-    :is-loading="status === 'pending'"
-    :is-error="status === 'error'"
-    width="100%"
+    :is-loading
+    :is-error
     copy-title
-    @update:open="handleUpdate"
+    @close="$emit('close')"
   >
     <GlossaryBody
-      v-if="glossary"
-      :glossary
+      v-if="detail"
+      :glossary="detail"
     />
-  </DrawerComponent>
+  </UiDrawer>
 </template>

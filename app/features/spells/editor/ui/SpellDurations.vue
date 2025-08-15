@@ -1,10 +1,10 @@
 <script setup lang="ts">
-  import { isEqual, isString } from 'lodash-es';
+  import { isString } from 'lodash-es';
 
-  import { Dictionaries } from '~/shared/api';
+  import { DictionaryService } from '~/shared/api';
 
-  import type { SelectValue } from 'ant-design-vue/es/select';
   import type { SpellDuration } from '~/shared/types';
+  import { EditorArrayControls } from '~ui/editor';
 
   const durations = defineModel<Array<SpellDuration>>({
     default: () => [],
@@ -12,7 +12,7 @@
 
   const { data: units, status } = await useAsyncData(
     'dictionaries-duration-units',
-    () => Dictionaries.durationUnits(),
+    () => DictionaryService.durationUnits(),
   );
 
   function getUnitOption(unitValue: string | undefined) {
@@ -37,7 +37,7 @@
     return !unitSelected.measurable;
   }
 
-  function updateUnit(value: SelectValue, index: number) {
+  function updateUnit(value: string | undefined, index: number) {
     if (!isString(value) && value !== undefined) {
       return;
     }
@@ -56,18 +56,6 @@
     }
 
     durations.value[index]!.value = undefined;
-  }
-
-  function add(index: number) {
-    durations.value.splice(index + 1, 0, getEmpty());
-  }
-
-  function clear(index: number) {
-    durations.value.splice(index, 1, getEmpty());
-  }
-
-  function remove(index: number) {
-    durations.value.splice(index, 1);
   }
 
   function getEmpty(): SpellDuration {
@@ -93,107 +81,74 @@
 </script>
 
 <template>
-  <ADivider orientation="left">
-    <ATypographyText
-      type="secondary"
-      content="Длительность"
-      strong
-    />
-  </ADivider>
+  <USeparator>
+    <span class="font-bold text-secondary">Длительность</span>
+  </USeparator>
 
-  <ARow
+  <UForm
     v-for="(duration, index) in durations"
     :key="index"
-    :gutter="16"
+    class="col-span-full grid grid-cols-24 gap-4"
+    attach
+    :state="duration"
   >
-    <ACol :span="4">
-      <AFormItem
-        label="Длительность"
-        :name="['duration', index, 'value']"
-      >
-        <AInputNumber
-          v-model:value="duration.value"
-          :disabled="isValueDisabled(duration.unit)"
-          :precision="0"
-          :min="0"
-          placeholder="Введи значение"
-          allow-clear
-        />
-      </AFormItem>
-    </ACol>
+    <UFormField
+      label="Длительность"
+      name="value"
+      class="col-span-4"
+    >
+      <UInputNumber
+        v-model="duration.value"
+        :disabled="isValueDisabled(duration.unit)"
+        :min="0"
+        placeholder="Введи значение"
+      />
+    </UFormField>
 
-    <ACol :span="4">
-      <AFormItem
-        label="Единица времени"
-        :name="['duration', index, 'unit']"
-      >
-        <ASelect
-          :value="duration.unit"
-          :loading="status === 'pending'"
-          :options="units || []"
-          placeholder="Выбери из списка"
-          show-search
-          show-arrow
-          allow-clear
-          @update:value="updateUnit($event, index)"
-        />
-      </AFormItem>
-    </ACol>
+    <UFormField
+      label="Единица времени"
+      name="unit"
+      class="col-span-4"
+    >
+      <USelect
+        :model-value="duration.unit"
+        :loading="status === 'pending'"
+        :items="units || []"
+        placeholder="Выбери из списка"
+        searchable
+        clearable
+        @update:model-value="updateUnit($event, index)"
+      />
+    </UFormField>
 
-    <ACol :span="4">
-      <AFormItem
-        label="Концентрация"
-        :name="['duration', index, 'concentration']"
-      >
-        <ACheckbox v-model:checked="duration.concentration">
-          Требуется
-        </ACheckbox>
-      </AFormItem>
-    </ACol>
+    <UFormField
+      label="Концентрация"
+      name="concentration"
+      class="col-span-4"
+    >
+      <UCheckbox
+        v-model="duration.concentration"
+        label="Требуется"
+      />
+    </UFormField>
 
-    <ACol :span="6">
-      <AFormItem
-        label="Собственное значение"
-        :name="['duration', index, 'custom']"
-      >
-        <AInput
-          v-model:value="duration.custom"
-          placeholder="Введи значение"
-          allow-clear
-        />
-      </AFormItem>
-    </ACol>
+    <UFormField
+      label="Собственное значение"
+      name="custom"
+      class="col-span-6"
+    >
+      <UInput
+        v-model="duration.custom"
+        placeholder="Введи значение"
+        clearable
+      />
+    </UFormField>
 
-    <ACol :span="6">
-      <AFormItem label="Управление">
-        <AFlex :gap="8">
-          <AButton
-            block
-            @click.left.exact.prevent="add(index)"
-          >
-            Добавить
-          </AButton>
-
-          <AButton
-            v-if="index === durations.length - 1"
-            :disabled="isEqual(duration, getEmpty())"
-            danger
-            block
-            @click.left.exact.prevent="clear(index)"
-          >
-            Очистить
-          </AButton>
-
-          <AButton
-            v-else
-            danger
-            block
-            @click.left.exact.prevent="remove(index)"
-          >
-            Удалить
-          </AButton>
-        </AFlex>
-      </AFormItem>
-    </ACol>
-  </ARow>
+    <EditorArrayControls
+      v-model="durations"
+      :item="duration"
+      :empty-object="getEmpty()"
+      :index
+    />
+  </UForm>
 </template>

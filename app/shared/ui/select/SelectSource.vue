@@ -1,34 +1,30 @@
 <script setup lang="ts">
-  import { Form } from 'ant-design-vue';
-
   import type { BookLink, SelectOptionWithShortName } from '~/shared/types';
 
-  withDefaults(
-    defineProps<{
-      multiple?: boolean;
-    }>(),
-    {
-      multiple: false,
-    },
-  );
-
-  const context = Form.useInjectFormItemContext();
+  const { multiple = false, disabled } = defineProps<{
+    disabled?: boolean;
+    multiple?: boolean;
+  }>();
 
   const model = defineModel<string | Array<string>>();
 
   const { data, status, refresh } = await useAsyncData<
     Array<SelectOptionWithShortName>
-  >('books', async () => {
-    const bookLinks = await $fetch<Array<BookLink>>('/api/v2/books/search', {
-      method: 'post',
-    });
+  >(
+    'books',
+    async () => {
+      const bookLinks = await $fetch<Array<BookLink>>('/api/v2/books/search', {
+        method: 'post',
+      });
 
-    return bookLinks.map((book) => ({
-      label: `${book.name.rus} [${book.name.eng}]`,
-      value: book.url,
-      shortName: book.name.label,
-    }));
-  });
+      return bookLinks.map((book) => ({
+        label: `${book.name.rus} [${book.name.eng}]`,
+        value: book.url,
+        shortName: book.name.label,
+      }));
+    },
+    { dedupe: 'defer' },
+  );
 
   const handleDropdownOpening = (state: boolean) => {
     if (!state) {
@@ -37,23 +33,18 @@
 
     refresh();
   };
-
-  watch(model, () => {
-    context.onFieldChange();
-  });
 </script>
 
 <template>
-  <ASelect
-    v-model:value="model"
+  <USelect
+    v-model="model"
     :loading="status === 'pending'"
-    :options="data || []"
-    :mode="multiple ? 'multiple' : undefined"
+    :items="data || []"
+    :multiple="multiple"
+    :disabled="disabled"
     placeholder="Выбери книгу"
-    max-tag-count="responsive"
-    allow-clear
-    show-search
-    show-arrow
-    @dropdown-visible-change="handleDropdownOpening"
+    searchable
+    clearable
+    @open="handleDropdownOpening(true)"
   />
 </template>

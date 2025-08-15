@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import { SelectMagicItemCategory } from './ui';
-  import { ruleMagicItemCategory } from './validators';
 
   import type { MagicItemCategory } from '~magic-items/types';
 
@@ -19,27 +18,28 @@
 </script>
 
 <template>
-  <ARow :gutter="16">
-    <ACol :span="8">
-      <AFormItem
-        label="Категория"
-        :name="['category', 'type']"
-        :rules="[ruleMagicItemCategory()]"
-      >
-        <SelectMagicItemCategory v-model="model.type" />
-      </AFormItem>
-    </ACol>
+  <UForm
+    class="col-span-full grid grid-cols-24 gap-4"
+    attach
+    :state="model"
+  >
+    <UFormField
+      class="col-span-8"
+      label="Категория"
+      name="type"
+    >
+      <SelectMagicItemCategory v-model="model.type" />
+    </UFormField>
 
-    <ACol :span="16">
-      <AFormItem
-        label="Уточнение категории"
-        :name="['category', 'clarification']"
-      >
-        <AInput
-          v-model:value="model.clarification"
-          placeholder="Введи уточнение категории"
-        />
-      </AFormItem>
-    </ACol>
-  </ARow>
+    <UFormField
+      class="col-span-16"
+      label="Уточнение категории"
+      name="clarification"
+    >
+      <UInput
+        v-model="model.clarification"
+        placeholder="Введи уточнение категории"
+      />
+    </UFormField>
+  </UForm>
 </template>

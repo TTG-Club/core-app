@@ -15,7 +15,7 @@
 
     <strong
       v-else
-      :style="{ color: 'var(--color-text-bold)' }"
+      :style="{ color: 'var(--ui-text-bold)' }"
     >
       Накладывание более высокой ячейкой.
     </strong>

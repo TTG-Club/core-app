@@ -11,9 +11,8 @@
 <template>
   <div :class="$style.container">
     <div :class="$style.body">
-      <AFlex
-        vertical
-        :gap="12"
+      <div
+        class="flex flex-col gap-3"
         :class="$style.info"
       >
         <StatsBlock
@@ -23,15 +22,11 @@
           :tool-proficiency="background.toolProficiency"
           :equipment="background.equipment"
         />
-      </AFlex>
+      </div>
 
-      <AFlex
-        vertical
-        :gap="12"
-        flex="1 1 auto"
-      >
+      <div class="flex flex-auto flex-col gap-3">
         <DescriptionsBlock :description="background.description" />
-      </AFlex>
+      </div>
     </div>
   </div>
 </template>

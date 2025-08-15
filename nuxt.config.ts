@@ -3,7 +3,6 @@ import { fileURLToPath, URL } from 'node:url';
 
 import bytes from 'bytes';
 import ms from 'ms';
-import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
 
 const application = {
   name: {
@@ -15,39 +14,91 @@ const application = {
     'TTG Club — сайт, посвященный DnD 5-й редакции. Тут можно найти: расы, происхождения, классы, заклинания, бестиарий, снаряжение, магические предметы и инструменты для облегчения игры как игрокам, так и мастерам — все в одном месте.',
   favicons: [48, 72, 96, 128, 192, 384, 512],
   themeColor: {
-    light: '#fdfaf9',
-    dark: '#0d1a22',
-    svifty7: '#1f1f22',
+    light: 'oklch(0.98 0.02 80.0)',
+    dark: 'oklch(0.245 0.02 270.0)',
+    svifty7: 'oklch(0.30 0.006 75.0)',
   },
 };
 
 export default defineNuxtConfig({
+  // Общие настройки проекта
   future: {
-    compatibilityVersion: 4,
     typescriptBundlerResolution: true,
   },
 
-  devtools: {
-    enabled: true,
-  },
+  compatibilityDate: '2025-07-22',
 
+  // Конфигурация среды разработки
   devServer: {
     https: process.env.NUXT_DEV_SSL === 'true',
   },
 
-  runtimeConfig: {
-    public: {
-      pwa: application,
+  // Модули и зависимости
+  modules: [
+    '@nuxt/ui',
+    '@nuxt/fonts',
+    '@nuxtjs/device',
+    '@nuxtjs/seo',
+    '@nuxt/image',
+    '@nuxt/eslint',
+    '@vueuse/nuxt',
+    '@pinia/nuxt',
+    'nuxt-security',
+  ],
+
+  // Конфигурация приложения
+  appId: 'ttg-club',
+  app: {
+    head: {
+      charset: 'utf-8',
+      titleTemplate: '%s %separator %siteName',
+      viewport:
+        'width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover',
+      meta: [
+        {
+          name: 'mobile-web-app-capable',
+          content: 'yes',
+        },
+        {
+          name: 'apple-mobile-web-app-status-bar-style',
+          content: 'default',
+        },
+      ],
     },
-    site: {
-      url: '',
-      name: application.name.long,
-      description: application.description,
-      defaultLocale: 'ru',
-      indexable: false,
+    rootAttrs: {
+      id: 'ttg-club',
+      class: 'ttg-club',
     },
   },
 
+  // SEO и метаданные
+  seo: {
+    redirectToCanonicalSiteUrl: true,
+    automaticOgAndTwitterTags: true,
+    automaticDefaults: true,
+    canonicalLowercase: true,
+  },
+  unhead: {
+    renderSSRHeadOptions: {
+      omitLineBreaks: true,
+    },
+  },
+  ogImage: {
+    enabled: false,
+  },
+  robots: {
+    disallow: [
+      '/user',
+      '/admin',
+      '/auth',
+      '/search',
+      '/profile',
+      '/api',
+      '/workshop/*',
+    ],
+  },
+
+  // Безопасность
   security: {
     headers: {
       contentSecurityPolicy: {
@@ -69,66 +120,28 @@ export default defineNuxtConfig({
         fullscreen: ['self'],
       },
     },
-
+    rateLimiter: false,
     requestSizeLimiter: {
       maxUploadFileRequestInBytes: bytes('30MB') || 8000000,
     },
   },
 
-  appId: 'ttg-club',
-
-  app: {
-    head: {
-      charset: 'utf-8',
-      titleTemplate: '%s %separator %siteName',
-      viewport: 'width=device-width, initial-scale=1.0, viewport-fit=cover',
-      meta: [
-        {
-          name: 'mobile-web-app-capable',
-          content: 'yes',
-        },
-        {
-          name: 'apple-mobile-web-app-status-bar-style',
-          content: 'default',
-        },
-      ],
+  // Стили и UI
+  css: ['~/assets/css/tailwind.css'],
+  ui: {
+    colorMode: false,
+  },
+  icon: {
+    serverBundle: {
+      collections: ['lucide', 'fluent'],
     },
-    rootAttrs: {
-      id: 'ttg-club',
-      class: 'ttg-club',
-    },
-  },
-
-  seo: {
-    redirectToCanonicalSiteUrl: true,
-    // fallbackTitle: false,
-    automaticOgAndTwitterTags: true,
-    automaticDefaults: true,
-    canonicalLowercase: true,
-  },
-
-  unhead: {
-    renderSSRHeadOptions: {
-      omitLineBreaks: true,
-    },
-  },
-
-  ogImage: {
-    enabled: false,
-  },
-
-  robots: {
-    disallow: [
-      '/user',
-      '/admin',
-      '/auth',
-      '/search',
-      '/profile',
-      '/api',
-      '/workshop/*',
+    customCollections: [
+      {
+        prefix: 'ttg',
+        dir: fileURLToPath(new URL('./app/assets/icons', import.meta.url)),
+      },
     ],
   },
-
   fonts: {
     defaults: {
       subsets: ['cyrillic-ext', 'cyrillic'],
@@ -137,39 +150,37 @@ export default defineNuxtConfig({
       adobe: false,
       bunny: false,
       local: false,
+      fontshare: false,
     },
-    priority: ['google', 'fontshare', 'fontsource'],
+    priority: ['google', 'fontsource'],
     families: [{ name: 'Open Sans' }],
   },
-
-  antd: {
-    icons: false,
-    extractStyle: true,
-  },
-
-  typescript: {
-    typeCheck: true,
-    tsConfig: {
-      compilerOptions: {
-        typeRoots: [
-          fileURLToPath(new URL('./app/shared/types/global', import.meta.url)),
-        ],
+  image: {
+    optimize: false,
+    provider: 'beget',
+    providers: {
+      beget: {
+        provider: '~/providers/beget.ts',
       },
     },
   },
 
+  // TypeScript и линтеры
+  typescript: {
+    typeCheck: true,
+  },
   eslint: {
     config: {
       standalone: false,
     },
   },
 
+  // Роутинг и сервер
   router: {
     options: {
       scrollBehaviorType: 'smooth',
     },
   },
-
   nitro: {
     experimental: {
       openAPI: true,
@@ -179,9 +190,9 @@ export default defineNuxtConfig({
     routeRules: {
       '/api/**': {
         security: {
-          enabled: true,
+          enabled: process.env.NODE_ENV !== 'development',
           rateLimiter: {
-            tokensPerInterval: 50,
+            tokensPerInterval: 75,
             interval: ms('1m'),
             headers: true,
           },
@@ -189,9 +200,9 @@ export default defineNuxtConfig({
       },
       '/s3/**': {
         security: {
-          enabled: true,
+          enabled: process.env.NODE_ENV !== 'development',
           rateLimiter: {
-            tokensPerInterval: 50,
+            tokensPerInterval: 75,
             interval: ms('1m'),
             headers: true,
           },
@@ -200,57 +211,35 @@ export default defineNuxtConfig({
     },
   },
 
-  alias: {
-    '~ui': fileURLToPath(new URL('./app/shared/ui', import.meta.url)),
-  },
-
+  // Сборщик и пути
   vite: {
     css: {
       preprocessorOptions: {
         scss: {
-          api: 'modern-compiler',
-          additionalData: `@use "~/assets/styles/variables" as *;`,
+          additionalData: `@use "~/assets/css/variables" as *;`,
         },
       },
     },
-    plugins: [
-      createSvgIconsPlugin({
-        iconDirs: [
-          fileURLToPath(new URL('./app/assets/icons', import.meta.url)),
-        ],
-        symbolId: 'ttg-[dir]-[name]',
-        svgoOptions: {
-          plugins: [
-            {
-              name: 'preset-default',
-              params: {
-                overrides: { removeViewBox: false },
-              },
-            },
-            {
-              name: 'removeAttrs',
-              params: {
-                attrs: '(width|height|style|color|fill|stroke)',
-              },
-            },
-          ],
-        },
-      }),
-    ],
+  },
+  alias: {
+    '~ui': fileURLToPath(new URL('./app/shared/ui', import.meta.url)),
   },
 
-  modules: [
-    '@nuxt/fonts',
-    '@nuxtjs/device',
-    '@nuxtjs/stylelint-module',
-    '@nuxtjs/seo',
-    '@nuxt/image',
-    '@nuxt/eslint',
-    '@vueuse/nuxt',
-    '@ant-design-vue/nuxt',
-    '@pinia/nuxt',
-    'nuxt-security',
-  ],
-
-  compatibilityDate: '2024-11-15',
+  // Конфигурация runtime
+  runtimeConfig: {
+    public: {
+      pwa: application,
+      lightGallery: {
+        licenseKey:
+          process.env.NUXT_LIGHT_GALLERY_LICENSE_KEY || '0000-0000-000-0000',
+      },
+    },
+    site: {
+      url: '',
+      name: application.name.long,
+      description: application.description,
+      defaultLocale: 'ru',
+      indexable: false,
+    },
+  },
 });

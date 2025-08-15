@@ -1,8 +1,6 @@
 <script setup lang="ts">
   import { StatusCodes } from 'http-status-codes';
 
-  import { PageContainer } from '~ui/page';
-
   const {
     query: { token },
   } = useRoute();
@@ -24,36 +22,20 @@
 </script>
 
 <template>
-  <PageContainer>
-    <AFlex
-      :style="{ flex: 1 }"
-      :gap="8"
-      justify="center"
-      vertical
-    >
-      <ATypographyTitle
-        :level="1"
-        data-allow-mismatch
-      >
-        Ваш учетная запись активирована 🥳
-      </ATypographyTitle>
+  <NuxtLayout>
+    <div class="flex h-full flex-1 flex-col justify-center gap-4">
+      <h1 class="text-xl">Ваш учетная запись активирована 🥳</h1>
 
-      <ATypographyText
-        type="secondary"
-        data-allow-mismatch
-      >
-        Теперь вы можете выполнить вход
-      </ATypographyText>
+      <span class="text-secondary"> Теперь вы можете выполнить вход </span>
 
-      <AFlex :gap="12">
-        <AButton
-          type="primary"
+      <div class="gap-3">
+        <UButton
           href="/"
           @click.left.exact.prevent="navigateTo({ name: 'index' })"
         >
           Вернуться на главную
-        </AButton>
-      </AFlex>
-    </AFlex>
-  </PageContainer>
+        </UButton>
+      </div>
+    </div>
+  </NuxtLayout>
 </template>

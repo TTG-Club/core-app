@@ -1,7 +1,6 @@
 <script setup lang="ts">
-  import { getSlicedString } from '~/shared/utils';
   import { FeatBody } from '~feats/body';
-  import { PageActions, PageContainer, PageHeader } from '~ui/page';
+  import { PageActions } from '~ui/page';
 
   import type { FeatDetailResponse } from '~/shared/types';
 
@@ -41,22 +40,19 @@
 </script>
 
 <template>
-  <PageContainer>
-    <template #header>
-      <PageHeader
-        :title="feat?.name.rus"
-        :subtitle="feat?.name.eng"
-        :source="feat?.source"
-        :date-time="feat?.updatedAt"
-        copy-title
-      >
-        <template #actions>
-          <PageActions
-            :edit-url="editUrl"
-            @close="navigateTo({ name: 'feats' })"
-          />
-        </template>
-      </PageHeader>
+  <NuxtLayout
+    name="detail"
+    :title="feat?.name.rus"
+    :subtitle="feat?.name.eng"
+    :source="feat?.source"
+    :date-time="feat?.updatedAt"
+    copy-text
+  >
+    <template #actions>
+      <PageActions
+        :edit-url="editUrl"
+        @close="navigateTo({ name: 'feats' })"
+      />
     </template>
 
     <template #default>
@@ -65,11 +61,13 @@
         :feat
       />
 
-      <ASkeleton
-        v-else
-        :title="false"
-        :paragraph="{ rows: 4 }"
-      />
+      <template v-else>
+        <USkeleton
+          v-for="index in 3"
+          :key="index"
+          :class="`w-1/${index + 1} h-6`"
+        />
+      </template>
     </template>
-  </PageContainer>
+  </NuxtLayout>
 </template>

@@ -1,26 +1,17 @@
 <script setup lang="ts">
-  import { Form } from 'ant-design-vue';
+  import { DictionaryService } from '~/shared/api';
 
-  import { Dictionaries } from '~/shared/api';
-
-  withDefaults(
-    defineProps<{
-      disabled?: boolean;
-      multiple?: boolean;
-    }>(),
-    {
-      disabled: false,
-      multiple: false,
-    },
-  );
-
-  const context = Form.useInjectFormItemContext();
+  const { multiple = false, disabled } = defineProps<{
+    disabled?: boolean;
+    multiple?: boolean;
+  }>();
 
   const model = defineModel<string | Array<string>>();
 
   const { data, status, refresh } = await useAsyncData(
     'dictionaries-creature-types',
-    () => Dictionaries.creatureTypes(),
+    () => DictionaryService.creatureTypes(),
+    { dedupe: 'defer' },
   );
 
   const handleDropdownOpening = (state: boolean) => {
@@ -30,22 +21,17 @@
 
     refresh();
   };
-
-  watch(model, () => {
-    context.onFieldChange();
-  });
 </script>
 
 <template>
-  <ASelect
-    v-model:value="model"
+  <USelect
+    v-model="model"
+    :placeholder="`Выбери тип${multiple ? 'ы' : ''} существ${!multiple ? 'а' : ''}`"
+    :multiple="multiple"
     :loading="status === 'pending'"
-    :options="data || []"
-    :mode="multiple ? 'multiple' : undefined"
-    placeholder="Выбери тип существа"
-    max-tag-count="responsive"
-    show-search
-    show-arrow
-    @dropdown-visible-change="handleDropdownOpening"
+    :items="data || []"
+    :disabled="disabled"
+    searchable
+    @open="handleDropdownOpening(true)"
   />
 </template>

@@ -1,357 +1,192 @@
 <script setup lang="ts">
   import { SpeciesLinkPreview, SpeciesFeatures, SpeciesSizes } from './ui';
 
-  import {
-    ValidationBase,
-    ValidationSpecies,
-    ValidationDictionaries,
-  } from '~/shared/utils';
-  import { InputUrl } from '~ui/input';
-  import {
-    SelectCreatureType,
-    SelectSource,
-    SelectSpecies,
-    SelectTags,
-  } from '~ui/select';
+  import { SpeciesSpeed } from '~species/editor/ui';
+  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { SelectCreatureType, SelectSpecies } from '~ui/select';
   import { UploadImage, UploadGallery } from '~ui/upload';
 
-  import type { FormInstance } from 'ant-design-vue';
-  import type { SelectValue } from 'ant-design-vue/es/select';
   import type { SpeciesCreate } from '~/shared/types';
 
-  const { isCreating } = defineProps<{
-    isCreating: boolean;
-  }>();
+  const formRef = useTemplateRef('formRef');
 
-  const form = defineModel<SpeciesCreate>({ required: true });
-
-  const {
-    params: { url: oldUrl },
-  } = useRoute();
-
-  const formRef = useTemplateRef<FormInstance>('formRef');
-
-  function resetBookPage() {
-    form.value.source.page = undefined;
-  }
-
-  function handleBookChange(value: SelectValue) {
-    if (typeof value !== 'string' && value !== undefined) {
-      return;
-    }
-
-    if (value === undefined) {
-      resetBookPage();
-    }
-
-    form.value.source.url = value;
-  }
+  const validate = () => {
+    return formRef.value?.validate();
+  };
 
   defineExpose({
-    validate: computed(() => formRef.value?.validate),
+    validate,
   });
+
+  function getInitialState(): SpeciesCreate {
+    return {
+      url: '',
+      name: {
+        rus: '',
+        eng: '',
+        alt: [],
+      },
+      description: '',
+      image: undefined,
+      linkImage: undefined,
+      gallery: [],
+      parent: undefined,
+      source: {
+        url: undefined,
+        page: undefined,
+      },
+      properties: {
+        sizes: [],
+        type: undefined,
+        speed: {
+          base: 30,
+          fly: undefined,
+          climb: undefined,
+          swim: undefined,
+          hover: false,
+        },
+      },
+      features: [],
+      tags: [],
+    };
+  }
+
+  const { state, onError, onSubmit } = await useWorkshopForm<SpeciesCreate>(
+    computed(() => ({
+      actionUrl: '/api/v2/species',
+      getInitialState,
+    })),
+  );
 </script>
 
 <template>
-  <AForm
+  <UForm
     ref="formRef"
-    layout="vertical"
-    :model="form"
-    :disabled="isCreating"
+    :state
+    class="grid grid-cols-24 gap-4"
+    @submit="onSubmit"
+    @error="onError"
   >
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Основная информация"
-        strong
+    <EditorBaseInfo
+      v-model="state"
+      section="species"
+    />
+
+    <UFormField
+      class="col-span-full"
+      label="Описание"
+      name="description"
+    >
+      <UTextarea
+        v-model="state.description"
+        placeholder="Введи описание"
+        :rows="8"
       />
-    </ADivider>
+    </UFormField>
 
-    <ARow :gutter="16">
-      <ACol :span="8">
-        <AFormItem
-          label="Название"
-          :name="['name', 'rus']"
-          :rules="[ValidationBase.ruleRusName()]"
-        >
-          <AInput
-            v-model:value="form.name.rus"
-            placeholder="Введи название"
-          />
-        </AFormItem>
-      </ACol>
+    <USeparator>
+      <span class="font-bold text-secondary">Характеристики</span>
+    </USeparator>
 
-      <ACol :span="8">
-        <AFormItem
-          label="Название (англ.)"
-          tooltip="Английское название"
-          :name="['name', 'eng']"
-          :rules="[ValidationBase.ruleEngName()]"
-        >
-          <AInput
-            v-model:value="form.name.eng"
-            placeholder="Введи английское название"
-          />
-        </AFormItem>
-      </ACol>
+    <UFormField
+      class="col-span-12"
+      label="Основной вид"
+      help="Необходимо указать, если создаешь происхождение вида"
+      name="parent"
+    >
+      <SelectSpecies v-model="state.parent" />
+    </UFormField>
 
-      <ACol :span="8">
-        <AFormItem
-          label="Название (альт.)"
-          tooltip="Альтернативные названия. Используется для поиска и СЕО."
-          :name="['name', 'alt']"
-        >
-          <SelectTags
-            v-model="form.name.alt"
-            placeholder="Введи альтернативные названия"
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
+    <UFormField
+      class="col-span-12"
+      label="Тип"
+      name="properties.type"
+    >
+      <SelectCreatureType v-model="state.properties.type" />
+    </UFormField>
 
-    <ARow :gutter="16">
-      <ACol :span="16">
-        <AFormItem
-          label="Источник"
-          tooltip="Книга, из которой взята информация о виде, если она существует"
-          :name="['source', 'url']"
-        >
-          <SelectSource
-            :model-value="form.source.url"
-            @update:model-value="handleBookChange"
-          />
-        </AFormItem>
-      </ACol>
+    <SpeciesSizes v-model="state.properties.sizes" />
 
-      <ACol :span="8">
-        <AFormItem
-          label="Страница в источнике"
-          tooltip="Номер страницы книги, откуда была взята информация о виде, если выбрана сама книга"
-          :name="['source', 'page']"
-          :rules="[ValidationBase.ruleSourcePage(!!form.source.url)]"
-        >
-          <AInputNumber
-            v-model:value="form.source.page"
-            :disabled="!form.source.url"
-            :precision="0"
-            placeholder="Введи номер страницы"
-            min="0"
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
+    <SpeciesSpeed v-model="state.properties.speed" />
 
-    <ARow>
-      <ACol :span="24">
-        <AFormItem
-          label="Описание"
-          :name="['description']"
-        >
-          <ATextarea
-            v-model:value="form.description"
-            placeholder="Введи описание"
-            :rows="8"
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
+    <SpeciesFeatures v-model="state.features" />
 
-    <ARow :gutter="16">
-      <ACol :span="12">
-        <AFormItem
-          label="Теги"
-          tooltip="Используются для поиска и СЕО"
-          :name="['tags']"
-        >
-          <SelectTags
-            v-model="form.tags"
-            placeholder="Введи теги"
-          />
-        </AFormItem>
-      </ACol>
+    <USeparator>
+      <span class="font-bold text-secondary">Изображения</span>
+    </USeparator>
 
-      <ACol :span="12">
-        <AFormItem
-          label="URL"
-          tooltip="Менять только при необходимости, т.к. URL генерируется автоматически при вводе английского названия"
-          :name="['url']"
-          :rules="[ValidationSpecies.ruleUrl(oldUrl)]"
-        >
-          <InputUrl
-            v-model="form.url"
-            :eng-name="form.name.eng"
-            :source-url="form.source.url"
-            :addon-before="`${getOrigin()}/species/`"
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Характеристики"
-        strong
-      />
-    </ADivider>
-
-    <ARow :gutter="16">
-      <ACol :span="12">
-        <AFormItem
-          label="Основной вид"
-          tooltip="Необходимо указать, если создаешь происхождение вида"
-          :name="['parent']"
-        >
-          <SelectSpecies v-model="form.parent" />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="12">
-        <AFormItem
-          label="Тип"
-          :name="['properties', 'type']"
-          :rules="[ValidationDictionaries.ruleCreatureType()]"
-        >
-          <SelectCreatureType v-model="form.properties.type" />
-        </AFormItem>
-      </ACol>
-    </ARow>
-
-    <SpeciesSizes v-model="form.properties.sizes" />
-
-    <ARow :gutter="16">
-      <ACol :span="6">
-        <AFormItem
-          label="Скорость передвижения"
-          :name="['properties', 'speed', 'base']"
-        >
-          <AInputNumber
-            v-model:value="form.properties.speed.base"
-            :precision="0"
-            placeholder="Введи скорость передвижения"
-            min="0"
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="6">
-        <ARow :gutter="16">
-          <ACol :span="16">
-            <AFormItem
-              label="Скорость полета"
-              :name="['properties', 'speed', 'fly']"
-            >
-              <AInputNumber
-                v-model:value="form.properties.speed.fly"
-                :precision="0"
-                placeholder="Введи скорость полета"
-                min="0"
-              />
-            </AFormItem>
-          </ACol>
-
-          <ACol :span="8">
-            <AFormItem
-              label="Парит"
-              :name="['properties', 'speed', 'hover']"
-            >
-              <ACheckbox v-model:checked="form.properties.speed.hover">
-                Да
-              </ACheckbox>
-            </AFormItem>
-          </ACol>
-        </ARow>
-      </ACol>
-
-      <ACol :span="6">
-        <AFormItem
-          label="Скорость лазания"
-          :name="['properties', 'speed', 'climb']"
-        >
-          <AInputNumber
-            v-model:value="form.properties.speed.climb"
-            :precision="0"
-            placeholder="Введи скорость лазания"
-            min="0"
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="6">
-        <AFormItem
-          label="Скорость плавания"
-          :name="['properties', 'speed', 'swim']"
-        >
-          <AInputNumber
-            v-model:value="form.properties.speed.swim"
-            :precision="0"
-            placeholder="Введи скорость плавания"
-            min="0"
-          />
-        </AFormItem>
-      </ACol>
-    </ARow>
-
-    <SpeciesFeatures v-model="form.features" />
-
-    <ADivider orientation="left">
-      <ATypographyText
-        type="secondary"
-        content="Изображения"
-        strong
-      />
-    </ADivider>
-
-    <ARow :gutter="16">
-      <ACol :span="8">
-        <AFormItem
-          label="Основное"
-          tooltip="Эта картинка отображается при просмотре страницы вида"
-          :name="['image']"
-          :rules="[ValidationBase.ruleImage()]"
-        >
-          <UploadImage
-            v-model="form.image"
-            section="species"
-            max-size="480"
-          />
-        </AFormItem>
-      </ACol>
-
-      <ACol :span="8">
-        <AFormItem
-          label="Для ссылки"
-          tooltip="Эта картинка отображается на странице со списком видов"
-          :name="['linkImage']"
-          :rules="[ValidationBase.ruleImage()]"
-        >
-          <UploadImage
-            v-model="form.linkImage"
-            section="species"
-            max-size="190"
+    <UFormField
+      class="col-span-8"
+      label="Основное"
+      help="Эта картинка отображается при просмотре страницы вида"
+      name="image"
+    >
+      <UploadImage
+        v-model="state.image"
+        section="species"
+        max-size="1024"
+      >
+        <template #preview>
+          <NuxtImg
+            v-slot="{ src, isLoaded, imgAttrs }"
+            :key="state.image"
+            :src="state.image"
+            custom
           >
-            <template #preview>
-              <SpeciesLinkPreview
-                :name="form.name"
-                :url="form.url"
-                :image="form.linkImage"
-              />
-            </template>
-          </UploadImage>
-        </AFormItem>
-      </ACol>
+            <!-- Show the actual image when loaded -->
+            <img
+              v-if="isLoaded"
+              v-bind="imgAttrs"
+              class="w-full rounded-lg object-contain"
+              :src="src"
+              :alt="state.name.rus"
+            />
 
-      <ACol :span="8">
-        <AFormItem
-          label="Галерея"
-          :name="['gallery']"
-        >
-          <UploadGallery
-            v-model="form.gallery"
-            section="species"
+            <!-- Show a placeholder while loading -->
+            <img
+              v-else
+              class="w-full rounded-lg object-contain"
+              src="/img/no-img.webp"
+              alt="no image"
+            />
+          </NuxtImg>
+        </template>
+      </UploadImage>
+    </UFormField>
+
+    <UFormField
+      class="col-span-8"
+      label="Для ссылки"
+      help="Эта картинка отображается на странице со списком видов"
+      name="linkImage"
+    >
+      <UploadImage
+        v-model="state.linkImage"
+        section="species"
+        max-size="256"
+      >
+        <template #preview>
+          <SpeciesLinkPreview
+            :name="state.name"
+            :url="state.url"
+            :image="state.linkImage"
+            :source="state.source"
           />
-        </AFormItem>
-      </ACol>
-    </ARow>
-  </AForm>
+        </template>
+      </UploadImage>
+    </UFormField>
+
+    <UFormField
+      class="col-span-8"
+      label="Галерея"
+      name="gallery"
+    >
+      <UploadGallery
+        v-model="state.gallery"
+        section="species"
+      />
+    </UFormField>
+
+    <EditorFormControls />
+  </UForm>
 </template>

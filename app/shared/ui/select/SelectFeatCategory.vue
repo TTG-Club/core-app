@@ -1,19 +1,16 @@
 <script setup lang="ts">
-  import { Form } from 'ant-design-vue';
+  import { DictionaryService } from '~/shared/api';
 
-  import { Dictionaries } from '~/shared/api';
-
-  defineProps<{
+  const { disabled } = defineProps<{
     disabled?: boolean;
   }>();
-
-  const context = Form.useInjectFormItemContext();
 
   const model = defineModel<string>();
 
   const { data, status, refresh } = await useAsyncData(
     'dictionaries-feat-categories',
-    () => Dictionaries.featCategories(),
+    () => DictionaryService.featCategories(),
+    { dedupe: 'defer' },
   );
 
   const handleDropdownOpening = (state: boolean) => {
@@ -23,22 +20,17 @@
 
     refresh();
   };
-
-  watch(model, () => {
-    context.onFieldChange();
-  });
 </script>
 
 <template>
-  <ASelect
-    v-model:value="model"
+  <USelect
+    v-model="model"
     :loading="status === 'pending'"
-    :options="data || []"
-    :disabled
+    :items="data || []"
+    :disabled="disabled"
     placeholder="Выбери категорию черты"
-    show-search
-    allow-clear
-    show-arrow
-    @dropdown-visible-change="handleDropdownOpening"
+    searchable
+    clearable
+    @open="handleDropdownOpening(true)"
   />
 </template>

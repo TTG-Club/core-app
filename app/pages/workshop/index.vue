@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { PageContainer, PageHeader } from '~ui/page';
   import {
     SectionSpecies,
     SectionSpells,
@@ -7,31 +6,31 @@
     SectionGlossary,
     SectionBackgrounds,
     SectionMagicItem,
+    SectionBestiary,
   } from '~workshop/section';
 </script>
 
 <template>
-  <PageContainer>
-    <template #header>
-      <PageHeader title="Мастерская" />
-    </template>
+  <NuxtLayout
+    name="detail"
+    title="Мастерская"
+  >
+    <div :class="$style.workshop">
+      <SectionSpecies />
 
-    <template #default>
-      <div :class="$style.workshop">
-        <SectionSpecies />
+      <SectionSpells />
 
-        <SectionSpells />
+      <SectionFeats />
 
-        <SectionFeats />
+      <SectionGlossary />
 
-        <SectionGlossary />
+      <SectionBackgrounds />
 
-        <SectionBackgrounds />
+      <SectionMagicItem />
 
-        <SectionMagicItem />
-      </div>
-    </template>
-  </PageContainer>
+      <SectionBestiary />
+    </div>
+  </NuxtLayout>
 </template>
 
 <style module lang="scss">

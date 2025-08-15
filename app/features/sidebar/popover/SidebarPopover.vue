@@ -1,8 +1,6 @@
 <script setup lang="ts">
   import { onKeyDown } from '@vueuse/core';
 
-  import { useSidebarPopover } from '~/shared/composables';
-
   const { popoverKey } = defineProps<{
     popoverKey: string;
     bottom?: boolean;
@@ -56,7 +54,7 @@
     </Transition>
 
     <Transition name="nav-popover-animation">
-      <AFlex
+      <div
         v-if="isOpened"
         :class="[
           $style.body,
@@ -65,20 +63,20 @@
             [$style.bottom]: bottom,
           },
         ]"
-        vertical
+        class="flex flex-col border border-default bg-linear-(--color-bg-menu) shadow-2xl backdrop-blur-lg"
       >
         <slot
           :close="() => close()"
           name="default"
         />
-      </AFlex>
+      </div>
     </Transition>
   </div>
 </template>
 
 <style lang="scss" module>
-  @use 'assets/styles/variables/breakpoints' as *;
-  @use 'assets/styles/variables/mixins' as *;
+  @use 'assets/css/variables/breakpoints' as *;
+  @use 'assets/css/variables/mixins' as *;
 
   $horizontalMargin: 72px;
   $verticalMargin: 16px;
@@ -137,10 +135,6 @@
     max-width: calc(100vw - 16px);
     max-height: calc(100dvh - 72px - var(--safe-area-inset-bottom));
     border-radius: 12px;
-
-    background-image: var(--color-bg-menu);
-    backdrop-filter: blur(16px);
-    box-shadow: 0 22px 122px var(--color-shadow);
 
     @include media-min($md) {
       top: $verticalMargin;

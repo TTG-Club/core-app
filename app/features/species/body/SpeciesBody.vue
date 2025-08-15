@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { SpeciesLineages } from '~species/lineages';
   import { MarkupRender } from '~ui/markup';
+  import { UiCollapse } from '~ui/collapse';
 
   import type { SpeciesDetailResponse } from '~/shared/types';
 
@@ -32,48 +33,34 @@
 </script>
 
 <template>
-  <AFlex
-    :gap="16"
-    vertical
-  >
-    <MarkupRender
-      v-if="species.description"
-      :entries="species.description"
-    />
+  <div class="flex flex-col gap-6">
+    <div>
+      <MarkupRender
+        v-if="species.description"
+        :entries="species.description"
+      />
+    </div>
 
     <template v-if="species.features">
-      <ACollapse
+      <UiCollapse
         v-for="feature in species.features"
+        :id="feature.url"
         :key="feature.url"
-        v-model:active-key="activeFeatures"
-        :bordered="false"
-        expand-icon-position="end"
-        destroy-inactive-panel
+        default-open
       >
-        <ACollapsePanel
-          :id="feature.url"
-          :key="feature.url"
-          data-allow-mismatch
-        >
-          <template #header>
-            <ATypographyTitle
-              :level="4"
-              data-allow-mismatch
-            >
-              {{ feature.name.rus }}
-            </ATypographyTitle>
-          </template>
+        <template #default>
+          {{ feature.name.rus }}
+        </template>
 
-          <template #default>
-            <MarkupRender :entries="feature.description" />
-          </template>
-        </ACollapsePanel>
-      </ACollapse>
+        <template #content>
+          <MarkupRender :entries="feature.description" />
+        </template>
+      </UiCollapse>
     </template>
 
     <SpeciesLineages
       v-if="!species.parent && species.hasLineages"
       :url="species.url"
     />
-  </AFlex>
+  </div>
 </template>

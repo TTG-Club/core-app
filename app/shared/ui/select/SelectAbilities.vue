@@ -1,20 +1,20 @@
 <script setup lang="ts">
-  import { Form } from 'ant-design-vue';
+  import { DictionaryService } from '~/shared/api';
 
-  import { Dictionaries } from '~/shared/api';
+  import type { AbilityKey } from '~/shared/types';
 
-  const { limit = 0 } = defineProps<{
-    multiple?: boolean;
+  const { multiple = false, limit = 0 } = defineProps<{
     disabled?: boolean;
+    multiple?: boolean;
     limit?: number;
   }>();
 
-  const context = Form.useInjectFormItemContext();
+  const model = defineModel<AbilityKey | Array<AbilityKey>>();
 
-  const model = defineModel<Array<string>>();
-
-  const { data, refresh } = await useAsyncData('dictionaries-abilities', () =>
-    Dictionaries.abilities(),
+  const { data, refresh } = await useAsyncData(
+    'dictionaries-abilities',
+    () => DictionaryService.abilities(),
+    { dedupe: 'defer' },
   );
 
   const options = computed(() => {
@@ -35,23 +35,17 @@
 
     refresh();
   };
-
-  watch(model, () => {
-    context.onFieldChange();
-  });
 </script>
 
 <template>
-  <ASelect
-    v-model:value="model"
+  <USelect
+    v-model="model"
     :placeholder="`Выбери характеристик${multiple ? 'и' : 'у'}`"
-    :mode="multiple ? 'multiple' : undefined"
-    :token-separators="[',']"
-    :options="options"
-    max-tag-count="responsive"
-    allow-clear
-    show-search
-    show-arrow
-    @dropdown-visible-change="handleDropdownOpening"
+    :multiple="multiple"
+    :items="options"
+    :disabled="disabled"
+    clearable
+    searchable
+    @open="handleDropdownOpening(true)"
   />
 </template>

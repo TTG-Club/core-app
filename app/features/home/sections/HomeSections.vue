@@ -1,36 +1,51 @@
 <script setup lang="ts">
+  import { isArray } from 'lodash-es';
+
   import { CARD_LINKS } from './model';
+
+  import { useUserStore } from '~/shared/stores';
+
+  const { user } = storeToRefs(useUserStore());
+
+  const sections = computed(() =>
+    CARD_LINKS.map((link) => {
+      if (!isArray(link.roles)) {
+        return link;
+      }
+
+      const available = link.roles.some((role) =>
+        user.value?.roles.includes(role),
+      );
+
+      return {
+        ...link,
+        disabled: link.disabled || !available,
+      };
+    }),
+  );
 </script>
 
 <template>
-  <ARow
-    :gutter="[12, 12]"
-    :class="$style.cards"
+  <div
+    class="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6"
   >
-    <ACol
-      v-for="(link, index) in CARD_LINKS"
+    <NuxtLink
+      v-for="(link, index) in sections"
       :key="index"
-      class="gutter-row"
-      :xs="12"
-      :sm="8"
-      :md="6"
-      :xl="4"
+      :to="link.url"
+      :class="[$style.card, { [$style.disabled]: link.disabled }]"
+      class="shadow-lg"
     >
-      <NuxtLink
-        :to="link.url"
-        :class="[$style.card, { [$style.disabled]: link.disable }]"
-      >
-        <span :class="$style.name">{{ link.name }}</span>
+      <span :class="$style.name">{{ link.name }}</span>
 
-        <img
-          :class="$style.img"
-          :src="link.img"
-          :alt="link.name"
-          loading="lazy"
-        />
-      </NuxtLink>
-    </ACol>
-  </ARow>
+      <img
+        :class="$style.img"
+        :src="link.img"
+        :alt="link.name"
+        loading="lazy"
+      />
+    </NuxtLink>
+  </div>
 </template>
 
 <style lang="scss" module>
@@ -48,13 +63,12 @@
 
     height: 56px;
     padding: 0 12px;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--ui-border);
     border-radius: 10px;
 
     text-decoration: none;
 
-    background-color: var(--color-bg-secondary);
-    box-shadow: 0 0.625rem 0.75rem 0 var(--color-card-shadow);
+    background-color: var(--ui-bg-muted);
 
     &:hover {
       .img {
@@ -99,9 +113,11 @@
 
       display: block;
 
-      width: 220px;
+      width: 100%;
+      height: 100%;
 
       opacity: 0.9;
+      object-fit: cover;
 
       transition: transform 200ms;
     }

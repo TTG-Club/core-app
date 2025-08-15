@@ -1,26 +1,22 @@
 <script setup lang="ts">
-  import { Form } from 'ant-design-vue';
+  import { DictionaryService } from '~/shared/api';
 
-  import { Dictionaries } from '~/shared/api';
-
-  const props = withDefaults(
-    defineProps<{
-      multiple?: boolean;
-      disabledKeys?: Array<string>;
-    }>(),
-    {
-      multiple: false,
-      disabledKeys: () => [],
-    },
-  );
-
-  const context = Form.useInjectFormItemContext();
+  const {
+    multiple = false,
+    disabledKeys = [],
+    disabled,
+  } = defineProps<{
+    disabled?: boolean;
+    multiple?: boolean;
+    disabledKeys?: Array<string>;
+  }>();
 
   const model = defineModel<string | Array<string>>();
 
   const { data, status, refresh } = await useAsyncData(
     'dictionaries-sizes',
-    () => Dictionaries.sizes(),
+    () => DictionaryService.sizes(),
+    { dedupe: 'defer' },
   );
 
   const options = computed(() => {
@@ -30,7 +26,7 @@
 
     return data.value.map((size) => ({
       ...size,
-      disabled: props.disabledKeys.includes(size.value),
+      disabled: disabledKeys.includes(size.value),
     }));
   });
 
@@ -41,22 +37,17 @@
 
     refresh();
   };
-
-  watch(model, () => {
-    context.onFieldChange();
-  });
 </script>
 
 <template>
-  <ASelect
-    v-model:value="model"
+  <USelect
+    v-model="model"
     :loading="status === 'pending'"
-    :options="options"
-    :mode="multiple ? 'multiple' : undefined"
+    :items="options"
+    :multiple="multiple"
+    :disabled="disabled"
     :placeholder="`Выбери размер${multiple ? 'ы' : ''}`"
-    max-tag-count="responsive"
-    show-arrow
-    show-search
-    @dropdown-visible-change="handleDropdownOpening"
+    searchable
+    @open="handleDropdownOpening(true)"
   />
 </template>

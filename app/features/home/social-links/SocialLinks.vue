@@ -1,38 +1,29 @@
 <script setup lang="ts">
   import { SOCIAL_LINKS } from './model';
-
-  import { SvgIcon } from '~ui/icon';
 </script>
 
 <template>
-  <AFlex
-    :class="$style.cards"
-    gap="12"
-    vertical
-  >
+  <div class="flex w-full flex-col gap-3">
     <NuxtLink
       v-for="(link, index) in SOCIAL_LINKS"
       :key="index"
       :to="link.url"
       :class="[$style.card, { [$style.disabled]: link.disable }]"
       :style="{ backgroundColor: link.backgroundColor }"
+      class="shadow-lg"
       target="_blank"
     >
-      <SvgIcon
-        :class="$style.icon"
-        :icon="link.icon"
+      <UIcon
+        :name="link.icon"
+        size="20"
       />
 
       <span :class="$style.name">{{ link.name }}</span>
     </NuxtLink>
-  </AFlex>
+  </div>
 </template>
 
 <style lang="scss" module>
-  .cards {
-    width: 100%;
-  }
-
   .card {
     position: relative;
 
@@ -45,13 +36,11 @@
 
     height: 48px;
     padding: 0 12px;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--ui-border);
     border-radius: 10px;
 
     color: #ffffff;
     text-decoration: none;
-
-    box-shadow: 0 0.625rem 0.75rem 0 var(--color-card-shadow);
 
     &:hover {
       color: #ffffff;

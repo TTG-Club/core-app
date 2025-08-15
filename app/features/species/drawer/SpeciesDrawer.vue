@@ -1,80 +1,47 @@
 <script setup lang="ts">
-  import { Breakpoint, BREAKPOINTS, useDrawer } from '~/shared/composables';
   import { SpeciesBody } from '~species/body';
-  import { DrawerComponent } from '~ui/drawer';
+  import { UiDrawer } from '~ui/drawer';
 
   import type { SpeciesDetailResponse } from '~/shared/types';
 
-  const { inLineagesDrawer } = defineProps<{
-    inLineagesDrawer?: boolean;
+  const { url } = defineProps<{
+    url: string;
   }>();
 
-  const { url, isOpened, close } = useDrawer(
-    inLineagesDrawer ? 'species-lineage-detail' : 'species-detail',
-  );
+  defineEmits<{
+    (e: 'close'): void;
+  }>();
 
-  const {
-    data: species,
-    status,
-    execute,
-    clear,
-  } = await useAsyncData(
-    'species-detail-drawer',
-    () => {
-      if (!url.value) {
-        return Promise.reject();
-      }
-
-      return $fetch<SpeciesDetailResponse>(`/api/v2/species/${url.value}`);
-    },
+  const { data: detail, status } = await useAsyncData(
+    computed(() => `species-${url}`),
+    () => $fetch<SpeciesDetailResponse>(`/api/v2/species/${url}`),
     {
       server: false,
-      immediate: false,
+      immediate: true,
     },
   );
 
-  const urlForCopy = computed(() =>
-    isOpened.value ? `${getOrigin()}/species/${url.value}` : undefined,
-  );
-
-  const editUrl = computed(() => `/workshop/species/${url.value}`);
-
-  function handleUpdate(opened: boolean) {
-    if (opened) {
-      return;
-    }
-
-    close();
-  }
-
-  watch(isOpened, (value) => {
-    if (!value) {
-      return;
-    }
-
-    clear();
-    execute();
-  });
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+  const urlForCopy = computed(() => `${getOrigin()}/species/${url}`);
+  const editUrl = computed(() => `/workshop/species/${url}`);
 </script>
 
 <template>
-  <DrawerComponent
-    :open="isOpened"
-    :min-width="320"
-    :max-width="BREAKPOINTS[Breakpoint.MD]"
-    :title="species?.name"
-    :source="species?.source"
+  <UiDrawer
+    :title="detail?.name"
+    :source="detail?.source"
+    :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
-    :is-loading="status === 'pending'"
-    :is-error="status === 'error'"
-    width="100%"
+    :is-loading
+    :is-error
     copy-title
-    @update:open="handleUpdate"
+    @close="$emit('close')"
   >
     <SpeciesBody
-      v-if="species"
-      :species
+      v-if="detail"
+      :species="detail"
     />
-  </DrawerComponent>
+  </UiDrawer>
 </template>

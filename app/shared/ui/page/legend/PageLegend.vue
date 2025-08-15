@@ -7,33 +7,23 @@
 </script>
 
 <template>
-  <AFlex
-    gap="8"
-    vertical
-  >
+  <div class="flex flex-col gap-2">
     <span>Легенда:</span>
 
-    <AFlex
-      align="center"
-      gap="8"
-    >
-      <ATooltip
+    <div class="flex items-center gap-2">
+      <UTooltip
         v-for="item in items"
         :key="item.label"
-        :mouse-enter-delay="0.5"
-        :mouse-leave-delay="0"
-        :title="item.title"
-        placement="bottom"
+        :text="item.title"
+        disable-hoverable-content
       >
-        <ATag :class="$style.tag">{{ item.label }}</ATag>
-      </ATooltip>
-    </AFlex>
-  </AFlex>
+        <UBadge
+          color="neutral"
+          variant="subtle"
+        >
+          {{ item.label }}
+        </UBadge>
+      </UTooltip>
+    </div>
+  </div>
 </template>
-
-<style module>
-  .tag {
-    cursor: default;
-    margin: 0;
-  }
-</style>

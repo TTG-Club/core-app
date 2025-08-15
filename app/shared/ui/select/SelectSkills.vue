@@ -1,23 +1,26 @@
 <script setup lang="ts">
-  import { Form } from 'ant-design-vue';
+  import { DictionaryService } from '~/shared/api';
 
-  import { Dictionaries } from '~/shared/api';
-
-  const { limit = 0 } = defineProps<{
+  const { multiple = false, limit = 0 } = defineProps<{
     disabled?: boolean;
     limit?: number;
+    multiple?: boolean;
   }>();
 
-  const context = Form.useInjectFormItemContext();
+  const model = defineModel<string | Array<string>>();
 
-  const model = defineModel<Array<string>>();
-
-  const { data, refresh } = await useAsyncData('dictionaries-skills', () =>
-    Dictionaries.skills(),
+  const { data, refresh } = await useAsyncData(
+    'dictionaries-skills',
+    () => DictionaryService.skills(),
+    { dedupe: 'defer' },
   );
 
   const options = computed(() => {
     if (!data.value) return [];
+
+    if (!multiple) {
+      return data.value;
+    }
 
     const disabled = !!model.value && !!limit && model.value.length >= limit;
 
@@ -35,21 +38,34 @@
     refresh();
   };
 
-  watch(model, () => {
-    context.onFieldChange();
+  const placeholder = computed(() => {
+    if (!multiple) {
+      return 'Выбери навык';
+    }
+
+    if (!limit) {
+      return 'Выбери навыки';
+    }
+
+    const plural = getPlural(limit, ['навык', 'навыка', 'навыков']);
+
+    return `Выбери ${limit} ${plural}`;
   });
 </script>
 
 <template>
-  <ASelect
-    v-model:value="model"
-    :options="options"
-    placeholder="Выбери два навыка"
-    max-tag-count="responsive"
-    mode="multiple"
-    show-search
-    allow-clear
-    show-arrow
-    @dropdown-visible-change="handleDropdownOpening"
-  />
+  <USelect
+    v-model="model"
+    :items="options"
+    :placeholder="placeholder"
+    :disabled="disabled"
+    :multiple
+    searchable
+    clearable
+    @open="handleDropdownOpening(true)"
+  >
+    <template #trailing>
+      <slot name="trailing" />
+    </template>
+  </USelect>
 </template>

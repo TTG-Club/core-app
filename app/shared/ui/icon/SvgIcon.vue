@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import { getIconName } from '~/shared/utils';
-
   export interface SvgIconProps {
     icon: string;
     size?: string | number;

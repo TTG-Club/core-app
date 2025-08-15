@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { SpeciesBody } from '~species/body';
+  import { UiCollapse } from '~ui/collapse';
 
   import type { SpeciesDetailResponse } from '~/shared/types';
 
@@ -13,36 +14,23 @@
 </script>
 
 <template>
-  <AFlex
+  <div
     v-if="lineages?.length"
-    gap="16"
-    vertical
+    class="flex flex-col gap-4"
   >
-    <ATypographyTitle
-      :level="3"
-      content="Происхождения"
-    />
+    <h3 class="text-xl font-semibold">Происхождения</h3>
 
-    <ACollapse
+    <UiCollapse
       v-for="species in lineages"
       :key="species.url"
-      :bordered="false"
-      expand-icon-position="end"
     >
-      <ACollapsePanel>
-        <template #header>
-          <ATypographyTitle
-            :level="4"
-            data-allow-mismatch
-          >
-            {{ species.name.rus }}
-          </ATypographyTitle>
-        </template>
+      <template #default>
+        {{ species.name.rus }}
+      </template>
 
-        <template #default>
-          <SpeciesBody :species />
-        </template>
-      </ACollapsePanel>
-    </ACollapse>
-  </AFlex>
+      <template #content>
+        <SpeciesBody :species />
+      </template>
+    </UiCollapse>
+  </div>
 </template>

@@ -1,6 +1,5 @@
 import { getReasonPhrase, StatusCodes } from 'http-status-codes';
 
-import { useToast } from '~ui/toast';
 import { getStatusMessage } from '~~/shared/utils';
 
 export default defineNuxtRouteMiddleware(async (to) => {
@@ -27,7 +26,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
     const $toast = useToast();
 
-    $toast.error({
+    $toast.add({
+      color: 'error',
       title: 'Ошибка доступа',
       description: getStatusMessage(code),
     });

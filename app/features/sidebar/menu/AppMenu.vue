@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { MENU_SUPPORT, MENU_LINKS } from './model';
+  import { MENU_SUPPORT, MENU_LINKS, MENU_SECTIONS } from './model';
   import { MenuSection, MenuContacts, MenuSupport } from './ui';
 
   import { SidebarPopover } from '~sidebar/popover';
@@ -19,10 +19,7 @@
     </template>
 
     <template #default>
-      <AFlex
-        :class="$style.header"
-        gap="middle"
-      >
+      <div class="flex gap-4 p-6 pb-3">
         <NuxtLink
           :class="$style.logo"
           to="/"
@@ -37,71 +34,31 @@
 
           <span :class="$style.title">TTG Club</span>
         </div>
-      </AFlex>
+      </div>
 
-      <ADivider :style="{ margin: '12px 0' }" />
+      <USeparator class="my-3" />
 
-      <AFlex
-        wrap="wrap"
-        gap="20"
+      <div
+        class="flex flex-wrap gap-5"
         :class="$style.content"
       >
         <MenuSection
-          icon="menu/filled/character"
-          title="Персонаж"
-          :items="[
-            { href: '/', label: 'Классы', disabled: true },
-            { href: '/species', label: 'Виды' },
-            { href: '/feats', label: 'Черты', disabled: false },
-            { href: '/backgrounds', label: 'Предыстории', disabled: false },
-            { href: '/spells', label: 'Заклинания' },
-          ]"
+          v-for="section in MENU_SECTIONS"
+          :key="section.label"
+          v-bind="section"
         />
+      </div>
 
-        <MenuSection
-          icon="menu/filled/inventory"
-          title="Предметы"
-          :items="[
-            { href: '/', label: 'Снаряжение', disabled: true },
-            {
-              href: '/magic-items',
-              label: 'Магические предметы',
-              disabled: false,
-            },
-          ]"
-        />
-
-        <MenuSection
-          icon="menu/filled/workshop"
-          title="Мастерская"
-          :items="[
-            { href: '/', label: 'Бестиарий', disabled: true },
-            { href: '/glossary', label: 'Глоссарий', disabled: false },
-            { href: '/', label: 'Источники', disabled: true },
-          ]"
-        />
-
-        <MenuSection
-          icon="menu/filled/wiki"
-          title="Интрукции"
-          :items="[
-            { href: '/', label: 'Discord Bot', disabled: true },
-            { href: '/', label: 'Telegram Spell Bot', disabled: true },
-            { href: '/', label: 'Управление закладками', disabled: true },
-          ]"
-        />
-      </AFlex>
-
-      <ADivider :style="{ margin: '12px 0' }" />
+      <USeparator class="my-3" />
 
       <div :class="$style.footer">
         <div :class="$style.contacts">
           <MenuContacts :social-links="MENU_LINKS" />
 
-          <ADivider
-            :style="{ height: '32px' }"
+          <USeparator
             :class="$style.divider"
-            type="vertical"
+            orientation="vertical"
+            class="my-3 h-8"
           />
 
           <MenuSupport :support-items="MENU_SUPPORT" />
@@ -135,7 +92,7 @@
     font-size: 28px;
     font-weight: 600;
     line-height: 28px;
-    color: var(--color-text-title);
+    color: var(--ui-text-highlighted);
 
     @container (width >= 248px) {
       font-size: 40px;

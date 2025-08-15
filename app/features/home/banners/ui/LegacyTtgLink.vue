@@ -2,9 +2,15 @@
   <NuxtLink
     to="https://ttg.club/"
     :class="$style.card"
+    class="shadow-lg"
     target="_blank"
   >
-    <h2 :class="$style.name">D&D 2014</h2>
+    <h2
+      :class="$style.name"
+      class="text-2xl"
+    >
+      D&D 2014
+    </h2>
 
     <p :class="$style.description">Предыдущая редакция Dungeon and Dragons</p>
   </NuxtLink>
@@ -18,17 +24,16 @@
     display: flex;
     flex: 1 1 100%;
     flex-direction: column;
+    gap: 12px;
 
-    margin-bottom: 12px;
     padding: 12px 12px;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--ui-border);
     border-radius: 10px;
 
-    color: var(--color-text);
+    color: var(--ui-text);
     text-decoration: none;
 
-    background: var(--color-bg-secondary);
-    box-shadow: 0 0.625rem 0.75rem 0 var(--color-card-shadow);
+    background: var(--ui-bg-muted);
 
     &:before {
       content: '';
@@ -43,7 +48,7 @@
       height: 100%;
 
       opacity: 0.4;
-      background-image: url('/s3/sections/fon.png');
+      background-image: url('/s3/home/legacy-site.webp');
       background-repeat: no-repeat;
       background-position: center;
       background-size: cover;
@@ -61,13 +66,13 @@
     .name {
       z-index: 10;
       font-weight: 600;
-      color: var(--color-text);
+      color: var(--ui-text);
       text-shadow: 0 2px 4px #0000006e;
     }
 
     .description {
       z-index: 10;
-      color: var(--color-text);
+      color: var(--ui-text);
       text-shadow: 0 2px 4px #0000006e;
     }
   }

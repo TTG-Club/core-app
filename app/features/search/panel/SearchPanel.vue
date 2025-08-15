@@ -1,108 +1,108 @@
 <script setup lang="ts">
-  const open = ref<boolean>(false);
+  import { useGlobalSearch } from '~search/composable';
+  import { HomeGreetings } from '~home/greetings';
 
-  const showModal = () => {
-    open.value = true;
-  };
+  const { open } = useGlobalSearch();
 </script>
 
 <template>
-  <AFlex
-    vertical
-    align="center"
-    :class="$style.head"
-  >
-    <div
-      :class="$style.search"
-      @click="showModal"
+  <div class="flex w-full flex-col items-center max-sm:mt-[3dvw] lg:w-1/2">
+    <HomeGreetings class="-z-1" />
+
+    <UButton
+      class="relative mb-6 rounded-full py-4 hover:bg-accented"
+      :class="$style.glowButton"
+      variant="subtle"
+      color="neutral"
+      size="xl"
+      block
+      @click.left.exact.prevent="open"
     >
-      <p>
-        Нажмите тут или <span :class="$style.key">\</span> для начала поиска
-      </p>
-    </div>
-
-    <AModal
-      v-model:open="open"
-      :closable="false"
-      :footer="null"
-    >
-      <AInput
-        autofocus
-        placeholder="Поиск по сайту"
-        size="large"
-      ></AInput>
-
-      <ASpace
-        direction="vertical"
-        :class="$style.result"
-      >
-        <span>Результат ответа</span>
-
-        <span>Результат ответа</span>
-
-        <span>Результат ответа</span>
-
-        <span>Результат ответа</span>
-
-        <span>Результат ответа</span>
-
-        <span>Результат ответа</span>
-
-        <span>Результат ответа</span>
-
-        <span>Результат ответа</span>
-      </ASpace>
-    </AModal>
-  </AFlex>
+      <span class="text-sm">
+        Нажмите тут или <UKbd value="\">\</UKbd> для начала поиска
+      </span>
+    </UButton>
+  </div>
 </template>
 
-<style lang="scss" module>
-  .head {
-    width: 100%;
-    margin: 3vw 0 0 0;
-  }
+<style module lang="scss">
+  .glowButton {
+    &:before {
+      content: '';
 
-  .search {
-    pointer-events: none;
-    cursor: pointer;
+      position: absolute;
+      z-index: -1;
+      inset: 0;
 
-    position: relative;
+      border-radius: inherit;
 
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+      background: conic-gradient(
+        from var(--gradient-angle),
+        var(--ui-color-primary-100),
+        var(--ui-color-primary-200),
+        var(--ui-color-primary-300),
+        var(--ui-color-primary-400),
+        var(--ui-color-primary-500),
+        var(--ui-color-primary-600),
+        var(--ui-color-primary-700),
+        var(--ui-color-primary-800),
+        var(--ui-color-primary-900),
+        var(--ui-color-primary-950),
+        var(--ui-color-primary-900),
+        var(--ui-color-primary-800),
+        var(--ui-color-primary-700),
+        var(--ui-color-primary-600),
+        var(--ui-color-primary-500),
+        var(--ui-color-primary-400),
+        var(--ui-color-primary-300),
+        var(--ui-color-primary-200),
+        var(--ui-color-primary-100)
+      );
+      filter: blur(8px);
 
-    width: 100%;
-    max-width: 600px;
-    height: 46px;
-    padding: 0 16px;
-    border: 1px solid var(--color-border);
-    border-radius: 36px;
-
-    opacity: 0.6;
-    background-color: var(--color-bg-secondary);
-
-    p {
-      margin: 0;
+      animation: gradient-rotate 10s linear infinite;
     }
 
-    .key {
-      padding: 0 8px;
-      border-color: var(--color-border);
-      border-style: solid;
-      border-width: 1px;
-      border-radius: 4px;
-
-      font-weight: 600;
-      color: var(--color-text-color-title);
-
-      background-color: var(--color-bg-sub-menu);
+    &:hover {
+      &:before {
+        background: conic-gradient(
+          from var(--gradient-angle),
+          var(--ui-color-secondary-100),
+          var(--ui-color-secondary-200),
+          var(--ui-color-secondary-300),
+          var(--ui-color-secondary-400),
+          var(--ui-color-secondary-500),
+          var(--ui-color-secondary-600),
+          var(--ui-color-secondary-700),
+          var(--ui-color-secondary-800),
+          var(--ui-color-secondary-900),
+          var(--ui-color-secondary-950),
+          var(--ui-color-secondary-900),
+          var(--ui-color-secondary-800),
+          var(--ui-color-secondary-700),
+          var(--ui-color-secondary-600),
+          var(--ui-color-secondary-500),
+          var(--ui-color-secondary-400),
+          var(--ui-color-secondary-300),
+          var(--ui-color-secondary-200),
+          var(--ui-color-secondary-100)
+        );
+      }
     }
   }
 
-  .result {
-    width: 100%;
-    margin-top: 16px;
+  @property --gradient-angle {
+    inherits: false;
+    initial-value: 0deg;
+    syntax: '<angle>';
+  }
+
+  @keyframes gradient-rotate {
+    0% {
+      --gradient-angle: 0deg;
+    }
+    100% {
+      --gradient-angle: 360deg;
+    }
   }
 </style>

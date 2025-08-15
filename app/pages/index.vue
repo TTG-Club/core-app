@@ -3,7 +3,7 @@
   import { HomeSections } from '~home/sections';
   import { SocialLinks } from '~home/social-links';
   import { SearchPanel } from '~search/panel';
-  import { PageContainer } from '~ui/page';
+  import { UiGallery } from '~ui/gallery';
 
   definePageMeta({
     layout: 'default',
@@ -17,71 +17,32 @@
 </script>
 
 <template>
-  <PageContainer>
-    <h1 :class="$style.siteName">
-      {{ name }}
-    </h1>
+  <NuxtLayout>
+    <div class="flex flex-col items-center gap-6">
+      <h1 class="m-0 h-0 overflow-hidden leading-0 opacity-0">
+        {{ name }}
+      </h1>
 
-    <div class="$style.mainBlock">
       <SearchPanel />
 
       <HomeSections />
 
-      <ARow
-        :gutter="[12, 12]"
-        :class="$style.row"
-      >
-        <ACol
-          :xs="24"
-          :md="12"
-          :xl="16"
+      <div class="flex w-full flex-col gap-3 lg:items-start xl:flex-row">
+        <div
+          class="w-full overflow-hidden rounded-lg border border-default opacity-80 xl:w-1/2 2xl:w-2/3"
         >
-          <div :class="$style.roadmap">
-            <AImage
-              src="/s3/roadmap.webp"
-              loading="lazy"
-              alt="roadmap"
-            />
-          </div>
-        </ACol>
+          <UiGallery
+            preview="/s3/roadmap.webp"
+            disable-square
+          />
+        </div>
 
-        <ACol
-          :xs="24"
-          :md="12"
-          :xl="8"
-        >
+        <div class="flex w-full flex-col gap-3 xl:w-1/2 2xl:w-1/3">
           <HomeBanners />
 
           <SocialLinks />
-        </ACol>
-      </ARow>
+        </div>
+      </div>
     </div>
-  </PageContainer>
+  </NuxtLayout>
 </template>
-
-<style module>
-  .siteName {
-    overflow: hidden;
-
-    height: 0;
-    margin: 0;
-
-    line-height: 0;
-
-    opacity: 0;
-  }
-
-  .row {
-    margin-top: 24px;
-  }
-
-  .roadmap {
-    overflow: hidden;
-
-    width: 100%;
-    border: 1px solid var(--color-border);
-    border-radius: 10px;
-
-    opacity: 0.8;
-  }
-</style>

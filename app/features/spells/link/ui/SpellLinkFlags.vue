@@ -5,19 +5,26 @@
 </script>
 
 <template>
-  <AFlex :gap="4">
-    <ATag
+  <div
+    v-if="concentration || ritual"
+    class="flex gap-1"
+  >
+    <UBadge
       v-if="concentration"
-      :style="{ margin: 0 }"
+      variant="subtle"
+      color="neutral"
+      size="sm"
     >
       К
-    </ATag>
+    </UBadge>
 
-    <ATag
+    <UBadge
       v-if="ritual"
-      :style="{ margin: 0 }"
+      variant="subtle"
+      color="neutral"
+      size="sm"
     >
       Р
-    </ATag>
-  </AFlex>
+    </UBadge>
+  </div>
 </template>
