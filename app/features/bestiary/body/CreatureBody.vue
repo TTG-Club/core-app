@@ -7,10 +7,29 @@
   import { UiCollapse } from '~ui/collapse';
 
   import type { CreatureDetailResponse } from '~/features/bestiary/types';
+  import { pick } from 'lodash-es';
 
-  defineProps<{
+  const { creature } = defineProps<{
     creature: CreatureDetailResponse;
   }>();
+
+  const stats = computed(() =>
+    pick(
+      creature,
+      'ac',
+      'cr',
+      'initiative',
+      'hit',
+      'speed',
+      'abilities',
+      'skills',
+      'vulnerability',
+      'resistance',
+      'immunity',
+      'sense',
+      'languages',
+    ),
+  );
 </script>
 
 <template>
@@ -33,7 +52,7 @@
           />
         </div>
 
-        <StatsBlock v-bind="creature" />
+        <StatsBlock v-bind="stats" />
       </div>
 
       <div class="flex flex-auto flex-col gap-6">

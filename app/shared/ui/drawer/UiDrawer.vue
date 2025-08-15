@@ -13,6 +13,7 @@
     editUrl = undefined,
     dateTime = undefined,
     dateTimeFormat = undefined,
+    dismissible = undefined,
   } = defineProps<{
     title: DrawerTitleName;
     source?: SourceResponse;
@@ -24,15 +25,25 @@
     dateTime?: string | number | Date | Dayjs | null;
     dateTimeFormat?: string;
     notDetail?: boolean;
+    dismissible?: boolean;
   }>();
 
   defineEmits<{
     (e: 'close'): void;
   }>();
 
+  const isGalleryOpened = useState('ui-gallery-opened', () => false);
   const { greaterOrEqual } = useBreakpoints();
 
   const isTabletOrGreater = greaterOrEqual(Breakpoint.MD);
+
+  const isDismissible = computed(() => {
+    if (dismissible !== undefined) {
+      return dismissible;
+    }
+
+    return !isGalleryOpened.value;
+  });
 
   const computedTitle = computed(() =>
     typeof title === 'string' ? title : title?.rus,
@@ -46,10 +57,12 @@
 <template>
   <UDrawer
     :handle="isTabletOrGreater && !notDetail"
-    :inset="isTabletOrGreater"
     :class="notDetail ? 'w-xl' : 'w-2xl'"
+    :dismissible="isDismissible"
+    :inset="isTabletOrGreater"
     direction="right"
     handle-only
+    fixed
     @close="$emit('close')"
   >
     <template #header>

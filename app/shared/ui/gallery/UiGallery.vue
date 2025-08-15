@@ -4,10 +4,6 @@
   import lgThumbnail from 'lightgallery/plugins/thumbnail';
   import lgZoom from 'lightgallery/plugins/zoom';
   import lgFullscreen from 'lightgallery/plugins/fullscreen';
-  import 'lightgallery/css/lightgallery.css';
-  import 'lightgallery/css/lg-zoom.css';
-  import 'lightgallery/css/lg-thumbnail.css';
-  import 'lightgallery/css/lg-fullscreen.css';
   import type { LightGallerySettings } from 'lightgallery/lg-settings';
 
   const {
@@ -27,6 +23,8 @@
       lightGallery: { licenseKey },
     },
   } = useRuntimeConfig();
+
+  const opened = useState<boolean>('ui-gallery-opened', () => false);
 
   const items = computed(() => {
     if (!images.length) {
@@ -57,7 +55,11 @@
 </script>
 
 <template>
-  <Lightgallery :settings="settings">
+  <Lightgallery
+    :settings="settings"
+    @before-open="opened = true"
+    @after-close="opened = false"
+  >
     <div
       v-for="(item, index) in items"
       :key="item.src"
