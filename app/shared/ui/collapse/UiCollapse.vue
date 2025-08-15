@@ -50,13 +50,12 @@
     </template>
 
     <template #content>
-      <template v-if="$slots.subtitle">
-        <USeparator />
-
-        <div class="mb-4 ml-1 italic">
-          <slot name="subtitle" />
-        </div>
-      </template>
+      <div
+        v-if="$slots.subtitle"
+        class="mb-4 ml-1 italic"
+      >
+        <slot name="subtitle" />
+      </div>
 
       <slot name="content" />
     </template>
