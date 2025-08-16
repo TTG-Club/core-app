@@ -45,6 +45,9 @@ const MARKERS: { [key: string]: MarkerName } = {
   sup: Marker.Superscript,
   sub: Marker.Subscript,
   highlight: Marker.Highlight,
+  ul: Marker.UnorderedList,
+  ol: Marker.OrderedList,
+  li: Marker.ListItem,
 };
 
 export function parse(text: string): MarkerNode[] {

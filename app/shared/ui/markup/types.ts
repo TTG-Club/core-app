@@ -15,6 +15,9 @@ export enum TextMarker {
 
 export enum RichMarker {
   Link = 'link',
+  UnorderedList = 'ul',
+  OrderedList = 'ol',
+  ListItem = 'li',
 }
 
 export enum EmptyMarker {
@@ -97,6 +100,9 @@ export interface TextNode {
 
 export type RichNodes = {
   [RichMarker.Link]: LinkNode;
+  [RichMarker.UnorderedList]: ListNode;
+  [RichMarker.OrderedList]: ListNode;
+  [RichMarker.ListItem]: ListItemNode;
 };
 
 export type RichNode = RichNodes[RichMarker];
@@ -106,6 +112,16 @@ export interface LinkNode {
   attrs: {
     url?: string;
   };
+  content: Array<MarkerNode>;
+}
+
+export interface ListNode {
+  type: RichMarker.UnorderedList | RichMarker.OrderedList;
+  content: Array<MarkerNode>;
+}
+
+export interface ListItemNode {
+  type: RichMarker.ListItem;
   content: Array<MarkerNode>;
 }
 
