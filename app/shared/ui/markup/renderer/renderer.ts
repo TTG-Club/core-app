@@ -20,6 +20,11 @@ import {
 
 import { renderLink } from './renderLink';
 import { renderSectionLink } from './renderSectionLink';
+import {
+  renderListItem,
+  renderOrderedList,
+  renderUnorderedList,
+} from './renderList';
 
 const TextMarkerTag: Record<TextMarker, string> = {
   [TextMarker.Bold]: 'b',
@@ -42,6 +47,9 @@ const RICH_NODE_RENDERERS: {
   ) => VNode;
 } = {
   [RichMarker.Link]: renderLink,
+  [RichMarker.UnorderedList]: renderUnorderedList,
+  [RichMarker.OrderedList]: renderOrderedList,
+  [RichMarker.ListItem]: renderListItem,
 };
 
 const FEATURE_NODE_RENDERERS: {
@@ -129,6 +137,8 @@ function renderRichNode(node: RichNode): VNode {
   if (!renderFn) {
     throw new Error(`[Markup] Unknown tag for rich node: ${node.type}`);
   }
+
+  // @ts-ignore
 
   return renderFn(node, () => child);
 }
