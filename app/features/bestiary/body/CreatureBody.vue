@@ -135,7 +135,7 @@
           </UiCollapse>
         </template>
 
-        <template v-if="creature.legendary">
+        <template v-if="creature.legendary.count > 0">
           <UiCollapse default-open>
             <template #default> Легендарные действия </template>
 
