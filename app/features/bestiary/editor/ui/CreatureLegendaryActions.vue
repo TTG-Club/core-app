@@ -41,7 +41,7 @@
     <UFormField
       class="col-span-12"
       label="Количество легендарных действий"
-      name="count"
+      name="legendary.count"
     >
       <UInputNumber
         v-model:value="model.count"
@@ -53,7 +53,7 @@
     <UFormField
       class="col-span-12"
       label="Количество легендарных действий в логове"
-      name="inLair"
+      name="legendary.inLair"
     >
       <UInputNumber
         v-model:value="model.inLair"
