@@ -30,6 +30,17 @@
       'languages',
     ),
   );
+
+  const hasLair = computed(
+    () => creature.lair?.description || creature.lair?.effects?.length,
+  );
+
+  const hasSection = computed(
+    () =>
+      creature.section?.description ||
+      creature.section?.habitats ||
+      creature.section?.treasures,
+  );
 </script>
 
 <template>
@@ -170,14 +181,11 @@
           <template #default> Описание </template>
 
           <template #content>
-            <DescriptionsBlock
-              v-if="creature.description"
-              :description="creature.description"
-            />
+            <DescriptionsBlock :description="creature.description" />
           </template>
         </UiCollapse>
 
-        <template v-if="creature.lair">
+        <template v-if="hasLair">
           <UiCollapse default-open>
             <template #default>
               {{ creature.lair.name || 'Описание логова' }}
@@ -209,7 +217,7 @@
         </template>
 
         <UiCollapse
-          v-if="creature?.section"
+          v-if="hasSection"
           default-open
         >
           <template #default>
