@@ -1,8 +1,36 @@
 <script setup lang="ts">
   import { AnimatedNumber } from '~ui/animated-number';
 
-  const { data: counter } = await useAsyncData('material-counter', () =>
+  const { isAdmin } = useUserRoles();
+
+  const {
+    data: counter,
+    refresh,
+    status: counterStatus,
+  } = await useAsyncData('material-counter', () =>
     $fetch<number>('/api/v2/statistics/count-all'),
+  );
+
+  const { execute: reset, status: resetStatus } = await useAsyncData(
+    'material-counter-reset-cache',
+    () =>
+      $fetch('/api/v2/cache/evict-all', {
+        onResponse: ({ response }) => {
+          if (!response.ok) {
+            return;
+          }
+
+          refresh();
+        },
+      }),
+    {
+      immediate: false,
+      server: false,
+    },
+  );
+
+  const isLoading = computed(
+    () => counterStatus.value === 'pending' && resetStatus.value === 'pending',
   );
 </script>
 
@@ -11,7 +39,18 @@
     :class="$style.card"
     class="shadow-lg"
   >
-    <h3 class="text-base leading-none font-medium">Статистика</h3>
+    <div class="flex items-center justify-between gap-2">
+      <h3 class="text-base leading-none font-medium">Статистика</h3>
+
+      <UButton
+        v-if="isAdmin"
+        :loading="isLoading"
+        icon="i-fluent-arrow-sync-16-regular"
+        variant="ghost"
+        size="sm"
+        @click.left.exact.prevent="reset()"
+      />
+    </div>
 
     <p>
       В настоящее время на сайте представлено следующее количество материалов:
