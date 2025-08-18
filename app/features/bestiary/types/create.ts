@@ -15,10 +15,7 @@ export interface CreatureCreate extends EditorBaseInfoState {
   speeds: CreateSpeeds;
   abilities: CreateAbilities;
   skills: Array<CreateSkill>;
-  vulnerabilities: Array<string>;
-  resistance: Array<string>;
-  immunityToDamage: Array<string>;
-  immunityToCondition: Array<string>;
+  defenses: CreatureDefenses;
   equipments: Array<Equipment>;
   senses: CreatureSenses;
   languages: CreatureLanguages;
@@ -31,6 +28,23 @@ export interface CreatureCreate extends EditorBaseInfoState {
   legendary: LegendaryActions;
   lair: CreatureLair;
   section: CreateSection;
+}
+
+export interface CreatureDefenses {
+  vulnerabilities: CreatureDefense;
+  resistances: CreatureDefense;
+  immunities: CreatureImmunities;
+}
+
+export interface CreatureDefense {
+  values: Array<string> | undefined;
+  text: string | undefined;
+}
+
+export interface CreatureImmunities {
+  damage: Array<string> | undefined;
+  condition: Array<string> | undefined;
+  text: string | undefined;
 }
 
 export interface LegendaryActions {
@@ -262,10 +276,21 @@ export function getInitialState(): CreatureCreate {
       },
     },
     skills: [],
-    vulnerabilities: [],
-    resistance: [],
-    immunityToDamage: [],
-    immunityToCondition: [],
+    defenses: {
+      vulnerabilities: {
+        values: [],
+        text: undefined,
+      },
+      resistances: {
+        values: [],
+        text: undefined,
+      },
+      immunities: {
+        damage: [],
+        condition: [],
+        text: undefined,
+      },
+    },
     equipments: [],
     senses: {
       darkvision: undefined,

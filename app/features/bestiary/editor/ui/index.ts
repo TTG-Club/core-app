@@ -24,8 +24,8 @@ export { default as CreatureType } from './CreatureType.vue';
 
 export { default as CreatureLanguages } from './CreatureLanguages.vue';
 
-export { default as CreatureDefenses } from './CreatureDefenses.vue';
-
 export { default as CreatureInitiative } from './CreatureInitiative.vue';
 
 export { default as CreatureSection } from './CreatureSection.vue';
+
+export * from './defenses';
