@@ -39,7 +39,7 @@
     :class="$style.card"
     class="shadow-lg"
   >
-    <div class="flex items-center justify-between gap-2">
+    <div class="flex h-[16px] items-center justify-between gap-2">
       <h3 class="text-base leading-none font-medium">Статистика</h3>
 
       <UButton
