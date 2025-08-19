@@ -107,12 +107,6 @@ export interface CreateSpeed {
   hover?: boolean;
 }
 
-export interface CreateFlySpeed {
-  value: number;
-  text: string | undefined;
-  hover: boolean | undefined;
-}
-
 export type CreateAbilities = Record<AbilityShortKey, CreateAbility>;
 
 export interface CreateAbility {
@@ -152,6 +146,7 @@ export interface CreateExperience {
 
 export interface CreatureSenses {
   darkvision: number | undefined;
+  unimpeded: boolean | undefined; // истина если существо беспрепятственно видит через магическую тьму
   truesight: number | undefined;
   blindsight: number | undefined;
   tremorsense: number | undefined;
@@ -274,6 +269,7 @@ export function getInitialState(): CreatureCreate {
     equipments: [],
     senses: {
       darkvision: undefined,
+      unimpeded: undefined,
       truesight: undefined,
       blindsight: undefined,
       tremorsense: undefined,
