@@ -55,6 +55,17 @@
     </UFormField>
 
     <UFormField
+      label="Видит через тьму"
+      name="unimpeded"
+    >
+      <UCheckbox
+        v-model="model.unimpeded"
+        label="Да"
+      >
+      </UCheckbox>
+    </UFormField>
+
+    <UFormField
       label="Истинное зрение"
       name="truesight"
     >
