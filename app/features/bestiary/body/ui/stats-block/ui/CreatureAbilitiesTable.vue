@@ -5,75 +5,120 @@
 </script>
 
 <template>
-  <div :class="$style.block">
+  <div
+    :class="$style.block"
+    class="flex flex-col"
+  >
     <div :class="$style.title">
-      <div :class="$style.first"></div>
+      <div :class="$style.row">
+        <div
+          :class="$style.first"
+          class="min-w-[34px]"
+        ></div>
 
-      <div :class="$style.first"></div>
+        <div
+          :class="$style.first"
+          class="max-w-[28px]"
+        ></div>
 
-      <div :class="$style.first">Мод</div>
+        <div :class="$style.first">Мод</div>
 
-      <div :class="$style.first">Спас</div>
+        <div :class="$style.first">Спас</div>
+      </div>
 
-      <div :class="$style.first"></div>
+      <div :class="$style.row">
+        <div
+          :class="$style.first"
+          class="min-w-[34px]"
+        ></div>
 
-      <div :class="$style.first"></div>
+        <div
+          :class="$style.first"
+          class="max-w-[28px]"
+        ></div>
 
-      <div :class="$style.first">Мод</div>
+        <div :class="$style.first">Мод</div>
 
-      <div :class="$style.first">Спас</div>
+        <div :class="$style.first">Спас</div>
+      </div>
 
-      <div :class="$style.third"></div>
+      <div :class="$style.rowThird">
+        <div
+          :class="$style.third"
+          class="min-w-[34px]"
+        ></div>
 
-      <div :class="$style.third"></div>
+        <div
+          :class="$style.third"
+          class="max-w-[28px]"
+        ></div>
 
-      <div :class="$style.third">Мод</div>
+        <div :class="$style.third">Мод</div>
 
-      <div :class="$style.third">Спас</div>
+        <div :class="$style.third">Спас</div>
+      </div>
     </div>
 
     <div :class="$style.group">
       <div :class="$style.ability">
         <div>
-          <div :class="$style.stat">Сил</div>
+          <div
+            :class="$style.stat"
+            class="min-w-[34px]"
+          >
+            Сил
+          </div>
 
-          <div>{{ str.value }}</div>
+          <div class="max-w-[28px]">{{ str.value }}</div>
 
-          <div>{{ str.mod }}</div>
+          <div class="justify-end">{{ str.mod }}</div>
 
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
             :data-is-sav="str.mod !== str.sav"
+            class="justify-end"
           >
             {{ str.sav }}
           </div>
         </div>
 
-        <div>
-          <div :class="$style.stat">Лов</div>
+        <div :class="$style.row">
+          <div
+            :class="$style.stat"
+            class="min-w-[34px]"
+          >
+            Лов
+          </div>
 
-          <div>{{ dex.value }}</div>
+          <div class="max-w-[28px]">{{ dex.value }}</div>
 
-          <div>{{ dex.mod }}</div>
+          <div class="justify-end">{{ dex.mod }}</div>
 
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
             :data-is-sav="str.mod !== str.sav"
+            class="justify-end"
           >
             {{ dex.sav }}
           </div>
         </div>
 
-        <div>
-          <div :class="$style.stat">Тел</div>
+        <div :class="$style.row">
+          <div
+            :class="$style.stat"
+            class="min-w-[34px]"
+          >
+            Тел
+          </div>
 
-          <div>{{ con.value }}</div>
+          <div class="max-w-[28px]">{{ con.value }}</div>
 
-          <div>{{ con.mod }}</div>
+          <div class="justify-end">{{ con.mod }}</div>
 
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
             :data-is-sav="str.mod !== str.sav"
+            class="justify-end"
           >
             {{ con.sav }}
           </div>
@@ -82,45 +127,63 @@
 
       <div :class="$style.ability">
         <div>
-          <div :class="$style.stat">Инт</div>
+          <div
+            :class="$style.stat"
+            class="min-w-[34px]"
+          >
+            Инт
+          </div>
 
-          <div>{{ int.value }}</div>
+          <div class="max-w-[28px]">{{ int.value }}</div>
 
-          <div>{{ int.mod }}</div>
+          <div class="justify-end">{{ int.mod }}</div>
 
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
             :data-is-sav="str.mod !== str.sav"
+            class="justify-end"
           >
             {{ int.sav }}
           </div>
         </div>
 
-        <div>
-          <div :class="$style.stat">Мдр</div>
+        <div :class="$style.row">
+          <div
+            :class="$style.stat"
+            class="min-w-[34px]"
+          >
+            Мдр
+          </div>
 
-          <div>{{ wis.value }}</div>
+          <div class="max-w-[28px]">{{ wis.value }}</div>
 
-          <div>{{ wis.mod }}</div>
+          <div class="justify-end">{{ wis.mod }}</div>
 
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
             :data-is-sav="str.mod !== str.sav"
+            class="justify-end"
           >
             {{ wis.sav }}
           </div>
         </div>
 
-        <div>
-          <div :class="$style.stat">Хар</div>
+        <div :class="$style.row">
+          <div
+            :class="$style.stat"
+            class="min-w-[34px]"
+          >
+            Хар
+          </div>
 
-          <div>{{ chr.value }}</div>
+          <div class="max-w-[28px]">{{ chr.value }}</div>
 
-          <div>{{ chr.mod }}</div>
+          <div class="justify-end">{{ chr.mod }}</div>
 
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
             :data-is-sav="str.mod !== str.sav"
+            class="justify-end"
           >
             {{ chr.sav }}
           </div>
@@ -132,9 +195,6 @@
 
 <style module lang="scss">
   .block {
-    display: flex;
-    flex-direction: column;
-
     width: 100%;
     margin: 6px 12px;
     padding: 12px 16px;
@@ -143,26 +203,48 @@
     background: var(--color-hover);
 
     @container (width > 600px) {
-      width: 70%;
+      width: 90%;
       margin-left: 16px;
     }
 
     .title {
       display: flex;
+      gap: 16px;
       width: 100%;
       font-size: 12px;
+
+      @container (width > 600px) {
+        gap: 48px;
+      }
+
+      .row {
+        display: flex;
+        width: 100%;
+      }
+
+      .rowThird {
+        display: none;
+
+        @container (width > 600px) {
+          display: flex;
+          width: 100%;
+        }
+      }
 
       .first {
         display: flex;
         flex: 1;
+        justify-content: flex-end;
       }
     }
 
     .group {
       display: flex;
+      gap: 8px;
 
       @container (width > 600px) {
         flex-direction: column;
+        gap: 0;
       }
     }
 
@@ -173,6 +255,27 @@
 
       @container (width > 600px) {
         flex-direction: row;
+        gap: 24px;
+      }
+
+      &:nth-child(2) {
+        padding-left: 8px;
+        border-left: 1px solid;
+
+        @container (width > 600px) {
+          padding-left: 0;
+          border-left: 0;
+        }
+      }
+
+      .row {
+        padding-left: 0;
+        border-left: 0;
+
+        @container (width > 600px) {
+          padding-left: 24px;
+          border-left: 1px solid;
+        }
       }
 
       .stat {
@@ -193,6 +296,7 @@
       @container (width > 600px) {
         display: flex;
         flex: 1;
+        justify-content: flex-end;
       }
     }
 
