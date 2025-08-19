@@ -55,17 +55,6 @@
     </UFormField>
 
     <UFormField
-      label="Видит через тьму"
-      name="unimpeded"
-    >
-      <UCheckbox
-        v-model="model.unimpeded"
-        label="Да"
-      >
-      </UCheckbox>
-    </UFormField>
-
-    <UFormField
       label="Истинное зрение"
       name="truesight"
     >
@@ -117,6 +106,17 @@
         :precision="0"
         placeholder="Введите значение"
       />
+    </UFormField>
+
+    <UFormField
+      label="Супер темное зрение"
+      name="unimpeded"
+    >
+      <UCheckbox
+        v-model="model.unimpeded"
+        label="Да"
+      >
+      </UCheckbox>
     </UFormField>
   </UForm>
 </template>
