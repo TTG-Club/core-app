@@ -15,7 +15,9 @@
     name="detail"
     title="Мастерская"
   >
-    <div :class="$style.workshop">
+    <div
+      class="grid [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))] gap-4 sm:[grid-template-columns:repeat(auto-fit,minmax(360px,1fr))]"
+    >
       <SectionSpecies />
 
       <SectionSpells />
@@ -32,11 +34,3 @@
     </div>
   </NuxtLayout>
 </template>
-
-<style module lang="scss">
-  .workshop {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-  }
-</style>

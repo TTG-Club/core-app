@@ -8,24 +8,43 @@
 <template>
   <UCard variant="subtle">
     <template #header>
-      <h2 class="text-lg text-(--ui-text-highlighted)">{{ title }}</h2>
+      <div class="flex items-center justify-between gap-2">
+        <h2 class="truncate text-base text-highlighted">
+          {{ title }}
+        </h2>
+
+        <UButton
+          size="sm"
+          icon="i-ttg-plus"
+          @click.left.exact.prevent="navigateTo(`/workshop/${section}/create`)"
+        >
+          Создать
+        </UButton>
+      </div>
     </template>
 
-    <div class="flex flex-col gap-2">
-      <div>Создано: <ULink :to="`/workshop/${section}`">0</ULink></div>
+    <div class="flex flex-wrap items-center gap-3 text-sm">
+      <div class="flex items-center gap-1">
+        <span class="opacity-70">Создано:</span>
 
-      <div>На модерации: <ULink :to="`/workshop/${section}`">0</ULink></div>
+        <ULink :to="`/workshop/${section}`">0</ULink>
+      </div>
 
-      <div>Черновики: <ULink :to="`/workshop/${section}`">0</ULink></div>
+      <span class="opacity-40">•</span>
+
+      <div class="flex items-center gap-1">
+        <span class="opacity-70">На модерации:</span>
+
+        <ULink :to="`/workshop/${section}`">0</ULink>
+      </div>
+
+      <span class="opacity-40">•</span>
+
+      <div class="flex items-center gap-1">
+        <span class="opacity-70">Черновики:</span>
+
+        <ULink :to="`/workshop/${section}`">0</ULink>
+      </div>
     </div>
-
-    <template #footer>
-      <UButton
-        icon="i-ttg-plus"
-        @click.left.exact.prevent="navigateTo(`/workshop/${section}/create`)"
-      >
-        Создать
-      </UButton>
-    </template>
   </UCard>
 </template>
