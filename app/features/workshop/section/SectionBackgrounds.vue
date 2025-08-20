@@ -4,7 +4,7 @@
 
 <template>
   <CardWorkshop
-    title="Мастерская предысторий"
+    title="Предыстории"
     section="backgrounds"
   />
 </template>

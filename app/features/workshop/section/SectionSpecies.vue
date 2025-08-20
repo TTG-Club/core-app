@@ -4,7 +4,7 @@
 
 <template>
   <CardWorkshop
-    title="Мастерская видов"
+    title="Виды"
     section="species"
   />
 </template>

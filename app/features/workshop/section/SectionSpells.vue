@@ -4,7 +4,7 @@
 
 <template>
   <CardWorkshop
-    title="Мастерская заклинаний"
+    title="Заклинания"
     section="spells"
   />
 </template>
