@@ -2,7 +2,7 @@
   import { isArray } from 'lodash-es';
 
   import { CARD_LINKS } from './model';
-  import FiveE14Block from '~home/5e14-block';
+  import { LinkTo5e14 } from '../LinkTo5e14';
 
   import { useUserStore } from '~/shared/stores';
 
@@ -55,7 +55,7 @@
     <div
       class="order-last xl:order-none xl:col-start-6 xl:row-span-2 xl:row-start-1"
     >
-      <FiveE14Block class="h-full" />
+      <LinkTo5e14 class="h-full" />
     </div>
   </div>
 </template>
