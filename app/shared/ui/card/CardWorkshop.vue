@@ -9,7 +9,7 @@
   <UCard variant="subtle">
     <template #header>
       <div class="flex items-center justify-between gap-2">
-        <h2 class="truncate text-base text-(--ui-text-highlighted)">
+        <h2 class="truncate text-base text-highlighted">
           {{ title }}
         </h2>
 
