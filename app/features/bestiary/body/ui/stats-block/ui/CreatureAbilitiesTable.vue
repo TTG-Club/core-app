@@ -14,12 +14,12 @@
         <div
           :class="$style.first"
           class="min-w-8"
-        ></div>
+        />
 
         <div
           :class="$style.first"
           class="max-w-[28px]"
-        ></div>
+        />
 
         <div :class="$style.first">Мод</div>
 
@@ -35,12 +35,12 @@
         <div
           :class="$style.first"
           class="min-w-8"
-        ></div>
+        />
 
         <div
           :class="$style.first"
           class="max-w-[28px]"
-        ></div>
+        />
 
         <div :class="$style.first">Мод</div>
 
@@ -56,12 +56,12 @@
         <div
           :class="$style.third"
           class="min-w-8"
-        ></div>
+        />
 
         <div
           :class="$style.third"
           class="max-w-[28px]"
-        ></div>
+        />
 
         <div :class="$style.third">Мод</div>
 
