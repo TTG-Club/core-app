@@ -2,7 +2,7 @@
   import { isArray } from 'lodash-es';
 
   import { CARD_LINKS } from './model';
-  import { LinkTo5e14 } from '../LinkTo5e14';
+  import { LinkTo5e14 } from '../link-to-5e14';
 
   import { useUserStore } from '~/shared/stores';
 
