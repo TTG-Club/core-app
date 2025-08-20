@@ -4,7 +4,7 @@
 
 <template>
   <CardWorkshop
-    title="Мастерская черт"
+    title="Черты"
     section="feats"
   />
 </template>

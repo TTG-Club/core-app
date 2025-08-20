@@ -15,7 +15,9 @@
       <div class="flex w-full flex-col gap-4 p-4 lg:w-60">
         <h2 class="text-2xl text-(--ui-text-highlighted)">{{ title }}</h2>
 
-        <slot name="controls" />
+        <ClientOnly>
+          <slot name="controls" />
+        </ClientOnly>
       </div>
     </div>
 

@@ -2,6 +2,7 @@
   import { isArray } from 'lodash-es';
 
   import { CARD_LINKS } from './model';
+  import { LinkTo5e14 } from '../link-to-5e14';
 
   import { useUserStore } from '~/shared/stores';
 
@@ -27,30 +28,48 @@
 
 <template>
   <div
-    class="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6"
+    :class="$style.container"
+    class="grid w-full grid-cols-1 gap-3 xl:grid-cols-6"
   >
-    <NuxtLink
-      v-for="(link, index) in sections"
-      :key="index"
-      :to="link.url"
-      :class="[$style.card, { [$style.disabled]: link.disabled }]"
-      class="shadow-lg"
+    <div
+      class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:col-span-5 xl:row-span-2 xl:grid-cols-5"
     >
-      <span :class="$style.name">{{ link.name }}</span>
+      <NuxtLink
+        v-for="(link, index) in sections"
+        :key="index"
+        :to="link.url"
+        :class="[$style.card, { [$style.disabled]: link.disabled }]"
+        class="shadow-lg"
+      >
+        <span :class="$style.name">{{ link.name }}</span>
 
-      <img
-        :class="$style.img"
-        :src="link.img"
-        :alt="link.name"
-        loading="lazy"
-      />
-    </NuxtLink>
+        <img
+          :class="$style.img"
+          :src="link.img"
+          :alt="link.name"
+          loading="lazy"
+        />
+      </NuxtLink>
+    </div>
+
+    <div
+      class="order-last xl:order-none xl:col-start-6 xl:row-span-2 xl:row-start-1"
+    >
+      <LinkTo5e14 class="h-full" />
+    </div>
   </div>
 </template>
 
 <style lang="scss" module>
   .cards {
     margin: 32px 0 0 0;
+  }
+
+  @media (min-width: 1280px) {
+    .container {
+      grid-auto-rows: 56px;
+      align-items: stretch;
+    }
   }
 
   .card {

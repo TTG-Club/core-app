@@ -23,7 +23,7 @@
     },
   });
 
-  const search = ref<string>('');
+  const search = ref<string>();
 
   const {
     filter,
@@ -52,7 +52,7 @@
       $fetch<Array<CreatureLinkResponse>>('/api/v2/bestiary/search', {
         method: 'POST',
         params: {
-          query: search.value || undefined,
+          query: search.value,
         },
         body: searchBody.value,
       }),

@@ -36,7 +36,7 @@
   </USeparator>
 
   <UForm
-    class="col-span-full grid grid-cols-5 gap-4"
+    class="col-span-full grid grid-cols-6 gap-4"
     attach
     :state="model"
   >
@@ -52,6 +52,17 @@
       >
         <template #trailing> фт. </template>
       </UInputNumber>
+    </UFormField>
+
+    <UFormField
+      label="Супер темное зрение"
+      name="unimpeded"
+    >
+      <UCheckbox
+        v-model="model.unimpeded"
+        label="Да"
+      >
+      </UCheckbox>
     </UFormField>
 
     <UFormField
