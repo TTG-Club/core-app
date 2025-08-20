@@ -44,7 +44,7 @@
       name="count"
     >
       <UInputNumber
-        v-model:value="model.count"
+        v-model="model.count"
         placeholder="Введи количество"
         :min="1"
       />
@@ -56,7 +56,7 @@
       name="inLair"
     >
       <UInputNumber
-        v-model:value="model.inLair"
+        v-model="model.inLair"
         placeholder="Введи количество"
         :min="1"
       />
