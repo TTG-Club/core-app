@@ -107,9 +107,9 @@
         <div :class="$style.socials" />
 
         <ClientOnly>
-          <ThemeSwitcher />
-
           <UserHelmet />
+
+          <ThemeSwitcher />
         </ClientOnly>
       </div>
     </header>

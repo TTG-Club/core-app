@@ -13,49 +13,64 @@
       <div :class="$style.row">
         <div
           :class="$style.first"
-          class="min-w-[34px]"
-        ></div>
+          class="min-w-8"
+        />
 
         <div
           :class="$style.first"
           class="max-w-[28px]"
-        ></div>
+        />
 
         <div :class="$style.first">Мод</div>
 
-        <div :class="$style.first">Спас</div>
+        <div
+          :class="$style.first"
+          class="min-w-8"
+        >
+          Спас
+        </div>
       </div>
 
       <div :class="$style.row">
         <div
           :class="$style.first"
-          class="min-w-[34px]"
-        ></div>
+          class="min-w-8"
+        />
 
         <div
           :class="$style.first"
           class="max-w-[28px]"
-        ></div>
+        />
 
         <div :class="$style.first">Мод</div>
 
-        <div :class="$style.first">Спас</div>
+        <div
+          :class="$style.first"
+          class="min-w-8"
+        >
+          Спас
+        </div>
       </div>
 
       <div :class="$style.rowThird">
         <div
           :class="$style.third"
-          class="min-w-[34px]"
-        ></div>
+          class="min-w-8"
+        />
 
         <div
           :class="$style.third"
           class="max-w-[28px]"
-        ></div>
+        />
 
         <div :class="$style.third">Мод</div>
 
-        <div :class="$style.third">Спас</div>
+        <div
+          :class="$style.third"
+          class="min-w-8"
+        >
+          Спас
+        </div>
       </div>
     </div>
 
@@ -64,7 +79,7 @@
         <div>
           <div
             :class="$style.stat"
-            class="min-w-[34px]"
+            class="min-w-8"
           >
             Сил
           </div>
@@ -76,7 +91,7 @@
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
             :data-is-sav="str.mod !== str.sav"
-            class="justify-end"
+            class="min-w-8 justify-end"
           >
             {{ str.sav }}
           </div>
@@ -85,7 +100,7 @@
         <div :class="$style.row">
           <div
             :class="$style.stat"
-            class="min-w-[34px]"
+            class="min-w-8"
           >
             Лов
           </div>
@@ -97,7 +112,7 @@
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
             :data-is-sav="str.mod !== str.sav"
-            class="justify-end"
+            class="min-w-8 justify-end"
           >
             {{ dex.sav }}
           </div>
@@ -106,7 +121,7 @@
         <div :class="$style.row">
           <div
             :class="$style.stat"
-            class="min-w-[34px]"
+            class="min-w-8"
           >
             Тел
           </div>
@@ -118,7 +133,7 @@
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
             :data-is-sav="str.mod !== str.sav"
-            class="justify-end"
+            class="min-w-8 justify-end"
           >
             {{ con.sav }}
           </div>
@@ -129,7 +144,7 @@
         <div>
           <div
             :class="$style.stat"
-            class="min-w-[34px]"
+            class="min-w-8"
           >
             Инт
           </div>
@@ -141,7 +156,7 @@
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
             :data-is-sav="str.mod !== str.sav"
-            class="justify-end"
+            class="min-w-8 justify-end"
           >
             {{ int.sav }}
           </div>
@@ -150,7 +165,7 @@
         <div :class="$style.row">
           <div
             :class="$style.stat"
-            class="min-w-[34px]"
+            class="min-w-8"
           >
             Мдр
           </div>
@@ -162,7 +177,7 @@
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
             :data-is-sav="str.mod !== str.sav"
-            class="justify-end"
+            class="min-w-8 justify-end"
           >
             {{ wis.sav }}
           </div>
@@ -171,7 +186,7 @@
         <div :class="$style.row">
           <div
             :class="$style.stat"
-            class="min-w-[34px]"
+            class="min-w-8"
           >
             Хар
           </div>
@@ -183,7 +198,7 @@
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
             :data-is-sav="str.mod !== str.sav"
-            class="justify-end"
+            class="min-w-8 justify-end"
           >
             {{ chr.sav }}
           </div>
