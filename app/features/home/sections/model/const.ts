@@ -34,12 +34,6 @@ export const CARD_LINKS: Array<{
     img: '/s3/home/section-link/spells.webp',
   },
   {
-    name: 'В разработке',
-    url: '/',
-    img: '/s3/home/section-link/development.webp',
-    disabled: true,
-  },
-  {
     name: 'Снаряжение',
     url: '/',
     img: '/s3/home/section-link/items.webp',
@@ -59,12 +53,6 @@ export const CARD_LINKS: Array<{
     name: 'Глоссарий правил',
     url: '/glossary',
     img: '/s3/home/section-link/glossary.webp',
-  },
-  {
-    name: 'В разработке',
-    url: '/',
-    img: '/s3/home/section-link/development.webp',
-    disabled: true,
   },
   {
     name: 'В разработке',

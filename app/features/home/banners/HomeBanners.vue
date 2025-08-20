@@ -1,11 +1,10 @@
 <script setup lang="ts">
-  import { LegacyTtgLink, MaterialCounter } from './ui';
+  import { MaterialCounter } from './ui';
+  // LegacyTtgLink перемещён в правую колонку секций на главной
 </script>
 
 <template>
   <div class="flex gap-3">
     <MaterialCounter />
-
-    <LegacyTtgLink />
   </div>
 </template>
