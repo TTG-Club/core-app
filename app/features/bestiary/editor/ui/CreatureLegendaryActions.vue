@@ -43,39 +43,41 @@
         attach
         :state="model"
       >
-        <UFormField
-          class="col-span-12"
-          label="Количество легендарных действий"
-          name="count"
-        >
-          <UInputNumber
-            v-model="model.count"
-            placeholder="Введи количество"
-            :min="1"
-          />
-        </UFormField>
+        <div class="col-span-7">
+          <UFormField
+            class="min-h-21"
+            label="Количество легендарных действий"
+            name="count"
+          >
+            <UInputNumber
+              v-model="model.count"
+              placeholder="Введи количество"
+              :min="1"
+            />
+          </UFormField>
+
+          <UFormField
+            class="min-h-21"
+            label="Количество легендарных действий в логове"
+            name="inLair"
+          >
+            <UInputNumber
+              v-model="model.inLair"
+              placeholder="Введи количество"
+              :min="1"
+            />
+          </UFormField>
+        </div>
 
         <UFormField
-          class="col-span-12"
-          label="Количество легендарных действий в логове"
-          name="inLair"
-        >
-          <UInputNumber
-            v-model="model.inLair"
-            placeholder="Введи количество"
-            :min="1"
-          />
-        </UFormField>
-
-        <UFormField
-          class="col-span-full"
+          class="col-span-17"
           label="Описание легендарных действий"
           name="description"
         >
           <UTextarea
             v-model="model.description"
             :maxrows="6"
-            :rows="2"
+            :rows="6"
             placeholder="Введите описание (необязательно)"
           />
         </UFormField>

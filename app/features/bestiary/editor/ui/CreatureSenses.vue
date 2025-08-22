@@ -41,14 +41,14 @@
 
     <div class="grid gap-4">
       <UForm
-        class="col-span-full grid grid-cols-24 gap-4"
+        class="col-span-full grid grid-cols-25 gap-4"
         attach
         :state="model"
       >
         <UFormField
           label="Тёмное зрение"
           name="darkvision"
-          class="col-span-3"
+          class="col-span-5"
         >
           <UInputNumber
             v-model="model.darkvision"
@@ -63,7 +63,7 @@
         <UFormField
           label="Истинное зрение"
           name="truesight"
-          class="col-span-3"
+          class="col-span-5"
         >
           <UInputNumber
             v-model="model.truesight"
@@ -78,7 +78,7 @@
         <UFormField
           label="Слепое зрение"
           name="blindsight"
-          class="col-span-3"
+          class="col-span-5"
         >
           <UInputNumber
             v-model="model.blindsight"
@@ -93,7 +93,7 @@
         <UFormField
           label="Чувство вибрации"
           name="tremorsense"
-          class="col-span-3"
+          class="col-span-5"
         >
           <UInputNumber
             v-model="model.tremorsense"
