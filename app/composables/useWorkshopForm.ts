@@ -156,8 +156,8 @@ export async function useWorkshopForm<
     status,
     execute: loadPreview,
     clear,
-  } = await useAsyncData<TPreview>( // data: Ref<TPreview | null>
-    () => `preview:${actionUrl.value}`, // уникальный ключ
+  } = await useAsyncData<TPreview>(
+    () => `preview:${actionUrl.value}`,
     previewRequest,
     {
       immediate: false,
