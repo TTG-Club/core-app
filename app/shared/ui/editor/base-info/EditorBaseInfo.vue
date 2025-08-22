@@ -77,114 +77,126 @@
 </script>
 
 <template>
-  <UForm
-    attach
-    :state="form"
-    :schema="schema"
-    class="col-span-full grid grid-cols-3 gap-4"
+  <UCard
+    variant="subtle"
+    class="col-span-full"
   >
-    <USeparator>
-      <span class="font-bold text-secondary">Основная информация</span>
-    </USeparator>
-
-    <UFormField
-      label="Название"
-      name="name.rus"
-      required
-    >
-      <UInput
-        v-model="form.name.rus"
-        placeholder="Введи название"
-      />
-    </UFormField>
-
-    <UFormField
-      label="Название (англ.)"
-      name="name.eng"
-      help="Английское название"
-      required
-    >
-      <UInput
-        v-model="form.name.eng"
-        placeholder="Введи английское название"
-      />
-    </UFormField>
-
-    <UFormField
-      label="URL"
-      help="Менять только при необходимости, т.к. URL генерируется автоматически при вводе английского названия"
-      name="url"
-      required
-    >
-      <InputUrl
-        v-model="form.url"
-        :eng-name="form.name.eng"
-        :source-url="form.source.url"
-        disabled
-      />
-    </UFormField>
-
-    <UFormField
-      class="col-span-full"
-      label="Название (альт.)"
-      name="name.alt"
-      help="Альтернативные названия. Используется для поиска и СЕО."
-    >
-      <UInputTags
-        v-model="form.name.alt"
-        placeholder="Введи альтернативные названия"
-        add-on-paste
-        add-on-blur
-        add-on-tab
-      />
-    </UFormField>
+    <template #header>
+      <h2 class="truncate text-base text-highlighted">Основная информация</h2>
+    </template>
 
     <UForm
-      class="col-span-full grid grid-cols-3 place-items-stretch gap-4"
-      :schema="sourceSchema"
-      :state="form.source"
       attach
+      :state="form"
+      :schema="schema"
+      class="grid grid-cols-2 gap-6"
     >
-      <UFormField
-        label="Источник"
-        help="Книга, из которой взята информация о виде, если она существует"
-        name="url"
-        class="col-span-2"
-      >
-        <SelectSource
-          :model-value="form.source.url"
-          @update:model-value="handleBookChange"
-        />
-      </UFormField>
+      <div class="flex flex-col gap-1">
+        <UFormField
+          class="min-h-21"
+          label="Название"
+          name="name.rus"
+          required
+        >
+          <UInput
+            v-model="form.name.rus"
+            placeholder="Введи название"
+          />
+        </UFormField>
 
-      <UFormField
-        label="Страница в источнике"
-        help="Номер страницы книги, откуда была взята информация о виде, если выбрана сама книга"
-        name="page"
-        :required="!!form.source.url"
-      >
-        <UInputNumber
-          v-model="form.source.page"
-          placeholder="Введи номер страницы"
-          :disabled="!form.source.url"
-          :min="1"
-        />
-      </UFormField>
+        <UFormField
+          class="min-h-21"
+          label="Английское название"
+          name="name.eng"
+          required
+        >
+          <UInput
+            v-model="form.name.eng"
+            placeholder="Введи английское название"
+          />
+        </UFormField>
+
+        <UFormField
+          class="min-h-21"
+          label="URL"
+          help="URL генерируется автоматически при вводе английского названия"
+          name="url"
+          required
+        >
+          <InputUrl
+            v-model="form.url"
+            :eng-name="form.name.eng"
+            :source-url="form.source.url"
+            disabled
+          />
+        </UFormField>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <UFormField
+          class="col-span-full min-h-21"
+          label="Альтернативные названия"
+          name="name.alt"
+          help="Используется для поиска и СЕО"
+        >
+          <UInputTags
+            v-model="form.name.alt"
+            placeholder="Введи альтернативные названия"
+            add-on-paste
+            add-on-blur
+            add-on-tab
+          />
+        </UFormField>
+
+        <UForm
+          class="grid grid-cols-3 gap-4"
+          :schema="sourceSchema"
+          :state="form.source"
+          attach
+        >
+          <UFormField
+            label="Источник"
+            help="Книга, из которой взята информация"
+            name="url"
+            class="col-span-2 min-h-21"
+          >
+            <SelectSource
+              :model-value="form.source.url"
+              @update:model-value="handleBookChange"
+            />
+          </UFormField>
+
+          <UFormField
+            class="min-h-21"
+            label="Страница в источнике"
+            help="Номер страницы книги"
+            name="page"
+            :required="!!form.source.url"
+          >
+            <UInputNumber
+              v-model="form.source.page"
+              placeholder="Страница"
+              :disabled="!form.source.url"
+              :min="1"
+            />
+          </UFormField>
+        </UForm>
+
+        <UFormField
+          class="min-h-21"
+          label="Теги"
+          help="Используются для поиска и СЕО"
+          name="tags"
+        >
+          <UInputTags
+            v-model="form.tags"
+            placeholder="Введи теги"
+            add-on-paste
+            add-on-blur
+            add-on-tab
+          />
+        </UFormField>
+      </div>
     </UForm>
-
-    <UFormField
-      class="col-span-full"
-      label="Теги"
-      help="Используются для поиска и СЕО"
-      name="tags"
-    >
-      <UInputTags
-        v-model="form.tags"
-        placeholder="Введи теги"
-        add-on-paste
-        add-on-blur
-        add-on-tab
-      />
-    </UFormField>
-  </UForm>
+  </UCard>
 </template>
