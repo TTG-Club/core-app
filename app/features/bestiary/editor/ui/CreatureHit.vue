@@ -122,7 +122,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-8"
+      class="col-span-6"
       label="Среднее количество хитов"
       name="value"
     >
@@ -134,7 +134,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-8"
+      class="col-span-10"
       label="Текстовое описание"
       name="text"
     >

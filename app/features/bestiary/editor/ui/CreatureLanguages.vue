@@ -15,79 +15,86 @@
 </script>
 
 <template>
-  <USeparator>
-    <span class="font-bold text-secondary">Языки</span>
-  </USeparator>
-
-  <UForm
-    v-for="(item, index) in model.values"
-    :key="index"
-    class="col-span-full grid grid-cols-24 gap-4"
-    attach
-    :state="item"
+  <UCard
+    variant="subtle"
+    class="col-span-full"
   >
-    <UFormField
-      class="col-span-6"
-      label="Язык"
-      name="language"
-    >
-      <SelectLanguage v-model="item.language" />
-    </UFormField>
+    <template #header>
+      <h2 class="truncate text-base text-highlighted">Языки</h2>
+    </template>
 
-    <UFormField
-      class="col-span-12"
-      label="Пояснение"
-      name="text"
-    >
-      <UInput
-        v-model="item.text"
-        placeholder="Например, только понимает или древний диалект"
-      />
-    </UFormField>
+    <div class="grid gap-4">
+      <UForm
+        v-for="(item, index) in model.values"
+        :key="index"
+        class="col-span-full grid grid-cols-24 gap-4"
+        attach
+        :state="item"
+      >
+        <UFormField
+          class="col-span-6"
+          label="Язык"
+          name="language"
+        >
+          <SelectLanguage v-model="item.language" />
+        </UFormField>
 
-    <EditorArrayControls
-      v-model="model.values"
-      :empty-object="getEmpty()"
-      :index
-      :item
-      only-remove
-    />
-  </UForm>
+        <UFormField
+          class="col-span-12"
+          label="Пояснение"
+          name="text"
+        >
+          <UInput
+            v-model="item.text"
+            placeholder="Например, только понимает или древний диалект"
+          />
+        </UFormField>
 
-  <div
-    v-if="!model.values?.length"
-    class="col-span-full flex justify-center"
-  >
-    <UButton @click.left.exact.prevent="model.values.push(getEmpty())">
-      Добавить первый
-    </UButton>
-  </div>
+        <EditorArrayControls
+          v-model="model.values"
+          :empty-object="getEmpty()"
+          :index
+          :item
+          only-remove
+        />
+      </UForm>
 
-  <UForm
-    class="col-span-full grid grid-cols-24 gap-4"
-    attach
-    :state="model"
-  >
-    <UFormField
-      class="col-span-12"
-      label="Телепатия"
-      name="telepathy"
-    >
-      <UInput
-        v-model="model.telepathy"
-        placeholder="Например, 60 футов"
-      />
-    </UFormField>
+      <div
+        v-if="!model.values?.length"
+        class="col-span-full flex justify-center"
+      >
+        <UButton @click.left.exact.prevent="model.values.push(getEmpty())">
+          Добавить первый
+        </UButton>
+      </div>
 
-    <UFormField
-      class="col-span-12"
-      label="Доп. описание"
-      name="text"
-    >
-      <UInput
-        v-model="model.text"
-        placeholder="Например, понимает язык природы"
-      />
-    </UFormField>
-  </UForm>
+      <UForm
+        class="col-span-full grid grid-cols-24 gap-4"
+        attach
+        :state="model"
+      >
+        <UFormField
+          class="col-span-6"
+          label="Телепатия"
+          name="telepathy"
+        >
+          <UInput
+            v-model="model.telepathy"
+            placeholder="Например, 60 футов"
+          />
+        </UFormField>
+
+        <UFormField
+          class="col-span-18"
+          label="Доп. описание"
+          name="text"
+        >
+          <UInput
+            v-model="model.text"
+            placeholder="Например, понимает язык природы"
+          />
+        </UFormField>
+      </UForm>
+    </div>
+  </UCard>
 </template>
