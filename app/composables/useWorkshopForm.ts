@@ -2,9 +2,9 @@ import type { FormErrorEvent } from '#ui/types';
 import { cloneDeep, isEqual, merge } from 'lodash-es';
 import type { FetchResponse } from 'ofetch';
 
-export type WorkshopFormOptions<TCreate> = MaybeRefOrGetter<{
+export type WorkshopFormOptions<T> = MaybeRefOrGetter<{
   actionUrl: string;
-  getInitialState: () => TCreate;
+  getInitialState: () => T;
 }>;
 
 export async function useWorkshopForm<
@@ -123,9 +123,11 @@ export async function useWorkshopForm<
       color: 'success',
     });
 
-    if (!isEditForm.value) return;
+    if (!isEditForm.value) {
+      return;
+    }
 
-    if ((response._data as string) === (state.value as any).url) {
+    if (response._data === state.value.url) {
       await reset();
     } else {
       await router.replace({ params: { url: response._data } });
@@ -170,7 +172,11 @@ export async function useWorkshopForm<
 
   watch(isPreviewShowed, (value) => {
     clear();
-    if (!value) return;
+
+    if (!value) {
+      return;
+    }
+
     loadPreview();
   });
 
