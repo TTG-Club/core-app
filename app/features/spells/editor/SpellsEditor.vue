@@ -16,7 +16,8 @@
     SelectSpecies,
   } from '~ui/select';
 
-  import type { SpellCreate } from '~/shared/types';
+  import type { SpellCreate, SpellDetailResponse } from '~/shared/types';
+  import { SpellPreview } from '~spells/preview';
 
   const formRef = useTemplateRef('formRef');
 
@@ -65,7 +66,16 @@
     };
   }
 
-  const { state, onError, onSubmit } = await useWorkshopForm<SpellCreate>(
+  const {
+    state,
+    preview,
+    isPreviewShowed,
+    isPreviewLoading,
+    isPreviewError,
+    onSubmit,
+    onError,
+    showPreview,
+  } = await useWorkshopForm<SpellCreate, SpellDetailResponse>(
     computed(() => ({
       actionUrl: '/api/v2/spells',
       getInitialState,
@@ -223,6 +233,13 @@
       />
     </UFormField>
 
-    <EditorFormControls />
+    <EditorFormControls @preview="showPreview" />
   </UForm>
+
+  <SpellPreview
+    v-model="isPreviewShowed"
+    :spell="preview"
+    :is-loading="isPreviewLoading"
+    :is-error="isPreviewError"
+  />
 </template>

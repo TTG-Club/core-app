@@ -1,8 +1,9 @@
 <script setup lang="ts">
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
 
-  import type { GlossaryCreate } from '~/shared/types';
+  import type { GlossaryCreate, GlossaryDetailResponse } from '~/shared/types';
   import { z } from 'zod/v4';
+  import { GlossaryPreview } from '~glossary/preview';
 
   const formRef = useTemplateRef('formRef');
 
@@ -33,7 +34,16 @@
     };
   }
 
-  const { state, onSubmit, onError } = await useWorkshopForm<GlossaryCreate>(
+  const {
+    state,
+    preview,
+    isPreviewShowed,
+    isPreviewLoading,
+    isPreviewError,
+    onSubmit,
+    onError,
+    showPreview,
+  } = await useWorkshopForm<GlossaryCreate, GlossaryDetailResponse>(
     computed(() => ({
       actionUrl: '/api/v2/glossary',
       getInitialState,
@@ -86,6 +96,13 @@
       />
     </UFormField>
 
-    <EditorFormControls />
+    <EditorFormControls @preview="showPreview" />
   </UForm>
+
+  <GlossaryPreview
+    v-model="isPreviewShowed"
+    :glossary="preview"
+    :is-loading="isPreviewLoading"
+    :is-error="isPreviewError"
+  />
 </template>

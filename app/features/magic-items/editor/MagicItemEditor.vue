@@ -8,7 +8,11 @@
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { UploadImage } from '~ui/upload';
 
-  import type { MagicItemCreate } from '~magic-items/types';
+  import type {
+    MagicItemCreate,
+    MagicItemDetailResponse,
+  } from '~magic-items/types';
+  import { MagicItemPreview } from '~magic-items/preview';
 
   const formRef = useTemplateRef('formRef');
 
@@ -53,7 +57,16 @@
     };
   }
 
-  const { state, onError, onSubmit } = await useWorkshopForm<MagicItemCreate>(
+  const {
+    state,
+    preview,
+    isPreviewShowed,
+    isPreviewLoading,
+    isPreviewError,
+    onSubmit,
+    onError,
+    showPreview,
+  } = await useWorkshopForm<MagicItemCreate, MagicItemDetailResponse>(
     computed(() => ({
       actionUrl: '/api/v2/magic-items',
       getInitialState,
@@ -180,6 +193,13 @@
       </UploadImage>
     </UFormField>
 
-    <EditorFormControls />
+    <EditorFormControls @preview="showPreview" />
   </UForm>
+
+  <MagicItemPreview
+    v-model="isPreviewShowed"
+    :magic-item="preview"
+    :is-loading="isPreviewLoading"
+    :is-error="isPreviewError"
+  />
 </template>

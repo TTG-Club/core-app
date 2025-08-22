@@ -20,7 +20,11 @@
   import { SelectAlignment } from '~ui/select';
   import { UploadImage } from '~ui/upload';
 
-  import { type CreatureCreate, getInitialState } from '~bestiary/types';
+  import {
+    type CreatureCreate,
+    type CreatureDetailResponse,
+    getInitialState,
+  } from '~bestiary/types';
   import { CreaturePreview } from '~bestiary/preview';
   import { CreatureLair, CreatureLegendaryActions } from '~bestiary/editor/ui';
 
@@ -43,7 +47,7 @@
     onError,
     onSubmit,
     showPreview,
-  } = await useWorkshopForm<CreatureCreate>(
+  } = await useWorkshopForm<CreatureCreate, CreatureDetailResponse>(
     computed(() => ({
       actionUrl: '/api/v2/bestiary',
       getInitialState,

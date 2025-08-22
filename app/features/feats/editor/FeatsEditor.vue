@@ -2,7 +2,8 @@
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectFeatCategory } from '~ui/select';
 
-  import type { FeatCreate } from '~/shared/types';
+  import type { FeatCreate, FeatDetailResponse } from '~/shared/types';
+  import { FeatPreview } from '~feats/preview';
 
   const formRef = useTemplateRef('formRef');
 
@@ -30,7 +31,16 @@
     };
   }
 
-  const { state, onSubmit, onError } = await useWorkshopForm<FeatCreate>(
+  const {
+    state,
+    preview,
+    isPreviewShowed,
+    isPreviewLoading,
+    isPreviewError,
+    onSubmit,
+    onError,
+    showPreview,
+  } = await useWorkshopForm<FeatCreate, FeatDetailResponse>(
     computed(() => ({
       actionUrl: '/api/v2/feats',
       getInitialState,
@@ -101,6 +111,13 @@
       />
     </UFormField>
 
-    <EditorFormControls />
+    <EditorFormControls @preview="showPreview" />
   </UForm>
+
+  <FeatPreview
+    v-model="isPreviewShowed"
+    :feat="preview"
+    :is-loading="isPreviewLoading"
+    :is-error="isPreviewError"
+  />
 </template>

@@ -1,23 +1,23 @@
 import type { FormErrorEvent } from '#ui/types';
 import { cloneDeep, isEqual, merge } from 'lodash-es';
-import type { CreatureDetailResponse } from '~bestiary/types';
 import type { FetchResponse } from 'ofetch';
 
-export type WorkshopFormOptions<T> = MaybeRefOrGetter<{
+export type WorkshopFormOptions<TCreate> = MaybeRefOrGetter<{
   actionUrl: string;
-  getInitialState: () => T;
+  getInitialState: () => TCreate;
 }>;
 
-export async function useWorkshopForm<T extends Record<string, any>>(
-  options: WorkshopFormOptions<T>,
-) {
+export async function useWorkshopForm<
+  TCreate extends Record<string, any>,
+  TPreview extends object = object,
+>(options: WorkshopFormOptions<TCreate>) {
   const _options = toValue(options);
   const $toast = useToast();
   const route = useRoute();
   const router = useRouter();
 
-  const state = useState<T>(_options.getInitialState);
-  const prevState = useState<T>(_options.getInitialState);
+  const state = useState<TCreate>(_options.getInitialState);
+  const prevState = useState<TCreate>(_options.getInitialState);
   const isPreviewShowed = useState<boolean>(() => false);
 
   const isEditForm = computed(() => !!route.params.url);
@@ -37,7 +37,7 @@ export async function useWorkshopForm<T extends Record<string, any>>(
   const { refresh: reset } = useAsyncData(async () => {
     if (isEditForm.value) {
       try {
-        const resp = await $fetch<T>(`${actionUrl.value}/raw`);
+        const resp = await $fetch<TCreate>(`${actionUrl.value}/raw`);
         const merged = merge({}, _options.getInitialState(), resp);
 
         state.value = cloneDeep(merged);
@@ -86,7 +86,6 @@ export async function useWorkshopForm<T extends Record<string, any>>(
         description: 'При попытке отправить форму произошла ошибка',
         color: 'error',
       });
-
       consola.error(err);
     }
 
@@ -100,7 +99,6 @@ export async function useWorkshopForm<T extends Record<string, any>>(
         description: 'При попытке отправить форму произошла ошибка',
         color: 'error',
       });
-
       consola.error('[useWorkshopForm] Error on response');
 
       return;
@@ -113,9 +111,7 @@ export async function useWorkshopForm<T extends Record<string, any>>(
           'Возможно форма сохранилась, но пришел некорректный ответ сервера...',
         color: 'error',
       });
-
       consola.error('[useWorkshopForm] Incorrect response from server');
-
       await reset();
 
       return;
@@ -127,11 +123,9 @@ export async function useWorkshopForm<T extends Record<string, any>>(
       color: 'success',
     });
 
-    if (!isEditForm.value) {
-      return;
-    }
+    if (!isEditForm.value) return;
 
-    if (response._data === state.value.url) {
+    if ((response._data as string) === (state.value as any).url) {
       await reset();
     } else {
       await router.replace({ params: { url: response._data } });
@@ -148,19 +142,25 @@ export async function useWorkshopForm<T extends Record<string, any>>(
     });
   }
 
+  const previewRequest = async (): Promise<TPreview> => {
+    return await $fetch<TPreview>(`${actionUrl.value}/preview`, {
+      method: 'post',
+      body: state.value,
+    });
+  };
+
   const {
     data: preview,
     status,
     execute: loadPreview,
     clear,
-  } = await useFetch<CreatureDetailResponse>(
-    computed(() => `${_options.actionUrl}/preview`),
+  } = await useAsyncData<TPreview>( // data: Ref<TPreview | null>
+    () => `preview:${actionUrl.value}`, // уникальный ключ
+    previewRequest,
     {
-      method: 'POST',
-      body: state,
-      lazy: true,
-      server: false,
       immediate: false,
+      server: false,
+      lazy: true,
     },
   );
 
@@ -170,11 +170,7 @@ export async function useWorkshopForm<T extends Record<string, any>>(
 
   watch(isPreviewShowed, (value) => {
     clear();
-
-    if (!value) {
-      return;
-    }
-
+    if (!value) return;
     loadPreview();
   });
 

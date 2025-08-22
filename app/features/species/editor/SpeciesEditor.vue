@@ -6,7 +6,8 @@
   import { SelectCreatureType, SelectSpecies } from '~ui/select';
   import { UploadImage, UploadGallery } from '~ui/upload';
 
-  import type { SpeciesCreate } from '~/shared/types';
+  import type { SpeciesCreate, SpeciesDetailResponse } from '~/shared/types';
+  import { SpeciesPreview } from '~species/preview';
 
   const formRef = useTemplateRef('formRef');
 
@@ -51,7 +52,16 @@
     };
   }
 
-  const { state, onError, onSubmit } = await useWorkshopForm<SpeciesCreate>(
+  const {
+    state,
+    preview,
+    isPreviewShowed,
+    isPreviewLoading,
+    isPreviewError,
+    onSubmit,
+    onError,
+    showPreview,
+  } = await useWorkshopForm<SpeciesCreate, SpeciesDetailResponse>(
     computed(() => ({
       actionUrl: '/api/v2/species',
       getInitialState,
@@ -187,6 +197,13 @@
       />
     </UFormField>
 
-    <EditorFormControls />
+    <EditorFormControls @preview="showPreview" />
   </UForm>
+
+  <SpeciesPreview
+    v-model="isPreviewShowed"
+    :species="preview"
+    :is-loading="isPreviewLoading"
+    :is-error="isPreviewError"
+  />
 </template>

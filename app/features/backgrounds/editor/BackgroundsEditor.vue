@@ -2,17 +2,17 @@
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectAbilities, SelectFeat, SelectSkill } from '~ui/select';
 
-  import type { BackgroundCreate } from '~/shared/types';
+  import type {
+    BackgroundCreate,
+    BackgroundDetailResponse,
+  } from '~/shared/types';
+  import { BackgroundPreview } from '~backgrounds/preview';
 
-  const formRef = useTemplateRef('formRef');
+  const formRef = useTemplateRef<{ validate: () => Promise<void> }>('formRef');
 
-  const validate = () => {
-    return formRef.value?.validate();
-  };
+  const validate = () => formRef.value?.validate();
 
-  defineExpose({
-    validate,
-  });
+  defineExpose({ validate });
 
   function getInitialState(): BackgroundCreate {
     return {
@@ -36,7 +36,16 @@
     };
   }
 
-  const { state, onSubmit, onError } = await useWorkshopForm<BackgroundCreate>(
+  const {
+    state,
+    preview,
+    isPreviewShowed,
+    isPreviewLoading,
+    isPreviewError,
+    onSubmit,
+    onError,
+    showPreview,
+  } = await useWorkshopForm<BackgroundCreate, BackgroundDetailResponse>(
     computed(() => ({
       actionUrl: '/api/v2/backgrounds',
       getInitialState,
@@ -47,7 +56,7 @@
 <template>
   <UForm
     ref="formRef"
-    :state
+    :state="state"
     class="grid grid-cols-24 gap-4"
     @submit="onSubmit"
     @error="onError"
@@ -135,6 +144,13 @@
       />
     </UFormField>
 
-    <EditorFormControls />
+    <EditorFormControls @preview="showPreview" />
   </UForm>
+
+  <BackgroundPreview
+    v-model="isPreviewShowed"
+    :background="preview"
+    :is-loading="isPreviewLoading"
+    :is-error="isPreviewError"
+  />
 </template>
