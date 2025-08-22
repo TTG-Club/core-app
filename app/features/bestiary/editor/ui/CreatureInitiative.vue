@@ -21,12 +21,12 @@
 
 <template>
   <UForm
-    class="col-span-8 grid grid-cols-24 gap-4"
+    class="col-span-1 grid grid-cols-22 gap-4"
     attach
     :state="model"
   >
     <UFormField
-      class="col-span-12"
+      class="col-span-10"
       label="Инициатива"
       name="value"
     >

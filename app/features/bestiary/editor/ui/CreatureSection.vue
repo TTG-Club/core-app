@@ -7,84 +7,92 @@
 </script>
 
 <template>
-  <USeparator>
-    <span class="font-bold text-secondary">Секция</span>
-  </USeparator>
-
-  <UForm
-    class="col-span-full grid grid-cols-24 gap-4"
-    attach
-    :state="model"
+  <UCard
+    variant="subtle"
+    class="col-span-full"
   >
-    <UFormField
-      class="col-span-8"
-      label="Название секции"
-      name="name.rus"
-      help="Например, Золотые драконы"
-    >
-      <UInput
-        v-model="model.name.rus"
-        placeholder="Введи название секции"
-      />
-    </UFormField>
+    <template #header>
+      <h2 class="truncate text-base text-highlighted">Секция</h2>
+    </template>
 
-    <UFormField
-      class="col-span-8"
-      label="Название секции (англ.)"
-      name="name.eng"
-      help="Например, Gold Dragons"
+    <UForm
+      class="grid grid-cols-24 gap-6"
+      attach
+      :state="model"
     >
-      <UInput
-        v-model="model.name.eng"
-        placeholder="Введи название секции"
-      />
-    </UFormField>
+      <div class="col-span-8 grid gap-1">
+        <UFormField
+          class="min-h-21"
+          label="Название секции"
+          name="name.rus"
+          help="Например, Золотые драконы"
+        >
+          <UInput
+            v-model="model.name.rus"
+            placeholder="Введи название секции"
+          />
+        </UFormField>
 
-    <UFormField
-      class="col-span-8"
-      label="Подзаголовок"
-      name="subtitle"
-      help="Например, Драконы надежды и величия"
-    >
-      <UInput
-        v-model="model.subtitle"
-        placeholder="Введи подзаголовок"
-      />
-    </UFormField>
+        <UFormField
+          class="min-h-21"
+          label="Название секции (англ.)"
+          name="name.eng"
+          help="Например, Gold Dragons"
+        >
+          <UInput
+            v-model="model.name.eng"
+            placeholder="Введи название секции"
+          />
+        </UFormField>
 
-    <UFormField
-      class="col-span-12"
-      label="Среда обитания"
-      name="habitats"
-    >
-      <SelectHabitat
-        v-model="model.habitats"
-        multiple
-      />
-    </UFormField>
+        <UFormField
+          class="min-h-21"
+          label="Подзаголовок"
+          name="subtitle"
+          help="Например, Драконы надежды и величия"
+        >
+          <UInput
+            v-model="model.subtitle"
+            placeholder="Введи подзаголовок"
+          />
+        </UFormField>
+      </div>
 
-    <UFormField
-      class="col-span-12"
-      label="Сокровища"
-      name="treasures"
-    >
-      <SelectTreasure
-        v-model="model.treasures"
-        multiple
-      />
-    </UFormField>
+      <div class="col-span-16 flex-col gap-1">
+        <div class="grid min-h-21 grid-cols-2 gap-4">
+          <UFormField
+            label="Среда обитания"
+            name="habitats"
+          >
+            <SelectHabitat
+              v-model="model.habitats"
+              multiple
+            />
+          </UFormField>
 
-    <UFormField
-      class="col-span-24"
-      label="Описание секции"
-      name="description"
-    >
-      <UTextarea
-        v-model="model.description"
-        :rows="8"
-        placeholder="Введи описание"
-        clearable
-      />
-    </UFormField>
-  </UForm>
+          <UFormField
+            label="Сокровища"
+            name="treasures"
+          >
+            <SelectTreasure
+              v-model="model.treasures"
+              multiple
+            />
+          </UFormField>
+        </div>
+
+        <UFormField
+          label="Описание секции"
+          name="description"
+        >
+          <UTextarea
+            v-model="model.description"
+            :rows="6"
+            placeholder="Введи описание"
+            clearable
+          />
+        </UFormField>
+      </div>
+    </UForm>
+  </UCard>
 </template>
