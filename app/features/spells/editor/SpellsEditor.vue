@@ -87,7 +87,7 @@
   <UForm
     ref="formRef"
     :state
-    class="grid grid-cols-24 gap-4"
+    class="grid gap-8"
     @error="onError"
     @submit="onSubmit"
   >
@@ -96,142 +96,166 @@
       section="spells"
     />
 
-    <UFormField
-      class="col-span-12"
-      label="Уровень заклинания"
-      name="level"
-    >
-      <SelectLevel v-model="state.level" />
-    </UFormField>
+    <UCard variant="subtle">
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">
+          Характеристики заклинания
+        </h2>
+      </template>
 
-    <UFormField
-      class="col-span-12"
-      label="Школа"
-      name="school"
-    >
-      <SelectMagicSchool v-model="state.school" />
-    </UFormField>
+      <div class="grid grid-cols-24 gap-4">
+        <UFormField
+          class="col-span-12"
+          label="Уровень заклинания"
+          name="level"
+        >
+          <SelectLevel v-model="state.level" />
+        </UFormField>
 
-    <SpellCastingTimes v-model="state.castingTime" />
+        <UFormField
+          class="col-span-12"
+          label="Школа"
+          name="school"
+        >
+          <SelectMagicSchool v-model="state.school" />
+        </UFormField>
 
-    <SpellRanges v-model="state.range" />
+        <SpellCastingTimes v-model="state.castingTime" />
 
-    <SpellComponents v-model="state.components" />
+        <SpellRanges v-model="state.range" />
 
-    <SpellDurations v-model="state.duration" />
+        <SpellComponents v-model="state.components" />
 
-    <USeparator>
-      <span class="font-bold text-secondary">Дополнительные фильтры</span>
-    </USeparator>
+        <SpellDurations v-model="state.duration" />
+      </div>
+    </UCard>
 
-    <UFormField
-      label="Типы урона"
-      name="damageType"
-      class="col-span-8"
-    >
-      <SelectDamageType
-        v-model="state.damageType"
-        multiple
-      />
-    </UFormField>
+    <UCard variant="subtle">
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">
+          Дополнительные фильтры
+        </h2>
+      </template>
 
-    <UFormField
-      class="col-span-8"
-      label="Спасброски"
-      name="savingThrow"
-    >
-      <SelectAbilities
-        v-model="state.savingThrow"
-        multiple
-      />
-    </UFormField>
+      <div class="grid grid-cols-24 gap-4">
+        <UFormField
+          label="Типы урона"
+          name="damageType"
+          class="col-span-8"
+        >
+          <SelectDamageType
+            v-model="state.damageType"
+            multiple
+          />
+        </UFormField>
 
-    <UFormField
-      class="col-span-8"
-      label="Типы лечения"
-      name="healingType"
-    >
-      <SelectHealType
-        v-model="state.healingType"
-        multiple
-      />
-    </UFormField>
+        <UFormField
+          class="col-span-8"
+          label="Спасброски"
+          name="savingThrow"
+        >
+          <SelectAbilities
+            v-model="state.savingThrow"
+            multiple
+          />
+        </UFormField>
 
-    <USeparator>
-      <span class="font-bold text-secondary">Описание</span>
-    </USeparator>
+        <UFormField
+          class="col-span-8"
+          label="Типы лечения"
+          name="healingType"
+        >
+          <SelectHealType
+            v-model="state.healingType"
+            multiple
+          />
+        </UFormField>
+      </div>
+    </UCard>
 
-    <UFormField
-      label="Описание"
-      name="description"
-      class="col-span-12"
-    >
-      <UTextarea
-        v-model="state.description"
-        :rows="8"
-        placeholder="Введи описание"
-      />
-    </UFormField>
+    <UCard variant="subtle">
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">Описание</h2>
+      </template>
 
-    <UFormField
-      label="На более высоких уровнях"
-      name="upper"
-      class="col-span-12"
-    >
-      <UTextarea
-        v-model="state.upper"
-        :rows="8"
-        placeholder="Введи описание"
-      />
-    </UFormField>
+      <div class="grid grid-cols-24 gap-4">
+        <UFormField
+          label="Описание"
+          name="description"
+          class="col-span-12"
+        >
+          <UTextarea
+            v-model="state.description"
+            :rows="8"
+            placeholder="Введи описание"
+          />
+        </UFormField>
 
-    <USeparator>
-      <span class="font-bold text-secondary">Принадлежность</span>
-    </USeparator>
+        <UFormField
+          label="На более высоких уровнях"
+          name="upper"
+          class="col-span-12"
+        >
+          <UTextarea
+            v-model="state.upper"
+            :rows="8"
+            placeholder="Введи описание"
+          />
+        </UFormField>
+      </div>
+    </UCard>
 
-    <UFormField
-      label="Классы"
-      name="affiliations.classes"
-      class="col-span-6"
-    >
-      <SelectSpecies
-        v-model="state.affiliations.classes"
-        multiple
-      />
-    </UFormField>
+    <UCard variant="subtle">
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">Принадлежность</h2>
+      </template>
 
-    <UFormField
-      class="col-span-6"
-      label="Архетипы"
-      name="affiliations.subclasses"
-    >
-      <SelectSpecies
-        v-model="state.affiliations.subclasses"
-        multiple
-      />
-    </UFormField>
+      <div class="grid grid-cols-24 gap-4">
+        <UFormField
+          label="Классы"
+          name="affiliations.classes"
+          class="col-span-6"
+        >
+          <SelectSpecies
+            v-model="state.affiliations.classes"
+            multiple
+          />
+        </UFormField>
 
-    <UFormField
-      class="col-span-6"
-      label="Виды"
-      name="affiliations.species"
-    >
-      <SelectSpecies
-        v-model="state.affiliations.species"
-        multiple
-      />
-    </UFormField>
+        <UFormField
+          class="col-span-6"
+          label="Архетипы"
+          name="affiliations.subclasses"
+        >
+          <SelectSpecies
+            v-model="state.affiliations.subclasses"
+            multiple
+          />
+        </UFormField>
 
-    <UFormField
-      class="col-span-6"
-      label="Происхождения"
-      name="affiliations.lineages"
-    >
-      <SelectSpecies
-        v-model="state.affiliations.lineages"
-        multiple
-      />
-    </UFormField>
+        <UFormField
+          class="col-span-6"
+          label="Виды"
+          name="affiliations.species"
+        >
+          <SelectSpecies
+            v-model="state.affiliations.species"
+            multiple
+          />
+        </UFormField>
+
+        <UFormField
+          class="col-span-6"
+          label="Происхождения"
+          name="affiliations.lineages"
+        >
+          <SelectSpecies
+            v-model="state.affiliations.lineages"
+            multiple
+          />
+        </UFormField>
+      </div>
+    </UCard>
 
     <EditorFormControls @preview="showPreview" />
   </UForm>
