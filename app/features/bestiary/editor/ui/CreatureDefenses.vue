@@ -20,53 +20,58 @@
 </script>
 
 <template>
-  <USeparator>
-    <span class="font-bold text-secondary">Защита</span>
-  </USeparator>
+  <UCard
+    variant="subtle"
+    class="col-span-full"
+  >
+    <template #header>
+      <h2 class="truncate text-base text-highlighted">Защита</h2>
+    </template>
 
-  <div class="col-span-full grid grid-cols-24 gap-4">
-    <UFormField
-      class="col-span-6"
-      label="Уязвимость к урону"
-      name="vulnerabilities"
-    >
-      <SelectDamageType
-        v-model="vulnerabilities"
-        multiple
-      />
-    </UFormField>
+    <div class="col-span-full grid grid-cols-24 gap-4">
+      <UFormField
+        class="col-span-6"
+        label="Уязвимость к урону"
+        name="vulnerabilities"
+      >
+        <SelectDamageType
+          v-model="vulnerabilities"
+          multiple
+        />
+      </UFormField>
 
-    <UFormField
-      class="col-span-6"
-      label="Сопротивление к урону"
-      name="resistance"
-    >
-      <SelectDamageType
-        v-model="resistance"
-        multiple
-      />
-    </UFormField>
+      <UFormField
+        class="col-span-6"
+        label="Сопротивление к урону"
+        name="resistance"
+      >
+        <SelectDamageType
+          v-model="resistance"
+          multiple
+        />
+      </UFormField>
 
-    <UFormField
-      class="col-span-6"
-      label="Иммунитет к урону"
-      name="immunityToDamage"
-    >
-      <SelectDamageType
-        v-model="immunityToDamage"
-        multiple
-      />
-    </UFormField>
+      <UFormField
+        class="col-span-6"
+        label="Иммунитет к урону"
+        name="immunityToDamage"
+      >
+        <SelectDamageType
+          v-model="immunityToDamage"
+          multiple
+        />
+      </UFormField>
 
-    <UFormField
-      class="col-span-6"
-      label="Иммунитет к состояниям"
-      name="immunityToCondition"
-    >
-      <SelectCondition
-        v-model="immunityToCondition"
-        multiple
-      />
-    </UFormField>
-  </div>
+      <UFormField
+        class="col-span-6"
+        label="Иммунитет к состояниям"
+        name="immunityToCondition"
+      >
+        <SelectCondition
+          v-model="immunityToCondition"
+          multiple
+        />
+      </UFormField>
+    </div>
+  </UCard>
 </template>

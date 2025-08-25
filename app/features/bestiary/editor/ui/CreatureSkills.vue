@@ -55,68 +55,75 @@
 </script>
 
 <template>
-  <USeparator>
-    <span class="font-bold text-secondary">Навыки</span>
-  </USeparator>
-
-  <UForm
-    v-for="(item, index) in model"
-    :key="index"
-    class="col-span-full grid grid-cols-24 gap-4"
-    attach
-    :state="item"
+  <UCard
+    variant="subtle"
+    class="col-span-full"
   >
-    <UFormField
-      class="col-span-6"
-      label="Навык"
-      name="skill"
-    >
-      <div class="flex">
-        <SelectSkills
-          v-model="item.skill"
-          class="flex-grow"
+    <template #header>
+      <h2 class="truncate text-base text-highlighted">Навыки</h2>
+    </template>
+
+    <div class="grid gap-4">
+      <UForm
+        v-for="(item, index) in model"
+        :key="index"
+        class="col-span-full grid grid-cols-24 gap-4"
+        attach
+        :state="item"
+      >
+        <UFormField
+          class="col-span-6"
+          label="Навык"
+          name="skill"
         >
-          <template #trailing>
-            {{ calcModifier(item.skill, item.multiplier) }}
-          </template>
-        </SelectSkills>
+          <div class="flex">
+            <SelectSkills
+              v-model="item.skill"
+              class="flex-grow"
+            >
+              <template #trailing>
+                {{ calcModifier(item.skill, item.multiplier) }}
+              </template>
+            </SelectSkills>
+          </div>
+        </UFormField>
+
+        <UFormField
+          class="col-span-4"
+          label="Уровень владения"
+          name="multiplier"
+        >
+          <SelectMastery v-model="item.multiplier" />
+        </UFormField>
+
+        <UFormField
+          class="col-span-8"
+          label="Пояснение"
+          name="text"
+        >
+          <UInput
+            v-model="item.text"
+            placeholder="Например, только понимает или древний диалект"
+          />
+        </UFormField>
+
+        <EditorArrayControls
+          v-model="model"
+          :empty-object="getEmpty()"
+          :index
+          :item
+          only-remove
+        />
+      </UForm>
+
+      <div
+        v-if="!model.length"
+        class="col-span-full flex justify-center"
+      >
+        <UButton @click.left.exact.prevent="model.push(getEmpty())">
+          Добавить
+        </UButton>
       </div>
-    </UFormField>
-
-    <UFormField
-      class="col-span-4"
-      label="Уровень владения"
-      name="multiplier"
-    >
-      <SelectMastery v-model="item.multiplier" />
-    </UFormField>
-
-    <UFormField
-      class="col-span-8"
-      label="Пояснение"
-      name="text"
-    >
-      <UInput
-        v-model="item.text"
-        placeholder="Например, только понимает или древний диалект"
-      />
-    </UFormField>
-
-    <EditorArrayControls
-      v-model="model"
-      :empty-object="getEmpty()"
-      :index
-      :item
-      only-remove
-    />
-  </UForm>
-
-  <div
-    v-if="!model.length"
-    class="col-span-full flex justify-center"
-  >
-    <UButton @click.left.exact.prevent="model.push(getEmpty())">
-      Добавить первый
-    </UButton>
-  </div>
+    </div>
+  </UCard>
 </template>
