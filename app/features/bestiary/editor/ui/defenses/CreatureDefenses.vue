@@ -12,15 +12,20 @@
 </script>
 
 <template>
-  <USeparator>
-    <span class="font-bold text-secondary">Защита</span>
-  </USeparator>
+  <UCard
+    variant="subtle"
+    class="col-span-full"
+  >
+    <template #header>
+      <h2 class="truncate text-base text-highlighted">Защита</h2>
+    </template>
 
-  <div class="col-span-full grid grid-cols-24 gap-4">
-    <CreatureVulnerabilities v-model="defenses.vulnerabilities" />
+    <div class="col-span-full grid grid-cols-24 gap-4">
+      <CreatureVulnerabilities v-model="defenses.vulnerabilities" />
 
-    <CreatureResistances v-model="defenses.resistances" />
+      <CreatureResistances v-model="defenses.resistances" />
 
-    <CreatureImmunities v-model="defenses.immunities" />
-  </div>
+      <CreatureImmunities v-model="defenses.immunities" />
+    </div>
+  </UCard>
 </template>
