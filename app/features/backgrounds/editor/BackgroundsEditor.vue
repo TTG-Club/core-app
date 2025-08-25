@@ -2,7 +2,11 @@
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectAbilities, SelectFeat, SelectSkill } from '~ui/select';
 
-  import type { BackgroundCreate } from '~/shared/types';
+  import type {
+    BackgroundCreate,
+    BackgroundDetailResponse,
+  } from '~/shared/types';
+  import { BackgroundPreview } from '~backgrounds/preview';
 
   const formRef = useTemplateRef('formRef');
 
@@ -36,12 +40,21 @@
     };
   }
 
-  const { state, onSubmit, onError } = await useWorkshopForm<BackgroundCreate>(
-    computed(() => ({
-      actionUrl: '/api/v2/backgrounds',
-      getInitialState,
-    })),
-  );
+  const { state, onSubmit, onError } = useWorkshopForm<BackgroundCreate>({
+    actionUrl: '/api/v2/backgrounds',
+    getInitialState,
+  });
+
+  const {
+    preview,
+    isPreviewShowed,
+    isPreviewLoading,
+    isPreviewError,
+    showPreview,
+  } = useWorkshopPreview<BackgroundCreate, BackgroundDetailResponse>({
+    actionUrl: '/api/v2/backgrounds',
+    state,
+  });
 </script>
 
 <template>
@@ -135,6 +148,13 @@
       />
     </UFormField>
 
-    <EditorFormControls />
+    <EditorFormControls @preview="showPreview" />
   </UForm>
+
+  <BackgroundPreview
+    v-model="isPreviewShowed"
+    :background="preview"
+    :is-loading="isPreviewLoading"
+    :is-error="isPreviewError"
+  />
 </template>

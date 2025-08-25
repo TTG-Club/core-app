@@ -14,15 +14,20 @@
     CreatureType,
     CreatureDefenses,
     CreatureInitiative,
+    CreatureLair,
+    CreatureLegendaryActions,
   } from './ui';
 
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectAlignment } from '~ui/select';
   import { UploadImage } from '~ui/upload';
 
-  import { type CreatureCreate, getInitialState } from '~bestiary/types';
+  import {
+    type CreatureCreate,
+    type CreatureDetailResponse,
+    getInitialState,
+  } from '~bestiary/types';
   import { CreaturePreview } from '~bestiary/preview';
-  import { CreatureLair, CreatureLegendaryActions } from '~bestiary/editor/ui';
 
   const formRef = useTemplateRef('formRef');
 
@@ -34,21 +39,21 @@
     validate,
   });
 
+  const { state, onError, onSubmit } = useWorkshopForm<CreatureCreate>({
+    actionUrl: '/api/v2/bestiary',
+    getInitialState,
+  });
+
   const {
-    state,
     preview,
     isPreviewShowed,
     isPreviewLoading,
     isPreviewError,
-    onError,
-    onSubmit,
     showPreview,
-  } = await useWorkshopForm<CreatureCreate>(
-    computed(() => ({
-      actionUrl: '/api/v2/bestiary',
-      getInitialState,
-    })),
-  );
+  } = useWorkshopPreview<CreatureCreate, CreatureDetailResponse>({
+    actionUrl: '/api/v2/bestiary',
+    state,
+  });
 </script>
 
 <template>

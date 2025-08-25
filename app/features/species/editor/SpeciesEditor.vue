@@ -1,12 +1,17 @@
 <script setup lang="ts">
-  import { SpeciesLinkPreview, SpeciesFeatures, SpeciesSizes } from './ui';
+  import {
+    SpeciesLinkPreview,
+    SpeciesFeatures,
+    SpeciesSizes,
+    SpeciesSpeed,
+  } from './ui';
 
-  import { SpeciesSpeed } from '~species/editor/ui';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectCreatureType, SelectSpecies } from '~ui/select';
   import { UploadImage, UploadGallery } from '~ui/upload';
 
-  import type { SpeciesCreate } from '~/shared/types';
+  import type { SpeciesCreate, SpeciesDetailResponse } from '~/shared/types';
+  import { SpeciesPreview } from '~species/preview';
 
   const formRef = useTemplateRef('formRef');
 
@@ -51,12 +56,21 @@
     };
   }
 
-  const { state, onError, onSubmit } = await useWorkshopForm<SpeciesCreate>(
-    computed(() => ({
-      actionUrl: '/api/v2/species',
-      getInitialState,
-    })),
-  );
+  const { state, onError, onSubmit } = useWorkshopForm<SpeciesCreate>({
+    actionUrl: '/api/v2/species',
+    getInitialState,
+  });
+
+  const {
+    preview,
+    isPreviewShowed,
+    isPreviewLoading,
+    isPreviewError,
+    showPreview,
+  } = useWorkshopPreview<SpeciesCreate, SpeciesDetailResponse>({
+    actionUrl: '/api/v2/species',
+    state,
+  });
 </script>
 
 <template>
@@ -187,6 +201,13 @@
       />
     </UFormField>
 
-    <EditorFormControls />
+    <EditorFormControls @preview="showPreview" />
   </UForm>
+
+  <SpeciesPreview
+    v-model="isPreviewShowed"
+    :species="preview"
+    :is-loading="isPreviewLoading"
+    :is-error="isPreviewError"
+  />
 </template>

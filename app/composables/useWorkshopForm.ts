@@ -1,14 +1,13 @@
 import type { FormErrorEvent } from '#ui/types';
 import { cloneDeep, isEqual, merge } from 'lodash-es';
-import type { CreatureDetailResponse } from '~bestiary/types';
 import type { FetchResponse } from 'ofetch';
 
-export type WorkshopFormOptions<T> = MaybeRefOrGetter<{
+export type WorkshopFormOptions<T> = {
   actionUrl: string;
   getInitialState: () => T;
-}>;
+};
 
-export async function useWorkshopForm<T extends Record<string, any>>(
+export function useWorkshopForm<T extends Record<string, any>>(
   options: WorkshopFormOptions<T>,
 ) {
   const _options = toValue(options);
@@ -18,7 +17,6 @@ export async function useWorkshopForm<T extends Record<string, any>>(
 
   const state = useState<T>(_options.getInitialState);
   const prevState = useState<T>(_options.getInitialState);
-  const isPreviewShowed = useState<boolean>(() => false);
 
   const isEditForm = computed(() => !!route.params.url);
 
@@ -148,50 +146,15 @@ export async function useWorkshopForm<T extends Record<string, any>>(
     });
   }
 
-  const {
-    data: preview,
-    status,
-    execute: loadPreview,
-    clear,
-  } = await useFetch<CreatureDetailResponse>(
-    computed(() => `${_options.actionUrl}/preview`),
-    {
-      method: 'POST',
-      body: state,
-      lazy: true,
-      server: false,
-      immediate: false,
-    },
-  );
-
-  function showPreview() {
-    isPreviewShowed.value = true;
-  }
-
-  watch(isPreviewShowed, (value) => {
-    clear();
-
-    if (!value) {
-      return;
-    }
-
-    loadPreview();
-  });
-
   return {
     state,
     prevState,
-    preview,
 
     isFormEdited,
-    isPreviewShowed,
-    isPreviewLoading: computed(() => status.value === 'pending'),
-    isPreviewError: computed(() => status.value === 'error'),
 
     onSubmit,
     onError,
 
-    reset,
-    showPreview,
+    reset: () => reset(),
   };
 }
