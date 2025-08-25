@@ -177,12 +177,7 @@
       :proficiency-bonus="state.proficiencyBonus"
     />
 
-    <CreatureDefenses
-      v-model:vulnerabilities="state.vulnerabilities"
-      v-model:resistance="state.resistance"
-      v-model:immunity-to-damage="state.immunityToDamage"
-      v-model:immunity-to-condition="state.immunityToCondition"
-    />
+    <CreatureDefenses v-model="state.defenses" />
 
     <CreatureSenses
       v-model="state.senses"
