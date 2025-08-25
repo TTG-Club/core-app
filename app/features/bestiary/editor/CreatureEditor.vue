@@ -96,19 +96,21 @@
         <h2 class="truncate text-base text-highlighted">Заголовок</h2>
       </template>
 
-      <div class="grid min-h-21 grid-cols-24 gap-4">
-        <CreatureType v-model="state.types" />
+      <div class="flex flex-col gap-4">
+        <div class="grid grid-cols-24 gap-4">
+          <CreatureType v-model="state.types" />
 
-        <UFormField
-          label="Мировоззрение существа"
-          class="col-span-8"
-          name="alignment"
-        >
-          <SelectAlignment v-model="state.alignment" />
-        </UFormField>
+          <UFormField
+            label="Мировоззрение существа"
+            class="col-span-8"
+            name="alignment"
+          >
+            <SelectAlignment v-model="state.alignment" />
+          </UFormField>
+        </div>
+
+        <CreatureSize v-model="state.sizes" />
       </div>
-
-      <CreatureSize v-model="state.sizes" />
     </UCard>
 
     <UCard

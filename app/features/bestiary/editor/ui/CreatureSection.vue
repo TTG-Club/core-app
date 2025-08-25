@@ -22,7 +22,6 @@
     >
       <div class="col-span-8 grid gap-1">
         <UFormField
-          class="min-h-21"
           label="Название секции"
           name="name.rus"
           help="Например, Золотые драконы"
@@ -34,7 +33,6 @@
         </UFormField>
 
         <UFormField
-          class="min-h-21"
           label="Название секции (англ.)"
           name="name.eng"
           help="Например, Gold Dragons"
@@ -46,7 +44,6 @@
         </UFormField>
 
         <UFormField
-          class="min-h-21"
           label="Подзаголовок"
           name="subtitle"
           help="Например, Драконы надежды и величия"
@@ -58,8 +55,8 @@
         </UFormField>
       </div>
 
-      <div class="col-span-16 flex-col gap-1">
-        <div class="grid min-h-21 grid-cols-2 gap-4">
+      <div class="col-span-16 flex flex-col gap-7">
+        <div class="grid grid-cols-2 gap-4">
           <UFormField
             label="Среда обитания"
             name="habitats"

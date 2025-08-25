@@ -43,9 +43,8 @@
         attach
         :state="model"
       >
-        <div class="col-span-7">
+        <div class="col-span-7 flex flex-col gap-6">
           <UFormField
-            class="min-h-21"
             label="Количество легендарных действий"
             name="count"
           >
@@ -57,7 +56,6 @@
           </UFormField>
 
           <UFormField
-            class="min-h-21"
             label="Количество легендарных действий в логове"
             name="inLair"
           >
@@ -76,8 +74,8 @@
         >
           <UTextarea
             v-model="model.description"
-            :maxrows="6"
-            :rows="6"
+            :maxrows="0"
+            :rows="5"
             placeholder="Введите описание (необязательно)"
           />
         </UFormField>
