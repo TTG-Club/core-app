@@ -3,6 +3,12 @@ export enum SimpleText {
   Text = 'text',
 }
 
+export enum ComplexEl {
+  List = 'list',
+}
+
+export type ListType = 'ordered' | 'unordered';
+
 export enum TextMarker {
   Bold = 'bold',
   Italic = 'italic',
@@ -73,12 +79,13 @@ export type ParamValue = string | number | boolean | null;
 export type MarkerAttributes = Record<string, ParamValue>;
 
 // Типы узлов TipTap.
-export type MarkerNode =
+export type RenderNode =
   | SimpleTextNode
   | EmptyNode
   | TextNode
   | RichNode
-  | SectionLinkNode;
+  | SectionLinkNode
+  | ListNode;
 
 export interface SimpleTextNode {
   type: SimpleText.Text;
@@ -92,7 +99,7 @@ export interface EmptyNode {
 export interface TextNode {
   type: TextMarker;
   attrs?: MarkerAttributes;
-  content: Array<MarkerNode>;
+  content: Array<RenderNode>;
 }
 
 export type RichNodes = {
@@ -106,7 +113,15 @@ export interface LinkNode {
   attrs: {
     url?: string;
   };
-  content: Array<MarkerNode>;
+  content: Array<RenderNode>;
+}
+
+export interface ListNode {
+  type: ComplexEl.List;
+  attrs: {
+    type: ListType;
+  };
+  content: Array<RenderNode | string | Array<RenderNode | string>>;
 }
 
 export type SectionNodes = {
@@ -125,5 +140,5 @@ export interface SectionNode {
   attrs: {
     url?: string;
   };
-  content: Array<MarkerNode>;
+  content: Array<RenderNode>;
 }

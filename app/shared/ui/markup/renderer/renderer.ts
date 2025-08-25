@@ -3,12 +3,13 @@ import { createTextVNode } from 'vue';
 import { TextMarker, EmptyMarker, RichMarker, SectionMarker } from '../types';
 import type {
   TextNode,
-  MarkerNode,
+  RenderNode,
   RichNode,
   EmptyNode,
   RichNodes,
   SectionLinkNode,
   SectionNodes,
+  ListNode,
 } from '../types';
 import {
   isEmptyNode,
@@ -16,10 +17,12 @@ import {
   isRichNode,
   isSimpleTextNode,
   isTextNode,
+  isListNode,
 } from '../utils';
 
 import { renderLink } from './renderLink';
 import { renderSectionLink } from './renderSectionLink';
+import { parse } from '../parser';
 
 const TextMarkerTag: Record<TextMarker, string> = {
   [TextMarker.Bold]: 'b',
@@ -58,37 +61,32 @@ const FEATURE_NODE_RENDERERS: {
   [SectionMarker.Glossary]: renderSectionLink,
 };
 
-// Функция для рендера контента — принимает массив узлов
-export function render(content: MarkerNode[]) {
-  return content.map((node) => renderNode(node));
+function toNodes(input: RenderNode | string): RenderNode[] {
+  if (typeof input === 'string') {
+    return parse(input);
+  }
+
+  return [input];
 }
 
-function renderNode(node: MarkerNode): VNode {
-  if (!node) {
-    throw new Error('[Markup] Node is not defined');
-  }
+// Функция для рендера контента — принимает массив узлов
+export function render(content: Array<RenderNode | string>) {
+  const nodes: RenderNode[] = content.flatMap(toNodes);
 
-  if (isSimpleTextNode(node)) {
-    return createTextVNode(node.text);
-  }
+  return nodes.map((node) => renderNode(node));
+}
 
-  if (isTextNode(node)) {
-    return renderTextNode(node);
-  }
+function renderNode(node: RenderNode): VNode {
+  if (!node) throw new Error('[Markup] Node is not defined');
 
-  if (isRichNode(node)) {
-    return renderRichNode(node);
-  }
+  if (isSimpleTextNode(node)) return createTextVNode(node.text);
+  if (isTextNode(node)) return renderTextNode(node);
+  if (isRichNode(node)) return renderRichNode(node);
+  if (isSectionNode(node)) return renderSectionLinkNode(node);
+  if (isEmptyNode(node)) return renderEmptyNode(node);
+  if (isListNode(node)) return renderListNode(node);
 
-  if (isSectionNode(node)) {
-    return renderSectionLinkNode(node);
-  }
-
-  if (isEmptyNode(node)) {
-    return renderEmptyNode(node);
-  }
-
-  throw new Error(`[Markup] Unknown node`);
+  throw new Error('[Markup] Unknown node');
 }
 
 function renderTextNode(node: TextNode): VNode {
@@ -147,4 +145,46 @@ function renderSectionLinkNode(node: SectionLinkNode): VNode {
   }
 
   return renderFn(node, () => child);
+}
+
+function renderListNode(node: ListNode): VNode {
+  const isOrdered = node.attrs?.type === 'ordered';
+  const tag = isOrdered ? 'ol' : 'ul';
+  const listClass = isOrdered ? 'pl-6 list-decimal' : 'pl-6 list-disc';
+
+  const liBatches: VNode[][] = [];
+
+  (node.content ?? []).forEach((item) => {
+    if (Array.isArray(item)) {
+      const batch = (item as Array<RenderNode | string>)
+        .flatMap(toNodes)
+        .map(renderNode);
+
+      liBatches.push(batch);
+
+      return;
+    }
+
+    const nodes = toNodes(item as RenderNode | string);
+
+    if (nodes.length === 1) {
+      const first = nodes[0];
+
+      if (first && isListNode(first)) {
+        if (liBatches.length > 0) {
+          liBatches[liBatches.length - 1]!.push(renderListNode(first));
+        } else {
+          liBatches.push([renderListNode(first)]);
+        }
+
+        return;
+      }
+    }
+
+    liBatches.push(nodes.map(renderNode));
+  });
+
+  const children = liBatches.map((batch) => h('li', {}, batch));
+
+  return h(tag, { class: listClass }, children);
 }

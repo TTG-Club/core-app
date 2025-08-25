@@ -8,7 +8,7 @@ import {
 } from '../utils';
 
 import type {
-  MarkerNode,
+  RenderNode,
   TextNode,
   EmptyNode,
   SectionLinkNode,
@@ -47,7 +47,7 @@ const MARKERS: { [key: string]: MarkerName } = {
   highlight: Marker.Highlight,
 };
 
-export function parse(text: string): MarkerNode[] {
+export function parse(text: string): RenderNode[] {
   if (text.length > MAX_STRING_LENGTH) {
     throw new Error('[Markup] String is too long');
   }
@@ -57,14 +57,14 @@ export function parse(text: string): MarkerNode[] {
   return recursiveParse(text, depth);
 }
 
-function recursiveParse(text: string, depth: number): MarkerNode[] {
+function recursiveParse(text: string, depth: number): RenderNode[] {
   if (depth > MAX_DEPTH) {
     throw new Error('[Markup] Maximum nesting depth exceeded');
   }
 
   const tagSplit = splitByMarkers(text);
   const len = tagSplit.length;
-  const result: Array<MarkerNode> = [];
+  const result: Array<RenderNode> = [];
 
   for (let i = 0; i < len; ++i) {
     const str = tagSplit[i];
@@ -74,9 +74,13 @@ function recursiveParse(text: string, depth: number): MarkerNode[] {
     }
 
     if (str.startsWith(`{${LEADING_CHARACTER}`)) {
-      const [marker, rawText] = splitFirstSpace(str.slice(1, -1));
+      try {
+        const [marker, rawText] = splitFirstSpace(str.slice(1, -1));
 
-      result.push(convertMarker(marker, rawText, depth));
+        result.push(convertMarker(marker, rawText, depth));
+      } catch (err) {
+        consola.error(err, `Содержащая строка: ${str}`);
+      }
     } else {
       result.push(convertText(str));
     }
@@ -89,7 +93,7 @@ function convertMarker(
   marker: MarkerName,
   textWithParams: string,
   depth: number,
-): MarkerNode {
+): RenderNode {
   if (isTextMarker(marker)) {
     return convertTextMarker(marker, textWithParams, depth);
   }
@@ -186,137 +190,99 @@ function convertEmptyMarker(marker: EmptyMarker): EmptyNode {
   };
 }
 
-function splitByMarkers(string: string): string[] {
-  let tagDepth = 0;
-  let char;
+function splitByMarkers(source: string): string[] {
+  let acc = '';
+  let level = 0;
 
-  let char2;
+  const result: string[] = [];
 
-  const out = [];
-
-  let curStr = '';
-  let isLastOpen = false;
-
-  const len = string.length;
-
-  for (let i = 0; i < len; ++i) {
-    char = string[i];
-    char2 = string[i + 1];
-
-    switch (char) {
-      case '{':
-        isLastOpen = true;
-
-        if (char2 === LEADING_CHARACTER) {
-          if (tagDepth++ > 0) {
-            curStr += '{';
-          } else {
-            out.push(curStr.replace(/<LEAD_CHAR>/g, LEADING_CHARACTER));
-            curStr = `{${LEADING_CHARACTER}`;
-            ++i;
-          }
-        } else {
-          curStr += '{';
-        }
-
-        break;
-
-      case '}':
-        isLastOpen = false;
-        curStr += '}';
-
-        if (tagDepth !== 0 && --tagDepth === 0) {
-          out.push(curStr.replace(/<LEAD_CHAR>/g, LEADING_CHARACTER));
-          curStr = '';
-        }
-
-        break;
-
-      case LEADING_CHARACTER: {
-        if (!isLastOpen) {
-          curStr += '<LEAD_CHAR>';
-        } else {
-          curStr += LEADING_CHARACTER;
-        }
-
-        break;
+  for (let i = 0; i < source.length; i++) {
+    // Открытие маркера
+    if (source[i] === '{' && source[i + 1] === LEADING_CHARACTER) {
+      if (level++ === 0 && acc) {
+        result.push(acc);
+        acc = '';
       }
 
-      default:
-        isLastOpen = false;
-        curStr += char;
+      acc += '{' + LEADING_CHARACTER;
+      i++;
 
-        break;
+      continue;
     }
+
+    // Закрытие маркера
+    if (source[i] === '}') {
+      acc += '}';
+
+      if (level && --level === 0) {
+        result.push(acc);
+        acc = '';
+      }
+
+      continue;
+    }
+
+    acc += source[i];
   }
 
-  if (curStr) {
-    out.push(curStr.replace(/<LEAD_CHAR>/g, LEADING_CHARACTER));
-  }
+  if (acc) result.push(acc);
 
-  return out;
+  return result;
 }
 
-function splitByPipeBase(string: string): { text?: string; params: string[] } {
-  let tagDepth = 0;
-  let curStr = '';
-
-  const len = string.length;
+function splitByPipeBase(input: string): { text?: string; params: string[] } {
+  let acc = '';
+  let level = 0;
 
   const params: string[] = [];
 
   let text: string | undefined;
 
-  for (let i = 0; i < len; ++i) {
-    const char = string[i];
-    const char2 = string[i + 1];
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+    const isMarkerOpen = char === '{' && input[i + 1] === LEADING_CHARACTER;
 
-    switch (char) {
-      case '{':
-        if (char2 === LEADING_CHARACTER) tagDepth++;
-        curStr += '{';
+    if (isMarkerOpen) {
+      level++;
+      acc += '{' + LEADING_CHARACTER;
+      i++;
 
-        break;
-
-      case '}':
-        if (tagDepth) tagDepth--;
-        curStr += '}';
-
-        break;
-
-      case '|': {
-        if (tagDepth) {
-          curStr += '|';
-        } else {
-          if (!text) {
-            text = curStr;
-          } else {
-            params.push(curStr);
-          }
-
-          curStr = '';
-        }
-
-        break;
-      }
-
-      default: {
-        curStr += char;
-
-        break;
-      }
+      continue;
     }
-  }
 
-  if (curStr) {
-    if (!text) {
-      text = curStr;
+    if (char === '}') {
+      acc += '}';
+
+      if (level) {
+        --level;
+      }
+
+      continue;
+    }
+
+    // Основная логика: разделитель pipe, если не во вложенностях
+    if (char === '|' && level === 0) {
+      if (text === undefined) {
+        text = acc.trim();
+      } else {
+        params.push(acc.trim());
+      }
+
+      acc = '';
     } else {
-      params.push(curStr);
+      acc += char;
     }
   }
 
-  return { text: text?.trim(), params: params.map((param) => param.trim()) };
+  if (acc) {
+    if (text === undefined) {
+      text = acc.trim();
+    } else {
+      params.push(acc.trim());
+    }
+  }
+
+  return { text, params };
 }
 
 function splitFirstSpace(string: string): [MarkerName, string] {
