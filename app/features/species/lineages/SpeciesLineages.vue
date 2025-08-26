@@ -29,7 +29,7 @@
       </template>
 
       <template #content>
-        <SpeciesBody :species />
+        <SpeciesBody :species :show-media-and-stats="false" />
       </template>
     </UiCollapse>
   </div>
