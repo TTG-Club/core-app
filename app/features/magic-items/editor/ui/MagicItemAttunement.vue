@@ -30,18 +30,17 @@
     :state="attunement"
   >
     <UFormField
-      class="col-span-8"
-      label="Требуется настройка"
+      class="col-span-full"
       name="requires"
     >
       <UCheckbox
         v-model="attunement.requires"
-        label="Требуется"
+        label="Требуется настройка"
       />
     </UFormField>
 
     <UFormField
-      class="col-span-16"
+      class="col-span-full"
       label="Особенности настройки"
       name="description"
     >

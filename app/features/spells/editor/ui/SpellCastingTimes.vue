@@ -79,9 +79,11 @@
 </script>
 
 <template>
-  <USeparator>
-    <span class="font-bold text-secondary">Время накладывания</span>
-  </USeparator>
+  <div class="col-span-full mt-4 flex gap-4">
+    <p class="w-1/5 text-lg">Время накладывания</p>
+
+    <USeparator />
+  </div>
 
   <UForm
     v-for="(time, index) in times"

@@ -91,9 +91,8 @@
       :schema="schema"
       class="grid grid-cols-2 gap-6"
     >
-      <div class="flex flex-col gap-1">
+      <div class="flex flex-col gap-7">
         <UFormField
-          class="min-h-21"
           label="Название"
           name="name.rus"
           required
@@ -105,7 +104,6 @@
         </UFormField>
 
         <UFormField
-          class="min-h-21"
           label="Английское название"
           name="name.eng"
           required
@@ -117,7 +115,6 @@
         </UFormField>
 
         <UFormField
-          class="min-h-21"
           label="URL"
           help="URL генерируется автоматически при вводе английского названия"
           name="url"
@@ -134,7 +131,7 @@
 
       <div class="flex flex-col gap-1">
         <UFormField
-          class="col-span-full min-h-21"
+          class="col-span-full"
           label="Альтернативные названия"
           name="name.alt"
           help="Используется для поиска и СЕО"
@@ -158,7 +155,7 @@
             label="Источник"
             help="Книга, из которой взята информация"
             name="url"
-            class="col-span-2 min-h-21"
+            class="col-span-2"
           >
             <SelectSource
               :model-value="form.source.url"
@@ -167,7 +164,6 @@
           </UFormField>
 
           <UFormField
-            class="min-h-21"
             label="Страница в источнике"
             help="Номер страницы книги"
             name="page"
@@ -183,7 +179,6 @@
         </UForm>
 
         <UFormField
-          class="min-h-21"
           label="Теги"
           help="Используются для поиска и СЕО"
           name="tags"

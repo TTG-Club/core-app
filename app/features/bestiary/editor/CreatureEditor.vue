@@ -14,15 +14,20 @@
     CreatureType,
     CreatureDefenses,
     CreatureInitiative,
+    CreatureLair,
+    CreatureLegendaryActions,
   } from './ui';
 
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectAlignment } from '~ui/select';
   import { UploadImage } from '~ui/upload';
 
-  import { type CreatureCreate, getInitialState } from '~bestiary/types';
+  import {
+    type CreatureCreate,
+    type CreatureDetailResponse,
+    getInitialState,
+  } from '~bestiary/types';
   import { CreaturePreview } from '~bestiary/preview';
-  import { CreatureLair, CreatureLegendaryActions } from '~bestiary/editor/ui';
 
   const formRef = useTemplateRef('formRef');
 
@@ -34,28 +39,28 @@
     validate,
   });
 
+  const { state, onError, onSubmit } = useWorkshopForm<CreatureCreate>({
+    actionUrl: '/api/v2/bestiary',
+    getInitialState,
+  });
+
   const {
-    state,
     preview,
     isPreviewShowed,
     isPreviewLoading,
     isPreviewError,
-    onError,
-    onSubmit,
     showPreview,
-  } = await useWorkshopForm<CreatureCreate>(
-    computed(() => ({
-      actionUrl: '/api/v2/bestiary',
-      getInitialState,
-    })),
-  );
+  } = useWorkshopPreview<CreatureCreate, CreatureDetailResponse>({
+    actionUrl: '/api/v2/bestiary',
+    state,
+  });
 </script>
 
 <template>
   <UForm
     ref="formRef"
     :state
-    class="grid grid-cols-24 gap-4"
+    class="grid grid-cols-24 gap-6"
     @error="onError"
     @submit="onSubmit"
   >
@@ -66,77 +71,98 @@
       section="bestiary"
     />
 
-    <UFormField
-      class="col-span-24"
-      label="Описание"
-      name="description"
-    >
-      <UTextarea
-        v-model="state.description"
-        :rows="4"
-        placeholder="Введи описание"
-      />
-    </UFormField>
-
-    <USeparator>
-      <span class="font-bold text-secondary">Заголовок</span>
-    </USeparator>
-
-    <CreatureType v-model="state.types" />
-
-    <UFormField
-      class="col-span-6"
-      label="Мировоззрение существа"
-      name="alignment"
-    >
-      <SelectAlignment v-model="state.alignment" />
-    </UFormField>
-
-    <CreatureSize v-model="state.sizes" />
-
-    <USeparator>
-      <span class="font-bold text-secondary">Статблок</span>
-    </USeparator>
-
-    <UFormField
-      class="col-span-4"
-      label="КД"
-      help="Класс доспеха"
-      name="ac.value"
-    >
-      <UInput
-        v-model="state.ac.value"
-        type="number"
-        placeholder="Введи КД"
-        min="0"
-        step="1"
-      />
-    </UFormField>
-
-    <UFormField
-      class="col-span-12"
-      label="Текст к КД"
-      name="ac.text"
-    >
-      <UInput
-        v-model="state.ac.text"
-        placeholder="Введи текст"
-      />
-    </UFormField>
-
-    <CreatureInitiative
-      v-model="state.initiative"
-      :dex="state.abilities.dex"
-      :proficiency-bonus="state.proficiencyBonus"
-      class="col-span-8"
-    />
-
-    <CreatureHit
-      v-model="state.hit"
-      :sizes="state.sizes"
-      :constitution="state.abilities.con"
+    <UCard
+      variant="subtle"
       class="col-span-full"
-    />
+    >
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">Описание</h2>
+      </template>
+
+      <UFormField name="description">
+        <UTextarea
+          v-model="state.description"
+          :rows="4"
+          placeholder="Введи описание"
+        />
+      </UFormField>
+    </UCard>
+
+    <UCard
+      variant="subtle"
+      class="col-span-full"
+    >
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">Заголовок</h2>
+      </template>
+
+      <div class="flex flex-col gap-4">
+        <div class="grid grid-cols-24 gap-4">
+          <CreatureType v-model="state.types" />
+
+          <UFormField
+            label="Мировоззрение существа"
+            class="col-span-8"
+            name="alignment"
+          >
+            <SelectAlignment v-model="state.alignment" />
+          </UFormField>
+        </div>
+
+        <CreatureSize v-model="state.sizes" />
+      </div>
+    </UCard>
+
+    <UCard
+      variant="subtle"
+      class="col-span-full"
+    >
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">Статблок</h2>
+      </template>
+
+      <div class="grid grid-cols-24 gap-4">
+        <UFormField
+          class="col-span-3"
+          label="КД"
+          help="Класс доспеха"
+          name="ac.value"
+        >
+          <UInput
+            v-model="state.ac.value"
+            type="number"
+            placeholder="Введи КД"
+            min="0"
+            step="1"
+          />
+        </UFormField>
+
+        <UFormField
+          class="col-span-13"
+          label="Текст к КД"
+          name="ac.text"
+        >
+          <UInput
+            v-model="state.ac.text"
+            placeholder="Введи текст"
+          />
+        </UFormField>
+
+        <CreatureInitiative
+          v-model="state.initiative"
+          :dex="state.abilities.dex"
+          :proficiency-bonus="state.proficiencyBonus"
+          class="col-span-8"
+        />
+
+        <CreatureHit
+          v-model="state.hit"
+          :sizes="state.sizes"
+          :constitution="state.abilities.con"
+          class="col-span-full"
+        />
+      </div>
+    </UCard>
 
     <CreatureSpeed v-model="state.speeds" />
 
@@ -192,10 +218,6 @@
     <CreatureLegendaryActions v-model="state.legendary" />
 
     <CreatureLair v-model="state.lair" />
-
-    <USeparator>
-      <span class="font-bold text-secondary">Изображения</span>
-    </USeparator>
 
     <UFormField
       class="col-span-8"

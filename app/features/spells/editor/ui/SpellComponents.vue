@@ -29,44 +29,40 @@
 </script>
 
 <template>
-  <USeparator>
-    <span class="font-bold text-secondary">Компоненты</span>
-  </USeparator>
+  <div class="col-span-full mt-4 flex gap-4">
+    <p class="text-lg">Компоненты</p>
+
+    <USeparator />
+  </div>
 
   <UForm
     class="col-span-full grid grid-cols-24 gap-4"
     attach
     :state="components"
   >
-    <div class="col-span-8">
-      <UFormField
-        label="Вербальный компонент"
-        name="v"
-      >
+    <div class="col-span-5">
+      <UFormField name="v">
         <UCheckbox
           v-model="components.v"
-          label="Требуется"
+          label="Вербальный компонент"
         />
       </UFormField>
     </div>
 
-    <div class="col-span-8">
-      <UFormField
-        label="Соматический компонент"
-        name="s"
-      >
+    <div class="col-span-5">
+      <UFormField name="s">
         <UCheckbox
           v-model="components.s"
-          label="Требуется"
+          label="Соматический компонент"
         />
       </UFormField>
     </div>
 
-    <div class="col-span-8">
-      <UFormField label="Материальный компонент">
+    <div class="col-span-5">
+      <UFormField>
         <UCheckbox
           :model-value="!!components.m"
-          label="Требуется"
+          label="Материальный компонент"
           @update:model-value="updateUseMaterialComponent"
         />
       </UFormField>
@@ -74,7 +70,7 @@
 
     <template v-if="components.m">
       <UFormField
-        class="col-span-16"
+        class="col-span-full"
         label="Список материалов"
         name="m.text"
       >
@@ -85,26 +81,24 @@
       </UFormField>
 
       <UFormField
-        class="col-span-4"
-        label="Материалы имеют цену"
+        class="col-span-5"
         name="m.withCost"
       >
         <UCheckbox
           v-model="components.m.withCost"
           :disabled="!components.m.text"
-          label="Да"
+          label="Материалы имеют цену"
         />
       </UFormField>
 
       <UFormField
-        class="col-span-4"
-        label="Материалы расходуются"
+        class="col-span-5"
         name="m.consumable"
       >
         <UCheckbox
           v-model="components.m.consumable"
           :disabled="!components.m.text"
-          label="Да"
+          label="Материалы расходуются"
         />
       </UFormField>
     </template>
