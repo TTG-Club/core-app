@@ -10,11 +10,8 @@
   const props = withDefaults(
     defineProps<{
       species: SpeciesDetailResponse;
-      showMediaAndStats?: boolean;
-      showLineagesButton?: boolean;
-      showContent?: boolean;
     }>(),
-    { showMediaAndStats: true, showLineagesButton: true, showContent: true },
+    {},
   );
 
   const overlay = useOverlay();
@@ -55,14 +52,8 @@
 
 <template>
   <div class="flex flex-col gap-6 @min-[800px]:flex-row @min-[800px]:gap-7">
-    <div
-      v-if="
-        props.showMediaAndStats ||
-        (props.showLineagesButton && props.species.hasLineages)
-      "
-      class="flex w-full flex-col gap-4 @min-[800px]:max-w-80"
-    >
-      <template v-if="props.showMediaAndStats">
+    <div class="flex w-full flex-col gap-4 @min-[800px]:max-w-80">
+      <template>
         <UiGallery
           :preview="props.species.image"
           :images="props.species.gallery"
@@ -98,7 +89,7 @@
       </template>
 
       <UButton
-        v-if="props.showLineagesButton && props.species.hasLineages"
+        v-if="props.species.hasLineages"
         block
         @click.left.exact.prevent="openLineages(props.species.url)"
       >
@@ -107,14 +98,14 @@
     </div>
 
     <div class="flex flex-auto flex-col gap-6">
-      <div v-if="props.showContent">
+      <div>
         <MarkupRender
           v-if="props.species.description"
           :entries="props.species.description"
         />
       </div>
 
-      <template v-if="props.showContent && props.species.features">
+      <template v-if="props.species.features">
         <UiCollapse
           v-for="feature in props.species.features"
           :id="feature.url"
@@ -132,11 +123,7 @@
       </template>
 
       <SpeciesLineages
-        v-if="
-          props.showContent &&
-          !props.species.parent &&
-          props.species.hasLineages
-        "
+        v-if="!props.species.parent && props.species.hasLineages"
         :url="props.species.url"
       />
     </div>
