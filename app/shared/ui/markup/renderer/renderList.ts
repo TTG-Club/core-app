@@ -1,48 +1,54 @@
+import { h, type VNode } from 'vue';
 import type { ListNode, RenderNode } from '../types';
 import { isListNode } from '../utils';
 
+type RenderListNodeDeps = {
+  renderNode: (n: RenderNode) => VNode;
+  toNodes: (i: RenderNode | string) => RenderNode[];
+};
+
 export function renderListNode(
   node: ListNode,
-  deps: {
-    renderNode: (n: RenderNode) => VNode;
-    toNodes: (i: RenderNode | string) => RenderNode[];
-  },
+  deps: RenderListNodeDeps,
 ): VNode {
   const isOrdered = node.attrs?.type === 'ordered';
   const tag = isOrdered ? 'ol' : 'ul';
-  const listClass = isOrdered ? 'pl-6 list-decimal' : 'pl-6 list-disc';
+
+  const listClass =
+    (isOrdered ? 'list-decimal' : 'list-disc') + ' list-outside pl-6';
 
   const liBatches: VNode[][] = [];
 
-  (node.content ?? []).forEach((item) => {
+  for (const item of node.content ?? []) {
     if (Array.isArray(item)) {
-      const batch = (item as Array<RenderNode | string>)
-        .flatMap(deps.toNodes)
-        .map(deps.renderNode);
+      const batchNodes = item.flatMap((part) => deps.toNodes(part));
+      const batch = batchNodes.map((n) => deps.renderNode(n));
 
       liBatches.push(batch);
 
-      return;
+      continue;
     }
 
-    const nodes = deps.toNodes(item as RenderNode | string);
+    const nodes = deps.toNodes(item);
 
     if (nodes.length === 1) {
       const first = nodes[0];
 
       if (first && isListNode(first)) {
-        if (liBatches.length > 0) {
-          liBatches[liBatches.length - 1]!.push(renderListNode(first, deps));
+        const lastBatch = liBatches[liBatches.length - 1];
+
+        if (lastBatch) {
+          lastBatch.push(renderListNode(first, deps));
         } else {
           liBatches.push([renderListNode(first, deps)]);
         }
 
-        return;
+        continue;
       }
     }
 
-    liBatches.push(nodes.map(deps.renderNode));
-  });
+    liBatches.push(nodes.map((n) => deps.renderNode(n)));
+  }
 
   const children = liBatches.map((batch) => h('li', {}, batch));
 
