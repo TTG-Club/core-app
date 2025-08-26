@@ -22,7 +22,6 @@
     :is-loading
     :is-error
     width="100%"
-    class="@container"
   >
     <SpeciesBody
       v-if="species"
