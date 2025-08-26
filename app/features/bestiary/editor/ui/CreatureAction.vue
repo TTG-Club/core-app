@@ -41,74 +41,81 @@
 </script>
 
 <template>
-  <USeparator>
-    <span class="font-bold text-secondary">
-      {{ labelMap[name] ?? 'Особенности' }}
-    </span>
-  </USeparator>
-
-  <template
-    v-for="(action, actionIndex) in model"
-    :key="actionIndex"
+  <UCard
+    variant="subtle"
+    class="col-span-full"
   >
-    <UForm
-      class="col-span-full grid grid-cols-24 gap-4"
-      attach
-      :state="action"
-    >
-      <UFormField
-        class="col-span-8"
-        label="Название"
-        :name="`${name}.${actionIndex}.name.rus`"
+    <template #header>
+      <h2 class="truncate text-base text-highlighted">
+        {{ labelMap[name] ?? 'Особенности' }}
+      </h2>
+    </template>
+
+    <div class="grid gap-4">
+      <template
+        v-for="(action, actionIndex) in model"
+        :key="actionIndex"
       >
-        <UInput
-          v-model="action.name.rus"
-          placeholder="Введи название"
-        />
-      </UFormField>
+        <UForm
+          class="col-span-full grid grid-cols-24 gap-4"
+          attach
+          :state="action"
+        >
+          <UFormField
+            class="col-span-8"
+            label="Название"
+            :name="`${name}.${actionIndex}.name.rus`"
+          >
+            <UInput
+              v-model="action.name.rus"
+              placeholder="Введи название"
+            />
+          </UFormField>
 
-      <UFormField
-        class="col-span-8"
-        label="Название (англ.)"
-        :name="`${name}.${actionIndex}.name.eng`"
+          <UFormField
+            class="col-span-8"
+            label="Название (англ.)"
+            :name="`${name}.${actionIndex}.name.eng`"
+          >
+            <UInput
+              v-model="action.name.eng"
+              placeholder="Введи английское название"
+            />
+          </UFormField>
+
+          <EditorArrayControls
+            v-model="model"
+            :item="action"
+            :empty-object="getEmpty()"
+            :index="actionIndex"
+            cols="8"
+            only-remove
+          />
+
+          <UFormField
+            class="col-span-24"
+            label="Описание"
+            :name="`${name}.${actionIndex}.description`"
+          >
+            <UTextarea
+              v-model="action.description"
+              :rows="3"
+              placeholder="Введи описание"
+            />
+          </UFormField>
+        </UForm>
+
+        <USeparator v-if="!isLastAction(actionIndex)" />
+      </template>
+
+      <div
+        v-if="!model.length"
+        class="col-span-full flex justify-center"
       >
-        <UInput
-          v-model="action.name.eng"
-          placeholder="Введи английское название"
-        />
-      </UFormField>
-
-      <EditorArrayControls
-        v-model="model"
-        :item="action"
-        :empty-object="getEmpty()"
-        :index="actionIndex"
-        cols="8"
-        only-remove
-      />
-
-      <UFormField
-        class="col-span-24"
-        label="Описание"
-        :name="`${name}.${actionIndex}.description`"
-      >
-        <UTextarea
-          v-model="action.description"
-          :rows="3"
-          placeholder="Введи описание"
-        />
-      </UFormField>
-    </UForm>
-
-    <USeparator v-if="!isLastAction(actionIndex)" />
-  </template>
-
-  <div
-    v-if="!model.length"
-    class="col-span-full flex justify-center"
-  >
-    <UButton @click.left.exact.prevent="addAction(0)">
-      Добавить первое
-    </UButton>
-  </div>
+        <UButton @click.left.exact.prevent="addAction(0)">
+          Добавить {{ (labelMap[name] ?? 'Особенности').toLowerCase() }}
+        </UButton>
+      </div>
+    </div>
+  </UCard>
 </template>

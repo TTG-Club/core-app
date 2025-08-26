@@ -19,66 +19,71 @@
 </script>
 
 <template>
-  <USeparator>
-    <span class="font-bold text-secondary">Характеристики</span>
-  </USeparator>
-
-  <UForm
-    class="col-span-full grid grid-cols-24 gap-4"
-    attach
-    :state="model"
+  <UCard
+    variant="subtle"
+    class="col-span-full"
   >
-    <UFormField
-      v-for="ability in ABILITIES"
-      :key="ability.key"
-      class="col-span-4"
-      :label="ability.label"
-      :name="ability.shortKey + '.value'"
-    >
-      <UInputNumber
-        v-model="model[ability.shortKey].value"
-        :precision="0"
-        :min="0"
-        :max="30"
+    <template #header>
+      <h2 class="truncate text-base text-highlighted">
+        Характеристики | Спасброски
+      </h2>
+    </template>
+
+    <div class="grid gap-4">
+      <UForm
+        class="col-span-full grid grid-cols-24 gap-4"
+        attach
+        :state="model"
       >
-        <template #trailing>
-          {{ getFormattedModifier(model[ability.shortKey].value) }}
-        </template>
-      </UInputNumber>
-    </UFormField>
-  </UForm>
-
-  <USeparator>
-    <span class="font-bold text-secondary">Спасброски</span>
-  </USeparator>
-
-  <UForm
-    class="col-span-full grid grid-cols-24 gap-4"
-    attach
-    :state="model"
-  >
-    <UFormField
-      v-for="ability in ABILITIES"
-      :key="ability.key"
-      class="col-span-4"
-      :label="ability.label"
-      :name="ability.shortKey + '.multiplier'"
-    >
-      <div class="flex">
-        <SelectMastery
-          v-model="model[ability.shortKey].multiplier"
-          class="flex-grow"
+        <UFormField
+          v-for="ability in ABILITIES"
+          :key="ability.key"
+          class="col-span-4"
+          :label="ability.label"
+          :name="ability.shortKey + '.value'"
         >
-          <template #trailing>
-            {{
-              calcModifier(
-                model[ability.shortKey].value,
-                model[ability.shortKey].multiplier,
-              )
-            }}
-          </template>
-        </SelectMastery>
-      </div>
-    </UFormField>
-  </UForm>
+          <UInputNumber
+            v-model="model[ability.shortKey].value"
+            :precision="0"
+            :min="0"
+            :max="30"
+          >
+            <template #trailing>
+              {{ getFormattedModifier(model[ability.shortKey].value) }}
+            </template>
+          </UInputNumber>
+        </UFormField>
+      </UForm>
+
+      <UForm
+        class="col-span-full grid grid-cols-24 gap-4"
+        attach
+        :state="model"
+      >
+        <UFormField
+          v-for="ability in ABILITIES"
+          :key="ability.key"
+          class="col-span-4"
+          :label="ability.label"
+          :name="ability.shortKey + '.multiplier'"
+        >
+          <div class="flex">
+            <SelectMastery
+              v-model="model[ability.shortKey].multiplier"
+              class="flex-grow"
+            >
+              <template #trailing>
+                {{
+                  calcModifier(
+                    model[ability.shortKey].value,
+                    model[ability.shortKey].multiplier,
+                  )
+                }}
+              </template>
+            </SelectMastery>
+          </div>
+        </UFormField>
+      </UForm>
+    </div>
+  </UCard>
 </template>

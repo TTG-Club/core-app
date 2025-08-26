@@ -81,9 +81,11 @@
 </script>
 
 <template>
-  <USeparator>
-    <span class="font-bold text-secondary">Длительность</span>
-  </USeparator>
+  <div class="col-span-full mt-4 flex gap-4">
+    <p class="text-lg">Длительность</p>
+
+    <USeparator />
+  </div>
 
   <UForm
     v-for="(duration, index) in durations"
@@ -122,13 +124,12 @@
     </UFormField>
 
     <UFormField
-      label="Концентрация"
       name="concentration"
-      class="col-span-4"
+      class="col-span-4 mb-2 flex items-end"
     >
       <UCheckbox
         v-model="duration.concentration"
-        label="Требуется"
+        label="Концентрация"
       />
     </UFormField>
 

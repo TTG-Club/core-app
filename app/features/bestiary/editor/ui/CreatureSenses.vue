@@ -31,92 +31,104 @@
 </script>
 
 <template>
-  <USeparator>
-    <span class="font-bold text-secondary">Чувства</span>
-  </USeparator>
-
-  <UForm
-    class="col-span-full grid grid-cols-6 gap-4"
-    attach
-    :state="model"
+  <UCard
+    variant="subtle"
+    class="col-span-full"
   >
-    <UFormField
-      label="Тёмное зрение"
-      name="darkvision"
-    >
-      <UInputNumber
-        v-model="model.darkvision"
-        :min="0"
-        :precision="0"
-        placeholder="Введите значение"
-      >
-        <template #trailing> фт. </template>
-      </UInputNumber>
-    </UFormField>
+    <template #header>
+      <h2 class="truncate text-base text-highlighted">Чувства</h2>
+    </template>
 
-    <UFormField
-      label="Супер темное зрение"
-      name="unimpeded"
-    >
-      <UCheckbox
-        v-model="model.unimpeded"
-        label="Да"
+    <div class="grid gap-4">
+      <UForm
+        class="col-span-full grid grid-cols-25 gap-4"
+        attach
+        :state="model"
       >
-      </UCheckbox>
-    </UFormField>
+        <UFormField
+          label="Тёмное зрение"
+          name="darkvision"
+          class="col-span-5"
+        >
+          <UInputNumber
+            v-model="model.darkvision"
+            :min="0"
+            :precision="0"
+            placeholder="В фт."
+          >
+            <template #trailing> фт. </template>
+          </UInputNumber>
+        </UFormField>
 
-    <UFormField
-      label="Истинное зрение"
-      name="truesight"
-    >
-      <UInputNumber
-        v-model="model.truesight"
-        :min="0"
-        :precision="0"
-        placeholder="Введите значение"
-      >
-        <template #trailing> фт. </template>
-      </UInputNumber>
-    </UFormField>
+        <UFormField
+          label="Истинное зрение"
+          name="truesight"
+          class="col-span-5"
+        >
+          <UInputNumber
+            v-model="model.truesight"
+            :min="0"
+            :precision="0"
+            placeholder="В фт."
+          >
+            <template #trailing> фт. </template>
+          </UInputNumber>
+        </UFormField>
 
-    <UFormField
-      label="Слепое зрение"
-      name="blindsight"
-    >
-      <UInputNumber
-        v-model="model.blindsight"
-        :min="0"
-        :precision="0"
-        placeholder="Введите значение"
-      >
-        <template #trailing> фт. </template>
-      </UInputNumber>
-    </UFormField>
+        <UFormField
+          label="Слепое зрение"
+          name="blindsight"
+          class="col-span-5"
+        >
+          <UInputNumber
+            v-model="model.blindsight"
+            :min="0"
+            :precision="0"
+            placeholder="В фт."
+          >
+            <template #trailing> фт. </template>
+          </UInputNumber>
+        </UFormField>
 
-    <UFormField
-      label="Чувство вибрации"
-      name="tremorsense"
-    >
-      <UInputNumber
-        v-model="model.tremorsense"
-        :min="0"
-        :precision="0"
-        placeholder="Введите значение"
-      >
-        <template #trailing> фт. </template>
-      </UInputNumber>
-    </UFormField>
+        <UFormField
+          label="Чувство вибрации"
+          name="tremorsense"
+          class="col-span-5"
+        >
+          <UInputNumber
+            v-model="model.tremorsense"
+            :min="0"
+            :precision="0"
+            placeholder="В фт."
+          >
+            <template #trailing> фт. </template>
+          </UInputNumber>
+        </UFormField>
 
-    <UFormField
-      label="Пассивная Внимательность"
-      name="passivePerception"
-    >
-      <UInputNumber
-        v-model="model.passivePerception"
-        :min="0"
-        :precision="0"
-        placeholder="Введите значение"
-      />
-    </UFormField>
-  </UForm>
+        <UFormField
+          label="Пассивная Внимательность"
+          name="passivePerception"
+          class="col-span-5"
+        >
+          <UInputNumber
+            v-model="model.passivePerception"
+            :min="0"
+            :precision="0"
+            placeholder="Введите значение"
+          />
+        </UFormField>
+
+        <UFormField
+          name="unimpeded"
+          class="w-ful col-span-full"
+        >
+          <UCheckbox
+            v-model="model.unimpeded"
+            label="Супер темное зрение"
+          >
+          </UCheckbox>
+        </UFormField>
+      </UForm>
+    </div>
+  </UCard>
 </template>
