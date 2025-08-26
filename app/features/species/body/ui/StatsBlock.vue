@@ -1,8 +1,8 @@
 <script setup lang="ts">
-  const { typeValue, size, speed } = defineProps<{
-    typeValue: string | number | undefined;
-    size: string | number | undefined;
-    speed: string | number | undefined;
+  import type { SpeciesProperties } from '~/shared/types';
+
+  const { properties } = defineProps<{
+    properties: SpeciesProperties;
   }>();
 </script>
 
@@ -13,13 +13,13 @@
     <div class="flex w-full min-w-full gap-0 px-4 py-1.5">
       <span class="min-w-20 text-sm font-medium text-highlighted">Тип:</span>
 
-      <span>{{ typeValue }}</span>
+      <span>{{ properties.type }}</span>
     </div>
 
     <div class="flex w-full min-w-full gap-0 px-4 py-1.5">
       <span class="min-w-20 text-sm font-medium text-highlighted">Размер:</span>
 
-      <span>{{ size }}</span>
+      <span>{{ properties.size }}</span>
     </div>
 
     <div class="flex w-full min-w-full gap-0 px-4 py-1.5">
@@ -27,7 +27,7 @@
         >Скорость:</span
       >
 
-      <span>{{ speed }}</span>
+      <span>{{ properties.speed }}</span>
     </div>
   </div>
 </template>

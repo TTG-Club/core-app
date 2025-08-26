@@ -60,11 +60,7 @@
           />
         </template>
 
-        <StatsBlock
-          :type-value="species.properties.type"
-          :size="species.properties.size"
-          :speed="species.properties.speed"
-        />
+        <StatsBlock :properties="species.properties" />
 
         <UButton
           v-if="species.hasLineages"
