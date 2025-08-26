@@ -1,22 +1,20 @@
 <script setup lang="ts">
-  import { parse } from '~ui/markup/parser';
   import { render } from '~ui/markup/renderer';
+  import type { RenderNode } from '~ui/markup/types';
 
   const { entry } = defineProps<{
-    entry: string;
+    entry: string | RenderNode;
   }>();
 
-  const rendered = ref(getRendered());
-
-  function getRendered() {
+  const rendered = computed(() => {
     try {
-      return render(parse(entry));
-    } catch (error) {
-      console.error(error);
+      return render([entry]);
+    } catch (e) {
+      console.error(e);
 
       return [];
     }
-  }
+  });
 </script>
 
 <template>
