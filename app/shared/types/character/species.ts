@@ -19,11 +19,7 @@ export interface SpeciesDetailResponse {
   hasLineages?: boolean;
   name: Pick<NameResponse, 'rus' | 'eng'>;
   source: SourceResponse;
-  properties: {
-    size: string;
-    type: string;
-    speed: string;
-  };
+  properties: SpeciesProperties;
   description: Array<string>;
   image: string;
   gallery?: Array<string>;
@@ -34,6 +30,12 @@ export interface SpeciesDetailResponse {
   }>;
   username: string;
   updatedAt: string;
+}
+
+export interface SpeciesProperties {
+  size: string;
+  type: string;
+  speed: string;
 }
 
 export interface SpeciesCreate extends EditorBaseInfoState {
