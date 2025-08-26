@@ -1,8 +1,9 @@
 <script setup lang="ts">
+  import type { RenderNode } from './types';
   import { RowRender } from './ui';
 
   const { entries } = defineProps<{
-    entries: Array<string>;
+    entries: Array<string | RenderNode>;
   }>();
 </script>
 
