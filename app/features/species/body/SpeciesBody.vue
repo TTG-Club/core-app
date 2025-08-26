@@ -10,8 +10,9 @@
   const props = withDefaults(
     defineProps<{
       species: SpeciesDetailResponse;
+      hideGallery?: boolean;
     }>(),
-    {},
+    { hideGallery: false },
   );
 
   const overlay = useOverlay();
@@ -53,40 +54,40 @@
 <template>
   <div class="flex flex-col gap-6 @min-[800px]:flex-row @min-[800px]:gap-7">
     <div class="flex w-full flex-col gap-4 @min-[800px]:max-w-80">
-      <template>
+      <template v-if="!props.hideGallery">
         <UiGallery
           :preview="props.species.image"
           :images="props.species.gallery"
         />
-
-        <div
-          class="w-full overflow-hidden rounded-lg border border-default bg-muted py-1.5"
-        >
-          <div class="flex w-full min-w-full gap-0 px-4 py-1.5">
-            <span class="min-w-20 text-sm font-medium text-highlighted"
-              >Тип:</span
-            >
-
-            <span>{{ props.species.properties.type }}</span>
-          </div>
-
-          <div class="flex w-full min-w-full gap-0 px-4 py-1.5">
-            <span class="min-w-20 text-sm font-medium text-highlighted"
-              >Размер:</span
-            >
-
-            <span>{{ props.species.properties.size }}</span>
-          </div>
-
-          <div class="flex w-full min-w-full gap-0 px-4 py-1.5">
-            <span class="min-w-20 text-sm font-medium text-highlighted"
-              >Скорость:</span
-            >
-
-            <span>{{ props.species.properties.speed }}</span>
-          </div>
-        </div>
       </template>
+
+      <div
+        class="w-full overflow-hidden rounded-lg border border-default bg-muted py-1.5"
+      >
+        <div class="flex w-full min-w-full gap-0 px-4 py-1.5">
+          <span class="min-w-20 text-sm font-medium text-highlighted"
+            >Тип:</span
+          >
+
+          <span>{{ props.species.properties.type }}</span>
+        </div>
+
+        <div class="flex w-full min-w-full gap-0 px-4 py-1.5">
+          <span class="min-w-20 text-sm font-medium text-highlighted"
+            >Размер:</span
+          >
+
+          <span>{{ props.species.properties.size }}</span>
+        </div>
+
+        <div class="flex w-full min-w-full gap-0 px-4 py-1.5">
+          <span class="min-w-20 text-sm font-medium text-highlighted"
+            >Скорость:</span
+          >
+
+          <span>{{ props.species.properties.speed }}</span>
+        </div>
+      </div>
 
       <UButton
         v-if="props.species.hasLineages"

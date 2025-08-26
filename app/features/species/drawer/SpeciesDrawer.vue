@@ -39,10 +39,10 @@
     copy-title
     @close="$emit('close')"
   >
-
     <SpeciesBody
       v-if="detail"
       :species="detail"
+      hide-gallery
     />
   </UiDrawer>
 </template>

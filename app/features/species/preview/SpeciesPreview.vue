@@ -27,6 +27,7 @@
     <SpeciesBody
       v-if="species"
       :species
+      hide-gallery
     />
   </UiDrawer>
 </template>
