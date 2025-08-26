@@ -69,10 +69,7 @@
     </template>
 
     <template #default>
-      <div
-        v-if="species"
-        class="@container"
-      >
+      <div v-if="species">
         <SpeciesBody :species="species" />
       </div>
 

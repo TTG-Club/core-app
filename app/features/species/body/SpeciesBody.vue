@@ -4,7 +4,7 @@
   import { UiCollapse } from '~ui/collapse';
   import { UiGallery } from '~ui/gallery';
   import { SpeciesLineagesDrawer } from '~species/lineages-drawer';
-  import StatsBlock from './ui/StatsBlock.vue';
+  import { StatsBlock } from './ui';
 
   import type { SpeciesDetailResponse } from '~/shared/types';
 
@@ -53,8 +53,9 @@
   <div class="@container">
     <div class="flex flex-col gap-6 @min-[800px]:flex-row @min-[800px]:gap-7">
       <div class="flex w-full flex-col gap-4 @min-[800px]:max-w-80">
-        <template v-if="!hideGallery">
+        <template>
           <UiGallery
+            v-if="!hideGallery"
             :preview="species.image"
             :images="species.gallery"
           />
