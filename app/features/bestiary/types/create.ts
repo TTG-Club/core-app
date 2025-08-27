@@ -132,6 +132,7 @@ export interface CreateAbility {
 export interface CreateSkill {
   skill: string | undefined;
   multiplier: 0 | 1 | 2;
+  bonus: number;
   text: string | undefined;
 }
 
