@@ -23,6 +23,7 @@
     return {
       skill: undefined,
       text: undefined,
+      bonus: 0,
       multiplier: 0,
     };
   }
@@ -38,6 +39,7 @@
   function calcModifier(
     skillKey: string | undefined,
     multiplier: number,
+    bonus: number,
   ): string {
     const skill = getSkill(skillKey);
 
@@ -48,7 +50,7 @@
     const abilityInfo = getAbilityInfo(skill.ability);
     const ability = abilities[abilityInfo.shortKey];
     const abilityMod = getModifier(ability.value);
-    const total = abilityMod + proficiencyBonus * multiplier;
+    const total = abilityMod + proficiencyBonus * multiplier + bonus;
 
     return total >= 0 ? `+${total}` : `${total}`;
   }
@@ -82,7 +84,7 @@
               class="flex-grow"
             >
               <template #trailing>
-                {{ calcModifier(item.skill, item.multiplier) }}
+                {{ calcModifier(item.skill, item.multiplier, item.bonus) }}
               </template>
             </SelectSkills>
           </div>
@@ -97,7 +99,22 @@
         </UFormField>
 
         <UFormField
-          class="col-span-8"
+          class="col-span-2"
+          label="Бонус"
+          name="bonus"
+        >
+          <UInputNumber
+            v-model="item.bonus"
+            :precision="0"
+            placeholder="Введи бонус"
+            :min="-10"
+            :max="10"
+          >
+          </UInputNumber>
+        </UFormField>
+
+        <UFormField
+          class="col-span-6"
           label="Пояснение"
           name="text"
         >
