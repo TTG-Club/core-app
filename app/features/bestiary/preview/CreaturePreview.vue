@@ -47,6 +47,7 @@
     :is-loading
     :is-error
     width="100%"
+    @close="opened = false"
   >
     <CreatureBody
       v-if="creature"

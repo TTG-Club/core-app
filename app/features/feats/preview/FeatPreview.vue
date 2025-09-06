@@ -46,6 +46,7 @@
     :is-loading
     :is-error
     width="100%"
+    @close="opened = false"
   >
     <FeatBody
       v-if="feat"

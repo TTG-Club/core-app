@@ -49,6 +49,7 @@
     :is-loading
     :is-error
     width="100%"
+    @close="opened = false"
   >
     <MagicItemBody
       v-if="magicItem"
