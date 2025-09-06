@@ -1,15 +1,39 @@
 <script setup lang="ts">
   import { UiDrawer } from '~ui/drawer';
-  import type { GlossaryDetailResponse } from '~/shared/types';
+  import type { GlossaryDetailResponse, GlossaryCreate } from '~/shared/types';
   import { GlossaryBody } from '~glossary/body';
 
-  const opened = defineModel<boolean>({ required: true });
+  const opened = defineModel<boolean>('open', { required: true });
 
-  defineProps<{
-    glossary: GlossaryDetailResponse | undefined;
-    isLoading: boolean;
-    isError: boolean;
+  const { state } = defineProps<{
+    state: GlossaryCreate;
   }>();
+
+  const {
+    data: glossary,
+    status,
+    execute: loadPreview,
+    clear,
+  } = useAsyncData(
+    () =>
+      $fetch<GlossaryDetailResponse>(`/api/v2/glossary/preview`, {
+        method: 'post',
+        body: state,
+      }),
+    {
+      lazy: true,
+      server: false,
+      immediate: false,
+    },
+  );
+
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+
+  whenever(opened, () => {
+    clear();
+    loadPreview();
+  });
 </script>
 
 <template>

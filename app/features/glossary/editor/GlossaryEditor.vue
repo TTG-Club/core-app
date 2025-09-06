@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
 
-  import type { GlossaryCreate, GlossaryDetailResponse } from '~/shared/types';
+  import type { GlossaryCreate } from '~/shared/types';
   import { z } from 'zod/v4';
   import { GlossaryPreview } from '~glossary/preview';
 
@@ -37,17 +37,6 @@
   const { state, onSubmit, onError } = useWorkshopForm<GlossaryCreate>({
     actionUrl: '/api/v2/glossary',
     getInitialState,
-  });
-
-  const {
-    preview,
-    isPreviewShowed,
-    isPreviewLoading,
-    isPreviewError,
-    showPreview,
-  } = useWorkshopPreview<GlossaryCreate, GlossaryDetailResponse>({
-    actionUrl: '/api/v2/glossary',
-    state,
   });
 </script>
 
@@ -102,13 +91,14 @@
       </div>
     </UCard>
 
-    <EditorFormControls @preview="showPreview" />
+    <EditorFormControls>
+      <template #preview="{ opened, changeVisibility }">
+        <GlossaryPreview
+          :open="opened"
+          :state="state"
+          @update:open="changeVisibility"
+        />
+      </template>
+    </EditorFormControls>
   </UForm>
-
-  <GlossaryPreview
-    v-model="isPreviewShowed"
-    :glossary="preview"
-    :is-loading="isPreviewLoading"
-    :is-error="isPreviewError"
-  />
 </template>

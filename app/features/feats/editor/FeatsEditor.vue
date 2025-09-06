@@ -2,7 +2,7 @@
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectFeatCategory } from '~ui/select';
 
-  import type { FeatCreate, FeatDetailResponse } from '~/shared/types';
+  import type { FeatCreate } from '~/shared/types';
   import { FeatPreview } from '~feats/preview';
 
   const formRef = useTemplateRef('formRef');
@@ -34,17 +34,6 @@
   const { state, onSubmit, onError } = useWorkshopForm<FeatCreate>({
     actionUrl: '/api/v2/feats',
     getInitialState,
-  });
-
-  const {
-    preview,
-    isPreviewShowed,
-    isPreviewLoading,
-    isPreviewError,
-    showPreview,
-  } = useWorkshopPreview<FeatCreate, FeatDetailResponse>({
-    actionUrl: '/api/v2/feats',
-    state,
   });
 </script>
 
@@ -119,13 +108,14 @@
       </div>
     </UCard>
 
-    <EditorFormControls @preview="showPreview" />
+    <EditorFormControls>
+      <template #preview="{ opened, changeVisibility }">
+        <FeatPreview
+          :open="opened"
+          :state="state"
+          @update:open="changeVisibility"
+        />
+      </template>
+    </EditorFormControls>
   </UForm>
-
-  <FeatPreview
-    v-model="isPreviewShowed"
-    :feat="preview"
-    :is-loading="isPreviewLoading"
-    :is-error="isPreviewError"
-  />
 </template>

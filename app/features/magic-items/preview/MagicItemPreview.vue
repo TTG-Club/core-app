@@ -1,15 +1,42 @@
 <script setup lang="ts">
   import { UiDrawer } from '~ui/drawer';
   import { MagicItemBody } from '~magic-items/body';
-  import type { MagicItemDetailResponse } from '~magic-items/types';
+  import type {
+    MagicItemDetailResponse,
+    MagicItemCreate,
+  } from '~magic-items/types';
 
-  const opened = defineModel<boolean>({ required: true });
+  const opened = defineModel<boolean>('open', { required: true });
 
-  defineProps<{
-    magicItem: MagicItemDetailResponse | undefined;
-    isLoading: boolean;
-    isError: boolean;
+  const { state } = defineProps<{
+    state: MagicItemCreate;
   }>();
+
+  const {
+    data: magicItem,
+    status,
+    execute: loadPreview,
+    clear,
+  } = useAsyncData(
+    () =>
+      $fetch<MagicItemDetailResponse>(`/api/v2/magic-items/preview`, {
+        method: 'post',
+        body: state,
+      }),
+    {
+      lazy: true,
+      server: false,
+      immediate: false,
+    },
+  );
+
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+
+  whenever(opened, () => {
+    clear();
+    loadPreview();
+  });
 </script>
 
 <template>
