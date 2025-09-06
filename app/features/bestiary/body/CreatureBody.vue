@@ -158,7 +158,7 @@
                 </span>
               </p>
 
-              <ul>
+              <ul class="mt-2">
                 <li
                   v-for="action in creature.legendary.actions"
                   :key="action.name.eng"
