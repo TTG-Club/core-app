@@ -16,7 +16,7 @@
     SelectSpecies,
   } from '~ui/select';
 
-  import type { SpellCreate, SpellDetailResponse } from '~/shared/types';
+  import type { SpellCreate } from '~/shared/types';
   import { SpellPreview } from '~spells/preview';
 
   const formRef = useTemplateRef('formRef');
@@ -69,17 +69,6 @@
   const { state, onError, onSubmit } = useWorkshopForm<SpellCreate>({
     actionUrl: '/api/v2/spells',
     getInitialState,
-  });
-
-  const {
-    preview,
-    isPreviewShowed,
-    isPreviewLoading,
-    isPreviewError,
-    showPreview,
-  } = useWorkshopPreview<SpellCreate, SpellDetailResponse>({
-    actionUrl: '/api/v2/spells',
-    state,
   });
 </script>
 
@@ -257,13 +246,14 @@
       </div>
     </UCard>
 
-    <EditorFormControls @preview="showPreview" />
+    <EditorFormControls>
+      <template #preview="{ opened, changeVisibility }">
+        <SpellPreview
+          :open="opened"
+          :state="state"
+          @update:open="changeVisibility"
+        />
+      </template>
+    </EditorFormControls>
   </UForm>
-
-  <SpellPreview
-    v-model="isPreviewShowed"
-    :spell="preview"
-    :is-loading="isPreviewLoading"
-    :is-error="isPreviewError"
-  />
 </template>
