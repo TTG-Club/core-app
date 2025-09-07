@@ -140,7 +140,7 @@
             <template #default> Легендарные действия </template>
 
             <template #content>
-              <p>
+              <p class="mb-2">
                 <strong>Использования легендарных действий:</strong>
 
                 <span> &nbsp;{{ creature.legendary.count }} </span>
@@ -158,7 +158,7 @@
                 </span>
               </p>
 
-              <ul class="mt-2">
+              <ul>
                 <li
                   v-for="action in creature.legendary.actions"
                   :key="action.name.eng"
