@@ -140,7 +140,7 @@
             <template #default> Легендарные действия </template>
 
             <template #content>
-              <p>
+              <p class="mb-2">
                 <strong>Использования легендарных действий:</strong>
 
                 <span> &nbsp;{{ creature.legendary.count }} </span>

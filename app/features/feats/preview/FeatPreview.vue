@@ -1,15 +1,39 @@
 <script setup lang="ts">
   import { UiDrawer } from '~ui/drawer';
   import { FeatBody } from '~feats/body';
-  import type { FeatDetailResponse } from '~/shared/types';
+  import type { FeatDetailResponse, FeatCreate } from '~/shared/types';
 
-  const opened = defineModel<boolean>({ required: true });
+  const opened = defineModel<boolean>('open', { required: true });
 
-  defineProps<{
-    feat: FeatDetailResponse | undefined;
-    isLoading: boolean;
-    isError: boolean;
+  const { state } = defineProps<{
+    state: FeatCreate;
   }>();
+
+  const {
+    data: feat,
+    status,
+    execute: loadPreview,
+    clear,
+  } = useAsyncData(
+    () =>
+      $fetch<FeatDetailResponse>(`/api/v2/feats/preview`, {
+        method: 'post',
+        body: state,
+      }),
+    {
+      lazy: true,
+      server: false,
+      immediate: false,
+    },
+  );
+
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+
+  whenever(opened, () => {
+    clear();
+    loadPreview();
+  });
 </script>
 
 <template>
@@ -22,6 +46,7 @@
     :is-loading
     :is-error
     width="100%"
+    @close="opened = false"
   >
     <FeatBody
       v-if="feat"

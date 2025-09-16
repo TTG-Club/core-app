@@ -1,15 +1,42 @@
 <script setup lang="ts">
   import { UiDrawer } from '~ui/drawer';
   import { BackgroundBody } from '~backgrounds/body';
-  import type { BackgroundDetailResponse } from '~/shared/types';
+  import type {
+    BackgroundDetailResponse,
+    BackgroundCreate,
+  } from '~/shared/types';
 
-  const opened = defineModel<boolean>({ required: true });
+  const opened = defineModel<boolean>('open', { required: true });
 
-  defineProps<{
-    background: BackgroundDetailResponse | undefined;
-    isLoading: boolean;
-    isError: boolean;
+  const { state } = defineProps<{
+    state: BackgroundCreate;
   }>();
+
+  const {
+    data: background,
+    status,
+    execute: loadPreview,
+    clear,
+  } = useAsyncData(
+    () =>
+      $fetch<BackgroundDetailResponse>(`/api/v2/backgrounds/preview`, {
+        method: 'post',
+        body: state,
+      }),
+    {
+      lazy: true,
+      server: false,
+      immediate: false,
+    },
+  );
+
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+
+  whenever(opened, () => {
+    clear();
+    loadPreview();
+  });
 </script>
 
 <template>
@@ -22,6 +49,7 @@
     :is-loading
     :is-error
     width="100%"
+    @close="opened = false"
   >
     <BackgroundBody
       v-if="background"
