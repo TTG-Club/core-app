@@ -7,14 +7,12 @@
     required: true,
   });
 
-  watch(
-    () => model.value.type,
-    (newVal, oldVal) => {
-      if (newVal !== oldVal) {
-        model.value.clarification = undefined;
-      }
-    },
-  );
+  function updateType(value: string | undefined) {
+    model.value.type = value;
+
+    model.value.clarification =
+      model.value.type != value ? undefined : model.value.clarification;
+  }
 </script>
 
 <template>
@@ -28,7 +26,10 @@
       label="Категория"
       name="type"
     >
-      <SelectMagicItemCategory v-model="model.type" />
+      <SelectMagicItemCategory
+        :model-value="model.type"
+        @update:model-value="updateType"
+      />
     </UFormField>
 
     <UFormField
