@@ -7,19 +7,17 @@
     required: true,
   });
 
-  function updateType(value: string | string[] | undefined): void {
-    const next = normalize(value);
-
-    if (isEqual(model.value.values, next)) {
-      model.value.text = undefined;
-      model.value.values = next;
+  function updateType(values: string | string[] | undefined) {
+    if (!Array.isArray(values)) {
+      throw new TypeError('[CreatureType] Incompatible values');
     }
-  }
 
-  function normalize(value: string | string[] | undefined): string[] {
-    if (value == null) return [];
+    if (isEqual(model.value.values, values)) {
+      return;
+    }
 
-    return Array.isArray(value) ? value : [value];
+    model.value.text = undefined;
+    model.value.values = values;
   }
 </script>
 
