@@ -1,20 +1,26 @@
 <script setup lang="ts">
   import { SelectCreatureType } from '~ui/select';
-
+  import { isEqual } from 'lodash-es';
   import type { CreatureTypes } from '~bestiary/types';
 
   const model = defineModel<CreatureTypes>({
     required: true,
   });
 
-  watch(
-    () => model.value.values,
-    (newVal, oldVal) => {
-      if (newVal !== oldVal) {
-        model.value.text = undefined;
-      }
-    },
-  );
+  function updateType(value: string | string[] | undefined): void {
+    const next = normalize(value);
+
+    if (isEqual(model.value.values, next)) {
+      model.value.text = undefined;
+      model.value.values = next;
+    }
+  }
+
+  function normalize(value: string | string[] | undefined): string[] {
+    if (value == null) return [];
+
+    return Array.isArray(value) ? value : [value];
+  }
 </script>
 
 <template>
@@ -31,6 +37,7 @@
       <SelectCreatureType
         v-model="model.values"
         multiple
+        @update:model-value="updateType"
       />
     </UFormField>
 
