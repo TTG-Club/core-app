@@ -14,15 +14,6 @@
     description: 'Бестиарий по D&D 2024 редакции',
   });
 
-  definePageMeta({
-    alert: {
-      color: 'info',
-      icon: 'i-fluent-translate-auto-16-regular',
-      description:
-        'В данный момент раздел находится в стадии перевода и будет пополняться по мере выхода нового материала',
-    },
-  });
-
   const search = ref<string>();
 
   const {
