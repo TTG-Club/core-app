@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
-  import { SelectFeatCategory } from '~ui/select';
+  import { SelectAbilities, SelectFeatCategory } from '~ui/select';
 
   import type { FeatCreate } from '~/shared/types';
   import { FeatPreview } from '~feats/preview';
@@ -27,6 +27,7 @@
       description: '',
       category: undefined,
       repeatability: false,
+      abilities: [],
       tags: [],
     };
   }
@@ -83,6 +84,18 @@
           <UCheckbox
             v-model="state.repeatability"
             label="Можно брать несколько раз"
+          />
+        </UFormField>
+
+        <UFormField
+          class="col-span-6"
+          label="Улучшаемые характеристики"
+          name="abilities"
+        >
+          <SelectAbilities
+            v-model="state.abilities"
+            :limit="3"
+            multiple
           />
         </UFormField>
       </div>
