@@ -2,6 +2,7 @@
   import { COMPONENT_TOOLTIP_TEXT } from '../model';
 
   import { MarkupRender } from '~ui/markup';
+  import { InfoTooltip } from '~ui/tooltip';
 
   defineProps<{
     abilityScores: string;
@@ -15,33 +16,45 @@
 <template>
   <div :class="$style.stats">
     <div :class="$style.item">
-      <UTooltip :text="COMPONENT_TOOLTIP_TEXT.abilities">
-        <div :class="$style.name">Характеристики:</div>
-      </UTooltip>
+      <InfoTooltip
+        :class="$style.name"
+        :text="COMPONENT_TOOLTIP_TEXT.abilities"
+      >
+        Характеристики
+      </InfoTooltip>
 
       <span>{{ abilityScores }}</span>
     </div>
 
     <div :class="$style.item">
-      <UTooltip :text="COMPONENT_TOOLTIP_TEXT.feat">
-        <span :class="$style.name">Черта:</span>
-      </UTooltip>
+      <InfoTooltip
+        :class="$style.name"
+        :text="COMPONENT_TOOLTIP_TEXT.feat"
+      >
+        Черта
+      </InfoTooltip>
 
       <span>{{ feat }}</span>
     </div>
 
     <div :class="$style.item">
-      <UTooltip :text="COMPONENT_TOOLTIP_TEXT.skills">
-        <span :class="$style.name">Навыки:</span>
-      </UTooltip>
+      <InfoTooltip
+        :class="$style.name"
+        :text="COMPONENT_TOOLTIP_TEXT.skills"
+      >
+        Навыки
+      </InfoTooltip>
 
       <span>{{ skillProficiencies }}</span>
     </div>
 
     <div :class="$style.item">
-      <UTooltip :text="COMPONENT_TOOLTIP_TEXT.tool">
-        <span :class="$style.name">Владение инструментами:</span>
-      </UTooltip>
+      <InfoTooltip
+        :class="$style.name"
+        :text="COMPONENT_TOOLTIP_TEXT.tool"
+      >
+        Владение инструментами
+      </InfoTooltip>
 
       <span>{{ toolProficiency }}</span>
     </div>
