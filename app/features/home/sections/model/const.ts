@@ -35,9 +35,8 @@ export const CARD_LINKS: Array<{
   },
   {
     name: 'Снаряжение',
-    url: '/',
+    url: '/items',
     img: '/s3/home/section-link/items.webp',
-    disabled: true,
   },
   {
     name: 'Магические предметы',
