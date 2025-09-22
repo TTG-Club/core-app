@@ -5,6 +5,38 @@ export enum SimpleText {
 
 export enum ComplexEl {
   List = 'list',
+  Table = 'table',
+}
+
+export type TableAlign = 'left' | 'center' | 'right';
+
+export interface TableCell {
+  // контент ячейки: строка (с @-маркерами) или узлы; допускаем "батчи" для одного td/th
+  content: Array<RenderNode | string | Array<RenderNode | string>>;
+  header?: boolean; // если true — <th>, иначе <td>
+  align?: TableAlign; // приоритетнее, чем выравнивание строки/таблицы
+  colSpan?: number;
+  rowSpan?: number;
+}
+
+// Строка
+export interface TableRow {
+  cells: TableCell[];
+  header?: boolean; // вся строка — заголовок (<thead>), можно не использовать, если задаёшь header на ячейках
+  align?: TableAlign; // дефолтное выравнивание для ячеек строки
+}
+
+// Таблица
+export interface TableNode {
+  type: ComplexEl.Table;
+  attrs?: {
+    colAlign?: TableAlign[]; // выравнивание по колонкам (по индексу)
+    dense?: boolean; // компактные отступы
+    bordered?: boolean; // границы
+    striped?: boolean; // зебра
+    fullWidth?: boolean; // на всю ширину
+  };
+  rows: TableRow[];
 }
 
 export type ListType = 'ordered' | 'unordered';
@@ -85,7 +117,8 @@ export type RenderNode =
   | TextNode
   | RichNode
   | SectionLinkNode
-  | ListNode;
+  | ListNode
+  | TableNode;
 
 export interface SimpleTextNode {
   type: SimpleText.Text;

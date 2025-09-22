@@ -17,12 +17,14 @@ import {
   isSimpleTextNode,
   isTextNode,
   isListNode,
+  isTableNode,
 } from '../utils';
 
 import { renderLink } from './renderLink';
 import { renderSectionLink } from './renderSectionLink';
 import { parse } from '../parser';
 import { renderListNode } from './renderList';
+import { renderTableNode } from './renderTableNodes';
 
 const TextMarkerTag: Record<TextMarker, string> = {
   [TextMarker.Bold]: 'b',
@@ -85,6 +87,7 @@ function renderNode(node: RenderNode): VNode {
   if (isSectionNode(node)) return renderSectionLinkNode(node);
   if (isEmptyNode(node)) return renderEmptyNode(node);
   if (isListNode(node)) return renderListNode(node, { renderNode, toNodes });
+  if (isTableNode(node)) return renderTableNode(node, { renderNode, toNodes });
 
   throw new Error('[Markup] Unknown node');
 }

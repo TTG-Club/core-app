@@ -15,6 +15,7 @@ import type {
   RichNode,
   SectionLinkNode,
   ListNode,
+  TableNode,
 } from '../types';
 
 export function isSimpleTextNode(node: RenderNode): node is SimpleTextNode {
@@ -39,4 +40,8 @@ export function isSectionNode(node: RenderNode): node is SectionLinkNode {
 
 export function isListNode(node: RenderNode): node is ListNode {
   return (node as any)?.type === ComplexEl.List;
+}
+
+export function isTableNode(node: RenderNode): node is TableNode {
+  return (node as any)?.type === ComplexEl.Table;
 }
