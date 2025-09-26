@@ -56,7 +56,7 @@
 
 <template>
   <UDrawer
-    :handle="isTabletOrGreater && !notDetail"
+    :handle="!notDetail"
     :class="notDetail ? 'w-xl' : 'w-2xl'"
     :dismissible="isDismissible"
     :inset="isTabletOrGreater"

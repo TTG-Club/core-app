@@ -80,9 +80,11 @@
 </script>
 
 <template>
-  <USeparator>
-    <span class="font-bold text-secondary">Дистанция</span>
-  </USeparator>
+  <div class="col-span-full mt-4 flex gap-4">
+    <p class="text-lg">Дистанция</p>
+
+    <USeparator />
+  </div>
 
   <UForm
     v-for="(range, index) in ranges"

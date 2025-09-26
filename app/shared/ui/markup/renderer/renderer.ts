@@ -3,7 +3,7 @@ import { createTextVNode } from 'vue';
 import { TextMarker, EmptyMarker, RichMarker, SectionMarker } from '../types';
 import type {
   TextNode,
-  MarkerNode,
+  RenderNode,
   RichNode,
   EmptyNode,
   RichNodes,
@@ -16,10 +16,13 @@ import {
   isRichNode,
   isSimpleTextNode,
   isTextNode,
+  isListNode,
 } from '../utils';
 
 import { renderLink } from './renderLink';
 import { renderSectionLink } from './renderSectionLink';
+import { parse } from '../parser';
+import { renderListNode } from './renderList';
 
 const TextMarkerTag: Record<TextMarker, string> = {
   [TextMarker.Bold]: 'b',
@@ -58,37 +61,32 @@ const FEATURE_NODE_RENDERERS: {
   [SectionMarker.Glossary]: renderSectionLink,
 };
 
-// Функция для рендера контента — принимает массив узлов
-export function render(content: MarkerNode[]) {
-  return content.map((node) => renderNode(node));
+function toNodes(input: RenderNode | string): RenderNode[] {
+  if (typeof input === 'string') {
+    return parse(input);
+  }
+
+  return [input];
 }
 
-function renderNode(node: MarkerNode): VNode {
-  if (!node) {
-    throw new Error('[Markup] Node is not defined');
-  }
+// Функция для рендера контента — принимает массив узлов
+export function render(content: Array<RenderNode | string>) {
+  const nodes: RenderNode[] = content.flatMap(toNodes);
 
-  if (isSimpleTextNode(node)) {
-    return createTextVNode(node.text);
-  }
+  return nodes.map((node) => renderNode(node));
+}
 
-  if (isTextNode(node)) {
-    return renderTextNode(node);
-  }
+function renderNode(node: RenderNode): VNode {
+  if (!node) throw new Error('[Markup] Node is not defined');
 
-  if (isRichNode(node)) {
-    return renderRichNode(node);
-  }
+  if (isSimpleTextNode(node)) return createTextVNode(node.text);
+  if (isTextNode(node)) return renderTextNode(node);
+  if (isRichNode(node)) return renderRichNode(node);
+  if (isSectionNode(node)) return renderSectionLinkNode(node);
+  if (isEmptyNode(node)) return renderEmptyNode(node);
+  if (isListNode(node)) return renderListNode(node, { renderNode, toNodes });
 
-  if (isSectionNode(node)) {
-    return renderSectionLinkNode(node);
-  }
-
-  if (isEmptyNode(node)) {
-    return renderEmptyNode(node);
-  }
-
-  throw new Error(`[Markup] Unknown node`);
+  throw new Error('[Markup] Unknown node');
 }
 
 function renderTextNode(node: TextNode): VNode {

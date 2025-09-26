@@ -31,7 +31,15 @@
   watchDebounced(
     localSearch,
     (value) => {
-      search.value = value;
+      if (value && value.length >= 2) {
+        search.value = value;
+
+        return;
+      }
+
+      if (!value) {
+        search.value = undefined;
+      }
     },
     {
       debounce: 700,
@@ -77,7 +85,21 @@
       v-model="localSearch"
       placeholder="Введите текст..."
       allow-clear
-    />
+      :ui="{ trailing: 'pe-0.5' }"
+    >
+      <template
+        v-if="localSearch"
+        #trailing
+      >
+        <UButton
+          icon="i-ttg-x"
+          variant="link"
+          color="neutral"
+          size="sm"
+          @click.left.exact.prevent="localSearch = ''"
+        />
+      </template>
+    </UInput>
 
     <div class="flex gap-2">
       <UChip

@@ -1,12 +1,17 @@
 <script setup lang="ts">
-  import { SpeciesLinkPreview, SpeciesFeatures, SpeciesSizes } from './ui';
+  import {
+    SpeciesLinkPreview,
+    SpeciesFeatures,
+    SpeciesSizes,
+    SpeciesSpeed,
+  } from './ui';
 
-  import { SpeciesSpeed } from '~species/editor/ui';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectCreatureType, SelectSpecies } from '~ui/select';
   import { UploadImage, UploadGallery } from '~ui/upload';
 
   import type { SpeciesCreate } from '~/shared/types';
+  import { SpeciesPreview } from '~species/preview';
 
   const formRef = useTemplateRef('formRef');
 
@@ -51,19 +56,17 @@
     };
   }
 
-  const { state, onError, onSubmit } = await useWorkshopForm<SpeciesCreate>(
-    computed(() => ({
-      actionUrl: '/api/v2/species',
-      getInitialState,
-    })),
-  );
+  const { state, onError, onSubmit } = useWorkshopForm<SpeciesCreate>({
+    actionUrl: '/api/v2/species',
+    getInitialState,
+  });
 </script>
 
 <template>
   <UForm
     ref="formRef"
     :state
-    class="grid grid-cols-24 gap-4"
+    class="grid gap-8"
     @submit="onSubmit"
     @error="onError"
   >
@@ -72,121 +75,145 @@
       section="species"
     />
 
-    <UFormField
-      class="col-span-full"
-      label="Описание"
-      name="description"
-    >
-      <UTextarea
-        v-model="state.description"
-        placeholder="Введи описание"
-        :rows="8"
-      />
-    </UFormField>
+    <UCard variant="subtle">
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">Описание</h2>
+      </template>
 
-    <USeparator>
-      <span class="font-bold text-secondary">Характеристики</span>
-    </USeparator>
-
-    <UFormField
-      class="col-span-12"
-      label="Основной вид"
-      help="Необходимо указать, если создаешь происхождение вида"
-      name="parent"
-    >
-      <SelectSpecies v-model="state.parent" />
-    </UFormField>
-
-    <UFormField
-      class="col-span-12"
-      label="Тип"
-      name="properties.type"
-    >
-      <SelectCreatureType v-model="state.properties.type" />
-    </UFormField>
-
-    <SpeciesSizes v-model="state.properties.sizes" />
-
-    <SpeciesSpeed v-model="state.properties.speed" />
-
-    <SpeciesFeatures v-model="state.features" />
-
-    <USeparator>
-      <span class="font-bold text-secondary">Изображения</span>
-    </USeparator>
-
-    <UFormField
-      class="col-span-8"
-      label="Основное"
-      help="Эта картинка отображается при просмотре страницы вида"
-      name="image"
-    >
-      <UploadImage
-        v-model="state.image"
-        section="species"
-        max-size="1024"
-      >
-        <template #preview>
-          <NuxtImg
-            v-slot="{ src, isLoaded, imgAttrs }"
-            :key="state.image"
-            :src="state.image"
-            custom
-          >
-            <!-- Show the actual image when loaded -->
-            <img
-              v-if="isLoaded"
-              v-bind="imgAttrs"
-              class="w-full rounded-lg object-contain"
-              :src="src"
-              :alt="state.name.rus"
-            />
-
-            <!-- Show a placeholder while loading -->
-            <img
-              v-else
-              class="w-full rounded-lg object-contain"
-              src="/img/no-img.webp"
-              alt="no image"
-            />
-          </NuxtImg>
-        </template>
-      </UploadImage>
-    </UFormField>
-
-    <UFormField
-      class="col-span-8"
-      label="Для ссылки"
-      help="Эта картинка отображается на странице со списком видов"
-      name="linkImage"
-    >
-      <UploadImage
-        v-model="state.linkImage"
-        section="species"
-        max-size="256"
-      >
-        <template #preview>
-          <SpeciesLinkPreview
-            :name="state.name"
-            :url="state.url"
-            :image="state.linkImage"
-            :source="state.source"
+      <div class="grid grid-cols-24 gap-4">
+        <UFormField
+          class="col-span-full"
+          label="Описание"
+          name="description"
+        >
+          <UTextarea
+            v-model="state.description"
+            placeholder="Введи описание"
+            :rows="8"
           />
-        </template>
-      </UploadImage>
-    </UFormField>
+        </UFormField>
+      </div>
+    </UCard>
 
-    <UFormField
-      class="col-span-8"
-      label="Галерея"
-      name="gallery"
-    >
-      <UploadGallery
-        v-model="state.gallery"
-        section="species"
-      />
-    </UFormField>
+    <UCard variant="subtle">
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">Характеристики</h2>
+      </template>
 
-    <EditorFormControls />
+      <div class="grid grid-cols-24 gap-4">
+        <UFormField
+          class="col-span-12"
+          label="Основной вид"
+          help="Необходимо указать, если создаешь происхождение вида"
+          name="parent"
+        >
+          <SelectSpecies v-model="state.parent" />
+        </UFormField>
+
+        <UFormField
+          class="col-span-12"
+          label="Тип"
+          name="properties.type"
+        >
+          <SelectCreatureType v-model="state.properties.type" />
+        </UFormField>
+
+        <SpeciesSizes v-model="state.properties.sizes" />
+
+        <SpeciesSpeed v-model="state.properties.speed" />
+
+        <SpeciesFeatures v-model="state.features" />
+      </div>
+    </UCard>
+
+    <UCard variant="subtle">
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">Изображения</h2>
+      </template>
+
+      <div class="grid grid-cols-24 gap-4">
+        <UFormField
+          class="col-span-8"
+          label="Основное"
+          help="Эта картинка отображается при просмотре страницы вида"
+          name="image"
+        >
+          <UploadImage
+            v-model="state.image"
+            section="species"
+            max-size="1024"
+          >
+            <template #preview>
+              <NuxtImg
+                v-slot="{ src, isLoaded, imgAttrs }"
+                :key="state.image"
+                :src="state.image"
+                custom
+              >
+                <!-- Show the actual image when loaded -->
+                <img
+                  v-if="isLoaded"
+                  v-bind="imgAttrs"
+                  class="w-full rounded-lg object-contain"
+                  :src="src"
+                  :alt="state.name.rus"
+                />
+
+                <!-- Show a placeholder while loading -->
+                <img
+                  v-else
+                  class="w-full rounded-lg object-contain"
+                  src="/img/no-img.webp"
+                  alt="no image"
+                />
+              </NuxtImg>
+            </template>
+          </UploadImage>
+        </UFormField>
+
+        <UFormField
+          class="col-span-8"
+          label="Для ссылки"
+          help="Эта картинка отображается на странице со списком видов"
+          name="linkImage"
+        >
+          <UploadImage
+            v-model="state.linkImage"
+            section="species"
+            max-size="256"
+          >
+            <template #preview>
+              <SpeciesLinkPreview
+                :name="state.name"
+                :url="state.url"
+                :image="state.linkImage"
+                :source="state.source"
+              />
+            </template>
+          </UploadImage>
+        </UFormField>
+
+        <UFormField
+          class="col-span-8"
+          label="Галерея"
+          name="gallery"
+        >
+          <UploadGallery
+            v-model="state.gallery"
+            section="species"
+          />
+        </UFormField>
+      </div>
+    </UCard>
+
+    <EditorFormControls>
+      <template #preview="{ opened, changeVisibility }">
+        <SpeciesPreview
+          :open="opened"
+          :state="state"
+          @update:open="changeVisibility"
+        />
+      </template>
+    </EditorFormControls>
   </UForm>
 </template>

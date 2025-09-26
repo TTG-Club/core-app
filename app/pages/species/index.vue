@@ -13,7 +13,7 @@
     description: 'Виды и происхождения персонажей по D&D 2024 редакции',
   });
 
-  const search = ref<string>('');
+  const search = ref<string>();
 
   const {
     filter,
@@ -37,8 +37,7 @@
       $fetch<Array<SpeciesLinkResponse>>('/api/v2/species/search', {
         method: 'post',
         params: {
-          query:
-            search.value && search.value.length >= 3 ? search.value : undefined,
+          query: search.value,
         },
         body: searchBody.value,
       }),

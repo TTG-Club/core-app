@@ -29,115 +29,122 @@
 </script>
 
 <template>
-  <USeparator>
-    <span class="font-bold text-secondary"> Легендарные действия </span>
-  </USeparator>
-
-  <UForm
-    class="col-span-full grid grid-cols-24 gap-4"
-    attach
-    :state="model"
+  <UCard
+    variant="subtle"
+    class="col-span-full"
   >
-    <UFormField
-      class="col-span-12"
-      label="Количество легендарных действий"
-      name="legendary.count"
-    >
-      <UInputNumber
-        v-model:value="model.count"
-        placeholder="Введи количество"
-        :min="1"
-      />
-    </UFormField>
+    <template #header>
+      <h2 class="truncate text-base text-highlighted">Легендарные действия</h2>
+    </template>
 
-    <UFormField
-      class="col-span-12"
-      label="Количество легендарных действий в логове"
-      name="legendary.inLair"
-    >
-      <UInputNumber
-        v-model:value="model.inLair"
-        placeholder="Введи количество"
-        :min="1"
-      />
-    </UFormField>
-
-    <UFormField
-      class="col-span-full"
-      label="Описание легендарных действий"
-      name="legendary.description"
-    >
-      <UTextarea
-        v-model="model.description"
-        :maxrows="6"
-        :rows="2"
-        placeholder="Введите описание (необязательно)"
-      />
-    </UFormField>
-  </UForm>
-
-  <template
-    v-for="(action, actionIndex) in model.actions"
-    :key="actionIndex"
-  >
-    <UForm
-      class="col-span-full grid grid-cols-24 gap-4"
-      attach
-      :state="action"
-    >
-      <UFormField
-        class="col-span-8"
-        label="Название"
-        name="name.rus"
+    <div class="grid gap-6">
+      <UForm
+        class="col-span-full grid grid-cols-24 gap-4"
+        attach
+        :state="model"
       >
-        <UInput
-          v-model="action.name.rus"
-          placeholder="Введи название"
-        />
-      </UFormField>
+        <div class="col-span-7 flex flex-col gap-6">
+          <UFormField
+            label="Количество легендарных действий"
+            name="count"
+          >
+            <UInputNumber
+              v-model="model.count"
+              placeholder="Введи количество"
+              :min="1"
+            />
+          </UFormField>
 
-      <UFormField
-        class="col-span-8"
-        label="Название (англ.)"
-        name="name.eng"
+          <UFormField
+            label="Количество легендарных действий в логове"
+            name="inLair"
+          >
+            <UInputNumber
+              v-model="model.inLair"
+              placeholder="Введи количество"
+              :min="1"
+            />
+          </UFormField>
+        </div>
+
+        <UFormField
+          class="col-span-17"
+          label="Описание легендарных действий"
+          name="description"
+        >
+          <UTextarea
+            v-model="model.description"
+            :maxrows="0"
+            :rows="5"
+            placeholder="Введите описание (необязательно)"
+          />
+        </UFormField>
+      </UForm>
+
+      <template
+        v-for="(action, actionIndex) in model.actions"
+        :key="actionIndex"
       >
-        <UInput
-          v-model="action.name.eng"
-          placeholder="Введи английское название"
-        />
-      </UFormField>
+        <UForm
+          class="col-span-full grid grid-cols-24 gap-4"
+          attach
+          :state="action"
+        >
+          <UFormField
+            class="col-span-8"
+            label="Название"
+            name="name.rus"
+          >
+            <UInput
+              v-model="action.name.rus"
+              placeholder="Введи название"
+            />
+          </UFormField>
 
-      <EditorArrayControls
-        v-model="model.actions"
-        :item="action"
-        :empty-object="getEmpty()"
-        :index="actionIndex"
-        cols="8"
-        only-remove
-      />
+          <UFormField
+            class="col-span-8"
+            label="Название (англ.)"
+            name="name.eng"
+          >
+            <UInput
+              v-model="action.name.eng"
+              placeholder="Введи английское название"
+            />
+          </UFormField>
 
-      <UFormField
-        class="col-span-24"
-        label="Описание"
-        name="description"
+          <EditorArrayControls
+            v-model="model.actions"
+            :item="action"
+            :empty-object="getEmpty()"
+            :index="actionIndex"
+            cols="8"
+            only-remove
+          />
+
+          <UFormField
+            class="col-span-24"
+            label="Описание"
+            name="description"
+          >
+            <UTextarea
+              v-model="action.description"
+              :rows="3"
+              placeholder="Введи описание"
+            />
+          </UFormField>
+        </UForm>
+
+        <USeparator v-if="!isLastAction(actionIndex)" />
+      </template>
+
+      <div
+        v-if="!model.actions.length"
+        class="col-span-full flex justify-center"
       >
-        <UTextarea
-          v-model="action.description"
-          :rows="3"
-          placeholder="Введи описание"
-        />
-      </UFormField>
-    </UForm>
-
-    <USeparator v-if="!isLastAction(actionIndex)" />
-  </template>
-
-  <div
-    v-if="!model.actions.length"
-    class="col-span-full flex justify-center"
-  >
-    <UButton @click.left.exact.prevent="addAction(0)">
-      Добавить первое
-    </UButton>
-  </div>
+        <UButton @click.left.exact.prevent="addAction(0)">
+          Добавить первое
+        </UButton>
+      </div>
+    </div>
+  </UCard>
 </template>

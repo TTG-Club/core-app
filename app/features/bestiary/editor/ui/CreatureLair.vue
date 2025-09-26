@@ -29,121 +29,128 @@
 </script>
 
 <template>
-  <USeparator>
-    <span class="font-bold text-secondary"> Логово </span>
-  </USeparator>
-
-  <UForm
-    class="col-span-full grid grid-cols-24 gap-4"
-    attach
-    :state="model"
+  <UCard
+    variant="subtle"
+    class="col-span-full"
   >
-    <UFormField
-      class="col-span-full"
-      label="Название логова"
-      name="lair.name"
-    >
-      <UInput
-        v-model="model.name"
-        placeholder="Название логова (необязательно)"
-      />
-    </UFormField>
+    <template #header>
+      <h2 class="truncate text-base text-highlighted">Логово</h2>
+    </template>
 
-    <UFormField
-      class="col-span-full"
-      label="Описание логова"
-      name="lair.description"
-    >
-      <UTextarea
-        v-model="model.description"
-        :maxrows="6"
-        :rows="2"
-        placeholder="Введите описание (необязательно)"
-      />
-    </UFormField>
-  </UForm>
-
-  <template
-    v-for="(effect, effectIndex) in model.effects"
-    :key="effectIndex"
-  >
-    <UForm
-      class="col-span-full grid grid-cols-24 gap-4"
-      attach
-      :state="effect"
-    >
-      <UFormField
-        class="col-span-8"
-        label="Название"
-        name="name.rus"
+    <div class="grid gap-6">
+      <UForm
+        class="col-span-full grid grid-cols-24 gap-4"
+        attach
+        :state="model"
       >
-        <UInput
-          v-model="effect.name.rus"
-          placeholder="Введи название"
-        />
-      </UFormField>
+        <UFormField
+          class="col-span-full"
+          label="Название логова"
+          name="lair.name"
+        >
+          <UInput
+            v-model="model.name"
+            placeholder="Название логова (необязательно)"
+          />
+        </UFormField>
 
-      <UFormField
-        class="col-span-8"
-        label="Название (англ.)"
-        name="name.eng"
+        <UFormField
+          class="col-span-full"
+          label="Описание логова"
+          name="lair.description"
+        >
+          <UTextarea
+            v-model="model.description"
+            :maxrows="6"
+            :rows="2"
+            placeholder="Введите описание (необязательно)"
+          />
+        </UFormField>
+      </UForm>
+
+      <template
+        v-for="(effect, effectIndex) in model.effects"
+        :key="effectIndex"
       >
-        <UInput
-          v-model="effect.name.eng"
-          placeholder="Введи английское название"
-        />
-      </UFormField>
+        <UForm
+          class="col-span-full grid grid-cols-24 gap-4"
+          attach
+          :state="effect"
+        >
+          <UFormField
+            class="col-span-8"
+            label="Название"
+            name="name.rus"
+          >
+            <UInput
+              v-model="effect.name.rus"
+              placeholder="Введи название"
+            />
+          </UFormField>
 
-      <EditorArrayControls
-        v-model="model.effects"
-        :item="effect"
-        :empty-object="getEmpty()"
-        :index="effectIndex"
-        cols="8"
-        only-remove
-      />
+          <UFormField
+            class="col-span-8"
+            label="Название (англ.)"
+            name="name.eng"
+          >
+            <UInput
+              v-model="effect.name.eng"
+              placeholder="Введи английское название"
+            />
+          </UFormField>
 
-      <UFormField
-        class="col-span-24"
-        label="Описание"
-        name="description"
+          <EditorArrayControls
+            v-model="model.effects"
+            :item="effect"
+            :empty-object="getEmpty()"
+            :index="effectIndex"
+            cols="8"
+            only-remove
+          />
+
+          <UFormField
+            class="col-span-24"
+            label="Описание"
+            name="description"
+          >
+            <UTextarea
+              v-model="effect.description"
+              :rows="3"
+              placeholder="Введи описание"
+            />
+          </UFormField>
+        </UForm>
+
+        <USeparator v-if="!isLastAction(effectIndex)" />
+      </template>
+
+      <div
+        v-if="!model.effects.length"
+        class="col-span-full flex justify-center"
       >
-        <UTextarea
-          v-model="effect.description"
-          :rows="3"
-          placeholder="Введи описание"
-        />
-      </UFormField>
-    </UForm>
+        <UButton @click.left.exact.prevent="addAction(0)">
+          Добавить первый
+        </UButton>
+      </div>
 
-    <USeparator v-if="!isLastAction(effectIndex)" />
-  </template>
-
-  <div
-    v-if="!model.effects.length"
-    class="col-span-full flex justify-center"
-  >
-    <UButton @click.left.exact.prevent="addAction(0)">
-      Добавить первый
-    </UButton>
-  </div>
-
-  <UForm
-    class="col-span-full grid grid-cols-24 gap-4"
-    attach
-    :state="model"
-  >
-    <UFormField
-      class="col-span-full"
-      label="Описание окончания действия логова"
-      name="lair.ending"
-    >
-      <UTextarea
-        v-model="model.ending"
-        :maxrows="6"
-        :rows="2"
-        placeholder="Описание окончания действия логова (необязательно)"
-      />
-    </UFormField>
-  </UForm>
+      <UForm
+        class="col-span-full grid grid-cols-24 gap-4"
+        attach
+        :state="model"
+      >
+        <UFormField
+          class="col-span-full"
+          label="Описание окончания действия логова"
+          name="lair.ending"
+        >
+          <UTextarea
+            v-model="model.ending"
+            :maxrows="6"
+            :rows="2"
+            placeholder="Описание окончания действия логова (необязательно)"
+          />
+        </UFormField>
+      </UForm>
+    </div>
+  </UCard>
 </template>

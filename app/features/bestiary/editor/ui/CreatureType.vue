@@ -1,42 +1,47 @@
 <script setup lang="ts">
   import { SelectCreatureType } from '~ui/select';
-
+  import { isEqual } from 'lodash-es';
   import type { CreatureTypes } from '~bestiary/types';
 
   const model = defineModel<CreatureTypes>({
     required: true,
   });
 
-  watch(
-    () => model.value.values,
-    (newVal, oldVal) => {
-      if (newVal !== oldVal) {
-        model.value.text = undefined;
-      }
-    },
-  );
+  function updateType(values: string | string[] | undefined) {
+    if (!Array.isArray(values)) {
+      throw new TypeError('[CreatureType] Incompatible values');
+    }
+
+    if (isEqual(model.value.values, values)) {
+      return;
+    }
+
+    model.value.text = undefined;
+    model.value.values = values;
+  }
 </script>
 
 <template>
   <UForm
-    class="col-span-full grid grid-cols-24 gap-4"
+    class="col-span-16 grid grid-cols-2 gap-4"
     attach
     :state="model"
   >
     <UFormField
       label="Типы существа"
-      class="col-span-8"
+      class="col-span-1"
       name="values"
     >
       <SelectCreatureType
         v-model="model.values"
         multiple
+        @update:model-value="updateType"
       />
     </UFormField>
 
     <UFormField
-      class="col-span-16"
       label="Уточнение типа"
+      class="col-span-1"
       name="text"
     >
       <UInput
