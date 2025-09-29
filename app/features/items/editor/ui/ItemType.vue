@@ -19,10 +19,6 @@
 
     refresh();
   };
-
-  watch(model, () => {
-    context.onFieldChange();
-  });
 </script>
 
 <template>
