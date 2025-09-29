@@ -69,7 +69,7 @@
         <input
           v-model="state.category"
           type="hidden"
-          name="['category']"
+          name="category"
         />
       </UFormField>
 
@@ -87,10 +87,10 @@
       <UFormField
         label="Количество монет"
         tooltip="Введите количество монет"
-        name="['cost']"
+        name="cost"
       >
         <UInput
-          v-model:value="state.cost"
+          v-model="state.cost"
           :precision="0"
           placeholder="Введи количество монет"
           min="0"
@@ -110,7 +110,7 @@
         name="weight"
       >
         <UInput
-          v-model:value="state.weight"
+          v-model="state.weight"
           placeholder="Введи вес"
         />
       </UFormField>
@@ -126,7 +126,7 @@
         name="description"
       >
         <UTextarea
-          v-model:value="state.description"
+          v-model="state.description"
           :rows="8"
           placeholder="Введи описание"
           allow-clear

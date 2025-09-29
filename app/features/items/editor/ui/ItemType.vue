@@ -23,8 +23,8 @@
 
 <template>
   <USelect
-    v-model:value="model"
-    :mode="multiple ? 'multiple' : undefined"
+    v-model="model"
+    :multiple="multiple"
     :loading="status === 'pending'"
     :items="data || []"
     placeholder="Выбери типы"
