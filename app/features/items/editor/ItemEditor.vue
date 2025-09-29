@@ -73,10 +73,16 @@
         />
       </UFormField>
 
-      <ItemType
-        v-model="state.types"
-        multiple
-      />
+      <UFormField
+        label="Типы предмета"
+        tooltip="Введите типы"
+        name="types"
+      >
+        <ItemType
+          v-model="state.types"
+          multiple
+        />
+      </UFormField>
 
       <UFormField
         label="Количество монет"
@@ -91,7 +97,13 @@
         />
       </UFormField>
 
-      <CoinsType v-model="state.coin" />
+      <UFormField
+        label="Номинал монет"
+        tooltip="Выберите номинал"
+        name="coin"
+      >
+        <CoinsType v-model="state.coin" />
+      </UFormField>
 
       <UFormField
         label="Вес"
@@ -102,10 +114,12 @@
           placeholder="Введи вес"
         />
       </UFormField>
+    </UCard>
 
-      <USeparator>
-        <span class="font-bold text-secondary">Описание</span>
-      </USeparator>
+    <UCard variant="subtle">
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">Описание</h2>
+      </template>
 
       <UFormField
         label="Описание"

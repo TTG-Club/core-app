@@ -22,19 +22,13 @@
 </script>
 
 <template>
-  <UFormField
-    label="Номинал монет"
-    tooltip="Выберите номинал"
-    name="coin"
-  >
-    <USelect
-      v-model:value="model"
-      :loading="status === 'pending'"
-      :options="data || []"
-      :disabled
-      placeholder="Выбери типы"
-      show-search
-      @dropdown-visible-change="handleDropdownOpening"
-    />
-  </UFormField>
+  <USelect
+    v-model="model"
+    :loading="status === 'pending'"
+    :items="data || []"
+    :disabled
+    placeholder="Выбери тип монет"
+    show-search
+    @dropdown-visible-change="handleDropdownOpening"
+  />
 </template>
