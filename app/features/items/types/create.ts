@@ -7,5 +7,5 @@ export interface ItemCreate extends EditorBaseInfoState {
   cost: number | undefined; // стоимость
   coin: string | undefined; // номинал монеты в стоимости
   weight: string | undefined; // вес
-  image: string;
+  image: string | undefined;
 }
