@@ -22,20 +22,14 @@
 </script>
 
 <template>
-  <UFormField
-    label="Типы предмета"
-    tooltip="Введите типы"
-    name="types"
-  >
-    <USelect
-      v-model:value="model"
-      :mode="multiple ? 'multiple' : undefined"
-      :loading="status === 'pending'"
-      :options="data || []"
-      placeholder="Выбери типы"
-      show-search
-      show-arrow
-      @dropdown-visible-change="handleDropdownOpening"
-    />
-  </UFormField>
+  <USelect
+    v-model="model"
+    :multiple="multiple"
+    :loading="status === 'pending'"
+    :items="data || []"
+    placeholder="Выбери типы"
+    show-search
+    show-arrow
+    @dropdown-visible-change="handleDropdownOpening"
+  />
 </template>

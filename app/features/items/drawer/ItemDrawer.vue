@@ -13,7 +13,7 @@
   }>();
 
   const { data: detail, status } = await useAsyncData(
-    computed(() => `item-${url}`),
+    computed(() => `items-${url}`),
     () => $fetch<ItemDetailResponse>(`/api/v2/item/${url}`),
     {
       server: false,
@@ -23,8 +23,8 @@
 
   const isLoading = computed(() => status.value === 'pending');
   const isError = computed(() => status.value === 'error');
-  const urlForCopy = computed(() => `${getOrigin()}/item/${url}`);
-  const editUrl = computed(() => `/workshop/item/${url}`);
+  const urlForCopy = computed(() => `${getOrigin()}/items/${url}`);
+  const editUrl = computed(() => `/workshop/items/${url}`);
 </script>
 
 <template>
