@@ -1,11 +1,45 @@
 <script setup lang="ts">
-  import type { ItemDetailResponse } from '~items/types';
+  import type { ArmorDetailResponse } from '~armors/types';
 
-  defineProps<Pick<ItemDetailResponse, 'cost' | 'weight'>>();
+  defineProps<
+    Pick<
+      ArmorDetailResponse,
+      | 'cost'
+      | 'weight'
+      | 'armorCategory'
+      | 'armorClass'
+      | 'strength'
+      | 'stealth'
+    >
+  >();
 </script>
 
 <template>
   <div :class="$style.stats">
+    <div :class="$style.item">
+      <span :class="$style.name">Категория:</span>
+
+      <span>{{ armorCategory }}</span>
+    </div>
+
+    <div :class="$style.item">
+      <span :class="$style.name">Класс доспеха:</span>
+
+      <span>{{ armorClass }}</span>
+    </div>
+
+    <div :class="$style.item">
+      <span :class="$style.name">Сила:</span>
+
+      <span>{{ strength }}</span>
+    </div>
+
+    <div :class="$style.item">
+      <span :class="$style.name">Скрытность:</span>
+
+      <span>{{ stealth }}</span>
+    </div>
+
     <div :class="$style.item">
       <span :class="$style.name">Стоимость:</span>
 

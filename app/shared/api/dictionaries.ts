@@ -31,6 +31,7 @@ enum DictionaryEndpoints {
   TREASURES = '/api/v2/dictionaries/treasures',
   ITEM_TYPE = '/api/v2/dictionaries/item/types',
   COIN_TYPE = '/api/v2/dictionaries/coins',
+  ARMOR_TYPE = '/api/v2/dictionaries/armor/categorie',
 }
 
 class Dictionaries {
@@ -227,6 +228,15 @@ class Dictionaries {
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.COIN_TYPE, {
+      ...config,
+      method: 'get',
+    });
+  };
+
+  public armorType = <R extends NitroFetchRequest>(
+    config: Omit<NitroFetchOptions<R>, 'method'> = {},
+  ): Promise<Array<SelectOption>> => {
+    return $fetch(DictionaryEndpoints.ARMOR_TYPE, {
       ...config,
       method: 'get',
     });

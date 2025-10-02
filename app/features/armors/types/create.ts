@@ -1,11 +1,8 @@
-import type { EditorBaseInfoState } from '~ui/editor';
+import type { ItemCreate } from '~items/types';
 
-export interface ItemCreate extends EditorBaseInfoState {
-  category: string; // категория
-  types: Array<string>; // типы
-  description: string; // описание маркап
-  cost: number | undefined; // стоимость
-  coin: string | undefined; // номинал монеты в стоимости
-  weight: string | undefined; // вес
-  image: string | undefined;
+export interface ArmorCreate extends ItemCreate {
+  armorCategory: string; // категория доспеха
+  armorClass: string; // класс доспеха
+  strength: string | undefined; // требование к Силе
+  stealth: string | undefined; // помеха на скрытность
 }

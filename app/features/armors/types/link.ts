@@ -1,8 +1,5 @@
-import type { NameResponse, SourceResponse } from '~/shared/types';
+import type { ItemLinkResponse } from '~items/types';
 
-export interface ItemLinkResponse {
-  url: string;
-  name: Pick<NameResponse, 'rus' | 'eng'>;
-  source: SourceResponse;
-  cost: string;
+export interface ArmorLinkResponse extends ItemLinkResponse {
+  armorCategory: string;
 }

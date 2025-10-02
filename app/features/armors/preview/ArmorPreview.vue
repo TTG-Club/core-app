@@ -1,22 +1,22 @@
 <script setup lang="ts">
   import { UiDrawer } from '~ui/drawer';
-  import { ItemBody } from '~items/body';
-  import type { ItemDetailResponse, ItemCreate } from '~items/types';
+  import { ArmorBody } from '~armors/body';
+  import type { ArmorDetailResponse, ArmorCreate } from '~armors/types';
 
   const opened = defineModel<boolean>('open', { required: true });
 
   const { state } = defineProps<{
-    state: ItemCreate;
+    state: ArmorCreate;
   }>();
 
   const {
-    data: item,
+    data: armor,
     status,
     execute: loadPreview,
     clear,
   } = useAsyncData(
     () =>
-      $fetch<ItemDetailResponse>(`/api/v2/item/preview`, {
+      $fetch<ArmorDetailResponse>(`/api/v2/item/preview`, {
         method: 'post',
         body: state,
       }),
@@ -41,16 +41,16 @@
     v-model:open="opened"
     :min-width="320"
     :max-width="BREAKPOINTS[Breakpoint.MD]"
-    :title="item?.name"
-    :source="item?.source"
+    :title="armor?.name"
+    :source="armor?.source"
     :is-loading
     :is-error
     width="100%"
     @close="opened = false"
   >
-    <ItemBody
-      v-if="item"
-      :item
+    <ArmorBody
+      v-if="armor"
+      :armor
     />
   </UiDrawer>
 </template>

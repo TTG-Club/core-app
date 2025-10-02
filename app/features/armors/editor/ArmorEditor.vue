@@ -4,9 +4,10 @@
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { UploadImage } from '~ui/upload';
 
-  import type { ItemCreate } from '~/features/items/types';
+  import type { ArmorCreate } from '~/features/armors/types';
   import CoinsType from '~items/editor/ui/CoinsType.vue';
-  import { ItemPreview } from '~items/preview';
+  import { ArmorPreview } from '~armors/preview';
+  import ArmorCategoryType from '~armors/editor/ui/ArmorCategoryType.vue';
 
   const formRef = useTemplateRef('formRef');
 
@@ -18,7 +19,7 @@
     validate,
   });
 
-  function getInitialState(): ItemCreate {
+  function getInitialState(): ArmorCreate {
     return {
       url: '',
       name: {
@@ -31,17 +32,21 @@
         page: undefined,
       },
       description: '',
-      category: 'ITEM',
+      category: 'ARMOR',
       types: [],
       cost: undefined,
       coin: undefined,
       weight: undefined,
+      armorCategory: '',
+      armorClass: '',
+      strength: '—',
+      stealth: undefined,
       image: undefined,
       tags: [],
     };
   }
 
-  const { state, onError, onSubmit } = useWorkshopForm<ItemCreate>({
+  const { state, onError, onSubmit } = useWorkshopForm<ArmorCreate>({
     actionUrl: '/api/v2/item',
     getInitialState,
   });
@@ -114,6 +119,24 @@
           placeholder="Введи вес"
         />
       </UFormField>
+
+      <UFormField
+        label="Категория"
+        tooltip="Выберите категорию доспеха"
+        name="armorCategory"
+      >
+        <ArmorCategoryType v-model="state.armorCategory" />
+      </UFormField>
+
+      <UFormField
+        label="КД"
+        name="armorClass"
+      >
+        <UInput
+          v-model="state.armorClass"
+          placeholder="Введи КД"
+        />
+      </UFormField>
     </UCard>
 
     <UCard variant="subtle">
@@ -154,7 +177,7 @@
 
     <EditorFormControls>
       <template #preview="{ opened, changeVisibility }">
-        <ItemPreview
+        <ArmorPreview
           :open="opened"
           :state="state"
           @update:open="changeVisibility"

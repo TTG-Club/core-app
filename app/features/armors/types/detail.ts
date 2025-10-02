@@ -1,17 +1,8 @@
-import type { SourceResponse } from '~/shared/types';
+import type { ItemDetailResponse } from '~items/types';
 
-export interface ItemDetailResponse {
-  url: string;
-  name: {
-    rus: string;
-    eng: string;
-  };
-  image: string;
-  subtitle: string;
-  source: SourceResponse;
-  description: Array<string>;
-  updatedAt: string;
-  types: string;
-  cost: string | undefined; // стоимость
-  weight: string | undefined; // вес
+export interface ArmorDetailResponse extends ItemDetailResponse {
+  armorCategory: string; // категория доспеха
+  armorClass: string; // класс доспеха
+  strength: number | undefined; // требование к Силе
+  stealth: boolean; // помеха на скрытность
 }

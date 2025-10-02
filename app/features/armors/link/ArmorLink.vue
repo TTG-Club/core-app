@@ -1,11 +1,11 @@
 <script setup lang="ts">
   import { SmallLink } from '~ui/link';
 
-  import type { ItemLinkResponse } from '~/features/items/types';
+  import type { ArmorLinkResponse } from '~/features/armors/types';
   import { ItemDrawer } from '~/features/items/drawer';
 
   const { item: item } = defineProps<{
-    item: ItemLinkResponse;
+    item: ArmorLinkResponse;
   }>();
 
   const overlay = useOverlay();

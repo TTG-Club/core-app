@@ -1,10 +1,10 @@
 <script setup lang="ts">
   import { MarkupRender } from '~ui/markup';
 
-  import type { ItemDetailResponse } from '~items/types';
+  import type { ArmorDetailResponse } from '~armors/types';
 
   const { description } =
-    defineProps<Pick<ItemDetailResponse, 'description'>>();
+    defineProps<Pick<ArmorDetailResponse, 'description'>>();
 </script>
 
 <template>
