@@ -6,6 +6,7 @@ import { CreatureDrawer } from '~bestiary/drawer';
 import { FeatDrawer } from '~feats/drawer';
 import { GlossaryDrawer } from '~glossary/drawer';
 import { MagicItemDrawer } from '~magic-items/drawer';
+import { ItemDrawer } from '~items/drawer';
 import { SpellDrawer } from '~spells/drawer';
 
 import type { SectionNode } from '../types';
@@ -15,6 +16,7 @@ const MARKER_URL_MAP: Record<SectionMarker, string> = {
   [SectionMarker.Feat]: 'feats',
   [SectionMarker.Background]: 'backgrounds',
   [SectionMarker.MagicItem]: 'magic-item',
+  [SectionMarker.Item]: 'items',
   [SectionMarker.Creature]: 'bestiary',
   [SectionMarker.Glossary]: 'glossary',
 } as const;
@@ -25,6 +27,7 @@ const DRAWER_COMPONENT_MAP = {
   [SectionMarker.Feat]: () => FeatDrawer,
   [SectionMarker.Glossary]: () => GlossaryDrawer,
   [SectionMarker.MagicItem]: () => MagicItemDrawer,
+  [SectionMarker.Item]: () => ItemDrawer,
   [SectionMarker.Spell]: () => SpellDrawer,
 } as const;
 

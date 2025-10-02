@@ -32,6 +32,7 @@ const TextMarkerTag: Record<TextMarker, string> = {
   [TextMarker.Subscript]: 'sub',
   [TextMarker.Superscript]: 'sup',
   [TextMarker.Highlight]: 'mark',
+  [TextMarker.Blockquote]: 'quote',
 };
 
 const EmptyMarkerTag: Record<EmptyMarker, string> = {
@@ -58,6 +59,7 @@ const FEATURE_NODE_RENDERERS: {
   [SectionMarker.Feat]: renderSectionLink,
   [SectionMarker.Creature]: renderSectionLink,
   [SectionMarker.MagicItem]: renderSectionLink,
+  [SectionMarker.Item]: renderSectionLink,
   [SectionMarker.Glossary]: renderSectionLink,
 };
 
