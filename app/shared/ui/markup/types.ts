@@ -29,6 +29,7 @@ export enum EmptyMarker {
 }
 
 export enum SectionMarker {
+  Class = 'class',
   Spell = 'spell',
   Feat = 'feat',
   Background = 'background',
@@ -114,6 +115,7 @@ export interface LinkNode {
   type: RichMarker.Link;
   attrs: {
     url?: string;
+    target?: string;
   };
   content: Array<RenderNode>;
 }
@@ -127,6 +129,7 @@ export interface ListNode {
 }
 
 export type SectionNodes = {
+  [SectionMarker.Class]: SectionNode;
   [SectionMarker.Spell]: SectionNode;
   [SectionMarker.Background]: SectionNode;
   [SectionMarker.Feat]: SectionNode;
@@ -145,3 +148,7 @@ export interface SectionNode {
   };
   content: Array<RenderNode>;
 }
+
+export type Entry = string | RenderNode;
+
+export type EntryList = Array<Entry>;

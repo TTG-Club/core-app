@@ -19,6 +19,7 @@ export interface SelectOptionWithMeasurable extends SelectOption {
 }
 
 export interface DiceSelectOption extends SelectOption {
+  avg: number;
   maxValue: number;
 }
 
@@ -38,4 +39,9 @@ export interface SkillSelectOption extends SelectOption {
 export interface ChallengeRatingSelectOption
   extends SelectOptionWithNumericValue {
   pb: number;
+}
+
+export interface ArmorCategorySelectOption extends SelectOption {
+  putting: string;
+  removal: string;
 }

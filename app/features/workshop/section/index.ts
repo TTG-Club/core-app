@@ -13,3 +13,5 @@ export { default as SectionMagicItem } from './SectionMagicItem.vue';
 export { default as SectionBestiary } from './SectionBestiary.vue';
 
 export { default as SectionItem } from './SectionItem.vue';
+
+export { default as SectionClasses } from './SectionClasses.vue';

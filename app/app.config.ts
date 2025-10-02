@@ -32,11 +32,11 @@ export default defineAppConfig({
       search: 'i-ttg-search',
     },
     link: {
-      base: 'text-(--color-primary)',
+      base: 'text-primary',
       variants: {
         active: {
-          false: 'text-(--color-primary)',
-          true: 'text-(--color-primary)',
+          false: 'text-primary',
+          true: 'text-primary',
         },
       },
       compoundVariants: [
@@ -44,8 +44,8 @@ export default defineAppConfig({
           active: false,
           disabled: false,
           class: [
-            'text-(--color-primary)',
-            'hover:text-(--color-primary)',
+            'text-primary',
+            'hover:text-primary',
             'hover:underline',
             'active:brightness-80',
             'transition-[filter]',

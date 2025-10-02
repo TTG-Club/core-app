@@ -1,21 +1,20 @@
 <script setup lang="ts">
-  import type { RenderNode } from './types';
   import { RowRender } from './ui';
+  import type { EntryList } from './types';
 
   const { entries } = defineProps<{
-    entries: Array<string | RenderNode>;
+    entries: EntryList;
   }>();
 </script>
 
 <template>
   <ClientOnly>
-    <template
+    <p
       v-for="(entry, index) in entries"
       :key="index"
+      class="mb-2"
     >
-      <p class="mb-2">
-        <RowRender :entry />
-      </p>
-    </template>
+      <RowRender :entry />
+    </p>
   </ClientOnly>
 </template>

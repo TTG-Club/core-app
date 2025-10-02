@@ -5,7 +5,7 @@
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
   import { PageGrid, PageResult } from '~ui/page';
-  import { SmallLinkSkeleton } from '~ui/skeleton';
+  import { SkeletonLinkSmall } from '~ui/skeleton';
 
   import type { CreatureLinkResponse } from '~bestiary/types';
 
@@ -78,7 +78,7 @@
           v-if="status !== 'success' && status !== 'error'"
           :columns="3"
         >
-          <SmallLinkSkeleton
+          <SkeletonLinkSmall
             v-for="index in 5"
             :key="index"
           />

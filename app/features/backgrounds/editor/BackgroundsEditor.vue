@@ -5,16 +5,6 @@
   import type { BackgroundCreate } from '~/shared/types';
   import { BackgroundPreview } from '~backgrounds/preview';
 
-  const formRef = useTemplateRef('formRef');
-
-  const validate = () => {
-    return formRef.value?.validate();
-  };
-
-  defineExpose({
-    validate,
-  });
-
   function getInitialState(): BackgroundCreate {
     return {
       url: '',
@@ -45,7 +35,6 @@
 
 <template>
   <UForm
-    ref="formRef"
     :state
     class="grid gap-8"
     @submit="onSubmit"

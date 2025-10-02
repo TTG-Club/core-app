@@ -25,16 +25,6 @@
   import { type CreatureCreate, getInitialState } from '~bestiary/types';
   import { CreaturePreview } from '~bestiary/preview';
 
-  const formRef = useTemplateRef('formRef');
-
-  const validate = () => {
-    return formRef.value?.validate();
-  };
-
-  defineExpose({
-    validate,
-  });
-
   const { state, onError, onSubmit } = useWorkshopForm<CreatureCreate>({
     actionUrl: '/api/v2/bestiary',
     getInitialState,
@@ -43,7 +33,6 @@
 
 <template>
   <UForm
-    ref="formRef"
     :state
     class="grid grid-cols-24 gap-6"
     @error="onError"

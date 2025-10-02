@@ -1,42 +1,57 @@
-import {
-  EmptyMarker,
-  RichMarker,
-  TextMarker,
-  SectionMarker,
-  SimpleText,
-  ComplexEl,
-} from '../types';
-
 import type {
   EmptyNode,
+  ListNode,
   RenderNode,
-  TextNode,
-  SimpleTextNode,
   RichNode,
   SectionLinkNode,
-  ListNode,
+  SimpleTextNode,
+  TextNode,
+} from '../types';
+import {
+  ComplexEl,
+  EmptyMarker,
+  RichMarker,
+  SectionMarker,
+  SimpleText,
+  TextMarker,
 } from '../types';
 
 export function isSimpleTextNode(node: RenderNode): node is SimpleTextNode {
-  return Object.values(SimpleText).includes(node.type as SimpleText);
+  return node.type === SimpleText.Text;
 }
 
 export function isEmptyNode(node: RenderNode): node is EmptyNode {
-  return Object.values(EmptyMarker).includes(node.type as EmptyMarker);
+  return node.type === EmptyMarker.Break;
 }
 
 export function isTextNode(node: RenderNode): node is TextNode {
-  return Object.values(TextMarker).includes(node.type as TextMarker);
+  return (
+    node.type === TextMarker.Bold ||
+    node.type === TextMarker.Italic ||
+    node.type === TextMarker.Underline ||
+    node.type === TextMarker.Strikethrough ||
+    node.type === TextMarker.Superscript ||
+    node.type === TextMarker.Subscript ||
+    node.type === TextMarker.Highlight
+  );
 }
 
 export function isRichNode(node: RenderNode): node is RichNode {
-  return Object.values(RichMarker).includes(node.type as RichMarker);
+  return node.type === RichMarker.Link;
 }
 
 export function isSectionNode(node: RenderNode): node is SectionLinkNode {
-  return Object.values(SectionMarker).includes(node.type as SectionMarker);
+  return (
+    node.type === SectionMarker.Class ||
+    node.type === SectionMarker.Spell ||
+    node.type === SectionMarker.Feat ||
+    node.type === SectionMarker.Background ||
+    node.type === SectionMarker.MagicItem ||
+    node.type === SectionMarker.Creature ||
+    node.type === SectionMarker.Glossary
+  );
 }
 
 export function isListNode(node: RenderNode): node is ListNode {
-  return (node as any)?.type === ComplexEl.List;
+  return node.type === ComplexEl.List;
 }

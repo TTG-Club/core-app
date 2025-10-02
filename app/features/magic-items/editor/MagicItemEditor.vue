@@ -11,16 +11,6 @@
   import type { MagicItemCreate } from '~magic-items/types';
   import { MagicItemPreview } from '~magic-items/preview';
 
-  const formRef = useTemplateRef('formRef');
-
-  const validate = () => {
-    return formRef.value?.validate();
-  };
-
-  defineExpose({
-    validate,
-  });
-
   function getInitialState(): MagicItemCreate {
     return {
       url: '',
@@ -62,7 +52,6 @@
 
 <template>
   <UForm
-    ref="formRef"
     :state
     class="grid gap-8"
     @error="onError"

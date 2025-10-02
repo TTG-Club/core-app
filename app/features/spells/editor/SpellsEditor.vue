@@ -11,23 +11,13 @@
     SelectAbilities,
     SelectDamageType,
     SelectHealType,
-    SelectLevel,
+    SelectSpellLevel,
     SelectMagicSchool,
     SelectSpecies,
   } from '~ui/select';
 
   import type { SpellCreate } from '~/shared/types';
   import { SpellPreview } from '~spells/preview';
-
-  const formRef = useTemplateRef('formRef');
-
-  const validate = () => {
-    return formRef.value?.validate();
-  };
-
-  defineExpose({
-    validate,
-  });
 
   function getInitialState(): SpellCreate {
     return {
@@ -98,7 +88,7 @@
           label="Уровень заклинания"
           name="level"
         >
-          <SelectLevel v-model="state.level" />
+          <SelectSpellLevel v-model="state.level" />
         </UFormField>
 
         <UFormField

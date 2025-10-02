@@ -42,4 +42,16 @@ export { default as SelectHabitat } from './SelectHabitat.vue';
 
 export { default as SelectTreasure } from './SelectTreasure.vue';
 
+export { default as SelectSpellLevel } from './SelectSpellLevel.vue';
+
+export { default as SelectClass } from './SelectClass.vue';
+
+export { default as SelectDice } from './SelectDice.vue';
+
+export { default as SelectCasterType } from './SelectCasterType.vue';
+
+export { default as SelectArmorCategory } from './SelectArmorCategory.vue';
+
+export { default as SelectWeaponCategory } from './SelectWeaponCategory.vue';
+
 export { default as SelectLevel } from './SelectLevel.vue';

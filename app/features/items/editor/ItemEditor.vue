@@ -1,22 +1,11 @@
 <script setup lang="ts">
-  import { ItemType } from './ui';
+  import { ItemType, CoinsType } from './ui';
 
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { UploadImage } from '~ui/upload';
 
-  import type { ItemCreate } from '~/features/items/types';
-  import CoinsType from '~items/editor/ui/CoinsType.vue';
+  import type { ItemCreate } from '~items/types';
   import { ItemPreview } from '~items/preview';
-
-  const formRef = useTemplateRef('formRef');
-
-  const validate = () => {
-    return formRef.value?.validate();
-  };
-
-  defineExpose({
-    validate,
-  });
 
   function getInitialState(): ItemCreate {
     return {

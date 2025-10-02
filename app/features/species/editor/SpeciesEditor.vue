@@ -13,16 +13,6 @@
   import type { SpeciesCreate } from '~/shared/types';
   import { SpeciesPreview } from '~species/preview';
 
-  const formRef = useTemplateRef('formRef');
-
-  const validate = () => {
-    return formRef.value?.validate();
-  };
-
-  defineExpose({
-    validate,
-  });
-
   function getInitialState(): SpeciesCreate {
     return {
       url: '',
@@ -64,7 +54,6 @@
 
 <template>
   <UForm
-    ref="formRef"
     :state
     class="grid gap-8"
     @submit="onSubmit"
