@@ -1,6 +1,7 @@
 type ValueOf<T> = T[keyof T];
 
 export const SearchItems = {
+  CLASS: 'class',
   BACKGROUND: 'background',
   FEAT: 'feat',
   SPECIES: 'species',
@@ -13,6 +14,7 @@ export const SearchItems = {
 export type SearchItemsType = ValueOf<typeof SearchItems>;
 
 export const mapSearchItemsToPaths = new Map<SearchItemsType, string>([
+  [SearchItems.CLASS, 'classes'],
   [SearchItems.BACKGROUND, 'backgrounds'],
   [SearchItems.FEAT, 'feats'],
   [SearchItems.SPECIES, 'species'],
@@ -23,6 +25,7 @@ export const mapSearchItemsToPaths = new Map<SearchItemsType, string>([
 ]);
 
 export const mapSearchItemsToTypeNames = new Map<SearchItemsType, string>([
+  [SearchItems.CLASS, 'Классы'],
   [SearchItems.BACKGROUND, 'Предыстории'],
   [SearchItems.FEAT, 'Черты'],
   [SearchItems.SPECIES, 'Виды'],
