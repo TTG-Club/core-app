@@ -64,7 +64,7 @@
       class="grid place-items-center py-2"
     >
       <UButton @click.left.exact.prevent="addEmptyColumn">
-        Добавить таблицу
+        Добавить колонку
       </UButton>
     </div>
   </UCard>
