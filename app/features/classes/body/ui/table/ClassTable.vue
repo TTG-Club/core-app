@@ -31,8 +31,8 @@
     level: Level;
     proficiencyBonus: number;
     features: Array<ClassFeature>;
-    pactSlotsCount?: number | string;
-    pactSlotsLevel?: number | string;
+    pactSlotsCount?: number;
+    pactSlotsLevel?: number;
 
     [key: string]: string | number | Array<ClassFeature> | undefined;
   }
@@ -102,10 +102,10 @@
     }
 
     if (isPactSpellcaster.value) {
-      row.pactSlotsCount = PACT_CASTER_SPELL_SLOTS_COUNT.get(level) ?? '—';
-      row.pactSlotsLevel = PACT_CASTER_SPELL_SLOTS_LEVEL.get(level) ?? '—';
+      row.pactSlotsCount = PACT_CASTER_SPELL_SLOTS_COUNT[level];
+      row.pactSlotsLevel = PACT_CASTER_SPELL_SLOTS_LEVEL[level];
     } else {
-      const levelSpellSlots = spellSlots.value!.get(level)!;
+      const levelSpellSlots = spellSlots.value![level];
 
       levelSpellSlots.forEach((slotCount, slotIndex) => {
         row[`spell${slotIndex + 1}`] = slotCount > 0 ? slotCount : '—';
@@ -237,7 +237,7 @@
       baseColumns.push({
         id: 'pactSlotsCount',
         header: 'Кол-во ячеек',
-        cell: ({ row }) => row.original.pactSlotsCount,
+        cell: ({ row }) => row.original.pactSlotsCount ?? '—',
         meta: {
           class: {
             th: 'w-8 text-center',
@@ -249,7 +249,7 @@
       baseColumns.push({
         id: 'pactSlotsLevel',
         header: 'Ур. ячейки',
-        cell: ({ row }) => row.original.pactSlotsLevel,
+        cell: ({ row }) => row.original.pactSlotsLevel ?? '—',
         meta: {
           class: {
             th: 'w-8 text-center',
