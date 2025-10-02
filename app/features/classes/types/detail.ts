@@ -1,4 +1,4 @@
-import type { NameResponse, SourceResponse } from '~/shared/types';
+import type { Level, NameResponse, SourceResponse } from '~/shared/types';
 import type { EntryList } from '~ui/markup';
 
 export interface ClassDetailResponse {
@@ -24,20 +24,20 @@ export interface ClassDetailResponse {
 export interface ClassTable {
   name: string;
   scaling: Array<{
-    level: number;
+    level: Level;
     value: string;
   }>;
 }
 
 export interface ClassFeature {
   key: string;
-  level: number;
+  level: Level;
   name: string;
   description: EntryList;
   additional: string;
   isSubclass?: boolean;
   scaling?: Array<{
-    level: number;
+    level: Level;
     name: string;
     description: EntryList;
     additional: string;

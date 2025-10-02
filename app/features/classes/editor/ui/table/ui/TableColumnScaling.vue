@@ -17,6 +17,10 @@
 </script>
 
 <template>
+  <USeparator class="col-span-full my-2">
+    <span class="font-bold text-secondary"> Масштабирование по уровням </span>
+  </USeparator>
+
   <div class="col-span-full grid grid-cols-24 gap-4">
     <UForm
       v-for="(row, index) in state"

@@ -6,7 +6,7 @@ import type {
   ChallengeRatingSelectOption,
   SkillSelectOption,
   DiceSelectOption,
-  SpellcasterSelectOption,
+  CasterSelectOption,
   ArmorCategorySelectOption,
 } from '~/shared/types';
 
@@ -35,7 +35,7 @@ enum DictionaryEndpoints {
   ITEM_TYPES = '/api/v2/dictionaries/item/types',
   COINS = '/api/v2/dictionaries/coins',
   DICES = '/api/v2/dictionaries/dices',
-  SPELLCASTER_TYPES = '/api/v2/dictionaries/spellcaster/types',
+  CASTER_TYPES = '/api/v2/dictionaries/caster-types',
   ARMOR_CATEGORIES = '/api/v2/dictionaries/armor/categories',
   WEAPON_CATEGORIES = '/api/v2/dictionaries/weapon/categories',
 }
@@ -248,10 +248,10 @@ class Dictionaries {
     });
   };
 
-  public spellcasterTypes = <R extends NitroFetchRequest>(
+  public casterTypes = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
-  ): Promise<Array<SpellcasterSelectOption>> => {
-    return $fetch(DictionaryEndpoints.SPELLCASTER_TYPES, {
+  ): Promise<Array<CasterSelectOption>> => {
+    return $fetch(DictionaryEndpoints.CASTER_TYPES, {
       ...config,
       method: 'get',
     });

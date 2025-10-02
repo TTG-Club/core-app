@@ -9,8 +9,8 @@
   const model = defineModel<string | Array<string>>();
 
   const { data, status, refresh } = await useAsyncData(
-    'dictionaries-spellcaster-types',
-    () => DictionaryService.spellcasterTypes(),
+    'dictionaries-caster-types',
+    () => DictionaryService.casterTypes(),
     { dedupe: 'defer' },
   );
 

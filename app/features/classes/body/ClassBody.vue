@@ -5,7 +5,6 @@
   import type { ClassDetailResponse, ClassFeature } from '~classes/types';
   import {
     ClassEquipment,
-    ClassHitPoints,
     ClassProficiency,
     ClassTable,
     FeatureCollapse,
@@ -81,8 +80,6 @@
       </div>
 
       <div class="flex flex-auto flex-col gap-6">
-        <ClassHitPoints :hit-dice="detail.hitDice" />
-
         <ClassTable
           :table="detail.table"
           :caster-type="detail.casterType"

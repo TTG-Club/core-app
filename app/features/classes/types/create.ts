@@ -50,15 +50,15 @@ export interface ClassProficiencyCreate {
 
 export interface ClassCreate extends EditorBaseInfoState {
   gallery: Array<string>;
-  description: string;
-  parentUrl: string;
-  hitDice: string;
+  description: string | undefined;
+  parentUrl: string | undefined;
+  hitDice: string | undefined;
   savingThrows: Array<AbilityKey>;
   proficiency: ClassProficiencyCreate;
-  equipment: string;
+  equipment: string | undefined;
   features: Array<ClassFeatureCreate>;
   table: Array<ClassColumnCreate>;
-  casterType: string;
+  casterType: string | undefined;
   image: string | undefined;
   primaryCharacteristic: AbilityKey | undefined;
 }

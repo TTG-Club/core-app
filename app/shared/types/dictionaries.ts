@@ -1,4 +1,4 @@
-import type { AbilityKey, AbilityShortKey } from '~/shared/types';
+import type { AbilityKey, AbilityShortKey } from './abilities';
 
 export interface SelectOption {
   label: string;
@@ -23,7 +23,7 @@ export interface DiceSelectOption extends SelectOption {
   maxValue: number;
 }
 
-export interface SpellcasterSelectOption extends SelectOption {
+export interface CasterSelectOption extends SelectOption {
   levels: number;
 }
 

@@ -29,9 +29,9 @@
       },
       image: undefined,
       gallery: [],
-      description: '',
-      parentUrl: '',
-      hitDice: '',
+      description: undefined,
+      parentUrl: undefined,
+      hitDice: undefined,
       primaryCharacteristic: undefined,
       savingThrows: [],
       proficiency: {
@@ -49,10 +49,10 @@
           skills: [],
         },
       },
-      equipment: '',
+      equipment: undefined,
       features: [],
       table: [],
-      casterType: '',
+      casterType: undefined,
       tags: [],
     };
   }

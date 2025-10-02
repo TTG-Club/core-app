@@ -22,43 +22,42 @@
       </h2>
     </template>
 
-    <template
-      v-for="(column, index) in state"
-      :key="index"
-    >
-      <UForm
-        class="grid grid-cols-24 gap-4"
-        attach
-        :state="column"
+    <div class="flex flex-col gap-4">
+      <template
+        v-for="(column, index) in state"
+        :key="index"
       >
-        <UFormField
-          class="col-span-12"
-          label="Название"
-          name="name"
-        >
-          <UInput
-            v-model="column.name"
-            placeholder="Например: Ячейки заклинаний"
-          />
-        </UFormField>
+        <UCard variant="subtle">
+          <UForm
+            class="grid grid-cols-24 gap-4"
+            attach
+            :state="column"
+          >
+            <UFormField
+              class="col-span-12"
+              label="Название"
+              name="name"
+            >
+              <UInput
+                v-model="column.name"
+                placeholder="Например: Ячейки заклинаний"
+              />
+            </UFormField>
 
-        <EditorArrayControls
-          v-model="state"
-          :item="column"
-          :empty-object="getEmptyColumn()"
-          :index="index"
-          cols="12"
-          only-remove
-        />
+            <EditorArrayControls
+              v-model="state"
+              :item="column"
+              :empty-object="getEmptyColumn()"
+              :index="index"
+              cols="12"
+              only-remove
+            />
 
-        <TableColumnScaling v-model="column.scaling" />
-      </UForm>
-
-      <USeparator
-        v-if="index < state.length - 1"
-        class="my-4"
-      />
-    </template>
+            <TableColumnScaling v-model="column.scaling" />
+          </UForm>
+        </UCard>
+      </template>
+    </div>
 
     <div
       v-if="!state.length"

@@ -13,15 +13,15 @@
   <div
     class="w-full overflow-hidden rounded-lg border border-default bg-muted py-1.5"
   >
-    <div class="flex w-full min-w-full gap-1 px-4 py-1.5">
+    <div class="flex w-full min-w-full flex-col gap-1 px-4 py-1.5">
       <span class="min-w-20 flex-none text-sm font-medium text-highlighted">
-        Основная хар-ка:
+        Основная характеристика:
       </span>
 
       <span>{{ primaryCharacteristic }}</span>
     </div>
 
-    <div class="flex w-full min-w-full gap-1 px-4 py-1.5">
+    <div class="flex w-full min-w-full flex-col gap-1 px-4 py-1.5">
       <span class="min-w-20 flex-none text-sm font-medium text-highlighted">
         Спасброски:
       </span>
@@ -31,7 +31,7 @@
       </span>
     </div>
 
-    <div class="flex w-full min-w-full gap-1 px-4 py-1.5">
+    <div class="flex w-full min-w-full flex-col gap-1 px-4 py-1.5">
       <span class="min-w-20 flex-none text-sm font-medium text-highlighted">
         Кость Хитов:
       </span>
@@ -39,9 +39,33 @@
       <span>1{{ hitDice.label }} за каждый уровень</span>
     </div>
 
-    <div class="flex w-full min-w-full gap-1 px-4 py-1.5">
+    <div class="flex w-full min-w-full flex-col gap-1 px-4 py-1.5">
       <span class="min-w-20 flex-none text-sm font-medium text-highlighted">
-        Доспехи:
+        Хиты на 1 уровне:
+      </span>
+
+      <span>
+        {{ hitDice.maxValue }} + ваш модификатор
+
+        <span class="font-bold text-muted">Телосложения</span>
+      </span>
+    </div>
+
+    <div class="flex w-full min-w-full flex-col gap-1 px-4 py-1.5">
+      <span class="min-w-20 flex-none text-sm font-medium text-highlighted">
+        Хиты на следующих уровнях:
+      </span>
+
+      <span>
+        1{{ hitDice.label }} (или {{ hitDice.avg }}) + модификатор
+        <span class="font-bold text-muted"> Телосложения </span> за каждый
+        уровень этого класса, после первого (минимум 1)
+      </span>
+    </div>
+
+    <div class="flex w-full min-w-full flex-col gap-1 px-4 py-1.5">
+      <span class="min-w-20 flex-none text-sm font-medium text-highlighted">
+        Владение доспехами:
       </span>
 
       <span>
@@ -49,9 +73,9 @@
       </span>
     </div>
 
-    <div class="flex w-full min-w-full gap-1 px-4 py-1.5">
+    <div class="flex w-full min-w-full flex-col gap-1 px-4 py-1.5">
       <span class="min-w-20 flex-none text-sm font-medium text-highlighted">
-        Оружие:
+        Владение оружием:
       </span>
 
       <span>

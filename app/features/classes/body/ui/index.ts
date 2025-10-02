@@ -1,5 +1,3 @@
-export { default as ClassHitPoints } from './ClassHitPoints.vue';
-
 export { default as ClassProficiency } from './ClassProficiency.vue';
 
 export { default as ClassEquipment } from './ClassEquipment.vue';

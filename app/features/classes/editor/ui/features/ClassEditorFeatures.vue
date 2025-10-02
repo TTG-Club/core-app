@@ -27,63 +27,62 @@
       <h2 class="truncate text-base text-highlighted">Умения класса</h2>
     </template>
 
-    <template
-      v-for="(feat, index) in state"
-      :key="index"
-    >
-      <UForm
-        class="grid grid-cols-24 gap-4"
-        attach
-        :state="feat"
+    <div class="flex flex-col gap-4">
+      <template
+        v-for="(feat, index) in state"
+        :key="index"
       >
-        <UFormField
-          class="col-span-8"
-          label="Уровень"
-          name="level"
-        >
-          <SelectLevel v-model="feat.level" />
-        </UFormField>
+        <UCard variant="subtle">
+          <UForm
+            class="grid grid-cols-24 gap-4"
+            attach
+            :state="feat"
+          >
+            <UFormField
+              class="col-span-8"
+              label="Уровень"
+              name="level"
+            >
+              <SelectLevel v-model="feat.level" />
+            </UFormField>
 
-        <UFormField
-          class="col-span-8"
-          label="Название"
-          name="name"
-        >
-          <UInput
-            v-model="feat.name"
-            placeholder="Название умения"
-          />
-        </UFormField>
+            <UFormField
+              class="col-span-8"
+              label="Название"
+              name="name"
+            >
+              <UInput
+                v-model="feat.name"
+                placeholder="Название умения"
+              />
+            </UFormField>
 
-        <EditorArrayControls
-          v-model="state"
-          :item="feat"
-          :empty-object="getEmptyFeature()"
-          :index="index"
-          cols="8"
-          only-remove
-        />
+            <EditorArrayControls
+              v-model="state"
+              :item="feat"
+              :empty-object="getEmptyFeature()"
+              :index="index"
+              cols="8"
+              only-remove
+            />
 
-        <UFormField
-          class="col-span-full"
-          label="Описание"
-          name="description"
-        >
-          <UTextarea
-            v-model="feat.description"
-            :rows="3"
-            placeholder="Описание умения"
-          />
-        </UFormField>
+            <UFormField
+              class="col-span-full"
+              label="Описание"
+              name="description"
+            >
+              <UTextarea
+                v-model="feat.description"
+                :rows="3"
+                placeholder="Описание умения"
+              />
+            </UFormField>
 
-        <FeatureScaling v-model="feat.scaling" />
-      </UForm>
-
-      <USeparator
-        v-if="index < state.length - 1"
-        class="my-4"
-      />
-    </template>
+            <FeatureScaling v-model="feat.scaling" />
+          </UForm>
+        </UCard>
+      </template>
+    </div>
 
     <div
       v-if="!state.length"
