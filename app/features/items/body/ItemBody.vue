@@ -2,7 +2,6 @@
   import { DescriptionsBlock, TopBar } from './ui';
 
   import type { ItemDetailResponse } from '~/features/items/types';
-  import { UiGallery } from '~ui/gallery';
   import StatsBlock from '~items/body/ui/StatsBlock.vue';
 
   defineProps<{
@@ -20,10 +19,6 @@
           :cost="item.cost"
           :weight="item.weight"
         />
-
-        <div class="max-w-40 overflow-hidden rounded-md border border-default">
-          <UiGallery :preview="item.image || '/img/no-img.webp'" />
-        </div>
       </div>
 
       <div class="flex flex-auto flex-col gap-3">
