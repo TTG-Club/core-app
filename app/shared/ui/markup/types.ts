@@ -17,6 +17,7 @@ export enum TextMarker {
   Superscript = 'superscript',
   Subscript = 'subscript',
   Highlight = 'highlight',
+  Blockquote = 'blockquote',
 }
 
 export enum RichMarker {
@@ -32,6 +33,7 @@ export enum SectionMarker {
   Feat = 'feat',
   Background = 'background',
   MagicItem = 'magicItem',
+  Item = 'item',
   Creature = 'creature',
   Glossary = 'glossary',
 }
@@ -129,6 +131,7 @@ export type SectionNodes = {
   [SectionMarker.Background]: SectionNode;
   [SectionMarker.Feat]: SectionNode;
   [SectionMarker.MagicItem]: SectionNode;
+  [SectionMarker.Item]: SectionNode;
   [SectionMarker.Creature]: SectionNode;
   [SectionMarker.Glossary]: SectionNode;
 };
