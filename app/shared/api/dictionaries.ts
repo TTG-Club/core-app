@@ -5,6 +5,9 @@ import type {
   SelectOptionWithMeasurable,
   ChallengeRatingSelectOption,
   SkillSelectOption,
+  DiceSelectOption,
+  CasterSelectOption,
+  ArmorCategorySelectOption,
 } from '~/shared/types';
 
 // Эндпоинты API
@@ -29,8 +32,12 @@ enum DictionaryEndpoints {
   LANGUAGES = '/api/v2/dictionaries/languages',
   HABITATS = '/api/v2/dictionaries/habitats',
   TREASURES = '/api/v2/dictionaries/treasures',
-  ITEM_TYPE = '/api/v2/dictionaries/item/types',
-  COIN_TYPE = '/api/v2/dictionaries/coins',
+  ITEM_TYPES = '/api/v2/dictionaries/item/types',
+  COINS = '/api/v2/dictionaries/coins',
+  DICES = '/api/v2/dictionaries/dices',
+  CASTER_TYPES = '/api/v2/dictionaries/caster-types',
+  ARMOR_CATEGORIES = '/api/v2/dictionaries/armor/categories',
+  WEAPON_CATEGORIES = '/api/v2/dictionaries/weapon/categories',
 }
 
 class Dictionaries {
@@ -214,19 +221,55 @@ class Dictionaries {
     });
   };
 
-  public itemType = <R extends NitroFetchRequest>(
+  public itemTypes = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
-    return $fetch(DictionaryEndpoints.ITEM_TYPE, {
+    return $fetch(DictionaryEndpoints.ITEM_TYPES, {
       ...config,
       method: 'get',
     });
   };
 
-  public coinType = <R extends NitroFetchRequest>(
+  public coins = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
-    return $fetch(DictionaryEndpoints.COIN_TYPE, {
+    return $fetch(DictionaryEndpoints.COINS, {
+      ...config,
+      method: 'get',
+    });
+  };
+
+  public dices = <R extends NitroFetchRequest>(
+    config: Omit<NitroFetchOptions<R>, 'method'> = {},
+  ): Promise<Array<DiceSelectOption>> => {
+    return $fetch(DictionaryEndpoints.DICES, {
+      ...config,
+      method: 'get',
+    });
+  };
+
+  public casterTypes = <R extends NitroFetchRequest>(
+    config: Omit<NitroFetchOptions<R>, 'method'> = {},
+  ): Promise<Array<CasterSelectOption>> => {
+    return $fetch(DictionaryEndpoints.CASTER_TYPES, {
+      ...config,
+      method: 'get',
+    });
+  };
+
+  public armorCategories = <R extends NitroFetchRequest>(
+    config: Omit<NitroFetchOptions<R>, 'method'> = {},
+  ): Promise<Array<ArmorCategorySelectOption>> => {
+    return $fetch(DictionaryEndpoints.ARMOR_CATEGORIES, {
+      ...config,
+      method: 'get',
+    });
+  };
+
+  public weaponCategories = <R extends NitroFetchRequest>(
+    config: Omit<NitroFetchOptions<R>, 'method'> = {},
+  ): Promise<Array<SelectOption>> => {
+    return $fetch(DictionaryEndpoints.WEAPON_CATEGORIES, {
       ...config,
       method: 'get',
     });

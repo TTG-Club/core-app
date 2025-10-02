@@ -8,8 +8,8 @@
   const model = defineModel<string>();
 
   const { data, status, refresh } = await useAsyncData(
-    'dictionaries-coins-type',
-    () => DictionaryService.coinType(),
+    'dictionaries-coins',
+    () => DictionaryService.coins(),
   );
 
   const handleDropdownOpening = (state: boolean) => {

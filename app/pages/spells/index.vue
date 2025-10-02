@@ -4,7 +4,7 @@
   import { SpellLegend } from '~spells/legend';
   import { SpellLink } from '~spells/link';
   import { PageGrid, PageResult } from '~ui/page';
-  import { SmallLinkSkeleton } from '~ui/skeleton';
+  import { SkeletonLinkSmall } from '~ui/skeleton';
 
   import type { SearchBody, SpellLinkResponse } from '~/shared/types';
 
@@ -80,7 +80,7 @@
           v-if="status !== 'success' && status !== 'error'"
           :columns="3"
         >
-          <SmallLinkSkeleton
+          <SkeletonLinkSmall
             v-for="index in 5"
             :key="index"
           />

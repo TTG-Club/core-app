@@ -1,22 +1,22 @@
 import { createTextVNode } from 'vue';
 
-import { TextMarker, EmptyMarker, RichMarker, SectionMarker } from '../types';
 import type {
-  TextNode,
+  EmptyNode,
   RenderNode,
   RichNode,
-  EmptyNode,
   RichNodes,
   SectionLinkNode,
   SectionNodes,
+  TextNode,
 } from '../types';
+import { EmptyMarker, RichMarker, SectionMarker, TextMarker } from '../types';
 import {
   isEmptyNode,
-  isSectionNode,
+  isListNode,
   isRichNode,
+  isSectionNode,
   isSimpleTextNode,
   isTextNode,
-  isListNode,
 } from '../utils';
 
 import { renderLink } from './renderLink';
@@ -54,6 +54,7 @@ const FEATURE_NODE_RENDERERS: {
     renderChildren: () => VNode[],
   ) => VNode;
 } = {
+  [SectionMarker.Class]: renderSectionLink,
   [SectionMarker.Spell]: renderSectionLink,
   [SectionMarker.Background]: renderSectionLink,
   [SectionMarker.Feat]: renderSectionLink,

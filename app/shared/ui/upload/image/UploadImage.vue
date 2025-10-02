@@ -2,7 +2,6 @@
   import bytes from 'bytes';
   import { toNumber } from 'lodash-es';
   import { getStatusMessage } from '#shared/utils';
-  import type { NuxtError } from '#app';
   import type { UploadResponse } from '~/shared/types';
 
   const { section, maxSize = undefined } = defineProps<{
@@ -173,6 +172,22 @@
 
   const isImageLoading = ref(false);
 
+  function hasStatusCode(x: unknown): x is { statusCode: unknown } {
+    return typeof x === 'object' && x !== null && 'statusCode' in x;
+  }
+
+  function toError(x: unknown): Error {
+    return x instanceof Error ? x : new Error('Неизвестная ошибка');
+  }
+
+  function onError(error: Error, statusCode: number) {
+    $toast.add({
+      color: 'error',
+      title: 'Ошибка при загрузке файла',
+      description: getStatusMessage(statusCode),
+    });
+  }
+
   async function handleFiles(files: File[] | FileList) {
     const file = Array.from(files)[0];
 
@@ -206,13 +221,12 @@
         description: 'Изображение успешно загружено',
       });
     } catch (err) {
-      const error = err as NuxtError;
+      const status =
+        hasStatusCode(err) && typeof err.statusCode === 'number'
+          ? err.statusCode
+          : 500;
 
-      $toast.add({
-        color: 'error',
-        title: 'Ошибка при загрузке файла',
-        description: getStatusMessage(error.statusCode),
-      });
+      onError(toError(err), status);
     } finally {
       isImageLoading.value = false;
     }

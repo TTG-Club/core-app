@@ -56,6 +56,7 @@
 
 <template>
   <Lightgallery
+    v-if="preview"
     :settings="settings"
     @before-open="opened = true"
     @after-close="opened = false"

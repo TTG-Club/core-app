@@ -1,24 +1,29 @@
 import { useRouter } from 'vue-router';
 
-import { NuxtLink } from '#components';
+import { ULink } from '#components';
 
 import type { LinkNode } from '../types';
 
 export function renderLink(node: LinkNode, renderChildren: () => VNode[]) {
-  const { url } = node.attrs;
+  const { url, target } = node.attrs;
 
   if (!url) {
     throw new Error('[Markup] Link node must have a `url`');
   }
 
+  if (target && target !== '_blank') {
+    throw new Error('[Markup] `target` must be "_blank"');
+  }
+
   const external = isExternal(url);
+  const isNewTab = target === '_blank' || external;
 
   return h(
-    NuxtLink,
+    ULink,
     {
       external,
       to: url,
-      target: external ? '_blank' : '_self',
+      target: isNewTab ? '_blank' : '_self',
     },
     renderChildren,
   );

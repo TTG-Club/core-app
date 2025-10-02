@@ -1,1 +1,3 @@
-export { default as SmallLinkSkeleton } from './SmallLinkSkeleton.vue';
+export { default as SkeletonLinkSmall } from './SkeletonLinkSmall.vue';
+
+export { default as SkeletonLinkBig } from './SkeletonLinkBig.vue';

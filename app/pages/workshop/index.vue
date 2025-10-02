@@ -1,13 +1,14 @@
 <script setup lang="ts">
   import {
-    SectionSpecies,
-    SectionSpells,
+    SectionBackgrounds,
+    SectionBestiary,
+    SectionClasses,
     SectionFeats,
     SectionGlossary,
-    SectionBackgrounds,
-    SectionMagicItem,
-    SectionBestiary,
     SectionItem,
+    SectionMagicItem,
+    SectionSpecies,
+    SectionSpells,
   } from '~workshop/section';
 </script>
 
@@ -20,6 +21,8 @@
       class="grid [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))] gap-4 sm:[grid-template-columns:repeat(auto-fit,minmax(360px,1fr))]"
     >
       <SectionSpecies />
+
+      <SectionClasses />
 
       <SectionSpells />
 

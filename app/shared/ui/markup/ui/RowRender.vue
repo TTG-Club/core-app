@@ -1,9 +1,9 @@
 <script setup lang="ts">
-  import { render } from '~ui/markup/renderer';
-  import type { RenderNode } from '~ui/markup/types';
+  import { render } from '../renderer';
+  import type { Entry } from '../types';
 
   const { entry } = defineProps<{
-    entry: string | RenderNode;
+    entry: Entry;
   }>();
 
   const rendered = computed(() => {

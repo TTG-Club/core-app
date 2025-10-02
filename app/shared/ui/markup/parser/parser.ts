@@ -34,6 +34,7 @@ const MARKERS: { [key: string]: MarkerName } = {
   strikethrough: Marker.Strikethrough,
   s: Marker.Strikethrough,
   link: Marker.Link,
+  class: Marker.Class,
   spell: Marker.Spell,
   feat: Marker.Feat,
   background: Marker.Background,

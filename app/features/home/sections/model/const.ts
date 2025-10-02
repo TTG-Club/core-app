@@ -9,9 +9,8 @@ export const CARD_LINKS: Array<{
 }> = [
   {
     name: 'Классы',
-    url: '/',
+    url: '/classes',
     img: '/s3/home/section-link/classes.webp',
-    disabled: true,
   },
   {
     name: 'Виды',

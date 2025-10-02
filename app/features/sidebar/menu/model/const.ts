@@ -15,9 +15,8 @@ export const MENU_SECTIONS: Array<{
     icon: 'menu/filled/character',
     items: [
       {
-        href: '/',
+        href: '/classes',
         label: 'Классы',
-        disabled: true,
       },
       {
         href: '/species',

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { range } from 'lodash-es';
+
   const { multiple = false, disabled } = defineProps<{
     disabled?: boolean;
     multiple?: boolean;
@@ -6,9 +8,9 @@
 
   const model = defineModel<number | Array<number>>();
 
-  const items = Array.from(Array(10)).map((_, index) => ({
-    label: !index ? 'Заговор' : `${index} круг`,
-    value: index,
+  const items = range(1, 21).map((level) => ({
+    label: `${level}-й уровень`,
+    value: level,
   }));
 </script>
 

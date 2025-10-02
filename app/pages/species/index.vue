@@ -4,7 +4,7 @@
   import { SpeciesLegend } from '~species/legend';
   import { SpeciesLink } from '~species/link';
   import { PageGrid, PageResult } from '~ui/page';
-  import { SmallLinkSkeleton } from '~ui/skeleton';
+  import { SkeletonLinkBig } from '~ui/skeleton';
 
   import type { SearchBody, SpeciesLinkResponse } from '~/shared/types';
 
@@ -75,7 +75,7 @@
           v-if="status !== 'success' && status !== 'error'"
           :columns="5"
         >
-          <SmallLinkSkeleton
+          <SkeletonLinkBig
             v-for="index in 5"
             :key="index"
           />
