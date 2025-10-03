@@ -12,7 +12,7 @@ export interface ClassDetailResponse {
   casterType: CasterType;
   updatedAt: string;
   hitDice: HitDice;
-  primaryCharacteristic: string;
+  primaryCharacteristics: string;
   username: string;
   proficiency: ClassProficiency;
   equipment: EntryList;

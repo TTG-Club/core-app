@@ -4,7 +4,7 @@
   defineProps<
     Pick<
       ClassDetailResponse,
-      'hitDice' | 'savingThrows' | 'proficiency' | 'primaryCharacteristic'
+      'hitDice' | 'savingThrows' | 'proficiency' | 'primaryCharacteristics'
     >
   >();
 </script>
@@ -21,7 +21,7 @@
         Основная характеристика:
       </span>
 
-      <span>{{ primaryCharacteristic }}</span>
+      <span>{{ primaryCharacteristics }}</span>
     </div>
 
     <div class="flex w-full min-w-full flex-col gap-1 px-4 py-1.5">

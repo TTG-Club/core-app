@@ -62,5 +62,5 @@ export interface ClassCreate extends EditorBaseInfoState {
   table: Array<ClassColumnCreate>;
   casterType: string | undefined;
   image: string | undefined;
-  primaryCharacteristic: AbilityKey | undefined;
+  primaryCharacteristics: Array<AbilityKey> | undefined;
 }

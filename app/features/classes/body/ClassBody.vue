@@ -33,7 +33,7 @@
           :hit-dice="detail.hitDice"
           :saving-throws="detail.savingThrows"
           :proficiency="detail.proficiency"
-          :primary-characteristic="detail.primaryCharacteristic"
+          :primary-characteristics="detail.primaryCharacteristics"
         />
       </div>
 

@@ -33,7 +33,7 @@
       description: undefined,
       parentUrl: undefined,
       hitDice: undefined,
-      primaryCharacteristic: undefined,
+      primaryCharacteristics: undefined,
       savingThrows: [],
       proficiency: {
         armor: {
@@ -114,9 +114,12 @@
         <UFormField
           class="col-span-12"
           label="Основная хар-ка"
-          name="primaryCharacteristic"
+          name="primaryCharacteristics"
         >
-          <SelectAbilities v-model="state.primaryCharacteristic" />
+          <SelectAbilities
+            v-model="state.primaryCharacteristics"
+            multiple
+          />
         </UFormField>
 
         <UFormField
