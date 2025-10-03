@@ -4,6 +4,10 @@
   import type { ClassFeatureCreate } from '~classes/types';
   import { FeatureScaling } from './ui';
 
+  const { isSubclass = false } = defineProps<{
+    isSubclass?: boolean;
+  }>();
+
   const state = defineModel<Array<ClassFeatureCreate>>({ required: true });
 
   function addEmptyFeature() {
@@ -48,7 +52,7 @@
             </UFormField>
 
             <UFormField
-              class="col-span-8"
+              :class="isSubclass ? 'col-span-12' : 'col-span-8'"
               label="Название"
               name="name"
             >
@@ -59,6 +63,7 @@
             </UFormField>
 
             <UFormField
+              v-if="!isSubclass"
               class="col-span-4"
               label="Скрывать в подклассе?"
               name="hideInSubclasses"

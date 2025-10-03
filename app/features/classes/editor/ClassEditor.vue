@@ -8,7 +8,7 @@
     SelectDice,
   } from '~ui/select';
 
-  import type { ClassCreate } from '~classes/types';
+  import type { ClassCreate, ClassLinkResponse } from '~classes/types';
   import {
     ClassEditorProficiency,
     ClassEditorTable,
@@ -62,6 +62,19 @@
     actionUrl: '/api/v2/classes',
     getInitialState,
   });
+
+  const { data: classLinks } =
+    useNuxtData<ClassLinkResponse[]>('classes-select');
+
+  const parentClass = computed<ClassLinkResponse | undefined>(() => {
+    if (!state.value.parentUrl) {
+      return undefined;
+    }
+
+    return classLinks.value?.find(
+      (classLink) => classLink.url === state.value.parentUrl,
+    );
+  });
 </script>
 
 <template>
@@ -74,6 +87,7 @@
     <EditorBaseInfo
       v-model="state"
       section="classes"
+      :prefix="parentClass?.name.eng"
     />
 
     <UCard variant="subtle">
@@ -178,7 +192,10 @@
       </div>
     </UCard>
 
-    <ClassEditorFeatures v-model="state.features" />
+    <ClassEditorFeatures
+      v-model="state.features"
+      :is-subclass="!!state.parentUrl"
+    />
 
     <ClassEditorTable v-model="state.table" />
 

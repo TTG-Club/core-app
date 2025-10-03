@@ -20,6 +20,7 @@
       );
 
       return speciesLinks.map((species) => ({
+        ...species,
         label: `${species.name.rus} [${species.name.eng}]`,
         value: species.url,
       }));
@@ -44,6 +45,8 @@
     :multiple="multiple"
     :disabled="disabled"
     :placeholder="`Выбери вид${multiple ? 'ы' : ''}`"
+    label-key="label"
+    value-key="value"
     clearable
     searchable
     @update:open="handleDropdownOpening"

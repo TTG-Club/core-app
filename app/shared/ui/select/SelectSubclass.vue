@@ -17,6 +17,7 @@
       );
 
       return classesLinks.map((classLink) => ({
+        ...classLink,
         label: `${classLink.name.rus} [${classLink.name.eng}]`,
         value: classLink.url,
       }));
@@ -41,6 +42,8 @@
     :multiple="multiple"
     :disabled="disabled"
     :placeholder="`Выбери подкласс${multiple ? 'ы' : ''}`"
+    label-key="label"
+    value-key="value"
     clearable
     searchable
     @update:open="handleDropdownOpening"
