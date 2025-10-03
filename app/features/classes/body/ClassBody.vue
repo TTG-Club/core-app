@@ -38,16 +38,18 @@
       </div>
 
       <div class="flex flex-auto flex-col gap-6">
-        <ClassRouting
-          :parent="detail.parent"
-          :url="detail.url"
-        />
+        <div class="flex flex-col gap-2">
+          <ClassRouting
+            :parent="detail.parent"
+            :url="detail.url"
+          />
 
-        <ClassTable
-          :table="detail.table"
-          :caster-type="detail.casterType"
-          :features="detail.features"
-        />
+          <ClassTable
+            :table="detail.table"
+            :caster-type="detail.casterType"
+            :features="detail.features"
+          />
+        </div>
 
         <ClassProficiency
           :proficiency="detail.proficiency"

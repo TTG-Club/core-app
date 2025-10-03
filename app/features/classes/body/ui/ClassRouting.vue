@@ -23,6 +23,25 @@
 
   const isLoading = computed(() => status.value === 'pending');
 
+  const route = useRoute();
+
+  const currentSlug = computed<string>(() => {
+    const byParam = (route.params as Record<string, string | undefined>)?.url;
+
+    if (byParam) {
+      return byParam;
+    }
+
+    const path = route.path || '';
+    const last = path.split('/').filter(Boolean).pop();
+
+    return last || '';
+  });
+
+  const selectedSubclass = computed(() =>
+    subclasses.value?.find((subclass) => subclass.url === currentSlug.value),
+  );
+
   const groups = computed<Array<CommandPaletteGroup>>(() => {
     if (!subclasses.value?.length) {
       return [];
@@ -47,16 +66,25 @@
 </script>
 
 <template>
-  <div class="flex gap-2">
+  <div class="flex w-auto gap-2 rounded-lg bg-accented p-1">
     <UButton
       v-if="parent"
       :to="`/classes/${parent.url}`"
       variant="ghost"
       color="neutral"
-      size="sm"
+      size="md"
     >
-      {{ parent.name.rus }}
+      <div class="flex flex-col items-start leading-tight">
+        <span class="text-xs text-secondary">Открыть класс:</span>
+
+        <span>{{ parent.name.rus }}</span>
+      </div>
     </UButton>
+
+    <USeparator
+      orientation="vertical"
+      class="h-auto"
+    />
 
     <UPopover
       :ui="{ content: 'p-0' }"
@@ -71,15 +99,24 @@
           :active="open"
           active-variant="soft"
           color="neutral"
-          size="sm"
+          size="md"
+          class="gap-4"
         >
-          Подклассы
+          <div class="flex flex-col items-start leading-tight">
+            <span class="text-left text-xs text-secondary"
+              >Выбрать подкласс:</span
+            >
+
+            <span class="text-left">
+              {{ selectedSubclass?.name?.rus || 'Выбрать' }}
+            </span>
+          </div>
 
           <UBadge
             v-if="subclasses?.length"
             variant="subtle"
             color="neutral"
-            size="sm"
+            size="md"
           >
             {{ subclasses.length }}
           </UBadge>
@@ -95,8 +132,29 @@
             input: '[&>input]:h-8 [&>input]:text-sm',
             content: 'max-h-80',
           }"
+          @update:model-value="() => (search = '')"
         />
       </template>
     </UPopover>
+
+    <USeparator
+      orientation="vertical"
+      class="hidden h-auto md:block"
+    />
+
+    <UButton
+      v-if="parent"
+      :to="`/classes/`"
+      variant="ghost"
+      color="neutral"
+      size="md"
+      class="ml-auto hidden md:block"
+    >
+      <div class="flex flex-col items-end leading-tight">
+        <span class="text-xs text-secondary">О классе</span>
+
+        <span>Описание</span>
+      </div>
+    </UButton>
   </div>
 </template>
