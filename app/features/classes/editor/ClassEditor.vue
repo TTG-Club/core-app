@@ -14,6 +14,7 @@
     ClassEditorTable,
     ClassEditorFeatures,
   } from './ui';
+  import { ClassPreview } from '~classes/preview';
 
   function getInitialState(): ClassCreate {
     return {
@@ -209,6 +210,14 @@
       </div>
     </UCard>
 
-    <EditorFormControls />
+    <EditorFormControls>
+      <template #preview="{ opened, changeVisibility }">
+        <ClassPreview
+          :open="opened"
+          :state="state"
+          @update:open="changeVisibility"
+        />
+      </template>
+    </EditorFormControls>
   </UForm>
 </template>

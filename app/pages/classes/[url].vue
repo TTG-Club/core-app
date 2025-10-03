@@ -5,6 +5,9 @@
 
   import type { ClassDetailResponse } from '~classes/types';
 
+  const { greaterOrEqual } = useBreakpoints();
+  const isTabletOrHigher = greaterOrEqual(Breakpoint.MD);
+
   const {
     params: { url },
   } = useRoute();
@@ -49,7 +52,7 @@
       return '';
     }
 
-    if (detail.value.parent) {
+    if (detail.value.parent && isTabletOrHigher.value) {
       return `${detail.value.parent.name.rus} ${detail.value.name.rus}`;
     }
 
@@ -61,7 +64,7 @@
       return '';
     }
 
-    if (detail.value.parent) {
+    if (detail.value.parent && isTabletOrHigher.value) {
       return `${detail.value.parent.name.eng} ${detail.value.name.eng}`;
     }
 

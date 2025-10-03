@@ -11,7 +11,10 @@
 
 <template>
   <div
-    class="w-full overflow-hidden rounded-lg border border-default bg-muted py-1.5"
+    :class="[
+      'w-full min-w-72 overflow-hidden bg-muted py-1.5',
+      'rounded-lg border border-default',
+    ]"
   >
     <div class="flex w-full min-w-full flex-col gap-1 px-4 py-1.5">
       <span class="min-w-20 flex-none text-sm font-medium text-highlighted">

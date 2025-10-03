@@ -22,7 +22,7 @@
 <template>
   <div class="@container">
     <div class="flex flex-col gap-6 @min-[800px]:flex-row @min-[800px]:gap-7">
-      <div class="flex w-full flex-col gap-4 @min-[800px]:max-w-80">
+      <div class="flex w-full flex-shrink-0 flex-col gap-4 @min-[800px]:w-80">
         <UiGallery
           v-if="!hideGallery && detail.image"
           :preview="detail.image"
