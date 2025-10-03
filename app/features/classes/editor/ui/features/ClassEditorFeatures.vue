@@ -16,6 +16,7 @@
       name: '',
       description: '',
       additional: '',
+      hideInSubclasses: false,
       scaling: [],
     };
   }
@@ -39,7 +40,7 @@
             :state="feat"
           >
             <UFormField
-              class="col-span-8"
+              class="col-span-4"
               label="Уровень"
               name="level"
             >
@@ -54,6 +55,17 @@
               <UInput
                 v-model="feat.name"
                 placeholder="Название умения"
+              />
+            </UFormField>
+
+            <UFormField
+              class="col-span-4"
+              label="Скрывать в подклассе?"
+              name="hideInSubclasses"
+            >
+              <UCheckbox
+                v-model="feat.hideInSubclasses"
+                description="Да"
               />
             </UFormField>
 

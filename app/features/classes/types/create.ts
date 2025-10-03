@@ -6,6 +6,7 @@ export interface ClassFeatureScalingCreate {
   name: string;
   description: string;
   additional: string;
+  hideInSubclasses: boolean | undefined;
 }
 
 export interface ClassFeatureCreate {
@@ -13,6 +14,7 @@ export interface ClassFeatureCreate {
   name: string;
   description: string;
   additional: string;
+  hideInSubclasses: boolean | undefined;
   scaling: Array<ClassFeatureScalingCreate>;
 }
 
@@ -37,7 +39,7 @@ export interface WeaponProficiencyCreate {
 }
 
 export interface SkillProficiencyCreate {
-  cnt: number;
+  count: number;
   skills: Array<string>;
 }
 

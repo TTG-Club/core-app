@@ -2,7 +2,7 @@
   import { MarkupRender } from '~ui/markup';
   import { UiGallery } from '~ui/gallery';
 
-  import type { ClassDetailResponse, ClassFeature } from '~classes/types';
+  import type { ClassDetailResponse } from '~classes/types';
   import {
     ClassEquipment,
     ClassProficiency,
@@ -12,7 +12,6 @@
   } from './ui';
   import { UiCollapse } from '~ui/collapse';
   import { ClassSubclassesDrawer } from '~classes/subclasses-drawer';
-  import { omit, orderBy } from 'lodash-es';
 
   const { detail, hideGallery = false } = defineProps<{
     detail: ClassDetailResponse;
@@ -31,26 +30,6 @@
       onClose: () => drawer.close(),
     });
   }
-
-  const features = computed(() => {
-    const list: Array<ClassFeature> = [];
-
-    for (const feature of detail.features) {
-      list.push(omit(feature, 'scaling'));
-
-      if (feature.scaling) {
-        list.push(
-          ...feature.scaling.map((scale) => ({
-            key: `${feature.key}-${scale.level}`,
-            isSubclass: feature.isSubclass,
-            ...scale,
-          })),
-        );
-      }
-    }
-
-    return orderBy(list, ['level'], ['asc']);
-  });
 </script>
 
 <template>
@@ -83,7 +62,7 @@
         <ClassTable
           :table="detail.table"
           :caster-type="detail.casterType"
-          :features="features"
+          :features="detail.features"
         />
 
         <ClassProficiency
@@ -94,7 +73,7 @@
         <ClassEquipment :equipment="detail.equipment" />
 
         <FeatureCollapse
-          v-for="feature in features"
+          v-for="feature in detail.features"
           :key="feature.key"
           :feature
         />

@@ -17,6 +17,7 @@
       name: '',
       description: '',
       additional: '',
+      hideInSubclasses: false,
     };
   }
 </script>
@@ -34,7 +35,7 @@
     :state="row"
   >
     <UFormField
-      class="col-span-8"
+      class="col-span-4"
       label="Уровень"
       name="level"
     >
@@ -49,6 +50,17 @@
       <UInput
         v-model="row.name"
         placeholder="Название уровня"
+      />
+    </UFormField>
+
+    <UFormField
+      class="col-span-4"
+      label="Скрывать в подклассе?"
+      name="hideInSubclasses"
+    >
+      <UCheckbox
+        v-model="row.hideInSubclasses"
+        description="Да"
       />
     </UFormField>
 

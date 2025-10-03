@@ -45,7 +45,7 @@
         },
         tool: undefined,
         skill: {
-          cnt: 0,
+          count: 0,
           skills: [],
         },
       },

@@ -12,7 +12,7 @@
     type ClassDetailResponse,
     type ClassFeature,
   } from '~classes/types';
-  import { maxBy, orderBy, range } from 'lodash-es';
+  import { maxBy, omit, orderBy, range } from 'lodash-es';
   import { useDndMechanics } from './useDndMechanics';
   import { ULink } from '#components';
   import { LEVELS } from '~/shared/consts';
@@ -65,6 +65,26 @@
     casterType: props.casterType,
   });
 
+  const features = computed(() => {
+    const list: Array<ClassFeature> = [];
+
+    for (const feature of props.features) {
+      list.push(omit(feature, 'scaling'));
+
+      if (feature.scaling) {
+        list.push(
+          ...feature.scaling.map((scale) => ({
+            key: feature.key,
+            isSubclass: feature.isSubclass,
+            ...scale,
+          })),
+        );
+      }
+    }
+
+    return orderBy(list, ['level'], ['asc']);
+  });
+
   function getScalingValueForLevel(
     level: Level,
     scalingArray: Array<{ level: number; value: string }> | undefined,
@@ -85,7 +105,7 @@
     const row: ClassTableRow = {
       level,
       proficiencyBonus: getProficiencyBonus(level),
-      features: props.features?.filter((f) => f.level === level) || [],
+      features: features.value.filter((f) => f.level === level) || [],
     };
 
     if (props.table && Array.isArray(props.table)) {
@@ -143,13 +163,13 @@
         accessorKey: 'features',
         header: 'Умения класса',
         cell: ({ row }) => {
-          const features = row.original.features as Array<ClassFeature>;
+          const featuresInLevel = row.original.features;
 
-          if (!features || features.length === 0) {
+          if (!featuresInLevel || featuresInLevel.length === 0) {
             return '—';
           }
 
-          const featureLinks = features.map((feature, index) => {
+          const featureLinks = featuresInLevel.map((feature, index) => {
             const link = h(
               ULink,
               {
@@ -167,7 +187,9 @@
               },
             );
 
-            return index < features.length - 1 ? [link, h('span', ', ')] : link;
+            return index < featuresInLevel.length - 1
+              ? [link, h('span', ', ')]
+              : link;
           });
 
           return h('span', featureLinks.flat());
@@ -349,7 +371,7 @@
 </script>
 
 <template>
-  <div class="w-full overflow-x-auto rounded border border-default">
+  <div class="w-full overflow-x-auto rounded-lg border border-default">
     <table class="min-w-full border-collapse">
       <thead class="bg-elevated/50">
         <tr

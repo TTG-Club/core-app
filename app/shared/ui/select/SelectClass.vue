@@ -45,6 +45,6 @@
     placeholder="Выбери класс"
     clearable
     searchable
-    @open="handleDropdownOpening(true)"
+    @update:open="handleDropdownOpening(true)"
   />
 </template>

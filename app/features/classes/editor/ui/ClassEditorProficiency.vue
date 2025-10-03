@@ -22,7 +22,7 @@
       <div class="grid grid-cols-24 gap-4">
         <UFormField
           class="col-span-12"
-          label="Виды оружия"
+          label="Виды доспехов"
           name="armor.category"
         >
           <SelectArmorCategory
@@ -78,10 +78,10 @@
         <UFormField
           class="col-span-4"
           label="Кол-во навыков"
-          name="skill.cnt"
+          name="skill.count"
         >
           <UInputNumber
-            v-model="state.skill.cnt"
+            v-model="state.skill.count"
             :min="0"
           />
         </UFormField>
@@ -94,7 +94,6 @@
           <SelectSkills
             v-model="state.skill.skills"
             multiple
-            :limit="state.skill.cnt || 0"
           />
         </UFormField>
       </div>
