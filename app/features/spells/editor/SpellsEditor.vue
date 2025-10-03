@@ -14,6 +14,9 @@
     SelectSpellLevel,
     SelectMagicSchool,
     SelectSpecies,
+    SelectLineage,
+    SelectSubclass,
+    SelectClass,
   } from '~ui/select';
 
   import type { SpellCreate } from '~/shared/types';
@@ -195,7 +198,7 @@
           name="affiliations.classes"
           class="col-span-6"
         >
-          <SelectSpecies
+          <SelectClass
             v-model="state.affiliations.classes"
             multiple
           />
@@ -206,7 +209,7 @@
           label="Архетипы"
           name="affiliations.subclasses"
         >
-          <SelectSpecies
+          <SelectSubclass
             v-model="state.affiliations.subclasses"
             multiple
           />
@@ -228,7 +231,7 @@
           label="Происхождения"
           name="affiliations.lineages"
         >
-          <SelectSpecies
+          <SelectLineage
             v-model="state.affiliations.lineages"
             multiple
           />

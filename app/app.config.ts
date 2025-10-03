@@ -144,6 +144,19 @@ export default defineAppConfig({
         },
       },
     },
+    selectMenu: {
+      slots: {
+        base: 'w-full',
+      },
+      variants: {
+        defaultVariants: {
+          variant: 'soft',
+        },
+        variant: {
+          outline: 'bg-accented text-default',
+        },
+      },
+    },
     popover: {
       slots: {
         content: [

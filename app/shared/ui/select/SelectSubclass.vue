@@ -10,13 +10,10 @@
   const model = defineModel<string | Array<string>>();
 
   const { data, status, refresh } = await useAsyncData<SelectMenuItem[]>(
-    'classes-select',
+    'subclasses-select',
     async () => {
       const classesLinks = await $fetch<Array<ClassLinkResponse>>(
-        '/api/v2/classes/search',
-        {
-          method: 'post',
-        },
+        '/api/v2/classes/subclasses',
       );
 
       return classesLinks.map((classLink) => ({
@@ -43,7 +40,7 @@
     :items="data || []"
     :multiple="multiple"
     :disabled="disabled"
-    :placeholder="`Выбери класс${multiple ? 'ы' : ''}`"
+    :placeholder="`Выбери подкласс${multiple ? 'ы' : ''}`"
     clearable
     searchable
     @update:open="handleDropdownOpening"

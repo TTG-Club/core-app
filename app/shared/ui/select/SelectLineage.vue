@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ClassLinkResponse } from '~classes/types';
+  import type { SpeciesLinkResponse } from '~/shared/types';
   import type { SelectMenuItem } from '#ui/components/SelectMenu.vue';
 
   const { multiple = false, disabled } = defineProps<{
@@ -10,18 +10,15 @@
   const model = defineModel<string | Array<string>>();
 
   const { data, status, refresh } = await useAsyncData<SelectMenuItem[]>(
-    'classes-select',
+    'species-lineages-select',
     async () => {
-      const classesLinks = await $fetch<Array<ClassLinkResponse>>(
-        '/api/v2/classes/search',
-        {
-          method: 'post',
-        },
+      const speciesLinks = await $fetch<Array<SpeciesLinkResponse>>(
+        '/api/v2/species/lineages',
       );
 
-      return classesLinks.map((classLink) => ({
-        label: `${classLink.name.rus} [${classLink.name.eng}]`,
-        value: classLink.url,
+      return speciesLinks.map((species) => ({
+        label: `${species.name.rus} [${species.name.eng}]`,
+        value: species.url,
       }));
     },
     { dedupe: 'defer' },
@@ -43,7 +40,7 @@
     :items="data || []"
     :multiple="multiple"
     :disabled="disabled"
-    :placeholder="`Выбери класс${multiple ? 'ы' : ''}`"
+    :placeholder="`Выбери происхождени${multiple ? 'я' : 'е'}`"
     clearable
     searchable
     @update:open="handleDropdownOpening"

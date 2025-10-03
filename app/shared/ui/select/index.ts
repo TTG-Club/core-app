@@ -55,3 +55,7 @@ export { default as SelectArmorCategory } from './SelectArmorCategory.vue';
 export { default as SelectWeaponCategory } from './SelectWeaponCategory.vue';
 
 export { default as SelectLevel } from './SelectLevel.vue';
+
+export { default as SelectLineage } from './SelectLineage.vue';
+
+export { default as SelectSubclass } from './SelectSubclass.vue';

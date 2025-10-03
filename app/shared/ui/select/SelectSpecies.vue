@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import type { SpeciesLinkResponse } from '~/shared/types';
+  import type { SelectMenuItem } from '#ui/components/SelectMenu.vue';
 
   const { multiple = false, disabled } = defineProps<{
     disabled?: boolean;
@@ -8,7 +9,7 @@
 
   const model = defineModel<string | Array<string>>();
 
-  const { data, status, refresh } = await useAsyncData(
+  const { data, status, refresh } = await useAsyncData<SelectMenuItem[]>(
     'species-select',
     async () => {
       const speciesLinks = await $fetch<Array<SpeciesLinkResponse>>(
@@ -36,15 +37,15 @@
 </script>
 
 <template>
-  <USelect
+  <USelectMenu
     v-model="model"
     :loading="status === 'pending'"
     :items="data || []"
     :multiple="multiple"
     :disabled="disabled"
-    placeholder="Выбери вид"
+    :placeholder="`Выбери вид${multiple ? 'ы' : ''}`"
     clearable
     searchable
-    @open="handleDropdownOpening(true)"
+    @update:open="handleDropdownOpening"
   />
 </template>
