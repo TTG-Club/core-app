@@ -20,7 +20,7 @@
   import {
     PACT_CASTER_SPELL_SLOTS_COUNT,
     PACT_CASTER_SPELL_SLOTS_LEVEL,
-  } from '~classes/body/ui/table/const';
+  } from './const';
 
   const props =
     defineProps<
@@ -211,8 +211,8 @@
           cell: ({ row }) => row.original[tableColumn.name] ?? '—',
           meta: {
             class: {
-              th: 'w-28 text-center',
-              td: 'w-28 text-center',
+              th: 'text-center',
+              td: 'text-center',
             },
           },
         });
