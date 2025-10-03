@@ -211,8 +211,8 @@
           cell: ({ row }) => row.original[tableColumn.name] ?? '—',
           meta: {
             class: {
-              th: 'text-center',
-              td: 'text-center',
+              th: 'max-w-28 text-center',
+              td: 'max-w-28 text-center',
             },
           },
         });
