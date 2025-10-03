@@ -44,6 +44,30 @@
     );
   }
 
+  const title = computed(() => {
+    if (!detail.value) {
+      return '';
+    }
+
+    if (detail.value.parent) {
+      return `${detail.value.parent.name.rus} ${detail.value.name.rus}`;
+    }
+
+    return detail.value.name.rus;
+  });
+
+  const subtitle = computed(() => {
+    if (!detail.value) {
+      return '';
+    }
+
+    if (detail.value.parent) {
+      return `${detail.value.parent.name.eng} ${detail.value.name.eng}`;
+    }
+
+    return detail.value.name.eng;
+  });
+
   const editUrl = computed(() => `/workshop/classes/${url}`);
 </script>
 
@@ -51,8 +75,8 @@
   <NuxtLayout
     id="classes-base"
     name="detail"
-    :title="detail?.name.rus"
-    :subtitle="detail?.name.eng"
+    :title
+    :subtitle
     :source="detail?.source"
     :date-time="detail?.updatedAt"
     copy-text

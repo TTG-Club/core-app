@@ -9,27 +9,14 @@
     ClassTable,
     FeatureCollapse,
     StatsBlock,
+    ClassRouting,
   } from './ui';
   import { UiCollapse } from '~ui/collapse';
-  import { ClassSubclassesDrawer } from '~classes/subclasses-drawer';
 
   const { detail, hideGallery = false } = defineProps<{
     detail: ClassDetailResponse;
     hideGallery?: boolean;
   }>();
-
-  const overlay = useOverlay();
-
-  const drawer = overlay.create(ClassSubclassesDrawer, {
-    destroyOnClose: true,
-  });
-
-  function openSubclasses(url: string) {
-    drawer.open({
-      url,
-      onClose: () => drawer.close(),
-    });
-  }
 </script>
 
 <template>
@@ -48,17 +35,14 @@
           :proficiency="detail.proficiency"
           :primary-characteristic="detail.primaryCharacteristic"
         />
-
-        <UButton
-          v-if="detail.hasSubclasses"
-          block
-          @click.left.exact.prevent="openSubclasses(detail.url)"
-        >
-          Подклассы
-        </UButton>
       </div>
 
       <div class="flex flex-auto flex-col gap-6">
+        <ClassRouting
+          :parent="detail.parent"
+          :url="detail.url"
+        />
+
         <ClassTable
           :table="detail.table"
           :caster-type="detail.casterType"

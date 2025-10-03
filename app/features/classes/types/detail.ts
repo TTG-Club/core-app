@@ -1,5 +1,6 @@
 import type { Level, NameResponse, SourceResponse } from '~/shared/types';
 import type { EntryList } from '~ui/markup';
+import type { ClassLinkResponse } from './link';
 
 export interface ClassDetailResponse {
   url: string;
@@ -19,6 +20,7 @@ export interface ClassDetailResponse {
   table: Array<ClassTable>;
   features: Array<ClassFeature>;
   hasSubclasses?: boolean;
+  parent?: ClassLinkResponse;
 }
 
 export interface ClassTable {
