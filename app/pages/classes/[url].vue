@@ -5,6 +5,12 @@
 
   import type { ClassDetailResponse } from '~classes/types';
 
+  const isClientReady = useState('client-ready', () => false);
+
+  onMounted(() => {
+    isClientReady.value = true;
+  });
+
   const { greaterOrEqual } = useBreakpoints();
   const isTabletOrHigher = greaterOrEqual(Breakpoint.MD);
 
@@ -52,6 +58,10 @@
       return '';
     }
 
+    if (!isClientReady.value) {
+      return detail.value.name.rus;
+    }
+
     if (detail.value.parent && isTabletOrHigher.value) {
       return `${detail.value.parent.name.rus} ${detail.value.name.rus}`;
     }
@@ -62,6 +72,10 @@
   const subtitle = computed(() => {
     if (!detail.value) {
       return '';
+    }
+
+    if (!isClientReady.value) {
+      return detail.value.name.eng;
     }
 
     if (detail.value.parent && isTabletOrHigher.value) {

@@ -2,10 +2,17 @@
   import type { ClassLinkResponse } from '~classes/types';
   import type { CommandPaletteGroup } from '@nuxt/ui';
   import { uniqBy } from 'lodash-es';
+  import type { NameResponse } from '~/shared/types';
 
-  const { url, parent = undefined } = defineProps<{
+  const {
+    url,
+    name,
+    parent = undefined,
+  } = defineProps<{
     url: string;
+    name: Pick<NameResponse, 'rus' | 'eng'>;
     parent?: ClassLinkResponse;
+    hasDescription?: boolean;
   }>();
 
   const { data: subclasses, status } = await useAsyncData(
@@ -14,9 +21,6 @@
       $fetch<Array<ClassLinkResponse>>(
         `/api/v2/classes/${parent ? parent.url : url}/subclasses`,
       ),
-    {
-      server: false,
-    },
   );
 
   const search = ref<string>();
@@ -47,16 +51,24 @@
 </script>
 
 <template>
-  <div class="flex gap-2">
+  <div class="flex w-auto gap-2 rounded-lg bg-accented p-1">
     <UButton
-      v-if="parent"
-      :to="`/classes/${parent.url}`"
+      :to="`/classes/${parent ? parent.url : url}`"
       variant="ghost"
       color="neutral"
-      size="sm"
+      size="md"
     >
-      {{ parent.name.rus }}
+      <div class="flex flex-col items-start leading-tight">
+        <span class="text-xs text-secondary"> Выбранный класс: </span>
+
+        <span>{{ parent ? parent.name.rus : name.rus }}</span>
+      </div>
     </UButton>
+
+    <USeparator
+      orientation="vertical"
+      class="h-auto"
+    />
 
     <UPopover
       :ui="{ content: 'p-0' }"
@@ -71,15 +83,24 @@
           :active="open"
           active-variant="soft"
           color="neutral"
-          size="sm"
+          class="gap-4"
+          size="md"
         >
-          Подклассы
+          <div class="flex flex-col items-start leading-tight">
+            <span class="text-left text-xs text-secondary">
+              Выбранный подкласс:
+            </span>
+
+            <span class="text-left">
+              {{ parent ? name.rus : 'Выбрать' }}
+            </span>
+          </div>
 
           <UBadge
             v-if="subclasses?.length"
             variant="subtle"
             color="neutral"
-            size="sm"
+            size="md"
           >
             {{ subclasses.length }}
           </UBadge>
@@ -98,5 +119,26 @@
         />
       </template>
     </UPopover>
+
+    <template v-if="hasDescription">
+      <USeparator
+        orientation="vertical"
+        class="hidden h-auto md:block"
+      />
+
+      <UButton
+        class="ml-auto hidden md:block"
+        to="#description"
+        variant="ghost"
+        color="neutral"
+        size="md"
+      >
+        <div class="flex flex-col items-end leading-tight">
+          <span class="text-xs text-secondary">О классе</span>
+
+          <span>Описание</span>
+        </div>
+      </UButton>
+    </template>
   </div>
 </template>
