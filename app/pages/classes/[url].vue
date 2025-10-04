@@ -5,6 +5,12 @@
 
   import type { ClassDetailResponse } from '~classes/types';
 
+  const isClientReady = useState('client-ready', () => false);
+
+  onMounted(() => {
+    isClientReady.value = true;
+  });
+
   const { greaterOrEqual } = useBreakpoints();
   const isTabletOrHigher = greaterOrEqual(Breakpoint.MD);
 
@@ -47,14 +53,12 @@
     );
   }
 
-  const { isHydrating } = useNuxtApp();
-
   const title = computed(() => {
     if (!detail.value) {
       return '';
     }
 
-    if (!import.meta.client || isHydrating) {
+    if (!isClientReady.value) {
       return detail.value.name.rus;
     }
 
@@ -70,7 +74,7 @@
       return '';
     }
 
-    if (!import.meta.client || isHydrating) {
+    if (!isClientReady.value) {
       return detail.value.name.eng;
     }
 
