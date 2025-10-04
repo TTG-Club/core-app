@@ -2,10 +2,17 @@
   import type { ClassLinkResponse } from '~classes/types';
   import type { CommandPaletteGroup } from '@nuxt/ui';
   import { uniqBy } from 'lodash-es';
+  import type { NameResponse } from '~/shared/types';
 
-  const { url, parent = undefined } = defineProps<{
+  const {
+    url,
+    name,
+    parent = undefined,
+  } = defineProps<{
     url: string;
+    name: Pick<NameResponse, 'rus' | 'eng'>;
     parent?: ClassLinkResponse;
+    hasDescription?: boolean;
   }>();
 
   const { data: subclasses, status } = await useAsyncData(
@@ -14,33 +21,11 @@
       $fetch<Array<ClassLinkResponse>>(
         `/api/v2/classes/${parent ? parent.url : url}/subclasses`,
       ),
-    {
-      server: false,
-    },
   );
 
   const search = ref<string>();
 
   const isLoading = computed(() => status.value === 'pending');
-
-  const route = useRoute();
-
-  const currentSlug = computed<string>(() => {
-    const byParam = (route.params as Record<string, string | undefined>)?.url;
-
-    if (byParam) {
-      return byParam;
-    }
-
-    const path = route.path || '';
-    const last = path.split('/').filter(Boolean).pop();
-
-    return last || '';
-  });
-
-  const selectedSubclass = computed(() =>
-    subclasses.value?.find((subclass) => subclass.url === currentSlug.value),
-  );
 
   const groups = computed<Array<CommandPaletteGroup>>(() => {
     if (!subclasses.value?.length) {
@@ -68,16 +53,15 @@
 <template>
   <div class="flex w-auto gap-2 rounded-lg bg-accented p-1">
     <UButton
-      v-if="parent"
-      :to="`/classes/${parent.url}`"
+      :to="`/classes/${parent ? parent.url : url}`"
       variant="ghost"
       color="neutral"
       size="md"
     >
       <div class="flex flex-col items-start leading-tight">
-        <span class="text-xs text-secondary">Открыть класс:</span>
+        <span class="text-xs text-secondary"> Выбранный класс: </span>
 
-        <span>{{ parent.name.rus }}</span>
+        <span>{{ parent ? parent.name.rus : name.rus }}</span>
       </div>
     </UButton>
 
@@ -99,16 +83,16 @@
           :active="open"
           active-variant="soft"
           color="neutral"
-          size="md"
           class="gap-4"
+          size="md"
         >
           <div class="flex flex-col items-start leading-tight">
-            <span class="text-left text-xs text-secondary"
-              >Выбрать подкласс:</span
-            >
+            <span class="text-left text-xs text-secondary">
+              Выбранный подкласс:
+            </span>
 
             <span class="text-left">
-              {{ selectedSubclass?.name?.rus || 'Выбрать' }}
+              {{ parent ? name.rus : 'Выбрать' }}
             </span>
           </div>
 
@@ -132,29 +116,29 @@
             input: '[&>input]:h-8 [&>input]:text-sm',
             content: 'max-h-80',
           }"
-          @update:model-value="() => (search = '')"
         />
       </template>
     </UPopover>
 
-    <USeparator
-      orientation="vertical"
-      class="hidden h-auto md:block"
-    />
+    <template v-if="hasDescription">
+      <USeparator
+        orientation="vertical"
+        class="hidden h-auto md:block"
+      />
 
-    <UButton
-      v-if="parent"
-      :to="`/classes/`"
-      variant="ghost"
-      color="neutral"
-      size="md"
-      class="ml-auto hidden md:block"
-    >
-      <div class="flex flex-col items-end leading-tight">
-        <span class="text-xs text-secondary">О классе</span>
+      <UButton
+        class="ml-auto hidden md:block"
+        to="#description"
+        variant="ghost"
+        color="neutral"
+        size="md"
+      >
+        <div class="flex flex-col items-end leading-tight">
+          <span class="text-xs text-secondary">О классе</span>
 
-        <span>Описание</span>
-      </div>
-    </UButton>
+          <span>Описание</span>
+        </div>
+      </UButton>
+    </template>
   </div>
 </template>

@@ -47,9 +47,15 @@
     );
   }
 
+  const { isHydrating } = useNuxtApp();
+
   const title = computed(() => {
     if (!detail.value) {
       return '';
+    }
+
+    if (!import.meta.client || isHydrating) {
+      return detail.value.name.rus;
     }
 
     if (detail.value.parent && isTabletOrHigher.value) {
@@ -62,6 +68,10 @@
   const subtitle = computed(() => {
     if (!detail.value) {
       return '';
+    }
+
+    if (!import.meta.client || isHydrating) {
+      return detail.value.name.eng;
     }
 
     if (detail.value.parent && isTabletOrHigher.value) {

@@ -40,8 +40,10 @@
       <div class="flex flex-auto flex-col gap-6">
         <div class="flex flex-col gap-2">
           <ClassRouting
-            :parent="detail.parent"
             :url="detail.url"
+            :name="detail.name"
+            :parent="detail.parent"
+            :has-description="!!detail.description"
           />
 
           <ClassTable
@@ -66,9 +68,10 @@
 
         <UiCollapse
           v-if="detail.description?.length"
+          id="description"
           default-open
         >
-          <template #default> Описание</template>
+          <template #default>Описание</template>
 
           <template #content>
             <MarkupRender :entries="detail.description" />
