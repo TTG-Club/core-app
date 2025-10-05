@@ -53,9 +53,9 @@ export const CARD_LINKS: Array<{
     img: '/s3/home/section-link/glossary.webp',
   },
   {
-    name: 'В разработке',
+    name: 'Бастионы',
     url: '/',
-    img: '/s3/home/section-link/development.webp',
+    img: '/s3/home/section-link/bastions.webp',
     disabled: true,
   },
 ];
