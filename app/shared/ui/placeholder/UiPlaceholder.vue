@@ -8,6 +8,7 @@
     >
       <defs>
         <pattern
+          id="ui-placeholder-pattern"
           x="0"
           y="0"
           width="10"
@@ -19,6 +20,7 @@
       </defs>
 
       <rect
+        :fill="`url(#ui-placeholder-pattern)`"
         stroke="none"
         width="100%"
         height="100%"
