@@ -371,7 +371,7 @@
 </script>
 
 <template>
-  <div class="w-full overflow-x-auto rounded-lg border border-default">
+  <div class="w-full overflow-x-auto rounded-lg border border-default bg-muted">
     <table class="min-w-full border-collapse">
       <thead class="bg-elevated/50">
         <tr

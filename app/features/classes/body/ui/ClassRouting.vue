@@ -59,9 +59,7 @@
       size="md"
     >
       <div class="flex flex-col items-start leading-tight">
-        <span class="ml-auto hidden text-xs text-secondary md:block">
-          Основной класс:
-        </span>
+        <span class="text-xs text-secondary"> Класс: </span>
 
         <span>{{ parent ? parent.name.rus : name.rus }}</span>
       </div>
@@ -93,9 +91,7 @@
           </UBadge>
 
           <div class="flex flex-col items-start leading-tight">
-            <span class="text-left text-xs text-secondary">
-              Выбранный подкласс:
-            </span>
+            <span class="text-left text-xs text-secondary"> Подкласс: </span>
 
             <span class="text-left">
               {{ parent ? name.rus : 'Выбрать' }}
@@ -117,20 +113,19 @@
       </template>
     </UPopover>
 
-    <template v-if="hasDescription">
-      <UButton
-        class="ml-auto hidden md:block"
-        to="#description"
-        variant="soft"
-        color="secondary"
-        size="md"
-      >
-        <div class="flex flex-col items-end leading-tight">
-          <span class="text-xs text-secondary">О классе</span>
+    <UButton
+      v-if="hasDescription"
+      class="ml-auto hidden md:block"
+      to="#description"
+      variant="soft"
+      color="secondary"
+      size="md"
+    >
+      <div class="flex flex-col items-end leading-tight">
+        <span class="text-xs text-secondary">О классе</span>
 
-          <span>Описание</span>
-        </div>
-      </UButton>
-    </template>
+        <span>Описание</span>
+      </div>
+    </UButton>
   </div>
 </template>
