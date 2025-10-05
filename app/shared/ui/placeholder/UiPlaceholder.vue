@@ -1,17 +1,6 @@
-<script setup lang="ts">
-  const props = withDefaults(
-    defineProps<{
-      patternId?: string;
-    }>(),
-    {
-      patternId: 'ui-placeholder-pattern',
-    },
-  );
-</script>
-
 <template>
   <div
-    class="relative w-full overflow-hidden rounded-lg border border-dashed border-default"
+    class="relative overflow-hidden rounded-lg border border-dashed border-default"
   >
     <svg
       class="absolute inset-0 h-full w-full stroke-inverted/10"
@@ -19,7 +8,6 @@
     >
       <defs>
         <pattern
-          :id="props.patternId"
           x="0"
           y="0"
           width="10"
@@ -32,7 +20,6 @@
 
       <rect
         stroke="none"
-        :fill="`url(#${props.patternId})`"
         width="100%"
         height="100%"
       ></rect>
