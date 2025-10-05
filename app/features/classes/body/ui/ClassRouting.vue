@@ -51,24 +51,19 @@
 </script>
 
 <template>
-  <div class="flex w-auto gap-2 rounded-lg bg-accented p-1">
+  <div class="flex w-auto gap-2">
     <UButton
       :to="`/classes/${parent ? parent.url : url}`"
-      variant="ghost"
-      color="neutral"
+      variant="soft"
+      color="secondary"
       size="md"
     >
       <div class="flex flex-col items-start leading-tight">
-        <span class="text-xs text-secondary"> Выбранный класс: </span>
+        <span class="text-xs text-secondary"> Класс: </span>
 
         <span>{{ parent ? parent.name.rus : name.rus }}</span>
       </div>
     </UButton>
-
-    <USeparator
-      orientation="vertical"
-      class="h-auto"
-    />
 
     <UPopover
       :ui="{ content: 'p-0' }"
@@ -79,31 +74,29 @@
         <UButton
           :disabled="!subclasses?.length"
           :loading="isLoading"
-          :variant="'ghost'"
+          :variant="'soft'"
           :active="open"
           active-variant="soft"
-          color="neutral"
-          class="gap-4"
+          color="primary"
+          class="gap-2"
           size="md"
         >
+          <UBadge
+            v-if="subclasses?.length"
+            variant="subtle"
+            color="primary"
+            size="lg"
+          >
+            {{ subclasses.length }}
+          </UBadge>
+
           <div class="flex flex-col items-start leading-tight">
-            <span class="text-left text-xs text-secondary">
-              Выбранный подкласс:
-            </span>
+            <span class="text-left text-xs text-secondary"> Подкласс: </span>
 
             <span class="text-left">
               {{ parent ? name.rus : 'Выбрать' }}
             </span>
           </div>
-
-          <UBadge
-            v-if="subclasses?.length"
-            variant="subtle"
-            color="neutral"
-            size="md"
-          >
-            {{ subclasses.length }}
-          </UBadge>
         </UButton>
       </template>
 
@@ -120,25 +113,19 @@
       </template>
     </UPopover>
 
-    <template v-if="hasDescription">
-      <USeparator
-        orientation="vertical"
-        class="hidden h-auto md:block"
-      />
+    <UButton
+      v-if="hasDescription"
+      class="ml-auto hidden md:block"
+      to="#description"
+      variant="soft"
+      color="secondary"
+      size="md"
+    >
+      <div class="flex flex-col items-end leading-tight">
+        <span class="text-xs text-secondary">О классе</span>
 
-      <UButton
-        class="ml-auto hidden md:block"
-        to="#description"
-        variant="ghost"
-        color="neutral"
-        size="md"
-      >
-        <div class="flex flex-col items-end leading-tight">
-          <span class="text-xs text-secondary">О классе</span>
-
-          <span>Описание</span>
-        </div>
-      </UButton>
-    </template>
+        <span>Описание</span>
+      </div>
+    </UButton>
   </div>
 </template>
