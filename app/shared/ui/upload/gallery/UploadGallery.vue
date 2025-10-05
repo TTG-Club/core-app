@@ -223,8 +223,11 @@
 <template>
   <div
     ref="dropZoneRef"
-    class="w-full rounded-lg border-2 border-dashed border-default bg-(--ui-bg-muted) p-6 text-center transition-colors hover:border-primary"
-    :class="isOverDropZone ? 'hover:border-primary' : undefined"
+    :class="[
+      'w-full bg-muted p-6 text-center transition-colors',
+      'rounded-lg border-2 border-dashed border-default hover:border-primary',
+      isOverDropZone ? 'hover:border-primary' : undefined,
+    ]"
     @click.left.exact.prevent="() => openDialog()"
   >
     <span class="text-sm">

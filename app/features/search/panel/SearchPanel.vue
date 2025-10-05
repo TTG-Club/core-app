@@ -28,6 +28,7 @@
 <style module lang="scss">
   .glowButton {
     &:before {
+      will-change: background;
       content: '';
 
       position: absolute;
@@ -59,6 +60,7 @@
         var(--ui-color-primary-100)
       );
       filter: blur(8px);
+      backdrop-filter: blur(8px);
 
       animation: gradient-rotate 10s linear infinite;
     }

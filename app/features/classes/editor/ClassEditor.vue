@@ -214,7 +214,17 @@
             v-model="state.image"
             section="classes"
             max-size="1024"
-          />
+          >
+            <template #preview>
+              <div class="relative w-48 overflow-hidden rounded-lg">
+                <img
+                  :src="state.image || '/img/no-img.webp'"
+                  alt="Uploaded image"
+                  class="h-full w-full object-contain"
+                />
+              </div>
+            </template>
+          </UploadImage>
         </UFormField>
 
         <UFormField
