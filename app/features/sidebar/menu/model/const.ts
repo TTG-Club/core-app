@@ -52,6 +52,11 @@ export const MENU_SECTIONS: Array<{
         label: 'Магические предметы',
         disabled: false,
       },
+      {
+        href: '/',
+        label: 'Бастионы',
+        disabled: true,
+      },
     ],
   },
   {
