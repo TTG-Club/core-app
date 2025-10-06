@@ -1,6 +1,7 @@
 import { getReasonPhrase, StatusCodes } from 'http-status-codes';
 
 import { getStatusMessage } from '~~/shared/utils';
+import type { Role } from '~/shared/types';
 
 export default defineNuxtRouteMiddleware(async (to) => {
   if (!to.meta.auth?.roles?.length) {
@@ -44,7 +45,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const requestFetch = useRequestFetch();
 
   try {
-    const roles = await requestFetch<Array<string>>('/api/user/roles');
+    const roles = await requestFetch<Array<Role>>('/api/user/roles');
 
     for (const role of roles) {
       if (to.meta.auth.roles.includes(role)) {

@@ -55,6 +55,8 @@
     hoveredCell.value = null;
   }, 10);
 
+  const { scrollToAnchor } = useAnchorScroll();
+
   const {
     spellSlots,
     isSpellcaster,
@@ -181,6 +183,10 @@
                     : 'text-primary hover:text-primary',
                   'transition-colors duration-100',
                 ],
+                onClick: withModifiers(
+                  () => scrollToAnchor(feature.key),
+                  ['left', 'exact', 'prevent'],
+                ),
               },
               {
                 default: () => feature.name,

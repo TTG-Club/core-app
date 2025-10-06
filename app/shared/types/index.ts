@@ -1,5 +1,7 @@
 export * from './character';
 
+export * from './composable';
+
 export * from './wiki';
 
 export * from './base';

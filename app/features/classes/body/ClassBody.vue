@@ -37,8 +37,8 @@
         />
       </div>
 
-      <div class="flex flex-auto flex-col gap-6">
-        <div class="flex flex-col gap-2">
+      <div class="flex min-w-0 flex-auto flex-col gap-6">
+        <div class="flex min-w-0 flex-col gap-2">
           <ClassRouting
             :url="detail.url"
             :name="detail.name"
