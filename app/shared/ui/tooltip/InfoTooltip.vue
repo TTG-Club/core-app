@@ -5,6 +5,7 @@
   }>();
 
   const slots = useSlots();
+  const { isDesktop } = useDevice();
 
   if (!text && !slots.content) {
     throw new Error('Text or content slot is required');
@@ -15,11 +16,15 @@
   <div class="flex items-center-safe gap-1">
     <slot name="default" />
 
-    <UTooltip :delay-duration="300">
+    <UPopover
+      :mode="isDesktop ? 'hover' : 'click'"
+      :delay-duration="300"
+      disable-hoverable-content
+    >
       <template #default>
         <UIcon
           :name="icon || 'i-ttg-info'"
-          class="cursor-help text-current hover:text-gray-700"
+          class="cursor-help text-current"
         />
       </template>
 
@@ -33,6 +38,6 @@
           {{ text }}
         </template>
       </template>
-    </UTooltip>
+    </UPopover>
   </div>
 </template>

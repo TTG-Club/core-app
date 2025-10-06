@@ -13,31 +13,22 @@
     <template #default> Владения</template>
 
     <template #content>
-      <div
-        v-if="proficiency.armor"
-        class="mb-2"
-      >
+      <div class="mb-2">
         <span class="font-bold text-muted">Доспехи: </span>
 
-        <span>{{ proficiency.armor }}</span>
+        <span>{{ proficiency.armor || 'Нет' }}</span>
       </div>
 
-      <div
-        v-if="proficiency.weapon"
-        class="mb-2"
-      >
+      <div class="mb-2">
         <span class="font-bold text-muted">Оружие: </span>
 
-        <span>{{ proficiency.weapon }}</span>
+        <span>{{ proficiency.weapon || 'Нет' }}</span>
       </div>
 
-      <div
-        v-if="proficiency.tool"
-        class="mb-2"
-      >
+      <div class="mb-2">
         <span class="font-bold text-muted">Инструменты: </span>
 
-        <span>{{ proficiency.tool }}</span>
+        <span>{{ proficiency.tool || 'Нет' }}</span>
       </div>
 
       <div class="mb-2">
