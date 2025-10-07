@@ -1,4 +1,3 @@
-// Разрешенные маркеры и их алиасы.
 export enum SimpleText {
   Text = 'text',
 }
@@ -11,10 +10,9 @@ export enum ComplexEl {
 export type TableAlign = 'left' | 'center' | 'right';
 
 export interface TableCell {
-  // контент ячейки: строка (с @-маркерами) или узлы; допускаем "батчи" для одного td/th
   content: Array<RenderNode | string | Array<RenderNode | string>>;
-  header?: boolean; // если true — <th>, иначе <td>
-  align?: TableAlign; // приоритетнее, чем выравнивание строки/таблицы
+  header?: boolean;
+  align?: TableAlign;
   colSpan?: number;
   rowSpan?: number;
 }
@@ -22,20 +20,14 @@ export interface TableCell {
 // Строка
 export interface TableRow {
   cells: TableCell[];
-  header?: boolean; // вся строка — заголовок (<thead>), можно не использовать, если задаёшь header на ячейках
-  align?: TableAlign; // дефолтное выравнивание для ячеек строки
+  header?: boolean;
+  align?: TableAlign;
 }
 
 // Таблица
 export interface TableNode {
   type: ComplexEl.Table;
-  attrs?: {
-    colAlign?: TableAlign[]; // выравнивание по колонкам (по индексу)
-    dense?: boolean; // компактные отступы
-    bordered?: boolean; // границы
-    striped?: boolean; // зебра
-    fullWidth?: boolean; // на всю ширину
-  };
+  props?: Record<string, unknown>;
   rows: TableRow[];
 }
 
@@ -107,13 +99,12 @@ export type TextWithMarkerName =
   | EmptyMarkerName
   | SectionMarkerName;
 
-// Типы данных для параметров атрибутов.
 export type ParamValue = string | number | boolean | null;
 
-// Тип для параметров маркера.
+export type Align = 'left' | 'center' | 'right';
+
 export type MarkerAttributes = Record<string, ParamValue>;
 
-// Типы узлов TipTap.
 export type RenderNode =
   | SimpleTextNode
   | EmptyNode
