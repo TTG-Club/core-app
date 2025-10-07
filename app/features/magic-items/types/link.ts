@@ -2,7 +2,7 @@ import type { NameResponse, SourceResponse } from '~/shared/types';
 
 export interface MagicItemLinkResponse {
   url: string;
-  name: Pick<NameResponse, 'rus' | 'eng'>;
+  name: NameResponse;
   rarity: string; // редкость
   attunement: boolean; // настройка
   source: SourceResponse;

@@ -4,13 +4,14 @@
   import { SpeciesLegend } from '~species/legend';
   import { SpeciesLink } from '~species/link';
   import { PageGrid, PageResult } from '~ui/page';
-  import { SmallLinkSkeleton } from '~ui/skeleton';
+  import { SkeletonLinkBig } from '~ui/skeleton';
 
   import type { SearchBody, SpeciesLinkResponse } from '~/shared/types';
 
   useSeoMeta({
     title: 'Виды [Species]',
-    description: 'Виды и происхождения персонажей по D&D 2024 редакции',
+    description:
+      'Виды и происхождения персонажей из D&D 5 (редакция 2024 года).',
   });
 
   const search = ref<string>();
@@ -75,7 +76,7 @@
           v-if="status !== 'success' && status !== 'error'"
           :columns="5"
         >
-          <SmallLinkSkeleton
+          <SkeletonLinkBig
             v-for="index in 5"
             :key="index"
           />

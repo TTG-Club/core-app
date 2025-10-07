@@ -10,18 +10,8 @@
   import { SelectCreatureType, SelectSpecies } from '~ui/select';
   import { UploadImage, UploadGallery } from '~ui/upload';
 
-  import type { SpeciesCreate, SpeciesDetailResponse } from '~/shared/types';
+  import type { SpeciesCreate } from '~/shared/types';
   import { SpeciesPreview } from '~species/preview';
-
-  const formRef = useTemplateRef('formRef');
-
-  const validate = () => {
-    return formRef.value?.validate();
-  };
-
-  defineExpose({
-    validate,
-  });
 
   function getInitialState(): SpeciesCreate {
     return {
@@ -60,22 +50,10 @@
     actionUrl: '/api/v2/species',
     getInitialState,
   });
-
-  const {
-    preview,
-    isPreviewShowed,
-    isPreviewLoading,
-    isPreviewError,
-    showPreview,
-  } = useWorkshopPreview<SpeciesCreate, SpeciesDetailResponse>({
-    actionUrl: '/api/v2/species',
-    state,
-  });
 </script>
 
 <template>
   <UForm
-    ref="formRef"
     :state
     class="grid gap-8"
     @submit="onSubmit"
@@ -217,13 +195,14 @@
       </div>
     </UCard>
 
-    <EditorFormControls @preview="showPreview" />
+    <EditorFormControls>
+      <template #preview="{ opened, changeVisibility }">
+        <SpeciesPreview
+          :open="opened"
+          :state="state"
+          @update:open="changeVisibility"
+        />
+      </template>
+    </EditorFormControls>
   </UForm>
-
-  <SpeciesPreview
-    v-model="isPreviewShowed"
-    :species="preview"
-    :is-loading="isPreviewLoading"
-    :is-error="isPreviewError"
-  />
 </template>

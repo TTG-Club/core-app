@@ -1,23 +1,34 @@
-declare module '#app' {
-  interface PageMeta {
+import type { AlertProps } from '#ui/components/Alert.vue';
+import type { AnchorScrollPageMetaCustomOptions, Role } from '~/shared/types';
+
+declare module 'vue-router' {
+  export interface RouteMeta {
+    // Управление алертом на странице
+    alert?: Pick<AlertProps, 'description' | 'color' | 'title' | 'icon'>;
+
+    // Управление доступом по ролям
     auth?: {
-      roles?: Array<string>;
+      roles?: Array<Role>;
     };
-    alert?: {
-      icon?: string;
-      title?: string;
-      description: string;
-      color?:
-        | 'error'
-        | 'info'
-        | 'primary'
-        | 'secondary'
-        | 'success'
-        | 'warning'
-        | 'neutral';
-    };
+
+    // Управление скролом к якорю
+    anchorScroll?: AnchorScrollPageMetaCustomOptions;
   }
 }
 
-// It is always important to ensure you import/export something when augmenting a type
+declare module 'nuxt/app' {
+  export interface PageMeta {
+    // Управление алертом на странице
+    alert?: Pick<AlertProps, 'description' | 'color' | 'title' | 'icon'>;
+
+    // Управление доступом по ролям
+    auth?: {
+      roles?: Array<Role>;
+    };
+
+    // Управление скролом к якорю
+    anchorScroll?: AnchorScrollPageMetaCustomOptions;
+  }
+}
+
 export {};

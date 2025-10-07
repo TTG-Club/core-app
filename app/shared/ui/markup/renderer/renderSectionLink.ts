@@ -1,3 +1,4 @@
+import type { SectionNode } from '../types';
 import { SectionMarker } from '../types';
 
 import { ULink } from '#components';
@@ -6,25 +7,29 @@ import { CreatureDrawer } from '~bestiary/drawer';
 import { FeatDrawer } from '~feats/drawer';
 import { GlossaryDrawer } from '~glossary/drawer';
 import { MagicItemDrawer } from '~magic-items/drawer';
+import { ItemDrawer } from '~items/drawer';
 import { SpellDrawer } from '~spells/drawer';
-
-import type { SectionNode } from '../types';
+import { ClassDrawer } from '~classes/drawer';
 
 const MARKER_URL_MAP: Record<SectionMarker, string> = {
+  [SectionMarker.Class]: 'classes',
   [SectionMarker.Spell]: 'spells',
   [SectionMarker.Feat]: 'feats',
   [SectionMarker.Background]: 'backgrounds',
-  [SectionMarker.MagicItem]: 'magic-item',
+  [SectionMarker.MagicItem]: 'magic-items',
+  [SectionMarker.Item]: 'items',
   [SectionMarker.Creature]: 'bestiary',
   [SectionMarker.Glossary]: 'glossary',
 } as const;
 
 const DRAWER_COMPONENT_MAP = {
+  [SectionMarker.Class]: () => ClassDrawer,
   [SectionMarker.Background]: () => BackgroundDrawer,
   [SectionMarker.Creature]: () => CreatureDrawer,
   [SectionMarker.Feat]: () => FeatDrawer,
   [SectionMarker.Glossary]: () => GlossaryDrawer,
   [SectionMarker.MagicItem]: () => MagicItemDrawer,
+  [SectionMarker.Item]: () => ItemDrawer,
   [SectionMarker.Spell]: () => SpellDrawer,
 } as const;
 
@@ -56,7 +61,9 @@ export function renderSectionLink(
   const { url } = node.attrs;
 
   if (!url) {
-    throw new Error('[Markup] Feature link node must have a `url`');
+    throw new Error(
+      `[Markup] Feature link node must have a \`url\`: ${JSON.stringify(node)}`,
+    );
   }
 
   const { open, isOpened } = drawerFactory(node.type, url);

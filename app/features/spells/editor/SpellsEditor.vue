@@ -11,23 +11,16 @@
     SelectAbilities,
     SelectDamageType,
     SelectHealType,
-    SelectLevel,
+    SelectSpellLevel,
     SelectMagicSchool,
     SelectSpecies,
+    SelectLineage,
+    SelectSubclass,
+    SelectClass,
   } from '~ui/select';
 
-  import type { SpellCreate, SpellDetailResponse } from '~/shared/types';
+  import type { SpellCreate } from '~/shared/types';
   import { SpellPreview } from '~spells/preview';
-
-  const formRef = useTemplateRef('formRef');
-
-  const validate = () => {
-    return formRef.value?.validate();
-  };
-
-  defineExpose({
-    validate,
-  });
 
   function getInitialState(): SpellCreate {
     return {
@@ -70,17 +63,6 @@
     actionUrl: '/api/v2/spells',
     getInitialState,
   });
-
-  const {
-    preview,
-    isPreviewShowed,
-    isPreviewLoading,
-    isPreviewError,
-    showPreview,
-  } = useWorkshopPreview<SpellCreate, SpellDetailResponse>({
-    actionUrl: '/api/v2/spells',
-    state,
-  });
 </script>
 
 <template>
@@ -109,7 +91,7 @@
           label="Уровень заклинания"
           name="level"
         >
-          <SelectLevel v-model="state.level" />
+          <SelectSpellLevel v-model="state.level" />
         </UFormField>
 
         <UFormField
@@ -216,7 +198,7 @@
           name="affiliations.classes"
           class="col-span-6"
         >
-          <SelectSpecies
+          <SelectClass
             v-model="state.affiliations.classes"
             multiple
           />
@@ -227,7 +209,7 @@
           label="Архетипы"
           name="affiliations.subclasses"
         >
-          <SelectSpecies
+          <SelectSubclass
             v-model="state.affiliations.subclasses"
             multiple
           />
@@ -249,7 +231,7 @@
           label="Происхождения"
           name="affiliations.lineages"
         >
-          <SelectSpecies
+          <SelectLineage
             v-model="state.affiliations.lineages"
             multiple
           />
@@ -257,13 +239,14 @@
       </div>
     </UCard>
 
-    <EditorFormControls @preview="showPreview" />
+    <EditorFormControls>
+      <template #preview="{ opened, changeVisibility }">
+        <SpellPreview
+          :open="opened"
+          :state="state"
+          @update:open="changeVisibility"
+        />
+      </template>
+    </EditorFormControls>
   </UForm>
-
-  <SpellPreview
-    v-model="isPreviewShowed"
-    :spell="preview"
-    :is-loading="isPreviewLoading"
-    :is-error="isPreviewError"
-  />
 </template>

@@ -20,7 +20,7 @@
   useSeoMeta({
     title: getSeoTitle,
     description: getSeoDescription,
-    ogImage: () => (species.value ? species.value.image : undefined),
+    // ogImage: () => getSeoImageUrl(species.value?.image),
     author: () => (species.value ? species.value.source.name.rus : undefined),
     titleTemplate: '%s | Виды и происхождения D&D 5 2024',
   });
@@ -43,7 +43,7 @@
       : 'вид';
 
     return getSlicedString(
-      `${species.value.name.rus} [${species.value.name.eng}] — ${type} D&D 5 2024 редакции. ${species.value.description}`,
+      `${species.value.name.rus} [${species.value.name.eng}] — ${type} из D&D 5 (редакция 2024 года).`,
       160,
     );
   }

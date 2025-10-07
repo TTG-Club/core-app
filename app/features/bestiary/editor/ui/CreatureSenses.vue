@@ -14,19 +14,16 @@
   }>();
 
   watchEffect(() => {
-    const wisdomModificator = getModifier(wisdom.value);
+    const wisdomMod = getModifier(wisdom.value);
 
-    const perception = skills.find(
-      (skill) => skill.skill === 'PERCEPTION',
-    )?.multiplier;
-
-    let bonus = 0;
+    const perception = skills.find((skill) => skill.skill === 'PERCEPTION');
 
     if (perception) {
-      bonus = perception * proficiencyBonus;
+      model.value.passivePerception =
+        10 + wisdomMod + perception.multiplier * proficiencyBonus;
+    } else {
+      model.value.passivePerception = 10 + wisdomMod;
     }
-
-    model.value.passivePerception = 10 + wisdomModificator + bonus;
   });
 </script>
 

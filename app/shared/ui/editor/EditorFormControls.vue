@@ -1,22 +1,27 @@
 <script setup lang="ts">
-  defineEmits<{
-    (e: 'preview'): void;
-  }>();
+  const previewOpened = ref(false);
 
-  const hasPreviewCallback = computed(
-    () => !!getCurrentInstance()?.vnode.props?.onPreview,
-  );
+  function changePreviewVisibility(value: boolean) {
+    previewOpened.value = value;
+  }
 </script>
 
 <template>
   <div class="col-span-full flex justify-end gap-2">
-    <UButton
-      v-if="hasPreviewCallback"
-      variant="soft"
-      @click.left.exact.prevent="$emit('preview')"
-    >
-      Предварительный просмотр
-    </UButton>
+    <template v-if="$slots.preview">
+      <UButton
+        variant="soft"
+        @click.left.exact.prevent="previewOpened = true"
+      >
+        Предварительный просмотр
+      </UButton>
+
+      <slot
+        name="preview"
+        :opened="previewOpened"
+        :change-visibility="changePreviewVisibility"
+      />
+    </template>
 
     <UButton type="submit"> Сохранить </UButton>
   </div>

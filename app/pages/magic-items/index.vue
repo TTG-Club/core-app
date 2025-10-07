@@ -4,14 +4,14 @@
   import { MagicItemLegend } from '~magic-items/legend';
   import { MagicItemLink } from '~magic-items/link';
   import { PageGrid, PageResult } from '~ui/page';
-  import { SmallLinkSkeleton } from '~ui/skeleton';
+  import { SkeletonLinkSmall } from '~ui/skeleton';
 
   import type { SearchBody } from '~/shared/types';
   import type { MagicItemLinkResponse } from '~magic-items/types';
 
   useSeoMeta({
     title: 'Магические предметы [Magic Items]',
-    description: 'Магические предметы по D&D 2024 редакции',
+    description: 'Магические предметы из D&D 5 (редакция 2024 года).',
   });
 
   const search = ref<string>();
@@ -81,7 +81,7 @@
           v-if="status !== 'success' && status !== 'error'"
           :columns="3"
         >
-          <SmallLinkSkeleton
+          <SkeletonLinkSmall
             v-for="index in 5"
             :key="index"
           />

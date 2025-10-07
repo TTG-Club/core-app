@@ -4,13 +4,13 @@
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
   import { PageGrid, PageResult } from '~ui/page';
-  import { SmallLinkSkeleton } from '~ui/skeleton';
+  import { SkeletonLinkSmall } from '~ui/skeleton';
 
   import type { BackgroundLinkResponse, SearchBody } from '~/shared/types';
 
   useSeoMeta({
     title: 'Предыстории [Backgrounds]',
-    description: 'Предыстории по D&D 2024 редакции',
+    description: 'Предыстории из D&D 5 (редакция 2024 года).',
   });
 
   const search = ref<string>();
@@ -80,7 +80,7 @@
           v-if="status !== 'success' && status !== 'error'"
           :columns="3"
         >
-          <SmallLinkSkeleton
+          <SkeletonLinkSmall
             v-for="index in 5"
             :key="index"
           />

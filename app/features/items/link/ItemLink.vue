@@ -1,0 +1,41 @@
+<script setup lang="ts">
+  import { SmallLink } from '~ui/link';
+
+  import type { ItemLinkResponse } from '~/features/items/types';
+  import { ItemDrawer } from '~/features/items/drawer';
+
+  const { item: item } = defineProps<{
+    item: ItemLinkResponse;
+  }>();
+
+  const overlay = useOverlay();
+
+  const drawer = overlay.create(ItemDrawer, {
+    props: {
+      url: item.url,
+      onClose: () => drawer.close(),
+    },
+    destroyOnClose: true,
+  });
+</script>
+
+<template>
+  <SmallLink
+    :to="{ name: 'items-url', params: { url: item.url } }"
+    :title="`${item.name.rus} [${item.name.eng}]`"
+    :group="item.source.group"
+    @open-drawer="drawer.open()"
+  >
+    <template #default>
+      {{ item.name.rus }}
+    </template>
+
+    <template #english>
+      {{ item.name.eng }}
+    </template>
+
+    <template #caption>
+      {{ item.cost }}
+    </template>
+  </SmallLink>
+</template>

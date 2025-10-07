@@ -39,7 +39,7 @@
     const school = `школы «${spell.value.school}»`;
 
     return getSlicedString(
-      `${spell.value.name.rus} [${spell.value.name.eng}] — ${level} ${school} D&D 5 2024 редакции`,
+      `${spell.value.name.rus} [${spell.value.name.eng}] — ${level} ${school} из D&D 5 (редакция 2024 года).`,
       160,
     );
   }

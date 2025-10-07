@@ -1,11 +1,8 @@
-import type { SourceResponse } from '../../base';
+import type { NameResponse, SourceResponse } from '../../base';
 
 export interface BackgroundDetailResponse {
   url: string;
-  name: {
-    rus: string;
-    eng: string;
-  };
+  name: NameResponse;
   abilityScores: string; // характеристики
   feat: string; // черта
   skillProficiencies: string; // навыки

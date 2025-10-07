@@ -5,13 +5,13 @@
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
   import { PageGrid, PageResult } from '~ui/page';
-  import { SmallLinkSkeleton } from '~ui/skeleton';
+  import { SkeletonLinkSmall } from '~ui/skeleton';
 
   import type { CreatureLinkResponse } from '~bestiary/types';
 
   useSeoMeta({
     title: 'Бестиарий [Bestiary]',
-    description: 'Бестиарий по D&D 2024 редакции',
+    description: 'Бестиарий из D&D 5 (редакция 2024 года).',
   });
 
   const search = ref<string>();
@@ -78,7 +78,7 @@
           v-if="status !== 'success' && status !== 'error'"
           :columns="3"
         >
-          <SmallLinkSkeleton
+          <SkeletonLinkSmall
             v-for="index in 5"
             :key="index"
           />

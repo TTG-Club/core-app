@@ -6,6 +6,7 @@
 
   defineProps<{
     section: string;
+    prefix?: string | undefined;
   }>();
 
   const form = defineModel<EditorBaseInfoState>({ required: true });
@@ -124,6 +125,7 @@
             v-model="form.url"
             :eng-name="form.name.eng"
             :source-url="form.source.url"
+            :prefix="prefix"
             disabled
           />
         </UFormField>

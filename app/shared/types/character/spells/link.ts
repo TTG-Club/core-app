@@ -2,7 +2,7 @@ import type { NameResponse, SourceResponse } from '../../base';
 
 export interface SpellLinkResponse {
   url: string;
-  name: Pick<NameResponse, 'rus' | 'eng'>;
+  name: NameResponse;
   level: number;
   school: string;
   source: SourceResponse;

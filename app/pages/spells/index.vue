@@ -4,13 +4,13 @@
   import { SpellLegend } from '~spells/legend';
   import { SpellLink } from '~spells/link';
   import { PageGrid, PageResult } from '~ui/page';
-  import { SmallLinkSkeleton } from '~ui/skeleton';
+  import { SkeletonLinkSmall } from '~ui/skeleton';
 
   import type { SearchBody, SpellLinkResponse } from '~/shared/types';
 
   useSeoMeta({
     title: 'Заклинания [Spells]',
-    description: 'Заклинания по D&D 2024 редакции',
+    description: 'Заклинания из D&D 5 (редакция 2024 года).',
   });
 
   const search = ref<string>();
@@ -80,7 +80,7 @@
           v-if="status !== 'success' && status !== 'error'"
           :columns="3"
         >
-          <SmallLinkSkeleton
+          <SkeletonLinkSmall
             v-for="index in 5"
             :key="index"
           />

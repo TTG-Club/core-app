@@ -1,12 +1,14 @@
 <script setup lang="ts">
   import {
-    SectionSpecies,
-    SectionSpells,
+    SectionBackgrounds,
+    SectionBestiary,
+    SectionClasses,
     SectionFeats,
     SectionGlossary,
-    SectionBackgrounds,
+    SectionItem,
     SectionMagicItem,
-    SectionBestiary,
+    SectionSpecies,
+    SectionSpells,
   } from '~workshop/section';
 </script>
 
@@ -20,6 +22,8 @@
     >
       <SectionSpecies />
 
+      <SectionClasses />
+
       <SectionSpells />
 
       <SectionFeats />
@@ -31,6 +35,8 @@
       <SectionMagicItem />
 
       <SectionBestiary />
+
+      <SectionItem />
     </div>
   </NuxtLayout>
 </template>

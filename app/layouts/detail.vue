@@ -66,7 +66,7 @@
           <div
             v-if="$slots.actions"
             :class="[
-              'fixed ml-auto flex shrink-0 gap-1 md:static',
+              'fixed z-1 ml-auto flex shrink-0 gap-1 md:static',
               'right-2 bottom-(--navbar-height) max-md:mb-2',
               'transition-[bottom] duration-200 ease-in-out',
               'max-md:rounded-md max-md:border max-md:border-default',

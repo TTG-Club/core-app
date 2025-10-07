@@ -2,7 +2,6 @@
   import bytes from 'bytes';
   import { chunk } from 'lodash-es';
   import { getStatusMessage } from '#shared/utils';
-  import type { NuxtError } from '#app';
   import type { UploadResponse } from '~/shared/types';
 
   const { section } = defineProps<{
@@ -16,11 +15,19 @@
 
   const actionUrl = computed(() => `/s3/upload?section=${getSlug(section)}`);
 
-  function onError(error: Error, responseError: NuxtError) {
+  function hasStatusCode(x: unknown): x is { statusCode: unknown } {
+    return typeof x === 'object' && x !== null && 'statusCode' in x;
+  }
+
+  function toError(x: unknown): Error {
+    return x instanceof Error ? x : new Error('Неизвестная ошибка');
+  }
+
+  function onError(error: Error, statusCode: number) {
     $toast.add({
       color: 'error',
       title: 'Неизвестная ошибка',
-      description: getStatusMessage(responseError.statusCode),
+      description: getStatusMessage(statusCode),
     });
   }
 
@@ -185,7 +192,12 @@
           description: 'Изображение успешно загружено',
         });
       } catch (err) {
-        onError(err as Error, err as NuxtError);
+        const status =
+          hasStatusCode(err) && typeof err.statusCode === 'number'
+            ? err.statusCode
+            : 500;
+
+        onError(toError(err), status);
       }
     }
 
@@ -211,8 +223,11 @@
 <template>
   <div
     ref="dropZoneRef"
-    class="w-full rounded-lg border-2 border-dashed border-default bg-(--ui-bg-muted) p-6 text-center transition-colors hover:border-primary"
-    :class="isOverDropZone ? 'hover:border-primary' : undefined"
+    :class="[
+      'w-full bg-muted p-6 text-center transition-colors',
+      'rounded-lg border-2 border-dashed border-default hover:border-primary',
+      isOverDropZone ? 'hover:border-primary' : undefined,
+    ]"
     @click.left.exact.prevent="() => openDialog()"
   >
     <span class="text-sm">

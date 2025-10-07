@@ -4,13 +4,13 @@
   import { GlossaryLegend } from '~glossary/legend';
   import { GlossaryLink } from '~glossary/link';
   import { PageGrid, PageResult } from '~ui/page';
-  import { SmallLinkSkeleton } from '~ui/skeleton';
+  import { SkeletonLinkSmall } from '~ui/skeleton';
 
   import type { GlossaryLinkResponse, SearchBody } from '~/shared/types';
 
   useSeoMeta({
     title: 'Глоссарий [Glossary]',
-    description: 'Глоссарий по D&D 2024 редакции',
+    description: 'Глоссарий из D&D 5 (редакция 2024 года).',
   });
 
   const search = ref<string>();
@@ -80,7 +80,7 @@
           v-if="status !== 'success' && status !== 'error'"
           :columns="3"
         >
-          <SmallLinkSkeleton
+          <SkeletonLinkSmall
             v-for="index in 5"
             :key="index"
           />

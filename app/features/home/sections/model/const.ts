@@ -9,9 +9,8 @@ export const CARD_LINKS: Array<{
 }> = [
   {
     name: 'Классы',
-    url: '/',
+    url: '/classes',
     img: '/s3/home/section-link/classes.webp',
-    disabled: true,
   },
   {
     name: 'Виды',
@@ -35,9 +34,8 @@ export const CARD_LINKS: Array<{
   },
   {
     name: 'Снаряжение',
-    url: '/',
+    url: '/items',
     img: '/s3/home/section-link/items.webp',
-    disabled: true,
   },
   {
     name: 'Магические предметы',
@@ -55,9 +53,9 @@ export const CARD_LINKS: Array<{
     img: '/s3/home/section-link/glossary.webp',
   },
   {
-    name: 'В разработке',
+    name: 'Бастионы',
     url: '/',
-    img: '/s3/home/section-link/development.webp',
+    img: '/s3/home/section-link/bastions.webp',
     disabled: true,
   },
 ];

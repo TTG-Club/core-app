@@ -22,43 +22,17 @@
   import { SelectAlignment } from '~ui/select';
   import { UploadImage } from '~ui/upload';
 
-  import {
-    type CreatureCreate,
-    type CreatureDetailResponse,
-    getInitialState,
-  } from '~bestiary/types';
+  import { type CreatureCreate, getInitialState } from '~bestiary/types';
   import { CreaturePreview } from '~bestiary/preview';
-
-  const formRef = useTemplateRef('formRef');
-
-  const validate = () => {
-    return formRef.value?.validate();
-  };
-
-  defineExpose({
-    validate,
-  });
 
   const { state, onError, onSubmit } = useWorkshopForm<CreatureCreate>({
     actionUrl: '/api/v2/bestiary',
     getInitialState,
   });
-
-  const {
-    preview,
-    isPreviewShowed,
-    isPreviewLoading,
-    isPreviewError,
-    showPreview,
-  } = useWorkshopPreview<CreatureCreate, CreatureDetailResponse>({
-    actionUrl: '/api/v2/bestiary',
-    state,
-  });
 </script>
 
 <template>
   <UForm
-    ref="formRef"
     :state
     class="grid grid-cols-24 gap-6"
     @error="onError"
@@ -253,13 +227,14 @@
       </UploadImage>
     </UFormField>
 
-    <EditorFormControls @preview="showPreview" />
+    <EditorFormControls>
+      <template #preview="{ opened, changeVisibility }">
+        <CreaturePreview
+          :state="state"
+          :open="opened"
+          @update:open="changeVisibility"
+        />
+      </template>
+    </EditorFormControls>
   </UForm>
-
-  <CreaturePreview
-    v-model="isPreviewShowed"
-    :creature="preview"
-    :is-loading="isPreviewLoading"
-    :is-error="isPreviewError"
-  />
 </template>

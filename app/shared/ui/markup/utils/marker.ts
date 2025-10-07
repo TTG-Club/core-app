@@ -1,45 +1,62 @@
-import {
-  EmptyMarker,
-  SectionMarker,
-  RichMarker,
-  SimpleText,
-  TextMarker,
-} from '../types';
 import type {
   EmptyMarkerName,
-  SectionMarkerName,
   RichMarkerName,
+  SectionMarkerName,
   SimpleTextName,
   TextMarkerName,
   TextWithMarkerName,
+} from '../types';
+import {
+  EmptyMarker,
+  RichMarker,
+  SectionMarker,
+  SimpleText,
+  TextMarker,
 } from '../types';
 
 export function isSimpleText(
   marker: TextWithMarkerName,
 ): marker is SimpleTextName {
-  return Object.values(SimpleText).includes(marker as SimpleText);
+  return marker === SimpleText.Text;
 }
 
 export function isEmptyMarker(
   marker: TextWithMarkerName,
 ): marker is EmptyMarkerName {
-  return Object.values(EmptyMarker).includes(marker as EmptyMarker);
+  return marker === EmptyMarker.Break;
 }
 
 export function isTextMarker(
   marker: TextWithMarkerName,
 ): marker is TextMarkerName {
-  return Object.values(TextMarker).includes(marker as TextMarker);
+  return (
+    marker === TextMarker.Bold ||
+    marker === TextMarker.Italic ||
+    marker === TextMarker.Underline ||
+    marker === TextMarker.Strikethrough ||
+    marker === TextMarker.Superscript ||
+    marker === TextMarker.Subscript ||
+    marker === TextMarker.Highlight
+  );
 }
 
 export function isRichMarker(
   marker: TextWithMarkerName,
 ): marker is RichMarkerName {
-  return Object.values(RichMarker).includes(marker as RichMarker);
+  return marker === RichMarker.Link;
 }
 
 export function isFeatureMarker(
   marker: TextWithMarkerName,
 ): marker is SectionMarkerName {
-  return Object.values(SectionMarker).includes(marker as SectionMarker);
+  return (
+    marker === SectionMarker.Class ||
+    marker === SectionMarker.Spell ||
+    marker === SectionMarker.Feat ||
+    marker === SectionMarker.Background ||
+    marker === SectionMarker.MagicItem ||
+    marker === SectionMarker.Creature ||
+    marker === SectionMarker.Item ||
+    marker === SectionMarker.Glossary
+  );
 }

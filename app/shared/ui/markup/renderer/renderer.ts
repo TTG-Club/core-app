@@ -1,22 +1,22 @@
 import { createTextVNode } from 'vue';
 
-import { TextMarker, EmptyMarker, RichMarker, SectionMarker } from '../types';
 import type {
-  TextNode,
+  EmptyNode,
   RenderNode,
   RichNode,
-  EmptyNode,
   RichNodes,
   SectionLinkNode,
   SectionNodes,
+  TextNode,
 } from '../types';
+import { EmptyMarker, RichMarker, SectionMarker, TextMarker } from '../types';
 import {
   isEmptyNode,
-  isSectionNode,
+  isListNode,
   isRichNode,
+  isSectionNode,
   isSimpleTextNode,
   isTextNode,
-  isListNode,
 } from '../utils';
 
 import { renderLink } from './renderLink';
@@ -32,6 +32,7 @@ const TextMarkerTag: Record<TextMarker, string> = {
   [TextMarker.Subscript]: 'sub',
   [TextMarker.Superscript]: 'sup',
   [TextMarker.Highlight]: 'mark',
+  [TextMarker.Blockquote]: 'quote',
 };
 
 const EmptyMarkerTag: Record<EmptyMarker, string> = {
@@ -53,11 +54,13 @@ const FEATURE_NODE_RENDERERS: {
     renderChildren: () => VNode[],
   ) => VNode;
 } = {
+  [SectionMarker.Class]: renderSectionLink,
   [SectionMarker.Spell]: renderSectionLink,
   [SectionMarker.Background]: renderSectionLink,
   [SectionMarker.Feat]: renderSectionLink,
   [SectionMarker.Creature]: renderSectionLink,
   [SectionMarker.MagicItem]: renderSectionLink,
+  [SectionMarker.Item]: renderSectionLink,
   [SectionMarker.Glossary]: renderSectionLink,
 };
 
@@ -77,7 +80,7 @@ export function render(content: Array<RenderNode | string>) {
 }
 
 function renderNode(node: RenderNode): VNode {
-  if (!node) throw new Error('[Markup] Node is not defined');
+  if (!node) throw new Error(`[Markup] Node is not defined`);
 
   if (isSimpleTextNode(node)) return createTextVNode(node.text);
   if (isTextNode(node)) return renderTextNode(node);
@@ -86,7 +89,7 @@ function renderNode(node: RenderNode): VNode {
   if (isEmptyNode(node)) return renderEmptyNode(node);
   if (isListNode(node)) return renderListNode(node, { renderNode, toNodes });
 
-  throw new Error('[Markup] Unknown node');
+  throw new Error(`[Markup] Unknown node: ${JSON.stringify(node)}`);
 }
 
 function renderTextNode(node: TextNode): VNode {

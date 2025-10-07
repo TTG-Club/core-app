@@ -8,21 +8,8 @@
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { UploadImage } from '~ui/upload';
 
-  import type {
-    MagicItemCreate,
-    MagicItemDetailResponse,
-  } from '~magic-items/types';
+  import type { MagicItemCreate } from '~magic-items/types';
   import { MagicItemPreview } from '~magic-items/preview';
-
-  const formRef = useTemplateRef('formRef');
-
-  const validate = () => {
-    return formRef.value?.validate();
-  };
-
-  defineExpose({
-    validate,
-  });
 
   function getInitialState(): MagicItemCreate {
     return {
@@ -61,22 +48,10 @@
     actionUrl: '/api/v2/magic-items',
     getInitialState,
   });
-
-  const {
-    preview,
-    isPreviewShowed,
-    isPreviewLoading,
-    isPreviewError,
-    showPreview,
-  } = useWorkshopPreview<MagicItemCreate, MagicItemDetailResponse>({
-    actionUrl: '/api/v2/magic-items',
-    state,
-  });
 </script>
 
 <template>
   <UForm
-    ref="formRef"
     :state
     class="grid gap-8"
     @error="onError"
@@ -198,13 +173,14 @@
       </div>
     </UCard>
 
-    <EditorFormControls @preview="showPreview" />
+    <EditorFormControls>
+      <template #preview="{ opened, changeVisibility }">
+        <MagicItemPreview
+          :open="opened"
+          :state="state"
+          @update:open="changeVisibility"
+        />
+      </template>
+    </EditorFormControls>
   </UForm>
-
-  <MagicItemPreview
-    v-model="isPreviewShowed"
-    :magic-item="preview"
-    :is-loading="isPreviewLoading"
-    :is-error="isPreviewError"
-  />
 </template>

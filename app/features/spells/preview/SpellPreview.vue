@@ -1,15 +1,39 @@
 <script setup lang="ts">
   import { UiDrawer } from '~ui/drawer';
   import { SpellBody } from '~spells/body';
-  import type { SpellDetailResponse } from '~/shared/types';
+  import type { SpellDetailResponse, SpellCreate } from '~/shared/types';
 
-  const opened = defineModel<boolean>({ required: true });
+  const opened = defineModel<boolean>('open', { required: true });
 
-  defineProps<{
-    spell: SpellDetailResponse | undefined;
-    isLoading: boolean;
-    isError: boolean;
+  const { state } = defineProps<{
+    state: SpellCreate;
   }>();
+
+  const {
+    data: spell,
+    status,
+    execute: loadPreview,
+    clear,
+  } = useAsyncData(
+    () =>
+      $fetch<SpellDetailResponse>(`/api/v2/spells/preview`, {
+        method: 'post',
+        body: state,
+      }),
+    {
+      lazy: true,
+      server: false,
+      immediate: false,
+    },
+  );
+
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+
+  whenever(opened, () => {
+    clear();
+    loadPreview();
+  });
 </script>
 
 <template>
@@ -22,6 +46,7 @@
     :is-loading
     :is-error
     width="100%"
+    @close="opened = false"
   >
     <SpellBody
       v-if="spell"

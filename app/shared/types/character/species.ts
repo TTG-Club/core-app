@@ -3,7 +3,7 @@ import type { EditorBaseInfoState } from '~ui/editor';
 
 export interface SpeciesLinkResponse {
   url: string;
-  name: Pick<NameResponse, 'rus' | 'eng'>;
+  name: NameResponse;
   source: SourceResponse;
   image: string;
   updatedAt: string;
@@ -14,10 +14,10 @@ export interface SpeciesDetailResponse {
   url: string;
   parent?: {
     url: string;
-    name: Pick<NameResponse, 'rus' | 'eng'>;
+    name: NameResponse;
   };
   hasLineages?: boolean;
-  name: Pick<NameResponse, 'rus' | 'eng'>;
+  name: NameResponse;
   source: SourceResponse;
   properties: SpeciesProperties;
   description: Array<string>;
@@ -25,7 +25,7 @@ export interface SpeciesDetailResponse {
   gallery?: Array<string>;
   features?: Array<{
     url: string;
-    name: Pick<NameResponse, 'rus' | 'eng'>;
+    name: NameResponse;
     description: Array<string>;
   }>;
   username: string;

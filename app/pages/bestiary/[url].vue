@@ -15,6 +15,7 @@
   useSeoMeta({
     title: getSeoTitle,
     description: getSeoDescription,
+    // ogImage: () => getSeoImageUrl(creature.value?.image),
     author: () => (creature.value ? creature.value.source.name.rus : undefined),
     titleTemplate: '%s | Бестиарий D&D 5 2025',
   });
@@ -33,7 +34,7 @@
     }
 
     return getSlicedString(
-      `${creature.value.name.rus} [${creature.value.name.eng}] D&D 5 2024 редакции`,
+      `${creature.value.name.rus} [${creature.value.name.eng}] — существо (${creature.value.header.toLocaleLowerCase()}) из D&D 5 2024 года.`,
       160,
     );
   }

@@ -3,7 +3,7 @@
   import { HomeSections } from '~home/sections';
   import { SocialLinks } from '~home/social-links';
   import { SearchPanel } from '~search/panel';
-  import { UiGallery } from '~ui/gallery';
+  import { UiPlaceholder } from '~ui/placeholder';
 
   definePageMeta({
     layout: 'default',
@@ -28,18 +28,17 @@
       <HomeSections />
 
       <div class="flex w-full flex-col gap-3 lg:items-start xl:flex-row">
+        <UiPlaceholder class="hidden h-[300px] xl:block xl:w-1/3 2xl:w-1/3" />
+
         <div
-          class="w-full overflow-hidden rounded-lg border border-default opacity-80 xl:w-1/2 2xl:w-2/3"
+          class="relative flex w-full flex-col gap-3 overflow-hidden rounded-lg xl:w-1/3 2xl:w-1/3"
         >
-          <UiGallery
-            preview="/s3/roadmap.webp"
-            disable-square
-          />
+          <HomeBanners />
+
+          <UiPlaceholder class="hidden h-[148px] xl:block" />
         </div>
 
         <div class="flex w-full flex-col gap-3 xl:w-1/2 2xl:w-1/3">
-          <HomeBanners />
-
           <SocialLinks />
         </div>
       </div>

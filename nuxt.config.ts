@@ -235,7 +235,7 @@ export default defineNuxtConfig({
       },
     },
     site: {
-      url: '',
+      url: process.env.NUXT_SITE_URL,
       name: application.name.long,
       description: application.description,
       defaultLocale: 'ru',

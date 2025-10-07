@@ -4,7 +4,7 @@
   import type { NameResponse, SpeciesLinkResponse } from '~/shared/types';
 
   const { name, url, image } = defineProps<{
-    name: Pick<NameResponse, 'rus' | 'eng'>;
+    name: NameResponse;
     url: string;
     image: string | undefined;
   }>();

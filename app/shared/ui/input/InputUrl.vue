@@ -7,9 +7,11 @@
     defineProps<{
       engName: string;
       sourceUrl?: string | undefined;
+      prefix?: string | undefined;
     }>(),
     {
       sourceUrl: '',
+      prefix: '',
     },
   );
 
@@ -36,27 +38,31 @@
     model.value = url ? getSlug(url) : undefined;
   }
 
-  function setUrlWithAcronym() {
+  function setUrl() {
     if (!props.engName) {
       return;
     }
 
+    const prefix = props.prefix ? `${props.prefix}-` : '';
     const sourcePostfix = acronym.value ? `-${acronym.value}` : '';
 
-    handleUrlChange(`${props.engName}${sourcePostfix}`);
+    handleUrlChange(`${prefix}${props.engName}${sourcePostfix}`);
   }
 
   watch(model, handleUrlChange);
 
-  watch(acronym, setUrlWithAcronym, {
+  watch(acronym, setUrl, {
     immediate: true,
   });
 
   watch(
+    () => props.prefix,
+    () => setUrl(),
+  );
+
+  watch(
     () => props.engName,
-    () => {
-      setUrlWithAcronym();
-    },
+    () => setUrl(),
   );
 </script>
 

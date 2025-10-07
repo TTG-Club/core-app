@@ -1,8 +1,8 @@
 <script setup lang="ts">
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
-  import { SelectFeatCategory } from '~ui/select';
+  import { SelectAbilities, SelectFeatCategory } from '~ui/select';
 
-  import type { FeatCreate, FeatDetailResponse } from '~/shared/types';
+  import type { FeatCreate } from '~/shared/types';
   import { FeatPreview } from '~feats/preview';
 
   const formRef = useTemplateRef('formRef');
@@ -27,6 +27,7 @@
       description: '',
       category: undefined,
       repeatability: false,
+      abilities: [],
       tags: [],
     };
   }
@@ -34,17 +35,6 @@
   const { state, onSubmit, onError } = useWorkshopForm<FeatCreate>({
     actionUrl: '/api/v2/feats',
     getInitialState,
-  });
-
-  const {
-    preview,
-    isPreviewShowed,
-    isPreviewLoading,
-    isPreviewError,
-    showPreview,
-  } = useWorkshopPreview<FeatCreate, FeatDetailResponse>({
-    actionUrl: '/api/v2/feats',
-    state,
   });
 </script>
 
@@ -96,6 +86,18 @@
             label="Можно брать несколько раз"
           />
         </UFormField>
+
+        <UFormField
+          class="col-span-6"
+          label="Улучшаемые характеристики"
+          name="abilities"
+        >
+          <SelectAbilities
+            v-model="state.abilities"
+            :limit="3"
+            multiple
+          />
+        </UFormField>
       </div>
     </UCard>
 
@@ -119,13 +121,14 @@
       </div>
     </UCard>
 
-    <EditorFormControls @preview="showPreview" />
+    <EditorFormControls>
+      <template #preview="{ opened, changeVisibility }">
+        <FeatPreview
+          :open="opened"
+          :state="state"
+          @update:open="changeVisibility"
+        />
+      </template>
+    </EditorFormControls>
   </UForm>
-
-  <FeatPreview
-    v-model="isPreviewShowed"
-    :feat="preview"
-    :is-loading="isPreviewLoading"
-    :is-error="isPreviewError"
-  />
 </template>

@@ -17,6 +17,7 @@ export enum TextMarker {
   Superscript = 'superscript',
   Subscript = 'subscript',
   Highlight = 'highlight',
+  Blockquote = 'blockquote',
 }
 
 export enum RichMarker {
@@ -28,10 +29,12 @@ export enum EmptyMarker {
 }
 
 export enum SectionMarker {
+  Class = 'class',
   Spell = 'spell',
   Feat = 'feat',
   Background = 'background',
   MagicItem = 'magicItem',
+  Item = 'item',
   Creature = 'creature',
   Glossary = 'glossary',
 }
@@ -112,6 +115,7 @@ export interface LinkNode {
   type: RichMarker.Link;
   attrs: {
     url?: string;
+    target?: string;
   };
   content: Array<RenderNode>;
 }
@@ -125,10 +129,12 @@ export interface ListNode {
 }
 
 export type SectionNodes = {
+  [SectionMarker.Class]: SectionNode;
   [SectionMarker.Spell]: SectionNode;
   [SectionMarker.Background]: SectionNode;
   [SectionMarker.Feat]: SectionNode;
   [SectionMarker.MagicItem]: SectionNode;
+  [SectionMarker.Item]: SectionNode;
   [SectionMarker.Creature]: SectionNode;
   [SectionMarker.Glossary]: SectionNode;
 };
@@ -142,3 +148,7 @@ export interface SectionNode {
   };
   content: Array<RenderNode>;
 }
+
+export type Entry = string | RenderNode;
+
+export type EntryList = Array<Entry>;

@@ -1,15 +1,39 @@
 <script setup lang="ts">
   import { UiDrawer } from '~ui/drawer';
   import { SpeciesBody } from '~species/body';
-  import type { SpeciesDetailResponse } from '~/shared/types';
+  import type { SpeciesDetailResponse, SpeciesCreate } from '~/shared/types';
 
-  const opened = defineModel<boolean>({ required: true });
+  const opened = defineModel<boolean>('open', { required: true });
 
-  defineProps<{
-    species: SpeciesDetailResponse | undefined;
-    isLoading: boolean;
-    isError: boolean;
+  const { state } = defineProps<{
+    state: SpeciesCreate;
   }>();
+
+  const {
+    data: species,
+    status,
+    execute: loadPreview,
+    clear,
+  } = useAsyncData(
+    () =>
+      $fetch<SpeciesDetailResponse>(`/api/v2/species/preview`, {
+        method: 'post',
+        body: state,
+      }),
+    {
+      lazy: true,
+      server: false,
+      immediate: false,
+    },
+  );
+
+  const isLoading = computed(() => status.value === 'pending');
+  const isError = computed(() => status.value === 'error');
+
+  whenever(opened, () => {
+    clear();
+    loadPreview();
+  });
 </script>
 
 <template>
@@ -22,6 +46,7 @@
     :is-loading
     :is-error
     width="100%"
+    @close="opened = false"
   >
     <SpeciesBody
       v-if="species"

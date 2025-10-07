@@ -15,9 +15,8 @@ export const MENU_SECTIONS: Array<{
     icon: 'menu/filled/character',
     items: [
       {
-        href: '/',
+        href: '/classes',
         label: 'Классы',
-        disabled: true,
       },
       {
         href: '/species',
@@ -44,14 +43,19 @@ export const MENU_SECTIONS: Array<{
     icon: 'menu/filled/inventory',
     items: [
       {
-        href: '/',
+        href: '/items',
         label: 'Снаряжение',
-        disabled: true,
+        disabled: false,
       },
       {
         href: '/magic-items',
         label: 'Магические предметы',
         disabled: false,
+      },
+      {
+        href: '/',
+        label: 'Бастионы',
+        disabled: true,
       },
     ],
   },
