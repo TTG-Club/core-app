@@ -12,7 +12,7 @@
   useSeoMeta({
     title: getSeoTitle,
     description: getSeoDescription,
-    ogImage: () => getSeoImageUrl(item.value?.image),
+    // ogImage: () => getSeoImageUrl(item.value?.image),
     author: () => (item.value ? item.value.source.name.rus : undefined),
     titleTemplate: '%s | Предметы D&D 5 2024',
   });

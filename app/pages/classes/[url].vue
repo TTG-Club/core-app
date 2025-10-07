@@ -29,7 +29,7 @@
   useSeoMeta({
     title: getSeoTitle,
     description: getSeoDescription,
-    ogImage: () => getSeoImageUrl(detail.value?.image),
+    // ogImage: () => getSeoImageUrl(detail.value?.image),
     author: () => (detail.value ? detail.value.source.name.rus : undefined),
     titleTemplate: '%s | Классы D&D 5 2024',
   });

@@ -20,7 +20,7 @@
   useSeoMeta({
     title: getSeoTitle,
     description: getSeoDescription,
-    ogImage: () => getSeoImageUrl(species.value?.image),
+    // ogImage: () => getSeoImageUrl(species.value?.image),
     author: () => (species.value ? species.value.source.name.rus : undefined),
     titleTemplate: '%s | Виды и происхождения D&D 5 2024',
   });
