@@ -4,6 +4,7 @@
   defineProps<{
     label: string;
     items: Array<SpellDetailAffiliationItem>;
+    section: string;
   }>();
 </script>
 
@@ -19,7 +20,12 @@
         v-for="(item, key) in items"
         :key="key"
       >
-        <ULink :to="{ name: 'spells-url', params: { url: item.url } }">
+        <ULink
+          :to="{
+            name: `${section}-url`,
+            params: { url: item.url },
+          }"
+        >
           {{ item.name }}
         </ULink>
 

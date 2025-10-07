@@ -14,13 +14,8 @@
 </script>
 
 <template>
-  <div class="">
-    <h5
-      :class="[
-        'float-left mr-1 font-bold italic',
-        // '[&:before]:content-[attr(data-icon)]',
-      ]"
-    >
+  <div>
+    <h5 class="float-left mr-1 font-bold italic">
       <slot v-if="$slots.default" />
 
       <template v-else> {{ label }}. </template>

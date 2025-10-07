@@ -46,24 +46,28 @@
           v-if="spell.affiliation?.classes"
           :items="spell.affiliation.classes"
           label="Классы"
+          section="classes"
         />
 
         <AffiliationBlock
           v-if="spell.affiliation?.subclasses"
           :items="spell.affiliation.subclasses"
-          label="Архетипы"
+          label="Подклассы"
+          section="classes"
         />
 
         <AffiliationBlock
           v-if="spell.affiliation?.species"
           :items="spell.affiliation.species"
           label="Виды"
+          section="species"
         />
 
         <AffiliationBlock
           v-if="spell.affiliation?.lineages"
           :items="spell.affiliation.lineages"
           label="Происхождения"
+          section="species"
         />
       </div>
     </div>
