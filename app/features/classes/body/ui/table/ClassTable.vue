@@ -366,9 +366,9 @@
         hoveredCell.value;
 
       if (rowIndex === hoveredRow && columnIndex === hoveredColumn) {
-        hoverClass = 'bg-elevated';
+        hoverClass = 'bg-accented/60';
       } else if (rowIndex === hoveredRow || columnIndex === hoveredColumn) {
-        hoverClass = 'bg-elevated/60';
+        hoverClass = 'bg-accented/40';
       }
     }
 
@@ -379,7 +379,7 @@
 <template>
   <div class="w-full overflow-x-auto rounded-lg border border-default bg-muted">
     <table class="min-w-full border-collapse">
-      <thead class="bg-elevated/50">
+      <thead class="bg-elevated">
         <tr
           v-for="headerGroup in table.getHeaderGroups()"
           :key="headerGroup.id"

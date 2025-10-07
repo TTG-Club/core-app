@@ -23,6 +23,8 @@
       ),
   );
 
+  const { scrollToAnchor } = useAnchorScroll();
+
   const search = ref<string>();
 
   const isLoading = computed(() => status.value === 'pending');
@@ -120,6 +122,7 @@
       variant="soft"
       color="secondary"
       size="md"
+      @click.left.exact.prevent="scrollToAnchor('description')"
     >
       <div class="flex flex-col items-end leading-tight">
         <span class="text-xs text-secondary">О классе</span>
