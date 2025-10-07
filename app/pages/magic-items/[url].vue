@@ -17,7 +17,7 @@
   useSeoMeta({
     title: getSeoTitle,
     description: getSeoDescription,
-    ogImage: () => (magicItem.value ? magicItem.value.image : undefined),
+    ogImage: () => getSeoImageUrl(magicItem.value?.image),
     author: () =>
       magicItem.value ? magicItem.value.source.name.rus : undefined,
     titleTemplate: '%s | Магические предметы D&D 5 2024',

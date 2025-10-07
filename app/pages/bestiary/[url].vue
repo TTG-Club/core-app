@@ -15,7 +15,7 @@
   useSeoMeta({
     title: getSeoTitle,
     description: getSeoDescription,
-    ogImage: () => (creature.value ? creature.value.image : undefined),
+    ogImage: () => getSeoImageUrl(creature.value?.image),
     author: () => (creature.value ? creature.value.source.name.rus : undefined),
     titleTemplate: '%s | Бестиарий D&D 5 2025',
   });
