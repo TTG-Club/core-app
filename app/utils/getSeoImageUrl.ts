@@ -1,17 +1,19 @@
 export function getSeoImageUrl(url: MaybeRefOrGetter<string | undefined>) {
-  const value = toValue(url);
+  const maybeUrl = toValue(url);
 
-  if (!value) return undefined;
-
-  if (value.startsWith('/')) {
-    return `${getOrigin()}${value}`;
+  if (!maybeUrl) {
+    return undefined;
   }
 
-  if (value.startsWith('http')) {
-    return value;
+  if (maybeUrl.startsWith('http')) {
+    return maybeUrl;
   }
 
-  consola.warn(`[getSeoImageUrl]: "${value}" is not valid url`);
+  if (maybeUrl.startsWith('/')) {
+    const origin = getOrigin();
+
+    return `${origin}${maybeUrl}`;
+  }
 
   return undefined;
 }

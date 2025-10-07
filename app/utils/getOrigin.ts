@@ -3,7 +3,11 @@ export function getOrigin() {
     return window.location.origin;
   }
 
-  const { origin } = useRequestURL();
+  try {
+    const { origin } = useRequestURL();
 
-  return origin;
+    return origin;
+  } catch (err) {
+    return process.env.NUXT_SITE_URL;
+  }
 }
