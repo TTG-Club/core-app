@@ -2,7 +2,7 @@ import type { NameResponse, SourceResponse } from '../../base';
 
 export interface FeatLinkResponse {
   url: string;
-  name: Pick<NameResponse, 'rus' | 'eng'>;
+  name: NameResponse;
   category: string;
   source: SourceResponse;
 }

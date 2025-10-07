@@ -11,7 +11,7 @@
 
   useSeoMeta({
     title: 'Магические предметы [Magic Items]',
-    description: 'Магические предметы по D&D 2024 редакции',
+    description: 'Магические предметы из D&D 5 (редакция 2024 года).',
   });
 
   const search = ref<string>();

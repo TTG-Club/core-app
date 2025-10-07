@@ -10,7 +10,8 @@
 
   useSeoMeta({
     title: 'Виды [Species]',
-    description: 'Виды и происхождения персонажей по D&D 2024 редакции',
+    description:
+      'Виды и происхождения персонажей из D&D 5 (редакция 2024 года).',
   });
 
   const search = ref<string>();

@@ -10,7 +10,7 @@
 
   useSeoMeta({
     title: 'Черты [Feats]',
-    description: 'Черты по D&D 2024 редакции',
+    description: 'Черты из D&D 5 (редакция 2024 года).',
   });
 
   const search = ref<string>();

@@ -43,7 +43,7 @@
       : 'вид';
 
     return getSlicedString(
-      `${species.value.name.rus} [${species.value.name.eng}] — ${type} D&D 5 2024 редакции. ${species.value.description}`,
+      `${species.value.name.rus} [${species.value.name.eng}] — ${type} из D&D 5 (редакция 2024 года).`,
       160,
     );
   }

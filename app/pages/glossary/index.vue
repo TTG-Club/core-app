@@ -10,7 +10,7 @@
 
   useSeoMeta({
     title: 'Глоссарий [Glossary]',
-    description: 'Глоссарий по D&D 2024 редакции',
+    description: 'Глоссарий из D&D 5 (редакция 2024 года).',
   });
 
   const search = ref<string>();

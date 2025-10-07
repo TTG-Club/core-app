@@ -3,13 +3,19 @@ import type { Filter } from '~filter/types';
 export interface NameResponse {
   rus: string;
   eng: string;
-  label: string;
 }
 
-export type SourceGroupResponse = Pick<NameResponse, 'rus' | 'label'>;
+export type SourceGroupResponse = {
+  rus: string;
+  label: string;
+};
 
 export interface SourceResponse {
-  name: NameResponse;
+  name: {
+    rus: string;
+    eng: string;
+    label: string;
+  };
   group: SourceGroupResponse;
   page: number;
 }

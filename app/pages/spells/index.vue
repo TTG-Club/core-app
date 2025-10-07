@@ -10,7 +10,7 @@
 
   useSeoMeta({
     title: 'Заклинания [Spells]',
-    description: 'Заклинания по D&D 2024 редакции',
+    description: 'Заклинания из D&D 5 (редакция 2024 года).',
   });
 
   const search = ref<string>();

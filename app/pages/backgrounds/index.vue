@@ -10,7 +10,7 @@
 
   useSeoMeta({
     title: 'Предыстории [Backgrounds]',
-    description: 'Предыстории по D&D 2024 редакции',
+    description: 'Предыстории из D&D 5 (редакция 2024 года).',
   });
 
   const search = ref<string>();

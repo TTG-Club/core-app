@@ -9,7 +9,7 @@
 
   useSeoMeta({
     title: 'Предметы [Items]',
-    description: 'Предметы по D&D 2024 редакции',
+    description: 'Предметы из D&D 5 (редакция 2024 года).',
   });
 
   const search = ref<string>('');

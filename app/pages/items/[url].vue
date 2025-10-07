@@ -12,6 +12,7 @@
   useSeoMeta({
     title: getSeoTitle,
     description: getSeoDescription,
+    ogImage: () => (item.value ? item.value.image : undefined),
     author: () => (item.value ? item.value.source.name.rus : undefined),
     titleTemplate: '%s | Предметы D&D 5 2024',
   });
@@ -30,7 +31,7 @@
     }
 
     return getSlicedString(
-      `${item.value.name.rus} [${item.value.name.eng}] — ${item.value.subtitle} D&D 5 2024 редакции`,
+      `${item.value.name.rus} [${item.value.name.eng}] — ${item.value.types.toLocaleLowerCase() || 'предмет снаряжения'} из D&D 5 (редакция 2024 года).`,
       160,
     );
   }

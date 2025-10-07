@@ -2,7 +2,7 @@ import type { NameResponse, SourceResponse } from '~/shared/types';
 
 export interface GlossaryLinkResponse {
   url: string;
-  name: Pick<NameResponse, 'rus' | 'eng'>;
+  name: NameResponse;
   source: SourceResponse;
   tags: string;
   tagCategory: string;

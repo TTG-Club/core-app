@@ -11,7 +11,7 @@
 
   useSeoMeta({
     title: 'Классы [Classes]',
-    description: 'Классы персонажей D&D 2024 редакции',
+    description: 'Классы персонажей из D&D 5 (редакция 2024 года).',
   });
 
   const search = ref<string>();

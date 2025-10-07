@@ -4,7 +4,7 @@ import type { ClassLinkResponse } from './link';
 
 export interface ClassDetailResponse {
   url: string;
-  name: Pick<NameResponse, 'rus' | 'eng'>;
+  name: NameResponse;
   source: SourceResponse;
   description: EntryList;
   image?: string;

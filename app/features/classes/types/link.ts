@@ -2,7 +2,7 @@ import type { NameResponse, SourceResponse } from '~/shared/types';
 
 export interface ClassLinkResponse {
   url: string;
-  name: Pick<NameResponse, 'rus' | 'eng'>;
+  name: NameResponse;
   source: SourceResponse;
   image: string;
   updatedAt: string;

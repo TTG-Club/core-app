@@ -48,7 +48,7 @@
     }
 
     return getSlicedString(
-      `${detail.value.name.rus} [${detail.value.name.eng}] — класс D&D 5 2024 редакции. `,
+      `${detail.value.name.rus} [${detail.value.name.eng}] — игровой класс в D&D 5 (редакция 2024 года).`,
       160,
     );
   }

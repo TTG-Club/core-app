@@ -10,7 +10,7 @@
     parent = undefined,
   } = defineProps<{
     url: string;
-    name: Pick<NameResponse, 'rus' | 'eng'>;
+    name: NameResponse;
     parent?: ClassLinkResponse;
     hasDescription?: boolean;
   }>();

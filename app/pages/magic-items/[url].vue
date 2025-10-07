@@ -17,6 +17,7 @@
   useSeoMeta({
     title: getSeoTitle,
     description: getSeoDescription,
+    ogImage: () => (magicItem.value ? magicItem.value.image : undefined),
     author: () =>
       magicItem.value ? magicItem.value.source.name.rus : undefined,
     titleTemplate: '%s | Магические предметы D&D 5 2024',
@@ -36,7 +37,7 @@
     }
 
     return getSlicedString(
-      `${magicItem.value.name.rus} [${magicItem.value.name.eng}] — ${magicItem.value.subtitle} D&D 5 2024 редакции`,
+      `${magicItem.value.name.rus} [${magicItem.value.name.eng}] — магический предмет (${magicItem.value.subtitle.toLocaleLowerCase()}) из D&D 5 (редакция 2024 года).`,
       160,
     );
   }

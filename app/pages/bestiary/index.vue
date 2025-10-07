@@ -11,7 +11,7 @@
 
   useSeoMeta({
     title: 'Бестиарий [Bestiary]',
-    description: 'Бестиарий по D&D 2024 редакции',
+    description: 'Бестиарий из D&D 5 (редакция 2024 года).',
   });
 
   const search = ref<string>();
