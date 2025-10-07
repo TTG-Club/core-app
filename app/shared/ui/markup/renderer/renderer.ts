@@ -80,7 +80,7 @@ export function render(content: Array<RenderNode | string>) {
 }
 
 function renderNode(node: RenderNode): VNode {
-  if (!node) throw new Error('[Markup] Node is not defined');
+  if (!node) throw new Error(`[Markup] Node is not defined`);
 
   if (isSimpleTextNode(node)) return createTextVNode(node.text);
   if (isTextNode(node)) return renderTextNode(node);
@@ -89,7 +89,7 @@ function renderNode(node: RenderNode): VNode {
   if (isEmptyNode(node)) return renderEmptyNode(node);
   if (isListNode(node)) return renderListNode(node, { renderNode, toNodes });
 
-  throw new Error('[Markup] Unknown node');
+  throw new Error(`[Markup] Unknown node: ${JSON.stringify(node)}`);
 }
 
 function renderTextNode(node: TextNode): VNode {

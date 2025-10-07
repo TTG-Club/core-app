@@ -48,6 +48,7 @@ export function isSectionNode(node: RenderNode): node is SectionLinkNode {
     node.type === SectionMarker.Background ||
     node.type === SectionMarker.MagicItem ||
     node.type === SectionMarker.Creature ||
+    node.type === SectionMarker.Item ||
     node.type === SectionMarker.Glossary
   );
 }

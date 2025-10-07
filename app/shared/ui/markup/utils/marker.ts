@@ -56,6 +56,7 @@ export function isFeatureMarker(
     marker === SectionMarker.Background ||
     marker === SectionMarker.MagicItem ||
     marker === SectionMarker.Creature ||
+    marker === SectionMarker.Item ||
     marker === SectionMarker.Glossary
   );
 }

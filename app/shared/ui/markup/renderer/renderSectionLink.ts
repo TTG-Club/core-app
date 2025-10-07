@@ -61,7 +61,9 @@ export function renderSectionLink(
   const { url } = node.attrs;
 
   if (!url) {
-    throw new Error('[Markup] Feature link node must have a `url`');
+    throw new Error(
+      `[Markup] Feature link node must have a \`url\`: ${JSON.stringify(node)}`,
+    );
   }
 
   const { open, isOpened } = drawerFactory(node.type, url);

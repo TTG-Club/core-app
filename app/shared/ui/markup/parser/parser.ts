@@ -41,6 +41,7 @@ const MARKERS: { [key: string]: MarkerName } = {
   magicItem: Marker.MagicItem,
   bestiary: Marker.Creature,
   glossary: Marker.Glossary,
+  item: Marker.Item,
   br: Marker.Break,
   break: Marker.Break,
   sup: Marker.Superscript,
@@ -50,7 +51,7 @@ const MARKERS: { [key: string]: MarkerName } = {
 
 export function parse(text: string): RenderNode[] {
   if (text.length > MAX_STRING_LENGTH) {
-    throw new Error('[Markup] String is too long');
+    throw new Error(`[Markup] String is too long: ${text}`);
   }
 
   const depth = 0;
@@ -60,7 +61,7 @@ export function parse(text: string): RenderNode[] {
 
 function recursiveParse(text: string, depth: number): RenderNode[] {
   if (depth > MAX_DEPTH) {
-    throw new Error('[Markup] Maximum nesting depth exceeded');
+    throw new Error(`[Markup] Maximum nesting depth exceeded: ${text}`);
   }
 
   const tagSplit = splitByMarkers(text);

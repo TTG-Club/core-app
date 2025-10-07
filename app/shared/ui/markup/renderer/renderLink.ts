@@ -8,11 +8,15 @@ export function renderLink(node: LinkNode, renderChildren: () => VNode[]) {
   const { url, target } = node.attrs;
 
   if (!url) {
-    throw new Error('[Markup] Link node must have a `url`');
+    throw new Error(
+      `[Markup] Link node must have a \`url\`: ${JSON.stringify(node)}`,
+    );
   }
 
   if (target && target !== '_blank') {
-    throw new Error('[Markup] `target` must be "_blank"');
+    throw new Error(
+      `[Markup] \`target\` must be "_blank": ${JSON.stringify(node)}`,
+    );
   }
 
   const external = isExternal(url);
