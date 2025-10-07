@@ -16,6 +16,7 @@
     text="Скопировать ссылку"
   >
     <UButton
+      :href="url"
       icon="i-ttg-copy"
       variant="ghost"
       color="neutral"

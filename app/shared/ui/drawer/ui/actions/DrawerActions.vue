@@ -20,6 +20,7 @@
     text="Редактировать"
   >
     <UButton
+      v-if="editUrl"
       :href="editUrl"
       variant="ghost"
       target="_blank"
@@ -29,9 +30,11 @@
     />
   </UTooltip>
 
-  <UTooltip text="Открыть в новой вкладке">
+  <UTooltip
+    v-if="url"
+    text="Открыть в новой вкладке"
+  >
     <UButton
-      v-if="url"
       :href="url"
       variant="ghost"
       target="_blank"

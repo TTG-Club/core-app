@@ -13,9 +13,14 @@
   } from './ui';
   import { UiCollapse } from '~ui/collapse';
 
-  const { detail, hideGallery = false } = defineProps<{
+  const {
+    detail,
+    hideGallery = false,
+    inDrawer = false,
+  } = defineProps<{
     detail: ClassDetailResponse;
     hideGallery?: boolean;
+    inDrawer?: boolean;
   }>();
 </script>
 
@@ -46,6 +51,7 @@
       <div class="flex min-w-0 flex-auto flex-col gap-6">
         <div class="flex min-w-0 flex-col gap-2">
           <ClassRouting
+            v-if="!inDrawer"
             :url="detail.url"
             :name="detail.name"
             :parent="detail.parent"
