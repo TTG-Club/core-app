@@ -51,7 +51,7 @@
     <ClassBody
       v-if="characterClass"
       :detail="characterClass"
-      hide-gallery
+      in-drawer
     />
   </UiDrawer>
 </template>

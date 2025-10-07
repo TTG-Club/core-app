@@ -42,7 +42,7 @@
     <ClassBody
       v-if="detail"
       :detail="detail"
-      hide-gallery
+      in-drawer
     />
   </UiDrawer>
 </template>
