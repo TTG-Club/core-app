@@ -21,15 +21,18 @@
 
 <template>
   <div class="@container">
-    <div class="flex flex-col gap-6 @min-[800px]:flex-row @min-[800px]:gap-7">
+    <div class="flex flex-col gap-6 @min-3xl:flex-row @min-3xl:gap-7">
       <div
-        class="flex w-full flex-shrink-0 flex-col gap-4 @min-[620px]:@max-[800px]:flex-row @min-[800px]:w-80"
+        :class="[
+          'flex w-full flex-shrink-0 flex-col gap-4',
+          '@min-xl:@max-3xl:flex-row @min-3xl:w-80',
+        ]"
       >
         <UiGallery
           v-if="!hideGallery && detail.image"
           :preview="detail.image"
           :images="[detail.image, ...(detail.gallery || [])]"
-          class="min-w-[100px] min-[620px]:@max-[800px]:max-w-[200px]"
+          class="min-w-25 @min-xl:@max-3xl:max-w-50"
         />
 
         <StatsBlock
