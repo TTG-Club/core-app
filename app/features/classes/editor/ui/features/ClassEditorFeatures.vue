@@ -85,6 +85,17 @@
 
             <UFormField
               class="col-span-full"
+              label="Подсказка"
+              name="additional"
+            >
+              <UInput
+                v-model="feat.additional"
+                placeholder="Краткая подсказка"
+              />
+            </UFormField>
+
+            <UFormField
+              class="col-span-full"
               label="Описание"
               name="description"
             >
@@ -95,7 +106,10 @@
               />
             </UFormField>
 
-            <FeatureScaling v-model="feat.scaling" />
+            <FeatureScaling
+              v-model="feat.scaling"
+              :is-subclass="isSubclass"
+            />
           </UForm>
         </UCard>
       </template>
