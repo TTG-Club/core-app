@@ -12,16 +12,16 @@
     v-if="items.length"
     :class="$style.block"
   >
-    <p :class="$style.label">{{ label }}:</p>
+    <span :class="$style.label">{{ label }}: </span>
 
     <span :class="$style.item">
       <span
         v-for="(item, key) in items"
         :key="key"
       >
-        <NuxtLink :to="{ name: 'spells-url', params: { url: item.url } }">
+        <ULink :to="{ name: 'spells-url', params: { url: item.url } }">
           {{ item.name }}
-        </NuxtLink>
+        </ULink>
 
         <span v-if="key !== items.length - 1">, </span>
       </span>

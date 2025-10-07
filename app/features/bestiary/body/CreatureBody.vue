@@ -8,6 +8,7 @@
 
   import type { CreatureDetailResponse } from '~/features/bestiary/types';
   import { pick } from 'lodash-es';
+  import { UiAction } from '~ui/action';
 
   const { creature } = defineProps<{
     creature: CreatureDetailResponse;
@@ -72,14 +73,12 @@
             <template #default> Особенности </template>
 
             <template #content>
-              <p
+              <UiAction
                 v-for="trait in creature.traits"
                 :key="trait.name.eng"
-              >
-                <strong>{{ trait.name.rus }}. </strong>
-
-                <MarkupRender :entries="trait.description" />
-              </p>
+                :label="trait.name.rus"
+                :text="trait.description"
+              />
             </template>
           </UiCollapse>
         </template>
@@ -89,14 +88,12 @@
             <template #default> Действия </template>
 
             <template #content>
-              <p
-                v-for="trait in creature.actions"
-                :key="trait.name.eng"
-              >
-                <strong>{{ trait.name.rus }}. </strong>
-
-                <MarkupRender :entries="trait.description" />
-              </p>
+              <UiAction
+                v-for="action in creature.actions"
+                :key="action.name.eng"
+                :label="action.name.rus"
+                :text="action.description"
+              />
             </template>
           </UiCollapse>
         </template>
@@ -106,14 +103,12 @@
             <template #default> Бонусные действия </template>
 
             <template #content>
-              <p
-                v-for="trait in creature.bonusActions"
-                :key="trait.name.eng"
-              >
-                <strong>{{ trait.name.rus }}. </strong>
-
-                <MarkupRender :entries="trait.description" />
-              </p>
+              <UiAction
+                v-for="bonusAction in creature.bonusActions"
+                :key="bonusAction.name.eng"
+                :label="bonusAction.name.rus"
+                :text="bonusAction.description"
+              />
             </template>
           </UiCollapse>
         </template>
@@ -123,14 +118,12 @@
             <template #default> Реакции </template>
 
             <template #content>
-              <p
-                v-for="trait in creature.reactions"
-                :key="trait.name.eng"
-              >
-                <strong>{{ trait.name.rus }}. </strong>
-
-                <MarkupRender :entries="trait.description" />
-              </p>
+              <UiAction
+                v-for="reaction in creature.reactions"
+                :key="reaction.name.eng"
+                :label="reaction.name.rus"
+                :text="reaction.description"
+              />
             </template>
           </UiCollapse>
         </template>
@@ -143,14 +136,14 @@
               <p class="mb-2">
                 <strong>Использования легендарных действий:</strong>
 
-                <span> &nbsp;{{ creature.legendary.count }} </span>
+                <span>&nbsp;{{ creature.legendary.count }}.</span>
 
                 <span v-if="creature.legendary?.description?.length">
                   {{ creature.legendary.description }}
                 </span>
 
                 <span v-else>
-                  . Сразу после хода другого существа
+                  Сразу после хода другого существа
                   {{ creature.name.rus }} может потратить 1 использование, чтобы
                   выполнить одно из следующих действий.
                   {{ creature.name.rus }} восстанавливает все потраченные
@@ -158,18 +151,12 @@
                 </span>
               </p>
 
-              <ul>
-                <li
-                  v-for="action in creature.legendary.actions"
-                  :key="action.name.eng"
-                >
-                  <p>
-                    <strong>{{ action.name.rus }}. </strong>
-
-                    <MarkupRender :entries="action.description" />
-                  </p>
-                </li>
-              </ul>
+              <UiAction
+                v-for="action in creature.legendary.actions"
+                :key="action.name.eng"
+                :label="action.name.rus"
+                :text="action.description"
+              />
             </template>
           </UiCollapse>
         </template>
@@ -198,14 +185,12 @@
               />
 
               <template v-if="creature.lair?.effects?.length">
-                <template
+                <UiAction
                   v-for="effect in creature.lair.effects"
                   :key="effect.name.eng"
-                >
-                  <strong>{{ effect.name.rus }}. </strong>
-
-                  <MarkupRender :entries="effect.description" />
-                </template>
+                  :label="effect.name.rus"
+                  :text="effect.description"
+                />
               </template>
 
               <MarkupRender
