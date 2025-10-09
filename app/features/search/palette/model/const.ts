@@ -22,7 +22,7 @@ export const mapSearchItemsToPaths = new Map<SearchItemsType, string>([
   [SearchItems.SPELL, 'spells'],
   [SearchItems.BESTIARY, 'bestiary'],
   [SearchItems.MAGIC_ITEM, 'magic-items'],
-  [SearchItems.ITEM, 'item'],
+  [SearchItems.ITEM, 'items'],
   [SearchItems.GLOSSARY, 'glossary'],
 ]);
 
