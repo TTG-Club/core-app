@@ -8,6 +8,7 @@ export const SearchItems = {
   SPELL: 'spell',
   BESTIARY: 'bestiary',
   MAGIC_ITEM: 'magic-item',
+  ITEM: 'item',
   GLOSSARY: 'glossary',
 } as const;
 
@@ -21,6 +22,7 @@ export const mapSearchItemsToPaths = new Map<SearchItemsType, string>([
   [SearchItems.SPELL, 'spells'],
   [SearchItems.BESTIARY, 'bestiary'],
   [SearchItems.MAGIC_ITEM, 'magic-items'],
+  [SearchItems.ITEM, 'items'],
   [SearchItems.GLOSSARY, 'glossary'],
 ]);
 
@@ -32,5 +34,6 @@ export const mapSearchItemsToTypeNames = new Map<SearchItemsType, string>([
   [SearchItems.SPELL, 'Заклинания'],
   [SearchItems.BESTIARY, 'Бестиарий'],
   [SearchItems.MAGIC_ITEM, 'Магические предметы'],
+  [SearchItems.ITEM, 'Предметы'],
   [SearchItems.GLOSSARY, 'Глоссарий'],
 ]);
