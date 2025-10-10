@@ -6,6 +6,8 @@
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
   import type { ItemLinkResponse } from '~items/types';
+  import { useFilter } from '~filter/composable';
+  import type { SearchBody } from '~/shared/types';
 
   useSeoMeta({
     title: 'Предметы [Items]',
@@ -13,6 +15,22 @@
   });
 
   const search = ref<string>('');
+
+  const {
+    filter,
+    isPending: isFilterPending,
+    isShowedPreview: isFilterPreviewShowed,
+  } = await useFilter('glossary-filters', '/api/v2/item/filters');
+
+  const searchBody = computed(() => {
+    const body: SearchBody = {};
+
+    if (filter) {
+      body.filter = filter.value;
+    }
+
+    return Object.keys(body).length ? body : undefined;
+  });
 
   const {
     data: items,
@@ -28,6 +46,7 @@
           query:
             search.value && search.value.length >= 3 ? search.value : undefined,
         },
+        body: searchBody.value,
       }),
     {
       deep: false,
@@ -42,7 +61,12 @@
     title="Предметы"
   >
     <template #controls>
-      <FilterControls v-model:search="search">
+      <FilterControls
+        v-model:search="search"
+        v-model:filter="filter"
+        :is-pending="isFilterPending"
+        :show-preview="isFilterPreviewShowed"
+      >
         <template #legend>
           <ItemLegend />
         </template>
