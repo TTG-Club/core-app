@@ -34,6 +34,18 @@
     actionUrl: '/api/v2/item',
     getInitialState,
   });
+
+  const hasArmor = computed(() => {
+    const t = state.value.types;
+
+    return Array.isArray(t) ? t.includes('ARMOR') : t === 'ARMOR';
+  });
+
+  const hasWeapon = computed(() => {
+    const t = state.value.types;
+
+    return Array.isArray(t) ? t.includes('WEAPON') : t === 'WEAPON';
+  });
 </script>
 
 <template>
@@ -105,7 +117,41 @@
       </UFormField>
     </UCard>
 
-    <UCard variant="subtle">
+    <UCard
+      v-if="hasWeapon"
+      variant="subtle"
+    >
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">Оружие</h2>
+      </template>
+    </UCard>
+
+    <UCard
+      v-if="hasArmor"
+      variant="subtle"
+    >
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">Доспехи</h2>
+      </template>
+
+      <UFormField
+        class="col-span-4"
+        name="weapon."
+      >
+        <UInputNumber
+          v-model="model[ability.shortKey].value"
+          :precision="0"
+          :min="0"
+          :max="30"
+        >
+        </UInputNumber>
+      </UFormField>
+    </UCard>
+
+    <UCard
+      v-if="hasWeapon"
+      variant="subtle"
+    >
       <template #header>
         <h2 class="truncate text-base text-highlighted">Описание</h2>
       </template>

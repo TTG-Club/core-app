@@ -1,7 +1,7 @@
 <template>
   <NuxtLayout
     name="detail"
-    title="Мастерская предметов"
+    title="Предметы"
   >
     <template #actions>
       <UButton
