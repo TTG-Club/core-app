@@ -94,7 +94,7 @@
         >
           <SelectAbilities
             v-model="state.abilities"
-            :limit="3"
+            :limit="6"
             multiple
           />
         </UFormField>
