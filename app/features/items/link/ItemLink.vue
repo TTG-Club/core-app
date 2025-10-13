@@ -17,6 +17,8 @@
     },
     destroyOnClose: true,
   });
+
+  const isOpened = computed(() => overlay.isOpen(drawer.id));
 </script>
 
 <template>
@@ -24,6 +26,7 @@
     :to="{ name: 'items-url', params: { url: item.url } }"
     :title="`${item.name.rus} [${item.name.eng}]`"
     :group="item.source.group"
+    :is-opened
     @open-drawer="drawer.open()"
   >
     <template #default>
