@@ -1,7 +1,9 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+
 import { fileURLToPath, URL } from 'node:url';
 
 import bytes from 'bytes';
+
 import ms from 'ms';
 
 const application = {
@@ -78,14 +80,17 @@ export default defineNuxtConfig({
     automaticDefaults: true,
     canonicalLowercase: true,
   },
+
   unhead: {
     renderSSRHeadOptions: {
       omitLineBreaks: true,
     },
   },
+
   ogImage: {
     enabled: false,
   },
+
   robots: {
     disallow: [
       '/user',
@@ -128,9 +133,11 @@ export default defineNuxtConfig({
 
   // Стили и UI
   css: ['~/assets/css/tailwind.css'],
+
   ui: {
     colorMode: false,
   },
+
   icon: {
     serverBundle: {
       collections: ['lucide', 'fluent'],
@@ -142,6 +149,7 @@ export default defineNuxtConfig({
       },
     ],
   },
+
   fonts: {
     defaults: {
       subsets: ['cyrillic-ext', 'cyrillic'],
@@ -155,6 +163,7 @@ export default defineNuxtConfig({
     priority: ['google', 'fontsource'],
     families: [{ name: 'Open Sans' }],
   },
+
   image: {
     optimize: false,
     provider: 'beget',
@@ -167,8 +176,14 @@ export default defineNuxtConfig({
 
   // TypeScript и линтеры
   typescript: {
-    typeCheck: true,
+    typeCheck: 'build', // Проверка типов только при сборке, не блокирует dev
+    tsConfig: {
+      compilerOptions: {
+        verbatimModuleSyntax: true, // Быстрее обработка модулей
+      },
+    },
   },
+
   eslint: {
     config: {
       standalone: false,
@@ -181,12 +196,22 @@ export default defineNuxtConfig({
       scrollBehaviorType: 'smooth',
     },
   },
+
+  // Nitro
   nitro: {
     experimental: {
       openAPI: true,
     },
 
-    // TODO: Поиграть с лимитами в будущем, если не будет хватать
+    // Минификация для уменьшения размера
+    minify: true,
+
+    // Компрессия статики
+    compressPublicAssets: {
+      gzip: true,
+      brotli: true,
+    },
+
     routeRules: {
       '/api/**': {
         security: {
@@ -211,6 +236,12 @@ export default defineNuxtConfig({
     },
   },
 
+  // Sourcemaps
+  sourcemap: {
+    server: false, // Не нужны на сервере
+    client: 'hidden', // Генерируются, но не включаются в бандл
+  },
+
   // Сборщик и пути
   vite: {
     css: {
@@ -220,7 +251,61 @@ export default defineNuxtConfig({
         },
       },
     },
+
+    build: {
+      minify: 'esbuild',
+      cssCodeSplit: false,
+      reportCompressedSize: false,
+      chunkSizeWarningLimit: 1000,
+    },
+
+    optimizeDeps: {
+      include: [
+        // Vue Core
+        'vue',
+        '@vue/devtools-core',
+        '@vue/devtools-kit',
+
+        // Nuxt UI
+        '@nuxt/ui/locale',
+
+        // Утилиты
+        'lodash-es',
+        '@vueuse/core',
+        '@nuxtjs/device',
+
+        // Date/Time
+        'dayjs',
+        'dayjs/locale/ru',
+        'dayjs/plugin/advancedFormat',
+        'dayjs/plugin/customParseFormat',
+        'dayjs/plugin/localizedFormat',
+        'dayjs/plugin/timezone',
+        'dayjs/plugin/utc',
+
+        // HTTP/API
+        'http-status-codes',
+
+        // Dev tools
+        '@faker-js/faker',
+        'transliteration',
+
+        // LightGallery
+        'lightgallery/vue',
+        'lightgallery/plugins/thumbnail',
+        'lightgallery/plugins/zoom',
+        'lightgallery/plugins/fullscreen',
+
+        // Tables
+        '@tanstack/vue-table',
+
+        // Pinia
+        'pinia',
+        '@pinia/nuxt',
+      ],
+    },
   },
+
   alias: {
     '~ui': fileURLToPath(new URL('./app/shared/ui', import.meta.url)),
   },
