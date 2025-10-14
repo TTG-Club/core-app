@@ -50,7 +50,7 @@
       }),
     {
       deep: false,
-      watch: [search],
+      watch: [search, filter],
     },
   );
 </script>
