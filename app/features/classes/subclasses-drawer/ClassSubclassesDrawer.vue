@@ -26,7 +26,7 @@
 
 <template>
   <UiDrawer
-    title="Происхождения"
+    title="Подклассы"
     :is-loading
     :is-error
     @close="$emit('close')"
