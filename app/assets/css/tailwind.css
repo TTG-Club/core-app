@@ -26,6 +26,10 @@
   @apply bg-(--ui-bg-accented);
 }
 
+@utility text-link {
+  @apply text-(--color-link);
+}
+
 body {
   @apply scheme-light dark:scheme-dark svifty7:scheme-dark bg-linear-(--color-bg-main-gradient) bg-no-repeat bg-cover bg-fixed
 }

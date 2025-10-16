@@ -1,29 +1,29 @@
 html.svifty7 {
-  /* Primary */
+  /* Primary - без изменений */
   --color-primary-50: oklch(0.97 0.020 25.0);
-  --color-primary-100: oklch(0.92 0.035 25.0);
-  --color-primary-200: oklch(0.85 0.060 25.0);
-  --color-primary-300: oklch(0.78 0.080 25.0);
-  --color-primary-400: oklch(0.70 0.100 25.0);
+  --color-primary-100: oklch(0.89 0.040 25.0);
+  --color-primary-200: oklch(0.80 0.065 25.0);
+  --color-primary-300: oklch(0.72 0.095 25.0);
+  --color-primary-400: oklch(0.63 0.120 25.0);
   --color-primary-500: oklch(0.55 0.140 25.0);
-  --color-primary-600: oklch(0.55 0.115 25.0);
-  --color-primary-700: oklch(0.48 0.120 25.0);
-  --color-primary-800: oklch(0.42 0.125 25.0);
-  --color-primary-900: oklch(0.36 0.120 25.0);
-  --color-primary-950: oklch(0.30 0.115 25.0);
+  --color-primary-600: oklch(0.50 0.128 25.0);
+  --color-primary-700: oklch(0.45 0.118 25.0);
+  --color-primary-800: oklch(0.40 0.110 25.0);
+  --color-primary-900: oklch(0.35 0.103 25.0);
+  --color-primary-950: oklch(0.30 0.098 25.0);
 
-  /* Red (Error) */
-  --color-red-50: oklch(0.97 0.050 15.0);
-  --color-red-100: oklch(0.92 0.070 15.0);
-  --color-red-200: oklch(0.85 0.090 15.0);
-  --color-red-300: oklch(0.78 0.110 15.0);
-  --color-red-400: oklch(0.70 0.130 15.0);
-  --color-red-500: oklch(0.62 0.140 15.0);
-  --color-red-600: oklch(0.57 0.135 15.0);
-  --color-red-700: oklch(0.50 0.125 15.0);
-  --color-red-800: oklch(0.44 0.115 15.0);
-  --color-red-900: oklch(0.38 0.105 15.0);
-  --color-red-950: oklch(0.32 0.095 15.0);
+  /* Red (Error) - более чистый красный */
+  --color-red-50: oklch(0.97 0.050 8.0);
+  --color-red-100: oklch(0.92 0.070 8.0);
+  --color-red-200: oklch(0.85 0.090 8.0);
+  --color-red-300: oklch(0.78 0.110 8.0);
+  --color-red-400: oklch(0.70 0.130 8.0);
+  --color-red-500: oklch(0.62 0.140 8.0);
+  --color-red-600: oklch(0.56 0.130 8.0);
+  --color-red-700: oklch(0.50 0.120 8.0);
+  --color-red-800: oklch(0.44 0.110 8.0);
+  --color-red-900: oklch(0.38 0.100 8.0);
+  --color-red-950: oklch(0.32 0.090 8.0);
 
   /* Yellow */
   --color-yellow-50: oklch(0.95 0.020 80.0);
@@ -201,7 +201,7 @@ html.svifty7 {
   --color-bg-menu: 135deg, oklch(0.38 0.006 75.0 / 0.78), oklch(0.27 0.006 75.0 / 0.78);
 
   --color-hover: oklch(0.976 0 89.876 / 0.09);
-  --color-link: var(--color-blue-400);
+  --color-link: var(--color-primary-400);
 
   // Logo
   --color-logo-stroke: oklch(0.66 0.07 84.542);
