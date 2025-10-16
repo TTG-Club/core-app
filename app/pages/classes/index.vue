@@ -1,7 +1,6 @@
 <script setup lang="ts">
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
-  import { ClassLegend } from '~classes/legend';
   import { ClassLink } from '~classes/link';
   import { PageGrid, PageResult } from '~ui/page';
 
@@ -66,9 +65,6 @@
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       >
-        <template #legend>
-          <ClassLegend />
-        </template>
       </FilterControls>
     </template>
 

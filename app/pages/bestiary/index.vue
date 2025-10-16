@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import type { SearchBody } from '~/shared/types';
-  import { CreatureLegend } from '~bestiary/legend';
   import { CreatureLink } from '~bestiary/link';
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
@@ -63,9 +62,6 @@
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       >
-        <template #legend>
-          <CreatureLegend />
-        </template>
       </FilterControls>
     </template>
 

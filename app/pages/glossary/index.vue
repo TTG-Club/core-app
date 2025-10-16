@@ -1,7 +1,6 @@
 <script setup lang="ts">
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
-  import { GlossaryLegend } from '~glossary/legend';
   import { GlossaryLink } from '~glossary/link';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
@@ -65,9 +64,6 @@
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       >
-        <template #legend>
-          <GlossaryLegend />
-        </template>
       </FilterControls>
     </template>
 

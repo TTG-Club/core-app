@@ -1,7 +1,6 @@
 <script setup lang="ts">
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
-  import { SpeciesLegend } from '~species/legend';
   import { SpeciesLink } from '~species/link';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkBig } from '~ui/skeleton';
@@ -61,9 +60,6 @@
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       >
-        <template #legend>
-          <SpeciesLegend />
-        </template>
       </FilterControls>
     </template>
 

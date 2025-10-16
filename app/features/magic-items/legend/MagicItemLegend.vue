@@ -4,10 +4,6 @@
 
   const items: LegendItems = [
     {
-      label: 'Basic',
-      title: 'Тип источника',
-    },
-    {
       label: 'Н',
       title: 'Требуется настройка',
     },
