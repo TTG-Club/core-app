@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { UiDrawer } from '~ui/drawer';
 
-  import { ClassLink } from '~classes/link';
+  import { SubClassLink } from '~classes/link';
   import type { ClassLinkResponse } from '~classes/types';
 
   const { url } = defineProps<{
@@ -33,13 +33,13 @@
   >
     <div :class="$style.container">
       <div :class="$style.grid">
-        <ClassLink
+        <SubClassLink
           v-for="link in subclasses"
           :key="link.url"
           :character-class="link"
         >
           {{ link.url }}
-        </ClassLink>
+        </SubClassLink>
       </div>
     </div>
   </UiDrawer>
@@ -49,10 +49,5 @@
   .grid {
     display: grid;
     grid-gap: 16px;
-    grid-template-columns: repeat(1, 248px);
-
-    @include media-min($sm) {
-      grid-template-columns: repeat(2, 248px);
-    }
   }
 </style>
