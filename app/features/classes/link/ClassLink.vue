@@ -11,46 +11,54 @@
 
 <template>
   <NuxtLink :to="`/classes/${characterClass.url}`">
-    <div :class="$style.link">
-      <div :class="$style.image">
+    <div
+      :class="$style.link"
+      class="@max-[500px]:flex"
+    >
+      <div
+        :class="$style.image"
+        class="w-full @max-[500px]:max-h-[100px] @max-[500px]:max-w-[100px]"
+      >
         <img
           :src="characterClass.image"
           :alt="characterClass.name.rus"
         />
       </div>
 
-      <div :class="$style.info">
-        <div :class="$style.main">
-          <span
-            :class="[$style.name, $style.rus]"
-            :title="characterClass.name.rus"
-          >
-            {{ characterClass.name.rus }}
-          </span>
+      <div class="w-full">
+        <div :class="$style.info">
+          <div :class="$style.main">
+            <span
+              :class="[$style.name, $style.rus]"
+              :title="characterClass.name.rus"
+            >
+              {{ characterClass.name.rus }}
+            </span>
 
-          <SourceTag
-            v-if="characterClass.source?.name?.label"
-            :source="characterClass.source"
+            <SourceTag
+              v-if="characterClass.source?.name?.label"
+              :source="characterClass.source"
+            />
+          </div>
+
+          <div :class="$style.common">
+            <span
+              :class="[$style.name, $style.eng]"
+              :title="characterClass.name.eng"
+            >
+              {{ characterClass.name.eng }}
+            </span>
+          </div>
+        </div>
+
+        <div :class="$style.actions">
+          <LinkPreview :url="characterClass.url" />
+
+          <LinkSubclasses
+            v-if="characterClass.hasSubclasses"
+            :url="characterClass.url"
           />
         </div>
-
-        <div :class="$style.common">
-          <span
-            :class="[$style.name, $style.eng]"
-            :title="characterClass.name.eng"
-          >
-            {{ characterClass.name.eng }}
-          </span>
-        </div>
-      </div>
-
-      <div :class="$style.actions">
-        <LinkPreview :url="characterClass.url" />
-
-        <LinkSubclasses
-          v-if="characterClass.hasSubclasses"
-          :url="characterClass.url"
-        />
       </div>
     </div>
   </NuxtLink>
@@ -146,27 +154,8 @@
     display: flex;
     border-top: 1px solid var(--ui-border);
 
-    .btn {
-      cursor: pointer;
-
-      flex: 1 1 auto;
-
-      padding: 12px 0;
-      border: none;
-
-      background-color: transparent;
-
-      & {
-        @include css-anim();
-      }
-
-      &:not(:first-child) {
-        border-left: 1px solid var(--ui-border);
-      }
-
-      &:hover {
-        background-color: var(--color-hover);
-      }
+    button {
+      padding: 6px 0;
     }
   }
 </style>
