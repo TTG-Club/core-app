@@ -14,21 +14,27 @@
   <NuxtLink :to="`/species/${species.url}`">
     <div
       :class="$style.link"
-      class="@max-[500px]:flex"
+      class="overflow-hidden rounded-xl border @max-[500px]:flex"
     >
       <div
         :class="$style.image"
-        class="@max-[500px]:max-h-[103px] @max-[500px]:min-w-[80px]"
+        class="@max-[500px]:max-h-[103px] @max-[500px]:min-w-[100px]"
       >
         <img
           :src="species.image"
           :alt="species.name.rus"
         />
+
+        <SourceTag
+          v-if="species.source?.name?.label"
+          :source="species.source"
+          class="absolute top-2 right-2"
+        />
       </div>
 
       <div class="w-full">
-        <div :class="$style.info">
-          <div :class="$style.main">
+        <div class="flex px-4 py-2">
+          <div class="flex w-full flex-col gap-1">
             <span
               :class="[$style.name, $style.rus]"
               :title="species.name.rus"
@@ -36,13 +42,6 @@
               {{ species.name.rus }}
             </span>
 
-            <SourceTag
-              v-if="species.source?.name?.label"
-              :source="species.source"
-            />
-          </div>
-
-          <div :class="$style.common">
             <span
               :class="[$style.name, $style.eng]"
               :title="species.name.eng"
@@ -50,15 +49,15 @@
               {{ species.name.eng }}
             </span>
           </div>
-        </div>
 
-        <div :class="$style.actions">
-          <LinkPreview :url="species.url" />
+          <div class="flex items-center gap-2">
+            <LinkPreview :url="species.url" />
 
-          <LinkLineages
-            v-if="species.hasLineages"
-            :url="species.url"
-          />
+            <LinkLineages
+              v-if="species.hasLineages"
+              :url="species.url"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -68,14 +67,7 @@
 <style module lang="scss">
   .link {
     will-change: box-shadow;
-
-    overflow: hidden;
-
-    border: 1px solid var(--ui-border);
-    border-radius: 16px;
-
-    color: var(--ui-text);
-
+    border-color: var(--ui-border);
     background-color: var(--ui-bg-muted);
 
     & {
@@ -103,10 +95,20 @@
       pointer-events: none;
       content: '';
 
+      position: relative;
+      z-index: 1;
+      bottom: 0;
+
       display: block;
 
       width: 100%;
       padding-bottom: 100%;
+
+      background: linear-gradient(
+        0deg,
+        rgba(29, 32, 42, 1) 0%,
+        rgba(255, 255, 255, 0) 50%
+      );
     }
 
     img {
@@ -117,19 +119,6 @@
 
       opacity: 0.9;
       object-fit: cover;
-    }
-  }
-
-  .info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 12px 16px 4px;
-
-    .main {
-      display: flex;
-      gap: 2px;
-      align-items: center;
     }
   }
 
@@ -149,10 +138,5 @@
     &.eng {
       max-width: 100%;
     }
-  }
-
-  .actions {
-    display: flex;
-    border-top: 1px solid var(--ui-border);
   }
 </style>

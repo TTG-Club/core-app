@@ -17,10 +17,11 @@
 </script>
 
 <template>
-  <button
-    class="flex-auto cursor-pointer border-l border-default bg-transparent px-1 py-2 hover:bg-elevated @min-[500px]:py-3"
+  <UButton
+    icon="i-ttg-new-page"
+    size="md"
+    color="neutral"
+    variant="soft"
     @click.left.exact.prevent.stop="drawer.open()"
-  >
-    Происхождения
-  </button>
+  />
 </template>
