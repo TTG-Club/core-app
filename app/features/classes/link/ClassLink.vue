@@ -153,9 +153,5 @@
   .actions {
     display: flex;
     border-top: 1px solid var(--ui-border);
-
-    button {
-      padding: 6px 0;
-    }
   }
 </style>
