@@ -18,7 +18,7 @@
 
 <template>
   <button
-    class="flex-auto cursor-pointer border-l border-default bg-transparent py-3 hover:bg-elevated"
+    class="flex-auto cursor-pointer border-l border-default bg-transparent px-1 py-2 hover:bg-elevated @min-[500px]:py-3"
     @click.left.exact.prevent.stop="drawer.open()"
   >
     Происхождения

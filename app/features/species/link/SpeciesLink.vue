@@ -12,46 +12,54 @@
 
 <template>
   <NuxtLink :to="`/species/${species.url}`">
-    <div :class="$style.link">
-      <div :class="$style.image">
+    <div
+      :class="$style.link"
+      class="@max-[500px]:flex"
+    >
+      <div
+        :class="$style.image"
+        class="@max-[500px]:max-h-[103px] @max-[500px]:min-w-[80px]"
+      >
         <img
           :src="species.image"
           :alt="species.name.rus"
         />
       </div>
 
-      <div :class="$style.info">
-        <div :class="$style.main">
-          <span
-            :class="[$style.name, $style.rus]"
-            :title="species.name.rus"
-          >
-            {{ species.name.rus }}
-          </span>
+      <div class="w-full">
+        <div :class="$style.info">
+          <div :class="$style.main">
+            <span
+              :class="[$style.name, $style.rus]"
+              :title="species.name.rus"
+            >
+              {{ species.name.rus }}
+            </span>
 
-          <SourceTag
-            v-if="species.source?.name?.label"
-            :source="species.source"
+            <SourceTag
+              v-if="species.source?.name?.label"
+              :source="species.source"
+            />
+          </div>
+
+          <div :class="$style.common">
+            <span
+              :class="[$style.name, $style.eng]"
+              :title="species.name.eng"
+            >
+              {{ species.name.eng }}
+            </span>
+          </div>
+        </div>
+
+        <div :class="$style.actions">
+          <LinkPreview :url="species.url" />
+
+          <LinkLineages
+            v-if="species.hasLineages"
+            :url="species.url"
           />
         </div>
-
-        <div :class="$style.common">
-          <span
-            :class="[$style.name, $style.eng]"
-            :title="species.name.eng"
-          >
-            {{ species.name.eng }}
-          </span>
-        </div>
-      </div>
-
-      <div :class="$style.actions">
-        <LinkPreview :url="species.url" />
-
-        <LinkLineages
-          v-if="species.hasLineages"
-          :url="species.url"
-        />
       </div>
     </div>
   </NuxtLink>
@@ -146,28 +154,5 @@
   .actions {
     display: flex;
     border-top: 1px solid var(--ui-border);
-
-    .btn {
-      cursor: pointer;
-
-      flex: 1 1 auto;
-
-      padding: 12px 0;
-      border: none;
-
-      background-color: transparent;
-
-      & {
-        @include css-anim();
-      }
-
-      &:not(:first-child) {
-        border-left: 1px solid var(--ui-border);
-      }
-
-      &:hover {
-        background-color: var(--color-hover);
-      }
-    }
   }
 </style>

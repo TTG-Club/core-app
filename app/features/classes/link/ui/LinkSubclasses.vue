@@ -18,7 +18,7 @@
 
 <template>
   <button
-    class="flex-auto cursor-pointer border-l border-default bg-transparent py-1 hover:bg-elevated @min-[500px]:py-3"
+    class="flex-auto cursor-pointer border-l border-default bg-transparent py-2 hover:bg-elevated @min-[500px]:py-3"
     @click.left.exact.prevent="drawer.open()"
   >
     Подклассы

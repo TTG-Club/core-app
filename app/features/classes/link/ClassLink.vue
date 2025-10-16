@@ -17,7 +17,7 @@
     >
       <div
         :class="$style.image"
-        class="w-full @max-[500px]:max-h-[100px] @max-[500px]:max-w-[100px]"
+        class="@max-[500px]:max-h-[103px] @max-[500px]:min-w-[80px]"
       >
         <img
           :src="characterClass.image"
