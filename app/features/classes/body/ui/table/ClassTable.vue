@@ -178,9 +178,7 @@
                 href: `#${feature.key}`,
                 replace: true,
                 class: [
-                  feature.isSubclass
-                    ? 'text-success hover:text-success'
-                    : 'text-primary hover:text-primary',
+                  feature.isSubclass ? 'text-success hover:text-success' : '',
                   'transition-colors duration-100',
                 ],
                 onClick: withModifiers(

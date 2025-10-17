@@ -7,6 +7,7 @@
 
   const {
     title,
+    notDetail = false,
     copyTitle = false,
     source = undefined,
     url = undefined,
@@ -14,6 +15,7 @@
     dateTime = undefined,
     dateTimeFormat = undefined,
     dismissible = undefined,
+    class: _class = 'w-2xl',
   } = defineProps<{
     title: DrawerTitleName;
     source?: SourceResponse;
@@ -26,6 +28,7 @@
     dateTimeFormat?: string;
     notDetail?: boolean;
     dismissible?: boolean;
+    class?: string;
   }>();
 
   defineEmits<{
@@ -52,12 +55,24 @@
   const computedSubtitle = computed(() =>
     typeof title === 'string' ? undefined : title?.eng,
   );
+
+  const classList = computed(() => {
+    if (!_class) {
+      return 'w-2xl';
+    }
+
+    if (!_class.includes(' w-') && !_class.startsWith('w-')) {
+      return `${notDetail ? 'w-xl' : 'w-2xl'} ${_class}`;
+    }
+
+    return _class;
+  });
 </script>
 
 <template>
   <UDrawer
     :handle="!notDetail"
-    :class="notDetail ? 'w-xl' : 'w-2xl'"
+    :class="classList"
     :dismissible="isDismissible"
     :inset="isTabletOrGreater"
     direction="right"

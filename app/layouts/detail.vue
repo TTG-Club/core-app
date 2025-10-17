@@ -46,7 +46,7 @@
   <div class="flex w-full flex-col">
     <div class="w-full shrink-0">
       <div
-        class="mx-auto flex w-full max-w-(--max-content) flex-col gap-2 p-4 md:pt-8 lg:gap-3"
+        class="mx-auto flex w-full max-w-(--max-content) flex-col gap-1 p-4 md:pt-6"
       >
         <div class="flex items-center gap-1">
           <h2

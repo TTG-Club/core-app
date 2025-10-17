@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { FeatLegend } from '~feats/legend';
   import { FeatLink } from '~feats/link';
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
@@ -65,9 +64,6 @@
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       >
-        <template #legend>
-          <FeatLegend />
-        </template>
       </FilterControls>
     </template>
 

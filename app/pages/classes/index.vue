@@ -1,7 +1,6 @@
 <script setup lang="ts">
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
-  import { ClassLegend } from '~classes/legend';
   import { ClassLink } from '~classes/link';
   import { PageGrid, PageResult } from '~ui/page';
 
@@ -66,9 +65,6 @@
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       >
-        <template #legend>
-          <ClassLegend />
-        </template>
       </FilterControls>
     </template>
 
@@ -77,20 +73,14 @@
         name="fade"
         mode="out-in"
       >
-        <PageGrid
-          v-if="status !== 'success' && status !== 'error'"
-          :columns="5"
-        >
+        <PageGrid v-if="status !== 'success' && status !== 'error'">
           <SkeletonLinkBig
             v-for="index in 5"
             :key="index"
           />
         </PageGrid>
 
-        <PageGrid
-          v-else-if="status === 'success' && classes?.length"
-          :columns="5"
-        >
+        <PageGrid v-else-if="status === 'success' && classes?.length">
           <ClassLink
             v-for="link in classes"
             :key="link.url"
