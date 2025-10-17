@@ -30,32 +30,19 @@
 <template>
   <UiDrawer
     title="Происхождения"
+    class="w-md"
     :is-loading
     :is-error
     @close="$emit('close')"
   >
-    <div :class="$style.container">
-      <div :class="$style.grid">
-        <SpeciesLink
-          v-for="link in data"
-          :key="link.url"
-          :species="link"
-        >
-          {{ link.url }}
-        </SpeciesLink>
-      </div>
+    <div class="@container grid gap-3">
+      <SpeciesLink
+        v-for="link in data"
+        :key="link.url"
+        :species="link"
+      >
+        {{ link.url }}
+      </SpeciesLink>
     </div>
   </UiDrawer>
 </template>
-
-<style module lang="scss">
-  .grid {
-    display: grid;
-    grid-gap: 16px;
-    grid-template-columns: repeat(1, 248px);
-
-    @include media-min($sm) {
-      grid-template-columns: repeat(2, 248px);
-    }
-  }
-</style>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { UiDrawer } from '~ui/drawer';
 
-  import { SubClassLink } from '~classes/link';
+  import { ClassLink } from '~classes/link';
   import type { ClassLinkResponse } from '~classes/types';
 
   const { url } = defineProps<{
@@ -27,27 +27,19 @@
 <template>
   <UiDrawer
     title="Подклассы"
+    class="w-md"
     :is-loading
     :is-error
     @close="$emit('close')"
   >
-    <div :class="$style.container">
-      <div :class="$style.grid">
-        <SubClassLink
-          v-for="link in subclasses"
-          :key="link.url"
-          :character-class="link"
-        >
-          {{ link.url }}
-        </SubClassLink>
-      </div>
+    <div class="@container grid gap-3">
+      <ClassLink
+        v-for="link in subclasses"
+        :key="link.url"
+        :character-class="link"
+      >
+        {{ link.url }}
+      </ClassLink>
     </div>
   </UiDrawer>
 </template>
-
-<style module lang="scss">
-  .grid {
-    display: grid;
-    grid-gap: 16px;
-  }
-</style>
