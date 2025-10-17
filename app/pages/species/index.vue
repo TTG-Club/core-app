@@ -68,20 +68,14 @@
         name="fade"
         mode="out-in"
       >
-        <PageGrid
-          v-if="status !== 'success' && status !== 'error'"
-          :columns="5"
-        >
+        <PageGrid v-if="status !== 'success' && status !== 'error'">
           <SkeletonLinkBig
             v-for="index in 5"
             :key="index"
           />
         </PageGrid>
 
-        <PageGrid
-          v-else-if="status === 'success' && data?.length"
-          :columns="5"
-        >
+        <PageGrid v-else-if="status === 'success' && data?.length">
           <SpeciesLink
             v-for="link in data"
             :key="link.url"

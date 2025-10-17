@@ -17,10 +17,10 @@
 </script>
 
 <template>
-  <button
-    class="flex-auto cursor-pointer border-l border-default bg-transparent py-2 hover:bg-elevated @min-[500px]:py-3"
+  <UButton
+    icon="i-fluent-row-child-16-regular"
+    variant="ghost"
+    color="neutral"
     @click.left.exact.prevent="drawer.open()"
-  >
-    Подклассы
-  </button>
+  />
 </template>

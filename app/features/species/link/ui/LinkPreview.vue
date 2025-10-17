@@ -17,10 +17,10 @@
 </script>
 
 <template>
-  <button
-    class="flex-auto cursor-pointer bg-transparent px-1 py-2 hover:bg-elevated @min-[500px]:py-3"
+  <UButton
+    icon="i-fluent-preview-link-16-regular"
+    variant="subtle"
+    color="neutral"
     @click.left.exact.prevent.stop="drawer.open()"
-  >
-    Предпросмотр
-  </button>
+  />
 </template>

@@ -38,13 +38,63 @@ export const enum Breakpoint {
  * [Breakpoint.XXL]: 1400px,
  */
 export const BREAKPOINTS: Record<Breakpoint, number> = {
-  [Breakpoint.SM]: 576,
+  [Breakpoint.SM]: 640,
   [Breakpoint.MD]: 768,
-  [Breakpoint.LG]: 992,
-  [Breakpoint.XL]: 1200,
-  [Breakpoint.XXL]: 1400,
+  [Breakpoint.LG]: 1024,
+  [Breakpoint.XL]: 1280,
+  [Breakpoint.XXL]: 1536,
 };
 
 export function useBreakpoints() {
-  return useBreakpointsComposition(BREAKPOINTS);
+  const composition = useBreakpointsComposition(BREAKPOINTS);
+
+  const isMobile = computed(() => unref(composition.smaller(Breakpoint.MD)));
+
+  const isTablet = computed(() =>
+    unref(composition.greaterOrEqual(Breakpoint.MD)),
+  );
+
+  const isDesktop = computed(() =>
+    unref(composition.greaterOrEqual(Breakpoint.LG)),
+  );
+
+  const isMobileOrTablet = computed(() =>
+    unref(composition.smaller(Breakpoint.XL)),
+  );
+
+  const isXsOrLower = computed(() => unref(composition.smaller(Breakpoint.SM)));
+
+  const isSmOrGreater = computed(() =>
+    unref(composition.greaterOrEqual(Breakpoint.SM)),
+  );
+
+  const isMdOrGreater = computed(() =>
+    unref(composition.greaterOrEqual(Breakpoint.MD)),
+  );
+
+  const isLgOrGreater = computed(() =>
+    unref(composition.greaterOrEqual(Breakpoint.LG)),
+  );
+
+  const isXlOrGreater = computed(() =>
+    unref(composition.greaterOrEqual(Breakpoint.XL)),
+  );
+
+  const isXxlOrGreater = computed(() =>
+    unref(composition.greaterOrEqual(Breakpoint.XXL)),
+  );
+
+  return {
+    ...composition,
+    isMobile,
+    isTablet,
+    isDesktop,
+    isMobileOrTablet,
+    isXsOrLower,
+    isSmOrGreater,
+    isMdOrGreater,
+    isLgOrGreater,
+    isXlOrGreater,
+    isXxlOrGreater,
+  };
 }

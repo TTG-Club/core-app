@@ -7,29 +7,60 @@
   const { characterClass } = defineProps<{
     characterClass: ClassLinkResponse;
   }>();
+
+  const { isDesktop } = useDevice();
 </script>
 
 <template>
   <NuxtLink :to="`/classes/${characterClass.url}`">
     <div
-      :class="$style.link"
-      class="@max-[500px]:flex"
+      :class="[
+        'group relative overflow-hidden @max-md:flex',
+        'rounded-2xl border border-default',
+        'bg-muted text-default',
+        'transition-all duration-[230ms] will-change-[box-shadow]',
+        'hover:bg-[var(--color-hover)]',
+        '[&:has(.actions:hover)]:hover:bg-muted',
+      ]"
     >
+      <!-- Image Block -->
       <div
-        :class="$style.image"
-        class="@max-[500px]:max-h-[103px] @max-[500px]:min-w-[80px]"
+        :class="[
+          'relative overflow-hidden',
+          'flex flex-none items-center justify-center',
+          'aspect-square w-full',
+          '@max-md:size-25',
+        ]"
       >
         <img
           :src="characterClass.image"
           :alt="characterClass.name.rus"
+          :class="['absolute h-full w-full', 'object-cover opacity-90']"
         />
       </div>
 
-      <div class="w-full">
-        <div :class="$style.info">
-          <div :class="$style.main">
+      <!-- Content Block -->
+      <div
+        :class="[
+          'flex flex-auto flex-col',
+          '@max-md:max-w-[calc(100cqw-calc(var(--spacing)*25))]',
+        ]"
+      >
+        <!-- Info -->
+        <div
+          :class="[
+            'flex flex-auto flex-col justify-center gap-0.5',
+            'px-4 py-3 @max-md:px-3 @max-md:py-2',
+          ]"
+        >
+          <!-- Main row -->
+          <div class="flex items-center gap-0.5">
             <span
-              :class="[$style.name, $style.rus]"
+              :class="[
+                'inline-block flex-1 overflow-hidden',
+                'text-ellipsis whitespace-nowrap',
+                'font-semibold text-highlighted',
+              ]"
               :title="characterClass.name.rus"
             >
               {{ characterClass.name.rus }}
@@ -41,117 +72,38 @@
             />
           </div>
 
-          <div :class="$style.common">
+          <!-- English name row -->
+          <div class="flex">
             <span
-              :class="[$style.name, $style.eng]"
+              :class="[
+                'inline-block max-w-full overflow-hidden',
+                'text-ellipsis whitespace-nowrap',
+              ]"
               :title="characterClass.name.eng"
             >
               {{ characterClass.name.eng }}
             </span>
           </div>
         </div>
+      </div>
 
-        <div :class="$style.actions">
-          <LinkPreview :url="characterClass.url" />
+      <!-- Actions -->
+      <div
+        v-if="isDesktop"
+        :class="[
+          'hidden gap-1 rounded-xl border border-default p-1',
+          'group-hover:flex',
+          'bg-default/50 shadow-md backdrop-blur-lg',
+          'absolute top-2 right-2',
+        ]"
+      >
+        <LinkPreview :url="characterClass.url" />
 
-          <LinkSubclasses
-            v-if="characterClass.hasSubclasses"
-            :url="characterClass.url"
-          />
-        </div>
+        <LinkSubclasses
+          v-if="characterClass.hasSubclasses"
+          :url="characterClass.url"
+        />
       </div>
     </div>
   </NuxtLink>
 </template>
-
-<style module lang="scss">
-  .link {
-    will-change: box-shadow;
-
-    overflow: hidden;
-
-    border: 1px solid var(--ui-border);
-    border-radius: 16px;
-
-    color: var(--ui-text);
-
-    background-color: var(--ui-bg-muted);
-
-    & {
-      @include css-anim($time: 0.23s);
-    }
-
-    &:not(:has(.actions:hover)) {
-      &:hover {
-        background-color: var(--color-hover);
-      }
-    }
-  }
-
-  .image {
-    position: relative;
-
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    height: 248px;
-
-    &:before {
-      pointer-events: none;
-      content: '';
-
-      display: block;
-
-      width: 100%;
-      padding-bottom: 100%;
-    }
-
-    img {
-      position: absolute;
-
-      width: 100%;
-      height: 100%;
-
-      opacity: 0.9;
-      object-fit: cover;
-    }
-  }
-
-  .info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 12px 16px 4px;
-
-    .main {
-      display: flex;
-      gap: 2px;
-      align-items: center;
-    }
-  }
-
-  .name {
-    overflow: hidden;
-    display: inline-block;
-    flex: 1;
-
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    &.rus {
-      font-weight: 600;
-      color: var(--ui-text-highlighted);
-    }
-
-    &.eng {
-      max-width: 100%;
-    }
-  }
-
-  .actions {
-    display: flex;
-    border-top: 1px solid var(--ui-border);
-  }
-</style>
