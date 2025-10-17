@@ -19,8 +19,9 @@
 <template>
   <UButton
     icon="i-fluent-row-child-16-regular"
-    variant="ghost"
+    size="md"
     color="neutral"
+    variant="soft"
     @click.left.exact.prevent="drawer.open()"
   />
 </template>
