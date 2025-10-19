@@ -52,7 +52,9 @@
 <template>
   <div class="@container">
     <div class="flex flex-col gap-6 @min-[800px]:flex-row @min-[800px]:gap-7">
-      <div class="flex w-full flex-col gap-4 @min-[800px]:max-w-80">
+      <div
+        class="flex w-full flex-col gap-4 @min-[800px]:max-w-80 @min-[800px]:min-w-[272px]"
+      >
         <UiGallery
           v-if="!hideGallery"
           :preview="species.image"
