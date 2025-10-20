@@ -8,9 +8,14 @@
 
   import type { SpeciesDetailResponse } from '~/shared/types';
 
-  const { species, hideGallery = false } = defineProps<{
+  const {
+    species,
+    hideGallery = false,
+    hideLeftBlock = false,
+  } = defineProps<{
     species: SpeciesDetailResponse;
     hideGallery?: boolean;
+    hideLeftBlock?: boolean;
   }>();
 
   const overlay = useOverlay();
@@ -53,6 +58,7 @@
   <div class="@container">
     <div class="flex flex-col gap-6 @min-[800px]:flex-row @min-[800px]:gap-7">
       <div
+        v-if="!hideLeftBlock"
         class="flex w-full flex-col gap-4 @min-[800px]:max-w-80 @min-[800px]:min-w-[272px]"
       >
         <UiGallery
