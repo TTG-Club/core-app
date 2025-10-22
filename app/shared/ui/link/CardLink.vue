@@ -9,16 +9,16 @@
     image = undefined,
     source = undefined,
     hasActions = false,
-    hideGalleryOnMobile = false,
-    showHeaderSourceOnMobile = false,
+    isHideImageOnMobile = false,
+    isShowHeaderSourceOnMobile = false,
   } = defineProps<{
     to: RouteLocationRaw;
     name: NameResponse;
     source?: SourceResponse;
     image?: string;
     hasActions?: boolean;
-    hideGalleryOnMobile?: boolean;
-    showHeaderSourceOnMobile?: boolean;
+    isHideImageOnMobile?: boolean;
+    isShowHeaderSourceOnMobile?: boolean;
   }>();
 
   const slots = useSlots();
@@ -30,12 +30,11 @@
     () => slots.actions && (isDesktop || hasActions),
   );
 
-  const shouldHideGallery = computed(() => {
-    // Если включено скрытие на мобильных и мы на мобильном устройстве
-    if (hideGalleryOnMobile && isMobile) return true;
+  const shouldHideImage = computed(() => isHideImageOnMobile && isMobile);
 
-    return false;
-  });
+  const shouldShowHeaderSource = computed(
+    () => isShowHeaderSourceOnMobile && isMobile,
+  );
 </script>
 
 <template>
@@ -49,7 +48,7 @@
   >
     <!-- Image Block -->
     <div
-      v-if="!shouldHideGallery"
+      v-if="!shouldHideImage"
       :class="[
         'relative overflow-hidden',
         'flex flex-none items-center justify-center',
@@ -103,7 +102,7 @@
           </span>
 
           <SourceTag
-            v-if="source?.name?.label && isMobile && showHeaderSourceOnMobile"
+            v-if="source?.name?.label && shouldShowHeaderSource"
             :source="source"
           />
         </div>
