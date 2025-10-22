@@ -37,6 +37,8 @@
         v-for="link in subclasses"
         :key="link.url"
         :character-class="link"
+        hide-gallery-on-mobile
+        show-header-source-on-mobile
       >
         {{ link.url }}
       </ClassLink>
