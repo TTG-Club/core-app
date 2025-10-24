@@ -1,10 +1,10 @@
 import type { ComplexEl } from '../enums';
 import {
-  TextMarker,
-  RichMarker,
   EmptyMarker,
+  RichMarker,
   SectionMarker,
   SimpleText,
+  TextMarker,
 } from '../enums';
 import type { TableNode } from './table';
 import type { VNode } from 'vue';
@@ -69,14 +69,66 @@ export interface EmptyNode {
   type: EmptyMarker;
 }
 
+export interface SeparatorNode {
+  type: RichMarker.Separator;
+  attrs: {
+    color?: string;
+    variant?: string;
+    size?: string;
+  };
+  content: Array<RenderNode>;
+}
+
 export interface TextNode {
   type: TextMarker;
   attrs?: MarkerAttributes;
   content: Array<RenderNode>;
 }
 
+export interface HeadingNode {
+  type: RichMarker.Heading;
+  attrs: {
+    level?: string;
+  };
+  content: Array<RenderNode>;
+}
+
+export interface QuoteNode {
+  type: RichMarker.Quote;
+  attrs: {
+    color?: string;
+    variant?: string;
+  };
+  content: Array<RenderNode>;
+}
+
+export interface KbdNode {
+  type: RichMarker.Kbd;
+  attrs: {
+    color?: string;
+    variant?: string;
+    size?: string;
+  };
+  content: Array<RenderNode>;
+}
+
+export interface BadgeNode {
+  type: RichMarker.Badge;
+  attrs: {
+    color?: string;
+    variant?: string;
+    size?: string;
+  };
+  content: Array<RenderNode>;
+}
+
 export type RichNodes = {
   [RichMarker.Link]: LinkNode;
+  [RichMarker.Heading]: HeadingNode;
+  [RichMarker.Quote]: QuoteNode;
+  [RichMarker.Kbd]: KbdNode;
+  [RichMarker.Badge]: BadgeNode;
+  [RichMarker.Separator]: SeparatorNode;
 };
 
 export type RichNode = RichNodes[RichMarker];

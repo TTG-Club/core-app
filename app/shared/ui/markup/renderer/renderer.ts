@@ -1,4 +1,4 @@
-import { createTextVNode } from 'vue';
+import { createTextVNode, h } from 'vue';
 
 import type {
   EmptyNode,
@@ -16,8 +16,8 @@ import {
   isRichNode,
   isSectionNode,
   isSimpleTextNode,
-  isTextNode,
   isTableNode,
+  isTextNode,
 } from '../utils';
 
 import { parse } from '../parser';
@@ -25,6 +25,11 @@ import { renderListNode } from './list';
 import { renderTableNode } from './table';
 import { renderLink } from './link';
 import { renderSectionLink } from './section-link';
+import { renderHeading } from './heading';
+import { renderQuote } from './quote';
+import { renderKbd } from './kbd';
+import { renderBadge } from './badge';
+import { renderSeparator } from './separator';
 
 const TextMarkerTag: Record<TextMarker, string> = {
   [TextMarker.Bold]: 'b',
@@ -48,6 +53,11 @@ const RICH_NODE_RENDERERS: {
   ) => VNode;
 } = {
   [RichMarker.Link]: renderLink,
+  [RichMarker.Heading]: renderHeading,
+  [RichMarker.Quote]: renderQuote,
+  [RichMarker.Kbd]: renderKbd,
+  [RichMarker.Badge]: renderBadge,
+  [RichMarker.Separator]: renderSeparator,
 };
 
 const FEATURE_NODE_RENDERERS: {

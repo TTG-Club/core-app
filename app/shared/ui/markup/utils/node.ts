@@ -5,8 +5,8 @@ import type {
   RichNode,
   SectionLinkNode,
   SimpleTextNode,
-  TextNode,
   TableNode,
+  TextNode,
 } from '../types';
 import {
   ComplexEl,

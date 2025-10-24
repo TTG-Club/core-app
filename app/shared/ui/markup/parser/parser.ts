@@ -1,29 +1,28 @@
-import { MAX_STRING_LENGTH, MAX_DEPTH, LEADING_CHARACTER } from '../consts';
+import { LEADING_CHARACTER, MAX_DEPTH, MAX_STRING_LENGTH } from '../consts';
+import type {
+  EmptyNode,
+  MarkerAttributes,
+  MarkerName,
+  ParamValue,
+  RenderNode,
+  RichNode,
+  SectionLinkNode,
+  SimpleTextNode,
+  TextNode,
+} from '../types';
 import { Marker } from '../types';
 import {
   isEmptyMarker,
+  isFeatureMarker,
   isRichMarker,
   isTextMarker,
-  isFeatureMarker,
 } from '../utils';
 
 import type {
-  RenderNode,
-  TextNode,
-  EmptyNode,
-  SectionLinkNode,
-  MarkerAttributes,
-  SimpleTextNode,
-  ParamValue,
-  RichNode,
-  MarkerName,
-} from '../types';
-
-import type {
-  RichMarker,
   EmptyMarker,
-  TextMarker,
+  RichMarker,
   SectionMarker,
+  TextMarker,
 } from '../enums';
 import { SimpleText } from '../enums';
 
@@ -51,6 +50,14 @@ const MARKERS: { [key: string]: MarkerName } = {
   sup: Marker.Superscript,
   sub: Marker.Subscript,
   highlight: Marker.Highlight,
+  heading: Marker.Heading,
+  h: Marker.Heading,
+  quote: Marker.Quote,
+  q: Marker.Quote,
+  kbd: Marker.Kbd,
+  badge: Marker.Badge,
+  separator: Marker.Separator,
+  sep: Marker.Separator,
 };
 
 export function parse(text: string): RenderNode[] {

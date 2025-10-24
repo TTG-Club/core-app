@@ -1,17 +1,17 @@
 <script setup lang="ts">
   import { computed, h, type VNode } from 'vue';
   import {
-    useVueTable,
-    getCoreRowModel,
-    FlexRender,
-    createColumnHelper,
     type ColumnDef,
+    createColumnHelper,
+    FlexRender,
+    getCoreRowModel,
+    useVueTable,
   } from '@tanstack/vue-table';
   import type {
-    TableNode,
-    TableCell,
-    RenderNode,
     RenderChildren,
+    RenderNode,
+    TableCell,
+    TableNode,
   } from '../../types';
 
   interface TableRowData {

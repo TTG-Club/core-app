@@ -36,14 +36,22 @@ export function isTextMarker(
     marker === TextMarker.Strikethrough ||
     marker === TextMarker.Superscript ||
     marker === TextMarker.Subscript ||
-    marker === TextMarker.Highlight
+    marker === TextMarker.Highlight ||
+    marker === TextMarker.Blockquote
   );
 }
 
 export function isRichMarker(
   marker: TextWithMarkerName,
 ): marker is RichMarkerName {
-  return marker === RichMarker.Link;
+  return (
+    marker === RichMarker.Link ||
+    marker === RichMarker.Heading ||
+    marker === RichMarker.Quote ||
+    marker === RichMarker.Kbd ||
+    marker === RichMarker.Badge ||
+    marker === RichMarker.Separator
+  );
 }
 
 export function isFeatureMarker(

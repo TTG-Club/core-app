@@ -20,6 +20,11 @@ export enum TextMarker {
 
 export enum RichMarker {
   Link = 'link',
+  Heading = 'heading',
+  Quote = 'quote',
+  Kbd = 'kbd',
+  Badge = 'badge',
+  Separator = 'separator',
 }
 
 export enum EmptyMarker {
