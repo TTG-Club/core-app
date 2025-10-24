@@ -18,7 +18,7 @@
 
         <div
           :class="$style.first"
-          class="max-w-[28px]"
+          class="max-w-7"
         />
 
         <div :class="$style.first">Мод</div>
@@ -39,7 +39,7 @@
 
         <div
           :class="$style.first"
-          class="max-w-[28px]"
+          class="max-w-7"
         />
 
         <div :class="$style.first">Мод</div>
@@ -60,7 +60,7 @@
 
         <div
           :class="$style.third"
-          class="max-w-[28px]"
+          class="max-w-7"
         />
 
         <div :class="$style.third">Мод</div>
@@ -84,7 +84,7 @@
             Сил
           </div>
 
-          <div class="max-w-[28px]">{{ str.value }}</div>
+          <div class="max-w-7">{{ str.value }}</div>
 
           <div class="justify-end">{{ str.mod }}</div>
 
@@ -105,7 +105,7 @@
             Лов
           </div>
 
-          <div class="max-w-[28px]">{{ dex.value }}</div>
+          <div class="max-w-7">{{ dex.value }}</div>
 
           <div class="justify-end">{{ dex.mod }}</div>
 
@@ -126,7 +126,7 @@
             Тел
           </div>
 
-          <div class="max-w-[28px]">{{ con.value }}</div>
+          <div class="max-w-7">{{ con.value }}</div>
 
           <div class="justify-end">{{ con.mod }}</div>
 
@@ -149,7 +149,7 @@
             Инт
           </div>
 
-          <div class="max-w-[28px]">{{ int.value }}</div>
+          <div class="max-w-7">{{ int.value }}</div>
 
           <div class="justify-end">{{ int.mod }}</div>
 
@@ -170,7 +170,7 @@
             Мдр
           </div>
 
-          <div class="max-w-[28px]">{{ wis.value }}</div>
+          <div class="max-w-7">{{ wis.value }}</div>
 
           <div class="justify-end">{{ wis.mod }}</div>
 
@@ -191,7 +191,7 @@
             Хар
           </div>
 
-          <div class="max-w-[28px]">{{ chr.value }}</div>
+          <div class="max-w-7">{{ chr.value }}</div>
 
           <div class="justify-end">{{ chr.mod }}</div>
 

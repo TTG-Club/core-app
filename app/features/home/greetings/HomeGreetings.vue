@@ -10,7 +10,7 @@
 <template>
   <div
     v-if="greeting"
-    class="flex w-full items-center justify-center px-8 max-sm:hidden sm:h-[200px]"
+    class="flex w-full items-center justify-center px-8 max-sm:hidden sm:h-50"
   >
     <div
       :class="[
@@ -26,7 +26,7 @@
     </div>
 
     <div
-      class="block h-[200px] w-[220px] bg-cover bg-no-repeat"
+      class="block h-50 w-55 bg-cover bg-no-repeat"
       :style="{ backgroundImage: `url(${greeting.image})` }"
     />
   </div>

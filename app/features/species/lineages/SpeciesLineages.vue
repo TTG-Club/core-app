@@ -29,7 +29,10 @@
       </template>
 
       <template #content>
-        <SpeciesBody :species />
+        <SpeciesBody
+          :species
+          hide-left-block
+        />
       </template>
     </UiCollapse>
   </div>
