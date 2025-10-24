@@ -40,6 +40,7 @@
         v-for="link in data"
         :key="link.url"
         :species="link"
+        hide-image-on-mobile
       >
         {{ link.url }}
       </SpeciesLink>

@@ -9,16 +9,14 @@
     image = undefined,
     source = undefined,
     hasActions = false,
-    isHideImageOnMobile = false,
-    isShowHeaderSourceOnMobile = false,
+    hideImageOnMobile = false,
   } = defineProps<{
     to: RouteLocationRaw;
     name: NameResponse;
     source?: SourceResponse;
     image?: string;
     hasActions?: boolean;
-    isHideImageOnMobile?: boolean;
-    isShowHeaderSourceOnMobile?: boolean;
+    hideImageOnMobile?: boolean;
   }>();
 
   const slots = useSlots();
@@ -26,15 +24,11 @@
 
   const img = computed(() => image || '/img/no-img.webp');
 
-  const showActions = computed(
+  const isActionsShowed = computed(
     () => slots.actions && (isDesktop || hasActions),
   );
 
-  const shouldHideImage = computed(() => isHideImageOnMobile && isMobile);
-
-  const shouldShowHeaderSource = computed(
-    () => isShowHeaderSourceOnMobile && isMobile,
-  );
+  const isImageHidden = computed(() => hideImageOnMobile && isMobile);
 </script>
 
 <template>
@@ -48,7 +42,7 @@
   >
     <!-- Image Block -->
     <div
-      v-if="!shouldHideImage"
+      v-if="!isImageHidden"
       :class="[
         'relative overflow-hidden',
         'flex flex-none items-center justify-center',
@@ -73,7 +67,7 @@
       />
 
       <SourceTag
-        v-if="source?.name?.label"
+        v-if="source"
         :source="source"
         class="absolute top-2 right-2"
       />
@@ -84,6 +78,9 @@
       :class="[
         'flex flex-auto justify-between gap-2 px-4 py-3',
         '@max-md:gap-1 @max-md:px-3 @max-md:py-2',
+        !isImageHidden
+          ? '@max-md:max-w-[calc(100cqw-calc(var(--spacing)*25))]'
+          : '@max-md:max-w-full',
       ]"
     >
       <!-- Info -->
@@ -102,7 +99,7 @@
           </span>
 
           <SourceTag
-            v-if="source?.name?.label && shouldShowHeaderSource"
+            v-if="source && isImageHidden"
             :source="source"
           />
         </div>
@@ -121,7 +118,7 @@
 
       <!-- Actions -->
       <div
-        v-if="showActions"
+        v-if="isActionsShowed"
         :class="[
           'flex flex-none items-center justify-end gap-2',
           'group-hover:flex @md:hidden',

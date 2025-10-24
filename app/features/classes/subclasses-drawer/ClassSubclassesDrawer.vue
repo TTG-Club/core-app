@@ -12,9 +12,6 @@
     (e: 'close'): void;
   }>();
 
-  const isHideImageOnMobile = computed(() => true);
-  const isShowHeaderSourceOnMobile = computed(() => true);
-
   const { data: subclasses, status } = await useAsyncData(
     computed(() => `class-${url}-subclasses`),
     () => $fetch<Array<ClassLinkResponse>>(`/api/v2/classes/${url}/subclasses`),
@@ -40,8 +37,7 @@
         v-for="link in subclasses"
         :key="link.url"
         :character-class="link"
-        :is-hide-image-on-mobile="isHideImageOnMobile"
-        :is-show-header-source-on-mobile="isShowHeaderSourceOnMobile"
+        hide-image-on-mobile
       >
         {{ link.url }}
       </ClassLink>

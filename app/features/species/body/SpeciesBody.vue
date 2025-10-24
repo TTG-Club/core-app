@@ -56,10 +56,10 @@
 
 <template>
   <div class="@container">
-    <div class="flex flex-col gap-6 @min-[800px]:flex-row @min-[800px]:gap-7">
+    <div class="flex flex-col gap-6 @min-3xl:flex-row @min-3xl:gap-7">
       <div
         v-if="!hideLeftBlock"
-        class="flex w-full flex-col gap-4 @min-[800px]:max-w-80 @min-[800px]:min-w-[272px]"
+        class="flex w-full flex-col gap-4 @min-3xl:max-w-80 @min-3xl:min-w-68"
       >
         <UiGallery
           v-if="!hideGallery"
