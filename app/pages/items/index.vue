@@ -1,7 +1,6 @@
 <script setup lang="ts">
   import { FilterControls } from '~filter/controls';
   import { ItemLink } from '~items/link';
-  import { ItemLegend } from '~items/legend';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
@@ -67,9 +66,6 @@
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       >
-        <template #legend>
-          <ItemLegend />
-        </template>
       </FilterControls>
     </template>
 

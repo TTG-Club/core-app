@@ -12,7 +12,7 @@ import {
   SectionMarker,
   SimpleText,
   TextMarker,
-} from '../types';
+} from '../enums';
 
 export function isSimpleText(
   marker: TextWithMarkerName,

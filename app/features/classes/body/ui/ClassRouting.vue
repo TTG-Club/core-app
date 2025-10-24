@@ -106,6 +106,7 @@
         <UCommandPalette
           v-model:search-term="search"
           placeholder="Поиск подкласса..."
+          :autofocus="false"
           :groups
           :ui="{
             input: '[&>input]:h-8 [&>input]:text-sm',

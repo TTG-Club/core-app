@@ -19,19 +19,26 @@
 
 <template>
   <template v-if="isVisible">
-    <div class="flex flex-col gap-3">
+    <div
+      class="flex flex-col"
+      :class="!preview ? 'gap-0' : 'gap-2'"
+    >
       <span v-if="preview">{{ label }}:</span>
 
-      <USeparator
+      <span
         v-else
-        decorative
+        class="rounded-t-xl border border-default px-3 py-2"
       >
         {{ label }}
-      </USeparator>
+      </span>
 
       <div
         class="flex flex-wrap"
-        :class="!preview ? 'gap-3' : 'gap-2'"
+        :class="
+          !preview
+            ? 'gap-3 rounded-b-xl border-x border-b border-default px-3 py-4'
+            : 'gap-2'
+        "
       >
         <FilterTag
           v-for="item in filters"

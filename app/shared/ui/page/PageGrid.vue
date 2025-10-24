@@ -1,54 +1,28 @@
 <script setup lang="ts">
-  const { columns } = defineProps<{
-    columns: number;
+  const props = defineProps<{
+    columns?: 1 | 2 | 3 | 4 | 5 | 6;
   }>();
+
+  const gridClasses = computed(() => {
+    const maxCols = Math.min(props.columns ?? 6, 6);
+
+    const breakpoints = [
+      'grid-cols-1',
+      '@md:grid-cols-2',
+      '@xl:grid-cols-3',
+      '@4xl:grid-cols-4',
+      '@6xl:grid-cols-5',
+      '@7xl:grid-cols-6',
+    ];
+
+    return breakpoints.slice(0, maxCols);
+  });
 </script>
 
 <template>
-  <div :class="$style.container">
-    <div :class="[$style.grid, $style[`cols-${columns}`]]">
-      <slot name="default" />
+  <div class="@container">
+    <div :class="['grid gap-3', gridClasses]">
+      <slot />
     </div>
   </div>
 </template>
-
-<style module lang="scss">
-  @mixin create-grid() {
-    @for $cols from 1 through 5 {
-      &-#{$cols} {
-        grid-template-columns: repeat(1, 100%);
-
-        @if $cols > 1 {
-          @for $col from 2 through $cols {
-            $cell: 244px;
-            $gap: 12px;
-
-            $container: $col * $cell + $gap * ($col - 1);
-
-            @container (width >= #{$container}) {
-              grid-template-columns: repeat(
-                $col,
-                calc((100% - $gap * ($col - 1)) / $col)
-              );
-            }
-          }
-        }
-      }
-    }
-  }
-
-  .container {
-    container-type: inline-size;
-    width: 100%;
-  }
-
-  .grid {
-    display: grid;
-    grid-gap: 12px;
-    width: 100%;
-
-    &.cols {
-      @include create-grid;
-    }
-  }
-</style>

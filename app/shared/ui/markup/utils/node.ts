@@ -6,6 +6,7 @@ import type {
   SectionLinkNode,
   SimpleTextNode,
   TextNode,
+  TableNode,
 } from '../types';
 import {
   ComplexEl,
@@ -14,7 +15,7 @@ import {
   SectionMarker,
   SimpleText,
   TextMarker,
-} from '../types';
+} from '../enums';
 
 export function isSimpleTextNode(node: RenderNode): node is SimpleTextNode {
   return node.type === SimpleText.Text;
@@ -55,4 +56,8 @@ export function isSectionNode(node: RenderNode): node is SectionLinkNode {
 
 export function isListNode(node: RenderNode): node is ListNode {
   return node.type === ComplexEl.List;
+}
+
+export function isTableNode(node: RenderNode): node is TableNode {
+  return node.type === ComplexEl.Table;
 }
