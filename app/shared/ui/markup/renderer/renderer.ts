@@ -9,7 +9,7 @@ import type {
   SectionNodes,
   TextNode,
 } from '../types';
-import { EmptyMarker, RichMarker, SectionMarker, TextMarker } from '../types';
+import { EmptyMarker, RichMarker, SectionMarker, TextMarker } from '../enums';
 import {
   isEmptyNode,
   isListNode,
@@ -20,11 +20,11 @@ import {
   isTableNode,
 } from '../utils';
 
-import { renderLink } from './renderLink';
-import { renderSectionLink } from './renderSectionLink';
 import { parse } from '../parser';
-import { renderListNode } from './renderList';
-import { renderTableNode } from './renderTableNodes';
+import { renderListNode } from './list';
+import { renderTableNode } from './table';
+import { renderLink } from './link';
+import { renderSectionLink } from './section-link';
 
 const TextMarkerTag: Record<TextMarker, string> = {
   [TextMarker.Bold]: 'b',

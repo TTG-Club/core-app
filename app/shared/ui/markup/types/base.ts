@@ -1,67 +1,15 @@
-export enum SimpleText {
-  Text = 'text',
-}
-
-export enum ComplexEl {
-  List = 'list',
-  Table = 'table',
-}
-
-export type TableAlign = 'left' | 'center' | 'right';
-
-export interface TableCell {
-  content: Array<RenderNode | string | Array<RenderNode | string>>;
-  header?: boolean;
-  align?: TableAlign;
-  colSpan?: number;
-  rowSpan?: number;
-}
-
-// Строка
-export interface TableRow {
-  cells: TableCell[];
-  header?: boolean;
-  align?: TableAlign;
-}
-
-// Таблица
-export interface TableNode {
-  type: ComplexEl.Table;
-  props?: Record<string, unknown>;
-  rows: TableRow[];
-}
+import type { ComplexEl } from '../enums';
+import {
+  TextMarker,
+  RichMarker,
+  EmptyMarker,
+  SectionMarker,
+  SimpleText,
+} from '../enums';
+import type { TableNode } from './table';
+import type { VNode } from 'vue';
 
 export type ListType = 'ordered' | 'unordered';
-
-export enum TextMarker {
-  Bold = 'bold',
-  Italic = 'italic',
-  Underline = 'underline',
-  Strikethrough = 'strikethrough',
-  Superscript = 'superscript',
-  Subscript = 'subscript',
-  Highlight = 'highlight',
-  Blockquote = 'blockquote',
-}
-
-export enum RichMarker {
-  Link = 'link',
-}
-
-export enum EmptyMarker {
-  Break = 'break',
-}
-
-export enum SectionMarker {
-  Class = 'class',
-  Spell = 'spell',
-  Feat = 'feat',
-  Background = 'background',
-  MagicItem = 'magicItem',
-  Item = 'item',
-  Creature = 'creature',
-  Glossary = 'glossary',
-}
 
 export const Marker = {
   ...TextMarker,
@@ -100,8 +48,6 @@ export type TextWithMarkerName =
   | SectionMarkerName;
 
 export type ParamValue = string | number | boolean | null;
-
-export type Align = 'left' | 'center' | 'right';
 
 export type MarkerAttributes = Record<string, ParamValue>;
 
@@ -176,3 +122,8 @@ export interface SectionNode {
 export type Entry = string | RenderNode;
 
 export type EntryList = Array<Entry>;
+
+export type RenderChildren = {
+  renderNode: (n: RenderNode) => VNode;
+  toNodes: (i: RenderNode | string) => RenderNode[];
+};

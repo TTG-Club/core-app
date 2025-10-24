@@ -15,7 +15,7 @@ import {
   SectionMarker,
   SimpleText,
   TextMarker,
-} from '../types';
+} from '../enums';
 
 export function isSimpleTextNode(node: RenderNode): node is SimpleTextNode {
   return node.type === SimpleText.Text;

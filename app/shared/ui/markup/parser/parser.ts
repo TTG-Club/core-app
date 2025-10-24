@@ -1,5 +1,5 @@
 import { MAX_STRING_LENGTH, MAX_DEPTH, LEADING_CHARACTER } from '../consts';
-import { SimpleText, Marker } from '../types';
+import { Marker } from '../types';
 import {
   isEmptyMarker,
   isRichMarker,
@@ -17,11 +17,15 @@ import type {
   ParamValue,
   RichNode,
   MarkerName,
+} from '../types';
+
+import type {
   RichMarker,
   EmptyMarker,
   TextMarker,
   SectionMarker,
-} from '../types';
+} from '../enums';
+import { SimpleText } from '../enums';
 
 // Разрешенные алиасы для маркеров
 const MARKERS: { [key: string]: MarkerName } = {
