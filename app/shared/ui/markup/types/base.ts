@@ -1,43 +1,15 @@
-// Разрешенные маркеры и их алиасы.
-export enum SimpleText {
-  Text = 'text',
-}
-
-export enum ComplexEl {
-  List = 'list',
-}
+import type { ComplexEl } from '../enums';
+import {
+  TextMarker,
+  RichMarker,
+  EmptyMarker,
+  SectionMarker,
+  SimpleText,
+} from '../enums';
+import type { TableNode } from './table';
+import type { VNode } from 'vue';
 
 export type ListType = 'ordered' | 'unordered';
-
-export enum TextMarker {
-  Bold = 'bold',
-  Italic = 'italic',
-  Underline = 'underline',
-  Strikethrough = 'strikethrough',
-  Superscript = 'superscript',
-  Subscript = 'subscript',
-  Highlight = 'highlight',
-  Blockquote = 'blockquote',
-}
-
-export enum RichMarker {
-  Link = 'link',
-}
-
-export enum EmptyMarker {
-  Break = 'break',
-}
-
-export enum SectionMarker {
-  Class = 'class',
-  Spell = 'spell',
-  Feat = 'feat',
-  Background = 'background',
-  MagicItem = 'magicItem',
-  Item = 'item',
-  Creature = 'creature',
-  Glossary = 'glossary',
-}
 
 export const Marker = {
   ...TextMarker,
@@ -75,20 +47,18 @@ export type TextWithMarkerName =
   | EmptyMarkerName
   | SectionMarkerName;
 
-// Типы данных для параметров атрибутов.
 export type ParamValue = string | number | boolean | null;
 
-// Тип для параметров маркера.
 export type MarkerAttributes = Record<string, ParamValue>;
 
-// Типы узлов TipTap.
 export type RenderNode =
   | SimpleTextNode
   | EmptyNode
   | TextNode
   | RichNode
   | SectionLinkNode
-  | ListNode;
+  | ListNode
+  | TableNode;
 
 export interface SimpleTextNode {
   type: SimpleText.Text;
@@ -152,3 +122,8 @@ export interface SectionNode {
 export type Entry = string | RenderNode;
 
 export type EntryList = Array<Entry>;
+
+export type RenderChildren = {
+  renderNode: (n: RenderNode) => VNode;
+  toNodes: (i: RenderNode | string) => RenderNode[];
+};
