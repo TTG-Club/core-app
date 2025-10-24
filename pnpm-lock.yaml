@@ -65,6 +65,9 @@ importers:
       dayjs:
         specifier: ^1.11.18
         version: 1.11.18
+      dice-roller-parser:
+        specifier: ^0.1.8
+        version: 0.1.8
       http-status-codes:
         specifier: ^2.3.0
         version: 2.3.0
@@ -3710,6 +3713,9 @@ packages:
 
   dfa@1.2.0:
     resolution: {integrity: sha512-ED3jP8saaweFTjeGX8HQPjeC1YYyZs98jGNZx6IiBvxW7JG5v492kamAQB3m2wop07CvU/RQmzcKr6bgcC5D/Q==}
+
+  dice-roller-parser@0.1.8:
+    resolution: {integrity: sha512-/UYDWMX1FHU6RR3iZGfexKlqyBJXSPuHPkvvpZ8k3QVjaXVc56W5GeLc/0bf9qLZTn1YdVFrIBLzvBt/9UHoNw==}
 
   diff@8.0.2:
     resolution: {integrity: sha512-sSuxWU5j5SR9QQji/o2qMvqRNYRDOcBTgsJ/DeCf4iSN4gW+gNMXM7wFIP+fdXZxoNiAnHUTGjCr+TSWXdRDKg==}
@@ -11487,6 +11493,8 @@ snapshots:
   devalue@5.4.2: {}
 
   dfa@1.2.0: {}
+
+  dice-roller-parser@0.1.8: {}
 
   diff@8.0.2: {}
 
