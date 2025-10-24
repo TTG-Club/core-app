@@ -98,9 +98,13 @@
           if (rawCell === undefined) return undefined;
 
           const cell = normalizeCell(rawCell);
-          const align = cell.align ?? 'left';
+          const content = renderCellContent(cell);
 
-          return h('div', { class: `text-${align}` }, renderCellContent(cell));
+          if (cell.align) {
+            return h('div', { class: `text-${cell.align}` }, content);
+          }
+
+          return content;
         },
       }),
     ),
