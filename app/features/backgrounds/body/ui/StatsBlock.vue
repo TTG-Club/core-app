@@ -3,12 +3,13 @@
 
   import { MarkupRender } from '~ui/markup';
   import { InfoTooltip } from '~ui/tooltip';
+  import { RowRender } from '~ui/markup/ui';
 
   defineProps<{
     abilityScores: string;
     feat: string;
     skillProficiencies: string;
-    toolProficiency: string;
+    toolProficiency: string[];
     equipment: string[];
   }>();
 </script>
@@ -34,7 +35,7 @@
         Черта
       </InfoTooltip>
 
-      <span>{{ feat }}</span>
+      <RowRender :entry="feat" />
     </div>
 
     <div :class="$style.item">
@@ -56,7 +57,7 @@
         Владение инструментами
       </InfoTooltip>
 
-      <span>{{ toolProficiency }}</span>
+      <MarkupRender :entries="toolProficiency" />
     </div>
 
     <div :class="[$style.item, $style.block]">
