@@ -1,14 +1,10 @@
 <script setup lang="ts">
-  import {
-    type Entry,
-    type EntryList,
-    MarkupRender,
-    MarkupRowRender,
-  } from '~ui/markup';
+  import type { RenderNode } from '~ui/markup';
+  import { MarkupRender } from '~ui/markup';
   import { isArray } from 'lodash-es';
 
   defineProps<{
-    text: EntryList | Entry;
+    text: RenderNode;
     label?: string;
   }>();
 </script>
@@ -23,11 +19,11 @@
 
     <MarkupRender
       v-if="isArray(text)"
-      :entries="text"
+      :render-node="text"
     />
 
     <p v-else>
-      <MarkupRowRender :entry="text" />
+      <MarkupRender :render-node="text" />
     </p>
   </div>
 </template>

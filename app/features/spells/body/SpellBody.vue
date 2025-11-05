@@ -36,11 +36,13 @@
       </div>
 
       <div class="flex flex-auto flex-col gap-3">
-        <DescriptionsBlock
-          :description="spell.description"
-          :level="spell.level"
-          :upper="spell.upper"
-        />
+        <div>
+          <DescriptionsBlock
+            :description="spell.description"
+            :level="spell.level"
+            :upper="spell.upper"
+          />
+        </div>
 
         <AffiliationBlock
           v-if="spell.affiliation?.classes"

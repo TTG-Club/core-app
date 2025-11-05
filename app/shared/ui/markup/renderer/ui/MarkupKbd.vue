@@ -1,13 +1,15 @@
 <script setup lang="ts">
-  import { USeparator } from '#components';
-  import type { SeparatorNode } from '../../types';
+  import { computed, type VNode } from 'vue';
+  import { UKbd } from '#components';
+  import type { MarkerNode, RenderNode } from '../types';
 
-  const { node } = defineProps<{
-    node: SeparatorNode;
+  const { node, renderNodes } = defineProps<{
+    node: MarkerNode;
+    renderNodes: (nodes: RenderNode[]) => VNode[];
   }>();
 
   function validateColor(
-    color: string | undefined,
+    color: string | number | boolean | null | undefined,
   ):
     | 'error'
     | 'primary'
@@ -28,7 +30,7 @@
   }
 
   function validateVariant(
-    variant: string | undefined,
+    variant: string | number | boolean | null | undefined,
   ): 'solid' | 'outline' | 'soft' | 'subtle' {
     if (variant === 'solid') return 'solid';
     if (variant === 'outline') return 'outline';
@@ -38,7 +40,9 @@
     return 'soft';
   }
 
-  function validateSize(size: string | undefined): 'sm' | 'md' | 'lg' {
+  function validateSize(
+    size: string | number | boolean | null | undefined,
+  ): 'sm' | 'md' | 'lg' {
     if (size === 'sm') return 'sm';
     if (size === 'md') return 'md';
     if (size === 'lg') return 'lg';
@@ -46,18 +50,25 @@
     return 'md';
   }
 
-  const color = validateColor(node.attrs.color);
-  const variant = validateVariant(node.attrs.variant);
-  const size = validateSize(node.attrs.size);
+  const color = validateColor(node.attrs?.color);
+  const variant = validateVariant(node.attrs?.variant);
+  const size = validateSize(node.attrs?.size);
+
+  const children = computed(() =>
+    node.content ? renderNodes(node.content) : [],
+  );
 </script>
 
 <template>
-  <USeparator
+  <UKbd
     :color="color"
     :variant="variant"
     :size="size"
-    class="my-4"
   >
-    <slot />
-  </USeparator>
+    <component
+      :is="vnode"
+      v-for="(vnode, index) in children"
+      :key="index"
+    />
+  </UKbd>
 </template>

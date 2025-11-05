@@ -1,164 +1,146 @@
-import { createTextVNode, h } from 'vue';
+import { createTextVNode, h, type VNode } from 'vue';
+import type { RenderNode, MarkerNode, SimpleTextNode } from './types';
+import { MARKER_MAP } from './config';
+import { parse } from './parser';
 
-import type {
-  EmptyNode,
-  RenderNode,
-  RichNode,
-  RichNodes,
-  SectionLinkNode,
-  SectionNodes,
-  TextNode,
-} from '../types';
-import { EmptyMarker, RichMarker, SectionMarker, TextMarker } from '../enums';
-import {
-  isEmptyNode,
-  isListNode,
-  isRichNode,
-  isSectionNode,
-  isSimpleTextNode,
-  isTableNode,
-  isTextNode,
-} from '../utils';
-
-import { parse } from '../parser';
-import { renderListNode } from './list';
-import { renderTableNode } from './table';
-import { renderLink } from './link';
-import { renderSectionLink } from './section-link';
-import { renderHeading } from './heading';
-import { renderQuote } from './quote';
-import { renderKbd } from './kbd';
-import { renderBadge } from './badge';
-import { renderSeparator } from './separator';
-
-const TextMarkerTag: Record<TextMarker, string> = {
-  [TextMarker.Bold]: 'b',
-  [TextMarker.Italic]: 'i',
-  [TextMarker.Underline]: 'u',
-  [TextMarker.Strikethrough]: 's',
-  [TextMarker.Subscript]: 'sub',
-  [TextMarker.Superscript]: 'sup',
-  [TextMarker.Highlight]: 'mark',
-  [TextMarker.Blockquote]: 'quote',
-};
-
-const EmptyMarkerTag: Record<EmptyMarker, string> = {
-  [EmptyMarker.Break]: 'br',
-};
-
-const RICH_NODE_RENDERERS: {
-  [K in RichMarker]: (
-    node: RichNodes[K],
-    renderChildren: () => VNode[],
-  ) => VNode;
-} = {
-  [RichMarker.Link]: renderLink,
-  [RichMarker.Heading]: renderHeading,
-  [RichMarker.Quote]: renderQuote,
-  [RichMarker.Kbd]: renderKbd,
-  [RichMarker.Badge]: renderBadge,
-  [RichMarker.Separator]: renderSeparator,
-};
-
-const FEATURE_NODE_RENDERERS: {
-  [K in SectionMarker]: (
-    node: SectionNodes[K],
-    renderChildren: () => VNode[],
-  ) => VNode;
-} = {
-  [SectionMarker.Class]: renderSectionLink,
-  [SectionMarker.Spell]: renderSectionLink,
-  [SectionMarker.Background]: renderSectionLink,
-  [SectionMarker.Feat]: renderSectionLink,
-  [SectionMarker.Creature]: renderSectionLink,
-  [SectionMarker.MagicItem]: renderSectionLink,
-  [SectionMarker.Item]: renderSectionLink,
-  [SectionMarker.Glossary]: renderSectionLink,
-};
-
-function toNodes(input: RenderNode | string): RenderNode[] {
-  if (typeof input === 'string') {
-    return parse(input);
-  }
-
-  return [input];
+function isSimpleTextNode(node: unknown): node is SimpleTextNode {
+  return (
+    typeof node === 'object' &&
+    node !== null &&
+    !Array.isArray(node) &&
+    'type' in node &&
+    node.type === 'text'
+  );
 }
 
-// Функция для рендера контента — принимает массив узлов
-export function render(content: Array<RenderNode | string>) {
-  const nodes: RenderNode[] = content.flatMap(toNodes);
-
-  return nodes.map((node) => renderNode(node));
+function isMarkerNode(node: unknown): node is MarkerNode {
+  return (
+    typeof node === 'object' &&
+    node !== null &&
+    !Array.isArray(node) &&
+    'type' in node &&
+    typeof node.type === 'string' &&
+    node.type !== 'text'
+  );
 }
 
-function renderNode(node: RenderNode): VNode {
-  if (!node) throw new Error(`[Markup] Node is not defined`);
+// Проверка, является ли нода блочным элементом
+function isBlockNode(node: unknown): boolean {
+  if (!isMarkerNode(node)) return false;
 
-  if (isSimpleTextNode(node)) return createTextVNode(node.text);
-  if (isTextNode(node)) return renderTextNode(node);
-  if (isRichNode(node)) return renderRichNode(node);
-  if (isSectionNode(node)) return renderSectionLinkNode(node);
-  if (isEmptyNode(node)) return renderEmptyNode(node);
-  if (isListNode(node)) return renderListNode(node, { renderNode, toNodes });
-  if (isTableNode(node)) return renderTableNode(node, { renderNode, toNodes });
+  const config = MARKER_MAP.get(node.type);
 
-  throw new Error(`[Markup] Unknown node: ${JSON.stringify(node)}`);
+  return config?.isBlock === true;
 }
 
-function renderTextNode(node: TextNode): VNode {
-  const tag = TextMarkerTag[node.type];
+// Валидация контента: блочные элементы не могут быть внутри inline
+function validateContent(
+  content: RenderNode[] | undefined,
+  parentType: string,
+  parentIsBlock: boolean,
+): void {
+  if (!content) return;
 
-  if (!tag) {
-    throw new Error(`[Markup] Unknown tag for text node`);
+  for (const child of content) {
+    // Пропускаем строки и SimpleTextNode
+    if (typeof child === 'string' || isSimpleTextNode(child)) continue;
+
+    // Проверяем массивы рекурсивно
+    if (Array.isArray(child)) {
+      validateContent(child, parentType, parentIsBlock);
+
+      continue;
+    }
+
+    // Проверяем MarkerNode
+    if (isMarkerNode(child)) {
+      const isChildBlock = isBlockNode(child);
+
+      // Блочный элемент внутри inline-элемента — ошибка
+      if (!parentIsBlock && isChildBlock) {
+        throw new Error(
+          `[Markup] Block element "${child.type}" cannot be nested inside inline element "${parentType}"`,
+        );
+      }
+
+      // Рекурсивно проверяем дочерние элементы
+      if (child.content) {
+        validateContent(child.content, child.type, isChildBlock);
+      }
+    }
   }
-
-  const child = node.content.map((item) => renderNode(item));
-
-  if (!child?.length) {
-    throw new Error(`[Markup] Text node must have content`);
-  }
-
-  return h(tag, child);
 }
 
-function renderEmptyNode(node: EmptyNode): VNode {
-  const tag = EmptyMarkerTag[node.type];
+// Нормализация: всегда возвращает массив VNode
+export function renderNodes(nodes: RenderNode[]): VNode[] {
+  return nodes.flatMap((node) => {
+    const result = renderNode(node);
 
-  if (!tag) {
-    throw new Error(`[Markup] Unknown tag for text node`);
-  }
-
-  return h(tag);
+    return Array.isArray(result) ? result : [result];
+  });
 }
 
-function renderRichNode(node: RichNode): VNode {
-  const child = node.content?.map((item) => renderNode(item));
+// Основной рендер - может возвращать VNode или VNode[]
+function renderNode(node: RenderNode): VNode | VNode[] {
+  // Строка
+  if (typeof node === 'string') {
+    const parsed = parse(node);
 
-  if (!child.length) {
-    throw new Error(`[Markup] Rich node must have content`);
+    return renderNodes(parsed);
   }
 
-  const renderFn = RICH_NODE_RENDERERS[node.type];
-
-  if (!renderFn) {
-    throw new Error(`[Markup] Unknown tag for rich node: ${node.type}`);
+  // Массив
+  if (Array.isArray(node)) {
+    return renderNodes(node);
   }
 
-  return renderFn(node, () => child);
+  // Простой текст
+  if (isSimpleTextNode(node)) {
+    return createTextVNode(node.text);
+  }
+
+  // Маркер
+  if (isMarkerNode(node)) {
+    const config = MARKER_MAP.get(node.type);
+
+    if (!config) {
+      throw new Error(`[Markup] Unknown node type: ${node.type}`);
+    }
+
+    // Валидация контента перед рендером
+    const isBlock = config.isBlock === true;
+
+    validateContent(node.content, node.type, isBlock);
+
+    // Empty маркер
+    if (config.isEmpty) {
+      return h(config.tag!);
+    }
+
+    // HTML-тег
+    if (config.tag) {
+      const children = node.content ? renderNodes(node.content) : [];
+
+      return h(config.tag, children);
+    }
+
+    // Vue-компонент
+    if (config.component) {
+      return h(config.component, { node, renderNodes });
+    }
+
+    throw new Error(`[Markup] No renderer for: ${node.type}`);
+  }
+
+  throw new Error('[Markup] Unknown node type');
 }
 
-function renderSectionLinkNode(node: SectionLinkNode): VNode {
-  const child = node.content?.map((item) => renderNode(item));
-
-  if (!child.length) {
-    throw new Error(`[Markup] Drawer Link node must have content`);
+export function render(content: RenderNode | RenderNode[]): VNode[] {
+  if (Array.isArray(content)) {
+    return renderNodes(content);
   }
 
-  const renderFn = FEATURE_NODE_RENDERERS[node.type];
+  const result = renderNode(content);
 
-  if (!renderFn) {
-    throw new Error(`[Markup] Unknown tag for rich node: ${node.type}`);
-  }
-
-  return renderFn(node, () => child);
+  return Array.isArray(result) ? result : [result];
 }

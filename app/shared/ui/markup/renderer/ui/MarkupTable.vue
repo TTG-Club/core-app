@@ -7,45 +7,57 @@
     getCoreRowModel,
     useVueTable,
   } from '@tanstack/vue-table';
-  import type {
-    RenderChildren,
-    RenderNode,
-    TableCell,
-    TableNode,
-  } from '../../types';
+  import type { MarkerNode, RenderNode } from '../types';
+
+  interface TableCell {
+    content: RenderNode[];
+    align?: 'left' | 'center' | 'right';
+  }
 
   interface TableRowData {
     cells: Array<string | number | RenderNode | TableCell>;
     index: number;
   }
 
-  const { node, deps } = defineProps<{
+  interface TableNode extends MarkerNode {
+    caption?: string;
+    colLabels?: string[];
+    colStyles?: string[];
+    rows?: any[][];
+  }
+
+  const { node, renderNodes } = defineProps<{
     node: TableNode;
-    deps: RenderChildren;
+    renderNodes: (nodes: RenderNode[]) => VNode[];
   }>();
 
-  const colCount = computed(
-    () =>
-      node.colLabels?.length ??
-      Math.max(...node.rows.map((row) => row.length), 0),
-  );
+  const colCount = computed(() => {
+    if (node.colLabels?.length) return node.colLabels.length;
+    if (!node.rows || node.rows.length === 0) return 0;
 
-  const labels = computed(
-    () =>
-      node.colLabels ??
-      Array.from({ length: colCount.value }, (_, i) => `#${i + 1}`),
-  );
+    return Math.max(...node.rows.map((row) => row.length));
+  });
 
-  const tableData = computed<TableRowData[]>(() =>
-    node.rows.map((cells, index) => ({ cells, index })),
-  );
+  const labels = computed(() => {
+    if (node.colLabels) return node.colLabels;
+
+    return Array.from({ length: colCount.value }, (_, i) => `#${i + 1}`);
+  });
+
+  const tableData = computed<TableRowData[]>(() => {
+    if (!node.rows || node.rows.length === 0) return [];
+
+    return node.rows.map((cells, index) => ({ cells, index }));
+  });
 
   function isRenderNode(value: unknown): value is RenderNode {
     return (
-      typeof value === 'object' &&
-      value !== null &&
-      'type' in value &&
-      typeof value.type === 'string'
+      typeof value === 'string' ||
+      Array.isArray(value) ||
+      (typeof value === 'object' &&
+        value !== null &&
+        'type' in value &&
+        typeof value.type === 'string')
     );
   }
 
@@ -78,17 +90,15 @@
   }
 
   function renderCellContent(cell: TableCell): VNode[] {
-    return (cell.content ?? [])
-      .flat()
-      .flatMap((chunk) =>
-        deps.toNodes(chunk).map((contentNode) => deps.renderNode(contentNode)),
-      );
+    return renderNodes(cell.content ?? []);
   }
 
   const columnHelper = createColumnHelper<TableRowData>();
 
-  const columns = computed<ColumnDef<TableRowData>[]>(() =>
-    Array.from({ length: colCount.value }, (_, columnIndex) =>
+  const columns = computed<ColumnDef<TableRowData>[]>(() => {
+    if (colCount.value === 0) return [];
+
+    return Array.from({ length: colCount.value }, (_, columnIndex) =>
       columnHelper.display({
         id: `c${columnIndex}`,
         header: labels.value[columnIndex],
@@ -107,8 +117,8 @@
           return content;
         },
       }),
-    ),
-  );
+    );
+  });
 
   const table = useVueTable({
     get data() {

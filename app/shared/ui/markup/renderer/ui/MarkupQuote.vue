@@ -1,13 +1,15 @@
 <script setup lang="ts">
+  import { computed, type VNode } from 'vue';
   import { UCard } from '#components';
-  import type { QuoteNode } from '../../types';
+  import type { MarkerNode, RenderNode } from '../types';
 
-  const { node } = defineProps<{
-    node: QuoteNode;
+  const { node, renderNodes } = defineProps<{
+    node: MarkerNode;
+    renderNodes: (nodes: RenderNode[]) => VNode[];
   }>();
 
   function validateColor(
-    color: string | undefined,
+    color: string | number | boolean | null | undefined,
   ):
     | 'error'
     | 'primary'
@@ -28,7 +30,7 @@
   }
 
   function validateVariant(
-    variant: string | undefined,
+    variant: string | number | boolean | null | undefined,
   ): 'solid' | 'outline' | 'soft' | 'subtle' {
     if (variant === 'solid') return 'solid';
     if (variant === 'outline') return 'outline';
@@ -38,16 +40,25 @@
     return 'soft';
   }
 
-  const color = validateColor(node.attrs.color);
-  const variant = validateVariant(node.attrs.variant);
+  const color = validateColor(node.attrs?.color);
+  const variant = validateVariant(node.attrs?.variant);
+
+  const children = computed(() =>
+    node.content ? renderNodes(node.content) : [],
+  );
 </script>
 
 <template>
   <UCard
     :color="color"
     :variant="variant"
-    class="my-4 border-l-4 p-4"
+    class="my-2 border-l-4"
+    :ui="{ body: 'sm:p-4' }"
   >
-    <slot />
+    <component
+      :is="vnode"
+      v-for="(vnode, index) in children"
+      :key="index"
+    />
   </UCard>
 </template>
