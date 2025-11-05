@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { COMPONENT_TOOLTIP_TEXT } from '../model';
 
-  import { MarkupRender, RowRender as MarkupRowRenderer } from '~ui/markup';
+  import { MarkupRender, MarkupRowRender } from '~ui/markup';
   import { InfoTooltip } from '~ui/tooltip';
 
   defineProps<{
@@ -34,7 +34,7 @@
         Черта
       </InfoTooltip>
 
-      <MarkupRowRenderer :entry="feat" />
+      <MarkupRowRender :entry="feat" />
     </div>
 
     <div :class="$style.item">
