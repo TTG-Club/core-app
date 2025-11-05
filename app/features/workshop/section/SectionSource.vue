@@ -4,7 +4,7 @@
 
 <template>
   <CardWorkshop
-    title="Предметы"
-    section="items"
+    title="Источники"
+    section="sources"
   />
 </template>

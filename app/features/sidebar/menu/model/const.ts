@@ -74,9 +74,9 @@ export const MENU_SECTIONS: Array<{
         disabled: false,
       },
       {
-        href: '/',
+        href: '/sources',
         label: 'Источники',
-        disabled: true,
+        disabled: false,
       },
     ],
   },

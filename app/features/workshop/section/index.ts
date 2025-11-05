@@ -5,5 +5,6 @@ export { default as SectionFeats } from './SectionFeats.vue';
 export { default as SectionGlossary } from './SectionGlossary.vue';
 export { default as SectionItem } from './SectionItem.vue';
 export { default as SectionMagicItem } from './SectionMagicItem.vue';
+export { default as SectionSource } from './SectionSource.vue';
 export { default as SectionSpecies } from './SectionSpecies.vue';
 export { default as SectionSpells } from './SectionSpells.vue';
