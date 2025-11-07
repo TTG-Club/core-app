@@ -79,14 +79,14 @@
         />
 
         <UiCollapse
-          v-if="detail.description?.length"
+          v-if="detail.description"
           id="description"
           default-open
         >
           <template #default>Описание</template>
 
           <template #content>
-            <MarkupRender :entries="detail.description" />
+            <MarkupRender :render-node="detail.description" />
           </template>
         </UiCollapse>
       </div>

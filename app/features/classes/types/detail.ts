@@ -1,12 +1,12 @@
 import type { Level, NameResponse, SourceResponse } from '~/shared/types';
-import type { EntryList } from '~ui/markup';
+import type { RenderNode } from '~ui/markup';
 import type { ClassLinkResponse } from './link';
 
 export interface ClassDetailResponse {
   url: string;
   name: NameResponse;
   source: SourceResponse;
-  description: EntryList;
+  description: RenderNode;
   image?: string;
   gallery?: Array<string>;
   casterType: CasterType;
@@ -15,7 +15,7 @@ export interface ClassDetailResponse {
   primaryCharacteristics: string;
   username: string;
   proficiency: ClassProficiency;
-  equipment: EntryList;
+  equipment: RenderNode;
   savingThrows: string;
   table: Array<ClassTable>;
   features: Array<ClassFeature>;
@@ -35,13 +35,13 @@ export interface ClassFeature {
   key: string;
   level: Level;
   name: string;
-  description: EntryList;
+  description: RenderNode;
   additional: string;
   isSubclass?: boolean;
   scaling?: Array<{
     level: Level;
     name: string;
-    description: EntryList;
+    description: RenderNode;
     additional: string;
   }>;
 }

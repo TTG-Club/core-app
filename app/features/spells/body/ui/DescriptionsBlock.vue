@@ -8,7 +8,7 @@
 </script>
 
 <template>
-  <MarkupRender :entries="description" />
+  <MarkupRender :render-node="description" />
 
   <div v-if="upper">
     <strong v-if="!level">Улучшение заговора. </strong>
@@ -20,6 +20,6 @@
       Накладывание более высокой ячейкой.
     </strong>
 
-    <MarkupRender :entries="upper" />
+    <MarkupRender :render-node="upper" />
   </div>
 </template>

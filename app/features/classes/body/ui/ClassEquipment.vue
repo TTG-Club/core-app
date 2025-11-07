@@ -10,7 +10,7 @@
 
 <template>
   <UiCollapse
-    v-if="equipment?.length"
+    v-if="equipment"
     default-open
   >
     <template #default>Снаряжение</template>
@@ -21,7 +21,7 @@
         полученному за вашу предысторию:
       </span>
 
-      <MarkupRender :entries="equipment" />
+      <MarkupRender :render-node="equipment" />
     </template>
   </UiCollapse>
 </template>

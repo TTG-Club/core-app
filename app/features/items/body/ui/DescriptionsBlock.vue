@@ -8,5 +8,5 @@
 </script>
 
 <template>
-  <MarkupRender :entries="description" />
+  <MarkupRender :render-node="description" />
 </template>

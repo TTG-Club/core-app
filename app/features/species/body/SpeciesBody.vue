@@ -82,7 +82,7 @@
         <div>
           <MarkupRender
             v-if="species.description"
-            :entries="species.description"
+            :render-node="species.description"
           />
         </div>
 
@@ -98,7 +98,7 @@
             </template>
 
             <template #content>
-              <MarkupRender :entries="feature.description" />
+              <MarkupRender :render-node="feature.description" />
             </template>
           </UiCollapse>
         </template>

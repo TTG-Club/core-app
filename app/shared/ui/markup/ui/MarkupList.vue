@@ -1,27 +1,28 @@
 <script setup lang="ts">
   import { computed, type VNode } from 'vue';
-  import type { ListNode, RenderChildren } from '../../types';
+  import type { MarkerNode, RenderNode } from '../types';
 
-  const { node, deps } = defineProps<{
-    node: ListNode;
-    deps: RenderChildren;
+  const { node, renderNodes } = defineProps<{
+    node: MarkerNode;
+    renderNodes: (nodes: RenderNode[]) => VNode[];
   }>();
 
   const isOrdered = computed(() => node.attrs?.type === 'ordered');
   const tag = computed(() => (isOrdered.value ? 'ol' : 'ul'));
 
-  const listClass = computed(() =>
-    isOrdered.value
-      ? 'list-decimal list-outside pl-6'
-      : 'list-disc list-outside pl-6',
-  );
+  const listClass = computed(() => {
+    const baseClass = isOrdered.value ? 'list-decimal' : 'list-disc';
 
-  function isListNode(value: unknown): value is ListNode {
+    return ['list-outside pl-6', baseClass];
+  });
+
+  function isMarkerNode(value: unknown): value is MarkerNode {
     return (
       typeof value === 'object' &&
       value !== null &&
       'type' in value &&
-      value.type === 'list'
+      typeof value.type === 'string' &&
+      value.type !== 'text'
     );
   }
 
@@ -31,31 +32,27 @@
 
     for (const item of content) {
       if (Array.isArray(item)) {
-        const batch = item
-          .flatMap((part) => deps.toNodes(part))
-          .map((n) => deps.renderNode(n));
-
-        batches.push(batch);
+        batches.push(renderNodes(item));
 
         continue;
       }
 
-      const nodes = deps.toNodes(item);
-
-      if (nodes.length === 1 && isListNode(nodes[0])) {
-        const nestedList = deps.renderNode(nodes[0]);
+      // Вложенный список
+      if (isMarkerNode(item) && item.type === 'list') {
+        const nestedList = renderNodes([item]);
         const lastBatch = batches[batches.length - 1];
 
         if (lastBatch) {
-          lastBatch.push(nestedList);
+          lastBatch.push(...nestedList);
         } else {
-          batches.push([nestedList]);
+          batches.push(nestedList);
         }
 
         continue;
       }
 
-      batches.push(nodes.map((n) => deps.renderNode(n)));
+      // Обычный элемент
+      batches.push(renderNodes([item]));
     }
 
     return batches;
@@ -70,6 +67,7 @@
     <li
       v-for="(batch, index) in liBatches"
       :key="index"
+      class="not-first:mt-1"
     >
       <component
         :is="vnode"
