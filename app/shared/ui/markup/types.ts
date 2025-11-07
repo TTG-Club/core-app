@@ -1,4 +1,5 @@
 import type { MarkerType } from './config';
+import type { VNode } from 'vue';
 
 export type MarkerAttributes = Record<string, string | number | boolean | null>;
 
@@ -21,3 +22,15 @@ export type RenderNode =
   | SimpleTextNode
   | MarkerNode
   | Array<string | SimpleTextNode | MarkerNode>;
+
+export interface Group {
+  id: number;
+  isBlock: boolean;
+  vnodes: VNode[];
+}
+
+export interface RenderResult {
+  isSingle: boolean;
+  vnodes?: VNode[];
+  groups?: Group[];
+}

@@ -1,39 +1,12 @@
 <script setup lang="ts">
-  import { computed, type VNode } from 'vue';
+  import { computed } from 'vue';
   import { render } from './renderer';
-  import { MARKER_MAP } from './config';
-  import type { RenderNode } from './types';
+  import type { Group, RenderNode, RenderResult } from './types';
+  import { isBlockNode } from './utils';
 
   const { renderNode } = defineProps<{
     renderNode: RenderNode;
   }>();
-
-  interface Group {
-    id: number;
-    isBlock: boolean;
-    vnodes: VNode[];
-  }
-
-  interface RenderResult {
-    isSingle: boolean;
-    vnodes?: VNode[];
-    groups?: Group[];
-  }
-
-  function isBlockMarker(node: unknown): boolean {
-    if (typeof node !== 'object' || node === null) return false;
-    if (Array.isArray(node)) return false;
-    if (!('type' in node)) return false;
-
-    const nodeType = node.type;
-
-    if (nodeType === 'text') return false;
-    if (typeof nodeType !== 'string') return false;
-
-    const config = MARKER_MAP.get(nodeType);
-
-    return config?.isBlock === true;
-  }
 
   const rendered = computed<RenderResult>(() => {
     try {
@@ -53,7 +26,7 @@
       for (const entry of renderNode) {
         groups.push({
           id: groupId++,
-          isBlock: isBlockMarker(entry),
+          isBlock: isBlockNode(entry),
           vnodes: render(entry),
         });
       }

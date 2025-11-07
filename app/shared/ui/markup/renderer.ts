@@ -1,37 +1,8 @@
 import { createTextVNode, h, type VNode } from 'vue';
-import type { RenderNode, MarkerNode, SimpleTextNode } from './types';
+import type { RenderNode } from './types';
 import { MARKER_MAP } from './config';
 import { parse } from './parser';
-
-function isSimpleTextNode(node: unknown): node is SimpleTextNode {
-  return (
-    typeof node === 'object' &&
-    node !== null &&
-    !Array.isArray(node) &&
-    'type' in node &&
-    node.type === 'text'
-  );
-}
-
-function isMarkerNode(node: unknown): node is MarkerNode {
-  return (
-    typeof node === 'object' &&
-    node !== null &&
-    !Array.isArray(node) &&
-    'type' in node &&
-    typeof node.type === 'string' &&
-    node.type !== 'text'
-  );
-}
-
-// Проверка, является ли нода блочным элементом
-function isBlockNode(node: unknown): boolean {
-  if (!isMarkerNode(node)) return false;
-
-  const config = MARKER_MAP.get(node.type);
-
-  return config?.isBlock === true;
-}
+import { isBlockNode, isMarkerNode, isSimpleTextNode } from './utils';
 
 // Валидация контента: блочные элементы не могут быть внутри inline
 function validateContent(
