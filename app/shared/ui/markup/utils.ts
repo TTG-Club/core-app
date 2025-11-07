@@ -1,6 +1,6 @@
 import { consola } from 'consola';
-import { MARKER_MAP } from '~ui/markup/config';
-import type { MarkerNode, SimpleTextNode } from '~ui/markup/types';
+import { MARKER_MAP } from './config';
+import type { MarkerNode, SimpleTextNode } from './types';
 
 export function logError(
   context: string,
