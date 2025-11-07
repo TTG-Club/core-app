@@ -1,7 +1,8 @@
 <script setup lang="ts">
   import { computed, type VNode } from 'vue';
-  import { render, MARKER_MAP } from './renderer';
-  import type { RenderNode } from './renderer';
+  import { render } from './renderer';
+  import { MARKER_MAP } from './config';
+  import type { RenderNode } from './types';
 
   const { renderNode } = defineProps<{
     renderNode: RenderNode;
