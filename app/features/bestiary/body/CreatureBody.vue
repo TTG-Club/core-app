@@ -24,6 +24,7 @@
       'speed',
       'abilities',
       'skills',
+      'equipments',
       'vulnerability',
       'resistance',
       'immunity',
@@ -181,7 +182,7 @@
             <template #content>
               <MarkupRender
                 v-if="creature.lair.description"
-                :entries="creature.lair.description"
+                :render-node="creature.lair.description"
               />
 
               <template v-if="creature.lair?.effects?.length">
@@ -195,7 +196,7 @@
 
               <MarkupRender
                 v-if="creature.lair.ending"
-                :entries="creature.lair.ending"
+                :render-node="creature.lair.ending"
               />
             </template>
           </UiCollapse>

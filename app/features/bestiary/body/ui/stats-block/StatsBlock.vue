@@ -2,6 +2,7 @@
   import { CreatureAbilitiesTable } from './ui';
 
   import type { CreatureDetailResponse } from '~bestiary/types';
+  import { MarkupRender } from '~ui/markup';
 
   defineProps<
     Pick<
@@ -11,6 +12,7 @@
       Pick<
         Partial<CreatureDetailResponse>,
         | 'skills'
+        | 'equipments'
         | 'vulnerability'
         | 'resistance'
         | 'immunity'
@@ -60,6 +62,15 @@
       <span :class="$style.name">Навыки: </span>
 
       <span>{{ skills }}</span>
+    </div>
+
+    <div
+      v-if="equipments"
+      :class="$style.item"
+    >
+      <span :class="$style.name">Снаряжение: </span>
+
+      <MarkupRender :render-node="equipments" />
     </div>
 
     <div

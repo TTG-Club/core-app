@@ -37,6 +37,8 @@
       160,
     );
   }
+
+  const editUrl = computed(() => `/workshop/glossary/${route.params.url}`);
 </script>
 
 <template>
@@ -49,7 +51,10 @@
     copy-text
   >
     <template #actions>
-      <PageActions @close="navigateTo({ name: 'glossary' })" />
+      <PageActions
+        :edit-url="editUrl"
+        @close="navigateTo({ name: 'glossary' })"
+      />
     </template>
 
     <template #default>

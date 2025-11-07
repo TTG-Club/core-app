@@ -1,24 +1,24 @@
 <script setup lang="ts">
-  import { computed } from 'vue';
+  import { computed, type VNode } from 'vue';
   import { useRouter } from 'vue-router';
   import { ULink } from '#components';
-  import type { LinkNode } from '../../types';
+  import type { MarkerNode, RenderNode } from '../types';
 
-  const { node } = defineProps<{
-    node: LinkNode;
+  const { node, renderNodes } = defineProps<{
+    node: MarkerNode;
+    renderNodes: (nodes: RenderNode[]) => VNode[];
   }>();
 
-  const { url, target } = node.attrs;
+  const url = node.attrs?.url?.toString();
+  const target = node.attrs?.target?.toString();
 
   if (!url) {
-    throw new Error(
-      `[Markup] Link node must have a \`url\`: ${JSON.stringify(node)}`,
-    );
+    throw new Error(`[Markup] Link must have url: ${JSON.stringify(node)}`);
   }
 
   if (target && target !== '_blank') {
     throw new Error(
-      `[Markup] \`target\` must be "_blank": ${JSON.stringify(node)}`,
+      `[Markup] target must be "_blank": ${JSON.stringify(node)}`,
     );
   }
 
@@ -26,9 +26,7 @@
     try {
       const parsedUrl = new URL(url, window.location.origin);
 
-      if (parsedUrl.origin !== window.location.origin) {
-        return true;
-      }
+      if (parsedUrl.origin !== window.location.origin) return true;
 
       const router = useRouter();
 
@@ -45,6 +43,10 @@
   });
 
   const isNewTab = computed(() => target === '_blank' || isExternal.value);
+
+  const children = computed(() =>
+    node.content ? renderNodes(node.content) : [],
+  );
 </script>
 
 <template>
@@ -53,6 +55,10 @@
     :to="url"
     :target="isNewTab ? '_blank' : '_self'"
   >
-    <slot />
+    <component
+      :is="vnode"
+      v-for="(vnode, index) in children"
+      :key="index"
+    />
   </ULink>
 </template>

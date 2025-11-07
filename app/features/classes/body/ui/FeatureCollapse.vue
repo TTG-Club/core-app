@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { MarkupRender, MarkupRowRender } from '~ui/markup';
+  import { MarkupRender } from '~ui/markup';
   import { UiCollapse } from '~ui/collapse';
   import type { ClassFeature } from '~classes/types';
 
@@ -14,7 +14,7 @@
 
     if (feature.additional) {
       str.push(`. `);
-      str.push(h(MarkupRowRender, { entry: feature.additional }));
+      str.push(h(MarkupRender, { renderNode: feature.additional }));
     }
 
     str.push(`.`);
@@ -39,7 +39,7 @@
     </template>
 
     <template #content>
-      <MarkupRender :entries="feature.description" />
+      <MarkupRender :render-node="feature.description" />
     </template>
   </UiCollapse>
 </template>

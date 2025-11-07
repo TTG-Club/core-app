@@ -37,6 +37,7 @@
     "bytes": "^3.1.2",
     "consola": "^3.4.2",
     "dayjs": "^1.11.18",
+    "dice-roller-parser": "^0.1.8",
     "http-status-codes": "^2.3.0",
     "jsonwebtoken": "^9.0.2",
     "lg-fullscreen": "^1.2.1",

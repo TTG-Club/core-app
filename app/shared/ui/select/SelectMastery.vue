@@ -3,7 +3,9 @@
     disabled?: boolean;
   }>();
 
-  const model = defineModel<0 | 1 | 2>({ required: true });
+  const model = defineModel<0 | 1 | 2>({
+    default: 1,
+  });
 
   const levels = ref<
     Array<{

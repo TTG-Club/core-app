@@ -1,5 +1,5 @@
 export { default as MarkupRender } from './MarkupRender.vue';
 
-export { RowRender as MarkupRowRender } from './ui';
+export * from './renderer';
 
-export type { Entry, EntryList } from './types';
+export * from './types';

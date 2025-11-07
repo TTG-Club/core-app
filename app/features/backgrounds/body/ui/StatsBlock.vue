@@ -8,7 +8,7 @@
     abilityScores: string;
     feat: string;
     skillProficiencies: string;
-    toolProficiency: string;
+    toolProficiency: string[];
     equipment: string[];
   }>();
 </script>
@@ -34,7 +34,7 @@
         Черта
       </InfoTooltip>
 
-      <span>{{ feat }}</span>
+      <MarkupRender :render-node="feat" />
     </div>
 
     <div :class="$style.item">
@@ -56,13 +56,13 @@
         Владение инструментами
       </InfoTooltip>
 
-      <span>{{ toolProficiency }}</span>
+      <MarkupRender :render-node="toolProficiency" />
     </div>
 
     <div :class="[$style.item, $style.block]">
       <span :class="$style.name">Снаряжение:</span>
 
-      <MarkupRender :entries="equipment" />
+      <MarkupRender :render-node="equipment" />
     </div>
   </div>
 </template>

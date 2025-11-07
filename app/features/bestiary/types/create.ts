@@ -16,7 +16,7 @@ export interface CreatureCreate extends EditorBaseInfoState {
   abilities: CreateAbilities;
   skills: Array<CreateSkill>;
   defenses: CreatureDefenses;
-  equipments: Array<Equipment>;
+  equipments: string | undefined;
   senses: CreatureSenses;
   languages: CreatureLanguages;
   proficiencyBonus: number;
@@ -145,12 +145,6 @@ export interface CreatureLanguages {
 export interface CreateLanguage {
   language: string | undefined;
   text: string | undefined;
-}
-
-export interface Equipment {
-  url: string;
-  name: string;
-  quantity: string;
 }
 
 export interface CreateExperience {
@@ -292,7 +286,7 @@ export function getInitialState(): CreatureCreate {
         text: undefined,
       },
     },
-    equipments: [],
+    equipments: undefined,
     senses: {
       darkvision: undefined,
       unimpeded: undefined,
