@@ -2,6 +2,7 @@
   import { COMPONENT_TOOLTIP_TEXT } from '../model';
 
   import type { FeatDetailResponse } from '~/shared/types';
+  import { MarkupRowRender } from '~ui/markup';
 
   defineProps<Pick<FeatDetailResponse, 'prerequisite'>>();
 </script>
@@ -13,7 +14,7 @@
         <div :class="$style.name">Предварительное условие:</div>
       </UTooltip>
 
-      <span>{{ prerequisite }}</span>
+      <MarkupRowRender :entry="prerequisite" />
     </div>
   </div>
 </template>
