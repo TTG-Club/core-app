@@ -46,14 +46,17 @@
   const children = computed(() =>
     node.content ? renderNodes(node.content) : [],
   );
+
+  const styles = computed(
+    () => `text-${color} bg-${color}/10 border-${color} ring-${color}`,
+  );
 </script>
 
 <template>
   <UCard
-    :color="color"
     :variant="variant"
     class="my-2 border-l-4"
-    :ui="{ body: 'sm:p-4' }"
+    :ui="{ root: styles, body: 'sm:p-4' }"
   >
     <component
       :is="vnode"
