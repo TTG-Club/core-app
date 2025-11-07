@@ -24,6 +24,7 @@
       'speed',
       'abilities',
       'skills',
+      'equipments',
       'vulnerability',
       'resistance',
       'immunity',

@@ -151,6 +151,25 @@
       :proficiency-bonus="state.proficiencyBonus"
     />
 
+    <UCard
+      variant="subtle"
+      class="col-span-full"
+    >
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">Снаряжение</h2>
+      </template>
+
+      <UFormField
+        class="col-span-13"
+        name="ac.text"
+      >
+        <UInput
+          v-model="state.equipments"
+          placeholder="Введи снаряжение"
+        />
+      </UFormField>
+    </UCard>
+
     <CreatureDefenses v-model="state.defenses" />
 
     <CreatureSenses
