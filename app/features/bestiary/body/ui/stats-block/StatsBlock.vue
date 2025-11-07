@@ -2,7 +2,7 @@
   import { CreatureAbilitiesTable } from './ui';
 
   import type { CreatureDetailResponse } from '~bestiary/types';
-  import { MarkupRender } from '~ui/markup';
+  import { MarkupRowRender } from '~ui/markup';
 
   defineProps<
     Pick<
@@ -70,7 +70,7 @@
     >
       <span :class="$style.name">Снаряжение: </span>
 
-      <MarkupRender :entries="equipments" />
+      <MarkupRowRender :entry="equipments" />
     </div>
 
     <div

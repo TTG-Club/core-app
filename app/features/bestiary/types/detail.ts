@@ -18,7 +18,7 @@ export interface CreatureDetailResponse {
   speed: string;
   abilities: CreatureAbilitiesResponse;
   skills?: string;
-  equipments?: string[];
+  equipments?: string;
   vulnerability?: string;
   resistance?: string;
   immunity?: string;
