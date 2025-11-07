@@ -163,9 +163,8 @@
         class="col-span-13"
         name="ac.text"
       >
-        <UTextarea
+        <UInput
           v-model="state.equipments"
-          :rows="3"
           placeholder="Введи снаряжение"
         />
       </UFormField>
