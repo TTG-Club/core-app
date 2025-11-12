@@ -15,23 +15,23 @@
     },
   );
 
-  const { data: books } =
-    useNuxtData<Array<SelectOptionWithShortName>>('books');
+  const { data: sources } =
+    useNuxtData<Array<SelectOptionWithShortName>>('sources');
 
   const model = defineModel<string>();
 
   const acronym = computed(() => {
-    if (!props.sourceUrl || !books.value?.length) {
+    if (!props.sourceUrl || !sources.value?.length) {
       return undefined;
     }
 
-    const index = books.value.findIndex((el) => el.value === props.sourceUrl);
+    const index = sources.value.findIndex((el) => el.value === props.sourceUrl);
 
     if (index < 0) {
       return undefined;
     }
 
-    return books.value[index]?.shortName;
+    return sources.value[index]?.shortName;
   });
 
   function handleUrlChange(url: string | undefined) {
