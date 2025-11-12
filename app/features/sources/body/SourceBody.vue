@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { DescriptionsBlock } from './ui';
   import type { SourceDetailResponse } from '~/features/sources/types';
+  import { StatsBlock } from '~sources/body/ui';
 
   defineProps<{
     source: SourceDetailResponse;
@@ -10,6 +11,14 @@
 <template>
   <div :class="$style.container">
     <div :class="$style.body">
+      <div class="flex w-full flex-col gap-3 @min-[800px]:max-w-80">
+        <StatsBlock
+          :type="source.type"
+          :published="source.published"
+          :authors="source.authors"
+        />
+      </div>
+
       <div class="flex flex-auto flex-col gap-3">
         <DescriptionsBlock :description="source.description" />
       </div>

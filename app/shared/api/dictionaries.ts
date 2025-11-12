@@ -38,6 +38,7 @@ enum DictionaryEndpoints {
   CASTER_TYPES = '/api/v2/dictionaries/caster-types',
   ARMOR_CATEGORIES = '/api/v2/dictionaries/armor/categories',
   WEAPON_CATEGORIES = '/api/v2/dictionaries/weapon/categories',
+  SOURCE_TYPES = '/api/v2/dictionaries/source/types',
 }
 
 class Dictionaries {
@@ -270,6 +271,15 @@ class Dictionaries {
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.WEAPON_CATEGORIES, {
+      ...config,
+      method: 'get',
+    });
+  };
+
+  public sourceTypes = <R extends NitroFetchRequest>(
+    config: Omit<NitroFetchOptions<R>, 'method'> = {},
+  ): Promise<Array<SelectOption>> => {
+    return $fetch(DictionaryEndpoints.SOURCE_TYPES, {
       ...config,
       method: 'get',
     });

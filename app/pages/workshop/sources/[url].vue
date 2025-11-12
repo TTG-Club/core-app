@@ -13,7 +13,7 @@
           icon="i-ttg-x"
           variant="ghost"
           color="neutral"
-          @click.left.exact.prevent="navigateTo('/feats')"
+          @click.left.exact.prevent="navigateTo('/sources')"
         />
       </UTooltip>
     </template>

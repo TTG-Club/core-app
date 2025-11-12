@@ -1,11 +1,11 @@
 <script setup lang="ts">
-  import { BackgroundLink } from '~backgrounds/link';
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
-
-  import type { BackgroundLinkResponse, SearchBody } from '~/shared/types';
+  import { SourceLink } from '~sources/link';
+  import type { SearchBody } from '~/shared/types';
+  import type { SourceLinkResponse } from '~sources/types';
 
   useSeoMeta({
     title: 'Источники [Sources]',
@@ -18,7 +18,7 @@
     filter,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
-  } = await useFilter('sources-filters', '/api/v2/sources/filters');
+  } = await useFilter('sources-filters', '/api/v2/source/filters');
 
   const searchBody = computed(() => {
     const body: SearchBody = {};
@@ -38,7 +38,7 @@
   } = await useAsyncData(
     'sources',
     () =>
-      $fetch<Array<BackgroundLinkResponse>>('/api/v2/source/search', {
+      $fetch<Array<SourceLinkResponse>>('/api/v2/source/search', {
         method: 'POST',
         params: {
           query: search.value,
@@ -86,10 +86,10 @@
           v-else-if="status === 'success' && sources?.length"
           :columns="3"
         >
-          <BackgroundLink
-            v-for="background in sources"
-            :key="background.url"
-            :background="background"
+          <SourceLink
+            v-for="source in sources"
+            :key="source.url"
+            :source="source"
           />
         </PageGrid>
 

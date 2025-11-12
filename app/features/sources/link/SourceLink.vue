@@ -1,10 +1,10 @@
 <script setup lang="ts">
   import { SmallLink } from '~ui/link';
-  import type { BackgroundLinkResponse } from '~/shared/types';
   import { SourceDrawer } from '~/features/sources/drawer';
+  import type { SourceLinkResponse } from '~sources/types';
 
   const { source } = defineProps<{
-    source: BackgroundLinkResponse;
+    source: SourceLinkResponse;
   }>();
 
   const overlay = useOverlay();
@@ -24,8 +24,8 @@
   <SmallLink
     :to="{ name: 'sources-url', params: { url: source.url } }"
     :title="`${source.name.rus} [${source.name.eng}]`"
-    :source="source.source"
     :is-opened
+    :source="source.source"
     @open-drawer="drawer.open()"
   >
     <template #default>
@@ -34,12 +34,6 @@
 
     <template #english>
       {{ source.name.eng }}
-    </template>
-
-    <template #caption>
-      <span>
-        {{ source.abilityScores }}
-      </span>
     </template>
   </SmallLink>
 </template>

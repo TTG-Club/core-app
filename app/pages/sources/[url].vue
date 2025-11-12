@@ -1,54 +1,51 @@
 <script setup lang="ts">
-  import { BackgroundBody } from '~backgrounds/body';
   import { PageActions } from '~ui/page';
-
-  import type { BackgroundDetailResponse } from '~/shared/types';
+  import type { SourceDetailResponse } from '~sources/types';
+  import { SourceBody } from '~sources/body';
 
   const route = useRoute();
 
-  const { data: background } = await useAsyncData(
+  const { data: source } = await useAsyncData(
     `source-${route.params.url}`,
-    () =>
-      $fetch<BackgroundDetailResponse>(`/api/v2/source/${route.params.url}`),
+    () => $fetch<SourceDetailResponse>(`/api/v2/source/${route.params.url}`),
   );
 
   useSeoMeta({
     title: getSeoTitle,
     description: getSeoDescription,
-    author: () =>
-      background.value ? background.value.source.name.rus : undefined,
+    author: () => (source.value ? source.value.source.name.rus : undefined),
     titleTemplate: '%s | Источники D&D 5 2024-2025',
   });
 
   function getSeoTitle() {
-    if (!background.value) {
+    if (!source.value) {
       return '';
     }
 
-    return getSlicedString(background.value.name.rus, 36);
+    return getSlicedString(source.value.name.rus, 36);
   }
 
   function getSeoDescription() {
-    if (!background.value) {
+    if (!source.value) {
       return '';
     }
 
     return getSlicedString(
-      `${background.value.name.rus} [${background.value.name.eng}] — источник для D&D 5 (редакция 2024 года).`,
+      `${source.value.name.rus} [${source.value.name.eng}] — источник для D&D 5 (редакция 2024 года).`,
       160,
     );
   }
 
-  const editUrl = computed(() => `/workshop/source/${route.params.url}`);
+  const editUrl = computed(() => `/workshop/sources/${route.params.url}`);
 </script>
 
 <template>
   <NuxtLayout
     name="detail"
-    :title="background?.name.rus"
-    :subtitle="background?.name.eng"
-    :source="background?.source"
-    :date-time="background?.updatedAt"
+    :title="source?.name.rus"
+    :subtitle="source?.name.eng"
+    :source="source?.source"
+    :date-time="source?.updatedAt"
     copy-text
   >
     <template #actions>
@@ -59,9 +56,9 @@
     </template>
 
     <template #default>
-      <BackgroundBody
-        v-if="background"
-        :background
+      <SourceBody
+        v-if="source"
+        :source
       />
 
       <template v-else>

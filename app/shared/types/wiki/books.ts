@@ -1,4 +1,4 @@
-export interface BookLink {
+export interface SourceLink {
   name: {
     rus: string;
     eng: string;

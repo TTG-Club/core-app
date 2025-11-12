@@ -1,12 +1,32 @@
 <script setup lang="ts">
+  import { MarkupRender } from '~ui/markup';
+
   defineProps<{
-    abilityScores: string;
+    type: string;
+    published: string;
+    authors: string[];
   }>();
 </script>
 
 <template>
   <div :class="$style.stats">
-    <div :class="$style.item"></div>
+    <div :class="$style.item">
+      <span :class="$style.name">Тип:</span>
+
+      <span>{{ type }}</span>
+    </div>
+
+    <div :class="$style.item">
+      <span :class="$style.name">Дата издания:</span>
+
+      <span>{{ published }}</span>
+    </div>
+
+    <div :class="$style.item">
+      <span :class="$style.name">Авторы:</span>
+
+      <span><MarkupRender :entries="authors" /> </span>
+    </div>
   </div>
 </template>
 

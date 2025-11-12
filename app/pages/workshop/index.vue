@@ -10,6 +10,7 @@
     SectionSpecies,
     SectionSpells,
   } from '~workshop/section';
+  import SectionSource from '~workshop/section/SectionSource.vue';
 </script>
 
 <template>
@@ -37,6 +38,8 @@
       <SectionBestiary />
 
       <SectionItem />
+
+      <SectionSource />
     </div>
   </NuxtLayout>
 </template>

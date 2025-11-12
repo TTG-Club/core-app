@@ -1,7 +1,7 @@
 <template>
   <NuxtLayout
     name="detail"
-    title="Мастерская источников"
+    title="Источники"
   >
     <template #actions>
       <UButton
