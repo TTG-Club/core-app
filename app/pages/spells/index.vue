@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { groupBy } from 'lodash-es';
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
   import { SpellLegend } from '~spells/legend';
@@ -51,6 +52,22 @@
       watch: [search, filter],
     },
   );
+
+  const groupedSpells = computed(() => {
+    if (!spells.value?.length) {
+      return [];
+    }
+
+    const grouped = groupBy(spells.value, 'level');
+
+    return Object.keys(grouped)
+      .map(Number)
+      .sort((a, b) => a - b)
+      .map((level) => ({
+        level,
+        spells: grouped[String(level)],
+      }));
+  });
 </script>
 
 <template>
@@ -86,16 +103,37 @@
           />
         </PageGrid>
 
-        <PageGrid
+        <div
           v-else-if="status === 'success' && spells?.length"
-          :columns="3"
+          class="flex flex-col gap-6"
         >
-          <SpellLink
-            v-for="spell in spells"
-            :key="spell.url"
-            :spell="spell"
-          />
-        </PageGrid>
+          <div
+            v-for="group in groupedSpells"
+            :key="group.level"
+            class="flex gap-4"
+          >
+            <div class="sticky top-2 flex shrink-0 self-start">
+              <UBadge
+                size="lg"
+                color="neutral"
+                variant="subtle"
+                class="vertical-rl"
+              >
+                Уровень {{ group.level }}
+              </UBadge>
+            </div>
+
+            <div class="flex min-w-0 flex-auto flex-col">
+              <PageGrid :columns="3">
+                <SpellLink
+                  v-for="spell in group.spells"
+                  :key="spell.url"
+                  :spell="spell"
+                />
+              </PageGrid>
+            </div>
+          </div>
+        </div>
 
         <PageResult
           v-else
