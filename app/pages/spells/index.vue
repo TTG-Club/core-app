@@ -107,32 +107,39 @@
           v-else-if="status === 'success' && spells?.length"
           class="flex flex-col gap-6"
         >
-          <div
-            v-for="group in groupedSpells"
+          <template
+            v-for="(group, index) in groupedSpells"
             :key="group.level"
-            class="flex gap-4"
           >
-            <div class="sticky top-2 flex shrink-0 self-start">
-              <UBadge
-                size="lg"
-                color="neutral"
-                variant="subtle"
-                class="vertical-rl"
-              >
-                Уровень {{ group.level }}
-              </UBadge>
+            <div class="flex gap-4">
+              <div class="flex min-w-0 flex-auto flex-col">
+                <PageGrid :columns="3">
+                  <SpellLink
+                    v-for="spell in group.spells"
+                    :key="spell.url"
+                    :spell="spell"
+                  />
+                </PageGrid>
+              </div>
+
+              <div class="sticky top-2 flex shrink-0 self-start">
+                <UBadge
+                  size="lg"
+                  color="neutral"
+                  variant="subtle"
+                  class="vertical-rl"
+                >
+                  Уровень {{ group.level }}
+                </UBadge>
+              </div>
             </div>
 
-            <div class="flex min-w-0 flex-auto flex-col">
-              <PageGrid :columns="3">
-                <SpellLink
-                  v-for="spell in group.spells"
-                  :key="spell.url"
-                  :spell="spell"
-                />
-              </PageGrid>
-            </div>
-          </div>
+            <USeparator
+              v-if="index < groupedSpells.length - 1"
+              class="col-span-full"
+              type="dashed"
+            />
+          </template>
         </div>
 
         <PageResult
