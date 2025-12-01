@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import type { SearchBody } from '~/shared/types';
-  import { CreatureLink } from '~bestiary/link';
+  import { BestiaryGroupedList } from '~bestiary/list';
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
   import { PageGrid, PageResult } from '~ui/page';
@@ -80,16 +80,10 @@
           />
         </PageGrid>
 
-        <PageGrid
+        <BestiaryGroupedList
           v-else-if="status === 'success' && bestiary?.length"
-          :columns="3"
-        >
-          <CreatureLink
-            v-for="creature in bestiary"
-            :key="creature.url"
-            :creature
-          />
-        </PageGrid>
+          :creatures="bestiary"
+        />
 
         <PageResult
           v-else

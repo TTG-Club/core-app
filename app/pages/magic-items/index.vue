@@ -2,7 +2,7 @@
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
   import { MagicItemLegend } from '~magic-items/legend';
-  import { MagicItemLink } from '~magic-items/link';
+  import { MagicItemsGroupedList } from '~magic-items/list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
@@ -87,16 +87,10 @@
           />
         </PageGrid>
 
-        <PageGrid
+        <MagicItemsGroupedList
           v-else-if="status === 'success' && magicItems?.length"
-          :columns="3"
-        >
-          <MagicItemLink
-            v-for="magicItem in magicItems"
-            :key="magicItem.url"
-            :magic-item="magicItem"
-          />
-        </PageGrid>
+          :magic-items="magicItems"
+        />
 
         <PageResult
           v-else

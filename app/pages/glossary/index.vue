@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
-  import { GlossaryLink } from '~glossary/link';
+  import { GlossaryGroupedList } from '~glossary/list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
@@ -82,16 +82,10 @@
           />
         </PageGrid>
 
-        <PageGrid
+        <GlossaryGroupedList
           v-else-if="status === 'success' && glossaryItems?.length"
-          :columns="3"
-        >
-          <GlossaryLink
-            v-for="item in glossaryItems"
-            :key="item.url"
-            :glossary="item"
-          />
-        </PageGrid>
+          :items="glossaryItems"
+        />
 
         <PageResult
           v-else
