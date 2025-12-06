@@ -144,6 +144,7 @@ export default defineNuxtConfig({
     },
     customCollections: [
       {
+        recursive: true,
         prefix: 'ttg',
         dir: fileURLToPath(new URL('./app/assets/icons', import.meta.url)),
       },

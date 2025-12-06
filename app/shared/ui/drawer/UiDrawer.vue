@@ -90,6 +90,8 @@
         :copy-text="copyTitle"
       >
         <template #actions>
+          <slot name="actions" />
+
           <DrawerActions
             :edit-url="editUrl"
             :url

@@ -1,39 +1,31 @@
 <script setup lang="ts">
   import { isUndefined } from 'lodash-es';
+  import type { RatingValue } from './types';
 
-  const { section, url } = defineProps<{
+  const {
+    section,
+    url,
+    initial = undefined,
+  } = defineProps<{
     section: string;
     url: string;
+    initial?: RatingValue;
   }>();
 
-  const isTooltipShown = refAutoReset(false, 3000);
-  const tooltipMessage = ref<string>();
-  const tooltipType = ref<'success' | 'error'>();
+  const $toast = useToast();
 
   function showSuccess(msg: string) {
-    tooltipType.value = 'success';
-
-    showTooltip(msg);
+    $toast.add({
+      color: 'success',
+      title: msg,
+    });
   }
 
   function showError(msg: string) {
-    tooltipType.value = 'error';
-
-    showTooltip(msg);
-  }
-
-  function showTooltip(msg: string) {
-    tooltipMessage.value = msg;
-    isTooltipShown.value = true;
-  }
-
-  function clearMessage(visibility: boolean) {
-    if (visibility) {
-      return;
-    }
-
-    tooltipMessage.value = undefined;
-    tooltipType.value = undefined;
+    $toast.add({
+      color: 'error',
+      title: msg,
+    });
   }
 
   const hoverRating = ref<number>();
@@ -41,13 +33,19 @@
   const { data: rating, refresh } = await useAsyncData(
     `rating-${section}-${url}`,
     () =>
-      $fetch<{ value: number; total: number }>('/api/v2/rating', {
+      $fetch<RatingValue>('/api/v2/rating', {
         params: {
           section: section,
           url: url,
         },
       }),
-    { watch: [() => url, () => section] },
+    {
+      watch: [() => url, () => section],
+      lazy: true,
+      dedupe: 'defer',
+      immediate: !initial,
+      default: () => initial,
+    },
   );
 
   const safeRating = computed(() => rating.value?.value ?? 0);
@@ -105,40 +103,33 @@
     <span><b>Рейтинг</b></span>
 
     <div :class="$style.block">
-      <UTooltip
-        :text="tooltipMessage"
-        :open="isTooltipShown"
-        :color="`var(--color-${tooltipType})`"
-        @open-change="clearMessage"
+      <div
+        :class="$style.stars"
+        @mouseleave="hoverRating = undefined"
       >
         <div
-          :class="$style.stars"
-          @mouseleave="hoverRating = undefined"
+          v-for="star in 5"
+          :key="star"
+          :class="$style.star"
         >
           <div
-            v-for="star in 5"
-            :key="star"
-            :class="$style.star"
+            v-for="part in 4"
+            :key="part"
+            :class="[
+              $style.part,
+              { [$style.highlight]: isHighlighted(star, part) },
+            ]"
+            @mouseover="hoverRating = getRating(star, part)"
+            @click.left.exact.prevent.stop="rate(star, part)"
           >
-            <div
-              v-for="part in 4"
-              :key="part"
-              :class="[
-                $style.part,
-                { [$style.highlight]: isHighlighted(star, part) },
-              ]"
-              @mouseover="hoverRating = getRating(star, part)"
-              @click.left.exact.prevent="rate(star, part)"
-            >
-              <UIcon
-                :class="$style.icon"
-                name="i-fluent-star-16-filled"
-                size="20"
-              />
-            </div>
+            <UIcon
+              :class="$style.icon"
+              name="i-fluent-star-16-filled"
+              size="20"
+            />
           </div>
         </div>
-      </UTooltip>
+      </div>
 
       <div :class="$style.result">{{ safeRating }}</div>
     </div>
@@ -153,6 +144,7 @@
   .rating {
     display: flex;
     flex-direction: column;
+    flex-shrink: 0;
     gap: 4px;
     justify-content: space-between;
 
