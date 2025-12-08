@@ -3,6 +3,10 @@
   import { PwaConfig } from '~pwa/config';
   import { SidebarPanel } from '~sidebar/panel';
 
+  import DiceRoller from '~/features/roller/modal/DiceRoller.vue';
+
+  import { DiceRollerFloatButton } from './features/roller';
+
   import '~/assets/css/index.scss';
 
   const { name } = useTheme();
@@ -21,7 +25,7 @@
       disableHoverableContent: true,
     }"
     :toaster="{
-      position: 'top-right',
+      position: 'bottom-right',
     }"
   >
     <NuxtLoadingIndicator
@@ -37,6 +41,10 @@
       <div class="min-h-dvh w-full">
         <NuxtPage />
       </div>
+
+      <DiceRollerFloatButton />
+
+      <DiceRoller />
     </div>
   </UApp>
 </template>

@@ -6,6 +6,8 @@
     useVueTable,
   } from '@tanstack/vue-table';
 
+  import { TABLE_ROLL_CONTEXT } from '../consts';
+
   import type { ColumnDef } from '@tanstack/vue-table';
   import type { VNode } from 'vue';
 
@@ -22,8 +24,8 @@
   }
 
   interface TableNode extends MarkerNode {
-    caption?: string;
-    colLabels?: string[];
+    caption?: RenderNode;
+    colLabels?: RenderNode[];
     colStyles?: string[];
     rows?: any[][];
   }
@@ -45,12 +47,24 @@
     return Math.max(...node.rows.map((row) => row.length));
   });
 
-  const labels = computed(() => {
+  const labels = computed<RenderNode[]>(() => {
     if (node.colLabels) {
       return node.colLabels;
     }
 
     return Array.from({ length: colCount.value }, (_, i) => `#${i + 1}`);
+  });
+
+  const captionNodes = computed(() => {
+    if (!node.caption) {
+      return [];
+    }
+
+    const normalized = Array.isArray(node.caption)
+      ? node.caption
+      : [node.caption];
+
+    return renderNodes(normalized);
   });
 
   const tableData = computed<TableRowData[]>(() => {
@@ -60,6 +74,29 @@
 
     return node.rows.map((cells, index) => ({ cells, index }));
   });
+
+  const activeRowIndex = ref<number | null>(null);
+
+  function handleTableRoll(value: number) {
+    if (!Number.isFinite(value)) {
+      activeRowIndex.value = null;
+
+      return;
+    }
+
+    const rowIndex = Math.round(value) - 1;
+    const maxIndex = tableData.value.length - 1;
+
+    if (rowIndex < 0 || rowIndex > maxIndex) {
+      activeRowIndex.value = null;
+
+      return;
+    }
+
+    activeRowIndex.value = rowIndex;
+  }
+
+  provide(TABLE_ROLL_CONTEXT, { onRoll: handleTableRoll });
 
   function isRenderNode(value: unknown): value is RenderNode {
     return (
@@ -106,6 +143,12 @@
 
   const columnHelper = createColumnHelper<TableRowData>();
 
+  function normalizeRenderNodes(
+    value: RenderNode | RenderNode[],
+  ): RenderNode[] {
+    return Array.isArray(value) ? value : [value];
+  }
+
   const columns = computed<ColumnDef<TableRowData>[]>(() => {
     if (colCount.value === 0) {
       return [];
@@ -114,7 +157,12 @@
     return Array.from({ length: colCount.value }, (_, columnIndex) =>
       columnHelper.display({
         id: `c${columnIndex}`,
-        header: labels.value[columnIndex],
+        header: () => {
+          const headerValue = labels.value[columnIndex] ?? '';
+          const nodes = normalizeRenderNodes(headerValue);
+
+          return h('span', renderNodes(nodes));
+        },
         cell: (ctx) => {
           const rawCell = ctx.row.original.cells[columnIndex];
 
@@ -154,12 +202,14 @@
   <div class="w-full overflow-x-auto rounded-lg border border-default bg-muted">
     <table class="min-w-full border-collapse">
       <caption
-        v-if="node.caption"
+        v-if="captionNodes.length"
         class="py-2 text-sm font-medium text-highlighted"
       >
-        {{
-          node.caption
-        }}
+        <component
+          :is="vnode"
+          v-for="(vnode, index) in captionNodes"
+          :key="index"
+        />
       </caption>
 
       <thead class="bg-elevated">
@@ -187,7 +237,10 @@
         <tr
           v-for="row in table.getRowModel().rows"
           :key="row.id"
-          class="divide-x divide-default"
+          :class="[
+            'divide-x divide-default transition-colors',
+            row.original.index === activeRowIndex ? 'bg-success/10' : '',
+          ]"
         >
           <td
             v-for="(cell, index) in row.getVisibleCells()"

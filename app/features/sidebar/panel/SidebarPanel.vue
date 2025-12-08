@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { useDiceRollerState } from '~roller/composables/useDiceRollerState';
   import { SearchButton } from '~search/button';
   import { useGlobalSearch } from '~search/composable';
   import { AppMenu } from '~sidebar/menu';
@@ -17,6 +18,7 @@
   const { smaller } = useBreakpoints();
   const { close } = useSidebarPopover();
   const { open } = useGlobalSearch();
+  const diceRoller = useDiceRollerState();
 
   defineShortcuts({
     '/': open,
@@ -107,6 +109,21 @@
         <div :class="$style.socials" />
 
         <ClientOnly>
+          <button
+            type="button"
+            :class="[
+              $style.diceButton,
+              'inline-flex items-center justify-center md:hidden',
+            ]"
+            aria-label="Открыть роллер кубов"
+            @click="diceRoller.open()"
+          >
+            <UIcon
+              name="i-ttg-dice-d20"
+              class="h-5 w-5 text-[var(--color-primary-500)]"
+            />
+          </button>
+
           <UserHelmet />
 
           <ThemeSwitcher />
@@ -163,6 +180,26 @@
     gap: 8px;
     height: auto;
     margin-left: 0;
+  }
+
+  .diceButton {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--ui-border);
+    border-radius: 10px;
+
+    color: var(--ui-text);
+
+    background: var(--ui-bg-elevated);
+
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(0, 0, 0, 0.18);
+    }
   }
 
   .bottomContainer {
