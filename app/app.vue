@@ -4,6 +4,7 @@
 
   import { PwaConfig } from '~pwa/config';
   import { SidebarPanel } from '~sidebar/panel';
+  import DiceRollerModal from '~/features/roller/DiceRollerModal.vue';
 
   const { name } = useTheme();
 
@@ -37,6 +38,8 @@
       <div class="min-h-dvh w-full">
         <NuxtPage />
       </div>
+
+      <DiceRollerModal />
     </div>
   </UApp>
 </template>
