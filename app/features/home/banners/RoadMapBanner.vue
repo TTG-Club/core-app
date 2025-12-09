@@ -1,40 +1,30 @@
 <template>
   <NuxtLink
-    to="https://5e14.ttg.club/"
     :class="$style.card"
-    class="shadow-lg"
+    class="relative min-h-[140px] rounded-lg p-6 shadow-lg"
     target="_blank"
+    to="../roadmap"
   >
-    <h2
-      :class="$style.name"
-      class="text-2xl"
-    >
-      D&D 2014
-    </h2>
+    <span class="z-1 text-2xl">Дорожная карта</span>
 
-    <p :class="$style.description">Предыдущая редакция Dungeon and Dragons</p>
+    <p class="z-1">Выбор за тобой!</p>
   </NuxtLink>
 </template>
 
 <style lang="scss" module>
   .card {
-    position: relative;
-
     overflow: hidden;
     display: flex;
     flex: 1 1 100%;
     flex-direction: column;
     gap: 12px;
 
-    padding: 12px 12px;
     border: 1px solid var(--ui-border);
-    border-radius: 10px;
 
     color: var(--ui-text);
     text-decoration: none;
 
     background: var(--ui-bg-muted);
-
     &:before {
       content: '';
 
@@ -48,7 +38,7 @@
       height: 100%;
 
       opacity: 0.4;
-      background-image: url('/s3/home/legacy-site.webp');
+      background-image: url('/s3/home/RoadMapBanner.webp');
       background-repeat: no-repeat;
       background-position: center;
       background-size: cover;
@@ -61,19 +51,6 @@
         transform: scale(1.15);
         transition: transform 200ms;
       }
-    }
-
-    .name {
-      z-index: 10;
-      font-weight: 600;
-      color: var(--ui-text);
-      text-shadow: 0 2px 4px #0000006e;
-    }
-
-    .description {
-      z-index: 10;
-      color: var(--ui-text);
-      text-shadow: 0 2px 4px #0000006e;
     }
   }
 </style>

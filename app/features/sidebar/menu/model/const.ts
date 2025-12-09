@@ -80,6 +80,22 @@ export const MENU_SECTIONS: Array<{
       },
     ],
   },
+  {
+    label: 'Другое',
+    icon: 'menu/filled/workshop',
+    items: [
+      {
+        href: '/roadmap',
+        label: 'Дорожная карта',
+        disabled: false,
+      },
+      {
+        href: 'https://5e14.ttg.club/',
+        label: 'Редакция D&D 2014',
+        disabled: false,
+      },
+    ],
+  },
 ];
 
 export const MENU_LINKS: Array<{
