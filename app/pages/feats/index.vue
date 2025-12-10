@@ -87,9 +87,13 @@
           v-else-if="status === 'success' && feats?.length"
           :items="feats"
           group-by="category"
-          :item-component="FeatLink"
-          item-prop="feat"
-        />
+        >
+          <template
+            #default="{ item }"
+          >
+            <FeatLink :feat="item" />
+          </template>
+        </GroupedList>
 
         <PageResult
           v-else

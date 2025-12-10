@@ -85,9 +85,14 @@
           v-else-if="status === 'success' && bestiary?.length"
           :items="bestiary"
           group-by="challengeRailing"
-          :item-component="CreatureLink"
-          item-prop="creature"
-        />
+          separator-label="Уровень опасности {value}"
+        >
+          <template
+            #default="{ item }"
+          >
+            <CreatureLink :creature="item" />
+          </template>
+        </GroupedList>
 
         <PageResult
           v-else

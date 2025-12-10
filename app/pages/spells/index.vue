@@ -92,10 +92,13 @@
           :items="spells"
           group-by="level"
           separator-label="Уровень {value}"
-          :item-component="SpellLink"
-          item-prop="spell"
-          :sort-fn="(a, b) => Number(a) - Number(b)"
-        />
+        >
+          <template
+            #default="{ item }"
+          >
+            <SpellLink :spell="item" />
+          </template>
+        </GroupedList>
 
         <PageResult
           v-else

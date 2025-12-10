@@ -89,9 +89,13 @@
           v-else-if="status === 'success' && items?.length"
           :items="items"
           group-by="category"
-          :item-component="ItemLink"
-          item-prop="item"
-        />
+        >
+          <template
+            #default="{ item }"
+          >
+            <ItemLink :item="item" />
+          </template>
+        </GroupedList>
 
         <PageResult
           v-else

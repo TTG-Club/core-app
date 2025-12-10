@@ -92,9 +92,13 @@
           v-else-if="status === 'success' && magicItems?.length"
           :items="magicItems"
           group-by="rarity"
-          :item-component="MagicItemLink"
-          item-prop="magicItem"
-        />
+        >
+          <template
+            #default="{ item }"
+          >
+            <MagicItemLink :magic-item="item" />
+          </template>
+        </GroupedList>
 
         <PageResult
           v-else

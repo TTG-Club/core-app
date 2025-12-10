@@ -87,9 +87,13 @@
           v-else-if="status === 'success' && glossaryItems?.length"
           :items="glossaryItems"
           group-by="tagCategory"
-          :item-component="GlossaryLink"
-          item-prop="glossary"
-        />
+        >
+          <template
+            #default="{ item }"
+          >
+            <GlossaryLink :glossary="item" />
+          </template>
+        </GroupedList>
 
         <PageResult
           v-else
