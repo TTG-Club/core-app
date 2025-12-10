@@ -16,23 +16,28 @@
 
 <template>
   <div
-    class="flex cursor-pointer gap-4 rounded-xl bg-elevated p-2 transition-colors hover:bg-accented"
+    :class="[
+      'flex cursor-pointer flex-col gap-2 rounded-xl p-4',
+      'bg-elevated transition-colors hover:bg-accented',
+    ]"
     @click.left.exact.prevent="preview.open()"
   >
-    <div class="flex min-w-0 flex-auto flex-col">
-      <div class="line-clamp-1 text-base font-bold">
-        {{ feature.name }}
-      </div>
+    <div class="min-w-0">
+      <RatingWidget
+        class="float-right clear-right align-text-top"
+        section="ROADMAP"
+        :url="feature.url"
+        :initial="feature.rating"
+        size="small"
+      />
 
-      <div class="line-clamp-4">
-        {{ feature.preview || 'Краткое описание не добавлено' }}
-      </div>
+      <span class="line-clamp-2 inline text-base leading-5 font-bold">
+        {{ feature.name }}
+      </span>
     </div>
 
-    <RatingWidget
-      section="ROADMAP"
-      :url="feature.url"
-      :initial="feature.rating"
-    />
+    <div class="line-clamp-4">
+      {{ feature.preview || 'Краткое описание не добавлено' }}
+    </div>
   </div>
 </template>
