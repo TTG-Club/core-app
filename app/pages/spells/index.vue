@@ -2,7 +2,8 @@
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
   import { SpellLegend } from '~spells/legend';
-  import { SpellsGroupedList } from '~spells/list';
+  import { SpellLink } from '~spells/link';
+  import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
@@ -86,9 +87,14 @@
           />
         </PageGrid>
 
-        <SpellsGroupedList
+        <GroupedList
           v-else-if="status === 'success' && spells?.length"
-          :spells="spells"
+          :items="spells"
+          group-by="level"
+          separator-label="Уровень {value}"
+          :item-component="SpellLink"
+          item-prop="spell"
+          :sort-fn="(a, b) => Number(a) - Number(b)"
         />
 
         <PageResult

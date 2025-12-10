@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { FilterControls } from '~filter/controls';
-  import { ItemsGroupedList } from '~items/list';
+  import { ItemLink } from '~items/link';
+  import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
@@ -84,9 +85,12 @@
           />
         </PageGrid>
 
-        <ItemsGroupedList
+        <GroupedList
           v-else-if="status === 'success' && items?.length"
           :items="items"
+          group-by="category"
+          :item-component="ItemLink"
+          item-prop="item"
         />
 
         <PageResult

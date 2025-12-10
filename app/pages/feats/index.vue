@@ -1,7 +1,8 @@
 <script setup lang="ts">
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
-  import { FeatsGroupedList } from '~feats/list';
+  import { FeatLink } from '~feats/link';
+  import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
@@ -82,9 +83,12 @@
           />
         </PageGrid>
 
-        <FeatsGroupedList
+        <GroupedList
           v-else-if="status === 'success' && feats?.length"
-          :feats="feats"
+          :items="feats"
+          group-by="category"
+          :item-component="FeatLink"
+          item-prop="feat"
         />
 
         <PageResult

@@ -2,7 +2,8 @@
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
   import { MagicItemLegend } from '~magic-items/legend';
-  import { MagicItemsGroupedList } from '~magic-items/list';
+  import { MagicItemLink } from '~magic-items/link';
+  import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
@@ -87,9 +88,12 @@
           />
         </PageGrid>
 
-        <MagicItemsGroupedList
+        <GroupedList
           v-else-if="status === 'success' && magicItems?.length"
-          :magic-items="magicItems"
+          :items="magicItems"
+          group-by="rarity"
+          :item-component="MagicItemLink"
+          item-prop="magicItem"
         />
 
         <PageResult
