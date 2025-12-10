@@ -1,7 +1,7 @@
 <template>
   <NuxtLink
     :class="$style.card"
-    class="relative min-h-[140px] rounded-lg p-6 shadow-lg"
+    class="relative flex rounded-lg p-6 shadow-lg"
     target="_blank"
     to="../roadmap"
   >
@@ -14,8 +14,6 @@
 <style lang="scss" module>
   .card {
     overflow: hidden;
-    display: flex;
-    flex: 1 1 100%;
     flex-direction: column;
     gap: 12px;
 
