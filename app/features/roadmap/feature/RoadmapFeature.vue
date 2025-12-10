@@ -17,7 +17,7 @@
 <template>
   <div
     :class="[
-      'flex cursor-pointer flex-col gap-2 rounded-xl p-2',
+      'flex cursor-pointer flex-col gap-2 rounded-xl p-4',
       'bg-elevated transition-colors hover:bg-accented',
     ]"
     @click.left.exact.prevent="preview.open()"
