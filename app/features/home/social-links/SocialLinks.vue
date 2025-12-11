@@ -1,70 +1,47 @@
 <script setup lang="ts">
   import { SOCIAL_LINKS } from './model';
+  import Color from 'colorjs.io';
+
+  const links = computed(() =>
+    SOCIAL_LINKS.map((link) => {
+      const baseColor = new Color(link.color);
+      const borderColor = baseColor.clone();
+
+      borderColor.oklch.l = 0.45;
+      borderColor.oklch.c = 0.12;
+
+      return {
+        ...link,
+        borderColor: !link.disabled ? borderColor.toString() : undefined,
+      };
+    }),
+  );
 </script>
 
 <template>
   <div class="flex w-full flex-col gap-3">
     <NuxtLink
-      v-for="(link, index) in SOCIAL_LINKS"
+      v-for="(link, index) in links"
       :key="index"
       :to="link.url"
-      :class="[$style.card, { [$style.disabled]: link.disable }]"
-      :style="{ backgroundColor: link.backgroundColor }"
-      class="shadow-lg"
+      :class="[
+        'flex items-center justify-center gap-2',
+        'h-12 overflow-hidden no-underline shadow-lg',
+        `rounded-md border border-default`,
+        'bg-muted hover:bg-elevated',
+        'transition-colors duration-200',
+        { 'pointer-events-none opacity-50': link.disabled },
+      ]"
+      :style="{ borderColor: link.borderColor }"
       target="_blank"
     >
       <UIcon
+        :style="{ color: !link.disabled ? link.color : undefined }"
         :name="link.icon"
-        size="20"
+        size="24"
       />
 
-      <span :class="$style.name">{{ link.name }}</span>
+      <span class="font-semibold">{{ link.name }}</span>
     </NuxtLink>
   </div>
 </template>
-
-<style lang="scss" module>
-  .card {
-    position: relative;
-
-    overflow: hidden;
-    display: flex;
-    flex-direction: row;
-    gap: 8px;
-    align-items: center;
-    justify-content: center;
-
-    height: 48px;
-    padding: 0 12px;
-    border: 1px solid var(--ui-border);
-    border-radius: 10px;
-
-    color: #ffffff;
-    text-decoration: none;
-
-    &:hover {
-      color: #ffffff;
-
-      .name {
-        font-size: 18px;
-        transition: all 200ms;
-      }
-    }
-
-    &.disabled {
-      pointer-events: none;
-      opacity: 0.4;
-    }
-
-    .name {
-      font-weight: 600;
-      transition: all 200ms;
-    }
-
-    .icon,
-    svg {
-      width: 24px;
-      height: 24px;
-    }
-  }
-</style>

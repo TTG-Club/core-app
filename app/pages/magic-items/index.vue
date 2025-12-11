@@ -3,6 +3,7 @@
   import { FilterControls } from '~filter/controls';
   import { MagicItemLegend } from '~magic-items/legend';
   import { MagicItemLink } from '~magic-items/link';
+  import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
@@ -87,16 +88,15 @@
           />
         </PageGrid>
 
-        <PageGrid
+        <GroupedList
           v-else-if="status === 'success' && magicItems?.length"
-          :columns="3"
+          :items="magicItems"
+          field="rarity"
         >
-          <MagicItemLink
-            v-for="magicItem in magicItems"
-            :key="magicItem.url"
-            :magic-item="magicItem"
-          />
-        </PageGrid>
+          <template #default="{ item }">
+            <MagicItemLink :magic-item="item" />
+          </template>
+        </GroupedList>
 
         <PageResult
           v-else

@@ -3,6 +3,7 @@
   import { FilterControls } from '~filter/controls';
   import { SpellLegend } from '~spells/legend';
   import { SpellLink } from '~spells/link';
+  import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
@@ -86,16 +87,18 @@
           />
         </PageGrid>
 
-        <PageGrid
+        <GroupedList
           v-else-if="status === 'success' && spells?.length"
-          :columns="3"
+          :items="spells"
+          :separator-label="
+            (value) => (!value ? 'Заговоры' : 'Уровень {value}')
+          "
+          field="level"
         >
-          <SpellLink
-            v-for="spell in spells"
-            :key="spell.url"
-            :spell="spell"
-          />
-        </PageGrid>
+          <template #default="{ item }">
+            <SpellLink :spell="item" />
+          </template>
+        </GroupedList>
 
         <PageResult
           v-else

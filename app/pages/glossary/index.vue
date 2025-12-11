@@ -2,6 +2,7 @@
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
   import { GlossaryLink } from '~glossary/link';
+  import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
@@ -82,16 +83,15 @@
           />
         </PageGrid>
 
-        <PageGrid
+        <GroupedList
           v-else-if="status === 'success' && glossaryItems?.length"
-          :columns="3"
+          :items="glossaryItems"
+          field="tagCategory"
         >
-          <GlossaryLink
-            v-for="item in glossaryItems"
-            :key="item.url"
-            :glossary="item"
-          />
-        </PageGrid>
+          <template #default="{ item }">
+            <GlossaryLink :glossary="item" />
+          </template>
+        </GroupedList>
 
         <PageResult
           v-else

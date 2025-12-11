@@ -36,6 +36,7 @@
     "@vueuse/nuxt": "^14.0.0",
     "@vueuse/shared": "^14.0.0",
     "bytes": "^3.1.2",
+    "colorjs.io": "^0.5.2",
     "consola": "^3.4.2",
     "dayjs": "^1.11.18",
     "dice-roller-parser": "^0.1.8",
