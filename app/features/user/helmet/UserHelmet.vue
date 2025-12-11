@@ -101,7 +101,7 @@
     <UButton
       :loading="isLoading"
       variant="ghost"
-      icon="i-fluent-person-16-regular"
+      icon="i-ttg-profile-helmet-outline"
       size="xl"
       color="neutral"
       @click.left.exact.prevent="onClick"
@@ -118,7 +118,7 @@
     <UButton
       :loading="isLoading"
       variant="ghost"
-      icon="i-fluent-person-16-filled"
+      icon="i-ttg-profile-helmet-filled"
       size="xl"
       color="neutral"
     />

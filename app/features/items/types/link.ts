@@ -5,5 +5,4 @@ export interface ItemLinkResponse {
   name: NameResponse;
   source: SourceResponse;
   cost: string;
-  category?: string;
 }

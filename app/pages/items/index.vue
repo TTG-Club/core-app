@@ -88,7 +88,6 @@
         <GroupedList
           v-else-if="status === 'success' && items?.length"
           :items="items"
-          group-by="category"
         >
           <template #default="{ item }">
             <ItemLink :item="item" />

@@ -1,31 +1,29 @@
-<script setup lang="ts" generic="T extends object">
+<script setup lang="ts" generic="T extends { url: string }">
   import { groupBy, isNumber, sortBy, upperFirst } from 'lodash-es';
   import { PageGrid } from '~ui/page';
 
   interface Props {
     items: Array<T>;
-    groupBy: keyof T;
+    field?: keyof T;
     separatorLabel?: string | ((value: string | number) => string);
     columns?: 1 | 2 | 3 | 4 | 5 | 6;
   }
 
   const {
     items,
-    groupBy: groupByField,
-    separatorLabel,
+    field = undefined,
+    separatorLabel = undefined,
     columns = 3,
   } = defineProps<Props>();
 
   const groupedItems = computed(() => {
-    if (!items?.length) {
+    if (!items?.length || !field) {
       return [];
     }
 
-    const grouped = groupBy(items, groupByField);
+    const grouped = groupBy(items, field);
 
-    const keys = Object.keys(grouped);
-
-    const sortedKeys = sortBy(keys, (key) => {
+    const keys = Object.keys(grouped).map((key) => {
       const numValue = Number(key);
 
       if (isNumber(numValue) && !Number.isNaN(numValue)) {
@@ -35,15 +33,12 @@
       return key;
     });
 
-    return sortedKeys.map((key) => {
-      const numValue = Number(key);
+    const sortedKeys = sortBy(keys);
 
-      return {
-        key,
-        value: isNumber(numValue) && !Number.isNaN(numValue) ? numValue : key,
-        items: grouped[key],
-      };
-    });
+    return sortedKeys.map((key) => ({
+      key,
+      items: grouped[key],
+    }));
   });
 
   function getSeparatorText(value: string | number): string {
@@ -52,7 +47,7 @@
     if (!separatorLabel) {
       text = String(value);
     } else if (typeof separatorLabel === 'function') {
-      text = separatorLabel(value);
+      text = separatorLabel(value).replace('{value}', String(value));
     } else {
       text = separatorLabel.replace('{value}', String(value));
     }
@@ -62,20 +57,34 @@
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
+  <PageGrid
+    v-if="!field"
+    :columns="columns"
+  >
+    <slot
+      v-for="item in items"
+      :key="item.url"
+      :item="item"
+    />
+  </PageGrid>
+
+  <div
+    v-else
+    class="flex flex-col gap-6"
+  >
     <div
       v-for="group in groupedItems"
       :key="group.key"
       class="flex flex-col gap-4"
     >
       <USeparator>
-        {{ getSeparatorText(group.value) }}
+        {{ getSeparatorText(group.key) }}
       </USeparator>
 
       <PageGrid :columns="columns">
         <slot
-          v-for="(item, index) in group.items"
-          :key="String((item as { url?: string }).url ?? index)"
+          v-for="item in group.items"
+          :key="item.url"
           :item="item"
         />
       </PageGrid>

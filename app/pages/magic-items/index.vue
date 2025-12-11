@@ -91,7 +91,7 @@
         <GroupedList
           v-else-if="status === 'success' && magicItems?.length"
           :items="magicItems"
-          group-by="rarity"
+          field="rarity"
         >
           <template #default="{ item }">
             <MagicItemLink :magic-item="item" />

@@ -84,8 +84,8 @@
         <GroupedList
           v-else-if="status === 'success' && bestiary?.length"
           :items="bestiary"
-          group-by="challengeRailing"
           separator-label="Уровень опасности {value}"
+          field="challengeRailing"
         >
           <template #default="{ item }">
             <CreatureLink :creature="item" />
