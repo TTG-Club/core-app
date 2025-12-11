@@ -87,9 +87,7 @@
           group-by="challengeRailing"
           separator-label="Уровень опасности {value}"
         >
-          <template
-            #default="{ item }"
-          >
+          <template #default="{ item }">
             <CreatureLink :creature="item" />
           </template>
         </GroupedList>

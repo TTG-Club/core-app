@@ -93,9 +93,7 @@
           :items="magicItems"
           group-by="rarity"
         >
-          <template
-            #default="{ item }"
-          >
+          <template #default="{ item }">
             <MagicItemLink :magic-item="item" />
           </template>
         </GroupedList>

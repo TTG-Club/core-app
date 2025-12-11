@@ -88,9 +88,7 @@
           :items="glossaryItems"
           group-by="tagCategory"
         >
-          <template
-            #default="{ item }"
-          >
+          <template #default="{ item }">
             <GlossaryLink :glossary="item" />
           </template>
         </GroupedList>

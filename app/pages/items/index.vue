@@ -90,9 +90,7 @@
           :items="items"
           group-by="category"
         >
-          <template
-            #default="{ item }"
-          >
+          <template #default="{ item }">
             <ItemLink :item="item" />
           </template>
         </GroupedList>

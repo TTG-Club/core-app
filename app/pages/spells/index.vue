@@ -93,9 +93,7 @@
           group-by="level"
           separator-label="Уровень {value}"
         >
-          <template
-            #default="{ item }"
-          >
+          <template #default="{ item }">
             <SpellLink :spell="item" />
           </template>
         </GroupedList>

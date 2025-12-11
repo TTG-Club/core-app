@@ -88,9 +88,7 @@
           :items="feats"
           group-by="category"
         >
-          <template
-            #default="{ item }"
-          >
+          <template #default="{ item }">
             <FeatLink :feat="item" />
           </template>
         </GroupedList>
