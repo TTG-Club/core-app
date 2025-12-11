@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { BookLink, SelectOptionWithShortName } from '~/shared/types';
+  import type { SourceLink, SelectOptionWithShortName } from '~/shared/types';
 
   const { multiple = false, disabled } = defineProps<{
     disabled?: boolean;
@@ -11,16 +11,19 @@
   const { data, status, refresh } = await useAsyncData<
     Array<SelectOptionWithShortName>
   >(
-    'books',
+    'sources',
     async () => {
-      const bookLinks = await $fetch<Array<BookLink>>('/api/v2/books/search', {
-        method: 'post',
-      });
+      const sourceLinks = await $fetch<Array<SourceLink>>(
+        '/api/v2/source/search',
+        {
+          method: 'post',
+        },
+      );
 
-      return bookLinks.map((book) => ({
-        label: `${book.name.rus} [${book.name.eng}]`,
-        value: book.url,
-        shortName: book.name.label,
+      return sourceLinks.map((source) => ({
+        label: `${source.name.rus} [${source.name.eng}]`,
+        value: source.url,
+        shortName: source.name.label,
       }));
     },
     { dedupe: 'defer' },

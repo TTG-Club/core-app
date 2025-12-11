@@ -1,39 +1,34 @@
 <script setup lang="ts">
   import { isUndefined } from 'lodash-es';
+  import type { RatingValue } from './types';
+  import { UIcon } from '#components';
 
-  const { section, url } = defineProps<{
+  const {
+    section,
+    url,
+    initial = undefined,
+    size = 'medium',
+  } = defineProps<{
     section: string;
     url: string;
+    initial?: RatingValue;
+    size?: 'small' | 'medium';
   }>();
 
-  const isTooltipShown = refAutoReset(false, 3000);
-  const tooltipMessage = ref<string>();
-  const tooltipType = ref<'success' | 'error'>();
+  const $toast = useToast();
 
   function showSuccess(msg: string) {
-    tooltipType.value = 'success';
-
-    showTooltip(msg);
+    $toast.add({
+      color: 'success',
+      title: msg,
+    });
   }
 
   function showError(msg: string) {
-    tooltipType.value = 'error';
-
-    showTooltip(msg);
-  }
-
-  function showTooltip(msg: string) {
-    tooltipMessage.value = msg;
-    isTooltipShown.value = true;
-  }
-
-  function clearMessage(visibility: boolean) {
-    if (visibility) {
-      return;
-    }
-
-    tooltipMessage.value = undefined;
-    tooltipType.value = undefined;
+    $toast.add({
+      color: 'error',
+      title: msg,
+    });
   }
 
   const hoverRating = ref<number>();
@@ -41,13 +36,19 @@
   const { data: rating, refresh } = await useAsyncData(
     `rating-${section}-${url}`,
     () =>
-      $fetch<{ value: number; total: number }>('/api/v2/rating', {
+      $fetch<RatingValue>('/api/v2/rating', {
         params: {
           section: section,
           url: url,
         },
       }),
-    { watch: [() => url, () => section] },
+    {
+      watch: [() => url, () => section],
+      lazy: true,
+      dedupe: 'defer',
+      immediate: !initial,
+      default: () => initial,
+    },
   );
 
   const safeRating = computed(() => rating.value?.value ?? 0);
@@ -63,7 +64,7 @@
   }
 
   function getRating(star: number, part: number) {
-    return Math.round((star - 1 + part * 0.25) * 4) / 4;
+    return Math.round((star + (part + 1) * 0.25) * 4) / 4;
   }
 
   function rate(star: number, part: number) {
@@ -98,155 +99,75 @@
       },
     });
   }
+
+  const StarsRow = () =>
+    h(
+      'div',
+      {
+        class: 'flex gap-1',
+        onMouseleave: () => (hoverRating.value = undefined),
+      },
+      Array.from({ length: 5 }, (_star, star) =>
+        h(
+          'div',
+          { class: 'cursor-pointer flex size-5' },
+          Array.from({ length: 4 }, (_part, part) =>
+            h(
+              'div',
+              {
+                class: [
+                  'relative overflow-hidden w-1/4 h-full',
+                  'transition-colors duration-100',
+                  isHighlighted(star, part) ? 'text-highlight' : 'text-hover',
+                ],
+                onClick: withModifiers(
+                  () => rate(star, part),
+                  ['left', 'exact', 'prevent', 'stop'],
+                ),
+                onMouseover: () => (hoverRating.value = getRating(star, part)),
+              },
+              h(UIcon, {
+                class: 'absolute top-0 duration-100',
+                style: {
+                  left: `${part * -5}px`,
+                },
+                name: 'i-fluent-star-16-filled',
+                size: 20,
+              }),
+            ),
+          ),
+        ),
+      ),
+    );
 </script>
 
 <template>
-  <div :class="$style.rating">
+  <div
+    v-if="size === 'medium'"
+    :class="[
+      'flex shrink-0 flex-col justify-between gap-2',
+      'h-28 w-full rounded-md bg-hover p-4 @md:max-w-50',
+    ]"
+  >
     <span><b>Рейтинг</b></span>
 
-    <div :class="$style.block">
-      <UTooltip
-        :text="tooltipMessage"
-        :open="isTooltipShown"
-        :color="`var(--color-${tooltipType})`"
-        @open-change="clearMessage"
-      >
-        <div
-          :class="$style.stars"
-          @mouseleave="hoverRating = undefined"
-        >
-          <div
-            v-for="star in 5"
-            :key="star"
-            :class="$style.star"
-          >
-            <div
-              v-for="part in 4"
-              :key="part"
-              :class="[
-                $style.part,
-                { [$style.highlight]: isHighlighted(star, part) },
-              ]"
-              @mouseover="hoverRating = getRating(star, part)"
-              @click.left.exact.prevent="rate(star, part)"
-            >
-              <UIcon
-                :class="$style.icon"
-                name="i-fluent-star-16-filled"
-                size="20"
-              />
-            </div>
-          </div>
-        </div>
-      </UTooltip>
+    <div class="flex items-center justify-between gap-1">
+      <StarsRow />
 
-      <div :class="$style.result">{{ safeRating }}</div>
+      <div
+        class="text-accent shrink-0 rounded-md bg-hover px-2 text-base leading-8 font-medium"
+      >
+        {{ safeRating }}
+      </div>
     </div>
 
-    <div :class="$style.total">Оценок: {{ rating?.total || 0 }}</div>
+    <div class="text-xs">Оценок: {{ rating?.total || 0 }}</div>
+  </div>
+
+  <div
+    v-else-if="size === 'small'"
+    class="shrink-0"
+  >
+    <StarsRow />
   </div>
 </template>
-
-<style module lang="scss">
-  @use 'sass:math';
-
-  .rating {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    justify-content: space-between;
-
-    width: 100%;
-    height: 110px;
-    padding: 12px 12px;
-    border-radius: 8px;
-
-    background: var(--color-hover);
-
-    @container (width > 600px) {
-      max-width: 200px;
-    }
-  }
-
-  .stars {
-    display: flex;
-    gap: 4px;
-
-    .star {
-      cursor: pointer;
-      display: flex;
-      width: 20px;
-      height: 20px;
-    }
-
-    .part {
-      position: relative;
-
-      overflow: hidden;
-
-      width: 25%;
-      height: 100%;
-
-      color: var(--color-hover);
-
-      & {
-        @include css-anim($time: 0.1s);
-      }
-
-      @for $i from 1 through 4 {
-        &:nth-child(#{ $i }) {
-          $index: $i - 1;
-          $part: math.div(20, -4);
-          $delta: $index * $part;
-
-          .icon {
-            left: #{$delta}px;
-          }
-        }
-      }
-
-      .icon {
-        position: absolute;
-        top: 0;
-
-        & {
-          @include css-anim($time: 0.1s);
-        }
-      }
-
-      &.highlight {
-        color: var(--ui-text-bold);
-      }
-    }
-  }
-
-  .field {
-    flex: 1 1 100%;
-  }
-
-  .block {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .result {
-    display: flex;
-    flex-shrink: 0;
-    align-items: flex-end;
-
-    padding: 0 8px;
-    border-radius: 8px;
-
-    font-size: 16px;
-    font-weight: 500;
-    line-height: 32px;
-    color: var(--ui-text-bold);
-
-    background: var(--color-hover);
-  }
-  .total {
-    font-size: 12px;
-  }
-</style>

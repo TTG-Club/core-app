@@ -17,6 +17,7 @@
     SelectLineage,
     SelectSubclass,
     SelectClass,
+    SelectCondition,
   } from '~ui/select';
 
   import type { SpellCreate } from '~/shared/types';
@@ -56,6 +57,7 @@
       savingThrow: [],
       healingType: [],
       damageType: [],
+      condition: [],
     };
   }
 
@@ -123,7 +125,7 @@
         <UFormField
           label="Типы урона"
           name="damageType"
-          class="col-span-8"
+          class="col-span-6"
         >
           <SelectDamageType
             v-model="state.damageType"
@@ -132,7 +134,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-8"
+          class="col-span-6"
           label="Спасброски"
           name="savingThrow"
         >
@@ -143,7 +145,18 @@
         </UFormField>
 
         <UFormField
-          class="col-span-8"
+          label="Состояния"
+          name="condition"
+          class="col-span-6"
+        >
+          <SelectCondition
+            v-model="state.condition"
+            multiple
+          />
+        </UFormField>
+
+        <UFormField
+          class="col-span-6"
           label="Типы лечения"
           name="healingType"
         >

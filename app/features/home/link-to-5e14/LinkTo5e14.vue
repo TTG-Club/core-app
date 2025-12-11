@@ -1,6 +1,6 @@
 <template>
   <NuxtLink
-    to="https://ttg.club/"
+    to="https://5e14.ttg.club/"
     :class="$style.card"
     class="shadow-lg"
     target="_blank"

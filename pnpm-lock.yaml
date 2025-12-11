@@ -23,6 +23,9 @@ importers:
       '@nuxt/fonts':
         specifier: ^0.11.4
         version: 0.11.4(@netlify/blobs@9.1.2)(db0@0.3.4)(ioredis@5.8.2)(magicast@0.3.5)(vite@7.1.12(@types/node@24.9.1)(jiti@2.6.1)(lightningcss@1.30.2)(sass-embedded@1.93.2)(sass@1.93.2)(terser@5.44.0)(yaml@2.8.1))
+      '@nuxt/icon':
+        specifier: ^2.1.0
+        version: 2.1.0(magicast@0.3.5)(vite@7.1.12(@types/node@24.9.1)(jiti@2.6.1)(lightningcss@1.30.2)(sass-embedded@1.93.2)(sass@1.93.2)(terser@5.44.0)(yaml@2.8.1))(vue@3.5.22(typescript@5.9.3))
       '@nuxt/image':
         specifier: ^1.11.0
         version: 1.11.0(@netlify/blobs@9.1.2)(db0@0.3.4)(ioredis@5.8.2)(magicast@0.3.5)
@@ -59,6 +62,9 @@ importers:
       bytes:
         specifier: ^3.1.2
         version: 3.1.2
+      colorjs.io:
+        specifier: ^0.5.2
+        version: 0.5.2
       consola:
         specifier: ^3.4.2
         version: 3.4.2

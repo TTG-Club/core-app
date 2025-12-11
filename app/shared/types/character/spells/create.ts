@@ -14,6 +14,7 @@ export interface SpellCreate extends EditorBaseInfoState {
   savingThrow: Array<AbilityKey> | undefined;
   healingType: Array<string> | undefined;
   damageType: Array<string> | undefined;
+  condition: Array<string> | undefined; // накладываемые состояния
 }
 
 export interface SpellRange {
