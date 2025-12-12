@@ -51,6 +51,18 @@
       </template>
 
       <UFormField
+        label="Акроним"
+        help="Акроним генерируется автоматически при вводе английского названия"
+        name="acronym"
+        required
+      >
+        <UInput
+          v-model="state.acronym"
+          disabled
+        />
+      </UFormField>
+
+      <UFormField
         label="Тип источника"
         name="type"
         required
@@ -70,14 +82,24 @@
       </UFormField>
 
       <UFormField
-        label="Акроним"
-        help="Акроним генерируется автоматически при вводе английского названия"
-        name="acronym"
+        label="Перевод"
+        name="published"
         required
       >
         <UInput
-          v-model="state.acronym"
-          disabled
+          v-model="state.published"
+          placeholder="Введи переводчиков"
+        />
+      </UFormField>
+
+      <UFormField
+        label="Дата перевода"
+        name="published"
+        required
+      >
+        <UInput
+          v-model="state.published"
+          placeholder="ДД.MM.ГГГГ"
         />
       </UFormField>
     </UCard>

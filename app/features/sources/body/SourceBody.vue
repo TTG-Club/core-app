@@ -2,15 +2,23 @@
   import { DescriptionsBlock } from './ui';
   import type { SourceDetailResponse } from '~/features/sources/types';
   import { StatsBlock } from '~sources/body/ui';
+  import { UiGallery } from '~ui/gallery';
 
-  defineProps<{
+  const { source, hideGallery = false } = defineProps<{
     source: SourceDetailResponse;
+    hideGallery?: boolean;
   }>();
 </script>
 
 <template>
   <div :class="$style.container">
     <div :class="$style.body">
+      <UiGallery
+        v-if="!hideGallery && source.image"
+        :preview="source.image"
+        class="min-w-25 @min-xl:@max-3xl:max-w-50"
+      />
+
       <div class="flex w-full flex-col gap-3 @min-[800px]:max-w-80">
         <StatsBlock
           :type="source.type"
