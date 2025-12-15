@@ -60,14 +60,13 @@
       <div
         :class="[
           'absolute inset-0',
-          'bg-gradient-to-t from-muted to-transparent to-50%',
+          'bg-linear-to-t from-muted to-transparent to-50%',
           'transition-all duration-300 @md:group-hover:top-full',
-          '@max-md:bg-gradient-to-l',
+          '@max-md:bg-linear-to-l',
         ]"
       />
 
       <SourceTag
-        v-if="source"
         :source="source"
         class="absolute top-2 right-2"
       />
@@ -99,7 +98,7 @@
           </span>
 
           <SourceTag
-            v-if="source && isImageHidden"
+            v-if="isImageHidden"
             :source="source"
           />
         </div>

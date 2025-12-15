@@ -1,10 +1,5 @@
 <script setup lang="ts">
-  import {
-    SpeciesLinkPreview,
-    SpeciesFeatures,
-    SpeciesSizes,
-    SpeciesSpeed,
-  } from './ui';
+  import { SpeciesFeatures, SpeciesSizes, SpeciesSpeed } from './ui';
 
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectCreatureType, SelectSpecies } from '~ui/select';
@@ -172,12 +167,29 @@
             max-size="256"
           >
             <template #preview>
-              <SpeciesLinkPreview
-                :name="state.name"
-                :url="state.url"
-                :image="state.linkImage"
-                :source="state.source"
-              />
+              <NuxtImg
+                v-slot="{ src, isLoaded, imgAttrs }"
+                :key="state.image"
+                :src="state.image"
+                custom
+              >
+                <!-- Show the actual image when loaded -->
+                <img
+                  v-if="isLoaded"
+                  v-bind="imgAttrs"
+                  class="aspect-square w-full rounded-lg object-cover"
+                  :src="src"
+                  :alt="state.name.rus"
+                />
+
+                <!-- Show a placeholder while loading -->
+                <img
+                  v-else
+                  class="w-full rounded-lg object-contain"
+                  src="/img/no-img.webp"
+                  alt="no image"
+                />
+              </NuxtImg>
             </template>
           </UploadImage>
         </UFormField>

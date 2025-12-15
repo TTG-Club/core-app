@@ -6,13 +6,13 @@
     showGroup = false,
     showTooltip = false,
   } = defineProps<{
-    source: SourceResponse;
+    source: SourceResponse | undefined;
     showGroup?: boolean;
     showTooltip?: boolean;
   }>();
 
   const color = computed(() => {
-    switch (source.group.label?.toLowerCase()) {
+    switch (source?.group.label?.toLowerCase()) {
       case '3rd':
         return 'secondary';
       case 'hb':
@@ -24,8 +24,12 @@
 </script>
 
 <template>
-  <div class="flex gap-1">
+  <div
+    v-if="source?.name || source?.group"
+    class="flex gap-1"
+  >
     <UTooltip
+      v-if="source?.name"
       :text="`${source.name.rus} [${source.name.eng}]`"
       :disabled="!showTooltip"
     >
@@ -39,7 +43,7 @@
     </UTooltip>
 
     <UTooltip
-      v-if="showGroup"
+      v-if="source?.group && showGroup"
       :text="source.group.rus"
       :disabled="!showTooltip"
     >

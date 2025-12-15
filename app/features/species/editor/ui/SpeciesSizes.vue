@@ -61,13 +61,20 @@
       label="Высота от"
       name="from"
     >
-      <UInputNumber
-        v-model="size.from"
-        :min="0"
-        placeholder="Введи минимальную высоту"
-      >
-        <template #trailing> фт. </template>
-      </UInputNumber>
+      <UFieldGroup>
+        <UInputNumber
+          v-model="size.from"
+          :min="0"
+          placeholder="Введи минимальную высоту"
+        />
+
+        <UBadge
+          color="neutral"
+          variant="subtle"
+        >
+          фт.
+        </UBadge>
+      </UFieldGroup>
     </UFormField>
 
     <UFormField
@@ -75,13 +82,20 @@
       name="to"
       class="col-span-6"
     >
-      <UInputNumber
-        v-model="size.to"
-        :min="0"
-        placeholder="Введи максимальную высоту"
-      >
-        <template #trailing> фт. </template>
-      </UInputNumber>
+      <UFieldGroup>
+        <UInputNumber
+          v-model="size.to"
+          :min="0"
+          placeholder="Введи максимальную высоту"
+        />
+
+        <UBadge
+          color="neutral"
+          variant="subtle"
+        >
+          фт.
+        </UBadge>
+      </UFieldGroup>
     </UFormField>
 
     <EditorArrayControls
