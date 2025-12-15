@@ -166,7 +166,6 @@ export default defineNuxtConfig({
   },
 
   image: {
-    optimize: false,
     provider: 'beget',
     providers: {
       beget: {

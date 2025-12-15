@@ -81,25 +81,27 @@
 
 <template>
   <div class="flex gap-2 lg:flex-col lg:gap-4">
-    <UInput
-      v-model="localSearch"
-      placeholder="Введите текст..."
-      allow-clear
-      :ui="{ trailing: 'pe-0.5' }"
-    >
-      <template
-        v-if="localSearch"
-        #trailing
+    <UFieldGroup>
+      <UInput
+        v-model="localSearch"
+        placeholder="Введите текст..."
+        allow-clear
+        :ui="{ trailing: 'pe-0.5' }"
       >
-        <UButton
-          icon="i-ttg-x"
-          variant="link"
-          color="neutral"
-          size="sm"
-          @click.left.exact.prevent="localSearch = ''"
-        />
-      </template>
-    </UInput>
+        <template
+          v-if="localSearch"
+          #trailing
+        >
+          <UButton
+            icon="i-ttg-x"
+            variant="link"
+            color="neutral"
+            size="sm"
+            @click.left.exact.prevent="localSearch = ''"
+          />
+        </template>
+      </UInput>
+    </UFieldGroup>
 
     <div class="flex gap-2">
       <UChip

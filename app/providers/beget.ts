@@ -1,7 +1,7 @@
-import type { ProviderGetImage } from '@nuxt/image';
+import { defineProvider } from '@nuxt/image/runtime';
 
-export const getImage: ProviderGetImage = (url) => {
-  return {
-    url,
-  };
-};
+export default defineProvider({
+  getImage(src) {
+    return { url: src };
+  },
+});

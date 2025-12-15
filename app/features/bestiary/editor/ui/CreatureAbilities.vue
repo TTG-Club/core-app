@@ -42,16 +42,21 @@
           :label="ability.label"
           :name="ability.shortKey + '.value'"
         >
-          <UInputNumber
-            v-model="model[ability.shortKey].value"
-            :precision="0"
-            :min="0"
-            :max="30"
-          >
-            <template #trailing>
+          <UFieldGroup>
+            <UInputNumber
+              v-model="model[ability.shortKey].value"
+              :precision="0"
+              :min="0"
+              :max="30"
+            />
+
+            <UBadge
+              color="neutral"
+              variant="subtle"
+            >
               {{ getFormattedModifier(model[ability.shortKey].value) }}
-            </template>
-          </UInputNumber>
+            </UBadge>
+          </UFieldGroup>
         </UFormField>
       </UForm>
 

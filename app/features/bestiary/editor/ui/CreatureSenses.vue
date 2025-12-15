@@ -47,14 +47,21 @@
           name="darkvision"
           class="col-span-5"
         >
-          <UInputNumber
-            v-model="model.darkvision"
-            :min="0"
-            :precision="0"
-            placeholder="В фт."
-          >
-            <template #trailing> фт. </template>
-          </UInputNumber>
+          <UFieldGroup>
+            <UInputNumber
+              v-model="model.darkvision"
+              :min="0"
+              :precision="0"
+              placeholder="В фт."
+            />
+
+            <UBadge
+              color="neutral"
+              variant="subtle"
+            >
+              фт.
+            </UBadge>
+          </UFieldGroup>
         </UFormField>
 
         <UFormField
@@ -62,14 +69,21 @@
           name="truesight"
           class="col-span-5"
         >
-          <UInputNumber
-            v-model="model.truesight"
-            :min="0"
-            :precision="0"
-            placeholder="В фт."
-          >
-            <template #trailing> фт. </template>
-          </UInputNumber>
+          <UFieldGroup>
+            <UInputNumber
+              v-model="model.truesight"
+              :min="0"
+              :precision="0"
+              placeholder="В фт."
+            />
+
+            <UBadge
+              color="neutral"
+              variant="subtle"
+            >
+              фт.
+            </UBadge>
+          </UFieldGroup>
         </UFormField>
 
         <UFormField
@@ -77,14 +91,21 @@
           name="blindsight"
           class="col-span-5"
         >
-          <UInputNumber
-            v-model="model.blindsight"
-            :min="0"
-            :precision="0"
-            placeholder="В фт."
-          >
-            <template #trailing> фт. </template>
-          </UInputNumber>
+          <UFieldGroup>
+            <UInputNumber
+              v-model="model.blindsight"
+              :min="0"
+              :precision="0"
+              placeholder="В фт."
+            />
+
+            <UBadge
+              color="neutral"
+              variant="subtle"
+            >
+              фт.
+            </UBadge>
+          </UFieldGroup>
         </UFormField>
 
         <UFormField
@@ -92,14 +113,21 @@
           name="tremorsense"
           class="col-span-5"
         >
-          <UInputNumber
-            v-model="model.tremorsense"
-            :min="0"
-            :precision="0"
-            placeholder="В фт."
-          >
-            <template #trailing> фт. </template>
-          </UInputNumber>
+          <UFieldGroup>
+            <UInputNumber
+              v-model="model.tremorsense"
+              :min="0"
+              :precision="0"
+              placeholder="В фт."
+            />
+
+            <UBadge
+              color="neutral"
+              variant="subtle"
+            >
+              фт.
+            </UBadge>
+          </UFieldGroup>
         </UFormField>
 
         <UFormField
@@ -107,12 +135,21 @@
           name="passivePerception"
           class="col-span-5"
         >
-          <UInputNumber
-            v-model="model.passivePerception"
-            :min="0"
-            :precision="0"
-            placeholder="Введите значение"
-          />
+          <UFieldGroup>
+            <UInputNumber
+              v-model="model.passivePerception"
+              :min="0"
+              :precision="0"
+              placeholder="Введите значение"
+            />
+
+            <UBadge
+              color="neutral"
+              variant="subtle"
+            >
+              фт.
+            </UBadge>
+          </UFieldGroup>
         </UFormField>
 
         <UFormField
