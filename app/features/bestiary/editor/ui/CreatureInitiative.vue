@@ -30,14 +30,21 @@
       label="Инициатива"
       name="value"
     >
-      <UInputNumber
-        v-model="model.value"
-        :precision="0"
-        placeholder="Введи инициативу"
-        :min="0"
-      >
-        <template #trailing> +{{ 10 + model.value }} </template>
-      </UInputNumber>
+      <UFieldGroup>
+        <UInputNumber
+          v-model="model.value"
+          :precision="0"
+          placeholder="Введи инициативу"
+          :min="0"
+        />
+
+        <UBadge
+          color="neutral"
+          variant="subtle"
+        >
+          +{{ 10 + model.value }}
+        </UBadge>
+      </UFieldGroup>
     </UFormField>
 
     <UFormField

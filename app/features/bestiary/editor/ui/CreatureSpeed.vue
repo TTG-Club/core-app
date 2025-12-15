@@ -72,14 +72,21 @@
             label="Скорость"
             :name="`${key}.${index}.value`"
           >
-            <UInputNumber
-              v-model="item.value"
-              :precision="0"
-              placeholder="Введи скорость"
-              :min="0"
-            >
-              <template #trailing> фт. </template>
-            </UInputNumber>
+            <UFieldGroup>
+              <UInputNumber
+                v-model="item.value"
+                :precision="0"
+                placeholder="Введи скорость"
+                :min="0"
+              />
+
+              <UBadge
+                color="neutral"
+                variant="subtle"
+              >
+                фт.
+              </UBadge>
+            </UFieldGroup>
           </UFormField>
 
           <UFormField

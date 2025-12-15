@@ -166,13 +166,7 @@ export default defineNuxtConfig({
   },
 
   image: {
-    optimize: false,
-    provider: 'beget',
-    providers: {
-      beget: {
-        provider: '~/providers/beget.ts',
-      },
-    },
+    provider: 'none',
   },
 
   // TypeScript и линтеры

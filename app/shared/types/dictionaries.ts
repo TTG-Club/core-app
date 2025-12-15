@@ -36,8 +36,7 @@ export interface SkillSelectOption extends SelectOption {
   ability: AbilityKey;
 }
 
-export interface ChallengeRatingSelectOption
-  extends SelectOptionWithNumericValue {
+export interface ChallengeRatingSelectOption extends SelectOptionWithNumericValue {
   pb: number;
 }
 
