@@ -15,66 +15,42 @@
     data: MulticlassData;
   }>();
 
-  const totalLevel = computed(
-    () => props.data.class1.level + props.data.class2.level,
+  const totalLevel = computed(() =>
+    props.data.classes.reduce((sum, c) => sum + c.level, 0),
   );
 
-  const class1Name = computed(() => {
-    if (props.data.class1.subclassUrl && props.data.class1.detail.parent) {
-      return `${props.data.class1.detail.parent.name.rus} / ${props.data.class1.detail.name.rus}`;
-    }
-
-    return props.data.class1.detail.name.rus;
-  });
-
-  const class2Name = computed(() => {
-    if (props.data.class2.subclassUrl && props.data.class2.detail.parent) {
-      return `${props.data.class2.detail.parent.name.rus} / ${props.data.class2.detail.name.rus}`;
-    }
-
-    return props.data.class2.detail.name.rus;
-  });
+  const classNames = computed(() =>
+    props.data.classes.map((c) => {
+      if (c.subclassUrl && c.detail.parent) {
+        return `${c.detail.parent.name.rus} / ${c.detail.name.rus}`;
+      }
+      return c.detail.name.rus;
+    }),
+  );
 
   // Собираем все уникальные умения из всех классов (только те, что есть в таблице)
   const allFeatures = computed(() => {
     const featuresList: Array<ClassFeature> = [];
 
-    // Добавляем умения класса 1 (только до максимального уровня класса)
-    props.data.class1.detail.features.forEach((feature) => {
-      if (feature.level <= props.data.class1.level) {
-        featuresList.push(omit(feature, 'scaling'));
+    // Добавляем умения всех классов (только до максимального уровня каждого класса)
+    props.data.classes.forEach((classItem) => {
+      classItem.detail.features.forEach((feature) => {
+        if (feature.level <= classItem.level) {
+          featuresList.push(omit(feature, 'scaling'));
 
-        if (feature.scaling) {
-          featuresList.push(
-            ...feature.scaling
-              .filter((scale) => scale.level <= props.data.class1.level)
-              .map((scale) => ({
-                key: feature.key,
-                isSubclass: feature.isSubclass,
-                ...scale,
-              })),
-          );
+          if (feature.scaling) {
+            featuresList.push(
+              ...feature.scaling
+                .filter((scale) => scale.level <= classItem.level)
+                .map((scale) => ({
+                  key: feature.key,
+                  isSubclass: feature.isSubclass,
+                  ...scale,
+                })),
+            );
+          }
         }
-      }
-    });
-
-    // Добавляем умения класса 2 (только до максимального уровня класса)
-    props.data.class2.detail.features.forEach((feature) => {
-      if (feature.level <= props.data.class2.level) {
-        featuresList.push(omit(feature, 'scaling'));
-
-        if (feature.scaling) {
-          featuresList.push(
-            ...feature.scaling
-              .filter((scale) => scale.level <= props.data.class2.level)
-              .map((scale) => ({
-                key: feature.key,
-                isSubclass: feature.isSubclass,
-                ...scale,
-              })),
-          );
-        }
-      }
+      });
     });
 
     // Убираем дубликаты по key и level, сортируем по уровню
@@ -92,27 +68,17 @@
     let thirdCasterLevel = 0;
     let hasPact = false;
 
-    // Класс 1
-    if (props.data.class1.detail.casterType === CasterType.FULL) {
-      fullCasterLevel += props.data.class1.level;
-    } else if (props.data.class1.detail.casterType === CasterType.HALF) {
-      halfCasterLevel += props.data.class1.level;
-    } else if (props.data.class1.detail.casterType === CasterType.THIRD) {
-      thirdCasterLevel += props.data.class1.level;
-    } else if (props.data.class1.detail.casterType === CasterType.PACT) {
-      hasPact = true;
-    }
-
-    // Класс 2
-    if (props.data.class2.detail.casterType === CasterType.FULL) {
-      fullCasterLevel += props.data.class2.level;
-    } else if (props.data.class2.detail.casterType === CasterType.HALF) {
-      halfCasterLevel += props.data.class2.level;
-    } else if (props.data.class2.detail.casterType === CasterType.THIRD) {
-      thirdCasterLevel += props.data.class2.level;
-    } else if (props.data.class2.detail.casterType === CasterType.PACT) {
-      hasPact = true;
-    }
+    props.data.classes.forEach((classItem) => {
+      if (classItem.detail.casterType === CasterType.FULL) {
+        fullCasterLevel += classItem.level;
+      } else if (classItem.detail.casterType === CasterType.HALF) {
+        halfCasterLevel += classItem.level;
+      } else if (classItem.detail.casterType === CasterType.THIRD) {
+        thirdCasterLevel += classItem.level;
+      } else if (classItem.detail.casterType === CasterType.PACT) {
+        hasPact = true;
+      }
+    });
 
     // По правилам D&D 5: каждый компонент округляется вниз отдельно, затем суммируется
     const fullContribution = fullCasterLevel;
@@ -161,19 +127,15 @@
             </div>
 
             <div
+              v-for="(classItem, index) in data.classes"
+              :key="index"
               class="flex items-center justify-between rounded-md border border-default px-2.5 py-1.5 leading-tight"
             >
-              <span class="text-xs text-secondary">{{ class1Name }}:</span>
+              <span class="text-xs text-secondary">{{
+                classNames[index]
+              }}:</span>
 
-              <span>{{ data.class1.level }}</span>
-            </div>
-
-            <div
-              class="flex items-center justify-between rounded-md border border-default px-2.5 py-1.5 leading-tight"
-            >
-              <span class="text-xs text-secondary">{{ class2Name }}:</span>
-
-              <span>{{ data.class2.level }}</span>
+              <span>{{ classItem.level }}</span>
             </div>
           </div>
         </div>

@@ -6,20 +6,32 @@
     data: MulticlassData;
   }>();
 
-  const class1Name = computed(() => {
-    if (data.class1.subclassUrl && data.class1.detail.parent) {
-      return `${data.class1.detail.parent.name.rus} / ${data.class1.detail.name.rus}`;
-    }
+  const classNames = computed(() =>
+    data.classes.map((c) => {
+      if (c.subclassUrl && c.detail.parent) {
+        return `${c.detail.parent.name.rus} / ${c.detail.name.rus}`;
+      }
 
-    return data.class1.detail.name.rus;
+      return c.detail.name.rus;
+    }),
+  );
+
+  const primaryCharacteristicsData = computed(() => {
+    return data.classes
+      .map((classItem, index) => ({
+        value: classItem.detail.primaryCharacteristics,
+        className: classNames.value[index],
+      }))
+      .filter((item) => item.value);
   });
 
-  const class2Name = computed(() => {
-    if (data.class2.subclassUrl && data.class2.detail.parent) {
-      return `${data.class2.detail.parent.name.rus} / ${data.class2.detail.name.rus}`;
-    }
-
-    return data.class2.detail.name.rus;
+  const savingThrowsData = computed(() => {
+    return data.classes
+      .map((classItem, index) => ({
+        value: classItem.detail.savingThrows,
+        className: classNames.value[index],
+      }))
+      .filter((item) => item.value);
   });
 </script>
 
@@ -35,7 +47,19 @@
         Основная характеристика:
       </span>
 
-      <span>{{ data.class1.detail.primaryCharacteristics }}</span>
+      <div class="flex flex-col gap-1">
+        <template
+          v-for="(item, index) in primaryCharacteristicsData"
+          :key="index"
+        >
+          <span>
+            {{ item.value }}
+            <span class="text-xs text-secondary"> ({{ item.className }})</span>
+          </span>
+        </template>
+
+        <span v-if="primaryCharacteristicsData.length === 0">Нет</span>
+      </div>
     </div>
 
     <div class="flex w-full min-w-full flex-col gap-1 px-4 py-1.5">
@@ -44,19 +68,17 @@
       </span>
 
       <div class="flex flex-col gap-1">
-        <span>
-          {{ data.class1.detail.savingThrows }}
-          <span class="text-xs text-secondary"> ({{ class1Name }})</span>
-        </span>
-
-        <span
-          v-if="
-            data.class2.detail.savingThrows !== data.class1.detail.savingThrows
-          "
+        <template
+          v-for="(item, index) in savingThrowsData"
+          :key="index"
         >
-          {{ data.class2.detail.savingThrows }}
-          <span class="text-xs text-secondary"> ({{ class2Name }})</span>
-        </span>
+          <span>
+            {{ item.value }}
+            <span class="text-xs text-secondary"> ({{ item.className }})</span>
+          </span>
+        </template>
+
+        <span v-if="savingThrowsData.length === 0">Нет</span>
       </div>
     </div>
 
@@ -68,57 +90,41 @@
 
         <template #content>
           <div class="flex flex-col gap-2">
-            <div>
+            <span
+              v-for="(classItem, index) in data.classes"
+              :key="index"
+            >
               <span class="font-medium text-highlighted">
-                {{ class1Name }}:
+                Хиты на 1 уровне:
               </span>
 
-              <span>
-                Хиты на 1 уровне: {{ data.class1.detail.hitDice.maxValue }} +
-                ваш модификатор
-                <span class="font-bold text-muted">Телосложения</span>
-              </span>
+              {{ classItem.detail.hitDice.maxValue }} + ваш модификатор
+              <span class="font-bold text-muted">Телосложения</span>
 
-              <span>
-                1{{ data.class1.detail.hitDice.label }} (или
-                {{ data.class1.detail.hitDice.avg }}) + модификатор
-                <span class="font-bold text-muted"> Телосложения </span> за
-                каждый уровень этого класса, после первого (минимум 1)
-              </span>
-            </div>
-
-            <div>
-              <span class="font-medium text-highlighted">
-                {{ class2Name }}:
-              </span>
-
-              <span>
-                Хиты на 1 уровне: {{ data.class2.detail.hitDice.maxValue }} +
-                ваш модификатор
-                <span class="font-bold text-muted">Телосложения</span>
-              </span>
-
-              <span>
-                1{{ data.class2.detail.hitDice.label }} (или
-                {{ data.class2.detail.hitDice.avg }}) + модификатор
-                <span class="font-bold text-muted"> Телосложения </span> за
-                каждый уровень этого класса, после первого (минимум 1)
-              </span>
-            </div>
+              <span class="text-xs text-secondary">
+                ({{ classNames[index] }})</span
+              >
+            </span>
           </div>
         </template>
       </InfoTooltip>
 
       <div class="flex flex-col gap-1">
-        <span>
-          1{{ data.class1.detail.hitDice.label }} за каждый уровень
-          <span class="text-xs text-secondary"> ({{ class1Name }})</span>
-        </span>
+        <template
+          v-for="(classItem, index) in data.classes"
+          :key="index"
+        >
+          <span>
+            1{{ classItem.detail.hitDice.label }}
+            <span class="text-xs text-secondary">
+              ({{ classNames[index] }})</span
+            >
 
-        <span>
-          1{{ data.class2.detail.hitDice.label }} за каждый уровень
-          <span class="text-xs text-secondary"> ({{ class2Name }})</span>
-        </span>
+            <span v-if="index === data.classes.length - 1">
+              за каждый уровень</span
+            >
+          </span>
+        </template>
       </div>
     </div>
   </div>
