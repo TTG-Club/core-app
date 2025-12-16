@@ -1,11 +1,14 @@
 <script setup lang="ts">
   import { computed } from 'vue';
+  import { omit, orderBy, uniqBy } from 'lodash-es';
   import {
     MulticlassStatsBlock,
     MulticlassTable,
     MulticlassProficiency,
   } from './ui';
+  import { FeatureCollapse } from '~classes/body/ui';
   import type { MulticlassData } from './types';
+  import type { ClassFeature } from '~classes/types';
   import { CasterType } from '~classes/types';
 
   const props = defineProps<{
@@ -30,6 +33,56 @@
     }
 
     return props.data.class2.detail.name.rus;
+  });
+
+  // Собираем все уникальные умения из всех классов (только те, что есть в таблице)
+  const allFeatures = computed(() => {
+    const featuresList: Array<ClassFeature> = [];
+
+    // Добавляем умения класса 1 (только до максимального уровня класса)
+    props.data.class1.detail.features.forEach((feature) => {
+      if (feature.level <= props.data.class1.level) {
+        featuresList.push(omit(feature, 'scaling'));
+
+        if (feature.scaling) {
+          featuresList.push(
+            ...feature.scaling
+              .filter((scale) => scale.level <= props.data.class1.level)
+              .map((scale) => ({
+                key: feature.key,
+                isSubclass: feature.isSubclass,
+                ...scale,
+              })),
+          );
+        }
+      }
+    });
+
+    // Добавляем умения класса 2 (только до максимального уровня класса)
+    props.data.class2.detail.features.forEach((feature) => {
+      if (feature.level <= props.data.class2.level) {
+        featuresList.push(omit(feature, 'scaling'));
+
+        if (feature.scaling) {
+          featuresList.push(
+            ...feature.scaling
+              .filter((scale) => scale.level <= props.data.class2.level)
+              .map((scale) => ({
+                key: feature.key,
+                isSubclass: feature.isSubclass,
+                ...scale,
+              })),
+          );
+        }
+      }
+    });
+
+    // Убираем дубликаты по key и level, сортируем по уровню
+    return orderBy(
+      uniqBy(featuresList, (f) => `${f.key}-${f.level}`),
+      ['level'],
+      ['asc'],
+    );
   });
 
   // Расчет уровня заклинателя по правилам мультиклассирования D&D 5
@@ -134,6 +187,12 @@
         </div>
 
         <MulticlassProficiency :data="data" />
+
+        <FeatureCollapse
+          v-for="feature in allFeatures"
+          :key="`${feature.key}-${feature.level}`"
+          :feature
+        />
       </div>
     </div>
   </div>

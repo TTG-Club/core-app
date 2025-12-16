@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, h, ref } from 'vue';
+  import { computed, h, ref, withModifiers } from 'vue';
   import type { Cell, ColumnDef, Header } from '@tanstack/vue-table';
   import {
     FlexRender,
@@ -8,7 +8,6 @@
   } from '@tanstack/vue-table';
   import { useDebounceFn } from '@vueuse/core';
   import { maxBy, omit, orderBy, range } from 'lodash-es';
-  import { ULink } from '#components';
   import { LEVELS } from '~/shared/consts';
   import type { Level } from '~/shared/types';
   import { CasterType, type ClassFeature } from '~classes/types';
@@ -389,22 +388,34 @@
             const { feature } = item;
 
             const link = h(
-              ULink,
+              'a',
               {
                 href: `#${feature.key}`,
-                replace: true,
                 class: [
-                  feature.isSubclass ? 'text-success hover:text-success' : '',
-                  'transition-colors duration-100',
+                  feature.isSubclass
+                    ? 'text-success hover:text-success'
+                    : 'text-primary hover:text-primary/75',
+                  'transition-colors duration-100 cursor-pointer hover:underline',
                 ],
                 onClick: withModifiers(
-                  () => scrollToAnchor(feature.key),
-                  ['left', 'exact', 'prevent'],
+                  (e: Event) => {
+                    e.preventDefault();
+
+                    // Обновляем hash через history API, сохраняя query параметры
+                    if (import.meta.client) {
+                      const pathname = window.location.pathname;
+                      const search = window.location.search;
+                      const newUrl = `${pathname}${search}#${feature.key}`;
+
+                      window.history.pushState(null, '', newUrl);
+                    }
+
+                    scrollToAnchor(feature.key);
+                  },
+                  ['left', 'exact'],
                 ),
               },
-              {
-                default: () => feature.name,
-              },
+              feature.name,
             );
 
             const separator =
@@ -424,18 +435,24 @@
       },
     ];
 
-    // Добавляем колонки данных таблицы - отдельные для каждого класса
-    // Сначала колонки класса 1
-    if (data.class1.detail.table && Array.isArray(data.class1.detail.table)) {
-      data.class1.detail.table.forEach((tableColumn) => {
-        baseColumns.push({
+    // Добавляем колонки данных таблицы - группируем по классам
+    // Класс 1
+    if (
+      data.class1.detail.table &&
+      Array.isArray(data.class1.detail.table) &&
+      data.class1.detail.table.length > 0
+    ) {
+      baseColumns.push({
+        id: `class1_table`,
+        header: () => h('span', { class: 'text-xs' }, class1Name.value),
+        meta: {
+          class: {
+            th: 'text-left',
+          },
+        },
+        columns: data.class1.detail.table.map((tableColumn) => ({
           accessorKey: `class1_${tableColumn.name}`,
-          header: () =>
-            h(
-              'span',
-              { class: 'text-xs' },
-              `${tableColumn.name} (${class1Name.value})`,
-            ),
+          header: () => h('span', { class: 'text-xs' }, tableColumn.name),
           cell: ({ row }) => {
             if (row.original.level <= data.class1.level) {
               return row.original.class1TableData?.[tableColumn.name] ?? '—';
@@ -449,21 +466,27 @@
               td: 'max-w-28 text-center',
             },
           },
-        });
+        })),
       });
     }
 
-    // Затем колонки класса 2
-    if (data.class2.detail.table && Array.isArray(data.class2.detail.table)) {
-      data.class2.detail.table.forEach((tableColumn) => {
-        baseColumns.push({
+    // Класс 2
+    if (
+      data.class2.detail.table &&
+      Array.isArray(data.class2.detail.table) &&
+      data.class2.detail.table.length > 0
+    ) {
+      baseColumns.push({
+        id: `class2_table`,
+        header: () => h('span', { class: 'text-xs' }, class2Name.value),
+        meta: {
+          class: {
+            th: 'text-left',
+          },
+        },
+        columns: data.class2.detail.table.map((tableColumn) => ({
           accessorKey: `class2_${tableColumn.name}`,
-          header: () =>
-            h(
-              'span',
-              { class: 'text-xs' },
-              `${tableColumn.name} (${class2Name.value})`,
-            ),
+          header: () => h('span', { class: 'text-xs' }, tableColumn.name),
           cell: ({ row }) => {
             if (row.original.level <= data.class2.level) {
               return row.original.class2TableData?.[tableColumn.name] ?? '—';
@@ -477,7 +500,7 @@
               td: 'max-w-28 text-center',
             },
           },
-        });
+        })),
       });
     }
 
@@ -602,7 +625,11 @@
       (class2Mechanics.isSpellcaster.value &&
         class2Mechanics.isRegularSpellcaster.value);
 
-    if (!hasSpellSlots) {
+    const hasGroupedColumns =
+      (data.class1.detail.table && data.class1.detail.table.length > 0) ||
+      (data.class2.detail.table && data.class2.detail.table.length > 0);
+
+    if (!hasSpellSlots && !hasGroupedColumns) {
       return true;
     }
 
@@ -622,7 +649,11 @@
       (class2Mechanics.isSpellcaster.value &&
         class2Mechanics.isRegularSpellcaster.value);
 
-    if (!hasSpellSlots) {
+    const hasGroupedColumns =
+      (data.class1.detail.table && data.class1.detail.table.length > 0) ||
+      (data.class2.detail.table && data.class2.detail.table.length > 0);
+
+    if (!hasSpellSlots && !hasGroupedColumns) {
       return 1;
     }
 
