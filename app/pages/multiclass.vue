@@ -93,32 +93,14 @@
     };
   });
 
-  const title = computed(() => {
-    if (!multiclassData.value) {
-      return 'Мультикласс';
-    }
+  const title = computed(() => 'Мультиклассирование');
 
-    const name1 = multiclassData.value.class1.detail.name.rus;
-    const name2 = multiclassData.value.class2.detail.name.rus;
-
-    return `${name1} / ${name2}`;
-  });
-
-  const subtitle = computed(() => {
-    if (!multiclassData.value) {
-      return 'Multiclass';
-    }
-
-    const name1 = multiclassData.value.class1.detail.name.eng;
-    const name2 = multiclassData.value.class2.detail.name.eng;
-
-    return `${name1} / ${name2}`;
-  });
+  const subtitle = computed(() => 'Multiclassing');
 
   useSeoMeta({
     title: () => title.value,
     description: () =>
-      `Мультикласс ${title.value} [${subtitle.value}] — комбинация классов в D&D 5 (редакция 2024 года).`,
+      `Мультиклассирование — комбинация классов в D&D 5 (редакция 2024 года).`,
     titleTemplate: '%s | Мультиклассы D&D 5 2024',
   });
 </script>
