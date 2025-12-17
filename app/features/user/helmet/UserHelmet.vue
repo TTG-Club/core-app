@@ -2,6 +2,8 @@
   import { useUserStore } from '~/shared/stores';
   import { AuthModal } from '~user/auth-modal';
   import { Breakpoint } from '~/composables/useBreakpoints';
+  import type { DropdownMenuItem } from '@nuxt/ui';
+  import KbdShortcut from './KbdShortcut.vue';
 
   const userStore = useUserStore();
   const { isAdmin } = useUserRoles();
@@ -22,11 +24,9 @@
     console.error(err);
   }
 
-  // Получаем инициалы из имени пользователя
+  // Инициалы пользователя
   const userInitials = computed(() => {
-    if (!user.value?.username) {
-      return 'U';
-    }
+    if (!user.value?.username) return 'U';
 
     const parts = user.value.username.split(' ');
 
@@ -34,18 +34,14 @@
       const first = parts[0]?.[0];
       const second = parts[1]?.[0];
 
-      if (first && second) {
-        return (first + second).toUpperCase();
-      }
+      if (first && second) return (first + second).toUpperCase();
     }
 
     const username = user.value.username;
 
-    if (username && username.length >= 2) {
-      return username.substring(0, 2).toUpperCase();
-    }
-
-    return 'U';
+    return username && username.length >= 2
+      ? username.substring(0, 2).toUpperCase()
+      : 'U';
   });
 
   function onClick() {
@@ -58,26 +54,84 @@
     });
   }
 
-  function navigateToWorkshop() {
+  function closeMenu() {
     isMenuOpened.value = false;
-    navigateTo({ name: 'workshop' });
   }
 
-  function navigateToProfile() {
-    isMenuOpened.value = false;
-    navigateTo({ name: 'user-profile' });
+  // Извлекает шорткаты из menuItems для defineShortcuts
+  function extractShortcuts(
+    items: DropdownMenuItem[][],
+  ): Record<string, () => void> {
+    const shortcuts: Record<string, () => void> = {};
+
+    for (const group of items) {
+      for (const item of group) {
+        if (item.kbds && item.onSelect) {
+          const kbdsArray = Array.isArray(item.kbds)
+            ? item.kbds.filter((k): k is string => typeof k === 'string')
+            : [];
+
+          if (kbdsArray.length > 0) {
+            const key = kbdsArray.join('_');
+
+            shortcuts[key] = () => {
+              item.onSelect?.(undefined as any);
+            };
+          }
+        }
+      }
+    }
+
+    return shortcuts;
   }
 
-  // Клавиатурные комбинации
+  // Определяем структуру меню (аналогично DropdownMenu, но используем вручную)
+  const menuItems = computed<DropdownMenuItem[][]>(() => [
+    // Основные пункты навигации
+    [
+      {
+        label: 'Настройка профиля',
+        icon: 'i-ttg-settings',
+        onSelect: (e?: Event) => {
+          e?.preventDefault();
+          closeMenu();
+          navigateTo({ name: 'user-profile' });
+        },
+      },
+      ...(isAdmin.value
+        ? [
+            {
+              label: 'Мастерская',
+              icon: 'i-ttg-menu-filled-workshop',
+              kbds: ['meta', 'shift', 'm'] as string[], // ← вот здесь шорткат
+              onSelect: (e?: Event) => {
+                e?.preventDefault();
+                closeMenu();
+                navigateTo({ name: 'workshop' });
+              },
+            },
+          ]
+        : []),
+    ],
+    // Пункт выхода
+    [
+      {
+        label: 'Выход',
+        icon: 'i-ttg-logout',
+        color: 'error' as const,
+        onSelect: logout,
+      },
+    ],
+  ]);
+
+  // Регистрируем глобальные шорткаты на основе kbds из menuItems
   watch(
-    isAdmin,
-    (admin) => {
-      if (admin) {
-        defineShortcuts({
-          ['meta_shift_m']: () => {
-            navigateTo({ name: 'workshop' });
-          },
-        });
+    menuItems,
+    (items) => {
+      const shortcuts = extractShortcuts(items);
+
+      if (Object.keys(shortcuts).length > 0) {
+        defineShortcuts(shortcuts);
       }
     },
     { immediate: true },
@@ -149,102 +203,55 @@
             <div class="flex items-center justify-between text-sm">
               <span>Скоро будет</span>
 
-              <span class="text-sm font-semibold"> ∞ </span>
+              <span class="text-sm font-semibold">∞</span>
             </div>
 
             <div class="flex items-center justify-between text-sm">
               <span>Скоро будет</span>
 
-              <span class="text-sm font-semibold"> ∞ </span>
+              <span class="text-sm font-semibold">∞</span>
             </div>
           </div>
         </div>
 
         <USeparator />
 
-        <!-- Навигация -->
+        <!-- Навигация — рендерим из menuItems -->
         <div class="flex flex-col py-1">
-          <div class="p-1">
-            <UButton
-              variant="ghost"
-              class="w-full justify-start px-2 py-2 text-default"
-              @click="navigateToProfile"
-            >
-              <div class="flex items-center">
-                <UIcon
-                  name="i-ttg-settings"
-                  class="mr-2 size-5"
-                />
-
-                <span>Настройка профиля</span>
-              </div>
-            </UButton>
-          </div>
-
-          <div
-            v-if="isAdmin"
-            class="p-1"
+          <template
+            v-for="(group, i) in menuItems"
+            :key="i"
           >
-            <UButton
-              variant="ghost"
-              class="w-full justify-between px-2 py-2 text-default"
-              @click="navigateToWorkshop"
+            <div
+              v-for="item in group"
+              :key="item.label"
+              class="p-1"
             >
-              <div class="flex items-center">
-                <UIcon
-                  name="i-ttg-menu-filled-workshop"
-                  class="mr-2 size-5"
-                />
+              <UButton
+                variant="ghost"
+                :color="item.color"
+                class="w-full justify-between px-2 py-2 text-default"
+                @click="item.onSelect"
+              >
+                <div class="flex items-center">
+                  <UIcon
+                    :name="item.icon"
+                    class="mr-2 size-5"
+                  />
 
-                <span>Мастерская</span>
-              </div>
+                  <span>{{ item.label }}</span>
+                </div>
 
-              <div class="flex items-center gap-1">
-                <UKbd
-                  size="sm"
-                  variant="outline"
-                >
-                  Ctrl
-                </UKbd>
-
-                <UKbd
-                  size="sm"
-                  variant="outline"
-                >
-                  Shift
-                </UKbd>
-
-                <UKbd
-                  size="sm"
-                  variant="outline"
-                >
-                  M
-                </UKbd>
-              </div>
-            </UButton>
-          </div>
-        </div>
-
-        <USeparator />
-
-        <!-- Выход -->
-        <div class="p-1">
-          <UButton
-            variant="ghost"
-            color="error"
-            class="w-full justify-start px-2 py-2"
-            @click="logout"
-          >
-            <div class="flex items-center">
-              <UIcon
-                name="i-ttg-logout"
-                class="mr-2 size-5"
-              />
-
-              <span>Выход</span>
+                <KbdShortcut :kbds="item.kbds" />
+              </UButton>
             </div>
-          </UButton>
+
+            <!-- Разделитель между группами, кроме последнего -->
+            <USeparator v-if="i < menuItems.length - 1" />
+          </template>
         </div>
+
+        <!-- Выход уже в menuItems, но если хочешь отдельно — можно оставить -->
       </div>
     </template>
   </UPopover>
