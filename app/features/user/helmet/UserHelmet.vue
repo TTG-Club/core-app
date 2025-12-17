@@ -51,11 +51,6 @@
   // Статистика пользователя (пока заглушки, можно подключить API позже)
   const userStats = ref({
     ratings: 234,
-    errorsFound: 56,
-    articles: 73,
-    spells: 12,
-    bestiary: 31,
-    etc: 0,
   });
 
   function onClick() {
@@ -173,19 +168,10 @@
     </template>
 
     <template #content>
-      <div
-        :class="$style.dropdown"
-        class="flex flex-col"
-      >
+      <div class="flex min-w-80 flex-col">
         <!-- Заголовок с именем и аватаром -->
-        <div
-          :class="$style.header"
-          class="flex items-center gap-3 p-4"
-        >
-          <div
-            :class="$style.userInfo"
-            class="flex min-w-0 flex-1 flex-col"
-          >
+        <div class="flex min-h-20 items-center gap-3 p-4">
+          <div class="flex min-w-0 flex-1 flex-col">
             <div
               class="mb-1 overflow-hidden text-2xl font-semibold text-ellipsis whitespace-nowrap"
             >
@@ -200,64 +186,39 @@
           </div>
 
           <div
-            :class="$style.avatar"
-            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-(--color-primary-500) text-(--ui-text-inverted) text-sm font-semibold"
           >
             {{ userInitials }}
           </div>
         </div>
 
         <!-- Статистика -->
-        <div
-          :class="$style.stats"
-          class="-mt-2 px-4 pb-3"
-        >
+        <div class="-mt-2 px-4 pb-3">
           <USeparator class="mb-2">
             <span class="text-sm font-medium">Статистика</span>
           </USeparator>
 
-          <div
-            :class="$style.statsList"
-            class="flex flex-col gap-1.5"
-          >
-            <div
-              :class="$style.statItem"
-              class="flex items-center justify-between"
-            >
-              <span class="text-sm">Оценок</span>
+          <div class="flex flex-col gap-1.5">
+            <div class="flex items-center justify-between text-sm">
+              <span>Оценок</span>
 
-              <span
-                :class="$style.statValue"
-                class="text-sm font-semibold"
-              >
+              <span class="text-sm font-semibold">
                 {{ userStats.ratings }}
               </span>
             </div>
 
-            <div
-              :class="$style.statItem"
-              class="flex items-center justify-between"
-            >
-              <span class="text-sm">Скоро будет</span>
+            <div class="flex items-center justify-between text-sm">
+              <span>Скоро будет</span>
 
-              <span
-                :class="$style.statValue"
-                class="text-sm font-semibold"
-              >
+              <span class="text-sm font-semibold">
                 ∞
               </span>
             </div>
 
-            <div
-              :class="$style.statItem"
-              class="flex items-center justify-between"
-            >
-              <span class="text-sm">Скоро будет</span>
+            <div class="flex items-center justify-between text-sm">
+              <span>Скоро будет</span>
 
-              <span
-                :class="$style.statValue"
-                class="text-sm font-semibold"
-              >
+              <span class="text-sm font-semibold">
                 ∞
               </span>
             </div>
@@ -267,14 +228,11 @@
         <USeparator />
 
         <!-- Навигация -->
-        <div
-          :class="$style.navigation"
-          class="flex flex-col"
-        >
+        <div class="flex flex-col py-1">
           <div class="p-1">
             <UButton
               variant="ghost"
-              class="w-full justify-start px-4 py-2 text-default"
+              class="w-full justify-start px-2 py-2 text-default"
               @click="navigateToProfile"
             >
               <div class="flex items-center">
@@ -294,7 +252,7 @@
           >
             <UButton
               variant="ghost"
-              class="w-full justify-between px-4 py-2 text-default"
+              class="w-full justify-between px-2 py-2 text-default"
               @click="navigateToWorkshop"
             >
               <div class="flex items-center">
@@ -335,14 +293,11 @@
         <USeparator />
 
         <!-- Выход -->
-        <div
-          :class="$style.logout"
-          class="p-1"
-        >
+        <div class="p-1">
           <UButton
             variant="ghost"
             color="error"
-            class="w-full justify-start px-4 py-2"
+            class="w-full justify-start px-2 py-2"
             @click="logout"
           >
             <div class="flex items-center">
@@ -359,52 +314,3 @@
     </template>
   </UPopover>
 </template>
-
-<style lang="scss" module>
-  .dropdown {
-    min-width: 320px;
-  }
-
-  .header {
-    min-height: 80px;
-  }
-
-  .avatar {
-    flex-shrink: 0;
-    color: var(--ui-text-inverted);
-    background-color: var(--color-primary-500);
-  }
-
-  .userInfo {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  .statsList {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .statItem {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 14px;
-  }
-
-  .statValue {
-    font-size: 14px;
-    font-weight: 600;
-  }
-
-  .navigation {
-    display: flex;
-    flex-direction: column;
-    padding: 4px 0;
-  }
-
-  .logout {
-    padding: 4px;
-  }
-</style>
