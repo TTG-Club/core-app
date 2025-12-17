@@ -1,8 +1,7 @@
 <script setup lang="ts">
   import { useUserStore } from '~/shared/stores';
   import { AuthModal } from '~user/auth-modal';
-
-  import type { DropdownMenuItem } from '@nuxt/ui';
+  import { Breakpoint } from '~/composables/useBreakpoints';
 
   const userStore = useUserStore();
   const { isAdmin } = useUserRoles();
@@ -12,9 +11,10 @@
 
   const isAuthOpened = ref(false);
   const isMenuOpened = ref(false);
-  const isMenuOnLeft = greaterOrEqual(Breakpoint.MD);
 
-  const side = computed(() => (isMenuOnLeft.value ? 'right' : 'top'));
+  const side = computed(() =>
+    greaterOrEqual(Breakpoint.MD).value ? 'right' : 'top',
+  );
 
   try {
     await userStore.fetch();
@@ -48,11 +48,6 @@
     return 'U';
   });
 
-  // Статистика пользователя (пока заглушки, можно подключить API позже)
-  const userStats = ref({
-    ratings: 234,
-  });
-
   function onClick() {
     isAuthOpened.value = true;
   }
@@ -73,65 +68,17 @@
     navigateTo({ name: 'user-profile' });
   }
 
-  const items = computed<DropdownMenuItem[][]>(() => [
-    [
-      ...(isAdmin.value
-        ? [
-            {
-              label: 'Мастерская',
-              kbds: ['meta', 'shift', 'm'],
-              onSelect: () => {
-                navigateTo({ name: 'workshop' });
-              },
-            },
-          ]
-        : []),
-      {
-        label: 'Личный кабинет',
-        to: {
-          name: 'user-profile',
-        },
-      },
-      {
-        label: 'Сменить пароль',
-        disabled: true,
-      },
-    ],
-    [
-      {
-        label: 'Выйти',
-        icon: 'i-ttg-logout',
-        color: 'error',
-        onSelect: logout,
-      },
-    ],
-  ]);
-
-  // Функция для извлечения клавиатурных комбинаций из items
-  function extractShortcuts(
-    menuItems: DropdownMenuItem[][],
-  ): Record<string, () => void> {
-    const shortcuts: Record<string, () => void> = {};
-
-    for (const group of menuItems) {
-      for (const item of group) {
-        if (item.kbds && item.onSelect) {
-          const key = item.kbds.join('_');
-
-          shortcuts[key] = item.onSelect as () => void;
-        }
-      }
-    }
-
-    return shortcuts;
-  }
-
+  // Клавиатурные комбинации
   watch(
-    items,
-    (newItems) => {
-      const shortcuts = extractShortcuts(newItems);
-
-      defineShortcuts(shortcuts);
+    isAdmin,
+    (admin) => {
+      if (admin) {
+        defineShortcuts({
+          ['meta_shift_m']: () => {
+            navigateTo({ name: 'workshop' });
+          },
+        });
+      }
     },
     { immediate: true },
   );
@@ -168,7 +115,7 @@
     </template>
 
     <template #content>
-      <div class="flex min-w-80 flex-col">
+      <div class="flex flex-col">
         <!-- Заголовок с именем и аватаром -->
         <div class="flex min-h-20 items-center gap-3 p-4">
           <div class="flex min-w-0 flex-1 flex-col">
@@ -186,7 +133,7 @@
           </div>
 
           <div
-            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-(--color-primary-500) text-(--ui-text-inverted) text-sm font-semibold"
+            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-(--color-primary-500) text-sm font-semibold text-(--ui-text-inverted)"
           >
             {{ userInitials }}
           </div>
@@ -200,27 +147,15 @@
 
           <div class="flex flex-col gap-1.5">
             <div class="flex items-center justify-between text-sm">
-              <span>Оценок</span>
+              <span>Скоро будет</span>
 
-              <span class="text-sm font-semibold">
-                {{ userStats.ratings }}
-              </span>
+              <span class="text-sm font-semibold"> ∞ </span>
             </div>
 
             <div class="flex items-center justify-between text-sm">
               <span>Скоро будет</span>
 
-              <span class="text-sm font-semibold">
-                ∞
-              </span>
-            </div>
-
-            <div class="flex items-center justify-between text-sm">
-              <span>Скоро будет</span>
-
-              <span class="text-sm font-semibold">
-                ∞
-              </span>
+              <span class="text-sm font-semibold"> ∞ </span>
             </div>
           </div>
         </div>
