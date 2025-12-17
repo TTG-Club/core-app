@@ -35,7 +35,10 @@
 </script>
 
 <template>
-  <template v-if="kbdsArray.length">
+  <div
+    v-if="kbdsArray.length"
+    class="flex items-center gap-2"
+  >
     <UKbd
       v-for="kbd in kbdsArray"
       :key="kbd"
@@ -44,5 +47,5 @@
     >
       {{ formatKbd(kbd) }}
     </UKbd>
-  </template>
+  </div>
 </template>
