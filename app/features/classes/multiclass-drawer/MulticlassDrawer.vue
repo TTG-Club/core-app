@@ -1,7 +1,6 @@
 <script setup lang="ts">
   import { SelectClass, SelectLevel } from '~ui/select';
   import { UiDrawer } from '~ui/drawer';
-  import { getOrigin } from '~/utils/getOrigin';
 
   import type { ClassLinkResponse } from '~classes/types';
   import type { NameResponse } from '~/shared/types';
@@ -24,6 +23,10 @@
   // Первая строка: текущий класс/подкласс и уровень
   const currentLevel = ref<number>(1);
 
+  const currentSubclassUrl = ref<string | undefined>(
+    currentParent ? currentUrl : undefined,
+  );
+
   // Вторая строка: выбор класса, подкласса и уровня
   const selectedClassUrl = ref<string>();
   const selectedSubclassUrl = ref<string>();
@@ -38,6 +41,26 @@
   }
 
   const additionalClasses = ref<Array<AdditionalClass>>([]);
+
+  // Получение подклассов для основного класса
+  const mainClassUrl = computed(() =>
+    currentParent ? currentParent.url : currentUrl,
+  );
+
+  const { data: currentClassSubclasses } = await useAsyncData<
+    Array<ClassLinkResponse>
+  >(
+    computed(() => `class-${mainClassUrl.value}-subclasses`),
+    () => {
+      return $fetch<Array<ClassLinkResponse>>(
+        `/api/v2/classes/${mainClassUrl.value}/subclasses`,
+      );
+    },
+    {
+      server: false,
+      watch: [mainClassUrl],
+    },
+  );
 
   // Получение подклассов для выбранного класса
   const { data: availableSubclasses } = await useAsyncData<
@@ -98,6 +121,19 @@
       value: subclass.url,
     }));
   }
+
+  // Преобразование подклассов основного класса в формат для SelectMenu
+  const currentClassSubclassItems = computed<Array<SelectMenuItem>>(() => {
+    if (!currentClassSubclasses.value?.length) {
+      return [];
+    }
+
+    return currentClassSubclasses.value.map((subclass) => ({
+      ...subclass,
+      label: `${subclass.name.rus} [${subclass.name.eng}]`,
+      value: subclass.url,
+    }));
+  });
 
   // Преобразование подклассов в формат для SelectMenu
   const subclassItems = computed<Array<SelectMenuItem>>(() => {
@@ -224,9 +260,11 @@
     }
 
     // Определяем базовый URL для первого класса
-    // Если есть parent, значит текущий класс - это подкласс
-    const class1BaseUrl = currentParent ? currentParent.url : currentUrl;
-    const class1FinalUrl = currentParent ? currentUrl : currentUrl;
+    const class1BaseUrl = mainClassUrl.value;
+
+    // Используем выбранный подкласс, если он выбран, иначе используем текущий подкласс (если есть)
+    const class1SubclassUrl =
+      currentSubclassUrl.value || (currentParent ? currentUrl : undefined);
 
     // Формируем URL для страницы мультикласса
     const query: Record<string, string> = {
@@ -236,9 +274,9 @@
       level2: String(selectedLevel.value),
     };
 
-    // Если текущий класс - это подкласс, добавляем его URL
-    if (currentParent) {
-      query.subclass1 = class1FinalUrl;
+    // Если выбран подкласс для основного класса, добавляем его URL
+    if (class1SubclassUrl) {
+      query.subclass1 = class1SubclassUrl;
     }
 
     // Если выбран подкласс для второго класса, добавляем его URL
@@ -261,11 +299,11 @@
     });
 
     const queryString = new URLSearchParams(query).toString();
-    const url = `${getOrigin()}/multiclass?${queryString}`;
+    const url = `/multiclass?${queryString}`;
 
-    // Закрываем drawer и открываем страницу в новой вкладке
+    // Закрываем drawer и переходим на страницу мультикласса в том же окне
     emit('close');
-    window.open(url, '_blank');
+    navigateTo(url);
   }
 </script>
 
@@ -284,6 +322,25 @@
           </span>
 
           <span class="text-sm">{{ currentClassDisplay }}</span>
+        </div>
+
+        <div
+          v-if="currentClassSubclassItems.length > 0"
+          class="flex items-center gap-3"
+        >
+          <span class="min-w-20 text-sm text-secondary">Подкласс:</span>
+
+          <USelectMenu
+            v-model="currentSubclassUrl"
+            :items="currentClassSubclassItems"
+            :placeholder="'Выбери подкласс'"
+            :disabled="currentClassSubclassItems.length === 0"
+            label-key="label"
+            value-key="value"
+            clearable
+            searchable
+            class="flex-1"
+          />
         </div>
 
         <div class="flex items-center gap-3">

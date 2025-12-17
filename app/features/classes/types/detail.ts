@@ -66,4 +66,5 @@ export enum CasterType {
   HALF = 'HALF',
   FULL = 'FULL',
   PACT = 'PACT',
+  MULTICLASS = 'MULTICLASS',
 }

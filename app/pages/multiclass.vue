@@ -1,92 +1,111 @@
 <script setup lang="ts">
-  import { MulticlassBody } from '~classes/multiclass';
   import { PageActions } from '~ui/page';
-  import { UiResult } from '~ui/result';
-
-  import type { MulticlassData } from '~classes/multiclass';
-  import type { ClassDetailResponse } from '~classes/types';
-  import type { Level } from '~/shared/types';
 
   const route = useRoute();
 
-  // Получение параметров из query для всех классов (до 10)
-  const classData: Array<{
-    url?: string;
-    level?: Level;
-    subclass?: string;
-  }> = [];
+  // Формируем body для POST запроса из query параметров
+  const requestBody = computed(() => {
+    // Первый класс (основной)
+    const class1Url = route.query.class1 as string | undefined;
+    const level1Raw = Number(route.query.level1);
+    const level1 = level1Raw >= 1 && level1Raw <= 20 ? level1Raw : undefined;
+    const subclass1 = route.query.subclass1 as string | undefined;
 
-  for (let i = 1; i <= 10; i++) {
-    const classUrl = route.query[`class${i}`] as string | undefined;
-    const levelRaw = Number(route.query[`level${i}`]);
-    const level = (
-      levelRaw >= 1 && levelRaw <= 20 ? levelRaw : undefined
-    ) as Level | undefined;
-    const subclass = route.query[`subclass${i}`] as string | undefined;
-
-    if (classUrl && level) {
-      classData.push({ url: classUrl, level, subclass });
-    }
-  }
-
-  // Загрузка данных классов
-  const classDetails = await Promise.all(
-    classData.map((c, index) =>
-      useAsyncData(
-        computed(() => `class-${index}-${c.subclass || c.url || ''}`),
-        () => {
-          const url = c.subclass || c.url;
-          if (!url) {
-            return Promise.resolve(null);
-          }
-          return $fetch<ClassDetailResponse>(`/api/v2/classes/${url}`);
-        },
-        {
-          watch: [() => c.subclass, () => c.url],
-        },
-      ),
-    ),
-  );
-
-  const error = computed(() => {
-    const firstError = classDetails.find((cd) => cd.error.value);
-    return firstError?.error.value || undefined;
-  });
-
-  const multiclassData = computed<MulticlassData | null>(() => {
-    const validClasses = classDetails
-      .map((cd, index) => {
-        const detail = cd.data.value;
-        const originalData = classData[index];
-        if (detail && originalData && originalData.level) {
-          return {
-            url: originalData.url!,
-            subclassUrl: originalData.subclass,
-            level: originalData.level,
-            detail: detail,
-          };
-        }
-        return null;
-      })
-      .filter(Boolean) as MulticlassData['classes'];
-
-    if (validClasses.length < 2) {
+    if (!class1Url || !level1) {
       return null;
     }
 
-    return {
-      classes: validClasses,
+    // Дополнительные классы (2-10)
+    const additionalClasses: Array<{
+      url: string;
+      level: number;
+      subclass?: string;
+    }> = [];
+
+    for (let i = 2; i <= 10; i++) {
+      const classUrl = route.query[`class${i}`] as string | undefined;
+      const levelRaw = Number(route.query[`level${i}`]);
+      const level = levelRaw >= 1 && levelRaw <= 20 ? levelRaw : undefined;
+      const subclass = route.query[`subclass${i}`] as string | undefined;
+
+      if (classUrl && level) {
+        const classData: {
+          url: string;
+          level: number;
+          subclass?: string;
+        } = {
+          url: classUrl,
+          level,
+        };
+
+        if (subclass) {
+          classData.subclass = subclass;
+        }
+
+        additionalClasses.push(classData);
+      }
+    }
+
+    // Проверяем, что есть хотя бы один дополнительный класс
+    if (additionalClasses.length === 0) {
+      return null;
+    }
+
+    // Формируем body согласно формату API
+    const body: {
+      class: string;
+      level: number;
+      subclass?: string;
+      classes: Array<{
+        url: string;
+        level: number;
+        subclass?: string;
+      }>;
+    } = {
+      class: class1Url,
+      level: level1,
+      classes: additionalClasses,
     };
+
+    // Добавляем subclass только если он есть (не undefined и не пустая строка)
+    if (subclass1 && subclass1.trim() !== '') {
+      body.subclass = subclass1;
+    }
+
+    return body;
   });
 
-  const title = computed(() => 'Мультиклассирование');
+  const {
+    data: apiResponse,
+    error,
+    refresh,
+  } = await useAsyncData(
+    computed(() => `multiclass-${JSON.stringify(requestBody.value)}`),
+    async () => {
+      if (!requestBody.value) {
+        return null;
+      }
 
-  const subtitle = computed(() => 'Multiclassing');
+      const response = await $fetch('/api/v2/multiclass', {
+        method: 'POST',
+        body: requestBody.value,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': '*/*',
+        },
+      });
+
+      return response;
+    },
+    {
+      watch: [requestBody],
+    },
+  );
 
   useSeoMeta({
-    title: () => title.value,
-    description: () =>
-      `Мультиклассирование — комбинация классов в D&D 5 (редакция 2024 года).`,
+    title: 'Мультиклассирование',
+    description:
+      'Мультиклассирование — комбинация классов в D&D 5 (редакция 2024 года).',
     titleTemplate: '%s | Мультиклассы D&D 5 2024',
   });
 </script>
@@ -95,8 +114,8 @@
   <NuxtLayout
     id="classes-base"
     name="detail"
-    :title
-    :subtitle
+    title="Мультиклассирование"
+    subtitle="Multiclassing"
     copy-text
   >
     <template #actions>
@@ -104,17 +123,27 @@
     </template>
 
     <template #default>
-      <div v-if="multiclassData">
-        <MulticlassBody :data="multiclassData" />
+      <div
+        v-if="apiResponse"
+        class="flex flex-col gap-4 p-4"
+      >
+        <h2 class="text-lg font-semibold">Ответ API:</h2>
+
+        <pre
+          class="overflow-auto rounded-lg border border-default bg-muted p-4 text-xs"
+          >{{ JSON.stringify(apiResponse, null, 2) }}</pre
+        >
       </div>
 
       <UiResult
         v-else
-        :error="error"
+        :error
         status="error"
         title="Ошибка"
       >
         <template #extra>
+          <UButton @click.left.exact.prevent="refresh()"> Обновить</UButton>
+
           <UButton
             variant="ghost"
             @click.left.exact.prevent="navigateTo('/classes')"
