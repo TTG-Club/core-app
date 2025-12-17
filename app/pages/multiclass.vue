@@ -1,5 +1,11 @@
 <script setup lang="ts">
   import { PageActions } from '~ui/page';
+  import { UiResult } from '~ui/result';
+  import {
+    StatsBlock,
+    ClassProficiency,
+    FeatureCollapse,
+  } from '~classes/body/ui';
 
   const route = useRoute();
 
@@ -125,14 +131,36 @@
     <template #default>
       <div
         v-if="apiResponse"
-        class="flex flex-col gap-4 p-4"
+        class="@container"
       >
-        <h2 class="text-lg font-semibold">Ответ API:</h2>
+        <div class="flex flex-col gap-6 @min-3xl:flex-row @min-3xl:gap-7">
+          <div
+            :class="[
+              'flex w-full shrink-0 flex-col gap-4',
+              '@min-xl:@max-3xl:flex-row @min-3xl:w-80',
+            ]"
+          >
+            <StatsBlock
+              :hit-dice="apiResponse.hitDice"
+              :saving-throws="apiResponse.savingThrows"
+              :proficiency="apiResponse.proficiency"
+              :primary-characteristics="apiResponse.primaryCharacteristics"
+            />
+          </div>
 
-        <pre
-          class="overflow-auto rounded-lg border border-default bg-muted p-4 text-xs"
-          >{{ JSON.stringify(apiResponse, null, 2) }}</pre
-        >
+          <div class="flex min-w-0 flex-auto flex-col gap-6">
+            <ClassProficiency
+              :proficiency="apiResponse.proficiency"
+              :saving-throws="apiResponse.savingThrows"
+            />
+
+            <FeatureCollapse
+              v-for="feature in apiResponse.features"
+              :key="feature.key"
+              :feature
+            />
+          </div>
+        </div>
       </div>
 
       <UiResult
