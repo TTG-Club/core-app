@@ -1,6 +1,14 @@
 <script setup lang="ts">
-  import { computed, ref } from 'vue';
+  import {
+    computed,
+    ref,
+    nextTick,
+    onMounted,
+    onBeforeUnmount,
+    watch,
+  } from 'vue';
   import { useDiceRoller } from '~/composables/useDiceRoller';
+  import DiceD20IconUrl from '~/assets/icons/dice/d20.svg';
 
   type CriticalType = 'success' | 'failure' | null;
 
@@ -27,11 +35,126 @@
     detail?: string;
   }
 
+  const IDB_DB_NAME = 'core-app';
+  const IDB_STORE = 'kv';
+  const IDB_KEY_HISTORY = 'dice-roller:history:v1';
+
+  let kvDbPromise: Promise<IDBDatabase> | null = null;
+
+  function openKvDb(): Promise<IDBDatabase> {
+    if (kvDbPromise) return kvDbPromise;
+
+    kvDbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(IDB_DB_NAME, 1);
+
+      req.onupgradeneeded = () => {
+        const db = req.result;
+
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+          db.createObjectStore(IDB_STORE);
+        }
+      };
+
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+
+    return kvDbPromise;
+  }
+
+  async function idbGet<T>(key: string): Promise<T | undefined> {
+    const db = await openKvDb();
+
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const store = tx.objectStore(IDB_STORE);
+
+      let out: T | undefined;
+
+      const req = store.get(key);
+
+      req.onsuccess = () => {
+        out = req.result as T | undefined;
+      };
+
+      req.onerror = () => reject(req.error);
+
+      tx.oncomplete = () => resolve(out);
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  }
+
+  async function idbSet<T>(key: string, value: T): Promise<void> {
+    const db = await openKvDb();
+
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      const store = tx.objectStore(IDB_STORE);
+
+      store.put(value as any, key);
+
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  }
+
+  function cloneHistoryEntries(entries: HistoryEntry[]): HistoryEntry[] {
+    return entries.map((entry) => ({ ...entry }));
+  }
+
   const rollFormula = ref<string>('');
   const result = ref<string | number | null>('');
   const history = ref<HistoryEntry[]>([]);
   const isCollapsed = ref<boolean>(true);
   const lastRollDetails = ref<DiceDetail[]>([]);
+  const resultRenderKey = ref<number>(0);
+
+  onMounted(async () => {
+    try {
+      const saved = await idbGet<HistoryEntry[]>(IDB_KEY_HISTORY);
+
+      if (Array.isArray(saved) && saved.length) {
+        history.value = cloneHistoryEntries(saved);
+      }
+    } catch (e) {
+      console.error('DiceRoller: failed to load history from IDB', e);
+    }
+  });
+
+  let saveTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const schedulePersistHistory = () => {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+    }
+
+    saveTimer = setTimeout(async () => {
+      try {
+        const payload = cloneHistoryEntries(history.value);
+
+        await idbSet(IDB_KEY_HISTORY, payload);
+      } catch (e) {
+        console.error('DiceRoller: failed to save history to IDB', e);
+      }
+    }, 250);
+  };
+
+  watch(
+    history,
+    () => {
+      schedulePersistHistory();
+    },
+    { deep: true },
+  );
+
+  onBeforeUnmount(() => {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = undefined;
+    }
+  });
 
   const hasResult = computed(() => {
     return (
@@ -69,6 +192,12 @@
     () =>
       Array.isArray(lastRollDetails.value) && lastRollDetails.value.length > 0,
   );
+
+  const totalDiceCount = computed(() => {
+    return lastRollDetails.value.reduce((acc, detail) => {
+      return acc + detail.rolls.filter((r) => r.valid).length;
+    }, 0);
+  });
 
   const addHistoryEntry = (payload: {
     formula: string;
@@ -108,8 +237,14 @@
     });
   };
 
-  const clearHistory = () => {
+  const clearHistory = async () => {
     history.value = [];
+
+    try {
+      await idbSet(IDB_KEY_HISTORY, []);
+    } catch (e) {
+      console.error('DiceRoller: failed to clear history in IDB', e);
+    }
   };
 
   const toggleCollapse = (force?: boolean) => {
@@ -221,6 +356,12 @@
       : String(value ?? '');
   };
 
+  const triggerResultAnimation = () => {
+    nextTick(() => {
+      resultRenderKey.value += 1;
+    });
+  };
+
   const rollDice = () => {
     try {
       const formula = (rollFormula.value || '').trim();
@@ -242,6 +383,8 @@
       result.value = value;
       lastRollDetails.value = extractRollDetails(rollObject);
 
+      triggerResultAnimation();
+
       addHistoryEntry({
         formula,
         value,
@@ -254,6 +397,8 @@
       result.value = `Ошибка: ${message}`;
       lastRollDetails.value = [];
 
+      triggerResultAnimation();
+
       addHistoryEntry({
         formula: (rollFormula.value || '').trim(),
         value: message,
@@ -262,164 +407,216 @@
       });
     }
   };
+
+  const applyExample = (example: string) => {
+    rollFormula.value = example;
+  };
 </script>
 
 <template>
   <Teleport to="body">
     <div
-      class="dice-roller"
+      :class="[
+        'pointer-events-none fixed z-[120]',
+        isCollapsed
+          ? 'w-auto'
+          : 'w-[calc(100vw-32px)] max-w-[364px] md:max-w-[380px]',
+      ]"
+      :style="{
+        right: 'calc(16px + var(--safe-area-inset-right, 0px))',
+        bottom: 'calc(16px + var(--safe-area-inset-bottom, 0px))',
+      }"
       role="region"
       aria-live="polite"
     >
       <Transition
-        name="dice-roller-collapse"
-        mode="out-in"
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0 translate-y-2"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100 translate-y-0"
+        leave-to-class="opacity-0 translate-y-2"
       >
         <section
           v-if="!isCollapsed"
           key="expanded"
-          class="dice-roller-card"
-          aria-labelledby="dice-roller-title"
+          class="pointer-events-auto relative flex max-h-[80vh] w-full flex-col gap-6 overflow-y-auto rounded-3xl border border-[var(--ui-border)] p-6 shadow-[0_25px_60px_rgba(8,15,17,0.25)] backdrop-blur-[14px]"
+          :style="{
+            background:
+              'linear-gradient(160deg, var(--ui-bg-elevated) 0%, var(--ui-bg) 55%, var(--ui-bg-accented) 100%)',
+          }"
         >
-          <header class="dice-roller-card__header">
-            <div class="dice-roller-card__intro">
-              <p class="dice-roller-card__eyebrow">Всегда под рукой</p>
-
-              <h2
-                id="dice-roller-title"
-                class="dice-roller-card__title"
-              >
-                Роллер кубов
-              </h2>
-
-              <p class="dice-roller-card__description">
-                Поддерживает нотацию Roll20 и русские операторы — бросайте кубы,
-                не покидая страницу.
-              </p>
-            </div>
-
-            <div class="dice-roller-card__meta">
-              <UBadge
-                size="sm"
-                variant="subtle"
-                color="primary"
-              >
-                beta
-              </UBadge>
-
-              <UButton
-                icon="i-fluent-dock-right-16-regular"
-                variant="ghost"
-                color="neutral"
-                size="sm"
-                aria-label="Свернуть роллер"
-                @click.left.exact.prevent="toggleCollapse(true)"
-              />
-            </div>
-          </header>
-
           <form
-            class="dice-roller-card__form"
+            class="flex flex-col gap-3"
             @submit.prevent="rollDice"
           >
-            <div class="dice-roller-card__label-row">
+            <div class="flex items-center justify-between gap-2">
               <label
-                class="dice-roller-card__label"
+                class="text-xs font-semibold tracking-wide text-[var(--ui-text)] uppercase"
                 for="dice-roll-formula"
               >
                 Роллформула
               </label>
 
-              <div class="dice-roller-card__info">
-                <button
-                  type="button"
-                  class="dice-roller-card__info-button"
-                  aria-label="Как пользоваться роллером"
-                >
-                  <UIcon name="i-fluent-info-16-regular" />
+              <div class="flex items-center gap-2">
+                <div class="relativ group">
+                  <button
+                    type="button"
+                    class="group inline-flex h-6 w-6 items-center justify-center rounded-full border border-[var(--ui-border)] bg-[var(--ui-bg-elevated)] text-[var(--ui-text-muted)] transition hover:border-[var(--color-primary-500)] hover:text-[var(--ui-text-highlighted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary-500)] focus-visible:outline-none"
+                    aria-label="Как пользоваться роллером"
+                  >
+                    <UIcon name="i-fluent-info-16-regular" />
 
-                  <div class="dice-roller-card__info-panel">
-                    <p><strong>Базовые броски</strong></p>
+                    <div
+                      class="invisible absolute top-8 right-0 z-10 max-h-80 max-w-[420px] min-w-[320px] space-y-3 overflow-y-auto rounded-xl border border-[var(--ui-border)] bg-[var(--ui-bg-elevated)] p-4 text-sm text-[var(--ui-text)] opacity-0 shadow-[0_12px_30px_rgba(0,0,0,0.25)] transition group-hover:visible group-hover:opacity-100 group-focus-visible:visible group-focus-visible:opacity-100"
+                    >
+                      <p class="font-semibold">Базовые броски</p>
 
-                    <ul>
-                      <li>к20 — одиночный куб</li>
+                      <ul class="flex flex-wrap gap-2">
+                        <li class="flex-1">
+                          <button
+                            type="button"
+                            class="flex w-full flex-col gap-1 rounded-lg border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
+                            @click.left.exact.prevent="applyExample('к20')"
+                          >
+                            <span
+                              class="font-semibold text-[var(--ui-text-highlighted)]"
+                            >
+                              к20
+                            </span>
 
-                      <li>2к6+3 — сумма с модификатором</li>
+                            <span class="text-xs text-[var(--ui-text-muted)]">
+                              одиночный куб
+                            </span>
+                          </button>
+                        </li>
 
-                      <li>(4к6вх3+2)*2 — группировка</li>
-                    </ul>
+                        <li class="flex-1">
+                          <button
+                            type="button"
+                            class="flex w-full flex-col gap-1 rounded-lg border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
+                            @click.left.exact.prevent="applyExample('2к6+3')"
+                          >
+                            <span
+                              class="font-semibold text-[var(--ui-text-highlighted)]"
+                            >
+                              2к6+3
+                            </span>
 
-                    <p><strong>Лучшие / худшие</strong></p>
+                            <span class="text-xs text-[var(--ui-text-muted)]">
+                              сумма с модификатором
+                            </span>
+                          </button>
+                        </li>
 
-                    <ul>
-                      <li>4к6вх3 — оставить лучшие (kh3)</li>
+                        <li class="flex-1">
+                          <button
+                            type="button"
+                            class="flex w-full flex-col gap-1 rounded-lg border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
+                            @click.left.exact.prevent="
+                              applyExample('(4к6вх3+2)*2')
+                            "
+                          >
+                            <span
+                              class="font-semibold text-[var(--ui-text-highlighted)]"
+                            >
+                              (4к6вх3+2)*2
+                            </span>
 
-                      <li>3к8вл1 — оставить худшие (kl1)</li>
+                            <span class="text-xs text-[var(--ui-text-muted)]">
+                              группировка
+                            </span>
+                          </button>
+                        </li>
+                      </ul>
 
-                      <li>5к10ул2 — убрать лучшие (dh2)</li>
+                      <p class="pt-1 font-semibold">Лучшие / худшие</p>
 
-                      <li>5к10ух2 — убрать худшие (dl2)</li>
-                    </ul>
+                      <ul class="flex flex-wrap gap-2">
+                        <li
+                          v-for="example in [
+                            {
+                              formula: '4к6вх3',
+                              note: 'оставить лучшие (kh3)',
+                            },
+                            {
+                              formula: '3к8вл1',
+                              note: 'оставить худшие (kl1)',
+                            },
+                            { formula: '5к10ул2', note: 'убрать лучшие (dh2)' },
+                            { formula: '5к10ух2', note: 'убрать худшие (dl2)' },
+                          ]"
+                          :key="`keep-${example.formula}`"
+                          class="flex-1"
+                        >
+                          <button
+                            type="button"
+                            class="flex w-full flex-col gap-1 rounded-lg border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
+                            @click.left.exact.prevent="
+                              applyExample(example.formula)
+                            "
+                          >
+                            <span
+                              class="font-semibold text-[var(--ui-text-highlighted)]"
+                            >
+                              {{ example.formula }}
+                            </span>
 
-                    <p><strong>Перебросы</strong></p>
+                            <span class="text-xs text-[var(--ui-text-muted)]">
+                              — {{ example.note }}
+                            </span>
+                          </button>
+                        </li>
+                      </ul>
 
-                    <ul>
-                      <li>к20пр1 — переброс значения 1 один раз (ro1)</li>
+                      <p class="pt-1 font-semibold">Перебросы</p>
 
-                      <li>10к6пб2 — перебрасывать 2 до нового значения (r2)</li>
+                      <ul class="flex flex-wrap gap-2">
+                        <li
+                          v-for="example in [
+                            { formula: 'к20пр1', note: 'переброс 1 (ro1)' },
+                            { formula: '10к6пб2', note: 'переброс 2 (r2)' },
+                            { formula: '8к6р<3', note: 'переброс <3' },
+                          ]"
+                          :key="`reroll-${example.formula}`"
+                          class="flex-1"
+                        >
+                          <button
+                            type="button"
+                            class="flex w-full flex-col gap-1 rounded-lg border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
+                            @click.left.exact.prevent="
+                              applyExample(example.formula)
+                            "
+                          >
+                            <span
+                              class="font-semibold text-[var(--ui-text-highlighted)]"
+                            >
+                              {{ example.formula }}
+                            </span>
 
-                      <li>8к6р&lt;3 — переброс всех &lt;3 (r&lt;3)</li>
-                    </ul>
+                            <span class="text-xs text-[var(--ui-text-muted)]">
+                              — {{ example.note }}
+                            </span>
+                          </button>
+                        </li>
+                      </ul>
 
-                    <p><strong>Взрывающиеся</strong></p>
+                      <p class="pt-1 text-xs text-[var(--ui-text-muted)]">
+                        Поддерживаются: к, кс, вх/вл, ул/ух, пр/пб, !/!!/!п, с,
+                        п, св/су
+                      </p>
+                    </div>
+                  </button>
+                </div>
 
-                    <ul>
-                      <li>6к6! — взрыв максимума (!)</li>
-
-                      <li>8к6!&gt;=5 — взрыв ≥5</li>
-
-                      <li>4к6!! — бесконечный взрыв (!!)</li>
-
-                      <li>5к6!п — проникающий взрыв (!p)</li>
-                    </ul>
-
-                    <p><strong>Успехи / провалы</strong></p>
-
-                    <ul>
-                      <li>10к6&gt;=5 — счёт успехов</li>
-
-                      <li>10к6&gt;=5п1 — успехи с провалами (f1)</li>
-
-                      <li>8к6с6 — подсчёт совпадений (m6)</li>
-                    </ul>
-
-                    <p><strong>Спец-кости</strong></p>
-
-                    <ul>
-                      <li>4кс — FATE (−1/0/+1)</li>
-
-                      <li>к% — процентная (d100)</li>
-                    </ul>
-
-                    <p><strong>Комбинации</strong></p>
-
-                    <ul>
-                      <li>2к20вх1+5 — кастомный advantage</li>
-
-                      <li>
-                        floor((4к6вх3+2)/2) — функции floor/ceil/round/min/max
-                      </li>
-
-                      <li>10к6!&gt;=5 — пул + взрывы + успехи</li>
-
-                      <li>6*(4к6вх3) — генератор характеристик</li>
-                    </ul>
-
-                    <p><strong>Поддерживаются русские операторы</strong></p>
-
-                    <p>к, кс, вх/вл, ул/ух, пр/пб, !/!!/!п, с, п, св/су</p>
-                  </div>
-                </button>
+                <UButton
+                  icon="i-fluent-dock-right-16-regular"
+                  variant="ghost"
+                  color="neutral"
+                  size="xs"
+                  aria-label="Свернуть роллер"
+                  @click.left.exact.prevent="toggleCollapse(true)"
+                />
               </div>
             </div>
 
@@ -428,7 +625,7 @@
               v-model="rollFormula"
               placeholder="Например: 4к6вх3+2"
               size="xl"
-              class="dice-roller-card__input"
+              class="w-full"
             />
 
             <UButton
@@ -441,89 +638,127 @@
             </UButton>
           </form>
 
-          <div class="dice-roller-card__result">
+          <div class="flex min-h-[128px] flex-col gap-3">
+            <div
+              v-if="isErrorResult"
+              class="rounded-2xl border border-[var(--ui-color-error-500)] px-4 py-3 text-sm text-[var(--ui-color-error-500)]"
+              :style="{
+                background:
+                  'color-mix(in srgb, var(--ui-color-error-500) 8%, var(--ui-bg-elevated))',
+              }"
+            >
+              {{ resultDescription }}
+            </div>
+
             <Transition
-              name="dice-roller-fade"
+              v-else
+              enter-active-class="transition duration-200 ease-out"
+              enter-from-class="opacity-0 scale-95"
+              enter-to-class="opacity-100 scale-100"
+              leave-active-class="transition duration-150 ease-in"
+              leave-from-class="opacity-100 scale-100"
+              leave-to-class="opacity-0 scale-95"
               mode="out-in"
             >
-              <UAlert
-                v-if="hasResult"
-                :key="isErrorResult ? 'error' : 'result'"
-                :color="isErrorResult ? 'error' : 'success'"
-                variant="soft"
+              <div
+                v-if="hasDiceDetails"
+                :key="`details-${resultRenderKey}`"
+                class="flex max-h-44 flex-col gap-3 overflow-y-auto pr-1"
               >
-                <template #title>
-                  {{ isErrorResult ? 'Ошибка' : 'Результат' }}
-                </template>
+                <div
+                  class="flex items-center justify-between gap-2 rounded-2xl border border-[var(--ui-border)] px-3 py-2 text-sm"
+                  :style="{
+                    background:
+                      'color-mix(in srgb, var(--ui-bg-elevated) 80%, transparent)',
+                  }"
+                >
+                  <span class="font-semibold text-[var(--ui-text-highlighted)]">
+                    Сумма: {{ result }}
+                  </span>
 
-                <template #description>
-                  {{ resultDescription }}
-                </template>
-              </UAlert>
+                  <span class="text-xs text-[var(--ui-text-muted)]">
+                    Кубов: {{ totalDiceCount }}
+                  </span>
+                </div>
+
+                <div
+                  v-for="detail in diceDetails"
+                  :key="detail.id"
+                  class="rounded-2xl border border-[var(--ui-border)] px-3 py-3"
+                  :style="{
+                    background:
+                      'color-mix(in srgb, var(--ui-bg-elevated) 85%, transparent)',
+                  }"
+                >
+                  <div
+                    class="mb-2 flex items-center justify-between text-sm font-semibold text-[var(--ui-text)]"
+                  >
+                    <span>{{ detail.label }}</span>
+
+                    <span class="text-[var(--ui-text-highlighted)]">
+                      {{ formatDetailTotal(detail.total) }}
+                    </span>
+                  </div>
+
+                  <ul class="flex flex-wrap gap-2">
+                    <li
+                      v-for="roll in detail.rolls"
+                      :key="roll.id"
+                      :class="[
+                        'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-semibold',
+                        roll.valid
+                          ? 'border-[color:color-mix(in_srgb,var(--ui-color-primary-500)_40%,transparent)] text-[var(--ui-text-highlighted)]'
+                          : 'border-[var(--ui-border)] line-through opacity-60',
+                      ]"
+                      :style="{ background: 'var(--ui-bg-elevated)' }"
+                    >
+                      <span>{{ roll.value }}</span>
+
+                      <UBadge
+                        v-if="
+                          roll.critical === 'success' ||
+                          roll.critical === 'failure'
+                        "
+                        :color="
+                          roll.critical === 'success' ? 'success' : 'error'
+                        "
+                        variant="subtle"
+                        size="xs"
+                      >
+                        {{ roll.critical === 'success' ? 'крит' : 'фейл' }}
+                      </UBadge>
+                    </li>
+                  </ul>
+                </div>
+              </div>
 
               <div
                 v-else
                 key="placeholder"
-                class="dice-roller-card__placeholder"
+                class="flex min-h-[112px] items-center rounded-2xl border border-dashed border-[var(--ui-border)] px-4 py-3 text-sm text-[var(--ui-text-muted)]"
+                :style="{
+                  background:
+                    'linear-gradient(135deg, var(--ui-bg) 0%, var(--ui-bg-elevated) 100%)',
+                }"
               >
-                <p>Введите формулу и нажмите «Бросить» или клавишу Enter.</p>
+                Введите формулу и нажмите «Бросить» или клавишу Enter.
               </div>
             </Transition>
-
-            <div
-              v-if="hasDiceDetails"
-              class="dice-roller-card__dice-details"
-            >
-              <div
-                v-for="detail in diceDetails"
-                :key="detail.id"
-                class="dice-roller-card__dice-group"
-              >
-                <div class="dice-roller-card__dice-header">
-                  <span>{{ detail.label }}</span>
-
-                  <span class="dice-roller-card__dice-total">
-                    {{ formatDetailTotal(detail.total) }}
-                  </span>
-                </div>
-
-                <ul class="dice-roller-card__dice-rolls">
-                  <li
-                    v-for="roll in detail.rolls"
-                    :key="roll.id"
-                    :class="[
-                      'dice-roller-card__dice-roll',
-                      roll.valid ? 'is-valid' : 'is-dropped',
-                    ]"
-                  >
-                    <span>{{ roll.value }}</span>
-
-                    <UBadge
-                      v-if="
-                        roll.critical === 'success' ||
-                        roll.critical === 'failure'
-                      "
-                      :color="roll.critical === 'success' ? 'success' : 'error'"
-                      variant="subtle"
-                      size="xs"
-                    >
-                      {{ roll.critical === 'success' ? 'крит' : 'фейл' }}
-                    </UBadge>
-                  </li>
-                </ul>
-              </div>
-            </div>
           </div>
 
           <div
             v-if="hasHistory"
-            class="dice-roller-card__history"
+            class="flex max-h-56 flex-col gap-3"
           >
-            <div class="dice-roller-card__history-header">
+            <div class="flex items-center justify-between gap-3">
               <div>
-                <p>История бросков</p>
+                <p class="m-0 font-semibold text-[var(--ui-text)]">
+                  История бросков
+                </p>
 
-                <span>последние {{ history.length }}</span>
+                <span class="text-xs text-[var(--ui-text-muted)]">
+                  последние {{ history.length }}
+                </span>
               </div>
 
               <UButton
@@ -537,34 +772,52 @@
             </div>
 
             <TransitionGroup
-              name="dice-roller-history"
               tag="ul"
-              class="dice-roller-card__history-list"
+              class="flex flex-1 flex-col gap-2 overflow-y-auto pr-1"
+              enter-active-class="transition duration-200 ease-out"
+              enter-from-class="opacity-0 translate-y-1"
+              enter-to-class="opacity-100 translate-y-0"
+              leave-active-class="transition duration-150 ease-in"
+              leave-from-class="opacity-100 translate-y-0"
+              leave-to-class="opacity-0 translate-y-1"
+              move-class="transition duration-200"
             >
               <li
                 v-for="entry in history"
                 :key="entry.id"
-                class="dice-roller-card__history-item"
                 :class="[
+                  'flex items-center justify-between gap-3 rounded-2xl border px-3 py-2 text-sm',
                   entry.isError
-                    ? 'dice-roller-card__history-item--error'
-                    : 'dice-roller-card__history-item--success',
+                    ? 'border-[color:color-mix(in_srgb,var(--ui-color-error-500)_25%,transparent)]'
+                    : 'border-[color:color-mix(in_srgb,var(--ui-color-success-500)_25%,transparent)]',
                 ]"
+                :style="{
+                  background:
+                    'color-mix(in srgb, var(--ui-bg) 85%, transparent)',
+                }"
               >
-                <div class="dice-roller-card__history-meta">
-                  <p>{{ entry.formula }}</p>
+                <div class="flex min-w-0 flex-col gap-1">
+                  <p
+                    class="m-0 truncate font-semibold text-[var(--ui-text-highlighted)]"
+                  >
+                    {{ entry.formula }}
+                  </p>
 
-                  <span>{{ formatHistoryTimestamp(entry) }}</span>
+                  <span class="text-xs text-[var(--ui-text-muted)]">
+                    {{ formatHistoryTimestamp(entry) }}
+                  </span>
 
                   <p
                     v-if="entry.detail"
-                    class="dice-roller-card__history-detail"
+                    class="m-0 text-xs text-[var(--ui-text-muted)]"
                   >
                     {{ entry.detail }}
                   </p>
                 </div>
 
-                <span class="dice-roller-card__history-value">
+                <span
+                  class="font-mono text-base font-semibold text-[var(--ui-text-highlighted)]"
+                >
                   {{ entry.displayValue }}
                 </span>
               </li>
@@ -575,579 +828,18 @@
         <button
           v-else
           key="collapsed"
-          class="dice-roller__toggle"
           type="button"
+          class="pointer-events-auto inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--ui-border)] bg-[var(--ui-bg-elevated)] text-[var(--ui-text)] shadow-[0_12px_25px_rgba(0,0,0,0.2)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_30px_rgba(0,0,0,0.3)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary-500)] focus-visible:outline-none"
           aria-label="Открыть роллер кубов"
           @click.left.exact.prevent="toggleCollapse(false)"
         >
-          <span
-            class="dice-roller__toggle-icon"
-            aria-hidden="true"
-          >
-            <UIcon name="i-fluent-dice-5-regular" />
-          </span>
-
-          <div class="dice-roller__toggle-text">
-            <strong>Роллер кубов</strong>
-
-            <span>Нажмите, чтобы открыть</span>
-          </div>
+          <img
+            :src="DiceD20IconUrl"
+            alt="D20"
+            class="h-5 w-5 transition dark:invert svifty7:invert"
+          />
         </button>
       </Transition>
     </div>
   </Teleport>
 </template>
-
-<style scoped lang="scss">
-  .dice-roller {
-    pointer-events: none;
-
-    position: fixed;
-    z-index: 120;
-    right: calc(16px + var(--safe-area-inset-right, 0px));
-    bottom: calc(16px + var(--safe-area-inset-bottom, 0px));
-
-    width: min(364px, calc(100vw - 32px));
-  }
-
-  @media (min-width: 768px) {
-    .dice-roller {
-      width: 380px;
-    }
-  }
-
-  .dice-roller-card,
-  .dice-roller__toggle {
-    pointer-events: auto;
-  }
-
-  .dice-roller-card {
-    position: relative;
-
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-
-    width: 100%;
-    padding: 24px;
-    border: 1px solid var(--ui-border);
-    border-radius: 24px;
-
-    background: linear-gradient(
-      160deg,
-      var(--ui-bg-elevated) 0%,
-      var(--ui-bg) 55%,
-      var(--ui-bg-accented) 100%
-    );
-    backdrop-filter: blur(14px);
-    box-shadow: 0 25px 60px rgba(8, 15, 17, 0.25);
-  }
-
-  .dice-roller-card::after {
-    pointer-events: none;
-    content: '';
-
-    position: absolute;
-    inset: 1px;
-
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 22px;
-  }
-
-  .dice-roller-card__header {
-    display: flex;
-    gap: 16px;
-    align-items: flex-start;
-    justify-content: space-between;
-  }
-
-  .dice-roller-card__meta {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-
-  .dice-roller-card__intro {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .dice-roller-card__eyebrow {
-    font-size: 12px;
-    color: var(--ui-text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-
-  .dice-roller-card__title {
-    margin: 0;
-    font-size: 24px;
-    line-height: 1.2;
-    color: var(--ui-text-highlighted);
-  }
-
-  .dice-roller-card__description {
-    margin: 4px 0 0;
-    line-height: 1.4;
-    color: var(--ui-text-muted);
-  }
-
-  .dice-roller-card__form {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .dice-roller-card__label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ui-text);
-    letter-spacing: 0.02em;
-  }
-
-  .dice-roller-card__hint {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-
-    font-size: 13px;
-    color: var(--ui-text-muted);
-  }
-
-  .dice-roller-card__hint ul {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-
-    margin: 0;
-    padding: 0;
-
-    list-style: none;
-  }
-
-  .dice-roller-card__hint li {
-    padding: 2px 8px;
-    border: 1px dashed var(--ui-border);
-    border-radius: 999px;
-
-    font-family:
-      'JetBrains Mono', 'Fira Code', 'SFMono-Regular', Menlo, monospace;
-    font-weight: 600;
-
-    background: rgba(0, 0, 0, 0.04);
-  }
-
-  :global(html.dark) .dice-roller-card__hint li {
-    background: rgba(255, 255, 255, 0.06);
-  }
-
-  .dice-roller-card__result {
-    min-height: 128px;
-  }
-
-  .dice-roller-card__placeholder {
-    display: flex;
-    align-items: center;
-
-    min-height: 112px;
-    padding: 16px;
-    border: 1px dashed var(--ui-border);
-    border-radius: 20px;
-
-    color: var(--ui-text-muted);
-
-    background: linear-gradient(
-      135deg,
-      var(--ui-bg) 0%,
-      var(--ui-bg-elevated) 100%
-    );
-  }
-
-  .dice-roller-card__placeholder p {
-    margin: 0;
-    line-height: 1.4;
-  }
-
-  .dice-roller-card__dice-details {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 12px;
-  }
-
-  .dice-roller-card__dice-group {
-    padding: 12px 14px;
-    border: 1px solid var(--ui-border);
-    border-radius: 16px;
-    background: rgba(0, 0, 0, 0.04);
-  }
-
-  :global(html.dark) .dice-roller-card__dice-group {
-    background: rgba(255, 255, 255, 0.04);
-  }
-
-  .dice-roller-card__dice-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    margin-bottom: 8px;
-
-    font-weight: 600;
-    color: var(--ui-text);
-  }
-
-  .dice-roller-card__dice-total {
-    color: var(--ui-text-highlighted);
-  }
-
-  .dice-roller-card__dice-rolls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-
-    margin: 0;
-    padding: 0;
-
-    list-style: none;
-  }
-
-  .dice-roller-card__dice-roll {
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-
-    padding: 4px 10px;
-    border: 1px solid transparent;
-    border-radius: 999px;
-
-    font-weight: 600;
-
-    background: var(--ui-bg-elevated);
-  }
-
-  .dice-roller-card__dice-roll.is-dropped {
-    border-color: var(--ui-border);
-    text-decoration: line-through;
-    opacity: 0.6;
-  }
-
-  .dice-roller-card__dice-roll.is-valid {
-    border-color: color-mix(
-      in srgb,
-      var(--ui-color-primary-500) 40%,
-      transparent
-    );
-  }
-
-  .dice-roller-card__history {
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-
-    max-height: 220px;
-  }
-
-  .dice-roller-card__history-header {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .dice-roller-card__history-header p {
-    margin: 0;
-    font-weight: 600;
-    color: var(--ui-text);
-  }
-
-  .dice-roller-card__history-header span {
-    display: block;
-    font-size: 12px;
-    color: var(--ui-text-muted);
-  }
-
-  .dice-roller-card__history-list {
-    scrollbar-gutter: stable;
-
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-
-    max-height: 168px;
-    margin: 0;
-    padding: 0;
-    padding-right: 4px;
-
-    list-style: none;
-  }
-
-  .dice-roller-card__history-item {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-
-    padding: 12px 14px;
-    border: 1px solid var(--ui-border);
-    border-radius: 16px;
-
-    background: color-mix(in srgb, var(--ui-bg) 85%, transparent);
-  }
-
-  .dice-roller-card__history-item--success {
-    border-color: color-mix(
-      in srgb,
-      var(--ui-color-success-500) 25%,
-      transparent
-    );
-  }
-
-  .dice-roller-card__history-item--error {
-    border-color: color-mix(
-      in srgb,
-      var(--ui-color-error-500) 25%,
-      transparent
-    );
-  }
-
-  .dice-roller-card__history-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-  }
-
-  .dice-roller-card__history-meta p {
-    margin: 0;
-    font-weight: 600;
-    color: var(--ui-text-highlighted);
-  }
-
-  .dice-roller-card__history-meta span {
-    font-size: 12px;
-    color: var(--ui-text-muted);
-  }
-
-  .dice-roller-card__history-detail {
-    font-size: 12px;
-    color: var(--ui-text-muted);
-  }
-
-  .dice-roller-card__history-value {
-    font-family:
-      'JetBrains Mono', 'Fira Code', 'SFMono-Regular', Menlo, monospace;
-    font-weight: 600;
-    color: var(--ui-text-highlighted);
-    white-space: nowrap;
-  }
-
-  .dice-roller__toggle {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-
-    width: 100%;
-    padding: 14px 18px;
-    border: 1px solid var(--ui-border);
-    border-radius: 16px;
-
-    font-size: 14px;
-    color: var(--ui-text);
-
-    background: var(--ui-bg-elevated);
-    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
-
-    transition:
-      transform 200ms ease,
-      box-shadow 200ms ease;
-  }
-
-  .dice-roller__toggle:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.3);
-  }
-
-  .dice-roller__toggle-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 36px;
-    height: 36px;
-    border-radius: 12px;
-
-    font-size: 22px;
-    color: var(--color-primary-500);
-
-    background: var(--ui-bg-accented);
-  }
-
-  .dice-roller__toggle-text {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    text-align: left;
-  }
-
-  .dice-roller__toggle-text strong {
-    font-size: 15px;
-    color: var(--ui-text-highlighted);
-  }
-
-  .dice-roller__toggle-text span {
-    font-size: 12px;
-    color: var(--ui-text-muted);
-  }
-
-  .dice-roller-fade-enter-active,
-  .dice-roller-fade-leave-active {
-    transition:
-      opacity 200ms ease,
-      transform 200ms ease;
-  }
-
-  .dice-roller-fade-enter-from,
-  .dice-roller-fade-leave-to {
-    transform: translateY(8px);
-    opacity: 0;
-  }
-
-  .dice-roller-collapse-enter-active,
-  .dice-roller-collapse-leave-active {
-    transition:
-      opacity 220ms ease,
-      transform 220ms ease;
-  }
-
-  .dice-roller-collapse-enter-from,
-  .dice-roller-collapse-leave-to {
-    transform: translateY(8px);
-    opacity: 0;
-  }
-
-  .dice-roller-history-enter-active,
-  .dice-roller-history-leave-active {
-    transition: all 200ms ease;
-  }
-
-  .dice-roller-history-enter-from,
-  .dice-roller-history-leave-to {
-    transform: translateY(6px);
-    opacity: 0;
-  }
-
-  .dice-roller-card__label-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .dice-roller-card__label-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .dice-roller-card__info {
-    position: relative;
-  }
-
-  .dice-roller-card__info-button {
-    cursor: pointer;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border: 1px solid var(--ui-border);
-    border-radius: 999px;
-
-    color: var(--ui-text-muted);
-
-    background: var(--ui-bg-elevated);
-  }
-
-  .dice-roller-card__info-button:hover,
-  .dice-roller-card__info-button:focus-visible {
-    border-color: var(--ui-color-primary-500);
-    color: var(--ui-text-highlighted);
-  }
-
-  .dice-roller-card__info-panel {
-    scrollbar-gutter: stable;
-
-    position: absolute;
-    z-index: 10;
-    top: 32px;
-    right: 0;
-    transform: translateY(4px);
-
-    /* чтобы большой текст влезал красиво */
-    overflow-y: auto;
-
-    min-width: 320px;
-    max-width: 420px;
-    max-height: 320px;
-    padding: 14px 16px;
-    border: 1px solid var(--ui-border);
-    border-radius: 12px;
-
-    font-size: 13px;
-    color: var(--ui-text);
-    text-align: left;
-
-    visibility: hidden;
-    opacity: 0;
-    background: var(--ui-bg-elevated);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
-
-    transition:
-      opacity 150ms ease,
-      transform 150ms ease,
-      visibility 150ms ease;
-  }
-
-  .dice-roller-card__info-button:hover .dice-roller-card__info-panel,
-  .dice-roller-card__info-button:focus-visible .dice-roller-card__info-panel {
-    transform: translateY(0);
-    visibility: visible;
-    opacity: 1;
-  }
-
-  .dice-roller-card__info-panel ul {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-
-    margin: 8px 0 0;
-    padding: 0;
-
-    list-style: none;
-  }
-
-  .dice-roller-card__info-panel li {
-    padding: 2px 8px;
-    border: 1px dashed var(--ui-border);
-    border-radius: 999px;
-
-    font-family:
-      'JetBrains Mono', 'Fira Code', 'SFMono-Regular', Menlo, monospace;
-    font-weight: 600;
-
-    background: rgba(0, 0, 0, 0.04);
-  }
-
-  :global(html.dark) .dice-roller-card__info-panel li {
-    background: rgba(255, 255, 255, 0.06);
-  }
-</style>
