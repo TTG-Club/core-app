@@ -641,10 +641,6 @@
                   <p class="m-0 font-semibold text-[var(--ui-text)]">
                     История бросков
                   </p>
-
-                  <span class="text-xs text-[var(--ui-text-muted)]">
-                    последние {{ history.length }}
-                  </span>
                 </div>
               </div>
 
