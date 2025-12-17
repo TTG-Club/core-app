@@ -111,6 +111,17 @@
   const lastRollDetails = ref<DiceDetail[]>([]);
   const resultRenderKey = ref<number>(0);
 
+  const historyScrollEl = ref<HTMLElement | null>(null);
+
+  const scrollHistoryToBottom = async () => {
+    await nextTick();
+
+    const el = historyScrollEl.value;
+
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  };
+
   onMounted(async () => {
     try {
       const saved = await idbGet<HistoryEntry[]>(IDB_KEY_HISTORY);
@@ -118,6 +129,8 @@
       if (Array.isArray(saved) && saved.length) {
         history.value = cloneHistoryEntries(saved);
       }
+
+      await scrollHistoryToBottom();
     } catch (e) {
       console.error('DiceRoller: failed to load history from IDB', e);
     }
@@ -147,6 +160,13 @@
       schedulePersistHistory();
     },
     { deep: true },
+  );
+
+  watch(
+    () => history.value.length,
+    async () => {
+      await scrollHistoryToBottom();
+    },
   );
 
   onBeforeUnmount(() => {
@@ -193,12 +213,6 @@
       Array.isArray(lastRollDetails.value) && lastRollDetails.value.length > 0,
   );
 
-  const totalDiceCount = computed(() => {
-    return lastRollDetails.value.reduce((acc, detail) => {
-      return acc + detail.rolls.filter((r) => r.valid).length;
-    }, 0);
-  });
-
   const addHistoryEntry = (payload: {
     formula: string;
     value: string | number;
@@ -223,7 +237,9 @@
       detail: detail || undefined,
     };
 
-    history.value = [entry, ...history.value].slice(0, 8);
+    // ✅ без ограничения по количеству
+    history.value = [...history.value, entry];
+    void scrollHistoryToBottom();
   };
 
   const formatHistoryTimestamp = (entry: HistoryEntry) => {
@@ -242,6 +258,7 @@
 
     try {
       await idbSet(IDB_KEY_HISTORY, []);
+      await scrollHistoryToBottom();
     } catch (e) {
       console.error('DiceRoller: failed to clear history in IDB', e);
     }
@@ -440,186 +457,352 @@
         <section
           v-if="!isCollapsed"
           key="expanded"
-          class="pointer-events-auto relative flex max-h-[80vh] w-full flex-col gap-6 overflow-y-auto rounded-3xl border border-[var(--ui-border)] p-6 shadow-[0_25px_60px_rgba(8,15,17,0.25)] backdrop-blur-[14px]"
+          class="pointer-events-auto relative flex max-h-[80vh] w-full flex-col overflow-hidden rounded-xl border border-[var(--ui-border)] p-4 shadow-[0_25px_60px_rgba(8,15,17,0.25)] backdrop-blur-[14px]"
           :style="{
             background:
               'linear-gradient(160deg, var(--ui-bg-elevated) 0%, var(--ui-bg) 55%, var(--ui-bg-accented) 100%)',
           }"
         >
-          <form
-            class="flex flex-col gap-3"
-            @submit.prevent="rollDice"
-          >
-            <div class="flex items-center justify-between gap-2">
-              <label
-                class="text-xs font-semibold tracking-wide text-[var(--ui-text)] uppercase"
-                for="dice-roll-formula"
+          <div class="flex items-center justify-end gap-2 pb-3">
+            <div class="relativ group">
+              <button
+                type="button"
+                class="group inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--ui-border)] bg-[var(--ui-bg-elevated)] text-[var(--ui-text-muted)] transition hover:border-[var(--color-primary-500)] hover:text-[var(--ui-text-highlighted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary-500)] focus-visible:outline-none"
+                aria-label="Как пользоваться роллером"
               >
-                Роллформула
-              </label>
+                <UIcon name="i-fluent-info-16-regular" />
 
-              <div class="flex items-center gap-2">
-                <div class="relativ group">
-                  <button
-                    type="button"
-                    class="group inline-flex h-6 w-6 items-center justify-center rounded-full border border-[var(--ui-border)] bg-[var(--ui-bg-elevated)] text-[var(--ui-text-muted)] transition hover:border-[var(--color-primary-500)] hover:text-[var(--ui-text-highlighted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary-500)] focus-visible:outline-none"
-                    aria-label="Как пользоваться роллером"
-                  >
-                    <UIcon name="i-fluent-info-16-regular" />
+                <div
+                  class="invisible absolute top-10 right-0 z-10 max-h-80 max-w-[420px] min-w-[320px] space-y-3 overflow-y-auto rounded-xl border border-[var(--ui-border)] bg-[var(--ui-bg-elevated)] p-4 text-sm text-[var(--ui-text)] opacity-0 shadow-[0_12px_30px_rgba(0,0,0,0.25)] transition group-hover:visible group-hover:opacity-100 group-focus-visible:visible group-focus-visible:opacity-100"
+                >
+                  <p class="font-semibold">Базовые броски</p>
 
-                    <div
-                      class="invisible absolute top-8 right-0 z-10 max-h-80 max-w-[420px] min-w-[320px] space-y-3 overflow-y-auto rounded-xl border border-[var(--ui-border)] bg-[var(--ui-bg-elevated)] p-4 text-sm text-[var(--ui-text)] opacity-0 shadow-[0_12px_30px_rgba(0,0,0,0.25)] transition group-hover:visible group-hover:opacity-100 group-focus-visible:visible group-focus-visible:opacity-100"
+                  <ul class="flex flex-wrap gap-2">
+                    <li class="flex-1">
+                      <button
+                        type="button"
+                        class="flex w-full flex-col gap-1 rounded-lg border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
+                        @click.left.exact.prevent="applyExample('к20')"
+                      >
+                        <span
+                          class="font-semibold text-[var(--ui-text-highlighted)]"
+                        >
+                          к20
+                        </span>
+
+                        <span class="text-xs text-[var(--ui-text-muted)]">
+                          одиночный куб
+                        </span>
+                      </button>
+                    </li>
+
+                    <li class="flex-1">
+                      <button
+                        type="button"
+                        class="flex w-full flex-col gap-1 rounded-lg border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
+                        @click.left.exact.prevent="applyExample('2к6+3')"
+                      >
+                        <span
+                          class="font-semibold text-[var(--ui-text-highlighted)]"
+                        >
+                          2к6+3
+                        </span>
+
+                        <span class="text-xs text-[var(--ui-text-muted)]">
+                          сумма с модификатором
+                        </span>
+                      </button>
+                    </li>
+
+                    <li class="flex-1">
+                      <button
+                        type="button"
+                        class="flex w-full flex-col gap-1 rounded-lg border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
+                        @click.left.exact.prevent="applyExample('(4к6вх3+2)*2')"
+                      >
+                        <span
+                          class="font-semibold text-[var(--ui-text-highlighted)]"
+                        >
+                          (4к6вх3+2)*2
+                        </span>
+
+                        <span class="text-xs text-[var(--ui-text-muted)]">
+                          группировка
+                        </span>
+                      </button>
+                    </li>
+                  </ul>
+
+                  <p class="pt-1 font-semibold">Лучшие / худшие</p>
+
+                  <ul class="flex flex-wrap gap-2">
+                    <li
+                      v-for="example in [
+                        {
+                          formula: '4к6вх3',
+                          note: 'оставить лучшие (kh3)',
+                        },
+                        {
+                          formula: '3к8вл1',
+                          note: 'оставить худшие (kl1)',
+                        },
+                        { formula: '5к10ул2', note: 'убрать лучшие (dh2)' },
+                        { formula: '5к10ух2', note: 'убрать худшие (dl2)' },
+                      ]"
+                      :key="`keep-${example.formula}`"
+                      class="flex-1"
                     >
-                      <p class="font-semibold">Базовые броски</p>
-
-                      <ul class="flex flex-wrap gap-2">
-                        <li class="flex-1">
-                          <button
-                            type="button"
-                            class="flex w-full flex-col gap-1 rounded-lg border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
-                            @click.left.exact.prevent="applyExample('к20')"
-                          >
-                            <span
-                              class="font-semibold text-[var(--ui-text-highlighted)]"
-                            >
-                              к20
-                            </span>
-
-                            <span class="text-xs text-[var(--ui-text-muted)]">
-                              одиночный куб
-                            </span>
-                          </button>
-                        </li>
-
-                        <li class="flex-1">
-                          <button
-                            type="button"
-                            class="flex w-full flex-col gap-1 rounded-lg border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
-                            @click.left.exact.prevent="applyExample('2к6+3')"
-                          >
-                            <span
-                              class="font-semibold text-[var(--ui-text-highlighted)]"
-                            >
-                              2к6+3
-                            </span>
-
-                            <span class="text-xs text-[var(--ui-text-muted)]">
-                              сумма с модификатором
-                            </span>
-                          </button>
-                        </li>
-
-                        <li class="flex-1">
-                          <button
-                            type="button"
-                            class="flex w-full flex-col gap-1 rounded-lg border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
-                            @click.left.exact.prevent="
-                              applyExample('(4к6вх3+2)*2')
-                            "
-                          >
-                            <span
-                              class="font-semibold text-[var(--ui-text-highlighted)]"
-                            >
-                              (4к6вх3+2)*2
-                            </span>
-
-                            <span class="text-xs text-[var(--ui-text-muted)]">
-                              группировка
-                            </span>
-                          </button>
-                        </li>
-                      </ul>
-
-                      <p class="pt-1 font-semibold">Лучшие / худшие</p>
-
-                      <ul class="flex flex-wrap gap-2">
-                        <li
-                          v-for="example in [
-                            {
-                              formula: '4к6вх3',
-                              note: 'оставить лучшие (kh3)',
-                            },
-                            {
-                              formula: '3к8вл1',
-                              note: 'оставить худшие (kl1)',
-                            },
-                            { formula: '5к10ул2', note: 'убрать лучшие (dh2)' },
-                            { formula: '5к10ух2', note: 'убрать худшие (dl2)' },
-                          ]"
-                          :key="`keep-${example.formula}`"
-                          class="flex-1"
+                      <button
+                        type="button"
+                        class="flex w-full flex-col gap-1 rounded-lg border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
+                        @click.left.exact.prevent="
+                          applyExample(example.formula)
+                        "
+                      >
+                        <span
+                          class="font-semibold text-[var(--ui-text-highlighted)]"
                         >
-                          <button
-                            type="button"
-                            class="flex w-full flex-col gap-1 rounded-lg border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
-                            @click.left.exact.prevent="
-                              applyExample(example.formula)
-                            "
-                          >
-                            <span
-                              class="font-semibold text-[var(--ui-text-highlighted)]"
-                            >
-                              {{ example.formula }}
-                            </span>
+                          {{ example.formula }}
+                        </span>
 
-                            <span class="text-xs text-[var(--ui-text-muted)]">
-                              — {{ example.note }}
-                            </span>
-                          </button>
-                        </li>
-                      </ul>
+                        <span class="text-xs text-[var(--ui-text-muted)]">
+                          — {{ example.note }}
+                        </span>
+                      </button>
+                    </li>
+                  </ul>
 
-                      <p class="pt-1 font-semibold">Перебросы</p>
+                  <p class="pt-1 font-semibold">Перебросы</p>
 
-                      <ul class="flex flex-wrap gap-2">
-                        <li
-                          v-for="example in [
-                            { formula: 'к20пр1', note: 'переброс 1 (ro1)' },
-                            { formula: '10к6пб2', note: 'переброс 2 (r2)' },
-                            { formula: '8к6р<3', note: 'переброс <3' },
-                          ]"
-                          :key="`reroll-${example.formula}`"
-                          class="flex-1"
+                  <ul class="flex flex-wrap gap-2">
+                    <li
+                      v-for="example in [
+                        { formula: 'к20пр1', note: 'переброс 1 (ro1)' },
+                        { formula: '10к6пб2', note: 'переброс 2 (r2)' },
+                        { formula: '8к6р<3', note: 'переброс <3' },
+                      ]"
+                      :key="`reroll-${example.formula}`"
+                      class="flex-1"
+                    >
+                      <button
+                        type="button"
+                        class="flex w-full flex-col gap-1 rounded-lg border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
+                        @click.left.exact.prevent="
+                          applyExample(example.formula)
+                        "
+                      >
+                        <span
+                          class="font-semibold text-[var(--ui-text-highlighted)]"
                         >
-                          <button
-                            type="button"
-                            class="flex w-full flex-col gap-1 rounded-lg border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
-                            @click.left.exact.prevent="
-                              applyExample(example.formula)
-                            "
-                          >
-                            <span
-                              class="font-semibold text-[var(--ui-text-highlighted)]"
-                            >
-                              {{ example.formula }}
-                            </span>
+                          {{ example.formula }}
+                        </span>
 
-                            <span class="text-xs text-[var(--ui-text-muted)]">
-                              — {{ example.note }}
-                            </span>
-                          </button>
-                        </li>
-                      </ul>
+                        <span class="text-xs text-[var(--ui-text-muted)]">
+                          — {{ example.note }}
+                        </span>
+                      </button>
+                    </li>
+                  </ul>
 
-                      <p class="pt-1 text-xs text-[var(--ui-text-muted)]">
-                        Поддерживаются: к, кс, вх/вл, ул/ух, пр/пб, !/!!/!п, с,
-                        п, св/су
+                  <p class="pt-1 text-xs text-[var(--ui-text-muted)]">
+                    Поддерживаются: к, кс, вх/вл, ул/ух, пр/пб, !/!!/!п, с, п,
+                    св/су
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            <UButton
+              icon="i-fluent-delete-16-regular"
+              variant="ghost"
+              color="neutral"
+              size="xs"
+              aria-label="Очистить историю"
+              @click.left.exact.prevent="clearHistory"
+            />
+
+            <UButton
+              icon="i-fluent-dismiss-16-regular"
+              variant="ghost"
+              color="neutral"
+              size="xs"
+              aria-label="Закрыть роллер"
+              @click.left.exact.prevent="toggleCollapse(true)"
+            />
+          </div>
+
+          <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
+            <div
+              v-if="hasHistory"
+              class="flex flex-col gap-3"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="m-0 font-semibold text-[var(--ui-text)]">
+                    История бросков
+                  </p>
+
+                  <span class="text-xs text-[var(--ui-text-muted)]">
+                    последние {{ history.length }}
+                  </span>
+                </div>
+              </div>
+
+              <div
+                ref="historyScrollEl"
+                class="max-h-56 overflow-y-auto pr-1"
+              >
+                <TransitionGroup
+                  tag="ul"
+                  class="flex flex-col gap-2"
+                  enter-active-class="transition duration-200 ease-out"
+                  enter-from-class="opacity-0 translate-y-1"
+                  enter-to-class="opacity-100 translate-y-0"
+                  leave-active-class="transition duration-150 ease-in"
+                  leave-from-class="opacity-100 translate-y-0"
+                  leave-to-class="opacity-0 translate-y-1"
+                  move-class="transition duration-200"
+                >
+                  <li
+                    v-for="entry in history"
+                    :key="entry.id"
+                    :class="[
+                      'flex items-center justify-between gap-3 rounded-2xl border px-3 py-2 text-sm',
+                      entry.isError
+                        ? 'border-[color:color-mix(in_srgb,var(--ui-color-error-500)_25%,transparent)]'
+                        : 'border-[color:color-mix(in_srgb,var(--ui-color-success-500)_25%,transparent)]',
+                    ]"
+                    :style="{
+                      background:
+                        'color-mix(in srgb, var(--ui-bg) 85%, transparent)',
+                    }"
+                  >
+                    <div class="flex min-w-0 flex-col gap-1">
+                      <p
+                        class="m-0 truncate font-semibold text-[var(--ui-text-highlighted)]"
+                      >
+                        {{ entry.formula }}
+                      </p>
+
+                      <span class="text-xs text-[var(--ui-text-muted)]">
+                        {{ formatHistoryTimestamp(entry) }}
+                      </span>
+
+                      <p
+                        v-if="entry.detail"
+                        class="m-0 text-xs text-[var(--ui-text-muted)]"
+                      >
+                        {{ entry.detail }}
                       </p>
                     </div>
-                  </button>
-                </div>
 
-                <UButton
-                  icon="i-fluent-dock-right-16-regular"
-                  variant="ghost"
-                  color="neutral"
-                  size="xs"
-                  aria-label="Свернуть роллер"
-                  @click.left.exact.prevent="toggleCollapse(true)"
-                />
+                    <span
+                      class="font-mono text-base font-semibold text-[var(--ui-text-highlighted)]"
+                    >
+                      {{ entry.displayValue }}
+                    </span>
+                  </li>
+                </TransitionGroup>
               </div>
             </div>
 
+            <div class="flex flex-col gap-3">
+              <div
+                v-if="isErrorResult"
+                class="rounded-2xl border border-[var(--ui-color-error-500)] px-4 py-3 text-sm text-[var(--ui-color-error-500)]"
+                :style="{
+                  background:
+                    'color-mix(in srgb, var(--ui-color-error-500) 8%, var(--ui-bg-elevated))',
+                }"
+              >
+                {{ resultDescription }}
+              </div>
+
+              <Transition
+                v-else
+                enter-active-class="transition duration-200 ease-out"
+                enter-from-class="opacity-0 scale-95"
+                enter-to-class="opacity-100 scale-100"
+                leave-active-class="transition duration-150 ease-in"
+                leave-from-class="opacity-100 scale-100"
+                leave-to-class="opacity-0 scale-95"
+                mode="out-in"
+              >
+                <div
+                  v-if="hasDiceDetails"
+                  :key="`details-${resultRenderKey}`"
+                  class="flex max-h-56 flex-col gap-3 overflow-y-auto pr-1"
+                >
+                  <div
+                    v-for="detail in diceDetails"
+                    :key="detail.id"
+                    class="rounded-2xl border border-[var(--ui-border)] px-3 py-3"
+                    :style="{
+                      background:
+                        'color-mix(in srgb, var(--ui-bg-elevated) 85%, transparent)',
+                    }"
+                  >
+                    <div
+                      class="mb-2 flex items-center justify-between text-sm font-semibold text-[var(--ui-text)]"
+                    >
+                      <span>{{ detail.label }}</span>
+
+                      <span class="text-[var(--ui-text-highlighted)]">
+                        {{ formatDetailTotal(detail.total) }}
+                      </span>
+                    </div>
+
+                    <ul class="flex flex-wrap gap-2">
+                      <li
+                        v-for="roll in detail.rolls"
+                        :key="roll.id"
+                        :class="[
+                          'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-semibold',
+                          roll.valid
+                            ? 'border-[color:color-mix(in_srgb,var(--ui-color-primary-500)_40%,transparent)] text-[var(--ui-text-highlighted)]'
+                            : 'border-[var(--ui-border)] line-through opacity-60',
+                        ]"
+                        :style="{ background: 'var(--ui-bg-elevated)' }"
+                      >
+                        <span>{{ roll.value }}</span>
+
+                        <UBadge
+                          v-if="
+                            roll.critical === 'success' ||
+                            roll.critical === 'failure'
+                          "
+                          :color="
+                            roll.critical === 'success' ? 'success' : 'error'
+                          "
+                          variant="subtle"
+                          size="xs"
+                        >
+                          {{ roll.critical === 'success' ? 'крит' : 'фейл' }}
+                        </UBadge>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div
+                  v-else
+                  key="placeholder"
+                  class="flex min-h-[112px] items-center rounded-2xl border border-dashed border-[var(--ui-border)] px-4 py-3 text-sm text-[var(--ui-text-muted)]"
+                  :style="{
+                    background:
+                      'linear-gradient(135deg, var(--ui-bg) 0%, var(--ui-bg-elevated) 100%)',
+                  }"
+                >
+                  Введите формулу и нажмите кнопку справа или клавишу Enter.
+                </div>
+              </Transition>
+            </div>
+          </div>
+
+          <form
+            class="mt-3 flex items-center gap-2 border-t border-[var(--ui-border)] pt-3"
+            @submit.prevent="rollDice"
+          >
             <UInput
               id="dice-roll-formula"
               v-model="rollFormula"
@@ -628,201 +811,19 @@
               class="w-full"
             />
 
-            <UButton
+            <button
               type="submit"
-              size="xl"
-              color="primary"
-              block
+              class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--ui-border)] bg-[var(--ui-bg-elevated)] shadow-[0_10px_20px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_24px_rgba(0,0,0,0.22)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary-500)] focus-visible:outline-none"
+              aria-label="Бросить кубы"
+              title="Бросить"
             >
-              Бросить кубы
-            </UButton>
-          </form>
-
-          <div class="flex min-h-[128px] flex-col gap-3">
-            <div
-              v-if="isErrorResult"
-              class="rounded-2xl border border-[var(--ui-color-error-500)] px-4 py-3 text-sm text-[var(--ui-color-error-500)]"
-              :style="{
-                background:
-                  'color-mix(in srgb, var(--ui-color-error-500) 8%, var(--ui-bg-elevated))',
-              }"
-            >
-              {{ resultDescription }}
-            </div>
-
-            <Transition
-              v-else
-              enter-active-class="transition duration-200 ease-out"
-              enter-from-class="opacity-0 scale-95"
-              enter-to-class="opacity-100 scale-100"
-              leave-active-class="transition duration-150 ease-in"
-              leave-from-class="opacity-100 scale-100"
-              leave-to-class="opacity-0 scale-95"
-              mode="out-in"
-            >
-              <div
-                v-if="hasDiceDetails"
-                :key="`details-${resultRenderKey}`"
-                class="flex max-h-44 flex-col gap-3 overflow-y-auto pr-1"
-              >
-                <div
-                  class="flex items-center justify-between gap-2 rounded-2xl border border-[var(--ui-border)] px-3 py-2 text-sm"
-                  :style="{
-                    background:
-                      'color-mix(in srgb, var(--ui-bg-elevated) 80%, transparent)',
-                  }"
-                >
-                  <span class="font-semibold text-[var(--ui-text-highlighted)]">
-                    Сумма: {{ result }}
-                  </span>
-
-                  <span class="text-xs text-[var(--ui-text-muted)]">
-                    Кубов: {{ totalDiceCount }}
-                  </span>
-                </div>
-
-                <div
-                  v-for="detail in diceDetails"
-                  :key="detail.id"
-                  class="rounded-2xl border border-[var(--ui-border)] px-3 py-3"
-                  :style="{
-                    background:
-                      'color-mix(in srgb, var(--ui-bg-elevated) 85%, transparent)',
-                  }"
-                >
-                  <div
-                    class="mb-2 flex items-center justify-between text-sm font-semibold text-[var(--ui-text)]"
-                  >
-                    <span>{{ detail.label }}</span>
-
-                    <span class="text-[var(--ui-text-highlighted)]">
-                      {{ formatDetailTotal(detail.total) }}
-                    </span>
-                  </div>
-
-                  <ul class="flex flex-wrap gap-2">
-                    <li
-                      v-for="roll in detail.rolls"
-                      :key="roll.id"
-                      :class="[
-                        'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-semibold',
-                        roll.valid
-                          ? 'border-[color:color-mix(in_srgb,var(--ui-color-primary-500)_40%,transparent)] text-[var(--ui-text-highlighted)]'
-                          : 'border-[var(--ui-border)] line-through opacity-60',
-                      ]"
-                      :style="{ background: 'var(--ui-bg-elevated)' }"
-                    >
-                      <span>{{ roll.value }}</span>
-
-                      <UBadge
-                        v-if="
-                          roll.critical === 'success' ||
-                          roll.critical === 'failure'
-                        "
-                        :color="
-                          roll.critical === 'success' ? 'success' : 'error'
-                        "
-                        variant="subtle"
-                        size="xs"
-                      >
-                        {{ roll.critical === 'success' ? 'крит' : 'фейл' }}
-                      </UBadge>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              <div
-                v-else
-                key="placeholder"
-                class="flex min-h-[112px] items-center rounded-2xl border border-dashed border-[var(--ui-border)] px-4 py-3 text-sm text-[var(--ui-text-muted)]"
-                :style="{
-                  background:
-                    'linear-gradient(135deg, var(--ui-bg) 0%, var(--ui-bg-elevated) 100%)',
-                }"
-              >
-                Введите формулу и нажмите «Бросить» или клавишу Enter.
-              </div>
-            </Transition>
-          </div>
-
-          <div
-            v-if="hasHistory"
-            class="flex max-h-56 flex-col gap-3"
-          >
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <p class="m-0 font-semibold text-[var(--ui-text)]">
-                  История бросков
-                </p>
-
-                <span class="text-xs text-[var(--ui-text-muted)]">
-                  последние {{ history.length }}
-                </span>
-              </div>
-
-              <UButton
-                icon="i-fluent-delete-16-regular"
-                variant="ghost"
-                color="neutral"
-                size="xs"
-                label="Очистить"
-                @click.left.exact.prevent="clearHistory"
+              <img
+                :src="DiceD20IconUrl"
+                alt="D20"
+                class="h-5 w-5 transition dark:invert svifty7:invert"
               />
-            </div>
-
-            <TransitionGroup
-              tag="ul"
-              class="flex flex-1 flex-col gap-2 overflow-y-auto pr-1"
-              enter-active-class="transition duration-200 ease-out"
-              enter-from-class="opacity-0 translate-y-1"
-              enter-to-class="opacity-100 translate-y-0"
-              leave-active-class="transition duration-150 ease-in"
-              leave-from-class="opacity-100 translate-y-0"
-              leave-to-class="opacity-0 translate-y-1"
-              move-class="transition duration-200"
-            >
-              <li
-                v-for="entry in history"
-                :key="entry.id"
-                :class="[
-                  'flex items-center justify-between gap-3 rounded-2xl border px-3 py-2 text-sm',
-                  entry.isError
-                    ? 'border-[color:color-mix(in_srgb,var(--ui-color-error-500)_25%,transparent)]'
-                    : 'border-[color:color-mix(in_srgb,var(--ui-color-success-500)_25%,transparent)]',
-                ]"
-                :style="{
-                  background:
-                    'color-mix(in srgb, var(--ui-bg) 85%, transparent)',
-                }"
-              >
-                <div class="flex min-w-0 flex-col gap-1">
-                  <p
-                    class="m-0 truncate font-semibold text-[var(--ui-text-highlighted)]"
-                  >
-                    {{ entry.formula }}
-                  </p>
-
-                  <span class="text-xs text-[var(--ui-text-muted)]">
-                    {{ formatHistoryTimestamp(entry) }}
-                  </span>
-
-                  <p
-                    v-if="entry.detail"
-                    class="m-0 text-xs text-[var(--ui-text-muted)]"
-                  >
-                    {{ entry.detail }}
-                  </p>
-                </div>
-
-                <span
-                  class="font-mono text-base font-semibold text-[var(--ui-text-highlighted)]"
-                >
-                  {{ entry.displayValue }}
-                </span>
-              </li>
-            </TransitionGroup>
-          </div>
+            </button>
+          </form>
         </section>
 
         <button
