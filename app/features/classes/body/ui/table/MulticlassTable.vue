@@ -11,17 +11,26 @@
   import { maxBy, omit, orderBy, range } from 'lodash-es';
   import type { Level } from '~/shared/types';
 
-  const props =
-    defineProps<
-      Pick<ClassDetailResponse, 'table' | 'casterType' | 'features'>
-    >();
+  interface MulticlassClass {
+    class: string;
+    subclass?: string;
+    level: number;
+  }
+
+  const props = defineProps<
+    Pick<ClassDetailResponse, 'table' | 'casterType' | 'features'> & {
+      multiclass?: Array<MulticlassClass>;
+    }
+  >();
 
   interface MulticlassTableRow {
     level: Level;
     proficiencyBonus: number;
     features: Array<ClassFeature>;
+    isSeparator?: boolean;
+    separatorText?: string;
 
-    [key: string]: string | number | Array<ClassFeature> | undefined;
+    [key: string]: string | number | Array<ClassFeature> | boolean | undefined;
   }
 
   interface HoverCell {
@@ -101,9 +110,66 @@
     return found?.value ?? '—';
   }
 
-  const tableData = computed(() =>
-    orderBy(characterLevels.value.map(getLevelData), 'level'),
-  );
+  // Вычисляем, на каком уровне персонажа начинается каждый класс
+  const classStartLevels = computed(() => {
+    if (!props.multiclass || props.multiclass.length === 0) {
+      return [];
+    }
+
+    const starts: Array<{ level: number; class: string; subclass?: string }> =
+      [];
+
+    let currentLevel = 1;
+
+    for (const classItem of props.multiclass) {
+      starts.push({
+        level: currentLevel,
+        class: classItem.class,
+        subclass: classItem.subclass,
+      });
+      currentLevel += classItem.level;
+    }
+
+    return starts;
+  });
+
+  const tableData = computed(() => {
+    const rows: Array<MulticlassTableRow> = [];
+
+    for (const level of characterLevels.value) {
+      // Проверяем, нужно ли добавить разделитель перед этим уровнем
+      const separator = classStartLevels.value.find((s) => s.level === level);
+
+      if (separator) {
+        const separatorText = separator.subclass
+          ? `${separator.class} / ${separator.subclass}`
+          : separator.class;
+
+        // Создаем разделитель с заполненными полями для всех столбцов
+        const separatorRow: MulticlassTableRow = {
+          level: level as Level,
+          proficiencyBonus: 0,
+          features: [],
+          isSeparator: true,
+          separatorText,
+        };
+
+        // Заполняем поля для всех столбцов таблицы
+        if (props.table && Array.isArray(props.table)) {
+          props.table.forEach((tableColumn) => {
+            separatorRow[tableColumn.name] = '';
+          });
+        }
+
+        rows.push(separatorRow);
+      }
+
+      // Добавляем обычную строку с данными уровня
+      rows.push(getLevelData(level));
+    }
+
+    return orderBy(rows, 'level');
+  });
 
   function getLevelData(level: Level) {
     const levelFeatures = features.value.filter((f) => f.level === level) || [];
@@ -309,20 +375,34 @@
         <tr
           v-for="(row, rowIndex) in table.getRowModel().rows"
           :key="row.id"
-          class="divide-x divide-default"
+          :class="[
+            'divide-x divide-default',
+            row.original.isSeparator ? 'bg-elevated font-medium' : '',
+          ]"
         >
-          <td
-            v-for="(cell, columnIndex) in row.getVisibleCells()"
-            :key="cell.id"
-            :class="getCellClass(cell, rowIndex, columnIndex)"
-            @mouseenter="debouncedCellHover(rowIndex, columnIndex)"
-            @mouseleave="debouncedCellLeave"
-          >
-            <FlexRender
-              :render="cell.column.columnDef.cell"
-              :props="cell.getContext()"
-            />
-          </td>
+          <template v-if="row.original.isSeparator">
+            <td
+              :colspan="table.getAllColumns().length"
+              class="px-4 py-1.5 text-left text-xs text-secondary"
+            >
+              {{ row.original.separatorText }}
+            </td>
+          </template>
+
+          <template v-else>
+            <td
+              v-for="(cell, columnIndex) in row.getVisibleCells()"
+              :key="cell.id"
+              :class="getCellClass(cell, rowIndex, columnIndex)"
+              @mouseenter="debouncedCellHover(rowIndex, columnIndex)"
+              @mouseleave="debouncedCellLeave"
+            >
+              <FlexRender
+                :render="cell.column.columnDef.cell"
+                :props="cell.getContext()"
+              />
+            </td>
+          </template>
         </tr>
       </tbody>
     </table>

@@ -2,6 +2,7 @@
   import { HomeBanners, RoadmapBanner } from '~home/banners';
   import { HomeSections } from '~home/sections';
   import { SocialLinks } from '~home/social-links';
+  import { HomeTools } from '~home/tools';
   import { SearchPanel } from '~search/panel';
   import { UiPlaceholder } from '~ui/placeholder';
 
@@ -28,25 +29,25 @@
       <HomeSections />
 
       <div
-        class="flex w-full flex-col gap-3 lg:items-start xl:flex-row xl:items-stretch"
+        class="flex w-full flex-col gap-3 lg:flex-row lg:flex-wrap 2xl:flex-nowrap"
       >
         <div
-          class="relative flex w-full flex-col gap-3 overflow-hidden rounded-lg xl:w-1/3 2xl:w-1/3"
+          class="relative flex w-full flex-col gap-3 overflow-hidden rounded-lg lg:w-1/2 2xl:w-1/3"
         >
-          <RoadmapBanner />
+          <HomeTools />
 
-          <UiPlaceholder class="hidden flex-1 xl:block" />
+          <RoadmapBanner />
         </div>
 
         <div
-          class="relative flex w-full flex-col gap-3 overflow-hidden rounded-lg xl:w-1/3 2xl:w-1/3"
+          class="relative flex w-full flex-col gap-3 overflow-hidden rounded-lg lg:w-1/2 2xl:w-1/3"
         >
           <HomeBanners />
 
           <UiPlaceholder class="hidden flex-1 xl:block" />
         </div>
 
-        <div class="flex w-full flex-col gap-3 xl:w-1/2 2xl:w-1/3">
+        <div class="flex w-full flex-col gap-3 lg:w-full 2xl:w-1/3">
           <SocialLinks />
         </div>
       </div>
