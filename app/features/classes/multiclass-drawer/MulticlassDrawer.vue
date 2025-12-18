@@ -6,11 +6,7 @@
   import type { NameResponse } from '~/shared/types';
   import type { SelectMenuItem } from '#ui/components/SelectMenu.vue';
 
-  const {
-    currentUrl,
-    currentName,
-    currentParent = undefined,
-  } = defineProps<{
+  const { currentUrl, currentParent = undefined } = defineProps<{
     currentUrl: string;
     currentName: NameResponse;
     currentParent?: ClassLinkResponse;
@@ -23,6 +19,28 @@
   // Первая строка: текущий класс/подкласс и уровень
   const currentLevel = ref<number>(1);
 
+  // Определяем базовый URL основного класса
+  const initialMainClassUrl = computed(() =>
+    currentParent ? currentParent.url : currentUrl,
+  );
+
+  // Основной класс (можно выбрать)
+  const currentClassUrl = ref<string>(
+    currentParent ? currentParent.url : currentUrl,
+  );
+
+  // Обновляем currentClassUrl при изменении initialMainClassUrl
+  watch(
+    initialMainClassUrl,
+    (newUrl) => {
+      if (currentClassUrl.value !== newUrl) {
+        currentClassUrl.value = newUrl;
+      }
+    },
+    { immediate: true },
+  );
+
+  // Инициализируем подкласс: если мы на странице подкласса, используем его URL
   const currentSubclassUrl = ref<string | undefined>(
     currentParent ? currentUrl : undefined,
   );
@@ -43,22 +61,22 @@
   const additionalClasses = ref<Array<AdditionalClass>>([]);
 
   // Получение подклассов для основного класса
-  const mainClassUrl = computed(() =>
-    currentParent ? currentParent.url : currentUrl,
-  );
-
   const { data: currentClassSubclasses } = await useAsyncData<
     Array<ClassLinkResponse>
   >(
-    computed(() => `class-${mainClassUrl.value}-subclasses`),
+    computed(() => `class-${currentClassUrl.value}-subclasses`),
     () => {
+      if (!currentClassUrl.value) {
+        return Promise.resolve([]);
+      }
+
       return $fetch<Array<ClassLinkResponse>>(
-        `/api/v2/classes/${mainClassUrl.value}/subclasses`,
+        `/api/v2/classes/${currentClassUrl.value}/subclasses`,
       );
     },
     {
       server: false,
-      watch: [mainClassUrl],
+      watch: [currentClassUrl],
     },
   );
 
@@ -148,18 +166,14 @@
     }));
   });
 
-  // Сброс подкласса при смене класса
-  watch(selectedClassUrl, () => {
-    selectedSubclassUrl.value = undefined;
+  // Сброс подкласса при смене основного класса
+  watch(currentClassUrl, () => {
+    currentSubclassUrl.value = undefined;
   });
 
-  // Отображение текущего класса/подкласса
-  const currentClassDisplay = computed(() => {
-    if (currentParent) {
-      return `${currentParent.name.rus} / ${currentName.rus}`;
-    }
-
-    return currentName.rus;
+  // Сброс подкласса при смене второго класса
+  watch(selectedClassUrl, () => {
+    selectedSubclassUrl.value = undefined;
   });
 
   // Обработчик нажатия на кнопку "Добавить класс"
@@ -252,6 +266,7 @@
   // Обработчик нажатия на кнопку "Применить"
   function handleApply() {
     if (
+      !currentClassUrl.value ||
       !currentLevel.value ||
       !selectedClassUrl.value ||
       !selectedLevel.value
@@ -259,12 +274,11 @@
       return;
     }
 
-    // Определяем базовый URL для первого класса
-    const class1BaseUrl = mainClassUrl.value;
+    // Используем выбранный основной класс
+    const class1BaseUrl = currentClassUrl.value;
 
-    // Используем выбранный подкласс, если он выбран, иначе используем текущий подкласс (если есть)
-    const class1SubclassUrl =
-      currentSubclassUrl.value || (currentParent ? currentUrl : undefined);
+    // Используем выбранный подкласс для основного класса
+    const class1SubclassUrl = currentSubclassUrl.value;
 
     // Формируем URL для страницы мультикласса
     const query: Record<string, string> = {
@@ -318,23 +332,33 @@
       <div class="flex flex-col gap-3">
         <div class="flex items-center gap-2">
           <span class="text-sm font-medium text-highlighted">
-            Текущий класс:
+            Основной класс:
           </span>
-
-          <span class="text-sm">{{ currentClassDisplay }}</span>
         </div>
 
-        <div
-          v-if="currentClassSubclassItems.length > 0"
-          class="flex items-center gap-3"
-        >
+        <div class="flex items-center gap-3">
+          <span class="min-w-20 text-sm text-secondary">Класс:</span>
+
+          <SelectClass
+            v-model="currentClassUrl"
+            class="flex-1"
+          />
+        </div>
+
+        <div class="flex items-center gap-3">
           <span class="min-w-20 text-sm text-secondary">Подкласс:</span>
 
           <USelectMenu
             v-model="currentSubclassUrl"
             :items="currentClassSubclassItems"
-            :placeholder="'Выбери подкласс'"
-            :disabled="currentClassSubclassItems.length === 0"
+            :placeholder="
+              currentClassSubclassItems.length === 0
+                ? 'Нет подклассов'
+                : 'Выбери подкласс'
+            "
+            :disabled="
+              !currentClassUrl || currentClassSubclassItems.length === 0
+            "
             label-key="label"
             value-key="value"
             clearable

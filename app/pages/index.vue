@@ -5,6 +5,7 @@
   import { HomeRecentChanges } from '~home/recent-changes';
   import { HomeSections } from '~home/sections';
   import { SocialLinks } from '~home/social-links';
+  import { HomeTools } from '~home/tools';
   import { SearchPanel } from '~infrastructure/search';
 
   definePageMeta({
@@ -35,6 +36,8 @@
 
       <div class="flex w-full flex-col gap-3 lg:items-start xl:flex-row">
         <div class="flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">
+          <HomeTools />
+
           <HomeBanners />
         </div>
 

@@ -168,6 +168,7 @@
                 :table="apiResponse.table"
                 :caster-type="apiResponse.casterType"
                 :features="apiResponse.features"
+                :multiclass="(apiResponse as any).multiclass"
               />
             </div>
 
