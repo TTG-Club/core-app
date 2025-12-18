@@ -1,0 +1,330 @@
+<script setup lang="ts">
+  import { computed, h, ref } from 'vue';
+  import type { Cell, ColumnDef, Header } from '@tanstack/vue-table';
+  import {
+    FlexRender,
+    getCoreRowModel,
+    useVueTable,
+  } from '@tanstack/vue-table';
+  import { useDebounceFn } from '@vueuse/core';
+  import type { ClassDetailResponse, ClassFeature } from '~classes/types';
+  import { maxBy, omit, orderBy, range } from 'lodash-es';
+  import type { Level } from '~/shared/types';
+
+  const props =
+    defineProps<
+      Pick<ClassDetailResponse, 'table' | 'casterType' | 'features'>
+    >();
+
+  interface MulticlassTableRow {
+    level: Level;
+    proficiencyBonus: number;
+    features: Array<ClassFeature>;
+
+    [key: string]: string | number | Array<ClassFeature> | undefined;
+  }
+
+  interface HoverCell {
+    rowIndex: number;
+    columnIndex: number;
+  }
+
+  const hoveredCell = ref<HoverCell | null>(null);
+
+  const debouncedCellHover = useDebounceFn(
+    (rowIndex: number, columnIndex: number) => {
+      hoveredCell.value = { rowIndex, columnIndex };
+    },
+    10,
+  );
+
+  const debouncedCellLeave = useDebounceFn(() => {
+    hoveredCell.value = null;
+  }, 10);
+
+  const { scrollToAnchor } = useAnchorScroll();
+  const route = useRoute();
+
+  function getProficiencyBonus(level: number): number {
+    return Math.ceil(level / 4) + 1;
+  }
+
+  const features = computed(() => {
+    const list: Array<ClassFeature> = [];
+
+    for (const feature of props.features) {
+      // Добавляем основное умение
+      list.push(omit(feature, 'scaling'));
+
+      // Добавляем scaling умения, если есть
+      if (feature.scaling) {
+        list.push(
+          ...feature.scaling.map((scale) => ({
+            key: feature.key,
+            isSubclass: feature.isSubclass,
+            ...scale,
+          })),
+        );
+      }
+    }
+
+    return orderBy(list, ['level'], ['asc']);
+  });
+
+  // Определяем максимальный уровень персонажа из features
+  const maxCharacterLevel = computed(() => {
+    if (!features.value || features.value.length === 0) {
+      return 20;
+    }
+
+    const maxLevel = Math.max(...features.value.map((f) => f.level));
+
+    return Math.min(maxLevel, 20) as Level;
+  });
+
+  // Генерируем массив уровней персонажа
+  const characterLevels = computed(() => {
+    return range(1, maxCharacterLevel.value + 1) as Level[];
+  });
+
+  function getScalingValueForLevel(
+    level: Level,
+    scalingArray: Array<{ level: number; value: string }> | undefined,
+  ): string {
+    if (!scalingArray?.length) return '—';
+
+    const found = maxBy(
+      scalingArray.filter((s) => s.level <= level),
+      'level',
+    );
+
+    return found?.value ?? '—';
+  }
+
+  const tableData = computed(() =>
+    orderBy(characterLevels.value.map(getLevelData), 'level'),
+  );
+
+  function getLevelData(level: Level) {
+    const levelFeatures = features.value.filter((f) => f.level === level) || [];
+
+    const row: MulticlassTableRow = {
+      level,
+      proficiencyBonus: getProficiencyBonus(level),
+      features: levelFeatures,
+    };
+
+    if (props.table && Array.isArray(props.table)) {
+      props.table.forEach((tableColumn) => {
+        row[tableColumn.name] = getScalingValueForLevel(
+          level,
+          tableColumn.scaling,
+        );
+      });
+    }
+
+    return row;
+  }
+
+  const tableColumns = computed<ColumnDef<MulticlassTableRow>[]>(() => {
+    const baseColumns: ColumnDef<MulticlassTableRow>[] = [
+      {
+        accessorKey: 'level',
+        header: 'Ур.',
+        cell: ({ row }) => row.original.level,
+        meta: {
+          class: {
+            th: 'w-8 text-center',
+            td: 'w-8 text-center',
+          },
+        },
+      },
+      {
+        accessorKey: 'proficiencyBonus',
+        header: 'БМ',
+        cell: ({ row }) => `+${row.original.proficiencyBonus}`,
+        meta: {
+          class: {
+            th: 'w-8 text-center',
+            td: 'w-8 text-center',
+          },
+        },
+      },
+      {
+        accessorKey: 'features',
+        header: 'Умения класса',
+        cell: ({ row }) => {
+          const featuresInLevel = row.original.features;
+
+          if (!featuresInLevel || featuresInLevel.length === 0) {
+            return '—';
+          }
+
+          const featureLinks = featuresInLevel.map((feature, index) => {
+            const link = h(
+              'span',
+              {
+                class: [
+                  feature.isSubclass
+                    ? 'text-success hover:text-success'
+                    : 'text-link hover:text-link',
+                  'cursor-pointer transition-colors duration-100',
+                  'hover:underline',
+                ],
+                onClick: withModifiers(() => {
+                  scrollToAnchor(feature.key);
+
+                  // Обновляем URL без перезагрузки страницы
+                  const currentPath = route.path;
+                  const newHash = `#${feature.key}`;
+
+                  if (window.location.hash !== newHash) {
+                    window.history.replaceState(
+                      null,
+                      '',
+                      `${currentPath}${newHash}`,
+                    );
+                  }
+                }, ['left', 'exact', 'prevent']),
+              },
+              feature.name,
+            );
+
+            return index < featuresInLevel.length - 1
+              ? [link, h('span', ', ')]
+              : link;
+          });
+
+          return h('span', featureLinks.flat());
+        },
+        meta: {
+          class: {
+            th: 'text-left min-w-48',
+            td: 'text-left min-w-48',
+          },
+        },
+      },
+    ];
+
+    if (props.table && Array.isArray(props.table)) {
+      props.table.forEach((tableColumn) => {
+        baseColumns.push({
+          accessorKey: tableColumn.name,
+          header: tableColumn.name,
+          cell: ({ row }) => row.original[tableColumn.name] ?? '—',
+          meta: {
+            class: {
+              th: 'max-w-28 text-center',
+              td: 'max-w-28 text-center',
+            },
+          },
+        });
+      });
+    }
+
+    return baseColumns;
+  });
+
+  const table = useVueTable({
+    get data() {
+      return tableData.value;
+    },
+    get columns() {
+      return tableColumns.value;
+    },
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  function shouldShowHeader(
+    _header: Header<MulticlassTableRow, unknown>,
+  ): boolean {
+    return true;
+  }
+
+  function getRowSpan(_header: Header<MulticlassTableRow, unknown>): number {
+    return 1;
+  }
+
+  function getHeaderClass(header: Header<MulticlassTableRow, unknown>): string {
+    const baseClass =
+      'p-2 text-xs border-b border-default text-center text-highlighted';
+
+    const metaClass = header.column.columnDef.meta?.class?.th || '';
+
+    return `${baseClass} ${metaClass}`;
+  }
+
+  function getCellClass(
+    cell: Cell<MulticlassTableRow, unknown>,
+    rowIndex: number,
+    columnIndex: number,
+  ): string {
+    const baseClass =
+      'py-1 px-2 text-xs text-default transition-colors duration-100';
+
+    const metaClass = cell.column.columnDef.meta?.class?.td || '';
+
+    let hoverClass = '';
+
+    if (hoveredCell.value) {
+      const { rowIndex: hoveredRow, columnIndex: hoveredColumn } =
+        hoveredCell.value;
+
+      if (rowIndex === hoveredRow && columnIndex === hoveredColumn) {
+        hoverClass = 'bg-accented/60';
+      } else if (rowIndex === hoveredRow || columnIndex === hoveredColumn) {
+        hoverClass = 'bg-accented/40';
+      }
+    }
+
+    return `${baseClass} ${metaClass} ${hoverClass}`;
+  }
+</script>
+
+<template>
+  <div class="w-full overflow-x-auto rounded-lg border border-default bg-muted">
+    <table class="min-w-full table-fixed border-collapse">
+      <thead class="bg-elevated">
+        <tr
+          v-for="headerGroup in table.getHeaderGroups()"
+          :key="headerGroup.id"
+        >
+          <th
+            v-for="header in headerGroup.headers"
+            v-show="shouldShowHeader(header)"
+            :key="header.id"
+            :colspan="header.colSpan"
+            :rowspan="getRowSpan(header)"
+            :class="getHeaderClass(header)"
+          >
+            <FlexRender
+              :render="header.column.columnDef.header"
+              :props="header.getContext()"
+            />
+          </th>
+        </tr>
+      </thead>
+
+      <tbody class="divide-y divide-default">
+        <tr
+          v-for="(row, rowIndex) in table.getRowModel().rows"
+          :key="row.id"
+          class="divide-x divide-default"
+        >
+          <td
+            v-for="(cell, columnIndex) in row.getVisibleCells()"
+            :key="cell.id"
+            :class="getCellClass(cell, rowIndex, columnIndex)"
+            @mouseenter="debouncedCellHover(rowIndex, columnIndex)"
+            @mouseleave="debouncedCellLeave"
+          >
+            <FlexRender
+              :render="cell.column.columnDef.cell"
+              :props="cell.getContext()"
+            />
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</template>
