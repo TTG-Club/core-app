@@ -5,7 +5,9 @@
     StatsBlock,
     ClassProficiency,
     FeatureCollapse,
+    MulticlassLevelInfo,
   } from '~classes/body/ui';
+  import { MulticlassTable } from '~classes/body/ui/table';
 
   const route = useRoute();
 
@@ -140,15 +142,35 @@
               '@min-xl:@max-3xl:flex-row @min-3xl:w-80',
             ]"
           >
+            <MulticlassLevelInfo
+              v-if="
+                apiResponse &&
+                (apiResponse as any).characterLevel &&
+                (apiResponse as any).multiclass
+              "
+              :character-level="(apiResponse as any).characterLevel"
+              :spellcasting-level="(apiResponse as any).spellcastingLevel"
+              :multiclass="(apiResponse as any).multiclass || []"
+            />
+
             <StatsBlock
               :hit-dice="apiResponse.hitDice"
               :saving-throws="apiResponse.savingThrows"
               :proficiency="apiResponse.proficiency"
               :primary-characteristics="apiResponse.primaryCharacteristics"
+              :multiclass="(apiResponse as any).multiclass"
             />
           </div>
 
           <div class="flex min-w-0 flex-auto flex-col gap-6">
+            <div class="flex min-w-0 flex-col gap-2">
+              <MulticlassTable
+                :table="apiResponse.table"
+                :caster-type="apiResponse.casterType"
+                :features="apiResponse.features"
+              />
+            </div>
+
             <ClassProficiency
               :proficiency="apiResponse.proficiency"
               :saving-throws="apiResponse.savingThrows"

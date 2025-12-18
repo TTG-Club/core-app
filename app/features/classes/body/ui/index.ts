@@ -8,4 +8,6 @@ export { default as StatsBlock } from './StatsBlock.vue';
 
 export { default as ClassRouting } from './ClassRouting.vue';
 
+export { default as MulticlassLevelInfo } from './MulticlassLevelInfo.vue';
+
 export * from './table';
