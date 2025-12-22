@@ -443,6 +443,12 @@
             v-model="currentClassUrl"
             class="flex-1"
           />
+
+          <SelectLevel
+            v-model="currentLevel"
+            :max="maxCurrentLevel"
+            class="w-36"
+          />
         </div>
 
         <div class="flex items-center gap-3">
@@ -468,16 +474,6 @@
             class="flex-1"
           />
         </div>
-
-        <div class="flex items-center gap-3">
-          <span class="min-w-20 text-sm text-secondary">Уровень:</span>
-
-          <SelectLevel
-            v-model="currentLevel"
-            :max="maxCurrentLevel"
-            class="w-44"
-          />
-        </div>
       </div>
 
       <!-- Вторая строка: выбор класса, подкласса и уровня -->
@@ -488,45 +484,39 @@
           </span>
         </div>
 
-        <div class="flex flex-col gap-3">
-          <div class="flex items-center gap-3">
-            <span class="min-w-20 text-sm text-secondary">Класс:</span>
+        <div class="flex items-center gap-3">
+          <span class="min-w-20 text-sm text-secondary">Класс:</span>
 
-            <SelectClass
-              v-model="selectedClassUrl"
-              class="flex-1"
-            />
-          </div>
+          <SelectClass
+            v-model="selectedClassUrl"
+            class="flex-1"
+          />
 
-          <div class="flex items-center gap-3">
-            <span class="min-w-20 text-sm text-secondary">Подкласс:</span>
+          <SelectLevel
+            v-model="selectedLevel"
+            :max="maxSelectedLevel"
+            class="w-36"
+          />
+        </div>
 
-            <USelectMenu
-              v-model="selectedSubclassUrl"
-              :items="subclassItems"
-              :placeholder="'Выбери подкласс'"
-              :disabled="
-                !selectedClassUrl ||
-                subclassItems.length === 0 ||
-                selectedLevel <= 2
-              "
-              label-key="label"
-              value-key="value"
-              clearable
-              searchable
-              class="flex-1"
-            />
-          </div>
+        <div class="flex items-center gap-3">
+          <span class="min-w-20 text-sm text-secondary">Подкласс:</span>
 
-          <div class="flex items-center gap-3">
-            <span class="min-w-20 text-sm text-secondary">Уровень:</span>
-
-            <SelectLevel
-              v-model="selectedLevel"
-              :max="maxSelectedLevel"
-              class="w-44"
-            />
-          </div>
+          <USelectMenu
+            v-model="selectedSubclassUrl"
+            :items="subclassItems"
+            :placeholder="'Выбери подкласс'"
+            :disabled="
+              !selectedClassUrl ||
+              subclassItems.length === 0 ||
+              selectedLevel <= 2
+            "
+            label-key="label"
+            value-key="value"
+            clearable
+            searchable
+            class="flex-1"
+          />
         </div>
       </div>
 
@@ -552,46 +542,40 @@
           </UButton>
         </div>
 
-        <div class="flex flex-col gap-3">
-          <div class="flex items-center gap-3">
-            <span class="min-w-20 text-sm text-secondary">Класс:</span>
+        <div class="flex items-center gap-3">
+          <span class="min-w-20 text-sm text-secondary">Класс:</span>
 
-            <SelectClass
-              v-model="additionalClass.classUrl"
-              class="flex-1"
-            />
-          </div>
+          <SelectClass
+            v-model="additionalClass.classUrl"
+            class="flex-1"
+          />
 
-          <div class="flex items-center gap-3">
-            <span class="min-w-20 text-sm text-secondary">Подкласс:</span>
+          <SelectLevel
+            v-model="additionalClass.level"
+            :max="getMaxLevelForAdditionalClass(additionalClass.id)"
+            class="w-36"
+          />
+        </div>
 
-            <USelectMenu
-              v-model="additionalClass.subclassUrl"
-              :items="getAdditionalClassSubclassItems(additionalClass.id)"
-              :placeholder="'Выбери подкласс'"
-              :disabled="
-                !additionalClass.classUrl ||
-                getAdditionalClassSubclassItems(additionalClass.id).length ===
-                  0 ||
-                additionalClass.level <= 2
-              "
-              label-key="label"
-              value-key="value"
-              clearable
-              searchable
-              class="flex-1"
-            />
-          </div>
+        <div class="flex items-center gap-3">
+          <span class="min-w-20 text-sm text-secondary">Подкласс:</span>
 
-          <div class="flex items-center gap-3">
-            <span class="min-w-20 text-sm text-secondary">Уровень:</span>
-
-            <SelectLevel
-              v-model="additionalClass.level"
-              :max="getMaxLevelForAdditionalClass(additionalClass.id)"
-              class="w-44"
-            />
-          </div>
+          <USelectMenu
+            v-model="additionalClass.subclassUrl"
+            :items="getAdditionalClassSubclassItems(additionalClass.id)"
+            :placeholder="'Выбери подкласс'"
+            :disabled="
+              !additionalClass.classUrl ||
+              getAdditionalClassSubclassItems(additionalClass.id).length ===
+                0 ||
+              additionalClass.level <= 2
+            "
+            label-key="label"
+            value-key="value"
+            clearable
+            searchable
+            class="flex-1"
+          />
         </div>
       </div>
 
