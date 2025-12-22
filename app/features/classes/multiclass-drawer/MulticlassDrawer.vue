@@ -160,14 +160,78 @@
     }));
   });
 
+  // Вычисляем сумму уровней дополнительных классов
+  const sumAdditionalLevels = computed(() => {
+    return additionalClasses.value
+      .filter((c) => c.classUrl)
+      .reduce((sum, c) => sum + c.level, 0);
+  });
+
+  // Максимальный доступный уровень для основного класса
+  const maxCurrentLevel = computed(() => {
+    const secondLevel = selectedClassUrl.value ? selectedLevel.value : 0;
+    const available = 20 - secondLevel - sumAdditionalLevels.value;
+
+    return Math.max(1, Math.min(available, 20));
+  });
+
+  // Максимальный доступный уровень для второго класса
+  const maxSelectedLevel = computed(() => {
+    const available = 20 - currentLevel.value - sumAdditionalLevels.value;
+
+    return Math.max(1, Math.min(available, 20));
+  });
+
+  // Функция для вычисления максимального уровня для дополнительного класса
+  function getMaxLevelForAdditionalClass(classId: string): number {
+    const currentSum = currentLevel.value;
+    const secondSum = selectedClassUrl.value ? selectedLevel.value : 0;
+
+    const otherAdditionalSum = additionalClasses.value
+      .filter((c) => c.id !== classId && c.classUrl)
+      .reduce((sum, c) => sum + c.level, 0);
+
+    const available = 20 - currentSum - secondSum - otherAdditionalSum;
+
+    return Math.max(1, Math.min(available, 20));
+  }
+
   // Сброс подкласса при смене основного класса
   watch(currentClassUrl, () => {
     currentSubclassUrl.value = undefined;
   });
 
+  // Корректировка уровня основного класса, если он превышает доступный максимум
+  watch(maxCurrentLevel, (maxLevel) => {
+    if (currentLevel.value > maxLevel) {
+      currentLevel.value = maxLevel;
+    }
+  });
+
+  // Корректировка уровня второго класса, если он превышает доступный максимум
+  watch(maxSelectedLevel, (maxLevel) => {
+    if (selectedClassUrl.value && selectedLevel.value > maxLevel) {
+      selectedLevel.value = maxLevel;
+    }
+  });
+
+  // Сброс подкласса при смене уровня основного класса (если уровень <= 2)
+  watch(currentLevel, (newLevel) => {
+    if (newLevel <= 2) {
+      currentSubclassUrl.value = undefined;
+    }
+  });
+
   // Сброс подкласса при смене второго класса
   watch(selectedClassUrl, () => {
     selectedSubclassUrl.value = undefined;
+  });
+
+  // Сброс подкласса при смене уровня второго класса (если уровень <= 2)
+  watch(selectedLevel, (newLevel) => {
+    if (newLevel <= 2) {
+      selectedSubclassUrl.value = undefined;
+    }
   });
 
   // Обработчик нажатия на кнопку "Добавить класс"
@@ -242,6 +306,48 @@
 
           if (additionalClass) {
             additionalClass.subclassUrl = undefined;
+          }
+        }
+      });
+    },
+    { deep: true },
+  );
+
+  // Сброс подкласса при смене уровня для дополнительных классов (если уровень <= 2)
+  watch(
+    () => additionalClasses.value.map((c) => ({ id: c.id, level: c.level })),
+    (newValues, oldValues) => {
+      newValues.forEach(({ id, level }) => {
+        const oldValue = oldValues?.find((o) => o.id === id);
+
+        if (oldValue && oldValue.level !== level && level <= 2) {
+          const additionalClass = additionalClasses.value.find(
+            (c) => c.id === id,
+          );
+
+          if (additionalClass) {
+            additionalClass.subclassUrl = undefined;
+          }
+        }
+      });
+    },
+    { deep: true },
+  );
+
+  // Корректировка уровней дополнительных классов, если они превышают доступный максимум
+  watch(
+    () => [
+      currentLevel.value,
+      selectedLevel.value,
+      additionalClasses.value.map((c) => ({ id: c.id, level: c.level })),
+    ],
+    () => {
+      additionalClasses.value.forEach((additionalClass) => {
+        if (additionalClass.classUrl) {
+          const maxLevel = getMaxLevelForAdditionalClass(additionalClass.id);
+
+          if (additionalClass.level > maxLevel) {
+            additionalClass.level = maxLevel;
           }
         }
       });
@@ -351,7 +457,9 @@
                 : 'Выбери подкласс'
             "
             :disabled="
-              !currentClassUrl || currentClassSubclassItems.length === 0
+              !currentClassUrl ||
+              currentClassSubclassItems.length === 0 ||
+              currentLevel <= 2
             "
             label-key="label"
             value-key="value"
@@ -366,6 +474,7 @@
 
           <SelectLevel
             v-model="currentLevel"
+            :max="maxCurrentLevel"
             class="w-44"
           />
         </div>
@@ -396,7 +505,11 @@
               v-model="selectedSubclassUrl"
               :items="subclassItems"
               :placeholder="'Выбери подкласс'"
-              :disabled="!selectedClassUrl || subclassItems.length === 0"
+              :disabled="
+                !selectedClassUrl ||
+                subclassItems.length === 0 ||
+                selectedLevel <= 2
+              "
               label-key="label"
               value-key="value"
               clearable
@@ -410,6 +523,7 @@
 
             <SelectLevel
               v-model="selectedLevel"
+              :max="maxSelectedLevel"
               class="w-44"
             />
           </div>
@@ -457,7 +571,9 @@
               :placeholder="'Выбери подкласс'"
               :disabled="
                 !additionalClass.classUrl ||
-                getAdditionalClassSubclassItems(additionalClass.id).length === 0
+                getAdditionalClassSubclassItems(additionalClass.id).length ===
+                  0 ||
+                additionalClass.level <= 2
               "
               label-key="label"
               value-key="value"
@@ -472,6 +588,7 @@
 
             <SelectLevel
               v-model="additionalClass.level"
+              :max="getMaxLevelForAdditionalClass(additionalClass.id)"
               class="w-44"
             />
           </div>

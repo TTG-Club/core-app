@@ -4,7 +4,6 @@
   import { SocialLinks } from '~home/social-links';
   import { HomeTools } from '~home/tools';
   import { SearchPanel } from '~search/panel';
-  import { UiPlaceholder } from '~ui/placeholder';
 
   definePageMeta({
     layout: 'default',
@@ -28,26 +27,20 @@
 
       <HomeSections />
 
-      <div
-        class="flex w-full flex-col gap-3 lg:flex-row lg:flex-wrap 2xl:flex-nowrap"
-      >
+      <div class="flex w-full flex-col gap-3 lg:flex-row lg:flex-nowrap">
         <div
-          class="relative flex w-full flex-col gap-3 overflow-hidden rounded-lg lg:w-1/2 2xl:w-1/3"
+          class="relative flex w-full flex-col gap-3 overflow-hidden rounded-lg lg:w-2/3 lg:flex-row"
         >
-          <HomeTools />
+          <div class="flex w-full flex-col gap-3 lg:w-1/2">
+            <HomeTools />
 
-          <RoadmapBanner />
+            <RoadmapBanner />
+          </div>
+
+          <HomeBanners class="w-full lg:w-1/2" />
         </div>
 
-        <div
-          class="relative flex w-full flex-col gap-3 overflow-hidden rounded-lg lg:w-1/2 2xl:w-1/3"
-        >
-          <HomeBanners />
-
-          <UiPlaceholder class="hidden flex-1 xl:block" />
-        </div>
-
-        <div class="flex w-full flex-col gap-3 lg:w-full 2xl:w-1/3">
+        <div class="flex w-full flex-col gap-3 lg:w-1/3">
           <SocialLinks />
         </div>
       </div>
