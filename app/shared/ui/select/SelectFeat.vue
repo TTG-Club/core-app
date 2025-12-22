@@ -48,7 +48,7 @@
 </script>
 
 <template>
-  <USelect
+  <USelectMenu
     v-model="model"
     :loading="status === 'pending'"
     :items="data || []"
