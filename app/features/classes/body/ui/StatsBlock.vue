@@ -1,23 +1,15 @@
 <script setup lang="ts">
-  import type { ClassDetailResponse } from '~classes/model';
-
+  import type { ClassDetailResponse, ClassInMulticlass } from '~classes/model';
   import { InfoTooltip } from '~ui/tooltip';
 
-  interface MulticlassClass {
-    class: string;
-    subclass?: string;
-    level: number;
-    hitDice?: string;
+  interface StatsBlockProps {
+    hitDice: ClassDetailResponse['hitDice'];
+    savingThrows: ClassDetailResponse['savingThrows'];
+    primaryCharacteristics: ClassDetailResponse['primaryCharacteristics'];
+    multiclass?: Array<ClassInMulticlass>;
   }
 
-  const props = defineProps<
-    Pick<
-      ClassDetailResponse,
-      'hitDice' | 'savingThrows' | 'primaryCharacteristics'
-    > & {
-      multiclass?: Array<MulticlassClass>;
-    }
-  >();
+  const props = defineProps<StatsBlockProps>();
 </script>
 
 <template>

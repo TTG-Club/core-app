@@ -7,21 +7,25 @@
     useVueTable,
   } from '@tanstack/vue-table';
   import { useDebounceFn } from '@vueuse/core';
-  import type { ClassDetailResponse, ClassFeature } from '~classes/types';
-  import { maxBy, omit, orderBy, range } from 'lodash-es';
+  import type {
+    ClassFeature,
+    ClassInMulticlass,
+    ClassTable,
+    CasterType,
+  } from '~classes/types';
+  import { maxBy, omit, orderBy } from 'lodash-es';
+  import { useDndMechanics } from './useDndMechanics';
+  import { LEVELS } from '~/shared/consts';
   import type { Level } from '~/shared/types';
 
-  interface MulticlassClass {
-    class: string;
-    subclass?: string;
-    level: number;
+  interface MulticlassTableProps {
+    table: Array<ClassTable>;
+    casterType: CasterType;
+    features: Array<ClassFeature>;
+    multiclass?: Array<ClassInMulticlass>;
   }
 
-  const props = defineProps<
-    Pick<ClassDetailResponse, 'table' | 'casterType' | 'features'> & {
-      multiclass?: Array<MulticlassClass>;
-    }
-  >();
+  const props = defineProps<MulticlassTableProps>();
 
   interface MulticlassTableRow {
     level: Level;
@@ -53,10 +57,11 @@
 
   const { scrollToAnchor } = useAnchorScroll();
   const route = useRoute();
+  const router = useRouter();
 
-  function getProficiencyBonus(level: number): number {
-    return Math.ceil(level / 4) + 1;
-  }
+  const { getProficiencyBonus } = useDndMechanics({
+    casterType: props.casterType,
+  });
 
   const features = computed(() => {
     const list: Array<ClassFeature> = [];
@@ -81,19 +86,21 @@
   });
 
   // Определяем максимальный уровень персонажа из features
-  const maxCharacterLevel = computed(() => {
+  const maxCharacterLevel = computed((): Level => {
     if (!features.value || features.value.length === 0) {
       return 20;
     }
 
     const maxLevel = Math.max(...features.value.map((f) => f.level));
 
-    return Math.min(maxLevel, 20) as Level;
+    const clampedLevel = Math.min(Math.max(maxLevel, 1), 20);
+
+    return LEVELS.find((level) => level === clampedLevel) ?? 20;
   });
 
   // Генерируем массив уровней персонажа
   const characterLevels = computed(() => {
-    return range(1, maxCharacterLevel.value + 1) as Level[];
+    return LEVELS.filter((level) => level <= maxCharacterLevel.value);
   });
 
   function getScalingValueForLevel(
@@ -147,7 +154,7 @@
 
         // Создаем разделитель с заполненными полями для всех столбцов
         const separatorRow: MulticlassTableRow = {
-          level: level as Level,
+          level,
           proficiencyBonus: 0,
           features: [],
           isSeparator: true,
@@ -172,7 +179,7 @@
   });
 
   function getLevelData(level: Level) {
-    const levelFeatures = features.value.filter((f) => f.level === level) || [];
+    const levelFeatures = features.value.filter((f) => f.level === level);
 
     const row: MulticlassTableRow = {
       level,
@@ -241,15 +248,8 @@
                   scrollToAnchor(feature.key);
 
                   // Обновляем URL без перезагрузки страницы
-                  const currentPath = route.path;
-                  const newHash = `#${feature.key}`;
-
-                  if (window.location.hash !== newHash) {
-                    window.history.replaceState(
-                      null,
-                      '',
-                      `${currentPath}${newHash}`,
-                    );
+                  if (route.hash !== `#${feature.key}`) {
+                    router.replace({ hash: `#${feature.key}` });
                   }
                 }, ['left', 'exact', 'prevent']),
               },
@@ -291,7 +291,7 @@
     return baseColumns;
   });
 
-  const table = useVueTable({
+  const vueTable = useVueTable({
     get data() {
       return tableData.value;
     },
@@ -300,16 +300,6 @@
     },
     getCoreRowModel: getCoreRowModel(),
   });
-
-  function shouldShowHeader(
-    _header: Header<MulticlassTableRow, unknown>,
-  ): boolean {
-    return true;
-  }
-
-  function getRowSpan(_header: Header<MulticlassTableRow, unknown>): number {
-    return 1;
-  }
 
   function getHeaderClass(header: Header<MulticlassTableRow, unknown>): string {
     const baseClass =
@@ -352,15 +342,14 @@
     <table class="min-w-full table-fixed border-collapse">
       <thead class="bg-elevated">
         <tr
-          v-for="headerGroup in table.getHeaderGroups()"
+          v-for="headerGroup in vueTable.getHeaderGroups()"
           :key="headerGroup.id"
         >
           <th
             v-for="header in headerGroup.headers"
-            v-show="shouldShowHeader(header)"
             :key="header.id"
             :colspan="header.colSpan"
-            :rowspan="getRowSpan(header)"
+            :rowspan="1"
             :class="getHeaderClass(header)"
           >
             <FlexRender
@@ -373,7 +362,7 @@
 
       <tbody class="divide-y divide-default">
         <tr
-          v-for="(row, rowIndex) in table.getRowModel().rows"
+          v-for="(row, rowIndex) in vueTable.getRowModel().rows"
           :key="row.id"
           :class="[
             'divide-x divide-default',
@@ -382,7 +371,7 @@
         >
           <template v-if="row.original.isSeparator">
             <td
-              :colspan="table.getAllColumns().length"
+              :colspan="vueTable.getAllColumns().length"
               class="px-4 py-1.5 text-left text-xs text-secondary"
             >
               {{ row.original.separatorText }}

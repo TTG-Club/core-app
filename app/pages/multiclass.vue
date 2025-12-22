@@ -1,47 +1,94 @@
 <script setup lang="ts">
   import { PageActions } from '~ui/page';
   import { UiResult } from '~ui/result';
-  import {
-    StatsBlock,
-    ClassProficiency,
-    FeatureCollapse,
-    MulticlassLevelInfo,
-  } from '~classes/body/ui';
-  import { MulticlassTable } from '~classes/body/ui/table';
+  import { MulticlassBody } from '~classes/body';
+  import type { MulticlassDetailResponse } from '~classes/types';
 
   const route = useRoute();
 
-  // Формируем body для POST запроса из query параметров
-  const requestBody = computed(() => {
-    // Первый класс (основной)
-    const class1Url = route.query.class1 as string | undefined;
-    const level1Raw = Number(route.query.level1);
-    const level1 = level1Raw >= 1 && level1Raw <= 20 ? level1Raw : undefined;
-    const subclass1 = route.query.subclass1 as string | undefined;
+  // Типы для запроса к API мультикласса
+  // Примечание: API использует `class` (единственное) для основного класса
+  // и `classes` (множественное) для массива дополнительных классов
+  type AdditionalClassItem = {
+    url: string; // URL класса
+    level: number; // Уровень класса
+    subclass?: string; // URL подкласса (опционально)
+  };
 
-    if (!class1Url || !level1) {
+  interface MainClassData {
+    url: string;
+    level: number;
+    subclass?: string;
+  }
+
+  interface MulticlassRequest {
+    class: string; // URL основного класса
+    level: number; // Уровень основного класса
+    subclass?: string; // URL подкласса основного класса (опционально)
+    classes: AdditionalClassItem[]; // Массив дополнительных классов
+  }
+
+  // Парсинг основного класса из query параметров
+  const mainClass = computed<MainClassData | null>(() => {
+    const url =
+      typeof route.query.class1 === 'string' ? route.query.class1 : undefined;
+    const levelRaw = Number(route.query.level1);
+    const level =
+      levelRaw >= 1 && levelRaw <= 20 ? levelRaw : undefined;
+    const subclass =
+      typeof route.query.subclass1 === 'string'
+        ? route.query.subclass1
+        : undefined;
+
+    if (!url || !level) {
       return null;
     }
 
-    // Дополнительные классы (2-10)
-    const additionalClasses: Array<{
-      url: string;
-      level: number;
-      subclass?: string;
-    }> = [];
+    const result: MainClassData = {
+      url,
+      level,
+    };
 
-    for (let i = 2; i <= 10; i++) {
-      const classUrl = route.query[`class${i}`] as string | undefined;
-      const levelRaw = Number(route.query[`level${i}`]);
+    if (subclass && subclass.trim() !== '') {
+      result.subclass = subclass;
+    }
+
+    return result;
+  });
+
+  // Парсинг дополнительных классов из query параметров
+  const additionalClasses = computed<AdditionalClassItem[]>(() => {
+    const classes: AdditionalClassItem[] = [];
+
+    // Обрабатываем дополнительные классы (начиная со второго, так как первый - основной)
+    const classKeys = Object.keys(route.query).filter((key) =>
+      key.startsWith('class'),
+    );
+
+    for (const classKey of classKeys) {
+      const index = classKey.replace('class', '');
+
+      if (index === '1') {
+        continue; // Пропускаем основной класс
+      }
+
+      const classUrl =
+        typeof route.query[classKey] === 'string'
+          ? route.query[classKey]
+          : undefined;
+
+      const levelQueryKey = `level${index}`;
+      const levelRaw = Number(route.query[levelQueryKey]);
       const level = levelRaw >= 1 && levelRaw <= 20 ? levelRaw : undefined;
-      const subclass = route.query[`subclass${i}`] as string | undefined;
+
+      const subclassQueryKey = `subclass${index}`;
+      const subclass =
+        typeof route.query[subclassQueryKey] === 'string'
+          ? route.query[subclassQueryKey]
+          : undefined;
 
       if (classUrl && level) {
-        const classData: {
-          url: string;
-          level: number;
-          subclass?: string;
-        } = {
+        const classData: AdditionalClassItem = {
           url: classUrl,
           level,
         };
@@ -50,63 +97,77 @@
           classData.subclass = subclass;
         }
 
-        additionalClasses.push(classData);
+        classes.push(classData);
       }
     }
 
-    // Проверяем, что есть хотя бы один дополнительный класс
-    if (additionalClasses.length === 0) {
+    return classes;
+  });
+
+  // Формируем body для POST запроса из query параметров
+  const requestBody = computed<MulticlassRequest | null>(() => {
+    const main = mainClass.value;
+    const additional = additionalClasses.value;
+
+    if (!main || additional.length === 0) {
       return null;
     }
 
-    // Формируем body согласно формату API
-    const body: {
-      class: string;
-      level: number;
-      subclass?: string;
-      classes: Array<{
-        url: string;
-        level: number;
-        subclass?: string;
-      }>;
-    } = {
-      class: class1Url,
-      level: level1,
-      classes: additionalClasses,
+    const body: MulticlassRequest = {
+      class: main.url,
+      level: main.level,
+      classes: additional,
     };
 
-    // Добавляем subclass только если он есть (не undefined и не пустая строка)
-    if (subclass1 && subclass1.trim() !== '') {
-      body.subclass = subclass1;
+    if (main.subclass) {
+      body.subclass = main.subclass;
     }
 
     return body;
   });
 
+  // Генерируем простой и понятный ключ для кеширования на основе query параметров
+  const multiclassKey = computed(() => {
+    // Используем отсортированные query параметры для создания уникального и читаемого ключа
+    const sortedKeys = Object.keys(route.query).sort();
+    const parts: string[] = [];
+
+    for (const key of sortedKeys) {
+      const value = route.query[key];
+      if (value && typeof value === 'string') {
+        parts.push(`${key}=${value}`);
+      }
+    }
+
+    return parts.length > 0 ? `multiclass-${parts.join('&')}` : 'multiclass-empty';
+  });
+
+  // Функция для получения данных мультикласса
+  function fetchMulticlassData(
+    body: MulticlassRequest | null,
+  ): Promise<unknown> {
+    if (!body) {
+      return Promise.resolve(null);
+    }
+
+    return $fetch('/api/v2/multiclass', {
+      method: 'POST',
+      body,
+    });
+  }
+
   const {
-    data: apiResponse,
+    data: classDetail,
     error,
     refresh,
   } = await useAsyncData(
-    computed(() => `multiclass-${JSON.stringify(requestBody.value)}`),
-    async () => {
+    multiclassKey,
+    () => {
       if (!requestBody.value) {
-        return null;
+        return Promise.resolve(null);
       }
 
-      const response = await $fetch('/api/v2/multiclass', {
-        method: 'POST',
-        body: requestBody.value,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': '*/*',
-        },
-      });
-
-      return response;
-    },
-    {
-      watch: [requestBody],
+      return fetchMulticlassData(requestBody.value);
     },
   );
 
@@ -120,7 +181,7 @@
 
 <template>
   <NuxtLayout
-    id="classes-base"
+    id="multiclass-base"
     name="detail"
     title="Мультиклассирование"
     subtitle="Multiclassing"
@@ -131,60 +192,10 @@
     </template>
 
     <template #default>
-      <div
-        v-if="apiResponse"
-        class="@container"
-      >
-        <div class="flex flex-col gap-6 @min-3xl:flex-row @min-3xl:gap-7">
-          <div
-            :class="[
-              'flex w-full shrink-0 flex-col gap-4',
-              '@min-xl:@max-3xl:flex-row @min-3xl:w-80',
-            ]"
-          >
-            <MulticlassLevelInfo
-              v-if="
-                apiResponse &&
-                (apiResponse as any).characterLevel &&
-                (apiResponse as any).multiclass
-              "
-              :character-level="(apiResponse as any).characterLevel"
-              :spellcasting-level="(apiResponse as any).spellcastingLevel"
-              :multiclass="(apiResponse as any).multiclass || []"
-            />
-
-            <StatsBlock
-              :hit-dice="apiResponse.hitDice"
-              :saving-throws="apiResponse.savingThrows"
-              :proficiency="apiResponse.proficiency"
-              :primary-characteristics="apiResponse.primaryCharacteristics"
-              :multiclass="(apiResponse as any).multiclass"
-            />
-          </div>
-
-          <div class="flex min-w-0 flex-auto flex-col gap-6">
-            <div class="flex min-w-0 flex-col gap-2">
-              <MulticlassTable
-                :table="apiResponse.table"
-                :caster-type="apiResponse.casterType"
-                :features="apiResponse.features"
-                :multiclass="(apiResponse as any).multiclass"
-              />
-            </div>
-
-            <ClassProficiency
-              :proficiency="apiResponse.proficiency"
-              :saving-throws="apiResponse.savingThrows"
-            />
-
-            <FeatureCollapse
-              v-for="feature in apiResponse.features"
-              :key="feature.key"
-              :feature
-            />
-          </div>
-        </div>
-      </div>
+      <MulticlassBody
+        v-if="classDetail"
+        :detail="classDetail as MulticlassDetailResponse"
+      />
 
       <UiResult
         v-else
