@@ -30,6 +30,26 @@ export interface MulticlassDetailResponse extends ClassDetailResponse {
   characterLevel: number;
 }
 
+// Типы для запроса к API мультикласса
+export interface AdditionalClassItem {
+  url: string;
+  level: number;
+  subclass?: string;
+}
+
+export interface MainClassData {
+  url: string;
+  level: number;
+  subclass?: string;
+}
+
+export interface MulticlassRequest {
+  class: string;
+  level: number;
+  subclass?: string;
+  classes: Array<AdditionalClassItem>;
+}
+
 export interface ClassTable {
   name: string;
   scaling: Array<{

@@ -1,12 +1,12 @@
 <script setup lang="ts">
   import type { ClassInMulticlass } from '~classes/types';
 
-  interface MulticlassLevelInfoProps {
+  interface Props {
     characterLevel: number;
     multiclass: Array<ClassInMulticlass>;
   }
 
-  const props = defineProps<MulticlassLevelInfoProps>();
+  const props = defineProps<Props>();
 </script>
 
 <template>

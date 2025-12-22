@@ -18,14 +18,14 @@
   import { LEVELS } from '~/shared/consts';
   import type { Level } from '~/shared/types';
 
-  interface MulticlassTableProps {
+  interface Props {
     table: Array<ClassTable>;
     casterType: CasterType;
     features: Array<ClassFeature>;
     multiclass?: Array<ClassInMulticlass>;
   }
 
-  const props = defineProps<MulticlassTableProps>();
+  const props = defineProps<Props>();
 
   interface MulticlassTableRow {
     level: Level;

@@ -2,31 +2,14 @@
   import { PageActions } from '~ui/page';
   import { UiResult } from '~ui/result';
   import { MulticlassBody } from '~classes/body';
-  import type { MulticlassDetailResponse } from '~classes/types';
+  import type {
+    AdditionalClassItem,
+    MainClassData,
+    MulticlassDetailResponse,
+    MulticlassRequest,
+  } from '~classes/types';
 
   const route = useRoute();
-
-  // Типы для запроса к API мультикласса
-  // Примечание: API использует `class` (единственное) для основного класса
-  // и `classes` (множественное) для массива дополнительных классов
-  type AdditionalClassItem = {
-    url: string; // URL класса
-    level: number; // Уровень класса
-    subclass?: string; // URL подкласса (опционально)
-  };
-
-  interface MainClassData {
-    url: string;
-    level: number;
-    subclass?: string;
-  }
-
-  interface MulticlassRequest {
-    class: string; // URL основного класса
-    level: number; // Уровень основного класса
-    subclass?: string; // URL подкласса основного класса (опционально)
-    classes: AdditionalClassItem[]; // Массив дополнительных классов
-  }
 
   // Парсинг основного класса из query параметров
   const mainClass = computed<MainClassData | null>(() => {
