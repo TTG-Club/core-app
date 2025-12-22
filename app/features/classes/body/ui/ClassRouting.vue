@@ -35,9 +35,9 @@
 
   const multiclassDrawer = overlay.create(MulticlassDrawer, {
     props: {
-      currentUrl: url, // URL текущей страницы (подкласса, если есть)
-      currentName: name,
-      currentParent: parent, // Основной класс, если текущий - подкласс
+      url, // URL текущей страницы (подкласса, если есть)
+      name,
+      parent, // Основной класс, если текущий - подкласс
       onClose: () => multiclassDrawer.close(),
     },
     destroyOnClose: true,

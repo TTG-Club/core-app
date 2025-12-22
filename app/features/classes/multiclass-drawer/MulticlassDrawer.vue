@@ -6,10 +6,10 @@
   import type { NameResponse } from '~/shared/types';
   import type { SelectMenuItem } from '#ui/components/SelectMenu.vue';
 
-  const { currentUrl, currentParent = undefined } = defineProps<{
-    currentUrl: string;
-    currentName: NameResponse;
-    currentParent?: ClassLinkResponse;
+  const { url, parent = undefined } = defineProps<{
+    url: string;
+    name: NameResponse;
+    parent?: ClassLinkResponse;
   }>();
 
   const emit = defineEmits<{
@@ -20,14 +20,10 @@
   const currentLevel = ref<number>(1);
 
   // Определяем базовый URL основного класса
-  const initialMainClassUrl = computed(() =>
-    currentParent ? currentParent.url : currentUrl,
-  );
+  const initialMainClassUrl = computed(() => (parent ? parent.url : url));
 
   // Основной класс (можно выбрать)
-  const currentClassUrl = ref<string>(
-    currentParent ? currentParent.url : currentUrl,
-  );
+  const currentClassUrl = ref<string>(parent ? parent.url : url);
 
   // Обновляем currentClassUrl при изменении initialMainClassUrl
   watch(
@@ -41,9 +37,7 @@
   );
 
   // Инициализируем подкласс: если мы на странице подкласса, используем его URL
-  const currentSubclassUrl = ref<string | undefined>(
-    currentParent ? currentUrl : undefined,
-  );
+  const currentSubclassUrl = ref<string | undefined>(parent ? url : undefined);
 
   // Вторая строка: выбор класса, подкласса и уровня
   const selectedClassUrl = ref<string>();
@@ -313,11 +307,11 @@
     });
 
     const queryString = new URLSearchParams(query).toString();
-    const url = `/multiclass?${queryString}`;
+    const multiclassUrl = `/multiclass?${queryString}`;
 
     // Закрываем drawer и переходим на страницу мультикласса в том же окне
     emit('close');
-    navigateTo(url);
+    navigateTo(multiclassUrl);
   }
 </script>
 

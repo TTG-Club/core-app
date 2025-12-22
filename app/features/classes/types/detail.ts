@@ -21,6 +21,12 @@ export interface ClassDetailResponse {
   features: Array<ClassFeature>;
   hasSubclasses?: boolean;
   parent?: ClassLinkResponse;
+  multiclass?: Array<ClassInMulticlass>;
+}
+
+// Расширенный тип для ответа API мультикласса
+export interface MulticlassDetailResponse extends ClassDetailResponse {
+  characterLevel: number;
 }
 
 export interface ClassTable {
@@ -58,6 +64,13 @@ export interface HitDice {
   value: string;
   maxValue: number;
   avg: number;
+}
+
+export interface ClassInMulticlass {
+  class: string;
+  subclass?: string;
+  level: number;
+  hitDice?: string;
 }
 
 export enum CasterType {
