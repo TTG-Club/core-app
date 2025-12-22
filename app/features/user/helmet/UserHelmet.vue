@@ -1,22 +1,18 @@
 <script setup lang="ts">
   import { useUserStore } from '~/shared/stores';
   import { AuthModal } from '~user/auth-modal';
-  import { Breakpoint } from '~/composables/useBreakpoints';
-  import type { DropdownMenuItem } from '@nuxt/ui';
-  import KbdShortcut from './KbdShortcut.vue';
+  import { KbdShortcut } from '~ui/kbd-shortcut';
 
   const userStore = useUserStore();
   const { isAdmin } = useUserRoles();
-  const { greaterOrEqual } = useBreakpoints();
+  const { isTablet } = useBreakpoints();
 
   const { isLoggedIn, isLoading, user } = storeToRefs(userStore);
 
   const isAuthOpened = ref(false);
   const isMenuOpened = ref(false);
 
-  const side = computed(() =>
-    greaterOrEqual(Breakpoint.MD).value ? 'right' : 'top',
-  );
+  const side = computed(() => (isTablet.value ? 'right' : 'top'));
 
   try {
     await userStore.fetch();
@@ -24,7 +20,6 @@
     console.error(err);
   }
 
-  // Инициалы пользователя
   const userInitials = computed(() => {
     if (!user.value?.username) return 'U';
 
@@ -58,84 +53,22 @@
     isMenuOpened.value = false;
   }
 
-  // Извлекает шорткаты из menuItems для defineShortcuts
-  function extractShortcuts(
-    items: DropdownMenuItem[][],
-  ): Record<string, () => void> {
-    const shortcuts: Record<string, () => void> = {};
-
-    for (const group of items) {
-      for (const item of group) {
-        if (item.kbds && item.onSelect) {
-          const kbdsArray = Array.isArray(item.kbds)
-            ? item.kbds.filter((k): k is string => typeof k === 'string')
-            : [];
-
-          if (kbdsArray.length > 0) {
-            const key = kbdsArray.join('_');
-
-            shortcuts[key] = () => {
-              item.onSelect?.(undefined as any);
-            };
-          }
-        }
-      }
-    }
-
-    return shortcuts;
+  function openProfile() {
+    closeMenu();
+    navigateTo({ name: 'user-profile' });
   }
 
-  // Определяем структуру меню (аналогично DropdownMenu, но используем вручную)
-  const menuItems = computed<DropdownMenuItem[][]>(() => [
-    // Основные пункты навигации
-    [
-      {
-        label: 'Настройка профиля',
-        icon: 'i-ttg-settings',
-        onSelect: (e?: Event) => {
-          e?.preventDefault();
-          closeMenu();
-          navigateTo({ name: 'user-profile' });
-        },
-      },
-      ...(isAdmin.value
-        ? [
-            {
-              label: 'Мастерская',
-              icon: 'i-ttg-menu-filled-workshop',
-              kbds: ['meta', 'shift', 'm'] as string[], // ← вот здесь шорткат
-              onSelect: (e?: Event) => {
-                e?.preventDefault();
-                closeMenu();
-                navigateTo({ name: 'workshop' });
-              },
-            },
-          ]
-        : []),
-    ],
-    // Пункт выхода
-    [
-      {
-        label: 'Выход',
-        icon: 'i-ttg-logout',
-        color: 'error' as const,
-        onSelect: logout,
-      },
-    ],
-  ]);
+  function openWorkshop() {
+    closeMenu();
+    navigateTo({ name: 'workshop' });
+  }
 
-  // Регистрируем глобальные шорткаты на основе kbds из menuItems
-  watch(
-    menuItems,
-    (items) => {
-      const shortcuts = extractShortcuts(items);
-
-      if (Object.keys(shortcuts).length > 0) {
-        defineShortcuts(shortcuts);
-      }
-    },
-    { immediate: true },
-  );
+  if (isAdmin.value) {
+    defineShortcuts({
+      // eslint-disable-next-line camelcase
+      meta_shift_m: openWorkshop,
+    });
+  }
 </script>
 
 <template>
@@ -169,20 +102,22 @@
     </template>
 
     <template #content>
-      <div class="flex flex-col">
-        <!-- Заголовок с именем и аватаром -->
+      <div
+        v-if="user"
+        class="flex flex-col"
+      >
         <div class="flex min-h-20 items-center gap-3 p-4">
           <div class="flex min-w-0 flex-1 flex-col">
             <div
               class="mb-1 overflow-hidden text-2xl font-semibold text-ellipsis whitespace-nowrap"
             >
-              {{ user?.username || 'Пользователь' }}
+              {{ user.username }}
             </div>
 
             <div
               class="overflow-hidden text-xs text-ellipsis whitespace-nowrap text-secondary"
             >
-              {{ user?.email || '' }}
+              {{ user.email }}
             </div>
           </div>
 
@@ -193,7 +128,6 @@
           </div>
         </div>
 
-        <!-- Статистика -->
         <div class="-mt-2 px-4 pb-3">
           <USeparator class="mb-2">
             <span class="text-sm font-medium">Статистика</span>
@@ -216,42 +150,66 @@
 
         <USeparator />
 
-        <!-- Навигация — рендерим из menuItems -->
         <div class="flex flex-col py-1">
-          <template
-            v-for="(group, i) in menuItems"
-            :key="i"
-          >
-            <div
-              v-for="item in group"
-              :key="item.label"
-              class="p-1"
+          <div class="p-1">
+            <UButton
+              variant="ghost"
+              class="w-full justify-between px-2 py-2 text-default"
+              @click="openProfile"
             >
-              <UButton
-                variant="ghost"
-                :color="item.color"
-                class="w-full justify-between px-2 py-2 text-default"
-                @click="item.onSelect"
-              >
-                <div class="flex items-center">
-                  <UIcon
-                    :name="item.icon"
-                    class="mr-2 size-5"
-                  />
+              <div class="flex items-center">
+                <UIcon
+                  name="i-ttg-settings"
+                  class="mr-2 size-5"
+                />
 
-                  <span>{{ item.label }}</span>
-                </div>
+                <span>Настройка профиля</span>
+              </div>
+            </UButton>
+          </div>
 
-                <KbdShortcut :kbds="item.kbds" />
-              </UButton>
-            </div>
+          <div
+            v-if="isAdmin"
+            class="p-1"
+          >
+            <UButton
+              variant="ghost"
+              class="w-full justify-between px-2 py-2 text-default"
+              @click="openWorkshop"
+            >
+              <div class="flex items-center">
+                <UIcon
+                  name="i-ttg-menu-filled-workshop"
+                  class="mr-2 size-5"
+                />
 
-            <!-- Разделитель между группами, кроме последнего -->
-            <USeparator v-if="i < menuItems.length - 1" />
-          </template>
+                <span>Мастерская</span>
+              </div>
+
+              <KbdShortcut :kbds="['meta', 'shift', 'm']" />
+            </UButton>
+          </div>
+
+          <USeparator />
+
+          <div class="p-1">
+            <UButton
+              variant="ghost"
+              color="error"
+              class="w-full justify-between px-2 py-2 text-default"
+              @click="logout"
+            >
+              <div class="flex items-center">
+                <UIcon
+                  name="i-ttg-logout"
+                  class="mr-2 size-5"
+                />
+
+                <span>Выход</span>
+              </div>
+            </UButton>
+          </div>
         </div>
-
-        <!-- Выход уже в menuItems, но если хочешь отдельно — можно оставить -->
       </div>
     </template>
   </UPopover>
