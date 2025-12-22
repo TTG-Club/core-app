@@ -15,9 +15,11 @@
   const mainClass = computed<MainClassData | null>(() => {
     const url =
       typeof route.query.class1 === 'string' ? route.query.class1 : undefined;
+
     const levelRaw = Number(route.query.level1);
-    const level =
-      levelRaw >= 1 && levelRaw <= 20 ? levelRaw : undefined;
+
+    const level = levelRaw >= 1 && levelRaw <= 20 ? levelRaw : undefined;
+
     const subclass =
       typeof route.query.subclass1 === 'string'
         ? route.query.subclass1
@@ -65,6 +67,7 @@
       const level = levelRaw >= 1 && levelRaw <= 20 ? levelRaw : undefined;
 
       const subclassQueryKey = `subclass${index}`;
+
       const subclass =
         typeof route.query[subclassQueryKey] === 'string'
           ? route.query[subclassQueryKey]
@@ -117,12 +120,15 @@
 
     for (const key of sortedKeys) {
       const value = route.query[key];
+
       if (value && typeof value === 'string') {
         parts.push(`${key}=${value}`);
       }
     }
 
-    return parts.length > 0 ? `multiclass-${parts.join('&')}` : 'multiclass-empty';
+    return parts.length > 0
+      ? `multiclass-${parts.join('&')}`
+      : 'multiclass-empty';
   });
 
   // Функция для получения данных мультикласса
@@ -143,16 +149,13 @@
     data: classDetail,
     error,
     refresh,
-  } = await useAsyncData(
-    multiclassKey,
-    () => {
-      if (!requestBody.value) {
-        return Promise.resolve(null);
-      }
+  } = await useAsyncData(multiclassKey, () => {
+    if (!requestBody.value) {
+      return Promise.resolve(null);
+    }
 
-      return fetchMulticlassData(requestBody.value);
-    },
-  );
+    return fetchMulticlassData(requestBody.value);
+  });
 
   useSeoMeta({
     title: 'Мультиклассирование',
