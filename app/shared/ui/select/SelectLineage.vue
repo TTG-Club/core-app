@@ -1,6 +1,12 @@
 <script setup lang="ts">
   import type { SpeciesLinkResponse } from '~/shared/types';
-  import type { SelectMenuItem } from '#ui/components/SelectMenu.vue';
+
+  type LineageSelectItem = {
+    label: string;
+    value: string;
+    description: string;
+    source: string;
+  };
 
   const { multiple = false, disabled } = defineProps<{
     disabled?: boolean;
@@ -9,28 +15,41 @@
 
   const model = defineModel<string | Array<string>>();
 
-  const { data, status, refresh } = await useAsyncData<SelectMenuItem[]>(
+  const openedOnce = ref(false);
+
+  const { data, status, refresh } = await useAsyncData<LineageSelectItem[]>(
     'species-lineages-select',
     async () => {
       const speciesLinks = await $fetch<Array<SpeciesLinkResponse>>(
         '/api/v2/species/lineages',
+        { method: 'get' },
       );
 
       return speciesLinks.map((species) => ({
-        ...species,
-        label: `${species.name.rus} [${species.name.eng}]`,
+        label: species.name.rus,
         value: species.url,
+        description: species.name.eng,
+        source: species.source.name.label,
       }));
     },
-    { dedupe: 'defer' },
+    {
+      immediate: false,
+      default: () => [],
+      dedupe: 'defer',
+    },
   );
 
-  const handleDropdownOpening = (state: boolean) => {
+  const items = computed(() => data.value ?? []);
+
+  const handleDropdownOpening = async (state: boolean) => {
     if (!state) {
       return;
     }
 
-    refresh();
+    if (!openedOnce.value) {
+      openedOnce.value = true;
+      await refresh();
+    }
   };
 </script>
 
@@ -38,7 +57,7 @@
   <USelectMenu
     v-model="model"
     :loading="status === 'pending'"
-    :items="data || []"
+    :items="items"
     :multiple="multiple"
     :disabled="disabled"
     :placeholder="`Выбери происхождени${multiple ? 'я' : 'е'}`"
@@ -46,6 +65,16 @@
     value-key="value"
     clearable
     searchable
+    :ui="{ itemDescription: 'text-xs text-secondary' }"
     @update:open="handleDropdownOpening"
-  />
+  >
+    <template #item-trailing="{ item }">
+      <UBadge
+        variant="subtle"
+        color="neutral"
+      >
+        {{ item.source }}
+      </UBadge>
+    </template>
+  </USelectMenu>
 </template>
