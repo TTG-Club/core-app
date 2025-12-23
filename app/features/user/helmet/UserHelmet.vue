@@ -7,7 +7,7 @@
   const { isAdmin } = useUserRoles();
   const { isTablet } = useBreakpoints();
 
-  const { isLoggedIn, isLoading, user } = storeToRefs(userStore);
+  const { isLoading, user } = storeToRefs(userStore);
 
   const isAuthOpened = ref(false);
   const isMenuOpened = ref(false);
@@ -18,29 +18,6 @@
     await userStore.fetch();
   } catch (err) {
     console.error(err);
-  }
-
-  const userInitials = computed(() => {
-    if (!user.value?.username) return 'U';
-
-    const parts = user.value.username.split(' ');
-
-    if (parts.length >= 2) {
-      const first = parts[0]?.[0];
-      const second = parts[1]?.[0];
-
-      if (first && second) return (first + second).toUpperCase();
-    }
-
-    const username = user.value.username;
-
-    return username && username.length >= 2
-      ? username.substring(0, 2).toUpperCase()
-      : 'U';
-  });
-
-  function onClick() {
-    isAuthOpened.value = true;
   }
 
   function logout() {
@@ -72,14 +49,14 @@
 </script>
 
 <template>
-  <template v-if="!isLoggedIn">
+  <template v-if="!user">
     <UButton
       :loading="isLoading"
       variant="ghost"
       icon="i-ttg-profile-helmet-outline"
       size="xl"
       color="neutral"
-      @click.left.exact.prevent="onClick"
+      @click.left.exact.prevent="isAuthOpened = true"
     />
 
     <AuthModal v-model="isAuthOpened" />
@@ -102,10 +79,7 @@
     </template>
 
     <template #content>
-      <div
-        v-if="user"
-        class="flex flex-col"
-      >
+      <div class="flex flex-col">
         <div class="flex min-h-20 items-center gap-3 p-4">
           <div class="flex min-w-0 flex-1 flex-col">
             <div
@@ -121,11 +95,11 @@
             </div>
           </div>
 
-          <div
-            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-(--color-primary-500) text-sm font-semibold text-(--ui-text-inverted)"
-          >
-            {{ userInitials }}
-          </div>
+          <UAvatar
+            :alt="user.username"
+            size="3xl"
+            :ui="{ fallback: 'uppercase' }"
+          />
         </div>
 
         <div class="-mt-2 px-4 pb-3">
@@ -150,43 +124,33 @@
 
         <USeparator />
 
-        <div class="flex flex-col py-1">
+        <div class="flex flex-col">
           <div class="p-1">
             <UButton
+              color="neutral"
               variant="ghost"
-              class="w-full justify-between px-2 py-2 text-default"
+              size="lg"
+              class="w-full"
+              icon="i-ttg-settings"
               @click="openProfile"
             >
-              <div class="flex items-center">
-                <UIcon
-                  name="i-ttg-settings"
-                  class="mr-2 size-5"
-                />
-
-                <span>Настройка профиля</span>
-              </div>
+              Настройка профиля
             </UButton>
-          </div>
 
-          <div
-            v-if="isAdmin"
-            class="p-1"
-          >
             <UButton
+              v-if="isAdmin"
+              icon="i-ttg-menu-filled-workshop"
+              color="neutral"
               variant="ghost"
-              class="w-full justify-between px-2 py-2 text-default"
+              class="w-full"
+              size="lg"
               @click="openWorkshop"
             >
-              <div class="flex items-center">
-                <UIcon
-                  name="i-ttg-menu-filled-workshop"
-                  class="mr-2 size-5"
-                />
-
+              <div class="flex w-full items-center justify-between">
                 <span>Мастерская</span>
-              </div>
 
-              <KbdShortcut :kbds="['meta', 'shift', 'm']" />
+                <KbdShortcut :kbds="['meta', 'shift', 'm']" />
+              </div>
             </UButton>
           </div>
 
@@ -194,19 +158,14 @@
 
           <div class="p-1">
             <UButton
+              class="w-full"
+              icon="i-ttg-logout"
               variant="ghost"
               color="error"
-              class="w-full justify-between px-2 py-2 text-default"
+              size="lg"
               @click="logout"
             >
-              <div class="flex items-center">
-                <UIcon
-                  name="i-ttg-logout"
-                  class="mr-2 size-5"
-                />
-
-                <span>Выход</span>
-              </div>
+              Выход
             </UButton>
           </div>
         </div>
