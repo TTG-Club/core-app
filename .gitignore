@@ -34,4 +34,3 @@ shared/types/generated
 
 # Custom
 .test
-package-lock.json

@@ -1,0 +1,21 @@
+<script setup lang="ts">
+  import DiceD20IconUrl from '~/assets/icons/dice/d20.svg';
+  import { useDiceRollerState } from '../composables/useDiceRollerState';
+
+  const { open } = useDiceRollerState();
+</script>
+
+<template>
+  <button
+    type="button"
+    class="fixed right-4 bottom-4 z-[120] inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--ui-border)] bg-[var(--ui-bg-elevated)] text-[var(--ui-text)] shadow-[0_12px_25px_rgba(0,0,0,0.2)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_30px_rgba(0,0,0,0.3)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary-500)] focus-visible:outline-none"
+    aria-label="Открыть роллер кубов"
+    @click="open"
+  >
+    <img
+      :src="DiceD20IconUrl"
+      alt="D20"
+      class="h-5 w-5 transition dark:invert svifty7:invert"
+    />
+  </button>
+</template>
