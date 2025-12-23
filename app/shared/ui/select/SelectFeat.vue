@@ -55,6 +55,8 @@
     :multiple="multiple"
     :disabled="disabled"
     placeholder="Выбери черту"
+    label-key="label"
+    value-key="value"
     searchable
     clearable
     :filter="false"

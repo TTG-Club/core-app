@@ -46,6 +46,8 @@
     :multiple="multiple"
     :disabled="disabled"
     placeholder="Выбери книгу"
+    label-key="label"
+    value-key="value"
     searchable
     clearable
     @open="handleDropdownOpening(true)"
