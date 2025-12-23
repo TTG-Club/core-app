@@ -17,15 +17,17 @@
         '/api/v2/feats/search',
         {
           method: 'post',
-          params: {
+          query: {
             query: searchQuery.value || undefined,
           },
         },
       );
 
       return featLinks.map((feat) => ({
-        label: `${feat.name.rus} [${feat.name.eng}]`,
+        label: feat.name.rus,
         value: feat.url,
+        description: feat.name.eng,
+        source: feat.source.name.label,
       }));
     },
     {
@@ -51,16 +53,27 @@
   <USelectMenu
     v-model="model"
     :loading="status === 'pending'"
-    :items="data || []"
+    :items="data"
     :multiple="multiple"
     :disabled="disabled"
     placeholder="Выбери черту"
     label-key="label"
     value-key="value"
+    ignore-filter
     searchable
     clearable
     :filter="false"
-    @open="handleDropdownOpening(true)"
-    @search="handleSearch"
-  />
+    :ui="{ itemDescription: 'text-xs text-secondary' }"
+    @update:search-term="handleSearch"
+    @update:open="handleDropdownOpening"
+  >
+    <template #item-trailing="{ item }">
+      <UBadge
+        variant="subtle"
+        color="neutral"
+      >
+        {{ item.source }}
+      </UBadge>
+    </template>
+  </USelectMenu>
 </template>
