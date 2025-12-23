@@ -48,13 +48,15 @@
 </script>
 
 <template>
-  <USelect
+  <USelectMenu
     v-model="model"
     :loading="status === 'pending'"
     :items="data || []"
     :multiple="multiple"
     :disabled="disabled"
     placeholder="Выбери черту"
+    label-key="label"
+    value-key="value"
     searchable
     clearable
     :filter="false"
