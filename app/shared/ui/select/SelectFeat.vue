@@ -1,5 +1,7 @@
 <script setup lang="ts">
   import type { FeatLinkResponse } from '~/shared/types';
+  import { debounce } from 'lodash-es';
+  import { onBeforeUnmount, ref } from 'vue';
 
   type FeatSelectItem = {
     label: string;
@@ -8,79 +10,63 @@
     source: string;
   };
 
+  export type FeatCategory =
+    | 'ORIGIN'
+    | 'GENERAL'
+    | 'EPIC_BOON'
+    | 'FIGHTING_STYLE'
+    | 'DRAGONMARK';
+
   export type FeatCategoryOption = {
-    value: string;
+    value: FeatCategory;
     label: string;
   };
 
-  const props = withDefaults(
-    defineProps<{
-      disabled?: boolean;
-      multiple?: boolean;
+  type Props = {
+    disabled?: boolean;
+    multiple?: boolean;
 
-      /**
-       * Значения категорий, которые должны быть выбраны.
-       * Пример: ['ORIGIN'].
-       */
-      selectedCategories?: Array<string>;
+    /**
+     * Значения категорий, которые могут быть выбраны.
+     */
+    selectedCategories?: Array<FeatCategory>;
 
-      /**
-       * (Опционально) список категорий с лейблами.
-       * Если не передан — фильтр всё равно может применяться по selectedCategories.
-       */
-      categories?: Array<FeatCategoryOption>;
-    }>(),
-    {
-      selectedCategories: () => [],
-      categories: () => [],
-    },
-  );
+    /**
+     * (Опционально) список категорий с лейблами.
+     * Если не передан — фильтр не отправляется.
+     */
+    categories?: Array<FeatCategoryOption>;
+  };
+
+  const props = withDefaults(defineProps<Props>(), {
+    selectedCategories: () => [],
+    categories: () => [],
+  });
 
   const model = defineModel<string | Array<string>>();
 
   const searchQuery = ref('');
   const openedOnce = ref(false);
 
-  let searchTimer: ReturnType<typeof setTimeout> | undefined;
+  type FetchOpts = Parameters<typeof $fetch>[1];
 
-  const defaultCategories: Array<FeatCategoryOption> = [
-    { value: 'ORIGIN', label: 'черта происхождения' },
-    { value: 'GENERAL', label: 'общая черта' },
-    { value: 'EPIC_BOON', label: 'эпическая черта' },
-    { value: 'FIGHTING_STYLE', label: 'боевой стиль' },
-    { value: 'DRAGONMARK', label: 'метка дракона' },
-  ];
-
-  const categoryOptions = computed<Array<FeatCategoryOption>>(() => {
-    if (props.categories.length > 0) {
-      return props.categories;
-    }
-
-    // Нужны лейблы для body.filter.filters[].name
-    return defaultCategories;
-  });
-
-  const selectedSet = computed(() => new Set(props.selectedCategories));
-
-  const shouldSendFilterBody = computed(() => {
-    // Тело отправляем, только если реально нужен фильтр
-    return props.selectedCategories.length > 0;
-  });
-
-  const buildFetchOptions = () => {
-    const base = {
-      method: 'post' as const,
+  const buildFetchOptions = (): FetchOpts => {
+    const base: FetchOpts = {
+      method: 'post',
       query: {
         query: searchQuery.value || undefined,
       },
     };
 
-    // Если selectedCategories не заданы — не отправляем body
-    if (!shouldSendFilterBody.value) {
+    if (
+      props.selectedCategories.length === 0 ||
+      props.categories.length === 0
+    ) {
       return base;
     }
 
-    // selectedCategories заданы — отправляем body.filter (даже если categories не передали)
+    const selectedSet = new Set(props.selectedCategories);
+
     return {
       ...base,
       body: {
@@ -89,28 +75,22 @@
             {
               key: 'club.ttg.dnd5.domain.feat.rest.dto.filter.FeatCategoryFilterGroup',
               name: 'Категории',
-              filters: categoryOptions.value.map((opt) => ({
+              filters: props.categories.map((opt) => ({
                 key: '.FeatCategoryFilterGroup$FeatCategoryFilterItem',
                 value: opt.value,
                 name: opt.label,
-                selected: selectedSet.value.has(opt.value) ? true : null,
+                selected: selectedSet.has(opt.value) ? true : null,
               })),
             },
           ],
           version: '1.0',
         },
       },
-    };
+    } as FetchOpts;
   };
 
   const { data, status, refresh } = await useAsyncData<Array<FeatSelectItem>>(
-    () => {
-      const filterKey = shouldSendFilterBody.value
-        ? `sel:${props.selectedCategories.join(',')}`
-        : 'nofilter';
-
-      return `feat-select:${searchQuery.value}:${filterKey}`;
-    },
+    'feat-select',
     async () => {
       const featLinks = await $fetch<Array<FeatLinkResponse>>(
         '/api/v2/feats/search',
@@ -125,24 +105,27 @@
       }));
     },
     {
-      immediate: false,
-      default: () => [],
       dedupe: 'defer',
     },
   );
 
-  const items = computed(() => data.value);
-
   const handleDropdownOpening = async (state: boolean) => {
-    if (!state) {
+    if (!state || openedOnce.value) {
       return;
     }
 
-    if (!openedOnce.value) {
-      openedOnce.value = true;
-      await refresh();
-    }
+    openedOnce.value = true;
+    await refresh();
   };
+
+  // debounce из lodash-es — ровно для этого кейса
+  const debouncedRefresh = debounce(() => {
+    refresh();
+  }, 250);
+
+  onBeforeUnmount(() => {
+    debouncedRefresh.cancel();
+  });
 
   const handleSearch = (value: string) => {
     searchQuery.value = value;
@@ -151,13 +134,7 @@
       return;
     }
 
-    if (searchTimer) {
-      clearTimeout(searchTimer);
-    }
-
-    searchTimer = setTimeout(() => {
-      refresh();
-    }, 250);
+    debouncedRefresh();
   };
 </script>
 
@@ -165,9 +142,9 @@
   <USelectMenu
     v-model="model"
     :loading="status === 'pending'"
-    :items="items"
-    :multiple="multiple"
-    :disabled="disabled"
+    :items="data"
+    :multiple="props.multiple ?? false"
+    :disabled="props.disabled"
     placeholder="Выбери черту"
     label-key="label"
     value-key="value"

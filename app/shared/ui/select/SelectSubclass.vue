@@ -33,23 +33,17 @@
       }));
     },
     {
-      immediate: false,
-      default: () => [],
       dedupe: 'defer',
     },
   );
 
-  const items = computed(() => data.value ?? []);
-
   const handleDropdownOpening = async (state: boolean) => {
-    if (!state) {
+    if (!state || openedOnce.value) {
       return;
     }
 
-    if (!openedOnce.value) {
-      openedOnce.value = true;
-      await refresh();
-    }
+    openedOnce.value = true;
+    await refresh();
   };
 </script>
 
@@ -57,7 +51,7 @@
   <USelectMenu
     v-model="model"
     :loading="status === 'pending'"
-    :items="items"
+    :items="data"
     :multiple="multiple"
     :disabled="disabled"
     :placeholder="`Выбери подкласс${multiple ? 'ы' : ''}`"

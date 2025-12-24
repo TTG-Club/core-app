@@ -1,5 +1,7 @@
 <script setup lang="ts">
   import type { ClassLinkResponse } from '~classes/types';
+  import { debounce } from 'lodash-es';
+  import { onBeforeUnmount, ref } from 'vue';
 
   type ClassSelectItem = {
     label: string;
@@ -18,10 +20,8 @@
   const searchQuery = ref('');
   const openedOnce = ref(false);
 
-  let searchTimer: ReturnType<typeof setTimeout> | undefined;
-
   const { data, status, refresh } = await useAsyncData<ClassSelectItem[]>(
-    () => `classes-select:${searchQuery.value}`,
+    'classes-select',
     async () => {
       const classesLinks = await $fetch<Array<ClassLinkResponse>>(
         '/api/v2/classes/search',
@@ -41,24 +41,26 @@
       }));
     },
     {
-      immediate: false,
-      default: () => [],
       dedupe: 'defer',
     },
   );
 
-  const items = computed(() => data.value);
-
   const handleDropdownOpening = async (state: boolean) => {
-    if (!state) {
+    if (!state || openedOnce.value) {
       return;
     }
 
-    if (!openedOnce.value) {
-      openedOnce.value = true;
-      await refresh();
-    }
+    openedOnce.value = true;
+    await refresh();
   };
+
+  const debouncedRefresh = debounce(() => {
+    refresh();
+  }, 250);
+
+  onBeforeUnmount(() => {
+    debouncedRefresh.cancel();
+  });
 
   const handleSearch = (value: string) => {
     searchQuery.value = value;
@@ -67,13 +69,7 @@
       return;
     }
 
-    if (searchTimer) {
-      clearTimeout(searchTimer);
-    }
-
-    searchTimer = setTimeout(() => {
-      refresh();
-    }, 250);
+    debouncedRefresh();
   };
 </script>
 
@@ -81,7 +77,7 @@
   <USelectMenu
     v-model="model"
     :loading="status === 'pending'"
-    :items="items"
+    :items="data"
     :multiple="multiple"
     :disabled="disabled"
     :placeholder="`Выбери класс${multiple ? 'ы' : ''}`"
