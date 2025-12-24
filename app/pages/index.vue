@@ -44,15 +44,11 @@
         >
           <HomeBanners />
 
-          <UiPlaceholder class="hidden flex-1 xl:block" />
+          <LastUpdate />
         </div>
 
         <div class="flex w-full flex-col gap-3 xl:w-1/2 2xl:w-1/3">
           <SocialLinks />
-        </div>
-
-        <div class="flex w-full flex-col gap-3 xl:w-1/2 2xl:w-1/3">
-          <LastUpdate />
         </div>
       </div>
     </div>

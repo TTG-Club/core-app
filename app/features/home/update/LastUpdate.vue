@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  type LastUpdateAction = 'Добавлено' | 'Обновлено' | 'Удалено' | string;
+  type LastUpdateAction = 'Добавлено' | 'Обновлено' | 'Удалено';
 
   type BadgeColor =
     | 'success'
@@ -13,7 +13,7 @@
   interface LastUpdateItem {
     url: string;
     updatedAt: string;
-    action: LastUpdateAction;
+    action: LastUpdateAction | string;
     name: {
       rus: string;
       eng: string;
@@ -30,22 +30,24 @@
 
   const {
     top = 10,
-    title = 'Последние обновления',
+    title = 'Обновления на сайте',
     showRefresh = true,
     showSource = true,
     showDate = true,
-    dense = false,
   } = defineProps<{
     top?: number;
     title?: string;
     showRefresh?: boolean;
     showSource?: boolean;
     showDate?: boolean;
-    dense?: boolean;
   }>();
 
-  const getActionColor = (action: LastUpdateAction): BadgeColor => {
-    const value = action?.toLowerCase?.() ?? '';
+  const getActionColor = (action: LastUpdateAction | string): BadgeColor => {
+    if (typeof action !== 'string') {
+      return 'neutral';
+    }
+
+    const value = action.toLowerCase();
 
     if (value.includes('добав')) {
       return 'success';
@@ -98,23 +100,27 @@
 
 <template>
   <UCard
+    class="border-border rounded-[10px] bg-muted shadow-lg"
     :ui="{
-      body: dense ? 'p-3 sm:p-3' : 'p-4 sm:p-4',
+      header: 'py-3 px-3 sm:px-3',
+      body: 'p-0 px-3 py-1 sm:p-0 sm:px-3 sm:py-1',
     }"
   >
     <template #header>
-      <div class="flex items-center justify-between gap-3">
-        <div>
-          <div class="text-base font-semibold">
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex flex-col gap-2">
+          <h3 class="text-base leading-none font-medium">
             {{ title }}
-          </div>
+          </h3>
 
-          <div class="text-xs text-gray-500">Топ: {{ top }}</div>
+          <div class="text-xs leading-none text-gray-500">
+            Последние: {{ top }}
+          </div>
         </div>
 
         <UButton
           v-if="showRefresh"
-          size="xs"
+          size="sm"
           variant="soft"
           :loading="status === 'pending'"
           @click="refresh()"
@@ -124,75 +130,60 @@
       </div>
     </template>
 
-    <div v-if="status === 'pending' && updates.length === 0">
-      <div class="space-y-2">
-        <USkeleton class="h-5 w-3/4" />
-
-        <USkeleton class="h-5 w-2/3" />
-
-        <USkeleton class="h-5 w-4/5" />
-      </div>
-    </div>
-
     <UAlert
-      v-else-if="error"
+      v-if="error"
       color="error"
       variant="soft"
       title="Не удалось загрузить обновления"
-      :description="String(error)"
+      :description="error instanceof Error ? error.message : String(error)"
     />
 
     <ul
       v-else
-      class="divide-y divide-gray-200 dark:divide-gray-800"
+      class="divide-y divide-default"
     >
       <li
         v-for="item in updates"
         :key="`${item.url}-${item.updatedAt}`"
-        class="py-3"
+        class="py-2"
       >
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0">
-            <div class="flex flex-wrap items-center gap-2">
+        <div class="flex items-start justify-between gap-1">
+          <div class="flex min-w-0 flex-col">
+            <NuxtLink
+              :to="{ path: item.url }"
+              class="font-medium hover:underline"
+            >
+              {{ item.name.rus }}
+            </NuxtLink>
+
+            <span class="text-gray-500"> [{{ item.name.eng }}] </span>
+          </div>
+
+          <div class="flex shrink-0 flex-col items-end gap-2">
+            <div class="flex flex-row items-center gap-2">
+              <div
+                v-if="showSource && item.source"
+                class="text-xs text-gray-500"
+              >
+                {{ item.source.name.label }}
+              </div>
+
               <UBadge
-                size="xs"
+                size="sm"
                 variant="soft"
                 :color="getActionColor(item.action)"
               >
                 {{ item.action }}
               </UBadge>
-
-              <NuxtLink
-                :to="{ path: item.url }"
-                class="font-medium hover:underline"
-              >
-                {{ item.name.rus }}
-              </NuxtLink>
-
-              <span class="text-xs text-gray-500"> [{{ item.name.eng }}] </span>
             </div>
 
             <div
-              v-if="showSource && item.source"
-              class="mt-1 text-xs text-gray-500"
+              v-if="showDate"
+              class="text-xs text-gray-500"
+              :title="item.updatedAt"
             >
-              Источник:
-              <span class="font-medium">
-                {{ item.source.name.label }}
-              </span>
-              — {{ item.source.name.rus }}
-              <span v-if="item.source.page">
-                , стр. {{ item.source.page }}
-              </span>
+              {{ formatDateTime(item.updatedAt) }}
             </div>
-          </div>
-
-          <div
-            v-if="showDate"
-            class="shrink-0 text-xs text-gray-500"
-            :title="item.updatedAt"
-          >
-            {{ formatDateTime(item.updatedAt) }}
           </div>
         </div>
       </li>
