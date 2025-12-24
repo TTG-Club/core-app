@@ -43,10 +43,6 @@
   }>();
 
   const getActionColor = (action: LastUpdateAction | string): BadgeColor => {
-    if (typeof action !== 'string') {
-      return 'neutral';
-    }
-
     const value = action.toLowerCase();
 
     if (value.includes('добав')) {
@@ -135,7 +131,7 @@
       color="error"
       variant="soft"
       title="Не удалось загрузить обновления"
-      :description="error instanceof Error ? error.message : String(error)"
+      :description="error?.message ?? String(error)"
     />
 
     <ul
@@ -150,7 +146,7 @@
         <div class="flex items-start justify-between gap-1">
           <div class="flex min-w-0 flex-col">
             <NuxtLink
-              :to="{ path: item.url }"
+              :to="item.url"
               class="font-medium hover:underline"
             >
               {{ item.name.rus }}
