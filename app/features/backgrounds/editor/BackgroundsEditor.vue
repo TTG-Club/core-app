@@ -84,7 +84,7 @@
         >
           <SelectFeat
             v-model="state.featUrl"
-            :selected-categories="['ORIGIN']"
+            :categories="['ORIGIN']"
           />
         </UFormField>
 

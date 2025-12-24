@@ -15,8 +15,6 @@
 
   const model = defineModel<string | Array<string>>();
 
-  const openedOnce = ref(false);
-
   const { data, status, refresh } = await useAsyncData<SubclassSelectItem[]>(
     'subclasses-select',
     async () => {
@@ -34,17 +32,17 @@
     },
     {
       dedupe: 'defer',
+      lazy: true,
     },
   );
 
-  const handleDropdownOpening = async (state: boolean) => {
-    if (!state || openedOnce.value) {
+  const handleDropdownOpening = useDebounceFn(async (state: boolean) => {
+    if (!state) {
       return;
     }
 
-    openedOnce.value = true;
     await refresh();
-  };
+  }, 250);
 </script>
 
 <template>

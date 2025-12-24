@@ -1,14 +1,5 @@
 <script setup lang="ts">
   import type { ClassLinkResponse } from '~classes/types';
-  import { debounce } from 'lodash-es';
-  import { onBeforeUnmount, ref } from 'vue';
-
-  type ClassSelectItem = {
-    label: string;
-    value: string;
-    description: string;
-    source: string;
-  };
 
   const { multiple = false, disabled } = defineProps<{
     disabled?: boolean;
@@ -17,11 +8,21 @@
 
   const model = defineModel<string | Array<string>>();
 
-  const searchQuery = ref('');
-  const openedOnce = ref(false);
+  const search = shallowRef('');
+  const searchQuery = refDebounced(search, 250);
 
-  const { data, status, refresh } = await useAsyncData<ClassSelectItem[]>(
-    'classes-select',
+  const fetchKey = computed(() => {
+    let key = 'feat-select';
+
+    if (searchQuery.value) {
+      key += `-${searchQuery.value}`;
+    }
+
+    return key;
+  });
+
+  const { data, status, refresh } = await useAsyncData(
+    fetchKey,
     async () => {
       const classesLinks = await $fetch<Array<ClassLinkResponse>>(
         '/api/v2/classes/search',
@@ -41,41 +42,25 @@
       }));
     },
     {
+      watch: [searchQuery],
       dedupe: 'defer',
+      lazy: true,
     },
   );
 
-  const handleDropdownOpening = async (state: boolean) => {
-    if (!state || openedOnce.value) {
+  const handleDropdownOpening = useDebounceFn(async (state: boolean) => {
+    if (!state) {
       return;
     }
 
-    openedOnce.value = true;
     await refresh();
-  };
-
-  const debouncedRefresh = debounce(() => {
-    refresh();
   }, 250);
-
-  onBeforeUnmount(() => {
-    debouncedRefresh.cancel();
-  });
-
-  const handleSearch = (value: string) => {
-    searchQuery.value = value;
-
-    if (!openedOnce.value) {
-      return;
-    }
-
-    debouncedRefresh();
-  };
 </script>
 
 <template>
   <USelectMenu
     v-model="model"
+    v-model:search-term="search"
     :loading="status === 'pending'"
     :items="data"
     :multiple="multiple"
@@ -87,7 +72,6 @@
     clearable
     searchable
     :ui="{ itemDescription: 'text-xs text-secondary' }"
-    @update:search-term="handleSearch"
     @update:open="handleDropdownOpening"
   >
     <template #item-trailing="{ item }">

@@ -15,8 +15,6 @@
 
   const model = defineModel<string | Array<string>>();
 
-  const openedOnce = ref(false);
-
   const { data, status, refresh } = await useAsyncData<LineageSelectItem[]>(
     'species-lineages-select',
     async () => {
@@ -33,24 +31,20 @@
       }));
     },
     {
-      immediate: false,
-      default: () => [],
       dedupe: 'defer',
+      lazy: true,
     },
   );
 
   const items = computed(() => data.value ?? []);
 
-  const handleDropdownOpening = async (state: boolean) => {
+  const handleDropdownOpening = useDebounceFn(async (state: boolean) => {
     if (!state) {
       return;
     }
 
-    if (!openedOnce.value) {
-      openedOnce.value = true;
-      await refresh();
-    }
-  };
+    await refresh();
+  }, 250);
 </script>
 
 <template>
