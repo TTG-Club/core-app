@@ -114,13 +114,6 @@
     return values;
   });
 
-  const selectItems = computed<Array<SelectItem<number>>>(() => {
-    return scoreOptions.value.map((v) => ({
-      label: `${v} (${pointCost(v)})`,
-      value: v,
-    }));
-  });
-
   const spent = computed<number>(() => {
     let sum = 0;
 
@@ -137,7 +130,6 @@
 
   const canSetScore = (ability: Ability, next: number): boolean => {
     const current = model.value[ability];
-
     const nextSpent = spent.value - pointCost(current) + pointCost(next);
 
     return nextSpent <= settingsModel.value.budgetBuy;
@@ -149,6 +141,32 @@
     }
 
     model.value = { ...model.value, [ability]: next };
+  };
+
+  const deltaLabel = (delta: number): string => {
+    if (delta === 0) {
+      return '0';
+    }
+
+    return delta > 0 ? `+${delta}` : `${delta}`;
+  };
+
+  // ВАЖНО: это не общая стоимость, а "сколько добавится/вернётся" очков относительно текущего значения характеристики
+  const selectItemsForAbility = (
+    ability: Ability,
+  ): Array<SelectItem<number>> => {
+    const current = model.value[ability];
+    const currentCost = pointCost(current);
+
+    return scoreOptions.value.map((v) => {
+      const nextCost = pointCost(v);
+      const delta = nextCost - currentCost;
+
+      return {
+        label: `${v} (= ${deltaLabel(delta)})`,
+        value: v,
+      };
+    });
   };
 
   const applyBoundsToScores = () => {
@@ -283,16 +301,18 @@
 
           <USelect
             :model-value="model[a]"
-            :items="selectItems"
-            class="w-32"
+            :items="selectItemsForAbility(a)"
+            class="w-40"
             @update:model-value="(v: number) => handleChange(a, v)"
           />
         </div>
       </div>
 
       <div class="text-xs text-gray-500 dark:text-gray-400">
-        Формат в списке: значение (стоимость). Стоимость считается относительно
-        «Минимума покупки» (минимум стоит 0).
+        В селекте указано, сколько очков добавится/вернётся при замене текущего
+        значения: <span class="font-mono">15 (= +2)</span>
+        ,
+        <span class="font-mono">12 (= -3)</span>.
       </div>
     </div>
 
