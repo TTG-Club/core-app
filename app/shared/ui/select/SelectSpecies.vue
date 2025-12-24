@@ -1,6 +1,12 @@
 <script setup lang="ts">
   import type { SpeciesLinkResponse } from '~/shared/types';
-  import type { SelectMenuItem } from '#ui/components/SelectMenu.vue';
+
+  type SpeciesSelectItem = {
+    label: string;
+    value: string;
+    description: string;
+    source: string;
+  };
 
   const { multiple = false, disabled } = defineProps<{
     disabled?: boolean;
@@ -9,7 +15,7 @@
 
   const model = defineModel<string | Array<string>>();
 
-  const { data, status, refresh } = await useAsyncData<SelectMenuItem[]>(
+  const { data, status, refresh } = await useAsyncData<SpeciesSelectItem[]>(
     'species-select',
     async () => {
       const speciesLinks = await $fetch<Array<SpeciesLinkResponse>>(
@@ -20,28 +26,32 @@
       );
 
       return speciesLinks.map((species) => ({
-        ...species,
-        label: `${species.name.rus} [${species.name.eng}]`,
+        label: species.name.rus,
         value: species.url,
+        description: species.name.eng,
+        source: species.source.name.label,
       }));
     },
-    { dedupe: 'defer' },
+    {
+      dedupe: 'defer',
+      lazy: true,
+    },
   );
 
-  const handleDropdownOpening = (state: boolean) => {
+  const handleDropdownOpening = useDebounceFn(async (state: boolean) => {
     if (!state) {
       return;
     }
 
-    refresh();
-  };
+    await refresh();
+  }, 250);
 </script>
 
 <template>
   <USelectMenu
     v-model="model"
     :loading="status === 'pending'"
-    :items="data || []"
+    :items="data"
     :multiple="multiple"
     :disabled="disabled"
     :placeholder="`Выбери вид${multiple ? 'ы' : ''}`"
@@ -49,6 +59,16 @@
     value-key="value"
     clearable
     searchable
+    :ui="{ itemDescription: 'text-xs text-secondary' }"
     @update:open="handleDropdownOpening"
-  />
+  >
+    <template #item-trailing="{ item }">
+      <UBadge
+        variant="subtle"
+        color="neutral"
+      >
+        {{ item.source }}
+      </UBadge>
+    </template>
+  </USelectMenu>
 </template>

@@ -41,10 +41,15 @@
   }
 
   if (isAdmin.value) {
-    defineShortcuts({
-      // eslint-disable-next-line camelcase
-      meta_shift_m: openWorkshop,
-    });
+    defineShortcuts(
+      {
+        // eslint-disable-next-line camelcase
+        meta_shift_m: openWorkshop,
+      },
+      {
+        layoutIndependent: true,
+      },
+    );
   }
 </script>
 
