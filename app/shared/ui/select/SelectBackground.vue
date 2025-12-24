@@ -24,9 +24,9 @@
     'backgrounds-select',
     async () => {
       const backgroundsLinks = await $fetch<Array<BackgroundLinkResponse>>(
-        '/api/v2/backgrounds/search',
+        '/api/v2/backgrounds/select',
         {
-          method: 'post',
+          method: 'get',
           query: {
             query: searchQuery.value || undefined,
           },
