@@ -4,6 +4,7 @@
   import { SocialLinks } from '~home/social-links';
   import { SearchPanel } from '~search/panel';
   import { UiPlaceholder } from '~ui/placeholder';
+  import LastUpdate from '~home/update/LastUpdate.vue';
 
   definePageMeta({
     layout: 'default',
@@ -48,6 +49,10 @@
 
         <div class="flex w-full flex-col gap-3 xl:w-1/2 2xl:w-1/3">
           <SocialLinks />
+        </div>
+
+        <div class="flex w-full flex-col gap-3 xl:w-1/2 2xl:w-1/3">
+          <LastUpdate />
         </div>
       </div>
     </div>
