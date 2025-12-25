@@ -82,7 +82,10 @@
           label="Черта"
           name="featUrl"
         >
-          <SelectFeat v-model="state.featUrl" />
+          <SelectFeat
+            v-model="state.featUrl"
+            :categories="['ORIGIN']"
+          />
         </UFormField>
 
         <UFormField

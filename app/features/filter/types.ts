@@ -15,6 +15,7 @@ export interface FilterItem {
   key: string;
   name: string;
   selected: boolean | null;
+  [key: string]: unknown;
 }
 
 export type FilterItems = Array<FilterItem>;

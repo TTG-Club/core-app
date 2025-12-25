@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import type { ClassLinkResponse } from '~classes/types';
-  import type { SelectMenuItem } from '#ui/components/SelectMenu.vue';
 
   const { multiple = false, disabled } = defineProps<{
     disabled?: boolean;
@@ -9,46 +8,79 @@
 
   const model = defineModel<string | Array<string>>();
 
-  const { data, status, refresh } = await useAsyncData<SelectMenuItem[]>(
-    'classes-select',
+  const search = shallowRef('');
+  const searchQuery = refDebounced(search, 250);
+
+  const fetchKey = computed(() => {
+    let key = 'feat-select';
+
+    if (searchQuery.value) {
+      key += `-${searchQuery.value}`;
+    }
+
+    return key;
+  });
+
+  const { data, status, refresh } = await useAsyncData(
+    fetchKey,
     async () => {
       const classesLinks = await $fetch<Array<ClassLinkResponse>>(
         '/api/v2/classes/search',
         {
           method: 'post',
+          query: {
+            query: searchQuery.value || undefined,
+          },
         },
       );
 
       return classesLinks.map((classLink) => ({
-        ...classLink,
-        label: `${classLink.name.rus} [${classLink.name.eng}]`,
+        label: classLink.name.rus,
         value: classLink.url,
+        description: classLink.name.eng,
+        source: classLink.source.name.label,
       }));
     },
-    { dedupe: 'defer' },
+    {
+      watch: [searchQuery],
+      dedupe: 'defer',
+      lazy: true,
+    },
   );
 
-  const handleDropdownOpening = (state: boolean) => {
+  const handleDropdownOpening = useDebounceFn(async (state: boolean) => {
     if (!state) {
       return;
     }
 
-    refresh();
-  };
+    await refresh();
+  }, 250);
 </script>
 
 <template>
   <USelectMenu
     v-model="model"
+    v-model:search-term="search"
     :loading="status === 'pending'"
-    :items="data || []"
+    :items="data"
     :multiple="multiple"
     :disabled="disabled"
     :placeholder="`Выбери класс${multiple ? 'ы' : ''}`"
     label-key="label"
     value-key="value"
+    ignore-filter
     clearable
     searchable
+    :ui="{ itemDescription: 'text-xs text-secondary' }"
     @update:open="handleDropdownOpening"
-  />
+  >
+    <template #item-trailing="{ item }">
+      <UBadge
+        variant="subtle"
+        color="neutral"
+      >
+        {{ item.source }}
+      </UBadge>
+    </template>
+  </USelectMenu>
 </template>

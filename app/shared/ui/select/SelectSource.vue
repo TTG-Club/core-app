@@ -39,13 +39,15 @@
 </script>
 
 <template>
-  <USelect
+  <USelectMenu
     v-model="model"
     :loading="status === 'pending'"
     :items="data || []"
     :multiple="multiple"
     :disabled="disabled"
     placeholder="Выбери книгу"
+    label-key="label"
+    value-key="value"
     searchable
     clearable
     @open="handleDropdownOpening(true)"

@@ -10,10 +10,7 @@ export const useUserStore = defineStore('userStore', () => {
   } = useAsyncData(
     'user-profile',
     () => $fetch<UserProfile>('/api/user/profile'),
-    {
-      immediate: false,
-      dedupe: 'defer',
-    },
+    { dedupe: 'defer' },
   );
 
   const isLoggedIn = computed(() => !!user.value);
