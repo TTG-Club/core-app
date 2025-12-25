@@ -1,8 +1,8 @@
 <script setup lang="ts">
-  import { useDiceRollerExamples } from '~/features/roller/composables/useDiceRollerExamples';
   import { useDiceRollerState } from '~/features/roller/composables/useDiceRollerState';
+  import { consts } from '../const';
 
-  const { basic, keep, reroll, footer } = useDiceRollerExamples();
+  const { basic, keep, reroll } = consts();
   const { formula } = useDiceRollerState();
 
   const apply = (value: string) => {
@@ -29,7 +29,7 @@
             v-for="item in basic"
             :key="item.formula"
             type="button"
-            class="flex min-w-[110px] flex-1 flex-col gap-1 rounded-lg border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
+            class="flex min-w-[110px] flex-1 flex-col gap-1 rounded-md border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
             @click="apply(item.formula)"
           >
             <span class="font-semibold text-[var(--ui-text-highlighted)]">
@@ -49,7 +49,7 @@
             v-for="item in keep"
             :key="item.formula"
             type="button"
-            class="flex min-w-[110px] flex-1 flex-col gap-1 rounded-lg border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
+            class="flex min-w-[110px] flex-1 flex-col gap-1 rounded-md border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
             @click="apply(item.formula)"
           >
             <span class="font-semibold text-[var(--ui-text-highlighted)]">
@@ -69,7 +69,7 @@
             v-for="item in reroll"
             :key="item.formula"
             type="button"
-            class="flex min-w-[110px] flex-1 flex-col gap-1 rounded-lg border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
+            class="flex min-w-[110px] flex-1 flex-col gap-1 rounded-md border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
             @click="apply(item.formula)"
           >
             <span class="font-semibold text-[var(--ui-text-highlighted)]">
@@ -83,7 +83,7 @@
         </div>
 
         <p class="pt-1 text-xs text-[var(--ui-text-muted)]">
-          {{ footer }}
+          Поддерживаются: к, кс, вх/вл, ул/ух, пр/пб, !/!!/!п, с, п, св/су
         </p>
       </div>
     </template>

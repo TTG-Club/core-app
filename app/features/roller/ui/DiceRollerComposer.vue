@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import DiceD20IconUrl from '~/assets/icons/dice/d20.svg';
   import { useDiceRollerState } from '../composables/useDiceRollerState';
 
   const props = defineProps<{
@@ -27,10 +26,9 @@
       aria-label="Бросить кубы"
       title="Бросить"
     >
-      <img
-        :src="DiceD20IconUrl"
-        alt="D20"
-        class="h-5 w-5 transition dark:invert svifty7:invert"
+      <UIcon
+        name="i-ttg-dice-d20"
+        class="h-5 w-5 text-[var(--color-primary-500)]"
       />
     </button>
   </form>

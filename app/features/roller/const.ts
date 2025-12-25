@@ -1,4 +1,4 @@
-export function useDiceRollerExamples() {
+export function consts() {
   const basic = [
     { formula: 'к20', note: 'одиночный куб' },
     { formula: '2к6+3', note: 'сумма с модификатором' },
@@ -18,8 +18,5 @@ export function useDiceRollerExamples() {
     { formula: '8к6р<3', note: 'переброс <3' },
   ];
 
-  const footer =
-    'Поддерживаются: к, кс, вх/вл, ул/ух, пр/пб, !/!!/!п, с, п, св/су';
-
-  return { basic, keep, reroll, footer };
+  return { basic, keep, reroll };
 }

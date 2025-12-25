@@ -2,17 +2,19 @@
   import { computed } from 'vue';
   import { useDiceRollerState } from '../composables/useDiceRollerState';
 
-  const { result, details } = useDiceRollerState();
+  const state = useDiceRollerState();
 
-  const isError = computed(() => result.value.startsWith('Ошибка:'));
+  const hasDetails = computed(() => state.details.value.length > 0);
 
-  const description = computed(() => {
-    if (!result.value) return '';
+  const isError = computed(
+    () =>
+      typeof state.result.value === 'string' &&
+      state.result.value.startsWith('Ошибка:'),
+  );
 
-    return isError.value
-      ? result.value.replace(/^Ошибка:\s*/i, '')
-      : result.value;
-  });
+  const errorText = computed(() =>
+    isError.value ? String(state.result.value).replace(/^Ошибка:\s*/i, '') : '',
+  );
 </script>
 
 <template>
@@ -25,68 +27,79 @@
           'color-mix(in srgb, var(--ui-color-error-500) 8%, var(--ui-bg-elevated))',
       }"
     >
-      {{ description }}
+      {{ errorText }}
     </div>
 
-    <div
-      v-else-if="details.length"
-      class="flex max-h-56 flex-col gap-3 overflow-y-auto pr-1"
+    <Transition
+      v-else
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="opacity-0 scale-95"
+      enter-to-class="opacity-100 scale-100"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100 scale-100"
+      leave-to-class="opacity-0 scale-95"
+      mode="out-in"
     >
       <div
-        v-for="detail in details"
-        :key="detail.id"
-        class="rounded-2xl border border-[var(--ui-border)] px-3 py-3"
-        :style="{
-          background:
-            'color-mix(in srgb, var(--ui-bg-elevated) 85%, transparent)',
-        }"
+        :key="`result-${state.resultKey.value}`"
+        class="flex max-h-56 flex-col gap-3 overflow-y-auto pr-1"
       >
         <div
-          class="mb-2 flex items-center justify-between text-sm font-semibold text-[var(--ui-text)]"
+          v-if="hasDetails"
+          class="flex flex-col gap-3"
         >
-          <span>{{ detail.label }}</span>
+          <div
+            v-for="detail in state.details.value"
+            :key="detail.id"
+            class="rounded-2xl border border-[var(--ui-border)] px-3 py-3"
+            :style="{
+              background:
+                'color-mix(in srgb, var(--ui-bg-elevated) 85%, transparent)',
+            }"
+          >
+            <div
+              class="mb-2 flex items-center justify-between text-sm font-semibold text-[var(--ui-text)]"
+            >
+              <span>{{ detail.label }}</span>
 
-          <span class="text-[var(--ui-text-highlighted)]">
-            {{ detail.total.toLocaleString('ru-RU') }}
-          </span>
+              <span class="text-[var(--ui-text-highlighted)]">
+                {{
+                  typeof detail.total === 'number'
+                    ? detail.total.toLocaleString('ru-RU')
+                    : detail.total
+                }}
+              </span>
+            </div>
+
+            <ul class="flex flex-wrap gap-2">
+              <li
+                v-for="roll in detail.rolls"
+                :key="roll.id"
+                :class="[
+                  'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-semibold',
+                  roll.valid
+                    ? 'border-[color:color-mix(in_srgb,var(--ui-color-primary-500)_40%,transparent)] text-[var(--ui-text-highlighted)]'
+                    : 'border-[var(--ui-border)] line-through opacity-60',
+                ]"
+                :style="{ background: 'var(--ui-bg-elevated)' }"
+              >
+                <span>{{ roll.value }}</span>
+              </li>
+            </ul>
+          </div>
         </div>
 
-        <ul class="flex flex-wrap gap-2">
-          <li
-            v-for="roll in detail.rolls"
-            :key="roll.id"
-            :class="[
-              'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-semibold',
-              roll.valid
-                ? 'border-[color:color-mix(in_srgb,var(--ui-color-primary-500)_40%,transparent)] text-[var(--ui-text-highlighted)]'
-                : 'border-[var(--ui-border)] line-through opacity-60',
-            ]"
-            :style="{ background: 'var(--ui-bg-elevated)' }"
-          >
-            <span>{{ roll.value }}</span>
-
-            <UBadge
-              v-if="roll.critical === 'success' || roll.critical === 'failure'"
-              :color="roll.critical === 'success' ? 'success' : 'error'"
-              variant="subtle"
-              size="xs"
-            >
-              {{ roll.critical === 'success' ? 'крит' : 'фейл' }}
-            </UBadge>
-          </li>
-        </ul>
+        <div
+          v-else
+          class="flex min-h-[112px] items-center rounded-2xl border border-dashed border-[var(--ui-border)] px-4 py-3 text-sm text-[var(--ui-text-muted)]"
+          :style="{
+            background:
+              'linear-gradient(135deg, var(--ui-bg) 0%, var(--ui-bg-elevated) 100%)',
+          }"
+        >
+          Введите формулу и нажмите кнопку справа или Enter.
+        </div>
       </div>
-    </div>
-
-    <div
-      v-else
-      class="flex min-h-[112px] items-center rounded-2xl border border-dashed border-[var(--ui-border)] px-4 py-3 text-sm text-[var(--ui-text-muted)]"
-      :style="{
-        background:
-          'linear-gradient(135deg, var(--ui-bg) 0%, var(--ui-bg-elevated) 100%)',
-      }"
-    >
-      Введите формулу и нажмите кнопку справа или клавишу Enter.
-    </div>
+    </Transition>
   </div>
 </template>

@@ -4,7 +4,7 @@
 
   import { PwaConfig } from '~pwa/config';
   import { SidebarPanel } from '~sidebar/panel';
-  import DiceRollerModal from '~/features/roller/modal/DiceRollerModal.vue';
+  import DiceRoller from '~/features/roller/modal/DiceRoller.vue';
   import { DiceRollerFloatButton } from './features/roller';
 
   const { name } = useTheme();
@@ -42,7 +42,7 @@
 
       <DiceRollerFloatButton />
 
-      <DiceRollerModal />
+      <DiceRoller />
     </div>
   </UApp>
 </template>

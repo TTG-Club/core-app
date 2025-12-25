@@ -7,6 +7,12 @@ export function useDiceRollerState() {
   const details = useState<DiceDetail[]>('dice-roller:details', () => []);
   const history = useState<HistoryEntry[]>('dice-roller:history', () => []);
 
+  const resultKey = ref(0);
+
+  const bumpResultKey = () => {
+    resultKey.value += 1;
+  };
+
   const open = () => {
     isOpen.value = true;
   };
@@ -19,5 +25,16 @@ export function useDiceRollerState() {
     isOpen.value = !isOpen.value;
   };
 
-  return { isOpen, formula, result, details, history, open, close, toggle };
+  return {
+    isOpen,
+    formula,
+    result,
+    details,
+    history,
+    open,
+    close,
+    toggle,
+    resultKey,
+    bumpResultKey,
+  };
 }

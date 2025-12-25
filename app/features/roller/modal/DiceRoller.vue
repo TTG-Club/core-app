@@ -21,6 +21,7 @@
   const historyApi = useDiceRollerHistory({
     history: state.history,
     historyScrollEl,
+    isOpen: state.isOpen,
   });
 
   onMounted(async () => {
@@ -111,7 +112,6 @@
   }
 
   function newId(): string {
-    // если у вас уже есть uuid v7 — замени сюда.
     return crypto.randomUUID();
   }
 
@@ -132,7 +132,6 @@
       detail: payload.detail || undefined,
     };
 
-    // без лимита (ты просил убрать ограничение)
     state.history.value = [...state.history.value, entry];
   }
 
@@ -142,7 +141,6 @@
 
       if (!formula) throw new Error('Введите роллформулу');
 
-      // если у вас автоимпорт composables — импорт строку можно убрать
       const diceRoller = useDiceRoller();
       const { valid, error } = diceRoller.validateWithError(formula);
 
@@ -154,9 +152,11 @@
       state.result.value = value.toLocaleString('ru-RU');
       state.details.value = extractRollDetails(rollObject);
 
+      state.bumpResultKey();
+
       addHistoryEntry({
         formula,
-        value: value.toLocaleString('ru-RU'),
+        value: state.result.value,
         isError: false,
         detail: formatDetailSummary(state.details.value),
       });
@@ -165,6 +165,8 @@
 
       state.result.value = `Ошибка: ${message}`;
       state.details.value = [];
+
+      state.bumpResultKey();
 
       addHistoryEntry({
         formula: state.formula.value.trim(),
@@ -181,13 +183,12 @@
     class="fixed right-4 bottom-4 z-[120] w-[calc(100vw-32px)] max-w-[420px]"
   >
     <div
-      class="flex max-h-[80vh] flex-col overflow-hidden rounded-xl border border-[var(--ui-border)] p-4 shadow-[0_25px_60px_rgba(8,15,17,0.25)] backdrop-blur-[14px]"
+      class="flex max-h-[80vh] flex-col overflow-hidden rounded-md border border-[var(--ui-border)] p-4 shadow-[0_25px_60px_rgba(8,15,17,0.25)] backdrop-blur-[14px]"
       :style="{
         background:
           'linear-gradient(160deg, var(--ui-bg-elevated) 0%, var(--ui-bg) 55%, var(--ui-bg-accented) 100%)',
       }"
     >
-      <!-- Top bar -->
       <div class="flex items-center justify-end gap-2 pb-3">
         <DiceRollerHelpPopover />
 
@@ -210,7 +211,6 @@
         />
       </div>
 
-      <!-- Main area -->
       <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
         <DiceRollerHistory>
           <template #scroller="{ formatTime }">
@@ -222,7 +222,7 @@
                 <li
                   v-for="entry in state.history.value"
                   :key="entry.id"
-                  class="flex items-center justify-between gap-3 rounded-2xl border px-3 py-2 text-sm"
+                  class="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm"
                 >
                   <div class="flex min-w-0 flex-col gap-1">
                     <p class="truncate font-semibold">
@@ -253,14 +253,7 @@
         <DiceRollerResult />
       </div>
 
-      <!-- Composer -->
       <DiceRollerComposer :on-submit="rollDice" />
     </div>
   </section>
 </template>
-
-<!-- 
-имя файла
-память сломана к хуям
-анимации слетели
-проверить коменты -->

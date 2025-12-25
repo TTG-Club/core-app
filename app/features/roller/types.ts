@@ -17,8 +17,8 @@ export interface DiceDetail {
 export interface HistoryEntry {
   id: string;
   formula: string;
-  displayValue: string; // всегда строка
+  displayValue: string;
   isError: boolean;
-  timestamp: string; // ISO
+  timestamp: string;
   detail?: string;
 }

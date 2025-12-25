@@ -1,87 +1,67 @@
-import { nextTick, watch } from 'vue';
-import type { Ref } from 'vue';
+import { watch, type Ref } from 'vue';
 import { idbGet, idbSet } from './idbKv';
 import type { HistoryEntry } from '../types';
 
 const KEY_HISTORY = 'dice-roller:history:v1';
 
-function toPlainHistory(entries: HistoryEntry[]): HistoryEntry[] {
-  return entries.map((e) => ({
-    id: e.id,
-    formula: e.formula,
-    displayValue: e.displayValue,
-    isError: e.isError,
-    timestamp: e.timestamp,
-    detail: e.detail ?? undefined,
-  }));
-}
-
 export function useDiceRollerHistory(opts: {
   history: Ref<HistoryEntry[]>;
   historyScrollEl: Ref<HTMLElement | null>;
+  isOpen: Ref<boolean>;
 }) {
-  const { history, historyScrollEl } = opts;
+  const { history, historyScrollEl, isOpen } = opts;
 
   const scrollToBottom = async () => {
-    await nextTick();
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
 
     const el = historyScrollEl.value;
 
     if (!el) return;
+
     el.scrollTop = el.scrollHeight;
   };
 
   const load = async () => {
-    try {
-      const saved = await idbGet<HistoryEntry[]>(KEY_HISTORY);
+    const saved = await idbGet<HistoryEntry[]>(KEY_HISTORY);
 
-      if (Array.isArray(saved)) {
-        history.value = toPlainHistory(saved);
-        await scrollToBottom();
-      }
-    } catch (e) {
-      console.error('DiceRoller: failed to load history from IDB', e);
+    if (Array.isArray(saved)) {
+      history.value = saved;
     }
   };
-
-  let persistQueued = false;
 
   const persist = async () => {
-    try {
-      await idbSet(KEY_HISTORY, toPlainHistory(history.value));
-    } catch (e) {
-      console.error('DiceRoller: failed to save history to IDB', e);
-    }
-  };
+    const payload = history.value.map((x) => ({ ...x }));
 
-  const queuePersist = () => {
-    if (persistQueued) return;
-    persistQueued = true;
-
-    queueMicrotask(async () => {
-      persistQueued = false;
-      await persist();
-    });
+    await idbSet(KEY_HISTORY, payload);
   };
 
   const clear = async () => {
     history.value = [];
-    queuePersist();
+    await persist();
     await scrollToBottom();
   };
 
   watch(
-    () => history.value.length,
-    async () => {
-      queuePersist();
+    () => ({
+      isOpen: isOpen.value,
+      historyLength: history.value.length,
+    }),
+    async (state, prev) => {
+      if (!state.isOpen) return;
       await scrollToBottom();
+
+      if (state.historyLength !== prev.historyLength) {
+        await persist();
+      }
     },
+    { flush: 'post' },
   );
 
   return {
     load,
     clear,
     scrollToBottom,
-    persist,
   };
 }
