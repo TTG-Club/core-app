@@ -2,6 +2,7 @@
   import { useUserStore } from '~/shared/stores';
   import { AuthModal } from '~user/auth-modal';
   import { KbdShortcut } from '~ui/kbd-shortcut';
+  import type { UserProfileDetailed } from '~/shared/types';
 
   const userStore = useUserStore();
   const { isAdmin } = useUserRoles();
@@ -19,6 +20,36 @@
   } catch (err) {
     console.error(err);
   }
+
+  const {
+    data: detailedProfile,
+    status: detailedProfileStatus,
+    execute: fetchDetailedProfile,
+  } = await useAsyncData(
+    'user-profile-detailed',
+    () => $fetch<UserProfileDetailed>('/api/user/profile/detailed'),
+    {
+      dedupe: 'defer',
+      lazy: true,
+      server: false,
+      immediate: false,
+      default: () => undefined,
+    },
+  );
+
+  const isDetailedProfileLoading = computed(
+    () => detailedProfileStatus.value === 'pending',
+  );
+
+  watch(
+    () => user.value,
+    (newUser) => {
+      if (newUser && detailedProfileStatus.value === 'idle') {
+        fetchDetailedProfile();
+      }
+    },
+    { immediate: true },
+  );
 
   function logout() {
     userStore.logout().finally(() => {
@@ -41,15 +72,10 @@
   }
 
   if (isAdmin.value) {
-    defineShortcuts(
-      {
-        // eslint-disable-next-line camelcase
-        meta_shift_m: openWorkshop,
-      },
-      {
-        layoutIndependent: true,
-      },
-    );
+    defineShortcuts({
+      // eslint-disable-next-line camelcase
+      meta_shift_m: openWorkshop,
+    });
   }
 </script>
 
@@ -114,15 +140,21 @@
 
           <div class="flex flex-col gap-1.5">
             <div class="flex items-center justify-between text-sm">
-              <span>Скоро будет</span>
+              <span>Всего оценок</span>
 
-              <span class="text-sm font-semibold">∞</span>
-            </div>
+              <span
+                v-if="isDetailedProfileLoading"
+                class="text-sm font-semibold"
+              >
+                ...
+              </span>
 
-            <div class="flex items-center justify-between text-sm">
-              <span>Скоро будет</span>
-
-              <span class="text-sm font-semibold">∞</span>
+              <span
+                v-else
+                class="text-sm font-semibold"
+              >
+                {{ detailedProfile?.statistics?.ratingCount ?? 0 }}
+              </span>
             </div>
           </div>
         </div>

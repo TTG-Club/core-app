@@ -13,3 +13,9 @@ export interface UserProfile extends TimestampResponse {
   username: string;
   roles: Role[];
 }
+
+export interface UserProfileDetailed extends UserProfile {
+  statistics: {
+    ratingCount: number;
+  };
+}
