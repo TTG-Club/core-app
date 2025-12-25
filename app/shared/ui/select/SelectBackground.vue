@@ -1,13 +1,13 @@
 <script setup lang="ts">
   import { debounce } from 'lodash-es';
   import { onBeforeUnmount, ref } from 'vue';
-  import type { BackgroundLinkResponse } from '~/shared/types';
+  import type { BackgroundSelectResponse } from '~/shared/types';
 
   type BackgroundSelectItem = {
     label: string;
     value: string;
     description: string;
-    source: string;
+    sourceLabel: string;
   };
 
   const { multiple = false, disabled } = defineProps<{
@@ -17,13 +17,15 @@
 
   const model = defineModel<string | Array<string>>();
 
-  const searchQuery = ref('');
-  const openedOnce = ref(false);
+  const searchQuery = ref<string>('');
+  const openedOnce = ref<boolean>(false);
 
-  const { data, status, refresh } = await useAsyncData<BackgroundSelectItem[]>(
+  const { data, status, refresh } = await useAsyncData<
+    Array<BackgroundSelectItem>
+  >(
     'backgrounds-select',
     async () => {
-      const backgroundsLinks = await $fetch<Array<BackgroundLinkResponse>>(
+      const backgroundsLinks = await $fetch<Array<BackgroundSelectResponse>>(
         '/api/v2/backgrounds/select',
         {
           method: 'get',
@@ -37,12 +39,10 @@
         label: backgroundLink.name.rus,
         value: backgroundLink.url,
         description: backgroundLink.name.eng,
-        source: backgroundLink.source.name.label,
+        sourceLabel: backgroundLink.source.name.label,
       }));
     },
-    {
-      dedupe: 'defer',
-    },
+    { dedupe: 'defer' },
   );
 
   const handleDropdownOpening = async (state: boolean) => {
@@ -95,7 +95,7 @@
         variant="subtle"
         color="neutral"
       >
-        {{ item.source }}
+        {{ item.sourceLabel }}
       </UBadge>
     </template>
   </USelectMenu>

@@ -1,7 +1,41 @@
 <script setup lang="ts">
-  import type { FeatLinkResponse } from '~/shared/types';
-  import { cloneDeep, isEmpty, isString } from 'lodash-es';
-  import type { Filter } from '~filter/types';
+  type FeatSelectResponse = {
+    url: string;
+    category: string;
+    prerequisite: string | null;
+    repeatability: boolean;
+    abilities: Array<string> | null;
+    increase: number | null;
+    source: {
+      name: {
+        label: string;
+        rus?: string;
+        eng?: string;
+      };
+      group?: {
+        label: string;
+        rus?: string;
+      };
+      page: number | null;
+    };
+    name: {
+      rus: string;
+      eng: string;
+      alt?: Array<string> | null;
+    };
+  };
+
+  type FeatSelectItem = {
+    label: string;
+    value: string;
+    description: string;
+    source: string;
+    category: string;
+    prerequisite: string | null;
+    repeatability: boolean;
+    abilities: Array<string>;
+    increase: number | null;
+  };
 
   const {
     disabled = false,
@@ -10,10 +44,6 @@
   } = defineProps<{
     disabled?: boolean;
     multiple?: boolean;
-    /**
-     * (Опционально) список категорий.
-     * Если не передан — фильтр не отправляется.
-     */
     categories?: Array<string>;
   }>();
 
@@ -22,82 +52,65 @@
   const search = shallowRef('');
   const searchQuery = refDebounced(search, 250);
 
-  const { data: filterData } = await useAsyncData(
-    'feats-filter',
-    () => $fetch<Filter>('/api/v2/feats/filters'),
-    {
-      deep: false,
-    },
-  );
-
-  const filter = computed(() => {
-    if (!categories?.length || !filterData.value) {
-      return undefined;
-    }
-
-    const modifiedFilter = cloneDeep(filterData.value);
-
-    const categoriesGroup = modifiedFilter.groups.find(
-      (group) =>
-        group.key ===
-        'club.ttg.dnd5.domain.feat.rest.dto.filter.FeatCategoryFilterGroup',
-    );
-
-    if (!categoriesGroup) {
-      return undefined;
-    }
-
-    categoriesGroup.filters = categoriesGroup.filters.map((filterItem) => ({
-      ...filterItem,
-      selected:
-        isString(filterItem.value) && categories.includes(filterItem.value)
-          ? true
-          : null,
-    }));
-
-    return {
-      filter: modifiedFilter,
-    };
-  });
+  const categoriesKey = computed(() => (categories ?? []).join('|'));
 
   const fetchKey = computed(() => {
-    let key = 'feat-select';
+    const base = 'feat-select-v2';
 
-    if (searchQuery.value) {
-      key += `-${searchQuery.value}`;
-    }
+    const queryPart =
+      searchQuery.value && searchQuery.value.length >= 2
+        ? `-q:${searchQuery.value}`
+        : '';
 
-    if (!isEmpty(categories?.length)) {
-      key += `-${categories?.join('-').toLowerCase()}`;
-    }
+    const categoriesPart =
+      categories && categories.length > 0
+        ? `-c:${categories.join('-').toLowerCase()}`
+        : '';
 
-    return key;
+    return `${base}${queryPart}${categoriesPart}`;
   });
 
-  const { data, status, refresh } = await useAsyncData(
+  const { data, status, refresh } = await useAsyncData<Array<FeatSelectItem>>(
     fetchKey,
     async () => {
-      const featLinks = await $fetch<Array<FeatLinkResponse>>(
-        '/api/v2/feats/search',
+      const featLinks = await $fetch<Array<FeatSelectResponse>>(
+        '/api/v2/feats/select',
         {
-          method: 'post',
+          method: 'get',
           query: {
+            categories:
+              categories && categories.length > 0 ? categories : undefined,
             query:
               searchQuery.value.length >= 2 ? searchQuery.value : undefined,
           },
-          body: filter.value || undefined,
         },
       );
 
-      return featLinks.map((feat) => ({
-        label: feat.name.rus,
-        value: feat.url,
-        description: feat.name.eng,
-        source: feat.source.name.label,
-      }));
+      return featLinks.map((feat) => {
+        const sourceLabel = feat.source.name.label;
+
+        const altNames = feat.name.alt ?? [];
+        const alt = altNames.length > 0 ? ` • ${altNames.join(', ')}` : '';
+
+        const prerequisiteText = feat.prerequisite
+          ? ` • ${feat.prerequisite}`
+          : '';
+
+        return {
+          label: feat.name.rus,
+          value: feat.url,
+          description: `${feat.name.eng}${alt}${prerequisiteText}`,
+          source: sourceLabel,
+          category: feat.category,
+          prerequisite: feat.prerequisite,
+          repeatability: feat.repeatability,
+          abilities: feat.abilities ?? [],
+          increase: feat.increase,
+        };
+      });
     },
     {
-      watch: [searchQuery],
+      watch: [searchQuery, categoriesKey],
       dedupe: 'defer',
       lazy: true,
     },

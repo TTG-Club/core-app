@@ -163,18 +163,53 @@
     return items;
   });
 
+  /**
+   * 2024: ASI/Feat слоты на 4/8/12/16, плюс Epic Boon на 19 уровне.
+   * Здесь считаем "слоты черт" как:
+   * - 4/8/12/16 -> 1..4
+   * - 19..20 -> добавляется 5-й слот (эпический на 19)
+   */
   const featSlots = computed<number>(() => {
     const l = level.value;
 
-    if (l >= 16) return 4;
-    if (l >= 12) return 3;
-    if (l >= 8) return 2;
-    if (l >= 4) return 1;
+    if (l >= 19) {
+      return 5;
+    }
+
+    if (l >= 16) {
+      return 4;
+    }
+
+    if (l >= 12) {
+      return 3;
+    }
+
+    if (l >= 8) {
+      return 2;
+    }
+
+    if (l >= 4) {
+      return 1;
+    }
 
     return 0;
   });
 
+  /**
+   * Категории по слоту:
+   * - слоты 1..4 всегда GENERAL
+   * - слот 5 (index === 4) доступен только на 19–20 и ТОЛЬКО EPIC_BOON
+   */
+  const featCategoriesForSlot = (index: number): Array<string> => {
+    if (index === 4) {
+      return ['EPIC_BOON'];
+    }
+
+    return ['GENERAL'];
+  };
+
   const feats = ref<Array<FeatModelValue>>([
+    undefined,
     undefined,
     undefined,
     undefined,
@@ -239,7 +274,8 @@
           class="mt-4 space-y-3"
         >
           <div class="text-sm text-gray-500 dark:text-gray-400">
-            Черты доступны на уровнях 4 / 8 / 12 / 16.
+            Черты доступны на уровнях 4 / 8 / 12 / 16. На 19 уровне добавляется
+            эпическая черта (Epic Boon).
           </div>
 
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -248,13 +284,23 @@
               :key="index"
               class="rounded-xl border border-gray-200 p-3 dark:border-gray-800"
             >
-              <div class="mb-2 text-sm font-semibold">Черта {{ index }}</div>
+              <div
+                class="mb-2 flex items-center justify-between gap-3 text-sm font-semibold"
+              >
+                <span>Черта {{ index }}</span>
+
+                <span
+                  v-if="index === 5"
+                  class="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900 dark:bg-amber-900/30 dark:text-amber-200"
+                >
+                  Epic Boon
+                </span>
+              </div>
 
               <SelectFeat
+                :categories="featCategoriesForSlot(index - 1)"
                 :model-value="feats[index - 1]"
-                @update:model-value="
-                  (v: FeatModelValue) => updateFeat(index - 1, v)
-                "
+                @update:model-value="(v) => updateFeat(index - 1, v)"
               />
             </div>
           </div>
@@ -275,16 +321,16 @@
 
           <div class="text-sm text-gray-500 dark:text-gray-400">
             Выбранный уровень:
-            <span class="font-semibold text-gray-700 dark:text-gray-200">{{
-              level
-            }}</span>
+            <span class="font-semibold text-gray-700 dark:text-gray-200">
+              {{ level }}
+            </span>
           </div>
 
           <div class="text-sm text-gray-500 dark:text-gray-400">
             Доступно черт:
-            <span class="font-semibold text-gray-700 dark:text-gray-200">{{
-              featSlots
-            }}</span>
+            <span class="font-semibold text-gray-700 dark:text-gray-200">
+              {{ featSlots }}
+            </span>
           </div>
         </div>
       </UCard>
