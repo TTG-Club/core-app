@@ -12,10 +12,7 @@ export interface UserProfile extends TimestampResponse {
   email: string;
   username: string;
   roles: Role[];
-}
-
-export interface UserProfileDetailed extends UserProfile {
-  statistics: {
+  statistics?: {
     ratingCount: number;
   };
 }

@@ -2,7 +2,6 @@
   import { useUserStore } from '~/shared/stores';
   import { AuthModal } from '~user/auth-modal';
   import { KbdShortcut } from '~ui/kbd-shortcut';
-  import type { UserProfileDetailed } from '~/shared/types';
 
   const userStore = useUserStore();
   const { isAdmin } = useUserRoles();
@@ -14,6 +13,8 @@
   const isMenuOpened = ref(false);
 
   const side = computed(() => (isTablet.value ? 'right' : 'top'));
+
+  const STATUS_PENDING = 'pending';
 
   try {
     await userStore.fetch();
@@ -27,22 +28,20 @@
     execute: fetchDetailedProfile,
   } = await useAsyncData(
     'user-profile-detailed',
-    () => $fetch<UserProfileDetailed>('/api/user/profile/detailed'),
+    () =>
+      $fetch<{ statistics?: { ratingCount: number } }>(
+        '/api/user/profile/detailed',
+      ),
     {
       dedupe: 'defer',
       lazy: true,
       server: false,
       immediate: false,
-      default: () => undefined,
     },
   );
 
-  const isDetailedProfileLoading = computed(
-    () => detailedProfileStatus.value === 'pending',
-  );
-
   watch(
-    () => user.value,
+    user,
     (newUser) => {
       if (newUser && detailedProfileStatus.value === 'idle') {
         fetchDetailedProfile();
@@ -72,10 +71,16 @@
   }
 
   if (isAdmin.value) {
-    defineShortcuts({
-      // eslint-disable-next-line camelcase
-      meta_shift_m: openWorkshop,
-    });
+    defineShortcuts(
+      {
+        // eslint-disable-next-line camelcase
+        meta_shift_m: openWorkshop,
+      },
+      {
+        // @ts-expect-error - layoutIndependent опция существует в runtime
+        layoutIndependent: true,
+      },
+    );
   }
 </script>
 
@@ -143,7 +148,7 @@
               <span>Всего оценок</span>
 
               <span
-                v-if="isDetailedProfileLoading"
+                v-if="isLoading || detailedProfileStatus === STATUS_PENDING"
                 class="text-sm font-semibold"
               >
                 ...
