@@ -23,6 +23,8 @@ export interface AbilityInfo {
   shortLabel: string;
 }
 
+export type BaseAbilityScores = Record<AbilityKey, number>;
+
 export const ABILITIES: AbilityInfo[] = [
   {
     key: AbilityKey.STRENGTH,

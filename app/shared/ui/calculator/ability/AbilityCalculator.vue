@@ -1,45 +1,24 @@
 <script setup lang="ts">
+  import { computed, ref } from 'vue';
+
+  import BonusesTab from './BonusesTab.vue';
   import RandomSetComponent from './RandomSetComponent.vue';
   import PointBayComponent from './PointBayComponent.vue';
   import ArrayComponent from './ArrayComponent.vue';
 
-  import BonusesTab from './BonusesTab.vue';
-
   import { AbilityKey } from '~/shared/types';
+  import type { BaseAbilityScores } from '~/shared/types';
 
-  type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
-
-  type BaseAbilityScores = {
-    str: number;
-    dex: number;
-    con: number;
-    int: number;
-    wis: number;
-    cha: number;
-  };
-
-  type AbilityScoresByKey = Record<AbilityKey, number>;
-
-  type Mode = 'bonuses' | 'array' | 'pointBuy' | 'dice';
+  type Mode = 'bonuses' | 'dice' | 'pointBuy' | 'array';
 
   type TabItem = {
     key: Mode;
     label: string;
   };
 
-  type PointBuyCostRow = {
-    score: number;
-    cost: number;
-  };
+  type AbilityShort = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
-  type PointBuySettings = {
-    minBuy: number;
-    maxBuy: number;
-    budgetBuy: number;
-    costs: Array<PointBuyCostRow>;
-  };
-
-  const abilities: Array<Ability> = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+  type ShortAbilityScores = Record<AbilityShort, number>;
 
   const tabs: Array<TabItem> = [
     { key: 'bonuses', label: 'Бонусы' },
@@ -48,7 +27,27 @@
     { key: 'array', label: 'Стандартный набор' },
   ];
 
-  const defaultScores: BaseAbilityScores = {
+  const model = defineModel<BaseAbilityScores>({ required: true });
+
+  const defaultBaseScores: BaseAbilityScores = {
+    [AbilityKey.STRENGTH]: 10,
+    [AbilityKey.DEXTERITY]: 10,
+    [AbilityKey.CONSTITUTION]: 10,
+    [AbilityKey.INTELLIGENCE]: 10,
+    [AbilityKey.WISDOM]: 10,
+    [AbilityKey.CHARISMA]: 10,
+  };
+
+  const defaultBonusScores: BaseAbilityScores = {
+    [AbilityKey.STRENGTH]: 0,
+    [AbilityKey.DEXTERITY]: 0,
+    [AbilityKey.CONSTITUTION]: 0,
+    [AbilityKey.INTELLIGENCE]: 0,
+    [AbilityKey.WISDOM]: 0,
+    [AbilityKey.CHARISMA]: 0,
+  };
+
+  const defaultShortScores: ShortAbilityScores = {
     str: 10,
     dex: 10,
     con: 10,
@@ -57,44 +56,138 @@
     cha: 10,
   };
 
-  const model = defineModel<BaseAbilityScores>({ required: true });
+  const normalizeNumber = (value: unknown, fallback: number): number => {
+    if (typeof value !== 'number') {
+      return fallback;
+    }
 
-  const normalizeBaseScores = (value: BaseAbilityScores): BaseAbilityScores => {
-    const str = Number.isFinite(value.str) ? value.str : defaultScores.str;
-    const dex = Number.isFinite(value.dex) ? value.dex : defaultScores.dex;
-    const con = Number.isFinite(value.con) ? value.con : defaultScores.con;
-    const int = Number.isFinite(value.int) ? value.int : defaultScores.int;
-    const wis = Number.isFinite(value.wis) ? value.wis : defaultScores.wis;
-    const cha = Number.isFinite(value.cha) ? value.cha : defaultScores.cha;
-
-    return { str, dex, con, int, wis, cha };
+    return Number.isFinite(value) ? value : fallback;
   };
 
-  const baseScores = computed<BaseAbilityScores>({
-    get: () => normalizeBaseScores(model.value),
-    set: (next) => {
-      model.value = normalizeBaseScores(next);
-    },
-  });
+  const normalizeBaseScores = (value: BaseAbilityScores): BaseAbilityScores => {
+    return {
+      [AbilityKey.STRENGTH]: normalizeNumber(
+        value[AbilityKey.STRENGTH],
+        defaultBaseScores[AbilityKey.STRENGTH],
+      ),
+      [AbilityKey.DEXTERITY]: normalizeNumber(
+        value[AbilityKey.DEXTERITY],
+        defaultBaseScores[AbilityKey.DEXTERITY],
+      ),
+      [AbilityKey.CONSTITUTION]: normalizeNumber(
+        value[AbilityKey.CONSTITUTION],
+        defaultBaseScores[AbilityKey.CONSTITUTION],
+      ),
+      [AbilityKey.INTELLIGENCE]: normalizeNumber(
+        value[AbilityKey.INTELLIGENCE],
+        defaultBaseScores[AbilityKey.INTELLIGENCE],
+      ),
+      [AbilityKey.WISDOM]: normalizeNumber(
+        value[AbilityKey.WISDOM],
+        defaultBaseScores[AbilityKey.WISDOM],
+      ),
+      [AbilityKey.CHARISMA]: normalizeNumber(
+        value[AbilityKey.CHARISMA],
+        defaultBaseScores[AbilityKey.CHARISMA],
+      ),
+    };
+  };
 
-  watch(
-    model,
-    (next) => {
-      const normalized = normalizeBaseScores(next);
+  const normalizeBonusScores = (
+    value: BaseAbilityScores,
+  ): BaseAbilityScores => {
+    return {
+      [AbilityKey.STRENGTH]: normalizeNumber(
+        value[AbilityKey.STRENGTH],
+        defaultBonusScores[AbilityKey.STRENGTH],
+      ),
+      [AbilityKey.DEXTERITY]: normalizeNumber(
+        value[AbilityKey.DEXTERITY],
+        defaultBonusScores[AbilityKey.DEXTERITY],
+      ),
+      [AbilityKey.CONSTITUTION]: normalizeNumber(
+        value[AbilityKey.CONSTITUTION],
+        defaultBonusScores[AbilityKey.CONSTITUTION],
+      ),
+      [AbilityKey.INTELLIGENCE]: normalizeNumber(
+        value[AbilityKey.INTELLIGENCE],
+        defaultBonusScores[AbilityKey.INTELLIGENCE],
+      ),
+      [AbilityKey.WISDOM]: normalizeNumber(
+        value[AbilityKey.WISDOM],
+        defaultBonusScores[AbilityKey.WISDOM],
+      ),
+      [AbilityKey.CHARISMA]: normalizeNumber(
+        value[AbilityKey.CHARISMA],
+        defaultBonusScores[AbilityKey.CHARISMA],
+      ),
+    };
+  };
 
-      if (
-        normalized.str !== next.str ||
-        normalized.dex !== next.dex ||
-        normalized.con !== next.con ||
-        normalized.int !== next.int ||
-        normalized.wis !== next.wis ||
-        normalized.cha !== next.cha
-      ) {
-        model.value = normalized;
-      }
-    },
-    { deep: true, immediate: true },
-  );
+  const normalizeShortScores = (
+    value: ShortAbilityScores,
+  ): ShortAbilityScores => {
+    return {
+      str: normalizeNumber(value.str, defaultShortScores.str),
+      dex: normalizeNumber(value.dex, defaultShortScores.dex),
+      con: normalizeNumber(value.con, defaultShortScores.con),
+      int: normalizeNumber(value.int, defaultShortScores.int),
+      wis: normalizeNumber(value.wis, defaultShortScores.wis),
+      cha: normalizeNumber(value.cha, defaultShortScores.cha),
+    };
+  };
+
+  const sameBaseScores = (
+    a: BaseAbilityScores,
+    b: BaseAbilityScores,
+  ): boolean => {
+    return (
+      a[AbilityKey.STRENGTH] === b[AbilityKey.STRENGTH] &&
+      a[AbilityKey.DEXTERITY] === b[AbilityKey.DEXTERITY] &&
+      a[AbilityKey.CONSTITUTION] === b[AbilityKey.CONSTITUTION] &&
+      a[AbilityKey.INTELLIGENCE] === b[AbilityKey.INTELLIGENCE] &&
+      a[AbilityKey.WISDOM] === b[AbilityKey.WISDOM] &&
+      a[AbilityKey.CHARISMA] === b[AbilityKey.CHARISMA]
+    );
+  };
+
+  const sameShortScores = (
+    a: ShortAbilityScores,
+    b: ShortAbilityScores,
+  ): boolean => {
+    return (
+      a.str === b.str &&
+      a.dex === b.dex &&
+      a.con === b.con &&
+      a.int === b.int &&
+      a.wis === b.wis &&
+      a.cha === b.cha
+    );
+  };
+
+  const baseToShort = (value: BaseAbilityScores): ShortAbilityScores => {
+    return {
+      str: value[AbilityKey.STRENGTH],
+      dex: value[AbilityKey.DEXTERITY],
+      con: value[AbilityKey.CONSTITUTION],
+      int: value[AbilityKey.INTELLIGENCE],
+      wis: value[AbilityKey.WISDOM],
+      cha: value[AbilityKey.CHARISMA],
+    };
+  };
+
+  const shortToBase = (value: ShortAbilityScores): BaseAbilityScores => {
+    return {
+      [AbilityKey.STRENGTH]: value.str,
+      [AbilityKey.DEXTERITY]: value.dex,
+      [AbilityKey.CONSTITUTION]: value.con,
+      [AbilityKey.INTELLIGENCE]: value.int,
+      [AbilityKey.WISDOM]: value.wis,
+      [AbilityKey.CHARISMA]: value.cha,
+    };
+  };
+
+  // ---------------- Tabs state ----------------
 
   const selectedTabIndex = ref<number>(0);
 
@@ -111,10 +204,14 @@
 
     const parsed = Number(payload);
 
-    return Number.isFinite(parsed) ? parsed : null;
+    if (!Number.isFinite(parsed)) {
+      return null;
+    }
+
+    return parsed;
   };
 
-  const handleTabChange = (payload: string | number) => {
+  const handleTabChange = (payload: string | number): void => {
     const nextIndex = toIndex(payload);
 
     if (nextIndex === null) {
@@ -124,65 +221,114 @@
     selectedTabIndex.value = nextIndex;
   };
 
-  const pointBuySettings = ref<PointBuySettings>({
-    minBuy: 8,
-    maxBuy: 15,
-    budgetBuy: 27,
-    costs: [
-      { score: 3, cost: 0 },
-      { score: 4, cost: 0 },
-      { score: 5, cost: 0 },
-      { score: 6, cost: 0 },
-      { score: 7, cost: 0 },
-      { score: 8, cost: 0 },
-      { score: 9, cost: 1 },
-      { score: 10, cost: 2 },
-      { score: 11, cost: 3 },
-      { score: 12, cost: 4 },
-      { score: 13, cost: 5 },
-      { score: 14, cost: 7 },
-      { score: 15, cost: 9 },
-    ],
+  // ---------------- Source of truth: model ----------------
+  // Important: keep object identity stable (cache), otherwise deep watchers / consumers can thrash.
+
+  const baseCache = ref<BaseAbilityScores>(normalizeBaseScores(model.value));
+
+  const baseScores = computed<BaseAbilityScores>({
+    get() {
+      const normalized = normalizeBaseScores(model.value);
+
+      if (!sameBaseScores(baseCache.value, normalized)) {
+        baseCache.value = normalized;
+      }
+
+      return baseCache.value;
+    },
+    set(next) {
+      const normalized = normalizeBaseScores(next);
+
+      if (sameBaseScores(model.value, normalized)) {
+        return;
+      }
+
+      model.value = normalized;
+    },
   });
 
-  const emptyBonus = (): AbilityScoresByKey => ({
-    [AbilityKey.STRENGTH]: 0,
-    [AbilityKey.DEXTERITY]: 0,
-    [AbilityKey.CONSTITUTION]: 0,
-    [AbilityKey.INTELLIGENCE]: 0,
-    [AbilityKey.WISDOM]: 0,
-    [AbilityKey.CHARISMA]: 0,
+  const shortCache = ref<ShortAbilityScores>(baseToShort(baseScores.value));
+
+  const shortScores = computed<ShortAbilityScores>({
+    get() {
+      const nextShort = normalizeShortScores(baseToShort(baseScores.value));
+
+      if (!sameShortScores(shortCache.value, nextShort)) {
+        shortCache.value = nextShort;
+      }
+
+      return shortCache.value;
+    },
+    set(next) {
+      const normalizedShort = normalizeShortScores(next);
+      const nextBase = normalizeBaseScores(shortToBase(normalizedShort));
+
+      if (sameBaseScores(baseScores.value, nextBase)) {
+        return;
+      }
+
+      baseScores.value = nextBase;
+    },
   });
 
-  const bonusScores = ref<AbilityScoresByKey>(emptyBonus());
+  const bonusScores = ref<BaseAbilityScores>({ ...defaultBonusScores });
 
-  const totalScore = computed<number>(() => {
-    const v = baseScores.value;
+  // ---------------- Final (base + bonus) ----------------
 
-    return v.str + v.dex + v.con + v.int + v.wis + v.cha;
+  const normalizedBonusScores = computed<BaseAbilityScores>(() => {
+    return normalizeBonusScores(bonusScores.value);
   });
 
   const finalScores = computed<BaseAbilityScores>(() => {
-    const v = baseScores.value;
+    const b = normalizedBonusScores.value;
 
     return {
-      str: v.str + bonusScores.value[AbilityKey.STRENGTH],
-      dex: v.dex + bonusScores.value[AbilityKey.DEXTERITY],
-      con: v.con + bonusScores.value[AbilityKey.CONSTITUTION],
-      int: v.int + bonusScores.value[AbilityKey.INTELLIGENCE],
-      wis: v.wis + bonusScores.value[AbilityKey.WISDOM],
-      cha: v.cha + bonusScores.value[AbilityKey.CHARISMA],
+      [AbilityKey.STRENGTH]:
+        baseScores.value[AbilityKey.STRENGTH] + b[AbilityKey.STRENGTH],
+      [AbilityKey.DEXTERITY]:
+        baseScores.value[AbilityKey.DEXTERITY] + b[AbilityKey.DEXTERITY],
+      [AbilityKey.CONSTITUTION]:
+        baseScores.value[AbilityKey.CONSTITUTION] + b[AbilityKey.CONSTITUTION],
+      [AbilityKey.INTELLIGENCE]:
+        baseScores.value[AbilityKey.INTELLIGENCE] + b[AbilityKey.INTELLIGENCE],
+      [AbilityKey.WISDOM]:
+        baseScores.value[AbilityKey.WISDOM] + b[AbilityKey.WISDOM],
+      [AbilityKey.CHARISMA]:
+        baseScores.value[AbilityKey.CHARISMA] + b[AbilityKey.CHARISMA],
     };
   });
 
-  const bonusByShort = computed<BaseAbilityScores>(() => ({
-    str: bonusScores.value[AbilityKey.STRENGTH],
-    dex: bonusScores.value[AbilityKey.DEXTERITY],
-    con: bonusScores.value[AbilityKey.CONSTITUTION],
-    int: bonusScores.value[AbilityKey.INTELLIGENCE],
-    wis: bonusScores.value[AbilityKey.WISDOM],
-    cha: bonusScores.value[AbilityKey.CHARISMA],
-  }));
+  const abilityModifier = (value: number): number => {
+    return Math.floor((value - 10) / 2);
+  };
+
+  const formatModifier = (value: number): string => {
+    const mod = abilityModifier(value);
+
+    return mod >= 0 ? `+${mod}` : `${mod}`;
+  };
+
+  const totalScore = computed<number>(() => {
+    return (
+      baseScores.value[AbilityKey.STRENGTH] +
+      baseScores.value[AbilityKey.DEXTERITY] +
+      baseScores.value[AbilityKey.CONSTITUTION] +
+      baseScores.value[AbilityKey.INTELLIGENCE] +
+      baseScores.value[AbilityKey.WISDOM] +
+      baseScores.value[AbilityKey.CHARISMA]
+    );
+  });
+
+  const totalFinalScore = computed<number>(() => {
+    return (
+      finalScores.value[AbilityKey.STRENGTH] +
+      finalScores.value[AbilityKey.DEXTERITY] +
+      finalScores.value[AbilityKey.CONSTITUTION] +
+      finalScores.value[AbilityKey.INTELLIGENCE] +
+      finalScores.value[AbilityKey.WISDOM] +
+      finalScores.value[AbilityKey.CHARISMA]
+    );
+  });
 </script>
 
 <template>
@@ -194,26 +340,6 @@
       @update:model-value="handleTabChange"
     />
 
-    <!-- ВАЖНО: v-show вместо v-if, чтобы состояние вкладок сохранялось -->
-    <div v-show="selectedMode === 'bonuses'">
-      <BonusesTab v-model:bonus="bonusScores" />
-    </div>
-
-    <div v-show="selectedMode === 'dice'">
-      <RandomSetComponent v-model="baseScores" />
-    </div>
-
-    <div v-show="selectedMode === 'pointBuy'">
-      <PointBayComponent
-        v-model="baseScores"
-        v-model:settings="pointBuySettings"
-      />
-    </div>
-
-    <div v-show="selectedMode === 'array'">
-      <ArrayComponent v-model="baseScores" />
-    </div>
-
     <UCard>
       <div class="space-y-3">
         <div class="text-sm font-semibold">Сводка</div>
@@ -223,31 +349,152 @@
         >
           Сумма базовых характеристик:
           <span class="font-semibold">{{ totalScore }}</span>
+
+          <span class="text-gray-500 dark:text-gray-400"> • </span>
+          С учётом бонусов:
+          <span class="font-semibold">{{ totalFinalScore }}</span>
         </div>
 
         <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-          <div
-            v-for="a in abilities"
-            :key="a"
-            class="rounded-xl bg-gray-50 p-2 text-center dark:bg-gray-900"
-          >
-            <div class="text-xs text-gray-500 dark:text-gray-400">
-              {{ a.toUpperCase() }}
-            </div>
+          <div class="rounded-xl bg-gray-50 p-2 text-center dark:bg-gray-900">
+            <div class="text-xs text-gray-500 dark:text-gray-400">СИЛ</div>
 
             <div class="text-lg font-semibold">
-              {{ finalScores[a] }}
+              {{ finalScores[AbilityKey.STRENGTH] }}
+              <span class="text-sm text-gray-500 dark:text-gray-400">
+                ({{ formatModifier(finalScores[AbilityKey.STRENGTH]) }})
+              </span>
             </div>
 
             <div
-              v-if="bonusByShort[a] !== 0"
+              v-if="normalizedBonusScores[AbilityKey.STRENGTH]"
               class="text-xs text-gray-500 dark:text-gray-400"
             >
-              ({{ baseScores[a] }} + {{ bonusByShort[a] }})
+              ({{ baseScores[AbilityKey.STRENGTH] }} +
+              {{ normalizedBonusScores[AbilityKey.STRENGTH] }})
+            </div>
+          </div>
+
+          <div class="rounded-xl bg-gray-50 p-2 text-center dark:bg-gray-900">
+            <div class="text-xs text-gray-500 dark:text-gray-400">ЛОВ</div>
+
+            <div class="text-lg font-semibold">
+              {{ finalScores[AbilityKey.DEXTERITY] }}
+              <span class="text-sm text-gray-500 dark:text-gray-400">
+                ({{ formatModifier(finalScores[AbilityKey.DEXTERITY]) }})
+              </span>
+            </div>
+
+            <div
+              v-if="normalizedBonusScores[AbilityKey.DEXTERITY]"
+              class="text-xs text-gray-500 dark:text-gray-400"
+            >
+              ({{ baseScores[AbilityKey.DEXTERITY] }} +
+              {{ normalizedBonusScores[AbilityKey.DEXTERITY] }})
+            </div>
+          </div>
+
+          <div class="rounded-xl bg-gray-50 p-2 text-center dark:bg-gray-900">
+            <div class="text-xs text-gray-500 dark:text-gray-400">ТЕЛ</div>
+
+            <div class="text-lg font-semibold">
+              {{ finalScores[AbilityKey.CONSTITUTION] }}
+              <span class="text-sm text-gray-500 dark:text-gray-400">
+                ({{ formatModifier(finalScores[AbilityKey.CONSTITUTION]) }})
+              </span>
+            </div>
+
+            <div
+              v-if="normalizedBonusScores[AbilityKey.CONSTITUTION]"
+              class="text-xs text-gray-500 dark:text-gray-400"
+            >
+              ({{ baseScores[AbilityKey.CONSTITUTION] }} +
+              {{ normalizedBonusScores[AbilityKey.CONSTITUTION] }})
+            </div>
+          </div>
+
+          <div class="rounded-xl bg-gray-50 p-2 text-center dark:bg-gray-900">
+            <div class="text-xs text-gray-500 dark:text-gray-400">ИНТ</div>
+
+            <div class="text-lg font-semibold">
+              {{ finalScores[AbilityKey.INTELLIGENCE] }}
+              <span class="text-sm text-gray-500 dark:text-gray-400">
+                ({{ formatModifier(finalScores[AbilityKey.INTELLIGENCE]) }})
+              </span>
+            </div>
+
+            <div
+              v-if="normalizedBonusScores[AbilityKey.INTELLIGENCE]"
+              class="text-xs text-gray-500 dark:text-gray-400"
+            >
+              ({{ baseScores[AbilityKey.INTELLIGENCE] }} +
+              {{ normalizedBonusScores[AbilityKey.INTELLIGENCE] }})
+            </div>
+          </div>
+
+          <div class="rounded-xl bg-gray-50 p-2 text-center dark:bg-gray-900">
+            <div class="text-xs text-gray-500 dark:text-gray-400">МДР</div>
+
+            <div class="text-lg font-semibold">
+              {{ finalScores[AbilityKey.WISDOM] }}
+              <span class="text-sm text-gray-500 dark:text-gray-400">
+                ({{ formatModifier(finalScores[AbilityKey.WISDOM]) }})
+              </span>
+            </div>
+
+            <div
+              v-if="normalizedBonusScores[AbilityKey.WISDOM]"
+              class="text-xs text-gray-500 dark:text-gray-400"
+            >
+              ({{ baseScores[AbilityKey.WISDOM] }} +
+              {{ normalizedBonusScores[AbilityKey.WISDOM] }})
+            </div>
+          </div>
+
+          <div class="rounded-xl bg-gray-50 p-2 text-center dark:bg-gray-900">
+            <div class="text-xs text-gray-500 dark:text-gray-400">ХАР</div>
+
+            <div class="text-lg font-semibold">
+              {{ finalScores[AbilityKey.CHARISMA] }}
+              <span class="text-sm text-gray-500 dark:text-gray-400">
+                ({{ formatModifier(finalScores[AbilityKey.CHARISMA]) }})
+              </span>
+            </div>
+
+            <div
+              v-if="normalizedBonusScores[AbilityKey.CHARISMA]"
+              class="text-xs text-gray-500 dark:text-gray-400"
+            >
+              ({{ baseScores[AbilityKey.CHARISMA] }} +
+              {{ normalizedBonusScores[AbilityKey.CHARISMA] }})
             </div>
           </div>
         </div>
       </div>
     </UCard>
+
+    <div class="space-y-4">
+      <KeepAlive>
+        <BonusesTab
+          v-if="selectedMode === 'bonuses'"
+          v-model:bonus="bonusScores"
+        />
+
+        <RandomSetComponent
+          v-else-if="selectedMode === 'dice'"
+          v-model="shortScores"
+        />
+
+        <PointBayComponent
+          v-else-if="selectedMode === 'pointBuy'"
+          v-model="shortScores"
+        />
+
+        <ArrayComponent
+          v-else
+          v-model="shortScores"
+        />
+      </KeepAlive>
+    </div>
   </div>
 </template>

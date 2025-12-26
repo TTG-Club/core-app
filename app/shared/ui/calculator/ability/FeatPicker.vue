@@ -155,6 +155,15 @@
     return value.length > 0 ? value : undefined;
   };
 
+  // Важно: для UI-селектов часто безопаснее не отдавать undefined как model-value.
+  const normalizeFeatModelForSelect = (
+    value: FeatModelValue,
+  ): string | Array<string> => {
+    if (!value) return '';
+
+    return value;
+  };
+
   const getFeatMeta = (
     url: string | undefined,
   ): FeatSelectResponse | undefined => {
@@ -195,7 +204,6 @@
   };
 
   // --- exclude неповторяемых черт из других слотов ---
-
   const nonRepeatableSelectedUrls = computed<Set<string>>(() => {
     const set = new Set<string>();
 
@@ -238,7 +246,6 @@
   };
 
   // --- селекты характеристик по increase ---
-
   const featAbilityPicks = ref<Array<Array<AbilityKey | undefined>>>([
     [],
     [],
@@ -380,7 +387,8 @@
     level.value = normalized;
   };
 
-  const isEpicSlot = (index: number): boolean => index === 5;
+  // слоты 0..4, эпическая — это 5-й слот (индекс 4)
+  const isEpicSlot = (slotIndex: number): boolean => slotIndex === 4;
 
   const getIncreaseLabel = (url: string | undefined): string => {
     const meta = getFeatMeta(url);
@@ -389,6 +397,24 @@
     if (meta.increase > 0) return `Повышение характеристик: ${meta.increase}`;
 
     return 'Эта черта не повышает характеристики.';
+  };
+
+  // Ключ для SelectAbilities: при смене черты инпуты не должны "переиспользоваться"
+  const getFeatAbilityPickKey = (
+    slotIndex: number,
+    pickIndex: number,
+  ): string => {
+    const featUrl = normalizeFeatUrl(feats.value[slotIndex]);
+
+    return `${featUrl || 'none'}:${slotIndex}:${pickIndex}`;
+  };
+
+  // Ключ для SelectFeat: принудительно ремоунтим при смене выбора/категорий
+  const getFeatSelectKey = (slotIndex: number): string => {
+    const cats = featCategoriesForSlot(slotIndex).join(',');
+    const url = normalizeFeatUrl(feats.value[slotIndex]) || 'none';
+
+    return `${slotIndex}:${cats}:${url}`;
   };
 </script>
 
@@ -431,7 +457,7 @@
             <span>Уровень {{ featLevel }}</span>
 
             <span
-              v-if="isEpicSlot(idx + 1)"
+              v-if="isEpicSlot(idx)"
               class="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900 dark:bg-amber-900/30 dark:text-amber-200"
             >
               Эпическая
@@ -439,9 +465,10 @@
           </div>
 
           <SelectFeat
+            :key="getFeatSelectKey(idx)"
             :categories="featCategoriesForSlot(idx)"
             :exclude-urls="excludeUrlsForSlot(idx)"
-            :model-value="feats[idx]"
+            :model-value="normalizeFeatModelForSelect(feats[idx])"
             @update:model-value="(v) => updateFeat(idx, v)"
           />
 
@@ -468,7 +495,7 @@
             <div class="grid grid-cols-1 gap-2">
               <div
                 v-for="i in getFeatIncrease(normalizeFeatUrl(feats[idx]))"
-                :key="i"
+                :key="getFeatAbilityPickKey(idx, i - 1)"
               >
                 <SelectAbilities
                   :model-value="featAbilityPicks[idx]?.[i - 1]"
