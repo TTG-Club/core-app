@@ -37,22 +37,28 @@
     increase: number | null;
   };
 
-  const {
-    disabled = false,
-    multiple = false,
-    categories = undefined,
-  } = defineProps<{
-    disabled?: boolean;
-    multiple?: boolean;
-    categories?: Array<string>;
-  }>();
+  const props = withDefaults(
+    defineProps<{
+      disabled?: boolean;
+      multiple?: boolean;
+      categories?: Array<string>;
+      excludeUrls?: Array<string>;
+    }>(),
+    {
+      disabled: false,
+      multiple: false,
+      categories: undefined,
+      excludeUrls: () => [],
+    },
+  );
 
   const model = defineModel<string | Array<string>>();
 
   const search = shallowRef('');
   const searchQuery = refDebounced(search, 250);
 
-  const categoriesKey = computed(() => (categories ?? []).join('|'));
+  const categoriesKey = computed(() => (props.categories ?? []).join('|'));
+  const excludeKey = computed(() => props.excludeUrls.join('|'));
 
   const fetchKey = computed(() => {
     const base = 'feat-select-v2';
@@ -63,11 +69,16 @@
         : '';
 
     const categoriesPart =
-      categories && categories.length > 0
-        ? `-c:${categories.join('-').toLowerCase()}`
+      props.categories && props.categories.length > 0
+        ? `-c:${props.categories.join('-').toLowerCase()}`
         : '';
 
-    return `${base}${queryPart}${categoriesPart}`;
+    const excludePart =
+      props.excludeUrls.length > 0
+        ? `-x:${props.excludeUrls.join('-').toLowerCase()}`
+        : '';
+
+    return `${base}${queryPart}${categoriesPart}${excludePart}`;
   });
 
   const { data, status, refresh } = await useAsyncData<Array<FeatSelectItem>>(
@@ -79,38 +90,59 @@
           method: 'get',
           query: {
             categories:
-              categories && categories.length > 0 ? categories : undefined,
+              props.categories && props.categories.length > 0
+                ? props.categories
+                : undefined,
             query:
               searchQuery.value.length >= 2 ? searchQuery.value : undefined,
           },
         },
       );
 
-      return featLinks.map((feat) => {
-        const sourceLabel = feat.source.name.label;
+      const excluded = new Set(props.excludeUrls);
 
-        const altNames = feat.name.alt ?? [];
-        const alt = altNames.length > 0 ? ` • ${altNames.join(', ')}` : '';
+      return featLinks
+        .filter((feat) => {
+          if (!excluded.has(feat.url)) {
+            return true;
+          }
 
-        const prerequisiteText = feat.prerequisite
-          ? ` • ${feat.prerequisite}`
-          : '';
+          // если значение уже выбрано — оставляем его видимым
+          if (typeof model.value === 'string') {
+            return model.value === feat.url;
+          }
 
-        return {
-          label: feat.name.rus,
-          value: feat.url,
-          description: `${feat.name.eng}${alt}${prerequisiteText}`,
-          source: sourceLabel,
-          category: feat.category,
-          prerequisite: feat.prerequisite,
-          repeatability: feat.repeatability,
-          abilities: feat.abilities ?? [],
-          increase: feat.increase,
-        };
-      });
+          if (Array.isArray(model.value)) {
+            return model.value.includes(feat.url);
+          }
+
+          return false;
+        })
+        .map((feat) => {
+          const sourceLabel = feat.source.name.label;
+
+          const altNames = feat.name.alt ?? [];
+          const alt = altNames.length > 0 ? ` • ${altNames.join(', ')}` : '';
+
+          const prerequisiteText = feat.prerequisite
+            ? ` • ${feat.prerequisite}`
+            : '';
+
+          return {
+            label: feat.name.rus,
+            value: feat.url,
+            description: `${feat.name.eng}${alt}${prerequisiteText}`,
+            source: sourceLabel,
+            category: feat.category,
+            prerequisite: feat.prerequisite,
+            repeatability: feat.repeatability,
+            abilities: feat.abilities ?? [],
+            increase: feat.increase,
+          };
+        });
     },
     {
-      watch: [searchQuery, categoriesKey],
+      watch: [searchQuery, categoriesKey, excludeKey],
       dedupe: 'defer',
       lazy: true,
     },
@@ -131,8 +163,8 @@
     v-model:search-term="search"
     :loading="status === 'pending'"
     :items="data"
-    :multiple="multiple"
-    :disabled="disabled"
+    :multiple="props.multiple"
+    :disabled="props.disabled"
     placeholder="Выбери черту"
     label-key="label"
     value-key="value"

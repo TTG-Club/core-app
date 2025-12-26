@@ -101,6 +101,17 @@
     return `r${t}-${index}`;
   };
 
+  const resetAssignments = () => {
+    diceAssign.value = {
+      str: null,
+      dex: null,
+      con: null,
+      int: null,
+      wis: null,
+      cha: null,
+    };
+  };
+
   const rollDicePool = () => {
     const nextPool: Array<DicePoolItem> = [];
 
@@ -112,15 +123,10 @@
     }
 
     dicePool.value = nextPool;
+    resetAssignments();
 
-    diceAssign.value = {
-      str: null,
-      dex: null,
-      con: null,
-      int: null,
-      wis: null,
-      cha: null,
-    };
+    // Сразу отдаём дефолтные значения, чтобы сводка всегда была числовой
+    model.value = { ...defaultScores };
   };
 
   const dicePoolSelectItems = computed<Array<SelectItem<string>>>(() => {
@@ -134,6 +140,21 @@
     const found = dicePool.value.find((p) => p.id === id);
 
     return found ? found.roll.total : null;
+  };
+
+  const normalizeSelectId = (
+    payload: string | number | undefined,
+  ): string | null => {
+    if (typeof payload === 'string') {
+      return payload.length > 0 ? payload : null;
+    }
+
+    // По факту ids у нас строки, но защитимся от числа
+    if (typeof payload === 'number') {
+      return Number.isFinite(payload) ? String(payload) : null;
+    }
+
+    return null;
   };
 
   const setDiceAssignment = (ability: Ability, nextId: string) => {
@@ -166,30 +187,26 @@
     };
   };
 
-  const builtScores = computed<AbilityScores | null>(() => {
-    if (dicePool.value.length !== 6) {
-      return null;
-    }
-
-    for (const a of abilities) {
-      if (!diceAssign.value[a]) {
-        return null;
-      }
-    }
-
+  // ВАЖНО: возвращаем "частично собранные" значения.
+  // Неназначенные — остаются дефолтными.
+  const computedScores = computed<AbilityScores>(() => {
     const next: AbilityScores = { ...defaultScores };
+
+    if (dicePool.value.length !== 6) {
+      return next;
+    }
 
     for (const a of abilities) {
       const id = diceAssign.value[a];
 
       if (!id) {
-        return null;
+        continue;
       }
 
       const score = diceScoreById(id);
 
       if (score === null) {
-        return null;
+        continue;
       }
 
       next[a] = score;
@@ -199,13 +216,11 @@
   });
 
   watch(
-    builtScores,
+    computedScores,
     (next) => {
-      if (next) {
-        model.value = { ...next };
-      }
+      model.value = { ...next };
     },
-    { immediate: false, deep: true },
+    { immediate: true, deep: true },
   );
 
   const modifier = (score: number): number => Math.floor((score - 10) / 2);
@@ -215,6 +230,10 @@
 
     return m >= 0 ? `+${m}` : `${m}`;
   };
+
+  const isReady = computed<boolean>(() => {
+    return dicePool.value.length === 6;
+  });
 </script>
 
 <template>
@@ -311,7 +330,9 @@
                   </span>
                 </template>
 
-                <template v-else> Не назначено </template>
+                <template v-else>
+                  Не назначено (будет {{ defaultScores[a] }})
+                </template>
               </div>
             </div>
 
@@ -319,8 +340,19 @@
               :model-value="diceAssign[a] || undefined"
               :items="dicePoolSelectItems"
               class="w-64 max-w-full"
+              :disabled="!isReady"
               placeholder="Выберите результат"
-              @update:model-value="(v: string) => setDiceAssignment(a, v)"
+              @update:model-value="
+                (v: string | number) => {
+                  const id = normalizeSelectId(v);
+
+                  if (!id) {
+                    return;
+                  }
+
+                  setDiceAssignment(a, id);
+                }
+              "
             />
           </div>
         </div>
