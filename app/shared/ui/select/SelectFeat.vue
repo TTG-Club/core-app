@@ -52,37 +52,22 @@
     },
   );
 
-  const model = defineModel<string | Array<string>>();
+  // IMPORTANT:
+  // USelectMenu при clearable может эмитить null.
+  // Мы внизу нормализуем null -> '' (а не даём ему попасть в model).
+  const model = defineModel<string | Array<string>>({ default: '' });
 
-  const search = shallowRef('');
+  const search = ref('');
   const searchQuery = refDebounced(search, 250);
 
-  const categoriesKey = computed(() => (props.categories ?? []).join('|'));
-  const excludeKey = computed(() => props.excludeUrls.join('|'));
+  const categoriesKey = computed<string>(() =>
+    (props.categories ?? []).join('|'),
+  );
 
-  const fetchKey = computed(() => {
-    const base = 'feat-select-v2';
-
-    const queryPart =
-      searchQuery.value && searchQuery.value.length >= 2
-        ? `-q:${searchQuery.value}`
-        : '';
-
-    const categoriesPart =
-      props.categories && props.categories.length > 0
-        ? `-c:${props.categories.join('-').toLowerCase()}`
-        : '';
-
-    const excludePart =
-      props.excludeUrls.length > 0
-        ? `-x:${props.excludeUrls.join('-').toLowerCase()}`
-        : '';
-
-    return `${base}${queryPart}${categoriesPart}${excludePart}`;
-  });
+  const excludeKey = computed<string>(() => props.excludeUrls.join('|'));
 
   const { data, status, refresh } = await useAsyncData<Array<FeatSelectItem>>(
-    fetchKey,
+    'feat-select-v2',
     async () => {
       const featLinks = await $fetch<Array<FeatSelectResponse>>(
         '/api/v2/feats/select',
@@ -145,8 +130,11 @@
       watch: [searchQuery, categoriesKey, excludeKey],
       dedupe: 'defer',
       lazy: true,
+      default: () => [],
     },
   );
+
+  const items = computed<Array<FeatSelectItem>>(() => data.value ?? []);
 
   const handleDropdownOpening = useDebounceFn(async (state: boolean) => {
     if (!state) {
@@ -155,14 +143,27 @@
 
     await refresh();
   }, 250);
+
+  const handleModelValueUpdate = (
+    value: string | Array<string> | null | undefined,
+  ) => {
+    if (value === null || value === undefined) {
+      // нормализация "очистки" в пустое значение, без null
+      model.value = '';
+
+      return;
+    }
+
+    model.value = value;
+  };
 </script>
 
 <template>
   <USelectMenu
-    v-model="model"
     v-model:search-term="search"
+    :model-value="model"
     :loading="status === 'pending'"
-    :items="data"
+    :items="items"
     :multiple="props.multiple"
     :disabled="props.disabled"
     placeholder="Выбери черту"
@@ -172,6 +173,7 @@
     searchable
     clearable
     @update:open="handleDropdownOpening"
+    @update:model-value="handleModelValueUpdate"
   >
     <template #item-trailing="{ item }">
       <UBadge

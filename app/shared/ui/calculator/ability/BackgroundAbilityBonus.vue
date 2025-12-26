@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { computed, ref, watch } from 'vue';
+
   import SelectBackground from '~ui/select/SelectBackground.vue';
   import SelectAbilities from '~ui/select/SelectAbilities.vue';
 
@@ -25,20 +27,33 @@
     }),
   });
 
-  const emptyBonus = (): AbilityScores => ({
-    [AbilityKey.STRENGTH]: 0,
-    [AbilityKey.DEXTERITY]: 0,
-    [AbilityKey.CONSTITUTION]: 0,
-    [AbilityKey.INTELLIGENCE]: 0,
-    [AbilityKey.WISDOM]: 0,
-    [AbilityKey.CHARISMA]: 0,
-  });
+  const emptyBonus = (): AbilityScores => {
+    return {
+      [AbilityKey.STRENGTH]: 0,
+      [AbilityKey.DEXTERITY]: 0,
+      [AbilityKey.CONSTITUTION]: 0,
+      [AbilityKey.INTELLIGENCE]: 0,
+      [AbilityKey.WISDOM]: 0,
+      [AbilityKey.CHARISMA]: 0,
+    };
+  };
+
+  const sameAbilityScores = (a: AbilityScores, b: AbilityScores): boolean => {
+    return (
+      a[AbilityKey.STRENGTH] === b[AbilityKey.STRENGTH] &&
+      a[AbilityKey.DEXTERITY] === b[AbilityKey.DEXTERITY] &&
+      a[AbilityKey.CONSTITUTION] === b[AbilityKey.CONSTITUTION] &&
+      a[AbilityKey.INTELLIGENCE] === b[AbilityKey.INTELLIGENCE] &&
+      a[AbilityKey.WISDOM] === b[AbilityKey.WISDOM] &&
+      a[AbilityKey.CHARISMA] === b[AbilityKey.CHARISMA]
+    );
+  };
 
   const addBonus = (
     b: AbilityScores,
     a: AbilityKey | undefined,
     value: number,
-  ) => {
+  ): void => {
     if (!a) {
       return;
     }
@@ -46,9 +61,9 @@
     b[a] += value;
   };
 
-  const allowedAbilityKeys = computed<Array<AbilityKey>>(() =>
-    ABILITIES.map((a) => a.key),
-  );
+  const allowedAbilityKeys = computed<Array<AbilityKey>>(() => {
+    return ABILITIES.map((a) => a.key);
+  });
 
   const abilityLookup = computed<Map<string, AbilityKey>>(() => {
     const map = new Map<string, AbilityKey>();
@@ -58,10 +73,10 @@
       map.set(String(a.shortKey).toLowerCase(), a.key);
     }
 
-    // совместимость: часто пишут cha вместо chr
+    // compatibility
     map.set('cha', AbilityKey.CHARISMA);
 
-    // англ. полные
+    // full english names
     map.set('strength', AbilityKey.STRENGTH);
     map.set('dexterity', AbilityKey.DEXTERITY);
     map.set('constitution', AbilityKey.CONSTITUTION);
@@ -105,22 +120,27 @@
     async () => {
       return await $fetch<Array<BackgroundSelectResponse>>(
         '/api/v2/backgrounds/select',
-        {
-          method: 'get',
-        },
+        { method: 'get' },
       );
     },
     { dedupe: 'defer' },
   );
 
+  const backgroundByUrl = computed<Map<string, BackgroundSelectResponse>>(
+    () => {
+      const map = new Map<string, BackgroundSelectResponse>();
+      const list = backgroundSelectData.value ?? [];
+
+      for (const bg of list) {
+        map.set(bg.url, bg);
+      }
+
+      return map;
+    },
+  );
+
   const backgroundAbilityOptions = computed<Array<AbilityKey>>(() => {
     if (!hasBackground.value) {
-      return [];
-    }
-
-    const list = backgroundSelectData.value;
-
-    if (!list) {
       return [];
     }
 
@@ -130,7 +150,7 @@
       return [];
     }
 
-    const bg = list.find((x) => x.url === url);
+    const bg = backgroundByUrl.value.get(url);
 
     if (!bg) {
       return [];
@@ -157,11 +177,19 @@
   const pick2 = ref<AbilityKey | undefined>(undefined);
   const pick3 = ref<AbilityKey | undefined>(undefined);
 
-  const resetPicks = () => {
+  const resetPicks = (): void => {
     pick1.value = undefined;
     pick2.value = undefined;
     pick3.value = undefined;
   };
+
+  watch(
+    backgroundUrl,
+    () => {
+      resetPicks();
+    },
+    { immediate: true },
+  );
 
   watch(
     hasBackground,
@@ -175,7 +203,7 @@
     { immediate: true },
   );
 
-  const keepOnlyAllowed = () => {
+  const keepOnlyAllowed = (): void => {
     const opts = backgroundAbilityOptions.value;
 
     if (opts.length !== 3) {
@@ -203,9 +231,17 @@
   const selectedPicks = computed<Array<AbilityKey>>(() => {
     const arr: Array<AbilityKey> = [];
 
-    if (pick1.value) arr.push(pick1.value);
-    if (pick2.value) arr.push(pick2.value);
-    if (pick3.value) arr.push(pick3.value);
+    if (pick1.value) {
+      arr.push(pick1.value);
+    }
+
+    if (pick2.value) {
+      arr.push(pick2.value);
+    }
+
+    if (pick3.value) {
+      arr.push(pick3.value);
+    }
 
     return arr;
   });
@@ -222,7 +258,6 @@
     return count;
   };
 
-  // исключаем способность только если она уже выбрана дважды в трёх селектах
   const excludeIfPickedTwice = (
     current: AbilityKey | undefined,
   ): Array<AbilityKey> => {
@@ -245,17 +280,17 @@
     return excluded;
   };
 
-  const excludedForFirst = computed<Array<AbilityKey>>(() =>
-    excludeIfPickedTwice(pick1.value),
-  );
+  const excludedForFirst = computed<Array<AbilityKey>>(() => {
+    return excludeIfPickedTwice(pick1.value);
+  });
 
-  const excludedForSecond = computed<Array<AbilityKey>>(() =>
-    excludeIfPickedTwice(pick2.value),
-  );
+  const excludedForSecond = computed<Array<AbilityKey>>(() => {
+    return excludeIfPickedTwice(pick2.value);
+  });
 
-  const excludedForThird = computed<Array<AbilityKey>>(() =>
-    excludeIfPickedTwice(pick3.value),
-  );
+  const excludedForThird = computed<Array<AbilityKey>>(() => {
+    return excludeIfPickedTwice(pick3.value);
+  });
 
   const computedBonus = computed<AbilityScores>(() => {
     if (backgroundAbilityOptions.value.length !== 3) {
@@ -266,7 +301,6 @@
     const a2 = pick2.value;
     const a3 = pick3.value;
 
-    // 3 выбора => +1/+1/+1 (дубли допустимы, но не более двух раз)
     if (a1 && a2 && a3) {
       const b = emptyBonus();
 
@@ -277,7 +311,6 @@
       return b;
     }
 
-    // 2 выбора => +2 к первому, +1 ко второму (могут совпадать)
     if (a1 && a2 && !a3) {
       const b = emptyBonus();
 
@@ -290,13 +323,20 @@
     return emptyBonus();
   });
 
-  watch(
-    computedBonus,
-    (next) => {
-      bonus.value = next;
-    },
-    { immediate: true, deep: true },
-  );
+  // IMPORTANT: do not emit v-model updates during SSR setup (can cause recursive SSR renders)
+  if (import.meta.client) {
+    watch(
+      computedBonus,
+      (next) => {
+        if (sameAbilityScores(bonus.value, next)) {
+          return;
+        }
+
+        bonus.value = next;
+      },
+      { immediate: true },
+    );
+  }
 </script>
 
 <template>
@@ -314,9 +354,8 @@
       </div>
 
       <div class="text-sm text-gray-500 dark:text-gray-400">
-        Выберите 2 характеристики (тогда будет +2 к первой и +1 ко второй), либо
-        выберите 3 характеристики (тогда будет +1 к каждой из них). Одна и та же
-        характеристика может встречаться дважды (но не три раза).
+        Выберите характеристики. Одна и та же характеристика может встречаться
+        дважды (но не три раза).
       </div>
 
       <div

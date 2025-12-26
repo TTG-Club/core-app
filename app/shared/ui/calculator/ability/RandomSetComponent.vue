@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import D6Icon from '~ui/calculator/ability/D6Icon.vue';
+
   type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
   type AbilityScores = {
@@ -10,12 +12,14 @@
     cha: number;
   };
 
+  type D6 = 1 | 2 | 3 | 4 | 5 | 6;
+
   type DiceRoll = {
-    d1: number;
-    d2: number;
-    d3: number;
-    d4: number;
-    dropped: number;
+    d1: D6;
+    d2: D6;
+    d3: D6;
+    d4: D6;
+    droppedIndex: 0 | 1 | 2 | 3;
     total: number;
   };
 
@@ -29,7 +33,7 @@
     value: T;
   };
 
-  const abilities: Array<Ability> = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+  const abilities: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
   const abilityLabel: Record<Ability, string> = {
     str: 'Сила',
@@ -51,7 +55,7 @@
 
   const model = defineModel<AbilityScores>({ required: true });
 
-  const dicePool = ref<Array<DicePoolItem>>([]);
+  const dicePool = ref<DicePoolItem[]>([]);
 
   const diceAssign = ref<Record<Ability, string | null>>({
     str: null,
@@ -62,7 +66,17 @@
     cha: null,
   });
 
-  const randomIntInclusive = (min: number, max: number): number => {
+  const toD6 = (n: number): D6 => {
+    if (n === 1) return 1;
+    if (n === 2) return 2;
+    if (n === 3) return 3;
+    if (n === 4) return 4;
+    if (n === 5) return 5;
+
+    return 6;
+  };
+
+  const randomIntInclusive = (min: number, max: number): D6 => {
     const range = max - min + 1;
 
     if (typeof window !== 'undefined' && window.crypto) {
@@ -70,10 +84,30 @@
 
       window.crypto.getRandomValues(buf);
 
-      return min + (buf[0] % range);
+      return toD6(min + (buf[0] % range));
     }
 
-    return min + Math.floor(Math.random() * range);
+    return toD6(min + Math.floor(Math.random() * range));
+  };
+
+  const getDroppedIndex = (
+    values: [number, number, number, number],
+  ): 0 | 1 | 2 | 3 => {
+    const lowest = Math.min(values[0], values[1], values[2], values[3]);
+
+    if (values[0] === lowest) {
+      return 0;
+    }
+
+    if (values[1] === lowest) {
+      return 1;
+    }
+
+    if (values[2] === lowest) {
+      return 2;
+    }
+
+    return 3;
   };
 
   const roll4d6DropLowest = (): DiceRoll => {
@@ -82,16 +116,17 @@
     const d3 = randomIntInclusive(1, 6);
     const d4 = randomIntInclusive(1, 6);
 
-    const values = [d1, d2, d3, d4];
-    const lowest = Math.min(...values);
+    const values: [D6, D6, D6, D6] = [d1, d2, d3, d4];
+    const droppedIndex = getDroppedIndex(values);
+    const droppedValue = values[droppedIndex];
 
     return {
       d1,
       d2,
       d3,
       d4,
-      dropped: lowest,
-      total: d1 + d2 + d3 + d4 - lowest,
+      droppedIndex,
+      total: d1 + d2 + d3 + d4 - droppedValue,
     };
   };
 
@@ -113,7 +148,7 @@
   };
 
   const rollDicePool = () => {
-    const nextPool: Array<DicePoolItem> = [];
+    const nextPool: DicePoolItem[] = [];
 
     for (let i = 0; i < 6; i += 1) {
       nextPool.push({
@@ -124,14 +159,12 @@
 
     dicePool.value = nextPool;
     resetAssignments();
-
-    // Сразу отдаём дефолтные значения, чтобы сводка всегда была числовой
     model.value = { ...defaultScores };
   };
 
-  const dicePoolSelectItems = computed<Array<SelectItem<string>>>(() => {
+  const dicePoolSelectItems = computed<SelectItem<string>[]>(() => {
     return dicePool.value.map((item, index) => ({
-      label: `#${index + 1}: ${item.roll.total}`,
+      label: `№${index + 1}: ${item.roll.total}`,
       value: item.id,
     }));
   });
@@ -149,7 +182,6 @@
       return payload.length > 0 ? payload : null;
     }
 
-    // По факту ids у нас строки, но защитимся от числа
     if (typeof payload === 'number') {
       return Number.isFinite(payload) ? String(payload) : null;
     }
@@ -187,8 +219,6 @@
     };
   };
 
-  // ВАЖНО: возвращаем "частично собранные" значения.
-  // Неназначенные — остаются дефолтными.
   const computedScores = computed<AbilityScores>(() => {
     const next: AbilityScores = { ...defaultScores };
 
@@ -234,6 +264,34 @@
   const isReady = computed<boolean>(() => {
     return dicePool.value.length === 6;
   });
+
+  const maxTotal = computed<number | null>(() => {
+    if (dicePool.value.length === 0) {
+      return null;
+    }
+
+    return Math.max(...dicePool.value.map((i) => i.roll.total));
+  });
+
+  const dieClass = (index: 0 | 1 | 2 | 3, roll: DiceRoll): string[] => {
+    if (roll.droppedIndex === index) {
+      return [
+        'rounded-lg',
+        'p-1',
+        'opacity-60',
+        'text-gray-400',
+        'dark:text-gray-600',
+      ];
+    }
+
+    const isMax = maxTotal.value !== null && roll.total === maxTotal.value;
+
+    if (isMax) {
+      return ['rounded-lg', 'p-1', 'text-green-600', 'dark:text-green-400'];
+    }
+
+    return ['rounded-lg', 'p-1', 'text-secondary'];
+  };
 </script>
 
 <template>
@@ -241,8 +299,8 @@
     <div class="space-y-4">
       <div class="flex items-center justify-between gap-3">
         <div class="text-sm text-gray-500 dark:text-gray-400">
-          Сначала бросьте <span class="font-mono">4d6</span> шесть раз (сброс
-          нижнего куба), затем распределите результаты по характеристикам.
+          Сначала бросьте <span class="font-mono">4к6</span> шесть раз, затем
+          распределите результаты по характеристикам.
         </div>
 
         <UButton
@@ -266,13 +324,13 @@
       >
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div
-            v-for="(item, index) in dicePool"
+            v-for="item in dicePool"
             :key="item.id"
             class="rounded-xl border border-gray-200 p-3 dark:border-gray-800"
           >
             <div class="flex items-center justify-between gap-3">
               <div class="font-semibold">
-                #{{ index + 1 }}: {{ item.roll.total }}
+                {{ item.roll.total }}
               </div>
 
               <div class="text-xs text-gray-500 dark:text-gray-400">
@@ -281,32 +339,32 @@
             </div>
 
             <div class="mt-2 flex flex-wrap items-center gap-2 text-sm">
-              <span
-                class="rounded-lg border border-gray-200 px-2 py-1 dark:border-gray-800"
-              >
-                {{ item.roll.d1 }}
+              <span :class="dieClass(0, item.roll)">
+                <D6Icon
+                  :value="item.roll.d1"
+                  :size="22"
+                />
               </span>
 
-              <span
-                class="rounded-lg border border-gray-200 px-2 py-1 dark:border-gray-800"
-              >
-                {{ item.roll.d2 }}
+              <span :class="dieClass(1, item.roll)">
+                <D6Icon
+                  :value="item.roll.d2"
+                  :size="22"
+                />
               </span>
 
-              <span
-                class="rounded-lg border border-gray-200 px-2 py-1 dark:border-gray-800"
-              >
-                {{ item.roll.d3 }}
+              <span :class="dieClass(2, item.roll)">
+                <D6Icon
+                  :value="item.roll.d3"
+                  :size="22"
+                />
               </span>
 
-              <span
-                class="rounded-lg border border-gray-200 px-2 py-1 dark:border-gray-800"
-              >
-                {{ item.roll.d4 }}
-              </span>
-
-              <span class="text-xs text-gray-500 dark:text-gray-400">
-                сброс: {{ item.roll.dropped }}
+              <span :class="dieClass(3, item.roll)">
+                <D6Icon
+                  :value="item.roll.d4"
+                  :size="22"
+                />
               </span>
             </div>
           </div>
@@ -360,6 +418,7 @@
         <div class="text-xs text-gray-500 dark:text-gray-400">
           Один результат можно назначить только одной характеристике. Если
           выбрать занятый результат — он будет автоматически обменён местами.
+          Максимальный результат подсвечен зелёным.
         </div>
       </div>
     </div>

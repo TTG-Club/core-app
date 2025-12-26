@@ -40,8 +40,28 @@
 
   const model = defineModel<AbilityScores>({ required: true });
 
+  // settings больше не required, дефолт хранится внутри компонента
   const settingsModel = defineModel<PointBuySettings>('settings', {
-    required: true,
+    default: () => ({
+      minBuy: 8,
+      maxBuy: 15,
+      budgetBuy: 27,
+      costs: [
+        { score: 3, cost: 0 },
+        { score: 4, cost: 0 },
+        { score: 5, cost: 0 },
+        { score: 6, cost: 0 },
+        { score: 7, cost: 0 },
+        { score: 8, cost: 0 },
+        { score: 9, cost: 1 },
+        { score: 10, cost: 2 },
+        { score: 11, cost: 3 },
+        { score: 12, cost: 4 },
+        { score: 13, cost: 5 },
+        { score: 14, cost: 7 },
+        { score: 15, cost: 9 },
+      ],
+    }),
   });
 
   const drawerOpen = ref<boolean>(false);
@@ -152,6 +172,7 @@
   };
 
   // ВАЖНО: это не общая стоимость, а "сколько добавится/вернётся" очков относительно текущего значения характеристики
+  // УБРАЛИ '=' из label
   const selectItemsForAbility = (
     ability: Ability,
   ): Array<SelectItem<number>> => {
@@ -163,7 +184,7 @@
       const delta = nextCost - currentCost;
 
       return {
-        label: `${v} (= ${deltaLabel(delta)})`,
+        label: `${v} (${deltaLabel(delta)})`,
         value: v,
       };
     });
@@ -310,13 +331,17 @@
 
       <div class="text-xs text-gray-500 dark:text-gray-400">
         В селекте указано, сколько очков добавится/вернётся при замене текущего
-        значения: <span class="font-mono">15 (= +2)</span>
+        значения: <span class="font-mono">15 (+2)</span>
         ,
-        <span class="font-mono">12 (= -3)</span>.
+        <span class="font-mono">12 (-3)</span>.
       </div>
     </div>
 
-    <UDrawer v-model:open="drawerOpen">
+    <!-- Дровер выезжает справа -->
+    <UDrawer
+      v-model:open="drawerOpen"
+      side="right"
+    >
       <template #content>
         <div class="flex h-full flex-col">
           <div
