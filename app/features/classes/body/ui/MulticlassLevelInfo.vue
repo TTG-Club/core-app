@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import type { ClassInMulticlass } from '~classes/types';
+  import { useMulticlassLevelInfo } from '~multiclass/composable';
 
   interface Props {
     characterLevel: number;
@@ -7,19 +8,15 @@
   }
 
   const props = defineProps<Props>();
+
+  const { containerClasses, cardClasses, cardContentClasses } =
+    useMulticlassLevelInfo(props);
 </script>
 
 <template>
-  <div class="flex w-full min-w-72 flex-col gap-4">
-    <div
-      :class="[
-        'w-full overflow-hidden bg-muted',
-        'rounded-lg border border-default',
-      ]"
-    >
-      <div
-        class="flex w-full flex-row items-center justify-between gap-2 px-4 py-1.5"
-      >
+  <div :class="containerClasses">
+    <div :class="cardClasses">
+      <div :class="cardContentClasses">
         <span class="text-sm font-medium text-highlighted">
           Общий уровень:
         </span>
@@ -31,14 +28,9 @@
     <div
       v-for="(classItem, index) in props.multiclass"
       :key="index"
-      :class="[
-        'w-full overflow-hidden bg-muted',
-        'rounded-lg border border-default',
-      ]"
+      :class="cardClasses"
     >
-      <div
-        class="flex w-full flex-row items-center justify-between gap-2 px-4 py-1.5"
-      >
+      <div :class="cardContentClasses">
         <span class="text-sm font-medium text-highlighted">
           {{ classItem.class }}
           <span v-if="classItem.subclass"> / {{ classItem.subclass }} </span>:

@@ -1,13 +1,14 @@
 <script setup lang="ts">
   import { PageActions } from '~ui/page';
   import { UiResult } from '~ui/result';
-  import { MulticlassBody } from '~classes/body';
+  import { MulticlassBody } from '~multiclass/body';
   import type {
     AdditionalClassItem,
     MainClassData,
     MulticlassDetailResponse,
     MulticlassRequest,
-  } from '~classes/types';
+  } from '~multiclass/types';
+  import { MIN_CHARACTER_LEVEL, MAX_CHARACTER_LEVEL } from '~multiclass/consts';
 
   const route = useRoute();
 
@@ -18,7 +19,10 @@
 
     const levelRaw = Number(route.query.level1);
 
-    const level = levelRaw >= 1 && levelRaw <= 20 ? levelRaw : undefined;
+    const level =
+      levelRaw >= MIN_CHARACTER_LEVEL && levelRaw <= MAX_CHARACTER_LEVEL
+        ? levelRaw
+        : undefined;
 
     const subclass =
       typeof route.query.subclass1 === 'string'
@@ -50,10 +54,12 @@
       key.startsWith('class'),
     );
 
+    const MAIN_CLASS_INDEX = '1';
+
     for (const classKey of classKeys) {
       const index = classKey.replace('class', '');
 
-      if (index === '1') {
+      if (index === MAIN_CLASS_INDEX) {
         continue; // Пропускаем основной класс
       }
 
@@ -64,7 +70,11 @@
 
       const levelQueryKey = `level${index}`;
       const levelRaw = Number(route.query[levelQueryKey]);
-      const level = levelRaw >= 1 && levelRaw <= 20 ? levelRaw : undefined;
+
+      const level =
+        levelRaw >= MIN_CHARACTER_LEVEL && levelRaw <= MAX_CHARACTER_LEVEL
+          ? levelRaw
+          : undefined;
 
       const subclassQueryKey = `subclass${index}`;
 
@@ -134,12 +144,12 @@
   // Функция для получения данных мультикласса
   function fetchMulticlassData(
     body: MulticlassRequest | null,
-  ): Promise<unknown> {
+  ): Promise<MulticlassDetailResponse | null> {
     if (!body) {
       return Promise.resolve(null);
     }
 
-    return $fetch('/api/v2/multiclass', {
+    return $fetch<MulticlassDetailResponse>('/api/v2/multiclass', {
       method: 'POST',
       body,
     });
@@ -149,7 +159,7 @@
     data: classDetail,
     error,
     refresh,
-  } = await useAsyncData(multiclassKey, () => {
+  } = await useAsyncData<MulticlassDetailResponse | null>(multiclassKey, () => {
     if (!requestBody.value) {
       return Promise.resolve(null);
     }
@@ -180,7 +190,7 @@
     <template #default>
       <MulticlassBody
         v-if="classDetail"
-        :detail="classDetail as MulticlassDetailResponse"
+        :detail="classDetail"
       />
 
       <UiResult

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { MulticlassDrawer } from '~classes/multiclass-drawer';
+  import { MulticlassDrawer } from '~multiclass/drawer';
   import type { ClassLinkResponse } from '~classes/types';
   import type { CommandPaletteGroup } from '@nuxt/ui';
   import { uniqBy } from 'lodash-es';

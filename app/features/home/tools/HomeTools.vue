@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { MulticlassDrawer } from '~classes/multiclass-drawer';
+  import { MulticlassDrawer } from '~multiclass/drawer';
 
   const overlay = useOverlay();
 
