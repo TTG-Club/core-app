@@ -1,19 +1,12 @@
 <script setup lang="ts">
-  type LastUpdateAction = 'Добавлено' | 'Обновлено' | 'Удалено';
+  import { RecentChangeAction } from '~/shared/enums';
 
-  type BadgeColor =
-    | 'success'
-    | 'error'
-    | 'info'
-    | 'primary'
-    | 'secondary'
-    | 'warning'
-    | 'neutral';
+  const RECENT_CHANGES_LIMIT = 10;
 
-  interface LastUpdateItem {
+  interface RecentChangeItem {
     url: string;
     updatedAt: string;
-    action: LastUpdateAction | string;
+    action: RecentChangeAction | string;
     name: {
       rus: string;
       eng: string;
@@ -28,32 +21,27 @@
     };
   }
 
-  const {
-    top = 10,
-    title = 'Обновления на сайте',
-    showRefresh = true,
-    showSource = true,
-    showDate = true,
-  } = defineProps<{
-    top?: number;
-    title?: string;
-    showRefresh?: boolean;
-    showSource?: boolean;
-    showDate?: boolean;
-  }>();
+  const dayjs = useDayjs();
 
-  const getActionColor = (action: LastUpdateAction | string): BadgeColor => {
-    const value = action.toLowerCase();
-
-    if (value.includes('добав')) {
+  const getActionColor = (
+    action: RecentChangeAction | string,
+  ):
+    | 'success'
+    | 'error'
+    | 'info'
+    | 'primary'
+    | 'secondary'
+    | 'warning'
+    | 'neutral' => {
+    if (action === RecentChangeAction.ADD) {
       return 'success';
     }
 
-    if (value.includes('обнов')) {
+    if (action === RecentChangeAction.UPDATE) {
       return 'info';
     }
 
-    if (value.includes('удал')) {
+    if (action === RecentChangeAction.DELETE) {
       return 'error';
     }
 
@@ -61,19 +49,25 @@
   };
 
   const formatDateTime = (iso: string) => {
-    const date = new Date(iso);
+    const date = dayjs(iso);
 
-    if (Number.isNaN(date.getTime())) {
+    if (!date.isValid()) {
       return iso;
     }
 
-    return new Intl.DateTimeFormat('ru-RU', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
+    return date.local().format('DD.MM.YYYY, HH:mm');
+  };
+
+  const getErrorMessage = (error: unknown): string => {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    return 'Произошла ошибка при загрузке данных';
   };
 
   const {
@@ -81,11 +75,11 @@
     status,
     error,
     refresh,
-  } = await useAsyncData<Array<LastUpdateItem>>(
-    () => `last-updates-top-${top}`,
+  } = await useAsyncData<Array<RecentChangeItem>>(
+    computed(() => `recent-changes-limit-${RECENT_CHANGES_LIMIT}`),
     () =>
-      $fetch<Array<LastUpdateItem>>('/api/v2/last/update', {
-        query: { top },
+      $fetch<Array<RecentChangeItem>>('/api/v2/last/update', {
+        query: { top: RECENT_CHANGES_LIMIT },
       }),
     {
       dedupe: 'defer',
@@ -96,7 +90,7 @@
 
 <template>
   <UCard
-    class="border-border rounded-[10px] bg-muted shadow-lg"
+    class="border-border rounded-lg bg-muted shadow-lg"
     :ui="{
       header: 'py-3 px-3 sm:px-3',
       body: 'p-0 px-3 py-1 sm:p-0 sm:px-3 sm:py-1',
@@ -106,16 +100,15 @@
       <div class="flex items-center justify-between gap-2">
         <div class="flex flex-col gap-2">
           <h3 class="text-base leading-none font-medium">
-            {{ title }}
+            Обновления на сайте
           </h3>
 
           <div class="text-xs leading-none text-gray-500">
-            Последние: {{ top }}
+            Последние: {{ RECENT_CHANGES_LIMIT }}
           </div>
         </div>
 
         <UButton
-          v-if="showRefresh"
           size="sm"
           variant="soft"
           :loading="status === 'pending'"
@@ -131,14 +124,14 @@
       color="error"
       variant="soft"
       title="Не удалось загрузить обновления"
-      :description="error?.message ?? String(error)"
+      :description="getErrorMessage(error)"
     />
 
-    <ul
+    <div
       v-else
-      class="divide-y divide-default"
+      class="flex flex-col divide-y divide-default"
     >
-      <li
+      <div
         v-for="item in updates"
         :key="`${item.url}-${item.updatedAt}`"
         class="py-2"
@@ -158,7 +151,7 @@
           <div class="flex shrink-0 flex-col items-end gap-2">
             <div class="flex flex-row items-center gap-2">
               <div
-                v-if="showSource && item.source"
+                v-if="item.source"
                 class="text-xs text-gray-500"
               >
                 {{ item.source.name.label }}
@@ -174,7 +167,6 @@
             </div>
 
             <div
-              v-if="showDate"
               class="text-xs text-gray-500"
               :title="item.updatedAt"
             >
@@ -182,7 +174,7 @@
             </div>
           </div>
         </div>
-      </li>
-    </ul>
+      </div>
+    </div>
   </UCard>
 </template>

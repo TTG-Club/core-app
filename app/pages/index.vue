@@ -1,10 +1,10 @@
 <script setup lang="ts">
   import { HomeBanners, RoadmapBanner } from '~home/banners';
   import { HomeSections } from '~home/sections';
+  import { RecentChanges } from '~home/recent-changes';
   import { SocialLinks } from '~home/social-links';
   import { SearchPanel } from '~search/panel';
   import { UiPlaceholder } from '~ui/placeholder';
-  import LastUpdate from '~home/update/LastUpdate.vue';
 
   definePageMeta({
     layout: 'default',
@@ -44,7 +44,7 @@
         >
           <HomeBanners />
 
-          <LastUpdate />
+          <RecentChanges />
         </div>
 
         <div class="flex w-full flex-col gap-3 xl:w-1/2 2xl:w-1/3">
