@@ -36,8 +36,11 @@
 
 <template>
   <div
-    :class="$style.card"
-    class="shadow-lg"
+    :class="[
+      'relative flex flex-col gap-3 self-start overflow-hidden',
+      'rounded-[10px] border border-default p-3 shadow-lg',
+      'bg-muted text-default no-underline',
+    ]"
   >
     <div class="flex h-4 items-center justify-between gap-2">
       <h3 class="text-base leading-none font-medium">Статистика</h3>
@@ -57,36 +60,8 @@
     </p>
 
     <AnimatedNumber
-      :class="$style.stats"
+      class="text-[32px] leading-[32px] font-semibold text-(--color-primary)"
       :value="counter"
     />
   </div>
 </template>
-
-<style lang="scss" module>
-  .card {
-    position: relative;
-
-    overflow: hidden;
-    display: flex;
-    flex: 1 1 100%;
-    flex-direction: column;
-    gap: 12px;
-
-    padding: 12px 12px;
-    border: 1px solid var(--ui-border);
-    border-radius: 10px;
-
-    color: var(--ui-text);
-    text-decoration: none;
-
-    background: var(--ui-bg-muted);
-
-    .stats {
-      font-size: 32px;
-      font-weight: 600;
-      line-height: 32px;
-      color: var(--color-primary);
-    }
-  }
-</style>
