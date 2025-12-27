@@ -40,7 +40,6 @@
 
   const model = defineModel<AbilityScores>({ required: true });
 
-  // settings больше не required, дефолт хранится внутри компонента
   const settingsModel = defineModel<PointBuySettings>('settings', {
     default: () => ({
       minBuy: 8,
@@ -171,8 +170,7 @@
     return delta > 0 ? `+${delta}` : `${delta}`;
   };
 
-  // ВАЖНО: это не общая стоимость, а "сколько добавится/вернётся" очков относительно текущего значения характеристики
-  // УБРАЛИ '=' из label
+  // Не показываем "(0)" для текущего выбранного значения
   const selectItemsForAbility = (
     ability: Ability,
   ): Array<SelectItem<number>> => {
@@ -180,8 +178,15 @@
     const currentCost = pointCost(current);
 
     return scoreOptions.value.map((v) => {
+      if (v === current) {
+        return {
+          label: `${v}`,
+          value: v,
+        };
+      }
+
       const nextCost = pointCost(v);
-      const delta = nextCost - currentCost;
+      const delta = currentCost - nextCost;
 
       return {
         label: `${v} (${deltaLabel(delta)})`,
@@ -330,17 +335,16 @@
       </div>
 
       <div class="text-xs text-gray-500 dark:text-gray-400">
-        В селекте указано, сколько очков добавится/вернётся при замене текущего
-        значения: <span class="font-mono">15 (+2)</span>
+        В селекте указано, сколько очков вернётся/потратится при замене текущего
+        значения: <span class="font-mono">8 (+2)</span>
         ,
-        <span class="font-mono">12 (-3)</span>.
+        <span class="font-mono">15 (-2)</span>.
       </div>
     </div>
 
-    <!-- Дровер выезжает справа -->
     <UDrawer
       v-model:open="drawerOpen"
-      side="right"
+      direction="right"
     >
       <template #content>
         <div class="flex h-full flex-col">
