@@ -1,107 +1,140 @@
 <script setup lang="ts">
-  import type { FeatLinkResponse } from '~/shared/types';
-  import { cloneDeep, isEmpty, isString } from 'lodash-es';
-  import type { Filter } from '~filter/types';
+  type FeatSelectResponse = {
+    url: string;
+    category: string;
+    prerequisite: string | null;
+    repeatability: boolean;
+    abilities: Array<string> | null;
+    increase: number | null;
+    source: {
+      name: {
+        label: string;
+        rus?: string;
+        eng?: string;
+      };
+      group?: {
+        label: string;
+        rus?: string;
+      };
+      page: number | null;
+    };
+    name: {
+      rus: string;
+      eng: string;
+      alt?: Array<string> | null;
+    };
+  };
 
-  const {
-    disabled = false,
-    multiple = false,
-    categories = undefined,
-  } = defineProps<{
-    disabled?: boolean;
-    multiple?: boolean;
-    /**
-     * (Опционально) список категорий.
-     * Если не передан — фильтр не отправляется.
-     */
-    categories?: Array<string>;
-  }>();
+  type FeatSelectItem = {
+    label: string;
+    value: string;
+    description: string;
+    source: string;
+    category: string;
+    prerequisite: string | null;
+    repeatability: boolean;
+    abilities: Array<string>;
+    increase: number | null;
+  };
 
-  const model = defineModel<string | Array<string>>();
-
-  const search = shallowRef('');
-  const searchQuery = refDebounced(search, 250);
-
-  const { data: filterData } = await useAsyncData(
-    'feats-filter',
-    () => $fetch<Filter>('/api/v2/feats/filters'),
+  const props = withDefaults(
+    defineProps<{
+      disabled?: boolean;
+      multiple?: boolean;
+      categories?: Array<string>;
+      excludeUrls?: Array<string>;
+    }>(),
     {
-      deep: false,
+      disabled: false,
+      multiple: false,
+      categories: undefined,
+      excludeUrls: () => [],
     },
   );
 
-  const filter = computed(() => {
-    if (!categories?.length || !filterData.value) {
-      return undefined;
-    }
+  // IMPORTANT:
+  // USelectMenu при clearable может эмитить null.
+  // Мы внизу нормализуем null -> '' (а не даём ему попасть в model).
+  const model = defineModel<string | Array<string>>({ default: '' });
 
-    const modifiedFilter = cloneDeep(filterData.value);
+  const search = ref('');
+  const searchQuery = refDebounced(search, 250);
 
-    const categoriesGroup = modifiedFilter.groups.find(
-      (group) =>
-        group.key ===
-        'club.ttg.dnd5.domain.feat.rest.dto.filter.FeatCategoryFilterGroup',
-    );
+  const categoriesKey = computed<string>(() =>
+    (props.categories ?? []).join('|'),
+  );
 
-    if (!categoriesGroup) {
-      return undefined;
-    }
+  const excludeKey = computed<string>(() => props.excludeUrls.join('|'));
 
-    categoriesGroup.filters = categoriesGroup.filters.map((filterItem) => ({
-      ...filterItem,
-      selected:
-        isString(filterItem.value) && categories.includes(filterItem.value)
-          ? true
-          : null,
-    }));
-
-    return {
-      filter: modifiedFilter,
-    };
-  });
-
-  const fetchKey = computed(() => {
-    let key = 'feat-select';
-
-    if (searchQuery.value) {
-      key += `-${searchQuery.value}`;
-    }
-
-    if (!isEmpty(categories?.length)) {
-      key += `-${categories?.join('-').toLowerCase()}`;
-    }
-
-    return key;
-  });
-
-  const { data, status, refresh } = await useAsyncData(
-    fetchKey,
+  const { data, status, refresh } = await useAsyncData<Array<FeatSelectItem>>(
+    'feat-select-v2',
     async () => {
-      const featLinks = await $fetch<Array<FeatLinkResponse>>(
-        '/api/v2/feats/search',
+      const featLinks = await $fetch<Array<FeatSelectResponse>>(
+        '/api/v2/feats/select',
         {
-          method: 'post',
+          method: 'get',
           query: {
+            categories:
+              props.categories && props.categories.length > 0
+                ? props.categories
+                : undefined,
             query:
               searchQuery.value.length >= 2 ? searchQuery.value : undefined,
           },
-          body: filter.value || undefined,
         },
       );
 
-      return featLinks.map((feat) => ({
-        label: feat.name.rus,
-        value: feat.url,
-        description: feat.name.eng,
-        source: feat.source.name.label,
-      }));
+      const excluded = new Set(props.excludeUrls);
+
+      return featLinks
+        .filter((feat) => {
+          if (!excluded.has(feat.url)) {
+            return true;
+          }
+
+          // если значение уже выбрано — оставляем его видимым
+          if (typeof model.value === 'string') {
+            return model.value === feat.url;
+          }
+
+          if (Array.isArray(model.value)) {
+            return model.value.includes(feat.url);
+          }
+
+          return false;
+        })
+        .map((feat) => {
+          const sourceLabel = feat.source.name.label;
+
+          const altNames = feat.name.alt ?? [];
+          const alt = altNames.length > 0 ? ` • ${altNames.join(', ')}` : '';
+
+          const prerequisiteText = feat.prerequisite
+            ? ` • ${feat.prerequisite}`
+            : '';
+
+          return {
+            label: feat.name.rus,
+            value: feat.url,
+            description: `${feat.name.eng}${alt}${prerequisiteText}`,
+            source: sourceLabel,
+            category: feat.category,
+            prerequisite: feat.prerequisite,
+            repeatability: feat.repeatability,
+            abilities: feat.abilities ?? [],
+            increase: feat.increase,
+          };
+        });
     },
     {
-      watch: [searchQuery],
+      watch: [searchQuery, categoriesKey, excludeKey],
       dedupe: 'defer',
       lazy: true,
+      default: () => [],
     },
   );
+
+  const items = computed<Array<FeatSelectItem>>(() => data.value ?? []);
 
   const handleDropdownOpening = useDebounceFn(async (state: boolean) => {
     if (!state) {
@@ -110,16 +143,29 @@
 
     await refresh();
   }, 250);
+
+  const handleModelValueUpdate = (
+    value: string | Array<string> | null | undefined,
+  ) => {
+    if (value === null || value === undefined) {
+      // нормализация "очистки" в пустое значение, без null
+      model.value = '';
+
+      return;
+    }
+
+    model.value = value;
+  };
 </script>
 
 <template>
   <USelectMenu
-    v-model="model"
     v-model:search-term="search"
+    :model-value="model"
     :loading="status === 'pending'"
-    :items="data"
-    :multiple="multiple"
-    :disabled="disabled"
+    :items="items"
+    :multiple="props.multiple"
+    :disabled="props.disabled"
     placeholder="Выбери черту"
     label-key="label"
     value-key="value"
@@ -127,6 +173,7 @@
     searchable
     clearable
     @update:open="handleDropdownOpening"
+    @update:model-value="handleModelValueUpdate"
   >
     <template #item-trailing="{ item }">
       <UBadge
