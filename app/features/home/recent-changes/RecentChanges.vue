@@ -33,6 +33,7 @@
     | 'secondary'
     | 'warning'
     | 'neutral' => {
+    // Проверка enum значений (когда бэкенд перейдет на enum)
     if (action === RecentChangeAction.ADD) {
       return 'success';
     }
@@ -43,6 +44,23 @@
 
     if (action === RecentChangeAction.DELETE) {
       return 'error';
+    }
+
+    // Временная поддержка русских строк (до перехода бэкенда на enum)
+    if (typeof action === 'string') {
+      const lowerAction = action.toLowerCase();
+
+      if (lowerAction.includes('добав')) {
+        return 'success';
+      }
+
+      if (lowerAction.includes('обнов')) {
+        return 'info';
+      }
+
+      if (lowerAction.includes('удал')) {
+        return 'error';
+      }
     }
 
     return 'neutral';
