@@ -609,40 +609,46 @@
             </span>
           </div>
 
-          <SelectFeat
-            :key="getFeatSelectKey(slotIndex, featLevel)"
-            :categories="featCategoriesForLevel(featLevel)"
-            :exclude-urls="excludeUrlsForSlot(slotIndex)"
-            :model-value="normalizeFeatModelForSelect(feats[slotIndex])"
-            @update:model-value="(payload) => updateFeat(slotIndex, payload)"
-          />
+          <!-- All selects in one row on md+ -->
+          <div class="flex flex-col gap-3 md:flex-row md:items-start">
+            <div class="min-w-0 flex-1">
+              <SelectFeat
+                :key="getFeatSelectKey(slotIndex, featLevel)"
+                :categories="featCategoriesForLevel(featLevel)"
+                :exclude-urls="excludeUrlsForSlot(slotIndex)"
+                :model-value="normalizeFeatModelForSelect(feats[slotIndex])"
+                @update:model-value="
+                  (payload) => updateFeat(slotIndex, payload)
+                "
+              />
 
-          <div
-            v-if="normalizeFeatUrl(feats[slotIndex])"
-            class="mt-2 text-xs text-gray-500 dark:text-gray-400"
-          >
-            {{ getIncreaseLabel(normalizeFeatUrl(feats[slotIndex])) }}
-          </div>
-
-          <div
-            v-if="
-              normalizeFeatUrl(feats[slotIndex]) &&
-              getFeatIncrease(normalizeFeatUrl(feats[slotIndex])) > 0
-            "
-            class="mt-3 space-y-2"
-          >
-            <div class="text-xs text-gray-500 dark:text-gray-400">
-              Выберите характеристики ({{
-                getFeatIncrease(normalizeFeatUrl(feats[slotIndex]))
-              }}):
+              <div
+                v-if="normalizeFeatUrl(feats[slotIndex])"
+                class="mt-2 text-xs text-gray-500 dark:text-gray-400"
+              >
+                {{ getIncreaseLabel(normalizeFeatUrl(feats[slotIndex])) }}
+              </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-2">
+            <div
+              v-if="
+                normalizeFeatUrl(feats[slotIndex]) &&
+                getFeatIncrease(normalizeFeatUrl(feats[slotIndex])) > 0
+              "
+              class="flex flex-col gap-2 md:flex-row md:items-start md:gap-3"
+            >
+              <div class="text-xs text-gray-500 md:hidden dark:text-gray-400">
+                Выберите характеристики ({{
+                  getFeatIncrease(normalizeFeatUrl(feats[slotIndex]))
+                }}):
+              </div>
+
               <div
                 v-for="pickIndex in getFeatIncrease(
                   normalizeFeatUrl(feats[slotIndex]),
                 )"
                 :key="getFeatAbilityPickKey(slotIndex, pickIndex - 1)"
+                class="w-full md:w-64"
               >
                 <SelectAbilities
                   :model-value="featAbilityPicks[slotIndex]?.[pickIndex - 1]"

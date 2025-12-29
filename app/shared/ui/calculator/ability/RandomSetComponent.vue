@@ -33,6 +33,8 @@
     value: T;
   };
 
+  const DICE_ICON_SIZE = 44;
+
   const abilities: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
   const abilityLabel: Record<Ability, string> = {
@@ -348,28 +350,28 @@
               <span :class="dieClass(0, item.roll)">
                 <D6Icon
                   :value="item.roll.d1"
-                  :size="22"
+                  :size="DICE_ICON_SIZE"
                 />
               </span>
 
               <span :class="dieClass(1, item.roll)">
                 <D6Icon
                   :value="item.roll.d2"
-                  :size="22"
+                  :size="DICE_ICON_SIZE"
                 />
               </span>
 
               <span :class="dieClass(2, item.roll)">
                 <D6Icon
                   :value="item.roll.d3"
-                  :size="22"
+                  :size="DICE_ICON_SIZE"
                 />
               </span>
 
               <span :class="dieClass(3, item.roll)">
                 <D6Icon
                   :value="item.roll.d4"
-                  :size="22"
+                  :size="DICE_ICON_SIZE"
                 />
               </span>
             </div>
@@ -424,8 +426,6 @@
         <div class="text-xs text-gray-500 dark:text-gray-400">
           Один результат можно назначить только одной характеристике. Если
           выбрать занятый результат — он будет автоматически обменён местами.
-          Максимальный результат подсвечен зелёным. В селекте в скобках
-          показано, сколько очков вы получите/потеряете относительно базовых 10.
         </div>
       </div>
     </div>
