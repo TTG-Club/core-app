@@ -171,12 +171,10 @@
     return levels;
   });
 
-  const featCategoriesForSlot = (slotIndex: number): Array<string> => {
-    if (slotIndex === 4) {
-      return ['EPIC_BOON'];
-    }
+  const isEpicFeatLevel = (featLevel: number): boolean => featLevel === 19;
 
-    return ['GENERAL'];
+  const featCategoriesForLevel = (featLevel: number): Array<string> => {
+    return isEpicFeatLevel(featLevel) ? ['EPIC_BOON'] : ['GENERAL'];
   };
 
   const feats = ref<Array<FeatModelValue>>([
@@ -534,8 +532,6 @@
     level.value = rounded;
   };
 
-  const isEpicSlot = (slotIndex: number): boolean => slotIndex === 4;
-
   const getIncreaseLabel = (url: string | undefined): string => {
     const meta = getFeatMeta(url);
 
@@ -559,11 +555,11 @@
     return `${featUrl || 'none'}:${slotIndex}:${pickIndex}`;
   };
 
-  const getFeatSelectKey = (slotIndex: number): string => {
-    const categories = featCategoriesForSlot(slotIndex).join(',');
+  const getFeatSelectKey = (slotIndex: number, featLevel: number): string => {
+    const categories = featCategoriesForLevel(featLevel).join(',');
     const url = normalizeFeatUrl(feats.value[slotIndex]) || 'none';
 
-    return `${slotIndex}:${categories}:${url}`;
+    return `${slotIndex}:${featLevel}:${categories}:${url}`;
   };
 </script>
 
@@ -606,7 +602,7 @@
             <span>Уровень {{ featLevel }}</span>
 
             <span
-              v-if="isEpicSlot(slotIndex)"
+              v-if="isEpicFeatLevel(featLevel)"
               class="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900 dark:bg-amber-900/30 dark:text-amber-200"
             >
               Эпическая
@@ -614,8 +610,8 @@
           </div>
 
           <SelectFeat
-            :key="getFeatSelectKey(slotIndex)"
-            :categories="featCategoriesForSlot(slotIndex)"
+            :key="getFeatSelectKey(slotIndex, featLevel)"
+            :categories="featCategoriesForLevel(featLevel)"
             :exclude-urls="excludeUrlsForSlot(slotIndex)"
             :model-value="normalizeFeatModelForSelect(feats[slotIndex])"
             @update:model-value="(payload) => updateFeat(slotIndex, payload)"

@@ -5,6 +5,7 @@
   import RandomSetComponent from './RandomSetComponent.vue';
   import PointBayComponent from './PointBayComponent.vue';
   import ArraySetComponent from './ArraySetComponent.vue';
+  import AbilityScoresDisplay from './AbilityScoresDisplay.vue';
 
   import { AbilityKey } from '~/shared/types';
   import type { BaseAbilityScores } from '~/shared/types';
@@ -24,6 +25,8 @@
     | Partial<Record<AbilityKey, unknown>>
     | null
     | undefined;
+
+  type EpicBoonAbilities = Partial<Record<AbilityKey, boolean>>;
 
   const tabs: Array<TabItem> = [
     { key: 'bonuses', label: 'Бонусы' },
@@ -162,20 +165,6 @@
     );
   };
 
-  const sameShortScores = (
-    a: ShortAbilityScores,
-    b: ShortAbilityScores,
-  ): boolean => {
-    return (
-      a.str === b.str &&
-      a.dex === b.dex &&
-      a.con === b.con &&
-      a.int === b.int &&
-      a.wis === b.wis &&
-      a.cha === b.cha
-    );
-  };
-
   const baseToShort = (value: BaseAbilityScores): ShortAbilityScores => {
     return {
       str: value[AbilityKey.STRENGTH],
@@ -198,8 +187,6 @@
     };
   };
 
-  // ---------------- Tabs state ----------------
-
   const selectedTabIndex = ref<number>(0);
 
   const clampTabIndex = (index: number): number => {
@@ -217,7 +204,6 @@
     return index;
   };
 
-  // v-model proxy: гарантирует подсветку "Бонусы" (индекс 0) при любых некорректных значениях
   const tabsModelValue = computed<number>({
     get() {
       return clampTabIndex(selectedTabIndex.value ?? 0);
@@ -228,22 +214,15 @@
   });
 
   const selectedMode = computed<Mode>(() => {
-    const item = tabs[clampTabIndex(tabsModelValue.value)];
+    const tabIndex = clampTabIndex(tabsModelValue.value);
+    const tabItem = tabs[tabIndex];
 
-    return item ? item.key : 'bonuses';
+    return tabItem ? tabItem.key : 'bonuses';
   });
-
-  const baseCache = ref<BaseAbilityScores>(normalizeBaseScores(model.value));
 
   const baseScores = computed<BaseAbilityScores>({
     get() {
-      const normalized = normalizeBaseScores(model.value);
-
-      if (!sameBaseScores(baseCache.value, normalized)) {
-        baseCache.value = normalized;
-      }
-
-      return baseCache.value;
+      return normalizeBaseScores(model.value);
     },
     set(next) {
       const normalized = normalizeBaseScores(next);
@@ -256,89 +235,61 @@
     },
   });
 
-  const shortCache = ref<ShortAbilityScores>(baseToShort(baseScores.value));
-
   const shortScores = computed<ShortAbilityScores>({
     get() {
-      const nextShort = normalizeShortScores(baseToShort(baseScores.value));
+      const normalizedBaseScores = baseScores.value;
 
-      if (!sameShortScores(shortCache.value, nextShort)) {
-        shortCache.value = nextShort;
-      }
-
-      return shortCache.value;
+      return normalizeShortScores(baseToShort(normalizedBaseScores));
     },
     set(next) {
-      const normalizedShort = normalizeShortScores(next);
-      const nextBase = normalizeBaseScores(shortToBase(normalizedShort));
+      const normalizedShortScores = normalizeShortScores(next);
 
-      if (sameBaseScores(baseScores.value, nextBase)) {
+      const nextBaseScores = normalizeBaseScores(
+        shortToBase(normalizedShortScores),
+      );
+
+      const currentBaseScores = baseScores.value;
+
+      if (sameBaseScores(currentBaseScores, nextBaseScores)) {
         return;
       }
 
-      baseScores.value = nextBase;
+      baseScores.value = nextBaseScores;
     },
   });
 
   const bonusScores = ref<BaseAbilityScores>({ ...defaultBonusScores });
 
-  // ---------------- Final (base + bonus) ----------------
+  const epicBoonAbilities = ref<EpicBoonAbilities>({});
 
   const normalizedBonusScores = computed<BaseAbilityScores>(() => {
     return normalizeBonusScores(bonusScores.value);
   });
 
   const finalScores = computed<BaseAbilityScores>(() => {
-    const bonus = normalizedBonusScores.value;
+    const normalizedBaseScores = baseScores.value;
+    const normalizedBonus = normalizedBonusScores.value;
 
     return {
       [AbilityKey.STRENGTH]:
-        baseScores.value[AbilityKey.STRENGTH] + bonus[AbilityKey.STRENGTH],
+        normalizedBaseScores[AbilityKey.STRENGTH] +
+        normalizedBonus[AbilityKey.STRENGTH],
       [AbilityKey.DEXTERITY]:
-        baseScores.value[AbilityKey.DEXTERITY] + bonus[AbilityKey.DEXTERITY],
+        normalizedBaseScores[AbilityKey.DEXTERITY] +
+        normalizedBonus[AbilityKey.DEXTERITY],
       [AbilityKey.CONSTITUTION]:
-        baseScores.value[AbilityKey.CONSTITUTION] +
-        bonus[AbilityKey.CONSTITUTION],
+        normalizedBaseScores[AbilityKey.CONSTITUTION] +
+        normalizedBonus[AbilityKey.CONSTITUTION],
       [AbilityKey.INTELLIGENCE]:
-        baseScores.value[AbilityKey.INTELLIGENCE] +
-        bonus[AbilityKey.INTELLIGENCE],
+        normalizedBaseScores[AbilityKey.INTELLIGENCE] +
+        normalizedBonus[AbilityKey.INTELLIGENCE],
       [AbilityKey.WISDOM]:
-        baseScores.value[AbilityKey.WISDOM] + bonus[AbilityKey.WISDOM],
+        normalizedBaseScores[AbilityKey.WISDOM] +
+        normalizedBonus[AbilityKey.WISDOM],
       [AbilityKey.CHARISMA]:
-        baseScores.value[AbilityKey.CHARISMA] + bonus[AbilityKey.CHARISMA],
+        normalizedBaseScores[AbilityKey.CHARISMA] +
+        normalizedBonus[AbilityKey.CHARISMA],
     };
-  });
-
-  const abilityModifier = (value: number): number => {
-    return Math.floor((value - 10) / 2);
-  };
-
-  const formatModifier = (value: number): string => {
-    const mod = abilityModifier(value);
-
-    return mod >= 0 ? `+${mod}` : `${mod}`;
-  };
-
-  const totalScore = computed<number>(() => {
-    return (
-      baseScores.value[AbilityKey.STRENGTH] +
-      baseScores.value[AbilityKey.DEXTERITY] +
-      baseScores.value[AbilityKey.CONSTITUTION] +
-      baseScores.value[AbilityKey.INTELLIGENCE] +
-      baseScores.value[AbilityKey.WISDOM] +
-      baseScores.value[AbilityKey.CHARISMA]
-    );
-  });
-
-  const totalFinalScore = computed<number>(() => {
-    return (
-      finalScores.value[AbilityKey.STRENGTH] +
-      finalScores.value[AbilityKey.DEXTERITY] +
-      finalScores.value[AbilityKey.CONSTITUTION] +
-      finalScores.value[AbilityKey.INTELLIGENCE] +
-      finalScores.value[AbilityKey.WISDOM] +
-      finalScores.value[AbilityKey.CHARISMA]
-    );
   });
 </script>
 
@@ -350,143 +301,20 @@
       class="w-full"
       :ui="{
         list: 'rounded-xl bg-gray-100 p-1 dark:bg-gray-900',
-        marker: 'rounded-lg bg-white shadow-sm dark:bg-gray-800',
-        tab: 'px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300',
-        active: 'text-gray-900 dark:text-gray-50',
+        indicator: 'rounded-lg bg-white shadow-sm dark:bg-gray-800',
+        trigger:
+          'px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300',
+        content: 'mt-0',
       }"
     />
 
     <UCard>
-      <div class="space-y-3">
-        <div class="text-sm font-semibold">Характеристики</div>
-
-        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-          <div class="rounded-xl bg-gray-50 p-2 text-center dark:bg-gray-900">
-            <div class="text-xs text-gray-500 dark:text-gray-400">СИЛ</div>
-
-            <div class="text-lg font-semibold">
-              {{ finalScores[AbilityKey.STRENGTH] }}
-              <span class="text-sm text-gray-500 dark:text-gray-400">
-                ({{ formatModifier(finalScores[AbilityKey.STRENGTH]) }})
-              </span>
-            </div>
-
-            <div
-              v-if="normalizedBonusScores[AbilityKey.STRENGTH]"
-              class="text-xs text-gray-500 dark:text-gray-400"
-            >
-              ({{ baseScores[AbilityKey.STRENGTH] }} +
-              {{ normalizedBonusScores[AbilityKey.STRENGTH] }})
-            </div>
-          </div>
-
-          <div class="rounded-xl bg-gray-50 p-2 text-center dark:bg-gray-900">
-            <div class="text-xs text-gray-500 dark:text-gray-400">ЛОВ</div>
-
-            <div class="text-lg font-semibold">
-              {{ finalScores[AbilityKey.DEXTERITY] }}
-              <span class="text-sm text-gray-500 dark:text-gray-400">
-                ({{ formatModifier(finalScores[AbilityKey.DEXTERITY]) }})
-              </span>
-            </div>
-
-            <div
-              v-if="normalizedBonusScores[AbilityKey.DEXTERITY]"
-              class="text-xs text-gray-500 dark:text-gray-400"
-            >
-              ({{ baseScores[AbilityKey.DEXTERITY] }} +
-              {{ normalizedBonusScores[AbilityKey.DEXTERITY] }})
-            </div>
-          </div>
-
-          <div class="rounded-xl bg-gray-50 p-2 text-center dark:bg-gray-900">
-            <div class="text-xs text-gray-500 dark:text-gray-400">ТЕЛ</div>
-
-            <div class="text-lg font-semibold">
-              {{ finalScores[AbilityKey.CONSTITUTION] }}
-              <span class="text-sm text-gray-500 dark:text-gray-400">
-                ({{ formatModifier(finalScores[AbilityKey.CONSTITUTION]) }})
-              </span>
-            </div>
-
-            <div
-              v-if="normalizedBonusScores[AbilityKey.CONSTITUTION]"
-              class="text-xs text-gray-500 dark:text-gray-400"
-            >
-              ({{ baseScores[AbilityKey.CONSTITUTION] }} +
-              {{ normalizedBonusScores[AbilityKey.CONSTITUTION] }})
-            </div>
-          </div>
-
-          <div class="rounded-xl bg-gray-50 p-2 text-center dark:bg-gray-900">
-            <div class="text-xs text-gray-500 dark:text-gray-400">ИНТ</div>
-
-            <div class="text-lg font-semibold">
-              {{ finalScores[AbilityKey.INTELLIGENCE] }}
-              <span class="text-sm text-gray-500 dark:text-gray-400">
-                ({{ formatModifier(finalScores[AbilityKey.INTELLIGENCE]) }})
-              </span>
-            </div>
-
-            <div
-              v-if="normalizedBonusScores[AbilityKey.INTELLIGENCE]"
-              class="text-xs text-gray-500 dark:text-gray-400"
-            >
-              ({{ baseScores[AbilityKey.INTELLIGENCE] }} +
-              {{ normalizedBonusScores[AbilityKey.INTELLIGENCE] }})
-            </div>
-          </div>
-
-          <div class="rounded-xl bg-gray-50 p-2 text-center dark:bg-gray-900">
-            <div class="text-xs text-gray-500 dark:text-gray-400">МДР</div>
-
-            <div class="text-lg font-semibold">
-              {{ finalScores[AbilityKey.WISDOM] }}
-              <span class="text-sm text-gray-500 dark:text-gray-400">
-                ({{ formatModifier(finalScores[AbilityKey.WISDOM]) }})
-              </span>
-            </div>
-
-            <div
-              v-if="normalizedBonusScores[AbilityKey.WISDOM]"
-              class="text-xs text-gray-500 dark:text-gray-400"
-            >
-              ({{ baseScores[AbilityKey.WISDOM] }} +
-              {{ normalizedBonusScores[AbilityKey.WISDOM] }})
-            </div>
-          </div>
-
-          <div class="rounded-xl bg-gray-50 p-2 text-center dark:bg-gray-900">
-            <div class="text-xs text-gray-500 dark:text-gray-400">ХАР</div>
-
-            <div class="text-lg font-semibold">
-              {{ finalScores[AbilityKey.CHARISMA] }}
-              <span class="text-sm text-gray-500 dark:text-gray-400">
-                ({{ formatModifier(finalScores[AbilityKey.CHARISMA]) }})
-              </span>
-            </div>
-
-            <div
-              v-if="normalizedBonusScores[AbilityKey.CHARISMA]"
-              class="text-xs text-gray-500 dark:text-gray-400"
-            >
-              ({{ baseScores[AbilityKey.CHARISMA] }} +
-              {{ normalizedBonusScores[AbilityKey.CHARISMA] }})
-            </div>
-          </div>
-        </div>
-
-        <div
-          class="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 dark:border-gray-800 dark:text-gray-200"
-        >
-          Сумма базовых характеристик:
-          <span class="font-semibold">{{ totalScore }}</span>
-
-          <span class="text-gray-500 dark:text-gray-400"> • </span>
-          С учётом бонусов:
-          <span class="font-semibold">{{ totalFinalScore }}</span>
-        </div>
-      </div>
+      <AbilityScoresDisplay
+        :base-scores="baseScores"
+        :final-scores="finalScores"
+        :bonus-scores="normalizedBonusScores"
+        :epic-boon-abilities="epicBoonAbilities"
+      />
     </UCard>
 
     <div class="space-y-4">
