@@ -1,5 +1,5 @@
 export enum RecentChangeAction {
-  ADD = 'ADD',
-  UPDATE = 'UPDATE',
-  DELETE = 'DELETE',
+  ADDED = 'Добавлено',
+  UPDATED = 'Обновлено',
+  DELETED = 'Удалено',
 }

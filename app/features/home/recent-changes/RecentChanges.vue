@@ -6,7 +6,10 @@
   interface RecentChangeItem {
     url: string;
     updatedAt: string;
-    action: RecentChangeAction | string;
+    action: {
+      type: RecentChangeAction;
+      name: string;
+    };
     name: {
       rus: string;
       eng: string;
@@ -33,34 +36,16 @@
     | 'secondary'
     | 'warning'
     | 'neutral' => {
-    // Проверка enum значений (когда бэкенд перейдет на enum)
-    if (action === RecentChangeAction.ADD) {
+    if (action === RecentChangeAction.ADDED) {
       return 'success';
     }
 
-    if (action === RecentChangeAction.UPDATE) {
+    if (action === RecentChangeAction.UPDATED) {
       return 'info';
     }
 
-    if (action === RecentChangeAction.DELETE) {
+    if (action === RecentChangeAction.DELETED) {
       return 'error';
-    }
-
-    // Временная поддержка русских строк (до перехода бэкенда на enum)
-    if (typeof action === 'string') {
-      const lowerAction = action.toLowerCase();
-
-      if (lowerAction.includes('добав')) {
-        return 'success';
-      }
-
-      if (lowerAction.includes('обнов')) {
-        return 'info';
-      }
-
-      if (lowerAction.includes('удал')) {
-        return 'error';
-      }
     }
 
     return 'neutral';
@@ -178,9 +163,9 @@
               <UBadge
                 size="sm"
                 variant="soft"
-                :color="getActionColor(item.action)"
+                :color="getActionColor(item.action.type)"
               >
-                {{ item.action }}
+                {{ item.action.name }}
               </UBadge>
             </div>
 
