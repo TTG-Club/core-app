@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { computed, ref } from 'vue';
+
   type FeatSelectResponse = {
     url: string;
     category: string;
@@ -60,24 +62,32 @@
   const search = ref('');
   const searchQuery = refDebounced(search, 250);
 
-  const categoriesKey = computed<string>(() =>
-    (props.categories ?? []).join('|'),
-  );
+  const categoriesList = computed<Array<string>>(() => props.categories ?? []);
+  const categoriesKey = computed<string>(() => categoriesList.value.join('|'));
 
   const excludeKey = computed<string>(() => props.excludeUrls.join('|'));
 
+  const requestCategories = computed<string | undefined>(() => {
+    if (categoriesList.value.length === 0) {
+      return undefined;
+    }
+
+    return categoriesList.value.join(',');
+  });
+
+  const asyncDataKey = computed<string>(() => {
+    return `feat-select-v2:${categoriesKey.value}:${excludeKey.value}`;
+  });
+
   const { data, status, refresh } = await useAsyncData<Array<FeatSelectItem>>(
-    'feat-select-v2',
+    () => asyncDataKey.value,
     async () => {
       const featLinks = await $fetch<Array<FeatSelectResponse>>(
         '/api/v2/feats/select',
         {
           method: 'get',
           query: {
-            categories:
-              props.categories && props.categories.length > 0
-                ? props.categories
-                : undefined,
+            categories: requestCategories.value,
             query:
               searchQuery.value.length >= 2 ? searchQuery.value : undefined,
           },
@@ -146,7 +156,7 @@
 
   const handleModelValueUpdate = (
     value: string | Array<string> | null | undefined,
-  ) => {
+  ): void => {
     if (value === null || value === undefined) {
       // нормализация "очистки" в пустое значение, без null
       model.value = '';
