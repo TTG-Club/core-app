@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { computed, ref, watch } from 'vue';
+
   import SelectFeat from '~ui/select/SelectFeat.vue';
   import SelectAbilities from '~ui/select/SelectAbilities.vue';
 
@@ -14,6 +16,13 @@
     increase: number;
     repeatability: boolean;
   };
+
+  type AbilityScoresLike =
+    | Partial<Record<AbilityKey, unknown>>
+    | null
+    | undefined;
+
+  type AbilityPickPayload = AbilityKey | Array<AbilityKey> | undefined;
 
   const level = defineModel<number>('level', { default: 1 });
 
@@ -37,18 +46,100 @@
     [AbilityKey.CHARISMA]: 0,
   });
 
-  const allowedAbilityKeys = computed<Array<AbilityKey>>(() =>
-    ABILITIES.map((a) => a.key),
-  );
+  const normalizeNumber = (value: unknown, fallback: number): number => {
+    if (typeof value !== 'number') {
+      return fallback;
+    }
+
+    return Number.isFinite(value) ? value : fallback;
+  };
+
+  const normalizeAbilityScores = (value: AbilityScoresLike): AbilityScores => {
+    const safeValue: Partial<Record<AbilityKey, unknown>> = value ?? {};
+
+    return {
+      [AbilityKey.STRENGTH]: normalizeNumber(safeValue[AbilityKey.STRENGTH], 0),
+      [AbilityKey.DEXTERITY]: normalizeNumber(
+        safeValue[AbilityKey.DEXTERITY],
+        0,
+      ),
+      [AbilityKey.CONSTITUTION]: normalizeNumber(
+        safeValue[AbilityKey.CONSTITUTION],
+        0,
+      ),
+      [AbilityKey.INTELLIGENCE]: normalizeNumber(
+        safeValue[AbilityKey.INTELLIGENCE],
+        0,
+      ),
+      [AbilityKey.WISDOM]: normalizeNumber(safeValue[AbilityKey.WISDOM], 0),
+      [AbilityKey.CHARISMA]: normalizeNumber(safeValue[AbilityKey.CHARISMA], 0),
+    };
+  };
+
+  const sameAbilityScores = (a: AbilityScores, b: AbilityScores): boolean => {
+    return (
+      a[AbilityKey.STRENGTH] === b[AbilityKey.STRENGTH] &&
+      a[AbilityKey.DEXTERITY] === b[AbilityKey.DEXTERITY] &&
+      a[AbilityKey.CONSTITUTION] === b[AbilityKey.CONSTITUTION] &&
+      a[AbilityKey.INTELLIGENCE] === b[AbilityKey.INTELLIGENCE] &&
+      a[AbilityKey.WISDOM] === b[AbilityKey.WISDOM] &&
+      a[AbilityKey.CHARISMA] === b[AbilityKey.CHARISMA]
+    );
+  };
+
+  const normalizeAbilityPickPayload = (
+    payload: AbilityPickPayload,
+  ): AbilityKey | undefined => {
+    if (!payload) {
+      return undefined;
+    }
+
+    if (Array.isArray(payload)) {
+      return payload[0];
+    }
+
+    return payload;
+  };
+
+  const normalizeSliderArgsToNumber = (
+    args: unknown[],
+    fallback: number,
+  ): number => {
+    const first = args[0];
+
+    if (Array.isArray(first)) {
+      return normalizeNumber(first[0], fallback);
+    }
+
+    return normalizeNumber(first, fallback);
+  };
+
+  const allowedAbilityKeys = computed<Array<AbilityKey>>(() => {
+    return ABILITIES.map((ability) => ability.key);
+  });
 
   const featSlots = computed<number>(() => {
-    const l = level.value;
+    const currentLevel = level.value;
 
-    if (l >= 19) return 5;
-    if (l >= 16) return 4;
-    if (l >= 12) return 3;
-    if (l >= 8) return 2;
-    if (l >= 4) return 1;
+    if (currentLevel >= 19) {
+      return 5;
+    }
+
+    if (currentLevel >= 16) {
+      return 4;
+    }
+
+    if (currentLevel >= 12) {
+      return 3;
+    }
+
+    if (currentLevel >= 8) {
+      return 2;
+    }
+
+    if (currentLevel >= 4) {
+      return 1;
+    }
 
     return 0;
   });
@@ -57,17 +148,33 @@
     const slots = featSlots.value;
     const levels: Array<number> = [];
 
-    if (slots >= 1) levels.push(4);
-    if (slots >= 2) levels.push(8);
-    if (slots >= 3) levels.push(12);
-    if (slots >= 4) levels.push(16);
-    if (slots >= 5) levels.push(19);
+    if (slots >= 1) {
+      levels.push(4);
+    }
+
+    if (slots >= 2) {
+      levels.push(8);
+    }
+
+    if (slots >= 3) {
+      levels.push(12);
+    }
+
+    if (slots >= 4) {
+      levels.push(16);
+    }
+
+    if (slots >= 5) {
+      levels.push(19);
+    }
 
     return levels;
   });
 
-  const featCategoriesForSlot = (index: number): Array<string> => {
-    if (index === 4) return ['EPIC_BOON'];
+  const featCategoriesForSlot = (slotIndex: number): Array<string> => {
+    if (slotIndex === 4) {
+      return ['EPIC_BOON'];
+    }
 
     return ['GENERAL'];
   };
@@ -85,8 +192,8 @@
     (slots) => {
       const next = feats.value.slice();
 
-      for (let i = slots; i < next.length; i += 1) {
-        next[i] = undefined;
+      for (let slotIndex = slots; slotIndex < next.length; slotIndex += 1) {
+        next[slotIndex] = undefined;
       }
 
       feats.value = next;
@@ -94,7 +201,6 @@
     { immediate: true },
   );
 
-  // meta: select?categories=...
   const categoriesToFetch = computed<Array<string>>(() => {
     const categories: Array<string> = ['GENERAL'];
 
@@ -105,11 +211,11 @@
     return categories;
   });
 
-  const categoriesKey = computed<string>(() =>
-    categoriesToFetch.value.join('|'),
-  );
+  const categoriesKey = computed<string>(() => {
+    return categoriesToFetch.value.join('|');
+  });
 
-  const { data: featSelectData, refresh: refreshFeatMeta } = await useAsyncData<
+  const { data: featSelectData } = await useAsyncData<
     Array<FeatSelectResponse>
   >(
     () => `feats-select-for-increase:${categoriesKey.value}`,
@@ -124,18 +230,16 @@
     { dedupe: 'defer', watch: [categoriesKey] },
   );
 
-  watch(categoriesKey, () => {
-    refreshFeatMeta();
-  });
-
   const featMetaByUrl = computed<Map<string, FeatSelectResponse>>(() => {
     const map = new Map<string, FeatSelectResponse>();
     const list = featSelectData.value;
 
-    if (!list) return map;
+    if (!list) {
+      return map;
+    }
 
-    for (const f of list) {
-      map.set(f.url, f);
+    for (const feat of list) {
+      map.set(feat.url, feat);
     }
 
     return map;
@@ -149,17 +253,18 @@
     if (Array.isArray(value)) {
       const first = value[0];
 
-      return first.length > 0 ? first : undefined;
+      return first && first.length > 0 ? first : undefined;
     }
 
     return value.length > 0 ? value : undefined;
   };
 
-  // Важно: для UI-селектов часто безопаснее не отдавать undefined как model-value.
   const normalizeFeatModelForSelect = (
     value: FeatModelValue,
   ): string | Array<string> => {
-    if (!value) return '';
+    if (!value) {
+      return '';
+    }
 
     return value;
   };
@@ -167,7 +272,9 @@
   const getFeatMeta = (
     url: string | undefined,
   ): FeatSelectResponse | undefined => {
-    if (!url) return undefined;
+    if (!url) {
+      return undefined;
+    }
 
     return featMetaByUrl.value.get(url);
   };
@@ -175,7 +282,9 @@
   const getFeatIncrease = (url: string | undefined): number => {
     const meta = getFeatMeta(url);
 
-    if (!meta) return 0;
+    if (!meta) {
+      return 0;
+    }
 
     return meta.increase > 0 ? meta.increase : 0;
   };
@@ -186,29 +295,32 @@
     const all = allowedAbilityKeys.value;
     const meta = getFeatMeta(url);
 
-    if (!meta) return all;
+    if (!meta) {
+      return all;
+    }
 
     const allowed = meta.abilities;
 
-    if (!allowed || allowed.length === 0) return all;
+    if (!allowed || allowed.length === 0) {
+      return all;
+    }
 
     const filtered: Array<AbilityKey> = [];
 
-    for (const a of allowed) {
-      if (all.includes(a)) {
-        filtered.push(a);
+    for (const abilityKey of allowed) {
+      if (all.includes(abilityKey)) {
+        filtered.push(abilityKey);
       }
     }
 
     return filtered;
   };
 
-  // --- exclude неповторяемых черт из других слотов ---
   const nonRepeatableSelectedUrls = computed<Set<string>>(() => {
     const set = new Set<string>();
 
-    for (let i = 0; i < featSlots.value; i += 1) {
-      const url = normalizeFeatUrl(feats.value[i]);
+    for (let slotIndex = 0; slotIndex < featSlots.value; slotIndex += 1) {
+      const url = normalizeFeatUrl(feats.value[slotIndex]);
 
       if (!url) {
         continue;
@@ -245,7 +357,6 @@
     return result;
   };
 
-  // --- селекты характеристик по increase ---
   const featAbilityPicks = ref<Array<Array<AbilityKey | undefined>>>([
     [],
     [],
@@ -254,54 +365,82 @@
     [],
   ]);
 
-  const ensureFeatAbilityPickLengths = () => {
+  const ensureSlotArray = (
+    next: Array<Array<AbilityKey | undefined>>,
+    slotIndex: number,
+  ): Array<AbilityKey | undefined> => {
+    const existing = next[slotIndex];
+
+    if (existing) {
+      return existing;
+    }
+
+    const created: Array<AbilityKey | undefined> = [];
+
+    next[slotIndex] = created;
+
+    return created;
+  };
+
+  const ensureFeatAbilityPickLengths = (): void => {
     const next = featAbilityPicks.value.slice();
 
-    for (let slot = 0; slot < next.length; slot += 1) {
-      if (slot >= featSlots.value) {
-        next[slot] = [];
+    for (let slotIndex = 0; slotIndex < next.length; slotIndex += 1) {
+      const slotArray = ensureSlotArray(next, slotIndex);
+
+      if (slotIndex >= featSlots.value) {
+        slotArray.length = 0;
 
         continue;
       }
 
-      const featUrl = normalizeFeatUrl(feats.value[slot]);
+      const featUrl = normalizeFeatUrl(feats.value[slotIndex]);
       const increase = getFeatIncrease(featUrl);
 
       if (!featUrl || increase === 0) {
-        next[slot] = [];
+        slotArray.length = 0;
 
         continue;
       }
 
       const allowed = getFeatAllowedAbilities(featUrl);
 
-      const current = next[slot] ? next[slot].slice() : [];
       const resized: Array<AbilityKey | undefined> = [];
+      const current = slotArray.slice();
 
-      for (let i = 0; i < increase; i += 1) {
-        resized.push(current[i]);
+      for (let pickIndex = 0; pickIndex < increase; pickIndex += 1) {
+        resized.push(current[pickIndex]);
       }
 
-      const cleaned: Array<AbilityKey | undefined> = resized.map((v) => {
-        if (!v) return undefined;
+      const cleaned: Array<AbilityKey | undefined> = resized.map((pick) => {
+        if (!pick) {
+          return undefined;
+        }
 
-        return allowed.includes(v) ? v : undefined;
+        return allowed.includes(pick) ? pick : undefined;
       });
 
       if (allowed.length === 1) {
         const single = allowed[0];
+
+        if (!single) {
+          next[slotIndex] = cleaned;
+
+          continue;
+        }
+
         const filled: Array<AbilityKey> = [];
 
-        for (let i = 0; i < increase; i += 1) {
+        for (let pickIndex = 0; pickIndex < increase; pickIndex += 1) {
           filled.push(single);
         }
 
-        next[slot] = filled;
+        next[slotIndex] = filled;
 
         continue;
       }
 
-      next[slot] = cleaned;
+      next[slotIndex] = cleaned;
     }
 
     featAbilityPicks.value = next;
@@ -315,91 +454,102 @@
     slotIndex: number,
     pickIndex: number,
     value: AbilityKey | undefined,
-  ) => {
+  ): void => {
     const next = featAbilityPicks.value.slice();
-    const slot = next[slotIndex] ? next[slotIndex].slice() : [];
+    const slotPicks = next[slotIndex] ? next[slotIndex].slice() : [];
 
-    slot[pickIndex] = value;
-    next[slotIndex] = slot;
+    slotPicks[pickIndex] = value;
+    next[slotIndex] = slotPicks;
 
     featAbilityPicks.value = next;
   };
 
   const computedBonus = computed<AbilityScores>(() => {
-    const b = emptyBonus();
+    const nextBonus = emptyBonus();
 
-    for (let slot = 0; slot < featSlots.value; slot += 1) {
-      const featUrl = normalizeFeatUrl(feats.value[slot]);
+    for (let slotIndex = 0; slotIndex < featSlots.value; slotIndex += 1) {
+      const featUrl = normalizeFeatUrl(feats.value[slotIndex]);
       const increase = getFeatIncrease(featUrl);
 
       if (!featUrl || increase <= 0) {
         continue;
       }
 
-      const picks = featAbilityPicks.value[slot] || [];
+      const picks = featAbilityPicks.value[slotIndex] ?? [];
 
-      for (let i = 0; i < increase; i += 1) {
-        const a = picks[i];
+      for (let pickIndex = 0; pickIndex < increase; pickIndex += 1) {
+        const abilityKey = picks[pickIndex];
 
-        if (a) {
-          b[a] += 1;
+        if (abilityKey) {
+          nextBonus[abilityKey] += 1;
         }
       }
     }
 
-    return b;
+    return nextBonus;
   });
 
   watch(
     computedBonus,
     (next) => {
-      bonus.value = next;
+      const normalizedNext = normalizeAbilityScores(next);
+      const normalizedCurrent = normalizeAbilityScores(bonus.value);
+
+      if (sameAbilityScores(normalizedCurrent, normalizedNext)) {
+        return;
+      }
+
+      bonus.value = normalizedNext;
     },
-    { immediate: true, deep: true },
+    { immediate: true },
   );
 
-  const updateFeat = (index: number, value: FeatModelValue) => {
+  const updateFeat = (slotIndex: number, value: FeatModelValue): void => {
     const next = feats.value.slice();
 
-    if (index < 0 || index >= next.length) {
+    if (slotIndex < 0 || slotIndex >= next.length) {
       return;
     }
 
-    next[index] = value;
+    next[slotIndex] = value;
     feats.value = next;
   };
 
-  const handleLevelChange = (next: number) => {
-    const normalized = Math.round(next);
+  const handleLevelChange = (...args: unknown[]): void => {
+    const raw = normalizeSliderArgsToNumber(args, 1);
+    const rounded = Math.round(raw);
 
-    if (normalized < 1) {
+    if (rounded < 1) {
       level.value = 1;
 
       return;
     }
 
-    if (normalized > 20) {
+    if (rounded > 20) {
       level.value = 20;
 
       return;
     }
 
-    level.value = normalized;
+    level.value = rounded;
   };
 
-  // слоты 0..4, эпическая — это 5-й слот (индекс 4)
   const isEpicSlot = (slotIndex: number): boolean => slotIndex === 4;
 
   const getIncreaseLabel = (url: string | undefined): string => {
     const meta = getFeatMeta(url);
 
-    if (!meta) return 'Данные черты ещё не загружены.';
-    if (meta.increase > 0) return `Повышение характеристик: ${meta.increase}`;
+    if (!meta) {
+      return 'Данные черты ещё не загружены.';
+    }
+
+    if (meta.increase > 0) {
+      return `Повышение характеристик: ${meta.increase}`;
+    }
 
     return 'Эта черта не повышает характеристики.';
   };
 
-  // Ключ для SelectAbilities: при смене черты инпуты не должны "переиспользоваться"
   const getFeatAbilityPickKey = (
     slotIndex: number,
     pickIndex: number,
@@ -409,12 +559,11 @@
     return `${featUrl || 'none'}:${slotIndex}:${pickIndex}`;
   };
 
-  // Ключ для SelectFeat: принудительно ремоунтим при смене выбора/категорий
   const getFeatSelectKey = (slotIndex: number): string => {
-    const cats = featCategoriesForSlot(slotIndex).join(',');
+    const categories = featCategoriesForSlot(slotIndex).join(',');
     const url = normalizeFeatUrl(feats.value[slotIndex]) || 'none';
 
-    return `${slotIndex}:${cats}:${url}`;
+    return `${slotIndex}:${categories}:${url}`;
   };
 </script>
 
@@ -447,7 +596,7 @@
 
       <div class="flex flex-col gap-3">
         <div
-          v-for="(featLevel, idx) in featSlotLevels"
+          v-for="(featLevel, slotIndex) in featSlotLevels"
           :key="featLevel"
           class="rounded-xl border border-gray-200 p-3 dark:border-gray-800"
         >
@@ -457,7 +606,7 @@
             <span>Уровень {{ featLevel }}</span>
 
             <span
-              v-if="isEpicSlot(idx)"
+              v-if="isEpicSlot(slotIndex)"
               class="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900 dark:bg-amber-900/30 dark:text-amber-200"
             >
               Эпическая
@@ -465,43 +614,54 @@
           </div>
 
           <SelectFeat
-            :key="getFeatSelectKey(idx)"
-            :categories="featCategoriesForSlot(idx)"
-            :exclude-urls="excludeUrlsForSlot(idx)"
-            :model-value="normalizeFeatModelForSelect(feats[idx])"
-            @update:model-value="(v) => updateFeat(idx, v)"
+            :key="getFeatSelectKey(slotIndex)"
+            :categories="featCategoriesForSlot(slotIndex)"
+            :exclude-urls="excludeUrlsForSlot(slotIndex)"
+            :model-value="normalizeFeatModelForSelect(feats[slotIndex])"
+            @update:model-value="(payload) => updateFeat(slotIndex, payload)"
           />
 
           <div
-            v-if="normalizeFeatUrl(feats[idx])"
+            v-if="normalizeFeatUrl(feats[slotIndex])"
             class="mt-2 text-xs text-gray-500 dark:text-gray-400"
           >
-            {{ getIncreaseLabel(normalizeFeatUrl(feats[idx])) }}
+            {{ getIncreaseLabel(normalizeFeatUrl(feats[slotIndex])) }}
           </div>
 
           <div
             v-if="
-              normalizeFeatUrl(feats[idx]) &&
-              getFeatIncrease(normalizeFeatUrl(feats[idx])) > 0
+              normalizeFeatUrl(feats[slotIndex]) &&
+              getFeatIncrease(normalizeFeatUrl(feats[slotIndex])) > 0
             "
             class="mt-3 space-y-2"
           >
             <div class="text-xs text-gray-500 dark:text-gray-400">
               Выберите характеристики ({{
-                getFeatIncrease(normalizeFeatUrl(feats[idx]))
+                getFeatIncrease(normalizeFeatUrl(feats[slotIndex]))
               }}):
             </div>
 
             <div class="grid grid-cols-1 gap-2">
               <div
-                v-for="i in getFeatIncrease(normalizeFeatUrl(feats[idx]))"
-                :key="getFeatAbilityPickKey(idx, i - 1)"
+                v-for="pickIndex in getFeatIncrease(
+                  normalizeFeatUrl(feats[slotIndex]),
+                )"
+                :key="getFeatAbilityPickKey(slotIndex, pickIndex - 1)"
               >
                 <SelectAbilities
-                  :model-value="featAbilityPicks[idx]?.[i - 1]"
-                  :only="getFeatAllowedAbilities(normalizeFeatUrl(feats[idx]))"
+                  :model-value="featAbilityPicks[slotIndex]?.[pickIndex - 1]"
+                  :only="
+                    getFeatAllowedAbilities(normalizeFeatUrl(feats[slotIndex]))
+                  "
                   placeholder="Выберите характеристику (+1)"
-                  @update:model-value="(v) => setFeatAbilityPick(idx, i - 1, v)"
+                  @update:model-value="
+                    (payload) =>
+                      setFeatAbilityPick(
+                        slotIndex,
+                        pickIndex - 1,
+                        normalizeAbilityPickPayload(payload),
+                      )
+                  "
                 />
               </div>
             </div>

@@ -4,7 +4,7 @@
   import BonusesTab from './BonusesTab.vue';
   import RandomSetComponent from './RandomSetComponent.vue';
   import PointBayComponent from './PointBayComponent.vue';
-  import ArrayComponent from './ArrayComponent.vue';
+  import ArraySetComponent from './ArraySetComponent.vue';
 
   import { AbilityKey } from '~/shared/types';
   import type { BaseAbilityScores } from '~/shared/types';
@@ -19,6 +19,11 @@
   type AbilityShort = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
   type ShortAbilityScores = Record<AbilityShort, number>;
+
+  type BaseAbilityScoresLike =
+    | Partial<Record<AbilityKey, unknown>>
+    | null
+    | undefined;
 
   const tabs: Array<TabItem> = [
     { key: 'bonuses', label: 'Бонусы' },
@@ -64,61 +69,67 @@
     return Number.isFinite(value) ? value : fallback;
   };
 
-  const normalizeBaseScores = (value: BaseAbilityScores): BaseAbilityScores => {
+  const normalizeBaseScores = (
+    value: BaseAbilityScoresLike,
+  ): BaseAbilityScores => {
+    const safeValue: Partial<Record<AbilityKey, unknown>> = value ?? {};
+
     return {
       [AbilityKey.STRENGTH]: normalizeNumber(
-        value[AbilityKey.STRENGTH],
+        safeValue[AbilityKey.STRENGTH],
         defaultBaseScores[AbilityKey.STRENGTH],
       ),
       [AbilityKey.DEXTERITY]: normalizeNumber(
-        value[AbilityKey.DEXTERITY],
+        safeValue[AbilityKey.DEXTERITY],
         defaultBaseScores[AbilityKey.DEXTERITY],
       ),
       [AbilityKey.CONSTITUTION]: normalizeNumber(
-        value[AbilityKey.CONSTITUTION],
+        safeValue[AbilityKey.CONSTITUTION],
         defaultBaseScores[AbilityKey.CONSTITUTION],
       ),
       [AbilityKey.INTELLIGENCE]: normalizeNumber(
-        value[AbilityKey.INTELLIGENCE],
+        safeValue[AbilityKey.INTELLIGENCE],
         defaultBaseScores[AbilityKey.INTELLIGENCE],
       ),
       [AbilityKey.WISDOM]: normalizeNumber(
-        value[AbilityKey.WISDOM],
+        safeValue[AbilityKey.WISDOM],
         defaultBaseScores[AbilityKey.WISDOM],
       ),
       [AbilityKey.CHARISMA]: normalizeNumber(
-        value[AbilityKey.CHARISMA],
+        safeValue[AbilityKey.CHARISMA],
         defaultBaseScores[AbilityKey.CHARISMA],
       ),
     };
   };
 
   const normalizeBonusScores = (
-    value: BaseAbilityScores,
+    value: BaseAbilityScoresLike,
   ): BaseAbilityScores => {
+    const safeValue: Partial<Record<AbilityKey, unknown>> = value ?? {};
+
     return {
       [AbilityKey.STRENGTH]: normalizeNumber(
-        value[AbilityKey.STRENGTH],
+        safeValue[AbilityKey.STRENGTH],
         defaultBonusScores[AbilityKey.STRENGTH],
       ),
       [AbilityKey.DEXTERITY]: normalizeNumber(
-        value[AbilityKey.DEXTERITY],
+        safeValue[AbilityKey.DEXTERITY],
         defaultBonusScores[AbilityKey.DEXTERITY],
       ),
       [AbilityKey.CONSTITUTION]: normalizeNumber(
-        value[AbilityKey.CONSTITUTION],
+        safeValue[AbilityKey.CONSTITUTION],
         defaultBonusScores[AbilityKey.CONSTITUTION],
       ),
       [AbilityKey.INTELLIGENCE]: normalizeNumber(
-        value[AbilityKey.INTELLIGENCE],
+        safeValue[AbilityKey.INTELLIGENCE],
         defaultBonusScores[AbilityKey.INTELLIGENCE],
       ),
       [AbilityKey.WISDOM]: normalizeNumber(
-        value[AbilityKey.WISDOM],
+        safeValue[AbilityKey.WISDOM],
         defaultBonusScores[AbilityKey.WISDOM],
       ),
       [AbilityKey.CHARISMA]: normalizeNumber(
-        value[AbilityKey.CHARISMA],
+        safeValue[AbilityKey.CHARISMA],
         defaultBonusScores[AbilityKey.CHARISMA],
       ),
     };
@@ -191,38 +202,36 @@
 
   const selectedTabIndex = ref<number>(0);
 
+  const clampTabIndex = (index: number): number => {
+    const minIndex = 0;
+    const maxIndex = Math.max(0, tabs.length - 1);
+
+    if (index < minIndex) {
+      return minIndex;
+    }
+
+    if (index > maxIndex) {
+      return maxIndex;
+    }
+
+    return index;
+  };
+
+  // v-model proxy: гарантирует подсветку "Бонусы" (индекс 0) при любых некорректных значениях
+  const tabsModelValue = computed<number>({
+    get() {
+      return clampTabIndex(selectedTabIndex.value ?? 0);
+    },
+    set(next) {
+      selectedTabIndex.value = clampTabIndex(next);
+    },
+  });
+
   const selectedMode = computed<Mode>(() => {
-    const item = tabs[selectedTabIndex.value];
+    const item = tabs[clampTabIndex(tabsModelValue.value)];
 
     return item ? item.key : 'bonuses';
   });
-
-  const toIndex = (payload: string | number): number | null => {
-    if (typeof payload === 'number') {
-      return Number.isFinite(payload) ? payload : null;
-    }
-
-    const parsed = Number(payload);
-
-    if (!Number.isFinite(parsed)) {
-      return null;
-    }
-
-    return parsed;
-  };
-
-  const handleTabChange = (payload: string | number): void => {
-    const nextIndex = toIndex(payload);
-
-    if (nextIndex === null) {
-      return;
-    }
-
-    selectedTabIndex.value = nextIndex;
-  };
-
-  // ---------------- Source of truth: model ----------------
-  // Important: keep object identity stable (cache), otherwise deep watchers / consumers can thrash.
 
   const baseCache = ref<BaseAbilityScores>(normalizeBaseScores(model.value));
 
@@ -280,21 +289,23 @@
   });
 
   const finalScores = computed<BaseAbilityScores>(() => {
-    const b = normalizedBonusScores.value;
+    const bonus = normalizedBonusScores.value;
 
     return {
       [AbilityKey.STRENGTH]:
-        baseScores.value[AbilityKey.STRENGTH] + b[AbilityKey.STRENGTH],
+        baseScores.value[AbilityKey.STRENGTH] + bonus[AbilityKey.STRENGTH],
       [AbilityKey.DEXTERITY]:
-        baseScores.value[AbilityKey.DEXTERITY] + b[AbilityKey.DEXTERITY],
+        baseScores.value[AbilityKey.DEXTERITY] + bonus[AbilityKey.DEXTERITY],
       [AbilityKey.CONSTITUTION]:
-        baseScores.value[AbilityKey.CONSTITUTION] + b[AbilityKey.CONSTITUTION],
+        baseScores.value[AbilityKey.CONSTITUTION] +
+        bonus[AbilityKey.CONSTITUTION],
       [AbilityKey.INTELLIGENCE]:
-        baseScores.value[AbilityKey.INTELLIGENCE] + b[AbilityKey.INTELLIGENCE],
+        baseScores.value[AbilityKey.INTELLIGENCE] +
+        bonus[AbilityKey.INTELLIGENCE],
       [AbilityKey.WISDOM]:
-        baseScores.value[AbilityKey.WISDOM] + b[AbilityKey.WISDOM],
+        baseScores.value[AbilityKey.WISDOM] + bonus[AbilityKey.WISDOM],
       [AbilityKey.CHARISMA]:
-        baseScores.value[AbilityKey.CHARISMA] + b[AbilityKey.CHARISMA],
+        baseScores.value[AbilityKey.CHARISMA] + bonus[AbilityKey.CHARISMA],
     };
   });
 
@@ -334,26 +345,20 @@
 <template>
   <div class="space-y-4">
     <UTabs
-      :model-value="selectedTabIndex"
+      v-model="tabsModelValue"
       :items="tabs"
       class="w-full"
-      @update:model-value="handleTabChange"
+      :ui="{
+        list: 'rounded-xl bg-gray-100 p-1 dark:bg-gray-900',
+        marker: 'rounded-lg bg-white shadow-sm dark:bg-gray-800',
+        tab: 'px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300',
+        active: 'text-gray-900 dark:text-gray-50',
+      }"
     />
 
     <UCard>
       <div class="space-y-3">
-        <div class="text-sm font-semibold">Сводка</div>
-
-        <div
-          class="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 dark:border-gray-800 dark:text-gray-200"
-        >
-          Сумма базовых характеристик:
-          <span class="font-semibold">{{ totalScore }}</span>
-
-          <span class="text-gray-500 dark:text-gray-400"> • </span>
-          С учётом бонусов:
-          <span class="font-semibold">{{ totalFinalScore }}</span>
-        </div>
+        <div class="text-sm font-semibold">Характеристики</div>
 
         <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
           <div class="rounded-xl bg-gray-50 p-2 text-center dark:bg-gray-900">
@@ -470,6 +475,17 @@
             </div>
           </div>
         </div>
+
+        <div
+          class="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 dark:border-gray-800 dark:text-gray-200"
+        >
+          Сумма базовых характеристик:
+          <span class="font-semibold">{{ totalScore }}</span>
+
+          <span class="text-gray-500 dark:text-gray-400"> • </span>
+          С учётом бонусов:
+          <span class="font-semibold">{{ totalFinalScore }}</span>
+        </div>
       </div>
     </UCard>
 
@@ -490,7 +506,7 @@
           v-model="shortScores"
         />
 
-        <ArrayComponent
+        <ArraySetComponent
           v-else
           v-model="shortScores"
         />
