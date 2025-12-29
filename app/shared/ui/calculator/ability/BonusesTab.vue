@@ -1,11 +1,16 @@
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue';
 
-  import FeatPicker from './FeatPicker.vue';
-  import BackgroundAbilityBonus from '~ui/calculator/ability/BackgroundAbilityBonus.vue';
+  import SelectFeatBonuses from './SelectFeatBonuses.vue';
+  import SelectBackgroundBonuses from '~ui/calculator/ability/SelectBackgroundBonuses.vue';
 
   import { AbilityKey } from '~/shared/types';
   import type { BaseAbilityScores } from '~/shared/types';
+
+  type BaseAbilityScoresLike =
+    | Partial<Record<AbilityKey, unknown>>
+    | null
+    | undefined;
 
   const bonus = defineModel<BaseAbilityScores>('bonus', {
     required: true,
@@ -19,6 +24,38 @@
       [AbilityKey.INTELLIGENCE]: 0,
       [AbilityKey.WISDOM]: 0,
       [AbilityKey.CHARISMA]: 0,
+    };
+  };
+
+  const normalizeNumber = (value: unknown, fallback: number): number => {
+    if (typeof value !== 'number') {
+      return fallback;
+    }
+
+    return Number.isFinite(value) ? value : fallback;
+  };
+
+  const normalizeBaseScores = (
+    value: BaseAbilityScoresLike,
+  ): BaseAbilityScores => {
+    const safeValue: Partial<Record<AbilityKey, unknown>> = value ?? {};
+
+    return {
+      [AbilityKey.STRENGTH]: normalizeNumber(safeValue[AbilityKey.STRENGTH], 0),
+      [AbilityKey.DEXTERITY]: normalizeNumber(
+        safeValue[AbilityKey.DEXTERITY],
+        0,
+      ),
+      [AbilityKey.CONSTITUTION]: normalizeNumber(
+        safeValue[AbilityKey.CONSTITUTION],
+        0,
+      ),
+      [AbilityKey.INTELLIGENCE]: normalizeNumber(
+        safeValue[AbilityKey.INTELLIGENCE],
+        0,
+      ),
+      [AbilityKey.WISDOM]: normalizeNumber(safeValue[AbilityKey.WISDOM], 0),
+      [AbilityKey.CHARISMA]: normalizeNumber(safeValue[AbilityKey.CHARISMA], 0),
     };
   };
 
@@ -40,30 +77,45 @@
   const featBonus = ref<BaseAbilityScores>(emptyScores());
 
   const totalBonus = computed<BaseAbilityScores>(() => {
-    const bg = backgroundBonus.value;
-    const ft = featBonus.value;
+    const normalizedBackgroundBonus = normalizeBaseScores(
+      backgroundBonus.value,
+    );
+
+    const normalizedFeatBonus = normalizeBaseScores(featBonus.value);
 
     return {
-      [AbilityKey.STRENGTH]: bg[AbilityKey.STRENGTH] + ft[AbilityKey.STRENGTH],
+      [AbilityKey.STRENGTH]:
+        normalizedBackgroundBonus[AbilityKey.STRENGTH] +
+        normalizedFeatBonus[AbilityKey.STRENGTH],
       [AbilityKey.DEXTERITY]:
-        bg[AbilityKey.DEXTERITY] + ft[AbilityKey.DEXTERITY],
+        normalizedBackgroundBonus[AbilityKey.DEXTERITY] +
+        normalizedFeatBonus[AbilityKey.DEXTERITY],
       [AbilityKey.CONSTITUTION]:
-        bg[AbilityKey.CONSTITUTION] + ft[AbilityKey.CONSTITUTION],
+        normalizedBackgroundBonus[AbilityKey.CONSTITUTION] +
+        normalizedFeatBonus[AbilityKey.CONSTITUTION],
       [AbilityKey.INTELLIGENCE]:
-        bg[AbilityKey.INTELLIGENCE] + ft[AbilityKey.INTELLIGENCE],
-      [AbilityKey.WISDOM]: bg[AbilityKey.WISDOM] + ft[AbilityKey.WISDOM],
-      [AbilityKey.CHARISMA]: bg[AbilityKey.CHARISMA] + ft[AbilityKey.CHARISMA],
+        normalizedBackgroundBonus[AbilityKey.INTELLIGENCE] +
+        normalizedFeatBonus[AbilityKey.INTELLIGENCE],
+      [AbilityKey.WISDOM]:
+        normalizedBackgroundBonus[AbilityKey.WISDOM] +
+        normalizedFeatBonus[AbilityKey.WISDOM],
+      [AbilityKey.CHARISMA]:
+        normalizedBackgroundBonus[AbilityKey.CHARISMA] +
+        normalizedFeatBonus[AbilityKey.CHARISMA],
     };
   });
 
   watch(
     totalBonus,
     (next) => {
-      if (sameBaseScores(bonus.value, next)) {
+      const normalizedNext = normalizeBaseScores(next);
+      const normalizedCurrent = normalizeBaseScores(bonus.value);
+
+      if (sameBaseScores(normalizedCurrent, normalizedNext)) {
         return;
       }
 
-      bonus.value = next;
+      bonus.value = normalizedNext;
     },
     { immediate: true },
   );
@@ -72,11 +124,11 @@
 <template>
   <div class="space-y-4">
     <UCard>
-      <BackgroundAbilityBonus v-model:bonus="backgroundBonus" />
+      <SelectBackgroundBonuses v-model:bonus="backgroundBonus" />
     </UCard>
 
     <UCard>
-      <FeatPicker v-model:bonus="featBonus" />
+      <SelectFeatBonuses v-model:bonus="featBonus" />
     </UCard>
   </div>
 </template>

@@ -79,12 +79,18 @@
   const randomIntInclusive = (min: number, max: number): D6 => {
     const range = max - min + 1;
 
+    if (range <= 0) {
+      return toD6(min);
+    }
+
     if (typeof window !== 'undefined' && window.crypto) {
       const buf = new Uint32Array(1);
 
       window.crypto.getRandomValues(buf);
 
-      return toD6(min + (buf[0] % range));
+      const randomUint32 = buf[0] ?? 0;
+
+      return toD6(min + (randomUint32 % range));
     }
 
     return toD6(min + Math.floor(Math.random() * range));

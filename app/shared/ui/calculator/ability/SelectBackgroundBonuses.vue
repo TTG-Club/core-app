@@ -12,6 +12,11 @@
 
   type AbilityScores = Record<AbilityKey, number>;
 
+  type AbilityScoresLike =
+    | Partial<Record<AbilityKey, unknown>>
+    | null
+    | undefined;
+
   const backgroundUrl = defineModel<string | undefined>('backgroundUrl', {
     default: undefined,
   });
@@ -38,6 +43,36 @@
     };
   };
 
+  const normalizeNumber = (value: unknown, fallback: number): number => {
+    if (typeof value !== 'number') {
+      return fallback;
+    }
+
+    return Number.isFinite(value) ? value : fallback;
+  };
+
+  const normalizeAbilityScores = (value: AbilityScoresLike): AbilityScores => {
+    const safeValue: Partial<Record<AbilityKey, unknown>> = value ?? {};
+
+    return {
+      [AbilityKey.STRENGTH]: normalizeNumber(safeValue[AbilityKey.STRENGTH], 0),
+      [AbilityKey.DEXTERITY]: normalizeNumber(
+        safeValue[AbilityKey.DEXTERITY],
+        0,
+      ),
+      [AbilityKey.CONSTITUTION]: normalizeNumber(
+        safeValue[AbilityKey.CONSTITUTION],
+        0,
+      ),
+      [AbilityKey.INTELLIGENCE]: normalizeNumber(
+        safeValue[AbilityKey.INTELLIGENCE],
+        0,
+      ),
+      [AbilityKey.WISDOM]: normalizeNumber(safeValue[AbilityKey.WISDOM], 0),
+      [AbilityKey.CHARISMA]: normalizeNumber(safeValue[AbilityKey.CHARISMA], 0),
+    };
+  };
+
   const sameAbilityScores = (a: AbilityScores, b: AbilityScores): boolean => {
     return (
       a[AbilityKey.STRENGTH] === b[AbilityKey.STRENGTH] &&
@@ -50,27 +85,27 @@
   };
 
   const addBonus = (
-    b: AbilityScores,
-    a: AbilityKey | undefined,
+    currentBonus: AbilityScores,
+    abilityKey: AbilityKey | undefined,
     value: number,
   ): void => {
-    if (!a) {
+    if (!abilityKey) {
       return;
     }
 
-    b[a] += value;
+    currentBonus[abilityKey] += value;
   };
 
   const allowedAbilityKeys = computed<Array<AbilityKey>>(() => {
-    return ABILITIES.map((a) => a.key);
+    return ABILITIES.map((ability) => ability.key);
   });
 
   const abilityLookup = computed<Map<string, AbilityKey>>(() => {
     const map = new Map<string, AbilityKey>();
 
-    for (const a of ABILITIES) {
-      map.set(String(a.key).toLowerCase(), a.key);
-      map.set(String(a.shortKey).toLowerCase(), a.key);
+    for (const ability of ABILITIES) {
+      map.set(String(ability.key).toLowerCase(), ability.key);
+      map.set(String(ability.shortKey).toLowerCase(), ability.key);
     }
 
     // compatibility
@@ -131,8 +166,8 @@
       const map = new Map<string, BackgroundSelectResponse>();
       const list = backgroundSelectData.value ?? [];
 
-      for (const bg of list) {
-        map.set(bg.url, bg);
+      for (const background of list) {
+        map.set(background.url, background);
       }
 
       return map;
@@ -150,23 +185,23 @@
       return [];
     }
 
-    const bg = backgroundByUrl.value.get(url);
+    const background = backgroundByUrl.value.get(url);
 
-    if (!bg) {
+    if (!background) {
       return [];
     }
 
     const result: Array<AbilityKey> = [];
 
-    for (const raw of bg.abilityScores) {
-      const a = normalizeAbilityFromApi(raw);
+    for (const rawAbilityKey of background.abilityScores) {
+      const normalized = normalizeAbilityFromApi(rawAbilityKey);
 
-      if (!a) {
+      if (!normalized) {
         continue;
       }
 
-      if (!result.includes(a)) {
-        result.push(a);
+      if (!result.includes(normalized)) {
+        result.push(normalized);
       }
     }
 
@@ -204,23 +239,23 @@
   );
 
   const keepOnlyAllowed = (): void => {
-    const opts = backgroundAbilityOptions.value;
+    const options = backgroundAbilityOptions.value;
 
-    if (opts.length !== 3) {
+    if (options.length !== 3) {
       resetPicks();
 
       return;
     }
 
-    if (pick1.value && !opts.includes(pick1.value)) {
+    if (pick1.value && !options.includes(pick1.value)) {
       pick1.value = undefined;
     }
 
-    if (pick2.value && !opts.includes(pick2.value)) {
+    if (pick2.value && !options.includes(pick2.value)) {
       pick2.value = undefined;
     }
 
-    if (pick3.value && !opts.includes(pick3.value)) {
+    if (pick3.value && !options.includes(pick3.value)) {
       pick3.value = undefined;
     }
   };
@@ -229,28 +264,28 @@
   watch([pick1, pick2, pick3], keepOnlyAllowed);
 
   const selectedPicks = computed<Array<AbilityKey>>(() => {
-    const arr: Array<AbilityKey> = [];
+    const selected: Array<AbilityKey> = [];
 
     if (pick1.value) {
-      arr.push(pick1.value);
+      selected.push(pick1.value);
     }
 
     if (pick2.value) {
-      arr.push(pick2.value);
+      selected.push(pick2.value);
     }
 
     if (pick3.value) {
-      arr.push(pick3.value);
+      selected.push(pick3.value);
     }
 
-    return arr;
+    return selected;
   });
 
   const countSelected = (value: AbilityKey): number => {
     let count = 0;
 
-    for (const a of selectedPicks.value) {
-      if (a === value) {
+    for (const selectedAbility of selectedPicks.value) {
+      if (selectedAbility === value) {
         count += 1;
       }
     }
@@ -263,18 +298,18 @@
   ): Array<AbilityKey> => {
     const excluded: Array<AbilityKey> = [];
 
-    for (const a of backgroundAbilityOptions.value) {
-      const count = countSelected(a);
+    for (const option of backgroundAbilityOptions.value) {
+      const selectedCount = countSelected(option);
 
-      if (count < 2) {
+      if (selectedCount < 2) {
         continue;
       }
 
-      if (current && current === a) {
+      if (current && current === option) {
         continue;
       }
 
-      excluded.push(a);
+      excluded.push(option);
     }
 
     return excluded;
@@ -297,46 +332,45 @@
       return emptyBonus();
     }
 
-    const a1 = pick1.value;
-    const a2 = pick2.value;
-    const a3 = pick3.value;
+    const firstPick = pick1.value;
+    const secondPick = pick2.value;
+    const thirdPick = pick3.value;
 
-    if (a1 && a2 && a3) {
-      const b = emptyBonus();
+    if (firstPick && secondPick && thirdPick) {
+      const nextBonus = emptyBonus();
 
-      addBonus(b, a1, 1);
-      addBonus(b, a2, 1);
-      addBonus(b, a3, 1);
+      addBonus(nextBonus, firstPick, 1);
+      addBonus(nextBonus, secondPick, 1);
+      addBonus(nextBonus, thirdPick, 1);
 
-      return b;
+      return nextBonus;
     }
 
-    if (a1 && a2 && !a3) {
-      const b = emptyBonus();
+    if (firstPick && secondPick && !thirdPick) {
+      const nextBonus = emptyBonus();
 
-      addBonus(b, a1, 2);
-      addBonus(b, a2, 1);
+      addBonus(nextBonus, firstPick, 2);
+      addBonus(nextBonus, secondPick, 1);
 
-      return b;
+      return nextBonus;
     }
 
     return emptyBonus();
   });
 
-  // IMPORTANT: do not emit v-model updates during SSR setup (can cause recursive SSR renders)
-  if (import.meta.client) {
-    watch(
-      computedBonus,
-      (next) => {
-        if (sameAbilityScores(bonus.value, next)) {
-          return;
-        }
+  watch(
+    computedBonus,
+    (next) => {
+      const normalized = normalizeAbilityScores(next);
 
-        bonus.value = next;
-      },
-      { immediate: true },
-    );
-  }
+      if (sameAbilityScores(normalizeAbilityScores(bonus.value), normalized)) {
+        return;
+      }
+
+      bonus.value = normalized;
+    },
+    { immediate: true },
+  );
 </script>
 
 <template>
@@ -355,7 +389,7 @@
 
       <div class="text-sm text-gray-500 dark:text-gray-400">
         Выберите характеристики. Одна и та же характеристика может встречаться
-        дважды (но не три раза).
+        дважды (но не трижды).
       </div>
 
       <div

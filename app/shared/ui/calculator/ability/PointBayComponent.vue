@@ -319,7 +319,6 @@
             </div>
 
             <div class="text-xs text-gray-500 dark:text-gray-400">
-              Значение: <span class="font-semibold">{{ model[a] }}</span> ·
               Стоимость: {{ pointCost(model[a]) }} · Мод:
               {{ modifierLabel(model[a]) }}
             </div>
@@ -335,7 +334,7 @@
       </div>
 
       <div class="text-xs text-gray-500 dark:text-gray-400">
-        В селекте указано, сколько очков вернётся/потратится при замене текущего
+        В выборе указано, сколько очков вернётся/потратится при замене текущего
         значения: <span class="font-mono">8 (+2)</span>
         ,
         <span class="font-mono">15 (-2)</span>.
@@ -473,10 +472,10 @@
                 variant="soft"
                 @click="resetSettings"
               >
-                Сбросить настройки
+                Стандартные настройки
               </UButton>
 
-              <UButton @click="drawerOpen = false"> Готово </UButton>
+              <UButton @click="drawerOpen = false"> Сохранить </UButton>
             </div>
           </div>
         </div>
