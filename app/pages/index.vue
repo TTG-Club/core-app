@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { HomeBanners, RoadmapBanner } from '~home/banners';
   import { HomeSections } from '~home/sections';
+  import { RecentChanges } from '~home/recent-changes';
   import { SocialLinks } from '~home/social-links';
   import { SearchPanel } from '~search/panel';
   import { UiPlaceholder } from '~ui/placeholder';
@@ -27,23 +28,19 @@
 
       <HomeSections />
 
-      <div
-        class="flex w-full flex-col gap-3 lg:items-start xl:flex-row xl:items-stretch"
-      >
+      <div class="flex w-full flex-col gap-3 lg:items-start xl:flex-row">
         <div
           class="relative flex w-full flex-col gap-3 overflow-hidden rounded-lg xl:w-1/3 2xl:w-1/3"
         >
           <RoadmapBanner />
 
-          <UiPlaceholder class="hidden flex-1 xl:block" />
+          <UiPlaceholder class="hidden min-h-32 flex-1 xl:block" />
         </div>
 
-        <div
-          class="relative flex w-full flex-col gap-3 overflow-hidden rounded-lg xl:w-1/3 2xl:w-1/3"
-        >
+        <div class="relative flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">
           <HomeBanners />
 
-          <UiPlaceholder class="hidden flex-1 xl:block" />
+          <RecentChanges />
         </div>
 
         <div class="flex w-full flex-col gap-3 xl:w-1/2 2xl:w-1/3">
