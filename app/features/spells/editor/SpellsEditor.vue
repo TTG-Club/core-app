@@ -219,7 +219,7 @@
 
         <UFormField
           class="col-span-6"
-          label="Архетипы"
+          label="Подклассы"
           name="affiliations.subclasses"
         >
           <SelectSubclass

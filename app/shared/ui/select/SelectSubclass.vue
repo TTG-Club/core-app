@@ -1,6 +1,12 @@
 <script setup lang="ts">
   import type { ClassLinkResponse } from '~classes/types';
-  import type { SelectMenuItem } from '#ui/components/SelectMenu.vue';
+
+  type SubclassSelectItem = {
+    label: string;
+    value: string;
+    description: string;
+    source: string;
+  };
 
   const { multiple = false, disabled } = defineProps<{
     disabled?: boolean;
@@ -9,36 +15,41 @@
 
   const model = defineModel<string | Array<string>>();
 
-  const { data, status, refresh } = await useAsyncData<SelectMenuItem[]>(
+  const { data, status, refresh } = await useAsyncData<SubclassSelectItem[]>(
     'subclasses-select',
     async () => {
       const classesLinks = await $fetch<Array<ClassLinkResponse>>(
         '/api/v2/classes/subclasses',
+        { method: 'get' },
       );
 
       return classesLinks.map((classLink) => ({
-        ...classLink,
-        label: `${classLink.name.rus} [${classLink.name.eng}]`,
+        label: classLink.name.rus,
         value: classLink.url,
+        description: classLink.name.eng,
+        source: classLink.source.name.label,
       }));
     },
-    { dedupe: 'defer' },
+    {
+      dedupe: 'defer',
+      lazy: true,
+    },
   );
 
-  const handleDropdownOpening = (state: boolean) => {
+  const handleDropdownOpening = useDebounceFn(async (state: boolean) => {
     if (!state) {
       return;
     }
 
-    refresh();
-  };
+    await refresh();
+  }, 250);
 </script>
 
 <template>
   <USelectMenu
     v-model="model"
     :loading="status === 'pending'"
-    :items="data || []"
+    :items="data"
     :multiple="multiple"
     :disabled="disabled"
     :placeholder="`Выбери подкласс${multiple ? 'ы' : ''}`"
@@ -46,6 +57,16 @@
     value-key="value"
     clearable
     searchable
+    :ui="{ itemDescription: 'text-xs text-secondary' }"
     @update:open="handleDropdownOpening"
-  />
+  >
+    <template #item-trailing="{ item }">
+      <UBadge
+        variant="subtle"
+        color="neutral"
+      >
+        {{ item.source }}
+      </UBadge>
+    </template>
+  </USelectMenu>
 </template>
