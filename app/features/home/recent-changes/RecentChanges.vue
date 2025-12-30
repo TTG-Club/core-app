@@ -24,15 +24,15 @@
 
   const dayjs = useDayjs();
 
-  const formatDateTime = (iso: string) => {
+  function formatDateTime(iso: string) {
     const date = dayjs(iso);
 
     if (!date.isValid()) {
-      return iso;
+      return undefined;
     }
 
     return date.local().format('LLL');
-  };
+  }
 
   const {
     data: updates,
@@ -127,12 +127,14 @@
               </UBadge>
             </div>
 
-            <div
+            <NuxtTime
+              :title="formatDateTime(update.updatedAt)"
+              :datetime="update.updatedAt"
               class="text-xs text-gray-500"
-              :title="update.updatedAt"
-            >
-              {{ formatDateTime(update.updatedAt) }}
-            </div>
+              relative-style="long"
+              locale="ru-RU"
+              relative
+            />
           </div>
         </div>
       </div>
