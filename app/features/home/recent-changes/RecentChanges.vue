@@ -1,14 +1,12 @@
 <script setup lang="ts">
-  import { RecentChangeAction } from '~/shared/enums';
-
   const RECENT_CHANGES_LIMIT = 10;
 
   interface RecentChangeItem {
     url: string;
     updatedAt: string;
     action: {
-      type: RecentChangeAction;
       name: string;
+      color?: 'success' | 'error' | 'info';
     };
     name: {
       rus: string;
@@ -26,31 +24,6 @@
 
   const dayjs = useDayjs();
 
-  const getActionColor = (
-    action: RecentChangeAction | string,
-  ):
-    | 'success'
-    | 'error'
-    | 'info'
-    | 'primary'
-    | 'secondary'
-    | 'warning'
-    | 'neutral' => {
-    if (action === RecentChangeAction.ADDED) {
-      return 'success';
-    }
-
-    if (action === RecentChangeAction.UPDATED) {
-      return 'info';
-    }
-
-    if (action === RecentChangeAction.DELETED) {
-      return 'error';
-    }
-
-    return 'neutral';
-  };
-
   const formatDateTime = (iso: string) => {
     const date = dayjs(iso);
 
@@ -58,25 +31,13 @@
       return iso;
     }
 
-    return date.local().format('DD.MM.YYYY, HH:mm');
-  };
-
-  const getErrorMessage = (error: unknown): string => {
-    if (error instanceof Error) {
-      return error.message;
-    }
-
-    if (typeof error === 'string') {
-      return error;
-    }
-
-    return 'Произошла ошибка при загрузке данных';
+    return date.local().format('LLL');
   };
 
   const {
     data: updates,
     status,
-    error,
+    pending,
     refresh,
   } = await useAsyncData<Array<RecentChangeItem>>(
     computed(() => `recent-changes-limit-${RECENT_CHANGES_LIMIT}`),
@@ -92,13 +53,7 @@
 </script>
 
 <template>
-  <UCard
-    class="border-border rounded-lg bg-muted shadow-lg"
-    :ui="{
-      header: 'py-3 px-3 sm:px-3',
-      body: 'p-0 px-3 py-1 sm:p-0 sm:px-3 sm:py-1',
-    }"
-  >
+  <UCard :ui="{ body: 'p-0 sm:p-0' }">
     <template #header>
       <div class="flex items-center justify-between gap-2">
         <div class="flex flex-col gap-2">
@@ -112,9 +67,9 @@
         </div>
 
         <UButton
-          size="sm"
+          :loading="pending"
           variant="soft"
-          :loading="status === 'pending'"
+          size="sm"
           @click="refresh()"
         >
           Обновить
@@ -123,11 +78,12 @@
     </template>
 
     <UAlert
-      v-if="error"
-      color="error"
-      variant="soft"
+      v-if="status === 'error'"
       title="Не удалось загрузить обновления"
-      :description="getErrorMessage(error)"
+      description="Попробуйте обновить еще раз"
+      class="rounded-none"
+      variant="soft"
+      color="error"
     />
 
     <div
@@ -135,45 +91,47 @@
       class="flex flex-col divide-y divide-default"
     >
       <div
-        v-for="item in updates"
-        :key="`${item.url}-${item.updatedAt}`"
-        class="py-2"
+        v-for="update in updates"
+        :key="`${update.url}-${update.updatedAt}`"
+        class="px-4 py-2 sm:px-6"
       >
         <div class="flex items-start justify-between gap-1">
           <div class="flex min-w-0 flex-col">
             <NuxtLink
-              :to="item.url"
+              :to="update.url"
               class="font-medium hover:underline"
             >
-              {{ item.name.rus }}
+              {{ update.name.rus }}
             </NuxtLink>
 
-            <span class="text-gray-500"> [{{ item.name.eng }}] </span>
+            <span class="text-gray-500"> [{{ update.name.eng }}] </span>
           </div>
 
           <div class="flex shrink-0 flex-col items-end gap-2">
             <div class="flex flex-row items-center gap-2">
-              <div
-                v-if="item.source"
-                class="text-xs text-gray-500"
+              <UBadge
+                v-if="update.source"
+                color="neutral"
+                variant="soft"
+                size="sm"
               >
-                {{ item.source.name.label }}
-              </div>
+                {{ update.source.name.label }}
+              </UBadge>
 
               <UBadge
                 size="sm"
                 variant="soft"
-                :color="getActionColor(item.action.type)"
+                :color="update.action.color || 'neutral'"
               >
-                {{ item.action.name }}
+                {{ update.action.name }}
               </UBadge>
             </div>
 
             <div
               class="text-xs text-gray-500"
-              :title="item.updatedAt"
+              :title="update.updatedAt"
             >
-              {{ formatDateTime(item.updatedAt) }}
+              {{ formatDateTime(update.updatedAt) }}
             </div>
           </div>
         </div>
