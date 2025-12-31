@@ -1,14 +1,14 @@
 type ValueOf<T> = T[keyof T];
 
 export const SearchItems = {
-  CLASS: 'class',
-  BACKGROUND: 'background',
-  FEAT: 'feat',
+  CLASS: 'classes',
+  BACKGROUND: 'backgrounds',
+  FEAT: 'feats',
   SPECIES: 'species',
-  SPELL: 'spell',
+  SPELL: 'spells',
   BESTIARY: 'bestiary',
-  MAGIC_ITEM: 'magic-item',
-  ITEM: 'item',
+  MAGIC_ITEM: 'magic-items',
+  ITEM: 'items',
   GLOSSARY: 'glossary',
 } as const;
 
