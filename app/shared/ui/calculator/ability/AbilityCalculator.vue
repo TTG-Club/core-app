@@ -203,6 +203,7 @@
   };
 
   const tabsModelValue = ref<number>(0);
+  const level = ref<number>(1);
 
   const selectedMode = computed<Mode>(() => {
     const tabIndex = clampTabIndex(tabsModelValue.value);
@@ -314,6 +315,7 @@
         <BonusesTab
           v-if="selectedMode === 'bonuses'"
           v-model:bonus="bonusScores"
+          v-model:level="level"
         />
 
         <RandomSetComponent

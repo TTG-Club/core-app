@@ -101,7 +101,7 @@
     return payload;
   };
 
-  const normalizeSliderArgsToNumber = (
+  const _normalizeSliderArgsToNumber = (
     args: unknown[],
     fallback: number,
   ): number => {
@@ -513,25 +513,6 @@
     feats.value = next;
   };
 
-  const handleLevelChange = (...args: unknown[]): void => {
-    const raw = normalizeSliderArgsToNumber(args, 1);
-    const rounded = Math.round(raw);
-
-    if (rounded < 1) {
-      level.value = 1;
-
-      return;
-    }
-
-    if (rounded > 20) {
-      level.value = 20;
-
-      return;
-    }
-
-    level.value = rounded;
-  };
-
   const getIncreaseLabel = (url: string | undefined): string => {
     const meta = getFeatMeta(url);
 
@@ -565,22 +546,6 @@
 
 <template>
   <div class="flex flex-col gap-3">
-    <div class="rounded-2xl border border-gray-200 p-3 dark:border-gray-800">
-      <div class="mb-2 text-sm font-semibold">Уровень: {{ level }}</div>
-
-      <USlider
-        :model-value="level"
-        :min="1"
-        :max="20"
-        :step="1"
-        @update:model-value="handleLevelChange"
-      />
-
-      <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-        Слоты черт: 4 / 8 / 12 / 16, плюс эпическая на 19 уровне.
-      </div>
-    </div>
-
     <div
       v-if="featSlots > 0"
       class="space-y-3"

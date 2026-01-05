@@ -1,8 +1,9 @@
 <script setup lang="ts">
-  import { computed, ref, watch } from 'vue';
+  import { computed, ref, watch, onMounted } from 'vue';
 
   import SelectFeatBonuses from './SelectFeatBonuses.vue';
-  import SelectBackgroundBonuses from '~ui/calculator/ability/SelectBackgroundBonuses.vue';
+  import SelectBackgroundBonuses from './SelectBackgroundBonuses.vue';
+  import BackgroundBonuses from './BackgroundBonuses.vue';
 
   import { AbilityKey } from '~/shared/types';
   import type { BaseAbilityScores } from '~/shared/types';
@@ -15,6 +16,68 @@
   const bonus = defineModel<BaseAbilityScores>('bonus', {
     required: true,
   });
+
+  const level = defineModel<number>('level');
+
+  const backgroundUrl = ref<string | undefined>(undefined);
+
+  // Уровни, на которых даются черты
+  const featLevels = [1, 4, 8, 12, 16, 19];
+
+  const featSlots = computed<number>(() => {
+    const currentLevel = level.value!;
+
+    if (currentLevel >= 19) {
+      return 5;
+    }
+
+    if (currentLevel >= 16) {
+      return 4;
+    }
+
+    if (currentLevel >= 12) {
+      return 3;
+    }
+
+    if (currentLevel >= 8) {
+      return 2;
+    }
+
+    if (currentLevel >= 4) {
+      return 1;
+    }
+
+    return 0;
+  });
+
+  // Инициализация уровня
+  onMounted(() => {
+    if (!level.value || !featLevels.includes(level.value)) {
+      level.value = featLevels[0];
+    }
+  });
+
+  const levelIndex = computed<number>(() => {
+    const currentLevel = level.value!;
+
+    return featLevels.indexOf(currentLevel);
+  });
+
+  const handleLevelChange = (index: number | undefined): void => {
+    if (index === undefined || index < 0) {
+      level.value = featLevels[0];
+
+      return;
+    }
+
+    if (index >= featLevels.length) {
+      level.value = featLevels[featLevels.length - 1];
+
+      return;
+    }
+
+    level.value = featLevels[index];
+  };
 
   const emptyScores = (): BaseAbilityScores => {
     return {
@@ -123,12 +186,48 @@
 
 <template>
   <div class="space-y-4">
-    <UCard>
-      <SelectBackgroundBonuses v-model:bonus="backgroundBonus" />
-    </UCard>
+    <div class="flex items-start gap-3">
+      <div class="w-1/3">
+        <SelectBackgroundBonuses v-model:background-url="backgroundUrl" />
+      </div>
 
-    <UCard>
-      <SelectFeatBonuses v-model:bonus="featBonus" />
-    </UCard>
+      <div class="w-2/3">
+        <div
+          class="mb-5 flex items-center justify-between gap-3 text-sm font-semibold"
+        >
+          <span>Уровень: {{ level || featLevels[0] }}</span>
+
+          <span class="text-xs text-muted">
+            Доступно слотов: {{ featSlots }}
+          </span>
+        </div>
+
+        <USlider
+          :model-value="levelIndex"
+          :min="0"
+          :max="featLevels.length - 1"
+          :step="1"
+          class="mb-1"
+          @update:model-value="handleLevelChange"
+        />
+      </div>
+    </div>
+
+    <div class="w-full">
+      <BackgroundBonuses
+        v-model:bonus="backgroundBonus"
+        v-model:background-url="backgroundUrl"
+      />
+    </div>
+
+    <div
+      v-if="featSlots > 0"
+      class="rounded-xl border border-default bg-muted p-4"
+    >
+      <SelectFeatBonuses
+        v-model:bonus="featBonus"
+        v-model:level="level"
+      />
+    </div>
   </div>
 </template>
