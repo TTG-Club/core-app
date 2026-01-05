@@ -286,7 +286,7 @@
 
 <template>
   <div class="space-y-4">
-    <div class="group relative flex w-full rounded-lg bg-elevated p-1">
+    <div class="group relative mt-2 flex w-full rounded-lg bg-elevated">
       <UButton
         v-for="(tab, index) in tabs"
         :key="tab.key"
@@ -300,14 +300,14 @@
       </UButton>
     </div>
 
-    <UCard>
+    <div class="rounded-xl border border-default bg-muted p-4">
       <AbilityScoresDisplay
         :base-scores="baseScores"
         :final-scores="finalScores"
         :bonus-scores="normalizedBonusScores"
         :epic-boon-abilities="epicBoonAbilities"
       />
-    </UCard>
+    </div>
 
     <div class="space-y-4">
       <KeepAlive>
