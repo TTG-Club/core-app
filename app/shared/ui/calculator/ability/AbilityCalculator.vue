@@ -187,8 +187,6 @@
     };
   };
 
-  const selectedTabIndex = ref<number>(0);
-
   const clampTabIndex = (index: number): number => {
     const minIndex = 0;
     const maxIndex = Math.max(0, tabs.length - 1);
@@ -204,14 +202,7 @@
     return index;
   };
 
-  const tabsModelValue = computed<number>({
-    get() {
-      return clampTabIndex(selectedTabIndex.value ?? 0);
-    },
-    set(next) {
-      selectedTabIndex.value = clampTabIndex(next);
-    },
-  });
+  const tabsModelValue = ref<number>(0);
 
   const selectedMode = computed<Mode>(() => {
     const tabIndex = clampTabIndex(tabsModelValue.value);
@@ -295,18 +286,19 @@
 
 <template>
   <div class="space-y-4">
-    <UTabs
-      v-model="tabsModelValue"
-      :items="tabs"
-      class="w-full"
-      :ui="{
-        list: 'rounded-xl bg-gray-100 p-1 dark:bg-gray-900',
-        indicator: 'rounded-lg bg-white shadow-sm dark:bg-gray-800',
-        trigger:
-          'px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300',
-        content: 'mt-0',
-      }"
-    />
+    <div class="group relative flex w-full rounded-lg bg-elevated p-1">
+      <UButton
+        v-for="(tab, index) in tabs"
+        :key="tab.key"
+        :variant="tabsModelValue === index ? 'solid' : 'ghost'"
+        :color="tabsModelValue === index ? 'primary' : 'neutral'"
+        size="md"
+        class="flex flex-1 items-center justify-center"
+        @click="tabsModelValue = index"
+      >
+        {{ tab.label }}
+      </UButton>
+    </div>
 
     <UCard>
       <AbilityScoresDisplay
