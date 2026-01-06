@@ -170,12 +170,52 @@
     model.value = { ...defaultScores };
   };
 
-  const dicePoolSelectItems = computed<SelectItem<string>[]>(() => {
-    return dicePool.value.map((item, index) => ({
-      label: `№${index + 1}: ${item.roll.total}`,
-      value: item.id,
-    }));
+  const abilitySelectItems = computed<SelectItem<Ability | null>[]>(() => {
+    const items: SelectItem<Ability | null>[] = [
+      { label: 'Не назначено', value: null },
+    ];
+
+    for (const ability of abilities) {
+      items.push({
+        label: abilityLabel[ability],
+        value: ability,
+      });
+    }
+
+    return items;
   });
+
+  const getAbilitySelectItemsForDice = (
+    diceId: string,
+  ): SelectItem<Ability | null>[] => {
+    const assignedAbility = Object.keys(diceAssign.value).find(
+      (a) => diceAssign.value[a as Ability] === diceId,
+    ) as Ability | undefined;
+
+    return abilitySelectItems.value.map((item) => {
+      if (item.value === null) {
+        return item;
+      }
+
+      if (item.value === assignedAbility) {
+        return item;
+      }
+
+      // Проверяем, занята ли эта характеристика другим броском
+      const isOccupied =
+        diceAssign.value[item.value] !== null &&
+        diceAssign.value[item.value] !== diceId;
+
+      if (isOccupied) {
+        return {
+          ...item,
+          disabled: true,
+        };
+      }
+
+      return item;
+    });
+  };
 
   const diceScoreById = (id: string): number | null => {
     const found = dicePool.value.find((p) => p.id === id);
@@ -183,48 +223,24 @@
     return found ? found.roll.total : null;
   };
 
-  const normalizeSelectId = (
-    payload: string | number | undefined,
-  ): string | null => {
-    if (typeof payload === 'string') {
-      return payload.length > 0 ? payload : null;
-    }
+  const setDiceAssignment = (diceId: string, nextAbility: Ability | null) => {
+    const prevAbility = Object.keys(diceAssign.value).find(
+      (a) => diceAssign.value[a as Ability] === diceId,
+    ) as Ability | undefined;
 
-    if (typeof payload === 'number') {
-      return Number.isFinite(payload) ? String(payload) : null;
-    }
-
-    return null;
-  };
-
-  const setDiceAssignment = (ability: Ability, nextId: string) => {
-    const prevId = diceAssign.value[ability];
-
-    if (prevId === nextId) {
+    if (prevAbility === nextAbility) {
       return;
     }
 
-    let otherAbility: Ability | null = null;
-
-    for (const a of abilities) {
-      if (a !== ability && diceAssign.value[a] === nextId) {
-        otherAbility = a;
-
-        break;
-      }
+    // Очищаем предыдущее назначение
+    if (prevAbility) {
+      diceAssign.value = { ...diceAssign.value, [prevAbility]: null };
     }
 
-    if (otherAbility === null) {
-      diceAssign.value = { ...diceAssign.value, [ability]: nextId };
-
-      return;
+    // Устанавливаем новое назначение
+    if (nextAbility) {
+      diceAssign.value = { ...diceAssign.value, [nextAbility]: diceId };
     }
-
-    diceAssign.value = {
-      ...diceAssign.value,
-      [ability]: nextId,
-      [otherAbility]: prevId,
-    };
   };
 
   const computedScores = computed<AbilityScores>(() => {
@@ -309,10 +325,10 @@
 </script>
 
 <template>
-  <UCard>
+  <div class="rounded-xl border border-default bg-muted p-4">
     <div class="space-y-4">
       <div class="flex items-center justify-between gap-3">
-        <div class="text-sm text-gray-500 dark:text-gray-400">
+        <div class="text-sm text-secondary">
           Сначала бросьте <span class="font-mono">4к6</span> шесть раз, затем
           распределите результаты по характеристикам.
         </div>
@@ -327,7 +343,7 @@
 
       <div
         v-if="dicePool.length === 0"
-        class="rounded-2xl border border-gray-200 p-4 text-sm text-gray-500 dark:border-gray-800 dark:text-gray-400"
+        class="rounded-xl border border-default p-4 text-sm text-secondary"
       >
         Нажмите «Бросить 6 раз», чтобы получить 6 значений.
       </div>
@@ -340,14 +356,14 @@
           <div
             v-for="item in dicePool"
             :key="item.id"
-            class="rounded-xl border border-gray-200 p-3 dark:border-gray-800"
+            class="rounded-xl border border-default p-3"
           >
             <div class="flex items-center justify-between gap-3">
               <div class="font-semibold">
                 {{ item.roll.total }}
               </div>
 
-              <div class="text-xs text-gray-500 dark:text-gray-400">
+              <div class="text-xs text-secondary">
                 мод {{ modifierLabel(item.roll.total) }}
               </div>
             </div>
@@ -381,59 +397,33 @@
                 />
               </span>
             </div>
-          </div>
-        </div>
 
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <div
-            v-for="a in abilities"
-            :key="a"
-            class="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-800"
-          >
-            <div class="min-w-0">
-              <div class="font-semibold">
-                {{ abilityLabel[a] }}
-              </div>
-
-              <div class="text-xs text-gray-500 dark:text-gray-400">
-                <template v-if="diceAssign[a]">
-                  <span class="font-semibold">
-                    {{ diceScoreById(diceAssign[a] || '') }}
-                  </span>
-                </template>
-
-                <template v-else>
-                  Не назначено (будет {{ defaultScores[a] }})
-                </template>
-              </div>
-            </div>
-
-            <USelect
-              :model-value="diceAssign[a] || undefined"
-              :items="dicePoolSelectItems"
-              class="w-64 max-w-full"
-              :disabled="!isReady"
-              placeholder="Выберите результат"
-              @update:model-value="
-                (v: string | number) => {
-                  const id = normalizeSelectId(v);
-
-                  if (!id) {
-                    return;
+            <div class="mt-3">
+              <USelect
+                :model-value="
+                  (Object.keys(diceAssign).find(
+                    (a) => diceAssign[a as Ability] === item.id,
+                  ) as Ability) || null
+                "
+                :items="getAbilitySelectItemsForDice(item.id)"
+                class="w-full"
+                :disabled="!isReady"
+                placeholder="Выберите характеристику"
+                @update:model-value="
+                  (v: Ability | null) => {
+                    setDiceAssignment(item.id, v);
                   }
-
-                  setDiceAssignment(a, id);
-                }
-              "
-            />
+                "
+              />
+            </div>
           </div>
         </div>
 
-        <div class="text-xs text-gray-500 dark:text-gray-400">
-          Один результат можно назначить только одной характеристике. Если
-          выбрать занятый результат — он будет автоматически обменён местами.
+        <div class="text-xs text-secondary">
+          Каждому результату броска можно назначить только одну характеристику.
+          Занятые характеристики недоступны для выбора.
         </div>
       </div>
     </div>
-  </UCard>
+  </div>
 </template>

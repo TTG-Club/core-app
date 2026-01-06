@@ -130,6 +130,7 @@
     for (const iterAbility of abilities) {
       if (iterAbility !== ability) {
         const value = pick.value[iterAbility];
+
         if (value !== null) {
           usedValues.add(value);
         }
