@@ -4,12 +4,12 @@
   type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
   type AbilityScores = {
-    str: number;
-    dex: number;
-    con: number;
-    int: number;
-    wis: number;
-    cha: number;
+    str: number | null;
+    dex: number | null;
+    con: number | null;
+    int: number | null;
+    wis: number | null;
+    cha: number | null;
   };
 
   type D6 = 1 | 2 | 3 | 4 | 5 | 6;
@@ -261,9 +261,15 @@
     { immediate: true, deep: true },
   );
 
-  const modifier = (score: number): number => Math.floor((score - 10) / 2);
+  const modifier = (score: number | null): number => {
+    if (score === null) {
+      return 0;
+    }
 
-  const modifierLabel = (score: number): string => {
+    return Math.floor((score - 10) / 2);
+  };
+
+  const modifierLabel = (score: number | null): string => {
     const m = modifier(score);
 
     return m >= 0 ? `+${m}` : `${m}`;

@@ -2,12 +2,12 @@
   type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
   type AbilityScores = {
-    str: number;
-    dex: number;
-    con: number;
-    int: number;
-    wis: number;
-    cha: number;
+    str: number | null;
+    dex: number | null;
+    con: number | null;
+    int: number | null;
+    wis: number | null;
+    cha: number | null;
   };
 
   type SelectItem<T> = {
@@ -110,7 +110,11 @@
     return found ? found.cost : 0;
   };
 
-  const pointCost = (score: number): number => {
+  const pointCost = (score: number | null): number => {
+    if (score === null) {
+      return 0;
+    }
+
     const min = clamp(settingsModel.value.minBuy, 3, 15);
 
     if (score <= min) {
@@ -147,14 +151,22 @@
     () => settingsModel.value.budgetBuy - spent.value,
   );
 
-  const canSetScore = (ability: Ability, next: number): boolean => {
+  const canSetScore = (ability: Ability, next: number | null): boolean => {
     const current = model.value[ability];
-    const nextSpent = spent.value - pointCost(current) + pointCost(next);
+
+    const nextSpent =
+      spent.value - pointCost(current ?? null) + pointCost(next);
 
     return nextSpent <= settingsModel.value.budgetBuy;
   };
 
-  const handleChange = (ability: Ability, next: number) => {
+  const handleChange = (ability: Ability, next: number | null | undefined) => {
+    if (next === null || next === undefined) {
+      model.value = { ...model.value, [ability]: null };
+
+      return;
+    }
+
     if (!canSetScore(ability, next)) {
       return;
     }
@@ -173,11 +185,18 @@
   // Не показываем "(0)" для текущего выбранного значения
   const selectItemsForAbility = (
     ability: Ability,
-  ): Array<SelectItem<number>> => {
+  ): Array<SelectItem<number | null>> => {
     const current = model.value[ability];
-    const currentCost = pointCost(current);
+    const currentCost = pointCost(current ?? null);
 
-    return scoreOptions.value.map((v) => {
+    const items: Array<SelectItem<number | null>> = [
+      {
+        label: 'Не выбрано',
+        value: null,
+      },
+    ];
+
+    const scoreItems = scoreOptions.value.map((v) => {
       if (v === current) {
         return {
           label: `${v}`,
@@ -193,6 +212,8 @@
         value: v,
       };
     });
+
+    return [...items, ...scoreItems];
   };
 
   const applyBoundsToScores = () => {
@@ -204,13 +225,15 @@
     let next: AbilityScores = { ...model.value };
 
     for (const a of abilities) {
-      if (next[a] < min) {
+      const currentValue = next[a];
+
+      if (currentValue !== null && currentValue < min) {
         next = { ...next, [a]: min };
 
         continue;
       }
 
-      if (next[a] > max) {
+      if (currentValue !== null && currentValue > max) {
         next = { ...next, [a]: max };
       }
     }
@@ -263,9 +286,15 @@
     };
   };
 
-  const modifier = (score: number): number => Math.floor((score - 10) / 2);
+  const modifier = (score: number | null): number => {
+    if (score === null) {
+      return 0;
+    }
 
-  const modifierLabel = (score: number): string => {
+    return Math.floor((score - 10) / 2);
+  };
+
+  const modifierLabel = (score: number | null): string => {
     const m = modifier(score);
 
     return m >= 0 ? `+${m}` : `${m}`;
@@ -319,10 +348,12 @@
           </div>
 
           <USelect
-            :model-value="model[a]"
+            :model-value="model[a] ?? null"
             :items="selectItemsForAbility(a)"
             class="w-40"
-            @update:model-value="(v: number) => handleChange(a, v)"
+            @update:model-value="
+              (v: number | null | undefined) => handleChange(a, v)
+            "
           />
         </div>
       </div>

@@ -4,17 +4,18 @@
   type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
   type AbilityScores = {
-    str: number;
-    dex: number;
-    con: number;
-    int: number;
-    wis: number;
-    cha: number;
+    str: number | null;
+    dex: number | null;
+    con: number | null;
+    int: number | null;
+    wis: number | null;
+    cha: number | null;
   };
 
   type SelectItem<T> = {
     label: string;
     value: T;
+    disabled?: boolean;
   };
 
   const abilities: Array<Ability> = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
@@ -32,25 +33,36 @@
 
   const standardArrayPool = [15, 14, 13, 12, 10, 8];
 
-  const standardArrayItems: Array<SelectItem<number>> = standardArrayPool.map(
-    (score) => ({
+  const UNSELECTED_VALUE = null;
+  const UNSELECTED_LABEL = 'Не выбрано';
+
+  const standardArrayItems: Array<SelectItem<number | null>> = [
+    { label: UNSELECTED_LABEL, value: UNSELECTED_VALUE },
+    ...standardArrayPool.map((score) => ({
       label: String(score),
-      value: score,
-    }),
-  );
+      value: score as number,
+    })),
+  ];
 
   const defaultPick: AbilityScores = {
-    str: 15,
-    dex: 14,
-    con: 13,
-    int: 12,
-    wis: 10,
-    cha: 8,
+    str: null,
+    dex: null,
+    con: null,
+    int: null,
+    wis: null,
+    cha: null,
   };
 
   const pick = ref<AbilityScores>({ ...defaultPick });
 
-  const normalizeNumber = (value: unknown, fallback: number): number => {
+  const normalizeNumber = (
+    value: unknown,
+    fallback: number | null,
+  ): number | null => {
+    if (value === null || value === undefined) {
+      return fallback;
+    }
+
     if (typeof value !== 'number') {
       return fallback;
     }
@@ -81,6 +93,10 @@
   };
 
   const parseSelectValue = (value: unknown): number | null => {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
     if (typeof value === 'number') {
       return Number.isFinite(value) ? value : null;
     }
@@ -94,42 +110,46 @@
     return null;
   };
 
-  const setValue = (ability: Ability, nextScore: number): void => {
+  const setValue = (ability: Ability, nextScore: number | null): void => {
     const previousScore = pick.value[ability];
 
     if (previousScore === nextScore) {
       return;
     }
 
-    let otherAbility: Ability | null = null;
+    pick.value = { ...pick.value, [ability]: nextScore };
+  };
 
+  const getAvailableItems = (
+    ability: Ability,
+  ): Array<SelectItem<number | null>> => {
+    const currentValue = pick.value[ability];
+    const usedValues = new Set<number | null>();
+
+    // Собираем все используемые значения, кроме текущего значения этой характеристики
     for (const iterAbility of abilities) {
-      if (iterAbility !== ability && pick.value[iterAbility] === nextScore) {
-        otherAbility = iterAbility;
-
-        break;
+      if (iterAbility !== ability) {
+        const value = pick.value[iterAbility];
+        if (value !== null) {
+          usedValues.add(value);
+        }
       }
     }
 
-    if (otherAbility === null) {
-      pick.value = { ...pick.value, [ability]: nextScore };
-
-      return;
-    }
-
-    pick.value = {
-      ...pick.value,
-      [ability]: nextScore,
-      [otherAbility]: previousScore,
-    };
+    // Возвращаем все элементы, но помечаем как disabled те, которые уже используются
+    // "Не выбрано" (null) никогда не должно быть disabled
+    return standardArrayItems.map((item) => ({
+      ...item,
+      disabled:
+        item.value !== null &&
+        item.value !== UNSELECTED_VALUE &&
+        usedValues.has(item.value) &&
+        item.value !== currentValue,
+    }));
   };
 
   const handleSelectUpdate = (ability: Ability, payload: unknown): void => {
     const nextScore = parseSelectValue(payload);
-
-    if (nextScore === null) {
-      return;
-    }
 
     setValue(ability, nextScore);
   };
@@ -162,9 +182,15 @@
     { deep: true },
   );
 
-  const modifier = (score: number): number => Math.floor((score - 10) / 2);
+  const modifier = (score: number | null): number => {
+    if (score === null) {
+      return 0;
+    }
 
-  const modifierLabel = (score: number): string => {
+    return Math.floor((score - 10) / 2);
+  };
+
+  const modifierLabel = (score: number | null): string => {
     const mod = modifier(score);
 
     return mod >= 0 ? `+${mod}` : `${mod}`;
@@ -172,9 +198,9 @@
 </script>
 
 <template>
-  <UCard>
+  <div class="rounded-xl border border-default bg-muted p-4">
     <div class="space-y-4">
-      <div class="text-sm text-gray-500 dark:text-gray-400">
+      <div class="text-sm text-secondary">
         Стандартный массив: <span class="font-mono">15 14 13 12 10 8</span>.
         Назначьте каждое значение одной характеристике.
       </div>
@@ -183,14 +209,14 @@
         <div
           v-for="abilityKey in abilities"
           :key="abilityKey"
-          class="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-800"
+          class="flex items-center justify-between gap-3 rounded-xl border border-default p-3"
         >
           <div class="min-w-0">
             <div class="font-semibold">
               {{ abilityLabel[abilityKey] }}
             </div>
 
-            <div class="text-xs text-gray-500 dark:text-gray-400">
+            <div class="text-xs text-secondary">
               Мод:
               {{ modifierLabel(pick[abilityKey]) }}
             </div>
@@ -198,7 +224,7 @@
 
           <USelect
             :model-value="pick[abilityKey]"
-            :items="standardArrayItems"
+            :items="getAvailableItems(abilityKey)"
             class="w-28"
             placeholder="Значение"
             @update:model-value="
@@ -208,5 +234,5 @@
         </div>
       </div>
     </div>
-  </UCard>
+  </div>
 </template>

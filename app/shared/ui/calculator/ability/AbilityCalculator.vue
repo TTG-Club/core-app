@@ -19,7 +19,7 @@
 
   type AbilityShort = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
-  type ShortAbilityScores = Record<AbilityShort, number>;
+  type ShortAbilityScores = Record<AbilityShort, number | null>;
 
   type BaseAbilityScoresLike =
     | Partial<Record<AbilityKey, unknown>>
@@ -56,15 +56,33 @@
   };
 
   const defaultShortScores: ShortAbilityScores = {
-    str: 10,
-    dex: 10,
-    con: 10,
-    int: 10,
-    wis: 10,
-    cha: 10,
+    str: null,
+    dex: null,
+    con: null,
+    int: null,
+    wis: null,
+    cha: null,
   };
 
-  const normalizeNumber = (value: unknown, fallback: number): number => {
+  const normalizeNumber = (
+    value: unknown,
+    fallback: number,
+  ): number => {
+    if (typeof value !== 'number') {
+      return fallback;
+    }
+
+    return Number.isFinite(value) ? value : fallback;
+  };
+
+  const normalizeNumberOrNull = (
+    value: unknown,
+    fallback: number | null,
+  ): number | null => {
+    if (value === null || value === undefined) {
+      return fallback;
+    }
+
     if (typeof value !== 'number') {
       return fallback;
     }
@@ -142,12 +160,12 @@
     value: ShortAbilityScores,
   ): ShortAbilityScores => {
     return {
-      str: normalizeNumber(value.str, defaultShortScores.str),
-      dex: normalizeNumber(value.dex, defaultShortScores.dex),
-      con: normalizeNumber(value.con, defaultShortScores.con),
-      int: normalizeNumber(value.int, defaultShortScores.int),
-      wis: normalizeNumber(value.wis, defaultShortScores.wis),
-      cha: normalizeNumber(value.cha, defaultShortScores.cha),
+      str: normalizeNumberOrNull(value.str, defaultShortScores.str),
+      dex: normalizeNumberOrNull(value.dex, defaultShortScores.dex),
+      con: normalizeNumberOrNull(value.con, defaultShortScores.con),
+      int: normalizeNumberOrNull(value.int, defaultShortScores.int),
+      wis: normalizeNumberOrNull(value.wis, defaultShortScores.wis),
+      cha: normalizeNumberOrNull(value.cha, defaultShortScores.cha),
     };
   };
 
@@ -178,12 +196,12 @@
 
   const shortToBase = (value: ShortAbilityScores): BaseAbilityScores => {
     return {
-      [AbilityKey.STRENGTH]: value.str,
-      [AbilityKey.DEXTERITY]: value.dex,
-      [AbilityKey.CONSTITUTION]: value.con,
-      [AbilityKey.INTELLIGENCE]: value.int,
-      [AbilityKey.WISDOM]: value.wis,
-      [AbilityKey.CHARISMA]: value.cha,
+      [AbilityKey.STRENGTH]: value.str ?? defaultBaseScores[AbilityKey.STRENGTH],
+      [AbilityKey.DEXTERITY]: value.dex ?? defaultBaseScores[AbilityKey.DEXTERITY],
+      [AbilityKey.CONSTITUTION]: value.con ?? defaultBaseScores[AbilityKey.CONSTITUTION],
+      [AbilityKey.INTELLIGENCE]: value.int ?? defaultBaseScores[AbilityKey.INTELLIGENCE],
+      [AbilityKey.WISDOM]: value.wis ?? defaultBaseScores[AbilityKey.WISDOM],
+      [AbilityKey.CHARISMA]: value.cha ?? defaultBaseScores[AbilityKey.CHARISMA],
     };
   };
 
@@ -230,8 +248,17 @@
   const shortScores = computed<ShortAbilityScores>({
     get() {
       const normalizedBaseScores = baseScores.value;
+      const converted = baseToShort(normalizedBaseScores);
 
-      return normalizeShortScores(baseToShort(normalizedBaseScores));
+      // Если значение равно значению по умолчанию (10), устанавливаем null для режима "Стандартный набор"
+      return {
+        str: converted.str === defaultBaseScores[AbilityKey.STRENGTH] ? null : converted.str,
+        dex: converted.dex === defaultBaseScores[AbilityKey.DEXTERITY] ? null : converted.dex,
+        con: converted.con === defaultBaseScores[AbilityKey.CONSTITUTION] ? null : converted.con,
+        int: converted.int === defaultBaseScores[AbilityKey.INTELLIGENCE] ? null : converted.int,
+        wis: converted.wis === defaultBaseScores[AbilityKey.WISDOM] ? null : converted.wis,
+        cha: converted.cha === defaultBaseScores[AbilityKey.CHARISMA] ? null : converted.cha,
+      };
     },
     set(next) {
       const normalizedShortScores = normalizeShortScores(next);
