@@ -38,7 +38,7 @@
 
 <template>
   <span
-    class="inline-flex text-secondary"
+    class="inline-flex"
     :style="sizeStyle"
     v-html="svg"
   />

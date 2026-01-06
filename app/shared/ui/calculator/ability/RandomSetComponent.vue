@@ -305,22 +305,16 @@
 
   const dieClass = (index: 0 | 1 | 2 | 3, roll: DiceRoll): string[] => {
     if (roll.droppedIndex === index) {
-      return [
-        'rounded-lg',
-        'p-1',
-        'opacity-60',
-        'text-gray-400',
-        'dark:text-gray-600',
-      ];
+      return ['opacity-60', 'text-secondary'];
     }
 
     const isMax = maxTotal.value !== null && roll.total === maxTotal.value;
 
     if (isMax) {
-      return ['rounded-lg', 'p-1', 'text-green-600', 'dark:text-green-400'];
+      return ['text-secondary'];
     }
 
-    return ['rounded-lg', 'p-1', 'text-secondary'];
+    return ['text-secondary'];
   };
 </script>
 
@@ -359,16 +353,32 @@
             class="rounded-xl border border-default p-3"
           >
             <div class="flex items-center justify-between gap-3">
-              <div class="font-semibold">
-                {{ item.roll.total }}
-              </div>
+              <USelect
+                :model-value="
+                  (Object.keys(diceAssign).find(
+                    (a) => diceAssign[a as Ability] === item.id,
+                  ) as Ability) || null
+                "
+                :items="getAbilitySelectItemsForDice(item.id)"
+                class="w-full"
+                :disabled="!isReady"
+                placeholder="Выберите характеристику"
+                @update:model-value="
+                  (v: Ability | null) => {
+                    setDiceAssignment(item.id, v);
+                  }
+                "
+              />
 
-              <div class="text-xs text-secondary">
-                мод {{ modifierLabel(item.roll.total) }}
+              <div class="w-full text-lg font-semibold">
+                {{ item.roll.total }}
+                <span class="text-sm text-secondary"
+                  >(Мод {{ modifierLabel(item.roll.total) }})
+                </span>
               </div>
             </div>
 
-            <div class="mt-2 flex flex-wrap items-center gap-2 text-sm">
+            <div class="mt-4 flex flex-wrap items-center justify-around gap-1">
               <span :class="dieClass(0, item.roll)">
                 <D6Icon
                   :value="item.roll.d1"
@@ -396,25 +406,6 @@
                   :size="DICE_ICON_SIZE"
                 />
               </span>
-            </div>
-
-            <div class="mt-3">
-              <USelect
-                :model-value="
-                  (Object.keys(diceAssign).find(
-                    (a) => diceAssign[a as Ability] === item.id,
-                  ) as Ability) || null
-                "
-                :items="getAbilitySelectItemsForDice(item.id)"
-                class="w-full"
-                :disabled="!isReady"
-                placeholder="Выберите характеристику"
-                @update:model-value="
-                  (v: Ability | null) => {
-                    setDiceAssignment(item.id, v);
-                  }
-                "
-              />
             </div>
           </div>
         </div>
