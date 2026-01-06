@@ -273,28 +273,22 @@
 </script>
 
 <template>
-  <UCard>
+  <div class="rounded-xl border border-default bg-muted p-4">
     <div class="space-y-4">
       <div class="flex items-start justify-between gap-3">
         <div class="space-y-1">
-          <div class="text-sm text-gray-500 dark:text-gray-400">
+          <div class="text-gray text-sm">
             Покупка: {{ settingsModel.minBuy }}–{{ settingsModel.maxBuy }},
             бюджет {{ settingsModel.budgetBuy }}.
           </div>
 
           <div
             class="text-sm"
-            :class="
-              remaining < 0
-                ? 'text-red-600 dark:text-red-400'
-                : 'text-gray-700 dark:text-gray-200'
-            "
+            :class="remaining < 0 ? 'text-red' : 'text-secondary'"
           >
-            Осталось: <span class="font-semibold">{{ remaining }}</span>
+            Осталось: {{ remaining }}
 
-            <span class="text-gray-500 dark:text-gray-400"
-              >/ {{ settingsModel.budgetBuy }}</span
-            >
+            / {{ settingsModel.budgetBuy }}
           </div>
         </div>
 
@@ -311,14 +305,14 @@
         <div
           v-for="a in abilities"
           :key="a"
-          class="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-800"
+          class="flex items-center justify-between gap-3 rounded-xl border border-default p-3"
         >
           <div class="min-w-0">
             <div class="font-semibold">
               {{ abilityLabel[a] }}
             </div>
 
-            <div class="text-xs text-gray-500 dark:text-gray-400">
+            <div class="text-xs text-secondary">
               Стоимость: {{ pointCost(model[a]) }} · Мод:
               {{ modifierLabel(model[a]) }}
             </div>
@@ -333,46 +327,27 @@
         </div>
       </div>
 
-      <div class="text-xs text-gray-500 dark:text-gray-400">
+      <div class="text-xs text-secondary">
         В выборе указано, сколько очков вернётся/потратится при замене текущего
-        значения: <span class="font-mono">8 (+2)</span>
-        ,
-        <span class="font-mono">15 (-2)</span>.
+        значения: 8 (+2), 15 (-2).
       </div>
     </div>
 
-    <UDrawer
+    <USlideover
       v-model:open="drawerOpen"
-      direction="right"
+      title="Настройки покупки значений"
+      :ui="{
+        content: 'w-full max-w-192 min-w-80',
+      }"
     >
-      <template #content>
-        <div class="flex h-full flex-col">
-          <div
-            class="flex items-start justify-between gap-4 border-b border-gray-200 p-4 dark:border-gray-800"
-          >
-            <div class="min-w-0">
-              <div class="text-base font-semibold">
-                Настройки покупки значений
-              </div>
+      <template #body>
+        <div class="space-y-4">
+          <p class="text-sm text-secondary">
+            Минимум/максимум, бюджет и стоимость значений.
+          </p>
 
-              <div class="text-sm text-gray-500 dark:text-gray-400">
-                Минимум/максимум, бюджет и стоимость значений.
-              </div>
-            </div>
-
-            <UButton
-              variant="ghost"
-              size="sm"
-              @click="drawerOpen = false"
-            >
-              Закрыть
-            </UButton>
-          </div>
-
-          <div class="flex-1 space-y-4 overflow-auto p-4">
-            <div
-              class="rounded-2xl border border-gray-200 p-4 dark:border-gray-800"
-            >
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div class="rounded-xl border border-default p-4">
               <div class="mb-2 text-sm font-semibold">Бюджет покупки</div>
 
               <UInput
@@ -389,97 +364,91 @@
               />
             </div>
 
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div
-                class="rounded-2xl border border-gray-200 p-4 dark:border-gray-800"
-              >
-                <div class="mb-2 text-sm font-semibold">Минимум покупки</div>
+            <div class="rounded-xl border border-default p-4">
+              <div class="mb-2 text-sm font-semibold">Минимум покупки</div>
 
-                <USelect
-                  :model-value="settingsModel.minBuy"
-                  :items="ALL_SCORES"
-                  class="w-40"
-                  @update:model-value="
-                    (v: number) =>
-                      (settingsModel = {
-                        ...settingsModel,
-                        minBuy: clamp(v, 3, 15),
-                      })
-                  "
-                />
-              </div>
-
-              <div
-                class="rounded-2xl border border-gray-200 p-4 dark:border-gray-800"
-              >
-                <div class="mb-2 text-sm font-semibold">Максимум покупки</div>
-
-                <USelect
-                  :model-value="settingsModel.maxBuy"
-                  :items="ALL_SCORES"
-                  class="w-40"
-                  @update:model-value="
-                    (v: number) =>
-                      (settingsModel = {
-                        ...settingsModel,
-                        maxBuy: clamp(v, 3, 15),
-                      })
-                  "
-                />
-              </div>
+              <USelect
+                :model-value="settingsModel.minBuy"
+                :items="ALL_SCORES"
+                class="w-40"
+                @update:model-value="
+                  (v: number) =>
+                    (settingsModel = {
+                      ...settingsModel,
+                      minBuy: clamp(v, 3, 15),
+                    })
+                "
+              />
             </div>
 
-            <div
-              class="rounded-2xl border border-gray-200 p-4 dark:border-gray-800"
-            >
-              <div class="mb-3 text-sm font-semibold">
-                Стоимость покупки для каждого значения
-              </div>
+            <div class="rounded-xl border border-default p-4">
+              <div class="mb-2 text-sm font-semibold">Максимум покупки</div>
 
-              <div
-                class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
-              >
-                <div
-                  v-for="row in settingsModel.costs"
-                  :key="row.score"
-                  class="rounded-xl border border-gray-200 p-3 dark:border-gray-800"
-                >
-                  <div class="mb-2 flex items-center justify-between text-sm">
-                    <div class="font-semibold">
-                      {{ row.score }}
-                    </div>
-
-                    <div class="text-xs text-gray-500 dark:text-gray-400">
-                      {{ row.cost }}
-                    </div>
-                  </div>
-
-                  <UInput
-                    :model-value="String(row.cost)"
-                    type="number"
-                    @update:model-value="
-                      (v: string) => setBaseCost(row.score, Number(v))
-                    "
-                  />
-                </div>
-              </div>
+              <USelect
+                :model-value="settingsModel.maxBuy"
+                :items="ALL_SCORES"
+                class="w-40"
+                @update:model-value="
+                  (v: number) =>
+                    (settingsModel = {
+                      ...settingsModel,
+                      maxBuy: clamp(v, 3, 15),
+                    })
+                "
+              />
             </div>
           </div>
 
-          <div class="border-t border-gray-200 p-4 dark:border-gray-800">
-            <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <UButton
-                variant="soft"
-                @click="resetSettings"
-              >
-                Стандартные настройки
-              </UButton>
+          <div class="rounded-xl border border-default p-4">
+            <div class="mb-3 text-sm font-semibold">
+              Стоимость покупки для каждого значения
+            </div>
 
-              <UButton @click="drawerOpen = false"> Сохранить </UButton>
+            <div
+              class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+            >
+              <div
+                v-for="row in settingsModel.costs"
+                :key="row.score"
+                class="rounded-xl border border-default p-3"
+              >
+                <div class="mb-2 flex items-center justify-between text-sm">
+                  <div class="font-semibold">
+                    {{ row.score }}
+                  </div>
+
+                  <div class="text-xs text-secondary">
+                    {{ row.cost }}
+                  </div>
+                </div>
+
+                <UInput
+                  :model-value="String(row.cost)"
+                  type="number"
+                  @update:model-value="
+                    (v: string) => setBaseCost(row.score, Number(v))
+                  "
+                />
+              </div>
             </div>
           </div>
         </div>
       </template>
-    </UDrawer>
-  </UCard>
+
+      <template #footer>
+        <div class="flex gap-2">
+          <UButton
+            variant="soft"
+            @click.left.exact.prevent="resetSettings"
+          >
+            Стандартные настройки
+          </UButton>
+
+          <UButton @click.left.exact.prevent="drawerOpen = false">
+            Сохранить
+          </UButton>
+        </div>
+      </template>
+    </USlideover>
+  </div>
 </template>
