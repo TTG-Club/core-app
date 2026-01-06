@@ -64,10 +64,7 @@
     cha: null,
   };
 
-  const normalizeNumber = (
-    value: unknown,
-    fallback: number,
-  ): number => {
+  const normalizeNumber = (value: unknown, fallback: number): number => {
     if (typeof value !== 'number') {
       return fallback;
     }
@@ -196,12 +193,17 @@
 
   const shortToBase = (value: ShortAbilityScores): BaseAbilityScores => {
     return {
-      [AbilityKey.STRENGTH]: value.str ?? defaultBaseScores[AbilityKey.STRENGTH],
-      [AbilityKey.DEXTERITY]: value.dex ?? defaultBaseScores[AbilityKey.DEXTERITY],
-      [AbilityKey.CONSTITUTION]: value.con ?? defaultBaseScores[AbilityKey.CONSTITUTION],
-      [AbilityKey.INTELLIGENCE]: value.int ?? defaultBaseScores[AbilityKey.INTELLIGENCE],
+      [AbilityKey.STRENGTH]:
+        value.str ?? defaultBaseScores[AbilityKey.STRENGTH],
+      [AbilityKey.DEXTERITY]:
+        value.dex ?? defaultBaseScores[AbilityKey.DEXTERITY],
+      [AbilityKey.CONSTITUTION]:
+        value.con ?? defaultBaseScores[AbilityKey.CONSTITUTION],
+      [AbilityKey.INTELLIGENCE]:
+        value.int ?? defaultBaseScores[AbilityKey.INTELLIGENCE],
       [AbilityKey.WISDOM]: value.wis ?? defaultBaseScores[AbilityKey.WISDOM],
-      [AbilityKey.CHARISMA]: value.cha ?? defaultBaseScores[AbilityKey.CHARISMA],
+      [AbilityKey.CHARISMA]:
+        value.cha ?? defaultBaseScores[AbilityKey.CHARISMA],
     };
   };
 
@@ -252,12 +254,30 @@
 
       // Если значение равно значению по умолчанию (10), устанавливаем null для режима "Стандартный набор"
       return {
-        str: converted.str === defaultBaseScores[AbilityKey.STRENGTH] ? null : converted.str,
-        dex: converted.dex === defaultBaseScores[AbilityKey.DEXTERITY] ? null : converted.dex,
-        con: converted.con === defaultBaseScores[AbilityKey.CONSTITUTION] ? null : converted.con,
-        int: converted.int === defaultBaseScores[AbilityKey.INTELLIGENCE] ? null : converted.int,
-        wis: converted.wis === defaultBaseScores[AbilityKey.WISDOM] ? null : converted.wis,
-        cha: converted.cha === defaultBaseScores[AbilityKey.CHARISMA] ? null : converted.cha,
+        str:
+          converted.str === defaultBaseScores[AbilityKey.STRENGTH]
+            ? null
+            : converted.str,
+        dex:
+          converted.dex === defaultBaseScores[AbilityKey.DEXTERITY]
+            ? null
+            : converted.dex,
+        con:
+          converted.con === defaultBaseScores[AbilityKey.CONSTITUTION]
+            ? null
+            : converted.con,
+        int:
+          converted.int === defaultBaseScores[AbilityKey.INTELLIGENCE]
+            ? null
+            : converted.int,
+        wis:
+          converted.wis === defaultBaseScores[AbilityKey.WISDOM]
+            ? null
+            : converted.wis,
+        cha:
+          converted.cha === defaultBaseScores[AbilityKey.CHARISMA]
+            ? null
+            : converted.cha,
       };
     },
     set(next) {
@@ -275,6 +295,21 @@
 
       baseScores.value = nextBaseScores;
     },
+  });
+
+  // При переключении между режимами сбрасываем значения характеристик, сохраняя бонусы
+  watch(selectedMode, (newMode, oldMode) => {
+    // Сбрасываем только при переключении между dice/pointBuy/array
+    const resetModes: Mode[] = ['dice', 'pointBuy', 'array'];
+
+    if (
+      resetModes.includes(newMode) &&
+      resetModes.includes(oldMode) &&
+      newMode !== oldMode
+    ) {
+      // Сбрасываем значения к умолчанию (10), сохраняя бонусы
+      baseScores.value = { ...defaultBaseScores };
+    }
   });
 
   const bonusScores = ref<BaseAbilityScores>({ ...defaultBonusScores });

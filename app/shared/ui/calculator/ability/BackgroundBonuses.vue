@@ -323,26 +323,31 @@
     const secondPick = pick2.value;
     const thirdPick = pick3.value;
 
-    if (firstPick && secondPick && thirdPick) {
-      const nextBonus = emptyBonus();
+    // Собираем все выбранные характеристики
+    const allPicks = [firstPick, secondPick, thirdPick].filter(
+      Boolean,
+    ) as AbilityKey[];
 
-      addBonus(nextBonus, firstPick, 1);
-      addBonus(nextBonus, secondPick, 1);
-      addBonus(nextBonus, thirdPick, 1);
+    const nextBonus = emptyBonus();
 
-      return nextBonus;
+    // Подсчитываем, сколько раз каждая характеристика была выбрана
+    const pickCounts = new Map<AbilityKey, number>();
+
+    for (const pick of allPicks) {
+      pickCounts.set(pick, (pickCounts.get(pick) || 0) + 1);
     }
 
-    if (firstPick && secondPick && !thirdPick) {
-      const nextBonus = emptyBonus();
-
-      addBonus(nextBonus, firstPick, 2);
-      addBonus(nextBonus, secondPick, 1);
-
-      return nextBonus;
+    // Назначаем бонусы в зависимости от количества выборов
+    for (const [ability, count] of pickCounts.entries()) {
+      if (count === 1) {
+        addBonus(nextBonus, ability, 1);
+      } else if (count === 2) {
+        addBonus(nextBonus, ability, 2);
+      }
+      // count === 3 не должно происходить из-за логики excludeIfPickedTwice
     }
 
-    return emptyBonus();
+    return nextBonus;
   });
 
   watch(

@@ -15,7 +15,10 @@
     multiple?: boolean;
   }>();
 
-  const model = defineModel<string | Array<string>>();
+  // IMPORTANT:
+  // USelectMenu при clearable может эмитить null.
+  // Мы внизу нормализуем null -> undefined (а не даём ему попасть в model).
+  const model = defineModel<string | undefined>({ default: undefined });
 
   const searchQuery = ref<string>('');
   const openedOnce = ref<boolean>(false);
@@ -71,11 +74,30 @@
 
     debouncedRefresh();
   };
+
+  const handleModelValueUpdate = (value: string | string[]): void => {
+    if (
+      value === null ||
+      value === undefined ||
+      value === '' ||
+      (Array.isArray(value) && value.length === 0)
+    ) {
+      // нормализация "очистки" в undefined, без null или пустой строки
+      model.value = undefined;
+
+      return;
+    }
+
+    // Для single select берем первый элемент массива, если пришел массив
+    const normalizedValue = Array.isArray(value) ? value[0] : value;
+
+    model.value = normalizedValue;
+  };
 </script>
 
 <template>
   <USelectMenu
-    v-model="model"
+    :model-value="model"
     :loading="status === 'pending'"
     :items="data"
     :multiple="multiple"
@@ -89,6 +111,7 @@
     :ui="{ itemDescription: 'text-xs text-secondary' }"
     @update:search-term="handleSearch"
     @update:open="handleDropdownOpening"
+    @update:model-value="handleModelValueUpdate"
   >
     <template #item-trailing="{ item }">
       <UBadge

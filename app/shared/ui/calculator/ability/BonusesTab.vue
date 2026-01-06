@@ -21,8 +21,45 @@
 
   const backgroundUrl = ref<string | undefined>(undefined);
 
+  // Загружаем сохраненную предысторию из localStorage
+  onMounted(() => {
+    try {
+      const saved = localStorage.getItem('selectedBackground');
+
+      if (saved) {
+        backgroundUrl.value = saved;
+      }
+    } catch (error) {
+      // Игнорируем ошибки localStorage
+    }
+  });
+
+  // Сохраняем выбранную предысторию в localStorage
+  watch(backgroundUrl, (newUrl) => {
+    try {
+      if (newUrl) {
+        localStorage.setItem('selectedBackground', newUrl);
+      } else {
+        localStorage.removeItem('selectedBackground');
+      }
+    } catch (error) {
+      // Игнорируем ошибки localStorage
+    }
+  });
+
   // Уровни, на которых даются черты
   const featLevels = [1, 4, 8, 12, 16, 19];
+
+  const emptyScores = (): BaseAbilityScores => {
+    return {
+      [AbilityKey.STRENGTH]: 0,
+      [AbilityKey.DEXTERITY]: 0,
+      [AbilityKey.CONSTITUTION]: 0,
+      [AbilityKey.INTELLIGENCE]: 0,
+      [AbilityKey.WISDOM]: 0,
+      [AbilityKey.CHARISMA]: 0,
+    };
+  };
 
   const featSlots = computed<number>(() => {
     const currentLevel = level.value!;
@@ -79,17 +116,6 @@
     level.value = featLevels[index];
   };
 
-  const emptyScores = (): BaseAbilityScores => {
-    return {
-      [AbilityKey.STRENGTH]: 0,
-      [AbilityKey.DEXTERITY]: 0,
-      [AbilityKey.CONSTITUTION]: 0,
-      [AbilityKey.INTELLIGENCE]: 0,
-      [AbilityKey.WISDOM]: 0,
-      [AbilityKey.CHARISMA]: 0,
-    };
-  };
-
   const normalizeNumber = (value: unknown, fallback: number): number => {
     if (typeof value !== 'number') {
       return fallback;
@@ -138,6 +164,18 @@
 
   const backgroundBonus = ref<BaseAbilityScores>(emptyScores());
   const featBonus = ref<BaseAbilityScores>(emptyScores());
+
+  // Очистка бонусов черт при изменении уровня
+  watch(
+    level,
+    (newLevel, oldLevel) => {
+      if (newLevel !== oldLevel) {
+        // Очищаем бонусы черт при изменении уровня
+        featBonus.value = emptyScores();
+      }
+    },
+    { immediate: true },
+  );
 
   const totalBonus = computed<BaseAbilityScores>(() => {
     const normalizedBackgroundBonus = normalizeBaseScores(
