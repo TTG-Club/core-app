@@ -34,7 +34,7 @@
       $fetch<Array<SpellLinkResponse>>('/api/v2/spells', {
         method: 'GET',
         query: {
-          query: search.value,
+          search: search.value,
           filter: filterStringFromUrl.value,
         },
       }),
