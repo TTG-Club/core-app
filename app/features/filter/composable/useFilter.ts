@@ -17,10 +17,6 @@ export async function useFilter(key: string, url: string) {
   const route = useRoute();
   const router = useRouter();
 
-  const filterCookie = useCookie<string | null>(filterKey, {
-    default: () => null,
-  });
-
   const { data, status, refresh } = await useAsyncData(
     filterKey,
     () => $fetch<Filter>(url),
@@ -89,43 +85,23 @@ export async function useFilter(key: string, url: string) {
     }
   }
 
-  // Инициализация: загрузили данные -> применили фильтр из куки или URL
+  // Инициализация: загрузили данные -> применили фильтр из URL
   watch(
     data,
     (value) => {
       if (value) {
         filter.value = getClone(value);
-
-        // Приоритет: сначала кука, потом URL
-        const filterToApply = filterCookie.value || filterStringFromUrl.value;
-
-        if (filterToApply) {
-          applyFiltersFromUrl(filterToApply);
-
-          // Если применили из куки, обновляем URL
-          if (
-            filterCookie.value &&
-            filterCookie.value !== filterStringFromUrl.value
-          ) {
-            syncUrlWithFilter();
-          }
-        }
+        applyFiltersFromUrl(filterStringFromUrl.value);
       }
     },
     { immediate: true },
   );
 
-  // Изменился фильтр -> обновляем URL и куку
+  // Изменился фильтр -> обновляем URL
   watch(
     selectedFilters,
     () => {
       syncUrlWithFilter();
-
-      if (filterString.value) {
-        filterCookie.value = filterString.value;
-      } else {
-        filterCookie.value = null;
-      }
     },
     { deep: true },
   );
