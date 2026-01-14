@@ -7,7 +7,6 @@
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
-  import type { SearchBody } from '~/shared/types';
   import type { MagicItemLinkResponse } from '~magic-items/types';
 
   useSeoMeta({
@@ -19,19 +18,10 @@
 
   const {
     filter,
+    filterStringFromUrl,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
   } = await useFilter('magic-items', '/api/v2/magic-items/filters');
-
-  const searchBody = computed(() => {
-    const body: SearchBody = {};
-
-    if (filter) {
-      body.filter = filter.value;
-    }
-
-    return Object.keys(body).length ? body : undefined;
-  });
 
   const {
     data: magicItems,
@@ -41,16 +31,16 @@
   } = await useAsyncData(
     'magic-items',
     () =>
-      $fetch<Array<MagicItemLinkResponse>>('/api/v2/magic-items/search', {
-        method: 'POST',
-        params: {
-          query: search.value,
+      $fetch<Array<MagicItemLinkResponse>>('/api/v2/magic-items', {
+        method: 'GET',
+        query: {
+          search: search.value,
+          filter: filterStringFromUrl.value,
         },
-        body: searchBody.value,
       }),
     {
       deep: false,
-      watch: [search, filter],
+      watch: [search, filterStringFromUrl],
     },
   );
 </script>

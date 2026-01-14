@@ -4,7 +4,6 @@
   import { ClassLink } from '~classes/link';
   import { PageGrid, PageResult } from '~ui/page';
 
-  import type { SearchBody } from '~/shared/types';
   import type { ClassLinkResponse } from '~classes/types';
   import { SkeletonLinkBig } from '~ui/skeleton';
 
@@ -17,19 +16,10 @@
 
   const {
     filter,
+    filterStringFromUrl,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
   } = await useFilter('classes', '/api/v2/classes/filters');
-
-  const searchBody = computed(() => {
-    const body: SearchBody = {};
-
-    if (filter) {
-      body.filter = filter.value;
-    }
-
-    return Object.keys(body).length ? body : undefined;
-  });
 
   const {
     data: classes,
@@ -39,16 +29,16 @@
   } = await useAsyncData(
     'classes',
     () =>
-      $fetch<Array<ClassLinkResponse>>('/api/v2/classes/search', {
-        method: 'post',
-        params: {
-          query: search.value,
+      $fetch<Array<ClassLinkResponse>>('/api/v2/classes', {
+        method: 'GET',
+        query: {
+          search: search.value,
+          filter: filterStringFromUrl.value,
         },
-        body: searchBody.value,
       }),
     {
       deep: false,
-      watch: [search, filter],
+      watch: [search, filterStringFromUrl],
     },
   );
 </script>

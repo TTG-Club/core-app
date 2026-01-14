@@ -5,7 +5,7 @@
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkBig } from '~ui/skeleton';
 
-  import type { SearchBody, SpeciesLinkResponse } from '~/shared/types';
+  import type { SpeciesLinkResponse } from '~/shared/types';
 
   useSeoMeta({
     title: 'Виды [Species]',
@@ -17,33 +17,24 @@
 
   const {
     filter,
+    filterStringFromUrl,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
   } = await useFilter('species', '/api/v2/species/filters');
 
-  const searchBody = computed(() => {
-    const body: SearchBody = {};
-
-    if (filter) {
-      body.filter = filter.value;
-    }
-
-    return Object.keys(body).length ? body : undefined;
-  });
-
   const { data, status, error, refresh } = await useAsyncData(
     'species',
     () =>
-      $fetch<Array<SpeciesLinkResponse>>('/api/v2/species/search', {
-        method: 'post',
-        params: {
-          query: search.value,
+      $fetch<Array<SpeciesLinkResponse>>('/api/v2/species', {
+        method: 'GET',
+        query: {
+          search: search.value,
+          filter: filterStringFromUrl.value,
         },
-        body: searchBody.value,
       }),
     {
       deep: false,
-      watch: [search, filter],
+      watch: [search, filterStringFromUrl],
     },
   );
 </script>

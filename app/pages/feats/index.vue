@@ -6,7 +6,7 @@
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
-  import type { FeatLinkResponse, SearchBody } from '~/shared/types';
+  import type { FeatLinkResponse } from '~/shared/types';
 
   useSeoMeta({
     title: 'Черты [Feats]',
@@ -17,19 +17,10 @@
 
   const {
     filter,
+    filterStringFromUrl,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
   } = await useFilter('feats', '/api/v2/feats/filters');
-
-  const searchBody = computed(() => {
-    const body: SearchBody = {};
-
-    if (filter) {
-      body.filter = filter.value;
-    }
-
-    return Object.keys(body).length ? body : undefined;
-  });
 
   const {
     data: feats,
@@ -39,16 +30,16 @@
   } = await useAsyncData(
     'feats',
     () =>
-      $fetch<Array<FeatLinkResponse>>('/api/v2/feats/search', {
-        method: 'POST',
-        params: {
-          query: search.value,
+      $fetch<Array<FeatLinkResponse>>('/api/v2/feats', {
+        method: 'GET',
+        query: {
+          search: search.value,
+          filter: filterStringFromUrl.value,
         },
-        body: searchBody.value,
       }),
     {
       deep: false,
-      watch: [search, filter],
+      watch: [search, filterStringFromUrl],
     },
   );
 </script>

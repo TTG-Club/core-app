@@ -6,7 +6,7 @@
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
-  import type { GlossaryLinkResponse, SearchBody } from '~/shared/types';
+  import type { GlossaryLinkResponse } from '~/shared/types';
 
   useSeoMeta({
     title: 'Глоссарий [Glossary]',
@@ -17,19 +17,10 @@
 
   const {
     filter,
+    filterStringFromUrl,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
   } = await useFilter('glossary', '/api/v2/glossary/filters');
-
-  const searchBody = computed(() => {
-    const body: SearchBody = {};
-
-    if (filter) {
-      body.filter = filter.value;
-    }
-
-    return Object.keys(body).length ? body : undefined;
-  });
 
   const {
     data: glossaryItems,
@@ -39,16 +30,16 @@
   } = await useAsyncData(
     'glossary',
     () =>
-      $fetch<Array<GlossaryLinkResponse>>('/api/v2/glossary/search', {
-        method: 'POST',
-        params: {
-          query: search.value,
+      $fetch<Array<GlossaryLinkResponse>>('/api/v2/glossary', {
+        method: 'GET',
+        query: {
+          search: search.value,
+          filter: filterStringFromUrl.value,
         },
-        body: searchBody.value,
       }),
     {
       deep: false,
-      watch: [search, filter],
+      watch: [search, filterStringFromUrl],
     },
   );
 </script>
