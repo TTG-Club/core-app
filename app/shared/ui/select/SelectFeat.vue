@@ -23,7 +23,7 @@
   const searchQuery = refDebounced(search, 250);
 
   const { data: filterData } = await useAsyncData(
-    'feats-filter',
+    'filter-feats',
     () => $fetch<Filter>('/api/v2/feats/filters'),
     {
       deep: false,

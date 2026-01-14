@@ -19,7 +19,7 @@
     filter,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
-  } = await useFilter('species-filters', '/api/v2/species/filters');
+  } = await useFilter('species', '/api/v2/species/filters');
 
   const searchBody = computed(() => {
     const body: SearchBody = {};

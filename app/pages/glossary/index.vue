@@ -19,7 +19,7 @@
     filter,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
-  } = await useFilter('glossary-filters', '/api/v2/glossary/filters');
+  } = await useFilter('glossary', '/api/v2/glossary/filters');
 
   const searchBody = computed(() => {
     const body: SearchBody = {};

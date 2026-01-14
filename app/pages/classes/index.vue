@@ -19,7 +19,7 @@
     filter,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
-  } = await useFilter('classes-filters', '/api/v2/classes/filters');
+  } = await useFilter('classes', '/api/v2/classes/filters');
 
   const searchBody = computed(() => {
     const body: SearchBody = {};

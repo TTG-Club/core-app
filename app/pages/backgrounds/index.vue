@@ -18,7 +18,7 @@
     filter,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
-  } = await useFilter('backgrounds-filters', '/api/v2/backgrounds/filters');
+  } = await useFilter('backgrounds', '/api/v2/backgrounds/filters');
 
   const searchBody = computed(() => {
     const body: SearchBody = {};

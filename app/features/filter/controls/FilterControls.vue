@@ -124,21 +124,25 @@
       />
     </div>
 
-    <template v-if="isLarge">
-      <slot name="legend" />
+    <ClientOnly>
+      <template v-if="isLarge">
+        <slot name="legend" />
 
-      <FilterPreview
-        v-if="showPreview && filter"
-        v-model="filter"
-      />
-    </template>
+        <FilterPreview
+          v-if="showPreview && filter"
+          v-model="filter"
+        />
+      </template>
+    </ClientOnly>
   </div>
 
-  <FilterDrawer
-    v-if="filter"
-    v-model="opened"
-    :filter="filter"
-    @save="save"
-    @reset="reset"
-  />
+  <ClientOnly>
+    <FilterDrawer
+      v-if="filter"
+      v-model="opened"
+      :filter="filter"
+      @save="save"
+      @reset="reset"
+    />
+  </ClientOnly>
 </template>

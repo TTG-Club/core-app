@@ -7,7 +7,7 @@
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
-  import type { SearchBody, SpellLinkResponse } from '~/shared/types';
+  import type { SpellLinkResponse } from '~/shared/types';
 
   useSeoMeta({
     title: 'Заклинания [Spells]',
@@ -18,19 +18,10 @@
 
   const {
     filter,
+    filterStringFromUrl,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
-  } = await useFilter('spells-filters', '/api/v2/spells/filters');
-
-  const searchBody = computed(() => {
-    const body: SearchBody = {};
-
-    if (filter) {
-      body.filter = filter.value;
-    }
-
-    return Object.keys(body).length ? body : undefined;
-  });
+  } = await useFilter('spells', '/api/v2/spells/filters');
 
   const {
     data: spells,
@@ -40,16 +31,16 @@
   } = await useAsyncData(
     'spells',
     () =>
-      $fetch<Array<SpellLinkResponse>>('/api/v2/spells/search', {
-        method: 'POST',
-        params: {
+      $fetch<Array<SpellLinkResponse>>('/api/v2/spells', {
+        method: 'GET',
+        query: {
           query: search.value,
+          filter: filterStringFromUrl.value,
         },
-        body: searchBody.value,
       }),
     {
       deep: false,
-      watch: [search, filter],
+      watch: [search, filterStringFromUrl],
     },
   );
 </script>
