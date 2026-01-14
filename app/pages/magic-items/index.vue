@@ -21,7 +21,7 @@
     filter,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
-  } = await useFilter('magic-items-filters', '/api/v2/magic-items/filters');
+  } = await useFilter('magic-items', '/api/v2/magic-items/filters');
 
   const searchBody = computed(() => {
     const body: SearchBody = {};

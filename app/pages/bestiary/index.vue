@@ -20,7 +20,7 @@
     filter,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
-  } = await useFilter('bestiary-filters', '/api/v2/bestiary/filters');
+  } = await useFilter('bestiary', '/api/v2/bestiary/filters');
 
   const searchBody = computed(() => {
     const body: SearchBody = {};

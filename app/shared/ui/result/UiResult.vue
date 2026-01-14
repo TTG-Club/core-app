@@ -106,7 +106,7 @@
 
     <p
       v-if="computedSubTitle"
-      class="text-secondary"
+      class="max-w-full truncate text-pretty text-secondary"
     >
       {{ computedSubTitle }}
     </p>
