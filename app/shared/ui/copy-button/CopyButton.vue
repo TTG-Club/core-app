@@ -7,7 +7,7 @@
     size?: ButtonProps['size'];
   }>();
 
-  const { share } = useCopy();
+  const { share } = useCopyAndShare();
 </script>
 
 <template>

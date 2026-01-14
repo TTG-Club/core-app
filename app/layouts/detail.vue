@@ -20,7 +20,7 @@
   }>();
 
   const dayjs = useDayjs();
-  const { copy } = useCopy();
+  const { copy } = useCopyAndShare();
   const navbarHidden = useState('navbar-hidden');
 
   const formattedDateTime = computed(() => {

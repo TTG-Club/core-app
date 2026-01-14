@@ -6,7 +6,7 @@
     copyTitle?: boolean;
   }>();
 
-  const { copy } = useCopy();
+  const { copy } = useCopyAndShare();
 
   function preventSelect(e: Event) {
     if (!copyTitle) {

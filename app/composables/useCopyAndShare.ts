@@ -28,7 +28,7 @@ function createDiscordErrorDescription() {
     ]);
 }
 
-export function useCopy() {
+export function useCopyAndShare() {
   const $toast = useToast();
 
   const { copy: copyToClipboard, isSupported: isClipboardSupported } =

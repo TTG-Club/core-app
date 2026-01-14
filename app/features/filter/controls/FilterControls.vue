@@ -15,7 +15,7 @@
   const filter = defineModel<Filter>('filter');
 
   const route = useRoute();
-  const { share } = useCopy();
+  const { share } = useCopyAndShare();
 
   const { greaterOrEqual } = useBreakpoints();
 
