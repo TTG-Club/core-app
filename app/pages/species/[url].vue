@@ -64,7 +64,7 @@
     <template #actions>
       <PageActions
         :edit-url="editUrl"
-        @close="navigateTo('/species')"
+        :close-url="{ name: 'species' }"
       />
     </template>
 

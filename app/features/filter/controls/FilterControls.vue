@@ -14,11 +14,18 @@
   const search = defineModel<string>('search');
   const filter = defineModel<Filter>('filter');
 
+  const route = useRoute();
+  const { shareOrCopy } = useCopy();
+
   const { greaterOrEqual } = useBreakpoints();
 
   const opened = ref(false);
   const localSearch = ref(toValue(search) ?? '');
   const isLarge = greaterOrEqual(Breakpoint.LG);
+
+  const urlForCopy = computed(() => {
+    return getOrigin() + route.fullPath;
+  });
 
   const isEdited = computed(
     () =>
@@ -83,7 +90,7 @@
   <div class="flex gap-2 lg:flex-col lg:gap-4">
     <UInput
       v-model="localSearch"
-      placeholder="Введите текст..."
+      placeholder="Поиск..."
       allow-clear
       :ui="{ trailing: 'pe-0.5' }"
     >
@@ -102,25 +109,28 @@
     </UInput>
 
     <div class="flex gap-2">
-      <UChip
-        :show="isEdited"
-        class="lg:flex-auto"
-      >
+      <UFieldGroup class="w-full space-x-px">
         <UButton
           :disabled="!filter"
           :loading="isPending"
-          icon="i-fluent-filter-16-regular"
+          icon="i-fluent-filter-24-regular"
           label="Фильтр"
           block
           @click.left.exact.prevent="opened = true"
         />
-      </UChip>
+
+        <UButton
+          v-if="isEdited"
+          title="Очистить фильтр"
+          icon="i-ttg-remove"
+          @click.left.exact.prevent="reset"
+        />
+      </UFieldGroup>
 
       <UButton
-        v-if="isEdited"
-        title="Очистить фильтр"
-        icon="i-ttg-remove"
-        @click.left.exact.prevent="reset"
+        icon="i-fluent-share-24-regular"
+        title="Поделиться ссылкой"
+        @click.left.exact.prevent="shareOrCopy(urlForCopy)"
       />
     </div>
 

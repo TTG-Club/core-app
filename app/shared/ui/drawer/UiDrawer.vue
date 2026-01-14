@@ -78,6 +78,7 @@
     direction="right"
     handle-only
     fixed
+    :ui="{ container: 'select-text **:select-text' }"
     @close="$emit('close')"
   >
     <template #header>

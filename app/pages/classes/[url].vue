@@ -101,7 +101,7 @@
     <template #actions>
       <PageActions
         :edit-url="editUrl"
-        @close="navigateTo('/classes')"
+        :close-url="{ name: 'classes' }"
       />
     </template>
 

@@ -8,14 +8,6 @@
 
   const { copy } = useCopy();
 
-  function handleCopy(text: string) {
-    if (!copyTitle) {
-      return;
-    }
-
-    copy(text);
-  }
-
   function preventSelect(e: Event) {
     if (!copyTitle) {
       return;
@@ -35,7 +27,7 @@
     <span
       v-if="typeof title === 'string'"
       :class="[$style.rus, { [$style.copy]: copyTitle }]"
-      @click.left.exact.prevent="handleCopy(title)"
+      @click.left.exact.prevent="copy(title)"
       @selectstart="preventSelect"
       @select="preventSelect"
     >
@@ -45,7 +37,7 @@
     <template v-else>
       <span
         :class="[$style.rus, { [$style.copy]: copyTitle }]"
-        @click.left.exact.prevent="handleCopy(title.rus)"
+        @click.left.exact.prevent="copy(title.rus)"
         @selectstart="preventSelect"
         @select="preventSelect"
       >
@@ -55,7 +47,7 @@
       <span
         v-if="title.eng"
         :class="[$style.eng, { [$style.copy]: copyTitle }]"
-        @click.left.exact.prevent="handleCopy(title.eng)"
+        @click.left.exact.prevent="copy(title.eng)"
         @selectstart="preventSelect"
         @select="preventSelect"
       >
