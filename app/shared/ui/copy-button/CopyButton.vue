@@ -13,11 +13,11 @@
 <template>
   <UTooltip
     v-if="url"
-    text="Скопировать ссылку"
+    text="Поделиться ссылкой"
   >
     <UButton
       :href="url"
-      icon="i-ttg-copy"
+      icon="i-fluent-share-24-regular"
       variant="ghost"
       color="neutral"
       :disabled
