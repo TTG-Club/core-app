@@ -8,8 +8,6 @@ const MESSAGES = {
   SHARE_ERROR_TITLE: 'Невозможно поделиться',
   SHARE_NOT_SUPPORTED: 'Ваш браузер не поддерживает эту функцию',
   SHARE_DEFAULT_TITLE: 'Поделиться',
-  COPY_NO_TEXT: 'Нечего копировать',
-  SHARE_NO_TEXT: 'Нечем поделиться',
 } as const;
 
 const DISCORD_URL = 'https://discord.gg/JqFKMKRtxv';
@@ -39,7 +37,7 @@ export function useCopy() {
   const { share: openShare, isSupported: isShareSupported } = useShare();
   const { isMobile } = useDevice();
 
-  async function copy(text: MaybeRefOrGetter<string>) {
+  async function copy(value: MaybeRefOrGetter<string>) {
     if (!isClipboardSupported.value) {
       $toast.add({
         title: MESSAGES.COPY_ERROR_TITLE,
@@ -50,14 +48,14 @@ export function useCopy() {
       throw new Error(MESSAGES.COPY_NOT_SUPPORTED);
     }
 
-    const _text = toValue(text);
+    const _value = toValue(value);
 
-    if (!_text) {
-      throw new Error(MESSAGES.COPY_NO_TEXT);
+    if (!_value) {
+      throw new Error('String to copy must not be empty.');
     }
 
     try {
-      await copyToClipboard(_text);
+      await copyToClipboard(_value);
 
       $toast.add({
         title: MESSAGES.COPY_SUCCESS_TITLE,
@@ -74,7 +72,13 @@ export function useCopy() {
     }
   }
 
-  async function share(text: MaybeRefOrGetter<string>) {
+  async function share(url: MaybeRefOrGetter<string>) {
+    if (!isShareAvailable()) {
+      await copy(url);
+
+      return;
+    }
+
     if (!isShareSupported.value) {
       $toast.add({
         title: MESSAGES.SHARE_ERROR_TITLE,
@@ -85,34 +89,15 @@ export function useCopy() {
       throw new Error(MESSAGES.SHARE_NOT_SUPPORTED);
     }
 
-    const _text = toValue(text);
+    const _url = toValue(url);
 
-    if (!_text) {
-      throw new Error(MESSAGES.SHARE_NO_TEXT);
+    if (!_url) {
+      throw new Error('URL for sharing must not be empty.');
     }
 
-    try {
-      await openShare({
-        // title: MESSAGES.SHARE_DEFAULT_TITLE,
-        text: _text,
-      });
-    } catch (error) {
-      $toast.add({
-        title: MESSAGES.SHARE_ERROR_TITLE,
-        color: 'error',
-        description: createDiscordErrorDescription(),
-      });
-
-      throw error;
-    }
-  }
-
-  function shareOrCopy(text: MaybeRefOrGetter<string>) {
-    if (isShareAvailable()) {
-      return share(text);
-    }
-
-    return copy(text);
+    await openShare({
+      url: _url,
+    });
   }
 
   function isShareAvailable() {
@@ -120,11 +105,7 @@ export function useCopy() {
   }
 
   return {
-    isShareAvailable,
-    isClipboardSupported,
-
     copy,
     share,
-    shareOrCopy,
   };
 }

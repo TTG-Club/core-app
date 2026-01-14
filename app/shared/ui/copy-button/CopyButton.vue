@@ -7,7 +7,7 @@
     size?: ButtonProps['size'];
   }>();
 
-  const { shareOrCopy } = useCopy();
+  const { share } = useCopy();
 </script>
 
 <template>
@@ -22,7 +22,7 @@
       color="neutral"
       :disabled
       :size
-      @click.left.exact.prevent="shareOrCopy(url)"
+      @click.left.exact.prevent="share(url)"
     />
   </UTooltip>
 </template>

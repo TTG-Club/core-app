@@ -15,7 +15,7 @@
   const filter = defineModel<Filter>('filter');
 
   const route = useRoute();
-  const { shareOrCopy } = useCopy();
+  const { share } = useCopy();
 
   const { greaterOrEqual } = useBreakpoints();
 
@@ -130,7 +130,7 @@
       <UButton
         icon="i-fluent-share-24-regular"
         title="Поделиться ссылкой"
-        @click.left.exact.prevent="shareOrCopy(urlForCopy)"
+        @click.left.exact.prevent="share(urlForCopy)"
       />
     </div>
 
