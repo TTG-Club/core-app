@@ -19,7 +19,7 @@ export function getSelectedFilters(
 
       return {
         ...groupFields,
-        filters: selectedFilters.map(({ _name, ...fields }) => fields),
+        filters: selectedFilters.map(({ name: _name, ...fields }) => fields),
       };
     })
     .filter((group) => !!group);
