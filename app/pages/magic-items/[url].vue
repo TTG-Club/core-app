@@ -57,7 +57,7 @@
     <template #actions>
       <PageActions
         :edit-url="editUrl"
-        @close="navigateTo({ name: 'magic-items' })"
+        :close-url="{ name: 'magic-items' }"
       />
     </template>
 

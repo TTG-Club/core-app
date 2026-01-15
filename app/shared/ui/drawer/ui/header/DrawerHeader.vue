@@ -20,7 +20,7 @@
   }>();
 
   const dayjs = useDayjs();
-  const { copy } = useCopy();
+  const { copy } = useCopyAndShare();
 
   const formattedDateTime = computed(() => {
     const converted = dayjs(dateTime);
@@ -31,14 +31,6 @@
 
     return converted.local().format(dateTimeFormat);
   });
-
-  function handleCopy(text: string) {
-    if (!copyText) {
-      return;
-    }
-
-    copy(text);
-  }
 </script>
 
 <template>
@@ -48,7 +40,7 @@
         v-if="title"
         class="truncate text-lg text-(--ui-text-highlighted)"
         :class="{ 'cursor-pointer': copyText }"
-        @click.left.exact.prevent="handleCopy(title)"
+        @click.left.exact.prevent="copy(title)"
       >
         {{ title }}
       </h2>
@@ -74,7 +66,7 @@
         v-if="subtitle"
         class="truncate text-sm text-secondary"
         :class="{ 'cursor-pointer': copyText }"
-        @click.left.exact.prevent="handleCopy(subtitle)"
+        @click.left.exact.prevent="copy(subtitle)"
       >
         {{ subtitle }}
       </span>

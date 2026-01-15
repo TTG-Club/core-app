@@ -56,7 +56,7 @@
     <template #actions>
       <PageActions
         :edit-url="editUrl"
-        @close="navigateTo({ name: 'backgrounds' })"
+        :close-url="{ name: 'backgrounds' }"
       />
     </template>
 

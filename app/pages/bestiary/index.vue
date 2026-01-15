@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import type { SearchBody } from '~/shared/types';
   import { CreatureLink } from '~bestiary/link';
   import { GroupedList } from '~ui/grouped-list';
   import { useFilter } from '~filter/composable';
@@ -18,19 +17,10 @@
 
   const {
     filter,
+    filterStringFromUrl,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
-  } = await useFilter('bestiary-filters', '/api/v2/bestiary/filters');
-
-  const searchBody = computed(() => {
-    const body: SearchBody = {};
-
-    if (filter) {
-      body.filter = filter.value;
-    }
-
-    return Object.keys(body).length ? body : undefined;
-  });
+  } = await useFilter('bestiary', '/api/v2/bestiary/filters');
 
   const {
     data: bestiary,
@@ -40,14 +30,14 @@
   } = await useAsyncData(
     'bestiary',
     () =>
-      $fetch<Array<CreatureLinkResponse>>('/api/v2/bestiary/search', {
-        method: 'POST',
-        params: {
-          query: search.value,
+      $fetch<Array<CreatureLinkResponse>>('/api/v2/bestiary', {
+        method: 'GET',
+        query: {
+          search: search.value,
+          filter: filterStringFromUrl.value,
         },
-        body: searchBody.value,
       }),
-    { deep: false, watch: [search, filter] },
+    { deep: false, watch: [search, filterStringFromUrl] },
   );
 </script>
 

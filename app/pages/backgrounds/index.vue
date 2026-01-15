@@ -5,7 +5,7 @@
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
-  import type { BackgroundLinkResponse, SearchBody } from '~/shared/types';
+  import type { BackgroundLinkResponse } from '~/shared/types';
 
   useSeoMeta({
     title: 'Предыстории [Backgrounds]',
@@ -16,19 +16,10 @@
 
   const {
     filter,
+    filterStringFromUrl,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
-  } = await useFilter('backgrounds-filters', '/api/v2/backgrounds/filters');
-
-  const searchBody = computed(() => {
-    const body: SearchBody = {};
-
-    if (filter) {
-      body.filter = filter.value;
-    }
-
-    return Object.keys(body).length ? body : undefined;
-  });
+  } = await useFilter('backgrounds', '/api/v2/backgrounds/filters');
 
   const {
     data: backgrounds,
@@ -38,16 +29,16 @@
   } = await useAsyncData(
     'backgrounds',
     () =>
-      $fetch<Array<BackgroundLinkResponse>>('/api/v2/backgrounds/search', {
-        method: 'POST',
-        params: {
-          query: search.value,
+      $fetch<Array<BackgroundLinkResponse>>('/api/v2/backgrounds', {
+        method: 'GET',
+        query: {
+          search: search.value,
+          filter: filterStringFromUrl.value,
         },
-        body: searchBody.value,
       }),
     {
       deep: false,
-      watch: [search, filter],
+      watch: [search, filterStringFromUrl],
     },
   );
 </script>

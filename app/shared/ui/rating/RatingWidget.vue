@@ -145,7 +145,7 @@
   <div
     v-if="size === 'medium'"
     :class="[
-      'flex shrink-0 flex-col justify-between gap-2',
+      'flex flex-col justify-between gap-2',
       'h-28 w-full rounded-md bg-hover p-4 @md:max-w-50',
     ]"
   >

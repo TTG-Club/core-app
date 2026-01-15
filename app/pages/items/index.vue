@@ -7,30 +7,20 @@
 
   import type { ItemLinkResponse } from '~items/types';
   import { useFilter } from '~filter/composable';
-  import type { SearchBody } from '~/shared/types';
 
   useSeoMeta({
     title: 'Предметы [Items]',
     description: 'Предметы из D&D 5 (редакция 2024 года).',
   });
 
-  const search = ref<string>('');
+  const search = ref<string>();
 
   const {
     filter,
+    filterStringFromUrl,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
-  } = await useFilter('item-filters', '/api/v2/item/filters');
-
-  const searchBody = computed(() => {
-    const body: SearchBody = {};
-
-    if (filter) {
-      body.filter = filter.value;
-    }
-
-    return Object.keys(body).length ? body : undefined;
-  });
+  } = await useFilter('items', '/api/v2/item/filters');
 
   const {
     data: items,
@@ -40,17 +30,16 @@
   } = await useAsyncData(
     'items',
     () =>
-      $fetch<Array<ItemLinkResponse>>('/api/v2/item/search', {
-        method: 'POST',
-        params: {
-          query:
-            search.value && search.value.length >= 3 ? search.value : undefined,
+      $fetch<Array<ItemLinkResponse>>('/api/v2/item', {
+        method: 'GET',
+        query: {
+          search: search.value,
+          filter: filterStringFromUrl.value,
         },
-        body: searchBody.value,
       }),
     {
       deep: false,
-      watch: [search, filter],
+      watch: [search, filterStringFromUrl],
     },
   );
 </script>

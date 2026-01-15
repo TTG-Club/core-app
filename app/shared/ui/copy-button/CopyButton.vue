@@ -7,22 +7,22 @@
     size?: ButtonProps['size'];
   }>();
 
-  const { copy } = useCopy();
+  const { share } = useCopyAndShare();
 </script>
 
 <template>
   <UTooltip
     v-if="url"
-    text="Скопировать ссылку"
+    text="Поделиться ссылкой"
   >
     <UButton
       :href="url"
-      icon="i-ttg-copy"
+      icon="i-fluent-share-24-regular"
       variant="ghost"
       color="neutral"
       :disabled
       :size
-      @click.left.exact.prevent="copy(url, 'Ссылка успешно скопирована')"
+      @click.left.exact.prevent="share(url)"
     />
   </UTooltip>
 </template>
