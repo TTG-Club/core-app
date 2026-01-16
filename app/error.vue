@@ -5,7 +5,7 @@
 
   import type { NuxtError } from '#app';
 
-  import '~assets/css/index.scss';
+  import 'assets/css/index.scss';
 
   const { error } = defineProps<{
     error: NuxtError;
