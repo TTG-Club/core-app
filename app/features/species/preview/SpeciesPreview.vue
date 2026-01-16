@@ -1,7 +1,8 @@
 <script setup lang="ts">
-  import { UiDrawer } from '~ui/drawer';
   import { SpeciesBody } from '~species/body';
-  import type { SpeciesDetailResponse, SpeciesCreate } from '~/shared/types';
+  import { UiDrawer } from '~ui/drawer';
+
+  import type { SpeciesCreate, SpeciesDetailResponse } from '~/shared/types';
 
   const opened = defineModel<boolean>('open', { required: true });
 

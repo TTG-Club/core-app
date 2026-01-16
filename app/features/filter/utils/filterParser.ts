@@ -1,6 +1,7 @@
-import pako from 'pako';
-import type { Filter, FilterRequest } from '../types';
 import { cloneDeep } from 'lodash-es';
+import pako from 'pako';
+
+import type { Filter, FilterRequest } from '../types';
 
 export function getSelectedFilters(
   filter: Filter | undefined,

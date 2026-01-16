@@ -1,7 +1,9 @@
 <script setup lang="ts">
   import bytes from 'bytes';
   import { toNumber } from 'lodash-es';
+
   import { getStatusMessage } from '#shared/utils';
+
   import type { UploadResponse } from '~/shared/types';
 
   const { section, maxSize = undefined } = defineProps<{
@@ -181,6 +183,8 @@
   }
 
   function onError(error: Error, statusCode: number) {
+    console.error(error);
+
     $toast.add({
       color: 'error',
       title: 'Ошибка при загрузке файла',
@@ -191,11 +195,15 @@
   async function handleFiles(files: File[] | FileList) {
     const file = Array.from(files)[0];
 
-    if (!file) return;
+    if (!file) {
+      return;
+    }
 
     const isValid = await beforeUpload(file);
 
-    if (!isValid) return;
+    if (!isValid) {
+      return;
+    }
 
     isImageLoading.value = true;
 

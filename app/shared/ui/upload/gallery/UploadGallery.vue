@@ -1,7 +1,9 @@
 <script setup lang="ts">
   import bytes from 'bytes';
   import { chunk } from 'lodash-es';
+
   import { getStatusMessage } from '#shared/utils';
+
   import type { UploadResponse } from '~/shared/types';
 
   const { section } = defineProps<{
@@ -24,6 +26,8 @@
   }
 
   function onError(error: Error, statusCode: number) {
+    console.error(error);
+
     $toast.add({
       color: 'error',
       title: 'Неизвестная ошибка',
@@ -165,14 +169,18 @@
   async function handleFiles(files: File[] | FileList) {
     const fileArray = Array.from(files);
 
-    if (!fileArray.length) return;
+    if (!fileArray.length) {
+      return;
+    }
 
     isImageLoading.value = true;
 
     for (const file of fileArray) {
       const isValid = await beforeUpload(file);
 
-      if (!isValid) continue;
+      if (!isValid) {
+        continue;
+      }
 
       try {
         const formData = new FormData();

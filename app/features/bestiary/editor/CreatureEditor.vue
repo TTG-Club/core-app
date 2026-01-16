@@ -1,29 +1,30 @@
 <script setup lang="ts">
+  import { CreaturePreview } from '~bestiary/preview';
+  import { getInitialState } from '~bestiary/types';
+  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { SelectAlignment } from '~ui/select';
+  import { UploadImage } from '~ui/upload';
+
   import {
-    CreatureSection,
-    CreatureChallengeRating,
     CreatureAbilities,
     CreatureAction,
+    CreatureChallengeRating,
+    CreatureDefenses,
     CreatureHit,
+    CreatureInitiative,
+    CreatureLair,
     CreatureLanguages,
+    CreatureLegendaryActions,
+    CreatureSection,
     CreatureSenses,
     CreatureSize,
     CreatureSkills,
     CreatureSpeed,
     CreatureTrait,
     CreatureType,
-    CreatureDefenses,
-    CreatureInitiative,
-    CreatureLair,
-    CreatureLegendaryActions,
   } from './ui';
 
-  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
-  import { SelectAlignment } from '~ui/select';
-  import { UploadImage } from '~ui/upload';
-
-  import { type CreatureCreate, getInitialState } from '~bestiary/types';
-  import { CreaturePreview } from '~bestiary/preview';
+  import type { CreatureCreate } from '~bestiary/types';
 
   const { state, onError, onSubmit } = useWorkshopForm<CreatureCreate>({
     actionUrl: '/api/v2/bestiary',

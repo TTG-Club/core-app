@@ -1,7 +1,8 @@
 <script setup lang="ts">
-  import { useUserStore } from '~/shared/stores';
-  import { AuthModal } from '~user/auth-modal';
   import { KbdShortcut } from '~ui/kbd-shortcut';
+  import { AuthModal } from '~user/auth-modal';
+
+  import { useUserStore } from '~/shared/stores';
 
   const userStore = useUserStore();
   const { isAdmin } = useUserRoles();

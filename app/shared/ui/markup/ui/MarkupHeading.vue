@@ -1,5 +1,8 @@
 <script setup lang="ts">
-  import { computed, type VNode } from 'vue';
+  import { computed } from 'vue';
+
+  import type { VNode } from 'vue';
+
   import type { MarkerNode, RenderNode } from '../types';
 
   const { node, renderNodes } = defineProps<{

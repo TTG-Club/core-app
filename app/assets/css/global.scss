@@ -64,9 +64,9 @@ body,
 html {
   --scrollbar-width: 0;
 
-  &[style*="overflow:hidden"],
-  &[style*="overflow: hidden"] {
-      padding-right: var(--scrollbar-width);
+  &[style*='overflow:hidden'],
+  &[style*='overflow: hidden'] {
+    padding-right: var(--scrollbar-width);
   }
 }
 

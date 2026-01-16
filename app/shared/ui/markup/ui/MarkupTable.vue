@@ -1,12 +1,14 @@
 <script setup lang="ts">
-  import { computed, h, type VNode } from 'vue';
   import {
-    type ColumnDef,
     createColumnHelper,
     FlexRender,
     getCoreRowModel,
     useVueTable,
   } from '@tanstack/vue-table';
+
+  import type { ColumnDef } from '@tanstack/vue-table';
+  import type { VNode } from 'vue';
+
   import type { MarkerNode, RenderNode } from '../types';
 
   interface TableCell {
@@ -32,20 +34,29 @@
   }>();
 
   const colCount = computed(() => {
-    if (node.colLabels?.length) return node.colLabels.length;
-    if (!node.rows || node.rows.length === 0) return 0;
+    if (node.colLabels?.length) {
+      return node.colLabels.length;
+    }
+
+    if (!node.rows || node.rows.length === 0) {
+      return 0;
+    }
 
     return Math.max(...node.rows.map((row) => row.length));
   });
 
   const labels = computed(() => {
-    if (node.colLabels) return node.colLabels;
+    if (node.colLabels) {
+      return node.colLabels;
+    }
 
     return Array.from({ length: colCount.value }, (_, i) => `#${i + 1}`);
   });
 
   const tableData = computed<TableRowData[]>(() => {
-    if (!node.rows || node.rows.length === 0) return [];
+    if (!node.rows || node.rows.length === 0) {
+      return [];
+    }
 
     return node.rows.map((cells, index) => ({ cells, index }));
   });
@@ -96,7 +107,9 @@
   const columnHelper = createColumnHelper<TableRowData>();
 
   const columns = computed<ColumnDef<TableRowData>[]>(() => {
-    if (colCount.value === 0) return [];
+    if (colCount.value === 0) {
+      return [];
+    }
 
     return Array.from({ length: colCount.value }, (_, columnIndex) =>
       columnHelper.display({
@@ -105,7 +118,9 @@
         cell: (ctx) => {
           const rawCell = ctx.row.original.cells[columnIndex];
 
-          if (rawCell === undefined) return undefined;
+          if (rawCell === undefined) {
+            return undefined;
+          }
 
           const cell = normalizeCell(rawCell);
           const content = renderCellContent(cell);

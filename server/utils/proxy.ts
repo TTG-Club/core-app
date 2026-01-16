@@ -1,4 +1,5 @@
 import type { H3Event } from 'h3';
 
-export const proxy = (event: H3Event) =>
-  proxyRequest(event, getProxyPath(event));
+export function proxy(event: H3Event) {
+  return proxyRequest(event, getProxyPath(event));
+}

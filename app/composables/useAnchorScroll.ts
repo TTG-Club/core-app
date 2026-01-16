@@ -38,7 +38,9 @@ export function useAnchorScroll(config?: AnchorScrollConfiguration) {
       anchorElement = document.getElementById(maybeElement.replace(/^#/, ''));
     }
 
-    if (!anchorElement) return false;
+    if (!anchorElement) {
+      return false;
+    }
 
     const { top, left } = anchorElement.getBoundingClientRect();
     const defaultOptions = toValue(resultConfig.toAnchor);

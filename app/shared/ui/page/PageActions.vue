@@ -1,7 +1,8 @@
 <script setup lang="ts">
+  import { useUserStore } from '~/shared/stores';
+
   import { CopyButton } from '../copy-button';
 
-  import { useUserStore } from '~/shared/stores';
   import type { RouteLocationRaw } from 'vue-router';
 
   const { closeUrl = undefined, editUrl = undefined } = defineProps<{

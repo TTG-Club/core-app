@@ -16,7 +16,9 @@
   );
 
   const options = computed(() => {
-    if (!data.value) return [];
+    if (!data.value) {
+      return [];
+    }
 
     if (!multiple) {
       return data.value;
@@ -30,13 +32,13 @@
     }));
   });
 
-  const handleDropdownOpening = (state: boolean) => {
+  function handleDropdownOpening(state: boolean) {
     if (!state) {
       return;
     }
 
     refresh();
-  };
+  }
 
   const placeholder = computed(() => {
     if (!multiple) {

@@ -14,13 +14,13 @@
     { dedupe: 'defer' },
   );
 
-  const handleDropdownOpening = (state: boolean) => {
+  function handleDropdownOpening(state: boolean) {
     if (!state) {
       return;
     }
 
     refresh();
-  };
+  }
 </script>
 
 <template>

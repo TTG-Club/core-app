@@ -1,8 +1,7 @@
 <script setup lang="ts">
-  import { DescriptionsBlock, TopBar } from './ui';
+  import { DescriptionsBlock, StatsBlock, TopBar } from './ui';
 
-  import type { ItemDetailResponse } from '~/features/items/types';
-  import StatsBlock from '~items/body/ui/StatsBlock.vue';
+  import type { ItemDetailResponse } from '~items/types';
 
   defineProps<{
     item: ItemDetailResponse;

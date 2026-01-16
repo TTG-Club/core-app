@@ -1,6 +1,6 @@
 import { getReasonPhrase, StatusCodes } from 'http-status-codes';
-
 import { getStatusMessage } from '~~/shared/utils';
+
 import type { Role } from '~/shared/types';
 
 export default defineNuxtRouteMiddleware(async (to) => {

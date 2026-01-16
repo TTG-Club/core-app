@@ -1,7 +1,9 @@
 <script setup lang="ts">
   import { EditorArrayControls } from '~ui/editor';
-  import type { ClassColumnCreate } from '~classes/types';
+
   import { TableColumnScaling } from './ui';
+
+  import type { ClassColumnCreate } from '~classes/types';
 
   const state = defineModel<Array<ClassColumnCreate>>({ required: true });
 

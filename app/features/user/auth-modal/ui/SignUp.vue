@@ -66,7 +66,7 @@
 
   const inProgress = computed(() => status.value === 'pending');
 
-  const onSubmit = async () => {
+  async function onSubmit() {
     await execute();
 
     if (error.value) {
@@ -91,7 +91,7 @@
       color: 'success',
       icon: 'i-fluent-person-available-16-regular',
     });
-  };
+  }
 </script>
 
 <template>

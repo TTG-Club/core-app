@@ -1,9 +1,11 @@
 <script setup lang="ts">
-  import { DrawerHeader, DrawerActions, DrawerBody } from './ui';
-  import type { DrawerTitleName } from './ui';
+  import { DrawerActions, DrawerBody, DrawerHeader } from './ui';
 
   import type { Dayjs } from 'dayjs';
+
   import type { SourceResponse } from '~/shared/types';
+
+  import type { DrawerTitleName } from './ui';
 
   const {
     title,

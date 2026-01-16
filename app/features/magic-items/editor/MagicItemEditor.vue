@@ -1,15 +1,15 @@
 <script setup lang="ts">
-  import {
-    MagicItemRarity,
-    MagicItemAttunement,
-    MagicItemCategory,
-  } from './ui';
-
+  import { MagicItemPreview } from '~magic-items/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { UploadImage } from '~ui/upload';
 
+  import {
+    MagicItemAttunement,
+    MagicItemCategory,
+    MagicItemRarity,
+  } from './ui';
+
   import type { MagicItemCreate } from '~magic-items/types';
-  import { MagicItemPreview } from '~magic-items/preview';
 
   function getInitialState(): MagicItemCreate {
     return {

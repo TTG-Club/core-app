@@ -1,17 +1,15 @@
-import {
-  mapSearchItemsToPaths,
-  mapSearchItemsToTypeNames,
-  type SearchItemsType,
-} from './const';
+import { mapSearchItemsToPaths, mapSearchItemsToTypeNames } from './const';
 
-export const getPathBySearchItem = (
+import type { SearchItemsType } from './const';
+
+export function getPathBySearchItem(
   action: SearchItemsType,
-): SearchItemsType | string => {
+): SearchItemsType | string {
   return mapSearchItemsToPaths.get(action) || action;
-};
+}
 
-export const getTypeNameBySearchItem = (
+export function getTypeNameBySearchItem(
   action: SearchItemsType,
-): SearchItemsType | string => {
+): SearchItemsType | string {
   return mapSearchItemsToTypeNames.get(action) || action;
-};
+}

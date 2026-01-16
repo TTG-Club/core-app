@@ -1,8 +1,8 @@
 <script setup lang="ts">
   import type {
-    CreatureSenses,
-    CreateSkill,
     CreateAbility,
+    CreateSkill,
+    CreatureSenses,
   } from '~bestiary/types';
 
   const model = defineModel<CreatureSenses>({ required: true });

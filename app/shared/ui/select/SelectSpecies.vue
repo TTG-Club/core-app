@@ -1,12 +1,12 @@
 <script setup lang="ts">
   import type { SpeciesLinkResponse } from '~/shared/types';
 
-  type SpeciesSelectItem = {
+  interface SpeciesSelectItem {
     label: string;
     value: string;
     description: string;
     source: string;
-  };
+  }
 
   const { multiple = false, disabled } = defineProps<{
     disabled?: boolean;

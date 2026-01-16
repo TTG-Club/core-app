@@ -1,7 +1,9 @@
 <script setup lang="ts">
-  import type { ClassLinkResponse } from '~classes/types';
-  import type { CommandPaletteGroup } from '@nuxt/ui';
   import { uniqBy } from 'lodash-es';
+
+  import type { CommandPaletteGroup } from '@nuxt/ui';
+  import type { ClassLinkResponse } from '~classes/types';
+
   import type { NameResponse } from '~/shared/types';
 
   const {

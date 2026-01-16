@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import type { SpeciesCreate } from '~/shared/types';
   import { EditorArrayControls } from '~ui/editor';
+
+  import type { SpeciesCreate } from '~/shared/types';
 
   type Features = SpeciesCreate['features'];
 

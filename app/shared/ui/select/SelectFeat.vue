@@ -1,7 +1,9 @@
 <script setup lang="ts">
-  import type { FeatLinkResponse } from '~/shared/types';
   import { cloneDeep, isEmpty, isString } from 'lodash-es';
+
   import type { Filter } from '~filter/types';
+
+  import type { FeatLinkResponse } from '~/shared/types';
 
   const {
     disabled = false,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SourceLink, SelectOptionWithShortName } from '~/shared/types';
+  import type { SelectOptionWithShortName, SourceLink } from '~/shared/types';
 
   const { multiple = false, disabled } = defineProps<{
     disabled?: boolean;
@@ -29,13 +29,13 @@
     { dedupe: 'defer' },
   );
 
-  const handleDropdownOpening = (state: boolean) => {
+  function handleDropdownOpening(state: boolean) {
     if (!state) {
       return;
     }
 
     refresh();
-  };
+  }
 </script>
 
 <template>

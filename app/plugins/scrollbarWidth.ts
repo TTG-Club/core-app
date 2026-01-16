@@ -1,5 +1,7 @@
 export default defineNuxtPlugin((nuxtApp) => {
-  if (!import.meta.client) return;
+  if (!import.meta.client) {
+    return;
+  }
 
   const scrollbarWidth = ref<number>(0);
 

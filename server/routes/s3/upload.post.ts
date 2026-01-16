@@ -2,7 +2,6 @@ import { H3Error } from 'h3';
 import { StatusCodes } from 'http-status-codes';
 import { toSafeInteger } from 'lodash-es';
 import { z } from 'zod/v4';
-
 import { S3Service } from '~~/server/services';
 
 import type { EventHandlerRequest } from 'h3';

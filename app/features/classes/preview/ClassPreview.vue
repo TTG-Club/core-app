@@ -1,7 +1,8 @@
 <script setup lang="ts">
-  import { UiDrawer } from '~ui/drawer';
-  import type { ClassCreate, ClassDetailResponse } from '~classes/types';
   import { ClassBody } from '~classes/body';
+  import { UiDrawer } from '~ui/drawer';
+
+  import type { ClassCreate, ClassDetailResponse } from '~classes/types';
 
   const opened = defineModel<boolean>('open', { required: true });
 

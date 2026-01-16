@@ -115,14 +115,11 @@ const messages: Partial<Record<StatusCodes, Array<string>>> = {
   ],
 };
 
-export const getStatusMessage = (
-  code: StatusCodes,
-  disableBeauty?: boolean,
-) => {
+export function getStatusMessage(code: StatusCodes, disableBeauty?: boolean) {
   const list = messages[code];
   const length = list?.length;
 
   return !length || disableBeauty
     ? getReasonPhrase(code)
     : list.at(random(length - 1));
-};
+}

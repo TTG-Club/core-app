@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { HomeBanners, RoadmapBanner } from '~home/banners';
-  import { HomeSections } from '~home/sections';
   import { RecentChanges } from '~home/recent-changes';
+  import { HomeSections } from '~home/sections';
   import { SocialLinks } from '~home/social-links';
   import { SearchPanel } from '~search/panel';
   import { UiPlaceholder } from '~ui/placeholder';

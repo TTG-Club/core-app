@@ -1,5 +1,6 @@
 import * as z from 'zod';
 import { util } from 'zod/v4/core';
+
 import type {
   $ZodErrorMap,
   $ZodStringFormatIssues,
@@ -87,7 +88,6 @@ const error: () => $ZodErrorMap = () => {
       case 'number': {
         return Number.isNaN(data) ? 'NaN' : 'число';
       }
-
       case 'object': {
         if (Array.isArray(data)) {
           return 'массив';
@@ -149,11 +149,11 @@ const error: () => $ZodErrorMap = () => {
       case 'invalid_type':
         return `Неверный ввод: ожидалось ${issue.expected}, получено ${parsedType(issue.input)}`;
       case 'invalid_value':
-        if (issue.values.length === 1)
+        if (issue.values.length === 1) {
           return `Неверный ввод: ожидалось ${util.stringifyPrimitive(issue.values[0])}`;
+        }
 
         return `Неверный вариант: ожидалось одно из ${util.joinValues(issue.values, '|')}`;
-
       case 'too_big': {
         const adj = issue.inclusive ? '<=' : '<';
         const sizing = getSizing(issue.origin);
@@ -173,7 +173,6 @@ const error: () => $ZodErrorMap = () => {
 
         return `Слишком большое значение: ожидалось, что ${issue.origin ?? 'значение'} будет ${adj}${issue.maximum.toString()}`;
       }
-
       case 'too_small': {
         const adj = issue.inclusive ? '>=' : '>';
         const sizing = getSizing(issue.origin);
@@ -193,22 +192,27 @@ const error: () => $ZodErrorMap = () => {
 
         return `Слишком маленькое значение: ожидалось, что ${issue.origin} будет ${adj}${issue.minimum.toString()}`;
       }
-
       case 'invalid_format': {
         const _issue = issue as $ZodStringFormatIssues;
 
-        if (_issue.format === 'starts_with')
+        if (_issue.format === 'starts_with') {
           return `Неверная строка: должна начинаться с "${_issue.prefix}"`;
-        if (_issue.format === 'ends_with')
+        }
+
+        if (_issue.format === 'ends_with') {
           return `Неверная строка: должна заканчиваться на "${_issue.suffix}"`;
-        if (_issue.format === 'includes')
+        }
+
+        if (_issue.format === 'includes') {
           return `Неверная строка: должна содержать "${_issue.includes}"`;
-        if (_issue.format === 'regex')
+        }
+
+        if (_issue.format === 'regex') {
           return `Неверная строка: должна соответствовать шаблону ${_issue.pattern}`;
+        }
 
         return `Неверный ${Nouns[_issue.format] ?? issue.format}`;
       }
-
       case 'not_multiple_of':
         return `Неверное число: должно быть кратным ${issue.divisor}`;
       case 'unrecognized_keys':

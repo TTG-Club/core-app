@@ -1,11 +1,13 @@
-import type { FormErrorEvent } from '#ui/types';
 import { cloneDeep, isEqual, merge } from 'lodash-es';
+
 import type { FetchResponse } from 'ofetch';
 
-export type WorkshopFormOptions<T> = {
+import type { FormErrorEvent } from '#ui/types';
+
+export interface WorkshopFormOptions<T> {
   actionUrl: string;
   getInitialState: () => T;
-};
+}
 
 export function useWorkshopForm<T extends Record<string, any>>(
   options: WorkshopFormOptions<T>,

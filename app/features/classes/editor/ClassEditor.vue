@@ -1,20 +1,21 @@
 <script setup lang="ts">
+  import { ClassPreview } from '~classes/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
-  import { UploadGallery, UploadImage } from '~ui/upload';
   import {
     SelectAbilities,
     SelectCasterType,
     SelectClass,
     SelectDice,
   } from '~ui/select';
+  import { UploadGallery, UploadImage } from '~ui/upload';
 
-  import type { ClassCreate, ClassLinkResponse } from '~classes/types';
   import {
+    ClassEditorFeatures,
     ClassEditorProficiency,
     ClassEditorTable,
-    ClassEditorFeatures,
   } from './ui';
-  import { ClassPreview } from '~classes/preview';
+
+  import type { ClassCreate, ClassLinkResponse } from '~classes/types';
 
   function getInitialState(): ClassCreate {
     return {

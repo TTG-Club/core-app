@@ -1,9 +1,5 @@
-export * from './species';
-
-export * from './spells';
-
-export * from './feats';
-
-export * from '~glossary/types';
-
 export * from './backgrounds';
+export * from './feats';
+export * from './species';
+export * from './spells';
+export * from '~glossary/types';

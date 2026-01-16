@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import { MarkupRender } from '~ui/markup';
   import { UiCollapse } from '~ui/collapse';
+  import { MarkupRender } from '~ui/markup';
+
   import type { ClassDetailResponse } from '~classes/types';
 
   defineProps<{

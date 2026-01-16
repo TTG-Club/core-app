@@ -1,5 +1,7 @@
 import { consola } from 'consola';
+
 import { MARKER_MAP } from './config';
+
 import type { MarkerNode, SimpleTextNode } from './types';
 
 export function logError(
@@ -33,7 +35,9 @@ export function isMarkerNode(node: unknown): node is MarkerNode {
 
 // Проверка, является ли нода блочным элементом
 export function isBlockNode(node: unknown): boolean {
-  if (!isMarkerNode(node)) return false;
+  if (!isMarkerNode(node)) {
+    return false;
+  }
 
   const config = MARKER_MAP.get(node.type);
 

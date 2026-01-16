@@ -1,8 +1,10 @@
-import { random } from 'lodash-es';
-import type { GreetingsResponse } from '../../dto';
-import { GreetingsRepository } from '../../repository';
-import type { GreetingsService } from '../GreetingsService';
 import { StatusCodes } from 'http-status-codes';
+import { random } from 'lodash-es';
+
+import { GreetingsRepository } from '../../repository';
+
+import type { GreetingsResponse } from '../../dto';
+import type { GreetingsService } from '../GreetingsService';
 
 class GreetingsServiceImpl implements GreetingsService {
   getRandomGreeting = (): GreetingsResponse => {

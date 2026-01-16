@@ -4,6 +4,7 @@
     SelectSkills,
     SelectWeaponCategory,
   } from '~ui/select';
+
   import type { ClassProficiencyCreate } from '~classes/types';
 
   const state = defineModel<ClassProficiencyCreate>({ required: true });

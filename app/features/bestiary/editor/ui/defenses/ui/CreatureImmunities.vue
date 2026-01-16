@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { SelectCondition, SelectDamageType } from '~ui/select';
+
   import type { CreatureImmunities } from '~bestiary/types';
 
   const immunities = defineModel<CreatureImmunities>({

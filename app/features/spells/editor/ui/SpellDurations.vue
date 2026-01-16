@@ -1,10 +1,10 @@
 <script setup lang="ts">
   import { isString } from 'lodash-es';
+  import { EditorArrayControls } from '~ui/editor';
 
   import { DictionaryService } from '~/shared/api';
 
   import type { SpellDuration } from '~/shared/types';
-  import { EditorArrayControls } from '~ui/editor';
 
   const durations = defineModel<Array<SpellDuration>>({
     default: () => [],

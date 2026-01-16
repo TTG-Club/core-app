@@ -3,7 +3,6 @@
 import { fileURLToPath, URL } from 'node:url';
 
 import bytes from 'bytes';
-
 import ms from 'ms';
 
 const application = {

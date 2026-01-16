@@ -1,6 +1,6 @@
 import { slugify } from 'transliteration';
 
-import type { OptionsSlugify } from 'transliteration';
+type OptionsSlugify = Parameters<typeof slugify>[1];
 
 /**
  * Конвертирование строки в url-friendly строку
@@ -12,7 +12,7 @@ import type { OptionsSlugify } from 'transliteration';
  *   allowedChars: 'a-zA-Z0-9-',
  * }`
  */
-export const getSlug = (string: string, options?: OptionsSlugify) => {
+export function getSlug(string: string, options?: OptionsSlugify) {
   const config = Object.assign(
     {
       lowercase: true,
@@ -26,4 +26,4 @@ export const getSlug = (string: string, options?: OptionsSlugify) => {
     .replace(/-+/g, '-')
     .replace(/^[^a-z0-9]+/gi, '')
     .replace(/[^a-z0-9]+$/gi, '');
-};
+}

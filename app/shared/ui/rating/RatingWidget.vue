@@ -1,7 +1,9 @@
 <script setup lang="ts">
   import { isUndefined } from 'lodash-es';
-  import type { RatingValue } from './types';
+
   import { UIcon } from '#components';
+
+  import type { RatingValue } from './types';
 
   const {
     section,
@@ -38,8 +40,8 @@
     () =>
       $fetch<RatingValue>('/api/v2/rating', {
         params: {
-          section: section,
-          url: url,
+          section,
+          url,
         },
       }),
     {
@@ -71,8 +73,8 @@
     return $fetch('/api/v2/rating', {
       method: 'POST',
       body: {
-        section: section,
-        url: url,
+        section,
+        url,
         value: getRating(star, part),
       },
       onResponse: (res) => {
@@ -100,8 +102,8 @@
     });
   }
 
-  const StarsRow = () =>
-    h(
+  function StarsRow() {
+    return h(
       'div',
       {
         class: 'flex gap-1',
@@ -139,6 +141,7 @@
         ),
       ),
     );
+  }
 </script>
 
 <template>

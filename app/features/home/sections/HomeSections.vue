@@ -1,10 +1,11 @@
 <script setup lang="ts">
   import { isArray } from 'lodash-es';
 
-  import { CARD_LINKS } from './model';
+  import { useUserStore } from '~/shared/stores';
+
   import { LinkTo5e14 } from '../link-to-5e14';
 
-  import { useUserStore } from '~/shared/stores';
+  import { CARD_LINKS } from './model';
 
   const { user } = storeToRefs(useUserStore());
 

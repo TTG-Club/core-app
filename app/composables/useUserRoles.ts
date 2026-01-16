@@ -1,7 +1,7 @@
 import { useUserStore } from '~/shared/stores';
 import { Role } from '~/shared/types';
 
-export const useUserRoles = () => {
+export function useUserRoles() {
   const { user } = storeToRefs(useUserStore());
 
   const isSubscriber = computed(
@@ -22,4 +22,4 @@ export const useUserRoles = () => {
     isModerator,
     isAdmin,
   };
-};
+}

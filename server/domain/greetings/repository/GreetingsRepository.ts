@@ -1,6 +1,8 @@
-import { GREETINGS_CHARACTERS } from '../const';
-import type { GreetingsCharacter } from '../model';
 import { random } from 'lodash-es';
+
+import { GREETINGS_CHARACTERS } from '../const';
+
+import type { GreetingsCharacter } from '../model';
 
 class GreetingsRepository {
   getRandomCharacter = (): GreetingsCharacter | undefined => {

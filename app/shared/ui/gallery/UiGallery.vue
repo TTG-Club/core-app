@@ -1,9 +1,10 @@
 <script setup lang="ts">
-  import { computed } from 'vue';
-  import Lightgallery from 'lightgallery/vue';
+  import lgFullscreen from 'lightgallery/plugins/fullscreen';
   import lgThumbnail from 'lightgallery/plugins/thumbnail';
   import lgZoom from 'lightgallery/plugins/zoom';
-  import lgFullscreen from 'lightgallery/plugins/fullscreen';
+  import Lightgallery from 'lightgallery/vue';
+  import { computed } from 'vue';
+
   import type { LightGallerySettings } from 'lightgallery/lg-settings';
 
   const {

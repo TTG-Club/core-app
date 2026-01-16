@@ -1,9 +1,10 @@
 <script setup lang="ts">
   import { SpeciesLineages } from '~species/lineages';
-  import { MarkupRender } from '~ui/markup';
+  import { SpeciesLineagesDrawer } from '~species/lineages-drawer';
   import { UiCollapse } from '~ui/collapse';
   import { UiGallery } from '~ui/gallery';
-  import { SpeciesLineagesDrawer } from '~species/lineages-drawer';
+  import { MarkupRender } from '~ui/markup';
+
   import { StatsBlock } from './ui';
 
   import type { SpeciesDetailResponse } from '~/shared/types';

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import { MarkupRender } from '~ui/markup';
   import { UiCollapse } from '~ui/collapse';
+  import { MarkupRender } from '~ui/markup';
+
   import type { ClassFeature } from '~classes/types';
 
   const { feature } = defineProps<{ feature: ClassFeature }>();

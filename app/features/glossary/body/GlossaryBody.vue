@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { TopBar, DescriptionsBlock } from './ui';
+  import { DescriptionsBlock, TopBar } from './ui';
 
   import type { GlossaryDetailResponse } from '~/shared/types';
 

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-  import { SpellLinkComponents, SpellLinkFlags } from './ui';
-
   import { SpellDrawer } from '~spells/drawer';
   import { SmallLink } from '~ui/link';
+
+  import { SpellLinkComponents, SpellLinkFlags } from './ui';
 
   import type { SpellLinkResponse } from '~/shared/types';
 

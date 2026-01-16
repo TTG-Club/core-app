@@ -1,9 +1,9 @@
 <script setup lang="ts">
+  import { BackgroundPreview } from '~backgrounds/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectAbilities, SelectFeat, SelectSkill } from '~ui/select';
 
   import type { BackgroundCreate } from '~/shared/types';
-  import { BackgroundPreview } from '~backgrounds/preview';
 
   function getInitialState(): BackgroundCreate {
     return {

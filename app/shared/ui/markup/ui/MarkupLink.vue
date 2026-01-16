@@ -1,7 +1,11 @@
 <script setup lang="ts">
-  import { computed, type VNode } from 'vue';
+  import { computed } from 'vue';
   import { useRouter } from 'vue-router';
+
   import { ULink } from '#components';
+
+  import type { VNode } from 'vue';
+
   import type { MarkerNode, RenderNode } from '../types';
 
   const { node, renderNodes } = defineProps<{
@@ -26,7 +30,9 @@
     try {
       const parsedUrl = new URL(url, window.location.origin);
 
-      if (parsedUrl.origin !== window.location.origin) return true;
+      if (parsedUrl.origin !== window.location.origin) {
+        return true;
+      }
 
       const router = useRouter();
 

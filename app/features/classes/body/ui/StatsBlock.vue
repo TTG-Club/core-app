@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import type { ClassDetailResponse } from '~classes/types';
   import { InfoTooltip } from '~ui/tooltip';
+
+  import type { ClassDetailResponse } from '~classes/types';
 
   defineProps<
     Pick<

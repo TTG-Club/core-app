@@ -1,7 +1,7 @@
 <script setup lang="ts">
+  import { ClassLink } from '~classes/link';
   import { UiDrawer } from '~ui/drawer';
 
-  import { ClassLink } from '~classes/link';
   import type { ClassLinkResponse } from '~classes/types';
 
   const { url } = defineProps<{

@@ -1,8 +1,12 @@
-import { createTextVNode, h, type VNode } from 'vue';
-import type { RenderNode } from './types';
+import { createTextVNode, h } from 'vue';
+
 import { MARKER_MAP } from './config';
 import { parse } from './parser';
 import { isBlockNode, isMarkerNode, isSimpleTextNode } from './utils';
+
+import type { VNode } from 'vue';
+
+import type { RenderNode } from './types';
 
 // Валидация контента: блочные элементы не могут быть внутри inline
 function validateContent(
@@ -10,11 +14,15 @@ function validateContent(
   parentType: string,
   parentIsBlock: boolean,
 ): void {
-  if (!content) return;
+  if (!content) {
+    return;
+  }
 
   for (const child of content) {
     // Пропускаем строки и SimpleTextNode
-    if (typeof child === 'string' || isSimpleTextNode(child)) continue;
+    if (typeof child === 'string' || isSimpleTextNode(child)) {
+      continue;
+    }
 
     // Проверяем массивы рекурсивно
     if (Array.isArray(child)) {

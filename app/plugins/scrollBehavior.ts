@@ -2,8 +2,10 @@ import { get } from 'lodash-es';
 
 import type { Router } from 'vue-router';
 
-export default defineNuxtPlugin(function (nuxtApp) {
-  if (!import.meta.client) return;
+export default defineNuxtPlugin((nuxtApp) => {
+  if (!import.meta.client) {
+    return;
+  }
 
   const router = nuxtApp.$router as Router;
   const scrollPositions = ref<Record<string, number>>({});

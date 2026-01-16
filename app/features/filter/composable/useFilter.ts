@@ -1,7 +1,6 @@
 // composables/useFilter.ts
 import { cloneDeep } from 'lodash-es';
 
-import type { Filter } from '../types';
 import { getFilterKey } from '../utils';
 import {
   applyCompressedFilters,
@@ -9,6 +8,8 @@ import {
   decompressFilters,
   getSelectedFilters,
 } from '../utils/filterParser';
+
+import type { Filter } from '../types';
 
 export async function useFilter(key: string, url: string) {
   const filterKey = getFilterKey(key);

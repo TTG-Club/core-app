@@ -1,17 +1,18 @@
 <script setup lang="ts">
-  import { MarkupRender } from '~ui/markup';
+  import { UiCollapse } from '~ui/collapse';
   import { UiGallery } from '~ui/gallery';
+  import { MarkupRender } from '~ui/markup';
 
-  import type { ClassDetailResponse } from '~classes/types';
   import {
     ClassEquipment,
     ClassProficiency,
+    ClassRouting,
     ClassTable,
     FeatureCollapse,
     StatsBlock,
-    ClassRouting,
   } from './ui';
-  import { UiCollapse } from '~ui/collapse';
+
+  import type { ClassDetailResponse } from '~classes/types';
 
   const {
     detail,

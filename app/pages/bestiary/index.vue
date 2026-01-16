@@ -1,8 +1,8 @@
 <script setup lang="ts">
   import { CreatureLink } from '~bestiary/link';
-  import { GroupedList } from '~ui/grouped-list';
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
+  import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 

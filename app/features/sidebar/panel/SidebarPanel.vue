@@ -1,10 +1,10 @@
 <script setup lang="ts">
-  import { AppMenu } from '~sidebar/menu';
-  import { ThemeSwitcher } from '~sidebar/theme-switcher';
-  import { UserHelmet } from '~user/helmet';
-  import { SvgLogo } from '~ui/icon';
   import { SearchButton } from '~search/button';
   import { useGlobalSearch } from '~search/composable';
+  import { AppMenu } from '~sidebar/menu';
+  import { ThemeSwitcher } from '~sidebar/theme-switcher';
+  import { SvgLogo } from '~ui/icon';
+  import { UserHelmet } from '~user/helmet';
 
   const route = useRoute();
   const { y } = useWindowScroll();

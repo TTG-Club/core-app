@@ -1,9 +1,9 @@
 <script setup lang="ts">
-  import '~/assets/css/index.scss';
   import { ru } from '@nuxt/ui/locale';
-
   import { PwaConfig } from '~pwa/config';
   import { SidebarPanel } from '~sidebar/panel';
+
+  import '~/assets/css/index.scss';
 
   const { name } = useTheme();
 

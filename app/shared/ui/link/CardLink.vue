@@ -1,7 +1,9 @@
 <script setup lang="ts">
   import { SourceTag } from '~ui/source-tag';
-  import type { NameResponse, SourceResponse } from '~/shared/types';
+
   import type { RouteLocationRaw } from 'vue-router';
+
+  import type { NameResponse, SourceResponse } from '~/shared/types';
 
   const {
     to,
