@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { pick } from 'lodash-es';
+  import { pick } from 'es-toolkit';
   import { UiAction } from '~ui/action';
   import { UiCollapse } from '~ui/collapse';
   import { UiGallery } from '~ui/gallery';
@@ -15,8 +15,7 @@
   }>();
 
   const stats = computed(() =>
-    pick(
-      creature,
+    pick(creature, [
       'ac',
       'cr',
       'initiative',
@@ -30,7 +29,7 @@
       'immunity',
       'sense',
       'languages',
-    ),
+    ]),
   );
 
   const hasLair = computed(

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { isUndefined } from 'lodash-es';
+  import { isUndefined } from 'es-toolkit';
 
   import { UIcon } from '#components';
 

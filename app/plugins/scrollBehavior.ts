@@ -1,5 +1,3 @@
-import { get } from 'lodash-es';
-
 import type { Router } from 'vue-router';
 
 export default defineNuxtPlugin((nuxtApp) => {
@@ -18,14 +16,14 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
 
     if (savedPosition) {
-      return { top: get(savedPosition, 'top', 0) };
+      return { top: savedPosition.top ?? 0 };
     }
 
     return { top: 0 };
   };
 
   function saveScrollPosition() {
-    const path = get(router.currentRoute.value, 'path', '');
+    const path = router.currentRoute.value.path ?? '';
 
     scrollPositions.value[path] = window.scrollY;
   }

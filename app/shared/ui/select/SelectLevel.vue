@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { range } from 'lodash-es';
+  import { range } from 'es-toolkit';
 
   const { multiple = false, disabled } = defineProps<{
     disabled?: boolean;

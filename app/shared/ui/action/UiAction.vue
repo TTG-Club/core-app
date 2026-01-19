@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { isArray } from 'lodash-es';
   import { MarkupRender } from '~ui/markup';
 
   import type { RenderNode } from '~ui/markup';
@@ -19,7 +18,7 @@
     </h5>
 
     <MarkupRender
-      v-if="isArray(text)"
+      v-if="Array.isArray(text)"
       :render-node="text"
     />
 

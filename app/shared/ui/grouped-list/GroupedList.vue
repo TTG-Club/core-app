@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends { url: string }">
-  import { groupBy, isNumber, sortBy, upperFirst } from 'lodash-es';
+  import { upperFirst } from 'es-toolkit';
   import { PageGrid } from '~ui/page';
 
   interface Props {
@@ -21,23 +21,31 @@
       return [];
     }
 
-    const grouped = groupBy(items, field);
+    const grouped = items.reduce<Record<string, T[]>>((acc, item) => {
+      const key = String(item[field]);
 
-    const keys = Object.keys(grouped).map((key) => {
-      const numValue = Number(key);
+      (acc[key] ??= []).push(item);
 
-      if (isNumber(numValue) && !Number.isNaN(numValue)) {
-        return numValue;
-      }
+      return acc;
+    }, {});
 
-      return key;
-    });
+    const keys = Object.keys(grouped)
+      .map((key) => {
+        const numValue = Number(key);
 
-    const sortedKeys = sortBy(keys);
+        return !Number.isNaN(numValue) ? numValue : key;
+      })
+      .sort((a, b) => {
+        if (typeof a === 'number' && typeof b === 'number') {
+          return a - b;
+        }
 
-    return sortedKeys.map((key) => ({
+        return String(a).localeCompare(String(b), undefined, { numeric: true });
+      });
+
+    return keys.map((key) => ({
       key,
-      items: grouped[key],
+      items: grouped[String(key)],
     }));
   });
 

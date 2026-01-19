@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import { isArray } from 'lodash-es';
-
   import { useUserStore } from '~/shared/stores';
 
   import { LinkTo5e14 } from '../link-to-5e14';
@@ -11,7 +9,7 @@
 
   const sections = computed(() =>
     CARD_LINKS.map((link) => {
-      if (!isArray(link.roles)) {
+      if (!Array.isArray(link.roles)) {
         return link;
       }
 

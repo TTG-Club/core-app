@@ -5,7 +5,7 @@
     useVueTable,
   } from '@tanstack/vue-table';
   import { useDebounceFn } from '@vueuse/core';
-  import { maxBy, omit, orderBy, range } from 'lodash-es';
+  import { maxBy, omit, orderBy, range } from 'es-toolkit';
   import { CasterType } from '~classes/types';
 
   import { LEVELS } from '~/shared/consts';
@@ -72,7 +72,7 @@
     const list: Array<ClassFeature> = [];
 
     for (const feature of props.features) {
-      list.push(omit(feature, 'scaling'));
+      list.push(omit(feature, ['scaling']));
 
       if (feature.scaling) {
         list.push(
@@ -98,13 +98,15 @@
 
     const found = maxBy(
       scalingArray.filter((s) => s.level <= level),
-      'level',
+      (o) => o.level,
     );
 
     return found?.value ?? '—';
   }
 
-  const tableData = computed(() => orderBy(LEVELS.map(getLevelData), 'level'));
+  const tableData = computed(() =>
+    orderBy(LEVELS.map(getLevelData), ['level'], ['asc']),
+  );
 
   function getLevelData(level: Level) {
     const row: ClassTableRow = {

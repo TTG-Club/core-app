@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import bytes from 'bytes';
-  import { toNumber } from 'lodash-es';
 
   import { getStatusMessage } from '#shared/utils';
 
@@ -14,11 +13,13 @@
     maxSize?: string | number;
   }>();
 
-  if (typeof maxSize === 'string' && !/\d+/.test(maxSize)) {
-    throw new Error('maxSize must be a Number or number in String');
+  const maxSizeConverted = Number(maxSize);
+
+  if (!Number.isFinite(maxSizeConverted)) {
+    throw new TypeError('maxSize must be a Number or number in String');
   }
 
-  if (maxSize && toNumber(maxSize) > 2048) {
+  if (maxSizeConverted > 2048) {
     throw new Error('maxSize must be lower or equal to 2048');
   }
 

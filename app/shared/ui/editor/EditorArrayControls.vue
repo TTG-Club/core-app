@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends object">
-  import { cloneDeep, isEqual } from 'lodash-es';
+  import { cloneDeep, isEqual } from 'es-toolkit';
 
   const model = defineModel<Array<T>>({ required: true });
 

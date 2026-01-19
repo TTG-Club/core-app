@@ -1,4 +1,4 @@
-import { cloneDeep } from 'lodash-es';
+import { cloneDeep } from 'es-toolkit';
 import pako from 'pako';
 
 import type { Filter, FilterRequest } from '../types';

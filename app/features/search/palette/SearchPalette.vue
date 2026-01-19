@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { sortBy } from 'lodash-es';
+  import { sortBy } from 'es-toolkit';
   import { useGlobalSearch } from '~search/composable';
   import { SourceTag } from '~ui/source-tag';
 
@@ -69,7 +69,7 @@
         })),
     }));
 
-    return sortBy(results, 'label');
+    return sortBy(results, ['label']);
   });
 
   const isLoading = computed(() => status.value === 'pending');

@@ -1,5 +1,5 @@
 import { DiceRoller } from 'dice-roller-parser';
-import { trim } from 'lodash-es';
+import { trim } from 'es-toolkit';
 
 /**
  * Маппинг русских операторов на Roll20 нотацию

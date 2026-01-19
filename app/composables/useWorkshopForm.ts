@@ -1,4 +1,4 @@
-import { cloneDeep, isEqual, merge } from 'lodash-es';
+import { cloneDeep, isEqual, toMerged } from 'es-toolkit';
 
 import type { FetchResponse } from 'ofetch';
 
@@ -38,7 +38,7 @@ export function useWorkshopForm<T extends Record<string, any>>(
     if (isEditForm.value) {
       try {
         const resp = await $fetch<T>(`${actionUrl.value}/raw`);
-        const merged = merge({}, _options.getInitialState(), resp);
+        const merged = toMerged(_options.getInitialState(), resp);
 
         state.value = cloneDeep(merged);
         prevState.value = cloneDeep(merged);

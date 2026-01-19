@@ -264,7 +264,7 @@ export default defineNuxtConfig({
         '@nuxt/ui/locale',
 
         // Утилиты
-        'lodash-es',
+        'es-toolkit',
         '@vueuse/core',
         '@nuxtjs/device',
 

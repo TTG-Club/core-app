@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import bytes from 'bytes';
-  import { chunk } from 'lodash-es';
+  import { chunk } from 'es-toolkit';
 
   import { getStatusMessage } from '#shared/utils';
 
@@ -37,7 +37,7 @@
 
   const imagesUploaded = defineModel<string[]>();
 
-  const chunkedPreview = computed(() => chunk(imagesUploaded.value, 3));
+  const chunkedPreview = computed(() => chunk(imagesUploaded.value ?? [], 3));
 
   function bufferToBase64(buf: ArrayBuffer) {
     const chunks = [];

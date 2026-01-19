@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { isString } from 'lodash-es';
+  import { isString } from 'es-toolkit';
   import { EditorArrayControls } from '~ui/editor';
   import { SelectSize } from '~ui/select';
 

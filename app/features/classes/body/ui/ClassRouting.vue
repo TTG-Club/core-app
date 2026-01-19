@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { uniqBy } from 'lodash-es';
+  import { uniqBy } from 'es-toolkit';
 
   import type { CommandPaletteGroup } from '@nuxt/ui';
   import type { ClassLinkResponse } from '~classes/types';

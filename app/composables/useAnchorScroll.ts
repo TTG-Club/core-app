@@ -1,4 +1,4 @@
-import { merge } from 'lodash-es';
+import { merge, toMerged } from 'es-toolkit';
 
 import type {
   AnchorScrollConfiguration,
@@ -21,7 +21,7 @@ export function useAnchorScroll(config?: AnchorScrollConfiguration) {
         offsetTop: 0,
       },
     },
-    config,
+    config ?? {},
   );
 
   const scrollToAnchor = (
@@ -44,7 +44,7 @@ export function useAnchorScroll(config?: AnchorScrollConfiguration) {
 
     const { top, left } = anchorElement.getBoundingClientRect();
     const defaultOptions = toValue(resultConfig.toAnchor);
-    const mergedOptions = merge({}, defaultOptions, options);
+    const mergedOptions = toMerged(defaultOptions ?? {}, options ?? {});
 
     const scrollByOptions: ScrollToOptions = {
       behavior: mergedOptions.behavior,
@@ -64,7 +64,7 @@ export function useAnchorScroll(config?: AnchorScrollConfiguration) {
 
   const scrollToTop = (options?: AnchorScrollOptions) => {
     const defaultOptions = toValue(resultConfig.toTop);
-    const mergedOptions = merge({}, defaultOptions, options);
+    const mergedOptions = toMerged(defaultOptions ?? {}, options ?? {});
 
     const scrollToOptions: ScrollToOptions = {
       behavior: mergedOptions.behavior,

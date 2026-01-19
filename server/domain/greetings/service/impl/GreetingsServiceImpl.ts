@@ -1,5 +1,5 @@
+import { randomInt } from 'es-toolkit';
 import { StatusCodes } from 'http-status-codes';
-import { random } from 'lodash-es';
 
 import { GreetingsRepository } from '../../repository';
 
@@ -16,7 +16,7 @@ class GreetingsServiceImpl implements GreetingsService {
 
     const { image, messages } = character;
 
-    const messageIndex = random(0, messages.length - 1);
+    const messageIndex = randomInt(0, messages.length - 1);
     const message = messages[messageIndex];
 
     if (!message) {

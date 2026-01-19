@@ -1,5 +1,5 @@
+import { randomInt } from 'es-toolkit';
 import { getReasonPhrase, StatusCodes } from 'http-status-codes';
-import { random } from 'lodash-es';
 
 const messages: Partial<Record<StatusCodes, Array<string>>> = {
   // 400 Bad Request
@@ -121,5 +121,5 @@ export function getStatusMessage(code: StatusCodes, disableBeauty?: boolean) {
 
   return !length || disableBeauty
     ? getReasonPhrase(code)
-    : list.at(random(length - 1));
+    : list.at(randomInt(length - 1));
 }

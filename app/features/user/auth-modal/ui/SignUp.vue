@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { omit } from 'lodash-es';
+  import { omit } from 'es-toolkit';
 
   const emit = defineEmits<{
     (e: 'switch:sign-in'): void;
@@ -57,7 +57,7 @@
   });
 
   const { execute, status, error } = useFetch('/api/auth/sign-up', {
-    body: computed(() => omit(state, 'repeat')),
+    body: computed(() => omit(state, ['repeat'])),
     method: 'post',
     watch: false,
     retry: false,

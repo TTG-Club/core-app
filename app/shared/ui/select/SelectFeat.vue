@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { cloneDeep, isEmpty, isString } from 'lodash-es';
+  import { cloneDeep, isString } from 'es-toolkit';
 
   import type { Filter } from '~filter/types';
 
@@ -69,7 +69,7 @@
       key += `-${searchQuery.value}`;
     }
 
-    if (!isEmpty(categories?.length)) {
+    if (Array.isArray(categories) && categories.length > 0) {
       key += `-${categories?.join('-').toLowerCase()}`;
     }
 
