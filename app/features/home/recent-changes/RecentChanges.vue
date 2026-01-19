@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  const RECENT_CHANGES_LIMIT = 10;
+  import { computed, onMounted, ref, watch } from 'vue';
 
   interface RecentChangeItem {
     url: string;
@@ -22,16 +22,104 @@
     };
   }
 
+  type TimelineItem = RecentChangeItem & {
+    date: string;
+    title: string;
+    description: string;
+    icon: string;
+    value: string;
+    tooltip: string;
+  };
+
+  const STORAGE_KEY = 'recent-changes-limit';
+  const DEFAULT_LIMIT = 10;
+
+  const selectedLimit = ref<number>(DEFAULT_LIMIT);
+  const isDropdownOpen = ref(false);
+
+  const limitValues = [5, 10, 20, 50, 100];
+
   const dayjs = useDayjs();
 
-  function formatDateTime(iso: string) {
-    const date = dayjs(iso);
-
-    if (!date.isValid()) {
-      return undefined;
+  function getSavedLimit(): number | null {
+    if (!import.meta.client) {
+      return null;
     }
 
-    return date.local().format('LLL');
+    const saved = localStorage.getItem(STORAGE_KEY);
+
+    if (!saved) {
+      return null;
+    }
+
+    const parsed = Number.parseInt(saved, 10);
+
+    return Number.isNaN(parsed) || parsed <= 0 ? null : parsed;
+  }
+
+  const limitOptions = computed(() =>
+    limitValues.map((value) => ({
+      label: String(value),
+      checked: selectedLimit.value === value,
+      type: 'checkbox' as const,
+      onSelect: () => {
+        selectedLimit.value = value;
+      },
+    })),
+  );
+
+  function formatDateTime(iso: string): string {
+    const date = dayjs(iso);
+
+    return date.isValid() ? date.local().format('LLL') : iso;
+  }
+
+  function getActionType(actionName: string): 'added' | 'updated' | 'default' {
+    const name = actionName.toLowerCase();
+
+    if (
+      name.includes('добавлен') ||
+      name.includes('создан') ||
+      name.includes('добав')
+    ) {
+      return 'added';
+    }
+
+    if (
+      name.includes('обновлен') ||
+      name.includes('изменен') ||
+      name.includes('обнов')
+    ) {
+      return 'updated';
+    }
+
+    return 'default';
+  }
+
+  function getActionIcon(actionName: string): string {
+    const type = getActionType(actionName);
+
+    switch (type) {
+      case 'added':
+        return 'i-ttg-plus';
+      case 'updated':
+        return 'i-fluent-arrow-sync-16-regular';
+      default:
+        return 'i-lucide-circle';
+    }
+  }
+
+  function getActionTooltip(actionName: string): string {
+    const type = getActionType(actionName);
+
+    switch (type) {
+      case 'added':
+        return 'Добавлено';
+      case 'updated':
+        return 'Обновлено';
+      default:
+        return '';
+    }
   }
 
   const {
@@ -40,16 +128,48 @@
     pending,
     refresh,
   } = await useAsyncData<Array<RecentChangeItem>>(
-    computed(() => `recent-changes-limit-${RECENT_CHANGES_LIMIT}`),
+    () => `recent-changes-limit-${selectedLimit.value}`,
     () =>
       $fetch<Array<RecentChangeItem>>('/api/v2/last/update', {
-        query: { top: RECENT_CHANGES_LIMIT },
+        query: { top: selectedLimit.value },
       }),
     {
       dedupe: 'defer',
       default: () => [],
     },
   );
+
+  const timelineItems = computed<Array<TimelineItem>>(() => {
+    return updates.value.map((update) => ({
+      ...update,
+      date: formatDateTime(update.updatedAt),
+      title: update.name.rus,
+      description: '',
+      icon: getActionIcon(update.action.name),
+      tooltip: getActionTooltip(update.action.name),
+      value: `${update.url}-${update.updatedAt}`,
+    }));
+  });
+
+  watch(
+    selectedLimit,
+    async (newLimit) => {
+      if (import.meta.client) {
+        localStorage.setItem(STORAGE_KEY, String(newLimit));
+      }
+
+      await refresh();
+    },
+    { flush: 'post' },
+  );
+
+  onMounted(() => {
+    const savedLimit = getSavedLimit();
+
+    if (savedLimit !== null && savedLimit !== selectedLimit.value) {
+      selectedLimit.value = savedLimit;
+    }
+  });
 </script>
 
 <template>
@@ -62,18 +182,35 @@
           </h3>
 
           <div class="text-xs leading-none text-gray-500">
-            Последние: {{ RECENT_CHANGES_LIMIT }}
+            Последние: {{ selectedLimit }}
           </div>
         </div>
 
-        <UButton
-          :loading="pending"
-          variant="soft"
-          size="sm"
-          @click="refresh()"
-        >
-          Обновить
-        </UButton>
+        <div class="flex gap-2">
+          <UDropdownMenu
+            v-model:open="isDropdownOpen"
+            :items="limitOptions"
+            :ui="{ content: 'w-auto min-w-fit' }"
+          >
+            <template #default>
+              <UButton
+                variant="soft"
+                size="sm"
+                trailing-icon="i-fluent-chevron-down-16-regular"
+              >
+                {{ selectedLimit }}
+              </UButton>
+            </template>
+          </UDropdownMenu>
+
+          <UButton
+            :loading="pending"
+            variant="soft"
+            size="sm"
+            icon="i-fluent-arrow-sync-16-regular"
+            @click="refresh()"
+          />
+        </div>
       </div>
     </template>
 
@@ -86,58 +223,63 @@
       color="error"
     />
 
-    <div
+    <UScrollArea
       v-else
-      class="flex flex-col divide-y divide-default"
+      class="max-h-[500px]"
+      :ui="{
+        viewport: 'p-3',
+      }"
     >
-      <div
-        v-for="update in updates"
-        :key="`${update.url}-${update.updatedAt}`"
-        class="p-3"
+      <UTimeline
+        :items="timelineItems"
+        color="primary"
+        :ui="{
+          indicator: 'bg-border',
+          separator: 'border-l-2 border-default',
+        }"
       >
-        <div class="flex items-start justify-between gap-1">
-          <div class="flex min-w-0 flex-col">
-            <NuxtLink
-              :to="update.url"
-              class="font-medium hover:underline"
-            >
-              {{ update.name.rus }}
-            </NuxtLink>
-
-            <span class="text-gray-500"> [{{ update.name.eng }}] </span>
-          </div>
-
-          <div class="flex shrink-0 flex-col items-end gap-2">
-            <div class="flex flex-row items-center gap-2">
-              <UBadge
-                v-if="update.source"
-                color="neutral"
-                variant="soft"
-                size="sm"
-              >
-                {{ update.source.name.label }}
-              </UBadge>
-
-              <UBadge
-                size="sm"
-                variant="soft"
-                :color="update.action.color || 'neutral'"
-              >
-                {{ update.action.name }}
-              </UBadge>
+        <template #indicator="{ item }">
+          <UTooltip :text="item.tooltip">
+            <div class="flex size-full items-center justify-center">
+              <UIcon
+                :name="item.icon"
+                class="size-4"
+              />
             </div>
+          </UTooltip>
+        </template>
 
-            <NuxtTime
-              :title="formatDateTime(update.updatedAt)"
-              :datetime="update.updatedAt"
-              class="text-xs text-gray-500"
-              relative-style="long"
-              locale="ru-RU"
-              relative
-            />
+        <template #date="{ item }">
+          <div class="flex items-center gap-2">
+            <span>{{ item.date }}</span>
+
+            <UBadge
+              v-if="item.source"
+              color="neutral"
+              variant="soft"
+              size="sm"
+            >
+              {{ item.source.name.label }}
+            </UBadge>
           </div>
-        </div>
-      </div>
-    </div>
+        </template>
+
+        <template #title="{ item }">
+          <NuxtLink
+            :to="item.url"
+            class="font-medium hover:underline"
+          >
+            {{ item.title }}
+
+            <span
+              v-if="item.name.eng"
+              class="text-gray-500"
+            >
+              [{{ item.name.eng }}]
+            </span>
+          </NuxtLink>
+        </template>
+      </UTimeline>
+    </UScrollArea>
   </UCard>
 </template>
