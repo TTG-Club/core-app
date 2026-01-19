@@ -9,13 +9,13 @@ importers:
   .:
     dependencies:
       '@aws-sdk/client-s3':
-        specifier: ^3.970.0
+        specifier: ^3.971.0
         version: 3.971.0
       '@faker-js/faker':
         specifier: ^10.2.0
         version: 10.2.0
       '@iconify-json/fluent':
-        specifier: ^1.2.36
+        specifier: ^1.2.37
         version: 1.2.37
       '@nuxt/fonts':
         specifier: ^0.12.1
@@ -96,7 +96,7 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0
       motion:
-        specifier: ^12.26.2
+        specifier: ^12.27.1
         version: 12.27.1
       ms:
         specifier: ^2.1.3
@@ -126,7 +126,7 @@ importers:
         specifier: 1.2.0
         version: 1.2.0(typescript@5.9.3)
       vue:
-        specifier: ^3.5.26
+        specifier: ^3.5.27
         version: 3.5.27(typescript@5.9.3)
       zod:
         specifier: ^4.3.5
