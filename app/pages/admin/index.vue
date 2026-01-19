@@ -24,13 +24,24 @@
           Управление рамками и настройками токенатора
         </div>
       </UCard>
-      <UButton
-        size="sm"
-        icon="i-ttg-plus"
-        @click.left.exact.prevent="navigateTo(`/admin/news`)"
-      >
-        Новости
-      </UButton>
+      <UCard variant="subtle">
+        <template #header>
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="truncate text-base text-highlighted">Новости</h2>
+
+            <UButton
+                size="sm"
+                to="/admin/news"
+            >
+              Настроить
+            </UButton>
+          </div>
+        </template>
+
+        <div class="text-sm text-neutral-500">
+          Добавление новостей
+        </div>
+      </UCard>
     </div>
   </NuxtLayout>
 </template>
