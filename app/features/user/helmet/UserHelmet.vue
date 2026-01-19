@@ -41,6 +41,11 @@
     navigateTo({ name: 'workshop' });
   }
 
+  function openAdmin() {
+    closeMenu();
+    navigateTo({ name: 'admin' });
+  }
+
   if (isAdmin.value) {
     defineShortcuts(
       {
@@ -154,6 +159,22 @@
             >
               <div class="flex w-full items-center justify-between">
                 <span>Мастерская</span>
+
+                <KbdShortcut :kbds="['meta', 'shift', 'm']" />
+              </div>
+            </UButton>
+
+            <UButton
+              v-if="isAdmin"
+              icon="i-ttg-menu-filled-workshop"
+              color="neutral"
+              variant="ghost"
+              class="w-full"
+              size="lg"
+              @click="openAdmin"
+            >
+              <div class="flex w-full items-center justify-between">
+                <span>Админка</span>
 
                 <KbdShortcut :kbds="['meta', 'shift', 'm']" />
               </div>
