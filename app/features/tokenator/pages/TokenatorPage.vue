@@ -11,10 +11,8 @@
       class="lg:page-h flex shrink-0 flex-col gap-4 lg:w-80 lg:overflow-hidden lg:pr-1"
     >
       <!-- Preview (Fixed) -->
-      <div class="flex shrink-0 flex-col items-center justify-center pt-0 pb-2">
-        <div class="aspect-square w-full max-w-[200px]">
-          <TokenatorPreview />
-        </div>
+      <div class="shrink-0 pt-0 pb-2">
+        <TokenatorPreview />
       </div>
 
       <!-- Controls (Scrollable) -->
@@ -25,10 +23,10 @@
 
     <!-- Right Area: Editor -->
     <div
-      class="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-neutral-900 lg:h-[calc(100vh-140px)] lg:rounded-2xl"
+      class="relative flex min-w-0 flex-1 flex-col overflow-hidden lg:h-[calc(100vh-140px)] lg:rounded-2xl"
     >
       <h2
-        class="absolute top-0 right-0 left-0 z-50 mb-4 bg-neutral-900/80 p-4 text-xl font-bold backdrop-blur-sm lg:hidden"
+        class="absolute top-0 right-0 left-0 z-50 mb-4 p-4 text-xl font-bold backdrop-blur-sm lg:hidden"
       >
         Редактор
       </h2>

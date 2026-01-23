@@ -76,6 +76,64 @@
   function getFrameName(url: string) {
     return url.split('/').pop() || 'Рамка';
   }
+
+  // 5. Drag and Drop
+  const draggedIndex = ref<number | null>(null);
+  const dragOverIndex = ref<number | null>(null);
+  const isSavingOrder = ref(false);
+
+  function onDragStart(index: number, event: DragEvent) {
+    draggedIndex.value = index;
+
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.dropEffect = 'move';
+    }
+  }
+
+  function onDragEnter(index: number) {
+    if (draggedIndex.value !== null && draggedIndex.value !== index) {
+      dragOverIndex.value = index;
+    }
+  }
+
+  async function onDrop(index: number) {
+    const fromIndex = draggedIndex.value;
+
+    draggedIndex.value = null;
+    dragOverIndex.value = null;
+
+    if (fromIndex === null || fromIndex === index || !frames.value) {
+      return;
+    }
+
+    // Update local state optimistic
+    const newFrames = [...frames.value];
+    const [movedItem] = newFrames.splice(fromIndex, 1);
+
+    if (movedItem !== undefined) {
+      newFrames.splice(index, 0, movedItem);
+      frames.value = newFrames;
+    }
+
+    // Save to server
+    isSavingOrder.value = true;
+
+    try {
+      await $fetch('/s3/tokenator/order', {
+        method: 'POST',
+        body: { frames: newFrames },
+      });
+
+      toast.add({ title: 'Порядок сохранен', color: 'success' });
+    } catch (e) {
+      console.error(e);
+      toast.add({ title: 'Ошибка сохранения порядка', color: 'error' });
+      await refresh(); // Revert on error
+    } finally {
+      isSavingOrder.value = false;
+    }
+  }
 </script>
 
 <template>
@@ -117,16 +175,26 @@
         class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
       >
         <UCard
-          v-for="url in frames"
+          v-for="(url, index) in frames"
           :key="url"
+          :class="[
+            'cursor-move transition-all duration-200',
+            draggedIndex === index ? 'scale-95 opacity-50' : '',
+            dragOverIndex === index
+              ? 'ring-2 ring-primary-500 ring-offset-2'
+              : '',
+          ]"
+          draggable="true"
+          @dragstart="onDragStart(index, $event)"
+          @dragenter.prevent="onDragEnter(index)"
+          @dragover.prevent
+          @drop="onDrop(index)"
         >
           <!-- Картинка в теле карточки -->
-          <div
-            class="relative aspect-square w-full overflow-hidden rounded bg-neutral-100 dark:bg-neutral-900"
-          >
+          <div class="relative aspect-square w-full overflow-hidden rounded">
             <img
               :src="url"
-              class="h-full w-full object-contain"
+              class="pointer-events-none h-full w-full object-contain"
               loading="lazy"
               alt="Frame"
             />

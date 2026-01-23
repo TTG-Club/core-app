@@ -14,9 +14,7 @@
 </script>
 
 <template>
-  <div
-    class="flex h-full w-64 flex-col border-r border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900"
-  >
+  <div class="flex h-full w-64 flex-col border-r border-default p-4">
     <div class="mb-6 flex items-center gap-2 px-2">
       <UIcon
         name="i-ttg-menu-filled-workshop"

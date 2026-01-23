@@ -22,6 +22,7 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     rotate: 0,
     flip: { x: false, y: false },
     position: { x: 0, y: 0 },
+    maskScale: 1,
   });
 
   // History support for transform (undo/redo if needed, but mainly for clean state mgmt)
@@ -85,6 +86,7 @@ export const useTokenatorStore = defineStore('tokenator', () => {
       rotate: 0,
       flip: { x: false, y: false },
       position: { x: 0, y: 0 },
+      maskScale: 1,
     };
   }
 

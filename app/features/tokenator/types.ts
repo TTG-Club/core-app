@@ -32,4 +32,5 @@ export interface TransformState {
     y: boolean;
   };
   position: Coordinates;
+  maskScale: number;
 }

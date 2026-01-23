@@ -1,6 +1,6 @@
 import type { FrameTint, TransformState } from '../types';
 
-export const CANVAS_SIZE = 1024;
+export const CANVAS_SIZE = 512;
 
 const imageCache = new Map<string, HTMLImageElement>();
 
@@ -103,8 +103,11 @@ export async function drawToken({
 
   // Scale mask radius based on token size ratio
   const scaleFactor = tokenSize / CANVAS_SIZE;
-  const padding = 65 * scaleFactor;
-  const maskRadius = Math.max(0, tokenSize / 2 - padding);
+  const basePadding = 45 * scaleFactor; // Padding so frame covers mask edge
+  // Calculate base radius then apply user scale
+  // If we simply scale the radius, we might overlap the frame if it gets too big, but that's what the user wants.
+  const baseRadius = Math.max(0, tokenSize / 2 - basePadding);
+  const maskRadius = baseRadius * (transform.maskScale || 1);
 
   // 2. Clear & Draw (Synchronous-like logic)
   // Only clear now that we have resources ready to draw immediately.
@@ -173,26 +176,29 @@ export async function drawToken({
 
   // Draw Frame
   if (frameImg) {
-    const x = cx - tokenSize / 2;
-    const y = cy - tokenSize / 2;
+    // Frame at normal size, mask is smaller so frame covers edge
+    const frameScale = 1.0;
+    const frameSize = tokenSize * frameScale;
+    const x = cx - frameSize / 2;
+    const y = cy - frameSize / 2;
 
     if (frameTint.enabled) {
       // Offscreen canvas for tinting.
       // Ideally cached too, buttint changes are rare compared to drag.
       const offCanvas = document.createElement('canvas');
 
-      offCanvas.width = tokenSize;
-      offCanvas.height = tokenSize;
+      offCanvas.width = frameSize;
+      offCanvas.height = frameSize;
 
       const offCtx = offCanvas.getContext('2d');
 
       if (offCtx) {
-        offCtx.drawImage(frameImg, 0, 0, tokenSize, tokenSize);
-        applyTint(offCtx, tokenSize, frameTint);
+        offCtx.drawImage(frameImg, 0, 0, frameSize, frameSize);
+        applyTint(offCtx, frameSize, frameTint);
         ctx.drawImage(offCanvas, x, y);
       }
     } else {
-      ctx.drawImage(frameImg, x, y, tokenSize, tokenSize);
+      ctx.drawImage(frameImg, x, y, frameSize, frameSize);
     }
   }
 }

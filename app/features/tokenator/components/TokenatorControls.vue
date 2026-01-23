@@ -99,6 +99,13 @@
     },
     { immediate: true },
   );
+
+  // Ensure new state properties exist
+  watchEffect(() => {
+    if (store.transform.maskScale === undefined) {
+      store.transform.maskScale = 1;
+    }
+  });
 </script>
 
 <template>
@@ -124,16 +131,8 @@
             </h3>
 
             <div class="grid grid-cols-2 gap-2">
-              <div class="relative">
-                <UButton
-                  block
-                  color="neutral"
-                  variant="outline"
-                  @click="imageInput?.click()"
-                >
-                  Изображение
-                </UButton>
-
+              <!-- Image Upload -->
+              <div>
                 <input
                   ref="imageInput"
                   type="file"
@@ -142,22 +141,41 @@
                   @change="onImageUpload"
                 />
 
-                <div
+                <UButtonGroup
                   v-if="store.currentImage"
-                  class="absolute -top-1 -right-1 size-2 rounded-full bg-green-500 ring-2 ring-white dark:ring-neutral-900"
-                />
-              </div>
+                  class="flex w-full"
+                  orientation="horizontal"
+                >
+                  <UButton
+                    color="neutral"
+                    variant="outline"
+                    class="flex-1 justify-center"
+                    @click="imageInput?.click()"
+                  >
+                    Изображение
+                  </UButton>
 
-              <div class="relative">
+                  <UButton
+                    color="neutral"
+                    variant="outline"
+                    icon="i-ttg-x"
+                    @click.stop="store.currentImage = null"
+                  />
+                </UButtonGroup>
+
                 <UButton
+                  v-else
                   block
                   color="neutral"
                   variant="outline"
-                  @click="frameInput?.click()"
+                  @click="imageInput?.click()"
                 >
-                  Своя рамка
+                  Изображение
                 </UButton>
+              </div>
 
+              <!-- Custom Frame Upload -->
+              <div>
                 <input
                   ref="frameInput"
                   type="file"
@@ -166,10 +184,37 @@
                   @change="onFrameUpload"
                 />
 
-                <div
+                <UButtonGroup
                   v-if="store.customFrame"
-                  class="absolute -top-1 -right-1 size-2 rounded-full bg-green-500 ring-2 ring-white dark:ring-neutral-900"
-                />
+                  class="flex w-full"
+                  orientation="horizontal"
+                >
+                  <UButton
+                    color="neutral"
+                    variant="outline"
+                    class="flex-1 justify-center"
+                    @click="frameInput?.click()"
+                  >
+                    Своя рамка
+                  </UButton>
+
+                  <UButton
+                    color="neutral"
+                    variant="outline"
+                    icon="i-ttg-x"
+                    @click.stop="store.customFrame = null"
+                  />
+                </UButtonGroup>
+
+                <UButton
+                  v-else
+                  block
+                  color="neutral"
+                  variant="outline"
+                  @click="frameInput?.click()"
+                >
+                  Своя рамка
+                </UButton>
               </div>
             </div>
           </div>
@@ -272,6 +317,26 @@
                 :min="0.1"
                 :max="3"
                 :step="0.05"
+                class="w-full accent-primary-500"
+              />
+            </div>
+
+            <!-- Mask Scale -->
+            <div class="space-y-2">
+              <div
+                class="flex justify-between text-xs text-neutral-600 dark:text-neutral-400"
+              >
+                <span>Размер маски</span>
+
+                <span>{{ (store.transform.maskScale || 1).toFixed(2) }}x</span>
+              </div>
+
+              <input
+                type="range"
+                v-model.number="store.transform.maskScale"
+                :min="0.5"
+                :max="1.5"
+                :step="0.01"
                 class="w-full accent-primary-500"
               />
             </div>
