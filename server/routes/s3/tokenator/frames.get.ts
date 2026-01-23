@@ -27,6 +27,11 @@ export default defineEventHandler(async () => {
 
         const key = obj.Key.toLowerCase();
 
+        // Exclude internal assets
+        if (key.includes('terrane.webp')) {
+          return false;
+        }
+
         return (
           key.endsWith('.png') ||
           key.endsWith('.jpg') ||

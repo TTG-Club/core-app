@@ -9,12 +9,13 @@ export const useTokenatorStore = defineStore('tokenator', () => {
   const currentFrame = ref<TokenatorFrame | null>(null);
   const customFrame = ref<string | null>(null); // URL of uploaded custom frame
 
-  const backgroundColor = ref<string>('#ffffff00'); // Transparent default
+  const backgroundColor = ref<string>('#22c55e'); // Green opaque default
 
   const frameTint = ref<FrameTint>({
-    enabled: false,
+    enabled: true,
     type: 'solid',
-    colors: ['#ff0000'],
+    colors: ['#ff000000'],
+    blendMode: 'source-atop',
   });
 
   const transform = ref<TransformState>({
@@ -46,8 +47,14 @@ export const useTokenatorStore = defineStore('tokenator', () => {
 
     reader.onload = (e) => {
       if (e.target?.result && typeof e.target.result === 'string') {
+        // Persist mask scale preference
+        const savedMaskScale = transform.value.maskScale;
+
         currentImage.value = e.target.result;
         resetTransform();
+
+        // Restore mask scale
+        transform.value.maskScale = savedMaskScale;
       }
     };
 
@@ -95,8 +102,8 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     currentImage.value = null;
     customFrame.value = null;
     currentFrame.value = null;
-    backgroundColor.value = '#ffffff00';
-    frameTint.value = { enabled: false, type: 'solid', colors: ['#ff0000'] };
+    backgroundColor.value = '#22c55e';
+    frameTint.value = { enabled: true, type: 'solid', colors: ['#ff000000'], blendMode: 'source-atop' };
   }
 
   function randomizeTint() {

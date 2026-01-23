@@ -17,6 +17,7 @@ export interface FrameTint {
   enabled: boolean;
   type: FrameTintType;
   colors: [string, string?];
+  blendMode?: string;
 }
 
 export interface Coordinates {

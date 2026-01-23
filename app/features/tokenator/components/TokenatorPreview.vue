@@ -26,12 +26,16 @@
 
 <template>
   <div
-    class="relative w-full rounded-2xl border border-neutral-200 shadow-md dark:border-neutral-800"
+    class="relative w-full overflow-hidden rounded-2xl border border-neutral-200 shadow-md dark:border-neutral-800"
   >
-    <!-- Background: Checkerboard -->
-    <div
-      class="absolute inset-0 z-0 bg-[radial-gradient(#888_1px,transparent_1px)] bg-[length:16px_16px] opacity-20"
-    ></div>
+    <!-- Background: Terrane -->
+    <div class="absolute inset-0 z-0 opacity-50">
+      <img
+        :src="'/s3/tokenator/terrane.webp'"
+        alt="Background"
+        class="h-full w-full object-cover"
+      />
+    </div>
 
     <!-- Inner Area -->
     <div class="relative flex aspect-square w-full items-center justify-center">

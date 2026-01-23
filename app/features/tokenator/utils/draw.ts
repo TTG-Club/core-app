@@ -40,13 +40,18 @@ function applyTint(
   ctx: CanvasRenderingContext2D,
   size: number,
   tint: FrameTint,
+  frameImg: HTMLImageElement,
 ) {
   if (!tint.enabled) {
     return;
   }
 
   ctx.save();
-  ctx.globalCompositeOperation = 'source-atop';
+
+  // Apply the blend mode for color mixing
+  const blendMode = tint.blendMode || 'source-atop';
+
+  ctx.globalCompositeOperation = blendMode as GlobalCompositeOperation;
 
   if (tint.type === 'solid') {
     ctx.fillStyle = tint.colors[0] || '#000000';
@@ -58,6 +63,13 @@ function applyTint(
     gradient.addColorStop(1, tint.colors[1] || '#ffffff');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, size, size);
+  }
+
+  // Mask result to original frame alpha (prevents bleeding outside frame shape)
+  // Only needed for blend modes that don't inherently respect alpha
+  if (blendMode !== 'source-atop' && blendMode !== 'source-in') {
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.drawImage(frameImg, 0, 0, size, size);
   }
 
   ctx.restore();
@@ -194,7 +206,7 @@ export async function drawToken({
 
       if (offCtx) {
         offCtx.drawImage(frameImg, 0, 0, frameSize, frameSize);
-        applyTint(offCtx, frameSize, frameTint);
+        applyTint(offCtx, frameSize, frameTint, frameImg);
         ctx.drawImage(offCanvas, x, y);
       }
     } else {

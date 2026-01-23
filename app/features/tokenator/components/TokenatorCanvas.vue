@@ -6,7 +6,7 @@
   const canvasRef = ref<HTMLCanvasElement | null>(null);
   const containerRef = ref<HTMLElement | null>(null);
 
-  const { initCanvas, render, CANVAS_SIZE } = useTokenatorCanvas(canvasRef, {
+  const { initCanvas, render } = useTokenatorCanvas(canvasRef, {
     clip: false,
   });
 
@@ -31,7 +31,7 @@
       return 1;
     }
 
-    return CANVAS_SIZE / rect.width;
+    return 1000 / rect.width;
   }
 
   function onPointerDown(e: PointerEvent) {
@@ -79,6 +79,21 @@
       containerRef.value.releasePointerCapture(e.pointerId);
     }
   }
+
+  function onWheel(event: WheelEvent) {
+    if (!store.currentImage) {
+      return;
+    }
+
+    const zoomSpeed = 0.1;
+    // deltaY > 0 -> scroll down -> zoom out
+    // deltaY < 0 -> scroll up -> zoom in
+    const delta = event.deltaY > 0 ? -1 : 1;
+    const newScale = store.transform.scale + delta * zoomSpeed;
+
+    // Clamp between 0.1 and 3
+    store.transform.scale = Math.min(Math.max(newScale, 0.1), 3);
+  }
 </script>
 
 <template>
@@ -90,6 +105,7 @@
     @pointermove="onPointerMove"
     @pointerup="onPointerUp"
     @pointercancel="onPointerUp"
+    @wheel.prevent="onWheel"
   >
     <!-- Checkerboard background for transparency indication -->
     <div
