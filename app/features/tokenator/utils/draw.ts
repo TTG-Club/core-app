@@ -1,0 +1,398 @@
+import type { FrameTint, TransformState } from '../types';
+
+export const CANVAS_SIZE = 512;
+
+const imageCache = new Map<string, HTMLImageElement>();
+
+function loadImage(url: string | null): Promise<HTMLImageElement | null> {
+  if (!url) {
+    return Promise.resolve(null);
+  }
+
+  if (imageCache.has(url)) {
+    return Promise.resolve(imageCache.get(url)!);
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+
+    if (!url.startsWith('blob:') && !url.startsWith('data:')) {
+      img.crossOrigin = 'anonymous';
+    }
+
+    img.onload = () => {
+      imageCache.set(url, img);
+      resolve(img);
+    };
+
+    img.onerror = (e) => {
+      console.error('Tokenator: Failed to load image', url, e);
+      resolve(null);
+    };
+
+    img.src = url;
+  });
+}
+
+function applyTint(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+  tint: FrameTint,
+  frameImg: HTMLImageElement,
+) {
+  if (!tint.enabled) {
+    return;
+  }
+
+  ctx.save();
+
+  const blendMode = tint.blendMode || 'source-atop';
+
+  ctx.globalCompositeOperation = blendMode as GlobalCompositeOperation;
+
+  if (tint.type === 'solid') {
+    ctx.fillStyle = tint.colors[0] || '#000000';
+    ctx.fillRect(0, 0, size, size);
+  } else {
+    const gradient = ctx.createLinearGradient(0, 0, size, size);
+
+    gradient.addColorStop(0, tint.colors[0] || '#000000');
+    gradient.addColorStop(1, tint.colors[1] || '#ffffff');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
+  }
+
+  if (blendMode !== 'source-atop' && blendMode !== 'source-in') {
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.drawImage(frameImg, 0, 0, size, size);
+  }
+
+  ctx.restore();
+}
+
+export interface DrawTokenText {
+  id: string;
+  content: string;
+  x: number;
+  y: number;
+  fontSize: number;
+  color: string;
+  rotation: number;
+  fontWeight: number;
+  fontFamily: string;
+  align: 'left' | 'center' | 'right';
+  arc?: number;
+}
+
+export interface DrawTokenParams {
+  ctx: CanvasRenderingContext2D;
+  backgroundColor: string;
+  currentImage: string | null;
+  activeFrameUrl: string | null;
+  frameTint: FrameTint;
+  transform: TransformState;
+  clip?: boolean;
+  viewSize?: { width: number; height: number };
+  tokenSize?: number;
+  maskImage?: HTMLCanvasElement;
+  maskTokenSize?: number;
+  halfMask?: boolean;
+  customBackground?: string | null;
+  texts?: DrawTokenText[];
+}
+
+export async function drawToken({
+  ctx,
+  backgroundColor,
+  currentImage,
+  activeFrameUrl,
+  frameTint,
+  transform,
+  clip = true,
+  viewSize = { width: CANVAS_SIZE, height: CANVAS_SIZE },
+  tokenSize = CANVAS_SIZE,
+  maskImage,
+  maskTokenSize,
+  halfMask = false,
+  customBackground,
+  texts,
+}: DrawTokenParams) {
+  const imgPromise = currentImage
+    ? loadImage(currentImage)
+    : Promise.resolve(null);
+
+  const framePromise = activeFrameUrl
+    ? loadImage(activeFrameUrl)
+    : Promise.resolve(null);
+
+  const bgPromise = customBackground
+    ? loadImage(customBackground)
+    : Promise.resolve(null);
+
+  const [img, frameImg, bgImg] = await Promise.all([
+    imgPromise,
+    framePromise,
+    bgPromise,
+  ]);
+
+  const cx = viewSize.width / 2;
+  const cy = viewSize.height / 2;
+
+  const scaleFactor = tokenSize / CANVAS_SIZE;
+  const basePadding = 45 * scaleFactor;
+  const baseRadius = Math.max(0, tokenSize / 2 - basePadding);
+  const maskRadius = baseRadius * (transform.maskScale || 1);
+
+  const referenceTokenSize = 500;
+  const posScale = tokenSize / referenceTokenSize;
+  const { position, scale, rotate, flip } = transform;
+
+  ctx.clearRect(0, 0, viewSize.width, viewSize.height);
+
+  if (backgroundColor) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, maskRadius, 0, Math.PI * 2);
+    ctx.fillStyle = backgroundColor;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  if (bgImg) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, maskRadius, 0, Math.PI * 2);
+    ctx.clip();
+
+    const aspectRatio = bgImg.width / bgImg.height;
+
+    let drawWidth = maskRadius * 2;
+    let drawHeight = maskRadius * 2;
+
+    if (aspectRatio > 1) {
+      drawHeight = maskRadius * 2;
+      drawWidth = drawHeight * aspectRatio;
+    } else {
+      drawWidth = maskRadius * 2;
+      drawHeight = drawWidth / aspectRatio;
+    }
+
+    ctx.drawImage(
+      bgImg,
+      cx - drawWidth / 2,
+      cy - drawHeight / 2,
+      drawWidth,
+      drawHeight,
+    );
+
+    ctx.restore();
+  }
+
+  if (img) {
+    ctx.save();
+
+    if (clip) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, maskRadius, 0, Math.PI * 2);
+      ctx.clip();
+    }
+
+    ctx.translate(cx + position.x * posScale, cy + position.y * posScale);
+    ctx.rotate((rotate * Math.PI) / 180);
+    ctx.scale(scale * (flip.x ? -1 : 1), scale * (flip.y ? -1 : 1));
+
+    const aspectRatio = img.width / img.height;
+
+    let drawWidth = tokenSize;
+    let drawHeight = tokenSize;
+
+    if (aspectRatio > 1) {
+      drawHeight = tokenSize;
+      drawWidth = tokenSize * aspectRatio;
+    } else {
+      drawWidth = tokenSize;
+      drawHeight = tokenSize / aspectRatio;
+    }
+
+    ctx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+    ctx.restore();
+
+    if (!clip) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.beginPath();
+      ctx.rect(0, 0, viewSize.width, viewSize.height);
+      ctx.arc(cx, cy, maskRadius, 0, Math.PI * 2, true);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  if (frameImg) {
+    const frameScaleFactor = transform.frameScale || 1.0;
+    const frameSize = tokenSize * frameScaleFactor;
+    const x = -frameSize / 2;
+    const y = -frameSize / 2;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate((transform.frameRotate || 0) * (Math.PI / 180));
+
+    if (frameTint.enabled) {
+      const offCanvas = document.createElement('canvas');
+
+      offCanvas.width = frameSize;
+      offCanvas.height = frameSize;
+
+      const offCtx = offCanvas.getContext('2d');
+
+      if (offCtx) {
+        offCtx.drawImage(frameImg, 0, 0, frameSize, frameSize);
+        applyTint(offCtx, frameSize, frameTint, frameImg);
+        ctx.drawImage(offCanvas, x, y);
+      }
+    } else {
+      ctx.drawImage(frameImg, x, y, frameSize, frameSize);
+    }
+
+    ctx.restore();
+  }
+
+  if (img && (maskImage || halfMask)) {
+    const tempCanvas = document.createElement('canvas');
+
+    tempCanvas.width = viewSize.width;
+    tempCanvas.height = viewSize.height;
+
+    const tempCtx = tempCanvas.getContext('2d');
+
+    if (tempCtx) {
+      tempCtx.save();
+
+      tempCtx.translate(cx + position.x * posScale, cy + position.y * posScale);
+      tempCtx.rotate((rotate * Math.PI) / 180);
+      tempCtx.scale(scale * (flip.x ? -1 : 1), scale * (flip.y ? -1 : 1));
+
+      const aspectRatio = img.width / img.height;
+
+      let drawWidth = tokenSize;
+      let drawHeight = tokenSize;
+
+      if (aspectRatio > 1) {
+        drawHeight = tokenSize;
+        drawWidth = tokenSize * aspectRatio;
+      } else {
+        drawWidth = tokenSize;
+        drawHeight = tokenSize / aspectRatio;
+      }
+
+      tempCtx.drawImage(
+        img,
+        -drawWidth / 2,
+        -drawHeight / 2,
+        drawWidth,
+        drawHeight,
+      );
+
+      tempCtx.restore();
+
+      const combinedMaskCanvas = document.createElement('canvas');
+
+      combinedMaskCanvas.width = viewSize.width;
+      combinedMaskCanvas.height = viewSize.height;
+
+      const maskCtx = combinedMaskCanvas.getContext('2d');
+
+      if (maskCtx) {
+        if (halfMask) {
+          maskCtx.fillStyle = 'white';
+          maskCtx.fillRect(0, 0, viewSize.width, viewSize.height / 2);
+        }
+
+        if (maskImage) {
+          const maskW = maskImage.width || viewSize.width;
+          const maskH = maskImage.height || viewSize.height;
+          const sourceMin = Math.min(maskW, maskH);
+          const targetMin = Math.min(viewSize.width, viewSize.height);
+
+          const calculatedMaskScale = maskTokenSize
+            ? tokenSize / maskTokenSize
+            : targetMin / sourceMin;
+
+          const sourceCx = maskW / 2;
+          const sourceCy = maskH / 2;
+
+          const targetCx = viewSize.width / 2;
+          const targetCy = viewSize.height / 2;
+
+          const destW = maskW * calculatedMaskScale;
+          const destH = maskH * calculatedMaskScale;
+
+          const destX = targetCx - sourceCx * calculatedMaskScale;
+          const destY = targetCy - sourceCy * calculatedMaskScale;
+
+          maskCtx.drawImage(maskImage, destX, destY, destW, destH);
+        }
+
+        tempCtx.globalCompositeOperation = 'destination-in';
+        tempCtx.drawImage(combinedMaskCanvas, 0, 0);
+
+        ctx.drawImage(tempCanvas, 0, 0);
+      }
+    }
+  }
+
+  if (texts && texts.length > 0) {
+    const textScaleFactor = tokenSize / CANVAS_SIZE;
+
+    ctx.save();
+
+    texts.forEach((text) => {
+      ctx.save();
+
+      ctx.translate(
+        cx + text.x * textScaleFactor,
+        cy + text.y * textScaleFactor,
+      );
+
+      ctx.rotate((text.rotation * Math.PI) / 180);
+
+      const scaledFontSize = text.fontSize * textScaleFactor;
+
+      ctx.font = `${text.fontWeight} ${scaledFontSize}px ${text.fontFamily || 'Inter'}`;
+      ctx.fillStyle = text.color;
+      ctx.textBaseline = 'middle';
+
+      const content = text.content || '';
+      const arc = text.arc ?? 0;
+
+      if (Math.abs(arc) > 5) {
+        ctx.textAlign = 'center';
+
+        const totalAngle = (arc * Math.PI) / 180;
+        const totalWidth = ctx.measureText(content).width;
+        const radius = totalWidth / totalAngle;
+
+        ctx.translate(0, radius);
+        ctx.rotate(-totalAngle / 2);
+
+        for (let i = 0; i < content.length; i++) {
+          const char = content[i] || '';
+          const charWidth = ctx.measureText(char).width;
+          const charAngle = (charWidth / totalWidth) * totalAngle;
+
+          ctx.rotate(charAngle / 2);
+          ctx.fillText(char, 0, -radius);
+          ctx.rotate(charAngle / 2);
+        }
+      } else {
+        ctx.textAlign = text.align;
+        ctx.fillText(content, 0, 0);
+      }
+
+      ctx.restore();
+    });
+
+    ctx.restore();
+  }
+}
