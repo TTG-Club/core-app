@@ -3,18 +3,24 @@ import { defineStore } from 'pinia';
 
 import type { FrameTint, TokenatorFrame, TransformState } from '../types';
 
+// Default colors - centralized for consistency
+export const DEFAULT_BACKGROUND_COLOR = '#22c55e';
+export const DEFAULT_TINT_COLOR = '#ff0000';
+export const DEFAULT_TINT_COLOR_TRANSPARENT = '#ff000000';
+export const DEFAULT_GRADIENT_COLOR = '#0000ff';
+
 export const useTokenatorStore = defineStore('tokenator', () => {
   // State
   const currentImage = ref<string | null>(null); // URL or DataURL
   const currentFrame = ref<TokenatorFrame | null>(null);
   const customFrame = ref<string | null>(null); // URL of uploaded custom frame
 
-  const backgroundColor = ref<string>('#22c55e'); // Green opaque default
+  const backgroundColor = ref<string>(DEFAULT_BACKGROUND_COLOR);
 
   const frameTint = ref<FrameTint>({
     enabled: true,
     type: 'solid',
-    colors: ['#ff000000'],
+    colors: [DEFAULT_TINT_COLOR_TRANSPARENT],
     blendMode: 'source-atop',
   });
 
@@ -102,8 +108,14 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     currentImage.value = null;
     customFrame.value = null;
     currentFrame.value = null;
-    backgroundColor.value = '#22c55e';
-    frameTint.value = { enabled: true, type: 'solid', colors: ['#ff000000'], blendMode: 'source-atop' };
+    backgroundColor.value = DEFAULT_BACKGROUND_COLOR;
+
+    frameTint.value = {
+      enabled: true,
+      type: 'solid',
+      colors: [DEFAULT_TINT_COLOR_TRANSPARENT],
+      blendMode: 'source-atop',
+    };
   }
 
   function randomizeTint() {

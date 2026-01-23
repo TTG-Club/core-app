@@ -1,5 +1,11 @@
 <script setup lang="ts">
-  import { useTokenatorStore } from '../composables/useTokenatorStore';
+  import {
+    DEFAULT_BACKGROUND_COLOR,
+    DEFAULT_GRADIENT_COLOR,
+    DEFAULT_TINT_COLOR,
+    DEFAULT_TINT_COLOR_TRANSPARENT,
+    useTokenatorStore,
+  } from '../composables/useTokenatorStore';
   import { CANVAS_SIZE, drawToken } from '../utils/draw';
 
   const store = useTokenatorStore();
@@ -79,14 +85,16 @@
   function resetBackgroundColor() {
     const currentAlpha = store.backgroundColor.slice(7);
 
-    store.backgroundColor = `#22c55e${currentAlpha}`;
+    store.backgroundColor = `${DEFAULT_BACKGROUND_COLOR}${currentAlpha}`;
   }
 
   function resetTint() {
-    const currentColor = store.frameTint.colors[0] || '#ff000000';
+    const currentColor =
+      store.frameTint.colors[0] || DEFAULT_TINT_COLOR_TRANSPARENT;
+
     const currentAlpha = currentColor.slice(7) || '00';
 
-    store.frameTint.colors[0] = `#ff0000${currentAlpha}`;
+    store.frameTint.colors[0] = `${DEFAULT_TINT_COLOR}${currentAlpha}`;
   }
 
   // Auto-select first frame
@@ -148,13 +156,13 @@
       store.frameTint.type = val ? 'gradient' : 'solid';
 
       if (val && store.frameTint.colors.length < 2) {
-        store.frameTint.colors.push('#0000ff');
+        store.frameTint.colors.push(DEFAULT_GRADIENT_COLOR);
       }
     },
   });
 
   const tintColor1Hex = computed({
-    get: () => store.frameTint.colors[0]?.slice(0, 7) || '#ff0000',
+    get: () => store.frameTint.colors[0]?.slice(0, 7) || DEFAULT_TINT_COLOR,
     set: (val) => {
       const alpha = store.frameTint.colors[0]?.slice(7) || '';
 
@@ -182,7 +190,7 @@
         .padStart(2, '0');
 
       // Ensure we have a valid color first if somehow missing
-      const base = store.frameTint.colors[0]?.slice(0, 7) || '#ff0000';
+      const base = store.frameTint.colors[0]?.slice(0, 7) || DEFAULT_TINT_COLOR;
 
       store.frameTint.colors[0] = base + (val < 100 ? hexAlpha : '');
 
@@ -193,7 +201,7 @@
   });
 
   const tintColor2Hex = computed({
-    get: () => store.frameTint.colors[1]?.slice(0, 7) || '#0000ff',
+    get: () => store.frameTint.colors[1]?.slice(0, 7) || DEFAULT_GRADIENT_COLOR,
     set: (val) => {
       const alpha = store.frameTint.colors[1]?.slice(7) || '';
 
@@ -224,7 +232,8 @@
         .toString(16)
         .padStart(2, '0');
 
-      const base = store.frameTint.colors[1]?.slice(0, 7) || '#0000ff';
+      const base =
+        store.frameTint.colors[1]?.slice(0, 7) || DEFAULT_GRADIENT_COLOR;
 
       if (store.frameTint.colors.length < 2) {
         store.frameTint.colors.push(base + hexAlpha);
@@ -256,6 +265,15 @@
     { label: 'Цветность', value: 'color' },
     { label: 'Яркость', value: 'luminosity' },
   ];
+
+  // Template helpers - check if color differs from default
+  const isBgColorChanged = computed(
+    () => bgColorHex.value !== DEFAULT_BACKGROUND_COLOR,
+  );
+
+  const isTintColorChanged = computed(
+    () => tintColor1Hex.value !== DEFAULT_TINT_COLOR,
+  );
 </script>
 
 <template>
@@ -571,7 +589,7 @@
                     color="neutral"
                     variant="outline"
                     :class="{
-                      'rounded-r-none': bgColorHex !== '#22c55e',
+                      'rounded-r-none': isBgColorChanged,
                     }"
                   >
                     <div
@@ -589,7 +607,7 @@
                 </UPopover>
 
                 <UButton
-                  v-if="bgColorHex !== '#22c55e'"
+                  v-if="isBgColorChanged"
                   color="neutral"
                   variant="outline"
                   icon="i-ttg-x"
@@ -620,7 +638,7 @@
                     color="neutral"
                     variant="outline"
                     :class="{
-                      'rounded-r-none': tintColor1Hex !== '#ff0000',
+                      'rounded-r-none': isTintColorChanged,
                     }"
                   >
                     <div
@@ -638,7 +656,7 @@
                 </UPopover>
 
                 <UButton
-                  v-if="tintColor1Hex !== '#ff0000'"
+                  v-if="isTintColorChanged"
                   color="neutral"
                   variant="outline"
                   icon="i-ttg-x"
