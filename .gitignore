@@ -34,3 +34,4 @@ shared/types/generated
 
 # Custom
 .test
+.antigravityignore
