@@ -15,10 +15,13 @@
     render();
   });
 
-  // Drag Logic
+  // Image Drag Logic (moving the image)
   const isDragging = ref(false);
   const startPos = { x: 0, y: 0 };
   const startTransformPos = { x: 0, y: 0 };
+
+  // File Drop Logic
+  const isDropZoneActive = ref(false);
 
   function getScaleFactor() {
     if (!containerRef.value) {
@@ -62,12 +65,6 @@
     const deltaY = e.clientY - startPos.y;
 
     // Convert to canvas pixels
-    // Adjust for rotation?
-    // If we simple add to x/y, we move the center. That's fine for "pan".
-    // However, we might want to scale the movement by the current image 'scale'
-    // if we want "1:1" feeling, but usually moving "canvas pixels" is consistent.
-    // BUT we must adjust for the CSS display size ratio (scaleFactor).
-
     store.transform.position.x = startTransformPos.x + deltaX * scaleFactor;
     store.transform.position.y = startTransformPos.y + deltaY * scaleFactor;
   }
@@ -86,13 +83,52 @@
     }
 
     const zoomSpeed = 0.1;
-    // deltaY > 0 -> scroll down -> zoom out
-    // deltaY < 0 -> scroll up -> zoom in
     const delta = event.deltaY > 0 ? -1 : 1;
     const newScale = store.transform.scale + delta * zoomSpeed;
 
-    // Clamp between 0.1 and 3
     store.transform.scale = Math.min(Math.max(newScale, 0.1), 3);
+  }
+
+  // File Drop Handlers
+  function onDragEnter(e: DragEvent) {
+    e.preventDefault();
+
+    if (e.dataTransfer?.types.includes('Files')) {
+      isDropZoneActive.value = true;
+    }
+  }
+
+  function onDragOver(e: DragEvent) {
+    e.preventDefault();
+  }
+
+  function onDragLeave(e: DragEvent) {
+    // Only deactivate if leaving the container entirely
+    const relatedTarget = e.relatedTarget as Node | null;
+
+    if (!containerRef.value?.contains(relatedTarget)) {
+      isDropZoneActive.value = false;
+    }
+  }
+
+  function onDrop(e: DragEvent) {
+    e.preventDefault();
+    isDropZoneActive.value = false;
+
+    const files = e.dataTransfer?.files;
+
+    if (!files?.length) {
+      return;
+    }
+
+    const file = files[0];
+
+    // Check if file exists and is an image
+    if (!file || !file.type.startsWith('image/')) {
+      return;
+    }
+
+    store.setImage(file);
   }
 </script>
 
@@ -100,12 +136,19 @@
   <div
     ref="containerRef"
     class="relative h-full w-full cursor-grab overflow-hidden bg-muted"
-    :class="{ 'cursor-grabbing': isDragging }"
+    :class="{
+      'cursor-grabbing': isDragging,
+      'ring-2 ring-primary ring-inset': isDropZoneActive,
+    }"
     @pointerdown="onPointerDown"
     @pointermove="onPointerMove"
     @pointerup="onPointerUp"
     @pointercancel="onPointerUp"
     @wheel.prevent="onWheel"
+    @dragenter="onDragEnter"
+    @dragover="onDragOver"
+    @dragleave="onDragLeave"
+    @drop="onDrop"
   >
     <!-- Checkerboard background for transparency indication -->
     <div
@@ -117,9 +160,24 @@
       class="relative z-10 size-full touch-none"
     />
 
+    <!-- Drop Zone Overlay -->
     <div
-      v-if="!store.currentImage && !store.activeFrameUrl"
-      class="absolute inset-0 flex items-center justify-center text-neutral-400"
+      v-if="isDropZoneActive"
+      class="absolute inset-0 z-20 flex items-center justify-center bg-primary/10"
+    >
+      <div class="flex flex-col items-center gap-2 text-primary">
+        <UIcon
+          name="i-heroicons-arrow-down-tray"
+          class="size-12"
+        />
+
+        <span class="text-lg font-medium">Отпустите для загрузки</span>
+      </div>
+    </div>
+
+    <div
+      v-else-if="!store.currentImage && !store.activeFrameUrl"
+      class="absolute inset-0 z-10 flex items-center justify-center text-neutral-400"
     >
       <span class="text-sm">Загрузите изображение</span>
     </div>
