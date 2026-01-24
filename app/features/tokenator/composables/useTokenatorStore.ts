@@ -50,11 +50,13 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     reader.onload = (e) => {
       if (e.target?.result && typeof e.target.result === 'string') {
         const savedMaskScale = transform.value.maskScale;
+        const savedFrameScale = transform.value.frameScale;
 
         currentImage.value = e.target.result;
         resetTransform();
 
         transform.value.maskScale = savedMaskScale;
+        transform.value.frameScale = savedFrameScale;
       }
     };
 

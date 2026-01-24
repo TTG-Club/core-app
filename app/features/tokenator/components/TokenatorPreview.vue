@@ -1,15 +1,20 @@
 <script setup lang="ts">
+  import { useMediaQuery } from '@vueuse/core';
+
   import { useTokenatorCanvas } from '../composables/useTokenatorCanvas';
   import { useTokenatorStore } from '../composables/useTokenatorStore';
 
   const store = useTokenatorStore();
   const canvasRef = ref<HTMLCanvasElement | null>(null);
+  const containerRef = ref<HTMLElement | null>(null);
 
   const { initCanvas, render } = useTokenatorCanvas(canvasRef);
 
+  const isMobile = useMediaQuery('(max-width: 1023px)');
+
   const guideInset = computed(() => {
     const maskScale = store.transform.maskScale || 1;
-    const baseRadiusPercent = 41; // 50% - 9% (basePadding)
+    const baseRadiusPercent = 41;
     const maskRadiusPercent = baseRadiusPercent * maskScale;
 
     return `${50 - maskRadiusPercent}%`;
@@ -19,6 +24,125 @@
     initCanvas();
     render();
   });
+
+  const isDragging = ref(false);
+  const startPos = { x: 0, y: 0 };
+  const startTransformPos = { x: 0, y: 0 };
+
+  function getScaleFactor() {
+    if (!containerRef.value) {
+      return 1;
+    }
+
+    const rect = containerRef.value.getBoundingClientRect();
+
+    if (rect.width === 0) {
+      return 1;
+    }
+
+    return 500 / rect.width;
+  }
+
+  function onPointerDown(e: PointerEvent) {
+    if (!isMobile.value || !store.currentImage) {
+      return;
+    }
+
+    isDragging.value = true;
+    startPos.x = e.clientX;
+    startPos.y = e.clientY;
+    startTransformPos.x = store.transform.position.x;
+    startTransformPos.y = store.transform.position.y;
+
+    if (containerRef.value) {
+      containerRef.value.setPointerCapture(e.pointerId);
+    }
+  }
+
+  function onPointerMove(e: PointerEvent) {
+    if (!isDragging.value) {
+      return;
+    }
+
+    const scaleFactor = getScaleFactor();
+
+    const deltaX = e.clientX - startPos.x;
+    const deltaY = e.clientY - startPos.y;
+
+    store.transform.position.x = startTransformPos.x + deltaX * scaleFactor;
+    store.transform.position.y = startTransformPos.y + deltaY * scaleFactor;
+  }
+
+  function onPointerUp(e: PointerEvent) {
+    isDragging.value = false;
+
+    if (containerRef.value) {
+      containerRef.value.releasePointerCapture(e.pointerId);
+    }
+  }
+
+  function onWheel(event: WheelEvent) {
+    if (!isMobile.value || !store.currentImage) {
+      return;
+    }
+
+    const zoomSpeed = 0.1;
+    const delta = event.deltaY > 0 ? -1 : 1;
+    const newScale = store.transform.scale + delta * zoomSpeed;
+
+    store.transform.scale = Math.min(Math.max(newScale, 0.1), 3);
+  }
+
+  const lastPinchDistance = ref<number | null>(null);
+
+  function onTouchStart(e: TouchEvent) {
+    if (!isMobile.value || !store.currentImage) {
+      return;
+    }
+
+    if (e.touches.length === 2) {
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+
+      if (touch1 && touch2) {
+        lastPinchDistance.value = Math.hypot(
+          touch2.clientX - touch1.clientX,
+          touch2.clientY - touch1.clientY,
+        );
+      }
+    }
+  }
+
+  function onTouchMove(e: TouchEvent) {
+    if (!isMobile.value || !store.currentImage) {
+      return;
+    }
+
+    if (e.touches.length === 2 && lastPinchDistance.value !== null) {
+      e.preventDefault();
+
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+
+      if (touch1 && touch2) {
+        const currentDistance = Math.hypot(
+          touch2.clientX - touch1.clientX,
+          touch2.clientY - touch1.clientY,
+        );
+
+        const delta = currentDistance - lastPinchDistance.value;
+        const zoomSpeed = 0.005;
+        const newScale = store.transform.scale + delta * zoomSpeed;
+
+        store.transform.scale = Math.min(Math.max(newScale, 0.1), 3);
+        lastPinchDistance.value = currentDistance;
+      }
+    }
+  }
+
+  function onTouchEnd() {
+    lastPinchDistance.value = null;
+  }
 </script>
 
 <template>
@@ -50,7 +174,22 @@
         class="pointer-events-none absolute top-0 bottom-0 left-[calc(50%+120px)] z-20 w-px bg-neutral-500/40"
       ></div>
 
-      <div class="relative mx-auto h-[240px] w-[240px] shrink-0">
+      <div
+        ref="containerRef"
+        class="relative mx-auto h-[240px] w-[240px] shrink-0 touch-none"
+        :class="{
+          'cursor-grab': isMobile && store.currentImage,
+          'cursor-grabbing': isDragging,
+        }"
+        @pointerdown="onPointerDown"
+        @pointermove="onPointerMove"
+        @pointerup="onPointerUp"
+        @pointercancel="onPointerUp"
+        @wheel.prevent="onWheel"
+        @touchstart="onTouchStart"
+        @touchmove="onTouchMove"
+        @touchend="onTouchEnd"
+      >
         <div
           class="pointer-events-none absolute rounded-full border border-neutral-200 dark:border-neutral-700"
           :style="{ inset: guideInset }"
