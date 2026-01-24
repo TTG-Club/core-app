@@ -6,22 +6,18 @@
 
 <template>
   <div class="flex h-full flex-col gap-6 lg:flex-row lg:gap-8">
-    <!-- Left Sidebar: Preview & Controls -->
     <div
       class="lg:page-h flex shrink-0 flex-col gap-4 lg:w-80 lg:overflow-hidden lg:pr-1"
     >
-      <!-- Preview (Fixed) -->
       <div class="shrink-0 pt-0 pb-2">
         <TokenatorPreview />
       </div>
 
-      <!-- Controls (Scrollable) -->
       <div class="min-h-0 flex-1 overflow-y-auto">
         <TokenatorControls />
       </div>
     </div>
 
-    <!-- Right Area: Editor -->
     <div
       class="relative flex min-w-0 flex-1 flex-col overflow-hidden lg:h-[calc(100vh-140px)] lg:rounded-2xl"
     >

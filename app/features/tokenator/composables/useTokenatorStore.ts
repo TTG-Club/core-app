@@ -3,17 +3,15 @@ import { defineStore } from 'pinia';
 
 import type { FrameTint, TokenatorFrame, TransformState } from '../types';
 
-// Default colors - centralized for consistency
 export const DEFAULT_BACKGROUND_COLOR = '#22c55e';
 export const DEFAULT_TINT_COLOR = '#ff0000';
 export const DEFAULT_TINT_COLOR_TRANSPARENT = '#ff000000';
 export const DEFAULT_GRADIENT_COLOR = '#0000ff';
 
 export const useTokenatorStore = defineStore('tokenator', () => {
-  // State
-  const currentImage = ref<string | null>(null); // URL or DataURL
+  const currentImage = ref<string | null>(null);
   const currentFrame = ref<TokenatorFrame | null>(null);
-  const customFrame = ref<string | null>(null); // URL of uploaded custom frame
+  const customFrame = ref<string | null>(null);
 
   const backgroundColor = ref<string>(DEFAULT_BACKGROUND_COLOR);
 
@@ -33,18 +31,15 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     frameScale: 1,
   });
 
-  // History support for transform (undo/redo if needed, but mainly for clean state mgmt)
   const { undo, redo, canUndo, canRedo } = useRefHistory(transform, {
     deep: true,
     capacity: 20,
   });
 
-  // Getters
   const activeFrameUrl = computed(
     () => customFrame.value || currentFrame.value?.url || null,
   );
 
-  // Actions
   function setImage(file: File) {
     if (currentImage.value && currentImage.value.startsWith('blob:')) {
       URL.revokeObjectURL(currentImage.value);
@@ -54,13 +49,11 @@ export const useTokenatorStore = defineStore('tokenator', () => {
 
     reader.onload = (e) => {
       if (e.target?.result && typeof e.target.result === 'string') {
-        // Persist mask scale preference
         const savedMaskScale = transform.value.maskScale;
 
         currentImage.value = e.target.result;
         resetTransform();
 
-        // Restore mask scale
         transform.value.maskScale = savedMaskScale;
       }
     };
@@ -78,7 +71,7 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     reader.onload = (e) => {
       if (e.target?.result && typeof e.target.result === 'string') {
         customFrame.value = e.target.result;
-        currentFrame.value = null; // Deselect default frame
+        currentFrame.value = null;
       }
     };
 

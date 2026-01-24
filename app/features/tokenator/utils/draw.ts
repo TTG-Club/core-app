@@ -16,8 +16,6 @@ function loadImage(url: string | null): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image();
 
-    // CrossOrigin is needed for external images (S3) to allow canvas export,
-    // but can cause issues with local blob URLs or if CORS headers are missing.
     if (!url.startsWith('blob:') && !url.startsWith('data:')) {
       img.crossOrigin = 'anonymous';
     }
@@ -48,7 +46,6 @@ function applyTint(
 
   ctx.save();
 
-  // Apply the blend mode for color mixing
   const blendMode = tint.blendMode || 'source-atop';
 
   ctx.globalCompositeOperation = blendMode as GlobalCompositeOperation;
@@ -65,8 +62,6 @@ function applyTint(
     ctx.fillRect(0, 0, size, size);
   }
 
-  // Mask result to original frame alpha (prevents bleeding outside frame shape)
-  // Only needed for blend modes that don't inherently respect alpha
   if (blendMode !== 'source-atop' && blendMode !== 'source-in') {
     ctx.globalCompositeOperation = 'destination-in';
     ctx.drawImage(frameImg, 0, 0, size, size);
@@ -98,8 +93,6 @@ export async function drawToken({
   viewSize = { width: CANVAS_SIZE, height: CANVAS_SIZE },
   tokenSize = CANVAS_SIZE,
 }: DrawTokenParams) {
-  // 1. Preload resources (Cache & Async)
-  // We must ensure images are loaded BEFORE clearing the canvas to prevent flickering (double buffering simulation).
   const imgPromise = currentImage
     ? loadImage(currentImage)
     : Promise.resolve(null);
@@ -113,19 +106,13 @@ export async function drawToken({
   const cx = viewSize.width / 2;
   const cy = viewSize.height / 2;
 
-  // Scale mask radius based on token size ratio
   const scaleFactor = tokenSize / CANVAS_SIZE;
   const basePadding = 45 * scaleFactor; // Padding so frame covers mask edge
-  // Calculate base radius then apply user scale
-  // If we simply scale the radius, we might overlap the frame if it gets too big, but that's what the user wants.
   const baseRadius = Math.max(0, tokenSize / 2 - basePadding);
   const maskRadius = baseRadius * (transform.maskScale || 1);
 
-  // 2. Clear & Draw (Synchronous-like logic)
-  // Only clear now that we have resources ready to draw immediately.
   ctx.clearRect(0, 0, viewSize.width, viewSize.height);
 
-  // Draw Background
   if (backgroundColor) {
     ctx.save();
     ctx.beginPath();
@@ -135,7 +122,6 @@ export async function drawToken({
     ctx.restore();
   }
 
-  // Draw Image
   if (img) {
     ctx.save();
 
@@ -145,9 +131,6 @@ export async function drawToken({
       ctx.clip();
     }
 
-    // Transforms
-    // Position is stored relative to editor tokenSize (500px reference)
-    // Scale it proportionally for other tokenSizes (e.g., preview)
     const referenceTokenSize = 500;
     const posScale = tokenSize / referenceTokenSize;
 
@@ -162,7 +145,6 @@ export async function drawToken({
     let drawWidth = tokenSize;
     let drawHeight = tokenSize;
 
-    // COVER Scaling logic relative to tokenSize
     if (aspectRatio > 1) {
       drawHeight = tokenSize;
       drawWidth = tokenSize * aspectRatio;
@@ -174,7 +156,6 @@ export async function drawToken({
     ctx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
     ctx.restore();
 
-    // Overlay (Inverse Mask)
     if (!clip) {
       ctx.save();
       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
@@ -186,17 +167,13 @@ export async function drawToken({
     }
   }
 
-  // Draw Frame
   if (frameImg) {
-    // Frame scale from user transform (default 1.0)
     const frameScaleFactor = transform.frameScale || 1.0;
     const frameSize = tokenSize * frameScaleFactor;
     const x = cx - frameSize / 2;
     const y = cy - frameSize / 2;
 
     if (frameTint.enabled) {
-      // Offscreen canvas for tinting.
-      // Ideally cached too, buttint changes are rare compared to drag.
       const offCanvas = document.createElement('canvas');
 
       offCanvas.width = frameSize;

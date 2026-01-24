@@ -15,12 +15,10 @@
     render();
   });
 
-  // Image Drag Logic (moving the image)
   const isDragging = ref(false);
   const startPos = { x: 0, y: 0 };
   const startTransformPos = { x: 0, y: 0 };
 
-  // File Drop Logic
   const isDropZoneActive = ref(false);
 
   function getScaleFactor() {
@@ -40,7 +38,7 @@
   function onPointerDown(e: PointerEvent) {
     if (!store.currentImage) {
       return;
-    } // Only drag if image exists
+    }
 
     isDragging.value = true;
     startPos.x = e.clientX;
@@ -60,11 +58,9 @@
 
     const scaleFactor = getScaleFactor();
 
-    // Calculate delta in screen pixels
     const deltaX = e.clientX - startPos.x;
     const deltaY = e.clientY - startPos.y;
 
-    // Convert to canvas pixels
     store.transform.position.x = startTransformPos.x + deltaX * scaleFactor;
     store.transform.position.y = startTransformPos.y + deltaY * scaleFactor;
   }
@@ -89,7 +85,6 @@
     store.transform.scale = Math.min(Math.max(newScale, 0.1), 3);
   }
 
-  // File Drop Handlers
   function onDragEnter(e: DragEvent) {
     e.preventDefault();
 
@@ -103,7 +98,6 @@
   }
 
   function onDragLeave(e: DragEvent) {
-    // Only deactivate if leaving the container entirely
     const relatedTarget = e.relatedTarget as Node | null;
 
     if (!containerRef.value?.contains(relatedTarget)) {
@@ -123,7 +117,6 @@
 
     const file = files[0];
 
-    // Check if file exists and is an image
     if (!file || !file.type.startsWith('image/')) {
       return;
     }
@@ -150,7 +143,10 @@
     @dragleave="onDragLeave"
     @drop="onDrop"
   >
-    <!-- Checkerboard background for transparency indication -->
+    <div
+      class="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,oklch(0.623_0.214_259.815/0.2)_1px,transparent_1px),linear-gradient(to_bottom,oklch(0.623_0.214_259.815/0.2)_1px,transparent_1px)] bg-[length:200px_200px]"
+    ></div>
+
     <div
       class="absolute inset-0 bg-[radial-gradient(#888_1px,transparent_1px)] bg-[length:16px_16px] opacity-20"
     ></div>
@@ -160,7 +156,6 @@
       class="relative z-10 size-full touch-none"
     />
 
-    <!-- Drop Zone Overlay -->
     <div
       v-if="isDropZoneActive"
       class="absolute inset-0 z-20 flex items-center justify-center bg-primary/10"

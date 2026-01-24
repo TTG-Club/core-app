@@ -7,9 +7,6 @@
 
   const { initCanvas, render } = useTokenatorCanvas(canvasRef);
 
-  // Dynamic inset for guide circle based on maskScale
-  // basePadding = 45/500 = 9%, so baseRadius = 50% - 9% = 41%
-  // maskRadius = 41% * maskScale, inset = 50% - maskRadius
   const guideInset = computed(() => {
     const maskScale = store.transform.maskScale || 1;
     const baseRadiusPercent = 41; // 50% - 9% (basePadding)
@@ -28,8 +25,7 @@
   <div
     class="relative w-full overflow-hidden rounded-2xl border border-neutral-200 shadow-md dark:border-neutral-800"
   >
-    <!-- Background: Terrane -->
-    <div class="absolute inset-0 z-0 opacity-50">
+    <div class="absolute inset-0 z-0 opacity-75">
       <img
         :src="'/s3/tokenator/terrane.webp'"
         alt="Background"
@@ -37,22 +33,34 @@
       />
     </div>
 
-    <!-- Inner Area -->
     <div class="relative flex aspect-square w-full items-center justify-center">
+      <div
+        class="pointer-events-none absolute top-[calc(50%-120px)] right-0 left-0 z-20 h-px bg-neutral-500/40"
+      ></div>
+
+      <div
+        class="pointer-events-none absolute top-[calc(50%+120px)] right-0 left-0 z-20 h-px bg-neutral-500/40"
+      ></div>
+
+      <div
+        class="pointer-events-none absolute top-0 bottom-0 left-[calc(50%-120px)] z-20 w-px bg-neutral-500/40"
+      ></div>
+
+      <div
+        class="pointer-events-none absolute top-0 bottom-0 left-[calc(50%+120px)] z-20 w-px bg-neutral-500/40"
+      ></div>
+
       <div class="relative mx-auto h-[240px] w-[240px] shrink-0">
-        <!-- Link/Circle Guide -->
         <div
           class="pointer-events-none absolute rounded-full border border-neutral-200 dark:border-neutral-700"
           :style="{ inset: guideInset }"
         ></div>
 
-        <!-- Token Dark Background -->
         <div
           class="pointer-events-none absolute rounded-full bg-black/40"
           :style="{ inset: guideInset }"
         ></div>
 
-        <!-- Canvas -->
         <canvas
           ref="canvasRef"
           class="relative z-10 size-full"

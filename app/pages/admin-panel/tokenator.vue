@@ -3,12 +3,10 @@
     title: 'Токенатор: Настройки',
   });
 
-  // 1. Получаем список рамок
   const { data: frames, refresh } = await useFetch<string[]>(
     '/s3/tokenator/frames',
   );
 
-  // 2. Логика загрузки
   const isUploading = ref(false);
   const toast = useToast();
 
@@ -19,7 +17,6 @@
 
     isUploading.value = true;
 
-    // Загружаем файлы по одному
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files.item(i);
@@ -49,35 +46,27 @@
     }
   }
 
-  // 3. Логика удаления
   const isDeleting = ref<string | null>(null);
 
   async function deleteFrame(url: string) {
-    // eslint-disable-next-line no-alert
-    if (!confirm('Удалить эту рамку?')) {
-      return;
-    }
-
     isDeleting.value = url;
 
     try {
       await $fetch(url, { method: 'DELETE' });
       await refresh();
+      toast.add({ title: 'Рамка удалена', color: 'success' });
     } catch (e) {
       console.error('Failed to delete:', e);
-      // eslint-disable-next-line no-alert
-      alert('Ошибка при удалении');
+      toast.add({ title: 'Ошибка при удалении', color: 'error' });
     } finally {
       isDeleting.value = null;
     }
   }
 
-  // 4. Форматирование имени для отображения
   function getFrameName(url: string) {
     return url.split('/').pop() || 'Рамка';
   }
 
-  // 5. Drag and Drop
   const draggedIndex = ref<number | null>(null);
   const dragOverIndex = ref<number | null>(null);
   const isSavingOrder = ref(false);
@@ -107,7 +96,6 @@
       return;
     }
 
-    // Update local state optimistic
     const newFrames = [...frames.value];
     const [movedItem] = newFrames.splice(fromIndex, 1);
 
@@ -116,7 +104,6 @@
       frames.value = newFrames;
     }
 
-    // Save to server
     isSavingOrder.value = true;
 
     try {
@@ -129,7 +116,7 @@
     } catch (e) {
       console.error(e);
       toast.add({ title: 'Ошибка сохранения порядка', color: 'error' });
-      await refresh(); // Revert on error
+      await refresh();
     } finally {
       isSavingOrder.value = false;
     }
@@ -142,7 +129,6 @@
     title="Токенатор: Настройки"
   >
     <div class="space-y-6">
-      <!-- Блок загрузки -->
       <UCard variant="subtle">
         <template #header>
           <h2 class="truncate text-base text-highlighted">
@@ -169,7 +155,6 @@
         </div>
       </UCard>
 
-      <!-- Список рамок -->
       <div
         v-if="frames?.length"
         class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
@@ -190,7 +175,6 @@
           @dragover.prevent
           @drop="onDrop(index)"
         >
-          <!-- Картинка в теле карточки -->
           <div class="relative aspect-square w-full overflow-hidden rounded">
             <img
               :src="url"
@@ -200,7 +184,6 @@
             />
           </div>
 
-          <!-- Футер с именем и кнопкой -->
           <template #footer>
             <div class="flex items-center justify-between gap-2">
               <span

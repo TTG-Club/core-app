@@ -10,10 +10,8 @@
 
   const store = useTokenatorStore();
 
-  // Frames Data - simple array of URLs
   const { data: frameUrls } = await useFetch<string[]>('/s3/tokenator/frames');
 
-  // Convert URLs to frame objects for compatibility
   const frames = computed(() => {
     return (
       frameUrls.value?.map((url, index) => ({
@@ -26,7 +24,6 @@
     );
   });
 
-  // Upload Handlers
   const imageInput = ref<HTMLInputElement | null>(null);
   const frameInput = ref<HTMLInputElement | null>(null);
 
@@ -36,7 +33,7 @@
 
     if (file) {
       store.setImage(file);
-      input.value = ''; // Reset to allow re-uploading same file
+      input.value = '';
     }
   }
 
@@ -46,11 +43,10 @@
 
     if (file) {
       store.setCustomFrame(file);
-      input.value = ''; // Reset
+      input.value = '';
     }
   }
 
-  // Export
   async function downloadToken(format: 'png' | 'jpeg' | 'webp') {
     const canvas = document.createElement('canvas');
 
@@ -81,7 +77,6 @@
     link.click();
   }
 
-  // Colors
   function resetBackgroundColor() {
     const currentAlpha = store.backgroundColor.slice(7);
 
@@ -97,7 +92,6 @@
     store.frameTint.colors[0] = `${DEFAULT_TINT_COLOR}${currentAlpha}`;
   }
 
-  // Auto-select first frame
   watch(
     frames,
     (newFrames) => {
@@ -113,14 +107,12 @@
     { immediate: true },
   );
 
-  // Ensure new state properties exist
   watchEffect(() => {
     if (store.transform.maskScale === undefined) {
       store.transform.maskScale = 1;
     }
   });
 
-  // Background Color Helpers
   const bgColorHex = computed({
     get: () => store.backgroundColor.slice(0, 7),
     set: (val) => {
@@ -148,8 +140,6 @@
       store.backgroundColor = store.backgroundColor.slice(0, 7) + hexAlpha;
     },
   });
-
-  // Tint Helpers
 
   const tintColor1Hex = computed({
     get: () => store.frameTint.colors[0]?.slice(0, 7) || DEFAULT_TINT_COLOR,
@@ -179,7 +169,6 @@
         .toString(16)
         .padStart(2, '0');
 
-      // Ensure we have a valid color first if somehow missing
       const base = store.frameTint.colors[0]?.slice(0, 7) || DEFAULT_TINT_COLOR;
 
       store.frameTint.colors[0] = base + (val < 100 ? hexAlpha : '');
@@ -256,7 +245,6 @@
     { label: 'Яркость', value: 'luminosity' },
   ];
 
-  // Template helpers - check if color differs from default
   const isBgColorChanged = computed(
     () => bgColorHex.value !== DEFAULT_BACKGROUND_COLOR,
   );
@@ -290,10 +278,8 @@
         content: 'pt-4 space-y-4',
       }"
     >
-      <!-- Library Tab -->
       <template #library>
         <div class="space-y-6">
-          <!-- Uploads -->
           <div class="space-y-3">
             <h3
               class="text-sm font-medium tracking-wider text-neutral-500 uppercase"
@@ -302,7 +288,6 @@
             </h3>
 
             <div class="grid grid-cols-2 gap-2">
-              <!-- Image Upload -->
               <div>
                 <input
                   ref="imageInput"
@@ -346,7 +331,6 @@
                 </UButton>
               </div>
 
-              <!-- Custom Frame Upload -->
               <div>
                 <input
                   ref="frameInput"
@@ -392,7 +376,6 @@
             </div>
           </div>
 
-          <!-- Default Frames -->
           <div class="space-y-3">
             <div
               v-if="frames && frames.length"
@@ -447,12 +430,9 @@
         </div>
       </template>
 
-      <!-- Settings Tab -->
       <template #settings>
         <div class="space-y-4">
-          <!-- Transform -->
           <div class="space-y-2">
-            <!-- Mask Scale -->
             <div class="flex gap-2">
               <div class="flex w-34 shrink-0 items-center -space-x-px">
                 <UButton
@@ -490,7 +470,6 @@
               </div>
             </div>
 
-            <!-- Frame Scale -->
             <div class="flex gap-2">
               <div class="flex w-34 shrink-0 items-center -space-x-px">
                 <UButton
@@ -528,7 +507,6 @@
               </div>
             </div>
 
-            <!-- Scale -->
             <div class="flex gap-2">
               <div class="flex w-34 shrink-0 items-center -space-x-px">
                 <UButton
@@ -566,7 +544,6 @@
               </div>
             </div>
 
-            <!-- Rotate -->
             <div class="flex gap-2">
               <div class="flex w-34 shrink-0 items-center -space-x-px">
                 <UButton
@@ -604,7 +581,6 @@
               </div>
             </div>
 
-            <!-- Flip -->
             <div class="flex items-center gap-2">
               <span class="text-sm text-muted">Отразить:</span>
 
@@ -633,11 +609,7 @@
             class="my-1"
           />
 
-          <!-- Style -->
-          <!-- Style -->
-          <!-- Style -->
           <div class="space-y-3">
-            <!-- Background -->
             <div class="flex gap-2">
               <div class="flex items-center -space-x-px">
                 <UPopover
@@ -691,12 +663,7 @@
               </div>
             </div>
 
-            <!-- Frame Tint -->
-            <!-- Color 1 -->
-            <!-- Frame Tint -->
-            <!-- Color Row -->
             <div class="flex items-center gap-2">
-              <!-- Color 1 Picker -->
               <div class="flex flex-1 items-center -space-x-px">
                 <UPopover
                   mode="click"
@@ -739,7 +706,6 @@
                 />
               </div>
 
-              <!-- Swap Button -->
               <UButton
                 icon="i-fluent-arrow-swap-20-regular"
                 color="neutral"
@@ -748,7 +714,6 @@
                 @click="store.swapTintColors"
               />
 
-              <!-- Color 2 Picker -->
               <div class="flex flex-1 items-center -space-x-px">
                 <UPopover
                   mode="click"
@@ -792,7 +757,6 @@
               </div>
             </div>
 
-            <!-- Sliders Row -->
             <div class="flex gap-8 px-1">
               <USlider
                 v-model.number="tintColor1Opacity"
@@ -834,7 +798,6 @@
 
     <USeparator class="my-1" />
 
-    <!-- Export Actions -->
     <div class="grid shrink-0 grid-cols-2 gap-3">
       <UButton
         size="lg"
