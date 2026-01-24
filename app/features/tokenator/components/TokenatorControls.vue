@@ -150,16 +150,6 @@
   });
 
   // Tint Helpers
-  const isTintGradient = computed({
-    get: () => store.frameTint.type === 'gradient',
-    set: (val) => {
-      store.frameTint.type = val ? 'gradient' : 'solid';
-
-      if (val && store.frameTint.colors.length < 2) {
-        store.frameTint.colors.push(DEFAULT_GRADIENT_COLOR);
-      }
-    },
-  });
 
   const tintColor1Hex = computed({
     get: () => store.frameTint.colors[0]?.slice(0, 7) || DEFAULT_TINT_COLOR,
@@ -274,6 +264,19 @@
   const isTintColorChanged = computed(
     () => tintColor1Hex.value !== DEFAULT_TINT_COLOR,
   );
+
+  const isTintColor2Changed = computed(
+    () => tintColor2Hex.value !== DEFAULT_GRADIENT_COLOR,
+  );
+
+  function resetTint2() {
+    const currentColor =
+      store.frameTint.colors[1] || DEFAULT_TINT_COLOR_TRANSPARENT;
+
+    const currentAlpha = currentColor.slice(7) || '00';
+
+    store.frameTint.colors[1] = `${DEFAULT_GRADIENT_COLOR}${currentAlpha}`;
+  }
 </script>
 
 <template>
@@ -446,133 +449,189 @@
 
       <!-- Settings Tab -->
       <template #settings>
-        <div class="space-y-6">
+        <div class="space-y-4">
           <!-- Transform -->
-          <!-- Transform -->
-          <div class="space-y-4">
+          <div class="space-y-2">
             <!-- Mask Scale -->
-            <div class="space-y-2">
-              <div
-                class="flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400"
-              >
-                <span>Размер маски</span>
+            <div class="flex gap-2">
+              <div class="flex w-34 shrink-0 items-center -space-x-px">
+                <UButton
+                  color="neutral"
+                  variant="outline"
+                  size="xs"
+                  class="flex-1"
+                  :class="{
+                    'rounded-r-none': store.transform.maskScale !== 1,
+                  }"
+                >
+                  Размер маски
+                </UButton>
 
-                <div class="flex items-center gap-2">
-                  <UButton
-                    v-if="store.transform.maskScale !== 1"
-                    color="neutral"
-                    variant="link"
-                    size="xs"
-                    class="p-0 text-xs font-normal"
-                    @click="store.transform.maskScale = 1"
-                  >
-                    Сбросить
-                  </UButton>
-
-                  <span
-                    >{{ (store.transform.maskScale || 1).toFixed(2) }}x</span
-                  >
-                </div>
+                <UButton
+                  v-if="store.transform.maskScale !== 1"
+                  color="neutral"
+                  variant="outline"
+                  size="xs"
+                  icon="i-ttg-x"
+                  class="rounded-l-none"
+                  @click="store.transform.maskScale = 1"
+                />
               </div>
 
-              <USlider
-                v-model.number="store.transform.maskScale"
-                :min="0.5"
-                :max="1.5"
-                :step="0.01"
-                size="sm"
-              />
+              <div class="flex flex-1 px-1">
+                <USlider
+                  v-model.number="store.transform.maskScale"
+                  :min="0.5"
+                  :max="1.5"
+                  :step="0.01"
+                  size="xs"
+                  class="w-full"
+                />
+              </div>
+            </div>
+
+            <!-- Frame Scale -->
+            <div class="flex gap-2">
+              <div class="flex w-34 shrink-0 items-center -space-x-px">
+                <UButton
+                  color="neutral"
+                  variant="outline"
+                  size="xs"
+                  class="flex-1"
+                  :class="{
+                    'rounded-r-none': store.transform.frameScale !== 1,
+                  }"
+                >
+                  Размер рамки
+                </UButton>
+
+                <UButton
+                  v-if="store.transform.frameScale !== 1"
+                  color="neutral"
+                  variant="outline"
+                  size="xs"
+                  icon="i-ttg-x"
+                  class="rounded-l-none"
+                  @click="store.transform.frameScale = 1"
+                />
+              </div>
+
+              <div class="flex flex-1 px-1">
+                <USlider
+                  v-model.number="store.transform.frameScale"
+                  :min="0.5"
+                  :max="1.5"
+                  :step="0.01"
+                  size="xs"
+                  class="w-full"
+                />
+              </div>
             </div>
 
             <!-- Scale -->
-            <div class="space-y-2">
-              <div
-                class="flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400"
-              >
-                <span>Масштаб</span>
+            <div class="flex gap-2">
+              <div class="flex w-34 shrink-0 items-center -space-x-px">
+                <UButton
+                  color="neutral"
+                  variant="outline"
+                  size="xs"
+                  class="flex-1"
+                  :class="{
+                    'rounded-r-none': store.transform.scale !== 1,
+                  }"
+                >
+                  Масштаб
+                </UButton>
 
-                <div class="flex items-center gap-2">
-                  <UButton
-                    v-if="store.transform.scale !== 1"
-                    color="neutral"
-                    variant="link"
-                    size="xs"
-                    class="p-0 text-xs font-normal"
-                    @click="store.transform.scale = 1"
-                  >
-                    Сбросить
-                  </UButton>
-
-                  <span>{{ store.transform.scale.toFixed(2) }}x</span>
-                </div>
+                <UButton
+                  v-if="store.transform.scale !== 1"
+                  color="neutral"
+                  variant="outline"
+                  size="xs"
+                  icon="i-ttg-x"
+                  class="rounded-l-none"
+                  @click="store.transform.scale = 1"
+                />
               </div>
 
-              <USlider
-                v-model.number="store.transform.scale"
-                :min="0.1"
-                :max="3"
-                :step="0.05"
-                size="sm"
-              />
+              <div class="flex flex-1 px-1">
+                <USlider
+                  v-model.number="store.transform.scale"
+                  :min="0.1"
+                  :max="3"
+                  :step="0.05"
+                  size="xs"
+                  class="w-full"
+                />
+              </div>
             </div>
 
             <!-- Rotate -->
-            <div class="space-y-2">
-              <div
-                class="flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400"
-              >
-                <span>Поворот</span>
+            <div class="flex gap-2">
+              <div class="flex w-34 shrink-0 items-center -space-x-px">
+                <UButton
+                  color="neutral"
+                  variant="outline"
+                  size="xs"
+                  class="flex-1"
+                  :class="{
+                    'rounded-r-none': store.transform.rotate !== 0,
+                  }"
+                >
+                  Поворот
+                </UButton>
 
-                <div class="flex items-center gap-2">
-                  <UButton
-                    v-if="store.transform.rotate !== 0"
-                    color="neutral"
-                    variant="link"
-                    size="xs"
-                    class="p-0 text-xs font-normal"
-                    @click="store.transform.rotate = 0"
-                  >
-                    Сбросить
-                  </UButton>
-
-                  <span>{{ store.transform.rotate }}°</span>
-                </div>
+                <UButton
+                  v-if="store.transform.rotate !== 0"
+                  color="neutral"
+                  variant="outline"
+                  size="xs"
+                  icon="i-ttg-x"
+                  class="rounded-l-none"
+                  @click="store.transform.rotate = 0"
+                />
               </div>
 
-              <USlider
-                v-model.number="store.transform.rotate"
-                :min="-180"
-                :max="180"
-                :step="1"
-                size="sm"
-              />
+              <div class="flex flex-1 px-1">
+                <USlider
+                  v-model.number="store.transform.rotate"
+                  :min="-180"
+                  :max="180"
+                  :step="1"
+                  size="xs"
+                  class="w-full"
+                />
+              </div>
             </div>
 
             <!-- Flip -->
-            <div class="grid grid-cols-2 gap-2">
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-muted">Отразить:</span>
+
               <UButton
-                block
                 size="xs"
                 :color="store.transform.flip.x ? 'primary' : 'neutral'"
                 :variant="store.transform.flip.x ? 'solid' : 'outline'"
-                icon="i-heroicons-arrows-right-left"
                 @click="store.transform.flip.x = !store.transform.flip.x"
               >
-                Отразить X
+                X
               </UButton>
 
               <UButton
-                block
                 size="xs"
                 :color="store.transform.flip.y ? 'primary' : 'neutral'"
                 :variant="store.transform.flip.y ? 'solid' : 'outline'"
-                icon="i-heroicons-arrows-up-down"
                 @click="store.transform.flip.y = !store.transform.flip.y"
               >
-                Отразить Y
+                Y
               </UButton>
             </div>
           </div>
+
+          <USeparator
+            label="Стиль"
+            class="my-1"
+          />
 
           <!-- Style -->
           <!-- Style -->
@@ -588,14 +647,17 @@
                   <UButton
                     color="neutral"
                     variant="outline"
+                    size="xs"
                     :class="{
                       'rounded-r-none': isBgColorChanged,
                     }"
                   >
-                    <div
-                      class="h-3 w-3 rounded-full border border-neutral-200 dark:border-neutral-700"
-                      :style="{ backgroundColor: bgColorHex }"
-                    ></div>
+                    <template #leading>
+                      <span
+                        :style="{ backgroundColor: bgColorHex }"
+                        class="size-3 rounded-full"
+                      />
+                    </template>
                     Цвет фона
                   </UButton>
 
@@ -609,6 +671,7 @@
                 <UButton
                   v-if="isBgColorChanged"
                   color="neutral"
+                  size="xs"
                   variant="outline"
                   icon="i-ttg-x"
                   class="rounded-l-none"
@@ -616,35 +679,45 @@
                 />
               </div>
 
-              <USlider
-                v-model.number="bgOpacity"
-                :min="0"
-                :max="100"
-                :step="1"
-                size="sm"
-                class="flex-1"
-              />
+              <div class="flex flex-1 px-1">
+                <USlider
+                  v-model.number="bgOpacity"
+                  :min="0"
+                  :max="100"
+                  :step="1"
+                  size="xs"
+                  class="w-full"
+                />
+              </div>
             </div>
 
             <!-- Frame Tint -->
             <!-- Color 1 -->
-            <div class="flex gap-2">
-              <div class="flex items-center -space-x-px">
+            <!-- Frame Tint -->
+            <!-- Color Row -->
+            <div class="flex items-center gap-2">
+              <!-- Color 1 Picker -->
+              <div class="flex flex-1 items-center -space-x-px">
                 <UPopover
                   mode="click"
                   :popper="{ placement: 'bottom-start' }"
+                  class="w-full"
                 >
                   <UButton
                     color="neutral"
                     variant="outline"
+                    block
+                    size="xs"
                     :class="{
                       'rounded-r-none': isTintColorChanged,
                     }"
                   >
-                    <div
-                      class="h-3 w-3 rounded-full border border-neutral-200 dark:border-neutral-700"
-                      :style="{ backgroundColor: tintColor1Hex }"
-                    ></div>
+                    <template #leading>
+                      <span
+                        :style="{ backgroundColor: tintColor1Hex }"
+                        class="size-3 rounded-full"
+                      />
+                    </template>
                     Цвет рамки 1
                   </UButton>
 
@@ -662,40 +735,41 @@
                   icon="i-ttg-x"
                   class="rounded-l-none"
                   @click="resetTint"
+                  size="xs"
                 />
               </div>
 
-              <USlider
-                v-model.number="tintColor1Opacity"
-                :min="0"
-                :max="100"
-                size="sm"
-                class="flex-1"
+              <!-- Swap Button -->
+              <UButton
+                icon="i-fluent-arrow-swap-20-regular"
+                color="neutral"
+                variant="soft"
+                size="xs"
+                @click="store.swapTintColors"
               />
-            </div>
 
-            <!-- Color 2 (Gradient) -->
-            <div class="flex gap-2">
-              <div class="flex items-center">
-                <UCheckbox v-model="isTintGradient" />
-              </div>
-
-              <div
-                class="flex flex-1 gap-2 transition-opacity"
-                :class="{ 'pointer-events-none opacity-50': !isTintGradient }"
-              >
+              <!-- Color 2 Picker -->
+              <div class="flex flex-1 items-center -space-x-px">
                 <UPopover
                   mode="click"
                   :popper="{ placement: 'bottom-start' }"
+                  class="w-full"
                 >
                   <UButton
+                    block
                     color="neutral"
                     variant="outline"
+                    size="xs"
+                    :class="{
+                      'rounded-r-none': isTintColor2Changed,
+                    }"
                   >
-                    <div
-                      class="h-3 w-3 rounded-full border border-neutral-200 dark:border-neutral-700"
-                      :style="{ backgroundColor: tintColor2Hex }"
-                    ></div>
+                    <template #leading>
+                      <span
+                        :style="{ backgroundColor: tintColor2Hex }"
+                        class="size-3 rounded-full"
+                      />
+                    </template>
                     Цвет рамки 2
                   </UButton>
 
@@ -706,27 +780,43 @@
                   </template>
                 </UPopover>
 
-                <USlider
-                  v-model.number="tintColor2Opacity"
-                  :min="0"
-                  :max="100"
-                  size="sm"
-                  class="flex-1"
+                <UButton
+                  v-if="isTintColor2Changed"
+                  color="neutral"
+                  variant="outline"
+                  icon="i-ttg-x"
+                  size="xs"
+                  class="rounded-l-none"
+                  @click="resetTint2"
                 />
               </div>
             </div>
 
-            <div class="flex gap-2">
+            <!-- Sliders Row -->
+            <div class="flex gap-8 px-1">
+              <USlider
+                v-model.number="tintColor1Opacity"
+                :min="0"
+                :max="100"
+                size="xs"
+                class="flex-1"
+              />
+
+              <USlider
+                v-model.number="tintColor2Opacity"
+                :min="0"
+                :max="100"
+                size="xs"
+                class="flex-1"
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 pt-2">
               <UButton
                 size="xs"
-                block
-                class="flex-1"
                 variant="soft"
                 @click="store.randomizeTint"
-                :label="
-                  isTintGradient ? 'Случайный градиент' : 'Случайный цвет'
-                "
-                icon="i-heroicons-sparkles"
+                label="Случайный градиент"
               />
 
               <USelectMenu
@@ -734,7 +824,6 @@
                 :items="blendModes"
                 value-key="value"
                 size="xs"
-                class="w-36"
                 :popper="{ placement: 'top' }"
               />
             </div>
@@ -742,6 +831,8 @@
         </div>
       </template>
     </UTabs>
+
+    <USeparator class="my-1" />
 
     <!-- Export Actions -->
     <div class="grid shrink-0 grid-cols-2 gap-3">

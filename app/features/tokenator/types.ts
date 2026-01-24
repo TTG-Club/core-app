@@ -34,4 +34,5 @@ export interface TransformState {
   };
   position: Coordinates;
   maskScale: number;
+  frameScale: number;
 }

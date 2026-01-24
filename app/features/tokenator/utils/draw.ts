@@ -188,9 +188,9 @@ export async function drawToken({
 
   // Draw Frame
   if (frameImg) {
-    // Frame at normal size, mask is smaller so frame covers edge
-    const frameScale = 1.0;
-    const frameSize = tokenSize * frameScale;
+    // Frame scale from user transform (default 1.0)
+    const frameScaleFactor = transform.frameScale || 1.0;
+    const frameSize = tokenSize * frameScaleFactor;
     const x = cx - frameSize / 2;
     const y = cy - frameSize / 2;
 

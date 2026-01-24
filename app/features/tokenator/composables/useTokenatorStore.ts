@@ -19,8 +19,8 @@ export const useTokenatorStore = defineStore('tokenator', () => {
 
   const frameTint = ref<FrameTint>({
     enabled: true,
-    type: 'solid',
-    colors: [DEFAULT_TINT_COLOR_TRANSPARENT],
+    type: 'gradient',
+    colors: [DEFAULT_TINT_COLOR_TRANSPARENT, DEFAULT_TINT_COLOR_TRANSPARENT],
     blendMode: 'source-atop',
   });
 
@@ -30,6 +30,7 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     flip: { x: false, y: false },
     position: { x: 0, y: 0 },
     maskScale: 1,
+    frameScale: 1,
   });
 
   // History support for transform (undo/redo if needed, but mainly for clean state mgmt)
@@ -100,6 +101,7 @@ export const useTokenatorStore = defineStore('tokenator', () => {
       flip: { x: false, y: false },
       position: { x: 0, y: 0 },
       maskScale: 1,
+      frameScale: 1,
     };
   }
 
@@ -112,8 +114,8 @@ export const useTokenatorStore = defineStore('tokenator', () => {
 
     frameTint.value = {
       enabled: true,
-      type: 'solid',
-      colors: [DEFAULT_TINT_COLOR_TRANSPARENT],
+      type: 'gradient',
+      colors: [DEFAULT_TINT_COLOR_TRANSPARENT, DEFAULT_TINT_COLOR_TRANSPARENT],
       blendMode: 'source-atop',
     };
   }
@@ -124,13 +126,17 @@ export const useTokenatorStore = defineStore('tokenator', () => {
         .toString(16)
         .padStart(6, '0')}`;
 
-    frameTint.value.colors = [randomColor()];
-
-    if (frameTint.value.type === 'gradient') {
-      frameTint.value.colors.push(randomColor());
-    }
-
+    frameTint.value.colors = [randomColor(), randomColor()];
     frameTint.value.enabled = true;
+  }
+
+  function swapTintColors() {
+    const c1 = frameTint.value.colors[0];
+    const c2 = frameTint.value.colors[1];
+
+    if (c2) {
+      frameTint.value.colors = [c2, c1 || DEFAULT_TINT_COLOR_TRANSPARENT];
+    }
   }
 
   return {
@@ -148,6 +154,7 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     resetTransform,
     resetAll,
     randomizeTint,
+    swapTintColors,
 
     undo,
     redo,
