@@ -188,10 +188,13 @@ class Dictionaries {
   public challengeRating = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<ChallengeRatingSelectOption>> => {
-    return $fetch(DictionaryEndpoints.CHALLENGE_RATING, {
-      ...config,
-      method: 'get',
-    });
+    return $fetch<Array<ChallengeRatingSelectOption>>(
+      DictionaryEndpoints.CHALLENGE_RATING,
+      {
+        ...config,
+        method: 'get',
+      },
+    );
   };
 
   public languages = <R extends NitroFetchRequest>(

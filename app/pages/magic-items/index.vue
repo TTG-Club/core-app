@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { computed } from 'vue';
+
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
   import { MagicItemLegend } from '~magic-items/legend';
@@ -6,6 +8,8 @@
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
+
+  import { useMagicItemRarityGroupOrder } from '~/shared/api/useMagicItemRarityGroupOrder';
 
   import type { MagicItemLinkResponse } from '~magic-items/types';
 
@@ -22,6 +26,9 @@
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
   } = await useFilter('magic-items', '/api/v2/magic-items/filters');
+
+  const { order: rarityOrder, pending: isRarityPending } =
+    useMagicItemRarityGroupOrder();
 
   const {
     data: magicItems,
@@ -43,6 +50,13 @@
       watch: [search, filterStringFromUrl],
     },
   );
+
+  const isLoading = computed(() => {
+    const isItemsLoading =
+      status.value !== 'success' && status.value !== 'error';
+
+    return isItemsLoading || isRarityPending.value;
+  });
 </script>
 
 <template>
@@ -69,7 +83,7 @@
         mode="out-in"
       >
         <PageGrid
-          v-if="status !== 'success' && status !== 'error'"
+          v-if="isLoading"
           :columns="3"
         >
           <SkeletonLinkSmall
@@ -82,6 +96,11 @@
           v-else-if="status === 'success' && magicItems?.length"
           :items="magicItems"
           field="rarity"
+          :group-sort="{
+            mode: 'custom',
+            order: rarityOrder,
+            unknown: 'after',
+          }"
         >
           <template #default="{ item }">
             <MagicItemLink :magic-item="item" />
