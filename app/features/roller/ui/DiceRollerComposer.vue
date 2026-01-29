@@ -1,5 +1,13 @@
 <script setup lang="ts">
   import { useDiceRollerState } from '../composables/useDiceRollerState';
+</script>
+
+<script lang="ts">
+  import DiceRollerHelpPopover from './DiceRollerHelpPopover.vue';
+
+  defineOptions({
+    components: { DiceRollerHelpPopover },
+  });
 
   const props = defineProps<{
     onSubmit: () => void;
@@ -18,17 +26,21 @@
       placeholder="Например: 1к20+5"
       size="xl"
       class="w-full"
-    />
+    >
+      <template #trailing>
+        <DiceRollerHelpPopover />
+      </template>
+    </UInput>
 
     <button
       type="submit"
-      class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--ui-border)] bg-[var(--ui-bg-elevated)] shadow-[0_10px_20px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_24px_rgba(0,0,0,0.22)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary-500)] focus-visible:outline-none"
+      class="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[var(--ui-border)] bg-[var(--ui-bg-elevated)] shadow-[0_10px_20px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_24px_rgba(0,0,0,0.22)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary-500)] focus-visible:outline-none"
       aria-label="Бросить кубы"
       title="Кидай!"
     >
       <UIcon
-        name="i-ttg-dice-d20"
-        class="h-5 w-5 text-[var(--color-primary-500)]"
+        name="i-heroicons-paper-airplane-20-solid"
+        class="h-6 w-6 text-[var(--color-primary-500)]"
       />
     </button>
   </form>

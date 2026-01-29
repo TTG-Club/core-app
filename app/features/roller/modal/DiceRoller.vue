@@ -6,7 +6,6 @@
   import { useDiceRollerHistory } from '../composables/useDiceRollerHistory';
   import { useDiceRollerState } from '../composables/useDiceRollerState';
   import DiceRollerComposer from '../ui/DiceRollerComposer.vue';
-  import DiceRollerHelpPopover from '../ui/DiceRollerHelpPopover.vue';
   import DiceRollerHistory from '../ui/DiceRollerHistory.vue';
   import { extractRollDetails, formatDetailSummary } from '../utils';
 
@@ -82,7 +81,7 @@
   >
     <section
       v-if="state.isOpen.value"
-      class="fixed right-4 bottom-24 z-[120] w-[calc(100vw-32px)] max-w-[420px]"
+      class="fixed right-4 bottom-20 z-[120] w-[calc(100vw-32px)] max-w-[420px]"
     >
       <div
         class="flex max-h-[70vh] flex-col overflow-hidden rounded-md border border-[var(--ui-border)] p-4 shadow-[0_25px_60px_rgba(8,15,17,0.25)] backdrop-blur-[14px]"
@@ -91,7 +90,9 @@
             'linear-gradient(160deg, var(--ui-bg-elevated) 0%, var(--ui-bg) 55%, var(--ui-bg-accented) 100%)',
         }"
       >
-        <div class="flex items-center justify-between gap-2 pb-3">
+        <div
+          class="flex items-center justify-between gap-2 border-b border-[var(--ui-border)] pb-3"
+        >
           <div class="min-w-0">
             <p class="m-0 truncate font-semibold text-[var(--ui-text)]">
               История бросков
@@ -99,8 +100,6 @@
           </div>
 
           <div>
-            <DiceRollerHelpPopover />
-
             <UButton
               icon="i-fluent-delete-16-regular"
               variant="ghost"
@@ -112,7 +111,9 @@
           </div>
         </div>
 
-        <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
+        <div
+          class="mt-3 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1"
+        >
           <DiceRollerHistory>
             <template #scroller="{ formatTime }">
               <div

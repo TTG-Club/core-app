@@ -14,78 +14,93 @@
 <template>
   <UPopover>
     <UButton
-      icon="i-fluent-info-16-regular"
+      icon="i-fluent-info-24-regular"
       variant="ghost"
       color="neutral"
-      size="xs"
+      class="rounded-md text-[var(--ui-text-muted)] hover:text-[var(--ui-text)]"
       aria-label="Как пользоваться роллером"
     />
 
     <template #content>
-      <div class="w-[360px] space-y-3 p-4">
-        <p class="font-semibold">Базовые броски</p>
+      <div class="max-h-[400px] w-[360px] space-y-3 overflow-y-auto p-2">
+        <!-- Section: Basic -->
+        <div class="space-y-2">
+          <p class="text-sm font-semibold text-[var(--ui-text)]">
+            Базовые броски
+          </p>
 
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="item in basic"
-            :key="item.formula"
-            type="button"
-            class="flex min-w-[110px] flex-1 flex-col gap-1 rounded-md border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
-            @click="apply(item.formula)"
-          >
-            <span class="font-semibold text-[var(--ui-text-highlighted)]">
-              {{ item.formula }}
-            </span>
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              v-for="item in basic"
+              :key="item.formula"
+              type="button"
+              class="flex cursor-pointer flex-col gap-0.5 rounded-lg border border-[var(--ui-border)] bg-[var(--ui-bg-elevated)] p-2 text-left transition hover:border-[var(--ui-border-hovered)] hover:bg-[var(--ui-bg-accented)]"
+              @click="apply(item.formula)"
+            >
+              <span class="text-sm font-bold text-[var(--color-primary-500)]">
+                {{ item.formula }}
+              </span>
 
-            <span class="text-xs text-[var(--ui-text-muted)]">
-              {{ item.note }}
-            </span>
-          </button>
+              <span class="text-xs text-[var(--ui-text-muted)]">
+                {{ item.note }}
+              </span>
+            </button>
+          </div>
         </div>
 
-        <p class="pt-1 font-semibold">Лучшие / худшие</p>
+        <!-- Section: Keep/Drop -->
+        <div class="space-y-2">
+          <p class="text-sm font-semibold text-[var(--ui-text)]">
+            Лучшие / худшие
+          </p>
 
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="item in keep"
-            :key="item.formula"
-            type="button"
-            class="flex min-w-[110px] flex-1 flex-col gap-1 rounded-md border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
-            @click="apply(item.formula)"
-          >
-            <span class="font-semibold text-[var(--ui-text-highlighted)]">
-              {{ item.formula }}
-            </span>
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              v-for="item in keep"
+              :key="item.formula"
+              type="button"
+              class="flex cursor-pointer flex-col gap-0.5 rounded-lg border border-[var(--ui-border)] bg-[var(--ui-bg-elevated)] p-2 text-left transition hover:border-[var(--ui-border-hovered)] hover:bg-[var(--ui-bg-accented)]"
+              @click="apply(item.formula)"
+            >
+              <span class="text-sm font-bold text-[var(--color-primary-500)]">
+                {{ item.formula }}
+              </span>
 
-            <span class="text-xs text-[var(--ui-text-muted)]">
-              — {{ item.note }}
-            </span>
-          </button>
+              <span class="text-xs text-[var(--ui-text-muted)]">
+                — {{ item.note }}
+              </span>
+            </button>
+          </div>
         </div>
 
-        <p class="pt-1 font-semibold">Перебросы</p>
+        <!-- Section: Reroll -->
+        <div class="space-y-2">
+          <p class="text-sm font-semibold text-[var(--ui-text)]">Перебросы</p>
 
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="item in reroll"
-            :key="item.formula"
-            type="button"
-            class="flex min-w-[110px] flex-1 flex-col gap-1 rounded-md border border-transparent px-2 py-1 text-left transition hover:border-[var(--ui-border)] hover:bg-[var(--ui-bg)]"
-            @click="apply(item.formula)"
-          >
-            <span class="font-semibold text-[var(--ui-text-highlighted)]">
-              {{ item.formula }}
-            </span>
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              v-for="item in reroll"
+              :key="item.formula"
+              type="button"
+              class="flex cursor-pointer flex-col gap-0.5 rounded-lg border border-[var(--ui-border)] bg-[var(--ui-bg-elevated)] p-2 text-left transition hover:border-[var(--ui-border-hovered)] hover:bg-[var(--ui-bg-accented)]"
+              @click="apply(item.formula)"
+            >
+              <span class="text-sm font-bold text-[var(--color-primary-500)]">
+                {{ item.formula }}
+              </span>
 
-            <span class="text-xs text-[var(--ui-text-muted)]">
-              — {{ item.note }}
-            </span>
-          </button>
+              <span class="text-xs text-[var(--ui-text-muted)]">
+                — {{ item.note }}
+              </span>
+            </button>
+          </div>
         </div>
 
-        <p class="pt-1 text-xs text-[var(--ui-text-muted)]">
-          Поддерживаются: к, кс, вх/вл, ул/ух, пр/пб, !/!!/!п, с, п, св/су
-        </p>
+        <div class="border-t border-[var(--ui-border)] pt-2">
+          <p class="text-xs leading-tight text-[var(--ui-text-muted)]">
+            Поддерживаются: к, кс, вх/вл, ул/ух, пр/пб, !/!!/!п, с, п, св/су
+          </p>
+        </div>
       </div>
     </template>
   </UPopover>

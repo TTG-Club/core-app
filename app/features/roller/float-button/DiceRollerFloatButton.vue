@@ -23,13 +23,13 @@
       <UIcon
         v-if="!isOpen"
         name="i-ttg-dice-d20"
-        class="h-8 w-8 text-[var(--color-primary-500)]"
+        class="h-6 w-6 text-[var(--color-primary-500)]"
       />
 
       <UIcon
         v-else
         name="i-fluent-dismiss-24-regular"
-        class="h-8 w-8 text-[var(--ui-text-muted)]"
+        class="h-6 w-6 text-[var(--ui-text-muted)]"
       />
     </Transition>
   </button>
