@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { ru } from '@nuxt/ui/locale';
-  import { DiceRollerFloatButton } from '~dice-roller/float-button';
-  import { DiceRollerModal as DiceRoller } from '~dice-roller/modal';
+  import DiceRollerFloatButton from '~dice-roller/DiceRollerFloatButton.vue';
+  import { DiceRollerDrawer } from '~dice-roller/drawer';
   import { PwaConfig } from '~pwa/config';
   import { SidebarPanel } from '~sidebar/panel';
 
@@ -43,7 +43,7 @@
       <ClientOnly>
         <DiceRollerFloatButton />
 
-        <DiceRoller />
+        <DiceRollerDrawer />
       </ClientOnly>
     </div>
   </UApp>

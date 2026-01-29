@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import { useDiceRollerState } from '~dice-roller/composables/useDiceRollerState';
   import DiceRollerHelpPopover from '~dice-roller/ui/DiceRollerHelpPopover.vue';
+  import { useDiceRollerState } from '~dice-roller/useDiceRollerState';
 
   const props = defineProps<{
     onSubmit: () => void;

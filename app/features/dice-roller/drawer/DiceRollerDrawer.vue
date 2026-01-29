@@ -1,13 +1,13 @@
 <script setup lang="ts">
   import { onMounted, ref } from 'vue';
-  import { useDiceRollerHistory } from '~dice-roller/composables/useDiceRollerHistory';
-  import { useDiceRollerState } from '~dice-roller/composables/useDiceRollerState';
   import {
     extractRollDetails,
     formatDetailSummary,
     getRollValue,
   } from '~dice-roller/model';
   import { DiceRollerComposer, DiceRollerHistory } from '~dice-roller/ui';
+  import { useDiceRollerHistory } from '~dice-roller/useDiceRollerHistory';
+  import { useDiceRollerState } from '~dice-roller/useDiceRollerState';
 
   import { useDiceRoller } from '~/composables/useDiceRoller';
 
