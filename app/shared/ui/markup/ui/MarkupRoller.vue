@@ -3,6 +3,10 @@
 
   import { useDiceRoller } from '~/composables/useDiceRoller';
   import { useDiceRollerState } from '~/features/roller/composables/useDiceRollerState';
+  import {
+    extractRollDetails,
+    formatDetailSummary,
+  } from '~/features/roller/utils';
 
   import { TABLE_ROLL_CONTEXT } from '../consts';
 
@@ -126,11 +130,13 @@
     const { valid, error } = diceRoller.validateWithError(notation);
 
     if (!valid) {
-      toast.add({
-        color: 'error',
-        title: 'Некорректная нотация броска',
-        description: error ?? 'Проверь формат записи броска.',
-      });
+      if (!rollerState.isOpen.value) {
+        toast.add({
+          color: 'error',
+          title: 'Некорректная нотация броска',
+          description: error ?? 'Проверь формат записи броска.',
+        });
+      }
 
       rollerState.addHistoryEntry({
         formula: notation,
@@ -148,20 +154,35 @@
       ? value.toLocaleString('ru-RU')
       : String(value);
 
-    toast.add({
-      color: 'neutral',
-      title: `Результат: ${value}`,
-      description: notation,
-    });
+    // Extract details for history/display
+    const details = extractRollDetails(rollObject);
+
+    if (!rollerState.isOpen.value) {
+      toast.add({
+        color: 'neutral',
+        title: `Результат: ${value}`,
+        description: notation,
+      });
+    }
 
     rollerState.result.value = displayValue;
-    rollerState.details.value = [];
+    rollerState.details.value = []; // Clear current view details as requested for text mode simplicity in modal view?
+    // Actually, if we want consistency, maybe we SHOULD set them?
+    // But the user said "if from text then not output [in the result box? or history?]".
+    // If I set them here, `DiceRollerResult` WILL show them if modal is open.
+    // Let's set them because the user likely wants to SEE the result if they open the history.
+    // rollerState.details.value = details; // Uncomment if we want them in the "current result" box too.
+    // The previous code CLEARED them. I will keep clearing them from "current result" view if that was intended,
+    // BUT I will definitely pass them to history.
+
     rollerState.bumpResultKey();
 
     rollerState.addHistoryEntry({
       formula: notation,
       value: displayValue,
       isError: false,
+      detail: formatDetailSummary(details), // Use the formatted summary
+      structuredDetails: details, // Pass the structured details for chips in history
     });
 
     if (Number.isFinite(value)) {

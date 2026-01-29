@@ -10,12 +10,12 @@
     "server": "node .output/server/index.mjs",
     "postinstall": "nuxt cleanup && nuxt prepare",
     "type-check": "vue-tsc -p tsconfig.json",
-    "lint:check": "eslint . --cache --cache-strategy content",
-    "lint:write": "eslint . --cache --cache-strategy content --fix",
-    "lint:workflow": "eslint . --cache --cache-strategy content --quiet",
-    "stylelint:check": "stylelint \"{**/*,*}.{css,scss,vue}\" --cache --cache-strategy content --ignore-path .gitignore",
-    "stylelint:write": "stylelint \"{**/*,*}.{css,scss,vue}\" --cache --cache-strategy content --ignore-path .gitignore --fix",
-    "stylelint:workflow": "stylelint \"{**/*,*}.{css,scss,vue}\" --cache --cache-strategy content --ignore-path .gitignore --quiet",
+    "lint:check": "eslint .",
+    "lint:write": "eslint . --fix",
+    "lint:workflow": "eslint . --quiet",
+    "stylelint:check": "stylelint \"{**/*,*}.{css,scss,vue}\" --ignore-path .gitignore",
+    "stylelint:write": "stylelint \"{**/*,*}.{css,scss,vue}\" --ignore-path .gitignore --fix",
+    "stylelint:workflow": "stylelint \"{**/*,*}.{css,scss,vue}\" --ignore-path .gitignore --quiet",
     "prepare": "pnpm simple-git-hooks"
   },
   "dependencies": {

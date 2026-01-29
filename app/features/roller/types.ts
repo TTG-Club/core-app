@@ -21,4 +21,5 @@ export interface HistoryEntry {
   isError: boolean;
   timestamp: string;
   detail?: string;
+  structuredDetails?: DiceDetail[];
 }

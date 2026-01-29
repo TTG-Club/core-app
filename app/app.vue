@@ -25,7 +25,7 @@
       disableHoverableContent: true,
     }"
     :toaster="{
-      position: 'bottom-right',
+      position: 'top-right',
     }"
   >
     <NuxtLoadingIndicator

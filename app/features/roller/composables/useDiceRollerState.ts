@@ -28,6 +28,7 @@ export function useDiceRollerState() {
     value: string;
     isError: boolean;
     detail?: string;
+    structuredDetails?: DiceDetail[];
   }) => {
     if (!payload.formula) {
       return;
@@ -40,6 +41,7 @@ export function useDiceRollerState() {
       isError: payload.isError,
       timestamp: new Date().toISOString(),
       detail: payload.detail || undefined,
+      structuredDetails: payload.structuredDetails,
     };
 
     history.value = [...history.value, entry];
