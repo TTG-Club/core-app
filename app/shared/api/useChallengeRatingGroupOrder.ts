@@ -1,40 +1,55 @@
 import { computed } from 'vue';
+import { useAsyncData } from '#app';
 
 import { DictionaryService } from '~/shared/api/dictionaries';
-import type { ChallengeRatingSelectOption } from '~/shared/types';
+
+type UnknownRecord = Record<string, unknown>;
+
+const isRecord = (value: unknown): value is UnknownRecord => {
+  return typeof value === 'object' && value !== null;
+};
+
+const extractLabels = (value: unknown): Array<string> => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const labels: Array<string> = [];
+
+  value.forEach((element) => {
+    if (!isRecord(element)) {
+      return;
+    }
+
+    const label = element.label;
+
+    if (typeof label === 'string') {
+      labels.push(label);
+    }
+  });
+
+  return labels;
+};
 
 export function useChallengeRatingGroupOrder() {
-  const { data, pending, error } = useAsyncData<
-    Array<ChallengeRatingSelectOption>
-  >(
-    'dictionary-challenge-rating',
-    async () => {
-      return await DictionaryService.challengeRating();
-    },
-    {
-      deep: false,
-      default: (): Array<ChallengeRatingSelectOption> => [],
-    },
-  );
-
-  const challengeRatingOptions = computed<Array<ChallengeRatingSelectOption>>(
+  const { data, pending, error } = useAsyncData<Array<string>>(
+    'dictionary-challenge-rating-order',
     () => {
-      const loadedOptions = data.value;
-
-      if (Array.isArray(loadedOptions)) {
-        return loadedOptions;
-      }
-
-      return [];
+      return DictionaryService.challengeRating().then((options) => {
+        return extractLabels(options);
+      });
     },
+    { deep: false },
   );
 
-  const order = computed<Array<number>>(() => {
-    return challengeRatingOptions.value.map(
-      (option: ChallengeRatingSelectOption) => {
-        return option.value;
-      },
-    );
+  const order = computed((): Array<string> => {
+    const loadedOrder = data.value;
+
+    if (Array.isArray(loadedOrder)) {
+      return loadedOrder;
+    }
+
+    return [];
   });
 
   return {
