@@ -6,6 +6,8 @@
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
+  import { useChallengeRatingGroupOrder } from '~/shared/api';
+
   import type { CreatureLinkResponse } from '~bestiary/types';
 
   useSeoMeta({
@@ -21,6 +23,11 @@
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
   } = await useFilter('bestiary', '/api/v2/bestiary/filters');
+
+  const {
+    order: challengeRatingOrder,
+    pending: isChallengeRatingOrderPending,
+  } = useChallengeRatingGroupOrder();
 
   const {
     data: bestiary,
@@ -39,6 +46,13 @@
       }),
     { deep: false, watch: [search, filterStringFromUrl] },
   );
+
+  const isLoading = computed(() => {
+    const isBestiaryLoading =
+      status.value !== 'success' && status.value !== 'error';
+
+    return isBestiaryLoading || isChallengeRatingOrderPending.value;
+  });
 </script>
 
 <template>
@@ -52,8 +66,7 @@
         v-model:filter="filter"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
-      >
-      </FilterControls>
+      />
     </template>
 
     <template #default>
@@ -62,7 +75,7 @@
         mode="out-in"
       >
         <PageGrid
-          v-if="status !== 'success' && status !== 'error'"
+          v-if="isLoading"
           :columns="3"
         >
           <SkeletonLinkSmall
@@ -74,8 +87,13 @@
         <GroupedList
           v-else-if="status === 'success' && bestiary?.length"
           :items="bestiary"
-          separator-label="Уровень опасности {value}"
           field="challengeRailing"
+          separator-label="Уровень опасности {value}"
+          :group-sort="{
+            mode: 'custom',
+            order: challengeRatingOrder,
+            unknown: 'before',
+          }"
         >
           <template #default="{ item }">
             <CreatureLink :creature="item" />
