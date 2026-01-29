@@ -68,6 +68,44 @@
       });
     }
   }
+
+  /* Resizing Logic */
+  const modalHeight = ref(450);
+  const isResizing = ref(false);
+  const startY = ref(0);
+  const startHeight = ref(0);
+
+  function startResize(e: MouseEvent) {
+    isResizing.value = true;
+    startY.value = e.clientY;
+    startHeight.value = modalHeight.value;
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', stopResize);
+    document.body.style.userSelect = 'none';
+  }
+
+  function onMouseMove(e: MouseEvent) {
+    if (!isResizing.value) {
+      return;
+    }
+
+    const delta = startY.value - e.clientY;
+    // Min 300px, Max 90vh
+    const maxHeight = window.innerHeight * 0.9;
+
+    modalHeight.value = Math.max(
+      300,
+      Math.min(maxHeight, startHeight.value + delta),
+    );
+  }
+
+  function stopResize() {
+    isResizing.value = false;
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup', stopResize);
+    document.body.style.userSelect = '';
+  }
 </script>
 
 <template>
@@ -84,12 +122,21 @@
       class="fixed right-4 bottom-20 z-[120] w-[calc(100vw-32px)] max-w-[420px]"
     >
       <div
-        class="flex max-h-[70vh] flex-col overflow-hidden rounded-md border border-[var(--ui-border)] p-4 shadow-[0_25px_60px_rgba(8,15,17,0.25)] backdrop-blur-[14px]"
+        class="relative flex flex-col overflow-hidden rounded-md border border-[var(--ui-border)] p-4 pt-5 shadow-[0_25px_60px_rgba(8,15,17,0.25)] backdrop-blur-[14px]"
         :style="{
+          height: `${modalHeight}px`,
           background:
             'linear-gradient(160deg, var(--ui-bg-elevated) 0%, var(--ui-bg) 55%, var(--ui-bg-accented) 100%)',
         }"
       >
+        <!-- Resize Handle -->
+        <div
+          class="absolute top-0 right-0 left-0 z-50 flex h-4 cursor-ns-resize items-start justify-center hover:bg-[var(--ui-bg-accented)]/50"
+          @mousedown="startResize"
+        >
+          <div class="mt-1.5 h-1 w-8 rounded-full bg-[var(--ui-border)]"></div>
+        </div>
+
         <div
           class="flex items-center justify-between gap-2 border-b border-[var(--ui-border)] pb-3"
         >
@@ -111,16 +158,14 @@
           </div>
         </div>
 
-        <div
-          class="mt-3 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1"
-        >
+        <div class="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden">
           <DiceRollerHistory>
             <template #scroller="{ formatTime }">
               <div
                 ref="historyScrollEl"
-                class="max-h-56 overflow-y-auto pr-1"
+                class="flex h-full flex-col overflow-y-auto pr-1"
               >
-                <ul class="flex flex-col gap-2">
+                <ul class="mt-auto flex flex-col gap-2 pt-4">
                   <li
                     v-for="entry in state.history.value"
                     :key="entry.id"

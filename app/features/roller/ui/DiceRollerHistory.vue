@@ -12,7 +12,7 @@
 <template>
   <div
     v-if="history.length"
-    class="flex flex-col gap-3"
+    class="flex h-full min-h-0 flex-col gap-3"
   >
     <slot
       name="scroller"
