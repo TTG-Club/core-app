@@ -112,15 +112,25 @@
           <button
             type="button"
             :class="[
-              $style.diceButton,
-              'inline-flex items-center justify-center md:hidden',
+              'inline-flex h-10 w-10 items-center justify-center rounded-lg text-[var(--ui-text-muted)] transition hover:bg-[var(--ui-bg-elevated)] hover:text-[var(--ui-text)] md:hidden',
             ]"
-            aria-label="Открыть роллер кубов"
-            @click="diceRoller.open()"
+            :aria-label="
+              diceRoller.isOpen.value
+                ? 'Закрыть роллер кубов'
+                : 'Открыть роллер кубов'
+            "
+            @click="diceRoller.toggle()"
           >
             <UIcon
+              v-if="!diceRoller.isOpen.value"
               name="i-ttg-dice-d20"
-              class="h-5 w-5 text-[var(--color-primary-500)]"
+              class="h-6 w-6"
+            />
+
+            <UIcon
+              v-else
+              name="i-fluent-dismiss-24-regular"
+              class="h-6 w-6"
             />
           </button>
 
@@ -180,26 +190,6 @@
     gap: 8px;
     height: auto;
     margin-left: 0;
-  }
-
-  .diceButton {
-    width: 40px;
-    height: 40px;
-    border: 1px solid var(--ui-border);
-    border-radius: 10px;
-
-    color: var(--ui-text);
-
-    background: var(--ui-bg-elevated);
-
-    transition:
-      transform 0.2s ease,
-      box-shadow 0.2s ease;
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 18px rgba(0, 0, 0, 0.18);
-    }
   }
 
   .bottomContainer {

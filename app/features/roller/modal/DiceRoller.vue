@@ -70,12 +70,19 @@
   }
 
   /* Resizing Logic */
+  const { smaller } = useBreakpoints();
+  const isMobile = smaller(Breakpoint.MD);
+
   const modalHeight = ref(450);
   const isResizing = ref(false);
   const startY = ref(0);
   const startHeight = ref(0);
 
   function startResize(e: MouseEvent) {
+    if (isMobile.value) {
+      return;
+    }
+
     isResizing.value = true;
     startY.value = e.clientY;
     startHeight.value = modalHeight.value;
@@ -119,18 +126,19 @@
   >
     <section
       v-if="state.isOpen.value"
-      class="fixed right-4 bottom-20 z-[120] w-[calc(100vw-32px)] max-w-[420px]"
+      class="fixed inset-x-4 top-4 bottom-20 z-[120] md:inset-auto md:right-4 md:bottom-20 md:w-[420px]"
     >
       <div
         class="relative flex flex-col overflow-hidden rounded-md border border-[var(--ui-border)] p-4 pt-5 shadow-[0_25px_60px_rgba(8,15,17,0.25)] backdrop-blur-[14px]"
         :style="{
-          height: `${modalHeight}px`,
+          height: isMobile ? '100%' : `${modalHeight}px`,
           background:
             'linear-gradient(160deg, var(--ui-bg-elevated) 0%, var(--ui-bg) 55%, var(--ui-bg-accented) 100%)',
         }"
       >
         <!-- Resize Handle -->
         <div
+          v-if="!isMobile"
           class="absolute top-0 right-0 left-0 z-50 flex h-4 cursor-ns-resize items-start justify-center hover:bg-[var(--ui-bg-accented)]/50"
           @mousedown="startResize"
         >
