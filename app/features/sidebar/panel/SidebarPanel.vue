@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { useDiceRollerState } from '~roller/composables/useDiceRollerState';
+  import { DiceRollerSidebarButton } from '~dice-roller/sidebar-button';
   import { SearchButton } from '~search/button';
   import { useGlobalSearch } from '~search/composable';
   import { AppMenu } from '~sidebar/menu';
@@ -18,7 +18,6 @@
   const { smaller } = useBreakpoints();
   const { close } = useSidebarPopover();
   const { open } = useGlobalSearch();
-  const diceRoller = useDiceRollerState();
 
   defineShortcuts({
     '/': open,
@@ -109,23 +108,7 @@
         <div :class="$style.socials" />
 
         <ClientOnly>
-          <UButton
-            :icon="
-              diceRoller.isOpen.value
-                ? 'i-fluent-dismiss-24-regular'
-                : 'i-ttg-dice-d20'
-            "
-            variant="ghost"
-            color="neutral"
-            class="md:hidden"
-            :ui="{ leadingIcon: 'h-6 w-6' }"
-            :aria-label="
-              diceRoller.isOpen.value
-                ? 'Закрыть роллер кубов'
-                : 'Открыть роллер кубов'
-            "
-            @click="diceRoller.toggle()"
-          />
+          <DiceRollerSidebarButton />
 
           <UserHelmet />
 

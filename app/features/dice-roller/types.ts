@@ -1,5 +1,10 @@
 export type CriticalType = 'success' | 'failure' | null;
 
+export interface DiceFormulaExample {
+  formula: string;
+  note: string;
+}
+
 export interface DiceRollItem {
   id: string;
   value: number;

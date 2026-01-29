@@ -2,7 +2,7 @@ import { consola } from 'consola';
 
 import { MARKER_MAP } from './config';
 
-import type { MarkerNode, SimpleTextNode } from './types';
+import type { MarkerNode, RenderNode, SimpleTextNode } from './types';
 
 export function logError(
   context: string,
@@ -42,4 +42,10 @@ export function isBlockNode(node: unknown): boolean {
   const config = MARKER_MAP.get(node.type);
 
   return config?.isBlock === true;
+}
+
+export function normalizeRenderNodes(
+  value: RenderNode | RenderNode[],
+): RenderNode[] {
+  return Array.isArray(value) ? value : [value];
 }

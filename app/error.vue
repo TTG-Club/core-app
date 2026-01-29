@@ -39,7 +39,7 @@
       disableHoverableContent: true,
     }"
     :toaster="{
-      position: 'bottom-right',
+      position: 'top-right',
     }"
   >
     <div class="ttg-app">

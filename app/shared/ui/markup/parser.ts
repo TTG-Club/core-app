@@ -61,9 +61,7 @@ function recursiveParse(text: string, depth: number): RenderNode[] {
 
         result.push(marker);
       } else {
-        const textNode = convertText(str);
-
-        result.push(...textNode);
+        result.push(convertText(str));
       }
     } catch (err) {
       logError('Parser', 'Converting error', { str, err });
@@ -101,28 +99,22 @@ function convertMarker(string: string, depth: number): MarkerNode {
     );
   }
 
-  const content =
-    marker === 'roller'
-      ? [makeTextNode(text)]
-      : recursiveParse(text, depth + 1);
-
   return {
     type: marker,
     attrs: splitAttrs(params),
-    content,
+    content: recursiveParse(text, depth + 1),
   };
 }
 
-function convertText(text: string | undefined): RenderNode[] {
-  if (text === undefined) {
-    throw new Error('Text marker must have text');
+function convertText(text: string | undefined): SimpleTextNode {
+  if (!text) {
+    throw new Error(`Text marker must have text`);
   }
 
-  return [makeTextNode(text)];
-}
-
-function makeTextNode(text: string): SimpleTextNode {
-  return { type: 'text', text };
+  return {
+    type: 'text',
+    text,
+  };
 }
 
 function splitByMarkers(source: string): string[] {

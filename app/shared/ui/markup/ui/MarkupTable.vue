@@ -5,8 +5,9 @@
     getCoreRowModel,
     useVueTable,
   } from '@tanstack/vue-table';
+  import { useDiceRollerState } from '~dice-roller/composables';
 
-  import { TABLE_ROLL_CONTEXT } from '../consts';
+  import { normalizeRenderNodes } from '../utils';
 
   import type { ColumnDef } from '@tanstack/vue-table';
   import type { VNode } from 'vue';
@@ -96,7 +97,16 @@
     activeRowIndex.value = rowIndex;
   }
 
-  provide(TABLE_ROLL_CONTEXT, { onRoll: handleTableRoll });
+  const tableId = useId();
+  const rollerState = useDiceRollerState();
+
+  onMounted(() => {
+    rollerState.registerTableRollCallback(tableId, handleTableRoll);
+  });
+
+  onUnmounted(() => {
+    rollerState.unregisterTableRollCallback(tableId);
+  });
 
   function isRenderNode(value: unknown): value is RenderNode {
     return (
@@ -142,12 +152,6 @@
   }
 
   const columnHelper = createColumnHelper<TableRowData>();
-
-  function normalizeRenderNodes(
-    value: RenderNode | RenderNode[],
-  ): RenderNode[] {
-    return Array.isArray(value) ? value : [value];
-  }
 
   const columns = computed<ColumnDef<TableRowData>[]>(() => {
     if (colCount.value === 0) {
