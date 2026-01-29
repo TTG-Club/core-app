@@ -1,12 +1,9 @@
 <script setup lang="ts">
   import { computed, inject } from 'vue';
+  import { useDiceRollerState } from '~dice-roller/composables/useDiceRollerState';
+  import { extractRollDetails, formatDetailSummary } from '~dice-roller/utils';
 
   import { useDiceRoller } from '~/composables/useDiceRoller';
-  import { useDiceRollerState } from '~/features/roller/composables/useDiceRollerState';
-  import {
-    extractRollDetails,
-    formatDetailSummary,
-  } from '~/features/roller/utils';
 
   import { TABLE_ROLL_CONTEXT } from '../consts';
 

@@ -1,7 +1,6 @@
 <script setup lang="ts">
-  import { useDiceRollerState } from '../composables/useDiceRollerState';
-
-  import DiceRollerHelpPopover from './DiceRollerHelpPopover.vue';
+  import { useDiceRollerState } from '~dice-roller/composables/useDiceRollerState';
+  import DiceRollerHelpPopover from '~dice-roller/ui/DiceRollerHelpPopover.vue';
 
   const props = defineProps<{
     onSubmit: () => void;
@@ -28,7 +27,7 @@
 
     <UButton
       type="submit"
-      icon="i-heroicons-paper-airplane-20-solid"
+      icon="i-fluent-send-20-filled"
       size="xl"
       color="primary"
       variant="soft"

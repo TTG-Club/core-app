@@ -1,4 +1,4 @@
-import type { DiceDetail, HistoryEntry } from '../types';
+import type { DiceDetail, HistoryEntry } from '~dice-roller/types';
 
 export function useDiceRollerState() {
   const isOpen = useState<boolean>('dice-roller:isOpen', () => false);

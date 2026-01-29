@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { useDiceRollerState } from '~roller/composables/useDiceRollerState';
+  import { useDiceRollerState } from '~dice-roller/composables/useDiceRollerState';
   import { SearchButton } from '~search/button';
   import { useGlobalSearch } from '~search/composable';
   import { AppMenu } from '~sidebar/menu';

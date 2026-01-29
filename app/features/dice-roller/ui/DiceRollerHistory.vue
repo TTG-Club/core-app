@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { useDiceRollerState } from '../composables/useDiceRollerState';
+  import { useDiceRollerState } from '~dice-roller/composables/useDiceRollerState';
 
   const { history } = useDiceRollerState();
   const dayjs = useDayjs();

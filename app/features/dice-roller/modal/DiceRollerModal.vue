@@ -1,13 +1,16 @@
 <script setup lang="ts">
   import { onMounted, ref } from 'vue';
+  import { useDiceRollerHistory } from '~dice-roller/composables/useDiceRollerHistory';
+  import { useDiceRollerState } from '~dice-roller/composables/useDiceRollerState';
+  import DiceRollerComposer from '~dice-roller/ui/DiceRollerComposer.vue';
+  import DiceRollerHistory from '~dice-roller/ui/DiceRollerHistory.vue';
+  import {
+    extractRollDetails,
+    formatDetailSummary,
+    getRollValue,
+  } from '~dice-roller/utils';
 
   import { useDiceRoller } from '~/composables/useDiceRoller';
-
-  import { useDiceRollerHistory } from '../composables/useDiceRollerHistory';
-  import { useDiceRollerState } from '../composables/useDiceRollerState';
-  import DiceRollerComposer from '../ui/DiceRollerComposer.vue';
-  import DiceRollerHistory from '../ui/DiceRollerHistory.vue';
-  import { extractRollDetails, formatDetailSummary } from '../utils';
 
   const state = useDiceRollerState();
 
@@ -19,23 +22,9 @@
     isOpen: state.isOpen,
   });
 
-  onMounted(async () => {
-    await historyApi.load();
+  onMounted(() => {
+    historyApi.load();
   });
-
-  function isObject(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null;
-  }
-
-  function getRollValue(roll: unknown): number {
-    if (!isObject(roll)) {
-      return Number.NaN;
-    }
-
-    const v = (roll as Record<string, unknown>).value;
-
-    return typeof v === 'number' ? v : Number.NaN;
-  }
 
   function rollDice() {
     try {
@@ -173,7 +162,7 @@
         class="relative flex flex-col overflow-hidden rounded-md border border-default p-4 pt-5 shadow-[0_25px_60px_rgba(8,15,17,0.25)] backdrop-blur-[14px]"
         :style="{
           height: isMobile ? '100%' : `${modalHeight}px`,
-          background:
+          backgroundImage:
             'linear-gradient(160deg, var(--ui-bg-elevated) 0%, var(--ui-bg) 55%, var(--ui-bg-accented) 100%)',
         }"
       >
@@ -253,11 +242,13 @@
                           :key="detail.id"
                           class="flex flex-wrap gap-1"
                         >
-                          <div
+                          <UBadge
                             v-for="roll in detail.rolls"
                             :key="roll.id"
+                            color="neutral"
+                            variant="subtle"
                             :class="[
-                              'inline-flex h-6 min-w-[24px] items-center justify-center rounded px-1.5 text-xs font-semibold',
+                              'h-6 min-w-[24px] justify-center px-1.5 text-xs font-semibold',
                               roll.valid
                                 ? 'bg-accented text-default'
                                 : 'bg-muted text-muted line-through opacity-60',
@@ -268,7 +259,7 @@
                             ]"
                           >
                             {{ roll.value }}
-                          </div>
+                          </UBadge>
                         </div>
                       </div>
 

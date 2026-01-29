@@ -1,9 +1,10 @@
 <script setup lang="ts">
-  import { useDiceRollerState } from '~/features/roller/composables/useDiceRollerState';
+  import { useDiceRollerState } from '~dice-roller/composables/useDiceRollerState';
+  import { BASIC_ROLLS, KEEP_ROLLS, REROLL_ROLLS } from '~dice-roller/const';
 
-  import { consts } from '../const';
-
-  const { basic, keep, reroll } = consts();
+  const basic = BASIC_ROLLS;
+  const keep = KEEP_ROLLS;
+  const reroll = REROLL_ROLLS;
   const { formula } = useDiceRollerState();
 
   function apply(value: string) {
@@ -30,11 +31,12 @@
           <p class="text-sm font-semibold text-default">Базовые броски</p>
 
           <div class="grid grid-cols-2 gap-2">
-            <button
+            <UButton
               v-for="item in basic"
               :key="item.formula"
-              type="button"
-              class="flex cursor-pointer flex-col gap-0.5 rounded-lg border border-default bg-elevated p-2 text-left transition hover:border-primary hover:bg-accented"
+              color="neutral"
+              variant="outline"
+              class="flex h-auto cursor-pointer flex-col items-start gap-0.5 rounded-lg border-default bg-elevated p-2 text-left transition hover:border-primary hover:bg-accented"
               @click="apply(item.formula)"
             >
               <span class="text-sm font-bold text-primary">
@@ -44,7 +46,7 @@
               <span class="text-xs text-muted">
                 {{ item.note }}
               </span>
-            </button>
+            </UButton>
           </div>
         </div>
 
@@ -53,11 +55,12 @@
           <p class="text-sm font-semibold text-default">Лучшие / худшие</p>
 
           <div class="grid grid-cols-2 gap-2">
-            <button
+            <UButton
               v-for="item in keep"
               :key="item.formula"
-              type="button"
-              class="flex cursor-pointer flex-col gap-0.5 rounded-lg border border-default bg-elevated p-2 text-left transition hover:border-primary hover:bg-accented"
+              color="neutral"
+              variant="outline"
+              class="flex h-auto cursor-pointer flex-col items-start gap-0.5 rounded-lg border-default bg-elevated p-2 text-left transition hover:border-primary hover:bg-accented"
               @click="apply(item.formula)"
             >
               <span class="text-sm font-bold text-primary">
@@ -65,7 +68,7 @@
               </span>
 
               <span class="text-xs text-muted"> — {{ item.note }} </span>
-            </button>
+            </UButton>
           </div>
         </div>
 
@@ -74,11 +77,12 @@
           <p class="text-sm font-semibold text-default">Перебросы</p>
 
           <div class="grid grid-cols-2 gap-2">
-            <button
+            <UButton
               v-for="item in reroll"
               :key="item.formula"
-              type="button"
-              class="flex cursor-pointer flex-col gap-0.5 rounded-lg border border-default bg-elevated p-2 text-left transition hover:border-primary hover:bg-accented"
+              color="neutral"
+              variant="outline"
+              class="flex h-auto cursor-pointer flex-col items-start gap-0.5 rounded-lg border-default bg-elevated p-2 text-left transition hover:border-primary hover:bg-accented"
               @click="apply(item.formula)"
             >
               <span class="text-sm font-bold text-primary">
@@ -86,7 +90,7 @@
               </span>
 
               <span class="text-xs text-muted"> — {{ item.note }} </span>
-            </button>
+            </UButton>
           </div>
         </div>
 

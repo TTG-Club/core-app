@@ -1,6 +1,11 @@
 import type { CriticalType, DiceDetail, DiceRollItem } from './types';
 
-function isObject(value: unknown): value is Record<string, unknown> {
+/**
+ * Checks if a value is a non-null object.
+ * @param value - The value to check.
+ * @returns True if value is an object and not null.
+ */
+export function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
@@ -18,6 +23,11 @@ interface DieNode {
   label?: string;
 }
 
+/**
+ * Checks if a node is a DieNode.
+ * @param node - The node to check.
+ * @returns True if node is a DieNode.
+ */
 function isDieNode(node: unknown): node is DieNode {
   return (
     isObject(node) &&
@@ -26,6 +36,11 @@ function isDieNode(node: unknown): node is DieNode {
   );
 }
 
+/**
+ * Retrieves the dice array from a node.
+ * @param node - The node to extract dice from.
+ * @returns An array of dice nodes or null.
+ */
 function getDiceArray(node: unknown): unknown[] | null {
   if (!isObject(node)) {
     return null;
@@ -36,6 +51,11 @@ function getDiceArray(node: unknown): unknown[] | null {
   return Array.isArray(dice) ? (dice as unknown[]) : null;
 }
 
+/**
+ * Retrieves the expression from a node.
+ * @param node - The node to extract expression from.
+ * @returns The expression or null.
+ */
 function getExpr(node: unknown): unknown | null {
   if (!isObject(node)) {
     return null;
@@ -46,6 +66,12 @@ function getExpr(node: unknown): unknown | null {
   return expr ?? null;
 }
 
+/**
+ * Describes a die roll based on its properties.
+ * @param roll - The roll object containing count, die type, and label.
+ * @param index - The index of the roll in the sequence.
+ * @returns A string description of the die roll.
+ */
 export function describeDie(
   roll: {
     count?: { value?: number };
@@ -82,6 +108,11 @@ export function describeDie(
   return `Бросок ${index + 1}`;
 }
 
+/**
+ * Extracts detailed information from a roll object.
+ * @param roll - The roll result object.
+ * @returns An array of DiceDetail objects.
+ */
 export function extractRollDetails(roll: unknown): DiceDetail[] {
   const details: DiceDetail[] = [];
 
@@ -128,6 +159,11 @@ export function extractRollDetails(roll: unknown): DiceDetail[] {
   return details;
 }
 
+/**
+ * Formats the summary of dice details.
+ * @param details - The array of DiceDetail objects.
+ * @returns A formatted string summary.
+ */
 export function formatDetailSummary(details: DiceDetail[]): string {
   const chunks = details
     .map((detail) => {
@@ -141,4 +177,19 @@ export function formatDetailSummary(details: DiceDetail[]): string {
     .filter(Boolean);
 
   return chunks.join(' | ');
+}
+
+/**
+ * Gets the numeric value of a roll object.
+ * @param roll - The roll object.
+ * @returns The numeric value or NaN.
+ */
+export function getRollValue(roll: unknown): number {
+  if (!isObject(roll)) {
+    return Number.NaN;
+  }
+
+  const v = (roll as Record<string, unknown>).value;
+
+  return typeof v === 'number' ? v : Number.NaN;
 }
