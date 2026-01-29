@@ -94,7 +94,7 @@
   }
 
   const rawNotation = computed(() => {
-    const fromAttr = (props.node as any)?.attrs?.notation?.toString?.();
+    const fromAttr = props.node.attrs?.notation?.toString?.();
 
     return (fromAttr ?? getNodeContentText(props.node)).trim();
   });
@@ -147,8 +147,19 @@
       return;
     }
 
-    const rollObject: any = diceRoller.roll(notation);
-    const value: number = rollObject?.value ?? 0;
+    function getValue(roll: unknown): number {
+      if (typeof roll !== 'object' || roll === null) {
+        return Number.NaN;
+      }
+
+      const maybe = (roll as Record<string, unknown>).value;
+
+      return typeof maybe === 'number' ? maybe : Number.NaN;
+    }
+
+    const rollObject = diceRoller.roll(notation) as unknown;
+
+    const value = getValue(rollObject);
 
     const displayValue = Number.isFinite(value)
       ? value.toLocaleString('ru-RU')
@@ -192,9 +203,11 @@
 </script>
 
 <template>
-  <button
+  <UButton
     type="button"
-    class="inline-flex items-baseline gap-1 rounded px-1 text-[var(--ui-text-muted)] underline decoration-dotted underline-offset-2 transition hover:text-[var(--ui-text-highlighted)]"
+    variant="link"
+    color="neutral"
+    class="inline-flex items-baseline gap-1 px-1 text-link underline decoration-dotted underline-offset-2 hover:text-link"
     @click="handleRoll"
   >
     <template
@@ -203,5 +216,5 @@
     >
       <component :is="vnode" />
     </template>
-  </button>
+  </UButton>
 </template>

@@ -1,5 +1,51 @@
 import type { CriticalType, DiceDetail, DiceRollItem } from './types';
 
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+interface DieNode {
+  type: 'die';
+  order?: number;
+  value?: number;
+  rolls?: Array<{
+    value?: number;
+    valid?: boolean;
+    critical?: CriticalType | undefined;
+  }>;
+  count?: { value?: number };
+  die?: { type?: string; value?: number };
+  label?: string;
+}
+
+function isDieNode(node: unknown): node is DieNode {
+  return (
+    isObject(node) &&
+    (node as Record<string, unknown>).type === 'die' &&
+    Array.isArray((node as Record<string, unknown>).rolls)
+  );
+}
+
+function getDiceArray(node: unknown): unknown[] | null {
+  if (!isObject(node)) {
+    return null;
+  }
+
+  const dice = (node as Record<string, unknown>).dice;
+
+  return Array.isArray(dice) ? (dice as unknown[]) : null;
+}
+
+function getExpr(node: unknown): unknown | null {
+  if (!isObject(node)) {
+    return null;
+  }
+
+  const expr = (node as Record<string, unknown>).expr;
+
+  return expr ?? null;
+}
+
 export function describeDie(
   roll: {
     count?: { value?: number };
@@ -36,25 +82,25 @@ export function describeDie(
   return `Бросок ${index + 1}`;
 }
 
-export function extractRollDetails(roll: any): DiceDetail[] {
+export function extractRollDetails(roll: unknown): DiceDetail[] {
   const details: DiceDetail[] = [];
 
-  const traverse = (node: any, index: string | number = 0) => {
-    if (!node || typeof node !== 'object') {
+  const traverse = (node: unknown, index: string | number = 0) => {
+    if (!isObject(node)) {
       return;
     }
 
-    if (node.type === 'die' && Array.isArray(node.rolls)) {
+    if (isDieNode(node)) {
       details.push({
-        id: `${index}-${node.order}`,
+        id: `${index}-${(node as DieNode).order}`,
         label: describeDie(node, details.length),
-        total: node.value,
-        rolls: node.rolls.map(
-          (item: any, rollIndex: number): DiceRollItem => ({
+        total: (node as DieNode).value ?? 0,
+        rolls: ((node as DieNode).rolls ?? []).map(
+          (item, rollIndex: number): DiceRollItem => ({
             id: `${index}-${rollIndex}`,
-            value: item.value,
-            valid: item.valid,
-            critical: (item.critical as CriticalType | undefined) ?? null,
+            value: item?.value ?? 0,
+            valid: Boolean(item?.valid),
+            critical: (item?.critical as CriticalType | undefined) ?? null,
           }),
         ),
       });
@@ -62,14 +108,18 @@ export function extractRollDetails(roll: any): DiceDetail[] {
       return;
     }
 
-    if (Array.isArray(node.dice)) {
-      node.dice.forEach((child: any, childIndex: number) =>
+    const diceList = getDiceArray(node);
+
+    if (diceList) {
+      diceList.forEach((child: unknown, childIndex: number) =>
         traverse(child, `${index}-${childIndex}`),
       );
     }
 
-    if (node.expr) {
-      traverse(node.expr, `${index}-expr`);
+    const expr = getExpr(node);
+
+    if (expr) {
+      traverse(expr, `${index}-expr`);
     }
   };
 

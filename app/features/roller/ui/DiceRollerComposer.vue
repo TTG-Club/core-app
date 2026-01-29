@@ -12,7 +12,7 @@
 
 <template>
   <form
-    class="mt-3 flex items-center gap-2 border-t border-[var(--ui-border)] pt-3"
+    class="mt-3 flex items-center gap-2 border-t border-default pt-3"
     @submit.prevent="props.onSubmit"
   >
     <UInput

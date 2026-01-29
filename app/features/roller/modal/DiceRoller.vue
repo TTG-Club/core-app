@@ -23,6 +23,20 @@
     await historyApi.load();
   });
 
+  function isObject(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+  }
+
+  function getRollValue(roll: unknown): number {
+    if (!isObject(roll)) {
+      return Number.NaN;
+    }
+
+    const v = (roll as Record<string, unknown>).value;
+
+    return typeof v === 'number' ? v : Number.NaN;
+  }
+
   function rollDice() {
     try {
       const formula = state.formula.value.trim();
@@ -38,10 +52,13 @@
         throw new Error(error);
       }
 
-      const rollObject: any = diceRoller.roll(formula);
-      const value: number = rollObject.value;
+      const rollObject = diceRoller.roll(formula) as unknown;
+      const value = getRollValue(rollObject);
 
-      state.result.value = value.toLocaleString('ru-RU');
+      state.result.value = Number.isFinite(value)
+        ? value.toLocaleString('ru-RU')
+        : String(value);
+
       state.details.value = extractRollDetails(rollObject);
 
       state.bumpResultKey();
@@ -73,6 +90,8 @@
   const { smaller } = useBreakpoints();
   const isMobile = smaller(Breakpoint.MD);
 
+  const MIN_MODAL_HEIGHT_PX = 300;
+  const MAX_HEIGHT_VH_RATIO = 0.9;
   const modalHeight = ref(450);
   const isResizing = ref(false);
   const startY = ref(0);
@@ -98,11 +117,10 @@
     }
 
     const delta = startY.value - e.clientY;
-    // Min 300px, Max 90vh
-    const maxHeight = window.innerHeight * 0.9;
+    const maxHeight = window.innerHeight * MAX_HEIGHT_VH_RATIO;
 
     modalHeight.value = Math.max(
-      300,
+      MIN_MODAL_HEIGHT_PX,
       Math.min(maxHeight, startHeight.value + delta),
     );
   }
@@ -113,9 +131,32 @@
     window.removeEventListener('mouseup', stopResize);
     document.body.style.userSelect = '';
   }
+
+  /* Scroll Lock */
+  const isLocked = useScrollLock(document.body);
+
+  watchEffect(() => {
+    isLocked.value = isMobile.value && state.isOpen.value;
+  });
 </script>
 
 <template>
+  <!-- Mobile Backdrop -->
+  <Transition
+    enter-active-class="transition duration-300 ease-out"
+    enter-from-class="opacity-0"
+    enter-to-class="opacity-100"
+    leave-active-class="transition duration-200 ease-in"
+    leave-from-class="opacity-100"
+    leave-to-class="opacity-0"
+  >
+    <div
+      v-if="isMobile && state.isOpen.value"
+      class="fixed inset-0 z-[95] bg-gray-900/50 backdrop-blur-[2px]"
+      @click="state.close()"
+    />
+  </Transition>
+
   <Transition
     enter-active-class="transition duration-300 ease-out"
     enter-from-class="opacity-0 translate-y-4 scale-95"
@@ -129,7 +170,7 @@
       class="fixed inset-x-4 top-4 bottom-20 z-[120] md:inset-auto md:right-4 md:bottom-20 md:w-[420px]"
     >
       <div
-        class="relative flex flex-col overflow-hidden rounded-md border border-[var(--ui-border)] p-4 pt-5 shadow-[0_25px_60px_rgba(8,15,17,0.25)] backdrop-blur-[14px]"
+        class="relative flex flex-col overflow-hidden rounded-md border border-default p-4 pt-5 shadow-[0_25px_60px_rgba(8,15,17,0.25)] backdrop-blur-[14px]"
         :style="{
           height: isMobile ? '100%' : `${modalHeight}px`,
           background:
@@ -139,17 +180,17 @@
         <!-- Resize Handle -->
         <div
           v-if="!isMobile"
-          class="absolute top-0 right-0 left-0 z-50 flex h-4 cursor-ns-resize items-start justify-center hover:bg-[var(--ui-bg-accented)]/50"
+          class="absolute top-0 right-0 left-0 z-50 flex h-4 cursor-ns-resize items-start justify-center hover:bg-accented/50"
           @mousedown="startResize"
         >
-          <div class="mt-1.5 h-1 w-8 rounded-full bg-[var(--ui-border)]"></div>
+          <div class="mt-1.5 h-1 w-8 rounded-full bg-default"></div>
         </div>
 
         <div
-          class="flex items-center justify-between gap-2 border-b border-[var(--ui-border)] pb-3"
+          class="flex items-center justify-between gap-2 border-b border-default pb-3"
         >
           <div class="min-w-0">
-            <p class="m-0 truncate font-semibold text-[var(--ui-text)]">
+            <p class="m-0 truncate font-semibold text-default">
               История бросков
             </p>
           </div>
@@ -177,7 +218,7 @@
                   <li
                     v-for="entry in state.history.value"
                     :key="entry.id"
-                    class="flex items-start gap-4 rounded-xl border border-[var(--ui-border)] bg-[var(--ui-bg-elevated)] p-2 shadow-sm transition hover:border-[var(--ui-border-hovered)]"
+                    class="flex items-start gap-4 rounded-xl border border-default bg-elevated p-2 transition hover:border-primary"
                   >
                     <!-- Left: Large Result -->
                     <div
@@ -193,13 +234,11 @@
                     <!-- Right: Details -->
                     <div class="flex min-w-0 flex-1 flex-col gap-2">
                       <div class="flex items-center justify-between gap-2">
-                        <p class="truncate font-medium text-[var(--ui-text)]">
+                        <p class="truncate font-medium text-default">
                           {{ entry.formula }}
                         </p>
 
-                        <span
-                          class="shrink-0 text-xs text-[var(--ui-text-muted)]"
-                        >
+                        <span class="shrink-0 text-xs text-muted">
                           {{ formatTime(entry.timestamp) }}
                         </span>
                       </div>
@@ -220,12 +259,12 @@
                             :class="[
                               'inline-flex h-6 min-w-[24px] items-center justify-center rounded px-1.5 text-xs font-semibold',
                               roll.valid
-                                ? 'bg-[var(--ui-bg-accented)] text-[var(--ui-text)]'
-                                : 'bg-[var(--ui-bg-muted)] text-[var(--ui-text-muted)] line-through opacity-60',
+                                ? 'bg-accented text-default'
+                                : 'bg-muted text-muted line-through opacity-60',
                               roll.critical === 'success' &&
-                                '!bg-[var(--color-success-500)] !text-white',
+                                '!bg-success-500 !text-white',
                               roll.critical === 'failure' &&
-                                '!bg-[var(--color-error-500)] !text-white',
+                                '!bg-error-500 !text-white',
                             ]"
                           >
                             {{ roll.value }}
@@ -236,7 +275,7 @@
                       <!-- Fallback to text detail if structured is missing -->
                       <p
                         v-else-if="entry.detail"
-                        class="text-xs text-[var(--ui-text-muted)]"
+                        class="text-xs text-muted"
                       >
                         {{ entry.detail }}
                       </p>

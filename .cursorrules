@@ -25,6 +25,9 @@
 - **Semantic Colors Only:**
   - **PROHIBITED:** Do not use color scheme modifiers directly in classes (e.g., `dark:`, `light:`, `blue-theme:`).
   - **REQUIRED:** Use unified semantic color names (e.g., `bg-surface`, `text-primary`) that rely on CSS variables.
+- **No Arbitrary Variables:**
+  - **PROHIBITED:** Do not use Tailwind arbitrary value syntax to access CSS variables directly (e.g., `bg-[var(--ui-bg-elevated)]` or `text-[var(--color-primary)]`).
+  - **REQUIRED:** Ensure variables are mapped in `tailwind.config` and use standard utility classes (e.g., `bg-ui-elevated`).
 - **Tailwind CSS:** Use Tailwind CSS according to the maximum version specified in the project.
 
 ## 5. Project Architecture & Reuse Strategy
