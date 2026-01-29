@@ -12,40 +12,88 @@
 - **No Magic Numbers:** Avoid hardcoded numbers or type assertions in variables/fields.
 
 ## 3. Naming Conventions
-- **Language:** Use full English names only.
+- **Language:** Use full English names only for variables, functions, and classes.
 - **Clarity over Brevity:** No abbreviations (e.g., `lst`, `ua`), no abstract names (`data`, `item`), and no single-letter names (except in mini-loops).
 - **Structure:**
   - One function = one task. One verb per action.
   - Different roots for different meanings (no similar terms like `date`/`data`).
-  - No underscores (unless specific rules apply). No prefixes like `super*`, `mega*`.
+  - No underscores. No prefixes like `super*`, `mega*`.
+- **Multi-word Names (Vue Components):**
+  - All component filenames MUST consist of at least two words (e.g., `UserCard.vue`, not `Card.vue`) to prevent conflicts with HTML elements.
+  - **EXCEPTION:** Files inside `app/pages` are exempt from this rule (e.g., `index.vue`, `[id].vue`, `about.vue` are allowed).
+- **Feature Component Naming:**
+  - Components inside features must reflect their path: `[FeatureName][Subfolder][Name].vue`.
+  - *Exception:* Components in `*/ui` subfolder should be named by their function (atomic components) without heavy prefixes.
+- **Constants:**
+  - Use `const` variables with Uppercase/CamelCase naming conventions.
+  - **PROHIBITED:** Do not create functions that simply return a static constant value.
 - **Booleans:** Functions starting with `is*` or `check*` must return a boolean and have NO side effects.
-- **Variable Safety:** No overlapping of external variables. No reusing variables for different meanings. No imperceptible substitutions (e.g., `elem = clone(elem)`).
+- **SQL:** All SQL scripts must be written in **lowercase**.
 
 ## 4. Styling & Design System
 - **Semantic Colors Only:**
-  - **PROHIBITED:** Do not use color scheme modifiers directly in classes (e.g., `dark:`, `light:`, `blue-theme:`).
-  - **REQUIRED:** Use unified semantic color names (e.g., `bg-surface`, `text-primary`) that rely on CSS variables.
+  - **PROHIBITED:** Do not use color scheme modifiers directly in classes (`dark:`, `light:`).
+  - **REQUIRED:** Use unified semantic color names (`bg-surface`, `text-primary`) mapped to CSS variables.
 - **No Arbitrary Variables:**
-  - **PROHIBITED:** Do not use Tailwind arbitrary value syntax to access CSS variables directly (e.g., `bg-[var(--ui-bg-elevated)]` or `text-[var(--color-primary)]`).
-  - **REQUIRED:** Ensure variables are mapped in `tailwind.config` and use standard utility classes (e.g., `bg-ui-elevated`).
+  - **PROHIBITED:** `bg-[var(--ui-bg-elevated)]`.
+  - **REQUIRED:** Use standard utility classes (e.g., `bg-ui-elevated`).
+- **Icons:** Use ONLY icons from the local `ttg` collection or `fluent` collection.
 - **Tailwind CSS:** Use Tailwind CSS according to the maximum version specified in the project.
 
-## 5. Project Architecture & Reuse Strategy
+## 5. Reuse Strategy
 - **Folder Structure Context:**
-  - `shared/ui`: **Global UI Kit.** Domain-agnostic, reusable components (Buttons, Drawers, Cards).
-  - `shared/api`, `shared/stores`, `shared/types`: **Global Shared Resources.** Core API logic, global state, and shared TypeScript definitions.
-  - `app/features`: **DOMAIN LOGIC CENTER.** Business logic divided by domain (e.g., `bestiary`).
+  - `shared/ui`: **Global UI Kit.**
+  - `app/features`: **DOMAIN LOGIC CENTER (DDD).**
     - `*/body`, `*/drawer`, `*/editor`: View components.
     - `*/model`: Feature-specific logic and constants.
     - `*/ui`: Feature-specific reusable UI.
-  - `app/pages`: **ROUTING ONLY.** Thin wrappers that import components from `features`. No heavy logic here.
-  - `server/domain` & `server/api`: **BACKEND LAYER.** DDD structure and API endpoints.
-  - `app/components`: **DOES NOT EXIST.** Do not create this folder. Use `shared/ui` or `features/*/ui`.
+  - `server/domain` & `server/api`: **BACKEND LAYER.**
+  - `app/components`: **DOES NOT EXIST.**
+
+- **Import Strategy (Smart Aliases):**
+  - **Cross-Feature / External:** When importing from **another feature** (even in the same domain) or a different domain entirely, ALWAYS use the generated domain alias.
+    - *Pattern:* `import { ... } from '~<domain>/<feature>';`
+    - *Example:* `import { DiceRollerModal } from '~dice-roller/modal';`
+  - **Internal Feature Imports:** When importing files **strictly inside the current feature**, use **relative paths**.
+    - *Pattern:* `import { ... } from '../const';` or `import { ... } from './types';`
+  - *Note:* Domain aliases (e.g., `~dice-roller`) are automatically generated via `pnpm run postinstall` or `dev/build`.
+
+- **Barrel Files (index.ts):**
+  - **Feature Root:** NO `index.ts` allowed in the root of a feature folder (e.g., `app/features/bestiary/index.ts` -> ❌).
+  - **Subfolders:** YES, `index.ts` is REQUIRED in subfolders (`model`, `ui`, `body`) for clean re-exports.
 
 - **Reuse Rule (Priority Order):**
-  - **UI:** 1. **Nuxt UI** components. 2. `shared/ui` (for custom global components). 3. `app/features/*/ui` (for domain-specific UI).
-  - **Logic:** Check `shared/` for global utilities/stores before writing new ones. Check `app/features/*/model` for domain logic.
-  - **New Features:** Create a folder in `app/features/` and follow the internal structure (`body`, `model`, etc.).
+  - **UI:** 1. **Nuxt UI** (@nuxt/ui). 2. `shared/ui`. 3. `app/features/*/ui`.
+  - **Logic:** Check `shared/` for global utilities/stores. Check `app/features/*/model` for domain logic.
 
-## 6. Tech Stack & Components
-- **Component Library:** When building UI, prioritize using Nuxt UI components (https://ui.nuxt.com/docs/components) or the version specified in the project.
+## 6. Tech Stack & Best Practices
+- **Official Documentation Context:**
+  - **MANDATORY:** For any Nuxt-related architecture or implementation questions, ALWAYS refer to the official guidelines for LLMs:
+    - `https://nuxt.com/llms.txt` (Complete Guidelines)
+    - `https://ui.nuxt.com/llms.txt` (Nuxt UI Guidelines)
+- **Framework Core:** Use **Nuxt 4** and **Vue 3.5** best practices (Composition API, `<script setup lang="ts">`).
+- **Rendering:**
+  - Purely frontend features (like Dice Rollers) MUST be wrapped in `<ClientOnly>`. Do not render them on SSR.
+- **Event Handling:**
+  - **Default Click Strategy:** Use `@click.left.exact.prevent` by default for interactive elements to avoid unwanted side effects, unless specific behavior is required.
+- **State Management:**
+  - Avoid `provide/inject`. Use Composables or Pinia stores for state sharing.
+- **Documentation (JSDoc):**
+  - All utility functions (especially in `utils.ts`) MUST have **JSDoc in Russian** explaining parameters, return values, and purpose.
+  - **NO HTML:** Do NOT use HTML tags (like `<ul>`, `<li>`, `<br>`) in JSDoc. Use standard Markdown syntax (e.g., `-` for lists) for formatting.
+  - *Note:* Code identifiers (variables, functions) remain in English.
+- **Composables & Utilities:**
+  - **NO REINVENTING THE WHEEL:** Before writing a custom utility function, ALWAYS check `vueuse` and `es-toolkit`.
+  - **Priority:**
+    1. `vueuse` (for reactive/browser APIs)
+    2. `es-toolkit` (for data manipulation/algorithms - replace `lodash`)
+    3. Custom implementation (only if 1 & 2 fail).
+  - Use specific project composables: `useDayjs` for time.
+
+## 7. AI & MCP Tools Integration
+- **Nuxt & Nuxt UI MCP Servers:**
+  - **ACTIVE USAGE REQUIRED:** When implementing logic or UI, you MUST explicitly query the connected MCP servers to retrieve the exact API definitions, props, and best practices.
+  - **Sources of Truth:**
+    - **Nuxt Core:** [https://nuxt.com/mcp](https://nuxt.com/mcp)
+    - **Nuxt UI:** [https://ui.nuxt.com/mcp](https://ui.nuxt.com/mcp)
+  - **NO GUESSING:** Do not hallucinate component props or Nuxt config options. Always verify against the MCP source of truth first.
