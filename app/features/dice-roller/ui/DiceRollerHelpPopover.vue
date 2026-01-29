@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { useDiceRollerState } from '~dice-roller/composables/useDiceRollerState';
-  import { BASIC_ROLLS, KEEP_ROLLS, REROLL_ROLLS } from '~dice-roller/const';
+  import { BASIC_ROLLS, KEEP_ROLLS, REROLL_ROLLS } from '~dice-roller/model';
 
   const basic = BASIC_ROLLS;
   const keep = KEEP_ROLLS;

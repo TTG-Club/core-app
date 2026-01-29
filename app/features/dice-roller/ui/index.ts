@@ -1,3 +1,3 @@
-export { default as Composer } from './Composer.vue';
-export { default as HelpPopover } from './HelpPopover.vue';
-export { default as History } from './History.vue';
+export { default as DiceRollerComposer } from './DiceRollerComposer.vue';
+export { default as DiceRollerHelpPopover } from './DiceRollerHelpPopover.vue';
+export { default as DiceRollerHistory } from './DiceRollerHistory.vue';

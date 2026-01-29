@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { useDiceRollerState } from '~dice-roller/composables/useDiceRollerState';
-  import HelpPopover from '~dice-roller/ui/HelpPopover.vue';
+  import DiceRollerHelpPopover from '~dice-roller/ui/DiceRollerHelpPopover.vue';
 
   const props = defineProps<{
     onSubmit: () => void;
@@ -21,7 +21,7 @@
       class="w-full"
     >
       <template #trailing>
-        <HelpPopover />
+        <DiceRollerHelpPopover />
       </template>
     </UInput>
 

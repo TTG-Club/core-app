@@ -6,7 +6,7 @@
     formatDetailSummary,
     getRollValue,
     isObject,
-  } from '~dice-roller/utils';
+  } from '~dice-roller/model';
 
   import { useDiceRoller } from '~/composables/useDiceRoller';
 
@@ -34,17 +34,19 @@
   }
 
   function hasContentArray(node: unknown): node is { content: RenderNode[] } {
-    return (
-      isObject(node) &&
-      'content' in node &&
-      Array.isArray((node as any).content)
-    );
+    if (!isObject(node) || !('content' in node)) {
+      return false;
+    }
+
+    return Array.isArray(node.content);
   }
 
   function hasText(node: unknown): node is { text: string } {
-    return (
-      isObject(node) && 'text' in node && typeof (node as any).text === 'string'
-    );
+    if (!isObject(node) || !('text' in node)) {
+      return false;
+    }
+
+    return typeof node.text === 'string';
   }
 
   function flattenText(nodes: RenderNode[] | undefined): string {
@@ -145,7 +147,7 @@
       return;
     }
 
-    const rollObject = diceRoller.roll(notation) as unknown;
+    const rollObject = diceRoller.roll(notation);
     const value = getRollValue(rollObject);
 
     const displayValue = Number.isFinite(value)

@@ -2,7 +2,7 @@ import type {
   CriticalType,
   DiceDetail,
   DiceRollItem,
-} from '~dice-roller/types';
+} from '~dice-roller/model/types';
 
 /**
  * Проверяет, является ли значение объектом (не null).
@@ -13,15 +13,17 @@ export function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+interface RollValue {
+  value?: number;
+  valid?: boolean;
+  critical?: unknown;
+}
+
 interface DieNode {
   type: 'die';
   order?: number;
   value?: number;
-  rolls?: Array<{
-    value?: number;
-    valid?: boolean;
-    critical?: CriticalType | undefined;
-  }>;
+  rolls?: RollValue[];
   count?: { value?: number };
   die?: { type?: string; value?: number };
   label?: string;
@@ -49,7 +51,7 @@ function isDieNode(node: unknown): node is DieNode {
  */
 function getDiceArray(node: unknown): unknown[] | null {
   if (isObject(node) && Array.isArray(node.dice)) {
-    return node.dice as unknown[];
+    return node.dice;
   }
 
   return null;
@@ -63,6 +65,19 @@ function getDiceArray(node: unknown): unknown[] | null {
 function getExpr(node: unknown): unknown | null {
   if (isObject(node) && 'expr' in node) {
     return node.expr ?? null;
+  }
+
+  return null;
+}
+
+/**
+ * Нормализует значение critical в тип CriticalType.
+ * @param value - Значение для нормализации.
+ * @returns Нормализованное значение типа CriticalType.
+ */
+function normalizeCritical(value: unknown): CriticalType {
+  if (value === 'success' || value === 'failure') {
+    return value;
   }
 
   return null;
@@ -133,7 +148,7 @@ export function extractRollDetails(roll: unknown): DiceDetail[] {
             id: `${index}-${rollIndex}`,
             value: item?.value ?? 0,
             valid: Boolean(item?.valid),
-            critical: (item?.critical as CriticalType | undefined) ?? null,
+            critical: normalizeCritical(item?.critical),
           }),
         ),
       });

@@ -2,12 +2,12 @@
   import { onMounted, ref } from 'vue';
   import { useDiceRollerHistory } from '~dice-roller/composables/useDiceRollerHistory';
   import { useDiceRollerState } from '~dice-roller/composables/useDiceRollerState';
-  import { Composer, History } from '~dice-roller/ui';
   import {
     extractRollDetails,
     formatDetailSummary,
     getRollValue,
-  } from '~dice-roller/utils';
+  } from '~dice-roller/model';
+  import { DiceRollerComposer, DiceRollerHistory } from '~dice-roller/ui';
 
   import { useDiceRoller } from '~/composables/useDiceRoller';
 
@@ -40,7 +40,7 @@
         throw new Error(error);
       }
 
-      const rollObject = diceRoller.roll(formula) as unknown;
+      const rollObject = diceRoller.roll(formula);
       const value = getRollValue(rollObject);
 
       state.result.value = Number.isFinite(value)
@@ -158,11 +158,9 @@
       class="fixed inset-x-4 top-4 bottom-20 z-[120] md:inset-auto md:right-4 md:bottom-20 md:w-[420px]"
     >
       <div
-        class="relative flex flex-col overflow-hidden rounded-md border border-default p-4 pt-5 shadow-[0_25px_60px_rgba(8,15,17,0.25)] backdrop-blur-[14px]"
+        class="relative flex flex-col overflow-hidden rounded-md border border-default bg-elevated p-4 pt-5 shadow-[0_25px_60px_rgba(8,15,17,0.25)] backdrop-blur-[14px]"
         :style="{
           height: isMobile ? '100%' : `${modalHeight}px`,
-          backgroundImage:
-            'linear-gradient(160deg, var(--ui-bg-elevated) 0%, var(--ui-bg) 55%, var(--ui-bg-accented) 100%)',
         }"
       >
         <!-- Resize Handle -->
@@ -196,7 +194,7 @@
         </div>
 
         <div class="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden">
-          <History>
+          <DiceRollerHistory>
             <template #scroller="{ formatTime }">
               <div
                 ref="historyScrollEl"
@@ -274,10 +272,10 @@
                 </ul>
               </div>
             </template>
-          </History>
+          </DiceRollerHistory>
         </div>
 
-        <Composer :on-submit="rollDice" />
+        <DiceRollerComposer :on-submit="rollDice" />
       </div>
     </section>
   </Transition>

@@ -1,4 +1,4 @@
-import type { DiceDetail, HistoryEntry } from '~dice-roller/types';
+import type { DiceDetail, HistoryEntry } from '~dice-roller/model';
 
 /**
  * Состояние и логика роллера кубов.

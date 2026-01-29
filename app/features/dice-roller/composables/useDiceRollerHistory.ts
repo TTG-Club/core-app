@@ -2,7 +2,7 @@ import { useIDBKeyval } from '@vueuse/integrations/useIDBKeyval';
 import { nextTick, watch } from 'vue';
 
 import type { Ref } from 'vue';
-import type { HistoryEntry } from '~dice-roller/types';
+import type { HistoryEntry } from '~dice-roller/model';
 
 const KEY_HISTORY = 'dice-roller:history:v1';
 
