@@ -109,30 +109,23 @@
         <div :class="$style.socials" />
 
         <ClientOnly>
-          <button
-            type="button"
-            :class="[
-              'inline-flex h-10 w-10 items-center justify-center rounded-lg text-[var(--ui-text-muted)] transition hover:bg-[var(--ui-bg-elevated)] hover:text-[var(--ui-text)] md:hidden',
-            ]"
+          <UButton
+            :icon="
+              diceRoller.isOpen.value
+                ? 'i-fluent-dismiss-24-regular'
+                : 'i-ttg-dice-d20'
+            "
+            variant="ghost"
+            color="neutral"
+            class="md:hidden"
+            :ui="{ leadingIcon: 'h-6 w-6' }"
             :aria-label="
               diceRoller.isOpen.value
                 ? 'Закрыть роллер кубов'
                 : 'Открыть роллер кубов'
             "
             @click="diceRoller.toggle()"
-          >
-            <UIcon
-              v-if="!diceRoller.isOpen.value"
-              name="i-ttg-dice-d20"
-              class="h-6 w-6"
-            />
-
-            <UIcon
-              v-else
-              name="i-fluent-dismiss-24-regular"
-              class="h-6 w-6"
-            />
-          </button>
+          />
 
           <UserHelmet />
 

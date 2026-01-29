@@ -22,7 +22,9 @@
     />
 
     <template #content>
-      <div class="max-h-[400px] w-[360px] space-y-3 overflow-y-auto p-2">
+      <div
+        class="max-h-[400px] w-[calc(100vw-32px)] space-y-3 overflow-y-auto p-2 sm:w-[360px]"
+      >
         <!-- Section: Basic -->
         <div class="space-y-2">
           <p class="text-sm font-semibold text-[var(--ui-text)]">

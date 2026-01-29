@@ -26,16 +26,15 @@
       </template>
     </UInput>
 
-    <button
+    <UButton
       type="submit"
-      class="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[var(--ui-border)] bg-[var(--ui-bg-elevated)] shadow-[0_10px_20px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_24px_rgba(0,0,0,0.22)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary-500)] focus-visible:outline-none"
+      icon="i-heroicons-paper-airplane-20-solid"
+      size="xl"
+      color="primary"
+      variant="soft"
+      class="rounded-md shadow-[0_10px_20px_rgba(0,0,0,0.18)] transition"
       aria-label="Бросить кубы"
       title="Кидай!"
-    >
-      <UIcon
-        name="i-heroicons-paper-airplane-20-solid"
-        class="h-6 w-6 text-[var(--color-primary-500)]"
-      />
-    </button>
+    />
   </form>
 </template>
