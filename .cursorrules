@@ -1,0 +1,48 @@
+# Project Rules & Guidelines
+
+## 1. Core Workflow (Must Follow)
+- **Analyze First:** Before writing any code, ALWAYS analyze the existing project codebase. Look at similar logic, file structure, and coding styles. Strictly follow established patterns and conventions to ensure consistency.
+- **Single Dictionary:** The code must read fluently without surprises, adhering to a unified project dictionary.
+- **Code Style:** Strictly follow the project's ESLint, Prettier, and Stylelint configurations.
+
+## 2. Type Safety (Strict TypeScript)
+- **Strict Typing:** Strong typing is mandatory.
+- **No any:** The use of `any` is strictly prohibited.
+- **No Assertions:** Do not use type assertions (`as Type`) or forced casting.
+- **No Magic Numbers:** Avoid hardcoded numbers or type assertions in variables/fields.
+
+## 3. Naming Conventions
+- **Language:** Use full English names only.
+- **Clarity over Brevity:** No abbreviations (e.g., `lst`, `ua`), no abstract names (`data`, `item`), and no single-letter names (except in mini-loops).
+- **Structure:**
+  - One function = one task. One verb per action.
+  - Different roots for different meanings (no similar terms like `date`/`data`).
+  - No underscores (unless specific rules apply). No prefixes like `super*`, `mega*`.
+- **Booleans:** Functions starting with `is*` or `check*` must return a boolean and have NO side effects.
+- **Variable Safety:** No overlapping of external variables. No reusing variables for different meanings. No imperceptible substitutions (e.g., `elem = clone(elem)`).
+
+## 4. Styling & Design System
+- **Semantic Colors Only:**
+  - **PROHIBITED:** Do not use color scheme modifiers directly in classes (e.g., `dark:`, `light:`, `blue-theme:`).
+  - **REQUIRED:** Use unified semantic color names (e.g., `bg-surface`, `text-primary`) that rely on CSS variables.
+- **Tailwind CSS:** Use Tailwind CSS according to the maximum version specified in the project.
+
+## 5. Project Architecture & Reuse Strategy
+- **Folder Structure Context:**
+  - `shared/ui`: **Global UI Kit.** Domain-agnostic, reusable components (Buttons, Drawers, Cards).
+  - `shared/api`, `shared/stores`, `shared/types`: **Global Shared Resources.** Core API logic, global state, and shared TypeScript definitions.
+  - `app/features`: **DOMAIN LOGIC CENTER.** Business logic divided by domain (e.g., `bestiary`).
+    - `*/body`, `*/drawer`, `*/editor`: View components.
+    - `*/model`: Feature-specific logic and constants.
+    - `*/ui`: Feature-specific reusable UI.
+  - `app/pages`: **ROUTING ONLY.** Thin wrappers that import components from `features`. No heavy logic here.
+  - `server/domain` & `server/api`: **BACKEND LAYER.** DDD structure and API endpoints.
+  - `app/components`: **DOES NOT EXIST.** Do not create this folder. Use `shared/ui` or `features/*/ui`.
+
+- **Reuse Rule (Priority Order):**
+  - **UI:** 1. **Nuxt UI** components. 2. `shared/ui` (for custom global components). 3. `app/features/*/ui` (for domain-specific UI).
+  - **Logic:** Check `shared/` for global utilities/stores before writing new ones. Check `app/features/*/model` for domain logic.
+  - **New Features:** Create a folder in `app/features/` and follow the internal structure (`body`, `model`, etc.).
+
+## 6. Tech Stack & Components
+- **Component Library:** When building UI, prioritize using Nuxt UI components (https://ui.nuxt.com/docs/components) or the version specified in the project.
