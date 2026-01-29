@@ -37,7 +37,7 @@
               color="neutral"
               variant="outline"
               class="flex h-auto cursor-pointer flex-col items-start gap-0.5 rounded-lg border-default bg-elevated p-2 text-left transition hover:border-primary hover:bg-accented"
-              @click="apply(item.formula)"
+              @click.left.exact.prevent="apply(item.formula)"
             >
               <span class="text-sm font-bold text-primary">
                 {{ item.formula }}
@@ -61,7 +61,7 @@
               color="neutral"
               variant="outline"
               class="flex h-auto cursor-pointer flex-col items-start gap-0.5 rounded-lg border-default bg-elevated p-2 text-left transition hover:border-primary hover:bg-accented"
-              @click="apply(item.formula)"
+              @click.left.exact.prevent="apply(item.formula)"
             >
               <span class="text-sm font-bold text-primary">
                 {{ item.formula }}
@@ -83,7 +83,7 @@
               color="neutral"
               variant="outline"
               class="flex h-auto cursor-pointer flex-col items-start gap-0.5 rounded-lg border-default bg-elevated p-2 text-left transition hover:border-primary hover:bg-accented"
-              @click="apply(item.formula)"
+              @click.left.exact.prevent="apply(item.formula)"
             >
               <span class="text-sm font-bold text-primary">
                 {{ item.formula }}

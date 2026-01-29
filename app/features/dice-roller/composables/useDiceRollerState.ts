@@ -1,5 +1,9 @@
 import type { DiceDetail, HistoryEntry } from '~dice-roller/types';
 
+/**
+ * Состояние и логика роллера кубов.
+ * Содержит текущую формулу, результат и историю бросков.
+ */
 export function useDiceRollerState() {
   const isOpen = useState<boolean>('dice-roller:isOpen', () => false);
   const formula = useState<string>('dice-roller:formula', () => '');

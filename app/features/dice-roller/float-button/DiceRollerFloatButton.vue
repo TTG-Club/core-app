@@ -12,6 +12,6 @@
     variant="soft"
     class="fixed right-4 bottom-4 z-[120] hidden h-12 w-12 items-center justify-center rounded-xl shadow-[0_12px_25px_rgba(0,0,0,0.2)] transition md:inline-flex"
     :aria-label="isOpen ? 'Закрыть роллер кубов' : 'Открыть роллер кубов'"
-    @click="toggle"
+    @click.left.exact.prevent="toggle"
   />
 </template>

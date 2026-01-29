@@ -2,8 +2,7 @@
   import { onMounted, ref } from 'vue';
   import { useDiceRollerHistory } from '~dice-roller/composables/useDiceRollerHistory';
   import { useDiceRollerState } from '~dice-roller/composables/useDiceRollerState';
-  import DiceRollerComposer from '~dice-roller/ui/DiceRollerComposer.vue';
-  import DiceRollerHistory from '~dice-roller/ui/DiceRollerHistory.vue';
+  import { Composer, History } from '~dice-roller/ui';
   import {
     extractRollDetails,
     formatDetailSummary,
@@ -142,7 +141,7 @@
     <div
       v-if="isMobile && state.isOpen.value"
       class="fixed inset-0 z-[95] bg-gray-900/50 backdrop-blur-[2px]"
-      @click="state.close()"
+      @click.left.exact.prevent="state.close()"
     />
   </Transition>
 
@@ -191,13 +190,13 @@
               color="neutral"
               size="xs"
               aria-label="Очистить историю"
-              @click="historyApi.clear()"
+              @click.left.exact.prevent="historyApi.clear()"
             />
           </div>
         </div>
 
         <div class="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden">
-          <DiceRollerHistory>
+          <History>
             <template #scroller="{ formatTime }">
               <div
                 ref="historyScrollEl"
@@ -275,10 +274,10 @@
                 </ul>
               </div>
             </template>
-          </DiceRollerHistory>
+          </History>
         </div>
 
-        <DiceRollerComposer :on-submit="rollDice" />
+        <Composer :on-submit="rollDice" />
       </div>
     </section>
   </Transition>

@@ -1,9 +1,13 @@
-import type { CriticalType, DiceDetail, DiceRollItem } from './types';
+import type {
+  CriticalType,
+  DiceDetail,
+  DiceRollItem,
+} from '~dice-roller/types';
 
 /**
- * Checks if a value is a non-null object.
- * @param value - The value to check.
- * @returns True if value is an object and not null.
+ * Проверяет, является ли значение объектом (не null).
+ * @param value - Проверяемое значение.
+ * @returns True, если значение — объект и не null.
  */
 export function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -24,53 +28,51 @@ interface DieNode {
 }
 
 /**
- * Checks if a node is a DieNode.
- * @param node - The node to check.
- * @returns True if node is a DieNode.
+ * Проверяет, является ли узел узлом кости (die).
+ * @param node - Проверяемый узел.
+ * @returns True, если это узел кости.
  */
 function isDieNode(node: unknown): node is DieNode {
-  return (
-    isObject(node) &&
-    (node as Record<string, unknown>).type === 'die' &&
-    Array.isArray((node as Record<string, unknown>).rolls)
-  );
+  if (!isObject(node)) {
+    return false;
+  }
+
+  const { type, rolls } = node;
+
+  return type === 'die' && Array.isArray(rolls);
 }
 
 /**
- * Retrieves the dice array from a node.
- * @param node - The node to extract dice from.
- * @returns An array of dice nodes or null.
+ * Извлекает массив костей из узла.
+ * @param node - Узел для извлечения.
+ * @returns Массив узлов костей или null.
  */
 function getDiceArray(node: unknown): unknown[] | null {
-  if (!isObject(node)) {
-    return null;
+  if (isObject(node) && Array.isArray(node.dice)) {
+    return node.dice as unknown[];
   }
 
-  const dice = (node as Record<string, unknown>).dice;
-
-  return Array.isArray(dice) ? (dice as unknown[]) : null;
+  return null;
 }
 
 /**
- * Retrieves the expression from a node.
- * @param node - The node to extract expression from.
- * @returns The expression or null.
+ * Извлекает выражение (expr) из узла.
+ * @param node - Узел для извлечения.
+ * @returns Выражение или null.
  */
 function getExpr(node: unknown): unknown | null {
-  if (!isObject(node)) {
-    return null;
+  if (isObject(node) && 'expr' in node) {
+    return node.expr ?? null;
   }
 
-  const expr = (node as Record<string, unknown>).expr;
-
-  return expr ?? null;
+  return null;
 }
 
 /**
- * Describes a die roll based on its properties.
- * @param roll - The roll object containing count, die type, and label.
- * @param index - The index of the roll in the sequence.
- * @returns A string description of the die roll.
+ * Формирует строковое описание броска кости на основе его свойств.
+ * @param roll - Объект броска с количеством, типом кости и меткой.
+ * @param index - Индекс броска в последовательности.
+ * @returns Строковое описание броска (например, "2к6").
  */
 export function describeDie(
   roll: {
@@ -109,9 +111,9 @@ export function describeDie(
 }
 
 /**
- * Extracts detailed information from a roll object.
- * @param roll - The roll result object.
- * @returns An array of DiceDetail objects.
+ * Извлекает детализированную информацию из объекта результата броска.
+ * @param roll - Объект с результатом броска.
+ * @returns Массив объектов DiceDetail.
  */
 export function extractRollDetails(roll: unknown): DiceDetail[] {
   const details: DiceDetail[] = [];
@@ -123,10 +125,10 @@ export function extractRollDetails(roll: unknown): DiceDetail[] {
 
     if (isDieNode(node)) {
       details.push({
-        id: `${index}-${(node as DieNode).order}`,
+        id: `${index}-${node.order}`,
         label: describeDie(node, details.length),
-        total: (node as DieNode).value ?? 0,
-        rolls: ((node as DieNode).rolls ?? []).map(
+        total: node.value ?? 0,
+        rolls: (node.rolls ?? []).map(
           (item, rollIndex: number): DiceRollItem => ({
             id: `${index}-${rollIndex}`,
             value: item?.value ?? 0,
@@ -160,9 +162,9 @@ export function extractRollDetails(roll: unknown): DiceDetail[] {
 }
 
 /**
- * Formats the summary of dice details.
- * @param details - The array of DiceDetail objects.
- * @returns A formatted string summary.
+ * Форматирует краткую сводку деталей броска в строку.
+ * @param details - Массив объектов DiceDetail.
+ * @returns Отформатированная строка со сводкой.
  */
 export function formatDetailSummary(details: DiceDetail[]): string {
   const chunks = details
@@ -180,16 +182,14 @@ export function formatDetailSummary(details: DiceDetail[]): string {
 }
 
 /**
- * Gets the numeric value of a roll object.
- * @param roll - The roll object.
- * @returns The numeric value or NaN.
+ * Получает числовое значение результата из объекта броска.
+ * @param roll - Объект броска.
+ * @returns Числовое значение или NaN.
  */
 export function getRollValue(roll: unknown): number {
-  if (!isObject(roll)) {
-    return Number.NaN;
+  if (isObject(roll) && typeof roll.value === 'number') {
+    return roll.value;
   }
 
-  const v = (roll as Record<string, unknown>).value;
-
-  return typeof v === 'number' ? v : Number.NaN;
+  return Number.NaN;
 }

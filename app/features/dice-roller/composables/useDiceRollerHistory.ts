@@ -6,6 +6,14 @@ import type { HistoryEntry } from '~dice-roller/types';
 
 const KEY_HISTORY = 'dice-roller:history:v1';
 
+/**
+ * Композиция для управления историей бросков кубов.
+ * Обеспечивает синхронизацию с IndexedDB и прокрутку списка.
+ * @param opts - Параметры композиции.
+ * @param opts.history - Ссылка на массив истории.
+ * @param opts.historyScrollEl - Ссылка на элемент прокрутки истории.
+ * @param opts.isOpen - Состояние открытия окна роллера.
+ */
 export function useDiceRollerHistory(opts: {
   history: Ref<HistoryEntry[]>;
   historyScrollEl: Ref<HTMLElement | null>;

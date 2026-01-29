@@ -1,7 +1,12 @@
 <script setup lang="ts">
   import { computed, inject } from 'vue';
   import { useDiceRollerState } from '~dice-roller/composables/useDiceRollerState';
-  import { extractRollDetails, formatDetailSummary } from '~dice-roller/utils';
+  import {
+    extractRollDetails,
+    formatDetailSummary,
+    getRollValue,
+    isObject,
+  } from '~dice-roller/utils';
 
   import { useDiceRoller } from '~/composables/useDiceRoller';
 
@@ -17,10 +22,6 @@
   }>();
 
   type AnyNode = RenderNode;
-
-  function isObject(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null;
-  }
 
   function getNodeType(node: unknown): string | undefined {
     if (!isObject(node)) {
@@ -144,19 +145,8 @@
       return;
     }
 
-    function getValue(roll: unknown): number {
-      if (typeof roll !== 'object' || roll === null) {
-        return Number.NaN;
-      }
-
-      const maybe = (roll as Record<string, unknown>).value;
-
-      return typeof maybe === 'number' ? maybe : Number.NaN;
-    }
-
     const rollObject = diceRoller.roll(notation) as unknown;
-
-    const value = getValue(rollObject);
+    const value = getRollValue(rollObject);
 
     const displayValue = Number.isFinite(value)
       ? value.toLocaleString('ru-RU')
@@ -174,23 +164,15 @@
     }
 
     rollerState.result.value = displayValue;
-    rollerState.details.value = []; // Clear current view details as requested for text mode simplicity in modal view?
-    // Actually, if we want consistency, maybe we SHOULD set them?
-    // But the user said "if from text then not output [in the result box? or history?]".
-    // If I set them here, `DiceRollerResult` WILL show them if modal is open.
-    // Let's set them because the user likely wants to SEE the result if they open the history.
-    // rollerState.details.value = details; // Uncomment if we want them in the "current result" box too.
-    // The previous code CLEARED them. I will keep clearing them from "current result" view if that was intended,
-    // BUT I will definitely pass them to history.
-
+    rollerState.details.value = [];
     rollerState.bumpResultKey();
 
     rollerState.addHistoryEntry({
       formula: notation,
       value: displayValue,
       isError: false,
-      detail: formatDetailSummary(details), // Use the formatted summary
-      structuredDetails: details, // Pass the structured details for chips in history
+      detail: formatDetailSummary(details),
+      structuredDetails: details,
     });
 
     if (Number.isFinite(value)) {
@@ -205,7 +187,7 @@
     variant="link"
     color="neutral"
     class="inline-flex items-baseline gap-1 px-1 text-link underline decoration-dotted underline-offset-2 hover:text-link"
-    @click="handleRoll"
+    @click.left.exact.prevent="handleRoll"
   >
     <template
       v-for="(vnode, index) in children"
