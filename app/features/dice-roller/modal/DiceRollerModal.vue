@@ -37,22 +37,43 @@
     await historyActions.loadHistory();
   });
 
+  function handleRollError(message: string, formulaValue: string) {
+    state.result.value = `Ошибка: ${message}`;
+    state.details.value = [];
+    state.incrementResultKey();
+
+    state.addHistoryEntry({
+      formula: formulaValue,
+      value: message,
+      isError: true,
+    });
+  }
+
   function executeRoll() {
+    const formulaValue = state.formula.value.trim();
+
+    if (!formulaValue) {
+      handleRollError('Введите формулу', formulaValue);
+
+      return;
+    }
+
     try {
-      const formulaValue = state.formula.value.trim();
-
-      if (!formulaValue) {
-        throw new Error('Введите формулу');
-      }
-
       const diceRoller = useDiceRoller();
-      const { valid, error } = diceRoller.validateWithError(formulaValue);
+
+      const { valid, error: validationError } =
+        diceRoller.validateWithError(formulaValue);
 
       if (!valid) {
-        throw new Error(error);
+        handleRollError(
+          validationError || 'Некорректная формула',
+          formulaValue,
+        );
+
+        return;
       }
 
-      const rollResult = diceRoller.roll(formulaValue) as unknown;
+      const rollResult = diceRoller.roll(formulaValue);
       const numericValue = extractRollValue(rollResult);
 
       state.result.value = Number.isFinite(numericValue)
@@ -74,16 +95,7 @@
       const errorMessage =
         error instanceof Error ? error.message : 'Неизвестная ошибка';
 
-      state.result.value = `Ошибка: ${errorMessage}`;
-      state.details.value = [];
-
-      state.incrementResultKey();
-
-      state.addHistoryEntry({
-        formula: state.formula.value.trim(),
-        value: errorMessage,
-        isError: true,
-      });
+      handleRollError(errorMessage, formulaValue);
     }
   }
 
@@ -168,11 +180,9 @@
       class="fixed inset-x-4 top-4 bottom-20 z-120 md:inset-auto md:right-4 md:bottom-20 md:w-105"
     >
       <div
-        class="relative flex flex-col overflow-hidden rounded-md border border-default p-4 pt-5 shadow-[0_25px_60px_rgba(8,15,17,0.25)] backdrop-blur-[14px]"
+        class="relative flex flex-col overflow-hidden rounded-md border border-default bg-elevated p-4 pt-5 shadow-[0_25px_60px_rgba(8,15,17,0.25)] backdrop-blur-[14px]"
         :style="{
           height: isMobile ? '100%' : `${modalHeight}px`,
-          background:
-            'linear-gradient(160deg, var(--ui-bg-elevated) 0%, var(--ui-bg) 55%, var(--ui-bg-accented) 100%)',
         }"
       >
         <div
