@@ -1,5 +1,9 @@
 import type { DiceFormulaExample } from './types';
 
+export const DICE_MODAL_MIN_HEIGHT = 300;
+export const DICE_MODAL_MAX_HEIGHT_RATIO = 0.9;
+export const DICE_MODAL_INITIAL_HEIGHT = 450;
+
 export const DICE_EXAMPLES_BASIC: DiceFormulaExample[] = [
   { formula: 'к20', note: 'одиночный куб' },
   { formula: '2к6+3', note: 'сумма с модификатором' },

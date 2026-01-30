@@ -3,8 +3,14 @@
     useDiceRoller,
     useDiceRollerHistory,
     useDiceRollerState,
+    useResizableHeight,
   } from '~dice-roller/composables';
-  import { DiceRollerComposer } from '~dice-roller/ui';
+  import {
+    DICE_MODAL_INITIAL_HEIGHT,
+    DICE_MODAL_MAX_HEIGHT_RATIO,
+    DICE_MODAL_MIN_HEIGHT,
+  } from '~dice-roller/const';
+  import { DiceRollerComposer, DiceRollerHistoryList } from '~dice-roller/ui';
   import {
     extractDiceRollDetails,
     extractRollValue,
@@ -12,6 +18,7 @@
   } from '~dice-roller/utils';
 
   const state = useDiceRollerState();
+  const diceRoller = useDiceRoller();
 
   const historyScrollElement = ref<HTMLElement | null>(null);
 
@@ -20,18 +27,6 @@
     historyScrollElement,
     isModalOpen: state.isOpen,
   });
-
-  const dayjs = useDayjs();
-
-  function formatDateTime(iso: string) {
-    const date = dayjs(iso);
-
-    if (!date.isValid()) {
-      return undefined;
-    }
-
-    return date.local().format('LLL');
-  }
 
   onMounted(async () => {
     await historyActions.loadHistory();
@@ -59,8 +54,6 @@
     }
 
     try {
-      const diceRoller = useDiceRoller();
-
       const { valid, error: validationError } =
         diceRoller.validateWithError(formulaValue);
 
@@ -102,47 +95,15 @@
   const { smaller } = useBreakpoints();
   const isMobile = smaller(Breakpoint.MD);
 
-  const MODAL_MIN_HEIGHT = 300;
-  const MODAL_MAX_HEIGHT_RATIO = 0.9;
-  const modalHeight = ref(450);
-  const isResizing = ref(false);
-  const resizeStartY = ref(0);
-  const resizeStartHeight = ref(0);
+  const resizeHandle = useTemplateRef<HTMLElement>('resizeHandle');
 
-  function handleResizeStart(event: MouseEvent) {
-    if (isMobile.value) {
-      return;
-    }
-
-    isResizing.value = true;
-    resizeStartY.value = event.clientY;
-    resizeStartHeight.value = modalHeight.value;
-
-    window.addEventListener('mousemove', handleResizeMove);
-    window.addEventListener('mouseup', handleResizeEnd);
-    document.body.style.userSelect = 'none';
-  }
-
-  function handleResizeMove(event: MouseEvent) {
-    if (!isResizing.value) {
-      return;
-    }
-
-    const delta = resizeStartY.value - event.clientY;
-    const maxHeight = window.innerHeight * MODAL_MAX_HEIGHT_RATIO;
-
-    modalHeight.value = Math.max(
-      MODAL_MIN_HEIGHT,
-      Math.min(maxHeight, resizeStartHeight.value + delta),
-    );
-  }
-
-  function handleResizeEnd() {
-    isResizing.value = false;
-    window.removeEventListener('mousemove', handleResizeMove);
-    window.removeEventListener('mouseup', handleResizeEnd);
-    document.body.style.userSelect = '';
-  }
+  const { height: modalHeight } = useResizableHeight({
+    handleElement: resizeHandle,
+    minHeight: DICE_MODAL_MIN_HEIGHT,
+    maxHeightRatio: DICE_MODAL_MAX_HEIGHT_RATIO,
+    initialHeight: DICE_MODAL_INITIAL_HEIGHT,
+    disabled: isMobile,
+  });
 
   const isScrollLocked = useScrollLock(document.body);
 
@@ -187,8 +148,8 @@
       >
         <div
           v-if="!isMobile"
+          ref="resizeHandle"
           class="absolute top-0 right-0 left-0 z-50 flex h-4 cursor-ns-resize items-start justify-center hover:bg-accented/50"
-          @mousedown="handleResizeStart"
         >
           <div class="mt-1.5 h-1 w-8 rounded-full bg-default" />
         </div>
@@ -212,89 +173,11 @@
           />
         </div>
 
-        <div
+        <DiceRollerHistoryList
           v-if="state.history"
-          class="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden"
-        >
-          <div class="flex h-full min-h-0 flex-col gap-3">
-            <div
-              ref="historyScrollElement"
-              class="flex h-full flex-col overflow-y-auto pr-1"
-            >
-              <ul class="mt-auto flex flex-col gap-2 pt-4">
-                <li
-                  v-for="entry in state.history.value"
-                  :key="entry.id"
-                  class="flex items-start gap-4 rounded-xl border border-default bg-elevated p-2 transition hover:border-primary"
-                >
-                  <div
-                    class="flex min-w-8 shrink-0 flex-col items-center justify-center gap-1"
-                  >
-                    <span
-                      class="text-3xl leading-none font-bold tracking-tight text-primary"
-                    >
-                      {{ entry.displayValue }}
-                    </span>
-                  </div>
-
-                  <div class="flex min-w-0 flex-1 flex-col gap-2">
-                    <div class="flex items-center justify-between gap-2">
-                      <p class="truncate font-medium text-default">
-                        {{ entry.formula }}
-                      </p>
-
-                      <NuxtTime
-                        :title="formatDateTime(entry.timestamp)"
-                        :datetime="entry.timestamp"
-                        class="shrink-0 text-xs text-muted"
-                        relative-style="long"
-                        locale="ru-RU"
-                        relative
-                      />
-                    </div>
-
-                    <div
-                      v-if="entry.structuredDetails?.length"
-                      class="flex flex-col gap-2"
-                    >
-                      <div
-                        v-for="detail in entry.structuredDetails"
-                        :key="detail.id"
-                        class="flex flex-wrap gap-1"
-                      >
-                        <UBadge
-                          v-for="roll in detail.rolls"
-                          :key="roll.id"
-                          :color="
-                            roll.critical === 'success'
-                              ? 'success'
-                              : roll.critical === 'failure'
-                                ? 'error'
-                                : 'neutral'
-                          "
-                          :variant="roll.valid ? 'subtle' : 'outline'"
-                          :class="[
-                            'min-w-6 justify-center',
-                            !roll.valid && 'line-through opacity-60',
-                          ]"
-                        >
-                          {{ roll.value }}
-                        </UBadge>
-                      </div>
-                    </div>
-
-                    <p
-                      v-else-if="entry.detail"
-                      class="text-xs text-muted"
-                    >
-                      {{ entry.detail }}
-                    </p>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
+          v-model:scroll-element="historyScrollElement"
+          :history="state.history.value"
+        />
 
         <DiceRollerComposer :on-submit="executeRoll" />
       </div>

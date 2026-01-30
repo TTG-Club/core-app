@@ -10,8 +10,15 @@ interface AddHistoryEntryPayload {
 
 type TableRollCallback = (value: number) => void;
 
+type TableRollCallbacksMap = Map<string, TableRollCallback>;
+
 export function useDiceRollerState() {
   const dayjs = useDayjs();
+
+  const tableRollCallbacks = useState<TableRollCallbacksMap>(
+    'dice-roller:tableRollCallbacks',
+    () => new Map(),
+  );
 
   const isOpen = useState<boolean>('dice-roller:isOpen', () => false);
   const formula = useState<string>('dice-roller:formula', () => '');
@@ -20,15 +27,6 @@ export function useDiceRollerState() {
   const history = useState<HistoryEntry[]>('dice-roller:history', () => []);
 
   const resultKey = ref(0);
-
-  /**
-   * Карта callback'ов для таблиц, подписанных на результаты бросков.
-   * Ключ - уникальный ID таблицы, значение - callback функция.
-   */
-  const tableRollCallbacks = useState<Map<string, TableRollCallback>>(
-    'dice-roller:tableRollCallbacks',
-    () => new Map(),
-  );
 
   const incrementResultKey = () => {
     resultKey.value += 1;

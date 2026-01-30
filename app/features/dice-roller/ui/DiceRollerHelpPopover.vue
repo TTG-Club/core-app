@@ -6,7 +6,20 @@
     DICE_EXAMPLES_REROLL,
   } from '~dice-roller/const';
 
+  import type { DiceFormulaExample } from '~dice-roller/types';
+
+  interface HelpSection {
+    title: string;
+    examples: DiceFormulaExample[];
+  }
+
   const { formula } = useDiceRollerState();
+
+  const sections: HelpSection[] = [
+    { title: 'Базовые броски', examples: DICE_EXAMPLES_BASIC },
+    { title: 'Лучшие / худшие', examples: DICE_EXAMPLES_KEEP },
+    { title: 'Перебросы', examples: DICE_EXAMPLES_REROLL },
+  ];
 
   function applyFormula(value: string) {
     formula.value = value;
@@ -25,58 +38,18 @@
       <div
         class="max-h-100 w-[calc(100vw-48px)] space-y-4 overflow-y-auto p-4 pr-3 sm:w-90"
       >
-        <div class="space-y-2">
-          <p class="text-sm font-semibold text-default">Базовые броски</p>
+        <div
+          v-for="section in sections"
+          :key="section.title"
+          class="space-y-2"
+        >
+          <p class="text-sm font-semibold text-default">
+            {{ section.title }}
+          </p>
 
           <div class="grid grid-cols-2 gap-2">
             <UButton
-              v-for="example in DICE_EXAMPLES_BASIC"
-              :key="example.formula"
-              variant="outline"
-              color="neutral"
-              class="h-auto flex-col items-start gap-0.5 p-2"
-              @click.left.exact.prevent="applyFormula(example.formula)"
-            >
-              <span class="text-sm font-bold text-primary">
-                {{ example.formula }}
-              </span>
-
-              <span class="text-xs text-muted">
-                {{ example.note }}
-              </span>
-            </UButton>
-          </div>
-        </div>
-
-        <div class="space-y-2">
-          <p class="text-sm font-semibold text-default">Лучшие / худшие</p>
-
-          <div class="grid grid-cols-2 gap-2">
-            <UButton
-              v-for="example in DICE_EXAMPLES_KEEP"
-              :key="example.formula"
-              variant="outline"
-              color="neutral"
-              class="h-auto flex-col items-start gap-0.5 p-2"
-              @click.left.exact.prevent="applyFormula(example.formula)"
-            >
-              <span class="text-sm font-bold text-primary">
-                {{ example.formula }}
-              </span>
-
-              <span class="text-xs text-muted">
-                {{ example.note }}
-              </span>
-            </UButton>
-          </div>
-        </div>
-
-        <div class="space-y-2">
-          <p class="text-sm font-semibold text-default">Перебросы</p>
-
-          <div class="grid grid-cols-2 gap-2">
-            <UButton
-              v-for="example in DICE_EXAMPLES_REROLL"
+              v-for="example in section.examples"
               :key="example.formula"
               variant="outline"
               color="neutral"

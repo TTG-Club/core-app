@@ -1,44 +1,11 @@
-import type { CriticalType, DiceDetail, DiceRollItem } from './types';
-
-/**
- * Внутренний интерфейс для информации о количестве кубов.
- */
-interface DieCountInfo {
-  value?: number;
-}
-
-/**
- * Внутренний интерфейс для информации о типе куба.
- */
-interface DieTypeInfo {
-  type?: string;
-  value?: number;
-}
-
-/**
- * Интерфейс с информацией о броске куба.
- */
-interface DieRollInfo {
-  count?: DieCountInfo;
-  die?: DieTypeInfo;
-  label?: string;
-}
-
-/**
- * Внутренний интерфейс, представляющий узел куба из результата dice-roller-parser.
- * Содержит информацию о типе куба, количестве, результатах отдельных бросков
- * и вычисленных значениях.
- */
-interface DieNode extends DieRollInfo {
-  type: 'die';
-  order?: number;
-  value?: number;
-  rolls?: Array<{
-    value?: number;
-    valid?: boolean;
-    critical?: CriticalType | undefined;
-  }>;
-}
+import type {
+  CriticalType,
+  DiceDetail,
+  DiceRollItem,
+  DieNode,
+  DieRollInfo,
+  ExpressionNode,
+} from './types';
 
 /**
  * Проверяет, является ли значение непустым объектом.
@@ -88,12 +55,18 @@ function extractDiceArray(node: unknown): unknown[] | null {
  * @param node - Узел для извлечения выражения
  * @returns Узел выражения или null, если отсутствует
  */
-function extractExpression(node: unknown): unknown | null {
+function extractExpression(node: unknown): ExpressionNode['expr'] | null {
   if (!isPlainObject(node)) {
     return null;
   }
 
-  return node.expr ?? null;
+  const expressionNode = node as ExpressionNode;
+
+  if (!expressionNode.expr || !isPlainObject(expressionNode.expr)) {
+    return null;
+  }
+
+  return expressionNode.expr;
 }
 
 /**

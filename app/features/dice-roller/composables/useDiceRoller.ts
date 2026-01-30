@@ -14,6 +14,8 @@ const RUSSIAN_OPERATORS_PATTERN = new RegExp(
   'gi',
 );
 
+const roller = new DiceRoller();
+
 /**
  * Нормализует русскую нотацию костей в стандартную Roll20.
  *
@@ -43,7 +45,6 @@ function isValidNotation(notation: unknown): notation is string {
   }
 
   try {
-    const roller = new DiceRoller();
     const normalized = normalizeRussianNotation(notation);
 
     roller.parse(normalized);
@@ -67,8 +68,6 @@ function isValidNotation(notation: unknown): notation is string {
  * }
  */
 export function useDiceRoller() {
-  const roller = new DiceRoller();
-
   /**
    * Выполняет бросок и возвращает числовой результат.
    *

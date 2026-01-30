@@ -10,6 +10,7 @@
 - **No any:** The use of `any` is strictly prohibited.
 - **No Assertions:** Do not use type assertions (`as Type`) or forced casting.
 - **No Magic Numbers:** Avoid hardcoded numbers or type assertions in variables/fields.
+- **Explicit Return Types:** For utility functions with complex return types (especially when working with `unknown`), always define explicit return types and helper interfaces. This improves code maintainability and IDE support.
 
 ## 3. Naming Conventions
 - **Language:** Use full English names only for variables, functions, and classes.
