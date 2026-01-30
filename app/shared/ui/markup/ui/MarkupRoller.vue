@@ -132,7 +132,8 @@
     type="button"
     variant="link"
     color="neutral"
-    class="inline-flex items-baseline gap-1 px-1 text-link underline decoration-dotted underline-offset-2 hover:text-link"
+    :padded="false"
+    class="inline-flex items-baseline gap-1 p-0 text-link underline decoration-dotted underline-offset-2 hover:text-link"
     @click.left.exact.prevent="handleRoll"
   >
     <component
