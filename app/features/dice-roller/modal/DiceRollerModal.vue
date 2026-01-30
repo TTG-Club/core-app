@@ -3,7 +3,6 @@
     useDiceRoller,
     useDiceRollerHistory,
     useDiceRollerState,
-    useResizableHeight,
   } from '~dice-roller/composables';
   import {
     DICE_MODAL_INITIAL_HEIGHT,
@@ -23,27 +22,37 @@
     DiceRollerHistoryList,
   } from './ui';
 
-  const state = useDiceRollerState();
-  const diceRoller = useDiceRoller();
+  const {
+    history,
+    isOpen,
+    formula,
+    result,
+    details,
+    incrementResultKey,
+    addHistoryEntry,
+    closeModal,
+  } = useDiceRollerState();
 
-  const historyScrollElement = ref<HTMLElement | null>(null);
+  const { validateWithError, roll } = useDiceRoller();
 
-  const historyActions = useDiceRollerHistory({
-    history: state.history,
+  const historyScrollElement = shallowRef<HTMLElement | null>(null);
+
+  const { loadHistory, clearHistory } = useDiceRollerHistory({
+    history,
     historyScrollElement,
-    isModalOpen: state.isOpen,
+    isModalOpen: isOpen,
   });
 
   onMounted(async () => {
-    await historyActions.loadHistory();
+    await loadHistory();
   });
 
   function handleRollError(message: string, formulaValue: string) {
-    state.result.value = `Ошибка: ${message}`;
-    state.details.value = [];
-    state.incrementResultKey();
+    result.value = `Ошибка: ${message}`;
+    details.value = [];
+    incrementResultKey();
 
-    state.addHistoryEntry({
+    addHistoryEntry({
       formula: formulaValue,
       value: message,
       isError: true,
@@ -51,7 +60,7 @@
   }
 
   function executeRoll() {
-    const formulaValue = state.formula.value.trim();
+    const formulaValue = formula.value.trim();
 
     if (!formulaValue) {
       handleRollError('Введите формулу', formulaValue);
@@ -60,8 +69,7 @@
     }
 
     try {
-      const { valid, error: validationError } =
-        diceRoller.validateWithError(formulaValue);
+      const { valid, error: validationError } = validateWithError(formulaValue);
 
       if (!valid) {
         handleRollError(
@@ -72,23 +80,23 @@
         return;
       }
 
-      const rollResult = diceRoller.roll(formulaValue);
+      const rollResult = roll(formulaValue);
       const numericValue = extractRollValue(rollResult);
 
-      state.result.value = Number.isFinite(numericValue)
+      result.value = Number.isFinite(numericValue)
         ? numericValue.toLocaleString('ru-RU')
         : String(numericValue);
 
-      state.details.value = extractDiceRollDetails(rollResult);
+      details.value = extractDiceRollDetails(rollResult);
 
-      state.incrementResultKey();
+      incrementResultKey();
 
-      state.addHistoryEntry({
+      addHistoryEntry({
         formula: formulaValue,
-        value: state.result.value,
+        value: result.value,
         isError: false,
-        detail: formatDiceDetailsSummary(state.details.value),
-        structuredDetails: state.details.value,
+        detail: formatDiceDetailsSummary(details.value),
+        structuredDetails: details.value,
       });
     } catch (error) {
       const errorMessage =
@@ -111,10 +119,10 @@
     disabled: isMobile,
   });
 
-  const isScrollLocked = useScrollLock(document.body);
+  const isScrollLocked = useScrollLock(window);
 
   watchEffect(() => {
-    isScrollLocked.value = isMobile.value && state.isOpen.value;
+    isScrollLocked.value = isMobile.value && isOpen.value;
   });
 </script>
 
@@ -128,9 +136,9 @@
     leave-to-class="opacity-0"
   >
     <div
-      v-if="isMobile && state.isOpen.value"
+      v-if="isMobile && isOpen"
       class="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm"
-      @click.left.exact.prevent="state.closeModal()"
+      @click.left.exact.prevent="closeModal()"
     />
   </Transition>
 
@@ -143,7 +151,7 @@
     leave-to-class="opacity-0 translate-y-4 scale-95"
   >
     <section
-      v-if="state.isOpen.value"
+      v-if="isOpen"
       class="fixed inset-x-4 top-4 bottom-20 z-50 md:inset-auto md:right-4 md:bottom-20 md:w-96"
     >
       <div
@@ -171,29 +179,28 @@
 
           <UButton
             icon="i-fluent-delete-16-regular"
-            variant="ghost"
+            variant="soft"
             color="neutral"
-            size="xs"
+            size="sm"
             aria-label="Очистить историю"
-            @click.left.exact.prevent="historyActions.clearHistory()"
+            @click.left.exact.prevent="clearHistory"
           />
         </div>
 
         <DiceRollerHistoryList
-          v-if="state.history"
+          v-if="history"
           v-model:scroll-element="historyScrollElement"
-          :history="state.history.value"
+          :history="history"
         >
-          <template #item="{ entry, formattedDateTime }">
+          <template #item="{ entry }">
             <DiceRollerHistoryItem
               :key="entry.id"
               :entry="entry"
-              :formatted-date-time="formattedDateTime"
             />
           </template>
         </DiceRollerHistoryList>
 
-        <DiceRollerComposer :on-submit="executeRoll">
+        <DiceRollerComposer @submit="executeRoll">
           <template #help>
             <DiceRollerHelpPopover />
           </template>

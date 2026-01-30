@@ -55,9 +55,7 @@ export function useDiceRollerHistory(options: UseDiceRollerHistoryOptions) {
   };
 
   const persistHistory = async () => {
-    const historySnapshot = history.value.map((entry) => ({ ...entry }));
-
-    await setStorageValue(DICE_HISTORY_STORAGE_KEY, historySnapshot);
+    await setStorageValue(DICE_HISTORY_STORAGE_KEY, history.value);
   };
 
   const clearHistory = async () => {

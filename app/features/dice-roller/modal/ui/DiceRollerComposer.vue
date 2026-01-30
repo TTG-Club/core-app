@@ -1,21 +1,26 @@
 <script setup lang="ts">
   import { useDiceRollerState } from '~dice-roller/composables';
 
-  const props = defineProps<{
-    onSubmit: () => void;
+  const emit = defineEmits<{
+    (e: 'submit'): void;
   }>();
 
   const { formula } = useDiceRollerState();
+
+  const state = reactive({
+    formula,
+  });
 </script>
 
 <template>
-  <form
+  <UForm
+    :state="state"
     class="mt-3 flex items-center gap-2 border-t border-default pt-3"
-    @submit.prevent="props.onSubmit"
+    @submit="emit('submit')"
   >
     <UFieldGroup class="w-full">
       <UInput
-        v-model="formula"
+        v-model="state.formula"
         placeholder="Например: 1к20+5"
         class="w-full"
       />
@@ -30,5 +35,5 @@
       class="rounded-md shadow-lg transition"
       aria-label="Бросить кубы"
     />
-  </form>
+  </UForm>
 </template>

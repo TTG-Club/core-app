@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { HistoryEntry } from '~dice-roller/types';
 
-  defineProps<{
+  const { history } = defineProps<{
     history: HistoryEntry[];
   }>();
 
@@ -11,18 +11,6 @@
   watchEffect(() => {
     scrollElementModel.value = scrollContainer.value;
   });
-
-  const dayjs = useDayjs();
-
-  function formatDateTime(iso: string): string | undefined {
-    const date = dayjs(iso);
-
-    if (!date.isValid()) {
-      return undefined;
-    }
-
-    return date.local().format('LLL');
-  }
 </script>
 
 <template>
@@ -40,7 +28,6 @@
             <slot
               name="item"
               :entry="entry"
-              :formatted-date-time="formatDateTime(entry.timestamp)"
             />
           </template>
         </ul>

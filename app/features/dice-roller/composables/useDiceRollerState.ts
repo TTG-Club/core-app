@@ -1,3 +1,5 @@
+import { v7 as uuidv7 } from 'uuid';
+
 import type { DiceDetail, HistoryEntry } from '~dice-roller/types';
 
 interface AddHistoryEntryPayload {
@@ -38,13 +40,7 @@ export function useDiceRollerState() {
   };
 
   const generateHistoryEntryId = (): string => {
-    const uuid = globalThis.crypto?.randomUUID?.();
-
-    if (uuid) {
-      return uuid;
-    }
-
-    return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    return uuidv7();
   };
 
   const addHistoryEntry = (payload: AddHistoryEntryPayload) => {
@@ -57,7 +53,7 @@ export function useDiceRollerState() {
       formula: payload.formula,
       displayValue: payload.value,
       isError: payload.isError,
-      timestamp: dayjs().toISOString(),
+      timestamp: dayjs().valueOf(),
       detail: payload.detail || undefined,
       structuredDetails: payload.structuredDetails,
     };

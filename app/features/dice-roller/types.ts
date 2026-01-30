@@ -24,7 +24,7 @@ export interface HistoryEntry {
   formula: string;
   displayValue: string;
   isError: boolean;
-  timestamp: string;
+  timestamp: number;
   detail?: string;
   structuredDetails?: DiceDetail[];
 }

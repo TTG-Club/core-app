@@ -5,9 +5,8 @@
     HistoryEntry,
   } from '~dice-roller/types';
 
-  const props = defineProps<{
+  const { entry } = defineProps<{
     entry: HistoryEntry;
-    formattedDateTime?: string;
   }>();
 
   type BadgeColor = 'success' | 'error' | 'neutral';
@@ -15,11 +14,24 @@
   interface EnrichedRoll extends DiceRollItem {
     badgeColor: BadgeColor;
     badgeClass: string[];
+    badgeVariant: 'subtle' | 'outline';
   }
 
   interface EnrichedDetail {
     id: string;
     rolls: EnrichedRoll[];
+  }
+
+  const dayjs = useDayjs();
+
+  function formatDateTime(timestamp: number): string | undefined {
+    const date = dayjs(timestamp);
+
+    if (!date.isValid()) {
+      return undefined;
+    }
+
+    return date.local().format('LLL');
   }
 
   const criticalColorMap: Record<NonNullable<CriticalType>, BadgeColor> = {
@@ -28,15 +40,16 @@
   };
 
   const enrichedDetails = computed<EnrichedDetail[]>(() => {
-    if (!props.entry.structuredDetails?.length) {
+    if (!entry.structuredDetails?.length) {
       return [];
     }
 
-    return props.entry.structuredDetails.map((detail) => ({
+    return entry.structuredDetails.map((detail) => ({
       id: detail.id,
       rolls: detail.rolls.map((roll) => ({
         ...roll,
         badgeColor: roll.critical ? criticalColorMap[roll.critical] : 'neutral',
+        badgeVariant: roll.valid ? 'subtle' : 'outline',
         badgeClass: roll.valid
           ? ['min-w-6 justify-center']
           : ['min-w-6 justify-center', 'line-through', 'opacity-60'],
@@ -64,7 +77,7 @@
         </p>
 
         <NuxtTime
-          :title="formattedDateTime"
+          :title="formatDateTime(entry.timestamp)"
           :datetime="entry.timestamp"
           class="shrink-0 text-xs text-muted"
           relative-style="long"
@@ -86,7 +99,7 @@
             v-for="roll in detail.rolls"
             :key="roll.id"
             :color="roll.badgeColor"
-            :variant="roll.valid ? 'subtle' : 'outline'"
+            :variant="roll.badgeVariant"
             :class="roll.badgeClass"
           >
             {{ roll.value }}

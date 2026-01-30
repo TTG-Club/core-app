@@ -7,6 +7,8 @@
     formatDiceDetailsSummary,
   } from '~dice-roller/utils';
 
+  import { isSimpleTextNode } from '../utils';
+
   import type { VNode } from 'vue';
 
   import type { MarkerNode, RenderNode } from '../types';
@@ -17,11 +19,45 @@
   }>();
 
   const toast = useToast();
-  const diceRoller = useDiceRoller();
-  const rollerState = useDiceRollerState();
+  const { validateWithError, roll } = useDiceRoller();
+
+  const {
+    isOpen,
+    result,
+    details,
+    incrementResultKey,
+    addHistoryEntry,
+    notifyTableRoll,
+  } = useDiceRollerState();
+
+  function getNodeText(renderNode: RenderNode | RenderNode[]): string {
+    if (typeof renderNode === 'string') {
+      return renderNode;
+    }
+
+    if (Array.isArray(renderNode)) {
+      return renderNode.map((child) => getNodeText(child)).join('');
+    }
+
+    if (isSimpleTextNode(renderNode)) {
+      return renderNode.text;
+    }
+
+    if (
+      typeof renderNode === 'object' &&
+      renderNode !== null &&
+      'content' in renderNode &&
+      Array.isArray(renderNode.content)
+    ) {
+      return renderNode.content.map((child) => getNodeText(child)).join('');
+    }
+
+    return '';
+  }
 
   function handleRoll() {
-    const notation = node.attrs?.notation;
+    const textContent = node.content ? getNodeText(node.content) : '';
+    const notation = node.attrs?.notation || textContent;
 
     if (
       !notation ||
@@ -31,10 +67,10 @@
       return;
     }
 
-    const { valid, error } = diceRoller.validateWithError(notation);
+    const { valid, error } = validateWithError(notation);
 
     if (!valid) {
-      if (!rollerState.isOpen.value) {
+      if (!isOpen.value) {
         toast.add({
           color: 'error',
           title: 'Некорректная нотация броска',
@@ -42,7 +78,7 @@
         });
       }
 
-      rollerState.addHistoryEntry({
+      addHistoryEntry({
         formula: notation,
         value: error ?? 'Некорректная нотация',
         isError: true,
@@ -51,16 +87,16 @@
       return;
     }
 
-    const rollResult = diceRoller.roll(notation);
+    const rollResult = roll(notation);
     const numericValue = extractRollValue(rollResult);
 
     const displayValue = Number.isFinite(numericValue)
       ? numericValue.toLocaleString('ru-RU')
       : String(numericValue);
 
-    const details = extractDiceRollDetails(rollResult);
+    const rollDetails = extractDiceRollDetails(rollResult);
 
-    if (!rollerState.isOpen.value) {
+    if (!isOpen.value) {
       toast.add({
         color: 'neutral',
         title: `Результат: ${numericValue}`,
@@ -68,21 +104,21 @@
       });
     }
 
-    rollerState.result.value = displayValue;
-    rollerState.details.value = [];
+    result.value = displayValue;
+    details.value = [];
 
-    rollerState.incrementResultKey();
+    incrementResultKey();
 
-    rollerState.addHistoryEntry({
+    addHistoryEntry({
       formula: notation,
       value: displayValue,
       isError: false,
-      detail: formatDiceDetailsSummary(details),
-      structuredDetails: details,
+      detail: formatDiceDetailsSummary(rollDetails),
+      structuredDetails: rollDetails,
     });
 
     if (Number.isFinite(numericValue)) {
-      rollerState.notifyTableRoll(Math.round(numericValue));
+      notifyTableRoll(Math.round(numericValue));
     }
   }
 

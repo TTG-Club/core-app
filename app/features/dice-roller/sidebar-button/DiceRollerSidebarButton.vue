@@ -1,10 +1,10 @@
 <script setup lang="ts">
   import { useDiceRollerState } from '~dice-roller/composables';
 
-  const diceRoller = useDiceRollerState();
+  const { isOpen, toggleModal } = useDiceRollerState();
 
   const icon = computed(() =>
-    diceRoller.isOpen.value ? 'i-fluent-dismiss-24-regular' : 'i-ttg-dice-d20',
+    isOpen.value ? 'i-fluent-dismiss-24-regular' : 'i-ttg-dice-d20',
   );
 </script>
 
@@ -15,6 +15,6 @@
     class="md:hidden"
     :ui="{ leadingIcon: 'h-6 w-6' }"
     :icon
-    @click.left.exact.prevent="diceRoller.toggleModal()"
+    @click.left.exact.prevent="toggleModal()"
   />
 </template>

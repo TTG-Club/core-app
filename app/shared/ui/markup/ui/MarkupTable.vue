@@ -57,13 +57,15 @@
   });
 
   const captionNodes = computed(() => {
-    if (!node.caption) {
+    const captionSource = node.caption || node.content;
+
+    if (!captionSource) {
       return [];
     }
 
-    const normalized = Array.isArray(node.caption)
-      ? node.caption
-      : [node.caption];
+    const normalized = Array.isArray(captionSource)
+      ? captionSource
+      : [captionSource];
 
     return renderNodes(normalized);
   });
@@ -98,14 +100,16 @@
   }
 
   const tableId = useId();
-  const rollerState = useDiceRollerState();
+
+  const { registerTableRollCallback, unregisterTableRollCallback } =
+    useDiceRollerState();
 
   onMounted(() => {
-    rollerState.registerTableRollCallback(tableId, handleTableRoll);
+    registerTableRollCallback(tableId, handleTableRoll);
   });
 
   onUnmounted(() => {
-    rollerState.unregisterTableRollCallback(tableId);
+    unregisterTableRollCallback(tableId);
   });
 
   function isRenderNode(value: unknown): value is RenderNode {
