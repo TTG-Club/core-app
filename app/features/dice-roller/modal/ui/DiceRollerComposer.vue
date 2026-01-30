@@ -15,7 +15,7 @@
 <template>
   <UForm
     :state="state"
-    class="mt-3 flex items-center gap-2 border-t border-default pt-3"
+    class="flex shrink-0 items-center gap-2 border-t border-default p-4"
     @submit="emit('submit')"
   >
     <UFieldGroup class="w-full">

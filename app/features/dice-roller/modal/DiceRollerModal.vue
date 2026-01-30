@@ -155,7 +155,7 @@
       class="fixed inset-x-4 top-4 bottom-20 z-50 md:inset-auto md:right-4 md:bottom-20 md:w-96"
     >
       <div
-        class="relative flex flex-col overflow-hidden rounded-md border border-default bg-elevated p-4 pt-5 shadow-2xl backdrop-blur-md"
+        class="relative flex flex-col overflow-hidden rounded-md border border-default bg-elevated shadow-2xl backdrop-blur-md"
         :style="{
           height: isMobile ? '100%' : `${modalHeight}px`,
         }"
@@ -169,7 +169,7 @@
         </div>
 
         <div
-          class="flex items-center justify-between gap-2 border-b border-default pb-3"
+          class="relative z-10 flex shrink-0 items-center justify-between gap-2 border-b border-default bg-elevated p-4 shadow-sm"
         >
           <div class="min-w-0">
             <p class="m-0 truncate font-semibold text-default">
@@ -183,7 +183,7 @@
             color="neutral"
             size="sm"
             aria-label="Очистить историю"
-            @click.left.exact.prevent="clearHistory"
+            @click.left.exact.prevent="clearHistory()"
           />
         </div>
 
