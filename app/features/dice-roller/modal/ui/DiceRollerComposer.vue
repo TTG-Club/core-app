@@ -1,8 +1,6 @@
 <script setup lang="ts">
   import { useDiceRollerState } from '~dice-roller/composables';
 
-  import DiceRollerHelpPopover from './DiceRollerHelpPopover.vue';
-
   const props = defineProps<{
     onSubmit: () => void;
   }>();
@@ -22,7 +20,7 @@
         class="w-full"
       />
 
-      <DiceRollerHelpPopover />
+      <slot name="help" />
     </UFieldGroup>
 
     <UButton

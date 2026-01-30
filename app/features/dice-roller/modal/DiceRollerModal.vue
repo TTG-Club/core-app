@@ -10,12 +10,18 @@
     DICE_MODAL_MAX_HEIGHT_RATIO,
     DICE_MODAL_MIN_HEIGHT,
   } from '~dice-roller/const';
-  import { DiceRollerComposer, DiceRollerHistoryList } from '~dice-roller/ui';
   import {
     extractDiceRollDetails,
     extractRollValue,
     formatDiceDetailsSummary,
   } from '~dice-roller/utils';
+
+  import {
+    DiceRollerComposer,
+    DiceRollerHelpPopover,
+    DiceRollerHistoryItem,
+    DiceRollerHistoryList,
+  } from './ui';
 
   const state = useDiceRollerState();
   const diceRoller = useDiceRoller();
@@ -177,9 +183,21 @@
           v-if="state.history"
           v-model:scroll-element="historyScrollElement"
           :history="state.history.value"
-        />
+        >
+          <template #item="{ entry, formattedDateTime }">
+            <DiceRollerHistoryItem
+              :key="entry.id"
+              :entry="entry"
+              :formatted-date-time="formattedDateTime"
+            />
+          </template>
+        </DiceRollerHistoryList>
 
-        <DiceRollerComposer :on-submit="executeRoll" />
+        <DiceRollerComposer :on-submit="executeRoll">
+          <template #help>
+            <DiceRollerHelpPopover />
+          </template>
+        </DiceRollerComposer>
       </div>
     </section>
   </Transition>

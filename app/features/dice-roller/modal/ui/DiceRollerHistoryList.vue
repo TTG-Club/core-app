@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import DiceRollerHistoryItem from './DiceRollerHistoryItem.vue';
-
   import type { HistoryEntry } from '~dice-roller/types';
 
   defineProps<{
@@ -35,12 +33,16 @@
         class="flex h-full flex-col overflow-y-auto pr-1"
       >
         <ul class="mt-auto flex flex-col gap-2 pt-4">
-          <DiceRollerHistoryItem
+          <template
             v-for="entry in history"
             :key="entry.id"
-            :entry="entry"
-            :formatted-date-time="formatDateTime(entry.timestamp)"
-          />
+          >
+            <slot
+              name="item"
+              :entry="entry"
+              :formatted-date-time="formatDateTime(entry.timestamp)"
+            />
+          </template>
         </ul>
       </div>
     </div>
