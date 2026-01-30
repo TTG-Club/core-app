@@ -17,9 +17,11 @@
 
   import {
     DiceRollerComposer,
+    DiceRollerHeader,
     DiceRollerHelpPopover,
     DiceRollerHistoryItem,
     DiceRollerHistoryList,
+    DiceRollerResizeHandle,
   } from './ui';
 
   const {
@@ -102,17 +104,28 @@
       const errorMessage =
         error instanceof Error ? error.message : 'Неизвестная ошибка';
 
-      handleRollError(errorMessage, formulaValue);
+      const displayError = errorMessage.startsWith('Expected')
+        ? 'Некорректная формула'
+        : errorMessage;
+
+      handleRollError(displayError, formulaValue);
     }
   }
 
   const { smaller } = useBreakpoints();
   const isMobile = smaller(Breakpoint.MD);
 
-  const resizeHandle = useTemplateRef<HTMLElement>('resizeHandle');
+  // Typecasting the template ref as a component to access its $el
+  const resizeHandleComponent = useTemplateRef<{ $el: HTMLElement }>(
+    'resizeHandle',
+  );
+
+  const resizeHandleElement = computed(
+    () => resizeHandleComponent.value?.$el || null,
+  );
 
   const { height: modalHeight } = useResizableHeight({
-    handleElement: resizeHandle,
+    handleElement: resizeHandleElement,
     minHeight: DICE_MODAL_MIN_HEIGHT,
     maxHeightRatio: DICE_MODAL_MAX_HEIGHT_RATIO,
     initialHeight: DICE_MODAL_INITIAL_HEIGHT,
@@ -137,7 +150,7 @@
   >
     <div
       v-if="isMobile && isOpen"
-      class="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm"
+      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm"
       @click.left.exact.prevent="closeModal()"
     />
   </Transition>
@@ -150,9 +163,9 @@
     leave-from-class="opacity-100 translate-y-0 scale-100"
     leave-to-class="opacity-0 translate-y-4 scale-95"
   >
-    <section
+    <div
       v-if="isOpen"
-      class="fixed inset-x-4 top-4 bottom-20 z-50 md:inset-auto md:right-4 md:bottom-20 md:w-96"
+      class="fixed inset-x-4 top-4 bottom-20 md:inset-auto md:right-4 md:bottom-20 md:w-96"
     >
       <div
         class="relative flex flex-col overflow-hidden rounded-md border border-default bg-elevated shadow-2xl backdrop-blur-md"
@@ -160,32 +173,15 @@
           height: isMobile ? '100%' : `${modalHeight}px`,
         }"
       >
-        <div
+        <DiceRollerResizeHandle
           v-if="!isMobile"
           ref="resizeHandle"
-          class="absolute top-0 right-0 left-0 z-50 flex h-4 cursor-ns-resize items-start justify-center hover:bg-accented/50"
-        >
-          <div class="mt-1.5 h-1 w-8 rounded-full bg-default" />
-        </div>
+        />
 
-        <div
-          class="relative z-10 flex shrink-0 items-center justify-between gap-2 border-b border-default bg-elevated p-4 shadow-sm"
-        >
-          <div class="min-w-0">
-            <p class="m-0 truncate font-semibold text-default">
-              История бросков
-            </p>
-          </div>
-
-          <UButton
-            icon="i-fluent-delete-16-regular"
-            variant="soft"
-            color="neutral"
-            size="sm"
-            aria-label="Очистить историю"
-            @click.left.exact.prevent="clearHistory()"
-          />
-        </div>
+        <DiceRollerHeader
+          @clear="clearHistory"
+          @close="closeModal"
+        />
 
         <DiceRollerHistoryList
           v-if="history"
@@ -206,6 +202,6 @@
           </template>
         </DiceRollerComposer>
       </div>
-    </section>
+    </div>
   </Transition>
 </template>
