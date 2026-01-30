@@ -30,7 +30,8 @@
   <UPopover :ui="{ content: 'p-0 overflow-hidden' }">
     <UButton
       icon="i-fluent-info-24-regular"
-      color="secondary"
+      color="neutral"
+      variant="subtle"
       aria-label="Как пользоваться роллером"
     />
 
