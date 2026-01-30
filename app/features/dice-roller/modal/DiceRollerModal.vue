@@ -123,7 +123,7 @@
   >
     <div
       v-if="isMobile && state.isOpen.value"
-      class="fixed inset-0 z-95 bg-gray-900/50 backdrop-blur-[2px]"
+      class="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm"
       @click.left.exact.prevent="state.closeModal()"
     />
   </Transition>
@@ -138,10 +138,10 @@
   >
     <section
       v-if="state.isOpen.value"
-      class="fixed inset-x-4 top-4 bottom-20 z-120 md:inset-auto md:right-4 md:bottom-20 md:w-105"
+      class="fixed inset-x-4 top-4 bottom-20 z-50 md:inset-auto md:right-4 md:bottom-20 md:w-96"
     >
       <div
-        class="relative flex flex-col overflow-hidden rounded-md border border-default bg-elevated p-4 pt-5 shadow-[0_25px_60px_rgba(8,15,17,0.25)] backdrop-blur-[14px]"
+        class="relative flex flex-col overflow-hidden rounded-md border border-default bg-elevated p-4 pt-5 shadow-2xl backdrop-blur-md"
         :style="{
           height: isMobile ? '100%' : `${modalHeight}px`,
         }"

@@ -29,7 +29,7 @@
       type="submit"
       icon="i-fluent-send-24-filled"
       color="primary"
-      class="rounded-md shadow-[0_10px_20px_rgba(0,0,0,0.18)] transition"
+      class="rounded-md shadow-lg transition"
       aria-label="Бросить кубы"
     />
   </form>

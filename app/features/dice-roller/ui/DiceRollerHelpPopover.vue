@@ -35,9 +35,7 @@
     />
 
     <template #content>
-      <div
-        class="max-h-100 w-[calc(100vw-48px)] space-y-4 overflow-y-auto p-4 pr-3 sm:w-90"
-      >
+      <div class="max-h-100 w-full max-w-sm space-y-4 overflow-y-auto p-4 pr-3">
         <div
           v-for="section in sections"
           :key="section.title"

@@ -1,7 +1,12 @@
 # Project Rules & Guidelines
 
 ## 1. Core Workflow (Must Follow)
+- **DRY Principle:** **STRICTLY FOLLOW THE DRY (DON'T REPEAT YOURSELF) POLICY.** If you find yourself writing the same or very similar logic more than once, abstract it into a shared utility, component, or composable. Code duplication is prohibited.
 - **Analyze First:** Before writing any code, ALWAYS analyze the existing project codebase. Look at similar logic, file structure, and coding styles. Strictly follow established patterns and conventions to ensure consistency.
+- **Change Summary Requirement:** If you are asked to "check", "review", "fix", or "refactor" a component or file, at the very end of your response, you **MUST** provide a bulleted list explaining your changes. For each change, specify:
+  - **Where:** The specific file, function, or block modified.
+  - **Why:** The reasoning (referencing a specific rule from this file or a bug).
+  - **For What:** The resulting benefit or fix.
 - **Single Dictionary:** The code must read fluently without surprises, adhering to a unified project dictionary.
 - **Code Style:** Strictly follow the project's ESLint, Prettier, and Stylelint configurations.
 
@@ -73,6 +78,9 @@
     - `https://nuxt.com/llms.txt` (Complete Guidelines)
     - `https://ui.nuxt.com/llms.txt` (Nuxt UI Guidelines)
 - **Framework Core:** Use **Nuxt 4** and **Vue 3.5** best practices (Composition API, `<script setup lang="ts">`).
+- **Computed Properties Strategy:**
+  - **Move Logic to Computed:** Whenever determining dynamic colors, classes, or complex state logic (especially conditional styles like `isActive ? 'bg-red' : 'bg-blue'`), move this logic into a `computed` property.
+  - **Keep Templates Clean:** Templates should remain declarative. Avoid complex inline ternary operators or logical chains inside `:class` or `v-if`.
 - **Rendering:**
   - Purely frontend features (like Dice Rollers) MUST be wrapped in `<ClientOnly>`. Do not render them on SSR.
 - **Event Handling:**
@@ -84,10 +92,12 @@
   - **NO HTML:** Do NOT use HTML tags (like `<ul>`, `<li>`, `<br>`) in JSDoc. Use standard Markdown syntax (e.g., `-` for lists) for formatting.
   - *Note:* Code identifiers (variables, functions) remain in English.
 - **Composables & Utilities:**
-  - **NO REINVENTING THE WHEEL:** Before writing a custom utility function, ALWAYS check `vueuse` and `es-toolkit`.
+  - **NO REINVENTING THE WHEEL:** Do NOT write custom implementations for common UI logic (drag & drop, window scroll, storage, etc.) if a standard solution exists.
   - **Priority:**
-    1. `vueuse` (for reactive/browser APIs)
-    2. `es-toolkit` (for data manipulation/algorithms - replace `lodash`)
+    1. **`vueuse`** (MANDATORY for reactive/browser APIs).
+       - *Example:* Use `useDraggable` instead of custom `mousedown/mousemove` listeners.
+       - *Example:* Use `useWindowScroll` instead of `window.addEventListener('scroll')`.
+    2. **`es-toolkit`** (for data manipulation/algorithms - replace `lodash`).
     3. Custom implementation (only if 1 & 2 fail).
   - Use specific project composables: `useDayjs` for time.
 

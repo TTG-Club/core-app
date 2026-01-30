@@ -21,6 +21,16 @@ async function setStorageValue<T>(key: string, value: T): Promise<void> {
   await set(key, cloneDeep(value), diceRollerStore);
 }
 
+/**
+ * Composable для управления историей бросков.
+ * Отвечает за загрузку, сохранение и очистку истории в IndexedDB (через idb-keyval).
+ * Также управляет скроллом списка истории при добавлении новых записей.
+ *
+ * @param options - Настройки для управления историей
+ * @param options.history - Ref на массив записей истории
+ * @param options.historyScrollElement - Ref на DOM-элемент контейнера скролла
+ * @param options.isModalOpen - Ref на состояние открытия модального окна
+ */
 export function useDiceRollerHistory(options: UseDiceRollerHistoryOptions) {
   const { history, historyScrollElement, isModalOpen } = options;
 

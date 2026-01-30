@@ -12,6 +12,11 @@ type TableRollCallback = (value: number) => void;
 
 type TableRollCallbacksMap = Map<string, TableRollCallback>;
 
+/**
+ * Глобальный стейт роллера кубов.
+ * Управляет состоянием модального окна, текущей формулой, результатами и историей.
+ * Синхронизирует состояние между различными компонентами (кнопка, модалка, сайдбар).
+ */
 export function useDiceRollerState() {
   const dayjs = useDayjs();
 
