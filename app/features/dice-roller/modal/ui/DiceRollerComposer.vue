@@ -41,7 +41,7 @@
 <template>
   <UForm
     :state="state"
-    class="flex shrink-0 items-center gap-2 border-t border-default p-4"
+    class="flex shrink-0 items-center gap-2 border-t border-default bg-muted p-4"
     @submit.prevent="onSubmit"
   >
     <UFieldGroup class="w-full">
@@ -49,8 +49,16 @@
         ref="inputRef"
         v-model="state.formula"
         placeholder="Например: 1к20+5"
-        class="w-full"
         @keydown.enter.prevent="onSubmit"
+      />
+
+      <UButton
+        v-if="state.formula?.length"
+        color="neutral"
+        variant="subtle"
+        size="sm"
+        icon="i-ttg-x"
+        @click.left.exact.prevent="state.formula = ''"
       />
 
       <slot name="help" />
