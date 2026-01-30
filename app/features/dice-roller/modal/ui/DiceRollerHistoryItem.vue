@@ -1,0 +1,120 @@
+<script setup lang="ts">
+  import type {
+    CriticalType,
+    DiceRollItem,
+    HistoryEntry,
+  } from '~dice-roller/types';
+
+  const { entry } = defineProps<{
+    entry: HistoryEntry;
+  }>();
+
+  type BadgeColor = 'success' | 'error' | 'neutral';
+
+  interface EnrichedRoll extends DiceRollItem {
+    badgeColor: BadgeColor;
+    badgeClass: string[];
+    badgeVariant: 'subtle' | 'outline';
+  }
+
+  interface EnrichedDetail {
+    id: string;
+    rolls: EnrichedRoll[];
+  }
+
+  const dayjs = useDayjs();
+
+  function formatDateTime(timestamp: number): string | undefined {
+    const date = dayjs(timestamp);
+
+    if (!date.isValid()) {
+      return undefined;
+    }
+
+    return date.local().format('LLL');
+  }
+
+  const criticalColorMap: Record<NonNullable<CriticalType>, BadgeColor> = {
+    success: 'success',
+    failure: 'error',
+  };
+
+  const enrichedDetails = computed<EnrichedDetail[]>(() => {
+    if (!entry.structuredDetails?.length) {
+      return [];
+    }
+
+    return entry.structuredDetails.map((detail) => ({
+      id: detail.id,
+      rolls: detail.rolls.map((roll) => ({
+        ...roll,
+        badgeColor: roll.critical ? criticalColorMap[roll.critical] : 'neutral',
+        badgeVariant: roll.valid ? 'subtle' : 'outline',
+        badgeClass: roll.valid
+          ? ['min-w-6 justify-center']
+          : ['min-w-6 justify-center', 'line-through', 'opacity-60'],
+      })),
+    }));
+  });
+</script>
+
+<template>
+  <li
+    class="flex flex-col gap-2 rounded-xl border border-default bg-elevated p-3 transition hover:border-primary"
+  >
+    <div class="flex items-center justify-between gap-4">
+      <div
+        class="flex min-w-8 shrink-0 flex-col items-center justify-center gap-1"
+      >
+        <span
+          class="text-3xl leading-none font-bold tracking-tight text-primary"
+        >
+          {{ entry.displayValue }}
+        </span>
+      </div>
+
+      <div class="flex min-w-0 flex-1 flex-col justify-center">
+        <p class="truncate font-medium text-default">
+          {{ entry.formula }}
+        </p>
+      </div>
+
+      <NuxtTime
+        :title="formatDateTime(entry.timestamp)"
+        :datetime="entry.timestamp"
+        class="shrink-0 text-xs text-muted"
+        relative-style="long"
+        locale="ru-RU"
+        relative
+      />
+    </div>
+
+    <div
+      v-if="enrichedDetails.length"
+      class="flex flex-col gap-2"
+    >
+      <div
+        v-for="detail in enrichedDetails"
+        :key="detail.id"
+        class="flex flex-wrap gap-1"
+      >
+        <UBadge
+          v-for="roll in detail.rolls"
+          :key="roll.id"
+          :color="roll.badgeColor"
+          :variant="roll.badgeVariant"
+          :class="roll.badgeClass"
+        >
+          {{ roll.value }}
+        </UBadge>
+      </div>
+    </div>
+
+    <p
+      v-else-if="entry.detail"
+      class="text-xs text-muted"
+    >
+      {{ entry.detail }}
+    </p>
+  </li>
+</template>

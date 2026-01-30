@@ -1,0 +1,110 @@
+# Project Rules & Guidelines
+
+## 1. Core Workflow (Must Follow)
+- **DRY Principle:** **STRICTLY FOLLOW THE DRY (DON'T REPEAT YOURSELF) POLICY.** If you find yourself writing the same or very similar logic more than once, abstract it into a shared utility, component, or composable. Code duplication is prohibited.
+- **Analyze First:** Before writing any code, ALWAYS analyze the existing project codebase. Look at similar logic, file structure, and coding styles. Strictly follow established patterns and conventions to ensure consistency.
+- **Change Summary Requirement:** If you are asked to "check", "review", "fix", or "refactor" a component or file, at the very end of your response, you **MUST** provide a bulleted list explaining your changes. For each change, specify:
+  - **Where:** The specific file, function, or block modified.
+  - **Why:** The reasoning (referencing a specific rule from this file or a bug).
+  - **For What:** The resulting benefit or fix.
+- **Single Dictionary:** The code must read fluently without surprises, adhering to a unified project dictionary.
+- **Code Style:** Strictly follow the project's ESLint, Prettier, and Stylelint configurations.
+
+## 2. Type Safety (Strict TypeScript)
+- **Strict Typing:** Strong typing is mandatory.
+- **No any:** The use of `any` is strictly prohibited.
+- **No Assertions:** Do not use type assertions (`as Type`) or forced casting.
+- **No Magic Numbers:** Avoid hardcoded numbers or type assertions in variables/fields.
+- **Explicit Return Types:** For utility functions with complex return types (especially when working with `unknown`), always define explicit return types and helper interfaces. This improves code maintainability and IDE support.
+
+## 3. Naming Conventions
+- **Language:** Use full English names only for variables, functions, and classes.
+- **Clarity over Brevity:** No abbreviations (e.g., `lst`, `ua`), no abstract names (`data`, `item`), and no single-letter names (except in mini-loops).
+- **Structure:**
+  - One function = one task. One verb per action.
+  - Different roots for different meanings (no similar terms like `date`/`data`).
+  - No underscores. No prefixes like `super*`, `mega*`.
+- **Multi-word Names (Vue Components):**
+  - All component filenames MUST consist of at least two words (e.g., `UserCard.vue`, not `Card.vue`) to prevent conflicts with HTML elements.
+  - **EXCEPTION:** Files inside `app/pages` are exempt from this rule (e.g., `index.vue`, `[id].vue`, `about.vue` are allowed).
+- **Feature Component Naming:**
+  - Components inside features must reflect their path: `[FeatureName][Subfolder][Name].vue`.
+  - *Exception:* Components in `*/ui` subfolder should be named by their function (atomic components) without heavy prefixes.
+- **Constants:**
+  - Use `const` variables with Uppercase/CamelCase naming conventions.
+  - **PROHIBITED:** Do not create functions that simply return a static constant value.
+- **Booleans:** Functions starting with `is*` or `check*` must return a boolean and have NO side effects.
+- **SQL:** All SQL scripts must be written in **lowercase**.
+
+## 4. Styling & Design System
+- **Semantic Colors Only:**
+  - **PROHIBITED:** Do not use color scheme modifiers directly in classes (`dark:`, `light:`).
+  - **REQUIRED:** Use unified semantic color names (`bg-surface`, `text-primary`) mapped to CSS variables.
+- **No Arbitrary Variables:**
+  - **PROHIBITED:** `bg-[var(--ui-bg-elevated)]`.
+  - **REQUIRED:** Use standard utility classes (e.g., `bg-ui-elevated`).
+- **Icons:** Use ONLY icons from the local `ttg` collection or `fluent` collection.
+- **Tailwind CSS:** Use Tailwind CSS according to the maximum version specified in the project.
+
+## 5. Reuse Strategy
+- **Folder Structure Context:**
+  - `shared/ui`: **Global UI Kit.**
+  - `app/features`: **DOMAIN LOGIC CENTER (DDD).**
+    - `*/body`, `*/drawer`, `*/editor`: View components.
+    - `*/model`: Feature-specific logic and constants.
+    - `*/ui`: Feature-specific reusable UI.
+  - `server/domain` & `server/api`: **BACKEND LAYER.**
+  - `app/components`: **DOES NOT EXIST.**
+
+- **Import Strategy (Smart Aliases):**
+  - **Cross-Feature / External:** When importing from **another feature** (even in the same domain) or a different domain entirely, ALWAYS use the generated domain alias.
+    - *Pattern:* `import { ... } from '~<domain>/<feature>';`
+    - *Example:* `import { DiceRollerModal } from '~dice-roller/modal';`
+  - **Internal Feature Imports:** When importing files **strictly inside the current feature**, use **relative paths**.
+    - *Pattern:* `import { ... } from '../const';` or `import { ... } from './types';`
+  - *Note:* Domain aliases (e.g., `~dice-roller`) are automatically generated via `pnpm run postinstall` or `dev/build`.
+
+- **Barrel Files (index.ts):**
+  - **Feature Root:** NO `index.ts` allowed in the root of a feature folder (e.g., `app/features/bestiary/index.ts` -> ❌).
+  - **Subfolders:** YES, `index.ts` is REQUIRED in subfolders (`model`, `ui`, `body`) for clean re-exports.
+
+- **Reuse Rule (Priority Order):**
+  - **UI:** 1. **Nuxt UI** (@nuxt/ui). 2. `shared/ui`. 3. `app/features/*/ui`.
+  - **Logic:** Check `shared/` for global utilities/stores. Check `app/features/*/model` for domain logic.
+
+## 6. Tech Stack & Best Practices
+- **Official Documentation Context:**
+  - **MANDATORY:** For any Nuxt-related architecture or implementation questions, ALWAYS refer to the official guidelines for LLMs:
+    - `https://nuxt.com/llms.txt` (Complete Guidelines)
+    - `https://ui.nuxt.com/llms.txt` (Nuxt UI Guidelines)
+- **Framework Core:** Use **Nuxt 4** and **Vue 3.5** best practices (Composition API, `<script setup lang="ts">`).
+- **Computed Properties Strategy:**
+  - **Move Logic to Computed:** Whenever determining dynamic colors, classes, or complex state logic (especially conditional styles like `isActive ? 'bg-red' : 'bg-blue'`), move this logic into a `computed` property.
+  - **Keep Templates Clean:** Templates should remain declarative. Avoid complex inline ternary operators or logical chains inside `:class` or `v-if`.
+- **Rendering:**
+  - Purely frontend features (like Dice Rollers) MUST be wrapped in `<ClientOnly>`. Do not render them on SSR.
+- **Event Handling:**
+  - **Default Click Strategy:** Use `@click.left.exact.prevent` by default for interactive elements to avoid unwanted side effects, unless specific behavior is required.
+- **State Management:**
+  - Avoid `provide/inject`. Use Composables or Pinia stores for state sharing.
+- **Documentation (JSDoc):**
+  - All utility functions (especially in `utils.ts`) MUST have **JSDoc in Russian** explaining parameters, return values, and purpose.
+  - **NO HTML:** Do NOT use HTML tags (like `<ul>`, `<li>`, `<br>`) in JSDoc. Use standard Markdown syntax (e.g., `-` for lists) for formatting.
+  - *Note:* Code identifiers (variables, functions) remain in English.
+- **Composables & Utilities:**
+  - **NO REINVENTING THE WHEEL:** Do NOT write custom implementations for common UI logic (drag & drop, window scroll, storage, etc.) if a standard solution exists.
+  - **Priority:**
+    1. **`vueuse`** (MANDATORY for reactive/browser APIs).
+       - *Example:* Use `useDraggable` instead of custom `mousedown/mousemove` listeners.
+       - *Example:* Use `useWindowScroll` instead of `window.addEventListener('scroll')`.
+    2. **`es-toolkit`** (for data manipulation/algorithms - replace `lodash`).
+    3. Custom implementation (only if 1 & 2 fail).
+  - Use specific project composables: `useDayjs` for time.
+
+## 7. AI & MCP Tools Integration
+- **Nuxt & Nuxt UI MCP Servers:**
+  - **ACTIVE USAGE REQUIRED:** When implementing logic or UI, you MUST explicitly query the connected MCP servers to retrieve the exact API definitions, props, and best practices.
+  - **Sources of Truth:**
+    - **Nuxt Core:** [https://nuxt.com/mcp](https://nuxt.com/mcp)
+    - **Nuxt UI:** [https://ui.nuxt.com/mcp](https://ui.nuxt.com/mcp)
+  - **NO GUESSING:** Do not hallucinate component props or Nuxt config options. Always verify against the MCP source of truth first.

@@ -70,7 +70,7 @@
           :loading="pending"
           variant="soft"
           size="sm"
-          @click="refresh()"
+          @click.left.exact.prevent="refresh()"
         >
           Обновить
         </UButton>

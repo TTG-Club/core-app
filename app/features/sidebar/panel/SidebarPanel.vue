@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { DiceRollerSidebarButton } from '~dice-roller/sidebar-button';
   import { SearchButton } from '~search/button';
   import { useGlobalSearch } from '~search/composable';
   import { AppMenu } from '~sidebar/menu';
@@ -107,6 +108,8 @@
         <div :class="$style.socials" />
 
         <ClientOnly>
+          <DiceRollerSidebarButton />
+
           <UserHelmet />
 
           <ThemeSwitcher />

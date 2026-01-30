@@ -1,5 +1,7 @@
 <script setup lang="ts">
   import { ru } from '@nuxt/ui/locale';
+  import { DiceRollerFloatButton } from '~dice-roller/float-button';
+  import { DiceRollerModal } from '~dice-roller/modal';
   import { PwaConfig } from '~pwa/config';
   import { SidebarPanel } from '~sidebar/panel';
 
@@ -37,6 +39,12 @@
       <div class="min-h-dvh w-full">
         <NuxtPage />
       </div>
+
+      <ClientOnly>
+        <DiceRollerFloatButton />
+
+        <DiceRollerModal />
+      </ClientOnly>
     </div>
   </UApp>
 </template>

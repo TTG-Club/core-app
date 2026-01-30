@@ -34,3 +34,7 @@ shared/types/generated
 
 # Custom
 .test
+
+# AI Agents
+AGENTS.md
+CLAUDE.md
