@@ -51,7 +51,21 @@
         placeholder="Например: 1к20+5"
         class="w-full"
         @keydown.enter.prevent="onSubmit"
-      />
+      >
+        <template
+          v-if="state.formula?.length"
+          #trailing
+        >
+          <UButton
+            color="neutral"
+            variant="link"
+            size="sm"
+            icon="i-fluent-dismiss-circle-20-filled"
+            :padded="false"
+            @click.left.exact.prevent="state.formula = ''"
+          />
+        </template>
+      </UInput>
 
       <slot name="help" />
     </UFieldGroup>

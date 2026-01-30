@@ -1,9 +1,7 @@
-import diceRollerParser from 'dice-roller-parser';
+import { DiceRoller } from 'dice-roller-parser';
 import { trim } from 'es-toolkit';
 
 import { DICE_RUSSIAN_OPERATORS } from '../const';
-
-const { DiceRoller } = diceRollerParser;
 
 /**
  * Регулярное выражение для замены русских операторов.
@@ -147,12 +145,15 @@ export function useDiceRoller() {
 
       return { valid: true };
     } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+
+      const userMessage = message.startsWith('Expected')
+        ? 'Некорректная формула'
+        : message || 'Неизвестная ошибка парсинга';
+
       return {
         valid: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Неизвестная ошибка парсинга',
+        error: userMessage,
       };
     }
   };

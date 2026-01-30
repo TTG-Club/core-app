@@ -1,12 +1,12 @@
 <script setup lang="ts">
-  import { useDiceRollerState } from '~dice-roller/composables';
+  import { useDiceRollerState } from '../../composables';
   import {
     DICE_EXAMPLES_BASIC,
     DICE_EXAMPLES_KEEP,
     DICE_EXAMPLES_REROLL,
-  } from '~dice-roller/const';
+  } from '../../const';
 
-  import type { DiceFormulaExample } from '~dice-roller/types';
+  import type { DiceFormulaExample } from '../../types';
 
   interface HelpSection {
     title: string;
@@ -36,7 +36,9 @@
     />
 
     <template #content>
-      <div class="max-h-100 w-full max-w-sm space-y-4 overflow-y-auto p-4 pr-3">
+      <div
+        class="max-h-100 w-full max-w-sm space-y-4 overflow-y-auto bg-muted p-4 pr-3"
+      >
         <div
           v-for="section in sections"
           :key="section.title"
@@ -50,9 +52,9 @@
             <UButton
               v-for="example in section.examples"
               :key="example.formula"
-              variant="outline"
+              variant="subtle"
               color="neutral"
-              class="h-auto flex-col items-start gap-0.5 p-2"
+              class="h-auto w-full flex-col items-start gap-0.5 !rounded-md p-2"
               @click.left.exact.prevent="applyFormula(example.formula)"
             >
               <span class="text-sm font-bold text-primary">

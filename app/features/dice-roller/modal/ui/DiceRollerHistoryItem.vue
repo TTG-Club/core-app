@@ -1,9 +1,5 @@
 <script setup lang="ts">
-  import type {
-    CriticalType,
-    DiceRollItem,
-    HistoryEntry,
-  } from '~dice-roller/types';
+  import type { CriticalType, DiceRollItem, HistoryEntry } from '../../types';
 
   const { entry } = defineProps<{
     entry: HistoryEntry;
@@ -62,21 +58,16 @@
   <li
     class="flex flex-col gap-2 rounded-xl border border-default bg-elevated p-3 transition hover:border-primary"
   >
-    <div class="flex items-center justify-between gap-4">
-      <div
-        class="flex min-w-8 shrink-0 flex-col items-center justify-center gap-1"
-      >
+    <div class="flex items-start justify-between gap-4">
+      <div class="flex flex-col justify-center gap-1 overflow-hidden">
         <span
-          class="text-3xl leading-none font-bold tracking-tight text-primary"
+          class="text-base font-medium break-words text-primary"
+          :class="{
+            'text-error': entry.isError,
+          }"
         >
           {{ entry.displayValue }}
         </span>
-      </div>
-
-      <div class="flex min-w-0 flex-1 flex-col justify-center">
-        <p class="truncate font-medium text-default">
-          {{ entry.formula }}
-        </p>
       </div>
 
       <NuxtTime
@@ -87,6 +78,12 @@
         locale="ru-RU"
         relative
       />
+    </div>
+
+    <div class="w-full">
+      <p class="text-sm font-medium break-words text-default">
+        {{ entry.formula }}
+      </p>
     </div>
 
     <div

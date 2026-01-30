@@ -11,8 +11,8 @@ export const DICE_EXAMPLES_BASIC: DiceFormulaExample[] = [
 ];
 
 export const DICE_EXAMPLES_KEEP: DiceFormulaExample[] = [
-  { formula: '4к6вх3', note: 'оставить лучшие (kh3)' },
-  { formula: '3к8вл1', note: 'оставить худшие (kl1)' },
+  { formula: '4к6вх3', note: 'оставить худшие (kh3)' },
+  { formula: '3к8вл1', note: 'оставить лучшие (kl1)' },
   { formula: '5к10ул2', note: 'убрать лучшие (dh2)' },
   { formula: '5к10ух2', note: 'убрать худшие (dl2)' },
 ];

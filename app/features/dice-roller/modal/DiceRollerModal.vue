@@ -102,7 +102,11 @@
       const errorMessage =
         error instanceof Error ? error.message : 'Неизвестная ошибка';
 
-      handleRollError(errorMessage, formulaValue);
+      const displayError = errorMessage.startsWith('Expected')
+        ? 'Некорректная формула'
+        : errorMessage;
+
+      handleRollError(displayError, formulaValue);
     }
   }
 
@@ -127,85 +131,98 @@
 </script>
 
 <template>
-  <Transition
-    enter-active-class="transition duration-300 ease-out"
-    enter-from-class="opacity-0"
-    enter-to-class="opacity-100"
-    leave-active-class="transition duration-200 ease-in"
-    leave-from-class="opacity-100"
-    leave-to-class="opacity-0"
-  >
-    <div
-      v-if="isMobile && isOpen"
-      class="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm"
-      @click.left.exact.prevent="closeModal()"
-    />
-  </Transition>
-
-  <Transition
-    enter-active-class="transition duration-300 ease-out"
-    enter-from-class="opacity-0 translate-y-4 scale-95"
-    enter-to-class="opacity-100 translate-y-0 scale-100"
-    leave-active-class="transition duration-200 ease-in"
-    leave-from-class="opacity-100 translate-y-0 scale-100"
-    leave-to-class="opacity-0 translate-y-4 scale-95"
-  >
-    <section
-      v-if="isOpen"
-      class="fixed inset-x-4 top-4 bottom-20 z-50 md:inset-auto md:right-4 md:bottom-20 md:w-96"
+  <Teleport to="body">
+    <Transition
+      enter-active-class="transition duration-300 ease-out"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition duration-200 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
     >
       <div
-        class="relative flex flex-col overflow-hidden rounded-md border border-default bg-elevated shadow-2xl backdrop-blur-md"
-        :style="{
-          height: isMobile ? '100%' : `${modalHeight}px`,
-        }"
+        v-if="isMobile && isOpen"
+        class="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm"
+        @click.left.exact.prevent="closeModal()"
+      />
+    </Transition>
+
+    <Transition
+      enter-active-class="transition duration-300 ease-out"
+      enter-from-class="opacity-0 translate-y-4 scale-95"
+      enter-to-class="opacity-100 translate-y-0 scale-100"
+      leave-active-class="transition duration-200 ease-in"
+      leave-from-class="opacity-100 translate-y-0 scale-100"
+      leave-to-class="opacity-0 translate-y-4 scale-95"
+    >
+      <section
+        v-if="isOpen"
+        class="fixed inset-x-4 top-4 bottom-20 z-50 md:inset-auto md:right-4 md:bottom-20 md:w-96"
       >
         <div
-          v-if="!isMobile"
-          ref="resizeHandle"
-          class="absolute top-0 right-0 left-0 z-50 flex h-4 cursor-ns-resize items-start justify-center hover:bg-accented/50"
+          class="relative flex flex-col overflow-hidden rounded-md border border-default bg-elevated shadow-2xl backdrop-blur-md"
+          :style="{
+            height: isMobile ? '100%' : `${modalHeight}px`,
+          }"
         >
-          <div class="mt-1.5 h-1 w-8 rounded-full bg-default" />
-        </div>
-
-        <div
-          class="relative z-10 flex shrink-0 items-center justify-between gap-2 border-b border-default bg-elevated p-4 shadow-sm"
-        >
-          <div class="min-w-0">
-            <p class="m-0 truncate font-semibold text-default">
-              История бросков
-            </p>
+          <div
+            v-if="!isMobile"
+            ref="resizeHandle"
+            class="absolute top-0 right-0 left-0 z-50 flex h-4 cursor-ns-resize items-start justify-center hover:bg-accented/50"
+          >
+            <div class="mt-1.5 h-1 w-8 rounded-full bg-default" />
           </div>
 
-          <UButton
-            icon="i-fluent-delete-16-regular"
-            variant="soft"
-            color="neutral"
-            size="sm"
-            aria-label="Очистить историю"
-            @click.left.exact.prevent="clearHistory()"
-          />
+          <div
+            class="relative z-10 flex shrink-0 items-center justify-between gap-2 border-b border-default bg-elevated p-4 shadow-sm"
+          >
+            <div class="min-w-0">
+              <p class="m-0 truncate font-semibold text-default">
+                История бросков
+              </p>
+            </div>
+
+            <div class="flex items-center gap-1">
+              <UButton
+                icon="i-fluent-delete-16-regular"
+                variant="soft"
+                color="neutral"
+                size="sm"
+                aria-label="Очистить историю"
+                @click.left.exact.prevent="clearHistory()"
+              />
+
+              <UButton
+                icon="i-ttg-x"
+                variant="soft"
+                color="neutral"
+                size="sm"
+                aria-label="Закрыть"
+                @click.left.exact.prevent="closeModal()"
+              />
+            </div>
+          </div>
+
+          <DiceRollerHistoryList
+            v-if="history"
+            v-model:scroll-element="historyScrollElement"
+            :history="history"
+          >
+            <template #item="{ entry }">
+              <DiceRollerHistoryItem
+                :key="entry.id"
+                :entry="entry"
+              />
+            </template>
+          </DiceRollerHistoryList>
+
+          <DiceRollerComposer @submit="executeRoll">
+            <template #help>
+              <DiceRollerHelpPopover />
+            </template>
+          </DiceRollerComposer>
         </div>
-
-        <DiceRollerHistoryList
-          v-if="history"
-          v-model:scroll-element="historyScrollElement"
-          :history="history"
-        >
-          <template #item="{ entry }">
-            <DiceRollerHistoryItem
-              :key="entry.id"
-              :entry="entry"
-            />
-          </template>
-        </DiceRollerHistoryList>
-
-        <DiceRollerComposer @submit="executeRoll">
-          <template #help>
-            <DiceRollerHelpPopover />
-          </template>
-        </DiceRollerComposer>
-      </div>
-    </section>
-  </Transition>
+      </section>
+    </Transition>
+  </Teleport>
 </template>
