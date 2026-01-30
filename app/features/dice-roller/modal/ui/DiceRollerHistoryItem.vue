@@ -61,7 +61,7 @@
     <div class="flex items-start justify-between gap-4">
       <div class="flex flex-col justify-center gap-1 overflow-hidden">
         <span
-          class="text-base font-medium break-words text-primary"
+          class="text-base font-medium wrap-break-word text-primary"
           :class="{
             'text-error': entry.isError,
           }"
@@ -81,7 +81,7 @@
     </div>
 
     <div class="w-full">
-      <p class="text-sm font-medium break-words text-default">
+      <p class="text-sm font-medium wrap-break-word text-default">
         {{ entry.formula }}
       </p>
     </div>

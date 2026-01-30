@@ -41,7 +41,7 @@
 <template>
   <UForm
     :state="state"
-    class="flex shrink-0 items-center gap-2 border-t border-default p-4"
+    class="flex shrink-0 items-center gap-2 border-t border-default bg-muted p-4"
     @submit.prevent="onSubmit"
   >
     <UFieldGroup class="w-full">
@@ -55,11 +55,9 @@
       <UButton
         v-if="state.formula?.length"
         color="neutral"
-        variant="link"
+        variant="subtle"
         size="sm"
-        icon="i-fluent-dismiss-circle-20-filled"
-        :padded="false"
-        class="absolute top-1/2 right-0 -translate-y-1/2 opacity-50 hover:opacity-100"
+        icon="i-ttg-x"
         @click.left.exact.prevent="state.formula = ''"
       />
 

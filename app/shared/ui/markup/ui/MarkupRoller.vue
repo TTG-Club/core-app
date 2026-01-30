@@ -73,6 +73,7 @@
       if (!isOpen.value) {
         toast.add({
           color: 'error',
+          icon: 'i-ttg-dice-outline-d20',
           title: 'Некорректная нотация броска',
           description: error ?? 'Проверь формат записи броска.',
         });
@@ -99,8 +100,13 @@
     if (!isOpen.value) {
       toast.add({
         color: 'neutral',
-        title: `Результат: ${numericValue}`,
-        description: notation,
+        title: `Бросок ${notation}`,
+        icon: 'i-ttg-dice-outline-d20',
+        description: () =>
+          h('span', [
+            `Результат: `,
+            h('span', { class: 'font-bold text-link' }, displayValue),
+          ]),
       });
     }
 
@@ -128,11 +134,8 @@
 </script>
 
 <template>
-  <UButton
-    type="button"
-    variant="link"
-    color="neutral"
-    class="inline-flex items-baseline gap-1 p-0 text-link underline decoration-dotted underline-offset-2 hover:text-link"
+  <span
+    class="cursor-pointer text-link underline decoration-dotted underline-offset-2 hover:text-link hover:decoration-solid"
     @click.left.exact.prevent="handleRoll"
   >
     <component
@@ -140,5 +143,5 @@
       v-for="(vnode, index) in children"
       :key="index"
     />
-  </UButton>
+  </span>
 </template>

@@ -7,7 +7,7 @@
 
 <template>
   <div
-    class="relative z-10 flex shrink-0 items-center justify-between gap-2 border-b border-default bg-elevated p-4 shadow-sm"
+    class="relative z-10 flex shrink-0 items-center justify-between gap-2 border-b border-default bg-muted p-4 shadow-sm"
   >
     <div class="min-w-0">
       <p class="m-0 truncate font-semibold text-default">История бросков</p>

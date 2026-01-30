@@ -150,7 +150,7 @@
   >
     <div
       v-if="isMobile && isOpen"
-      class="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm"
+      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm"
       @click.left.exact.prevent="closeModal()"
     />
   </Transition>
@@ -163,9 +163,9 @@
     leave-from-class="opacity-100 translate-y-0 scale-100"
     leave-to-class="opacity-0 translate-y-4 scale-95"
   >
-    <section
+    <div
       v-if="isOpen"
-      class="fixed inset-x-4 top-4 bottom-20 z-50 md:inset-auto md:right-4 md:bottom-20 md:w-96"
+      class="fixed inset-x-4 top-4 bottom-20 md:inset-auto md:right-4 md:bottom-20 md:w-96"
     >
       <div
         class="relative flex flex-col overflow-hidden rounded-md border border-default bg-elevated shadow-2xl backdrop-blur-md"
@@ -202,6 +202,6 @@
           </template>
         </DiceRollerComposer>
       </div>
-    </section>
+    </div>
   </Transition>
 </template>
