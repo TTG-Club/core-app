@@ -1,7 +1,9 @@
-import { DiceRoller } from 'dice-roller-parser';
+import diceRollerParser from 'dice-roller-parser';
 import { trim } from 'es-toolkit';
 
 import { DICE_RUSSIAN_OPERATORS } from '../const';
+
+const { DiceRoller } = diceRollerParser;
 
 /**
  * Регулярное выражение для замены русских операторов.
