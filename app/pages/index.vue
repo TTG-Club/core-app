@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { HomeBanners, RoadmapBanner } from '~home/banners';
-  import { RecentChanges } from '~home/recent-changes';
+  import RecentChanges from '~home/recent-changes/RecentChanges.vue';
   import { HomeSections } from '~home/sections';
   import { SocialLinks } from '~home/social-links';
   import { SearchPanel } from '~search/panel';

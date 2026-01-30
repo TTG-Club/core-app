@@ -1,5 +1,6 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref, watch } from 'vue';
+  import { useLocalStorage } from '@vueuse/core';
+  import { computed, watch } from 'vue';
 
   interface RecentChangeItem {
     url: string;
@@ -31,32 +32,20 @@
     tooltip: string;
   };
 
-  const STORAGE_KEY = 'recent-changes-limit';
   const DEFAULT_LIMIT = 10;
-
-  const selectedLimit = ref<number>(DEFAULT_LIMIT);
-  const isDropdownOpen = ref(false);
 
   const limitValues = [5, 10, 20, 50, 100];
 
+  const selectedLimit = useLocalStorage('recent-changes-limit', DEFAULT_LIMIT);
+  const isDropdownOpen = ref(false);
+
   const dayjs = useDayjs();
 
-  function getSavedLimit(): number | null {
-    if (!import.meta.client) {
-      return null;
-    }
-
-    const saved = localStorage.getItem(STORAGE_KEY);
-
-    if (!saved) {
-      return null;
-    }
-
-    const parsed = Number.parseInt(saved, 10);
-
-    return Number.isNaN(parsed) || parsed <= 0 ? null : parsed;
-  }
-
+  /**
+   * Опции выпадающего списка для выбора лимита отображаемых записей
+   *
+   * @returns Массив опций с label, состоянием checked и обработчиком выбора
+   */
   const limitOptions = computed(() =>
     limitValues.map((value) => ({
       label: String(value),
@@ -68,12 +57,24 @@
     })),
   );
 
+  /**
+   * Форматирует ISO дату в локализованный формат
+   *
+   * @param iso - строка даты в формате ISO 8601
+   * @returns отформатированная дата в локальном формате LLL или исходная строка при невалидной дате
+   */
   function formatDateTime(iso: string): string {
     const date = dayjs(iso);
 
     return date.isValid() ? date.local().format('LLL') : iso;
   }
 
+  /**
+   * Определяет тип действия на основе названия
+   *
+   * @param actionName - название действия на русском языке
+   * @returns тип действия: 'added' для добавления, 'updated' для обновления, 'default' для остальных
+   */
   function getActionType(actionName: string): 'added' | 'updated' | 'default' {
     const name = actionName.toLowerCase();
 
@@ -96,6 +97,12 @@
     return 'default';
   }
 
+  /**
+   * Возвращает иконку для типа действия
+   *
+   * @param actionName - название действия
+   * @returns имя иконки из коллекции ttg или fluent
+   */
   function getActionIcon(actionName: string): string {
     const type = getActionType(actionName);
 
@@ -105,10 +112,16 @@
       case 'updated':
         return 'i-fluent-arrow-sync-16-regular';
       default:
-        return 'i-lucide-circle';
+        return 'i-fluent-circle-16-regular';
     }
   }
 
+  /**
+   * Возвращает текст подсказки для типа действия
+   *
+   * @param actionName - название действия
+   * @returns текст подсказки на русском языке
+   */
   function getActionTooltip(actionName: string): string {
     const type = getActionType(actionName);
 
@@ -136,6 +149,7 @@
     {
       dedupe: 'defer',
       default: () => [],
+      server: false,
     },
   );
 
@@ -153,23 +167,11 @@
 
   watch(
     selectedLimit,
-    async (newLimit) => {
-      if (import.meta.client) {
-        localStorage.setItem(STORAGE_KEY, String(newLimit));
-      }
-
+    async () => {
       await refresh();
     },
     { flush: 'post' },
   );
-
-  onMounted(() => {
-    const savedLimit = getSavedLimit();
-
-    if (savedLimit !== null && savedLimit !== selectedLimit.value) {
-      selectedLimit.value = savedLimit;
-    }
-  });
 </script>
 
 <template>
@@ -181,7 +183,7 @@
             Обновления на сайте
           </h3>
 
-          <div class="text-xs leading-none text-gray-500">
+          <div class="text-xs leading-none text-muted">
             Последние: {{ selectedLimit }}
           </div>
         </div>
@@ -208,7 +210,7 @@
             variant="soft"
             size="sm"
             icon="i-fluent-arrow-sync-16-regular"
-            @click="refresh()"
+            @click.left.exact.prevent="refresh()"
           />
         </div>
       </div>
@@ -273,7 +275,7 @@
 
             <span
               v-if="item.name.eng"
-              class="text-gray-500"
+              class="text-muted"
             >
               [{{ item.name.eng }}]
             </span>
