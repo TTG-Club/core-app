@@ -41,9 +41,11 @@
       </div>
 
       <ClientOnly>
-        <DiceRollerFloatButton />
+        <Teleport to="body">
+          <DiceRollerFloatButton />
 
-        <DiceRollerModal />
+          <DiceRollerModal />
+        </Teleport>
       </ClientOnly>
     </div>
   </UApp>

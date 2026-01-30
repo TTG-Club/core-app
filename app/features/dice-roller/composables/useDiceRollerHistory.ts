@@ -85,6 +85,19 @@ export function useDiceRollerHistory(options: UseDiceRollerHistoryOptions) {
     { flush: 'post' },
   );
 
+  /**
+   * Следим за появлением элемента скролла.
+   * Если модальное окно открыто, но элемент только что появился (например, после v-if),
+   * прокручиваем список вниз.
+   */
+  watch(historyScrollElement, (element) => {
+    if (element && isModalOpen.value) {
+      nextTick(() => {
+        scrollToBottom();
+      });
+    }
+  });
+
   return {
     loadHistory,
     clearHistory,

@@ -1,9 +1,7 @@
-import diceRollerParser from 'dice-roller-parser';
+import * as diceRollerParser from 'dice-roller-parser';
 import { trim } from 'es-toolkit';
 
 import { DICE_RUSSIAN_OPERATORS } from '../const';
-
-const { DiceRoller } = diceRollerParser;
 
 /**
  * Регулярное выражение для замены русских операторов.
@@ -17,7 +15,7 @@ const RUSSIAN_OPERATORS_PATTERN = new RegExp(
   'gi',
 );
 
-const roller = new DiceRoller();
+const roller = new diceRollerParser.DiceRoller();
 
 /**
  * Нормализует русскую нотацию костей в стандартную Roll20.
@@ -147,12 +145,15 @@ export function useDiceRoller() {
 
       return { valid: true };
     } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+
+      const userMessage = message.startsWith('Expected')
+        ? 'Некорректная формула'
+        : message || 'Неизвестная ошибка парсинга';
+
       return {
         valid: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Неизвестная ошибка парсинга',
+        error: userMessage,
       };
     }
   };
