@@ -49,23 +49,19 @@
         ref="inputRef"
         v-model="state.formula"
         placeholder="Например: 1к20+5"
-        class="w-full"
         @keydown.enter.prevent="onSubmit"
-      >
-        <template
-          v-if="state.formula?.length"
-          #trailing
-        >
-          <UButton
-            color="neutral"
-            variant="link"
-            size="sm"
-            icon="i-fluent-dismiss-circle-20-filled"
-            :padded="false"
-            @click.left.exact.prevent="state.formula = ''"
-          />
-        </template>
-      </UInput>
+      />
+
+      <UButton
+        v-if="state.formula?.length"
+        color="neutral"
+        variant="link"
+        size="sm"
+        icon="i-fluent-dismiss-circle-20-filled"
+        :padded="false"
+        class="absolute top-1/2 right-0 -translate-y-1/2 opacity-50 hover:opacity-100"
+        @click.left.exact.prevent="state.formula = ''"
+      />
 
       <slot name="help" />
     </UFieldGroup>

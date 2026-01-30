@@ -1,4 +1,4 @@
-import { DiceRoller } from 'dice-roller-parser';
+import * as diceRollerParser from 'dice-roller-parser';
 import { trim } from 'es-toolkit';
 
 import { DICE_RUSSIAN_OPERATORS } from '../const';
@@ -15,7 +15,7 @@ const RUSSIAN_OPERATORS_PATTERN = new RegExp(
   'gi',
 );
 
-const roller = new DiceRoller();
+const roller = new diceRollerParser.DiceRoller();
 
 /**
  * Нормализует русскую нотацию костей в стандартную Roll20.
