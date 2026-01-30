@@ -1,6 +1,6 @@
 import { v7 as uuidv7 } from 'uuid';
 
-import type { DiceDetail, HistoryEntry } from '~dice-roller/types';
+import type { DiceDetail, HistoryEntry } from '../types';
 
 interface AddHistoryEntryPayload {
   formula: string;

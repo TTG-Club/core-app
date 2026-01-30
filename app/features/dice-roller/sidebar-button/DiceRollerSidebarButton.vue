@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { useDiceRollerState } from '~dice-roller/composables';
+  import { useDiceRollerState } from '../composables';
 
   const { isOpen, toggleModal } = useDiceRollerState();
 

@@ -3,17 +3,17 @@
     useDiceRoller,
     useDiceRollerHistory,
     useDiceRollerState,
-  } from '~dice-roller/composables';
+  } from '../composables';
   import {
     DICE_MODAL_INITIAL_HEIGHT,
     DICE_MODAL_MAX_HEIGHT_RATIO,
     DICE_MODAL_MIN_HEIGHT,
-  } from '~dice-roller/const';
+  } from '../const';
   import {
     extractDiceRollDetails,
     extractRollValue,
     formatDiceDetailsSummary,
-  } from '~dice-roller/utils';
+  } from '../utils';
 
   import {
     DiceRollerComposer,

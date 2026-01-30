@@ -1,9 +1,11 @@
 import { cloneDeep } from 'es-toolkit';
 import { createStore, get, set } from 'idb-keyval';
-import { DICE_HISTORY_STORAGE_KEY } from '~dice-roller/const';
+
+import { DICE_HISTORY_STORAGE_KEY } from '../const';
 
 import type { Ref } from 'vue';
-import type { HistoryEntry } from '~dice-roller/types';
+
+import type { HistoryEntry } from '../types';
 
 interface UseDiceRollerHistoryOptions {
   history: Ref<HistoryEntry[]>;

@@ -16,6 +16,7 @@
     "stylelint:check": "stylelint \"{**/*,*}.{css,scss,vue}\" --ignore-path .gitignore",
     "stylelint:write": "stylelint \"{**/*,*}.{css,scss,vue}\" --ignore-path .gitignore --fix",
     "stylelint:workflow": "stylelint \"{**/*,*}.{css,scss,vue}\" --ignore-path .gitignore --quiet",
+    "sync-ai-rules": "node .scripts/sync-ai-rules.js",
     "prepare": "pnpm simple-git-hooks"
   },
   "dependencies": {
@@ -87,6 +88,9 @@
     "vue-tsc": "^3.2.2"
   },
   "simple-git-hooks": {
-    "pre-commit": "pnpm lint-staged"
+    "pre-commit": "pnpm lint-staged",
+    "post-checkout": "pnpm sync-ai-rules",
+    "post-merge": "pnpm sync-ai-rules",
+    "post-rewrite": "pnpm sync-ai-rules"
   }
 }
