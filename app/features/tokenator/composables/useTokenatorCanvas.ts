@@ -4,6 +4,15 @@ import { CANVAS_SIZE, drawToken } from '../utils/draw';
 
 import { useTokenatorStore } from './useTokenatorStore';
 
+/**
+ * Composable для управления canvas редактора токенов.
+ * Обеспечивает отрисовку, работу с маской и реактивное обновление при изменении стора.
+ *
+ * @param canvasRef - Референс на HTML canvas элемент
+ * @param options - Опции отрисовки
+ * @param options.clip - Обрезать ли изображение по кругу маски
+ * @returns Методы для работы с canvas и его маской
+ */
 export function useTokenatorCanvas(
   canvasRef: Ref<HTMLCanvasElement | null>,
   options: { clip?: boolean } = {},
@@ -14,6 +23,9 @@ export function useTokenatorCanvas(
 
   const maskCanvas = document.createElement('canvas');
 
+  /**
+   * Инициализирует canvas и маску, устанавливает размеры и запускает первую отрисовку.
+   */
   function initCanvas() {
     if (!canvasRef.value) {
       return;
@@ -28,6 +40,13 @@ export function useTokenatorCanvas(
     render();
   }
 
+  /**
+   * Рисует на маске в указанных координатах.
+   * Использует настройки кисти из стора (размер, режим).
+   *
+   * @param x - Координата X
+   * @param y - Координата Y
+   */
   function paintMask(x: number, y: number) {
     const ctx = maskCanvas.getContext('2d');
 
@@ -51,6 +70,10 @@ export function useTokenatorCanvas(
     render();
   }
 
+  /**
+   * Выполняет отрисовку токена на canvas.
+   * Автоматически обновляет размеры canvas и маски при изменении размера контейнера.
+   */
   async function draw() {
     if (!canvasRef.value) {
       return;
@@ -110,10 +133,16 @@ export function useTokenatorCanvas(
     });
   }
 
+  /**
+   * Запускает отрисовку в requestAnimationFrame для оптимальной производительности.
+   */
   function render() {
     requestAnimationFrame(() => draw());
   }
 
+  /**
+   * Очищает маску и запускает перерисовку.
+   */
   function clearMask() {
     const ctx = maskCanvas.getContext('2d');
 

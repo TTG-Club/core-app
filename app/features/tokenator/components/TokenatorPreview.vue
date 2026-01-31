@@ -3,6 +3,7 @@
 
   import { useTokenatorCanvas } from '../composables/useTokenatorCanvas';
   import { useTokenatorStore } from '../composables/useTokenatorStore';
+  import { getScaleFactor } from '../utils/scaleFactor';
 
   const store = useTokenatorStore();
   const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -29,20 +30,6 @@
   const startPos = { x: 0, y: 0 };
   const startTransformPos = { x: 0, y: 0 };
 
-  function getScaleFactor() {
-    if (!containerRef.value) {
-      return 1;
-    }
-
-    const rect = containerRef.value.getBoundingClientRect();
-
-    if (rect.width === 0) {
-      return 1;
-    }
-
-    return 500 / rect.width;
-  }
-
   function onPointerDown(e: PointerEvent) {
     if (!isMobile.value || !store.currentImage) {
       return;
@@ -64,7 +51,7 @@
       return;
     }
 
-    const scaleFactor = getScaleFactor();
+    const scaleFactor = getScaleFactor(containerRef.value, 500);
 
     const deltaX = e.clientX - startPos.x;
     const deltaY = e.clientY - startPos.y;

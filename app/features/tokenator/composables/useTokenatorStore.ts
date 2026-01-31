@@ -75,6 +75,11 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     () => customFrame.value || currentFrame.value?.url || null,
   );
 
+  /**
+   * Добавляет новый текстовый элемент на токен.
+   *
+   * @param content - Текст для добавления
+   */
   function addText(content: string) {
     if (!content.trim()) {
       return;
@@ -99,6 +104,12 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     activeTextId.value = id;
   }
 
+  /**
+   * Удаляет текстовый элемент по ID.
+   * Автоматически снимает выделение, если удаляемый элемент был активным.
+   *
+   * @param id - Уникальный идентификатор текстового элемента
+   */
   function removeText(id: string) {
     const index = texts.value.findIndex((t) => t.id === id);
 
@@ -111,6 +122,12 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     }
   }
 
+  /**
+   * Обновляет свойства текстового элемента.
+   *
+   * @param id - Уникальный идентификатор текстового элемента
+   * @param updates - Объект с обновляемыми свойствами
+   */
   function updateText(id: string, updates: Partial<TokenText>) {
     const text = texts.value.find((t) => t.id === id);
 
@@ -119,6 +136,12 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     }
   }
 
+  /**
+   * Загружает изображение персонажа из файла.
+   * Сохраняет текущие значения maskScale и frameScale при сбросе трансформаций.
+   *
+   * @param file - Файл изображения для загрузки
+   */
   function setImage(file: File) {
     if (currentImage.value && currentImage.value.startsWith('blob:')) {
       URL.revokeObjectURL(currentImage.value);
@@ -142,6 +165,11 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     reader.readAsDataURL(file);
   }
 
+  /**
+   * Загружает кастомную рамку из файла.
+   *
+   * @param file - Файл рамки для загрузки
+   */
   function setCustomFrame(file: File) {
     if (customFrame.value && customFrame.value.startsWith('blob:')) {
       URL.revokeObjectURL(customFrame.value);
@@ -158,6 +186,11 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     reader.readAsDataURL(file);
   }
 
+  /**
+   * Загружает кастомное фоновое изображение из файла.
+   *
+   * @param file - Файл фонового изображения для загрузки
+   */
   function setCustomBackground(file: File) {
     if (customBackground.value && customBackground.value.startsWith('blob:')) {
       URL.revokeObjectURL(customBackground.value);
@@ -174,6 +207,12 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     reader.readAsDataURL(file);
   }
 
+  /**
+   * Выбирает рамку из библиотеки.
+   * Автоматически очищает кастомную рамку при выборе.
+   *
+   * @param frame - Объект рамки из библиотеки
+   */
   function selectFrame(frame: TokenatorFrame) {
     if (customFrame.value) {
       URL.revokeObjectURL(customFrame.value);
@@ -183,6 +222,9 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     currentFrame.value = frame;
   }
 
+  /**
+   * Сбрасывает все трансформации токена к значениям по умолчанию.
+   */
   function resetTransform() {
     transform.value = {
       scale: 1,
@@ -195,6 +237,10 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     };
   }
 
+  /**
+   * Полный сброс всех настроек редактора токенов.
+   * Сбрасывает трансформации, изображения, рамки и цвета.
+   */
   function resetAll() {
     resetTransform();
     currentImage.value = null;
@@ -210,6 +256,9 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     };
   }
 
+  /**
+   * Генерирует случайные цвета для градиентной тонировки рамки.
+   */
   function randomizeTint() {
     const randomColor = () =>
       `#${Math.floor(Math.random() * 16777215)
@@ -220,6 +269,9 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     frameTint.value.enabled = true;
   }
 
+  /**
+   * Меняет местами цвета градиента тонировки.
+   */
   function swapTintColors() {
     const c1 = frameTint.value.colors[0];
     const c2 = frameTint.value.colors[1];

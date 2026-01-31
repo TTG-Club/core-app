@@ -367,7 +367,7 @@
                     class="flex-1 justify-center rounded-r-none px-1"
                     :ui="{ leadingIcon: 'mr-1' }"
                     label="Изображение"
-                    @click="imageInput?.click()"
+                    @click.left.exact.prevent="imageInput?.click()"
                   />
 
                   <UButton
@@ -375,7 +375,7 @@
                     variant="outline"
                     icon="i-ttg-x"
                     class="rounded-l-none border-l-0 px-2"
-                    @click.stop="store.currentImage = null"
+                    @click.left.exact.prevent.stop="store.currentImage = null"
                   />
                 </UButtonGroup>
 
@@ -385,7 +385,7 @@
                   color="neutral"
                   variant="outline"
                   label="Изображение"
-                  @click="imageInput?.click()"
+                  @click.left.exact.prevent="imageInput?.click()"
                 />
               </div>
 
@@ -409,7 +409,7 @@
                     class="flex-1 justify-center rounded-r-none px-1"
                     :ui="{ leadingIcon: 'mr-1' }"
                     label="Рамка"
-                    @click="frameInput?.click()"
+                    @click.left.exact.prevent="frameInput?.click()"
                   />
 
                   <UButton
@@ -417,7 +417,7 @@
                     variant="outline"
                     icon="i-ttg-x"
                     class="rounded-l-none border-l-0 px-2"
-                    @click.stop="store.customFrame = null"
+                    @click.left.exact.prevent.stop="store.customFrame = null"
                   />
                 </UButtonGroup>
 
@@ -427,7 +427,7 @@
                   color="neutral"
                   variant="outline"
                   label="Рамка"
-                  @click="frameInput?.click()"
+                  @click.left.exact.prevent="frameInput?.click()"
                 />
               </div>
 
@@ -451,7 +451,7 @@
                     class="flex-1 justify-center rounded-r-none px-1"
                     :ui="{ leadingIcon: 'mr-1' }"
                     label="Фон"
-                    @click="bgInput?.click()"
+                    @click.left.exact.prevent="bgInput?.click()"
                   />
 
                   <UButton
@@ -459,7 +459,9 @@
                     variant="outline"
                     icon="i-ttg-x"
                     class="rounded-l-none border-l-0 px-2"
-                    @click.stop="store.customBackground = null"
+                    @click.left.exact.prevent.stop="
+                      store.customBackground = null
+                    "
                   />
                 </UButtonGroup>
 
@@ -469,7 +471,7 @@
                   color="neutral"
                   variant="outline"
                   label="Фон"
-                  @click="bgInput?.click()"
+                  @click.left.exact.prevent="bgInput?.click()"
                 />
               </div>
             </div>
@@ -487,7 +489,7 @@
                     ? 'border-primary text-primary'
                     : ''
                 "
-                @click="
+                @click.left.exact.prevent="
                   store.currentFrame = null;
                   store.customFrame = null;
                 "
@@ -507,7 +509,7 @@
                     ? 'border-primary'
                     : 'border-neutral-200'
                 "
-                @click="store.selectFrame(frame)"
+                @click.left.exact.prevent="store.selectFrame(frame)"
               >
                 <img
                   :src="frame.url"
@@ -537,7 +539,7 @@
               :variant="selectedTab === 0 ? 'solid' : 'ghost'"
               :color="selectedTab === 0 ? 'primary' : 'neutral'"
               label="Основа"
-              @click="selectedTab = 0"
+              @click.left.exact.prevent="selectedTab = 0"
             />
 
             <UButton
@@ -546,7 +548,7 @@
               :variant="selectedTab === 1 ? 'solid' : 'ghost'"
               :color="selectedTab === 1 ? 'primary' : 'neutral'"
               label="Стиль"
-              @click="selectedTab = 1"
+              @click.left.exact.prevent="selectedTab = 1"
             />
 
             <UButton
@@ -555,7 +557,7 @@
               :variant="selectedTab === 2 ? 'solid' : 'ghost'"
               :color="selectedTab === 2 ? 'primary' : 'neutral'"
               label="3D"
-              @click="selectedTab = 2"
+              @click.left.exact.prevent="selectedTab = 2"
             />
 
             <UButton
@@ -564,7 +566,7 @@
               :variant="selectedTab === 3 ? 'solid' : 'ghost'"
               :color="selectedTab === 3 ? 'primary' : 'neutral'"
               label="Текст"
-              @click="selectedTab = 3"
+              @click.left.exact.prevent="selectedTab = 3"
             />
           </div>
 
@@ -586,7 +588,9 @@
                   variant="soft"
                   :padded="false"
                   class="flex h-7 w-8 items-center justify-center text-xs font-medium"
-                  @click="store.transform.flip.x = !store.transform.flip.x"
+                  @click.left.exact.prevent="
+                    store.transform.flip.x = !store.transform.flip.x
+                  "
                 >
                   X
                 </UButton>
@@ -597,7 +601,9 @@
                   variant="soft"
                   :padded="false"
                   class="flex h-7 w-8 items-center justify-center text-xs font-medium"
-                  @click="store.transform.flip.y = !store.transform.flip.y"
+                  @click.left.exact.prevent="
+                    store.transform.flip.y = !store.transform.flip.y
+                  "
                 >
                   Y
                 </UButton>
@@ -617,7 +623,7 @@
                     "
                     :disabled="store.transform.maskScale === 1"
                     title="Сбросить масштаб маски"
-                    @click="store.transform.maskScale = 1"
+                    @click.left.exact.prevent="store.transform.maskScale = 1"
                   >
                     <span>Маска</span>
 
@@ -654,7 +660,7 @@
                     "
                     :disabled="store.transform.frameScale === 1"
                     title="Сбросить масштаб рамки"
-                    @click="store.transform.frameScale = 1"
+                    @click.left.exact.prevent="store.transform.frameScale = 1"
                   >
                     <span>Рамка</span>
 
@@ -691,7 +697,7 @@
                     "
                     :disabled="store.transform.frameRotate === 0"
                     title="Сбросить поворот рамки"
-                    @click="store.transform.frameRotate = 0"
+                    @click.left.exact.prevent="store.transform.frameRotate = 0"
                   >
                     <span>Поворот рамки</span>
 
@@ -728,7 +734,7 @@
                     "
                     :disabled="store.transform.scale === 1"
                     title="Сбросить общий масштаб"
-                    @click="store.transform.scale = 1"
+                    @click.left.exact.prevent="store.transform.scale = 1"
                   >
                     <span>Масштаб</span>
 
@@ -765,7 +771,7 @@
                     "
                     :disabled="store.transform.rotate === 0"
                     title="Сбросить поворот изображения"
-                    @click="store.transform.rotate = 0"
+                    @click.left.exact.prevent="store.transform.rotate = 0"
                   >
                     <span>Поворот изображения</span>
 
@@ -833,7 +839,7 @@
                       "
                       :disabled="!isBgColorChanged"
                       title="Сбросить цвет фона"
-                      @click="resetBackgroundColor"
+                      @click.left.exact.prevent="resetBackgroundColor"
                     >
                       <span>Цвет фона</span>
 
@@ -852,7 +858,7 @@
                       color="error"
                       :padded="false"
                       title="Удалить фон"
-                      @click="store.customBackground = null"
+                      @click.left.exact.prevent="store.customBackground = null"
                     />
                   </div>
 
@@ -885,7 +891,9 @@
                       "
                       :disabled="!isTintColorChanged"
                       title="Сбросить цвет рамки 1"
-                      @click="store.frameTint.colors[0] = DEFAULT_TINT_COLOR"
+                      @click.left.exact.prevent="
+                        store.frameTint.colors[0] = DEFAULT_TINT_COLOR
+                      "
                     >
                       <span>Рамка 1</span>
 
@@ -943,7 +951,7 @@
                     color="neutral"
                     :padded="false"
                     class="p-1"
-                    @click="store.swapTintColors"
+                    @click.left.exact.prevent="store.swapTintColors"
                   />
                 </div>
 
@@ -959,7 +967,7 @@
                       "
                       :disabled="!isTintColor2Changed"
                       title="Сбросить цвет рамки 2"
-                      @click="resetTint2"
+                      @click.left.exact.prevent="resetTint2"
                     >
                       <span>Рамка 2</span>
 
@@ -1016,7 +1024,7 @@
                   variant="soft"
                   icon="i-heroicons-sparkles-20-solid"
                   label="Случайный"
-                  @click="store.randomizeTint"
+                  @click.left.exact.prevent="store.randomizeTint"
                 />
 
                 <USelectMenu
@@ -1051,7 +1059,7 @@
                 :color="!store.brush.enabled ? 'primary' : 'neutral'"
                 label="Двигать"
                 icon="i-heroicons-cursor-arrow-rays-20-solid"
-                @click="store.brush.enabled = false"
+                @click.left.exact.prevent="store.brush.enabled = false"
               />
 
               <UButton
@@ -1069,7 +1077,7 @@
                 "
                 label="Рисовать"
                 icon="i-heroicons-pencil-20-solid"
-                @click="
+                @click.left.exact.prevent="
                   store.brush.enabled = true;
                   store.brush.mode = 'add';
                 "
@@ -1090,7 +1098,7 @@
                 "
                 label="Стереть"
                 icon="i-heroicons-backspace-20-solid"
-                @click="
+                @click.left.exact.prevent="
                   store.brush.enabled = true;
                   store.brush.mode = 'remove';
                 "
@@ -1138,7 +1146,7 @@
                 label="Добавить"
                 size="sm"
                 :disabled="!textInput.trim()"
-                @click="addNewText"
+                @click.left.exact.prevent="addNewText"
               />
             </div>
 
@@ -1154,7 +1162,7 @@
                     size="xs"
                     :padded="false"
                     title="Назад к списку"
-                    @click="store.activeTextId = null"
+                    @click.left.exact.prevent="store.activeTextId = null"
                   />
 
                   <span
@@ -1169,7 +1177,7 @@
                   variant="ghost"
                   size="xs"
                   :padded="false"
-                  @click="store.removeText(activeText.id)"
+                  @click.left.exact.prevent="store.removeText(activeText.id)"
                 />
               </div>
 
@@ -1188,7 +1196,7 @@
                     "
                     :disabled="activeText.x === 0"
                     title="Сбросить X"
-                    @click="activeText.x = 0"
+                    @click.left.exact.prevent="activeText.x = 0"
                   >
                     <span>Позиция X</span>
 
@@ -1223,7 +1231,7 @@
                     "
                     :disabled="activeText.y === 0"
                     title="Сбросить Y"
-                    @click="activeText.y = 0"
+                    @click.left.exact.prevent="activeText.y = 0"
                   >
                     <span>Позиция Y</span>
 
@@ -1260,7 +1268,7 @@
                     "
                     :disabled="activeText.fontSize === 40"
                     title="Сбросить размер"
-                    @click="activeText.fontSize = 40"
+                    @click.left.exact.prevent="activeText.fontSize = 40"
                   >
                     <span>Размер</span>
 
@@ -1295,7 +1303,7 @@
                     "
                     :disabled="activeText.rotation === 0"
                     title="Сбросить поворот"
-                    @click="activeText.rotation = 0"
+                    @click.left.exact.prevent="activeText.rotation = 0"
                   >
                     <span>Поворот</span>
 
@@ -1330,7 +1338,7 @@
                     "
                     :disabled="activeText.arc === 0"
                     title="Сбросить изгиб"
-                    @click="activeText.arc = 0"
+                    @click.left.exact.prevent="activeText.arc = 0"
                   >
                     <span>Изгиб</span>
 
@@ -1396,7 +1404,7 @@
                   variant="soft"
                   color="neutral"
                   class="justify-start truncate"
-                  @click="store.activeTextId = text.id"
+                  @click.left.exact.prevent="store.activeTextId = text.id"
                 />
               </div>
             </div>
@@ -1418,7 +1426,7 @@
       <UButton
         size="lg"
         block
-        @click="downloadToken('png')"
+        @click.left.exact.prevent="downloadToken('png')"
         >Скачать PNG</UButton
       >
 
@@ -1427,7 +1435,7 @@
         block
         color="neutral"
         variant="outline"
-        @click="downloadToken('webp')"
+        @click.left.exact.prevent="downloadToken('webp')"
         >WEBP</UButton
       >
     </div>
