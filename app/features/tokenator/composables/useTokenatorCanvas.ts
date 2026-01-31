@@ -1,4 +1,4 @@
-import { useElementSize } from '@vueuse/core';
+import { useElementSize, useRafFn } from '@vueuse/core';
 
 import { CANVAS_SIZE, drawToken } from '../utils/draw';
 
@@ -115,29 +115,42 @@ export function useTokenatorCanvas(
       store.maskTokenSize = tokenSize;
     }
 
-    await drawToken({
-      ctx,
-      backgroundColor: store.backgroundColor,
-      currentImage: store.currentImage,
-      activeFrameUrl: store.activeFrameUrl,
-      frameTint: store.frameTint,
-      transform: store.transform,
-      clip,
-      viewSize: { width: w, height: h },
-      tokenSize,
-      maskImage: store.maskImageCanvas || maskCanvas,
-      maskTokenSize: store.maskTokenSize,
-      halfMask: store.brush.halfMask,
-      customBackground: store.customBackground,
-      texts: store.texts,
-    });
+    try {
+      await drawToken({
+        ctx,
+        backgroundColor: store.backgroundColor,
+        currentImage: store.currentImage,
+        activeFrameUrl: store.activeFrameUrl,
+        frameTint: store.frameTint,
+        transform: store.transform,
+        clip,
+        viewSize: { width: w, height: h },
+        tokenSize,
+        maskImage: store.maskImageCanvas || maskCanvas,
+        maskTokenSize: store.maskTokenSize,
+        halfMask: store.brush.halfMask,
+        customBackground: store.customBackground,
+        texts: store.texts,
+      });
+    } catch (error) {
+      console.error('Failed to draw token:', error);
+    }
   }
 
   /**
    * Запускает отрисовку в requestAnimationFrame для оптимальной производительности.
+   * Использует useRafFn из VueUse для предотвращения множественных перерисовок.
    */
+  const { pause, resume } = useRafFn(
+    () => {
+      draw();
+      pause(); // Отрисовали один раз и остановились
+    },
+    { immediate: false },
+  );
+
   function render() {
-    requestAnimationFrame(() => draw());
+    resume(); // Запускаем отрисовку в следующем frame
   }
 
   /**
@@ -154,6 +167,7 @@ export function useTokenatorCanvas(
     render();
   }
 
+  // Реактивное обновление при изменении зависимостей
   watch(
     [
       width,
@@ -169,11 +183,12 @@ export function useTokenatorCanvas(
       () => store.maskVersion,
     ],
     () => {
-      requestAnimationFrame(() => draw());
+      render();
     },
     { deep: true },
   );
 
+  // Очистка маски при смене изображения
   watch(
     () => store.currentImage,
     () => {
