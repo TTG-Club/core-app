@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import { useGlobalSearch } from '~search/composable';
   import { HomeGreetings } from '~home/greetings';
+  import { useGlobalSearch } from '~search/composable';
 
   const { open } = useGlobalSearch();
 </script>

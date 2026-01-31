@@ -15,20 +15,30 @@
 
   const rules = {
     usernameOrEmail: (value: string) => {
-      if (!value) return 'Поле обязательно для заполнения';
-      if (value.includes(' ')) return 'Поле не должно содержать пробелы';
+      if (!value) {
+        return 'Поле обязательно для заполнения';
+      }
+
+      if (value.includes(' ')) {
+        return 'Поле не должно содержать пробелы';
+      }
 
       return true;
     },
     password: (value: string) => {
-      if (!value) return 'Поле обязательно для заполнения';
-      if (value.includes(' ')) return 'Поле не должно содержать пробелы';
+      if (!value) {
+        return 'Поле обязательно для заполнения';
+      }
+
+      if (value.includes(' ')) {
+        return 'Поле не должно содержать пробелы';
+      }
 
       return true;
     },
   };
 
-  const onSubmit = () => {};
+  function onSubmit() {}
 </script>
 
 <template>

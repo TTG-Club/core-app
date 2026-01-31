@@ -1,8 +1,9 @@
 <script setup lang="ts">
+  import { MarkupRender } from '~ui/markup';
+
   import { COMPONENT_TOOLTIP_TEXT } from '../model';
 
   import type { FeatDetailResponse } from '~/shared/types';
-  import { MarkupRender } from '~ui/markup';
 
   defineProps<Pick<FeatDetailResponse, 'prerequisite'>>();
 </script>

@@ -1,7 +1,9 @@
 <script setup lang="ts">
-  import type { FeatLinkResponse } from '~/shared/types';
-  import { cloneDeep, isEmpty, isString } from 'lodash-es';
+  import { cloneDeep, isString } from 'es-toolkit';
+
   import type { Filter } from '~filter/types';
+
+  import type { FeatLinkResponse } from '~/shared/types';
 
   const {
     disabled = false,
@@ -67,7 +69,7 @@
       key += `-${searchQuery.value}`;
     }
 
-    if (!isEmpty(categories?.length)) {
+    if (Array.isArray(categories) && categories.length > 0) {
       key += `-${categories?.join('-').toLowerCase()}`;
     }
 

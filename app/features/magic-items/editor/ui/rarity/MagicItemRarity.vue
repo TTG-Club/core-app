@@ -7,7 +7,7 @@
     required: true,
   });
 
-  const isVaries = computed(() => model.value.type == 'VARIES');
+  const isVaries = computed(() => model.value.type === 'VARIES');
 
   watch(isVaries, (value) => {
     if (value) {

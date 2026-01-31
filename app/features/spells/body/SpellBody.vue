@@ -1,9 +1,9 @@
 <script setup lang="ts">
   import {
-    TopBar,
-    StatsBlock,
     AffiliationBlock,
     DescriptionsBlock,
+    StatsBlock,
+    TopBar,
   } from './ui';
 
   import type { SpellDetailResponse } from '~/shared/types';

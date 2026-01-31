@@ -1,12 +1,12 @@
 <script setup lang="ts">
-  import { SpeciesFeatures, SpeciesSizes, SpeciesSpeed } from './ui';
-
+  import { SpeciesPreview } from '~species/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectCreatureType, SelectSpecies } from '~ui/select';
-  import { UploadImage, UploadGallery } from '~ui/upload';
+  import { UploadGallery, UploadImage } from '~ui/upload';
+
+  import { SpeciesFeatures, SpeciesSizes, SpeciesSpeed } from './ui';
 
   import type { SpeciesCreate } from '~/shared/types';
-  import { SpeciesPreview } from '~species/preview';
 
   function getInitialState(): SpeciesCreate {
     return {

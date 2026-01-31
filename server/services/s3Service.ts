@@ -5,7 +5,7 @@ import ms from 'ms';
 import type { GetObjectCommandOutput } from '@aws-sdk/client-s3';
 import type { S3UploadFile, S3UploadResponse } from '~~/server/types/s3';
 
-export const createS3Service = () => {
+export function createS3Service() {
   const { endpoint, region, accessKeyId, secretAccessKey, bucket } =
     getS3Secrets();
 
@@ -96,6 +96,6 @@ export const createS3Service = () => {
     upload,
     delete: remove,
   };
-};
+}
 
 export const S3Service = createS3Service();

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { cloneDeep } from 'lodash-es';
+  import { cloneDeep } from 'es-toolkit';
 
   import { FilterList } from '../list';
 

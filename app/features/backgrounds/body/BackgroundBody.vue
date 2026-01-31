@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { StatsBlock, DescriptionsBlock } from './ui';
+  import { DescriptionsBlock, StatsBlock } from './ui';
 
   import type { BackgroundDetailResponse } from '~/shared/types';
 

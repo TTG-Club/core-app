@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import { SelectLevel } from '~ui/select';
   import { EditorArrayControls } from '~ui/editor';
+  import { SelectLevel } from '~ui/select';
+
   import type { ClassFeatureScalingCreate } from '~classes/types';
 
   const { isSubclass = false } = defineProps<{

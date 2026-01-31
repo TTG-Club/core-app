@@ -1,16 +1,17 @@
-import type { Component } from 'vue';
-
 import {
   MarkupBadge,
   MarkupHeading,
   MarkupKbd,
   MarkupLink,
-  MarkupQuote,
-  MarkupSectionLink,
-  MarkupTable,
   MarkupList,
+  MarkupQuote,
+  MarkupRoller,
+  MarkupSectionLink,
   MarkupSeparator,
+  MarkupTable,
 } from './ui';
+
+import type { Component } from 'vue';
 
 interface MarkerConfig {
   type: string;
@@ -37,6 +38,7 @@ export const MARKER_CONFIGS: MarkerConfig[] = [
   { type: 'link', component: MarkupLink, aliases: ['a', 'link'] },
   { type: 'kbd', component: MarkupKbd, aliases: ['kbd'] },
   { type: 'badge', component: MarkupBadge, aliases: ['badge'] },
+  { type: 'roll', component: MarkupRoller, aliases: ['dice'] },
 
   // Блочные элементы
   { type: 'heading', component: MarkupHeading, aliases: ['h'], isBlock: true },

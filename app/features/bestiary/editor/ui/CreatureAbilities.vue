@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import { ABILITIES } from '~/shared/types';
   import { SelectMastery } from '~ui/select';
+
+  import { ABILITIES } from '~/shared/types';
 
   import type { CreateAbilities } from '~bestiary/types';
 

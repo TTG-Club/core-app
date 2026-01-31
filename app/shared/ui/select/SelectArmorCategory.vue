@@ -16,7 +16,9 @@
   );
 
   const options = computed(() => {
-    if (!data.value) return [];
+    if (!data.value) {
+      return [];
+    }
 
     const disabled = !!model.value && !!limit && model.value.length >= limit;
 
@@ -26,13 +28,13 @@
     }));
   });
 
-  const handleDropdownOpening = (state: boolean) => {
+  function handleDropdownOpening(state: boolean) {
     if (!state) {
       return;
     }
 
     refresh();
-  };
+  }
 </script>
 
 <template>

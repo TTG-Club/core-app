@@ -1,5 +1,6 @@
-import type { MarkerType } from './config';
 import type { VNode } from 'vue';
+
+import type { MarkerType } from './config';
 
 export type MarkerAttributes = Record<string, string | number | boolean | null>;
 

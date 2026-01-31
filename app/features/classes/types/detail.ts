@@ -1,5 +1,7 @@
-import type { Level, NameResponse, SourceResponse } from '~/shared/types';
 import type { RenderNode } from '~ui/markup';
+
+import type { Level, NameResponse, SourceResponse } from '~/shared/types';
+
 import type { ClassLinkResponse } from './link';
 
 export interface ClassDetailResponse {

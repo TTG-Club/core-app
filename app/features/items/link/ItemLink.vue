@@ -1,10 +1,10 @@
 <script setup lang="ts">
+  import { ItemDrawer } from '~items/drawer';
   import { SmallLink } from '~ui/link';
 
-  import type { ItemLinkResponse } from '~/features/items/types';
-  import { ItemDrawer } from '~/features/items/drawer';
+  import type { ItemLinkResponse } from '~items/types';
 
-  const { item: item } = defineProps<{
+  const { item } = defineProps<{
     item: ItemLinkResponse;
   }>();
 

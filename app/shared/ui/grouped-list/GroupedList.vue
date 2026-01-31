@@ -6,25 +6,25 @@
 
   type GroupKey = string | number;
 
-  type Group<TItem> = {
+  interface Group<TItem> {
     key: GroupKey;
     items: Array<TItem>;
-  };
+  }
 
-  type GroupSortAuto = {
+  interface GroupSortAuto {
     mode: 'auto';
-  };
+  }
 
-  type GroupSortCustom = {
+  interface GroupSortCustom {
     mode: 'custom';
     order: Array<GroupKey>;
     unknown?: 'after' | 'before' | 'auto';
-  };
+  }
 
-  type GroupSortComparator = {
+  interface GroupSortComparator {
     mode: 'comparator';
     compare: (a: GroupKey, b: GroupKey) => number;
-  };
+  }
 
   type GroupSort = GroupSortAuto | GroupSortCustom | GroupSortComparator;
 
@@ -44,7 +44,7 @@
     groupSort = { mode: 'auto' },
   } = defineProps<Props>();
 
-  const upperFirst = (text: string): string => {
+  function upperFirst(text: string): string {
     if (!text) {
       return '';
     }
@@ -53,15 +53,15 @@
     const rest = text.slice(1);
 
     return `${firstChar}${rest}`;
-  };
+  }
 
-  const getComparableKey = (rawKey: string): GroupKey => {
+  function getComparableKey(rawKey: string): GroupKey {
     const numericKey = Number(rawKey);
 
     return Number.isNaN(numericKey) ? rawKey : numericKey;
-  };
+  }
 
-  const sortKeysAuto = (keys: Array<GroupKey>): Array<GroupKey> => {
+  function sortKeysAuto(keys: Array<GroupKey>): Array<GroupKey> {
     return [...keys].sort((a, b) => {
       if (typeof a === 'number' && typeof b === 'number') {
         return a - b;
@@ -69,12 +69,12 @@
 
       return String(a).localeCompare(String(b), undefined, { numeric: true });
     });
-  };
+  }
 
-  const sortKeysCustom = (
+  function sortKeysCustom(
     keys: Array<GroupKey>,
     sortConfig: GroupSortCustom,
-  ): Array<GroupKey> => {
+  ): Array<GroupKey> {
     const orderIndexByKeyText = new Map<string, number>();
 
     sortConfig.order.forEach((key, index) => {
@@ -122,9 +122,9 @@
     }
 
     return [...sortedKnown, ...unknownKeys];
-  };
+  }
 
-  const sortGroupKeys = (keys: Array<GroupKey>): Array<GroupKey> => {
+  function sortGroupKeys(keys: Array<GroupKey>): Array<GroupKey> {
     if (groupSort.mode === 'auto') {
       return sortKeysAuto(keys);
     }
@@ -134,7 +134,7 @@
     }
 
     return sortKeysCustom(keys, groupSort);
-  };
+  }
 
   const groupedItems = computed<Array<Group<T>>>(() => {
     if (!items.length || !field) {

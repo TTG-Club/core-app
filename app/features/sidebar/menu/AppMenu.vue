@@ -1,9 +1,9 @@
 <script setup lang="ts">
-  import { MENU_SUPPORT, MENU_LINKS, MENU_SECTIONS } from './model';
-  import { MenuSection, MenuContacts, MenuSupport } from './ui';
-
   import { SidebarPopover } from '~sidebar/popover';
   import { HamburgerIcon, SvgLogo } from '~ui/icon';
+
+  import { MENU_LINKS, MENU_SECTIONS, MENU_SUPPORT } from './model';
+  import { MenuContacts, MenuSection, MenuSupport } from './ui';
 </script>
 
 <template>

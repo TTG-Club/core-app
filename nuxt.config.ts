@@ -3,7 +3,6 @@
 import { fileURLToPath, URL } from 'node:url';
 
 import bytes from 'bytes';
-
 import ms from 'ms';
 
 const application = {
@@ -265,7 +264,7 @@ export default defineNuxtConfig({
         '@nuxt/ui/locale',
 
         // Утилиты
-        'lodash-es',
+        'es-toolkit',
         '@vueuse/core',
         '@nuxtjs/device',
 

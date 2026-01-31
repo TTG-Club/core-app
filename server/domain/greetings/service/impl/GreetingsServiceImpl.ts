@@ -1,8 +1,10 @@
-import { random } from 'lodash-es';
-import type { GreetingsResponse } from '../../dto';
-import { GreetingsRepository } from '../../repository';
-import type { GreetingsService } from '../GreetingsService';
+import { randomInt } from 'es-toolkit';
 import { StatusCodes } from 'http-status-codes';
+
+import { GreetingsRepository } from '../../repository';
+
+import type { GreetingsResponse } from '../../dto';
+import type { GreetingsService } from '../GreetingsService';
 
 class GreetingsServiceImpl implements GreetingsService {
   getRandomGreeting = (): GreetingsResponse => {
@@ -14,7 +16,7 @@ class GreetingsServiceImpl implements GreetingsService {
 
     const { image, messages } = character;
 
-    const messageIndex = random(0, messages.length - 1);
+    const messageIndex = randomInt(0, messages.length - 1);
     const message = messages[messageIndex];
 
     if (!message) {

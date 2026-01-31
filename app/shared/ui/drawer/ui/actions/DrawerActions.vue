@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import { useUserStore } from '~/shared/stores';
   import { CopyButton } from '~ui/copy-button';
+
+  import { useUserStore } from '~/shared/stores';
 
   defineEmits<{
     (e: 'close'): void;

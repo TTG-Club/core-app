@@ -1,15 +1,16 @@
 import { computed } from 'vue';
-import { useAsyncData } from '#app';
 
 import { DictionaryService } from '~/shared/api/dictionaries';
 
+import { useAsyncData } from '#app';
+
 type UnknownRecord = Record<string, unknown>;
 
-const isRecord = (value: unknown): value is UnknownRecord => {
+function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null;
-};
+}
 
-const extractLabels = (value: unknown): Array<string> => {
+function extractLabels(value: unknown): Array<string> {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -29,7 +30,7 @@ const extractLabels = (value: unknown): Array<string> => {
   });
 
   return labels;
-};
+}
 
 export function useChallengeRatingGroupOrder() {
   const { data, pending, error } = useAsyncData<Array<string>>(

@@ -1,13 +1,15 @@
 <script setup lang="ts">
+  import { sortBy } from 'es-toolkit';
   import { useGlobalSearch } from '~search/composable';
   import { SourceTag } from '~ui/source-tag';
+
   import {
     getPathBySearchItem,
     getTypeNameBySearchItem,
     SearchItems,
   } from './model';
+
   import type { GlobalSearchRes } from './model';
-  import { sortBy } from 'lodash-es';
 
   const { isOpen, close } = useGlobalSearch();
 
@@ -67,7 +69,7 @@
         })),
     }));
 
-    return sortBy(results, 'label');
+    return sortBy(results, ['label']);
   });
 
   const isLoading = computed(() => status.value === 'pending');

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import { SOCIAL_LINKS } from './model';
   import Color from 'colorjs.io';
+
+  import { SOCIAL_LINKS } from './model';
 
   const links = computed(() =>
     SOCIAL_LINKS.map((link) => {

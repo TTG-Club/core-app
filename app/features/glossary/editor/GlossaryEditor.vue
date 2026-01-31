@@ -1,9 +1,9 @@
 <script setup lang="ts">
+  import { z } from 'zod/v4';
+  import { GlossaryPreview } from '~glossary/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
 
   import type { GlossaryCreate } from '~/shared/types';
-  import { z } from 'zod/v4';
-  import { GlossaryPreview } from '~glossary/preview';
 
   const formRef = useTemplateRef('formRef');
 

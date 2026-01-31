@@ -1,27 +1,27 @@
 <script setup lang="ts">
-  import {
-    SpellCastingTimes,
-    SpellRanges,
-    SpellDurations,
-    SpellComponents,
-  } from './ui';
-
+  import { SpellPreview } from '~spells/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import {
     SelectAbilities,
-    SelectDamageType,
-    SelectHealType,
-    SelectSpellLevel,
-    SelectMagicSchool,
-    SelectSpecies,
-    SelectLineage,
-    SelectSubclass,
     SelectClass,
     SelectCondition,
+    SelectDamageType,
+    SelectHealType,
+    SelectLineage,
+    SelectMagicSchool,
+    SelectSpecies,
+    SelectSpellLevel,
+    SelectSubclass,
   } from '~ui/select';
 
+  import {
+    SpellCastingTimes,
+    SpellComponents,
+    SpellDurations,
+    SpellRanges,
+  } from './ui';
+
   import type { SpellCreate } from '~/shared/types';
-  import { SpellPreview } from '~spells/preview';
 
   function getInitialState(): SpellCreate {
     return {

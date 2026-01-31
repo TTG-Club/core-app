@@ -1,7 +1,8 @@
 <script setup lang="ts">
   import bytes from 'bytes';
-  import { toNumber } from 'lodash-es';
+
   import { getStatusMessage } from '#shared/utils';
+
   import type { UploadResponse } from '~/shared/types';
 
   const { section, maxSize = undefined } = defineProps<{
@@ -12,11 +13,13 @@
     maxSize?: string | number;
   }>();
 
-  if (typeof maxSize === 'string' && !/\d+/.test(maxSize)) {
-    throw new Error('maxSize must be a Number or number in String');
+  const maxSizeConverted = Number(maxSize);
+
+  if (!Number.isFinite(maxSizeConverted)) {
+    throw new TypeError('maxSize must be a Number or number in String');
   }
 
-  if (maxSize && toNumber(maxSize) > 2048) {
+  if (maxSizeConverted > 2048) {
     throw new Error('maxSize must be lower or equal to 2048');
   }
 
@@ -181,6 +184,8 @@
   }
 
   function onError(error: Error, statusCode: number) {
+    console.error(error);
+
     $toast.add({
       color: 'error',
       title: 'Ошибка при загрузке файла',
@@ -191,11 +196,15 @@
   async function handleFiles(files: File[] | FileList) {
     const file = Array.from(files)[0];
 
-    if (!file) return;
+    if (!file) {
+      return;
+    }
 
     const isValid = await beforeUpload(file);
 
-    if (!isValid) return;
+    if (!isValid) {
+      return;
+    }
 
     isImageLoading.value = true;
 

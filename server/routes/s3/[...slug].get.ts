@@ -1,5 +1,4 @@
 import { StatusCodes } from 'http-status-codes';
-
 import { S3Service } from '~~/server/services';
 
 export default defineEventHandler(async (event) => {

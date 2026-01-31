@@ -1,11 +1,11 @@
 <script setup lang="ts">
+  import { ClassLink } from '~classes/link';
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
-  import { ClassLink } from '~classes/link';
   import { PageGrid, PageResult } from '~ui/page';
+  import { SkeletonLinkBig } from '~ui/skeleton';
 
   import type { ClassLinkResponse } from '~classes/types';
-  import { SkeletonLinkBig } from '~ui/skeleton';
 
   useSeoMeta({
     title: 'Классы [Classes]',

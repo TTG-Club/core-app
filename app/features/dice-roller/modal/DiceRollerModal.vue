@@ -1,0 +1,207 @@
+<script setup lang="ts">
+  import {
+    useDiceRoller,
+    useDiceRollerHistory,
+    useDiceRollerState,
+  } from '../composables';
+  import {
+    DICE_MODAL_INITIAL_HEIGHT,
+    DICE_MODAL_MAX_HEIGHT_RATIO,
+    DICE_MODAL_MIN_HEIGHT,
+  } from '../const';
+  import {
+    extractDiceRollDetails,
+    extractRollValue,
+    formatDiceDetailsSummary,
+  } from '../utils';
+
+  import {
+    DiceRollerComposer,
+    DiceRollerHeader,
+    DiceRollerHelpPopover,
+    DiceRollerHistoryItem,
+    DiceRollerHistoryList,
+    DiceRollerResizeHandle,
+  } from './ui';
+
+  const {
+    history,
+    isOpen,
+    formula,
+    result,
+    details,
+    incrementResultKey,
+    addHistoryEntry,
+    closeModal,
+  } = useDiceRollerState();
+
+  const { validateWithError, roll } = useDiceRoller();
+
+  const historyScrollElement = shallowRef<HTMLElement | null>(null);
+
+  const { loadHistory, clearHistory } = useDiceRollerHistory({
+    history,
+    historyScrollElement,
+    isModalOpen: isOpen,
+  });
+
+  onMounted(async () => {
+    await loadHistory();
+  });
+
+  function handleRollError(message: string, formulaValue: string) {
+    result.value = `Ошибка: ${message}`;
+    details.value = [];
+    incrementResultKey();
+
+    addHistoryEntry({
+      formula: formulaValue,
+      value: message,
+      isError: true,
+    });
+  }
+
+  function executeRoll() {
+    const formulaValue = formula.value.trim();
+
+    if (!formulaValue) {
+      handleRollError('Введите формулу', formulaValue);
+
+      return;
+    }
+
+    try {
+      const { valid, error: validationError } = validateWithError(formulaValue);
+
+      if (!valid) {
+        handleRollError(
+          validationError || 'Некорректная формула',
+          formulaValue,
+        );
+
+        return;
+      }
+
+      const rollResult = roll(formulaValue);
+      const numericValue = extractRollValue(rollResult);
+
+      result.value = Number.isFinite(numericValue)
+        ? numericValue.toLocaleString('ru-RU')
+        : String(numericValue);
+
+      details.value = extractDiceRollDetails(rollResult);
+
+      incrementResultKey();
+
+      addHistoryEntry({
+        formula: formulaValue,
+        value: result.value,
+        isError: false,
+        detail: formatDiceDetailsSummary(details.value),
+        structuredDetails: details.value,
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Неизвестная ошибка';
+
+      const displayError = errorMessage.startsWith('Expected')
+        ? 'Некорректная формула'
+        : errorMessage;
+
+      handleRollError(displayError, formulaValue);
+    }
+  }
+
+  const { smaller } = useBreakpoints();
+  const isMobile = smaller(Breakpoint.MD);
+
+  // Typecasting the template ref as a component to access its $el
+  const resizeHandleComponent = useTemplateRef<{ $el: HTMLElement }>(
+    'resizeHandle',
+  );
+
+  const resizeHandleElement = computed(
+    () => resizeHandleComponent.value?.$el || null,
+  );
+
+  const { height: modalHeight } = useResizableHeight({
+    handleElement: resizeHandleElement,
+    minHeight: DICE_MODAL_MIN_HEIGHT,
+    maxHeightRatio: DICE_MODAL_MAX_HEIGHT_RATIO,
+    initialHeight: DICE_MODAL_INITIAL_HEIGHT,
+    disabled: isMobile,
+  });
+
+  const isScrollLocked = useScrollLock(window);
+
+  watchEffect(() => {
+    isScrollLocked.value = isMobile.value && isOpen.value;
+  });
+</script>
+
+<template>
+  <Transition
+    enter-active-class="transition duration-300 ease-out"
+    enter-from-class="opacity-0"
+    enter-to-class="opacity-100"
+    leave-active-class="transition duration-200 ease-in"
+    leave-from-class="opacity-100"
+    leave-to-class="opacity-0"
+  >
+    <div
+      v-if="isMobile && isOpen"
+      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm"
+      @click.left.exact.prevent="closeModal()"
+    />
+  </Transition>
+
+  <Transition
+    enter-active-class="transition duration-300 ease-out"
+    enter-from-class="opacity-0 translate-y-4 scale-95"
+    enter-to-class="opacity-100 translate-y-0 scale-100"
+    leave-active-class="transition duration-200 ease-in"
+    leave-from-class="opacity-100 translate-y-0 scale-100"
+    leave-to-class="opacity-0 translate-y-4 scale-95"
+  >
+    <div
+      v-if="isOpen"
+      class="fixed inset-x-4 top-4 bottom-20 md:inset-auto md:right-4 md:bottom-20 md:w-96"
+    >
+      <div
+        class="relative flex flex-col overflow-hidden rounded-md border border-default bg-elevated shadow-2xl backdrop-blur-md"
+        :style="{
+          height: isMobile ? '100%' : `${modalHeight}px`,
+        }"
+      >
+        <DiceRollerResizeHandle
+          v-if="!isMobile"
+          ref="resizeHandle"
+        />
+
+        <DiceRollerHeader
+          @clear="clearHistory"
+          @close="closeModal"
+        />
+
+        <DiceRollerHistoryList
+          v-if="history"
+          v-model:scroll-element="historyScrollElement"
+          :history="history"
+        >
+          <template #item="{ entry }">
+            <DiceRollerHistoryItem
+              :key="entry.id"
+              :entry="entry"
+            />
+          </template>
+        </DiceRollerHistoryList>
+
+        <DiceRollerComposer @submit="executeRoll">
+          <template #help>
+            <DiceRollerHelpPopover />
+          </template>
+        </DiceRollerComposer>
+      </div>
+    </div>
+  </Transition>
+</template>

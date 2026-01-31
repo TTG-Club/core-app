@@ -1,5 +1,6 @@
-import type { SearchItemsType } from './const';
 import type { SourceResponse } from '~/shared/types';
+
+import type { SearchItemsType } from './const';
 
 export interface GlobalSearchItem {
   url: string;

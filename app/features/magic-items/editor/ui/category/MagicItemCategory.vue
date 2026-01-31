@@ -11,7 +11,7 @@
     model.value.type = value;
 
     model.value.clarification =
-      model.value.type != value ? undefined : model.value.clarification;
+      model.value.type !== value ? undefined : model.value.clarification;
   }
 </script>
 

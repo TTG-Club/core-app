@@ -1,6 +1,6 @@
 import { SearchPalette } from '~search/palette';
 
-export const useGlobalSearch = () => {
+export function useGlobalSearch() {
   const overlay = useOverlay();
   const modal = overlay.create(SearchPalette);
 
@@ -24,4 +24,4 @@ export const useGlobalSearch = () => {
     close,
     open,
   };
-};
+}

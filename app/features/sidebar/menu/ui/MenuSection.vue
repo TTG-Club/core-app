@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import { isArray } from 'lodash-es';
-
   import { useUserStore } from '~/shared/stores';
 
   import type { Role } from '~/shared/types';
@@ -19,7 +17,7 @@
 
   const links = computed(() =>
     items.map((link) => {
-      if (!isArray(link.roles)) {
+      if (!Array.isArray(link.roles)) {
         return link;
       }
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import type { RoadmapRequest } from '~roadmap/types';
   import { RoadmapPreview } from '~roadmap/preview';
+
+  import type { RoadmapRequest } from '~roadmap/types';
 
   const { url = undefined } = defineProps<{
     url?: string;

@@ -1,9 +1,11 @@
 <script setup lang="ts">
-  import 'assets/css/index.scss';
-  import { ru } from '#ui/locale';
   import { PwaConfig } from '~pwa/config';
 
+  import { ru } from '#ui/locale';
+
   import type { NuxtError } from '#app';
+
+  import 'assets/css/index.scss';
 
   const { error } = defineProps<{
     error: NuxtError;
@@ -17,17 +19,17 @@
     },
   });
 
-  const handleError = () => {
+  function handleError() {
     clearError();
 
     window.location.href = '/';
-  };
+  }
 
-  const reload = () => {
+  function reload() {
     clearError();
 
     window.location.reload();
-  };
+  }
 </script>
 
 <template>

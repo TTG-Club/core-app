@@ -1,11 +1,11 @@
 <script setup lang="ts">
-  import { ItemType, CoinsType } from './ui';
-
+  import { ItemPreview } from '~items/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { UploadImage } from '~ui/upload';
 
+  import { CoinsType, ItemType } from './ui';
+
   import type { ItemCreate } from '~items/types';
-  import { ItemPreview } from '~items/preview';
 
   function getInitialState(): ItemCreate {
     return {

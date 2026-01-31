@@ -1,9 +1,9 @@
 <script setup lang="ts">
+  import { FeatPreview } from '~feats/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectAbilities, SelectFeatCategory } from '~ui/select';
 
   import type { FeatCreate } from '~/shared/types';
-  import { FeatPreview } from '~feats/preview';
 
   const formRef = useTemplateRef('formRef');
 

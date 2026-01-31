@@ -1,7 +1,7 @@
 <script setup lang="ts">
+  import { FeatLink } from '~feats/link';
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
-  import { FeatLink } from '~feats/link';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';

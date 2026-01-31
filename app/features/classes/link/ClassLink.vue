@@ -1,8 +1,9 @@
 <script setup lang="ts">
+  import { CardLink } from '~ui/link';
+
   import { LinkPreview, LinkSubclasses } from './ui';
 
   import type { ClassLinkResponse } from '~classes/types';
-  import { CardLink } from '~ui/link';
 
   const { characterClass } = defineProps<{
     characterClass: ClassLinkResponse;

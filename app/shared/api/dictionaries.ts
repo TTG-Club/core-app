@@ -1,13 +1,14 @@
 import type { NitroFetchOptions, NitroFetchRequest } from 'nitropack';
+
 import type {
   AbilitySelectOption,
+  ArmorCategorySelectOption,
+  CasterSelectOption,
+  ChallengeRatingSelectOption,
+  DiceSelectOption,
   SelectOption,
   SelectOptionWithMeasurable,
-  ChallengeRatingSelectOption,
   SkillSelectOption,
-  DiceSelectOption,
-  CasterSelectOption,
-  ArmorCategorySelectOption,
 } from '~/shared/types';
 
 // Эндпоинты API

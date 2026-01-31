@@ -21,10 +21,11 @@ const iconAvailList = Object.fromEntries(
 
 const icons = Object.keys(iconAvailList);
 
-const isIconExist = (path: string | null | undefined): path is string =>
-  !!path && Boolean(iconAvailList[path]);
+function isIconExist(path: string | null | undefined): path is string {
+  return !!path && Boolean(iconAvailList[path]);
+}
 
-const getIconName = (path: string) => {
+function getIconName(path: string) {
   if (isIconExist(path)) {
     const name = path.replace(/\//g, '-');
 
@@ -34,6 +35,6 @@ const getIconName = (path: string) => {
   console.error(`[SvgIcon]: icon "${String(path)}" not found.`);
 
   return undefined;
-};
+}
 
-export { icons, iconAvailList, isIconExist, getIconName };
+export { getIconName, iconAvailList, icons, isIconExist };

@@ -1,16 +1,20 @@
 <script setup lang="ts">
-  import { computed, type VNode, type DefineComponent } from 'vue';
-  import type { MarkerNode, RenderNode } from '../types';
-  import type { MarkerType } from '../config';
-  import { ULink } from '#components';
+  import { computed } from 'vue';
   import { BackgroundDrawer } from '~backgrounds/drawer';
   import { CreatureDrawer } from '~bestiary/drawer';
+  import { ClassDrawer } from '~classes/drawer';
   import { FeatDrawer } from '~feats/drawer';
   import { GlossaryDrawer } from '~glossary/drawer';
-  import { MagicItemDrawer } from '~magic-items/drawer';
   import { ItemDrawer } from '~items/drawer';
+  import { MagicItemDrawer } from '~magic-items/drawer';
   import { SpellDrawer } from '~spells/drawer';
-  import { ClassDrawer } from '~classes/drawer';
+
+  import { ULink } from '#components';
+
+  import type { DefineComponent, VNode } from 'vue';
+
+  import type { MarkerType } from '../config';
+  import type { MarkerNode, RenderNode } from '../types';
 
   const { node, renderNodes } = defineProps<{
     node: MarkerNode;

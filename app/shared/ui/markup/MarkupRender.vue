@@ -1,8 +1,10 @@
 <script setup lang="ts">
   import { computed } from 'vue';
+
   import { render } from './renderer';
-  import type { Group, RenderNode, RenderResult } from './types';
   import { isBlockNode } from './utils';
+
+  import type { Group, RenderNode, RenderResult } from './types';
 
   const { renderNode } = defineProps<{
     renderNode: RenderNode;

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-  import { UiDrawer } from '~ui/drawer';
-  import type { GlossaryDetailResponse, GlossaryCreate } from '~/shared/types';
   import { GlossaryBody } from '~glossary/body';
+  import { UiDrawer } from '~ui/drawer';
+
+  import type { GlossaryCreate, GlossaryDetailResponse } from '~/shared/types';
 
   const opened = defineModel<boolean>('open', { required: true });
 

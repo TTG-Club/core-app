@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { SignIn, SignUp } from './ui';
-
   import { UButton } from '#components';
+
+  import { SignIn, SignUp } from './ui';
 
   const enum FormType {
     SIGN_IN = 'signIn',
@@ -23,12 +23,12 @@
   //   () => formType.value === FormType.CHANGE_PASSWORD,
   // );
 
-  const close = () => {
+  function close() {
     opened.value = false;
     formType.value = FormType.SIGN_IN;
-  };
+  }
 
-  const showEmailVerifiedNotify = () => {
+  function showEmailVerifiedNotify() {
     if (!emailVerified.value) {
       return;
     }
@@ -54,7 +54,7 @@
         },
       ],
     });
-  };
+  }
 
   onMounted(() => showEmailVerifiedNotify());
 

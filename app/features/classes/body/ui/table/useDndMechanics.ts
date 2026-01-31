@@ -1,5 +1,6 @@
 import { computed } from 'vue';
 import { CasterType } from '~classes/types';
+
 import {
   FULL_CASTER_SPELL_SLOTS,
   HALF_CASTER_SPELL_SLOTS,

@@ -1,6 +1,7 @@
 <script setup lang="ts">
+  import { isEqual } from 'es-toolkit';
   import { SelectCreatureType } from '~ui/select';
-  import { isEqual } from 'lodash-es';
+
   import type { CreatureTypes } from '~bestiary/types';
 
   const model = defineModel<CreatureTypes>({

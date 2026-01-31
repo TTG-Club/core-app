@@ -1,8 +1,9 @@
 <script setup lang="ts">
+  import { MarkupRender } from '~ui/markup';
+
   import { CreatureAbilitiesTable } from './ui';
 
   import type { CreatureDetailResponse } from '~bestiary/types';
-  import { MarkupRender } from '~ui/markup';
 
   defineProps<
     Pick<

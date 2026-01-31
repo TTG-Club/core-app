@@ -1,16 +1,15 @@
 <script setup lang="ts">
-  import { isArray } from 'lodash-es';
+  import { useUserStore } from '~/shared/stores';
 
-  import { CARD_LINKS } from './model';
   import { LinkTo5e14 } from '../link-to-5e14';
 
-  import { useUserStore } from '~/shared/stores';
+  import { CARD_LINKS } from './model';
 
   const { user } = storeToRefs(useUserStore());
 
   const sections = computed(() =>
     CARD_LINKS.map((link) => {
-      if (!isArray(link.roles)) {
+      if (!Array.isArray(link.roles)) {
         return link;
       }
 
@@ -32,7 +31,7 @@
     class="grid w-full grid-cols-1 gap-3 xl:grid-cols-6"
   >
     <div
-      class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:col-span-5 xl:row-span-2 xl:grid-cols-5"
+      class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:col-span-5 xl:row-span-2 xl:grid-cols-5"
     >
       <NuxtLink
         v-for="(link, index) in sections"

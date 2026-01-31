@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { PageLegend } from '~ui/page';
+
   import type { LegendItems } from '~ui/page';
 
   const items: LegendItems = [

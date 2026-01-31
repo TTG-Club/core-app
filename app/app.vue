@@ -1,9 +1,11 @@
 <script setup lang="ts">
-  import '~/assets/css/index.scss';
   import { ru } from '@nuxt/ui/locale';
-
+  import { DiceRollerFloatButton } from '~dice-roller/float-button';
+  import { DiceRollerModal } from '~dice-roller/modal';
   import { PwaConfig } from '~pwa/config';
   import { SidebarPanel } from '~sidebar/panel';
+
+  import '~/assets/css/index.scss';
 
   const { name } = useTheme();
 
@@ -37,6 +39,14 @@
       <div class="min-h-dvh w-full">
         <NuxtPage />
       </div>
+
+      <ClientOnly>
+        <Teleport to="body">
+          <DiceRollerFloatButton />
+
+          <DiceRollerModal />
+        </Teleport>
+      </ClientOnly>
     </div>
   </UApp>
 </template>

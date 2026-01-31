@@ -1,12 +1,18 @@
 <script setup lang="ts">
-  import { computed, h, type VNode } from 'vue';
   import {
-    type ColumnDef,
     createColumnHelper,
     FlexRender,
     getCoreRowModel,
     useVueTable,
   } from '@tanstack/vue-table';
+  import { defineComponent, h, provide } from 'vue';
+  import { useDiceRollerState } from '~dice-roller/composables';
+
+  import { getNodeText, normalizeRenderNodes } from '../utils';
+
+  import type { ColumnDef } from '@tanstack/vue-table';
+  import type { VNode } from 'vue';
+
   import type { MarkerNode, RenderNode } from '../types';
 
   interface TableCell {
@@ -20,11 +26,22 @@
   }
 
   interface TableNode extends MarkerNode {
-    caption?: string;
-    colLabels?: string[];
+    caption?: RenderNode;
+    colLabels?: RenderNode[];
     colStyles?: string[];
     rows?: any[][];
   }
+
+  const TableHeaderContext = defineComponent({
+    props: {
+      tableId: { type: String, required: true },
+    },
+    setup(props, { slots }) {
+      provide('dice-roller:table-id', props.tableId);
+
+      return () => slots.default?.();
+    },
+  });
 
   const { node, renderNodes } = defineProps<{
     node: TableNode;
@@ -32,22 +49,126 @@
   }>();
 
   const colCount = computed(() => {
-    if (node.colLabels?.length) return node.colLabels.length;
-    if (!node.rows || node.rows.length === 0) return 0;
+    if (node.colLabels?.length) {
+      return node.colLabels.length;
+    }
+
+    if (!node.rows || node.rows.length === 0) {
+      return 0;
+    }
 
     return Math.max(...node.rows.map((row) => row.length));
   });
 
-  const labels = computed(() => {
-    if (node.colLabels) return node.colLabels;
+  const labels = computed<RenderNode[]>(() => {
+    if (node.colLabels) {
+      return node.colLabels;
+    }
 
     return Array.from({ length: colCount.value }, (_, i) => `#${i + 1}`);
   });
 
+  const captionNodes = computed(() => {
+    const captionSource = node.caption || node.content;
+
+    if (!captionSource) {
+      return [];
+    }
+
+    const normalized = Array.isArray(captionSource)
+      ? captionSource
+      : [captionSource];
+
+    return renderNodes(normalized);
+  });
+
   const tableData = computed<TableRowData[]>(() => {
-    if (!node.rows || node.rows.length === 0) return [];
+    if (!node.rows || node.rows.length === 0) {
+      return [];
+    }
 
     return node.rows.map((cells, index) => ({ cells, index }));
+  });
+
+  const activeRowIndex = ref<number | null>(null);
+
+  function parseCellNumber(val: string): number {
+    const trimmed = val.trim();
+
+    if (trimmed === '00') {
+      return 100;
+    }
+
+    return Number.parseInt(trimmed, 10);
+  }
+
+  function checkValueMatch(text: string, rollValue: number): boolean {
+    const cleanText = text.trim();
+
+    // Проверка диапазона (например, "01-40", "41-75")
+    // Поддержка различных видов тире: - (дефис), – (en dash), — (em dash)
+    const rangeMatch = cleanText.match(/^(\d+)\s*[-–—]\s*(\d+)$/);
+
+    if (rangeMatch) {
+      const min = parseCellNumber(rangeMatch[1] || '');
+      const max = parseCellNumber(rangeMatch[2] || '');
+
+      return rollValue >= min && rollValue <= max;
+    }
+
+    // Проверка одиночного числа
+    const singleMatch = cleanText.match(/^(\d+)$/);
+
+    if (singleMatch) {
+      const val = parseCellNumber(singleMatch[1] || '');
+
+      return rollValue === val;
+    }
+
+    return false;
+  }
+
+  function handleTableRoll(value: number) {
+    if (!Number.isFinite(value)) {
+      activeRowIndex.value = null;
+
+      return;
+    }
+
+    const numericValue = Math.round(value);
+
+    // Ищем строку, где значение в первой ячейке соответствует броску
+    const matchIndex = tableData.value.findIndex((row) => {
+      const firstCell = row.cells[0];
+
+      if (firstCell === undefined) {
+        return false;
+      }
+
+      const cell = normalizeCell(firstCell);
+      const text = getNodeText(cell.content);
+
+      return checkValueMatch(text, numericValue);
+    });
+
+    if (matchIndex !== -1) {
+      activeRowIndex.value = matchIndex;
+    } else {
+      activeRowIndex.value = null;
+    }
+  }
+
+  const tableId = useId();
+
+  const { registerTableRollCallback, unregisterTableRollCallback } =
+    useDiceRollerState();
+
+  onMounted(() => {
+    registerTableRollCallback(tableId, handleTableRoll);
+  });
+
+  onUnmounted(() => {
+    unregisterTableRollCallback(tableId);
   });
 
   function isRenderNode(value: unknown): value is RenderNode {
@@ -96,16 +217,32 @@
   const columnHelper = createColumnHelper<TableRowData>();
 
   const columns = computed<ColumnDef<TableRowData>[]>(() => {
-    if (colCount.value === 0) return [];
+    if (colCount.value === 0) {
+      return [];
+    }
 
     return Array.from({ length: colCount.value }, (_, columnIndex) =>
       columnHelper.display({
         id: `c${columnIndex}`,
-        header: labels.value[columnIndex],
+        header: () => {
+          const headerValue = labels.value[columnIndex] ?? '';
+          const nodes = normalizeRenderNodes(headerValue);
+
+          // Только первая колонка (с диапазонами бросков) должна триггерить подсветку
+          if (columnIndex === 0) {
+            return h(TableHeaderContext, { tableId }, () =>
+              h('span', renderNodes(nodes)),
+            );
+          }
+
+          return h('span', renderNodes(nodes));
+        },
         cell: (ctx) => {
           const rawCell = ctx.row.original.cells[columnIndex];
 
-          if (rawCell === undefined) return undefined;
+          if (rawCell === undefined) {
+            return undefined;
+          }
 
           const cell = normalizeCell(rawCell);
           const content = renderCellContent(cell);
@@ -139,12 +276,14 @@
   <div class="w-full overflow-x-auto rounded-lg border border-default bg-muted">
     <table class="min-w-full border-collapse">
       <caption
-        v-if="node.caption"
+        v-if="captionNodes.length"
         class="py-2 text-sm font-medium text-highlighted"
       >
-        {{
-          node.caption
-        }}
+        <component
+          :is="vnode"
+          v-for="(vnode, index) in captionNodes"
+          :key="index"
+        />
       </caption>
 
       <thead class="bg-elevated">
@@ -172,7 +311,10 @@
         <tr
           v-for="row in table.getRowModel().rows"
           :key="row.id"
-          class="divide-x divide-default"
+          :class="[
+            'divide-x divide-default transition-colors',
+            row.original.index === activeRowIndex ? 'bg-success/10' : '',
+          ]"
         >
           <td
             v-for="(cell, index) in row.getVisibleCells()"

@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import { computed } from 'vue';
-
   import { useFilter } from '~filter/composable';
   import { FilterControls } from '~filter/controls';
   import { MagicItemLegend } from '~magic-items/legend';

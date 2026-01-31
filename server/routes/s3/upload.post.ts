@@ -1,8 +1,6 @@
 import { H3Error } from 'h3';
 import { StatusCodes } from 'http-status-codes';
-import { toSafeInteger } from 'lodash-es';
 import { z } from 'zod/v4';
-
 import { S3Service } from '~~/server/services';
 
 import type { EventHandlerRequest } from 'h3';
@@ -33,7 +31,12 @@ export default defineEventHandler<Request, Promise<S3UploadResponse>>(
     try {
       const query = await getValidatedQuery(event, requestSchema.parse);
 
-      maxSize = toSafeInteger(query?.maxSize);
+      maxSize = Number(query?.maxSize);
+
+      if (!Number.isFinite(maxSize)) {
+        maxSize = undefined;
+      }
+
       section = query?.section;
     } catch (err) {
       throw createError(

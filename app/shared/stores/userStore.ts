@@ -1,4 +1,5 @@
 import { Role } from '~/shared/types';
+
 import type { UserProfile } from '~/shared/types';
 
 export const useUserStore = defineStore('userStore', () => {

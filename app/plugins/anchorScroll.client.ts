@@ -1,4 +1,5 @@
 import type { RouteLocationNormalizedLoaded } from 'vue-router';
+
 import type { AnchorScrollOptions } from '~/shared/types';
 
 function executeScroll(route: RouteLocationNormalizedLoaded) {
@@ -11,7 +12,9 @@ function executeScroll(route: RouteLocationNormalizedLoaded) {
       ? { toAnchor: true, toTop: true }
       : (anchorScrollProps.disabled ?? {});
 
-  if (disableToAnchor && disableToTop) return;
+  if (disableToAnchor && disableToTop) {
+    return;
+  }
 
   const customOptions = route.meta.anchorScroll;
 
@@ -20,7 +23,9 @@ function executeScroll(route: RouteLocationNormalizedLoaded) {
     const options: AnchorScrollOptions | undefined = customOptions?.toAnchor;
     const success = scrollToAnchor(route.hash, options);
 
-    if (success) return;
+    if (success) {
+      return;
+    }
   }
 
   // Скролл наверх

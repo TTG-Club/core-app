@@ -1,26 +1,27 @@
 <script setup lang="ts">
-  import { computed, h, ref } from 'vue';
-  import type { Cell, ColumnDef, Header } from '@tanstack/vue-table';
   import {
     FlexRender,
     getCoreRowModel,
     useVueTable,
   } from '@tanstack/vue-table';
   import { useDebounceFn } from '@vueuse/core';
-  import {
-    CasterType,
-    type ClassDetailResponse,
-    type ClassFeature,
-  } from '~classes/types';
-  import { maxBy, omit, orderBy, range } from 'lodash-es';
-  import { useDndMechanics } from './useDndMechanics';
-  import { ULink } from '#components';
+  import { maxBy, omit, orderBy, range } from 'es-toolkit';
+  import { CasterType } from '~classes/types';
+
   import { LEVELS } from '~/shared/consts';
-  import type { Level } from '~/shared/types';
+
+  import { ULink } from '#components';
+
   import {
     PACT_CASTER_SPELL_SLOTS_COUNT,
     PACT_CASTER_SPELL_SLOTS_LEVEL,
   } from './const';
+  import { useDndMechanics } from './useDndMechanics';
+
+  import type { Cell, ColumnDef, Header } from '@tanstack/vue-table';
+  import type { ClassDetailResponse, ClassFeature } from '~classes/types';
+
+  import type { Level } from '~/shared/types';
 
   const props =
     defineProps<
@@ -71,7 +72,7 @@
     const list: Array<ClassFeature> = [];
 
     for (const feature of props.features) {
-      list.push(omit(feature, 'scaling'));
+      list.push(omit(feature, ['scaling']));
 
       if (feature.scaling) {
         list.push(
@@ -91,17 +92,21 @@
     level: Level,
     scalingArray: Array<{ level: number; value: string }> | undefined,
   ): string {
-    if (!scalingArray?.length) return '—';
+    if (!scalingArray?.length) {
+      return '—';
+    }
 
     const found = maxBy(
       scalingArray.filter((s) => s.level <= level),
-      'level',
+      (o) => o.level,
     );
 
     return found?.value ?? '—';
   }
 
-  const tableData = computed(() => orderBy(LEVELS.map(getLevelData), 'level'));
+  const tableData = computed(() =>
+    orderBy(LEVELS.map(getLevelData), ['level'], ['asc']),
+  );
 
   function getLevelData(level: Level) {
     const row: ClassTableRow = {

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-  import type { RoadmapItem } from '~roadmap/types';
   import { RoadmapDetail } from '~roadmap/detail';
   import { RatingWidget } from '~ui/rating';
+
+  import type { RoadmapItem } from '~roadmap/types';
 
   const { feature } = defineProps<{
     feature: RoadmapItem;

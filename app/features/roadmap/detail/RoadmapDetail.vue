@@ -1,8 +1,9 @@
 <script setup lang="ts">
-  import type { RoadmapItem } from '~roadmap/types';
-  import { MarkupRender } from '~ui/markup';
   import { RoadmapEditor } from '~roadmap/editor';
   import { UiDrawer } from '~ui/drawer';
+  import { MarkupRender } from '~ui/markup';
+
+  import type { RoadmapItem } from '~roadmap/types';
 
   const { feature } = defineProps<{
     feature: RoadmapItem;

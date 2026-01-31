@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { DescriptionsBlock, TopBar } from './ui';
-
   import { UiGallery } from '~ui/gallery';
+
+  import { DescriptionsBlock, TopBar } from './ui';
 
   import type { MagicItemDetailResponse } from '~magic-items/types';
 

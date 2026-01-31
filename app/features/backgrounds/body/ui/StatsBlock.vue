@@ -1,8 +1,8 @@
 <script setup lang="ts">
-  import { COMPONENT_TOOLTIP_TEXT } from '../model';
-
   import { MarkupRender } from '~ui/markup';
   import { InfoTooltip } from '~ui/tooltip';
+
+  import { COMPONENT_TOOLTIP_TEXT } from '../model';
 
   defineProps<{
     abilityScores: string;

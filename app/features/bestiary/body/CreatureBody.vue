@@ -1,22 +1,21 @@
 <script setup lang="ts">
-  import { StatsBlock, DescriptionsBlock, TopBar } from './ui';
-
+  import { pick } from 'es-toolkit';
+  import { UiAction } from '~ui/action';
+  import { UiCollapse } from '~ui/collapse';
   import { UiGallery } from '~ui/gallery';
   import { MarkupRender } from '~ui/markup';
   import { RatingWidget } from '~ui/rating';
-  import { UiCollapse } from '~ui/collapse';
 
-  import type { CreatureDetailResponse } from '~/features/bestiary/types';
-  import { pick } from 'lodash-es';
-  import { UiAction } from '~ui/action';
+  import { DescriptionsBlock, StatsBlock, TopBar } from './ui';
+
+  import type { CreatureDetailResponse } from '~bestiary/types';
 
   const { creature } = defineProps<{
     creature: CreatureDetailResponse;
   }>();
 
   const stats = computed(() =>
-    pick(
-      creature,
+    pick(creature, [
       'ac',
       'cr',
       'initiative',
@@ -30,7 +29,7 @@
       'immunity',
       'sense',
       'languages',
-    ),
+    ]),
   );
 
   const hasLair = computed(

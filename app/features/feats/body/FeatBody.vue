@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { TopBar, StatsBlock, DescriptionsBlock } from './ui';
+  import { DescriptionsBlock, StatsBlock, TopBar } from './ui';
 
   import type { FeatDetailResponse } from '~/shared/types';
 

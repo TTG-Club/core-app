@@ -1,6 +1,10 @@
 <script setup lang="ts">
-  import { computed, type VNode } from 'vue';
+  import { computed } from 'vue';
+
   import { UBadge } from '#components';
+
+  import type { VNode } from 'vue';
+
   import type { MarkerNode, RenderNode } from '../types';
 
   const { node, renderNodes } = defineProps<{
@@ -18,13 +22,33 @@
     | 'info'
     | 'warning'
     | 'neutral' {
-    if (color === 'error') return 'error';
-    if (color === 'primary') return 'primary';
-    if (color === 'secondary') return 'secondary';
-    if (color === 'success') return 'success';
-    if (color === 'info') return 'info';
-    if (color === 'warning') return 'warning';
-    if (color === 'neutral') return 'neutral';
+    if (color === 'error') {
+      return 'error';
+    }
+
+    if (color === 'primary') {
+      return 'primary';
+    }
+
+    if (color === 'secondary') {
+      return 'secondary';
+    }
+
+    if (color === 'success') {
+      return 'success';
+    }
+
+    if (color === 'info') {
+      return 'info';
+    }
+
+    if (color === 'warning') {
+      return 'warning';
+    }
+
+    if (color === 'neutral') {
+      return 'neutral';
+    }
 
     return 'neutral';
   }
@@ -32,10 +56,21 @@
   function validateVariant(
     variant: string | number | boolean | null | undefined,
   ): 'solid' | 'outline' | 'soft' | 'subtle' {
-    if (variant === 'solid') return 'solid';
-    if (variant === 'outline') return 'outline';
-    if (variant === 'soft') return 'soft';
-    if (variant === 'subtle') return 'subtle';
+    if (variant === 'solid') {
+      return 'solid';
+    }
+
+    if (variant === 'outline') {
+      return 'outline';
+    }
+
+    if (variant === 'soft') {
+      return 'soft';
+    }
+
+    if (variant === 'subtle') {
+      return 'subtle';
+    }
 
     return 'soft';
   }
@@ -43,9 +78,17 @@
   function validateSize(
     size: string | number | boolean | null | undefined,
   ): 'sm' | 'md' | 'lg' {
-    if (size === 'sm') return 'sm';
-    if (size === 'md') return 'md';
-    if (size === 'lg') return 'lg';
+    if (size === 'sm') {
+      return 'sm';
+    }
+
+    if (size === 'md') {
+      return 'md';
+    }
+
+    if (size === 'lg') {
+      return 'lg';
+    }
 
     return 'md';
   }

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-  import { useRafFn, useDebounceFn } from '@vueuse/core';
+  import { useDebounceFn, useRafFn } from '@vueuse/core';
   import { ref, watch } from 'vue';
 
   // Простая реализация линейной интерполяции
@@ -22,7 +22,7 @@
   }
 
   try {
-    new Intl.NumberFormat(locale);
+    Intl.NumberFormat(locale);
   } catch (e) {
     throw new Error('[AnimatedNumber] Невалидное значение локали');
   }
@@ -45,7 +45,9 @@
 
     const { pause, resume } = useRafFn(
       ({ timestamp }: { timestamp: number }) => {
-        if (!startTime) startTime = timestamp;
+        if (!startTime) {
+          startTime = timestamp;
+        }
 
         const progress = Math.min((timestamp - startTime) / duration, 1);
 

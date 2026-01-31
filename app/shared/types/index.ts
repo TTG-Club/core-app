@@ -1,15 +1,8 @@
-export * from './character';
-
-export * from './composable';
-
-export * from './wiki';
-
-export * from './base';
-
-export * from './user';
-
-export * from './upload';
-
-export * from './dictionaries';
-
 export * from './abilities';
+export * from './base';
+export * from './character';
+export * from './composable';
+export * from './dictionaries';
+export * from './upload';
+export * from './user';
+export * from './wiki';

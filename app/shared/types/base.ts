@@ -5,10 +5,10 @@ export interface NameResponse {
   eng: string;
 }
 
-export type SourceGroupResponse = {
+export interface SourceGroupResponse {
   rus: string;
   label: string;
-};
+}
 
 export interface SourceResponse {
   name: {

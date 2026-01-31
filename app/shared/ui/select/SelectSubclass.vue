@@ -1,12 +1,12 @@
 <script setup lang="ts">
   import type { ClassLinkResponse } from '~classes/types';
 
-  type SubclassSelectItem = {
+  interface SubclassSelectItem {
     label: string;
     value: string;
     description: string;
     source: string;
-  };
+  }
 
   const { multiple = false, disabled } = defineProps<{
     disabled?: boolean;

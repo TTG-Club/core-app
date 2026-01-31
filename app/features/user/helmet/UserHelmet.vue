@@ -1,7 +1,8 @@
 <script setup lang="ts">
-  import { useUserStore } from '~/shared/stores';
-  import { AuthModal } from '~user/auth-modal';
   import { KbdShortcut } from '~ui/kbd-shortcut';
+  import { AuthModal } from '~user/auth-modal';
+
+  import { useUserStore } from '~/shared/stores';
 
   const userStore = useUserStore();
   const { isAdmin } = useUserRoles();
@@ -137,7 +138,7 @@
               size="lg"
               class="w-full"
               icon="i-ttg-settings"
-              @click="openProfile"
+              @click.left.exact.prevent="openProfile"
             >
               Настройка профиля
             </UButton>
@@ -149,7 +150,7 @@
               variant="ghost"
               class="w-full"
               size="lg"
-              @click="openWorkshop"
+              @click.left.exact.prevent="openWorkshop"
             >
               <div class="flex w-full items-center justify-between">
                 <span>Мастерская</span>
@@ -168,7 +169,7 @@
               variant="ghost"
               color="error"
               size="lg"
-              @click="logout"
+              @click.left.exact.prevent="logout"
             >
               Выход
             </UButton>

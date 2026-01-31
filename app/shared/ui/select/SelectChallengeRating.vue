@@ -24,13 +24,13 @@
     })),
   );
 
-  const handleDropdownOpening = (state: boolean) => {
+  function handleDropdownOpening(state: boolean) {
     if (!data.value?.length && !state) {
       return;
     }
 
     refresh();
-  };
+  }
 </script>
 
 <template>

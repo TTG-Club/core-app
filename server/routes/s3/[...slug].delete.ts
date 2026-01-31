@@ -1,8 +1,9 @@
 import { StatusCodes } from 'http-status-codes';
-
 import { S3Service } from '~~/server/services';
-import type { H3Event } from 'h3';
+
 import { Role } from '~/shared/types';
+
+import type { H3Event } from 'h3';
 
 export default defineEventHandler((event) => {
   const slug = getRouterParam(event, 'slug');

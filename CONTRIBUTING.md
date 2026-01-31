@@ -47,6 +47,7 @@ If you do not agree to these terms, please **do not submit a Pull Request**.
 Для удобства ведения истории изменений и их отслеживания, все коммиты должны соответствовать формату [Conventional Commits](https://www.conventionalcommits.org/ru/v1.0.0/). Пожалуйста, следуйте этим правилам:
 
 - Формат заголовка коммита:
+
   ```markdown
   <тип>[опционально: область]: <краткое описание>
   ```
@@ -63,6 +64,7 @@ If you do not agree to these terms, please **do not submit a Pull Request**.
 To maintain a clean and consistent history of changes, all commits must follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format. Please adhere to the following rules:
 
 - Commit header format:
+
   ```markdown
   <type>[optional scope]: <short description>
   ```

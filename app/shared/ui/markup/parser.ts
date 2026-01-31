@@ -1,12 +1,13 @@
-import { LEADING_CHARACTER, MAX_DEPTH, MAX_STRING_LENGTH } from './consts';
 import { MARKER_ALIASES, MARKER_MAP } from './config';
+import { LEADING_CHARACTER, MAX_DEPTH, MAX_STRING_LENGTH } from './consts';
+import { logError } from './utils';
+
 import type {
-  RenderNode,
-  MarkerNode,
   MarkerAttributes,
+  MarkerNode,
+  RenderNode,
   SimpleTextNode,
 } from './types';
-import { logError } from './utils';
 
 export function parse(text: string): RenderNode[] {
   if (text.length > MAX_STRING_LENGTH) {
@@ -130,7 +131,7 @@ function splitByMarkers(source: string): string[] {
         acc = '';
       }
 
-      acc += '{' + LEADING_CHARACTER;
+      acc += `{${LEADING_CHARACTER}`;
       i++;
 
       continue;
@@ -151,7 +152,9 @@ function splitByMarkers(source: string): string[] {
     acc += source[i];
   }
 
-  if (acc) result.push(acc);
+  if (acc) {
+    result.push(acc);
+  }
 
   return result;
 }
@@ -170,7 +173,7 @@ function splitByPipeBase(input: string): { text?: string; params: string[] } {
 
     if (isMarkerOpen) {
       level++;
-      acc += '{' + LEADING_CHARACTER;
+      acc += `{${LEADING_CHARACTER}`;
       i++;
 
       continue;
@@ -225,7 +228,9 @@ function splitFirstSpace(string: string): { text: string; rest: string } {
 }
 
 function splitAttrs(params: string[]): MarkerAttributes | undefined {
-  if (!params.length) return undefined;
+  if (!params.length) {
+    return undefined;
+  }
 
   const attrs: MarkerAttributes = {};
 

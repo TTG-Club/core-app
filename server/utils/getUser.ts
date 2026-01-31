@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes';
 
 import type { H3Event } from 'h3';
 
-export const getUser = (event: H3Event) => {
+export function getUser(event: H3Event) {
   const user = getUserFromToken(event);
 
   if (!user) {
@@ -10,4 +10,4 @@ export const getUser = (event: H3Event) => {
   }
 
   return user;
-};
+}

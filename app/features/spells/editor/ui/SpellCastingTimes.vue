@@ -1,8 +1,9 @@
 <script setup lang="ts">
-  import { isString } from 'lodash-es';
+  import { isString } from 'es-toolkit';
+  import { EditorArrayControls } from '~ui/editor';
 
   import { DictionaryService } from '~/shared/api';
-  import { EditorArrayControls } from '~ui/editor';
+
   import type { SpellCastingTime } from '~/shared/types';
 
   const times = defineModel<Array<SpellCastingTime>>({
