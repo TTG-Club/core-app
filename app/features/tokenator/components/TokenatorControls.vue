@@ -1,14 +1,9 @@
 <script setup lang="ts">
-  import {
-    DEFAULT_BACKGROUND_COLOR,
-    DEFAULT_GRADIENT_COLOR,
-    DEFAULT_TINT_COLOR,
-    DEFAULT_TINT_COLOR_TRANSPARENT,
-    useTokenatorStore,
-  } from '../composables/useTokenatorStore';
+  import { useTokenatorStore } from '../composables';
+  import { DEFAULT_COLORS } from '../model/constants';
   import { CANVAS_SIZE, drawToken } from '../utils/draw';
 
-  import type { TokenatorFrame } from '../types';
+  import type { TokenatorFrame } from '../model/types';
 
   const store = useTokenatorStore();
 
@@ -122,7 +117,7 @@
   function resetBackgroundColor() {
     const currentAlpha = store.backgroundColor.slice(7);
 
-    store.backgroundColor = `${DEFAULT_BACKGROUND_COLOR}${currentAlpha}`;
+    store.backgroundColor = `${DEFAULT_COLORS.BACKGROUND}${currentAlpha}`;
   }
 
   watch(
@@ -200,7 +195,7 @@
   }
 
   const tintColor1Hex = computed({
-    get: () => store.frameTint.colors[0]?.slice(0, 7) || DEFAULT_TINT_COLOR,
+    get: () => store.frameTint.colors[0]?.slice(0, 7) || DEFAULT_COLORS.TINT,
     set: (val) => {
       const alpha = store.frameTint.colors[0]?.slice(7) || '';
 
@@ -227,7 +222,8 @@
         .toString(16)
         .padStart(2, '0');
 
-      const base = store.frameTint.colors[0]?.slice(0, 7) || DEFAULT_TINT_COLOR;
+      const base =
+        store.frameTint.colors[0]?.slice(0, 7) || DEFAULT_COLORS.TINT;
 
       store.frameTint.colors[0] = base + (val < 100 ? hexAlpha : '');
 
@@ -238,7 +234,8 @@
   });
 
   const tintColor2Hex = computed({
-    get: () => store.frameTint.colors[1]?.slice(0, 7) || DEFAULT_GRADIENT_COLOR,
+    get: () =>
+      store.frameTint.colors[1]?.slice(0, 7) || DEFAULT_COLORS.GRADIENT,
     set: (val) => {
       const alpha = store.frameTint.colors[1]?.slice(7) || '';
 
@@ -270,7 +267,7 @@
         .padStart(2, '0');
 
       const base =
-        store.frameTint.colors[1]?.slice(0, 7) || DEFAULT_GRADIENT_COLOR;
+        store.frameTint.colors[1]?.slice(0, 7) || DEFAULT_COLORS.GRADIENT;
 
       if (store.frameTint.colors.length < 2) {
         store.frameTint.colors.push(base + hexAlpha);
@@ -304,24 +301,24 @@
   ];
 
   const isBgColorChanged = computed(
-    () => bgColorHex.value !== DEFAULT_BACKGROUND_COLOR,
+    () => bgColorHex.value !== DEFAULT_COLORS.BACKGROUND,
   );
 
   const isTintColorChanged = computed(
-    () => tintColor1Hex.value !== DEFAULT_TINT_COLOR,
+    () => tintColor1Hex.value !== DEFAULT_COLORS.TINT,
   );
 
   const isTintColor2Changed = computed(
-    () => tintColor2Hex.value !== DEFAULT_GRADIENT_COLOR,
+    () => tintColor2Hex.value !== DEFAULT_COLORS.GRADIENT,
   );
 
   function resetTint2() {
     const currentColor =
-      store.frameTint.colors[1] || DEFAULT_TINT_COLOR_TRANSPARENT;
+      store.frameTint.colors[1] || DEFAULT_COLORS.TINT_TRANSPARENT;
 
     const currentAlpha = currentColor.slice(7) || '00';
 
-    store.frameTint.colors[1] = `${DEFAULT_GRADIENT_COLOR}${currentAlpha}`;
+    store.frameTint.colors[1] = `${DEFAULT_COLORS.GRADIENT}${currentAlpha}`;
   }
 </script>
 
@@ -892,7 +889,7 @@
                       :disabled="!isTintColorChanged"
                       title="Сбросить цвет рамки 1"
                       @click.left.exact.prevent="
-                        store.frameTint.colors[0] = DEFAULT_TINT_COLOR
+                        store.frameTint.colors[0] = DEFAULT_COLORS.TINT
                       "
                     >
                       <span>Рамка 1</span>

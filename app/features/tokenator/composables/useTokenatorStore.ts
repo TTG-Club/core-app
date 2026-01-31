@@ -1,76 +1,80 @@
-import { useRefHistory } from '@vueuse/core';
+import { useLocalStorage, useRefHistory } from '@vueuse/core';
 import { defineStore } from 'pinia';
 import { v4 as uuid } from 'uuid';
 
-import type { FrameTint, TokenatorFrame, TransformState } from '../types';
+import {
+  BLEND_MODES,
+  DEFAULT_BRUSH_CONFIG,
+  DEFAULT_COLORS,
+  DEFAULT_FRAME_TINT,
+  DEFAULT_TEXT_CONFIG,
+  DEFAULT_TRANSFORM,
+} from '../model/constants';
+import {
+  validateBrushSize,
+  validateFontSize,
+  validateRotation,
+  validateScale,
+} from '../utils/validators';
 
-export const DEFAULT_BACKGROUND_COLOR = '#22c55e';
-export const DEFAULT_TINT_COLOR = '#ff0000';
-export const DEFAULT_TINT_COLOR_TRANSPARENT = '#ff000000';
-export const DEFAULT_GRADIENT_COLOR = '#0000ff';
+import type {
+  BrushState,
+  FrameTint,
+  TokenatorFrame,
+  TokenText,
+  TransformState,
+} from '../model/types';
 
-export interface TokenText {
-  id: string;
-  content: string;
-  x: number;
-  y: number;
-  fontSize: number;
-  color: string;
-  rotation: number;
-  fontWeight: number;
-  fontFamily: string;
-  align: 'left' | 'center' | 'right';
-  arc: number;
-}
-
+/**
+ * Основной Pinia store для редактора токенов.
+ * Управляет состоянием изображений, рамок, трансформаций, текста и кисти.
+ * Поддерживает персистентность через LocalStorage и undo/redo функциональность.
+ */
 export const useTokenatorStore = defineStore('tokenator', () => {
+  // Изображения
   const currentImage = ref<string | null>(null);
   const currentFrame = ref<TokenatorFrame | null>(null);
   const customFrame = ref<string | null>(null);
   const customBackground = ref<string | null>(null);
 
+  // Текст
   const texts = ref<TokenText[]>([]);
   const activeTextId = ref<string | null>(null);
+
+  // Маска
   const maskImageCanvas = ref<HTMLCanvasElement | null>(null);
   const maskVersion = ref(0);
   const maskTokenSize = ref(500);
 
-  const backgroundColor = ref<string>(DEFAULT_BACKGROUND_COLOR);
+  // Цвета и стили (с LocalStorage персистентностью)
+  const backgroundColor = useLocalStorage<string>(
+    'tokenator:backgroundColor',
+    DEFAULT_COLORS.BACKGROUND,
+  );
 
-  const frameTint = ref<FrameTint>({
-    enabled: true,
-    type: 'gradient',
-    colors: [DEFAULT_TINT_COLOR_TRANSPARENT, DEFAULT_TINT_COLOR_TRANSPARENT],
-    blendMode: 'source-atop',
-  });
+  const frameTint = useLocalStorage<FrameTint>(
+    'tokenator:frameTint',
+    DEFAULT_FRAME_TINT,
+  );
 
-  const transform = ref<TransformState>({
-    scale: 1,
-    rotate: 0,
-    flip: { x: false, y: false },
-    position: { x: 0, y: 0 },
-    maskScale: 1,
-    frameScale: 1,
-    frameRotate: 0,
-  });
-
-  const brush = ref<{
-    enabled: boolean;
-    size: number;
-    mode: 'add' | 'remove';
-    halfMask: boolean;
-  }>({
-    enabled: false,
-    size: 20,
-    mode: 'add',
-    halfMask: false,
-  });
+  // Трансформации (с LocalStorage и undo/redo)
+  const transform = useLocalStorage<TransformState>(
+    'tokenator:transform',
+    DEFAULT_TRANSFORM,
+  );
 
   const { undo, redo, canUndo, canRedo } = useRefHistory(transform, {
     deep: true,
     capacity: 20,
   });
 
+  // Кисть (с LocalStorage)
+  const brush = useLocalStorage<BrushState>(
+    'tokenator:brush',
+    DEFAULT_BRUSH_CONFIG,
+  );
+
+  // Computed
   const activeFrameUrl = computed(
     () => customFrame.value || currentFrame.value?.url || null,
   );
@@ -90,15 +94,7 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     texts.value.push({
       id,
       content,
-      x: 0,
-      y: 0,
-      fontSize: 40,
-      color: '#ffffff',
-      rotation: 0,
-      fontWeight: 700,
-      fontFamily: 'Inter',
-      align: 'center',
-      arc: 0,
+      ...DEFAULT_TEXT_CONFIG,
     });
 
     activeTextId.value = id;
@@ -132,6 +128,15 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     const text = texts.value.find((t) => t.id === id);
 
     if (text) {
+      // Применяем валидацию для числовых значений
+      if (updates.fontSize !== undefined) {
+        updates.fontSize = validateFontSize(updates.fontSize);
+      }
+
+      if (updates.rotation !== undefined) {
+        updates.rotation = validateRotation(updates.rotation);
+      }
+
       Object.assign(text, updates);
     }
   }
@@ -162,6 +167,10 @@ export const useTokenatorStore = defineStore('tokenator', () => {
       }
     };
 
+    reader.onerror = () => {
+      console.error('Failed to load image file');
+    };
+
     reader.readAsDataURL(file);
   }
 
@@ -183,6 +192,10 @@ export const useTokenatorStore = defineStore('tokenator', () => {
       }
     };
 
+    reader.onerror = () => {
+      console.error('Failed to load frame file');
+    };
+
     reader.readAsDataURL(file);
   }
 
@@ -202,6 +215,10 @@ export const useTokenatorStore = defineStore('tokenator', () => {
       if (e.target?.result && typeof e.target.result === 'string') {
         customBackground.value = e.target.result;
       }
+    };
+
+    reader.onerror = () => {
+      console.error('Failed to load background file');
     };
 
     reader.readAsDataURL(file);
@@ -226,15 +243,7 @@ export const useTokenatorStore = defineStore('tokenator', () => {
    * Сбрасывает все трансформации токена к значениям по умолчанию.
    */
   function resetTransform() {
-    transform.value = {
-      scale: 1,
-      rotate: 0,
-      flip: { x: false, y: false },
-      position: { x: 0, y: 0 },
-      maskScale: 1,
-      frameScale: 1,
-      frameRotate: 0,
-    };
+    transform.value = { ...DEFAULT_TRANSFORM };
   }
 
   /**
@@ -246,14 +255,8 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     currentImage.value = null;
     customFrame.value = null;
     currentFrame.value = null;
-    backgroundColor.value = DEFAULT_BACKGROUND_COLOR;
-
-    frameTint.value = {
-      enabled: true,
-      type: 'gradient',
-      colors: [DEFAULT_TINT_COLOR_TRANSPARENT, DEFAULT_TINT_COLOR_TRANSPARENT],
-      blendMode: 'source-atop',
-    };
+    backgroundColor.value = DEFAULT_COLORS.BACKGROUND;
+    frameTint.value = { ...DEFAULT_FRAME_TINT };
   }
 
   /**
@@ -277,11 +280,40 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     const c2 = frameTint.value.colors[1];
 
     if (c2) {
-      frameTint.value.colors = [c2, c1 || DEFAULT_TINT_COLOR_TRANSPARENT];
+      frameTint.value.colors = [c2, c1 || DEFAULT_COLORS.TINT_TRANSPARENT];
     }
   }
 
+  /**
+   * Устанавливает масштаб с валидацией.
+   */
+  function setScale(scale: number) {
+    transform.value.scale = validateScale(scale);
+  }
+
+  /**
+   * Устанавливает поворот с валидацией.
+   */
+  function setRotation(rotation: number) {
+    transform.value.rotate = validateRotation(rotation);
+  }
+
+  /**
+   * Устанавливает поворот рамки с валидацией.
+   */
+  function setFrameRotation(rotation: number) {
+    transform.value.frameRotate = validateRotation(rotation);
+  }
+
+  /**
+   * Устанавливает размер кисти с валидацией.
+   */
+  function setBrushSize(size: number) {
+    brush.value.size = validateBrushSize(size);
+  }
+
   return {
+    // State
     currentImage,
     currentFrame,
     customFrame,
@@ -291,7 +323,20 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     frameTint,
     transform,
     brush,
+    texts,
+    activeTextId,
+    maskImageCanvas,
+    maskVersion,
+    maskTokenSize,
 
+    // Constants (re-export для удобства)
+    BLEND_MODES,
+    DEFAULT_COLORS,
+
+    // Actions
+    addText,
+    removeText,
+    updateText,
     setImage,
     setCustomFrame,
     setCustomBackground,
@@ -300,19 +345,15 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     resetAll,
     randomizeTint,
     swapTintColors,
+    setScale,
+    setRotation,
+    setFrameRotation,
+    setBrushSize,
 
+    // Undo/Redo
     undo,
     redo,
     canUndo,
     canRedo,
-
-    texts,
-    activeTextId,
-    addText,
-    removeText,
-    updateText,
-    maskImageCanvas,
-    maskVersion,
-    maskTokenSize,
   };
 });
