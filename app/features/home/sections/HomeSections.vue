@@ -31,7 +31,7 @@
     class="grid w-full grid-cols-1 gap-3 xl:grid-cols-6"
   >
     <div
-      class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:col-span-5 xl:row-span-2 xl:grid-cols-5"
+      class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:col-span-5 xl:row-span-2 xl:grid-cols-5"
     >
       <NuxtLink
         v-for="(link, index) in sections"

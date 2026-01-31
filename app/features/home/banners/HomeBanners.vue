@@ -3,7 +3,7 @@
 </script>
 
 <template>
-  <div class="flex gap-3">
+  <div class="flex items-start gap-3">
     <MaterialCounter />
   </div>
 </template>
