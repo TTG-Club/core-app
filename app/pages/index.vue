@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { HomeBanners, RoadmapBanner } from '~home/banners';
-  import RecentChanges from '~home/recent-changes/RecentChanges.vue';
+  import { HomeRecentChanges } from '~home/recent-changes';
   import { HomeSections } from '~home/sections';
   import { SocialLinks } from '~home/social-links';
   import { SearchPanel } from '~search/panel';
@@ -42,7 +42,7 @@
         </div>
 
         <div class="relative flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">
-          <RecentChanges />
+          <HomeRecentChanges />
         </div>
       </div>
     </div>

@@ -1,53 +1,39 @@
 <script setup lang="ts">
-  import { useLocalStorage } from '@vueuse/core';
-  import { computed, watch } from 'vue';
+  import type { DropdownMenuItem, TimelineItem } from '@nuxt/ui';
+
+  import type { NameResponse, SourceResponse } from '~/shared/types';
+
+  enum ActionType {
+    ADDED = 'ADDED',
+    UPDATED = 'UPDATED',
+    DELETED = 'DELETED',
+  }
 
   interface RecentChangeItem {
     url: string;
     updatedAt: string;
     action: {
       name: string;
-      color?: 'success' | 'error' | 'info';
+      type: ActionType;
+      color: 'success' | 'error' | 'info';
     };
-    name: {
-      rus: string;
-      eng: string;
-    };
-    source?: {
-      name: {
-        label: string;
-        rus: string;
-        eng: string;
-      };
-      page?: number;
-    };
+    name: NameResponse;
+    source?: SourceResponse;
   }
 
-  type TimelineItem = RecentChangeItem & {
-    date: string;
-    title: string;
-    description: string;
-    icon: string;
-    value: string;
-    tooltip: string;
-  };
-
+  const LIMIT_VALUES = [5, 10, 20, 50, 100];
   const DEFAULT_LIMIT = 10;
 
-  const limitValues = [5, 10, 20, 50, 100];
-
   const selectedLimit = useLocalStorage('recent-changes-limit', DEFAULT_LIMIT);
-  const isDropdownOpen = ref(false);
-
-  const dayjs = useDayjs();
+  const { format } = useDayjs();
 
   /**
    * Опции выпадающего списка для выбора лимита отображаемых записей
    *
    * @returns Массив опций с label, состоянием checked и обработчиком выбора
    */
-  const limitOptions = computed(() =>
-    limitValues.map((value) => ({
+  const limitOptions = computed<DropdownMenuItem[]>(() =>
+    LIMIT_VALUES.map((value) => ({
       label: String(value),
       checked: selectedLimit.value === value,
       type: 'checkbox' as const,
@@ -58,80 +44,21 @@
   );
 
   /**
-   * Форматирует ISO дату в локализованный формат
-   *
-   * @param iso - строка даты в формате ISO 8601
-   * @returns отформатированная дата в локальном формате LLL или исходная строка при невалидной дате
-   */
-  function formatDateTime(iso: string): string {
-    const date = dayjs(iso);
-
-    return date.isValid() ? date.local().format('LLL') : iso;
-  }
-
-  /**
-   * Определяет тип действия на основе названия
-   *
-   * @param actionName - название действия на русском языке
-   * @returns тип действия: 'added' для добавления, 'updated' для обновления, 'default' для остальных
-   */
-  function getActionType(actionName: string): 'added' | 'updated' | 'default' {
-    const name = actionName.toLowerCase();
-
-    if (
-      name.includes('добавлен') ||
-      name.includes('создан') ||
-      name.includes('добав')
-    ) {
-      return 'added';
-    }
-
-    if (
-      name.includes('обновлен') ||
-      name.includes('изменен') ||
-      name.includes('обнов')
-    ) {
-      return 'updated';
-    }
-
-    return 'default';
-  }
-
-  /**
    * Возвращает иконку для типа действия
    *
-   * @param actionName - название действия
+   * @param actionType - название действия
    * @returns имя иконки из коллекции ttg или fluent
    */
-  function getActionIcon(actionName: string): string {
-    const type = getActionType(actionName);
-
-    switch (type) {
-      case 'added':
+  function getActionIcon(actionType: ActionType): string {
+    switch (actionType) {
+      case ActionType.ADDED:
         return 'i-ttg-plus';
-      case 'updated':
+      case ActionType.UPDATED:
         return 'i-fluent-arrow-sync-16-regular';
+      case ActionType.DELETED:
+        return 'i-ttg-remove';
       default:
         return 'i-fluent-circle-16-regular';
-    }
-  }
-
-  /**
-   * Возвращает текст подсказки для типа действия
-   *
-   * @param actionName - название действия
-   * @returns текст подсказки на русском языке
-   */
-  function getActionTooltip(actionName: string): string {
-    const type = getActionType(actionName);
-
-    switch (type) {
-      case 'added':
-        return 'Добавлено';
-      case 'updated':
-        return 'Обновлено';
-      default:
-        return '';
     }
   }
 
@@ -141,7 +68,7 @@
     pending,
     refresh,
   } = await useAsyncData<Array<RecentChangeItem>>(
-    () => `recent-changes-limit-${selectedLimit.value}`,
+    computed(() => `recent-changes-${selectedLimit.value}`),
     () =>
       $fetch<Array<RecentChangeItem>>('/api/v2/last/update', {
         query: { top: selectedLimit.value },
@@ -149,33 +76,28 @@
     {
       dedupe: 'defer',
       default: () => [],
+      lazy: true,
       server: false,
     },
   );
 
-  const timelineItems = computed<Array<TimelineItem>>(() => {
-    return updates.value.map((update) => ({
+  const timelineItems = computed<Array<TimelineItem & RecentChangeItem>>(() =>
+    updates.value.map((update) => ({
       ...update,
-      date: formatDateTime(update.updatedAt),
-      title: update.name.rus,
-      description: '',
-      icon: getActionIcon(update.action.name),
-      tooltip: getActionTooltip(update.action.name),
-      value: `${update.url}-${update.updatedAt}`,
-    }));
-  });
-
-  watch(
-    selectedLimit,
-    async () => {
-      await refresh();
-    },
-    { flush: 'post' },
+      date: format(update.updatedAt),
+      icon: getActionIcon(update.action.type),
+    })),
   );
 </script>
 
 <template>
-  <UCard :ui="{ root: 'bg-muted', header: 'p-3 sm:p-3', body: 'p-0 sm:p-0' }">
+  <UCard
+    :ui="{
+      root: 'bg-muted',
+      header: 'p-3 sm:p-3',
+      body: 'p-0 sm:p-0',
+    }"
+  >
     <template #header>
       <div class="flex items-center justify-between gap-2">
         <div class="flex flex-col gap-2">
@@ -190,7 +112,6 @@
 
         <div class="flex gap-2">
           <UDropdownMenu
-            v-model:open="isDropdownOpen"
             :items="limitOptions"
             :ui="{ content: 'w-auto min-w-fit' }"
           >
@@ -227,7 +148,7 @@
 
     <UScrollArea
       v-else
-      class="max-h-[500px]"
+      class="max-h-125 min-h-0"
       :ui="{
         viewport: 'p-3',
       }"
@@ -241,7 +162,7 @@
         }"
       >
         <template #indicator="{ item }">
-          <UTooltip :text="item.tooltip">
+          <UTooltip :text="item.action.name">
             <div class="flex size-full items-center justify-center">
               <UIcon
                 :name="item.icon"
@@ -271,7 +192,7 @@
             :to="item.url"
             class="font-medium hover:underline"
           >
-            {{ item.title }}
+            {{ item.name.rus }}
 
             <span
               v-if="item.name.eng"
