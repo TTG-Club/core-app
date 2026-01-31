@@ -1,6 +1,5 @@
 import { useUserStore } from '~/shared/stores';
 
-// TODO: Проверить и исправить ошибку.
 export default defineNuxtRouteMiddleware(async () => {
   const userStore = useUserStore();
   const { isAdmin } = useUserRoles();
@@ -27,4 +26,6 @@ export default defineNuxtRouteMiddleware(async () => {
   if (!isAdmin.value) {
     return navigateTo('/');
   }
+
+  return true;
 });
