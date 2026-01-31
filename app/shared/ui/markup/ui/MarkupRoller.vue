@@ -135,7 +135,7 @@
 
 <template>
   <span
-    class="cursor-pointer text-link underline decoration-dotted underline-offset-2 hover:text-link hover:decoration-solid"
+    class="cursor-pointer whitespace-nowrap text-link underline decoration-dotted underline-offset-2 hover:text-link hover:decoration-solid"
     @click.left.exact.prevent="handleRoll"
   >
     <component
