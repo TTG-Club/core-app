@@ -1,5 +1,7 @@
 <script setup lang="ts">
-  import type { CreatureAbilitiesResponse } from '~bestiary/types'; // или путь к твоим типам
+  import { DiceRollerLink } from '~dice-roller/link'; // или путь к твоим типам
+
+  import type { CreatureAbilitiesResponse } from '~bestiary/types';
 
   defineProps<CreatureAbilitiesResponse>();
 </script>
@@ -86,14 +88,20 @@
 
           <div class="max-w-7">{{ str.value }}</div>
 
-          <div class="justify-end">{{ str.mod }}</div>
+          <div class="justify-end">
+            <DiceRollerLink :notation="`1к20${str.mod}`">{{
+              str.mod
+            }}</DiceRollerLink>
+          </div>
 
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
             :data-is-sav="str.mod !== str.sav"
             class="min-w-8 justify-end"
           >
-            {{ str.sav }}
+            <DiceRollerLink :notation="`1к20${str.sav}`">{{
+              str.sav
+            }}</DiceRollerLink>
           </div>
         </div>
 
@@ -107,14 +115,16 @@
 
           <div class="max-w-7">{{ dex.value }}</div>
 
-          <div class="justify-end">{{ dex.mod }}</div>
+          <DiceRollerLink :notation="`1к20${dex.mod}`">{{
+            dex.mod
+          }}</DiceRollerLink>
 
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
             :data-is-sav="str.mod !== str.sav"
             class="min-w-8 justify-end"
           >
-            {{ dex.sav }}
+            <DiceRollerLink :notation="dex.sav" />
           </div>
         </div>
 
@@ -128,14 +138,14 @@
 
           <div class="max-w-7">{{ con.value }}</div>
 
-          <div class="justify-end">{{ con.mod }}</div>
+          <div class="justify-end"><DiceRollerLink :notation="con.mod" /></div>
 
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
             :data-is-sav="str.mod !== str.sav"
             class="min-w-8 justify-end"
           >
-            {{ con.sav }}
+            <DiceRollerLink :notation="con.sav" />
           </div>
         </div>
       </div>
@@ -151,14 +161,14 @@
 
           <div class="max-w-7">{{ int.value }}</div>
 
-          <div class="justify-end">{{ int.mod }}</div>
+          <div class="justify-end"><DiceRollerLink :notation="int.mod" /></div>
 
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
             :data-is-sav="str.mod !== str.sav"
             class="min-w-8 justify-end"
           >
-            {{ int.sav }}
+            <DiceRollerLink :notation="int.sav" />
           </div>
         </div>
 
@@ -172,14 +182,14 @@
 
           <div class="max-w-7">{{ wis.value }}</div>
 
-          <div class="justify-end">{{ wis.mod }}</div>
+          <div class="justify-end"><DiceRollerLink :notation="wis.mod" /></div>
 
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
             :data-is-sav="str.mod !== str.sav"
             class="min-w-8 justify-end"
           >
-            {{ wis.sav }}
+            <DiceRollerLink :notation="wis.sav" />
           </div>
         </div>
 
@@ -193,14 +203,14 @@
 
           <div class="max-w-7">{{ chr.value }}</div>
 
-          <div class="justify-end">{{ chr.mod }}</div>
+          <div class="justify-end"><DiceRollerLink :notation="chr.mod" /></div>
 
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
             :data-is-sav="str.mod !== str.sav"
             class="min-w-8 justify-end"
           >
-            {{ chr.sav }}
+            <DiceRollerLink :notation="chr.sav" />
           </div>
         </div>
       </div>
