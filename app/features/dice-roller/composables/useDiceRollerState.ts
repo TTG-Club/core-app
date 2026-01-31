@@ -20,7 +20,7 @@ type TableRollCallbacksMap = Map<string, TableRollCallback>;
  * Синхронизирует состояние между различными компонентами (кнопка, модалка, сайдбар).
  */
 export function useDiceRollerState() {
-  const dayjs = useDayjs();
+  const { $dayjs } = useDayjs();
 
   const tableRollCallbacks = useState<TableRollCallbacksMap>(
     'dice-roller:tableRollCallbacks',
@@ -53,7 +53,7 @@ export function useDiceRollerState() {
       formula: payload.formula,
       displayValue: payload.value,
       isError: payload.isError,
-      timestamp: dayjs().valueOf(),
+      timestamp: $dayjs().valueOf(),
       detail: payload.detail || undefined,
       structuredDetails: payload.structuredDetails,
     };
