@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed } from 'vue';
+  import { computed, inject } from 'vue';
   import { useDiceRoller, useDiceRollerState } from '~dice-roller/composables';
   import {
     extractDiceRollDetails,
@@ -7,7 +7,7 @@
     formatDiceDetailsSummary,
   } from '~dice-roller/utils';
 
-  import { isSimpleTextNode } from '../utils';
+  import { getNodeText } from '../utils';
 
   import type { VNode } from 'vue';
 
@@ -30,30 +30,7 @@
     notifyTableRoll,
   } = useDiceRollerState();
 
-  function getNodeText(renderNode: RenderNode | RenderNode[]): string {
-    if (typeof renderNode === 'string') {
-      return renderNode;
-    }
-
-    if (Array.isArray(renderNode)) {
-      return renderNode.map((child) => getNodeText(child)).join('');
-    }
-
-    if (isSimpleTextNode(renderNode)) {
-      return renderNode.text;
-    }
-
-    if (
-      typeof renderNode === 'object' &&
-      renderNode !== null &&
-      'content' in renderNode &&
-      Array.isArray(renderNode.content)
-    ) {
-      return renderNode.content.map((child) => getNodeText(child)).join('');
-    }
-
-    return '';
-  }
+  const tableId = inject<string | undefined>('dice-roller:table-id', undefined);
 
   function handleRoll() {
     const textContent = node.content ? getNodeText(node.content) : '';
@@ -124,7 +101,7 @@
     });
 
     if (Number.isFinite(numericValue)) {
-      notifyTableRoll(Math.round(numericValue));
+      notifyTableRoll(Math.round(numericValue), tableId);
     }
   }
 
