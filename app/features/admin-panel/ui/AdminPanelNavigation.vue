@@ -1,5 +1,11 @@
 <script setup lang="ts">
-  const items = [
+  interface NavigationItem {
+    label: string;
+    icon: string;
+    to: string;
+  }
+
+  const items: NavigationItem[] = [
     {
       label: 'Главная',
       icon: 'i-heroicons-home',
@@ -33,7 +39,7 @@
         variant="ghost"
         color="neutral"
         class="justify-start"
-        active-class="bg-neutral-100 dark:bg-neutral-800 text-primary"
+        active-class="bg-ui-active text-primary"
       >
         {{ item.label }}
       </UButton>
