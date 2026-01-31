@@ -96,14 +96,21 @@ export function useDiceRollerState() {
   };
 
   /**
-   * Уведомляет все зарегистрированные таблицы о результате броска.
+   * Уведомляет таблицу о результате броска.
+   * Если передан tableId, уведомляет только конкретную таблицу.
+   * Если tableId не передан, ничего не делает (глобальные броски не влияют на таблицы).
    *
    * @param value - Числовой результат броска
+   * @param tableId - ID таблицы, из которой был сделан бросок
    */
-  const notifyTableRoll = (value: number) => {
-    tableRollCallbacks.value.forEach((callback) => {
-      callback(value);
-    });
+  const notifyTableRoll = (value: number, tableId?: string) => {
+    if (tableId) {
+      const callback = tableRollCallbacks.value.get(tableId);
+
+      if (callback) {
+        callback(value);
+      }
+    }
   };
 
   return {

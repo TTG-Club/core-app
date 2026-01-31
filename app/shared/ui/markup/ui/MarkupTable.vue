@@ -5,9 +5,10 @@
     getCoreRowModel,
     useVueTable,
   } from '@tanstack/vue-table';
+  import { defineComponent, h, provide } from 'vue';
   import { useDiceRollerState } from '~dice-roller/composables';
 
-  import { normalizeRenderNodes } from '../utils';
+  import { getNodeText, normalizeRenderNodes } from '../utils';
 
   import type { ColumnDef } from '@tanstack/vue-table';
   import type { VNode } from 'vue';
@@ -30,6 +31,17 @@
     colStyles?: string[];
     rows?: any[][];
   }
+
+  const TableHeaderContext = defineComponent({
+    props: {
+      tableId: { type: String, required: true },
+    },
+    setup(props, { slots }) {
+      provide('dice-roller:table-id', props.tableId);
+
+      return () => slots.default?.();
+    },
+  });
 
   const { node, renderNodes } = defineProps<{
     node: TableNode;
@@ -80,6 +92,42 @@
 
   const activeRowIndex = ref<number | null>(null);
 
+  function parseCellNumber(val: string): number {
+    const trimmed = val.trim();
+
+    if (trimmed === '00') {
+      return 100;
+    }
+
+    return Number.parseInt(trimmed, 10);
+  }
+
+  function checkValueMatch(text: string, rollValue: number): boolean {
+    const cleanText = text.trim();
+
+    // Проверка диапазона (например, "01-40", "41-75")
+    // Поддержка различных видов тире: - (дефис), – (en dash), — (em dash)
+    const rangeMatch = cleanText.match(/^(\d+)\s*[-–—]\s*(\d+)$/);
+
+    if (rangeMatch) {
+      const min = parseCellNumber(rangeMatch[1] || '');
+      const max = parseCellNumber(rangeMatch[2] || '');
+
+      return rollValue >= min && rollValue <= max;
+    }
+
+    // Проверка одиночного числа
+    const singleMatch = cleanText.match(/^(\d+)$/);
+
+    if (singleMatch) {
+      const val = parseCellNumber(singleMatch[1] || '');
+
+      return rollValue === val;
+    }
+
+    return false;
+  }
+
   function handleTableRoll(value: number) {
     if (!Number.isFinite(value)) {
       activeRowIndex.value = null;
@@ -87,16 +135,27 @@
       return;
     }
 
-    const rowIndex = Math.round(value) - 1;
-    const maxIndex = tableData.value.length - 1;
+    const numericValue = Math.round(value);
 
-    if (rowIndex < 0 || rowIndex > maxIndex) {
+    // Ищем строку, где значение в первой ячейке соответствует броску
+    const matchIndex = tableData.value.findIndex((row) => {
+      const firstCell = row.cells[0];
+
+      if (firstCell === undefined) {
+        return false;
+      }
+
+      const cell = normalizeCell(firstCell);
+      const text = getNodeText(cell.content);
+
+      return checkValueMatch(text, numericValue);
+    });
+
+    if (matchIndex !== -1) {
+      activeRowIndex.value = matchIndex;
+    } else {
       activeRowIndex.value = null;
-
-      return;
     }
-
-    activeRowIndex.value = rowIndex;
   }
 
   const tableId = useId();
@@ -168,6 +227,13 @@
         header: () => {
           const headerValue = labels.value[columnIndex] ?? '';
           const nodes = normalizeRenderNodes(headerValue);
+
+          // Только первая колонка (с диапазонами бросков) должна триггерить подсветку
+          if (columnIndex === 0) {
+            return h(TableHeaderContext, { tableId }, () =>
+              h('span', renderNodes(nodes)),
+            );
+          }
 
           return h('span', renderNodes(nodes));
         },

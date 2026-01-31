@@ -80,3 +80,34 @@ export function normalizeRenderNodes(
 ): RenderNode[] {
   return Array.isArray(value) ? value : [value];
 }
+
+/**
+ * Рекурсивно извлекает текстовое содержимое из узла рендеринга.
+ *
+ * @param node - Узел или массив узлов
+ * @returns Строковое представление содержимого
+ */
+export function getNodeText(node: RenderNode | RenderNode[]): string {
+  if (typeof node === 'string') {
+    return node;
+  }
+
+  if (Array.isArray(node)) {
+    return node.map((child) => getNodeText(child)).join('');
+  }
+
+  if (isSimpleTextNode(node)) {
+    return node.text;
+  }
+
+  if (
+    typeof node === 'object' &&
+    node !== null &&
+    'content' in node &&
+    Array.isArray(node.content)
+  ) {
+    return node.content.map((child) => getNodeText(child)).join('');
+  }
+
+  return '';
+}
