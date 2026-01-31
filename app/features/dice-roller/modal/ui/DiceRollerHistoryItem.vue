@@ -18,17 +18,7 @@
     rolls: EnrichedRoll[];
   }
 
-  const dayjs = useDayjs();
-
-  function formatDateTime(timestamp: number): string | undefined {
-    const date = dayjs(timestamp);
-
-    if (!date.isValid()) {
-      return undefined;
-    }
-
-    return date.local().format('LLL');
-  }
+  const { format } = useDayjs();
 
   const criticalColorMap: Record<NonNullable<CriticalType>, BadgeColor> = {
     success: 'success',
@@ -71,7 +61,7 @@
       </div>
 
       <NuxtTime
-        :title="formatDateTime(entry.timestamp)"
+        :title="format(entry.timestamp)"
         :datetime="entry.timestamp"
         class="shrink-0 text-xs text-muted"
         relative-style="long"

@@ -1,1 +1,1 @@
-export { default as RecentChanges } from './RecentChanges.vue';
+export { default as HomeRecentChanges } from './HomeRecentChanges.vue';

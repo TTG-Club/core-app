@@ -20,18 +20,16 @@
     source?: SourceResponse;
   }>();
 
-  const dayjs = useDayjs();
+  const { format } = useDayjs();
   const { copy } = useCopyAndShare();
   const navbarHidden = useState('navbar-hidden');
 
   const formattedDateTime = computed(() => {
-    const converted = dayjs(dateTime);
-
-    if (!dateTime || !converted.isValid()) {
+    if (!dateTime) {
       return undefined;
     }
 
-    return converted.local().format(dateTimeFormat);
+    return format(dateTime, dateTimeFormat);
   });
 </script>
 
