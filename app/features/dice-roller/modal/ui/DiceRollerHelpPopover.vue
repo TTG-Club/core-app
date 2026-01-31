@@ -29,8 +29,7 @@
 <template>
   <UPopover
     :ui="{
-      content:
-        'overflow-hidden bg-muted max-h-100 w-full max-w-sm gap-4 overflow-y-auto p-4',
+      content: 'overflow-hidden bg-muted max-h-100 gap-4 overflow-y-auto p-4',
     }"
   >
     <UButton
@@ -65,7 +64,7 @@
                 {{ example.formula }}
               </span>
 
-              <span class="text-xs text-dimmed">
+              <span class="text-left text-xs text-dimmed">
                 {{ example.note }}
               </span>
             </span>
@@ -74,8 +73,21 @@
       </div>
 
       <div class="border-t border-default pt-2">
-        <p class="text-xs leading-tight text-muted">
-          Поддерживаются: к, кс, вх/вл, ул/ух, пр/пб, !/!!/!п, с, п, св/су
+        <p class="text-xs text-muted">
+          Поддерживаются: к, кс, в/вх/вл, уб/ул/ух, пр/пб, !/!!/!п, с, п, ку/кп,
+          св/су
+        </p>
+
+        <p class="text-xs text-muted">
+          Полная документация по нотации бросков доступна на
+          <ULink
+            href="https://github.com/TTG-Club/dice-roller-parser/blob/main/README.md#%D0%BE%D0%BF%D0%B5%D1%80%D0%B0%D1%82%D0%BE%D1%80%D1%8B"
+            rel="noopener noreferrer"
+            target="_blank"
+            external
+          >
+            GitHub
+          </ULink>
         </p>
       </div>
     </template>
