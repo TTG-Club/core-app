@@ -1,9 +1,21 @@
 import type { FrameTint, TransformState } from '../types';
 
+/**
+ * Размер canvas для финального экспорта токена.
+ * 512px выбран как оптимальный баланс между качеством изображения
+ * и размером файла для использования в виртуальных настольных играх.
+ */
 export const CANVAS_SIZE = 512;
 
 const imageCache = new Map<string, HTMLImageElement>();
 
+/**
+ * Загружает изображение с URL и кэширует его для повторного использования.
+ * Автоматически обрабатывает CORS для внешних изображений.
+ *
+ * @param url - URL изображения или null если загрузка не требуется
+ * @returns Promise с загруженным HTMLImageElement или null при ошибке/отсутствии URL
+ */
 function loadImage(url: string | null): Promise<HTMLImageElement | null> {
   if (!url) {
     return Promise.resolve(null);
@@ -34,6 +46,14 @@ function loadImage(url: string | null): Promise<HTMLImageElement | null> {
   });
 }
 
+/**
+ * Применяет цветовую тонировку к рамке токена с поддержкой градиентов и режимов наложения.
+ *
+ * @param ctx - Контекст canvas для отрисовки
+ * @param size - Размер области тонировки
+ * @param tint - Настройки тонировки (цвет, тип, режим наложения)
+ * @param frameImg - Изображение рамки для маскирования
+ */
 function applyTint(
   ctx: CanvasRenderingContext2D,
   size: number,
@@ -101,6 +121,26 @@ export interface DrawTokenParams {
   texts?: DrawTokenText[];
 }
 
+/**
+ * Основная функция отрисовки токена со всеми трансформациями, эффектами и текстом.
+ * Рисует фон, изображение персонажа, рамку, маску и текстовые элементы.
+ *
+ * @param params - Параметры отрисовки токена
+ * @param params.ctx - Контекст canvas для отрисовки
+ * @param params.backgroundColor - Цвет фона токена
+ * @param params.currentImage - URL изображения персонажа
+ * @param params.activeFrameUrl - URL активной рамки
+ * @param params.frameTint - Настройки тонировки рамки
+ * @param params.transform - Трансформации (масштаб, поворот, позиция)
+ * @param params.clip - Обрезать ли изображение по кругу маски
+ * @param params.viewSize - Размер области отрисовки
+ * @param params.tokenSize - Размер токена в пикселях
+ * @param params.maskImage - Canvas с пользовательской маской
+ * @param params.maskTokenSize - Размер токена при создании маски
+ * @param params.halfMask - Использовать ли верхнюю половину маски
+ * @param params.customBackground - URL кастомного фонового изображения
+ * @param params.texts - Массив текстовых элементов для отрисовки
+ */
 export async function drawToken({
   ctx,
   backgroundColor,
