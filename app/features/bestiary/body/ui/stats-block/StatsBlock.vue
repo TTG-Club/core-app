@@ -46,7 +46,7 @@
       <span>
         {{ hit.hit }}
         <span v-if="hit.formula"
-          >(<DiceRollerLink :notation="hit.formula">{{
+          >(<DiceRollerLink :notation="`{(${hit.formula}), 1}вл1`">{{
             hit.formula
           }}</DiceRollerLink
           >)</span
