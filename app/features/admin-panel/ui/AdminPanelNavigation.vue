@@ -1,45 +1,57 @@
 <script setup lang="ts">
-  interface NavigationItem {
-    label: string;
-    icon: string;
-    to: string;
-  }
+  /**
+   * Компонент главной навигации админ-панели.
+   * Отображает список разделов с активным состоянием для текущего роута.
+   * Использует динамические стили на основе активности роута.
+   */
 
-  const items: NavigationItem[] = [
-    {
-      label: 'Главная',
-      icon: 'i-heroicons-home',
-      to: '/admin-panel',
-    },
-    {
-      label: 'Токенатор',
-      icon: 'i-heroicons-photo',
-      to: '/admin-panel/tokenator',
-    },
-  ];
+  import { useAdminNavigation } from '../composables';
+  import {
+    ADMIN_PANEL_ICON,
+    ADMIN_PANEL_TITLE,
+    ADMIN_PANEL_UI_CONFIG,
+  } from '../model/constants';
+
+  const { items, isItemActive, getItemColor, getItemVariant } =
+    useAdminNavigation();
 </script>
 
 <template>
-  <div class="flex h-full w-64 flex-col border-r border-default p-4">
-    <div class="mb-6 flex items-center gap-2 px-2">
+  <div
+    :class="[
+      'flex h-full flex-col border-r border-default',
+      ADMIN_PANEL_UI_CONFIG.navigationWidth,
+      ADMIN_PANEL_UI_CONFIG.containerPadding,
+    ]"
+  >
+    <div
+      :class="[
+        'flex items-center gap-2',
+        ADMIN_PANEL_UI_CONFIG.headerGap,
+        ADMIN_PANEL_UI_CONFIG.headerPadding,
+      ]"
+    >
       <UIcon
-        name="i-ttg-menu-filled-workshop"
-        class="h-6 w-6 text-primary"
+        :name="ADMIN_PANEL_ICON"
+        :class="[ADMIN_PANEL_UI_CONFIG.iconSize, 'text-primary']"
       />
 
-      <span class="text-lg font-bold">Админ-панель</span>
+      <span class="text-lg font-bold">{{ ADMIN_PANEL_TITLE }}</span>
     </div>
 
-    <nav class="flex flex-col gap-1">
+    <nav
+      :class="['flex flex-col', ADMIN_PANEL_UI_CONFIG.navGap]"
+      aria-label="Навигация админ-панели"
+    >
       <UButton
         v-for="item in items"
         :key="item.to"
         :to="item.to"
         :icon="item.icon"
-        variant="ghost"
-        color="neutral"
+        :color="getItemColor(item)"
+        :variant="getItemVariant(item)"
+        :aria-current="isItemActive(item) ? 'page' : undefined"
         class="justify-start"
-        active-class="bg-ui-active text-primary"
       >
         {{ item.label }}
       </UButton>
