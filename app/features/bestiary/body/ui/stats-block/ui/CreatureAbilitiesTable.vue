@@ -115,9 +115,11 @@
 
           <div class="max-w-7">{{ dex.value }}</div>
 
-          <DiceRollerLink :notation="`1к20${dex.mod}`">
-            {{ dex.mod }}
-          </DiceRollerLink>
+          <div class="justify-end">
+            <DiceRollerLink :notation="`1к20${dex.mod}`">{{
+              dex.mod
+            }}</DiceRollerLink>
+          </div>
 
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
