@@ -14,12 +14,6 @@
       class: name,
     },
   });
-
-  onMounted(() => {
-    const { start } = useOnlineHeartbeat();
-
-    start();
-  });
 </script>
 
 <template>

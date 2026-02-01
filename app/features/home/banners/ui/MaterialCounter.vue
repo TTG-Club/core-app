@@ -54,17 +54,25 @@
 </script>
 
 <template>
-  <div :class="$style.card">
+  <div
+    class="relative flex flex-1 flex-col gap-3 overflow-hidden rounded-xl border border-default bg-muted p-4 text-default"
+  >
     <!-- Заголовок с индикатором -->
     <div class="flex items-center gap-2">
-      <div :class="$style.indicator">
+      <div
+        class="glow-indicator flex size-5 items-center justify-center rounded bg-linear-to-br from-(--color-success-500) to-(--color-success-600) shadow-[0_0_12px_var(--color-success-500)]"
+      >
         <UIcon
           name="i-fluent-play-12-filled"
-          :class="$style.indicatorIcon"
+          class="size-2.5 text-white"
         />
       </div>
 
-      <h3 :class="$style.title">Статистика</h3>
+      <h3
+        class="text-sm leading-tight font-semibold text-(--color-success-400)"
+      >
+        Статистика
+      </h3>
 
       <UButton
         v-if="isAdmin"
@@ -78,27 +86,31 @@
     </div>
 
     <!-- Описание -->
-    <p :class="$style.description">
+    <p class="text-xs leading-normal text-default">
       TTG — справочник по настольным ролевым играм, созданный сообществом для
       сообщества!
     </p>
 
     <!-- Статистика в две колонки -->
-    <div :class="$style.statsGrid">
-      <div :class="$style.statItem">
-        <span :class="$style.statLabel">Материалов</span>
+    <div class="grid grid-cols-2 gap-4 border-t border-default pt-1">
+      <div class="flex flex-col gap-1">
+        <span class="text-xs font-medium tracking-[0.5px] text-muted uppercase">
+          Материалов
+        </span>
 
         <AnimatedNumber
-          :class="$style.statValue"
+          class="text-2xl leading-tight font-bold text-(--color-primary-400)"
           :value="materialsValue"
         />
       </div>
 
-      <div :class="$style.statItem">
-        <span :class="$style.statLabel">Посетителей</span>
+      <div class="flex flex-col gap-1">
+        <span class="text-xs font-medium tracking-[0.5px] text-muted uppercase">
+          Посетителей
+        </span>
 
         <AnimatedNumber
-          :class="$style.statValue"
+          class="text-2xl leading-tight font-bold text-(--color-primary-400)"
           :value="visitorsTotalValue"
         />
       </div>
@@ -106,48 +118,9 @@
   </div>
 </template>
 
-<style lang="scss" module>
-  .card {
-    position: relative;
-
-    overflow: hidden;
-    display: flex;
-    flex: 1 1 100%;
-    flex-direction: column;
-    gap: 12px;
-
-    padding: 16px;
-    border: 1px solid var(--ui-border);
-    border-radius: 12px;
-
-    color: var(--ui-text);
-
-    background: var(--ui-bg-muted);
-  }
-
-  .indicator {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-
-    background: linear-gradient(
-      135deg,
-      var(--color-success-500) 0%,
-      var(--color-success-600) 100%
-    );
-    box-shadow: 0 0 12px var(--color-success-500);
-
+<style scoped>
+  .glow-indicator {
     animation: pulse-glow 2s ease-in-out infinite;
-  }
-
-  .indicatorIcon {
-    width: 10px;
-    height: 10px;
-    color: white;
   }
 
   @keyframes pulse-glow {
@@ -159,48 +132,5 @@
     50% {
       box-shadow: 0 0 16px var(--color-success-400);
     }
-  }
-
-  .title {
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 1.2;
-    color: var(--color-success-400);
-  }
-
-  .description {
-    font-size: 13px;
-    line-height: 1.5;
-    color: var(--ui-text);
-  }
-
-  .statsGrid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-
-    padding-top: 4px;
-    border-top: 1px solid var(--ui-border);
-  }
-
-  .statItem {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .statLabel {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--ui-text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .statValue {
-    font-size: 24px;
-    font-weight: 700;
-    line-height: 1.2;
-    color: var(--color-primary-400);
   }
 </style>
