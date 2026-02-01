@@ -1,11 +1,5 @@
 <script lang="ts" setup>
-  import { useDebounceFn, useRafFn } from '@vueuse/core';
-  import { ref, watch } from 'vue';
-
-  // Простая реализация линейной интерполяции
-  function lerp(start: number, end: number, t: number) {
-    return start + (end - start) * t;
-  }
+  import { TransitionPresets, useTransition } from '@vueuse/core';
 
   interface Props {
     value: number | undefined;
@@ -13,76 +7,37 @@
     locale?: string;
   }
 
-  const { value, duration = 1000, locale = 'en-US' } = defineProps<Props>();
+  const props = withDefaults(defineProps<Props>(), {
+    duration: 1000,
+    locale: 'ru-RU',
+  });
 
-  if (duration < 0) {
-    throw new Error(
-      '[AnimatedNumber] Длительность должна быть положительным числом',
-    );
-  }
+  // Начинаем с 0, чтобы всегда была анимация при появлении (даже если данные уже загружены)
+  const source = ref(0);
 
-  try {
-    Intl.NumberFormat(locale);
-  } catch (e) {
-    throw new Error('[AnimatedNumber] Невалидное значение локали');
-  }
+  const output = useTransition(source, {
+    duration: props.duration,
+    transition: TransitionPresets.easeInOutExpo,
+  });
 
-  const displayValue = ref(0);
-
-  let startValue = 0;
-
-  let cleanupRAF: (() => void) | null = null;
-
-  function formatNumber(num: number) {
-    return new Intl.NumberFormat(locale).format(num);
-  }
-
-  function animateNumber(targetValue: number) {
-    cleanupRAF?.();
-
-    startValue = displayValue.value;
-    let startTime: number | null = null;
-
-    const { pause, resume } = useRafFn(
-      ({ timestamp }: { timestamp: number }) => {
-        if (!startTime) {
-          startTime = timestamp;
-        }
-
-        const progress = Math.min((timestamp - startTime) / duration, 1);
-
-        displayValue.value = Math.trunc(
-          lerp(startValue, targetValue, progress),
-        );
-
-        if (progress >= 1) {
-          displayValue.value = targetValue;
-
-          pause();
-        }
-      },
-    );
-
-    cleanupRAF = pause;
-
-    resume();
-  }
-
-  const debouncedAnimate = useDebounceFn(animateNumber, 100, { maxWait: 1000 });
-
-  watch(
-    () => value,
-    (newValue) => {
-      debouncedAnimate(newValue === undefined ? 0 : newValue);
-    },
-    { immediate: true },
+  const formattedValue = computed(() =>
+    new Intl.NumberFormat(props.locale).format(Math.round(output.value)),
   );
 
-  onUnmounted(() => {
-    cleanupRAF?.();
+  // Обновляем значение при изменении пропса
+  watch(
+    () => props.value,
+    (newValue) => {
+      source.value = newValue ?? 0;
+    },
+  );
+
+  // При монтировании запускаем анимацию от 0 до текущего значения
+  onMounted(() => {
+    source.value = props.value ?? 0;
   });
 </script>
 
 <template>
-  <span>{{ formatNumber(displayValue) }}</span>
+  <span>{{ formattedValue }}</span>
 </template>
