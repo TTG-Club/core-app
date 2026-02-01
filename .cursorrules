@@ -9,6 +9,11 @@
   - **For What:** The resulting benefit or fix.
 - **Single Dictionary:** The code must read fluently without surprises, adhering to a unified project dictionary.
 - **Code Style:** Strictly follow the project's ESLint, Prettier, and Stylelint configurations.
+- **File Size & Modularity:**
+  - **Limit File Size:** Avoid extremely large files. If a file grows too complex, refactor it by extracting logic into smaller components, utilities, composables, or constants.
+  - **Feature Localization:** Utilities, composables, constants, types, stores, helpers, and any other logic specific to a single feature MUST be located inside that feature's folder (e.g., `app/features/tokenator/controls/composables`).
+- **Final Verification:**
+  - **Mandatory Checks:** At the end of every task, you MUST run `pnpm run lint:write` and `pnpm run type-check` to ensure no regressions were introduced.
 
 ## 2. Type Safety (Strict TypeScript)
 - **Strict Typing:** Strong typing is mandatory.
@@ -31,7 +36,9 @@
   - Components inside features must reflect their path: `[FeatureName][Subfolder][Name].vue`.
   - *Exception:* Components in `*/ui` subfolder should be named by their function (atomic components) without heavy prefixes.
 - **Constants:**
+  - File name should be `consts.ts` (not `constants.ts`).
   - Use `const` variables with Uppercase/CamelCase naming conventions.
+  - **No Hardcoding:** Hardcoded links, texts, numbers, and configuration values are PROHIBITED in components. Move them to `consts.ts`.
   - **PROHIBITED:** Do not create functions that simply return a static constant value.
 - **Booleans:** Functions starting with `is*` or `check*` must return a boolean and have NO side effects.
 - **SQL:** All SQL scripts must be written in **lowercase**.
@@ -42,31 +49,46 @@
   - **REQUIRED:** Use unified semantic color names (`bg-surface`, `text-primary`) mapped to CSS variables.
 - **No Arbitrary Variables:**
   - **PROHIBITED:** `bg-[var(--ui-bg-elevated)]`.
-  - **REQUIRED:** Use standard utility classes (e.g., `bg-ui-elevated`).
+  - **REQUIRED:** Use standard utility classes (e.g., `bg-elevated`).
 - **Icons:** Use ONLY icons from the local `ttg` collection or `fluent` collection.
 - **Tailwind CSS:** Use Tailwind CSS according to the maximum version specified in the project.
 
 ## 5. Reuse Strategy
 - **Folder Structure Context:**
   - `shared/ui`: **Global UI Kit.**
-  - `app/features`: **DOMAIN LOGIC CENTER (DDD).**
-    - `*/body`, `*/drawer`, `*/editor`: View components.
-    - `*/model`: Feature-specific logic and constants.
-    - `*/ui`: Feature-specific reusable UI.
+  - `app/features`: **DDD STRUCTURE (Domains & Features).**
+    - **Concept:** `app/features` contains **Domains**. Inside each **Domain**, there are multiple **Features**.
+    - **Domain:** A high-level business area (e.g., `bestiary`, `tokenator`, `dice-roller`).
+    - **Feature:** A distinct functional module within a domain (e.g., `editor`, `list`, `canvas`, `controls`).
+    - **Structure:** `app/features/<domain>/<feature>`.
+      - `ui/`: Feature-specific UI components.
+      - `model/`: Feature-specific logic, stores, types.
+      - `index.ts`: Public API for this feature.
   - `server/domain` & `server/api`: **BACKEND LAYER.**
   - `app/components`: **DOES NOT EXIST.**
+
+- **Page Components Strategy:**
+  - **Direct Index Usage:** Do NOT create dedicated "Page Components" (e.g., `TokenatorPage.vue`) just to wrap a feature. Write the glue logic directly in `app/pages/.../index.vue`.
+  - **Feature Imports:** Import feature components using the feature alias (e.g., `import { TokenatorCanvas } from '~tokenator/canvas'`).
 
 - **Import Strategy (Smart Aliases):**
   - **Cross-Feature / External:** When importing from **another feature** (even in the same domain) or a different domain entirely, ALWAYS use the generated domain alias.
     - *Pattern:* `import { ... } from '~<domain>/<feature>';`
     - *Example:* `import { DiceRollerModal } from '~dice-roller/modal';`
-  - **Internal Feature Imports:** When importing files **strictly inside the current feature**, use **relative paths**.
+  - **Cross-Submodule (Same Feature):** When importing from a sibling submodule within the same feature (e.g., `controls` importing from `model`), USE the feature alias.
+    - *Pattern:* `import { ... } from '~<feature>/model';`
+    - *Example:* `import { ... } from '~tokenator/model';` (NOT `../../model`)
+  - **Internal Feature Imports:** When importing files **strictly inside the current sub-folder**, use **relative paths**.
     - *Pattern:* `import { ... } from '../const';` or `import { ... } from './types';`
+  - **Shortest Path:** ALWAYS import from the barrel file (`index.ts`) if available, rather than deep linking.
+    - *Correct:* `import { ... } from '~tokenator/model';`
+    - *Incorrect:* `import { ... } from '~tokenator/model/consts';`
   - *Note:* Domain aliases (e.g., `~dice-roller`) are automatically generated via `pnpm run postinstall` or `dev/build`.
 
 - **Barrel Files (index.ts):**
   - **Feature Root:** NO `index.ts` allowed in the root of a feature folder (e.g., `app/features/bestiary/index.ts` -> ❌).
   - **Subfolders:** YES, `index.ts` is REQUIRED in subfolders (`model`, `ui`, `body`) for clean re-exports.
+  - **UI Exports:** `ui` folders MUST have an `index.ts` file for re-exports. Imports from these folders must use the barrel file: `import { ... } from './ui'`.
 
 - **Reuse Rule (Priority Order):**
   - **UI:** 1. **Nuxt UI** (@nuxt/ui). 2. `shared/ui`. 3. `app/features/*/ui`.

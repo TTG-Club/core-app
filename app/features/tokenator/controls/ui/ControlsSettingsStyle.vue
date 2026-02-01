@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import { useTokenatorStore } from '../../composables';
-  import { BLEND_MODES, DEFAULT_COLORS } from '../../model';
+  import { useTokenatorStore } from '~tokenator/composables';
+  import { BLEND_MODES, DEFAULT_COLORS } from '~tokenator/model';
+
   import { useColorWithOpacity } from '../composables';
 
   const store = useTokenatorStore();

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { useTokenatorStore } from '../../composables';
+  import { useTokenatorStore } from '~tokenator/composables';
 
   const store = useTokenatorStore();
 

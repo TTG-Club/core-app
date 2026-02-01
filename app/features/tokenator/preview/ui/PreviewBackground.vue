@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { PREVIEW_ASSETS } from '../../model/consts';
+  import { PREVIEW_ASSETS } from '~tokenator/model';
 </script>
 
 <template>

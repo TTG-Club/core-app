@@ -1,7 +1,6 @@
 import { useLocalStorage, useRefHistory } from '@vueuse/core';
 import { defineStore } from 'pinia';
 import { v4 as uuid } from 'uuid';
-
 import {
   BLEND_MODES,
   DEFAULT_BRUSH_CONFIG,
@@ -9,13 +8,13 @@ import {
   DEFAULT_FRAME_TINT,
   DEFAULT_TEXT_CONFIG,
   DEFAULT_TRANSFORM,
-} from '../model';
+} from '~tokenator/model';
 import {
   validateBrushSize,
   validateFontSize,
   validateRotation,
   validateScale,
-} from '../utils';
+} from '~tokenator/utils';
 
 import type {
   BrushState,
@@ -23,7 +22,7 @@ import type {
   TokenatorFrame,
   TokenText,
   TransformState,
-} from '../model';
+} from '~tokenator/model';
 
 /**
  * Основной Pinia store для редактора токенов.

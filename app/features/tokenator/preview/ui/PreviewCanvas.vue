@@ -1,8 +1,10 @@
 <script setup lang="ts">
   import { useMediaQuery } from '@vueuse/core';
-
-  import { useTokenatorCanvas, useTokenatorStore } from '../../composables';
-  import { getScaleFactor } from '../../utils';
+  import {
+    useTokenatorCanvas,
+    useTokenatorStore,
+  } from '~tokenator/composables';
+  import { getScaleFactor } from '~tokenator/utils';
 
   const store = useTokenatorStore();
   const canvasRef = ref<HTMLCanvasElement | null>(null);

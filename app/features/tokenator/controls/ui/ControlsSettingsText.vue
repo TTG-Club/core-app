@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { useTokenatorStore } from '../../composables';
+  import { useTokenatorStore } from '~tokenator/composables';
 
-  import type { TokenText } from '../../model';
+  import type { TokenText } from '~tokenator/model';
 
   const store = useTokenatorStore();
   const textInput = ref('');

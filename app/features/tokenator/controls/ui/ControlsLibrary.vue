@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { useTokenatorStore } from '../../composables';
+  import { useTokenatorStore } from '~tokenator/composables';
 
-  import type { TokenatorFrame } from '../../model';
+  import type { TokenatorFrame } from '~tokenator/model';
 
   const store = useTokenatorStore();
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { useTokenatorStore } from '../composables';
+  import { useTokenatorStore } from '~tokenator/composables';
 
   import {
     ControlsLibrary,
@@ -34,7 +34,6 @@
         { label: 'Библиотека', value: 'library', slot: 'library' as const },
         { label: 'Настройки', value: 'settings', slot: 'settings' as const },
       ]"
-      @update:model-value="toolTab = 'base'"
     >
       <template #library>
         <ControlsLibrary />

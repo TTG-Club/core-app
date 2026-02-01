@@ -1,6 +1,9 @@
 <script setup lang="ts">
-  import { useTokenatorCanvas, useTokenatorStore } from '../composables';
-  import { getScaleFactor } from '../utils';
+  import {
+    useTokenatorCanvas,
+    useTokenatorStore,
+  } from '~tokenator/composables';
+  import { getScaleFactor } from '~tokenator/utils';
 
   import { CanvasDropZone } from './ui';
 
