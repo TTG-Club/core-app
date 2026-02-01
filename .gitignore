@@ -34,6 +34,7 @@ shared/types/generated
 
 # Custom
 .test
+.antigravityignore
 
 # AI Agents
 AGENTS.md

@@ -1,0 +1,359 @@
+import { useLocalStorage, useRefHistory } from '@vueuse/core';
+import { defineStore } from 'pinia';
+import { v4 as uuid } from 'uuid';
+
+import {
+  BLEND_MODES,
+  DEFAULT_BRUSH_CONFIG,
+  DEFAULT_COLORS,
+  DEFAULT_FRAME_TINT,
+  DEFAULT_TEXT_CONFIG,
+  DEFAULT_TRANSFORM,
+} from '../model/constants';
+import {
+  validateBrushSize,
+  validateFontSize,
+  validateRotation,
+  validateScale,
+} from '../utils/validators';
+
+import type {
+  BrushState,
+  FrameTint,
+  TokenatorFrame,
+  TokenText,
+  TransformState,
+} from '../model/types';
+
+/**
+ * Основной Pinia store для редактора токенов.
+ * Управляет состоянием изображений, рамок, трансформаций, текста и кисти.
+ * Поддерживает персистентность через LocalStorage и undo/redo функциональность.
+ */
+export const useTokenatorStore = defineStore('tokenator', () => {
+  // Изображения
+  const currentImage = ref<string | null>(null);
+  const currentFrame = ref<TokenatorFrame | null>(null);
+  const customFrame = ref<string | null>(null);
+  const customBackground = ref<string | null>(null);
+
+  // Текст
+  const texts = ref<TokenText[]>([]);
+  const activeTextId = ref<string | null>(null);
+
+  // Маска
+  const maskImageCanvas = ref<HTMLCanvasElement | null>(null);
+  const maskVersion = ref(0);
+  const maskTokenSize = ref(500);
+
+  // Цвета и стили (с LocalStorage персистентностью)
+  const backgroundColor = useLocalStorage<string>(
+    'tokenator:backgroundColor',
+    DEFAULT_COLORS.BACKGROUND,
+  );
+
+  const frameTint = useLocalStorage<FrameTint>(
+    'tokenator:frameTint',
+    DEFAULT_FRAME_TINT,
+  );
+
+  // Трансформации (с LocalStorage и undo/redo)
+  const transform = useLocalStorage<TransformState>(
+    'tokenator:transform',
+    DEFAULT_TRANSFORM,
+  );
+
+  const { undo, redo, canUndo, canRedo } = useRefHistory(transform, {
+    deep: true,
+    capacity: 20,
+  });
+
+  // Кисть (с LocalStorage)
+  const brush = useLocalStorage<BrushState>(
+    'tokenator:brush',
+    DEFAULT_BRUSH_CONFIG,
+  );
+
+  // Computed
+  const activeFrameUrl = computed(
+    () => customFrame.value || currentFrame.value?.url || null,
+  );
+
+  /**
+   * Добавляет новый текстовый элемент на токен.
+   *
+   * @param content - Текст для добавления
+   */
+  function addText(content: string) {
+    if (!content.trim()) {
+      return;
+    }
+
+    const id = uuid();
+
+    texts.value.push({
+      id,
+      content,
+      ...DEFAULT_TEXT_CONFIG,
+    });
+
+    activeTextId.value = id;
+  }
+
+  /**
+   * Удаляет текстовый элемент по ID.
+   * Автоматически снимает выделение, если удаляемый элемент был активным.
+   *
+   * @param id - Уникальный идентификатор текстового элемента
+   */
+  function removeText(id: string) {
+    const index = texts.value.findIndex((t) => t.id === id);
+
+    if (index !== -1) {
+      texts.value.splice(index, 1);
+
+      if (activeTextId.value === id) {
+        activeTextId.value = null;
+      }
+    }
+  }
+
+  /**
+   * Обновляет свойства текстового элемента.
+   *
+   * @param id - Уникальный идентификатор текстового элемента
+   * @param updates - Объект с обновляемыми свойствами
+   */
+  function updateText(id: string, updates: Partial<TokenText>) {
+    const text = texts.value.find((t) => t.id === id);
+
+    if (text) {
+      // Применяем валидацию для числовых значений
+      if (updates.fontSize !== undefined) {
+        updates.fontSize = validateFontSize(updates.fontSize);
+      }
+
+      if (updates.rotation !== undefined) {
+        updates.rotation = validateRotation(updates.rotation);
+      }
+
+      Object.assign(text, updates);
+    }
+  }
+
+  /**
+   * Загружает изображение персонажа из файла.
+   * Сохраняет текущие значения maskScale и frameScale при сбросе трансформаций.
+   *
+   * @param file - Файл изображения для загрузки
+   */
+  function setImage(file: File) {
+    if (currentImage.value && currentImage.value.startsWith('blob:')) {
+      URL.revokeObjectURL(currentImage.value);
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      if (e.target?.result && typeof e.target.result === 'string') {
+        const savedMaskScale = transform.value.maskScale;
+        const savedFrameScale = transform.value.frameScale;
+
+        currentImage.value = e.target.result;
+        resetTransform();
+
+        transform.value.maskScale = savedMaskScale;
+        transform.value.frameScale = savedFrameScale;
+      }
+    };
+
+    reader.onerror = () => {
+      console.error('Failed to load image file');
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  /**
+   * Загружает кастомную рамку из файла.
+   *
+   * @param file - Файл рамки для загрузки
+   */
+  function setCustomFrame(file: File) {
+    if (customFrame.value && customFrame.value.startsWith('blob:')) {
+      URL.revokeObjectURL(customFrame.value);
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      if (e.target?.result && typeof e.target.result === 'string') {
+        customFrame.value = e.target.result;
+      }
+    };
+
+    reader.onerror = () => {
+      console.error('Failed to load frame file');
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  /**
+   * Загружает кастомное фоновое изображение из файла.
+   *
+   * @param file - Файл фонового изображения для загрузки
+   */
+  function setCustomBackground(file: File) {
+    if (customBackground.value && customBackground.value.startsWith('blob:')) {
+      URL.revokeObjectURL(customBackground.value);
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      if (e.target?.result && typeof e.target.result === 'string') {
+        customBackground.value = e.target.result;
+      }
+    };
+
+    reader.onerror = () => {
+      console.error('Failed to load background file');
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  /**
+   * Выбирает рамку из библиотеки.
+   * Автоматически очищает кастомную рамку при выборе.
+   *
+   * @param frame - Объект рамки из библиотеки
+   */
+  function selectFrame(frame: TokenatorFrame) {
+    if (customFrame.value) {
+      URL.revokeObjectURL(customFrame.value);
+      customFrame.value = null;
+    }
+
+    currentFrame.value = frame;
+  }
+
+  /**
+   * Сбрасывает все трансформации токена к значениям по умолчанию.
+   */
+  function resetTransform() {
+    transform.value = { ...DEFAULT_TRANSFORM };
+  }
+
+  /**
+   * Полный сброс всех настроек редактора токенов.
+   * Сбрасывает трансформации, изображения, рамки и цвета.
+   */
+  function resetAll() {
+    resetTransform();
+    currentImage.value = null;
+    customFrame.value = null;
+    currentFrame.value = null;
+    backgroundColor.value = DEFAULT_COLORS.BACKGROUND;
+    frameTint.value = { ...DEFAULT_FRAME_TINT };
+  }
+
+  /**
+   * Генерирует случайные цвета для градиентной тонировки рамки.
+   */
+  function randomizeTint() {
+    const randomColor = () =>
+      `#${Math.floor(Math.random() * 16777215)
+        .toString(16)
+        .padStart(6, '0')}`;
+
+    frameTint.value.colors = [randomColor(), randomColor()];
+    frameTint.value.enabled = true;
+  }
+
+  /**
+   * Меняет местами цвета градиента тонировки.
+   */
+  function swapTintColors() {
+    const c1 = frameTint.value.colors[0];
+    const c2 = frameTint.value.colors[1];
+
+    if (c2) {
+      frameTint.value.colors = [c2, c1 || DEFAULT_COLORS.TINT_TRANSPARENT];
+    }
+  }
+
+  /**
+   * Устанавливает масштаб с валидацией.
+   */
+  function setScale(scale: number) {
+    transform.value.scale = validateScale(scale);
+  }
+
+  /**
+   * Устанавливает поворот с валидацией.
+   */
+  function setRotation(rotation: number) {
+    transform.value.rotate = validateRotation(rotation);
+  }
+
+  /**
+   * Устанавливает поворот рамки с валидацией.
+   */
+  function setFrameRotation(rotation: number) {
+    transform.value.frameRotate = validateRotation(rotation);
+  }
+
+  /**
+   * Устанавливает размер кисти с валидацией.
+   */
+  function setBrushSize(size: number) {
+    brush.value.size = validateBrushSize(size);
+  }
+
+  return {
+    // State
+    currentImage,
+    currentFrame,
+    customFrame,
+    customBackground,
+    activeFrameUrl,
+    backgroundColor,
+    frameTint,
+    transform,
+    brush,
+    texts,
+    activeTextId,
+    maskImageCanvas,
+    maskVersion,
+    maskTokenSize,
+
+    // Constants (re-export для удобства)
+    BLEND_MODES,
+    DEFAULT_COLORS,
+
+    // Actions
+    addText,
+    removeText,
+    updateText,
+    setImage,
+    setCustomFrame,
+    setCustomBackground,
+    selectFrame,
+    resetTransform,
+    resetAll,
+    randomizeTint,
+    swapTintColors,
+    setScale,
+    setRotation,
+    setFrameRotation,
+    setBrushSize,
+
+    // Undo/Redo
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  };
+});
