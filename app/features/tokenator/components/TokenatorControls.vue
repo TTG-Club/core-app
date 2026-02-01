@@ -631,7 +631,7 @@
                     />
                   </button>
 
-                  <span class="font-mono text-[10px] text-neutral-400">{{
+                  <span class="font-mono text-xs text-neutral-400">{{
                     store.transform.maskScale.toFixed(2)
                   }}</span>
                 </div>
@@ -668,7 +668,7 @@
                     />
                   </button>
 
-                  <span class="font-mono text-[10px] text-neutral-400">{{
+                  <span class="font-mono text-xs text-neutral-400">{{
                     store.transform.frameScale.toFixed(2)
                   }}</span>
                 </div>
@@ -705,7 +705,7 @@
                     />
                   </button>
 
-                  <span class="font-mono text-[10px] text-neutral-400"
+                  <span class="font-mono text-xs text-neutral-400"
                     >{{ store.transform.frameRotate }}°</span
                   >
                 </div>
@@ -742,7 +742,7 @@
                     />
                   </button>
 
-                  <span class="font-mono text-[10px] text-neutral-400">{{
+                  <span class="font-mono text-xs text-neutral-400">{{
                     store.transform.scale.toFixed(2)
                   }}</span>
                 </div>
@@ -779,7 +779,7 @@
                     />
                   </button>
 
-                  <span class="font-mono text-[10px] text-neutral-400"
+                  <span class="font-mono text-xs text-neutral-400"
                     >{{ store.transform.rotate }}°</span
                   >
                 </div>
