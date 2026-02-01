@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { HomeBackground } from '~home/background';
   import { HomeBanners, RoadmapBanner } from '~home/banners';
   import { HomeRecentChanges } from '~home/recent-changes';
   import { HomeSections } from '~home/sections';
@@ -19,7 +20,11 @@
 
 <template>
   <NuxtLayout>
-    <div class="flex flex-col items-center gap-6">
+    <ClientOnly>
+      <HomeBackground />
+    </ClientOnly>
+
+    <div class="relative z-10 flex flex-col items-center gap-6">
       <h1 class="m-0 h-0 overflow-hidden leading-0 opacity-0">
         {{ name }}
       </h1>
