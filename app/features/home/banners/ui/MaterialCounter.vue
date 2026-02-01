@@ -71,7 +71,7 @@
       <h3
         class="text-sm leading-tight font-semibold text-(--color-success-400)"
       >
-        Статистика
+        Статистика онлайн
       </h3>
 
       <UButton
@@ -87,13 +87,13 @@
 
     <!-- Описание -->
     <p class="text-xs leading-normal text-default">
-      TTG — справочник по настольным ролевым играм, созданный сообществом для
+      TTG — твой проводник в мир Dungeons & Dragons, созданный сообществом для
       сообщества!
     </p>
 
     <!-- Статистика в две колонки -->
-    <div class="grid grid-cols-2 gap-4 border-t border-default pt-1">
-      <div class="flex flex-col gap-1">
+    <div class="flex content-evenly gap-4 pt-2">
+      <div class="flex flex-col items-center gap-1">
         <span class="text-xs font-medium tracking-[0.5px] text-muted uppercase">
           Материалов
         </span>
@@ -104,9 +104,11 @@
         />
       </div>
 
-      <div class="flex flex-col gap-1">
+      <USeparator orientation="vertical" />
+
+      <div class="flex flex-col items-center gap-1">
         <span class="text-xs font-medium tracking-[0.5px] text-muted uppercase">
-          Посетителей
+          Авантюристов
         </span>
 
         <AnimatedNumber
