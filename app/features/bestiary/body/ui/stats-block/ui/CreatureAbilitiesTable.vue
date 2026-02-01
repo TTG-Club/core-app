@@ -89,9 +89,9 @@
           <div class="max-w-7">{{ str.value }}</div>
 
           <div class="justify-end">
-            <DiceRollerLink :notation="`1к20${str.mod}`">{{
-              str.mod
-            }}</DiceRollerLink>
+            <DiceRollerLink :notation="`1к20${str.mod}`">
+              {{ str.mod }}
+            </DiceRollerLink>
           </div>
 
           <div
@@ -99,9 +99,9 @@
             :data-is-sav="str.mod !== str.sav"
             class="min-w-8 justify-end"
           >
-            <DiceRollerLink :notation="`1к20${str.sav}`">{{
-              str.sav
-            }}</DiceRollerLink>
+            <DiceRollerLink :notation="`1к20${str.sav}`">
+              {{ str.sav }}
+            </DiceRollerLink>
           </div>
         </div>
 
@@ -115,18 +115,18 @@
 
           <div class="max-w-7">{{ dex.value }}</div>
 
-          <DiceRollerLink :notation="`1к20${dex.mod}`">{{
-            dex.mod
-          }}</DiceRollerLink>
+          <DiceRollerLink :notation="`1к20${dex.mod}`">
+            {{ dex.mod }}
+          </DiceRollerLink>
 
           <div
             :class="{ [$style.boxed]: str.mod !== str.sav }"
             :data-is-sav="str.mod !== str.sav"
             class="min-w-8 justify-end"
           >
-            <DiceRollerLink :notation="`1к20${dex.sav}`">{{
-              dex.sav
-            }}</DiceRollerLink>
+            <DiceRollerLink :notation="`1к20${dex.sav}`">
+              {{ dex.sav }}
+            </DiceRollerLink>
           </div>
         </div>
 
@@ -141,9 +141,9 @@
           <div class="max-w-7">{{ con.value }}</div>
 
           <div class="justify-end">
-            <DiceRollerLink :notation="`1к20${con.mod}`">{{
-              con.mod
-            }}</DiceRollerLink>
+            <DiceRollerLink :notation="`1к20${con.mod}`">
+              {{ con.mod }}
+            </DiceRollerLink>
           </div>
 
           <div
@@ -151,9 +151,9 @@
             :data-is-sav="str.mod !== str.sav"
             class="min-w-8 justify-end"
           >
-            <DiceRollerLink :notation="`1к20${con.sav}`">{{
-              con.sav
-            }}</DiceRollerLink>
+            <DiceRollerLink :notation="`1к20${con.sav}`">
+              {{ con.sav }}
+            </DiceRollerLink>
           </div>
         </div>
       </div>
@@ -170,9 +170,9 @@
           <div class="max-w-7">{{ int.value }}</div>
 
           <div class="justify-end">
-            <DiceRollerLink :notation="`1к20${int.mod}`">{{
-              int.mod
-            }}</DiceRollerLink>
+            <DiceRollerLink :notation="`1к20${int.mod}`">
+              {{ int.mod }}
+            </DiceRollerLink>
           </div>
 
           <div
@@ -180,9 +180,9 @@
             :data-is-sav="str.mod !== str.sav"
             class="min-w-8 justify-end"
           >
-            <DiceRollerLink :notation="`1к20${int.sav}`">{{
-              int.sav
-            }}</DiceRollerLink>
+            <DiceRollerLink :notation="`1к20${int.sav}`">
+              {{ int.sav }}
+            </DiceRollerLink>
           </div>
         </div>
 
@@ -197,9 +197,9 @@
           <div class="max-w-7">{{ wis.value }}</div>
 
           <div class="justify-end">
-            <DiceRollerLink :notation="`1к20${wis.mod}`">{{
-              wis.mod
-            }}</DiceRollerLink>
+            <DiceRollerLink :notation="`1к20${wis.mod}`">
+              {{ wis.mod }}
+            </DiceRollerLink>
           </div>
 
           <div
@@ -207,9 +207,9 @@
             :data-is-sav="str.mod !== str.sav"
             class="min-w-8 justify-end"
           >
-            <DiceRollerLink :notation="`1к20${wis.sav}`">{{
-              wis.sav
-            }}</DiceRollerLink>
+            <DiceRollerLink :notation="`1к20${wis.sav}`">
+              {{ wis.sav }}
+            </DiceRollerLink>
           </div>
         </div>
 
@@ -224,9 +224,9 @@
           <div class="max-w-7">{{ chr.value }}</div>
 
           <div class="justify-end">
-            <DiceRollerLink :notation="`1к20${chr.mod}`">{{
-              chr.mod
-            }}</DiceRollerLink>
+            <DiceRollerLink :notation="`1к20${chr.mod}`">
+              {{ chr.mod }}
+            </DiceRollerLink>
           </div>
 
           <div
@@ -234,9 +234,9 @@
             :data-is-sav="str.mod !== str.sav"
             class="min-w-8 justify-end"
           >
-            <DiceRollerLink :notation="`1к20${chr.sav}`">{{
-              chr.sav
-            }}</DiceRollerLink>
+            <DiceRollerLink :notation="`1к20${chr.sav}`">
+              {{ chr.sav }}
+            </DiceRollerLink>
           </div>
         </div>
       </div>
