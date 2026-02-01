@@ -92,7 +92,7 @@
     </p>
 
     <!-- Статистика в две колонки -->
-    <div class="flex content-evenly gap-4 pt-2">
+    <div class="flex justify-evenly gap-4 pt-2">
       <div class="flex flex-col items-center gap-1">
         <span class="text-xs font-medium tracking-[0.5px] text-muted uppercase">
           Материалов
