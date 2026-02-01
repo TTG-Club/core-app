@@ -24,7 +24,10 @@
   const LIMIT_VALUES = [5, 10, 20, 50, 100];
   const DEFAULT_LIMIT = 10;
 
-  const selectedLimit = useLocalStorage('recent-changes-limit', DEFAULT_LIMIT);
+  const selectedLimit = useLocalStorage('recent-changes-limit', DEFAULT_LIMIT, {
+    initOnMounted: true,
+  });
+
   const { format } = useDayjs();
 
   /**
@@ -68,7 +71,7 @@
     pending,
     refresh,
   } = await useAsyncData<Array<RecentChangeItem>>(
-    computed(() => `recent-changes-${selectedLimit.value}`),
+    'recent-changes',
     () =>
       $fetch<Array<RecentChangeItem>>('/api/v2/last/update', {
         query: { top: selectedLimit.value },
@@ -78,8 +81,14 @@
       default: () => [],
       lazy: true,
       server: false,
+      immediate: false,
+      watch: [selectedLimit],
     },
   );
+
+  onMounted(() => {
+    refresh();
+  });
 
   const timelineItems = computed<Array<TimelineItem & RecentChangeItem>>(() =>
     updates.value.map((update) => ({
@@ -87,6 +96,11 @@
       date: format(update.updatedAt),
       icon: getActionIcon(update.action.type),
     })),
+  );
+
+  const showSkeleton = computed(
+    () =>
+      (status.value === 'idle' || pending.value) && !timelineItems.value.length,
   );
 </script>
 
@@ -153,7 +167,31 @@
         viewport: 'p-3',
       }"
     >
+      <div
+        v-if="showSkeleton"
+        class="flex flex-col gap-4"
+      >
+        <div
+          v-for="i in 5"
+          :key="i"
+          class="flex gap-4"
+        >
+          <div class="flex flex-col items-center gap-2">
+            <USkeleton class="size-4 rounded-full" />
+
+            <USkeleton class="h-full w-0.5" />
+          </div>
+
+          <div class="flex flex-1 flex-col gap-2 pb-4">
+            <USkeleton class="h-4 w-24" />
+
+            <USkeleton class="h-5 w-3/4" />
+          </div>
+        </div>
+      </div>
+
       <UTimeline
+        v-else
         :items="timelineItems"
         color="primary"
         :ui="{

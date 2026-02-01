@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { DiceRollerLink } from '~dice-roller/link';
   import { MarkupRender } from '~ui/markup';
 
   import { CreatureAbilitiesTable } from './ui';
@@ -43,7 +44,12 @@
       <span :class="$style.name">Хиты: </span>
 
       <span>
-        {{ hit.hit }} <span v-if="hit.formula">({{ hit.formula }})</span>
+        {{ hit.hit }}
+        <span v-if="hit.formula">
+          (<DiceRollerLink :notation="`{(${hit.formula}), 1}вл1`">
+            {{ hit.formula }} </DiceRollerLink
+          >)
+        </span>
         {{ hit.text }}
       </span>
     </div>
