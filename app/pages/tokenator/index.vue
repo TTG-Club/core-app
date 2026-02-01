@@ -1,5 +1,7 @@
 <script setup lang="ts">
-  import TokenatorPage from '../../features/tokenator/pages/TokenatorPage.vue';
+  import { TokenatorCanvas } from '~tokenator/canvas';
+  import { TokenatorControls } from '~tokenator/controls';
+  import { TokenatorPreview } from '~tokenator/preview';
 
   definePageMeta({
     layout: 'default',
@@ -23,12 +25,38 @@
     <h1 class="mb-8 text-3xl font-bold">Токенатор</h1>
 
     <ClientOnly>
-      <TokenatorPage />
+      <div class="flex h-full flex-col gap-6 lg:flex-row lg:gap-8">
+        <div
+          class="lg:page-h flex shrink-0 flex-col gap-4 lg:w-80 lg:overflow-hidden lg:pr-1"
+        >
+          <div class="shrink-0 pt-0 pb-2">
+            <TokenatorPreview />
+          </div>
+
+          <div class="min-h-0 flex-1 overflow-y-auto">
+            <TokenatorControls />
+          </div>
+        </div>
+
+        <div
+          class="relative flex min-w-0 flex-1 flex-col overflow-hidden lg:h-[calc(100vh-140px)] lg:rounded-2xl"
+        >
+          <h2
+            class="absolute top-0 right-0 left-0 z-50 mb-4 p-4 text-xl font-bold backdrop-blur-sm lg:hidden"
+          >
+            Редактор
+          </h2>
+
+          <div class="absolute inset-0 h-full w-full">
+            <TokenatorCanvas />
+          </div>
+        </div>
+      </div>
 
       <template #fallback>
         <div class="flex h-96 items-center justify-center">
           <UIcon
-            name="i-heroicons-arrow-path"
+            name="i-fluent-arrow-clockwise-24-regular"
             class="h-10 w-10 animate-spin text-gray-500"
           />
         </div>

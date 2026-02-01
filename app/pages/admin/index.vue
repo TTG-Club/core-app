@@ -19,7 +19,7 @@
 
             <UButton
               size="sm"
-              to="/admin-panel/tokenator"
+              to="/admin/tokenator"
             >
               Настроить
             </UButton>

@@ -30,7 +30,11 @@ export const BLEND_MODES = [
   { label: 'Насыщенность', value: 'saturation' },
   { label: 'Цветность', value: 'color' },
   { label: 'Яркость', value: 'luminosity' },
-] as const;
+];
+
+export const PREVIEW_ASSETS = {
+  BACKGROUND: '/s3/tokenator/terrane.webp',
+} as const;
 
 /**
  * Состояние трансформаций по умолчанию

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-  import { useTokenatorCanvas } from '../composables/useTokenatorCanvas';
-  import { useTokenatorStore } from '../composables/useTokenatorStore';
-  import { getScaleFactor } from '../utils/scaleFactor';
+  import { useTokenatorCanvas, useTokenatorStore } from '../composables';
+  import { getScaleFactor } from '../utils';
+
+  import { CanvasDropZone } from './ui';
 
   const store = useTokenatorStore();
   const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -208,19 +209,7 @@
       class="relative z-10 size-full touch-none"
     />
 
-    <div
-      v-if="isDropZoneActive"
-      class="absolute inset-0 z-20 flex items-center justify-center bg-primary/10"
-    >
-      <div class="flex flex-col items-center gap-2 text-primary">
-        <UIcon
-          name="i-heroicons-arrow-down-tray"
-          class="size-12"
-        />
-
-        <span class="text-lg font-medium">Отпустите для загрузки</span>
-      </div>
-    </div>
+    <CanvasDropZone v-if="isDropZoneActive" />
 
     <div
       v-else-if="!store.currentImage && !store.activeFrameUrl"

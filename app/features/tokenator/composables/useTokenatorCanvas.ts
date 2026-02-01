@@ -1,6 +1,6 @@
 import { useElementSize, useRafFn } from '@vueuse/core';
 
-import { CANVAS_SIZE, drawToken } from '../utils/draw';
+import { CANVAS_SIZE, drawToken } from '../utils';
 
 import { useTokenatorStore } from './useTokenatorStore';
 

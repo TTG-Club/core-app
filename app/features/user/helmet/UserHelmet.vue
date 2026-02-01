@@ -166,7 +166,7 @@
               variant="ghost"
               class="w-full"
               size="lg"
-              to="/admin-panel"
+              to="/admin"
               @click="closeMenu"
             >
               <div class="flex w-full items-center justify-between">

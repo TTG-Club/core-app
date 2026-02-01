@@ -1,9 +1,8 @@
 <script setup lang="ts">
   import { useMediaQuery } from '@vueuse/core';
 
-  import { useTokenatorCanvas } from '../composables/useTokenatorCanvas';
-  import { useTokenatorStore } from '../composables/useTokenatorStore';
-  import { getScaleFactor } from '../utils/scaleFactor';
+  import { useTokenatorCanvas, useTokenatorStore } from '../../composables';
+  import { getScaleFactor } from '../../utils';
 
   const store = useTokenatorStore();
   const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -134,64 +133,35 @@
 
 <template>
   <div
-    class="relative w-full overflow-hidden rounded-2xl border border-neutral-200 shadow-md"
+    ref="containerRef"
+    class="relative mx-auto h-[240px] w-[240px] shrink-0 touch-none"
+    :class="{
+      'cursor-grab': isMobile && store.currentImage,
+      'cursor-grabbing': isDragging,
+    }"
+    @pointerdown="onPointerDown"
+    @pointermove="onPointerMove"
+    @pointerup="onPointerUp"
+    @pointercancel="onPointerUp"
+    @wheel.prevent="onWheel"
+    @touchstart="onTouchStart"
+    @touchmove="onTouchMove"
+    @touchend="onTouchEnd"
   >
-    <div class="absolute inset-0 z-0 opacity-75">
-      <img
-        :src="'/s3/tokenator/terrane.webp'"
-        alt="Background"
-        class="h-full w-full object-cover"
-      />
-    </div>
+    <!-- Guides -->
+    <div
+      class="pointer-events-none absolute rounded-full border border-neutral-200"
+      :style="{ inset: guideInset }"
+    ></div>
 
-    <div class="relative flex aspect-square w-full items-center justify-center">
-      <div
-        class="pointer-events-none absolute top-[calc(50%-120px)] right-0 left-0 z-20 h-px bg-neutral-500/40"
-      ></div>
+    <div
+      class="pointer-events-none absolute rounded-full bg-black/40"
+      :style="{ inset: guideInset }"
+    ></div>
 
-      <div
-        class="pointer-events-none absolute top-[calc(50%+120px)] right-0 left-0 z-20 h-px bg-neutral-500/40"
-      ></div>
-
-      <div
-        class="pointer-events-none absolute top-0 bottom-0 left-[calc(50%-120px)] z-20 w-px bg-neutral-500/40"
-      ></div>
-
-      <div
-        class="pointer-events-none absolute top-0 bottom-0 left-[calc(50%+120px)] z-20 w-px bg-neutral-500/40"
-      ></div>
-
-      <div
-        ref="containerRef"
-        class="relative mx-auto h-[240px] w-[240px] shrink-0 touch-none"
-        :class="{
-          'cursor-grab': isMobile && store.currentImage,
-          'cursor-grabbing': isDragging,
-        }"
-        @pointerdown="onPointerDown"
-        @pointermove="onPointerMove"
-        @pointerup="onPointerUp"
-        @pointercancel="onPointerUp"
-        @wheel.prevent="onWheel"
-        @touchstart="onTouchStart"
-        @touchmove="onTouchMove"
-        @touchend="onTouchEnd"
-      >
-        <div
-          class="pointer-events-none absolute rounded-full border border-neutral-200"
-          :style="{ inset: guideInset }"
-        ></div>
-
-        <div
-          class="pointer-events-none absolute rounded-full bg-black/40"
-          :style="{ inset: guideInset }"
-        ></div>
-
-        <canvas
-          ref="canvasRef"
-          class="relative z-10 size-full"
-        />
-      </div>
-    </div>
+    <canvas
+      ref="canvasRef"
+      class="relative z-10 size-full"
+    />
   </div>
 </template>

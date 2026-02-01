@@ -7,12 +7,12 @@ export const ADMIN_NAVIGATION_ITEMS: NavigationItem[] = [
   {
     label: 'Главная',
     icon: 'i-heroicons-home',
-    to: '/admin-panel',
+    to: '/admin',
   },
   {
     label: 'Токенатор',
     icon: 'i-heroicons-photo',
-    to: '/admin-panel/tokenator',
+    to: '/admin/tokenator',
   },
 ];
 

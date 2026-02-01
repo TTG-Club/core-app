@@ -9,13 +9,13 @@ import {
   DEFAULT_FRAME_TINT,
   DEFAULT_TEXT_CONFIG,
   DEFAULT_TRANSFORM,
-} from '../model/constants';
+} from '../model';
 import {
   validateBrushSize,
   validateFontSize,
   validateRotation,
   validateScale,
-} from '../utils/validators';
+} from '../utils';
 
 import type {
   BrushState,
@@ -23,7 +23,7 @@ import type {
   TokenatorFrame,
   TokenText,
   TransformState,
-} from '../model/types';
+} from '../model';
 
 /**
  * Основной Pinia store для редактора токенов.
