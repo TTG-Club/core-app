@@ -1,5 +1,10 @@
 # Project Rules & Guidelines
 
+## 0. AI Rules Management (Meta Rules)
+- **Single Source of Truth:** `.cursorrules` is the **PRIMARY** source of truth for all AI agent rules.
+- **Editing Policy:** ALWAYS edit rules in `.cursorrules` ONLY. Do NOT edit `AGENTS.md`, `CLAUDE.md`, or other rule files directly.
+- **Sync Requirement:** After ANY change to `.cursorrules`, you **MUST** immediately run `pnpm run sync-ai-rules` to propagate changes to all other rule files (including `AGENTS.md`, `CLAUDE.md`).
+
 ## 1. Core Workflow (Must Follow)
 - **DRY Principle:** **STRICTLY FOLLOW THE DRY (DON'T REPEAT YOURSELF) POLICY.** If you find yourself writing the same or very similar logic more than once, abstract it into a shared utility, component, or composable. Code duplication is prohibited.
 - **Analyze First:** Before writing any code, ALWAYS analyze the existing project codebase. Look at similar logic, file structure, and coding styles. Strictly follow established patterns and conventions to ensure consistency.
@@ -12,6 +17,7 @@
 - **File Size & Modularity:**
   - **Limit File Size:** Avoid extremely large files. If a file grows too complex, refactor it by extracting logic into smaller components, utilities, composables, or constants.
   - **Feature Localization:** Utilities, composables, constants, types, stores, helpers, and any other logic specific to a single feature MUST be located inside that feature's folder (e.g., `app/features/tokenator/controls/composables`).
+  - **Composables Placement:** The `composables` (or `composable`) folder MUST NOT be located inside the `model` folder. It should be a sibling to `model` and `ui`.
 - **Final Verification:**
   - **Mandatory Checks:** At the end of every task, you MUST run `pnpm run lint:write` and `pnpm run type-check` to ensure no regressions were introduced.
 
@@ -73,14 +79,20 @@
   - **Feature Imports:** Import feature components using the feature alias (e.g., `import { TokenatorCanvas } from '~tokenator/canvas'`).
 
 - **Import Strategy (Smart Aliases):**
-  - **Cross-Feature / External:** When importing from **another feature** (even in the same domain) or a different domain entirely, ALWAYS use the generated domain alias.
+  - **Cross-Feature (Different Features):** When importing from another feature (even in the same domain), ALWAYS use the generated domain alias.
     - *Pattern:* `import { ... } from '~<domain>/<feature>';`
-    - *Example:* `import { DiceRollerModal } from '~dice-roller/modal';`
-  - **Cross-Submodule (Same Feature):** When importing from a sibling submodule within the same feature (e.g., `controls` importing from `model`), USE the feature alias.
-    - *Pattern:* `import { ... } from '~<feature>/model';`
+    - *Example:* `import { TokenatorCanvas } from '~tokenator/canvas';`
+  - **Cross-Submodule (Same Feature):** When importing from a sibling submodule within the same feature (e.g., `app/features/domain/feature/ui` importing from `app/features/domain/feature/model`), USE **relative paths**.
+    - *Pattern:* `import { ... } from '../../model';` or `import { ... } from '../model';`
+    - *Example:* `import { ... } from '../../model';` (NOT `~tokenator/model`)
+  - **Cross-Feature (Different Features):** When importing from another feature or domain-shared module (e.g., `app/features/domain/feature1` importing from `app/features/domain/feature2` or `app/features/domain/model`), USE **aliases**.
+    - *Pattern:* `import { ... } from '~<domain>/<feature>';`
     - *Example:* `import { ... } from '~tokenator/model';` (NOT `../../model`)
   - **Internal Feature Imports:** When importing files **strictly inside the current sub-folder**, use **relative paths**.
     - *Pattern:* `import { ... } from '../const';` or `import { ... } from './types';`
+  - **Feature Export Constraints:**
+    - **No UI Folder Export:** Do NOT export the `ui` folder from the feature's `index.ts`.
+    - **Max Import Depth:** External imports from a feature must not exceed 2 folders depth (e.g., `~<domain>/<feature>`).
   - **Shortest Path:** ALWAYS import from the barrel file (`index.ts`) if available, rather than deep linking.
     - *Correct:* `import { ... } from '~tokenator/model';`
     - *Incorrect:* `import { ... } from '~tokenator/model/consts';`

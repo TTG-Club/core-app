@@ -3,7 +3,7 @@
     useTokenatorCanvas,
     useTokenatorStore,
   } from '~tokenator/composables';
-  import { getScaleFactor } from '~tokenator/utils';
+  import { getScaleFactor } from '~tokenator/model';
 
   import { CanvasDropZone } from './ui';
 

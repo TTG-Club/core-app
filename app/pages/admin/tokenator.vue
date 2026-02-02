@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { TokenatorFrame } from '~/features/tokenator/model/types';
+  import type { TokenatorFrame } from '~tokenator/model';
 
   useSeoMeta({
     title: 'Токенатор: Настройки',

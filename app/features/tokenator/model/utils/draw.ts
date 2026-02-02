@@ -1,4 +1,4 @@
-import type { FrameTint, TransformState } from '../model/types';
+import type { FrameTint, TransformState } from '../types';
 
 /**
  * Размер canvas для финального экспорта токена.

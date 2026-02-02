@@ -5,12 +5,12 @@
    * Использует динамические стили на основе активности роута.
    */
 
-  import { useAdminNavigation } from '../composables';
+  import { useAdminNavigation } from './composables';
   import {
     ADMIN_PANEL_ICON,
     ADMIN_PANEL_TITLE,
     ADMIN_PANEL_UI_CONFIG,
-  } from '../model/constants';
+  } from './model';
 
   const { items, isItemActive, getItemColor, getItemVariant } =
     useAdminNavigation();
