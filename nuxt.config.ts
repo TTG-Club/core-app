@@ -296,6 +296,13 @@ export default defineNuxtConfig({
         // Pinia
         'pinia',
         '@pinia/nuxt',
+
+        // Other
+        'uuid',
+        'colorjs.io',
+        'pako',
+        'idb-keyval',
+        '@ttg-club/dice-roller-parser',
       ],
     },
   },
