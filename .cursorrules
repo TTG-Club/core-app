@@ -32,9 +32,10 @@
 - **Multi-word Names (Vue Components):**
   - All component filenames MUST consist of at least two words (e.g., `UserCard.vue`, not `Card.vue`) to prevent conflicts with HTML elements.
   - **EXCEPTION:** Files inside `app/pages` are exempt from this rule (e.g., `index.vue`, `[id].vue`, `about.vue` are allowed).
-- **Feature Component Naming:**
-  - Components inside features must reflect their path: `[FeatureName][Subfolder][Name].vue`.
-  - *Exception:* Components in `*/ui` subfolder should be named by their function (atomic components) without heavy prefixes.
+- **Domain & Feature Component Naming:**
+  - **Context:** `app/features/<domain>/<feature>`.
+  - **Feature Root:** The main component inside a feature folder MUST be named `[Domain][Feature].vue` (e.g., `TokenatorControls.vue`).
+  - **Feature UI:** Components in `*/ui` subfolders should be named descriptively (e.g., `LayerSettings.vue`). Avoid redundant prefixes if the component is local, but ensure uniqueness if necessary.
 - **Constants:**
   - File name should be `consts.ts` (not `constants.ts`).
   - Use `const` variables with Uppercase/CamelCase naming conventions.
