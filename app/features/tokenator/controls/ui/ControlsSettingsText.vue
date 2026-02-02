@@ -21,7 +21,7 @@
 </script>
 
 <template>
-  <div class="space-y-4 px-1 pt-1">
+  <div class="grid gap-2">
     <div class="flex gap-2">
       <UInput
         v-model="textInput"
@@ -72,6 +72,50 @@
 
       <!-- Position -->
       <div class="space-y-2">
+        <div class="grid grid-cols-[1fr_auto] gap-2">
+          <!-- Color -->
+          <div class="flex items-center gap-2">
+            <UPopover
+              mode="click"
+              :popper="{ placement: 'bottom-start' }"
+            >
+              <UButton
+                color="neutral"
+                variant="outline"
+                size="xs"
+                class="flex size-6 items-center justify-center p-0"
+              >
+                <span
+                  class="size-4 rounded-full border border-neutral-200"
+                  :style="{ backgroundColor: activeText.color }"
+                />
+              </UButton>
+
+              <template #content>
+                <div class="p-2">
+                  <UColorPicker v-model="activeText.color" />
+                </div>
+              </template>
+            </UPopover>
+
+            <span class="text-xs text-neutral-500">Цвет</span>
+          </div>
+
+          <!-- Font Size -->
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-neutral-500">Размер</span>
+
+            <UInput
+              v-model="activeText.fontSize"
+              type="number"
+              size="xs"
+              class="w-16"
+              :min="10"
+              :max="200"
+            />
+          </div>
+        </div>
+
         <div class="flex items-center justify-between text-xs text-neutral-500">
           <button
             type="button"
@@ -137,7 +181,111 @@
           :step="1"
           size="xs"
         />
+
+        <!-- Rotation -->
+        <div class="flex items-center justify-between text-xs text-neutral-500">
+          <button
+            type="button"
+            class="flex items-center gap-1.5 transition-colors"
+            :class="
+              activeText.rotation !== 0
+                ? 'cursor-pointer text-primary-500'
+                : 'cursor-default text-neutral-500'
+            "
+            :disabled="activeText.rotation === 0"
+            title="Сбросить поворот"
+            @click.left.exact.prevent="activeText.rotation = 0"
+          >
+            <span>Поворот</span>
+
+            <UIcon
+              v-if="activeText.rotation !== 0"
+              name="i-fluent-arrow-undo-20-regular"
+              class="size-3"
+            />
+          </button>
+
+          <span class="font-mono">{{ activeText.rotation }}°</span>
+        </div>
+
+        <USlider
+          v-model="activeText.rotation"
+          :min="-180"
+          :max="180"
+          :step="1"
+          size="xs"
+        />
+
+        <!-- Arc -->
+        <div class="flex items-center justify-between text-xs text-neutral-500">
+          <button
+            type="button"
+            class="flex items-center gap-1.5 transition-colors"
+            :class="
+              activeText.arc !== 0
+                ? 'cursor-pointer text-primary-500'
+                : 'cursor-default text-neutral-500'
+            "
+            :disabled="activeText.arc === 0"
+            title="Сбросить изгиб"
+            @click.left.exact.prevent="activeText.arc = 0"
+          >
+            <span>Изгиб</span>
+
+            <UIcon
+              v-if="activeText.arc !== 0"
+              name="i-fluent-arrow-undo-20-regular"
+              class="size-3"
+            />
+          </button>
+
+          <span class="font-mono">{{ activeText.arc }}°</span>
+        </div>
+
+        <USlider
+          v-model="activeText.arc"
+          :min="-360"
+          :max="360"
+          :step="5"
+          size="xs"
+        />
       </div>
     </div>
+
+    <div
+      v-else-if="store.texts.length > 0"
+      class="space-y-2"
+    >
+      <div class="text-xs text-neutral-500">Выберите текст:</div>
+
+      <div class="flex flex-col gap-2">
+        <UButton
+          v-for="text in store.texts"
+          :key="text.id"
+          :label="text.content"
+          size="sm"
+          variant="soft"
+          color="neutral"
+          class="justify-start truncate"
+          @click.left.exact.prevent="store.activeTextId = text.id"
+        />
+      </div>
+    </div>
+
+    <div
+      v-else
+      class="py-4 text-center text-xs text-neutral-400"
+    >
+      Нет текстов
+    </div>
+
+    <UButton
+      icon="i-fluent-arrow-reset-24-regular"
+      label="Сбросить"
+      variant="soft"
+      color="error"
+      block
+      @click="store.resetTextSettings"
+    />
   </div>
 </template>

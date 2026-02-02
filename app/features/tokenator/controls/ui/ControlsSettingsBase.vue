@@ -11,7 +11,7 @@
 </script>
 
 <template>
-  <div class="space-y-3 pt-1">
+  <div class="grid gap-2">
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-1.5">
         <span class="mr-1 text-xs tracking-wide text-neutral-500 uppercase">
@@ -46,7 +46,7 @@
       </div>
     </div>
 
-    <div class="space-y-4 px-1">
+    <div class="grid gap-2">
       <div class="space-y-1.5">
         <div class="flex h-5 items-center justify-between">
           <button
@@ -232,5 +232,14 @@
         />
       </div>
     </div>
+
+    <UButton
+      icon="i-fluent-arrow-reset-24-regular"
+      label="Сбросить"
+      variant="soft"
+      color="error"
+      block
+      @click="store.resetBaseSettings"
+    />
   </div>
 </template>

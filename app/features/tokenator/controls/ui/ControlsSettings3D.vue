@@ -5,7 +5,7 @@
 </script>
 
 <template>
-  <div class="space-y-4 px-1 pt-1">
+  <div class="grid gap-2">
     <div class="flex items-center gap-2">
       <UCheckbox
         v-model="store.brush.halfMask"
@@ -89,5 +89,14 @@
         :step="1"
       />
     </div>
+
+    <UButton
+      icon="i-fluent-arrow-reset-24-regular"
+      label="Сбросить"
+      variant="soft"
+      color="error"
+      block
+      @click="store.reset3DSettings"
+    />
   </div>
 </template>

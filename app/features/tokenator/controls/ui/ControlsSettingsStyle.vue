@@ -77,7 +77,7 @@
 </script>
 
 <template>
-  <div class="space-y-4 px-1 pt-1">
+  <div class="grid gap-2">
     <div class="grid grid-cols-[auto_1fr] items-center gap-3">
       <UPopover
         mode="click"
@@ -153,7 +153,7 @@
       </div>
     </div>
 
-    <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-2">
       <div class="flex items-end gap-3">
         <div class="flex-1 space-y-1">
           <div class="flex h-5 items-center justify-between">
@@ -312,5 +312,14 @@
         />
       </div>
     </div>
+
+    <UButton
+      icon="i-fluent-arrow-reset-24-regular"
+      label="Сбросить"
+      variant="soft"
+      color="error"
+      block
+      @click="store.resetStyleSettings"
+    />
   </div>
 </template>

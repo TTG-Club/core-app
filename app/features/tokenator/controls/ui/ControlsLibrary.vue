@@ -79,8 +79,8 @@
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="space-y-3">
+  <div class="grid gap-2">
+    <div class="grid gap-2">
       <h3 class="text-sm font-medium tracking-wider text-neutral-500 uppercase">
         Загрузка
       </h3>
@@ -264,5 +264,14 @@
         Нет доступных рамок
       </div>
     </div>
+
+    <UButton
+      icon="i-fluent-arrow-reset-24-regular"
+      label="Сбросить все изображения"
+      variant="soft"
+      color="error"
+      block
+      @click="store.resetLibrarySettings"
+    />
   </div>
 </template>

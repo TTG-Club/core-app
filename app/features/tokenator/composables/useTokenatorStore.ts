@@ -1,4 +1,6 @@
-import { useLocalStorage, useRefHistory } from '@vueuse/core';
+import { useRefHistory } from '@vueuse/core';
+import { liveQuery } from 'dexie';
+import { cloneDeep } from 'es-toolkit';
 import { defineStore } from 'pinia';
 import { v4 as uuid } from 'uuid';
 
@@ -10,6 +12,7 @@ import {
   DEFAULT_TEXT_CONFIG,
   DEFAULT_TRANSFORM,
 } from '../model/consts';
+import { db } from '../model/db';
 import {
   validateBrushSize,
   validateFontSize,
@@ -26,9 +29,53 @@ import type {
 } from '../model/types';
 
 /**
+ * Helper function to sync a ref with Dexie DB.
+ * Handles 2-way binding with loop protection.
+ */
+function useTokenatorSetting<T>(key: string, defaultValue: T) {
+  const data = ref<T>(defaultValue) as Ref<T>;
+
+  let isSyncing = false;
+
+  // Sync from DB (Reactive read)
+  if (import.meta.client) {
+    liveQuery(async () => {
+      const result = await db.settings.get(key);
+
+      return result ? (result.value as T) : defaultValue;
+    }).subscribe((val) => {
+      isSyncing = true;
+      data.value = val;
+
+      nextTick(() => {
+        isSyncing = false;
+      });
+    });
+  }
+
+  // Sync to DB (Write on change)
+  watch(
+    data,
+    async (newValue) => {
+      if (isSyncing) {
+        return;
+      }
+
+      // Use raw value to avoid proxy issues and deep clone to ensure data integrity
+      const rawValue = cloneDeep(newValue);
+
+      await db.settings.put({ key, value: rawValue });
+    },
+    { deep: true },
+  );
+
+  return { data };
+}
+
+/**
  * Основной Pinia store для редактора токенов.
  * Управляет состоянием изображений, рамок, трансформаций, текста и кисти.
- * Поддерживает персистентность через LocalStorage и undo/redo функциональность.
+ * Поддерживает персистентность через IndexedDB (Dexie) и undo/redo функциональность.
  */
 export const useTokenatorStore = defineStore('tokenator', () => {
   // Изображения
@@ -46,20 +93,20 @@ export const useTokenatorStore = defineStore('tokenator', () => {
   const maskVersion = ref(0);
   const maskTokenSize = ref(500);
 
-  // Цвета и стили (с LocalStorage персистентностью)
-  const backgroundColor = useLocalStorage<string>(
-    'tokenator:backgroundColor',
+  // Цвета и стили (с IDB персистентностью)
+  const { data: backgroundColor } = useTokenatorSetting<string>(
+    'background-color',
     DEFAULT_COLORS.BACKGROUND,
   );
 
-  const frameTint = useLocalStorage<FrameTint>(
-    'tokenator:frameTint',
+  const { data: frameTint } = useTokenatorSetting<FrameTint>(
+    'frame-tint',
     DEFAULT_FRAME_TINT,
   );
 
-  // Трансформации (с LocalStorage и undo/redo)
-  const transform = useLocalStorage<TransformState>(
-    'tokenator:transform',
+  // Трансформации (с IDB и undo/redo)
+  const { data: transform } = useTokenatorSetting<TransformState>(
+    'transform',
     DEFAULT_TRANSFORM,
   );
 
@@ -68,9 +115,9 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     capacity: 20,
   });
 
-  // Кисть (с LocalStorage)
-  const brush = useLocalStorage<BrushState>(
-    'tokenator:brush',
+  // Кисть (с IDB)
+  const { data: brush } = useTokenatorSetting<BrushState>(
+    'brush',
     DEFAULT_BRUSH_CONFIG,
   );
 
@@ -240,23 +287,69 @@ export const useTokenatorStore = defineStore('tokenator', () => {
   }
 
   /**
-   * Сбрасывает все трансформации токена к значениям по умолчанию.
+   * Сбрасывает базовые настройки (трансформации).
    */
-  function resetTransform() {
-    transform.value = { ...DEFAULT_TRANSFORM };
+  function resetBaseSettings() {
+    transform.value = cloneDeep(DEFAULT_TRANSFORM);
   }
 
   /**
-   * Полный сброс всех настроек редактора токенов.
-   * Сбрасывает трансформации, изображения, рамки и цвета.
+   * Алиас для сброса трансформаций (обратная совместимость)
    */
-  function resetAll() {
-    resetTransform();
+  function resetTransform() {
+    resetBaseSettings();
+  }
+
+  /**
+   * Сбрасывает настройки стиля (цвета).
+   */
+  function resetStyleSettings() {
+    backgroundColor.value = DEFAULT_COLORS.BACKGROUND;
+    frameTint.value = cloneDeep(DEFAULT_FRAME_TINT);
+  }
+
+  /**
+   * Сбрасывает настройки 3D (кисть/маска).
+   */
+  function reset3DSettings() {
+    brush.value = cloneDeep(DEFAULT_BRUSH_CONFIG);
+  }
+
+  /**
+   * Сбрасывает настройки текста.
+   */
+  function resetTextSettings() {
+    texts.value = [];
+    activeTextId.value = null;
+  }
+
+  /**
+   * Сбрасывает настройки библиотеки (контент).
+   */
+  function resetLibrarySettings() {
     currentImage.value = null;
     customFrame.value = null;
     currentFrame.value = null;
-    backgroundColor.value = DEFAULT_COLORS.BACKGROUND;
-    frameTint.value = { ...DEFAULT_FRAME_TINT };
+    customBackground.value = null;
+  }
+
+  /**
+   * Сбрасывает все настройки редактора на значения по умолчанию.
+   * Не затрагивает загруженное изображение и рамку (если они не часть настроек, но здесь мы сбрасываем всё, что в табах настроек).
+   */
+  function resetSettings() {
+    resetBaseSettings();
+    resetStyleSettings();
+    reset3DSettings();
+    resetTextSettings();
+  }
+
+  /**
+   * Полный сброс всего.
+   */
+  function resetAll() {
+    resetSettings();
+    resetLibrarySettings();
   }
 
   /**
@@ -341,8 +434,6 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     setCustomFrame,
     setCustomBackground,
     selectFrame,
-    resetTransform,
-    resetAll,
     randomizeTint,
     swapTintColors,
     setScale,
@@ -355,5 +446,14 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     redo,
     canUndo,
     canRedo,
+
+    resetTransform,
+    resetAll,
+    resetBaseSettings,
+    reset3DSettings,
+    resetStyleSettings,
+    resetTextSettings,
+    resetSettings,
+    resetLibrarySettings,
   };
 });

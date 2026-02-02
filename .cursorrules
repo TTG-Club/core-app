@@ -49,6 +49,9 @@
   - **PROHIBITED:** Do not create functions that simply return a static constant value.
 - **Booleans:** Functions starting with `is*` or `check*` must return a boolean and have NO side effects.
 - **SQL:** All SQL scripts must be written in **lowercase**.
+- **IndexedDB Keys:**
+  - Format: `domain:key-name` (kebab-case).
+  - Example: `tokenator:background-color`, `dice-roller:history`.
 
 ## 4. Styling & Design System
 - **Semantic Colors Only:**

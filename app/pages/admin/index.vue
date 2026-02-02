@@ -1,9 +1,3 @@
-<script setup lang="ts">
-  useSeoMeta({
-    title: 'Админ-панель',
-  });
-</script>
-
 <template>
   <NuxtLayout
     name="detail"

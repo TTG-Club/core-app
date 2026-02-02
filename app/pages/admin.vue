@@ -4,6 +4,10 @@
   definePageMeta({
     auth: { roles: [Role.ADMIN] },
   });
+
+  useSeoMeta({
+    title: 'Панель администрирования',
+  });
 </script>
 
 <template>
