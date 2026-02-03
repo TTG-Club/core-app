@@ -224,14 +224,5 @@
         :step="1"
       />
     </div>
-
-    <UButton
-      icon="i-fluent-arrow-reset-24-regular"
-      label="Сбросить"
-      variant="soft"
-      color="error"
-      block
-      @click="store.resetBaseSettings"
-    />
   </div>
 </template>

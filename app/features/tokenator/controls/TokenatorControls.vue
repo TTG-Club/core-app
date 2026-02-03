@@ -1,6 +1,13 @@
 <script setup lang="ts">
   import { useTokenatorStore } from '~tokenator/composables';
-  import { CANVAS_SIZE, drawToken } from '~tokenator/model';
+  import {
+    CANVAS_SIZE,
+    DEFAULT_BRUSH_CONFIG,
+    DEFAULT_COLORS,
+    DEFAULT_FRAME_TINT,
+    DEFAULT_TRANSFORM,
+    drawToken,
+  } from '~tokenator/model';
 
   import {
     ControlsLibrary,
@@ -13,6 +20,30 @@
   const store = useTokenatorStore();
   const selectedTab = ref('library');
   const toolTab = ref('base');
+
+  const hasSettingsChanged = computed(() => {
+    // Проверяем, отличаются ли текущие настройки от дефолтных
+    const hasTransformChanges =
+      JSON.stringify(store.transform) !== JSON.stringify(DEFAULT_TRANSFORM);
+
+    const hasColorChanges = store.backgroundColor !== DEFAULT_COLORS.BACKGROUND;
+
+    const hasTintChanges =
+      JSON.stringify(store.frameTint) !== JSON.stringify(DEFAULT_FRAME_TINT);
+
+    const hasTextChanges = store.texts.length > 0;
+
+    const hasBrushChanges =
+      JSON.stringify(store.brush) !== JSON.stringify(DEFAULT_BRUSH_CONFIG);
+
+    return (
+      hasTransformChanges ||
+      hasColorChanges ||
+      hasTintChanges ||
+      hasTextChanges ||
+      hasBrushChanges
+    );
+  });
 
   watch(selectedTab, (tab) => {
     if (tab === 'library') {
@@ -64,64 +95,86 @@
 
 <template>
   <div class="grid gap-2">
-    <UTabs
-      v-model="selectedTab"
-      :items="[
-        { label: 'Библиотека', value: 'library', slot: 'library' as const },
-        { label: 'Настройки', value: 'settings', slot: 'settings' as const },
-      ]"
-      :ui="{
-        root: 'grid gap-2',
-      }"
-    >
-      <template #library>
-        <ControlsLibrary />
-      </template>
+    <div class="relative">
+      <UTabs
+        v-model="selectedTab"
+        :items="[
+          { label: 'Библиотека', value: 'library', slot: 'library' as const },
+          { label: 'Настройки', value: 'settings', slot: 'settings' as const },
+        ]"
+        :ui="{
+          root: 'grid gap-2',
+        }"
+      >
+        <template #library>
+          <ControlsLibrary />
+        </template>
 
-      <template #settings>
-        <div class="grid h-full gap-2">
-          <UTabs
-            v-model="toolTab"
-            size="sm"
-            :items="[
-              { label: 'Основа', value: 'base', slot: 'base' as const },
-              { label: 'Стиль', value: 'style', slot: 'style' as const },
-              { label: '3D', value: '3d', slot: '3d' as const },
-              { label: 'Текст', value: 'text', slot: 'text' as const },
-            ]"
-          >
-            <template #base>
-              <ControlsSettingsBase />
-            </template>
+        <template #settings>
+          <div class="grid h-full gap-2">
+            <UTabs
+              v-model="toolTab"
+              size="sm"
+              :items="[
+                { label: 'Основа', value: 'base', slot: 'base' as const },
+                { label: 'Стиль', value: 'style', slot: 'style' as const },
+                { label: '3D', value: '3d', slot: '3d' as const },
+                { label: 'Текст', value: 'text', slot: 'text' as const },
+              ]"
+            >
+              <template #base>
+                <ControlsSettingsBase />
+              </template>
 
-            <template #style>
-              <ControlsSettingsStyle />
-            </template>
+              <template #style>
+                <ControlsSettingsStyle />
+              </template>
 
-            <template #3d>
-              <ControlsSettings3D />
-            </template>
+              <template #3d>
+                <ControlsSettings3D />
+              </template>
 
-            <template #text>
-              <ControlsSettingsText />
-            </template>
-          </UTabs>
+              <template #text>
+                <ControlsSettingsText />
+              </template>
+            </UTabs>
 
-          <UButton
-            icon="i-fluent-arrow-reset-24-regular"
-            label="Сбросить все настройки"
-            variant="soft"
-            color="error"
-            block
-            @click="store.resetSettings"
-          />
-        </div>
-      </template>
-    </UTabs>
+            <div class="flex pt-2">
+              <UButton
+                icon="i-fluent-arrow-reset-20-regular"
+                label="Сбросить все"
+                size="sm"
+                variant="soft"
+                color="error"
+                @click="
+                  toolTab === 'base'
+                    ? store.resetBaseSettings()
+                    : toolTab === 'style'
+                      ? store.resetStyleSettings()
+                      : toolTab === '3d'
+                        ? store.reset3DSettings()
+                        : store.resetTextSettings()
+                "
+              />
+            </div>
+          </div>
+        </template>
+      </UTabs>
 
-    <USeparator class="py-2" />
+      <UButton
+        v-if="hasSettingsChanged"
+        v-tooltip="'Сбросить все настройки'"
+        icon="i-fluent-arrow-reset-20-regular"
+        size="xs"
+        color="neutral"
+        variant="solid"
+        :padded="false"
+        class="absolute top-2 right-2"
+        @click="store.resetSettings"
+      />
+    </div>
 
-    <div class="grid grid-cols-2 gap-2">
+    <div class="grid grid-cols-2 gap-2 pt-2">
       <UButton
         icon="i-fluent-arrow-download-24-regular"
         label="PNG"
