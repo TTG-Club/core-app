@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { useWindowSize } from '@vueuse/core';
+  import { useElementBounding } from '@vueuse/core';
 
   import {
     PARTICLE_OPACITY_MAX,
@@ -14,30 +14,12 @@
 
   import type { Particle } from './model';
 
-  const canvasRef = ref<HTMLCanvasElement | null>(null);
-  const { width, height } = useWindowSize();
-  const { smaller } = useBreakpoints();
+  const containerRef = useTemplateRef<HTMLDivElement>('container');
+  const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas');
+  const { width, height } = useElementBounding(containerRef);
 
   const particles = ref<Particle[]>([]);
   const animationFrameId = ref<number | null>(null);
-
-  const isMobile = smaller(Breakpoint.MD);
-
-  /**
-   * Вычисляет отступ слева для canvas (ширина sidebar на десктопе)
-   * @returns Отступ в пикселях
-   */
-  const leftOffset = computed<number>(() => {
-    return isMobile.value ? 0 : 64;
-  });
-
-  /**
-   * Вычисляет эффективную ширину canvas с учётом sidebar
-   * @returns Ширина в пикселях
-   */
-  const effectiveWidth = computed<number>(() => {
-    return width.value - leftOffset.value;
-  });
 
   /**
    * Получает цвет из CSS переменной и конвертирует в RGB
@@ -90,7 +72,7 @@
    */
   function createParticle(isInitial = false): Particle {
     return {
-      x: Math.random() * effectiveWidth.value + leftOffset.value,
+      x: Math.random() * width.value,
       y: isInitial
         ? Math.random() * height.value
         : height.value + Math.random() * 100,
@@ -112,9 +94,7 @@
   function initParticles(): void {
     const particleCount = Math.max(
       PARTICLES_MIN_COUNT,
-      Math.floor(
-        (effectiveWidth.value * height.value) / PARTICLES_DENSITY_DIVIDER,
-      ),
+      Math.floor((width.value * height.value) / PARTICLES_DENSITY_DIVIDER),
     );
 
     particles.value = Array.from({ length: particleCount }, () =>
@@ -131,7 +111,7 @@
 
     if (particle.y < -10) {
       particle.y = height.value + 10;
-      particle.x = Math.random() * effectiveWidth.value + leftOffset.value;
+      particle.x = Math.random() * width.value;
     }
   }
 
@@ -176,23 +156,8 @@
     animationFrameId.value = requestAnimationFrame(animate);
   }
 
-  /**
-   * Обновляет размеры canvas при изменении размера окна
-   */
-  function updateCanvasSize(): void {
-    const canvas = canvasRef.value;
-
-    if (!canvas) {
-      return;
-    }
-
-    canvas.width = width.value;
-    canvas.height = height.value;
-    initParticles();
-  }
-
   onMounted(() => {
-    updateCanvasSize();
+    initParticles();
     animate();
   });
 
@@ -202,14 +167,18 @@
     }
   });
 
-  watch([width, height, isMobile], updateCanvasSize);
+  watch([width, height], initParticles);
 </script>
 
 <template>
-  <canvas
-    ref="canvasRef"
-    class="pointer-events-none fixed inset-0 z-0 md:left-(--navbar-width)"
-    :width="width"
-    :height="height"
-  />
+  <div
+    ref="container"
+    class="pointer-events-none absolute inset-0 -z-1 size-full"
+  >
+    <canvas
+      ref="canvas"
+      :width
+      :height
+    />
+  </div>
 </template>
