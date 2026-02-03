@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { useGesture } from '@vueuse/gesture';
   import {
     useTokenatorCanvas,
     useTokenatorStore,
@@ -108,17 +109,48 @@
     isPainting.value = false;
   }
 
-  function onWheel(event: WheelEvent) {
-    if (!store.currentImage) {
-      return;
-    }
+  // Используем useGesture для плавного масштабирования на iOS
+  useGesture(
+    {
+      onPinch: (arg) => {
+        arg.event.preventDefault();
 
-    const zoomSpeed = 0.1;
-    const delta = event.deltaY > 0 ? -1 : 1;
-    const newScale = store.transform.scale + delta * zoomSpeed;
+        if (!store.currentImage) {
+          return;
+        }
 
-    store.transform.scale = Math.min(Math.max(newScale, 0.1), 3);
-  }
+        store.transform.scale = Math.min(
+          Math.max(store.transform.scale + arg.velocities[0] / 100, 0.1),
+          3,
+        );
+      },
+      onWheel: ({ event, delta: [, deltaY], ctrlKey }) => {
+        // Игнорируем зум жесты (ctrl + wheel), так как они обрабатываются в onPinch
+        if (ctrlKey) {
+          return;
+        }
+
+        event.preventDefault();
+
+        if (!store.currentImage) {
+          return;
+        }
+
+        // Уменьшенная чувствительность для колеса мыши
+        const zoomSpeed = 0.001;
+        const newScale = store.transform.scale - deltaY * zoomSpeed;
+
+        store.transform.scale = Math.min(Math.max(newScale, 0.1), 3);
+      },
+    },
+    {
+      domTarget: containerRef,
+      eventOptions: { passive: false },
+      pinch: {
+        rubberband: true,
+      },
+    },
+  );
 
   function onDragEnter(e: DragEvent) {
     e.preventDefault();
@@ -181,7 +213,6 @@
     @pointercancel="onPointerUp"
     @pointerenter="onPointerEnter"
     @pointerleave="onPointerLeave"
-    @wheel.prevent="onWheel"
     @dragenter="onDragEnter"
     @dragover="onDragOver"
     @dragleave="onDragLeave"
@@ -200,11 +231,11 @@
     />
 
     <div
-      class="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,oklch(0.623_0.214_259.815/0.2)_1px,transparent_1px),linear-gradient(to_bottom,oklch(0.623_0.214_259.815/0.2)_1px,transparent_1px)] bg-size-[200px_200px]"
+      class="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,oklch(0.623_0.214_259.815/0.2)_1px,transparent_1px),linear-gradient(to_bottom,oklch(0.623_0.214_259.815/0.2)_1px,transparent_1px)] bg-size-[200px_200px] bg-center"
     ></div>
 
     <div
-      class="absolute inset-0 bg-[radial-gradient(#888_1px,transparent_1px)] bg-size-[16px_16px] opacity-20"
+      class="absolute inset-0 bg-[radial-gradient(#888_1px,transparent_1px)] bg-size-[16px_16px] bg-center opacity-20"
     ></div>
 
     <canvas

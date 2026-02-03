@@ -167,7 +167,7 @@
               class="w-full"
               size="lg"
               to="/admin"
-              @click="closeMenu"
+              @click.left.exact.prevent="closeMenu"
             >
               <div class="flex w-full items-center justify-between">
                 <span>Админ-панель</span>

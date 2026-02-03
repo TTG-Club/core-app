@@ -1,6 +1,15 @@
 <script setup lang="ts">
   import { useTokenatorStore } from '~tokenator/composables';
-  import { CANVAS_SIZE, drawToken } from '~tokenator/model';
+  import {
+    CANVAS_SIZE,
+    DEFAULT_BRUSH_CONFIG,
+    DEFAULT_COLORS,
+    DEFAULT_FRAME_TINT,
+    DEFAULT_TRANSFORM,
+    drawToken,
+    TokenatorTab,
+    TokenatorTool,
+  } from '~tokenator/model';
 
   import {
     ControlsLibrary,
@@ -11,22 +20,85 @@
   } from './ui';
 
   const store = useTokenatorStore();
-  const selectedTab = ref('library');
-  const toolTab = ref('base');
+  const selectedTab = ref(TokenatorTab.Library);
+  const toolTab = ref(TokenatorTool.Base);
+
+  const tabs = [
+    {
+      label: 'Библиотека',
+      value: TokenatorTab.Library,
+      slot: 'library' as const,
+    },
+    {
+      label: 'Настройки',
+      value: TokenatorTab.Settings,
+      slot: 'settings' as const,
+    },
+  ];
+
+  const toolTabs = [
+    {
+      label: 'Основа',
+      value: TokenatorTool.Base,
+      slot: 'base' as const,
+    },
+    {
+      label: 'Стиль',
+      value: TokenatorTool.Style,
+      slot: 'style' as const,
+    },
+    {
+      label: '3D',
+      value: TokenatorTool.ThreeD,
+      slot: '3d' as const,
+    },
+    {
+      label: 'Текст',
+      value: TokenatorTool.Text,
+      slot: 'text' as const,
+    },
+  ];
+
+  const hasSettingsChanged = computed(() => {
+    // Проверяем, отличаются ли текущие настройки от дефолтных
+    const hasTransformChanges =
+      JSON.stringify(store.transform) !== JSON.stringify(DEFAULT_TRANSFORM);
+
+    const hasColorChanges = store.backgroundColor !== DEFAULT_COLORS.BACKGROUND;
+
+    const hasTintChanges =
+      JSON.stringify(store.frameTint) !== JSON.stringify(DEFAULT_FRAME_TINT);
+
+    const hasTextChanges = store.texts.length > 0;
+
+    const hasBrushChanges =
+      JSON.stringify(store.brush) !== JSON.stringify(DEFAULT_BRUSH_CONFIG);
+
+    return (
+      hasTransformChanges ||
+      hasColorChanges ||
+      hasTintChanges ||
+      hasTextChanges ||
+      hasBrushChanges
+    );
+  });
 
   watch(selectedTab, (tab) => {
-    if (tab === 'library') {
-      toolTab.value = 'base';
+    if (tab === TokenatorTab.Library) {
+      toolTab.value = TokenatorTool.Base;
     }
   });
 
   watch(toolTab, (tool) => {
-    if (tool !== '3d') {
+    if (tool !== TokenatorTool.ThreeD) {
       store.brush.enabled = false;
     }
   });
 
-  async function downloadToken(format: 'png' | 'jpeg' | 'webp') {
+  const { exportToPng, exportToWebp, isExportingPng, isExportingWebp } =
+    useCanvasExport();
+
+  async function downloadToken(format: 'png' | 'webp') {
     const canvas = document.createElement('canvas');
 
     canvas.width = CANVAS_SIZE;
@@ -48,93 +120,137 @@
       clip: true,
       texts: store.texts,
       customBackground: store.customBackground,
+      backgroundStyle: store.backgroundStyle,
       maskImage: store.maskImageCanvas || undefined,
       maskTokenSize: store.maskTokenSize,
       halfMask: store.brush.halfMask,
     });
 
-    const url = canvas.toDataURL(`image/${format}`, 0.9);
-    const link = document.createElement('a');
+    const filename = `token-${Date.now()}`;
 
-    link.download = `token-${Date.now()}.${format}`;
-    link.href = url;
-    link.click();
+    if (format === 'png') {
+      await exportToPng(canvas, filename);
+    } else {
+      await exportToWebp(canvas, filename);
+    }
   }
+
+  function resetTab() {
+    switch (toolTab.value) {
+      case TokenatorTool.Base:
+        store.resetBaseSettings();
+
+        break;
+      case TokenatorTool.Style:
+        store.resetStyleSettings();
+
+        break;
+      case TokenatorTool.ThreeD:
+        store.clearMask();
+
+        break;
+      case TokenatorTool.Text:
+        store.resetTextSettings();
+
+        break;
+      default:
+        break;
+    }
+  }
+
+  const resetIcon = computed(() =>
+    toolTab.value === TokenatorTool.ThreeD
+      ? 'i-fluent-eraser-24-regular'
+      : 'i-fluent-arrow-reset-24-regular',
+  );
+
+  const resetLabel = computed(() =>
+    toolTab.value === TokenatorTool.ThreeD ? 'Стереть маску' : 'Сбросить все',
+  );
 </script>
 
 <template>
   <div class="grid gap-2">
-    <UTabs
-      v-model="selectedTab"
-      :items="[
-        { label: 'Библиотека', value: 'library', slot: 'library' as const },
-        { label: 'Настройки', value: 'settings', slot: 'settings' as const },
-      ]"
-      :ui="{
-        root: 'grid gap-2',
-      }"
-    >
-      <template #library>
-        <ControlsLibrary />
-      </template>
+    <div class="relative">
+      <UTabs
+        v-model="selectedTab"
+        :items="tabs"
+        :ui="{
+          root: 'grid gap-2',
+        }"
+      >
+        <template #library>
+          <ControlsLibrary />
+        </template>
 
-      <template #settings>
-        <div class="grid h-full gap-2">
-          <UTabs
-            v-model="toolTab"
-            size="sm"
-            :items="[
-              { label: 'Основа', value: 'base', slot: 'base' as const },
-              { label: 'Стиль', value: 'style', slot: 'style' as const },
-              { label: '3D', value: '3d', slot: '3d' as const },
-              { label: 'Текст', value: 'text', slot: 'text' as const },
-            ]"
-          >
-            <template #base>
-              <ControlsSettingsBase />
-            </template>
+        <template #settings>
+          <div class="grid h-full gap-2">
+            <UTabs
+              v-model="toolTab"
+              size="sm"
+              :items="toolTabs"
+            >
+              <template #base>
+                <ControlsSettingsBase />
+              </template>
 
-            <template #style>
-              <ControlsSettingsStyle />
-            </template>
+              <template #style>
+                <ControlsSettingsStyle />
+              </template>
 
-            <template #3d>
-              <ControlsSettings3D />
-            </template>
+              <template #3d>
+                <ControlsSettings3D />
+              </template>
 
-            <template #text>
-              <ControlsSettingsText />
-            </template>
-          </UTabs>
+              <template #text>
+                <ControlsSettingsText />
+              </template>
+            </UTabs>
 
-          <UButton
-            icon="i-fluent-arrow-reset-24-regular"
-            label="Сбросить все настройки"
-            variant="soft"
-            color="error"
-            block
-            @click="store.resetSettings"
-          />
-        </div>
-      </template>
-    </UTabs>
+            <div class="flex pt-2">
+              <UButton
+                :icon="resetIcon"
+                :label="resetLabel"
+                size="sm"
+                variant="soft"
+                color="error"
+                @click.left.exact.prevent="resetTab"
+              />
+            </div>
+          </div>
+        </template>
+      </UTabs>
 
-    <div class="grid grid-cols-2 gap-2">
+      <UButton
+        v-if="hasSettingsChanged"
+        tooltip="Сбросить все настройки"
+        icon="i-fluent-arrow-reset-20-regular"
+        size="xs"
+        color="neutral"
+        variant="solid"
+        class="absolute top-2 right-2"
+        @click.left.exact.prevent="store.resetSettings"
+      />
+    </div>
+
+    <div class="grid grid-cols-2 gap-2 pt-2">
       <UButton
         icon="i-fluent-arrow-download-24-regular"
-        label="PNG"
+        :loading="isExportingPng"
         variant="soft"
+        label="PNG"
         block
-        @click="downloadToken('png')"
+        @click.left.exact.prevent="downloadToken('png')"
       />
 
       <UButton
         icon="i-fluent-arrow-download-24-regular"
+        :loading="isExportingWebp"
         color="neutral"
         variant="soft"
         label="WEBP"
         block
-        @click="downloadToken('webp')"
+        @click.left.exact.prevent="downloadToken('webp')"
       />
     </div>
   </div>

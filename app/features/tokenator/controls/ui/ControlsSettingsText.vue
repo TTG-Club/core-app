@@ -21,7 +21,7 @@
 </script>
 
 <template>
-  <div class="grid gap-2">
+  <div class="grid gap-3 pt-2">
     <div class="flex gap-2">
       <UInput
         v-model="textInput"
@@ -41,15 +41,14 @@
 
     <div
       v-if="activeText"
-      class="space-y-3 rounded-md bg-muted p-2"
+      class="grid gap-2 rounded-md bg-muted p-2"
     >
       <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
           <UButton
             icon="i-fluent-arrow-left-20-regular"
             variant="ghost"
             size="xs"
-            :padded="false"
             title="Назад к списку"
             @click.left.exact.prevent="store.activeTextId = null"
           />
@@ -65,13 +64,13 @@
           color="error"
           variant="ghost"
           size="xs"
-          :padded="false"
           @click.left.exact.prevent="store.removeText(activeText.id)"
         />
       </div>
 
       <!-- Position -->
-      <div class="space-y-2">
+      <div class="grid gap-3">
+        <!-- Color & Font Size -->
         <div class="grid grid-cols-[1fr_auto] gap-2">
           <!-- Color -->
           <div class="flex items-center gap-2">
@@ -116,139 +115,157 @@
           </div>
         </div>
 
-        <div class="flex items-center justify-between text-xs text-neutral-500">
-          <button
-            type="button"
-            class="flex items-center gap-1.5 transition-colors"
-            :class="
-              activeText.x !== 0
-                ? 'cursor-pointer text-primary-500'
-                : 'cursor-default text-neutral-500'
-            "
-            :disabled="activeText.x === 0"
-            title="Сбросить X"
-            @click.left.exact.prevent="activeText.x = 0"
+        <!-- Position X -->
+        <div class="space-y-1">
+          <div
+            class="flex items-center justify-between text-xs text-neutral-500"
           >
-            <span>Позиция X</span>
+            <button
+              type="button"
+              class="flex items-center gap-1.5 transition-colors"
+              :class="
+                activeText.x !== 0
+                  ? 'cursor-pointer text-primary-500'
+                  : 'cursor-default text-neutral-500'
+              "
+              :disabled="activeText.x === 0"
+              title="Сбросить X"
+              @click.left.exact.prevent="activeText.x = 0"
+            >
+              <span>Позиция X</span>
 
-            <UIcon
-              v-if="activeText.x !== 0"
-              name="i-fluent-arrow-undo-20-regular"
-              class="size-3"
-            />
-          </button>
+              <UIcon
+                v-if="activeText.x !== 0"
+                name="i-fluent-arrow-undo-20-regular"
+                class="size-3"
+              />
+            </button>
 
-          <span class="font-mono">{{ activeText.x }}</span>
+            <span class="font-mono">{{ activeText.x }}</span>
+          </div>
+
+          <USlider
+            v-model="activeText.x"
+            :min="-250"
+            :max="250"
+            :step="1"
+            size="xs"
+          />
         </div>
 
-        <USlider
-          v-model="activeText.x"
-          :min="-250"
-          :max="250"
-          :step="1"
-          size="xs"
-        />
-
-        <div class="flex items-center justify-between text-xs text-neutral-500">
-          <button
-            type="button"
-            class="flex items-center gap-1.5 transition-colors"
-            :class="
-              activeText.y !== 0
-                ? 'cursor-pointer text-primary-500'
-                : 'cursor-default text-neutral-500'
-            "
-            :disabled="activeText.y === 0"
-            title="Сбросить Y"
-            @click.left.exact.prevent="activeText.y = 0"
+        <!-- Position Y -->
+        <div class="space-y-1">
+          <div
+            class="flex items-center justify-between text-xs text-neutral-500"
           >
-            <span>Позиция Y</span>
+            <button
+              type="button"
+              class="flex items-center gap-1.5 transition-colors"
+              :class="
+                activeText.y !== 0
+                  ? 'cursor-pointer text-primary-500'
+                  : 'cursor-default text-neutral-500'
+              "
+              :disabled="activeText.y === 0"
+              title="Сбросить Y"
+              @click.left.exact.prevent="activeText.y = 0"
+            >
+              <span>Позиция Y</span>
 
-            <UIcon
-              v-if="activeText.y !== 0"
-              name="i-fluent-arrow-undo-20-regular"
-              class="size-3"
-            />
-          </button>
+              <UIcon
+                v-if="activeText.y !== 0"
+                name="i-fluent-arrow-undo-20-regular"
+                class="size-3"
+              />
+            </button>
 
-          <span class="font-mono">{{ activeText.y }}</span>
+            <span class="font-mono">{{ activeText.y }}</span>
+          </div>
+
+          <USlider
+            v-model="activeText.y"
+            :min="-250"
+            :max="250"
+            :step="1"
+            size="xs"
+          />
         </div>
-
-        <USlider
-          v-model="activeText.y"
-          :min="-250"
-          :max="250"
-          :step="1"
-          size="xs"
-        />
 
         <!-- Rotation -->
-        <div class="flex items-center justify-between text-xs text-neutral-500">
-          <button
-            type="button"
-            class="flex items-center gap-1.5 transition-colors"
-            :class="
-              activeText.rotation !== 0
-                ? 'cursor-pointer text-primary-500'
-                : 'cursor-default text-neutral-500'
-            "
-            :disabled="activeText.rotation === 0"
-            title="Сбросить поворот"
-            @click.left.exact.prevent="activeText.rotation = 0"
+        <div class="space-y-1">
+          <div
+            class="flex items-center justify-between text-xs text-neutral-500"
           >
-            <span>Поворот</span>
+            <button
+              type="button"
+              class="flex items-center gap-1.5 transition-colors"
+              :class="
+                activeText.rotation !== 0
+                  ? 'cursor-pointer text-primary-500'
+                  : 'cursor-default text-neutral-500'
+              "
+              :disabled="activeText.rotation === 0"
+              title="Сбросить поворот"
+              @click.left.exact.prevent="activeText.rotation = 0"
+            >
+              <span>Поворот</span>
 
-            <UIcon
-              v-if="activeText.rotation !== 0"
-              name="i-fluent-arrow-undo-20-regular"
-              class="size-3"
-            />
-          </button>
+              <UIcon
+                v-if="activeText.rotation !== 0"
+                name="i-fluent-arrow-undo-20-regular"
+                class="size-3"
+              />
+            </button>
 
-          <span class="font-mono">{{ activeText.rotation }}°</span>
+            <span class="font-mono">{{ activeText.rotation }}°</span>
+          </div>
+
+          <USlider
+            v-model="activeText.rotation"
+            :min="-180"
+            :max="180"
+            :step="1"
+            size="xs"
+          />
         </div>
-
-        <USlider
-          v-model="activeText.rotation"
-          :min="-180"
-          :max="180"
-          :step="1"
-          size="xs"
-        />
 
         <!-- Arc -->
-        <div class="flex items-center justify-between text-xs text-neutral-500">
-          <button
-            type="button"
-            class="flex items-center gap-1.5 transition-colors"
-            :class="
-              activeText.arc !== 0
-                ? 'cursor-pointer text-primary-500'
-                : 'cursor-default text-neutral-500'
-            "
-            :disabled="activeText.arc === 0"
-            title="Сбросить изгиб"
-            @click.left.exact.prevent="activeText.arc = 0"
+        <div class="space-y-1">
+          <div
+            class="flex items-center justify-between text-xs text-neutral-500"
           >
-            <span>Изгиб</span>
+            <button
+              type="button"
+              class="flex items-center gap-1.5 transition-colors"
+              :class="
+                activeText.arc !== 0
+                  ? 'cursor-pointer text-primary-500'
+                  : 'cursor-default text-neutral-500'
+              "
+              :disabled="activeText.arc === 0"
+              title="Сбросить изгиб"
+              @click.left.exact.prevent="activeText.arc = 0"
+            >
+              <span>Изгиб</span>
 
-            <UIcon
-              v-if="activeText.arc !== 0"
-              name="i-fluent-arrow-undo-20-regular"
-              class="size-3"
-            />
-          </button>
+              <UIcon
+                v-if="activeText.arc !== 0"
+                name="i-fluent-arrow-undo-20-regular"
+                class="size-3"
+              />
+            </button>
 
-          <span class="font-mono">{{ activeText.arc }}°</span>
+            <span class="font-mono">{{ activeText.arc }}°</span>
+          </div>
+
+          <USlider
+            v-model="activeText.arc"
+            :min="-360"
+            :max="360"
+            :step="5"
+            size="xs"
+          />
         </div>
-
-        <USlider
-          v-model="activeText.arc"
-          :min="-360"
-          :max="360"
-          :step="5"
-          size="xs"
-        />
       </div>
     </div>
 
@@ -278,14 +295,5 @@
     >
       Нет текстов
     </div>
-
-    <UButton
-      icon="i-fluent-arrow-reset-24-regular"
-      label="Сбросить"
-      variant="soft"
-      color="error"
-      block
-      @click="store.resetTextSettings"
-    />
   </div>
 </template>
