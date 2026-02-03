@@ -142,8 +142,12 @@
 
             <div class="flex pt-2">
               <UButton
-                icon="i-fluent-arrow-reset-20-regular"
-                label="Сбросить все"
+                :icon="
+                  toolTab === '3d'
+                    ? 'i-fluent-eraser-20-regular'
+                    : 'i-fluent-arrow-reset-20-regular'
+                "
+                :label="toolTab === '3d' ? 'Стереть маску' : 'Сбросить все'"
                 size="sm"
                 variant="soft"
                 color="error"
@@ -153,7 +157,7 @@
                     : toolTab === 'style'
                       ? store.resetStyleSettings()
                       : toolTab === '3d'
-                        ? store.reset3DSettings()
+                        ? store.clearMask()
                         : store.resetTextSettings()
                 "
               />

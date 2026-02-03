@@ -325,6 +325,28 @@ export const useTokenatorStore = defineStore('tokenator', () => {
   }
 
   /**
+   * Очищает нарисованную маску.
+   */
+  function clearMask() {
+    if (!maskImageCanvas.value) {
+      return;
+    }
+
+    const ctx = maskImageCanvas.value.getContext('2d');
+
+    if (ctx) {
+      ctx.clearRect(
+        0,
+        0,
+        maskImageCanvas.value.width,
+        maskImageCanvas.value.height,
+      );
+    }
+
+    maskVersion.value++;
+  }
+
+  /**
    * Сбрасывает настройки текста.
    */
   function resetTextSettings() {
@@ -466,5 +488,6 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     resetTextSettings,
     resetSettings,
     resetLibrarySettings,
+    clearMask,
   };
 });
