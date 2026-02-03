@@ -71,7 +71,7 @@
       </div>
 
       <!-- Position -->
-      <div class="grid gap-2">
+      <div class="grid gap-3">
         <div class="grid grid-cols-[1fr_auto] gap-2">
           <!-- Color -->
           <div class="flex items-center gap-2">
