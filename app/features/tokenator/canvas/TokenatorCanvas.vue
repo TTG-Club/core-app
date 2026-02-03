@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { useGesture } from '@vueuse/gesture';
   import {
     useTokenatorCanvas,
     useTokenatorStore,
@@ -108,17 +109,40 @@
     isPainting.value = false;
   }
 
-  function onWheel(event: WheelEvent) {
-    if (!store.currentImage) {
-      return;
-    }
+  // Используем useGesture для плавного масштабирования на iOS
+  useGesture(
+    {
+      onPinch: ({ offset: [scale] }) => {
+        if (!store.currentImage) {
+          return;
+        }
 
-    const zoomSpeed = 0.1;
-    const delta = event.deltaY > 0 ? -1 : 1;
-    const newScale = store.transform.scale + delta * zoomSpeed;
+        // Применяем масштаб с ограничениями
+        const newScale = Math.min(Math.max(scale, 0.1), 3);
 
-    store.transform.scale = Math.min(Math.max(newScale, 0.1), 3);
-  }
+        store.transform.scale = newScale;
+      },
+      onWheel: ({ delta: [, deltaY] }) => {
+        if (!store.currentImage) {
+          return;
+        }
+
+        // Уменьшенная чувствительность для колеса мыши
+        const zoomSpeed = 0.001;
+        const newScale = store.transform.scale - deltaY * zoomSpeed;
+
+        store.transform.scale = Math.min(Math.max(newScale, 0.1), 3);
+      },
+    },
+    {
+      domTarget: containerRef,
+      eventOptions: { passive: false },
+      pinch: {
+        distanceBounds: { min: 0.1, max: 3 },
+        rubberband: true,
+      },
+    },
+  );
 
   function onDragEnter(e: DragEvent) {
     e.preventDefault();
@@ -181,7 +205,6 @@
     @pointercancel="onPointerUp"
     @pointerenter="onPointerEnter"
     @pointerleave="onPointerLeave"
-    @wheel.prevent="onWheel"
     @dragenter="onDragEnter"
     @dragover="onDragOver"
     @dragleave="onDragLeave"

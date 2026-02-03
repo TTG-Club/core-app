@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { useMediaQuery } from '@vueuse/core';
+  import { useGesture } from '@vueuse/gesture';
   import {
     useTokenatorCanvas,
     useTokenatorStore,
@@ -69,68 +70,40 @@
     }
   }
 
-  function onWheel(event: WheelEvent) {
-    if (!isMobile.value || !store.currentImage) {
-      return;
-    }
+  // Используем useGesture для плавного масштабирования
+  useGesture(
+    {
+      onPinch: ({ offset: [scale] }) => {
+        if (!isMobile.value || !store.currentImage) {
+          return;
+        }
 
-    const zoomSpeed = 0.1;
-    const delta = event.deltaY > 0 ? -1 : 1;
-    const newScale = store.transform.scale + delta * zoomSpeed;
+        // Применяем масштаб с ограничениями
+        const newScale = Math.min(Math.max(scale, 0.1), 3);
 
-    store.transform.scale = Math.min(Math.max(newScale, 0.1), 3);
-  }
+        store.transform.scale = newScale;
+      },
+      onWheel: ({ delta: [, deltaY] }) => {
+        if (!isMobile.value || !store.currentImage) {
+          return;
+        }
 
-  const lastPinchDistance = ref<number | null>(null);
-
-  function onTouchStart(e: TouchEvent) {
-    if (!isMobile.value || !store.currentImage) {
-      return;
-    }
-
-    if (e.touches.length === 2) {
-      const touch1 = e.touches[0];
-      const touch2 = e.touches[1];
-
-      if (touch1 && touch2) {
-        lastPinchDistance.value = Math.hypot(
-          touch2.clientX - touch1.clientX,
-          touch2.clientY - touch1.clientY,
-        );
-      }
-    }
-  }
-
-  function onTouchMove(e: TouchEvent) {
-    if (!isMobile.value || !store.currentImage) {
-      return;
-    }
-
-    if (e.touches.length === 2 && lastPinchDistance.value !== null) {
-      e.preventDefault();
-
-      const touch1 = e.touches[0];
-      const touch2 = e.touches[1];
-
-      if (touch1 && touch2) {
-        const currentDistance = Math.hypot(
-          touch2.clientX - touch1.clientX,
-          touch2.clientY - touch1.clientY,
-        );
-
-        const delta = currentDistance - lastPinchDistance.value;
-        const zoomSpeed = 0.005;
-        const newScale = store.transform.scale + delta * zoomSpeed;
+        // Уменьшенная чувствительность для колеса мыши
+        const zoomSpeed = 0.001;
+        const newScale = store.transform.scale - deltaY * zoomSpeed;
 
         store.transform.scale = Math.min(Math.max(newScale, 0.1), 3);
-        lastPinchDistance.value = currentDistance;
-      }
-    }
-  }
-
-  function onTouchEnd() {
-    lastPinchDistance.value = null;
-  }
+      },
+    },
+    {
+      domTarget: containerRef,
+      eventOptions: { passive: false },
+      pinch: {
+        distanceBounds: { min: 0.1, max: 3 },
+        rubberband: true,
+      },
+    },
+  );
 </script>
 
 <template>
@@ -145,10 +118,6 @@
     @pointermove="onPointerMove"
     @pointerup="onPointerUp"
     @pointercancel="onPointerUp"
-    @wheel.prevent="onWheel"
-    @touchstart="onTouchStart"
-    @touchmove="onTouchMove"
-    @touchend="onTouchEnd"
   >
     <!-- Guides -->
     <div

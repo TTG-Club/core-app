@@ -186,6 +186,7 @@ export interface DrawTokenParams {
  * @param params.maskTokenSize - Размер токена при создании маски
  * @param params.halfMask - Использовать ли верхнюю половину маски
  * @param params.customBackground - URL кастомного фонового изображения
+ * @param params.backgroundStyle - Настройки фонового изображения (прозрачность и режим наложения)
  * @param params.texts - Массив текстовых элементов для отрисовки
  */
 export async function drawToken({
