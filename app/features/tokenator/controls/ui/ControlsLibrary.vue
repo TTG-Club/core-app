@@ -210,44 +210,46 @@
 
     <div
       v-if="frames && frames.length"
-      class="grid grid-cols-5 gap-2"
+      class="scrollbar-thin max-h-[200px] overflow-x-hidden overflow-y-auto"
     >
-      <button
-        class="flex aspect-square items-center justify-center rounded-md border-2 border-dashed border-neutral-300 text-neutral-400 hover:border-primary hover:text-primary"
-        :class="
-          !store.currentFrame && !store.customFrame
-            ? 'border-primary text-primary'
-            : ''
-        "
-        @click.left.exact.prevent="
-          store.currentFrame = null;
-          store.customFrame = null;
-        "
-      >
-        <UIcon
-          name="i-ttg-x"
-          class="size-6"
-        />
-      </button>
+      <div class="grid grid-cols-5 gap-2">
+        <button
+          class="flex aspect-square items-center justify-center rounded-md border-2 border-dashed border-neutral-300 text-neutral-400 hover:border-primary hover:text-primary"
+          :class="
+            !store.currentFrame && !store.customFrame
+              ? 'border-primary text-primary'
+              : ''
+          "
+          @click.left.exact.prevent="
+            store.currentFrame = null;
+            store.customFrame = null;
+          "
+        >
+          <UIcon
+            name="i-ttg-x"
+            class="size-6"
+          />
+        </button>
 
-      <button
-        v-for="frame in frames"
-        :key="frame.id"
-        class="relative aspect-square overflow-hidden rounded-md border-2 p-1 transition-all hover:border-primary-500/50"
-        :class="
-          store.currentFrame?.id === frame.id
-            ? 'border-primary'
-            : 'border-default'
-        "
-        @click.left.exact.prevent="store.selectFrame(frame)"
-      >
-        <img
-          :src="frame.url"
-          alt="Рамка"
-          class="size-full object-contain"
-          loading="lazy"
-        />
-      </button>
+        <button
+          v-for="frame in frames"
+          :key="frame.id"
+          class="relative aspect-square overflow-hidden rounded-md border-2 p-1 transition-all hover:border-primary-500/50"
+          :class="
+            store.currentFrame?.id === frame.id
+              ? 'border-primary'
+              : 'border-default'
+          "
+          @click.left.exact.prevent="store.selectFrame(frame)"
+        >
+          <img
+            :src="frame.url"
+            alt="Рамка"
+            class="size-full object-contain"
+            loading="lazy"
+          />
+        </button>
+      </div>
     </div>
 
     <div
