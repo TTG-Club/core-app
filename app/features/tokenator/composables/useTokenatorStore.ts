@@ -5,7 +5,9 @@ import { defineStore } from 'pinia';
 import { v4 as uuid } from 'uuid';
 
 import {
+  BACKGROUND_BLEND_MODES,
   BLEND_MODES,
+  DEFAULT_BACKGROUND_STYLE,
   DEFAULT_BRUSH_CONFIG,
   DEFAULT_COLORS,
   DEFAULT_FRAME_TINT,
@@ -21,6 +23,7 @@ import {
 } from '../model/utils';
 
 import type {
+  BackgroundStyle,
   BrushState,
   FrameTint,
   TokenatorFrame,
@@ -102,6 +105,11 @@ export const useTokenatorStore = defineStore('tokenator', () => {
   const { data: frameTint } = useTokenatorSetting<FrameTint>(
     'frame-tint',
     DEFAULT_FRAME_TINT,
+  );
+
+  const { data: backgroundStyle } = useTokenatorSetting<BackgroundStyle>(
+    'background-style',
+    DEFAULT_BACKGROUND_STYLE,
   );
 
   // Трансформации (с IDB и undo/redo)
@@ -306,6 +314,7 @@ export const useTokenatorStore = defineStore('tokenator', () => {
   function resetStyleSettings() {
     backgroundColor.value = DEFAULT_COLORS.BACKGROUND;
     frameTint.value = cloneDeep(DEFAULT_FRAME_TINT);
+    backgroundStyle.value = cloneDeep(DEFAULT_BACKGROUND_STYLE);
   }
 
   /**
@@ -413,6 +422,7 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     customBackground,
     activeFrameUrl,
     backgroundColor,
+    backgroundStyle,
     frameTint,
     transform,
     brush,
@@ -424,6 +434,7 @@ export const useTokenatorStore = defineStore('tokenator', () => {
 
     // Constants (re-export для удобства)
     BLEND_MODES,
+    BACKGROUND_BLEND_MODES,
     DEFAULT_COLORS,
 
     // Actions

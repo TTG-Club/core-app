@@ -1,4 +1,9 @@
-import type { BrushState, FrameTint, TransformState } from './types';
+import type {
+  BackgroundStyle,
+  BrushState,
+  FrameTint,
+  TransformState,
+} from './types';
 
 /**
  * Цвета по умолчанию для редактора токенов
@@ -15,6 +20,28 @@ export const DEFAULT_COLORS = {
  */
 export const BLEND_MODES = [
   { label: 'Обычный', value: 'source-atop' },
+  { label: 'Умножение', value: 'multiply' },
+  { label: 'Экран', value: 'screen' },
+  { label: 'Перекрытие', value: 'overlay' },
+  { label: 'Затемнение', value: 'darken' },
+  { label: 'Осветление', value: 'lighten' },
+  { label: 'Осветление основы', value: 'color-dodge' },
+  { label: 'Затемнение основы', value: 'color-burn' },
+  { label: 'Жёсткий свет', value: 'hard-light' },
+  { label: 'Мягкий свет', value: 'soft-light' },
+  { label: 'Разница', value: 'difference' },
+  { label: 'Исключение', value: 'exclusion' },
+  { label: 'Цветовой тон', value: 'hue' },
+  { label: 'Насыщенность', value: 'saturation' },
+  { label: 'Цветность', value: 'color' },
+  { label: 'Яркость', value: 'luminosity' },
+];
+
+/**
+ * Режимы наложения для фонового изображения
+ */
+export const BACKGROUND_BLEND_MODES = [
+  { label: 'Обычный', value: 'normal' },
   { label: 'Умножение', value: 'multiply' },
   { label: 'Экран', value: 'screen' },
   { label: 'Перекрытие', value: 'overlay' },
@@ -67,6 +94,14 @@ export const DEFAULT_FRAME_TINT: FrameTint = {
   type: 'gradient',
   colors: [DEFAULT_COLORS.TINT_TRANSPARENT, DEFAULT_COLORS.TINT_TRANSPARENT],
   blendMode: 'source-atop',
+};
+
+/**
+ * Настройки фонового изображения по умолчанию
+ */
+export const DEFAULT_BACKGROUND_STYLE: BackgroundStyle = {
+  opacity: 100,
+  blendMode: 'normal',
 };
 
 /**

@@ -13,6 +13,11 @@ export interface FrameTint {
   blendMode?: string;
 }
 
+export interface BackgroundStyle {
+  opacity: number;
+  blendMode: string;
+}
+
 export interface Coordinates {
   x: number;
   y: number;

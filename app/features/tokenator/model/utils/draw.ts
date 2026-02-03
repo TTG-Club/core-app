@@ -1,4 +1,4 @@
-import type { FrameTint, TransformState } from '../types';
+import type { BackgroundStyle, FrameTint, TransformState } from '../types';
 
 /**
  * Размер canvas для финального экспорта токена.
@@ -118,6 +118,7 @@ export interface DrawTokenParams {
   maskTokenSize?: number;
   halfMask?: boolean;
   customBackground?: string | null;
+  backgroundStyle?: BackgroundStyle;
   texts?: DrawTokenText[];
 }
 
@@ -155,6 +156,7 @@ export async function drawToken({
   maskTokenSize,
   halfMask = false,
   customBackground,
+  backgroundStyle,
   texts,
 }: DrawTokenParams) {
   const imgPromise = currentImage
@@ -203,6 +205,14 @@ export async function drawToken({
     ctx.beginPath();
     ctx.arc(cx, cy, maskRadius, 0, Math.PI * 2);
     ctx.clip();
+
+    // Применяем прозрачность и режим наложения
+    if (backgroundStyle) {
+      ctx.globalAlpha = backgroundStyle.opacity / 100;
+
+      ctx.globalCompositeOperation =
+        backgroundStyle.blendMode as GlobalCompositeOperation;
+    }
 
     const aspectRatio = bgImg.width / bgImg.height;
 

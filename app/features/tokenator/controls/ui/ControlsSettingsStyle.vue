@@ -1,6 +1,10 @@
 <script setup lang="ts">
   import { useTokenatorStore } from '~tokenator/composables';
-  import { BLEND_MODES, DEFAULT_COLORS } from '~tokenator/model';
+  import {
+    BACKGROUND_BLEND_MODES,
+    BLEND_MODES,
+    DEFAULT_COLORS,
+  } from '~tokenator/model';
 
   import { useColorWithOpacity } from '../composables';
 
@@ -31,7 +35,7 @@
     });
 
   const tintColor2Ref = computed({
-    get: () => store.frameTint.colors[1] || DEFAULT_COLORS.GRADIENT,
+    get: () => store.frameTint.colors[1] || DEFAULT_COLORS.TINT_TRANSPARENT,
     set: (val) => {
       if (store.frameTint.colors.length < 2) {
         store.frameTint.colors.push(val);
@@ -42,7 +46,7 @@
   });
 
   const { hex: tintColor2Hex, opacity: tintColor2Opacity } =
-    useColorWithOpacity(tintColor2Ref, DEFAULT_COLORS.GRADIENT, () => {
+    useColorWithOpacity(tintColor2Ref, DEFAULT_COLORS.TINT_TRANSPARENT, () => {
       if (!store.frameTint.enabled) {
         store.frameTint.enabled = true;
       }
@@ -57,7 +61,7 @@
   );
 
   const isTintColor2Changed = computed(
-    () => tintColor2Hex.value !== DEFAULT_COLORS.GRADIENT,
+    () => tintColor2Hex.value !== DEFAULT_COLORS.TINT_TRANSPARENT.slice(0, 7),
   );
 
   function resetBackgroundColor() {
@@ -67,93 +71,122 @@
   }
 
   function resetTint2() {
-    const currentColor =
-      store.frameTint.colors[1] || DEFAULT_COLORS.TINT_TRANSPARENT;
-
-    const currentAlpha = currentColor.slice(7) || '00';
-
-    store.frameTint.colors[1] = `${DEFAULT_COLORS.GRADIENT}${currentAlpha}`;
+    store.frameTint.colors[1] = DEFAULT_COLORS.TINT_TRANSPARENT;
   }
 </script>
 
 <template>
-  <div class="grid gap-3 pt-2">
-    <div class="grid grid-cols-[auto_1fr] items-center gap-3">
-      <UPopover
-        mode="click"
-        :popper="{ placement: 'bottom-start' }"
-      >
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="xs"
-          class="flex size-8 items-center justify-center p-0"
+  <div class="grid gap-6 pt-2">
+    <!-- Фон -->
+    <div class="grid gap-1">
+      <div class="text-xs font-medium text-neutral-400">Настрйока фона</div>
+
+      <div class="grid grid-cols-[auto_1fr] items-center gap-3">
+        <UPopover
+          mode="click"
+          :popper="{ placement: 'bottom-start' }"
         >
-          <span
-            class="size-5 rounded-full border border-neutral-200"
-            :style="{ backgroundColor: bgColorHex }"
-          />
-        </UButton>
-
-        <template #content>
-          <div class="p-2">
-            <UColorPicker v-model="bgColorHex" />
-          </div>
-        </template>
-      </UPopover>
-
-      <div class="grid gap-1">
-        <div class="flex h-5 items-center justify-between">
-          <div class="flex items-center gap-2">
-            <button
-              type="button"
-              class="flex items-center gap-1.5 text-xs transition-colors"
-              :class="
-                isBgColorChanged
-                  ? 'cursor-pointer text-primary-500'
-                  : 'cursor-default text-neutral-500'
-              "
-              :disabled="!isBgColorChanged"
-              title="Сбросить цвет фона"
-              @click.left.exact.prevent="resetBackgroundColor"
-            >
-              <span>Цвет фона</span>
-
-              <UIcon
-                v-if="isBgColorChanged"
-                name="i-fluent-arrow-undo-20-regular"
-                class="size-3"
-              />
-            </button>
-
-            <UButton
-              v-if="store.customBackground"
-              icon="i-fluent-dismiss-20-regular"
-              variant="ghost"
-              size="xs"
-              color="error"
-              :padded="false"
-              title="Удалить фон"
-              @click.left.exact.prevent="store.customBackground = null"
-            />
-          </div>
-
-          <span class="font-mono text-[10px] text-neutral-400"
-            >{{ bgOpacity }}%</span
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="xs"
+            class="flex size-8 items-center justify-center p-0"
           >
+            <span
+              class="size-5 rounded-full border border-neutral-200"
+              :style="{ backgroundColor: bgColorHex }"
+            />
+          </UButton>
+
+          <template #content>
+            <div class="p-2">
+              <UColorPicker v-model="bgColorHex" />
+            </div>
+          </template>
+        </UPopover>
+
+        <div class="grid gap-1">
+          <div class="flex h-5 items-center justify-between">
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                class="flex items-center gap-1.5 text-xs transition-colors"
+                :class="
+                  isBgColorChanged
+                    ? 'cursor-pointer text-primary-500'
+                    : 'cursor-default text-neutral-500'
+                "
+                :disabled="!isBgColorChanged"
+                title="Сбросить цвет фона"
+                @click.left.exact.prevent="resetBackgroundColor"
+              >
+                <span>Прозрачность</span>
+
+                <UIcon
+                  v-if="isBgColorChanged"
+                  name="i-fluent-arrow-undo-20-regular"
+                  class="size-3"
+                />
+              </button>
+            </div>
+
+            <span class="font-mono text-[10px] text-neutral-400"
+              >{{ bgOpacity }}%</span
+            >
+          </div>
+
+          <USlider
+            v-model.number="bgOpacity"
+            size="xs"
+            :min="0"
+            :max="100"
+            :step="1"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Настройки фонового изображения -->
+    <div class="grid gap-1">
+      <div class="text-xs font-medium text-neutral-400">
+        Фоновое изображение
+      </div>
+
+      <div class="flex items-end gap-6">
+        <div class="grid flex-2 gap-1">
+          <div class="flex h-5 items-center justify-between">
+            <span class="text-xs text-neutral-500">Прозрачность</span>
+
+            <span class="font-mono text-[10px] text-neutral-400"
+              >{{ store.backgroundStyle.opacity }}%</span
+            >
+          </div>
+
+          <USlider
+            v-model.number="store.backgroundStyle.opacity"
+            size="xs"
+            :min="0"
+            :max="100"
+            :step="1"
+          />
         </div>
 
-        <USlider
-          v-model.number="bgOpacity"
-          size="xs"
-          :min="0"
-          :max="100"
-          :step="1"
+        <USelectMenu
+          v-model="store.backgroundStyle.blendMode"
+          :items="BACKGROUND_BLEND_MODES"
+          value-key="value"
+          size="sm"
+          placeholder="Режим наложения"
+          :popper="{ placement: 'top' }"
+          class="flex-1"
         />
       </div>
     </div>
 
-    <div class="flex flex-col gap-2">
+    <!-- Рамка -->
+    <div class="grid gap-1">
+      <div class="text-xs font-medium text-neutral-400">Настройка рамки</div>
+
       <div class="flex items-end gap-3">
         <div class="flex-1">
           <div class="flex h-5 items-center justify-between">

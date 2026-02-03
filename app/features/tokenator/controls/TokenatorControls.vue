@@ -79,6 +79,7 @@
       clip: true,
       texts: store.texts,
       customBackground: store.customBackground,
+      backgroundStyle: store.backgroundStyle,
       maskImage: store.maskImageCanvas || undefined,
       maskTokenSize: store.maskTokenSize,
       halfMask: store.brush.halfMask,
