@@ -214,6 +214,7 @@
                 size="sm"
                 variant="soft"
                 color="error"
+                block
                 @click.left.exact.prevent="resetTab"
               />
             </div>

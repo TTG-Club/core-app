@@ -46,6 +46,68 @@ function createMaskPath(
   }
 }
 
+export interface DrawBrushStrokeParams {
+  ctx: CanvasRenderingContext2D;
+  x: number;
+  y: number;
+  prevX?: number;
+  prevY?: number;
+  size: number;
+  mode: 'add' | 'remove';
+  color?: string;
+}
+
+/**
+ * Рисует мазок кистью на canvas.
+ * Поддерживает интерполяцию линии между текущей и предыдущей точкой.
+ *
+ * @param params - Параметры отрисовки
+ * @param params.ctx - Контекст canvas
+ * @param params.x - Текущая координата X
+ * @param params.y - Текущая координата Y
+ * @param params.prevX - Предыдущая координата X (для интерполяции)
+ * @param params.prevY - Предыдущая координата Y (для интерполяции)
+ * @param params.size - Размер кисти (диаметр)
+ * @param params.mode - Режим рисования (add/remove)
+ * @param params.color - Цвет кисти (по умолчанию 'white')
+ */
+export function drawBrushStroke({
+  ctx,
+  x,
+  y,
+  prevX,
+  prevY,
+  size,
+  mode,
+  color = 'white',
+}: DrawBrushStrokeParams) {
+  ctx.save();
+  ctx.beginPath();
+
+  const strokeColor = mode === 'add' ? color : 'black';
+
+  ctx.fillStyle = strokeColor;
+  ctx.strokeStyle = strokeColor;
+
+  if (mode === 'remove') {
+    ctx.globalCompositeOperation = 'destination-out';
+  }
+
+  if (prevX !== undefined && prevY !== undefined) {
+    ctx.lineWidth = size;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.moveTo(prevX, prevY);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  } else {
+    ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
 /**
  * Размер canvas для финального экспорта токена.
  * 512px выбран как оптимальный баланс между качеством изображения
