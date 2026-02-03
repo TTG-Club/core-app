@@ -88,6 +88,13 @@ export default defineAppConfig({
       slots: {
         base: 'cursor-pointer',
       },
+      compoundVariants: [
+        {
+          color: 'neutral',
+          variant: 'solid',
+          class: 'text-secondary',
+        },
+      ],
     },
     formField: {
       slots: {

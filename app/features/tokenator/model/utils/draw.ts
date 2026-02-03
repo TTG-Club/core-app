@@ -1,4 +1,50 @@
-import type { FrameTint, TransformState } from '../types';
+import type { BackgroundStyle, FrameTint, TransformState } from '../types';
+
+/**
+ * Создает путь для многоугольной или круглой маски.
+ *
+ * @param ctx - Контекст canvas
+ * @param cx - Центр X
+ * @param cy - Центр Y
+ * @param radius - Радиус маски
+ * @param sides - Количество сторон (0 = круг, 3+ = многоугольник)
+ * @param rotation - Угол поворота в градусах
+ * @param counterClockwise - Рисовать против часовой стрелки (для evenodd)
+ */
+function createMaskPath(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  radius: number,
+  sides: number,
+  rotation: number,
+  counterClockwise = false,
+) {
+  if (sides === 0 || sides > 20) {
+    // Круглая маска
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2, counterClockwise);
+  } else {
+    // Многоугольная маска
+    const angleStep = (Math.PI * 2) / sides;
+    const rotationRad = (rotation * Math.PI) / 180;
+    const direction = counterClockwise ? -1 : 1;
+
+    for (let i = 0; i <= sides; i++) {
+      const angle = i * angleStep * direction + rotationRad - Math.PI / 2;
+
+      const x = cx + radius * Math.cos(angle);
+      const y = cy + radius * Math.sin(angle);
+
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+
+    ctx.closePath();
+  }
+}
 
 /**
  * Размер canvas для финального экспорта токена.
@@ -118,6 +164,7 @@ export interface DrawTokenParams {
   maskTokenSize?: number;
   halfMask?: boolean;
   customBackground?: string | null;
+  backgroundStyle?: BackgroundStyle;
   texts?: DrawTokenText[];
 }
 
@@ -139,6 +186,7 @@ export interface DrawTokenParams {
  * @param params.maskTokenSize - Размер токена при создании маски
  * @param params.halfMask - Использовать ли верхнюю половину маски
  * @param params.customBackground - URL кастомного фонового изображения
+ * @param params.backgroundStyle - Настройки фонового изображения (прозрачность и режим наложения)
  * @param params.texts - Массив текстовых элементов для отрисовки
  */
 export async function drawToken({
@@ -155,6 +203,7 @@ export async function drawToken({
   maskTokenSize,
   halfMask = false,
   customBackground,
+  backgroundStyle,
   texts,
 }: DrawTokenParams) {
   const imgPromise = currentImage
@@ -189,10 +238,13 @@ export async function drawToken({
 
   ctx.clearRect(0, 0, viewSize.width, viewSize.height);
 
+  const maskSides = transform.maskSides || 0;
+  const maskRotate = transform.maskRotate || 0;
+
   if (backgroundColor) {
     ctx.save();
     ctx.beginPath();
-    ctx.arc(cx, cy, maskRadius, 0, Math.PI * 2);
+    createMaskPath(ctx, cx, cy, maskRadius, maskSides, maskRotate);
     ctx.fillStyle = backgroundColor;
     ctx.fill();
     ctx.restore();
@@ -201,8 +253,16 @@ export async function drawToken({
   if (bgImg) {
     ctx.save();
     ctx.beginPath();
-    ctx.arc(cx, cy, maskRadius, 0, Math.PI * 2);
+    createMaskPath(ctx, cx, cy, maskRadius, maskSides, maskRotate);
     ctx.clip();
+
+    // Применяем прозрачность и режим наложения
+    if (backgroundStyle) {
+      ctx.globalAlpha = backgroundStyle.opacity / 100;
+
+      ctx.globalCompositeOperation =
+        backgroundStyle.blendMode as GlobalCompositeOperation;
+    }
 
     const aspectRatio = bgImg.width / bgImg.height;
 
@@ -233,7 +293,7 @@ export async function drawToken({
 
     if (clip) {
       ctx.beginPath();
-      ctx.arc(cx, cy, maskRadius, 0, Math.PI * 2);
+      createMaskPath(ctx, cx, cy, maskRadius, maskSides, maskRotate);
       ctx.clip();
     }
 
@@ -262,8 +322,8 @@ export async function drawToken({
       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
       ctx.beginPath();
       ctx.rect(0, 0, viewSize.width, viewSize.height);
-      ctx.arc(cx, cy, maskRadius, 0, Math.PI * 2, true);
-      ctx.fill();
+      createMaskPath(ctx, cx, cy, maskRadius, maskSides, maskRotate, true);
+      ctx.fill('evenodd');
       ctx.restore();
     }
   }

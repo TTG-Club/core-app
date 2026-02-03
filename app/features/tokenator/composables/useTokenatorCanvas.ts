@@ -130,6 +130,7 @@ export function useTokenatorCanvas(
         maskTokenSize: store.maskTokenSize,
         halfMask: store.brush.halfMask,
         customBackground: store.customBackground,
+        backgroundStyle: store.backgroundStyle,
         texts: store.texts,
       });
     } catch (error) {
@@ -175,6 +176,7 @@ export function useTokenatorCanvas(
       () => store.currentImage,
       () => store.activeFrameUrl,
       () => store.backgroundColor,
+      () => store.backgroundStyle,
       () => store.frameTint,
       () => store.transform,
       () => store.brush.halfMask,

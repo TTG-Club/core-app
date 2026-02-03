@@ -79,146 +79,140 @@
 </script>
 
 <template>
-  <div class="grid gap-2">
-    <div class="grid gap-2">
-      <h3 class="text-sm font-medium tracking-wider text-neutral-500 uppercase">
-        Загрузка
-      </h3>
+  <div class="grid gap-6">
+    <div class="grid gap-2 pt-4">
+      <div class="col-span-2">
+        <input
+          ref="imageInput"
+          type="file"
+          class="hidden"
+          accept="image/*"
+          @change="onImageUpload"
+        />
 
-      <div class="grid grid-cols-2 gap-2">
-        <div class="col-span-2">
-          <input
-            ref="imageInput"
-            type="file"
-            class="hidden"
-            accept="image/*"
-            @change="onImageUpload"
-          />
-
-          <UFieldGroup
-            v-if="store.currentImage"
-            class="flex w-full"
-            orientation="horizontal"
-          >
-            <UButton
-              color="neutral"
-              variant="outline"
-              class="flex-1 justify-center rounded-r-none px-1"
-              :ui="{ leadingIcon: 'mr-1' }"
-              label="Изображение"
-              @click.left.exact.prevent="imageInput?.click()"
-            />
-
-            <UButton
-              color="neutral"
-              variant="outline"
-              icon="i-ttg-x"
-              class="rounded-l-none border-l-0 px-2"
-              @click.left.exact.prevent.stop="store.currentImage = null"
-            />
-          </UFieldGroup>
-
+        <UFieldGroup
+          v-if="store.currentImage"
+          class="flex w-full"
+          orientation="horizontal"
+        >
           <UButton
-            v-else
-            block
             color="neutral"
             variant="outline"
+            class="flex-1 justify-center rounded-r-none px-1"
+            :ui="{ leadingIcon: 'mr-1' }"
             label="Изображение"
             @click.left.exact.prevent="imageInput?.click()"
           />
-        </div>
-
-        <div>
-          <input
-            ref="frameInput"
-            type="file"
-            class="hidden"
-            accept="image/*"
-            @change="onFrameUpload"
-          />
-
-          <UFieldGroup
-            v-if="store.customFrame"
-            class="flex w-full"
-            orientation="horizontal"
-          >
-            <UButton
-              color="neutral"
-              variant="outline"
-              class="flex-1 justify-center rounded-r-none px-1"
-              :ui="{ leadingIcon: 'mr-1' }"
-              label="Рамка"
-              @click.left.exact.prevent="frameInput?.click()"
-            />
-
-            <UButton
-              color="neutral"
-              variant="outline"
-              icon="i-ttg-x"
-              class="rounded-l-none border-l-0 px-2"
-              @click.left.exact.prevent.stop="store.customFrame = null"
-            />
-          </UFieldGroup>
 
           <UButton
-            v-else
-            block
             color="neutral"
             variant="outline"
+            icon="i-ttg-x"
+            class="rounded-l-none border-l-0 px-2"
+            @click.left.exact.prevent.stop="store.currentImage = null"
+          />
+        </UFieldGroup>
+
+        <UButton
+          v-else
+          block
+          color="neutral"
+          variant="outline"
+          label="Изображение"
+          @click.left.exact.prevent="imageInput?.click()"
+        />
+      </div>
+
+      <div>
+        <input
+          ref="frameInput"
+          type="file"
+          class="hidden"
+          accept="image/*"
+          @change="onFrameUpload"
+        />
+
+        <UFieldGroup
+          v-if="store.customFrame"
+          class="flex w-full"
+          orientation="horizontal"
+        >
+          <UButton
+            color="neutral"
+            variant="outline"
+            class="flex-1 justify-center rounded-r-none px-1"
+            :ui="{ leadingIcon: 'mr-1' }"
             label="Рамка"
             @click.left.exact.prevent="frameInput?.click()"
           />
-        </div>
-
-        <div>
-          <input
-            ref="bgInput"
-            type="file"
-            class="hidden"
-            accept="image/*"
-            @change="onBgUpload"
-          />
-
-          <UFieldGroup
-            v-if="store.customBackground"
-            class="flex w-full"
-            orientation="horizontal"
-          >
-            <UButton
-              color="neutral"
-              variant="outline"
-              class="flex-1 justify-center rounded-r-none px-1"
-              :ui="{ leadingIcon: 'mr-1' }"
-              label="Фон"
-              @click.left.exact.prevent="bgInput?.click()"
-            />
-
-            <UButton
-              color="neutral"
-              variant="outline"
-              icon="i-ttg-x"
-              class="rounded-l-none border-l-0 px-2"
-              @click.left.exact.prevent.stop="store.customBackground = null"
-            />
-          </UFieldGroup>
 
           <UButton
-            v-else
-            block
             color="neutral"
             variant="outline"
+            icon="i-ttg-x"
+            class="rounded-l-none border-l-0 px-2"
+            @click.left.exact.prevent.stop="store.customFrame = null"
+          />
+        </UFieldGroup>
+
+        <UButton
+          v-else
+          block
+          color="neutral"
+          variant="outline"
+          label="Рамка"
+          @click.left.exact.prevent="frameInput?.click()"
+        />
+      </div>
+
+      <div>
+        <input
+          ref="bgInput"
+          type="file"
+          class="hidden"
+          accept="image/*"
+          @change="onBgUpload"
+        />
+
+        <UFieldGroup
+          v-if="store.customBackground"
+          class="flex w-full"
+          orientation="horizontal"
+        >
+          <UButton
+            color="neutral"
+            variant="outline"
+            class="flex-1 justify-center rounded-r-none px-1"
+            :ui="{ leadingIcon: 'mr-1' }"
             label="Фон"
             @click.left.exact.prevent="bgInput?.click()"
           />
-        </div>
+
+          <UButton
+            color="neutral"
+            variant="outline"
+            icon="i-ttg-x"
+            class="rounded-l-none border-l-0 px-2"
+            @click.left.exact.prevent.stop="store.customBackground = null"
+          />
+        </UFieldGroup>
+
+        <UButton
+          v-else
+          block
+          color="neutral"
+          variant="outline"
+          label="Фон"
+          @click.left.exact.prevent="bgInput?.click()"
+        />
       </div>
     </div>
 
-    <div class="space-y-3">
-      <div
-        v-if="frames && frames.length"
-        class="grid grid-cols-5 gap-2"
-      >
+    <div
+      v-if="frames && frames.length"
+      class="scrollbar-thin max-h-[200px] overflow-x-hidden overflow-y-auto"
+    >
+      <div class="grid grid-cols-5 gap-2">
         <button
           class="flex aspect-square items-center justify-center rounded-md border-2 border-dashed border-neutral-300 text-neutral-400 hover:border-primary hover:text-primary"
           :class="
@@ -244,7 +238,7 @@
           :class="
             store.currentFrame?.id === frame.id
               ? 'border-primary'
-              : 'border-neutral-200'
+              : 'border-default'
           "
           @click.left.exact.prevent="store.selectFrame(frame)"
         >
@@ -256,13 +250,13 @@
           />
         </button>
       </div>
+    </div>
 
-      <div
-        v-else
-        class="py-4 text-center text-sm text-neutral-400"
-      >
-        Нет доступных рамок
-      </div>
+    <div
+      v-else
+      class="py-4 text-center text-sm text-neutral-400"
+    >
+      Нет доступных рамок
     </div>
 
     <UButton
@@ -271,7 +265,7 @@
       variant="soft"
       color="error"
       block
-      @click="store.resetLibrarySettings"
+      @click.left.exact.prevent="store.resetLibrarySettings"
     />
   </div>
 </template>

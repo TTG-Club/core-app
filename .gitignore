@@ -39,3 +39,4 @@ shared/types/generated
 # AI Agents
 AGENTS.md
 CLAUDE.md
+/.agent/rules/project-style-guide.md
