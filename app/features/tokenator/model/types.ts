@@ -13,6 +13,11 @@ export interface FrameTint {
   blendMode?: string;
 }
 
+export interface BackgroundStyle {
+  opacity: number;
+  blendMode: string;
+}
+
 export interface Coordinates {
   x: number;
   y: number;
@@ -27,6 +32,8 @@ export interface TransformState {
   };
   position: Coordinates;
   maskScale: number;
+  maskRotate: number;
+  maskSides: number;
   frameScale: number;
   frameRotate: number;
 }

@@ -222,7 +222,7 @@
                 icon="i-ttg-remove"
                 size="xs"
                 :loading="isDeleting === border.id"
-                @click="deleteBorder(border.id)"
+                @click.left.exact.prevent="deleteBorder(border.id)"
               />
             </div>
           </template>

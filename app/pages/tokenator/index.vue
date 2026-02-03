@@ -35,7 +35,7 @@
         </div>
 
         <div
-          class="relative flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl lg:h-[calc(100vh-140px)]"
+          class="relative hidden min-w-0 flex-1 flex-col overflow-hidden rounded-2xl lg:flex lg:h-[calc(100vh-140px)]"
         >
           <div class="inset-0 h-full w-full">
             <TokenatorCanvas />
