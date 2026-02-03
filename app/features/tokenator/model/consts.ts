@@ -120,3 +120,15 @@ export const DEFAULT_TEXT_CONFIG = {
   x: 0,
   y: 0,
 };
+
+export enum TokenatorTab {
+  Library = 'library',
+  Settings = 'settings',
+}
+
+export enum TokenatorTool {
+  Base = 'base',
+  Style = 'style',
+  ThreeD = '3d',
+  Text = 'text',
+}

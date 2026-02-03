@@ -265,7 +265,7 @@
       variant="soft"
       color="error"
       block
-      @click="store.resetLibrarySettings"
+      @click.left.exact.prevent="store.resetLibrarySettings"
     />
   </div>
 </template>

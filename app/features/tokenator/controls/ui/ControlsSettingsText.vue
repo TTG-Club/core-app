@@ -49,7 +49,6 @@
             icon="i-fluent-arrow-left-20-regular"
             variant="ghost"
             size="xs"
-            :padded="false"
             title="Назад к списку"
             @click.left.exact.prevent="store.activeTextId = null"
           />
@@ -65,7 +64,6 @@
           color="error"
           variant="ghost"
           size="xs"
-          :padded="false"
           @click.left.exact.prevent="store.removeText(activeText.id)"
         />
       </div>

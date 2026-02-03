@@ -7,6 +7,8 @@
     DEFAULT_FRAME_TINT,
     DEFAULT_TRANSFORM,
     drawToken,
+    TokenatorTab,
+    TokenatorTool,
   } from '~tokenator/model';
 
   import {
@@ -18,8 +20,44 @@
   } from './ui';
 
   const store = useTokenatorStore();
-  const selectedTab = ref('library');
-  const toolTab = ref('base');
+  const selectedTab = ref(TokenatorTab.Library);
+  const toolTab = ref(TokenatorTool.Base);
+
+  const tabs = [
+    {
+      label: 'Библиотека',
+      value: TokenatorTab.Library,
+      slot: 'library' as const,
+    },
+    {
+      label: 'Настройки',
+      value: TokenatorTab.Settings,
+      slot: 'settings' as const,
+    },
+  ];
+
+  const toolTabs = [
+    {
+      label: 'Основа',
+      value: TokenatorTool.Base,
+      slot: 'base' as const,
+    },
+    {
+      label: 'Стиль',
+      value: TokenatorTool.Style,
+      slot: 'style' as const,
+    },
+    {
+      label: '3D',
+      value: TokenatorTool.ThreeD,
+      slot: '3d' as const,
+    },
+    {
+      label: 'Текст',
+      value: TokenatorTool.Text,
+      slot: 'text' as const,
+    },
+  ];
 
   const hasSettingsChanged = computed(() => {
     // Проверяем, отличаются ли текущие настройки от дефолтных
@@ -46,18 +84,21 @@
   });
 
   watch(selectedTab, (tab) => {
-    if (tab === 'library') {
-      toolTab.value = 'base';
+    if (tab === TokenatorTab.Library) {
+      toolTab.value = TokenatorTool.Base;
     }
   });
 
   watch(toolTab, (tool) => {
-    if (tool !== '3d') {
+    if (tool !== TokenatorTool.ThreeD) {
       store.brush.enabled = false;
     }
   });
 
-  async function downloadToken(format: 'png' | 'jpeg' | 'webp') {
+  const { exportToPng, exportToWebp, isExportingPng, isExportingWebp } =
+    useCanvasExport();
+
+  async function downloadToken(format: 'png' | 'webp') {
     const canvas = document.createElement('canvas');
 
     canvas.width = CANVAS_SIZE;
@@ -85,12 +126,36 @@
       halfMask: store.brush.halfMask,
     });
 
-    const url = canvas.toDataURL(`image/${format}`, 0.9);
-    const link = document.createElement('a');
+    const filename = `token-${Date.now()}`;
 
-    link.download = `token-${Date.now()}.${format}`;
-    link.href = url;
-    link.click();
+    if (format === 'png') {
+      await exportToPng(canvas, filename);
+    } else {
+      await exportToWebp(canvas, filename);
+    }
+  }
+
+  function resetTab() {
+    switch (toolTab.value) {
+      case TokenatorTool.Base:
+        store.resetBaseSettings();
+
+        break;
+      case TokenatorTool.Style:
+        store.resetStyleSettings();
+
+        break;
+      case TokenatorTool.ThreeD:
+        store.clearMask();
+
+        break;
+      case TokenatorTool.Text:
+        store.resetTextSettings();
+
+        break;
+      default:
+        break;
+    }
   }
 </script>
 
@@ -99,10 +164,7 @@
     <div class="relative">
       <UTabs
         v-model="selectedTab"
-        :items="[
-          { label: 'Библиотека', value: 'library', slot: 'library' as const },
-          { label: 'Настройки', value: 'settings', slot: 'settings' as const },
-        ]"
+        :items="tabs"
         :ui="{
           root: 'grid gap-2',
         }"
@@ -116,12 +178,7 @@
             <UTabs
               v-model="toolTab"
               size="sm"
-              :items="[
-                { label: 'Основа', value: 'base', slot: 'base' as const },
-                { label: 'Стиль', value: 'style', slot: 'style' as const },
-                { label: '3D', value: '3d', slot: '3d' as const },
-                { label: 'Текст', value: 'text', slot: 'text' as const },
-              ]"
+              :items="toolTabs"
             >
               <template #base>
                 <ControlsSettingsBase />
@@ -144,22 +201,14 @@
               <UButton
                 :icon="
                   toolTab === '3d'
-                    ? 'i-fluent-eraser-20-regular'
-                    : 'i-fluent-arrow-reset-20-regular'
+                    ? 'i-fluent-eraser-24-regular'
+                    : 'i-fluent-arrow-reset-24-regular'
                 "
                 :label="toolTab === '3d' ? 'Стереть маску' : 'Сбросить все'"
                 size="sm"
                 variant="soft"
                 color="error"
-                @click="
-                  toolTab === 'base'
-                    ? store.resetBaseSettings()
-                    : toolTab === 'style'
-                      ? store.resetStyleSettings()
-                      : toolTab === '3d'
-                        ? store.clearMask()
-                        : store.resetTextSettings()
-                "
+                @click.left.exact.prevent="resetTab"
               />
             </div>
           </div>
@@ -168,33 +217,34 @@
 
       <UButton
         v-if="hasSettingsChanged"
-        v-tooltip="'Сбросить все настройки'"
+        tooltip="Сбросить все настройки"
         icon="i-fluent-arrow-reset-20-regular"
         size="xs"
         color="neutral"
         variant="solid"
-        :padded="false"
         class="absolute top-2 right-2"
-        @click="store.resetSettings"
+        @click.left.exact.prevent="store.resetSettings"
       />
     </div>
 
     <div class="grid grid-cols-2 gap-2 pt-2">
       <UButton
         icon="i-fluent-arrow-download-24-regular"
-        label="PNG"
+        :loading="isExportingPng"
         variant="soft"
+        label="PNG"
         block
-        @click="downloadToken('png')"
+        @click.left.exact.prevent="downloadToken('png')"
       />
 
       <UButton
         icon="i-fluent-arrow-download-24-regular"
+        :loading="isExportingWebp"
         color="neutral"
         variant="soft"
         label="WEBP"
         block
-        @click="downloadToken('webp')"
+        @click.left.exact.prevent="downloadToken('webp')"
       />
     </div>
   </div>

@@ -304,7 +304,6 @@
                 size="sm"
                 color="neutral"
                 variant="soft"
-                :padded="false"
                 class="flex h-5 w-6 items-center justify-center text-xs font-medium"
                 @click.left.exact.prevent="
                   store.transform.flip.x = !store.transform.flip.x
@@ -317,7 +316,6 @@
                 size="sm"
                 color="neutral"
                 variant="soft"
-                :padded="false"
                 class="flex h-5 w-6 items-center justify-center text-xs font-medium"
                 @click.left.exact.prevent="
                   store.transform.flip.y = !store.transform.flip.y

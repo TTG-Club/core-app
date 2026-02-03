@@ -258,7 +258,6 @@
             size="xs"
             variant="ghost"
             color="neutral"
-            :padded="false"
             class="p-1"
             @click.left.exact.prevent="store.swapTintColors"
           />
