@@ -112,17 +112,26 @@
   // Используем useGesture для плавного масштабирования на iOS
   useGesture(
     {
-      onPinch: ({ offset: [scale] }) => {
+      onPinch: (arg) => {
+        arg.event.preventDefault();
+
         if (!store.currentImage) {
           return;
         }
 
-        // Применяем масштаб с ограничениями
-        const newScale = Math.min(Math.max(scale, 0.1), 3);
-
-        store.transform.scale = newScale;
+        store.transform.scale = Math.min(
+          Math.max(store.transform.scale + arg.velocities[0] / 100, 0.1),
+          3,
+        );
       },
-      onWheel: ({ delta: [, deltaY] }) => {
+      onWheel: ({ event, delta: [, deltaY], ctrlKey }) => {
+        // Игнорируем зум жесты (ctrl + wheel), так как они обрабатываются в onPinch
+        if (ctrlKey) {
+          return;
+        }
+
+        event.preventDefault();
+
         if (!store.currentImage) {
           return;
         }
@@ -138,7 +147,6 @@
       domTarget: containerRef,
       eventOptions: { passive: false },
       pinch: {
-        distanceBounds: { min: 0.1, max: 3 },
         rubberband: true,
       },
     },

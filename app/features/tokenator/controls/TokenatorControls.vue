@@ -157,6 +157,16 @@
         break;
     }
   }
+
+  const resetIcon = computed(() =>
+    toolTab.value === TokenatorTool.ThreeD
+      ? 'i-fluent-eraser-24-regular'
+      : 'i-fluent-arrow-reset-24-regular',
+  );
+
+  const resetLabel = computed(() =>
+    toolTab.value === TokenatorTool.ThreeD ? 'Стереть маску' : 'Сбросить все',
+  );
 </script>
 
 <template>
@@ -199,12 +209,8 @@
 
             <div class="flex pt-2">
               <UButton
-                :icon="
-                  toolTab === '3d'
-                    ? 'i-fluent-eraser-24-regular'
-                    : 'i-fluent-arrow-reset-24-regular'
-                "
-                :label="toolTab === '3d' ? 'Стереть маску' : 'Сбросить все'"
+                :icon="resetIcon"
+                :label="resetLabel"
                 size="sm"
                 variant="soft"
                 color="error"
