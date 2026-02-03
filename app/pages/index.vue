@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { HomeBackground } from '~home/background';
   import { HomeBanners, RoadmapBanner } from '~home/banners';
   import News from '~home/news/News.vue';
   import { RecentChanges } from '~home/recent-changes';
@@ -19,6 +20,10 @@
 
 <template>
   <NuxtLayout>
+    <ClientOnly>
+      <HomeBackground />
+    </ClientOnly>
+
     <div class="flex flex-col items-center gap-6">
       <h1 class="m-0 h-0 overflow-hidden leading-0 opacity-0">
         {{ name }}
@@ -45,7 +50,6 @@
 
         <div class="flex w-full flex-col gap-3 xl:w-1/2 2xl:w-1/3">
           <SocialLinks />
-        </div>
       </div>
     </div>
   </NuxtLayout>

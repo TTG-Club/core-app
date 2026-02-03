@@ -3,6 +3,7 @@
   import { useGlobalSearch } from '~search/composable';
 
   const { open } = useGlobalSearch();
+  const { isDesktop } = useDevice();
 </script>
 
 <template>
@@ -10,7 +11,7 @@
     <HomeGreetings class="-z-1" />
 
     <UButton
-      class="relative mb-6 rounded-full py-4 hover:bg-accented"
+      class="@container relative mb-6 rounded-full py-4 hover:bg-accented"
       :class="$style.glowButton"
       variant="subtle"
       color="neutral"
@@ -19,7 +20,9 @@
       @click.left.exact.prevent="open"
     >
       <span class="text-sm">
-        Нажмите тут или <UKbd value="\">\</UKbd> для начала поиска
+        Нажмите тут
+        <span v-if="isDesktop">или <UKbd value="\">\</UKbd></span> для начала
+        поиска
       </span>
     </UButton>
   </div>
