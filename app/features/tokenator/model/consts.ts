@@ -72,6 +72,8 @@ export const DEFAULT_TRANSFORM: TransformState = {
   flip: { x: false, y: false },
   position: { x: 0, y: 0 },
   maskScale: 1,
+  maskRotate: 0,
+  maskSides: 0, // 0 = круг
   frameScale: 1,
   frameRotate: 0,
 };

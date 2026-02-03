@@ -3,9 +3,31 @@
 
   const store = useTokenatorStore();
 
+  // Допустимые значения для углов маски
+  const MASK_SIDES_VALUES = [0, 3, 4, 5, 6, 8, 10, 12, 16, 18, 20];
+
+  const maskSidesIndex = computed({
+    get: () => {
+      const currentValue = store.transform.maskSides || 0;
+
+      return MASK_SIDES_VALUES.indexOf(currentValue);
+    },
+    set: (index: number) => {
+      store.transform.maskSides = MASK_SIDES_VALUES[index] || 0;
+    },
+  });
+
   watchEffect(() => {
     if (store.transform.maskScale === undefined) {
       store.transform.maskScale = 1;
+    }
+
+    if (store.transform.maskRotate === undefined) {
+      store.transform.maskRotate = 0;
+    }
+
+    if (store.transform.maskSides === undefined) {
+      store.transform.maskSides = 0;
     }
   });
 </script>
@@ -52,13 +74,91 @@
             :step="0.01"
           />
         </div>
+
+        <div class="grid grid-cols-2 gap-6">
+          <div class="grid gap-1">
+            <div class="flex h-5 items-center justify-between">
+              <button
+                type="button"
+                class="flex items-center gap-1.5 text-xs transition-colors"
+                :class="
+                  store.transform.maskRotate !== 0
+                    ? 'cursor-pointer text-primary-500'
+                    : 'cursor-default text-neutral-500'
+                "
+                :disabled="store.transform.maskRotate === 0"
+                title="Сбросить поворот маски"
+                @click.left.exact.prevent="store.transform.maskRotate = 0"
+              >
+                <span>Поворот</span>
+
+                <UIcon
+                  v-if="store.transform.maskRotate !== 0"
+                  name="i-fluent-arrow-undo-20-regular"
+                  class="size-3"
+                />
+              </button>
+
+              <span class="font-mono text-xs text-neutral-400"
+                >{{ store.transform.maskRotate }}°</span
+              >
+            </div>
+
+            <USlider
+              v-model.number="store.transform.maskRotate"
+              size="xs"
+              :min="-180"
+              :max="180"
+              :step="1"
+            />
+          </div>
+
+          <div class="grid gap-1">
+            <div class="flex h-5 items-center justify-between">
+              <button
+                type="button"
+                class="flex items-center gap-1.5 text-xs transition-colors"
+                :class="
+                  store.transform.maskSides !== 0
+                    ? 'cursor-pointer text-primary-500'
+                    : 'cursor-default text-neutral-500'
+                "
+                :disabled="store.transform.maskSides === 0"
+                title="Сбросить форму маски"
+                @click.left.exact.prevent="store.transform.maskSides = 0"
+              >
+                <span>Углы</span>
+
+                <UIcon
+                  v-if="store.transform.maskSides !== 0"
+                  name="i-fluent-arrow-undo-20-regular"
+                  class="size-3"
+                />
+              </button>
+
+              <span class="font-mono text-xs text-neutral-400">{{
+                store.transform.maskSides === 0
+                  ? '∞'
+                  : store.transform.maskSides
+              }}</span>
+            </div>
+
+            <USlider
+              v-model.number="maskSidesIndex"
+              size="xs"
+              :min="0"
+              :max="10"
+              :step="1"
+            />
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="grid gap-1">
       <div class="text-xs font-medium text-neutral-400">Настройка рамки</div>
 
-      <div class="grid gap-2">
+      <div class="grid grid-cols-2 gap-6">
         <div class="grid gap-1">
           <div class="flex h-5 items-center justify-between">
             <button
