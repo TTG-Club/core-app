@@ -91,10 +91,30 @@ export function createS3Service() {
     }
   }
 
+  async function list(prefix: string) {
+    try {
+      const command = await s3.listObjectsV2({
+        Bucket: bucket,
+        Prefix: prefix,
+      });
+
+      return command.Contents || [];
+    } catch (err) {
+      console.error(err);
+
+      throw createError(
+        getErrorResponse(StatusCodes.INTERNAL_SERVER_ERROR, {
+          message: 'Ошибка получения списка файлов',
+        }),
+      );
+    }
+  }
+
   return {
     get,
     upload,
     delete: remove,
+    list,
   };
 }
 

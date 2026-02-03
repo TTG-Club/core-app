@@ -41,11 +41,6 @@
     navigateTo({ name: 'workshop' });
   }
 
-  function openAdmin() {
-    closeMenu();
-    navigateTo({ name: 'admin' });
-  }
-
   if (isAdmin.value) {
     defineShortcuts(
       {
@@ -166,17 +161,16 @@
 
             <UButton
               v-if="isAdmin"
-              icon="i-ttg-menu-filled-workshop"
+              icon="i-heroicons-cog-6-tooth"
               color="neutral"
               variant="ghost"
               class="w-full"
               size="lg"
-              @click="openAdmin"
+              to="/admin"
+              @click="closeMenu"
             >
               <div class="flex w-full items-center justify-between">
-                <span>Админка</span>
-
-                <KbdShortcut :kbds="['meta', 'shift', 'm']" />
+                <span>Админ-панель</span>
               </div>
             </UButton>
           </div>

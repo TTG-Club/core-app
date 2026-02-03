@@ -1,7 +1,6 @@
-import { cloneDeep } from 'es-toolkit';
-import { createStore, get, set } from 'idb-keyval';
+import { liveQuery } from 'dexie';
 
-import { DICE_HISTORY_STORAGE_KEY } from '../const';
+import { db } from '../model/db';
 
 import type { Ref } from 'vue';
 
@@ -13,19 +12,9 @@ interface UseDiceRollerHistoryOptions {
   isModalOpen: Ref<boolean>;
 }
 
-const diceRollerStore = createStore('ttg-club', 'dice-roller');
-
-async function getStorageValue<T>(key: string): Promise<T | undefined> {
-  return await get<T>(key, diceRollerStore);
-}
-
-async function setStorageValue<T>(key: string, value: T): Promise<void> {
-  await set(key, cloneDeep(value), diceRollerStore);
-}
-
 /**
  * Composable для управления историей бросков.
- * Отвечает за загрузку, сохранение и очистку истории в IndexedDB (через idb-keyval).
+ * Отвечает за загрузку, сохранение и очистку истории в IndexedDB (через Dexie).
  * Также управляет скроллом списка истории при добавлении новых записей.
  *
  * @param options - Настройки для управления историей
@@ -35,6 +24,8 @@ async function setStorageValue<T>(key: string, value: T): Promise<void> {
  */
 export function useDiceRollerHistory(options: UseDiceRollerHistoryOptions) {
   const { history, historyScrollElement, isModalOpen } = options;
+
+  let isSyncing = false;
 
   const scrollToBottom = () => {
     const element = historyScrollElement.value;
@@ -46,23 +37,39 @@ export function useDiceRollerHistory(options: UseDiceRollerHistoryOptions) {
     element.scrollTop = element.scrollHeight;
   };
 
-  const loadHistory = async () => {
-    const savedHistory = await getStorageValue<HistoryEntry[]>(
-      DICE_HISTORY_STORAGE_KEY,
+  // Синхронизация из IDB в history (при загрузке или изменении в другой вкладке)
+  if (import.meta.client) {
+    liveQuery(() => db.history.orderBy('timestamp').toArray()).subscribe(
+      (data) => {
+        isSyncing = true;
+        history.value = data;
+
+        nextTick(() => {
+          isSyncing = false;
+        });
+      },
     );
+  }
 
-    if (Array.isArray(savedHistory)) {
-      history.value = savedHistory;
-    }
-  };
+  // Синхронизация из history в IDB (при добавлении броска)
+  watch(
+    history,
+    async (newHistory) => {
+      if (isSyncing) {
+        return;
+      }
 
-  const persistHistory = async () => {
-    await setStorageValue(DICE_HISTORY_STORAGE_KEY, history.value);
-  };
+      await db.transaction('rw', db.history, async () => {
+        await db.history.clear();
+        await db.history.bulkPut(JSON.parse(JSON.stringify(newHistory)));
+      });
+    },
+    { deep: true },
+  );
 
-  const clearHistory = async () => {
+  const clearHistory = () => {
     history.value = [];
-    await persistHistory();
+    // Watch сработает и очистит БД
     scrollToBottom();
   };
 
@@ -71,16 +78,12 @@ export function useDiceRollerHistory(options: UseDiceRollerHistoryOptions) {
       isOpen: isModalOpen.value,
       historyLength: history.value.length,
     }),
-    async (currentState, previousState) => {
+    (currentState) => {
       if (!currentState.isOpen) {
         return;
       }
 
       scrollToBottom();
-
-      if (currentState.historyLength !== previousState.historyLength) {
-        await persistHistory();
-      }
     },
     { flush: 'post' },
   );
@@ -99,7 +102,6 @@ export function useDiceRollerHistory(options: UseDiceRollerHistoryOptions) {
   });
 
   return {
-    loadHistory,
     clearHistory,
     scrollToBottom,
   };

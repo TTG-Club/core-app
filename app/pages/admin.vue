@@ -6,8 +6,7 @@
   });
 
   useSeoMeta({
-    title: 'Админка',
-    ogTitle: 'Админка',
+    title: 'Панель администрирования',
   });
 </script>
 

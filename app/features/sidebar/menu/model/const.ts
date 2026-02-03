@@ -81,6 +81,16 @@ export const MENU_SECTIONS: Array<{
     ],
   },
   {
+    label: 'Инструменты',
+    icon: 'menu/filled/workshop',
+    items: [
+      {
+        href: '/tokenator',
+        label: 'Токенатор',
+      },
+    ],
+  },
+  {
     label: 'Другое',
     icon: 'menu/filled/workshop',
     items: [

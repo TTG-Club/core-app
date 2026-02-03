@@ -23,4 +23,4 @@ export const DICE_EXAMPLES_REROLL: DiceFormulaExample[] = [
   { formula: '8к6р<3', note: 'переброс <3' },
 ];
 
-export const DICE_HISTORY_STORAGE_KEY = 'dice-roller:history:v1';
+export const DICE_HISTORY_STORAGE_KEY = 'dice-roller:history';

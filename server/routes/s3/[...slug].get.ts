@@ -2,7 +2,13 @@ import { StatusCodes } from 'http-status-codes';
 import { S3Service } from '~~/server/services';
 
 export default defineEventHandler(async (event) => {
-  const path = getRouterParam(event, 'slug');
+  const rawPath = getRouterParam(event, 'slug');
+
+  let path = rawPath ? decodeURIComponent(rawPath) : undefined;
+
+  if (path?.startsWith('/')) {
+    path = path.substring(1);
+  }
 
   if (!path) {
     throw createError(getErrorResponse(StatusCodes.BAD_REQUEST));
@@ -17,8 +23,11 @@ export default defineEventHandler(async (event) => {
 
     setHeader(event, 'content-type', file.ContentType);
     setHeader(event, 'cache-control', file.CacheControl);
+    setHeader(event, 'access-control-allow-origin', '*');
 
-    return sendStream(event, file.Body.transformToWebStream());
+    const body = file.Body as any;
+
+    return sendStream(event, body);
   } catch (e) {
     if (!(e instanceof Error)) {
       throw createError(getErrorResponse(StatusCodes.INTERNAL_SERVER_ERROR));
