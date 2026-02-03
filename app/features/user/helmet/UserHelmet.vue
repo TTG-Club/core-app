@@ -158,6 +158,21 @@
                 <KbdShortcut :kbds="['meta', 'shift', 'm']" />
               </div>
             </UButton>
+
+            <UButton
+              v-if="isAdmin"
+              icon="i-heroicons-cog-6-tooth"
+              color="neutral"
+              variant="ghost"
+              class="w-full"
+              size="lg"
+              to="/admin"
+              @click="closeMenu"
+            >
+              <div class="flex w-full items-center justify-between">
+                <span>Админ-панель</span>
+              </div>
+            </UButton>
           </div>
 
           <USeparator />

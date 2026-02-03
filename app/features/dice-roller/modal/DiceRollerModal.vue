@@ -39,14 +39,10 @@
 
   const historyScrollElement = shallowRef<HTMLElement | null>(null);
 
-  const { loadHistory, clearHistory } = useDiceRollerHistory({
+  const { clearHistory } = useDiceRollerHistory({
     history,
     historyScrollElement,
     isModalOpen: isOpen,
-  });
-
-  onMounted(async () => {
-    await loadHistory();
   });
 
   function handleRollError(message: string, formulaValue: string) {
