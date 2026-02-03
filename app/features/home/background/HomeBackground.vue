@@ -1,5 +1,6 @@
 <script setup lang="ts">
-  import { useElementBounding } from '@vueuse/core';
+  import { useElementBounding, useRafFn } from '@vueuse/core';
+  import Color from 'colorjs.io';
 
   import {
     PARTICLE_OPACITY_MAX,
@@ -17,65 +18,24 @@
   const containerRef = useTemplateRef<HTMLDivElement>('container');
   const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas');
   const { width, height } = useElementBounding(containerRef);
+  const uiColor = useCssVar('--ui-text', document.documentElement);
 
-  const particles = ref<Particle[]>([]);
-  const animationFrameId = ref<number | null>(null);
-
-  /**
-   * Получает цвет из CSS переменной и конвертирует в RGB
-   * @param cssVar - Название CSS переменной
-   * @returns RGB строка для использования в rgba()
-   */
-  function getCssVariableColor(cssVar: string): string {
-    if (!import.meta.client) {
-      return '128, 128, 128';
+  function getColor(): Color {
+    if (!uiColor.value) {
+      return new Color('oklch(0.60, 0.00, 0)');
     }
 
-    const value = getComputedStyle(document.documentElement)
-      .getPropertyValue(cssVar)
-      .trim();
-
-    // Если это oklch формат, используем временный элемент для конвертации
-    if (value.startsWith('oklch')) {
-      const temp = document.createElement('div');
-
-      temp.style.color = value;
-      document.body.appendChild(temp);
-
-      const rgb = getComputedStyle(temp).color;
-
-      document.body.removeChild(temp);
-
-      // Извлекаем RGB значения из строки "rgb(r, g, b)"
-      const match = rgb.match(/\d+/g);
-
-      if (match && match.length >= 3) {
-        return `${match[0]}, ${match[1]}, ${match[2]}`;
-      }
-    }
-
-    return '128, 128, 128';
+    return new Color(uiColor.value);
   }
 
   /**
-   * Вычисляет цвет частиц из CSS переменной --ui-text-dimmed
-   * @returns RGB строка для цвета частиц
-   */
-  const particleColor = computed<string>(() => {
-    return getCssVariableColor('--ui-color-primary');
-  });
-
-  /**
    * Создает новую частицу со случайными параметрами
-   * @param isInitial - Флаг первичной инициализации (распределяет по всей высоте)
    * @returns Объект частицы с координатами, размером, скоростью и прозрачностью
    */
-  function createParticle(isInitial = false): Particle {
+  function createParticle(): Particle {
     return {
       x: Math.random() * width.value,
-      y: isInitial
-        ? Math.random() * height.value
-        : height.value + Math.random() * 100,
+      y: Math.random() * height.value,
       size:
         Math.random() * (PARTICLE_SIZE_MAX - PARTICLE_SIZE_MIN) +
         PARTICLE_SIZE_MIN,
@@ -88,19 +48,16 @@
     };
   }
 
-  /**
-   * Инициализирует массив частиц
-   */
-  function initParticles(): void {
-    const particleCount = Math.max(
+  const count = computed(() =>
+    Math.max(
       PARTICLES_MIN_COUNT,
       Math.floor((width.value * height.value) / PARTICLES_DENSITY_DIVIDER),
-    );
+    ),
+  );
 
-    particles.value = Array.from({ length: particleCount }, () =>
-      createParticle(true),
-    );
-  }
+  const particles = computed<Array<Particle>>(() =>
+    Array.from({ length: count.value }, createParticle),
+  );
 
   /**
    * Обновляет позицию частицы и пересоздает её при выходе за границы
@@ -124,23 +81,18 @@
     ctx: CanvasRenderingContext2D,
     particle: Particle,
   ): void {
+    const color = getColor();
+
+    color.alpha = particle.opacity;
+
     ctx.beginPath();
     ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(${particleColor.value}, ${particle.opacity})`;
+    ctx.fillStyle = color.toString({ format: 'oklch' });
     ctx.fill();
   }
 
-  /**
-   * Основной цикл анимации
-   */
-  function animate(): void {
-    const canvas = canvasRef.value;
-
-    if (!canvas) {
-      return;
-    }
-
-    const ctx = canvas.getContext('2d');
+  useRafFn(() => {
+    const ctx = canvasRef.value?.getContext('2d');
 
     if (!ctx) {
       return;
@@ -148,26 +100,11 @@
 
     ctx.clearRect(0, 0, width.value, height.value);
 
-    particles.value.forEach((particle) => {
+    for (const particle of particles.value) {
       updateParticle(particle);
       drawParticle(ctx, particle);
-    });
-
-    animationFrameId.value = requestAnimationFrame(animate);
-  }
-
-  onMounted(() => {
-    initParticles();
-    animate();
-  });
-
-  onUnmounted(() => {
-    if (animationFrameId.value !== null) {
-      cancelAnimationFrame(animationFrameId.value);
     }
   });
-
-  watch([width, height], initParticles);
 </script>
 
 <template>
