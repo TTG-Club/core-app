@@ -1,19 +1,18 @@
 <script setup lang="ts">
-  import { useMediaQuery } from '@vueuse/core';
-  import { useGesture } from '@vueuse/gesture';
   import {
     useTokenatorCanvas,
+    useTokenatorGestures,
     useTokenatorStore,
   } from '~tokenator/composables';
-  import { getScaleFactor } from '~tokenator/model';
+  import { drawBrushStroke } from '~tokenator/model';
 
   const store = useTokenatorStore();
   const canvasRef = ref<HTMLCanvasElement | null>(null);
   const containerRef = ref<HTMLElement | null>(null);
 
-  const { initCanvas, render } = useTokenatorCanvas(canvasRef);
+  const { isDesktop } = useBreakpoints();
 
-  const isMobile = useMediaQuery('(max-width: 1023px)');
+  const { initCanvas, render } = useTokenatorCanvas(canvasRef);
 
   /**
    * Рисует на маске в указанных координатах.
@@ -23,8 +22,10 @@
    *
    * @param x - Координата X в контейнере превью
    * @param y - Координата Y в контейнере превью
+   * @param prevX - Предыдущая координата X (для интерполяции)
+   * @param prevY - Предыдущая координата Y (для интерполяции)
    */
-  function paintMask(x: number, y: number) {
+  function paintMask(x: number, y: number, prevX?: number, prevY?: number) {
     if (!store.maskImageCanvas || !containerRef.value) {
       return;
     }
@@ -66,20 +67,24 @@
     const scaledX = (x - previewCx) * scale + maskCx;
     const scaledY = (y - previewCy) * scale + maskCy;
 
-    // Масштабируем размер кисти
-    const scaledBrushSize = (store.brush.size / 2) * scale;
+    let scaledPrevX: number | undefined;
+    let scaledPrevY: number | undefined;
 
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(scaledX, scaledY, scaledBrushSize, 0, Math.PI * 2);
-    ctx.fillStyle = store.brush.mode === 'add' ? 'white' : 'black';
-
-    if (store.brush.mode === 'remove') {
-      ctx.globalCompositeOperation = 'destination-out';
+    if (prevX !== undefined && prevY !== undefined) {
+      scaledPrevX = (prevX - previewCx) * scale + maskCx;
+      scaledPrevY = (prevY - previewCy) * scale + maskCy;
     }
 
-    ctx.fill();
-    ctx.restore();
+    drawBrushStroke({
+      ctx,
+      x: scaledX,
+      y: scaledY,
+      prevX: scaledPrevX,
+      prevY: scaledPrevY,
+      size: store.brush.size * scale,
+      mode: store.brush.mode,
+      color: store.brush.mode === 'add' ? 'white' : 'black',
+    });
 
     store.maskVersion++;
     render();
@@ -98,146 +103,28 @@
     render();
   });
 
-  const isDragging = ref(false);
-  const isPainting = ref(false);
-  const isHovering = ref(false);
-  const cursorX = ref(0);
-  const cursorY = ref(0);
-  const startPos = { x: 0, y: 0 };
-  const startTransformPos = { x: 0, y: 0 };
+  const { isDragging, isHovering, cursorX, cursorY } = useTokenatorGestures({
+    containerRef,
+    canvasRef,
+    paintMask,
+    scaleReferenceSize: 500,
+    disabled: isDesktop,
+  });
 
   const isBrushMode = computed(
-    () => isMobile.value && store.brush.enabled && store.currentImage,
-  );
-
-  function onPointerDown(e: PointerEvent) {
-    if (!isMobile.value || !store.currentImage) {
-      return;
-    }
-
-    if (store.brush.enabled) {
-      isPainting.value = true;
-
-      if (containerRef.value) {
-        containerRef.value.setPointerCapture(e.pointerId);
-
-        const rect = containerRef.value.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        paintMask(x, y);
-      }
-
-      return;
-    }
-
-    isDragging.value = true;
-    startPos.x = e.clientX;
-    startPos.y = e.clientY;
-    startTransformPos.x = store.transform.position.x;
-    startTransformPos.y = store.transform.position.y;
-
-    if (containerRef.value) {
-      containerRef.value.setPointerCapture(e.pointerId);
-    }
-  }
-
-  function onPointerMove(e: PointerEvent) {
-    if (containerRef.value) {
-      const rect = containerRef.value.getBoundingClientRect();
-
-      cursorX.value = e.clientX - rect.left;
-      cursorY.value = e.clientY - rect.top;
-    }
-
-    if (isPainting.value) {
-      paintMask(cursorX.value, cursorY.value);
-
-      return;
-    }
-
-    if (!isDragging.value) {
-      return;
-    }
-
-    const scaleFactor = getScaleFactor(containerRef.value, 500);
-
-    const deltaX = e.clientX - startPos.x;
-    const deltaY = e.clientY - startPos.y;
-
-    store.transform.position.x = startTransformPos.x + deltaX * scaleFactor;
-    store.transform.position.y = startTransformPos.y + deltaY * scaleFactor;
-  }
-
-  function onPointerUp(e: PointerEvent) {
-    isDragging.value = false;
-    isPainting.value = false;
-
-    if (containerRef.value) {
-      containerRef.value.releasePointerCapture(e.pointerId);
-    }
-  }
-
-  function onPointerEnter() {
-    isHovering.value = true;
-  }
-
-  function onPointerLeave() {
-    isHovering.value = false;
-    isPainting.value = false;
-  }
-
-  // Используем useGesture для плавного масштабирования
-  useGesture(
-    {
-      onPinch: ({ offset: [scale] }) => {
-        if (!isMobile.value || !store.currentImage || store.brush.enabled) {
-          return;
-        }
-
-        // Применяем масштаб с ограничениями
-        const newScale = Math.min(Math.max(scale, 0.1), 3);
-
-        store.transform.scale = newScale;
-      },
-      onWheel: ({ delta: [, deltaY] }) => {
-        if (!isMobile.value || !store.currentImage || store.brush.enabled) {
-          return;
-        }
-
-        // Уменьшенная чувствительность для колеса мыши
-        const zoomSpeed = 0.001;
-        const newScale = store.transform.scale - deltaY * zoomSpeed;
-
-        store.transform.scale = Math.min(Math.max(newScale, 0.1), 3);
-      },
-    },
-    {
-      domTarget: containerRef,
-      eventOptions: { passive: false },
-      pinch: {
-        distanceBounds: { min: 0.1, max: 3 },
-        rubberband: true,
-      },
-    },
+    () => store.brush.enabled && !!store.currentImage,
   );
 </script>
 
 <template>
   <div
     ref="containerRef"
-    class="relative mx-auto h-[240px] w-[240px] shrink-0 touch-none"
+    class="relative mx-auto h-60 w-60 shrink-0 touch-none"
     :class="{
       'cursor-none': isBrushMode,
-      'cursor-grab': isMobile && store.currentImage && !store.brush.enabled,
+      'cursor-grab': store.currentImage && !store.brush.enabled && !isDragging,
       'cursor-grabbing': isDragging,
     }"
-    @pointerdown="onPointerDown"
-    @pointermove="onPointerMove"
-    @pointerup="onPointerUp"
-    @pointercancel="onPointerUp"
-    @pointerenter="onPointerEnter"
-    @pointerleave="onPointerLeave"
   >
     <!-- Brush Cursor -->
     <div

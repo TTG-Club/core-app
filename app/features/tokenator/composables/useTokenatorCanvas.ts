@@ -1,6 +1,6 @@
 import { useElementSize, useRafFn } from '@vueuse/core';
 
-import { CANVAS_SIZE, drawToken } from '../model/utils';
+import { CANVAS_SIZE, drawBrushStroke, drawToken } from '../model';
 
 import { useTokenatorStore } from './useTokenatorStore';
 
@@ -21,7 +21,26 @@ export function useTokenatorCanvas(
   const { clip = true } = options;
   const { width, height } = useElementSize(canvasRef);
 
+  // Размер маски теперь фиксированный и большой для сохранения качества
+  const MASK_SIDE = 2048;
+
+  // Пытаемся восстановить маску из стора, если она там есть
+  const existingMask = store.maskImageCanvas;
   const maskCanvas = document.createElement('canvas');
+
+  // Если маска уже была, отрисовываем её, растягивая на новый размер если нужно
+  // Это позволит мигрировать старые маски на новый формат
+  if (existingMask) {
+    maskCanvas.width = MASK_SIDE;
+    maskCanvas.height = MASK_SIDE;
+
+    maskCanvas
+      .getContext('2d')
+      ?.drawImage(existingMask, 0, 0, MASK_SIDE, MASK_SIDE);
+  } else {
+    maskCanvas.width = MASK_SIDE;
+    maskCanvas.height = MASK_SIDE;
+  }
 
   /**
    * Инициализирует canvas и маску, устанавливает размеры и запускает первую отрисовку.
@@ -31,40 +50,77 @@ export function useTokenatorCanvas(
       return;
     }
 
-    const w = width.value || canvasRef.value.clientWidth || 300;
-    const h = height.value || canvasRef.value.clientHeight || 300;
-
-    maskCanvas.width = w;
-    maskCanvas.height = h;
-
+    // Маска теперь фиксированного размера, поэтому не меняем её размер при инициализации
     render();
   }
 
   /**
    * Рисует на маске в указанных координатах.
    * Использует настройки кисти из стора (размер, режим).
+   * Автоматически пересчитывает координаты экрана в координаты маски.
    *
    * @param x - Координата X
    * @param y - Координата Y
+   * @param prevX - Предыдущая координата X (для интерполяции линии)
+   * @param prevY - Предыдущая координата Y (для интерполяции линии)
    */
-  function paintMask(x: number, y: number) {
+  function paintMask(x: number, y: number, prevX?: number, prevY?: number) {
     const ctx = maskCanvas.getContext('2d');
 
-    if (!ctx) {
+    if (!ctx || !canvasRef.value) {
       return;
     }
 
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(x, y, store.brush.size / 2, 0, Math.PI * 2);
-    ctx.fillStyle = store.brush.mode === 'add' ? 'white' : 'black';
+    const w = width.value || canvasRef.value.clientWidth || 300;
+    const h = height.value || canvasRef.value.clientHeight || 300;
 
-    if (store.brush.mode === 'remove') {
-      ctx.globalCompositeOperation = 'destination-out';
+    // Вычисляем размер токена на экране (логика должна совпадать с draw)
+    let tokenSize = 500;
+
+    if (clip) {
+      tokenSize = Math.min(w, h);
+    } else {
+      tokenSize = Math.min(500, Math.min(w, h) - 40);
     }
 
-    ctx.fill();
-    ctx.restore();
+    // Коэффициент масштабирования между экраном и маской
+    const scale = MASK_SIDE / tokenSize;
+
+    // Центры координат
+    const screenCx = w / 2;
+    const screenCy = h / 2;
+    const maskCx = MASK_SIDE / 2;
+    const maskCy = MASK_SIDE / 2;
+
+    // Преобразование координат:
+    // 1. Сдвигаем к центру экрана (0,0)
+    // 2. Масштабируем
+    // 3. Сдвигаем к центру маски
+    const mx = (x - screenCx) * scale + maskCx;
+    const my = (y - screenCy) * scale + maskCy;
+
+    let mPrevX: number | undefined;
+    let mPrevY: number | undefined;
+
+    if (prevX !== undefined && prevY !== undefined) {
+      mPrevX = (prevX - screenCx) * scale + maskCx;
+      mPrevY = (prevY - screenCy) * scale + maskCy;
+    }
+
+    try {
+      drawBrushStroke({
+        ctx,
+        x: mx,
+        y: my,
+        prevX: mPrevX,
+        prevY: mPrevY,
+        size: store.brush.size * scale, // Размер кисти тоже масштабируем
+        mode: store.brush.mode,
+        color: store.brush.mode === 'add' ? 'white' : 'black',
+      });
+    } catch (e) {
+      console.error('Failed to paint mask:', e);
+    }
 
     store.maskVersion++;
     render();
@@ -88,19 +144,10 @@ export function useTokenatorCanvas(
     const w = width.value || canvasRef.value.clientWidth || 300;
     const h = height.value || canvasRef.value.clientHeight || 300;
 
+    // Обновляем размер только экранного канваса
     if (canvasRef.value.width !== w || canvasRef.value.height !== h) {
       canvasRef.value.width = w;
       canvasRef.value.height = h;
-
-      const temp = document.createElement('canvas');
-
-      temp.width = maskCanvas.width;
-      temp.height = maskCanvas.height;
-      temp.getContext('2d')?.drawImage(maskCanvas, 0, 0);
-
-      maskCanvas.width = w;
-      maskCanvas.height = h;
-      maskCanvas.getContext('2d')?.drawImage(temp, 0, 0);
     }
 
     let tokenSize = 500;
@@ -111,9 +158,8 @@ export function useTokenatorCanvas(
       tokenSize = Math.min(500, Math.min(w, h) - 40);
     }
 
-    if (!clip) {
-      store.maskTokenSize = tokenSize;
-    }
+    // Указываем, что размер токена на маске равен полному размеру маски
+    store.maskTokenSize = MASK_SIDE;
 
     try {
       await drawToken({
