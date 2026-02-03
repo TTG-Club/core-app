@@ -21,7 +21,7 @@
 </script>
 
 <template>
-  <div class="grid gap-2">
+  <div class="grid gap-3 pt-2">
     <div class="flex gap-2">
       <UInput
         v-model="textInput"
@@ -41,10 +41,10 @@
 
     <div
       v-if="activeText"
-      class="space-y-3 rounded-md bg-muted p-2"
+      class="grid gap-2 rounded-md bg-muted p-2"
     >
       <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
           <UButton
             icon="i-fluent-arrow-left-20-regular"
             variant="ghost"
@@ -71,7 +71,7 @@
       </div>
 
       <!-- Position -->
-      <div class="space-y-2">
+      <div class="grid gap-2">
         <div class="grid grid-cols-[1fr_auto] gap-2">
           <!-- Color -->
           <div class="flex items-center gap-2">

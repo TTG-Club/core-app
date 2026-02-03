@@ -77,7 +77,7 @@
 </script>
 
 <template>
-  <div class="grid gap-2">
+  <div class="grid gap-3 pt-2">
     <div class="grid grid-cols-[auto_1fr] items-center gap-3">
       <UPopover
         mode="click"
@@ -102,7 +102,7 @@
         </template>
       </UPopover>
 
-      <div class="space-y-1">
+      <div class="grid gap-1">
         <div class="flex h-5 items-center justify-between">
           <div class="flex items-center gap-2">
             <button
@@ -155,7 +155,7 @@
 
     <div class="flex flex-col gap-2">
       <div class="flex items-end gap-3">
-        <div class="flex-1 space-y-1">
+        <div class="flex-1">
           <div class="flex h-5 items-center justify-between">
             <button
               type="button"
@@ -231,7 +231,7 @@
           />
         </div>
 
-        <div class="flex-1 space-y-1">
+        <div class="flex-1">
           <div class="flex h-5 items-center justify-between">
             <button
               type="button"

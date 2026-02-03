@@ -5,7 +5,7 @@
 </script>
 
 <template>
-  <div class="grid gap-2">
+  <div class="grid gap-3 pt-2">
     <div class="flex items-center gap-2">
       <UCheckbox
         v-model="store.brush.halfMask"

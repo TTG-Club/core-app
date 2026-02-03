@@ -119,6 +119,8 @@
       </template>
     </UTabs>
 
+    <USeparator class="py-2" />
+
     <div class="grid grid-cols-2 gap-2">
       <UButton
         icon="i-fluent-arrow-download-24-regular"
