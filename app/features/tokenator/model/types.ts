@@ -16,6 +16,9 @@ export interface FrameTint {
 export interface BackgroundStyle {
   opacity: number;
   blendMode: string;
+  scale: number;
+  position: Coordinates;
+  rotate: number;
 }
 
 export interface Coordinates {
@@ -42,11 +45,15 @@ export interface TransformState {
  * Состояние кисти для редактирования маски
  */
 export interface BrushState {
-  enabled: boolean;
   size: number;
   mode: 'add' | 'remove';
   halfMask: boolean;
 }
+
+/**
+ * Режим редактирования в токенаторе
+ */
+export type TokenatorEditMode = 'none' | 'brush' | 'background';
 
 /**
  * Текстовый элемент на токене

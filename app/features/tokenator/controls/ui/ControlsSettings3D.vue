@@ -19,28 +19,30 @@
       <UButton
         size="sm"
         class="flex-1"
-        :variant="!store.brush.enabled ? 'solid' : 'soft'"
-        :color="!store.brush.enabled ? 'primary' : 'neutral'"
+        :variant="store.editMode === 'none' ? 'solid' : 'soft'"
+        :color="store.editMode === 'none' ? 'primary' : 'neutral'"
         label="Двигать"
         icon="i-fluent-cursor-20-regular"
-        @click.left.exact.prevent="store.brush.enabled = false"
+        @click.left.exact.prevent="store.editMode = 'none'"
       />
 
       <UButton
         size="sm"
         class="flex-1"
         :variant="
-          store.brush.enabled && store.brush.mode === 'add' ? 'solid' : 'soft'
+          store.editMode === 'brush' && store.brush.mode === 'add'
+            ? 'solid'
+            : 'soft'
         "
         :color="
-          store.brush.enabled && store.brush.mode === 'add'
+          store.editMode === 'brush' && store.brush.mode === 'add'
             ? 'primary'
             : 'neutral'
         "
         label="Рисовать"
         icon="i-fluent-edit-20-regular"
         @click.left.exact.prevent="
-          store.brush.enabled = true;
+          store.editMode = 'brush';
           store.brush.mode = 'add';
         "
       />
@@ -49,19 +51,19 @@
         size="sm"
         class="flex-1"
         :variant="
-          store.brush.enabled && store.brush.mode === 'remove'
+          store.editMode === 'brush' && store.brush.mode === 'remove'
             ? 'solid'
             : 'soft'
         "
         :color="
-          store.brush.enabled && store.brush.mode === 'remove'
+          store.editMode === 'brush' && store.brush.mode === 'remove'
             ? 'primary'
             : 'neutral'
         "
         label="Стереть"
         icon="i-fluent-backspace-20-regular"
         @click.left.exact.prevent="
-          store.brush.enabled = true;
+          store.editMode = 'brush';
           store.brush.mode = 'remove';
         "
       />
@@ -70,7 +72,7 @@
     <div
       class="space-y-1.5 transition-opacity duration-200"
       :class="{
-        'pointer-events-none opacity-50': !store.brush.enabled,
+        'pointer-events-none opacity-50': store.editMode !== 'brush',
       }"
     >
       <div class="flex h-5 items-center justify-between">

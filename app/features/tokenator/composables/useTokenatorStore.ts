@@ -26,6 +26,7 @@ import type {
   BackgroundStyle,
   BrushState,
   FrameTint,
+  TokenatorEditMode,
   TokenatorFrame,
   TokenText,
   TransformState,
@@ -128,6 +129,9 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     'brush',
     DEFAULT_BRUSH_CONFIG,
   );
+
+  // Режим редактирования (не сохраняется в IDB)
+  const editMode = ref<TokenatorEditMode>('none');
 
   // Computed
   const activeFrameUrl = computed(
@@ -324,6 +328,7 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     backgroundColor.value = DEFAULT_COLORS.BACKGROUND;
     frameTint.value = cloneDeep(DEFAULT_FRAME_TINT);
     backgroundStyle.value = cloneDeep(DEFAULT_BACKGROUND_STYLE);
+    editMode.value = 'none';
   }
 
   /**
@@ -331,6 +336,7 @@ export const useTokenatorStore = defineStore('tokenator', () => {
    */
   function reset3DSettings() {
     brush.value = cloneDeep(DEFAULT_BRUSH_CONFIG);
+    editMode.value = 'none';
   }
 
   /**
@@ -457,6 +463,7 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     frameTint,
     transform,
     brush,
+    editMode,
     texts,
     activeTextId,
     maskImageCanvas,

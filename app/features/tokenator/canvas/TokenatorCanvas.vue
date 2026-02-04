@@ -53,14 +53,15 @@
     ref="containerRef"
     class="relative h-full w-full overflow-hidden rounded-2xl bg-muted shadow-xl"
     :class="{
-      'cursor-none': store.brush.enabled,
-      'cursor-grab': !store.brush.enabled && !isDragging,
-      'cursor-grabbing': !store.brush.enabled && isDragging,
+      'cursor-none': store.editMode === 'brush',
+      'cursor-grab': store.editMode === 'none' && !isDragging,
+      'cursor-grabbing': store.editMode === 'none' && isDragging,
+      'cursor-move': store.editMode === 'background',
       'ring-2 ring-primary ring-inset': isOverDropZone,
     }"
   >
     <div
-      v-if="store.brush.enabled && isHovering"
+      v-if="store.editMode === 'brush' && isHovering"
       class="pointer-events-none absolute z-50 rounded-full border border-white bg-white/20 shadow-[0_0_2px_rgba(0,0,0,0.5)]"
       :style="{
         left: `${cursorX}px`,

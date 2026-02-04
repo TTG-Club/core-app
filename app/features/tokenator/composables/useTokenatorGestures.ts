@@ -29,6 +29,7 @@ export function useTokenatorGestures({
   const cursorX = ref(0);
   const cursorY = ref(0);
   const dragStartPos = { x: 0, y: 0 };
+  const bgDragStartPos = { x: 0, y: 0 };
   const lastPaintPos = { x: 0, y: 0 };
 
   // Zoom constraints
@@ -39,12 +40,16 @@ export function useTokenatorGestures({
   useGesture(
     {
       onDragStart: ({ event }) => {
-        if (isDisabled.value || !store.currentImage || isPinching.value) {
+        if (isDisabled.value || isPinching.value) {
           return;
         }
 
         // Brush mode - start painting immediately on click
-        if (store.brush.enabled && containerRef.value) {
+        if (store.editMode === 'brush' && containerRef.value) {
+          if (!store.currentImage) {
+            return;
+          }
+
           isPainting.value = true;
 
           const rect = containerRef.value.getBoundingClientRect();
@@ -60,19 +65,36 @@ export function useTokenatorGestures({
           return;
         }
 
-        // Drag mode
+        // Background drag mode
+        if (store.editMode === 'background') {
+          isDragging.value = true;
+          bgDragStartPos.x = store.backgroundStyle.position.x;
+          bgDragStartPos.y = store.backgroundStyle.position.y;
+
+          return;
+        }
+
+        // Image drag mode
+        if (!store.currentImage) {
+          return;
+        }
+
         isDragging.value = true;
         dragStartPos.x = store.transform.position.x;
         dragStartPos.y = store.transform.position.y;
       },
 
       onDrag: ({ xy: [x, y], movement: [mx, my], pinching, dragging }) => {
-        if (isDisabled.value || !store.currentImage || pinching || !dragging) {
+        if (isDisabled.value || pinching || !dragging) {
           return;
         }
 
         // Brush mode
-        if (store.brush.enabled) {
+        if (store.editMode === 'brush') {
+          if (!store.currentImage) {
+            return;
+          }
+
           if (containerRef.value) {
             const rect = containerRef.value.getBoundingClientRect();
             const localX = x - rect.left;
@@ -87,6 +109,27 @@ export function useTokenatorGestures({
             lastPaintPos.y = localY;
           }
 
+          return;
+        }
+
+        // Background drag mode
+        if (store.editMode === 'background' && isDragging.value) {
+          const scaleFactor = getScaleFactor(
+            containerRef.value,
+            scaleReferenceSize,
+          );
+
+          store.backgroundStyle.position.x =
+            bgDragStartPos.x + mx * scaleFactor;
+
+          store.backgroundStyle.position.y =
+            bgDragStartPos.y + my * scaleFactor;
+
+          return;
+        }
+
+        // Image drag mode
+        if (!store.currentImage) {
           return;
         }
 
@@ -145,7 +188,11 @@ export function useTokenatorGestures({
       onPinch: ({ event, direction: [dir], velocities: [velocity] }) => {
         event.preventDefault();
 
-        if (isDisabled.value || !store.currentImage || store.brush.enabled) {
+        if (
+          isDisabled.value ||
+          !store.currentImage ||
+          store.editMode !== 'none'
+        ) {
           return;
         }
 
@@ -188,7 +235,7 @@ export function useTokenatorGestures({
 
         event.preventDefault();
 
-        if (!store.currentImage || store.brush.enabled) {
+        if (!store.currentImage || store.editMode !== 'none') {
           return;
         }
 

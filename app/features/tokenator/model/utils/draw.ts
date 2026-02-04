@@ -326,23 +326,37 @@ export async function drawToken({
         backgroundStyle.blendMode as GlobalCompositeOperation;
     }
 
+    const bgScale = backgroundStyle?.scale || 1;
+    const bgPosition = backgroundStyle?.position || { x: 0, y: 0 };
+    const bgRotate = backgroundStyle?.rotate || 0;
+
     const aspectRatio = bgImg.width / bgImg.height;
 
-    let drawWidth = maskRadius * 2;
-    let drawHeight = maskRadius * 2;
+    let drawWidth = maskRadius * 2 * bgScale;
+    let drawHeight = maskRadius * 2 * bgScale;
 
     if (aspectRatio > 1) {
-      drawHeight = maskRadius * 2;
+      drawHeight = maskRadius * 2 * bgScale;
       drawWidth = drawHeight * aspectRatio;
     } else {
-      drawWidth = maskRadius * 2;
+      drawWidth = maskRadius * 2 * bgScale;
       drawHeight = drawWidth / aspectRatio;
     }
 
+    const bgPosScale = tokenSize / referenceTokenSize;
+
+    // Применяем трансформации для фона
+    ctx.translate(
+      cx + bgPosition.x * bgPosScale,
+      cy + bgPosition.y * bgPosScale,
+    );
+
+    ctx.rotate((bgRotate * Math.PI) / 180);
+
     ctx.drawImage(
       bgImg,
-      cx - drawWidth / 2,
-      cy - drawHeight / 2,
+      -drawWidth / 2,
+      -drawHeight / 2,
       drawWidth,
       drawHeight,
     );

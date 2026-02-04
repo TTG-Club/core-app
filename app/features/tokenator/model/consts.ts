@@ -82,7 +82,6 @@ export const DEFAULT_TRANSFORM: TransformState = {
  * Настройки кисти по умолчанию
  */
 export const DEFAULT_BRUSH_CONFIG: BrushState = {
-  enabled: false,
   size: 20,
   mode: 'add',
   halfMask: false,
@@ -104,6 +103,9 @@ export const DEFAULT_FRAME_TINT: FrameTint = {
 export const DEFAULT_BACKGROUND_STYLE: BackgroundStyle = {
   opacity: 100,
   blendMode: 'normal',
+  scale: 1,
+  position: { x: 0, y: 0 },
+  rotate: 0,
 };
 
 /**

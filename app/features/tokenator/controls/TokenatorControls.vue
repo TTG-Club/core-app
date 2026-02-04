@@ -91,7 +91,7 @@
 
   watch(toolTab, (tool) => {
     if (tool !== TokenatorTool.ThreeD) {
-      store.brush.enabled = false;
+      store.editMode = 'none';
     }
   });
 

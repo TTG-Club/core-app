@@ -104,7 +104,7 @@
   });
 
   const isBrushMode = computed(
-    () => store.brush.enabled && !!store.currentImage,
+    () => store.editMode === 'brush' && !!store.currentImage,
   );
 
   /**
@@ -154,8 +154,10 @@
     class="relative mx-auto h-60 w-60 shrink-0 touch-none"
     :class="{
       'cursor-none': isBrushMode,
-      'cursor-grab': store.currentImage && !store.brush.enabled && !isDragging,
-      'cursor-grabbing': isDragging,
+      'cursor-grab':
+        store.currentImage && store.editMode === 'none' && !isDragging,
+      'cursor-grabbing': isDragging && store.editMode === 'none',
+      'cursor-move': store.editMode === 'background',
     }"
   >
     <!-- Brush Cursor -->
