@@ -1,11 +1,10 @@
 <script setup lang="ts">
-  import { computed, ref, watch, onMounted } from 'vue';
-
-  import SelectFeatBonuses from './SelectFeatBonuses.vue';
-  import SelectBackgroundBonuses from './SelectBackgroundBonuses.vue';
-  import BackgroundBonuses from './BackgroundBonuses.vue';
-
   import { AbilityKey } from '~/shared/types';
+
+  import BackgroundBonuses from './BackgroundBonuses.vue';
+  import SelectBackgroundBonuses from './SelectBackgroundBonuses.vue';
+  import SelectFeatBonuses from './SelectFeatBonuses.vue';
+
   import type { BaseAbilityScores } from '~/shared/types';
 
   type BaseAbilityScoresLike =
@@ -50,7 +49,7 @@
   // Уровни, на которых даются черты
   const featLevels = [1, 4, 8, 12, 16, 19];
 
-  const emptyScores = (): BaseAbilityScores => {
+  function emptyScores(): BaseAbilityScores {
     return {
       [AbilityKey.STRENGTH]: 0,
       [AbilityKey.DEXTERITY]: 0,
@@ -59,7 +58,7 @@
       [AbilityKey.WISDOM]: 0,
       [AbilityKey.CHARISMA]: 0,
     };
-  };
+  }
 
   const featSlots = computed<number>(() => {
     const currentLevel = level.value!;
@@ -100,7 +99,7 @@
     return featLevels.indexOf(currentLevel);
   });
 
-  const handleLevelChange = (index: number | undefined): void => {
+  function handleLevelChange(index: number | undefined): void {
     if (index === undefined || index < 0) {
       level.value = featLevels[0];
 
@@ -114,19 +113,19 @@
     }
 
     level.value = featLevels[index];
-  };
+  }
 
-  const normalizeNumber = (value: unknown, fallback: number): number => {
+  function normalizeNumber(value: unknown, fallback: number): number {
     if (typeof value !== 'number') {
       return fallback;
     }
 
     return Number.isFinite(value) ? value : fallback;
-  };
+  }
 
-  const normalizeBaseScores = (
+  function normalizeBaseScores(
     value: BaseAbilityScoresLike,
-  ): BaseAbilityScores => {
+  ): BaseAbilityScores {
     const safeValue: Partial<Record<AbilityKey, unknown>> = value ?? {};
 
     return {
@@ -146,12 +145,9 @@
       [AbilityKey.WISDOM]: normalizeNumber(safeValue[AbilityKey.WISDOM], 0),
       [AbilityKey.CHARISMA]: normalizeNumber(safeValue[AbilityKey.CHARISMA], 0),
     };
-  };
+  }
 
-  const sameBaseScores = (
-    a: BaseAbilityScores,
-    b: BaseAbilityScores,
-  ): boolean => {
+  function sameBaseScores(a: BaseAbilityScores, b: BaseAbilityScores): boolean {
     return (
       a[AbilityKey.STRENGTH] === b[AbilityKey.STRENGTH] &&
       a[AbilityKey.DEXTERITY] === b[AbilityKey.DEXTERITY] &&
@@ -160,7 +156,7 @@
       a[AbilityKey.WISDOM] === b[AbilityKey.WISDOM] &&
       a[AbilityKey.CHARISMA] === b[AbilityKey.CHARISMA]
     );
-  };
+  }
 
   const backgroundBonus = ref<BaseAbilityScores>(emptyScores());
   const featBonus = ref<BaseAbilityScores>(emptyScores());

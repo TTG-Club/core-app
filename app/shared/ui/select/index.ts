@@ -1,6 +1,7 @@
 export { default as SelectAbilities } from './SelectAbilities.vue';
 export { default as SelectAlignment } from './SelectAlignment.vue';
 export { default as SelectArmorCategory } from './SelectArmorCategory.vue';
+export { default as SelectBackground } from './SelectBackground.vue';
 export { default as SelectCasterType } from './SelectCasterType.vue';
 export { default as SelectChallengeRating } from './SelectChallengeRating.vue';
 export { default as SelectClass } from './SelectClass.vue';

@@ -1,7 +1,5 @@
 <script setup lang="ts">
-  import { ref } from 'vue';
-
-  import { AbilityCalculator } from '~ui/calculator/ability';
+  import { CalculatorsAbilities } from '~calculators/abilities';
 
   import type { BaseAbilityScores } from '~/shared/types';
 
@@ -14,10 +12,7 @@
     CHARISMA: 10,
   });
 
-  const areScoresEqual = (
-    a: BaseAbilityScores,
-    b: BaseAbilityScores,
-  ): boolean => {
+  function areScoresEqual(a: BaseAbilityScores, b: BaseAbilityScores): boolean {
     return (
       a.STRENGTH === b.STRENGTH &&
       a.DEXTERITY === b.DEXTERITY &&
@@ -26,9 +21,9 @@
       a.WISDOM === b.WISDOM &&
       a.CHARISMA === b.CHARISMA
     );
-  };
+  }
 
-  const handleScoresUpdate = (next: BaseAbilityScores): void => {
+  function handleScoresUpdate(next: BaseAbilityScores): void {
     // Diagnostic log: helps see infinite update spam
     // eslint-disable-next-line no-console
     console.debug('[AbilityCalculator] update:modelValue', next);
@@ -39,7 +34,7 @@
     }
 
     scores.value = next;
-  };
+  }
 </script>
 
 <template>
@@ -47,7 +42,7 @@
     name="detail"
     title="Калькулятор характеристик"
   >
-    <AbilityCalculator
+    <CalculatorsAbilities
       :model-value="scores"
       @update:model-value="handleScoresUpdate"
     />

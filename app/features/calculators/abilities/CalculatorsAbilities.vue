@@ -1,21 +1,22 @@
 <script setup lang="ts">
-  import { computed, ref } from 'vue';
-
-  import BonusesTab from './BonusesTab.vue';
-  import RandomSetComponent from './RandomSetComponent.vue';
-  import PointBayComponent from './PointBayComponent.vue';
-  import ArraySetComponent from './ArraySetComponent.vue';
-  import AbilityScoresDisplay from './AbilityScoresDisplay.vue';
-
   import { AbilityKey } from '~/shared/types';
+
+  import {
+    AbilityScoresDisplay,
+    ArraySetComponent,
+    BonusesTab,
+    PointBuyComponent,
+    RandomSetComponent,
+  } from './ui';
+
   import type { BaseAbilityScores } from '~/shared/types';
 
   type Mode = 'bonuses' | 'dice' | 'pointBuy' | 'array';
 
-  type TabItem = {
+  interface TabItem {
     key: Mode;
     label: string;
-  };
+  }
 
   type AbilityShort = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
@@ -64,18 +65,18 @@
     cha: null,
   };
 
-  const normalizeNumber = (value: unknown, fallback: number): number => {
+  function normalizeNumber(value: unknown, fallback: number): number {
     if (typeof value !== 'number') {
       return fallback;
     }
 
     return Number.isFinite(value) ? value : fallback;
-  };
+  }
 
-  const normalizeNumberOrNull = (
+  function normalizeNumberOrNull(
     value: unknown,
     fallback: number | null,
-  ): number | null => {
+  ): number | null {
     if (value === null || value === undefined) {
       return fallback;
     }
@@ -85,11 +86,11 @@
     }
 
     return Number.isFinite(value) ? value : fallback;
-  };
+  }
 
-  const normalizeBaseScores = (
+  function normalizeBaseScores(
     value: BaseAbilityScoresLike,
-  ): BaseAbilityScores => {
+  ): BaseAbilityScores {
     const safeValue: Partial<Record<AbilityKey, unknown>> = value ?? {};
 
     return {
@@ -118,11 +119,11 @@
         defaultBaseScores[AbilityKey.CHARISMA],
       ),
     };
-  };
+  }
 
-  const normalizeBonusScores = (
+  function normalizeBonusScores(
     value: BaseAbilityScoresLike,
-  ): BaseAbilityScores => {
+  ): BaseAbilityScores {
     const safeValue: Partial<Record<AbilityKey, unknown>> = value ?? {};
 
     return {
@@ -151,11 +152,9 @@
         defaultBonusScores[AbilityKey.CHARISMA],
       ),
     };
-  };
+  }
 
-  const normalizeShortScores = (
-    value: ShortAbilityScores,
-  ): ShortAbilityScores => {
+  function normalizeShortScores(value: ShortAbilityScores): ShortAbilityScores {
     return {
       str: normalizeNumberOrNull(value.str, defaultShortScores.str),
       dex: normalizeNumberOrNull(value.dex, defaultShortScores.dex),
@@ -164,12 +163,9 @@
       wis: normalizeNumberOrNull(value.wis, defaultShortScores.wis),
       cha: normalizeNumberOrNull(value.cha, defaultShortScores.cha),
     };
-  };
+  }
 
-  const sameBaseScores = (
-    a: BaseAbilityScores,
-    b: BaseAbilityScores,
-  ): boolean => {
+  function sameBaseScores(a: BaseAbilityScores, b: BaseAbilityScores): boolean {
     return (
       a[AbilityKey.STRENGTH] === b[AbilityKey.STRENGTH] &&
       a[AbilityKey.DEXTERITY] === b[AbilityKey.DEXTERITY] &&
@@ -178,9 +174,9 @@
       a[AbilityKey.WISDOM] === b[AbilityKey.WISDOM] &&
       a[AbilityKey.CHARISMA] === b[AbilityKey.CHARISMA]
     );
-  };
+  }
 
-  const baseToShort = (value: BaseAbilityScores): ShortAbilityScores => {
+  function baseToShort(value: BaseAbilityScores): ShortAbilityScores {
     return {
       str: value[AbilityKey.STRENGTH],
       dex: value[AbilityKey.DEXTERITY],
@@ -189,9 +185,9 @@
       wis: value[AbilityKey.WISDOM],
       cha: value[AbilityKey.CHARISMA],
     };
-  };
+  }
 
-  const shortToBase = (value: ShortAbilityScores): BaseAbilityScores => {
+  function shortToBase(value: ShortAbilityScores): BaseAbilityScores {
     return {
       [AbilityKey.STRENGTH]:
         value.str ?? defaultBaseScores[AbilityKey.STRENGTH],
@@ -205,9 +201,9 @@
       [AbilityKey.CHARISMA]:
         value.cha ?? defaultBaseScores[AbilityKey.CHARISMA],
     };
-  };
+  }
 
-  const clampTabIndex = (index: number): number => {
+  function clampTabIndex(index: number): number {
     const minIndex = 0;
     const maxIndex = Math.max(0, tabs.length - 1);
 
@@ -220,7 +216,7 @@
     }
 
     return index;
-  };
+  }
 
   const tabsModelValue = ref<number>(0);
   const level = ref<number>(1);
@@ -385,7 +381,7 @@
           v-model="shortScores"
         />
 
-        <PointBayComponent
+        <PointBuyComponent
           v-else-if="selectedMode === 'pointBuy'"
           v-model="shortScores"
         />

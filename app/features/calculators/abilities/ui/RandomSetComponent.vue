@@ -1,48 +1,48 @@
-﻿<script setup lang="ts">
-  import D6Icon from '~ui/calculator/ability/D6Icon.vue';
+<script setup lang="ts">
+  import D6Icon from './D6Icon.vue';
 
   type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
-  type AbilityScores = {
+  interface AbilityScores {
     str: number | null;
     dex: number | null;
     con: number | null;
     int: number | null;
     wis: number | null;
     cha: number | null;
-  };
+  }
 
   type D6 = 1 | 2 | 3 | 4 | 5 | 6;
 
-  type DiceRoll = {
+  interface DiceRoll {
     d1: D6;
     d2: D6;
     d3: D6;
     d4: D6;
     droppedIndex: 0 | 1 | 2 | 3;
     total: number;
-  };
+  }
 
-  type DicePoolItem = {
+  interface DicePoolItem {
     id: string;
     roll: DiceRoll;
-  };
+  }
 
-  type SelectItem<T> = {
+  interface SelectItem<T> {
     label: string;
     value: T;
-  };
+  }
 
   const DICE_ICON_SIZE = 44;
 
   const diceContainerStyle = {
-    width: '44px',
-    height: '44px',
+    width: `${DICE_ICON_SIZE}px`,
+    height: `${DICE_ICON_SIZE}px`,
   };
 
   const diceItemStyle = {
-    width: '44px',
-    height: '44px',
+    width: `${DICE_ICON_SIZE}px`,
+    height: `${DICE_ICON_SIZE}px`,
     margin: '0',
     padding: '0',
   };
@@ -148,17 +148,31 @@
     }
   });
 
-  const toD6 = (n: number): D6 => {
-    if (n === 1) return 1;
-    if (n === 2) return 2;
-    if (n === 3) return 3;
-    if (n === 4) return 4;
-    if (n === 5) return 5;
+  function toD6(n: number): D6 {
+    if (n === 1) {
+      return 1;
+    }
+
+    if (n === 2) {
+      return 2;
+    }
+
+    if (n === 3) {
+      return 3;
+    }
+
+    if (n === 4) {
+      return 4;
+    }
+
+    if (n === 5) {
+      return 5;
+    }
 
     return 6;
-  };
+  }
 
-  const randomIntInclusive = (min: number, max: number): D6 => {
+  function randomIntInclusive(min: number, max: number): D6 {
     const range = max - min + 1;
 
     if (range <= 0) {
@@ -176,11 +190,11 @@
     }
 
     return toD6(min + Math.floor(Math.random() * range));
-  };
+  }
 
-  const getDroppedIndex = (
+  function getDroppedIndex(
     values: [number, number, number, number],
-  ): 0 | 1 | 2 | 3 => {
+  ): 0 | 1 | 2 | 3 {
     const lowest = Math.min(values[0], values[1], values[2], values[3]);
 
     if (values[0] === lowest) {
@@ -196,9 +210,9 @@
     }
 
     return 3;
-  };
+  }
 
-  const roll4d6DropLowest = (): DiceRoll => {
+  function roll4d6DropLowest(): DiceRoll {
     const d1 = randomIntInclusive(1, 6);
     const d2 = randomIntInclusive(1, 6);
     const d3 = randomIntInclusive(1, 6);
@@ -216,14 +230,14 @@
       droppedIndex,
       total: d1 + d2 + d3 + d4 - droppedValue,
     };
-  };
+  }
 
   // Анимация одного кубика с эффектом барабана
-  const animateDiceRoll = (
+  function animateDiceRoll(
     diceId: string,
     finalRoll: DiceRoll,
     onComplete: () => void,
-  ): void => {
+  ): void {
     // Предотвращаем повторный запуск анимации для завершенных или активных
     if (
       diceAnimationState.value[diceId]?.completed ||
@@ -249,13 +263,13 @@
       currentValues: initialValues,
       isAnimating: true,
       animationStep: 0,
-      initialValues: initialValues,
+      initialValues,
       completed: false,
       scrollPositions: [
-        (initialValues[0] - 1) * 44,
-        (initialValues[1] - 1) * 44,
-        (initialValues[2] - 1) * 44,
-        (initialValues[3] - 1) * 44,
+        (initialValues[0] - 1) * DICE_ICON_SIZE,
+        (initialValues[1] - 1) * DICE_ICON_SIZE,
+        (initialValues[2] - 1) * DICE_ICON_SIZE,
+        (initialValues[3] - 1) * DICE_ICON_SIZE,
       ],
     };
 
@@ -288,11 +302,11 @@
           const time = Date.now() * 0.001 * speed + uniqueOffset * 1000;
 
           // Линейная прокрутка вниз без скачков
-          scrollPositions[i] = (time * 80) % (18 * 44); // 18 чисел для плавности
+          scrollPositions[i] = (time * 80) % (18 * DICE_ICON_SIZE); // 18 чисел для плавности
         } else {
           // Последние 4 секунды (67%) - плавное замедление к финальному значению
           const lateProgress = (progress - 0.33) / 0.67; // от 0 до 1 за последние 67%
-          const targetPosition = (finalValue - 1) * 44; // 44px - размер кубика
+          const targetPosition = (finalValue - 1) * DICE_ICON_SIZE; // 44px - размер кубика
 
           const animationState = diceAnimationState.value[diceId];
 
@@ -303,14 +317,14 @@
           const currentPosition = animationState.scrollPositions[i] || 0;
 
           // Используем более плавную интерполяцию для точной остановки
-          const smoothProgress = 1 - Math.pow(1 - lateProgress, 4); // четвертая степень для плавности
+          const smoothProgress = 1 - (1 - lateProgress) ** 4; // четвертая степень для плавности
 
           const newPosition =
             currentPosition +
             (targetPosition - currentPosition) * smoothProgress;
 
           // Выбираем позицию из второго блока чисел (7-12) для естественной остановки
-          const finalTargetPosition = (finalValue - 1 + 6) * 44; // +6 для второго блока
+          const finalTargetPosition = (finalValue - 1 + 6) * DICE_ICON_SIZE; // +6 для второго блока
 
           // Гарантируем точную остановку в последние 10% замедления
           if (lateProgress > 0.9) {
@@ -371,7 +385,7 @@
       const hasReachedFinal = scrollPositions.every((pos, index) => {
         const targetPos =
           ((finalRoll[`d${index + 1}` as keyof DiceRoll] as number) - 1 + 6) *
-          44;
+          DICE_ICON_SIZE;
 
         return Math.abs(pos - targetPos) < 1; // Допуск 1px
       });
@@ -399,11 +413,12 @@
         finalAnimationState.currentValues = finalCurrentValues;
 
         finalAnimationState.scrollPositions = [
-          (finalRoll.d1 - 1 + 6) * 44, // Позиция из второго блока
-          (finalRoll.d2 - 1 + 6) * 44,
-          (finalRoll.d3 - 1 + 6) * 44,
-          (finalRoll.d4 - 1 + 6) * 44,
+          (finalRoll.d1 - 1 + 6) * DICE_ICON_SIZE, // Позиция из второго блока
+          (finalRoll.d2 - 1 + 6) * DICE_ICON_SIZE,
+          (finalRoll.d3 - 1 + 6) * DICE_ICON_SIZE,
+          (finalRoll.d4 - 1 + 6) * DICE_ICON_SIZE,
         ];
+
         finalAnimationState.isAnimating = false;
 
         // Полностью замораживаем состояние после завершения анимации
@@ -414,10 +429,10 @@
           animationStep: 60,
           initialValues: finalAnimationState.initialValues,
           scrollPositions: [
-            (finalRoll.d1 - 1 + 6) * 44,
-            (finalRoll.d2 - 1 + 6) * 44,
-            (finalRoll.d3 - 1 + 6) * 44,
-            (finalRoll.d4 - 1 + 6) * 44,
+            (finalRoll.d1 - 1 + 6) * DICE_ICON_SIZE,
+            (finalRoll.d2 - 1 + 6) * DICE_ICON_SIZE,
+            (finalRoll.d3 - 1 + 6) * DICE_ICON_SIZE,
+            (finalRoll.d4 - 1 + 6) * DICE_ICON_SIZE,
           ],
         };
 
@@ -434,10 +449,10 @@
 
     // Запускаем анимацию
     requestAnimationFrame(animate);
-  };
+  }
 
   // Параллельная анимация всех кубиков
-  const animateAllDice = (pool: DicePoolItem[]): void => {
+  function animateAllDice(pool: DicePoolItem[]): void {
     let completedCount = 0;
 
     const totalDice = pool.length;
@@ -451,15 +466,15 @@
         }
       });
     });
-  };
+  }
 
-  const createId = (index: number): string => {
+  function createId(index: number): string {
     const t = Date.now();
 
     return `r${t}-${index}`;
-  };
+  }
 
-  const resetAssignments = () => {
+  function resetAssignments() {
     diceAssign.value = {
       str: null,
       dex: null,
@@ -468,9 +483,9 @@
       wis: null,
       cha: null,
     };
-  };
+  }
 
-  const rollDicePool = () => {
+  function rollDicePool() {
     const nextPool: DicePoolItem[] = [];
 
     for (let i = 0; i < 6; i += 1) {
@@ -490,7 +505,7 @@
 
     // Запускаем анимацию
     animateAllDice(nextPool);
-  };
+  }
 
   const abilitySelectItems = computed<SelectItem<Ability | null>[]>(() => {
     const items: SelectItem<Ability | null>[] = [
@@ -507,9 +522,9 @@
     return items;
   });
 
-  const getAbilitySelectItemsForDice = (
+  function getAbilitySelectItemsForDice(
     diceId: string,
-  ): SelectItem<Ability | null>[] => {
+  ): SelectItem<Ability | null>[] {
     const assignedAbility = Object.keys(diceAssign.value).find(
       (a) => diceAssign.value[a as Ability] === diceId,
     ) as Ability | undefined;
@@ -537,15 +552,15 @@
 
       return item;
     });
-  };
+  }
 
-  const diceScoreById = (id: string): number | null => {
+  function diceScoreById(id: string): number | null {
     const found = dicePool.value.find((p) => p.id === id);
 
     return found ? found.roll.total : null;
-  };
+  }
 
-  const setDiceAssignment = (diceId: string, nextAbility: Ability | null) => {
+  function setDiceAssignment(diceId: string, nextAbility: Ability | null) {
     const prevAbility = Object.keys(diceAssign.value).find(
       (a) => diceAssign.value[a as Ability] === diceId,
     ) as Ability | undefined;
@@ -563,7 +578,7 @@
     if (nextAbility) {
       diceAssign.value = { ...diceAssign.value, [nextAbility]: diceId };
     }
-  };
+  }
 
   const computedScores = computed<AbilityScores>(() => {
     const next: AbilityScores = { ...defaultScores };
@@ -599,26 +614,26 @@
     { immediate: true, deep: true },
   );
 
-  const modifier = (score: number | null): number => {
+  function modifier(score: number | null): number {
     if (score === null) {
       return 0;
     }
 
     return Math.floor((score - 10) / 2);
-  };
+  }
 
-  const modifierLabel = (score: number | null): string => {
+  function modifierLabel(score: number | null): string {
     const m = modifier(score);
 
     return m >= 0 ? `+${m}` : `${m}`;
-  };
+  }
 
   const isReady = computed<boolean>(() => {
     return dicePool.value.length === 6;
   });
 
   // Получить позицию прокрутки для эффекта барабана
-  const getScrollPosition = (item: DicePoolItem, dieIndex: number): number => {
+  function getScrollPosition(item: DicePoolItem, dieIndex: number): number {
     const animationState = diceAnimationState.value[item.id];
 
     // Для полностью завершенных анимаций - абсолютная стабильность
@@ -635,8 +650,8 @@
     const seed = item.id.charCodeAt(0) + dieIndex;
     const randomValue = (seed % 6) + 1;
 
-    return (randomValue - 1) * 44;
-  };
+    return (randomValue - 1) * DICE_ICON_SIZE;
+  }
 
   const maxTotal = computed<number | null>(() => {
     if (dicePool.value.length === 0) {
@@ -651,23 +666,27 @@
 
   // Общая сумма всех результатов (показывается в 2 раза раньше)
   const totalSum = computed(() => {
-    if (!hasRolledDice.value) return 0;
+    if (!hasRolledDice.value) {
+      return 0;
+    }
 
     // Проверяем, прошло ли достаточно времени (половина анимации)
     const hasEnoughTime = dicePool.value.some(
       (item) => (diceAnimationState.value[item.id]?.animationStep || 0) > 30,
     );
 
-    if (!hasEnoughTime) return 0;
+    if (!hasEnoughTime) {
+      return 0;
+    }
 
     return dicePool.value.reduce((sum, item) => sum + item.roll.total, 0);
   });
 
-  const dieClass = (
+  function dieClass(
     index: 0 | 1 | 2 | 3,
     roll: DiceRoll,
     itemId?: string,
-  ): string[] => {
+  ): string[] {
     // Проверяем, завершена ли анимация для этого блока или прошло достаточно времени
     const animationState = itemId ? diceAnimationState.value[itemId] : null;
     const isCompleted = animationState?.completed;
@@ -685,7 +704,7 @@
     }
 
     return ['text-secondary'];
-  };
+  }
 </script>
 
 <template>

@@ -1,14 +1,14 @@
 <script setup lang="ts">
-  import { debounce } from 'lodash-es';
-  import { onBeforeUnmount, ref } from 'vue';
+  import { debounce } from 'es-toolkit';
+
   import type { BackgroundSelectResponse } from '~/shared/types';
 
-  type BackgroundSelectItem = {
+  interface BackgroundSelectItem {
     label: string;
     value: string;
     description: string;
     sourceLabel: string;
-  };
+  }
 
   const { multiple = false, disabled } = defineProps<{
     disabled?: boolean;
@@ -48,14 +48,14 @@
     { dedupe: 'defer' },
   );
 
-  const handleDropdownOpening = async (state: boolean) => {
+  async function handleDropdownOpening(state: boolean) {
     if (!state || openedOnce.value) {
       return;
     }
 
     openedOnce.value = true;
     await refresh();
-  };
+  }
 
   const debouncedRefresh = debounce(() => {
     refresh();
@@ -65,7 +65,7 @@
     debouncedRefresh.cancel();
   });
 
-  const handleSearch = (value: string) => {
+  function handleSearch(value: string) {
     searchQuery.value = value;
 
     if (!openedOnce.value) {
@@ -73,9 +73,9 @@
     }
 
     debouncedRefresh();
-  };
+  }
 
-  const handleModelValueUpdate = (value: string | string[]): void => {
+  function handleModelValueUpdate(value: string | string[]): void {
     if (
       value === null ||
       value === undefined ||
@@ -89,10 +89,8 @@
     }
 
     // Для single select берем первый элемент массива, если пришел массив
-    const normalizedValue = Array.isArray(value) ? value[0] : value;
-
-    model.value = normalizedValue;
-  };
+    model.value = Array.isArray(value) ? value[0] : value;
+  }
 </script>
 
 <template>

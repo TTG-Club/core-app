@@ -1,12 +1,12 @@
 <script setup lang="ts">
-  import { computed } from 'vue';
+  import { AbilityKey } from '~/shared/types';
 
-  import { AbilityKey, type BaseAbilityScores } from '~/shared/types';
+  import type { BaseAbilityScores } from '~/shared/types';
 
-  type AbilityCard = {
+  interface AbilityCard {
     key: AbilityKey;
     label: string;
-  };
+  }
 
   type EpicBoonAbilities = Partial<Record<AbilityKey, boolean>>;
 
@@ -31,15 +31,15 @@
     { key: AbilityKey.CHARISMA, label: 'ХАР' },
   ];
 
-  const abilityModifier = (value: number): number => {
+  function abilityModifier(value: number): number {
     return Math.floor((value - 10) / 2);
-  };
+  }
 
-  const formatModifier = (value: number): string => {
+  function formatModifier(value: number): string {
     const modifier = abilityModifier(value);
 
     return modifier >= 0 ? `+${modifier}` : `${modifier}`;
-  };
+  }
 
   const totalBaseScore = computed<number>(() => {
     return (
@@ -63,15 +63,15 @@
     );
   });
 
-  const isNonZeroBonus = (abilityKey: AbilityKey): boolean => {
+  function isNonZeroBonus(abilityKey: AbilityKey): boolean {
     return bonusScores[abilityKey] !== 0;
-  };
+  }
 
-  const isEpicBoonAbility = (abilityKey: AbilityKey): boolean => {
+  function isEpicBoonAbility(abilityKey: AbilityKey): boolean {
     return epicBoonAbilities[abilityKey] === true;
-  };
+  }
 
-  const isOvercap = (abilityKey: AbilityKey): boolean => {
+  function isOvercap(abilityKey: AbilityKey): boolean {
     const finalValue = finalScores[abilityKey];
 
     if (isEpicBoonAbility(abilityKey)) {
@@ -79,9 +79,9 @@
     }
 
     return finalValue > 20;
-  };
+  }
 
-  const getCardClass = (abilityKey: AbilityKey): string => {
+  function getCardClass(abilityKey: AbilityKey): string {
     const baseClass =
       'rounded-xl p-2 text-center border transition-colors hover:border-primary border-default';
 
@@ -90,7 +90,7 @@
     }
 
     return `${baseClass} bg-error-50 ring-error-200 dark:bg-error-950/30 dark:ring-error-900`;
-  };
+  }
 </script>
 
 <template>

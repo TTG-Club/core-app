@@ -1,22 +1,20 @@
 <script setup lang="ts">
-  import { ref, watch } from 'vue';
-
   type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
-  type AbilityScores = {
+  interface AbilityScores {
     str: number | null;
     dex: number | null;
     con: number | null;
     int: number | null;
     wis: number | null;
     cha: number | null;
-  };
+  }
 
-  type SelectItem<T> = {
+  interface SelectItem<T> {
     label: string;
     value: T;
     disabled?: boolean;
-  };
+  }
 
   const abilities: Array<Ability> = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
@@ -55,10 +53,10 @@
 
   const pick = ref<AbilityScores>({ ...defaultPick });
 
-  const normalizeNumber = (
+  function normalizeNumber(
     value: unknown,
     fallback: number | null,
-  ): number | null => {
+  ): number | null {
     if (value === null || value === undefined) {
       return fallback;
     }
@@ -68,9 +66,9 @@
     }
 
     return Number.isFinite(value) ? value : fallback;
-  };
+  }
 
-  const normalizeAbilityScores = (value: AbilityScores): AbilityScores => {
+  function normalizeAbilityScores(value: AbilityScores): AbilityScores {
     return {
       str: normalizeNumber(value.str, defaultPick.str),
       dex: normalizeNumber(value.dex, defaultPick.dex),
@@ -79,9 +77,9 @@
       wis: normalizeNumber(value.wis, defaultPick.wis),
       cha: normalizeNumber(value.cha, defaultPick.cha),
     };
-  };
+  }
 
-  const abilityScoresEqual = (a: AbilityScores, b: AbilityScores): boolean => {
+  function abilityScoresEqual(a: AbilityScores, b: AbilityScores): boolean {
     return (
       a.str === b.str &&
       a.dex === b.dex &&
@@ -90,9 +88,9 @@
       a.wis === b.wis &&
       a.cha === b.cha
     );
-  };
+  }
 
-  const parseSelectValue = (value: unknown): number | null => {
+  function parseSelectValue(value: unknown): number | null {
     if (value === null || value === undefined) {
       return null;
     }
@@ -108,9 +106,9 @@
     }
 
     return null;
-  };
+  }
 
-  const setValue = (ability: Ability, nextScore: number | null): void => {
+  function setValue(ability: Ability, nextScore: number | null): void {
     const previousScore = pick.value[ability];
 
     if (previousScore === nextScore) {
@@ -118,11 +116,11 @@
     }
 
     pick.value = { ...pick.value, [ability]: nextScore };
-  };
+  }
 
-  const getAvailableItems = (
+  function getAvailableItems(
     ability: Ability,
-  ): Array<SelectItem<number | null>> => {
+  ): Array<SelectItem<number | null>> {
     const currentValue = pick.value[ability];
     const usedValues = new Set<number | null>();
 
@@ -147,13 +145,13 @@
         usedValues.has(item.value) &&
         item.value !== currentValue,
     }));
-  };
+  }
 
-  const handleSelectUpdate = (ability: Ability, payload: unknown): void => {
+  function handleSelectUpdate(ability: Ability, payload: unknown): void {
     const nextScore = parseSelectValue(payload);
 
     setValue(ability, nextScore);
-  };
+  }
 
   watch(
     model,
@@ -183,19 +181,19 @@
     { deep: true },
   );
 
-  const modifier = (score: number | null): number => {
+  function modifier(score: number | null): number {
     if (score === null) {
       return 0;
     }
 
     return Math.floor((score - 10) / 2);
-  };
+  }
 
-  const modifierLabel = (score: number | null): string => {
+  function modifierLabel(score: number | null): string {
     const mod = modifier(score);
 
     return mod >= 0 ? `+${mod}` : `${mod}`;
-  };
+  }
 </script>
 
 <template>

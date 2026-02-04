@@ -1,7 +1,5 @@
 <script setup lang="ts">
-  import { computed, ref } from 'vue';
-
-  type FeatSelectResponse = {
+  interface FeatSelectResponse {
     url: string;
     category: string;
     prerequisite: string | null;
@@ -25,9 +23,9 @@
       eng: string;
       alt?: Array<string> | null;
     };
-  };
+  }
 
-  type FeatSelectItem = {
+  interface FeatSelectItem {
     label: string;
     value: string;
     description: string;
@@ -37,7 +35,7 @@
     repeatability: boolean;
     abilities: Array<string>;
     increase: number | null;
-  };
+  }
 
   const props = withDefaults(
     defineProps<{
@@ -154,9 +152,9 @@
     await refresh();
   }, 250);
 
-  const handleModelValueUpdate = (
+  function handleModelValueUpdate(
     value: string | Array<string> | null | undefined,
-  ): void => {
+  ): void {
     if (value === null || value === undefined) {
       // нормализация "очистки" в пустое значение, без null
       model.value = '';
@@ -165,7 +163,7 @@
     }
 
     model.value = value;
-  };
+  }
 </script>
 
 <template>

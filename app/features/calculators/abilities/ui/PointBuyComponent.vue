@@ -1,31 +1,31 @@
 <script setup lang="ts">
   type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
-  type AbilityScores = {
+  interface AbilityScores {
     str: number | null;
     dex: number | null;
     con: number | null;
     int: number | null;
     wis: number | null;
     cha: number | null;
-  };
+  }
 
-  type SelectItem<T> = {
+  interface SelectItem<T> {
     label: string;
     value: T;
-  };
+  }
 
-  type PointBuyCostRow = {
+  interface PointBuyCostRow {
     score: number;
     cost: number;
-  };
+  }
 
-  type PointBuySettings = {
+  interface PointBuySettings {
     minBuy: number;
     maxBuy: number;
     budgetBuy: number;
     costs: Array<PointBuyCostRow>;
-  };
+  }
 
   const abilities: Array<Ability> = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
@@ -65,52 +65,55 @@
 
   const drawerOpen = ref<boolean>(false);
 
-  const clamp = (value: number, min: number, max: number): number => {
-    if (value < min) return min;
-    if (value > max) return max;
+  function clamp(value: number, min: number, max: number): number {
+    if (value < min) {
+      return min;
+    }
+
+    if (value > max) {
+      return max;
+    }
 
     return value;
-  };
+  }
 
   const ALL_SCORES: Array<number> = [
     3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
   ];
 
-  const normalizeBounds = () => {
+  function normalizeBounds() {
     const min = clamp(settingsModel.value.minBuy, 3, 15);
     const max = clamp(settingsModel.value.maxBuy, 3, 15);
 
-    if (min > max) {
-      settingsModel.value = {
-        ...settingsModel.value,
-        minBuy: max,
-        maxBuy: min,
-      };
+    let newMin = min;
+    let newMax = max;
 
+    if (min > max) {
+      newMin = max;
+      newMax = min;
+    }
+
+    if (
+      settingsModel.value.minBuy === newMin &&
+      settingsModel.value.maxBuy === newMax
+    ) {
       return;
     }
 
     settingsModel.value = {
       ...settingsModel.value,
-      minBuy: min,
-      maxBuy: max,
+      minBuy: newMin,
+      maxBuy: newMax,
     };
-  };
+  }
 
-  watch(
-    () => [settingsModel.value.minBuy, settingsModel.value.maxBuy],
-    () => {
-      normalizeBounds();
-    },
-  );
-
-  const getBaseCost = (score: number): number => {
+  function getBaseCost(score: number): number {
     const found = settingsModel.value.costs.find((r) => r.score === score);
 
     return found ? found.cost : 0;
-  };
+  }
 
-  const pointCost = (score: number | null): number => {
+  function pointCost(score: number | null): number {
     if (score === null) {
       return 0;
     }
@@ -122,7 +125,7 @@
     }
 
     return getBaseCost(score) - getBaseCost(min);
-  };
+  }
 
   const scoreOptions = computed<Array<number>>(() => {
     const min = clamp(settingsModel.value.minBuy, 3, 15);
@@ -151,16 +154,16 @@
     () => settingsModel.value.budgetBuy - spent.value,
   );
 
-  const canSetScore = (ability: Ability, next: number | null): boolean => {
+  function canSetScore(ability: Ability, next: number | null): boolean {
     const current = model.value[ability];
 
     const nextSpent =
       spent.value - pointCost(current ?? null) + pointCost(next);
 
     return nextSpent <= settingsModel.value.budgetBuy;
-  };
+  }
 
-  const handleChange = (ability: Ability, next: number | null | undefined) => {
+  function handleChange(ability: Ability, next: number | null | undefined) {
     if (next === null || next === undefined) {
       model.value = { ...model.value, [ability]: null };
 
@@ -172,20 +175,20 @@
     }
 
     model.value = { ...model.value, [ability]: next };
-  };
+  }
 
-  const deltaLabel = (delta: number): string => {
+  function deltaLabel(delta: number): string {
     if (delta === 0) {
       return '0';
     }
 
     return delta > 0 ? `+${delta}` : `${delta}`;
-  };
+  }
 
   // Не показываем "(0)" для текущего выбранного значения
-  const selectItemsForAbility = (
+  function selectItemsForAbility(
     ability: Ability,
-  ): Array<SelectItem<number | null>> => {
+  ): Array<SelectItem<number | null>> {
     const current = model.value[ability];
     const currentCost = pointCost(current ?? null);
 
@@ -214,9 +217,9 @@
     });
 
     return [...items, ...scoreItems];
-  };
+  }
 
-  const applyBoundsToScores = () => {
+  function applyBoundsToScores() {
     normalizeBounds();
 
     const min = settingsModel.value.minBuy;
@@ -239,7 +242,7 @@
     }
 
     model.value = next;
-  };
+  }
 
   watch(
     () => [settingsModel.value.minBuy, settingsModel.value.maxBuy],
@@ -249,7 +252,7 @@
     { immediate: true },
   );
 
-  const setBaseCost = (score: number, nextCost: number) => {
+  function setBaseCost(score: number, nextCost: number) {
     const safeCost = clamp(nextCost, 0, 200);
 
     const next = settingsModel.value.costs.map((r) => {
@@ -261,9 +264,9 @@
     });
 
     settingsModel.value = { ...settingsModel.value, costs: next };
-  };
+  }
 
-  const resetSettings = () => {
+  function resetSettings() {
     settingsModel.value = {
       minBuy: 8,
       maxBuy: 15,
@@ -284,21 +287,21 @@
         { score: 15, cost: 9 },
       ],
     };
-  };
+  }
 
-  const modifier = (score: number | null): number => {
+  function modifier(score: number | null): number {
     if (score === null) {
       return 0;
     }
 
     return Math.floor((score - 10) / 2);
-  };
+  }
 
-  const modifierLabel = (score: number | null): string => {
+  function modifierLabel(score: number | null): string {
     const m = modifier(score);
 
     return m >= 0 ? `+${m}` : `${m}`;
-  };
+  }
 </script>
 
 <template>
