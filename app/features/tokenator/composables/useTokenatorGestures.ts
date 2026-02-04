@@ -30,6 +30,7 @@ export function useTokenatorGestures({
   const cursorY = ref(0);
   const dragStartPos = { x: 0, y: 0 };
   const bgDragStartPos = { x: 0, y: 0 };
+  const canvasPanStartPos = { x: 0, y: 0 };
   const lastPaintPos = { x: 0, y: 0 };
 
   // Zoom constraints
@@ -41,6 +42,15 @@ export function useTokenatorGestures({
     {
       onDragStart: ({ event }) => {
         if (isDisabled.value || isPinching.value) {
+          return;
+        }
+
+        // Canvas pan mode
+        if (store.canvasViewport.isPanning) {
+          isDragging.value = true;
+          canvasPanStartPos.x = store.canvasViewport.pan.x;
+          canvasPanStartPos.y = store.canvasViewport.pan.y;
+
           return;
         }
 
@@ -86,6 +96,14 @@ export function useTokenatorGestures({
 
       onDrag: ({ xy: [x, y], movement: [mx, my], pinching, dragging }) => {
         if (isDisabled.value || pinching || !dragging) {
+          return;
+        }
+
+        // Canvas pan mode
+        if (store.canvasViewport.isPanning && isDragging.value) {
+          store.canvasViewport.pan.x = canvasPanStartPos.x + mx;
+          store.canvasViewport.pan.y = canvasPanStartPos.y + my;
+
           return;
         }
 
@@ -234,6 +252,16 @@ export function useTokenatorGestures({
         }
 
         event.preventDefault();
+
+        // Canvas zoom mode (приоритет над image zoom)
+        if (store.canvasViewport.isPanning) {
+          const zoomSpeed = 0.001;
+          const newZoom = store.canvasViewport.zoom - deltaY * zoomSpeed;
+
+          store.canvasViewport.zoom = Math.min(Math.max(newZoom, 0.5), 3);
+
+          return;
+        }
 
         if (!store.currentImage || store.editMode !== 'none') {
           return;

@@ -80,12 +80,18 @@
     const hasBrushChanges =
       JSON.stringify(store.brush) !== JSON.stringify(DEFAULT_BRUSH_CONFIG);
 
+    const hasCanvasChanges =
+      store.canvasViewport.zoom !== 1 ||
+      store.canvasViewport.pan.x !== 0 ||
+      store.canvasViewport.pan.y !== 0;
+
     return (
       hasTransformChanges ||
       hasColorChanges ||
       hasTintChanges ||
       hasTextChanges ||
-      hasBrushChanges
+      hasBrushChanges ||
+      hasCanvasChanges
     );
   });
 
@@ -158,6 +164,7 @@
         break;
       case TokenatorTool.ThreeD:
         store.clearMask();
+        store.resetCanvasSettings();
 
         break;
       case TokenatorTool.Text:
@@ -176,7 +183,9 @@
   );
 
   const resetLabel = computed(() =>
-    toolTab.value === TokenatorTool.ThreeD ? 'Стереть маску' : 'Сбросить все',
+    toolTab.value === TokenatorTool.ThreeD
+      ? 'Стереть маску и сбросить холст'
+      : 'Сбросить все',
   );
 </script>
 

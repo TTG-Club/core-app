@@ -165,6 +165,46 @@
               type="button"
               class="flex items-center gap-1.5 text-xs transition-colors"
               :class="
+                store.transform.position.x !== 0 ||
+                store.transform.position.y !== 0
+                  ? 'cursor-pointer text-primary-500'
+                  : 'cursor-default text-neutral-500'
+              "
+              :disabled="
+                store.transform.position.x === 0 &&
+                store.transform.position.y === 0
+              "
+              title="Вернуть изображение в центр"
+              @click.left.exact.prevent="
+                store.transform.position.x = 0;
+                store.transform.position.y = 0;
+              "
+            >
+              <span>Позиция</span>
+
+              <UIcon
+                v-if="
+                  store.transform.position.x !== 0 ||
+                  store.transform.position.y !== 0
+                "
+                name="i-fluent-arrow-undo-20-regular"
+                class="size-3"
+              />
+            </button>
+
+            <span class="font-mono text-xs text-neutral-400"
+              >X: {{ store.transform.position.x.toFixed(0) }} / Y:
+              {{ store.transform.position.y.toFixed(0) }}</span
+            >
+          </div>
+        </div>
+
+        <div class="grid gap-1">
+          <div class="flex h-5 items-center justify-between">
+            <button
+              type="button"
+              class="flex items-center gap-1.5 text-xs transition-colors"
+              :class="
                 store.transform.scale !== 1
                   ? 'cursor-pointer text-primary-500'
                   : 'cursor-default text-neutral-500'

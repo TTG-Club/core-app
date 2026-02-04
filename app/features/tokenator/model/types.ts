@@ -71,3 +71,12 @@ export interface TokenText {
   align: 'left' | 'center' | 'right';
   arc: number;
 }
+
+/**
+ * Состояние холста (zoom и pan)
+ */
+export interface CanvasViewport {
+  zoom: number;
+  pan: Coordinates;
+  isPanning: boolean;
+}

@@ -9,6 +9,7 @@ import {
   BLEND_MODES,
   DEFAULT_BACKGROUND_STYLE,
   DEFAULT_BRUSH_CONFIG,
+  DEFAULT_CANVAS_VIEWPORT,
   DEFAULT_COLORS,
   DEFAULT_FRAME_TINT,
   DEFAULT_TEXT_CONFIG,
@@ -25,6 +26,7 @@ import {
 import type {
   BackgroundStyle,
   BrushState,
+  CanvasViewport,
   FrameTint,
   TokenatorEditMode,
   TokenatorFrame,
@@ -128,6 +130,12 @@ export const useTokenatorStore = defineStore('tokenator', () => {
   const { data: brush } = useTokenatorSetting<BrushState>(
     'brush',
     DEFAULT_BRUSH_CONFIG,
+  );
+
+  // Canvas viewport (с IDB)
+  const { data: canvasViewport } = useTokenatorSetting<CanvasViewport>(
+    'canvas-viewport',
+    DEFAULT_CANVAS_VIEWPORT,
   );
 
   // Режим редактирования (не сохраняется в IDB)
@@ -414,6 +422,7 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     resetStyleSettings();
     reset3DSettings();
     resetTextSettings();
+    resetCanvasSettings();
   }
 
   /**
@@ -477,6 +486,27 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     brush.value.size = validateBrushSize(size);
   }
 
+  /**
+   * Сбрасывает настройки холста (zoom и pan).
+   */
+  function resetCanvasSettings() {
+    canvasViewport.value = cloneDeep(DEFAULT_CANVAS_VIEWPORT);
+  }
+
+  /**
+   * Устанавливает zoom холста с валидацией.
+   */
+  function setCanvasZoom(zoom: number) {
+    canvasViewport.value.zoom = Math.max(0.5, Math.min(3, zoom));
+  }
+
+  /**
+   * Устанавливает позицию pan холста.
+   */
+  function setCanvasPan(x: number, y: number) {
+    canvasViewport.value.pan = { x, y };
+  }
+
   return {
     // State
     currentImage,
@@ -495,6 +525,7 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     maskImageCanvas,
     maskVersion,
     maskTokenSize,
+    canvasViewport,
 
     // Constants (re-export для удобства)
     BLEND_MODES,
@@ -515,6 +546,8 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     setRotation,
     setFrameRotation,
     setBrushSize,
+    setCanvasZoom,
+    setCanvasPan,
 
     // Undo/Redo
     undo,
@@ -532,6 +565,7 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     resetTextSettings,
     resetSettings,
     resetLibrarySettings,
+    resetCanvasSettings,
     clearMask,
   };
 });

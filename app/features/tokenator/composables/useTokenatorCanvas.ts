@@ -57,7 +57,7 @@ export function useTokenatorCanvas(
   /**
    * Рисует на маске в указанных координатах.
    * Использует настройки кисти из стора (размер, режим).
-   * Автоматически пересчитывает координаты экрана в координаты маски.
+   * Автоматически пересчитывает координаты экрана в координаты маски с учетом трансформации холста.
    *
    * @param x - Координата X
    * @param y - Координата Y
@@ -92,19 +92,29 @@ export function useTokenatorCanvas(
     const maskCx = MASK_SIDE / 2;
     const maskCy = MASK_SIDE / 2;
 
-    // Преобразование координат:
+    // Получаем трансформацию холста
+    const { zoom, pan } = store.canvasViewport;
+
+    // Преобразование координат с учетом трансформации холста:
     // 1. Сдвигаем к центру экрана (0,0)
-    // 2. Масштабируем
-    // 3. Сдвигаем к центру маски
-    const mx = (x - screenCx) * scale + maskCx;
-    const my = (y - screenCy) * scale + maskCy;
+    // 2. Применяем обратную трансформацию холста (zoom и pan)
+    // 3. Масштабируем к размеру маски
+    // 4. Сдвигаем к центру маски
+    const relX = (x - screenCx - pan.x) / zoom;
+    const relY = (y - screenCy - pan.y) / zoom;
+
+    const mx = relX * scale + maskCx;
+    const my = relY * scale + maskCy;
 
     let mPrevX: number | undefined;
     let mPrevY: number | undefined;
 
     if (prevX !== undefined && prevY !== undefined) {
-      mPrevX = (prevX - screenCx) * scale + maskCx;
-      mPrevY = (prevY - screenCy) * scale + maskCy;
+      const relPrevX = (prevX - screenCx - pan.x) / zoom;
+      const relPrevY = (prevY - screenCy - pan.y) / zoom;
+
+      mPrevX = relPrevX * scale + maskCx;
+      mPrevY = relPrevY * scale + maskCy;
     }
 
     try {

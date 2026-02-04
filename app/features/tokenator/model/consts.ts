@@ -123,6 +123,15 @@ export const DEFAULT_TEXT_CONFIG = {
   y: 0,
 };
 
+/**
+ * Настройки viewport холста по умолчанию
+ */
+export const DEFAULT_CANVAS_VIEWPORT = {
+  zoom: 1,
+  pan: { x: 0, y: 0 },
+  isPanning: false,
+};
+
 export enum TokenatorTab {
   Library = 'library',
   Settings = 'settings',
