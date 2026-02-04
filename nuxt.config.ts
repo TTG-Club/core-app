@@ -106,6 +106,13 @@ export default defineNuxtConfig({
   security: {
     headers: {
       contentSecurityPolicy: {
+        'script-src': [
+          "'self'",
+          "'unsafe-inline'",
+          "'strict-dynamic'",
+          "'nonce-{{nonce}}'",
+          "'wasm-unsafe-eval'",
+        ],
         'img-src': ["'self'", 'https:', 'data:', 'blob:'],
         'media-src': ["'self'", 'https:', 'data:', 'blob:'],
       },
@@ -303,11 +310,10 @@ export default defineNuxtConfig({
         'pako',
         'idb-keyval',
         '@ttg-club/dice-roller-parser',
-        '@jsquash/webp',
-        '@jsquash/webp/encode',
         'dexie',
         '@vueuse/gesture',
       ],
+      exclude: ['@jsquash/webp', '@jsquash/webp/encode'],
     },
   },
 
