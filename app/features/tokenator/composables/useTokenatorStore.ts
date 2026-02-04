@@ -198,7 +198,8 @@ export const useTokenatorStore = defineStore('tokenator', () => {
 
   /**
    * Загружает изображение персонажа из файла.
-   * Сохраняет текущие значения maskScale и frameScale при сбросе трансформаций.
+   * Сохраняет настройки маски (maskScale, maskSides, maskRotate) и рамки (frameScale, frameRotate)
+   * при сбросе трансформаций, чтобы пользователь мог загружать картинки одну за другой.
    *
    * @param file - Файл изображения для загрузки
    */
@@ -213,18 +214,20 @@ export const useTokenatorStore = defineStore('tokenator', () => {
       if (e.target?.result && typeof e.target.result === 'string') {
         // Сохраняем настройки маски и рамки перед сбросом
         const savedMaskScale = transform.value.maskScale;
-        const savedFrameScale = transform.value.frameScale;
         const savedMaskSides = transform.value.maskSides;
         const savedMaskRotate = transform.value.maskRotate;
+        const savedFrameScale = transform.value.frameScale;
+        const savedFrameRotate = transform.value.frameRotate;
 
         currentImage.value = e.target.result;
         resetTransform();
 
         // Восстанавливаем сохранённые настройки
         transform.value.maskScale = savedMaskScale;
-        transform.value.frameScale = savedFrameScale;
         transform.value.maskSides = savedMaskSides;
         transform.value.maskRotate = savedMaskRotate;
+        transform.value.frameScale = savedFrameScale;
+        transform.value.frameRotate = savedFrameRotate;
       }
     };
 
