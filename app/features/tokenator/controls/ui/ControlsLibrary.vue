@@ -9,25 +9,7 @@
     $fetch<Array<TokenatorFrame>>('/api/v2/token-border'),
   );
 
-  const frames = computed<Array<TokenatorFrame>>(() =>
-    (bordersData.value ?? []).map((border) => {
-      let url = border.url;
-
-      if (url.startsWith('http')) {
-        const match = url.match(/(token-borders\/|tokenator\/)(.+)/);
-
-        if (match) {
-          url = `/s3/${match[0]}`;
-        }
-      }
-
-      return {
-        ...border,
-        url,
-      };
-    }),
-  );
-
+  const frames = computed<Array<TokenatorFrame>>(() => bordersData.value ?? []);
   const imageInput = ref<HTMLInputElement | null>(null);
   const frameInput = ref<HTMLInputElement | null>(null);
   const bgInput = ref<HTMLInputElement | null>(null);
