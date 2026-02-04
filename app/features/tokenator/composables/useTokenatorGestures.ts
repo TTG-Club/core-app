@@ -43,7 +43,7 @@ export function useTokenatorGestures({
           return;
         }
 
-        // Brush mode - start painting
+        // Brush mode - start painting immediately on click
         if (store.brush.enabled && containerRef.value) {
           isPainting.value = true;
 
@@ -51,6 +51,7 @@ export function useTokenatorGestures({
           const x = event.clientX - rect.left;
           const y = event.clientY - rect.top;
 
+          // Рисуем сразу при клике (без prevX/prevY - будет круг)
           paintMask(x, y);
 
           lastPaintPos.x = x;
@@ -204,7 +205,8 @@ export function useTokenatorGestures({
       domTarget: containerRef,
       eventOptions: { passive: false },
       drag: {
-        filterTaps: true,
+        filterTaps: false, // Разрешаем обработку кликов без движения
+        threshold: 0, // Убираем порог для начала драга
       },
       pinch: {
         rubberband: true,
