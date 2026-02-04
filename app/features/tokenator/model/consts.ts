@@ -130,7 +130,8 @@ export enum TokenatorTab {
 
 export enum TokenatorTool {
   Base = 'base',
-  Style = 'style',
+  Frame = 'frame',
+  Background = 'background',
   ThreeD = '3d',
   Text = 'text',
 }

@@ -308,10 +308,19 @@ export const useTokenatorStore = defineStore('tokenator', () => {
   }
 
   /**
-   * Сбрасывает базовые настройки (трансформации).
+   * Сбрасывает базовые настройки (маска и картинка, БЕЗ рамки).
    */
   function resetBaseSettings() {
+    // Сохраняем настройки рамки
+    const savedFrameScale = transform.value.frameScale;
+    const savedFrameRotate = transform.value.frameRotate;
+
+    // Сбрасываем все трансформации
     transform.value = cloneDeep(DEFAULT_TRANSFORM);
+
+    // Восстанавливаем настройки рамки
+    transform.value.frameScale = savedFrameScale;
+    transform.value.frameRotate = savedFrameRotate;
   }
 
   /**
@@ -322,13 +331,30 @@ export const useTokenatorStore = defineStore('tokenator', () => {
   }
 
   /**
-   * Сбрасывает настройки стиля (цвета).
+   * Сбрасывает настройки рамки (размер, поворот, тонировка).
    */
-  function resetStyleSettings() {
-    backgroundColor.value = DEFAULT_COLORS.BACKGROUND;
+  function resetFrameSettings() {
+    transform.value.frameScale = DEFAULT_TRANSFORM.frameScale;
+    transform.value.frameRotate = DEFAULT_TRANSFORM.frameRotate;
     frameTint.value = cloneDeep(DEFAULT_FRAME_TINT);
+  }
+
+  /**
+   * Сбрасывает настройки фона (цвет, фоновое изображение).
+   */
+  function resetBackgroundSettings() {
+    backgroundColor.value = DEFAULT_COLORS.BACKGROUND;
     backgroundStyle.value = cloneDeep(DEFAULT_BACKGROUND_STYLE);
     editMode.value = 'none';
+  }
+
+  /**
+   * Сбрасывает настройки стиля (для обратной совместимости).
+   * Вызывает resetFrameSettings и resetBackgroundSettings.
+   */
+  function resetStyleSettings() {
+    resetFrameSettings();
+    resetBackgroundSettings();
   }
 
   /**
@@ -499,6 +525,8 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     resetTransform,
     resetAll,
     resetBaseSettings,
+    resetFrameSettings,
+    resetBackgroundSettings,
     reset3DSettings,
     resetStyleSettings,
     resetTextSettings,

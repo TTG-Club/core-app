@@ -14,8 +14,9 @@
   import {
     ControlsLibrary,
     ControlsSettings3D,
+    ControlsSettingsBackground,
     ControlsSettingsBase,
-    ControlsSettingsStyle,
+    ControlsSettingsFrame,
     ControlsSettingsText,
   } from './ui';
 
@@ -43,9 +44,14 @@
       slot: 'base' as const,
     },
     {
-      label: 'Стиль',
-      value: TokenatorTool.Style,
-      slot: 'style' as const,
+      label: 'Рамка',
+      value: TokenatorTool.Frame,
+      slot: 'frame' as const,
+    },
+    {
+      label: 'Фон',
+      value: TokenatorTool.Background,
+      slot: 'background' as const,
     },
     {
       label: '3D',
@@ -90,7 +96,8 @@
   });
 
   watch(toolTab, (tool) => {
-    if (tool !== TokenatorTool.ThreeD) {
+    // Сбрасываем режим редактирования при переходе на вкладки, где он не нужен
+    if (tool !== TokenatorTool.ThreeD && tool !== TokenatorTool.Background) {
       store.editMode = 'none';
     }
   });
@@ -141,8 +148,12 @@
         store.resetBaseSettings();
 
         break;
-      case TokenatorTool.Style:
-        store.resetStyleSettings();
+      case TokenatorTool.Frame:
+        store.resetFrameSettings();
+
+        break;
+      case TokenatorTool.Background:
+        store.resetBackgroundSettings();
 
         break;
       case TokenatorTool.ThreeD:
@@ -194,8 +205,12 @@
                 <ControlsSettingsBase />
               </template>
 
-              <template #style>
-                <ControlsSettingsStyle />
+              <template #frame>
+                <ControlsSettingsFrame />
+              </template>
+
+              <template #background>
+                <ControlsSettingsBackground />
               </template>
 
               <template #3d>

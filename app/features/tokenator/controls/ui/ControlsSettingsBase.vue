@@ -155,87 +155,7 @@
       </div>
     </div>
 
-    <div class="grid gap-1">
-      <div class="text-xs font-medium text-neutral-400">Настройка рамки</div>
-
-      <div class="grid grid-cols-2 gap-6">
-        <div class="grid gap-1">
-          <div class="flex h-5 items-center justify-between">
-            <button
-              type="button"
-              class="flex items-center gap-1.5 text-xs transition-colors"
-              :class="
-                store.transform.frameScale !== 1
-                  ? 'cursor-pointer text-primary-500'
-                  : 'cursor-default text-neutral-500'
-              "
-              :disabled="store.transform.frameScale === 1"
-              title="Сбросить масштаб рамки"
-              @click.left.exact.prevent="store.transform.frameScale = 1"
-            >
-              <span>Размер</span>
-
-              <UIcon
-                v-if="store.transform.frameScale !== 1"
-                name="i-fluent-arrow-undo-20-regular"
-                class="size-3"
-              />
-            </button>
-
-            <span class="font-mono text-xs text-neutral-400">{{
-              store.transform.frameScale.toFixed(2)
-            }}</span>
-          </div>
-
-          <USlider
-            v-model.number="store.transform.frameScale"
-            size="xs"
-            :min="0.5"
-            :max="1.5"
-            :step="0.01"
-          />
-        </div>
-
-        <div class="grid gap-1">
-          <div class="flex h-5 items-center justify-between">
-            <button
-              type="button"
-              class="flex items-center gap-1.5 text-xs transition-colors"
-              :class="
-                store.transform.frameRotate !== 0
-                  ? 'cursor-pointer text-primary-500'
-                  : 'cursor-default text-neutral-500'
-              "
-              :disabled="store.transform.frameRotate === 0"
-              title="Сбросить поворот рамки"
-              @click.left.exact.prevent="store.transform.frameRotate = 0"
-            >
-              <span>Поворот рамки</span>
-
-              <UIcon
-                v-if="store.transform.frameRotate !== 0"
-                name="i-fluent-arrow-undo-20-regular"
-                class="size-3"
-              />
-            </button>
-
-            <span class="font-mono text-xs text-neutral-400"
-              >{{ store.transform.frameRotate }}°</span
-            >
-          </div>
-
-          <USlider
-            v-model.number="store.transform.frameRotate"
-            size="xs"
-            :min="-180"
-            :max="180"
-            :step="1"
-          />
-        </div>
-      </div>
-    </div>
-
-    <div class="grid gap-1">
+    <div class="grid gap-2">
       <div class="text-xs font-medium text-neutral-400">Настройка картинки</div>
 
       <div class="grid gap-2">
@@ -290,7 +210,7 @@
               title="Сбросить поворот изображения"
               @click.left.exact.prevent="store.transform.rotate = 0"
             >
-              <span>Поворот изображения</span>
+              <span>Поворот</span>
 
               <UIcon
                 v-if="store.transform.rotate !== 0"
