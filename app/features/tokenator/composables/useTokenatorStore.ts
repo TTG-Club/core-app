@@ -211,14 +211,20 @@ export const useTokenatorStore = defineStore('tokenator', () => {
 
     reader.onload = (e) => {
       if (e.target?.result && typeof e.target.result === 'string') {
+        // Сохраняем настройки маски и рамки перед сбросом
         const savedMaskScale = transform.value.maskScale;
         const savedFrameScale = transform.value.frameScale;
+        const savedMaskSides = transform.value.maskSides;
+        const savedMaskRotate = transform.value.maskRotate;
 
         currentImage.value = e.target.result;
         resetTransform();
 
+        // Восстанавливаем сохранённые настройки
         transform.value.maskScale = savedMaskScale;
         transform.value.frameScale = savedFrameScale;
+        transform.value.maskSides = savedMaskSides;
+        transform.value.maskRotate = savedMaskRotate;
       }
     };
 
