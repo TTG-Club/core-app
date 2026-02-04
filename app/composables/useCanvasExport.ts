@@ -88,7 +88,11 @@ export function useCanvasExport() {
     }
 
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const arrayBuffer = await webpEncoder(imageData, { quality });
+
+    const arrayBuffer = await webpEncoder(imageData, {
+      quality: quality * 100,
+    });
+
     const blob = new Blob([arrayBuffer], { type: 'image/webp' });
 
     downloadBlob(blob, `${filename}.webp`);
