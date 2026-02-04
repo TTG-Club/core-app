@@ -161,16 +161,16 @@
 
             <UButton
               v-if="isAdmin"
-              icon="i-heroicons-cog-6-tooth"
+              icon="i-fluent-settings-cog-multiple-24-regular"
               color="neutral"
               variant="ghost"
               class="w-full"
               size="lg"
               to="/admin"
-              @click.left.exact.prevent="closeMenu"
+              @click.left.exact="closeMenu"
             >
               <div class="flex w-full items-center justify-between">
-                <span>Админ-панель</span>
+                <span>Панель администратора</span>
               </div>
             </UButton>
           </div>
