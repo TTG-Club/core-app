@@ -11,13 +11,16 @@ export interface CreatureDetailResponse {
   description: Array<string>;
   updatedAt: string;
   header: string;
-  initiative: string;
+  initiative: {
+    label: string;
+    value: string;
+  };
   ac: string;
   cr: string;
   hit: CreatureHitResponse;
   speed: string;
   abilities: CreatureAbilitiesResponse;
-  skills?: string;
+  skills?: Array<Skill>;
   equipments?: string;
   vulnerability?: string;
   resistance?: string;
@@ -43,7 +46,10 @@ export interface CreatureDetailResponse {
   };
   section: CreatureSection;
 }
-
+export interface Skill {
+  label: string;
+  value: string;
+}
 export interface CreatureSection {
   name: {
     rus: string;
