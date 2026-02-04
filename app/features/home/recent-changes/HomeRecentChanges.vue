@@ -119,35 +119,33 @@
             Обновления на сайте
           </h3>
 
-          <div class="text-xs leading-none text-muted">
-            Последние: {{ selectedLimit }}
+          <div class="flex items-center gap-1">
+            <span class="text-xs leading-none text-muted">Последние:</span>
+
+            <UDropdownMenu
+              :items="limitOptions"
+              :ui="{ content: 'w-auto min-w-fit' }"
+            >
+              <template #default>
+                <UButton
+                  trailing-icon="i-fluent-chevron-down-16-regular"
+                  color="neutral"
+                  variant="soft"
+                  size="xs"
+                >
+                  {{ selectedLimit }}
+                </UButton>
+              </template>
+            </UDropdownMenu>
           </div>
         </div>
 
-        <div class="flex gap-2">
-          <UDropdownMenu
-            :items="limitOptions"
-            :ui="{ content: 'w-auto min-w-fit' }"
-          >
-            <template #default>
-              <UButton
-                variant="soft"
-                size="sm"
-                trailing-icon="i-fluent-chevron-down-16-regular"
-              >
-                {{ selectedLimit }}
-              </UButton>
-            </template>
-          </UDropdownMenu>
-
-          <UButton
-            :loading="pending"
-            variant="soft"
-            size="sm"
-            icon="i-fluent-arrow-sync-16-regular"
-            @click.left.exact.prevent="refresh()"
-          />
-        </div>
+        <UButton
+          :loading="pending"
+          variant="soft"
+          icon="i-fluent-arrow-sync-24-regular"
+          @click.left.exact.prevent="refresh()"
+        />
       </div>
     </template>
 

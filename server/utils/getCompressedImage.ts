@@ -93,9 +93,11 @@ function replaceImageExtension(pathOrName: string, type: string) {
     throw createError(getErrorResponse(StatusCodes.INTERNAL_SERVER_ERROR));
   }
 
-  return path.format({
+  const newPath = path.format({
     ...path.parse(pathOrName),
     base: '',
     ext: `.${mime.getExtension(type)}`,
   });
+
+  return newPath.replaceAll('\\', '/');
 }

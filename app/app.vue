@@ -36,7 +36,7 @@
 
       <SidebarPanel />
 
-      <div class="min-h-dvh w-full">
+      <div class="relative min-h-dvh w-full">
         <NuxtPage />
       </div>
 
