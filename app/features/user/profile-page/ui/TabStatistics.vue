@@ -53,7 +53,7 @@
         <div
           v-for="stat in statistics"
           :key="stat.key"
-          class="flex items-center justify-between gap-4 rounded-lg border border-gray-800 bg-gray-900/40 p-4 transition-colors hover:border-gray-700"
+          class="flex items-center justify-between gap-4 rounded-lg border border-gray-800 bg-gray-900/20 p-4 transition-colors hover:border-gray-700"
         >
           <!-- Иконка и информация -->
           <div class="flex flex-1 items-center gap-3">

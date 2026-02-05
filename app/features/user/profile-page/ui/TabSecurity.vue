@@ -32,7 +32,7 @@
       <template #header>
         <div class="flex items-center gap-2">
           <UIcon
-            name="i-fluent-shield-key-24-regular"
+            name="i-fluent-key-24-regular"
             class="h-5 w-5 text-primary-500"
           />
 
