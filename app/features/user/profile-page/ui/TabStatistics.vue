@@ -1,5 +1,8 @@
 <script setup lang="ts">
-  import { StatisticTypes } from '../model';
+  import { useUserProfile } from '../composables/useUserProfile';
+  import { ProfileCardUI, StatisticTypes } from '../model';
+
+  import StatisticCard from './StatisticCard.vue';
 
   import type { UserStatistic } from '../model';
 
@@ -16,24 +19,36 @@
     })),
   );
 
+  const { updateStatisticVisibility } = useUserProfile();
+
   /**
    * Обработчик изменения видимости статистики
    */
-  function handleVisibilityChange(_key: string, _isPublic: boolean) {
-    // TODO: Реализовать сохранение настроек через API
+  async function handleVisibilityChange(key: string, isPublic: boolean) {
+    const success = await updateStatisticVisibility(key, isPublic);
+
+    if (!success) {
+      // Откатываем изменение при ошибке
+      const stat = statistics.value.find((s) => s.key === key);
+
+      if (stat) {
+        stat.isPublic = !isPublic;
+      }
+    }
   }
 </script>
 
 <template>
   <div class="space-y-6">
     <!-- Статистика -->
-    <UCard :ui="{ header: 'px-6 py-4', body: 'p-6' }">
+    <UCard :ui="ProfileCardUI">
       <template #header>
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <UIcon
               name="i-fluent-data-bar-vertical-24-regular"
               class="h-5 w-5 text-primary-500"
+              aria-hidden="true"
             />
 
             <h3 class="font-semibold text-primary">Статистика активности</h3>
@@ -43,55 +58,26 @@
             color="neutral"
             variant="subtle"
           >
-            <UIcon name="i-fluent-info-24-regular" />
+            <UIcon
+              name="i-fluent-info-24-regular"
+              aria-hidden="true"
+            />
             Управляйте видимостью
           </UBadge>
         </div>
       </template>
 
-      <div class="space-y-4">
-        <div
+      <div
+        class="space-y-4"
+        role="list"
+        aria-label="Статистика пользователя"
+      >
+        <StatisticCard
           v-for="stat in statistics"
           :key="stat.key"
-          class="hover:border-accent flex items-center justify-between gap-4 rounded-lg border border-muted bg-elevated p-4 transition-colors"
-        >
-          <!-- Иконка и информация -->
-          <div class="flex flex-1 items-center gap-3">
-            <div
-              class="bg-surface flex h-10 w-10 items-center justify-center rounded-lg text-primary"
-            >
-              <UIcon
-                :name="stat.icon"
-                class="h-5 w-5"
-              />
-            </div>
-
-            <div class="flex-1">
-              <p class="font-medium">
-                {{ stat.label }}
-              </p>
-
-              <p class="text-sm text-muted">Значение: {{ stat.value }}</p>
-            </div>
-          </div>
-
-          <!-- Переключатель видимости -->
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-muted">
-              {{ stat.isPublic ? 'Публичная' : 'Приватная' }}
-            </span>
-
-            <USwitch
-              :model-value="stat.isPublic"
-              @update:model-value="
-                (value) => {
-                  stat.isPublic = value;
-                  handleVisibilityChange(stat.key, value);
-                }
-              "
-            />
-          </div>
-        </div>
+          :stat="stat"
+          @update:visibility="handleVisibilityChange"
+        />
       </div>
     </UCard>
 

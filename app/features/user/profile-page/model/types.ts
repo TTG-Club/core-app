@@ -24,3 +24,20 @@ export interface ConnectedSocial {
   icon: string;
   color: string;
 }
+
+/**
+ * Данные формы смены пароля
+ */
+export interface PasswordChangeForm {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+/**
+ * Состояние загрузки
+ */
+export interface LoadingState {
+  isLoading: boolean;
+  error: string | null;
+}

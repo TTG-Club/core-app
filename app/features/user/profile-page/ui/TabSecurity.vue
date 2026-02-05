@@ -1,8 +1,15 @@
 <script setup lang="ts">
+  import { useUserProfile } from '../composables/useUserProfile';
+  import { passwordChangeSchema, ProfileCardUI } from '../model';
+
+  import type { FormSubmitEvent } from '#ui/types';
+
+  import type { PasswordChangeForm } from '../model';
+
   /**
    * Форма смены пароля
    */
-  const passwordForm = ref({
+  const passwordForm = ref<PasswordChangeForm>({
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
@@ -17,39 +24,61 @@
     confirm: false,
   });
 
+  const { isLoading, changePassword } = useUserProfile();
+
   /**
-   * Обработчик смены пароля
+   * Обработчик отправки формы смены пароля
    */
-  function handlePasswordChange() {
-    // TODO: Реализовать смену пароля через API
+  async function handlePasswordChange(
+    event: FormSubmitEvent<PasswordChangeForm>,
+  ) {
+    const success = await changePassword(event.data);
+
+    if (success) {
+      // Очищаем форму после успешной смены
+      passwordForm.value = {
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      };
+    }
   }
 </script>
 
 <template>
   <div class="space-y-6">
     <!-- Смена пароля -->
-    <UCard :ui="{ header: 'px-6 py-4', body: 'p-6' }">
+    <UCard :ui="ProfileCardUI">
       <template #header>
         <div class="flex items-center gap-2">
           <UIcon
             name="i-fluent-key-24-regular"
             class="h-5 w-5 text-primary-500"
+            aria-hidden="true"
           />
 
           <h3 class="font-semibold text-primary">Смена пароля</h3>
         </div>
       </template>
 
-      <div class="space-y-4">
+      <UForm
+        :state="passwordForm"
+        :schema="passwordChangeSchema"
+        class="space-y-4"
+        @submit="handlePasswordChange"
+      >
         <!-- Текущий пароль -->
         <UFormField
           label="Текущий пароль"
+          name="currentPassword"
           required
         >
           <UInput
             v-model="passwordForm.currentPassword"
             :type="showPasswords.current ? 'text' : 'password'"
             placeholder="Введите текущий пароль"
+            :disabled="isLoading"
+            autocomplete="current-password"
           >
             <template #trailing>
               <UButton
@@ -57,6 +86,9 @@
                   showPasswords.current
                     ? 'i-fluent-eye-off-24-regular'
                     : 'i-fluent-eye-24-regular'
+                "
+                :aria-label="
+                  showPasswords.current ? 'Скрыть пароль' : 'Показать пароль'
                 "
                 color="neutral"
                 variant="ghost"
@@ -72,12 +104,16 @@
         <!-- Новый пароль -->
         <UFormField
           label="Новый пароль"
+          name="newPassword"
           required
+          hint="Минимум 8 символов, включая заглавные и строчные буквы, цифры"
         >
           <UInput
             v-model="passwordForm.newPassword"
             :type="showPasswords.new ? 'text' : 'password'"
             placeholder="Введите новый пароль"
+            :disabled="isLoading"
+            autocomplete="new-password"
           >
             <template #trailing>
               <UButton
@@ -85,6 +121,9 @@
                   showPasswords.new
                     ? 'i-fluent-eye-off-24-regular'
                     : 'i-fluent-eye-24-regular'
+                "
+                :aria-label="
+                  showPasswords.new ? 'Скрыть пароль' : 'Показать пароль'
                 "
                 color="neutral"
                 variant="ghost"
@@ -100,12 +139,15 @@
         <!-- Подтверждение пароля -->
         <UFormField
           label="Подтвердите новый пароль"
+          name="confirmPassword"
           required
         >
           <UInput
             v-model="passwordForm.confirmPassword"
             :type="showPasswords.confirm ? 'text' : 'password'"
             placeholder="Повторите новый пароль"
+            :disabled="isLoading"
+            autocomplete="new-password"
           >
             <template #trailing>
               <UButton
@@ -113,6 +155,9 @@
                   showPasswords.confirm
                     ? 'i-fluent-eye-off-24-regular'
                     : 'i-fluent-eye-24-regular'
+                "
+                :aria-label="
+                  showPasswords.confirm ? 'Скрыть пароль' : 'Показать пароль'
                 "
                 color="neutral"
                 variant="ghost"
@@ -128,22 +173,25 @@
         <!-- Кнопка сохранения -->
         <div class="flex justify-end">
           <UButton
+            type="submit"
             color="primary"
-            @click.left.exact.prevent="handlePasswordChange"
+            :loading="isLoading"
+            :disabled="isLoading"
           >
             Изменить пароль
           </UButton>
         </div>
-      </div>
+      </UForm>
     </UCard>
 
     <!-- Дополнительная безопасность -->
-    <UCard :ui="{ header: 'px-6 py-4', body: 'p-6' }">
+    <UCard :ui="ProfileCardUI">
       <template #header>
         <div class="flex items-center gap-2">
           <UIcon
             name="i-fluent-shield-checkmark-24-regular"
             class="h-5 w-5 text-primary-500"
+            aria-hidden="true"
           />
 
           <h3 class="font-semibold text-primary">
