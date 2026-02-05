@@ -4,7 +4,10 @@ export interface TokenatorFrame {
   order: number;
 }
 
-export type FrameTintType = 'solid' | 'gradient';
+export enum FrameTintType {
+  Solid = 'solid',
+  Gradient = 'gradient',
+}
 
 export interface FrameTint {
   enabled: boolean;
@@ -16,6 +19,9 @@ export interface FrameTint {
 export interface BackgroundStyle {
   opacity: number;
   blendMode: string;
+  scale: number;
+  position: Coordinates;
+  rotate: number;
 }
 
 export interface Coordinates {
@@ -38,14 +44,33 @@ export interface TransformState {
   frameRotate: number;
 }
 
+export enum BrushMode {
+  Add = 'add',
+  Remove = 'remove',
+}
+
 /**
  * Состояние кисти для редактирования маски
  */
 export interface BrushState {
-  enabled: boolean;
   size: number;
-  mode: 'add' | 'remove';
+  mode: BrushMode;
   halfMask: boolean;
+}
+
+/**
+ * Режим редактирования в токенаторе
+ */
+export enum TokenatorEditMode {
+  None = 'none',
+  Brush = 'brush',
+  Background = 'background',
+}
+
+export enum TextAlign {
+  Left = 'left',
+  Center = 'center',
+  Right = 'right',
 }
 
 /**
@@ -61,6 +86,15 @@ export interface TokenText {
   rotation: number;
   fontWeight: number;
   fontFamily: string;
-  align: 'left' | 'center' | 'right';
+  align: TextAlign;
   arc: number;
+}
+
+/**
+ * Состояние холста (zoom и pan)
+ */
+export interface CanvasViewport {
+  zoom: number;
+  pan: Coordinates;
+  isPanning: boolean;
 }

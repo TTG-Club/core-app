@@ -4,6 +4,7 @@
     useTokenatorGestures,
     useTokenatorStore,
   } from '~tokenator/composables';
+  import { TokenatorEditMode } from '~tokenator/model';
 
   import { CanvasDropZone } from './ui';
 
@@ -46,29 +47,54 @@
     initCanvas();
     render();
   });
+
+  const canvasTransform = computed(() => {
+    const { zoom, pan } = store.canvasViewport;
+
+    return `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`;
+  });
+
+  const isPanningMode = computed(() => store.canvasViewport.isPanning);
+
+  const brushCursorSize = computed(() => {
+    return store.brush.size * store.canvasViewport.zoom;
+  });
+
+  const containerClasses = computed(() => ({
+    'cursor-none': store.isBrushMode,
+    'cursor-grab':
+      (store.editMode === TokenatorEditMode.None || isPanningMode.value) &&
+      !isDragging.value,
+    'cursor-grabbing':
+      (store.editMode === TokenatorEditMode.None || isPanningMode.value) &&
+      isDragging.value,
+    'cursor-move': store.editMode === TokenatorEditMode.Background,
+    'ring-2 ring-primary ring-inset': isOverDropZone.value,
+  }));
+
+  const brushCursorStyle = computed(() => ({
+    left: `${cursorX.value}px`,
+    top: `${cursorY.value}px`,
+    width: `${brushCursorSize.value}px`,
+    height: `${brushCursorSize.value}px`,
+    transform: 'translate(-50%, -50%)',
+  }));
+
+  const isEmptyState = computed(
+    () => !store.currentImage && !store.activeFrameUrl,
+  );
 </script>
 
 <template>
   <div
     ref="containerRef"
     class="relative h-full w-full overflow-hidden rounded-2xl bg-muted shadow-xl"
-    :class="{
-      'cursor-none': store.brush.enabled,
-      'cursor-grab': !store.brush.enabled && !isDragging,
-      'cursor-grabbing': !store.brush.enabled && isDragging,
-      'ring-2 ring-primary ring-inset': isOverDropZone,
-    }"
+    :class="containerClasses"
   >
     <div
-      v-if="store.brush.enabled && isHovering"
+      v-if="store.isBrushMode && isHovering"
       class="pointer-events-none absolute z-50 rounded-full border border-white bg-white/20 shadow-[0_0_2px_rgba(0,0,0,0.5)]"
-      :style="{
-        left: `${cursorX}px`,
-        top: `${cursorY}px`,
-        width: `${store.brush.size}px`,
-        height: `${store.brush.size}px`,
-        transform: 'translate(-50%, -50%)',
-      }"
+      :style="brushCursorStyle"
     />
 
     <div
@@ -81,13 +107,14 @@
 
     <canvas
       ref="canvasRef"
-      class="relative z-10 size-full touch-none"
+      class="relative z-10 size-full touch-none transition-transform duration-100"
+      :style="{ transform: canvasTransform }"
     />
 
     <CanvasDropZone v-if="isOverDropZone" />
 
     <div
-      v-else-if="!store.currentImage && !store.activeFrameUrl"
+      v-else-if="isEmptyState"
       class="absolute inset-0 z-10 flex items-center justify-center text-neutral-400"
     >
       <span class="text-sm">Загрузите изображение</span>
