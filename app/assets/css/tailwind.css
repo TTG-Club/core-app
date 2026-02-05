@@ -1,8 +1,6 @@
 @import 'tailwindcss';
 @import '@nuxt/ui';
 
-@plugin "@tailwindcss/typography";
-
 @theme {
   --font-sans:
     'Open Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
