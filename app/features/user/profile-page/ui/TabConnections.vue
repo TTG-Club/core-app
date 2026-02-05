@@ -43,7 +43,7 @@
             class="h-5 w-5 text-primary-500"
           />
 
-          <h3 class="font-semibold text-white">Подключенные аккаунты</h3>
+          <h3 class="font-semibold text-primary">Подключенные аккаунты</h3>
         </div>
       </template>
 
@@ -51,12 +51,12 @@
         <div
           v-for="connection in connections"
           :key="connection.id"
-          class="flex items-center justify-between gap-4 rounded-lg border border-gray-800 bg-gray-900/40 p-4 transition-colors hover:border-gray-700"
+          class="hover:border-accent flex items-center justify-between gap-4 rounded-lg border border-muted bg-elevated p-4 transition-colors"
         >
           <!-- Иконка и информация -->
           <div class="flex flex-1 items-center gap-3">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-800"
+              class="bg-surface flex h-10 w-10 items-center justify-center rounded-lg"
             >
               <UIcon
                 :name="connection.icon"
@@ -70,7 +70,7 @@
                 {{ connection.name }}
               </p>
 
-              <p class="text-sm text-gray-500">
+              <p class="text-sm text-muted">
                 {{
                   connection.isConnected && connection.username
                     ? connection.username

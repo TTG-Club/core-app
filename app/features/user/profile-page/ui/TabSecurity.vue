@@ -36,7 +36,7 @@
             class="h-5 w-5 text-primary-500"
           />
 
-          <h3 class="font-semibold text-white">Смена пароля</h3>
+          <h3 class="font-semibold text-primary">Смена пароля</h3>
         </div>
       </template>
 
@@ -146,7 +146,9 @@
             class="h-5 w-5 text-primary-500"
           />
 
-          <h3 class="font-semibold text-white">Дополнительная безопасность</h3>
+          <h3 class="font-semibold text-primary">
+            Дополнительная безопасность
+          </h3>
         </div>
       </template>
 
