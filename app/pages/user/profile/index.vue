@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { useSwipe } from '@vueuse/core';
+
   import { HomeBackground } from '~/features/home/background';
   import {
     ProfileTabItems,
@@ -25,6 +27,37 @@
    */
   const activeTab = ref<string>(ProfileTabs.GENERAL);
 
+  /**
+   * Логика свайпов для переключения табов
+   */
+  const contentEl = ref<HTMLElement | null>(null);
+  const { isSwiping, direction } = useSwipe(contentEl);
+
+  watch(isSwiping, (value) => {
+    if (!value) {
+      const currentIndex = ProfileTabItems.findIndex(
+        (item) => item.value === activeTab.value,
+      );
+
+      if (direction.value === 'left') {
+        const nextIndex = currentIndex + 1;
+
+        if (
+          nextIndex < ProfileTabItems.length &&
+          !ProfileTabItems[nextIndex]?.disabled
+        ) {
+          activeTab.value = ProfileTabItems[nextIndex]!.value;
+        }
+      } else if (direction.value === 'right') {
+        const prevIndex = currentIndex - 1;
+
+        if (prevIndex >= 0 && !ProfileTabItems[prevIndex]?.disabled) {
+          activeTab.value = ProfileTabItems[prevIndex]!.value;
+        }
+      }
+    }
+  });
+
   useSeoMeta({
     title: 'Профиль пользователя',
   });
@@ -38,14 +71,14 @@
       </ClientOnly>
 
       <UContainer class="relative z-10 pt-6">
-        <div class="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+        <div class="grid grid-cols-1 items-start gap-8 lg:grid-cols-16">
           <!-- Sidebar: Profile Info -->
-          <div class="flex flex-col gap-6 lg:col-span-4">
+          <div class="flex flex-col gap-6 lg:col-span-5">
             <div class="relative flex flex-col items-center pt-6 text-center">
               <!-- Avatar with glow -->
               <div class="group relative mb-6">
                 <div
-                  class="absolute inset-0 rounded-full bg-primary-500/30 opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100"
+                  class="absolute inset-0 rounded-full bg-primary-500/20 blur-3xl transition-colors duration-500 group-hover:bg-primary-400/40"
                 />
 
                 <UAvatar
@@ -89,36 +122,42 @@
                 <div
                   class="cursor-default p-3 transition-colors hover:bg-white/5"
                 >
-                  <div class="text-xl font-bold text-white">12</div>
+                  <div class="opacity-50 blur-md filter select-none">
+                    <div class="text-xl font-bold text-white">12</div>
 
-                  <div
-                    class="text-[10px] font-semibold tracking-wider text-gray-500 uppercase"
-                  >
-                    Уровень
+                    <div
+                      class="text-[10px] font-semibold tracking-wider text-gray-500 uppercase"
+                    >
+                      Уровень
+                    </div>
                   </div>
                 </div>
 
                 <div
                   class="cursor-default p-3 transition-colors hover:bg-white/5"
                 >
-                  <div class="text-xl font-bold text-white">4</div>
+                  <div class="opacity-50 blur-md filter select-none">
+                    <div class="text-xl font-bold text-white">4</div>
 
-                  <div
-                    class="text-[10px] font-semibold tracking-wider text-gray-500 uppercase"
-                  >
-                    Персонажа
+                    <div
+                      class="text-[10px] font-semibold tracking-wider text-gray-500 uppercase"
+                    >
+                      Персонажа
+                    </div>
                   </div>
                 </div>
 
                 <div
                   class="cursor-default p-3 transition-colors hover:bg-white/5"
                 >
-                  <div class="text-xl font-bold text-white">28</div>
+                  <div class="opacity-50 blur-md filter select-none">
+                    <div class="text-xl font-bold text-white">28</div>
 
-                  <div
-                    class="text-[10px] font-semibold tracking-wider text-gray-500 uppercase"
-                  >
-                    Заметок
+                    <div
+                      class="text-[10px] font-semibold tracking-wider text-gray-500 uppercase"
+                    >
+                      Заметок
+                    </div>
                   </div>
                 </div>
               </div>
@@ -143,28 +182,30 @@
           </div>
 
           <!-- Main Content -->
-          <div class="flex flex-col gap-6 lg:col-span-8">
+          <div class="flex flex-col gap-6 lg:col-span-11">
             <!-- Mobile Navigation -->
-            <div class="lg:hidden">
-              <USelectMenu
-                v-model="activeTab"
-                :options="ProfileTabItems"
-                option-attribute="label"
-                value-attribute="value"
-                size="lg"
-              >
-                <template #leading>
-                  <UIcon
-                    :name="
-                      ProfileTabItems.find((i) => i.value === activeTab)?.icon
-                    "
-                  />
-                </template>
-              </USelectMenu>
+            <div
+              class="hidden-scrollbar flex gap-2 overflow-x-auto pb-2 lg:hidden"
+            >
+              <UButton
+                v-for="item in ProfileTabItems"
+                :key="item.value"
+                :label="item.label"
+                :icon="item.icon"
+                :variant="activeTab === item.value ? 'solid' : 'soft'"
+                :color="activeTab === item.value ? 'primary' : 'neutral'"
+                size="md"
+                class="shrink-0"
+                :disabled="item.disabled"
+                @click="activeTab = item.value"
+              />
             </div>
 
             <!-- Content Area -->
-            <div class="min-h-[400px]">
+            <div
+              ref="contentEl"
+              class="min-h-[400px]"
+            >
               <Transition
                 mode="out-in"
                 enter-active-class="transition duration-200 ease-out"
