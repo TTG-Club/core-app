@@ -2,7 +2,7 @@
   "name": "ttg-core-app",
   "type": "module",
   "private": true,
-  "packageManager": "pnpm@10.28.1",
+  "packageManager": "pnpm@10.28.2",
   "scripts": {
     "dev": "nuxt dev --host --no-qr",
     "build": "nuxt build",
@@ -95,5 +95,9 @@
     "post-checkout": "pnpm sync-ai-rules",
     "post-merge": "pnpm sync-ai-rules",
     "post-rewrite": "pnpm sync-ai-rules"
+  },
+  "volta": {
+    "node": "24.13.0",
+    "pnpm": "10.28.2"
   }
 }
