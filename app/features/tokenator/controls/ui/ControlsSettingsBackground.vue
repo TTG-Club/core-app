@@ -215,11 +215,7 @@
             :color="store.isBackgroundMoveMode ? 'primary' : 'neutral'"
             size="sm"
             icon="i-fluent-arrow-move-20-regular"
-            :label="
-              store.isBackgroundMoveMode
-                ? 'Режим перемещения активен'
-                : 'Переместить фон'
-            "
+            label="Переместить фон"
             class="flex-1"
             @click.left.exact.prevent="store.toggleBackgroundMoveMode"
           />
