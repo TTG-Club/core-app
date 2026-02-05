@@ -76,7 +76,10 @@
           <div class="flex flex-col gap-6 lg:col-span-5">
             <div class="relative flex flex-col items-center pt-6 text-center">
               <!-- Avatar with glow -->
-              <div class="group relative mb-6">
+              <div
+                class="group relative mb-6 cursor-pointer"
+                @click.prevent
+              >
                 <div
                   class="absolute inset-0 rounded-full bg-primary-500/20 blur-3xl transition-colors duration-500 group-hover:bg-primary-400/40"
                 />
@@ -84,14 +87,14 @@
                 <UAvatar
                   :alt="profile?.username"
                   size="3xl"
-                  class="relative z-10 h-32 w-32 text-4xl shadow-2xl ring-4 ring-gray-950"
+                  class="relative z-10 h-32 w-32 text-4xl shadow-2xl ring-4 ring-gray-950 transition-transform duration-200 group-active:scale-95"
                 />
 
                 <UButton
                   size="xs"
-                  color="neutral"
+                  color="primary"
                   variant="solid"
-                  icon="i-fluent-camera-edit-24-regular"
+                  icon="i-fluent-camera-24-regular"
                   class="absolute right-1 bottom-1 z-20 translate-y-2 rounded-full opacity-0 shadow-lg transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100"
                 />
               </div>

@@ -36,7 +36,7 @@
               class="h-5 w-5 text-primary-500"
             />
 
-            <h3 class="font-semibold text-white">Статистика активности</h3>
+            <h3 class="font-semibold text-primary">Статистика активности</h3>
           </div>
 
           <UBadge
@@ -53,12 +53,12 @@
         <div
           v-for="stat in statistics"
           :key="stat.key"
-          class="flex items-center justify-between gap-4 rounded-lg border border-gray-800 bg-gray-900/20 p-4 transition-colors hover:border-gray-700"
+          class="hover:border-accent flex items-center justify-between gap-4 rounded-lg border border-muted bg-elevated p-4 transition-colors"
         >
           <!-- Иконка и информация -->
           <div class="flex flex-1 items-center gap-3">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-800 text-white"
+              class="bg-surface flex h-10 w-10 items-center justify-center rounded-lg text-primary"
             >
               <UIcon
                 :name="stat.icon"
@@ -71,13 +71,13 @@
                 {{ stat.label }}
               </p>
 
-              <p class="text-sm text-gray-500">Значение: {{ stat.value }}</p>
+              <p class="text-sm text-muted">Значение: {{ stat.value }}</p>
             </div>
           </div>
 
           <!-- Переключатель видимости -->
           <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-500">
+            <span class="text-sm text-muted">
               {{ stat.isPublic ? 'Публичная' : 'Приватная' }}
             </span>
 

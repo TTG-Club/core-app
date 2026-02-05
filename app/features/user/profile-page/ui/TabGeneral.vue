@@ -31,7 +31,7 @@
             class="h-5 w-5 text-primary-500"
           />
 
-          <h3 class="font-semibold text-white">Личные данные</h3>
+          <h3 class="font-semibold text-primary">Личные данные</h3>
         </div>
       </template>
 
@@ -100,15 +100,15 @@
         <div class="flex items-center gap-2">
           <UIcon
             name="i-fluent-trophy-24-regular"
-            class="h-5 w-5 text-yellow-500"
+            class="h-5 w-5 text-warning"
           />
 
-          <h3 class="font-semibold text-white">Достижения</h3>
+          <h3 class="font-semibold text-primary">Достижения</h3>
         </div>
       </template>
 
       <div
-        class="flex min-h-[140px] items-center justify-center rounded-xl border border-dashed border-gray-800 bg-gray-900/30 p-8"
+        class="flex min-h-[140px] items-center justify-center rounded-xl border border-dashed border-muted bg-elevated p-8"
       >
         <UEmpty
           icon="i-fluent-trophy-24-regular"
@@ -118,7 +118,7 @@
           <template #icon="{ name }">
             <UIcon
               :name="name"
-              class="h-12 w-12 text-gray-700"
+              class="h-12 w-12 text-muted"
             />
           </template>
         </UEmpty>
