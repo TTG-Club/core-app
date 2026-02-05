@@ -1,14 +1,8 @@
 <script setup lang="ts">
   import { useTokenatorStore } from '~tokenator/composables';
 
-  import type { TokenText } from '~tokenator/model';
-
   const store = useTokenatorStore();
   const textInput = ref('');
-
-  const activeText = computed<TokenText | undefined>(() =>
-    store.texts.find((t) => t.id === store.activeTextId),
-  );
 
   function addNewText() {
     if (!textInput.value.trim()) {
@@ -18,6 +12,30 @@
     store.addText(textInput.value);
     textInput.value = '';
   }
+
+  const resetActiveTextXButtonClass = computed(() =>
+    store.isActiveTextXChanged
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
+
+  const resetActiveTextYButtonClass = computed(() =>
+    store.isActiveTextYChanged
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
+
+  const resetActiveTextRotationButtonClass = computed(() =>
+    store.isActiveTextRotationChanged
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
+
+  const resetActiveTextArcButtonClass = computed(() =>
+    store.isActiveTextArcChanged
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
 </script>
 
 <template>
@@ -40,7 +58,7 @@
     </div>
 
     <div
-      v-if="activeText"
+      v-if="store.activeText"
       class="grid gap-2 rounded-md bg-muted p-2"
     >
       <div class="flex items-center justify-between">
@@ -50,12 +68,12 @@
             variant="ghost"
             size="xs"
             title="Назад к списку"
-            @click.left.exact.prevent="store.activeTextId = null"
+            @click.left.exact.prevent="store.deselectText"
           />
 
           <span
             class="max-w-[120px] truncate text-xs font-medium text-primary-500"
-            >{{ activeText.content }}</span
+            >{{ store.activeText.content }}</span
           >
         </div>
 
@@ -64,7 +82,7 @@
           color="error"
           variant="ghost"
           size="xs"
-          @click.left.exact.prevent="store.removeText(activeText.id)"
+          @click.left.exact.prevent="store.removeActiveText"
         />
       </div>
 
@@ -86,13 +104,13 @@
               >
                 <span
                   class="size-4 rounded-full border border-neutral-200"
-                  :style="{ backgroundColor: activeText.color }"
+                  :style="{ backgroundColor: store.activeText.color }"
                 />
               </UButton>
 
               <template #content>
                 <div class="p-2">
-                  <UColorPicker v-model="activeText.color" />
+                  <UColorPicker v-model="store.activeText.color" />
                 </div>
               </template>
             </UPopover>
@@ -105,7 +123,7 @@
             <span class="text-xs text-neutral-500">Размер</span>
 
             <UInput
-              v-model="activeText.fontSize"
+              v-model="store.activeText.fontSize"
               type="number"
               size="xs"
               class="w-16"
@@ -123,29 +141,25 @@
             <button
               type="button"
               class="flex items-center gap-1.5 transition-colors"
-              :class="
-                activeText.x !== 0
-                  ? 'cursor-pointer text-primary-500'
-                  : 'cursor-default text-neutral-500'
-              "
-              :disabled="activeText.x === 0"
+              :class="resetActiveTextXButtonClass"
+              :disabled="!store.isActiveTextXChanged"
               title="Сбросить X"
-              @click.left.exact.prevent="activeText.x = 0"
+              @click.left.exact.prevent="store.resetActiveTextX"
             >
               <span>Позиция X</span>
 
               <UIcon
-                v-if="activeText.x !== 0"
+                v-if="store.isActiveTextXChanged"
                 name="i-fluent-arrow-undo-20-regular"
                 class="size-3"
               />
             </button>
 
-            <span class="font-mono">{{ activeText.x }}</span>
+            <span class="font-mono">{{ store.activeText.x }}</span>
           </div>
 
           <USlider
-            v-model="activeText.x"
+            v-model="store.activeText.x"
             :min="-250"
             :max="250"
             :step="1"
@@ -161,29 +175,25 @@
             <button
               type="button"
               class="flex items-center gap-1.5 transition-colors"
-              :class="
-                activeText.y !== 0
-                  ? 'cursor-pointer text-primary-500'
-                  : 'cursor-default text-neutral-500'
-              "
-              :disabled="activeText.y === 0"
+              :class="resetActiveTextYButtonClass"
+              :disabled="!store.isActiveTextYChanged"
               title="Сбросить Y"
-              @click.left.exact.prevent="activeText.y = 0"
+              @click.left.exact.prevent="store.resetActiveTextY"
             >
               <span>Позиция Y</span>
 
               <UIcon
-                v-if="activeText.y !== 0"
+                v-if="store.isActiveTextYChanged"
                 name="i-fluent-arrow-undo-20-regular"
                 class="size-3"
               />
             </button>
 
-            <span class="font-mono">{{ activeText.y }}</span>
+            <span class="font-mono">{{ store.activeText.y }}</span>
           </div>
 
           <USlider
-            v-model="activeText.y"
+            v-model="store.activeText.y"
             :min="-250"
             :max="250"
             :step="1"
@@ -199,29 +209,25 @@
             <button
               type="button"
               class="flex items-center gap-1.5 transition-colors"
-              :class="
-                activeText.rotation !== 0
-                  ? 'cursor-pointer text-primary-500'
-                  : 'cursor-default text-neutral-500'
-              "
-              :disabled="activeText.rotation === 0"
+              :class="resetActiveTextRotationButtonClass"
+              :disabled="!store.isActiveTextRotationChanged"
               title="Сбросить поворот"
-              @click.left.exact.prevent="activeText.rotation = 0"
+              @click.left.exact.prevent="store.resetActiveTextRotation"
             >
               <span>Поворот</span>
 
               <UIcon
-                v-if="activeText.rotation !== 0"
+                v-if="store.isActiveTextRotationChanged"
                 name="i-fluent-arrow-undo-20-regular"
                 class="size-3"
               />
             </button>
 
-            <span class="font-mono">{{ activeText.rotation }}°</span>
+            <span class="font-mono">{{ store.activeText.rotation }}°</span>
           </div>
 
           <USlider
-            v-model="activeText.rotation"
+            v-model="store.activeText.rotation"
             :min="-180"
             :max="180"
             :step="1"
@@ -237,29 +243,25 @@
             <button
               type="button"
               class="flex items-center gap-1.5 transition-colors"
-              :class="
-                activeText.arc !== 0
-                  ? 'cursor-pointer text-primary-500'
-                  : 'cursor-default text-neutral-500'
-              "
-              :disabled="activeText.arc === 0"
+              :class="resetActiveTextArcButtonClass"
+              :disabled="!store.isActiveTextArcChanged"
               title="Сбросить изгиб"
-              @click.left.exact.prevent="activeText.arc = 0"
+              @click.left.exact.prevent="store.resetActiveTextArc"
             >
               <span>Изгиб</span>
 
               <UIcon
-                v-if="activeText.arc !== 0"
+                v-if="store.isActiveTextArcChanged"
                 name="i-fluent-arrow-undo-20-regular"
                 class="size-3"
               />
             </button>
 
-            <span class="font-mono">{{ activeText.arc }}°</span>
+            <span class="font-mono">{{ store.activeText.arc }}°</span>
           </div>
 
           <USlider
-            v-model="activeText.arc"
+            v-model="store.activeText.arc"
             :min="-360"
             :max="360"
             :step="5"
@@ -284,7 +286,7 @@
           variant="soft"
           color="neutral"
           class="justify-start truncate"
-          @click.left.exact.prevent="store.activeTextId = text.id"
+          @click.left.exact.prevent="store.selectText(text.id)"
         />
       </div>
     </div>

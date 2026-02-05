@@ -1,4 +1,11 @@
-import type { BackgroundStyle, FrameTint, TransformState } from '../types';
+import { BrushMode, FrameTintType } from '../types';
+
+import type {
+  BackgroundStyle,
+  FrameTint,
+  TextAlign,
+  TransformState,
+} from '../types';
 
 /**
  * Создает путь для многоугольной или круглой маски.
@@ -53,7 +60,7 @@ export interface DrawBrushStrokeParams {
   prevX?: number;
   prevY?: number;
   size: number;
-  mode: 'add' | 'remove';
+  mode: BrushMode;
   color?: string;
 }
 
@@ -84,12 +91,12 @@ export function drawBrushStroke({
   ctx.save();
   ctx.beginPath();
 
-  const strokeColor = mode === 'add' ? color : 'black';
+  const strokeColor = mode === BrushMode.Add ? color : 'black';
 
   ctx.fillStyle = strokeColor;
   ctx.strokeStyle = strokeColor;
 
-  if (mode === 'remove') {
+  if (mode === BrushMode.Remove) {
     ctx.globalCompositeOperation = 'destination-out';
   }
 
@@ -178,7 +185,7 @@ function applyTint(
 
   ctx.globalCompositeOperation = blendMode as GlobalCompositeOperation;
 
-  if (tint.type === 'solid') {
+  if (tint.type === FrameTintType.Solid) {
     ctx.fillStyle = tint.colors[0] || '#000000';
     ctx.fillRect(0, 0, size, size);
   } else {
@@ -208,7 +215,7 @@ export interface DrawTokenText {
   rotation: number;
   fontWeight: number;
   fontFamily: string;
-  align: 'left' | 'center' | 'right';
+  align: TextAlign;
   arc?: number;
 }
 
@@ -326,23 +333,37 @@ export async function drawToken({
         backgroundStyle.blendMode as GlobalCompositeOperation;
     }
 
+    const bgScale = backgroundStyle?.scale || 1;
+    const bgPosition = backgroundStyle?.position || { x: 0, y: 0 };
+    const bgRotate = backgroundStyle?.rotate || 0;
+
     const aspectRatio = bgImg.width / bgImg.height;
 
-    let drawWidth = maskRadius * 2;
-    let drawHeight = maskRadius * 2;
+    let drawWidth = maskRadius * 2 * bgScale;
+    let drawHeight = maskRadius * 2 * bgScale;
 
     if (aspectRatio > 1) {
-      drawHeight = maskRadius * 2;
+      drawHeight = maskRadius * 2 * bgScale;
       drawWidth = drawHeight * aspectRatio;
     } else {
-      drawWidth = maskRadius * 2;
+      drawWidth = maskRadius * 2 * bgScale;
       drawHeight = drawWidth / aspectRatio;
     }
 
+    const bgPosScale = tokenSize / referenceTokenSize;
+
+    // Применяем трансформации для фона
+    ctx.translate(
+      cx + bgPosition.x * bgPosScale,
+      cy + bgPosition.y * bgPosScale,
+    );
+
+    ctx.rotate((bgRotate * Math.PI) / 180);
+
     ctx.drawImage(
       bgImg,
-      cx - drawWidth / 2,
-      cy - drawHeight / 2,
+      -drawWidth / 2,
+      -drawHeight / 2,
       drawWidth,
       drawHeight,
     );
