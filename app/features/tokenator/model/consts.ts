@@ -1,3 +1,5 @@
+import { BrushMode, FrameTintType, TextAlign } from './types';
+
 import type {
   BackgroundStyle,
   BrushState,
@@ -82,9 +84,8 @@ export const DEFAULT_TRANSFORM: TransformState = {
  * Настройки кисти по умолчанию
  */
 export const DEFAULT_BRUSH_CONFIG: BrushState = {
-  enabled: false,
   size: 20,
-  mode: 'add',
+  mode: BrushMode.Add,
   halfMask: false,
 };
 
@@ -93,7 +94,7 @@ export const DEFAULT_BRUSH_CONFIG: BrushState = {
  */
 export const DEFAULT_FRAME_TINT: FrameTint = {
   enabled: true,
-  type: 'gradient',
+  type: FrameTintType.Gradient,
   colors: [DEFAULT_COLORS.TINT_TRANSPARENT, DEFAULT_COLORS.TINT_TRANSPARENT],
   blendMode: 'source-atop',
 };
@@ -104,6 +105,9 @@ export const DEFAULT_FRAME_TINT: FrameTint = {
 export const DEFAULT_BACKGROUND_STYLE: BackgroundStyle = {
   opacity: 100,
   blendMode: 'normal',
+  scale: 1,
+  position: { x: 0, y: 0 },
+  rotate: 0,
 };
 
 /**
@@ -115,10 +119,19 @@ export const DEFAULT_TEXT_CONFIG = {
   rotation: 0,
   fontWeight: 700,
   fontFamily: 'Inter',
-  align: 'center' as const,
+  align: TextAlign.Center,
   arc: 0,
   x: 0,
   y: 0,
+};
+
+/**
+ * Настройки viewport холста по умолчанию
+ */
+export const DEFAULT_CANVAS_VIEWPORT = {
+  zoom: 1,
+  pan: { x: 0, y: 0 },
+  isPanning: false,
 };
 
 export enum TokenatorTab {
@@ -128,7 +141,8 @@ export enum TokenatorTab {
 
 export enum TokenatorTool {
   Base = 'base',
-  Style = 'style',
+  Frame = 'frame',
+  Background = 'background',
   ThreeD = '3d',
   Text = 'text',
 }

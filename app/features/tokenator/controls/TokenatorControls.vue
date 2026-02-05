@@ -7,6 +7,7 @@
     DEFAULT_FRAME_TINT,
     DEFAULT_TRANSFORM,
     drawToken,
+    TokenatorEditMode,
     TokenatorTab,
     TokenatorTool,
   } from '~tokenator/model';
@@ -14,8 +15,9 @@
   import {
     ControlsLibrary,
     ControlsSettings3D,
+    ControlsSettingsBackground,
     ControlsSettingsBase,
-    ControlsSettingsStyle,
+    ControlsSettingsFrame,
     ControlsSettingsText,
   } from './ui';
 
@@ -43,9 +45,14 @@
       slot: 'base' as const,
     },
     {
-      label: 'Стиль',
-      value: TokenatorTool.Style,
-      slot: 'style' as const,
+      label: 'Рамка',
+      value: TokenatorTool.Frame,
+      slot: 'frame' as const,
+    },
+    {
+      label: 'Фон',
+      value: TokenatorTool.Background,
+      slot: 'background' as const,
     },
     {
       label: '3D',
@@ -74,12 +81,18 @@
     const hasBrushChanges =
       JSON.stringify(store.brush) !== JSON.stringify(DEFAULT_BRUSH_CONFIG);
 
+    const hasCanvasChanges =
+      store.canvasViewport.zoom !== 1 ||
+      store.canvasViewport.pan.x !== 0 ||
+      store.canvasViewport.pan.y !== 0;
+
     return (
       hasTransformChanges ||
       hasColorChanges ||
       hasTintChanges ||
       hasTextChanges ||
-      hasBrushChanges
+      hasBrushChanges ||
+      hasCanvasChanges
     );
   });
 
@@ -90,8 +103,9 @@
   });
 
   watch(toolTab, (tool) => {
-    if (tool !== TokenatorTool.ThreeD) {
-      store.brush.enabled = false;
+    // Сбрасываем режим редактирования при переходе на вкладки, где он не нужен
+    if (tool !== TokenatorTool.ThreeD && tool !== TokenatorTool.Background) {
+      store.editMode = TokenatorEditMode.None;
     }
   });
 
@@ -141,12 +155,17 @@
         store.resetBaseSettings();
 
         break;
-      case TokenatorTool.Style:
-        store.resetStyleSettings();
+      case TokenatorTool.Frame:
+        store.resetFrameSettings();
+
+        break;
+      case TokenatorTool.Background:
+        store.resetBackgroundSettings();
 
         break;
       case TokenatorTool.ThreeD:
         store.clearMask();
+        store.resetCanvasSettings();
 
         break;
       case TokenatorTool.Text:
@@ -165,7 +184,9 @@
   );
 
   const resetLabel = computed(() =>
-    toolTab.value === TokenatorTool.ThreeD ? 'Стереть маску' : 'Сбросить все',
+    toolTab.value === TokenatorTool.ThreeD
+      ? 'Стереть маску и сбросить холст'
+      : 'Сбросить все',
   );
 </script>
 
@@ -194,8 +215,12 @@
                 <ControlsSettingsBase />
               </template>
 
-              <template #style>
-                <ControlsSettingsStyle />
+              <template #frame>
+                <ControlsSettingsFrame />
+              </template>
+
+              <template #background>
+                <ControlsSettingsBackground />
               </template>
 
               <template #3d>
