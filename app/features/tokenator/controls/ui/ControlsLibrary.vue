@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { useFileDialog } from '@vueuse/core';
   import { useTokenatorStore } from '~tokenator/composables';
 
   import type { TokenatorFrame } from '~tokenator/model';
@@ -10,39 +11,26 @@
   );
 
   const frames = computed<Array<TokenatorFrame>>(() => bordersData.value ?? []);
-  const imageInput = ref<HTMLInputElement | null>(null);
-  const frameInput = ref<HTMLInputElement | null>(null);
-  const bgInput = ref<HTMLInputElement | null>(null);
 
-  function onImageUpload(e: Event) {
-    const input = e.target as HTMLInputElement;
-    const file = input.files?.[0];
+  function useImageUpload(handler: (file: File) => void) {
+    const { open, onChange } = useFileDialog({
+      accept: 'image/*',
+      multiple: false,
+      reset: true,
+    });
 
-    if (file) {
-      store.setImage(file);
-      input.value = '';
-    }
+    onChange((files) => {
+      if (files?.[0]) {
+        handler(files[0]);
+      }
+    });
+
+    return open;
   }
 
-  function onFrameUpload(e: Event) {
-    const input = e.target as HTMLInputElement;
-    const file = input.files?.[0];
-
-    if (file) {
-      store.setCustomFrame(file);
-      input.value = '';
-    }
-  }
-
-  function onBgUpload(e: Event) {
-    const input = e.target as HTMLInputElement;
-    const file = input.files?.[0];
-
-    if (file) {
-      store.setCustomBackground(file);
-      input.value = '';
-    }
-  }
+  const openImageUpload = useImageUpload(store.setImage);
+  const openFrameUpload = useImageUpload(store.setCustomFrame);
+  const openBgUpload = useImageUpload(store.setCustomBackground);
 
   watch(
     frames,
@@ -58,20 +46,16 @@
     },
     { immediate: true },
   );
+
+  function getFrameButtonClass(id: string) {
+    return store.currentFrame?.id === id ? 'border-primary' : 'border-default';
+  }
 </script>
 
 <template>
   <div class="grid gap-6">
     <div class="grid gap-2 pt-4">
       <div class="col-span-2">
-        <input
-          ref="imageInput"
-          type="file"
-          class="hidden"
-          accept="image/*"
-          @change="onImageUpload"
-        />
-
         <UFieldGroup
           v-if="store.currentImage"
           class="flex w-full"
@@ -83,7 +67,7 @@
             class="flex-1 justify-center rounded-r-none px-1"
             :ui="{ leadingIcon: 'mr-1' }"
             label="Изображение"
-            @click.left.exact.prevent="imageInput?.click()"
+            @click="openImageUpload()"
           />
 
           <UButton
@@ -91,7 +75,7 @@
             variant="outline"
             icon="i-ttg-x"
             class="rounded-l-none border-l-0 px-2"
-            @click.left.exact.prevent.stop="store.currentImage = null"
+            @click.stop="store.currentImage = null"
           />
         </UFieldGroup>
 
@@ -101,19 +85,11 @@
           color="neutral"
           variant="outline"
           label="Изображение"
-          @click.left.exact.prevent="imageInput?.click()"
+          @click="openImageUpload()"
         />
       </div>
 
       <div>
-        <input
-          ref="frameInput"
-          type="file"
-          class="hidden"
-          accept="image/*"
-          @change="onFrameUpload"
-        />
-
         <UFieldGroup
           v-if="store.customFrame"
           class="flex w-full"
@@ -125,7 +101,7 @@
             class="flex-1 justify-center rounded-r-none px-1"
             :ui="{ leadingIcon: 'mr-1' }"
             label="Рамка"
-            @click.left.exact.prevent="frameInput?.click()"
+            @click="openFrameUpload()"
           />
 
           <UButton
@@ -133,7 +109,7 @@
             variant="outline"
             icon="i-ttg-x"
             class="rounded-l-none border-l-0 px-2"
-            @click.left.exact.prevent.stop="store.customFrame = null"
+            @click.stop="store.customFrame = null"
           />
         </UFieldGroup>
 
@@ -143,19 +119,11 @@
           color="neutral"
           variant="outline"
           label="Рамка"
-          @click.left.exact.prevent="frameInput?.click()"
+          @click="openFrameUpload()"
         />
       </div>
 
       <div>
-        <input
-          ref="bgInput"
-          type="file"
-          class="hidden"
-          accept="image/*"
-          @change="onBgUpload"
-        />
-
         <UFieldGroup
           v-if="store.customBackground"
           class="flex w-full"
@@ -167,7 +135,7 @@
             class="flex-1 justify-center rounded-r-none px-1"
             :ui="{ leadingIcon: 'mr-1' }"
             label="Фон"
-            @click.left.exact.prevent="bgInput?.click()"
+            @click="openBgUpload()"
           />
 
           <UButton
@@ -175,7 +143,7 @@
             variant="outline"
             icon="i-ttg-x"
             class="rounded-l-none border-l-0 px-2"
-            @click.left.exact.prevent.stop="store.customBackground = null"
+            @click.stop="store.customBackground = null"
           />
         </UFieldGroup>
 
@@ -185,27 +153,28 @@
           color="neutral"
           variant="outline"
           label="Фон"
-          @click.left.exact.prevent="bgInput?.click()"
+          @click="openBgUpload()"
         />
       </div>
     </div>
 
     <div
       v-if="frames && frames.length"
-      class="scrollbar-thin max-h-[200px] overflow-x-hidden overflow-y-auto"
+      :class="[
+        'scrollbar-thin -my-2 max-h-48 overflow-x-hidden overflow-y-auto',
+        'mask-[linear-gradient(to_bottom,transparent,black_8px,black_calc(100%-8px),transparent)]',
+      ]"
     >
-      <div class="grid grid-cols-5 gap-2">
+      <div class="grid grid-cols-5 gap-2 py-2">
         <button
-          class="flex aspect-square items-center justify-center rounded-md border-2 border-dashed border-neutral-300 text-neutral-400 hover:border-primary hover:text-primary"
-          :class="
-            !store.currentFrame && !store.customFrame
-              ? 'border-primary text-primary'
-              : ''
-          "
-          @click.left.exact.prevent="
-            store.currentFrame = null;
-            store.customFrame = null;
-          "
+          :class="[
+            store.isNoFrameSelected ? 'border-primary text-primary' : '',
+            'flex aspect-square items-center justify-center',
+            'cursor-pointer overflow-hidden rounded-md p-1',
+            'border-2 border-dashed border-neutral-300 text-neutral-400',
+            'transition-all hover:hover:border-primary hover:text-primary',
+          ]"
+          @click.left.exact.prevent="store.selectNoFrame"
         >
           <UIcon
             name="i-ttg-x"
@@ -216,18 +185,18 @@
         <button
           v-for="frame in frames"
           :key="frame.id"
-          class="relative aspect-square overflow-hidden rounded-md border-2 p-1 transition-all hover:border-primary-500/50"
-          :class="
-            store.currentFrame?.id === frame.id
-              ? 'border-primary'
-              : 'border-default'
-          "
+          :class="[
+            getFrameButtonClass(frame.id),
+            'flex aspect-square items-center justify-center',
+            'cursor-pointer overflow-hidden rounded-md border-2 p-1',
+            'transition-all hover:border-primary-500/50',
+          ]"
           @click.left.exact.prevent="store.selectFrame(frame)"
         >
           <img
             :src="frame.url"
             alt="Рамка"
-            class="size-full object-contain"
+            class="block size-full object-contain"
             loading="lazy"
           />
         </button>
@@ -247,7 +216,7 @@
       variant="soft"
       color="error"
       block
-      @click.left.exact.prevent="store.resetLibrarySettings"
+      @click="store.resetLibrarySettings"
     />
   </div>
 </template>

@@ -3,33 +3,41 @@
 
   const store = useTokenatorStore();
 
-  // Допустимые значения для углов маски
-  const MASK_SIDES_VALUES = [0, 3, 4, 5, 6, 8, 10, 12, 16, 18, 20];
+  const resetMaskScaleButtonClass = computed(() =>
+    store.isMaskScaleChanged
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
 
-  const maskSidesIndex = computed({
-    get: () => {
-      const currentValue = store.transform.maskSides || 0;
+  const resetMaskRotateButtonClass = computed(() =>
+    store.isMaskRotateChanged
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
 
-      return MASK_SIDES_VALUES.indexOf(currentValue);
-    },
-    set: (index: number) => {
-      store.transform.maskSides = MASK_SIDES_VALUES[index] || 0;
-    },
-  });
+  const resetMaskSidesButtonClass = computed(() =>
+    store.isMaskSidesChanged
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
 
-  watchEffect(() => {
-    if (store.transform.maskScale === undefined) {
-      store.transform.maskScale = 1;
-    }
+  const resetPositionButtonClass = computed(() =>
+    store.isPositionChanged
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
 
-    if (store.transform.maskRotate === undefined) {
-      store.transform.maskRotate = 0;
-    }
+  const resetScaleButtonClass = computed(() =>
+    store.isScaleChanged
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
 
-    if (store.transform.maskSides === undefined) {
-      store.transform.maskSides = 0;
-    }
-  });
+  const resetRotateButtonClass = computed(() =>
+    store.isRotateChanged
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
 </script>
 
 <template>
@@ -43,19 +51,15 @@
             <button
               type="button"
               class="flex items-center gap-1.5 text-xs transition-colors"
-              :class="
-                store.transform.maskScale !== 1
-                  ? 'cursor-pointer text-primary-500'
-                  : 'cursor-default text-neutral-500'
-              "
-              :disabled="store.transform.maskScale === 1"
+              :class="resetMaskScaleButtonClass"
+              :disabled="!store.isMaskScaleChanged"
               title="Сбросить масштаб маски"
-              @click.left.exact.prevent="store.transform.maskScale = 1"
+              @click.left.exact.prevent="store.resetMaskScale"
             >
               <span>Размер</span>
 
               <UIcon
-                v-if="store.transform.maskScale !== 1"
+                v-if="store.isMaskScaleChanged"
                 name="i-fluent-arrow-undo-20-regular"
                 class="size-3"
               />
@@ -81,19 +85,15 @@
               <button
                 type="button"
                 class="flex items-center gap-1.5 text-xs transition-colors"
-                :class="
-                  store.transform.maskRotate !== 0
-                    ? 'cursor-pointer text-primary-500'
-                    : 'cursor-default text-neutral-500'
-                "
-                :disabled="store.transform.maskRotate === 0"
+                :class="resetMaskRotateButtonClass"
+                :disabled="!store.isMaskRotateChanged"
                 title="Сбросить поворот маски"
-                @click.left.exact.prevent="store.transform.maskRotate = 0"
+                @click.left.exact.prevent="store.resetMaskRotate"
               >
                 <span>Поворот</span>
 
                 <UIcon
-                  v-if="store.transform.maskRotate !== 0"
+                  v-if="store.isMaskRotateChanged"
                   name="i-fluent-arrow-undo-20-regular"
                   class="size-3"
                 />
@@ -118,19 +118,15 @@
               <button
                 type="button"
                 class="flex items-center gap-1.5 text-xs transition-colors"
-                :class="
-                  store.transform.maskSides !== 0
-                    ? 'cursor-pointer text-primary-500'
-                    : 'cursor-default text-neutral-500'
-                "
-                :disabled="store.transform.maskSides === 0"
+                :class="resetMaskSidesButtonClass"
+                :disabled="!store.isMaskSidesChanged"
                 title="Сбросить форму маски"
-                @click.left.exact.prevent="store.transform.maskSides = 0"
+                @click.left.exact.prevent="store.resetMaskSides"
               >
                 <span>Углы</span>
 
                 <UIcon
-                  v-if="store.transform.maskSides !== 0"
+                  v-if="store.isMaskSidesChanged"
                   name="i-fluent-arrow-undo-20-regular"
                   class="size-3"
                 />
@@ -144,7 +140,7 @@
             </div>
 
             <USlider
-              v-model.number="maskSidesIndex"
+              v-model.number="store.maskSidesIndex"
               size="xs"
               :min="0"
               :max="10"
@@ -155,87 +151,7 @@
       </div>
     </div>
 
-    <div class="grid gap-1">
-      <div class="text-xs font-medium text-neutral-400">Настройка рамки</div>
-
-      <div class="grid grid-cols-2 gap-6">
-        <div class="grid gap-1">
-          <div class="flex h-5 items-center justify-between">
-            <button
-              type="button"
-              class="flex items-center gap-1.5 text-xs transition-colors"
-              :class="
-                store.transform.frameScale !== 1
-                  ? 'cursor-pointer text-primary-500'
-                  : 'cursor-default text-neutral-500'
-              "
-              :disabled="store.transform.frameScale === 1"
-              title="Сбросить масштаб рамки"
-              @click.left.exact.prevent="store.transform.frameScale = 1"
-            >
-              <span>Размер</span>
-
-              <UIcon
-                v-if="store.transform.frameScale !== 1"
-                name="i-fluent-arrow-undo-20-regular"
-                class="size-3"
-              />
-            </button>
-
-            <span class="font-mono text-xs text-neutral-400">{{
-              store.transform.frameScale.toFixed(2)
-            }}</span>
-          </div>
-
-          <USlider
-            v-model.number="store.transform.frameScale"
-            size="xs"
-            :min="0.5"
-            :max="1.5"
-            :step="0.01"
-          />
-        </div>
-
-        <div class="grid gap-1">
-          <div class="flex h-5 items-center justify-between">
-            <button
-              type="button"
-              class="flex items-center gap-1.5 text-xs transition-colors"
-              :class="
-                store.transform.frameRotate !== 0
-                  ? 'cursor-pointer text-primary-500'
-                  : 'cursor-default text-neutral-500'
-              "
-              :disabled="store.transform.frameRotate === 0"
-              title="Сбросить поворот рамки"
-              @click.left.exact.prevent="store.transform.frameRotate = 0"
-            >
-              <span>Поворот рамки</span>
-
-              <UIcon
-                v-if="store.transform.frameRotate !== 0"
-                name="i-fluent-arrow-undo-20-regular"
-                class="size-3"
-              />
-            </button>
-
-            <span class="font-mono text-xs text-neutral-400"
-              >{{ store.transform.frameRotate }}°</span
-            >
-          </div>
-
-          <USlider
-            v-model.number="store.transform.frameRotate"
-            size="xs"
-            :min="-180"
-            :max="180"
-            :step="1"
-          />
-        </div>
-      </div>
-    </div>
-
-    <div class="grid gap-1">
+    <div class="grid gap-2">
       <div class="text-xs font-medium text-neutral-400">Настройка картинки</div>
 
       <div class="grid gap-2">
@@ -244,19 +160,41 @@
             <button
               type="button"
               class="flex items-center gap-1.5 text-xs transition-colors"
-              :class="
-                store.transform.scale !== 1
-                  ? 'cursor-pointer text-primary-500'
-                  : 'cursor-default text-neutral-500'
-              "
-              :disabled="store.transform.scale === 1"
+              :class="resetPositionButtonClass"
+              :disabled="!store.isPositionChanged"
+              title="Вернуть изображение в центр"
+              @click.left.exact.prevent="store.resetPosition"
+            >
+              <span>Позиция</span>
+
+              <UIcon
+                v-if="store.isPositionChanged"
+                name="i-fluent-arrow-undo-20-regular"
+                class="size-3"
+              />
+            </button>
+
+            <span class="font-mono text-xs text-neutral-400"
+              >X: {{ store.transform.position.x.toFixed(0) }} / Y:
+              {{ store.transform.position.y.toFixed(0) }}</span
+            >
+          </div>
+        </div>
+
+        <div class="grid gap-1">
+          <div class="flex h-5 items-center justify-between">
+            <button
+              type="button"
+              class="flex items-center gap-1.5 text-xs transition-colors"
+              :class="resetScaleButtonClass"
+              :disabled="!store.isScaleChanged"
               title="Сбросить общий масштаб"
-              @click.left.exact.prevent="store.transform.scale = 1"
+              @click.left.exact.prevent="store.resetScale"
             >
               <span>Масштаб</span>
 
               <UIcon
-                v-if="store.transform.scale !== 1"
+                v-if="store.isScaleChanged"
                 name="i-fluent-arrow-undo-20-regular"
                 class="size-3"
               />
@@ -281,19 +219,15 @@
             <button
               type="button"
               class="flex items-center gap-1.5 text-xs transition-colors"
-              :class="
-                store.transform.rotate !== 0
-                  ? 'cursor-pointer text-primary-500'
-                  : 'cursor-default text-neutral-500'
-              "
-              :disabled="store.transform.rotate === 0"
+              :class="resetRotateButtonClass"
+              :disabled="!store.isRotateChanged"
               title="Сбросить поворот изображения"
-              @click.left.exact.prevent="store.transform.rotate = 0"
+              @click.left.exact.prevent="store.resetRotation"
             >
-              <span>Поворот изображения</span>
+              <span>Поворот</span>
 
               <UIcon
-                v-if="store.transform.rotate !== 0"
+                v-if="store.isRotateChanged"
                 name="i-fluent-arrow-undo-20-regular"
                 class="size-3"
               />
@@ -305,9 +239,7 @@
                 color="neutral"
                 variant="soft"
                 class="flex h-5 w-6 items-center justify-center text-xs font-medium"
-                @click.left.exact.prevent="
-                  store.transform.flip.x = !store.transform.flip.x
-                "
+                @click.left.exact.prevent="store.toggleFlipX"
               >
                 X
               </UButton>
@@ -317,9 +249,7 @@
                 color="neutral"
                 variant="soft"
                 class="flex h-5 w-6 items-center justify-center text-xs font-medium"
-                @click.left.exact.prevent="
-                  store.transform.flip.y = !store.transform.flip.y
-                "
+                @click.left.exact.prevent="store.toggleFlipY"
               >
                 Y
               </UButton>

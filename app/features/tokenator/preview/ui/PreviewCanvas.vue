@@ -4,7 +4,7 @@
     useTokenatorGestures,
     useTokenatorStore,
   } from '~tokenator/composables';
-  import { drawBrushStroke } from '~tokenator/model';
+  import { drawBrushStroke, TokenatorEditMode } from '~tokenator/model';
 
   const store = useTokenatorStore();
   const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -90,14 +90,6 @@
     render();
   }
 
-  const guideInset = computed(() => {
-    const maskScale = store.transform.maskScale || 1;
-    const baseRadiusPercent = 41;
-    const maskRadiusPercent = baseRadiusPercent * maskScale;
-
-    return `${50 - maskRadiusPercent}%`;
-  });
-
   onMounted(() => {
     initCanvas();
     render();
@@ -112,43 +104,101 @@
   });
 
   const isBrushMode = computed(
-    () => store.brush.enabled && !!store.currentImage,
+    () => store.editMode === TokenatorEditMode.Brush && !!store.currentImage,
   );
+
+  /**
+   * Генерирует SVG path для маски (круг или многоугольник).
+   * Использует ту же логику, что и createMaskPath в draw.ts.
+   *
+   * @returns SVG path строка
+   */
+  const guidePath = computed(() => {
+    const containerSize = 240; // размер контейнера h-60 w-60 = 240px
+    const maskScale = store.transform.maskScale || 1;
+    const baseRadiusPercent = 0.41;
+    const radius = (containerSize / 2) * baseRadiusPercent * maskScale;
+
+    const cx = containerSize / 2;
+    const cy = containerSize / 2;
+    const sides = store.transform.maskSides || 0;
+    const rotation = store.transform.maskRotate || 0;
+
+    if (sides === 0 || sides > 20) {
+      // Круг
+      return `M ${cx + radius}, ${cy}
+              A ${radius},${radius} 0 1,1 ${cx - radius},${cy}
+              A ${radius},${radius} 0 1,1 ${cx + radius},${cy} Z`;
+    }
+
+    // Многоугольник
+    const angleStep = (Math.PI * 2) / sides;
+    const rotationRad = (rotation * Math.PI) / 180;
+    const points: string[] = [];
+
+    for (let i = 0; i <= sides; i++) {
+      const angle = i * angleStep + rotationRad - Math.PI / 2;
+      const x = cx + radius * Math.cos(angle);
+      const y = cy + radius * Math.sin(angle);
+
+      points.push(i === 0 ? `M ${x},${y}` : `L ${x},${y}`);
+    }
+
+    return `${points.join(' ')} Z`;
+  });
+
+  const containerClasses = computed(() => ({
+    'cursor-none': isBrushMode.value,
+    'cursor-grab':
+      store.currentImage &&
+      store.editMode === TokenatorEditMode.None &&
+      !isDragging.value,
+    'cursor-grabbing':
+      isDragging.value && store.editMode === TokenatorEditMode.None,
+    'cursor-move': store.editMode === TokenatorEditMode.Background,
+  }));
+
+  const brushCursorStyle = computed(() => ({
+    left: `${cursorX.value}px`,
+    top: `${cursorY.value}px`,
+    width: `${store.brush.size}px`,
+    height: `${store.brush.size}px`,
+    transform: 'translate(-50%, -50%)',
+  }));
 </script>
 
 <template>
   <div
     ref="containerRef"
     class="relative mx-auto h-60 w-60 shrink-0 touch-none"
-    :class="{
-      'cursor-none': isBrushMode,
-      'cursor-grab': store.currentImage && !store.brush.enabled && !isDragging,
-      'cursor-grabbing': isDragging,
-    }"
+    :class="containerClasses"
   >
     <!-- Brush Cursor -->
     <div
       v-if="isBrushMode && isHovering"
       class="pointer-events-none absolute z-50 rounded-full border border-white bg-white/20 shadow-[0_0_2px_rgba(0,0,0,0.5)]"
-      :style="{
-        left: `${cursorX}px`,
-        top: `${cursorY}px`,
-        width: `${store.brush.size}px`,
-        height: `${store.brush.size}px`,
-        transform: 'translate(-50%, -50%)',
-      }"
+      :style="brushCursorStyle"
     />
 
-    <!-- Guides -->
-    <div
-      class="pointer-events-none absolute rounded-full border border-neutral-200"
-      :style="{ inset: guideInset }"
-    ></div>
+    <!-- Guides (SVG для поддержки полигональных масок) -->
+    <svg
+      class="pointer-events-none absolute inset-0 z-0 size-full"
+      viewBox="0 0 240 240"
+    >
+      <!-- Заливка фона -->
+      <path
+        :d="guidePath"
+        fill="rgba(0, 0, 0, 0.4)"
+      />
 
-    <div
-      class="pointer-events-none absolute rounded-full bg-black/40"
-      :style="{ inset: guideInset }"
-    ></div>
+      <!-- Обводка -->
+      <path
+        :d="guidePath"
+        fill="none"
+        stroke="rgb(229, 229, 229)"
+        stroke-width="1"
+      />
+    </svg>
 
     <canvas
       ref="canvasRef"

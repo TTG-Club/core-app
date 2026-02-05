@@ -1,6 +1,5 @@
 import { useGesture } from '@vueuse/gesture';
-
-import { getScaleFactor } from '../model';
+import { getScaleFactor, TokenatorEditMode } from '~tokenator/model';
 
 import { useTokenatorStore } from './useTokenatorStore';
 
@@ -29,6 +28,8 @@ export function useTokenatorGestures({
   const cursorX = ref(0);
   const cursorY = ref(0);
   const dragStartPos = { x: 0, y: 0 };
+  const bgDragStartPos = { x: 0, y: 0 };
+  const canvasPanStartPos = { x: 0, y: 0 };
   const lastPaintPos = { x: 0, y: 0 };
 
   // Zoom constraints
@@ -39,18 +40,32 @@ export function useTokenatorGestures({
   useGesture(
     {
       onDragStart: ({ event }) => {
-        if (isDisabled.value || !store.currentImage || isPinching.value) {
+        if (isDisabled.value || isPinching.value) {
           return;
         }
 
-        // Brush mode - start painting
-        if (store.brush.enabled && containerRef.value) {
+        // Canvas pan mode
+        if (store.canvasViewport.isPanning) {
+          isDragging.value = true;
+          canvasPanStartPos.x = store.canvasViewport.pan.x;
+          canvasPanStartPos.y = store.canvasViewport.pan.y;
+
+          return;
+        }
+
+        // Brush mode - start painting immediately on click
+        if (store.editMode === TokenatorEditMode.Brush && containerRef.value) {
+          if (!store.currentImage) {
+            return;
+          }
+
           isPainting.value = true;
 
           const rect = containerRef.value.getBoundingClientRect();
           const x = event.clientX - rect.left;
           const y = event.clientY - rect.top;
 
+          // Рисуем сразу при клике (без prevX/prevY - будет круг)
           paintMask(x, y);
 
           lastPaintPos.x = x;
@@ -59,19 +74,44 @@ export function useTokenatorGestures({
           return;
         }
 
-        // Drag mode
+        // Background drag mode
+        if (store.editMode === TokenatorEditMode.Background) {
+          isDragging.value = true;
+          bgDragStartPos.x = store.backgroundStyle.position.x;
+          bgDragStartPos.y = store.backgroundStyle.position.y;
+
+          return;
+        }
+
+        // Image drag mode
+        if (!store.currentImage) {
+          return;
+        }
+
         isDragging.value = true;
         dragStartPos.x = store.transform.position.x;
         dragStartPos.y = store.transform.position.y;
       },
 
       onDrag: ({ xy: [x, y], movement: [mx, my], pinching, dragging }) => {
-        if (isDisabled.value || !store.currentImage || pinching || !dragging) {
+        if (isDisabled.value || pinching || !dragging) {
+          return;
+        }
+
+        // Canvas pan mode
+        if (store.canvasViewport.isPanning && isDragging.value) {
+          store.canvasViewport.pan.x = canvasPanStartPos.x + mx;
+          store.canvasViewport.pan.y = canvasPanStartPos.y + my;
+
           return;
         }
 
         // Brush mode
-        if (store.brush.enabled) {
+        if (store.editMode === TokenatorEditMode.Brush) {
+          if (!store.currentImage) {
+            return;
+          }
+
           if (containerRef.value) {
             const rect = containerRef.value.getBoundingClientRect();
             const localX = x - rect.left;
@@ -86,6 +126,30 @@ export function useTokenatorGestures({
             lastPaintPos.y = localY;
           }
 
+          return;
+        }
+
+        // Background drag mode
+        if (
+          store.editMode === TokenatorEditMode.Background &&
+          isDragging.value
+        ) {
+          const scaleFactor = getScaleFactor(
+            containerRef.value,
+            scaleReferenceSize,
+          );
+
+          store.backgroundStyle.position.x =
+            bgDragStartPos.x + mx * scaleFactor;
+
+          store.backgroundStyle.position.y =
+            bgDragStartPos.y + my * scaleFactor;
+
+          return;
+        }
+
+        // Image drag mode
+        if (!store.currentImage) {
           return;
         }
 
@@ -144,7 +208,11 @@ export function useTokenatorGestures({
       onPinch: ({ event, direction: [dir], velocities: [velocity] }) => {
         event.preventDefault();
 
-        if (isDisabled.value || !store.currentImage || store.brush.enabled) {
+        if (
+          isDisabled.value ||
+          !store.currentImage ||
+          store.editMode !== 'none'
+        ) {
           return;
         }
 
@@ -187,7 +255,17 @@ export function useTokenatorGestures({
 
         event.preventDefault();
 
-        if (!store.currentImage || store.brush.enabled) {
+        // Canvas zoom mode (приоритет над image zoom)
+        if (store.canvasViewport.isPanning) {
+          const zoomSpeed = 0.001;
+          const newZoom = store.canvasViewport.zoom - deltaY * zoomSpeed;
+
+          store.canvasViewport.zoom = Math.min(Math.max(newZoom, 0.5), 3);
+
+          return;
+        }
+
+        if (!store.currentImage || store.editMode !== 'none') {
           return;
         }
 
@@ -204,7 +282,8 @@ export function useTokenatorGestures({
       domTarget: containerRef,
       eventOptions: { passive: false },
       drag: {
-        filterTaps: true,
+        filterTaps: false, // Разрешаем обработку кликов без движения
+        threshold: 0, // Убираем порог для начала драга
       },
       pinch: {
         rubberband: true,

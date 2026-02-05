@@ -1,6 +1,10 @@
 import { useElementSize, useRafFn } from '@vueuse/core';
-
-import { CANVAS_SIZE, drawBrushStroke, drawToken } from '../model';
+import {
+  BrushMode,
+  CANVAS_SIZE,
+  drawBrushStroke,
+  drawToken,
+} from '~tokenator/model';
 
 import { useTokenatorStore } from './useTokenatorStore';
 
@@ -40,90 +44,6 @@ export function useTokenatorCanvas(
   } else {
     maskCanvas.width = MASK_SIDE;
     maskCanvas.height = MASK_SIDE;
-  }
-
-  /**
-   * Инициализирует canvas и маску, устанавливает размеры и запускает первую отрисовку.
-   */
-  function initCanvas() {
-    if (!canvasRef.value) {
-      return;
-    }
-
-    // Маска теперь фиксированного размера, поэтому не меняем её размер при инициализации
-    render();
-  }
-
-  /**
-   * Рисует на маске в указанных координатах.
-   * Использует настройки кисти из стора (размер, режим).
-   * Автоматически пересчитывает координаты экрана в координаты маски.
-   *
-   * @param x - Координата X
-   * @param y - Координата Y
-   * @param prevX - Предыдущая координата X (для интерполяции линии)
-   * @param prevY - Предыдущая координата Y (для интерполяции линии)
-   */
-  function paintMask(x: number, y: number, prevX?: number, prevY?: number) {
-    const ctx = maskCanvas.getContext('2d');
-
-    if (!ctx || !canvasRef.value) {
-      return;
-    }
-
-    const w = width.value || canvasRef.value.clientWidth || 300;
-    const h = height.value || canvasRef.value.clientHeight || 300;
-
-    // Вычисляем размер токена на экране (логика должна совпадать с draw)
-    let tokenSize = 500;
-
-    if (clip) {
-      tokenSize = Math.min(w, h);
-    } else {
-      tokenSize = Math.min(500, Math.min(w, h) - 40);
-    }
-
-    // Коэффициент масштабирования между экраном и маской
-    const scale = MASK_SIDE / tokenSize;
-
-    // Центры координат
-    const screenCx = w / 2;
-    const screenCy = h / 2;
-    const maskCx = MASK_SIDE / 2;
-    const maskCy = MASK_SIDE / 2;
-
-    // Преобразование координат:
-    // 1. Сдвигаем к центру экрана (0,0)
-    // 2. Масштабируем
-    // 3. Сдвигаем к центру маски
-    const mx = (x - screenCx) * scale + maskCx;
-    const my = (y - screenCy) * scale + maskCy;
-
-    let mPrevX: number | undefined;
-    let mPrevY: number | undefined;
-
-    if (prevX !== undefined && prevY !== undefined) {
-      mPrevX = (prevX - screenCx) * scale + maskCx;
-      mPrevY = (prevY - screenCy) * scale + maskCy;
-    }
-
-    try {
-      drawBrushStroke({
-        ctx,
-        x: mx,
-        y: my,
-        prevX: mPrevX,
-        prevY: mPrevY,
-        size: store.brush.size * scale, // Размер кисти тоже масштабируем
-        mode: store.brush.mode,
-        color: store.brush.mode === 'add' ? 'white' : 'black',
-      });
-    } catch (e) {
-      console.error('Failed to paint mask:', e);
-    }
-
-    store.maskVersion++;
-    render();
   }
 
   /**
@@ -188,7 +108,7 @@ export function useTokenatorCanvas(
    * Запускает отрисовку в requestAnimationFrame для оптимальной производительности.
    * Использует useRafFn из VueUse для предотвращения множественных перерисовок.
    */
-  const { pause, resume } = useRafFn(
+  const { pause, resume: render } = useRafFn(
     () => {
       draw();
       pause(); // Отрисовали один раз и остановились
@@ -196,8 +116,98 @@ export function useTokenatorCanvas(
     { immediate: false },
   );
 
-  function render() {
-    resume(); // Запускаем отрисовку в следующем frame
+  /**
+   * Инициализирует canvas и маску, устанавливает размеры и запускает первую отрисовку.
+   */
+  function initCanvas() {
+    if (!canvasRef.value) {
+      return;
+    }
+
+    // Маска теперь фиксированного размера, поэтому не меняем её размер при инициализации
+    render();
+  }
+
+  /**
+   * Рисует на маске в указанных координатах.
+   * Использует настройки кисти из стора (размер, режим).
+   * Автоматически пересчитывает координаты экрана в координаты маски с учетом трансформации холста.
+   *
+   * @param x - Координата X
+   * @param y - Координата Y
+   * @param prevX - Предыдущая координата X (для интерполяции линии)
+   * @param prevY - Предыдущая координата Y (для интерполяции линии)
+   */
+  function paintMask(x: number, y: number, prevX?: number, prevY?: number) {
+    const ctx = maskCanvas.getContext('2d');
+
+    if (!ctx || !canvasRef.value) {
+      return;
+    }
+
+    const w = width.value || canvasRef.value.clientWidth || 300;
+    const h = height.value || canvasRef.value.clientHeight || 300;
+
+    // Вычисляем размер токена на экране (логика должна совпадать с draw)
+    let tokenSize = 500;
+
+    if (clip) {
+      tokenSize = Math.min(w, h);
+    } else {
+      tokenSize = Math.min(500, Math.min(w, h) - 40);
+    }
+
+    // Коэффициент масштабирования между экраном и маской
+    const scale = MASK_SIDE / tokenSize;
+
+    // Центры координат
+    const screenCx = w / 2;
+    const screenCy = h / 2;
+    const maskCx = MASK_SIDE / 2;
+    const maskCy = MASK_SIDE / 2;
+
+    // Получаем трансформацию холста
+    const { zoom, pan } = store.canvasViewport;
+
+    // Преобразование координат с учетом трансформации холста:
+    // 1. Сдвигаем к центру экрана (0,0)
+    // 2. Применяем обратную трансформацию холста (zoom и pan)
+    // 3. Масштабируем к размеру маски
+    // 4. Сдвигаем к центру маски
+    const relX = (x - screenCx - pan.x) / zoom;
+    const relY = (y - screenCy - pan.y) / zoom;
+
+    const mx = relX * scale + maskCx;
+    const my = relY * scale + maskCy;
+
+    let mPrevX: number | undefined;
+    let mPrevY: number | undefined;
+
+    if (prevX !== undefined && prevY !== undefined) {
+      const relPrevX = (prevX - screenCx - pan.x) / zoom;
+      const relPrevY = (prevY - screenCy - pan.y) / zoom;
+
+      mPrevX = relPrevX * scale + maskCx;
+      mPrevY = relPrevY * scale + maskCy;
+    }
+
+    try {
+      drawBrushStroke({
+        ctx,
+        x: mx,
+        y: my,
+        prevX: mPrevX,
+        prevY: mPrevY,
+        size: store.brush.size * scale, // Размер кисти тоже масштабируем
+        mode: store.brush.mode,
+        color: store.brush.mode === BrushMode.Add ? 'white' : 'black',
+      });
+    } catch (e) {
+      console.error('Failed to paint mask:', e);
+    }
+
+    store.maskVersion++;
+    render();
   }
 
   /**
