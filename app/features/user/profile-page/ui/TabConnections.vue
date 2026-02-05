@@ -1,5 +1,7 @@
 <script setup lang="ts">
-  import { SocialConnections } from '../model';
+  import { useConfirmModal } from '../composables/useConfirmModal';
+  import { useUserProfile } from '../composables/useUserProfile';
+  import { ProfileCardUI, SocialConnections } from '../model';
 
   import type { ConnectedSocial } from '../model';
 
@@ -17,46 +19,66 @@
     })),
   );
 
+  const { isLoading, connectSocial, disconnectSocial } = useUserProfile();
+  const { confirm } = useConfirmModal();
+
   /**
    * Обработчик подключения социальной сети
    */
-  function handleConnect(_id: string) {
-    // TODO: Реализовать подключение через API
+  async function handleConnect(id: string) {
+    await connectSocial(id);
   }
 
   /**
    * Обработчик отключения социальной сети
    */
-  function handleDisconnect(_id: string) {
-    // TODO: Реализовать отключение через API
+  async function handleDisconnect(id: string, name: string) {
+    const confirmed = await confirm({
+      title: `Отключить ${name}?`,
+      description:
+        'Вы больше не сможете использовать этот аккаунт для входа на сайт.',
+      confirmLabel: 'Отключить',
+      color: 'error',
+    });
+
+    if (confirmed) {
+      await disconnectSocial(id);
+    }
   }
 </script>
 
 <template>
   <div class="space-y-6">
     <!-- Подключенные аккаунты -->
-    <UCard :ui="{ header: 'px-6 py-4', body: 'p-6' }">
+    <UCard :ui="ProfileCardUI">
       <template #header>
         <div class="flex items-center gap-2">
           <UIcon
             name="i-fluent-plug-connected-24-regular"
             class="h-5 w-5 text-primary-500"
+            aria-hidden="true"
           />
 
           <h3 class="font-semibold text-primary">Подключенные аккаунты</h3>
         </div>
       </template>
 
-      <div class="space-y-4">
+      <div
+        class="space-y-4"
+        role="list"
+        aria-label="Подключенные социальные сети"
+      >
         <div
           v-for="connection in connections"
           :key="connection.id"
           class="hover:border-accent flex items-center justify-between gap-4 rounded-lg border border-muted bg-elevated p-4 transition-colors"
+          role="listitem"
         >
           <!-- Иконка и информация -->
           <div class="flex flex-1 items-center gap-3">
             <div
               class="bg-surface flex h-10 w-10 items-center justify-center rounded-lg"
+              aria-hidden="true"
             >
               <UIcon
                 :name="connection.icon"
@@ -86,7 +108,11 @@
             color="error"
             variant="outline"
             size="sm"
-            @click.left.exact.prevent="handleDisconnect(connection.id)"
+            :disabled="isLoading"
+            :aria-label="`Отключить ${connection.name}`"
+            @click.left.exact.prevent="
+              handleDisconnect(connection.id, connection.name)
+            "
           >
             Отключить
           </UButton>
@@ -96,6 +122,9 @@
             color="primary"
             variant="outline"
             size="sm"
+            :disabled="isLoading"
+            :loading="isLoading"
+            :aria-label="`Подключить ${connection.name}`"
             @click.left.exact.prevent="handleConnect(connection.id)"
           >
             Подключить

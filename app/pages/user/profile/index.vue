@@ -87,7 +87,7 @@
                 <UAvatar
                   :alt="profile?.username"
                   size="3xl"
-                  class="relative z-10 h-32 w-32 text-4xl shadow-2xl ring-4 ring-gray-950 transition-transform duration-200 group-active:scale-95"
+                  class="relative z-10 h-32 w-32 text-4xl shadow-2xl ring-4 ring-default transition-transform duration-200 group-active:scale-95"
                 />
 
                 <UButton
@@ -99,7 +99,7 @@
                 />
               </div>
 
-              <h2 class="mb-2 text-3xl font-bold tracking-tight text-white">
+              <h2 class="mb-2 text-3xl font-bold tracking-tight text-primary">
                 {{ profile?.username || 'Путешественник' }}
               </h2>
 
@@ -108,28 +108,26 @@
                   color="primary"
                   variant="subtle"
                   size="md"
-                  >Игрок</UBadge
+                  >Авантюрист</UBadge
                 >
 
-                <span class="text-gray-500">•</span>
+                <span class="text-muted">•</span>
 
-                <span class="font-medium text-gray-400">{{
-                  profile?.email
-                }}</span>
+                <span class="font-medium text-muted">{{ profile?.email }}</span>
               </div>
 
               <!-- Mini Stats -->
               <div
-                class="grid w-full grid-cols-3 gap-px overflow-hidden rounded-xl border border-gray-800/50 bg-gray-800/50"
+                class="bg-surface grid w-full grid-cols-3 gap-px overflow-hidden rounded-xl border border-default"
               >
                 <div
-                  class="cursor-default p-3 transition-colors hover:bg-white/5"
+                  class="cursor-default p-3 transition-colors hover:bg-muted"
                 >
                   <div class="opacity-50 blur-md filter select-none">
-                    <div class="text-xl font-bold text-white">12</div>
+                    <div class="text-xl font-bold text-primary">12</div>
 
                     <div
-                      class="text-[10px] font-semibold tracking-wider text-gray-500 uppercase"
+                      class="text-[10px] font-semibold tracking-wider text-muted uppercase"
                     >
                       Уровень
                     </div>
@@ -137,10 +135,10 @@
                 </div>
 
                 <div
-                  class="cursor-default p-3 transition-colors hover:bg-white/5"
+                  class="cursor-default p-3 transition-colors hover:bg-muted"
                 >
                   <div class="opacity-50 blur-md filter select-none">
-                    <div class="text-xl font-bold text-white">4</div>
+                    <div class="text-xl font-bold text-primary">4</div>
 
                     <div
                       class="text-[10px] font-semibold tracking-wider text-gray-500 uppercase"
@@ -151,10 +149,10 @@
                 </div>
 
                 <div
-                  class="cursor-default p-3 transition-colors hover:bg-white/5"
+                  class="cursor-default p-3 transition-colors hover:bg-muted"
                 >
                   <div class="opacity-50 blur-md filter select-none">
-                    <div class="text-xl font-bold text-white">28</div>
+                    <div class="text-xl font-bold text-primary">28</div>
 
                     <div
                       class="text-[10px] font-semibold tracking-wider text-gray-500 uppercase"

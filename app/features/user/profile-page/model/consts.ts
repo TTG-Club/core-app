@@ -14,6 +14,14 @@ export const ProfileTabs = {
 } as const;
 
 /**
+ * Общая UI конфигурация для карточек профиля
+ */
+export const ProfileCardUI = {
+  header: 'px-6 py-4',
+  body: 'p-6',
+} as const;
+
+/**
  * Элементы табов для навигации
  */
 export const ProfileTabItems = [
@@ -36,6 +44,7 @@ export const ProfileTabItems = [
     value: ProfileTabs.STATISTICS,
     label: 'Статистика',
     icon: 'i-fluent-data-bar-vertical-24-regular',
+    disabled: true,
   },
   {
     value: ProfileTabs.CONNECTIONS,
