@@ -6,22 +6,22 @@
 
   import type { CreatureDetailResponse } from '~bestiary/types';
 
-  defineProps<
+  type Props = Pick<
+    CreatureDetailResponse,
+    'ac' | 'cr' | 'initiative' | 'hit' | 'speed' | 'abilities'
+  > &
     Pick<
-      CreatureDetailResponse,
-      'ac' | 'cr' | 'initiative' | 'hit' | 'speed' | 'abilities'
-    > &
-      Pick<
-        Partial<CreatureDetailResponse>,
-        | 'skills'
-        | 'equipments'
-        | 'vulnerability'
-        | 'resistance'
-        | 'immunity'
-        | 'sense'
-        | 'languages'
-      >
-  >();
+      Partial<CreatureDetailResponse>,
+      | 'skills'
+      | 'equipments'
+      | 'vulnerability'
+      | 'resistance'
+      | 'immunity'
+      | 'sense'
+      | 'languages'
+    >;
+
+  defineProps<Props>();
 </script>
 
 <template>
@@ -36,7 +36,12 @@
       <div :class="$style.item">
         <span :class="$style.name">Инициатива: </span>
 
-        <span>{{ initiative }}</span>
+        <span>
+          <DiceRollerLink :notation="`1к20${initiative.value}`">
+            {{ initiative.value }}
+          </DiceRollerLink>
+          ({{ initiative.label }})
+        </span>
       </div>
     </div>
 
@@ -63,12 +68,25 @@
     <CreatureAbilitiesTable v-bind="abilities" />
 
     <div
-      v-if="skills"
+      v-if="skills?.length"
       :class="$style.item"
     >
       <span :class="$style.name">Навыки: </span>
 
-      <span>{{ skills }}</span>
+      <span>
+        <template
+          v-for="(skill, index) in skills"
+          :key="`${skill.label}-${index}`"
+        >
+          <span v-if="index > 0">, </span>
+
+          <span>{{ skill.label }} </span>&nbsp;
+
+          <DiceRollerLink :notation="`1к20${skill.value}`">
+            {{ skill.value }}
+          </DiceRollerLink>
+        </template>
+      </span>
     </div>
 
     <div
