@@ -8,6 +8,7 @@
 export const ProfileTabs = {
   GENERAL: 'general',
   SECURITY: 'security',
+  SETTINGS: 'settings',
   STATISTICS: 'statistics',
   CONNECTIONS: 'connections',
 } as const;
@@ -27,6 +28,11 @@ export const ProfileTabItems = [
     icon: 'i-fluent-shield-24-regular',
   },
   {
+    value: ProfileTabs.SETTINGS,
+    label: 'Настройки / фильтры',
+    icon: 'i-fluent-settings-24-regular',
+  },
+  {
     value: ProfileTabs.STATISTICS,
     label: 'Статистика',
     icon: 'i-fluent-data-bar-vertical-24-regular',
@@ -35,6 +41,7 @@ export const ProfileTabItems = [
     value: ProfileTabs.CONNECTIONS,
     label: 'Подключения',
     icon: 'i-fluent-plug-connected-24-regular',
+    disabled: true,
   },
 ];
 
