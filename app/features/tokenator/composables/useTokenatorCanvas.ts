@@ -1,6 +1,10 @@
 import { useElementSize, useRafFn } from '@vueuse/core';
-
-import { CANVAS_SIZE, drawBrushStroke, drawToken } from '../model';
+import {
+  BrushMode,
+  CANVAS_SIZE,
+  drawBrushStroke,
+  drawToken,
+} from '~tokenator/model';
 
 import { useTokenatorStore } from './useTokenatorStore';
 
@@ -41,6 +45,76 @@ export function useTokenatorCanvas(
     maskCanvas.width = MASK_SIDE;
     maskCanvas.height = MASK_SIDE;
   }
+
+  /**
+   * Выполняет отрисовку токена на canvas.
+   * Автоматически обновляет размеры canvas и маски при изменении размера контейнера.
+   */
+  async function draw() {
+    if (!canvasRef.value) {
+      return;
+    }
+
+    const ctx = canvasRef.value.getContext('2d');
+
+    if (!ctx) {
+      return;
+    }
+
+    const w = width.value || canvasRef.value.clientWidth || 300;
+    const h = height.value || canvasRef.value.clientHeight || 300;
+
+    // Обновляем размер только экранного канваса
+    if (canvasRef.value.width !== w || canvasRef.value.height !== h) {
+      canvasRef.value.width = w;
+      canvasRef.value.height = h;
+    }
+
+    let tokenSize = 500;
+
+    if (clip) {
+      tokenSize = Math.min(w, h);
+    } else {
+      tokenSize = Math.min(500, Math.min(w, h) - 40);
+    }
+
+    // Указываем, что размер токена на маске равен полному размеру маски
+    store.maskTokenSize = MASK_SIDE;
+
+    try {
+      await drawToken({
+        ctx,
+        backgroundColor: store.backgroundColor,
+        currentImage: store.currentImage,
+        activeFrameUrl: store.activeFrameUrl,
+        frameTint: store.frameTint,
+        transform: store.transform,
+        clip,
+        viewSize: { width: w, height: h },
+        tokenSize,
+        maskImage: store.maskImageCanvas || maskCanvas,
+        maskTokenSize: store.maskTokenSize,
+        halfMask: store.brush.halfMask,
+        customBackground: store.customBackground,
+        backgroundStyle: store.backgroundStyle,
+        texts: store.texts,
+      });
+    } catch (error) {
+      console.error('Failed to draw token:', error);
+    }
+  }
+
+  /**
+   * Запускает отрисовку в requestAnimationFrame для оптимальной производительности.
+   * Использует useRafFn из VueUse для предотвращения множественных перерисовок.
+   */
+  const { pause, resume: render } = useRafFn(
+    () => {
+      draw();
+      pause(); // Отрисовали один раз и остановились
+    },
+    { immediate: false },
+  );
 
   /**
    * Инициализирует canvas и маску, устанавливает размеры и запускает первую отрисовку.
@@ -126,7 +200,7 @@ export function useTokenatorCanvas(
         prevY: mPrevY,
         size: store.brush.size * scale, // Размер кисти тоже масштабируем
         mode: store.brush.mode,
-        color: store.brush.mode === 'add' ? 'white' : 'black',
+        color: store.brush.mode === BrushMode.Add ? 'white' : 'black',
       });
     } catch (e) {
       console.error('Failed to paint mask:', e);
@@ -134,80 +208,6 @@ export function useTokenatorCanvas(
 
     store.maskVersion++;
     render();
-  }
-
-  /**
-   * Выполняет отрисовку токена на canvas.
-   * Автоматически обновляет размеры canvas и маски при изменении размера контейнера.
-   */
-  async function draw() {
-    if (!canvasRef.value) {
-      return;
-    }
-
-    const ctx = canvasRef.value.getContext('2d');
-
-    if (!ctx) {
-      return;
-    }
-
-    const w = width.value || canvasRef.value.clientWidth || 300;
-    const h = height.value || canvasRef.value.clientHeight || 300;
-
-    // Обновляем размер только экранного канваса
-    if (canvasRef.value.width !== w || canvasRef.value.height !== h) {
-      canvasRef.value.width = w;
-      canvasRef.value.height = h;
-    }
-
-    let tokenSize = 500;
-
-    if (clip) {
-      tokenSize = Math.min(w, h);
-    } else {
-      tokenSize = Math.min(500, Math.min(w, h) - 40);
-    }
-
-    // Указываем, что размер токена на маске равен полному размеру маски
-    store.maskTokenSize = MASK_SIDE;
-
-    try {
-      await drawToken({
-        ctx,
-        backgroundColor: store.backgroundColor,
-        currentImage: store.currentImage,
-        activeFrameUrl: store.activeFrameUrl,
-        frameTint: store.frameTint,
-        transform: store.transform,
-        clip,
-        viewSize: { width: w, height: h },
-        tokenSize,
-        maskImage: store.maskImageCanvas || maskCanvas,
-        maskTokenSize: store.maskTokenSize,
-        halfMask: store.brush.halfMask,
-        customBackground: store.customBackground,
-        backgroundStyle: store.backgroundStyle,
-        texts: store.texts,
-      });
-    } catch (error) {
-      console.error('Failed to draw token:', error);
-    }
-  }
-
-  /**
-   * Запускает отрисовку в requestAnimationFrame для оптимальной производительности.
-   * Использует useRafFn из VueUse для предотвращения множественных перерисовок.
-   */
-  const { pause, resume } = useRafFn(
-    () => {
-      draw();
-      pause(); // Отрисовали один раз и остановились
-    },
-    { immediate: false },
-  );
-
-  function render() {
-    resume(); // Запускаем отрисовку в следующем frame
   }
 
   /**

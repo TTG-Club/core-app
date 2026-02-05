@@ -7,6 +7,7 @@
     DEFAULT_FRAME_TINT,
     DEFAULT_TRANSFORM,
     drawToken,
+    TokenatorEditMode,
     TokenatorTab,
     TokenatorTool,
   } from '~tokenator/model';
@@ -104,7 +105,7 @@
   watch(toolTab, (tool) => {
     // Сбрасываем режим редактирования при переходе на вкладки, где он не нужен
     if (tool !== TokenatorTool.ThreeD && tool !== TokenatorTool.Background) {
-      store.editMode = 'none';
+      store.editMode = TokenatorEditMode.None;
     }
   });
 

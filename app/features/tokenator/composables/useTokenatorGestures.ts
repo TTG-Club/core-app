@@ -1,6 +1,5 @@
 import { useGesture } from '@vueuse/gesture';
-
-import { getScaleFactor } from '../model';
+import { getScaleFactor, TokenatorEditMode } from '~tokenator/model';
 
 import { useTokenatorStore } from './useTokenatorStore';
 
@@ -55,7 +54,7 @@ export function useTokenatorGestures({
         }
 
         // Brush mode - start painting immediately on click
-        if (store.editMode === 'brush' && containerRef.value) {
+        if (store.editMode === TokenatorEditMode.Brush && containerRef.value) {
           if (!store.currentImage) {
             return;
           }
@@ -76,7 +75,7 @@ export function useTokenatorGestures({
         }
 
         // Background drag mode
-        if (store.editMode === 'background') {
+        if (store.editMode === TokenatorEditMode.Background) {
           isDragging.value = true;
           bgDragStartPos.x = store.backgroundStyle.position.x;
           bgDragStartPos.y = store.backgroundStyle.position.y;
@@ -108,7 +107,7 @@ export function useTokenatorGestures({
         }
 
         // Brush mode
-        if (store.editMode === 'brush') {
+        if (store.editMode === TokenatorEditMode.Brush) {
           if (!store.currentImage) {
             return;
           }
@@ -131,7 +130,10 @@ export function useTokenatorGestures({
         }
 
         // Background drag mode
-        if (store.editMode === 'background' && isDragging.value) {
+        if (
+          store.editMode === TokenatorEditMode.Background &&
+          isDragging.value
+        ) {
           const scaleFactor = getScaleFactor(
             containerRef.value,
             scaleReferenceSize,

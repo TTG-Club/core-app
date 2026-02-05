@@ -1,82 +1,12 @@
-import { useRefHistory } from '@vueuse/core';
-import { liveQuery } from 'dexie';
-import { cloneDeep } from 'es-toolkit';
 import { defineStore } from 'pinia';
-import { v4 as uuid } from 'uuid';
+import { BrushMode, TokenatorEditMode } from '~tokenator/model';
 
-import {
-  BACKGROUND_BLEND_MODES,
-  BLEND_MODES,
-  DEFAULT_BACKGROUND_STYLE,
-  DEFAULT_BRUSH_CONFIG,
-  DEFAULT_CANVAS_VIEWPORT,
-  DEFAULT_COLORS,
-  DEFAULT_FRAME_TINT,
-  DEFAULT_TEXT_CONFIG,
-  DEFAULT_TRANSFORM,
-} from '../model/consts';
-import { db } from '../model/db';
-import {
-  validateBrushSize,
-  validateFontSize,
-  validateRotation,
-  validateScale,
-} from '../model/utils';
-
-import type {
-  BackgroundStyle,
-  BrushState,
-  CanvasViewport,
-  FrameTint,
-  TokenatorEditMode,
-  TokenatorFrame,
-  TokenText,
-  TransformState,
-} from '../model/types';
-
-/**
- * Helper function to sync a ref with Dexie DB.
- * Handles 2-way binding with loop protection.
- */
-function useTokenatorSetting<T>(key: string, defaultValue: T) {
-  const data = ref<T>(defaultValue) as Ref<T>;
-
-  let isSyncing = false;
-
-  // Sync from DB (Reactive read)
-  if (import.meta.client) {
-    liveQuery(async () => {
-      const result = await db.settings.get(key);
-
-      return result ? (result.value as T) : defaultValue;
-    }).subscribe((val) => {
-      isSyncing = true;
-      data.value = val;
-
-      nextTick(() => {
-        isSyncing = false;
-      });
-    });
-  }
-
-  // Sync to DB (Write on change)
-  watch(
-    data,
-    async (newValue) => {
-      if (isSyncing) {
-        return;
-      }
-
-      // Use raw value to avoid proxy issues and deep clone to ensure data integrity
-      const rawValue = cloneDeep(newValue);
-
-      await db.settings.put({ key, value: rawValue });
-    },
-    { deep: true },
-  );
-
-  return { data };
-}
+import { useTokenatorBrush } from './useTokenatorBrush';
+import { useTokenatorLayers } from './useTokenatorLayers';
+import { useTokenatorStyles } from './useTokenatorStyles';
+import { useTokenatorTexts } from './useTokenatorTexts';
+import { useTokenatorTransforms } from './useTokenatorTransforms';
+import { useTokenatorViewport } from './useTokenatorViewport';
 
 /**
  * Основной Pinia store для редактора токенов.
@@ -84,140 +14,161 @@ function useTokenatorSetting<T>(key: string, defaultValue: T) {
  * Поддерживает персистентность через IndexedDB (Dexie) и undo/redo функциональность.
  */
 export const useTokenatorStore = defineStore('tokenator', () => {
-  // Изображения
-  const currentImage = ref<string | null>(null);
-  const currentFrame = ref<TokenatorFrame | null>(null);
-  const customFrame = ref<string | null>(null);
-  const customBackground = ref<string | null>(null);
-
-  // Текст
-  const texts = ref<TokenText[]>([]);
-  const activeTextId = ref<string | null>(null);
-
-  // Маска
-  const maskImageCanvas = ref<HTMLCanvasElement | null>(null);
-  const maskVersion = ref(0);
-  const maskTokenSize = ref(500);
-
-  // Цвета и стили (с IDB персистентностью)
-  const { data: backgroundColor } = useTokenatorSetting<string>(
-    'background-color',
-    DEFAULT_COLORS.BACKGROUND,
-  );
-
-  const { data: frameTint } = useTokenatorSetting<FrameTint>(
-    'frame-tint',
-    DEFAULT_FRAME_TINT,
-  );
-
-  const { data: backgroundStyle } = useTokenatorSetting<BackgroundStyle>(
-    'background-style',
-    DEFAULT_BACKGROUND_STYLE,
-  );
-
-  // Трансформации (с IDB и undo/redo)
-  const { data: transform } = useTokenatorSetting<TransformState>(
-    'transform',
-    DEFAULT_TRANSFORM,
-  );
-
-  const { undo, redo, canUndo, canRedo } = useRefHistory(transform, {
-    deep: true,
-    capacity: 20,
-  });
-
-  // Кисть (с IDB)
-  const { data: brush } = useTokenatorSetting<BrushState>(
-    'brush',
-    DEFAULT_BRUSH_CONFIG,
-  );
-
-  // Canvas viewport (с IDB)
-  const { data: canvasViewport } = useTokenatorSetting<CanvasViewport>(
-    'canvas-viewport',
-    DEFAULT_CANVAS_VIEWPORT,
-  );
+  // Modules
+  const layers = useTokenatorLayers();
+  const texts = useTokenatorTexts();
+  const transforms = useTokenatorTransforms();
+  const styles = useTokenatorStyles();
+  const brushModule = useTokenatorBrush();
+  const viewport = useTokenatorViewport();
 
   // Режим редактирования (не сохраняется в IDB)
-  const editMode = ref<TokenatorEditMode>('none');
+  const editMode = ref<TokenatorEditMode>(TokenatorEditMode.None);
 
-  // Computed
-  const activeFrameUrl = computed(
-    () => customFrame.value || currentFrame.value?.url || null,
+  // Computed Properties (Cross-module)
+  const isBackgroundMoveMode = computed(
+    () => editMode.value === TokenatorEditMode.Background,
   );
 
+  const isBrushMode = computed(
+    () =>
+      editMode.value === TokenatorEditMode.Brush && !!layers.currentImage.value,
+  );
+
+  const isMoveMode = computed(
+    () =>
+      editMode.value === TokenatorEditMode.None &&
+      !viewport.canvasViewport.value.isPanning,
+  );
+
+  const isBrushAddMode = computed(
+    () =>
+      editMode.value === TokenatorEditMode.Brush &&
+      brushModule.brush.value.mode === 'add',
+  );
+
+  const isBrushRemoveMode = computed(
+    () =>
+      editMode.value === TokenatorEditMode.Brush &&
+      brushModule.brush.value.mode === 'remove',
+  );
+
+  const isBrushControlsDisabled = computed(
+    () => editMode.value !== TokenatorEditMode.Brush,
+  );
+
+  // Actions (Coordinating)
+
   /**
-   * Добавляет новый текстовый элемент на токен.
-   *
-   * @param content - Текст для добавления
+   * Переключает режим перемещения фона.
    */
-  function addText(content: string) {
-    if (!content.trim()) {
-      return;
-    }
-
-    const id = uuid();
-
-    texts.value.push({
-      id,
-      content,
-      ...DEFAULT_TEXT_CONFIG,
-    });
-
-    activeTextId.value = id;
+  function toggleBackgroundMoveMode() {
+    editMode.value =
+      editMode.value === TokenatorEditMode.Background
+        ? TokenatorEditMode.None
+        : TokenatorEditMode.Background;
   }
 
   /**
-   * Удаляет текстовый элемент по ID.
-   * Автоматически снимает выделение, если удаляемый элемент был активным.
-   *
-   * @param id - Уникальный идентификатор текстового элемента
+   * Активирует режим перемещения.
    */
-  function removeText(id: string) {
-    const index = texts.value.findIndex((t) => t.id === id);
+  function activateMoveMode() {
+    editMode.value = TokenatorEditMode.None;
+    viewport.canvasViewport.value.isPanning = false;
+  }
 
-    if (index !== -1) {
-      texts.value.splice(index, 1);
+  /**
+   * Активирует режим рисования маски.
+   */
+  function activateDrawMode() {
+    editMode.value = TokenatorEditMode.Brush;
+    brushModule.brush.value.mode = BrushMode.Add;
+    viewport.canvasViewport.value.isPanning = false;
+  }
 
-      if (activeTextId.value === id) {
-        activeTextId.value = null;
-      }
+  /**
+   * Активирует режим стирания маски.
+   */
+  function activateEraseMode() {
+    editMode.value = TokenatorEditMode.Brush;
+    brushModule.brush.value.mode = BrushMode.Remove;
+    viewport.canvasViewport.value.isPanning = false;
+  }
+
+  /**
+   * Переключает режим панорамирования холста.
+   */
+  function togglePanMode() {
+    viewport.canvasViewport.value.isPanning =
+      !viewport.canvasViewport.value.isPanning;
+
+    if (viewport.canvasViewport.value.isPanning) {
+      editMode.value = TokenatorEditMode.None;
     }
   }
 
   /**
-   * Обновляет свойства текстового элемента.
-   *
-   * @param id - Уникальный идентификатор текстового элемента
-   * @param updates - Объект с обновляемыми свойствами
+   * Сбрасывает настройки 3D (кисть/маска).
    */
-  function updateText(id: string, updates: Partial<TokenText>) {
-    const text = texts.value.find((t) => t.id === id);
+  function reset3DSettings() {
+    brushModule.resetBrush();
+    editMode.value = TokenatorEditMode.None;
+  }
 
-    if (text) {
-      // Применяем валидацию для числовых значений
-      if (updates.fontSize !== undefined) {
-        updates.fontSize = validateFontSize(updates.fontSize);
-      }
+  /**
+   * Сбрасывает настройки фона (цвет, фоновое изображение).
+   */
+  function resetBackgroundSettings() {
+    styles.resetBackgroundColor();
+    styles.resetBackgroundStyle();
+    editMode.value = TokenatorEditMode.None;
+  }
 
-      if (updates.rotation !== undefined) {
-        updates.rotation = validateRotation(updates.rotation);
-      }
+  /**
+   * Сбрасывает настройки рамки (размер, поворот, тонировка).
+   */
+  function resetFrameSettings() {
+    transforms.resetFrameTransform();
+    styles.resetFrameTint();
+  }
 
-      Object.assign(text, updates);
-    }
+  /**
+   * Сбрасывает настройки стиля (для обратной совместимости).
+   */
+  function resetStyleSettings() {
+    resetFrameSettings();
+    resetBackgroundSettings();
+  }
+
+  /**
+   * Сбрасывает все настройки редактора на значения по умолчанию.
+   */
+  function resetSettings() {
+    transforms.resetBaseSettings();
+    resetStyleSettings();
+    reset3DSettings();
+    texts.resetTextSettings();
+    viewport.resetCanvasSettings();
+  }
+
+  /**
+   * Полный сброс всего.
+   */
+  function resetAll() {
+    resetSettings();
+    layers.resetLibrarySettings();
   }
 
   /**
    * Загружает изображение персонажа из файла.
-   * Сохраняет настройки маски (maskScale, maskSides, maskRotate) и рамки (frameScale, frameRotate)
-   * при сбросе трансформаций, чтобы пользователь мог загружать картинки одну за другой.
-   *
-   * @param file - Файл изображения для загрузки
+   * Сохраняет настройки маски и рамки при сбросе трансформаций.
    */
   function setImage(file: File) {
-    if (currentImage.value && currentImage.value.startsWith('blob:')) {
-      URL.revokeObjectURL(currentImage.value);
+    if (
+      layers.currentImage.value &&
+      layers.currentImage.value.startsWith('blob:')
+    ) {
+      URL.revokeObjectURL(layers.currentImage.value);
     }
 
     const reader = new FileReader();
@@ -225,21 +176,21 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     reader.onload = (e) => {
       if (e.target?.result && typeof e.target.result === 'string') {
         // Сохраняем настройки маски и рамки перед сбросом
-        const savedMaskScale = transform.value.maskScale;
-        const savedMaskSides = transform.value.maskSides;
-        const savedMaskRotate = transform.value.maskRotate;
-        const savedFrameScale = transform.value.frameScale;
-        const savedFrameRotate = transform.value.frameRotate;
+        const savedMaskScale = transforms.transform.value.maskScale;
+        const savedMaskSides = transforms.transform.value.maskSides;
+        const savedMaskRotate = transforms.transform.value.maskRotate;
+        const savedFrameScale = transforms.transform.value.frameScale;
+        const savedFrameRotate = transforms.transform.value.frameRotate;
 
-        currentImage.value = e.target.result;
-        resetTransform();
+        layers.currentImage.value = e.target.result;
+        transforms.resetTransform();
 
         // Восстанавливаем сохранённые настройки
-        transform.value.maskScale = savedMaskScale;
-        transform.value.maskSides = savedMaskSides;
-        transform.value.maskRotate = savedMaskRotate;
-        transform.value.frameScale = savedFrameScale;
-        transform.value.frameRotate = savedFrameRotate;
+        transforms.transform.value.maskScale = savedMaskScale;
+        transforms.transform.value.maskSides = savedMaskSides;
+        transforms.transform.value.maskRotate = savedMaskRotate;
+        transforms.transform.value.frameScale = savedFrameScale;
+        transforms.transform.value.frameRotate = savedFrameRotate;
       }
     };
 
@@ -250,322 +201,38 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     reader.readAsDataURL(file);
   }
 
-  /**
-   * Загружает кастомную рамку из файла.
-   *
-   * @param file - Файл рамки для загрузки
-   */
-  function setCustomFrame(file: File) {
-    if (customFrame.value && customFrame.value.startsWith('blob:')) {
-      URL.revokeObjectURL(customFrame.value);
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = (e) => {
-      if (e.target?.result && typeof e.target.result === 'string') {
-        customFrame.value = e.target.result;
-      }
-    };
-
-    reader.onerror = () => {
-      console.error('Failed to load frame file');
-    };
-
-    reader.readAsDataURL(file);
-  }
-
-  /**
-   * Загружает кастомное фоновое изображение из файла.
-   *
-   * @param file - Файл фонового изображения для загрузки
-   */
-  function setCustomBackground(file: File) {
-    if (customBackground.value && customBackground.value.startsWith('blob:')) {
-      URL.revokeObjectURL(customBackground.value);
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = (e) => {
-      if (e.target?.result && typeof e.target.result === 'string') {
-        customBackground.value = e.target.result;
-      }
-    };
-
-    reader.onerror = () => {
-      console.error('Failed to load background file');
-    };
-
-    reader.readAsDataURL(file);
-  }
-
-  /**
-   * Выбирает рамку из библиотеки.
-   * Автоматически очищает кастомную рамку при выборе.
-   *
-   * @param frame - Объект рамки из библиотеки
-   */
-  function selectFrame(frame: TokenatorFrame) {
-    if (customFrame.value) {
-      URL.revokeObjectURL(customFrame.value);
-      customFrame.value = null;
-    }
-
-    currentFrame.value = frame;
-  }
-
-  /**
-   * Сбрасывает базовые настройки (маска и картинка, БЕЗ рамки).
-   */
-  function resetBaseSettings() {
-    // Сохраняем настройки рамки
-    const savedFrameScale = transform.value.frameScale;
-    const savedFrameRotate = transform.value.frameRotate;
-
-    // Сбрасываем все трансформации
-    transform.value = cloneDeep(DEFAULT_TRANSFORM);
-
-    // Восстанавливаем настройки рамки
-    transform.value.frameScale = savedFrameScale;
-    transform.value.frameRotate = savedFrameRotate;
-  }
-
-  /**
-   * Алиас для сброса трансформаций (обратная совместимость)
-   */
-  function resetTransform() {
-    resetBaseSettings();
-  }
-
-  /**
-   * Сбрасывает настройки рамки (размер, поворот, тонировка).
-   */
-  function resetFrameSettings() {
-    transform.value.frameScale = DEFAULT_TRANSFORM.frameScale;
-    transform.value.frameRotate = DEFAULT_TRANSFORM.frameRotate;
-    frameTint.value = cloneDeep(DEFAULT_FRAME_TINT);
-  }
-
-  /**
-   * Сбрасывает настройки фона (цвет, фоновое изображение).
-   */
-  function resetBackgroundSettings() {
-    backgroundColor.value = DEFAULT_COLORS.BACKGROUND;
-    backgroundStyle.value = cloneDeep(DEFAULT_BACKGROUND_STYLE);
-    editMode.value = 'none';
-  }
-
-  /**
-   * Сбрасывает настройки стиля (для обратной совместимости).
-   * Вызывает resetFrameSettings и resetBackgroundSettings.
-   */
-  function resetStyleSettings() {
-    resetFrameSettings();
-    resetBackgroundSettings();
-  }
-
-  /**
-   * Сбрасывает настройки 3D (кисть/маска).
-   */
-  function reset3DSettings() {
-    brush.value = cloneDeep(DEFAULT_BRUSH_CONFIG);
-    editMode.value = 'none';
-  }
-
-  /**
-   * Очищает нарисованную маску.
-   */
-  function clearMask() {
-    if (!maskImageCanvas.value) {
-      return;
-    }
-
-    const ctx = maskImageCanvas.value.getContext('2d');
-
-    if (ctx) {
-      ctx.clearRect(
-        0,
-        0,
-        maskImageCanvas.value.width,
-        maskImageCanvas.value.height,
-      );
-    }
-
-    maskVersion.value++;
-  }
-
-  /**
-   * Сбрасывает настройки текста.
-   */
-  function resetTextSettings() {
-    texts.value = [];
-    activeTextId.value = null;
-  }
-
-  /**
-   * Сбрасывает настройки библиотеки (контент).
-   */
-  function resetLibrarySettings() {
-    currentImage.value = null;
-    customFrame.value = null;
-    currentFrame.value = null;
-    customBackground.value = null;
-  }
-
-  /**
-   * Сбрасывает все настройки редактора на значения по умолчанию.
-   * Не затрагивает загруженное изображение и рамку (если они не часть настроек, но здесь мы сбрасываем всё, что в табах настроек).
-   */
-  function resetSettings() {
-    resetBaseSettings();
-    resetStyleSettings();
-    reset3DSettings();
-    resetTextSettings();
-    resetCanvasSettings();
-  }
-
-  /**
-   * Полный сброс всего.
-   */
-  function resetAll() {
-    resetSettings();
-    resetLibrarySettings();
-  }
-
-  /**
-   * Генерирует случайные цвета для градиентной тонировки рамки.
-   */
-  function randomizeTint() {
-    const randomColor = () =>
-      `#${Math.floor(Math.random() * 16777215)
-        .toString(16)
-        .padStart(6, '0')}`;
-
-    frameTint.value.colors = [randomColor(), randomColor()];
-    frameTint.value.enabled = true;
-  }
-
-  /**
-   * Меняет местами цвета градиента тонировки.
-   */
-  function swapTintColors() {
-    const c1 = frameTint.value.colors[0];
-    const c2 = frameTint.value.colors[1];
-
-    if (c2) {
-      frameTint.value.colors = [c2, c1 || DEFAULT_COLORS.TINT_TRANSPARENT];
-    }
-  }
-
-  /**
-   * Устанавливает масштаб с валидацией.
-   */
-  function setScale(scale: number) {
-    transform.value.scale = validateScale(scale);
-  }
-
-  /**
-   * Устанавливает поворот с валидацией.
-   */
-  function setRotation(rotation: number) {
-    transform.value.rotate = validateRotation(rotation);
-  }
-
-  /**
-   * Устанавливает поворот рамки с валидацией.
-   */
-  function setFrameRotation(rotation: number) {
-    transform.value.frameRotate = validateRotation(rotation);
-  }
-
-  /**
-   * Устанавливает размер кисти с валидацией.
-   */
-  function setBrushSize(size: number) {
-    brush.value.size = validateBrushSize(size);
-  }
-
-  /**
-   * Сбрасывает настройки холста (zoom и pan).
-   */
-  function resetCanvasSettings() {
-    canvasViewport.value = cloneDeep(DEFAULT_CANVAS_VIEWPORT);
-  }
-
-  /**
-   * Устанавливает zoom холста с валидацией.
-   */
-  function setCanvasZoom(zoom: number) {
-    canvasViewport.value.zoom = Math.max(0.5, Math.min(3, zoom));
-  }
-
-  /**
-   * Устанавливает позицию pan холста.
-   */
-  function setCanvasPan(x: number, y: number) {
-    canvasViewport.value.pan = { x, y };
-  }
-
   return {
-    // State
-    currentImage,
-    currentFrame,
-    customFrame,
-    customBackground,
-    activeFrameUrl,
-    backgroundColor,
-    backgroundStyle,
-    frameTint,
-    transform,
-    brush,
-    editMode,
-    texts,
-    activeTextId,
-    maskImageCanvas,
-    maskVersion,
-    maskTokenSize,
-    canvasViewport,
+    // Re-export everything from modules
+    ...layers,
+    ...texts,
+    ...transforms,
+    ...styles,
+    ...brushModule,
+    ...viewport,
 
-    // Constants (re-export для удобства)
-    BLEND_MODES,
-    BACKGROUND_BLEND_MODES,
-    DEFAULT_COLORS,
+    // Local State
+    editMode,
+
+    // Computed
+    isBackgroundMoveMode,
+    isBrushMode,
+    isMoveMode,
+    isBrushAddMode,
+    isBrushRemoveMode,
+    isBrushControlsDisabled,
 
     // Actions
-    addText,
-    removeText,
-    updateText,
-    setImage,
-    setCustomFrame,
-    setCustomBackground,
-    selectFrame,
-    randomizeTint,
-    swapTintColors,
-    setScale,
-    setRotation,
-    setFrameRotation,
-    setBrushSize,
-    setCanvasZoom,
-    setCanvasPan,
-
-    // Undo/Redo
-    undo,
-    redo,
-    canUndo,
-    canRedo,
-
-    resetTransform,
-    resetAll,
-    resetBaseSettings,
-    resetFrameSettings,
-    resetBackgroundSettings,
+    toggleBackgroundMoveMode,
+    activateMoveMode,
+    activateDrawMode,
+    activateEraseMode,
+    togglePanMode,
     reset3DSettings,
+    resetBackgroundSettings,
+    resetFrameSettings,
     resetStyleSettings,
-    resetTextSettings,
     resetSettings,
-    resetLibrarySettings,
-    resetCanvasSettings,
-    clearMask,
+    resetAll,
+    setImage,
   };
 });

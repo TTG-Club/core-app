@@ -1,4 +1,11 @@
-import type { BackgroundStyle, FrameTint, TransformState } from '../types';
+import { BrushMode, FrameTintType } from '../types';
+
+import type {
+  BackgroundStyle,
+  FrameTint,
+  TextAlign,
+  TransformState,
+} from '../types';
 
 /**
  * Создает путь для многоугольной или круглой маски.
@@ -53,7 +60,7 @@ export interface DrawBrushStrokeParams {
   prevX?: number;
   prevY?: number;
   size: number;
-  mode: 'add' | 'remove';
+  mode: BrushMode;
   color?: string;
 }
 
@@ -84,12 +91,12 @@ export function drawBrushStroke({
   ctx.save();
   ctx.beginPath();
 
-  const strokeColor = mode === 'add' ? color : 'black';
+  const strokeColor = mode === BrushMode.Add ? color : 'black';
 
   ctx.fillStyle = strokeColor;
   ctx.strokeStyle = strokeColor;
 
-  if (mode === 'remove') {
+  if (mode === BrushMode.Remove) {
     ctx.globalCompositeOperation = 'destination-out';
   }
 
@@ -178,7 +185,7 @@ function applyTint(
 
   ctx.globalCompositeOperation = blendMode as GlobalCompositeOperation;
 
-  if (tint.type === 'solid') {
+  if (tint.type === FrameTintType.Solid) {
     ctx.fillStyle = tint.colors[0] || '#000000';
     ctx.fillRect(0, 0, size, size);
   } else {
@@ -208,7 +215,7 @@ export interface DrawTokenText {
   rotation: number;
   fontWeight: number;
   fontFamily: string;
-  align: 'left' | 'center' | 'right';
+  align: TextAlign;
   arc?: number;
 }
 

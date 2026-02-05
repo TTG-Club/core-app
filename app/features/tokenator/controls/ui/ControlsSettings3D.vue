@@ -2,6 +2,18 @@
   import { useTokenatorStore } from '~tokenator/composables';
 
   const store = useTokenatorStore();
+
+  const resetZoomButtonClass = computed(() =>
+    store.isZoomChanged
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
+
+  const resetPanButtonClass = computed(() =>
+    store.isPanChanged
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
 </script>
 
 <template>
@@ -21,73 +33,38 @@
         <UButton
           size="sm"
           class="flex-1"
-          :variant="
-            store.editMode === 'none' && !store.canvasViewport.isPanning
-              ? 'solid'
-              : 'soft'
-          "
-          :color="
-            store.editMode === 'none' && !store.canvasViewport.isPanning
-              ? 'primary'
-              : 'neutral'
-          "
+          :variant="store.isMoveMode ? 'solid' : 'soft'"
+          :color="store.isMoveMode ? 'primary' : 'neutral'"
           label="Двигать"
           icon="i-fluent-cursor-20-regular"
-          @click.left.exact.prevent="
-            store.editMode = 'none';
-            store.canvasViewport.isPanning = false;
-          "
+          @click.left.exact.prevent="store.activateMoveMode"
         />
 
         <UButton
           size="sm"
           class="flex-1"
-          :variant="
-            store.editMode === 'brush' && store.brush.mode === 'add'
-              ? 'solid'
-              : 'soft'
-          "
-          :color="
-            store.editMode === 'brush' && store.brush.mode === 'add'
-              ? 'primary'
-              : 'neutral'
-          "
+          :variant="store.isBrushAddMode ? 'solid' : 'soft'"
+          :color="store.isBrushAddMode ? 'primary' : 'neutral'"
           label="Рисовать"
           icon="i-fluent-edit-20-regular"
-          @click.left.exact.prevent="
-            store.editMode = 'brush';
-            store.brush.mode = 'add';
-            store.canvasViewport.isPanning = false;
-          "
+          @click.left.exact.prevent="store.activateDrawMode"
         />
 
         <UButton
           size="sm"
           class="flex-1"
-          :variant="
-            store.editMode === 'brush' && store.brush.mode === 'remove'
-              ? 'solid'
-              : 'soft'
-          "
-          :color="
-            store.editMode === 'brush' && store.brush.mode === 'remove'
-              ? 'primary'
-              : 'neutral'
-          "
+          :variant="store.isBrushRemoveMode ? 'solid' : 'soft'"
+          :color="store.isBrushRemoveMode ? 'primary' : 'neutral'"
           label="Стереть"
           icon="i-fluent-backspace-20-regular"
-          @click.left.exact.prevent="
-            store.editMode = 'brush';
-            store.brush.mode = 'remove';
-            store.canvasViewport.isPanning = false;
-          "
+          @click.left.exact.prevent="store.activateEraseMode"
         />
       </div>
 
       <div
         class="space-y-1.5 transition-opacity duration-200"
         :class="{
-          'pointer-events-none opacity-50': store.editMode !== 'brush',
+          'pointer-events-none opacity-50': store.isBrushControlsDisabled,
         }"
       >
         <div class="flex h-5 items-center justify-between">
@@ -118,19 +95,15 @@
             <button
               type="button"
               class="flex items-center gap-1.5 text-xs transition-colors"
-              :class="
-                store.canvasViewport.zoom !== 1
-                  ? 'cursor-pointer text-primary-500'
-                  : 'cursor-default text-neutral-500'
-              "
-              :disabled="store.canvasViewport.zoom === 1"
+              :class="resetZoomButtonClass"
+              :disabled="!store.isZoomChanged"
               title="Сбросить масштаб холста"
-              @click.left.exact.prevent="store.canvasViewport.zoom = 1"
+              @click.left.exact.prevent="store.resetCanvasZoom"
             >
               <span>Масштаб</span>
 
               <UIcon
-                v-if="store.canvasViewport.zoom !== 1"
+                v-if="store.isZoomChanged"
                 name="i-fluent-arrow-undo-20-regular"
                 class="size-3"
               />
@@ -155,29 +128,15 @@
             <button
               type="button"
               class="flex items-center gap-1.5 text-xs transition-colors"
-              :class="
-                store.canvasViewport.pan.x !== 0 ||
-                store.canvasViewport.pan.y !== 0
-                  ? 'cursor-pointer text-primary-500'
-                  : 'cursor-default text-neutral-500'
-              "
-              :disabled="
-                store.canvasViewport.pan.x === 0 &&
-                store.canvasViewport.pan.y === 0
-              "
+              :class="resetPanButtonClass"
+              :disabled="!store.isPanChanged"
               title="Сбросить позицию холста"
-              @click.left.exact.prevent="
-                store.canvasViewport.pan.x = 0;
-                store.canvasViewport.pan.y = 0;
-              "
+              @click.left.exact.prevent="store.resetPan"
             >
               <span>Позиция</span>
 
               <UIcon
-                v-if="
-                  store.canvasViewport.pan.x !== 0 ||
-                  store.canvasViewport.pan.y !== 0
-                "
+                v-if="store.isPanChanged"
                 name="i-fluent-arrow-undo-20-regular"
                 class="size-3"
               />
@@ -196,12 +155,7 @@
             label="Переместить холст"
             icon="i-fluent-arrow-move-20-regular"
             block
-            @click.left.exact.prevent="
-              store.canvasViewport.isPanning = !store.canvasViewport.isPanning;
-              if (store.canvasViewport.isPanning) {
-                store.editMode = 'none';
-              }
-            "
+            @click.left.exact.prevent="store.togglePanMode"
           />
         </div>
       </div>

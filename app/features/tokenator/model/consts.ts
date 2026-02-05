@@ -1,3 +1,5 @@
+import { BrushMode, FrameTintType, TextAlign } from './types';
+
 import type {
   BackgroundStyle,
   BrushState,
@@ -83,7 +85,7 @@ export const DEFAULT_TRANSFORM: TransformState = {
  */
 export const DEFAULT_BRUSH_CONFIG: BrushState = {
   size: 20,
-  mode: 'add',
+  mode: BrushMode.Add,
   halfMask: false,
 };
 
@@ -92,7 +94,7 @@ export const DEFAULT_BRUSH_CONFIG: BrushState = {
  */
 export const DEFAULT_FRAME_TINT: FrameTint = {
   enabled: true,
-  type: 'gradient',
+  type: FrameTintType.Gradient,
   colors: [DEFAULT_COLORS.TINT_TRANSPARENT, DEFAULT_COLORS.TINT_TRANSPARENT],
   blendMode: 'source-atop',
 };
@@ -117,7 +119,7 @@ export const DEFAULT_TEXT_CONFIG = {
   rotation: 0,
   fontWeight: 700,
   fontFamily: 'Inter',
-  align: 'center' as const,
+  align: TextAlign.Center,
   arc: 0,
   x: 0,
   y: 0,

@@ -4,7 +4,7 @@
     useTokenatorGestures,
     useTokenatorStore,
   } from '~tokenator/composables';
-  import { drawBrushStroke } from '~tokenator/model';
+  import { drawBrushStroke, TokenatorEditMode } from '~tokenator/model';
 
   const store = useTokenatorStore();
   const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -104,7 +104,7 @@
   });
 
   const isBrushMode = computed(
-    () => store.editMode === 'brush' && !!store.currentImage,
+    () => store.editMode === TokenatorEditMode.Brush && !!store.currentImage,
   );
 
   /**
@@ -146,31 +146,38 @@
 
     return `${points.join(' ')} Z`;
   });
+
+  const containerClasses = computed(() => ({
+    'cursor-none': isBrushMode.value,
+    'cursor-grab':
+      store.currentImage &&
+      store.editMode === TokenatorEditMode.None &&
+      !isDragging.value,
+    'cursor-grabbing':
+      isDragging.value && store.editMode === TokenatorEditMode.None,
+    'cursor-move': store.editMode === TokenatorEditMode.Background,
+  }));
+
+  const brushCursorStyle = computed(() => ({
+    left: `${cursorX.value}px`,
+    top: `${cursorY.value}px`,
+    width: `${store.brush.size}px`,
+    height: `${store.brush.size}px`,
+    transform: 'translate(-50%, -50%)',
+  }));
 </script>
 
 <template>
   <div
     ref="containerRef"
     class="relative mx-auto h-60 w-60 shrink-0 touch-none"
-    :class="{
-      'cursor-none': isBrushMode,
-      'cursor-grab':
-        store.currentImage && store.editMode === 'none' && !isDragging,
-      'cursor-grabbing': isDragging && store.editMode === 'none',
-      'cursor-move': store.editMode === 'background',
-    }"
+    :class="containerClasses"
   >
     <!-- Brush Cursor -->
     <div
       v-if="isBrushMode && isHovering"
       class="pointer-events-none absolute z-50 rounded-full border border-white bg-white/20 shadow-[0_0_2px_rgba(0,0,0,0.5)]"
-      :style="{
-        left: `${cursorX}px`,
-        top: `${cursorY}px`,
-        width: `${store.brush.size}px`,
-        height: `${store.brush.size}px`,
-        transform: 'translate(-50%, -50%)',
-      }"
+      :style="brushCursorStyle"
     />
 
     <!-- Guides (SVG для поддержки полигональных масок) -->

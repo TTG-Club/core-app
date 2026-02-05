@@ -47,13 +47,29 @@
     () => tintColor2Hex.value !== DEFAULT_COLORS.TINT_TRANSPARENT.slice(0, 7),
   );
 
-  function resetTint1() {
-    store.frameTint.colors[0] = DEFAULT_COLORS.TINT;
-  }
+  const resetFrameScaleButtonClass = computed(() =>
+    store.isFrameScaleChanged
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
 
-  function resetTint2() {
-    store.frameTint.colors[1] = DEFAULT_COLORS.TINT_TRANSPARENT;
-  }
+  const resetFrameRotateButtonClass = computed(() =>
+    store.isFrameRotateChanged
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
+
+  const resetTint1ButtonClass = computed(() =>
+    isTintColorChanged.value
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
+
+  const resetTint2ButtonClass = computed(() =>
+    isTintColor2Changed.value
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
 </script>
 
 <template>
@@ -65,19 +81,15 @@
           <button
             type="button"
             class="flex items-center gap-1.5 text-xs transition-colors"
-            :class="
-              store.transform.frameScale !== 1
-                ? 'cursor-pointer text-primary-500'
-                : 'cursor-default text-neutral-500'
-            "
-            :disabled="store.transform.frameScale === 1"
+            :class="resetFrameScaleButtonClass"
+            :disabled="!store.isFrameScaleChanged"
             title="Сбросить масштаб рамки"
-            @click.left.exact.prevent="store.transform.frameScale = 1"
+            @click.left.exact.prevent="store.resetFrameScale"
           >
             <span>Размер</span>
 
             <UIcon
-              v-if="store.transform.frameScale !== 1"
+              v-if="store.isFrameScaleChanged"
               name="i-fluent-arrow-undo-20-regular"
               class="size-3"
             />
@@ -102,19 +114,15 @@
           <button
             type="button"
             class="flex items-center gap-1.5 text-xs transition-colors"
-            :class="
-              store.transform.frameRotate !== 0
-                ? 'cursor-pointer text-primary-500'
-                : 'cursor-default text-neutral-500'
-            "
-            :disabled="store.transform.frameRotate === 0"
+            :class="resetFrameRotateButtonClass"
+            :disabled="!store.isFrameRotateChanged"
             title="Сбросить поворот рамки"
-            @click.left.exact.prevent="store.transform.frameRotate = 0"
+            @click.left.exact.prevent="store.resetFrameRotation"
           >
             <span>Поворот</span>
 
             <UIcon
-              v-if="store.transform.frameRotate !== 0"
+              v-if="store.isFrameRotateChanged"
               name="i-fluent-arrow-undo-20-regular"
               class="size-3"
             />
@@ -172,14 +180,10 @@
                 <button
                   type="button"
                   class="flex items-center gap-1.5 text-xs transition-colors"
-                  :class="
-                    isTintColorChanged
-                      ? 'cursor-pointer text-primary-500'
-                      : 'cursor-default text-neutral-500'
-                  "
+                  :class="resetTint1ButtonClass"
                   :disabled="!isTintColorChanged"
                   title="Сбросить цвет 1"
-                  @click.left.exact.prevent="resetTint1"
+                  @click.left.exact.prevent="store.resetTint1"
                 >
                   <span>Цвет 1</span>
 
@@ -247,14 +251,10 @@
                 <button
                   type="button"
                   class="flex items-center gap-1.5 text-xs transition-colors"
-                  :class="
-                    isTintColor2Changed
-                      ? 'cursor-pointer text-primary-500'
-                      : 'cursor-default text-neutral-500'
-                  "
+                  :class="resetTint2ButtonClass"
                   :disabled="!isTintColor2Changed"
                   title="Сбросить цвет 2"
-                  @click.left.exact.prevent="resetTint2"
+                  @click.left.exact.prevent="store.resetTint2"
                 >
                   <span>Цвет 2</span>
 

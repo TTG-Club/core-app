@@ -15,11 +15,29 @@
     () => bgColorHex.value !== DEFAULT_COLORS.BACKGROUND,
   );
 
-  function resetBackgroundColor() {
-    const currentAlpha = store.backgroundColor.slice(7);
+  const resetBgColorButtonClass = computed(() =>
+    isBgColorChanged.value
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
 
-    store.backgroundColor = `${DEFAULT_COLORS.BACKGROUND}${currentAlpha}`;
-  }
+  const resetOpacityButtonClass = computed(() =>
+    store.isBackgroundOpacityChanged
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
+
+  const resetScaleButtonClass = computed(() =>
+    store.isBackgroundScaleChanged
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
+
+  const resetRotateButtonClass = computed(() =>
+    store.isBackgroundRotateChanged
+      ? 'cursor-pointer text-primary-500'
+      : 'cursor-default text-neutral-500',
+  );
 </script>
 
 <template>
@@ -55,14 +73,10 @@
             <button
               type="button"
               class="flex items-center gap-1.5 text-xs transition-colors"
-              :class="
-                isBgColorChanged
-                  ? 'cursor-pointer text-primary-500'
-                  : 'cursor-default text-neutral-500'
-              "
+              :class="resetBgColorButtonClass"
               :disabled="!isBgColorChanged"
               title="Сбросить цвет фона"
-              @click.left.exact.prevent="resetBackgroundColor"
+              @click.left.exact.prevent="store.resetBackgroundColor"
             >
               <span>Прозрачность</span>
 
@@ -101,19 +115,15 @@
             <button
               type="button"
               class="flex items-center gap-1.5 text-xs transition-colors"
-              :class="
-                store.backgroundStyle.opacity !== 100
-                  ? 'cursor-pointer text-primary-500'
-                  : 'cursor-default text-neutral-500'
-              "
-              :disabled="store.backgroundStyle.opacity === 100"
+              :class="resetOpacityButtonClass"
+              :disabled="!store.isBackgroundOpacityChanged"
               title="Сбросить прозрачность"
-              @click.left.exact.prevent="store.backgroundStyle.opacity = 100"
+              @click.left.exact.prevent="store.resetBackgroundOpacity"
             >
               <span>Прозрачность</span>
 
               <UIcon
-                v-if="store.backgroundStyle.opacity !== 100"
+                v-if="store.isBackgroundOpacityChanged"
                 name="i-fluent-arrow-undo-20-regular"
                 class="size-3"
               />
@@ -138,19 +148,15 @@
             <button
               type="button"
               class="flex items-center gap-1.5 text-xs transition-colors"
-              :class="
-                store.backgroundStyle.scale !== 1
-                  ? 'cursor-pointer text-primary-500'
-                  : 'cursor-default text-neutral-500'
-              "
-              :disabled="store.backgroundStyle.scale === 1"
+              :class="resetScaleButtonClass"
+              :disabled="!store.isBackgroundScaleChanged"
               title="Сбросить масштаб"
-              @click.left.exact.prevent="store.backgroundStyle.scale = 1"
+              @click.left.exact.prevent="store.resetBackgroundScale"
             >
               <span>Масштаб</span>
 
               <UIcon
-                v-if="store.backgroundStyle.scale !== 1"
+                v-if="store.isBackgroundScaleChanged"
                 name="i-fluent-arrow-undo-20-regular"
                 class="size-3"
               />
@@ -175,19 +181,15 @@
             <button
               type="button"
               class="flex items-center gap-1.5 text-xs transition-colors"
-              :class="
-                store.backgroundStyle.rotate !== 0
-                  ? 'cursor-pointer text-primary-500'
-                  : 'cursor-default text-neutral-500'
-              "
-              :disabled="store.backgroundStyle.rotate === 0"
+              :class="resetRotateButtonClass"
+              :disabled="!store.isBackgroundRotateChanged"
               title="Сбросить вращение"
-              @click.left.exact.prevent="store.backgroundStyle.rotate = 0"
+              @click.left.exact.prevent="store.resetBackgroundRotation"
             >
               <span>Вращение</span>
 
               <UIcon
-                v-if="store.backgroundStyle.rotate !== 0"
+                v-if="store.isBackgroundRotateChanged"
                 name="i-fluent-arrow-undo-20-regular"
                 class="size-3"
               />
@@ -209,20 +211,17 @@
 
         <div class="flex items-center gap-2 pt-2">
           <UButton
-            :variant="store.editMode === 'background' ? 'solid' : 'soft'"
-            :color="store.editMode === 'background' ? 'primary' : 'neutral'"
+            :variant="store.isBackgroundMoveMode ? 'solid' : 'soft'"
+            :color="store.isBackgroundMoveMode ? 'primary' : 'neutral'"
             size="sm"
             icon="i-fluent-arrow-move-20-regular"
             :label="
-              store.editMode === 'background'
+              store.isBackgroundMoveMode
                 ? 'Режим перемещения активен'
                 : 'Переместить фон'
             "
             class="flex-1"
-            @click.left.exact.prevent="
-              store.editMode =
-                store.editMode === 'background' ? 'none' : 'background'
-            "
+            @click.left.exact.prevent="store.toggleBackgroundMoveMode"
           />
 
           <USelectMenu
