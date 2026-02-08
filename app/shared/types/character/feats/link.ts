@@ -1,3 +1,4 @@
+import type { AbilityKey } from '../../abilities';
 import type { NameResponse, SourceResponse } from '../../base';
 
 export interface FeatLinkResponse {
@@ -10,6 +11,6 @@ export interface FeatLinkResponse {
 export interface FeatSelectResponse extends FeatLinkResponse {
   prerequisite: string;
   repeatability: boolean;
-  abilities: string[]; // характеристики
+  abilities: AbilityKey[]; // характеристики
   increase: number; // количество характеристик для увеличения
 }

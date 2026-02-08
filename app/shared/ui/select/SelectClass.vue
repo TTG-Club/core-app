@@ -12,7 +12,7 @@
   const searchQuery = refDebounced(search, 250);
 
   const fetchKey = computed(() => {
-    let key = 'feat-select';
+    let key = 'class-select';
 
     if (searchQuery.value) {
       key += `-${searchQuery.value}`;

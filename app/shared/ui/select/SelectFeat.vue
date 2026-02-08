@@ -43,27 +43,29 @@
       multiple?: boolean;
       categories?: Array<string>;
       excludeUrls?: Array<string>;
+      max?: number;
     }>(),
     {
       disabled: false,
       multiple: false,
       categories: undefined,
       excludeUrls: () => [],
+      max: undefined,
     },
   );
 
   // IMPORTANT:
   // USelectMenu при clearable может эмитить null.
   // Мы внизу нормализуем null -> '' (а не даём ему попасть в model).
-  const model = defineModel<string | Array<string>>({ default: '' });
+  const model = defineModel<string | Array<string>>();
 
   const search = ref('');
   const searchQuery = refDebounced(search, 250);
 
   const categoriesList = computed<Array<string>>(() => props.categories ?? []);
-  const categoriesKey = computed<string>(() => categoriesList.value.join('|'));
+  const categoriesKey = computed<string>(() => categoriesList.value.join(','));
 
-  const excludeKey = computed<string>(() => props.excludeUrls.join('|'));
+  const excludeKey = computed<string>(() => props.excludeUrls.join(','));
 
   const requestCategories = computed<string | undefined>(() => {
     if (categoriesList.value.length === 0) {
@@ -74,11 +76,11 @@
   });
 
   const asyncDataKey = computed<string>(() => {
-    return `feat-select-v2:${categoriesKey.value}:${excludeKey.value}`;
+    return `feats-select:${categoriesKey.value}:${excludeKey.value}`;
   });
 
   const { data, status, refresh } = await useAsyncData<Array<FeatSelectItem>>(
-    () => asyncDataKey.value,
+    asyncDataKey,
     async () => {
       const featLinks = await $fetch<Array<FeatSelectResponse>>(
         '/api/v2/feats/select',
@@ -117,14 +119,10 @@
           const altNames = feat.name.alt ?? [];
           const alt = altNames.length > 0 ? ` • ${altNames.join(', ')}` : '';
 
-          const prerequisiteText = feat.prerequisite
-            ? ` • ${feat.prerequisite}`
-            : '';
-
           return {
             label: feat.name.rus,
             value: feat.url,
-            description: `${feat.name.eng}${alt}${prerequisiteText}`,
+            description: `${feat.name.eng}${alt}`,
             source: sourceLabel,
             category: feat.category,
             prerequisite: feat.prerequisite,
@@ -142,7 +140,22 @@
     },
   );
 
-  const items = computed<Array<FeatSelectItem>>(() => data.value ?? []);
+  const items = computed<Array<FeatSelectItem>>(() => {
+    const list = data.value ?? [];
+
+    if (
+      props.max &&
+      Array.isArray(model.value) &&
+      model.value.length >= props.max
+    ) {
+      return list.map((item) => ({
+        ...item,
+        disabled: !model.value?.includes(item.value),
+      }));
+    }
+
+    return list;
+  });
 
   const handleDropdownOpening = useDebounceFn(async (state: boolean) => {
     if (!state) {
@@ -171,9 +184,9 @@
     v-model:search-term="search"
     :model-value="model"
     :loading="status === 'pending'"
-    :items="items"
-    :multiple="props.multiple"
-    :disabled="props.disabled"
+    :items
+    :multiple
+    :disabled
     placeholder="Выбери черту"
     label-key="label"
     value-key="value"
@@ -190,6 +203,25 @@
       >
         {{ item.source }}
       </UBadge>
+    </template>
+
+    <template #item-description="{ item }">
+      <div class="grid w-full">
+        <div
+          class="w-full truncate"
+          :title="item.description"
+        >
+          {{ item.description }}
+        </div>
+
+        <div
+          v-if="item.prerequisite"
+          class="w-full truncate text-dimmed"
+          :title="item.prerequisite"
+        >
+          {{ item.prerequisite }}
+        </div>
+      </div>
     </template>
   </USelectMenu>
 </template>
