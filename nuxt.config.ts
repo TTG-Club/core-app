@@ -181,13 +181,6 @@ export default defineNuxtConfig({
     tsConfig: {
       compilerOptions: {
         verbatimModuleSyntax: true, // Быстрее обработка модулей
-        plugins: [
-          {
-            name: '@vue/typescript-plugin',
-            location: 'node_modules/@vue/typescript-plugin', // Важно для WebStorm
-            languages: ['vue'],
-          },
-        ],
       },
     },
   },

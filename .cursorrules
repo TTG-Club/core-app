@@ -1,11 +1,23 @@
 # Project Rules & Guidelines
 
-## 0. AI Rules Management (Meta Rules)
+## AI Rules Management (Meta Rules)
 - **Single Source of Truth:** `.cursorrules` is the **PRIMARY** source of truth for all AI agent rules.
 - **Editing Policy:** ALWAYS edit rules in `.cursorrules` ONLY. Do NOT edit `AGENTS.md`, `CLAUDE.md`, or other rule files directly.
 - **Sync Requirement:** After ANY change to `.cursorrules`, you **MUST** immediately run `pnpm run sync-ai-rules` to propagate changes to all other rule files (including `AGENTS.md`, `CLAUDE.md`).
 
-## 1. Core Workflow (Must Follow)
+
+## 🧙‍♂️ Smart Context Discovery (Anti-Duplication)
+Before creating ANY new composable, utility, or helper function, you MUST perform this discovery protocol:
+1.  **Read Source of Truth:** **READ** the file `.nuxt/imports.d.ts` directly from the disk.
+    - *Note:* This file contains ALL available auto-imports (Nuxt built-ins, VueUse, project utils). Even if it is git-ignored, you must read it.
+2.  **Search First:** **SEARCH** inside `.nuxt/imports.d.ts` for keywords related to your task.
+    - *Example:* If you need to format a date, search for `Date`, `Time`, `Format`.
+3.  **Action Logic:**
+    - *Found:* `export { useDateFormat } from '@vueuse/core'` -> **USE IT**. Do not create a wrapper.
+    - *Not Found:* Only then checking `es-toolkit` or creating a new file is allowed.
+
+
+## Core Workflow (Must Follow)
 - **DRY Principle:** **STRICTLY FOLLOW THE DRY (DON'T REPEAT YOURSELF) POLICY.** If you find yourself writing the same or very similar logic more than once, abstract it into a shared utility, component, or composable. Code duplication is prohibited.
 - **Analyze First:** Before writing any code, ALWAYS analyze the existing project codebase. Look at similar logic, file structure, and coding styles. Strictly follow established patterns and conventions to ensure consistency.
 - **Change Summary Requirement:** If you are asked to "check", "review", "fix", or "refactor" a component or file, at the very end of your response, you **MUST** provide a bulleted list explaining your changes. For each change, specify:
@@ -21,16 +33,23 @@
 - **Final Verification:**
   - **Mandatory Checks:** At the end of every task, you MUST run `pnpm run lint:write` and `pnpm run type-check` to ensure no regressions were introduced.
 
-## 2. Type Safety (Strict TypeScript)
+
+## Type Safety (Strict TypeScript)
 - **Strict Typing:** Strong typing is mandatory.
 - **No any:** The use of `any` is strictly prohibited.
 - **No Assertions:** Do not use type assertions (`as Type`) or forced casting.
 - **No Magic Numbers:** Avoid hardcoded numbers or type assertions in variables/fields.
 - **Explicit Return Types:** For utility functions with complex return types (especially when working with `unknown`), always define explicit return types and helper interfaces. This improves code maintainability and IDE support.
 
-## 3. Naming Conventions
+
+## Naming Conventions
 - **Language:** Use full English names only for variables, functions, and classes.
-- **Clarity over Brevity:** No abbreviations (e.g., `lst`, `ua`), no abstract names (`data`, `item`), and no single-letter names (except in mini-loops).
+- **Clarity over Brevity:** No abbreviations (e.g., `lst`, `ua`), no abstract names (`data`, `item`).
+- **STRICT NO SINGLE LETTERS:**
+  - Single-letter variables (`v`, `e`, `d`, `t`) are **STRICTLY PROHIBITED** in function arguments, props, callbacks, and top-level scopes.
+  - **Bad:** `(v) => update(v)` or `catch(e)` or `data.map(d => d.id)`.
+  - **Good:** `(value) => update(value)` or `catch(error)` or `data.map(item => item.id)`.
+  - **Exception:** `i` is allowed ONLY in standard `for` loops as an index.
 - **Structure:**
   - One function = one task. One verb per action.
   - Different roots for different meanings (no similar terms like `date`/`data`).
@@ -53,7 +72,8 @@
   - Format: `domain:key-name` (kebab-case).
   - Example: `tokenator:background-color`, `dice-roller:history`.
 
-## 4. Styling & Design System
+
+## Styling & Design System
 - **Semantic Colors Only:**
   - **PROHIBITED:** Do not use color scheme modifiers directly in classes (`dark:`, `light:`).
   - **REQUIRED:** Use unified semantic color names (`bg-surface`, `text-primary`) mapped to CSS variables.
@@ -63,7 +83,8 @@
 - **Icons:** Use ONLY icons from the local `ttg` collection or `fluent` collection.
 - **Tailwind CSS:** Use Tailwind CSS according to the maximum version specified in the project.
 
-## 5. Reuse Strategy
+
+## Reuse Strategy
 - **Folder Structure Context:**
   - `shared/ui`: **Global UI Kit.**
   - `app/features`: **DDD STRUCTURE (Domains & Features).**
@@ -77,9 +98,11 @@
   - `server/domain` & `server/api`: **BACKEND LAYER.**
   - `app/components`: **DOES NOT EXIST.**
 
+
 - **Page Components Strategy:**
   - **Direct Index Usage:** Do NOT create dedicated "Page Components" (e.g., `TokenatorPage.vue`) just to wrap a feature. Write the glue logic directly in `app/pages/.../index.vue`.
   - **Feature Imports:** Import feature components using the feature alias (e.g., `import { TokenatorCanvas } from '~tokenator/canvas'`).
+
 
 - **Import Strategy (Smart Aliases):**
   - **Cross-Feature (Different Features):** When importing from another feature (even in the same domain), ALWAYS use the generated domain alias.
@@ -101,21 +124,29 @@
     - *Incorrect:* `import { ... } from '~tokenator/model/consts';`
   - *Note:* Domain aliases (e.g., `~dice-roller`) are automatically generated via `pnpm run postinstall` or `dev/build`.
 
+
 - **Barrel Files (index.ts):**
   - **Feature Root:** NO `index.ts` allowed in the root of a feature folder (e.g., `app/features/bestiary/index.ts` -> ❌).
   - **Subfolders:** YES, `index.ts` is REQUIRED in subfolders (`model`, `ui`, `body`) for clean re-exports.
   - **UI Exports:** `ui` folders MUST have an `index.ts` file for re-exports. Imports from these folders must use the barrel file: `import { ... } from './ui'`.
 
+
 - **Reuse Rule (Priority Order):**
   - **UI:** 1. **Nuxt UI** (@nuxt/ui). 2. `shared/ui`. 3. `app/features/*/ui`.
   - **Logic:** Check `shared/` for global utilities/stores. Check `app/features/*/model` for domain logic.
 
-## 6. Tech Stack & Best Practices
+
+## Tech Stack & Best Practices
 - **Official Documentation Context:**
   - **MANDATORY:** For any Nuxt-related architecture or implementation questions, ALWAYS refer to the official guidelines for LLMs:
     - `https://nuxt.com/llms.txt` (Complete Guidelines)
     - `https://ui.nuxt.com/llms.txt` (Nuxt UI Guidelines)
 - **Framework Core:** Use **Nuxt 4** and **Vue 3.5** best practices (Composition API, `<script setup lang="ts">`).
+- **Template Hygiene (Strict):**
+  - **NO Multi-line Handlers:** If an event handler (`@click`, `@update:model-value`) or prop binding fits on **one line**, it is allowed.
+  - **Extraction Required:** If it exceeds one line, contains `{ ...spread }`, or complex logic (ternaries, math), you **MUST** extract it to a named function in `<script setup>`.
+  - *Bad:* `@update="v => { form = { ...form, val: v } }"`
+  - *Good:* `@update="handleUpdate"`
 - **Computed Properties Strategy:**
   - **Move Logic to Computed:** Whenever determining dynamic colors, classes, or complex state logic (especially conditional styles like `isActive ? 'bg-red' : 'bg-blue'`), move this logic into a `computed` property.
   - **Keep Templates Clean:** Templates should remain declarative. Avoid complex inline ternary operators or logical chains inside `:class` or `v-if`.
@@ -139,7 +170,8 @@
     3. Custom implementation (only if 1 & 2 fail).
   - Use specific project composables: `useDayjs` for time.
 
-## 7. AI & MCP Tools Integration
+
+## AI & MCP Tools Integration
 - **Nuxt & Nuxt UI MCP Servers:**
   - **ACTIVE USAGE REQUIRED:** When implementing logic or UI, you MUST explicitly query the connected MCP servers to retrieve the exact API definitions, props, and best practices.
   - **Sources of Truth:**
