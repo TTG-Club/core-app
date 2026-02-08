@@ -1,5 +1,6 @@
 <script setup lang="ts">
-  import { DEFAULT_SCORES, useAbilitiesCalculator, ZERO_SCORES } from './model';
+  import { useAbilitiesCalculator } from './composables/useAbilitiesCalculator';
+  import { DEFAULT_SCORES, ZERO_SCORES } from './model';
   import {
     BonusBackgrounds,
     BonusFeats,
@@ -111,7 +112,7 @@
         <BonusBackgrounds @update:sources="backgroundBonuses = $event" />
 
         <div
-          class="flex flex-col gap-2 rounded-xl border border-default bg-muted p-4"
+          class="flex flex-col gap-4 rounded-xl border border-default bg-muted p-4"
         >
           <div class="flex items-center justify-between">
             <span class="text-sm font-semibold">Уровень персонажа</span>
@@ -125,7 +126,6 @@
             v-model="characterLevel"
             :min="1"
             :max="20"
-            size="xs"
           />
         </div>
 

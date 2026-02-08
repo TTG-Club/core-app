@@ -1,8 +1,16 @@
 <script setup lang="ts">
-  import { useDiceRoller } from '~/features/dice-roller/composables/useDiceRoller';
-  import { AbilityKey } from '~/shared/types/abilities';
+  import { useTimeoutFn } from '@vueuse/core';
 
-  import { ABILITY_KEYS, ABILITY_LABELS } from '../../model/consts';
+  import { useDiceRoller } from '~/features/dice-roller/composables/useDiceRoller';
+  import { extractDiceRollDetails } from '~/features/dice-roller/utils';
+  import {
+    ABILITY_KEYS,
+    ABILITY_LABELS,
+    AbilityKey,
+    isAbilityKey,
+  } from '~/shared/types';
+
+  import DiceSpinner from './components/DiceSpinner.vue';
 
   import type { RandomRollState } from '../../model/types';
 
@@ -14,23 +22,105 @@
     (e: 'update:state', value: RandomRollState): void;
   }>();
 
-  const { rollMultiple } = useDiceRoller();
+  const { roll } = useDiceRoller();
+  const isAnimating = ref(false);
 
   const localState = ref<RandomRollState>({ ...props.state });
+  const hasRolled = ref(props.state.rolls.length > 0);
+
+  // Initialize dice if they exist in state, otherwise placeholder
+  const currentDice = ref<number[][]>(
+    (props.state.dice as number[][]) ??
+      Array.from({ length: 6 }).fill([1, 2, 3, 4]),
+  );
+
+  // Helper to find dropped index (lowest value) for a set of 4 dice
+  function getDroppedIndex(dice: number[]): number {
+    if (dice.length !== 4) {
+      return -1;
+    }
+
+    let minIndex = 0;
+    let minValue = dice[0];
+
+    for (let i = 1; i < 4; i++) {
+      const val = dice[i];
+
+      if (
+        typeof val === 'number' &&
+        typeof minValue === 'number' &&
+        val < minValue
+      ) {
+        minValue = val;
+        minIndex = i;
+      }
+    }
+
+    return minIndex;
+  }
 
   watch(
     () => props.state,
     (newVal) => {
       localState.value = { ...newVal };
+
+      if (newVal.dice) {
+        currentDice.value = newVal.dice;
+      }
+
+      if (newVal.rolls.length > 0) {
+        hasRolled.value = true;
+      }
     },
     { deep: true },
   );
 
+  const totalSum = computed(() =>
+    localState.value.rolls.reduce((sum, val) => sum + val, 0),
+  );
+
+  const { start: stopAnimation } = useTimeoutFn(
+    () => {
+      isAnimating.value = false;
+    },
+    2600, // Matches max duration in DiceSpinner (2000 + 3*200)
+    { immediate: false },
+  );
+
   function rollDice() {
-    const results = rollMultiple('4d6dl1', 6);
+    const results: number[] = [];
+    const diceDetails: number[][] = [];
+
+    for (let i = 0; i < 6; i++) {
+      const rollResult = roll('4d6dl1');
+      const details = extractDiceRollDetails(rollResult);
+
+      // Extract dice values from the structured details
+      // details[0] is the root DieNode for '4d6'
+      const rolls =
+        details[0]?.rolls.map((r) => r.value).filter((v): v is number => !!v) ||
+        [];
+
+      // Sort descending to find top 3
+      const sorted = [...rolls].sort((a, b) => b - a);
+      const top3Sum = sorted.slice(0, 3).reduce((sum, val) => sum + val, 0);
+
+      results.push(top3Sum);
+      diceDetails.push(rolls);
+    }
 
     // Sort results descending
-    results.sort((a, b) => b - a);
+    // We also need to sort diceDetails to match the sorted results
+    // Create pairs of [result, dice]
+    const paired = results.map((res, i) => ({
+      res,
+      dice: diceDetails[i],
+    }));
+
+    paired.sort((a, b) => b.res - a.res);
+
+    const sortedResults = paired.map((p) => p.res);
+    const sortedDice = paired.map((p) => p.dice ?? []);
 
     // Reset assignments and scores
     const newScores = { ...localState.value.scores };
@@ -42,15 +132,21 @@
     const newState: RandomRollState = {
       scores: newScores,
       isComplete: false,
-      rolls: results,
+      rolls: sortedResults,
+      dice: sortedDice,
       assignments: {},
     };
 
     localState.value = newState;
+    currentDice.value = sortedDice;
     emit('update:state', newState);
+
+    hasRolled.value = true;
+    isAnimating.value = true;
+    stopAnimation();
   }
 
-  function getAbilityOptions(_currentRollIndex: number) {
+  const abilityOptions = computed(() => {
     return [
       { label: 'Не назначено', value: null },
       ...ABILITY_KEYS.map((key) => ({
@@ -58,13 +154,7 @@
         value: key,
       })),
     ];
-  }
-
-  function isAbilityKey(k: unknown): k is AbilityKey {
-    return (
-      typeof k === 'string' && ABILITY_KEYS.some((key) => String(key) === k)
-    );
-  }
+  });
 
   function updateAssignment(rollIndex: number, ability: AbilityKey | null) {
     const newAssignments: Record<number, AbilityKey | null> = {};
@@ -128,7 +218,20 @@
   >
     <div class="flex items-center justify-between">
       <div class="text-sm text-secondary">
-        Бросьте 4к6 (с отбрасыванием наименьшего) 6 раз.
+        <template v-if="!hasRolled">
+          Сначала бросьте <span class="font-mono">4к6</span> шесть раз, затем
+          распределите результаты по характеристикам.
+        </template>
+
+        <template v-else>
+          Распределите результаты по характеристикам.
+          <span
+            v-if="totalSum > 0"
+            class="ml-2 font-semibold text-primary"
+          >
+            Общая сумма: {{ totalSum }}
+          </span>
+        </template>
       </div>
 
       <UButton
@@ -144,23 +247,44 @@
       class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
     >
       <div
-        v-for="(roll, index) in localState.rolls"
+        v-for="(rollValue, index) in localState.rolls"
         :key="index"
-        class="bg-card flex items-center justify-between gap-3 rounded-xl border border-default p-3"
+        class="bg-card flex flex-col gap-3 rounded-xl border border-default p-3 transition-colors"
+        :class="{ 'border-success bg-success/5': rollValue === 18 }"
       >
-        <div class="pl-2 text-xl font-bold">
-          {{ roll }}
+        <div class="flex items-center justify-between">
+          <div class="pl-2 text-2xl font-bold">
+            <USkeleton
+              v-if="isAnimating"
+              class="h-7 w-8"
+            />
+
+            <span v-else>{{ rollValue }}</span>
+          </div>
+
+          <USelect
+            v-if="!isAnimating"
+            :model-value="localState.assignments[index] ?? null"
+            :items="abilityOptions"
+            class="w-40"
+            placeholder="Назначить..."
+            @update:model-value="
+              (v) => updateAssignment(index, isAbilityKey(v) ? v : null)
+            "
+          />
+
+          <USkeleton
+            v-else
+            class="h-8 w-40"
+          />
         </div>
 
-        <USelect
-          :model-value="localState.assignments[index] ?? null"
-          :items="getAbilityOptions(index)"
-          class="w-40"
-          placeholder="Назначить..."
-          @update:model-value="
-            (v) => updateAssignment(index, isAbilityKey(v) ? v : null)
-          "
-        />
+        <div class="flex items-center justify-center gap-4 py-2">
+          <DiceSpinner
+            :values="currentDice[index] ?? []"
+            :dropped-index="getDroppedIndex(currentDice[index] ?? [])"
+          />
+        </div>
       </div>
     </div>
 

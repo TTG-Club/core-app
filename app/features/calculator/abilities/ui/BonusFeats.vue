@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { SelectClass, SelectFeat } from '~ui/select';
 
-  import { ABILITY_KEYS, ABILITY_LABELS } from '../model/consts';
+  import { ABILITY_KEYS, ABILITY_LABELS } from '~/shared/types';
 
   import type { FeatSelectResponse } from '~/shared/types';
   import type { AbilityKey } from '~/shared/types/abilities';

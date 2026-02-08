@@ -19,6 +19,7 @@ export interface PointBuyState extends TabState {
 
 export interface RandomRollState extends TabState {
   rolls: number[]; // The 6 rolled numbers
+  dice?: number[][]; // The individual dice values for each roll (6 arrays of 4 numbers)
   assignments: Record<number, AbilityKey | null>; // Index of roll -> assigned ability
 }
 

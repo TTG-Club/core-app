@@ -1,11 +1,8 @@
 <script setup lang="ts">
+  import { ABILITY_KEYS, ABILITY_LABELS } from '~/shared/types';
   import { AbilityKey } from '~/shared/types/abilities';
 
-  import {
-    ABILITY_KEYS,
-    ABILITY_LABELS,
-    STANDARD_ARRAY,
-  } from '../../model/consts';
+  import { STANDARD_ARRAY } from '../../model/consts';
 
   import type { AbilityScores } from '../../model/types';
 

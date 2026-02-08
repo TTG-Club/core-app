@@ -1,9 +1,7 @@
 <script setup lang="ts">
   import { SelectBackground } from '~ui/select';
 
-  import { AbilityKey } from '~/shared/types';
-
-  import { ABILITY_LABELS } from '../model';
+  import { ABILITY_LABELS, AbilityKey } from '~/shared/types';
 
   import type { AbilityScores, BonusSource } from '../model';
 

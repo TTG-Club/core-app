@@ -1,12 +1,13 @@
 import { computed } from 'vue';
 
+import { ABILITY_KEYS } from '~/shared/types';
 import { getFormattedModifier, getModifier } from '~/utils/modifier';
 
-import { ABILITY_KEYS, DEFAULT_SCORES } from './consts';
+import { DEFAULT_SCORES } from '../model/consts';
 
 import type { Ref } from 'vue';
 
-import type { AbilityScores, BonusSource } from './types';
+import type { AbilityScores, BonusSource } from '../model/types';
 
 export function useAbilitiesCalculator(
   baseScores: Ref<AbilityScores>,

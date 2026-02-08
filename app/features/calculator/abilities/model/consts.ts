@@ -2,26 +2,6 @@ import { AbilityKey } from '~/shared/types';
 
 import type { AbilityScores } from './types';
 
-export const ABILITY_LABELS: Record<AbilityKey, string> = {
-  [AbilityKey.STRENGTH]: 'Сила',
-  [AbilityKey.DEXTERITY]: 'Ловкость',
-  [AbilityKey.CONSTITUTION]: 'Телосложение',
-  [AbilityKey.INTELLIGENCE]: 'Интеллект',
-  [AbilityKey.WISDOM]: 'Мудрость',
-  [AbilityKey.CHARISMA]: 'Харизма',
-};
-
-export const ABILITY_SHORT_LABELS: Record<AbilityKey, string> = {
-  [AbilityKey.STRENGTH]: 'СИЛ',
-  [AbilityKey.DEXTERITY]: 'ЛОВ',
-  [AbilityKey.CONSTITUTION]: 'ТЕЛ',
-  [AbilityKey.INTELLIGENCE]: 'ИНТ',
-  [AbilityKey.WISDOM]: 'МДР',
-  [AbilityKey.CHARISMA]: 'ХАР',
-};
-
-export const ABILITY_KEYS = Object.values(AbilityKey);
-
 export const DEFAULT_SCORES: AbilityScores = {
   [AbilityKey.STRENGTH]: 8,
   [AbilityKey.DEXTERITY]: 8,

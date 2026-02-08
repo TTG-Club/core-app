@@ -193,9 +193,28 @@
     ignore-filter
     searchable
     clearable
+    :ui="{
+      itemTrailing: 'float-end',
+    }"
     @update:open="handleDropdownOpening"
     @update:model-value="handleModelValueUpdate"
   >
+    <template #item-label="{ item }">
+      <span class="flex items-center gap-1">
+        <span class="truncate">
+          {{ item.label }}
+        </span>
+
+        <UIcon
+          v-if="item.repeatability"
+          name="i-fluent-arrow-repeat-all-24-regular"
+          class="text-muted"
+          size="16"
+          title="Повторяемая черта"
+        />
+      </span>
+    </template>
+
     <template #item-trailing="{ item }">
       <UBadge
         variant="subtle"

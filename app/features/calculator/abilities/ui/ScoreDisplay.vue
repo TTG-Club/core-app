@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { ABILITY_SHORT_LABELS } from '../model/consts';
+  import { ABILITY_SHORT_LABELS } from '~/shared/types';
 
   import type { AbilityKey } from '~/shared/types';
 
@@ -10,9 +10,10 @@
     modifier: number;
     formattedModifier: string;
     breakdown: string | undefined;
+    baseValue: number;
   }
 
-  defineProps<{
+  const props = defineProps<{
     items: DisplayItem[];
   }>();
 
@@ -22,14 +23,22 @@
 
   function getCardClass(value: number): string {
     const baseClass =
-      'rounded-xl p-2 text-center border transition-colors hover:border-primary border-default';
+      'rounded-xl p-2 text-center border transition-shadow hover:shadow-lg border-default';
 
-    if (!isOvercap(value)) {
-      return `${baseClass} bg-card`;
+    if (isOvercap(value)) {
+      return `${baseClass} border-error bg-error/5`;
     }
 
-    return `${baseClass} border-error bg-error/10`;
+    return `${baseClass} bg-card`;
   }
+
+  const totalBase = computed(() =>
+    props.items.reduce((sum, item) => sum + item.baseValue, 0),
+  );
+
+  const totalScore = computed(() =>
+    props.items.reduce((sum, item) => sum + item.value, 0),
+  );
 </script>
 
 <template>
@@ -55,8 +64,20 @@
       </UTooltip>
     </div>
 
-    <div class="mt-4 text-xs text-secondary">
-      Наведите на характеристику, чтобы увидеть детальный расчет.
+    <div
+      class="mt-4 flex flex-col justify-between gap-2 text-xs text-secondary sm:flex-row sm:items-center"
+    >
+      <div>Наведите на характеристику, чтобы увидеть детальный расчет.</div>
+
+      <div class="flex gap-1 font-medium">
+        <div>
+          Сумма очков: <span class="text-primary">{{ totalBase }}</span>
+        </div>
+        ·
+        <div>
+          Включая бонусы: <span class="text-primary">{{ totalScore }}</span>
+        </div>
+      </div>
     </div>
   </div>
 </template>
