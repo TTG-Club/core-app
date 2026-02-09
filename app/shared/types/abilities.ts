@@ -23,6 +23,8 @@ export interface AbilityInfo {
   shortLabel: string;
 }
 
+export type BaseAbilityScores = Record<AbilityKey, number>;
+
 export const ABILITIES: AbilityInfo[] = [
   {
     key: AbilityKey.STRENGTH,
@@ -62,6 +64,25 @@ export const ABILITIES: AbilityInfo[] = [
   },
 ] as const;
 
+export const ABILITY_LABELS: Record<AbilityKey, string> = {
+  [AbilityKey.STRENGTH]: 'Сила',
+  [AbilityKey.DEXTERITY]: 'Ловкость',
+  [AbilityKey.CONSTITUTION]: 'Телосложение',
+  [AbilityKey.INTELLIGENCE]: 'Интеллект',
+  [AbilityKey.WISDOM]: 'Мудрость',
+  [AbilityKey.CHARISMA]: 'Харизма',
+} as const;
+
+export const ABILITY_SHORT_LABELS: Record<AbilityKey, string> = {
+  [AbilityKey.STRENGTH]: 'СИЛ',
+  [AbilityKey.DEXTERITY]: 'ЛОВ',
+  [AbilityKey.CONSTITUTION]: 'ТЕЛ',
+  [AbilityKey.INTELLIGENCE]: 'ИНТ',
+  [AbilityKey.WISDOM]: 'МДР',
+  [AbilityKey.CHARISMA]: 'ХАР',
+} as const;
+
+export const ABILITY_KEYS = Object.values(AbilityKey);
 export function getAbilityInfo(key: AbilityKey): AbilityInfo;
 
 export function getAbilityInfo(key: AbilityShortKey): AbilityInfo;
@@ -76,4 +97,8 @@ export function getAbilityInfo(key: AbilityKey | AbilityShortKey): AbilityInfo {
   }
 
   return ability;
+}
+
+export function isAbilityKey(k: unknown): k is AbilityKey {
+  return typeof k === 'string' && ABILITY_KEYS.some((key) => String(key) === k);
 }

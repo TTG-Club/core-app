@@ -1,0 +1,104 @@
+<script setup lang="ts">
+  import { ABILITY_KEYS, ABILITY_LABELS } from '~/shared/types';
+  import { AbilityKey } from '~/shared/types/abilities';
+
+  import { STANDARD_ARRAY, ZERO_SCORES } from '../../model';
+
+  import type { AbilityScores } from '../../model';
+
+  const model = defineModel<AbilityScores>({ required: true });
+
+  const localScores = ref<AbilityScores>({ ...ZERO_SCORES });
+
+  watch(
+    model,
+    (newVal) => {
+      localScores.value = { ...newVal };
+    },
+    { immediate: true, deep: true },
+  );
+
+  const usedValues = computed(() => {
+    const set = new Set<number>();
+
+    for (const key of Object.values(AbilityKey)) {
+      const val = localScores.value[key];
+
+      if (val !== 0 && STANDARD_ARRAY.includes(val)) {
+        set.add(val);
+      }
+    }
+
+    return set;
+  });
+
+  function getOptions() {
+    return [
+      { label: 'Не выбрано', value: 0 },
+      ...STANDARD_ARRAY.map((score) => ({
+        label: String(score),
+        value: score,
+      })),
+    ];
+  }
+
+  function updateScore(key: AbilityKey, value: number) {
+    const newScores = { ...localScores.value };
+
+    const conflictingKey = ABILITY_KEYS.find(
+      (abilityKey) =>
+        newScores[abilityKey] === value && abilityKey !== key && value !== 0,
+    );
+
+    if (conflictingKey) {
+      newScores[conflictingKey] = 0;
+    }
+
+    newScores[key] = value;
+
+    localScores.value = newScores;
+    model.value = newScores;
+  }
+
+  function getScoreClass(score: number) {
+    return usedValues.value.has(score)
+      ? 'text-secondary'
+      : 'text-error font-bold';
+  }
+</script>
+
+<template>
+  <div
+    class="flex flex-col gap-4 rounded-xl border border-default bg-muted p-4"
+  >
+    <div class="text-sm text-secondary">
+      Распределите значения:
+      <span class="font-mono">
+        <span
+          v-for="(score, index) in STANDARD_ARRAY"
+          :key="score"
+          :class="getScoreClass(score)"
+        >
+          {{ score }}<span v-if="index < STANDARD_ARRAY.length - 1">, </span>
+        </span> </span
+      >.
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div
+        v-for="key in ABILITY_KEYS"
+        :key="key"
+        class="bg-card flex items-center justify-between gap-3 rounded-xl border border-default p-3"
+      >
+        <div class="font-semibold">{{ ABILITY_LABELS[key] }}</div>
+
+        <USelect
+          :model-value="localScores[key]"
+          :items="getOptions()"
+          class="w-32"
+          @update:model-value="updateScore(key, Number($event))"
+        />
+      </div>
+    </div>
+  </div>
+</template>
