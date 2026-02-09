@@ -8,7 +8,7 @@
     CalculatorBackgroundOption,
   } from '../../model';
 
-  const props = defineProps<{
+  const { background, backgroundOptions, loading } = defineProps<{
     background: CalculatorAbilitiesBackground | undefined;
     backgroundOptions: CalculatorBackgroundOption[];
     loading: boolean;
@@ -18,17 +18,13 @@
     (e: 'update:sources', value: BonusSource[]): void;
   }>();
 
-  const selectedBackgroundUrl = defineModel<string | undefined>(
-    'selectedBackgroundUrl',
-  );
+  const selectedBackgroundUrl = defineModel<string>('selected-background-url');
 
   const asiChoice = ref<'three_ones' | 'two_one'>('two_one');
   const plusTwoStat = ref<AbilityKey | undefined>(undefined);
   const plusOneStat = ref<AbilityKey | undefined>(undefined);
 
   const availableAbilities = computed<AbilityKey[]>(() => {
-    const background = props.background;
-
     if (
       !background?.abilityScores ||
       !Array.isArray(background.abilityScores)
@@ -52,7 +48,7 @@
   const canChooseTwoOne = computed(() => availableAbilities.value.length >= 2);
 
   watch(
-    () => props.background,
+    () => background,
     () => {
       plusTwoStat.value = undefined;
       plusOneStat.value = undefined;
@@ -66,12 +62,12 @@
   );
 
   const calculatedBonuses = computed<BonusSource[]>(() => {
-    if (!props.background) {
+    if (!background) {
       return [];
     }
 
     const bonuses: Partial<AbilityScores> = {};
-    const bgName = props.background.name.rus;
+    const bgName = background.name.rus;
 
     if (asiChoice.value === 'three_ones' && canChooseThreeOnes.value) {
       for (const key of availableAbilities.value.slice(0, 3)) {
@@ -89,7 +85,7 @@
 
     return [
       {
-        id: props.background.url,
+        id: background.url,
         label: `Предыстория: ${bgName}`,
         scores: bonuses,
       },

@@ -15,7 +15,7 @@
     baseValue: number;
   }
 
-  const props = defineProps<{
+  const { items } = defineProps<{
     items: DisplayItem[];
   }>();
 
@@ -35,11 +35,11 @@
   }
 
   const totalBase = computed(() =>
-    props.items.reduce((sum, scoreItem) => sum + scoreItem.baseValue, 0),
+    items.reduce((sum, scoreItem) => sum + scoreItem.baseValue, 0),
   );
 
   const totalScore = computed(() =>
-    props.items.reduce((sum, scoreItem) => sum + scoreItem.value, 0),
+    items.reduce((sum, scoreItem) => sum + scoreItem.value, 0),
   );
 </script>
 

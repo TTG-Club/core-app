@@ -6,7 +6,15 @@
     CalculatorFeatOption,
   } from '../../model';
 
-  defineProps<{
+  const {
+    options,
+    abilityOptions,
+    loading,
+    label,
+    placeholder,
+    disabled,
+    hasMultipleAbilities,
+  } = defineProps<{
     options: CalculatorFeatOption[];
     abilityOptions: CalculatorAbilityOption[];
     loading: boolean;
@@ -14,18 +22,17 @@
     placeholder: string;
     disabled: boolean;
     hasMultipleAbilities: boolean;
-    showAbilityChoice: boolean;
   }>();
 
-  const modelValue = defineModel<string | undefined>('modelValue');
-  const abilityChoice = defineModel<AbilityKey | undefined>('abilityChoice');
+  const model = defineModel<string>();
+  const abilityChoice = defineModel<AbilityKey>('ability-choice');
 </script>
 
 <template>
   <div
     class="bg-card flex h-full flex-col gap-2 rounded-lg border border-default p-4"
     :class="{
-      'opacity-50 grayscale': disabled && !modelValue,
+      'opacity-50 grayscale': disabled && !model,
     }"
   >
     <div class="text-xs font-medium text-secondary">
@@ -34,7 +41,7 @@
 
     <UFieldGroup>
       <USelectMenu
-        v-model="modelValue"
+        v-model="model"
         :items="options"
         :loading="loading"
         searchable
@@ -90,16 +97,16 @@
       </USelectMenu>
 
       <UButton
-        v-if="modelValue && !disabled"
+        v-if="model && !disabled"
         icon="i-fluent-dismiss-24-regular"
         color="neutral"
         variant="subtle"
-        @click="modelValue = undefined"
+        @click="model = undefined"
       />
     </UFieldGroup>
 
     <!-- Ability Choice Inline -->
-    <template v-if="modelValue">
+    <template v-if="model">
       <UFieldGroup
         v-if="hasMultipleAbilities"
         class="mt-auto w-full pt-1"

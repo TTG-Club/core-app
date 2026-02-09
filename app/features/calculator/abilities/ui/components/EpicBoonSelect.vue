@@ -6,16 +6,17 @@
     CalculatorFeatOption,
   } from '../../model';
 
-  defineProps<{
-    options: CalculatorFeatOption[];
-    abilityOptions: CalculatorAbilityOption[];
-    loading: boolean;
-    disabled: boolean;
-    hasMultipleAbilities: boolean;
-  }>();
+  const { options, abilityOptions, loading, disabled, hasMultipleAbilities } =
+    defineProps<{
+      options: CalculatorFeatOption[];
+      abilityOptions: CalculatorAbilityOption[];
+      loading: boolean;
+      disabled: boolean;
+      hasMultipleAbilities: boolean;
+    }>();
 
-  const modelValue = defineModel<string | undefined>('modelValue');
-  const abilityChoice = defineModel<AbilityKey | undefined>('abilityChoice');
+  const model = defineModel<string>();
+  const abilityChoice = defineModel<AbilityKey>('ability-choice');
 </script>
 
 <template>
@@ -28,7 +29,7 @@
     <div class="flex flex-col gap-2">
       <UFieldGroup>
         <USelectMenu
-          v-model="modelValue"
+          v-model="model"
           :items="options"
           :loading="loading"
           placeholder="Выберите эпический дар"
@@ -68,16 +69,16 @@
         </USelectMenu>
 
         <UButton
-          v-if="modelValue && !disabled"
+          v-if="model && !disabled"
           icon="i-fluent-dismiss-24-regular"
           color="neutral"
           variant="subtle"
-          @click="modelValue = undefined"
+          @click="model = undefined"
         />
       </UFieldGroup>
 
       <!-- Epic Ability Choice -->
-      <div v-if="modelValue">
+      <div v-if="model">
         <UFieldGroup
           v-if="hasMultipleAbilities"
           class="w-full"

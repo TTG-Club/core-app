@@ -1,12 +1,12 @@
 <script setup lang="ts">
   import type { CalculatorClassOption } from '../../model';
 
-  defineProps<{
+  const { classOptions, classesPending } = defineProps<{
     classOptions: CalculatorClassOption[];
     classesPending: boolean;
   }>();
 
-  const selectedClassUrl = defineModel<string | undefined>('selectedClassUrl');
+  const selectedClassUrl = defineModel<string>('selected-class-url');
   const level = defineModel<number>('level', { required: true });
 </script>
 

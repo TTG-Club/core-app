@@ -5,21 +5,18 @@
     muted?: boolean;
   }
 
-  const props = withDefaults(defineProps<Props>(), {
-    size: 44,
-    muted: false,
-  });
+  const { value, size = 44, muted = false } = defineProps<Props>();
 </script>
 
 <template>
   <div
     class="flex items-center justify-center rounded border shadow-sm transition-colors"
     :class="[
-      props.muted
+      muted
         ? 'border-muted/30 bg-muted/30 text-muted/30'
         : 'border-default bg-elevated text-default',
     ]"
-    :style="{ width: `${props.size}px`, height: `${props.size}px` }"
+    :style="{ width: `${size}px`, height: `${size}px` }"
   >
     <svg
       viewBox="0 0 100 100"

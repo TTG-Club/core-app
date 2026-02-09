@@ -8,7 +8,17 @@
     CalculatorFeatOption,
   } from '../../model';
 
-  const props = defineProps<{
+  const {
+    allAsiLevels,
+    classAsiLevels,
+    level,
+    selectedFeats,
+    featAbilityChoices,
+    loading,
+    getOptionsForLevel,
+    getAbilityOptions,
+    isFeatHasMultipleAbilities,
+  } = defineProps<{
     allAsiLevels: number[];
     classAsiLevels: number[];
     level: number;
@@ -30,15 +40,13 @@
   }>();
 
   function getPlaceholder(featLevel: number): string {
-    return props.classAsiLevels.includes(featLevel)
-      ? 'Выберите черту'
-      : 'Недоступно';
+    return classAsiLevels.includes(featLevel) ? 'Выберите черту' : 'Недоступно';
   }
 
   function isSlotDisabled(featLevel: number): boolean {
-    const isClassLevelAvailable = props.classAsiLevels.includes(featLevel);
-    const hasFeatSelected = props.selectedFeats.get(featLevel);
-    const isLevelReached = props.level >= featLevel;
+    const isClassLevelAvailable = classAsiLevels.includes(featLevel);
+    const hasFeatSelected = selectedFeats.get(featLevel);
+    const isLevelReached = level >= featLevel;
 
     return !isClassLevelAvailable || (!isLevelReached && !hasFeatSelected);
   }
@@ -71,7 +79,6 @@
       :has-multiple-abilities="
         isFeatHasMultipleAbilities(selectedFeats.get(featLevel))
       "
-      show-ability-choice
       @update:model-value="handleFeatUpdate(featLevel, $event)"
       @update:ability-choice="handleAbilityChoiceUpdate(featLevel, $event)"
     />

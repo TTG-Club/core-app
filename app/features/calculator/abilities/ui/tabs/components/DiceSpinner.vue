@@ -1,9 +1,11 @@
 <script setup lang="ts">
   import { TransitionPresets, useTransition } from '@vueuse/core';
 
+  import DiceD6 from './DiceD6.vue';
+
   import type { DiceRollItem } from '~dice-roller/types';
 
-  const props = defineProps<{
+  const { values } = defineProps<{
     values: DiceRollItem[];
   }>();
 
@@ -44,7 +46,7 @@
   const transitionOffsets = offsets.map((source, index) => {
     return useTransition(source, {
       duration: getDuration(index),
-      transition: TransitionPresets.easeOutCubic,
+      easing: TransitionPresets.easeOutCubic,
     });
   });
 
@@ -53,7 +55,7 @@
   }
 
   watch(
-    () => props.values,
+    () => values,
     (newValues) => {
       if (!newValues.length) {
         return;

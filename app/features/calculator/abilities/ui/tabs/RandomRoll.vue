@@ -13,6 +13,7 @@
     RANDOM_ROLL_COUNT,
     RANDOM_ROLL_FORMULA,
     RANDOM_ROLL_MAX_RESULT,
+    ZERO_SCORES,
   } from '../../model';
 
   import { DiceSpinner } from './components';
@@ -21,23 +22,22 @@
 
   import type { RandomRollState } from '../../model';
 
-  const props = defineProps<{
-    state: RandomRollState;
-  }>();
-
-  const emit = defineEmits<{
-    (e: 'update:state', value: RandomRollState): void;
-  }>();
+  const state = defineModel<RandomRollState>('state', { required: true });
 
   const { roll } = useDiceRoller();
   const isAnimating = ref(false);
 
-  const localState = ref<RandomRollState>({ ...props.state });
-  const hasRolled = ref(props.state.rolls.length > 0);
+  const localState = ref<RandomRollState>({
+    scores: { ...ZERO_SCORES },
+    isComplete: false,
+    rolls: [],
+    assignments: {},
+  });
+
+  const hasRolled = ref(false);
 
   const currentDice = ref<DiceRollItem[][]>(
-    props.state.dice ??
-      Array.from<DiceRollItem[]>({ length: RANDOM_ROLL_COUNT }).fill([]),
+    Array.from<DiceRollItem[]>({ length: RANDOM_ROLL_COUNT }).fill([]),
   );
 
   const animationCompleted = ref<boolean[]>(
@@ -45,7 +45,7 @@
   );
 
   watch(
-    () => props.state,
+    state,
     (newVal) => {
       localState.value = { ...newVal };
 
@@ -57,7 +57,7 @@
         hasRolled.value = true;
       }
     },
-    { deep: true },
+    { deep: true, immediate: true },
   );
 
   const totalSum = computed(() =>
@@ -111,7 +111,7 @@
 
     localState.value = newState;
     currentDice.value = sortedDice;
-    emit('update:state', newState);
+    state.value = newState;
 
     hasRolled.value = true;
     isAnimating.value = true;
@@ -180,7 +180,7 @@
     };
 
     localState.value = newState;
-    emit('update:state', newState);
+    state.value = newState;
   }
 
   function handleAssignmentUpdate(index: number, value: unknown) {

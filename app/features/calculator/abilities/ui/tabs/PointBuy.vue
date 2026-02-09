@@ -7,22 +7,17 @@
     POINT_BUY_COSTS,
     POINT_BUY_MAX_SCORE,
     POINT_BUY_MIN_SCORE,
+    ZERO_SCORES,
   } from '../../model';
 
   import type { AbilityScores } from '../../model';
 
-  const props = defineProps<{
-    modelValue: AbilityScores;
-  }>();
+  const model = defineModel<AbilityScores>({ required: true });
 
-  const emit = defineEmits<{
-    (e: 'update:modelValue', value: AbilityScores): void;
-  }>();
-
-  const localScores = ref<AbilityScores>({ ...props.modelValue });
+  const localScores = ref<AbilityScores>({ ...ZERO_SCORES });
 
   watch(
-    () => props.modelValue,
+    model,
     (newVal) => {
       localScores.value = { ...newVal };
     },
@@ -78,7 +73,7 @@
     const newScores = { ...localScores.value, [key]: next };
 
     localScores.value = newScores;
-    emit('update:modelValue', newScores);
+    model.value = newScores;
   }
 
   const remainingPointsClass = computed(() =>
