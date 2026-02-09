@@ -1,9 +1,12 @@
 <script setup lang="ts">
-  import { SelectBackground } from '~ui/select';
-
   import { ABILITY_LABELS, AbilityKey } from '~/shared/types';
+  import { isAbilityKey } from '~/shared/types/abilities';
 
-  import type { AbilityScores, BonusSource } from '../model';
+  import type {
+    AbilityScores,
+    BonusSource,
+    CalculatorAbilitiesBackground,
+  } from '../model';
 
   const emit = defineEmits<{
     (e: 'update:sources', value: BonusSource[]): void;
@@ -14,13 +17,16 @@
   const plusTwoStat = ref<AbilityKey | undefined>(undefined);
   const plusOneStat = ref<AbilityKey | undefined>(undefined);
 
-  const { data: allBackgrounds } = await useAsyncData(
-    'all-backgrounds-for-calc',
-    () => $fetch<any[]>('/api/v2/backgrounds/select'),
-  );
+  const { data: allBackgrounds, status } = await useFetch<
+    CalculatorAbilitiesBackground[]
+  >('/api/v2/backgrounds/select', {
+    dedupe: 'defer',
+    lazy: true,
+    default: () => [],
+  });
 
   const backgroundsByUrl = computed(() => {
-    const map: Record<string, any> = {};
+    const map: Record<string, CalculatorAbilitiesBackground> = {};
 
     if (allBackgrounds.value) {
       for (const b of allBackgrounds.value) {
@@ -29,6 +35,29 @@
     }
 
     return map;
+  });
+
+  const backgroundOptions = computed(() => {
+    return (
+      allBackgrounds.value?.map((backgroundLink) => {
+        const abilities =
+          backgroundLink.abilityScores
+            ?.filter(isAbilityKey)
+            .map((key) => ABILITY_LABELS[key])
+            .join(', ') || '';
+
+        const description = [backgroundLink.name.eng, abilities]
+          .filter(Boolean)
+          .join(' • ');
+
+        return {
+          label: backgroundLink.name.rus,
+          value: backgroundLink.url,
+          description,
+          sourceLabel: backgroundLink.source.name.label,
+        };
+      }) || []
+    );
   });
 
   const currentBackground = computed(() => {
@@ -166,7 +195,25 @@
   >
     <div class="text-sm font-semibold">Предыстория</div>
 
-    <SelectBackground v-model="selectedBackgroundUrl" />
+    <USelectMenu
+      v-model="selectedBackgroundUrl"
+      :items="backgroundOptions"
+      :loading="status === 'pending'"
+      placeholder="Выберите предысторию"
+      searchable
+      class="w-full"
+      label-key="label"
+      value-key="value"
+    >
+      <template #item-trailing="{ item }">
+        <UBadge
+          variant="subtle"
+          color="neutral"
+        >
+          {{ item.sourceLabel }}
+        </UBadge>
+      </template>
+    </USelectMenu>
 
     <div
       v-if="currentBackground"

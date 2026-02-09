@@ -193,28 +193,9 @@
     ignore-filter
     searchable
     clearable
-    :ui="{
-      itemTrailing: 'float-end',
-    }"
     @update:open="handleDropdownOpening"
     @update:model-value="handleModelValueUpdate"
   >
-    <template #item-label="{ item }">
-      <span class="flex items-center gap-1">
-        <span class="truncate">
-          {{ item.label }}
-        </span>
-
-        <UIcon
-          v-if="item.repeatability"
-          name="i-fluent-arrow-repeat-all-24-regular"
-          class="text-muted"
-          size="16"
-          title="Повторяемая черта"
-        />
-      </span>
-    </template>
-
     <template #item-trailing="{ item }">
       <UBadge
         variant="subtle"
@@ -225,21 +206,11 @@
     </template>
 
     <template #item-description="{ item }">
-      <div class="grid w-full">
-        <div
-          class="w-full truncate"
-          :title="item.description"
-        >
-          {{ item.description }}
-        </div>
-
-        <div
-          v-if="item.prerequisite"
-          class="w-full truncate text-dimmed"
-          :title="item.prerequisite"
-        >
-          {{ item.prerequisite }}
-        </div>
+      <div
+        class="w-full truncate"
+        :title="item.description"
+      >
+        {{ item.description }}
       </div>
     </template>
   </USelectMenu>

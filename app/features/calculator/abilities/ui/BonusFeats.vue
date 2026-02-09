@@ -1,12 +1,18 @@
 <script setup lang="ts">
-  import { SelectClass, SelectFeat } from '~ui/select';
+  import {
+    ABILITY_KEYS,
+    ABILITY_LABELS,
+    ABILITY_SHORT_LABELS,
+  } from '~/shared/types';
 
-  import { ABILITY_KEYS, ABILITY_LABELS } from '~/shared/types';
-
-  import type { FeatSelectResponse } from '~/shared/types';
   import type { AbilityKey } from '~/shared/types/abilities';
 
-  import type { AbilityScores, BonusSource } from '../model/types';
+  import type {
+    AbilityScores,
+    BonusSource,
+    CalculatorAbilitiesClass,
+    CalculatorAbilitiesFeat,
+  } from '../model/types';
 
   const props = defineProps<{
     level: number;
@@ -17,17 +23,28 @@
   }>();
 
   // --- Class Selection ---
-  const selectedClassUrl = ref<string | undefined>(undefined);
+  const standardAsiLevels = [4, 8, 12, 16];
+  const selectedClassUrl = ref<string>();
 
-  // In a real implementation, we would fetch class details to get exact ASI levels.
-  // For this stub, we default to standard 4/8/12/16/19.
-  // Rogues get extra at 10, Fighters at 6 and 14.
-  const standardAsiLevels = [4, 8, 12, 16, 19];
+  const { data: allClasses, pending: classesPending } = await useFetch<
+    CalculatorAbilitiesClass[]
+  >('/api/v2/classes/ability-improvement', {
+    dedupe: 'defer',
+    lazy: true,
+    default: () => [],
+  });
 
   const classAsiLevels = computed(() => {
-    // TODO: Fetch real class data.
-    // For now, if class is selected, we still use standard.
-    // If no class, standard.
+    if (selectedClassUrl.value && allClasses.value) {
+      const cls = allClasses.value.find(
+        (c) => c.url === selectedClassUrl.value,
+      );
+
+      if (cls) {
+        return cls.levels.filter((lvl) => lvl !== 19);
+      }
+    }
+
     return standardAsiLevels;
   });
 
@@ -48,22 +65,23 @@
 
   // --- Feat Selection ---
   const selectedFeatUrls = ref<string[]>([]);
-  const selectedEpicFeatUrl = ref<string | undefined>(undefined);
+  const selectedEpicFeatUrl = ref<string>();
   // Store user choices for feats that offer ability selection
   const featAbilityChoices = ref<Record<string, AbilityKey>>({});
 
-  const { data: allFeats } = await useFetch<FeatSelectResponse[]>(
-    '/api/v2/feats/select',
-    {
-      method: 'GET',
-      query: {
-        categories: ['GENERAL', 'DRAGONMARK', 'EPIC_BOON'],
-      },
+  const { data: allFeats, pending: featsPending } = await useFetch<
+    CalculatorAbilitiesFeat[]
+  >('/api/v2/feats/select', {
+    query: {
+      categories: ['GENERAL', 'DRAGONMARK', 'EPIC_BOON'],
     },
-  );
+    dedupe: 'defer',
+    lazy: true,
+    default: () => [],
+  });
 
   const featsByUrl = computed(() => {
-    const map: Record<string, FeatSelectResponse> = {};
+    const map: Record<string, CalculatorAbilitiesFeat> = {};
 
     if (allFeats.value) {
       for (const f of allFeats.value) {
@@ -74,11 +92,69 @@
     return map;
   });
 
+  const generalFeatsOptions = computed(() => {
+    const options =
+      allFeats.value
+        ?.filter((f) => f.category === 'GENERAL' || f.category === 'DRAGONMARK')
+        .map(mapFeats) || [];
+
+    // Mark unselected options as disabled if max slots reached
+    if (selectedFeatUrls.value.length >= generalSlots.value) {
+      return options.map((opt) => ({
+        ...opt,
+        disabled: !selectedFeatUrls.value.includes(opt.value),
+      }));
+    }
+
+    return options;
+  });
+
+  const epicFeatsOptions = computed(() => {
+    return (
+      allFeats.value?.filter((f) => f.category === 'EPIC_BOON').map(mapFeats) ||
+      []
+    );
+  });
+
+  function mapFeats(feat: CalculatorAbilitiesFeat) {
+    const sourceLabel = feat.source.name.label;
+
+    const abilities =
+      feat.abilities
+        ?.filter(isAbilityKey)
+        .map((key) => ABILITY_SHORT_LABELS[key])
+        .join(', ') || '';
+
+    const description = [feat.name.eng, abilities].filter(Boolean).join(' • ');
+
+    return {
+      label: feat.name.rus,
+      value: feat.url,
+      description,
+      source: sourceLabel,
+      prerequisite: feat.prerequisite,
+      repeatability: feat.repeatability,
+    };
+  }
+
+  const classOptions = computed(() => {
+    return (
+      allClasses.value?.map((classLink) => ({
+        label: classLink.name.rus,
+        value: classLink.url,
+        description: `${classLink.name.eng} • Уровни: ${classLink.levels.join(', ')}`,
+        source: classLink.source.name.label,
+      })) || []
+    );
+  });
+
   function isAbilityKey(key: string): key is AbilityKey {
     return ABILITY_KEYS.some((k) => String(k) === key);
   }
 
-  function getFirstAbility(feat: FeatSelectResponse): AbilityKey | undefined {
+  function getFirstAbility(
+    feat: CalculatorAbilitiesFeat,
+  ): AbilityKey | undefined {
     if (!feat.abilities || feat.abilities.length === 0) {
       return undefined;
     }
@@ -161,12 +237,6 @@
   });
 
   watch(selectedSources, (newVal) => {
-    // Emit sources WITHOUT labels for internal calculation as requested
-    // "в selectedSources лучше добавить label, а для emit убирать label"
-    // However, useAbilitiesCalculator expects label for breakdown.
-    // If we remove it, the breakdown will show "undefined".
-    // Let's compromise: we keep label, but maybe the user wanted cleaner data?
-    // I'll emit with label to ensure functionality, but address the lint error.
     emit('update:sources', newVal);
   });
 
@@ -202,13 +272,27 @@
     <div class="flex flex-col gap-2">
       <div class="text-sm font-semibold">Класс</div>
 
-      <SelectClass
+      <USelectMenu
         v-model="selectedClassUrl"
+        :items="classOptions"
+        :loading="classesPending"
         placeholder="Выберите класс"
-      />
+        label-key="label"
+        value-key="value"
+        searchable
+      >
+        <template #item-trailing="{ item }">
+          <UBadge
+            variant="subtle"
+            color="neutral"
+          >
+            {{ item.source }}
+          </UBadge>
+        </template>
+      </USelectMenu>
 
       <div class="text-xs text-secondary">
-        Класс определяет уровни получения черт (ASI).
+        Класс определяет уровни получения черт.
       </div>
     </div>
 
@@ -217,18 +301,75 @@
       <div class="flex items-center justify-between">
         <div class="text-sm font-semibold">Черты</div>
 
-        <div class="text-xs text-secondary">
+        <div
+          class="text-xs"
+          :class="[
+            selectedFeatUrls.length > generalSlots
+              ? 'text-error'
+              : 'text-secondary',
+          ]"
+        >
           Выбрано: {{ selectedFeatUrls.length }} / {{ generalSlots }}
         </div>
       </div>
 
-      <SelectFeat
+      <USelectMenu
         v-model="selectedFeatUrls"
-        :categories="['GENERAL', 'DRAGONMARK']"
+        :items="generalFeatsOptions"
         :max="generalSlots"
+        :disabled="generalSlots === 0 && !selectedFeatUrls.length"
+        :loading="featsPending"
         multiple
+        searchable
         placeholder="Выберите черты"
-      />
+        class="w-full"
+        label-key="label"
+        value-key="value"
+      >
+        <template #item-label="{ item }">
+          <span class="flex items-center gap-1">
+            <span class="truncate">
+              {{ item.label }}
+            </span>
+
+            <UIcon
+              v-if="item.repeatability"
+              name="i-fluent-arrow-repeat-all-24-regular"
+              class="text-muted"
+              size="16"
+              title="Повторяемая черта"
+            />
+          </span>
+        </template>
+
+        <template #item-trailing="{ item }">
+          <UBadge
+            variant="subtle"
+            color="neutral"
+          >
+            {{ item.source }}
+          </UBadge>
+        </template>
+
+        <template #item-description="{ item }">
+          <div class="grid w-full">
+            <div
+              class="w-full truncate"
+              :title="item.description"
+            >
+              {{ item.description }}
+            </div>
+
+            <div
+              v-if="item.prerequisite"
+              class="w-full truncate"
+              :title="item.prerequisite"
+            >
+              {{ item.prerequisite }}
+            </div>
+          </div>
+        </template>
+      </USelectMenu>
     </div>
 
     <!-- Epic Boon -->
@@ -238,11 +379,44 @@
     >
       <div class="text-sm font-semibold">Эпический дар (Ур. 19+)</div>
 
-      <SelectFeat
+      <USelectMenu
         v-model="selectedEpicFeatUrl"
-        :categories="['EPIC_BOON']"
+        :items="epicFeatsOptions"
+        :loading="featsPending"
         placeholder="Выберите эпический дар"
-      />
+        searchable
+        class="w-full"
+        label-key="label"
+        value-key="value"
+      >
+        <template #item-trailing="{ item }">
+          <UBadge
+            variant="subtle"
+            color="neutral"
+          >
+            {{ item.source }}
+          </UBadge>
+        </template>
+
+        <template #item-description="{ item }">
+          <div class="grid w-full">
+            <div
+              class="w-full truncate"
+              :title="item.description"
+            >
+              {{ item.description }}
+            </div>
+
+            <div
+              v-if="item.prerequisite"
+              class="w-full truncate text-dimmed"
+              :title="item.prerequisite"
+            >
+              {{ item.prerequisite }}
+            </div>
+          </div>
+        </template>
+      </USelectMenu>
     </div>
 
     <!-- Selected Feats Details & Choices -->
@@ -268,16 +442,15 @@
           v-if="getFeatAbilities(source.id).length > 1"
           class="mt-1"
         >
-          <USelect
+          <USelectMenu
             v-model="featAbilityChoices[source.id]"
             :items="getAbilityOptions(source.id)"
             size="xs"
             placeholder="Выберите характеристику"
             class="w-full"
             :class="!featAbilityChoices[source.id] ? 'ring-error' : undefined"
-            :ui="{
-              base: '',
-            }"
+            label-key="label"
+            value-key="value"
           />
         </div>
       </div>
