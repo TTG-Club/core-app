@@ -1,0 +1,142 @@
+<script setup lang="ts">
+  import { ABILITY_KEYS, ABILITY_LABELS } from '~/shared/types';
+  import { AbilityKey } from '~/shared/types/abilities';
+
+  import {
+    POINT_BUY_BUDGET,
+    POINT_BUY_COSTS,
+    POINT_BUY_MAX_SCORE,
+    POINT_BUY_MIN_SCORE,
+    ZERO_SCORES,
+  } from '../../model';
+
+  import type { AbilityScores } from '../../model';
+
+  const model = defineModel<AbilityScores>({ required: true });
+
+  const localScores = ref<AbilityScores>({ ...ZERO_SCORES });
+
+  watch(
+    model,
+    (newVal) => {
+      localScores.value = { ...newVal };
+    },
+    { immediate: true, deep: true },
+  );
+
+  function getCost(score: number): number {
+    return POINT_BUY_COSTS[score] ?? 0;
+  }
+
+  const totalCost = computed(() => {
+    let cost = 0;
+
+    for (const key of Object.values(AbilityKey)) {
+      cost += getCost(localScores.value[key]);
+    }
+
+    return cost;
+  });
+
+  const remainingPoints = computed(() => POINT_BUY_BUDGET - totalCost.value);
+
+  function canIncrease(key: AbilityKey): boolean {
+    const current = localScores.value[key];
+
+    if (current >= POINT_BUY_MAX_SCORE) {
+      return false;
+    }
+
+    const nextCost = getCost(current + 1);
+    const currentCost = getCost(current);
+    const diff = nextCost - currentCost;
+
+    return remainingPoints.value >= diff;
+  }
+
+  function canDecrease(key: AbilityKey): boolean {
+    return localScores.value[key] > POINT_BUY_MIN_SCORE;
+  }
+
+  function updateScore(key: AbilityKey, delta: number) {
+    const current = localScores.value[key];
+    const next = current + delta;
+
+    if (next < POINT_BUY_MIN_SCORE || next > POINT_BUY_MAX_SCORE) {
+      return;
+    }
+
+    if (delta > 0 && !canIncrease(key)) {
+      return;
+    }
+
+    const newScores = { ...localScores.value, [key]: next };
+
+    localScores.value = newScores;
+    model.value = newScores;
+  }
+
+  const remainingPointsClass = computed(() =>
+    remainingPoints.value > 0 ? 'text-error' : undefined,
+  );
+</script>
+
+<template>
+  <div
+    class="flex flex-col gap-4 rounded-xl border border-default bg-muted p-4"
+  >
+    <div class="flex items-center justify-between">
+      <div class="text-sm text-secondary">
+        Бюджет: {{ POINT_BUY_BUDGET }} очков. Диапазон:
+        {{ POINT_BUY_MIN_SCORE }}–{{ POINT_BUY_MAX_SCORE }}.
+      </div>
+
+      <div
+        class="text-sm font-semibold"
+        :class="remainingPointsClass"
+      >
+        Осталось: {{ remainingPoints }}
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div
+        v-for="key in ABILITY_KEYS"
+        :key="key"
+        class="bg-card flex items-center justify-between gap-3 rounded-xl border border-default p-3"
+      >
+        <div>
+          <div class="font-semibold">{{ ABILITY_LABELS[key] }}</div>
+
+          <div class="text-xs text-secondary">
+            Стоимость: {{ getCost(localScores[key]) }}
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <UButton
+            icon="i-fluent-subtract-24-regular"
+            size="xs"
+            color="neutral"
+            variant="soft"
+            :disabled="!canDecrease(key)"
+            @click="updateScore(key, -1)"
+          />
+
+          <div class="w-8 text-center font-semibold">
+            {{ localScores[key] }}
+          </div>
+
+          <UButton
+            icon="i-fluent-add-24-regular"
+            size="xs"
+            color="neutral"
+            variant="soft"
+            :disabled="!canIncrease(key)"
+            @click="updateScore(key, 1)"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
