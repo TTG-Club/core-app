@@ -1,3 +1,4 @@
+import type { DiceRollItem } from '~/features/dice-roller/types';
 import type { AbilityKey, NameResponse, SourceResponse } from '~/shared/types';
 
 export type AbilityScores = Record<AbilityKey, number>;
@@ -19,7 +20,7 @@ export interface PointBuyState extends TabState {
 
 export interface RandomRollState extends TabState {
   rolls: number[]; // The 6 rolled numbers
-  dice?: number[][]; // The individual dice values for each roll (6 arrays of 4 numbers)
+  dice?: DiceRollItem[][]; // The individual dice values for each roll (6 arrays of 4 numbers)
   assignments: Record<number, AbilityKey | null>; // Index of roll -> assigned ability
 }
 

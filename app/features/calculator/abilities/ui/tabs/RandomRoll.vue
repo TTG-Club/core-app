@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import { useTimeoutFn } from '@vueuse/core';
-
   import { useDiceRoller } from '~/features/dice-roller/composables/useDiceRoller';
   import { extractDiceRollDetails } from '~/features/dice-roller/utils';
   import {
@@ -11,6 +9,8 @@
   } from '~/shared/types';
 
   import DiceSpinner from './components/DiceSpinner.vue';
+
+  import type { DiceRollItem } from '~/features/dice-roller/types';
 
   import type { RandomRollState } from '../../model/types';
 
@@ -29,35 +29,14 @@
   const hasRolled = ref(props.state.rolls.length > 0);
 
   // Initialize dice if they exist in state, otherwise placeholder
-  const currentDice = ref<number[][]>(
-    (props.state.dice as number[][]) ??
-      Array.from({ length: 6 }).fill([1, 2, 3, 4]),
+  const currentDice = ref<DiceRollItem[][]>(
+    props.state.dice ?? Array.from<DiceRollItem[]>({ length: 6 }).fill([]),
   );
 
-  // Helper to find dropped index (lowest value) for a set of 4 dice
-  function getDroppedIndex(dice: number[]): number {
-    if (dice.length !== 4) {
-      return -1;
-    }
-
-    let minIndex = 0;
-    let minValue = dice[0];
-
-    for (let i = 1; i < 4; i++) {
-      const val = dice[i];
-
-      if (
-        typeof val === 'number' &&
-        typeof minValue === 'number' &&
-        val < minValue
-      ) {
-        minValue = val;
-        minIndex = i;
-      }
-    }
-
-    return minIndex;
-  }
+  // Store boolean flags for animation completion of each block
+  const animationCompleted = ref<boolean[]>(
+    Array.from({ length: 6 }, () => true),
+  );
 
   watch(
     () => props.state,
@@ -79,33 +58,25 @@
     localState.value.rolls.reduce((sum, val) => sum + val, 0),
   );
 
-  const { start: stopAnimation } = useTimeoutFn(
-    () => {
+  function onAnimationComplete(index: number) {
+    animationCompleted.value[index] = true;
+
+    // If all animations are complete, set global isAnimating to false
+    if (animationCompleted.value.every((completed) => completed)) {
       isAnimating.value = false;
-    },
-    2600, // Matches max duration in DiceSpinner (2000 + 3*200)
-    { immediate: false },
-  );
+    }
+  }
 
   function rollDice() {
     const results: number[] = [];
-    const diceDetails: number[][] = [];
+    const diceDetails: DiceRollItem[][] = [];
 
     for (let i = 0; i < 6; i++) {
       const rollResult = roll('4d6dl1');
-      const details = extractDiceRollDetails(rollResult);
+      const [details] = extractDiceRollDetails(rollResult);
+      const rolls = details?.rolls || [];
 
-      // Extract dice values from the structured details
-      // details[0] is the root DieNode for '4d6'
-      const rolls =
-        details[0]?.rolls.map((r) => r.value).filter((v): v is number => !!v) ||
-        [];
-
-      // Sort descending to find top 3
-      const sorted = [...rolls].sort((a, b) => b - a);
-      const top3Sum = sorted.slice(0, 3).reduce((sum, val) => sum + val, 0);
-
-      results.push(top3Sum);
+      results.push(rollResult.value);
       diceDetails.push(rolls);
     }
 
@@ -143,7 +114,7 @@
 
     hasRolled.value = true;
     isAnimating.value = true;
-    stopAnimation();
+    animationCompleted.value = Array.from({ length: 6 }, () => false);
   }
 
   const abilityOptions = computed(() => {
@@ -227,9 +198,17 @@
           Распределите результаты по характеристикам.
           <span
             v-if="totalSum > 0"
-            class="ml-2 font-semibold text-primary"
+            class="ml-2 inline-flex items-center gap-1 font-semibold text-primary"
           >
-            Общая сумма: {{ totalSum }}
+            Общая сумма:
+            <span v-if="!isAnimating">
+              {{ totalSum }}
+            </span>
+
+            <USkeleton
+              v-else
+              class="h-4 w-8 bg-primary/50"
+            />
           </span>
         </template>
       </div>
@@ -250,7 +229,9 @@
         v-for="(rollValue, index) in localState.rolls"
         :key="index"
         class="bg-card flex flex-col gap-3 rounded-xl border border-default p-3 transition-colors"
-        :class="{ 'border-success bg-success/5': rollValue === 18 }"
+        :class="{
+          'border-success bg-success/5': !isAnimating && rollValue === 18,
+        }"
       >
         <div class="flex items-center justify-between">
           <div class="pl-2 text-2xl font-bold">
@@ -279,10 +260,10 @@
           />
         </div>
 
-        <div class="flex items-center justify-center gap-4 py-2">
+        <div class="flex items-center justify-center gap-4 pt-2">
           <DiceSpinner
             :values="currentDice[index] ?? []"
-            :dropped-index="getDroppedIndex(currentDice[index] ?? [])"
+            @complete="onAnimationComplete(index)"
           />
         </div>
       </div>

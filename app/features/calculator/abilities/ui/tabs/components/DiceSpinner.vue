@@ -3,17 +3,23 @@
 
   import D6 from './D6.vue';
 
+  import type { DiceRollItem } from '~/features/dice-roller/types';
+
   const props = defineProps<{
-    values: number[];
-    droppedIndex?: number;
+    values: DiceRollItem[];
   }>();
 
+  const emit = defineEmits<{
+    (e: 'complete'): void;
+  }>();
+
+  const isAnimationCompleted = ref(false);
+
   const DICE_SIZE = 44;
-  const GAP_SIZE = 4; // gap-1 is 4px
+  const GAP_SIZE = 4;
   const DICE_FACES = 6;
   const STRIP_HEIGHT = (DICE_SIZE + GAP_SIZE) * DICE_FACES;
 
-  // We use independent transitionable refs for each die to allow staggered animations
   const offset1 = ref(0);
   const offset2 = ref(0);
   const offset3 = ref(0);
@@ -21,17 +27,8 @@
 
   const offsets = [offset1, offset2, offset3, offset4];
 
-  const transitionOffsets = offsets.map((source, index) =>
-    useTransition(source, {
-      duration: 2000 + index * 200, // Staggered duration
-      transition: TransitionPresets.easeOutCubic,
-    }),
-  );
-
-  // Helper to calculate next target position
   function calculateNextPosition(current: number, targetFace: number) {
     const targetMod = (targetFace - 1) * (DICE_SIZE + GAP_SIZE);
-    // Minimum spin distance (e.g. 5 full rotations)
     const minSpin = 5 * STRIP_HEIGHT;
     const nextBase = current + minSpin;
 
@@ -46,14 +43,41 @@
     return nextBase + diff;
   }
 
+  const transitionOffsets = offsets.map((source, index) => {
+    return useTransition(source, {
+      duration: getDuration(index),
+      transition: TransitionPresets.easeOutCubic,
+    });
+  });
+
+  function getDuration(index: number) {
+    return 2000 + index * 200;
+  }
+
   watch(
     () => props.values,
     (newValues) => {
-      newValues.forEach((val, i) => {
+      if (!newValues.length) {
+        return;
+      }
+
+      isAnimationCompleted.value = false;
+
+      newValues.forEach((roll, i) => {
         if (offsets[i]) {
-          offsets[i].value = calculateNextPosition(offsets[i].value, val);
+          offsets[i].value = calculateNextPosition(
+            offsets[i].value,
+            roll.value,
+          );
         }
       });
+
+      const maxDuration = getDuration(newValues.length - 1);
+
+      setTimeout(() => {
+        isAnimationCompleted.value = true;
+        emit('complete');
+      }, maxDuration + 50);
     },
     { deep: true, immediate: true },
   );
@@ -71,13 +95,12 @@
         class="flex flex-col gap-1"
         :style="{ transform: `translateY(-${offset.value % STRIP_HEIGHT}px)` }"
       >
-        <!-- Render double strip for seamless wrapping -->
         <D6
           v-for="n in 12"
           :key="n"
           :value="((n - 1) % 6) + 1"
           :size="DICE_SIZE"
-          :muted="props.droppedIndex === index"
+          :muted="isAnimationCompleted && !values[index]?.valid"
           class="shrink-0"
         />
       </div>
