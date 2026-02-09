@@ -3,11 +3,11 @@ import { computed } from 'vue';
 import { ABILITY_KEYS } from '~/shared/types';
 import { getFormattedModifier, getModifier } from '~/utils/modifier';
 
-import { DEFAULT_SCORES } from '../model/consts';
+import { DEFAULT_SCORES } from '../model';
 
 import type { Ref } from 'vue';
 
-import type { AbilityScores, BonusSource } from '../model/types';
+import type { AbilityScores, BonusSource } from '../model';
 
 /**
  * Калькулятор характеристик персонажа.

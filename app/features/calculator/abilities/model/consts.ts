@@ -36,3 +36,21 @@ export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
 export const POINT_BUY_BUDGET = 27;
 export const POINT_BUY_MIN_SCORE = 8;
 export const POINT_BUY_MAX_SCORE = 15;
+
+/** Максимальное значение характеристики без превышения лимита */
+export const ABILITY_MAX_SCORE = 20;
+
+/** Стандартные уровни получения ASI для большинства классов */
+export const STANDARD_ASI_LEVELS = [4, 8, 12, 16];
+
+/** Уровень получения эпического дара */
+export const EPIC_BOON_LEVEL = 19;
+
+/** Количество бросков для случайного набора */
+export const RANDOM_ROLL_COUNT = 6;
+
+/** Формула броска для случайного набора */
+export const RANDOM_ROLL_FORMULA = '4d6dl1';
+
+/** Максимальный результат броска 4d6dl1 (три шестёрки) */
+export const RANDOM_ROLL_MAX_RESULT = 18;

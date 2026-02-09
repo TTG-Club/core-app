@@ -9,11 +9,17 @@
     isAbilityKey,
   } from '~/shared/types';
 
+  import {
+    RANDOM_ROLL_COUNT,
+    RANDOM_ROLL_FORMULA,
+    RANDOM_ROLL_MAX_RESULT,
+  } from '../../model';
+
   import { DiceSpinner } from './components';
 
-  import type { DiceRollItem } from '~/features/dice-roller/types';
+  import type { DiceRollItem } from '~dice-roller/types';
 
-  import type { RandomRollState } from '../../model/types';
+  import type { RandomRollState } from '../../model';
 
   const props = defineProps<{
     state: RandomRollState;
@@ -31,12 +37,13 @@
 
   // Initialize dice if they exist in state, otherwise placeholder
   const currentDice = ref<DiceRollItem[][]>(
-    props.state.dice ?? Array.from<DiceRollItem[]>({ length: 6 }).fill([]),
+    props.state.dice ??
+      Array.from<DiceRollItem[]>({ length: RANDOM_ROLL_COUNT }).fill([]),
   );
 
   // Store boolean flags for animation completion of each block
   const animationCompleted = ref<boolean[]>(
-    Array.from({ length: 6 }, () => true),
+    Array.from({ length: RANDOM_ROLL_COUNT }, () => true),
   );
 
   watch(
@@ -72,8 +79,8 @@
     const results: number[] = [];
     const diceDetails: DiceRollItem[][] = [];
 
-    for (let i = 0; i < 6; i++) {
-      const rollResult = roll('4d6dl1');
+    for (let i = 0; i < RANDOM_ROLL_COUNT; i++) {
+      const rollResult = roll(RANDOM_ROLL_FORMULA);
       const [details] = extractDiceRollDetails(rollResult);
       const rolls = details?.rolls || [];
 
@@ -115,7 +122,11 @@
 
     hasRolled.value = true;
     isAnimating.value = true;
-    animationCompleted.value = Array.from({ length: 6 }, () => false);
+
+    animationCompleted.value = Array.from(
+      { length: RANDOM_ROLL_COUNT },
+      () => false,
+    );
   }
 
   const abilityOptions = computed(() => {
@@ -235,7 +246,8 @@
         :key="index"
         class="bg-card flex flex-col gap-3 rounded-xl border border-default p-3 transition-colors"
         :class="{
-          'border-success bg-success/5': !isAnimating && rollValue === 18,
+          'border-success bg-success/5':
+            !isAnimating && rollValue === RANDOM_ROLL_MAX_RESULT,
         }"
       >
         <div class="flex items-center justify-between">
@@ -254,9 +266,7 @@
             :items="abilityOptions"
             class="w-40"
             placeholder="Назначить..."
-            @update:model-value="
-              (value) => handleAssignmentUpdate(index, value)
-            "
+            @update:model-value="handleAssignmentUpdate(index, $event)"
           />
 
           <USkeleton

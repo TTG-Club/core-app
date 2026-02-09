@@ -7,9 +7,9 @@
     POINT_BUY_COSTS,
     POINT_BUY_MAX_SCORE,
     POINT_BUY_MIN_SCORE,
-  } from '../../model/consts';
+  } from '../../model';
 
-  import type { AbilityScores } from '../../model/types';
+  import type { AbilityScores } from '../../model';
 
   const props = defineProps<{
     modelValue: AbilityScores;
@@ -81,6 +81,10 @@
     localScores.value = newScores;
     emit('update:modelValue', newScores);
   }
+
+  const remainingPointsClass = computed(() =>
+    remainingPoints.value > 0 ? 'text-error' : undefined,
+  );
 </script>
 
 <template>
@@ -95,7 +99,7 @@
 
       <div
         class="text-sm font-semibold"
-        :class="remainingPoints > 0 ? 'text-error' : undefined"
+        :class="remainingPointsClass"
       >
         Осталось: {{ remainingPoints }}
       </div>

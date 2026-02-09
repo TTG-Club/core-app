@@ -6,7 +6,7 @@
     BonusSource,
     CalculatorAbilitiesBackground,
     CalculatorBackgroundOption,
-  } from '../../model/types';
+  } from '../../model';
 
   const props = defineProps<{
     background: CalculatorAbilitiesBackground | undefined;

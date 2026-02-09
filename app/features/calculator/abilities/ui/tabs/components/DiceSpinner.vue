@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { TransitionPresets, useTransition } from '@vueuse/core';
 
-  import type { DiceRollItem } from '~/features/dice-roller/types';
+  import type { DiceRollItem } from '~dice-roller/types';
 
   const props = defineProps<{
     values: DiceRollItem[];

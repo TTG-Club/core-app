@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import { ABILITY_SHORT_LABELS } from '~/shared/types';
 
+  import { ABILITY_MAX_SCORE } from '../model';
+
   import type { AbilityKey } from '~/shared/types';
 
   interface DisplayItem {
@@ -18,7 +20,7 @@
   }>();
 
   function isOvercap(value: number): boolean {
-    return value > 20;
+    return value > ABILITY_MAX_SCORE;
   }
 
   function getCardClass(value: number): string {

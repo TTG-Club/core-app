@@ -4,7 +4,7 @@
   import type {
     CalculatorAbilityOption,
     CalculatorFeatOption,
-  } from '../../model/types';
+  } from '../../model';
 
   defineProps<{
     options: CalculatorFeatOption[];

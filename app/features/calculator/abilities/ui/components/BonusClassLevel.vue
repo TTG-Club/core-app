@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CalculatorClassOption } from '../../model/types';
+  import type { CalculatorClassOption } from '../../model';
 
   defineProps<{
     classOptions: CalculatorClassOption[];

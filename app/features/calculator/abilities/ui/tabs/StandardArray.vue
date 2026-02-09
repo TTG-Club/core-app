@@ -2,9 +2,9 @@
   import { ABILITY_KEYS, ABILITY_LABELS } from '~/shared/types';
   import { AbilityKey } from '~/shared/types/abilities';
 
-  import { STANDARD_ARRAY } from '../../model/consts';
+  import { STANDARD_ARRAY } from '../../model';
 
-  import type { AbilityScores } from '../../model/types';
+  import type { AbilityScores } from '../../model';
 
   const props = defineProps<{
     modelValue: AbilityScores;
@@ -38,7 +38,7 @@
     return set;
   });
 
-  function getOptions(_currentKey: AbilityKey) {
+  function getOptions() {
     return [
       { label: 'Не выбрано', value: 0 },
       ...STANDARD_ARRAY.map((score) => ({
@@ -53,7 +53,8 @@
 
     // Find if another ability already has this value
     const conflictingKey = ABILITY_KEYS.find(
-      (k) => newScores[k] === value && k !== key && value !== 0,
+      (abilityKey) =>
+        newScores[abilityKey] === value && abilityKey !== key && value !== 0,
     );
 
     if (conflictingKey) {
@@ -101,7 +102,7 @@
 
         <USelect
           :model-value="localScores[key]"
-          :items="getOptions(key)"
+          :items="getOptions()"
           class="w-32"
           @update:model-value="updateScore(key, Number($event))"
         />

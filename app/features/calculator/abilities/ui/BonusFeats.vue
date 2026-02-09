@@ -5,6 +5,8 @@
     isAbilityKey,
   } from '~/shared/types';
 
+  import { EPIC_BOON_LEVEL, STANDARD_ASI_LEVELS } from '../model';
+
   import {
     BonusBackgrounds,
     BonusClassLevel,
@@ -24,7 +26,7 @@
     CalculatorBackgroundOption,
     CalculatorClassOption,
     CalculatorFeatOption,
-  } from '../model/types';
+  } from '../model';
 
   const level = defineModel<number>({ required: true });
 
@@ -88,7 +90,6 @@
   });
 
   // --- Class Selection ---
-  const standardAsiLevels = [4, 8, 12, 16];
   const selectedClassUrl = ref<string>();
 
   const { data: allClasses, pending: classesPending } = await useFetch<
@@ -106,19 +107,21 @@
       );
 
       if (selectedClass) {
-        return selectedClass.levels.filter((classLevel) => classLevel !== 19);
+        return selectedClass.levels.filter(
+          (classLevel) => classLevel !== EPIC_BOON_LEVEL,
+        );
       }
     }
 
-    return standardAsiLevels;
+    return STANDARD_ASI_LEVELS;
   });
 
   const allAsiLevels = computed(() => {
     if (!allClasses.value || !selectedClassUrl.value) {
-      return standardAsiLevels;
+      return STANDARD_ASI_LEVELS;
     }
 
-    const levels = new Set<number>(standardAsiLevels);
+    const levels = new Set<number>(STANDARD_ASI_LEVELS);
 
     if (classAsiLevels.value) {
       classAsiLevels.value.forEach((asiLevel) => levels.add(asiLevel));
@@ -128,7 +131,7 @@
   });
 
   // --- Slots Calculation ---
-  const hasEpicBoon = computed(() => level.value >= 19);
+  const hasEpicBoon = computed(() => level.value >= EPIC_BOON_LEVEL);
 
   // --- Feat Selection ---
   const selectedFeats = ref<Map<number, string | undefined>>(new Map());
