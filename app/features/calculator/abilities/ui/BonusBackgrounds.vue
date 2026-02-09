@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import { ABILITY_LABELS, AbilityKey } from '~/shared/types';
-  import { isAbilityKey } from '~/shared/types/abilities';
 
   import type {
     AbilityScores,
@@ -8,69 +7,21 @@
     CalculatorAbilitiesBackground,
   } from '../model';
 
+  const props = defineProps<{
+    background: CalculatorAbilitiesBackground | undefined;
+  }>();
+
   const emit = defineEmits<{
     (e: 'update:sources', value: BonusSource[]): void;
   }>();
 
-  const selectedBackgroundUrl = ref<string | undefined>(undefined);
   const asiChoice = ref<'three_ones' | 'two_one'>('two_one');
   const plusTwoStat = ref<AbilityKey | undefined>(undefined);
   const plusOneStat = ref<AbilityKey | undefined>(undefined);
 
-  const { data: allBackgrounds, status } = await useFetch<
-    CalculatorAbilitiesBackground[]
-  >('/api/v2/backgrounds/select', {
-    dedupe: 'defer',
-    lazy: true,
-    default: () => [],
-  });
-
-  const backgroundsByUrl = computed(() => {
-    const map: Record<string, CalculatorAbilitiesBackground> = {};
-
-    if (allBackgrounds.value) {
-      for (const b of allBackgrounds.value) {
-        map[b.url] = b;
-      }
-    }
-
-    return map;
-  });
-
-  const backgroundOptions = computed(() => {
-    return (
-      allBackgrounds.value?.map((backgroundLink) => {
-        const abilities =
-          backgroundLink.abilityScores
-            ?.filter(isAbilityKey)
-            .map((key) => ABILITY_LABELS[key])
-            .join(', ') || '';
-
-        const description = [backgroundLink.name.eng, abilities]
-          .filter(Boolean)
-          .join(' • ');
-
-        return {
-          label: backgroundLink.name.rus,
-          value: backgroundLink.url,
-          description,
-          sourceLabel: backgroundLink.source.name.label,
-        };
-      }) || []
-    );
-  });
-
-  const currentBackground = computed(() => {
-    if (!selectedBackgroundUrl.value) {
-      return null;
-    }
-
-    return backgroundsByUrl.value[selectedBackgroundUrl.value];
-  });
-
   // Parse abilities from background
   const availableAbilities = computed<AbilityKey[]>(() => {
-    const bg = currentBackground.value;
+    const bg = props.background;
 
     if (!bg?.abilityScores || !Array.isArray(bg.abilityScores)) {
       return [];
@@ -91,25 +42,28 @@
   const canChooseTwoOne = computed(() => availableAbilities.value.length >= 2);
 
   // Reset choices when background changes
-  watch(selectedBackgroundUrl, () => {
-    plusTwoStat.value = undefined;
-    plusOneStat.value = undefined;
+  watch(
+    () => props.background,
+    () => {
+      plusTwoStat.value = undefined;
+      plusOneStat.value = undefined;
 
-    // Default to +2/+1 if possible, otherwise +1/+1/+1
-    if (canChooseTwoOne.value) {
-      asiChoice.value = 'two_one';
-    } else if (canChooseThreeOnes.value) {
-      asiChoice.value = 'three_ones';
-    }
-  });
+      // Default to +2/+1 if possible, otherwise +1/+1/+1
+      if (canChooseTwoOne.value) {
+        asiChoice.value = 'two_one';
+      } else if (canChooseThreeOnes.value) {
+        asiChoice.value = 'three_ones';
+      }
+    },
+  );
 
   const calculatedBonuses = computed<BonusSource[]>(() => {
-    if (!currentBackground.value) {
+    if (!props.background) {
       return [];
     }
 
     const bonuses: Partial<AbilityScores> = {};
-    const bgName = currentBackground.value.name.rus;
+    const bgName = props.background.name.rus;
 
     if (asiChoice.value === 'three_ones' && canChooseThreeOnes.value) {
       // Apply +1 to first 3 abilities
@@ -129,7 +83,7 @@
     // If no bonuses selected yet, return empty but with label
     return [
       {
-        id: currentBackground.value.url,
+        id: props.background.url,
         label: `Предыстория: ${bgName}`,
         scores: bonuses,
       },
@@ -191,33 +145,14 @@
 
 <template>
   <div
-    class="flex flex-col gap-4 rounded-xl border border-default bg-muted p-4"
+    class="flex flex-col gap-4"
+    :class="{ 'pointer-events-none opacity-50 grayscale': !background }"
   >
-    <div class="text-sm font-semibold">Предыстория</div>
-
-    <USelectMenu
-      v-model="selectedBackgroundUrl"
-      :items="backgroundOptions"
-      :loading="status === 'pending'"
-      placeholder="Выберите предысторию"
-      searchable
-      class="w-full"
-      label-key="label"
-      value-key="value"
-    >
-      <template #item-trailing="{ item }">
-        <UBadge
-          variant="subtle"
-          color="neutral"
-        >
-          {{ item.sourceLabel }}
-        </UBadge>
-      </template>
-    </USelectMenu>
+    <div class="text-sm font-semibold">Бонусы предыстории</div>
 
     <div
-      v-if="currentBackground"
-      class="flex flex-col gap-3 pt-2"
+      v-if="background"
+      class="flex flex-col gap-3"
     >
       <div class="flex flex-col gap-2">
         <span class="text-xs font-medium text-secondary">
@@ -238,17 +173,39 @@
         v-if="asiChoice === 'two_one'"
         class="grid grid-cols-2 gap-2"
       >
-        <USelect
-          v-model="plusTwoStat"
-          :items="plusTwoOptions"
-          placeholder="Выберите +2"
-        />
+        <UFieldGroup class="w-full">
+          <USelect
+            v-model="plusTwoStat"
+            :items="plusTwoOptions"
+            placeholder="Выберите +2"
+            class="w-full"
+          />
 
-        <USelect
-          v-model="plusOneStat"
-          :items="plusOneOptions"
-          placeholder="Выберите +1"
-        />
+          <UButton
+            v-if="plusTwoStat"
+            icon="i-fluent-dismiss-24-regular"
+            color="neutral"
+            variant="subtle"
+            @click="plusTwoStat = undefined"
+          />
+        </UFieldGroup>
+
+        <UFieldGroup class="w-full">
+          <USelect
+            v-model="plusOneStat"
+            :items="plusOneOptions"
+            placeholder="Выберите +1"
+            class="w-full"
+          />
+
+          <UButton
+            v-if="plusOneStat"
+            icon="i-fluent-dismiss-24-regular"
+            color="neutral"
+            variant="subtle"
+            @click="plusOneStat = undefined"
+          />
+        </UFieldGroup>
       </div>
 
       <div
@@ -258,6 +215,13 @@
         Автоматически:
         {{ getAutomaticBonusDescription(availableAbilities) }}
       </div>
+    </div>
+
+    <div
+      v-else
+      class="text-sm text-secondary"
+    >
+      Выберите предысторию выше, чтобы настроить бонусы.
     </div>
   </div>
 </template>

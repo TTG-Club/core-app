@@ -2,7 +2,6 @@
   import { useAbilitiesCalculator } from './composables/useAbilitiesCalculator';
   import { DEFAULT_SCORES, ZERO_SCORES } from './model';
   import {
-    BonusBackgrounds,
     BonusFeats,
     PointBuyTab,
     RandomRollTab,
@@ -85,55 +84,31 @@
     <ScoreDisplay :items="formattedScores" />
 
     <!-- Main Content Area -->
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <!-- Left Column: Calculator Tabs -->
-      <div class="flex flex-col gap-4 lg:col-span-2">
-        <UTabs
-          v-model="selectedTabIndex"
-          :items="tabs"
-          :ui="{ root: 'flex flex-col gap-4' }"
-        >
-          <template #random>
-            <RandomRollTab v-model:state="randomRollState" />
-          </template>
+    <div class="flex flex-col gap-6">
+      <!-- Calculator Tabs -->
+      <UTabs
+        v-model="selectedTabIndex"
+        :items="tabs"
+        :ui="{ root: 'flex flex-col gap-4' }"
+      >
+        <template #random>
+          <RandomRollTab v-model:state="randomRollState" />
+        </template>
 
-          <template #standard-array>
-            <StandardArrayTab v-model="arrayScores" />
-          </template>
+        <template #standard-array>
+          <StandardArrayTab v-model="arrayScores" />
+        </template>
 
-          <template #point-buy>
-            <PointBuyTab v-model="pointBuyScores" />
-          </template>
-        </UTabs>
-      </div>
+        <template #point-buy>
+          <PointBuyTab v-model="pointBuyScores" />
+        </template>
+      </UTabs>
 
-      <!-- Right Column: Bonuses -->
-      <div class="flex flex-col gap-4">
-        <BonusBackgrounds @update:sources="backgroundBonuses = $event" />
-
-        <div
-          class="flex flex-col gap-4 rounded-xl border border-default bg-muted p-4"
-        >
-          <div class="flex items-center justify-between">
-            <span class="text-sm font-semibold">Уровень персонажа</span>
-
-            <span class="text-sm font-bold text-primary">{{
-              characterLevel
-            }}</span>
-          </div>
-
-          <USlider
-            v-model="characterLevel"
-            :min="1"
-            :max="20"
-          />
-        </div>
-
-        <BonusFeats
-          :level="characterLevel"
-          @update:sources="featBonuses = $event"
-        />
-      </div>
+      <BonusFeats
+        v-model="characterLevel"
+        @update:feat-sources="featBonuses = $event"
+        @update:background-sources="backgroundBonuses = $event"
+      />
     </div>
   </div>
 </template>
