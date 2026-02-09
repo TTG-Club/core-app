@@ -1,8 +1,6 @@
 <script setup lang="ts">
   import { TransitionPresets, useTransition } from '@vueuse/core';
 
-  import D6 from './D6.vue';
-
   import type { DiceRollItem } from '~/features/dice-roller/types';
 
   const props = defineProps<{
@@ -95,7 +93,7 @@
         class="flex flex-col gap-1"
         :style="{ transform: `translateY(-${offset.value % STRIP_HEIGHT}px)` }"
       >
-        <D6
+        <DiceD6
           v-for="n in 12"
           :key="n"
           :value="((n - 1) % 6) + 1"

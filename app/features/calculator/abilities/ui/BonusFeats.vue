@@ -1,7 +1,16 @@
 <script setup lang="ts">
-  import { ABILITY_LABELS, isAbilityKey } from '~/shared/types';
+  import {
+    ABILITY_LABELS,
+    ABILITY_SHORT_LABELS,
+    isAbilityKey,
+  } from '~/shared/types';
 
-  import BonusBackgrounds from './BonusBackgrounds.vue';
+  import {
+    BonusBackgrounds,
+    BonusClassLevel,
+    BonusEpicBoon,
+    BonusGeneralFeats,
+  } from './components';
 
   import type { AbilityKey } from '~/shared/types/abilities';
 
@@ -11,6 +20,10 @@
     CalculatorAbilitiesBackground,
     CalculatorAbilitiesClass,
     CalculatorAbilitiesFeat,
+    CalculatorAbilityOption,
+    CalculatorBackgroundOption,
+    CalculatorClassOption,
+    CalculatorFeatOption,
   } from '../model/types';
 
   const level = defineModel<number>({ required: true });
@@ -35,15 +48,15 @@
     const map: Record<string, CalculatorAbilitiesBackground> = {};
 
     if (allBackgrounds.value) {
-      for (const b of allBackgrounds.value) {
-        map[b.url] = b;
+      for (const background of allBackgrounds.value) {
+        map[background.url] = background;
       }
     }
 
     return map;
   });
 
-  const backgroundOptions = computed(() => {
+  const backgroundOptions = computed<CalculatorBackgroundOption[]>(() => {
     return (
       allBackgrounds.value?.map((backgroundLink) => {
         const abilities =
@@ -88,12 +101,12 @@
 
   const classAsiLevels = computed(() => {
     if (selectedClassUrl.value && allClasses.value) {
-      const cls = allClasses.value.find(
-        (c) => c.url === selectedClassUrl.value,
+      const selectedClass = allClasses.value.find(
+        (classItem) => classItem.url === selectedClassUrl.value,
       );
 
-      if (cls) {
-        return cls.levels.filter((lvl) => lvl !== 19);
+      if (selectedClass) {
+        return selectedClass.levels.filter((classLevel) => classLevel !== 19);
       }
     }
 
@@ -105,44 +118,22 @@
       return standardAsiLevels;
     }
 
-    // We only show levels relevant to the selected class + standard levels
-    // But per requirements: "only base slots always, specific slots added when class selected"
-    // Actually, "display only base slots always" means start with 4,8,12,16
-    // "add specific slots when class selected" means merge class levels.
-
     const levels = new Set<number>(standardAsiLevels);
 
     if (classAsiLevels.value) {
-      classAsiLevels.value.forEach((lvl) => levels.add(lvl));
+      classAsiLevels.value.forEach((asiLevel) => levels.add(asiLevel));
     }
 
     return Array.from(levels).sort((a, b) => a - b);
   });
 
   // --- Slots Calculation ---
-  // Only used for internal logic if needed, but we now iterate over classAsiLevels directly for display
   const hasEpicBoon = computed(() => level.value >= 19);
 
-  // --- Display Helpers ---
-  // If a class has e.g. 5 slots max (fighter), we want to show 20 slots?
-  // The user requirement said: "if a class has an upgrade every level, draw 20 slots".
-  // But standard classes have specific levels.
-  // Interpretation: We should just show ALL levels defined in `classAsiLevels`.
-  // If the user meant "maximum possible slots across ANY class", that would be different.
-  // Given "maximum levels that exist in classes", and "if in some class it increases every level",
-  // it implies we should trust `classAsiLevels` to be correct for the selected class.
-  // However, `classAsiLevels` currently filters out 19.
-  // Let's ensure we just use `classAsiLevels` which comes from the API/Standard list.
-  // The user example "if in some class it increases every level, draw 20 slots" suggests dynamic sizing based on the class.
-  // So iterating `classAsiLevels` is correct.
-
   // --- Feat Selection ---
-  // Key: Level (4, 8, etc.), Value: Feat URL
   const selectedFeats = ref<Map<number, string | undefined>>(new Map());
   const selectedEpicFeatUrl = ref<string>();
 
-  // Key: Level (for normal feats) or 'epic' (for epic boon), Value: AbilityKey
-  // Using level as key ensures uniqueness for repeatable feats taken at different levels
   const featAbilityChoices = ref<Map<string | number, AbilityKey>>(new Map());
 
   const { data: allFeats, pending: featsPending } = await useFetch<
@@ -160,8 +151,8 @@
     const map: Record<string, CalculatorAbilitiesFeat> = {};
 
     if (allFeats.value) {
-      for (const f of allFeats.value) {
-        map[f.url] = f;
+      for (const feat of allFeats.value) {
+        map[feat.url] = feat;
       }
     }
 
@@ -171,13 +162,15 @@
   const baseFeatOptions = computed(() => {
     return (
       allFeats.value
-        ?.filter((f) => f.category === 'GENERAL' || f.category === 'DRAGONMARK')
+        ?.filter(
+          (feat) =>
+            feat.category === 'GENERAL' || feat.category === 'DRAGONMARK',
+        )
         .map(mapFeats) || []
     );
   });
 
-  function getOptionsForLevel(featLevel: number) {
-    // Get URLs selected in other slots
+  function getOptionsForLevel(featLevel: number): CalculatorFeatOption[] {
     const otherSelections = new Set<string>();
 
     for (const [lvl, url] of selectedFeats.value.entries()) {
@@ -186,31 +179,30 @@
       }
     }
 
-    return baseFeatOptions.value.filter((opt) => {
-      // Always show if repeatable
-      if (opt.repeatability) {
+    return baseFeatOptions.value.filter((option) => {
+      if (option.repeatability) {
         return true;
       }
 
-      // Show if not selected elsewhere
-      return !otherSelections.has(opt.value);
+      return !otherSelections.has(option.value);
     });
   }
 
-  const epicFeatsOptions = computed(() => {
+  const epicFeatsOptions = computed<CalculatorFeatOption[]>(() => {
     return (
-      allFeats.value?.filter((f) => f.category === 'EPIC_BOON').map(mapFeats) ||
-      []
+      allFeats.value
+        ?.filter((feat) => feat.category === 'EPIC_BOON')
+        .map(mapFeats) || []
     );
   });
 
-  function mapFeats(feat: CalculatorAbilitiesFeat) {
+  function mapFeats(feat: CalculatorAbilitiesFeat): CalculatorFeatOption {
     const sourceLabel = feat.source.name.label;
 
     const abilities =
       feat.abilities
         ?.filter(isAbilityKey)
-        .map((key) => ABILITY_LABELS[key])
+        .map((key) => ABILITY_SHORT_LABELS[key])
         .join(', ') || '';
 
     const description = [feat.name.eng, abilities].filter(Boolean).join(' • ');
@@ -220,12 +212,12 @@
       value: feat.url,
       description,
       source: sourceLabel,
-      prerequisite: feat.prerequisite,
+      prerequisite: feat.prerequisite ?? undefined,
       repeatability: feat.repeatability,
     };
   }
 
-  const classOptions = computed(() => {
+  const classOptions = computed<CalculatorClassOption[]>(() => {
     return (
       allClasses.value?.map((classLink) => ({
         label: classLink.name.rus,
@@ -273,7 +265,6 @@
       let chosenAbility: AbilityKey | undefined;
 
       if (feat.abilities && feat.abilities.length > 0 && feat.increase) {
-        // If multiple options, check user choice. If not chosen, NO bonus.
         if (feat.abilities.length > 1) {
           chosenAbility = featAbilityChoices.value.get(featLevel);
         } else {
@@ -286,7 +277,7 @@
       }
 
       sources.push({
-        id: `${url}-${featLevel}`, // Unique ID for repeatable feats
+        id: `${url}-${featLevel}`,
         label: `Черта: ${feat.name.rus}`,
         scores: bonuses,
       });
@@ -342,14 +333,16 @@
     return feat.abilities.filter(isAbilityKey);
   }
 
-  function getAbilityOptions(url: string | undefined) {
+  function getAbilityOptions(
+    url: string | undefined,
+  ): CalculatorAbilityOption[] {
     if (!url) {
       return [];
     }
 
-    return getFeatAbilities(url).map((k) => ({
-      label: ABILITY_LABELS[k],
-      value: k,
+    return getFeatAbilities(url).map((key) => ({
+      label: ABILITY_LABELS[key],
+      value: key,
     }));
   }
 
@@ -360,11 +353,9 @@
       selectedFeats.value.delete(featLevel);
     }
 
-    // Reset ability choice for this level when feat changes
     featAbilityChoices.value.delete(featLevel);
     featAbilityChoices.value = new Map(featAbilityChoices.value);
 
-    // Trigger reactivity manually since Map mutation doesn't trigger it automatically in Vue 3 deep watch sometimes or if structure changes
     selectedFeats.value = new Map(selectedFeats.value);
   }
 
@@ -394,6 +385,12 @@
 
     return abilities.length > 1;
   }
+
+  function handleEpicAbilityUpdate(value: unknown) {
+    if (isAbilityKey(value)) {
+      updateFeatAbilityChoice('epic', value);
+    }
+  }
 </script>
 
 <template>
@@ -401,375 +398,53 @@
     <!-- Top Controls: Two Blocks -->
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <!-- Block 1: Class & Level -->
-      <div
-        class="flex flex-col gap-6 rounded-xl border border-default bg-muted p-4"
+      <BonusClassLevel
+        v-model:selected-class-url="selectedClassUrl"
+        v-model:level="level"
+        :class-options="classOptions"
+        :classes-pending="classesPending"
       >
-        <!-- Class -->
-        <div class="flex flex-col gap-2">
-          <div class="text-sm font-semibold">Класс</div>
-
-          <UFieldGroup>
-            <USelectMenu
-              v-model="selectedClassUrl"
-              :items="classOptions"
-              :loading="classesPending"
-              placeholder="Выберите класс"
-              label-key="label"
-              value-key="value"
-              searchable
-              class="w-full"
-            >
-              <template #item-trailing="{ item }">
-                <UBadge
-                  variant="subtle"
-                  color="neutral"
-                >
-                  {{ item.source }}
-                </UBadge>
-              </template>
-            </USelectMenu>
-
-            <UButton
-              v-if="selectedClassUrl"
-              icon="i-fluent-dismiss-24-regular"
-              color="neutral"
-              variant="subtle"
-              @click="selectedClassUrl = undefined"
-            />
-          </UFieldGroup>
-        </div>
-
-        <!-- Level -->
-        <div class="flex flex-col gap-4">
-          <div class="flex items-center justify-between">
-            <span class="text-sm font-semibold">Уровень персонажа</span>
-
-            <span class="text-sm font-bold text-primary">{{ level }}</span>
-          </div>
-
-          <USlider
-            v-model="level"
-            :min="1"
-            :max="20"
+        <template #epic-boon>
+          <BonusEpicBoon
+            v-model:model-value="selectedEpicFeatUrl"
+            :ability-choice="getFeatAbilityChoice('epic')"
+            :options="epicFeatsOptions"
+            :ability-options="getAbilityOptions(selectedEpicFeatUrl)"
+            :loading="featsPending"
+            :disabled="!hasEpicBoon"
+            :has-multiple-abilities="
+              isFeatHasMultipleAbilities(selectedEpicFeatUrl)
+            "
+            @update:ability-choice="handleEpicAbilityUpdate"
           />
-        </div>
-
-        <!-- Epic Boon (Moved here) -->
-        <div
-          class="flex flex-col gap-2 transition-opacity"
-          :class="{ 'opacity-50 grayscale': !hasEpicBoon }"
-        >
-          <div class="text-sm font-semibold">Эпический дар</div>
-
-          <div class="flex flex-col gap-2">
-            <UFieldGroup>
-              <USelectMenu
-                v-model="selectedEpicFeatUrl"
-                :items="epicFeatsOptions"
-                :loading="featsPending"
-                placeholder="Выберите эпический дар"
-                searchable
-                class="w-full"
-                label-key="label"
-                value-key="value"
-                :disabled="!hasEpicBoon"
-              >
-                <template #item-trailing="{ item }">
-                  <UBadge
-                    variant="subtle"
-                    color="neutral"
-                  >
-                    {{ item.source }}
-                  </UBadge>
-                </template>
-
-                <template #item-description="{ item }">
-                  <div class="grid w-full">
-                    <div
-                      class="w-full truncate"
-                      :title="item.description"
-                    >
-                      {{ item.description }}
-                    </div>
-
-                    <div
-                      v-if="item.prerequisite"
-                      class="w-full truncate text-dimmed"
-                      :title="item.prerequisite"
-                    >
-                      {{ item.prerequisite }}
-                    </div>
-                  </div>
-                </template>
-              </USelectMenu>
-
-              <UButton
-                v-if="selectedEpicFeatUrl && hasEpicBoon"
-                icon="i-fluent-dismiss-24-regular"
-                color="neutral"
-                variant="subtle"
-                @click="selectedEpicFeatUrl = undefined"
-              />
-            </UFieldGroup>
-
-            <!-- Epic Ability Choice -->
-            <div v-if="selectedEpicFeatUrl">
-              <UFieldGroup
-                v-if="isFeatHasMultipleAbilities(selectedEpicFeatUrl)"
-                class="w-full"
-              >
-                <USelect
-                  :model-value="getFeatAbilityChoice('epic')"
-                  :items="getAbilityOptions(selectedEpicFeatUrl)"
-                  placeholder="Выберите характеристику"
-                  class="w-full"
-                  :class="{
-                    'ring-error': hasEpicBoon && !getFeatAbilityChoice('epic'),
-                  }"
-                  :disabled="!hasEpicBoon"
-                  @update:model-value="
-                    (v) => updateFeatAbilityChoice('epic', v as AbilityKey)
-                  "
-                />
-
-                <UButton
-                  v-if="getFeatAbilityChoice('epic') && hasEpicBoon"
-                  icon="i-fluent-dismiss-24-regular"
-                  color="neutral"
-                  variant="subtle"
-                  @click="updateFeatAbilityChoice('epic', undefined)"
-                />
-              </UFieldGroup>
-
-              <!-- Single Ability Display -->
-              <template v-else>
-                <span
-                  v-if="getAbilityOptions(selectedEpicFeatUrl)[0]?.label"
-                  class="text-xs text-secondary"
-                >
-                  Бонус: {{ getAbilityOptions(selectedEpicFeatUrl)[0]?.label }}
-                </span>
-
-                <span
-                  v-else
-                  class="text-xs text-secondary"
-                  >Нет бонуса</span
-                >
-              </template>
-            </div>
-          </div>
-        </div>
-      </div>
+        </template>
+      </BonusClassLevel>
 
       <!-- Block 2: Background & Settings -->
-      <div
-        class="flex flex-col gap-6 rounded-xl border border-default bg-muted p-4"
-      >
-        <!-- Background Select -->
-        <div class="flex flex-col gap-2">
-          <div class="text-sm font-semibold">Предыстория</div>
-
-          <UFieldGroup>
-            <USelectMenu
-              v-model="selectedBackgroundUrl"
-              :items="backgroundOptions"
-              :loading="backgroundsPending"
-              placeholder="Выберите предысторию"
-              searchable
-              class="w-full"
-              label-key="label"
-              value-key="value"
-            >
-              <template #item-trailing="{ item }">
-                <UBadge
-                  variant="subtle"
-                  color="neutral"
-                >
-                  {{ item.sourceLabel }}
-                </UBadge>
-              </template>
-            </USelectMenu>
-
-            <UButton
-              v-if="selectedBackgroundUrl"
-              icon="i-fluent-dismiss-24-regular"
-              color="neutral"
-              variant="subtle"
-              @click="selectedBackgroundUrl = undefined"
-            />
-          </UFieldGroup>
-        </div>
-
-        <!-- Background ASI Settings -->
-        <BonusBackgrounds
-          :background="currentBackground"
-          @update:sources="emit('update:background-sources', $event)"
-        />
-      </div>
+      <BonusBackgrounds
+        v-model:selected-background-url="selectedBackgroundUrl"
+        :background="currentBackground"
+        :background-options="backgroundOptions"
+        :loading="backgroundsPending"
+        @update:sources="emit('update:background-sources', $event)"
+      />
     </div>
 
     <!-- Main Grid Container (Bordered) -->
     <div class="rounded-xl border border-default bg-muted p-4">
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <!-- Row 2+: General Feats Grid -->
-        <template
-          v-for="featLevel in allAsiLevels"
-          :key="featLevel"
-        >
-          <div
-            class="bg-card flex h-full flex-col gap-2 rounded-lg border border-default p-4"
-            :class="{
-              'opacity-50 grayscale':
-                !classAsiLevels.includes(featLevel) ||
-                (level < featLevel && !selectedFeats.get(featLevel)),
-            }"
-          >
-            <div class="text-xs font-medium text-secondary">
-              Уровень {{ featLevel }}
-            </div>
-
-            <UFieldGroup>
-              <USelectMenu
-                :model-value="selectedFeats.get(featLevel)"
-                :items="getOptionsForLevel(featLevel)"
-                :loading="featsPending"
-                searchable
-                :placeholder="
-                  classAsiLevels.includes(featLevel)
-                    ? 'Выберите черту'
-                    : 'Недоступно'
-                "
-                class="w-full"
-                label-key="label"
-                value-key="value"
-                :disabled="
-                  !classAsiLevels.includes(featLevel) ||
-                  (level < featLevel && !selectedFeats.get(featLevel))
-                "
-                @update:model-value="(v) => updateSelectedFeat(featLevel, v)"
-              >
-                <template #item-label="{ item }">
-                  <span class="flex items-center gap-1">
-                    <span class="truncate">
-                      {{ item.label }}
-                    </span>
-
-                    <UIcon
-                      v-if="item.repeatability"
-                      name="i-fluent-arrow-repeat-all-24-regular"
-                      class="text-muted"
-                      size="16"
-                      title="Повторяемая черта"
-                    />
-                  </span>
-                </template>
-
-                <template #item-trailing="{ item }">
-                  <UBadge
-                    variant="subtle"
-                    color="neutral"
-                  >
-                    {{ item.source }}
-                  </UBadge>
-                </template>
-
-                <template #item-description="{ item }">
-                  <div class="grid w-full">
-                    <div
-                      class="w-full truncate"
-                      :title="item.description"
-                    >
-                      {{ item.description }}
-                    </div>
-
-                    <div
-                      v-if="item.prerequisite"
-                      class="w-full truncate"
-                      :title="item.prerequisite"
-                    >
-                      {{ item.prerequisite }}
-                    </div>
-                  </div>
-                </template>
-              </USelectMenu>
-
-              <UButton
-                v-if="
-                  selectedFeats.get(featLevel) &&
-                  !(level < featLevel && !selectedFeats.get(featLevel)) &&
-                  classAsiLevels.includes(featLevel)
-                "
-                icon="i-fluent-dismiss-24-regular"
-                color="neutral"
-                variant="subtle"
-                @click="updateSelectedFeat(featLevel, undefined)"
-              />
-            </UFieldGroup>
-
-            <!-- Ability Choice Inline -->
-            <template v-if="selectedFeats.get(featLevel)">
-              <UFieldGroup
-                v-if="isFeatHasMultipleAbilities(selectedFeats.get(featLevel))"
-                class="w-full"
-              >
-                <USelect
-                  :model-value="getFeatAbilityChoice(featLevel)"
-                  :items="getAbilityOptions(selectedFeats.get(featLevel))"
-                  placeholder="Выберите характеристику"
-                  class="w-full"
-                  :class="{
-                    'ring-error':
-                      selectedFeats.get(featLevel) &&
-                      !getFeatAbilityChoice(featLevel) &&
-                      level >= featLevel,
-                  }"
-                  option-attribute="label"
-                  value-attribute="value"
-                  :disabled="
-                    !classAsiLevels.includes(featLevel) ||
-                    level < featLevel ||
-                    !selectedFeats.get(featLevel)
-                  "
-                  @update:model-value="
-                    (v) => updateFeatAbilityChoice(featLevel, v as AbilityKey)
-                  "
-                />
-
-                <UButton
-                  v-if="
-                    getFeatAbilityChoice(featLevel) &&
-                    !(level < featLevel && !selectedFeats.get(featLevel)) &&
-                    classAsiLevels.includes(featLevel)
-                  "
-                  icon="i-fluent-dismiss-24-regular"
-                  color="neutral"
-                  variant="subtle"
-                  @click="updateFeatAbilityChoice(featLevel, undefined)"
-                />
-              </UFieldGroup>
-
-              <!-- Single Ability Display -->
-              <div
-                v-else
-                class="mt-auto text-xs text-secondary"
-              >
-                <span
-                  v-if="
-                    getAbilityOptions(selectedFeats.get(featLevel))[0]?.label
-                  "
-                >
-                  Бонус:
-                  {{
-                    getAbilityOptions(selectedFeats.get(featLevel))[0]?.label
-                  }}
-                </span>
-
-                <span v-else>Нет бонуса</span>
-              </div>
-            </template>
-          </div>
-        </template>
-      </div>
+      <BonusGeneralFeats
+        :all-asi-levels="allAsiLevels"
+        :class-asi-levels="classAsiLevels"
+        :level="level"
+        :selected-feats="selectedFeats"
+        :feat-ability-choices="featAbilityChoices"
+        :loading="featsPending"
+        :get-options-for-level="getOptionsForLevel"
+        :get-ability-options="getAbilityOptions"
+        :is-feat-has-multiple-abilities="isFeatHasMultipleAbilities"
+        @update:selected-feat="updateSelectedFeat"
+        @update:ability-choice="updateFeatAbilityChoice"
+      />
     </div>
   </div>
 </template>

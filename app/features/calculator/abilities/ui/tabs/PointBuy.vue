@@ -2,7 +2,12 @@
   import { ABILITY_KEYS, ABILITY_LABELS } from '~/shared/types';
   import { AbilityKey } from '~/shared/types/abilities';
 
-  import { POINT_BUY_COSTS } from '../../model/consts';
+  import {
+    POINT_BUY_BUDGET,
+    POINT_BUY_COSTS,
+    POINT_BUY_MAX_SCORE,
+    POINT_BUY_MIN_SCORE,
+  } from '../../model/consts';
 
   import type { AbilityScores } from '../../model/types';
 
@@ -13,10 +18,6 @@
   const emit = defineEmits<{
     (e: 'update:modelValue', value: AbilityScores): void;
   }>();
-
-  const BUDGET = 27;
-  const MIN_SCORE = 8;
-  const MAX_SCORE = 15;
 
   const localScores = ref<AbilityScores>({ ...props.modelValue });
 
@@ -42,12 +43,12 @@
     return cost;
   });
 
-  const remainingPoints = computed(() => BUDGET - totalCost.value);
+  const remainingPoints = computed(() => POINT_BUY_BUDGET - totalCost.value);
 
   function canIncrease(key: AbilityKey): boolean {
     const current = localScores.value[key];
 
-    if (current >= MAX_SCORE) {
+    if (current >= POINT_BUY_MAX_SCORE) {
       return false;
     }
 
@@ -59,14 +60,14 @@
   }
 
   function canDecrease(key: AbilityKey): boolean {
-    return localScores.value[key] > MIN_SCORE;
+    return localScores.value[key] > POINT_BUY_MIN_SCORE;
   }
 
   function updateScore(key: AbilityKey, delta: number) {
     const current = localScores.value[key];
     const next = current + delta;
 
-    if (next < MIN_SCORE || next > MAX_SCORE) {
+    if (next < POINT_BUY_MIN_SCORE || next > POINT_BUY_MAX_SCORE) {
       return;
     }
 
@@ -88,12 +89,13 @@
   >
     <div class="flex items-center justify-between">
       <div class="text-sm text-secondary">
-        Бюджет: {{ BUDGET }} очков. Диапазон: {{ MIN_SCORE }}–{{ MAX_SCORE }}.
+        Бюджет: {{ POINT_BUY_BUDGET }} очков. Диапазон:
+        {{ POINT_BUY_MIN_SCORE }}–{{ POINT_BUY_MAX_SCORE }}.
       </div>
 
       <div
         class="text-sm font-semibold"
-        :class="remainingPoints > 0 ? 'text-red-500' : undefined"
+        :class="remainingPoints > 0 ? 'text-error' : undefined"
       >
         Осталось: {{ remainingPoints }}
       </div>

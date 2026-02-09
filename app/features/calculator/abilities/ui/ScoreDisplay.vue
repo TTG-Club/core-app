@@ -33,11 +33,11 @@
   }
 
   const totalBase = computed(() =>
-    props.items.reduce((sum, item) => sum + item.baseValue, 0),
+    props.items.reduce((sum, scoreItem) => sum + scoreItem.baseValue, 0),
   );
 
   const totalScore = computed(() =>
-    props.items.reduce((sum, item) => sum + item.value, 0),
+    props.items.reduce((sum, scoreItem) => sum + scoreItem.value, 0),
   );
 </script>
 

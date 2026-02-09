@@ -9,6 +9,14 @@ import type { Ref } from 'vue';
 
 import type { AbilityScores, BonusSource } from '../model/types';
 
+/**
+ * Калькулятор характеристик персонажа.
+ * Вычисляет итоговые значения характеристик на основе базовых значений и бонусов.
+ *
+ * @param baseScores - Реактивный объект с базовыми значениями характеристик (например, от Point Buy или Standard Array).
+ * @param bonusSources - Реактивный массив источников бонусов (раса, черты и т.д.).
+ * @returns Объект с вычисленными значениями и отформатированными для отображения данными.
+ */
 export function useAbilitiesCalculator(
   baseScores: Ref<AbilityScores>,
   bonusSources: Ref<BonusSource[]>,

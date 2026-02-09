@@ -53,7 +53,7 @@
 
     // Find if another ability already has this value
     const conflictingKey = ABILITY_KEYS.find(
-      (k) => newScores[k] === value && k !== key,
+      (k) => newScores[k] === value && k !== key && value !== 0,
     );
 
     if (conflictingKey) {
@@ -70,7 +70,7 @@
   function getScoreClass(score: number) {
     return usedValues.value.has(score)
       ? 'text-secondary'
-      : 'text-red-500 font-bold';
+      : 'text-error font-bold';
   }
 </script>
 
@@ -103,7 +103,7 @@
           :model-value="localScores[key]"
           :items="getOptions(key)"
           class="w-32"
-          @update:model-value="(v) => updateScore(key, Number(v))"
+          @update:model-value="updateScore(key, Number($event))"
         />
       </div>
     </div>

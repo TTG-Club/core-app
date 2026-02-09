@@ -1,4 +1,5 @@
-import type { DiceRollItem } from '~/features/dice-roller/types';
+import type { DiceRollItem } from '~dice-roller/types';
+
 import type { AbilityKey, NameResponse, SourceResponse } from '~/shared/types';
 
 export type AbilityScores = Record<AbilityKey, number>;
@@ -33,6 +34,34 @@ export interface CalculatorAbilitiesClass {
   createdAt: string;
   levels: number[];
   source: SourceResponse;
+}
+
+export interface CalculatorClassOption {
+  label: string;
+  value: string;
+  description: string;
+  source: string;
+}
+
+export interface CalculatorFeatOption {
+  label: string;
+  value: string;
+  description: string;
+  source: string;
+  prerequisite?: string;
+  repeatability?: boolean;
+}
+
+export interface CalculatorAbilityOption {
+  label: string;
+  value: string;
+}
+
+export interface CalculatorBackgroundOption {
+  label: string;
+  value: string;
+  description: string;
+  sourceLabel: string;
 }
 
 export interface CalculatorAbilitiesFeat {

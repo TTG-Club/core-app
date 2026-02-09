@@ -32,3 +32,7 @@ export const POINT_BUY_COSTS: Record<number, number> = {
 };
 
 export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
+
+export const POINT_BUY_BUDGET = 27;
+export const POINT_BUY_MIN_SCORE = 8;
+export const POINT_BUY_MAX_SCORE = 15;

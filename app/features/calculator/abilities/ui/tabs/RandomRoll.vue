@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import { useDiceRoller } from '~/features/dice-roller/composables/useDiceRoller';
-  import { extractDiceRollDetails } from '~/features/dice-roller/utils';
+  import { useDiceRoller } from '~dice-roller/composables/useDiceRoller';
+  import { extractDiceRollDetails } from '~dice-roller/utils';
+
   import {
     ABILITY_KEYS,
     ABILITY_LABELS,
@@ -8,7 +9,7 @@
     isAbilityKey,
   } from '~/shared/types';
 
-  import DiceSpinner from './components/DiceSpinner.vue';
+  import { DiceSpinner } from './components';
 
   import type { DiceRollItem } from '~/features/dice-roller/types';
 
@@ -83,15 +84,15 @@
     // Sort results descending
     // We also need to sort diceDetails to match the sorted results
     // Create pairs of [result, dice]
-    const paired = results.map((res, i) => ({
-      res,
+    const paired = results.map((result, i) => ({
+      result,
       dice: diceDetails[i],
     }));
 
-    paired.sort((a, b) => b.res - a.res);
+    paired.sort((a, b) => b.result - a.result);
 
-    const sortedResults = paired.map((p) => p.res);
-    const sortedDice = paired.map((p) => p.dice ?? []);
+    const sortedResults = paired.map((pair) => pair.result);
+    const sortedDice = paired.map((pair) => pair.dice ?? []);
 
     // Reset assignments and scores
     const newScores = { ...localState.value.scores };
@@ -181,6 +182,10 @@
     localState.value = newState;
     emit('update:state', newState);
   }
+
+  function handleAssignmentUpdate(index: number, value: unknown) {
+    updateAssignment(index, isAbilityKey(value) ? value : null);
+  }
 </script>
 
 <template>
@@ -250,7 +255,7 @@
             class="w-40"
             placeholder="Назначить..."
             @update:model-value="
-              (v) => updateAssignment(index, isAbilityKey(v) ? v : null)
+              (value) => handleAssignmentUpdate(index, value)
             "
           />
 
