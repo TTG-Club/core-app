@@ -71,7 +71,6 @@
       return;
     }
 
-    // Check budget on increase
     if (delta > 0 && !canIncrease(key)) {
       return;
     }

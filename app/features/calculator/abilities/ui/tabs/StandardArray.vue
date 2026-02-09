@@ -51,14 +51,12 @@
   function updateScore(key: AbilityKey, value: number) {
     const newScores = { ...localScores.value };
 
-    // Find if another ability already has this value
     const conflictingKey = ABILITY_KEYS.find(
       (abilityKey) =>
         newScores[abilityKey] === value && abilityKey !== key && value !== 0,
     );
 
     if (conflictingKey) {
-      // Clear the conflicting ability
       newScores[conflictingKey] = 0;
     }
 

@@ -35,13 +35,11 @@
   const localState = ref<RandomRollState>({ ...props.state });
   const hasRolled = ref(props.state.rolls.length > 0);
 
-  // Initialize dice if they exist in state, otherwise placeholder
   const currentDice = ref<DiceRollItem[][]>(
     props.state.dice ??
       Array.from<DiceRollItem[]>({ length: RANDOM_ROLL_COUNT }).fill([]),
   );
 
-  // Store boolean flags for animation completion of each block
   const animationCompleted = ref<boolean[]>(
     Array.from({ length: RANDOM_ROLL_COUNT }, () => true),
   );
@@ -69,7 +67,6 @@
   function onAnimationComplete(index: number) {
     animationCompleted.value[index] = true;
 
-    // If all animations are complete, set global isAnimating to false
     if (animationCompleted.value.every((completed) => completed)) {
       isAnimating.value = false;
     }
@@ -88,9 +85,6 @@
       diceDetails.push(rolls);
     }
 
-    // Sort results descending
-    // We also need to sort diceDetails to match the sorted results
-    // Create pairs of [result, dice]
     const paired = results.map((result, i) => ({
       result,
       dice: diceDetails[i],
@@ -101,7 +95,6 @@
     const sortedResults = paired.map((pair) => pair.result);
     const sortedDice = paired.map((pair) => pair.dice ?? []);
 
-    // Reset assignments and scores
     const newScores = { ...localState.value.scores };
 
     for (const key of Object.values(AbilityKey)) {
@@ -142,32 +135,28 @@
   function updateAssignment(rollIndex: number, ability: AbilityKey | null) {
     const newAssignments: Record<number, AbilityKey | null> = {};
 
-    // Copy existing assignments, filtering out the current roll index and the target ability if it was assigned elsewhere
     for (const [idxStr, assignedAbility] of Object.entries(
       localState.value.assignments,
     )) {
       const idx = Number(idxStr);
 
       if (idx === rollIndex) {
-        continue; // Skip current roll's old assignment
+        continue;
       }
 
       if (ability !== null && assignedAbility === ability) {
-        continue; // Unassign ability from other roll
+        continue;
       }
 
       newAssignments[idx] = assignedAbility;
     }
 
-    // Assign new ability if not null
     if (ability !== null) {
       newAssignments[rollIndex] = ability;
     }
 
-    // Recalculate scores
     const newScores = { ...localState.value.scores };
 
-    // Reset all to 0 first
     for (const key of Object.values(AbilityKey)) {
       newScores[key] = 0;
     }

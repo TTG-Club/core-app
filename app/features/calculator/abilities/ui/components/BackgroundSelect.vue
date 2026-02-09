@@ -26,7 +26,6 @@
   const plusTwoStat = ref<AbilityKey | undefined>(undefined);
   const plusOneStat = ref<AbilityKey | undefined>(undefined);
 
-  // Parse abilities from background
   const availableAbilities = computed<AbilityKey[]>(() => {
     const background = props.background;
 
@@ -46,21 +45,18 @@
       .filter((key: AbilityKey | undefined): key is AbilityKey => !!key);
   });
 
-  // Determine allowed choices
   const canChooseThreeOnes = computed(
     () => availableAbilities.value.length >= 3,
   );
 
   const canChooseTwoOne = computed(() => availableAbilities.value.length >= 2);
 
-  // Reset choices when background changes
   watch(
     () => props.background,
     () => {
       plusTwoStat.value = undefined;
       plusOneStat.value = undefined;
 
-      // Default to +2/+1 if possible, otherwise +1/+1/+1
       if (canChooseTwoOne.value) {
         asiChoice.value = 'two_one';
       } else if (canChooseThreeOnes.value) {
@@ -78,7 +74,6 @@
     const bgName = props.background.name.rus;
 
     if (asiChoice.value === 'three_ones' && canChooseThreeOnes.value) {
-      // Apply +1 to first 3 abilities
       for (const key of availableAbilities.value.slice(0, 3)) {
         bonuses[key] = (bonuses[key] || 0) + 1;
       }
@@ -92,7 +87,6 @@
       }
     }
 
-    // If no bonuses selected yet, return empty but with label
     return [
       {
         id: props.background.url,
@@ -159,7 +153,6 @@
   <div
     class="flex flex-col gap-6 rounded-xl border border-default bg-muted p-4"
   >
-    <!-- Background Select -->
     <div class="flex flex-col gap-2">
       <div class="text-sm font-semibold">Предыстория</div>
 

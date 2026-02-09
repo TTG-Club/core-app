@@ -2,7 +2,7 @@
   import { useAbilitiesCalculator } from './composables/useAbilitiesCalculator';
   import { DEFAULT_SCORES, ZERO_SCORES } from './model';
   import {
-    BonusFeats,
+    AbilityBonuses,
     PointBuyTab,
     RandomRollTab,
     ScoreDisplay,
@@ -11,7 +11,6 @@
 
   import type { AbilityScores, BonusSource, RandomRollState } from './model';
 
-  // --- State Management ---
   const pointBuyScores = ref<AbilityScores>({ ...DEFAULT_SCORES });
   const arrayScores = ref<AbilityScores>({ ...ZERO_SCORES });
 
@@ -32,7 +31,6 @@
     PointBuy = 'point-buy',
   }
 
-  // --- Tabs Configuration ---
   const tabs = [
     {
       label: 'Случайный набор',
@@ -53,7 +51,6 @@
 
   const selectedTabIndex = ref(TabValues.Random);
 
-  // --- Calculator Integration ---
   const activeBaseScores = computed(() => {
     switch (selectedTabIndex.value) {
       case TabValues.Random:
@@ -80,12 +77,9 @@
 
 <template>
   <div class="flex flex-col gap-6">
-    <!-- Results Display -->
     <ScoreDisplay :items="formattedScores" />
 
-    <!-- Main Content Area -->
     <div class="flex flex-col gap-6">
-      <!-- Calculator Tabs -->
       <UTabs
         v-model="selectedTabIndex"
         :items="tabs"
@@ -104,7 +98,7 @@
         </template>
       </UTabs>
 
-      <BonusFeats
+      <AbilityBonuses
         v-model="characterLevel"
         @update:feat-sources="featBonuses = $event"
         @update:background-sources="backgroundBonuses = $event"

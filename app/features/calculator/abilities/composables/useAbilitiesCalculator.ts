@@ -24,12 +24,10 @@ export function useAbilitiesCalculator(
   const finalScores = computed<AbilityScores>(() => {
     const scores = { ...DEFAULT_SCORES };
 
-    // Start with base scores
     for (const key of ABILITY_KEYS) {
       scores[key] = baseScores.value[key] ?? scores[key];
     }
 
-    // Add bonuses
     for (const source of bonusSources.value) {
       for (const key of ABILITY_KEYS) {
         const bonusValue = source.scores[key];
@@ -73,7 +71,7 @@ export function useAbilitiesCalculator(
 
       return {
         key,
-        label: key, // Should be mapped to localized label in UI
+        label: key,
         value: finalValue,
         modifier,
         baseValue,

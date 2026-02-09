@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import BonusFeatSlot from './BonusFeatSlot.vue';
+  import FeatSlot from './FeatSlot.vue';
 
   import type { AbilityKey } from '~/shared/types';
 
@@ -57,7 +57,7 @@
 
 <template>
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-    <BonusFeatSlot
+    <FeatSlot
       v-for="featLevel in allAsiLevels"
       :key="featLevel"
       :model-value="selectedFeats.get(featLevel)"
