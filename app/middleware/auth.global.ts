@@ -12,8 +12,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
     if (import.meta.server) {
       return abortNavigation(
         createError({
-          statusCode: code,
-          statusMessage: getReasonPhrase(code),
+          status: code,
+          statusText: getReasonPhrase(code),
           message: getStatusMessage(code),
         }),
       );
@@ -35,8 +35,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
     return abortNavigation(
       createError({
-        statusCode: code,
-        statusMessage: getReasonPhrase(code),
+        status: code,
+        statusText: getReasonPhrase(code),
         message: getStatusMessage(code),
       }),
     );
