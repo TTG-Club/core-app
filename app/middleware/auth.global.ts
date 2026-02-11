@@ -1,4 +1,4 @@
-import { getReasonPhrase, StatusCodes } from 'http-status-codes';
+import { StatusCodes } from 'http-status-codes';
 import { getStatusMessage } from '~~/shared/utils';
 
 import type { Role } from '~/shared/types';
@@ -10,13 +10,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   const preventRouting = (code: StatusCodes) => {
     if (import.meta.server) {
-      return abortNavigation(
-        createError({
-          status: code,
-          statusText: getReasonPhrase(code),
-          message: getStatusMessage(code),
-        }),
-      );
+      return abortNavigation(createError(getErrorResponse(code)));
     }
 
     const nuxtApp = useNuxtApp();
@@ -33,13 +27,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
       description: getStatusMessage(code),
     });
 
-    return abortNavigation(
-      createError({
-        status: code,
-        statusText: getReasonPhrase(code),
-        message: getStatusMessage(code),
-      }),
-    );
+    return abortNavigation(createError(getErrorResponse(code)));
   };
 
   const requestFetch = useRequestFetch();
