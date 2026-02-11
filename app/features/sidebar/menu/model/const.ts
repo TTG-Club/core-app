@@ -88,6 +88,10 @@ export const MENU_SECTIONS: Array<{
         href: '/tokenator',
         label: 'Токенатор',
       },
+      {
+        href: '/calculators/abilities',
+        label: 'Калькулятор характеристик',
+      },
     ],
   },
   {
