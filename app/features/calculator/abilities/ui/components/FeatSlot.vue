@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { isAbilityKey } from '~/shared/types';
+
   import type { AbilityKey } from '~/shared/types';
 
   import type {
@@ -25,7 +27,37 @@
   }>();
 
   const model = defineModel<string>();
-  const abilityChoice = defineModel<AbilityKey>('ability-choice');
+  const abilityChoice = defineModel<AbilityKey[]>('ability-choice');
+
+  const selectedFeat = computed(() =>
+    options.find((option) => option.value === model.value),
+  );
+
+  const increaseCount = computed(
+    () => selectedFeat.value?.abilityScoreIncreaseOptions ?? 1,
+  );
+
+  function getChoice(index: number) {
+    return abilityChoice.value?.[index];
+  }
+
+  function handleChoiceUpdate(index: number, value: unknown) {
+    const current: (AbilityKey | undefined)[] = [
+      ...(abilityChoice.value || []),
+    ];
+
+    while (current.length <= index) {
+      current.push(undefined);
+    }
+
+    if (isAbilityKey(value)) {
+      current[index] = value;
+    } else {
+      current.splice(index, 1);
+    }
+
+    abilityChoice.value = current.filter(isAbilityKey);
+  }
 </script>
 
 <template>
@@ -101,38 +133,43 @@
         icon="i-fluent-dismiss-24-regular"
         color="neutral"
         variant="subtle"
-        @click="model = undefined"
+        @click.left.exact.prevent="model = undefined"
       />
     </UFieldGroup>
 
-    <!-- Ability Choice Inline -->
     <template v-if="model">
-      <UFieldGroup
+      <div
         v-if="hasMultipleAbilities"
-        class="mt-auto w-full pt-1"
+        class="flex w-full flex-col gap-2 pt-1 lg:flex-row"
       >
-        <USelect
-          v-model="abilityChoice"
-          :items="abilityOptions"
-          placeholder="Выберите характеристику"
+        <UFieldGroup
+          v-for="i in increaseCount"
+          :key="i"
           class="w-full"
-          :class="{
-            'ring-error': !abilityChoice,
-          }"
-          option-attribute="label"
-          value-attribute="value"
-        />
+        >
+          <USelect
+            :model-value="getChoice(i - 1)"
+            :items="abilityOptions"
+            placeholder="Выберите характеристику"
+            class="w-full"
+            :class="{
+              'ring-error': !getChoice(i - 1),
+            }"
+            option-attribute="label"
+            value-attribute="value"
+            @update:model-value="handleChoiceUpdate(i - 1, $event)"
+          />
 
-        <UButton
-          v-if="abilityChoice"
-          icon="i-fluent-dismiss-24-regular"
-          color="neutral"
-          variant="subtle"
-          @click="abilityChoice = undefined"
-        />
-      </UFieldGroup>
+          <UButton
+            v-if="getChoice(i - 1)"
+            icon="i-fluent-dismiss-24-regular"
+            color="neutral"
+            variant="subtle"
+            @click.left.exact.prevent="handleChoiceUpdate(i - 1, '')"
+          />
+        </UFieldGroup>
+      </div>
 
-      <!-- Single Ability Display -->
       <div
         v-else
         class="mt-auto text-xs text-secondary"

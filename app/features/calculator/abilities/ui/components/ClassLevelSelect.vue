@@ -43,7 +43,7 @@
           icon="i-fluent-dismiss-24-regular"
           color="neutral"
           variant="subtle"
-          @click="selectedClassUrl = undefined"
+          @click.left.exact.prevent="selectedClassUrl = undefined"
         />
       </UFieldGroup>
 

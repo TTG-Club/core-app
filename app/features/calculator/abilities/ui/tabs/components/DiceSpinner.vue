@@ -5,8 +5,9 @@
 
   import type { DiceRollItem } from '~dice-roller/types';
 
-  const { values } = defineProps<{
+  const { values, animate = true } = defineProps<{
     values: DiceRollItem[];
+    animate?: boolean;
   }>();
 
   const emit = defineEmits<{
@@ -45,7 +46,7 @@
 
   const transitionOffsets = offsets.map((source, index) => {
     return useTransition(source, {
-      duration: getDuration(index),
+      duration: computed(() => (animate ? 2000 + index * 200 : 0)),
       easing: TransitionPresets.easeOutCubic,
     });
   });
@@ -61,23 +62,31 @@
         return;
       }
 
-      isAnimationCompleted.value = false;
+      isAnimationCompleted.value = !animate;
 
       newValues.forEach((roll, i) => {
         if (offsets[i]) {
-          offsets[i].value = calculateNextPosition(
-            offsets[i].value,
-            roll.value,
-          );
+          if (animate) {
+            offsets[i].value = calculateNextPosition(
+              offsets[i].value,
+              roll.value,
+            );
+          } else {
+            offsets[i].value = (roll.value - 1) * (DICE_SIZE + GAP_SIZE);
+          }
         }
       });
 
-      const maxDuration = getDuration(newValues.length - 1);
+      const maxDuration = animate ? getDuration(newValues.length - 1) : 0;
 
-      setTimeout(() => {
-        isAnimationCompleted.value = true;
+      if (animate) {
+        setTimeout(() => {
+          isAnimationCompleted.value = true;
+          emit('complete');
+        }, maxDuration + 50);
+      } else {
         emit('complete');
-      }, maxDuration + 50);
+      }
     },
     { deep: true, immediate: true },
   );

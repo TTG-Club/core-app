@@ -178,7 +178,7 @@
           icon="i-fluent-dismiss-24-regular"
           color="neutral"
           variant="subtle"
-          @click="selectedBackgroundUrl = undefined"
+          @click.left.exact.prevent="selectedBackgroundUrl = undefined"
         />
       </UFieldGroup>
     </div>
@@ -227,7 +227,7 @@
               icon="i-fluent-dismiss-24-regular"
               color="neutral"
               variant="subtle"
-              @click="plusTwoStat = undefined"
+              @click.left.exact.prevent="plusTwoStat = undefined"
             />
           </UFieldGroup>
 
@@ -244,7 +244,7 @@
               icon="i-fluent-dismiss-24-regular"
               color="neutral"
               variant="subtle"
-              @click="plusOneStat = undefined"
+              @click.left.exact.prevent="plusOneStat = undefined"
             />
           </UFieldGroup>
         </div>

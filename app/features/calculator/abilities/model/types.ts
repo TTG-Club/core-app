@@ -20,9 +20,9 @@ export interface PointBuyState extends TabState {
 }
 
 export interface RandomRollState extends TabState {
-  rolls: number[]; // The 6 rolled numbers
-  dice?: DiceRollItem[][]; // The individual dice values for each roll (6 arrays of 4 numbers)
-  assignments: Record<number, AbilityKey | null>; // Index of roll -> assigned ability
+  rolls: number[];
+  dice?: DiceRollItem[][];
+  assignments: Record<number, AbilityKey | null>;
 }
 
 export type TabMode = 'point-buy' | 'standard-array' | 'random';
@@ -50,6 +50,7 @@ export interface CalculatorFeatOption {
   source: string;
   prerequisite?: string;
   repeatability?: boolean;
+  abilityScoreIncreaseOptions?: number;
 }
 
 export interface CalculatorAbilityOption {
@@ -70,7 +71,7 @@ export interface CalculatorAbilitiesFeat {
   prerequisite: string | null;
   repeatability: boolean;
   abilities: Array<string> | null;
-  increase: number | null;
+  abilityScoreIncreaseOptions: number | null;
   source: SourceResponse;
   name: NameResponse & {
     alt?: Array<string> | null;

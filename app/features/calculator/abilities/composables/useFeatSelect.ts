@@ -25,7 +25,7 @@ import type {
 export function useFeatSelect(hasEpicBoon: Ref<boolean>) {
   const selectedFeats = ref<Map<number, string | undefined>>(new Map());
   const selectedEpicFeatUrl = ref<string>();
-  const featAbilityChoices = ref<Map<string | number, AbilityKey>>(new Map());
+  const featAbilityChoices = ref<Map<string | number, AbilityKey[]>>(new Map());
 
   const { data: feats, pending } = useFetch<CalculatorAbilitiesFeat[]>(
     '/api/v2/feats/select',
@@ -71,6 +71,8 @@ export function useFeatSelect(hasEpicBoon: Ref<boolean>) {
       source: sourceLabel,
       prerequisite: feat.prerequisite ?? undefined,
       repeatability: feat.repeatability,
+      abilityScoreIncreaseOptions:
+        feat.abilityScoreIncreaseOptions ?? undefined,
     };
   }
 
@@ -164,16 +166,18 @@ export function useFeatSelect(hasEpicBoon: Ref<boolean>) {
     return abilities.length > 1;
   }
 
-  function getAbilityChoice(key: string | number): AbilityKey | undefined {
+  function getAbilityChoice(key: string | number): AbilityKey[] | undefined {
     return featAbilityChoices.value.get(key);
   }
 
   function updateAbilityChoice(
     key: string | number,
-    value: AbilityKey | undefined,
+    value: AbilityKey[] | AbilityKey | undefined,
   ) {
     if (value) {
-      featAbilityChoices.value.set(key, value);
+      const arr = Array.isArray(value) ? value : [value];
+
+      featAbilityChoices.value.set(key, arr);
     } else {
       featAbilityChoices.value.delete(key);
     }
@@ -195,8 +199,14 @@ export function useFeatSelect(hasEpicBoon: Ref<boolean>) {
   }
 
   function handleEpicAbilityUpdate(value: unknown) {
-    if (isAbilityKey(value)) {
-      updateAbilityChoice('epic', value);
+    if (Array.isArray(value)) {
+      const validKeys = value.filter((item): item is AbilityKey =>
+        isAbilityKey(item),
+      );
+
+      updateAbilityChoice('epic', validKeys);
+    } else if (isAbilityKey(value)) {
+      updateAbilityChoice('epic', [value]);
     }
   }
 
@@ -216,17 +226,27 @@ export function useFeatSelect(hasEpicBoon: Ref<boolean>) {
 
       const bonuses: Partial<AbilityScores> = {};
 
-      let chosenAbility: AbilityKey | undefined;
+      if (
+        feat.abilities &&
+        feat.abilities.length > 0 &&
+        feat.abilityScoreIncreaseOptions
+      ) {
+        let chosenAbilities: AbilityKey[] = [];
 
-      if (feat.abilities && feat.abilities.length > 0 && feat.increase) {
         if (feat.abilities.length > 1) {
-          chosenAbility = featAbilityChoices.value.get(featLevel);
+          chosenAbilities = featAbilityChoices.value.get(featLevel) || [];
         } else {
-          chosenAbility = getFirstAbility(feat);
+          const first = getFirstAbility(feat);
+
+          if (first) {
+            for (let i = 0; i < feat.abilityScoreIncreaseOptions; i++) {
+              chosenAbilities.push(first);
+            }
+          }
         }
 
-        if (chosenAbility) {
-          bonuses[chosenAbility] = feat.increase;
+        for (const ability of chosenAbilities) {
+          bonuses[ability] = (bonuses[ability] || 0) + 1;
         }
       }
 
@@ -243,17 +263,27 @@ export function useFeatSelect(hasEpicBoon: Ref<boolean>) {
       if (feat) {
         const bonuses: Partial<AbilityScores> = {};
 
-        let chosenAbility: AbilityKey | undefined;
+        if (
+          feat.abilities &&
+          feat.abilities.length > 0 &&
+          feat.abilityScoreIncreaseOptions
+        ) {
+          let chosenAbilities: AbilityKey[] = [];
 
-        if (feat.abilities && feat.abilities.length > 0 && feat.increase) {
           if (feat.abilities.length > 1) {
-            chosenAbility = featAbilityChoices.value.get('epic');
+            chosenAbilities = featAbilityChoices.value.get('epic') || [];
           } else {
-            chosenAbility = getFirstAbility(feat);
+            const first = getFirstAbility(feat);
+
+            if (first) {
+              for (let i = 0; i < feat.abilityScoreIncreaseOptions; i++) {
+                chosenAbilities.push(first);
+              }
+            }
           }
 
-          if (chosenAbility) {
-            bonuses[chosenAbility] = feat.increase;
+          for (const ability of chosenAbilities) {
+            bonuses[ability] = (bonuses[ability] || 0) + 1;
           }
         }
 

@@ -60,7 +60,7 @@
 
 <template>
   <div class="flex flex-col gap-6">
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <div class="grid gap-6 lg:grid-cols-2">
       <ClassLevelSelect
         v-model:selected-class-url="classSelectedUrl"
         v-model:level="model"
