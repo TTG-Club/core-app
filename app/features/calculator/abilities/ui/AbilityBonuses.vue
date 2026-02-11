@@ -8,7 +8,7 @@
   import {
     BackgroundSelect,
     ClassLevelSelect,
-    EpicBoonSelect,
+    FeatSlot,
     GeneralFeatsGrid,
   } from './components';
 
@@ -68,8 +68,10 @@
         :classes-pending="classesPending"
       >
         <template #epic-boon>
-          <EpicBoonSelect
+          <FeatSlot
             v-model="selectedEpicFeatUrl"
+            label="Эпический дар"
+            placeholder="Выберите эпический дар"
             :ability-choice="getAbilityChoice('epic')"
             :options="epicFeatOptions"
             :ability-options="getAbilityOptions(selectedEpicFeatUrl)"
