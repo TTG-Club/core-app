@@ -6,16 +6,18 @@
   }
 
   const { value, size = 44, muted = false } = defineProps<Props>();
+
+  const classes = computed(() =>
+    muted
+      ? 'border-muted/30 bg-muted/30 text-muted/30'
+      : 'border-default bg-elevated text-default',
+  );
 </script>
 
 <template>
   <div
-    class="flex items-center justify-center rounded border shadow-sm transition-colors"
-    :class="[
-      muted
-        ? 'border-muted/30 bg-muted/30 text-muted/30'
-        : 'border-default bg-elevated text-default',
-    ]"
+    class="flex items-center justify-center rounded border shadow-sm"
+    :class="classes"
     :style="{ width: `${size}px`, height: `${size}px` }"
   >
     <svg

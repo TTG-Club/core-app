@@ -45,7 +45,9 @@
 
 <template>
   <div class="rounded-xl border border-default bg-muted p-4">
-    <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
+    <div
+      class="grid grid-flow-col grid-cols-2 grid-rows-3 gap-2 sm:grid-flow-row sm:grid-cols-3 sm:grid-rows-2 md:grid-cols-6 md:grid-rows-1"
+    >
       <UTooltip
         v-for="item in items"
         :key="item.key"

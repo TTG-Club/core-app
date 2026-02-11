@@ -23,7 +23,7 @@
     classAsiLevels: number[];
     level: number;
     selectedFeats: Map<number, string | undefined>;
-    featAbilityChoices: Map<string | number, AbilityKey>;
+    featAbilityChoices: Map<string | number, AbilityKey[]>;
     loading: boolean;
     getOptionsForLevel: (level: number) => CalculatorFeatOption[];
     getAbilityOptions: (url: string | undefined) => CalculatorAbilityOption[];
@@ -35,7 +35,7 @@
     (
       e: 'update:ability-choice',
       level: number,
-      value: AbilityKey | undefined,
+      value: AbilityKey[] | undefined,
     ): void;
   }>();
 
@@ -57,14 +57,14 @@
 
   function handleAbilityChoiceUpdate(
     featLevel: number,
-    value: AbilityKey | undefined,
+    value: AbilityKey[] | undefined,
   ) {
     emit('update:ability-choice', featLevel, value);
   }
 </script>
 
 <template>
-  <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+  <div class="grid gap-6 md:grid-cols-2 2xl:grid-cols-3">
     <FeatSlot
       v-for="featLevel in allAsiLevels"
       :key="featLevel"

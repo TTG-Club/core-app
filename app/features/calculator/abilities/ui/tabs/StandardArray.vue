@@ -32,13 +32,19 @@
     return set;
   });
 
-  function getOptions() {
+  function getOptions(currentValue: number) {
     return [
       { label: 'Не выбрано', value: 0 },
-      ...STANDARD_ARRAY.map((score) => ({
-        label: String(score),
-        value: score,
-      })),
+      ...STANDARD_ARRAY.map((score) => {
+        const isUsed = usedValues.value.has(score) && score !== currentValue;
+
+        return {
+          label: isUsed ? `${score} (Занято)` : String(score),
+          value: score,
+          disabled: false,
+          class: isUsed ? 'text-secondary' : undefined,
+        };
+      }),
     ];
   }
 
@@ -63,7 +69,7 @@
   function getScoreClass(score: number) {
     return usedValues.value.has(score)
       ? 'text-secondary'
-      : 'text-error font-bold';
+      : 'text-primary font-bold';
   }
 </script>
 
@@ -73,14 +79,13 @@
   >
     <div class="text-sm text-secondary">
       Распределите значения:
-      <span class="font-mono">
-        <span
-          v-for="(score, index) in STANDARD_ARRAY"
-          :key="score"
-          :class="getScoreClass(score)"
-        >
-          {{ score }}<span v-if="index < STANDARD_ARRAY.length - 1">, </span>
-        </span> </span
+      <span
+        v-for="(score, index) in STANDARD_ARRAY"
+        :key="score"
+        :class="getScoreClass(score)"
+      >
+        {{ score
+        }}<span v-if="index < STANDARD_ARRAY.length - 1">, </span> </span
       >.
     </div>
 
@@ -94,7 +99,7 @@
 
         <USelect
           :model-value="localScores[key]"
-          :items="getOptions()"
+          :items="getOptions(localScores[key])"
           class="w-32"
           @update:model-value="updateScore(key, Number($event))"
         />

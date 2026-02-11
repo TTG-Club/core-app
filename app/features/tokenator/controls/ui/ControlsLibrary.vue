@@ -67,7 +67,7 @@
             class="flex-1 justify-center rounded-r-none px-1"
             :ui="{ leadingIcon: 'mr-1' }"
             label="Изображение"
-            @click="openImageUpload()"
+            @click.left.exact.prevent="openImageUpload()"
           />
 
           <UButton
@@ -85,7 +85,7 @@
           color="neutral"
           variant="outline"
           label="Изображение"
-          @click="openImageUpload()"
+          @click.left.exact.prevent="openImageUpload()"
         />
       </div>
 
@@ -101,7 +101,7 @@
             class="flex-1 justify-center rounded-r-none px-1"
             :ui="{ leadingIcon: 'mr-1' }"
             label="Рамка"
-            @click="openFrameUpload()"
+            @click.left.exact.prevent="openFrameUpload()"
           />
 
           <UButton
@@ -119,7 +119,7 @@
           color="neutral"
           variant="outline"
           label="Рамка"
-          @click="openFrameUpload()"
+          @click.left.exact.prevent="openFrameUpload()"
         />
       </div>
 
@@ -135,7 +135,7 @@
             class="flex-1 justify-center rounded-r-none px-1"
             :ui="{ leadingIcon: 'mr-1' }"
             label="Фон"
-            @click="openBgUpload()"
+            @click.left.exact.prevent="openBgUpload()"
           />
 
           <UButton
@@ -153,7 +153,7 @@
           color="neutral"
           variant="outline"
           label="Фон"
-          @click="openBgUpload()"
+          @click.left.exact.prevent="openBgUpload()"
         />
       </div>
     </div>
@@ -216,7 +216,7 @@
       variant="soft"
       color="error"
       block
-      @click="store.resetLibrarySettings"
+      @click.left.exact.prevent="store.resetLibrarySettings"
     />
   </div>
 </template>

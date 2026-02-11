@@ -31,6 +31,7 @@
     scores: { ...ZERO_SCORES },
     isComplete: false,
     rolls: [],
+    dice: [],
     assignments: {},
   });
 
@@ -132,6 +133,35 @@
     ];
   });
 
+  const usedAbilities = computed(() => {
+    const set = new Set<AbilityKey>();
+
+    for (const val of Object.values(localState.value.assignments)) {
+      if (val) {
+        set.add(val);
+      }
+    }
+
+    return set;
+  });
+
+  function getAbilityOptions(currentAbility: AbilityKey | null) {
+    return abilityOptions.value.map((opt) => {
+      const isUsed = !!(
+        opt.value &&
+        usedAbilities.value.has(opt.value) &&
+        opt.value !== currentAbility
+      );
+
+      return {
+        ...opt,
+        label: isUsed ? `${opt.label} (Занято)` : opt.label,
+        disabled: false,
+        class: isUsed ? 'text-secondary' : undefined,
+      };
+    });
+  }
+
   function updateAssignment(rollIndex: number, ability: AbilityKey | null) {
     const newAssignments: Record<number, AbilityKey | null> = {};
 
@@ -192,8 +222,8 @@
   <div
     class="flex flex-col gap-4 rounded-xl border border-default bg-muted p-4"
   >
-    <div class="flex items-center justify-between">
-      <div class="text-sm text-secondary">
+    <div class="flex items-start justify-between gap-2">
+      <span class="text-sm text-secondary">
         <template v-if="!hasRolled">
           Сначала бросьте <span class="font-mono">4к6</span> шесть раз, затем
           распределите результаты по характеристикам.
@@ -203,7 +233,7 @@
           Распределите результаты по характеристикам.
           <span
             v-if="totalSum > 0"
-            class="ml-2 inline-flex items-center gap-1 font-semibold text-primary"
+            class="font-semibold text-primary"
           >
             Общая сумма:
             <span v-if="!isAnimating">
@@ -212,17 +242,18 @@
 
             <USkeleton
               v-else
-              class="h-4 w-8 bg-primary/50"
+              class="inline-block h-4 w-8 bg-primary/50 align-middle"
             />
           </span>
         </template>
-      </div>
+      </span>
 
       <UButton
         size="sm"
-        @click="rollDice"
+        :loading="isAnimating"
+        @click.left.exact.prevent="rollDice"
       >
-        Бросить кубы
+        Бросок
       </UButton>
     </div>
 
@@ -252,7 +283,7 @@
           <USelect
             v-if="!isAnimating"
             :model-value="localState.assignments[index] ?? null"
-            :items="abilityOptions"
+            :items="getAbilityOptions(localState.assignments[index] ?? null)"
             class="w-40"
             placeholder="Назначить..."
             @update:model-value="handleAssignmentUpdate(index, $event)"
@@ -267,6 +298,7 @@
         <div class="flex items-center justify-center gap-4 pt-2">
           <DiceSpinner
             :values="currentDice[index] ?? []"
+            :animate="isAnimating"
             @complete="onAnimationComplete(index)"
           />
         </div>
@@ -277,7 +309,7 @@
       v-else
       class="py-8 text-center text-muted"
     >
-      Нажмите "Бросить кубы" чтобы начать
+      Нажмите "Бросок" чтобы начать
     </div>
   </div>
 </template>

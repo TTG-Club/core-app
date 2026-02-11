@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { isAbilityKey } from '~/shared/types';
+
   import type { AbilityKey } from '~/shared/types';
 
   import type {
@@ -16,110 +18,157 @@
     }>();
 
   const model = defineModel<string>();
-  const abilityChoice = defineModel<AbilityKey>('ability-choice');
+  const abilityChoice = defineModel<AbilityKey[]>('ability-choice');
+
+  const selectedFeat = computed(() =>
+    options.find((option) => option.value === model.value),
+  );
+
+  const increaseCount = computed(
+    () => selectedFeat.value?.abilityScoreIncreaseOptions ?? 1,
+  );
+
+  function getChoice(index: number) {
+    return abilityChoice.value?.[index];
+  }
+
+  function handleChoiceUpdate(index: number, value: unknown) {
+    const current: (AbilityKey | undefined)[] = [
+      ...(abilityChoice.value || []),
+    ];
+
+    while (current.length <= index) {
+      current.push(undefined);
+    }
+
+    if (isAbilityKey(value)) {
+      current[index] = value;
+    } else {
+      current.splice(index, 1);
+    }
+
+    abilityChoice.value = current.filter(isAbilityKey);
+  }
 </script>
 
 <template>
   <div
-    class="flex flex-col gap-2 transition-opacity"
-    :class="{ 'opacity-50 grayscale': disabled }"
+    class="bg-card flex h-full flex-col gap-2 rounded-lg border border-default p-4"
+    :class="{
+      'opacity-50 grayscale': disabled && !model,
+    }"
   >
-    <div class="text-sm font-semibold">Эпический дар</div>
+    <div class="text-xs font-medium text-secondary">Эпический дар</div>
 
-    <div class="flex flex-col gap-2">
-      <UFieldGroup>
-        <USelectMenu
-          v-model="model"
-          :items="options"
-          :loading="loading"
-          placeholder="Выберите эпический дар"
-          searchable
-          class="w-full"
-          label-key="label"
-          value-key="value"
-          :disabled="disabled"
-        >
-          <template #item-trailing="{ item }">
-            <UBadge
-              variant="subtle"
-              color="neutral"
+    <UFieldGroup>
+      <USelectMenu
+        v-model="model"
+        :items="options"
+        :loading="loading"
+        searchable
+        placeholder="Выберите эпический дар"
+        class="w-full"
+        label-key="label"
+        value-key="value"
+        :disabled="disabled"
+      >
+        <template #item-label="{ item }">
+          <span class="flex items-center gap-1">
+            <span class="truncate">
+              {{ item.label }}
+            </span>
+
+            <UIcon
+              v-if="item.repeatability"
+              name="i-fluent-arrow-repeat-all-24-regular"
+              class="text-muted"
+              size="16"
+              title="Повторяемая черта"
+            />
+          </span>
+        </template>
+
+        <template #item-trailing="{ item }">
+          <UBadge
+            variant="subtle"
+            color="neutral"
+          >
+            {{ item.source }}
+          </UBadge>
+        </template>
+
+        <template #item-description="{ item }">
+          <div class="grid w-full">
+            <div
+              class="w-full truncate"
+              :title="item.description"
             >
-              {{ item.source }}
-            </UBadge>
-          </template>
-
-          <template #item-description="{ item }">
-            <div class="grid w-full">
-              <div
-                class="w-full truncate"
-                :title="item.description"
-              >
-                {{ item.description }}
-              </div>
-
-              <div
-                v-if="item.prerequisite"
-                class="w-full truncate text-dimmed"
-                :title="item.prerequisite"
-              >
-                {{ item.prerequisite }}
-              </div>
+              {{ item.description }}
             </div>
-          </template>
-        </USelectMenu>
 
-        <UButton
-          v-if="model && !disabled"
-          icon="i-fluent-dismiss-24-regular"
-          color="neutral"
-          variant="subtle"
-          @click="model = undefined"
-        />
-      </UFieldGroup>
+            <div
+              v-if="item.prerequisite"
+              class="w-full truncate"
+              :title="item.prerequisite"
+            >
+              {{ item.prerequisite }}
+            </div>
+          </div>
+        </template>
+      </USelectMenu>
 
-      <!-- Epic Ability Choice -->
-      <div v-if="model">
+      <UButton
+        v-if="model && !disabled"
+        icon="i-fluent-dismiss-24-regular"
+        color="neutral"
+        variant="subtle"
+        @click.left.exact.prevent="model = undefined"
+      />
+    </UFieldGroup>
+
+    <template v-if="model">
+      <div
+        v-if="hasMultipleAbilities"
+        class="flex w-full flex-col gap-2 pt-1"
+      >
         <UFieldGroup
-          v-if="hasMultipleAbilities"
+          v-for="i in increaseCount"
+          :key="i"
           class="w-full"
         >
           <USelect
-            v-model="abilityChoice"
+            :model-value="getChoice(i - 1)"
             :items="abilityOptions"
             placeholder="Выберите характеристику"
             class="w-full"
             :class="{
-              'ring-error': !disabled && !abilityChoice,
+              'ring-error': !getChoice(i - 1),
             }"
-            :disabled="disabled"
+            option-attribute="label"
+            value-attribute="value"
+            @update:model-value="handleChoiceUpdate(i - 1, $event)"
           />
 
           <UButton
-            v-if="abilityChoice && !disabled"
+            v-if="getChoice(i - 1)"
             icon="i-fluent-dismiss-24-regular"
             color="neutral"
             variant="subtle"
-            @click="abilityChoice = undefined"
+            @click.left.exact.prevent="handleChoiceUpdate(i - 1, '')"
           />
         </UFieldGroup>
-
-        <!-- Single Ability Display -->
-        <template v-else>
-          <span
-            v-if="abilityOptions[0]?.label"
-            class="text-xs text-secondary"
-          >
-            Бонус: {{ abilityOptions[0]?.label }}
-          </span>
-
-          <span
-            v-else
-            class="text-xs text-secondary"
-          >
-            Нет бонуса
-          </span>
-        </template>
       </div>
-    </div>
+
+      <div
+        v-else
+        class="mt-auto text-xs text-secondary"
+      >
+        <span v-if="abilityOptions[0]?.label">
+          Бонус: {{ abilityOptions[0]?.label }}
+        </span>
+
+        <span v-else>Нет бонуса</span>
+      </div>
+    </template>
   </div>
 </template>
