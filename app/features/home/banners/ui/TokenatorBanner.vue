@@ -6,7 +6,7 @@
       'overflow-hidden no-underline',
       'before:absolute before:inset-0',
       'before:block before:size-full',
-      'before:bg-[url(/s3/home/TokenatorBanner.webp)] before:opacity-40',
+      'before:bg-[url(/s3/home/tokenator-banner.webp)] before:opacity-40',
       'before:bg-cover before:bg-center before:bg-no-repeat',
       'before:transition-transform before:duration-200',
       'hover:before:scale-115',
