@@ -4,6 +4,8 @@
 
   import { useUserStore } from '~/shared/stores';
 
+  import type { UserProfileDetailed } from '~/shared/types';
+
   const userStore = useUserStore();
   const { isAdmin } = useUserRoles();
   const { isTablet } = useBreakpoints();
@@ -15,11 +17,41 @@
 
   const side = computed(() => (isTablet.value ? 'right' : 'top'));
 
+  const STATUS_PENDING = 'pending';
+
   try {
     await userStore.fetch();
   } catch (err) {
     console.error(err);
   }
+
+  const {
+    data: detailedProfile,
+    status: detailedProfileStatus,
+    execute: fetchDetailedProfile,
+  } = await useAsyncData(
+    'user-profile-detailed',
+    () =>
+      $fetch<{ statistics?: { ratingCount: number } }>(
+        '/api/user/profile/detailed',
+      ),
+    {
+      dedupe: 'defer',
+      lazy: true,
+      server: false,
+      immediate: false,
+    },
+  );
+
+  watch(
+    user,
+    (newUser) => {
+      if (newUser && detailedProfileStatus.value === 'idle') {
+        fetchDetailedProfile();
+      }
+    },
+    { immediate: true },
+  );
 
   function logout() {
     userStore.logout().finally(() => {
@@ -115,15 +147,21 @@
 
           <div class="flex flex-col gap-1.5">
             <div class="flex items-center justify-between text-sm">
-              <span>Скоро будет</span>
+              <span>Всего оценок</span>
 
-              <span class="text-sm font-semibold">∞</span>
-            </div>
+              <span
+                v-if="isLoading || detailedProfileStatus === STATUS_PENDING"
+                class="text-sm font-semibold"
+              >
+                ...
+              </span>
 
-            <div class="flex items-center justify-between text-sm">
-              <span>Скоро будет</span>
-
-              <span class="text-sm font-semibold">∞</span>
+              <span
+                v-else
+                class="text-sm font-semibold"
+              >
+                {{ detailedProfile?.statistics?.ratingCount ?? 0 }}
+              </span>
             </div>
           </div>
         </div>
