@@ -1,15 +1,26 @@
 <script setup lang="ts">
-  import {
-    CalculatorAbilitiesBanner,
-    RoadmapBanner,
-    TokenatorBanner,
-  } from './ui';
+  import { BannerLink } from './ui';
 </script>
 
 <template>
-  <CalculatorAbilitiesBanner />
+  <BannerLink
+    title="Калькулятор характеристик"
+    to="/calculators/abilities"
+    background-url="/s3/home/calculator-abilities-banner.webp"
+    description="Идеальный баланс твоего персонажа"
+  />
 
-  <TokenatorBanner />
+  <BannerLink
+    title="Токенатор"
+    to="/tokenator"
+    background-url="/s3/home/tokenator-banner.webp"
+    description="Создай уникальный токен персонажа!"
+  />
 
-  <RoadmapBanner />
+  <BannerLink
+    title="Дорожная карта"
+    to="/roadmap"
+    background-url="/s3/home/roadmap-banner.webp"
+    description="Выбор за тобой!"
+  />
 </template>
