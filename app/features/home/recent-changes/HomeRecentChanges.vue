@@ -195,6 +195,7 @@
         :ui="{
           indicator: 'bg-border',
           separator: 'border-l-2 border-default',
+          item: 'last:*:data-[slot=wrapper]:pb-1.5',
         }"
       >
         <template #indicator="{ item }">
