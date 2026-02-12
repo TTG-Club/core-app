@@ -87,6 +87,7 @@
       {
         id: background.url,
         label: `Предыстория: ${bgName}`,
+        type: 'background',
         scores: bonuses,
       },
     ];

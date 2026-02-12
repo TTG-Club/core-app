@@ -253,6 +253,7 @@ export function useFeatSelect(hasEpicBoon: Ref<boolean>) {
       sources.push({
         id: `${url}-${featLevel}`,
         label: `Черта: ${feat.name.rus}`,
+        type: 'feat',
         scores: bonuses,
       });
     }
@@ -292,6 +293,7 @@ export function useFeatSelect(hasEpicBoon: Ref<boolean>) {
         sources.push({
           id: `${feat.url}-epic`,
           label: `Эпический дар: ${feat.name.rus}`,
+          type: 'epic',
           scores: bonuses,
           maxScoreIncreases,
         });

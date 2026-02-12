@@ -16,6 +16,7 @@ export interface ClassFeatureCreate {
   description: string;
   additional: string;
   hideInSubclasses: boolean | undefined;
+  abilityImprovement: boolean | undefined;
   scaling: Array<ClassFeatureScalingCreate>;
   abilityBonus?: ClassFeatureAbilityBonusCreate;
 }
