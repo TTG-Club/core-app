@@ -1,11 +1,11 @@
 <script setup lang="ts">
   import { HomeBackground } from '~home/background';
-  import { HomeBanners, RoadmapBanner, TokenatorBanner } from '~home/banners';
+  import { HomeBanners } from '~home/banners';
+  import { HomeCounters } from '~home/counters';
   import { HomeRecentChanges } from '~home/recent-changes';
   import { HomeSections } from '~home/sections';
   import { SocialLinks } from '~home/social-links';
   import { SearchPanel } from '~search/panel';
-  import { UiPlaceholder } from '~ui/placeholder';
 
   definePageMeta({
     layout: 'default',
@@ -35,11 +35,7 @@
 
       <div class="flex w-full flex-col gap-3 lg:items-start xl:flex-row">
         <div class="flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">
-          <TokenatorBanner />
-
-          <RoadmapBanner />
-
-          <UiPlaceholder class="hidden min-h-32 flex-1 xl:block" />
+          <HomeBanners />
         </div>
 
         <div class="flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">
@@ -47,7 +43,7 @@
         </div>
 
         <div class="flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">
-          <HomeBanners />
+          <HomeCounters />
 
           <SocialLinks />
         </div>

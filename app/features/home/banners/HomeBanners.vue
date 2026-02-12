@@ -1,9 +1,15 @@
 <script setup lang="ts">
-  import { MaterialCounter } from './ui';
+  import {
+    CalculatorAbilitiesBanner,
+    RoadmapBanner,
+    TokenatorBanner,
+  } from './ui';
 </script>
 
 <template>
-  <div class="flex gap-3">
-    <MaterialCounter />
-  </div>
+  <CalculatorAbilitiesBanner />
+
+  <TokenatorBanner />
+
+  <RoadmapBanner />
 </template>

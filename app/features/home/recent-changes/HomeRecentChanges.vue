@@ -107,7 +107,7 @@
 <template>
   <UCard
     :ui="{
-      root: 'bg-muted',
+      root: 'bg-muted ',
       header: 'p-3 sm:p-3',
       body: 'p-0 sm:p-0',
     }"
