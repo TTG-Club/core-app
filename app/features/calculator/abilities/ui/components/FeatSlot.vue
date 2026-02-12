@@ -145,7 +145,7 @@
         <UFieldGroup
           v-for="i in increaseCount"
           :key="i"
-          class="w-full"
+          class="w-full min-w-0"
         >
           <USelect
             :model-value="getChoice(i - 1)"

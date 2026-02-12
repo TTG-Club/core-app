@@ -46,6 +46,9 @@ export const STANDARD_ASI_LEVELS = [4, 8, 12, 16];
 /** Уровень получения эпического дара */
 export const EPIC_BOON_LEVEL = 19;
 
+/** Увеличение максимального значения характеристики от эпического дара */
+export const EPIC_BOON_MAX_SCORE_INCREASE = 10;
+
 /** Количество бросков для случайного набора */
 export const RANDOM_ROLL_COUNT = 6;
 

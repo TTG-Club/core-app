@@ -262,6 +262,7 @@ export function useFeatSelect(hasEpicBoon: Ref<boolean>) {
 
       if (feat) {
         const bonuses: Partial<AbilityScores> = {};
+        const maxScoreIncreases: Partial<AbilityScores> = {};
 
         if (
           feat.abilities &&
@@ -284,6 +285,7 @@ export function useFeatSelect(hasEpicBoon: Ref<boolean>) {
 
           for (const ability of chosenAbilities) {
             bonuses[ability] = (bonuses[ability] || 0) + 1;
+            maxScoreIncreases[ability] = (maxScoreIncreases[ability] || 0) + 1;
           }
         }
 
@@ -291,6 +293,7 @@ export function useFeatSelect(hasEpicBoon: Ref<boolean>) {
           id: `${feat.url}-epic`,
           label: `Эпический дар: ${feat.name.rus}`,
           scores: bonuses,
+          maxScoreIncreases,
         });
       }
     }

@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { ABILITY_KEYS } from '~/shared/types';
 import { getFormattedModifier, getModifier } from '~/utils/modifier';
 
-import { DEFAULT_SCORES } from '../model';
+import { ABILITY_MAX_SCORE, DEFAULT_SCORES } from '../model';
 
 import type { Ref } from 'vue';
 
@@ -48,6 +48,14 @@ export function useAbilitiesCalculator(
       const modifier = getModifier(finalValue);
       const formattedMod = getFormattedModifier(finalValue);
 
+      let maxScore = ABILITY_MAX_SCORE;
+
+      for (const source of bonusSources.value) {
+        const increase = source.maxScoreIncreases?.[key] || 0;
+
+        maxScore += increase;
+      }
+
       const bonuses = bonusSources.value
         .map((source) => ({
           label: source.label,
@@ -77,6 +85,7 @@ export function useAbilitiesCalculator(
         baseValue,
         formattedModifier: formattedMod,
         breakdown,
+        maxScore,
       };
     });
   });
