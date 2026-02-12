@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { FeatureAbilityBonus } from '~classes/editor/ui/features/ui';
   import { EditorArrayControls } from '~ui/editor';
   import { SelectLevel } from '~ui/select';
 
@@ -24,6 +25,11 @@
       additional: '',
       hideInSubclasses: false,
       scaling: [],
+      abilityBonus: {
+        abilities: [],
+        bonus: 0,
+        upto: 25,
+      },
     };
   }
 </script>
@@ -111,6 +117,11 @@
             <FeatureScaling
               v-model="feat.scaling"
               :is-subclass="isSubclass"
+            />
+
+            <FeatureAbilityBonus
+              v-if="feat.level >= 20"
+              v-model="feat.abilityBonus"
             />
           </UForm>
         </UCard>
