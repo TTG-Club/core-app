@@ -1,8 +1,6 @@
 <script setup lang="ts">
   import { ABILITY_SHORT_LABELS } from '~/shared/types';
 
-  import { ABILITY_MAX_SCORE } from '../model';
-
   import type { AbilityKey } from '~/shared/types';
 
   interface DisplayItem {
@@ -13,21 +11,22 @@
     formattedModifier: string;
     breakdown: string | undefined;
     baseValue: number;
+    maxScore: number;
   }
 
   const { items } = defineProps<{
     items: DisplayItem[];
   }>();
 
-  function isOvercap(value: number): boolean {
-    return value > ABILITY_MAX_SCORE;
+  function isOvercap(value: number, maxScore: number): boolean {
+    return value > maxScore;
   }
 
-  function getCardClass(value: number): string {
+  function getCardClass(item: DisplayItem): string {
     const baseClass =
       'rounded-xl p-2 text-center border transition-shadow hover:shadow-lg border-default';
 
-    if (isOvercap(value)) {
+    if (isOvercap(item.value, item.maxScore)) {
       return `${baseClass} border-error bg-error/5`;
     }
 
@@ -53,7 +52,7 @@
         :key="item.key"
         :text="item.breakdown"
       >
-        <div :class="getCardClass(item.value)">
+        <div :class="getCardClass(item)">
           <div class="text-xs text-muted">
             {{ ABILITY_SHORT_LABELS[item.key] }}
           </div>

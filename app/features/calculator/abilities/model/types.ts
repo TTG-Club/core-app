@@ -8,6 +8,7 @@ export interface BonusSource {
   id: string;
   label: string;
   scores: Partial<AbilityScores>;
+  maxScoreIncreases?: Partial<AbilityScores>;
 }
 
 export interface TabState {
@@ -34,6 +35,13 @@ export interface CalculatorAbilitiesClass {
   createdAt: string;
   levels: number[];
   source: SourceResponse;
+  abilityBonus: Array<CalculatorAbilitiesClassBonus>;
+}
+
+export interface CalculatorAbilitiesClassBonus {
+  abilities: Array<AbilityKey>;
+  bonus: number;
+  upto: number;
 }
 
 export interface CalculatorClassOption {
