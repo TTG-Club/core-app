@@ -1,7 +1,6 @@
 import { ABILITY_LABELS, isAbilityKey } from '~/shared/types';
 
 import type {
-  BonusSource,
   CalculatorAbilitiesBackground,
   CalculatorBackgroundOption,
 } from '../model';
@@ -35,26 +34,7 @@ export function useBackgroundSelect() {
   });
 
   const options = computed<CalculatorBackgroundOption[]>(() => {
-    return (
-      backgrounds.value?.map((background) => {
-        const abilities =
-          background.abilityScores
-            ?.filter(isAbilityKey)
-            .map((key) => ABILITY_LABELS[key])
-            .join(', ') || '';
-
-        const description = [background.name.eng, abilities]
-          .filter(Boolean)
-          .join(' • ');
-
-        return {
-          label: background.name.rus,
-          value: background.url,
-          description,
-          sourceLabel: background.source.name.label,
-        };
-      }) || []
-    );
+    return backgrounds.value?.map(mapBackgroundToOption) || [];
   });
 
   const current = computed(() => {
@@ -65,18 +45,31 @@ export function useBackgroundSelect() {
     return backgroundsByUrl.value[selectedUrl.value];
   });
 
-  function emitSources(
-    background: CalculatorAbilitiesBackground | undefined,
-    bonuses: BonusSource[],
-  ) {
-    return bonuses;
-  }
-
   return {
     selectedUrl,
     pending,
     options,
     current,
-    emitSources,
+  };
+}
+
+function mapBackgroundToOption(
+  background: CalculatorAbilitiesBackground,
+): CalculatorBackgroundOption {
+  const abilities =
+    background.abilityScores
+      ?.filter(isAbilityKey)
+      .map((key) => ABILITY_LABELS[key])
+      .join(', ') || '';
+
+  const description = [background.name.eng, abilities]
+    .filter(Boolean)
+    .join(' • ');
+
+  return {
+    label: background.name.rus,
+    value: background.url,
+    description,
+    sourceLabel: background.source.name.label,
   };
 }
