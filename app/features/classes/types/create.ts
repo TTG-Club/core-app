@@ -17,6 +17,13 @@ export interface ClassFeatureCreate {
   additional: string;
   hideInSubclasses: boolean | undefined;
   scaling: Array<ClassFeatureScalingCreate>;
+  abilityBonus?: ClassFeatureAbilityBonusCreate;
+}
+
+export interface ClassFeatureAbilityBonusCreate {
+  abilities: Array<AbilityKey>;
+  bonus: number;
+  upto: number;
 }
 
 export interface ClassColumnScalingCreate {
