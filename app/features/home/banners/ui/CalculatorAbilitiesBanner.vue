@@ -11,7 +11,7 @@
       'before:transition-transform before:duration-200',
       'hover:before:scale-115',
     ]"
-    to="/tokenator"
+    to="/calculators/abilities"
   >
     <span class="relative z-10 text-2xl">Калькулятор характеристик</span>
 
