@@ -81,7 +81,7 @@
     class="navbar"
     :class="[
       'fixed left-0 z-100 h-(--navbar-height) w-full md:top-0 md:bottom-auto md:h-dvh md:w-(--navbar-width)',
-      'border-t border-default max-md:bg-default md:border-t-0 md:border-r',
+      'border-t border-default max-md:bg-muted md:border-t-0 md:border-r',
       'pb-(--safe-area-inset-bottom) md:pb-0 md:pl-(--safe-area-inset-left)',
       'transition-[bottom] duration-200 ease-in-out md:transition-none',
       'flex flex-nowrap md:flex-col',
