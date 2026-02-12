@@ -46,7 +46,7 @@ export function useAbilitiesCalculator(
       const finalValue = finalScores.value[key];
       const baseValue = baseScores.value[key] || 0;
       const modifier = getModifier(finalValue);
-      const formattedMod = getFormattedModifier(finalValue);
+      const formattedModifier = getFormattedModifier(finalValue);
 
       let maxScore = ABILITY_MAX_SCORE;
 
@@ -56,25 +56,84 @@ export function useAbilitiesCalculator(
         maxScore += increase;
       }
 
-      const bonuses = bonusSources.value
-        .map((source) => ({
-          label: source.label,
-          value: source.scores[key],
-        }))
-        .filter(
-          (item): item is { label: string; value: number } =>
-            typeof item.value === 'number' && item.value !== 0,
-        );
+      // Validation Logic
+      let currentTotal = baseValue;
+      let isError = false;
 
-      let breakdown;
+      const breakdownItems: VNode[] = [];
 
-      if (bonuses.length > 0) {
-        breakdown = bonuses
-          .map(
-            (bonus) =>
-              `${bonus.label} (${bonus.value > 0 ? '+' : ''}${bonus.value})`,
-          )
-          .join(', ');
+      const formatBonus = (
+        label: string,
+        val: number,
+        isViolation: boolean,
+        extraInfo = '',
+      ) => {
+        const sign = val > 0 ? '+' : '';
+        const content = `${label} (${sign}${val})${extraInfo}`;
+
+        return h('span', { class: { 'text-error': isViolation } }, content);
+      };
+
+      // 1. Base + Background + Feats (limit 20)
+      const step1Sources = bonusSources.value.filter(
+        (s) => s.type === 'background' || s.type === 'feat',
+      );
+
+      for (const source of step1Sources) {
+        const val = source.scores[key];
+
+        if (typeof val === 'number' && val !== 0) {
+          currentTotal += val;
+
+          const violated = !isError && currentTotal > 20;
+
+          if (violated) {
+            isError = true;
+          }
+
+          breakdownItems.push(formatBonus(source.label, val, violated));
+        }
+      }
+
+      // 2. Class (limit upto)
+      const step2Sources = bonusSources.value.filter((s) => s.type === 'class');
+
+      for (const source of step2Sources) {
+        const val = source.scores[key];
+
+        if (typeof val === 'number' && val !== 0) {
+          currentTotal += val;
+
+          const limit = source.upto ?? 20;
+          const violated = !isError && currentTotal > limit;
+
+          if (violated) {
+            isError = true;
+          }
+
+          const extra = violated ? ` [Лимит: ${limit}]` : '';
+
+          breakdownItems.push(formatBonus(source.label, val, violated, extra));
+        }
+      }
+
+      // 3. Epic (limit 30)
+      const step3Sources = bonusSources.value.filter((s) => s.type === 'epic');
+
+      for (const source of step3Sources) {
+        const val = source.scores[key];
+
+        if (typeof val === 'number' && val !== 0) {
+          currentTotal += val;
+
+          const violated = !isError && currentTotal > 30;
+
+          if (violated) {
+            isError = true;
+          }
+
+          breakdownItems.push(formatBonus(source.label, val, violated));
+        }
       }
 
       return {
@@ -83,9 +142,10 @@ export function useAbilitiesCalculator(
         value: finalValue,
         modifier,
         baseValue,
-        formattedModifier: formattedMod,
-        breakdown,
+        formattedModifier,
+        breakdownItems,
         maxScore,
+        isError,
       };
     });
   });

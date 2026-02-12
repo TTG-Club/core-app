@@ -24,6 +24,7 @@
       description: '',
       additional: '',
       hideInSubclasses: false,
+      abilityImprovement: false,
       scaling: [],
       abilityBonus: {
         abilities: [],
@@ -92,13 +93,24 @@
             />
 
             <UFormField
-              class="col-span-full"
+              class="col-span-18"
               label="Подсказка"
               name="additional"
             >
               <UInput
                 v-model="feat.additional"
                 placeholder="Краткая подсказка"
+              />
+            </UFormField>
+
+            <UFormField
+              class="col-span-6"
+              label="Увеличивает характеристики?"
+              name="abilityImprovement"
+            >
+              <UCheckbox
+                v-model="feat.abilityImprovement"
+                description="Да"
               />
             </UFormField>
 

@@ -4,11 +4,15 @@ import type { AbilityKey, NameResponse, SourceResponse } from '~/shared/types';
 
 export type AbilityScores = Record<AbilityKey, number>;
 
+export type BonusSourceType = 'background' | 'feat' | 'class' | 'epic';
+
 export interface BonusSource {
   id: string;
   label: string;
+  type: BonusSourceType;
   scores: Partial<AbilityScores>;
   maxScoreIncreases?: Partial<AbilityScores>;
+  upto?: number;
 }
 
 export interface TabState {
@@ -35,13 +39,14 @@ export interface CalculatorAbilitiesClass {
   createdAt: string;
   levels: number[];
   source: SourceResponse;
-  abilityBonus: Array<CalculatorAbilitiesClassBonus>;
+  abilityBonus?: Array<CalculatorAbilitiesClassBonus>;
 }
 
 export interface CalculatorAbilitiesClassBonus {
   abilities: Array<AbilityKey>;
   bonus: number;
   upto: number;
+  level: number;
 }
 
 export interface CalculatorClassOption {

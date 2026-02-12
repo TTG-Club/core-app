@@ -9,9 +9,10 @@
     value: number;
     modifier: number;
     formattedModifier: string;
-    breakdown: string | undefined;
+    breakdownItems: VNode[] | undefined;
     baseValue: number;
     maxScore: number;
+    isError?: boolean;
   }
 
   const { items } = defineProps<{
@@ -26,7 +27,7 @@
     const baseClass =
       'rounded-xl p-2 text-center border transition-shadow hover:shadow-lg border-default';
 
-    if (isOvercap(item.value, item.maxScore)) {
+    if (item.isError || isOvercap(item.value, item.maxScore)) {
       return `${baseClass} border-error bg-error/5`;
     }
 
@@ -50,8 +51,15 @@
       <UTooltip
         v-for="item in items"
         :key="item.key"
-        :text="item.breakdown"
       >
+        <template #content>
+          <component
+            :is="breakdownItem"
+            v-for="breakdownItem in item.breakdownItems"
+            :key="breakdownItem.key"
+          />
+        </template>
+
         <div :class="getCardClass(item)">
           <div class="text-xs text-muted">
             {{ ABILITY_SHORT_LABELS[item.key] }}

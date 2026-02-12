@@ -19,6 +19,7 @@
   const emit = defineEmits<{
     (e: 'update:feat-sources', value: BonusSource[]): void;
     (e: 'update:background-sources', value: BonusSource[]): void;
+    (e: 'update:class-sources', value: BonusSource[]): void;
   }>();
 
   const {
@@ -35,7 +36,12 @@
     hasEpicBoon,
     allAsiLevels,
     classAsiLevels,
+    selectedClassSources,
   } = useClassSelect(model);
+
+  watch(selectedClassSources, (sources) => {
+    emit('update:class-sources', sources);
+  });
 
   const {
     selectedEpicFeatUrl,

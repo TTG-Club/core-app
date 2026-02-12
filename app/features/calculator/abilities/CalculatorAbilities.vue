@@ -23,6 +23,7 @@
 
   const featBonuses = ref<BonusSource[]>([]);
   const backgroundBonuses = ref<BonusSource[]>([]);
+  const classBonuses = ref<BonusSource[]>([]);
   const characterLevel = ref(1);
 
   enum TabValues {
@@ -67,6 +68,7 @@
   const allBonuses = computed(() => [
     ...featBonuses.value,
     ...backgroundBonuses.value,
+    ...classBonuses.value,
   ]);
 
   const { formattedScores } = useAbilitiesCalculator(
@@ -102,6 +104,7 @@
         v-model="characterLevel"
         @update:feat-sources="featBonuses = $event"
         @update:background-sources="backgroundBonuses = $event"
+        @update:class-sources="classBonuses = $event"
       />
     </div>
   </div>
