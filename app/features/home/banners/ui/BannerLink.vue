@@ -1,9 +1,9 @@
 <script setup lang="ts">
   defineProps<{
     to: string;
-    backgroundUrl: string;
     title: string;
     description: string;
+    backgroundUrl: string;
   }>();
 </script>
 
@@ -25,8 +25,8 @@
       :alt="title"
     />
 
-    <span class="relative z-10 text-2xl">Дорожная карта</span>
+    <span class="relative z-10 text-2xl">{{ title }}</span>
 
-    <p class="relative z-10">Выбор за тобой!</p>
+    <p class="relative z-10">{{ description }}</p>
   </NuxtLink>
 </template>
