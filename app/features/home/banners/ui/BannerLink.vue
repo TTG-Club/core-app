@@ -14,7 +14,7 @@
       'rounded-lg border border-default shadow-lg',
       'group overflow-hidden no-underline',
     ]"
-    to="/roadmap"
+    :to
   >
     <img
       :class="[
