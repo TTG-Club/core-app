@@ -51,31 +51,6 @@ export function useFeatSelect(hasEpicBoon: Ref<boolean>) {
     return map;
   });
 
-  function mapFeatToOption(
-    feat: CalculatorAbilitiesFeat,
-  ): CalculatorFeatOption {
-    const sourceLabel = feat.source.name.label;
-
-    const abilities =
-      feat.abilities
-        ?.filter(isAbilityKey)
-        .map((key) => ABILITY_SHORT_LABELS[key])
-        .join(', ') || '';
-
-    const description = [feat.name.eng, abilities].filter(Boolean).join(' • ');
-
-    return {
-      label: feat.name.rus,
-      value: feat.url,
-      description,
-      source: sourceLabel,
-      prerequisite: feat.prerequisite ?? undefined,
-      repeatability: feat.repeatability,
-      abilityScoreIncreaseOptions:
-        feat.abilityScoreIncreaseOptions ?? undefined,
-    };
-  }
-
   const baseFeatOptions = computed(() => {
     return (
       feats.value
@@ -111,22 +86,6 @@ export function useFeatSelect(hasEpicBoon: Ref<boolean>) {
 
       return !otherSelections.has(option.value);
     });
-  }
-
-  function getFirstAbility(
-    feat: CalculatorAbilitiesFeat,
-  ): AbilityKey | undefined {
-    if (!feat.abilities || feat.abilities.length === 0) {
-      return undefined;
-    }
-
-    const first = feat.abilities[0];
-
-    if (!first) {
-      return undefined;
-    }
-
-    return isAbilityKey(first) ? first : undefined;
   }
 
   function getFeatAbilities(url: string | undefined): AbilityKey[] {
@@ -211,93 +170,21 @@ export function useFeatSelect(hasEpicBoon: Ref<boolean>) {
   }
 
   const selectedSources = computed<BonusSource[]>(() => {
-    const sources: BonusSource[] = [];
+    const sources = calculateFeatBonuses(
+      selectedFeats.value,
+      featsByUrl.value,
+      featAbilityChoices.value,
+    );
 
-    for (const [featLevel, url] of selectedFeats.value.entries()) {
-      if (!url) {
-        continue;
-      }
+    const epicSource = calculateEpicBonuses(
+      selectedEpicFeatUrl.value,
+      hasEpicBoon.value,
+      featsByUrl.value,
+      featAbilityChoices.value,
+    );
 
-      const feat = featsByUrl.value[url];
-
-      if (!feat) {
-        continue;
-      }
-
-      const bonuses: Partial<AbilityScores> = {};
-
-      if (
-        feat.abilities &&
-        feat.abilities.length > 0 &&
-        feat.abilityScoreIncreaseOptions
-      ) {
-        let chosenAbilities: AbilityKey[] = [];
-
-        if (feat.abilities.length > 1) {
-          chosenAbilities = featAbilityChoices.value.get(featLevel) || [];
-        } else {
-          const first = getFirstAbility(feat);
-
-          if (first) {
-            for (let i = 0; i < feat.abilityScoreIncreaseOptions; i++) {
-              chosenAbilities.push(first);
-            }
-          }
-        }
-
-        for (const ability of chosenAbilities) {
-          bonuses[ability] = (bonuses[ability] || 0) + 1;
-        }
-      }
-
-      sources.push({
-        id: `${url}-${featLevel}`,
-        label: `Черта: ${feat.name.rus}`,
-        type: 'feat',
-        scores: bonuses,
-      });
-    }
-
-    if (selectedEpicFeatUrl.value && hasEpicBoon.value) {
-      const feat = featsByUrl.value[selectedEpicFeatUrl.value];
-
-      if (feat) {
-        const bonuses: Partial<AbilityScores> = {};
-        const maxScoreIncreases: Partial<AbilityScores> = {};
-
-        if (
-          feat.abilities &&
-          feat.abilities.length > 0 &&
-          feat.abilityScoreIncreaseOptions
-        ) {
-          let chosenAbilities: AbilityKey[] = [];
-
-          if (feat.abilities.length > 1) {
-            chosenAbilities = featAbilityChoices.value.get('epic') || [];
-          } else {
-            const first = getFirstAbility(feat);
-
-            if (first) {
-              for (let i = 0; i < feat.abilityScoreIncreaseOptions; i++) {
-                chosenAbilities.push(first);
-              }
-            }
-          }
-
-          for (const ability of chosenAbilities) {
-            bonuses[ability] = (bonuses[ability] || 0) + 1;
-            maxScoreIncreases[ability] = (maxScoreIncreases[ability] || 0) + 1;
-          }
-        }
-
-        sources.push({
-          id: `${feat.url}-epic`,
-          label: `Эпический дар: ${feat.name.rus}`,
-          type: 'epic',
-          scores: bonuses,
-          maxScoreIncreases,
-        });
-      }
+    if (epicSource) {
+      sources.push(epicSource);
     }
 
     return sources;
@@ -318,4 +205,148 @@ export function useFeatSelect(hasEpicBoon: Ref<boolean>) {
     updateSelectedFeat,
     handleEpicAbilityUpdate,
   };
+}
+
+function mapFeatToOption(feat: CalculatorAbilitiesFeat): CalculatorFeatOption {
+  const sourceLabel = feat.source.name.label;
+
+  const abilities =
+    feat.abilities
+      ?.filter(isAbilityKey)
+      .map((key) => ABILITY_SHORT_LABELS[key])
+      .join(', ') || '';
+
+  const description = [feat.name.eng, abilities].filter(Boolean).join(' • ');
+
+  return {
+    label: feat.name.rus,
+    value: feat.url,
+    description,
+    source: sourceLabel,
+    prerequisite: feat.prerequisite ?? undefined,
+    repeatability: feat.repeatability,
+    abilityScoreIncreaseOptions: feat.abilityScoreIncreaseOptions ?? undefined,
+  };
+}
+
+function getFirstAbility(
+  feat: CalculatorAbilitiesFeat,
+): AbilityKey | undefined {
+  if (!feat.abilities || feat.abilities.length === 0) {
+    return undefined;
+  }
+
+  const first = feat.abilities[0];
+
+  if (!first) {
+    return undefined;
+  }
+
+  return isAbilityKey(first) ? first : undefined;
+}
+
+function calculateFeatBonuses(
+  selectedFeats: Map<number, string | undefined>,
+  featsByUrl: Record<string, CalculatorAbilitiesFeat>,
+  featAbilityChoices: Map<string | number, AbilityKey[]>,
+): BonusSource[] {
+  const sources: BonusSource[] = [];
+
+  for (const [featLevel, url] of selectedFeats.entries()) {
+    if (!url) {
+      continue;
+    }
+
+    const feat = featsByUrl[url];
+
+    if (!feat) {
+      continue;
+    }
+
+    const bonuses: Partial<AbilityScores> = {};
+
+    if (
+      feat.abilities &&
+      feat.abilities.length > 0 &&
+      feat.abilityScoreIncreaseOptions
+    ) {
+      let chosenAbilities: AbilityKey[] = [];
+
+      if (feat.abilities.length > 1) {
+        chosenAbilities = featAbilityChoices.get(featLevel) || [];
+      } else {
+        const first = getFirstAbility(feat);
+
+        if (first) {
+          for (let i = 0; i < feat.abilityScoreIncreaseOptions; i++) {
+            chosenAbilities.push(first);
+          }
+        }
+      }
+
+      for (const ability of chosenAbilities) {
+        bonuses[ability] = (bonuses[ability] || 0) + 1;
+      }
+    }
+
+    sources.push({
+      id: `${url}-${featLevel}`,
+      label: `Черта: ${feat.name.rus}`,
+      type: 'feat',
+      scores: bonuses,
+    });
+  }
+
+  return sources;
+}
+
+function calculateEpicBonuses(
+  selectedEpicFeatUrl: string | undefined,
+  hasEpicBoon: boolean,
+  featsByUrl: Record<string, CalculatorAbilitiesFeat>,
+  featAbilityChoices: Map<string | number, AbilityKey[]>,
+): BonusSource | undefined {
+  if (selectedEpicFeatUrl && hasEpicBoon) {
+    const feat = featsByUrl[selectedEpicFeatUrl];
+
+    if (feat) {
+      const bonuses: Partial<AbilityScores> = {};
+      const maxScoreIncreases: Partial<AbilityScores> = {};
+
+      if (
+        feat.abilities &&
+        feat.abilities.length > 0 &&
+        feat.abilityScoreIncreaseOptions
+      ) {
+        let chosenAbilities: AbilityKey[] = [];
+
+        if (feat.abilities.length > 1) {
+          chosenAbilities = featAbilityChoices.get('epic') || [];
+        } else {
+          const first = getFirstAbility(feat);
+
+          if (first) {
+            for (let i = 0; i < feat.abilityScoreIncreaseOptions; i++) {
+              chosenAbilities.push(first);
+            }
+          }
+        }
+
+        for (const ability of chosenAbilities) {
+          bonuses[ability] = (bonuses[ability] || 0) + 1;
+          maxScoreIncreases[ability] = (maxScoreIncreases[ability] || 0) + 1;
+        }
+      }
+
+      return {
+        id: `${feat.url}-epic`,
+        label: `Эпический дар: ${feat.name.rus}`,
+        type: 'epic',
+        scores: bonuses,
+        maxScoreIncreases,
+      };
+    }
+  }
+
+  return undefined;
 }
