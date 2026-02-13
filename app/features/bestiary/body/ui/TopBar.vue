@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreatureDetailResponse } from '~bestiary/types';
+  import type { CreatureDetailResponse } from '~bestiary/model';
 
   defineProps<Pick<CreatureDetailResponse, 'header'>>();
 </script>

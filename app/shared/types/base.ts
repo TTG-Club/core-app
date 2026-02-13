@@ -1,4 +1,4 @@
-import type { Filter } from '~filter/types';
+import type { Filter } from '~infrastructure/filter/types';
 
 export interface NameResponse {
   rus: string;

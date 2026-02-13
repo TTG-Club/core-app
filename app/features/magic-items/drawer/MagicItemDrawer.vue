@@ -2,7 +2,7 @@
   import { MagicItemBody } from '~magic-items/body';
   import { UiDrawer } from '~ui/drawer';
 
-  import type { MagicItemDetailResponse } from '~magic-items/types';
+  import type { MagicItemDetailResponse } from '~magic-items/model';
 
   const { url } = defineProps<{
     url: string;

@@ -2,8 +2,9 @@
   import { z } from 'zod/v4';
   import { GlossaryPreview } from '~glossary/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { useWorkshopForm } from '~workshop/composable';
 
-  import type { GlossaryCreate } from '~/shared/types';
+  import type { GlossaryCreate } from '~glossary/model';
 
   const formRef = useTemplateRef('formRef');
 

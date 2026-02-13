@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SpeciesCreateSpeed } from '~/shared/types';
+  import type { SpeciesCreateSpeed } from '~species/model';
 
   const speed = defineModel<SpeciesCreateSpeed>({ required: true });
 </script>

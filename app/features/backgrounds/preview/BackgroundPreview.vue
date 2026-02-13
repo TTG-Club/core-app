@@ -5,7 +5,7 @@
   import type {
     BackgroundCreate,
     BackgroundDetailResponse,
-  } from '~/shared/types';
+  } from '~backgrounds/model';
 
   const opened = defineModel<boolean>('open', { required: true });
 

@@ -2,7 +2,7 @@
   import { BackgroundDrawer } from '~backgrounds/drawer';
   import { SmallLink } from '~ui/link';
 
-  import type { BackgroundLinkResponse } from '~/shared/types';
+  import type { BackgroundLinkResponse } from '~backgrounds/model';
 
   const { background } = defineProps<{
     background: BackgroundLinkResponse;

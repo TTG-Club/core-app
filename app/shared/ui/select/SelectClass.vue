@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ClassLinkResponse } from '~classes/types';
+  import type { ClassLinkResponse } from '~classes/model';
 
   const { multiple = false, disabled } = defineProps<{
     disabled?: boolean;

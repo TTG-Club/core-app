@@ -3,7 +3,7 @@
   import { EditorArrayControls } from '~ui/editor';
   import { SelectSize } from '~ui/select';
 
-  import type { SpeciesCreate } from '~/shared/types';
+  import type { SpeciesCreate } from '~species/model';
 
   type Sizes = SpeciesCreate['properties']['sizes'];
 

@@ -2,7 +2,7 @@
   import { EditorArrayControls } from '~ui/editor';
   import { SelectLevel } from '~ui/select';
 
-  import type { ClassColumnScalingCreate } from '~classes/types';
+  import type { ClassColumnScalingCreate } from '~classes/model';
 
   const state = defineModel<Array<ClassColumnScalingCreate>>({
     required: true,

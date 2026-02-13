@@ -8,7 +8,7 @@
 
   import { DescriptionsBlock, StatsBlock, TopBar } from './ui';
 
-  import type { CreatureDetailResponse } from '~bestiary/types';
+  import type { CreatureDetailResponse } from '~bestiary/model';
 
   const { creature } = defineProps<{
     creature: CreatureDetailResponse;

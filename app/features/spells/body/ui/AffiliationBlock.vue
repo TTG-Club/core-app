@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SpellDetailAffiliationItem } from '~/shared/types';
+  import type { SpellDetailAffiliationItem } from '~spells/model';
 
   defineProps<{
     label: string;

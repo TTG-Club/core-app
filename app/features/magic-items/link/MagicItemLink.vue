@@ -2,7 +2,7 @@
   import { MagicItemDrawer } from '~magic-items/drawer';
   import { SmallLink } from '~ui/link';
 
-  import type { MagicItemLinkResponse } from '~magic-items/types';
+  import type { MagicItemLinkResponse } from '~magic-items/model';
 
   const { magicItem } = defineProps<{
     magicItem: MagicItemLinkResponse;

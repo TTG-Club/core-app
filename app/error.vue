@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { PwaConfig } from '~pwa/config';
+  import { PwaConfig } from '~infrastructure/pwa/config';
 
   import { ru } from '#ui/locale';
 

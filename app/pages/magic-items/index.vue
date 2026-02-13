@@ -1,16 +1,14 @@
 <script setup lang="ts">
   import { computed } from 'vue';
-  import { useFilter } from '~filter/composable';
-  import { FilterControls } from '~filter/controls';
+  import { FilterControls, useFilter } from '~infrastructure/filter';
+  import { useMagicItemRarityGroupOrder } from '~magic-items/composable';
   import { MagicItemLegend } from '~magic-items/legend';
   import { MagicItemLink } from '~magic-items/link';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
-  import { useMagicItemRarityGroupOrder } from '~/shared/api/useMagicItemRarityGroupOrder';
-
-  import type { MagicItemLinkResponse } from '~magic-items/types';
+  import type { MagicItemLinkResponse } from '~magic-items/model';
 
   useSeoMeta({
     title: 'Магические предметы [Magic Items]',

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ItemDetailResponse } from '~items/types';
+  import type { ItemDetailResponse } from '~items/model';
 
   defineProps<Pick<ItemDetailResponse, 'cost' | 'weight'>>();
 </script>

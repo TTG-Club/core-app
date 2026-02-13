@@ -1,12 +1,11 @@
 <script setup lang="ts">
   import { FeatLink } from '~feats/link';
-  import { useFilter } from '~filter/composable';
-  import { FilterControls } from '~filter/controls';
+  import { FilterControls, useFilter } from '~infrastructure/filter';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
-  import type { FeatLinkResponse } from '~/shared/types';
+  import type { FeatLinkResponse } from '~feats/model';
 
   useSeoMeta({
     title: 'Черты [Feats]',

@@ -2,8 +2,9 @@
   import { BackgroundPreview } from '~backgrounds/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectAbilities, SelectFeat, SelectSkill } from '~ui/select';
+  import { useWorkshopForm } from '~workshop/composable';
 
-  import type { BackgroundCreate } from '~/shared/types';
+  import type { BackgroundCreate } from '~backgrounds/model';
 
   function getInitialState(): BackgroundCreate {
     return {

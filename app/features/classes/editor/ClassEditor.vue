@@ -8,6 +8,7 @@
     SelectDice,
   } from '~ui/select';
   import { UploadGallery, UploadImage } from '~ui/upload';
+  import { useWorkshopForm } from '~workshop/composable';
 
   import {
     ClassEditorFeatures,
@@ -15,7 +16,7 @@
     ClassEditorTable,
   } from './ui';
 
-  import type { ClassCreate, ClassLinkResponse } from '~classes/types';
+  import type { ClassCreate, ClassLinkResponse } from '~classes/model';
 
   function getInitialState(): ClassCreate {
     return {

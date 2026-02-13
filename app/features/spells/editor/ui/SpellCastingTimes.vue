@@ -4,7 +4,7 @@
 
   import { DictionaryService } from '~/shared/api';
 
-  import type { SpellCastingTime } from '~/shared/types';
+  import type { SpellCastingTime } from '~spells/model';
 
   const times = defineModel<Array<SpellCastingTime>>({
     default: () => [],

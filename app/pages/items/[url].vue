@@ -2,7 +2,7 @@
   import { ItemBody } from '~items/body';
   import { PageActions } from '~ui/page';
 
-  import type { ItemDetailResponse } from '~items/types';
+  import type { ItemDetailResponse } from '~items/model';
 
   const route = useRoute();
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { MagicItemAttunement } from '~magic-items/types';
+  import type { MagicItemAttunement } from '~magic-items/model';
 
   const attunement = defineModel<MagicItemAttunement>({
     required: true,

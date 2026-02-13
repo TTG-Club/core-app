@@ -146,7 +146,7 @@ export default defineNuxtConfig({
 
   icon: {
     serverBundle: {
-      collections: ['lucide', 'fluent'],
+      collections: ['fluent'],
     },
     customCollections: [
       {
@@ -312,6 +312,11 @@ export default defineNuxtConfig({
         '@ttg-club/dice-roller-parser',
         'dexie',
         '@vueuse/gesture',
+
+        // Validation & Bytes
+        'bytes',
+        'zod',
+        'zod/v4/core',
       ],
       exclude: ['@jsquash/webp', '@jsquash/webp/encode'],
     },
