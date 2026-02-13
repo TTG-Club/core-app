@@ -1,13 +1,13 @@
 <script setup lang="ts">
-  import { useFilter } from '~filter/composable';
-  import { FilterControls } from '~filter/controls';
+  import { useFilter } from '~infrastructure/filter/composable';
+  import { FilterControls } from '~infrastructure/filter/controls';
   import { SpellLegend } from '~spells/legend';
   import { SpellLink } from '~spells/link';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
-  import type { SpellLinkResponse } from '~/shared/types';
+  import type { SpellLinkResponse } from '~spells/model';
 
   useSeoMeta({
     title: 'Заклинания [Spells]',

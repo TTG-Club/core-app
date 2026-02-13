@@ -3,7 +3,7 @@
 
   import { DescriptionsBlock, TopBar } from './ui';
 
-  import type { MagicItemDetailResponse } from '~magic-items/types';
+  import type { MagicItemDetailResponse } from '~magic-items/model';
 
   defineProps<{
     magicItem: MagicItemDetailResponse;

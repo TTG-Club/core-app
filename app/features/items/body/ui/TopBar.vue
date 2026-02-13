@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ItemDetailResponse } from '~items/types';
+  import type { ItemDetailResponse } from '~items/model';
 
   const { types } = defineProps<Pick<ItemDetailResponse, 'types'>>();
 </script>

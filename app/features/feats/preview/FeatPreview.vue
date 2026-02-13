@@ -2,7 +2,7 @@
   import { FeatBody } from '~feats/body';
   import { UiDrawer } from '~ui/drawer';
 
-  import type { FeatCreate, FeatDetailResponse } from '~/shared/types';
+  import type { FeatCreate, FeatDetailResponse } from '~feats/model';
 
   const opened = defineModel<boolean>('open', { required: true });
 

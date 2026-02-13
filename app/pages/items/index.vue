@@ -1,12 +1,12 @@
 <script setup lang="ts">
-  import { useFilter } from '~filter/composable';
-  import { FilterControls } from '~filter/controls';
+  import { useFilter } from '~infrastructure/filter/composable';
+  import { FilterControls } from '~infrastructure/filter/controls';
   import { ItemLink } from '~items/link';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
-  import type { ItemLinkResponse } from '~items/types';
+  import type { ItemLinkResponse } from '~items/model';
 
   useSeoMeta({
     title: 'Предметы [Items]',

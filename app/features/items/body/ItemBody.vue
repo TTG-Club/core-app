@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { DescriptionsBlock, StatsBlock, TopBar } from './ui';
 
-  import type { ItemDetailResponse } from '~items/types';
+  import type { ItemDetailResponse } from '~items/model';
 
   defineProps<{
     item: ItemDetailResponse;

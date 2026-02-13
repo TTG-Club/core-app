@@ -2,7 +2,7 @@
   import { SpeciesBody } from '~species/body';
   import { UiDrawer } from '~ui/drawer';
 
-  import type { SpeciesDetailResponse } from '~/shared/types';
+  import type { SpeciesDetailResponse } from '~species/model';
 
   const { url } = defineProps<{
     url: string;

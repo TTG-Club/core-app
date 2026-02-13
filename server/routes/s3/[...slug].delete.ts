@@ -1,5 +1,5 @@
 import { StatusCodes } from 'http-status-codes';
-import { S3Service } from '~~/server/services';
+import { S3Service } from '~~/server/domain/s3/service';
 
 import { Role } from '~/shared/types';
 

@@ -2,7 +2,7 @@
   import { ClassBody } from '~classes/body';
   import { UiDrawer } from '~ui/drawer';
 
-  import type { ClassDetailResponse } from '~classes/types';
+  import type { ClassDetailResponse } from '~classes/model';
 
   const { url } = defineProps<{
     url: string;

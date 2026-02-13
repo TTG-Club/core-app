@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { COMPONENT_TOOLTIP_TEXT } from '../model';
 
-  import type { SpellDetailResponse } from '~/shared/types';
+  import type { SpellDetailResponse } from '~spells/model';
 
   defineProps<
     Pick<

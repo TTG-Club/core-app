@@ -1,14 +1,13 @@
 <script setup lang="ts">
+  import { useChallengeRatingGroupOrder } from '~bestiary/composable';
   import { CreatureLink } from '~bestiary/link';
-  import { useFilter } from '~filter/composable';
-  import { FilterControls } from '~filter/controls';
+  import { useFilter } from '~infrastructure/filter/composable';
+  import { FilterControls } from '~infrastructure/filter/controls';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
-  import { useChallengeRatingGroupOrder } from '~/shared/api';
-
-  import type { CreatureLinkResponse } from '~bestiary/types';
+  import type { CreatureLinkResponse } from '~bestiary/model';
 
   useSeoMeta({
     title: 'Бестиарий [Bestiary]',

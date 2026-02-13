@@ -2,7 +2,7 @@
   import { MagicItemBody } from '~magic-items/body';
   import { PageActions } from '~ui/page';
 
-  import type { MagicItemDetailResponse } from '~magic-items/types';
+  import type { MagicItemDetailResponse } from '~magic-items/model';
 
   const route = useRoute();
 

@@ -1,5 +1,7 @@
 # Project Rules & Guidelines
 
+> **🗺️ Architecture & Domains:** See [PROJECT_MAP.md](./PROJECT_MAP.md) for the detailed project structure, domain map, and cheat sheet.
+
 ## AI Rules Management (Meta Rules)
 - **Single Source of Truth:** `.cursorrules` is the **PRIMARY** source of truth for all AI agent rules.
 - **Editing Policy:** ALWAYS edit rules in `.cursorrules` ONLY. Do NOT edit `AGENTS.md`, `CLAUDE.md`, or other rule files directly.
@@ -85,13 +87,15 @@ Before creating ANY new composable, utility, or helper function, you MUST perfor
   - `shared/ui`: **Global UI Kit.**
   - `app/features`: **DDD STRUCTURE (Domains & Features).**
     - **Concept:** `app/features` contains **Domains**. Inside each **Domain**, there are multiple **Features**.
-    - **Domain:** A high-level business area (e.g., `bestiary`, `tokenator`, `dice-roller`).
+    - **Domain:** A high-level business area (e.g., `bestiary`, `infrastructure`, `dice-roller`).
     - **Feature:** A distinct functional module within a domain (e.g., `editor`, `list`, `canvas`, `controls`).
     - **Structure:** `app/features/<domain>/<feature>`.
       - `ui/`: Feature-specific UI components.
       - `model/`: Feature-specific logic, stores, types.
       - `index.ts`: Public API for this feature.
-  - `server/domain` & `server/api`: **BACKEND LAYER.**
+  - `server/domain`: **BACKEND DDD LAYER** (subfolders: `model`, `service`, `utils`, `dto`).
+  - `server/api` & `server/routes`: **API LAYER** (endpoints).
+  - **PROHIBITED:** `server/services` and `server/types` directories are **STRICTLY PROHIBITED**. Use `server/domain`.
   - `app/components`: **DOES NOT EXIST.**
 
 - **Page Components Strategy:**
@@ -125,7 +129,8 @@ Before creating ANY new composable, utility, or helper function, you MUST perfor
 
 - **Reuse Rule (Priority Order):**
   - **UI:** 1. **Nuxt UI** (@nuxt/ui). 2. `shared/ui`. 3. `app/features/*/ui`.
-  - **Logic:** Check `shared/` for global utilities/stores. Check `app/features/*/model` for domain logic.
+  - **Logic:** Check `shared/` for global utilities/stores. Check `app/features/*/model` for domain logic and types.
+  - **Types:** Domain-specific types MUST be in `app/features/<domain>/model`. `shared/types` is ONLY for truly global/shared types (base, user, wiki).
 
 ## Tech Stack & Best Practices
 - **Official Documentation Context:**

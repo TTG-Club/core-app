@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { EditorArrayControls } from '~ui/editor';
 
-  import type { CreateTrait, CreatureCreate } from '~bestiary/types';
+  import type { CreateTrait, CreatureCreate } from '~bestiary/model';
 
   type Traits = CreatureCreate['traits'];
 

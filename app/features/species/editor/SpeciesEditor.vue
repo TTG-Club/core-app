@@ -3,10 +3,11 @@
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectCreatureType, SelectSpecies } from '~ui/select';
   import { UploadGallery, UploadImage } from '~ui/upload';
+  import { useWorkshopForm } from '~workshop/composable';
 
   import { SpeciesFeatures, SpeciesSizes, SpeciesSpeed } from './ui';
 
-  import type { SpeciesCreate } from '~/shared/types';
+  import type { SpeciesCreate } from '~species/model';
 
   function getInitialState(): SpeciesCreate {
     return {

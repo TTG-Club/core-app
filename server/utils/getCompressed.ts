@@ -1,4 +1,4 @@
-import type { S3UploadFile } from '~~/server/types/s3';
+import type { S3UploadFile } from '~~/server/domain/s3/model';
 
 export function getCompressed(
   file: S3UploadFile,

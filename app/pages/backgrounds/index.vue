@@ -1,11 +1,11 @@
 <script setup lang="ts">
   import { BackgroundLink } from '~backgrounds/link';
-  import { useFilter } from '~filter/composable';
-  import { FilterControls } from '~filter/controls';
+  import { useFilter } from '~infrastructure/filter/composable';
+  import { FilterControls } from '~infrastructure/filter/controls';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
-  import type { BackgroundLinkResponse } from '~/shared/types';
+  import type { BackgroundLinkResponse } from '~backgrounds/model';
 
   useSeoMeta({
     title: 'Предыстории [Backgrounds]',

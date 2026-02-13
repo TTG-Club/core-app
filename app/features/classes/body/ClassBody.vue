@@ -12,7 +12,7 @@
     StatsBlock,
   } from './ui';
 
-  import type { ClassDetailResponse } from '~classes/types';
+  import type { ClassDetailResponse } from '~classes/model';
 
   const {
     detail,

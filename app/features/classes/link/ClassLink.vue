@@ -3,7 +3,7 @@
 
   import { LinkPreview, LinkSubclasses } from './ui';
 
-  import type { ClassLinkResponse } from '~classes/types';
+  import type { ClassLinkResponse } from '~classes/model';
 
   const { characterClass } = defineProps<{
     characterClass: ClassLinkResponse;

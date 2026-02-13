@@ -2,7 +2,7 @@
   import { SpellBody } from '~spells/body';
   import { UiDrawer } from '~ui/drawer';
 
-  import type { SpellDetailResponse } from '~/shared/types';
+  import type { SpellDetailResponse } from '~spells/model';
 
   const { url } = defineProps<{
     url: string;

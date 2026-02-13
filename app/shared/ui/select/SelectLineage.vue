@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SpeciesLinkResponse } from '~/shared/types';
+  import type { SpeciesLinkResponse } from '~species/model';
 
   interface LineageSelectItem {
     label: string;

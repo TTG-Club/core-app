@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { SelectRarity } from './ui';
 
-  import type { MagicItemRarity } from '~magic-items/types';
+  import type { MagicItemRarity } from '~magic-items/model';
 
   const model = defineModel<MagicItemRarity>({
     required: true,

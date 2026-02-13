@@ -5,7 +5,7 @@
     CreatureVulnerabilities,
   } from './ui';
 
-  import type { CreatureDefenses } from '~bestiary/types';
+  import type { CreatureDefenses } from '~bestiary/model';
 
   const defenses = defineModel<CreatureDefenses>({
     required: true,

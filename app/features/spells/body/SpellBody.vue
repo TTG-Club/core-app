@@ -6,7 +6,7 @@
     TopBar,
   } from './ui';
 
-  import type { SpellDetailResponse } from '~/shared/types';
+  import type { SpellDetailResponse } from '~spells/model';
 
   defineProps<{
     spell: SpellDetailResponse;

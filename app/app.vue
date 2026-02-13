@@ -2,8 +2,8 @@
   import { ru } from '@nuxt/ui/locale';
   import { DiceRollerFloatButton } from '~dice-roller/float-button';
   import { DiceRollerModal } from '~dice-roller/modal';
-  import { PwaConfig } from '~pwa/config';
-  import { SidebarPanel } from '~sidebar/panel';
+  import { PwaConfig } from '~infrastructure/pwa/config';
+  import { SidebarPanel } from '~infrastructure/sidebar/panel';
 
   import '~/assets/css/index.scss';
 

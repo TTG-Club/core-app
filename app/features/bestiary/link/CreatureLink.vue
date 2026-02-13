@@ -2,7 +2,7 @@
   import { CreatureDrawer } from '~bestiary/drawer';
   import { SmallLink } from '~ui/link';
 
-  import type { CreatureLinkResponse } from '~bestiary/types';
+  import type { CreatureLinkResponse } from '~bestiary/model';
 
   const { creature } = defineProps<{
     creature: CreatureLinkResponse;

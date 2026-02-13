@@ -7,7 +7,7 @@
 
   import { StatsBlock } from './ui';
 
-  import type { SpeciesDetailResponse } from '~/shared/types';
+  import type { SpeciesDetailResponse } from '~species/model';
 
   const {
     species,

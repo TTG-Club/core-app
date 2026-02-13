@@ -1,11 +1,11 @@
 <script setup lang="ts">
-  import { useFilter } from '~filter/composable';
-  import { FilterControls } from '~filter/controls';
+  import { useFilter } from '~infrastructure/filter/composable';
+  import { FilterControls } from '~infrastructure/filter/controls';
   import { SpeciesLink } from '~species/link';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkBig } from '~ui/skeleton';
 
-  import type { SpeciesLinkResponse } from '~/shared/types';
+  import type { SpeciesLinkResponse } from '~species/model';
 
   useSeoMeta({
     title: 'Виды [Species]',

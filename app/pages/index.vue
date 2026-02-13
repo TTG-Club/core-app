@@ -5,7 +5,7 @@
   import { HomeRecentChanges } from '~home/recent-changes';
   import { HomeSections } from '~home/sections';
   import { SocialLinks } from '~home/social-links';
-  import { SearchPanel } from '~search/panel';
+  import { SearchPanel } from '~infrastructure/search/panel';
 
   definePageMeta({
     layout: 'default',
