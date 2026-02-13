@@ -54,9 +54,7 @@ export function useClassSelect(level: Ref<number>) {
 
     const levels = new Set<number>(STANDARD_ASI_LEVELS);
 
-    if (classAsiLevels.value) {
-      classAsiLevels.value.forEach((asiLevel) => levels.add(asiLevel));
-    }
+    classAsiLevels.value.forEach((asiLevel) => levels.add(asiLevel));
 
     return Array.from(levels).sort((sortA, sortB) => sortA - sortB);
   });
@@ -79,6 +77,24 @@ export function useClassSelect(level: Ref<number>) {
     return getClassBonuses(selectedClass, level.value);
   });
 
+  const selectedClassAbilityTemplate = computed<Array<number>>(() => {
+    if (!selectedUrl.value || !classes.value) {
+      return [];
+    }
+
+    const selectedClass = classes.value.find(
+      (classItem) => classItem.url === selectedUrl.value,
+    );
+
+    const template = selectedClass?.abilityTemplate;
+
+    if (!template || template.length === 0) {
+      return [];
+    }
+
+    return template;
+  });
+
   const options = computed<CalculatorClassOption[]>(() => {
     return classes.value?.map(mapClassToOption) || [];
   });
@@ -91,9 +107,17 @@ export function useClassSelect(level: Ref<number>) {
     allAsiLevels,
     hasEpicBoon,
     selectedClassSources,
+    selectedClassAbilityTemplate,
   };
 }
 
+/**
+ * Получает бонусы характеристик от класса для указанного уровня.
+ *
+ * @param selectedClass - Выбранный класс
+ * @param level - Текущий уровень персонажа
+ * @returns Список источников бонусов от класса
+ */
 function getClassBonuses(
   selectedClass: CalculatorAbilitiesClass,
   level: number,
@@ -131,15 +155,19 @@ function getClassBonuses(
     });
 }
 
+/**
+ * Преобразует объект класса в опцию для селекта.
+ *
+ * @param classLink - Объект класса
+ * @returns Опция для селекта
+ */
 function mapClassToOption(
   classLink: CalculatorAbilitiesClass,
 ): CalculatorClassOption {
   return {
     label: classLink.name.rus,
     value: classLink.url,
-    description: `${classLink.name.eng} • Уровни: ${classLink.levels.join(
-      ', ',
-    )}`,
+    description: `${classLink.name.eng} • Уровни: ${classLink.levels.join(', ')}`,
     source: classLink.source.name.label,
   };
 }

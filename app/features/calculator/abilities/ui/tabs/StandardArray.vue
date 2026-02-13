@@ -2,9 +2,18 @@
   import { ABILITY_KEYS, ABILITY_LABELS } from '~/shared/types';
   import { AbilityKey } from '~/shared/types/abilities';
 
-  import { STANDARD_ARRAY, ZERO_SCORES } from '../../model';
+  import {
+    STANDARD_ARRAY,
+    STANDARD_ARRAY_LABELS,
+    ZERO_SCORES,
+  } from '../../model';
 
   import type { AbilityScores } from '../../model';
+
+  const props = defineProps<{
+    selectedClassUrl?: string;
+    classAbilityTemplate: number[];
+  }>();
 
   const model = defineModel<AbilityScores>({ required: true });
 
@@ -34,12 +43,14 @@
 
   function getOptions(currentValue: number) {
     return [
-      { label: 'Не выбрано', value: 0 },
+      { label: STANDARD_ARRAY_LABELS.NOT_SELECTED, value: 0 },
       ...STANDARD_ARRAY.map((score) => {
         const isUsed = usedValues.value.has(score) && score !== currentValue;
 
         return {
-          label: isUsed ? `${score} (Занято)` : String(score),
+          label: isUsed
+            ? `${score} ${STANDARD_ARRAY_LABELS.USED_SUFFIX}`
+            : String(score),
           value: score,
           disabled: false,
           class: isUsed ? 'text-secondary' : undefined,
@@ -71,22 +82,65 @@
       ? 'text-secondary'
       : 'text-primary font-bold';
   }
+
+  const isClassTemplateButtonDisabled = computed(() => {
+    return !props.selectedClassUrl || props.classAbilityTemplate.length === 0;
+  });
+
+  function applyClassTemplate() {
+    if (isClassTemplateButtonDisabled.value) {
+      return;
+    }
+
+    const newScores: AbilityScores = { ...ZERO_SCORES };
+
+    for (let index = 0; index < ABILITY_KEYS.length; index += 1) {
+      const ability = ABILITY_KEYS[index];
+
+      if (!ability) {
+        continue;
+      }
+
+      const value = props.classAbilityTemplate[index];
+
+      if (value === undefined) {
+        continue;
+      }
+
+      newScores[ability] = value;
+    }
+
+    localScores.value = newScores;
+    model.value = newScores;
+  }
 </script>
 
 <template>
   <div
     class="flex flex-col gap-4 rounded-xl border border-default bg-muted p-4"
   >
-    <div class="text-sm text-secondary">
-      Распределите значения:
-      <span
-        v-for="(score, index) in STANDARD_ARRAY"
-        :key="score"
-        :class="getScoreClass(score)"
+    <div class="flex items-start justify-between gap-4">
+      <div class="text-sm text-secondary">
+        {{ STANDARD_ARRAY_LABELS.DESCRIPTION_PREFIX }}
+        <span
+          v-for="(score, index) in STANDARD_ARRAY"
+          :key="score"
+          :class="getScoreClass(score)"
+        >
+          {{ score
+          }}<span v-if="index < STANDARD_ARRAY.length - 1">, </span> </span
+        >.
+      </div>
+
+      <UButton
+        :disabled="isClassTemplateButtonDisabled"
+        variant="subtle"
+        color="neutral"
+        size="sm"
+        @click="applyClassTemplate"
       >
-        {{ score
-        }}<span v-if="index < STANDARD_ARRAY.length - 1">, </span> </span
-      >.
+        {{ STANDARD_ARRAY_LABELS.APPLY_TEMPLATE }}
+      </UButton>
     </div>
 
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

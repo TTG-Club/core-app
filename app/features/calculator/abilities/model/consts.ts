@@ -57,3 +57,34 @@ export const RANDOM_ROLL_FORMULA = '4d6dl1';
 
 /** Максимальный результат броска 4d6dl1 (три шестёрки) */
 export const RANDOM_ROLL_MAX_RESULT = 18;
+
+export enum TabValues {
+  Random = 'random',
+  StandardArray = 'standard-array',
+  PointBuy = 'point-buy',
+}
+
+export const ABILITIES_TABS = [
+  {
+    label: 'Случайный набор',
+    value: TabValues.Random,
+    slot: TabValues.Random,
+  },
+  {
+    label: 'Стандартный набор',
+    value: TabValues.StandardArray,
+    slot: TabValues.StandardArray,
+  },
+  {
+    label: 'Покупка значений',
+    value: TabValues.PointBuy,
+    slot: TabValues.PointBuy,
+  },
+];
+
+export const STANDARD_ARRAY_LABELS = {
+  NOT_SELECTED: 'Не выбрано',
+  USED_SUFFIX: '(Занято)',
+  APPLY_TEMPLATE: 'Использовать шаблон класса',
+  DESCRIPTION_PREFIX: 'Распределите значения:',
+};
