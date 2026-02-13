@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import { useAbilitiesCalculator } from '~calculator/abilities/composables';
-
+  import { useAbilitiesCalculator } from './composables';
+  import { ABILITIES_TABS, TabValues } from './consts';
   import { DEFAULT_SCORES, ZERO_SCORES } from './model';
   import {
     AbilityBonuses,
@@ -29,30 +29,6 @@
 
   const selectedClassUrl = ref<string>();
   const classAbilityTemplate = ref<Array<number>>([]);
-
-  enum TabValues {
-    Random = 'random',
-    StandardArray = 'standard-array',
-    PointBuy = 'point-buy',
-  }
-
-  const tabs = [
-    {
-      label: 'Случайный набор',
-      value: TabValues.Random,
-      slot: TabValues.Random,
-    },
-    {
-      label: 'Стандартный набор',
-      value: TabValues.StandardArray,
-      slot: TabValues.StandardArray,
-    },
-    {
-      label: 'Покупка значений',
-      value: TabValues.PointBuy,
-      slot: TabValues.PointBuy,
-    },
-  ];
 
   const selectedTabIndex = ref(TabValues.Random);
 
@@ -88,7 +64,7 @@
     <div class="flex flex-col gap-6">
       <UTabs
         v-model="selectedTabIndex"
-        :items="tabs"
+        :items="ABILITIES_TABS"
         :ui="{ root: 'flex flex-col gap-4' }"
       >
         <template #random>

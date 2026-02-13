@@ -1,3 +1,4 @@
+import { API_URLS } from '../consts';
 import {
   ABILITY_MAX_SCORE,
   EPIC_BOON_LEVEL,
@@ -17,7 +18,7 @@ export function useClassSelect(level: Ref<number>) {
   const selectedUrl = ref<string>();
 
   const { data: classes, pending } = useFetch<CalculatorAbilitiesClass[]>(
-    '/api/v2/classes/ability-improvement',
+    API_URLS.CLASSES_ABILITY_IMPROVEMENT,
     {
       dedupe: 'defer',
       lazy: true,
@@ -71,7 +72,6 @@ export function useClassSelect(level: Ref<number>) {
     return getClassBonuses(selectedClass, level.value);
   });
 
-  // ✅ ВАЖНО: это готовые значения характеристик (number[]), а не AbilityKey[]
   const selectedClassAbilityTemplate = computed<Array<number>>(() => {
     if (!selectedUrl.value || !classes.value) {
       return [];
@@ -106,6 +106,13 @@ export function useClassSelect(level: Ref<number>) {
   };
 }
 
+/**
+ * Получает бонусы характеристик от класса для указанного уровня.
+ *
+ * @param selectedClass - Выбранный класс
+ * @param level - Текущий уровень персонажа
+ * @returns Список источников бонусов от класса
+ */
 function getClassBonuses(
   selectedClass: CalculatorAbilitiesClass,
   level: number,
@@ -143,6 +150,12 @@ function getClassBonuses(
     });
 }
 
+/**
+ * Преобразует объект класса в опцию для селекта.
+ *
+ * @param classLink - Объект класса
+ * @returns Опция для селекта
+ */
 function mapClassToOption(
   classLink: CalculatorAbilitiesClass,
 ): CalculatorClassOption {

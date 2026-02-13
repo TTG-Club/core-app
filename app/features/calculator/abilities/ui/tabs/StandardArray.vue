@@ -2,6 +2,7 @@
   import { ABILITY_KEYS, ABILITY_LABELS } from '~/shared/types';
   import { AbilityKey } from '~/shared/types/abilities';
 
+  import { STANDARD_ARRAY_LABELS } from '../../consts';
   import { STANDARD_ARRAY, ZERO_SCORES } from '../../model';
 
   import type { AbilityScores } from '../../model';
@@ -39,12 +40,14 @@
 
   function getOptions(currentValue: number) {
     return [
-      { label: 'Не выбрано', value: 0 },
+      { label: STANDARD_ARRAY_LABELS.NOT_SELECTED, value: 0 },
       ...STANDARD_ARRAY.map((score) => {
         const isUsed = usedValues.value.has(score) && score !== currentValue;
 
         return {
-          label: isUsed ? `${score} (Занято)` : String(score),
+          label: isUsed
+            ? `${score} ${STANDARD_ARRAY_LABELS.USED_SUFFIX}`
+            : String(score),
           value: score,
           disabled: false,
           class: isUsed ? 'text-secondary' : undefined,
@@ -95,7 +98,6 @@
         continue;
       }
 
-      // При noUncheckedIndexedAccess: number[] -> number | undefined при доступе по индексу
       const value = props.classAbilityTemplate[index];
 
       if (value === undefined) {
@@ -116,7 +118,7 @@
   >
     <div class="flex items-center justify-between gap-4">
       <div class="text-sm text-secondary">
-        Распределите значения:
+        {{ STANDARD_ARRAY_LABELS.DESCRIPTION_PREFIX }}
         <span
           v-for="(score, index) in STANDARD_ARRAY"
           :key="score"
@@ -133,7 +135,7 @@
         :disabled="isClassTemplateButtonDisabled"
         @click="applyClassTemplate"
       >
-        Шаблон класса
+        {{ STANDARD_ARRAY_LABELS.APPLY_TEMPLATE }}
       </UButton>
     </div>
 
