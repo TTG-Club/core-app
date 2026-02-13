@@ -18,7 +18,25 @@
   const containerRef = useTemplateRef<HTMLDivElement>('container');
   const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas');
   const { width, height } = useElementBounding(containerRef);
-  const uiColor = useCssVar('--ui-text', document.documentElement);
+  const { name } = useTheme();
+
+  const uiColor = ref(getCurrentColor());
+
+  function getCurrentColor() {
+    return getComputedStyle(document.documentElement)
+      .getPropertyValue('--ui-text')
+      .trim();
+  }
+
+  watch(
+    name,
+    () => {
+      uiColor.value = getCurrentColor();
+    },
+    {
+      immediate: true,
+    },
+  );
 
   function getColor(): Color {
     if (!uiColor.value) {

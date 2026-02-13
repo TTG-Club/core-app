@@ -1,8 +1,6 @@
 @import 'tailwindcss';
 @import '@nuxt/ui';
 
-@plugin "@tailwindcss/typography";
-
 @theme {
   --font-sans:
     'Open Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
@@ -38,5 +36,5 @@
 }
 
 body {
-  @apply scheme-light dark:scheme-dark svifty7:scheme-dark bg-linear-(--color-bg-main-gradient) bg-no-repeat bg-cover bg-fixed;
+  @apply scheme-light dark:scheme-dark svifty7:scheme-dark bg-linear-(--color-bg-main-gradient) bg-muted bg-no-repeat bg-cover bg-fixed;
 }

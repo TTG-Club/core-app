@@ -11,8 +11,8 @@ export function getErrorResponse<DataT = unknown>(
   err?: Omit<Partial<NuxtError<DataT>>, 'statusCode'>,
 ): Partial<NuxtError<DataT>> {
   return {
-    statusCode: code,
-    statusMessage: getReasonPhrase(code),
+    status: code,
+    statusText: getReasonPhrase(code),
     message: getStatusMessage(code),
     ...err,
   };

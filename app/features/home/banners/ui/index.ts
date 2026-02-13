@@ -1,1 +1,1 @@
-export { default as MaterialCounter } from './MaterialCounter.vue';
+export { default as BannerLink } from './BannerLink.vue';

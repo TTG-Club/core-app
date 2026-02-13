@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { FeatureAbilityBonus } from '~classes/editor/ui/features/ui';
   import { EditorArrayControls } from '~ui/editor';
   import { SelectLevel } from '~ui/select';
 
@@ -23,7 +24,13 @@
       description: '',
       additional: '',
       hideInSubclasses: false,
+      abilityImprovement: false,
       scaling: [],
+      abilityBonus: {
+        abilities: [],
+        bonus: 0,
+        upto: 25,
+      },
     };
   }
 </script>
@@ -86,13 +93,24 @@
             />
 
             <UFormField
-              class="col-span-full"
+              class="col-span-18"
               label="Подсказка"
               name="additional"
             >
               <UInput
                 v-model="feat.additional"
                 placeholder="Краткая подсказка"
+              />
+            </UFormField>
+
+            <UFormField
+              class="col-span-6"
+              label="Увеличивает характеристики?"
+              name="abilityImprovement"
+            >
+              <UCheckbox
+                v-model="feat.abilityImprovement"
+                description="Да"
               />
             </UFormField>
 
@@ -111,6 +129,11 @@
             <FeatureScaling
               v-model="feat.scaling"
               :is-subclass="isSubclass"
+            />
+
+            <FeatureAbilityBonus
+              v-if="feat.level >= 20"
+              v-model="feat.abilityBonus"
             />
           </UForm>
         </UCard>

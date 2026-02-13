@@ -107,7 +107,7 @@
 <template>
   <UCard
     :ui="{
-      root: 'bg-muted',
+      root: 'bg-muted ',
       header: 'p-3 sm:p-3',
       body: 'p-0 sm:p-0',
     }"
@@ -195,6 +195,7 @@
         :ui="{
           indicator: 'bg-border',
           separator: 'border-l-2 border-default',
+          item: 'last:*:data-[slot=wrapper]:pb-1.5',
         }"
       >
         <template #indicator="{ item }">
