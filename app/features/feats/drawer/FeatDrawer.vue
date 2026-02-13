@@ -2,7 +2,7 @@
   import { FeatBody } from '~feats/body';
   import { UiDrawer } from '~ui/drawer';
 
-  import type { FeatDetailResponse } from '~/shared/types';
+  import type { FeatDetailResponse } from '~feats/model';
 
   const { url } = defineProps<{
     url: string;

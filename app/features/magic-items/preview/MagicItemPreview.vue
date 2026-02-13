@@ -5,7 +5,7 @@
   import type {
     MagicItemCreate,
     MagicItemDetailResponse,
-  } from '~magic-items/types';
+  } from '~magic-items/model';
 
   const opened = defineModel<boolean>('open', { required: true });
 

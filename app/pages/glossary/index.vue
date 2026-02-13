@@ -1,12 +1,11 @@
 <script setup lang="ts">
-  import { useFilter } from '~filter/composable';
-  import { FilterControls } from '~filter/controls';
   import { GlossaryLink } from '~glossary/link';
+  import { FilterControls, useFilter } from '~infrastructure/filter';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
-  import type { GlossaryLinkResponse } from '~/shared/types';
+  import type { GlossaryLinkResponse } from '~glossary/model';
 
   useSeoMeta({
     title: 'Глоссарий [Glossary]',

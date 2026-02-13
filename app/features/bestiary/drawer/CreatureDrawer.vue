@@ -2,7 +2,7 @@
   import { CreatureBody } from '~bestiary/body';
   import { UiDrawer } from '~ui/drawer';
 
-  import type { CreatureDetailResponse } from '~bestiary/types';
+  import type { CreatureDetailResponse } from '~bestiary/model';
 
   const { url } = defineProps<{
     url: string;

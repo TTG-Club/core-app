@@ -2,10 +2,11 @@
   import { ItemPreview } from '~items/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { UploadImage } from '~ui/upload';
+  import { useWorkshopForm } from '~workshop/composable';
 
   import { CoinsType, ItemType } from './ui';
 
-  import type { ItemCreate } from '~items/types';
+  import type { ItemCreate } from '~items/model';
 
   function getInitialState(): ItemCreate {
     return {

@@ -2,7 +2,7 @@
   import { UiCollapse } from '~ui/collapse';
   import { MarkupRender } from '~ui/markup';
 
-  import type { ClassDetailResponse } from '~classes/types';
+  import type { ClassDetailResponse } from '~classes/model';
 
   defineProps<{
     equipment: ClassDetailResponse['equipment'];

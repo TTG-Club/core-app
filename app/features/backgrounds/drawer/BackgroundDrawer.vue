@@ -2,7 +2,7 @@
   import { BackgroundBody } from '~backgrounds/body';
   import { UiDrawer } from '~ui/drawer';
 
-  import type { BackgroundDetailResponse } from '~/shared/types';
+  import type { BackgroundDetailResponse } from '~backgrounds/model';
 
   const { url } = defineProps<{
     url: string;

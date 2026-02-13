@@ -3,7 +3,7 @@
 
   import { ABILITIES } from '~/shared/types';
 
-  import type { CreateAbilities } from '~bestiary/types';
+  import type { CreateAbilities } from '~bestiary/model';
 
   const { proficiencyBonus } = defineProps<{
     proficiencyBonus: number;

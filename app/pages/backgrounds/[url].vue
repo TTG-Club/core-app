@@ -2,7 +2,7 @@
   import { BackgroundBody } from '~backgrounds/body';
   import { PageActions } from '~ui/page';
 
-  import type { BackgroundDetailResponse } from '~/shared/types';
+  import type { BackgroundDetailResponse } from '~backgrounds/model';
 
   const route = useRoute();
 

@@ -3,7 +3,7 @@
     CreateAbility,
     CreateSkill,
     CreatureSenses,
-  } from '~bestiary/types';
+  } from '~bestiary/model';
 
   const model = defineModel<CreatureSenses>({ required: true });
 

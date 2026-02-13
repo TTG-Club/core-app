@@ -2,6 +2,7 @@
   import { MagicItemPreview } from '~magic-items/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { UploadImage } from '~ui/upload';
+  import { useWorkshopForm } from '~workshop/composable';
 
   import {
     MagicItemAttunement,
@@ -9,7 +10,7 @@
     MagicItemRarity,
   } from './ui';
 
-  import type { MagicItemCreate } from '~magic-items/types';
+  import type { MagicItemCreate } from '~magic-items/model';
 
   function getInitialState(): MagicItemCreate {
     return {

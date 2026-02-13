@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SpeciesProperties } from '~/shared/types';
+  import type { SpeciesProperties } from '~species/model';
 
   const { properties } = defineProps<{
     properties: SpeciesProperties;

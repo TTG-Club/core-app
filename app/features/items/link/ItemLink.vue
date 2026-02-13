@@ -2,7 +2,7 @@
   import { ItemDrawer } from '~items/drawer';
   import { SmallLink } from '~ui/link';
 
-  import type { ItemLinkResponse } from '~items/types';
+  import type { ItemLinkResponse } from '~items/model';
 
   const { item } = defineProps<{
     item: ItemLinkResponse;

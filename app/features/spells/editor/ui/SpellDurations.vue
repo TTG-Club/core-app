@@ -4,7 +4,7 @@
 
   import { DictionaryService } from '~/shared/api';
 
-  import type { SpellDuration } from '~/shared/types';
+  import type { SpellDuration } from '~spells/model';
 
   const durations = defineModel<Array<SpellDuration>>({
     default: () => [],

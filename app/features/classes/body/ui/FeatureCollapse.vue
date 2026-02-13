@@ -2,7 +2,7 @@
   import { UiCollapse } from '~ui/collapse';
   import { MarkupRender } from '~ui/markup';
 
-  import type { ClassFeature } from '~classes/types';
+  import type { ClassFeature } from '~classes/model';
 
   const { feature } = defineProps<{ feature: ClassFeature }>();
 

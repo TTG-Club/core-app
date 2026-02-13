@@ -2,7 +2,7 @@
   import { ClassLink } from '~classes/link';
   import { UiDrawer } from '~ui/drawer';
 
-  import type { ClassLinkResponse } from '~classes/types';
+  import type { ClassLinkResponse } from '~classes/model';
 
   const { url } = defineProps<{
     url: string;

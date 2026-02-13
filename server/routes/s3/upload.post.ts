@@ -1,10 +1,13 @@
 import { H3Error } from 'h3';
 import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod/v4';
-import { S3Service } from '~~/server/services';
+
+import { S3Service } from '#server/domain/s3/service';
+import { getFileForUpload } from '#server/domain/s3/utils';
 
 import type { EventHandlerRequest } from 'h3';
-import type { S3UploadFile, S3UploadResponse } from '~~/server/types/s3';
+
+import type { S3UploadFile, S3UploadResponse } from '#server/domain/s3/model';
 
 const requestSchema = z
   .object({

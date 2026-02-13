@@ -4,7 +4,7 @@
 
   import { DictionaryService } from '~/shared/api';
 
-  import type { SpellRange } from '~/shared/types';
+  import type { SpellRange } from '~spells/model';
 
   const ranges = defineModel<Array<SpellRange>>({
     default: () => [],

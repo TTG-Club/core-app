@@ -2,7 +2,7 @@
   import { SpellBody } from '~spells/body';
   import { PageActions } from '~ui/page';
 
-  import type { SpellDetailResponse } from '~/shared/types';
+  import type { SpellDetailResponse } from '~spells/model';
 
   const route = useRoute();
 

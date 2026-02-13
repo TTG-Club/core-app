@@ -2,7 +2,7 @@
   import { CreatureBody } from '~bestiary/body';
   import { UiDrawer } from '~ui/drawer';
 
-  import type { CreatureCreate, CreatureDetailResponse } from '~bestiary/types';
+  import type { CreatureCreate, CreatureDetailResponse } from '~bestiary/model';
 
   const opened = defineModel<boolean>('open', { required: true });
 

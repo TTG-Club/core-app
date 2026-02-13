@@ -4,7 +4,7 @@
 
   import { CreatureAbilitiesTable } from './ui';
 
-  import type { CreatureDetailResponse } from '~bestiary/types';
+  import type { CreatureDetailResponse } from '~bestiary/model';
 
   type Props = Pick<
     CreatureDetailResponse,

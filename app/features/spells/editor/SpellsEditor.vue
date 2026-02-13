@@ -13,6 +13,7 @@
     SelectSpellLevel,
     SelectSubclass,
   } from '~ui/select';
+  import { useWorkshopForm } from '~workshop/composable';
 
   import {
     SpellCastingTimes,
@@ -21,7 +22,7 @@
     SpellRanges,
   } from './ui';
 
-  import type { SpellCreate } from '~/shared/types';
+  import type { SpellCreate } from '~spells/model';
 
   function getInitialState(): SpellCreate {
     return {

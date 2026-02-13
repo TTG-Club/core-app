@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { GlossaryDetailResponse } from '~/shared/types';
+  import type { GlossaryDetailResponse } from '~glossary/model';
 
   defineProps<Pick<GlossaryDetailResponse, 'tags'>>();
 </script>
