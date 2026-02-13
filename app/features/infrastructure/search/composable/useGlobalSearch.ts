@@ -1,4 +1,4 @@
-import { SearchPalette } from '~infrastructure/search/palette';
+import { SearchPalette } from '../palette';
 
 export function useGlobalSearch() {
   const overlay = useOverlay();

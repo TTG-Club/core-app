@@ -1,7 +1,6 @@
 <script setup lang="ts">
   import { GlossaryLink } from '~glossary/link';
-  import { useFilter } from '~infrastructure/filter/composable';
-  import { FilterControls } from '~infrastructure/filter/controls';
+  import { FilterControls, useFilter } from '~infrastructure/filter';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';

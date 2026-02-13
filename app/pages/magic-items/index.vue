@@ -1,7 +1,6 @@
 <script setup lang="ts">
   import { computed } from 'vue';
-  import { useFilter } from '~infrastructure/filter/composable';
-  import { FilterControls } from '~infrastructure/filter/controls';
+  import { FilterControls, useFilter } from '~infrastructure/filter';
   import { useMagicItemRarityGroupOrder } from '~magic-items/composable';
   import { MagicItemLegend } from '~magic-items/legend';
   import { MagicItemLink } from '~magic-items/link';

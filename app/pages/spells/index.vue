@@ -1,6 +1,5 @@
 <script setup lang="ts">
-  import { useFilter } from '~infrastructure/filter/composable';
-  import { FilterControls } from '~infrastructure/filter/controls';
+  import { FilterControls, useFilter } from '~infrastructure/filter';
   import { SpellLegend } from '~spells/legend';
   import { SpellLink } from '~spells/link';
   import { GroupedList } from '~ui/grouped-list';

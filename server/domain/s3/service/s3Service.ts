@@ -3,7 +3,8 @@ import { StatusCodes } from 'http-status-codes';
 import ms from 'ms';
 
 import type { GetObjectCommandOutput } from '@aws-sdk/client-s3';
-import type { S3UploadFile, S3UploadResponse } from '~~/server/domain/s3/model';
+
+import type { S3UploadFile, S3UploadResponse } from '#server/domain/s3/model';
 
 export function createS3Service() {
   const { endpoint, region, accessKeyId, secretAccessKey, bucket } =

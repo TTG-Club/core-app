@@ -1,9 +1,10 @@
 <script setup lang="ts">
   import { cloneDeep } from 'es-toolkit';
-  import { FilterDrawer } from '~infrastructure/filter/drawer';
-  import { FilterPreview } from '~infrastructure/filter/preview';
 
-  import type { Filter } from '~infrastructure/filter/types';
+  import { FilterDrawer } from '../drawer';
+  import { FilterPreview } from '../preview';
+
+  import type { Filter } from '../types';
 
   const { isPending = false, showPreview = false } = defineProps<{
     isPending?: boolean;

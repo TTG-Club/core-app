@@ -1,6 +1,5 @@
 <script setup lang="ts">
-  import { useFilter } from '~infrastructure/filter/composable';
-  import { FilterControls } from '~infrastructure/filter/controls';
+  import { FilterControls, useFilter } from '~infrastructure/filter';
   import { ItemLink } from '~items/link';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
