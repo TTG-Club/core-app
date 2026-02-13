@@ -6,6 +6,11 @@
 
   import type { AbilityScores } from '../../model';
 
+  const props = defineProps<{
+    selectedClassUrl?: string;
+    classAbilityTemplate: number[];
+  }>();
+
   const model = defineModel<AbilityScores>({ required: true });
 
   const localScores = ref<AbilityScores>({ ...ZERO_SCORES });
@@ -71,22 +76,65 @@
       ? 'text-secondary'
       : 'text-primary font-bold';
   }
+
+  const isClassTemplateButtonDisabled = computed(() => {
+    return !props.selectedClassUrl || props.classAbilityTemplate.length === 0;
+  });
+
+  function applyClassTemplate() {
+    if (isClassTemplateButtonDisabled.value) {
+      return;
+    }
+
+    const newScores: AbilityScores = { ...ZERO_SCORES };
+
+    for (let index = 0; index < ABILITY_KEYS.length; index += 1) {
+      const ability = ABILITY_KEYS[index];
+
+      if (!ability) {
+        continue;
+      }
+
+      // При noUncheckedIndexedAccess: number[] -> number | undefined при доступе по индексу
+      const value = props.classAbilityTemplate[index];
+
+      if (value === undefined) {
+        continue;
+      }
+
+      newScores[ability] = value;
+    }
+
+    localScores.value = newScores;
+    model.value = newScores;
+  }
 </script>
 
 <template>
   <div
     class="flex flex-col gap-4 rounded-xl border border-default bg-muted p-4"
   >
-    <div class="text-sm text-secondary">
-      Распределите значения:
-      <span
-        v-for="(score, index) in STANDARD_ARRAY"
-        :key="score"
-        :class="getScoreClass(score)"
+    <div class="flex items-center justify-between gap-4">
+      <div class="text-sm text-secondary">
+        Распределите значения:
+        <span
+          v-for="(score, index) in STANDARD_ARRAY"
+          :key="score"
+          :class="getScoreClass(score)"
+        >
+          {{ score }}<span v-if="index < STANDARD_ARRAY.length - 1">, </span>
+        </span>
+        .
+      </div>
+
+      <UButton
+        size="sm"
+        variant="outline"
+        :disabled="isClassTemplateButtonDisabled"
+        @click="applyClassTemplate"
       >
-        {{ score
-        }}<span v-if="index < STANDARD_ARRAY.length - 1">, </span> </span
-      >.
+        Шаблон класса
+      </UButton>
     </div>
 
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

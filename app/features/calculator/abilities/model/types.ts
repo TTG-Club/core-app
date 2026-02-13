@@ -40,6 +40,15 @@ export interface CalculatorAbilitiesClass {
   levels: number[];
   source: SourceResponse;
   abilityBonus?: Array<CalculatorAbilitiesClassBonus>;
+
+  /**
+   * Шаблон распределения характеристик.
+   * Backend отдаёт готовые значения (перестановка STANDARD_ARRAY)
+   * в порядке ABILITY_KEYS.
+   *
+   * Пример: [8,14,12,13,10,15]
+   */
+  abilityTemplate?: Array<number>;
 }
 
 export interface CalculatorAbilitiesClassBonus {

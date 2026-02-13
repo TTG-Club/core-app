@@ -13,12 +13,6 @@ import type {
   CalculatorClassOption,
 } from '../model';
 
-/**
- * Composable для выбора класса и расчёта уровней ASI.
- *
- * @param level - Реактивная ссылка на уровень персонажа.
- * @returns Объект с реактивным состоянием выбора класса и уровнями ASI.
- */
 export function useClassSelect(level: Ref<number>) {
   const selectedUrl = ref<string>();
 
@@ -54,9 +48,7 @@ export function useClassSelect(level: Ref<number>) {
 
     const levels = new Set<number>(STANDARD_ASI_LEVELS);
 
-    if (classAsiLevels.value) {
-      classAsiLevels.value.forEach((asiLevel) => levels.add(asiLevel));
-    }
+    classAsiLevels.value.forEach((asiLevel) => levels.add(asiLevel));
 
     return Array.from(levels).sort((sortA, sortB) => sortA - sortB);
   });
@@ -79,6 +71,25 @@ export function useClassSelect(level: Ref<number>) {
     return getClassBonuses(selectedClass, level.value);
   });
 
+  // ✅ ВАЖНО: это готовые значения характеристик (number[]), а не AbilityKey[]
+  const selectedClassAbilityTemplate = computed<Array<number>>(() => {
+    if (!selectedUrl.value || !classes.value) {
+      return [];
+    }
+
+    const selectedClass = classes.value.find(
+      (classItem) => classItem.url === selectedUrl.value,
+    );
+
+    const template = selectedClass?.abilityTemplate;
+
+    if (!template || template.length === 0) {
+      return [];
+    }
+
+    return template;
+  });
+
   const options = computed<CalculatorClassOption[]>(() => {
     return classes.value?.map(mapClassToOption) || [];
   });
@@ -91,6 +102,7 @@ export function useClassSelect(level: Ref<number>) {
     allAsiLevels,
     hasEpicBoon,
     selectedClassSources,
+    selectedClassAbilityTemplate,
   };
 }
 
@@ -137,9 +149,7 @@ function mapClassToOption(
   return {
     label: classLink.name.rus,
     value: classLink.url,
-    description: `${classLink.name.eng} • Уровни: ${classLink.levels.join(
-      ', ',
-    )}`,
+    description: `${classLink.name.eng} • Уровни: ${classLink.levels.join(', ')}`,
     source: classLink.source.name.label,
   };
 }

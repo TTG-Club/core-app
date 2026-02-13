@@ -1,5 +1,6 @@
 <script setup lang="ts">
-  import { useAbilitiesCalculator } from './composables/useAbilitiesCalculator';
+  import { useAbilitiesCalculator } from '~calculator/abilities/composables';
+
   import { DEFAULT_SCORES, ZERO_SCORES } from './model';
   import {
     AbilityBonuses,
@@ -25,6 +26,9 @@
   const backgroundBonuses = ref<BonusSource[]>([]);
   const classBonuses = ref<BonusSource[]>([]);
   const characterLevel = ref(1);
+
+  const selectedClassUrl = ref<string>();
+  const classAbilityTemplate = ref<Array<number>>([]);
 
   enum TabValues {
     Random = 'random',
@@ -92,7 +96,11 @@
         </template>
 
         <template #standard-array>
-          <StandardArrayTab v-model="arrayScores" />
+          <StandardArrayTab
+            v-model="arrayScores"
+            :selected-class-url="selectedClassUrl"
+            :class-ability-template="classAbilityTemplate"
+          />
         </template>
 
         <template #point-buy>
@@ -105,6 +113,8 @@
         @update:feat-sources="featBonuses = $event"
         @update:background-sources="backgroundBonuses = $event"
         @update:class-sources="classBonuses = $event"
+        @update:selected-class-url="selectedClassUrl = $event"
+        @update:class-ability-template="classAbilityTemplate = $event"
       />
     </div>
   </div>
