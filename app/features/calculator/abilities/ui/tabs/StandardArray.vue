@@ -116,7 +116,7 @@
   <div
     class="flex flex-col gap-4 rounded-xl border border-default bg-muted p-4"
   >
-    <div class="flex items-center justify-between gap-4">
+    <div class="flex items-start justify-between gap-4">
       <div class="text-sm text-secondary">
         {{ STANDARD_ARRAY_LABELS.DESCRIPTION_PREFIX }}
         <span
@@ -124,15 +124,16 @@
           :key="score"
           :class="getScoreClass(score)"
         >
-          {{ score }}<span v-if="index < STANDARD_ARRAY.length - 1">, </span>
-        </span>
-        .
+          {{ score
+          }}<span v-if="index < STANDARD_ARRAY.length - 1">, </span> </span
+        >.
       </div>
 
       <UButton
-        size="sm"
-        variant="outline"
         :disabled="isClassTemplateButtonDisabled"
+        variant="subtle"
+        color="neutral"
+        size="sm"
         @click="applyClassTemplate"
       >
         {{ STANDARD_ARRAY_LABELS.APPLY_TEMPLATE }}

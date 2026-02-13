@@ -25,7 +25,7 @@ export const ABILITIES_TABS = [
 export const STANDARD_ARRAY_LABELS = {
   NOT_SELECTED: 'Не выбрано',
   USED_SUFFIX: '(Занято)',
-  APPLY_TEMPLATE: 'Шаблон класса',
+  APPLY_TEMPLATE: 'Использовать шаблон класса',
   DESCRIPTION_PREFIX: 'Распределите значения:',
 };
 
