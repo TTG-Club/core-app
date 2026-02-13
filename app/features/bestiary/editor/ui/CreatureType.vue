@@ -2,7 +2,7 @@
   import { isEqual } from 'es-toolkit';
   import { SelectCreatureType } from '~ui/select';
 
-  import type { CreatureTypes } from '~bestiary/types';
+  import type { CreatureTypes } from '~bestiary/model';
 
   const model = defineModel<CreatureTypes>({
     required: true,

@@ -5,7 +5,7 @@
 
   import { FeatureScaling } from './ui';
 
-  import type { ClassFeatureCreate } from '~classes/types';
+  import type { ClassFeatureCreate } from '~classes/model';
 
   const { isSubclass = false } = defineProps<{
     isSubclass?: boolean;

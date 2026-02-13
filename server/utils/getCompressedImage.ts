@@ -6,7 +6,8 @@ import mime from 'mime';
 import sharp from 'sharp';
 
 import type { OutputInfo, ResizeOptions } from 'sharp';
-import type { S3UploadFile } from '~~/server/types/s3';
+
+import type { S3UploadFile } from '#server/domain/s3/model';
 
 type FileType =
   | Buffer

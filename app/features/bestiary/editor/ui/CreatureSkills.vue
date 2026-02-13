@@ -5,7 +5,7 @@
   import { DictionaryService } from '~/shared/api';
   import { getAbilityInfo } from '~/shared/types';
 
-  import type { CreateAbilities, CreateSkill } from '~bestiary/types';
+  import type { CreateAbilities, CreateSkill } from '~bestiary/model';
 
   const { abilities, proficiencyBonus = 0 } = defineProps<{
     abilities: CreateAbilities;

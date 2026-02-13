@@ -7,8 +7,7 @@
   import { RecentChanges } from '~home/recent-changes';
   import { HomeSections } from '~home/sections';
   import { SocialLinks } from '~home/social-links';
-  import { SearchPanel } from '~search/panel';
-  import {UiPlaceholder} from "~ui/placeholder";
+  import { SearchPanel } from '~infrastructure/search';
 
   definePageMeta({
     layout: 'default',
@@ -37,13 +36,8 @@
       <HomeSections />
 
       <div class="flex w-full flex-col gap-3 lg:items-start xl:flex-row">
-
-
-        <div class="relative flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">
+        <div class="flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">
           <HomeBanners />
-
-          <RecentChanges />
-          <UiPlaceholder class="hidden min-h-32 flex-1 xl:block" />
         </div>
 
         <div class="flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">

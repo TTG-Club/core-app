@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SpellComponents, SpellMaterialComponent } from '~/shared/types';
+  import type { SpellComponents, SpellMaterialComponent } from '~spells/model';
 
   const components = defineModel<SpellComponents>({
     required: true,

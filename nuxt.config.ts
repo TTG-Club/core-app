@@ -146,7 +146,7 @@ export default defineNuxtConfig({
 
   icon: {
     serverBundle: {
-      collections: ['lucide', 'fluent'],
+      collections: ['fluent'],
     },
     customCollections: [
       {
@@ -313,6 +313,11 @@ export default defineNuxtConfig({
         'dexie',
         '@vueuse/gesture',
         'js-base64',
+
+        // Validation & Bytes
+        'bytes',
+        'zod',
+        'zod/v4/core',
       ],
       exclude: ['@jsquash/webp', '@jsquash/webp/encode'],
     },

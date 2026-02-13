@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { debounce } from 'es-toolkit';
 
-  import type { BackgroundSelectResponse } from '~/shared/types';
+  import type { BackgroundSelectResponse } from '~backgrounds/model';
 
   interface BackgroundSelectItem {
     label: string;

@@ -2,7 +2,7 @@
   import { GlossaryDrawer } from '~glossary/drawer';
   import { SmallLink } from '~ui/link';
 
-  import type { GlossaryLinkResponse } from '~/shared/types';
+  import type { GlossaryLinkResponse } from '~glossary/model';
 
   const { glossary } = defineProps<{
     glossary: GlossaryLinkResponse;

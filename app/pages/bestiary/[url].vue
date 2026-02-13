@@ -2,7 +2,7 @@
   import { CreatureBody } from '~bestiary/body';
   import { PageActions } from '~ui/page';
 
-  import type { CreatureDetailResponse } from '~bestiary/types';
+  import type { CreatureDetailResponse } from '~bestiary/model';
 
   const route = useRoute();
 

@@ -3,7 +3,7 @@
 
   import { TableColumnScaling } from './ui';
 
-  import type { ClassColumnCreate } from '~classes/types';
+  import type { ClassColumnCreate } from '~classes/model';
 
   const state = defineModel<Array<ClassColumnCreate>>({ required: true });
 

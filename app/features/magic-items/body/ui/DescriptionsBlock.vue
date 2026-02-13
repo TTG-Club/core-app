@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { MarkupRender } from '~ui/markup';
 
-  import type { MagicItemDetailResponse } from '~magic-items/types';
+  import type { MagicItemDetailResponse } from '~magic-items/model';
 
   const { description } =
     defineProps<Pick<MagicItemDetailResponse, 'description'>>();

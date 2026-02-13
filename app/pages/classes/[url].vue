@@ -3,7 +3,7 @@
   import { PageActions } from '~ui/page';
   import { UiResult } from '~ui/result';
 
-  import type { ClassDetailResponse } from '~classes/types';
+  import type { ClassDetailResponse } from '~classes/model';
 
   const isClientReady = useState('client-ready', () => false);
 

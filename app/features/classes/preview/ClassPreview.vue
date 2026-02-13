@@ -2,7 +2,7 @@
   import { ClassBody } from '~classes/body';
   import { UiDrawer } from '~ui/drawer';
 
-  import type { ClassCreate, ClassDetailResponse } from '~classes/types';
+  import type { ClassCreate, ClassDetailResponse } from '~classes/model';
 
   const opened = defineModel<boolean>('open', { required: true });
 

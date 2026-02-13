@@ -3,7 +3,7 @@
 
   import { LinkLineages, LinkPreview } from './ui';
 
-  import type { SpeciesLinkResponse } from '~/shared/types';
+  import type { SpeciesLinkResponse } from '~species/model';
 
   const { species } = defineProps<{
     species: SpeciesLinkResponse;

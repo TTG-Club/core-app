@@ -6,7 +6,7 @@
   } from '@tanstack/vue-table';
   import { useDebounceFn } from '@vueuse/core';
   import { maxBy, omit, orderBy, range } from 'es-toolkit';
-  import { CasterType } from '~classes/types';
+  import { CasterType } from '~classes/model';
 
   import { LEVELS } from '~/shared/consts';
 
@@ -19,7 +19,7 @@
   import { useDndMechanics } from './useDndMechanics';
 
   import type { Cell, ColumnDef, Header } from '@tanstack/vue-table';
-  import type { ClassDetailResponse, ClassFeature } from '~classes/types';
+  import type { ClassDetailResponse, ClassFeature } from '~classes/model';
 
   import type { Level } from '~/shared/types';
 

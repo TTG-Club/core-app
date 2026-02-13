@@ -2,7 +2,7 @@
   import { EditorArrayControls } from '~ui/editor';
   import { SelectLanguage } from '~ui/select';
 
-  import type { CreateLanguage, CreatureLanguages } from '~bestiary/types';
+  import type { CreateLanguage, CreatureLanguages } from '~bestiary/model';
 
   const model = defineModel<CreatureLanguages>({ required: true });
 

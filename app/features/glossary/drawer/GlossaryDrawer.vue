@@ -2,7 +2,7 @@
   import { GlossaryBody } from '~glossary/body';
   import { UiDrawer } from '~ui/drawer';
 
-  import type { GlossaryDetailResponse } from '~/shared/types';
+  import type { GlossaryDetailResponse } from '~glossary/model';
 
   const { url } = defineProps<{
     url: string;
