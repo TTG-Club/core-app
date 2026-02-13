@@ -2,8 +2,11 @@
   import { ABILITY_KEYS, ABILITY_LABELS } from '~/shared/types';
   import { AbilityKey } from '~/shared/types/abilities';
 
-  import { STANDARD_ARRAY_LABELS } from '../../consts';
-  import { STANDARD_ARRAY, ZERO_SCORES } from '../../model';
+  import {
+    STANDARD_ARRAY,
+    STANDARD_ARRAY_LABELS,
+    ZERO_SCORES,
+  } from '../../model';
 
   import type { AbilityScores } from '../../model';
 

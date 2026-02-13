@@ -1,7 +1,11 @@
 <script setup lang="ts">
   import { useAbilitiesCalculator } from './composables';
-  import { ABILITIES_TABS, TabValues } from './consts';
-  import { DEFAULT_SCORES, ZERO_SCORES } from './model';
+  import {
+    ABILITIES_TABS,
+    DEFAULT_SCORES,
+    TabValues,
+    ZERO_SCORES,
+  } from './model';
   import {
     AbilityBonuses,
     PointBuyTab,

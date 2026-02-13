@@ -1,4 +1,3 @@
-import { API_URLS } from '../consts';
 import {
   ABILITY_MAX_SCORE,
   EPIC_BOON_LEVEL,
@@ -14,11 +13,17 @@ import type {
   CalculatorClassOption,
 } from '../model';
 
+/**
+ * Composable для выбора класса и расчёта уровней ASI.
+ *
+ * @param level - Реактивная ссылка на уровень персонажа.
+ * @returns Объект с реактивным состоянием выбора класса и уровнями ASI.
+ */
 export function useClassSelect(level: Ref<number>) {
   const selectedUrl = ref<string>();
 
   const { data: classes, pending } = useFetch<CalculatorAbilitiesClass[]>(
-    API_URLS.CLASSES_ABILITY_IMPROVEMENT,
+    '/api/v2/classes/ability-improvement',
     {
       dedupe: 'defer',
       lazy: true,
