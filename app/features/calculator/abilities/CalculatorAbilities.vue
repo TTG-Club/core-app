@@ -1,6 +1,11 @@
 <script setup lang="ts">
-  import { useAbilitiesCalculator } from './composables/useAbilitiesCalculator';
-  import { DEFAULT_SCORES, ZERO_SCORES } from './model';
+  import { useAbilitiesCalculator } from './composables';
+  import {
+    ABILITIES_TABS,
+    DEFAULT_SCORES,
+    TabValues,
+    ZERO_SCORES,
+  } from './model';
   import {
     AbilityBonuses,
     PointBuyTab,
@@ -26,29 +31,8 @@
   const classBonuses = ref<BonusSource[]>([]);
   const characterLevel = ref(1);
 
-  enum TabValues {
-    Random = 'random',
-    StandardArray = 'standard-array',
-    PointBuy = 'point-buy',
-  }
-
-  const tabs = [
-    {
-      label: 'Случайный набор',
-      value: TabValues.Random,
-      slot: TabValues.Random,
-    },
-    {
-      label: 'Стандартный набор',
-      value: TabValues.StandardArray,
-      slot: TabValues.StandardArray,
-    },
-    {
-      label: 'Покупка значений',
-      value: TabValues.PointBuy,
-      slot: TabValues.PointBuy,
-    },
-  ];
+  const selectedClassUrl = ref<string>();
+  const classAbilityTemplate = ref<Array<number>>([]);
 
   const selectedTabIndex = ref(TabValues.Random);
 
@@ -84,7 +68,7 @@
     <div class="flex flex-col gap-6">
       <UTabs
         v-model="selectedTabIndex"
-        :items="tabs"
+        :items="ABILITIES_TABS"
         :ui="{ root: 'flex flex-col gap-4' }"
       >
         <template #random>
@@ -92,7 +76,11 @@
         </template>
 
         <template #standard-array>
-          <StandardArrayTab v-model="arrayScores" />
+          <StandardArrayTab
+            v-model="arrayScores"
+            :selected-class-url="selectedClassUrl"
+            :class-ability-template="classAbilityTemplate"
+          />
         </template>
 
         <template #point-buy>
@@ -105,6 +93,8 @@
         @update:feat-sources="featBonuses = $event"
         @update:background-sources="backgroundBonuses = $event"
         @update:class-sources="classBonuses = $event"
+        @update:selected-class-url="selectedClassUrl = $event"
+        @update:class-ability-template="classAbilityTemplate = $event"
       />
     </div>
   </div>
