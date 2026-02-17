@@ -1,9 +1,9 @@
 <script setup lang="ts">
-  import { FeatureAbilityBonus } from '~classes/editor/ui/features/ui';
   import { EditorArrayControls } from '~ui/editor';
   import { SelectLevel } from '~ui/select';
 
-  import { FeatureScaling } from './ui';
+  import FeatureAbilityBonus from './FeatureAbilityBonus.vue';
+  import FeatureScaling from './FeatureScaling.vue';
 
   import type { ClassFeatureCreate } from '~classes/model';
 

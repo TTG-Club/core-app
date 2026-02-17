@@ -1,1 +1,1 @@
-export { default as ClassEditorFeatures } from './ClassEditorFeatures.vue';
+export { default as FeaturesEditor } from './FeaturesEditor.vue';

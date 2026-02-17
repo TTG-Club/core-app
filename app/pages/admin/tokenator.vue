@@ -219,7 +219,7 @@
               <UButton
                 color="error"
                 variant="ghost"
-                icon="i-ttg-remove"
+                icon="i-ttg-trash"
                 size="xs"
                 :loading="isDeleting === border.id"
                 @click.left.exact.prevent="deleteBorder(border.id)"
