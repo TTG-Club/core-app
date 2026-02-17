@@ -268,7 +268,7 @@
           class="absolute top-0 right-0 p-2 opacity-0 transition-opacity hover:opacity-100"
         >
           <UButton
-            icon="i-ttg-remove"
+            icon="i-ttg-trash"
             color="error"
             size="xs"
             @click.left.exact.prevent="removeLoadedImage(image)"

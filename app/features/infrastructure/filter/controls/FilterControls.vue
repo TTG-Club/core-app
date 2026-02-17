@@ -122,7 +122,7 @@
         <UButton
           v-if="isEdited"
           title="Очистить фильтр"
-          icon="i-ttg-remove"
+          icon="i-ttg-trash"
           @click.left.exact.prevent="reset"
         />
       </UFieldGroup>

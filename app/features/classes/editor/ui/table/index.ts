@@ -1,1 +1,1 @@
-export { default as ClassEditorTable } from './ClassEditorTable.vue';
+export { default as TableEditor } from './TableEditor.vue';

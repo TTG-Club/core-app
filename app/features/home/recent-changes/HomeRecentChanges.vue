@@ -59,7 +59,7 @@
       case ActionType.UPDATED:
         return 'i-fluent-arrow-sync-16-regular';
       case ActionType.DELETED:
-        return 'i-ttg-remove';
+        return 'i-ttg-trash';
       default:
         return 'i-fluent-circle-16-regular';
     }

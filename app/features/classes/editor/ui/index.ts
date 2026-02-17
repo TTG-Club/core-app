@@ -1,3 +1,4 @@
-export { default as ClassEditorProficiency } from './ClassEditorProficiency.vue';
+export * from './characteristics';
 export * from './features';
+export * from './proficiency';
 export * from './table';
