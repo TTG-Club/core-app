@@ -1,19 +1,14 @@
 <script setup lang="ts">
   import { ClassPreview } from '~classes/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
-  import {
-    SelectAbilities,
-    SelectCasterType,
-    SelectClass,
-    SelectDice,
-  } from '~ui/select';
   import { UploadGallery, UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
 
   import {
-    ClassEditorFeatures,
-    ClassEditorProficiency,
-    ClassEditorTable,
+    CharacteristicsSettings,
+    FeaturesEditor,
+    ProficiencySettings,
+    TableEditor,
   } from './ui';
 
   import type { ClassCreate, ClassLinkResponse } from '~classes/model';
@@ -55,6 +50,7 @@
       equipment: undefined,
       features: [],
       table: [],
+      abilityTemplate: undefined,
       casterType: undefined,
       tags: [],
     };
@@ -92,67 +88,16 @@
       :prefix="parentClass?.name.eng"
     />
 
-    <UCard variant="subtle">
-      <template #header>
-        <h2 class="truncate text-base text-highlighted">
-          Характеристики и родительский класс
-        </h2>
-      </template>
+    <CharacteristicsSettings
+      v-model:parent-url="state.parentUrl"
+      v-model:hit-dice="state.hitDice"
+      v-model:caster-type="state.casterType"
+      v-model:primary-characteristics="state.primaryCharacteristics"
+      v-model:saving-throws="state.savingThrows"
+      v-model:ability-template="state.abilityTemplate"
+    />
 
-      <div class="grid grid-cols-24 gap-4">
-        <UFormField
-          class="col-span-12"
-          label="Родительский класс"
-          name="parentUrl"
-        >
-          <SelectClass v-model="state.parentUrl" />
-        </UFormField>
-
-        <UFormField
-          class="col-span-6"
-          label="Кость хитов"
-          name="hitDice"
-        >
-          <SelectDice
-            v-model="state.hitDice"
-            placeholder="Выбери кость хитов"
-          />
-        </UFormField>
-
-        <UFormField
-          class="col-span-6"
-          label="Тип заклинателя"
-          name="casterType"
-        >
-          <SelectCasterType v-model="state.casterType" />
-        </UFormField>
-
-        <UFormField
-          class="col-span-12"
-          label="Основная хар-ка"
-          name="primaryCharacteristics"
-        >
-          <SelectAbilities
-            v-model="state.primaryCharacteristics"
-            multiple
-          />
-        </UFormField>
-
-        <UFormField
-          class="col-span-12"
-          label="Спасброски"
-          name="savingThrows"
-        >
-          <SelectAbilities
-            v-model="state.savingThrows"
-            :limit="2"
-            multiple
-          />
-        </UFormField>
-      </div>
-    </UCard>
-
-    <ClassEditorProficiency v-model="state.proficiency" />
+    <ProficiencySettings v-model="state.proficiency" />
 
     <UCard variant="subtle">
       <template #header>
@@ -194,12 +139,12 @@
       </div>
     </UCard>
 
-    <ClassEditorFeatures
+    <FeaturesEditor
       v-model="state.features"
       :is-subclass="!!state.parentUrl"
     />
 
-    <ClassEditorTable v-model="state.table" />
+    <TableEditor v-model="state.table" />
 
     <UCard variant="subtle">
       <template #header>

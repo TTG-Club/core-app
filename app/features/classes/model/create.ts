@@ -72,4 +72,14 @@ export interface ClassCreate extends EditorBaseInfoState {
   casterType: string | undefined;
   image: string | undefined;
   primaryCharacteristics: Array<AbilityKey> | undefined;
+  abilityTemplate: AbilityTemplateCreate | undefined;
 }
+
+export type AbilityTemplateCreate = [
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+];

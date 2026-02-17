@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { EditorArrayControls } from '~ui/editor';
 
-  import { TableColumnScaling } from './ui';
+  import TableColumnScaling from './TableColumnScaling.vue';
 
   import type { ClassColumnCreate } from '~classes/model';
 
