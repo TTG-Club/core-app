@@ -1,9 +1,14 @@
 <script setup lang="ts">
-  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
-  import { SourcePreview } from '~/features/sources/preview';
-  import type { SourceCreate } from '~/features/sources/types';
+  import { computed, watchEffect } from 'vue';
+  import { z } from 'zod';
+  import { EditorFormControls } from '~ui/editor';
+  import { InputUrl } from '~ui/input';
   import { UploadImage } from '~ui/upload';
-  import SourceType from '~sources/editor/ui/SourceType.vue';
+
+  import SourceType from '~/features/sources/editor/ui/SourceType.vue';
+  import { SourcePreview } from '~/features/sources/preview';
+
+  import type { SourceCreate } from '~/features/sources/types';
 
   function getInitialState(): SourceCreate {
     return {
@@ -22,8 +27,14 @@
       },
       description: '',
       tags: [],
-      authors: '',
-      published: '',
+      publisher: {
+        name: '',
+        published: '',
+      },
+      translation: {
+        authors: '',
+        translationDate: '',
+      },
     };
   }
 
@@ -31,6 +42,82 @@
     actionUrl: '/api/v2/source',
     getInitialState,
   });
+
+  const MINOR_WORDS = new Set([
+    'a',
+    'an',
+    'and',
+    'as',
+    'at',
+    'by',
+    'for',
+    'from',
+    'in',
+    'into',
+    'nor',
+    'of',
+    'on',
+    'or',
+    'over',
+    'the',
+    'to',
+    'under',
+    'with',
+    'vs',
+    'via',
+  ]);
+
+  const acronym = computed<string>(() => {
+    const value = state.value.name.eng?.trim();
+
+    if (!value) {
+      return '';
+    }
+
+    const words = value.match(/[A-Z0-9]+(?:'[A-Z0-9]+)*/gi) ?? [];
+
+    return words
+      .map((word, index) => {
+        const firstChar = word.charAt(0);
+
+        if (!firstChar) {
+          return '';
+        }
+
+        const lowerWord = word.toLowerCase();
+
+        if (index === 0) {
+          return firstChar.toUpperCase();
+        }
+
+        if (MINOR_WORDS.has(lowerWord)) {
+          return firstChar.toLowerCase();
+        }
+
+        return firstChar.toUpperCase();
+      })
+      .join('');
+  });
+
+  watchEffect(() => {
+    state.value.acronym = acronym.value;
+  });
+
+  // === Локальная схема "Основной информации" (без source/page) ===
+  const nameSchema = z.object({
+    rus: z.string().trim().nonempty(),
+    eng: z.string().trim().nonempty(),
+    alt: z.array(z.string().trim().nonempty()).optional(),
+  });
+
+  const baseInfoSchema = computed(() =>
+    z.object({
+      url: z.string().trim().nonempty(),
+      tags: z.array(z.string().trim().nonempty()).optional(),
+      name: nameSchema,
+      acronym: z.string().trim().nonempty(),
+    }),
+  );
 </script>
 
 <template>
@@ -40,27 +127,77 @@
     @submit="onSubmit"
     @error="onError"
   >
-    <EditorBaseInfo
-      v-model="state"
-      section="sources"
-    />
+    <UCard
+      variant="subtle"
+      class="col-span-full"
+    >
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">Основная информация</h2>
+      </template>
+
+      <UForm
+        attach
+        :state="state"
+        :schema="baseInfoSchema"
+        class="grid grid-cols-2 gap-6"
+      >
+        <div class="flex flex-col gap-7">
+          <UFormField
+            label="Название"
+            name="name.rus"
+            required
+          >
+            <UInput
+              v-model="state.name.rus"
+              placeholder="Введи название"
+            />
+          </UFormField>
+
+          <UFormField
+            label="Английское название"
+            name="name.eng"
+            required
+          >
+            <UInput
+              v-model="state.name.eng"
+              placeholder="Введи английское название"
+            />
+          </UFormField>
+
+          <UFormField
+            label="URL"
+            help="URL генерируется автоматически при вводе английского названия"
+            name="url"
+            required
+          >
+            <InputUrl
+              v-model="state.url"
+              :eng-name="state.name.eng"
+              :source-url="undefined"
+              disabled
+            />
+          </UFormField>
+        </div>
+
+        <div class="flex flex-col gap-7">
+          <UFormField
+            label="Акроним"
+            help="Генерируется автоматически из английского названия"
+            name="acronym"
+          >
+            <UInput
+              :model-value="acronym"
+              disabled
+            />
+          </UFormField>
+        </div>
+      </UForm>
+    </UCard>
 
     <UCard variant="subtle">
       <template #header>
         <h2 class="truncate text-base text-highlighted">Подробности</h2>
       </template>
-
-      <UFormField
-        label="Акроним"
-        help="Акроним генерируется автоматически при вводе английского названия"
-        name="acronym"
-        required
-      >
-        <UInput
-          v-model="state.acronym"
-          disabled
-        />
-      </UFormField>
 
       <UFormField
         label="Тип источника"
@@ -71,23 +208,34 @@
       </UFormField>
 
       <UFormField
+        label="Издатель"
+        name="publisher"
+        required
+      >
+        <UInput
+          v-model="state.publisher.name"
+          placeholder="Издатель"
+        />
+      </UFormField>
+
+      <UFormField
         label="Дата публикации"
         name="published"
         required
       >
         <UInput
-          v-model="state.published"
+          v-model="state.publisher.published"
           placeholder="ДД.MM.ГГГГ"
         />
       </UFormField>
 
       <UFormField
         label="Перевод"
-        name="published"
+        name="translation"
         required
       >
         <UInput
-          v-model="state.published"
+          v-model="state.translation.authors"
           placeholder="Введи переводчиков"
         />
       </UFormField>
@@ -98,7 +246,7 @@
         required
       >
         <UInput
-          v-model="state.published"
+          v-model="state.translation.translationDate"
           placeholder="ДД.MM.ГГГГ"
         />
       </UFormField>
@@ -112,7 +260,6 @@
       <div class="grid grid-cols-24 gap-4">
         <UFormField
           class="col-span-24"
-          label="Описание"
           name="description"
         >
           <UTextarea
@@ -148,7 +295,6 @@
                 :src="state.image"
                 custom
               >
-                <!-- Show the actual image when loaded -->
                 <img
                   v-if="isLoaded"
                   v-bind="imgAttrs"
@@ -157,7 +303,6 @@
                   :alt="state.name.rus"
                 />
 
-                <!-- Show a placeholder while loading -->
                 <img
                   v-else
                   class="w-full rounded-lg object-contain"

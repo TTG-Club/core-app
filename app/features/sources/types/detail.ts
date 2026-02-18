@@ -5,8 +5,14 @@ export interface SourceDetailResponse {
   name: NameResponse;
   source: SourceResponse;
   type: string;
-  published: string;
-  authors: string[];
+  publisher: {
+    name: string;
+    published: string;
+  };
+  translation: {
+    authors: string;
+    translationDate: string;
+  };
   description: Array<string>;
   image: string;
   updatedAt: string;
