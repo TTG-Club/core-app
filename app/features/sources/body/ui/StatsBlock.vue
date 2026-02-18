@@ -1,10 +1,14 @@
 <script setup lang="ts">
-  import { MarkupRender } from '~ui/markup';
-
   defineProps<{
     type: string;
-    published: string;
-    authors: string[];
+    publisher: {
+      name: string;
+      published: string;
+    };
+    translation: {
+      authors: string; // переводчики
+      translationDate: string; // дата перевода
+    };
   }>();
 </script>
 
@@ -17,15 +21,27 @@
     </div>
 
     <div :class="$style.item">
-      <span :class="$style.name">Дата издания:</span>
+      <span :class="$style.name">Издатель:</span>
 
-      <span>{{ published }}</span>
+      <span>{{ publisher.name }}</span>
     </div>
 
     <div :class="$style.item">
-      <span :class="$style.name">Авторы:</span>
+      <span :class="$style.name">Дата издания:</span>
 
-      <span><MarkupRender :entries="authors" /> </span>
+      <span>{{ publisher.published }}</span>
+    </div>
+
+    <div :class="$style.item">
+      <span :class="$style.name">Перевод:</span>
+
+      <span>{{ translation.authors }}</span>
+    </div>
+
+    <div :class="$style.item">
+      <span :class="$style.name">Дата перевода:</span>
+
+      <span>{{ translation.translationDate }}</span>
     </div>
   </div>
 </template>

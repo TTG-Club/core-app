@@ -1,8 +1,10 @@
 <script setup lang="ts">
-  import { DescriptionsBlock } from './ui';
-  import type { SourceDetailResponse } from '~/features/sources/types';
   import { StatsBlock } from '~sources/body/ui';
   import { UiGallery } from '~ui/gallery';
+
+  import { DescriptionsBlock } from './ui';
+
+  import type { SourceDetailResponse } from '~/features/sources/types';
 
   const { source, hideGallery = false } = defineProps<{
     source: SourceDetailResponse;
@@ -22,8 +24,8 @@
       <div class="flex w-full flex-col gap-3 @min-[800px]:max-w-80">
         <StatsBlock
           :type="source.type"
-          :published="source.published"
-          :authors="source.authors"
+          :publisher="source.publisher"
+          :translation="source.translation"
         />
       </div>
 
