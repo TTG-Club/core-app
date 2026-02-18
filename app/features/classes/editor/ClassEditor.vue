@@ -13,6 +13,16 @@
 
   import type { ClassCreate, ClassLinkResponse } from '~classes/model';
 
+  type PrimaryCharacteristicsOperator = 'AND' | 'OR';
+
+  const primaryCharacteristicsOperatorOptions: Array<{
+    label: string;
+    value: PrimaryCharacteristicsOperator;
+  }> = [
+    { label: 'И', value: 'AND' },
+    { label: 'ИЛИ', value: 'OR' },
+  ];
+
   function getInitialState(): ClassCreate {
     return {
       url: '',
@@ -31,6 +41,7 @@
       parentUrl: undefined,
       hitDice: undefined,
       primaryCharacteristics: undefined,
+      delimiterAbility: 'AND',
       savingThrows: [],
       proficiency: {
         armor: {

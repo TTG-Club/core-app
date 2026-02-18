@@ -2,6 +2,8 @@ import type { EditorBaseInfoState } from '~ui/editor';
 
 import type { AbilityKey } from '~/shared/types';
 
+export type AbilityDelimiter = 'AND' | 'OR';
+
 export interface ClassFeatureScalingCreate {
   level: number;
   name: string;
@@ -73,6 +75,7 @@ export interface ClassCreate extends EditorBaseInfoState {
   image: string | undefined;
   primaryCharacteristics: Array<AbilityKey> | undefined;
   abilityTemplate: AbilityTemplateCreate | undefined;
+  delimiterAbility: AbilityDelimiter;
 }
 
 export type AbilityTemplateCreate = [
