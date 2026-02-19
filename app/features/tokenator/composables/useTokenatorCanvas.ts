@@ -61,21 +61,24 @@ export function useTokenatorCanvas(
       return;
     }
 
-    const w = width.value || canvasRef.value.clientWidth || 300;
-    const h = height.value || canvasRef.value.clientHeight || 300;
+    const canvasWidth = width.value || canvasRef.value.clientWidth || 300;
+    const canvasHeight = height.value || canvasRef.value.clientHeight || 300;
 
     // Обновляем размер только экранного канваса
-    if (canvasRef.value.width !== w || canvasRef.value.height !== h) {
-      canvasRef.value.width = w;
-      canvasRef.value.height = h;
+    if (
+      canvasRef.value.width !== canvasWidth ||
+      canvasRef.value.height !== canvasHeight
+    ) {
+      canvasRef.value.width = canvasWidth;
+      canvasRef.value.height = canvasHeight;
     }
 
     let tokenSize = 500;
 
     if (clip) {
-      tokenSize = Math.min(w, h);
+      tokenSize = Math.min(canvasWidth, canvasHeight);
     } else {
-      tokenSize = Math.min(500, Math.min(w, h) - 40);
+      tokenSize = Math.min(500, Math.min(canvasWidth, canvasHeight) - 40);
     }
 
     // Указываем, что размер токена на маске равен полному размеру маски
@@ -90,7 +93,7 @@ export function useTokenatorCanvas(
         frameTint: store.frameTint,
         transform: store.transform,
         clip,
-        viewSize: { width: w, height: h },
+        viewSize: { width: canvasWidth, height: canvasHeight },
         tokenSize,
         maskImage: store.maskImageCanvas || maskCanvas,
         maskTokenSize: store.maskTokenSize,
@@ -145,24 +148,24 @@ export function useTokenatorCanvas(
       return;
     }
 
-    const w = width.value || canvasRef.value.clientWidth || 300;
-    const h = height.value || canvasRef.value.clientHeight || 300;
+    const canvasWidth = width.value || canvasRef.value.clientWidth || 300;
+    const canvasHeight = height.value || canvasRef.value.clientHeight || 300;
 
     // Вычисляем размер токена на экране (логика должна совпадать с draw)
     let tokenSize = 500;
 
     if (clip) {
-      tokenSize = Math.min(w, h);
+      tokenSize = Math.min(canvasWidth, canvasHeight);
     } else {
-      tokenSize = Math.min(500, Math.min(w, h) - 40);
+      tokenSize = Math.min(500, Math.min(canvasWidth, canvasHeight) - 40);
     }
 
     // Коэффициент масштабирования между экраном и маской
     const scale = MASK_SIDE / tokenSize;
 
     // Центры координат
-    const screenCx = w / 2;
-    const screenCy = h / 2;
+    const screenCx = canvasWidth / 2;
+    const screenCy = canvasHeight / 2;
     const maskCx = MASK_SIDE / 2;
     const maskCy = MASK_SIDE / 2;
 

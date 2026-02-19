@@ -137,7 +137,7 @@
         variant="subtle"
         color="neutral"
         size="sm"
-        @click="applyClassTemplate"
+        @click.left.exact.prevent="applyClassTemplate"
       >
         {{ STANDARD_ARRAY_LABELS.APPLY_TEMPLATE }}
       </UButton>
