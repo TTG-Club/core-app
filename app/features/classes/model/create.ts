@@ -61,6 +61,11 @@ export interface ClassProficiencyCreate {
   skill: SkillProficiencyCreate;
 }
 
+export interface ClassPrimaryCharacteristicsCreate {
+  values: Array<AbilityKey> | undefined;
+  delimiter: AbilityDelimiter | undefined;
+}
+
 export interface ClassCreate extends EditorBaseInfoState {
   gallery: Array<string>;
   description: string | undefined;
@@ -73,9 +78,8 @@ export interface ClassCreate extends EditorBaseInfoState {
   table: Array<ClassColumnCreate>;
   casterType: string | undefined;
   image: string | undefined;
-  primaryCharacteristics: Array<AbilityKey> | undefined;
+  primaryCharacteristics: ClassPrimaryCharacteristicsCreate;
   abilityTemplate: AbilityTemplateCreate | undefined;
-  delimiterAbility: AbilityDelimiter;
 }
 
 export type AbilityTemplateCreate = [
