@@ -1,9 +1,7 @@
 <script setup lang="ts">
-  import {
-    TokenatorCanvas,
-    TokenatorControls,
-    TokenatorPreview,
-  } from '~tokenator';
+  import { TokenatorCanvas } from '~tokenator/canvas';
+  import { TokenatorControls } from '~tokenator/controls';
+  import { TokenatorPreview } from '~tokenator/preview';
 
   definePageMeta({
     layout: 'default',

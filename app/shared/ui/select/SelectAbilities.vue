@@ -38,17 +38,15 @@
   );
 
   const selectedValues = computed<Array<AbilityKey>>(() => {
-    const v = model.value;
-
-    if (!v) {
+    if (!model.value) {
       return [];
     }
 
-    if (Array.isArray(v)) {
-      return v;
+    if (Array.isArray(model.value)) {
+      return model.value;
     }
 
-    return [v];
+    return [model.value];
   });
 
   const isLimitReached = computed<boolean>(() => {

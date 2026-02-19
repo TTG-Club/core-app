@@ -28,7 +28,7 @@
         size="xs"
         trailing-icon="i-ttg-plus"
         label="Добавить шаблон"
-        @click="enableTemplate"
+        @click.left.exact.prevent="enableTemplate"
       />
 
       <UButton
@@ -38,7 +38,7 @@
         size="xs"
         trailing-icon="i-ttg-trash"
         label="Удалить шаблон"
-        @click="disableTemplate"
+        @click.left.exact.prevent="disableTemplate"
       />
     </div>
 
