@@ -7,25 +7,40 @@
   } from '~ui/select';
 
   import ClassEditorAbilityTemplate from './AbilityTemplate.vue';
+  import PrimaryCharacteristics from './PrimaryCharacteristics.vue';
 
-  import type { AbilityTemplateCreate } from '~classes/model';
+  import type {
+    AbilityTemplateCreate,
+    ClassPrimaryCharacteristicsCreate,
+  } from '~classes/model';
 
   import type { AbilityKey } from '~/shared/types';
 
-  const parentUrl = defineModel<string | undefined>('parentUrl');
-  const hitDice = defineModel<string | undefined>('hitDice');
-  const casterType = defineModel<string | undefined>('casterType');
+  const parentUrl = defineModel<string | undefined>('parentUrl', {
+    required: true,
+  });
 
-  const primaryCharacteristics = defineModel<AbilityKey[] | undefined>(
+  const hitDice = defineModel<string | undefined>('hitDice', {
+    required: true,
+  });
+
+  const casterType = defineModel<string | undefined>('casterType', {
+    required: true,
+  });
+
+  const primaryCharacteristics = defineModel<ClassPrimaryCharacteristicsCreate>(
     'primaryCharacteristics',
+    { required: true },
   );
 
   const savingThrows = defineModel<AbilityKey[]>('savingThrows', {
     default: () => [],
+    required: true,
   });
 
   const abilityTemplate = defineModel<AbilityTemplateCreate | undefined>(
     'abilityTemplate',
+    { required: true },
   );
 </script>
 
@@ -65,19 +80,10 @@
         <SelectCasterType v-model="casterType" />
       </UFormField>
 
-      <UFormField
-        class="col-span-12"
-        label="Основная хар-ка"
-        name="primaryCharacteristics"
-      >
-        <SelectAbilities
-          v-model="primaryCharacteristics"
-          multiple
-        />
-      </UFormField>
+      <PrimaryCharacteristics v-model="primaryCharacteristics" />
 
       <UFormField
-        class="col-span-12"
+        class="col-span-10"
         label="Спасброски"
         name="savingThrows"
       >

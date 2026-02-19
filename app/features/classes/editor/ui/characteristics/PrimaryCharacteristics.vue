@@ -36,7 +36,7 @@
 <template>
   <div class="contents">
     <UFormField
-      class="col-span-9"
+      class="col-span-10"
       label="Основная характеристика"
       name="primaryCharacteristics.values"
     >
@@ -47,7 +47,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-3"
+      class="col-span-4"
       label="Разделитель"
       name="primaryCharacteristics.delimiter"
     >
