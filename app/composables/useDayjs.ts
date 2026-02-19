@@ -4,10 +4,10 @@ export function useDayjs() {
   const { $dayjs } = useNuxtApp();
 
   const format = (date: ConfigType, formatStr = 'LLL') => {
-    const d = $dayjs(date);
+    const dateObj = $dayjs(date);
 
-    if (d.isValid()) {
-      return d.local().format(formatStr);
+    if (dateObj.isValid()) {
+      return dateObj.local().format(formatStr);
     }
 
     if (typeof date === 'string') {

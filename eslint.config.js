@@ -7,6 +7,7 @@ export default withNuxt(
     prettier: {
       tailwindStylesheet: './app/assets/css/tailwind.css',
     },
+    ignores: ['.agents', 'AGENTS.md'],
   }).overrideRules({
     'vue/multi-word-component-names': undefined,
   }),

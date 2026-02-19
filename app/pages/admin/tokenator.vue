@@ -14,7 +14,11 @@
   const toast = useToast();
 
   function onFileChange(e: Event) {
-    const input = e.target as HTMLInputElement;
+    if (!(e.target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const input = e.target;
 
     if (input.files) {
       handleFileUpload(input.files);

@@ -6,7 +6,7 @@
     open?: boolean;
     disabled?: boolean;
     unmountOnHide?: boolean;
-    class?: any;
+    class?: unknown;
     ui?: {
       root?: ClassValue;
       content?: ClassValue;
