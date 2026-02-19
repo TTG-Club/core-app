@@ -6,8 +6,7 @@
     SelectDice,
   } from '~ui/select';
 
-  import ClassEditorAbilityTemplate from './AbilityTemplate.vue';
-  import PrimaryCharacteristics from './PrimaryCharacteristics.vue';
+  import { AbilityTemplate, PrimaryCharacteristics } from './characteristics';
 
   import type {
     AbilityTemplateCreate,
@@ -97,7 +96,7 @@
       <USeparator class="col-span-full my-2" />
 
       <div class="col-span-full">
-        <ClassEditorAbilityTemplate v-model="abilityTemplate" />
+        <AbilityTemplate v-model="abilityTemplate" />
       </div>
     </div>
   </UCard>
