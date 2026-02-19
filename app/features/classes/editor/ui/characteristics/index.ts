@@ -1,1 +1,2 @@
-export { default as CharacteristicsSettings } from './CharacteristicsSettings.vue';
+export { default as AbilityTemplate } from './AbilityTemplate.vue';
+export { default as PrimaryCharacteristics } from './PrimaryCharacteristics.vue';

@@ -30,7 +30,10 @@
       description: undefined,
       parentUrl: undefined,
       hitDice: undefined,
-      primaryCharacteristics: undefined,
+      primaryCharacteristics: {
+        values: undefined,
+        delimiter: undefined,
+      },
       savingThrows: [],
       proficiency: {
         armor: {

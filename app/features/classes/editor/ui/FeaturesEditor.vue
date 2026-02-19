@@ -2,8 +2,7 @@
   import { EditorArrayControls } from '~ui/editor';
   import { SelectLevel } from '~ui/select';
 
-  import FeatureAbilityBonus from './FeatureAbilityBonus.vue';
-  import FeatureScaling from './FeatureScaling.vue';
+  import { FeatureAbilityBonus, FeatureScaling } from './features';
 
   import type { ClassFeatureCreate } from '~classes/model';
 
