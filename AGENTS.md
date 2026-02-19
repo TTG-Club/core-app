@@ -1,287 +1,202 @@
-# Project Rules & Guidelines
+# 🤖 AI Agents Rules & Guidelines (AGENTS.md)
 
-> **🗺️ Architecture & Domains:** See [PROJECT_MAP.md](./PROJECT_MAP.md) for the
-> detailed project structure, domain map, and cheat sheet.
+> **ATTENTION:** This file is the **PRIMARY AND SOLE** source of truth for
+> coding rules, style guidelines, and architectural constraints for all developers
+> and AI agents.
+> **🗺️ Project Map:** For folder structure descriptions and the list of existing
+> features, refer to `PROJECT_MAP.md`.
 
-## AI Rules Management (Meta Rules)
+---
 
-- **Single Source of Truth:** `AGENTS.md`, `.agents` is the **PRIMARY** source
-  of truth for all AI agent rules.
+## 🧙‍♂️ AI Agents Skills - Mandatory Reading!
 
-## 🧙‍♂️ Smart Context Discovery (Anti-Duplication)
+The project has a skills system for AI agents located in the `.agents/skills/`
+directory.
+Before executing any task related to UI development, architecture, or using new
+tools, you **MUST**:
 
-Before creating ANY new composable, utility, or helper function, you MUST
-perform this discovery protocol:
+1. Explore the `.agents/skills/` directory.
+2. Find and apply the appropriate skills relevant to your task.
+   For example, if you are writing a Vue component, you must follow the `vue`
+   and `vue-best-practices` skills. If using Pinia — `pinia`. And so on.
 
-1. **Read Source of Truth:** **READ** the file `.nuxt/imports.d.ts` directly
-   from the disk.
+---
 
-- _Note:_ This file contains ALL available auto-imports (Nuxt built-ins,
-  VueUse, project utils). Even if it is git-ignored, you must read it.
+## 🔮 Smart Context Discovery (Anti-Duplication Protocol)
 
+Before creating ANY new composable, utility, or helper function, you **MUST**
+follow this protocol:
+
+1. **Read Source of Truth:** **READ** the `.nuxt/imports.d.ts` file directly
+   from the disk (even if git-ignored). It contains ALL available auto-imports (
+   Nuxt built-ins, VueUse, project utils).
 2. **Search First:** **SEARCH** inside `.nuxt/imports.d.ts` for keywords related
-   to your task.
-
-- _Example:_ If you need to format a date, search for `Date`, `Time`,
-  `Format`.
-
+   to your task (e.g., `Date`, `Time`, `Format`).
 3. **Action Logic:**
 
 - _Found:_ `export { useDateFormat } from '@vueuse/core'` -> **USE IT**. Do
-  not create a wrapper.
-- _Not Found:_ Only then checking `es-toolkit` or creating a new file is
-  allowed.
+  not create a wrapper!
+- _Not Found:_ Only then check `es-toolkit` or create a new file.
 
-## Core Workflow (Must Follow)
+---
 
-- **DRY Principle:** **STRICTLY FOLLOW THE DRY (DON'T REPEAT YOURSELF) POLICY.**
-  If you find yourself writing the same or very similar logic more than once,
-  abstract it into a shared utility, component, or composable. Code duplication
-  is prohibited.
-- **Analyze First:** Before writing any code, ALWAYS analyze the existing
-  project codebase. Look at similar logic, file structure, and coding styles.
-  Strictly follow established patterns and conventions to ensure consistency.
-- **Change Summary Requirement:** If you are asked to "check", "review", "fix",
-  or "refactor" a component or file, at the very end of your response, you \*
-  \*MUST\*\* provide a bulleted list explaining your changes. For each change,
-  specify:
-  - **Where:** The specific file, function, or block modified.
-  - **Why:** The reasoning (referencing a specific rule from this file or a
-    bug).
-  - **For What:** The resulting benefit or fix.
-- **Single Dictionary:** The code must read fluently without surprises, adhering
-  to a unified project dictionary.
-- **Code Style:** Strictly follow the project's ESLint, Prettier, and Stylelint
-  configurations.
-- **File Size & Modularity:**
-  - **Limit File Size:** Avoid extremely large files. If a file grows too
-    complex, refactor it by extracting logic into smaller components, utilities,
-    composables, or constants.
-  - **Feature Localization:** Utilities, composables, constants, types, stores,
-    helpers, and any other logic specific to a single feature MUST be located
-    inside that feature's folder (e.g.,
-    `app/features/tokenator/controls/composables`).
-  - **Composables Placement:** The `composables` (or `composable`) folder MUST
-    NOT be located inside the `model` folder. It should be a sibling to `model`
-    and `ui`.
-- **Final Verification:**
-  - **Mandatory Checks:** At the end of every task, you MUST run
-    `pnpm run lint:write` and `pnpm run type-check` to ensure no regressions
-    were introduced.
+## 🏗️ Architecture & DDD
 
-## Type Safety (Strict TypeScript)
+### Core Rules
 
-- **Strict Typing:** Strong typing is mandatory.
-- **No any:** The use of `any` is strictly prohibited.
-- **No Assertions:** Do not use type assertions (`as Type`) or forced casting.
-- **No Double Casting:** Usage of `as unknown as Type` is strictly prohibited.
-- **No Magic Numbers:** Avoid hardcoded numbers or type assertions in
-  variables/fields.
-- **Explicit Return Types:** For utility functions with complex return types (
-  especially when working with `unknown`), always define explicit return types
-  and helper interfaces. This improves code maintainability and IDE support.
-- **Validation:** If data comes from an external source (API, user input),
-  assume it is `unknown` and use runtime validation (e.g., Zod or manual checks)
-  to parse it into a typed structure.
-
-## Naming Conventions
-
-- **Language:** Use full English names only for variables, functions, and
-  classes.
-- **Clarity over Brevity:** No abbreviations (e.g., `lst`, `ua`), no abstract
-  names (`data`, `item`).
-- **STRICT NO SINGLE LETTERS:**
-  - Single-letter variables (`v`, `e`, `d`, `t`) are **STRICTLY PROHIBITED** in
-    function arguments, props, callbacks, and top-level scopes.
-  - **Bad:** `(v) => update(v)` or `catch(e)` or `data.map(d => d.id)`.
-  - **Good:** `(value) => update(value)` or `catch(error)` or
-    `data.map(item => item.id)`.
-  - **Exception:** `i` is allowed ONLY in standard `for` loops as an index.
-- **Structure:**
-  - One function = one task. One verb per action.
-  - Different roots for different meanings (no similar terms like `date`/
-    `data`).
-  - No underscores. No prefixes like `super*`, `mega*`.
-- **Multi-word Names (Vue Components):**
-  - All component filenames MUST consist of at least two words (e.g.,
-    `UserCard.vue`, not `Card.vue`) to prevent conflicts with HTML elements.
-  - **EXCEPTION:** Files inside `app/pages` are exempt from this rule (e.g.,
-    `index.vue`, `[id].vue`, `about.vue` are allowed).
-- **Domain & Feature Component Naming:**
-  - **Context:** `app/features/<domain>/<feature>`.
-  - **Feature Root:** The main component inside a feature folder MUST be named
-    `[Domain][Feature].vue` (e.g., `TokenatorControls.vue`).
-  - **Feature UI:** Components in `*/ui` subfolders should be named
-    descriptively (e.g., `LayerSettings.vue`). Avoid redundant prefixes if the
-    component is local, but ensure uniqueness if necessary.
-- **Constants:**
-  - File name should be `consts.ts` (not `constants.ts`).
-  - Use `const` variables with Uppercase/CamelCase naming conventions.
-  - **No Hardcoding:** Hardcoded links, texts, numbers, and configuration values
-    are PROHIBITED in components. Move them to `consts.ts`.
-  - **PROHIBITED:** Do not create functions that simply return a static constant
-    value.
-- **Booleans:** Functions starting with `is*` or `check*` must return a boolean
-  and have NO side effects.
-- **SQL:** All SQL scripts must be written in **lowercase**.
-- **IndexedDB Keys:**
-  - Format: `domain:key-name` (kebab-case).
-  - Example: `tokenator:background-color`, `dice-roller:history`.
-
-## Styling & Design System
-
-- **Semantic Colors Only:**
-  - **PROHIBITED:** Do not use color scheme modifiers directly in classes (
-    `dark:`, `light:`).
-  - **REQUIRED:** Use unified semantic color names (`bg-surface`,
-    `text-primary`) mapped to CSS variables.
-- **No Arbitrary Variables:**
-  - **PROHIBITED:** `bg-[var(--ui-bg-elevated)]`.
-  - **REQUIRED:** Use standard utility classes (e.g., `bg-elevated`).
-- **Icons:** Use ONLY icons from the local `ttg` collection or `fluent`
-  collection.
-- **Tailwind CSS:** Use Tailwind CSS according to the maximum version specified
-  in the project.
-
-## Reuse Strategy
-
-- **Folder Structure Context:**
-  - `shared/ui`: **Global UI Kit.**
-  - `app/features`: **DDD STRUCTURE (Domains & Features).**
-    - **Concept:** `app/features` contains **Domains**. Inside each **Domain**,
-      there are multiple **Features**.
-    - **Domain:** A high-level business area (e.g., `bestiary`,
-      `infrastructure`, `dice-roller`).
-    - **Feature:** A distinct functional module within a domain (e.g., `editor`,
-      `list`, `canvas`, `controls`).
-    - **Structure:** `app/features/<domain>/<feature>`.
-      - `ui/`: Feature-specific UI components.
-      - `model/`: Feature-specific logic, stores, types.
-      - `index.ts`: Public API for this feature.
-  - `server/domain`: **BACKEND DDD LAYER** (subfolders: `model`, `service`,
-    `utils`, `dto`).
-  - `server/api` & `server/routes`: **API LAYER** (endpoints).
-  - **PROHIBITED:** `server/services` and `server/types` directories are \*
-    \*STRICTLY PROHIBITED\*\*. Use `server/domain`.
-  - `app/components`: **DOES NOT EXIST.**
-
-- **Page Components Strategy:**
-  - **Direct Index Usage:** Do NOT create dedicated "Page Components" (e.g.,
-    `TokenatorPage.vue`) just to wrap a feature. Write the glue logic directly
-    in `app/pages/.../index.vue`.
-  - **Feature Imports:** Import feature components using the feature alias (
-    e.g., `import { TokenatorCanvas } from '~tokenator/canvas'`).
-
-- **Import Strategy (Smart Aliases):**
-  - **Cross-Feature (Different Features):** When importing from another
-    feature (even in the same domain), ALWAYS use the generated domain alias.
-    - _Pattern:_ `import { ... } from '~<domain>/<feature>';`
-    - _Example:_ `import { TokenatorCanvas } from '~tokenator/canvas';`
-  - **Cross-Submodule (Same Feature):** When importing from a sibling submodule
-    within the same feature (e.g., `app/features/domain/feature/ui` importing
-    from `app/features/domain/feature/model`), USE **relative paths**.
-    - _Pattern:_ `import { ... } from '../../model';` or
-      `import { ... } from '../model';`
-    - _Example:_ `import { ... } from '../../model';` (NOT `~tokenator/model`)
-  - **Cross-Feature (Different Features):** When importing from another feature
-    or domain-shared module (e.g., `app/features/domain/feature1` importing from
-    `app/features/domain/feature2` or `app/features/domain/model`), USE \*
-    \*aliases\*\*.
-    - _Pattern:_ `import { ... } from '~<domain>/<feature>';`
-    - _Example:_ `import { ... } from '~tokenator/model';` (NOT `../../model`)
-  - **Internal Feature Imports:** When importing files **strictly inside the
-    current sub-folder**, use **relative paths**.
-    - _Pattern:_ `import { ... } from '../const';` or
-      `import { ... } from './types';`
-  - **Feature Export Constraints:**
-    - **No UI Folder Export:** Do NOT export the `ui` folder from the feature's
-      `index.ts`.
-    - **Max Import Depth:** External imports from a feature must not exceed 2
-      folders depth (e.g., `~<domain>/<feature>`).
-  - **Shortest Path:** ALWAYS import from the barrel file (`index.ts`) if
-    available, rather than deep linking.
-    - _Correct:_ `import { ... } from '~tokenator/model';`
-    - _Incorrect:_ `import { ... } from '~tokenator/model/consts';`
-  - _Note:_ Domain aliases (e.g., `~dice-roller`) are automatically generated
-    via `pnpm run postinstall` or `dev/build`.
-
+- **Composables:** The `composables` (or `composable`) folder MUST be a sibling
+  to `model` and `ui`, **NOT** inside `model`.
 - **Barrel Files (index.ts):**
-  - **Feature Root:** NO `index.ts` allowed in the root of a feature folder (
-    e.g., `app/features/bestiary/index.ts` -> ❌).
-  - **Subfolders:** YES, `index.ts` is REQUIRED in subfolders (`model`, `ui`,
-    `body`) for clean re-exports.
-  - **UI Exports:** `ui` folders MUST have an `index.ts` file for re-exports.
-    Imports from these folders must use the barrel file:
-    `import { ... } from './ui'`.
+  - **Feature Root:** An `index.ts` file at the root of a feature (e.g.,
+    `app/features/bestiary/index.ts`) is **STRICTLY PROHIBITED**.
+  - **Subfolders:** An `index.ts` file inside subfolders (`model`, `ui`, `body`)
+    is **REQUIRED** for clean re-exports.
+- **No `app/components`:** The `app/components` directory **DOES NOT EXIST** and
+  must not be created.
+- **No Page Components:** Do not create dedicated page components (e.g.,
+  `TokenatorPage.vue`) just to wrap a feature. Write the composition logic
+  directly in `app/pages/.../index.vue`.
 
-- **Reuse Rule (Priority Order):**
-  - **UI:** 1. **Nuxt UI** (@nuxt/ui). 2. `shared/ui`. 3. `app/features/*/ui`.
-  - **Logic:** Check `shared/` for global utilities/stores. Check
-    `app/features/*/model` for domain logic and types.
-  - **Types:** Domain-specific types MUST be in `app/features/<domain>/model`.
-    `shared/types` is ONLY for truly global/shared types (base, user, wiki).
+### Alias System & Imports
 
-## Tech Stack & Best Practices
+Always import feature components using the domain alias (e.g.,
+`import { TokenatorCanvas } from '~tokenator/canvas'`).
 
-- **Official Documentation Context:**
-  - **MANDATORY:** For any Nuxt-related architecture or implementation
-    questions, ALWAYS refer to the official guidelines for LLMs:
-    - `https://nuxt.com/llms.txt` (Complete Guidelines)
-    - `https://ui.nuxt.com/llms.txt` (Nuxt UI Guidelines)
-- **Framework Core:** Use **Nuxt 4** and **Vue 3.5** best practices (Composition
-  API, `<script setup lang="ts">`).
-- **Template Hygiene (Strict):**
-  - **NO Multi-line Handlers:** If an event handler (`@click`,
-    `@update:model-value`) or prop binding fits on **one line**, it is allowed.
-  - **Extraction Required:** If it exceeds one line, contains `{ ...spread }`,
-    or complex logic (ternaries, math), you **MUST** extract it to a named
-    function in `<script setup>`.
+- **Cross-feature (Different features):** ALWAYS use the domain alias:
+  `import { ... } from '~<domain>/<feature>';`
+- **Cross-submodule (Same feature):** Between `ui` and `model` within the same
+  feature, use **RELATIVE** paths: `import { ... } from '../../model';`
+- **Inside the same folder:** Use relative paths:
+  `import { ... } from './types';`
+- **Export Constraints:** Do NOT export the `ui` folder from a feature's
+  `index.ts`. External imports should not exceed 2 folders deep. Prioritize
+  barrel files (e.g., `~tokenator/model` instead of
+  `~tokenator/model/constants`).
+
+### Reuse Strategy
+
+1. **UI:** 1. Nuxt UI (`@nuxt/ui`). 2. `shared/ui`. 3. `app/features/*/ui`.
+2. **Logic:** Global utilities/stores — in `shared/`. Domain logic/types — in
+   `app/features/*/model`.
+3. **Types:** Domain types — in the domain. Global types (`base`, `user`,
+   `wiki`) — in `shared/types`.
+
+---
+
+## 🛠️ Tech Stack & Best Practices
+
+- **Framework:** **Nuxt 4** + **Vue 3.5** (Composition API,
+  `<script setup lang="ts">`).
+- **Strict TypeScript:**
+  - `any` is **STRICTLY PROHIBITED**.
+  - Type assertions (`as Type`) or double casting (`as unknown as Type`) are \*
+    \*PROHIBITED\*\*.
+  - For utilities with complex types, always define explicit Return Types.
+- **Validation:** All external data (API, input) is `unknown` by default. Use
+  `Zod` to validate before usage!
+- **State Management:** Avoid `provide/inject` — use Pinia or Composables.
+- **Rendering:** Pure frontend features (calculators, dice rollers) must
+  strictly be wrapped in `<ClientOnly>`.
+- **Documentation (JSDoc):** All functions (especially in `utils.ts`) must have
+  **JSDoc in English**. HTML tags are prohibited in JSDoc, use standard Markdown
+  instead.
+
+---
+
+## 📝 Vue Templates & Event Handlers
+
+- **Template Hygiene:**
+  - **PROHIBITED:** Multi-line inline handlers are forbidden. If a handler
+    doesn't fit on one line or contains complex logic, extract it to a function
+    inside `<script setup>`.
   - _Bad:_ `@update="v => { form = { ...form, val: v } }"`
   - _Good:_ `@update="handleUpdate"`
-- **Computed Properties Strategy:**
-  - **Move Logic to Computed:** Whenever determining dynamic colors, classes, or
-    complex state logic (especially conditional styles like
-    `isActive ? 'bg-red' : 'bg-blue'`), move this logic into a `computed`
-    property.
-  - **Keep Templates Clean:** Templates should remain declarative. Avoid complex
-    inline ternary operators or logical chains inside `:class` or `v-if`.
-- **Rendering:**
-  - Purely frontend features (like Dice Rollers) MUST be wrapped in
-    `<ClientOnly>`. Do not render them on SSR.
-- **Event Handling:**
-  - **Default Click Strategy:** Use `@click.left.exact.prevent` by default for
-    interactive elements to avoid unwanted side effects, unless specific
-    behavior is required.
-- **State Management:**
-  - Avoid `provide/inject`. Use Composables or Pinia stores for state sharing.
-- **Documentation (JSDoc):**
-  - All utility functions (especially in `utils.ts`) MUST have **JSDoc in
-    Russian** explaining parameters, return values, and purpose.
-  - **NO HTML:** Do NOT use HTML tags (like `<ul>`, `<li>`, `<br>`) in JSDoc.
-    Use standard Markdown syntax (e.g., `-` for lists) for formatting.
-  - _Note:_ Code identifiers (variables, functions) remain in English.
-- **Composables & Utilities:**
-  - **NO REINVENTING THE WHEEL:** Do NOT write custom implementations for common
-    UI logic (drag & drop, window scroll, storage, etc.) if a standard solution
-    exists.
-  - **Priority:**
-    1. **`vueuse`** (MANDATORY for reactive/browser APIs).
-    - _Example:_ Use `useDraggable` instead of custom `mousedown/mousemove`
-      listeners.
-    - _Example:_ Use `useWindowScroll` instead of
-      `window.addEventListener('scroll')`.
-    2. **`es-toolkit`** (for data manipulation/algorithms - replace `lodash`).
-    3. Custom implementation (only if 1 & 2 fail).
-  - Use specific project composables: `useDayjs` for time.
+- **Computed Properties:** Move any complex template logic (ternaries,
+  determining dynamic classes and colors) into `computed` properties. Templates
+  must be declarative. Logic like `isActive ? 'bg-red' : 'bg-blue'` belongs in
+  `computed`.
+- **Default Click:** Interactive elements by default should use
+  `@click.left.exact.prevent` to avoid unwanted side effects (unless specific
+  behavior is required).
 
-## AI & MCP Tools Integration
+---
 
-- **Nuxt & Nuxt UI MCP Servers:**
-  - **ACTIVE USAGE REQUIRED:** When implementing logic or UI, you MUST
-    explicitly query the connected MCP servers to retrieve the exact API
-    definitions, props, and best practices.
-  - **Sources of Truth:**
-    - **Nuxt Core:** [https://nuxt.com/mcp](https://nuxt.com/mcp)
-    - **Nuxt UI:** [https://ui.nuxt.com/mcp](https://ui.nuxt.com/mcp)
-  - **NO GUESSING:** Do not hallucinate component props or Nuxt config options.
-    Always verify against the MCP source of truth first.
+## ✍️ Naming Conventions
+
+- **Language:** Strictly use full English names for variables, functions, and
+  classes.
+- **Clarity over Brevity:** No abbreviations (`lst`, `ua`) and no abstract
+  names (`data`, `item`). Different roots for different meanings (do not mix
+  `date` and `data`).
+- **Multi-word Component Names:**
+  - All Vue components must consist of at least two words (`UserCard.vue`,
+    `TokenatorControls.vue`). Exception: components inside `app/pages`.
+- **STRICT NO SINGLE LETTERS:**
+  - Single-letter variables (`v`, `e`, `d`, `t`) are **STRICTLY PROHIBITED** in
+    arguments, props, callbacks, and top-level scopes.
+  - Allowed exception: `i` is allowed ONLY as an index in standard `for` loops.
+- **Constants:**
+  - **No Hardcoding:** Hardcoded strings, links, numbers, and configs are
+    PROHIBITED in components. Move them to `constants.ts`. Do not create
+    functions that simply return a static constant.
+  - **IndexedDB Keys:** Format is `domain:key-name` (kebab-case), e.g.,
+    `tokenator:background-color`.
+- **SQL scripts:** All scripts must be written in **lowercase**.
+
+---
+
+## 🎨 Styling & Design
+
+- **Semantic Colors Only:**
+  - **PROHIBITED:** Using `dark:` or `light:` modifiers, or non-semantic
+    colors (`bg-red-500`).
+  - **REQUIRED:** Use unified semantic color names (e.g., `bg-surface`,
+    `text-primary`) mapped to CSS variables.
+- **No Arbitrary Variables:** `bg-[var(--ui-bg-elevated)]` is prohibited, use
+  `bg-elevated`.
+- **Icons:** Use ONLY icons from the local `ttg` or `fluent` collection.
+- **Tailwind CSS:** Use Tailwind CSS according to the version specified in the
+  project (v4).
+
+---
+
+## 🤖 MCP Tools Integration
+
+- **ACTIVE USAGE REQUIRED:** You MUST explicitly query the connected MCP
+  servers (Nuxt, Nuxt UI) to retrieve exact API definitions, props, and best
+  practices before implementing logic. No guessing props or options. Check MCP
+  sources!
+  - Nuxt Core: `https://nuxt.com/mcp`
+  - Nuxt UI: `https://ui.nuxt.com/mcp`
+
+---
+
+## ✅ CI/CD, Commands & Final Verification
+
+**Commands:**
+
+- `pnpm dev` - Start dev server
+- `pnpm build` - Build project
+- `pnpm type-check` - Run TS checks (vue-tsc)
+- `pnpm lint:write` - ESLint auto-fix
+- `pnpm postinstall` - Generate domain aliases (`nuxt prepare`)
+
+**CI/CD & Commits:**
+
+- **Commit Format:**
+  Use [Conventional Commits](https://www.conventionalcommits.org/):
+  `<type>[scope]: <description>` (e.g., `feat`, `fix`, `refactor`).
+- **Pre-commit:** Enforced by lint-staged (eslint + vue-tsc + stylelint).
+
+**Final Verification (Must Follow):**
+At the end of any task, you **MUST**:
+
+1. Run `pnpm run lint:write` to check for style errors and format code.
+2. Run `pnpm run type-check` to ensure no typing bugs were introduced.
+3. Provide a "Change Summary" when asked to check/fix/refactor (Where / Why /
+   Result).
+
+---
+
+> The rules in `AGENTS.md` override any potential conflicting rules found in the
+> project. Strict adherence is mandatory.
