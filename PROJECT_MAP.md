@@ -1,6 +1,8 @@
 # 🗺️ TTG Club Core App — Карта проекта и правила для ИИ-агентов
 
-> **Назначение:** Онлайн-справочник по D&D 5e. Расы, классы, заклинания, бестиарий, магические предметы, инструменты (токенатор, калькулятор, бросок костей).
+> **Назначение:** Онлайн-справочник по D&D 5e. Расы, классы, заклинания,
+> бестиарий, магические предметы, инструменты (токенатор, калькулятор, бросок
+> костей).
 
 ```
 ✅ Делай                                   ❌ Не делай
@@ -103,8 +105,6 @@ core-app/
 ├── modules/                        # 🧩 Nuxt-модули
 │   └── auto-aliases.ts             # Автогенерация ~domain алиасов
 ├── public/                         # Статические файлы
-├── .scripts/
-│   └── sync-ai-rules.js            # Синхронизация .cursorrules → AGENTS.md, CLAUDE.md
 └── .github/workflows/              # CI/CD
     ├── code-check.yml              # PR: stylelint → eslint → type-check
     └── deploy.yml                  # Push main/dev: Docker build → SSH deploy
@@ -185,7 +185,8 @@ app/features/tokenator/
 
 ## Система алиасов и импорты
 
-Модуль `modules/auto-aliases.ts` автоматически генерирует алиасы для каждого домена в `app/features/`:
+Модуль `modules/auto-aliases.ts` автоматически генерирует алиасы для каждого
+домена в `app/features/`:
 
 | Алиас             | Путь                                           |
 | ----------------- | ---------------------------------------------- |
@@ -226,7 +227,10 @@ export * from './ui'; // ЗАПРЕЩЕНО
 
 ## Shared UI Kit
 
-23 компонента в `app/shared/ui/`: action, animated-number, card, collapse, copy-button, drawer, editor, gallery, grouped-list, icon, input, kbd-shortcut, link, markup, page, placeholder, rating, result, select, skeleton, source-tag, tooltip, upload.
+23 компонента в `app/shared/ui/`: action, animated-number, card, collapse,
+copy-button, drawer, editor, gallery, grouped-list, icon, input, kbd-shortcut,
+link, markup, page, placeholder, rating, result, select, skeleton, source-tag,
+tooltip, upload.
 
 **Приоритет UI-компонентов:** Nuxt UI → `shared/ui` → `features/*/ui`
 
@@ -247,7 +251,9 @@ export * from './ui'; // ЗАПРЕЩЕНО
 
 ### Валидация внешних данных
 
-Данные из внешних источников (ответы API, пользовательский ввод) не гарантируют свой тип. Перед использованием необходимо валидировать их через **Zod** или ручные проверки, чтобы убедиться в соответствии ожидаемой структуре:
+Данные из внешних источников (ответы API, пользовательский ввод) не гарантируют
+свой тип. Перед использованием необходимо валидировать их через **Zod** или
+ручные проверки, чтобы убедиться в соответствии ожидаемой структуре:
 
 ```typescript
 // ✅ Валидация ответа API через Zod
@@ -325,7 +331,8 @@ creature.name; // может быть undefined
 
 ### Модификаторы событий
 
-По умолчанию **обязательно** указывать модификаторы событий, чтобы было очевидно, какое действие обрабатывается и какие side-effects ожидать:
+По умолчанию **обязательно** указывать модификаторы событий, чтобы было
+очевидно, какое действие обрабатывается и какие side-effects ожидать:
 
 ```vue
 <!-- ✅ Явные модификаторы — понятно, что реагируем только на левый клик,
@@ -339,7 +346,8 @@ creature.name; // может быть undefined
 <UButton @click="handleClick" />
 ```
 
-**Стратегия по умолчанию:** `@click.left.exact.prevent` для интерактивных элементов, если нет причин для другого поведения.
+**Стратегия по умолчанию:** `@click.left.exact.prevent` для интерактивных
+элементов, если нет причин для другого поведения.
 
 ### Обработчики событий
 
@@ -405,10 +413,12 @@ creature.name; // может быть undefined
 
 **Перед созданием** любого нового composable, утилиты или хелпера:
 
-1. **Прочитать** `.nuxt/imports.d.ts` (содержит ВСЕ auto-imports: Nuxt built-ins, VueUse, проектные утилиты)
+1. **Прочитать** `.nuxt/imports.d.ts` (содержит ВСЕ auto-imports: Nuxt
+   built-ins, VueUse, проектные утилиты)
 2. **Найти** ключевые слова задачи (Date, Format, Scroll, Drag и т.д.)
 3. **Найден** → **Использовать** существующий. Не создавать обёртку
-4. **Не найден** → Проверить `VueUse` и `es-toolkit`, затем при отсутствии — создавать новый файл
+4. **Не найден** → Проверить `VueUse` и `es-toolkit`, затем при отсутствии —
+   создавать новый файл
 
 ### Источники правды (MCP)
 
@@ -455,7 +465,6 @@ function getSlicedString(source: string, maxLength: number): string {
 | `pnpm lint:write`      | ESLint с автофиксом                                       |
 | `pnpm lint:check`      | ESLint без автофикса                                      |
 | `pnpm stylelint:write` | Stylelint с автофиксом                                    |
-| `pnpm sync-ai-rules`   | Синхронизация .cursorrules → AGENTS.md, CLAUDE.md         |
 | `pnpm postinstall`     | `nuxt cleanup && nuxt prepare` (генерация алиасов, типов) |
 
 **Финальная проверка (обязательная)** — после каждой задачи:
@@ -472,7 +481,6 @@ pnpm run type-check
 - **PR:** Stylelint → ESLint → Type Check (`code-check.yml`)
 - **Push main/dev:** Docker build → Push GHCR → SSH deploy (`deploy.yml`)
 - **Pre-commit:** lint-staged (eslint + vue-tsc + stylelint)
-- **Post-checkout/merge/rewrite:** `sync-ai-rules`
 
 | Правило         | Описание                                                            |
 | --------------- | ------------------------------------------------------------------- |
@@ -494,14 +502,13 @@ pnpm run type-check
 
 ## Управление правилами ИИ и конфигурации
 
-| Файл                     | Назначение                                                            |
-| ------------------------ | --------------------------------------------------------------------- |
-| `.cursorrules`           | **Единый источник правил для ИИ**. Редактировать **только** этот файл |
-| `AGENTS.md`, `CLAUDE.md` | Зеркала .cursorrules (auto-sync). НЕ редактировать напрямую           |
-| `nuxt.config.ts`         | Конфигурация Nuxt                                                     |
-| `app/app.config.ts`      | Конфигурация Nuxt UI (иконки, варианты)                               |
-| `eslint.config.js`       | ESLint (через @svifty7/eslint-config)                                 |
-| `stylelint.config.js`    | Stylelint (clean-order)                                               |
-| `.editorconfig`          | LF, 2 spaces, final newline                                           |
+| Файл                   | Назначение                              |
+| ---------------------- | --------------------------------------- |
+| `AGENTS.md`, `.agents` | **Источник правил для ИИ**              |
+| `nuxt.config.ts`       | Конфигурация Nuxt                       |
+| `app/app.config.ts`    | Конфигурация Nuxt UI (иконки, варианты) |
+| `eslint.config.js`     | ESLint (через @svifty7/eslint-config)   |
+| `stylelint.config.js`  | Stylelint (clean-order)                 |
+| `.editorconfig`        | LF, 2 spaces, final newline             |
 
-После изменений `.cursorrules` → `pnpm run sync-ai-rules`
+После изменений `AGENTS.md` → `pnpm run sync-ai-rules`
