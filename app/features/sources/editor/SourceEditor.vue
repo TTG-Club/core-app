@@ -1,14 +1,14 @@
 <script setup lang="ts">
-  import { computed, watchEffect } from 'vue';
   import { z } from 'zod';
+  import { SourcePreview } from '~sources/preview';
   import { EditorFormControls } from '~ui/editor';
   import { InputUrl } from '~ui/input';
   import { UploadImage } from '~ui/upload';
+  import { useWorkshopForm } from '~workshop/composable';
 
-  import SourceType from '~/features/sources/editor/ui/SourceType.vue';
-  import { SourcePreview } from '~/features/sources/preview';
+  import { SourceType } from './ui';
 
-  import type { SourceCreate } from '~/features/sources/types';
+  import type { SourceCreate } from '~sources/types';
 
   function getInitialState(): SourceCreate {
     return {
@@ -77,7 +77,7 @@
     const words = value.match(/[A-Z0-9]+(?:'[A-Z0-9]+)*/gi) ?? [];
 
     return words
-      .map((word, index) => {
+      .map((word: string, index: number) => {
         const firstChar = word.charAt(0);
 
         if (!firstChar) {

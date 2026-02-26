@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { SourceEditor } from '~/features/sources/editor';
+  import { SourceEditor } from '~sources/editor';
 </script>
 
 <template>

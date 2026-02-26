@@ -1,11 +1,12 @@
 <script setup lang="ts">
-  import { useFilter } from '~filter/composable';
-  import { FilterControls } from '~filter/controls';
+  import { FilterControls, useFilter } from '~infrastructure/filter';
+  import { SourceLink } from '~sources/link';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
-  import { SourceLink } from '~sources/link';
-  import type { SearchBody } from '~/shared/types';
+
   import type { SourceLinkResponse } from '~sources/types';
+
+  import type { SearchBody } from '~/shared/types';
 
   useSeoMeta({
     title: 'Источники [Sources]',

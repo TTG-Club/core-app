@@ -7,10 +7,10 @@
     SectionGlossary,
     SectionItem,
     SectionMagicItem,
+    SectionSource,
     SectionSpecies,
     SectionSpells,
   } from '~workshop/section';
-  import SectionSource from '~workshop/section/SectionSource.vue';
 </script>
 
 <template>

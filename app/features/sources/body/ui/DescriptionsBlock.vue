@@ -1,12 +1,12 @@
 <script setup lang="ts">
   import { MarkupRender } from '~ui/markup';
 
-  import type { SourceDetailResponse } from '~/features/sources/types';
+  import type { SourceDetailResponse } from '~sources/types';
 
   const { description } =
     defineProps<Pick<SourceDetailResponse, 'description'>>();
 </script>
 
 <template>
-  <MarkupRender :entries="description" />
+  <MarkupRender :render-node="description" />
 </template>

@@ -1,10 +1,9 @@
 <script setup lang="ts">
-  import { StatsBlock } from '~sources/body/ui';
   import { UiGallery } from '~ui/gallery';
 
-  import { DescriptionsBlock } from './ui';
+  import { DescriptionsBlock, StatsBlock } from './ui';
 
-  import type { SourceDetailResponse } from '~/features/sources/types';
+  import type { SourceDetailResponse } from '~sources/types';
 
   const { source, hideGallery = false } = defineProps<{
     source: SourceDetailResponse;

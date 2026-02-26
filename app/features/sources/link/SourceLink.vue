@@ -1,6 +1,7 @@
 <script setup lang="ts">
+  import { SourceDrawer } from '~sources/drawer';
   import { SmallLink } from '~ui/link';
-  import { SourceDrawer } from '~/features/sources/drawer';
+
   import type { SourceLinkResponse } from '~sources/types';
 
   const { source } = defineProps<{
