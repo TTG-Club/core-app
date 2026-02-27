@@ -1,6 +1,7 @@
 <script setup lang="ts">
+  import { LinkPreview } from '~classes/link/ui';
   import { SourceDrawer } from '~sources/drawer';
-  import { SmallLink } from '~ui/link';
+  import { CardLink } from '~ui/link';
 
   import type { SourceLinkResponse } from '~sources/types';
 
@@ -18,23 +19,22 @@
     destroyOnClose: true,
   });
 
-  const isOpened = computed(() => overlay.isOpen(drawer.id));
+  const { isDesktop } = useDevice();
+  const url = computed(() => `/sources/${source.url}`);
 </script>
 
 <template>
-  <SmallLink
-    :to="{ name: 'sources-url', params: { url: source.url } }"
-    :title="`${source.name.rus} [${source.name.eng}]`"
-    :is-opened
+  <CardLink
+    :to="url"
+    :name="source.name"
+    :image="source.image"
     :source="source.source"
-    @open-drawer="drawer.open()"
   >
-    <template #default>
-      {{ source.name.rus }}
+    <template #actions>
+      <LinkPreview
+        v-if="isDesktop"
+        :url="source.url"
+      />
     </template>
-
-    <template #english>
-      {{ source.name.eng }}
-    </template>
-  </SmallLink>
+  </CardLink>
 </template>
