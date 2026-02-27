@@ -98,7 +98,7 @@ Always import feature components using the domain alias (e.g.,
 - **Rendering:** Pure frontend features (calculators, dice rollers) must
   strictly be wrapped in `<ClientOnly>`.
 - **Documentation (JSDoc):** All functions (especially in `utils.ts`) must have
-  **JSDoc in English**. HTML tags are prohibited in JSDoc, use standard Markdown
+  **JSDoc in Russian**. HTML tags are prohibited in JSDoc, use standard Markdown
   instead.
 
 ---
