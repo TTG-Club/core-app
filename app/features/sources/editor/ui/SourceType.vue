@@ -12,6 +12,14 @@
     () => DictionaryService.sourceTypes(),
   );
 
+  const placeholder = computed(() => {
+    if (multiple) {
+      return 'Выбери типы источника';
+    }
+
+    return 'Выбери тип источника';
+  });
+
   function handleDropdownOpening(state: boolean) {
     if (!state) {
       return;
@@ -27,7 +35,7 @@
     :loading="status === 'pending'"
     :items="data || []"
     :multiple="multiple"
-    placeholder="Выбери тип источника"
+    :placeholder
     searchable
     @open="handleDropdownOpening(true)"
   />

@@ -1,21 +1,23 @@
+import type { RenderNode } from '~ui/markup';
+
 import type { NameResponse, SourceResponse } from '~/shared/types';
 
 export interface SourceDetailResponse {
   url: string;
   name: NameResponse;
   source: SourceResponse;
-  type: string;
-  publisher: {
+  type?: string;
+  publisher?: {
     name: string;
-    published: string;
+    date: string;
   };
-  translation: {
+  translation?: {
     authors: string;
-    translationDate: string;
+    date: string;
   };
-  description: Array<string>;
-  image: string;
+  description?: RenderNode;
+  image?: string;
   updatedAt: string;
-  tags: string;
-  tagCategory: string;
+  tags?: string;
+  tagCategory?: string;
 }

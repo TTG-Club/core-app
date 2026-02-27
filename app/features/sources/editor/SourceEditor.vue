@@ -1,6 +1,8 @@
 <script setup lang="ts">
+  import { removeStopwords } from 'stopword';
   import { z } from 'zod';
   import { SourcePreview } from '~sources/preview';
+  import { DatePicker } from '~ui/date-picker';
   import { EditorFormControls } from '~ui/editor';
   import { InputUrl } from '~ui/input';
   import { UploadImage } from '~ui/upload';
@@ -28,12 +30,12 @@
       description: '',
       tags: [],
       publisher: {
-        name: '',
-        published: '',
+        name: undefined,
+        date: undefined,
       },
       translation: {
-        authors: '',
-        translationDate: '',
+        authors: undefined,
+        date: undefined,
       },
     };
   }
@@ -43,59 +45,18 @@
     getInitialState,
   });
 
-  const MINOR_WORDS = new Set([
-    'a',
-    'an',
-    'and',
-    'as',
-    'at',
-    'by',
-    'for',
-    'from',
-    'in',
-    'into',
-    'nor',
-    'of',
-    'on',
-    'or',
-    'over',
-    'the',
-    'to',
-    'under',
-    'with',
-    'vs',
-    'via',
-  ]);
-
   const acronym = computed<string>(() => {
-    const value = state.value.name.eng?.trim();
+    const words = state.value.name.eng
+      ?.split(' ')
+      .map((word) => word.trim())
+      .filter(Boolean);
 
-    if (!value) {
+    if (!words?.length) {
       return '';
     }
 
-    const words = value.match(/[A-Z0-9]+(?:'[A-Z0-9]+)*/gi) ?? [];
-
-    return words
-      .map((word: string, index: number) => {
-        const firstChar = word.charAt(0);
-
-        if (!firstChar) {
-          return '';
-        }
-
-        const lowerWord = word.toLowerCase();
-
-        if (index === 0) {
-          return firstChar.toUpperCase();
-        }
-
-        if (MINOR_WORDS.has(lowerWord)) {
-          return firstChar.toLowerCase();
-        }
-
-        return firstChar.toUpperCase();
-      })
+    return removeStopwords(words)
+      .map((word) => word.at(0) || '')
       .join('');
   });
 
@@ -122,8 +83,9 @@
 
 <template>
   <UForm
-    :state
+    :schema="baseInfoSchema"
     class="grid gap-8"
+    :state
     @submit="onSubmit"
     @error="onError"
   >
@@ -135,63 +97,55 @@
         <h2 class="truncate text-base text-highlighted">Основная информация</h2>
       </template>
 
-      <UForm
-        attach
-        :state="state"
-        :schema="baseInfoSchema"
-        class="grid grid-cols-2 gap-6"
-      >
-        <div class="flex flex-col gap-7">
-          <UFormField
-            label="Название"
-            name="name.rus"
-            required
-          >
-            <UInput
-              v-model="state.name.rus"
-              placeholder="Введи название"
-            />
-          </UFormField>
+      <div class="grid grid-cols-2 gap-6">
+        <UFormField
+          label="Название"
+          name="name.rus"
+          required
+        >
+          <UInput
+            v-model="state.name.rus"
+            placeholder="Введи название"
+          />
+        </UFormField>
 
-          <UFormField
-            label="Английское название"
-            name="name.eng"
-            required
-          >
-            <UInput
-              v-model="state.name.eng"
-              placeholder="Введи английское название"
-            />
-          </UFormField>
+        <UFormField
+          label="Английское название"
+          name="name.eng"
+          required
+        >
+          <UInput
+            v-model="state.name.eng"
+            placeholder="Введи английское название"
+          />
+        </UFormField>
 
-          <UFormField
-            label="URL"
-            help="URL генерируется автоматически при вводе английского названия"
-            name="url"
-            required
-          >
-            <InputUrl
-              v-model="state.url"
-              :eng-name="state.name.eng"
-              :source-url="undefined"
-              disabled
-            />
-          </UFormField>
-        </div>
+        <UFormField
+          label="URL"
+          help="URL генерируется автоматически при вводе английского названия"
+          name="url"
+          required
+        >
+          <InputUrl
+            v-model="state.url"
+            :eng-name="state.name.eng"
+            :source-url="undefined"
+            disabled
+          />
+        </UFormField>
 
-        <div class="flex flex-col gap-7">
-          <UFormField
-            label="Акроним"
-            help="Генерируется автоматически из английского названия"
-            name="acronym"
-          >
-            <UInput
-              :model-value="acronym"
-              disabled
-            />
-          </UFormField>
-        </div>
-      </UForm>
+        <UFormField
+          label="Акроним"
+          help="Генерируется автоматически из английского названия"
+          name="acronym"
+        >
+          <UInput
+            v-model="state.acronym"
+            :default-value="acronym"
+            placeholder="Введи акроним"
+          />
+        </UFormField>
+      </div>
     </UCard>
 
     <UCard variant="subtle">
@@ -199,57 +153,58 @@
         <h2 class="truncate text-base text-highlighted">Подробности</h2>
       </template>
 
-      <UFormField
-        label="Тип источника"
-        name="type"
-        required
-      >
-        <SourceType v-model="state.type" />
-      </UFormField>
+      <div class="grid grid-cols-12 gap-6">
+        <UFormField
+          class="col-span-full"
+          label="Тип источника"
+          name="type"
+          required
+        >
+          <SourceType v-model="state.type" />
+        </UFormField>
 
-      <UFormField
-        label="Издатель"
-        name="publisher"
-        required
-      >
-        <UInput
-          v-model="state.publisher.name"
-          placeholder="Издатель"
-        />
-      </UFormField>
+        <UFormField
+          class="col-span-10"
+          label="Издатель"
+          name="publisher.name"
+          required
+        >
+          <UInput
+            v-model="state.publisher.name"
+            placeholder="Введи название издателя"
+          />
+        </UFormField>
 
-      <UFormField
-        label="Дата публикации"
-        name="published"
-        required
-      >
-        <UInput
-          v-model="state.publisher.published"
-          placeholder="ДД.MM.ГГГГ"
-        />
-      </UFormField>
+        <UFormField
+          class="col-span-2"
+          label="Дата публикации"
+          name="publisher.date"
+          required
+        >
+          <DatePicker v-model="state.publisher.date" />
+        </UFormField>
 
-      <UFormField
-        label="Перевод"
-        name="translation"
-        required
-      >
-        <UInput
-          v-model="state.translation.authors"
-          placeholder="Введи переводчиков"
-        />
-      </UFormField>
+        <UFormField
+          class="col-span-10"
+          label="Перевод"
+          name="translation.authors"
+          required
+        >
+          <UInputTags
+            v-model="state.translation.authors"
+            placeholder="Введи имена переводчиков"
+          />
+        </UFormField>
 
-      <UFormField
-        label="Дата перевода"
-        name="published"
-        required
-      >
-        <UInput
-          v-model="state.translation.translationDate"
-          placeholder="ДД.MM.ГГГГ"
-        />
-      </UFormField>
+        <UFormField
+          class="col-span-2"
+          label="Дата перевода"
+          name="translation.date"
+          required
+        >
+          <DatePicker v-model="state.translation.date" />
+        </UFormField>
+      </div>
     </UCard>
 
     <UCard variant="subtle">
@@ -259,7 +214,7 @@
 
       <div class="grid grid-cols-24 gap-4">
         <UFormField
-          class="col-span-24"
+          class="col-span-full"
           name="description"
         >
           <UTextarea
@@ -278,9 +233,9 @@
 
       <div class="grid grid-cols-24 gap-4">
         <UFormField
-          class="col-span-8"
+          class="col-span-12"
           label="Основное"
-          help="Эта картинка отображается при просмотре страницы магического предмета"
+          help="Эта картинка отображается при просмотре страницы источника"
           name="image"
         >
           <UploadImage

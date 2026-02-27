@@ -122,6 +122,19 @@ export default defineAppConfig({
         },
       },
     },
+    inputDate: {
+      slots: {
+        base: 'w-full bg-accented',
+      },
+      variants: {
+        defaultVariants: {
+          variant: 'soft',
+        },
+        variant: {
+          outline: 'bg-accented text-default',
+        },
+      },
+    },
     inputTags: {
       slots: {
         root: 'w-full',

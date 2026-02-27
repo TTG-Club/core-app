@@ -1,48 +1,55 @@
 <script setup lang="ts">
-  defineProps<{
-    type: string;
-    publisher: {
-      name: string;
-      published: string;
-    };
-    translation: {
-      authors: string; // переводчики
-      translationDate: string; // дата перевода
-    };
-  }>();
+  import type { SourceDetailResponse } from '~sources/types';
+
+  defineProps<
+    Pick<SourceDetailResponse, 'type' | 'publisher' | 'translation'>
+  >();
 </script>
 
 <template>
   <div :class="$style.stats">
-    <div :class="$style.item">
+    <div
+      v-if="type"
+      :class="$style.item"
+    >
       <span :class="$style.name">Тип:</span>
 
       <span>{{ type }}</span>
     </div>
 
-    <div :class="$style.item">
-      <span :class="$style.name">Издатель:</span>
+    <template v-if="publisher">
+      <div :class="$style.item">
+        <span :class="$style.name">Издатель:</span>
 
-      <span>{{ publisher.name }}</span>
-    </div>
+        <span>{{ publisher.name }}</span>
+      </div>
 
-    <div :class="$style.item">
-      <span :class="$style.name">Дата издания:</span>
+      <div :class="$style.item">
+        <span :class="$style.name">Дата издания:</span>
 
-      <span>{{ publisher.published }}</span>
-    </div>
+        <NuxtTime
+          :datetime="publisher.date"
+          locale="ru-RU"
+        />
+      </div>
+    </template>
 
-    <div :class="$style.item">
-      <span :class="$style.name">Перевод:</span>
+    <template v-if="translation">
+      <div :class="$style.item">
+        <span :class="$style.name">Перевод:</span>
 
-      <span>{{ translation.authors }}</span>
-    </div>
+        <span>{{ translation.authors }}</span>
+      </div>
 
-    <div :class="$style.item">
-      <span :class="$style.name">Дата перевода:</span>
+      <div :class="$style.item">
+        <span :class="$style.name">Дата перевода:</span>
 
-      <span>{{ translation.translationDate }}</span>
-    </div>
+        <NuxtTime
+          :datetime="translation.date"
+          locale="ru-RU"
+        />
+      </div>
+    </template>
   </div>
 </template>
 

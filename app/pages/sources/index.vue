@@ -41,7 +41,7 @@
     () =>
       $fetch<Array<SourceLinkResponse>>('/api/v2/source/search', {
         method: 'POST',
-        params: {
+        query: {
           query: search.value,
         },
         body: searchBody.value,

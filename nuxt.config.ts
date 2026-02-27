@@ -312,6 +312,8 @@ export default defineNuxtConfig({
         '@ttg-club/dice-roller-parser',
         'dexie',
         '@vueuse/gesture',
+        'stopword',
+        '@internationalized/date',
 
         // Validation & Bytes
         'bytes',
