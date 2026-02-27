@@ -313,6 +313,8 @@ export default defineNuxtConfig({
         'dexie',
         '@vueuse/gesture',
         'js-base64',
+        'stopword',
+        '@internationalized/date',
 
         // Validation & Bytes
         'bytes',
