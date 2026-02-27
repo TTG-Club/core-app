@@ -7,6 +7,7 @@
     SectionGlossary,
     SectionItem,
     SectionMagicItem,
+    SectionSources,
     SectionSpecies,
     SectionSpells,
   } from '~workshop/section';
@@ -37,6 +38,8 @@
       <SectionBestiary />
 
       <SectionItem />
+
+      <SectionSources />
     </div>
   </NuxtLayout>
 </template>
