@@ -80,10 +80,10 @@
         <GroupedList
           v-else-if="status === 'success' && spells?.length"
           :items="spells"
+          :group-by="(item) => item.level ?? 0"
           :separator-label="
-            (value) => (!value ? 'Заговоры' : 'Уровень {value}')
+            (value) => (Number(value) === 0 ? 'Заговоры' : `Уровень ${value}`)
           "
-          field="level"
         >
           <template #default="{ item }">
             <SpellLink :spell="item" />

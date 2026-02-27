@@ -76,7 +76,7 @@
         <GroupedList
           v-else-if="status === 'success' && feats?.length"
           :items="feats"
-          field="category"
+          :group-by="(item) => item.category"
         >
           <template #default="{ item }">
             <FeatLink :feat="item" />

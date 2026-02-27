@@ -3,7 +3,6 @@
   import { PageGrid } from '~ui/page';
 
   type SeparatorLabel = string | ((value: string | number) => string);
-
   type GroupKey = string | number;
 
   interface Group<TItem> {
@@ -30,7 +29,7 @@
 
   interface Props {
     items: Array<T>;
-    field?: keyof T;
+    groupBy?: (item: T) => GroupKey | undefined;
     separatorLabel?: SeparatorLabel;
     columns?: 1 | 2 | 3 | 4 | 5 | 6;
     groupSort?: GroupSort;
@@ -38,7 +37,7 @@
 
   const {
     items,
-    field = undefined,
+    groupBy = undefined,
     separatorLabel = undefined,
     columns = 3,
     groupSort = { mode: 'auto' },
@@ -49,10 +48,7 @@
       return '';
     }
 
-    const firstChar = text.slice(0, 1).toUpperCase();
-    const rest = text.slice(1);
-
-    return `${firstChar}${rest}`;
+    return text.charAt(0).toUpperCase() + text.slice(1);
   }
 
   function getComparableKey(rawKey: string): GroupKey {
@@ -71,59 +67,6 @@
     });
   }
 
-  function sortKeysCustom(
-    keys: Array<GroupKey>,
-    sortConfig: GroupSortCustom,
-  ): Array<GroupKey> {
-    const orderIndexByKeyText = new Map<string, number>();
-
-    sortConfig.order.forEach((key, index) => {
-      orderIndexByKeyText.set(String(key), index);
-    });
-
-    const knownKeys: Array<GroupKey> = [];
-    const unknownKeys: Array<GroupKey> = [];
-
-    keys.forEach((key) => {
-      if (orderIndexByKeyText.has(String(key))) {
-        knownKeys.push(key);
-      } else {
-        unknownKeys.push(key);
-      }
-    });
-
-    const sortedKnown = [...knownKeys].sort((a, b) => {
-      const aIndex = orderIndexByKeyText.get(String(a));
-      const bIndex = orderIndexByKeyText.get(String(b));
-
-      if (aIndex === undefined && bIndex === undefined) {
-        return 0;
-      }
-
-      if (aIndex === undefined) {
-        return 1;
-      }
-
-      if (bIndex === undefined) {
-        return -1;
-      }
-
-      return aIndex - bIndex;
-    });
-
-    const unknownPolicy = sortConfig.unknown ?? 'after';
-
-    if (unknownPolicy === 'auto') {
-      return [...sortedKnown, ...sortKeysAuto(unknownKeys)];
-    }
-
-    if (unknownPolicy === 'before') {
-      return [...unknownKeys, ...sortedKnown];
-    }
-
-    return [...sortedKnown, ...unknownKeys];
-  }
-
   function sortGroupKeys(keys: Array<GroupKey>): Array<GroupKey> {
     if (groupSort.mode === 'auto') {
       return sortKeysAuto(keys);
@@ -133,16 +76,39 @@
       return [...keys].sort(groupSort.compare);
     }
 
-    return sortKeysCustom(keys, groupSort);
+    const orderIndex = new Map<string, number>();
+
+    groupSort.order.forEach((key, index) => {
+      orderIndex.set(String(key), index);
+    });
+
+    return [...keys].sort((a, b) => {
+      const aIndex = orderIndex.get(String(a));
+      const bIndex = orderIndex.get(String(b));
+
+      if (aIndex != null && bIndex != null) {
+        return aIndex - bIndex;
+      }
+
+      if (aIndex != null) {
+        return -1;
+      }
+
+      if (bIndex != null) {
+        return 1;
+      }
+
+      return sortKeysAuto([a, b])[0] === a ? -1 : 1;
+    });
   }
 
   const groupedItems = computed<Array<Group<T>>>(() => {
-    if (!items.length || !field) {
+    if (!items.length || !groupBy) {
       return [];
     }
 
     const grouped = items.reduce<Record<string, Array<T>>>((acc, item) => {
-      const keyText = String(item[field] ?? '');
+      const keyText = String(groupBy(item) ?? '');
 
       (acc[keyText] ??= []).push(item);
 
@@ -166,7 +132,7 @@
     }
 
     if (typeof separatorLabel === 'function') {
-      return upperFirst(separatorLabel(value).replace('{value}', valueText));
+      return upperFirst(separatorLabel(value));
     }
 
     return upperFirst(separatorLabel.replace('{value}', valueText));
@@ -175,7 +141,7 @@
 
 <template>
   <PageGrid
-    v-if="!field"
+    v-if="!groupBy"
     :columns="columns"
   >
     <slot

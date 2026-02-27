@@ -1,11 +1,12 @@
 <script setup lang="ts">
   import { FilterControls, useFilter } from '~infrastructure/filter';
-  import { SourceLink } from '~sources/link';
+  import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
-  import type { SourceLinkResponse } from '~sources/types';
+  import { SourceLink } from '~/features/sources/link';
 
+  import type { SourceLinkResponse } from '~/features/sources/types';
   import type { SearchBody } from '~/shared/types';
 
   useSeoMeta({
@@ -64,8 +65,7 @@
         v-model:filter="filter"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
-      >
-      </FilterControls>
+      />
     </template>
 
     <template #default>
@@ -83,22 +83,25 @@
           />
         </PageGrid>
 
-        <PageGrid
+        <GroupedList
           v-else-if="status === 'success' && sources?.length"
-          :columns="3"
+          :items="sources"
+          :group-by="(item) => item.source?.group?.rus ?? 'Без группы'"
+          :separator-label="'{value}'"
         >
-          <SourceLink
-            v-for="source in sources"
-            :key="source.url"
-            :source="source"
-          />
-        </PageGrid>
+          <template #default="{ item }">
+            <SourceLink
+              :key="item.url"
+              :source="item"
+            />
+          </template>
+        </GroupedList>
 
         <PageResult
           v-else
-          :items="sources"
-          :status
-          :error
+          :items="sources ?? []"
+          :status="status"
+          :error="error"
           @refresh="refresh"
         />
       </Transition>

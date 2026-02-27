@@ -92,7 +92,7 @@
         <GroupedList
           v-else-if="status === 'success' && magicItems?.length"
           :items="magicItems"
-          field="rarity"
+          :group-by="(item) => item.rarity"
           :group-sort="{
             mode: 'custom',
             order: rarityOrder,

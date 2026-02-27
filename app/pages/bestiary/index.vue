@@ -85,7 +85,7 @@
         <GroupedList
           v-else-if="status === 'success' && bestiary?.length"
           :items="bestiary"
-          field="challengeRailing"
+          :group-by="(item) => item.challengeRailing"
           separator-label="Уровень опасности {value}"
           :group-sort="{
             mode: 'custom',
