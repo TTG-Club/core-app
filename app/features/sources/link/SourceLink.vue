@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import { LinkPreview } from '~classes/link/ui';
   import { SourceDrawer } from '~sources/drawer';
+  import LinkPreview from '~sources/link/LinkPreview.vue';
   import { CardLink } from '~ui/link';
 
   import type { SourceLinkResponse } from '~sources/types';
