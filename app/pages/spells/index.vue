@@ -82,7 +82,7 @@
           :items="spells"
           :group-by="(item) => item.level ?? 0"
           :separator-label="
-            (value) => (Number(value) === 0 ? 'Заговоры' : `Уровень ${value}`)
+            (value) => (value === 0 ? 'Заговоры' : `Уровень ${value}`)
           "
         >
           <template #default="{ item }">

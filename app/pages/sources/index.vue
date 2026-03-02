@@ -1,12 +1,12 @@
 <script setup lang="ts">
   import { FilterControls, useFilter } from '~infrastructure/filter';
+  import { SourceLink } from '~sources/link';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
-  import { SourceLink } from '~/features/sources/link';
+  import type { SourceLinkResponse } from '~sources/types';
 
-  import type { SourceLinkResponse } from '~/features/sources/types';
   import type { SearchBody } from '~/shared/types';
 
   useSeoMeta({
