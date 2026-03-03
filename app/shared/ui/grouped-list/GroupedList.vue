@@ -70,10 +70,6 @@
   }
 
   function sortKeysAuto(keys: Array<GroupKey>): Array<GroupKey> {
-    if (!field) {
-      return [];
-    }
-
     return [...keys].sort((a, b) => {
       if (typeof a === 'number' && typeof b === 'number') {
         return a - b;
