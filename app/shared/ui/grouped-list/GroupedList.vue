@@ -79,13 +79,62 @@
     });
   }
 
+  function sortKeysOrdered(
+    keys: Array<GroupKey>,
+    sortConfig: GroupSortOrdered,
+  ): Array<GroupKey> {
+    const orderIndexByKeyText = new Map<string, number>();
+
+    sortConfig.order.values().forEach((key, index) => {
+      orderIndexByKeyText.set(String(key), index);
+    });
+
+    const knownKeys: Array<GroupKey> = [];
+    const unknownKeys: Array<GroupKey> = [];
+
+    keys.forEach((key) => {
+      if (orderIndexByKeyText.has(String(key))) {
+        knownKeys.push(key);
+      } else {
+        unknownKeys.push(key);
+      }
+    });
+
+    const sortedKnown = [...knownKeys].sort((a, b) => {
+      const aIndex = orderIndexByKeyText.get(String(a));
+      const bIndex = orderIndexByKeyText.get(String(b));
+
+      if (aIndex === undefined && bIndex === undefined) {
+        return 0;
+      }
+
+      if (aIndex === undefined) {
+        return 1;
+      }
+
+      if (bIndex === undefined) {
+        return -1;
+      }
+
+      return aIndex - bIndex;
+    });
+
+    const unknownPolicy = sortConfig.unknown ?? 'after';
+
+    if (unknownPolicy === 'before') {
+      return [...sortKeysAuto(unknownKeys), ...sortedKnown];
+    }
+
+    return [...sortedKnown, ...sortKeysAuto(unknownKeys)];
+  }
+
   function sortGroupKeys(keys: Array<GroupKey>): Array<GroupKey> {
     if (groupSort.mode === 'comparator') {
       return [...keys].sort(groupSort.compare);
     }
 
     if (groupSort.mode === 'ordered') {
-      return groupSort.order.values().toArray();
+      return sortKeysOrdered(keys, groupSort);
     }
 
     return sortKeysAuto(keys);
