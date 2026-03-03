@@ -42,6 +42,14 @@
       watch: [search, filterStringFromUrl],
     },
   );
+
+  function getLabel(level: number | string) {
+    if (typeof level === 'string') {
+      return level;
+    }
+
+    return !level ? 'Заговоры' : `Уровень ${level}`;
+  }
 </script>
 
 <template>
@@ -79,10 +87,8 @@
 
         <GroupedList
           v-else-if="status === 'success' && spells?.length"
+          :separator-label="getLabel"
           :items="spells"
-          :separator-label="
-            (value) => (!value ? 'Заговоры' : 'Уровень {value}')
-          "
           field="level"
         >
           <template #default="{ item }">
