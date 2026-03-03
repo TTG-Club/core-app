@@ -3,7 +3,7 @@
   import { SourceLink } from '~sources/link';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
-  import { SkeletonLinkSmall } from '~ui/skeleton';
+  import { SkeletonLinkBig } from '~ui/skeleton';
 
   import type { SourceLinkResponse } from '~sources/types';
 
@@ -77,7 +77,7 @@
           v-if="status !== 'success' && status !== 'error'"
           :columns="3"
         >
-          <SkeletonLinkSmall
+          <SkeletonLinkBig
             v-for="index in 5"
             :key="index"
           />
@@ -85,9 +85,10 @@
 
         <GroupedList
           v-else-if="status === 'success' && sources?.length"
+          :separator-label="(value) => (!value ? 'Без группы' : String(value))"
           :items="sources"
-          :group-by="(item) => item.source?.group?.rus ?? 'Без группы'"
-          :separator-label="'{value}'"
+          :columns="3"
+          field="source.group.rus"
         >
           <template #default="{ item }">
             <SourceLink
@@ -100,8 +101,8 @@
         <PageResult
           v-else
           :items="sources ?? []"
-          :status="status"
-          :error="error"
+          :status
+          :error
           @refresh="refresh"
         />
       </Transition>

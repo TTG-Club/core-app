@@ -1,4 +1,5 @@
 <script setup lang="ts" generic="T extends { url: string }">
+  import { get } from 'es-toolkit/compat';
   import { computed } from 'vue';
   import { PageGrid } from '~ui/page';
 
@@ -14,9 +15,9 @@
     mode: 'auto';
   }
 
-  interface GroupSortCustom {
-    mode: 'custom';
-    order: Array<GroupKey>;
+  interface GroupSortOrdered {
+    mode: 'ordered';
+    order: Set<GroupKey>;
     unknown?: 'after' | 'before' | 'auto';
   }
 
@@ -25,11 +26,20 @@
     compare: (a: GroupKey, b: GroupKey) => number;
   }
 
-  type GroupSort = GroupSortAuto | GroupSortCustom | GroupSortComparator;
+  interface GroupSortCustom {
+    mode: 'custom';
+    compare: (items: Array<T>) => Array<Group<T>>;
+  }
+
+  type GroupSort =
+    | GroupSortAuto
+    | GroupSortOrdered
+    | GroupSortComparator
+    | GroupSortCustom;
 
   interface Props {
     items: Array<T>;
-    groupBy?: (item: T) => GroupKey | undefined;
+    field?: string;
     separatorLabel?: SeparatorLabel;
     columns?: 1 | 2 | 3 | 4 | 5 | 6;
     groupSort?: GroupSort;
@@ -37,18 +47,20 @@
 
   const {
     items,
-    groupBy = undefined,
+    field = undefined,
     separatorLabel = undefined,
     columns = 3,
     groupSort = { mode: 'auto' },
   } = defineProps<Props>();
 
   function upperFirst(text: string): string {
-    if (!text) {
+    const str = text.trim();
+
+    if (!str.length) {
       return '';
     }
 
-    return text.charAt(0).toUpperCase() + text.slice(1);
+    return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
   function getComparableKey(rawKey: string): GroupKey {
@@ -58,57 +70,46 @@
   }
 
   function sortKeysAuto(keys: Array<GroupKey>): Array<GroupKey> {
+    if (!field) {
+      return [];
+    }
+
     return [...keys].sort((a, b) => {
       if (typeof a === 'number' && typeof b === 'number') {
         return a - b;
       }
 
-      return String(a).localeCompare(String(b), undefined, { numeric: true });
+      return sortString(String(a), String(b));
     });
   }
 
   function sortGroupKeys(keys: Array<GroupKey>): Array<GroupKey> {
-    if (groupSort.mode === 'auto') {
-      return sortKeysAuto(keys);
-    }
-
     if (groupSort.mode === 'comparator') {
       return [...keys].sort(groupSort.compare);
     }
 
-    const orderIndex = new Map<string, number>();
+    if (groupSort.mode === 'ordered') {
+      return groupSort.order.values().toArray();
+    }
 
-    groupSort.order.forEach((key, index) => {
-      orderIndex.set(String(key), index);
-    });
-
-    return [...keys].sort((a, b) => {
-      const aIndex = orderIndex.get(String(a));
-      const bIndex = orderIndex.get(String(b));
-
-      if (aIndex != null && bIndex != null) {
-        return aIndex - bIndex;
-      }
-
-      if (aIndex != null) {
-        return -1;
-      }
-
-      if (bIndex != null) {
-        return 1;
-      }
-
-      return sortKeysAuto([a, b])[0] === a ? -1 : 1;
-    });
+    return sortKeysAuto(keys);
   }
 
   const groupedItems = computed<Array<Group<T>>>(() => {
-    if (!items.length || !groupBy) {
+    if (!items.length) {
+      return [];
+    }
+
+    if (groupSort.mode === 'custom') {
+      return groupSort.compare(items);
+    }
+
+    if (!field) {
       return [];
     }
 
     const grouped = items.reduce<Record<string, Array<T>>>((acc, item) => {
-      const keyText = String(groupBy(item) ?? '');
+      const keyText = String(get(item, field) ?? '');
 
       (acc[keyText] ??= []).push(item);
 
@@ -141,7 +142,7 @@
 
 <template>
   <PageGrid
-    v-if="!groupBy"
+    v-if="!field"
     :columns="columns"
   >
     <slot

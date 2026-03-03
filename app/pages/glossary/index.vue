@@ -76,7 +76,7 @@
         <GroupedList
           v-else-if="status === 'success' && glossaryItems?.length"
           :items="glossaryItems"
-          :group-by="(item) => item.tagCategory"
+          field="tagCategory"
         >
           <template #default="{ item }">
             <GlossaryLink :glossary="item" />
