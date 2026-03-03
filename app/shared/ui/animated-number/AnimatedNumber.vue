@@ -17,7 +17,7 @@
 
   const output = useTransition(source, {
     duration: props.duration,
-    transition: TransitionPresets.easeInOutExpo,
+    easing: TransitionPresets.easeInOutExpo,
   });
 
   const formattedValue = computed(() =>
@@ -39,5 +39,5 @@
 </script>
 
 <template>
-  <span>{{ formattedValue }}</span>
+  <span class="tabular-nums">{{ formattedValue }}</span>
 </template>
