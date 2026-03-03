@@ -1,8 +1,9 @@
 <script setup lang="ts">
   import { FilterControls, useFilter } from '~infrastructure/filter';
   import { SourceLink } from '~sources/link';
+  import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
-  import { SkeletonLinkSmall } from '~ui/skeleton';
+  import { SkeletonLinkBig } from '~ui/skeleton';
 
   import type { SourceLinkResponse } from '~sources/types';
 
@@ -64,8 +65,7 @@
         v-model:filter="filter"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
-      >
-      </FilterControls>
+      />
     </template>
 
     <template #default>
@@ -77,26 +77,30 @@
           v-if="status !== 'success' && status !== 'error'"
           :columns="3"
         >
-          <SkeletonLinkSmall
+          <SkeletonLinkBig
             v-for="index in 5"
             :key="index"
           />
         </PageGrid>
 
-        <PageGrid
+        <GroupedList
           v-else-if="status === 'success' && sources?.length"
+          :separator-label="(value) => (!value ? 'Без группы' : String(value))"
+          :items="sources"
           :columns="3"
+          field="source.group.rus"
         >
-          <SourceLink
-            v-for="source in sources"
-            :key="source.url"
-            :source="source"
-          />
-        </PageGrid>
+          <template #default="{ item }">
+            <SourceLink
+              :key="item.url"
+              :source="item"
+            />
+          </template>
+        </GroupedList>
 
         <PageResult
           v-else
-          :items="sources"
+          :items="sources ?? []"
           :status
           :error
           @refresh="refresh"

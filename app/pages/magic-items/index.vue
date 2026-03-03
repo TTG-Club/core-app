@@ -94,7 +94,7 @@
           :items="magicItems"
           field="rarity"
           :group-sort="{
-            mode: 'custom',
+            mode: 'ordered',
             order: rarityOrder,
             unknown: 'after',
           }"

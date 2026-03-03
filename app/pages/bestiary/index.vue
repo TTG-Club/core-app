@@ -88,7 +88,7 @@
           field="challengeRailing"
           separator-label="Уровень опасности {value}"
           :group-sort="{
-            mode: 'custom',
+            mode: 'ordered',
             order: challengeRatingOrder,
             unknown: 'before',
           }"

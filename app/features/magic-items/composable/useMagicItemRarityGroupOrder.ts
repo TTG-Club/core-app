@@ -14,9 +14,9 @@ export function useMagicItemRarityGroupOrder() {
     },
   );
 
-  const order = computed<Array<string>>(() => {
-    return data.value.map((option) => option.label);
-  });
+  const order = computed<Set<string>>(
+    () => new Set(data.value.map((option) => option.label)),
+  );
 
   return {
     order,

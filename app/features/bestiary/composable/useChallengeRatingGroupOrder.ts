@@ -35,22 +35,20 @@ function extractLabels(value: unknown): Array<string> {
 export function useChallengeRatingGroupOrder() {
   const { data, pending, error } = useAsyncData<Array<string>>(
     'dictionary-challenge-rating-order',
-    () => {
-      return DictionaryService.challengeRating().then((options) => {
-        return extractLabels(options);
-      });
+    async () => {
+      const options = await DictionaryService.challengeRating();
+
+      return extractLabels(options);
     },
     { deep: false },
   );
 
-  const order = computed((): Array<string> => {
-    const loadedOrder = data.value;
-
-    if (Array.isArray(loadedOrder)) {
-      return loadedOrder;
+  const order = computed((): Set<string> => {
+    if (Array.isArray(data.value) && data.value.length) {
+      return new Set(data.value);
     }
 
-    return [];
+    return new Set();
   });
 
   return {
