@@ -9,6 +9,23 @@
       <UCard variant="subtle">
         <template #header>
           <div class="flex items-center justify-between gap-2">
+            <h2 class="truncate text-base text-highlighted">Пользователи</h2>
+
+            <UButton
+              size="sm"
+              to="/admin/users"
+            >
+              Настроить
+            </UButton>
+          </div>
+        </template>
+
+        <div class="text-sm text-neutral-500">Управление пользователями</div>
+      </UCard>
+
+      <UCard variant="subtle">
+        <template #header>
+          <div class="flex items-center justify-between gap-2">
             <h2 class="truncate text-base text-highlighted">
               Токенатор
             </h2>
