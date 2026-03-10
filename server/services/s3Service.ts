@@ -1,4 +1,5 @@
 import { S3 } from '@aws-sdk/client-s3';
+import consola from 'consola';
 import { StatusCodes } from 'http-status-codes';
 import ms from 'ms';
 
@@ -19,6 +20,18 @@ export function createS3Service() {
     apiVersion: 'latest',
     requestHandler: {
       connectionTimeout: ms('5s'),
+      requestTimeout: ms('15s'),
+      throwOnRequestTimeout: true,
+      socketTimeout: ms('5s'),
+      logger: consola,
+      httpsAgent: {
+        keepAlive: true,
+        keepAliveMsecs: ms('1s'),
+        maxSockets: 200,
+        maxFreeSockets: 50,
+        timeout: ms('15s'),
+        scheduling: 'lifo',
+      },
     },
   });
 

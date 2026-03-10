@@ -1,3 +1,4 @@
+import consola from 'consola';
 import { StatusCodes } from 'http-status-codes';
 import { S3Service } from '~~/server/services';
 
@@ -30,12 +31,16 @@ export default defineEventHandler(async (event) => {
     return sendStream(event, body);
   } catch (e) {
     if (!(e instanceof Error)) {
+      consola.error('[S3 Service Error]: unknown error.', e);
+
       throw createError(getErrorResponse(StatusCodes.INTERNAL_SERVER_ERROR));
     }
 
     if (e.name === 'NoSuchKey') {
       throw createError(getErrorResponse(StatusCodes.NOT_FOUND));
     }
+
+    consola.error('[S3 Service Error]:', e.name, e.message);
 
     throw createError(getErrorResponse(StatusCodes.INTERNAL_SERVER_ERROR));
   }
