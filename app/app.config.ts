@@ -1,14 +1,4 @@
 export default defineAppConfig({
-  icon: {
-    customize: (content: string) =>
-      content
-        .replace(/fill="(?!none|currentColor)[^"]*"/g, 'fill="currentColor"')
-        .replace(
-          /stroke="(?!none|currentColor)[^"]*"/g,
-          'stroke="currentColor"',
-        )
-        .replace(/stroke-width="[^"]*"/g, 'stroke-width="1.5"'),
-  },
   ui: {
     icons: {
       arrowDown: 'i-tabler-arrow-down',
