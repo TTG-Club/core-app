@@ -312,6 +312,7 @@ export default defineNuxtConfig({
         '@ttg-club/dice-roller-parser',
         'dexie',
         '@vueuse/gesture',
+        'js-base64',
       ],
       exclude: ['@jsquash/webp', '@jsquash/webp/encode'],
     },
