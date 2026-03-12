@@ -89,6 +89,9 @@ importers:
       idb-keyval:
         specifier: ^6.2.2
         version: 6.2.2
+      js-base64:
+        specifier: ^3.7.8
+        version: 3.7.8
       jsonwebtoken:
         specifier: ^9.0.3
         version: 9.0.3
@@ -5184,6 +5187,9 @@ packages:
 
   jquery@4.0.0:
     resolution: {integrity: sha512-TXCHVR3Lb6TZdtw1l3RTLf8RBWVGexdxL6AC8/e0xZKEpBflBsjh9/8LXw+dkNFuOyW9B7iB3O1sP7hS0Kiacg==}
+
+  js-base64@3.7.8:
+    resolution: {integrity: sha512-hNngCeKxIUQiEUN3GPJOkz4wF/YvdUdbNL9hsBcMQTkKzboD7T/q3OYOuuPZLUE6dBxSGpwhk5mwuDud7JVAow==}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -13640,6 +13646,8 @@ snapshots:
   jiti@2.6.1: {}
 
   jquery@4.0.0: {}
+
+  js-base64@3.7.8: {}
 
   js-tokens@4.0.0: {}
 

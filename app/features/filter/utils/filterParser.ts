@@ -1,4 +1,5 @@
 import { cloneDeep } from 'es-toolkit';
+import { fromUint8Array, toUint8Array } from 'js-base64';
 import pako from 'pako';
 
 import type { Filter, FilterRequest } from '../types';
@@ -37,7 +38,7 @@ export function compressFilters(filter: FilterRequest | undefined): string {
     const jsonString = JSON.stringify(filter);
     const compressed = pako.deflate(jsonString, { level: 9 });
 
-    return btoa(String.fromCharCode(...compressed));
+    return fromUint8Array(compressed, true);
   } catch (error) {
     console.error('Error compressing filters:', error);
 
@@ -53,13 +54,7 @@ export function decompressFilters(
   }
 
   try {
-    const binaryString = atob(compressedString);
-    const bytes = new Uint8Array(binaryString.length);
-
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-
+    const bytes = toUint8Array(compressedString);
     const decompressed = pako.inflate(bytes, { to: 'string' });
 
     return JSON.parse(decompressed);
