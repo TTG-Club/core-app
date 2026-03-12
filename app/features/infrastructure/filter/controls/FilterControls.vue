@@ -113,7 +113,7 @@
         <UButton
           :disabled="!filter"
           :loading="isPending"
-          icon="i-fluent-filter-24-regular"
+          icon="i-tabler-filter"
           label="Фильтр"
           block
           @click.left.exact.prevent="opened = true"
@@ -128,7 +128,7 @@
       </UFieldGroup>
 
       <UButton
-        icon="i-fluent-share-24-regular"
+        icon="i-tabler-share"
         title="Поделиться ссылкой"
         @click.left.exact.prevent="share(urlForCopy)"
       />

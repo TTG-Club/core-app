@@ -211,7 +211,7 @@
     </div>
 
     <UButton
-      icon="i-fluent-arrow-reset-24-regular"
+      icon="i-tabler-restore"
       label="Сбросить все изображения"
       variant="soft"
       color="error"

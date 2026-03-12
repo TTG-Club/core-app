@@ -15,7 +15,7 @@
 
     <div class="flex items-center gap-1">
       <UButton
-        icon="i-fluent-delete-16-regular"
+        icon="i-tabler-trash"
         variant="soft"
         color="neutral"
         size="sm"

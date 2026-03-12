@@ -8,7 +8,7 @@
   <UButton
     variant="ghost"
     color="neutral"
-    class="block size-full cursor-pointer"
+    class="block size-full cursor-pointer text-[--ui-text]"
     :class="[$style.hamburger, { [$style.isActive]: isActive }]"
   >
     <span

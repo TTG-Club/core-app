@@ -68,7 +68,7 @@
   });
 
   const statusIcon = computed(
-    () => icon || iconMap[status] || 'i-fluent-info-16-filled',
+    () => icon || iconMap[status] || 'i-tabler-info-circle-filled',
   );
 
   const statusColor = computed(() => {

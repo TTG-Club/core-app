@@ -161,7 +161,7 @@
 
             <UButton
               v-if="isAdmin"
-              icon="i-fluent-settings-cog-multiple-24-regular"
+              icon="i-tabler-settings"
               color="neutral"
               variant="ghost"
               class="w-full"

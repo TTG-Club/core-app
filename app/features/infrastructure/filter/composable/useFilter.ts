@@ -27,7 +27,7 @@ export async function useFilter(key: string, url: string) {
   const isPending = computed(() => status.value === 'pending');
 
   const isShowedPreview = computed(() =>
-    filter.value?.groups.some((group) =>
+    filter.value?.groups?.some((group) =>
       group.filters.some((item) => item.selected !== null),
     ),
   );

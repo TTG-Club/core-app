@@ -17,7 +17,7 @@
   >
     <UButton
       :href="url"
-      icon="i-fluent-share-24-regular"
+      icon="i-tabler-share"
       variant="ghost"
       color="neutral"
       :disabled

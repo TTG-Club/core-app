@@ -74,7 +74,7 @@
         title: 'Ошибка регистрации',
         description: error.value.data.message,
         color: 'error',
-        icon: 'i-fluent-person-warning-16-regular',
+        icon: 'i-tabler-user-exclamation',
       });
 
       return;
@@ -89,7 +89,7 @@
       description:
         'Пожалуйста, подтвердите почту пройдя по ссылке в письме на электронной почте. Ссылка действительна в течение суток.',
       color: 'success',
-      icon: 'i-fluent-person-available-16-regular',
+      icon: 'i-tabler-user-check',
     });
   }
 </script>
@@ -151,11 +151,7 @@
                 color="neutral"
                 variant="link"
                 size="sm"
-                :icon="
-                  showPwd
-                    ? 'i-fluent-eye-off-16-filled'
-                    : 'i-fluent-eye-16-filled'
-                "
+                :icon="showPwd ? 'i-tabler-eye-off' : 'i-tabler-eye-filled'"
                 :aria-label="showPwd ? 'Скрыть пароль' : 'Показать пароль'"
                 :aria-pressed="showPwd"
                 aria-controls="password"
@@ -180,11 +176,7 @@
               color="neutral"
               variant="link"
               size="sm"
-              :icon="
-                showPwdRepeat
-                  ? 'i-fluent-eye-off-16-filled'
-                  : 'i-fluent-eye-16-filled'
-              "
+              :icon="showPwdRepeat ? 'i-tabler-eye-off' : 'i-tabler-eye-filled'"
               :aria-label="showPwdRepeat ? 'Скрыть пароля' : 'Показать пароль'"
               :aria-pressed="showPwdRepeat"
               aria-controls="password"

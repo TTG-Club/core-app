@@ -53,6 +53,7 @@
       size="xl"
       icon="i-ttg-settings"
       color="neutral"
+      class="text-[--ui-text]"
     />
   </UDropdownMenu>
 </template>

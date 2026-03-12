@@ -41,7 +41,7 @@
       description: 'Теперь вы можете авторизоваться',
       actions: [
         {
-          icon: 'i-fluent-person-16-regular',
+          icon: 'i-tabler-user',
           label: 'Авторизоваться',
           variant: 'ghost',
           onClick: (e) => {

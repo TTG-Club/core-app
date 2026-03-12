@@ -66,7 +66,7 @@
 
     <UButton
       type="button"
-      icon="i-fluent-send-24-filled"
+      icon="i-tabler-send-2"
       color="primary"
       class="rounded-md shadow-lg transition"
       aria-label="Бросить кубы"
