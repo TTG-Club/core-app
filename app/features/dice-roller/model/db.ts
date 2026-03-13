@@ -38,7 +38,7 @@ export async function migrateFromIdbKeyval() {
       await del(DICE_HISTORY_STORAGE_KEY);
     }
   } catch (error) {
-    console.error('Failed to migrate Dice Roller history:', error);
+    consola.error('Failed to migrate Dice Roller history:', error);
   }
 }
 

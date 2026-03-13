@@ -38,7 +38,7 @@
         groups,
       };
     } catch (e) {
-      console.error('[Markup] Error rendering entries:', e);
+      consola.error('[Markup] Error rendering entries:', e);
 
       return { isSingle: true, vnodes: [] };
     }

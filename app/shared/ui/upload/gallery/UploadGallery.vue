@@ -26,7 +26,7 @@
   }
 
   function onError(error: Error, statusCode: number) {
-    console.error(error);
+    consola.error(error);
 
     $toast.add({
       color: 'error',

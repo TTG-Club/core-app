@@ -26,7 +26,7 @@ export function useTheme() {
     const newMode = toValue(name);
 
     if (!Object.values(ThemeName).find((value) => value === newMode)) {
-      console.warn(`Неизвестная тема: ${newMode}.`);
+      consola.warn(`Неизвестная тема: ${newMode}.`);
 
       return;
     }

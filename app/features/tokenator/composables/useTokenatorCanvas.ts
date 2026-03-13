@@ -103,7 +103,7 @@ export function useTokenatorCanvas(
         texts: store.texts,
       });
     } catch (error) {
-      console.error('Failed to draw token:', error);
+      consola.error('Failed to draw token:', error);
     }
   }
 
@@ -206,7 +206,7 @@ export function useTokenatorCanvas(
         color: store.brush.mode === BrushMode.Add ? 'white' : 'black',
       });
     } catch (e) {
-      console.error('Failed to paint mask:', e);
+      consola.error('Failed to paint mask:', e);
     }
 
     store.maskVersion++;

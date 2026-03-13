@@ -34,7 +34,7 @@ export function useUser() {
       clear();
       redirectIfNeeded();
     } catch (error) {
-      console.error('Ошибка при выходе:', error);
+      consola.error('Ошибка при выходе:', error);
     }
   }
 

@@ -21,7 +21,7 @@ function generateAliases(
       const path = resolver.resolve(basePath, folder);
 
       if (aliases[alias]) {
-        console.warn(`Коллизия алиаса: ${alias} уже существует. Пропускаем.`);
+        consola.warn(`Коллизия алиаса: ${alias} уже существует. Пропускаем.`);
 
         continue;
       }
@@ -29,7 +29,7 @@ function generateAliases(
       aliases[alias] = path;
     }
   } catch (error) {
-    console.error(`Ошибка при чтении директории ${baseDir}:`, error);
+    consola.error(`Ошибка при чтении директории ${baseDir}:`, error);
   }
 
   return aliases;

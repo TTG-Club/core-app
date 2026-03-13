@@ -47,7 +47,7 @@ export function useCanvasExport() {
         downloadBlob(blob, `${filename}.png`);
       }
     } catch (error) {
-      console.error('PNG export failed:', error);
+      consola.error('PNG export failed:', error);
 
       toast.add({
         title: 'Ошибка экспорта в PNG',
@@ -121,7 +121,7 @@ export function useCanvasExport() {
       try {
         await exportWithJsquash(canvas, filename, quality);
       } catch (error) {
-        console.error('Failed to export using @jsquash/webp on iOS:', error);
+        consola.error('Failed to export using @jsquash/webp on iOS:', error);
 
         toast.add({
           title: 'Ошибка экспорта в WebP',
@@ -146,7 +146,7 @@ export function useCanvasExport() {
 
       await exportWithJsquash(canvas, filename, quality);
     } catch (error) {
-      console.error('WebP export failed:', error);
+      consola.error('WebP export failed:', error);
 
       toast.add({
         title: 'Ошибка экспорта в WebP',
