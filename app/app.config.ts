@@ -2,6 +2,8 @@ export default defineAppConfig({
   icon: {
     mode: 'css',
     cssLayer: 'base',
+    customize: (content: string) =>
+      content.replace(/stroke-width="[^"]*"/g, 'stroke-width="1.5"'),
   },
   ui: {
     icons: {

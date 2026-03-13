@@ -272,6 +272,7 @@ export default defineNuxtConfig({
 
         // Утилиты
         'es-toolkit',
+        'es-toolkit/compat',
         '@vueuse/core',
         '@nuxtjs/device',
 
