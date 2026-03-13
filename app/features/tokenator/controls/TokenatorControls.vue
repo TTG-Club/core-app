@@ -178,9 +178,7 @@
   }
 
   const resetIcon = computed(() =>
-    toolTab.value === TokenatorTool.ThreeD
-      ? 'i-tabler-eraser'
-      : 'i-tabler-restore',
+    toolTab.value === TokenatorTool.ThreeD ? 'tabler:eraser' : 'tabler:restore',
   );
 
   const resetLabel = computed(() =>
@@ -250,7 +248,7 @@
       <UButton
         v-if="hasSettingsChanged"
         tooltip="Сбросить все настройки"
-        icon="i-tabler-restore"
+        icon="tabler:restore"
         size="xs"
         color="neutral"
         variant="solid"
@@ -261,7 +259,7 @@
 
     <div class="grid grid-cols-2 gap-2 pt-2">
       <UButton
-        icon="i-tabler-download"
+        icon="tabler:download"
         :loading="isExportingPng"
         variant="soft"
         label="PNG"
@@ -270,7 +268,7 @@
       />
 
       <UButton
-        icon="i-tabler-download"
+        icon="tabler:download"
         :loading="isExportingWebp"
         color="neutral"
         variant="soft"

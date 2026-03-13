@@ -26,7 +26,7 @@
         color="primary"
         variant="soft"
         size="xs"
-        trailing-icon="i-ttg-plus"
+        trailing-icon="tabler:plus"
         label="Добавить шаблон"
         @click.left.exact.prevent="enableTemplate"
       />
@@ -36,7 +36,7 @@
         color="error"
         variant="ghost"
         size="xs"
-        trailing-icon="i-ttg-trash"
+        trailing-icon="tabler:trash"
         label="Удалить шаблон"
         @click.left.exact.prevent="disableTemplate"
       />

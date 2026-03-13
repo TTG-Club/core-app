@@ -36,7 +36,7 @@
           :variant="store.isMoveMode ? 'solid' : 'soft'"
           :color="store.isMoveMode ? 'primary' : 'neutral'"
           label="Двигать"
-          icon="i-tabler-pointer"
+          icon="tabler:pointer"
           @click.left.exact.prevent="store.activateMoveMode"
         />
 
@@ -46,7 +46,7 @@
           :variant="store.isBrushAddMode ? 'solid' : 'soft'"
           :color="store.isBrushAddMode ? 'primary' : 'neutral'"
           label="Рисовать"
-          icon="i-tabler-edit"
+          icon="tabler:edit"
           @click.left.exact.prevent="store.activateDrawMode"
         />
 
@@ -56,7 +56,7 @@
           :variant="store.isBrushRemoveMode ? 'solid' : 'soft'"
           :color="store.isBrushRemoveMode ? 'primary' : 'neutral'"
           label="Стереть"
-          icon="i-tabler-backspace"
+          icon="tabler:backspace"
           @click.left.exact.prevent="store.activateEraseMode"
         />
       </div>
@@ -104,7 +104,7 @@
 
               <UIcon
                 v-if="store.isZoomChanged"
-                name="i-tabler-arrow-back-up"
+                name="tabler:arrow-back-up"
                 class="size-3"
               />
             </button>
@@ -137,7 +137,7 @@
 
               <UIcon
                 v-if="store.isPanChanged"
-                name="i-tabler-arrow-back-up"
+                name="tabler:arrow-back-up"
                 class="size-3"
               />
             </button>
@@ -153,7 +153,7 @@
             :variant="store.canvasViewport.isPanning ? 'solid' : 'soft'"
             :color="store.canvasViewport.isPanning ? 'primary' : 'neutral'"
             label="Переместить холст"
-            icon="i-tabler-arrows-move"
+            icon="tabler:arrows-move"
             block
             @click.left.exact.prevent="store.togglePanMode"
           />

@@ -91,7 +91,7 @@
 
             <UIcon
               v-if="item.repeatability"
-              name="i-tabler-repeat"
+              name="tabler:repeat"
               class="text-muted"
               size="16"
               title="Повторяемая черта"
@@ -130,7 +130,7 @@
 
       <UButton
         v-if="model && !disabled"
-        icon="i-tabler-x"
+        icon="tabler:x"
         color="neutral"
         variant="subtle"
         @click.left.exact.prevent="model = undefined"
@@ -162,7 +162,7 @@
 
           <UButton
             v-if="getChoice(i - 1)"
-            icon="i-tabler-x"
+            icon="tabler:x"
             color="neutral"
             variant="subtle"
             @click.left.exact.prevent="handleChoiceUpdate(i - 1, '')"

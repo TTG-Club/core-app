@@ -73,7 +73,7 @@
           <UButton
             color="neutral"
             variant="outline"
-            icon="i-ttg-x"
+            icon="tabler:x"
             class="rounded-l-none border-l-0 px-2"
             @click.stop="store.currentImage = null"
           />
@@ -107,7 +107,7 @@
           <UButton
             color="neutral"
             variant="outline"
-            icon="i-ttg-x"
+            icon="tabler:x"
             class="rounded-l-none border-l-0 px-2"
             @click.stop="store.customFrame = null"
           />
@@ -141,7 +141,7 @@
           <UButton
             color="neutral"
             variant="outline"
-            icon="i-ttg-x"
+            icon="tabler:x"
             class="rounded-l-none border-l-0 px-2"
             @click.stop="store.customBackground = null"
           />
@@ -177,7 +177,7 @@
           @click.left.exact.prevent="store.selectNoFrame"
         >
           <UIcon
-            name="i-ttg-x"
+            name="tabler:x"
             class="size-6"
           />
         </button>
@@ -211,7 +211,7 @@
     </div>
 
     <UButton
-      icon="i-tabler-restore"
+      icon="tabler:restore"
       label="Сбросить все изображения"
       variant="soft"
       color="error"

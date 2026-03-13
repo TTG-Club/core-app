@@ -3,7 +3,7 @@
 
   const { isOpen, toggleModal } = useDiceRollerState();
 
-  const icon = computed(() => (isOpen.value ? 'i-tabler-x' : 'i-ttg-dice-d20'));
+  const icon = computed(() => (isOpen.value ? 'tabler:x' : 'ttg:dice-d20'));
 </script>
 
 <template>

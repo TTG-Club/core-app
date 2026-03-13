@@ -48,7 +48,7 @@
         <UButton
           variant="ghost"
           color="error"
-          trailing-icon="i-ttg-trash"
+          trailing-icon="tabler:trash"
           @click.left.exact.prevent="$emit('reset')"
         >
           Сбросить

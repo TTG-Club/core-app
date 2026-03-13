@@ -90,7 +90,7 @@
 
             <UIcon
               v-if="store.isFrameScaleChanged"
-              name="i-tabler-arrow-back-up"
+              name="tabler:arrow-back-up"
               class="size-3"
             />
           </button>
@@ -123,7 +123,7 @@
 
             <UIcon
               v-if="store.isFrameRotateChanged"
-              name="i-tabler-arrow-back-up"
+              name="tabler:arrow-back-up"
               class="size-3"
             />
           </button>
@@ -189,7 +189,7 @@
 
                   <UIcon
                     v-if="isTintColorChanged"
-                    name="i-tabler-arrow-back-up"
+                    name="tabler:arrow-back-up"
                     class="size-3"
                   />
                 </button>
@@ -211,7 +211,7 @@
 
         <div class="flex h-full items-end pb-1.5">
           <UButton
-            icon="i-tabler-arrows-exchange"
+            icon="tabler:arrows-exchange"
             size="xs"
             variant="ghost"
             color="neutral"
@@ -260,7 +260,7 @@
 
                   <UIcon
                     v-if="isTintColor2Changed"
-                    name="i-tabler-arrow-back-up"
+                    name="tabler:arrow-back-up"
                     class="size-3"
                   />
                 </button>
@@ -285,7 +285,7 @@
         <UButton
           size="sm"
           variant="soft"
-          icon="i-tabler-sparkles"
+          icon="tabler:sparkles"
           title="Случайные цвета"
           label="Случайные цвета"
           class="w-full"

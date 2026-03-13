@@ -82,7 +82,7 @@
 
               <UIcon
                 v-if="isBgColorChanged"
-                name="i-tabler-arrow-back-up"
+                name="tabler:arrow-back-up"
                 class="size-3"
               />
             </button>
@@ -124,7 +124,7 @@
 
               <UIcon
                 v-if="store.isBackgroundOpacityChanged"
-                name="i-tabler-arrow-back-up"
+                name="tabler:arrow-back-up"
                 class="size-3"
               />
             </button>
@@ -157,7 +157,7 @@
 
               <UIcon
                 v-if="store.isBackgroundScaleChanged"
-                name="i-tabler-arrow-back-up"
+                name="tabler:arrow-back-up"
                 class="size-3"
               />
             </button>
@@ -190,7 +190,7 @@
 
               <UIcon
                 v-if="store.isBackgroundRotateChanged"
-                name="i-tabler-arrow-back-up"
+                name="tabler:arrow-back-up"
                 class="size-3"
               />
             </button>
@@ -214,7 +214,7 @@
             :variant="store.isBackgroundMoveMode ? 'solid' : 'soft'"
             :color="store.isBackgroundMoveMode ? 'primary' : 'neutral'"
             size="sm"
-            icon="i-tabler-arrows-move"
+            icon="tabler:arrows-move"
             label="Переместить фон"
             class="flex-1"
             @click.left.exact.prevent="store.toggleBackgroundMoveMode"

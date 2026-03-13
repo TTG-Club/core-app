@@ -55,13 +55,13 @@
   function getActionIcon(actionType: ActionType): string {
     switch (actionType) {
       case ActionType.ADDED:
-        return 'i-ttg-plus';
+        return 'tabler:plus';
       case ActionType.UPDATED:
-        return 'i-tabler-refresh';
+        return 'tabler:refresh';
       case ActionType.DELETED:
-        return 'i-ttg-trash';
+        return 'tabler:trash';
       default:
-        return 'i-tabler-circle';
+        return 'tabler:circle';
     }
   }
 
@@ -128,7 +128,7 @@
             >
               <template #default>
                 <UButton
-                  trailing-icon="i-tabler-chevron-down"
+                  trailing-icon="tabler:chevron-down"
                   color="neutral"
                   variant="soft"
                   size="xs"
@@ -143,7 +143,7 @@
         <UButton
           :loading="pending"
           variant="soft"
-          icon="i-tabler-refresh"
+          icon="tabler:refresh"
           @click.left.exact.prevent="refresh()"
         />
       </div>

@@ -23,7 +23,7 @@
     >
       <template #default>
         <UIcon
-          :name="icon || 'i-ttg-info'"
+          :name="icon || 'tabler:info-circle'"
           class="cursor-help text-current"
         />
       </template>

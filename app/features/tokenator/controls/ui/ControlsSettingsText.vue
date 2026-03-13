@@ -64,7 +64,7 @@
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
           <UButton
-            icon="i-tabler-arrow-left"
+            icon="tabler:arrow-left"
             variant="ghost"
             size="xs"
             title="Назад к списку"
@@ -78,7 +78,7 @@
         </div>
 
         <UButton
-          icon="i-tabler-trash"
+          icon="tabler:trash"
           color="error"
           variant="ghost"
           size="xs"
@@ -150,7 +150,7 @@
 
               <UIcon
                 v-if="store.isActiveTextXChanged"
-                name="i-tabler-arrow-back-up"
+                name="tabler:arrow-back-up"
                 class="size-3"
               />
             </button>
@@ -184,7 +184,7 @@
 
               <UIcon
                 v-if="store.isActiveTextYChanged"
-                name="i-tabler-arrow-back-up"
+                name="tabler:arrow-back-up"
                 class="size-3"
               />
             </button>
@@ -218,7 +218,7 @@
 
               <UIcon
                 v-if="store.isActiveTextRotationChanged"
-                name="i-tabler-arrow-back-up"
+                name="tabler:arrow-back-up"
                 class="size-3"
               />
             </button>
@@ -252,7 +252,7 @@
 
               <UIcon
                 v-if="store.isActiveTextArcChanged"
-                name="i-tabler-arrow-back-up"
+                name="tabler:arrow-back-up"
                 class="size-3"
               />
             </button>

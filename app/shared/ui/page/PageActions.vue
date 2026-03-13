@@ -47,7 +47,7 @@
   >
     <UButton
       :href="editUrl"
-      icon="i-ttg-edit"
+      icon="tabler:pencil"
       variant="ghost"
       target="_blank"
       color="neutral"
@@ -61,7 +61,7 @@
     <UButton
       variant="ghost"
       color="neutral"
-      icon="i-ttg-x"
+      icon="tabler:x"
       @click.left.exact.prevent="close"
     />
   </UTooltip>

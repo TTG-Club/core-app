@@ -57,7 +57,7 @@
         color="neutral"
         variant="subtle"
         size="sm"
-        icon="i-ttg-x"
+        icon="tabler:x"
         @click.left.exact.prevent="state.formula = ''"
       />
 
@@ -66,7 +66,7 @@
 
     <UButton
       type="button"
-      icon="i-tabler-send-2"
+      icon="tabler:send-2"
       color="primary"
       class="rounded-md shadow-lg transition"
       aria-label="Бросить кубы"

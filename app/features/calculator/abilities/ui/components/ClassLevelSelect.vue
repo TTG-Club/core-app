@@ -40,7 +40,7 @@
 
         <UButton
           v-if="selectedClassUrl"
-          icon="i-tabler-x"
+          icon="tabler:x"
           color="neutral"
           variant="subtle"
           @click.left.exact.prevent="selectedClassUrl = undefined"

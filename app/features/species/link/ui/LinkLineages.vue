@@ -18,7 +18,7 @@
 
 <template>
   <UButton
-    icon="i-tabler-subtask"
+    icon="tabler:subtask"
     size="md"
     color="neutral"
     variant="soft"

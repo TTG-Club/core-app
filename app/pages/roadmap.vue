@@ -37,7 +37,7 @@
         @update:roadmap="refresh()"
       >
         <UButton
-          icon="i-ttg-plus"
+          icon="tabler:plus"
           variant="ghost"
           color="neutral"
         />

@@ -59,7 +59,7 @@
     <UButton
       :loading="isLoading"
       variant="ghost"
-      icon="i-ttg-profile-helmet-outline"
+      icon="ttg:profile-helmet-outline"
       size="xl"
       color="neutral"
       @click.left.exact.prevent="isAuthOpened = true"
@@ -78,7 +78,7 @@
       <UButton
         :loading="isLoading"
         variant="ghost"
-        icon="i-ttg-profile-helmet-filled"
+        icon="ttg:profile-helmet-filled"
         size="xl"
         color="neutral"
       />
@@ -137,7 +137,7 @@
               variant="ghost"
               size="lg"
               class="w-full"
-              icon="i-ttg-settings"
+              icon="tabler:settings"
               @click.left.exact.prevent="openProfile"
             >
               Настройка профиля
@@ -145,7 +145,7 @@
 
             <UButton
               v-if="isAdmin"
-              icon="i-ttg-menu-filled-workshop"
+              icon="ttg:menu-filled-workshop"
               color="neutral"
               variant="ghost"
               class="w-full"
@@ -161,7 +161,7 @@
 
             <UButton
               v-if="isAdmin"
-              icon="i-tabler-settings"
+              icon="tabler:settings"
               color="neutral"
               variant="ghost"
               class="w-full"
@@ -180,7 +180,7 @@
           <div class="p-1">
             <UButton
               class="w-full"
-              icon="i-ttg-logout"
+              icon="tabler:logout"
               variant="ghost"
               color="error"
               size="lg"

@@ -7,7 +7,7 @@
 <template>
   <UButton
     variant="ghost"
-    icon="i-ttg-search"
+    icon="tabler:search"
     size="xl"
     color="neutral"
     @click.left.exact.prevent="open"

@@ -8,7 +8,7 @@
   >
     <div class="flex flex-col items-center gap-2 text-primary">
       <UIcon
-        name="i-tabler-download"
+        name="tabler:download"
         class="size-12"
       />
 

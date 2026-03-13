@@ -176,7 +176,7 @@
 
         <UButton
           v-if="selectedBackgroundUrl"
-          icon="i-tabler-x"
+          icon="tabler:x"
           color="neutral"
           variant="subtle"
           @click.left.exact.prevent="selectedBackgroundUrl = undefined"
@@ -225,7 +225,7 @@
 
             <UButton
               v-if="plusTwoStat"
-              icon="i-tabler-x"
+              icon="tabler:x"
               color="neutral"
               variant="subtle"
               @click.left.exact.prevent="plusTwoStat = undefined"
@@ -242,7 +242,7 @@
 
             <UButton
               v-if="plusOneStat"
-              icon="i-tabler-x"
+              icon="tabler:x"
               color="neutral"
               variant="subtle"
               @click.left.exact.prevent="plusOneStat = undefined"

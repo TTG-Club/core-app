@@ -177,7 +177,7 @@
             type="file"
             multiple
             accept=".jpg,.jpeg,.png,.webp"
-            icon="i-ttg-plus"
+            icon="tabler:plus"
             :loading="isUploading"
             @change="onFileChange"
           />
@@ -223,7 +223,7 @@
               <UButton
                 color="error"
                 variant="ghost"
-                icon="i-ttg-trash"
+                icon="tabler:trash"
                 size="xs"
                 :loading="isDeleting === border.id"
                 @click.left.exact.prevent="deleteBorder(border.id)"

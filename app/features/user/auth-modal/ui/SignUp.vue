@@ -74,7 +74,7 @@
         title: 'Ошибка регистрации',
         description: error.value.data.message,
         color: 'error',
-        icon: 'i-tabler-user-exclamation',
+        icon: 'tabler:user-exclamation',
       });
 
       return;
@@ -89,7 +89,7 @@
       description:
         'Пожалуйста, подтвердите почту пройдя по ссылке в письме на электронной почте. Ссылка действительна в течение суток.',
       color: 'success',
-      icon: 'i-tabler-user-check',
+      icon: 'tabler:user-check',
     });
   }
 </script>
@@ -151,7 +151,7 @@
                 color="neutral"
                 variant="link"
                 size="sm"
-                :icon="showPwd ? 'i-tabler-eye-off' : 'i-tabler-eye-filled'"
+                :icon="showPwd ? 'tabler:eye-off' : 'tabler:eye-filled'"
                 :aria-label="showPwd ? 'Скрыть пароль' : 'Показать пароль'"
                 :aria-pressed="showPwd"
                 aria-controls="password"
@@ -176,7 +176,7 @@
               color="neutral"
               variant="link"
               size="sm"
-              :icon="showPwdRepeat ? 'i-tabler-eye-off' : 'i-tabler-eye-filled'"
+              :icon="showPwdRepeat ? 'tabler:eye-off' : 'tabler:eye-filled'"
               :aria-label="showPwdRepeat ? 'Скрыть пароля' : 'Показать пароль'"
               :aria-pressed="showPwdRepeat"
               aria-controls="password"

@@ -60,7 +60,7 @@
 
               <UIcon
                 v-if="store.isMaskScaleChanged"
-                name="i-tabler-arrow-back-up"
+                name="tabler:arrow-back-up"
                 class="size-3"
               />
             </button>
@@ -94,7 +94,7 @@
 
                 <UIcon
                   v-if="store.isMaskRotateChanged"
-                  name="i-tabler-arrow-back-up"
+                  name="tabler:arrow-back-up"
                   class="size-3"
                 />
               </button>
@@ -127,7 +127,7 @@
 
                 <UIcon
                   v-if="store.isMaskSidesChanged"
-                  name="i-tabler-arrow-back-up"
+                  name="tabler:arrow-back-up"
                   class="size-3"
                 />
               </button>
@@ -169,7 +169,7 @@
 
               <UIcon
                 v-if="store.isPositionChanged"
-                name="i-tabler-arrow-back-up"
+                name="tabler:arrow-back-up"
                 class="size-3"
               />
             </button>
@@ -195,7 +195,7 @@
 
               <UIcon
                 v-if="store.isScaleChanged"
-                name="i-tabler-arrow-back-up"
+                name="tabler:arrow-back-up"
                 class="size-3"
               />
             </button>
@@ -228,7 +228,7 @@
 
               <UIcon
                 v-if="store.isRotateChanged"
-                name="i-tabler-arrow-back-up"
+                name="tabler:arrow-back-up"
                 class="size-3"
               />
             </button>

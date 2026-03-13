@@ -135,7 +135,7 @@
         </div>
 
         <UButton
-          icon="i-tabler-settings"
+          icon="tabler:settings"
           color="neutral"
           variant="subtle"
           size="sm"
