@@ -1,4 +1,4 @@
-import { USER_TOKEN_COOKIE } from '~~/shared/consts';
+import { USER_TOKEN_COOKIE } from '#shared/consts';
 
 export default defineEventHandler((event) => {
   const token = getCookie(event, USER_TOKEN_COOKIE);

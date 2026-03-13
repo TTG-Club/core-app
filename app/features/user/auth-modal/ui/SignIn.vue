@@ -38,8 +38,7 @@
       return;
     }
 
-    fetch().finally();
-
+    fetch();
     emit('close');
 
     $toast.add({

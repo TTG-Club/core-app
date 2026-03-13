@@ -1,8 +1,8 @@
-import { USER_TOKEN_COOKIE } from '~~/shared/consts';
+import { USER_TOKEN_COOKIE } from '#shared/consts';
 
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
   try {
-    verifyToken(event);
+    await verifyToken(event);
   } catch (err) {
     deleteCookie(event, USER_TOKEN_COOKIE);
   }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { getSlug } from '~~/shared/utils';
+  import { getSlug } from '#shared/utils';
 
   import type { SelectOptionWithShortName } from '~/shared/types';
 

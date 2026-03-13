@@ -1,7 +1,7 @@
 import { Role } from '~/shared/types';
 
 export function useUserRoles() {
-  const { user } = useUser();
+  const { user, roles } = useUser();
 
   const isSubscriber = computed(
     () => !!user.value?.roles.includes(Role.SUBSCRIBER),
@@ -16,6 +16,8 @@ export function useUserRoles() {
   const isAdmin = computed(() => !!user.value?.roles.includes(Role.ADMIN));
 
   return {
+    roles,
+
     isSubscriber,
     isWriter,
     isModerator,

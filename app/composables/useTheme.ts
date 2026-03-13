@@ -1,7 +1,8 @@
 import { toValue } from 'vue';
-import { ONE_DAY_IN_SECONDS, THEME_STORE_KEY } from '~~/shared/consts';
 
 import { ThemeName } from '~/shared/consts';
+
+import { ONE_DAY_IN_SECONDS, THEME_STORE_KEY } from '#shared/consts';
 
 import type { MaybeRefOrGetter } from 'vue';
 

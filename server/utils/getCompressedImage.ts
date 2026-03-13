@@ -7,7 +7,7 @@ import sharp from 'sharp';
 
 import type { OutputInfo, ResizeOptions } from 'sharp';
 
-import type { S3UploadFile } from '#server/domain/s3/model';
+import type { S3UploadFile } from '#server/domain/s3';
 
 type FileType =
   | Buffer
