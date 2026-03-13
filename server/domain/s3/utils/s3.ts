@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes';
 
 import type { MultiPartData } from 'h3';
 
-import type { S3UploadFile } from '#server/domain/s3/model';
+import type { S3UploadFile } from '#server/domain/s3';
 
 export function getFileForUpload(
   section: string | undefined,

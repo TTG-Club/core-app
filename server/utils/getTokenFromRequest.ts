@@ -1,5 +1,6 @@
 import { StatusCodes } from 'http-status-codes';
-import { USER_TOKEN_COOKIE } from '~~/shared/consts';
+
+import { USER_TOKEN_COOKIE } from '#shared/consts';
 
 import type { H3Event } from 'h3';
 

@@ -3,36 +3,59 @@ import { Role } from '~/shared/types';
 import type { UserProfile } from '~/shared/types';
 
 export function useUser() {
+  const requestFetch = useRequestFetch();
+
   const {
     data: user,
-    execute: fetch,
+    execute,
     pending,
     clear,
-  } = useAsyncData<UserProfile>(
+  } = useAsyncData<UserProfile | null>(
     'user-profile',
-    () => $fetch('/api/user/profile'),
-    { dedupe: 'defer' },
+    () => requestFetch('/api/user/profile'),
+    { dedupe: 'defer', lazy: true, immediate: false },
   );
 
   const isLoggedIn = computed(() => !!user.value);
   const isAdmin = computed(() => !!user.value?.roles.includes(Role.ADMIN));
 
-  const logout = async () => {
+  async function fetchProfile(force = false) {
+    if (!isLoggedIn.value && !force) {
+      return Promise.resolve();
+    }
+
+    return await execute();
+  }
+
+  async function logout() {
     try {
       await $fetch('/api/auth/logout');
+
       clear();
+      redirectIfNeeded();
     } catch (error) {
       console.error('Ошибка при выходе:', error);
     }
-  };
+  }
+
+  function redirectIfNeeded() {
+    const { currentRoute, push } = useRouter();
+    const route = currentRoute.value;
+
+    if (route.meta.auth?.roles?.length) {
+      push({ path: '/' });
+    }
+  }
 
   return {
     user,
-    pending,
+    roles: computed(() => user.value?.roles),
+
     isLoggedIn,
     isAdmin,
 
-    fetch,
+    pending,
+    fetch: () => fetchProfile(true),
     logout,
   };
 }

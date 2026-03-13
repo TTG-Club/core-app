@@ -316,6 +316,7 @@ export default defineNuxtConfig({
         'js-base64',
         'stopword',
         '@internationalized/date',
+        'jose',
 
         // Validation & Bytes
         'bytes',
