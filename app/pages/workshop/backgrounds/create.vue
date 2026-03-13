@@ -10,7 +10,7 @@
     <template #actions>
       <UTooltip text="Закрыть">
         <UButton
-          icon="i-ttg-x"
+          icon="tabler:x"
           variant="ghost"
           color="neutral"
           @click.left.exact.prevent="navigateTo('/workshop/backgrounds')"

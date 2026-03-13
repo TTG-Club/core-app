@@ -154,7 +154,9 @@ Always import feature components using the domain alias (e.g.,
     `text-primary`) mapped to CSS variables.
 - **No Arbitrary Variables:** `bg-[var(--ui-bg-elevated)]` is prohibited, use
   `bg-elevated`.
-- **Icons:** Use ONLY icons from the local `ttg` or `fluent` collection.
+- **Icons:** Use ONLY icons from the local `ttg` or the `tabler` collection.
+  - For `tabler` icons, you MUST use the exact format `tabler:<icon-name>` (e.g., `tabler:shield-lock`, `tabler:map-off`). Do not use `i-tabler-` or any other prefixes.
+  - For local icons, you MUST use the exact format `ttg:<icon-name>` (e.g., `ttg:telegram`, `ttg:discord`). Do not use `i-ttg-` or any other prefixes.
 - **Tailwind CSS:** Use Tailwind CSS according to the version specified in the
   project (v4).
 

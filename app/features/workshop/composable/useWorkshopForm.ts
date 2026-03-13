@@ -51,7 +51,7 @@ export function useWorkshopForm<T extends Record<string, any>>(
           color: 'error',
           actions: [
             {
-              icon: 'i-ttg-center-axis',
+              icon: 'tabler:reload',
               label: 'Перезагрузить',
               onClick: withModifiers(reset, ['left', 'exact', 'prevent']),
             },

@@ -15,6 +15,7 @@
   const filter = defineModel<Filter>('filter');
 
   const route = useRoute();
+  const { isApple } = useDevice();
   const { share } = useCopyAndShare();
 
   const { greaterOrEqual } = useBreakpoints();
@@ -99,7 +100,7 @@
         #trailing
       >
         <UButton
-          icon="i-ttg-x"
+          icon="tabler:x"
           variant="link"
           color="neutral"
           size="sm"
@@ -113,7 +114,7 @@
         <UButton
           :disabled="!filter"
           :loading="isPending"
-          icon="i-fluent-filter-24-regular"
+          icon="tabler:filter"
           label="Фильтр"
           block
           @click.left.exact.prevent="opened = true"
@@ -122,13 +123,13 @@
         <UButton
           v-if="isEdited"
           title="Очистить фильтр"
-          icon="i-ttg-trash"
+          icon="tabler:trash"
           @click.left.exact.prevent="reset"
         />
       </UFieldGroup>
 
       <UButton
-        icon="i-fluent-share-24-regular"
+        :icon="isApple ? 'tabler:share-2' : 'tabler:share'"
         title="Поделиться ссылкой"
         @click.left.exact.prevent="share(urlForCopy)"
       />

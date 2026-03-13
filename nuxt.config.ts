@@ -146,7 +146,7 @@ export default defineNuxtConfig({
 
   icon: {
     serverBundle: {
-      collections: ['fluent'],
+      collections: ['tabler'],
     },
     customCollections: [
       {

@@ -15,7 +15,7 @@
 
         <UButton
           size="sm"
-          icon="i-ttg-plus"
+          icon="tabler:plus"
           @click.left.exact.prevent="navigateTo(`/workshop/${section}/create`)"
         >
           Создать

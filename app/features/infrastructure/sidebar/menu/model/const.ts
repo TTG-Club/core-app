@@ -118,19 +118,19 @@ export const MENU_LINKS: Array<{
 }> = [
   {
     url: 'https://vk.com/ttg.club',
-    icon: 'i-ttg-vk',
+    icon: 'ttg:vk',
   },
   {
     url: 'https://discord.gg/JqFKMKRtxv',
-    icon: 'i-ttg-discord',
+    icon: 'ttg:discord',
   },
   {
     url: 'https://t.me/ttgclubnews',
-    icon: 'i-ttg-telegram',
+    icon: 'ttg:telegram',
   },
   {
     url: 'https://www.youtube.com/channel/UCpFse6-P2IBXYfkesAxZbfA',
-    icon: 'i-ttg-youtube',
+    icon: 'ttg:youtube',
   },
 ];
 
@@ -141,12 +141,12 @@ export const MENU_SUPPORT: Array<{
 }> = [
   {
     url: 'https://boosty.to/dnd5club',
-    icon: 'i-ttg-boosty',
+    icon: 'ttg:boosty',
     label: 'TTG Club',
   },
   {
     url: 'https://boosty.to/dnd5eclub',
-    icon: 'i-ttg-boosty',
+    icon: 'ttg:boosty',
     label: 'Magistrus',
   },
 ];

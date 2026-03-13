@@ -135,7 +135,7 @@
         </div>
 
         <UButton
-          icon="i-fluent-settings-24-regular"
+          icon="tabler:settings"
           color="neutral"
           variant="subtle"
           size="sm"
