@@ -22,7 +22,7 @@ core-app/
 │   ├── composables/                # ⚡ Global composables (auto-import)
 │   ├── features/                   # 🏗️ DDD domains (core business logic)
 │   ├── layouts/                    # Layouts: default, detail, section
-│   ├── middleware/                 # Route middleware: auth, admin, close-overlay
+│   ├── middleware/                 # Route middleware: auth, close-overlay
 │   ├── pages/                      # 📄 Routes (file-based routing)
 │   ├── plugins/                    # Plugins: dayjs, scroll, heartbeat
 │   ├── shared/                     # 🔧 Global shared layer

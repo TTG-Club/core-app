@@ -1,8 +1,7 @@
-import { useUserStore } from '~/shared/stores';
 import { Role } from '~/shared/types';
 
 export function useUserRoles() {
-  const { user } = storeToRefs(useUserStore());
+  const { user } = useUser();
 
   const isSubscriber = computed(
     () => !!user.value?.roles.includes(Role.SUBSCRIBER),

@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import { useUserStore } from '~/shared/stores';
-
   import { CopyButton } from '../copy-button';
 
   import type { RouteLocationRaw } from 'vue-router';
@@ -17,7 +15,7 @@
   const route = useRoute();
   const router = useRouter();
 
-  const { isAdmin } = storeToRefs(useUserStore());
+  const { isAdmin } = useUser();
 
   const urlForCopy = computed(() => {
     return getOrigin() + route.fullPath;

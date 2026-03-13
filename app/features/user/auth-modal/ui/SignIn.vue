@@ -1,11 +1,9 @@
 <script setup lang="ts">
-  import { useUserStore } from '~/shared/stores';
-
   const emit = defineEmits<{
     (e: 'switch:sign-up' | 'switch:change-password' | 'close'): void;
   }>();
 
-  const { fetch } = useUserStore();
+  const { fetch } = useUser();
   const $toast = useToast();
 
   const showPwd = ref(false);

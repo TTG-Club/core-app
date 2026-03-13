@@ -3,8 +3,6 @@
   import { RoadmapFeature } from '~roadmap/feature';
   import { PageGrid } from '~ui/page';
 
-  import { useUserStore } from '~/shared/stores';
-
   import type { RoadmapItem } from '~roadmap/types';
 
   useSeoMeta({
@@ -13,7 +11,7 @@
   });
 
   const { isAdmin } = useUserRoles();
-  const { isLoggedIn } = storeToRefs(useUserStore());
+  const { isLoggedIn } = useUser();
 
   const { data: roadmap, refresh } = useAsyncData(
     'roadmap',

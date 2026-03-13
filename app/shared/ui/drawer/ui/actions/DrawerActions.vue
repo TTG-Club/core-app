@@ -1,8 +1,6 @@
 <script setup lang="ts">
   import { CopyButton } from '~ui/copy-button';
 
-  import { useUserStore } from '~/shared/stores';
-
   defineEmits<{
     (e: 'close'): void;
   }>();
@@ -12,7 +10,7 @@
     editUrl?: string;
   }>();
 
-  const { isAdmin } = storeToRefs(useUserStore());
+  const { isAdmin } = useUser();
 </script>
 
 <template>
