@@ -53,7 +53,7 @@
       await refresh();
       toast.add({ title: 'Файлы успешно загружены', color: 'success' });
     } catch (e) {
-      console.error(e);
+      consola.error(e);
       toast.add({ title: 'Ошибка при загрузке', color: 'error' });
     } finally {
       isUploading.value = false;
@@ -73,7 +73,7 @@
       await refresh();
       toast.add({ title: 'Рамка удалена', color: 'success' });
     } catch (e) {
-      console.error('Failed to delete:', e);
+      consola.error('Failed to delete:', e);
       toast.add({ title: 'Ошибка при удалении', color: 'error' });
     } finally {
       isDeleting.value = null;
@@ -150,7 +150,7 @@
 
       toast.add({ title: 'Порядок сохранен', color: 'success' });
     } catch (e) {
-      console.error(e);
+      consola.error(e);
       toast.add({ title: 'Ошибка сохранения порядка', color: 'error' });
       await refresh();
     } finally {

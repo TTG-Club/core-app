@@ -29,7 +29,7 @@
   try {
     await fetchUser();
   } catch (err) {
-    console.error(err);
+    consola.error(err);
   }
 
   function logout() {

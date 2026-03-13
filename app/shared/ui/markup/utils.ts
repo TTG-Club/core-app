@@ -1,5 +1,3 @@
-import { consola } from 'consola';
-
 import { MARKER_MAP } from './config';
 
 import type { MarkerNode, RenderNode, SimpleTextNode } from './types';

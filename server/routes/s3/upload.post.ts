@@ -82,7 +82,7 @@ export default defineEventHandler<Request, Promise<S3UploadResponse>>(
         maxSize,
       );
     } catch (err) {
-      console.error(err);
+      consola.error(err);
 
       if (err instanceof H3Error) {
         throw err;

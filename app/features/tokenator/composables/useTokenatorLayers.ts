@@ -52,7 +52,7 @@ export function useTokenatorLayers() {
     };
 
     reader.onerror = () => {
-      console.error('Failed to load frame file');
+      consola.error('Failed to load frame file');
     };
 
     reader.readAsDataURL(file);
@@ -75,7 +75,7 @@ export function useTokenatorLayers() {
     };
 
     reader.onerror = () => {
-      console.error('Failed to load background file');
+      consola.error('Failed to load background file');
     };
 
     reader.readAsDataURL(file);

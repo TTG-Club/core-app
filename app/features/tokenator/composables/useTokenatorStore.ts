@@ -195,7 +195,7 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     };
 
     reader.onerror = () => {
-      console.error('Failed to load image file');
+      consola.error('Failed to load image file');
     };
 
     reader.readAsDataURL(file);

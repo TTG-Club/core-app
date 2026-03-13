@@ -40,7 +40,7 @@ export function compressFilters(filter: FilterRequest | undefined): string {
 
     return fromUint8Array(compressed, true);
   } catch (error) {
-    console.error('Error compressing filters:', error);
+    consola.error('Error compressing filters:', error);
 
     return '';
   }
@@ -59,7 +59,7 @@ export function decompressFilters(
 
     return JSON.parse(decompressed);
   } catch (error) {
-    console.error('Error decompressing filters:', error);
+    consola.error('Error decompressing filters:', error);
 
     return undefined;
   }

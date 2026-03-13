@@ -82,7 +82,7 @@ export async function useFilter(key: string, url: string) {
         filter.value = applyCompressedFilters(data.value, decompressed);
       }
     } catch (error) {
-      console.error('Failed to apply filters from URL:', error);
+      consola.error('Failed to apply filters from URL:', error);
     }
   }
 

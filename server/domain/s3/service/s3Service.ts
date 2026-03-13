@@ -1,5 +1,4 @@
 import { S3 } from '@aws-sdk/client-s3';
-import consola from 'consola';
 import { StatusCodes } from 'http-status-codes';
 import ms from 'ms';
 
@@ -95,7 +94,7 @@ export function createS3Service() {
         Bucket: bucket,
       });
     } catch (err) {
-      console.error(err);
+      consola.error(err);
 
       throw createError(
         getErrorResponse(StatusCodes.INTERNAL_SERVER_ERROR, {
@@ -114,7 +113,7 @@ export function createS3Service() {
 
       return command.Contents || [];
     } catch (err) {
-      console.error(err);
+      consola.error(err);
 
       throw createError(
         getErrorResponse(StatusCodes.INTERNAL_SERVER_ERROR, {

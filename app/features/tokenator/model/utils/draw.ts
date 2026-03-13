@@ -153,7 +153,7 @@ function loadImage(url: string | null): Promise<HTMLImageElement | null> {
     };
 
     img.onerror = (e) => {
-      console.error('Tokenator: Failed to load image', url, e);
+      consola.error('Tokenator: Failed to load image', url, e);
       resolve(null);
     };
 
