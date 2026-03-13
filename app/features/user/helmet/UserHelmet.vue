@@ -2,13 +2,9 @@
   import { KbdShortcut } from '~ui/kbd-shortcut';
   import { AuthModal } from '~user/auth-modal';
 
-  import { useUserStore } from '~/shared/stores';
-
-  const userStore = useUserStore();
+  const { fetch: fetchUser, logout: userLogout, user, pending } = useUser();
   const { isAdmin } = useUserRoles();
   const { isTablet } = useBreakpoints();
-
-  const { isLoading, user } = storeToRefs(userStore);
 
   const isAuthOpened = ref(false);
   const isMenuOpened = ref(false);
@@ -16,13 +12,13 @@
   const side = computed(() => (isTablet.value ? 'right' : 'top'));
 
   try {
-    await userStore.fetch();
+    await fetchUser();
   } catch (err) {
     console.error(err);
   }
 
   function logout() {
-    userStore.logout().finally(() => {
+    userLogout().finally(() => {
       window.location.reload();
     });
   }
@@ -57,7 +53,7 @@
 <template>
   <template v-if="!user">
     <UButton
-      :loading="isLoading"
+      :loading="pending"
       variant="ghost"
       icon="ttg:profile-helmet-outline"
       size="xl"
@@ -76,7 +72,7 @@
   >
     <template #default>
       <UButton
-        :loading="isLoading"
+        :loading="pending"
         variant="ghost"
         icon="ttg:profile-helmet-filled"
         size="xl"

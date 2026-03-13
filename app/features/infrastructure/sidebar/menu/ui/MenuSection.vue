@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import { useUserStore } from '~/shared/stores';
-
   import type { Role } from '~/shared/types';
 
   const { items } = defineProps<{
@@ -13,7 +11,7 @@
     }>;
   }>();
 
-  const { user } = storeToRefs(useUserStore());
+  const { user } = useUser();
 
   const links = computed(() =>
     items.map((link) => {
