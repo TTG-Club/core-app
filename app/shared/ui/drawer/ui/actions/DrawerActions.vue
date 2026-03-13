@@ -26,7 +26,7 @@
       variant="ghost"
       target="_blank"
       color="neutral"
-      icon="i-ttg-edit"
+      icon="tabler:pencil"
       size="sm"
     />
   </UTooltip>
@@ -40,7 +40,7 @@
       variant="ghost"
       target="_blank"
       color="neutral"
-      icon="i-ttg-new-page"
+      icon="tabler:external-link"
       size="sm"
     />
   </UTooltip>
@@ -54,7 +54,7 @@
   <UButton
     variant="ghost"
     color="neutral"
-    icon="i-ttg-x"
+    icon="tabler:x"
     size="sm"
     @click.left.exact.prevent="$emit('close')"
   />

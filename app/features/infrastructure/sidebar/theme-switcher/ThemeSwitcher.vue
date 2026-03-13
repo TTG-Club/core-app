@@ -51,7 +51,7 @@
     <UButton
       variant="ghost"
       size="xl"
-      icon="i-ttg-settings"
+      icon="tabler:settings"
       color="neutral"
     />
   </UDropdownMenu>

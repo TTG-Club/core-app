@@ -133,7 +133,7 @@
                 style: {
                   left: `${part * -5}px`,
                 },
-                name: 'i-fluent-star-16-filled',
+                name: 'tabler:star-filled',
                 size: 20,
               }),
             ),

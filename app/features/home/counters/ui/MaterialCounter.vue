@@ -63,7 +63,7 @@
         class="glow-indicator flex size-5 items-center justify-center rounded bg-linear-to-br from-(--color-success-500) to-(--color-success-600) shadow-[0_0_12px_var(--color-success-500)]"
       >
         <UIcon
-          name="i-fluent-play-12-filled"
+          name="tabler:player-play-filled"
           class="size-2.5 text-white"
         />
       </div>
@@ -77,7 +77,7 @@
       <UButton
         v-if="isAdmin"
         :loading="isLoading"
-        icon="i-fluent-arrow-sync-16-regular"
+        icon="tabler:refresh"
         variant="ghost"
         size="xs"
         class="ml-auto"

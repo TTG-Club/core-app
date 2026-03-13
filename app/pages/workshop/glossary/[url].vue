@@ -12,7 +12,7 @@
         <UButton
           variant="ghost"
           color="neutral"
-          icon="i-ttg-x"
+          icon="tabler:x"
           @click.left.exact.prevent="navigateTo('/glossary')"
         />
       </UTooltip>

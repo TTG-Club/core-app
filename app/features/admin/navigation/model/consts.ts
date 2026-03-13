@@ -24,7 +24,7 @@ export const ADMIN_PANEL_TITLE = 'Админ-панель';
 /**
  * Иконка админ-панели
  */
-export const ADMIN_PANEL_ICON = 'i-ttg-menu-filled-workshop';
+export const ADMIN_PANEL_ICON = 'ttg:menu-filled-workshop';
 
 /**
  * Конфигурация UI админ-панели

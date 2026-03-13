@@ -26,7 +26,7 @@
           color="neutral"
           variant="link"
           size="sm"
-          icon="i-fluent-calendar-24-regular"
+          icon="tabler:calendar"
           aria-label="Выбери дату"
           class="px-0"
         />

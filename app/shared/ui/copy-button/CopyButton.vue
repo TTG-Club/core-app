@@ -7,6 +7,7 @@
     size?: ButtonProps['size'];
   }>();
 
+  const { isApple } = useDevice();
   const { share } = useCopyAndShare();
 </script>
 
@@ -17,7 +18,7 @@
   >
     <UButton
       :href="url"
-      icon="i-fluent-share-24-regular"
+      :icon="isApple ? 'tabler:share-2' : 'tabler:share'"
       variant="ghost"
       color="neutral"
       :disabled

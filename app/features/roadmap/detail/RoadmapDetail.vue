@@ -22,7 +22,7 @@
         <UButton
           variant="ghost"
           color="neutral"
-          icon="i-ttg-edit"
+          icon="tabler:pencil"
           size="sm"
         />
       </RoadmapEditor>

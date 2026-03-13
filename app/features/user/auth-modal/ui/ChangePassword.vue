@@ -83,11 +83,7 @@
               color="neutral"
               variant="link"
               size="sm"
-              :icon="
-                showPwd
-                  ? 'i-fluent-eye-off-16-filled'
-                  : 'i-fluent-eye-16-filled'
-              "
+              :icon="showPwd ? 'tabler:eye-off' : 'tabler:eye-filled'"
               :aria-label="showPwd ? 'Скрыть пароль' : 'Показать пароль'"
               :aria-pressed="showPwd"
               aria-controls="password"
