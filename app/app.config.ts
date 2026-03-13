@@ -1,4 +1,8 @@
 export default defineAppConfig({
+  icon: {
+    mode: 'css',
+    cssLayer: 'base',
+  },
   ui: {
     icons: {
       arrowDown: 'i-tabler-arrow-down',
