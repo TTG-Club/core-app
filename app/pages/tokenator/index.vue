@@ -43,7 +43,7 @@
         <template #fallback>
           <div class="flex h-96 w-full items-center justify-center">
             <UIcon
-              name="tabler:refresh"
+              name="tabler:loader-2"
               class="animate-spin text-gray-500"
               size="2.5rem"
             />
