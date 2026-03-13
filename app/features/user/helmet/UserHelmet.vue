@@ -137,7 +137,7 @@
               variant="ghost"
               size="lg"
               class="w-full"
-              icon="tabler:settings"
+              icon="tabler:user-cog"
               @click.left.exact.prevent="openProfile"
             >
               Настройка профиля
@@ -161,7 +161,7 @@
 
             <UButton
               v-if="isAdmin"
-              icon="tabler:settings"
+              icon="tabler:settings-cog"
               color="neutral"
               variant="ghost"
               class="w-full"
