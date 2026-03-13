@@ -68,7 +68,7 @@
   });
 
   const statusIcon = computed(
-    () => icon || iconMap[status] || 'tabler:info-circle-filled',
+    () => icon || iconMap[status] || 'tabler:info-circle',
   );
 
   const statusColor = computed(() => {
