@@ -1,14 +1,14 @@
 <script setup lang="ts">
-  import { SourceBody } from '~sources/body';
-  import { UiDrawer } from '~ui/drawer';
-
   import type { SourceCreate, SourceDetailResponse } from '~sources/types';
 
-  const opened = defineModel<boolean>('open', { required: true });
+  import { SourceBody } from '~sources/body';
+  import { UiDrawer } from '~ui/drawer';
 
   const { state } = defineProps<{
     state: SourceCreate;
   }>();
+
+  const opened = defineModel<boolean>('open', { required: true });
 
   const {
     data: source,

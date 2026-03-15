@@ -1,5 +1,8 @@
+import type { TransformState } from '~tokenator/model';
+
 import { useRefHistory } from '@vueuse/core';
 import { cloneDeep } from 'es-toolkit';
+
 import {
   DEFAULT_TRANSFORM,
   validateRotation,
@@ -7,8 +10,6 @@ import {
 } from '~tokenator/model';
 
 import { useTokenatorSetting } from './useTokenatorSetting';
-
-import type { TransformState } from '~tokenator/model';
 
 export function useTokenatorTransforms() {
   const { data: transform } = useTokenatorSetting<TransformState>(

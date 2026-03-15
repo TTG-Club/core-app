@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { ClassFeature } from '~classes/model';
+
   import { UiCollapse } from '~ui/collapse';
   import { MarkupRender } from '~ui/markup';
-
-  import type { ClassFeature } from '~classes/model';
 
   const { feature } = defineProps<{ feature: ClassFeature }>();
 

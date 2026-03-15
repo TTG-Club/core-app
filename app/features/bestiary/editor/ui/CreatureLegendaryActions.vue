@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { EditorArrayControls } from '~ui/editor';
-
   import type { CreateAction, LegendaryActions } from '~bestiary/model';
+
+  import { EditorArrayControls } from '~ui/editor';
 
   function getEmpty(): CreateAction {
     return {
@@ -35,7 +35,9 @@
     class="col-span-full"
   >
     <template #header>
-      <h2 class="truncate text-base text-highlighted">Легендарные действия</h2>
+      <h2 class="truncate text-base text-highlighted">
+        Легендарные действия
+      </h2>
     </template>
 
     <div class="grid gap-6">

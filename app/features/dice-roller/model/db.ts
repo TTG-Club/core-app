@@ -1,11 +1,11 @@
+import type { Table } from 'dexie';
+
+import type { HistoryEntry } from '../types';
+
 import Dexie from 'dexie';
 import { del, get } from 'idb-keyval';
 
 import { DICE_HISTORY_STORAGE_KEY } from '../const';
-
-import type { Table } from 'dexie';
-
-import type { HistoryEntry } from '../types';
 
 export class DiceRollerDB extends Dexie {
   history!: Table<HistoryEntry>;

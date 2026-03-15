@@ -15,7 +15,9 @@
 <template>
   <NuxtLayout>
     <div class="flex flex-col gap-4">
-      <h1 class="text-3xl">Профиль пользователя</h1>
+      <h1 class="text-3xl">
+        Профиль пользователя
+      </h1>
 
       <div class="flex gap-2">
         <strong>Имя пользователя: </strong>

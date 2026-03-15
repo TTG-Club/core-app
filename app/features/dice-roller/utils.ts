@@ -7,6 +7,8 @@ import type {
   ExpressionNode,
 } from './types';
 
+const DICE_PERCENT_REGEX = /d%/i;
+
 /**
  * Проверяет, является ли значение непустым объектом.
  * Используется для сужения типов при обработке результатов бросков.
@@ -104,7 +106,7 @@ export function createDieLabel(roll: DieRollInfo, rollIndex: number): string {
   }
 
   if (suffix === '?' && roll.label) {
-    return roll.label.replace(/d%/i, 'к100').replace('%', '100');
+    return roll.label.replace(DICE_PERCENT_REGEX, 'к100').replace('%', '100');
   }
 
   if (typeof countValue === 'number') {

@@ -9,7 +9,9 @@
       <UCard variant="subtle">
         <template #header>
           <div class="flex items-center justify-between gap-2">
-            <h2 class="truncate text-base text-highlighted">Токенатор</h2>
+            <h2 class="truncate text-base text-highlighted">
+              Токенатор
+            </h2>
 
             <UButton
               size="sm"

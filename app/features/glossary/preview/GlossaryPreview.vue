@@ -1,14 +1,14 @@
 <script setup lang="ts">
-  import { GlossaryBody } from '~glossary/body';
-  import { UiDrawer } from '~ui/drawer';
-
   import type { GlossaryCreate, GlossaryDetailResponse } from '~glossary/model';
 
-  const opened = defineModel<boolean>('open', { required: true });
+  import { GlossaryBody } from '~glossary/body';
+  import { UiDrawer } from '~ui/drawer';
 
   const { state } = defineProps<{
     state: GlossaryCreate;
   }>();
+
+  const opened = defineModel<boolean>('open', { required: true });
 
   const {
     data: glossary,

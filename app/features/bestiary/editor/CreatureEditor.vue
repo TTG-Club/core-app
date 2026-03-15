@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { CreatureCreate } from '~bestiary/model';
+
   import { getInitialState } from '~bestiary/model';
   import { CreaturePreview } from '~bestiary/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
@@ -25,8 +27,6 @@
     CreatureType,
   } from './ui';
 
-  import type { CreatureCreate } from '~bestiary/model';
-
   const { state, onError, onSubmit } = useWorkshopForm<CreatureCreate>({
     actionUrl: '/api/v2/bestiary',
     getInitialState,
@@ -52,7 +52,9 @@
       class="col-span-full"
     >
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Описание</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Описание
+        </h2>
       </template>
 
       <UFormField name="description">
@@ -69,7 +71,9 @@
       class="col-span-full"
     >
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Заголовок</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Заголовок
+        </h2>
       </template>
 
       <div class="flex flex-col gap-4">
@@ -94,7 +98,9 @@
       class="col-span-full"
     >
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Статблок</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Статблок
+        </h2>
       </template>
 
       <div class="grid grid-cols-24 gap-4">
@@ -158,7 +164,9 @@
       class="col-span-full"
     >
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Снаряжение</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Снаряжение
+        </h2>
       </template>
 
       <UFormField
@@ -234,7 +242,7 @@
               class="w-full rounded-lg object-contain"
               :src="src"
               :alt="state.name.rus"
-            />
+            >
 
             <!-- Show a placeholder while loading -->
             <img
@@ -242,7 +250,7 @@
               class="w-full rounded-lg object-contain"
               src="/img/no-img.webp"
               alt="no image"
-            />
+            >
           </NuxtImg>
         </template>
       </UploadImage>

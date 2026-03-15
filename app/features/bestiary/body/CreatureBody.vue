@@ -1,5 +1,8 @@
 <script setup lang="ts">
+  import type { CreatureDetailResponse } from '~bestiary/model';
+
   import { pick } from 'es-toolkit';
+
   import { UiAction } from '~ui/action';
   import { UiCollapse } from '~ui/collapse';
   import { UiGallery } from '~ui/gallery';
@@ -7,8 +10,6 @@
   import { RatingWidget } from '~ui/rating';
 
   import { DescriptionsBlock, StatsBlock, TopBar } from './ui';
-
-  import type { CreatureDetailResponse } from '~bestiary/model';
 
   const { creature } = defineProps<{
     creature: CreatureDetailResponse;
@@ -38,9 +39,9 @@
 
   const hasSection = computed(
     () =>
-      creature.section?.description ||
-      creature.section?.habitats ||
-      creature.section?.treasures,
+      creature.section?.description
+      || creature.section?.habitats
+      || creature.section?.treasures,
   );
 </script>
 
@@ -70,7 +71,9 @@
       <div class="flex flex-auto flex-col gap-6">
         <template v-if="creature.traits?.length">
           <UiCollapse default-open>
-            <template #default> Особенности </template>
+            <template #default>
+              Особенности
+            </template>
 
             <template #content>
               <UiAction
@@ -85,7 +88,9 @@
 
         <template v-if="creature.actions?.length">
           <UiCollapse default-open>
-            <template #default> Действия </template>
+            <template #default>
+              Действия
+            </template>
 
             <template #content>
               <UiAction
@@ -100,7 +105,9 @@
 
         <template v-if="creature.bonusActions?.length">
           <UiCollapse default-open>
-            <template #default> Бонусные действия </template>
+            <template #default>
+              Бонусные действия
+            </template>
 
             <template #content>
               <UiAction
@@ -115,7 +122,9 @@
 
         <template v-if="creature.reactions?.length">
           <UiCollapse default-open>
-            <template #default> Реакции </template>
+            <template #default>
+              Реакции
+            </template>
 
             <template #content>
               <UiAction
@@ -130,7 +139,9 @@
 
         <template v-if="creature.legendary?.actions?.length">
           <UiCollapse default-open>
-            <template #default> Легендарные действия </template>
+            <template #default>
+              Легендарные действия
+            </template>
 
             <template #content>
               <p class="mb-2">
@@ -165,7 +176,9 @@
           v-if="creature.description"
           default-open
         >
-          <template #default> Описание </template>
+          <template #default>
+            Описание
+          </template>
 
           <template #content>
             <DescriptionsBlock :description="creature.description" />

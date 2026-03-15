@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { UiResult } from '~ui/result';
-
   import type { NuxtError } from '#app';
+
+  import { UiResult } from '~ui/result';
 
   defineProps<{
     items: Array<unknown> | undefined;
@@ -21,7 +21,9 @@
     sub-title="По вашему запросу ничего не нашлось. Попробуйте изменить фильтр или строку поиска"
   >
     <template #extra>
-      <UButton @click.left.exact.prevent="$emit('refresh')"> Обновить </UButton>
+      <UButton @click.left.exact.prevent="$emit('refresh')">
+        Обновить
+      </UButton>
 
       <UButton
         variant="soft"
@@ -37,7 +39,9 @@
     :error
   >
     <template #extra>
-      <UButton @click.left.exact.prevent="$emit('refresh')"> Обновить </UButton>
+      <UButton @click.left.exact.prevent="$emit('refresh')">
+        Обновить
+      </UButton>
 
       <UButton
         variant="soft"

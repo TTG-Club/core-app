@@ -44,9 +44,9 @@
 
   const isLoading = computed(
     () =>
-      counterStatus.value === 'pending' ||
-      visitorsCounterStatus.value === 'pending' ||
-      resetStatus.value === 'pending',
+      counterStatus.value === 'pending'
+      || visitorsCounterStatus.value === 'pending'
+      || resetStatus.value === 'pending',
   );
 
   const materialsValue = computed(() => counter.value ?? 0);

@@ -1,10 +1,10 @@
 <script setup lang="ts">
+  import type { FeatCreate } from '~feats/model';
+
   import { FeatPreview } from '~feats/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectAbilities, SelectFeatCategory } from '~ui/select';
   import { useWorkshopForm } from '~workshop/composable';
-
-  import type { FeatCreate } from '~feats/model';
 
   const formRef = useTemplateRef('formRef');
 
@@ -54,7 +54,9 @@
 
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Подробности</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Подробности
+        </h2>
       </template>
 
       <div class="grid grid-cols-24 gap-4">
@@ -104,7 +106,9 @@
 
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Описание</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Описание
+        </h2>
       </template>
 
       <div class="grid grid-cols-24 gap-4">

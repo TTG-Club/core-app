@@ -1,3 +1,6 @@
+const ICON_PATH_REGEX = /.+?icons\/(.+?)\.svg/i;
+const SLASH_REGEX = /\//g;
+
 const iconAvailList = Object.fromEntries(
   Object.entries(
     import.meta.glob('@/assets/icons/**/*.svg', {
@@ -7,7 +10,7 @@ const iconAvailList = Object.fromEntries(
     }),
   )
     .map(([path, icon]): [string, boolean] => {
-      const match = path.match(/.+?icons\/(.+?)\.svg/i);
+      const match = path.match(ICON_PATH_REGEX);
       const name = match?.[1];
 
       if (!name || !icon) {
@@ -27,7 +30,7 @@ function isIconExist(path: string | null | undefined): path is string {
 
 function getIconName(path: string) {
   if (isIconExist(path)) {
-    const name = path.replace(/\//g, '-');
+    const name = path.replace(SLASH_REGEX, '-');
 
     return `#ttg-${name}`;
   }

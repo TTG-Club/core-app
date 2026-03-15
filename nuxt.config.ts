@@ -107,14 +107,14 @@ export default defineNuxtConfig({
     headers: {
       contentSecurityPolicy: {
         'script-src': [
-          "'self'",
-          "'unsafe-inline'",
-          "'strict-dynamic'",
-          "'nonce-{{nonce}}'",
-          "'wasm-unsafe-eval'",
+          '\'self\'',
+          '\'unsafe-inline\'',
+          '\'strict-dynamic\'',
+          '\'nonce-{{nonce}}\'',
+          '\'wasm-unsafe-eval\'',
         ],
-        'img-src': ["'self'", 'https:', 'data:', 'blob:'],
-        'media-src': ["'self'", 'https:', 'data:', 'blob:'],
+        'img-src': ['\'self\'', 'https:', 'data:', 'blob:'],
+        'media-src': ['\'self\'', 'https:', 'data:', 'blob:'],
       },
       strictTransportSecurity: {
         preload: true,

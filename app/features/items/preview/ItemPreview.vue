@@ -1,14 +1,14 @@
 <script setup lang="ts">
-  import { ItemBody } from '~items/body';
-  import { UiDrawer } from '~ui/drawer';
-
   import type { ItemCreate, ItemDetailResponse } from '~items/model';
 
-  const opened = defineModel<boolean>('open', { required: true });
+  import { ItemBody } from '~items/body';
+  import { UiDrawer } from '~ui/drawer';
 
   const { state } = defineProps<{
     state: ItemCreate;
   }>();
+
+  const opened = defineModel<boolean>('open', { required: true });
 
   const {
     data: item,

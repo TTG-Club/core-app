@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { FilterTag } from '../tag';
-
   import type { FilterItems } from '~infrastructure/filter/types';
+
+  import { FilterTag } from '../tag';
 
   const { label, preview = false } = defineProps<{
     label: string;

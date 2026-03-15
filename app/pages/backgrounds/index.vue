@@ -1,10 +1,10 @@
 <script setup lang="ts">
+  import type { BackgroundLinkResponse } from '~backgrounds/model';
+
   import { BackgroundLink } from '~backgrounds/link';
   import { FilterControls, useFilter } from '~infrastructure/filter';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
-
-  import type { BackgroundLinkResponse } from '~backgrounds/model';
 
   useSeoMeta({
     title: 'Предыстории [Backgrounds]',
@@ -53,8 +53,7 @@
         v-model:filter="filter"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
-      >
-      </FilterControls>
+      />
     </template>
 
     <template #default>

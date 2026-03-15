@@ -43,7 +43,9 @@
 
 <template>
   <div class="flex flex-col gap-6">
-    <h4 class="text-2xl">Изменение пароля</h4>
+    <h4 class="text-2xl">
+      Изменение пароля
+    </h4>
 
     <UForm
       class="flex flex-col gap-4"

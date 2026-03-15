@@ -10,14 +10,17 @@
     raw: false,
   });
 
+  const DIGITS_ONLY_REGEX = /^\d+$/;
+  const SIZE_FORMAT_REGEX = /^\d+(?:px|em)$/i;
+
   const iconName = computed(() => (!props.raw ? getIconName(props.icon) : ''));
 
   const sizeCalculated = computed(() => {
-    if (/^\d+$/.test(String(props.size))) {
+    if (DIGITS_ONLY_REGEX.test(String(props.size))) {
       return `${props.size}px`;
     }
 
-    if (/^\d+(?:px|em)$/i.test(String(props.size))) {
+    if (SIZE_FORMAT_REGEX.test(String(props.size))) {
       return props.size;
     }
 

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-  import { uniqBy } from 'es-toolkit';
-
   import type { CommandPaletteGroup } from '@nuxt/ui';
-  import type { ClassLinkResponse } from '~classes/model';
 
   import type { NameResponse } from '~/shared/types';
+  import type { ClassLinkResponse } from '~classes/model';
+
+  import { uniqBy } from 'es-toolkit';
 
   const {
     url,
@@ -78,7 +78,7 @@
         <UButton
           :disabled="!subclasses?.length"
           :loading="isLoading"
-          :variant="'soft'"
+          variant="soft"
           :active="open"
           active-variant="soft"
           color="primary"

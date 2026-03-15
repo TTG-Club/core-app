@@ -1,13 +1,15 @@
-import { MARKER_ALIASES, MARKER_MAP } from './config';
-import { LEADING_CHARACTER, MAX_DEPTH, MAX_STRING_LENGTH } from './consts';
-import { logError } from './utils';
-
 import type {
   MarkerAttributes,
   MarkerNode,
   RenderNode,
   SimpleTextNode,
 } from './types';
+
+import { MARKER_ALIASES, MARKER_MAP } from './config';
+import { LEADING_CHARACTER, MAX_DEPTH, MAX_STRING_LENGTH } from './consts';
+import { logError } from './utils';
+
+const MARKER_PREFIX_REGEX = /^@/;
 
 export function parse(text: string): RenderNode[] {
   if (text.length > MAX_STRING_LENGTH) {
@@ -38,8 +40,8 @@ function recursiveParse(text: string, depth: number): RenderNode[] {
 
   try {
     tagSplit = splitByMarkers(text);
-  } catch (err) {
-    logError('Parser', 'Splitting error', { text, err });
+  } catch {
+    logError('Parser', 'Splitting error', { text });
 
     return [];
   }
@@ -74,7 +76,7 @@ function recursiveParse(text: string, depth: number): RenderNode[] {
 function convertMarker(string: string, depth: number): MarkerNode {
   const { text: rawMarker, rest } = splitFirstSpace(string);
 
-  const marker = MARKER_ALIASES.get(rawMarker.replace(/^@/, ''));
+  const marker = MARKER_ALIASES.get(rawMarker.replace(MARKER_PREFIX_REGEX, ''));
 
   if (!marker) {
     throw new Error(`Unknown marker: ${rawMarker}`);
@@ -262,7 +264,7 @@ function splitAttrs(params: string[]): MarkerAttributes | undefined {
 function parseAttrValue(attrValue: string): string | number | boolean | null {
   try {
     return JSON.parse(attrValue);
-  } catch (err) {
+  } catch {
     return attrValue;
   }
 }

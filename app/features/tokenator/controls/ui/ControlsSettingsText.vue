@@ -73,8 +73,7 @@
 
           <span
             class="max-w-[120px] truncate text-xs font-medium text-primary-500"
-            >{{ store.activeText.content }}</span
-          >
+          >{{ store.activeText.content }}</span>
         </div>
 
         <UButton
@@ -275,7 +274,9 @@
       v-else-if="store.texts.length > 0"
       class="space-y-2"
     >
-      <div class="text-xs text-neutral-500">Выберите текст:</div>
+      <div class="text-xs text-neutral-500">
+        Выберите текст:
+      </div>
 
       <div class="flex flex-col gap-2">
         <UButton

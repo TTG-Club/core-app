@@ -1,11 +1,11 @@
 <script setup lang="ts">
+  import type { FeatLinkResponse } from '~feats/model';
+
   import { FeatLink } from '~feats/link';
   import { FilterControls, useFilter } from '~infrastructure/filter';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
-
-  import type { FeatLinkResponse } from '~feats/model';
 
   useSeoMeta({
     title: 'Черты [Feats]',
@@ -54,8 +54,7 @@
         v-model:filter="filter"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
-      >
-      </FilterControls>
+      />
     </template>
 
     <template #default>

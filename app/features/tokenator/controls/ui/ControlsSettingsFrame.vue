@@ -128,9 +128,7 @@
             />
           </button>
 
-          <span class="font-mono text-xs text-neutral-400"
-            >{{ store.transform.frameRotate }}°</span
-          >
+          <span class="font-mono text-xs text-neutral-400">{{ store.transform.frameRotate }}°</span>
         </div>
 
         <USlider
@@ -146,7 +144,9 @@
     <!-- Тонировка рамки -->
     <div class="grid gap-2">
       <div class="flex items-center justify-between gap-2">
-        <div class="text-xs font-medium text-neutral-400">Тонировка</div>
+        <div class="text-xs font-medium text-neutral-400">
+          Тонировка
+        </div>
       </div>
 
       <div class="flex items-center gap-3">
@@ -194,9 +194,7 @@
                   />
                 </button>
 
-                <span class="font-mono text-[10px] text-neutral-400"
-                  >{{ tintColor1Opacity }}%</span
-                >
+                <span class="font-mono text-[10px] text-neutral-400">{{ tintColor1Opacity }}%</span>
               </div>
 
               <USlider
@@ -265,9 +263,7 @@
                   />
                 </button>
 
-                <span class="font-mono text-[10px] text-neutral-400"
-                  >{{ tintColor2Opacity }}%</span
-                >
+                <span class="font-mono text-[10px] text-neutral-400">{{ tintColor2Opacity }}%</span>
               </div>
 
               <USlider

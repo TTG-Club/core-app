@@ -15,7 +15,9 @@
     class="flex flex-col gap-6 rounded-xl border border-default bg-muted p-4"
   >
     <div class="flex flex-col gap-2">
-      <div class="text-sm font-semibold">Класс</div>
+      <div class="text-sm font-semibold">
+        Класс
+      </div>
 
       <UFieldGroup>
         <USelectMenu

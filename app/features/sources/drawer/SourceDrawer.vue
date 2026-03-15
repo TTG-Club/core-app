@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { SourceDetailResponse } from '~sources/types';
+
   import { SourceBody } from '~sources/body';
   import { UiDrawer } from '~ui/drawer';
-
-  import type { SourceDetailResponse } from '~sources/types';
 
   const { url } = defineProps<{
     url: string;

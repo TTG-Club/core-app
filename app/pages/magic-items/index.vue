@@ -1,5 +1,8 @@
 <script setup lang="ts">
+  import type { MagicItemLinkResponse } from '~magic-items/model';
+
   import { computed } from 'vue';
+
   import { FilterControls, useFilter } from '~infrastructure/filter';
   import { useMagicItemRarityGroupOrder } from '~magic-items/composable';
   import { MagicItemLegend } from '~magic-items/legend';
@@ -7,8 +10,6 @@
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
-
-  import type { MagicItemLinkResponse } from '~magic-items/model';
 
   useSeoMeta({
     title: 'Магические предметы [Magic Items]',

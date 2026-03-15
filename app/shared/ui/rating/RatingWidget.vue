@@ -1,9 +1,9 @@
 <script setup lang="ts">
+  import type { RatingValue } from './types';
+
   import { isUndefined } from 'es-toolkit';
 
   import { UIcon } from '#components';
-
-  import type { RatingValue } from './types';
 
   const {
     section,
@@ -164,7 +164,9 @@
       </div>
     </div>
 
-    <div class="text-xs">Оценок: {{ rating?.total || 0 }}</div>
+    <div class="text-xs">
+      Оценок: {{ rating?.total || 0 }}
+    </div>
   </div>
 
   <div

@@ -7,7 +7,7 @@ import { useBreakpoints as useBreakpointsComposition } from '@vueuse/core';
  * XL: 1200px,
  * XXL: 1400px,
  */
-export const enum Breakpoint {
+export enum Breakpoint {
   /**
    * 576px
    */

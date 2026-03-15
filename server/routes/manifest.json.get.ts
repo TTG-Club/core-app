@@ -1,6 +1,6 @@
-import { z } from 'zod/v4';
-
 import type { EventHandlerRequest } from 'h3';
+
+import { z } from 'zod/v4';
 
 const requestSchema = z.object({
   theme: z.enum(['dark', 'light', 'svifty7']),
@@ -17,7 +17,7 @@ export default defineEventHandler<Request>(async (event) => {
     const query = await getValidatedQuery(event, requestSchema.parse);
 
     themeName = query?.theme || 'dark';
-  } catch (err) {
+  } catch {
     themeName = 'dark';
   }
 

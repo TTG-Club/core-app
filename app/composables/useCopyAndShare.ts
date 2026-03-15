@@ -1,6 +1,6 @@
-import { h } from 'vue';
-
 import type { MaybeRefOrGetter } from 'vue';
+
+import { h } from 'vue';
 
 const MESSAGES = {
   COPY_SUCCESS_TITLE: 'Скопировано',

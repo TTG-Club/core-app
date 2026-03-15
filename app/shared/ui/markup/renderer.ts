@@ -1,12 +1,12 @@
+import type { VNode } from 'vue';
+
+import type { RenderNode } from './types';
+
 import { createTextVNode, h } from 'vue';
 
 import { MARKER_MAP } from './config';
 import { parse } from './parser';
 import { isBlockNode, isMarkerNode, isSimpleTextNode } from './utils';
-
-import type { VNode } from 'vue';
-
-import type { RenderNode } from './types';
 
 // Валидация контента: блочные элементы не могут быть внутри inline
 function validateContent(

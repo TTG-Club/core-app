@@ -87,9 +87,7 @@
               />
             </button>
 
-            <span class="font-mono text-xs text-neutral-400"
-              >{{ bgOpacity }}%</span
-            >
+            <span class="font-mono text-xs text-neutral-400">{{ bgOpacity }}%</span>
           </div>
 
           <USlider
@@ -129,9 +127,7 @@
               />
             </button>
 
-            <span class="font-mono text-xs text-neutral-400"
-              >{{ store.backgroundStyle.opacity }}%</span
-            >
+            <span class="font-mono text-xs text-neutral-400">{{ store.backgroundStyle.opacity }}%</span>
           </div>
 
           <USlider
@@ -195,9 +191,7 @@
               />
             </button>
 
-            <span class="font-mono text-xs text-neutral-400"
-              >{{ store.backgroundStyle.rotate }}°</span
-            >
+            <span class="font-mono text-xs text-neutral-400">{{ store.backgroundStyle.rotate }}°</span>
           </div>
 
           <USlider

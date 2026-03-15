@@ -1,11 +1,11 @@
 <script setup lang="ts">
-  import { computed } from 'vue';
-
-  import { USeparator } from '#components';
-
   import type { VNode } from 'vue';
 
   import type { MarkerNode, RenderNode } from '../types';
+
+  import { computed } from 'vue';
+
+  import { USeparator } from '#components';
 
   const { node, renderNodes } = defineProps<{
     node: MarkerNode;

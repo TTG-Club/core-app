@@ -23,6 +23,8 @@
       />
     </template>
 
-    <UButton type="submit"> Сохранить </UButton>
+    <UButton type="submit">
+      Сохранить
+    </UButton>
   </div>
 </template>

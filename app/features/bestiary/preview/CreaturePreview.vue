@@ -1,14 +1,14 @@
 <script setup lang="ts">
-  import { CreatureBody } from '~bestiary/body';
-  import { UiDrawer } from '~ui/drawer';
-
   import type { CreatureCreate, CreatureDetailResponse } from '~bestiary/model';
 
-  const opened = defineModel<boolean>('open', { required: true });
+  import { CreatureBody } from '~bestiary/body';
+  import { UiDrawer } from '~ui/drawer';
 
   const { state } = defineProps<{
     state: CreatureCreate;
   }>();
+
+  const opened = defineModel<boolean>('open', { required: true });
 
   const {
     data: creature,

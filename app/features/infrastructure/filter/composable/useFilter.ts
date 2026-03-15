@@ -1,3 +1,5 @@
+import type { Filter } from '../types';
+
 // composables/useFilter.ts
 import { cloneDeep } from 'es-toolkit';
 
@@ -8,8 +10,6 @@ import {
   decompressFilters,
   getSelectedFilters,
 } from '../utils/filterParser';
-
-import type { Filter } from '../types';
 
 export async function useFilter(key: string, url: string) {
   const filterKey = getFilterKey(key);

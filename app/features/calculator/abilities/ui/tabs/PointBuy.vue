@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { AbilityScores } from '../../model';
+
   import { ABILITY_KEYS, ABILITY_LABELS } from '~/shared/types';
   import { AbilityKey } from '~/shared/types/abilities';
 
@@ -9,8 +11,6 @@
     POINT_BUY_MIN_SCORE,
     ZERO_SCORES,
   } from '../../model';
-
-  import type { AbilityScores } from '../../model';
 
   const model = defineModel<AbilityScores>({ required: true });
 
@@ -120,7 +120,9 @@
         <div
           class="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-4"
         >
-          <div class="font-semibold">Бюджет: {{ budget }}</div>
+          <div class="font-semibold">
+            Бюджет: {{ budget }}
+          </div>
 
           <div
             class="font-semibold"
@@ -219,7 +221,9 @@
         class="bg-card flex items-center justify-between gap-3 rounded-xl border border-default p-3"
       >
         <div>
-          <div class="font-semibold">{{ ABILITY_LABELS[key] }}</div>
+          <div class="font-semibold">
+            {{ ABILITY_LABELS[key] }}
+          </div>
 
           <div class="text-xs text-secondary">
             Стоимость: {{ getCost(localScores[key]) }}

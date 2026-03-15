@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { SpeciesDetailResponse } from '~species/model';
+
   import { SpeciesBody } from '~species/body';
   import { UiCollapse } from '~ui/collapse';
-
-  import type { SpeciesDetailResponse } from '~species/model';
 
   const { url } = defineProps<{
     url: SpeciesDetailResponse['url'];
@@ -18,7 +18,9 @@
     v-if="lineages?.length"
     class="flex flex-col gap-4"
   >
-    <h3 class="text-xl font-semibold">Происхождения</h3>
+    <h3 class="text-xl font-semibold">
+      Происхождения
+    </h3>
 
     <UiCollapse
       v-for="species in lineages"

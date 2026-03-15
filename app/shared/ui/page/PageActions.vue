@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { CopyButton } from '../copy-button';
-
   import type { RouteLocationRaw } from 'vue-router';
+
+  import { CopyButton } from '../copy-button';
 
   const { closeUrl = undefined, editUrl = undefined } = defineProps<{
     closeUrl?: RouteLocationRaw | undefined | null;

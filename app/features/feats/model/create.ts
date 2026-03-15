@@ -1,6 +1,5 @@
-import type { EditorBaseInfoState } from '~ui/editor';
-
 import type { AbilityKey } from '~/shared/types';
+import type { EditorBaseInfoState } from '~ui/editor';
 
 export interface FeatCreate extends EditorBaseInfoState {
   description: string; // описание маркап

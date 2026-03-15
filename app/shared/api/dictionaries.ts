@@ -43,7 +43,7 @@ enum DictionaryEndpoints {
 }
 
 class Dictionaries {
-  public sizes = <R extends NitroFetchRequest>(
+  sizes = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.SIZES, {
@@ -52,7 +52,7 @@ class Dictionaries {
     });
   };
 
-  public magicSchools = <R extends NitroFetchRequest>(
+  magicSchools = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.MAGIC_SCHOOLS, {
@@ -61,7 +61,7 @@ class Dictionaries {
     });
   };
 
-  public creatureTypes = <R extends NitroFetchRequest>(
+  creatureTypes = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.CREATURE_TYPES, {
@@ -70,7 +70,7 @@ class Dictionaries {
     });
   };
 
-  public damageTypes = <R extends NitroFetchRequest>(
+  damageTypes = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.DAMAGE_TYPES, {
@@ -79,7 +79,7 @@ class Dictionaries {
     });
   };
 
-  public healTypes = <R extends NitroFetchRequest>(
+  healTypes = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.HEAL_TYPES, {
@@ -88,7 +88,7 @@ class Dictionaries {
     });
   };
 
-  public rangeTypes = <R extends NitroFetchRequest>(
+  rangeTypes = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOptionWithMeasurable>> => {
     return $fetch(DictionaryEndpoints.RANGE_TYPES, {
@@ -97,7 +97,7 @@ class Dictionaries {
     });
   };
 
-  public timeUnits = <R extends NitroFetchRequest>(
+  timeUnits = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOptionWithMeasurable>> => {
     return $fetch(DictionaryEndpoints.TIME_UNITS, {
@@ -106,7 +106,7 @@ class Dictionaries {
     });
   };
 
-  public durationUnits = <R extends NitroFetchRequest>(
+  durationUnits = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOptionWithMeasurable>> => {
     return $fetch(DictionaryEndpoints.DURATION_UNITS, {
@@ -115,7 +115,7 @@ class Dictionaries {
     });
   };
 
-  public comparisonOperators = <R extends NitroFetchRequest>(
+  comparisonOperators = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.COMPARISON_OPERATORS, {
@@ -124,7 +124,7 @@ class Dictionaries {
     });
   };
 
-  public featCategories = <R extends NitroFetchRequest>(
+  featCategories = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.FEAT_CATEGORIES, {
@@ -133,7 +133,7 @@ class Dictionaries {
     });
   };
 
-  public abilities = <R extends NitroFetchRequest>(
+  abilities = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<AbilitySelectOption>> => {
     return $fetch(DictionaryEndpoints.ABILITIES, {
@@ -142,7 +142,7 @@ class Dictionaries {
     });
   };
 
-  public skills = <R extends NitroFetchRequest>(
+  skills = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SkillSelectOption>> => {
     return $fetch(DictionaryEndpoints.SKILLS, {
@@ -151,7 +151,7 @@ class Dictionaries {
     });
   };
 
-  public magicItemCategory = <R extends NitroFetchRequest>(
+  magicItemCategory = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.MAGIC_ITEM_CATEGORY, {
@@ -160,7 +160,7 @@ class Dictionaries {
     });
   };
 
-  public rarity = <R extends NitroFetchRequest>(
+  rarity = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.RARITY, {
@@ -169,7 +169,7 @@ class Dictionaries {
     });
   };
 
-  public alignments = <R extends NitroFetchRequest>(
+  alignments = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.ALIGNMENTS, {
@@ -178,7 +178,7 @@ class Dictionaries {
     });
   };
 
-  public conditions = <R extends NitroFetchRequest>(
+  conditions = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.CONDITIONS, {
@@ -187,7 +187,7 @@ class Dictionaries {
     });
   };
 
-  public challengeRating = <R extends NitroFetchRequest>(
+  challengeRating = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<ChallengeRatingSelectOption>> => {
     return $fetch<Array<ChallengeRatingSelectOption>>(
@@ -199,7 +199,7 @@ class Dictionaries {
     );
   };
 
-  public languages = <R extends NitroFetchRequest>(
+  languages = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.LANGUAGES, {
@@ -208,7 +208,7 @@ class Dictionaries {
     });
   };
 
-  public habitats = <R extends NitroFetchRequest>(
+  habitats = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.HABITATS, {
@@ -217,7 +217,7 @@ class Dictionaries {
     });
   };
 
-  public treasures = <R extends NitroFetchRequest>(
+  treasures = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.TREASURES, {
@@ -226,7 +226,7 @@ class Dictionaries {
     });
   };
 
-  public itemTypes = <R extends NitroFetchRequest>(
+  itemTypes = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.ITEM_TYPES, {
@@ -235,7 +235,7 @@ class Dictionaries {
     });
   };
 
-  public coins = <R extends NitroFetchRequest>(
+  coins = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.COINS, {
@@ -244,7 +244,7 @@ class Dictionaries {
     });
   };
 
-  public dices = <R extends NitroFetchRequest>(
+  dices = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<DiceSelectOption>> => {
     return $fetch(DictionaryEndpoints.DICES, {
@@ -253,7 +253,7 @@ class Dictionaries {
     });
   };
 
-  public casterTypes = <R extends NitroFetchRequest>(
+  casterTypes = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<CasterSelectOption>> => {
     return $fetch(DictionaryEndpoints.CASTER_TYPES, {
@@ -262,7 +262,7 @@ class Dictionaries {
     });
   };
 
-  public armorCategories = <R extends NitroFetchRequest>(
+  armorCategories = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<ArmorCategorySelectOption>> => {
     return $fetch(DictionaryEndpoints.ARMOR_CATEGORIES, {
@@ -271,7 +271,7 @@ class Dictionaries {
     });
   };
 
-  public weaponCategories = <R extends NitroFetchRequest>(
+  weaponCategories = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.WEAPON_CATEGORIES, {
@@ -280,7 +280,7 @@ class Dictionaries {
     });
   };
 
-  public sourceTypes = <R extends NitroFetchRequest>(
+  sourceTypes = <R extends NitroFetchRequest>(
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.SOURCE_TYPES, {

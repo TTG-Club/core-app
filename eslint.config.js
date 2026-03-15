@@ -4,8 +4,11 @@ import withNuxt from './.nuxt/eslint.config.mjs';
 
 export default withNuxt(
   configure({
-    prettier: {
-      tailwindStylesheet: './app/assets/css/tailwind.css',
+    stylistic: {
+      semi: true,
+    },
+    vue: {
+      a11y: true,
     },
     ignores: ['.agents', 'AGENTS.md'],
   }).overrideRules({

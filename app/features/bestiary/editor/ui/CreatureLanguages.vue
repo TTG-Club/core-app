@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { CreateLanguage, CreatureLanguages } from '~bestiary/model';
+
   import { EditorArrayControls } from '~ui/editor';
   import { SelectLanguage } from '~ui/select';
-
-  import type { CreateLanguage, CreatureLanguages } from '~bestiary/model';
 
   const model = defineModel<CreatureLanguages>({ required: true });
 
@@ -20,7 +20,9 @@
     class="col-span-full"
   >
     <template #header>
-      <h2 class="truncate text-base text-highlighted">Языки</h2>
+      <h2 class="truncate text-base text-highlighted">
+        Языки
+      </h2>
     </template>
 
     <div class="grid gap-4">

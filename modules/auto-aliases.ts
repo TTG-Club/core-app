@@ -2,6 +2,8 @@ import { readdirSync } from 'node:fs';
 
 import { createResolver, defineNuxtModule } from '@nuxt/kit';
 
+const HIDDEN_DIR_REGEX = /^[_|.]/;
+
 // Функция для генерации алиасов
 function generateAliases(
   baseDir: string,
@@ -13,7 +15,7 @@ function generateAliases(
 
   try {
     const folders = readdirSync(basePath, { withFileTypes: true })
-      .filter((dirent) => dirent.isDirectory() && !/^[_|.]/.test(dirent.name))
+      .filter((dirent) => dirent.isDirectory() && !HIDDEN_DIR_REGEX.test(dirent.name))
       .map((dirent) => dirent.name);
 
     for (const folder of folders) {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { MarkupRender } from '~ui/markup';
-
   import type { RenderNode } from '~ui/markup';
+
+  import { MarkupRender } from '~ui/markup';
 
   defineProps<{
     text: RenderNode;
@@ -14,7 +14,9 @@
     <h5 class="float-left mr-1 font-bold italic">
       <slot v-if="$slots.default" />
 
-      <template v-else> {{ label }}. </template>
+      <template v-else>
+        {{ label }}.
+      </template>
     </h5>
 
     <MarkupRender

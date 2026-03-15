@@ -5,13 +5,13 @@
     CreatureSenses,
   } from '~bestiary/model';
 
-  const model = defineModel<CreatureSenses>({ required: true });
-
   const { wisdom, skills, proficiencyBonus } = defineProps<{
     wisdom: CreateAbility;
     skills: Array<CreateSkill>;
     proficiencyBonus: number;
   }>();
+
+  const model = defineModel<CreatureSenses>({ required: true });
 
   watchEffect(() => {
     const wisdomMod = getModifier(wisdom.value);
@@ -33,7 +33,9 @@
     class="col-span-full"
   >
     <template #header>
-      <h2 class="truncate text-base text-highlighted">Чувства</h2>
+      <h2 class="truncate text-base text-highlighted">
+        Чувства
+      </h2>
     </template>
 
     <div class="grid gap-4">
@@ -159,8 +161,7 @@
           <UCheckbox
             v-model="model.unimpeded"
             label="Супер темное зрение"
-          >
-          </UCheckbox>
+          />
         </UFormField>
       </UForm>
     </div>

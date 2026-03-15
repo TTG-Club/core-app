@@ -1,17 +1,17 @@
 <script setup lang="ts">
-  import { BackgroundBody } from '~backgrounds/body';
-  import { UiDrawer } from '~ui/drawer';
-
   import type {
     BackgroundCreate,
     BackgroundDetailResponse,
   } from '~backgrounds/model';
 
-  const opened = defineModel<boolean>('open', { required: true });
+  import { BackgroundBody } from '~backgrounds/body';
+  import { UiDrawer } from '~ui/drawer';
 
   const { state } = defineProps<{
     state: BackgroundCreate;
   }>();
+
+  const opened = defineModel<boolean>('open', { required: true });
 
   const {
     data: background,

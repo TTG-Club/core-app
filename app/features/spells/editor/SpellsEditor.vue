@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { SpellCreate } from '~spells/model';
+
   import { SpellPreview } from '~spells/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import {
@@ -21,8 +23,6 @@
     SpellDurations,
     SpellRanges,
   } from './ui';
-
-  import type { SpellCreate } from '~spells/model';
 
   function getInitialState(): SpellCreate {
     return {
@@ -70,7 +70,6 @@
 
 <template>
   <UForm
-    ref="formRef"
     :state
     class="grid gap-8"
     @error="onError"
@@ -171,7 +170,9 @@
 
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Описание</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Описание
+        </h2>
       </template>
 
       <div class="grid grid-cols-24 gap-4">
@@ -203,7 +204,9 @@
 
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Принадлежность</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Принадлежность
+        </h2>
       </template>
 
       <div class="grid grid-cols-24 gap-4">

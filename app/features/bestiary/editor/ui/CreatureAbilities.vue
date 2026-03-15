@@ -1,9 +1,8 @@
 <script setup lang="ts">
-  import { SelectMastery } from '~ui/select';
+  import type { CreateAbilities } from '~bestiary/model';
 
   import { ABILITIES } from '~/shared/types';
-
-  import type { CreateAbilities } from '~bestiary/model';
+  import { SelectMastery } from '~ui/select';
 
   const { proficiencyBonus } = defineProps<{
     proficiencyBonus: number;
@@ -41,7 +40,7 @@
           :key="ability.key"
           class="col-span-4"
           :label="ability.label"
-          :name="ability.shortKey + '.value'"
+          :name="`${ability.shortKey}.value`"
         >
           <UFieldGroup>
             <UInputNumber
@@ -71,7 +70,7 @@
           :key="ability.key"
           class="col-span-4"
           :label="ability.label"
-          :name="ability.shortKey + '.multiplier'"
+          :name="`${ability.shortKey}.multiplier`"
         >
           <div class="flex">
             <SelectMastery

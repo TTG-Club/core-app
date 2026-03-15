@@ -1,10 +1,10 @@
 <script setup lang="ts">
+  import type { UploadResponse } from '~/shared/types';
+
   import bytes from 'bytes';
   import { chunk } from 'es-toolkit';
 
   import { getStatusMessage } from '#shared/utils';
-
-  import type { UploadResponse } from '~/shared/types';
 
   const { section } = defineProps<{
     section: string;
@@ -94,9 +94,9 @@
 
   async function beforeUpload(file: File) {
     const isExtensionSuccess =
-      file.type === 'image/jpeg' ||
-      file.type === 'image/png' ||
-      file.type === 'image/webp';
+      file.type === 'image/jpeg'
+      || file.type === 'image/png'
+      || file.type === 'image/webp';
 
     if (!isExtensionSuccess) {
       $toast.add({
@@ -132,7 +132,7 @@
       }
 
       return true;
-    } catch (err) {
+    } catch {
       $toast.add({
         color: 'error',
         title: 'Ошибка при загрузке файла',
@@ -157,7 +157,7 @@
         title: 'Успех',
         description: 'Изображение успешно удалено',
       });
-    } catch (e) {
+    } catch {
       $toast.add({
         color: 'error',
         title: 'Ошибка при удалении',
@@ -167,7 +167,7 @@
   }
 
   async function handleFiles(files: File[] | FileList) {
-    const fileArray = Array.from(files);
+    const fileArray = [...files];
 
     if (!fileArray.length) {
       return;
@@ -262,7 +262,7 @@
           :src="image || '/img/no-img.webp'"
           alt="Uploaded image"
           class="h-full w-full object-contain"
-        />
+        >
 
         <div
           class="absolute top-0 right-0 p-2 opacity-0 transition-opacity hover:opacity-100"
@@ -291,7 +291,7 @@
         src="/img/no-img.webp"
         alt="Placeholder"
         class="h-full w-full object-contain"
-      />
+      >
     </div>
   </div>
 </template>

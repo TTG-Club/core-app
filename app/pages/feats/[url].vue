@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { FeatDetailResponse } from '~feats/model';
+
   import { FeatBody } from '~feats/body';
   import { PageActions } from '~ui/page';
-
-  import type { FeatDetailResponse } from '~feats/model';
 
   const route = useRoute();
 

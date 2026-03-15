@@ -1,10 +1,10 @@
+import type { GreetingsResponse } from '../../dto';
+import type { GreetingsService } from '../GreetingsService';
+
 import { randomInt } from 'es-toolkit';
 import { StatusCodes } from 'http-status-codes';
 
 import { GreetingsRepository } from '../../repository';
-
-import type { GreetingsResponse } from '../../dto';
-import type { GreetingsService } from '../GreetingsService';
 
 class GreetingsServiceImpl implements GreetingsService {
   getRandomGreeting = (): GreetingsResponse => {

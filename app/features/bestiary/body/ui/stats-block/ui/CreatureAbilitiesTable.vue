@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { DiceRollerLink } from '~dice-roller/link'; // или путь к твоим типам
-
   import type { CreatureAbilitiesResponse } from '~bestiary/model';
+
+  import { DiceRollerLink } from '~dice-roller/link'; // или путь к твоим типам
 
   defineProps<CreatureAbilitiesResponse>();
 </script>
@@ -23,7 +23,9 @@
           class="max-w-7"
         />
 
-        <div :class="$style.first">Мод</div>
+        <div :class="$style.first">
+          Мод
+        </div>
 
         <div
           :class="$style.first"
@@ -44,7 +46,9 @@
           class="max-w-7"
         />
 
-        <div :class="$style.first">Мод</div>
+        <div :class="$style.first">
+          Мод
+        </div>
 
         <div
           :class="$style.first"
@@ -65,7 +69,9 @@
           class="max-w-7"
         />
 
-        <div :class="$style.third">Мод</div>
+        <div :class="$style.third">
+          Мод
+        </div>
 
         <div
           :class="$style.third"
@@ -86,7 +92,9 @@
             Сил
           </div>
 
-          <div class="max-w-7">{{ str.value }}</div>
+          <div class="max-w-7">
+            {{ str.value }}
+          </div>
 
           <div class="justify-end">
             <DiceRollerLink :notation="`1к20${str.mod}`">
@@ -113,12 +121,16 @@
             Лов
           </div>
 
-          <div class="max-w-7">{{ dex.value }}</div>
+          <div class="max-w-7">
+            {{ dex.value }}
+          </div>
 
           <div class="justify-end">
-            <DiceRollerLink :notation="`1к20${dex.mod}`">{{
-              dex.mod
-            }}</DiceRollerLink>
+            <DiceRollerLink :notation="`1к20${dex.mod}`">
+              {{
+                dex.mod
+              }}
+            </DiceRollerLink>
           </div>
 
           <div
@@ -140,7 +152,9 @@
             Тел
           </div>
 
-          <div class="max-w-7">{{ con.value }}</div>
+          <div class="max-w-7">
+            {{ con.value }}
+          </div>
 
           <div class="justify-end">
             <DiceRollerLink :notation="`1к20${con.mod}`">
@@ -169,7 +183,9 @@
             Инт
           </div>
 
-          <div class="max-w-7">{{ int.value }}</div>
+          <div class="max-w-7">
+            {{ int.value }}
+          </div>
 
           <div class="justify-end">
             <DiceRollerLink :notation="`1к20${int.mod}`">
@@ -196,7 +212,9 @@
             Мдр
           </div>
 
-          <div class="max-w-7">{{ wis.value }}</div>
+          <div class="max-w-7">
+            {{ wis.value }}
+          </div>
 
           <div class="justify-end">
             <DiceRollerLink :notation="`1к20${wis.mod}`">
@@ -223,7 +241,9 @@
             Хар
           </div>
 
-          <div class="max-w-7">{{ chr.value }}</div>
+          <div class="max-w-7">
+            {{ chr.value }}
+          </div>
 
           <div class="justify-end">
             <DiceRollerLink :notation="`1к20${chr.mod}`">

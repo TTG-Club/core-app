@@ -1,24 +1,24 @@
 <script setup lang="ts">
+  import type { CreatureDetailResponse } from '~bestiary/model';
+
   import { DiceRollerLink } from '~dice-roller/link';
   import { MarkupRender } from '~ui/markup';
 
   import { CreatureAbilitiesTable } from './ui';
 
-  import type { CreatureDetailResponse } from '~bestiary/model';
-
   type Props = Pick<
     CreatureDetailResponse,
     'ac' | 'cr' | 'initiative' | 'hit' | 'speed' | 'abilities'
-  > &
-    Pick<
+  >
+    & Pick<
       Partial<CreatureDetailResponse>,
       | 'skills'
-      | 'equipments'
-      | 'vulnerability'
-      | 'resistance'
-      | 'immunity'
-      | 'sense'
-      | 'languages'
+        | 'equipments'
+        | 'vulnerability'
+        | 'resistance'
+        | 'immunity'
+        | 'sense'
+        | 'languages'
     >;
 
   defineProps<Props>();
@@ -52,8 +52,7 @@
         {{ hit.hit }}
         <span v-if="hit.formula">
           (<DiceRollerLink :notation="`{(${hit.formula}), 1}вл1`">
-            {{ hit.formula }} </DiceRollerLink
-          >)
+            {{ hit.formula }} </DiceRollerLink>)
         </span>
         {{ hit.text }}
       </span>

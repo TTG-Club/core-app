@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { ClassCreate, ClassLinkResponse } from '~classes/model';
+
   import { ClassPreview } from '~classes/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { UploadGallery, UploadImage } from '~ui/upload';
@@ -10,8 +12,6 @@
     ProficiencySettings,
     TableEditor,
   } from './ui';
-
-  import type { ClassCreate, ClassLinkResponse } from '~classes/model';
 
   function getInitialState(): ClassCreate {
     return {
@@ -125,7 +125,9 @@
 
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Описание</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Описание
+        </h2>
       </template>
 
       <div class="grid grid-cols-24 gap-4">
@@ -151,7 +153,9 @@
 
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Изображения</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Изображения
+        </h2>
       </template>
 
       <div class="grid grid-cols-24 gap-4">
@@ -171,7 +175,7 @@
                   :src="state.image || '/img/no-img.webp'"
                   alt="Uploaded image"
                   class="h-full w-full object-contain"
-                />
+                >
               </div>
             </template>
           </UploadImage>

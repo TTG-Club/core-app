@@ -1,6 +1,9 @@
 <script setup lang="ts">
+  import type { SourceCreate } from '~sources/types';
+
   import { removeStopwords } from 'stopword';
   import { z } from 'zod';
+
   import { SourcePreview } from '~sources/preview';
   import { DatePicker } from '~ui/date-picker';
   import { EditorFormControls } from '~ui/editor';
@@ -9,8 +12,6 @@
   import { useWorkshopForm } from '~workshop/composable';
 
   import { SourceType } from './ui';
-
-  import type { SourceCreate } from '~sources/types';
 
   function getInitialState(): SourceCreate {
     return {
@@ -94,7 +95,9 @@
       class="col-span-full"
     >
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Основная информация</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Основная информация
+        </h2>
       </template>
 
       <div class="grid grid-cols-2 gap-6">
@@ -150,7 +153,9 @@
 
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Подробности</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Подробности
+        </h2>
       </template>
 
       <div class="grid grid-cols-12 gap-6">
@@ -209,7 +214,9 @@
 
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Описание</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Описание
+        </h2>
       </template>
 
       <div class="grid grid-cols-24 gap-4">
@@ -228,7 +235,9 @@
 
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Обложка</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Обложка
+        </h2>
       </template>
 
       <div class="grid grid-cols-24 gap-4">
@@ -256,14 +265,14 @@
                   class="w-full rounded-lg object-contain"
                   :src="src"
                   :alt="state.name.rus"
-                />
+                >
 
                 <img
                   v-else
                   class="w-full rounded-lg object-contain"
                   src="/img/no-img.webp"
                   alt="no image"
-                />
+                >
               </NuxtImg>
             </template>
           </UploadImage>

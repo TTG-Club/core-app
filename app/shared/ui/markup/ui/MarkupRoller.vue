@@ -1,12 +1,13 @@
 <script setup lang="ts">
-  import { computed } from 'vue';
-  import { useDiceRollHandler } from '~dice-roller/composables';
-
-  import { getNodeText } from '../utils';
-
   import type { VNode } from 'vue';
 
   import type { MarkerNode, RenderNode } from '../types';
+
+  import { computed } from 'vue';
+
+  import { useDiceRollHandler } from '~dice-roller/composables';
+
+  import { getNodeText } from '../utils';
 
   const { node, renderNodes } = defineProps<{
     node: MarkerNode;
@@ -24,9 +25,9 @@
     const notation = node.attrs?.notation || textContent;
 
     if (
-      !notation ||
-      typeof notation !== 'string' ||
-      notation.trim().length === 0
+      !notation
+      || typeof notation !== 'string'
+      || notation.trim().length === 0
     ) {
       return;
     }

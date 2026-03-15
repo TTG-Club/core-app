@@ -1,13 +1,16 @@
 <script setup lang="ts">
+  import type { EditorBaseInfoState } from './types';
+
   import { InputUrl } from '~ui/input';
   import { SelectSource } from '~ui/select';
-
-  import type { EditorBaseInfoState } from './types';
 
   defineProps<{
     section: string;
     prefix?: string | undefined;
   }>();
+
+  const CYRILLIC_ONLY_REGEX = /[^0-9\u{0410}-\u{044F}\u{401}\u{0451}\u{0020}\u{0027}\u{2010}-\u{2014}\u{002D}\u{0028}\u{0029}\u{002F}\u{002B}\u{002C}\u{003A}]/u;
+  const LATIN_ONLY_REGEX = /[^0-9\u{0041}-\u{005A}\u{0061}-\u{007A}\u{0020}\u{0027}\u{2010}-\u{2014}\u{002D}\u{0028}\u{0029}\u{002F}\u{002B}\u{002C}\u{003A}]/u;
 
   const form = defineModel<EditorBaseInfoState>({ required: true });
 
@@ -30,9 +33,7 @@
       .nonempty()
       .refine(
         (value) => {
-          return !/[^0-9\u{0410}-\u{044F}\u{401}\u{0451}\u{0020}\u{0027}\u{2010}-\u{2014}\u{002D}\u{0028}\u{0029}\u{002F}\u{002B}\u{002C}\u{003A}]/u.test(
-            value,
-          );
+          return !CYRILLIC_ONLY_REGEX.test(value);
         },
         {
           error:
@@ -45,9 +46,7 @@
       .nonempty()
       .refine(
         (value) => {
-          return !/[^0-9\u{0041}-\u{005A}\u{0061}-\u{007A}\u{0020}\u{0027}\u{2010}-\u{2014}\u{002D}\u{0028}\u{0029}\u{002F}\u{002B}\u{002C}\u{003A}]/u.test(
-            value,
-          );
+          return !LATIN_ONLY_REGEX.test(value);
         },
         {
           error:
@@ -83,7 +82,9 @@
     class="col-span-full"
   >
     <template #header>
-      <h2 class="truncate text-base text-highlighted">Основная информация</h2>
+      <h2 class="truncate text-base text-highlighted">
+        Основная информация
+      </h2>
     </template>
 
     <UForm

@@ -43,7 +43,9 @@
 <template>
   <div class="grid gap-6">
     <div class="grid gap-2">
-      <div class="text-xs font-medium text-neutral-400">Настройка маски</div>
+      <div class="text-xs font-medium text-neutral-400">
+        Настройка маски
+      </div>
 
       <div class="grid gap-2">
         <div class="grid gap-1">
@@ -99,9 +101,7 @@
                 />
               </button>
 
-              <span class="font-mono text-xs text-neutral-400"
-                >{{ store.transform.maskRotate }}°</span
-              >
+              <span class="font-mono text-xs text-neutral-400">{{ store.transform.maskRotate }}°</span>
             </div>
 
             <USlider
@@ -152,7 +152,9 @@
     </div>
 
     <div class="grid gap-2">
-      <div class="text-xs font-medium text-neutral-400">Настройка картинки</div>
+      <div class="text-xs font-medium text-neutral-400">
+        Настройка картинки
+      </div>
 
       <div class="grid gap-2">
         <div class="grid gap-1">
@@ -174,10 +176,8 @@
               />
             </button>
 
-            <span class="font-mono text-xs text-neutral-400"
-              >X: {{ store.transform.position.x.toFixed(0) }} / Y:
-              {{ store.transform.position.y.toFixed(0) }}</span
-            >
+            <span class="font-mono text-xs text-neutral-400">X: {{ store.transform.position.x.toFixed(0) }} / Y:
+              {{ store.transform.position.y.toFixed(0) }}</span>
           </div>
         </div>
 
@@ -254,9 +254,7 @@
                 Y
               </UButton>
 
-              <span class="font-mono text-xs text-neutral-400"
-                >{{ store.transform.rotate }}°</span
-              >
+              <span class="font-mono text-xs text-neutral-400">{{ store.transform.rotate }}°</span>
             </div>
           </div>
 

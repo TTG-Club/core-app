@@ -18,12 +18,12 @@
           height="10"
           patternUnits="userSpaceOnUse"
         >
-          <path d="M-3 13 15-5M-5 5l18-18M-1 21 17 3"></path>
+          <path d="M-3 13 15-5M-5 5l18-18M-1 21 17 3" />
         </pattern>
       </defs>
 
       <rect
-        :fill="`url(#ui-placeholder-pattern)`"
+        fill="url(#ui-placeholder-pattern)"
         stroke="none"
         width="100%"
         height="100%"

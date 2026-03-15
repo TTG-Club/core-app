@@ -1,8 +1,8 @@
-import { cloneDeep, isEqual, toMerged } from 'es-toolkit';
-
 import type { FetchResponse } from 'ofetch';
 
 import type { FormErrorEvent } from '#ui/types';
+
+import { cloneDeep, isEqual, toMerged } from 'es-toolkit';
 
 export interface WorkshopFormOptions<T> {
   actionUrl: string;

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { SelectMastery } from '~ui/select';
-
   import type { CreateAbility, CreateInitiative } from '~bestiary/model';
+
+  import { SelectMastery } from '~ui/select';
 
   const { dex, proficiencyBonus } = defineProps<{
     dex: CreateAbility;

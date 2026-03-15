@@ -1,9 +1,9 @@
 <script setup lang="ts">
+  import type { FeatDetailResponse } from '~feats/model';
+
   import { MarkupRender } from '~ui/markup';
 
   import { COMPONENT_TOOLTIP_TEXT } from '../model';
-
-  import type { FeatDetailResponse } from '~feats/model';
 
   defineProps<Pick<FeatDetailResponse, 'prerequisite'>>();
 </script>
@@ -12,7 +12,9 @@
   <div :class="$style.stats">
     <div :class="$style.item">
       <UTooltip :text="COMPONENT_TOOLTIP_TEXT.prerequisite">
-        <div :class="$style.name">Предварительное условие:</div>
+        <div :class="$style.name">
+          Предварительное условие:
+        </div>
       </UTooltip>
 
       <MarkupRender :render-node="prerequisite" />

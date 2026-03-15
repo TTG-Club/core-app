@@ -7,7 +7,7 @@ export function getOrigin() {
     const { origin } = useRequestURL();
 
     return origin;
-  } catch (err) {
+  } catch {
     return process.env.NUXT_SITE_URL;
   }
 }

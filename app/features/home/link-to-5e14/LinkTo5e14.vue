@@ -12,7 +12,9 @@
       D&D 2014
     </h2>
 
-    <p :class="$style.description">Предыдущая редакция Dungeon and Dragons</p>
+    <p :class="$style.description">
+      Предыдущая редакция Dungeon and Dragons
+    </p>
   </NuxtLink>
 </template>
 

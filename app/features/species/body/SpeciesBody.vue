@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { SpeciesDetailResponse } from '~species/model';
+
   import { SpeciesLineages } from '~species/lineages';
   import { SpeciesLineagesDrawer } from '~species/lineages-drawer';
   import { UiCollapse } from '~ui/collapse';
@@ -6,8 +8,6 @@
   import { MarkupRender } from '~ui/markup';
 
   import { StatsBlock } from './ui';
-
-  import type { SpeciesDetailResponse } from '~species/model';
 
   const {
     species,

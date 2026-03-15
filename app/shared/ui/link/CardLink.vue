@@ -1,9 +1,9 @@
 <script setup lang="ts">
-  import { SourceTag } from '~ui/source-tag';
-
   import type { RouteLocationRaw } from 'vue-router';
 
   import type { NameResponse, SourceResponse } from '~/shared/types';
+
+  import { SourceTag } from '~ui/source-tag';
 
   const {
     to,
@@ -56,7 +56,7 @@
         :src="img"
         :alt="name.rus"
         :class="['absolute h-full w-full', 'object-cover opacity-90']"
-      />
+      >
 
       <!-- Gradient Overlay -->
       <div

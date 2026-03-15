@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import { LinkTo5e14 } from '../link-to-5e14';
-
   import { CARD_LINKS } from './model';
 
   const { user } = useUser();
@@ -45,7 +44,7 @@
           :src="link.img"
           :alt="link.name"
           loading="lazy"
-        />
+        >
       </NuxtLink>
     </div>
 

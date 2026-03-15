@@ -1,12 +1,12 @@
 <script setup lang="ts">
+  import type { DiceFormulaExample } from '../../types';
+
   import { useDiceRollerState } from '../../composables';
   import {
     DICE_EXAMPLES_BASIC,
     DICE_EXAMPLES_KEEP,
     DICE_EXAMPLES_REROLL,
   } from '../../const';
-
-  import type { DiceFormulaExample } from '../../types';
 
   interface HelpSection {
     title: string;

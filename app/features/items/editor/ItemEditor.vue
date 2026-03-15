@@ -1,12 +1,12 @@
 <script setup lang="ts">
+  import type { ItemCreate } from '~items/model';
+
   import { ItemPreview } from '~items/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
 
   import { CoinsType, ItemType } from './ui';
-
-  import type { ItemCreate } from '~items/model';
 
   function getInitialState(): ItemCreate {
     return {
@@ -39,7 +39,6 @@
 
 <template>
   <UForm
-    ref="formRef"
     :state
     class="grid gap-8"
     @error="onError"
@@ -52,7 +51,9 @@
 
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Подробности</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Подробности
+        </h2>
       </template>
 
       <UFormField>
@@ -60,7 +61,7 @@
           v-model="state.category"
           type="hidden"
           name="category"
-        />
+        >
       </UFormField>
 
       <UFormField
@@ -108,7 +109,9 @@
 
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Описание</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Описание
+        </h2>
       </template>
 
       <UFormField
@@ -126,7 +129,9 @@
 
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Изображения</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Изображения
+        </h2>
       </template>
 
       <UFormField

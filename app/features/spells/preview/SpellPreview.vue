@@ -1,14 +1,14 @@
 <script setup lang="ts">
-  import { SpellBody } from '~spells/body';
-  import { UiDrawer } from '~ui/drawer';
-
   import type { SpellCreate, SpellDetailResponse } from '~spells/model';
 
-  const opened = defineModel<boolean>('open', { required: true });
+  import { SpellBody } from '~spells/body';
+  import { UiDrawer } from '~ui/drawer';
 
   const { state } = defineProps<{
     state: SpellCreate;
   }>();
+
+  const opened = defineModel<boolean>('open', { required: true });
 
   const {
     data: spell,

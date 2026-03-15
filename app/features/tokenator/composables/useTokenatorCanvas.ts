@@ -1,4 +1,5 @@
 import { useElementSize, useRafFn } from '@vueuse/core';
+
 import {
   BrushMode,
   CANVAS_SIZE,
@@ -66,14 +67,14 @@ export function useTokenatorCanvas(
 
     // Обновляем размер только экранного канваса
     if (
-      canvasRef.value.width !== canvasWidth ||
-      canvasRef.value.height !== canvasHeight
+      canvasRef.value.width !== canvasWidth
+      || canvasRef.value.height !== canvasHeight
     ) {
       canvasRef.value.width = canvasWidth;
       canvasRef.value.height = canvasHeight;
     }
 
-    let tokenSize = 500;
+    let tokenSize;
 
     if (clip) {
       tokenSize = Math.min(canvasWidth, canvasHeight);
@@ -152,7 +153,7 @@ export function useTokenatorCanvas(
     const canvasHeight = height.value || canvasRef.value.clientHeight || 300;
 
     // Вычисляем размер токена на экране (логика должна совпадать с draw)
-    let tokenSize = 500;
+    let tokenSize;
 
     if (clip) {
       tokenSize = Math.min(canvasWidth, canvasHeight);

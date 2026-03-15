@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import { useDiceRoller } from '~dice-roller/composables/useDiceRoller';
-  import { extractDiceRollDetails } from '~dice-roller/utils';
+  import type { DiceRollItem } from '~dice-roller/types';
+
+  import type { RandomRollState } from '../../model';
 
   import {
     ABILITY_KEYS,
@@ -8,6 +9,8 @@
     AbilityKey,
     isAbilityKey,
   } from '~/shared/types';
+  import { useDiceRoller } from '~dice-roller/composables/useDiceRoller';
+  import { extractDiceRollDetails } from '~dice-roller/utils';
 
   import {
     RANDOM_ROLL_COUNT,
@@ -15,12 +18,7 @@
     RANDOM_ROLL_MAX_RESULT,
     ZERO_SCORES,
   } from '../../model';
-
   import { DiceSpinner } from './components';
-
-  import type { DiceRollItem } from '~dice-roller/types';
-
-  import type { RandomRollState } from '../../model';
 
   const state = defineModel<RandomRollState>('state', { required: true });
 
@@ -42,7 +40,7 @@
   );
 
   const animationCompleted = ref<boolean[]>(
-    Array.from({ length: RANDOM_ROLL_COUNT }, () => true),
+    Array.from<boolean>({ length: RANDOM_ROLL_COUNT }).fill(true),
   );
 
   watch(
@@ -117,10 +115,7 @@
     hasRolled.value = true;
     isAnimating.value = true;
 
-    animationCompleted.value = Array.from(
-      { length: RANDOM_ROLL_COUNT },
-      () => false,
-    );
+    animationCompleted.value = Array.from<boolean>({ length: RANDOM_ROLL_COUNT }).fill(false);
   }
 
   const abilityOptions = computed(() => {
@@ -148,9 +143,9 @@
   function getAbilityOptions(currentAbility: AbilityKey | null) {
     return abilityOptions.value.map((opt) => {
       const isUsed = !!(
-        opt.value &&
-        usedAbilities.value.has(opt.value) &&
-        opt.value !== currentAbility
+        opt.value
+        && usedAbilities.value.has(opt.value)
+        && opt.value !== currentAbility
       );
 
       return {

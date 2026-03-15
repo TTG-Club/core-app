@@ -1,8 +1,9 @@
 <script setup lang="ts">
-  import { useFileDialog } from '@vueuse/core';
-  import { useTokenatorStore } from '~tokenator/composables';
-
   import type { TokenatorFrame } from '~tokenator/model';
+
+  import { useFileDialog } from '@vueuse/core';
+
+  import { useTokenatorStore } from '~tokenator/composables';
 
   const store = useTokenatorStore();
 
@@ -36,10 +37,10 @@
     frames,
     (newFrames) => {
       if (
-        newFrames?.length &&
-        newFrames[0] &&
-        !store.currentFrame &&
-        !store.customFrame
+        newFrames?.length
+        && newFrames[0]
+        && !store.currentFrame
+        && !store.customFrame
       ) {
         store.selectFrame(newFrames[0]);
       }
@@ -198,7 +199,7 @@
             alt="Рамка"
             class="block size-full object-contain"
             loading="lazy"
-          />
+          >
         </button>
       </div>
     </div>

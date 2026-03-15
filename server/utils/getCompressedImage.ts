@@ -1,13 +1,13 @@
+import type { OutputInfo, ResizeOptions } from 'sharp';
+
+import type { S3UploadFile } from '#server/domain/s3';
+
 import path from 'node:path';
 
 import bytes from 'bytes';
 import { StatusCodes } from 'http-status-codes';
 import mime from 'mime';
 import sharp from 'sharp';
-
-import type { OutputInfo, ResizeOptions } from 'sharp';
-
-import type { S3UploadFile } from '#server/domain/s3';
 
 type FileType =
   | Buffer
@@ -76,15 +76,13 @@ function getResizeOptions(options?: ResizeOptions | number): ResizeOptions {
     };
   }
 
-  return Object.assign<ResizeOptions, ResizeOptions | undefined>(
-    {
-      width: 2048,
-      height: 2048,
-      fit: 'outside',
-      withoutEnlargement: true,
-    },
-    resizeOptions,
-  );
+  return {
+    width: 2048,
+    height: 2048,
+    fit: 'outside',
+    withoutEnlargement: true,
+    ...resizeOptions,
+  };
 }
 
 function replaceImageExtension(pathOrName: string, type: string) {

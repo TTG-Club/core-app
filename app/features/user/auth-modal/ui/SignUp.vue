@@ -10,7 +10,7 @@
   const { focused } = useFocusWithin(passwordField);
 
   const ALLOWED_SPECIAL_CHARACTERS = [
-    "'",
+    '\'',
     '-',
     '!',
     '"',
@@ -96,7 +96,9 @@
 
 <template>
   <div class="flex flex-col gap-6">
-    <h4 class="text-2xl">Регистрация</h4>
+    <h4 class="text-2xl">
+      Регистрация
+    </h4>
 
     <UForm
       class="flex flex-col gap-4"

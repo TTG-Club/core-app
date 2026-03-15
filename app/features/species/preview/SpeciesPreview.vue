@@ -1,14 +1,14 @@
 <script setup lang="ts">
-  import { SpeciesBody } from '~species/body';
-  import { UiDrawer } from '~ui/drawer';
-
   import type { SpeciesCreate, SpeciesDetailResponse } from '~species/model';
 
-  const opened = defineModel<boolean>('open', { required: true });
+  import { SpeciesBody } from '~species/body';
+  import { UiDrawer } from '~ui/drawer';
 
   const { state } = defineProps<{
     state: SpeciesCreate;
   }>();
+
+  const opened = defineModel<boolean>('open', { required: true });
 
   const {
     data: species,

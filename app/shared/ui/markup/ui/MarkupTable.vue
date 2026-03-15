@@ -1,4 +1,9 @@
 <script setup lang="ts">
+  import type { ColumnDef } from '@tanstack/vue-table';
+  import type { VNode } from 'vue';
+
+  import type { MarkerNode, RenderNode } from '../types';
+
   import {
     createColumnHelper,
     FlexRender,
@@ -6,19 +11,23 @@
     useVueTable,
   } from '@tanstack/vue-table';
   import { defineComponent, h, provide } from 'vue';
+
   import { useDiceRollerState } from '~dice-roller/composables';
 
   import { getNodeText, normalizeRenderNodes } from '../utils';
-
-  import type { ColumnDef } from '@tanstack/vue-table';
-  import type { VNode } from 'vue';
-
-  import type { MarkerNode, RenderNode } from '../types';
 
   interface TableCell {
     content: RenderNode[];
     align?: 'left' | 'center' | 'right';
   }
+
+  const { node, renderNodes } = defineProps<{
+    node: TableNode;
+    renderNodes: (nodes: RenderNode[]) => VNode[];
+  }>();
+
+  const RANGE_REGEX = /^(\d+)\s*[-–—]\s*(\d+)$/;
+  const SINGLE_NUMBER_REGEX = /^(\d+)$/;
 
   interface TableRowData {
     cells: Array<string | number | RenderNode | TableCell>;
@@ -42,11 +51,6 @@
       return () => slots.default?.();
     },
   });
-
-  const { node, renderNodes } = defineProps<{
-    node: TableNode;
-    renderNodes: (nodes: RenderNode[]) => VNode[];
-  }>();
 
   const colCount = computed(() => {
     if (node.colLabels?.length) {
@@ -107,7 +111,7 @@
 
     // Проверка диапазона (например, "01-40", "41-75")
     // Поддержка различных видов тире: - (дефис), – (en dash), — (em dash)
-    const rangeMatch = cleanText.match(/^(\d+)\s*[-–—]\s*(\d+)$/);
+    const rangeMatch = cleanText.match(RANGE_REGEX);
 
     if (rangeMatch) {
       const min = parseCellNumber(rangeMatch[1] || '');
@@ -117,7 +121,7 @@
     }
 
     // Проверка одиночного числа
-    const singleMatch = cleanText.match(/^(\d+)$/);
+    const singleMatch = cleanText.match(SINGLE_NUMBER_REGEX);
 
     if (singleMatch) {
       const val = parseCellNumber(singleMatch[1] || '');
@@ -173,22 +177,22 @@
 
   function isRenderNode(value: unknown): value is RenderNode {
     return (
-      typeof value === 'string' ||
-      Array.isArray(value) ||
-      (typeof value === 'object' &&
-        value !== null &&
-        'type' in value &&
-        typeof value.type === 'string')
+      typeof value === 'string'
+      || Array.isArray(value)
+      || (typeof value === 'object'
+        && value !== null
+        && 'type' in value
+        && typeof value.type === 'string')
     );
   }
 
   function isTableCell(value: unknown): value is TableCell {
     return (
-      typeof value === 'object' &&
-      value !== null &&
-      'content' in value &&
-      Array.isArray(value.content) &&
-      !('type' in value)
+      typeof value === 'object'
+      && value !== null
+      && 'content' in value
+      && Array.isArray(value.content)
+      && !('type' in value)
     );
   }
 

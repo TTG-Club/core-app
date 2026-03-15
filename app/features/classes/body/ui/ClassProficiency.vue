@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { UiCollapse } from '~ui/collapse';
-
   import type { ClassDetailResponse, ClassProficiency } from '~classes/model';
+
+  import { UiCollapse } from '~ui/collapse';
 
   defineProps<{
     proficiency: ClassProficiency;
@@ -11,7 +11,9 @@
 
 <template>
   <UiCollapse default-open>
-    <template #default> Владения</template>
+    <template #default>
+      Владения
+    </template>
 
     <template #content>
       <div class="mb-2">

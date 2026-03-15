@@ -23,10 +23,12 @@
       ]"
       :src="backgroundUrl"
       :alt="title"
-    />
+    >
 
     <span class="relative z-10 text-2xl">{{ title }}</span>
 
-    <p class="relative z-10">{{ description }}</p>
+    <p class="relative z-10">
+      {{ description }}
+    </p>
   </NuxtLink>
 </template>

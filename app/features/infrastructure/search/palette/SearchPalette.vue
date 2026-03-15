@@ -1,5 +1,8 @@
 <script setup lang="ts">
+  import type { GlobalSearchRes } from './model';
+
   import { sortBy } from 'es-toolkit';
+
   import { useGlobalSearch } from '~infrastructure/search/composable';
   import { SourceTag } from '~ui/source-tag';
 
@@ -8,8 +11,6 @@
     getTypeNameBySearchItem,
     SearchItems,
   } from './model';
-
-  import type { GlobalSearchRes } from './model';
 
   const { isOpen, close } = useGlobalSearch();
 

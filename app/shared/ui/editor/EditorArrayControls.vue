@@ -1,8 +1,6 @@
 <script setup lang="ts" generic="T extends object">
   import { cloneDeep, isEqual } from 'es-toolkit';
 
-  const model = defineModel<Array<T>>({ required: true });
-
   const {
     emptyObject,
     item,
@@ -15,6 +13,8 @@
     onlyRemove?: boolean;
     cols?: number | `${number}`;
   }>();
+
+  const model = defineModel<Array<T>>({ required: true });
 
   const isEmpty = computed(() => isEqual(item, emptyObject));
   const isLast = computed(() => index === model.value.length - 1);

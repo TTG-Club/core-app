@@ -1,11 +1,11 @@
 <script setup lang="ts">
+  import type { ClassProficiencyCreate } from '~classes/model';
+
   import {
     SelectArmorCategory,
     SelectSkills,
     SelectWeaponCategory,
   } from '~ui/select';
-
-  import type { ClassProficiencyCreate } from '~classes/model';
 
   const state = defineModel<ClassProficiencyCreate>({ required: true });
 </script>
@@ -17,7 +17,9 @@
   >
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Владения</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Владения
+        </h2>
       </template>
 
       <div class="grid grid-cols-24 gap-4">

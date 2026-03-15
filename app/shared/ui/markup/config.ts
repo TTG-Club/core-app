@@ -1,3 +1,5 @@
+import type { Component } from 'vue';
+
 import {
   MarkupBadge,
   MarkupHeading,
@@ -10,8 +12,6 @@ import {
   MarkupSeparator,
   MarkupTable,
 } from './ui';
-
-import type { Component } from 'vue';
 
 interface MarkerConfig {
   type: string;

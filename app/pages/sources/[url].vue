@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { SourceDetailResponse } from '~sources/types';
+
   import { SourceBody } from '~sources/body';
   import { PageActions } from '~ui/page';
-
-  import type { SourceDetailResponse } from '~sources/types';
 
   const route = useRoute();
 

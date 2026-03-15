@@ -1,10 +1,10 @@
 <script setup lang="ts">
+  import type { ClassLinkResponse } from '~classes/model';
+
   import { ClassLink } from '~classes/link';
   import { FilterControls, useFilter } from '~infrastructure/filter';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkBig } from '~ui/skeleton';
-
-  import type { ClassLinkResponse } from '~classes/model';
 
   useSeoMeta({
     title: 'Классы [Classes]',
@@ -53,8 +53,7 @@
         v-model:filter="filter"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
-      >
-      </FilterControls>
+      />
     </template>
 
     <template #default>

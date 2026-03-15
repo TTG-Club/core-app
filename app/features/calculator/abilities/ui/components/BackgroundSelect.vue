@@ -1,12 +1,12 @@
 <script setup lang="ts">
-  import { ABILITY_LABELS, AbilityKey } from '~/shared/types';
-
   import type {
     AbilityScores,
     BonusSource,
     CalculatorAbilitiesBackground,
     CalculatorBackgroundOption,
   } from '../../model';
+
+  import { ABILITY_LABELS, AbilityKey } from '~/shared/types';
 
   const { background, backgroundOptions, loading } = defineProps<{
     background: CalculatorAbilitiesBackground | undefined;
@@ -26,8 +26,8 @@
 
   const availableAbilities = computed<AbilityKey[]>(() => {
     if (
-      !background?.abilityScores ||
-      !Array.isArray(background.abilityScores)
+      !background?.abilityScores
+      || !Array.isArray(background.abilityScores)
     ) {
       return [];
     }
@@ -151,7 +151,9 @@
     class="flex flex-col gap-6 rounded-xl border border-default bg-muted p-4"
   >
     <div class="flex flex-col gap-2">
-      <div class="text-sm font-semibold">Предыстория</div>
+      <div class="text-sm font-semibold">
+        Предыстория
+      </div>
 
       <UFieldGroup>
         <USelectMenu
@@ -190,7 +192,9 @@
       class="flex flex-col gap-4"
       :class="{ 'pointer-events-none opacity-50 grayscale': !background }"
     >
-      <div class="text-sm font-semibold">Бонусы предыстории</div>
+      <div class="text-sm font-semibold">
+        Бонусы предыстории
+      </div>
 
       <div
         v-if="background"

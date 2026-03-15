@@ -1,20 +1,17 @@
 <script setup lang="ts">
+  import type { BonusSource } from '../model';
+
   import {
     useBackgroundSelect,
     useClassSelect,
     useFeatSelect,
   } from '../composables';
-
   import {
     BackgroundSelect,
     ClassLevelSelect,
     FeatSlot,
     GeneralFeatsGrid,
   } from './components';
-
-  import type { BonusSource } from '../model';
-
-  const model = defineModel<number>({ required: true });
 
   const emit = defineEmits<{
     (e: 'update:feat-sources', value: BonusSource[]): void;
@@ -24,6 +21,8 @@
     (e: 'update:selected-class-url', value: string | undefined): void;
     (e: 'update:class-ability-template', value: Array<number>): void;
   }>();
+
+  const model = defineModel<number>({ required: true });
 
   const {
     selectedUrl: backgroundSelectedUrl,

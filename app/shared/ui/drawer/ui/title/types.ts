@@ -2,6 +2,6 @@ export type DrawerTitleName =
   | undefined
   | string
   | {
-      rus: string;
-      eng?: string;
-    };
+    rus: string;
+    eng?: string;
+  };

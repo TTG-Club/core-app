@@ -116,5 +116,5 @@ When creating a Pull Request, CLA Assistant will automatically request and recor
 
 ---
 
-Спасибо за участие в улучшении нашего проекта!  
+Спасибо за участие в улучшении нашего проекта!
 Thank you for helping improve our project! 🎉

@@ -1,11 +1,10 @@
 <script setup lang="ts">
-  import { EditorArrayControls } from '~ui/editor';
-  import { SelectMastery, SelectSkills } from '~ui/select';
+  import type { CreateAbilities, CreateSkill } from '~bestiary/model';
 
   import { DictionaryService } from '~/shared/api';
   import { getAbilityInfo } from '~/shared/types';
-
-  import type { CreateAbilities, CreateSkill } from '~bestiary/model';
+  import { EditorArrayControls } from '~ui/editor';
+  import { SelectMastery, SelectSkills } from '~ui/select';
 
   const { abilities, proficiencyBonus = 0 } = defineProps<{
     abilities: CreateAbilities;
@@ -63,7 +62,9 @@
     class="col-span-full"
   >
     <template #header>
-      <h2 class="truncate text-base text-highlighted">Навыки</h2>
+      <h2 class="truncate text-base text-highlighted">
+        Навыки
+      </h2>
     </template>
 
     <div class="grid gap-4">
@@ -110,8 +111,7 @@
             placeholder="Введи бонус"
             :min="-10"
             :max="10"
-          >
-          </UInputNumber>
+          />
         </UFormField>
 
         <UFormField

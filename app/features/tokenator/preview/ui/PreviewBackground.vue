@@ -8,6 +8,6 @@
       :src="PREVIEW_ASSETS.BACKGROUND"
       alt="Background"
       class="h-full w-full object-cover"
-    />
+    >
   </div>
 </template>

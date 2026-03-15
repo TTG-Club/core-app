@@ -5,21 +5,21 @@
     CreatureSizes,
   } from '~bestiary/model';
 
-  const model = defineModel<CreateHit>({
-    required: true,
-  });
-
   const { sizes, constitution } = defineProps<{
     sizes: CreatureSizes;
     constitution: CreateAbility;
   }>();
+
+  const model = defineModel<CreateHit>({
+    required: true,
+  });
 
   const diceSize = computed(() => {
     if (!sizes.values.length) {
       return undefined;
     }
 
-    const currentSize = sizes.values[sizes.values.length - 1];
+    const currentSize = sizes.values.at(-1);
 
     switch (currentSize) {
       case 'GARGANTUAN':

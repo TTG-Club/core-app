@@ -1,5 +1,6 @@
 import { liveQuery } from 'dexie';
 import { cloneDeep } from 'es-toolkit';
+
 import { db } from '~tokenator/model';
 
 /**

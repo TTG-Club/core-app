@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { EditorArrayControls } from '~ui/editor';
-
   import type { CreateTrait, CreatureCreate } from '~bestiary/model';
+
+  import { EditorArrayControls } from '~ui/editor';
 
   type Traits = CreatureCreate['traits'];
 
@@ -34,7 +34,9 @@
     class="col-span-full"
   >
     <template #header>
-      <h2 class="truncate text-base text-highlighted">Особенности</h2>
+      <h2 class="truncate text-base text-highlighted">
+        Особенности
+      </h2>
     </template>
 
     <div class="grid gap-4">

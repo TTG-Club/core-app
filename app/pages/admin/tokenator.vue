@@ -208,7 +208,7 @@
               class="pointer-events-none h-full w-full object-contain"
               loading="lazy"
               alt="Рамка"
-            />
+            >
           </div>
 
           <template #footer>

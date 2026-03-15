@@ -1,11 +1,11 @@
 <script setup lang="ts">
+  import type { CreatureDefenses } from '~bestiary/model';
+
   import {
     CreatureImmunities,
     CreatureResistances,
     CreatureVulnerabilities,
   } from './ui';
-
-  import type { CreatureDefenses } from '~bestiary/model';
 
   const defenses = defineModel<CreatureDefenses>({
     required: true,
@@ -18,7 +18,9 @@
     class="col-span-full"
   >
     <template #header>
-      <h2 class="truncate text-base text-highlighted">Защита</h2>
+      <h2 class="truncate text-base text-highlighted">
+        Защита
+      </h2>
     </template>
 
     <div class="col-span-full grid grid-cols-24 gap-4">

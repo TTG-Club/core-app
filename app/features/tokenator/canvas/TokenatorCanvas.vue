@@ -63,11 +63,11 @@
   const containerClasses = computed(() => ({
     'cursor-none': store.isBrushMode,
     'cursor-grab':
-      (store.editMode === TokenatorEditMode.None || isPanningMode.value) &&
-      !isDragging.value,
+      (store.editMode === TokenatorEditMode.None || isPanningMode.value)
+      && !isDragging.value,
     'cursor-grabbing':
-      (store.editMode === TokenatorEditMode.None || isPanningMode.value) &&
-      isDragging.value,
+      (store.editMode === TokenatorEditMode.None || isPanningMode.value)
+      && isDragging.value,
     'cursor-move': store.editMode === TokenatorEditMode.Background,
     'ring-2 ring-primary ring-inset': isOverDropZone.value,
   }));
@@ -99,11 +99,11 @@
 
     <div
       class="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_right,oklch(0.623_0.214_259.815/0.2)_1px,transparent_1px),linear-gradient(to_bottom,oklch(0.623_0.214_259.815/0.2)_1px,transparent_1px)] bg-size-[200px_200px] bg-center"
-    ></div>
+    />
 
     <div
       class="absolute inset-0 bg-[radial-gradient(#888_1px,transparent_1px)] bg-size-[16px_16px] bg-center opacity-20"
-    ></div>
+    />
 
     <canvas
       ref="canvasRef"

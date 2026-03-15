@@ -1,9 +1,9 @@
 <script setup lang="ts">
+  import type { ClassDetailResponse } from '~classes/model';
+
   import { ClassBody } from '~classes/body';
   import { PageActions } from '~ui/page';
   import { UiResult } from '~ui/result';
-
-  import type { ClassDetailResponse } from '~classes/model';
 
   const isClientReady = useState('client-ready', () => false);
 
@@ -117,7 +117,9 @@
         title="Ошибка"
       >
         <template #extra>
-          <UButton @click.left.exact.prevent="refresh()"> Обновить</UButton>
+          <UButton @click.left.exact.prevent="refresh()">
+            Обновить
+          </UButton>
 
           <UButton
             variant="ghost"

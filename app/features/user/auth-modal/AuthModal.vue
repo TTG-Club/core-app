@@ -3,7 +3,7 @@
 
   import { SignIn, SignUp } from './ui';
 
-  const enum FormType {
+  enum FormType {
     SIGN_IN = 'signIn',
     SIGN_UP = 'signUp',
     CHANGE_PASSWORD = 'changePassword',
@@ -74,7 +74,7 @@
           class="hidden w-55 shrink-0 object-cover md:block"
           alt="auth-background-image"
           src="/img/bg-login.png"
-        />
+        >
 
         <div class="w-full p-8 md:py-12 md:pr-16 md:pl-6">
           <SignIn

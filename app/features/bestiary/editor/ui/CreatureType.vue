@@ -1,8 +1,9 @@
 <script setup lang="ts">
-  import { isEqual } from 'es-toolkit';
-  import { SelectCreatureType } from '~ui/select';
-
   import type { CreatureTypes } from '~bestiary/model';
+
+  import { isEqual } from 'es-toolkit';
+
+  import { SelectCreatureType } from '~ui/select';
 
   const model = defineModel<CreatureTypes>({
     required: true,

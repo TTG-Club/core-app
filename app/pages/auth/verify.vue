@@ -24,7 +24,9 @@
 <template>
   <NuxtLayout>
     <div class="flex h-full flex-1 flex-col justify-center gap-4">
-      <h1 class="text-xl">Ваш учетная запись активирована 🥳</h1>
+      <h1 class="text-xl">
+        Ваш учетная запись активирована 🥳
+      </h1>
 
       <span class="text-secondary"> Теперь вы можете выполнить вход </span>
 

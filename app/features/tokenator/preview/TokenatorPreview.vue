@@ -12,19 +12,19 @@
       <!-- Grid Lines -->
       <div
         class="pointer-events-none absolute top-[calc(50%-120px)] right-0 left-0 z-20 h-px bg-neutral-500/40"
-      ></div>
+      />
 
       <div
         class="pointer-events-none absolute top-[calc(50%+120px)] right-0 left-0 z-20 h-px bg-neutral-500/40"
-      ></div>
+      />
 
       <div
         class="pointer-events-none absolute top-0 bottom-0 left-[calc(50%-120px)] z-20 w-px bg-neutral-500/40"
-      ></div>
+      />
 
       <div
         class="pointer-events-none absolute top-0 bottom-0 left-[calc(50%+120px)] z-20 w-px bg-neutral-500/40"
-      ></div>
+      />
 
       <PreviewCanvas />
     </div>

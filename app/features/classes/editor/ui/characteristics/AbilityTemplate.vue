@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { ABILITIES } from '~/shared/types';
-
   import type { AbilityTemplateCreate } from '~classes/model';
+
+  import { ABILITIES } from '~/shared/types';
 
   const modelValue = defineModel<AbilityTemplateCreate | undefined>();
 
@@ -19,7 +19,9 @@
 <template>
   <div class="grid gap-4">
     <div class="flex items-center justify-between">
-      <h3 class="text-base text-highlighted">Шаблон характеристик</h3>
+      <h3 class="text-base text-highlighted">
+        Шаблон характеристик
+      </h3>
 
       <UButton
         v-if="!modelValue"

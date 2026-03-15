@@ -1,9 +1,9 @@
 <script setup lang="ts">
+  import type { UploadResponse } from '~/shared/types';
+
   import bytes from 'bytes';
 
   import { getStatusMessage } from '#shared/utils';
-
-  import type { UploadResponse } from '~/shared/types';
 
   const { section, maxSize = undefined } = defineProps<{
     section: string;
@@ -124,9 +124,9 @@
 
   async function beforeUpload(file: File) {
     const isExtensionSuccess =
-      file.type === 'image/jpeg' ||
-      file.type === 'image/png' ||
-      file.type === 'image/webp';
+      file.type === 'image/jpeg'
+      || file.type === 'image/png'
+      || file.type === 'image/webp';
 
     if (!isExtensionSuccess) {
       $toast.add({
@@ -162,7 +162,7 @@
       }
 
       return true;
-    } catch (err) {
+    } catch {
       $toast.add({
         color: 'error',
         title: 'Ошибка при загрузке файла',
@@ -194,7 +194,7 @@
   }
 
   async function handleFiles(files: File[] | FileList) {
-    const file = Array.from(files)[0];
+    const file = [...files][0];
 
     if (!file) {
       return;

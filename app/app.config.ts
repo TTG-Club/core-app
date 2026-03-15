@@ -1,9 +1,11 @@
+const STROKE_WIDTH_REGEX = /stroke-width="[^"]*"/g;
+
 export default defineAppConfig({
   icon: {
     mode: 'css',
     cssLayer: 'base',
     customize: (content: string) =>
-      content.replace(/stroke-width="[^"]*"/g, 'stroke-width="1.5"'),
+      content.replace(STROKE_WIDTH_REGEX, 'stroke-width="1.5"'),
   },
   ui: {
     icons: {

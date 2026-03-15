@@ -1,10 +1,10 @@
 <script setup lang="ts">
+  import type { SpellCastingTime } from '~spells/model';
+
   import { isString } from 'es-toolkit';
-  import { EditorArrayControls } from '~ui/editor';
 
   import { DictionaryService } from '~/shared/api';
-
-  import type { SpellCastingTime } from '~spells/model';
+  import { EditorArrayControls } from '~ui/editor';
 
   const times = defineModel<Array<SpellCastingTime>>({
     default: () => [],
@@ -81,7 +81,9 @@
 
 <template>
   <div class="col-span-full mt-4 flex gap-4">
-    <p class="w-1/5 text-lg">Время накладывания</p>
+    <p class="w-1/5 text-lg">
+      Время накладывания
+    </p>
 
     <USeparator />
   </div>

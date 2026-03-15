@@ -1,14 +1,14 @@
 <script setup lang="ts">
-  import { ClassBody } from '~classes/body';
-  import { UiDrawer } from '~ui/drawer';
-
   import type { ClassCreate, ClassDetailResponse } from '~classes/model';
 
-  const opened = defineModel<boolean>('open', { required: true });
+  import { ClassBody } from '~classes/body';
+  import { UiDrawer } from '~ui/drawer';
 
   const { state } = defineProps<{
     state: ClassCreate;
   }>();
+
+  const opened = defineModel<boolean>('open', { required: true });
 
   const {
     data: characterClass,

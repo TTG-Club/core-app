@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { SelectChallengeRating } from '~ui/select';
-
   import type { CreateExperience } from '~bestiary/model';
+
+  import { SelectChallengeRating } from '~ui/select';
 
   const model = defineModel<CreateExperience>({ required: true });
 
@@ -16,7 +16,9 @@
     class="col-span-full"
   >
     <template #header>
-      <h2 class="truncate text-base text-highlighted">Уровень опасности</h2>
+      <h2 class="truncate text-base text-highlighted">
+        Уровень опасности
+      </h2>
     </template>
 
     <UForm

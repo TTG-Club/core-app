@@ -27,7 +27,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
     }
 
     return preventRouting(StatusCodes.FORBIDDEN);
-  } catch (err) {
+  } catch {
     return preventRouting(StatusCodes.UNAUTHORIZED);
   }
 });

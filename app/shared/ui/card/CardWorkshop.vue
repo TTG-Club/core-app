@@ -27,7 +27,9 @@
       <div class="flex items-center gap-1">
         <span class="opacity-70">Создано:</span>
 
-        <ULink :to="`/workshop/${section}`">0</ULink>
+        <ULink :to="`/workshop/${section}`">
+          0
+        </ULink>
       </div>
 
       <span class="opacity-40">•</span>
@@ -35,7 +37,9 @@
       <div class="flex items-center gap-1">
         <span class="opacity-70">На модерации:</span>
 
-        <ULink :to="`/workshop/${section}`">0</ULink>
+        <ULink :to="`/workshop/${section}`">
+          0
+        </ULink>
       </div>
 
       <span class="opacity-40">•</span>
@@ -43,7 +47,9 @@
       <div class="flex items-center gap-1">
         <span class="opacity-70">Черновики:</span>
 
-        <ULink :to="`/workshop/${section}`">0</ULink>
+        <ULink :to="`/workshop/${section}`">
+          0
+        </ULink>
       </div>
     </div>
   </UCard>

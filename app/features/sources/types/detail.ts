@@ -1,6 +1,5 @@
-import type { RenderNode } from '~ui/markup';
-
 import type { NameResponse, SourceResponse } from '~/shared/types';
+import type { RenderNode } from '~ui/markup';
 
 export interface SourceDetailResponse {
   url: string;

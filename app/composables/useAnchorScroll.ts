@@ -1,9 +1,11 @@
-import { merge, toMerged } from 'es-toolkit';
-
 import type {
   AnchorScrollConfiguration,
   AnchorScrollOptions,
 } from '~/shared/types';
+
+import { merge, toMerged } from 'es-toolkit';
+
+const ANCHOR_HASH_REGEX = /^#/;
 
 function isHTMLElement(value: unknown): value is HTMLElement {
   return value instanceof HTMLElement;
@@ -35,7 +37,7 @@ export function useAnchorScroll(config?: AnchorScrollConfiguration) {
     if (isHTMLElement(maybeElement)) {
       anchorElement = maybeElement;
     } else {
-      anchorElement = document.getElementById(maybeElement.replace(/^#/, ''));
+      anchorElement = document.getElementById(maybeElement.replace(ANCHOR_HASH_REGEX, ''));
     }
 
     if (!anchorElement) {

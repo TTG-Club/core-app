@@ -1,13 +1,13 @@
 <script setup lang="ts">
   import { CopyButton } from '~ui/copy-button';
 
-  defineEmits<{
-    (e: 'close'): void;
-  }>();
-
   defineProps<{
     url?: string;
     editUrl?: string;
+  }>();
+
+  defineEmits<{
+    (e: 'close'): void;
   }>();
 
   const { isAdmin } = useUser();

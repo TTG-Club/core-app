@@ -1,10 +1,10 @@
 <script setup lang="ts">
+  import type { ClassFeatureCreate } from '~classes/model';
+
   import { EditorArrayControls } from '~ui/editor';
   import { SelectLevel } from '~ui/select';
 
   import { FeatureAbilityBonus, FeatureScaling } from './features';
-
-  import type { ClassFeatureCreate } from '~classes/model';
 
   const { isSubclass = false } = defineProps<{
     isSubclass?: boolean;
@@ -37,7 +37,9 @@
 <template>
   <UCard variant="subtle">
     <template #header>
-      <h2 class="truncate text-base text-highlighted">Умения класса</h2>
+      <h2 class="truncate text-base text-highlighted">
+        Умения класса
+      </h2>
     </template>
 
     <div class="flex flex-col gap-4">

@@ -1,12 +1,12 @@
+import type { EventHandlerRequest } from 'h3';
+
+import type { S3UploadFile, S3UploadResponse } from '#server/domain/s3';
+
 import { H3Error } from 'h3';
 import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod/v4';
 
 import { getFileForUpload, S3Service } from '#server/domain/s3';
-
-import type { EventHandlerRequest } from 'h3';
-
-import type { S3UploadFile, S3UploadResponse } from '#server/domain/s3';
 
 const requestSchema = z
   .object({
@@ -40,7 +40,7 @@ export default defineEventHandler<Request, Promise<S3UploadResponse>>(
       }
 
       section = query?.section;
-    } catch (err) {
+    } catch {
       throw createError(
         getErrorResponse(StatusCodes.BAD_REQUEST, {
           message: 'Максимальный размер имеет неверный формат',

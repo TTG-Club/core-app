@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { ClassDetailResponse } from '~classes/model';
+
   import { ClassBody } from '~classes/body';
   import { UiDrawer } from '~ui/drawer';
-
-  import type { ClassDetailResponse } from '~classes/model';
 
   const { url } = defineProps<{
     url: string;

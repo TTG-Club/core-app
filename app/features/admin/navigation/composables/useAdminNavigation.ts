@@ -1,6 +1,6 @@
-import { ADMIN_NAVIGATION_ITEMS } from '../model';
-
 import type { NavigationItem } from '../model';
+
+import { ADMIN_NAVIGATION_ITEMS } from '../model';
 
 /**
  * Composable для управления навигацией админ-панели.

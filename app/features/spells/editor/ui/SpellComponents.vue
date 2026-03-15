@@ -30,7 +30,9 @@
 
 <template>
   <div class="col-span-full mt-4 flex gap-4">
-    <p class="text-lg">Компоненты</p>
+    <p class="text-lg">
+      Компоненты
+    </p>
 
     <USeparator />
   </div>

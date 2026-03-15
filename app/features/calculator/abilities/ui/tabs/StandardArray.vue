@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { AbilityScores } from '../../model';
+
   import { ABILITY_KEYS, ABILITY_LABELS } from '~/shared/types';
   import { AbilityKey } from '~/shared/types/abilities';
 
@@ -7,8 +9,6 @@
     STANDARD_ARRAY_LABELS,
     ZERO_SCORES,
   } from '../../model';
-
-  import type { AbilityScores } from '../../model';
 
   const props = defineProps<{
     selectedClassUrl?: string;
@@ -128,8 +128,7 @@
           :class="getScoreClass(score)"
         >
           {{ score
-          }}<span v-if="index < STANDARD_ARRAY.length - 1">, </span> </span
-        >.
+          }}<span v-if="index < STANDARD_ARRAY.length - 1">, </span> </span>.
       </div>
 
       <UButton
@@ -149,7 +148,9 @@
         :key="key"
         class="bg-card flex items-center justify-between gap-3 rounded-xl border border-default p-3"
       >
-        <div class="font-semibold">{{ ABILITY_LABELS[key] }}</div>
+        <div class="font-semibold">
+          {{ ABILITY_LABELS[key] }}
+        </div>
 
         <USelect
           :model-value="localScores[key]"

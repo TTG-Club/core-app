@@ -23,9 +23,7 @@
     </div>
 
     <div class="flex w-full min-w-full gap-0 px-4 py-1.5">
-      <span class="min-w-20 text-sm font-medium text-highlighted"
-        >Скорость:</span
-      >
+      <span class="min-w-20 text-sm font-medium text-highlighted">Скорость:</span>
 
       <span>{{ properties.speed }}</span>
     </div>

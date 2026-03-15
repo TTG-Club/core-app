@@ -1,9 +1,3 @@
-import {
-  ABILITY_MAX_SCORE,
-  EPIC_BOON_LEVEL,
-  STANDARD_ASI_LEVELS,
-} from '../model';
-
 import type { Ref } from 'vue';
 
 import type {
@@ -11,6 +5,12 @@ import type {
   BonusSource,
   CalculatorAbilitiesClass,
   CalculatorClassOption,
+} from '../model';
+
+import {
+  ABILITY_MAX_SCORE,
+  EPIC_BOON_LEVEL,
+  STANDARD_ASI_LEVELS,
 } from '../model';
 
 /**
@@ -56,7 +56,7 @@ export function useClassSelect(level: Ref<number>) {
 
     classAsiLevels.value.forEach((asiLevel) => levels.add(asiLevel));
 
-    return Array.from(levels).sort((sortA, sortB) => sortA - sortB);
+    return levels.values().toArray().sort((sortA, sortB) => sortA - sortB);
   });
 
   const hasEpicBoon = computed(() => level.value >= EPIC_BOON_LEVEL);

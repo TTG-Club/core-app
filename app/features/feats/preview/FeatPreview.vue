@@ -1,14 +1,14 @@
 <script setup lang="ts">
-  import { FeatBody } from '~feats/body';
-  import { UiDrawer } from '~ui/drawer';
-
   import type { FeatCreate, FeatDetailResponse } from '~feats/model';
 
-  const opened = defineModel<boolean>('open', { required: true });
+  import { FeatBody } from '~feats/body';
+  import { UiDrawer } from '~ui/drawer';
 
   const { state } = defineProps<{
     state: FeatCreate;
   }>();
+
+  const opened = defineModel<boolean>('open', { required: true });
 
   const {
     data: feat,

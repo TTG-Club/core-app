@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { ClassDetailResponse } from '~classes/model';
+
   import { UiCollapse } from '~ui/collapse';
   import { MarkupRender } from '~ui/markup';
-
-  import type { ClassDetailResponse } from '~classes/model';
 
   defineProps<{
     equipment: ClassDetailResponse['equipment'];
@@ -14,7 +14,9 @@
     v-if="equipment"
     default-open
   >
-    <template #default>Снаряжение</template>
+    <template #default>
+      Снаряжение
+    </template>
 
     <template #content>
       <span>

@@ -1,6 +1,5 @@
-import type { EditorBaseInfoState } from '~ui/editor';
-
 import type { NameResponse, SourceResponse } from '~/shared/types';
+import type { EditorBaseInfoState } from '~ui/editor';
 
 export interface SpeciesLinkResponse {
   url: string;

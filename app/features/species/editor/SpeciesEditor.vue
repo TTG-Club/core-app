@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { SpeciesCreate } from '~species/model';
+
   import { SpeciesPreview } from '~species/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectCreatureType, SelectSpecies } from '~ui/select';
@@ -6,8 +8,6 @@
   import { useWorkshopForm } from '~workshop/composable';
 
   import { SpeciesFeatures, SpeciesSizes, SpeciesSpeed } from './ui';
-
-  import type { SpeciesCreate } from '~species/model';
 
   function getInitialState(): SpeciesCreate {
     return {
@@ -62,7 +62,9 @@
 
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Описание</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Описание
+        </h2>
       </template>
 
       <div class="grid grid-cols-24 gap-4">
@@ -82,7 +84,9 @@
 
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Характеристики</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Характеристики
+        </h2>
       </template>
 
       <div class="grid grid-cols-24 gap-4">
@@ -113,7 +117,9 @@
 
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Изображения</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Изображения
+        </h2>
       </template>
 
       <div class="grid grid-cols-24 gap-4">
@@ -142,7 +148,7 @@
                   class="w-full rounded-lg object-contain"
                   :src="src"
                   :alt="state.name.rus"
-                />
+                >
 
                 <!-- Show a placeholder while loading -->
                 <img
@@ -150,7 +156,7 @@
                   class="w-full rounded-lg object-contain"
                   src="/img/no-img.webp"
                   alt="no image"
-                />
+                >
               </NuxtImg>
             </template>
           </UploadImage>
@@ -181,7 +187,7 @@
                   class="aspect-square w-full rounded-lg object-cover"
                   :src="src"
                   :alt="state.name.rus"
-                />
+                >
 
                 <!-- Show a placeholder while loading -->
                 <img
@@ -189,7 +195,7 @@
                   class="w-full rounded-lg object-contain"
                   src="/img/no-img.webp"
                   alt="no image"
-                />
+                >
               </NuxtImg>
             </template>
           </UploadImage>

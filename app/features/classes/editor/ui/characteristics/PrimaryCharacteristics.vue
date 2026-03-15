@@ -1,10 +1,10 @@
 <script setup lang="ts">
-  import { SelectAbilities } from '~ui/select';
-
   import type {
     AbilityDelimiter,
     ClassPrimaryCharacteristicsCreate,
   } from '~classes/model';
+
+  import { SelectAbilities } from '~ui/select';
 
   const model = defineModel<ClassPrimaryCharacteristicsCreate>({
     required: true,

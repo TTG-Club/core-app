@@ -70,9 +70,7 @@
         <div class="flex h-5 items-center justify-between">
           <span class="text-xs text-neutral-500">Размер кисти</span>
 
-          <span class="font-mono text-[10px] text-neutral-400"
-            >{{ store.brush.size }}px</span
-          >
+          <span class="font-mono text-[10px] text-neutral-400">{{ store.brush.size }}px</span>
         </div>
 
         <USlider
@@ -87,7 +85,9 @@
 
     <!-- Секция управления холстом -->
     <div class="grid gap-3">
-      <div class="text-xs font-medium text-neutral-400">Управление холстом</div>
+      <div class="text-xs font-medium text-neutral-400">
+        Управление холстом
+      </div>
 
       <div class="grid gap-2">
         <div class="grid gap-1">
@@ -142,10 +142,8 @@
               />
             </button>
 
-            <span class="font-mono text-xs text-neutral-400"
-              >X: {{ store.canvasViewport.pan.x.toFixed(0) }} / Y:
-              {{ store.canvasViewport.pan.y.toFixed(0) }}</span
-            >
+            <span class="font-mono text-xs text-neutral-400">X: {{ store.canvasViewport.pan.x.toFixed(0) }} / Y:
+              {{ store.canvasViewport.pan.y.toFixed(0) }}</span>
           </div>
 
           <UButton

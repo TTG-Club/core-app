@@ -1,6 +1,7 @@
 <script setup lang="ts" generic="T extends { url: string }">
   import { get } from 'es-toolkit/compat';
   import { computed } from 'vue';
+
   import { PageGrid } from '~ui/page';
 
   type SeparatorLabel = string | ((value: string | number) => string);
@@ -70,7 +71,7 @@
   }
 
   function sortKeysAuto(keys: Array<GroupKey>): Array<GroupKey> {
-    return [...keys].sort((a, b) => {
+    return keys.toSorted((a, b) => {
       if (typeof a === 'number' && typeof b === 'number') {
         return a - b;
       }
@@ -100,7 +101,7 @@
       }
     });
 
-    const sortedKnown = [...knownKeys].sort((a, b) => {
+    const sortedKnown = knownKeys.toSorted((a, b) => {
       const aIndex = orderIndexByKeyText.get(String(a));
       const bIndex = orderIndexByKeyText.get(String(b));
 
@@ -130,7 +131,7 @@
 
   function sortGroupKeys(keys: Array<GroupKey>): Array<GroupKey> {
     if (groupSort.mode === 'comparator') {
-      return [...keys].sort(groupSort.compare);
+      return keys.toSorted(groupSort.compare);
     }
 
     if (groupSort.mode === 'ordered') {
