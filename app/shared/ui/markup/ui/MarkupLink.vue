@@ -1,12 +1,12 @@
 <script setup lang="ts">
+  import type { VNode } from 'vue';
+
+  import type { MarkerNode, RenderNode } from '../types';
+
   import { computed } from 'vue';
   import { useRouter } from 'vue-router';
 
   import { ULink } from '#components';
-
-  import type { VNode } from 'vue';
-
-  import type { MarkerNode, RenderNode } from '../types';
 
   const { node, renderNodes } = defineProps<{
     node: MarkerNode;

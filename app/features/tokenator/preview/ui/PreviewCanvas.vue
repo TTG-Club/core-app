@@ -150,9 +150,9 @@
   const containerClasses = computed(() => ({
     'cursor-none': isBrushMode.value,
     'cursor-grab':
-      store.currentImage &&
-      store.editMode === TokenatorEditMode.None &&
-      !isDragging.value,
+      store.currentImage
+      && store.editMode === TokenatorEditMode.None
+      && !isDragging.value,
     'cursor-grabbing':
       isDragging.value && store.editMode === TokenatorEditMode.None,
     'cursor-move': store.editMode === TokenatorEditMode.Background,

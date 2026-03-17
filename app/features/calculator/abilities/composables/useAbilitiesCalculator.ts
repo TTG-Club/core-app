@@ -1,15 +1,15 @@
+import type { Ref, VNode } from 'vue';
+
+import type { AbilityKey } from '~/shared/types';
+
+import type { AbilityScores, BonusSource } from '../model';
+
 import { computed, h } from 'vue';
 
 import { ABILITY_KEYS } from '~/shared/types';
 import { getFormattedModifier, getModifier } from '~/utils/modifier';
 
 import { ABILITY_MAX_SCORE, DEFAULT_SCORES } from '../model';
-
-import type { Ref, VNode } from 'vue';
-
-import type { AbilityKey } from '~/shared/types';
-
-import type { AbilityScores, BonusSource } from '../model';
 
 /**
  * Калькулятор характеристик персонажа.

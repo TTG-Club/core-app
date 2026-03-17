@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { MagicItemCreate } from '~magic-items/model';
+
   import { MagicItemPreview } from '~magic-items/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { UploadImage } from '~ui/upload';
@@ -9,8 +11,6 @@
     MagicItemCategory,
     MagicItemRarity,
   } from './ui';
-
-  import type { MagicItemCreate } from '~magic-items/model';
 
   function getInitialState(): MagicItemCreate {
     return {

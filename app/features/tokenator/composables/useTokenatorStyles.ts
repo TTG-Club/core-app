@@ -1,4 +1,7 @@
+import type { BackgroundStyle, FrameTint } from '~tokenator/model';
+
 import { cloneDeep } from 'es-toolkit';
+
 import {
   BACKGROUND_BLEND_MODES,
   BLEND_MODES,
@@ -8,8 +11,6 @@ import {
 } from '~tokenator/model';
 
 import { useTokenatorSetting } from './useTokenatorSetting';
-
-import type { BackgroundStyle, FrameTint } from '~tokenator/model';
 
 export function useTokenatorStyles() {
   const { data: backgroundColor } = useTokenatorSetting<string>(

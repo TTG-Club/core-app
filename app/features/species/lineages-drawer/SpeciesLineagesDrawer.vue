@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { SpeciesLinkResponse } from '~species/model';
+
   import { SpeciesLink } from '~species/link';
   import { UiDrawer } from '~ui/drawer';
-
-  import type { SpeciesLinkResponse } from '~species/model';
 
   const { url } = defineProps<{
     url: string;

@@ -1,12 +1,11 @@
-import { toValue } from 'vue';
-
-import { ThemeName } from '~/shared/consts';
-
-import { ONE_DAY_IN_SECONDS, THEME_STORE_KEY } from '#shared/consts';
-
 import type { MaybeRefOrGetter } from 'vue';
 
 import type { ColorMode } from '~/shared/consts';
+
+import { toValue } from 'vue';
+
+import { ONE_DAY_IN_SECONDS, THEME_STORE_KEY } from '#shared/consts';
+import { ThemeName } from '~/shared/consts';
 
 export function useTheme() {
   const {

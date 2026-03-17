@@ -82,17 +82,17 @@
       JSON.stringify(store.brush) !== JSON.stringify(DEFAULT_BRUSH_CONFIG);
 
     const hasCanvasChanges =
-      store.canvasViewport.zoom !== 1 ||
-      store.canvasViewport.pan.x !== 0 ||
-      store.canvasViewport.pan.y !== 0;
+      store.canvasViewport.zoom !== 1
+      || store.canvasViewport.pan.x !== 0
+      || store.canvasViewport.pan.y !== 0;
 
     return (
-      hasTransformChanges ||
-      hasColorChanges ||
-      hasTintChanges ||
-      hasTextChanges ||
-      hasBrushChanges ||
-      hasCanvasChanges
+      hasTransformChanges
+      || hasColorChanges
+      || hasTintChanges
+      || hasTextChanges
+      || hasBrushChanges
+      || hasCanvasChanges
     );
   });
 

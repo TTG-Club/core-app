@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { computed } from 'vue';
-
   import type { NuxtError } from '#app';
+
+  import { computed } from 'vue';
 
   interface Props {
     status?: 'success' | 'error' | 'info' | 'warning' | '404' | '403';

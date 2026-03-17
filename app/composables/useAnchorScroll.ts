@@ -1,9 +1,9 @@
-import { merge, toMerged } from 'es-toolkit';
-
 import type {
   AnchorScrollConfiguration,
   AnchorScrollOptions,
 } from '~/shared/types';
+
+import { merge, toMerged } from 'es-toolkit';
 
 function isHTMLElement(value: unknown): value is HTMLElement {
   return value instanceof HTMLElement;

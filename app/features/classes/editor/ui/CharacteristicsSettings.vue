@@ -1,4 +1,10 @@
 <script setup lang="ts">
+  import type { AbilityKey } from '~/shared/types';
+  import type {
+    AbilityTemplateCreate,
+    ClassPrimaryCharacteristicsCreate,
+  } from '~classes/model';
+
   import {
     SelectAbilities,
     SelectCasterType,
@@ -7,13 +13,6 @@
   } from '~ui/select';
 
   import { AbilityTemplate, PrimaryCharacteristics } from './characteristics';
-
-  import type {
-    AbilityTemplateCreate,
-    ClassPrimaryCharacteristicsCreate,
-  } from '~classes/model';
-
-  import type { AbilityKey } from '~/shared/types';
 
   const parentUrl = defineModel<string | undefined>('parentUrl', {
     required: true,

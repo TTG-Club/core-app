@@ -1,11 +1,11 @@
 <script setup lang="ts">
+  import type { ClassProficiencyCreate } from '~classes/model';
+
   import {
     SelectArmorCategory,
     SelectSkills,
     SelectWeaponCategory,
   } from '~ui/select';
-
-  import type { ClassProficiencyCreate } from '~classes/model';
 
   const state = defineModel<ClassProficiencyCreate>({ required: true });
 </script>

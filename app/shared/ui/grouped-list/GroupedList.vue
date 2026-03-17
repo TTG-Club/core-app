@@ -1,6 +1,7 @@
 <script setup lang="ts" generic="T extends { url: string }">
   import { get } from 'es-toolkit/compat';
   import { computed } from 'vue';
+
   import { PageGrid } from '~ui/page';
 
   type SeparatorLabel = string | ((value: string | number) => string);

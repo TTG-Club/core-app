@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { EditorArrayControls } from '~ui/editor';
-
   import type { CreateAction, LegendaryActions } from '~bestiary/model';
+
+  import { EditorArrayControls } from '~ui/editor';
 
   function getEmpty(): CreateAction {
     return {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { ThemeName } from '~/shared/consts';
-
   import type { DropdownMenuItem } from '@nuxt/ui';
+
+  import { ThemeName } from '~/shared/consts';
 
   const { name, change } = useTheme();
   const { greaterOrEqual } = useBreakpoints();

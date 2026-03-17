@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { GlossaryDetailResponse } from '~glossary/model';
+
   import { GlossaryBody } from '~glossary/body';
   import { UiDrawer } from '~ui/drawer';
-
-  import type { GlossaryDetailResponse } from '~glossary/model';
 
   const { url } = defineProps<{
     url: string;

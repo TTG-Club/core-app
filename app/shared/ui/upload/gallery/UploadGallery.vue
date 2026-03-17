@@ -1,10 +1,10 @@
 <script setup lang="ts">
+  import type { UploadResponse } from '~/shared/types';
+
   import bytes from 'bytes';
   import { chunk } from 'es-toolkit';
 
   import { getStatusMessage } from '#shared/utils';
-
-  import type { UploadResponse } from '~/shared/types';
 
   const { section } = defineProps<{
     section: string;
@@ -94,9 +94,9 @@
 
   async function beforeUpload(file: File) {
     const isExtensionSuccess =
-      file.type === 'image/jpeg' ||
-      file.type === 'image/png' ||
-      file.type === 'image/webp';
+      file.type === 'image/jpeg'
+      || file.type === 'image/png'
+      || file.type === 'image/webp';
 
     if (!isExtensionSuccess) {
       $toast.add({

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { ABILITY_SHORT_LABELS } from '~/shared/types';
-
   import type { AbilityKey } from '~/shared/types';
+
+  import { ABILITY_SHORT_LABELS } from '~/shared/types';
 
   interface DisplayItem {
     key: AbilityKey;

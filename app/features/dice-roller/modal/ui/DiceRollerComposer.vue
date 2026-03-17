@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { useFocus } from '@vueuse/core';
+
   import { useDiceRollerState } from '~dice-roller/composables';
 
   const emit = defineEmits<{

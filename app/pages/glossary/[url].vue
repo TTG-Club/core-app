@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { GlossaryDetailResponse } from '~glossary/model';
+
   import { GlossaryBody } from '~glossary/body';
   import { PageActions } from '~ui/page';
-
-  import type { GlossaryDetailResponse } from '~glossary/model';
 
   const route = useRoute();
 

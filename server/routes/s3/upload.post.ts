@@ -1,12 +1,12 @@
+import type { EventHandlerRequest } from 'h3';
+
+import type { S3UploadFile, S3UploadResponse } from '#server/domain/s3';
+
 import { H3Error } from 'h3';
 import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod/v4';
 
 import { getFileForUpload, S3Service } from '#server/domain/s3';
-
-import type { EventHandlerRequest } from 'h3';
-
-import type { S3UploadFile, S3UploadResponse } from '#server/domain/s3';
 
 const requestSchema = z
   .object({

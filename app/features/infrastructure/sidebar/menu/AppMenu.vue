@@ -2,7 +2,6 @@
   import { HamburgerIcon, SvgLogo } from '~ui/icon';
 
   import { SidebarPopover } from '../popover';
-
   import { MENU_LINKS, MENU_SECTIONS, MENU_SUPPORT } from './model';
   import { MenuContacts, MenuSection, MenuSupport } from './ui';
 </script>

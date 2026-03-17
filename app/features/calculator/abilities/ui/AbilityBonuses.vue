@@ -1,18 +1,17 @@
 <script setup lang="ts">
+  import type { BonusSource } from '../model';
+
   import {
     useBackgroundSelect,
     useClassSelect,
     useFeatSelect,
   } from '../composables';
-
   import {
     BackgroundSelect,
     ClassLevelSelect,
     FeatSlot,
     GeneralFeatsGrid,
   } from './components';
-
-  import type { BonusSource } from '../model';
 
   const model = defineModel<number>({ required: true });
 

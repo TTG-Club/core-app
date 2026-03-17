@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { RoadmapPreview } from '~roadmap/preview';
-
   import type { RoadmapRequest } from '~roadmap/types';
+
+  import { RoadmapPreview } from '~roadmap/preview';
 
   const { url = undefined } = defineProps<{
     url?: string;
@@ -55,8 +55,8 @@
 
     if (url) {
       state.value =
-        (await $fetch<RoadmapRequest>(`/api/v2/roadmap/${url}/raw`)) ||
-        getDefaultState();
+        (await $fetch<RoadmapRequest>(`/api/v2/roadmap/${url}/raw`))
+        || getDefaultState();
     }
   });
 </script>

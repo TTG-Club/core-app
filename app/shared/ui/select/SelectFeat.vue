@@ -144,9 +144,9 @@
     const list = data.value ?? [];
 
     if (
-      props.max &&
-      Array.isArray(model.value) &&
-      model.value.length >= props.max
+      props.max
+      && Array.isArray(model.value)
+      && model.value.length >= props.max
     ) {
       return list.map((item) => ({
         ...item,

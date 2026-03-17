@@ -1,12 +1,12 @@
 <script setup lang="ts">
-  import FeatSlot from './FeatSlot.vue';
-
   import type { AbilityKey } from '~/shared/types';
 
   import type {
     CalculatorAbilityOption,
     CalculatorFeatOption,
   } from '../../model';
+
+  import FeatSlot from './FeatSlot.vue';
 
   const {
     allAsiLevels,

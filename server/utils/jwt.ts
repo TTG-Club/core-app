@@ -1,6 +1,6 @@
-import { jwtVerify } from 'jose';
-
 import type { H3Event } from 'h3';
+
+import { jwtVerify } from 'jose';
 
 export async function verifyJwt(token: string) {
   const { secret } = getApiSecrets();

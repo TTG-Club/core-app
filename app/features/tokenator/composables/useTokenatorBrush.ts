@@ -1,9 +1,10 @@
+import type { BrushState } from '~tokenator/model';
+
 import { cloneDeep } from 'es-toolkit';
+
 import { DEFAULT_BRUSH_CONFIG, validateBrushSize } from '~tokenator/model';
 
 import { useTokenatorSetting } from './useTokenatorSetting';
-
-import type { BrushState } from '~tokenator/model';
 
 export function useTokenatorBrush() {
   const { data: brush } = useTokenatorSetting<BrushState>(

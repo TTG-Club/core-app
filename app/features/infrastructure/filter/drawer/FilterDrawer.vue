@@ -1,9 +1,9 @@
 <script setup lang="ts">
+  import type { Filter } from '../types';
+
   import { cloneDeep } from 'es-toolkit';
 
   import { FilterList } from '../list';
-
-  import type { Filter } from '../types';
 
   defineEmits<{
     (e: 'save', v: Filter): void;

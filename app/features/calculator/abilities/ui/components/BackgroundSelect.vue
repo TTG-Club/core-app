@@ -1,12 +1,12 @@
 <script setup lang="ts">
-  import { ABILITY_LABELS, AbilityKey } from '~/shared/types';
-
   import type {
     AbilityScores,
     BonusSource,
     CalculatorAbilitiesBackground,
     CalculatorBackgroundOption,
   } from '../../model';
+
+  import { ABILITY_LABELS, AbilityKey } from '~/shared/types';
 
   const { background, backgroundOptions, loading } = defineProps<{
     background: CalculatorAbilitiesBackground | undefined;
@@ -26,8 +26,8 @@
 
   const availableAbilities = computed<AbilityKey[]>(() => {
     if (
-      !background?.abilityScores ||
-      !Array.isArray(background.abilityScores)
+      !background?.abilityScores
+      || !Array.isArray(background.abilityScores)
     ) {
       return [];
     }

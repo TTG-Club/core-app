@@ -1,9 +1,9 @@
 <script setup lang="ts">
+  import type { MagicItemDetailResponse } from '~magic-items/model';
+
   import { UiGallery } from '~ui/gallery';
 
   import { DescriptionsBlock, TopBar } from './ui';
-
-  import type { MagicItemDetailResponse } from '~magic-items/model';
 
   defineProps<{
     magicItem: MagicItemDetailResponse;

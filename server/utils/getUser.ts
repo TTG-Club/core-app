@@ -1,9 +1,9 @@
+import type { H3Event } from 'h3';
+
 import { StatusCodes } from 'http-status-codes';
 import { errors } from 'jose';
 
 import { Role } from '~/shared/types';
-
-import type { H3Event } from 'h3';
 
 export function getUserFromToken(event: H3Event) {
   const token = getTokenFromRequest(event);

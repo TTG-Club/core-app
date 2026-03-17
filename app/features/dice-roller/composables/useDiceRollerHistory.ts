@@ -1,10 +1,10 @@
-import { liveQuery } from 'dexie';
-
-import { db } from '../model/db';
-
 import type { Ref } from 'vue';
 
 import type { HistoryEntry } from '../types';
+
+import { liveQuery } from 'dexie';
+
+import { db } from '../model/db';
 
 interface UseDiceRollerHistoryOptions {
   history: Ref<HistoryEntry[]>;

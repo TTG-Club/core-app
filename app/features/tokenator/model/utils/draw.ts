@@ -1,11 +1,11 @@
-import { BrushMode, FrameTintType } from '../types';
-
 import type {
   BackgroundStyle,
   FrameTint,
   TextAlign,
   TransformState,
 } from '../types';
+
+import { BrushMode, FrameTintType } from '../types';
 
 /**
  * Создает путь для многоугольной или круглой маски.

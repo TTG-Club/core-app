@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { UiCollapse } from '~ui/collapse';
-
   import type { ClassDetailResponse, ClassProficiency } from '~classes/model';
+
+  import { UiCollapse } from '~ui/collapse';
 
   defineProps<{
     proficiency: ClassProficiency;

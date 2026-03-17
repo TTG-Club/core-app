@@ -1,8 +1,8 @@
+import type { GreetingsCharacter } from '../model';
+
 import { randomInt } from 'es-toolkit';
 
 import { GREETINGS_CHARACTERS } from '../const';
-
-import type { GreetingsCharacter } from '../model';
 
 class GreetingsRepository {
   getRandomCharacter = (): GreetingsCharacter | undefined => {

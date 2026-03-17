@@ -1,10 +1,10 @@
 <script setup lang="ts">
+  import type { SpellRange } from '~spells/model';
+
   import { isString } from 'es-toolkit';
-  import { EditorArrayControls } from '~ui/editor';
 
   import { DictionaryService } from '~/shared/api';
-
-  import type { SpellRange } from '~spells/model';
+  import { EditorArrayControls } from '~ui/editor';
 
   const ranges = defineModel<Array<SpellRange>>({
     default: () => [],

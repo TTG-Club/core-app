@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { ru } from '@nuxt/ui/locale';
+
   import { DiceRollerFloatButton } from '~dice-roller/float-button';
   import { DiceRollerModal } from '~dice-roller/modal';
   import { PwaConfig } from '~infrastructure/pwa';

@@ -1,6 +1,9 @@
 <script setup lang="ts">
+  import type { SourceCreate } from '~sources/types';
+
   import { removeStopwords } from 'stopword';
   import { z } from 'zod';
+
   import { SourcePreview } from '~sources/preview';
   import { DatePicker } from '~ui/date-picker';
   import { EditorFormControls } from '~ui/editor';
@@ -9,8 +12,6 @@
   import { useWorkshopForm } from '~workshop/composable';
 
   import { SourceType } from './ui';
-
-  import type { SourceCreate } from '~sources/types';
 
   function getInitialState(): SourceCreate {
     return {

@@ -63,11 +63,11 @@
   const containerClasses = computed(() => ({
     'cursor-none': store.isBrushMode,
     'cursor-grab':
-      (store.editMode === TokenatorEditMode.None || isPanningMode.value) &&
-      !isDragging.value,
+      (store.editMode === TokenatorEditMode.None || isPanningMode.value)
+      && !isDragging.value,
     'cursor-grabbing':
-      (store.editMode === TokenatorEditMode.None || isPanningMode.value) &&
-      isDragging.value,
+      (store.editMode === TokenatorEditMode.None || isPanningMode.value)
+      && isDragging.value,
     'cursor-move': store.editMode === TokenatorEditMode.Background,
     'ring-2 ring-primary ring-inset': isOverDropZone.value,
   }));

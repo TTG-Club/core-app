@@ -1,12 +1,12 @@
 <script setup lang="ts">
-  import { isAbilityKey } from '~/shared/types';
-
   import type { AbilityKey } from '~/shared/types';
 
   import type {
     CalculatorAbilityOption,
     CalculatorFeatOption,
   } from '../../model';
+
+  import { isAbilityKey } from '~/shared/types';
 
   const {
     options,

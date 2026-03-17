@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { SelectSize } from '~ui/select';
-
   import type { CreatureSizes } from '~bestiary/model';
+
+  import { SelectSize } from '~ui/select';
 
   const model = defineModel<CreatureSizes>({
     required: true,

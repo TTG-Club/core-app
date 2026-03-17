@@ -1,12 +1,11 @@
 import { inject } from 'vue';
 
+import { useDiceRoller, useDiceRollerState } from '.';
 import {
   extractDiceRollDetails,
   extractRollValue,
   formatDiceDetailsSummary,
 } from '../utils';
-
-import { useDiceRoller, useDiceRollerState } from '.';
 
 /**
  * Composable для обработки бросков кубов.

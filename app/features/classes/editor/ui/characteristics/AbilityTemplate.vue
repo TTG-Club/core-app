@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { ABILITIES } from '~/shared/types';
-
   import type { AbilityTemplateCreate } from '~classes/model';
+
+  import { ABILITIES } from '~/shared/types';
 
   const modelValue = defineModel<AbilityTemplateCreate | undefined>();
 

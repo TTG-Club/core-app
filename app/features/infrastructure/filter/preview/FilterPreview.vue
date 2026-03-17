@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { FilterList } from '../list';
-
   import type { Filter } from '../types';
+
+  import { FilterList } from '../list';
 
   const filter = defineModel<Filter>({ required: true });
 
