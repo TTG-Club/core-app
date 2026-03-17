@@ -1,9 +1,9 @@
 <script setup lang="ts">
+  import type { RoadmapItem } from '~roadmap/types';
+
   import { RoadmapEditor } from '~roadmap/editor';
   import { RoadmapFeature } from '~roadmap/feature';
   import { PageGrid } from '~ui/page';
-
-  import type { RoadmapItem } from '~roadmap/types';
 
   useSeoMeta({
     title: 'Карта разработки',

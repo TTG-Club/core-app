@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { AbilityScores } from '../../model';
+
   import { ABILITY_KEYS, ABILITY_LABELS } from '~/shared/types';
   import { AbilityKey } from '~/shared/types/abilities';
 
@@ -7,8 +9,6 @@
     STANDARD_ARRAY_LABELS,
     ZERO_SCORES,
   } from '../../model';
-
-  import type { AbilityScores } from '../../model';
 
   const props = defineProps<{
     selectedClassUrl?: string;

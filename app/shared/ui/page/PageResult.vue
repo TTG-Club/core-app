@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { UiResult } from '~ui/result';
-
   import type { NuxtError } from '#app';
+
+  import { UiResult } from '~ui/result';
 
   defineProps<{
     items: Array<unknown> | undefined;

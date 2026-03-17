@@ -1,10 +1,10 @@
 <script setup lang="ts">
+  import type { SpellDuration } from '~spells/model';
+
   import { isString } from 'es-toolkit';
-  import { EditorArrayControls } from '~ui/editor';
 
   import { DictionaryService } from '~/shared/api';
-
-  import type { SpellDuration } from '~spells/model';
+  import { EditorArrayControls } from '~ui/editor';
 
   const durations = defineModel<Array<SpellDuration>>({
     default: () => [],

@@ -1,6 +1,6 @@
-import Dexie from 'dexie';
-
 import type { Table } from 'dexie';
+
+import Dexie from 'dexie';
 
 export interface TokenatorSetting<T = unknown> {
   key: string;

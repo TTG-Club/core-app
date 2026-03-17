@@ -1,10 +1,10 @@
 <script setup lang="ts">
+  import type { SpeciesLinkResponse } from '~species/model';
+
   import { FilterControls, useFilter } from '~infrastructure/filter';
   import { SpeciesLink } from '~species/link';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkBig } from '~ui/skeleton';
-
-  import type { SpeciesLinkResponse } from '~species/model';
 
   useSeoMeta({
     title: 'Виды [Species]',

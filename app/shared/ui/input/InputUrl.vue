@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { getSlug } from '#shared/utils';
-
   import type { SelectOptionWithShortName } from '~/shared/types';
+
+  import { getSlug } from '#shared/utils';
 
   const props = withDefaults(
     defineProps<{

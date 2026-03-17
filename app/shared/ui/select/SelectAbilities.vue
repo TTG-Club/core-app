@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { DictionaryService } from '~/shared/api';
-
   import type { AbilityKey } from '~/shared/types';
+
+  import { DictionaryService } from '~/shared/api';
 
   const {
     disabled = false,

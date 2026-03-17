@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { ClassCreate, ClassLinkResponse } from '~classes/model';
+
   import { ClassPreview } from '~classes/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { UploadGallery, UploadImage } from '~ui/upload';
@@ -10,8 +12,6 @@
     ProficiencySettings,
     TableEditor,
   } from './ui';
-
-  import type { ClassCreate, ClassLinkResponse } from '~classes/model';
 
   function getInitialState(): ClassCreate {
     return {

@@ -1,11 +1,11 @@
 <script setup lang="ts">
+  import type { ItemLinkResponse } from '~items/model';
+
   import { FilterControls, useFilter } from '~infrastructure/filter';
   import { ItemLink } from '~items/link';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
-
-  import type { ItemLinkResponse } from '~items/model';
 
   useSeoMeta({
     title: 'Предметы [Items]',

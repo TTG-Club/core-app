@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { FilterGroup } from './ui';
-
   import type { Filter } from '../types';
+
+  import { FilterGroup } from './ui';
 
   const { preview = false } = defineProps<{
     preview?: boolean;

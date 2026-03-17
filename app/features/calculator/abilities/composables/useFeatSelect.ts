@@ -1,9 +1,3 @@
-import {
-  ABILITY_LABELS,
-  ABILITY_SHORT_LABELS,
-  isAbilityKey,
-} from '~/shared/types';
-
 import type { Ref } from 'vue';
 
 import type { AbilityKey } from '~/shared/types';
@@ -15,6 +9,12 @@ import type {
   CalculatorAbilityOption,
   CalculatorFeatOption,
 } from '../model';
+
+import {
+  ABILITY_LABELS,
+  ABILITY_SHORT_LABELS,
+  isAbilityKey,
+} from '~/shared/types';
 
 /**
  * Composable для выбора черт и расчёта бонусов характеристик.
@@ -266,9 +266,9 @@ function calculateFeatBonuses(
     const bonuses: Partial<AbilityScores> = {};
 
     if (
-      feat.abilities &&
-      feat.abilities.length > 0 &&
-      feat.abilityScoreIncreaseOptions
+      feat.abilities
+      && feat.abilities.length > 0
+      && feat.abilityScoreIncreaseOptions
     ) {
       let chosenAbilities: AbilityKey[] = [];
 
@@ -314,9 +314,9 @@ function calculateEpicBonuses(
       const maxScoreIncreases: Partial<AbilityScores> = {};
 
       if (
-        feat.abilities &&
-        feat.abilities.length > 0 &&
-        feat.abilityScoreIncreaseOptions
+        feat.abilities
+        && feat.abilities.length > 0
+        && feat.abilityScoreIncreaseOptions
       ) {
         let chosenAbilities: AbilityKey[] = [];
 

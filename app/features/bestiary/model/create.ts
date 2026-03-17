@@ -1,6 +1,6 @@
-import { AbilityKey, AbilityShortKey } from '~/shared/types';
-
 import type { EditorBaseInfoState } from '~ui/editor';
+
+import { AbilityKey, AbilityShortKey } from '~/shared/types';
 
 export interface CreatureCreate extends EditorBaseInfoState {
   description: string; // описание маркап

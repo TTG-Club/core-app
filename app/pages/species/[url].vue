@@ -1,9 +1,9 @@
 <script setup lang="ts">
+  import type { SpeciesDetailResponse } from '~species/model';
+
   import { SpeciesBody } from '~species/body';
   import { PageActions } from '~ui/page';
   import { UiResult } from '~ui/result';
-
-  import type { SpeciesDetailResponse } from '~species/model';
 
   const {
     params: { url },

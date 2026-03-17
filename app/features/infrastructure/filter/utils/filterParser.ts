@@ -1,8 +1,8 @@
+import type { Filter, FilterRequest } from '../types';
+
 import { cloneDeep } from 'es-toolkit';
 import { fromUint8Array, toUint8Array } from 'js-base64';
 import pako from 'pako';
-
-import type { Filter, FilterRequest } from '../types';
 
 export function getSelectedFilters(
   filter: Filter | undefined,

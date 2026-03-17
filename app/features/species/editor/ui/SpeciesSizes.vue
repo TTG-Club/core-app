@@ -1,9 +1,10 @@
 <script setup lang="ts">
+  import type { SpeciesCreate } from '~species/model';
+
   import { isString } from 'es-toolkit';
+
   import { EditorArrayControls } from '~ui/editor';
   import { SelectSize } from '~ui/select';
-
-  import type { SpeciesCreate } from '~species/model';
 
   type Sizes = SpeciesCreate['properties']['sizes'];
 

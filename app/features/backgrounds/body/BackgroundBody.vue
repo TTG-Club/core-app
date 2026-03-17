@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { DescriptionsBlock, StatsBlock } from './ui';
-
   import type { BackgroundDetailResponse } from '~backgrounds/model';
+
+  import { DescriptionsBlock, StatsBlock } from './ui';
 
   defineProps<{
     background: BackgroundDetailResponse;

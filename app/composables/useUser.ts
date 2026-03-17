@@ -1,6 +1,6 @@
-import { Role } from '~/shared/types';
-
 import type { UserProfile } from '~/shared/types';
+
+import { Role } from '~/shared/types';
 
 export function useUser() {
   const requestFetch = useRequestFetch();

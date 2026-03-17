@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { SpellCreate } from '~spells/model';
+
   import { SpellPreview } from '~spells/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import {
@@ -21,8 +23,6 @@
     SpellDurations,
     SpellRanges,
   } from './ui';
-
-  import type { SpellCreate } from '~spells/model';
 
   function getInitialState(): SpellCreate {
     return {

@@ -1,9 +1,10 @@
+import type { CanvasViewport } from '~tokenator/model';
+
 import { cloneDeep } from 'es-toolkit';
+
 import { DEFAULT_CANVAS_VIEWPORT } from '~tokenator/model';
 
 import { useTokenatorSetting } from './useTokenatorSetting';
-
-import type { CanvasViewport } from '~tokenator/model';
 
 export function useTokenatorViewport() {
   const { data: canvasViewport } = useTokenatorSetting<CanvasViewport>(

@@ -1,8 +1,8 @@
+import type { SelectOption } from '~/shared/types';
+
 import { computed } from 'vue';
 
 import { DictionaryService } from '~/shared/api/dictionaries';
-
-import type { SelectOption } from '~/shared/types';
 
 export function useMagicItemRarityGroupOrder() {
   const { data, pending, error } = useAsyncData(

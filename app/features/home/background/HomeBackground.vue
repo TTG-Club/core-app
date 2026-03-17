@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { Particle } from './model';
+
   import { useElementBounding, useRafFn } from '@vueuse/core';
   import Color from 'colorjs.io';
 
@@ -12,8 +14,6 @@
     PARTICLES_DENSITY_DIVIDER,
     PARTICLES_MIN_COUNT,
   } from './model';
-
-  import type { Particle } from './model';
 
   const containerRef = useTemplateRef<HTMLDivElement>('container');
   const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas');
@@ -55,14 +55,14 @@
       x: Math.random() * width.value,
       y: Math.random() * height.value,
       size:
-        Math.random() * (PARTICLE_SIZE_MAX - PARTICLE_SIZE_MIN) +
-        PARTICLE_SIZE_MIN,
+        Math.random() * (PARTICLE_SIZE_MAX - PARTICLE_SIZE_MIN)
+        + PARTICLE_SIZE_MIN,
       speedY:
-        Math.random() * (PARTICLE_SPEED_MAX - PARTICLE_SPEED_MIN) +
-        PARTICLE_SPEED_MIN,
+        Math.random() * (PARTICLE_SPEED_MAX - PARTICLE_SPEED_MIN)
+        + PARTICLE_SPEED_MIN,
       opacity:
-        Math.random() * (PARTICLE_OPACITY_MAX - PARTICLE_OPACITY_MIN) +
-        PARTICLE_OPACITY_MIN,
+        Math.random() * (PARTICLE_OPACITY_MAX - PARTICLE_OPACITY_MIN)
+        + PARTICLE_OPACITY_MIN,
     };
   }
 

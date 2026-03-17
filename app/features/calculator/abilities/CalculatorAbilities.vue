@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { AbilityScores, BonusSource, RandomRollState } from './model';
+
   import { useAbilitiesCalculator } from './composables';
   import {
     ABILITIES_TABS,
@@ -13,8 +15,6 @@
     ScoreDisplay,
     StandardArrayTab,
   } from './ui';
-
-  import type { AbilityScores, BonusSource, RandomRollState } from './model';
 
   const pointBuyScores = ref<AbilityScores>({ ...DEFAULT_SCORES });
   const arrayScores = ref<AbilityScores>({ ...ZERO_SCORES });

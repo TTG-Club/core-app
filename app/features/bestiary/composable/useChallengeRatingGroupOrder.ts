@@ -1,8 +1,7 @@
 import { computed } from 'vue';
 
-import { DictionaryService } from '~/shared/api/dictionaries';
-
 import { useAsyncData } from '#app';
+import { DictionaryService } from '~/shared/api/dictionaries';
 
 type UnknownRecord = Record<string, unknown>;
 

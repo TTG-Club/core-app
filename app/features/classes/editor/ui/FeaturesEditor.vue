@@ -1,10 +1,10 @@
 <script setup lang="ts">
+  import type { ClassFeatureCreate } from '~classes/model';
+
   import { EditorArrayControls } from '~ui/editor';
   import { SelectLevel } from '~ui/select';
 
   import { FeatureAbilityBonus, FeatureScaling } from './features';
-
-  import type { ClassFeatureCreate } from '~classes/model';
 
   const { isSubclass = false } = defineProps<{
     isSubclass?: boolean;

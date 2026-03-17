@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { DescriptionsBlock, TopBar } from './ui';
-
   import type { GlossaryDetailResponse } from '~glossary/model';
+
+  import { DescriptionsBlock, TopBar } from './ui';
 
   defineProps<{
     glossary: GlossaryDetailResponse;

@@ -1,10 +1,10 @@
 <script setup lang="ts">
+  import type { FeatCreate } from '~feats/model';
+
   import { FeatPreview } from '~feats/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectAbilities, SelectFeatCategory } from '~ui/select';
   import { useWorkshopForm } from '~workshop/composable';
-
-  import type { FeatCreate } from '~feats/model';
 
   const formRef = useTemplateRef('formRef');
 

@@ -1,4 +1,9 @@
 <script setup lang="ts">
+  import type { ColumnDef } from '@tanstack/vue-table';
+  import type { VNode } from 'vue';
+
+  import type { MarkerNode, RenderNode } from '../types';
+
   import {
     createColumnHelper,
     FlexRender,
@@ -6,14 +11,10 @@
     useVueTable,
   } from '@tanstack/vue-table';
   import { defineComponent, h, provide } from 'vue';
+
   import { useDiceRollerState } from '~dice-roller/composables';
 
   import { getNodeText, normalizeRenderNodes } from '../utils';
-
-  import type { ColumnDef } from '@tanstack/vue-table';
-  import type { VNode } from 'vue';
-
-  import type { MarkerNode, RenderNode } from '../types';
 
   interface TableCell {
     content: RenderNode[];
@@ -173,22 +174,22 @@
 
   function isRenderNode(value: unknown): value is RenderNode {
     return (
-      typeof value === 'string' ||
-      Array.isArray(value) ||
-      (typeof value === 'object' &&
-        value !== null &&
-        'type' in value &&
-        typeof value.type === 'string')
+      typeof value === 'string'
+      || Array.isArray(value)
+      || (typeof value === 'object'
+        && value !== null
+        && 'type' in value
+        && typeof value.type === 'string')
     );
   }
 
   function isTableCell(value: unknown): value is TableCell {
     return (
-      typeof value === 'object' &&
-      value !== null &&
-      'content' in value &&
-      Array.isArray(value.content) &&
-      !('type' in value)
+      typeof value === 'object'
+      && value !== null
+      && 'content' in value
+      && Array.isArray(value.content)
+      && !('type' in value)
     );
   }
 

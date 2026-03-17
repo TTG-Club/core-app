@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { ItemLinkResponse } from '~items/model';
+
   import { ItemDrawer } from '~items/drawer';
   import { SmallLink } from '~ui/link';
-
-  import type { ItemLinkResponse } from '~items/model';
 
   const { item } = defineProps<{
     item: ItemLinkResponse;

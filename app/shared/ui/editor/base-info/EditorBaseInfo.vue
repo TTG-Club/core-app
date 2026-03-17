@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { EditorBaseInfoState } from './types';
+
   import { InputUrl } from '~ui/input';
   import { SelectSource } from '~ui/select';
-
-  import type { EditorBaseInfoState } from './types';
 
   defineProps<{
     section: string;

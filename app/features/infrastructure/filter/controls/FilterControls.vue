@@ -1,10 +1,10 @@
 <script setup lang="ts">
+  import type { Filter } from '../types';
+
   import { cloneDeep } from 'es-toolkit';
 
   import { FilterDrawer } from '../drawer';
   import { FilterPreview } from '../preview';
-
-  import type { Filter } from '../types';
 
   const { isPending = false, showPreview = false } = defineProps<{
     isPending?: boolean;
@@ -30,8 +30,8 @@
 
   const isEdited = computed(
     () =>
-      !!filter.value &&
-      filter.value.groups.some((group) =>
+      !!filter.value
+      && filter.value.groups.some((group) =>
         group.filters.some((item) => item.selected !== null),
       ),
   );

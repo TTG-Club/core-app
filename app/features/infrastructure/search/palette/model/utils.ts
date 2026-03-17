@@ -1,6 +1,6 @@
-import { mapSearchItemsToPaths, mapSearchItemsToTypeNames } from './const';
-
 import type { SearchItemsType } from './const';
+
+import { mapSearchItemsToPaths, mapSearchItemsToTypeNames } from './const';
 
 export function getPathBySearchItem(
   action: SearchItemsType,

@@ -1,9 +1,8 @@
 <script setup lang="ts">
-  import { PwaConfig } from '~infrastructure/pwa/config';
+  import type { NuxtError } from '#app';
 
   import { ru } from '#ui/locale';
-
-  import type { NuxtError } from '#app';
+  import { PwaConfig } from '~infrastructure/pwa/config';
 
   import 'assets/css/index.scss';
 

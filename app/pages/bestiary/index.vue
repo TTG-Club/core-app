@@ -1,12 +1,12 @@
 <script setup lang="ts">
+  import type { CreatureLinkResponse } from '~bestiary/model';
+
   import { useChallengeRatingGroupOrder } from '~bestiary/composable';
   import { CreatureLink } from '~bestiary/link';
   import { FilterControls, useFilter } from '~infrastructure/filter';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
-
-  import type { CreatureLinkResponse } from '~bestiary/model';
 
   useSeoMeta({
     title: 'Бестиарий [Bestiary]',

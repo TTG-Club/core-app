@@ -1,6 +1,5 @@
-import type { DiceRollItem } from '~dice-roller/types';
-
 import type { AbilityKey, NameResponse, SourceResponse } from '~/shared/types';
+import type { DiceRollItem } from '~dice-roller/types';
 
 export type AbilityScores = Record<AbilityKey, number>;
 

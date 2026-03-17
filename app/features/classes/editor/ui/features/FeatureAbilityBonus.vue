@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { SelectAbilities } from '~ui/select';
-
   import type { ClassFeatureAbilityBonusCreate } from '~classes/model';
+
+  import { SelectAbilities } from '~ui/select';
 
   const state = defineModel<ClassFeatureAbilityBonusCreate | undefined>({
     required: true,

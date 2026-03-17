@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { DiceRollerLink } from '~dice-roller/link'; // или путь к твоим типам
-
   import type { CreatureAbilitiesResponse } from '~bestiary/model';
+
+  import { DiceRollerLink } from '~dice-roller/link'; // или путь к твоим типам
 
   defineProps<CreatureAbilitiesResponse>();
 </script>

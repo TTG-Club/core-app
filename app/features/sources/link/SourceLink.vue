@@ -1,10 +1,10 @@
 <script setup lang="ts">
+  import type { SourceLinkResponse } from '~sources/types';
+
   import { SourceDrawer } from '~sources/drawer';
   import { CardLink } from '~ui/link';
 
   import { LinkPreview } from './ui';
-
-  import type { SourceLinkResponse } from '~sources/types';
 
   const { source } = defineProps<{
     source: SourceLinkResponse;

@@ -1,6 +1,6 @@
-import { AbilityKey } from '~/shared/types';
-
 import type { AbilityScores } from './types';
+
+import { AbilityKey } from '~/shared/types';
 
 export const DEFAULT_SCORES: AbilityScores = {
   [AbilityKey.STRENGTH]: 8,

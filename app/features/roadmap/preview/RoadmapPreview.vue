@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { RoadmapItem, RoadmapRequest } from '~roadmap/types';
+
   import { UiDrawer } from '~ui/drawer';
   import { MarkupRender } from '~ui/markup';
-
-  import type { RoadmapItem, RoadmapRequest } from '~roadmap/types';
 
   const opened = ref<boolean>(false);
 

@@ -1,4 +1,5 @@
 import { useElementSize, useRafFn } from '@vueuse/core';
+
 import {
   BrushMode,
   CANVAS_SIZE,
@@ -66,8 +67,8 @@ export function useTokenatorCanvas(
 
     // Обновляем размер только экранного канваса
     if (
-      canvasRef.value.width !== canvasWidth ||
-      canvasRef.value.height !== canvasHeight
+      canvasRef.value.width !== canvasWidth
+      || canvasRef.value.height !== canvasHeight
     ) {
       canvasRef.value.width = canvasWidth;
       canvasRef.value.height = canvasHeight;

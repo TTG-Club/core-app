@@ -1,6 +1,6 @@
-import { z } from 'zod/v4';
-
 import type { EventHandlerRequest } from 'h3';
+
+import { z } from 'zod/v4';
 
 const requestSchema = z.object({
   theme: z.enum(['dark', 'light', 'svifty7']),

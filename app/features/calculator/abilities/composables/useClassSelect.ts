@@ -1,9 +1,3 @@
-import {
-  ABILITY_MAX_SCORE,
-  EPIC_BOON_LEVEL,
-  STANDARD_ASI_LEVELS,
-} from '../model';
-
 import type { Ref } from 'vue';
 
 import type {
@@ -11,6 +5,12 @@ import type {
   BonusSource,
   CalculatorAbilitiesClass,
   CalculatorClassOption,
+} from '../model';
+
+import {
+  ABILITY_MAX_SCORE,
+  EPIC_BOON_LEVEL,
+  STANDARD_ASI_LEVELS,
 } from '../model';
 
 /**

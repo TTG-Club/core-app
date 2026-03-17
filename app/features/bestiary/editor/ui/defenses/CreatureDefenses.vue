@@ -1,11 +1,11 @@
 <script setup lang="ts">
+  import type { CreatureDefenses } from '~bestiary/model';
+
   import {
     CreatureImmunities,
     CreatureResistances,
     CreatureVulnerabilities,
   } from './ui';
-
-  import type { CreatureDefenses } from '~bestiary/model';
 
   const defenses = defineModel<CreatureDefenses>({
     required: true,

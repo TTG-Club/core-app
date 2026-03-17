@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { MarkupRender } from '~ui/markup';
-
   import type { RenderNode } from '~ui/markup';
+
+  import { MarkupRender } from '~ui/markup';
 
   defineProps<{
     text: RenderNode;

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { SpeciesCreate } from '~species/model';
+
   import { SpeciesPreview } from '~species/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectCreatureType, SelectSpecies } from '~ui/select';
@@ -6,8 +8,6 @@
   import { useWorkshopForm } from '~workshop/composable';
 
   import { SpeciesFeatures, SpeciesSizes, SpeciesSpeed } from './ui';
-
-  import type { SpeciesCreate } from '~species/model';
 
   function getInitialState(): SpeciesCreate {
     return {

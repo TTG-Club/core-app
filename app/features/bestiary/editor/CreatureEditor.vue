@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { CreatureCreate } from '~bestiary/model';
+
   import { getInitialState } from '~bestiary/model';
   import { CreaturePreview } from '~bestiary/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
@@ -24,8 +26,6 @@
     CreatureTrait,
     CreatureType,
   } from './ui';
-
-  import type { CreatureCreate } from '~bestiary/model';
 
   const { state, onError, onSubmit } = useWorkshopForm<CreatureCreate>({
     actionUrl: '/api/v2/bestiary',

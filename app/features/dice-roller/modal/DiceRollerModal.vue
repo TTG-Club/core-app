@@ -14,7 +14,6 @@
     extractRollValue,
     formatDiceDetailsSummary,
   } from '../utils';
-
   import {
     DiceRollerComposer,
     DiceRollerHeader,

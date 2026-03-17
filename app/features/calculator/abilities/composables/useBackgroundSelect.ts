@@ -1,9 +1,9 @@
-import { ABILITY_LABELS, isAbilityKey } from '~/shared/types';
-
 import type {
   CalculatorAbilitiesBackground,
   CalculatorBackgroundOption,
 } from '../model';
+
+import { ABILITY_LABELS, isAbilityKey } from '~/shared/types';
 
 /**
  * Composable для выбора предыстории и расчёта бонусов характеристик.

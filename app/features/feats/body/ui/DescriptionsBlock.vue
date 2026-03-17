@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { MarkupRender } from '~ui/markup';
-
   import type { FeatDetailResponse } from '~feats/model';
+
+  import { MarkupRender } from '~ui/markup';
 
   const { description } =
     defineProps<Pick<FeatDetailResponse, 'description'>>();

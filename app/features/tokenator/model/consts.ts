@@ -1,11 +1,11 @@
-import { BrushMode, FrameTintType, TextAlign } from './types';
-
 import type {
   BackgroundStyle,
   BrushState,
   FrameTint,
   TransformState,
 } from './types';
+
+import { BrushMode, FrameTintType, TextAlign } from './types';
 
 /**
  * Цвета по умолчанию для редактора токенов

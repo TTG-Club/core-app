@@ -36,5 +36,5 @@
 }
 
 body {
-  @apply scheme-light dark:scheme-dark svifty7:scheme-dark bg-linear-(--color-bg-main-gradient) bg-muted bg-no-repeat bg-cover bg-fixed;
+  @apply bg-muted bg-linear-(--color-bg-main-gradient) bg-cover bg-fixed bg-no-repeat scheme-light dark:scheme-dark svifty7:scheme-dark;
 }
