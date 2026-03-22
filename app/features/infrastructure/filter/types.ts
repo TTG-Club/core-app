@@ -1,6 +1,10 @@
-export interface Filter {
+export interface FilterSection {
   groups: FilterGroups;
-  version: string;
+}
+
+export interface Filter {
+  filter: FilterSection;
+  sources: FilterSection;
 }
 
 export interface FilterGroup {
@@ -31,7 +35,11 @@ export interface FilterRequestGroup {
   filters: Array<FilterRequestItem>;
 }
 
-export interface FilterRequest {
+export interface FilterSectionRequest {
   groups: Array<FilterRequestGroup>;
-  version: string;
+}
+
+export interface FilterRequest {
+  filter?: FilterSectionRequest;
+  sources?: FilterSectionRequest;
 }

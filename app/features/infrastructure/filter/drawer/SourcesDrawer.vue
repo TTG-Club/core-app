@@ -10,27 +10,27 @@
     (e: 'reset'): void;
   }>();
 
-  const { filter } = defineProps<{
-    filter: FilterSection;
+  const { sources } = defineProps<{
+    sources: FilterSection;
   }>();
 
   const opened = defineModel<boolean>();
 
-  const cloned = ref<FilterSection>(filter);
+  const cloned = ref<FilterSection>(sources);
 
   watch(opened, (value) => {
     if (!value) {
       return;
     }
 
-    cloned.value = cloneDeep(filter);
+    cloned.value = cloneDeep(sources);
   });
 </script>
 
 <template>
   <USlideover
     v-model:open="opened"
-    title="Фильтры"
+    title="Источники"
     :ui="{
       content: 'w-full max-w-192 min-w-80',
     }"
