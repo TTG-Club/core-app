@@ -52,7 +52,7 @@
         <h2 class="truncate text-base text-highlighted">Подробности</h2>
       </template>
 
-      <div class="grid grid-cols-24 gap-4">
+      <div class="grid grid-cols-26 gap-4">
         <UFormField
           class="col-span-8"
           label="Характеристики"
@@ -80,7 +80,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-8"
+          class="col-span-4"
           label="Черта"
           name="featUrl"
         >
@@ -91,7 +91,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-8"
+          class="col-span-4"
           label="Суффикс черты"
           name="featSuffix"
         >
@@ -123,7 +123,7 @@
         </UFormField>
       </div>
 
-      <template #header>
+      <template>
         <h2 class="truncate text-base text-highlighted">Описание</h2>
       </template>
 
