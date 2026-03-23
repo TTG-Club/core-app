@@ -21,6 +21,7 @@
       description: '',
       abilityScores: [],
       featUrl: undefined,
+      featSuffix: undefined,
       skillsProficiencies: [],
       toolProficiency: '',
       equipment: '',
@@ -90,6 +91,14 @@
         </UFormField>
 
         <UFormField
+          class="col-span-8"
+          label="Суффикс черты"
+          name="featSuffix"
+        >
+          <UInput v-model="state.featSuffix" />
+        </UFormField>
+
+        <UFormField
           class="col-span-24"
           label="Владение инструментами"
           name="toolProficiency"
@@ -113,9 +122,7 @@
           />
         </UFormField>
       </div>
-    </UCard>
 
-    <UCard variant="subtle">
       <template #header>
         <h2 class="truncate text-base text-highlighted">Описание</h2>
       </template>
