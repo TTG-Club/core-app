@@ -52,7 +52,7 @@
         <h2 class="truncate text-base text-highlighted">Подробности</h2>
       </template>
 
-      <div class="grid grid-cols-26 gap-4">
+      <div class="grid grid-cols-24 gap-4">
         <UFormField
           class="col-span-8"
           label="Характеристики"
@@ -122,15 +122,16 @@
           />
         </UFormField>
       </div>
+    </UCard>
 
-      <template>
+    <UCard variant="subtle">
+      <template #header>
         <h2 class="truncate text-base text-highlighted">Описание</h2>
       </template>
 
       <div class="grid grid-cols-24 gap-4">
         <UFormField
           class="col-span-24"
-          label="Описание"
           name="description"
         >
           <UTextarea
