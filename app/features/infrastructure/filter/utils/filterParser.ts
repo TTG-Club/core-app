@@ -1,17 +1,25 @@
-import type { Filter, FilterRequest } from '../types';
+import type {
+  Filter,
+  FilterRequest,
+  FilterSection,
+  FilterSectionRequest,
+} from '../types';
 
 import { cloneDeep } from 'es-toolkit';
 import { fromUint8Array, toUint8Array } from 'js-base64';
 import pako from 'pako';
 
+/**
+ * Извлекает выбранные элементы из секции фильтра
+ */
 export function getSelectedFilters(
-  filter: Filter | undefined,
-): FilterRequest | undefined {
-  if (!filter?.groups) {
+  section: FilterSection | undefined,
+): FilterSectionRequest | undefined {
+  if (!section?.groups) {
     return undefined;
   }
 
-  const groups = filter.groups
+  const groups = section.groups
     .map(({ name, filters, ...groupFields }) => {
       const selectedFilters = filters.filter((item) => item.selected != null);
 
@@ -26,9 +34,38 @@ export function getSelectedFilters(
     })
     .filter((group) => !!group);
 
-  return groups.length > 0 ? { groups, version: filter.version } : undefined;
+  return groups.length > 0 ? { groups } : undefined;
 }
 
+/**
+ * Собирает объект запроса из обеих секций фильтра (filter + sources)
+ */
+export function getFilterRequest(
+  filter: Filter | undefined,
+): FilterRequest | undefined {
+  const filterSection = getSelectedFilters(filter?.filter);
+  const sourcesSection = getSelectedFilters(filter?.sources);
+
+  if (!filterSection && !sourcesSection) {
+    return undefined;
+  }
+
+  const result: FilterRequest = {};
+
+  if (filterSection) {
+    result.filter = filterSection;
+  }
+
+  if (sourcesSection) {
+    result.sources = sourcesSection;
+  }
+
+  return result;
+}
+
+/**
+ * Сжимает объект запроса в строку для URL
+ */
 export function compressFilters(filter: FilterRequest | undefined): string {
   if (!filter) {
     return '';
@@ -46,6 +83,9 @@ export function compressFilters(filter: FilterRequest | undefined): string {
   }
 }
 
+/**
+ * Распаковывает строку из URL в объект запроса
+ */
 export function decompressFilters(
   compressedString: string,
 ): FilterRequest | undefined {
@@ -65,17 +105,20 @@ export function decompressFilters(
   }
 }
 
-export function applyCompressedFilters(
-  originalFilter: Filter,
-  compressedFilter: FilterRequest | undefined,
-): Filter {
-  if (!compressedFilter?.groups) {
-    return originalFilter;
+/**
+ * Применяет сжатые фильтры к секции
+ */
+export function applyCompressedSection(
+  originalSection: FilterSection,
+  compressedSection: FilterSectionRequest | undefined,
+): FilterSection {
+  if (!compressedSection?.groups) {
+    return originalSection;
   }
 
-  const result = cloneDeep(originalFilter);
+  const result = cloneDeep(originalSection);
 
-  compressedFilter.groups.forEach((compressedGroup) => {
+  compressedSection.groups.forEach((compressedGroup) => {
     const originalGroup = result.groups.find(
       (g) => g.key === compressedGroup.key,
     );
@@ -95,4 +138,21 @@ export function applyCompressedFilters(
   });
 
   return result;
+}
+
+/**
+ * Применяет сжатый объект запроса ко всему фильтру (filter + sources)
+ */
+export function applyCompressedFilters(
+  originalFilter: Filter,
+  compressed: FilterRequest | undefined,
+): Filter {
+  if (!compressed) {
+    return originalFilter;
+  }
+
+  return {
+    filter: applyCompressedSection(originalFilter.filter, compressed.filter),
+    sources: applyCompressedSection(originalFilter.sources, compressed.sources),
+  };
 }

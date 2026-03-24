@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { Filter } from '../types';
+  import type { FilterSection } from '../types';
 
   import { FilterGroup } from './ui';
 
@@ -7,7 +7,7 @@
     preview?: boolean;
   }>();
 
-  const filter = defineModel<Filter>({
+  const filter = defineModel<FilterSection>({
     required: true,
   });
 </script>

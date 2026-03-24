@@ -8,7 +8,7 @@ import {
   applyCompressedFilters,
   compressFilters,
   decompressFilters,
-  getSelectedFilters,
+  getFilterRequest,
 } from '../utils/filterParser';
 
 export async function useFilter(key: string, url: string) {
@@ -27,12 +27,12 @@ export async function useFilter(key: string, url: string) {
   const isPending = computed(() => status.value === 'pending');
 
   const isShowedPreview = computed(() =>
-    filter.value?.groups.some((group) =>
+    filter.value?.filter.groups.some((group) =>
       group.filters.some((item) => item.selected !== null),
     ),
   );
 
-  const selectedFilters = computed(() => getSelectedFilters(filter.value));
+  const selectedFilters = computed(() => getFilterRequest(filter.value));
   const filterString = computed(() => compressFilters(selectedFilters.value));
 
   const filterStringFromUrl = computed(() => {
@@ -78,8 +78,8 @@ export async function useFilter(key: string, url: string) {
     try {
       const decompressed = decompressFilters(urlFilter);
 
-      if (decompressed) {
-        filter.value = applyCompressedFilters(data.value, decompressed);
+      if (decompressed && filter.value) {
+        filter.value = applyCompressedFilters(filter.value, decompressed);
       }
     } catch (error) {
       consola.error('Failed to apply filters from URL:', error);

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-  import type { Filter } from '../types';
+  import type { FilterSection } from '../types';
 
   import { FilterList } from '../list';
 
-  const filter = defineModel<Filter>({ required: true });
+  const filter = defineModel<FilterSection>({ required: true });
 
   const { cloned, isModified } = useCloned(filter);
 

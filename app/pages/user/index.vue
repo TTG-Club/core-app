@@ -1,14 +1,9 @@
 <script setup lang="ts">
-  useSeoMeta({
-    title: 'Личный кабинет',
-    ogTitle: 'Личный кабинет | TTG Club Онлайн-справочник',
-    twitterTitle: 'Личный кабинет | TTG Club Онлайн-справочник',
+  definePageMeta({
+    redirect: '/user/profile',
   });
 </script>
 
 <template>
-  <NuxtLayout
-    name="section"
-    title="Личный кабинет"
-  />
+  <span>Redirecting...</span>
 </template>

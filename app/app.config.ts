@@ -103,6 +103,13 @@ export default defineAppConfig({
         label: 'cursor-pointer',
       },
     },
+    switch: {
+      slots: {
+        root: 'cursor-pointer',
+        base: 'cursor-pointer',
+        label: 'cursor-pointer',
+      },
+    },
     input: {
       slots: {
         root: 'w-full',
