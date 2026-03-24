@@ -95,7 +95,10 @@
           label="Суффикс черты"
           name="featSuffix"
         >
-          <UInput v-model="state.featSuffix" />
+          <UInput
+            v-model="state.featSuffix"
+            placeholder="Введи суффикс"
+          />
         </UFormField>
 
         <UFormField
