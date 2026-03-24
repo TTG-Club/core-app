@@ -21,6 +21,7 @@
       description: '',
       abilityScores: [],
       featUrl: undefined,
+      featSuffix: undefined,
       skillsProficiencies: [],
       toolProficiency: '',
       equipment: '',
@@ -79,13 +80,24 @@
         </UFormField>
 
         <UFormField
-          class="col-span-8"
+          class="col-span-4"
           label="Черта"
           name="featUrl"
         >
           <SelectFeat
             v-model="state.featUrl"
             :categories="['ORIGIN']"
+          />
+        </UFormField>
+
+        <UFormField
+          class="col-span-4"
+          label="Суффикс черты"
+          name="featSuffix"
+        >
+          <UInput
+            v-model="state.featSuffix"
+            placeholder="Введи суффикс"
           />
         </UFormField>
 
@@ -123,7 +135,6 @@
       <div class="grid grid-cols-24 gap-4">
         <UFormField
           class="col-span-24"
-          label="Описание"
           name="description"
         >
           <UTextarea
