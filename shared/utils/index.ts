@@ -1,3 +1,4 @@
+export * from './env';
 export * from './faker';
 export * from './getErrorResponse';
 export * from './getPlural';

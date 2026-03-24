@@ -118,6 +118,8 @@ Always import feature components using the domain alias (e.g.,
 - **Default Click:** Interactive elements by default should use
   `@click.left.exact.prevent` to avoid unwanted side effects (unless specific
   behavior is required).
+- **UI Prop:** Inline `:ui="{ body: 'p-6' }"` objects are allowed directly
+  in templates for Nuxt UI component customization.
 
 ---
 
@@ -154,6 +156,9 @@ Always import feature components using the domain alias (e.g.,
     `text-primary`) mapped to CSS variables.
 - **No Arbitrary Variables:** `bg-[var(--ui-bg-elevated)]` is prohibited, use
   `bg-elevated`.
+- **Style Bindings:** Inline `:style="{ ... }"` is allowed when applying a CSS
+  variable value or a dynamic value that has no corresponding Tailwind utility
+  (e.g., brand colors for social networks).
 - **Icons:** Use ONLY icons from the local `ttg` or the `tabler` collection.
   - For `tabler` icons, you MUST use the exact format `tabler:<icon-name>` (e.g., `tabler:shield-lock`, `tabler:map-off`). Do not use `i-tabler-` or any other prefixes.
   - For local icons, you MUST use the exact format `ttg:<icon-name>` (e.g., `ttg:telegram`, `ttg:discord`). Do not use `i-ttg-` or any other prefixes.
@@ -193,8 +198,8 @@ Always import feature components using the domain alias (e.g.,
 **Final Verification (Must Follow):**
 At the end of any task, you **MUST**:
 
-1. Run `pnpm run lint:write` to check for style errors and format code.
-2. Run `pnpm run type-check` to ensure no typing bugs were introduced.
+1. Run `eslint . --fix` to check for style errors and format code.
+2. Run `vue-tsc -p tsconfig.json` to ensure no typing bugs were introduced.
 3. Provide a "Change Summary" when asked to check/fix/refactor (Where / Why /
    Result).
 
