@@ -347,5 +347,9 @@ export default defineNuxtConfig({
       defaultLocale: 'ru',
       indexable: false,
     },
+    polymorpher: {
+      apiBase: 'https://polymorpher.ru/games/api/v1',
+      siteBase: 'https://polymorpher.ru',
+    },
   },
 });
