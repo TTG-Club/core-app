@@ -123,28 +123,37 @@
           <strong>Мастер:</strong> {{ game.masterName }}
         </div>
 
-        <div
-          v-if="maxPlayers > 0"
-          class="flex items-center gap-1"
-        >
-          <UIcon
-            v-for="index in maxPlayers"
-            :key="index"
-            name="i-tabler-user"
-            class="h-4 w-4"
-            :class="[
-              index <= currentPlayers
-                ? 'text-primary'
-                : index <= minPlayers
-                  ? 'text-muted'
-                  : 'text-muted opacity-20',
-            ]"
-          />
+        <UTooltip>
+          <template #content>
+            <div class="text-xs">
+              <div>Текущие: {{ currentPlayers }}</div>
 
-          <span class="ml-1 text-[11px] text-muted">
-            {{ currentPlayers }}/{{ maxPlayers }}
-          </span>
-        </div>
+              <div>Минимум: {{ minPlayers }}</div>
+
+              <div>Максимум: {{ maxPlayers }}</div>
+            </div>
+          </template>
+
+          <div class="flex cursor-help items-center gap-1">
+            <UIcon
+              v-for="index in maxPlayers"
+              :key="index"
+              :name="
+                index <= currentPlayers
+                  ? 'i-tabler-user-filled'
+                  : 'i-tabler-user'
+              "
+              class="h-4 w-4 shrink-0"
+              :class="[
+                index <= currentPlayers
+                  ? 'text-primary'
+                  : index <= minPlayers
+                    ? 'text-muted'
+                    : 'text-muted opacity-20',
+              ]"
+            />
+          </div>
+        </UTooltip>
       </div>
     </div>
 

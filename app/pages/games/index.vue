@@ -71,7 +71,7 @@
     filterOpened.value = false;
   }
 
-  const size = ref<number>(12);
+  const size = ref<number>(16);
   const status = ref<'pending' | 'success' | 'error'>('pending');
   const error = ref<NuxtError | null>(null);
   const isLoadingMore = ref(false);
