@@ -1,5 +1,6 @@
 import type {
   PolymorpherApiGame,
+  PolymorpherGameCard,
   PolymorpherGamesApiResponse,
   PolymorpherGamesResponse,
 } from '~/shared/types/polymorpher';
@@ -12,6 +13,10 @@ function asString(value: unknown): string | null {
 
 function asNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function notNull<T>(value: T | null): value is T {
+  return value !== null;
 }
 
 function formatPrice(
@@ -84,7 +89,7 @@ function formatStartDate(startDate: string | null): string | null {
   }).format(date);
 }
 
-function mapGame(item: PolymorpherApiGame) {
+function mapGame(item: PolymorpherApiGame): PolymorpherGameCard | null {
   const id = asString(item.id);
 
   if (!id) {
@@ -138,6 +143,7 @@ function mapGame(item: PolymorpherApiGame) {
       ? `/api/polymorpher/join?target=${encodeURIComponent(shareUrl)}`
       : `/api/polymorpher/join?target=${encodeURIComponent('https://polymorpher.ru/games/home')}`,
     isHighlighted: Boolean(item.isHighlighted),
+    playerRequirements: asString(item.playerRequirements),
   };
 }
 
@@ -172,12 +178,14 @@ export default defineEventHandler(
       },
     );
 
-    const items = Array.isArray(response.items) ? response.items : [];
+    const items: PolymorpherApiGame[] = Array.isArray(response.items)
+      ? response.items
+      : [];
+
+    const content: PolymorpherGameCard[] = items.map(mapGame).filter(notNull);
 
     return {
-      content: items
-        .map(mapGame)
-        .filter((item): item is NonNullable<typeof item> => item !== null),
+      content,
       totalPages: response.totalPages,
       totalElements: response.totalElements,
       size,

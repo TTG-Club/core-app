@@ -1,94 +1,204 @@
 <script setup lang="ts">
-  import { PolymorpherGameCard } from '~/features/games';
+  import type { PolymorpherGamesResponse } from '~/shared/types/polymorpher';
+  import type { Filter } from '~infrastructure/filter';
 
-  const { games, page, size, search, status, error, refresh, totalElements } =
-    usePolymorpher();
+  import { refDebounced } from '@vueuse/core';
+  import { cloneDeep } from 'es-toolkit';
 
-  const isPending = computed(() => status.value === 'pending');
+  import { PolymorpherGameCard } from '~games';
+  import { PageGrid, PageResult } from '~ui/page';
+  import { SkeletonLinkBig } from '~ui/skeleton';
 
-  const isEmpty = computed(
-    () => status.value === 'success' && games.value.length === 0,
+  useSeoMeta({
+    title: 'Игры с Polymorpher',
+    description: 'Подборка открытых игр с Polymorpher.',
+  });
+
+  const search = ref<string>('');
+  const filter = defineModel<Filter>('filter');
+  const debouncedSearch = refDebounced(search, 400);
+  const route = useRoute();
+  const { isApple } = useDevice();
+  const { share } = useCopyAndShare();
+
+  const { isPending = false } = defineProps<{
+    isPending?: boolean;
+    showPreview?: boolean;
+  }>();
+
+  const filterOpened = ref(false);
+
+  ref(false);
+
+  const urlForCopy = computed(() => {
+    return getOrigin() + route.fullPath;
+  });
+
+  const isFilterEdited = computed(
+    () =>
+      !!filter.value
+      && filter.value.filter.groups.some((group) =>
+        group.filters.some((item) => item.selected !== null),
+      ),
   );
+
+  function resetFilter() {
+    if (!filter.value) {
+      filterOpened.value = false;
+
+      return;
+    }
+
+    const cloned = cloneDeep(filter.value.filter);
+
+    filter.value = {
+      ...filter.value,
+      filter: {
+        ...cloned,
+        groups: cloned.groups.map((group) => ({
+          ...group,
+          filters: group.filters.map((item) => ({
+            ...item,
+            selected: null,
+          })),
+        })),
+      },
+    };
+
+    filterOpened.value = false;
+  }
+
+  const page = ref<number>(1);
+  const size = ref<number>(12);
 
   watch(search, () => {
     page.value = 1;
   });
+
+  const {
+    data: response,
+    status,
+    error,
+    refresh,
+  } = await useAsyncData(
+    'polymorpher-games',
+    () =>
+      $fetch<PolymorpherGamesResponse>('/api/polymorpher/games', {
+        method: 'GET',
+        query: {
+          search: debouncedSearch.value || undefined,
+          page: Math.max(0, page.value - 1),
+          size: size.value,
+        },
+      }),
+    {
+      deep: false,
+      watch: [debouncedSearch, page, size],
+    },
+  );
+
+  const games = computed(() => response.value?.content ?? []);
+  const totalElements = computed(() => response.value?.totalElements ?? 0);
 </script>
 
 <template>
-  <div class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6">
-    <div
-      class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
-    >
-      <div class="space-y-1">
-        <h1 class="text-2xl font-semibold text-highlighted">Polymorpher</h1>
-
-        <p class="text-sm text-toned">Найди свою игру</p>
-      </div>
-
-      <div class="w-full md:w-96">
+  <NuxtLayout
+    name="section"
+    title="Игры"
+  >
+    <template #controls>
+      <div class="space-y-3">
         <UInput
           v-model="search"
-          placeholder="Поиск по названию или системе"
+          placeholder="Поиск..."
+          allow-clear
+          :ui="{ trailing: 'pe-0.5' }"
+          size="lg"
+        >
+          <template
+            v-if="search"
+            #trailing
+          >
+            <UButton
+              icon="tabler:x"
+              variant="link"
+              color="neutral"
+              size="sm"
+              @click.left.exact.prevent="search = ''"
+            /> </template
+        ></UInput>
+      </div>
+
+      <div class="flex gap-2">
+        <UFieldGroup class="w-full space-x-px">
+          <UButton
+            :disabled="!filter"
+            :loading="isPending"
+            icon="tabler:filter"
+            label="Фильтр"
+            block
+            @click.left.exact.prevent="filterOpened = true"
+          />
+
+          <UButton
+            v-if="isFilterEdited"
+            title="Очистить фильтр"
+            icon="tabler:trash"
+            @click.left.exact.prevent="resetFilter"
+          />
+        </UFieldGroup>
+
+        <UButton
+          :icon="isApple ? 'tabler:share-2' : 'tabler:share'"
+          title="Поделиться ссылкой"
+          square
+          @click.left.exact.prevent="share(urlForCopy)"
         />
       </div>
-    </div>
+    </template>
 
-    <UAlert
-      v-if="error"
-      color="error"
-      variant="subtle"
-      title="Не удалось загрузить игры"
-      :description="error.message"
-    >
-      <template #actions>
-        <UButton
-          variant="subtle"
-          @click="refresh()"
+    <template #default>
+      <div class="space-y-4">
+        <Transition
+          name="fade"
+          mode="out-in"
         >
-          Повторить
-        </UButton>
-      </template>
-    </UAlert>
+          <PageGrid v-if="status !== 'success' && status !== 'error'">
+            <SkeletonLinkBig
+              v-for="index in size"
+              :key="index"
+            />
+          </PageGrid>
 
-    <div
-      v-if="isPending"
-      class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-    >
-      <USkeleton
-        v-for="index in size"
-        :key="index"
-        class="h-[420px] rounded-2xl"
-      />
-    </div>
+          <PageGrid v-else-if="status === 'success' && games.length">
+            <PolymorpherGameCard
+              v-for="game in games"
+              :key="game.id"
+              :game="game"
+            />
+          </PageGrid>
 
-    <div
-      v-else-if="isEmpty"
-      class="rounded-2xl border border-default bg-elevated p-8 text-center text-toned"
-    >
-      Ничего не найдено
-    </div>
+          <PageResult
+            v-else
+            :items="games"
+            :status="status"
+            :error="error"
+            @refresh="refresh"
+          />
+        </Transition>
 
-    <div
-      v-else
-      class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-    >
-      <PolymorpherGameCard
-        v-for="game in games"
-        :key="game.id"
-        :game="game"
-      />
-    </div>
-
-    <div
-      v-if="totalElements > size"
-      class="flex justify-center"
-    >
-      <UPagination
-        v-model:page="page"
-        :items-per-page="size"
-        :total="totalElements"
-      />
-    </div>
-  </div>
+        <div
+          v-if="status === 'success' && totalElements > size"
+          class="flex justify-center"
+        >
+          <UPagination
+            v-model:page="page"
+            :items-per-page="size"
+            :total="totalElements"
+            size="sm"
+          />
+        </div>
+      </div>
+    </template>
+  </NuxtLayout>
 </template>
