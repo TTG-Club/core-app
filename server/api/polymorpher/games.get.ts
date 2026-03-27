@@ -139,9 +139,6 @@ function mapGame(item: PolymorpherApiGame): PolymorpherGameCard | null {
     imageUrl: asString(item.imageUrl),
     bigImageUrl: asString(item.bigImageUrl),
     shareUrl,
-    joinUrl: shareUrl
-      ? `/api/polymorpher/join?target=${encodeURIComponent(shareUrl)}`
-      : `/api/polymorpher/join?target=${encodeURIComponent('https://polymorpher.ru/games/home')}`,
     isHighlighted: Boolean(item.isHighlighted),
     playerRequirements: asString(item.playerRequirements),
   };

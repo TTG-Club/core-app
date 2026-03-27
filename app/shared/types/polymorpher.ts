@@ -77,7 +77,6 @@ export interface PolymorpherGameCard {
   imageUrl: string | null;
   bigImageUrl: string | null;
   shareUrl: string | null;
-  joinUrl: string;
   isHighlighted: boolean;
 }
 
