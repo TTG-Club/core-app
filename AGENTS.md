@@ -103,6 +103,47 @@ Always import feature components using the domain alias (e.g.,
 
 ---
 
+## 🔄 Reactivity & Data Flow
+
+- **Immutable Transforms:** When deriving new state from existing objects,
+  **ALWAYS** prefer `.map()` + spread (`{ ...item, selected: value }`) over
+  `cloneDeep` + mutation. Direct use of `cloneDeep` followed by mutation
+  (`clone.field = x`) is **PROHIBITED** in utility functions. `cloneDeep` is
+  acceptable only when the clone is passed to a function that returns a new
+  immutable result.
+- **Watcher Hygiene:**
+  - If multiple watchers call the **same handler**, combine them into a single
+    `watch([sourceA, sourceB], handler)`.
+  - Be aware of **watcher cycles** (`watch(A) → B changes → watch(B) → A
+    changes`). Always document the cycle-breaking guard (e.g., `isEqual` check)
+    with a comment explaining _why_ the cycle terminates.
+- **URL Query Defensiveness:** Values from `route.query` are
+  `string | null | (string | null)[]`. Always check for both `null` and empty
+  string (`''`). A bare `typeof val === 'string'` check is **NOT sufficient** —
+  include an explicit truthiness guard: `typeof val === 'string' && val`.
+
+---
+
+## 🧩 Composable Hygiene
+
+- **Pure Functions Outside Closure:** If a function inside a composable does NOT
+  reference any reactive state, refs, or composable-scoped variables, it **MUST**
+  be extracted:
+  - To the same file but **above** the composable function (as a module-level
+    function), OR
+  - To a `utils/` file if it is reusable across composables.
+- **No Dead Fallbacks:** Do not write fallback defaults for values that are
+  already typed as required (e.g., `group.type || 'filter'` when `type` is
+  non-optional in the interface). This masks API data errors.
+- **Strict Matching Over Fuzzy:** When matching entities (e.g., saved filters to
+  API groups), use strict criteria with clear priority:
+  1. Exact match by compound key (e.g., `key + name`).
+  2. Unambiguous fallback (e.g., single entry with matching `key`).
+  3. Return `undefined` — never fall back to a single-field match (like `name`
+     alone) that can produce false positives.
+
+---
+
 ## 📝 Vue Templates & Event Handlers
 
 - **Template Hygiene:**

@@ -72,7 +72,7 @@ core-app/
 | `feats`          | Character feats                               | —                                             |
 | `glossary`       | Terms glossary                                | —                                             |
 | `home`           | Landing/Home page                             | —                                             |
-| `infrastructure` | Infrastructure (filter, search, sidebar, pwa) | —                                             |
+| `infrastructure` | Infrastructure (filter, search, sidebar, pwa) | filter, search, sidebar, pwa                  |
 | `items`          | Equipment & Items                             | —                                             |
 | `magic-items`    | Magic items                                   | —                                             |
 | `roadmap`        | Project roadmap                               | —                                             |
