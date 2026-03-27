@@ -17,7 +17,7 @@
 
   const {
     filter,
-    filterStringFromUrl,
+    selectedFiltersQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
   } = await useFilter('spells', '/api/v2/spells/filters');
@@ -34,12 +34,12 @@
         method: 'GET',
         query: {
           search: search.value,
-          filter: filterStringFromUrl.value,
+          ...selectedFiltersQuery.value,
         },
       }),
     {
       deep: false,
-      watch: [search, filterStringFromUrl],
+      watch: [search],
     },
   );
 
@@ -50,6 +50,8 @@
 
     return !level ? 'Заговоры' : `Уровень ${level}`;
   }
+
+  watch(selectedFiltersQuery, () => refresh());
 </script>
 
 <template>

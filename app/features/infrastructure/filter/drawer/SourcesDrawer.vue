@@ -1,22 +1,22 @@
 <script setup lang="ts">
-  import type { FilterSection } from '../types';
+  import type { FilterGroups } from '../types';
 
   import { cloneDeep } from 'es-toolkit';
 
   import { FilterList } from '../list';
 
   defineEmits<{
-    (e: 'save', value: FilterSection): void;
+    (e: 'save', value: FilterGroups): void;
     (e: 'reset'): void;
   }>();
 
   const { sources } = defineProps<{
-    sources: FilterSection;
+    sources: FilterGroups;
   }>();
 
   const opened = defineModel<boolean>();
 
-  const cloned = ref<FilterSection>(sources);
+  const cloned = ref<FilterGroups>(sources);
 
   watch(opened, (value) => {
     if (!value) {

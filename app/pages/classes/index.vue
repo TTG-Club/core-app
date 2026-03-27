@@ -15,7 +15,7 @@
 
   const {
     filter,
-    filterStringFromUrl,
+    selectedFiltersQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
   } = await useFilter('classes', '/api/v2/classes/filters');
@@ -32,14 +32,16 @@
         method: 'GET',
         query: {
           search: search.value,
-          filter: filterStringFromUrl.value,
+          ...selectedFiltersQuery.value,
         },
       }),
     {
       deep: false,
-      watch: [search, filterStringFromUrl],
+      watch: [search],
     },
   );
+
+  watch(selectedFiltersQuery, () => refresh());
 </script>
 
 <template>

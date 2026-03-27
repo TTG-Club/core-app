@@ -20,7 +20,7 @@
 
   const {
     filter,
-    filterStringFromUrl,
+    selectedFiltersQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
   } = await useFilter('magic-items', '/api/v2/magic-items/filters');
@@ -40,12 +40,12 @@
         method: 'GET',
         query: {
           search: search.value,
-          filter: filterStringFromUrl.value,
+          ...selectedFiltersQuery.value,
         },
       }),
     {
       deep: false,
-      watch: [search, filterStringFromUrl],
+      watch: [search],
     },
   );
 
@@ -55,6 +55,8 @@
 
     return isItemsLoading || isRarityPending.value;
   });
+
+  watch(selectedFiltersQuery, () => refresh());
 </script>
 
 <template>

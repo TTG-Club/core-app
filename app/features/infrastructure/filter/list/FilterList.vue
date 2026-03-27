@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { FilterSection } from '../types';
+  import type { FilterGroups } from '../types';
 
   import { FilterGroup } from './ui';
 
@@ -7,7 +7,7 @@
     preview?: boolean;
   }>();
 
-  const filter = defineModel<FilterSection>({
+  const filter = defineModel<FilterGroups>({
     required: true,
   });
 </script>
@@ -21,11 +21,15 @@
     }"
   >
     <FilterGroup
-      v-for="group in filter.groups"
+      v-for="(group, index) in filter"
       :key="group.key + group.name"
-      v-model="group.filters"
-      :label="group.name"
+      :model-value="group"
       :preview
+      @update:model-value="
+        (v) => {
+          filter[index] = v as any;
+        }
+      "
     />
   </div>
 </template>

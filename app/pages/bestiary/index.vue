@@ -17,7 +17,7 @@
 
   const {
     filter,
-    filterStringFromUrl,
+    selectedFiltersQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
   } = await useFilter('bestiary', '/api/v2/bestiary/filters');
@@ -35,14 +35,14 @@
   } = await useAsyncData(
     'bestiary',
     () =>
-      $fetch<Array<CreatureLinkResponse>>('/api/v2/bestiary', {
+      $fetch<Array<CreatureLinkResponse>>('/api/v2/bestiary/search', {
         method: 'GET',
         query: {
           search: search.value,
-          filter: filterStringFromUrl.value,
+          ...selectedFiltersQuery.value,
         },
       }),
-    { deep: false, watch: [search, filterStringFromUrl] },
+    { deep: false, watch: [search] },
   );
 
   const isLoading = computed(() => {
@@ -51,6 +51,8 @@
 
     return isBestiaryLoading || isChallengeRatingOrderPending.value;
   });
+
+  watch(selectedFiltersQuery, () => refresh());
 </script>
 
 <template>

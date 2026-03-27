@@ -1,15 +1,9 @@
-import type { Filter } from '../types';
+import type { Filter, FilterGroup } from '../types';
 
-// composables/useFilter.ts
 import { cloneDeep } from 'es-toolkit';
 
 import { getFilterKey } from '../utils';
-import {
-  applyCompressedFilters,
-  compressFilters,
-  decompressFilters,
-  getFilterRequest,
-} from '../utils/filterParser';
+import { applyQueryToFilters, buildSearchQuery } from '../utils/filterParser';
 
 export async function useFilter(key: string, url: string) {
   const filterKey = getFilterKey(key);
@@ -18,28 +12,76 @@ export async function useFilter(key: string, url: string) {
   const route = useRoute();
   const router = useRouter();
 
+  const { isLoggedIn, fetch: fetchUser } = useUser();
+  const requestFetch = useRequestFetch();
+
   const { data, status, refresh } = await useAsyncData(
     filterKey,
-    () => $fetch<Filter>(url),
+    async () => {
+      // Ensure user profile is processed/deduped before trying to fetch settings
+      await fetchUser();
+
+      const [filterData, savedFilters] = await Promise.all([
+        requestFetch<Filter>(url),
+        isLoggedIn.value
+          ? requestFetch<any>('/api/user/profile/saved-filter').catch(
+              () => null,
+            )
+          : Promise.resolve(null),
+      ]);
+
+      if (filterData.sources) {
+        for (const group of filterData.sources) {
+          const items = group.values || group.filters || [];
+
+          for (const item of items) {
+            if (!isLoggedIn.value || !savedFilters) {
+              item.selected = true;
+            } else {
+              const savedGroup = savedFilters.filter?.groups?.find(
+                (g: any) =>
+                  g.key === group.key
+                  || group.key.includes(g.key)
+                  || g.key.includes(group.key)
+                  || g.name === group.name,
+              );
+
+              const savedItem = savedGroup?.filters?.find(
+                (f: any) =>
+                  f.value === item.value
+                  || f.value === item.id
+                  || f.name === item.name,
+              );
+
+              item.selected = savedItem?.selected ?? true;
+            }
+          }
+        }
+      }
+
+      return filterData;
+    },
     { deep: false },
   );
 
   const isPending = computed(() => status.value === 'pending');
 
-  const isShowedPreview = computed(() =>
-    filter.value?.filter.groups.some((group) =>
-      group.filters.some((item) => item.selected !== null),
-    ),
-  );
+  const isShowedPreview = computed(() => {
+    if (!filter.value) {
+      return false;
+    }
 
-  const selectedFilters = computed(() => getFilterRequest(filter.value));
-  const filterString = computed(() => compressFilters(selectedFilters.value));
+    const checkGroups = (groups?: FilterGroup[]) =>
+      groups?.some((group) =>
+        (group.values || group.filters || []).some(
+          (item) => item.selected !== null,
+        ),
+      );
 
-  const filterStringFromUrl = computed(() => {
-    const param = route.query.filter;
-
-    return typeof param === 'string' ? param : '';
+    return checkGroups(filter.value.filters) || false;
   });
+
+  const selectedFiltersQuery = computed(() => buildSearchQuery(filter.value));
 
   function getClone(
     payload: MaybeRefOrGetter<Filter | undefined>,
@@ -50,80 +92,149 @@ export async function useFilter(key: string, url: string) {
   }
 
   function syncUrlWithFilter() {
-    const currentUrlFilter = filterStringFromUrl.value;
-    const newFilterString = filterString.value;
+    const newQuery = { ...selectedFiltersQuery.value };
 
-    if (currentUrlFilter === newFilterString) {
-      return;
-    }
+    // If sources match default, omit them from the URL to keep it clean
+    if (filter.value && data.value) {
+      const getSourcesList = (groups?: FilterGroup[]) => {
+        const list: string[] = [];
 
-    if (!newFilterString) {
-      const { filter: _, ...restQuery } = route.query;
+        groups?.forEach((g) => {
+          (g.values || g.filters || []).forEach((i) => {
+            if (i.selected) {
+              list.push(String(i.id));
+            }
+          });
+        });
 
-      router.replace({ query: restQuery });
+        return list.sort().join(',');
+      };
 
-      return;
-    }
-
-    router.replace({
-      query: { ...route.query, filter: newFilterString },
-    });
-  }
-
-  function applyFiltersFromUrl(urlFilter: string) {
-    if (!urlFilter || !data.value) {
-      return;
-    }
-
-    try {
-      const decompressed = decompressFilters(urlFilter);
-
-      if (decompressed && filter.value) {
-        filter.value = applyCompressedFilters(filter.value, decompressed);
+      if (
+        getSourcesList(filter.value.sources)
+        === getSourcesList(data.value.sources)
+      ) {
+        delete newQuery.source;
       }
-    } catch (error) {
-      consola.error('Failed to apply filters from URL:', error);
+    }
+
+    const filterKeys = new Set<string>();
+
+    filterKeys.add('source');
+
+    const collectKeys = (groups?: FilterGroup[]) => {
+      groups?.forEach((g) => {
+        if (g.type === 'filter') {
+          filterKeys.add(g.key);
+          filterKeys.add(`${g.key}_mode`);
+          filterKeys.add(`${g.key}_union`);
+        } else if (g.type === 'singleton') {
+          (g.values || g.filters || []).forEach((item) =>
+            filterKeys.add(String(item.id)),
+          );
+        }
+      });
+    };
+
+    if (data.value) {
+      collectKeys(data.value.filters);
+      collectKeys(data.value.sources);
+    }
+
+    const cleanQuery = { ...route.query };
+
+    Object.keys(cleanQuery).forEach((k) => {
+      if (filterKeys.has(k)) {
+        // eslint-disable-next-line ts/no-dynamic-delete
+        delete cleanQuery[k];
+      }
+    });
+
+    // To prevent infinite loop, compare if anything really changed
+    const finalQuery = { ...cleanQuery, ...newQuery };
+
+    if (JSON.stringify(route.query) !== JSON.stringify(finalQuery)) {
+      router.replace({
+        query: finalQuery,
+      });
     }
   }
 
-  // Инициализация: загрузили данные -> применили фильтр из URL
   watch(
     data,
     (value) => {
-      if (value) {
-        filter.value = getClone(value);
-        applyFiltersFromUrl(filterStringFromUrl.value);
+      if (!value) {
+        return;
+      }
+
+      const cloned = getClone(value);
+
+      if (cloned) {
+        // Устанавливаем filter.value сразу с применёнными URL-параметрами,
+        // чтобы не триггерить перезапись URL пустыми значениями.
+        filter.value = applyQueryToFilters(cloned, route.query);
       }
     },
     { immediate: true },
   );
 
-  // Изменился фильтр -> обновляем URL
   watch(
-    selectedFilters,
+    selectedFiltersQuery,
     () => {
       syncUrlWithFilter();
     },
     { deep: true },
   );
 
-  // Изменился URL извне -> применяем к фильтру
-  watch(filterStringFromUrl, (newUrlFilter) => {
-    // Если URL изменился не из-за нашего syncUrlWithFilter
-    if (newUrlFilter !== filterString.value && data.value) {
-      applyFiltersFromUrl(newUrlFilter);
+  watch(
+    () => route.query,
+    () => {
+      if (data.value) {
+        const pristine = getClone(data.value);
+
+        if (!pristine) {
+          return;
+        }
+
+        const prevFiltersQuery = JSON.stringify(selectedFiltersQuery.value);
+        const testFilter = applyQueryToFilters(pristine, route.query);
+        const nextFiltersQuery = JSON.stringify(buildSearchQuery(testFilter));
+
+        if (prevFiltersQuery !== nextFiltersQuery) {
+          filter.value = testFilter;
+        }
+      }
+    },
+    { deep: true },
+  );
+
+  function restoreSources() {
+    if (data.value && filter.value) {
+      filter.value = {
+        ...filter.value,
+        sources: cloneDeep(data.value.sources),
+      };
     }
-  });
+  }
+
+  function restoreFilters() {
+    if (data.value && filter.value) {
+      filter.value = {
+        ...filter.value,
+        filters: cloneDeep(data.value.filters),
+      };
+    }
+  }
 
   return {
     isPending,
     isShowedPreview,
 
     filter,
-    filterString,
-    filterStringFromUrl,
-    selectedFilters,
+    selectedFiltersQuery,
 
     refresh,
+    restoreSources,
+    restoreFilters,
   };
 }

@@ -1,7 +1,5 @@
 <script setup lang="ts">
-  import type { Filter, FilterSection } from '../types';
-
-  import { cloneDeep } from 'es-toolkit';
+  import type { Filter, FilterGroups } from '../types';
 
   import { FilterDrawer, SourcesDrawer } from '../drawer';
   import { FilterPreview } from '../preview';
@@ -15,6 +13,7 @@
   const filter = defineModel<Filter>('filter');
 
   const route = useRoute();
+  const router = useRouter();
   const { isApple } = useDevice();
   const { share } = useCopyAndShare();
 
@@ -32,18 +31,14 @@
   const isFilterEdited = computed(
     () =>
       !!filter.value
-      && filter.value.filter.groups.some((group) =>
-        group.filters.some((item) => item.selected !== null),
+      && filter.value.filters?.some((group) =>
+        (group.values || group.filters || []).some(
+          (item) => item.selected !== null,
+        ),
       ),
   );
 
-  const isSourcesEdited = computed(
-    () =>
-      !!filter.value
-      && filter.value.sources.groups.some((group) =>
-        group.filters.some((item) => item.selected !== null),
-      ),
-  );
+  const isSourcesEdited = computed(() => !!route.query.source);
 
   watchDebounced(
     localSearch,
@@ -63,42 +58,43 @@
     },
   );
 
-  function saveFilter(payload: FilterSection) {
+  function saveFilter(payload: FilterGroups) {
     if (!filter.value) {
       return;
     }
 
-    filter.value = { ...filter.value, filter: payload };
+    filter.value = { ...filter.value, filters: payload };
     filterOpened.value = false;
   }
 
   function resetFilter() {
-    if (!filter.value) {
+    if (!filter.value?.filters) {
       filterOpened.value = false;
 
       return;
     }
 
-    const cloned = cloneDeep(filter.value.filter);
+    const query = { ...route.query };
 
-    filter.value = {
-      ...filter.value,
-      filter: {
-        ...cloned,
-        groups: cloned.groups.map((group) => ({
-          ...group,
-          filters: group.filters.map((item) => ({
-            ...item,
-            selected: null,
-          })),
-        })),
-      },
-    };
+    filter.value.filters.forEach((g) => {
+      if (g.type === 'filter') {
+        delete query[g.key];
+        delete query[`${g.key}_mode`];
+        delete query[`${g.key}_union`];
+      } else if (g.type === 'singleton') {
+        const items = g.values || g.filters || [];
 
+        items.forEach((i) => {
+          delete query[String(i.id)];
+        });
+      }
+    });
+
+    router.replace({ query });
     filterOpened.value = false;
   }
 
-  function saveSources(payload: FilterSection) {
+  function saveSources(payload: FilterGroups) {
     if (!filter.value) {
       return;
     }
@@ -108,28 +104,17 @@
   }
 
   function resetSources() {
-    if (!filter.value) {
+    if (!filter.value?.sources) {
       sourcesOpened.value = false;
 
       return;
     }
 
-    const cloned = cloneDeep(filter.value.sources);
+    const query = { ...route.query };
 
-    filter.value = {
-      ...filter.value,
-      sources: {
-        ...cloned,
-        groups: cloned.groups.map((group) => ({
-          ...group,
-          filters: group.filters.map((item) => ({
-            ...item,
-            selected: null,
-          })),
-        })),
-      },
-    };
+    delete query.source;
 
+    router.replace({ query });
     sourcesOpened.value = false;
   }
 </script>
@@ -199,8 +184,8 @@
         <slot name="legend" />
 
         <FilterPreview
-          v-if="showPreview && filter"
-          v-model="filter.filter"
+          v-if="showPreview && filter?.filters"
+          v-model="filter.filters"
         />
       </template>
     </ClientOnly>
@@ -208,15 +193,15 @@
 
   <ClientOnly>
     <FilterDrawer
-      v-if="filter"
+      v-if="filter?.filters"
       v-model="filterOpened"
-      :filter="filter.filter"
+      :filter-groups="filter.filters"
       @save="saveFilter"
       @reset="resetFilter"
     />
 
     <SourcesDrawer
-      v-if="filter"
+      v-if="filter?.sources"
       v-model="sourcesOpened"
       :sources="filter.sources"
       @save="saveSources"
