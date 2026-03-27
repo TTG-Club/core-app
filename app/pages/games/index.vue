@@ -1,8 +1,12 @@
 <script setup lang="ts">
-  import type { PolymorpherGamesResponse } from '~/shared/types/polymorpher';
+  import type { NuxtError } from '#app';
+  import type {
+    PolymorpherGameCard as PolymorpherGameCardType,
+    PolymorpherGamesResponse,
+  } from '~/shared/types/polymorpher';
   import type { Filter } from '~infrastructure/filter';
 
-  import { refDebounced } from '@vueuse/core';
+  import { refDebounced, useIntersectionObserver } from '@vueuse/core';
   import { cloneDeep } from 'es-toolkit';
 
   import { PolymorpherGameCard } from '~games';
@@ -27,8 +31,6 @@
   }>();
 
   const filterOpened = ref(false);
-
-  ref(false);
 
   const urlForCopy = computed(() => {
     return getOrigin() + route.fullPath;
@@ -68,37 +70,95 @@
     filterOpened.value = false;
   }
 
-  const page = ref<number>(1);
+  const page = ref<number>(0);
   const size = ref<number>(12);
 
-  watch(search, () => {
-    page.value = 1;
+  const games = ref<PolymorpherGameCardType[]>([]);
+  const totalElements = ref<number>(0);
+  const status = ref<'pending' | 'success' | 'error'>('pending');
+  const error = ref<NuxtError | null>(null);
+  const isLoadingMore = ref(false);
+
+  const sentinel = ref<HTMLElement | null>(null);
+
+  const hasMore = computed(() => games.value.length < totalElements.value);
+
+  async function loadGames(reset: boolean = false): Promise<void> {
+    if (isLoadingMore.value) {
+      return;
+    }
+
+    if (reset) {
+      status.value = 'pending';
+      error.value = null;
+      page.value = 0;
+    }
+
+    isLoadingMore.value = true;
+
+    try {
+      const response = await $fetch<PolymorpherGamesResponse>(
+        '/api/polymorpher/games',
+        {
+          method: 'GET',
+          query: {
+            search: debouncedSearch.value || undefined,
+            page: page.value,
+            size: size.value,
+          },
+        },
+      );
+
+      if (reset) {
+        games.value = response.content;
+      } else {
+        const existingIds = new Set(games.value.map((game) => game.id));
+
+        games.value = [
+          ...games.value,
+          ...response.content.filter((game) => !existingIds.has(game.id)),
+        ];
+      }
+
+      totalElements.value = response.totalElements ?? 0;
+      page.value += 1;
+      status.value = 'success';
+    } catch (cause) {
+      error.value = createError({
+        statusCode: 500,
+        statusMessage: 'Ошибка загрузки игр',
+        data: cause,
+      });
+
+      status.value = 'error';
+    } finally {
+      isLoadingMore.value = false;
+    }
+  }
+
+  watch(debouncedSearch, async () => {
+    await loadGames(true);
   });
 
-  const {
-    data: response,
-    status,
-    error,
-    refresh,
-  } = await useAsyncData(
-    'polymorpher-games',
-    () =>
-      $fetch<PolymorpherGamesResponse>('/api/polymorpher/games', {
-        method: 'GET',
-        query: {
-          search: debouncedSearch.value || undefined,
-          page: Math.max(0, page.value - 1),
-          size: size.value,
-        },
-      }),
+  await loadGames(true);
+
+  useIntersectionObserver(
+    sentinel,
+    async ([entry]) => {
+      if (!entry?.isIntersecting || isLoadingMore.value || !hasMore.value) {
+        return;
+      }
+
+      await loadGames(false);
+    },
     {
-      deep: false,
-      watch: [debouncedSearch, page, size],
+      rootMargin: '300px 0px',
     },
   );
 
-  const games = computed(() => response.value?.content ?? []);
-  const totalElements = computed(() => response.value?.totalElements ?? 0);
+  function refresh(): Promise<void> {
+    return loadGames(true);
+  }
 </script>
 
 <template>
@@ -125,8 +185,9 @@
               color="neutral"
               size="sm"
               @click.left.exact.prevent="search = ''"
-            /> </template
-        ></UInput>
+            />
+          </template>
+        </UInput>
       </div>
 
       <div class="flex gap-2">
@@ -163,7 +224,7 @@
           name="fade"
           mode="out-in"
         >
-          <PageGrid v-if="status !== 'success' && status !== 'error'">
+          <PageGrid v-if="status === 'pending' && !games.length">
             <SkeletonLinkBig
               v-for="index in size"
               :key="index"
@@ -171,10 +232,24 @@
           </PageGrid>
 
           <PageGrid v-else-if="status === 'success' && games.length">
-            <PolymorpherGameCard
+            <template
               v-for="game in games"
               :key="game.id"
-              :game="game"
+            >
+              <PolymorpherGameCard :game="game" />
+            </template>
+
+            <template v-if="isLoadingMore">
+              <SkeletonLinkBig
+                v-for="index in 3"
+                :key="`loading-${index}`"
+              />
+            </template>
+
+            <div
+              v-if="hasMore"
+              ref="sentinel"
+              class="col-span-full h-2"
             />
           </PageGrid>
 
@@ -182,22 +257,10 @@
             v-else
             :items="games"
             :status="status"
-            :error="error"
+            :error="error ?? undefined"
             @refresh="refresh"
           />
         </Transition>
-
-        <div
-          v-if="status === 'success' && totalElements > size"
-          class="flex justify-center"
-        >
-          <UPagination
-            v-model:page="page"
-            :items-per-page="size"
-            :total="totalElements"
-            size="sm"
-          />
-        </div>
       </div>
     </template>
   </NuxtLayout>
