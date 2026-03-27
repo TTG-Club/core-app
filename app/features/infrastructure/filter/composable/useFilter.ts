@@ -1,13 +1,119 @@
-import type { Filter, FilterGroup, SavedFilterResponse } from '../types';
+import type { LocationQuery } from 'vue-router';
 
-import { cloneDeep } from 'es-toolkit';
+import type {
+  Filter,
+  SavedFilterGroup,
+  SavedFilterItem,
+  SavedFilterResponse,
+} from '../types';
+
+import { cloneDeep, isEqual } from 'es-toolkit';
 
 import {
   applyQueryToFilters,
   buildSearchQuery,
+  collectGroupKeys,
   getFilterKey,
   getGroupItems,
+  serializeSelectedIds,
 } from '../utils';
+
+/**
+ * Находит соответствующую сохранённую группу по ключу и имени.
+ * Приоритет: точное совпадение (key + name) → единственная группа с таким key.
+ */
+function findSavedGroup(
+  savedGroups: SavedFilterGroup[],
+  groupKey: string,
+  groupName: string,
+): SavedFilterGroup | undefined {
+  const byKey = savedGroups.filter((entry) => entry.key === groupKey);
+
+  // Точное совпадение key + name
+  const exact = byKey.find((entry) => entry.name === groupName);
+
+  if (exact) {
+    return exact;
+  }
+
+  // Единственная группа с таким key — безопасный fallback
+  if (byKey.length === 1) {
+    return byKey[0];
+  }
+
+  return undefined;
+}
+
+/**
+ * Определяет, выбран ли элемент в сохранённом фильтре
+ */
+function resolveItemSelection(
+  item: { id: string | number; value: string; name: string },
+  savedGroup: SavedFilterGroup | undefined,
+  isLoggedIn: boolean,
+): boolean {
+  if (!isLoggedIn || !savedGroup) {
+    return true;
+  }
+
+  const savedItem = savedGroup.filters.find(
+    (entry: SavedFilterItem) =>
+      entry.value === item.value || entry.value === String(item.id),
+  );
+
+  return savedItem ? savedItem.selected === true : true;
+}
+
+/**
+ * Строит полный query-объект для URL, объединяя фильтры, search
+ * и текущие query-параметры, не управляемые фильтром
+ */
+function buildFullQuery(
+  filterValue: Filter | undefined,
+  dataValue: Filter | undefined,
+  selectedQuery: LocationQuery,
+  searchValue: string | undefined,
+  currentRouteQuery: LocationQuery,
+): LocationQuery {
+  let activeQuery: LocationQuery = { ...selectedQuery };
+
+  if (searchValue) {
+    activeQuery.search = searchValue;
+  }
+
+  // Если sources не изменены — убираем их ключи из URL
+  if (filterValue && dataValue) {
+    const sourcesMatch =
+      serializeSelectedIds(filterValue.sources)
+      === serializeSelectedIds(dataValue.sources);
+
+    if (sourcesMatch) {
+      const defaultSourceKeys = collectGroupKeys(dataValue.sources ?? []);
+
+      activeQuery = Object.fromEntries(
+        Object.entries(activeQuery).filter(
+          ([queryKey]) => !defaultSourceKeys.has(queryKey),
+        ),
+      );
+    }
+  }
+
+  // Сохраняем query-параметры, не управляемые фильтром
+  const controlledKeys = collectGroupKeys([
+    ...(dataValue?.filters ?? []),
+    ...(dataValue?.sources ?? []),
+  ]);
+
+  controlledKeys.add('search');
+
+  const preservedQuery = Object.fromEntries(
+    Object.entries(currentRouteQuery).filter(
+      ([queryKey]) => !controlledKeys.has(queryKey),
+    ),
+  );
+
+  return { ...preservedQuery, ...activeQuery };
+}
 
 export async function useFilter(key: string, url: string) {
   const route = useRoute();
@@ -17,19 +123,15 @@ export async function useFilter(key: string, url: string) {
   const filter = useState<Filter | undefined>(filterKey, () => undefined);
 
   const search = useState<string | undefined>(`${filterKey}_search`, () => {
-    const querySearch = route.query.search as string;
+    const searchVal = route.query.search;
 
-    return querySearch || undefined;
+    const searchStr = Array.isArray(searchVal) ? searchVal[0] : searchVal;
+
+    return typeof searchStr === 'string' && searchStr ? searchStr : undefined;
   });
 
   const { isLoggedIn, fetch: fetchUser } = useUser();
   const requestFetch = useRequestFetch();
-
-  /**
-   * Флаг для предотвращения цикла watcher'ов:
-   * filter → query → filter
-   */
-  let isInternalUpdate = false;
 
   const { data, status, refresh } = await useAsyncData(
     filterKey,
@@ -45,38 +147,24 @@ export async function useFilter(key: string, url: string) {
           : Promise.resolve(null),
       ]);
 
-      if (filterData.sources) {
-        for (const group of filterData.sources) {
-          const items = getGroupItems(group);
+      const result = cloneDeep(filterData);
+      const savedGroups = savedFilters?.filter?.groups ?? [];
 
-          for (const item of items) {
-            if (!isLoggedIn.value || !savedFilters) {
-              item.selected = true;
-            } else {
-              const savedGroup = savedFilters.filter?.groups?.find(
-                (saved) =>
-                  (saved.key === group.key && saved.name === group.name)
-                  || (saved.key === group.key
-                    && !savedFilters.filter?.groups?.some(
-                      (other) => other !== saved && other.key === group.key,
-                    ))
-                  || saved.name === group.name,
-              );
+      if (result.sources) {
+        for (const group of result.sources) {
+          const savedGroup = findSavedGroup(savedGroups, group.key, group.name);
 
-              const savedItem = savedGroup?.filters?.find(
-                (saved) =>
-                  saved.value === item.value
-                  || saved.value === String(item.id)
-                  || saved.name === item.name,
-              );
-
-              item.selected = savedItem ? savedItem.selected === true : true;
-            }
+          for (const item of getGroupItems(group)) {
+            item.selected = resolveItemSelection(
+              item,
+              savedGroup,
+              isLoggedIn.value,
+            );
           }
         }
       }
 
-      return filterData;
+      return result;
     },
     { deep: false },
   );
@@ -97,82 +185,16 @@ export async function useFilter(key: string, url: string) {
 
   const selectedFiltersQuery = computed(() => buildSearchQuery(filter.value));
 
-  function getClone(
-    payload: MaybeRefOrGetter<Filter | undefined>,
-  ): Filter | undefined {
-    const resolved = toValue(payload);
-
-    return resolved ? cloneDeep(resolved) : undefined;
-  }
-
   function syncUrlWithFilter() {
-    const newQuery = { ...selectedFiltersQuery.value };
+    const finalQuery = buildFullQuery(
+      filter.value,
+      data.value ?? undefined,
+      selectedFiltersQuery.value,
+      search.value,
+      route.query,
+    );
 
-    if (filter.value && data.value) {
-      const getSourcesList = (groups?: FilterGroup[]) => {
-        const list: string[] = [];
-
-        groups?.forEach((group) => {
-          getGroupItems(group).forEach((item) => {
-            if (item.selected) {
-              list.push(String(item.id));
-            }
-          });
-        });
-
-        return list.sort().join(',');
-      };
-
-      if (
-        getSourcesList(filter.value.sources)
-        === getSourcesList(data.value.sources)
-      ) {
-        data.value.sources?.forEach((group) => {
-          // eslint-disable-next-line ts/no-dynamic-delete
-          delete newQuery[group.key];
-        });
-      }
-    }
-
-    if (search.value) {
-      newQuery.search = search.value;
-    }
-
-    const filterKeys = new Set<string>();
-
-    const collectKeys = (groups?: FilterGroup[]) => {
-      groups?.forEach((group) => {
-        if (group.type === 'filter') {
-          filterKeys.add(group.key);
-          filterKeys.add(`${group.key}_mode`);
-          filterKeys.add(`${group.key}_union`);
-        } else if (group.type === 'singleton') {
-          getGroupItems(group).forEach((item) =>
-            filterKeys.add(String(item.id)),
-          );
-        }
-      });
-    };
-
-    if (data.value) {
-      collectKeys(data.value.filters);
-      collectKeys(data.value.sources);
-    }
-
-    const cleanQuery = { ...route.query };
-
-    Object.keys(cleanQuery).forEach((queryKey) => {
-      if (filterKeys.has(queryKey) || queryKey === 'search') {
-        // eslint-disable-next-line ts/no-dynamic-delete
-        delete cleanQuery[queryKey];
-      }
-    });
-
-    const finalQuery = { ...cleanQuery, ...newQuery };
-
-    if (JSON.stringify(route.query) !== JSON.stringify(finalQuery)) {
-      isInternalUpdate = true;
-
+    if (!isEqual(route.query, finalQuery)) {
       router.replace({ query: finalQuery });
     }
   }
@@ -184,53 +206,36 @@ export async function useFilter(key: string, url: string) {
         return;
       }
 
-      const cloned = getClone(value);
+      const cloned = cloneDeep(value);
 
-      if (cloned) {
-        // Устанавливаем filter.value сразу с применёнными URL-параметрами,
-        // чтобы не триггерить перезапись URL пустыми значениями.
-        isInternalUpdate = true;
-        filter.value = applyQueryToFilters(cloned, route.query);
-      }
+      // Устанавливаем filter.value сразу с применёнными URL-параметрами
+      filter.value = applyQueryToFilters(cloned, route.query);
     },
     { immediate: true },
   );
 
   watch(
-    selectedFiltersQuery,
+    [selectedFiltersQuery, search],
     () => {
       syncUrlWithFilter();
     },
     { deep: true },
   );
 
-  watch(search, () => {
-    syncUrlWithFilter();
-  });
-
   watch(
     () => route.query,
     () => {
-      if (isInternalUpdate) {
-        isInternalUpdate = false;
-
+      if (!data.value) {
         return;
       }
 
-      if (data.value) {
-        const pristine = getClone(data.value);
+      const pristine = cloneDeep(data.value);
+      const prevFiltersQuery = JSON.stringify(selectedFiltersQuery.value);
+      const testFilter = applyQueryToFilters(pristine, route.query);
+      const nextFiltersQuery = JSON.stringify(buildSearchQuery(testFilter));
 
-        if (!pristine) {
-          return;
-        }
-
-        const prevFiltersQuery = JSON.stringify(selectedFiltersQuery.value);
-        const testFilter = applyQueryToFilters(pristine, route.query);
-        const nextFiltersQuery = JSON.stringify(buildSearchQuery(testFilter));
-
-        if (prevFiltersQuery !== nextFiltersQuery) {
-          filter.value = testFilter;
-        }
+      if (prevFiltersQuery !== nextFiltersQuery) {
+        filter.value = testFilter;
       }
     },
     { deep: true },

@@ -9,6 +9,8 @@
     preview?: boolean;
   }>();
 
+  // Используется defineModel — мутация group.mode / group.union через v-model
+  // допустима, т.к. defineModel создаёт двустороннюю привязку и эмитит update
   const group = defineModel<FilterGroupType>({
     required: true,
   });
@@ -65,7 +67,7 @@
       >
         <FilterTag
           v-for="item in getGroupItems(group)"
-          :key="item.id + item.name"
+          :key="`${item.id}-${item.name}`"
           v-model="item.selected"
           :type="group.type"
           :preview

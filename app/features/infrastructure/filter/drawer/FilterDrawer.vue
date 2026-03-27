@@ -17,7 +17,7 @@
 
   const opened = defineModel<boolean>();
 
-  const cloned = ref<FilterGroups>(groups);
+  const cloned = ref<FilterGroups>(cloneDeep(groups));
 
   watch(opened, (value) => {
     if (!value) {

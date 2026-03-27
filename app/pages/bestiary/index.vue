@@ -30,6 +30,7 @@
     data: bestiary,
     error,
     status,
+    refresh,
   } = await useAsyncData(
     'bestiary',
     () =>
@@ -101,6 +102,7 @@
           :items="bestiary"
           :status
           :error
+          @refresh="refresh"
         />
       </Transition>
     </template>

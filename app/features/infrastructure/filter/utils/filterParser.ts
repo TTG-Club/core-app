@@ -1,13 +1,25 @@
 import type { LocationQuery } from 'vue-router';
 
-import type { Filter, FilterGroup } from '../types';
-
-import { cloneDeep } from 'es-toolkit';
+import type { Filter, FilterGroup, FilterGroups, FilterItems } from '../types';
 
 import { getGroupItems } from './getGroupItems';
 
 /**
- * Собирает объект запроса LocationQuery (для vue-router) из состояния фильтров
+ * Создаёт новый массив `items` с обновлённым состоянием `selected`
+ * без мутации оригинальных объектов
+ */
+function applySelectionToItems(
+  items: FilterItems,
+  selectedSet: Set<string>,
+): FilterItems {
+  return items.map((item) => ({
+    ...item,
+    selected: selectedSet.has(String(item.id)) ? true : null,
+  }));
+}
+
+/**
+ * Собирает объект `LocationQuery` (для `vue-router`) из состояния фильтров
  */
 export function buildSearchQuery(
   filterState: Filter | undefined,
@@ -18,116 +30,140 @@ export function buildSearchQuery(
 
   const query: LocationQuery = {};
 
-  const processGroups = (groups: FilterGroup[] | undefined) => {
-    if (!groups) {
-      return;
-    }
+  const allGroups = [
+    ...(filterState.filters ?? []),
+    ...(filterState.sources ?? []),
+  ];
 
-    for (const group of groups) {
-      const items = getGroupItems(group);
-      const groupType = group.type || 'filter';
+  for (const group of allGroups) {
+    const items = getGroupItems(group);
 
-      if (groupType === 'filter') {
-        const selectedIds = items
-          .filter((item) => item.selected)
-          .map((item) => String(item.id));
+    if (group.type === 'filter') {
+      const selectedIds = items
+        .filter((item) => item.selected)
+        .map((item) => String(item.id));
 
-        if (selectedIds.length > 0) {
-          const existing = query[group.key];
+      if (selectedIds.length > 0) {
+        const existing = query[group.key];
 
-          query[group.key] = existing
-            ? `${existing},${selectedIds.join(',')}`
-            : selectedIds.join(',');
+        query[group.key] = existing
+          ? `${existing},${selectedIds.join(',')}`
+          : selectedIds.join(',');
 
-          if (group.mode) {
-            query[`${group.key}_mode`] = '1';
-          }
-
-          if (group.union) {
-            query[`${group.key}_union`] = '1';
-          }
+        if (group.mode) {
+          query[`${group.key}_mode`] = '1';
         }
-      } else if (groupType === 'singleton') {
-        for (const item of items) {
-          if (item.selected === true) {
-            query[String(item.id)] = '1';
-          } else if (item.selected === false) {
-            query[String(item.id)] = '0';
-          }
+
+        if (group.union) {
+          query[`${group.key}_union`] = '1';
+        }
+      }
+    } else if (group.type === 'singleton') {
+      for (const item of items) {
+        if (item.selected === true) {
+          query[String(item.id)] = '1';
+        } else if (item.selected === false) {
+          query[String(item.id)] = '0';
         }
       }
     }
-  };
-
-  processGroups(filterState.filters);
-  processGroups(filterState.sources);
+  }
 
   return query;
 }
 
 /**
- * Применяет параметры URL к объекту Filter и возвращает его новый экземпляр
+ * Применяет параметры URL к объекту `Filter` и возвращает новый экземпляр
+ * без мутации оригинала
  */
 export function applyQueryToFilters(
   originalFilter: Filter,
   query: LocationQuery,
 ): Filter {
-  const result = cloneDeep(originalFilter);
-
-  const applyToGroups = (
-    groups: FilterGroup[] | undefined,
+  const mapGroups = (
+    groups: FilterGroups | undefined,
     isSource: boolean,
-  ) => {
+  ): FilterGroups | undefined => {
     if (!groups) {
-      return;
+      return undefined;
     }
 
-    for (const group of groups) {
+    return groups.map((group) => {
       const items = getGroupItems(group);
-      const groupType = group.type || 'filter';
 
-      if (groupType === 'filter') {
+      if (group.type === 'filter') {
         const queryVal = query[group.key];
 
         if (queryVal && typeof queryVal === 'string') {
           const selectedSet = new Set(queryVal.split(','));
 
-          items.forEach((item) => {
-            item.selected = selectedSet.has(String(item.id)) ? true : null;
-          });
-
-          if (!isSource) {
-            group.mode = query[`${group.key}_mode`] === '1';
-            group.union = query[`${group.key}_union`] === '1';
-          }
-        } else {
-          if (!isSource) {
-            items.forEach((item) => {
-              item.selected = null;
-            });
-
-            group.mode = false;
-            group.union = false;
-          }
+          return {
+            ...group,
+            values: applySelectionToItems(items, selectedSet),
+            ...(!isSource && {
+              mode: query[`${group.key}_mode`] === '1',
+              union: query[`${group.key}_union`] === '1',
+            }),
+          };
         }
-      } else if (groupType === 'singleton') {
-        for (const item of items) {
-          const itemVal = query[String(item.id)];
 
-          if (itemVal === '1') {
-            item.selected = true;
-          } else if (itemVal === '0') {
-            item.selected = false;
-          } else {
-            item.selected = null;
-          }
+        if (!isSource) {
+          return {
+            ...group,
+            mode: false,
+            union: false,
+            values: items.map((item) => ({ ...item, selected: null })),
+          };
         }
+
+        return group;
       }
-    }
+
+      if (group.type === 'singleton') {
+        return {
+          ...group,
+          values: items.map((item) => {
+            const itemVal = query[String(item.id)];
+
+            if (itemVal === '1') {
+              return { ...item, selected: true as const };
+            }
+
+            if (itemVal === '0') {
+              return { ...item, selected: false as const };
+            }
+
+            return { ...item, selected: null };
+          }),
+        };
+      }
+
+      return group;
+    });
   };
 
-  applyToGroups(result.filters, false);
-  applyToGroups(result.sources, true);
+  return {
+    ...originalFilter,
+    filters: mapGroups(originalFilter.filters, false) ?? [],
+    sources: mapGroups(originalFilter.sources, true),
+  };
+}
 
-  return result;
+/**
+ * Сериализует выбранные элементы групп в строку отсортированных ID
+ * для сравнения состояний фильтров
+ */
+export function serializeSelectedIds(groups?: FilterGroup[]): string {
+  if (!groups) {
+    return '';
+  }
+
+  return groups
+    .flatMap((group) => {
+      return getGroupItems(group)
+        .filter((item) => item.selected)
+        .map((item) => String(item.id));
+    })
+    .sort()
+    .join(',');
 }

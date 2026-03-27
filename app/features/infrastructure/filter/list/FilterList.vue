@@ -11,8 +11,11 @@
     required: true,
   });
 
-  function handleGroupUpdate(index: number, value: FilterGroup) {
-    filter.value[index] = value;
+  function handleGroupUpdate(index: number, updatedGroup: FilterGroup) {
+    const updated = [...filter.value];
+
+    updated[index] = updatedGroup;
+    filter.value = updated;
   }
 </script>
 
@@ -26,7 +29,7 @@
   >
     <FilterGroupComponent
       v-for="(group, index) in filter"
-      :key="group.key + group.name"
+      :key="`${group.key}-${group.name}`"
       :model-value="group"
       :preview
       @update:model-value="handleGroupUpdate(index, $event)"

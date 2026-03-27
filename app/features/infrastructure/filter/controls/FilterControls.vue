@@ -13,8 +13,6 @@
   const search = defineModel<string>('search');
   const filter = defineModel<Filter>('filter');
 
-  const route = useRoute();
-  const router = useRouter();
   const { isApple } = useDevice();
   const { share } = useCopyAndShare();
 
@@ -26,7 +24,7 @@
   const isLarge = greaterOrEqual(Breakpoint.LG);
 
   const urlForCopy = computed(() => {
-    return getOrigin() + route.fullPath;
+    return getOrigin() + useRoute().fullPath;
   });
 
   const isFilterEdited = computed(
@@ -37,7 +35,15 @@
       ),
   );
 
-  const isSourcesEdited = computed(() => !!route.query.source);
+  const isSourcesEdited = computed(() => {
+    if (!filter.value?.sources) {
+      return false;
+    }
+
+    return filter.value.sources.some((group) =>
+      getGroupItems(group).some((item) => item.selected !== null),
+    );
+  });
 
   watchDebounced(
     localSearch,
@@ -73,21 +79,19 @@
       return;
     }
 
-    const query = { ...route.query };
+    filter.value = {
+      ...filter.value,
+      filters: filter.value.filters.map((group) => ({
+        ...group,
+        mode: false,
+        union: false,
+        values: getGroupItems(group).map((item) => ({
+          ...item,
+          selected: null,
+        })),
+      })),
+    };
 
-    filter.value.filters.forEach((group) => {
-      if (group.type === 'filter') {
-        delete query[group.key];
-        delete query[`${group.key}_mode`];
-        delete query[`${group.key}_union`];
-      } else if (group.type === 'singleton') {
-        getGroupItems(group).forEach((item) => {
-          delete query[String(item.id)];
-        });
-      }
-    });
-
-    router.replace({ query });
     filterOpened.value = false;
   }
 
@@ -107,11 +111,17 @@
       return;
     }
 
-    const query = { ...route.query };
+    filter.value = {
+      ...filter.value,
+      sources: filter.value.sources.map((group) => ({
+        ...group,
+        values: getGroupItems(group).map((item) => ({
+          ...item,
+          selected: null,
+        })),
+      })),
+    };
 
-    delete query.source;
-
-    router.replace({ query });
     sourcesOpened.value = false;
   }
 </script>
