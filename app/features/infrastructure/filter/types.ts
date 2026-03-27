@@ -30,4 +30,20 @@ export interface Filter {
   sources?: FilterGroups;
 }
 
-// Removing FilterRequest logic since encoding to URLSearchParams doesn't use the old structure anymore.
+export interface SavedFilterItem {
+  value: string;
+  name: string;
+  selected: boolean;
+}
+
+export interface SavedFilterGroup {
+  key: string;
+  name: string;
+  filters: SavedFilterItem[];
+}
+
+export interface SavedFilterResponse {
+  filter?: {
+    groups?: SavedFilterGroup[];
+  };
+}

@@ -6,31 +6,32 @@
   import { FilterList } from '../list';
 
   defineEmits<{
-    (e: 'save', value: FilterGroups): void;
-    (e: 'reset'): void;
+    (event: 'save', value: FilterGroups): void;
+    (event: 'reset'): void;
   }>();
 
-  const { filterGroups } = defineProps<{
-    filterGroups: FilterGroups;
+  const { groups, title } = defineProps<{
+    groups: FilterGroups;
+    title: string;
   }>();
 
   const opened = defineModel<boolean>();
 
-  const cloned = ref<FilterGroups>(filterGroups);
+  const cloned = ref<FilterGroups>(groups);
 
   watch(opened, (value) => {
     if (!value) {
       return;
     }
 
-    cloned.value = cloneDeep(filterGroups);
+    cloned.value = cloneDeep(groups);
   });
 </script>
 
 <template>
   <USlideover
     v-model:open="opened"
-    title="Фильтры"
+    :title
     :ui="{
       content: 'w-full max-w-192 min-w-80',
     }"

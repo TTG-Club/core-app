@@ -4,6 +4,8 @@ import type { Filter, FilterGroup } from '../types';
 
 import { cloneDeep } from 'es-toolkit';
 
+import { getGroupItems } from './getGroupItems';
+
 /**
  * Собирает объект запроса LocationQuery (для vue-router) из состояния фильтров
  */
@@ -26,7 +28,7 @@ export function buildSearchQuery(
     }
 
     for (const group of groups) {
-      const items = group.values || group.filters || [];
+      const items = getGroupItems(group);
       const groupType = group.type || 'filter';
 
       if (groupType === 'filter') {
@@ -89,7 +91,7 @@ export function applyQueryToFilters(
     }
 
     for (const group of groups) {
-      const items = group.values || group.filters || [];
+      const items = getGroupItems(group);
       const groupType = group.type || 'filter';
 
       if (groupType === 'filter') {

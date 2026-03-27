@@ -1,8 +1,9 @@
 <script setup lang="ts">
   import type { Filter, FilterGroups } from '../types';
 
-  import { FilterDrawer, SourcesDrawer } from '../drawer';
+  import { FilterDrawer } from '../drawer';
   import { FilterPreview } from '../preview';
+  import { getGroupItems } from '../utils';
 
   const { isPending = false, showPreview = false } = defineProps<{
     isPending?: boolean;
@@ -32,9 +33,7 @@
     () =>
       !!filter.value
       && filter.value.filters?.some((group) =>
-        (group.values || group.filters || []).some(
-          (item) => item.selected !== null,
-        ),
+        getGroupItems(group).some((item) => item.selected !== null),
       ),
   );
 
@@ -76,16 +75,14 @@
 
     const query = { ...route.query };
 
-    filter.value.filters.forEach((g) => {
-      if (g.type === 'filter') {
-        delete query[g.key];
-        delete query[`${g.key}_mode`];
-        delete query[`${g.key}_union`];
-      } else if (g.type === 'singleton') {
-        const items = g.values || g.filters || [];
-
-        items.forEach((i) => {
-          delete query[String(i.id)];
+    filter.value.filters.forEach((group) => {
+      if (group.type === 'filter') {
+        delete query[group.key];
+        delete query[`${group.key}_mode`];
+        delete query[`${group.key}_union`];
+      } else if (group.type === 'singleton') {
+        getGroupItems(group).forEach((item) => {
+          delete query[String(item.id)];
         });
       }
     });
@@ -195,15 +192,17 @@
     <FilterDrawer
       v-if="filter?.filters"
       v-model="filterOpened"
-      :filter-groups="filter.filters"
+      title="Фильтры"
+      :groups="filter.filters"
       @save="saveFilter"
       @reset="resetFilter"
     />
 
-    <SourcesDrawer
+    <FilterDrawer
       v-if="filter?.sources"
       v-model="sourcesOpened"
-      :sources="filter.sources"
+      title="Источники"
+      :groups="filter.sources"
       @save="saveSources"
       @reset="resetSources"
     />

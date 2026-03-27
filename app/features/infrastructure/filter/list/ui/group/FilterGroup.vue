@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { FilterGroup as FilterGroupType } from '~infrastructure/filter/types';
 
+  import { getGroupItems } from '~infrastructure/filter/utils';
+
   import { FilterTag } from '../tag';
 
   const { preview = false } = defineProps<{
@@ -14,9 +16,7 @@
   const isVisible = computed(
     () =>
       !preview
-      || (group.value.values || group.value.filters || []).some(
-        (filter) => filter.selected !== null,
-      ),
+      || getGroupItems(group.value).some((filter) => filter.selected !== null),
   );
 </script>
 
@@ -41,8 +41,6 @@
           <UCheckbox
             v-if="group.supportsMode"
             v-model="group.mode"
-            :true-value="1"
-            :false-value="0"
             label="Исключать совпадения"
             size="xs"
             color="error"
@@ -51,8 +49,6 @@
           <UCheckbox
             v-if="group.supportsUnion"
             v-model="group.union"
-            :true-value="1"
-            :false-value="0"
             label="Любое из (OR)"
             size="xs"
           />
@@ -68,7 +64,7 @@
         "
       >
         <FilterTag
-          v-for="item in group.values || group.filters || []"
+          v-for="item in getGroupItems(group)"
           :key="item.id + item.name"
           v-model="item.selected"
           :type="group.type"

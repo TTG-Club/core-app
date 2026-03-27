@@ -30,7 +30,6 @@
     data: bestiary,
     error,
     status,
-    refresh,
   } = await useAsyncData(
     'bestiary',
     () =>
@@ -41,7 +40,7 @@
           ...selectedFiltersQuery.value,
         },
       }),
-    { deep: false, watch: [search] },
+    { deep: false, watch: [search, selectedFiltersQuery] },
   );
 
   const isLoading = computed(() => {
@@ -50,8 +49,6 @@
 
     return isBestiaryLoading || isChallengeRatingOrderPending.value;
   });
-
-  watch(selectedFiltersQuery, () => refresh());
 </script>
 
 <template>
@@ -104,7 +101,6 @@
           :items="bestiary"
           :status
           :error
-          @refresh="refresh"
         />
       </Transition>
     </template>

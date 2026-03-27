@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import type { FilterGroups } from '../types';
+  import type { FilterGroup, FilterGroups } from '../types';
 
-  import { FilterGroup } from './ui';
+  import { FilterGroup as FilterGroupComponent } from './ui';
 
   const { preview = false } = defineProps<{
     preview?: boolean;
@@ -10,6 +10,10 @@
   const filter = defineModel<FilterGroups>({
     required: true,
   });
+
+  function handleGroupUpdate(index: number, value: FilterGroup) {
+    filter.value[index] = value;
+  }
 </script>
 
 <template>
@@ -20,16 +24,12 @@
       'gap-6': !preview,
     }"
   >
-    <FilterGroup
+    <FilterGroupComponent
       v-for="(group, index) in filter"
       :key="group.key + group.name"
       :model-value="group"
       :preview
-      @update:model-value="
-        (v) => {
-          filter[index] = v as any;
-        }
-      "
+      @update:model-value="handleGroupUpdate(index, $event)"
     />
   </div>
 </template>
