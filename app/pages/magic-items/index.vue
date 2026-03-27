@@ -1,8 +1,6 @@
 <script setup lang="ts">
   import type { MagicItemLinkResponse } from '~magic-items/model';
 
-  import { computed } from 'vue';
-
   import { FilterControls, useFilter } from '~infrastructure/filter';
   import { useMagicItemRarityGroupOrder } from '~magic-items/composable';
   import { MagicItemLegend } from '~magic-items/legend';
@@ -35,7 +33,7 @@
   } = await useAsyncData(
     'magic-items',
     () =>
-      $fetch<Array<MagicItemLinkResponse>>('/api/v2/magic-items', {
+      $fetch<Array<MagicItemLinkResponse>>('/api/v2/magic-items/search', {
         method: 'GET',
         query: {
           search: search.value,
@@ -44,7 +42,7 @@
       }),
     {
       deep: false,
-      watch: [search],
+      watch: [search, selectedFiltersQuery],
     },
   );
 
@@ -54,8 +52,6 @@
 
     return isItemsLoading || isRarityPending.value;
   });
-
-  watch(selectedFiltersQuery, () => refresh());
 </script>
 
 <template>

@@ -55,9 +55,11 @@ export async function useFilter(key: string, url: string) {
             } else {
               const savedGroup = savedFilters.filter?.groups?.find(
                 (saved) =>
-                  saved.key === group.key
-                  || group.key.includes(saved.key)
-                  || saved.key.includes(group.key)
+                  (saved.key === group.key && saved.name === group.name)
+                  || (saved.key === group.key
+                    && !savedFilters.filter?.groups?.some(
+                      (other) => other !== saved && other.key === group.key,
+                    ))
                   || saved.name === group.name,
               );
 
@@ -68,7 +70,7 @@ export async function useFilter(key: string, url: string) {
                   || saved.name === item.name,
               );
 
-              item.selected = savedItem?.selected ?? true;
+              item.selected = savedItem ? savedItem.selected === true : true;
             }
           }
         }
@@ -125,7 +127,10 @@ export async function useFilter(key: string, url: string) {
         getSourcesList(filter.value.sources)
         === getSourcesList(data.value.sources)
       ) {
-        delete newQuery.source;
+        data.value.sources?.forEach((group) => {
+          // eslint-disable-next-line ts/no-dynamic-delete
+          delete newQuery[group.key];
+        });
       }
     }
 
@@ -134,8 +139,6 @@ export async function useFilter(key: string, url: string) {
     }
 
     const filterKeys = new Set<string>();
-
-    filterKeys.add('source');
 
     const collectKeys = (groups?: FilterGroup[]) => {
       groups?.forEach((group) => {

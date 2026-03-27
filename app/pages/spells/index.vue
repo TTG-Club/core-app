@@ -29,7 +29,7 @@
   } = await useAsyncData(
     'spells',
     () =>
-      $fetch<Array<SpellLinkResponse>>('/api/v2/spells', {
+      $fetch<Array<SpellLinkResponse>>('/api/v2/spells/search', {
         method: 'GET',
         query: {
           search: search.value,
@@ -38,7 +38,7 @@
       }),
     {
       deep: false,
-      watch: [search],
+      watch: [search, selectedFiltersQuery],
     },
   );
 
@@ -49,8 +49,6 @@
 
     return !level ? 'Заговоры' : `Уровень ${level}`;
   }
-
-  watch(selectedFiltersQuery, () => refresh());
 </script>
 
 <template>

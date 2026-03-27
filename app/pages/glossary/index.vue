@@ -28,7 +28,7 @@
   } = await useAsyncData(
     'glossary',
     () =>
-      $fetch<Array<GlossaryLinkResponse>>('/api/v2/glossary', {
+      $fetch<Array<GlossaryLinkResponse>>('/api/v2/glossary/search', {
         method: 'GET',
         query: {
           search: search.value,
@@ -37,11 +37,9 @@
       }),
     {
       deep: false,
-      watch: [search],
+      watch: [search, selectedFiltersQuery],
     },
   );
-
-  watch(selectedFiltersQuery, () => refresh());
 </script>
 
 <template>

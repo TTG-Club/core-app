@@ -17,12 +17,8 @@ export function buildSearchQuery(
   }
 
   const query: LocationQuery = {};
-  const selectedSources: string[] = [];
 
-  const processGroups = (
-    groups: FilterGroup[] | undefined,
-    isSource: boolean,
-  ) => {
+  const processGroups = (groups: FilterGroup[] | undefined) => {
     if (!groups) {
       return;
     }
@@ -37,18 +33,18 @@ export function buildSearchQuery(
           .map((item) => String(item.id));
 
         if (selectedIds.length > 0) {
-          if (isSource) {
-            selectedSources.push(...selectedIds);
-          } else {
-            query[group.key] = selectedIds.join(',');
+          const existing = query[group.key];
 
-            if (group.mode) {
-              query[`${group.key}_mode`] = '1';
-            }
+          query[group.key] = existing
+            ? `${existing},${selectedIds.join(',')}`
+            : selectedIds.join(',');
 
-            if (group.union) {
-              query[`${group.key}_union`] = '1';
-            }
+          if (group.mode) {
+            query[`${group.key}_mode`] = '1';
+          }
+
+          if (group.union) {
+            query[`${group.key}_union`] = '1';
           }
         }
       } else if (groupType === 'singleton') {
@@ -63,12 +59,8 @@ export function buildSearchQuery(
     }
   };
 
-  processGroups(filterState.filters, false);
-  processGroups(filterState.sources, true);
-
-  if (selectedSources.length > 0) {
-    query.source = selectedSources.join(',');
-  }
+  processGroups(filterState.filters);
+  processGroups(filterState.sources);
 
   return query;
 }
@@ -95,7 +87,7 @@ export function applyQueryToFilters(
       const groupType = group.type || 'filter';
 
       if (groupType === 'filter') {
-        const queryVal = isSource ? query.source : query[group.key];
+        const queryVal = query[group.key];
 
         if (queryVal && typeof queryVal === 'string') {
           const selectedSet = new Set(queryVal.split(','));

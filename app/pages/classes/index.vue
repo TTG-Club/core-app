@@ -27,7 +27,7 @@
   } = await useAsyncData(
     'classes',
     () =>
-      $fetch<Array<ClassLinkResponse>>('/api/v2/classes', {
+      $fetch<Array<ClassLinkResponse>>('/api/v2/classes/search', {
         method: 'GET',
         query: {
           search: search.value,
@@ -36,11 +36,9 @@
       }),
     {
       deep: false,
-      watch: [search],
+      watch: [search, selectedFiltersQuery],
     },
   );
-
-  watch(selectedFiltersQuery, () => refresh());
 </script>
 
 <template>

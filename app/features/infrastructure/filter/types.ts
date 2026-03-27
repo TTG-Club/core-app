@@ -10,7 +10,6 @@ export interface FilterGroup {
   union?: boolean; // true = OR
 
   values?: FilterItems;
-  filters?: FilterItems;
 }
 
 export type FilterGroups = Array<FilterGroup>;

@@ -27,7 +27,7 @@
   } = await useAsyncData(
     'backgrounds',
     () =>
-      $fetch<Array<BackgroundLinkResponse>>('/api/v2/backgrounds', {
+      $fetch<Array<BackgroundLinkResponse>>('/api/v2/backgrounds/search', {
         method: 'GET',
         query: {
           search: search.value,
@@ -36,11 +36,9 @@
       }),
     {
       deep: false,
-      watch: [search],
+      watch: [search, selectedFiltersQuery],
     },
   );
-
-  watch(selectedFiltersQuery, () => refresh());
 </script>
 
 <template>
