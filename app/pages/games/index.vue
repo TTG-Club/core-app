@@ -19,8 +19,8 @@
   });
 
   const search = ref<string>('');
-  const filter = defineModel<Filter>('filter');
   const debouncedSearch = refDebounced(search, 400);
+  const filter = defineModel<Filter>('filter');
   const route = useRoute();
   const { isApple } = useDevice();
   const { share } = useCopyAndShare();
@@ -31,6 +31,7 @@
   }>();
 
   const filterOpened = ref(false);
+  const sentinel = ref<HTMLElement | null>(null);
 
   const urlForCopy = computed(() => {
     return getOrigin() + route.fullPath;
@@ -70,18 +71,66 @@
     filterOpened.value = false;
   }
 
-  const page = ref<number>(0);
   const size = ref<number>(12);
-
-  const games = ref<PolymorpherGameCardType[]>([]);
-  const totalElements = ref<number>(0);
   const status = ref<'pending' | 'success' | 'error'>('pending');
   const error = ref<NuxtError | null>(null);
   const isLoadingMore = ref(false);
 
-  const sentinel = ref<HTMLElement | null>(null);
+  const cacheKey = computed(() => {
+    return `polymorpher-games:${debouncedSearch.value.trim() || 'all'}`;
+  });
 
-  const hasMore = computed(() => games.value.length < totalElements.value);
+  const gamesCache = useState<Record<string, PolymorpherGameCardType[]>>(
+    'polymorpher-games-cache',
+    () => ({}),
+  );
+
+  const pagesCache = useState<Record<string, number>>(
+    'polymorpher-games-pages-cache',
+    () => ({}),
+  );
+
+  const totalsCache = useState<Record<string, number>>(
+    'polymorpher-games-totals-cache',
+    () => ({}),
+  );
+
+  const games = computed<PolymorpherGameCardType[]>(() => {
+    return gamesCache.value[cacheKey.value] ?? [];
+  });
+
+  const totalElements = computed<number>(() => {
+    return totalsCache.value[cacheKey.value] ?? 0;
+  });
+
+  const currentPage = computed<number>(() => {
+    return pagesCache.value[cacheKey.value] ?? 0;
+  });
+
+  const hasMore = computed(() => {
+    return games.value.length < totalElements.value;
+  });
+
+  function setCache(
+    items: PolymorpherGameCardType[],
+    nextPage: number,
+    total: number,
+  ): void {
+    gamesCache.value = {
+      ...gamesCache.value,
+      [cacheKey.value]: items,
+    };
+
+    pagesCache.value = {
+      ...pagesCache.value,
+      [cacheKey.value]: nextPage,
+    };
+
+    totalsCache.value = {
+      ...totalsCache.value,
+      [cacheKey.value]: total,
+    };
+  }
 
   async function loadGames(reset: boolean = false): Promise<void> {
     if (isLoadingMore.value) {
@@ -89,48 +138,69 @@
     }
 
     if (reset) {
+      const cachedGames = gamesCache.value[cacheKey.value];
+      const cachedTotal = totalsCache.value[cacheKey.value];
+      const cachedPage = pagesCache.value[cacheKey.value];
+
+      if (
+        cachedGames
+        && cachedTotal !== undefined
+        && cachedPage !== undefined
+      ) {
+        status.value = 'success';
+        error.value = null;
+
+        return;
+      }
+
       status.value = 'pending';
       error.value = null;
-      page.value = 0;
     }
 
     isLoadingMore.value = true;
 
     try {
+      const pageToLoad = reset ? 0 : currentPage.value;
+
       const response = await $fetch<PolymorpherGamesResponse>(
         '/api/polymorpher/games',
         {
           method: 'GET',
           query: {
-            search: debouncedSearch.value || undefined,
-            page: page.value,
+            search: debouncedSearch.value.trim() || undefined,
+            page: pageToLoad,
             size: size.value,
           },
         },
       );
 
       if (reset) {
-        games.value = response.content;
+        setCache(response.content, 1, response.totalElements ?? 0);
       } else {
         const existingIds = new Set(games.value.map((game) => game.id));
 
-        games.value = [
+        const mergedGames = [
           ...games.value,
           ...response.content.filter((game) => !existingIds.has(game.id)),
         ];
+
+        setCache(mergedGames, pageToLoad + 1, response.totalElements ?? 0);
       }
 
-      totalElements.value = response.totalElements ?? 0;
-      page.value += 1;
       status.value = 'success';
+      error.value = null;
     } catch (cause) {
-      error.value = createError({
-        statusCode: 500,
-        statusMessage: 'Ошибка загрузки игр',
-        data: cause,
-      });
+      if (reset) {
+        error.value = createError({
+          statusCode: 500,
+          statusMessage: 'Не удалось загрузить игры',
+          data: cause,
+        });
 
-      status.value = 'error';
+        status.value = 'error';
+      } else {
+        console.error('Ошибка догрузки:', cause);
+      }
     } finally {
       isLoadingMore.value = false;
     }
@@ -156,8 +226,23 @@
     },
   );
 
-  function refresh(): Promise<void> {
-    return loadGames(true);
+  async function refresh(): Promise<void> {
+    gamesCache.value = {
+      ...gamesCache.value,
+      [cacheKey.value]: [],
+    };
+
+    pagesCache.value = {
+      ...pagesCache.value,
+      [cacheKey.value]: 0,
+    };
+
+    totalsCache.value = {
+      ...totalsCache.value,
+      [cacheKey.value]: 0,
+    };
+
+    await loadGames(true);
   }
 </script>
 
@@ -251,6 +336,13 @@
               ref="sentinel"
               class="col-span-full h-2"
             />
+
+            <div
+              v-else
+              class="col-span-full py-2 text-center text-sm text-muted"
+            >
+              Все игры загружены
+            </div>
           </PageGrid>
 
           <PageResult
