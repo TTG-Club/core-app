@@ -13,10 +13,9 @@
     description: 'Источники из D&D 5 (редакция 2024-2025 года).',
   });
 
-  const search = ref<string>();
-
   const {
     filter,
+    search,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
   } = await useFilter('sources-filters', '/api/v2/source/filters');

@@ -6,11 +6,17 @@ import { getFilterKey } from '../utils';
 import { applyQueryToFilters, buildSearchQuery } from '../utils/filterParser';
 
 export async function useFilter(key: string, url: string) {
+  const route = useRoute();
+  const router = useRouter();
+
   const filterKey = getFilterKey(key);
   const filter = useState<Filter | undefined>(filterKey, () => undefined);
 
-  const route = useRoute();
-  const router = useRouter();
+  const search = useState<string | undefined>(`${filterKey}_search`, () => {
+    const q = route.query.search as string;
+
+    return q || undefined;
+  });
 
   const { isLoggedIn, fetch: fetchUser } = useUser();
   const requestFetch = useRequestFetch();
@@ -118,6 +124,10 @@ export async function useFilter(key: string, url: string) {
       }
     }
 
+    if (search.value) {
+      newQuery.search = search.value;
+    }
+
     const filterKeys = new Set<string>();
 
     filterKeys.add('source');
@@ -144,7 +154,7 @@ export async function useFilter(key: string, url: string) {
     const cleanQuery = { ...route.query };
 
     Object.keys(cleanQuery).forEach((k) => {
-      if (filterKeys.has(k)) {
+      if (filterKeys.has(k) || k === 'search') {
         // eslint-disable-next-line ts/no-dynamic-delete
         delete cleanQuery[k];
       }
@@ -185,6 +195,10 @@ export async function useFilter(key: string, url: string) {
     },
     { deep: true },
   );
+
+  watch(search, () => {
+    syncUrlWithFilter();
+  });
 
   watch(
     () => route.query,
@@ -231,6 +245,7 @@ export async function useFilter(key: string, url: string) {
     isShowedPreview,
 
     filter,
+    search,
     selectedFiltersQuery,
 
     refresh,

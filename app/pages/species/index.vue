@@ -12,10 +12,9 @@
       'Виды и происхождения персонажей из D&D 5 (редакция 2024 года).',
   });
 
-  const search = ref<string>();
-
   const {
     filter,
+    search,
     selectedFiltersQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
