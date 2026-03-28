@@ -26,7 +26,7 @@
     },
     {
       value: ProfileTabs.SETTINGS,
-      label: 'Настройки / фильтры',
+      label: 'Настройки / Источники',
       icon: 'tabler:settings',
     },
     {
