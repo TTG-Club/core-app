@@ -15,11 +15,15 @@
     required: true,
   });
 
-  const isVisible = computed(
-    () =>
-      !preview
-      || getGroupItems(group.value).some((filter) => filter.selected !== null),
-  );
+  const isVisible = computed(() => {
+    if (!preview) {
+      return true;
+    }
+
+    return getGroupItems(group.value).some(
+      (filter) => filter.selected !== null,
+    );
+  });
 </script>
 
 <template>
@@ -37,11 +41,11 @@
         <span>{{ group.name }}</span>
 
         <div
-          v-if="group.type === 'filter' && !preview"
+          v-if="!preview"
           class="flex gap-4"
         >
           <UCheckbox
-            v-if="group.supportsMode"
+            v-if="group.supports?.mode"
             v-model="group.mode"
             label="Исключать совпадения"
             size="xs"
@@ -49,7 +53,7 @@
           />
 
           <UCheckbox
-            v-if="group.supportsUnion"
+            v-if="group.supports?.union"
             v-model="group.union"
             label="Любое из (OR)"
             size="xs"
@@ -69,7 +73,6 @@
           v-for="item in getGroupItems(group)"
           :key="`${item.id}-${item.name}`"
           v-model="item.selected"
-          :type="group.type"
           :preview
         >
           {{ item.name }}

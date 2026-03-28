@@ -177,9 +177,9 @@ export async function useFilter(key: string, url: string) {
     }
 
     return (
-      filter.value.filters?.some((group) =>
-        getGroupItems(group).some((item) => item.selected !== null),
-      ) || false
+      filter.value.filters?.some((group) => {
+        return getGroupItems(group).some((item) => item.selected !== null);
+      }) || false
     );
   });
 

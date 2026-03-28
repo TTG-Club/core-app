@@ -58,14 +58,6 @@ export function buildSearchQuery(
           query[`${group.key}_union`] = '1';
         }
       }
-    } else if (group.type === 'singleton') {
-      for (const item of items) {
-        if (item.selected === true) {
-          query[String(item.id)] = '1';
-        } else if (item.selected === false) {
-          query[String(item.id)] = '0';
-        }
-      }
     }
   }
 
@@ -117,25 +109,6 @@ export function applyQueryToFilters(
         }
 
         return group;
-      }
-
-      if (group.type === 'singleton') {
-        return {
-          ...group,
-          values: items.map((item) => {
-            const itemVal = query[String(item.id)];
-
-            if (itemVal === '1') {
-              return { ...item, selected: true as const };
-            }
-
-            if (itemVal === '0') {
-              return { ...item, selected: false as const };
-            }
-
-            return { ...item, selected: null };
-          }),
-        };
       }
 
       return group;

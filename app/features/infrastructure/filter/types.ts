@@ -1,9 +1,11 @@
 export interface FilterGroup {
   key: string;
   name: string;
-  type: 'filter' | 'singleton';
-  supportsMode?: boolean;
-  supportsUnion?: boolean;
+  type: 'filter';
+  supports?: {
+    mode: boolean;
+    union: boolean;
+  };
 
   // UI mutable states
   mode?: boolean; // true = exclude

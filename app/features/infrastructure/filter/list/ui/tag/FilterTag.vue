@@ -1,25 +1,12 @@
 <script setup lang="ts">
-  const { preview = false, type = 'filter' } = defineProps<{
+  const { preview = false } = defineProps<{
     preview?: boolean;
-    type?: 'filter' | 'singleton';
   }>();
 
   const model = defineModel<boolean | null>({ required: true });
 
   const color = computed(() => {
-    if (type === 'filter') {
-      return model.value ? 'primary' : 'neutral';
-    }
-
-    if (model.value === true) {
-      return 'success';
-    }
-
-    if (model.value === false) {
-      return 'error';
-    }
-
-    return 'neutral';
+    return model.value ? 'primary' : 'neutral';
   });
 
   function getNextValue() {
@@ -27,20 +14,7 @@
       return null;
     }
 
-    if (type === 'filter') {
-      return model.value ? null : true;
-    }
-
-    switch (model.value) {
-      case null:
-        return true;
-      case true:
-        return false;
-      case false:
-        return null;
-      default:
-        return null;
-    }
+    return model.value ? null : true;
   }
 
   function onClick() {
