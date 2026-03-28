@@ -38,25 +38,23 @@ export function buildSearchQuery(
   for (const group of allGroups) {
     const items = getGroupItems(group);
 
-    if (group.type === 'filter') {
-      const selectedIds = items
-        .filter((item) => item.selected)
-        .map((item) => String(item.id));
+    const selectedIds = items
+      .filter((item) => item.selected)
+      .map((item) => String(item.id));
 
-      if (selectedIds.length > 0) {
-        const existing = query[group.key];
+    if (selectedIds.length > 0) {
+      const existing = query[group.key];
 
-        query[group.key] = existing
-          ? `${existing},${selectedIds.join(',')}`
-          : selectedIds.join(',');
+      query[group.key] = existing
+        ? `${existing},${selectedIds.join(',')}`
+        : selectedIds.join(',');
 
-        if (group.mode) {
-          query[`${group.key}_mode`] = '1';
-        }
+      if (group.mode) {
+        query[`${group.key}_mode`] = '1';
+      }
 
-        if (group.union) {
-          query[`${group.key}_union`] = '1';
-        }
+      if (group.union) {
+        query[`${group.key}_union`] = '1';
       }
     }
   }
@@ -83,32 +81,28 @@ export function applyQueryToFilters(
     return groups.map((group) => {
       const items = getGroupItems(group);
 
-      if (group.type === 'filter') {
-        const queryVal = query[group.key];
+      const queryVal = query[group.key];
 
-        if (queryVal && typeof queryVal === 'string') {
-          const selectedSet = new Set(queryVal.split(','));
+      if (queryVal && typeof queryVal === 'string') {
+        const selectedSet = new Set(queryVal.split(','));
 
-          return {
-            ...group,
-            values: applySelectionToItems(items, selectedSet),
-            ...(!isSource && {
-              mode: query[`${group.key}_mode`] === '1',
-              union: query[`${group.key}_union`] === '1',
-            }),
-          };
-        }
+        return {
+          ...group,
+          values: applySelectionToItems(items, selectedSet),
+          ...(!isSource && {
+            mode: query[`${group.key}_mode`] === '1',
+            union: query[`${group.key}_union`] === '1',
+          }),
+        };
+      }
 
-        if (!isSource) {
-          return {
-            ...group,
-            mode: false,
-            union: false,
-            values: items.map((item) => ({ ...item, selected: null })),
-          };
-        }
-
-        return group;
+      if (!isSource) {
+        return {
+          ...group,
+          mode: false,
+          union: false,
+          values: items.map((item) => ({ ...item, selected: null })),
+        };
       }
 
       return group;

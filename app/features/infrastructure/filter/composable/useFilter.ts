@@ -51,9 +51,9 @@ function resolveItemSelection(
   item: { id: string | number; value: string; name: string },
   savedGroup: SavedFilterGroup | undefined,
   isLoggedIn: boolean,
-): boolean {
+): boolean | null {
   if (!isLoggedIn || !savedGroup) {
-    return true;
+    return null;
   }
 
   const savedItem = savedGroup.filters.find(
@@ -61,7 +61,7 @@ function resolveItemSelection(
       entry.value === item.value || entry.value === String(item.id),
   );
 
-  return savedItem ? savedItem.selected === true : true;
+  return savedItem && savedItem.selected === true ? true : null;
 }
 
 /**
@@ -241,14 +241,15 @@ export async function useFilter(key: string, url: string) {
     { deep: true },
   );
 
-  return {
-    isPending,
-    isShowedPreview,
+  provide('filterDefaults', data);
 
+  return {
     filter,
     search,
     selectedFiltersQuery,
-
+    isPending,
+    isShowedPreview,
+    data,
     refresh,
   };
 }

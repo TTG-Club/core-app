@@ -1,9 +1,13 @@
 <script setup lang="ts">
   import type { Filter, FilterGroups } from '../types';
 
+  import { cloneDeep } from 'es-toolkit';
+
   import { FilterDrawer } from '../drawer';
   import { FilterPreview } from '../preview';
   import { getGroupItems } from '../utils';
+
+  const defaultFilter = inject<Ref<Filter | undefined>>('filterDefaults');
 
   const { isPending = false, showPreview = false } = defineProps<{
     isPending?: boolean;
@@ -111,16 +115,23 @@
       return;
     }
 
-    filter.value = {
-      ...filter.value,
-      sources: filter.value.sources.map((group) => ({
-        ...group,
-        values: getGroupItems(group).map((item) => ({
-          ...item,
-          selected: null,
+    if (defaultFilter?.value?.sources) {
+      filter.value = {
+        ...filter.value,
+        sources: cloneDeep(defaultFilter.value.sources),
+      };
+    } else {
+      filter.value = {
+        ...filter.value,
+        sources: filter.value.sources.map((group) => ({
+          ...group,
+          values: getGroupItems(group).map((item) => ({
+            ...item,
+            selected: null,
+          })),
         })),
-      })),
-    };
+      };
+    }
 
     sourcesOpened.value = false;
   }
