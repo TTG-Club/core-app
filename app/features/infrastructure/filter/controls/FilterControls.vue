@@ -7,11 +7,14 @@
   import { FilterPreview } from '../preview';
   import { getGroupItems } from '../utils';
 
-  const defaultFilter = inject<Ref<Filter | undefined>>('filterDefaults');
-
-  const { isPending = false, showPreview = false } = defineProps<{
+  const {
+    isPending = false,
+    showPreview = false,
+    defaults = undefined,
+  } = defineProps<{
     isPending?: boolean;
     showPreview?: boolean;
+    defaults?: Filter;
   }>();
 
   const search = defineModel<string>('search');
@@ -42,6 +45,28 @@
   const isSourcesEdited = computed(() => {
     if (!filter.value?.sources) {
       return false;
+    }
+
+    if (defaults?.sources) {
+      const currentKeys = filter.value.sources
+        .flatMap((group) =>
+          getGroupItems(group)
+            .filter((item) => item.selected)
+            .map((item) => String(item.id)),
+        )
+        .sort()
+        .join(',');
+
+      const defaultKeys = defaults.sources
+        .flatMap((group) =>
+          getGroupItems(group)
+            .filter((item) => item.selected)
+            .map((item) => String(item.id)),
+        )
+        .sort()
+        .join(',');
+
+      return currentKeys !== defaultKeys;
     }
 
     return filter.value.sources.some((group) =>
@@ -115,10 +140,10 @@
       return;
     }
 
-    if (defaultFilter?.value?.sources) {
+    if (defaults?.sources) {
       filter.value = {
         ...filter.value,
-        sources: cloneDeep(defaultFilter.value.sources),
+        sources: cloneDeep(defaults.sources),
       };
     } else {
       filter.value = {

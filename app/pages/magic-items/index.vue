@@ -20,6 +20,7 @@
     selectedFiltersQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
+    data: filterDefaults,
   } = await useFilter('magic-items', '/api/v2/magic-items/filters');
 
   const { order: rarityOrder, pending: isRarityPending } =
@@ -63,6 +64,7 @@
       <FilterControls
         v-model:search="search"
         v-model:filter="filter"
+        :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       >

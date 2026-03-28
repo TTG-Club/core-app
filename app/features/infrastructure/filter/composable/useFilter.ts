@@ -27,16 +27,23 @@ function findSavedGroup(
   groupKey: string,
   groupName: string,
 ): SavedFilterGroup | undefined {
-  const byKey = savedGroups.filter((entry) => entry.key === groupKey);
+  // 1. Попытка точного совпадения по имени (названия уникальны: "Базовые", "Сеттинги")
+  const exactByName = savedGroups.find(
+    (entry) => entry.name?.trim() === groupName?.trim(),
+  );
 
-  // Точное совпадение key + name
-  const exact = byKey.find((entry) => entry.name === groupName);
-
-  if (exact) {
-    return exact;
+  if (exactByName) {
+    return exactByName;
   }
 
-  // Единственная группа с таким key — безопасный fallback
+  // 2. Если по имени не нашли, ищем по ключу (безопасный fallback)
+  const sourceAliases = ['source', 'sources', 'book', 'books'];
+  const isSourceKey = sourceAliases.includes(groupKey);
+
+  const byKey = savedGroups.filter((entry) =>
+    isSourceKey ? sourceAliases.includes(entry.key) : entry.key === groupKey,
+  );
+
   if (byKey.length === 1) {
     return byKey[0];
   }
@@ -56,10 +63,14 @@ function resolveItemSelection(
     return null;
   }
 
-  const savedItem = savedGroup.filters.find(
-    (entry: SavedFilterItem) =>
-      entry.value === item.value || entry.value === String(item.id),
-  );
+  const savedItem = savedGroup.filters.find((entry: SavedFilterItem) => {
+    const entryVal = String(entry.value).toLowerCase();
+
+    return (
+      entryVal === String(item.value).toLowerCase()
+      || entryVal === String(item.id).toLowerCase()
+    );
+  });
 
   return savedItem && savedItem.selected === true ? true : null;
 }
@@ -240,8 +251,6 @@ export async function useFilter(key: string, url: string) {
     },
     { deep: true },
   );
-
-  provide('filterDefaults', data);
 
   return {
     filter,

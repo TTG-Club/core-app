@@ -19,6 +19,7 @@
     selectedFiltersQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
+    data: filterDefaults,
   } = await useFilter('spells', '/api/v2/spells/filters');
 
   const {
@@ -60,6 +61,7 @@
       <FilterControls
         v-model:search="search"
         v-model:filter="filter"
+        :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       >

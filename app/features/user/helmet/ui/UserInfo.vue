@@ -28,24 +28,4 @@
       :ui="{ fallback: 'uppercase' }"
     />
   </div>
-
-  <div class="-mt-2 px-4 pb-3">
-    <USeparator class="mb-2">
-      <span class="text-sm font-medium">Статистика</span>
-    </USeparator>
-
-    <div class="flex flex-col gap-1.5">
-      <div class="flex items-center justify-between text-sm">
-        <span>Скоро будет</span>
-
-        <span class="text-sm font-semibold">∞</span>
-      </div>
-
-      <div class="flex items-center justify-between text-sm">
-        <span>Скоро будет</span>
-
-        <span class="text-sm font-semibold">∞</span>
-      </div>
-    </div>
-  </div>
 </template>

@@ -18,6 +18,7 @@
     selectedFiltersQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
+    data: filterDefaults,
   } = await useFilter('species', '/api/v2/species/filters');
 
   const { data, status, error, refresh } = await useAsyncData(
@@ -46,6 +47,7 @@
       <FilterControls
         v-model:search="search"
         v-model:filter="filter"
+        :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       >

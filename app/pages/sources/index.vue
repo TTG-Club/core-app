@@ -18,6 +18,7 @@
     search,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
+    data: filterDefaults,
   } = await useFilter('sources-filters', '/api/v2/source/filters');
 
   const searchBody = computed(() => {
@@ -61,6 +62,7 @@
       <FilterControls
         v-model:search="search"
         v-model:filter="filter"
+        :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       />

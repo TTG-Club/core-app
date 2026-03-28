@@ -17,6 +17,7 @@
     selectedFiltersQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
+    data: filterDefaults,
   } = await useFilter('backgrounds', '/api/v2/backgrounds/filters');
 
   const {
@@ -50,6 +51,7 @@
       <FilterControls
         v-model:search="search"
         v-model:filter="filter"
+        :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       >
