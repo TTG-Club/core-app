@@ -74,6 +74,7 @@
           :key="`${item.id}-${item.name}`"
           v-model="item.selected"
           :preview
+          :exclude="group.mode"
         >
           {{ item.name }}
         </FilterTag>

@@ -188,7 +188,7 @@
                 <!-- Декоративный градиент при выборе -->
                 <div
                   v-if="filterItem.selected"
-                  class="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-50"
+                  class="pointer-events-none absolute inset-0 bg-linear-to-br from-primary/10 via-transparent to-transparent opacity-50"
                 />
 
                 <UIcon
