@@ -18,7 +18,7 @@
     search,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
-    data: filterDefaults,
+    defaults: filterDefaults,
   } = await useFilter('sources-filters', '/api/v2/source/filters');
 
   const searchBody = computed(() => {

@@ -14,10 +14,10 @@
   const {
     filter,
     search,
-    selectedFiltersQuery,
+    filterQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
-    data: filterDefaults,
+    defaults: filterDefaults,
   } = await useFilter('classes', '/api/v2/classes/filters');
 
   const {
@@ -32,12 +32,12 @@
         method: 'GET',
         query: {
           search: search.value,
-          ...selectedFiltersQuery.value,
+          ...filterQuery.value,
         },
       }),
     {
       deep: false,
-      watch: [search, selectedFiltersQuery],
+      watch: [search, filterQuery],
     },
   );
 </script>

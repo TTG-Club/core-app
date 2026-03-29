@@ -1,130 +1,16 @@
-import type { LocationQuery } from 'vue-router';
-
-import type {
-  Filter,
-  SavedFilterGroup,
-  SavedFilterItem,
-  SavedFilterResponse,
-} from '../types';
+import type { Filter, SavedFilterResponse } from '../types';
 
 import { cloneDeep, isEqual } from 'es-toolkit';
 
 import {
   applyQueryToFilters,
+  buildFullQuery,
   buildSearchQuery,
-  collectGroupKeys,
+  findSavedGroup,
   getFilterKey,
   getGroupItems,
-  serializeSelectedIds,
+  resolveItemSelection,
 } from '../utils';
-
-/**
- * Находит соответствующую сохранённую группу по ключу и имени.
- * Приоритет: точное совпадение (key + name) → единственная группа с таким key.
- */
-function findSavedGroup(
-  savedGroups: SavedFilterGroup[],
-  groupKey: string,
-  groupName: string,
-): SavedFilterGroup | undefined {
-  // 1. Попытка точного совпадения по имени (названия уникальны: "Базовые", "Сеттинги")
-  const exactByName = savedGroups.find(
-    (entry) => entry.name?.trim() === groupName?.trim(),
-  );
-
-  if (exactByName) {
-    return exactByName;
-  }
-
-  // 2. Если по имени не нашли, ищем по ключу (безопасный fallback)
-  const sourceAliases = ['source', 'sources', 'book', 'books'];
-  const isSourceKey = sourceAliases.includes(groupKey);
-
-  const byKey = savedGroups.filter((entry) =>
-    isSourceKey ? sourceAliases.includes(entry.key) : entry.key === groupKey,
-  );
-
-  if (byKey.length === 1) {
-    return byKey[0];
-  }
-
-  return undefined;
-}
-
-/**
- * Определяет, выбран ли элемент в сохранённом фильтре
- */
-function resolveItemSelection(
-  item: { id: string | number; value: string; name: string },
-  savedGroup: SavedFilterGroup | undefined,
-  isLoggedIn: boolean,
-): boolean | null {
-  if (!isLoggedIn || !savedGroup) {
-    return null;
-  }
-
-  const savedItem = savedGroup.filters.find((entry: SavedFilterItem) => {
-    const entryVal = String(entry.value).toLowerCase();
-
-    return (
-      entryVal === String(item.value).toLowerCase()
-      || entryVal === String(item.id).toLowerCase()
-    );
-  });
-
-  return savedItem && savedItem.selected === true ? true : null;
-}
-
-/**
- * Строит полный query-объект для URL, объединяя фильтры, search
- * и текущие query-параметры, не управляемые фильтром
- */
-function buildFullQuery(
-  filterValue: Filter | undefined,
-  dataValue: Filter | undefined,
-  selectedQuery: LocationQuery,
-  searchValue: string | undefined,
-  currentRouteQuery: LocationQuery,
-): LocationQuery {
-  let activeQuery: LocationQuery = { ...selectedQuery };
-
-  if (searchValue) {
-    activeQuery.search = searchValue;
-  }
-
-  // Если sources не изменены — убираем их ключи из URL
-  if (filterValue && dataValue) {
-    const sourcesMatch =
-      serializeSelectedIds(filterValue.sources)
-      === serializeSelectedIds(dataValue.sources);
-
-    if (sourcesMatch) {
-      const defaultSourceKeys = collectGroupKeys(dataValue.sources ?? []);
-
-      activeQuery = Object.fromEntries(
-        Object.entries(activeQuery).filter(
-          ([queryKey]) => !defaultSourceKeys.has(queryKey),
-        ),
-      );
-    }
-  }
-
-  // Сохраняем query-параметры, не управляемые фильтром
-  const controlledKeys = collectGroupKeys([
-    ...(dataValue?.filters ?? []),
-    ...(dataValue?.sources ?? []),
-  ]);
-
-  controlledKeys.add('search');
-
-  const preservedQuery = Object.fromEntries(
-    Object.entries(currentRouteQuery).filter(
-      ([queryKey]) => !controlledKeys.has(queryKey),
-    ),
-  );
-
-  return { ...preservedQuery, ...activeQuery };
-}
 
 export async function useFilter(key: string, url: string) {
   const route = useRoute();
@@ -144,7 +30,11 @@ export async function useFilter(key: string, url: string) {
   const { isLoggedIn, fetch: fetchUser } = useUser();
   const requestFetch = useRequestFetch();
 
-  const { data, status, refresh } = await useAsyncData(
+  const {
+    data: defaults,
+    status,
+    refresh,
+  } = await useAsyncData(
     filterKey,
     async () => {
       await fetchUser();
@@ -194,13 +84,13 @@ export async function useFilter(key: string, url: string) {
     );
   });
 
-  const selectedFiltersQuery = computed(() => buildSearchQuery(filter.value));
+  const filterQuery = computed(() => buildSearchQuery(filter.value));
 
   function syncUrlWithFilter() {
     const finalQuery = buildFullQuery(
       filter.value,
-      data.value ?? undefined,
-      selectedFiltersQuery.value,
+      defaults.value ?? undefined,
+      filterQuery.value,
       search.value,
       route.query,
     );
@@ -211,7 +101,7 @@ export async function useFilter(key: string, url: string) {
   }
 
   watch(
-    data,
+    defaults,
     (value) => {
       if (!value) {
         return;
@@ -219,14 +109,13 @@ export async function useFilter(key: string, url: string) {
 
       const cloned = cloneDeep(value);
 
-      // Устанавливаем filter.value сразу с применёнными URL-параметрами
       filter.value = applyQueryToFilters(cloned, route.query);
     },
     { immediate: true },
   );
 
   watch(
-    [selectedFiltersQuery, search],
+    [filterQuery, search],
     () => {
       syncUrlWithFilter();
     },
@@ -236,12 +125,12 @@ export async function useFilter(key: string, url: string) {
   watch(
     () => route.query,
     () => {
-      if (!data.value) {
+      if (!defaults.value) {
         return;
       }
 
-      const pristine = cloneDeep(data.value);
-      const prevFiltersQuery = JSON.stringify(selectedFiltersQuery.value);
+      const pristine = cloneDeep(defaults.value);
+      const prevFiltersQuery = JSON.stringify(filterQuery.value);
       const testFilter = applyQueryToFilters(pristine, route.query);
       const nextFiltersQuery = JSON.stringify(buildSearchQuery(testFilter));
 
@@ -255,10 +144,10 @@ export async function useFilter(key: string, url: string) {
   return {
     filter,
     search,
-    selectedFiltersQuery,
+    filterQuery,
     isPending,
     isShowedPreview,
-    data,
+    defaults,
     refresh,
   };
 }

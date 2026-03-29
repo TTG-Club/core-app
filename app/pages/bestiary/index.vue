@@ -16,10 +16,10 @@
   const {
     filter,
     search,
-    selectedFiltersQuery,
+    filterQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
-    data: filterDefaults,
+    defaults: filterDefaults,
   } = await useFilter('bestiary', '/api/v2/bestiary/filters');
 
   const {
@@ -39,10 +39,10 @@
         method: 'GET',
         query: {
           search: search.value,
-          ...selectedFiltersQuery.value,
+          ...filterQuery.value,
         },
       }),
-    { deep: false, watch: [search, selectedFiltersQuery] },
+    { deep: false, watch: [search, filterQuery] },
   );
 
   const isLoading = computed(() => {

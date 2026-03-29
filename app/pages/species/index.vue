@@ -15,10 +15,10 @@
   const {
     filter,
     search,
-    selectedFiltersQuery,
+    filterQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
-    data: filterDefaults,
+    defaults: filterDefaults,
   } = await useFilter('species', '/api/v2/species/filters');
 
   const { data, status, error, refresh } = await useAsyncData(
@@ -28,12 +28,12 @@
         method: 'GET',
         query: {
           search: search.value,
-          ...selectedFiltersQuery.value,
+          ...filterQuery.value,
         },
       }),
     {
       deep: false,
-      watch: [search, selectedFiltersQuery],
+      watch: [search, filterQuery],
     },
   );
 </script>
