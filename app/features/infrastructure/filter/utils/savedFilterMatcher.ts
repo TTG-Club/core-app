@@ -1,22 +1,21 @@
 import type { SavedFilterGroup, SavedFilterItem } from '../types';
 
 /**
- * Находит соответствующую сохранённую группу по ключу и имени.
- * Приоритет: точное совпадение по имени → единственная группа с таким ключом.
+ * Находит соответствующую сохранённую группу по уникальному ключу.
+ *
+ * Приоритет:
+ * 1. Единственное совпадение по ключу — однозначный результат.
+ * 2. Множественные совпадения по ключу — disambiguация по имени (key + name).
+ * 3. Если disambiguация не дала результата — `undefined`.
+ *
+ * На имя как на единственный критерий ориентироваться нельзя,
+ * т.к. имена могут меняться или дублироваться.
  */
 export function findSavedGroup(
   savedGroups: SavedFilterGroup[],
   groupKey: string,
   groupName: string,
 ): SavedFilterGroup | undefined {
-  const exactByName = savedGroups.find(
-    (entry) => entry.name?.trim() === groupName?.trim(),
-  );
-
-  if (exactByName) {
-    return exactByName;
-  }
-
   const sourceAliases = ['source', 'sources', 'book', 'books'];
   const isSourceKey = sourceAliases.includes(groupKey);
 
@@ -26,6 +25,10 @@ export function findSavedGroup(
 
   if (byKey.length === 1) {
     return byKey[0];
+  }
+
+  if (byKey.length > 1) {
+    return byKey.find((entry) => entry.name?.trim() === groupName?.trim());
   }
 
   return undefined;
