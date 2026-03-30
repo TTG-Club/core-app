@@ -1,4 +1,4 @@
-import type { Filter, SavedFilterResponse } from '../types';
+import type { Filter } from '../types';
 
 import { cloneDeep, isEqual } from 'es-toolkit';
 
@@ -6,10 +6,8 @@ import {
   applyQueryToFilters,
   buildFullQuery,
   buildSearchQuery,
-  findSavedGroup,
   getFilterKey,
   getGroupItems,
-  resolveItemSelection,
 } from '../utils';
 
 export async function useFilter(key: string, url: string) {
@@ -27,7 +25,6 @@ export async function useFilter(key: string, url: string) {
     return typeof searchStr === 'string' && searchStr ? searchStr : undefined;
   });
 
-  const { isLoggedIn, fetch: fetchUser } = useUser();
   const requestFetch = useRequestFetch();
 
   const {
@@ -37,35 +34,9 @@ export async function useFilter(key: string, url: string) {
   } = await useAsyncData(
     filterKey,
     async () => {
-      await fetchUser();
+      const filterData = await requestFetch<Filter>(url);
 
-      const [filterData, savedFilters] = await Promise.all([
-        requestFetch<Filter>(url),
-        isLoggedIn.value
-          ? requestFetch<SavedFilterResponse>(
-              '/api/user/profile/saved-filter',
-            ).catch(() => null)
-          : Promise.resolve(null),
-      ]);
-
-      const result = cloneDeep(filterData);
-      const savedGroups = savedFilters?.filter?.groups ?? [];
-
-      if (result.sources) {
-        for (const group of result.sources) {
-          const savedGroup = findSavedGroup(savedGroups, group.key, group.name);
-
-          for (const item of getGroupItems(group)) {
-            item.selected = resolveItemSelection(
-              item,
-              savedGroup,
-              isLoggedIn.value,
-            );
-          }
-        }
-      }
-
-      return result;
+      return cloneDeep(filterData);
     },
     { deep: false },
   );

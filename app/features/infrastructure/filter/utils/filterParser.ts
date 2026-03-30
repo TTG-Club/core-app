@@ -30,24 +30,13 @@ export function buildSearchQuery(
 
   const query: LocationQuery = {};
 
-  const allGroups = [
-    ...(filterState.filters ?? []),
-    ...(filterState.sources ?? []),
-  ];
-
-  for (const group of allGroups) {
-    const items = getGroupItems(group);
-
-    const selectedIds = items
+  for (const group of filterState.filters ?? []) {
+    const selectedIds = getGroupItems(group)
       .filter((item) => item.selected)
       .map((item) => String(item.id));
 
     if (selectedIds.length > 0) {
-      const existing = query[group.key];
-
-      query[group.key] = existing
-        ? `${existing},${selectedIds.join(',')}`
-        : selectedIds.join(',');
+      query[group.key] = selectedIds.join(',');
 
       if (group.mode) {
         query[`${group.key}_mode`] = '1';
@@ -57,6 +46,16 @@ export function buildSearchQuery(
         query[`${group.key}_union`] = '1';
       }
     }
+  }
+
+  const sourceIds = (filterState.sources ?? []).flatMap((group) =>
+    getGroupItems(group)
+      .filter((item) => item.selected)
+      .map((item) => String(item.id)),
+  );
+
+  if (sourceIds.length > 0) {
+    query.source = sourceIds.join(',');
   }
 
   return query;
@@ -81,7 +80,7 @@ export function applyQueryToFilters(
     return groups.map((group) => {
       const items = getGroupItems(group);
 
-      const queryVal = query[group.key];
+      const queryVal = isSource ? query.source : query[group.key];
 
       if (queryVal && typeof queryVal === 'string') {
         const selectedSet = new Set(queryVal.split(','));

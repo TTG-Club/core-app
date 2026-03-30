@@ -1,3 +1,16 @@
+/**
+ * Допустимые значения поля `key` в source-группах ответа `/api/v2/{section}/filters`.
+ *
+ * Бэкенд возвращает уникальный ключ типа источника (enum `SourceType` в UPPER_SNAKE_CASE).
+ */
+export type SourceTypeKey =
+  | 'OFFICIAL'
+  | 'SETTING'
+  | 'MODULE'
+  | 'TEST'
+  | 'THIRD_PARTY'
+  | 'CUSTOM';
+
 export interface FilterGroup {
   key: string;
   name: string;
@@ -29,22 +42,4 @@ export type FilterItems = Array<FilterItem>;
 export interface Filter {
   filters: FilterGroups;
   sources?: FilterGroups;
-}
-
-export interface SavedFilterItem {
-  value: string;
-  name: string;
-  selected: boolean;
-}
-
-export interface SavedFilterGroup {
-  key: string;
-  name: string;
-  filters: SavedFilterItem[];
-}
-
-export interface SavedFilterResponse {
-  filter?: {
-    groups?: SavedFilterGroup[];
-  };
 }

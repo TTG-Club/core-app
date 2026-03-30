@@ -30,6 +30,8 @@ export function buildFullQuery(
     if (sourcesMatch) {
       const defaultSourceKeys = collectGroupKeys(dataValue.sources ?? []);
 
+      defaultSourceKeys.add('source');
+
       activeQuery = Object.fromEntries(
         Object.entries(activeQuery).filter(
           ([queryKey]) => !defaultSourceKeys.has(queryKey),
@@ -44,6 +46,7 @@ export function buildFullQuery(
   ]);
 
   controlledKeys.add('search');
+  controlledKeys.add('source');
 
   const preservedQuery = Object.fromEntries(
     Object.entries(currentRouteQuery).filter(
