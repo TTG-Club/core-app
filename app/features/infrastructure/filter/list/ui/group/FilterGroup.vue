@@ -36,18 +36,18 @@
 
       <div
         v-else
-        class="flex items-center justify-between rounded-t-xl border border-default px-3 py-2"
+        class="flex flex-wrap items-center justify-between gap-3 rounded-t-xl border border-default px-3 py-2"
       >
-        <span>{{ group.name }}</span>
+        <span class="font-medium">{{ group.name }}</span>
 
         <div
           v-if="!preview"
-          class="flex gap-4"
+          class="flex flex-wrap items-center gap-3"
         >
           <UCheckbox
             v-if="group.supports?.mode"
             v-model="group.mode"
-            label="Исключать совпадения"
+            label="Исключать"
             size="xs"
             color="error"
           />
@@ -55,7 +55,7 @@
           <UCheckbox
             v-if="group.supports?.union"
             v-model="group.union"
-            label="Любое из (OR)"
+            label="Точное совпадение (AND)"
             size="xs"
           />
         </div>
