@@ -22,7 +22,7 @@ export interface FilterGroup {
 
   // UI mutable states
   mode?: boolean; // true = exclude
-  union?: boolean; // true = OR
+  union?: boolean; // true = AND (точное совпадение)
 
   values?: FilterItems;
 }
