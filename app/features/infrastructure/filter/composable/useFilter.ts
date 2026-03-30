@@ -1,129 +1,116 @@
 import type { Filter } from '../types';
 
-// composables/useFilter.ts
-import { cloneDeep } from 'es-toolkit';
+import { cloneDeep, isEqual } from 'es-toolkit';
 
-import { getFilterKey } from '../utils';
 import {
-  applyCompressedFilters,
-  compressFilters,
-  decompressFilters,
-  getFilterRequest,
-} from '../utils/filterParser';
+  applyQueryToFilters,
+  buildFullQuery,
+  buildSearchQuery,
+  getFilterKey,
+  getGroupItems,
+} from '../utils';
 
 export async function useFilter(key: string, url: string) {
-  const filterKey = getFilterKey(key);
-  const filter = useState<Filter | undefined>(filterKey, () => undefined);
-
   const route = useRoute();
   const router = useRouter();
 
-  const { data, status, refresh } = await useAsyncData(
-    filterKey,
-    () => $fetch<Filter>(url),
-    { deep: false },
-  );
+  const filterKey = getFilterKey(key);
+  const filter = useState<Filter | undefined>(filterKey, () => undefined);
+
+  const search = useState<string | undefined>(`${filterKey}_search`, () => {
+    const searchVal = route.query.search;
+    const searchStr = Array.isArray(searchVal) ? searchVal[0] : searchVal;
+
+    return typeof searchStr === 'string' && searchStr ? searchStr : undefined;
+  });
+
+  const {
+    data: defaults,
+    status,
+    refresh,
+  } = await useFetch<Filter>(url, {
+    key: filterKey,
+    deep: false,
+  });
 
   const isPending = computed(() => status.value === 'pending');
 
-  const isShowedPreview = computed(() =>
-    filter.value?.filter.groups.some((group) =>
-      group.filters.some((item) => item.selected !== null),
-    ),
-  );
+  const isShowedPreview = computed(() => {
+    if (!filter.value) {
+      return false;
+    }
 
-  const selectedFilters = computed(() => getFilterRequest(filter.value));
-  const filterString = computed(() => compressFilters(selectedFilters.value));
-
-  const filterStringFromUrl = computed(() => {
-    const param = route.query.filter;
-
-    return typeof param === 'string' ? param : '';
+    return (
+      filter.value.filters?.some((group) => {
+        return getGroupItems(group).some((item) => item.selected !== null);
+      }) || false
+    );
   });
 
-  function getClone(
-    payload: MaybeRefOrGetter<Filter | undefined>,
-  ): Filter | undefined {
-    const _payload = toValue(payload);
-
-    return _payload ? cloneDeep(_payload) : undefined;
-  }
+  const filterQuery = computed(() => buildSearchQuery(filter.value));
 
   function syncUrlWithFilter() {
-    const currentUrlFilter = filterStringFromUrl.value;
-    const newFilterString = filterString.value;
+    const finalQuery = buildFullQuery(
+      filter.value,
+      defaults.value ?? undefined,
+      filterQuery.value,
+      search.value,
+      route.query,
+    );
 
-    if (currentUrlFilter === newFilterString) {
-      return;
-    }
-
-    if (!newFilterString) {
-      const { filter: _, ...restQuery } = route.query;
-
-      router.replace({ query: restQuery });
-
-      return;
-    }
-
-    router.replace({
-      query: { ...route.query, filter: newFilterString },
-    });
-  }
-
-  function applyFiltersFromUrl(urlFilter: string) {
-    if (!urlFilter || !data.value) {
-      return;
-    }
-
-    try {
-      const decompressed = decompressFilters(urlFilter);
-
-      if (decompressed && filter.value) {
-        filter.value = applyCompressedFilters(filter.value, decompressed);
-      }
-    } catch (error) {
-      consola.error('Failed to apply filters from URL:', error);
+    if (!isEqual(route.query, finalQuery)) {
+      router.replace({ query: finalQuery });
     }
   }
 
-  // Инициализация: загрузили данные -> применили фильтр из URL
   watch(
-    data,
+    defaults,
     (value) => {
-      if (value) {
-        filter.value = getClone(value);
-        applyFiltersFromUrl(filterStringFromUrl.value);
+      if (!value) {
+        return;
       }
+
+      const cloned = cloneDeep(value);
+
+      filter.value = applyQueryToFilters(cloned, route.query);
     },
     { immediate: true },
   );
 
-  // Изменился фильтр -> обновляем URL
   watch(
-    selectedFilters,
+    [filterQuery, search],
     () => {
       syncUrlWithFilter();
     },
     { deep: true },
   );
 
-  // Изменился URL извне -> применяем к фильтру
-  watch(filterStringFromUrl, (newUrlFilter) => {
-    // Если URL изменился не из-за нашего syncUrlWithFilter
-    if (newUrlFilter !== filterString.value && data.value) {
-      applyFiltersFromUrl(newUrlFilter);
-    }
-  });
+  watch(
+    () => route.query,
+    () => {
+      if (!defaults.value) {
+        return;
+      }
+
+      const pristine = cloneDeep(defaults.value);
+      const prevFiltersQuery = JSON.stringify(filterQuery.value);
+      const testFilter = applyQueryToFilters(pristine, route.query);
+      const nextFiltersQuery = JSON.stringify(buildSearchQuery(testFilter));
+
+      if (prevFiltersQuery !== nextFiltersQuery) {
+        filter.value = testFilter;
+      }
+    },
+    { deep: true },
+  );
 
   return {
+    filter,
+    search,
+    filterQuery,
     isPending,
     isShowedPreview,
-
-    filter,
-    filterString,
-    filterStringFromUrl,
-    selectedFilters,
-
+    defaults,
     refresh,
   };
 }

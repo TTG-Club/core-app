@@ -1,8 +1,6 @@
 <script setup lang="ts">
   import type { MagicItemLinkResponse } from '~magic-items/model';
 
-  import { computed } from 'vue';
-
   import { FilterControls, useFilter } from '~infrastructure/filter';
   import { useMagicItemRarityGroupOrder } from '~magic-items/composable';
   import { MagicItemLegend } from '~magic-items/legend';
@@ -16,13 +14,13 @@
     description: 'Магические предметы из D&D 5 (редакция 2024 года).',
   });
 
-  const search = ref<string>();
-
   const {
     filter,
-    filterStringFromUrl,
+    search,
+    filterQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
+    defaults: filterDefaults,
   } = await useFilter('magic-items', '/api/v2/magic-items/filters');
 
   const { order: rarityOrder, pending: isRarityPending } =
@@ -36,16 +34,16 @@
   } = await useAsyncData(
     'magic-items',
     () =>
-      $fetch<Array<MagicItemLinkResponse>>('/api/v2/magic-items', {
+      $fetch<Array<MagicItemLinkResponse>>('/api/v2/magic-items/search', {
         method: 'GET',
         query: {
           search: search.value,
-          filter: filterStringFromUrl.value,
+          ...filterQuery.value,
         },
       }),
     {
       deep: false,
-      watch: [search, filterStringFromUrl],
+      watch: [search, filterQuery],
     },
   );
 
@@ -66,6 +64,7 @@
       <FilterControls
         v-model:search="search"
         v-model:filter="filter"
+        :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       >

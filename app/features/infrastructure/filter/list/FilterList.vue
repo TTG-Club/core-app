@@ -1,15 +1,22 @@
 <script setup lang="ts">
-  import type { FilterSection } from '../types';
+  import type { FilterGroup, FilterGroups } from '../types';
 
-  import { FilterGroup } from './ui';
+  import { FilterGroup as FilterGroupComponent } from './ui';
 
   const { preview = false } = defineProps<{
     preview?: boolean;
   }>();
 
-  const filter = defineModel<FilterSection>({
+  const filter = defineModel<FilterGroups>({
     required: true,
   });
+
+  function handleGroupUpdate(index: number, updatedGroup: FilterGroup) {
+    const updated = [...filter.value];
+
+    updated[index] = updatedGroup;
+    filter.value = updated;
+  }
 </script>
 
 <template>
@@ -20,12 +27,12 @@
       'gap-6': !preview,
     }"
   >
-    <FilterGroup
-      v-for="group in filter.groups"
-      :key="group.key + group.name"
-      v-model="group.filters"
-      :label="group.name"
+    <FilterGroupComponent
+      v-for="(group, index) in filter"
+      :key="`${group.key}-${group.name}`"
+      :model-value="group"
       :preview
+      @update:model-value="handleGroupUpdate(index, $event)"
     />
   </div>
 </template>

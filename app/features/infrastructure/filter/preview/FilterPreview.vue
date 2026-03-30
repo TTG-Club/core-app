@@ -1,18 +1,18 @@
 <script setup lang="ts">
-  import type { FilterSection } from '../types';
+  import type { FilterGroups } from '../types';
 
   import { FilterList } from '../list';
 
-  const filter = defineModel<FilterSection>({ required: true });
+  const filterGroups = defineModel<FilterGroups>({ required: true });
 
-  const { cloned, isModified } = useCloned(filter);
+  const { cloned, isModified } = useCloned(filterGroups);
 
   watch(isModified, (value) => {
     if (!value) {
       return;
     }
 
-    filter.value = cloned.value;
+    filterGroups.value = cloned.value;
   });
 </script>
 

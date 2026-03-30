@@ -13,13 +13,13 @@
     description: 'Бестиарий из D&D 5 (редакция 2024 года).',
   });
 
-  const search = ref<string>();
-
   const {
     filter,
-    filterStringFromUrl,
+    search,
+    filterQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
+    defaults: filterDefaults,
   } = await useFilter('bestiary', '/api/v2/bestiary/filters');
 
   const {
@@ -35,14 +35,14 @@
   } = await useAsyncData(
     'bestiary',
     () =>
-      $fetch<Array<CreatureLinkResponse>>('/api/v2/bestiary', {
+      $fetch<Array<CreatureLinkResponse>>('/api/v2/bestiary/search', {
         method: 'GET',
         query: {
           search: search.value,
-          filter: filterStringFromUrl.value,
+          ...filterQuery.value,
         },
       }),
-    { deep: false, watch: [search, filterStringFromUrl] },
+    { deep: false, watch: [search, filterQuery] },
   );
 
   const isLoading = computed(() => {
@@ -62,6 +62,7 @@
       <FilterControls
         v-model:search="search"
         v-model:filter="filter"
+        :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       />

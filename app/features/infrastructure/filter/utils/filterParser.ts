@@ -1,158 +1,135 @@
-import type {
-  Filter,
-  FilterRequest,
-  FilterSection,
-  FilterSectionRequest,
-} from '../types';
+import type { LocationQuery } from 'vue-router';
 
-import { cloneDeep } from 'es-toolkit';
-import { fromUint8Array, toUint8Array } from 'js-base64';
-import pako from 'pako';
+import type { Filter, FilterGroup, FilterGroups, FilterItems } from '../types';
+
+import { getGroupItems } from './getGroupItems';
 
 /**
- * Извлекает выбранные элементы из секции фильтра
+ * Создаёт новый массив `items` с обновлённым состоянием `selected`
+ * без мутации оригинальных объектов
  */
-export function getSelectedFilters(
-  section: FilterSection | undefined,
-): FilterSectionRequest | undefined {
-  if (!section?.groups) {
-    return undefined;
+function applySelectionToItems(
+  items: FilterItems,
+  selectedSet: Set<string>,
+): FilterItems {
+  return items.map((item) => ({
+    ...item,
+    selected: selectedSet.has(String(item.id)) ? true : null,
+  }));
+}
+
+/**
+ * Собирает объект `LocationQuery` (для `vue-router`) из состояния фильтров
+ */
+export function buildSearchQuery(
+  filterState: Filter | undefined,
+): LocationQuery {
+  if (!filterState) {
+    return {};
   }
 
-  const groups = section.groups
-    .map(({ name, filters, ...groupFields }) => {
-      const selectedFilters = filters.filter((item) => item.selected != null);
+  const query: LocationQuery = {};
 
-      if (selectedFilters.length === 0) {
-        return null;
+  for (const group of filterState.filters ?? []) {
+    const selectedIds = getGroupItems(group)
+      .filter((item) => item.selected)
+      .map((item) => String(item.id));
+
+    if (selectedIds.length > 0) {
+      query[group.key] = selectedIds.join(',');
+
+      if (group.mode) {
+        query[`${group.key}_mode`] = '1';
       }
 
-      return {
-        ...groupFields,
-        filters: selectedFilters.map(({ name: _name, ...fields }) => fields),
-      };
-    })
-    .filter((group) => !!group);
-
-  return groups.length > 0 ? { groups } : undefined;
-}
-
-/**
- * Собирает объект запроса из обеих секций фильтра (filter + sources)
- */
-export function getFilterRequest(
-  filter: Filter | undefined,
-): FilterRequest | undefined {
-  const filterSection = getSelectedFilters(filter?.filter);
-  const sourcesSection = getSelectedFilters(filter?.sources);
-
-  if (!filterSection && !sourcesSection) {
-    return undefined;
-  }
-
-  const result: FilterRequest = {};
-
-  if (filterSection) {
-    result.filter = filterSection;
-  }
-
-  if (sourcesSection) {
-    result.sources = sourcesSection;
-  }
-
-  return result;
-}
-
-/**
- * Сжимает объект запроса в строку для URL
- */
-export function compressFilters(filter: FilterRequest | undefined): string {
-  if (!filter) {
-    return '';
-  }
-
-  try {
-    const jsonString = JSON.stringify(filter);
-    const compressed = pako.deflate(jsonString, { level: 9 });
-
-    return fromUint8Array(compressed, true);
-  } catch (error) {
-    consola.error('Error compressing filters:', error);
-
-    return '';
-  }
-}
-
-/**
- * Распаковывает строку из URL в объект запроса
- */
-export function decompressFilters(
-  compressedString: string,
-): FilterRequest | undefined {
-  if (!compressedString) {
-    return undefined;
-  }
-
-  try {
-    const bytes = toUint8Array(compressedString);
-    const decompressed = pako.inflate(bytes, { to: 'string' });
-
-    return JSON.parse(decompressed);
-  } catch (error) {
-    consola.error('Error decompressing filters:', error);
-
-    return undefined;
-  }
-}
-
-/**
- * Применяет сжатые фильтры к секции
- */
-export function applyCompressedSection(
-  originalSection: FilterSection,
-  compressedSection: FilterSectionRequest | undefined,
-): FilterSection {
-  if (!compressedSection?.groups) {
-    return originalSection;
-  }
-
-  const result = cloneDeep(originalSection);
-
-  compressedSection.groups.forEach((compressedGroup) => {
-    const originalGroup = result.groups.find(
-      (g) => g.key === compressedGroup.key,
-    );
-
-    if (originalGroup) {
-      compressedGroup.filters.forEach((compressedItem) => {
-        const originalItem = originalGroup.filters.find(
-          (f) =>
-            f.key === compressedItem.key && f.value === compressedItem.value,
-        );
-
-        if (originalItem) {
-          originalItem.selected = compressedItem.selected;
-        }
-      });
+      if (group.union) {
+        query[`${group.key}_union`] = '1';
+      }
     }
-  });
+  }
 
-  return result;
+  const sourceIds = (filterState.sources ?? []).flatMap((group) =>
+    getGroupItems(group)
+      .filter((item) => item.selected)
+      .map((item) => String(item.id)),
+  );
+
+  if (sourceIds.length > 0) {
+    query.source = sourceIds.join(',');
+  }
+
+  return query;
 }
 
 /**
- * Применяет сжатый объект запроса ко всему фильтру (filter + sources)
+ * Применяет параметры URL к объекту `Filter` и возвращает новый экземпляр
+ * без мутации оригинала
  */
-export function applyCompressedFilters(
+export function applyQueryToFilters(
   originalFilter: Filter,
-  compressed: FilterRequest | undefined,
+  query: LocationQuery,
 ): Filter {
-  if (!compressed) {
-    return originalFilter;
-  }
+  const mapGroups = (
+    groups: FilterGroups | undefined,
+    isSource: boolean,
+  ): FilterGroups | undefined => {
+    if (!groups) {
+      return undefined;
+    }
+
+    return groups.map((group) => {
+      const items = getGroupItems(group);
+
+      const queryVal = isSource ? query.source : query[group.key];
+
+      if (queryVal && typeof queryVal === 'string') {
+        const selectedSet = new Set(queryVal.split(','));
+
+        return {
+          ...group,
+          values: applySelectionToItems(items, selectedSet),
+          ...(!isSource && {
+            mode: query[`${group.key}_mode`] === '1',
+            union: query[`${group.key}_union`] === '1',
+          }),
+        };
+      }
+
+      if (!isSource) {
+        return {
+          ...group,
+          mode: false,
+          union: false,
+          values: items.map((item) => ({ ...item, selected: null })),
+        };
+      }
+
+      return group;
+    });
+  };
 
   return {
-    filter: applyCompressedSection(originalFilter.filter, compressed.filter),
-    sources: applyCompressedSection(originalFilter.sources, compressed.sources),
+    ...originalFilter,
+    filters: mapGroups(originalFilter.filters, false) ?? [],
+    sources: mapGroups(originalFilter.sources, true),
   };
+}
+
+/**
+ * Сериализует выбранные элементы групп в строку отсортированных ID
+ * для сравнения состояний фильтров
+ */
+export function serializeSelectedIds(groups?: FilterGroup[]): string {
+  if (!groups) {
+    return '';
+  }
+
+  return groups
+    .flatMap((group) => {
+      return getGroupItems(group)
+        .filter((item) => item.selected)
+        .map((item) => String(item.id));
+    })
+    .sort()
+    .join(',');
 }

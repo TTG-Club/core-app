@@ -1,20 +1,25 @@
 <script setup lang="ts">
-  import type { Filter, FilterSection } from '../types';
+  import type { Filter, FilterGroups } from '../types';
 
   import { cloneDeep } from 'es-toolkit';
 
-  import { FilterDrawer, SourcesDrawer } from '../drawer';
+  import { FilterDrawer } from '../drawer';
   import { FilterPreview } from '../preview';
+  import { getGroupItems } from '../utils';
 
-  const { isPending = false, showPreview = false } = defineProps<{
+  const {
+    isPending = false,
+    showPreview = false,
+    defaults = undefined,
+  } = defineProps<{
     isPending?: boolean;
     showPreview?: boolean;
+    defaults?: Filter;
   }>();
 
   const search = defineModel<string>('search');
   const filter = defineModel<Filter>('filter');
 
-  const route = useRoute();
   const { isApple } = useDevice();
   const { share } = useCopyAndShare();
 
@@ -26,24 +31,48 @@
   const isLarge = greaterOrEqual(Breakpoint.LG);
 
   const urlForCopy = computed(() => {
-    return getOrigin() + route.fullPath;
+    return getOrigin() + useRoute().fullPath;
   });
 
   const isFilterEdited = computed(
     () =>
       !!filter.value
-      && filter.value.filter.groups.some((group) =>
-        group.filters.some((item) => item.selected !== null),
+      && filter.value.filters?.some((group) =>
+        getGroupItems(group).some((item) => item.selected !== null),
       ),
   );
 
-  const isSourcesEdited = computed(
-    () =>
-      !!filter.value
-      && filter.value.sources.groups.some((group) =>
-        group.filters.some((item) => item.selected !== null),
-      ),
-  );
+  const isSourcesEdited = computed(() => {
+    if (!filter.value?.sources) {
+      return false;
+    }
+
+    if (defaults?.sources) {
+      const currentKeys = filter.value.sources
+        .flatMap((group) =>
+          getGroupItems(group)
+            .filter((item) => item.selected)
+            .map((item) => String(item.id)),
+        )
+        .sort()
+        .join(',');
+
+      const defaultKeys = defaults.sources
+        .flatMap((group) =>
+          getGroupItems(group)
+            .filter((item) => item.selected)
+            .map((item) => String(item.id)),
+        )
+        .sort()
+        .join(',');
+
+      return currentKeys !== defaultKeys;
+    }
+
+    return filter.value.sources.some((group) =>
+      getGroupItems(group).some((item) => item.selected !== null),
+    );
+  });
 
   watchDebounced(
     localSearch,
@@ -63,42 +92,39 @@
     },
   );
 
-  function saveFilter(payload: FilterSection) {
+  function saveFilter(payload: FilterGroups) {
     if (!filter.value) {
       return;
     }
 
-    filter.value = { ...filter.value, filter: payload };
+    filter.value = { ...filter.value, filters: payload };
     filterOpened.value = false;
   }
 
   function resetFilter() {
-    if (!filter.value) {
+    if (!filter.value?.filters) {
       filterOpened.value = false;
 
       return;
     }
 
-    const cloned = cloneDeep(filter.value.filter);
-
     filter.value = {
       ...filter.value,
-      filter: {
-        ...cloned,
-        groups: cloned.groups.map((group) => ({
-          ...group,
-          filters: group.filters.map((item) => ({
-            ...item,
-            selected: null,
-          })),
+      filters: filter.value.filters.map((group) => ({
+        ...group,
+        mode: false,
+        union: false,
+        values: getGroupItems(group).map((item) => ({
+          ...item,
+          selected: null,
         })),
-      },
+      })),
     };
 
     filterOpened.value = false;
   }
 
-  function saveSources(payload: FilterSection) {
+  function saveSources(payload: FilterGroups) {
     if (!filter.value) {
       return;
     }
@@ -108,27 +134,29 @@
   }
 
   function resetSources() {
-    if (!filter.value) {
+    if (!filter.value?.sources) {
       sourcesOpened.value = false;
 
       return;
     }
 
-    const cloned = cloneDeep(filter.value.sources);
-
-    filter.value = {
-      ...filter.value,
-      sources: {
-        ...cloned,
-        groups: cloned.groups.map((group) => ({
+    if (defaults?.sources) {
+      filter.value = {
+        ...filter.value,
+        sources: cloneDeep(defaults.sources),
+      };
+    } else {
+      filter.value = {
+        ...filter.value,
+        sources: filter.value.sources.map((group) => ({
           ...group,
-          filters: group.filters.map((item) => ({
+          values: getGroupItems(group).map((item) => ({
             ...item,
             selected: null,
           })),
         })),
-      },
-    };
+      };
+    }
 
     sourcesOpened.value = false;
   }
@@ -199,8 +227,8 @@
         <slot name="legend" />
 
         <FilterPreview
-          v-if="showPreview && filter"
-          v-model="filter.filter"
+          v-if="showPreview && filter?.filters"
+          v-model="filter.filters"
         />
       </template>
     </ClientOnly>
@@ -208,17 +236,19 @@
 
   <ClientOnly>
     <FilterDrawer
-      v-if="filter"
+      v-if="filter?.filters"
       v-model="filterOpened"
-      :filter="filter.filter"
+      title="Фильтры"
+      :groups="filter.filters"
       @save="saveFilter"
       @reset="resetFilter"
     />
 
-    <SourcesDrawer
-      v-if="filter"
+    <FilterDrawer
+      v-if="filter?.sources"
       v-model="sourcesOpened"
-      :sources="filter.sources"
+      title="Источники"
+      :groups="filter.sources"
       @save="saveSources"
       @reset="resetSources"
     />

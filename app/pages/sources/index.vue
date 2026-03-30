@@ -13,12 +13,12 @@
     description: 'Источники из D&D 5 (редакция 2024-2025 года).',
   });
 
-  const search = ref<string>();
-
   const {
     filter,
+    search,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
+    defaults: filterDefaults,
   } = await useFilter('sources-filters', '/api/v2/source/filters');
 
   const searchBody = computed(() => {
@@ -62,6 +62,7 @@
       <FilterControls
         v-model:search="search"
         v-model:filter="filter"
+        :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       />

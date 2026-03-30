@@ -12,13 +12,13 @@
     description: 'Глоссарий из D&D 5 (редакция 2024 года).',
   });
 
-  const search = ref<string>();
-
   const {
     filter,
-    filterStringFromUrl,
+    search,
+    filterQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
+    defaults: filterDefaults,
   } = await useFilter('glossary', '/api/v2/glossary/filters');
 
   const {
@@ -29,16 +29,16 @@
   } = await useAsyncData(
     'glossary',
     () =>
-      $fetch<Array<GlossaryLinkResponse>>('/api/v2/glossary', {
+      $fetch<Array<GlossaryLinkResponse>>('/api/v2/glossary/search', {
         method: 'GET',
         query: {
           search: search.value,
-          filter: filterStringFromUrl.value,
+          ...filterQuery.value,
         },
       }),
     {
       deep: false,
-      watch: [search, filterStringFromUrl],
+      watch: [search, filterQuery],
     },
   );
 </script>
@@ -52,6 +52,7 @@
       <FilterControls
         v-model:search="search"
         v-model:filter="filter"
+        :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       >

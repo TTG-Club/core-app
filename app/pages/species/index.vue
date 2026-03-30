@@ -12,28 +12,28 @@
       'Виды и происхождения персонажей из D&D 5 (редакция 2024 года).',
   });
 
-  const search = ref<string>();
-
   const {
     filter,
-    filterStringFromUrl,
+    search,
+    filterQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
+    defaults: filterDefaults,
   } = await useFilter('species', '/api/v2/species/filters');
 
   const { data, status, error, refresh } = await useAsyncData(
     'species',
     () =>
-      $fetch<Array<SpeciesLinkResponse>>('/api/v2/species', {
+      $fetch<Array<SpeciesLinkResponse>>('/api/v2/species/search', {
         method: 'GET',
         query: {
           search: search.value,
-          filter: filterStringFromUrl.value,
+          ...filterQuery.value,
         },
       }),
     {
       deep: false,
-      watch: [search, filterStringFromUrl],
+      watch: [search, filterQuery],
     },
   );
 </script>
@@ -47,6 +47,7 @@
       <FilterControls
         v-model:search="search"
         v-model:filter="filter"
+        :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       >

@@ -1,36 +1,37 @@
 <script setup lang="ts">
-  import type { FilterSection } from '../types';
+  import type { FilterGroups } from '../types';
 
   import { cloneDeep } from 'es-toolkit';
 
   import { FilterList } from '../list';
 
   defineEmits<{
-    (e: 'save', value: FilterSection): void;
-    (e: 'reset'): void;
+    (event: 'save', value: FilterGroups): void;
+    (event: 'reset'): void;
   }>();
 
-  const { filter } = defineProps<{
-    filter: FilterSection;
+  const { groups, title } = defineProps<{
+    groups: FilterGroups;
+    title: string;
   }>();
 
   const opened = defineModel<boolean>();
 
-  const cloned = ref<FilterSection>(filter);
+  const cloned = ref<FilterGroups>(cloneDeep(groups));
 
   watch(opened, (value) => {
     if (!value) {
       return;
     }
 
-    cloned.value = cloneDeep(filter);
+    cloned.value = cloneDeep(groups);
   });
 </script>
 
 <template>
   <USlideover
     v-model:open="opened"
-    title="Фильтры"
+    :title
     :ui="{
       content: 'w-full max-w-192 min-w-80',
     }"
