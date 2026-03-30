@@ -27,7 +27,7 @@
       const classesLinks = await $fetch<Array<ClassLinkResponse>>(
         '/api/v2/classes/search',
         {
-          method: 'post',
+          method: 'get',
           query: {
             query: searchQuery.value || undefined,
           },
