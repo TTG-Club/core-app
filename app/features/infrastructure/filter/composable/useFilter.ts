@@ -19,27 +19,19 @@ export async function useFilter(key: string, url: string) {
 
   const search = useState<string | undefined>(`${filterKey}_search`, () => {
     const searchVal = route.query.search;
-
     const searchStr = Array.isArray(searchVal) ? searchVal[0] : searchVal;
 
     return typeof searchStr === 'string' && searchStr ? searchStr : undefined;
   });
 
-  const requestFetch = useRequestFetch();
-
   const {
     data: defaults,
     status,
     refresh,
-  } = await useAsyncData(
-    filterKey,
-    async () => {
-      const filterData = await requestFetch<Filter>(url);
-
-      return cloneDeep(filterData);
-    },
-    { deep: false },
-  );
+  } = await useFetch<Filter>(url, {
+    key: filterKey,
+    deep: false,
+  });
 
   const isPending = computed(() => status.value === 'pending');
 
