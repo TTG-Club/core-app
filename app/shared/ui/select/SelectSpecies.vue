@@ -21,7 +21,7 @@
       const speciesLinks = await $fetch<Array<SpeciesLinkResponse>>(
         '/api/v2/species/search',
         {
-          method: 'post',
+          method: 'get',
         },
       );
 
