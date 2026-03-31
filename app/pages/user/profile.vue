@@ -1,6 +1,10 @@
 <script setup lang="ts">
   import { HomeBackground } from '~home/background';
-  import { ProfileNavigationTabs, ProfileSidebar } from '~profile/sidebar';
+  import {
+    ProfileNavigationScroller,
+    ProfileNavigationTabs,
+    ProfileSidebar,
+  } from '~profile/sidebar';
 
   const { user: profile, fetch: fetchUserProfile } = useUser();
 
@@ -34,11 +38,11 @@
             <!-- Main Content -->
             <div class="flex flex-col gap-6 lg:col-span-11">
               <!-- Mobile Navigation -->
-              <div
-                class="hidden-scrollbar flex gap-2 overflow-x-auto pb-2 lg:hidden"
-              >
-                <ProfileNavigationTabs />
-              </div>
+              <nav class="lg:hidden">
+                <ProfileNavigationScroller>
+                  <ProfileNavigationTabs />
+                </ProfileNavigationScroller>
+              </nav>
 
               <!-- Content Area -->
               <NuxtPage :profile="profile ?? undefined" />
