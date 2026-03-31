@@ -190,7 +190,8 @@
           :disabled="!filter"
           :loading="isPending"
           icon="tabler:filter"
-          label="Фильтр"
+          :label="isLarge ? 'Фильтр' : undefined"
+          :square="!isLarge"
           block
           @click.left.exact.prevent="filterOpened = true"
         />
