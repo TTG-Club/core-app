@@ -17,14 +17,20 @@
       <span>{{ type }}</span>
     </div>
 
-    <template v-if="publisher">
-      <div :class="$style.item">
+    <template v-if="publisher?.date || publisher?.name">
+      <div
+        v-if="publisher.name"
+        :class="$style.item"
+      >
         <span :class="$style.name">Издатель:</span>
 
         <span>{{ publisher.name }}</span>
       </div>
 
-      <div :class="$style.item">
+      <div
+        v-if="publisher.date"
+        :class="$style.item"
+      >
         <span :class="$style.name">Дата издания:</span>
 
         <NuxtTime
@@ -34,14 +40,20 @@
       </div>
     </template>
 
-    <template v-if="translation">
-      <div :class="$style.item">
+    <template v-if="translation?.authors || translation?.date">
+      <div
+        v-if="translation.authors"
+        :class="$style.item"
+      >
         <span :class="$style.name">Перевод:</span>
 
         <span>{{ translation.authors }}</span>
       </div>
 
-      <div :class="$style.item">
+      <div
+        v-if="translation.date"
+        :class="$style.item"
+      >
         <span :class="$style.name">Дата перевода:</span>
 
         <NuxtTime
