@@ -12,7 +12,7 @@
       {{ profile?.username || 'Путешественник' }}
     </h2>
 
-    <div class="mb-6 flex items-center gap-2">
+    <div class="mb-6">
       <UBadge
         color="primary"
         variant="subtle"
@@ -20,10 +20,6 @@
       >
         Авантюрист
       </UBadge>
-
-      <span class="text-muted">•</span>
-
-      <span class="font-medium text-muted">{{ profile?.email }}</span>
     </div>
   </div>
 </template>

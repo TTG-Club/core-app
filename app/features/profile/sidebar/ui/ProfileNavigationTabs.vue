@@ -56,7 +56,7 @@
     active-color="primary"
     variant="ghost"
     color="neutral"
-    size="lg"
+    :size="full ? 'lg' : 'md'"
     :class="['shrink-0', { 'w-full': full }]"
   />
 </template>

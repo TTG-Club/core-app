@@ -54,12 +54,10 @@
       </div>
     </template>
 
-    <div
-      v-if="isDev"
-      class="max-w-xl space-y-6"
-    >
+    <div class="max-w-xl space-y-6">
       <!-- Отображаемое имя -->
       <UFormField
+        v-if="isDev"
         label="Отображаемое имя"
         description="Это имя будет видно другим пользователям"
       >
@@ -118,19 +116,6 @@
           size="lg"
         />
       </UFormField>
-    </div>
-
-    <div
-      v-else
-      class="space-y-4"
-    >
-      <UAlert
-        icon="tabler:info-circle"
-        color="neutral"
-        variant="subtle"
-        title="Личные данные"
-        description="Функция будет доступна в будущих обновлениях"
-      />
     </div>
   </UCard>
 </template>
