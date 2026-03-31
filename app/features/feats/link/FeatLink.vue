@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { FeatLinkResponse } from '~feats/model';
+
   import { FeatDrawer } from '~feats/drawer';
   import { SmallLink } from '~ui/link';
-
-  import type { FeatLinkResponse } from '~/shared/types';
 
   const { feat } = defineProps<{
     feat: FeatLinkResponse;

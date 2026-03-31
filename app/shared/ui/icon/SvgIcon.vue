@@ -21,7 +21,7 @@
       return props.size;
     }
 
-    console.error(`[SvgIcon]: size "${String(props.size)}" is incorrect.`);
+    consola.error(`[SvgIcon]: size "${String(props.size)}" is incorrect.`);
 
     return undefined;
   });

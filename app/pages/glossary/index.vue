@@ -1,25 +1,24 @@
 <script setup lang="ts">
-  import { useFilter } from '~filter/composable';
-  import { FilterControls } from '~filter/controls';
+  import type { GlossaryLinkResponse } from '~glossary/model';
+
   import { GlossaryLink } from '~glossary/link';
+  import { FilterControls, useFilter } from '~infrastructure/filter';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
-
-  import type { GlossaryLinkResponse } from '~/shared/types';
 
   useSeoMeta({
     title: 'Глоссарий [Glossary]',
     description: 'Глоссарий из D&D 5 (редакция 2024 года).',
   });
 
-  const search = ref<string>();
-
   const {
     filter,
-    filterStringFromUrl,
+    search,
+    filterQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
+    defaults: filterDefaults,
   } = await useFilter('glossary', '/api/v2/glossary/filters');
 
   const {
@@ -30,16 +29,16 @@
   } = await useAsyncData(
     'glossary',
     () =>
-      $fetch<Array<GlossaryLinkResponse>>('/api/v2/glossary', {
+      $fetch<Array<GlossaryLinkResponse>>('/api/v2/glossary/search', {
         method: 'GET',
         query: {
           search: search.value,
-          filter: filterStringFromUrl.value,
+          ...filterQuery.value,
         },
       }),
     {
       deep: false,
-      watch: [search, filterStringFromUrl],
+      watch: [search, filterQuery],
     },
   );
 </script>
@@ -53,6 +52,7 @@
       <FilterControls
         v-model:search="search"
         v-model:filter="filter"
+        :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       >

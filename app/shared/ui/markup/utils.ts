@@ -1,8 +1,6 @@
-import { consola } from 'consola';
+import type { MarkerNode, RenderNode, SimpleTextNode } from './types';
 
 import { MARKER_MAP } from './config';
-
-import type { MarkerNode, RenderNode, SimpleTextNode } from './types';
 
 /**
  * Логирует ошибку с контекстом разметки.
@@ -27,11 +25,11 @@ export function logError(
  */
 export function isSimpleTextNode(node: unknown): node is SimpleTextNode {
   return (
-    typeof node === 'object' &&
-    node !== null &&
-    !Array.isArray(node) &&
-    'type' in node &&
-    node.type === 'text'
+    typeof node === 'object'
+    && node !== null
+    && !Array.isArray(node)
+    && 'type' in node
+    && node.type === 'text'
   );
 }
 
@@ -43,12 +41,12 @@ export function isSimpleTextNode(node: unknown): node is SimpleTextNode {
  */
 export function isMarkerNode(node: unknown): node is MarkerNode {
   return (
-    typeof node === 'object' &&
-    node !== null &&
-    !Array.isArray(node) &&
-    'type' in node &&
-    typeof node.type === 'string' &&
-    node.type !== 'text'
+    typeof node === 'object'
+    && node !== null
+    && !Array.isArray(node)
+    && 'type' in node
+    && typeof node.type === 'string'
+    && node.type !== 'text'
   );
 }
 
@@ -101,10 +99,10 @@ export function getNodeText(node: RenderNode | RenderNode[]): string {
   }
 
   if (
-    typeof node === 'object' &&
-    node !== null &&
-    'content' in node &&
-    Array.isArray(node.content)
+    typeof node === 'object'
+    && node !== null
+    && 'content' in node
+    && Array.isArray(node.content)
   ) {
     return node.content.map((child) => getNodeText(child)).join('');
   }

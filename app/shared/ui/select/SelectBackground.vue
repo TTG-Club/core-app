@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { debounce } from 'es-toolkit';
+  import type { BackgroundSelectResponse } from '~backgrounds/model';
 
-  import type { BackgroundSelectResponse } from '~/shared/types';
+  import { debounce } from 'es-toolkit';
 
   interface BackgroundSelectItem {
     label: string;
@@ -77,10 +77,10 @@
 
   function handleModelValueUpdate(value: string | string[]): void {
     if (
-      value === null ||
-      value === undefined ||
-      value === '' ||
-      (Array.isArray(value) && value.length === 0)
+      value === null
+      || value === undefined
+      || value === ''
+      || (Array.isArray(value) && value.length === 0)
     ) {
       // нормализация "очистки" в undefined, без null или пустой строки
       model.value = undefined;

@@ -3,7 +3,7 @@
     CreateAbility,
     CreateHit,
     CreatureSizes,
-  } from '~bestiary/types';
+  } from '~bestiary/model';
 
   const model = defineModel<CreateHit>({
     required: true,

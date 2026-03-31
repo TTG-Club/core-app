@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { BackgroundDetailResponse } from '~backgrounds/model';
+
   import { BackgroundBody } from '~backgrounds/body';
   import { PageActions } from '~ui/page';
-
-  import type { BackgroundDetailResponse } from '~/shared/types';
 
   const route = useRoute();
 

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-  import { uniqBy } from 'es-toolkit';
-
   import type { CommandPaletteGroup } from '@nuxt/ui';
-  import type { ClassLinkResponse } from '~classes/types';
 
   import type { NameResponse } from '~/shared/types';
+  import type { ClassLinkResponse } from '~classes/model';
+
+  import { uniqBy } from 'es-toolkit';
 
   const {
     url,

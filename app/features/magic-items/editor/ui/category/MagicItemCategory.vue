@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { SelectMagicItemCategory } from './ui';
+  import type { MagicItemCategory } from '~magic-items/model';
 
-  import type { MagicItemCategory } from '~magic-items/types';
+  import { SelectMagicItemCategory } from './ui';
 
   const model = defineModel<MagicItemCategory>({
     required: true,

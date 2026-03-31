@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { MarkupRender } from '~ui/markup';
+  import type { GlossaryDetailResponse } from '~glossary/model';
 
-  import type { GlossaryDetailResponse } from '~/shared/types';
+  import { MarkupRender } from '~ui/markup';
 
   const { description } =
     defineProps<Pick<GlossaryDetailResponse, 'description'>>();

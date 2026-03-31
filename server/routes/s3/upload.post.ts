@@ -1,10 +1,12 @@
+import type { EventHandlerRequest } from 'h3';
+
+import type { S3UploadFile, S3UploadResponse } from '#server/domain/s3';
+
 import { H3Error } from 'h3';
 import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod/v4';
-import { S3Service } from '~~/server/services';
 
-import type { EventHandlerRequest } from 'h3';
-import type { S3UploadFile, S3UploadResponse } from '~~/server/types/s3';
+import { getFileForUpload, S3Service } from '#server/domain/s3';
 
 const requestSchema = z
   .object({
@@ -22,7 +24,7 @@ interface Request extends EventHandlerRequest {
 
 export default defineEventHandler<Request, Promise<S3UploadResponse>>(
   async (event) => {
-    const { username } = getUserFromToken(event);
+    const { username } = await getUserFromToken(event);
     const form = await readMultipartFormData(event);
 
     let maxSize: number | undefined;
@@ -80,7 +82,7 @@ export default defineEventHandler<Request, Promise<S3UploadResponse>>(
         maxSize,
       );
     } catch (err) {
-      console.error(err);
+      consola.error(err);
 
       if (err instanceof H3Error) {
         throw err;

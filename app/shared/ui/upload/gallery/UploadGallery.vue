@@ -1,10 +1,10 @@
 <script setup lang="ts">
+  import type { UploadResponse } from '~/shared/types';
+
   import bytes from 'bytes';
   import { chunk } from 'es-toolkit';
 
   import { getStatusMessage } from '#shared/utils';
-
-  import type { UploadResponse } from '~/shared/types';
 
   const { section } = defineProps<{
     section: string;
@@ -26,7 +26,7 @@
   }
 
   function onError(error: Error, statusCode: number) {
-    console.error(error);
+    consola.error(error);
 
     $toast.add({
       color: 'error',
@@ -94,9 +94,9 @@
 
   async function beforeUpload(file: File) {
     const isExtensionSuccess =
-      file.type === 'image/jpeg' ||
-      file.type === 'image/png' ||
-      file.type === 'image/webp';
+      file.type === 'image/jpeg'
+      || file.type === 'image/png'
+      || file.type === 'image/webp';
 
     if (!isExtensionSuccess) {
       $toast.add({
@@ -268,7 +268,7 @@
           class="absolute top-0 right-0 p-2 opacity-0 transition-opacity hover:opacity-100"
         >
           <UButton
-            icon="i-ttg-remove"
+            icon="tabler:trash"
             color="error"
             size="xs"
             @click.left.exact.prevent="removeLoadedImage(image)"

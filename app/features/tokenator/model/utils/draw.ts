@@ -1,11 +1,11 @@
-import { BrushMode, FrameTintType } from '../types';
-
 import type {
   BackgroundStyle,
   FrameTint,
   TextAlign,
   TransformState,
 } from '../types';
+
+import { BrushMode, FrameTintType } from '../types';
 
 /**
  * Создает путь для многоугольной или круглой маски.
@@ -39,13 +39,13 @@ function createMaskPath(
     for (let i = 0; i <= sides; i++) {
       const angle = i * angleStep * direction + rotationRad - Math.PI / 2;
 
-      const x = cx + radius * Math.cos(angle);
-      const y = cy + radius * Math.sin(angle);
+      const posX = cx + radius * Math.cos(angle);
+      const posY = cy + radius * Math.sin(angle);
 
       if (i === 0) {
-        ctx.moveTo(x, y);
+        ctx.moveTo(posX, posY);
       } else {
-        ctx.lineTo(x, y);
+        ctx.lineTo(posX, posY);
       }
     }
 
@@ -153,7 +153,7 @@ function loadImage(url: string | null): Promise<HTMLImageElement | null> {
     };
 
     img.onerror = (e) => {
-      console.error('Tokenator: Failed to load image', url, e);
+      consola.error('Tokenator: Failed to load image', url, e);
       resolve(null);
     };
 
@@ -414,8 +414,8 @@ export async function drawToken({
   if (frameImg) {
     const frameScaleFactor = transform.frameScale || 1.0;
     const frameSize = tokenSize * frameScaleFactor;
-    const x = -frameSize / 2;
-    const y = -frameSize / 2;
+    const posX = -frameSize / 2;
+    const posY = -frameSize / 2;
 
     ctx.save();
     ctx.translate(cx, cy);
@@ -432,10 +432,10 @@ export async function drawToken({
       if (offCtx) {
         offCtx.drawImage(frameImg, 0, 0, frameSize, frameSize);
         applyTint(offCtx, frameSize, frameTint, frameImg);
-        ctx.drawImage(offCanvas, x, y);
+        ctx.drawImage(offCanvas, posX, posY);
       }
     } else {
-      ctx.drawImage(frameImg, x, y, frameSize, frameSize);
+      ctx.drawImage(frameImg, posX, posY, frameSize, frameSize);
     }
 
     ctx.restore();

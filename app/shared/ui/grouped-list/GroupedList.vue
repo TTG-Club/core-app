@@ -1,9 +1,10 @@
 <script setup lang="ts" generic="T extends { url: string }">
+  import { get } from 'es-toolkit/compat';
   import { computed } from 'vue';
+
   import { PageGrid } from '~ui/page';
 
   type SeparatorLabel = string | ((value: string | number) => string);
-
   type GroupKey = string | number;
 
   interface Group<TItem> {
@@ -15,9 +16,9 @@
     mode: 'auto';
   }
 
-  interface GroupSortCustom {
-    mode: 'custom';
-    order: Array<GroupKey>;
+  interface GroupSortOrdered {
+    mode: 'ordered';
+    order: Set<GroupKey>;
     unknown?: 'after' | 'before' | 'auto';
   }
 
@@ -26,11 +27,20 @@
     compare: (a: GroupKey, b: GroupKey) => number;
   }
 
-  type GroupSort = GroupSortAuto | GroupSortCustom | GroupSortComparator;
+  interface GroupSortCustom {
+    mode: 'custom';
+    compare: (items: Array<T>) => Array<Group<T>>;
+  }
+
+  type GroupSort =
+    | GroupSortAuto
+    | GroupSortOrdered
+    | GroupSortComparator
+    | GroupSortCustom;
 
   interface Props {
     items: Array<T>;
-    field?: keyof T;
+    field?: string;
     separatorLabel?: SeparatorLabel;
     columns?: 1 | 2 | 3 | 4 | 5 | 6;
     groupSort?: GroupSort;
@@ -45,14 +55,13 @@
   } = defineProps<Props>();
 
   function upperFirst(text: string): string {
-    if (!text) {
+    const str = text.trim();
+
+    if (!str.length) {
       return '';
     }
 
-    const firstChar = text.slice(0, 1).toUpperCase();
-    const rest = text.slice(1);
-
-    return `${firstChar}${rest}`;
+    return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
   function getComparableKey(rawKey: string): GroupKey {
@@ -67,17 +76,17 @@
         return a - b;
       }
 
-      return String(a).localeCompare(String(b), undefined, { numeric: true });
+      return sortString(String(a), String(b));
     });
   }
 
-  function sortKeysCustom(
+  function sortKeysOrdered(
     keys: Array<GroupKey>,
-    sortConfig: GroupSortCustom,
+    sortConfig: GroupSortOrdered,
   ): Array<GroupKey> {
     const orderIndexByKeyText = new Map<string, number>();
 
-    sortConfig.order.forEach((key, index) => {
+    sortConfig.order.values().forEach((key, index) => {
       orderIndexByKeyText.set(String(key), index);
     });
 
@@ -113,36 +122,40 @@
 
     const unknownPolicy = sortConfig.unknown ?? 'after';
 
-    if (unknownPolicy === 'auto') {
-      return [...sortedKnown, ...sortKeysAuto(unknownKeys)];
-    }
-
     if (unknownPolicy === 'before') {
-      return [...unknownKeys, ...sortedKnown];
+      return [...sortKeysAuto(unknownKeys), ...sortedKnown];
     }
 
-    return [...sortedKnown, ...unknownKeys];
+    return [...sortedKnown, ...sortKeysAuto(unknownKeys)];
   }
 
   function sortGroupKeys(keys: Array<GroupKey>): Array<GroupKey> {
-    if (groupSort.mode === 'auto') {
-      return sortKeysAuto(keys);
-    }
-
     if (groupSort.mode === 'comparator') {
       return [...keys].sort(groupSort.compare);
     }
 
-    return sortKeysCustom(keys, groupSort);
+    if (groupSort.mode === 'ordered') {
+      return sortKeysOrdered(keys, groupSort);
+    }
+
+    return sortKeysAuto(keys);
   }
 
   const groupedItems = computed<Array<Group<T>>>(() => {
-    if (!items.length || !field) {
+    if (!items.length) {
+      return [];
+    }
+
+    if (groupSort.mode === 'custom') {
+      return groupSort.compare(items);
+    }
+
+    if (!field) {
       return [];
     }
 
     const grouped = items.reduce<Record<string, Array<T>>>((acc, item) => {
-      const keyText = String(item[field] ?? '');
+      const keyText = String(get(item, field) ?? '');
 
       (acc[keyText] ??= []).push(item);
 
@@ -166,7 +179,7 @@
     }
 
     if (typeof separatorLabel === 'function') {
-      return upperFirst(separatorLabel(value).replace('{value}', valueText));
+      return upperFirst(separatorLabel(value));
     }
 
     return upperFirst(separatorLabel.replace('{value}', valueText));

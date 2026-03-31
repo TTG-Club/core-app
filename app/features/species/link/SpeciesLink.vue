@@ -1,9 +1,9 @@
 <script setup lang="ts">
+  import type { SpeciesLinkResponse } from '~species/model';
+
   import { CardLink } from '~ui/link';
 
   import { LinkLineages, LinkPreview } from './ui';
-
-  import type { SpeciesLinkResponse } from '~/shared/types';
 
   const { species } = defineProps<{
     species: SpeciesLinkResponse;

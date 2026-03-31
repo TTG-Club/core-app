@@ -1,9 +1,9 @@
 <script setup lang="ts">
-  import { computed } from 'vue';
-
   import type { VNode } from 'vue';
 
   import type { MarkerNode, RenderNode } from '../types';
+
+  import { computed } from 'vue';
 
   const { node, renderNodes } = defineProps<{
     node: MarkerNode;
@@ -21,11 +21,11 @@
 
   function isMarkerNode(value: unknown): value is MarkerNode {
     return (
-      typeof value === 'object' &&
-      value !== null &&
-      'type' in value &&
-      typeof value.type === 'string' &&
-      value.type !== 'text'
+      typeof value === 'object'
+      && value !== null
+      && 'type' in value
+      && typeof value.type === 'string'
+      && value.type !== 'text'
     );
   }
 

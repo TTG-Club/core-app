@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { AbilityScores } from '../../model';
+
   import { ABILITY_KEYS, ABILITY_LABELS } from '~/shared/types';
   import { AbilityKey } from '~/shared/types/abilities';
 
@@ -9,8 +11,6 @@
     POINT_BUY_MIN_SCORE,
     ZERO_SCORES,
   } from '../../model';
-
-  import type { AbilityScores } from '../../model';
 
   const model = defineModel<AbilityScores>({ required: true });
 
@@ -135,7 +135,7 @@
         </div>
 
         <UButton
-          icon="i-fluent-settings-24-regular"
+          icon="tabler:settings"
           color="neutral"
           variant="subtle"
           size="sm"

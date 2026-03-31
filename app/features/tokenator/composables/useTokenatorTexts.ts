@@ -1,11 +1,12 @@
+import type { TokenText } from '~tokenator/model';
+
 import { v4 as uuid } from 'uuid';
+
 import {
   DEFAULT_TEXT_CONFIG,
   validateFontSize,
   validateRotation,
 } from '~tokenator/model';
-
-import type { TokenText } from '~tokenator/model';
 
 export function useTokenatorTexts() {
   const texts = ref<TokenText[]>([]);

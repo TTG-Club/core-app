@@ -41,7 +41,7 @@
       description: 'Теперь вы можете авторизоваться',
       actions: [
         {
-          icon: 'i-fluent-person-16-regular',
+          icon: 'tabler:user',
           label: 'Авторизоваться',
           variant: 'ghost',
           onClick: (e) => {
@@ -93,7 +93,7 @@
 
       <UButton
         class="absolute top-3 right-3"
-        icon="i-ttg-x"
+        icon="tabler:x"
         variant="ghost"
         @click.left.exact.prevent="close"
       />

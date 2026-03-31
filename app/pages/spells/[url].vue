@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { SpellDetailResponse } from '~spells/model';
+
   import { SpellBody } from '~spells/body';
   import { PageActions } from '~ui/page';
-
-  import type { SpellDetailResponse } from '~/shared/types';
 
   const route = useRoute();
 

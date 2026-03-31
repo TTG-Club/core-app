@@ -1,9 +1,9 @@
 <script setup lang="ts">
+  import type { RoadmapItem } from '~roadmap/types';
+
   import { RoadmapEditor } from '~roadmap/editor';
   import { UiDrawer } from '~ui/drawer';
   import { MarkupRender } from '~ui/markup';
-
-  import type { RoadmapItem } from '~roadmap/types';
 
   const { feature } = defineProps<{
     feature: RoadmapItem;
@@ -22,7 +22,7 @@
         <UButton
           variant="ghost"
           color="neutral"
-          icon="i-ttg-edit"
+          icon="tabler:pencil"
           size="sm"
         />
       </RoadmapEditor>

@@ -1,26 +1,25 @@
 <script setup lang="ts">
-  import { useFilter } from '~filter/composable';
-  import { FilterControls } from '~filter/controls';
+  import type { SpellLinkResponse } from '~spells/model';
+
+  import { FilterControls, useFilter } from '~infrastructure/filter';
   import { SpellLegend } from '~spells/legend';
   import { SpellLink } from '~spells/link';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
-  import type { SpellLinkResponse } from '~/shared/types';
-
   useSeoMeta({
     title: 'Заклинания [Spells]',
     description: 'Заклинания из D&D 5 (редакция 2024 года).',
   });
 
-  const search = ref<string>();
-
   const {
     filter,
-    filterStringFromUrl,
+    search,
+    filterQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
+    defaults: filterDefaults,
   } = await useFilter('spells', '/api/v2/spells/filters');
 
   const {
@@ -31,18 +30,26 @@
   } = await useAsyncData(
     'spells',
     () =>
-      $fetch<Array<SpellLinkResponse>>('/api/v2/spells', {
+      $fetch<Array<SpellLinkResponse>>('/api/v2/spells/search', {
         method: 'GET',
         query: {
           search: search.value,
-          filter: filterStringFromUrl.value,
+          ...filterQuery.value,
         },
       }),
     {
       deep: false,
-      watch: [search, filterStringFromUrl],
+      watch: [search, filterQuery],
     },
   );
+
+  function getLabel(level: number | string) {
+    if (typeof level === 'string') {
+      return level;
+    }
+
+    return !level ? 'Заговоры' : `Уровень ${level}`;
+  }
 </script>
 
 <template>
@@ -54,6 +61,7 @@
       <FilterControls
         v-model:search="search"
         v-model:filter="filter"
+        :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       >
@@ -80,10 +88,8 @@
 
         <GroupedList
           v-else-if="status === 'success' && spells?.length"
+          :separator-label="getLabel"
           :items="spells"
-          :separator-label="
-            (value) => (!value ? 'Заговоры' : 'Уровень {value}')
-          "
           field="level"
         >
           <template #default="{ item }">

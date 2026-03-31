@@ -1,4 +1,9 @@
 <script setup lang="ts">
+  import type { Cell, ColumnDef, Header } from '@tanstack/vue-table';
+
+  import type { Level } from '~/shared/types';
+  import type { ClassDetailResponse, ClassFeature } from '~classes/model';
+
   import {
     FlexRender,
     getCoreRowModel,
@@ -6,22 +11,16 @@
   } from '@tanstack/vue-table';
   import { useDebounceFn } from '@vueuse/core';
   import { maxBy, omit, orderBy, range } from 'es-toolkit';
-  import { CasterType } from '~classes/types';
-
-  import { LEVELS } from '~/shared/consts';
 
   import { ULink } from '#components';
+  import { LEVELS } from '~/shared/consts';
+  import { CasterType } from '~classes/model';
 
   import {
     PACT_CASTER_SPELL_SLOTS_COUNT,
     PACT_CASTER_SPELL_SLOTS_LEVEL,
   } from './const';
   import { useDndMechanics } from './useDndMechanics';
-
-  import type { Cell, ColumnDef, Header } from '@tanstack/vue-table';
-  import type { ClassDetailResponse, ClassFeature } from '~classes/types';
-
-  import type { Level } from '~/shared/types';
 
   const props =
     defineProps<
@@ -313,9 +312,9 @@
     const columnRelativeDepth = header.depth - header.column.depth;
 
     return !(
-      !header.isPlaceholder &&
-      columnRelativeDepth > 1 &&
-      header.id === header.column.id
+      !header.isPlaceholder
+      && columnRelativeDepth > 1
+      && header.id === header.column.id
     );
   }
 

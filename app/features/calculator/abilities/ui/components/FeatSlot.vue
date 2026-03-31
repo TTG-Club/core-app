@@ -1,12 +1,12 @@
 <script setup lang="ts">
-  import { isAbilityKey } from '~/shared/types';
-
   import type { AbilityKey } from '~/shared/types';
 
   import type {
     CalculatorAbilityOption,
     CalculatorFeatOption,
   } from '../../model';
+
+  import { isAbilityKey } from '~/shared/types';
 
   const {
     options,
@@ -91,7 +91,7 @@
 
             <UIcon
               v-if="item.repeatability"
-              name="i-fluent-arrow-repeat-all-24-regular"
+              name="tabler:repeat"
               class="text-muted"
               size="16"
               title="Повторяемая черта"
@@ -130,7 +130,7 @@
 
       <UButton
         v-if="model && !disabled"
-        icon="i-fluent-dismiss-24-regular"
+        icon="tabler:x"
         color="neutral"
         variant="subtle"
         @click.left.exact.prevent="model = undefined"
@@ -162,7 +162,7 @@
 
           <UButton
             v-if="getChoice(i - 1)"
-            icon="i-fluent-dismiss-24-regular"
+            icon="tabler:x"
             color="neutral"
             variant="subtle"
             @click.left.exact.prevent="handleChoiceUpdate(i - 1, '')"

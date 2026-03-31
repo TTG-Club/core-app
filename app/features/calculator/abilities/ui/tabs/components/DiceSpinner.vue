@@ -1,9 +1,9 @@
 <script setup lang="ts">
+  import type { DiceRollItem } from '~dice-roller/types';
+
   import { TransitionPresets, useTransition } from '@vueuse/core';
 
   import DiceD6 from './DiceD6.vue';
-
-  import type { DiceRollItem } from '~dice-roller/types';
 
   const { values, animate = true } = defineProps<{
     values: DiceRollItem[];

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { DescriptionsBlock, StatsBlock, TopBar } from './ui';
+  import type { FeatDetailResponse } from '~feats/model';
 
-  import type { FeatDetailResponse } from '~/shared/types';
+  import { DescriptionsBlock, StatsBlock, TopBar } from './ui';
 
   defineProps<{
     feat: FeatDetailResponse;

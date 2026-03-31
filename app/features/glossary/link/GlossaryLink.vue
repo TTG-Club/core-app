@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { GlossaryLinkResponse } from '~glossary/model';
+
   import { GlossaryDrawer } from '~glossary/drawer';
   import { SmallLink } from '~ui/link';
-
-  import type { GlossaryLinkResponse } from '~/shared/types';
 
   const { glossary } = defineProps<{
     glossary: GlossaryLinkResponse;

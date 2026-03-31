@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { EditorArrayControls } from '~ui/editor';
+  import type { CreateAction } from '~bestiary/model';
 
-  import type { CreateAction } from '~bestiary/types';
+  import { EditorArrayControls } from '~ui/editor';
 
   type ActionKey = 'actions' | 'bonusActions' | 'reactions';
 

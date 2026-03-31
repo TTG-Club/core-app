@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { MagicItemLinkResponse } from '~magic-items/model';
+
   import { MagicItemDrawer } from '~magic-items/drawer';
   import { SmallLink } from '~ui/link';
-
-  import type { MagicItemLinkResponse } from '~magic-items/types';
 
   const { magicItem } = defineProps<{
     magicItem: MagicItemLinkResponse;

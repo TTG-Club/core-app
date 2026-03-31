@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { CreateLanguage, CreatureLanguages } from '~bestiary/model';
+
   import { EditorArrayControls } from '~ui/editor';
   import { SelectLanguage } from '~ui/select';
-
-  import type { CreateLanguage, CreatureLanguages } from '~bestiary/types';
 
   const model = defineModel<CreatureLanguages>({ required: true });
 

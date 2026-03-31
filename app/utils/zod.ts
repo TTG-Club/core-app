@@ -1,11 +1,11 @@
-import * as z from 'zod';
-import { util } from 'zod/v4/core';
-
 import type {
   $ZodErrorMap,
   $ZodStringFormatIssues,
   $ZodStringFormats,
 } from 'zod/v4/core';
+
+import * as z from 'zod';
+import { util } from 'zod/v4/core';
 
 function getRussianPlural(
   count: number,
@@ -98,8 +98,8 @@ const error: () => $ZodErrorMap = () => {
         }
 
         if (
-          Object.getPrototypeOf(data) !== Object.prototype &&
-          data.constructor
+          Object.getPrototypeOf(data) !== Object.prototype
+          && data.constructor
         ) {
           return data.constructor.name;
         }

@@ -1,9 +1,7 @@
 <script setup lang="ts">
-  import {
-    TokenatorCanvas,
-    TokenatorControls,
-    TokenatorPreview,
-  } from '~tokenator';
+  import { TokenatorCanvas } from '~tokenator/canvas';
+  import { TokenatorControls } from '~tokenator/controls';
+  import { TokenatorPreview } from '~tokenator/preview';
 
   definePageMeta({
     layout: 'default',
@@ -45,7 +43,7 @@
         <template #fallback>
           <div class="flex h-96 w-full items-center justify-center">
             <UIcon
-              name="i-fluent-arrow-clockwise-24-regular"
+              name="tabler:loader-2"
               class="animate-spin text-gray-500"
               size="2.5rem"
             />

@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { MagicItemDetailResponse } from '~magic-items/model';
+
   import { MagicItemBody } from '~magic-items/body';
   import { PageActions } from '~ui/page';
-
-  import type { MagicItemDetailResponse } from '~magic-items/types';
 
   const route = useRoute();
 

@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { ItemCreate, ItemDetailResponse } from '~items/model';
+
   import { ItemBody } from '~items/body';
   import { UiDrawer } from '~ui/drawer';
-
-  import type { ItemCreate, ItemDetailResponse } from '~items/types';
 
   const opened = defineModel<boolean>('open', { required: true });
 

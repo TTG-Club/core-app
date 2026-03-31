@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { SpellCreate } from '~spells/model';
+
   import { SpellPreview } from '~spells/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import {
@@ -13,6 +15,7 @@
     SelectSpellLevel,
     SelectSubclass,
   } from '~ui/select';
+  import { useWorkshopForm } from '~workshop/composable';
 
   import {
     SpellCastingTimes,
@@ -20,8 +23,6 @@
     SpellDurations,
     SpellRanges,
   } from './ui';
-
-  import type { SpellCreate } from '~/shared/types';
 
   function getInitialState(): SpellCreate {
     return {

@@ -1,1 +1,1 @@
-export { default as ClassEditorTable } from './ClassEditorTable.vue';
+export { default as TableColumnScaling } from './TableColumnScaling.vue';

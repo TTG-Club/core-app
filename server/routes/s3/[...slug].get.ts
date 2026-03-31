@@ -1,6 +1,6 @@
-import consola from 'consola';
 import { StatusCodes } from 'http-status-codes';
-import { S3Service } from '~~/server/services';
+
+import { S3Service } from '#server/domain/s3';
 
 export default defineEventHandler(async (event) => {
   const rawPath = getRouterParam(event, 'slug');

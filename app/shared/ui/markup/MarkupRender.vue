@@ -1,10 +1,10 @@
 <script setup lang="ts">
+  import type { Group, RenderNode, RenderResult } from './types';
+
   import { computed } from 'vue';
 
   import { render } from './renderer';
   import { isBlockNode } from './utils';
-
-  import type { Group, RenderNode, RenderResult } from './types';
 
   const { renderNode } = defineProps<{
     renderNode: RenderNode;
@@ -38,7 +38,7 @@
         groups,
       };
     } catch (e) {
-      console.error('[Markup] Error rendering entries:', e);
+      consola.error('[Markup] Error rendering entries:', e);
 
       return { isSingle: true, vnodes: [] };
     }

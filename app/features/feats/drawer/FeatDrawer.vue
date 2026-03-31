@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { FeatDetailResponse } from '~feats/model';
+
   import { FeatBody } from '~feats/body';
   import { UiDrawer } from '~ui/drawer';
-
-  import type { FeatDetailResponse } from '~/shared/types';
 
   const { url } = defineProps<{
     url: string;

@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { SpeciesDetailResponse } from '~species/model';
+
   import { SpeciesBody } from '~species/body';
   import { UiCollapse } from '~ui/collapse';
-
-  import type { SpeciesDetailResponse } from '~/shared/types';
 
   const { url } = defineProps<{
     url: SpeciesDetailResponse['url'];

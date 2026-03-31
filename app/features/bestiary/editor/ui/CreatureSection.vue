@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { SelectHabitat, SelectTreasure } from '~ui/select';
+  import type { CreateSection } from '~bestiary/model';
 
-  import type { CreateSection } from '~bestiary/types';
+  import { SelectHabitat, SelectTreasure } from '~ui/select';
 
   const model = defineModel<CreateSection>({ required: true });
 </script>

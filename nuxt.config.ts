@@ -146,7 +146,7 @@ export default defineNuxtConfig({
 
   icon: {
     serverBundle: {
-      collections: ['lucide', 'fluent'],
+      collections: ['tabler'],
     },
     customCollections: [
       {
@@ -272,6 +272,7 @@ export default defineNuxtConfig({
 
         // Утилиты
         'es-toolkit',
+        'es-toolkit/compat',
         '@vueuse/core',
         '@nuxtjs/device',
 
@@ -313,6 +314,14 @@ export default defineNuxtConfig({
         'dexie',
         '@vueuse/gesture',
         'js-base64',
+        'stopword',
+        '@internationalized/date',
+        'jose',
+
+        // Validation & Bytes
+        'bytes',
+        'zod',
+        'zod/v4/core',
       ],
       exclude: ['@jsquash/webp', '@jsquash/webp/encode'],
     },

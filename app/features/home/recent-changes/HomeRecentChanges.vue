@@ -50,18 +50,18 @@
    * Возвращает иконку для типа действия
    *
    * @param actionType - название действия
-   * @returns имя иконки из коллекции ttg или fluent
+   * @returns имя иконки из коллекции ttg или tabler
    */
   function getActionIcon(actionType: ActionType): string {
     switch (actionType) {
       case ActionType.ADDED:
-        return 'i-ttg-plus';
+        return 'tabler:plus';
       case ActionType.UPDATED:
-        return 'i-fluent-arrow-sync-16-regular';
+        return 'tabler:refresh';
       case ActionType.DELETED:
-        return 'i-ttg-remove';
+        return 'tabler:trash';
       default:
-        return 'i-fluent-circle-16-regular';
+        return 'tabler:circle';
     }
   }
 
@@ -128,7 +128,7 @@
             >
               <template #default>
                 <UButton
-                  trailing-icon="i-fluent-chevron-down-16-regular"
+                  trailing-icon="tabler:chevron-down"
                   color="neutral"
                   variant="soft"
                   size="xs"
@@ -143,7 +143,7 @@
         <UButton
           :loading="pending"
           variant="soft"
-          icon="i-fluent-arrow-sync-24-regular"
+          icon="tabler:refresh"
           @click.left.exact.prevent="refresh()"
         />
       </div>

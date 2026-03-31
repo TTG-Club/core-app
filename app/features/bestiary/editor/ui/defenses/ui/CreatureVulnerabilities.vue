@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { SelectDamageType } from '~ui/select';
+  import type { CreatureDefense } from '~bestiary/model';
 
-  import type { CreatureDefense } from '~bestiary/types';
+  import { SelectDamageType } from '~ui/select';
 
   const vulnerabilities = defineModel<CreatureDefense>({
     required: true,

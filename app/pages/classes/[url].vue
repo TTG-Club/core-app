@@ -1,9 +1,9 @@
 <script setup lang="ts">
+  import type { ClassDetailResponse } from '~classes/model';
+
   import { ClassBody } from '~classes/body';
   import { PageActions } from '~ui/page';
   import { UiResult } from '~ui/result';
-
-  import type { ClassDetailResponse } from '~classes/types';
 
   const isClientReady = useState('client-ready', () => false);
 

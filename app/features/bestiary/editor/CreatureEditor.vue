@@ -1,9 +1,12 @@
 <script setup lang="ts">
+  import type { CreatureCreate } from '~bestiary/model';
+
+  import { getInitialState } from '~bestiary/model';
   import { CreaturePreview } from '~bestiary/preview';
-  import { getInitialState } from '~bestiary/types';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectAlignment } from '~ui/select';
   import { UploadImage } from '~ui/upload';
+  import { useWorkshopForm } from '~workshop/composable';
 
   import {
     CreatureAbilities,
@@ -23,8 +26,6 @@
     CreatureTrait,
     CreatureType,
   } from './ui';
-
-  import type { CreatureCreate } from '~bestiary/types';
 
   const { state, onError, onSubmit } = useWorkshopForm<CreatureCreate>({
     actionUrl: '/api/v2/bestiary',

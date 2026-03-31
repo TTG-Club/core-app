@@ -18,7 +18,7 @@
 
 <template>
   <UButton
-    icon="i-fluent-row-child-16-regular"
+    icon="tabler:subtask"
     size="md"
     color="neutral"
     variant="soft"

@@ -1,11 +1,10 @@
 <script setup lang="ts">
-  import { EditorArrayControls } from '~ui/editor';
-  import { SelectMastery, SelectSkills } from '~ui/select';
+  import type { CreateAbilities, CreateSkill } from '~bestiary/model';
 
   import { DictionaryService } from '~/shared/api';
   import { getAbilityInfo } from '~/shared/types';
-
-  import type { CreateAbilities, CreateSkill } from '~bestiary/types';
+  import { EditorArrayControls } from '~ui/editor';
+  import { SelectMastery, SelectSkills } from '~ui/select';
 
   const { abilities, proficiencyBonus = 0 } = defineProps<{
     abilities: CreateAbilities;

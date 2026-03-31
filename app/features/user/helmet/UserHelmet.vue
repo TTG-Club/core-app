@@ -2,32 +2,50 @@
   import { KbdShortcut } from '~ui/kbd-shortcut';
   import { AuthModal } from '~user/auth-modal';
 
-  import { useUserStore } from '~/shared/stores';
+  import { UserInfo } from './ui';
 
-  const userStore = useUserStore();
+  const {
+    fetch: fetchUser,
+    logout: userLogout,
+    user,
+    pending,
+    isLoggedIn,
+  } = useUser();
+
   const { isAdmin } = useUserRoles();
   const { isTablet } = useBreakpoints();
-
-  const { isLoading, user } = storeToRefs(userStore);
 
   const isAuthOpened = ref(false);
   const isMenuOpened = ref(false);
 
   const side = computed(() => (isTablet.value ? 'right' : 'top'));
 
+  const helmetIcon = computed(() =>
+    isLoggedIn.value
+      ? 'ttg:profile-helmet-filled'
+      : 'ttg:profile-helmet-outline',
+  );
+
   try {
-    await userStore.fetch();
+    await fetchUser();
   } catch (err) {
-    console.error(err);
+    consola.error(err);
   }
 
   function logout() {
-    userStore.logout().finally(() => {
-      window.location.reload();
-    });
+    closeMenu();
+    userLogout();
   }
 
   function closeMenu() {
+    isMenuOpened.value = false;
+  }
+
+  function dismissMenu(newOpenState: boolean) {
+    if (newOpenState) {
+      return;
+    }
+
     isMenuOpened.value = false;
   }
 
@@ -39,6 +57,14 @@
   function openWorkshop() {
     closeMenu();
     navigateTo({ name: 'workshop' });
+  }
+
+  function handleHelmetClick() {
+    if (!isLoggedIn.value) {
+      isAuthOpened.value = true;
+    } else {
+      isMenuOpened.value = true;
+    }
   }
 
   if (isAdmin.value) {
@@ -55,78 +81,29 @@
 </script>
 
 <template>
-  <template v-if="!user">
-    <UButton
-      :loading="isLoading"
-      variant="ghost"
-      icon="i-ttg-profile-helmet-outline"
-      size="xl"
-      color="neutral"
-      @click.left.exact.prevent="isAuthOpened = true"
-    />
-
-    <AuthModal v-model="isAuthOpened" />
-  </template>
-
   <UPopover
-    v-else
-    v-model:open="isMenuOpened"
+    :open="isMenuOpened"
     :content="{ side }"
     :ui="{ content: 'w-80 p-0' }"
+    @update:open="dismissMenu"
   >
     <template #default>
       <UButton
-        :loading="isLoading"
+        :loading="pending"
+        :icon="helmetIcon"
         variant="ghost"
-        icon="i-ttg-profile-helmet-filled"
-        size="xl"
         color="neutral"
+        size="xl"
+        @click.left.exact.prevent.stop="handleHelmetClick"
       />
     </template>
 
-    <template #content>
+    <template
+      v-if="user"
+      #content
+    >
       <div class="flex flex-col">
-        <div class="flex min-h-20 items-center gap-3 p-4">
-          <div class="flex min-w-0 flex-1 flex-col">
-            <div
-              class="mb-1 overflow-hidden text-2xl font-semibold text-ellipsis whitespace-nowrap"
-            >
-              {{ user.username }}
-            </div>
-
-            <div
-              class="overflow-hidden text-xs text-ellipsis whitespace-nowrap text-secondary"
-            >
-              {{ user.email }}
-            </div>
-          </div>
-
-          <UAvatar
-            :alt="user.username"
-            size="3xl"
-            :ui="{ fallback: 'uppercase' }"
-          />
-        </div>
-
-        <div class="-mt-2 px-4 pb-3">
-          <USeparator class="mb-2">
-            <span class="text-sm font-medium">Статистика</span>
-          </USeparator>
-
-          <div class="flex flex-col gap-1.5">
-            <div class="flex items-center justify-between text-sm">
-              <span>Скоро будет</span>
-
-              <span class="text-sm font-semibold">∞</span>
-            </div>
-
-            <div class="flex items-center justify-between text-sm">
-              <span>Скоро будет</span>
-
-              <span class="text-sm font-semibold">∞</span>
-            </div>
-          </div>
-        </div>
+        <UserInfo :user />
 
         <USeparator />
 
@@ -137,7 +114,7 @@
               variant="ghost"
               size="lg"
               class="w-full"
-              icon="i-ttg-settings"
+              icon="tabler:user-cog"
               @click.left.exact.prevent="openProfile"
             >
               Настройка профиля
@@ -145,7 +122,7 @@
 
             <UButton
               v-if="isAdmin"
-              icon="i-ttg-menu-filled-workshop"
+              icon="ttg:menu-filled-workshop"
               color="neutral"
               variant="ghost"
               class="w-full"
@@ -161,7 +138,7 @@
 
             <UButton
               v-if="isAdmin"
-              icon="i-fluent-settings-cog-multiple-24-regular"
+              icon="tabler:settings-cog"
               color="neutral"
               variant="ghost"
               class="w-full"
@@ -180,7 +157,7 @@
           <div class="p-1">
             <UButton
               class="w-full"
-              icon="i-ttg-logout"
+              icon="tabler:logout"
               variant="ghost"
               color="error"
               size="lg"
@@ -193,4 +170,9 @@
       </div>
     </template>
   </UPopover>
+
+  <AuthModal
+    v-if="!isLoggedIn"
+    v-model="isAuthOpened"
+  />
 </template>

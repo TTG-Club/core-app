@@ -1,12 +1,12 @@
 <script setup lang="ts">
-  import { ABILITY_LABELS, AbilityKey } from '~/shared/types';
-
   import type {
     AbilityScores,
     BonusSource,
     CalculatorAbilitiesBackground,
     CalculatorBackgroundOption,
   } from '../../model';
+
+  import { ABILITY_LABELS, AbilityKey } from '~/shared/types';
 
   const { background, backgroundOptions, loading } = defineProps<{
     background: CalculatorAbilitiesBackground | undefined;
@@ -26,8 +26,8 @@
 
   const availableAbilities = computed<AbilityKey[]>(() => {
     if (
-      !background?.abilityScores ||
-      !Array.isArray(background.abilityScores)
+      !background?.abilityScores
+      || !Array.isArray(background.abilityScores)
     ) {
       return [];
     }
@@ -176,7 +176,7 @@
 
         <UButton
           v-if="selectedBackgroundUrl"
-          icon="i-fluent-dismiss-24-regular"
+          icon="tabler:x"
           color="neutral"
           variant="subtle"
           @click.left.exact.prevent="selectedBackgroundUrl = undefined"
@@ -225,7 +225,7 @@
 
             <UButton
               v-if="plusTwoStat"
-              icon="i-fluent-dismiss-24-regular"
+              icon="tabler:x"
               color="neutral"
               variant="subtle"
               @click.left.exact.prevent="plusTwoStat = undefined"
@@ -242,7 +242,7 @@
 
             <UButton
               v-if="plusOneStat"
-              icon="i-fluent-dismiss-24-regular"
+              icon="tabler:x"
               color="neutral"
               variant="subtle"
               @click.left.exact.prevent="plusOneStat = undefined"

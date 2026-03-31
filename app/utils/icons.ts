@@ -32,7 +32,7 @@ function getIconName(path: string) {
     return `#ttg-${name}`;
   }
 
-  console.error(`[SvgIcon]: icon "${String(path)}" not found.`);
+  consola.error(`[SvgIcon]: icon "${String(path)}" not found.`);
 
   return undefined;
 }

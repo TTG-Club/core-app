@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+
 import { BrushMode, TokenatorEditMode } from '~tokenator/model';
 
 import { useTokenatorBrush } from './useTokenatorBrush';
@@ -37,20 +38,20 @@ export const useTokenatorStore = defineStore('tokenator', () => {
 
   const isMoveMode = computed(
     () =>
-      editMode.value === TokenatorEditMode.None &&
-      !viewport.canvasViewport.value.isPanning,
+      editMode.value === TokenatorEditMode.None
+      && !viewport.canvasViewport.value.isPanning,
   );
 
   const isBrushAddMode = computed(
     () =>
-      editMode.value === TokenatorEditMode.Brush &&
-      brushModule.brush.value.mode === 'add',
+      editMode.value === TokenatorEditMode.Brush
+      && brushModule.brush.value.mode === 'add',
   );
 
   const isBrushRemoveMode = computed(
     () =>
-      editMode.value === TokenatorEditMode.Brush &&
-      brushModule.brush.value.mode === 'remove',
+      editMode.value === TokenatorEditMode.Brush
+      && brushModule.brush.value.mode === 'remove',
   );
 
   const isBrushControlsDisabled = computed(
@@ -165,8 +166,8 @@ export const useTokenatorStore = defineStore('tokenator', () => {
    */
   function setImage(file: File) {
     if (
-      layers.currentImage.value &&
-      layers.currentImage.value.startsWith('blob:')
+      layers.currentImage.value
+      && layers.currentImage.value.startsWith('blob:')
     ) {
       URL.revokeObjectURL(layers.currentImage.value);
     }
@@ -195,7 +196,7 @@ export const useTokenatorStore = defineStore('tokenator', () => {
     };
 
     reader.onerror = () => {
-      console.error('Failed to load image file');
+      consola.error('Failed to load image file');
     };
 
     reader.readAsDataURL(file);

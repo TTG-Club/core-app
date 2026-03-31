@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { ClassDetailResponse } from '~classes/model';
+
   import { UiCollapse } from '~ui/collapse';
   import { UiGallery } from '~ui/gallery';
   import { MarkupRender } from '~ui/markup';
@@ -11,8 +13,6 @@
     FeatureCollapse,
     StatsBlock,
   } from './ui';
-
-  import type { ClassDetailResponse } from '~classes/types';
 
   const {
     detail,

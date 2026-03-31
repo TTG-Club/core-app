@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SpeciesLinkResponse } from '~/shared/types';
+  import type { SpeciesLinkResponse } from '~species/model';
 
   interface SpeciesSelectItem {
     label: string;
@@ -21,7 +21,7 @@
       const speciesLinks = await $fetch<Array<SpeciesLinkResponse>>(
         '/api/v2/species/search',
         {
-          method: 'post',
+          method: 'get',
         },
       );
 

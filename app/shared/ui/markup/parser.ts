@@ -1,13 +1,13 @@
-import { MARKER_ALIASES, MARKER_MAP } from './config';
-import { LEADING_CHARACTER, MAX_DEPTH, MAX_STRING_LENGTH } from './consts';
-import { logError } from './utils';
-
 import type {
   MarkerAttributes,
   MarkerNode,
   RenderNode,
   SimpleTextNode,
 } from './types';
+
+import { MARKER_ALIASES, MARKER_MAP } from './config';
+import { LEADING_CHARACTER, MAX_DEPTH, MAX_STRING_LENGTH } from './consts';
+import { logError } from './utils';
 
 export function parse(text: string): RenderNode[] {
   if (text.length > MAX_STRING_LENGTH) {

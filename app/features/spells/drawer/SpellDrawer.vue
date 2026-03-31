@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { SpellDetailResponse } from '~spells/model';
+
   import { SpellBody } from '~spells/body';
   import { UiDrawer } from '~ui/drawer';
-
-  import type { SpellDetailResponse } from '~/shared/types';
 
   const { url } = defineProps<{
     url: string;

@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { ItemDetailResponse } from '~items/model';
+
   import { ItemBody } from '~items/body';
   import { PageActions } from '~ui/page';
-
-  import type { ItemDetailResponse } from '~items/types';
 
   const route = useRoute();
 

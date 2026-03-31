@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { FeatCreate, FeatDetailResponse } from '~feats/model';
+
   import { FeatBody } from '~feats/body';
   import { UiDrawer } from '~ui/drawer';
-
-  import type { FeatCreate, FeatDetailResponse } from '~/shared/types';
 
   const opened = defineModel<boolean>('open', { required: true });
 

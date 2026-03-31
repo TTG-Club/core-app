@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SpellLinkResponse } from '~/shared/types';
+  import type { SpellLinkResponse } from '~spells/model';
 
   defineProps<Pick<SpellLinkResponse, 'components'>>();
 </script>

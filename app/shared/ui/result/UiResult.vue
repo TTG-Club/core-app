@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { computed } from 'vue';
-
   import type { NuxtError } from '#app';
+
+  import { computed } from 'vue';
 
   interface Props {
     status?: 'success' | 'error' | 'info' | 'warning' | '404' | '403';
@@ -20,12 +20,12 @@
   } = defineProps<Props>();
 
   const iconMap = {
-    'success': 'i-ttg-success',
-    'error': 'i-ttg-error',
-    'info': 'i-ttg-info',
-    'warning': 'i-ttg-warning',
-    '404': 'i-ttg-error',
-    '403': 'i-ttg-error',
+    'success': 'tabler:circle-check',
+    'error': 'tabler:alert-triangle',
+    'info': 'tabler:info-circle',
+    'warning': 'tabler:alert-octagon',
+    '404': 'tabler:error-404',
+    '403': 'tabler:ban',
   };
 
   const computedStatus = computed(() => {
@@ -68,7 +68,7 @@
   });
 
   const statusIcon = computed(
-    () => icon || iconMap[status] || 'i-fluent-info-16-filled',
+    () => icon || iconMap[status] || 'tabler:info-circle',
   );
 
   const statusColor = computed(() => {

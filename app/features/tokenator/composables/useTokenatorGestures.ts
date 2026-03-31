@@ -1,4 +1,5 @@
 import { useGesture } from '@vueuse/gesture';
+
 import { getScaleFactor, TokenatorEditMode } from '~tokenator/model';
 
 import { useTokenatorStore } from './useTokenatorStore';
@@ -62,14 +63,14 @@ export function useTokenatorGestures({
           isPainting.value = true;
 
           const rect = containerRef.value.getBoundingClientRect();
-          const x = event.clientX - rect.left;
-          const y = event.clientY - rect.top;
+          const pointerX = event.clientX - rect.left;
+          const pointerY = event.clientY - rect.top;
 
           // Рисуем сразу при клике (без prevX/prevY - будет круг)
-          paintMask(x, y);
+          paintMask(pointerX, pointerY);
 
-          lastPaintPos.x = x;
-          lastPaintPos.y = y;
+          lastPaintPos.x = pointerX;
+          lastPaintPos.y = pointerY;
 
           return;
         }
@@ -93,7 +94,12 @@ export function useTokenatorGestures({
         dragStartPos.y = store.transform.position.y;
       },
 
-      onDrag: ({ xy: [x, y], movement: [mx, my], pinching, dragging }) => {
+      onDrag: ({
+        xy: [pointerX, pointerY],
+        movement: [mx, my],
+        pinching,
+        dragging,
+      }) => {
         if (isDisabled.value || pinching || !dragging) {
           return;
         }
@@ -114,8 +120,8 @@ export function useTokenatorGestures({
 
           if (containerRef.value) {
             const rect = containerRef.value.getBoundingClientRect();
-            const localX = x - rect.left;
-            const localY = y - rect.top;
+            const localX = pointerX - rect.left;
+            const localY = pointerY - rect.top;
 
             cursorX.value = localX;
             cursorY.value = localY;
@@ -131,8 +137,8 @@ export function useTokenatorGestures({
 
         // Background drag mode
         if (
-          store.editMode === TokenatorEditMode.Background &&
-          isDragging.value
+          store.editMode === TokenatorEditMode.Background
+          && isDragging.value
         ) {
           const scaleFactor = getScaleFactor(
             containerRef.value,
@@ -173,15 +179,15 @@ export function useTokenatorGestures({
         isPainting.value = false;
       },
 
-      onMove: ({ xy: [x, y] }) => {
+      onMove: ({ xy: [pointerX, pointerY] }) => {
         if (isDisabled.value || !containerRef.value) {
           return;
         }
 
         const rect = containerRef.value.getBoundingClientRect();
 
-        cursorX.value = x - rect.left;
-        cursorY.value = y - rect.top;
+        cursorX.value = pointerX - rect.left;
+        cursorY.value = pointerY - rect.top;
       },
 
       onHover: ({ hovering }) => {
@@ -209,9 +215,9 @@ export function useTokenatorGestures({
         event.preventDefault();
 
         if (
-          isDisabled.value ||
-          !store.currentImage ||
-          store.editMode !== 'none'
+          isDisabled.value
+          || !store.currentImage
+          || store.editMode !== 'none'
         ) {
           return;
         }
@@ -228,10 +234,10 @@ export function useTokenatorGestures({
 
         // Формула: (STEP / delta) * velocity * direction * currentScale
         const step =
-          (SCALE_STEP / delta) *
-          (Math.abs(velocity) || 1) *
-          dir *
-          store.transform.scale;
+          (SCALE_STEP / delta)
+          * (Math.abs(velocity) || 1)
+          * dir
+          * store.transform.scale;
 
         store.transform.scale = Math.min(
           Math.max(store.transform.scale + step, MIN_SCALE),

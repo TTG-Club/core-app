@@ -1,9 +1,8 @@
 <script setup lang="ts">
-  import { SelectMastery } from '~ui/select';
+  import type { CreateAbilities } from '~bestiary/model';
 
   import { ABILITIES } from '~/shared/types';
-
-  import type { CreateAbilities } from '~bestiary/types';
+  import { SelectMastery } from '~ui/select';
 
   const { proficiencyBonus } = defineProps<{
     proficiencyBonus: number;

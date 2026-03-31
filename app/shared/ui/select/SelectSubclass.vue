@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ClassLinkResponse } from '~classes/types';
+  import type { ClassLinkResponse } from '~classes/model';
 
   interface SubclassSelectItem {
     label: string;

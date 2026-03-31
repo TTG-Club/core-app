@@ -5,7 +5,7 @@
   >
     <template #actions>
       <UButton
-        icon="i-ttg-plus"
+        icon="tabler:plus"
         color="neutral"
         variant="ghost"
         @click.left.exact.prevent="navigateTo('/workshop/classes/create')"
@@ -17,7 +17,7 @@
         <UButton
           variant="ghost"
           color="neutral"
-          icon="i-ttg-x"
+          icon="tabler:x"
           @click.left.exact.prevent="navigateTo('/workshop')"
         />
       </UTooltip>

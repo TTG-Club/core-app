@@ -12,7 +12,7 @@ const roller = new DiceRoller();
  * const { valid } = validateWithError('2к6+3');
  * if (valid) {
  *   const result = roll('2к6+3');
- *   console.log(result.value);
+ *   consola.log(result.value);
  * }
  */
 export function useDiceRoller() {

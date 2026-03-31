@@ -4,7 +4,7 @@
 
 <template>
   <CardWorkshop
-    title="Мастерская предметов"
+    title="Предметы"
     section="items"
   />
 </template>

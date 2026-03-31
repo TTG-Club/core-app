@@ -1,11 +1,8 @@
 <script setup lang="ts">
-  import { useUserStore } from '~/shared/stores';
-
   import { LinkTo5e14 } from '../link-to-5e14';
-
   import { CARD_LINKS } from './model';
 
-  const { user } = storeToRefs(useUserStore());
+  const { user } = useUser();
 
   const sections = computed(() =>
     CARD_LINKS.map((link) => {

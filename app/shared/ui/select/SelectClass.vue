@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ClassLinkResponse } from '~classes/types';
+  import type { ClassLinkResponse } from '~classes/model';
 
   const { multiple = false, disabled } = defineProps<{
     disabled?: boolean;
@@ -27,7 +27,7 @@
       const classesLinks = await $fetch<Array<ClassLinkResponse>>(
         '/api/v2/classes/search',
         {
-          method: 'post',
+          method: 'get',
           query: {
             query: searchQuery.value || undefined,
           },

@@ -1,9 +1,7 @@
 <script setup lang="ts">
-  import { useUserStore } from '~/shared/stores';
+  import type { RouteLocationRaw } from 'vue-router';
 
   import { CopyButton } from '../copy-button';
-
-  import type { RouteLocationRaw } from 'vue-router';
 
   const { closeUrl = undefined, editUrl = undefined } = defineProps<{
     closeUrl?: RouteLocationRaw | undefined | null;
@@ -17,7 +15,7 @@
   const route = useRoute();
   const router = useRouter();
 
-  const { isAdmin } = storeToRefs(useUserStore());
+  const { isAdmin } = useUser();
 
   const urlForCopy = computed(() => {
     return getOrigin() + route.fullPath;
@@ -47,7 +45,7 @@
   >
     <UButton
       :href="editUrl"
-      icon="i-ttg-edit"
+      icon="tabler:pencil"
       variant="ghost"
       target="_blank"
       color="neutral"
@@ -61,7 +59,7 @@
     <UButton
       variant="ghost"
       color="neutral"
-      icon="i-ttg-x"
+      icon="tabler:x"
       @click.left.exact.prevent="close"
     />
   </UTooltip>

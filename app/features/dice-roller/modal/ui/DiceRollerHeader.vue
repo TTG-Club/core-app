@@ -15,7 +15,7 @@
 
     <div class="flex items-center gap-1">
       <UButton
-        icon="i-fluent-delete-16-regular"
+        icon="tabler:trash"
         variant="soft"
         color="neutral"
         size="sm"
@@ -24,7 +24,7 @@
       />
 
       <UButton
-        icon="i-ttg-x"
+        icon="tabler:x"
         variant="soft"
         color="neutral"
         size="sm"

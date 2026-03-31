@@ -14,7 +14,11 @@
   const toast = useToast();
 
   function onFileChange(e: Event) {
-    const input = e.target as HTMLInputElement;
+    if (!(e.target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const input = e.target;
 
     if (input.files) {
       handleFileUpload(input.files);
@@ -49,7 +53,7 @@
       await refresh();
       toast.add({ title: 'Файлы успешно загружены', color: 'success' });
     } catch (e) {
-      console.error(e);
+      consola.error(e);
       toast.add({ title: 'Ошибка при загрузке', color: 'error' });
     } finally {
       isUploading.value = false;
@@ -69,7 +73,7 @@
       await refresh();
       toast.add({ title: 'Рамка удалена', color: 'success' });
     } catch (e) {
-      console.error('Failed to delete:', e);
+      consola.error('Failed to delete:', e);
       toast.add({ title: 'Ошибка при удалении', color: 'error' });
     } finally {
       isDeleting.value = null;
@@ -146,7 +150,7 @@
 
       toast.add({ title: 'Порядок сохранен', color: 'success' });
     } catch (e) {
-      console.error(e);
+      consola.error(e);
       toast.add({ title: 'Ошибка сохранения порядка', color: 'error' });
       await refresh();
     } finally {
@@ -173,7 +177,7 @@
             type="file"
             multiple
             accept=".jpg,.jpeg,.png,.webp"
-            icon="i-ttg-plus"
+            icon="tabler:plus"
             :loading="isUploading"
             @change="onFileChange"
           />
@@ -219,7 +223,7 @@
               <UButton
                 color="error"
                 variant="ghost"
-                icon="i-ttg-remove"
+                icon="tabler:trash"
                 size="xs"
                 :loading="isDeleting === border.id"
                 @click.left.exact.prevent="deleteBorder(border.id)"

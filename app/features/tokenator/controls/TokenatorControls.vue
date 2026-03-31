@@ -82,17 +82,17 @@
       JSON.stringify(store.brush) !== JSON.stringify(DEFAULT_BRUSH_CONFIG);
 
     const hasCanvasChanges =
-      store.canvasViewport.zoom !== 1 ||
-      store.canvasViewport.pan.x !== 0 ||
-      store.canvasViewport.pan.y !== 0;
+      store.canvasViewport.zoom !== 1
+      || store.canvasViewport.pan.x !== 0
+      || store.canvasViewport.pan.y !== 0;
 
     return (
-      hasTransformChanges ||
-      hasColorChanges ||
-      hasTintChanges ||
-      hasTextChanges ||
-      hasBrushChanges ||
-      hasCanvasChanges
+      hasTransformChanges
+      || hasColorChanges
+      || hasTintChanges
+      || hasTextChanges
+      || hasBrushChanges
+      || hasCanvasChanges
     );
   });
 
@@ -178,9 +178,7 @@
   }
 
   const resetIcon = computed(() =>
-    toolTab.value === TokenatorTool.ThreeD
-      ? 'i-fluent-eraser-24-regular'
-      : 'i-fluent-arrow-reset-24-regular',
+    toolTab.value === TokenatorTool.ThreeD ? 'tabler:eraser' : 'tabler:restore',
   );
 
   const resetLabel = computed(() =>
@@ -250,7 +248,7 @@
       <UButton
         v-if="hasSettingsChanged"
         tooltip="Сбросить все настройки"
-        icon="i-fluent-arrow-reset-20-regular"
+        icon="tabler:restore"
         size="xs"
         color="neutral"
         variant="solid"
@@ -261,7 +259,7 @@
 
     <div class="grid grid-cols-2 gap-2 pt-2">
       <UButton
-        icon="i-fluent-arrow-download-24-regular"
+        icon="tabler:download"
         :loading="isExportingPng"
         variant="soft"
         label="PNG"
@@ -270,7 +268,7 @@
       />
 
       <UButton
-        icon="i-fluent-arrow-download-24-regular"
+        icon="tabler:download"
         :loading="isExportingWebp"
         color="neutral"
         variant="soft"

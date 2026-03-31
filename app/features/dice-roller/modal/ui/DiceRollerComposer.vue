@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { useFocus } from '@vueuse/core';
+
   import { useDiceRollerState } from '~dice-roller/composables';
 
   const emit = defineEmits<{
@@ -57,7 +58,7 @@
         color="neutral"
         variant="subtle"
         size="sm"
-        icon="i-ttg-x"
+        icon="tabler:x"
         @click.left.exact.prevent="state.formula = ''"
       />
 
@@ -66,7 +67,7 @@
 
     <UButton
       type="button"
-      icon="i-fluent-send-24-filled"
+      icon="tabler:send-2"
       color="primary"
       class="rounded-md shadow-lg transition"
       aria-label="Бросить кубы"

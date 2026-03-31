@@ -1,6 +1,6 @@
-import { v7 as uuidv7 } from 'uuid';
-
 import type { DiceDetail, HistoryEntry } from '../types';
+
+import { v7 as uuidv7 } from 'uuid';
 
 interface AddHistoryEntryPayload {
   formula: string;

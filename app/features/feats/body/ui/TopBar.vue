@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { FeatDetailResponse } from '~/shared/types';
+  import type { FeatDetailResponse } from '~feats/model';
 
   defineProps<Pick<FeatDetailResponse, 'category'>>();
 </script>

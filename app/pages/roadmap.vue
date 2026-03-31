@@ -1,11 +1,9 @@
 <script setup lang="ts">
+  import type { RoadmapItem } from '~roadmap/types';
+
   import { RoadmapEditor } from '~roadmap/editor';
   import { RoadmapFeature } from '~roadmap/feature';
   import { PageGrid } from '~ui/page';
-
-  import { useUserStore } from '~/shared/stores';
-
-  import type { RoadmapItem } from '~roadmap/types';
 
   useSeoMeta({
     title: 'Карта разработки',
@@ -13,7 +11,7 @@
   });
 
   const { isAdmin } = useUserRoles();
-  const { isLoggedIn } = storeToRefs(useUserStore());
+  const { isLoggedIn } = useUser();
 
   const { data: roadmap, refresh } = useAsyncData(
     'roadmap',
@@ -37,7 +35,7 @@
         @update:roadmap="refresh()"
       >
         <UButton
-          icon="i-ttg-plus"
+          icon="tabler:plus"
           variant="ghost"
           color="neutral"
         />

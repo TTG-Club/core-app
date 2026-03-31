@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { SelectChallengeRating } from '~ui/select';
+  import type { CreateExperience } from '~bestiary/model';
 
-  import type { CreateExperience } from '~bestiary/types';
+  import { SelectChallengeRating } from '~ui/select';
 
   const model = defineModel<CreateExperience>({ required: true });
 

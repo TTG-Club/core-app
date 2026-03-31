@@ -1,9 +1,11 @@
 <script setup lang="ts">
+  import type { GlossaryCreate } from '~glossary/model';
+
   import { z } from 'zod/v4';
+
   import { GlossaryPreview } from '~glossary/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
-
-  import type { GlossaryCreate } from '~/shared/types';
+  import { useWorkshopForm } from '~workshop/composable';
 
   const formRef = useTemplateRef('formRef');
 

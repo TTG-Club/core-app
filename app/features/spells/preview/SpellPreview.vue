@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { SpellCreate, SpellDetailResponse } from '~spells/model';
+
   import { SpellBody } from '~spells/body';
   import { UiDrawer } from '~ui/drawer';
-
-  import type { SpellCreate, SpellDetailResponse } from '~/shared/types';
 
   const opened = defineModel<boolean>('open', { required: true });
 

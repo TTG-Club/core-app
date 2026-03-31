@@ -1,5 +1,8 @@
 <script setup lang="ts">
+  import type { CreatureDetailResponse } from '~bestiary/model';
+
   import { pick } from 'es-toolkit';
+
   import { UiAction } from '~ui/action';
   import { UiCollapse } from '~ui/collapse';
   import { UiGallery } from '~ui/gallery';
@@ -7,8 +10,6 @@
   import { RatingWidget } from '~ui/rating';
 
   import { DescriptionsBlock, StatsBlock, TopBar } from './ui';
-
-  import type { CreatureDetailResponse } from '~bestiary/types';
 
   const { creature } = defineProps<{
     creature: CreatureDetailResponse;
@@ -38,9 +39,9 @@
 
   const hasSection = computed(
     () =>
-      creature.section?.description ||
-      creature.section?.habitats ||
-      creature.section?.treasures,
+      creature.section?.description
+      || creature.section?.habitats
+      || creature.section?.treasures,
   );
 </script>
 

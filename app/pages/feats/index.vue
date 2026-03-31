@@ -1,25 +1,24 @@
 <script setup lang="ts">
+  import type { FeatLinkResponse } from '~feats/model';
+
   import { FeatLink } from '~feats/link';
-  import { useFilter } from '~filter/composable';
-  import { FilterControls } from '~filter/controls';
+  import { FilterControls, useFilter } from '~infrastructure/filter';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
-
-  import type { FeatLinkResponse } from '~/shared/types';
 
   useSeoMeta({
     title: 'Черты [Feats]',
     description: 'Черты из D&D 5 (редакция 2024 года).',
   });
 
-  const search = ref<string>();
-
   const {
     filter,
-    filterStringFromUrl,
+    search,
+    filterQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
+    defaults: filterDefaults,
   } = await useFilter('feats', '/api/v2/feats/filters');
 
   const {
@@ -30,16 +29,16 @@
   } = await useAsyncData(
     'feats',
     () =>
-      $fetch<Array<FeatLinkResponse>>('/api/v2/feats', {
+      $fetch<Array<FeatLinkResponse>>('/api/v2/feats/search', {
         method: 'GET',
         query: {
           search: search.value,
-          filter: filterStringFromUrl.value,
+          ...filterQuery.value,
         },
       }),
     {
       deep: false,
-      watch: [search, filterStringFromUrl],
+      watch: [search, filterQuery],
     },
   );
 </script>
@@ -53,6 +52,7 @@
       <FilterControls
         v-model:search="search"
         v-model:filter="filter"
+        :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       >

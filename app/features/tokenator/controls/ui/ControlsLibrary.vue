@@ -1,8 +1,9 @@
 <script setup lang="ts">
-  import { useFileDialog } from '@vueuse/core';
-  import { useTokenatorStore } from '~tokenator/composables';
-
   import type { TokenatorFrame } from '~tokenator/model';
+
+  import { useFileDialog } from '@vueuse/core';
+
+  import { useTokenatorStore } from '~tokenator/composables';
 
   const store = useTokenatorStore();
 
@@ -36,10 +37,10 @@
     frames,
     (newFrames) => {
       if (
-        newFrames?.length &&
-        newFrames[0] &&
-        !store.currentFrame &&
-        !store.customFrame
+        newFrames?.length
+        && newFrames[0]
+        && !store.currentFrame
+        && !store.customFrame
       ) {
         store.selectFrame(newFrames[0]);
       }
@@ -73,7 +74,7 @@
           <UButton
             color="neutral"
             variant="outline"
-            icon="i-ttg-x"
+            icon="tabler:x"
             class="rounded-l-none border-l-0 px-2"
             @click.stop="store.currentImage = null"
           />
@@ -107,7 +108,7 @@
           <UButton
             color="neutral"
             variant="outline"
-            icon="i-ttg-x"
+            icon="tabler:x"
             class="rounded-l-none border-l-0 px-2"
             @click.stop="store.customFrame = null"
           />
@@ -141,7 +142,7 @@
           <UButton
             color="neutral"
             variant="outline"
-            icon="i-ttg-x"
+            icon="tabler:x"
             class="rounded-l-none border-l-0 px-2"
             @click.stop="store.customBackground = null"
           />
@@ -177,7 +178,7 @@
           @click.left.exact.prevent="store.selectNoFrame"
         >
           <UIcon
-            name="i-ttg-x"
+            name="tabler:x"
             class="size-6"
           />
         </button>
@@ -211,7 +212,7 @@
     </div>
 
     <UButton
-      icon="i-fluent-arrow-reset-24-regular"
+      icon="tabler:restore"
       label="Сбросить все изображения"
       variant="soft"
       color="error"

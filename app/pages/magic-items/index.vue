@@ -1,29 +1,26 @@
 <script setup lang="ts">
-  import { computed } from 'vue';
-  import { useFilter } from '~filter/composable';
-  import { FilterControls } from '~filter/controls';
+  import type { MagicItemLinkResponse } from '~magic-items/model';
+
+  import { FilterControls, useFilter } from '~infrastructure/filter';
+  import { useMagicItemRarityGroupOrder } from '~magic-items/composable';
   import { MagicItemLegend } from '~magic-items/legend';
   import { MagicItemLink } from '~magic-items/link';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
-  import { useMagicItemRarityGroupOrder } from '~/shared/api/useMagicItemRarityGroupOrder';
-
-  import type { MagicItemLinkResponse } from '~magic-items/types';
-
   useSeoMeta({
     title: 'Магические предметы [Magic Items]',
     description: 'Магические предметы из D&D 5 (редакция 2024 года).',
   });
 
-  const search = ref<string>();
-
   const {
     filter,
-    filterStringFromUrl,
+    search,
+    filterQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
+    defaults: filterDefaults,
   } = await useFilter('magic-items', '/api/v2/magic-items/filters');
 
   const { order: rarityOrder, pending: isRarityPending } =
@@ -37,16 +34,16 @@
   } = await useAsyncData(
     'magic-items',
     () =>
-      $fetch<Array<MagicItemLinkResponse>>('/api/v2/magic-items', {
+      $fetch<Array<MagicItemLinkResponse>>('/api/v2/magic-items/search', {
         method: 'GET',
         query: {
           search: search.value,
-          filter: filterStringFromUrl.value,
+          ...filterQuery.value,
         },
       }),
     {
       deep: false,
-      watch: [search, filterStringFromUrl],
+      watch: [search, filterQuery],
     },
   );
 
@@ -67,6 +64,7 @@
       <FilterControls
         v-model:search="search"
         v-model:filter="filter"
+        :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       >
@@ -96,7 +94,7 @@
           :items="magicItems"
           field="rarity"
           :group-sort="{
-            mode: 'custom',
+            mode: 'ordered',
             order: rarityOrder,
             unknown: 'after',
           }"

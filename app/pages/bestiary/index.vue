@@ -1,27 +1,25 @@
 <script setup lang="ts">
+  import type { CreatureLinkResponse } from '~bestiary/model';
+
+  import { useChallengeRatingGroupOrder } from '~bestiary/composable';
   import { CreatureLink } from '~bestiary/link';
-  import { useFilter } from '~filter/composable';
-  import { FilterControls } from '~filter/controls';
+  import { FilterControls, useFilter } from '~infrastructure/filter';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
-
-  import { useChallengeRatingGroupOrder } from '~/shared/api';
-
-  import type { CreatureLinkResponse } from '~bestiary/types';
 
   useSeoMeta({
     title: 'Бестиарий [Bestiary]',
     description: 'Бестиарий из D&D 5 (редакция 2024 года).',
   });
 
-  const search = ref<string>();
-
   const {
     filter,
-    filterStringFromUrl,
+    search,
+    filterQuery,
     isPending: isFilterPending,
     isShowedPreview: isFilterPreviewShowed,
+    defaults: filterDefaults,
   } = await useFilter('bestiary', '/api/v2/bestiary/filters');
 
   const {
@@ -37,14 +35,14 @@
   } = await useAsyncData(
     'bestiary',
     () =>
-      $fetch<Array<CreatureLinkResponse>>('/api/v2/bestiary', {
+      $fetch<Array<CreatureLinkResponse>>('/api/v2/bestiary/search', {
         method: 'GET',
         query: {
           search: search.value,
-          filter: filterStringFromUrl.value,
+          ...filterQuery.value,
         },
       }),
-    { deep: false, watch: [search, filterStringFromUrl] },
+    { deep: false, watch: [search, filterQuery] },
   );
 
   const isLoading = computed(() => {
@@ -64,6 +62,7 @@
       <FilterControls
         v-model:search="search"
         v-model:filter="filter"
+        :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
       />
@@ -90,7 +89,7 @@
           field="challengeRailing"
           separator-label="Уровень опасности {value}"
           :group-sort="{
-            mode: 'custom',
+            mode: 'ordered',
             order: challengeRatingOrder,
             unknown: 'before',
           }"

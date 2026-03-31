@@ -138,10 +138,10 @@
 
     for (let i = 0; i <= sides; i++) {
       const angle = i * angleStep + rotationRad - Math.PI / 2;
-      const x = cx + radius * Math.cos(angle);
-      const y = cy + radius * Math.sin(angle);
+      const posX = cx + radius * Math.cos(angle);
+      const posY = cy + radius * Math.sin(angle);
 
-      points.push(i === 0 ? `M ${x},${y}` : `L ${x},${y}`);
+      points.push(i === 0 ? `M ${posX},${posY}` : `L ${posX},${posY}`);
     }
 
     return `${points.join(' ')} Z`;
@@ -150,9 +150,9 @@
   const containerClasses = computed(() => ({
     'cursor-none': isBrushMode.value,
     'cursor-grab':
-      store.currentImage &&
-      store.editMode === TokenatorEditMode.None &&
-      !isDragging.value,
+      store.currentImage
+      && store.editMode === TokenatorEditMode.None
+      && !isDragging.value,
     'cursor-grabbing':
       isDragging.value && store.editMode === TokenatorEditMode.None,
     'cursor-move': store.editMode === TokenatorEditMode.Background,

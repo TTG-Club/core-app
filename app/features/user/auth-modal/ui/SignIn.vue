@@ -1,11 +1,9 @@
 <script setup lang="ts">
-  import { useUserStore } from '~/shared/stores';
-
   const emit = defineEmits<{
     (e: 'switch:sign-up' | 'switch:change-password' | 'close'): void;
   }>();
 
-  const { fetch } = useUserStore();
+  const { fetch } = useUser();
   const $toast = useToast();
 
   const showPwd = ref(false);
@@ -34,20 +32,19 @@
         title: 'Ошибка авторизации',
         description: error.value.data.message,
         color: 'error',
-        icon: 'i-fluent-person-warning-16-regular',
+        icon: 'tabler:user-exclamation',
       });
 
       return;
     }
 
-    fetch().finally();
-
+    fetch();
     emit('close');
 
     $toast.add({
       title: 'Вы авторизовались!',
       color: 'success',
-      icon: 'i-fluent-person-available-16-regular',
+      icon: 'tabler:user-check',
     });
   }
 </script>
@@ -88,11 +85,7 @@
               color="neutral"
               variant="link"
               size="sm"
-              :icon="
-                showPwd
-                  ? 'i-fluent-eye-off-16-filled'
-                  : 'i-fluent-eye-16-filled'
-              "
+              :icon="showPwd ? 'tabler:eye-off' : 'tabler:eye-filled'"
               :aria-label="showPwd ? 'Скрыть пароль' : 'Показать пароль'"
               :aria-pressed="showPwd"
               aria-controls="password"

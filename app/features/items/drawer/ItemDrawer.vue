@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { ItemDetailResponse } from '~items/model';
+
   import { ItemBody } from '~items/body';
   import { UiDrawer } from '~ui/drawer';
-
-  import type { ItemDetailResponse } from '~items/types';
 
   const { url } = defineProps<{
     url: string;

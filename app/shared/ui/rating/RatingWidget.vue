@@ -1,9 +1,9 @@
 <script setup lang="ts">
+  import type { RatingValue } from './types';
+
   import { isUndefined } from 'es-toolkit';
 
   import { UIcon } from '#components';
-
-  import type { RatingValue } from './types';
 
   const {
     section,
@@ -133,7 +133,7 @@
                 style: {
                   left: `${part * -5}px`,
                 },
-                name: 'i-fluent-star-16-filled',
+                name: 'tabler:star-filled',
                 size: 20,
               }),
             ),

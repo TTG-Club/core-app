@@ -1,10 +1,11 @@
 <script setup lang="ts">
+  import type { BonusSource } from '../model';
+
   import {
     useBackgroundSelect,
     useClassSelect,
     useFeatSelect,
   } from '../composables';
-
   import {
     BackgroundSelect,
     ClassLevelSelect,
@@ -12,14 +13,15 @@
     GeneralFeatsGrid,
   } from './components';
 
-  import type { BonusSource } from '../model';
-
   const model = defineModel<number>({ required: true });
 
   const emit = defineEmits<{
     (e: 'update:feat-sources', value: BonusSource[]): void;
     (e: 'update:background-sources', value: BonusSource[]): void;
     (e: 'update:class-sources', value: BonusSource[]): void;
+
+    (e: 'update:selected-class-url', value: string | undefined): void;
+    (e: 'update:class-ability-template', value: Array<number>): void;
   }>();
 
   const {
@@ -37,11 +39,32 @@
     allAsiLevels,
     classAsiLevels,
     selectedClassSources,
+    selectedClassAbilityTemplate,
   } = useClassSelect(model);
 
-  watch(selectedClassSources, (sources) => {
-    emit('update:class-sources', sources);
-  });
+  watch(
+    selectedClassSources,
+    (sources) => {
+      emit('update:class-sources', sources);
+    },
+    { immediate: true },
+  );
+
+  watch(
+    classSelectedUrl,
+    (url) => {
+      emit('update:selected-class-url', url);
+    },
+    { immediate: true },
+  );
+
+  watch(
+    selectedClassAbilityTemplate,
+    (template) => {
+      emit('update:class-ability-template', template);
+    },
+    { immediate: true },
+  );
 
   const {
     selectedEpicFeatUrl,
@@ -59,9 +82,13 @@
     updateAbilityChoice,
   } = useFeatSelect(hasEpicBoon);
 
-  watch(featSelectedSources, (sources) => {
-    emit('update:feat-sources', sources);
-  });
+  watch(
+    featSelectedSources,
+    (sources) => {
+      emit('update:feat-sources', sources);
+    },
+    { immediate: true },
+  );
 </script>
 
 <template>

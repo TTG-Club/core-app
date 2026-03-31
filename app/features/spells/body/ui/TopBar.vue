@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SpellDetailResponse } from '~/shared/types';
+  import type { SpellDetailResponse } from '~spells/model';
 
   defineProps<
     Pick<SpellDetailResponse, 'level' | 'school' | 'additionalType' | 'ritual'>

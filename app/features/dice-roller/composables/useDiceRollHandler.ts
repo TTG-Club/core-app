@@ -1,12 +1,11 @@
 import { inject } from 'vue';
 
+import { useDiceRoller, useDiceRollerState } from '.';
 import {
   extractDiceRollDetails,
   extractRollValue,
   formatDiceDetailsSummary,
 } from '../utils';
-
-import { useDiceRoller, useDiceRollerState } from '.';
 
 /**
  * Composable для обработки бросков кубов.
@@ -45,7 +44,7 @@ export function useDiceRollHandler() {
       if (!isOpen.value) {
         toast.add({
           color: 'error',
-          icon: 'i-ttg-dice-outline-d20',
+          icon: 'ttg:dice-outline-d20',
           title: 'Некорректная нотация броска',
           description: error ?? 'Проверь формат записи броска.',
         });
@@ -73,7 +72,7 @@ export function useDiceRollHandler() {
       toast.add({
         color: 'neutral',
         title: `Бросок ${notation}`,
-        icon: 'i-ttg-dice-outline-d20',
+        icon: 'ttg:dice-outline-d20',
         description: () =>
           h('span', [
             `Результат: `,

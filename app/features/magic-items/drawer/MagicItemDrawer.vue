@@ -1,8 +1,8 @@
 <script setup lang="ts">
+  import type { MagicItemDetailResponse } from '~magic-items/model';
+
   import { MagicItemBody } from '~magic-items/body';
   import { UiDrawer } from '~ui/drawer';
-
-  import type { MagicItemDetailResponse } from '~magic-items/types';
 
   const { url } = defineProps<{
     url: string;

@@ -6,7 +6,7 @@
     open?: boolean;
     disabled?: boolean;
     unmountOnHide?: boolean;
-    class?: any;
+    class?: unknown;
     ui?: {
       root?: ClassValue;
       content?: ClassValue;
@@ -35,7 +35,7 @@
     <template #default="{ open: opened }">
       <h4 class="flex cursor-pointer items-center gap-2 text-xl font-semibold">
         <UIcon
-          name="i-fluent-chevron-down-16-regular"
+          name="tabler:chevron-down"
           class="transition-transform duration-150 ease-in-out"
           :class="opened ? '-rotate-180' : ''"
         />

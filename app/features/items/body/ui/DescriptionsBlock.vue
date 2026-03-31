@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { MarkupRender } from '~ui/markup';
+  import type { ItemDetailResponse } from '~items/model';
 
-  import type { ItemDetailResponse } from '~items/types';
+  import { MarkupRender } from '~ui/markup';
 
   const { description } =
     defineProps<Pick<ItemDetailResponse, 'description'>>();

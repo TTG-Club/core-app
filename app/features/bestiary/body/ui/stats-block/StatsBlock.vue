@@ -1,16 +1,16 @@
 <script setup lang="ts">
+  import type { CreatureDetailResponse } from '~bestiary/model';
+
   import { DiceRollerLink } from '~dice-roller/link';
   import { MarkupRender } from '~ui/markup';
 
   import { CreatureAbilitiesTable } from './ui';
 
-  import type { CreatureDetailResponse } from '~bestiary/types';
-
   type Props = Pick<
     CreatureDetailResponse,
     'ac' | 'cr' | 'initiative' | 'hit' | 'speed' | 'abilities'
-  > &
-    Pick<
+  >
+    & Pick<
       Partial<CreatureDetailResponse>,
       | 'skills'
       | 'equipments'
