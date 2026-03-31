@@ -18,7 +18,7 @@
 
 <template>
   <UButton
-    icon="tabler:link"
+    icon="tabler:layout-sidebar-right-expand"
     size="md"
     color="neutral"
     variant="soft"
