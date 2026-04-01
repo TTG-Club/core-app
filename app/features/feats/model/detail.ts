@@ -1,3 +1,5 @@
+import type { JSONContent } from '@tiptap/core';
+
 import type { SourceResponse } from '~/shared/types';
 
 export interface FeatDetailResponse {
@@ -7,8 +9,8 @@ export interface FeatDetailResponse {
     eng: string;
   };
   category: string;
-  prerequisite: string;
+  prerequisite: JSONContent;
   source: SourceResponse;
-  description: Array<string>;
+  description: JSONContent;
   updatedAt: string;
 }

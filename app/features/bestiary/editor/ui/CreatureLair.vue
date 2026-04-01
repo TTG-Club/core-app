@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { CreateAction, CreatureLair } from '~bestiary/model';
 
+  import { MarkupEditor } from '~markup/editor';
   import { EditorArrayControls } from '~ui/editor';
 
   function getEmpty(): CreateAction {
@@ -9,7 +10,7 @@
         rus: '',
         eng: '',
       },
-      description: '',
+      description: { type: 'doc', content: [{ type: 'paragraph' }] },
       attackType: '',
       savingThrows: [],
       damageTypes: [],
@@ -60,12 +61,7 @@
           label="Описание логова"
           name="lair.description"
         >
-          <UTextarea
-            v-model="model.description"
-            :maxrows="6"
-            :rows="2"
-            placeholder="Введите описание (необязательно)"
-          />
+          <MarkupEditor v-model="model.description" />
         </UFormField>
       </UForm>
 
@@ -114,11 +110,7 @@
             label="Описание"
             name="description"
           >
-            <UTextarea
-              v-model="effect.description"
-              :rows="3"
-              placeholder="Введи описание"
-            />
+            <MarkupEditor v-model="effect.description" />
           </UFormField>
         </UForm>
 

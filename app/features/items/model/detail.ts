@@ -1,3 +1,5 @@
+import type { JSONContent } from '@tiptap/core';
+
 import type { SourceResponse } from '~/shared/types';
 
 export interface ItemDetailResponse {
@@ -9,7 +11,7 @@ export interface ItemDetailResponse {
   image: string;
   subtitle: string;
   source: SourceResponse;
-  description: Array<string>;
+  description: JSONContent;
   updatedAt: string;
   types: string;
   cost: string | undefined; // стоимость

@@ -1,3 +1,5 @@
+import type { JSONContent } from '@tiptap/core';
+
 import type { EditorBaseInfoState } from '~ui/editor';
 
 export interface SourceCreate extends EditorBaseInfoState {
@@ -11,6 +13,6 @@ export interface SourceCreate extends EditorBaseInfoState {
     authors: Array<string> | undefined; // переводчики
     date: string | undefined; // дата перевода
   };
-  description: string; // описание маркап
+  description: JSONContent; // описание маркап
   image: string; // обложка
 }

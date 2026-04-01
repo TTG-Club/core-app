@@ -3,6 +3,7 @@
 
   import { getInitialState } from '~bestiary/model';
   import { CreaturePreview } from '~bestiary/preview';
+  import { MarkupEditor } from '~markup/editor';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectAlignment } from '~ui/select';
   import { UploadImage } from '~ui/upload';
@@ -56,11 +57,7 @@
       </template>
 
       <UFormField name="description">
-        <UTextarea
-          v-model="state.description"
-          :rows="4"
-          placeholder="Введи описание"
-        />
+        <MarkupEditor v-model="state.description" />
       </UFormField>
     </UCard>
 
@@ -163,12 +160,9 @@
 
       <UFormField
         class="col-span-13"
-        name="ac.text"
+        name="equipments"
       >
-        <UInput
-          v-model="state.equipments"
-          placeholder="Введи снаряжение"
-        />
+        <MarkupEditor v-model="state.equipments" />
       </UFormField>
     </UCard>
 

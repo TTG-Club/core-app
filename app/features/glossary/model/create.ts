@@ -1,6 +1,8 @@
+import type { JSONContent } from '@tiptap/core';
+
 import type { EditorBaseInfoState } from '~ui/editor';
 
 export interface GlossaryCreate extends EditorBaseInfoState {
-  description: string; // описание маркап
+  description: JSONContent; // описание маркап
   tagCategory: string; // теги как категории
 }

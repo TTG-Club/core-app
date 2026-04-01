@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { CreateAction } from '~bestiary/model';
 
+  import { MarkupEditor } from '~markup/editor';
   import { EditorArrayControls } from '~ui/editor';
 
   type ActionKey = 'actions' | 'bonusActions' | 'reactions';
@@ -21,7 +22,7 @@
         rus: '',
         eng: '',
       },
-      description: '',
+      description: { type: 'doc', content: [{ type: 'paragraph' }] },
       attackType: '',
       savingThrows: [],
       damageTypes: [],
@@ -98,11 +99,7 @@
             label="Описание"
             :name="`${name}.${actionIndex}.description`"
           >
-            <UTextarea
-              v-model="action.description"
-              :rows="3"
-              placeholder="Введи описание"
-            />
+            <MarkupEditor v-model="action.description" />
           </UFormField>
         </UForm>
 

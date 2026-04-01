@@ -1,8 +1,8 @@
 <script setup lang="ts">
   import type { ClassFeature } from '~classes/model';
 
+  import { MarkupContent } from '~markup/content';
   import { UiCollapse } from '~ui/collapse';
-  import { MarkupRender } from '~ui/markup';
 
   const { feature } = defineProps<{ feature: ClassFeature }>();
 
@@ -15,7 +15,7 @@
 
     if (feature.additional) {
       str.push(`. `);
-      str.push(h(MarkupRender, { renderNode: feature.additional }));
+      str.push(feature.additional);
     }
 
     str.push(`.`);
@@ -40,7 +40,7 @@
     </template>
 
     <template #content>
-      <MarkupRender :render-node="feature.description" />
+      <MarkupContent :content="feature.description" />
     </template>
   </UiCollapse>
 </template>

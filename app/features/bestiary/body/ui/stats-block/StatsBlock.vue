@@ -2,7 +2,7 @@
   import type { CreatureDetailResponse } from '~bestiary/model';
 
   import { DiceRollerLink } from '~dice-roller/link';
-  import { MarkupRender } from '~ui/markup';
+  import { MarkupContent } from '~markup/content';
 
   import { CreatureAbilitiesTable } from './ui';
 
@@ -95,7 +95,7 @@
     >
       <span :class="$style.name">Снаряжение: </span>
 
-      <MarkupRender :render-node="equipments" />
+      <MarkupContent :content="equipments" />
     </div>
 
     <div

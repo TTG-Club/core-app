@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { CreateTrait, CreatureCreate } from '~bestiary/model';
 
+  import { MarkupEditor } from '~markup/editor';
   import { EditorArrayControls } from '~ui/editor';
 
   type Traits = CreatureCreate['traits'];
@@ -11,7 +12,7 @@
         rus: '',
         eng: '',
       },
-      description: '',
+      description: { type: 'doc', content: [{ type: 'paragraph' }] },
     };
   }
 
@@ -84,11 +85,7 @@
             label="Описание"
             name="description"
           >
-            <UTextarea
-              v-model="trait.description"
-              :rows="3"
-              placeholder="Введи описание"
-            />
+            <MarkupEditor v-model="trait.description" />
           </UFormField>
         </UForm>
 

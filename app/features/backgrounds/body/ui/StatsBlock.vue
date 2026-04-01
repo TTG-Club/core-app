@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { MarkupRender } from '~ui/markup';
   import { InfoTooltip } from '~ui/tooltip';
 
   import { COMPONENT_TOOLTIP_TEXT } from '../model';
@@ -34,7 +33,8 @@
         Черта
       </InfoTooltip>
 
-      <MarkupRender :render-node="feat" />
+      <!-- eslint-disable-next-line vue/no-v-html -->
+      <span v-html="feat" />
     </div>
 
     <div :class="$style.item">
@@ -56,13 +56,29 @@
         Владение инструментами
       </InfoTooltip>
 
-      <MarkupRender :render-node="toolProficiency" />
+      <div class="flex flex-col gap-1">
+        <!-- eslint-disable vue/no-v-html -->
+        <span
+          v-for="(item, index) in toolProficiency"
+          :key="index"
+          v-html="item"
+        />
+        <!-- eslint-enable vue/no-v-html -->
+      </div>
     </div>
 
     <div :class="[$style.item, $style.block]">
       <span :class="$style.name">Снаряжение:</span>
 
-      <MarkupRender :render-node="equipment" />
+      <div class="flex w-full flex-col gap-1">
+        <!-- eslint-disable vue/no-v-html -->
+        <span
+          v-for="(item, index) in equipment"
+          :key="index"
+          v-html="item"
+        />
+        <!-- eslint-enable vue/no-v-html -->
+      </div>
     </div>
   </div>
 </template>

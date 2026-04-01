@@ -1,12 +1,12 @@
 <script setup lang="ts">
   import type { BackgroundDetailResponse } from '~backgrounds/model';
 
-  import { MarkupRender } from '~ui/markup';
+  import { MarkupContent } from '~markup/content';
 
   const { description } =
     defineProps<Pick<BackgroundDetailResponse, 'description'>>();
 </script>
 
 <template>
-  <MarkupRender :render-node="description" />
+  <MarkupContent :content="description" />
 </template>

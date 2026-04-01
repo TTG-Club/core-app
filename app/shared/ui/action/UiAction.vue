@@ -1,10 +1,10 @@
 <script setup lang="ts">
-  import type { RenderNode } from '~ui/markup';
+  import type { JSONContent } from '@tiptap/core';
 
-  import { MarkupRender } from '~ui/markup';
+  import { MarkupContent } from '~markup/content';
 
   defineProps<{
-    text: RenderNode;
+    text: JSONContent;
     label?: string;
   }>();
 </script>
@@ -17,13 +17,6 @@
       <template v-else> {{ label }}. </template>
     </h5>
 
-    <MarkupRender
-      v-if="Array.isArray(text)"
-      :render-node="text"
-    />
-
-    <p v-else>
-      <MarkupRender :render-node="text" />
-    </p>
+    <MarkupContent :content="text" />
   </div>
 </template>

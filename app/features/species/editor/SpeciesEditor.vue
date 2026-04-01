@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { SpeciesCreate } from '~species/model';
 
+  import { MarkupEditor } from '~markup/editor';
   import { SpeciesPreview } from '~species/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectCreatureType, SelectSpecies } from '~ui/select';
@@ -17,7 +18,7 @@
         eng: '',
         alt: [],
       },
-      description: '',
+      description: { type: 'doc', content: [{ type: 'paragraph' }] },
       image: undefined,
       linkImage: undefined,
       gallery: [],
@@ -71,11 +72,7 @@
           label="Описание"
           name="description"
         >
-          <UTextarea
-            v-model="state.description"
-            placeholder="Введи описание"
-            :rows="8"
-          />
+          <MarkupEditor v-model="state.description" />
         </UFormField>
       </div>
     </UCard>

@@ -20,7 +20,7 @@
     return {
       level: 1,
       name: '',
-      description: '',
+      description: { type: 'doc', content: [{ type: 'paragraph' }] },
       additional: '',
       hideInSubclasses: false,
     };
@@ -95,11 +95,7 @@
       label="Описание"
       name="description"
     >
-      <UTextarea
-        v-model="row.description"
-        :rows="3"
-        placeholder="Описание для уровня"
-      />
+      <MarkupEditor v-model="row.description" />
     </UFormField>
   </UForm>
 

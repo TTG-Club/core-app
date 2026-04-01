@@ -3,10 +3,11 @@
 
   import { pick } from 'es-toolkit';
 
+  import { MarkupContent } from '~markup/content';
+  import { getTextFromJSON } from '~markup/model';
   import { UiAction } from '~ui/action';
   import { UiCollapse } from '~ui/collapse';
   import { UiGallery } from '~ui/gallery';
-  import { MarkupRender } from '~ui/markup';
   import { RatingWidget } from '~ui/rating';
 
   import { DescriptionsBlock, StatsBlock, TopBar } from './ui';
@@ -139,8 +140,8 @@
 
                 <span>&nbsp;{{ creature.legendary.count }}.</span>
 
-                <span v-if="creature.legendary?.description?.length">
-                  {{ creature.legendary.description }}
+                <span v-if="getTextFromJSON(creature.legendary?.description)">
+                  <MarkupContent :content="creature.legendary.description" />
                 </span>
 
                 <span v-else>
@@ -180,9 +181,9 @@
             </template>
 
             <template #content>
-              <MarkupRender
+              <MarkupContent
                 v-if="creature.lair.description"
-                :render-node="creature.lair.description"
+                :content="creature.lair.description"
               />
 
               <template v-if="creature.lair?.effects?.length">
@@ -194,10 +195,12 @@
                 />
               </template>
 
-              <MarkupRender
-                v-if="creature.lair.ending"
-                :render-node="creature.lair.ending"
-              />
+              <p
+                v-for="(endingLine, endingIndex) in creature.lair.ending"
+                :key="endingIndex"
+              >
+                {{ endingLine }}
+              </p>
             </template>
           </UiCollapse>
         </template>

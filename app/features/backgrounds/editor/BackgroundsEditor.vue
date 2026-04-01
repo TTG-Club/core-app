@@ -2,6 +2,7 @@
   import type { BackgroundCreate } from '~backgrounds/model';
 
   import { BackgroundPreview } from '~backgrounds/preview';
+  import { MarkupEditor } from '~markup/editor';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectAbilities, SelectFeat, SelectSkill } from '~ui/select';
   import { useWorkshopForm } from '~workshop/composable';
@@ -18,7 +19,7 @@
         url: undefined,
         page: undefined,
       },
-      description: '',
+      description: { type: 'doc', content: [{ type: 'paragraph' }] },
       abilityScores: [],
       featUrl: undefined,
       featSuffix: undefined,
@@ -137,11 +138,7 @@
           class="col-span-24"
           name="description"
         >
-          <UTextarea
-            v-model="state.description"
-            :rows="8"
-            placeholder="Введи описание"
-          />
+          <MarkupEditor v-model="state.description" />
         </UFormField>
       </div>
     </UCard>

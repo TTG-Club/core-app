@@ -1,12 +1,12 @@
 <script setup lang="ts">
   import type { ItemDetailResponse } from '~items/model';
 
-  import { MarkupRender } from '~ui/markup';
+  import { MarkupContent } from '~markup/content';
 
   const { description } =
     defineProps<Pick<ItemDetailResponse, 'description'>>();
 </script>
 
 <template>
-  <MarkupRender :render-node="description" />
+  <MarkupContent :content="description" />
 </template>

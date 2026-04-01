@@ -1,3 +1,5 @@
+import type { JSONContent } from '@tiptap/core';
+
 import type { NameResponse, SourceResponse } from '~/shared/types';
 
 export interface BackgroundDetailResponse {
@@ -9,6 +11,6 @@ export interface BackgroundDetailResponse {
   toolProficiency: string[]; // владение инструментов
   equipment: string[]; // снаряжение
   source: SourceResponse;
-  description: Array<string>;
+  description: JSONContent;
   updatedAt: string;
 }

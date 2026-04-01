@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { RoadmapRequest } from '~roadmap/types';
 
+  import { MarkupEditor } from '~markup/editor';
   import { RoadmapPreview } from '~roadmap/preview';
 
   const { url = undefined } = defineProps<{
@@ -95,7 +96,7 @@
           label="Описание"
           name="description"
         >
-          <UTextarea v-model="state.description" />
+          <MarkupEditor v-model="state.description" />
         </UFormField>
 
         <UFormField

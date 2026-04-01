@@ -1,12 +1,12 @@
 <script setup lang="ts">
   import type { MagicItemDetailResponse } from '~magic-items/model';
 
-  import { MarkupRender } from '~ui/markup';
+  import { MarkupContent } from '~markup/content';
 
   const { description } =
     defineProps<Pick<MagicItemDetailResponse, 'description'>>();
 </script>
 
 <template>
-  <MarkupRender :render-node="description" />
+  <MarkupContent :content="description" />
 </template>

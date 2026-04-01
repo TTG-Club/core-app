@@ -1,3 +1,5 @@
+import type { JSONContent } from '@tiptap/core';
+
 import type { SourceResponse } from '~/shared/types';
 
 export interface CreatureDetailResponse {
@@ -8,7 +10,7 @@ export interface CreatureDetailResponse {
   };
   image: string;
   source: SourceResponse;
-  description: Array<string>;
+  description: JSONContent;
   updatedAt: string;
   header: string;
   initiative: {
@@ -21,7 +23,7 @@ export interface CreatureDetailResponse {
   speed: string;
   abilities: CreatureAbilitiesResponse;
   skills?: Array<Skill>;
-  equipments?: string;
+  equipments?: JSONContent;
   vulnerability?: string;
   resistance?: string;
   immunity?: string;
@@ -36,11 +38,11 @@ export interface CreatureDetailResponse {
   legendary: {
     actions: Array<CreatureActionResponse>;
     count: string;
-    description: string;
+    description: JSONContent;
   };
   lair: {
     name: string;
-    description: Array<string>;
+    description: JSONContent;
     effects: Array<CreatureActionResponse>;
     ending: Array<string>;
   };
@@ -58,7 +60,7 @@ export interface CreatureSection {
   subtitle: string;
   habitats: string;
   treasures: string;
-  description: Array<string>;
+  description: JSONContent;
 }
 
 export interface CreatureAbilitiesResponse {
@@ -88,7 +90,7 @@ export interface CreatureTraitResponse {
     eng: string;
   };
   english: string;
-  description: Array<string>;
+  description: JSONContent;
 }
 
 export interface CreatureActionResponse {
@@ -97,5 +99,5 @@ export interface CreatureActionResponse {
     eng: string;
   };
   english: string;
-  description: Array<string>;
+  description: JSONContent;
 }

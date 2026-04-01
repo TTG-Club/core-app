@@ -2,6 +2,7 @@
   import type { ClassCreate, ClassLinkResponse } from '~classes/model';
 
   import { ClassPreview } from '~classes/preview';
+  import { MarkupEditor } from '~markup/editor';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { UploadGallery, UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
@@ -50,7 +51,7 @@
           skills: [],
         },
       },
-      equipment: undefined,
+      equipment: { type: 'doc', content: [{ type: 'paragraph' }] },
       features: [],
       table: [],
       abilityTemplate: undefined,
@@ -114,11 +115,7 @@
           class="col-span-full"
           name="equipment"
         >
-          <UTextarea
-            v-model="state.equipment"
-            placeholder="Опиши стартовое снаряжение"
-            :rows="4"
-          />
+          <MarkupEditor v-model="state.equipment" />
         </UFormField>
       </div>
     </UCard>
@@ -133,11 +130,7 @@
           class="col-span-full"
           name="description"
         >
-          <UTextarea
-            v-model="state.description"
-            placeholder="Введи описание"
-            :rows="8"
-          />
+          <MarkupEditor v-model="state.description" />
         </UFormField>
       </div>
     </UCard>

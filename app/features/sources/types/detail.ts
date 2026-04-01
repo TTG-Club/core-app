@@ -1,5 +1,6 @@
+import type { JSONContent } from '@tiptap/core';
+
 import type { NameResponse, SourceResponse } from '~/shared/types';
-import type { RenderNode } from '~ui/markup';
 
 export interface SourceDetailResponse {
   url: string;
@@ -14,7 +15,7 @@ export interface SourceDetailResponse {
     authors: string;
     date: string;
   };
-  description?: RenderNode;
+  description?: JSONContent;
   image?: string;
   updatedAt: string;
   tags?: string;

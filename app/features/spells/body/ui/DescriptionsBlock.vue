@@ -1,14 +1,14 @@
 <script setup lang="ts">
   import type { SpellDetailResponse } from '~spells/model';
 
-  import { MarkupRender } from '~ui/markup';
+  import { MarkupContent } from '~markup/content';
 
   const { description } =
     defineProps<Pick<SpellDetailResponse, 'description' | 'level' | 'upper'>>();
 </script>
 
 <template>
-  <MarkupRender :render-node="description" />
+  <MarkupContent :content="description" />
 
   <div v-if="upper">
     <strong v-if="!level">Улучшение заговора. </strong>
@@ -20,6 +20,6 @@
       Накладывание более высокой ячейкой.
     </strong>
 
-    <MarkupRender :render-node="upper" />
+    <MarkupContent :content="upper" />
   </div>
 </template>
