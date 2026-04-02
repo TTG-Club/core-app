@@ -30,7 +30,7 @@
     <div class="flex flex-col gap-6 @min-3xl:flex-row @min-3xl:gap-7">
       <div
         :class="[
-          'flex w-full flex-shrink-0 flex-col gap-4',
+          'flex w-full shrink-0 flex-col gap-4',
           '@min-xl:@max-3xl:flex-row @min-3xl:w-80',
         ]"
       >
