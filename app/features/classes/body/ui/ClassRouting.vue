@@ -119,6 +119,27 @@
     </UPopover>
 
     <UButton
+      icon="tabler:vocabulary"
+      :to="{
+        path: '/spells',
+        query: {
+          className: parent ? parent.url : url,
+          subclassName: parent ? url : undefined,
+        },
+      }"
+      target="_blank"
+      variant="soft"
+      color="secondary"
+      size="md"
+    >
+      <div class="flex flex-col items-start leading-tight">
+        <span class="text-xs text-secondary">Список:</span>
+
+        <span>Заклинаний</span>
+      </div>
+    </UButton>
+
+    <UButton
       v-if="hasDescription"
       class="ml-auto hidden md:block"
       to="#description"
