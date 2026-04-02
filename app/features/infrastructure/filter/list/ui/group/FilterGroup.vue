@@ -5,8 +5,11 @@
 
   import { FilterTag } from '../tag';
 
-  const { preview = false } = defineProps<{
+  type GroupPosition = 'standalone' | 'top' | 'bottom';
+
+  const { preview = false, position = 'standalone' } = defineProps<{
     preview?: boolean;
+    position?: GroupPosition;
   }>();
 
   // Используется defineModel — мутация group.mode / group.union через v-model
@@ -21,29 +24,38 @@
     }
 
     return getGroupItems(group.value).some(
-      (filter) => filter.selected !== null,
+      (filterItem) => filterItem.selected !== null,
     );
   });
+
+  // Классы бордера шапки: нижний блок не имеет скругления сверху
+  const headerClass = computed(() => ({
+    'rounded-t-xl': position !== 'bottom',
+    'border border-default flex flex-wrap items-center justify-between gap-3 px-3 py-2': true,
+  }));
+
+  // Классы бордера тела: верхний блок не имеет скругления и нижней границы снизу
+  const bodyClass = computed(() => ({
+    'rounded-b-xl border-b': position !== 'top',
+    'border-x border-default flex flex-wrap gap-3 px-3 py-4': true,
+  }));
 </script>
 
 <template>
   <template v-if="isVisible">
     <div
       class="flex flex-col"
-      :class="!preview ? 'gap-0' : 'gap-2'"
+      :class="preview ? 'gap-2' : undefined"
     >
       <span v-if="preview">{{ group.name }}:</span>
 
       <div
         v-else
-        class="flex flex-wrap items-center justify-between gap-3 rounded-t-xl border border-default px-3 py-2"
+        :class="headerClass"
       >
         <span class="font-medium">{{ group.name }}</span>
 
-        <div
-          v-if="!preview"
-          class="flex flex-wrap items-center gap-3"
-        >
+        <div class="flex flex-wrap items-center gap-3">
           <UCheckbox
             v-if="group.supports?.mode"
             v-model="group.mode"
@@ -62,18 +74,28 @@
       </div>
 
       <div
-        class="flex flex-wrap"
-        :class="
-          !preview
-            ? 'gap-3 rounded-b-xl border-x border-b border-default px-3 py-4'
-            : 'gap-2'
-        "
+        v-if="!preview"
+        :class="bodyClass"
       >
         <FilterTag
           v-for="item in getGroupItems(group)"
           :key="`${item.id}-${item.name}`"
           v-model="item.selected"
-          :preview
+          :exclude="group.mode"
+        >
+          {{ item.name }}
+        </FilterTag>
+      </div>
+
+      <div
+        v-else
+        class="flex flex-wrap gap-2"
+      >
+        <FilterTag
+          v-for="item in getGroupItems(group)"
+          :key="`${item.id}-${item.name}`"
+          v-model="item.selected"
+          preview
           :exclude="group.mode"
         >
           {{ item.name }}
