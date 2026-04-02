@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { FilterGroup, FilterGroups } from '../types';
 
+  import { getGroupItems } from '../utils';
   import { FilterGroup as FilterGroupComponent } from './ui';
 
   type GroupPosition = 'standalone' | 'top' | 'bottom';
@@ -18,6 +19,16 @@
     }
 
     return subIdx === 0 ? 'top' : 'bottom';
+  }
+
+  function isGroupVisible(group: FilterGroup, isPreview: boolean) {
+    if (!isPreview) {
+      return true;
+    }
+
+    return getGroupItems(group).some(
+      (filterItem) => filterItem.selected !== null,
+    );
   }
 
   const { preview = false } = defineProps<{
@@ -38,13 +49,25 @@
 
       // Если идут подряд Классы и Подклассы, объединяем их (без отступа между ними)
       if (group?.key === 'className' && nextGroup?.key === 'subclassName') {
-        items.push([
-          { group, index: i },
-          { group: nextGroup, index: i + 1 },
-        ]);
+        const groupVisible = isGroupVisible(group, preview);
+        const nextGroupVisible = isGroupVisible(nextGroup, preview);
+
+        if (groupVisible || nextGroupVisible) {
+          const combined = [];
+
+          if (groupVisible) {
+            combined.push({ group, index: i });
+          }
+
+          if (nextGroupVisible) {
+            combined.push({ group: nextGroup, index: i + 1 });
+          }
+
+          items.push(combined);
+        }
 
         i++;
-      } else if (group) {
+      } else if (group && isGroupVisible(group, preview)) {
         items.push([{ group, index: i }]);
       }
     }
