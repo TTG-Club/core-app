@@ -1,8 +1,7 @@
 <script setup lang="ts">
   import type { FilterGroup, FilterGroups } from '../types';
 
-  import { getGroupItems } from '~infrastructure/filter/utils';
-
+  import { getGroupItems } from '../utils';
   import { FilterGroup as FilterGroupComponent } from './ui';
 
   type GroupPosition = 'standalone' | 'top' | 'bottom';
