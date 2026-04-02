@@ -57,6 +57,7 @@
             :name="detail.name"
             :parent="detail.parent"
             :has-description="!!detail.description"
+            :has-spells="detail.casterType !== 'NONE'"
           />
 
           <ClassTable

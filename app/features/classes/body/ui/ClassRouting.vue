@@ -10,11 +10,13 @@
     url,
     name,
     parent = undefined,
+    hasSpells = false,
   } = defineProps<{
     url: string;
     name: NameResponse;
     parent?: ClassLinkResponse;
     hasDescription?: boolean;
+    hasSpells?: boolean;
   }>();
 
   const { data: subclasses, status } = await useAsyncData(
@@ -119,6 +121,7 @@
     </UPopover>
 
     <UButton
+      v-if="hasSpells"
       icon="tabler:vocabulary"
       :to="{
         path: '/spells',
