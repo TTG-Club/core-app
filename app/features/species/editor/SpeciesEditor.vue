@@ -51,7 +51,7 @@
 <template>
   <UForm
     :state
-    class="grid gap-8"
+    class="grid gap-8 pb-24"
     @submit="onSubmit"
     @error="onError"
   >

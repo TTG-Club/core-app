@@ -57,7 +57,7 @@
         <h2 class="truncate text-base text-highlighted">Подробности</h2>
       </template>
 
-      <div class="grid grid-cols-24 gap-4">
+      <div class="grid grid-cols-24 gap-4 pb-24">
         <UFormField
           class="col-span-6"
           label="Категория"

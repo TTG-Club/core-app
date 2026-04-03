@@ -36,7 +36,7 @@
 <template>
   <UForm
     :state
-    class="grid grid-cols-24 gap-6"
+    class="grid grid-cols-24 gap-6 pb-24"
     @error="onError"
     @submit="onSubmit"
   >

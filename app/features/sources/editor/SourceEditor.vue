@@ -85,7 +85,7 @@
 <template>
   <UForm
     :schema="baseInfoSchema"
-    class="grid gap-8"
+    class="grid gap-8 pb-24"
     :state
     @submit="onSubmit"
     @error="onError"
