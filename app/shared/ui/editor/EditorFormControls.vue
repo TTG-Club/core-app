@@ -1,39 +1,33 @@
 <script setup lang="ts">
-  interface Props {
-    submitLabel?: string;
-    previewLabel?: string;
-    submitDisabled?: boolean;
-  }
+const previewOpened = ref(false);
 
-  withDefaults(defineProps<Props>(), {
-    submitLabel: 'Сохранить',
-    previewLabel: 'Предпросмотр',
-    submitDisabled: false,
-  });
+function changePreviewVisibility(value: boolean)
+{
+  previewOpened.value = value;
+}
 </script>
 
 <template>
   <div class="sticky bottom-0 z-20 col-span-full">
-    <div
-      class="flex justify-end gap-3 border-t border-default bg-default/95 px-4 py-3 backdrop-blur"
-    >
-      <slot name="left" />
-
-      <slot name="actions">
+    <div class="flex justify-end gap-2 border-t border-default bg-default/95 px-4 py-3 backdrop-blur">
+      <template v-if="$slots.preview">
         <UButton
           variant="soft"
-          color="neutral"
+          @click.left.exact.prevent="previewOpened = true"
         >
-          {{ previewLabel }}
+          Предварительный просмотр
         </UButton>
 
-        <UButton
-          type="submit"
-          :disabled="submitDisabled"
-        >
-          {{ submitLabel }}
-        </UButton>
-      </slot>
+        <slot
+          name="preview"
+          :opened="previewOpened"
+          :change-visibility="changePreviewVisibility"
+        />
+      </template>
+
+      <UButton type="submit">
+        Сохранить
+      </UButton>
     </div>
   </div>
 </template>
