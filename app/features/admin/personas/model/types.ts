@@ -9,19 +9,14 @@ export interface PersonaResponse {
 
 export interface NotificationAdminResponse {
   id: number;
-  type: 'PHRASE' | 'NEWS' | 'ADVERTISING';
+  type: string;
   typeName: string;
   personaId: string;
-  text: unknown;
+  text: string;
   view?: number | null;
   after?: string | null;
   before?: string | null;
   disabled: boolean;
   username?: string;
   createdAt?: string;
-}
-
-export interface NotificationTypeOption {
-  label: string;
-  value: string;
 }

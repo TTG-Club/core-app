@@ -1,8 +1,5 @@
 <script setup lang="ts">
-  import type {
-    NotificationTypeOption,
-    PersonaResponse,
-  } from '~/features/admin/personas/model';
+  import type { PersonaResponse } from '~/features/admin/personas/model';
 
   import { PersonaCard, PersonaModal } from '~/features/admin/personas/ui';
 
@@ -16,18 +13,9 @@
     { default: () => [] },
   );
 
-  const { data: notificationTypeOptions } = await useAsyncData<
-    NotificationTypeOption[]
-  >(
-    'admin-notification-types',
-    () => $fetch('/api/v2/dictionaries/notification/types'),
-    {
-      default: () => [],
-    },
-  );
-
   const isModalOpen = ref(false);
   const editingPersona = ref<PersonaResponse | null>(null);
+  const isEditingPersona = computed(() => !!editingPersona.value);
 
   function openAddModal() {
     editingPersona.value = null;
@@ -56,6 +44,7 @@
       <PersonaModal
         v-model:open="isModalOpen"
         :persona="editingPersona"
+        :is-editing="isEditingPersona"
         @saved="refresh()"
       />
 
@@ -63,7 +52,6 @@
         v-for="persona in personas"
         :key="persona.id"
         :persona="persona"
-        :notification-types="notificationTypeOptions || []"
         @edit-name="openEditModal(persona)"
         @edited="refresh()"
         @deleted="refresh()"

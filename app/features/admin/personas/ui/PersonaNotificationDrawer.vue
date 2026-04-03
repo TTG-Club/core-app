@@ -1,23 +1,14 @@
 <script setup lang="ts">
-  import type {
-    NotificationAdminResponse,
-    NotificationTypeOption,
-    PersonaResponse,
-  } from '../model';
+  import type { NotificationAdminResponse, PersonaResponse } from '../model';
+
+  import { FetchError } from 'ofetch';
 
   import DatePicker from '~/shared/ui/date-picker/DatePicker.vue';
 
-  import {
-    DEFAULT_NOTIFICATION_TIME,
-    DEFAULT_NOTIFICATION_TYPE,
-    extractNotificationText,
-    parseDateTimeField,
-  } from '../model';
-
-  const props = defineProps<{
+  const { persona, notification, isEditing } = defineProps<{
     persona: PersonaResponse | null;
     notification: NotificationAdminResponse | null;
-    notificationTypes: NotificationTypeOption[];
+    isEditing: boolean;
   }>();
 
   const isOpen = defineModel<boolean>('open', { required: true });
@@ -28,33 +19,49 @@
 
   const toast = useToast();
 
-  const notifType = ref(DEFAULT_NOTIFICATION_TYPE);
-  const notifText = ref('');
-  const notifView = ref<number | null>(null);
-  const notifAfterDate = ref<string | undefined>(undefined);
-  const notifAfterTime = ref(DEFAULT_NOTIFICATION_TIME);
-  const notifBeforeDate = ref<string | undefined>(undefined);
-  const notifBeforeTime = ref(DEFAULT_NOTIFICATION_TIME);
-  const notifDisabled = ref(false);
+  const notificationText = ref('');
+  const notificationViewLimit = ref<number | null>(null);
+  const notificationAfterDate = ref<string | undefined>(undefined);
+  const notificationAfterTime = ref('00:01');
+  const notificationBeforeDate = ref<string | undefined>(undefined);
+  const notificationBeforeTime = ref('00:01');
+  const notificationDisabled = ref(false);
   const isSaving = ref(false);
 
-  const isEditing = computed(() => !!props.notification);
+  const drawerTitle = computed(() =>
+    isEditing ? 'Редактирование фразы' : 'Новая фраза',
+  );
 
-  const canSave = computed(() => {
-    const text = notifText.value;
-
-    return typeof text === 'string' && text.trim().length > 0;
-  });
+  const canSave = computed(
+    () =>
+      typeof notificationText.value === 'string'
+      && notificationText.value.trim().length > 0,
+  );
 
   function resetForm() {
-    notifType.value = DEFAULT_NOTIFICATION_TYPE;
-    notifText.value = '';
-    notifView.value = null;
-    notifAfterDate.value = undefined;
-    notifAfterTime.value = DEFAULT_NOTIFICATION_TIME;
-    notifBeforeDate.value = undefined;
-    notifBeforeTime.value = DEFAULT_NOTIFICATION_TIME;
-    notifDisabled.value = false;
+    notificationText.value = '';
+    notificationViewLimit.value = null;
+    notificationAfterDate.value = undefined;
+    notificationAfterTime.value = '00:01';
+    notificationBeforeDate.value = undefined;
+    notificationBeforeTime.value = '00:01';
+    notificationDisabled.value = false;
+  }
+
+  function splitDateTime(dateTimeString: string | null | undefined): {
+    date: string | undefined;
+    time: string;
+  } {
+    if (!dateTimeString) {
+      return { date: undefined, time: '00:01' };
+    }
+
+    const [datePart, timePart] = dateTimeString.split('T');
+
+    return {
+      date: datePart,
+      time: timePart ? timePart.slice(0, 5) : '00:01',
+    };
   }
 
   watch(isOpen, (opened) => {
@@ -62,39 +69,32 @@
       return;
     }
 
-    if (props.notification) {
-      notifType.value = props.notification.type ?? DEFAULT_NOTIFICATION_TYPE;
-      notifText.value = extractNotificationText(props.notification.text);
-      notifView.value = props.notification.view ?? null;
+    if (notification) {
+      notificationText.value = String(notification.text ?? '');
+      notificationViewLimit.value = notification.view ?? null;
 
-      const afterParsed = parseDateTimeField(
-        props.notification.after,
-        DEFAULT_NOTIFICATION_TIME,
-      );
+      const afterParsed = splitDateTime(notification.after);
 
-      notifAfterDate.value = afterParsed.date;
-      notifAfterTime.value = afterParsed.time;
+      notificationAfterDate.value = afterParsed.date;
+      notificationAfterTime.value = afterParsed.time;
 
-      const beforeParsed = parseDateTimeField(
-        props.notification.before,
-        DEFAULT_NOTIFICATION_TIME,
-      );
+      const beforeParsed = splitDateTime(notification.before);
 
-      notifBeforeDate.value = beforeParsed.date;
-      notifBeforeTime.value = beforeParsed.time;
+      notificationBeforeDate.value = beforeParsed.date;
+      notificationBeforeTime.value = beforeParsed.time;
 
-      notifDisabled.value = props.notification.disabled ?? false;
+      notificationDisabled.value = notification.disabled ?? false;
     } else {
       resetForm();
     }
   });
 
   async function saveNotification() {
-    if (!props.persona) {
+    if (!persona) {
       return;
     }
 
-    const trimmedText = (notifText.value || '').trim();
+    const trimmedText = notificationText.value.trim();
 
     if (!trimmedText) {
       return;
@@ -104,35 +104,43 @@
 
     try {
       const payload = {
-        ...(props.notification || {}),
-        type: notifType.value,
-        personaId: props.persona.id,
+        ...(notification || {}),
+        type: 'PHRASE',
+        personaId: persona.id,
         text: trimmedText,
-        view: notifView.value || null,
-        after: notifAfterDate.value
-          ? `${notifAfterDate.value}T${notifAfterTime.value || '00:00'}:00`
+        view: notificationViewLimit.value || null,
+        after: notificationAfterDate.value
+          ? `${notificationAfterDate.value}T${notificationAfterTime.value || '00:00'}:00`
           : null,
-        before: notifBeforeDate.value
-          ? `${notifBeforeDate.value}T${notifBeforeTime.value || '00:00'}:00`
+        before: notificationBeforeDate.value
+          ? `${notificationBeforeDate.value}T${notificationBeforeTime.value || '00:00'}:00`
           : null,
-        disabled: notifDisabled.value,
+        disabled: notificationDisabled.value,
       };
 
       await $fetch('/api/v2/notification', {
-        method: isEditing.value ? 'PUT' : 'POST',
+        method: isEditing ? 'PUT' : 'POST',
         body: payload,
       });
 
       toast.add({
-        title: isEditing.value ? 'Фраза обновлена' : 'Фраза добавлена',
+        title: isEditing ? 'Фраза обновлена' : 'Фраза добавлена',
         color: 'success',
       });
 
       isOpen.value = false;
-      emit('saved', props.persona.id);
+      emit('saved', persona.id);
     } catch (error) {
-      consola.error('Failed to save notification:', error);
-      toast.add({ title: 'Ошибка при сохранении фразы', color: 'error' });
+      const message =
+        error instanceof FetchError
+          ? error.data?.message || error.message
+          : 'Неизвестная ошибка';
+
+      toast.add({
+        title: 'Ошибка при сохранении фразы',
+        description: message,
+        color: 'error',
+      });
     } finally {
       isSaving.value = false;
     }
@@ -142,8 +150,8 @@
 <template>
   <USlideover
     v-model:open="isOpen"
-    :title="isEditing ? 'Редактирование фразы' : 'Новая фраза'"
-    description="Настройте параметры нотификации"
+    :title="drawerTitle"
+    description="Настройте параметры фразы"
   >
     <template #body>
       <div class="flex h-full flex-col space-y-6">
@@ -154,44 +162,34 @@
 
         <div class="flex-1 space-y-4 overflow-y-auto">
           <div class="flex items-center gap-3">
-            <USwitch v-model="notifDisabled" />
+            <USwitch v-model="notificationDisabled" />
 
             <span class="text-sm font-medium">Отключить показ</span>
           </div>
 
-          <div class="grid grid-cols-2 gap-4">
-            <UFormField label="Тип фразы">
-              <USelect
-                v-model="notifType"
-                :items="notificationTypes || []"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField label="Лимит показов">
-              <UInput
-                v-model="notifView"
-                type="number"
-                placeholder="100"
-                class="w-full"
-              />
-            </UFormField>
-          </div>
+          <UFormField label="Лимит показов">
+            <UInput
+              v-model="notificationViewLimit"
+              type="number"
+              placeholder="100"
+              class="w-full"
+            />
+          </UFormField>
 
           <div class="grid grid-cols-2 gap-4">
             <UFormField label="Показывать с">
               <DatePicker
-                v-model="notifAfterDate"
+                v-model="notificationAfterDate"
                 class="w-full"
               />
             </UFormField>
 
             <UFormField label="Время начала">
               <UInput
-                v-model="notifAfterTime"
+                v-model="notificationAfterTime"
                 type="time"
                 class="w-full"
-                :disabled="!notifAfterDate"
+                :disabled="!notificationAfterDate"
               />
             </UFormField>
           </div>
@@ -199,24 +197,24 @@
           <div class="grid grid-cols-2 gap-4">
             <UFormField label="Показывать до">
               <DatePicker
-                v-model="notifBeforeDate"
+                v-model="notificationBeforeDate"
                 class="w-full"
               />
             </UFormField>
 
             <UFormField label="Время завершения">
               <UInput
-                v-model="notifBeforeTime"
+                v-model="notificationBeforeTime"
                 type="time"
                 class="w-full"
-                :disabled="!notifBeforeDate"
+                :disabled="!notificationBeforeDate"
               />
             </UFormField>
           </div>
 
           <UFormField label="Текст (поддерживает разметку)">
             <UTextarea
-              v-model="notifText"
+              v-model="notificationText"
               :rows="12"
               class="w-full"
             />

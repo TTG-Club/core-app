@@ -11,6 +11,7 @@
     v-if="greeting"
     class="flex w-full items-center justify-center px-8 max-sm:hidden sm:h-50"
   >
+    <!-- eslint-disable-next-line vue/no-v-html -- текст контролируется только администраторами -->
     <div
       :class="[
         'relative flex items-center justify-center',
