@@ -1,15 +1,16 @@
 <script setup lang="ts">
-const previewOpened = ref(false);
+  const previewOpened = ref(false);
 
-function changePreviewVisibility(value: boolean)
-{
-  previewOpened.value = value;
-}
+  function changePreviewVisibility(value: boolean) {
+    previewOpened.value = value;
+  }
 </script>
 
 <template>
   <div class="sticky bottom-0 z-20 col-span-full">
-    <div class="flex justify-end gap-2 border-t border-default bg-default/95 px-4 py-3 backdrop-blur">
+    <div
+      class="flex justify-end gap-2 border-t border-default bg-default/95 px-4 py-3 backdrop-blur"
+    >
       <template v-if="$slots.preview">
         <UButton
           variant="soft"
@@ -25,9 +26,7 @@ function changePreviewVisibility(value: boolean)
         />
       </template>
 
-      <UButton type="submit">
-        Сохранить
-      </UButton>
+      <UButton type="submit"> Сохранить </UButton>
     </div>
   </div>
 </template>
