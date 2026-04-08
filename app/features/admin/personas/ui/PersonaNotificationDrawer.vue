@@ -3,8 +3,8 @@
 
   import { FetchError } from 'ofetch';
 
-  import DatePicker from '~/shared/ui/date-picker/DatePicker.vue';
-  import SelectNotificationType from '~ui/select/SelectNotificationType.vue';
+  import { DatePicker } from '~/shared/ui/date-picker';
+  import { SelectNotificationType } from '~ui/select';
 
   const { persona, notification, isEditing } = defineProps<{
     persona: PersonaResponse | null;
