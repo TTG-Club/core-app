@@ -166,7 +166,7 @@
           <SelectNotificationType v-model="notificationType" />
 
           <div class="flex items-center gap-3">
-            <USwitch elv-mod="notificationDisabled" />
+            <USwitch v-model="notificationDisabled" />
 
             <span class="text-sm font-medium">Отключить показ</span>
           </div>
