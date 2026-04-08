@@ -1,9 +1,8 @@
 <script setup lang="ts">
-  import type { GreetingsResponse } from '#server/domain/greetings';
-
-  const { data: greeting } = await useAsyncData<GreetingsResponse>(
-    'home-greetings',
-    () => $fetch('/api/greetings'),
+  const { data: greeting } = await useAsyncData('home-greetings', () =>
+    $fetch<{ image: string; text: string; persona: string } | null>(
+      '/api/v2/notification',
+    ),
   );
 </script>
 
@@ -12,18 +11,18 @@
     v-if="greeting"
     class="flex w-full items-center justify-center px-8 max-sm:hidden sm:h-50"
   >
+    <!-- eslint-disable-next-line vue/no-v-html -- текст контролируется только администраторами -->
     <div
       :class="[
         'relative flex items-center justify-center',
         'w-1/2 px-5 py-6',
-        'rounded-2xl border-1 border-blue-500',
+        'rounded-2xl border border-blue-500',
         'bg-(--color-message) shadow-md',
         'font-semibold text-black',
         $style.message,
       ]"
-    >
-      {{ greeting.message }}
-    </div>
+      v-html="greeting.text"
+    />
 
     <div
       class="block h-50 w-55 bg-cover bg-no-repeat"

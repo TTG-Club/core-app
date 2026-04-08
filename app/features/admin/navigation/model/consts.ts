@@ -6,13 +6,18 @@ import type { NavigationItem } from './types';
 export const ADMIN_NAVIGATION_ITEMS: NavigationItem[] = [
   {
     label: 'Главная',
-    icon: 'i-heroicons-home',
+    icon: 'tabler:home',
     to: '/admin',
   },
   {
     label: 'Токенатор',
-    icon: 'i-heroicons-photo',
+    icon: 'tabler:photo',
     to: '/admin/tokenator',
+  },
+  {
+    label: 'Персоны',
+    icon: 'tabler:users',
+    to: '/admin/personas',
   },
 ];
 
