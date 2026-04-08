@@ -3,7 +3,8 @@
 
   import { FetchError } from 'ofetch';
 
-  import DatePicker from '~/shared/ui/date-picker/DatePicker.vue';
+  import { DatePicker } from '~ui/date-picker';
+  import { SelectNotificationType } from '~ui/select';
 
   const { persona, notification, isEditing } = defineProps<{
     persona: PersonaResponse | null;
@@ -20,6 +21,7 @@
   const toast = useToast();
 
   const notificationText = ref('');
+  const notificationType = ref('');
   const notificationViewLimit = ref<number | null>(null);
   const notificationAfterDate = ref<string | undefined>(undefined);
   const notificationAfterTime = ref('00:01');
@@ -29,13 +31,13 @@
   const isSaving = ref(false);
 
   const drawerTitle = computed(() =>
-    isEditing ? 'Редактирование фразы' : 'Новая фраза',
+    isEditing ? 'Редактирование нотификации' : 'Новая нотификация',
   );
 
   const canSave = computed(
     () =>
-      typeof notificationText.value === 'string'
-      && notificationText.value.trim().length > 0,
+      notificationText.value.trim().length > 0
+      && notificationType.value.trim().length > 0,
   );
 
   function resetForm() {
@@ -105,8 +107,8 @@
     try {
       const payload = {
         ...(notification || {}),
-        type: 'PHRASE',
         personaId: persona.id,
+        type: notificationType.value,
         text: trimmedText,
         view: notificationViewLimit.value || null,
         after: notificationAfterDate.value
@@ -124,7 +126,7 @@
       });
 
       toast.add({
-        title: isEditing ? 'Фраза обновлена' : 'Фраза добавлена',
+        title: isEditing ? 'Нотификация обновлена' : 'Нотификация добавлена',
         color: 'success',
       });
 
@@ -137,7 +139,7 @@
           : 'Неизвестная ошибка';
 
       toast.add({
-        title: 'Ошибка при сохранении фразы',
+        title: 'Ошибка при сохранении нотификации',
         description: message,
         color: 'error',
       });
@@ -151,16 +153,18 @@
   <USlideover
     v-model:open="isOpen"
     :title="drawerTitle"
-    description="Настройте параметры фразы"
+    description="Настройте параметры нотификации"
   >
     <template #body>
       <div class="flex h-full flex-col space-y-6">
         <div class="text-sm text-neutral-500">
-          Выбрана персона:
+          Персонаж:
           <span class="font-medium text-highlighted">{{ persona?.name }}</span>
         </div>
 
         <div class="flex-1 space-y-4 overflow-y-auto">
+          <SelectNotificationType v-model="notificationType" />
+
           <div class="flex items-center gap-3">
             <USwitch v-model="notificationDisabled" />
 
