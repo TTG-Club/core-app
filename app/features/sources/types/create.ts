@@ -8,7 +8,7 @@ export interface SourceCreate extends EditorBaseInfoState {
     date: string | undefined; // дата публикации
   }; // издатель
   translation: {
-    authors: Array<string> | undefined; // переводчики
+    authors: string | undefined; // переводчики
     date: string | undefined; // дата перевода
   };
   description: string; // описание маркап
