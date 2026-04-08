@@ -3,7 +3,7 @@
 
   import { FetchError } from 'ofetch';
 
-  import { DatePicker } from '~/shared/ui/date-picker';
+  import { DatePicker } from '~ui/date-picker';
   import { SelectNotificationType } from '~ui/select';
 
   const { persona, notification, isEditing } = defineProps<{
