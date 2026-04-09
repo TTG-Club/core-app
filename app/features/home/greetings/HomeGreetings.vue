@@ -27,7 +27,7 @@
     <img
       :src="greeting.image"
       :alt="greeting.persona"
-      class="h-45 w-50 shrink-0 object-contain object-bottom max-sm:h-30 max-sm:w-30"
+      class="h-45 w-50 shrink-0 self-end object-contain object-bottom max-sm:h-30 max-sm:w-30"
     />
   </div>
 </template>
