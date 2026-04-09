@@ -57,7 +57,7 @@
 </script>
 
 <template>
-  <div class="flex w-auto gap-2">
+  <div class="flex w-auto flex-wrap gap-2">
     <UButton
       :to="`/classes/${parent ? parent.url : url}`"
       variant="soft"

@@ -9,24 +9,25 @@
 <template>
   <div
     v-if="greeting"
-    class="flex w-full items-center justify-center px-8 max-sm:hidden sm:h-50"
+    class="flex w-10/12 items-center justify-center"
   >
     <!-- eslint-disable-next-line vue/no-v-html -- текст контролируется только администраторами -->
     <div
       :class="[
         'relative flex items-center justify-center',
-        'w-1/2 px-5 py-6',
-        'rounded-2xl border border-blue-500',
+        'w-100 px-5 py-6 max-sm:p-2',
+        'rounded-xl border border-blue-500',
         'bg-(--color-message) shadow-md',
-        'font-semibold text-black',
+        'font-semibold text-black max-sm:text-xs',
         $style.message,
       ]"
       v-html="greeting.text"
     />
 
-    <div
-      class="block h-50 w-55 bg-cover bg-no-repeat"
-      :style="{ backgroundImage: `url(${greeting.image})` }"
+    <img
+      :src="greeting.image"
+      :alt="greeting.persona"
+      class="h-45 w-50 shrink-0 object-contain object-bottom max-sm:h-30 max-sm:w-30"
     />
   </div>
 </template>
