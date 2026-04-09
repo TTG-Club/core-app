@@ -31,6 +31,7 @@ export interface SpellDetailAffiliation {
   subclasses?: Array<SpellDetailAffiliationItem>;
   species?: Array<SpellDetailAffiliationItem>;
   lineages?: Array<SpellDetailAffiliationItem>;
+  feats?: Array<SpellDetailAffiliationItem>;
 }
 
 export interface SpellDetailAffiliationItem {

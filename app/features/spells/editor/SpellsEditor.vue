@@ -8,6 +8,7 @@
     SelectClass,
     SelectCondition,
     SelectDamageType,
+    SelectFeat,
     SelectHealType,
     SelectLineage,
     SelectMagicSchool,
@@ -53,6 +54,7 @@
         subclasses: [],
         species: [],
         lineages: [],
+        feats: [],
       },
       tags: [],
       savingThrow: [],
@@ -247,6 +249,17 @@
         >
           <SelectLineage
             v-model="state.affiliations.lineages"
+            multiple
+          />
+        </UFormField>
+
+        <UFormField
+          class="col-span-6"
+          label="Черта"
+          name="affiliations.feats"
+        >
+          <SelectFeat
+            v-model="state.affiliations.feats"
             multiple
           />
         </UFormField>

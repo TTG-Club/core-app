@@ -71,6 +71,13 @@
           label="Происхождения"
           section="species"
         />
+
+        <AffiliationBlock
+          v-if="spell.affiliation?.feats"
+          :items="spell.affiliation.feats"
+          label="Черты"
+          section="species"
+        />
       </div>
     </div>
   </div>

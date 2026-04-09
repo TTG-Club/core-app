@@ -19,6 +19,7 @@ export { default as SelectLevel } from './SelectLevel.vue';
 export { default as SelectLineage } from './SelectLineage.vue';
 export { default as SelectMagicSchool } from './SelectMagicSchool.vue';
 export { default as SelectMastery } from './SelectMastery.vue';
+export { default as SelectNotificationType } from './SelectNotificationType.vue';
 export { default as SelectRangeType } from './SelectRangeType.vue';
 export { default as SelectSize } from './SelectSize.vue';
 export { default as SelectSkill } from './SelectSkills.vue';

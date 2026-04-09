@@ -191,7 +191,7 @@
           name="translation.authors"
           required
         >
-          <UInputTags
+          <UInput
             v-model="state.translation.authors"
             placeholder="Введи имена переводчиков"
           />
