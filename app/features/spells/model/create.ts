@@ -53,4 +53,5 @@ export interface SpellAffiliation {
   subclasses: Array<string>; // урлы архетипов классов
   species: Array<string>; // урлы видов
   lineages: Array<string>; // урлы происхождений видов
+  feats: Array<string>; // урлы черт
 }
