@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { MarkupRender } from '~ui/markup';
+
   const { data: greeting } = await useAsyncData('home-greetings', () =>
     $fetch<{ image: string; text: string; persona: string } | null>(
       '/api/v2/notification',
@@ -11,7 +13,6 @@
     v-if="greeting"
     class="flex w-10/12 items-center justify-center"
   >
-    <!-- eslint-disable-next-line vue/no-v-html -- текст контролируется только администраторами -->
     <div
       :class="[
         'relative flex items-center justify-center',
@@ -21,8 +22,11 @@
         'font-semibold text-black max-sm:text-xs',
         $style.message,
       ]"
-      v-html="greeting.text"
-    />
+    >
+      <span class="text-center">
+        <MarkupRender :render-node="greeting.text" />
+      </span>
+    </div>
 
     <img
       :src="greeting.image"

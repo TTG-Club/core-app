@@ -7,7 +7,9 @@
 </script>
 
 <template>
-  <div class="flex w-full flex-col items-center max-sm:mt-[3dvw] lg:w-1/2">
+  <div
+    class="relative z-10 flex w-full flex-col items-center max-sm:mt-[3dvw] lg:w-1/2"
+  >
     <HomeGreetings class="-z-1" />
 
     <UButton
