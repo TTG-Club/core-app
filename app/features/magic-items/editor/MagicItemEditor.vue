@@ -2,6 +2,7 @@
   import type { MagicItemCreate } from '~magic-items/model';
 
   import { MagicItemPreview } from '~magic-items/preview';
+  import { MarkupEditor } from '~markup/editor';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
@@ -24,7 +25,7 @@
         url: undefined,
         page: undefined,
       },
-      description: '',
+      description: { type: 'doc', content: [{ type: 'paragraph' }] },
       category: {
         type: undefined,
         clarification: undefined,
@@ -118,11 +119,7 @@
           class="col-span-24"
           name="description"
         >
-          <UTextarea
-            v-model="state.description"
-            :rows="8"
-            placeholder="Введи описание"
-          />
+          <MarkupEditor v-model="state.description" />
         </UFormField>
       </div>
     </UCard>

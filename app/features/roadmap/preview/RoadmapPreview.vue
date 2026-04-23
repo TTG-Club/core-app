@@ -1,8 +1,8 @@
 <script setup lang="ts">
   import type { RoadmapItem, RoadmapRequest } from '~roadmap/types';
 
+  import { MarkupContent } from '~markup/content';
   import { UiDrawer } from '~ui/drawer';
-  import { MarkupRender } from '~ui/markup';
 
   const opened = ref<boolean>(false);
 
@@ -66,9 +66,9 @@
       {{ feature.preview }}
     </UCard>
 
-    <MarkupRender
+    <MarkupContent
       v-if="feature?.description"
-      :render-node="feature.description"
+      :content="feature.description"
     />
   </UiDrawer>
 </template>

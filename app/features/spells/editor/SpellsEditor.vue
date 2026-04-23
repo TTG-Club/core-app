@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { SpellCreate } from '~spells/model';
 
+  import { MarkupEditor } from '~markup/editor';
   import { SpellPreview } from '~spells/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import {
@@ -37,7 +38,7 @@
         url: undefined,
         page: undefined,
       },
-      description: '',
+      description: { type: 'doc', content: [{ type: 'paragraph' }] },
       upper: undefined,
       level: 0,
       school: undefined,
@@ -182,11 +183,7 @@
           name="description"
           class="col-span-12"
         >
-          <UTextarea
-            v-model="state.description"
-            :rows="8"
-            placeholder="Введи описание"
-          />
+          <MarkupEditor v-model="state.description" />
         </UFormField>
 
         <UFormField

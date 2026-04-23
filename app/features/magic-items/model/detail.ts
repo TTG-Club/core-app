@@ -1,3 +1,5 @@
+import type { JSONContent } from '@tiptap/core';
+
 import type { SourceResponse } from '~/shared/types';
 
 export interface MagicItemDetailResponse {
@@ -9,6 +11,6 @@ export interface MagicItemDetailResponse {
   image: string;
   subtitle: string;
   source: SourceResponse;
-  description: Array<string>;
+  description: JSONContent;
   updatedAt: string;
 }

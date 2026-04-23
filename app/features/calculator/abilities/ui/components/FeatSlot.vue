@@ -7,6 +7,7 @@
   } from '../../model';
 
   import { isAbilityKey } from '~/shared/types';
+  import { getTextFromJSON } from '~markup/model';
 
   const {
     options,
@@ -58,6 +59,15 @@
 
     abilityChoice.value = current.filter(isAbilityKey);
   }
+
+  function isFeatOption(val: unknown): val is CalculatorFeatOption {
+    return (
+      typeof val === 'object'
+      && val !== null
+      && 'value' in val
+      && 'label' in val
+    );
+  }
 </script>
 
 <template>
@@ -84,7 +94,10 @@
         :disabled="disabled"
       >
         <template #item-label="{ item }">
-          <span class="flex items-center gap-1">
+          <span
+            v-if="isFeatOption(item)"
+            class="flex items-center gap-1"
+          >
             <span class="truncate">
               {{ item.label }}
             </span>
@@ -101,6 +114,7 @@
 
         <template #item-trailing="{ item }">
           <UBadge
+            v-if="isFeatOption(item)"
             variant="subtle"
             color="neutral"
           >
@@ -109,7 +123,10 @@
         </template>
 
         <template #item-description="{ item }">
-          <div class="grid w-full">
+          <div
+            v-if="isFeatOption(item)"
+            class="grid w-full"
+          >
             <div
               class="w-full truncate"
               :title="item.description"
@@ -120,9 +137,9 @@
             <div
               v-if="item.prerequisite"
               class="w-full truncate"
-              :title="item.prerequisite"
+              :title="getTextFromJSON(item.prerequisite)"
             >
-              {{ item.prerequisite }}
+              {{ getTextFromJSON(item.prerequisite) }}
             </div>
           </div>
         </template>

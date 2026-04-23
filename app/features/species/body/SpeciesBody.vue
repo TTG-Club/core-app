@@ -1,11 +1,11 @@
 <script setup lang="ts">
   import type { SpeciesDetailResponse } from '~species/model';
 
+  import { MarkupContent } from '~markup/content';
   import { SpeciesLineages } from '~species/lineages';
   import { SpeciesLineagesDrawer } from '~species/lineages-drawer';
   import { UiCollapse } from '~ui/collapse';
   import { UiGallery } from '~ui/gallery';
-  import { MarkupRender } from '~ui/markup';
 
   import { StatsBlock } from './ui';
 
@@ -81,9 +81,9 @@
 
       <div class="flex flex-auto flex-col gap-6">
         <div>
-          <MarkupRender
+          <MarkupContent
             v-if="species.description"
-            :render-node="species.description"
+            :content="species.description"
           />
         </div>
 
@@ -99,7 +99,7 @@
             </template>
 
             <template #content>
-              <MarkupRender :render-node="feature.description" />
+              <MarkupContent :content="feature.description" />
             </template>
           </UiCollapse>
         </template>

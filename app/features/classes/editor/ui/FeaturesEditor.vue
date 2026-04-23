@@ -20,7 +20,7 @@
     return {
       level: 1,
       name: '',
-      description: '',
+      description: { type: 'doc', content: [{ type: 'paragraph' }] },
       additional: '',
       hideInSubclasses: false,
       abilityImprovement: false,
@@ -118,11 +118,7 @@
               label="Описание"
               name="description"
             >
-              <UTextarea
-                v-model="feat.description"
-                :rows="3"
-                placeholder="Описание умения"
-              />
+              <MarkupEditor v-model="feat.description" />
             </UFormField>
 
             <FeatureScaling

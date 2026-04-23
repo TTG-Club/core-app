@@ -1,12 +1,12 @@
 <script setup lang="ts">
   import type { FeatDetailResponse } from '~feats/model';
 
-  import { MarkupRender } from '~ui/markup';
+  import { MarkupContent } from '~markup/content';
 
   const { description } =
     defineProps<Pick<FeatDetailResponse, 'description'>>();
 </script>
 
 <template>
-  <MarkupRender :render-node="description" />
+  <MarkupContent :content="description" />
 </template>

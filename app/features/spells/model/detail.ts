@@ -1,3 +1,5 @@
+import type { JSONContent } from '@tiptap/core';
+
 import type { SourceResponse } from '~/shared/types';
 
 export interface SpellDetailResponse {
@@ -20,7 +22,7 @@ export interface SpellDetailResponse {
     s?: boolean;
     m?: string;
   };
-  description: Array<string>;
+  description: JSONContent;
   upper?: Array<string>;
   affiliation?: SpellDetailAffiliation;
   updatedAt: string;

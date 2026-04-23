@@ -1,8 +1,8 @@
 <script setup lang="ts">
   import type { SourceDetailResponse } from '~sources/types';
 
+  import { MarkupContent } from '~markup/content';
   import { UiGallery } from '~ui/gallery';
-  import { MarkupRender } from '~ui/markup';
 
   import { StatsBlock } from './ui';
 
@@ -35,7 +35,7 @@
         v-if="source.description"
         class="flex flex-auto flex-col gap-3"
       >
-        <MarkupRender :render-node="source.description" />
+        <MarkupContent :content="source.description" />
       </div>
     </div>
   </div>

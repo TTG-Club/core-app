@@ -4,6 +4,7 @@
   import { z } from 'zod/v4';
 
   import { GlossaryPreview } from '~glossary/preview';
+  import { MarkupEditor } from '~markup/editor';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { useWorkshopForm } from '~workshop/composable';
 
@@ -11,7 +12,7 @@
 
   const schema = z.object({
     tagCategory: z.string().nonempty(),
-    description: z.string().nonempty(),
+    description: z.any(),
   });
 
   defineExpose({
@@ -30,7 +31,7 @@
         url: undefined,
         page: undefined,
       },
-      description: '',
+      description: { type: 'doc', content: [{ type: 'paragraph' }] },
       tags: [],
       tagCategory: '',
     };
@@ -84,11 +85,7 @@
           name="description"
           required
         >
-          <UTextarea
-            v-model="state.description"
-            :rows="8"
-            placeholder="Введи описание"
-          />
+          <MarkupEditor v-model="state.description" />
         </UFormField>
       </div>
     </UCard>

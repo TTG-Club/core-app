@@ -1,9 +1,9 @@
 <script setup lang="ts">
   import type { RoadmapItem } from '~roadmap/types';
 
+  import { MarkupContent } from '~markup/content';
   import { RoadmapEditor } from '~roadmap/editor';
   import { UiDrawer } from '~ui/drawer';
-  import { MarkupRender } from '~ui/markup';
 
   const { feature } = defineProps<{
     feature: RoadmapItem;
@@ -39,6 +39,6 @@
       {{ feature.preview }}
     </UCard>
 
-    <MarkupRender :render-node="feature.description" />
+    <MarkupContent :content="feature.description" />
   </UiDrawer>
 </template>

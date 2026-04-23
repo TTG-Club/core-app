@@ -1,7 +1,9 @@
+import type { JSONContent } from '@tiptap/core';
+
 import type { EditorBaseInfoState } from '~ui/editor';
 
 export interface MagicItemCreate extends EditorBaseInfoState {
-  description: string; // описание маркап
+  description: JSONContent; // описание маркап
   attunement: MagicItemAttunement;
   charges: number; // заряды
   curse: boolean; // проклятие

@@ -1,3 +1,5 @@
+import type { JSONContent } from '@tiptap/core';
+
 import type { AbilityKey } from '~/shared/types';
 import type { EditorBaseInfoState } from '~ui/editor';
 
@@ -6,7 +8,7 @@ export type AbilityDelimiter = 'AND' | 'OR';
 export interface ClassFeatureScalingCreate {
   level: number;
   name: string;
-  description: string;
+  description: JSONContent;
   additional: string;
   hideInSubclasses: boolean | undefined;
 }
@@ -14,7 +16,7 @@ export interface ClassFeatureScalingCreate {
 export interface ClassFeatureCreate {
   level: number;
   name: string;
-  description: string;
+  description: JSONContent;
   additional: string;
   hideInSubclasses: boolean | undefined;
   abilityImprovement: boolean | undefined;
@@ -67,12 +69,12 @@ export interface ClassPrimaryCharacteristicsCreate {
 
 export interface ClassCreate extends EditorBaseInfoState {
   gallery: Array<string>;
-  description: string | undefined;
+  description: JSONContent | undefined;
   parentUrl: string | undefined;
   hitDice: string | undefined;
   savingThrows: Array<AbilityKey>;
   proficiency: ClassProficiencyCreate;
-  equipment: string | undefined;
+  equipment: JSONContent | undefined;
   features: Array<ClassFeatureCreate>;
   table: Array<ClassColumnCreate>;
   casterType: string | undefined;

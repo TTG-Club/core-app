@@ -11,7 +11,7 @@
         rus: '',
         eng: '',
       },
-      description: '',
+      description: { type: 'doc', content: [{ type: 'paragraph' }] },
     };
   }
 
@@ -79,11 +79,7 @@
         label="Описание"
         name="description"
       >
-        <UTextarea
-          v-model="feature.description"
-          :rows="3"
-          placeholder="Введи описание"
-        />
+        <MarkupEditor v-model="feature.description" />
       </UFormField>
     </UForm>
 

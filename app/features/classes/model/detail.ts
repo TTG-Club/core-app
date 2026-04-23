@@ -1,5 +1,6 @@
+import type { JSONContent } from '@tiptap/core';
+
 import type { Level, NameResponse, SourceResponse } from '~/shared/types';
-import type { RenderNode } from '~ui/markup';
 
 import type { ClassLinkResponse } from './link';
 
@@ -7,7 +8,7 @@ export interface ClassDetailResponse {
   url: string;
   name: NameResponse;
   source: SourceResponse;
-  description: RenderNode;
+  description: JSONContent;
   image?: string;
   gallery?: Array<string>;
   casterType: CasterType;
@@ -16,7 +17,7 @@ export interface ClassDetailResponse {
   primaryCharacteristics: string;
   username: string;
   proficiency: ClassProficiency;
-  equipment: RenderNode;
+  equipment: JSONContent;
   savingThrows: string;
   table: Array<ClassTable>;
   features: Array<ClassFeature>;
@@ -36,13 +37,13 @@ export interface ClassFeature {
   key: string;
   level: Level;
   name: string;
-  description: RenderNode;
+  description: JSONContent;
   additional: string;
   isSubclass?: boolean;
   scaling?: Array<{
     level: Level;
     name: string;
-    description: RenderNode;
+    description: JSONContent;
     additional: string;
   }>;
 }

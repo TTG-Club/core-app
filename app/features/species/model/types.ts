@@ -1,3 +1,5 @@
+import type { JSONContent } from '@tiptap/core';
+
 import type { NameResponse, SourceResponse } from '~/shared/types';
 import type { EditorBaseInfoState } from '~ui/editor';
 
@@ -20,13 +22,13 @@ export interface SpeciesDetailResponse {
   name: NameResponse;
   source: SourceResponse;
   properties: SpeciesProperties;
-  description: Array<string>;
+  description: JSONContent;
   image: string;
   gallery?: Array<string>;
   features?: Array<{
     url: string;
     name: NameResponse;
-    description: Array<string>;
+    description: JSONContent;
   }>;
   username: string;
   updatedAt: string;
@@ -39,7 +41,7 @@ export interface SpeciesProperties {
 }
 
 export interface SpeciesCreate extends EditorBaseInfoState {
-  description: string;
+  description: JSONContent;
   image: string | undefined;
   linkImage: string | undefined;
   gallery: Array<string>;
@@ -58,7 +60,7 @@ export interface SpeciesCreate extends EditorBaseInfoState {
       rus: string;
       eng: string;
     };
-    description: string;
+    description: JSONContent;
   }>;
 }
 

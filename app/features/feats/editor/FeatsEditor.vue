@@ -2,6 +2,7 @@
   import type { FeatCreate } from '~feats/model';
 
   import { FeatPreview } from '~feats/preview';
+  import { MarkupEditor } from '~markup/editor';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectAbilities, SelectFeatCategory } from '~ui/select';
   import { useWorkshopForm } from '~workshop/composable';
@@ -24,8 +25,8 @@
         url: undefined,
         page: undefined,
       },
-      prerequisite: '',
-      description: '',
+      prerequisite: { type: 'doc', content: [{ type: 'paragraph' }] },
+      description: { type: 'doc', content: [{ type: 'paragraph' }] },
       category: undefined,
       repeatability: false,
       abilities: [],
@@ -71,10 +72,7 @@
           label="Предварительное условие"
           name="prerequisite"
         >
-          <UInput
-            v-model="state.prerequisite"
-            placeholder="Введи предварительное условие если есть"
-          />
+          <MarkupEditor v-model="state.prerequisite" />
         </UFormField>
 
         <UFormField
@@ -113,11 +111,7 @@
           label="Описание"
           name="description"
         >
-          <UTextarea
-            v-model="state.description"
-            :rows="8"
-            placeholder="Введи описание"
-          />
+          <MarkupEditor v-model="state.description" />
         </UFormField>
       </div>
     </UCard>

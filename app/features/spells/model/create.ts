@@ -1,8 +1,10 @@
+import type { JSONContent } from '@tiptap/core';
+
 import type { AbilityKey } from '~/shared/types';
 import type { EditorBaseInfoState } from '~ui/editor';
 
 export interface SpellCreate extends EditorBaseInfoState {
-  description: string; // описание маркап
+  description: JSONContent; // описание маркап
   upper: string | undefined; // "На более высоких уровнях"
   level: number; // уровень заклинания, 0 - заговор
   school: string | undefined; // школа

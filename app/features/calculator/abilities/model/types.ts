@@ -1,3 +1,5 @@
+import type { JSONContent } from '@tiptap/core';
+
 import type { AbilityKey, NameResponse, SourceResponse } from '~/shared/types';
 import type { DiceRollItem } from '~dice-roller/types';
 
@@ -69,7 +71,7 @@ export interface CalculatorFeatOption {
   value: string;
   description: string;
   source: string;
-  prerequisite?: string;
+  prerequisite?: JSONContent;
   repeatability?: boolean;
   abilityScoreIncreaseOptions?: number;
 }
@@ -89,7 +91,7 @@ export interface CalculatorBackgroundOption {
 export interface CalculatorAbilitiesFeat {
   url: string;
   category: string;
-  prerequisite: string | null;
+  prerequisite: JSONContent | null;
   repeatability: boolean;
   abilities: Array<string> | null;
   abilityScoreIncreaseOptions: number | null;

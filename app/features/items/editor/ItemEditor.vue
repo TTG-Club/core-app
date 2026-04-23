@@ -2,6 +2,7 @@
   import type { ItemCreate } from '~items/model';
 
   import { ItemPreview } from '~items/preview';
+  import { MarkupEditor } from '~markup/editor';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
@@ -20,7 +21,7 @@
         url: undefined,
         page: undefined,
       },
-      description: '',
+      description: { type: 'doc', content: [{ type: 'paragraph' }] },
       category: 'ITEM',
       types: [],
       cost: undefined,
@@ -115,12 +116,7 @@
         label="Описание"
         name="description"
       >
-        <UTextarea
-          v-model="state.description"
-          :rows="8"
-          placeholder="Введи описание"
-          allow-clear
-        />
+        <MarkupEditor v-model="state.description" />
       </UFormField>
     </UCard>
 

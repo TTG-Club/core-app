@@ -1,9 +1,11 @@
+import type { JSONContent } from '@tiptap/core';
+
 import type { EditorBaseInfoState } from '~ui/editor';
 
 import { AbilityKey, AbilityShortKey } from '~/shared/types';
 
 export interface CreatureCreate extends EditorBaseInfoState {
-  description: string; // описание маркап
+  description: JSONContent; // описание маркап
   image: string | undefined;
 
   types: CreatureTypes; // типы существа
@@ -16,7 +18,7 @@ export interface CreatureCreate extends EditorBaseInfoState {
   abilities: CreateAbilities;
   skills: Array<CreateSkill>;
   defenses: CreatureDefenses;
-  equipments: string | undefined;
+  equipments: JSONContent | undefined;
   senses: CreatureSenses;
   languages: CreatureLanguages;
   proficiencyBonus: number;
@@ -50,13 +52,13 @@ export interface CreatureImmunities {
 export interface LegendaryActions {
   count: number;
   inLair: number | undefined;
-  description: string | undefined;
+  description: JSONContent | undefined;
   actions: Array<CreateAction>;
 }
 
 export interface CreatureLair {
   name: string;
-  description: string;
+  description: JSONContent;
   effects: Array<CreateAction>;
   ending: string;
 }
@@ -69,7 +71,7 @@ export interface CreateSection {
   subtitle: string;
   habitats: Array<string>;
   treasures: Array<string>;
-  description: string;
+  description: JSONContent;
 }
 
 export interface CreateInitiative {
@@ -167,7 +169,7 @@ export interface CreateTrait {
     rus: string;
     eng: string;
   };
-  description: string;
+  description: JSONContent;
 }
 
 export interface CreateAction {
@@ -175,7 +177,7 @@ export interface CreateAction {
     rus: string;
     eng: string;
   };
-  description: string;
+  description: JSONContent;
   attackType: string;
   savingThrows: Array<SavingThrow>;
   damageTypes: Array<string>;
@@ -200,7 +202,7 @@ export function getInitialState(): CreatureCreate {
       url: undefined,
       page: undefined,
     },
-    description: '',
+    description: { type: 'doc', content: [{ type: 'paragraph' }] },
     image: undefined,
     tags: [],
     types: {
@@ -314,12 +316,12 @@ export function getInitialState(): CreatureCreate {
       count: 0,
       inLair: 0,
       actions: [],
-      description: '',
+      description: { type: 'doc', content: [{ type: 'paragraph' }] },
     },
     lair: {
       name: '',
       effects: [],
-      description: '',
+      description: { type: 'doc', content: [{ type: 'paragraph' }] },
       ending: '',
     },
     section: {
@@ -330,7 +332,7 @@ export function getInitialState(): CreatureCreate {
       subtitle: '',
       habitats: [],
       treasures: [],
-      description: '',
+      description: { type: 'doc', content: [{ type: 'paragraph' }] },
     },
   };
 }

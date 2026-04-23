@@ -4,6 +4,7 @@
   import { removeStopwords } from 'stopword';
   import { z } from 'zod';
 
+  import { MarkupEditor } from '~markup/editor';
   import { SourcePreview } from '~sources/preview';
   import { DatePicker } from '~ui/date-picker';
   import { EditorFormControls } from '~ui/editor';
@@ -28,7 +29,7 @@
         url: undefined,
         page: undefined,
       },
-      description: '',
+      description: { type: 'doc', content: [{ type: 'paragraph' }] },
       tags: [],
       publisher: {
         name: undefined,
@@ -218,11 +219,7 @@
           class="col-span-full"
           name="description"
         >
-          <UTextarea
-            v-model="state.description"
-            :rows="8"
-            placeholder="Введи описание"
-          />
+          <MarkupEditor v-model="state.description" />
         </UFormField>
       </div>
     </UCard>

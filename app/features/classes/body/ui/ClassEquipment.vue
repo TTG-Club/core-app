@@ -1,8 +1,8 @@
 <script setup lang="ts">
   import type { ClassDetailResponse } from '~classes/model';
 
+  import { MarkupContent } from '~markup/content';
   import { UiCollapse } from '~ui/collapse';
-  import { MarkupRender } from '~ui/markup';
 
   defineProps<{
     equipment: ClassDetailResponse['equipment'];
@@ -22,7 +22,7 @@
         полученному за вашу предысторию:
       </span>
 
-      <MarkupRender :render-node="equipment" />
+      <MarkupContent :content="equipment" />
     </template>
   </UiCollapse>
 </template>

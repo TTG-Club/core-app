@@ -1,9 +1,9 @@
 <script setup lang="ts">
   import type { ClassDetailResponse } from '~classes/model';
 
+  import { MarkupContent } from '~markup/content';
   import { UiCollapse } from '~ui/collapse';
   import { UiGallery } from '~ui/gallery';
-  import { MarkupRender } from '~ui/markup';
 
   import {
     ClassEquipment,
@@ -88,7 +88,7 @@
           <template #default>Описание</template>
 
           <template #content>
-            <MarkupRender :render-node="detail.description" />
+            <MarkupContent :content="detail.description" />
           </template>
         </UiCollapse>
       </div>
