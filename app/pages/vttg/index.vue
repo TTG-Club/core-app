@@ -138,7 +138,8 @@
 
 <template>
   <NuxtLayout>
-    <section :class="$style.hero">
+    <!-- Общая фоновая картинка для hero + carousel -->
+    <div :class="$style.pageBgWrapper">
       <img
         src="https://picsum.photos/seed/vttg-hero/1920/1080"
         alt="Virtual TTG World"
@@ -147,111 +148,112 @@
 
       <div :class="$style.heroOverlay" />
 
-      <div
-        class="relative z-10 flex flex-col items-center gap-6 px-4 text-center"
-      >
+      <!-- ═══════════════════════════════════════════════
+           HERO
+      ═══════════════════════════════════════════════ -->
+      <section :class="$style.hero">
         <div
-          class="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary"
+          class="relative z-10 flex flex-col items-center gap-6 px-4 text-center"
         >
-          <UIcon
-            name="tabler:sparkles"
-            class="size-4"
-          />
-          Открытая бета — играй бесплатно
-        </div>
-
-        <h1
-          class="m-0 max-w-4xl text-5xl leading-tight font-black tracking-tight text-highlighted md:text-7xl lg:text-8xl"
-        >
-          Virtual<br />
-
-          <span class="text-primary">TTG World</span>
-        </h1>
-
-        <p class="max-w-xl text-lg text-toned md:text-xl">
-          Полноценный виртуальный стол для D&amp;D 5e прямо в браузере. Карты,
-          кубики, персонажи — всё в одном месте.
-        </p>
-
-        <div class="flex flex-wrap items-center justify-center gap-3">
-          <UButton
-            size="xl"
-            :ui="{ base: $style.ctaButton }"
-            icon="tabler:sword"
-            label="Начать играть"
-          />
-
-          <UButton
-            size="xl"
-            variant="ghost"
-            icon="tabler:play"
-            label="Смотреть демо"
-          />
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══════════════════════════════════════════════
-         CAROUSEL
-    ═══════════════════════════════════════════════ -->
-    <section>
-      <div class="mx-auto px-6 py-20 lg:max-w-330 lg:px-8">
-        <div class="mb-12 text-center">
-          <h2 class="text-3xl font-bold text-highlighted md:text-4xl">
-            Всё для идеальной игровой сессии
-          </h2>
-
-          <p class="mt-3 text-toned">
-            Инструменты, которые делают игру плавной и захватывающей
-          </p>
-        </div>
-
-        <UCarousel
-          v-slot="{ item }"
-          :items="carouselCards"
-          arrows
-          loop
-          class-names
-          class="mx-auto w-full lg:max-w-330"
-          :ui="{
-            container: 'items-stretch',
-            item: 'flex basis-[90%] md:basis-[80%] lg:basis-[70%] transition-opacity duration-300 [&:not(.is-snapped)]:opacity-40',
-          }"
-        >
-          <UCard
-            class="mx-2 flex w-full flex-col md:mx-4"
-            :ui="{ body: 'p-0 sm:p-0 flex-1 flex flex-col' }"
+          <div
+            class="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary"
           >
-            <div
-              class="relative h-64 w-full overflow-hidden rounded-t-xl sm:h-80 lg:h-[400px]"
+            <UIcon
+              name="tabler:sparkles"
+              class="size-4"
+            />
+            Открытая бета — играй бесплатно
+          </div>
+
+          <h1
+            class="m-0 max-w-4xl text-5xl leading-tight font-black tracking-tight text-highlighted md:text-7xl lg:text-8xl"
+          >
+            Virtual<br />
+
+            <span class="text-primary">TTG World</span>
+          </h1>
+
+          <p class="max-w-xl text-lg text-toned md:text-xl">
+            Полноценный виртуальный стол для D&amp;D 5e прямо в браузере. Карты,
+            кубики, персонажи — всё в одном месте.
+          </p>
+
+          <div class="flex flex-wrap items-center justify-center gap-3">
+            <UButton
+              size="xl"
+              :ui="{ base: $style.ctaButton }"
+              icon="tabler:sword"
+              label="Начать играть"
+            />
+
+            <UButton
+              size="xl"
+              variant="ghost"
+              icon="tabler:play"
+              label="Смотреть демо"
+            />
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════
+           CAROUSEL
+      ═══════════════════════════════════════════════ -->
+      <section class="relative z-10">
+        <div class="mx-auto px-6 py-20 lg:max-w-330 lg:px-8">
+          <div class="mb-12 text-center">
+            <h2 class="text-3xl font-bold text-highlighted md:text-4xl">
+              Всё для идеальной игровой сессии
+            </h2>
+          </div>
+
+          <UCarousel
+            v-slot="{ item }"
+            :items="carouselCards"
+            arrows
+            loop
+            class-names
+            class="mx-auto w-full pb-2 lg:max-w-330"
+            :ui="{
+              container: 'items-stretch',
+              item: 'flex basis-[90%] md:basis-[80%] lg:basis-[70%] transition-opacity duration-300 [&:not(.is-snapped)]:opacity-40',
+            }"
+          >
+            <UCard
+              class="mx-2 flex w-full flex-col md:mx-4"
+              :ui="{ body: 'p-0 sm:p-0 flex-1 flex flex-col' }"
             >
-              <img
-                :src="item.img"
-                :alt="item.title"
-                class="size-full object-cover"
-              />
-            </div>
-
-            <div class="flex flex-1 flex-col gap-4 p-6 md:p-8">
-              <div class="flex items-center gap-3">
-                <UIcon
-                  :name="item.icon"
-                  class="size-8 shrink-0 text-primary"
+              <div
+                class="relative h-48 w-full shrink-0 overflow-hidden rounded-t-xl sm:h-56 lg:h-64"
+              >
+                <img
+                  :src="item.img"
+                  :alt="item.title"
+                  class="size-full object-cover"
                 />
-
-                <h3 class="text-2xl font-bold text-highlighted">
-                  {{ item.title }}
-                </h3>
               </div>
 
-              <p class="text-lg leading-relaxed text-toned">
-                {{ item.description }}
-              </p>
-            </div>
-          </UCard>
-        </UCarousel>
-      </div>
-    </section>
+              <div class="flex flex-1 flex-col gap-4 p-6 md:p-8">
+                <div class="flex items-center gap-3">
+                  <UIcon
+                    :name="item.icon"
+                    class="size-8 shrink-0 text-primary"
+                  />
+
+                  <h3 class="text-2xl font-bold text-highlighted">
+                    {{ item.title }}
+                  </h3>
+                </div>
+
+                <p class="text-lg leading-relaxed text-toned">
+                  {{ item.description }}
+                </p>
+              </div>
+            </UCard>
+          </UCarousel>
+        </div>
+      </section>
+    </div>
 
     <!-- ═══════════════════════════════════════════════
          FEATURE GRID (зигзаг)
@@ -396,16 +398,21 @@
 </template>
 
 <style module lang="scss">
+  /* ── Page background wrapper ──────────────────── */
+  .pageBgWrapper {
+    position: relative;
+    overflow: hidden;
+  }
+
   /* ── Hero ─────────────────────────────────────── */
   .hero {
     position: relative;
 
-    overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
 
-    min-height: 100dvh;
+    min-height: 70dvh;
     padding: 0 1rem;
   }
 
@@ -422,8 +429,8 @@
     mask-image: linear-gradient(
       to bottom,
       black 0%,
-      black 55%,
-      transparent 100%
+      black 40%,
+      transparent 85%
     );
   }
 
