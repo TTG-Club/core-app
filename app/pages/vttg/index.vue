@@ -214,7 +214,8 @@
           class-names
           class="mx-auto w-full lg:max-w-330"
           :ui="{
-            item: 'basis-[90%] md:basis-[80%] lg:basis-[70%] transition-opacity duration-300 [&:not(.is-snapped)]:opacity-40',
+            container: 'items-stretch',
+            item: 'flex basis-[90%] md:basis-[80%] lg:basis-[70%] transition-opacity duration-300 [&:not(.is-snapped)]:opacity-40',
           }"
         >
           <UCard
