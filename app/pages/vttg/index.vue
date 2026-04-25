@@ -4,9 +4,9 @@
   });
 
   useSeoMeta({
-    title: 'Virtual TTG World — Виртуальный стол для D&D 5e',
+    title: 'Virtual TTG Club — Виртуальный стол для D&D 5e',
     description:
-      'VTTG — онлайн-платформа для игры в D&D 5e прямо в браузере. Карты, броски кубиков, интеграция с ttg.club.',
+      'VTTG — онлайн-платформа для игры в D&D 5e. Карты, броски кубиков, интеграция с ttg.club.',
   });
 
   interface CarouselCard {
@@ -142,15 +142,15 @@
     <div class="relative overflow-hidden">
       <img
         src="https://picsum.photos/seed/vttg-hero/1920/1080"
-        alt="Virtual TTG World"
-        class="absolute inset-0 size-full object-cover object-center"
+        alt="Virtual TTG Club"
+        class="absolute inset-0 size-full object-cover object-center opacity-20"
       />
 
       <section class="relative flex h-[700px] items-center justify-center px-4">
         <div
           class="relative z-10 flex flex-col items-center gap-6 px-4 text-center"
         >
-          <div
+          <!-- <div
             class="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary"
           >
             <UIcon
@@ -158,14 +158,14 @@
               class="size-4"
             />
             Открытая бета — играй бесплатно
-          </div>
+          </div> -->
 
           <h1
             class="m-0 max-w-4xl text-5xl leading-tight font-black tracking-tight text-highlighted md:text-7xl lg:text-8xl"
           >
             Virtual<br />
 
-            <span class="text-primary">TTG World</span>
+            <span class="text-[oklch(0.828_0.189_84.429)]">TTG World</span>
           </h1>
 
           <p class="max-w-xl text-lg text-toned md:text-xl">
