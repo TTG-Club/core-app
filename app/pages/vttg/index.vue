@@ -218,8 +218,8 @@
           }"
         >
           <UCard
-            class="mx-2 w-full md:mx-4"
-            :ui="{ body: 'p-0 sm:p-0' }"
+            class="mx-2 h-full w-full md:mx-4"
+            :ui="{ body: 'p-0 sm:p-0 h-full flex flex-col' }"
           >
             <div
               class="relative h-64 w-full overflow-hidden rounded-t-xl sm:h-80 lg:h-[400px]"
@@ -231,7 +231,7 @@
               />
             </div>
 
-            <div class="flex flex-col gap-4 p-6 md:p-8">
+            <div class="flex flex-1 flex-col gap-4 p-6 md:p-8">
               <div class="flex items-center gap-3">
                 <UIcon
                   :name="item.icon"
