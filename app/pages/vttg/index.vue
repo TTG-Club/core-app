@@ -195,7 +195,7 @@
          CAROUSEL
     ═══════════════════════════════════════════════ -->
     <section :class="$style.sectionAlt">
-      <div class="mx-auto max-w-7xl px-6 py-20 lg:px-8">
+      <div class="mx-auto px-6 py-20 lg:max-w-330 lg:px-8">
         <div class="mb-12 text-center">
           <h2 class="text-3xl font-bold text-highlighted md:text-4xl">
             Всё для идеальной игровой сессии
@@ -211,7 +211,7 @@
           :items="carouselCards"
           arrows
           dots
-          class="mx-auto w-full max-w-4xl"
+          class="mx-auto w-full lg:max-w-330"
           :ui="{ item: 'basis-full' }"
         >
           <UCard
@@ -251,7 +251,7 @@
          FEATURE GRID (зигзаг)
     ═══════════════════════════════════════════════ -->
     <section class="py-24">
-      <div class="mx-auto max-w-6xl px-6 lg:px-8">
+      <div class="mx-auto px-6 lg:max-w-330 lg:px-8">
         <div class="mb-16 text-center">
           <h2 class="text-3xl font-bold text-highlighted md:text-4xl">
             Мощь профессионального VTT
@@ -339,7 +339,7 @@
          FAQ
     ═══════════════════════════════════════════════ -->
     <section :class="$style.sectionAlt">
-      <div class="mx-auto max-w-3xl px-6 py-20 lg:px-8">
+      <div class="mx-auto px-6 py-20 lg:max-w-330 lg:px-8">
         <div class="mb-12 text-center">
           <h2 class="text-3xl font-bold text-highlighted md:text-4xl">
             Частые вопросы
@@ -349,7 +349,7 @@
         </div>
 
         <UCard
-          class="mx-auto shadow-sm"
+          class="mx-auto w-full max-w-4xl shadow-sm"
           :ui="{ body: 'p-2 sm:p-4' }"
         >
           <UAccordion
@@ -366,7 +366,7 @@
          CTA FOOTER
     ═══════════════════════════════════════════════ -->
     <section class="py-28">
-      <div class="mx-auto max-w-2xl px-6 text-center lg:px-8">
+      <div class="mx-auto px-6 text-center lg:max-w-330 lg:px-8">
         <h2 class="text-3xl font-bold text-highlighted md:text-5xl">
           Готов к приключению?
         </h2>
