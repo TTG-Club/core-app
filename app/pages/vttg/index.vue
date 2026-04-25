@@ -146,12 +146,7 @@
         class="absolute inset-0 size-full object-cover object-center"
       />
 
-      <!-- ═══════════════════════════════════════════════
-           HERO
-      ═══════════════════════════════════════════════ -->
-      <section
-        class="relative flex min-h-[70dvh] items-center justify-center px-4"
-      >
+      <section class="relative flex h-[700px] items-center justify-center px-4">
         <div
           class="relative z-10 flex flex-col items-center gap-6 px-4 text-center"
         >
