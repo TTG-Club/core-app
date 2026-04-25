@@ -139,19 +139,19 @@
 <template>
   <NuxtLayout>
     <!-- Общая фоновая картинка для hero + carousel -->
-    <div :class="$style.pageBgWrapper">
+    <div class="relative overflow-hidden">
       <img
         src="https://picsum.photos/seed/vttg-hero/1920/1080"
         alt="Virtual TTG World"
-        :class="$style.heroBg"
+        class="absolute inset-0 size-full object-cover object-center"
       />
-
-      <div :class="$style.heroOverlay" />
 
       <!-- ═══════════════════════════════════════════════
            HERO
       ═══════════════════════════════════════════════ -->
-      <section :class="$style.hero">
+      <section
+        class="relative flex min-h-[70dvh] items-center justify-center px-4"
+      >
         <div
           class="relative z-10 flex flex-col items-center gap-6 px-4 text-center"
         >
@@ -181,7 +181,6 @@
           <div class="flex flex-wrap items-center justify-center gap-3">
             <UButton
               size="xl"
-              :ui="{ base: $style.ctaButton }"
               icon="tabler:sword"
               label="Начать играть"
             />
@@ -346,7 +345,7 @@
     <!-- ═══════════════════════════════════════════════
          FAQ
     ═══════════════════════════════════════════════ -->
-    <section :class="$style.sectionAlt">
+    <section class="border-y border-default bg-elevated">
       <div class="mx-auto px-6 py-20 lg:max-w-330 lg:px-8">
         <div class="mb-12 text-center">
           <h2 class="text-3xl font-bold text-highlighted md:text-4xl">
@@ -387,7 +386,6 @@
         <div class="mt-10 flex flex-wrap items-center justify-center gap-4">
           <UButton
             size="xl"
-            :ui="{ base: $style.ctaButton }"
             icon="tabler:rocket"
             label="Создать бесплатный аккаунт"
           />
@@ -396,69 +394,3 @@
     </section>
   </NuxtLayout>
 </template>
-
-<style module lang="scss">
-  /* ── Page background wrapper ──────────────────── */
-  .pageBgWrapper {
-    position: relative;
-    overflow: hidden;
-  }
-
-  /* ── Hero ─────────────────────────────────────── */
-  .hero {
-    position: relative;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    min-height: 70dvh;
-    padding: 0 1rem;
-  }
-
-  .heroBg {
-    position: absolute;
-    inset: 0;
-
-    width: 100%;
-    height: 100%;
-
-    object-fit: cover;
-    object-position: center;
-
-    mask-image: linear-gradient(
-      to bottom,
-      black 0%,
-      black 40%,
-      transparent 85%
-    );
-  }
-
-  .heroOverlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--ui-bg) 70%, transparent) 0%,
-      color-mix(in srgb, var(--ui-bg) 40%, transparent) 50%,
-      color-mix(in srgb, var(--ui-color-primary-500) 15%, transparent) 100%
-    );
-  }
-
-  /* ── CTA Button glow ──────────────────────────── */
-  .ctaButton {
-    transition: box-shadow 0.3s ease;
-
-    &:hover {
-      box-shadow: 0 0 24px 4px
-        color-mix(in srgb, var(--ui-color-primary-500) 50%, transparent);
-    }
-  }
-
-  /* ── Section alt background ───────────────────── */
-  .sectionAlt {
-    border-top: 1px solid var(--ui-border);
-    border-bottom: 1px solid var(--ui-border);
-    background: var(--ui-bg-elevated);
-  }
-</style>
