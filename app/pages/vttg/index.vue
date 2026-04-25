@@ -194,7 +194,7 @@
     <!-- ═══════════════════════════════════════════════
          CAROUSEL
     ═══════════════════════════════════════════════ -->
-    <section :class="$style.sectionAlt">
+    <section>
       <div class="mx-auto px-6 py-20 lg:max-w-330 lg:px-8">
         <div class="mb-12 text-center">
           <h2 class="text-3xl font-bold text-highlighted md:text-4xl">
