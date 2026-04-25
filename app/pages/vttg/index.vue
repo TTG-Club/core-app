@@ -161,7 +161,7 @@
           </div> -->
 
           <h1
-            class="m-0 max-w-4xl text-5xl leading-tight font-medium tracking-widest text-highlighted drop-shadow-lg md:text-7xl lg:text-8xl"
+            class="m-0 max-w-4xl text-5xl leading-tight font-black tracking-widest text-highlighted drop-shadow-[8px_8px_8px_rgba(0,0,0,0.4)] md:text-7xl lg:text-8xl"
           >
             Virtual<br />
 
@@ -169,15 +169,15 @@
           </h1>
 
           <p class="max-w-xl text-lg text-toned md:text-xl">
-            Полноценный виртуальный стол для D&amp;D 5e. Карты, кубики,
-            персонажи — всё в одном месте.
+            Полноценный виртуальный стол для D&amp;D 5e. <br />
+            Карты, кубики, персонажи — всё в одном месте.
           </p>
 
           <div class="flex flex-wrap items-center justify-center gap-3">
             <UButton
               size="xl"
-              icon="tabler:sword"
-              label="Начать играть"
+              icon="tabler:heart"
+              label="Поддержать проект"
             />
 
             <UButton
