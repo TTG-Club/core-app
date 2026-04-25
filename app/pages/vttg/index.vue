@@ -218,7 +218,9 @@
             class="w-full"
             :ui="{ body: 'p-0 sm:p-0' }"
           >
-            <div class="relative aspect-video overflow-hidden rounded-t-xl">
+            <div
+              class="relative h-64 w-full overflow-hidden rounded-t-xl sm:h-80 lg:h-[400px]"
+            >
               <img
                 :src="item.img"
                 :alt="item.title"
