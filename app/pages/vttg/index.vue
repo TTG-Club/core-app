@@ -210,7 +210,6 @@
           v-slot="{ item }"
           :items="carouselCards"
           arrows
-          dots
           loop
           class-names
           class="mx-auto w-full lg:max-w-330"
