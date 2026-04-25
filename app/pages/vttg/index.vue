@@ -138,7 +138,6 @@
 
 <template>
   <NuxtLayout>
-    HERO ═══════════════════════════════════════════════ -->
     <section :class="$style.hero">
       <img
         src="https://picsum.photos/seed/vttg-hero/1920/1080"
@@ -207,45 +206,44 @@
           </p>
         </div>
 
-        <div
-          class="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 lg:hidden-scrollbar"
+        <UCarousel
+          v-slot="{ item }"
+          :items="carouselCards"
+          arrows
+          dots
+          class="mx-auto w-full max-w-4xl"
+          :ui="{ item: 'basis-full' }"
         >
           <UCard
-            v-for="(card, index) in carouselCards"
-            :key="index"
-            class="group w-80 min-w-[320px] shrink-0 snap-start transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/20 md:w-96 md:min-w-[384px]"
+            class="w-full"
             :ui="{ body: 'p-0 sm:p-0' }"
           >
             <div class="relative aspect-video overflow-hidden rounded-t-xl">
               <img
-                :src="card.img"
-                :alt="card.title"
-                class="size-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-
-              <div
-                class="from-background/80 absolute inset-0 bg-gradient-to-t to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                :src="item.img"
+                :alt="item.title"
+                class="size-full object-cover"
               />
             </div>
 
-            <div class="flex flex-col gap-3 p-6">
-              <div class="flex items-center gap-2">
+            <div class="flex flex-col gap-4 p-6 md:p-8">
+              <div class="flex items-center gap-3">
                 <UIcon
-                  :name="card.icon"
-                  class="size-5 shrink-0 text-primary"
+                  :name="item.icon"
+                  class="size-8 shrink-0 text-primary"
                 />
 
-                <h3 class="text-lg font-semibold text-highlighted">
-                  {{ card.title }}
+                <h3 class="text-2xl font-bold text-highlighted">
+                  {{ item.title }}
                 </h3>
               </div>
 
-              <p class="text-sm leading-relaxed text-toned">
-                {{ card.description }}
+              <p class="text-lg leading-relaxed text-toned">
+                {{ item.description }}
               </p>
             </div>
           </UCard>
-        </div>
+        </UCarousel>
       </div>
     </section>
 
