@@ -141,7 +141,7 @@
     <!-- Общая фоновая картинка для hero + carousel -->
     <div class="relative overflow-hidden">
       <img
-        src="https://picsum.photos/seed/vttg-hero/1920/1080"
+        src="/s3/vttgw/main-bg.png"
         alt="Virtual TTG Club"
         class="absolute inset-0 size-full object-cover object-center opacity-20"
       />
