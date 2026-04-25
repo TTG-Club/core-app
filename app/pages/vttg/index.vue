@@ -211,11 +211,14 @@
           :items="carouselCards"
           arrows
           dots
+          class-names
           class="mx-auto w-full lg:max-w-330"
-          :ui="{ item: 'basis-full' }"
+          :ui="{
+            item: 'basis-[90%] md:basis-[80%] lg:basis-[70%] transition-opacity duration-300 [&:not(.is-snapped)]:opacity-40',
+          }"
         >
           <UCard
-            class="w-full"
+            class="mx-2 w-full md:mx-4"
             :ui="{ body: 'p-0 sm:p-0' }"
           >
             <div
