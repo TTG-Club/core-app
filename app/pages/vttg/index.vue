@@ -219,8 +219,8 @@
           }"
         >
           <UCard
-            class="mx-2 h-full w-full md:mx-4"
-            :ui="{ body: 'p-0 sm:p-0 h-full flex flex-col' }"
+            class="mx-2 flex w-full flex-col md:mx-4"
+            :ui="{ body: 'p-0 sm:p-0 flex-1 flex flex-col' }"
           >
             <div
               class="relative h-64 w-full overflow-hidden rounded-t-xl sm:h-80 lg:h-[400px]"
