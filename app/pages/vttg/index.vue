@@ -141,7 +141,7 @@
     <!-- Общая фоновая картинка для hero + carousel -->
     <div class="relative overflow-hidden">
       <img
-        src="/s3/vttgw/main-bg.png"
+        :src="'/s3/vttgw/main-bg.png'"
         alt="Virtual TTG Club"
         class="absolute inset-0 size-full object-cover object-center opacity-20"
       />
@@ -161,7 +161,7 @@
           </div> -->
 
           <h1
-            class="m-0 max-w-4xl text-5xl leading-tight font-black tracking-tight text-highlighted md:text-7xl lg:text-8xl"
+            class="m-0 max-w-4xl text-5xl leading-tight font-medium tracking-widest text-highlighted drop-shadow-lg md:text-7xl lg:text-8xl"
           >
             Virtual<br />
 
@@ -169,8 +169,8 @@
           </h1>
 
           <p class="max-w-xl text-lg text-toned md:text-xl">
-            Полноценный виртуальный стол для D&amp;D 5e прямо в браузере. Карты,
-            кубики, персонажи — всё в одном месте.
+            Полноценный виртуальный стол для D&amp;D 5e. Карты, кубики,
+            персонажи — всё в одном месте.
           </p>
 
           <div class="flex flex-wrap items-center justify-center gap-3">
