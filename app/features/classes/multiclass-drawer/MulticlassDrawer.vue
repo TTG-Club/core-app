@@ -1,424 +1,431 @@
 <script setup lang="ts">
-import { SelectClass, SelectLevel } from "~ui/select";
-import { UiDrawer } from "~ui/drawer";
+  import type { SelectMenuItem } from '#ui/components/SelectMenu.vue';
+  import type { NameResponse } from '~/shared/types';
+  import type { ClassLinkResponse } from '~classes/model';
 
-import type { ClassLinkResponse } from "~classes/model";
-import type { NameResponse } from "~/shared/types";
-import type { SelectMenuItem } from "#ui/components/SelectMenu.vue";
+  import { UiDrawer } from '~ui/drawer';
+  import { SelectClass, SelectLevel } from '~ui/select';
 
-const { url, parent = undefined } = defineProps<{
-  url: string;
-  name: NameResponse;
-  parent?: ClassLinkResponse;
-}>();
+  const { url, parent = undefined } = defineProps<{
+    url: string;
+    name: NameResponse;
+    parent?: ClassLinkResponse;
+  }>();
 
-const emit = defineEmits<{
-  (e: "close"): void;
-}>();
+  const emit = defineEmits<{
+    (e: 'close'): void;
+  }>();
 
-// Первая строка: текущий класс/подкласс и уровень
-const currentLevel = ref<number>(1);
+  // Первая строка: текущий класс/подкласс и уровень
+  const currentLevel = ref<number>(1);
 
-// Определяем базовый URL основного класса
-const initialMainClassUrl = computed(() => (parent ? parent.url : url));
+  // Определяем базовый URL основного класса
+  const initialMainClassUrl = computed(() => (parent ? parent.url : url));
 
-// Основной класс (можно выбрать)
-const currentClassUrl = ref<string>(parent ? parent.url : url);
+  // Основной класс (можно выбрать)
+  const currentClassUrl = ref<string>(parent ? parent.url : url);
 
-// Обновляем currentClassUrl при изменении initialMainClassUrl
-watch(
-  initialMainClassUrl,
-  (newUrl) => {
-    if (currentClassUrl.value !== newUrl) {
-      currentClassUrl.value = newUrl;
-    }
-  },
-  { immediate: true },
-);
-
-// Инициализируем подкласс: если мы на странице подкласса, используем его URL
-const currentSubclassUrl = ref<string | undefined>(parent ? url : undefined);
-
-// Вторая строка: выбор класса, подкласса и уровня
-const selectedClassUrl = ref<string>();
-const selectedSubclassUrl = ref<string>();
-const selectedLevel = ref<number>(1);
-
-// Дополнительные классы (3-10)
-interface AdditionalClass {
-  id: string;
-  classUrl?: string;
-  subclassUrl?: string;
-  level: number;
-}
-
-const additionalClasses = ref<Array<AdditionalClass>>([]);
-
-// Получение подклассов для основного класса
-const { data: currentClassSubclasses } = await useAsyncData<
-  Array<ClassLinkResponse>
->(
-  computed(() => `class-${currentClassUrl.value}-subclasses`),
-  () => {
-    if (!currentClassUrl.value) {
-      return Promise.resolve([]);
-    }
-
-    return $fetch<Array<ClassLinkResponse>>(
-      `/api/v2/classes/${currentClassUrl.value}/subclasses`,
-    );
-  },
-  {
-    server: false,
-    watch: [currentClassUrl],
-  },
-);
-
-// Получение подклассов для выбранного класса
-const { data: availableSubclasses } = await useAsyncData<
-  Array<ClassLinkResponse>
->(
-  computed(() => `class-${selectedClassUrl.value || ""}-subclasses`),
-  () => {
-    if (!selectedClassUrl.value) {
-      return Promise.resolve([]);
-    }
-
-    return $fetch<Array<ClassLinkResponse>>(
-      `/api/v2/classes/${selectedClassUrl.value}/subclasses`,
-    );
-  },
-  {
-    server: false,
-    watch: [selectedClassUrl],
-  },
-);
-
-// Хранилище подклассов для дополнительных классов
-const additionalClassSubclasses = ref<
-  Record<string, Array<ClassLinkResponse> | undefined>
->({});
-
-// Загрузка подклассов для дополнительного класса
-async function loadSubclassesForAdditionalClass(
-  classId: string,
-  classUrl: string | undefined,
-) {
-  if (!classUrl) {
-    additionalClassSubclasses.value[classId] = [];
-
-    return;
-  }
-
-  try {
-    additionalClassSubclasses.value[classId] = await $fetch<
-      Array<ClassLinkResponse>
-    >(`/api/v2/classes/${classUrl}/subclasses`);
-  } catch {
-    additionalClassSubclasses.value[classId] = [];
-  }
-}
-
-// Получение подклассов для дополнительного класса в формате SelectMenu
-function getAdditionalClassSubclassItems(
-  classId: string,
-): Array<SelectMenuItem> {
-  const subclasses = additionalClassSubclasses.value[classId] ?? [];
-
-  return subclasses.map((subclass) => ({
-    ...subclass,
-    label: `${subclass.name.rus} [${subclass.name.eng}]`,
-    value: subclass.url,
-  }));
-}
-
-// Преобразование подклассов основного класса в формат для SelectMenu
-const currentClassSubclassItems = computed<Array<SelectMenuItem>>(() => {
-  if (!currentClassSubclasses.value?.length) {
-    return [];
-  }
-
-  return currentClassSubclasses.value.map((subclass) => ({
-    ...subclass,
-    label: `${subclass.name.rus} [${subclass.name.eng}]`,
-    value: subclass.url,
-  }));
-});
-
-// Преобразование подклассов в формат для SelectMenu
-const subclassItems = computed<Array<SelectMenuItem>>(() => {
-  if (!availableSubclasses.value?.length) {
-    return [];
-  }
-
-  return availableSubclasses.value.map((subclass) => ({
-    ...subclass,
-    label: `${subclass.name.rus} [${subclass.name.eng}]`,
-    value: subclass.url,
-  }));
-});
-
-// Вычисляем сумму уровней дополнительных классов
-const sumAdditionalLevels = computed(() => {
-  return additionalClasses.value
-    .filter((c) => c.classUrl)
-    .reduce((sum, c) => sum + c.level, 0);
-});
-
-// Максимальный доступный уровень для основного класса
-const maxCurrentLevel = computed(() => {
-  const secondLevel = selectedClassUrl.value ? selectedLevel.value : 0;
-  const available = 20 - secondLevel - sumAdditionalLevels.value;
-
-  return Math.max(1, Math.min(available, 20));
-});
-
-// Максимальный доступный уровень для второго класса
-const maxSelectedLevel = computed(() => {
-  const available = 20 - currentLevel.value - sumAdditionalLevels.value;
-
-  return Math.max(1, Math.min(available, 20));
-});
-
-// Функция для вычисления максимального уровня для дополнительного класса
-function getMaxLevelForAdditionalClass(classId: string): number {
-  const currentSum = currentLevel.value;
-  const secondSum = selectedClassUrl.value ? selectedLevel.value : 0;
-
-  const otherAdditionalSum = additionalClasses.value
-    .filter((c) => c.id !== classId && c.classUrl)
-    .reduce((sum, c) => sum + c.level, 0);
-
-  const available = 20 - currentSum - secondSum - otherAdditionalSum;
-
-  return Math.max(1, Math.min(available, 20));
-}
-
-// Сброс подкласса при смене основного класса
-watch(currentClassUrl, () => {
-  currentSubclassUrl.value = undefined;
-});
-
-// Корректировка уровня основного класса, если он превышает доступный максимум
-watch(maxCurrentLevel, (maxLevel) => {
-  if (currentLevel.value > maxLevel) {
-    currentLevel.value = maxLevel;
-  }
-});
-
-// Корректировка уровня второго класса, если он превышает доступный максимум
-watch(maxSelectedLevel, (maxLevel) => {
-  if (selectedClassUrl.value && selectedLevel.value > maxLevel) {
-    selectedLevel.value = maxLevel;
-  }
-});
-
-// Сброс подкласса при смене уровня основного класса (если уровень <= 2)
-watch(currentLevel, (newLevel) => {
-  if (newLevel <= 2) {
-    currentSubclassUrl.value = undefined;
-  }
-});
-
-// Сброс подкласса при смене второго класса
-watch(selectedClassUrl, () => {
-  selectedSubclassUrl.value = undefined;
-});
-
-// Сброс подкласса при смене уровня второго класса (если уровень <= 2)
-watch(selectedLevel, (newLevel) => {
-  if (newLevel <= 2) {
-    selectedSubclassUrl.value = undefined;
-  }
-});
-
-// Обработчик нажатия на кнопку "Добавить класс"
-function handleAddClass() {
-  if (additionalClasses.value.length >= 9) {
-    // Максимум 10 классов (1 текущий + 1 второй + 8 дополнительных)
-    return;
-  }
-
-  additionalClasses.value.push({
-    id: `class-${Date.now()}`,
-    level: 1,
-  });
-}
-
-// Удаление дополнительного класса
-function removeAdditionalClass(id: string) {
-  const index = additionalClasses.value.findIndex((c) => c.id === id);
-
-  if (index !== -1) {
-    additionalClasses.value.splice(index, 1);
-
-    // Используем новый объект без удаляемого свойства
-    const newSubclasses: Record<string, Array<ClassLinkResponse> | undefined> =
-      {};
-
-    Object.keys(additionalClassSubclasses.value).forEach((key) => {
-      if (key !== id) {
-        const subclasses = additionalClassSubclasses.value[key];
-
-        if (subclasses !== undefined) {
-          newSubclasses[key] = subclasses;
-        }
+  // Обновляем currentClassUrl при изменении initialMainClassUrl
+  watch(
+    initialMainClassUrl,
+    (newUrl) => {
+      if (currentClassUrl.value !== newUrl) {
+        currentClassUrl.value = newUrl;
       }
-    });
-    additionalClassSubclasses.value = newSubclasses;
+    },
+    { immediate: true },
+  );
+
+  // Инициализируем подкласс: если мы на странице подкласса, используем его URL
+  const currentSubclassUrl = ref<string | undefined>(parent ? url : undefined);
+
+  // Вторая строка: выбор класса, подкласса и уровня
+  const selectedClassUrl = ref<string>();
+  const selectedSubclassUrl = ref<string>();
+  const selectedLevel = ref<number>(1);
+
+  // Дополнительные классы (3-10)
+  interface AdditionalClass {
+    id: string;
+    classUrl?: string;
+    subclassUrl?: string;
+    level: number;
   }
-}
 
-// Отслеживание изменений classUrl для дополнительных классов
-watch(
-  () =>
-    additionalClasses.value.map((c) => ({ id: c.id, classUrl: c.classUrl })),
-  (newValues, oldValues) => {
-    newValues.forEach(({ id, classUrl }) => {
-      const oldValue = oldValues?.find((o) => o.id === id);
+  const additionalClasses = ref<Array<AdditionalClass>>([]);
 
-      if (classUrl && (!oldValue || oldValue.classUrl !== classUrl)) {
-        loadSubclassesForAdditionalClass(id, classUrl);
-      } else if (!classUrl) {
-        additionalClassSubclasses.value[id] = [];
+  // Получение подклассов для основного класса
+  const { data: currentClassSubclasses } = await useAsyncData<
+    Array<ClassLinkResponse>
+  >(
+    computed(() => `class-${currentClassUrl.value}-subclasses`),
+    () => {
+      if (!currentClassUrl.value) {
+        return Promise.resolve([]);
       }
-    });
-  },
-  { deep: true },
-);
 
-// Сброс подкласса при смене класса для дополнительных классов
-watch(
-  () =>
-    additionalClasses.value.map((c) => ({ id: c.id, classUrl: c.classUrl })),
-  (newValues, oldValues) => {
-    newValues.forEach(({ id, classUrl }) => {
-      const oldClass = oldValues?.find((o) => o.id === id);
+      return $fetch<Array<ClassLinkResponse>>(
+        `/api/v2/classes/${currentClassUrl.value}/subclasses`,
+      );
+    },
+    {
+      server: false,
+      watch: [currentClassUrl],
+    },
+  );
 
-      if (oldClass && oldClass.classUrl !== classUrl) {
-        const additionalClass = additionalClasses.value.find(
-          (c) => c.id === id,
-        );
-
-        if (additionalClass) {
-          additionalClass.subclassUrl = undefined;
-        }
+  // Получение подклассов для выбранного класса
+  const { data: availableSubclasses } = await useAsyncData<
+    Array<ClassLinkResponse>
+  >(
+    computed(() => `class-${selectedClassUrl.value || ''}-subclasses`),
+    () => {
+      if (!selectedClassUrl.value) {
+        return Promise.resolve([]);
       }
-    });
-  },
-  { deep: true },
-);
 
-// Сброс подкласса при смене уровня для дополнительных классов (если уровень <= 2)
-watch(
-  () => additionalClasses.value.map((c) => ({ id: c.id, level: c.level })),
-  (newValues, oldValues) => {
-    newValues.forEach(({ id, level }) => {
-      const oldValue = oldValues?.find((o) => o.id === id);
+      return $fetch<Array<ClassLinkResponse>>(
+        `/api/v2/classes/${selectedClassUrl.value}/subclasses`,
+      );
+    },
+    {
+      server: false,
+      watch: [selectedClassUrl],
+    },
+  );
 
-      if (oldValue && oldValue.level !== level && level <= 2) {
-        const additionalClass = additionalClasses.value.find(
-          (c) => c.id === id,
-        );
+  // Хранилище подклассов для дополнительных классов
+  const additionalClassSubclasses = ref<
+    Record<string, Array<ClassLinkResponse> | undefined>
+  >({});
 
-        if (additionalClass) {
-          additionalClass.subclassUrl = undefined;
-        }
-      }
-    });
-  },
-  { deep: true },
-);
-
-// Корректировка уровней дополнительных классов, если они превышают доступный максимум
-watch(
-  () => [
-    currentLevel.value,
-    selectedLevel.value,
-    additionalClasses.value.map((c) => ({ id: c.id, level: c.level })),
-  ],
-  () => {
-    additionalClasses.value.forEach((additionalClass) => {
-      if (additionalClass.classUrl) {
-        const maxLevel = getMaxLevelForAdditionalClass(additionalClass.id);
-
-        if (additionalClass.level > maxLevel) {
-          additionalClass.level = maxLevel;
-        }
-      }
-    });
-  },
-  { deep: true },
-);
-
-// Обработчик нажатия на кнопку "Очистить"
-function handleClear() {
-  selectedClassUrl.value = undefined;
-  selectedSubclassUrl.value = undefined;
-  selectedLevel.value = 1;
-  additionalClasses.value = [];
-}
-
-// Обработчик нажатия на кнопку "Применить"
-function handleApply() {
-  if (
-    !currentClassUrl.value ||
-    !currentLevel.value ||
-    !selectedClassUrl.value ||
-    !selectedLevel.value
+  // Загрузка подклассов для дополнительного класса
+  async function loadSubclassesForAdditionalClass(
+    classId: string,
+    classUrl: string | undefined,
   ) {
-    return;
+    if (!classUrl) {
+      additionalClassSubclasses.value[classId] = [];
+
+      return;
+    }
+
+    try {
+      additionalClassSubclasses.value[classId] = await $fetch<
+        Array<ClassLinkResponse>
+      >(`/api/v2/classes/${classUrl}/subclasses`);
+    } catch {
+      additionalClassSubclasses.value[classId] = [];
+    }
   }
 
-  // Используем выбранный основной класс
-  const class1BaseUrl = currentClassUrl.value;
+  // Получение подклассов для дополнительного класса в формате SelectMenu
+  function getAdditionalClassSubclassItems(
+    classId: string,
+  ): Array<SelectMenuItem> {
+    const subclasses = additionalClassSubclasses.value[classId] ?? [];
 
-  // Используем выбранный подкласс для основного класса
-  const class1SubclassUrl = currentSubclassUrl.value;
-
-  // Формируем URL для страницы мультикласса
-  const query: Record<string, string> = {
-    class1: class1BaseUrl,
-    level1: String(currentLevel.value),
-    class2: selectedClassUrl.value,
-    level2: String(selectedLevel.value),
-  };
-
-  // Если выбран подкласс для основного класса, добавляем его URL
-  if (class1SubclassUrl) {
-    query.subclass1 = class1SubclassUrl;
+    return subclasses.map((subclass) => ({
+      ...subclass,
+      label: `${subclass.name.rus} [${subclass.name.eng}]`,
+      value: subclass.url,
+    }));
   }
 
-  // Если выбран подкласс для второго класса, добавляем его URL
-  if (selectedSubclassUrl.value) {
-    query.subclass2 = selectedSubclassUrl.value;
+  // Преобразование подклассов основного класса в формат для SelectMenu
+  const currentClassSubclassItems = computed<Array<SelectMenuItem>>(() => {
+    if (!currentClassSubclasses.value?.length) {
+      return [];
+    }
+
+    return currentClassSubclasses.value.map((subclass) => ({
+      ...subclass,
+      label: `${subclass.name.rus} [${subclass.name.eng}]`,
+      value: subclass.url,
+    }));
+  });
+
+  // Преобразование подклассов в формат для SelectMenu
+  const subclassItems = computed<Array<SelectMenuItem>>(() => {
+    if (!availableSubclasses.value?.length) {
+      return [];
+    }
+
+    return availableSubclasses.value.map((subclass) => ({
+      ...subclass,
+      label: `${subclass.name.rus} [${subclass.name.eng}]`,
+      value: subclass.url,
+    }));
+  });
+
+  // Вычисляем сумму уровней дополнительных классов
+  const sumAdditionalLevels = computed(() => {
+    return additionalClasses.value
+      .filter((c) => c.classUrl)
+      .reduce((sum, c) => sum + c.level, 0);
+  });
+
+  // Максимальный доступный уровень для основного класса
+  const maxCurrentLevel = computed(() => {
+    const secondLevel = selectedClassUrl.value ? selectedLevel.value : 0;
+    const available = 20 - secondLevel - sumAdditionalLevels.value;
+
+    return Math.max(1, Math.min(available, 20));
+  });
+
+  // Максимальный доступный уровень для второго класса
+  const maxSelectedLevel = computed(() => {
+    const available = 20 - currentLevel.value - sumAdditionalLevels.value;
+
+    return Math.max(1, Math.min(available, 20));
+  });
+
+  // Функция для вычисления максимального уровня для дополнительного класса
+  function getMaxLevelForAdditionalClass(classId: string): number {
+    const currentSum = currentLevel.value;
+    const secondSum = selectedClassUrl.value ? selectedLevel.value : 0;
+
+    const otherAdditionalSum = additionalClasses.value
+      .filter((c) => c.id !== classId && c.classUrl)
+      .reduce((sum, c) => sum + c.level, 0);
+
+    const available = 20 - currentSum - secondSum - otherAdditionalSum;
+
+    return Math.max(1, Math.min(available, 20));
   }
 
-  // Добавляем дополнительные классы (3-10)
-  additionalClasses.value.forEach((additionalClass, index) => {
-    if (additionalClass.classUrl) {
-      const classNumber = index + 3;
+  // Сброс подкласса при смене основного класса
+  watch(currentClassUrl, () => {
+    currentSubclassUrl.value = undefined;
+  });
 
-      query[`class${classNumber}`] = additionalClass.classUrl;
-      query[`level${classNumber}`] = String(additionalClass.level);
-
-      if (additionalClass.subclassUrl) {
-        query[`subclass${classNumber}`] = additionalClass.subclassUrl;
-      }
+  // Корректировка уровня основного класса, если он превышает доступный максимум
+  watch(maxCurrentLevel, (maxLevel) => {
+    if (currentLevel.value > maxLevel) {
+      currentLevel.value = maxLevel;
     }
   });
 
-  const queryString = new URLSearchParams(query).toString();
-  const multiclassUrl = `/multiclass?${queryString}`;
+  // Корректировка уровня второго класса, если он превышает доступный максимум
+  watch(maxSelectedLevel, (maxLevel) => {
+    if (selectedClassUrl.value && selectedLevel.value > maxLevel) {
+      selectedLevel.value = maxLevel;
+    }
+  });
 
-  // Закрываем drawer и переходим на страницу мультикласса в том же окне
-  emit("close");
-  navigateTo(multiclassUrl);
-}
+  // Сброс подкласса при смене уровня основного класса (если уровень <= 2)
+  watch(currentLevel, (newLevel) => {
+    if (newLevel <= 2) {
+      currentSubclassUrl.value = undefined;
+    }
+  });
+
+  // Сброс подкласса при смене второго класса
+  watch(selectedClassUrl, () => {
+    selectedSubclassUrl.value = undefined;
+  });
+
+  // Сброс подкласса при смене уровня второго класса (если уровень <= 2)
+  watch(selectedLevel, (newLevel) => {
+    if (newLevel <= 2) {
+      selectedSubclassUrl.value = undefined;
+    }
+  });
+
+  // Обработчик нажатия на кнопку "Добавить класс"
+  function handleAddClass() {
+    if (additionalClasses.value.length >= 9) {
+      // Максимум 10 классов (1 текущий + 1 второй + 8 дополнительных)
+      return;
+    }
+
+    additionalClasses.value.push({
+      id: `class-${Date.now()}`,
+      level: 1,
+    });
+  }
+
+  // Удаление дополнительного класса
+  function removeAdditionalClass(id: string) {
+    const index = additionalClasses.value.findIndex((c) => c.id === id);
+
+    if (index !== -1) {
+      additionalClasses.value.splice(index, 1);
+
+      // Используем новый объект без удаляемого свойства
+      const newSubclasses: Record<
+        string,
+        Array<ClassLinkResponse> | undefined
+      > = {};
+
+      Object.keys(additionalClassSubclasses.value).forEach((key) => {
+        if (key !== id) {
+          const subclasses = additionalClassSubclasses.value[key];
+
+          if (subclasses !== undefined) {
+            newSubclasses[key] = subclasses;
+          }
+        }
+      });
+
+      additionalClassSubclasses.value = newSubclasses;
+    }
+  }
+
+  // Отслеживание изменений classUrl для дополнительных классов
+  watch(
+    () =>
+      additionalClasses.value.map((c) => ({ id: c.id, classUrl: c.classUrl })),
+    (newValues, oldValues) => {
+      newValues.forEach(({ id, classUrl }) => {
+        const oldValue = oldValues?.find((o) => o.id === id);
+
+        if (classUrl && (!oldValue || oldValue.classUrl !== classUrl)) {
+          loadSubclassesForAdditionalClass(id, classUrl);
+        } else if (!classUrl) {
+          additionalClassSubclasses.value[id] = [];
+        }
+      });
+    },
+    { deep: true },
+  );
+
+  // Сброс подкласса при смене класса для дополнительных классов
+  watch(
+    () =>
+      additionalClasses.value.map((c) => ({ id: c.id, classUrl: c.classUrl })),
+    (newValues, oldValues) => {
+      newValues.forEach(({ id, classUrl }) => {
+        const oldClass = oldValues?.find((o) => o.id === id);
+
+        if (oldClass && oldClass.classUrl !== classUrl) {
+          const additionalClass = additionalClasses.value.find(
+            (c) => c.id === id,
+          );
+
+          if (additionalClass) {
+            additionalClass.subclassUrl = undefined;
+          }
+        }
+      });
+    },
+    { deep: true },
+  );
+
+  // Сброс подкласса при смене уровня для дополнительных классов (если уровень <= 2)
+  watch(
+    () => additionalClasses.value.map((c) => ({ id: c.id, level: c.level })),
+    (newValues, oldValues) => {
+      newValues.forEach(({ id, level }) => {
+        const oldValue = oldValues?.find((o) => o.id === id);
+
+        if (oldValue && oldValue.level !== level && level <= 2) {
+          const additionalClass = additionalClasses.value.find(
+            (c) => c.id === id,
+          );
+
+          if (additionalClass) {
+            additionalClass.subclassUrl = undefined;
+          }
+        }
+      });
+    },
+    { deep: true },
+  );
+
+  // Корректировка уровней дополнительных классов, если они превышают доступный максимум
+  watch(
+    () => [
+      currentLevel.value,
+      selectedLevel.value,
+      additionalClasses.value.map((c) => ({ id: c.id, level: c.level })),
+    ],
+    () => {
+      additionalClasses.value.forEach((additionalClass) => {
+        if (additionalClass.classUrl) {
+          const maxLevel = getMaxLevelForAdditionalClass(additionalClass.id);
+
+          if (additionalClass.level > maxLevel) {
+            additionalClass.level = maxLevel;
+          }
+        }
+      });
+    },
+    { deep: true },
+  );
+
+  // Обработчик нажатия на кнопку "Очистить"
+  function handleClear() {
+    selectedClassUrl.value = undefined;
+    selectedSubclassUrl.value = undefined;
+    selectedLevel.value = 1;
+    additionalClasses.value = [];
+  }
+
+  // Обработчик нажатия на кнопку "Применить"
+  function handleApply() {
+    if (
+      !currentClassUrl.value
+      || !currentLevel.value
+      || !selectedClassUrl.value
+      || !selectedLevel.value
+    ) {
+      return;
+    }
+
+    // Используем выбранный основной класс
+    const class1BaseUrl = currentClassUrl.value;
+
+    // Используем выбранный подкласс для основного класса
+    const class1SubclassUrl = currentSubclassUrl.value;
+
+    // Формируем URL для страницы мультикласса
+    const query: Record<string, string> = {
+      class1: class1BaseUrl,
+      level1: String(currentLevel.value),
+      class2: selectedClassUrl.value,
+      level2: String(selectedLevel.value),
+    };
+
+    // Если выбран подкласс для основного класса, добавляем его URL
+    if (class1SubclassUrl) {
+      query.subclass1 = class1SubclassUrl;
+    }
+
+    // Если выбран подкласс для второго класса, добавляем его URL
+    if (selectedSubclassUrl.value) {
+      query.subclass2 = selectedSubclassUrl.value;
+    }
+
+    // Добавляем дополнительные классы (3-10)
+    additionalClasses.value.forEach((additionalClass, index) => {
+      if (additionalClass.classUrl) {
+        const classNumber = index + 3;
+
+        query[`class${classNumber}`] = additionalClass.classUrl;
+        query[`level${classNumber}`] = String(additionalClass.level);
+
+        if (additionalClass.subclassUrl) {
+          query[`subclass${classNumber}`] = additionalClass.subclassUrl;
+        }
+      }
+    });
+
+    const queryString = new URLSearchParams(query).toString();
+    const multiclassUrl = `/multiclass?${queryString}`;
+
+    // Закрываем drawer и переходим на страницу мультикласса в том же окне
+    emit('close');
+    navigateTo(multiclassUrl);
+  }
 </script>
 
 <template>
-  <UiDrawer title="Создать мультикласс" class="w-lg" @close="$emit('close')">
+  <UiDrawer
+    title="Создать мультикласс"
+    class="w-lg"
+    @close="$emit('close')"
+  >
     <div class="flex flex-col gap-6">
       <!-- Первая строка: текущий класс/подкласс и уровень -->
       <div class="flex flex-col gap-3">
@@ -431,7 +438,10 @@ function handleApply() {
         <div class="flex items-center gap-3">
           <span class="min-w-20 text-sm text-secondary">Класс:</span>
 
-          <SelectClass v-model="currentClassUrl" class="flex-1" />
+          <SelectClass
+            v-model="currentClassUrl"
+            class="flex-1"
+          />
 
           <SelectLevel
             v-model="currentLevel"
@@ -452,9 +462,9 @@ function handleApply() {
                 : 'Выбери подкласс'
             "
             :disabled="
-              !currentClassUrl ||
-              currentClassSubclassItems.length === 0 ||
-              currentLevel <= 2
+              !currentClassUrl
+              || currentClassSubclassItems.length === 0
+              || currentLevel <= 2
             "
             label-key="label"
             value-key="value"
@@ -476,7 +486,10 @@ function handleApply() {
         <div class="flex items-center gap-3">
           <span class="min-w-20 text-sm text-secondary">Класс:</span>
 
-          <SelectClass v-model="selectedClassUrl" class="flex-1" />
+          <SelectClass
+            v-model="selectedClassUrl"
+            class="flex-1"
+          />
 
           <SelectLevel
             v-model="selectedLevel"
@@ -493,9 +506,9 @@ function handleApply() {
             :items="subclassItems"
             :placeholder="'Выбери подкласс'"
             :disabled="
-              !selectedClassUrl ||
-              subclassItems.length === 0 ||
-              selectedLevel <= 2
+              !selectedClassUrl
+              || subclassItems.length === 0
+              || selectedLevel <= 2
             "
             label-key="label"
             value-key="value"
@@ -531,7 +544,10 @@ function handleApply() {
         <div class="flex items-center gap-3">
           <span class="min-w-20 text-sm text-secondary">Класс:</span>
 
-          <SelectClass v-model="additionalClass.classUrl" class="flex-1" />
+          <SelectClass
+            v-model="additionalClass.classUrl"
+            class="flex-1"
+          />
 
           <SelectLevel
             v-model="additionalClass.level"
@@ -548,10 +564,10 @@ function handleApply() {
             :items="getAdditionalClassSubclassItems(additionalClass.id)"
             :placeholder="'Выбери подкласс'"
             :disabled="
-              !additionalClass.classUrl ||
-              getAdditionalClassSubclassItems(additionalClass.id).length ===
-                0 ||
-              additionalClass.level <= 2
+              !additionalClass.classUrl
+              || getAdditionalClassSubclassItems(additionalClass.id).length
+                === 0
+              || additionalClass.level <= 2
             "
             label-key="label"
             value-key="value"
@@ -567,14 +583,17 @@ function handleApply() {
         <UButton
           variant="link"
           :disabled="additionalClasses.length >= 9"
-          class="!p-0"
+          class="p-0!"
           @click.left.exact.prevent="handleAddClass()"
         >
           Добавить класс
         </UButton>
 
         <div class="flex gap-2">
-          <UButton variant="ghost" @click.left.exact.prevent="handleClear()">
+          <UButton
+            variant="ghost"
+            @click.left.exact.prevent="handleClear()"
+          >
             Очистить
           </UButton>
 
