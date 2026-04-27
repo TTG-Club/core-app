@@ -1,22 +1,26 @@
 <script setup lang="ts">
-  import { computed, h, ref } from 'vue';
   import type { Cell, ColumnDef, Header } from '@tanstack/vue-table';
+
+  import type { Level } from '~/shared/types';
+  import type {
+    CasterType,
+    ClassFeature,
+    ClassInMulticlass,
+    ClassTable,
+  } from '~classes/model';
+
   import {
     FlexRender,
     getCoreRowModel,
     useVueTable,
   } from '@tanstack/vue-table';
   import { useDebounceFn } from '@vueuse/core';
-  import type {
-    ClassFeature,
-    ClassInMulticlass,
-    ClassTable,
-    CasterType,
-  } from '~classes/model';
-  import { maxBy, omit, orderBy } from 'lodash-es';
-  import { useDndMechanics } from './useDndMechanics';
+  import { maxBy, omit, orderBy } from 'es-toolkit';
+  import { computed, h, ref } from 'vue';
+
   import { LEVELS } from '~/shared/consts';
-  import type { Level } from '~/shared/types';
+
+  import { useDndMechanics } from './useDndMechanics';
 
   interface Props {
     table: Array<ClassTable>;
@@ -68,7 +72,7 @@
 
     for (const feature of props.features) {
       // Добавляем основное умение
-      list.push(omit(feature, 'scaling'));
+      list.push(omit(feature, ['scaling']));
 
       // Добавляем scaling умения, если есть
       if (feature.scaling) {
@@ -107,11 +111,13 @@
     level: Level,
     scalingArray: Array<{ level: number; value: string }> | undefined,
   ): string {
-    if (!scalingArray?.length) return '—';
+    if (!scalingArray?.length) {
+      return '—';
+    }
 
     const found = maxBy(
       scalingArray.filter((s) => s.level <= level),
-      'level',
+      (item) => item.level,
     );
 
     return found?.value ?? '—';
@@ -134,6 +140,7 @@
         class: classItem.class,
         subclass: classItem.subclass,
       });
+
       currentLevel += classItem.level;
     }
 
@@ -175,7 +182,7 @@
       rows.push(getLevelData(level));
     }
 
-    return orderBy(rows, 'level');
+    return orderBy(rows, ['level'], ['asc']);
   });
 
   function getLevelData(level: Level) {
