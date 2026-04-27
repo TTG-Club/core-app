@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ClassInMulticlass } from '~classes/types';
+  import type { ClassInMulticlass } from '~classes/model';
 
   interface Props {
     characterLevel: number;

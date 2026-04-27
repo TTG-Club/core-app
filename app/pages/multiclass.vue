@@ -7,7 +7,7 @@
     MainClassData,
     MulticlassDetailResponse,
     MulticlassRequest,
-  } from '~classes/types';
+  } from '~classes/model';
 
   const route = useRoute();
 

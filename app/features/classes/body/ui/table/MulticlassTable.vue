@@ -12,7 +12,7 @@
     ClassInMulticlass,
     ClassTable,
     CasterType,
-  } from '~classes/types';
+  } from '~classes/model';
   import { maxBy, omit, orderBy } from 'lodash-es';
   import { useDndMechanics } from './useDndMechanics';
   import { LEVELS } from '~/shared/consts';

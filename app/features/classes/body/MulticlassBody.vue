@@ -7,7 +7,7 @@
     MulticlassTable,
   } from './ui';
 
-  import type { MulticlassDetailResponse } from '~classes/types';
+  import type { MulticlassDetailResponse } from '~classes/model';
 
   const { detail } = defineProps<{
     detail: MulticlassDetailResponse;
