@@ -1,11 +1,12 @@
 <script setup lang="ts">
-  import { MulticlassDrawer } from '~classes/multiclass-drawer';
   import type { CommandPaletteGroup } from '@nuxt/ui';
 
   import type { NameResponse } from '~/shared/types';
   import type { ClassLinkResponse } from '~classes/model';
 
   import { uniqBy } from 'es-toolkit';
+
+  import { MulticlassDrawer } from '~classes/multiclass-drawer';
 
   const {
     url,

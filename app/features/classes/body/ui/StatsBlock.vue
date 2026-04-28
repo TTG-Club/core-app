@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import type { ClassDetailResponse, ClassInMulticlass } from '~classes/model';
+
   import { InfoTooltip } from '~ui/tooltip';
 
   interface StatsBlockProps {
