@@ -1,13 +1,14 @@
 <script setup lang="ts">
-  import { PageActions } from '~ui/page';
-  import { UiResult } from '~ui/result';
-  import { MulticlassBody } from '~classes/body';
   import type {
     AdditionalClassItem,
     MainClassData,
     MulticlassDetailResponse,
     MulticlassRequest,
   } from '~classes/model';
+
+  import { MulticlassBody } from '~classes/body';
+  import { PageActions } from '~ui/page';
+  import { UiResult } from '~ui/result';
 
   const route = useRoute();
 
