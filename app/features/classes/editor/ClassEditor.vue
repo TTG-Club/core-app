@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ClassCreate, ClassLinkResponse } from '~classes/model';
+  import type { ClassCreate, ClassLinkResponse } from '../model';
 
   import { ClassPreview } from '~classes/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';

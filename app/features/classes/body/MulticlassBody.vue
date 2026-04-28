@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { MulticlassDetailResponse } from '~classes/model';
+  import type { MulticlassDetailResponse } from '../model';
 
   import {
     ClassProficiency,

@@ -2,29 +2,41 @@
   import type {
     AdditionalClassItem,
     MainClassData,
-    MulticlassDetailResponse,
     MulticlassRequest,
   } from '~classes/model';
 
   import { MulticlassBody } from '~classes/body';
+  import { parseMulticlassDetailResponse } from '~classes/model';
   import { PageActions } from '~ui/page';
   import { UiResult } from '~ui/result';
 
   const route = useRoute();
 
+  function getQueryStringValue(
+    queryValue: string | null | Array<string | null> | undefined,
+  ) {
+    return typeof queryValue === 'string' && queryValue
+      ? queryValue
+      : undefined;
+  }
+
+  function getQueryLevelValue(
+    queryValue: string | null | Array<string | null> | undefined,
+  ) {
+    if (typeof queryValue !== 'string' || !queryValue) {
+      return undefined;
+    }
+
+    const parsedLevel = Number(queryValue);
+
+    return parsedLevel >= 1 && parsedLevel <= 20 ? parsedLevel : undefined;
+  }
+
   // Парсинг основного класса из query параметров
   const mainClass = computed<MainClassData | null>(() => {
-    const url =
-      typeof route.query.class1 === 'string' ? route.query.class1 : undefined;
-
-    const levelRaw = Number(route.query.level1);
-
-    const level = levelRaw >= 1 && levelRaw <= 20 ? levelRaw : undefined;
-
-    const subclass =
-      typeof route.query.subclass1 === 'string'
-        ? route.query.subclass1
-        : undefined;
+    const url = getQueryStringValue(route.query.class1);
+    const level = getQueryLevelValue(route.query.level1);
+    const subclass = getQueryStringValue(route.query.subclass1);
 
     if (!url || !level) {
       return null;
@@ -58,21 +70,14 @@
         continue; // Пропускаем основной класс
       }
 
-      const classUrl =
-        typeof route.query[classKey] === 'string'
-          ? route.query[classKey]
-          : undefined;
+      const classUrl = getQueryStringValue(route.query[classKey]);
 
       const levelQueryKey = `level${index}`;
-      const levelRaw = Number(route.query[levelQueryKey]);
-      const level = levelRaw >= 1 && levelRaw <= 20 ? levelRaw : undefined;
+      const level = getQueryLevelValue(route.query[levelQueryKey]);
 
       const subclassQueryKey = `subclass${index}`;
 
-      const subclass =
-        typeof route.query[subclassQueryKey] === 'string'
-          ? route.query[subclassQueryKey]
-          : undefined;
+      const subclass = getQueryStringValue(route.query[subclassQueryKey]);
 
       if (classUrl && level) {
         const classData: AdditionalClassItem = {
@@ -133,17 +138,17 @@
   });
 
   // Функция для получения данных мультикласса
-  function fetchMulticlassData(
-    body: MulticlassRequest | null,
-  ): Promise<unknown> {
+  async function fetchMulticlassData(body: MulticlassRequest | null) {
     if (!body) {
-      return Promise.resolve(null);
+      return null;
     }
 
-    return $fetch('/api/v2/multiclass', {
+    const response = await $fetch('/api/v2/multiclass', {
       method: 'POST',
       body,
     });
+
+    return parseMulticlassDetailResponse(response);
   }
 
   const {
@@ -181,7 +186,7 @@
     <template #default>
       <MulticlassBody
         v-if="classDetail"
-        :detail="classDetail as MulticlassDetailResponse"
+        :detail="classDetail"
       />
 
       <UiResult

@@ -2,7 +2,8 @@
   import type { CommandPaletteGroup } from '@nuxt/ui';
 
   import type { NameResponse } from '~/shared/types';
-  import type { ClassLinkResponse } from '~classes/model';
+
+  import type { ClassLinkResponse } from '../../model';
 
   import { uniqBy } from 'es-toolkit';
 

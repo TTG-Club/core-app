@@ -1,7 +1,6 @@
 import { computed } from 'vue';
 
-import { CasterType } from '~classes/model';
-
+import { CasterType } from '../../../model';
 import {
   FULL_CASTER_SPELL_SLOTS,
   HALF_CASTER_SPELL_SLOTS,
@@ -37,9 +36,11 @@ export function useDndMechanics(options: UseDndMechanicsOptions) {
     return null;
   });
 
-  const isSpellcaster = computed(() => casterType !== CasterType.NONE);
+  const isSpellcaster = computed(() => toValue(casterType) !== CasterType.NONE);
 
-  const isPactSpellcaster = computed(() => casterType === CasterType.PACT);
+  const isPactSpellcaster = computed(
+    () => toValue(casterType) === CasterType.PACT,
+  );
 
   const isRegularSpellcaster = computed(
     () => isSpellcaster.value && !isPactSpellcaster.value,

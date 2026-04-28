@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ClassMulticlassProficiencyCreate } from '~classes/model';
+  import type { ClassMulticlassProficiencyCreate } from '../../model';
 
   import { SelectArmorCategory, SelectWeaponCategory } from '~ui/select';
 

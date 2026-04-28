@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ClassDetailResponse, ClassInMulticlass } from '~classes/model';
+  import type { ClassDetailResponse, ClassInMulticlass } from '../../model';
 
   import { InfoTooltip } from '~ui/tooltip';
 

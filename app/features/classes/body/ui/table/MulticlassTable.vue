@@ -2,12 +2,13 @@
   import type { Cell, ColumnDef, Header } from '@tanstack/vue-table';
 
   import type { Level } from '~/shared/types';
+
   import type {
     CasterType,
     ClassFeature,
     ClassInMulticlass,
     ClassTable,
-  } from '~classes/model';
+  } from '../../../model';
 
   import {
     FlexRender,
@@ -95,7 +96,9 @@
       return 20;
     }
 
-    const maxLevel = Math.max(...features.value.map((f) => f.level));
+    const maxLevel = Math.max(
+      ...features.value.map((feature) => feature.level),
+    );
 
     const clampedLevel = Math.min(Math.max(maxLevel, 1), 20);
 
@@ -116,8 +119,8 @@
     }
 
     const found = maxBy(
-      scalingArray.filter((s) => s.level <= level),
-      (item) => item.level,
+      scalingArray.filter((scalingValue) => scalingValue.level <= level),
+      (scalingValue) => scalingValue.level,
     );
 
     return found?.value ?? '—';
@@ -152,7 +155,9 @@
 
     for (const level of characterLevels.value) {
       // Проверяем, нужно ли добавить разделитель перед этим уровнем
-      const separator = classStartLevels.value.find((s) => s.level === level);
+      const separator = classStartLevels.value.find(
+        (classStart) => classStart.level === level,
+      );
 
       if (separator) {
         const separatorText = separator.subclass
@@ -186,7 +191,9 @@
   });
 
   function getLevelData(level: Level) {
-    const levelFeatures = features.value.filter((f) => f.level === level);
+    const levelFeatures = features.value.filter(
+      (feature) => feature.level === level,
+    );
 
     const row: MulticlassTableRow = {
       level,

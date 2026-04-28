@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ClassFeature } from '~classes/model';
+  import type { ClassFeature } from '../../model';
 
   import { UiCollapse } from '~ui/collapse';
   import { MarkupRender } from '~ui/markup';

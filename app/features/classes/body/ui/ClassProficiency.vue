@@ -3,7 +3,7 @@
     ClassDetailResponse,
     ClassMulticlassProficiency,
     ClassProficiency,
-  } from '~classes/model';
+  } from '../../model';
 
   import { UiCollapse } from '~ui/collapse';
 
