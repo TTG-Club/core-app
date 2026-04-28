@@ -1,5 +1,5 @@
 <template>
-  <div class="flex min-h-dvh items-center justify-center">
+  <div class="min-h-dvh w-full overflow-x-hidden">
     <slot name="default" />
   </div>
 </template>

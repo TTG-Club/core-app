@@ -16,6 +16,10 @@
     icon: string;
   }
 
+  const VIDEO_EXTENSIONS = ['.webm', '.mp4'] as const;
+
+  type VideoExtension = (typeof VIDEO_EXTENSIONS)[number];
+
   interface FeatureItem {
     badge: string;
     badgeVariant: 'new' | 'beta' | 'soon';
@@ -23,6 +27,15 @@
     description: string;
     img: string;
     icon: string;
+  }
+
+  /**
+   * Проверяет, является ли источник видеофайлом по расширению
+   */
+  function isVideoSource(source: string): boolean {
+    return VIDEO_EXTENSIONS.some((extension: VideoExtension) =>
+      source.endsWith(extension),
+    );
   }
 
   interface FaqItem {
@@ -61,7 +74,7 @@
       title: 'Редактор стен',
       description:
         'Удобный инструмент для создания геометрии комнат, настройки дверей и невидимых препятствий.',
-      img: 'https://picsum.photos/seed/vttg-walls/720/480',
+      img: '/s3/vttgw/blocks/walls.webm',
       icon: 'tabler:wall',
     },
     {
@@ -70,7 +83,7 @@
       title: 'Система освещения',
       description:
         'Динамические источники света, направленное освещение и учёт радиуса видимости.',
-      img: 'https://picsum.photos/seed/vttg-light/720/480',
+      img: '/s3/vttgw/blocks/lighting.webm',
       icon: 'tabler:bulb',
     },
     {
@@ -79,7 +92,7 @@
       title: 'Туман войны',
       description:
         'Автоматическое скрытие неизведанных областей. Игроки видят только то, что видят их персонажи.',
-      img: 'https://picsum.photos/seed/vttg-fog/720/480',
+      img: '/s3/vttgw/blocks/fog.webm',
       icon: 'tabler:cloud-fog',
     },
     {
@@ -88,7 +101,7 @@
       title: 'Токены',
       description:
         'Свободное размещение, масштабирование, привязка к сетке, статусы и отслеживание здоровья.',
-      img: 'https://picsum.photos/seed/vttg-tokens/720/480',
+      img: 's3/vttgw/blocks/tokens.webm',
       icon: 'tabler:chess-knight',
     },
     {
@@ -97,16 +110,16 @@
       title: 'Лист персонажа',
       description:
         'Полная интеграция с базой ttg.club, автоматический подсчет характеристик и броски навыков.',
-      img: 'https://picsum.photos/seed/vttg-sheet/720/480',
-      icon: 'tabler:file-user',
+      img: 's3/vttgw/blocks/list.webm',
+      icon: 'tabler:clipboard-list',
     },
     {
       badge: 'Автоматизация',
       badgeVariant: 'new',
       title: 'Трекер инициативы',
       description:
-        'Быстрое управление порядком ходов, эффектами, концентрацией и состояниями в бою.',
-      img: 'https://picsum.photos/seed/vttg-initiative/720/480',
+        'Удобное отслеживание ходов, передача инициативы, начало и конец боя.',
+      img: 's3/vttgw/blocks/tracker.webm',
       icon: 'tabler:list-numbers',
     },
     {
@@ -115,7 +128,7 @@
       title: 'Кубики',
       description:
         '3D-кубики с физикой, история бросков, скрытые броски Мастера и поддержка сложных формул.',
-      img: 'https://picsum.photos/seed/vttg-dice/720/480',
+      img: 's3/vttgw/blocks/dice.webm',
       icon: 'tabler:dice-5',
     },
     {
@@ -124,7 +137,7 @@
       title: 'Карта и сцены',
       description:
         'Бесшовный переход между локациями, поддержка анимации, слоев и видео-фонов.',
-      img: 'https://picsum.photos/seed/vttg-maps/720/480',
+      img: 's3/vttgw/blocks/scenes.webm',
       icon: 'tabler:map-2',
     },
     {
@@ -133,7 +146,7 @@
       title: 'Визуальные эффекты',
       description:
         'Добавьте атмосферы вашей сцене с помощью динамической погоды, частиц, заклинаний и фильтров.',
-      img: 'https://picsum.photos/seed/vttg-effects/720/480',
+      img: 's3/vttgw/blocks/effects.webm',
       icon: 'tabler:wand',
     },
   ];
@@ -204,7 +217,7 @@
 
           <template #title>
             <span
-              class="inline-block text-6xl leading-[1.3] font-black tracking-widest drop-shadow-[8px_8px_8px_rgba(0,0,0,0.4)] md:text-8xl lg:text-[110px]"
+              class="inline-block text-6xl leading-[1.3] tracking-widest drop-shadow-[8px_8px_8px_rgba(0,0,0,0.4)] md:text-8xl lg:text-[110px]"
             >
               Virtual<br />
 
@@ -231,6 +244,7 @@
               :items="carouselCards"
               arrows
               loop
+              autoplay
               class-names
               class="mx-auto w-full pb-2 lg:max-w-330"
               :ui="{
@@ -297,13 +311,49 @@
           </div>
 
           <UPageGrid class="gap-8 lg:grid-cols-3 lg:gap-12">
-            <UBlogPost
+            <UCard
               v-for="(feature, index) in featureItems"
               :key="index"
-              :title="feature.title"
-              :description="feature.description"
-              :image="{ src: feature.img, alt: feature.title }"
-            />
+              :ui="{ body: 'p-0 sm:p-0' }"
+            >
+              <div
+                class="relative aspect-video w-full overflow-hidden rounded-t-xl"
+              >
+                <video
+                  v-if="isVideoSource(feature.img)"
+                  :src="feature.img"
+                  autoplay
+                  loop
+                  muted
+                  playsinline
+                  class="size-full object-cover"
+                />
+
+                <img
+                  v-else
+                  :src="feature.img"
+                  :alt="feature.title"
+                  class="size-full object-cover"
+                />
+              </div>
+
+              <div class="flex flex-col gap-2 p-5">
+                <div class="flex items-center gap-2">
+                  <UIcon
+                    :name="feature.icon"
+                    class="size-5 shrink-0 text-primary"
+                  />
+
+                  <h3 class="font-semibold text-highlighted">
+                    {{ feature.title }}
+                  </h3>
+                </div>
+
+                <p class="text-sm text-toned">
+                  {{ feature.description }}
+                </p>
+              </div>
+            </UCard>
 
             <div
               class="col-span-full mt-4 rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 p-12 text-center transition-colors hover:border-primary/50 hover:bg-primary/10"
