@@ -1,14 +1,16 @@
 <script setup lang="ts">
-  import type { ClassDetailResponse } from '~classes/model';
+  import type { ClassDetailResponse, ClassInMulticlass } from '~classes/model';
 
   import { InfoTooltip } from '~ui/tooltip';
 
-  defineProps<
-    Pick<
-      ClassDetailResponse,
-      'hitDice' | 'savingThrows' | 'primaryCharacteristics'
-    >
-  >();
+  interface StatsBlockProps {
+    hitDice: ClassDetailResponse['hitDice'];
+    savingThrows: ClassDetailResponse['savingThrows'];
+    primaryCharacteristics: ClassDetailResponse['primaryCharacteristics'];
+    multiclass?: Array<ClassInMulticlass>;
+  }
+
+  const props = defineProps<StatsBlockProps>();
 </script>
 
 <template>
@@ -36,7 +38,69 @@
       </span>
     </div>
 
-    <div class="flex w-full min-w-full flex-col gap-1 px-4 py-1.5">
+    <!-- Для мультикласса показываем кости хитов каждого класса -->
+    <div
+      v-if="props.multiclass && props.multiclass.length > 0"
+      class="flex w-full min-w-full flex-col gap-1 px-4 py-1.5"
+    >
+      <InfoTooltip>
+        <span class="min-w-20 flex-none text-sm font-medium text-highlighted">
+          Кость Хитов:
+        </span>
+
+        <template #content>
+          <div class="flex flex-col gap-2">
+            <span
+              v-for="(classItem, index) in props.multiclass"
+              :key="index"
+            >
+              {{ classItem.hitDice || '—' }}
+              <span
+                v-if="classItem.subclass"
+                class="text-xs text-secondary"
+              >
+                ({{ classItem.class }} / {{ classItem.subclass }})
+              </span>
+
+              <span
+                v-else
+                class="text-xs text-secondary"
+              >
+                ({{ classItem.class }})
+              </span>
+            </span>
+          </div>
+        </template>
+      </InfoTooltip>
+
+      <div class="flex flex-col gap-1">
+        <span
+          v-for="(classItem, index) in props.multiclass"
+          :key="index"
+        >
+          {{ classItem.hitDice || '—' }}
+          <span
+            v-if="classItem.subclass"
+            class="text-xs text-secondary"
+          >
+            ({{ classItem.class }} / {{ classItem.subclass }})
+          </span>
+
+          <span
+            v-else
+            class="text-xs text-secondary"
+          >
+            ({{ classItem.class }})
+          </span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Для обычного класса показываем стандартную информацию -->
+    <div
+      v-else
+      class="flex w-full min-w-full flex-col gap-1 px-4 py-1.5"
+    >
       <InfoTooltip>
         <span class="min-w-20 flex-none text-sm font-medium text-highlighted">
           Кость Хитов:

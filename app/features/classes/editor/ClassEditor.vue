@@ -9,6 +9,7 @@
   import {
     CharacteristicsSettings,
     FeaturesEditor,
+    MulticlassProficiencySettings,
     ProficiencySettings,
     TableEditor,
   } from './ui';
@@ -49,6 +50,18 @@
           count: 0,
           skills: [],
         },
+      },
+      multiclassProficiency: {
+        armor: {
+          category: [],
+          custom: undefined,
+        },
+        weapon: {
+          category: [],
+          custom: undefined,
+        },
+        toolProficiency: undefined,
+        skills: 0,
       },
       equipment: undefined,
       features: [],
@@ -101,6 +114,8 @@
     />
 
     <ProficiencySettings v-model="state.proficiency" />
+
+    <MulticlassProficiencySettings v-model="state.multiclassProficiency" />
 
     <UCard variant="subtle">
       <template #header>
