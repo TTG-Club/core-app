@@ -4,7 +4,7 @@
   import { InfoTooltip } from '~ui/tooltip';
 
   interface StatsBlockProps {
-    hitDice: ClassDetailResponse['hitDice'];
+    hitDice?: ClassDetailResponse['hitDice'];
     savingThrows: ClassDetailResponse['savingThrows'];
     primaryCharacteristics: ClassDetailResponse['primaryCharacteristics'];
     multiclass?: Array<ClassInMulticlass>;
@@ -98,7 +98,7 @@
 
     <!-- Для обычного класса показываем стандартную информацию -->
     <div
-      v-else
+      v-else-if="hitDice"
       class="flex w-full min-w-full flex-col gap-1 px-4 py-1.5"
     >
       <InfoTooltip>

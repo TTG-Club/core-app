@@ -26,7 +26,11 @@ export interface ClassDetailResponse {
 }
 
 // Расширенный тип для ответа API мультикласса
-export interface MulticlassDetailResponse extends ClassDetailResponse {
+export interface MulticlassDetailResponse extends Omit<
+  ClassDetailResponse,
+  'hitDice'
+> {
+  hitDice?: HitDice;
   characterLevel: number;
   multiclassProficiency?: ClassMulticlassProficiency;
 }

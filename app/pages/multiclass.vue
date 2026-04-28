@@ -2,11 +2,11 @@
   import type {
     AdditionalClassItem,
     MainClassData,
+    MulticlassDetailResponse,
     MulticlassRequest,
   } from '~classes/model';
 
   import { MulticlassBody } from '~classes/body';
-  import { parseMulticlassDetailResponse } from '~classes/model';
   import { PageActions } from '~ui/page';
   import { UiResult } from '~ui/result';
 
@@ -138,17 +138,17 @@
   });
 
   // Функция для получения данных мультикласса
-  async function fetchMulticlassData(body: MulticlassRequest | null) {
+  function fetchMulticlassData(
+    body: MulticlassRequest | null,
+  ): Promise<MulticlassDetailResponse | null> {
     if (!body) {
-      return null;
+      return Promise.resolve(null);
     }
 
-    const response = await $fetch('/api/v2/multiclass', {
+    return $fetch<MulticlassDetailResponse>('/api/v2/multiclass', {
       method: 'POST',
       body,
     });
-
-    return parseMulticlassDetailResponse(response);
   }
 
   const {

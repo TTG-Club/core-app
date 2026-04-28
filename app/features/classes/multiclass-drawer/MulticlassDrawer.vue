@@ -7,8 +7,6 @@
   import { UiDrawer } from '~ui/drawer';
   import { SelectClass, SelectLevel } from '~ui/select';
 
-  import { parseClassLinkResponseArray } from '../model';
-
   const { url, parent = undefined } = defineProps<{
     url: string;
     name: NameResponse;
@@ -57,12 +55,12 @@
 
   const additionalClasses = ref<Array<AdditionalClass>>([]);
 
-  async function fetchSubclassLinks(
+  function fetchSubclassLinks(
     classUrl: string,
   ): Promise<Array<ClassLinkResponse>> {
-    const response = await $fetch(`/api/v2/classes/${classUrl}/subclasses`);
-
-    return parseClassLinkResponseArray(response);
+    return $fetch<Array<ClassLinkResponse>>(
+      `/api/v2/classes/${classUrl}/subclasses`,
+    );
   }
 
   function createSubclassSelectItems(

@@ -139,7 +139,7 @@ const multiclassDetailResponseSchema: z.ZodType<MulticlassDetailResponse> =
     gallery: z.array(z.string()).optional(),
     casterType: z.nativeEnum(CasterType),
     updatedAt: z.string(),
-    hitDice: hitDiceSchema,
+    hitDice: hitDiceSchema.optional(),
     primaryCharacteristics: z.string(),
     username: z.string(),
     proficiency: classProficiencySchema,
