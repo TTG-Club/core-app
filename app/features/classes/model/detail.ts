@@ -28,6 +28,7 @@ export interface ClassDetailResponse {
 // Расширенный тип для ответа API мультикласса
 export interface MulticlassDetailResponse extends ClassDetailResponse {
   characterLevel: number;
+  multiclassProficiency?: ClassMulticlassProficiency;
 }
 
 // Типы для запроса к API мультикласса
@@ -78,6 +79,13 @@ export interface ClassProficiency {
   weapon: string;
   tool: string;
   skill: string;
+}
+
+export interface ClassMulticlassProficiency {
+  armor: string;
+  weapon: string;
+  toolProficiency?: string;
+  skills?: number;
 }
 
 export interface HitDice {

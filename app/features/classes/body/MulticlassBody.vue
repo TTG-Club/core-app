@@ -1,13 +1,13 @@
 <script setup lang="ts">
+  import type { MulticlassDetailResponse } from '~classes/model';
+
   import {
-    StatsBlock,
     ClassProficiency,
     FeatureCollapse,
     MulticlassLevelInfo,
     MulticlassTable,
+    StatsBlock,
   } from './ui';
-
-  import type { MulticlassDetailResponse } from '~classes/model';
 
   const { detail } = defineProps<{
     detail: MulticlassDetailResponse;
@@ -49,6 +49,7 @@
 
         <ClassProficiency
           :proficiency="detail.proficiency"
+          :multiclass-proficiency="detail.multiclassProficiency"
           :saving-throws="detail.savingThrows"
         />
 
