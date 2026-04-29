@@ -14,8 +14,9 @@
     props.to ? resolveComponent('NuxtLink') : 'button',
   );
 
-  function handleClick() {
+  function handleClick(e: MouseEvent) {
     if (!props.to) {
+      e.preventDefault();
       emit('click');
     }
   }
