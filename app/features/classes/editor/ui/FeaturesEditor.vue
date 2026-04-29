@@ -16,11 +16,27 @@
 
   const state = defineModel<Array<ClassFeatureCreate>>({ required: true });
 
-  watchEffect(() => {
-    for (const feature of state.value) {
-      feature.options ??= [];
-    }
-  });
+  // Нормализует входящие данные: гарантирует наличие массива options у каждого умения.
+  // Необходимо для совместимости с данными API, где options может отсутствовать.
+  // Guard предотвращает зацикливание: .map() всегда создаёт новый массив,
+  // поэтому без проверки повторное присвоение state.value бесконечно триггерит вотчер.
+  watch(
+    state,
+    (features) => {
+      const needsNormalization = features.some(
+        (feature) => feature.options === undefined,
+      );
+
+      if (!needsNormalization) {
+        return;
+      }
+
+      state.value = features.map((feature) =>
+        feature.options !== undefined ? feature : { ...feature, options: [] },
+      );
+    },
+    { immediate: true, deep: false },
+  );
 
   function addEmptyFeature() {
     state.value.push(getEmptyFeature());

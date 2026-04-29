@@ -79,8 +79,6 @@
     );
   });
 
-  const title = computed(() => props.title);
-
   const shownLabel = computed(
     () =>
       `${FEATURE_OPTIONS_LABELS.shown} ${filteredOptions.value.length} / ${options.value.length}`,
@@ -109,7 +107,6 @@
         v-model="searchQuery"
         :placeholder="FEATURE_OPTIONS_LABELS.search"
         icon="tabler:search"
-        allow-clear
         :ui="{ trailing: 'pe-0.5' }"
       >
         <template

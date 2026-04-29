@@ -90,12 +90,12 @@
       :item="option"
       :empty-object="getEmptyFeatureOption()"
       :index="index"
-      cols="24"
+      cols="8"
       only-remove
     />
 
     <UFormField
-      class="col-span-12"
+      class="col-span-12 col-start-1"
       label="Подсказка"
       name="additional"
     >
