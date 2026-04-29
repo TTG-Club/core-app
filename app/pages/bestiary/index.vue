@@ -171,6 +171,7 @@
         <GroupedList
           v-else-if="status === 'success' && bestiary.length"
           virtual
+          :virtual-threshold="BESTIARY_LIST_PAGE_SIZE"
           :items="bestiary"
           :reset-key="listResetKey"
           field="challengeRailing"

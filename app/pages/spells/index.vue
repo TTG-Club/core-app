@@ -171,6 +171,7 @@
         <GroupedList
           v-else-if="status === 'success' && spells.length"
           virtual
+          :virtual-threshold="SPELL_LIST_PAGE_SIZE"
           :reset-key="listResetKey"
           :separator-label="getLabel"
           :items="spells"
