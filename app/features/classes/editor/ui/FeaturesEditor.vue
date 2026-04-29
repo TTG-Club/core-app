@@ -4,13 +4,39 @@
   import { EditorArrayControls } from '~ui/editor';
   import { SelectLevel } from '~ui/select';
 
-  import { FeatureAbilityBonus, FeatureScaling } from './features';
+  import {
+    FeatureAbilityBonus,
+    FeatureOptions,
+    FeatureScaling,
+  } from './features';
 
   const { isSubclass = false } = defineProps<{
     isSubclass?: boolean;
   }>();
 
   const state = defineModel<Array<ClassFeatureCreate>>({ required: true });
+
+  // Нормализует входящие данные: гарантирует наличие массива options у каждого умения.
+  // Необходимо для совместимости с данными API, где options может отсутствовать.
+  // Guard предотвращает зацикливание: .map() всегда создаёт новый массив,
+  // поэтому без проверки повторное присвоение state.value бесконечно триггерит вотчер.
+  watch(
+    state,
+    (features) => {
+      const needsNormalization = features.some(
+        (feature) => feature.options === undefined,
+      );
+
+      if (!needsNormalization) {
+        return;
+      }
+
+      state.value = features.map((feature) =>
+        feature.options !== undefined ? feature : { ...feature, options: [] },
+      );
+    },
+    { immediate: true, deep: false },
+  );
 
   function addEmptyFeature() {
     state.value.push(getEmptyFeature());
@@ -20,11 +46,13 @@
     return {
       level: 1,
       name: '',
+      optionsName: undefined,
       description: '',
       additional: '',
       hideInSubclasses: false,
       abilityImprovement: false,
       scaling: [],
+      options: [],
       abilityBonus: {
         abilities: [],
         bonus: 0,
@@ -67,6 +95,17 @@
               <UInput
                 v-model="feat.name"
                 placeholder="Название умения"
+              />
+            </UFormField>
+
+            <UFormField
+              class="col-span-8"
+              label="Название списка опций"
+              name="optionsName"
+            >
+              <UInput
+                v-model="feat.optionsName"
+                placeholder="Например, Манёвры"
               />
             </UFormField>
 
@@ -127,6 +166,11 @@
 
             <FeatureScaling
               v-model="feat.scaling"
+              :is-subclass="isSubclass"
+            />
+
+            <FeatureOptions
+              v-model="feat.options"
               :is-subclass="isSubclass"
             />
 
