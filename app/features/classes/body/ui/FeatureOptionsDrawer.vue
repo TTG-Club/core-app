@@ -5,7 +5,10 @@
 
   import { MarkupRender } from '~ui/markup';
 
-  import { FEATURE_OPTIONS_LABELS } from './constants';
+  import {
+    FEATURE_OPTIONS_LABELS,
+    FEATURE_OPTIONS_TOOLTIP_TEXT,
+  } from './constants';
 
   const props = defineProps<{
     feature: ClassFeature;
@@ -164,8 +167,15 @@
 
           <div
             v-if="option.prerequisite"
-            class="mb-3 text-sm text-muted"
+            class="mb-3 flex flex-wrap items-baseline gap-x-1 border-l-2 border-default pl-3 text-sm text-muted"
+            :class="$style.prerequisite"
           >
+            <UTooltip :text="FEATURE_OPTIONS_TOOLTIP_TEXT.prerequisite">
+              <span class="font-semibold text-highlighted">
+                {{ FEATURE_OPTIONS_LABELS.prerequisite }}
+              </span>
+            </UTooltip>
+
             <MarkupRender :render-node="option.prerequisite" />
           </div>
 
@@ -189,3 +199,12 @@
     </template>
   </USlideover>
 </template>
+
+<style module lang="scss">
+  .prerequisite {
+    :deep(p) {
+      display: inline;
+      margin-bottom: 0;
+    }
+  }
+</style>
