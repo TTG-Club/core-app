@@ -1,1 +1,1 @@
-export { default as BannerLink } from './BannerLink.vue';
+export { default as BannerCard } from './BannerCard.vue';
