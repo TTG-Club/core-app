@@ -162,13 +162,9 @@
 
           <div
             v-if="option.prerequisite"
-            class="mb-3 flex flex-wrap items-baseline gap-x-1 border-l-2 border-default pl-3 text-sm text-muted"
+            class="mb-3 border-l-2 border-default pl-3 text-sm text-muted"
             :class="$style.prerequisite"
           >
-            <span class="font-semibold text-highlighted">
-              {{ FEATURE_OPTIONS_LABELS.prerequisite }}
-            </span>
-
             <MarkupRender :render-node="option.prerequisite" />
           </div>
 
