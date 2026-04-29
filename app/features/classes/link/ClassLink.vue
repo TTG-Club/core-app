@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ClassLinkResponse } from '~classes/model';
+  import type { ClassLinkResponse } from '../model';
 
   import { CardLink } from '~ui/link';
 
