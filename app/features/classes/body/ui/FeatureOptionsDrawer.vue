@@ -5,10 +5,7 @@
 
   import { MarkupRender } from '~ui/markup';
 
-  import {
-    FEATURE_OPTIONS_LABELS,
-    FEATURE_OPTIONS_TOOLTIP_TEXT,
-  } from './constants';
+  import { FEATURE_OPTIONS_LABELS } from './constants';
 
   const props = defineProps<{
     feature: ClassFeature;
@@ -82,9 +79,7 @@
     );
   });
 
-  const title = computed(
-    () => `${FEATURE_OPTIONS_LABELS.title}: ${props.title}`,
-  );
+  const title = computed(() => props.title);
 
   const shownLabel = computed(
     () =>
@@ -170,11 +165,9 @@
             class="mb-3 flex flex-wrap items-baseline gap-x-1 border-l-2 border-default pl-3 text-sm text-muted"
             :class="$style.prerequisite"
           >
-            <UTooltip :text="FEATURE_OPTIONS_TOOLTIP_TEXT.prerequisite">
-              <span class="font-semibold text-highlighted">
-                {{ FEATURE_OPTIONS_LABELS.prerequisite }}
-              </span>
-            </UTooltip>
+            <span class="font-semibold text-highlighted">
+              {{ FEATURE_OPTIONS_LABELS.prerequisite }}
+            </span>
 
             <MarkupRender :render-node="option.prerequisite" />
           </div>
