@@ -67,6 +67,7 @@ export interface ClassFeature {
   key: string;
   level: Level;
   name: string;
+  optionsName?: string;
   description: RenderNode;
   additional: string;
   isSubclass?: boolean;
@@ -76,6 +77,17 @@ export interface ClassFeature {
     description: RenderNode;
     additional: string;
   }>;
+  options?: Array<ClassFeatureOption>;
+}
+
+export interface ClassFeatureOption {
+  key: string;
+  name: NameResponse;
+  description: RenderNode;
+  additional?: RenderNode;
+  prerequisite?: RenderNode;
+  requiredClassLevel?: Level;
+  hideInSubclasses?: boolean;
 }
 
 export interface ClassProficiency {

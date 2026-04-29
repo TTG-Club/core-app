@@ -3,6 +3,7 @@ import type { RenderNode } from '~ui/markup';
 
 import type {
   ClassFeature,
+  ClassFeatureOption,
   ClassInMulticlass,
   ClassMulticlassProficiency,
   ClassProficiency,
@@ -88,10 +89,21 @@ const classTableSchema: z.ZodType<ClassTable> = z.object({
   ),
 });
 
+const classFeatureOptionSchema: z.ZodType<ClassFeatureOption> = z.object({
+  key: z.string(),
+  name: nameResponseSchema,
+  description: renderNodeSchema,
+  additional: renderNodeSchema.optional(),
+  prerequisite: renderNodeSchema.optional(),
+  requiredClassLevel: levelSchema.optional(),
+  hideInSubclasses: z.boolean().optional(),
+});
+
 const classFeatureSchema: z.ZodType<ClassFeature> = z.object({
   key: z.string(),
   level: levelSchema,
   name: z.string(),
+  optionsName: z.string().optional(),
   description: renderNodeSchema,
   additional: z.string(),
   isSubclass: z.boolean().optional(),
@@ -105,6 +117,7 @@ const classFeatureSchema: z.ZodType<ClassFeature> = z.object({
       }),
     )
     .optional(),
+  options: z.array(classFeatureOptionSchema).optional(),
 });
 
 const classProficiencySchema: z.ZodType<ClassProficiency> = z.object({

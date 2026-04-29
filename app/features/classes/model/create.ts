@@ -11,14 +11,29 @@ export interface ClassFeatureScalingCreate {
   hideInSubclasses: boolean | undefined;
 }
 
+export interface ClassFeatureOptionCreate {
+  key?: string;
+  name: {
+    rus: string;
+    eng: string;
+  };
+  description: string;
+  additional: string | undefined;
+  prerequisite: string | undefined;
+  requiredClassLevel: number | undefined;
+  hideInSubclasses: boolean | undefined;
+}
+
 export interface ClassFeatureCreate {
   level: number;
   name: string;
+  optionsName: string | undefined;
   description: string;
   additional: string;
   hideInSubclasses: boolean | undefined;
   abilityImprovement: boolean | undefined;
   scaling: Array<ClassFeatureScalingCreate>;
+  options: Array<ClassFeatureOptionCreate>;
   abilityBonus?: ClassFeatureAbilityBonusCreate;
 }
 

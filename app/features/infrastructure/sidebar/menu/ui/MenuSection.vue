@@ -8,7 +8,12 @@
       label: string;
       disabled?: boolean;
       roles?: Array<Role>;
+      action?: string;
     }>;
+  }>();
+
+  const emit = defineEmits<{
+    action: [actionId: string];
   }>();
 
   const { user } = useUser();
@@ -29,6 +34,12 @@
       };
     }),
   );
+
+  function handleItemClick(link: (typeof links.value)[number]) {
+    if (link.action) {
+      emit('action', link.action);
+    }
+  }
 </script>
 
 <template>
@@ -38,14 +49,26 @@
   >
     <span :class="$style.title">{{ label }}</span>
 
-    <NuxtLink
+    <template
       v-for="link in links"
-      :key="link.href"
-      :class="[$style.item, { [$style.disabled]: link.disabled }]"
-      :to="link.href"
+      :key="link.action || link.href"
     >
-      {{ link.label }}
-    </NuxtLink>
+      <button
+        v-if="link.action"
+        :class="[$style.item, { [$style.disabled]: link.disabled }]"
+        @click.left.exact.prevent="handleItemClick(link)"
+      >
+        {{ link.label }}
+      </button>
+
+      <NuxtLink
+        v-else
+        :class="[$style.item, { [$style.disabled]: link.disabled }]"
+        :to="link.href"
+      >
+        {{ link.label }}
+      </NuxtLink>
+    </template>
   </div>
 </template>
 
@@ -70,6 +93,7 @@
   .item {
     padding: 6px 16px;
     border-radius: 6px;
+    text-align: left;
     &:hover {
       background-color: var(--color-hover);
       transition: all 0.15s ease-in-out;

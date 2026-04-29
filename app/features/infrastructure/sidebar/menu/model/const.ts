@@ -1,15 +1,20 @@
 import type { Role } from '~/shared/types';
 
-export const MENU_SECTIONS: Array<{
+export interface MenuItem {
+  label: string;
+  href: string;
+  disabled?: boolean;
+  roles?: Array<Role>;
+  action?: string;
+}
+
+export interface MenuSection {
   label: string;
   icon: string;
-  items: Array<{
-    label: string;
-    href: string;
-    disabled?: boolean;
-    roles?: Array<Role>;
-  }>;
-}> = [
+  items: Array<MenuItem>;
+}
+
+export const MENU_SECTIONS: Array<MenuSection> = [
   {
     label: 'Персонаж',
     icon: 'menu/filled/character',
@@ -84,6 +89,11 @@ export const MENU_SECTIONS: Array<{
     label: 'Инструменты',
     icon: 'menu/filled/workshop',
     items: [
+      {
+        href: '',
+        label: 'Создание мультикласса',
+        action: 'open-multiclass',
+      },
       {
         href: '/tokenator',
         label: 'Токенатор',
