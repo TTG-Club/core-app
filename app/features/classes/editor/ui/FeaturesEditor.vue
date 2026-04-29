@@ -4,13 +4,23 @@
   import { EditorArrayControls } from '~ui/editor';
   import { SelectLevel } from '~ui/select';
 
-  import { FeatureAbilityBonus, FeatureScaling } from './features';
+  import {
+    FeatureAbilityBonus,
+    FeatureOptions,
+    FeatureScaling,
+  } from './features';
 
   const { isSubclass = false } = defineProps<{
     isSubclass?: boolean;
   }>();
 
   const state = defineModel<Array<ClassFeatureCreate>>({ required: true });
+
+  watchEffect(() => {
+    for (const feature of state.value) {
+      feature.options ??= [];
+    }
+  });
 
   function addEmptyFeature() {
     state.value.push(getEmptyFeature());
@@ -20,11 +30,13 @@
     return {
       level: 1,
       name: '',
+      optionsName: undefined,
       description: '',
       additional: '',
       hideInSubclasses: false,
       abilityImprovement: false,
       scaling: [],
+      options: [],
       abilityBonus: {
         abilities: [],
         bonus: 0,
@@ -67,6 +79,17 @@
               <UInput
                 v-model="feat.name"
                 placeholder="Название умения"
+              />
+            </UFormField>
+
+            <UFormField
+              class="col-span-8"
+              label="Название списка опций"
+              name="optionsName"
+            >
+              <UInput
+                v-model="feat.optionsName"
+                placeholder="Например, Манёвры"
               />
             </UFormField>
 
@@ -127,6 +150,11 @@
 
             <FeatureScaling
               v-model="feat.scaling"
+              :is-subclass="isSubclass"
+            />
+
+            <FeatureOptions
+              v-model="feat.options"
               :is-subclass="isSubclass"
             />
 
