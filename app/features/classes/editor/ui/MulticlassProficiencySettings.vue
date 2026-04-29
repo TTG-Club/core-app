@@ -1,13 +1,11 @@
 <script setup lang="ts">
-  import type { ClassProficiencyCreate } from '../../model';
+  import type { ClassMulticlassProficiencyCreate } from '../../model';
 
-  import {
-    SelectArmorCategory,
-    SelectSkills,
-    SelectWeaponCategory,
-  } from '~ui/select';
+  import { SelectArmorCategory, SelectWeaponCategory } from '~ui/select';
 
-  const state = defineModel<ClassProficiencyCreate>({ required: true });
+  const state = defineModel<ClassMulticlassProficiencyCreate>({
+    required: true,
+  });
 </script>
 
 <template>
@@ -17,14 +15,16 @@
   >
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Владения</h2>
+        <h2 class="truncate text-base text-highlighted">
+          Владения при мультиклассировании
+        </h2>
       </template>
 
       <div class="grid grid-cols-24 gap-4">
         <UFormField
           class="col-span-12"
           label="Виды доспехов"
-          name="armor.category"
+          name="multiclassProficiency.armor.category"
         >
           <SelectArmorCategory
             v-model="state.armor.category"
@@ -35,7 +35,7 @@
         <UFormField
           class="col-span-12"
           label="Дополнительно"
-          name="armor.custom"
+          name="multiclassProficiency.armor.custom"
         >
           <UInput
             v-model="state.armor.custom"
@@ -46,7 +46,7 @@
         <UFormField
           class="col-span-12"
           label="Виды оружия"
-          name="weapon.category"
+          name="multiclassProficiency.weapon.category"
         >
           <SelectWeaponCategory
             v-model="state.weapon.category"
@@ -57,7 +57,7 @@
         <UFormField
           class="col-span-12"
           label="Дополнительно"
-          name="weapon.custom"
+          name="multiclassProficiency.weapon.custom"
         >
           <UInput
             v-model="state.weapon.custom"
@@ -68,33 +68,22 @@
         <UFormField
           class="col-span-24"
           label="Инструменты"
-          name="tool"
+          name="multiclassProficiency.toolProficiency"
         >
           <UInput
-            v-model="state.tool"
+            v-model="state.toolProficiency"
             placeholder="Например: набор вора"
           />
         </UFormField>
 
         <UFormField
-          class="col-span-4"
+          class="col-span-24"
           label="Кол-во навыков"
-          name="skill.count"
+          name="multiclassProficiency.skills"
         >
           <UInputNumber
-            v-model="state.skill.count"
+            v-model="state.skills"
             :min="0"
-          />
-        </UFormField>
-
-        <UFormField
-          class="col-span-20"
-          label="Навыки на выбор"
-          name="skill.skills"
-        >
-          <SelectSkills
-            v-model="state.skill.skills"
-            multiple
           />
         </UFormField>
       </div>

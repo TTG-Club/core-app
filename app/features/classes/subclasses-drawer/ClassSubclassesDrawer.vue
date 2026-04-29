@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ClassLinkResponse } from '~classes/model';
+  import type { ClassLinkResponse } from '../model';
 
   import { ClassLink } from '~classes/link';
   import { UiDrawer } from '~ui/drawer';

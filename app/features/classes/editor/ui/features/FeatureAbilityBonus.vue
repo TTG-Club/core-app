@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ClassFeatureAbilityBonusCreate } from '~classes/model';
+  import type { ClassFeatureAbilityBonusCreate } from '../../../model';
 
   import { SelectAbilities } from '~ui/select';
 

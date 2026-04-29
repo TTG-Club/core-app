@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ClassDetailResponse } from '~classes/model';
+  import type { ClassDetailResponse } from '../model';
 
   import { UiCollapse } from '~ui/collapse';
   import { UiGallery } from '~ui/gallery';

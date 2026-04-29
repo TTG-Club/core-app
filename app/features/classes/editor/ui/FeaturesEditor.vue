@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ClassFeatureCreate } from '~classes/model';
+  import type { ClassFeatureCreate } from '../../model';
 
   import { EditorArrayControls } from '~ui/editor';
   import { SelectLevel } from '~ui/select';
