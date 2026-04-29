@@ -77,6 +77,7 @@
     overscan?: number;
     virtualBottomOffset?: number;
     resetKey?: string;
+    scrollKey?: string;
   }
 
   const {
@@ -92,7 +93,23 @@
     overscan = GROUPED_LIST_DEFAULT_OVERSCAN,
     virtualBottomOffset = GROUPED_LIST_DEFAULT_BOTTOM_OFFSET,
     resetKey = undefined,
+    scrollKey = undefined,
   } = defineProps<Props>();
+
+  const route = useRoute();
+
+  const resolvedScrollKey = computed(() => {
+    if (scrollKey) {
+      return scrollKey;
+    }
+
+    return typeof route.name === 'string' ? route.name : undefined;
+  });
+
+  const { rememberCurrentPosition, restoreSavedPosition } =
+    useSectionListScroll(resolvedScrollKey, () => resetKey);
+
+  const isScrollPositionRestored = ref(false);
 
   /**
    * Разбивает элементы на строки виртуальной сетки.
@@ -288,6 +305,35 @@
     Math.min(virtualColumns.value, columns),
   );
 
+  function getItemKey(item: T): string {
+    return item.url;
+  }
+
+  function getItemElementId(item: T): string | undefined {
+    if (!resolvedScrollKey.value) {
+      return undefined;
+    }
+
+    return getSectionListItemId(resolvedScrollKey.value, getItemKey(item));
+  }
+
+  function getSavedItemElement(itemKey: string): HTMLElement | null {
+    if (!resolvedScrollKey.value) {
+      return null;
+    }
+
+    return document.getElementById(
+      getSectionListItemId(resolvedScrollKey.value, itemKey),
+    );
+  }
+
+  function rememberListItem(item: T): void {
+    const itemElement = getSavedItemElement(getItemKey(item));
+    const itemViewportTop = itemElement?.getBoundingClientRect().top;
+
+    rememberCurrentPosition(getItemKey(item), itemViewportTop);
+  }
+
   const virtualGridClasses = computed(() => {
     return GROUPED_LIST_GRID_CLASSES.slice(0, activeVirtualColumns.value);
   });
@@ -411,6 +457,54 @@
       });
   });
 
+  function getVirtualItemScrollTop(itemKey: string): number | undefined {
+    if (!virtualContainerElement.value) {
+      return undefined;
+    }
+
+    const rowIndex = virtualRows.value.findIndex((virtualRow) => {
+      return (
+        virtualRow.type === 'items'
+        && virtualRow.items.some((item) => getItemKey(item) === itemKey)
+      );
+    });
+
+    if (rowIndex < 0) {
+      return undefined;
+    }
+
+    const containerDocumentTop =
+      windowScrollTop.value
+      + virtualContainerElement.value.getBoundingClientRect().top;
+
+    return Math.max(
+      0,
+      containerDocumentTop + (virtualRowOffsets.value[rowIndex] ?? 0),
+    );
+  }
+
+  async function restoreListScrollPosition(): Promise<void> {
+    if (isScrollPositionRestored.value) {
+      return;
+    }
+
+    if (shouldUseVirtual.value && !isColumnCountReady.value) {
+      return;
+    }
+
+    await nextTick();
+    await new Promise(requestAnimationFrame);
+
+    const isRestored = restoreSavedPosition(
+      getSavedItemElement,
+      shouldUseVirtual.value ? getVirtualItemScrollTop : undefined,
+    );
+
+    if (isRestored) {
+      isScrollPositionRestored.value = true;
+    }
+  }
+
   watch(
     [virtualContainerWidth, () => columns],
     ([containerWidth]) => {
@@ -428,6 +522,8 @@
   watch(
     () => resetKey,
     () => {
+      isScrollPositionRestored.value = false;
+
       if (!virtualContainerElement.value) {
         return;
       }
@@ -441,6 +537,21 @@
       });
     },
   );
+
+  watch(
+    [() => items, shouldUseVirtual, isColumnCountReady, visibleVirtualRows],
+    () => {
+      restoreListScrollPosition();
+    },
+    {
+      flush: 'post',
+      immediate: true,
+    },
+  );
+
+  onBeforeRouteLeave(() => {
+    rememberCurrentPosition();
+  });
 </script>
 
 <template>
@@ -475,11 +586,14 @@
             :style="{ height: `${rowHeight}px` }"
           >
             <div :class="['grid gap-3', virtualGridClasses]">
-              <slot
+              <div
                 v-for="item in virtualItem.row.items"
+                :id="getItemElementId(item)"
                 :key="item.url"
-                :item="item"
-              />
+                @click.left.exact.capture="rememberListItem(item)"
+              >
+                <slot :item="item" />
+              </div>
             </div>
           </div>
         </div>
@@ -491,11 +605,14 @@
     v-else-if="!field"
     :columns="columns"
   >
-    <slot
+    <div
       v-for="item in items"
+      :id="getItemElementId(item)"
       :key="item.url"
-      :item="item"
-    />
+      @click.left.exact.capture="rememberListItem(item)"
+    >
+      <slot :item="item" />
+    </div>
   </PageGrid>
 
   <div
@@ -512,11 +629,14 @@
       </USeparator>
 
       <PageGrid :columns="columns">
-        <slot
+        <div
           v-for="item in group.items"
+          :id="getItemElementId(item)"
           :key="item.url"
-          :item="item"
-        />
+          @click.left.exact.capture="rememberListItem(item)"
+        >
+          <slot :item="item" />
+        </div>
       </PageGrid>
     </div>
   </div>
