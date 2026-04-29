@@ -1,9 +1,11 @@
 <script setup lang="ts">
+  import { Role } from '~/shared/types';
   import { VTTG_SEO } from '~vttg/model';
   import { VttgLanding } from '~vttg/ui';
 
   definePageMeta({
     layout: 'vttg',
+    auth: { roles: [Role.ADMIN] },
   });
 
   useSeoMeta({
