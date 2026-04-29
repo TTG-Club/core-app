@@ -2,9 +2,12 @@
   import type { CommandPaletteGroup } from '@nuxt/ui';
 
   import type { NameResponse } from '~/shared/types';
-  import type { ClassLinkResponse } from '~classes/model';
+
+  import type { ClassLinkResponse } from '../../model';
 
   import { uniqBy } from 'es-toolkit';
+
+  import { MulticlassDrawer } from '~classes/multiclass-drawer';
 
   const {
     url,
@@ -32,6 +35,19 @@
   const search = ref<string>();
 
   const isLoading = computed(() => status.value === 'pending');
+
+  // Модальное окно для создания мультикласса
+  const overlay = useOverlay();
+
+  const multiclassDrawer = overlay.create(MulticlassDrawer, {
+    props: {
+      url, // URL текущей страницы (подкласса, если есть)
+      name,
+      parent, // Основной класс, если текущий - подкласс
+      onClose: () => multiclassDrawer.close(),
+    },
+    destroyOnClose: true,
+  });
 
   const groups = computed<Array<CommandPaletteGroup>>(() => {
     if (!subclasses.value?.length) {
@@ -139,6 +155,19 @@
         <span class="text-xs text-secondary">Список:</span>
 
         <span>Заклинаний</span>
+      </div>
+    </UButton>
+
+    <UButton
+      variant="soft"
+      color="primary"
+      size="md"
+      @click.left.exact.prevent.stop="multiclassDrawer.open()"
+    >
+      <div class="flex flex-col items-start leading-tight">
+        <span class="text-left text-xs text-secondary"> Создать </span>
+
+        <span class="text-left">Мультикласс</span>
       </div>
     </UButton>
 

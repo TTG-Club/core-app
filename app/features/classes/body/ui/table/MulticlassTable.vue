@@ -3,7 +3,12 @@
 
   import type { Level } from '~/shared/types';
 
-  import type { ClassDetailResponse, ClassFeature } from '../../../model';
+  import type {
+    CasterType,
+    ClassFeature,
+    ClassInMulticlass,
+    ClassTable,
+  } from '../../../model';
 
   import {
     FlexRender,
@@ -11,31 +16,30 @@
     useVueTable,
   } from '@tanstack/vue-table';
   import { useDebounceFn } from '@vueuse/core';
-  import { maxBy, omit, orderBy, range } from 'es-toolkit';
+  import { maxBy, omit, orderBy } from 'es-toolkit';
+  import { computed, h, ref } from 'vue';
 
-  import { ULink } from '#components';
   import { LEVELS } from '~/shared/consts';
 
-  import { CasterType } from '../../../model';
-  import {
-    PACT_CASTER_SPELL_SLOTS_COUNT,
-    PACT_CASTER_SPELL_SLOTS_LEVEL,
-  } from './const';
   import { useDndMechanics } from './useDndMechanics';
 
-  const props =
-    defineProps<
-      Pick<ClassDetailResponse, 'table' | 'casterType' | 'features'>
-    >();
+  interface Props {
+    table: Array<ClassTable>;
+    casterType: CasterType;
+    features: Array<ClassFeature>;
+    multiclass?: Array<ClassInMulticlass>;
+  }
 
-  interface ClassTableRow {
+  const props = defineProps<Props>();
+
+  interface MulticlassTableRow {
     level: Level;
     proficiencyBonus: number;
     features: Array<ClassFeature>;
-    pactSlotsCount?: number;
-    pactSlotsLevel?: number;
+    isSeparator?: boolean;
+    separatorText?: string;
 
-    [key: string]: string | number | Array<ClassFeature> | undefined;
+    [key: string]: string | number | Array<ClassFeature> | boolean | undefined;
   }
 
   interface HoverCell {
@@ -57,14 +61,10 @@
   }, 10);
 
   const { scrollToAnchor } = useAnchorScroll();
+  const route = useRoute();
+  const router = useRouter();
 
-  const {
-    spellSlots,
-    isSpellcaster,
-    isPactSpellcaster,
-    isRegularSpellcaster,
-    getProficiencyBonus,
-  } = useDndMechanics({
+  const { getProficiencyBonus } = useDndMechanics({
     casterType: props.casterType,
   });
 
@@ -72,8 +72,10 @@
     const list: Array<ClassFeature> = [];
 
     for (const feature of props.features) {
+      // Добавляем основное умение
       list.push(omit(feature, ['scaling']));
 
+      // Добавляем scaling умения, если есть
       if (feature.scaling) {
         list.push(
           ...feature.scaling.map((scale) => ({
@@ -86,6 +88,26 @@
     }
 
     return orderBy(list, ['level'], ['asc']);
+  });
+
+  // Определяем максимальный уровень персонажа из features
+  const maxCharacterLevel = computed((): Level => {
+    if (!features.value || features.value.length === 0) {
+      return 20;
+    }
+
+    const maxLevel = Math.max(
+      ...features.value.map((feature) => feature.level),
+    );
+
+    const clampedLevel = Math.min(Math.max(maxLevel, 1), 20);
+
+    return LEVELS.find((level) => level === clampedLevel) ?? 20;
+  });
+
+  // Генерируем массив уровней персонажа
+  const characterLevels = computed(() => {
+    return LEVELS.filter((level) => level <= maxCharacterLevel.value);
   });
 
   function getScalingValueForLevel(
@@ -104,15 +126,79 @@
     return found?.value ?? '—';
   }
 
-  const tableData = computed(() =>
-    orderBy(LEVELS.map(getLevelData), ['level'], ['asc']),
-  );
+  // Вычисляем, на каком уровне персонажа начинается каждый класс
+  const classStartLevels = computed(() => {
+    if (!props.multiclass || props.multiclass.length === 0) {
+      return [];
+    }
+
+    const starts: Array<{ level: number; class: string; subclass?: string }> =
+      [];
+
+    let currentLevel = 1;
+
+    for (const classItem of props.multiclass) {
+      starts.push({
+        level: currentLevel,
+        class: classItem.class,
+        subclass: classItem.subclass,
+      });
+
+      currentLevel += classItem.level;
+    }
+
+    return starts;
+  });
+
+  const tableData = computed(() => {
+    const rows: Array<MulticlassTableRow> = [];
+
+    for (const level of characterLevels.value) {
+      // Проверяем, нужно ли добавить разделитель перед этим уровнем
+      const separator = classStartLevels.value.find(
+        (classStart) => classStart.level === level,
+      );
+
+      if (separator) {
+        const separatorText = separator.subclass
+          ? `${separator.class} / ${separator.subclass}`
+          : separator.class;
+
+        // Создаем разделитель с заполненными полями для всех столбцов
+        const separatorRow: MulticlassTableRow = {
+          level,
+          proficiencyBonus: 0,
+          features: [],
+          isSeparator: true,
+          separatorText,
+        };
+
+        // Заполняем поля для всех столбцов таблицы
+        if (props.table && Array.isArray(props.table)) {
+          props.table.forEach((tableColumn) => {
+            separatorRow[tableColumn.name] = '';
+          });
+        }
+
+        rows.push(separatorRow);
+      }
+
+      // Добавляем обычную строку с данными уровня
+      rows.push(getLevelData(level));
+    }
+
+    return orderBy(rows, ['level'], ['asc']);
+  });
 
   function getLevelData(level: Level) {
-    const row: ClassTableRow = {
+    const levelFeatures = features.value.filter(
+      (feature) => feature.level === level,
+    );
+
+    const row: MulticlassTableRow = {
       level,
       proficiencyBonus: getProficiencyBonus(level),
-      features: features.value.filter((feature) => feature.level === level),
+      features: levelFeatures,
     };
 
     if (props.table && Array.isArray(props.table)) {
@@ -124,26 +210,11 @@
       });
     }
 
-    if (!isSpellcaster.value) {
-      return row;
-    }
-
-    if (isPactSpellcaster.value) {
-      row.pactSlotsCount = PACT_CASTER_SPELL_SLOTS_COUNT[level];
-      row.pactSlotsLevel = PACT_CASTER_SPELL_SLOTS_LEVEL[level];
-    } else {
-      const levelSpellSlots = spellSlots.value![level];
-
-      levelSpellSlots.forEach((slotCount, slotIndex) => {
-        row[`spell${slotIndex + 1}`] = slotCount > 0 ? slotCount : '—';
-      });
-    }
-
     return row;
   }
 
-  const tableColumns = computed<ColumnDef<ClassTableRow>[]>(() => {
-    const baseColumns: ColumnDef<ClassTableRow>[] = [
+  const tableColumns = computed<ColumnDef<MulticlassTableRow>[]>(() => {
+    const baseColumns: ColumnDef<MulticlassTableRow>[] = [
       {
         accessorKey: 'level',
         header: 'Ур.',
@@ -178,22 +249,25 @@
 
           const featureLinks = featuresInLevel.map((feature, index) => {
             const link = h(
-              ULink,
+              'span',
               {
-                href: `#${feature.key}`,
-                replace: true,
                 class: [
-                  feature.isSubclass ? 'text-success hover:text-success' : '',
-                  'transition-colors duration-100',
+                  feature.isSubclass
+                    ? 'text-success hover:text-success'
+                    : 'text-link hover:text-link',
+                  'cursor-pointer transition-colors duration-100',
+                  'hover:underline',
                 ],
-                onClick: withModifiers(
-                  () => scrollToAnchor(feature.key),
-                  ['left', 'exact', 'prevent'],
-                ),
+                onClick: withModifiers(() => {
+                  scrollToAnchor(feature.key);
+
+                  // Обновляем URL без перезагрузки страницы
+                  if (route.hash !== `#${feature.key}`) {
+                    router.replace({ hash: `#${feature.key}` });
+                  }
+                }, ['left', 'exact', 'prevent']),
               },
-              {
-                default: () => feature.name,
-              },
+              feature.name,
             );
 
             return index < featuresInLevel.length - 1
@@ -228,72 +302,10 @@
       });
     }
 
-    if (!isSpellcaster.value) {
-      return baseColumns;
-    }
-
-    if (isRegularSpellcaster.value) {
-      let spellSlotsCount = 0;
-
-      if (props.casterType === CasterType.FULL) {
-        spellSlotsCount = 9;
-      } else if (props.casterType === CasterType.HALF) {
-        spellSlotsCount = 5;
-      } else if (props.casterType === CasterType.THIRD) {
-        spellSlotsCount = 4;
-      }
-
-      if (!spellSlotsCount) {
-        return baseColumns;
-      }
-
-      baseColumns.push({
-        id: 'spellSlots',
-        header: 'Ячейки заклинаний',
-        columns: range(1, spellSlotsCount + 1).map((level) => ({
-          accessorKey: `spell${level}`,
-          header: `${level}`,
-          cell: ({ row }) => row.original[`spell${level}`] ?? '—',
-          meta: {
-            class: {
-              th: 'w-8 text-center',
-              td: 'w-8 text-center',
-            },
-          },
-        })),
-      });
-    }
-
-    if (isPactSpellcaster.value) {
-      baseColumns.push({
-        id: 'pactSlotsCount',
-        header: 'Кол-во ячеек',
-        cell: ({ row }) => row.original.pactSlotsCount ?? '—',
-        meta: {
-          class: {
-            th: 'w-8 text-center',
-            td: 'w-8 text-center',
-          },
-        },
-      });
-
-      baseColumns.push({
-        id: 'pactSlotsLevel',
-        header: 'Ур. ячейки',
-        cell: ({ row }) => row.original.pactSlotsLevel ?? '—',
-        meta: {
-          class: {
-            th: 'w-8 text-center',
-            td: 'w-8 text-center',
-          },
-        },
-      });
-    }
-
     return baseColumns;
   });
 
-  const table = useVueTable({
+  const vueTable = useVueTable({
     get data() {
       return tableData.value;
     },
@@ -303,47 +315,7 @@
     getCoreRowModel: getCoreRowModel(),
   });
 
-  function shouldShowHeader(header: Header<ClassTableRow, unknown>): boolean {
-    const hasSpellSlots = props.casterType !== CasterType.NONE;
-
-    if (!hasSpellSlots) {
-      return true;
-    }
-
-    const columnRelativeDepth = header.depth - header.column.depth;
-
-    return !(
-      !header.isPlaceholder
-      && columnRelativeDepth > 1
-      && header.id === header.column.id
-    );
-  }
-
-  function getRowSpan(header: Header<ClassTableRow, unknown>): number {
-    const hasSpellSlots = props.casterType !== CasterType.NONE;
-
-    if (!hasSpellSlots) {
-      return 1;
-    }
-
-    let rowSpan = 1;
-
-    if (header.isPlaceholder) {
-      const leafs = header.getLeafHeaders();
-
-      if (leafs.length > 0) {
-        const lastLeaf = leafs[leafs.length - 1];
-
-        if (lastLeaf) {
-          rowSpan = lastLeaf.depth - header.depth;
-        }
-      }
-    }
-
-    return rowSpan;
-  }
-
-  function getHeaderClass(header: Header<ClassTableRow, unknown>): string {
+  function getHeaderClass(header: Header<MulticlassTableRow, unknown>): string {
     const baseClass =
       'p-2 text-xs border-b border-default text-center text-highlighted';
 
@@ -353,7 +325,7 @@
   }
 
   function getCellClass(
-    cell: Cell<ClassTableRow, unknown>,
+    cell: Cell<MulticlassTableRow, unknown>,
     rowIndex: number,
     columnIndex: number,
   ): string {
@@ -381,18 +353,17 @@
 
 <template>
   <div class="w-full overflow-x-auto rounded-lg border border-default bg-muted">
-    <table class="min-w-full border-collapse">
+    <table class="min-w-full table-fixed border-collapse">
       <thead class="bg-elevated">
         <tr
-          v-for="headerGroup in table.getHeaderGroups()"
+          v-for="headerGroup in vueTable.getHeaderGroups()"
           :key="headerGroup.id"
         >
           <th
             v-for="header in headerGroup.headers"
-            v-show="shouldShowHeader(header)"
             :key="header.id"
             :colspan="header.colSpan"
-            :rowspan="getRowSpan(header)"
+            :rowspan="1"
             :class="getHeaderClass(header)"
           >
             <FlexRender
@@ -405,22 +376,36 @@
 
       <tbody class="divide-y divide-default">
         <tr
-          v-for="(row, rowIndex) in table.getRowModel().rows"
+          v-for="(row, rowIndex) in vueTable.getRowModel().rows"
           :key="row.id"
-          class="divide-x divide-default"
+          :class="[
+            'divide-x divide-default',
+            row.original.isSeparator ? 'bg-elevated font-medium' : '',
+          ]"
         >
-          <td
-            v-for="(cell, columnIndex) in row.getVisibleCells()"
-            :key="cell.id"
-            :class="getCellClass(cell, rowIndex, columnIndex)"
-            @mouseenter="debouncedCellHover(rowIndex, columnIndex)"
-            @mouseleave="debouncedCellLeave"
-          >
-            <FlexRender
-              :render="cell.column.columnDef.cell"
-              :props="cell.getContext()"
-            />
-          </td>
+          <template v-if="row.original.isSeparator">
+            <td
+              :colspan="vueTable.getAllColumns().length"
+              class="px-4 py-1.5 text-left text-xs text-secondary"
+            >
+              {{ row.original.separatorText }}
+            </td>
+          </template>
+
+          <template v-else>
+            <td
+              v-for="(cell, columnIndex) in row.getVisibleCells()"
+              :key="cell.id"
+              :class="getCellClass(cell, rowIndex, columnIndex)"
+              @mouseenter="debouncedCellHover(rowIndex, columnIndex)"
+              @mouseleave="debouncedCellLeave"
+            >
+              <FlexRender
+                :render="cell.column.columnDef.cell"
+                :props="cell.getContext()"
+              />
+            </td>
+          </template>
         </tr>
       </tbody>
     </table>

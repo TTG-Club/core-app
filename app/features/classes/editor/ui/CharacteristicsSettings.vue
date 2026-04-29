@@ -1,9 +1,10 @@
 <script setup lang="ts">
   import type { AbilityKey } from '~/shared/types';
+
   import type {
     AbilityTemplateCreate,
     ClassPrimaryCharacteristicsCreate,
-  } from '~classes/model';
+  } from '../../model';
 
   import {
     SelectAbilities,

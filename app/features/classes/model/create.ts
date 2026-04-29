@@ -60,6 +60,13 @@ export interface ClassProficiencyCreate {
   skill: SkillProficiencyCreate;
 }
 
+export interface ClassMulticlassProficiencyCreate {
+  armor: ArmorProficiencyCreate;
+  weapon: WeaponProficiencyCreate;
+  toolProficiency: string | undefined;
+  skills: number;
+}
+
 export interface ClassPrimaryCharacteristicsCreate {
   values: Array<AbilityKey> | undefined;
   delimiter: AbilityDelimiter | undefined;
@@ -72,6 +79,7 @@ export interface ClassCreate extends EditorBaseInfoState {
   hitDice: string | undefined;
   savingThrows: Array<AbilityKey>;
   proficiency: ClassProficiencyCreate;
+  multiclassProficiency: ClassMulticlassProficiencyCreate;
   equipment: string | undefined;
   features: Array<ClassFeatureCreate>;
   table: Array<ClassColumnCreate>;
