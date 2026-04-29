@@ -158,7 +158,7 @@
   ): Array<GroupKey> {
     const orderIndexByKeyText = new Map<string, number>();
 
-    sortConfig.order.values().forEach((key, index) => {
+    Array.from(sortConfig.order).forEach((key, index) => {
       orderIndexByKeyText.set(String(key), index);
     });
 
@@ -274,6 +274,9 @@
     ];
   });
 
+  // До первого измерения ширины контейнера количество колонок неизвестно.
+  // Скрываем виртуальный список, чтобы избежать мерцания с 1 колонкой.
+  const isColumnCountReady = ref(false);
   const virtualColumns = ref(1);
 
   const activeVirtualColumns = computed(() =>
@@ -390,23 +393,32 @@
     [virtualContainerWidth, () => columns],
     ([containerWidth]) => {
       virtualColumns.value = getColumnCount(containerWidth, columns);
+
+      if (containerWidth > 0) {
+        isColumnCountReady.value = true;
+      }
     },
     { immediate: true },
   );
 
-  watch([() => resetKey, activeVirtualColumns], () => {
-    if (!virtualContainerElement.value) {
-      return;
-    }
+  // Скролл к началу списка только при смене фильтра/поиска (resetKey).
+  // Изменение колонок при ресайзе не должно вызывать прокрутку.
+  watch(
+    () => resetKey,
+    () => {
+      if (!virtualContainerElement.value) {
+        return;
+      }
 
-    const documentTop =
-      windowScrollTop.value
-      + virtualContainerElement.value.getBoundingClientRect().top;
+      const documentTop =
+        windowScrollTop.value
+        + virtualContainerElement.value.getBoundingClientRect().top;
 
-    window.scrollTo({
-      top: Math.max(0, documentTop),
-    });
-  });
+      window.scrollTo({
+        top: Math.max(0, documentTop),
+      });
+    },
+  );
 </script>
 
 <template>
@@ -416,38 +428,40 @@
     class="relative"
     :style="{ height: `${virtualTotalHeight}px` }"
   >
-    <template
-      v-for="virtualItem in visibleVirtualRows"
-      :key="virtualItem.row.key"
-    >
-      <div
-        class="absolute inset-x-0"
-        :style="{ transform: `translateY(${virtualItem.top}px)` }"
+    <template v-if="isColumnCountReady">
+      <template
+        v-for="virtualItem in visibleVirtualRows"
+        :key="virtualItem.row.key"
       >
         <div
-          v-if="virtualItem.row.type === 'separator'"
-          class="flex items-center"
-          :style="{ height: `${separatorHeight}px` }"
+          class="absolute inset-x-0"
+          :style="{ transform: `translateY(${virtualItem.top}px)` }"
         >
-          <USeparator>
-            {{ getSeparatorText(virtualItem.row.groupKey) }}
-          </USeparator>
-        </div>
+          <div
+            v-if="virtualItem.row.type === 'separator'"
+            class="flex items-center pb-2.5"
+            :style="{ height: `${separatorHeight}px` }"
+          >
+            <USeparator>
+              {{ getSeparatorText(virtualItem.row.groupKey) }}
+            </USeparator>
+          </div>
 
-        <div
-          v-else
-          class="@container py-1.5"
-          :style="{ height: `${rowHeight}px` }"
-        >
-          <div :class="['grid gap-3', virtualGridClasses]">
-            <slot
-              v-for="item in virtualItem.row.items"
-              :key="item.url"
-              :item="item"
-            />
+          <div
+            v-else
+            class="@container py-1.5"
+            :style="{ height: `${rowHeight}px` }"
+          >
+            <div :class="['grid gap-3', virtualGridClasses]">
+              <slot
+                v-for="item in virtualItem.row.items"
+                :key="item.url"
+                :item="item"
+              />
+            </div>
           </div>
         </div>
-      </div>
+      </template>
     </template>
   </div>
 

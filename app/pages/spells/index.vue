@@ -16,6 +16,14 @@
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
+  function getSpellLevelLabel(level: number | string): string {
+    if (typeof level === 'string') {
+      return level;
+    }
+
+    return !level ? 'Заговоры' : `Уровень ${level}`;
+  }
+
   useSeoMeta({
     title: 'Заклинания [Spells]',
     description: 'Заклинания из D&D 5 (редакция 2024 года).',
@@ -125,13 +133,9 @@
     canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
   });
 
-  function getLabel(level: number | string) {
-    if (typeof level === 'string') {
-      return level;
-    }
-
-    return !level ? 'Заговоры' : `Уровень ${level}`;
-  }
+  const isLoading = computed(
+    () => status.value !== 'success' && status.value !== 'error',
+  );
 </script>
 
 <template>
@@ -159,7 +163,7 @@
         mode="out-in"
       >
         <PageGrid
-          v-if="status !== 'success' && status !== 'error'"
+          v-if="isLoading"
           :columns="3"
         >
           <SkeletonLinkSmall
@@ -173,7 +177,7 @@
           virtual
           :virtual-threshold="SPELL_LIST_PAGE_SIZE"
           :reset-key="listResetKey"
-          :separator-label="getLabel"
+          :separator-label="getSpellLevelLabel"
           :items="spells"
           field="level"
         >
