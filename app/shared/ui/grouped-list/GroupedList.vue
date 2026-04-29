@@ -11,6 +11,7 @@
     GROUPED_LIST_DEFAULT_OVERSCAN,
     GROUPED_LIST_DEFAULT_ROW_HEIGHT,
     GROUPED_LIST_DEFAULT_SEPARATOR_HEIGHT,
+    GROUPED_LIST_DEFAULT_SEPARATOR_TOP_OFFSET,
     GROUPED_LIST_DEFAULT_VIRTUAL_THRESHOLD,
     GROUPED_LIST_GRID_CLASSES,
   } from './constants';
@@ -326,9 +327,18 @@
   const { y: windowScrollTop } = useWindowScroll();
 
   const virtualRowHeights = computed(() => {
-    return virtualRows.value.map((virtualRow) =>
-      virtualRow.type === 'separator' ? separatorHeight : rowHeight,
-    );
+    return virtualRows.value.map((virtualRow, rowIndex) => {
+      if (virtualRow.type !== 'separator') {
+        return rowHeight;
+      }
+
+      // Для не-первых разделителей добавляем отступ сверху к высоте строки,
+      // чтобы следующие строки сдвинулись вниз и не перекрывались.
+      const topOffset =
+        rowIndex > 0 ? GROUPED_LIST_DEFAULT_SEPARATOR_TOP_OFFSET : 0;
+
+      return separatorHeight + topOffset;
+    });
   });
 
   const virtualRowOffsets = computed(() => {
@@ -381,10 +391,18 @@
       .slice(safeStartIndex, safeEndIndex)
       .map((virtualRow, visibleIndex) => {
         const rowIndex = safeStartIndex + visibleIndex;
+        const baseTop = virtualRowOffsets.value[rowIndex] ?? 0;
+
+        // Для не-первых разделителей сдвигаем блок вниз внутри расширенной строки,
+        // чтобы отступ был сверху, а не снизу.
+        const separatorTopShift =
+          virtualRow.type === 'separator' && rowIndex > 0
+            ? GROUPED_LIST_DEFAULT_SEPARATOR_TOP_OFFSET
+            : 0;
 
         return {
           row: virtualRow,
-          top: virtualRowOffsets.value[rowIndex] ?? 0,
+          top: baseTop + separatorTopShift,
         };
       });
   });

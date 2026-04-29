@@ -13,6 +13,9 @@ export const GROUPED_LIST_DEFAULT_ROW_HEIGHT = 72;
 // Высота разделителя группы в виртуальном списке (21px линия + 16px отступ снизу pb-4).
 export const GROUPED_LIST_DEFAULT_SEPARATOR_HEIGHT = 31;
 
+// Отступ сверху для разделителей, которые идут не первыми (визуальный зазор от предыдущего списка).
+export const GROUPED_LIST_DEFAULT_SEPARATOR_TOP_OFFSET = 18;
+
 // Отступ от нижней границы экрана для расчета видимой области.
 export const GROUPED_LIST_DEFAULT_BOTTOM_OFFSET = 32;
 
