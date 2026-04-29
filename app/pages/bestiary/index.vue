@@ -51,6 +51,9 @@
     }),
   );
 
+  const { savedItemKey } = useSectionListScroll('bestiary', listResetKey);
+  const isRestoringSavedPage = ref(false);
+
   function normalizeCreaturePage(
     response: CreatureSearchResponse | null | undefined,
   ): CreatureSearchPageResponse {
@@ -125,10 +128,46 @@
     }
   }
 
+  async function restoreSavedCreaturePages(): Promise<void> {
+    const savedCreatureUrl = savedItemKey.value;
+
+    if (
+      !savedCreatureUrl
+      || isRestoringSavedPage.value
+      || bestiary.value.some((creature) => creature.url === savedCreatureUrl)
+    ) {
+      return;
+    }
+
+    isRestoringSavedPage.value = true;
+
+    try {
+      while (
+        hasNextPage.value
+        && !bestiary.value.some((creature) => creature.url === savedCreatureUrl)
+      ) {
+        await loadNextCreaturePage();
+      }
+    } finally {
+      isRestoringSavedPage.value = false;
+    }
+  }
+
   useInfiniteScroll(infiniteScrollTarget, loadNextCreaturePage, {
     distance: BESTIARY_LIST_LOAD_MORE_DISTANCE,
     canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
   });
+
+  watch(
+    [bestiary, savedItemKey],
+    () => {
+      restoreSavedCreaturePages();
+    },
+    {
+      flush: 'post',
+      immediate: true,
+    },
+  );
 
   const isLoading = computed(() => {
     const isBestiaryLoading =

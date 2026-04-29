@@ -54,6 +54,9 @@
     }),
   );
 
+  const { savedItemKey } = useSectionListScroll('spells', listResetKey);
+  const isRestoringSavedPage = ref(false);
+
   function normalizeSpellPage(
     response: SpellSearchResponse | null | undefined,
   ): SpellSearchPageResponse {
@@ -128,10 +131,46 @@
     }
   }
 
+  async function restoreSavedSpellPages(): Promise<void> {
+    const savedSpellUrl = savedItemKey.value;
+
+    if (
+      !savedSpellUrl
+      || isRestoringSavedPage.value
+      || spells.value.some((spell) => spell.url === savedSpellUrl)
+    ) {
+      return;
+    }
+
+    isRestoringSavedPage.value = true;
+
+    try {
+      while (
+        hasNextPage.value
+        && !spells.value.some((spell) => spell.url === savedSpellUrl)
+      ) {
+        await loadNextSpellPage();
+      }
+    } finally {
+      isRestoringSavedPage.value = false;
+    }
+  }
+
   useInfiniteScroll(infiniteScrollTarget, loadNextSpellPage, {
     distance: SPELL_LIST_LOAD_MORE_DISTANCE,
     canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
   });
+
+  watch(
+    [spells, savedItemKey],
+    () => {
+      restoreSavedSpellPages();
+    },
+    {
+      flush: 'post',
+      immediate: true,
+    },
+  );
 
   const isLoading = computed(
     () => status.value !== 'success' && status.value !== 'error',

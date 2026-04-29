@@ -51,6 +51,13 @@
       watch: [search, filter],
     },
   );
+
+  const listResetKey = computed(() =>
+    JSON.stringify({
+      filter: filter.value,
+      search: search.value ?? '',
+    }),
+  );
 </script>
 
 <template>
@@ -88,6 +95,7 @@
           :separator-label="(value) => (!value ? 'Без группы' : String(value))"
           :items="sources"
           :columns="3"
+          :reset-key="listResetKey"
           field="source.group.rus"
         >
           <template #default="{ item }">
