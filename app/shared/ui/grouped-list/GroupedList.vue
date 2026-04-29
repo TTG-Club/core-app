@@ -138,6 +138,10 @@
   }
 
   function getComparableKey(rawKey: string): GroupKey {
+    if (!rawKey.length) {
+      return rawKey;
+    }
+
     const numericKey = Number(rawKey);
 
     return Number.isNaN(numericKey) ? rawKey : numericKey;

@@ -174,7 +174,7 @@
           :virtual-threshold="BESTIARY_LIST_PAGE_SIZE"
           :items="bestiary"
           :reset-key="listResetKey"
-          field="challengeRating"
+          field="challengeRailing"
           separator-label="Уровень опасности {value}"
           :group-sort="{
             mode: 'ordered',
