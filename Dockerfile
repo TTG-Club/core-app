@@ -1,4 +1,4 @@
-FROM node:24.13-slim AS base
+FROM node:24-alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 ENV CI=true
@@ -6,19 +6,25 @@ RUN corepack enable
 WORKDIR /app
 
 FROM base AS deps
-COPY package.json pnpm-lock.yaml ./
-COPY .npmrc* pnpm-workspace.yaml* ./
+COPY --link package.json pnpm-lock.yaml ./
+COPY --link .npmrc* pnpm-workspace.yaml* ./
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile
 
-FROM base AS build
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+FROM deps AS build
+COPY --link . .
+RUN pnpm nuxt prepare
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN pnpm nuxt build
 
-FROM base
-COPY --from=build /app/.output/ ./
+FROM node:24-alpine AS runner
+WORKDIR /app
+
+RUN addgroup -g 1001 -S nodeapp && adduser -u 1001 -S nodeapp -G nodeapp
+USER nodeapp
+
+COPY --from=build --chown=1001:1001 --link /app/.output ./
 
 EXPOSE 3000
+
 CMD ["node", "server/index.mjs"]
