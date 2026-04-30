@@ -65,6 +65,7 @@ jobs:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
+          outputs: type=registry,compression=zstd,compression-level=3,oci-mediatypes=true
           cache-from: type=gha,scope=${{ github.ref_name }}
           cache-to: type=gha,mode=min,scope=${{ github.ref_name }}
 
