@@ -4,7 +4,6 @@
   import type { Level } from '~/shared/types';
 
   import type {
-    CasterType,
     ClassFeature,
     ClassInMulticlass,
     ClassTable,
@@ -16,11 +15,13 @@
     useVueTable,
   } from '@tanstack/vue-table';
   import { useDebounceFn } from '@vueuse/core';
-  import { maxBy, omit, orderBy } from 'es-toolkit';
+  import { maxBy, omit, orderBy, range } from 'es-toolkit';
   import { computed, h, ref } from 'vue';
 
   import { LEVELS } from '~/shared/consts';
 
+  import { CasterType } from '../../../model';
+  import { MULTICLASS_SPELL_SLOTS } from './const';
   import { useDndMechanics } from './useDndMechanics';
 
   interface Props {
@@ -67,6 +68,10 @@
   const { getProficiencyBonus } = useDndMechanics({
     casterType: props.casterType,
   });
+
+  const hasMulticlassSpellSlots = computed(
+    () => props.casterType === CasterType.MULTICLASS,
+  );
 
   const features = computed(() => {
     const list: Array<ClassFeature> = [];
@@ -210,6 +215,14 @@
       });
     }
 
+    if (hasMulticlassSpellSlots.value) {
+      const levelSpellSlots = MULTICLASS_SPELL_SLOTS[level];
+
+      levelSpellSlots.forEach((slotCount, slotIndex) => {
+        row[`spell${slotIndex + 1}`] = slotCount > 0 ? slotCount : '—';
+      });
+    }
+
     return row;
   }
 
@@ -302,6 +315,24 @@
       });
     }
 
+    if (hasMulticlassSpellSlots.value) {
+      baseColumns.push({
+        id: 'spellSlots',
+        header: 'Ячейки заклинаний',
+        columns: range(1, 10).map((level) => ({
+          accessorKey: `spell${level}`,
+          header: `${level}`,
+          cell: ({ row }) => row.original[`spell${level}`] ?? '—',
+          meta: {
+            class: {
+              th: 'w-8 text-center',
+              td: 'w-8 text-center',
+            },
+          },
+        })),
+      });
+    }
+
     return baseColumns;
   });
 
@@ -314,6 +345,44 @@
     },
     getCoreRowModel: getCoreRowModel(),
   });
+
+  function shouldShowHeader(
+    header: Header<MulticlassTableRow, unknown>,
+  ): boolean {
+    if (!hasMulticlassSpellSlots.value) {
+      return true;
+    }
+
+    const columnRelativeDepth = header.depth - header.column.depth;
+
+    return !(
+      !header.isPlaceholder
+      && columnRelativeDepth > 1
+      && header.id === header.column.id
+    );
+  }
+
+  function getRowSpan(header: Header<MulticlassTableRow, unknown>): number {
+    if (!hasMulticlassSpellSlots.value) {
+      return 1;
+    }
+
+    let rowSpan = 1;
+
+    if (header.isPlaceholder) {
+      const leafs = header.getLeafHeaders();
+
+      if (leafs.length > 0) {
+        const lastLeaf = leafs[leafs.length - 1];
+
+        if (lastLeaf) {
+          rowSpan = lastLeaf.depth - header.depth;
+        }
+      }
+    }
+
+    return rowSpan;
+  }
 
   function getHeaderClass(header: Header<MulticlassTableRow, unknown>): string {
     const baseClass =
@@ -361,9 +430,10 @@
         >
           <th
             v-for="header in headerGroup.headers"
+            v-show="shouldShowHeader(header)"
             :key="header.id"
             :colspan="header.colSpan"
-            :rowspan="1"
+            :rowspan="getRowSpan(header)"
             :class="getHeaderClass(header)"
           >
             <FlexRender
@@ -385,7 +455,7 @@
         >
           <template v-if="row.original.isSeparator">
             <td
-              :colspan="vueTable.getAllColumns().length"
+              :colspan="vueTable.getAllLeafColumns().length"
               class="px-4 py-1.5 text-left text-xs text-secondary"
             >
               {{ row.original.separatorText }}
