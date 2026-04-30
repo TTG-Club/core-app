@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ClassProficiencyCreate } from '~classes/model';
+  import type { ClassProficiencyCreate } from '../../model';
 
   import {
     SelectArmorCategory,

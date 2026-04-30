@@ -53,6 +53,13 @@
 
     return isItemsLoading || isRarityPending.value;
   });
+
+  const listResetKey = computed(() =>
+    JSON.stringify({
+      filter: filterQuery.value,
+      search: search.value ?? '',
+    }),
+  );
 </script>
 
 <template>
@@ -92,6 +99,7 @@
         <GroupedList
           v-else-if="status === 'success' && magicItems?.length"
           :items="magicItems"
+          :reset-key="listResetKey"
           field="rarity"
           :group-sort="{
             mode: 'ordered',
