@@ -7,6 +7,11 @@
   import { UiDrawer } from '~ui/drawer';
   import { SelectClass, SelectLevel } from '~ui/select';
 
+  import {
+    MULTICLASS_DRAWER_CURRENT_CLASS_ID,
+    MULTICLASS_DRAWER_SELECTED_CLASS_ID,
+  } from './constants';
+
   const { url, parent = undefined } = defineProps<{
     url: string;
     name: NameResponse;
@@ -54,6 +59,62 @@
   }
 
   const additionalClasses = ref<Array<AdditionalClass>>([]);
+
+  interface SelectedClassUrlEntry {
+    classUrl: string;
+    id: string;
+  }
+
+  function getSelectedClassUrlEntries(): Array<SelectedClassUrlEntry> {
+    const entries: Array<SelectedClassUrlEntry> = [];
+
+    if (currentClassUrl.value) {
+      entries.push({
+        id: MULTICLASS_DRAWER_CURRENT_CLASS_ID,
+        classUrl: currentClassUrl.value,
+      });
+    }
+
+    if (selectedClassUrl.value) {
+      entries.push({
+        id: MULTICLASS_DRAWER_SELECTED_CLASS_ID,
+        classUrl: selectedClassUrl.value,
+      });
+    }
+
+    additionalClasses.value.forEach((additionalClass) => {
+      if (additionalClass.classUrl) {
+        entries.push({
+          id: additionalClass.id,
+          classUrl: additionalClass.classUrl,
+        });
+      }
+    });
+
+    return entries;
+  }
+
+  function getClassExcludedValues(classId: string): Array<string> {
+    return getSelectedClassUrlEntries()
+      .filter((entry) => entry.id !== classId)
+      .map((entry) => entry.classUrl);
+  }
+
+  const currentClassExcludedValues = computed(() => {
+    return getClassExcludedValues(MULTICLASS_DRAWER_CURRENT_CLASS_ID);
+  });
+
+  const selectedClassExcludedValues = computed(() => {
+    return getClassExcludedValues(MULTICLASS_DRAWER_SELECTED_CLASS_ID);
+  });
+
+  const hasDuplicateSelectedClasses = computed(() => {
+    const selectedClassUrls = getSelectedClassUrlEntries().map(
+      (entry) => entry.classUrl,
+    );
+
+    return new Set(selectedClassUrls).size !== selectedClassUrls.length;
+  });
 
   function fetchSubclassLinks(
     classUrl: string,
@@ -393,6 +454,7 @@
       || !currentLevel.value
       || !selectedClassUrl.value
       || !selectedLevel.value
+      || hasDuplicateSelectedClasses.value
     ) {
       return;
     }
@@ -459,18 +521,21 @@
           </span>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div
+          class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]"
+        >
           <span class="min-w-20 text-sm text-secondary">Класс:</span>
 
           <SelectClass
             v-model="currentClassUrl"
-            class="flex-1"
+            :excluded-values="currentClassExcludedValues"
+            class="min-w-0"
           />
 
           <SelectLevel
             v-model="currentLevel"
             :max="maxCurrentLevel"
-            class="w-36"
+            class="col-start-2 w-36 sm:col-start-auto"
           />
         </div>
 
@@ -507,18 +572,21 @@
           </span>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div
+          class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]"
+        >
           <span class="min-w-20 text-sm text-secondary">Класс:</span>
 
           <SelectClass
             v-model="selectedClassUrl"
-            class="flex-1"
+            :excluded-values="selectedClassExcludedValues"
+            class="min-w-0"
           />
 
           <SelectLevel
             v-model="selectedLevel"
             :max="maxSelectedLevel"
-            class="w-36"
+            class="col-start-2 w-36 sm:col-start-auto"
           />
         </div>
 
@@ -565,18 +633,21 @@
           </UButton>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div
+          class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]"
+        >
           <span class="min-w-20 text-sm text-secondary">Класс:</span>
 
           <SelectClass
             v-model="additionalClass.classUrl"
-            class="flex-1"
+            :excluded-values="getClassExcludedValues(additionalClass.id)"
+            class="min-w-0"
           />
 
           <SelectLevel
             v-model="additionalClass.level"
             :max="getMaxLevelForAdditionalClass(additionalClass.id)"
-            class="w-36"
+            class="col-start-2 w-36 sm:col-start-auto"
           />
         </div>
 
@@ -622,7 +693,9 @@
           </UButton>
 
           <UButton
-            :disabled="!selectedClassUrl || !selectedLevel"
+            :disabled="
+              !selectedClassUrl || !selectedLevel || hasDuplicateSelectedClasses
+            "
             @click.left.exact.prevent="handleApply()"
           >
             Создать
