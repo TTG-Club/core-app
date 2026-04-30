@@ -1,6 +1,7 @@
 interface SectionListScrollState {
   itemViewportTop: number | null;
   itemKey: string | null;
+  page: number | null;
   resetKey: string | null;
   scrollTop: number;
 }
@@ -83,6 +84,12 @@ export function useSectionListScroll(
 
   const savedItemKey = computed(() => matchingSavedState.value?.itemKey);
 
+  const savedPage = computed(() => matchingSavedState.value?.page);
+
+  const hasSavedPosition = computed(
+    () => matchingSavedState.value !== undefined,
+  );
+
   /**
    * Запоминает текущую позицию окна и последний активный элемент списка.
    */
@@ -104,8 +111,34 @@ export function useSectionListScroll(
         itemViewportTop:
           itemViewportTop ?? currentState?.itemViewportTop ?? null,
         itemKey: itemKey ?? currentState?.itemKey ?? null,
+        page: currentState?.page ?? null,
         resetKey: resolvedResetKey.value,
         scrollTop: getCurrentWindowScrollTop(),
+      },
+    };
+  }
+
+  /**
+   * Запоминает последнюю загруженную страницу, на которой находится активный элемент списка.
+   */
+  function rememberCurrentPage(page: number): void {
+    const key = resolvedSectionKey.value;
+
+    if (!import.meta.client || !key) {
+      return;
+    }
+
+    const currentState = stateBySection.value[key];
+
+    if (!currentState) {
+      return;
+    }
+
+    stateBySection.value = {
+      ...stateBySection.value,
+      [key]: {
+        ...currentState,
+        page,
       },
     };
   }
@@ -174,8 +207,11 @@ export function useSectionListScroll(
   }
 
   return {
+    hasSavedPosition,
+    rememberCurrentPage,
     rememberCurrentPosition,
     restoreSavedPosition,
     savedItemKey,
+    savedPage,
   };
 }

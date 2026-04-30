@@ -54,8 +54,32 @@
     }),
   );
 
-  const { savedItemKey } = useSectionListScroll('spells', listResetKey);
+  const { hasSavedPosition, rememberCurrentPage, savedItemKey, savedPage } =
+    useSectionListScroll('spells', listResetKey);
+
   const isRestoringSavedPage = ref(false);
+
+  const firstSpellPageSize = computed(() => {
+    return hasSavedPosition.value && typeof savedPage.value === 'number'
+      ? (savedPage.value + 1) * SPELL_LIST_PAGE_SIZE
+      : SPELL_LIST_PAGE_SIZE;
+  });
+
+  const isSavedSpellLoaded = computed(() => {
+    const savedSpellUrl = savedItemKey.value;
+
+    if (!savedSpellUrl) {
+      return true;
+    }
+
+    return spells.value.some((spell) => spell.url === savedSpellUrl);
+  });
+
+  const isSavedSpellRestorePending = computed(() => {
+    return (
+      hasSavedPosition.value && !isSavedSpellLoaded.value && hasNextPage.value
+    );
+  });
 
   function normalizeSpellPage(
     response: SpellSearchResponse | null | undefined,
@@ -75,6 +99,7 @@
 
   async function fetchSpellPage(
     page: number,
+    size: number = SPELL_LIST_PAGE_SIZE,
   ): Promise<SpellSearchPageResponse> {
     const response = await $fetch<SpellSearchResponse>(
       '/api/v2/spells/search',
@@ -82,7 +107,7 @@
         method: 'GET',
         query: {
           page,
-          size: SPELL_LIST_PAGE_SIZE,
+          size,
           ...(search.value ? { search: search.value } : {}),
           ...filterQuery.value,
         },
@@ -97,17 +122,27 @@
     error,
     status,
     refresh,
-  } = await useAsyncData('spells-search-page', () => fetchSpellPage(0), {
-    deep: false,
-    watch: [search, filterQuery],
-  });
+  } = await useAsyncData(
+    'spells-search-page',
+    () => fetchSpellPage(0, firstSpellPageSize.value),
+    {
+      deep: false,
+      watch: [search, filterQuery],
+    },
+  );
 
   watch(
     firstSpellPage,
     (page) => {
       currentPage.value = 0;
       spells.value = page?.value ?? [];
-      hasNextPage.value = (page?.Count ?? 0) === SPELL_LIST_PAGE_SIZE;
+
+      currentPage.value = Math.max(
+        0,
+        Math.ceil(spells.value.length / SPELL_LIST_PAGE_SIZE) - 1,
+      );
+
+      hasNextPage.value = (page?.Count ?? 0) === firstSpellPageSize.value;
     },
     { immediate: true },
   );
@@ -137,7 +172,7 @@
     if (
       !savedSpellUrl
       || isRestoringSavedPage.value
-      || spells.value.some((spell) => spell.url === savedSpellUrl)
+      || isSavedSpellLoaded.value
     ) {
       return;
     }
@@ -149,6 +184,12 @@
         hasNextPage.value
         && !spells.value.some((spell) => spell.url === savedSpellUrl)
       ) {
+        if (isLoadingMore.value) {
+          await until(isLoadingMore).toBe(false);
+
+          continue;
+        }
+
         await loadNextSpellPage();
       }
     } finally {
@@ -160,6 +201,26 @@
     distance: SPELL_LIST_LOAD_MORE_DISTANCE,
     canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
   });
+
+  function rememberSavedSpellPage(): void {
+    const savedSpellUrl = savedItemKey.value;
+
+    if (!savedSpellUrl) {
+      return;
+    }
+
+    const savedSpellIndex = spells.value.findIndex((spell) => {
+      return spell.url === savedSpellUrl;
+    });
+
+    if (savedSpellIndex < 0) {
+      return;
+    }
+
+    rememberCurrentPage(Math.floor(savedSpellIndex / SPELL_LIST_PAGE_SIZE));
+  }
+
+  watch(savedItemKey, rememberSavedSpellPage, { flush: 'sync' });
 
   watch(
     [spells, savedItemKey],
@@ -173,7 +234,10 @@
   );
 
   const isLoading = computed(
-    () => status.value !== 'success' && status.value !== 'error',
+    () =>
+      (status.value !== 'success' && status.value !== 'error')
+      || isRestoringSavedPage.value
+      || isSavedSpellRestorePending.value,
   );
 </script>
 

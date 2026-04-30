@@ -106,8 +106,12 @@
     return typeof route.name === 'string' ? route.name : undefined;
   });
 
-  const { rememberCurrentPosition, restoreSavedPosition } =
-    useSectionListScroll(resolvedScrollKey, () => resetKey);
+  const {
+    hasSavedPosition,
+    rememberCurrentPosition,
+    restoreSavedPosition,
+    savedItemKey,
+  } = useSectionListScroll(resolvedScrollKey, () => resetKey);
 
   const isScrollPositionRestored = ref(false);
 
@@ -334,6 +338,30 @@
     rememberCurrentPosition(getItemKey(item), itemViewportTop);
   }
 
+  const isSavedItemLoaded = computed(() => {
+    const itemKey = savedItemKey.value;
+
+    if (!itemKey) {
+      return true;
+    }
+
+    return items.some((item) => getItemKey(item) === itemKey);
+  });
+
+  const isScrollRestorePending = computed(() => {
+    return (
+      hasSavedPosition.value
+      && isSavedItemLoaded.value
+      && !isScrollPositionRestored.value
+    );
+  });
+
+  const scrollRestoreClasses = computed(() => {
+    return {
+      invisible: isScrollRestorePending.value,
+    };
+  });
+
   const virtualGridClasses = computed(() => {
     return GROUPED_LIST_GRID_CLASSES.slice(0, activeVirtualColumns.value);
   });
@@ -555,89 +583,91 @@
 </script>
 
 <template>
-  <div
-    v-if="shouldUseVirtual"
-    ref="virtualContainerElement"
-    class="relative"
-    :style="{ height: `${virtualTotalHeight}px` }"
-  >
-    <template v-if="isColumnCountReady">
-      <template
-        v-for="virtualItem in visibleVirtualRows"
-        :key="virtualItem.row.key"
-      >
-        <div
-          class="absolute inset-x-0"
-          :style="{ transform: `translateY(${virtualItem.top}px)` }"
+  <div :class="scrollRestoreClasses">
+    <div
+      v-if="shouldUseVirtual"
+      ref="virtualContainerElement"
+      class="relative"
+      :style="{ height: `${virtualTotalHeight}px` }"
+    >
+      <template v-if="isColumnCountReady">
+        <template
+          v-for="virtualItem in visibleVirtualRows"
+          :key="virtualItem.row.key"
         >
           <div
-            v-if="virtualItem.row.type === 'separator'"
-            class="flex items-center pb-2.5"
-            :style="{ height: `${separatorHeight}px` }"
+            class="absolute inset-x-0"
+            :style="{ transform: `translateY(${virtualItem.top}px)` }"
           >
-            <USeparator>
-              {{ getSeparatorText(virtualItem.row.groupKey) }}
-            </USeparator>
-          </div>
+            <div
+              v-if="virtualItem.row.type === 'separator'"
+              class="flex items-center pb-2.5"
+              :style="{ height: `${separatorHeight}px` }"
+            >
+              <USeparator>
+                {{ getSeparatorText(virtualItem.row.groupKey) }}
+              </USeparator>
+            </div>
 
-          <div
-            v-else
-            class="@container py-1.5"
-            :style="{ height: `${rowHeight}px` }"
-          >
-            <div :class="['grid gap-3', virtualGridClasses]">
-              <div
-                v-for="item in virtualItem.row.items"
-                :id="getItemElementId(item)"
-                :key="item.url"
-                @click.left.exact.capture="rememberListItem(item)"
-              >
-                <slot :item="item" />
+            <div
+              v-else
+              class="@container py-1.5"
+              :style="{ height: `${rowHeight}px` }"
+            >
+              <div :class="['grid gap-3', virtualGridClasses]">
+                <div
+                  v-for="item in virtualItem.row.items"
+                  :id="getItemElementId(item)"
+                  :key="item.url"
+                  @click.left.exact.capture="rememberListItem(item)"
+                >
+                  <slot :item="item" />
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </template>
       </template>
-    </template>
-  </div>
-
-  <PageGrid
-    v-else-if="!field"
-    :columns="columns"
-  >
-    <div
-      v-for="item in items"
-      :id="getItemElementId(item)"
-      :key="item.url"
-      @click.left.exact.capture="rememberListItem(item)"
-    >
-      <slot :item="item" />
     </div>
-  </PageGrid>
 
-  <div
-    v-else
-    class="flex flex-col gap-6"
-  >
-    <div
-      v-for="group in groupedItems"
-      :key="group.key"
-      class="flex flex-col gap-4"
+    <PageGrid
+      v-else-if="!field"
+      :columns="columns"
     >
-      <USeparator>
-        {{ getSeparatorText(group.key) }}
-      </USeparator>
+      <div
+        v-for="item in items"
+        :id="getItemElementId(item)"
+        :key="item.url"
+        @click.left.exact.capture="rememberListItem(item)"
+      >
+        <slot :item="item" />
+      </div>
+    </PageGrid>
 
-      <PageGrid :columns="columns">
-        <div
-          v-for="item in group.items"
-          :id="getItemElementId(item)"
-          :key="item.url"
-          @click.left.exact.capture="rememberListItem(item)"
-        >
-          <slot :item="item" />
-        </div>
-      </PageGrid>
+    <div
+      v-else
+      class="flex flex-col gap-6"
+    >
+      <div
+        v-for="group in groupedItems"
+        :key="group.key"
+        class="flex flex-col gap-4"
+      >
+        <USeparator>
+          {{ getSeparatorText(group.key) }}
+        </USeparator>
+
+        <PageGrid :columns="columns">
+          <div
+            v-for="item in group.items"
+            :id="getItemElementId(item)"
+            :key="item.url"
+            @click.left.exact.capture="rememberListItem(item)"
+          >
+            <slot :item="item" />
+          </div>
+        </PageGrid>
+      </div>
     </div>
   </div>
 </template>

@@ -51,8 +51,34 @@
     }),
   );
 
-  const { savedItemKey } = useSectionListScroll('bestiary', listResetKey);
+  const { hasSavedPosition, rememberCurrentPage, savedItemKey, savedPage } =
+    useSectionListScroll('bestiary', listResetKey);
+
   const isRestoringSavedPage = ref(false);
+
+  const firstCreaturePageSize = computed(() => {
+    return hasSavedPosition.value && typeof savedPage.value === 'number'
+      ? (savedPage.value + 1) * BESTIARY_LIST_PAGE_SIZE
+      : BESTIARY_LIST_PAGE_SIZE;
+  });
+
+  const isSavedCreatureLoaded = computed(() => {
+    const savedCreatureUrl = savedItemKey.value;
+
+    if (!savedCreatureUrl) {
+      return true;
+    }
+
+    return bestiary.value.some((creature) => creature.url === savedCreatureUrl);
+  });
+
+  const isSavedCreatureRestorePending = computed(() => {
+    return (
+      hasSavedPosition.value
+      && !isSavedCreatureLoaded.value
+      && hasNextPage.value
+    );
+  });
 
   function normalizeCreaturePage(
     response: CreatureSearchResponse | null | undefined,
@@ -72,6 +98,7 @@
 
   async function fetchCreaturePage(
     page: number,
+    size: number = BESTIARY_LIST_PAGE_SIZE,
   ): Promise<CreatureSearchPageResponse> {
     const response = await $fetch<CreatureSearchResponse>(
       '/api/v2/bestiary/search',
@@ -79,7 +106,7 @@
         method: 'GET',
         query: {
           page,
-          size: BESTIARY_LIST_PAGE_SIZE,
+          size,
           ...(search.value ? { search: search.value } : {}),
           ...filterQuery.value,
         },
@@ -94,17 +121,27 @@
     error,
     status,
     refresh,
-  } = await useAsyncData('bestiary-search-page', () => fetchCreaturePage(0), {
-    deep: false,
-    watch: [search, filterQuery],
-  });
+  } = await useAsyncData(
+    'bestiary-search-page',
+    () => fetchCreaturePage(0, firstCreaturePageSize.value),
+    {
+      deep: false,
+      watch: [search, filterQuery],
+    },
+  );
 
   watch(
     firstCreaturePage,
     (page) => {
       currentPage.value = 0;
       bestiary.value = page?.value ?? [];
-      hasNextPage.value = (page?.Count ?? 0) === BESTIARY_LIST_PAGE_SIZE;
+
+      currentPage.value = Math.max(
+        0,
+        Math.ceil(bestiary.value.length / BESTIARY_LIST_PAGE_SIZE) - 1,
+      );
+
+      hasNextPage.value = (page?.Count ?? 0) === firstCreaturePageSize.value;
     },
     { immediate: true },
   );
@@ -134,7 +171,7 @@
     if (
       !savedCreatureUrl
       || isRestoringSavedPage.value
-      || bestiary.value.some((creature) => creature.url === savedCreatureUrl)
+      || isSavedCreatureLoaded.value
     ) {
       return;
     }
@@ -142,10 +179,13 @@
     isRestoringSavedPage.value = true;
 
     try {
-      while (
-        hasNextPage.value
-        && !bestiary.value.some((creature) => creature.url === savedCreatureUrl)
-      ) {
+      while (hasNextPage.value && !isSavedCreatureLoaded.value) {
+        if (isLoadingMore.value) {
+          await until(isLoadingMore).toBe(false);
+
+          continue;
+        }
+
         await loadNextCreaturePage();
       }
     } finally {
@@ -157,6 +197,28 @@
     distance: BESTIARY_LIST_LOAD_MORE_DISTANCE,
     canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
   });
+
+  function rememberSavedCreaturePage(): void {
+    const savedCreatureUrl = savedItemKey.value;
+
+    if (!savedCreatureUrl) {
+      return;
+    }
+
+    const savedCreatureIndex = bestiary.value.findIndex((creature) => {
+      return creature.url === savedCreatureUrl;
+    });
+
+    if (savedCreatureIndex < 0) {
+      return;
+    }
+
+    rememberCurrentPage(
+      Math.floor(savedCreatureIndex / BESTIARY_LIST_PAGE_SIZE),
+    );
+  }
+
+  watch(savedItemKey, rememberSavedCreaturePage, { flush: 'sync' });
 
   watch(
     [bestiary, savedItemKey],
@@ -173,7 +235,12 @@
     const isBestiaryLoading =
       status.value !== 'success' && status.value !== 'error';
 
-    return isBestiaryLoading || isChallengeRatingOrderPending.value;
+    return (
+      isBestiaryLoading
+      || isChallengeRatingOrderPending.value
+      || isRestoringSavedPage.value
+      || isSavedCreatureRestorePending.value
+    );
   });
 </script>
 
