@@ -26,6 +26,7 @@
         <MulticlassLevelInfo
           v-if="detail.characterLevel && detail.multiclass"
           :character-level="detail.characterLevel"
+          :spellcasting-level="detail.spellcastingLevel"
           :multiclass="detail.multiclass || []"
         />
 

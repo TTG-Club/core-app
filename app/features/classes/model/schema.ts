@@ -164,6 +164,7 @@ const multiclassDetailResponseSchema: z.ZodType<MulticlassDetailResponse> =
     parent: classLinkResponseSchema.optional(),
     multiclass: z.array(classInMulticlassSchema).optional(),
     characterLevel: z.number(),
+    spellcastingLevel: z.number().optional(),
     multiclassProficiency: classMulticlassProficiencySchema.optional(),
   });
 

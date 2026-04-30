@@ -32,6 +32,7 @@ export interface MulticlassDetailResponse extends Omit<
 > {
   hitDice?: HitDice;
   characterLevel: number;
+  spellcastingLevel?: number;
   multiclassProficiency?: ClassMulticlassProficiency;
 }
 

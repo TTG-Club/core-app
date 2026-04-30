@@ -3,6 +3,7 @@
 
   interface Props {
     characterLevel: number;
+    spellcastingLevel?: number;
     multiclass: Array<ClassInMulticlass>;
   }
 
@@ -25,6 +26,24 @@
         </span>
 
         <span class="text-sm">{{ props.characterLevel }}</span>
+      </div>
+    </div>
+
+    <div
+      v-if="props.spellcastingLevel !== undefined"
+      :class="[
+        'w-full overflow-hidden bg-muted',
+        'rounded-lg border border-default',
+      ]"
+    >
+      <div
+        class="flex w-full flex-row items-center justify-between gap-2 px-4 py-1.5"
+      >
+        <span class="text-sm font-medium text-highlighted">
+          Уровень заклинателя:
+        </span>
+
+        <span class="text-sm">{{ props.spellcastingLevel }}</span>
       </div>
     </div>
 
