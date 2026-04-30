@@ -1,11 +1,57 @@
 <script setup lang="ts">
+  import type { HomeGreeting } from './model';
+
+  import { v4 as createUuid } from 'uuid';
+
+  import { USER_TOKEN_COOKIE } from '#shared/consts';
   import { MarkupRender } from '~ui/markup';
 
-  const { data: greeting } = await useAsyncData('home-greetings', () =>
-    $fetch<{ image: string; text: string; persona: string } | null>(
-      '/api/v2/notification',
-    ),
-  );
+  import {
+    GUEST_ID_HEADER,
+    GUEST_ID_STORAGE_KEY,
+    HOME_GREETING_API_URL,
+    parseHomeGreeting,
+  } from './model';
+
+  const { isLoggedIn } = useUser();
+  const userTokenCookie = useCookie<string | null>(USER_TOKEN_COOKIE);
+
+  const guestId = useLocalStorage(GUEST_ID_STORAGE_KEY, '', {
+    initOnMounted: true,
+    writeDefaults: false,
+  });
+
+  const greeting = shallowRef<HomeGreeting | null>(null);
+  const isGuest = computed(() => !isLoggedIn.value && !userTokenCookie.value);
+
+  const guestHeaders = computed<Record<string, string> | undefined>(() => {
+    if (!isGuest.value || !guestId.value) {
+      return undefined;
+    }
+
+    return {
+      [GUEST_ID_HEADER]: guestId.value,
+    };
+  });
+
+  /**
+   * Загружает приветствие и валидирует ответ API перед отрисовкой.
+   */
+  async function fetchHomeGreeting(): Promise<void> {
+    const response = await $fetch<unknown>(HOME_GREETING_API_URL, {
+      headers: guestHeaders.value,
+    });
+
+    greeting.value = parseHomeGreeting(response);
+  }
+
+  onMounted(() => {
+    if (isGuest.value && !guestId.value) {
+      guestId.value = createUuid();
+    }
+
+    void fetchHomeGreeting();
+  });
 </script>
 
 <template>
