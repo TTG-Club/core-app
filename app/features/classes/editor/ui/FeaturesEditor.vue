@@ -17,14 +17,14 @@
   const state = defineModel<Array<ClassFeatureCreate>>({ required: true });
 
   // Нормализует входящие данные: гарантирует наличие массива options у каждого умения.
-  // Необходимо для совместимости с данными API, где options может отсутствовать.
+  // Необходимо для совместимости с данными API, где options может отсутствовать или приходить null.
   // Guard предотвращает зацикливание: .map() всегда создаёт новый массив,
   // поэтому без проверки повторное присвоение state.value бесконечно триггерит вотчер.
   watch(
     state,
     (features) => {
       const needsNormalization = features.some(
-        (feature) => feature.options === undefined,
+        (feature) => feature.options === undefined || feature.options === null,
       );
 
       if (!needsNormalization) {
@@ -32,7 +32,9 @@
       }
 
       state.value = features.map((feature) =>
-        feature.options !== undefined ? feature : { ...feature, options: [] },
+        feature.options !== undefined && feature.options !== null
+          ? feature
+          : { ...feature, options: [] },
       );
     },
     { immediate: true, deep: false },
