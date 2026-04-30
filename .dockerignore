@@ -1,3 +1,7 @@
+# Git
+.git
+.github
+
 # Nuxt dev/build outputs
 .output
 .data
