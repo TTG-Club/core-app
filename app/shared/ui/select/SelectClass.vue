@@ -1,10 +1,26 @@
 <script setup lang="ts">
   import type { ClassLinkResponse } from '~classes/model';
 
-  const { multiple = false, disabled } = defineProps<{
-    disabled?: boolean;
-    multiple?: boolean;
-  }>();
+  interface ClassSelectItem {
+    description: string;
+    disabled: boolean;
+    label: string;
+    source: string;
+    value: string;
+  }
+
+  const props = withDefaults(
+    defineProps<{
+      disabled?: boolean;
+      excludedValues?: Array<string>;
+      multiple?: boolean;
+    }>(),
+    {
+      disabled: false,
+      excludedValues: () => [],
+      multiple: false,
+    },
+  );
 
   const model = defineModel<string | Array<string>>();
 
@@ -21,25 +37,19 @@
     return key;
   });
 
-  const { data, status, refresh } = await useAsyncData(
+  const {
+    data: classLinks,
+    status,
+    refresh,
+  } = await useAsyncData(
     fetchKey,
-    async () => {
-      const classesLinks = await $fetch<Array<ClassLinkResponse>>(
-        '/api/v2/classes/search',
-        {
-          method: 'get',
-          query: {
-            query: searchQuery.value || undefined,
-          },
+    () => {
+      return $fetch<Array<ClassLinkResponse>>('/api/v2/classes/search', {
+        method: 'get',
+        query: {
+          query: searchQuery.value || undefined,
         },
-      );
-
-      return classesLinks.map((classLink) => ({
-        label: classLink.name.rus,
-        value: classLink.url,
-        description: classLink.name.eng,
-        source: classLink.source.name.label,
-      }));
+      });
     },
     {
       watch: [searchQuery],
@@ -55,6 +65,16 @@
 
     await refresh();
   }, 250);
+
+  const selectItems = computed<Array<ClassSelectItem>>(() => {
+    return (classLinks.value ?? []).map((classLink) => ({
+      label: classLink.name.rus,
+      value: classLink.url,
+      description: classLink.name.eng,
+      source: classLink.source.name.label,
+      disabled: props.excludedValues.includes(classLink.url),
+    }));
+  });
 </script>
 
 <template>
@@ -62,10 +82,10 @@
     v-model="model"
     v-model:search-term="search"
     :loading="status === 'pending'"
-    :items="data"
-    :multiple="multiple"
-    :disabled="disabled"
-    :placeholder="`Выбери класс${multiple ? 'ы' : ''}`"
+    :items="selectItems"
+    :multiple="props.multiple"
+    :disabled="props.disabled"
+    :placeholder="`Выбери класс${props.multiple ? 'ы' : ''}`"
     label-key="label"
     value-key="value"
     ignore-filter
@@ -74,12 +94,12 @@
     :ui="{ itemDescription: 'text-xs text-secondary' }"
     @update:open="handleDropdownOpening"
   >
-    <template #item-trailing="{ item }">
+    <template #item-trailing="{ item: classItem }">
       <UBadge
         variant="subtle"
         color="neutral"
       >
-        {{ item.source }}
+        {{ classItem.source }}
       </UBadge>
     </template>
   </USelectMenu>
