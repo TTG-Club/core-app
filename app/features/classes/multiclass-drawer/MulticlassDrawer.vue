@@ -459,18 +459,20 @@
           </span>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div
+          class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]"
+        >
           <span class="min-w-20 text-sm text-secondary">Класс:</span>
 
           <SelectClass
             v-model="currentClassUrl"
-            class="flex-1"
+            class="min-w-0"
           />
 
           <SelectLevel
             v-model="currentLevel"
             :max="maxCurrentLevel"
-            class="w-36"
+            class="col-start-2 w-36 sm:col-start-auto"
           />
         </div>
 
@@ -507,18 +509,20 @@
           </span>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div
+          class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]"
+        >
           <span class="min-w-20 text-sm text-secondary">Класс:</span>
 
           <SelectClass
             v-model="selectedClassUrl"
-            class="flex-1"
+            class="min-w-0"
           />
 
           <SelectLevel
             v-model="selectedLevel"
             :max="maxSelectedLevel"
-            class="w-36"
+            class="col-start-2 w-36 sm:col-start-auto"
           />
         </div>
 
@@ -565,18 +569,20 @@
           </UButton>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div
+          class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]"
+        >
           <span class="min-w-20 text-sm text-secondary">Класс:</span>
 
           <SelectClass
             v-model="additionalClass.classUrl"
-            class="flex-1"
+            class="min-w-0"
           />
 
           <SelectLevel
             v-model="additionalClass.level"
             :max="getMaxLevelForAdditionalClass(additionalClass.id)"
-            class="w-36"
+            class="col-start-2 w-36 sm:col-start-auto"
           />
         </div>
 

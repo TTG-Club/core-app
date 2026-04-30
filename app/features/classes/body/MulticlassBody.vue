@@ -5,6 +5,7 @@
     ClassProficiency,
     FeatureCollapse,
     MulticlassLevelInfo,
+    MulticlassSpellSlots,
     MulticlassTable,
     StatsBlock,
   } from './ui';
@@ -45,6 +46,11 @@
             :caster-type="detail.casterType"
             :features="detail.features"
             :multiclass="detail.multiclass"
+          />
+
+          <MulticlassSpellSlots
+            :caster-type="detail.casterType"
+            :spellcasting-level="detail.spellcastingLevel"
           />
         </div>
 
