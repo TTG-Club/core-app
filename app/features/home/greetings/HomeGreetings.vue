@@ -1,9 +1,57 @@
 <script setup lang="ts">
-  const { data: greeting } = await useAsyncData('home-greetings', () =>
-    $fetch<{ image: string; text: string; persona: string } | null>(
-      '/api/v2/notification',
-    ),
-  );
+  import type { HomeGreeting } from './model';
+
+  import { v4 as createUuid } from 'uuid';
+
+  import { USER_TOKEN_COOKIE } from '#shared/consts';
+  import { MarkupRender } from '~ui/markup';
+
+  import {
+    GUEST_ID_HEADER,
+    GUEST_ID_STORAGE_KEY,
+    HOME_GREETING_API_URL,
+    parseHomeGreeting,
+  } from './model';
+
+  const { isLoggedIn } = useUser();
+  const userTokenCookie = useCookie<string | null>(USER_TOKEN_COOKIE);
+
+  const guestId = useLocalStorage(GUEST_ID_STORAGE_KEY, '', {
+    initOnMounted: true,
+    writeDefaults: false,
+  });
+
+  const greeting = shallowRef<HomeGreeting | null>(null);
+  const isGuest = computed(() => !isLoggedIn.value && !userTokenCookie.value);
+
+  const guestHeaders = computed<Record<string, string> | undefined>(() => {
+    if (!isGuest.value || !guestId.value) {
+      return undefined;
+    }
+
+    return {
+      [GUEST_ID_HEADER]: guestId.value,
+    };
+  });
+
+  /**
+   * Загружает приветствие и валидирует ответ API перед отрисовкой.
+   */
+  async function fetchHomeGreeting(): Promise<void> {
+    const response = await $fetch<unknown>(HOME_GREETING_API_URL, {
+      headers: guestHeaders.value,
+    });
+
+    greeting.value = parseHomeGreeting(response);
+  }
+
+  onMounted(() => {
+    if (isGuest.value && !guestId.value) {
+      guestId.value = createUuid();
+    }
+
+    void fetchHomeGreeting();
+  });
 </script>
 
 <template>
@@ -11,7 +59,6 @@
     v-if="greeting"
     class="flex w-10/12 items-center justify-center"
   >
-    <!-- eslint-disable-next-line vue/no-v-html -- текст контролируется только администраторами -->
     <div
       :class="[
         'relative flex items-center justify-center',
@@ -21,8 +68,11 @@
         'font-semibold text-black max-sm:text-xs',
         $style.message,
       ]"
-      v-html="greeting.text"
-    />
+    >
+      <span class="text-center">
+        <MarkupRender :render-node="greeting.text" />
+      </span>
+    </div>
 
     <img
       :src="greeting.image"

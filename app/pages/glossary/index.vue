@@ -41,6 +41,13 @@
       watch: [search, filterQuery],
     },
   );
+
+  const listResetKey = computed(() =>
+    JSON.stringify({
+      filter: filterQuery.value,
+      search: search.value ?? '',
+    }),
+  );
 </script>
 
 <template>
@@ -77,6 +84,7 @@
         <GroupedList
           v-else-if="status === 'success' && glossaryItems?.length"
           :items="glossaryItems"
+          :reset-key="listResetKey"
           field="tagCategory"
         >
           <template #default="{ item }">

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ClassColumnCreate } from '~classes/model';
+  import type { ClassColumnCreate } from '../../model';
 
   import { EditorArrayControls } from '~ui/editor';
 

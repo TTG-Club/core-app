@@ -49,7 +49,7 @@
     </div>
 
     <div
-      class="order-last xl:order-none xl:col-start-6 xl:row-span-2 xl:row-start-1"
+      class="order-last xl:order-0 xl:col-start-6 xl:row-span-2 xl:row-start-1"
     >
       <LinkTo5e14 class="h-full" />
     </div>

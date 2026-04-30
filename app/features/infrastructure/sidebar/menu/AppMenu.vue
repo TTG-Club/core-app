@@ -1,9 +1,33 @@
 <script setup lang="ts">
+  import { MulticlassDrawer } from '~classes/multiclass-drawer';
   import { HamburgerIcon, SvgLogo } from '~ui/icon';
 
   import { SidebarPopover } from '../popover';
   import { MENU_LINKS, MENU_SECTIONS, MENU_SUPPORT } from './model';
   import { MenuContacts, MenuSection, MenuSupport } from './ui';
+
+  const overlay = useOverlay();
+
+  const multiclassDrawer = overlay.create(MulticlassDrawer, {
+    props: {
+      url: '',
+      name: {
+        rus: '',
+        eng: '',
+      },
+      parent: undefined,
+      onClose: () => multiclassDrawer.close(),
+    },
+    destroyOnClose: true,
+  });
+
+  const ACTION_HANDLERS: Record<string, () => void> = {
+    'open-multiclass': () => multiclassDrawer.open(),
+  };
+
+  function handleMenuAction(actionId: string) {
+    ACTION_HANDLERS[actionId]?.();
+  }
 </script>
 
 <template>
@@ -46,6 +70,7 @@
           v-for="section in MENU_SECTIONS"
           :key="section.label"
           v-bind="section"
+          @action="handleMenuAction"
         />
       </div>
 

@@ -22,6 +22,38 @@ export interface ClassDetailResponse {
   features: Array<ClassFeature>;
   hasSubclasses?: boolean;
   parent?: ClassLinkResponse;
+  multiclass?: Array<ClassInMulticlass>;
+}
+
+// Расширенный тип для ответа API мультикласса
+export interface MulticlassDetailResponse extends Omit<
+  ClassDetailResponse,
+  'hitDice'
+> {
+  hitDice?: HitDice;
+  characterLevel: number;
+  spellcastingLevel?: number;
+  multiclassProficiency?: ClassMulticlassProficiency;
+}
+
+// Типы для запроса к API мультикласса
+export interface AdditionalClassItem {
+  url: string;
+  level: number;
+  subclass?: string;
+}
+
+export interface MainClassData {
+  url: string;
+  level: number;
+  subclass?: string;
+}
+
+export interface MulticlassRequest {
+  class: string;
+  level: number;
+  subclass?: string;
+  classes: Array<AdditionalClassItem>;
 }
 
 export interface ClassTable {
@@ -36,6 +68,7 @@ export interface ClassFeature {
   key: string;
   level: Level;
   name: string;
+  optionsName?: string;
   description: RenderNode;
   additional: string;
   isSubclass?: boolean;
@@ -45,6 +78,17 @@ export interface ClassFeature {
     description: RenderNode;
     additional: string;
   }>;
+  options?: Array<ClassFeatureOption>;
+}
+
+export interface ClassFeatureOption {
+  key: string;
+  name: NameResponse;
+  description: RenderNode;
+  additional?: RenderNode;
+  prerequisite?: RenderNode;
+  requiredClassLevel?: Level;
+  hideInSubclasses?: boolean;
 }
 
 export interface ClassProficiency {
@@ -54,11 +98,25 @@ export interface ClassProficiency {
   skill: string;
 }
 
+export interface ClassMulticlassProficiency {
+  armor: string;
+  weapon: string;
+  toolProficiency?: string;
+  skills?: number;
+}
+
 export interface HitDice {
   label: string;
   value: string;
   maxValue: number;
   avg: number;
+}
+
+export interface ClassInMulticlass {
+  class: string;
+  subclass?: string;
+  level: number;
+  hitDice?: string;
 }
 
 export enum CasterType {
@@ -67,4 +125,5 @@ export enum CasterType {
   HALF = 'HALF',
   FULL = 'FULL',
   PACT = 'PACT',
+  MULTICLASS = 'MULTICLASS',
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { AbilityTemplateCreate } from '~classes/model';
+  import type { AbilityTemplateCreate } from '../../../model';
 
   import { ABILITIES } from '~/shared/types';
 

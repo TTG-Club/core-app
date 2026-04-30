@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ClassCreate, ClassDetailResponse } from '~classes/model';
+  import type { ClassCreate, ClassDetailResponse } from '../model';
 
   import { ClassBody } from '~classes/body';
   import { UiDrawer } from '~ui/drawer';

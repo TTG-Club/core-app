@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ClassColumnScalingCreate } from '~classes/model';
+  import type { ClassColumnScalingCreate } from '../../../model';
 
   import { EditorArrayControls } from '~ui/editor';
   import { SelectLevel } from '~ui/select';

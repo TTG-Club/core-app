@@ -2,7 +2,8 @@
   import type { Cell, ColumnDef, Header } from '@tanstack/vue-table';
 
   import type { Level } from '~/shared/types';
-  import type { ClassDetailResponse, ClassFeature } from '~classes/model';
+
+  import type { ClassDetailResponse, ClassFeature } from '../../../model';
 
   import {
     FlexRender,
@@ -14,8 +15,8 @@
 
   import { ULink } from '#components';
   import { LEVELS } from '~/shared/consts';
-  import { CasterType } from '~classes/model';
 
+  import { CasterType } from '../../../model';
   import {
     PACT_CASTER_SPELL_SLOTS_COUNT,
     PACT_CASTER_SPELL_SLOTS_LEVEL,
@@ -96,8 +97,8 @@
     }
 
     const found = maxBy(
-      scalingArray.filter((s) => s.level <= level),
-      (o) => o.level,
+      scalingArray.filter((scalingValue) => scalingValue.level <= level),
+      (scalingValue) => scalingValue.level,
     );
 
     return found?.value ?? '—';
@@ -111,7 +112,7 @@
     const row: ClassTableRow = {
       level,
       proficiencyBonus: getProficiencyBonus(level),
-      features: features.value.filter((f) => f.level === level) || [],
+      features: features.value.filter((feature) => feature.level === level),
     };
 
     if (props.table && Array.isArray(props.table)) {

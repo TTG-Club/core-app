@@ -2,7 +2,7 @@
   import type {
     AbilityDelimiter,
     ClassPrimaryCharacteristicsCreate,
-  } from '~classes/model';
+  } from '../../../model';
 
   import { SelectAbilities } from '~ui/select';
 
