@@ -1,11 +1,10 @@
 <script setup lang="ts">
-  import type { SelectMenuItem } from '#ui/components/SelectMenu.vue';
   import type { NameResponse } from '~/shared/types';
 
   import type { ClassLinkResponse } from '../model';
 
   import { UiDrawer } from '~ui/drawer';
-  import { SelectClass, SelectLevel } from '~ui/select';
+  import { SelectClass, SelectLevel, SelectSubclass } from '~ui/select';
 
   import {
     MULTICLASS_DRAWER_CURRENT_CLASS_ID,
@@ -116,28 +115,6 @@
     return new Set(selectedClassUrls).size !== selectedClassUrls.length;
   });
 
-  function fetchSubclassLinks(
-    classUrl: string,
-  ): Promise<Array<ClassLinkResponse>> {
-    return $fetch<Array<ClassLinkResponse>>(
-      `/api/v2/classes/${classUrl}/subclasses`,
-    );
-  }
-
-  function createSubclassSelectItems(
-    subclasses: Array<ClassLinkResponse> | undefined,
-  ): Array<SelectMenuItem> {
-    if (!subclasses?.length) {
-      return [];
-    }
-
-    return subclasses.map((subclass) => ({
-      ...subclass,
-      label: `${subclass.name.rus} [${subclass.name.eng}]`,
-      value: subclass.url,
-    }));
-  }
-
   function resetAdditionalSubclass(classId: string) {
     const additionalClass = additionalClasses.value.find(
       (additionalClassItem) => additionalClassItem.id === classId,
@@ -151,85 +128,6 @@
   function handleRemoveAdditionalClass(classId: string) {
     removeAdditionalClass(classId);
   }
-
-  // Получение подклассов для основного класса
-  const { data: currentClassSubclasses } = await useAsyncData<
-    Array<ClassLinkResponse>
-  >(
-    computed(() => `class-${currentClassUrl.value}-subclasses`),
-    () => {
-      if (!currentClassUrl.value) {
-        return Promise.resolve([]);
-      }
-
-      return fetchSubclassLinks(currentClassUrl.value);
-    },
-    {
-      server: false,
-      watch: [currentClassUrl],
-    },
-  );
-
-  // Получение подклассов для выбранного класса
-  const { data: availableSubclasses } = await useAsyncData<
-    Array<ClassLinkResponse>
-  >(
-    computed(() => `class-${selectedClassUrl.value || ''}-subclasses`),
-    () => {
-      if (!selectedClassUrl.value) {
-        return Promise.resolve([]);
-      }
-
-      return fetchSubclassLinks(selectedClassUrl.value);
-    },
-    {
-      server: false,
-      watch: [selectedClassUrl],
-    },
-  );
-
-  // Хранилище подклассов для дополнительных классов
-  const additionalClassSubclasses = ref<
-    Record<string, Array<ClassLinkResponse> | undefined>
-  >({});
-
-  // Загрузка подклассов для дополнительного класса
-  async function loadSubclassesForAdditionalClass(
-    classId: string,
-    classUrl: string | undefined,
-  ) {
-    if (!classUrl) {
-      additionalClassSubclasses.value[classId] = [];
-
-      return;
-    }
-
-    try {
-      additionalClassSubclasses.value[classId] =
-        await fetchSubclassLinks(classUrl);
-    } catch {
-      additionalClassSubclasses.value[classId] = [];
-    }
-  }
-
-  // Получение подклассов для дополнительного класса в формате SelectMenu
-  function getAdditionalClassSubclassItems(
-    classId: string,
-  ): Array<SelectMenuItem> {
-    const subclasses = additionalClassSubclasses.value[classId];
-
-    return createSubclassSelectItems(subclasses);
-  }
-
-  // Преобразование подклассов основного класса в формат для SelectMenu
-  const currentClassSubclassItems = computed<Array<SelectMenuItem>>(() => {
-    return createSubclassSelectItems(currentClassSubclasses.value);
-  });
-
-  // Преобразование подклассов в формат для SelectMenu
-  const subclassItems = computed<Array<SelectMenuItem>>(() => {
-    return createSubclassSelectItems(availableSubclasses.value);
-  });
 
   // Вычисляем сумму уровней дополнительных классов
   const sumAdditionalLevels = computed(() => {
@@ -329,49 +227,8 @@
 
     if (index !== -1) {
       additionalClasses.value.splice(index, 1);
-
-      // Используем новый объект без удаляемого свойства
-      const newSubclasses: Record<
-        string,
-        Array<ClassLinkResponse> | undefined
-      > = {};
-
-      Object.keys(additionalClassSubclasses.value).forEach((key) => {
-        if (key !== id) {
-          const subclasses = additionalClassSubclasses.value[key];
-
-          if (subclasses !== undefined) {
-            newSubclasses[key] = subclasses;
-          }
-        }
-      });
-
-      additionalClassSubclasses.value = newSubclasses;
     }
   }
-
-  // Отслеживание изменений classUrl для дополнительных классов
-  watch(
-    () =>
-      additionalClasses.value.map((additionalClass) => ({
-        id: additionalClass.id,
-        classUrl: additionalClass.classUrl,
-      })),
-    (newValues, oldValues) => {
-      newValues.forEach(({ id, classUrl }) => {
-        const oldValue = oldValues?.find(
-          (previousValue) => previousValue.id === id,
-        );
-
-        if (classUrl && (!oldValue || oldValue.classUrl !== classUrl)) {
-          loadSubclassesForAdditionalClass(id, classUrl);
-        } else if (!classUrl) {
-          additionalClassSubclasses.value[id] = [];
-        }
-      });
-    },
-    { deep: true },
-  );
 
   // Сброс подкласса при смене класса для дополнительных классов
   watch(
@@ -542,23 +399,10 @@
         <div class="flex items-center gap-3">
           <span class="min-w-20 text-sm text-secondary">Подкласс:</span>
 
-          <USelectMenu
+          <SelectSubclass
             v-model="currentSubclassUrl"
-            :items="currentClassSubclassItems"
-            :placeholder="
-              currentClassSubclassItems.length === 0
-                ? 'Нет подклассов'
-                : 'Выбери подкласс'
-            "
-            :disabled="
-              !currentClassUrl
-              || currentClassSubclassItems.length === 0
-              || currentLevel <= 2
-            "
-            label-key="label"
-            value-key="value"
-            clearable
-            searchable
+            :class-url="currentClassUrl"
+            :disabled="!currentClassUrl || currentLevel <= 2"
             class="flex-1"
           />
         </div>
@@ -593,19 +437,10 @@
         <div class="flex items-center gap-3">
           <span class="min-w-20 text-sm text-secondary">Подкласс:</span>
 
-          <USelectMenu
+          <SelectSubclass
             v-model="selectedSubclassUrl"
-            :items="subclassItems"
-            :placeholder="'Выбери подкласс'"
-            :disabled="
-              !selectedClassUrl
-              || subclassItems.length === 0
-              || selectedLevel <= 2
-            "
-            label-key="label"
-            value-key="value"
-            clearable
-            searchable
+            :class-url="selectedClassUrl"
+            :disabled="!selectedClassUrl || selectedLevel <= 2"
             class="flex-1"
           />
         </div>
@@ -654,20 +489,10 @@
         <div class="flex items-center gap-3">
           <span class="min-w-20 text-sm text-secondary">Подкласс:</span>
 
-          <USelectMenu
+          <SelectSubclass
             v-model="additionalClass.subclassUrl"
-            :items="getAdditionalClassSubclassItems(additionalClass.id)"
-            :placeholder="'Выбери подкласс'"
-            :disabled="
-              !additionalClass.classUrl
-              || getAdditionalClassSubclassItems(additionalClass.id).length
-                === 0
-              || additionalClass.level <= 2
-            "
-            label-key="label"
-            value-key="value"
-            clearable
-            searchable
+            :class-url="additionalClass.classUrl"
+            :disabled="!additionalClass.classUrl || additionalClass.level <= 2"
             class="flex-1"
           />
         </div>
