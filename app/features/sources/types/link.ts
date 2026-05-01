@@ -5,5 +5,4 @@ export interface SourceLinkResponse {
   name: NameResponse;
   source: SourceResponse;
   image: string;
-  tags: string;
 }
