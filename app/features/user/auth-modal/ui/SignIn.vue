@@ -15,7 +15,10 @@
   });
 
   const { execute, status, error } = useFetch('/api/auth/sign-in', {
-    body: computed(() => state),
+    body: computed(() => ({
+      login: state.usernameOrEmail,
+      password: state.password,
+    })),
     method: 'post',
     watch: false,
     retry: false,

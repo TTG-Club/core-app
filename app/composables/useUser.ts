@@ -12,7 +12,7 @@ export function useUser() {
     clear,
   } = useAsyncData<UserProfile | null>(
     'user-profile',
-    () => requestFetch('/api/user/profile'),
+    () => requestFetch('/api/auth/me'),
     { dedupe: 'defer', lazy: true, immediate: false },
   );
 
