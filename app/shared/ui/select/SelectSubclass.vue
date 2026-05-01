@@ -1,29 +1,65 @@
 <script setup lang="ts">
   import type { ClassLinkResponse } from '~classes/model';
 
+  import {
+    SELECT_DROPDOWN_DEBOUNCE_MS,
+    SUBCLASS_SELECT_BASE_KEY,
+    SUBCLASS_SELECT_MULTIPLE_PLACEHOLDER_SUFFIX,
+    SUBCLASS_SELECT_PLACEHOLDER,
+    SUBCLASSES_BY_CLASS_ENDPOINT_PREFIX,
+    SUBCLASSES_BY_CLASS_ENDPOINT_SUFFIX,
+    SUBCLASSES_ENDPOINT,
+  } from './constants';
+
   interface SubclassSelectItem {
-    label: string;
-    value: string;
     description: string;
+    label: string;
     source: string;
+    value: string;
   }
 
-  const { multiple = false, disabled } = defineProps<{
-    disabled?: boolean;
-    multiple?: boolean;
-  }>();
+  const props = withDefaults(
+    defineProps<{
+      classUrl?: string;
+      disabled?: boolean;
+      multiple?: boolean;
+    }>(),
+    {
+      classUrl: undefined,
+      disabled: false,
+      multiple: false,
+    },
+  );
 
   const model = defineModel<string | Array<string>>();
 
-  const { data, status, refresh } = await useAsyncData<SubclassSelectItem[]>(
-    'subclasses-select',
-    async () => {
-      const classesLinks = await $fetch<Array<ClassLinkResponse>>(
-        '/api/v2/classes/subclasses',
+  const fetchKey = computed(() => {
+    if (props.classUrl) {
+      return `${SUBCLASS_SELECT_BASE_KEY}-${props.classUrl}`;
+    }
+
+    return SUBCLASS_SELECT_BASE_KEY;
+  });
+
+  function fetchSubclassLinks(): Promise<Array<ClassLinkResponse>> {
+    if (props.classUrl) {
+      return $fetch<Array<ClassLinkResponse>>(
+        `${SUBCLASSES_BY_CLASS_ENDPOINT_PREFIX}/${props.classUrl}${SUBCLASSES_BY_CLASS_ENDPOINT_SUFFIX}`,
         { method: 'get' },
       );
+    }
 
-      return classesLinks.map((classLink) => ({
+    return $fetch<Array<ClassLinkResponse>>(SUBCLASSES_ENDPOINT, {
+      method: 'get',
+    });
+  }
+
+  const { data, status, refresh } = await useAsyncData<SubclassSelectItem[]>(
+    fetchKey,
+    async () => {
+      const classLinks = await fetchSubclassLinks();
+
+      return classLinks.map((classLink) => ({
         label: classLink.name.rus,
         value: classLink.url,
         description: classLink.name.eng,
@@ -33,6 +69,7 @@
     {
       dedupe: 'defer',
       lazy: true,
+      watch: [() => props.classUrl],
     },
   );
 
@@ -42,7 +79,15 @@
     }
 
     await refresh();
-  }, 250);
+  }, SELECT_DROPDOWN_DEBOUNCE_MS);
+
+  const placeholder = computed(() => {
+    if (props.multiple) {
+      return `${SUBCLASS_SELECT_PLACEHOLDER}${SUBCLASS_SELECT_MULTIPLE_PLACEHOLDER_SUFFIX}`;
+    }
+
+    return SUBCLASS_SELECT_PLACEHOLDER;
+  });
 </script>
 
 <template>
@@ -50,9 +95,9 @@
     v-model="model"
     :loading="status === 'pending'"
     :items="data"
-    :multiple="multiple"
-    :disabled="disabled"
-    :placeholder="`Выбери подкласс${multiple ? 'ы' : ''}`"
+    :multiple="props.multiple"
+    :disabled="props.disabled"
+    :placeholder="placeholder"
     label-key="label"
     value-key="value"
     clearable
