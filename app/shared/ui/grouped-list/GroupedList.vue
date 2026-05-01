@@ -335,6 +335,7 @@
     const itemElement = getSavedItemElement(getItemKey(item));
     const itemViewportTop = itemElement?.getBoundingClientRect().top;
 
+    isScrollPositionRestored.value = true;
     rememberCurrentPosition(getItemKey(item), itemViewportTop);
   }
 
