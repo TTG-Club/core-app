@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { UButton } from '#components';
 
-  import { SignIn, SignUp } from './ui';
+  import { ChangePassword, SignIn, SignUp } from './ui';
 
   const enum FormType {
     SIGN_IN = 'signIn',
@@ -19,9 +19,10 @@
 
   const isSignIn = computed(() => formType.value === FormType.SIGN_IN);
   const isSignUp = computed(() => formType.value === FormType.SIGN_UP);
-  // const isChangePassword = computed(
-  //   () => formType.value === FormType.CHANGE_PASSWORD,
-  // );
+
+  const isChangePassword = computed(
+    () => formType.value === FormType.CHANGE_PASSWORD,
+  );
 
   function close() {
     opened.value = false;
@@ -44,8 +45,8 @@
           icon: 'tabler:user',
           label: 'Авторизоваться',
           variant: 'ghost',
-          onClick: (e) => {
-            e?.stopPropagation();
+          onClick: (event) => {
+            event?.stopPropagation();
 
             opened.value = true;
 
@@ -86,6 +87,11 @@
 
           <SignUp
             v-else-if="isSignUp"
+            @switch:sign-in="formType = FormType.SIGN_IN"
+          />
+
+          <ChangePassword
+            v-else-if="isChangePassword"
             @switch:sign-in="formType = FormType.SIGN_IN"
           />
         </div>

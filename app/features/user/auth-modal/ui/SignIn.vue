@@ -1,6 +1,6 @@
 <script setup lang="ts">
   const emit = defineEmits<{
-    (e: 'switch:sign-up' | 'switch:change-password' | 'close'): void;
+    (event: 'switch:sign-up' | 'switch:change-password' | 'close'): void;
   }>();
 
   const { fetch } = useUser();
@@ -130,7 +130,7 @@
         <UButton
           class="md:w-auto"
           variant="soft"
-          disabled
+          :disabled="inProgress"
           block
           @click.left.exact.prevent="$emit('switch:change-password')"
         >
