@@ -20,12 +20,14 @@
 </script>
 
 <template>
-  <UBadge
-    :style="{ marginInlineEnd: 0 }"
-    :color="tagColor"
-    variant="subtle"
-    size="sm"
-  >
-    {{ group.label }}
-  </UBadge>
+  <UTooltip :text="group.rus">
+    <UBadge
+      :style="{ marginInlineEnd: 0 }"
+      :color="tagColor"
+      variant="subtle"
+      size="sm"
+    >
+      {{ group.label }}
+    </UBadge>
+  </UTooltip>
 </template>

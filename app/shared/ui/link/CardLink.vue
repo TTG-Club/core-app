@@ -71,6 +71,7 @@
       <SourceTag
         :source="source"
         class="absolute top-2 right-2"
+        show-tooltip
       />
     </div>
 
@@ -102,6 +103,7 @@
           <SourceTag
             v-if="isImageHidden"
             :source="source"
+            show-tooltip
           />
         </div>
 
