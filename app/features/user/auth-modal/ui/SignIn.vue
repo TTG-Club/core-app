@@ -1,6 +1,6 @@
 <script setup lang="ts">
   const emit = defineEmits<{
-    (e: 'switch:sign-up' | 'switch:change-password' | 'close'): void;
+    (event: 'switch:sign-up' | 'switch:change-password' | 'close'): void;
   }>();
 
   const { fetch } = useUser();
@@ -15,7 +15,10 @@
   });
 
   const { execute, status, error } = useFetch('/api/auth/sign-in', {
-    body: computed(() => state),
+    body: computed(() => ({
+      login: state.usernameOrEmail,
+      password: state.password,
+    })),
     method: 'post',
     watch: false,
     retry: false,
@@ -127,7 +130,7 @@
         <UButton
           class="md:w-auto"
           variant="soft"
-          disabled
+          :disabled="inProgress"
           block
           @click.left.exact.prevent="$emit('switch:change-password')"
         >

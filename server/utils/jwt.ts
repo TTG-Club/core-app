@@ -2,8 +2,10 @@ import type { H3Event } from 'h3';
 
 import { jwtVerify } from 'jose';
 
+import { getAuthSecrets } from './secrets';
+
 export async function verifyJwt(token: string) {
-  const { secret } = getApiSecrets();
+  const { secret } = getAuthSecrets();
   const secretKey = new TextEncoder().encode(secret);
 
   const { payload } = await jwtVerify<AuthJwtPayload>(token, secretKey);

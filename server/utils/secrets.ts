@@ -2,7 +2,13 @@ export function getSecrets() {
   return {
     s3: getS3Secrets(),
     api: getApiSecrets(),
+    auth: getAuthSecrets(),
   };
+}
+
+interface AuthSecrets {
+  secret: string;
+  url: string;
 }
 
 // Получение секретов S3
@@ -44,5 +50,24 @@ export function getApiSecrets() {
     url,
     token,
     secret,
+  };
+}
+
+/**
+ * Возвращает настройки внешнего сервиса аутентификации.
+ */
+export function getAuthSecrets(): AuthSecrets {
+  const {
+    NITRO_AUTH_API_URL: authApiUrl = '',
+    NITRO_AUTH_JWT_SECRET: authJwtSecret = '',
+  } = process.env;
+
+  if (!authApiUrl || !authJwtSecret) {
+    throw new Error('[AUTH] Variables are not set');
+  }
+
+  return {
+    secret: authJwtSecret,
+    url: authApiUrl,
   };
 }

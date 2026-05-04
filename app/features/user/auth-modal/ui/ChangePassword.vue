@@ -1,49 +1,59 @@
 <script setup lang="ts">
-  defineEmits<{
-    (e: 'switch:sign-in'): void;
+  const emit = defineEmits<{
+    (event: 'switch:sign-in'): void;
   }>();
 
-  const success = ref(false);
-  const inProgress = ref(false);
-  const showPwd = ref(false);
+  const toast = useToast();
 
   const state = reactive({
-    usernameOrEmail: '',
-    password: '',
-    remember: true,
+    email: '',
   });
 
-  const rules = {
-    usernameOrEmail: (value: string) => {
-      if (!value) {
-        return 'Поле обязательно для заполнения';
-      }
-
-      if (value.includes(' ')) {
-        return 'Поле не должно содержать пробелы';
-      }
-
-      return true;
+  const { execute, status, error } = useFetch(
+    '/api/auth/password/reset-request',
+    {
+      body: computed(() => ({
+        email: state.email,
+      })),
+      immediate: false,
+      method: 'POST',
+      retry: false,
+      watch: false,
     },
-    password: (value: string) => {
-      if (!value) {
-        return 'Поле обязательно для заполнения';
-      }
+  );
 
-      if (value.includes(' ')) {
-        return 'Поле не должно содержать пробелы';
-      }
+  const inProgress = computed(() => status.value === 'pending');
+  const success = computed(() => status.value === 'success');
 
-      return true;
-    },
-  };
+  async function onSubmit() {
+    await execute();
 
-  function onSubmit() {}
+    if (error.value) {
+      toast.add({
+        title: 'Ошибка восстановления пароля',
+        description: error.value.data.message,
+        color: 'error',
+        icon: 'tabler:user-exclamation',
+      });
+
+      return;
+    }
+
+    toast.add({
+      title: 'Письмо отправлено',
+      description:
+        'Если почта есть в системе, мы отправили ссылку для сброса пароля.',
+      color: 'success',
+      icon: 'tabler:mail-check',
+    });
+
+    emit('switch:sign-in');
+  }
 </script>
 
 <template>
   <div class="flex flex-col gap-6">
-    <h4 class="text-2xl">Изменение пароля</h4>
+    <h4 class="text-2xl">Восстановление пароля</h4>
 
     <UForm
       class="flex flex-col gap-4"
@@ -51,46 +61,15 @@
       @submit.prevent.stop="onSubmit"
       @keyup.enter.exact.prevent.stop="onSubmit"
     >
-      <UFormField
-        name="usernameOrEmail"
-        :validate="rules.usernameOrEmail"
-      >
+      <UFormField name="email">
         <UInput
-          v-model="state.usernameOrEmail"
+          v-model="state.email"
           autocapitalize="off"
-          autocomplete="username"
+          autocomplete="email"
           autocorrect="off"
-          placeholder="Логин или электронная почта"
+          placeholder="Электронная почта"
           autofocus
         />
-      </UFormField>
-
-      <UFormField
-        name="password"
-        :validate="rules.password"
-      >
-        <UInput
-          v-model="state.password"
-          autocapitalize="off"
-          autocomplete="current-password"
-          autocorrect="off"
-          placeholder="Пароль"
-          :type="showPwd ? 'text' : 'password'"
-          :ui="{ trailing: 'pe-1' }"
-        >
-          <template #trailing>
-            <UButton
-              color="neutral"
-              variant="link"
-              size="sm"
-              :icon="showPwd ? 'tabler:eye-off' : 'tabler:eye-filled'"
-              :aria-label="showPwd ? 'Скрыть пароль' : 'Показать пароль'"
-              :aria-pressed="showPwd"
-              aria-controls="password"
-              @click.left.exact.prevent="showPwd = !showPwd"
-            />
-          </template>
-        </UInput>
       </UFormField>
 
       <div class="flex flex-col gap-2 md:flex-row">
@@ -101,7 +80,7 @@
           block
           @click.left.exact.prevent="onSubmit"
         >
-          Изменить пароль
+          Отправить письмо
         </UButton>
 
         <UButton
