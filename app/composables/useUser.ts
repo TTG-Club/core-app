@@ -7,6 +7,7 @@ export function useUser() {
 
   const {
     data: user,
+    error,
     execute,
     pending,
     clear,
@@ -33,8 +34,8 @@ export function useUser() {
 
       clear();
       redirectIfNeeded();
-    } catch (error) {
-      consola.error('Ошибка при выходе:', error);
+    } catch (logoutError) {
+      consola.error('Ошибка при выходе:', logoutError);
     }
   }
 
@@ -54,6 +55,7 @@ export function useUser() {
     isLoggedIn,
     isAdmin,
 
+    error,
     pending,
     fetch: () => fetchProfile(true),
     logout,

@@ -3,7 +3,12 @@
     (event: 'switch:sign-up' | 'switch:change-password' | 'close'): void;
   }>();
 
-  const { fetch } = useUser();
+  const {
+    error: profileError,
+    fetch: fetchProfile,
+    pending: profilePending,
+  } = useUser();
+
   const $toast = useToast();
 
   const showPwd = ref(false);
@@ -25,7 +30,9 @@
     immediate: false,
   });
 
-  const inProgress = computed(() => status.value === 'pending');
+  const inProgress = computed(
+    () => status.value === 'pending' || profilePending.value,
+  );
 
   async function onSubmit() {
     await execute();
@@ -41,7 +48,19 @@
       return;
     }
 
-    fetch();
+    await fetchProfile();
+
+    if (profileError.value) {
+      $toast.add({
+        title: 'Ошибка авторизации',
+        description: 'Не удалось загрузить профиль. Попробуйте еще раз.',
+        color: 'error',
+        icon: 'tabler:user-exclamation',
+      });
+
+      return;
+    }
+
     emit('close');
 
     $toast.add({
@@ -108,7 +127,7 @@
 
       <div class="flex flex-col gap-2 md:flex-row">
         <UButton
-          :disabled="status === 'success'"
+          :disabled="inProgress"
           :loading="inProgress"
           class="md:w-auto"
           block
