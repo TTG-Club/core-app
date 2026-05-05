@@ -1,7 +1,7 @@
-import { clearUserTokenCookie } from '#server/utils/authService';
+import { clearUserAuthCookies } from '#server/utils/authService';
 
 export default defineEventHandler((event) => {
-  clearUserTokenCookie(event);
+  clearUserAuthCookies(event);
 
   return {
     success: true,

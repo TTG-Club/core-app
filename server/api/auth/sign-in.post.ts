@@ -4,7 +4,8 @@ import {
   createAuthValidationError,
   fetchAuthService,
   parseAuthTokenResponse,
-  setUserTokenCookie,
+  setUserAuthCookies,
+  toAuthClientTokenResponse,
 } from '#server/utils/authService';
 
 const signInRequestSchema = z.object({
@@ -28,7 +29,7 @@ export default defineEventHandler(async (event) => {
     }),
   );
 
-  setUserTokenCookie(event, tokenResponse);
+  setUserAuthCookies(event, tokenResponse);
 
-  return tokenResponse;
+  return toAuthClientTokenResponse(tokenResponse);
 });

@@ -1,9 +1,20 @@
-import { USER_TOKEN_COOKIE } from '#shared/consts';
+import {
+  clearUserAuthCookies,
+  refreshUserAuthCookies,
+} from '#server/utils/authService';
 
 export default defineEventHandler(async (event) => {
   try {
     await verifyToken(event);
-  } catch (err) {
-    deleteCookie(event, USER_TOKEN_COOKIE);
+  } catch {
+    try {
+      const tokenResponse = await refreshUserAuthCookies(event);
+
+      Object.assign(event.node.req.headers, {
+        authorization: `${tokenResponse.tokenType} ${tokenResponse.accessToken}`,
+      });
+    } catch {
+      clearUserAuthCookies(event);
+    }
   }
 });
