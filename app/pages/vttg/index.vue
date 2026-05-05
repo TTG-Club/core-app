@@ -5,7 +5,7 @@
 
   definePageMeta({
     layout: 'vttg',
-    auth: { roles: [Role.ADMIN] },
+    auth: { roles: [Role.ADMIN, Role.VTTG] },
   });
 
   useSeoMeta({

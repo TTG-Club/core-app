@@ -3,6 +3,7 @@ export enum Role {
   MODERATOR = 'MODERATOR',
   WRITER = 'WRITER',
   SUBSCRIBER = 'SUBSCRIBER',
+  VTTG = 'VTTG',
   USER = 'USER',
 }
 
