@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3';
 
+import { getRequestURL } from 'h3';
 import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod';
 
@@ -21,6 +22,8 @@ const authJwtPayloadSchema = z.object({
   username: z.string().min(1),
   roles: z.array(z.nativeEnum(Role)),
 });
+
+const FRONTEND_ORIGIN_HEADER = 'X-Frontend-Origin';
 
 export type AuthTokenResponse = z.infer<typeof authTokenSchema>;
 
@@ -45,6 +48,19 @@ export async function fetchAuthService<T>(
   options: Parameters<typeof $fetch<T>>[1] = {},
 ): Promise<T> {
   return await $fetch<T>(getAuthServicePath(path), options);
+}
+
+/**
+ * Возвращает заголовки с публичным origin фронта для server-to-server запросов.
+ */
+export function getFrontendOriginHeaders(event: H3Event): Headers {
+  const headers = new Headers();
+  const configuredOrigin = process.env.NUXT_SITE_URL;
+  const { origin: requestOrigin } = getRequestURL(event);
+
+  headers.set(FRONTEND_ORIGIN_HEADER, configuredOrigin || requestOrigin);
+
+  return headers;
 }
 
 /**
