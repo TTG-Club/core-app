@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { USER_TOKEN_COOKIE } from '#shared/consts';
   import { KbdShortcut } from '~ui/kbd-shortcut';
   import { AuthModal } from '~user/auth-modal';
 
@@ -14,6 +15,7 @@
 
   const { isAdmin } = useUserRoles();
   const { isTablet } = useBreakpoints();
+  const userTokenCookie = useCookie<string | null>(USER_TOKEN_COOKIE);
 
   const isAuthOpened = ref(false);
   const isMenuOpened = ref(false);
@@ -26,10 +28,12 @@
       : 'ttg:profile-helmet-outline',
   );
 
-  try {
-    await fetchUser();
-  } catch (err) {
-    consola.error(err);
+  if (userTokenCookie.value) {
+    try {
+      await fetchUser();
+    } catch (err) {
+      consola.error(err);
+    }
   }
 
   function logout() {
