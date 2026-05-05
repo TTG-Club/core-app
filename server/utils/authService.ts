@@ -24,6 +24,7 @@ const authJwtPayloadSchema = z.object({
 });
 
 const FRONTEND_ORIGIN_HEADER = 'X-Frontend-Origin';
+const DEFAULT_FRONTEND_ORIGIN_PROTOCOL = 'https://';
 
 export type AuthTokenResponse = z.infer<typeof authTokenSchema>;
 
@@ -51,11 +52,33 @@ export async function fetchAuthService<T>(
 }
 
 /**
+ * Возвращает origin из полного URL или undefined для некорректного значения.
+ */
+function parseUrlOrigin(url: string | undefined): string | undefined {
+  const normalizedUrl = url?.trim();
+
+  if (!normalizedUrl) {
+    return undefined;
+  }
+
+  try {
+    return new URL(normalizedUrl).origin;
+  } catch {
+    try {
+      return new URL(`${DEFAULT_FRONTEND_ORIGIN_PROTOCOL}${normalizedUrl}`)
+        .origin;
+    } catch {
+      return undefined;
+    }
+  }
+}
+
+/**
  * Возвращает заголовки с публичным origin фронта для server-to-server запросов.
  */
 export function getFrontendOriginHeaders(event: H3Event): Headers {
   const headers = new Headers();
-  const configuredOrigin = process.env.NUXT_SITE_URL;
+  const configuredOrigin = parseUrlOrigin(process.env.NUXT_SITE_URL);
   const { origin: requestOrigin } = getRequestURL(event);
 
   headers.set(FRONTEND_ORIGIN_HEADER, configuredOrigin || requestOrigin);
