@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
-import { getFrontendOriginHeaders } from '../../utils/authService';
+import {
+  createAuthValidationError,
+  fetchAuthService,
+  getFrontendOriginHeaders,
+} from '#server/utils/authService';
 
 const signUpRequestSchema = z.object({
   email: z.string().email().max(320),

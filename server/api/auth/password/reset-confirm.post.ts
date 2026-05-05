@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+import {
+  createAuthValidationError,
+  fetchAuthService,
+} from '#server/utils/authService';
+
 const passwordResetConfirmSchema = z.object({
   newPassword: z.string().min(8).max(100),
   token: z.string().min(1),

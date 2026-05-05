@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
-import { getFrontendOriginHeaders } from '#server/utils/authService';
+import {
+  createAuthValidationError,
+  fetchAuthService,
+  getFrontendOriginHeaders,
+} from '#server/utils/authService';
 
 const passwordResetRequestSchema = z.object({
   email: z.string().email(),

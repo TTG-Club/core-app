@@ -3,6 +3,10 @@ import type { H3Event } from 'h3';
 import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod';
 
+import {
+  fetchAuthService,
+  parseAuthJwtPayload,
+} from '#server/utils/authService';
 import { Role } from '~/shared/types';
 
 const authAdminRoleSchema = z.object({

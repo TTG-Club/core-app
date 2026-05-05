@@ -1,3 +1,9 @@
+import {
+  fetchAuthService,
+  parseAuthJwtPayload,
+  parseAuthUserResponse,
+} from '#server/utils/authService';
+
 export default defineEventHandler(async (event) => {
   const token = getTokenFromRequest(event);
   const tokenPayload = parseAuthJwtPayload(await verifyJwt(token));

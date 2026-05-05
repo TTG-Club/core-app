@@ -1,3 +1,8 @@
+import {
+  createAuthValidationError,
+  fetchAuthService,
+} from '#server/utils/authService';
+
 export default defineEventHandler(async (event) => {
   const { token } = getQuery(event);
 

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { createAuthValidationError } from '#server/utils/authService';
+
 const updateUserRolesParamsSchema = z.object({
   userId: z.string().uuid(),
 });
