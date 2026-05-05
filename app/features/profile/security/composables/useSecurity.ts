@@ -1,4 +1,33 @@
-import type { PasswordChangeForm } from '../model/types';
+import type { PasswordChangeForm } from '../model';
+
+import { FetchError } from 'ofetch';
+
+import {
+  PASSWORD_CHANGE_API_PATH,
+  PASSWORD_CHANGE_ERROR_TOAST_COLOR,
+  PASSWORD_CHANGE_ERROR_TOAST_DESCRIPTION,
+  PASSWORD_CHANGE_ERROR_TOAST_TITLE,
+  PASSWORD_CHANGE_SUCCESS_TOAST_COLOR,
+  PASSWORD_CHANGE_SUCCESS_TOAST_DESCRIPTION,
+  PASSWORD_CHANGE_SUCCESS_TOAST_TITLE,
+} from '../model';
+
+interface PasswordChangeRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+/**
+ * Возвращает тело запроса смены пароля без клиентского подтверждения.
+ */
+function toPasswordChangeRequest(
+  form: PasswordChangeForm,
+): PasswordChangeRequest {
+  return {
+    currentPassword: form.currentPassword,
+    newPassword: form.newPassword,
+  };
+}
 
 export function useSecurity() {
   const toast = useToast();
@@ -23,22 +52,41 @@ export function useSecurity() {
     return Promise.resolve(true);
   }
 
-  function changePassword(_data: PasswordChangeForm): Promise<boolean> {
+  async function changePassword(form: PasswordChangeForm): Promise<boolean> {
     isLoading.value = true;
     error.value = null;
 
-    // TODO: Реализовать API запрос
-    // await $fetch('/api/user/password', { method: 'PATCH', body: _data });
+    try {
+      await $fetch(PASSWORD_CHANGE_API_PATH, {
+        body: toPasswordChangeRequest(form),
+        method: 'POST',
+      });
 
-    toast.add({
-      title: 'Пароль изменён',
-      description: 'Ваш пароль успешно обновлён',
-      color: 'success',
-    });
+      toast.add({
+        title: PASSWORD_CHANGE_SUCCESS_TOAST_TITLE,
+        description: PASSWORD_CHANGE_SUCCESS_TOAST_DESCRIPTION,
+        color: PASSWORD_CHANGE_SUCCESS_TOAST_COLOR,
+      });
 
-    isLoading.value = false;
+      return true;
+    } catch (changePasswordError) {
+      error.value = PASSWORD_CHANGE_ERROR_TOAST_DESCRIPTION;
 
-    return Promise.resolve(true);
+      if (changePasswordError instanceof FetchError) {
+        error.value =
+          changePasswordError.data?.message || changePasswordError.message;
+      }
+
+      toast.add({
+        title: PASSWORD_CHANGE_ERROR_TOAST_TITLE,
+        description: error.value ?? PASSWORD_CHANGE_ERROR_TOAST_DESCRIPTION,
+        color: PASSWORD_CHANGE_ERROR_TOAST_COLOR,
+      });
+
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   return { updateEmail, changePassword, isLoading, error };
