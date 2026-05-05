@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - dev
+      - test/docker-ci-optimization
   workflow_dispatch:
 
 env:
@@ -15,7 +16,7 @@ jobs:
   build:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
-    if: ${{ github.ref_name == 'main' || github.ref_name == 'dev' }}
+    if: ${{ github.ref_name == 'main' || github.ref_name == 'dev' || github.ref_name == 'test/docker-ci-optimization' }}
     concurrency:
       group: build-${{ github.ref_name }}
       cancel-in-progress: true
