@@ -40,6 +40,77 @@ export type AuthUserResponse = z.infer<typeof authUserSchema>;
 
 type AuthJwtPayloadResponse = z.infer<typeof authJwtPayloadSchema>;
 
+interface AuthServiceHttpError extends Error {
+  data?: unknown;
+  response?: {
+    status?: number;
+    statusText?: string;
+    _data?: unknown;
+  };
+  status?: number;
+  statusCode?: number;
+  statusMessage?: string;
+  statusText?: string;
+}
+
+/**
+ * Проверяет, что ошибка пришла от HTTP-клиента внешнего auth-service.
+ */
+function isAuthServiceHttpError(error: unknown): error is AuthServiceHttpError {
+  return (
+    error instanceof Error
+    && ('response' in error || 'status' in error || 'statusCode' in error)
+  );
+}
+
+/**
+ * Возвращает безопасный HTTP-статус для ответа приложения.
+ */
+function getAuthServiceErrorStatus(error: AuthServiceHttpError): StatusCodes {
+  const status = error.response?.status ?? error.statusCode ?? error.status;
+
+  switch (status) {
+    case StatusCodes.BAD_REQUEST:
+    case StatusCodes.UNAUTHORIZED:
+    case StatusCodes.FORBIDDEN:
+    case StatusCodes.NOT_FOUND:
+    case StatusCodes.CONFLICT:
+    case StatusCodes.TOO_MANY_REQUESTS:
+      return status;
+    default:
+      return StatusCodes.BAD_GATEWAY;
+  }
+}
+
+/**
+ * Создает нормализованную ошибку для ответа внешнего auth-service.
+ */
+function createAuthServiceError(
+  error: unknown,
+): ReturnType<typeof createError> {
+  if (!isAuthServiceHttpError(error)) {
+    return createError(getErrorResponse(StatusCodes.BAD_GATEWAY));
+  }
+
+  return createError(getErrorResponse(getAuthServiceErrorStatus(error)));
+}
+
+/**
+ * Проверяет payload внешнего auth-service и не дает ошибке Zod стать 500.
+ */
+function parseAuthServicePayload<Payload>(
+  schema: z.ZodType<Payload>,
+  payload: unknown,
+): Payload {
+  const parsedPayload = schema.safeParse(payload);
+
+  if (!parsedPayload.success) {
+    throw createError(getErrorResponse(StatusCodes.BAD_GATEWAY));
+  }
+
+  return parsedPayload.data;
+}
+
 /**
  * Возвращает полный URL для запроса к внешнему сервису аутентификации.
  */
@@ -56,7 +127,11 @@ export async function fetchAuthService<T>(
   path: string,
   options: Parameters<typeof $fetch<T>>[1] = {},
 ): Promise<T> {
-  return await $fetch<T>(getAuthServicePath(path), options);
+  try {
+    return await $fetch<T>(getAuthServicePath(path), options);
+  } catch (error) {
+    throw createAuthServiceError(error);
+  }
 }
 
 /**
@@ -98,7 +173,7 @@ export function getFrontendOriginHeaders(event: H3Event): Headers {
  * Проверяет ответ с access token от внешнего сервиса аутентификации.
  */
 export function parseAuthTokenResponse(payload: unknown): AuthTokenResponse {
-  return authTokenSchema.parse(payload);
+  return parseAuthServicePayload(authTokenSchema, payload);
 }
 
 /**
@@ -118,14 +193,14 @@ export function toAuthClientTokenResponse(
  * Проверяет данные пользователя от внешнего сервиса аутентификации.
  */
 export function parseAuthUserResponse(payload: unknown): AuthUserResponse {
-  return authUserSchema.parse(payload);
+  return parseAuthServicePayload(authUserSchema, payload);
 }
 
 /**
  * Проверяет полезную нагрузку JWT, полученного от внешнего сервиса аутентификации.
  */
 export function parseAuthJwtPayload(payload: unknown): AuthJwtPayloadResponse {
-  return authJwtPayloadSchema.parse(payload);
+  return parseAuthServicePayload(authJwtPayloadSchema, payload);
 }
 
 /**
