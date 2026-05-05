@@ -5,7 +5,6 @@ import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod';
 
 import { USER_REFRESH_TOKEN_COOKIE, USER_TOKEN_COOKIE } from '#shared/consts';
-import { Role } from '~/shared/types';
 
 const authTokenSchema = z.object({
   accessToken: z.string().min(1),
@@ -22,7 +21,7 @@ const authUserSchema = z.object({
 
 const authJwtPayloadSchema = z.object({
   username: z.string().min(1),
-  roles: z.array(z.nativeEnum(Role)),
+  roles: z.array(z.string().min(1)),
 });
 
 const FRONTEND_ORIGIN_HEADER = 'X-Frontend-Origin';
