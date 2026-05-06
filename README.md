@@ -1,6 +1,94 @@
-## Лицензия / License
+# TTG Club Core App
 
-Этот проект распространяется под лицензией [Apache 2.0](LICENSE.md).  
-Для вкладов контрибьюторов требуется подписание [Contributor License Agreement (CLA)](CONTRIBUTING.md).  
-This project is licensed under the [Apache 2.0 License](LICENSE.md).  
-Contributions require signing the [Contributor License Agreement (CLA)](CONTRIBUTING.md).
+Frontend-приложение TTG Club: онлайн-справочник и набор инструментов для D&D 5e.
+
+Проект включает разделы со справочными материалами, бестиарием, классами,
+заклинаниями, предметами, пользовательскими инструментами и серверным слоем на
+Nitro для проксирования и вспомогательных API.
+
+## Технологии
+
+- Nuxt 4
+- Vue 3.5
+- TypeScript
+- Nuxt UI
+- Pinia
+- Tailwind CSS v4
+- Nitro
+- pnpm
+
+## Быстрый старт
+
+```bash
+pnpm install
+pnpm dev
+```
+
+После установки `postinstall` запускает подготовку Nuxt и генерацию локальных
+алиасов.
+
+## Команды
+
+```bash
+pnpm dev
+pnpm build
+pnpm preview
+pnpm type-check
+pnpm lint:check
+pnpm lint:write
+pnpm stylelint:check
+pnpm stylelint:write
+```
+
+## Конфигурация
+
+Локальная конфигурация хранится в `.env`. Этот файл не должен попадать в Git и
+не должен копироваться в документацию, задачи, pull request или issue.
+
+В README намеренно не перечислены значения переменных окружения, ключи,
+токены, адреса приватных сервисов и параметры деплоя. Для настройки окружения
+используйте безопасные внутренние инструкции команды или локальный пример без
+секретов, если он появится в репозитории.
+
+## Структура
+
+Основная карта проекта находится в [PROJECT_MAP.md](PROJECT_MAP.md).
+
+Ключевые директории:
+
+- `app/` — Nuxt-приложение, страницы, layouts, клиентские плагины и feature
+  modules.
+- `app/features/` — DDD-домены и пользовательские функции.
+- `app/shared/` — общие типы, утилиты, UI и состояние.
+- `server/` — Nitro API, middleware, routes и серверные утилиты.
+- `modules/` — локальные Nuxt-модули.
+- `public/` — статические файлы.
+
+## Правила разработки
+
+Обязательные правила кодстайла, архитектуры, импортов, Vue-компонентов и
+проверок описаны в [AGENTS.md](AGENTS.md).
+
+Перед добавлением новых composable, utility или helper-функций сначала
+проверьте доступные auto-imports в `.nuxt/imports.d.ts` и используйте уже
+существующие решения, если они подходят.
+
+## Проверки перед отправкой
+
+```bash
+pnpm lint:write
+pnpm type-check
+```
+
+Для изменений в стилях также запускайте:
+
+```bash
+pnpm stylelint:write
+```
+
+## Лицензия
+
+Проект распространяется по лицензии [Apache 2.0](LICENSE.md).
+
+Для вкладов требуется подписание
+[Contributor License Agreement (CLA)](CONTRIBUTING.md).
