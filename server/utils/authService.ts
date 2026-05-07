@@ -24,6 +24,10 @@ const authJwtPayloadSchema = z.object({
   roles: z.array(z.string().min(1)),
 });
 
+const authServiceErrorPayloadSchema = z.object({
+  message: z.string().min(1),
+});
+
 const FRONTEND_ORIGIN_HEADER = 'X-Frontend-Origin';
 const DEFAULT_FRONTEND_ORIGIN_PROTOCOL = 'https://';
 
@@ -82,6 +86,26 @@ function getAuthServiceErrorStatus(error: AuthServiceHttpError): StatusCodes {
 }
 
 /**
+ * Возвращает тело ошибки внешнего auth-service из разных форматов ответа HTTP-клиента.
+ */
+function getAuthServiceErrorPayload(error: AuthServiceHttpError): unknown {
+  return error.response?._data ?? error.data;
+}
+
+/**
+ * Возвращает пользовательское сообщение ошибки, если auth-service прислал его в теле ответа.
+ */
+function getAuthServiceErrorMessage(
+  error: AuthServiceHttpError,
+): string | undefined {
+  const parsedPayload = authServiceErrorPayloadSchema.safeParse(
+    getAuthServiceErrorPayload(error),
+  );
+
+  return parsedPayload.success ? parsedPayload.data.message : undefined;
+}
+
+/**
  * Создает нормализованную ошибку для ответа внешнего auth-service.
  */
 function createAuthServiceError(
@@ -91,7 +115,12 @@ function createAuthServiceError(
     return createError(getErrorResponse(StatusCodes.BAD_GATEWAY));
   }
 
-  return createError(getErrorResponse(getAuthServiceErrorStatus(error)));
+  const status = getAuthServiceErrorStatus(error);
+  const message = getAuthServiceErrorMessage(error);
+
+  return createError(
+    getErrorResponse(status, message ? { message } : undefined),
+  );
 }
 
 /**
