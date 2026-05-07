@@ -34,6 +34,6 @@ export async function isUserHasAccess(
   }
 
   return roles.some((role) => {
-    return role.name === Role.ADMIN || role.name === Role.MODERATOR;
+    return role === Role.ADMIN || role === Role.MODERATOR;
   });
 }

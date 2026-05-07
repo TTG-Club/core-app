@@ -1,6 +1,10 @@
 import { USER_TOKEN_COOKIE } from '#shared/consts';
 
 export default defineEventHandler((event) => {
+  if (getHeader(event, 'authorization')) {
+    return;
+  }
+
   const token = getCookie(event, USER_TOKEN_COOKIE);
 
   if (token) {

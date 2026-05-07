@@ -1,5 +1,10 @@
 import type { NavigationItem } from './types';
 
+import {
+  ADMIN_USERS_NAVIGATION_ICON,
+  ADMIN_USERS_NAVIGATION_LABEL,
+} from '~admin/users/model';
+
 /**
  * Элементы главной навигации админ-панели
  */
@@ -18,6 +23,11 @@ export const ADMIN_NAVIGATION_ITEMS: NavigationItem[] = [
     label: 'Персоны',
     icon: 'tabler:users',
     to: '/admin/personas',
+  },
+  {
+    label: ADMIN_USERS_NAVIGATION_LABEL,
+    icon: ADMIN_USERS_NAVIGATION_ICON,
+    to: '/admin/users',
   },
 ];
 

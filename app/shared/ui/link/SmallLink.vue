@@ -81,7 +81,10 @@
               v-if="source"
               class="shrink-0"
             >
-              <SourceTag :source />
+              <SourceTag
+                :source
+                show-tooltip
+              />
             </div>
           </div>
 

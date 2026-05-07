@@ -108,6 +108,7 @@
           <SourceTag
             :source="item.source"
             show-group
+            show-tooltip
           />
         </template>
 

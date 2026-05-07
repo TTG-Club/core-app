@@ -22,6 +22,7 @@
 <template>
   <UBadge
     :style="{ marginInlineEnd: 0 }"
+    :title="group.rus"
     :color="tagColor"
     variant="subtle"
     size="sm"
