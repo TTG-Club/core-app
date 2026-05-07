@@ -7,12 +7,13 @@ export function useUser() {
 
   const {
     data: user,
+    error,
     execute,
     pending,
     clear,
   } = useAsyncData<UserProfile | null>(
     'user-profile',
-    () => requestFetch('/api/user/profile'),
+    () => requestFetch('/api/auth/me'),
     { dedupe: 'defer', lazy: true, immediate: false },
   );
 
@@ -33,8 +34,8 @@ export function useUser() {
 
       clear();
       redirectIfNeeded();
-    } catch (error) {
-      consola.error('Ошибка при выходе:', error);
+    } catch (logoutError) {
+      consola.error('Ошибка при выходе:', logoutError);
     }
   }
 
@@ -54,6 +55,7 @@ export function useUser() {
     isLoggedIn,
     isAdmin,
 
+    error,
     pending,
     fetch: () => fetchProfile(true),
     logout,

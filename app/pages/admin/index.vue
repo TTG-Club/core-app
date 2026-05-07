@@ -1,3 +1,11 @@
+<script setup lang="ts">
+  import {
+    ADMIN_USERS_CONFIGURE_LABEL,
+    ADMIN_USERS_NAVIGATION_LABEL,
+    ADMIN_USERS_PAGE_DESCRIPTION,
+  } from '~admin/users/model';
+</script>
+
 <template>
   <NuxtLayout
     name="detail"
@@ -41,6 +49,27 @@
 
         <div class="text-sm text-neutral-500">
           Управление персонами и их фразами
+        </div>
+      </UCard>
+
+      <UCard variant="subtle">
+        <template #header>
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="truncate text-base text-highlighted">
+              {{ ADMIN_USERS_NAVIGATION_LABEL }}
+            </h2>
+
+            <UButton
+              size="sm"
+              to="/admin/users"
+            >
+              {{ ADMIN_USERS_CONFIGURE_LABEL }}
+            </UButton>
+          </div>
+        </template>
+
+        <div class="text-sm text-muted">
+          {{ ADMIN_USERS_PAGE_DESCRIPTION }}
         </div>
       </UCard>
     </div>

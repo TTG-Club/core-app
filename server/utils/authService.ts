@@ -1,0 +1,326 @@
+import type { H3Event } from 'h3';
+
+import { getRequestURL } from 'h3';
+import { StatusCodes } from 'http-status-codes';
+import { z } from 'zod';
+
+import { USER_REFRESH_TOKEN_COOKIE, USER_TOKEN_COOKIE } from '#shared/consts';
+
+const authTokenSchema = z.object({
+  accessToken: z.string().min(1),
+  refreshToken: z.string().min(1),
+  tokenType: z.string().min(1),
+  expiresIn: z.number().int().positive(),
+  refreshExpiresIn: z.number().int().positive(),
+});
+
+const authUserSchema = z.object({
+  email: z.string().email(),
+  username: z.string().min(1),
+});
+
+const authJwtPayloadSchema = z.object({
+  username: z.string().min(1),
+  roles: z.array(z.string().min(1)),
+});
+
+const authServiceErrorPayloadSchema = z.object({
+  message: z.string().min(1),
+});
+
+const FRONTEND_ORIGIN_HEADER = 'X-Frontend-Origin';
+const DEFAULT_FRONTEND_ORIGIN_PROTOCOL = 'https://';
+
+export type AuthTokenResponse = z.infer<typeof authTokenSchema>;
+
+export interface AuthClientTokenResponse {
+  accessToken: string;
+  tokenType: string;
+  expiresIn: number;
+}
+
+export type AuthUserResponse = z.infer<typeof authUserSchema>;
+
+type AuthJwtPayloadResponse = z.infer<typeof authJwtPayloadSchema>;
+
+interface AuthServiceHttpError extends Error {
+  data?: unknown;
+  response?: {
+    status?: number;
+    statusText?: string;
+    _data?: unknown;
+  };
+  status?: number;
+  statusCode?: number;
+  statusMessage?: string;
+  statusText?: string;
+}
+
+/**
+ * Проверяет, что ошибка пришла от HTTP-клиента внешнего auth-service.
+ */
+function isAuthServiceHttpError(error: unknown): error is AuthServiceHttpError {
+  return (
+    error instanceof Error
+    && ('response' in error || 'status' in error || 'statusCode' in error)
+  );
+}
+
+/**
+ * Возвращает безопасный HTTP-статус для ответа приложения.
+ */
+function getAuthServiceErrorStatus(error: AuthServiceHttpError): StatusCodes {
+  const status = error.response?.status ?? error.statusCode ?? error.status;
+
+  switch (status) {
+    case StatusCodes.BAD_REQUEST:
+    case StatusCodes.UNAUTHORIZED:
+    case StatusCodes.FORBIDDEN:
+    case StatusCodes.NOT_FOUND:
+    case StatusCodes.CONFLICT:
+    case StatusCodes.TOO_MANY_REQUESTS:
+      return status;
+    default:
+      return StatusCodes.BAD_GATEWAY;
+  }
+}
+
+/**
+ * Возвращает тело ошибки внешнего auth-service из разных форматов ответа HTTP-клиента.
+ */
+function getAuthServiceErrorPayload(error: AuthServiceHttpError): unknown {
+  return error.response?._data ?? error.data;
+}
+
+/**
+ * Возвращает пользовательское сообщение ошибки, если auth-service прислал его в теле ответа.
+ */
+function getAuthServiceErrorMessage(
+  error: AuthServiceHttpError,
+): string | undefined {
+  const parsedPayload = authServiceErrorPayloadSchema.safeParse(
+    getAuthServiceErrorPayload(error),
+  );
+
+  return parsedPayload.success ? parsedPayload.data.message : undefined;
+}
+
+/**
+ * Создает нормализованную ошибку для ответа внешнего auth-service.
+ */
+function createAuthServiceError(
+  error: unknown,
+): ReturnType<typeof createError> {
+  if (!isAuthServiceHttpError(error)) {
+    return createError(getErrorResponse(StatusCodes.BAD_GATEWAY));
+  }
+
+  const status = getAuthServiceErrorStatus(error);
+  const message = getAuthServiceErrorMessage(error);
+
+  return createError(
+    getErrorResponse(status, message ? { message } : undefined),
+  );
+}
+
+/**
+ * Проверяет payload внешнего auth-service и не дает ошибке Zod стать 500.
+ */
+function parseAuthServicePayload<Payload>(
+  schema: z.ZodType<Payload>,
+  payload: unknown,
+): Payload {
+  const parsedPayload = schema.safeParse(payload);
+
+  if (!parsedPayload.success) {
+    throw createError(getErrorResponse(StatusCodes.BAD_GATEWAY));
+  }
+
+  return parsedPayload.data;
+}
+
+/**
+ * Возвращает полный URL для запроса к внешнему сервису аутентификации.
+ */
+function getAuthServicePath(path: string): string {
+  const { url } = getAuthSecrets();
+
+  return `${url}${path}`;
+}
+
+/**
+ * Выполняет запрос к внешнему сервису аутентификации.
+ */
+export async function fetchAuthService<T>(
+  path: string,
+  options: Parameters<typeof $fetch<T>>[1] = {},
+): Promise<T> {
+  try {
+    return await $fetch<T>(getAuthServicePath(path), options);
+  } catch (error) {
+    throw createAuthServiceError(error);
+  }
+}
+
+/**
+ * Возвращает origin из полного URL или undefined для некорректного значения.
+ */
+function parseUrlOrigin(url: string | undefined): string | undefined {
+  const normalizedUrl = url?.trim();
+
+  if (!normalizedUrl) {
+    return undefined;
+  }
+
+  try {
+    return new URL(normalizedUrl).origin;
+  } catch {
+    try {
+      return new URL(`${DEFAULT_FRONTEND_ORIGIN_PROTOCOL}${normalizedUrl}`)
+        .origin;
+    } catch {
+      return undefined;
+    }
+  }
+}
+
+/**
+ * Возвращает заголовки с публичным origin фронта для server-to-server запросов.
+ */
+export function getFrontendOriginHeaders(event: H3Event): Headers {
+  const headers = new Headers();
+  const configuredOrigin = parseUrlOrigin(process.env.NUXT_SITE_URL);
+  const { origin: requestOrigin } = getRequestURL(event);
+
+  headers.set(FRONTEND_ORIGIN_HEADER, configuredOrigin || requestOrigin);
+
+  return headers;
+}
+
+/**
+ * Проверяет ответ с access token от внешнего сервиса аутентификации.
+ */
+export function parseAuthTokenResponse(payload: unknown): AuthTokenResponse {
+  return parseAuthServicePayload(authTokenSchema, payload);
+}
+
+/**
+ * Возвращает безопасный для клиента ответ без refresh token.
+ */
+export function toAuthClientTokenResponse(
+  tokenResponse: AuthTokenResponse,
+): AuthClientTokenResponse {
+  return {
+    accessToken: tokenResponse.accessToken,
+    expiresIn: tokenResponse.expiresIn,
+    tokenType: tokenResponse.tokenType,
+  };
+}
+
+/**
+ * Проверяет данные пользователя от внешнего сервиса аутентификации.
+ */
+export function parseAuthUserResponse(payload: unknown): AuthUserResponse {
+  return parseAuthServicePayload(authUserSchema, payload);
+}
+
+/**
+ * Проверяет полезную нагрузку JWT, полученного от внешнего сервиса аутентификации.
+ */
+export function parseAuthJwtPayload(payload: unknown): AuthJwtPayloadResponse {
+  return parseAuthServicePayload(authJwtPayloadSchema, payload);
+}
+
+/**
+ * Возвращает refresh token из cookie приложения.
+ */
+function getUserRefreshTokenCookie(event: H3Event): string | undefined {
+  return getCookie(event, USER_REFRESH_TOKEN_COOKIE);
+}
+
+/**
+ * Сохраняет access token пользователя в cookie приложения.
+ */
+function setUserTokenCookie(
+  event: H3Event,
+  tokenResponse: AuthTokenResponse,
+): void {
+  setCookie(event, USER_TOKEN_COOKIE, tokenResponse.accessToken, {
+    httpOnly: false,
+    maxAge: tokenResponse.expiresIn,
+    path: '/',
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV !== 'development',
+  });
+}
+
+/**
+ * Сохраняет refresh token пользователя в защищенную cookie приложения.
+ */
+function setUserRefreshTokenCookie(
+  event: H3Event,
+  tokenResponse: AuthTokenResponse,
+): void {
+  setCookie(event, USER_REFRESH_TOKEN_COOKIE, tokenResponse.refreshToken, {
+    httpOnly: true,
+    maxAge: tokenResponse.refreshExpiresIn,
+    path: '/',
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV !== 'development',
+  });
+}
+
+/**
+ * Сохраняет access и refresh token пользователя в cookie приложения.
+ */
+export function setUserAuthCookies(
+  event: H3Event,
+  tokenResponse: AuthTokenResponse,
+): void {
+  setUserTokenCookie(event, tokenResponse);
+  setUserRefreshTokenCookie(event, tokenResponse);
+}
+
+/**
+ * Удаляет cookie с access и refresh token пользователя.
+ */
+export function clearUserAuthCookies(event: H3Event): void {
+  deleteCookie(event, USER_TOKEN_COOKIE, {
+    path: '/',
+  });
+
+  deleteCookie(event, USER_REFRESH_TOKEN_COOKIE, {
+    path: '/',
+  });
+}
+
+/**
+ * Обновляет пару token через auth-service и сохраняет результат в cookie приложения.
+ */
+export async function refreshUserAuthCookies(
+  event: H3Event,
+): Promise<AuthTokenResponse> {
+  const refreshToken = getUserRefreshTokenCookie(event);
+
+  if (!refreshToken) {
+    throw createError(getErrorResponse(StatusCodes.UNAUTHORIZED));
+  }
+
+  const tokenResponse = parseAuthTokenResponse(
+    await fetchAuthService<unknown>('/api/auth/refresh', {
+      body: { refreshToken },
+      method: 'POST',
+    }),
+  );
+
+  setUserAuthCookies(event, tokenResponse);
+
+  return tokenResponse;
+}
+
+/**
+ * Создает ошибку некорректного запроса для auth endpoint.
+ */
+export function createAuthValidationError(): ReturnType<typeof createError> {
+  return createError(getErrorResponse(StatusCodes.BAD_REQUEST));
+}

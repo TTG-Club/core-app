@@ -4,7 +4,21 @@
   import type { PasswordChangeForm } from '../model';
 
   import { useSecurity } from '../composables';
-  import { passwordChangeSchema, ProfileCardUI } from '../model';
+  import {
+    PASSWORD_CHANGE_CARD_TITLE,
+    PASSWORD_CHANGE_CONFIRM_PASSWORD_LABEL,
+    PASSWORD_CHANGE_CONFIRM_PASSWORD_PLACEHOLDER,
+    PASSWORD_CHANGE_CURRENT_PASSWORD_LABEL,
+    PASSWORD_CHANGE_CURRENT_PASSWORD_PLACEHOLDER,
+    PASSWORD_CHANGE_HIDE_PASSWORD_LABEL,
+    PASSWORD_CHANGE_NEW_PASSWORD_HINT,
+    PASSWORD_CHANGE_NEW_PASSWORD_LABEL,
+    PASSWORD_CHANGE_NEW_PASSWORD_PLACEHOLDER,
+    PASSWORD_CHANGE_SHOW_PASSWORD_LABEL,
+    PASSWORD_CHANGE_SUBMIT_LABEL,
+    passwordChangeSchema,
+    ProfileCardUI,
+  } from '../model';
 
   /**
    * Форма смены пароля
@@ -37,7 +51,9 @@
    * Подпись для кнопки переключения видимости пароля
    */
   function passwordToggleLabel(isVisible: boolean): string {
-    return isVisible ? 'Скрыть пароль' : 'Показать пароль';
+    return isVisible
+      ? PASSWORD_CHANGE_HIDE_PASSWORD_LABEL
+      : PASSWORD_CHANGE_SHOW_PASSWORD_LABEL;
   }
 
   /**
@@ -75,12 +91,13 @@
           aria-hidden="true"
         />
 
-        <h3 class="font-semibold text-primary">Смена пароля</h3>
+        <h3 class="font-semibold text-primary">
+          {{ PASSWORD_CHANGE_CARD_TITLE }}
+        </h3>
       </div>
     </template>
 
     <UForm
-      v-if="isDev"
       :state="passwordForm"
       :schema="passwordChangeSchema"
       class="space-y-4"
@@ -88,14 +105,14 @@
     >
       <!-- Текущий пароль -->
       <UFormField
-        label="Текущий пароль"
+        :label="PASSWORD_CHANGE_CURRENT_PASSWORD_LABEL"
         name="currentPassword"
         required
       >
         <UInput
           v-model="passwordForm.currentPassword"
           :type="showPasswords.current ? 'text' : 'password'"
-          placeholder="Введите текущий пароль"
+          :placeholder="PASSWORD_CHANGE_CURRENT_PASSWORD_PLACEHOLDER"
           :disabled="isLoading"
           autocomplete="current-password"
         >
@@ -114,15 +131,15 @@
 
       <!-- Новый пароль -->
       <UFormField
-        label="Новый пароль"
+        :label="PASSWORD_CHANGE_NEW_PASSWORD_LABEL"
         name="newPassword"
         required
-        hint="Минимум 8 символов, включая заглавные и строчные буквы, цифры"
+        :hint="PASSWORD_CHANGE_NEW_PASSWORD_HINT"
       >
         <UInput
           v-model="passwordForm.newPassword"
           :type="showPasswords.new ? 'text' : 'password'"
-          placeholder="Введите новый пароль"
+          :placeholder="PASSWORD_CHANGE_NEW_PASSWORD_PLACEHOLDER"
           :disabled="isLoading"
           autocomplete="new-password"
         >
@@ -141,14 +158,14 @@
 
       <!-- Подтверждение пароля -->
       <UFormField
-        label="Подтвердите новый пароль"
+        :label="PASSWORD_CHANGE_CONFIRM_PASSWORD_LABEL"
         name="confirmPassword"
         required
       >
         <UInput
           v-model="passwordForm.confirmPassword"
           :type="showPasswords.confirm ? 'text' : 'password'"
-          placeholder="Повторите новый пароль"
+          :placeholder="PASSWORD_CHANGE_CONFIRM_PASSWORD_PLACEHOLDER"
           :disabled="isLoading"
           autocomplete="new-password"
         >
@@ -173,22 +190,9 @@
           :loading="isLoading"
           :disabled="isLoading"
         >
-          Изменить пароль
+          {{ PASSWORD_CHANGE_SUBMIT_LABEL }}
         </UButton>
       </div>
     </UForm>
-
-    <div
-      v-else
-      class="space-y-4"
-    >
-      <UAlert
-        icon="tabler:info-circle"
-        color="neutral"
-        variant="subtle"
-        title="Смена пароля"
-        description="Функция будет доступна в будущих обновлениях"
-      />
-    </div>
   </UCard>
 </template>

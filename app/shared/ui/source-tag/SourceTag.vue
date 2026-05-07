@@ -28,19 +28,14 @@
     v-if="source?.name || source?.group"
     class="flex gap-1"
   >
-    <UTooltip
-      v-if="source?.name"
-      :text="`${source.name.rus} [${source.name.eng}]`"
-      :disabled="!showTooltip"
+    <UBadge
+      variant="subtle"
+      size="sm"
+      :color
+      :title="`${source.name.rus} [${source.name.eng}]`"
     >
-      <UBadge
-        variant="subtle"
-        size="sm"
-        :color
-      >
-        {{ source.name.label }}
-      </UBadge>
-    </UTooltip>
+      {{ source.name.label }}
+    </UBadge>
 
     <UTooltip
       v-if="source?.group && showGroup"
