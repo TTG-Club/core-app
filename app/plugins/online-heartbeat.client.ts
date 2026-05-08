@@ -5,6 +5,26 @@ import {
 } from '@vueuse/core';
 import { v7 as uuidv7 } from 'uuid';
 
+import {
+  ONLINE_COUNTER_DATA_KEY,
+  parseOnlineUsersTotal,
+} from '~home/counters/model';
+
+const HEARTBEAT_URL = '/api/online/heartbeat';
+const HEARTBEAT_INTERVAL_MS = 30 * 1000;
+const HEARTBEAT_COOLDOWN_MS = 10 * 1000;
+const ONLINE_VISITOR_ID_COOKIE = 'ttg-online-visitor-id';
+const ONLINE_VISITOR_ID_COOKIE_MAX_AGE_SECONDS = 400 * 24 * 60 * 60;
+const VISITOR_ONLINE_TYPE = 'GUEST';
+const REGISTERED_ONLINE_TYPE = 'REGISTERED';
+const DEBUG = import.meta.dev;
+
+interface OnlineHeartbeatBody {
+  key: string;
+  previousGuestKey?: string;
+  type: typeof REGISTERED_ONLINE_TYPE | typeof VISITOR_ONLINE_TYPE;
+}
+
 /**
  * Плагин для отправки heartbeat-запросов на сервер для отслеживания статуса "онлайн".
  *
@@ -15,12 +35,19 @@ import { v7 as uuidv7 } from 'uuid';
  * - Имеет защиту от спама (cooldown) для предотвращения частых запросов при переключении вкладок.
  */
 export default defineNuxtPlugin((nuxtApp) => {
-  const HEARTBEAT_URL = '/api/v2/online/heartbeat';
-  const HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000;
-  const HEARTBEAT_COOLDOWN_MS = 30 * 1000;
-  const DEBUG = import.meta.dev;
-
   const tabId = uuidv7();
+
+  const { data: visitorsCounter } = useNuxtData<number>(
+    ONLINE_COUNTER_DATA_KEY,
+  );
+
+  const visitorIdCookie = useCookie<string | null>(ONLINE_VISITOR_ID_COOKIE, {
+    maxAge: ONLINE_VISITOR_ID_COOKIE_MAX_AGE_SECONDS,
+    path: '/',
+    sameSite: 'lax',
+  });
+
+  const { fetch: fetchUser, isLoggedIn, user } = useUser();
 
   let stopLock: (() => void) | null = null;
   let lastHeartbeatTime = 0;
@@ -28,18 +55,62 @@ export default defineNuxtPlugin((nuxtApp) => {
   const isLeader = ref(false);
   const visibility = useDocumentVisibility();
 
-  const log = (...args: unknown[]) => {
+  function log(...args: unknown[]): void {
     if (DEBUG) {
       consola.log('[online-heartbeat]', ...args);
     }
-  };
+  }
 
   /**
-   * Отправляет heartbeat-запрос на сервер.
+   * Возвращает стабильный идентификатор гостя для online-app.
+   */
+  function getVisitorId(): string {
+    if (!visitorIdCookie.value) {
+      visitorIdCookie.value = uuidv7();
+    }
+
+    return visitorIdCookie.value;
+  }
+
+  /**
+   * Возвращает данные текущего пользователя для heartbeat.
+   */
+  async function getHeartbeatBody(): Promise<OnlineHeartbeatBody> {
+    if (!user.value) {
+      try {
+        await fetchUser();
+      } catch (error) {
+        log('user fetch failed', error);
+      }
+    }
+
+    if (isLoggedIn.value && user.value?.username) {
+      if (visitorIdCookie.value) {
+        return {
+          key: user.value.username,
+          previousGuestKey: visitorIdCookie.value,
+          type: REGISTERED_ONLINE_TYPE,
+        };
+      }
+
+      return {
+        key: user.value.username,
+        type: REGISTERED_ONLINE_TYPE,
+      };
+    }
+
+    return {
+      key: getVisitorId(),
+      type: VISITOR_ONLINE_TYPE,
+    };
+  }
+
+  /**
+   * Отправляет heartbeat-запрос на backend, который проксирует его в online-app.
    *
    * @param force - Если true, игнорирует проверку cooldown (например, при инициализации).
    */
-  const sendHeartbeat = async (force = false) => {
+  async function sendHeartbeat(force = false): Promise<void> {
     const now = Date.now();
 
     if (!force && now - lastHeartbeatTime < HEARTBEAT_COOLDOWN_MS) {
@@ -51,22 +122,21 @@ export default defineNuxtPlugin((nuxtApp) => {
     lastHeartbeatTime = now;
 
     try {
-      await $fetch(HEARTBEAT_URL, {
+      const body = await getHeartbeatBody();
+
+      const heartbeatResponse = await $fetch<unknown>(HEARTBEAT_URL, {
+        body,
         method: 'POST',
         retry: 0,
       });
 
-      log('heartbeat sent', { tabId, isLeader: isLeader.value });
-    } catch (e) {
-      log('heartbeat failed', e);
-    }
+      visitorsCounter.value = parseOnlineUsersTotal(heartbeatResponse);
 
-    try {
-      await refreshNuxtData('material-counter');
-    } catch (e) {
-      log('refresh material-counter failed', e);
+      log('heartbeat sent', { tabId, isLeader: isLeader.value });
+    } catch (error) {
+      log('heartbeat failed', error);
     }
-  };
+  }
 
   const { pause: pauseHeartbeat, resume: resumeHeartbeat } = useIntervalFn(
     () => {
@@ -93,7 +163,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
   });
 
-  const start = () => {
+  function start(): void {
     if (!navigator.locks) {
       log('Web Locks API not supported; fallback to per-tab heartbeat');
       resumeHeartbeat();
@@ -128,7 +198,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         log('lost leadership', { tabId });
       },
     );
-  };
+  }
 
   nuxtApp.hooks.hook('app:beforeMount', () => {
     start();
