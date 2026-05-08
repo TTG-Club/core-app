@@ -234,6 +234,16 @@ export default defineNuxtConfig({
           },
         },
       },
+      '/online/**': {
+        security: {
+          enabled: process.env.NODE_ENV !== 'development',
+          rateLimiter: {
+            tokensPerInterval: 75,
+            interval: ms('1m'),
+            headers: true,
+          },
+        },
+      },
     },
   },
 

@@ -10,7 +10,7 @@ import {
   parseOnlineUsersTotal,
 } from '~home/counters/model';
 
-const HEARTBEAT_URL = '/api/online/heartbeat';
+const HEARTBEAT_URL = '/online/heartbeat';
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
 const HEARTBEAT_COOLDOWN_MS = 10 * 1000;
 const ONLINE_VISITOR_ID_COOKIE = 'ttg-online-visitor-id';
