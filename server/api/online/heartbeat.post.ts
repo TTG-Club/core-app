@@ -1,10 +1,7 @@
 import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod';
 
-import {
-  fetchOnlineService,
-  getOnlineSiteId,
-} from '#server/utils/onlineService';
+import { fetchOnlineService, getOnlineSiteId } from '#server/domain/online';
 
 const onlineHeartbeatBodySchema = z.object({
   key: z.string().min(1).max(128),

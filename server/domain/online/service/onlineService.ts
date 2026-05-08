@@ -1,58 +1,28 @@
 import { StatusCodes } from 'http-status-codes';
-import { z } from 'zod';
+import { FetchError } from 'ofetch';
 
 const ONLINE_SERVICE_TOKEN_HEADER = 'X-Online-Token';
-const ONLINE_SITE_ID = '5e24';
-
-const onlineSiteIdSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .regex(/^[a-z0-9][a-z0-9_-]*$/);
 
 interface OnlineSecrets {
   token: string;
   url: string;
 }
 
-interface OnlineServiceHttpError extends Error {
-  data?: unknown;
-  response?: {
-    status?: number;
-    statusText?: string;
-    _data?: unknown;
-  };
-  status?: number;
-  statusCode?: number;
-}
-
-/**
- * Проверяет, что ошибка пришла от HTTP-клиента online-app.
- */
-function isOnlineServiceHttpError(
-  error: unknown,
-): error is OnlineServiceHttpError {
-  return (
-    error instanceof Error
-    && ('response' in error || 'status' in error || 'statusCode' in error)
-  );
-}
-
 /**
  * Возвращает безопасный HTTP-статус для ответа приложения.
  */
-function getOnlineServiceErrorStatus(
-  error: OnlineServiceHttpError,
-): StatusCodes {
-  const status = error.response?.status ?? error.statusCode ?? error.status;
-
-  switch (status) {
+function getOnlineServiceErrorStatus(error: FetchError): StatusCodes {
+  switch (error.statusCode) {
     case StatusCodes.BAD_REQUEST:
+      return StatusCodes.BAD_REQUEST;
     case StatusCodes.UNAUTHORIZED:
+      return StatusCodes.UNAUTHORIZED;
     case StatusCodes.FORBIDDEN:
+      return StatusCodes.FORBIDDEN;
     case StatusCodes.NOT_FOUND:
+      return StatusCodes.NOT_FOUND;
     case StatusCodes.TOO_MANY_REQUESTS:
-      return status;
+      return StatusCodes.TOO_MANY_REQUESTS;
     default:
       return StatusCodes.BAD_GATEWAY;
   }
@@ -64,19 +34,20 @@ function getOnlineServiceErrorStatus(
 function createOnlineServiceError(
   error: unknown,
 ): ReturnType<typeof createError> {
-  if (!isOnlineServiceHttpError(error)) {
-    return createError(getErrorResponse(StatusCodes.BAD_GATEWAY));
+  if (error instanceof FetchError) {
+    return createError(getErrorResponse(getOnlineServiceErrorStatus(error)));
   }
 
-  return createError(getErrorResponse(getOnlineServiceErrorStatus(error)));
+  return createError(getErrorResponse(StatusCodes.BAD_GATEWAY));
 }
 
 /**
  * Возвращает настройки внешнего сервиса online-app.
  */
-export function getOnlineSecrets(): OnlineSecrets {
-  const { NITRO_ONLINE_API_TOKEN: token = '', NITRO_ONLINE_API_URL: url = '' } =
-    process.env;
+function getOnlineSecrets(): OnlineSecrets {
+  const {
+    online: { apiToken: token, apiUrl: url },
+  } = useRuntimeConfig();
 
   if (!url || !token) {
     throw new Error('[ONLINE] Variables are not set');
@@ -92,7 +63,15 @@ export function getOnlineSecrets(): OnlineSecrets {
  * Возвращает идентификатор текущего сайта для online-app.
  */
 export function getOnlineSiteId(): string {
-  return onlineSiteIdSchema.parse(ONLINE_SITE_ID);
+  const {
+    online: { siteId },
+  } = useRuntimeConfig();
+
+  if (!siteId) {
+    throw new Error('[ONLINE] Site ID is not set');
+  }
+
+  return siteId;
 }
 
 /**

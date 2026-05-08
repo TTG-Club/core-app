@@ -347,5 +347,10 @@ export default defineNuxtConfig({
       defaultLocale: 'ru',
       indexable: false,
     },
+    online: {
+      apiToken: '',
+      apiUrl: '',
+      siteId: '5e24',
+    },
   },
 });
