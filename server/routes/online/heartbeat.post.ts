@@ -21,7 +21,7 @@ export default defineEventHandler(async (event): Promise<unknown> => {
     throw createError(getErrorResponse(StatusCodes.BAD_REQUEST));
   }
 
-  return await fetchOnlineService('/api/v1/online/heartbeat', {
+  return await fetchOnlineService('/api/v2/online/heartbeat', {
     body: {
       ...body.data,
       siteId: getOnlineSiteId(),
