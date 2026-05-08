@@ -1,9 +1,13 @@
 <script setup lang="ts">
   import { AnimatedNumber } from '~ui/animated-number';
 
-  interface OnlineCountResponse {
-    total: number;
-  }
+  import {
+    MATERIAL_COUNTER_API_URL,
+    MATERIAL_COUNTER_CACHE_API_URL,
+    MATERIAL_COUNTER_DATA_KEY,
+    MATERIAL_COUNTER_RESET_DATA_KEY,
+    ONLINE_COUNTER_DATA_KEY,
+  } from '../model';
 
   const { isAdmin } = useUserRoles();
 
@@ -11,29 +15,24 @@
     data: counter,
     refresh,
     status: counterStatus,
-  } = await useAsyncData('material-counter', () =>
-    $fetch<number>('/api/v2/statistics/count-all'),
+  } = await useAsyncData(MATERIAL_COUNTER_DATA_KEY, () =>
+    $fetch<number>(MATERIAL_COUNTER_API_URL),
   );
 
-  const {
-    data: visitorsCounter,
-    refresh: refreshVisitors,
-    status: visitorsCounterStatus,
-  } = await useAsyncData('visitors-counter', () =>
-    $fetch<OnlineCountResponse>('/api/v2/online/count'),
+  const { data: visitorsCounter } = useNuxtData<number>(
+    ONLINE_COUNTER_DATA_KEY,
   );
 
   const { execute: reset, status: resetStatus } = await useAsyncData(
-    'material-counter-reset-cache',
+    MATERIAL_COUNTER_RESET_DATA_KEY,
     () =>
-      $fetch('/api/v2/cache/evict-all', {
+      $fetch(MATERIAL_COUNTER_CACHE_API_URL, {
         onResponse: ({ response }) => {
           if (!response.ok) {
             return;
           }
 
           refresh();
-          refreshVisitors();
         },
       }),
     {
@@ -43,14 +42,11 @@
   );
 
   const isLoading = computed(
-    () =>
-      counterStatus.value === 'pending'
-      || visitorsCounterStatus.value === 'pending'
-      || resetStatus.value === 'pending',
+    () => counterStatus.value === 'pending' || resetStatus.value === 'pending',
   );
 
   const materialsValue = computed(() => counter.value ?? 0);
-  const visitorsTotalValue = computed(() => visitorsCounter.value?.total ?? 0);
+  const visitorsTotalValue = computed(() => visitorsCounter.value ?? 0);
 </script>
 
 <template>
