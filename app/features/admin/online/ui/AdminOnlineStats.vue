@@ -12,7 +12,6 @@
     ADMIN_ONLINE_STATS_SITE_LABEL,
     ADMIN_ONLINE_STATS_SUMMARY_LABEL,
     ADMIN_ONLINE_STATS_TITLE,
-    ADMIN_ONLINE_STATS_TOTAL_INLINE_LABEL,
     ADMIN_ONLINE_STATS_TOTAL_LABEL,
     ADMIN_ONLINE_STATS_WINDOW_LABEL,
   } from '../model';
@@ -83,7 +82,6 @@
 
         <span>
           {{ ADMIN_ONLINE_STATS_SUMMARY_LABEL }}:
-          {{ ADMIN_ONLINE_STATS_TOTAL_INLINE_LABEL }}
           {{ stats.total.total }}
         </span>
       </div>
