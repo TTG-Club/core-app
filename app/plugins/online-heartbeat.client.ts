@@ -37,8 +37,9 @@ interface OnlineHeartbeatBody {
 export default defineNuxtPlugin((nuxtApp) => {
   const tabId = uuidv7();
 
-  const { data: visitorsCounter } = useNuxtData<number>(
+  const visitorsCounter = useState<number | null>(
     ONLINE_COUNTER_DATA_KEY,
+    () => null,
   );
 
   const visitorIdCookie = useCookie<string | null>(ONLINE_VISITOR_ID_COOKIE, {
@@ -107,13 +108,11 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   /**
    * Отправляет heartbeat-запрос на backend, который проксирует его в online-app.
-   *
-   * @param force - Если true, игнорирует проверку cooldown (например, при инициализации).
    */
-  async function sendHeartbeat(force = false): Promise<void> {
+  async function sendHeartbeat(): Promise<void> {
     const now = Date.now();
 
-    if (!force && now - lastHeartbeatTime < HEARTBEAT_COOLDOWN_MS) {
+    if (now - lastHeartbeatTime < HEARTBEAT_COOLDOWN_MS) {
       log('heartbeat skipped (cooldown)', { tabId });
 
       return;
@@ -148,18 +147,21 @@ export default defineNuxtPlugin((nuxtApp) => {
       void sendHeartbeat();
     },
     HEARTBEAT_INTERVAL_MS,
-    { immediate: false },
+    { immediate: false, immediateCallback: true },
   );
 
   watch(visibility, (current, previous) => {
     if (current === 'visible' && previous === 'hidden') {
       log('tab became visible');
-      void sendHeartbeat();
 
       if (isLeader.value) {
         pauseHeartbeat();
         resumeHeartbeat();
+
+        return;
       }
+
+      void sendHeartbeat();
     }
   });
 
@@ -167,10 +169,6 @@ export default defineNuxtPlugin((nuxtApp) => {
     if (!navigator.locks) {
       log('Web Locks API not supported; fallback to per-tab heartbeat');
       resumeHeartbeat();
-
-      if (visibility.value === 'visible') {
-        void sendHeartbeat(true);
-      }
 
       return;
     }
@@ -186,7 +184,6 @@ export default defineNuxtPlugin((nuxtApp) => {
         log('became leader', { tabId });
         isLeader.value = true;
 
-        void sendHeartbeat(true);
         resumeHeartbeat();
 
         await new Promise<void>((resolve) => {
