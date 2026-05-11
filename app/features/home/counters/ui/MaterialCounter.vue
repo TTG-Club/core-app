@@ -19,8 +19,9 @@
     $fetch<number>(MATERIAL_COUNTER_API_URL),
   );
 
-  const { data: visitorsCounter } = useNuxtData<number>(
+  const visitorsCounter = useState<number | null>(
     ONLINE_COUNTER_DATA_KEY,
+    () => null,
   );
 
   const { execute: reset, status: resetStatus } = await useAsyncData(

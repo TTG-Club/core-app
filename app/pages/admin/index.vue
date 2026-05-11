@@ -45,6 +45,13 @@
     :title="ADMIN_DASHBOARD_PAGE_TITLE"
   >
     <div class="space-y-8">
+      <AdminOnlineStats
+        :stats="resolvedOnlineStats"
+        :is-loading="isOnlineStatsLoading"
+        :has-error="hasOnlineStatsError"
+        @refresh="refreshOnlineStats"
+      />
+
       <div
         class="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4 sm:grid-cols-[repeat(auto-fit,minmax(360px,1fr))]"
       >
@@ -111,13 +118,6 @@
           </div>
         </UCard>
       </div>
-
-      <AdminOnlineStats
-        :stats="resolvedOnlineStats"
-        :is-loading="isOnlineStatsLoading"
-        :has-error="hasOnlineStatsError"
-        @refresh="refreshOnlineStats"
-      />
     </div>
   </NuxtLayout>
 </template>
