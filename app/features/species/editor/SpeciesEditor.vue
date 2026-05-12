@@ -26,6 +26,7 @@
         url: undefined,
         page: undefined,
       },
+      srdVersion: undefined,
       properties: {
         sizes: [],
         type: undefined,

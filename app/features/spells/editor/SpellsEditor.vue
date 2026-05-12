@@ -37,6 +37,7 @@
         url: undefined,
         page: undefined,
       },
+      srdVersion: undefined,
       description: '',
       upper: undefined,
       level: 0,
