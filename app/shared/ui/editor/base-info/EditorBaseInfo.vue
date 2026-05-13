@@ -181,6 +181,17 @@
         </UForm>
 
         <UFormField
+          label="Версия SRD"
+          help="Версия документа SRD, к которой относится сущность"
+          name="srdVersion"
+        >
+          <UInput
+            v-model="form.srdVersion"
+            placeholder="Введи версию SRD"
+          />
+        </UFormField>
+
+        <UFormField
           label="Теги"
           help="Используются для поиска и СЕО"
           name="tags"
