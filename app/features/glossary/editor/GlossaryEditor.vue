@@ -30,6 +30,7 @@
         url: undefined,
         page: undefined,
       },
+      srdVersion: undefined,
       description: '',
       tags: [],
       tagCategory: '',

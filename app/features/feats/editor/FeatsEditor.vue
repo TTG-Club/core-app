@@ -24,6 +24,7 @@
         url: undefined,
         page: undefined,
       },
+      srdVersion: undefined,
       prerequisite: '',
       description: '',
       category: undefined,

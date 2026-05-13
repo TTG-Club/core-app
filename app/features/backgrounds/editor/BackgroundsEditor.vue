@@ -18,6 +18,7 @@
         url: undefined,
         page: undefined,
       },
+      srdVersion: undefined,
       description: '',
       abilityScores: [],
       featUrl: undefined,

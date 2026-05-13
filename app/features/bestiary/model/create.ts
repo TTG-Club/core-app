@@ -200,6 +200,7 @@ export function getInitialState(): CreatureCreate {
       url: undefined,
       page: undefined,
     },
+    srdVersion: undefined,
     description: '',
     image: undefined,
     tags: [],

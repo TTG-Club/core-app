@@ -9,5 +9,6 @@ export interface EditorBaseInfoState {
     url: string | undefined;
     page: number | undefined;
   };
+  srdVersion: string | undefined;
   tags: Array<string>;
 }

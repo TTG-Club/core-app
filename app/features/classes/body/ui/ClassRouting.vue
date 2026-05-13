@@ -8,6 +8,7 @@
   import { uniqBy } from 'es-toolkit';
 
   import { MulticlassDrawer } from '~classes/multiclass-drawer';
+  import { SourceTag } from '~ui/source-tag';
 
   const {
     url,
@@ -66,6 +67,7 @@
           id: subclass.url,
           label: subclass.name.rus,
           suffix: subclass.name.eng ? `[${subclass.name.eng}]` : undefined,
+          source: subclass.source,
           to: `/classes/${subclass.url}`,
         })),
     }));
@@ -132,7 +134,11 @@
             input: '[&>input]:h-8 [&>input]:text-sm',
             content: 'max-h-80',
           }"
-        />
+        >
+          <template #item-trailing="{ item }">
+            <SourceTag :source="item.source" />
+          </template>
+        </UCommandPalette>
       </template>
     </UPopover>
 
