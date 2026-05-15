@@ -4,17 +4,19 @@
   const {
     multiple = false,
     disabled,
+    min = 1,
     max = 20,
   } = defineProps<{
     disabled?: boolean;
     multiple?: boolean;
+    min?: number;
     max?: number;
   }>();
 
   const model = defineModel<number | Array<number>>();
 
   const items = computed(() =>
-    range(1, Math.min(max, 20) + 1).map((level) => ({
+    range(Math.max(min, 1), Math.min(max, 20) + 1).map((level) => ({
       label: `${level}-й уровень`,
       value: level,
     })),

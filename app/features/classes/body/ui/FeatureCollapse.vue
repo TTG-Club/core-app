@@ -6,20 +6,28 @@
 
   import FeatureOptionsDrawer from './FeatureOptionsDrawer.vue';
 
-  const { feature } = defineProps<{ feature: ClassFeature }>();
+  const props = withDefaults(
+    defineProps<{
+      feature: ClassFeature;
+      anchorId?: string;
+    }>(),
+    {
+      anchorId: undefined,
+    },
+  );
 
   const optionsOpened = ref(false);
 
   const subtitle = computed(() => {
-    const str: Array<string | VNode> = [`${feature.level}-й уровень`];
+    const str: Array<string | VNode> = [`${props.feature.level}-й уровень`];
 
-    if (feature.isSubclass) {
+    if (props.feature.isSubclass) {
       str.push(', умение подкласса');
     }
 
-    if (feature.additional) {
+    if (props.feature.additional) {
       str.push(`. `);
-      str.push(h(MarkupRender, { renderNode: feature.additional }));
+      str.push(h(MarkupRender, { renderNode: props.feature.additional }));
     }
 
     str.push(`.`);
@@ -27,9 +35,11 @@
     return () => str;
   });
 
-  const optionsCount = computed(() => feature.options?.length ?? 0);
+  const optionsCount = computed(() => props.feature.options?.length ?? 0);
 
-  const optionsName = computed(() => feature.optionsName || feature.name);
+  const optionsName = computed(
+    () => props.feature.optionsName || props.feature.name,
+  );
 
   const optionsLabel = computed(
     () => `${optionsName.value} (${optionsCount.value})`,
@@ -45,12 +55,12 @@
 
 <template>
   <UiCollapse
-    :id="feature.key"
+    :id="props.anchorId ?? props.feature.key"
     default-open
   >
     <template #default>
-      <span :class="feature.isSubclass ? 'text-success' : undefined">
-        {{ feature.name }}
+      <span :class="props.feature.isSubclass ? 'text-success' : undefined">
+        {{ props.feature.name }}
       </span>
     </template>
 
@@ -59,7 +69,7 @@
     </template>
 
     <template #content>
-      <MarkupRender :render-node="feature.description" />
+      <MarkupRender :render-node="props.feature.description" />
 
       <div
         v-if="optionsCount"
@@ -78,7 +88,7 @@
         <FeatureOptionsDrawer
           v-if="optionsCount"
           v-model="optionsOpened"
-          :feature
+          :feature="props.feature"
           :title="optionsName"
         />
       </ClientOnly>
