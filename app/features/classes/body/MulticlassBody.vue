@@ -6,9 +6,10 @@
     FeatureCollapse,
     MulticlassLevelInfo,
     MulticlassSpellSlots,
+    MulticlassStatsBlock,
     MulticlassTable,
-    StatsBlock,
   } from './ui';
+  import { getIndexedFeatureAnchorId } from './ui/constants';
 
   const { detail } = defineProps<{
     detail: MulticlassDetailResponse;
@@ -31,9 +32,9 @@
           :multiclass="detail.multiclass || []"
         />
 
-        <StatsBlock
-          :hit-dice="detail.hitDice"
+        <MulticlassStatsBlock
           :saving-throws="detail.savingThrows"
+          :requirements="detail.requirements"
           :primary-characteristics="detail.primaryCharacteristics"
           :multiclass="detail.multiclass"
         />
@@ -61,8 +62,9 @@
         />
 
         <FeatureCollapse
-          v-for="feature in detail.features"
-          :key="feature.key"
+          v-for="(feature, featureIndex) in detail.features"
+          :key="getIndexedFeatureAnchorId(feature.key, featureIndex)"
+          :anchor-id="getIndexedFeatureAnchorId(feature.key, featureIndex)"
           :feature
         />
       </div>

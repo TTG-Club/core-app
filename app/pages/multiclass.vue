@@ -5,8 +5,10 @@
     MulticlassDetailResponse,
     MulticlassRequest,
   } from '~classes/model';
+  import type { MulticlassDrawerInitialState } from '~classes/multiclass-drawer';
 
   import { MulticlassBody } from '~classes/body';
+  import { MulticlassDrawer } from '~classes/multiclass-drawer';
   import { PageActions } from '~ui/page';
   import { UiResult } from '~ui/result';
 
@@ -59,9 +61,14 @@
     const classes: AdditionalClassItem[] = [];
 
     // Обрабатываем дополнительные классы (начиная со второго, так как первый - основной)
-    const classKeys = Object.keys(route.query).filter((key) =>
-      key.startsWith('class'),
-    );
+    const classKeys = Object.keys(route.query)
+      .filter((key) => /^class\d+$/.test(key))
+      .sort((firstKey, secondKey) => {
+        const firstIndex = Number(firstKey.replace('class', ''));
+        const secondIndex = Number(secondKey.replace('class', ''));
+
+        return firstIndex - secondIndex;
+      });
 
     for (const classKey of classKeys) {
       const index = classKey.replace('class', '');
@@ -106,14 +113,19 @@
     }
 
     const body: MulticlassRequest = {
-      class: main.url,
-      level: main.level,
-      classes: additional,
+      levels: [
+        {
+          class: main.url,
+          level: main.level,
+          subclass: main.subclass,
+        },
+        ...additional.map((additionalClassItem) => ({
+          class: additionalClassItem.url,
+          level: additionalClassItem.level,
+          subclass: additionalClassItem.subclass,
+        })),
+      ],
     };
-
-    if (main.subclass) {
-      body.subclass = main.subclass;
-    }
 
     return body;
   });
@@ -163,6 +175,52 @@
     return fetchMulticlassData(requestBody.value);
   });
 
+  // Формируем initialState для drawer из текущих query параметров
+  const drawerInitialState = computed<MulticlassDrawerInitialState | undefined>(
+    () => {
+      const main = mainClass.value;
+      const additional = additionalClasses.value;
+
+      if (!main || additional.length === 0) {
+        return undefined;
+      }
+
+      return {
+        mainClass: {
+          classUrl: main.url,
+          level: main.level,
+          subclassUrl: main.subclass,
+        },
+        additionalClasses: additional.map((additionalClassItem) => ({
+          classUrl: additionalClassItem.url,
+          level: additionalClassItem.level,
+          subclassUrl: additionalClassItem.subclass,
+        })),
+      };
+    },
+  );
+
+  // Drawer для редактирования мультикласса
+  const overlay = useOverlay();
+
+  const editDrawer = overlay.create(MulticlassDrawer, {
+    props: {
+      url: '',
+      name: { rus: 'Мультикласс', eng: 'Multiclass' },
+      initialState: undefined,
+      onClose: () => editDrawer.close(),
+    },
+  });
+
+  function handleEditDrawerOpen() {
+    editDrawer.patch({
+      initialState: drawerInitialState.value,
+      url: mainClass.value?.url ?? '',
+    });
+
+    editDrawer.open();
+  }
+
   useSeoMeta({
     title: 'Мультиклассирование',
     description:
@@ -180,6 +238,18 @@
     copy-text
   >
     <template #actions>
+      <UTooltip
+        v-if="classDetail"
+        text="Редактировать"
+      >
+        <UButton
+          icon="tabler:pencil"
+          variant="ghost"
+          color="neutral"
+          @click.left.exact.prevent="handleEditDrawerOpen()"
+        />
+      </UTooltip>
+
       <PageActions @close="navigateTo('/classes')" />
     </template>
 
