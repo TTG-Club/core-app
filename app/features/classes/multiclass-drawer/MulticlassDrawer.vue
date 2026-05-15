@@ -394,11 +394,7 @@
     }
   }
 
-  function handleRemoveAdditionalClass(classId: string) {
-    removeAdditionalClass(classId);
-  }
-
-  // Сброс/наследование подкласса при смене класса для дополнительных классов
+  // Сброс наследования подкласса при смене класса для дополнительных классов
   watch(
     () =>
       additionalClasses.value.map((additionalClass) => ({
@@ -652,7 +648,7 @@
             variant="ghost"
             size="xs"
             @click.left.exact.prevent="
-              handleRemoveAdditionalClass(additionalClass.id)
+              removeAdditionalClass(additionalClass.id)
             "
           >
             Удалить

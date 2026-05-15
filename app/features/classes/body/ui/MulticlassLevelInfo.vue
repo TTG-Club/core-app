@@ -2,7 +2,6 @@
   import type { ClassInMulticlass } from '../../model';
 
   interface Props {
-    characterLevel: number;
     spellcastingLevel?: number;
     multiclass: Array<ClassInMulticlass>;
   }
@@ -15,8 +14,8 @@
   const props = defineProps<Props>();
 
   /**
-   * Группирует классы по имени и берёт максимальный уровень для каждого класса.
-   * При повторном выборе одного класса учитывается только наивысший уровень,
+   * Группирует классы по имени и суммирует уровни для каждого класса.
+   * При повторном выборе одного класса уровни складываются,
    * так как это продолжение того же класса.
    */
   const groupedClasses = computed<Array<GroupedClass>>(() => {
@@ -71,7 +70,7 @@
     </div>
 
     <div
-      v-if="props.spellcastingLevel"
+      v-if="props.spellcastingLevel !== undefined"
       :class="[
         'w-full overflow-hidden bg-muted',
         'rounded-lg border border-default',
