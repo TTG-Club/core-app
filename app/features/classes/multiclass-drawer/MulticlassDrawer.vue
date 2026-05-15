@@ -11,43 +11,76 @@
     MULTICLASS_DRAWER_SELECTED_CLASS_ID,
   } from './constants';
 
-  const { url, parent = undefined } = defineProps<{
+  const MAX_CHARACTER_LEVEL = 20;
+  const MAX_ADDITIONAL_CLASS_COUNT = 9;
+
+  export interface MulticlassDrawerClassState {
+    classUrl: string;
+    level: number;
+    subclassUrl?: string;
+  }
+
+  export interface MulticlassDrawerInitialState {
+    /** Основной класс (первый слот) */
+    mainClass: MulticlassDrawerClassState;
+    /** Дополнительные классы (второй слот и далее) */
+    additionalClasses: Array<MulticlassDrawerClassState>;
+  }
+
+  const {
+    url,
+    parent = undefined,
+    initialState = undefined,
+  } = defineProps<{
     url: string;
     name: NameResponse;
     parent?: ClassLinkResponse;
+    initialState?: MulticlassDrawerInitialState;
   }>();
 
   const emit = defineEmits<{
     (eventName: 'close'): void;
   }>();
 
-  // Первая строка: текущий класс/подкласс и уровень
-  const currentLevel = ref<number>(1);
-
   // Определяем базовый URL основного класса
   const initialMainClassUrl = computed(() => (parent ? parent.url : url));
 
-  // Основной класс (можно выбрать)
-  const currentClassUrl = ref<string>(parent ? parent.url : url);
+  // Первая строка: текущий класс/подкласс и уровень
+  const currentLevel = ref<number>(
+    initialState?.mainClass.level ?? (parent ? 3 : 1),
+  );
 
-  // Обновляем currentClassUrl при изменении initialMainClassUrl
+  // Основной класс (можно выбрать)
+  const currentClassUrl = ref<string>(
+    initialState?.mainClass.classUrl ?? (parent ? parent.url : url),
+  );
+
+  // Обновляем currentClassUrl при изменении initialMainClassUrl (только если нет initialState)
   watch(
     initialMainClassUrl,
     (newUrl) => {
-      if (currentClassUrl.value !== newUrl) {
+      if (!initialState && currentClassUrl.value !== newUrl) {
         currentClassUrl.value = newUrl;
       }
     },
-    { immediate: true },
+    { immediate: !initialState },
   );
 
-  // Инициализируем подкласс: если мы на странице подкласса, используем его URL
-  const currentSubclassUrl = ref<string | undefined>(parent ? url : undefined);
+  // Инициализируем подкласс
+  const currentSubclassUrl = ref<string | undefined>(
+    initialState?.mainClass.subclassUrl ?? (parent ? url : undefined),
+  );
 
-  // Вторая строка: выбор класса, подкласса и уровня
-  const selectedClassUrl = ref<string>();
-  const selectedSubclassUrl = ref<string>();
-  const selectedLevel = ref<number>(1);
+  // Второй слот: берём из initialState[0] если есть
+  const secondInitial = initialState?.additionalClasses[0];
+
+  const selectedClassUrl = ref<string | undefined>(secondInitial?.classUrl);
+
+  const selectedSubclassUrl = ref<string | undefined>(
+    secondInitial?.subclassUrl,
+  );
+
+  const selectedLevel = ref<number>(secondInitial?.level ?? 1);
 
   // Дополнительные классы (3-10)
   interface AdditionalClass {
@@ -57,120 +90,250 @@
     level: number;
   }
 
-  const additionalClasses = ref<Array<AdditionalClass>>([]);
+  // Инициализируем дополнительные классы из initialState (начиная с индекса 1)
+  const additionalClasses = ref<Array<AdditionalClass>>(
+    (initialState?.additionalClasses.slice(1) ?? []).map(
+      (additionalClassState, index) => ({
+        id: `class-init-${index}`,
+        classUrl: additionalClassState.classUrl,
+        subclassUrl: additionalClassState.subclassUrl,
+        level: additionalClassState.level,
+      }),
+    ),
+  );
 
-  interface SelectedClassUrlEntry {
-    classUrl: string;
+  // Единый упорядоченный список всех слотов классов
+  interface ClassSlot {
     id: string;
+    classUrl: string | undefined;
+    subclassUrl: string | undefined;
+    level: number;
   }
 
-  function getSelectedClassUrlEntries(): Array<SelectedClassUrlEntry> {
-    const entries: Array<SelectedClassUrlEntry> = [];
-
-    if (currentClassUrl.value) {
-      entries.push({
+  const allClassSlots = computed<Array<ClassSlot>>(() => {
+    const slots: Array<ClassSlot> = [
+      {
         id: MULTICLASS_DRAWER_CURRENT_CLASS_ID,
         classUrl: currentClassUrl.value,
-      });
-    }
-
-    if (selectedClassUrl.value) {
-      entries.push({
+        subclassUrl: currentSubclassUrl.value,
+        level: currentLevel.value,
+      },
+      {
         id: MULTICLASS_DRAWER_SELECTED_CLASS_ID,
         classUrl: selectedClassUrl.value,
-      });
-    }
+        subclassUrl: selectedSubclassUrl.value,
+        level: selectedLevel.value,
+      },
+      ...additionalClasses.value.map((additionalClass) => ({
+        id: additionalClass.id,
+        classUrl: additionalClass.classUrl,
+        subclassUrl: additionalClass.subclassUrl,
+        level: additionalClass.level,
+      })),
+    ];
 
-    additionalClasses.value.forEach((additionalClass) => {
-      if (additionalClass.classUrl) {
-        entries.push({
-          id: additionalClass.id,
-          classUrl: additionalClass.classUrl,
-        });
+    return slots;
+  });
+
+  function getClassMaxLevelTotal(slots: Array<ClassSlot>): number {
+    const classMaxLevels = new Map<string, number>();
+
+    for (const slot of slots) {
+      if (!slot.classUrl) {
+        continue;
       }
-    });
 
-    return entries;
-  }
+      const currentMaxLevel = classMaxLevels.get(slot.classUrl);
 
-  function getClassExcludedValues(classId: string): Array<string> {
-    return getSelectedClassUrlEntries()
-      .filter((entry) => entry.id !== classId)
-      .map((entry) => entry.classUrl);
-  }
-
-  const currentClassExcludedValues = computed(() => {
-    return getClassExcludedValues(MULTICLASS_DRAWER_CURRENT_CLASS_ID);
-  });
-
-  const selectedClassExcludedValues = computed(() => {
-    return getClassExcludedValues(MULTICLASS_DRAWER_SELECTED_CLASS_ID);
-  });
-
-  const hasDuplicateSelectedClasses = computed(() => {
-    const selectedClassUrls = getSelectedClassUrlEntries().map(
-      (entry) => entry.classUrl,
-    );
-
-    return new Set(selectedClassUrls).size !== selectedClassUrls.length;
-  });
-
-  function resetAdditionalSubclass(classId: string) {
-    const additionalClass = additionalClasses.value.find(
-      (additionalClassItem) => additionalClassItem.id === classId,
-    );
-
-    if (additionalClass) {
-      additionalClass.subclassUrl = undefined;
+      if (currentMaxLevel === undefined || slot.level > currentMaxLevel) {
+        classMaxLevels.set(slot.classUrl, slot.level);
+      }
     }
+
+    let totalLevel = 0;
+
+    for (const level of classMaxLevels.values()) {
+      totalLevel += level;
+    }
+
+    return totalLevel;
   }
 
-  function handleRemoveAdditionalClass(classId: string) {
-    removeAdditionalClass(classId);
+  const effectiveCharacterLevel = computed(() =>
+    getClassMaxLevelTotal(allClassSlots.value),
+  );
+
+  const isAddClassDisabled = computed(
+    () =>
+      additionalClasses.value.length >= MAX_ADDITIONAL_CLASS_COUNT
+      || effectiveCharacterLevel.value >= MAX_CHARACTER_LEVEL,
+  );
+
+  /**
+   * Возвращает выбранные классы соседних слотов.
+   */
+  function getAdjacentClassUrls(slotId: string): Array<string> {
+    const slots = allClassSlots.value;
+    const slotIndex = slots.findIndex((slot) => slot.id === slotId);
+
+    if (slotIndex === -1) {
+      return [];
+    }
+
+    const previousClassUrl = slots[slotIndex - 1]?.classUrl;
+    const nextClassUrl = slots[slotIndex + 1]?.classUrl;
+
+    return [previousClassUrl, nextClassUrl].filter(
+      (classUrl): classUrl is string =>
+        typeof classUrl === 'string' && classUrl.length > 0,
+    );
   }
 
-  // Вычисляем сумму уровней дополнительных классов
-  const sumAdditionalLevels = computed(() => {
-    return additionalClasses.value
-      .filter((additionalClass) => additionalClass.classUrl)
-      .reduce((sum, additionalClass) => sum + additionalClass.level, 0);
-  });
+  /**
+   * Проверяет, есть ли в текущей последовательности два одинаковых класса подряд.
+   */
+  function hasAdjacentDuplicateClassSlots(): boolean {
+    return allClassSlots.value.some((slot, slotIndex) => {
+      const nextSlot = allClassSlots.value[slotIndex + 1];
+
+      return !!slot.classUrl && slot.classUrl === nextSlot?.classUrl;
+    });
+  }
+
+  /**
+   * Возвращает предыдущий слот с тем же classUrl для данного слота.
+   * Используется для определения ограничений повторно выбранного класса.
+   */
+  function getPreviousSameClassSlot(slotId: string): ClassSlot | undefined {
+    const slots = allClassSlots.value;
+    const currentIndex = slots.findIndex((slot) => slot.id === slotId);
+
+    if (currentIndex <= 0) {
+      return undefined;
+    }
+
+    const currentSlot = slots[currentIndex];
+
+    if (!currentSlot?.classUrl) {
+      return undefined;
+    }
+
+    // Ищем предыдущий слот с тем же classUrl среди слотов до текущего
+    for (let index = currentIndex - 1; index >= 0; index--) {
+      const slot = slots[index];
+
+      if (slot && slot.classUrl === currentSlot.classUrl) {
+        return slot;
+      }
+    }
+
+    return undefined;
+  }
+
+  function getMinLevelForSlot(slotId: string): number {
+    const previousSlot = getPreviousSameClassSlot(slotId);
+
+    if (!previousSlot) {
+      return 1;
+    }
+
+    return previousSlot.level + 1;
+  }
+
+  /**
+   * Возвращает унаследованный подкласс для повторного слота.
+   * Если класс выбран повторно и у предыдущего вхождения есть подкласс,
+   * повторный слот обязан использовать тот же подкласс.
+   */
+  function getInheritedSubclassForSlot(slotId: string): string | undefined {
+    const previousSlot = getPreviousSameClassSlot(slotId);
+
+    return previousSlot?.subclassUrl;
+  }
+
+  /**
+   * Подкласс заблокирован для повторного класса, если подкласс уже был выбран
+   * в предыдущем вхождении этого класса (он наследуется автоматически).
+   * Также заблокирован если уровень <= 2 или класс не выбран.
+   */
+  function isSubclassDisabledForSlot(
+    slotId: string,
+    level: number,
+    classUrl: string | undefined,
+  ): boolean {
+    if (!classUrl || level <= 2) {
+      return true;
+    }
+
+    // Если есть унаследованный подкласс — поле заблокировано (значение проставлено автоматически)
+    return getInheritedSubclassForSlot(slotId) !== undefined;
+  }
+
+  function getEffectiveUsedLevels(excludeSlotId: string): number {
+    const slots = allClassSlots.value;
+    const classMaxLevels = new Map<string, number>();
+    const excludedSlot = slots.find((slot) => slot.id === excludeSlotId);
+
+    for (const slot of slots) {
+      if (slot.id === excludeSlotId || !slot.classUrl) {
+        continue;
+      }
+
+      if (excludedSlot?.classUrl === slot.classUrl) {
+        continue;
+      }
+
+      const existing = classMaxLevels.get(slot.classUrl);
+
+      if (existing === undefined || slot.level > existing) {
+        classMaxLevels.set(slot.classUrl, slot.level);
+      }
+    }
+
+    let totalUsed = 0;
+
+    for (const level of classMaxLevels.values()) {
+      totalUsed += level;
+    }
+
+    return totalUsed;
+  }
 
   // Максимальный доступный уровень для основного класса
   const maxCurrentLevel = computed(() => {
-    const secondLevel = selectedClassUrl.value ? selectedLevel.value : 0;
-    const available = 20 - secondLevel - sumAdditionalLevels.value;
+    const usedByOthers = getEffectiveUsedLevels(
+      MULTICLASS_DRAWER_CURRENT_CLASS_ID,
+    );
 
-    return Math.max(1, Math.min(available, 20));
+    const available = MAX_CHARACTER_LEVEL - usedByOthers;
+
+    return Math.max(1, Math.min(available, MAX_CHARACTER_LEVEL));
   });
 
   // Максимальный доступный уровень для второго класса
   const maxSelectedLevel = computed(() => {
-    const available = 20 - currentLevel.value - sumAdditionalLevels.value;
+    const usedByOthers = getEffectiveUsedLevels(
+      MULTICLASS_DRAWER_SELECTED_CLASS_ID,
+    );
 
-    return Math.max(1, Math.min(available, 20));
+    const available = MAX_CHARACTER_LEVEL - usedByOthers;
+
+    return Math.max(1, Math.min(available, MAX_CHARACTER_LEVEL));
   });
 
   // Функция для вычисления максимального уровня для дополнительного класса
   function getMaxLevelForAdditionalClass(classId: string): number {
-    const currentSum = currentLevel.value;
-    const secondSum = selectedClassUrl.value ? selectedLevel.value : 0;
+    const usedByOthers = getEffectiveUsedLevels(classId);
+    const available = MAX_CHARACTER_LEVEL - usedByOthers;
 
-    const otherAdditionalSum = additionalClasses.value
-      .filter(
-        (additionalClass) =>
-          additionalClass.id !== classId && additionalClass.classUrl,
-      )
-      .reduce((sum, additionalClass) => sum + additionalClass.level, 0);
-
-    const available = 20 - currentSum - secondSum - otherAdditionalSum;
-
-    return Math.max(1, Math.min(available, 20));
+    return Math.max(1, Math.min(available, MAX_CHARACTER_LEVEL));
   }
 
-  // Сброс подкласса при смене основного класса
+  // Сброс/наследование подкласса при смене основного класса
   watch(currentClassUrl, () => {
-    currentSubclassUrl.value = undefined;
+    currentSubclassUrl.value = getInheritedSubclassForSlot(
+      MULTICLASS_DRAWER_CURRENT_CLASS_ID,
+    );
   });
 
   // Корректировка уровня основного класса, если он превышает доступный максимум
@@ -194,9 +357,11 @@
     }
   });
 
-  // Сброс подкласса при смене второго класса
+  // Сброс/наследование подкласса при смене второго класса
   watch(selectedClassUrl, () => {
-    selectedSubclassUrl.value = undefined;
+    selectedSubclassUrl.value = getInheritedSubclassForSlot(
+      MULTICLASS_DRAWER_SELECTED_CLASS_ID,
+    );
   });
 
   // Сброс подкласса при смене уровня второго класса (если уровень <= 2)
@@ -208,8 +373,7 @@
 
   // Обработчик нажатия на кнопку "Добавить класс"
   function handleAddClass() {
-    if (additionalClasses.value.length >= 9) {
-      // Максимум 10 классов (1 текущий + 1 второй + 8 дополнительных)
+    if (isAddClassDisabled.value) {
       return;
     }
 
@@ -230,7 +394,7 @@
     }
   }
 
-  // Сброс подкласса при смене класса для дополнительных классов
+  // Сброс наследования подкласса при смене класса для дополнительных классов
   watch(
     () =>
       additionalClasses.value.map((additionalClass) => ({
@@ -244,7 +408,14 @@
         );
 
         if (previousClass && previousClass.classUrl !== classUrl) {
-          resetAdditionalSubclass(id);
+          const additionalClass = additionalClasses.value.find(
+            (additionalClassItem) => additionalClassItem.id === id,
+          );
+
+          if (additionalClass) {
+            // Наследуем подкласс от предыдущего вхождения того же класса (или сбрасываем)
+            additionalClass.subclassUrl = getInheritedSubclassForSlot(id);
+          }
         }
       });
     },
@@ -265,7 +436,13 @@
         );
 
         if (oldValue && oldValue.level !== level && level <= 2) {
-          resetAdditionalSubclass(id);
+          const additionalClass = additionalClasses.value.find(
+            (additionalClassItem) => additionalClassItem.id === id,
+          );
+
+          if (additionalClass) {
+            additionalClass.subclassUrl = undefined;
+          }
         }
       });
     },
@@ -311,18 +488,14 @@
       || !currentLevel.value
       || !selectedClassUrl.value
       || !selectedLevel.value
-      || hasDuplicateSelectedClasses.value
+      || hasAdjacentDuplicateClassSlots()
     ) {
       return;
     }
 
-    // Используем выбранный основной класс
     const class1BaseUrl = currentClassUrl.value;
-
-    // Используем выбранный подкласс для основного класса
     const class1SubclassUrl = currentSubclassUrl.value;
 
-    // Формируем URL для страницы мультикласса
     const query: Record<string, string> = {
       class1: class1BaseUrl,
       level1: String(currentLevel.value),
@@ -330,17 +503,14 @@
       level2: String(selectedLevel.value),
     };
 
-    // Если выбран подкласс для основного класса, добавляем его URL
     if (class1SubclassUrl) {
       query.subclass1 = class1SubclassUrl;
     }
 
-    // Если выбран подкласс для второго класса, добавляем его URL
     if (selectedSubclassUrl.value) {
       query.subclass2 = selectedSubclassUrl.value;
     }
 
-    // Добавляем дополнительные классы (3-10)
     additionalClasses.value.forEach((additionalClass, index) => {
       if (additionalClass.classUrl) {
         const classNumber = index + 3;
@@ -357,7 +527,6 @@
     const queryString = new URLSearchParams(query).toString();
     const multiclassUrl = `/multiclass?${queryString}`;
 
-    // Закрываем drawer и переходим на страницу мультикласса в том же окне
     emit('close');
     navigateTo(multiclassUrl);
   }
@@ -385,12 +554,15 @@
 
           <SelectClass
             v-model="currentClassUrl"
-            :excluded-values="currentClassExcludedValues"
+            :excluded-values="
+              getAdjacentClassUrls(MULTICLASS_DRAWER_CURRENT_CLASS_ID)
+            "
             class="min-w-0"
           />
 
           <SelectLevel
             v-model="currentLevel"
+            :min="getMinLevelForSlot(MULTICLASS_DRAWER_CURRENT_CLASS_ID)"
             :max="maxCurrentLevel"
             class="col-start-2 w-36 sm:col-start-auto"
           />
@@ -402,7 +574,13 @@
           <SelectSubclass
             v-model="currentSubclassUrl"
             :class-url="currentClassUrl"
-            :disabled="!currentClassUrl || currentLevel <= 2"
+            :disabled="
+              isSubclassDisabledForSlot(
+                MULTICLASS_DRAWER_CURRENT_CLASS_ID,
+                currentLevel,
+                currentClassUrl,
+              )
+            "
             class="flex-1"
           />
         </div>
@@ -423,12 +601,15 @@
 
           <SelectClass
             v-model="selectedClassUrl"
-            :excluded-values="selectedClassExcludedValues"
+            :excluded-values="
+              getAdjacentClassUrls(MULTICLASS_DRAWER_SELECTED_CLASS_ID)
+            "
             class="min-w-0"
           />
 
           <SelectLevel
             v-model="selectedLevel"
+            :min="getMinLevelForSlot(MULTICLASS_DRAWER_SELECTED_CLASS_ID)"
             :max="maxSelectedLevel"
             class="col-start-2 w-36 sm:col-start-auto"
           />
@@ -440,7 +621,13 @@
           <SelectSubclass
             v-model="selectedSubclassUrl"
             :class-url="selectedClassUrl"
-            :disabled="!selectedClassUrl || selectedLevel <= 2"
+            :disabled="
+              isSubclassDisabledForSlot(
+                MULTICLASS_DRAWER_SELECTED_CLASS_ID,
+                selectedLevel,
+                selectedClassUrl,
+              )
+            "
             class="flex-1"
           />
         </div>
@@ -461,7 +648,7 @@
             variant="ghost"
             size="xs"
             @click.left.exact.prevent="
-              handleRemoveAdditionalClass(additionalClass.id)
+              removeAdditionalClass(additionalClass.id)
             "
           >
             Удалить
@@ -475,12 +662,13 @@
 
           <SelectClass
             v-model="additionalClass.classUrl"
-            :excluded-values="getClassExcludedValues(additionalClass.id)"
+            :excluded-values="getAdjacentClassUrls(additionalClass.id)"
             class="min-w-0"
           />
 
           <SelectLevel
             v-model="additionalClass.level"
+            :min="getMinLevelForSlot(additionalClass.id)"
             :max="getMaxLevelForAdditionalClass(additionalClass.id)"
             class="col-start-2 w-36 sm:col-start-auto"
           />
@@ -492,7 +680,13 @@
           <SelectSubclass
             v-model="additionalClass.subclassUrl"
             :class-url="additionalClass.classUrl"
-            :disabled="!additionalClass.classUrl || additionalClass.level <= 2"
+            :disabled="
+              isSubclassDisabledForSlot(
+                additionalClass.id,
+                additionalClass.level,
+                additionalClass.classUrl,
+              )
+            "
             class="flex-1"
           />
         </div>
@@ -502,7 +696,7 @@
       <div class="flex justify-between gap-2 pt-4">
         <UButton
           variant="link"
-          :disabled="additionalClasses.length >= 9"
+          :disabled="isAddClassDisabled"
           class="p-0!"
           @click.left.exact.prevent="handleAddClass()"
         >
@@ -519,7 +713,9 @@
 
           <UButton
             :disabled="
-              !selectedClassUrl || !selectedLevel || hasDuplicateSelectedClasses
+              !selectedClassUrl
+              || !selectedLevel
+              || hasAdjacentDuplicateClassSlots()
             "
             @click.left.exact.prevent="handleApply()"
           >
