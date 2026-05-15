@@ -204,6 +204,7 @@
   const overlay = useOverlay();
 
   const editDrawer = overlay.create(MulticlassDrawer, {
+    destroyOnClose: true,
     props: {
       url: '',
       name: { rus: 'Мультикласс', eng: 'Multiclass' },
@@ -213,12 +214,11 @@
   });
 
   function handleEditDrawerOpen() {
-    editDrawer.patch({
+    editDrawer.open({
       initialState: drawerInitialState.value,
       url: mainClass.value?.url ?? '',
+      name: { rus: 'Мультикласс', eng: 'Multiclass' },
     });
-
-    editDrawer.open();
   }
 
   useSeoMeta({
