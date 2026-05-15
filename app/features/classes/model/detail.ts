@@ -18,6 +18,7 @@ export interface ClassDetailResponse {
   proficiency: ClassProficiency;
   equipment: RenderNode;
   savingThrows: string;
+  requirements: string;
   table: Array<ClassTable>;
   features: Array<ClassFeature>;
   hasSubclasses?: boolean;
@@ -49,11 +50,14 @@ export interface MainClassData {
   subclass?: string;
 }
 
-export interface MulticlassRequest {
+export interface MulticlassLevelEntry {
   class: string;
   level: number;
   subclass?: string;
-  classes: Array<AdditionalClassItem>;
+}
+
+export interface MulticlassRequest {
+  levels: Array<MulticlassLevelEntry>;
 }
 
 export interface ClassTable {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import type { Cell, ColumnDef, Header } from '@tanstack/vue-table';
+  import type { RouteLocationRaw } from 'vue-router';
 
   import type { Level } from '~/shared/types';
 
@@ -17,10 +18,12 @@
   } from '@tanstack/vue-table';
   import { useDebounceFn } from '@vueuse/core';
   import { maxBy, omit, orderBy } from 'es-toolkit';
-  import { computed, h, ref } from 'vue';
+  import { computed, h, ref, withModifiers } from 'vue';
 
+  import { ULink } from '#components';
   import { LEVELS } from '~/shared/consts';
 
+  import { getIndexedFeatureAnchorId } from '../constants';
   import { useDndMechanics } from './useDndMechanics';
 
   interface Props {
@@ -35,16 +38,32 @@
   interface MulticlassTableRow {
     level: Level;
     proficiencyBonus: number;
-    features: Array<ClassFeature>;
+    features: Array<MulticlassTableFeature>;
     isSeparator?: boolean;
     separatorText?: string;
 
-    [key: string]: string | number | Array<ClassFeature> | boolean | undefined;
+    [key: string]:
+      | string
+      | number
+      | Array<MulticlassTableFeature>
+      | boolean
+      | undefined;
   }
 
   interface HoverCell {
     rowIndex: number;
     columnIndex: number;
+  }
+
+  interface MulticlassSegment {
+    level: number;
+    class: string;
+    subclass?: string;
+    segmentLevel: number;
+  }
+
+  interface MulticlassTableFeature extends Omit<ClassFeature, 'scaling'> {
+    anchorId: string;
   }
 
   const hoveredCell = ref<HoverCell | null>(null);
@@ -69,11 +88,16 @@
   });
 
   const features = computed(() => {
-    const list: Array<ClassFeature> = [];
+    const list: Array<MulticlassTableFeature> = [];
 
-    for (const feature of props.features) {
+    props.features.forEach((feature, featureIndex) => {
+      const anchorId = getIndexedFeatureAnchorId(feature.key, featureIndex);
+
       // Добавляем основное умение
-      list.push(omit(feature, ['scaling']));
+      list.push({
+        ...omit(feature, ['scaling']),
+        anchorId,
+      });
 
       // Добавляем scaling умения, если есть
       if (feature.scaling) {
@@ -82,16 +106,50 @@
             key: feature.key,
             isSubclass: feature.isSubclass,
             ...scale,
+            anchorId,
           })),
         );
       }
-    }
+    });
 
     return orderBy(list, ['level'], ['asc']);
   });
 
   // Определяем максимальный уровень персонажа из features
+  const multiclassSegments = computed<Array<MulticlassSegment>>(() => {
+    if (!props.multiclass || props.multiclass.length === 0) {
+      return [];
+    }
+
+    const previousLevelByClass = new Map<string, number>();
+
+    return props.multiclass.map((classItem) => {
+      const previousLevel = previousLevelByClass.get(classItem.class) ?? 0;
+
+      const segmentLevel =
+        previousLevel > 0 && classItem.level > previousLevel
+          ? classItem.level - previousLevel
+          : classItem.level;
+
+      previousLevelByClass.set(classItem.class, previousLevel + segmentLevel);
+
+      return {
+        ...classItem,
+        segmentLevel,
+      };
+    });
+  });
+
   const maxCharacterLevel = computed((): Level => {
+    if (multiclassSegments.value.length > 0) {
+      const multiclassLevel = multiclassSegments.value.reduce(
+        (sum, segment) => sum + segment.segmentLevel,
+        0,
+      );
+
+      return LEVELS.find((level) => level === multiclassLevel) ?? 20;
+    }
+
     if (!features.value || features.value.length === 0) {
       return 20;
     }
@@ -128,7 +186,7 @@
 
   // Вычисляем, на каком уровне персонажа начинается каждый класс
   const classStartLevels = computed(() => {
-    if (!props.multiclass || props.multiclass.length === 0) {
+    if (multiclassSegments.value.length === 0) {
       return [];
     }
 
@@ -137,14 +195,14 @@
 
     let currentLevel = 1;
 
-    for (const classItem of props.multiclass) {
+    for (const classItem of multiclassSegments.value) {
       starts.push({
         level: currentLevel,
         class: classItem.class,
         subclass: classItem.subclass,
       });
 
-      currentLevel += classItem.level;
+      currentLevel += classItem.segmentLevel;
     }
 
     return starts;
@@ -213,6 +271,25 @@
     return row;
   }
 
+  /**
+   * Формирует ссылку на умение без потери текущих параметров мультикласса.
+   */
+  function getFeatureRoute(anchorId: string): RouteLocationRaw {
+    return {
+      path: route.path,
+      query: route.query,
+      hash: `#${anchorId}`,
+    };
+  }
+
+  /**
+   * Прокручивает к описанию умения и обновляет hash в текущем URL.
+   */
+  function handleFeatureClick(anchorId: string) {
+    scrollToAnchor(anchorId);
+    router.replace(getFeatureRoute(anchorId));
+  }
+
   const tableColumns = computed<ColumnDef<MulticlassTableRow>[]>(() => {
     const baseColumns: ColumnDef<MulticlassTableRow>[] = [
       {
@@ -249,25 +326,22 @@
 
           const featureLinks = featuresInLevel.map((feature, index) => {
             const link = h(
-              'span',
+              ULink,
               {
+                to: getFeatureRoute(feature.anchorId),
+                replace: true,
                 class: [
-                  feature.isSubclass
-                    ? 'text-success hover:text-success'
-                    : 'text-link hover:text-link',
-                  'cursor-pointer transition-colors duration-100',
-                  'hover:underline',
+                  feature.isSubclass ? 'text-success hover:text-success' : '',
+                  'transition-colors duration-100',
                 ],
-                onClick: withModifiers(() => {
-                  scrollToAnchor(feature.key);
-
-                  // Обновляем URL без перезагрузки страницы
-                  if (route.hash !== `#${feature.key}`) {
-                    router.replace({ hash: `#${feature.key}` });
-                  }
-                }, ['left', 'exact', 'prevent']),
+                onClick: withModifiers(
+                  () => handleFeatureClick(feature.anchorId),
+                  ['left', 'exact', 'prevent'],
+                ),
               },
-              feature.name,
+              {
+                default: () => feature.name,
+              },
             );
 
             return index < featuresInLevel.length - 1

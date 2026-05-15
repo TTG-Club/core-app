@@ -44,7 +44,7 @@
         <StatsBlock
           :hit-dice="detail.hitDice"
           :saving-throws="detail.savingThrows"
-          :proficiency="detail.proficiency"
+          :requirements="detail.requirements"
           :primary-characteristics="detail.primaryCharacteristics"
         />
       </div>

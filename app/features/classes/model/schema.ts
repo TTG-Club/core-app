@@ -158,6 +158,7 @@ const multiclassDetailResponseSchema: z.ZodType<MulticlassDetailResponse> =
     proficiency: classProficiencySchema,
     equipment: renderNodeSchema,
     savingThrows: z.string(),
+    requirements: z.string(),
     table: z.array(classTableSchema),
     features: z.array(classFeatureSchema),
     hasSubclasses: z.boolean().optional(),
