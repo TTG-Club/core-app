@@ -3,7 +3,9 @@
     CAROUSEL_CARDS,
     VTTG_HERO_BACKGROUND,
     VTTG_HERO_LINKS,
+    VTTG_HERO_VIDEO,
   } from '../model';
+  import VttgVideoPlayer from './VttgVideoPlayer.vue';
 </script>
 
 <template>
@@ -18,19 +20,6 @@
       class="relative z-10"
       :links="VTTG_HERO_LINKS"
     >
-      <template #headline>
-        <UBadge
-          variant="subtle"
-          class="rounded-full"
-        >
-          <UIcon
-            name="tabler:sparkles"
-            class="mr-2 size-4"
-          />
-          Открытая demo — уже скора
-        </UBadge>
-      </template>
-
       <template #title>
         <span
           class="inline-block text-6xl leading-[1.3] tracking-widest drop-shadow-[8px_8px_8px_rgba(0,0,0,0.4)] md:text-8xl lg:text-[110px]"
@@ -46,6 +35,19 @@
         Карты, кубики, персонажи — всё в одном месте.
       </template>
     </UPageHero>
+
+    <section class="relative z-10 pb-20">
+      <div class="mx-auto px-6 lg:max-w-330 lg:px-8">
+        <div
+          class="bg-surface overflow-hidden rounded-2xl border-2 border-primary/20 shadow-2xl"
+        >
+          <VttgVideoPlayer
+            :src="VTTG_HERO_VIDEO"
+            :poster="VTTG_HERO_BACKGROUND"
+          />
+        </div>
+      </div>
+    </section>
 
     <section class="relative z-10 pb-20">
       <div class="mx-auto px-6 lg:max-w-330 lg:px-8">
