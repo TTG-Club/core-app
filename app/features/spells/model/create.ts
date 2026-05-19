@@ -5,7 +5,7 @@ export interface SpellCreate extends EditorBaseInfoState {
   description: string; // описание маркап
   upper: string | undefined; // "На более высоких уровнях"
   level: number; // уровень заклинания, 0 - заговор
-  school: string | undefined; // школа
+  school: SpellSchool; // школа
   range: Array<SpellRange>; // дистанция
   duration: Array<SpellDuration>; // длительность
   castingTime: Array<SpellCastingTime>; // время накладывания
@@ -15,6 +15,11 @@ export interface SpellCreate extends EditorBaseInfoState {
   healingType: Array<string> | undefined;
   damageType: Array<string> | undefined;
   condition: Array<string> | undefined; // накладываемые состояния
+}
+
+export interface SpellSchool {
+  school: string | undefined; // школа
+  additionalType: string | undefined; // подшкола
 }
 
 export interface SpellRange {

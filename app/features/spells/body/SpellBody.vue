@@ -21,7 +21,6 @@
         :class="$style.info"
       >
         <TopBar
-          :additional-type="spell.additionalType"
           :ritual="spell.ritual"
           :school="spell.school"
           :level="spell.level"

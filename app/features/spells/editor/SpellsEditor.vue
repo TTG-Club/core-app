@@ -41,7 +41,10 @@
       description: '',
       upper: undefined,
       level: 0,
-      school: undefined,
+      school: {
+        school: undefined,
+        additionalType: undefined,
+      },
       range: [],
       duration: [],
       castingTime: [],
@@ -105,7 +108,18 @@
           label="Школа"
           name="school"
         >
-          <SelectMagicSchool v-model="state.school" />
+          <SelectMagicSchool v-model="state.school.school" />
+        </UFormField>
+
+        <UFormField
+          class="col-span-full"
+          label="Подшкола"
+          name="additionalType"
+        >
+          <UInput
+            v-model="state.school.additionalType"
+            placeholder="Подшкола"
+          />
         </UFormField>
 
         <SpellCastingTimes v-model="state.castingTime" />
