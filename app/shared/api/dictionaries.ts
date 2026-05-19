@@ -41,6 +41,7 @@ enum DictionaryEndpoints {
   WEAPON_CATEGORIES = '/api/v2/dictionaries/weapon/categories',
   SOURCE_TYPES = '/api/v2/dictionaries/source/types',
   NOTIFICATION_TYPES = '/api/v2/dictionaries/notification/types',
+  ATTACK_TYPES = '/api/v2/dictionaries/attack/types',
 }
 
 class Dictionaries {
@@ -294,6 +295,15 @@ class Dictionaries {
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.NOTIFICATION_TYPES, {
+      ...config,
+      method: 'get',
+    });
+  };
+
+  public attackTypes = <R extends NitroFetchRequest>(
+    config: Omit<NitroFetchOptions<R>, 'method'> = {},
+  ): Promise<Array<SelectOption>> => {
+    return $fetch(DictionaryEndpoints.ATTACK_TYPES, {
       ...config,
       method: 'get',
     });

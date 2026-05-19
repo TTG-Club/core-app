@@ -5,6 +5,7 @@
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import {
     SelectAbilities,
+    SelectAttackType,
     SelectClass,
     SelectCondition,
     SelectDamageType,
@@ -65,6 +66,7 @@
       healingType: [],
       damageType: [],
       condition: [],
+      attackType: [],
     };
   }
 
@@ -181,6 +183,16 @@
           <SelectHealType
             v-model="state.healingType"
             multiple
+          />
+        </UFormField>
+
+        <UFormField
+          class="col-span-6"
+          label="Тип атаки"
+          name="attackType"
+        >
+          <SelectAttackType
+            v-model="state.attackType"
           />
         </UFormField>
       </div>

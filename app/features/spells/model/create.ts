@@ -15,6 +15,7 @@ export interface SpellCreate extends EditorBaseInfoState {
   healingType: Array<string> | undefined;
   damageType: Array<string> | undefined;
   condition: Array<string> | undefined; // накладываемые состояния
+  attackType: Array<string> | undefined; // типы атаки
 }
 
 export interface SpellSchool {
