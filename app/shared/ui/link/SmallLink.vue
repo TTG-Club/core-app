@@ -36,7 +36,7 @@
 <template>
   <NuxtLink
     v-slot="{ href }"
-    v-memo="[to]"
+    v-memo="[to, isOpened]"
     custom
     :to
   >
@@ -90,9 +90,13 @@
 
           <div
             v-if="$slots.caption"
-            class="flex items-center gap-1"
+            class="flex w-full min-w-0 items-center gap-1 overflow-hidden text-nowrap text-ellipsis"
           >
-            <slot name="caption" />
+            <span
+              class="block w-full overflow-hidden text-nowrap text-ellipsis"
+            >
+              <slot name="caption" />
+            </span>
           </div>
         </div>
       </div>

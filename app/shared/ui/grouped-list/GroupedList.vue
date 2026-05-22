@@ -78,6 +78,7 @@
     virtualBottomOffset?: number;
     resetKey?: string;
     scrollKey?: string;
+    activeItemKey?: string;
   }
 
   const {
@@ -94,6 +95,7 @@
     virtualBottomOffset = GROUPED_LIST_DEFAULT_BOTTOM_OFFSET,
     resetKey = undefined,
     scrollKey = undefined,
+    activeItemKey = undefined,
   } = defineProps<Props>();
 
   const route = useRoute();
@@ -512,6 +514,80 @@
     );
   }
 
+  const scrollContainer = computed(() => {
+    if (!import.meta.client) {
+      return null;
+    }
+
+    return document.getElementById('section-list-container') || window;
+  });
+
+  /**
+   * Выполняет прокрутку списка к указанному элементу.
+   * Поддерживает как обычный, так и виртуальный список.
+   * @param itemKey Уникальный идентификатор элемента (url).
+   * @returns Возвращает true, если прокрутка была успешно выполнена.
+   */
+  function scrollToItem(itemKey: string): boolean {
+    if (!import.meta.client) {
+      return false;
+    }
+
+    if (!shouldUseVirtual.value) {
+      const element = getSavedItemElement(itemKey);
+
+      if (element) {
+        element.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+
+        return true;
+      }
+
+      return false;
+    }
+
+    if (!virtualContainerElement.value) {
+      return false;
+    }
+
+    const rowIndex = virtualRows.value.findIndex((virtualRow) => {
+      return (
+        virtualRow.type === 'items'
+        && virtualRow.items.some((item) => getItemKey(item) === itemKey)
+      );
+    });
+
+    if (rowIndex < 0) {
+      return false;
+    }
+
+    const rowOffset = virtualRowOffsets.value[rowIndex] ?? 0;
+    const container = scrollContainer.value;
+
+    if (container === window) {
+      const containerDocumentTop =
+        windowScrollTop.value
+        + virtualContainerElement.value.getBoundingClientRect().top;
+
+      window.scrollTo({
+        top: Math.max(0, containerDocumentTop + rowOffset),
+        behavior: 'instant',
+      });
+
+      return true;
+    }
+
+    if (container instanceof HTMLElement) {
+      container.scrollTo({
+        top: rowOffset,
+        behavior: 'instant',
+      });
+
+      return true;
+    }
+
+    return false;
+  }
+
   async function restoreListScrollPosition(): Promise<void> {
     if (isScrollPositionRestored.value) {
       return;
@@ -524,10 +600,14 @@
     await nextTick();
     await new Promise(requestAnimationFrame);
 
-    const isRestored = restoreSavedPosition(
+    let isRestored = restoreSavedPosition(
       getSavedItemElement,
       shouldUseVirtual.value ? getVirtualItemScrollTop : undefined,
     );
+
+    if (!isRestored && activeItemKey) {
+      isRestored = scrollToItem(activeItemKey);
+    }
 
     if (isRestored) {
       isScrollPositionRestored.value = true;

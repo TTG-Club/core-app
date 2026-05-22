@@ -6,6 +6,8 @@
 
   const route = useRoute();
 
+  useSectionDetailRedirect('glossary');
+
   const { data: glossary } = await useAsyncData(
     `glossary-${route.params.url}`,
     () =>

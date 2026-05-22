@@ -6,6 +6,8 @@
 
   const route = useRoute();
 
+  useSectionDetailRedirect('magic-items');
+
   const { data: magicItem } = await useAsyncData(
     `magic-items-${route.params.url}`,
     () =>

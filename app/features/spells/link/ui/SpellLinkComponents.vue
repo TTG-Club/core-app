@@ -5,7 +5,7 @@
 </script>
 
 <template>
-  <div class="ml-auto flex gap-1">
+  <span class="ml-auto inline-flex gap-1">
     <span class="w-3 text-center">
       {{ components.v ? 'В' : '·' }}
     </span>
@@ -17,7 +17,7 @@
     <span class="w-3 text-center">
       {{ components.m ? 'М' : '·' }}
     </span>
-  </div>
+  </span>
 </template>
 
 <style module lang="scss">

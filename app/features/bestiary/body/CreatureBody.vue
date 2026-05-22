@@ -68,7 +68,7 @@
         <StatsBlock v-bind="stats" />
       </div>
 
-      <div class="flex flex-auto flex-col gap-6">
+      <div class="flex w-full min-w-0 flex-auto flex-col gap-6">
         <template v-if="creature.traits?.length">
           <UiCollapse default-open>
             <template #default> Особенности </template>
@@ -252,6 +252,10 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .body {

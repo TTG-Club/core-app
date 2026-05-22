@@ -24,11 +24,19 @@
   const { share } = useCopyAndShare();
 
   const { greaterOrEqual } = useBreakpoints();
+  const isMounted = ref(false);
+
+  onMounted(() => {
+    isMounted.value = true;
+  });
 
   const filterOpened = ref(false);
   const sourcesOpened = ref(false);
   const localSearch = ref(toValue(search) ?? '');
-  const isLarge = greaterOrEqual(Breakpoint.LG);
+
+  const isLarge = computed(
+    () => isMounted.value && greaterOrEqual(Breakpoint.LG).value,
+  );
 
   const urlForCopy = computed(() => {
     return getOrigin() + useRoute().fullPath;
