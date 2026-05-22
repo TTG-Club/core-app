@@ -5,23 +5,8 @@
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
-  const { isSplitActive } = useLayoutWidth();
 
-  watch(
-    isSplitActive,
-    (splitActive) => {
-      if (splitActive) {
-        navigateTo(
-          {
-            name: 'bestiary',
-            query: { detail: route.params.url },
-          },
-          { replace: true },
-        );
-      }
-    },
-    { immediate: true },
-  );
+  useSectionDetailRedirect('bestiary');
 
   const { data: creature } = await useAsyncData(
     `bestiary-${route.params.url}`,

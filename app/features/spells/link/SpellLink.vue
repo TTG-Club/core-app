@@ -20,7 +20,9 @@
     destroyOnClose: true,
   });
 
-  const isOpened = computed(() => overlay.isOpen(drawer.id));
+  const { isOpened, handleOpen } = useSectionLink(spell.url, drawer.id, () =>
+    drawer.open(),
+  );
 </script>
 
 <template>
@@ -29,7 +31,7 @@
     :title="`${spell.name.rus} [${spell.name.eng}]`"
     :source="spell.source"
     :is-opened
-    @open-drawer="drawer.open()"
+    @open-drawer="handleOpen"
   >
     <template #icon>
       {{ spell.level || '◐' }}
@@ -44,16 +46,21 @@
     </template>
 
     <template #caption>
-      <SpellLinkFlags
-        :ritual="spell.ritual"
-        :concentration="spell.concentration"
-      />
+      <span class="flex w-full items-center">
+        <span class="flex items-center gap-1">
+          <SpellLinkFlags
+            :ritual="spell.ritual"
+            :concentration="spell.concentration"
+          />
 
-      <span>
-        {{ spell.school }}
+          <span>{{ spell.school }}</span>
+        </span>
+
+        <SpellLinkComponents
+          class="ml-auto"
+          :components="spell.components"
+        />
       </span>
-
-      <SpellLinkComponents :components="spell.components" />
     </template>
   </SmallLink>
 </template>

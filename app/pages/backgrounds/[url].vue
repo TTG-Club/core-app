@@ -6,6 +6,8 @@
 
   const route = useRoute();
 
+  useSectionDetailRedirect('backgrounds');
+
   const { data: background } = await useAsyncData(
     `background-${route.params.url}`,
     () =>

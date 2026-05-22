@@ -18,7 +18,9 @@
     destroyOnClose: true,
   });
 
-  const isOpened = computed(() => overlay.isOpen(drawer.id));
+  const { isOpened, handleOpen } = useSectionLink(glossary.url, drawer.id, () =>
+    drawer.open(),
+  );
 </script>
 
 <template>
@@ -27,7 +29,7 @@
     :title="`${glossary.name.rus} [${glossary.name.eng}]`"
     :source="glossary.source"
     :is-opened
-    @open-drawer="drawer.open()"
+    @open-drawer="handleOpen"
   >
     <template #default>
       {{ glossary.name.rus }}

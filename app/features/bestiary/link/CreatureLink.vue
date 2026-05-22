@@ -8,10 +8,6 @@
     creature: CreatureLinkResponse;
   }>();
 
-  const route = useRoute();
-  const router = useRouter();
-  const { isSplitActive } = useLayoutWidth();
-
   const overlay = useOverlay();
 
   const drawer = overlay.create(CreatureDrawer, {
@@ -22,28 +18,9 @@
     destroyOnClose: true,
   });
 
-  const isOpened = computed(() => {
-    if (isSplitActive.value) {
-      return route.query.detail === creature.url;
-    }
-
-    return overlay.isOpen(drawer.id);
-  });
-
-  function handleOpen() {
-    if (isSplitActive.value) {
-      router.push({
-        query: {
-          ...route.query,
-          detail: creature.url,
-        },
-      });
-
-      return;
-    }
-
-    drawer.open();
-  }
+  const { isOpened, handleOpen } = useSectionLink(creature.url, drawer.id, () =>
+    drawer.open(),
+  );
 </script>
 
 <template>
