@@ -153,11 +153,8 @@
     if (firstCreature) {
       const currentDetail = route.query.detail;
 
-      const isCurrentInList = bestiary.value.some(
-        (creature) => creature.url === currentDetail,
-      );
-
-      if (!currentDetail || !isCurrentInList) {
+      // Выбираем первого монстра только если в URL пусто
+      if (!currentDetail) {
         router.replace({
           query: {
             ...route.query,
@@ -277,20 +274,29 @@
       : BESTIARY_LIST_PAGE_SIZE;
   });
 
-  const isSavedCreatureLoaded = computed(() => {
-    const savedCreatureUrl = savedItemKey.value;
+  // Целевой URL монстра для прокрутки/загрузки: либо сохраненный из скролла, либо из URL
+  const targetCreatureUrl = computed(() => {
+    if (savedItemKey.value) {
+      return savedItemKey.value;
+    }
 
-    if (!savedCreatureUrl) {
+    return detailUrl.value;
+  });
+
+  const isTargetCreatureLoaded = computed(() => {
+    const targetUrl = targetCreatureUrl.value;
+
+    if (!targetUrl) {
       return true;
     }
 
-    return bestiary.value.some((creature) => creature.url === savedCreatureUrl);
+    return bestiary.value.some((creature) => creature.url === targetUrl);
   });
 
-  const isSavedCreatureRestorePending = computed(() => {
+  const isTargetCreatureRestorePending = computed(() => {
     return (
-      hasSavedPosition.value
-      && !isSavedCreatureLoaded.value
+      (hasSavedPosition.value || detailUrl.value)
+      && !isTargetCreatureLoaded.value
       && hasNextPage.value
     );
   });
@@ -393,15 +399,15 @@
   }
 
   /**
-   * Восстановление сохраненных страниц бестиария.
+   * Восстановление сохраненных страниц бестиария до целевого существа.
    */
   async function restoreSavedCreaturePages(): Promise<void> {
-    const savedCreatureUrl = savedItemKey.value;
+    const targetUrl = targetCreatureUrl.value;
 
     if (
-      !savedCreatureUrl
+      !targetUrl
       || isRestoringSavedPage.value
-      || isSavedCreatureLoaded.value
+      || isTargetCreatureLoaded.value
     ) {
       return;
     }
@@ -409,7 +415,7 @@
     isRestoringSavedPage.value = true;
 
     try {
-      while (hasNextPage.value && !isSavedCreatureLoaded.value) {
+      while (hasNextPage.value && !isTargetCreatureLoaded.value) {
         if (isLoadingMore.value) {
           await until(isLoadingMore).toBe(false);
 
@@ -454,7 +460,7 @@
   watch(savedItemKey, rememberSavedCreaturePage, { flush: 'sync' });
 
   watch(
-    [bestiary, savedItemKey],
+    [bestiary, targetCreatureUrl],
     () => {
       restoreSavedCreaturePages();
     },
@@ -472,7 +478,7 @@
       isBestiaryLoading
       || isChallengeRatingOrderPending.value
       || isRestoringSavedPage.value
-      || isSavedCreatureRestorePending.value
+      || isTargetCreatureRestorePending.value
     );
   });
 </script>
@@ -520,6 +526,7 @@
             order: challengeRatingOrder,
             unknown: 'before',
           }"
+          :active-item-key="detailUrl"
         >
           <template #default="{ item }">
             <CreatureLink :creature="item" />

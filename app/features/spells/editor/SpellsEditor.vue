@@ -191,9 +191,7 @@
           label="Тип атаки"
           name="attackType"
         >
-          <SelectAttackType
-            v-model="state.attackType"
-          />
+          <SelectAttackType v-model="state.attackType" />
         </UFormField>
       </div>
     </UCard>

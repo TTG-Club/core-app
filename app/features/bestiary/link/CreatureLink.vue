@@ -8,6 +8,10 @@
     creature: CreatureLinkResponse;
   }>();
 
+  const route = useRoute();
+  const router = useRouter();
+  const { isSplitActive } = useLayoutWidth();
+
   const overlay = useOverlay();
 
   const drawer = overlay.create(CreatureDrawer, {
@@ -18,7 +22,28 @@
     destroyOnClose: true,
   });
 
-  const isOpened = computed(() => overlay.isOpen(drawer.id));
+  const isOpened = computed(() => {
+    if (isSplitActive.value) {
+      return route.query.detail === creature.url;
+    }
+
+    return overlay.isOpen(drawer.id);
+  });
+
+  function handleOpen() {
+    if (isSplitActive.value) {
+      router.push({
+        query: {
+          ...route.query,
+          detail: creature.url,
+        },
+      });
+
+      return;
+    }
+
+    drawer.open();
+  }
 </script>
 
 <template>
@@ -27,7 +52,7 @@
     :title="`${creature.name.rus} [${creature.name.eng}]`"
     :source="creature.source"
     :is-opened
-    @open-drawer="drawer.open()"
+    @open-drawer="handleOpen"
   >
     <template #icon>
       {{ creature.challengeRailing }}
