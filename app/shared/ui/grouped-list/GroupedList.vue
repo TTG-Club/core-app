@@ -117,6 +117,8 @@
 
   const isScrollPositionRestored = ref(false);
 
+  const { isSplitActive } = useLayoutWidth();
+
   /**
    * Разбивает элементы на строки виртуальной сетки.
    */
@@ -514,13 +516,45 @@
     );
   }
 
-  const scrollContainer = computed(() => {
-    if (!import.meta.client) {
-      return null;
+  const scrollContainer = shallowRef<HTMLElement | Window | null>(
+    import.meta.client ? window : null,
+  );
+
+  /**
+   * Поиск DOM-контейнера для скролла в Wide Mode.
+   * Использует requestAnimationFrame для повторной попытки,
+   * т.к. элемент может ещё не быть в DOM при первом вызове.
+   */
+  function resolveSplitContainer(): void {
+    const container = document.getElementById('section-list-container');
+
+    if (container) {
+      scrollContainer.value = container;
+
+      return;
     }
 
-    return document.getElementById('section-list-container') || window;
-  });
+    requestAnimationFrame(() => {
+      scrollContainer.value =
+        document.getElementById('section-list-container') ?? window;
+    });
+  }
+
+  if (import.meta.client) {
+    onMounted(() => {
+      watch(
+        isSplitActive,
+        (active) => {
+          if (active) {
+            resolveSplitContainer();
+          } else {
+            scrollContainer.value = window;
+          }
+        },
+        { immediate: true },
+      );
+    });
+  }
 
   /**
    * Выполняет прокрутку списка к указанному элементу.

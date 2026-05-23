@@ -22,13 +22,13 @@ export const LAYOUT_WIDTH_OPTIONS = [
   {
     value: LayoutWidthName.Default,
     label: 'Обычная',
-    icon: 'tabler:columns',
+    icon: 'tabler:layout-sidebar-right-expand',
     title: 'Обычная ширина',
   },
   {
     value: LayoutWidthName.Wide,
     label: 'Широкая',
-    icon: 'tabler:columns-3',
+    icon: 'tabler:columns-2',
     title: 'Широкая ширина',
   },
 ] as const;
