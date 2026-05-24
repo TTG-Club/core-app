@@ -244,17 +244,51 @@
   });
 
   // Динамический таргет для бесконечного скролла
-  const infiniteScrollTarget = computed(() => {
-    if (!import.meta.client) {
-      return null;
+  // В стандартном режиме — window с большим distance (900px),
+  // в Wide Mode — контейнер списка с малым distance (200px),
+  // т.к. контейнер сам по себе ~900px высотой.
+  const windowScrollTarget = computed(() =>
+    import.meta.client && !isSplitActive.value ? window : null,
+  );
+
+  const splitScrollTarget = shallowRef<HTMLElement | null>(null);
+
+  /**
+   * Поиск DOM-контейнера для скролла в Wide Mode.
+   * Использует requestAnimationFrame для повторной попытки,
+   * т.к. элемент может ещё не быть в DOM при первом вызове.
+   */
+  function resolveSplitContainer(): void {
+    const container = document.getElementById('section-list-container');
+
+    if (container) {
+      splitScrollTarget.value = container;
+
+      return;
     }
 
-    if (isSplitActive.value) {
-      return document.getElementById('section-list-container');
-    }
+    requestAnimationFrame(() => {
+      splitScrollTarget.value = document.getElementById(
+        'section-list-container',
+      );
+    });
+  }
 
-    return window;
-  });
+  if (import.meta.client) {
+    onMounted(() => {
+      watch(
+        isSplitActive,
+        (active) => {
+          if (active) {
+            resolveSplitContainer();
+          } else {
+            splitScrollTarget.value = null;
+          }
+        },
+        { immediate: true },
+      );
+    });
+  }
 
   const listResetKey = computed(() =>
     JSON.stringify({
@@ -429,8 +463,13 @@
     }
   }
 
-  useInfiniteScroll(infiniteScrollTarget, loadNextCreaturePage, {
+  useInfiniteScroll(windowScrollTarget, loadNextCreaturePage, {
     distance: BESTIARY_LIST_LOAD_MORE_DISTANCE,
+    canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
+  });
+
+  useInfiniteScroll(splitScrollTarget, loadNextCreaturePage, {
+    distance: 200,
     canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
   });
 
