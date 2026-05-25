@@ -8,6 +8,8 @@
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkBig } from '~ui/skeleton';
 
+  const route = useRoute();
+
   useSeoMeta({
     title: 'Классы [Classes]',
     description: 'Классы персонажей из D&D 5 (редакция 2024 года).',
@@ -115,6 +117,11 @@
         :edit-url="detailEditUrl"
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
+        :back-to="
+          detailClass?.parent
+            ? { query: { ...route.query, detail: detailClass.parent.url } }
+            : undefined
+        "
         copy-title
         @close="handleCloseDetail"
       >

@@ -16,6 +16,10 @@ export interface SpeciesDetailResponse {
     url: string;
     name: NameResponse;
   };
+  species?: {
+    url: string;
+    name: NameResponse;
+  };
   hasLineages?: boolean;
   name: NameResponse;
   source: SourceResponse;

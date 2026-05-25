@@ -11,6 +11,8 @@
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkBig } from '~ui/skeleton';
 
+  const route = useRoute();
+
   useSeoMeta({
     title: 'Виды [Species]',
     description:
@@ -114,6 +116,13 @@
         :edit-url="detailEditUrl"
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
+        :back-to="
+          detailSpecies?.parent
+            ? { query: { ...route.query, detail: detailSpecies.parent.url } }
+            : detailSpecies?.species
+              ? { query: { ...route.query, detail: detailSpecies.species.url } }
+              : undefined
+        "
         copy-title
         @close="handleCloseDetail"
       >

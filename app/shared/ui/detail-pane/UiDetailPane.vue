@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import type { Dayjs } from 'dayjs';
+  import type { RouteLocationRaw } from 'vue-router';
 
   import type { SourceResponse } from '~/shared/types';
 
@@ -15,6 +16,7 @@
     editUrl = undefined,
     dateTime = undefined,
     dateTimeFormat = undefined,
+    backTo = undefined,
   } = defineProps<{
     /** Заголовок панели */
     title: DrawerTitleName;
@@ -34,6 +36,8 @@
     dateTime?: string | number | Date | Dayjs | null;
     /** Формат даты и времени */
     dateTimeFormat?: string;
+    /** Путь/маршрут возврата назад */
+    backTo?: RouteLocationRaw;
   }>();
 
   defineEmits<{
@@ -62,6 +66,7 @@
         :date-time="dateTime"
         :date-time-format="dateTimeFormat"
         :copy-text="copyTitle"
+        :back-to="backTo"
       >
         <template #actions>
           <slot name="actions" />

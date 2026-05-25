@@ -40,9 +40,9 @@
       return '';
     }
 
-    const type = species.value.parent
-      ? `происхождение вида ${species.value.parent.name.rus}`
-      : 'вид';
+    const parent = species.value.parent || species.value.species;
+
+    const type = parent ? `происхождение вида ${parent.name.rus}` : 'вид';
 
     return getSlicedString(
       `${species.value.name.rus} [${species.value.name.eng}] — ${type} из D&D 5 (редакция 2024 года).`,
@@ -61,6 +61,13 @@
     :subtitle="species?.name.eng"
     :source="species?.source"
     :date-time="species?.updatedAt"
+    :back-to="
+      species?.parent
+        ? `/species/${species.parent.url}`
+        : species?.species
+          ? `/species/${species.species.url}`
+          : undefined
+    "
     copy-text
   >
     <template #actions>
