@@ -7,13 +7,19 @@ import { FetchStatus } from '~/shared/consts';
 import { createLruCache } from '~/utils/createLruCache';
 import { getOrigin } from '~/utils/getOrigin';
 
-export interface UseSectionDetailOptions {
+export interface UseSectionDetailOptions<TDetail = unknown> {
   /** Базовый путь раздела (например, '/classes') */
   sectionPath: string;
   /** Базовый путь API для загрузки сущности (например, '/api/v2/classes') */
   apiBasePath: string;
   /** Список элементов раздела для автоматического выбора первого */
   items: Ref<Array<{ url: string }> | null | undefined>;
+  /**
+   * Извлекает URL родительского элемента из детальных данных.
+   * Используется для сохранения выделения основного элемента в списке
+   * при выборе дочернего (например, подкласса).
+   */
+  getParentUrl?: (detail: TDetail) => string | undefined;
 }
 
 export interface UseSectionDetailReturn<TDetail> {
@@ -46,11 +52,16 @@ export interface UseSectionDetailReturn<TDetail> {
  * @returns Набор реактивных переменных и методов для управления детальной панелью.
  */
 export function useSectionDetail<TDetail>(
-  options: UseSectionDetailOptions,
+  options: UseSectionDetailOptions<TDetail>,
 ): UseSectionDetailReturn<TDetail> {
   const route = useRoute();
   const router = useRouter();
   const { isSplitActive } = useLayoutWidth();
+
+  const detailParentUrl = useState<string | undefined>(
+    'section-detail-parent-url',
+    () => undefined,
+  );
 
   const detailCache = createLruCache<string, TDetail>(50);
 
@@ -111,6 +122,11 @@ export function useSectionDetail<TDetail>(
     },
     { immediate: true },
   );
+
+  watch(detailData, (detail) => {
+    detailParentUrl.value =
+      detail && options.getParentUrl ? options.getParentUrl(detail) : undefined;
+  });
 
   const isDetailLoading = computed(
     () => detailStatus.value === FetchStatus.Pending,

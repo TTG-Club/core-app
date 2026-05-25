@@ -58,6 +58,7 @@
     sectionPath: '/classes',
     apiBasePath: '/api/v2/classes',
     items: classes,
+    getParentUrl: (detail) => detail.parent?.url,
   });
 </script>
 

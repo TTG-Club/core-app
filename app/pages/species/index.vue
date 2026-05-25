@@ -57,6 +57,7 @@
     sectionPath: '/species',
     apiBasePath: '/api/v2/species',
     items: data,
+    getParentUrl: (detail) => detail.parent?.url ?? detail.species?.url,
   });
 </script>
 

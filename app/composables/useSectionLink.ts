@@ -17,9 +17,16 @@ export function useSectionLink(
   const { isSplitActive } = useLayoutWidth();
   const overlay = useOverlay();
 
+  const detailParentUrl = useState<string | undefined>(
+    'section-detail-parent-url',
+    () => undefined,
+  );
+
   const isOpened = computed(() => {
     if (isSplitActive.value) {
-      return route.query.detail === itemUrl;
+      return (
+        route.query.detail === itemUrl || detailParentUrl.value === itemUrl
+      );
     }
 
     if (import.meta.server) {
