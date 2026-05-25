@@ -106,7 +106,8 @@
     max-width: 100%;
 
     @container (width > 800px) {
-      max-width: 320px;
+      flex-shrink: 0;
+      width: 320px;
     }
   }
 </style>
