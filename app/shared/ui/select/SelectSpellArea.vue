@@ -8,8 +8,8 @@
   const model = defineModel<string>();
 
   const { data, status, refresh } = await useAsyncData(
-    'dictionaries-attack-types',
-    () => DictionaryService.attackTypes(),
+    'dictionaries-spell-area',
+    () => DictionaryService.spellArea(),
     { dedupe: 'defer' },
   );
 
@@ -25,7 +25,7 @@
 <template>
   <USelect
     v-model="model"
-    placeholder="Выбери тип атаки"
+    placeholder="Выбери область воздействия"
     clearable
     :loading="status === 'pending'"
     :items="data || []"

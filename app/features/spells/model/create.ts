@@ -15,7 +15,14 @@ export interface SpellCreate extends EditorBaseInfoState {
   healingType: Array<string> | undefined;
   damageType: Array<string> | undefined;
   condition: Array<string> | undefined; // накладываемые состояния
-  attackType: Array<string> | undefined; // типы атаки
+  attackType: string | undefined; // тип атаки
+  areaOfEffect: SpellAreaOfEffect | undefined; // область воздействия
+}
+
+export interface SpellAreaOfEffect {
+  type: string | undefined; // тип области
+  value1: number | undefined; // первое значение (радиус/длина)
+  value2: number | undefined; // второе значение (высота/ширина)
 }
 
 export interface SpellSchool {

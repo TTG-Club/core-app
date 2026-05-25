@@ -42,6 +42,7 @@ enum DictionaryEndpoints {
   SOURCE_TYPES = '/api/v2/dictionaries/source/types',
   NOTIFICATION_TYPES = '/api/v2/dictionaries/notification/types',
   ATTACK_TYPES = '/api/v2/dictionaries/attack/types',
+  SPELL_AREA = '/api/v2/dictionaries/spell-area',
 }
 
 class Dictionaries {
@@ -295,6 +296,15 @@ class Dictionaries {
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.NOTIFICATION_TYPES, {
+      ...config,
+      method: 'get',
+    });
+  };
+
+  public spellArea = <R extends NitroFetchRequest>(
+    config: Omit<NitroFetchOptions<R>, 'method'> = {},
+  ): Promise<Array<SelectOption>> => {
+    return $fetch(DictionaryEndpoints.SPELL_AREA, {
       ...config,
       method: 'get',
     });

@@ -14,6 +14,7 @@
     SelectLineage,
     SelectMagicSchool,
     SelectSpecies,
+    SelectSpellArea,
     SelectSpellLevel,
     SelectSubclass,
   } from '~ui/select';
@@ -66,7 +67,12 @@
       healingType: [],
       damageType: [],
       condition: [],
-      attackType: [],
+      attackType: undefined,
+      areaOfEffect: {
+        type: undefined,
+        value1: undefined,
+        value2: undefined,
+      },
     };
   }
 
@@ -192,6 +198,38 @@
           name="attackType"
         >
           <SelectAttackType v-model="state.attackType" />
+        </UFormField>
+
+        <UFormField
+          class="col-span-6"
+          label="Область воздействия"
+          name="areaOfEffect.type"
+        >
+          <SelectSpellArea v-model="state.areaOfEffect!.type" />
+        </UFormField>
+
+        <UFormField
+          class="col-span-3"
+          label="Значение 1"
+          name="areaOfEffect.value1"
+        >
+          <UInput
+            v-model.number="state.areaOfEffect!.value1"
+            type="number"
+            placeholder="Радиус/длина"
+          />
+        </UFormField>
+
+        <UFormField
+          class="col-span-3"
+          label="Значение 2"
+          name="areaOfEffect.value2"
+        >
+          <UInput
+            v-model.number="state.areaOfEffect!.value2"
+            type="number"
+            placeholder="Высота/ширина"
+          />
         </UFormField>
       </div>
     </UCard>
