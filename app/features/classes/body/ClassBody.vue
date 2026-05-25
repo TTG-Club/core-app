@@ -106,17 +106,18 @@
           :feature
         />
 
-        <UiCollapse
+        <div
           v-if="detail.description"
           id="description"
-          default-open
         >
-          <template #default>Описание</template>
+          <UiCollapse default-open>
+            <template #default>Описание</template>
 
-          <template #content>
-            <MarkupRender :render-node="detail.description" />
-          </template>
-        </UiCollapse>
+            <template #content>
+              <MarkupRender :render-node="detail.description" />
+            </template>
+          </UiCollapse>
+        </div>
       </div>
     </div>
   </div>

@@ -66,10 +66,10 @@
     <a
       :href="href"
       :class="[
-        'group overflow-hidden @max-md:flex',
+        'group overflow-hidden transition-all @max-md:flex',
         'rounded-xl border',
         isOpened
-          ? 'border-accented bg-accented'
+          ? 'border-primary bg-primary/10 text-highlighted shadow-sm ring-1 ring-primary/50'
           : 'border-default bg-muted text-default hover:border-accented',
       ]"
       @click.exact.prevent.stop="handleClick"
