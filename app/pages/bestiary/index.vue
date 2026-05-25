@@ -245,8 +245,7 @@
 
   // Динамический таргет для бесконечного скролла
   // В стандартном режиме — window с большим distance (900px),
-  // в Wide Mode — контейнер списка с малым distance (200px),
-  // т.к. контейнер сам по себе ~900px высотой.
+  // в Wide Mode — контейнер списка с аналогичным distance (900px) для своевременной подгрузки.
   const windowScrollTarget = computed(() =>
     import.meta.client && !isSplitActive.value ? window : null,
   );
@@ -469,7 +468,7 @@
   });
 
   useInfiniteScroll(splitScrollTarget, loadNextCreaturePage, {
-    distance: 200,
+    distance: BESTIARY_LIST_LOAD_MORE_DISTANCE,
     canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
   });
 

@@ -640,7 +640,13 @@
     );
 
     if (!isRestored && activeItemKey) {
-      isRestored = scrollToItem(activeItemKey);
+      const isFirstItem = items[0] && getItemKey(items[0]) === activeItemKey;
+
+      if (!isFirstItem) {
+        isRestored = scrollToItem(activeItemKey);
+      } else {
+        isRestored = true;
+      }
     }
 
     if (isRestored) {
