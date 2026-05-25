@@ -4,7 +4,7 @@
   import { ClassBody } from '~classes/body';
   import { UiDrawer } from '~ui/drawer';
 
-  const { url } = defineProps<{
+  const props = defineProps<{
     url: string;
   }>();
 
@@ -12,19 +12,35 @@
     (e: 'close'): void;
   }>();
 
+  /** Текущий URL класса/подкласса — может меняться при inline-навигации */
+  const currentUrl = ref(props.url);
+
   const { data: detail, status } = await useAsyncData(
-    computed(() => `classes-${url}`),
-    () => $fetch<ClassDetailResponse>(`/api/v2/classes/${url}`),
+    computed(() => `classes-${currentUrl.value}`),
+    () => $fetch<ClassDetailResponse>(`/api/v2/classes/${currentUrl.value}`),
     {
       server: false,
       immediate: true,
+      watch: [currentUrl],
     },
   );
 
   const isLoading = computed(() => status.value === 'pending');
   const isError = computed(() => status.value === 'error');
-  const urlForCopy = computed(() => `${getOrigin()}/classes/${url}`);
-  const editUrl = computed(() => `/workshop/classes/${url}`);
+
+  const urlForCopy = computed(
+    () => `${getOrigin()}/classes/${currentUrl.value}`,
+  );
+
+  const editUrl = computed(() => `/workshop/classes/${currentUrl.value}`);
+
+  /**
+   * Обработчик inline-навигации — обновляет текущий URL,
+   * что триггерит перезагрузку данных через watch в useAsyncData.
+   */
+  function handleNavigate(classUrl: string): void {
+    currentUrl.value = classUrl;
+  }
 </script>
 
 <template>
@@ -42,7 +58,8 @@
     <ClassBody
       v-if="detail"
       :detail="detail"
-      in-drawer
+      navigate-in-place
+      @navigate="handleNavigate"
     />
   </UiDrawer>
 </template>

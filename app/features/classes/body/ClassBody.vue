@@ -17,11 +17,21 @@
   const {
     detail,
     hideGallery = false,
-    inDrawer = false,
+    navigateInPlace = false,
   } = defineProps<{
     detail: ClassDetailResponse;
     hideGallery?: boolean;
-    inDrawer?: boolean;
+    /**
+     * Включает inline-навигацию внутри текущего контейнера (drawer).
+     */
+    navigateInPlace?: boolean;
+  }>();
+
+  const emit = defineEmits<{
+    /**
+     * Навигация к другому классу/подклассу внутри текущего контейнера.
+     */
+    (event: 'navigate', classUrl: string): void;
   }>();
 </script>
 
@@ -52,12 +62,13 @@
       <div class="flex min-w-0 flex-auto flex-col gap-6">
         <div class="flex min-w-0 flex-col gap-2">
           <ClassRouting
-            v-if="!inDrawer"
             :url="detail.url"
             :name="detail.name"
             :parent="detail.parent"
             :has-description="!!detail.description"
             :has-spells="detail.casterType !== 'NONE'"
+            :navigate-in-place="navigateInPlace"
+            @navigate="emit('navigate', $event)"
           />
 
           <ClassTable

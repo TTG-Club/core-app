@@ -128,7 +128,6 @@
         <ClassBody
           v-if="detailClass"
           :detail="detailClass"
-          in-drawer
         />
       </UiDetailPane>
 

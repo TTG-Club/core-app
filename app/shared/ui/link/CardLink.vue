@@ -38,13 +38,15 @@
 
   const isImageHidden = computed(() => hideImageOnMobile && isMobile);
 
+  const { isSplitActive } = useLayoutWidth();
+
   /**
    * Обработчик клика по карточке.
-   * На десктопе эмитит событие для открытия детальной панели или drawer.
-   * На мобильных устройствах выполняет прямой переход по ссылке.
+   * В широком режиме (split) на десктопе — открывает детальную панель.
+   * В обычном режиме — выполняет переход по ссылке на полную страницу.
    */
   function handleClick() {
-    if (isDesktop) {
+    if (isDesktop && isSplitActive.value) {
       return emit('open-drawer');
     }
 
