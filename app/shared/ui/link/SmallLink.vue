@@ -36,7 +36,7 @@
 <template>
   <NuxtLink
     v-slot="{ href }"
-    v-memo="[to]"
+    v-memo="[to, isOpened]"
     custom
     :to
   >
@@ -45,14 +45,21 @@
       @click.exact.prevent.stop="handleClick"
     >
       <div
-        class="flex min-h-12.5 w-full items-center gap-3 rounded-xl border border-default px-3 py-1.5 hover:border-accented hover:bg-accented"
-        :class="isOpened ? 'bg-accented' : 'bg-elevated'"
+        class="flex min-h-12.5 w-full items-center gap-3 rounded-xl border px-3 py-1.5 transition-all"
+        :class="
+          isOpened
+            ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/50'
+            : 'border-default bg-elevated hover:border-accented hover:bg-accented'
+        "
       >
         <div
           v-if="$slots.icon"
           class="-ml-2 flex size-11 shrink-0 items-center justify-center border-r border-inherit"
         >
-          <div class="text-center text-base leading-none">
+          <div
+            class="text-center text-base leading-none transition-colors"
+            :class="{ 'text-primary': isOpened }"
+          >
             <slot name="icon" />
           </div>
         </div>
@@ -90,9 +97,13 @@
 
           <div
             v-if="$slots.caption"
-            class="flex items-center gap-1"
+            class="flex w-full min-w-0 items-center gap-1 overflow-hidden text-nowrap text-ellipsis"
           >
-            <slot name="caption" />
+            <span
+              class="block w-full overflow-hidden text-nowrap text-ellipsis"
+            >
+              <slot name="caption" />
+            </span>
           </div>
         </div>
       </div>

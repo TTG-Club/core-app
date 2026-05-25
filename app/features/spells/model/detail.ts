@@ -8,7 +8,6 @@ export interface SpellDetailResponse {
   };
   level: number;
   school: string;
-  additionalType?: string;
   source: SourceResponse;
   castingTime: string;
   ritual?: boolean;

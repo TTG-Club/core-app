@@ -1,9 +1,14 @@
 <script setup lang="ts">
   import type { SearchBody } from '~/shared/types';
-  import type { SourceLinkResponse } from '~sources/types';
+  import type {
+    SourceDetailResponse,
+    SourceLinkResponse,
+  } from '~sources/types';
 
   import { FilterControls, useFilter } from '~infrastructure/filter';
+  import { SourceBody } from '~sources/body';
   import { SourceLink } from '~sources/link';
+  import { UiDetailPane } from '~ui/detail-pane';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkBig } from '~ui/skeleton';
 
@@ -81,6 +86,21 @@
 
     return Array.from(groupMap.values());
   });
+
+  const {
+    detailUrl,
+    detailData: detailSource,
+    isDetailLoading,
+    isDetailError,
+    isDetailDismissed,
+    detailUrlForCopy,
+    detailEditUrl,
+    handleCloseDetail,
+  } = useSectionDetail<SourceDetailResponse>({
+    sectionPath: '/sources',
+    apiBasePath: '/api/v2/source',
+    items: sources,
+  });
 </script>
 
 <template>
@@ -139,6 +159,53 @@
           @refresh="refresh"
         />
       </Transition>
+    </template>
+
+    <template #detail>
+      <UiDetailPane
+        v-if="detailUrl"
+        :title="detailSource?.name ?? ''"
+        :source="detailSource?.source"
+        :date-time="detailSource?.updatedAt"
+        :url="detailUrlForCopy"
+        :edit-url="detailEditUrl"
+        :is-loading="isDetailLoading"
+        :is-error="isDetailError"
+        copy-title
+        @close="handleCloseDetail"
+      >
+        <SourceBody
+          v-if="detailSource"
+          :source="detailSource"
+        />
+      </UiDetailPane>
+
+      <div
+        v-else-if="isDetailDismissed"
+        class="flex h-full w-full flex-col items-center justify-center p-6 text-center select-none"
+      >
+        <div class="flex max-w-xs flex-col items-center gap-3">
+          <UIcon
+            name="tabler:click"
+            class="size-10 text-muted"
+          />
+
+          <h3 class="text-lg font-semibold text-highlighted">
+            Источник не выбран
+          </h3>
+
+          <p class="text-sm text-secondary">
+            Выберите источник из списка слева, чтобы просмотреть подробную
+            информацию
+          </p>
+        </div>
+      </div>
+
+      <UiDetailPane
+        v-else
+        title=""
+        :is-loading="true"
+      />
     </template>
   </NuxtLayout>
 </template>

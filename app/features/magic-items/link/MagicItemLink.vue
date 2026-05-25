@@ -18,7 +18,11 @@
     destroyOnClose: true,
   });
 
-  const isOpened = computed(() => overlay.isOpen(drawer.id));
+  const { isOpened, handleOpen } = useSectionLink(
+    magicItem.url,
+    drawer.id,
+    () => drawer.open(),
+  );
 </script>
 
 <template>
@@ -27,7 +31,7 @@
     :title="`${magicItem.name.rus} [${magicItem.name.eng}]`"
     :source="magicItem.source"
     :is-opened
-    @open-drawer="drawer.open()"
+    @open-drawer="handleOpen"
   >
     <template #default>
       {{ magicItem.name.rus }}

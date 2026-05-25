@@ -18,7 +18,9 @@
     destroyOnClose: true,
   });
 
-  const isOpened = computed(() => overlay.isOpen(drawer.id));
+  const { isOpened, handleOpen } = useSectionLink(creature.url, drawer.id, () =>
+    drawer.open(),
+  );
 </script>
 
 <template>
@@ -27,7 +29,7 @@
     :title="`${creature.name.rus} [${creature.name.eng}]`"
     :source="creature.source"
     :is-opened
-    @open-drawer="drawer.open()"
+    @open-drawer="handleOpen"
   >
     <template #icon>
       {{ creature.challengeRailing }}

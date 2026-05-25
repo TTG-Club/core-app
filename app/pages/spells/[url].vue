@@ -6,6 +6,8 @@
 
   const route = useRoute();
 
+  useSectionDetailRedirect('spells');
+
   const { data: spell } = await useAsyncData(`spell-${route.params.url}`, () =>
     $fetch<SpellDetailResponse>(`/api/v2/spells/${route.params.url}`),
   );

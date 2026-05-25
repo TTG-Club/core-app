@@ -52,7 +52,6 @@
     <ClassBody
       v-if="characterClass"
       :detail="characterClass"
-      in-drawer
     />
   </UiDrawer>
 </template>

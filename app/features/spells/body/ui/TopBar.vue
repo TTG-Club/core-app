@@ -1,9 +1,7 @@
 <script setup lang="ts">
   import type { SpellDetailResponse } from '~spells/model';
 
-  defineProps<
-    Pick<SpellDetailResponse, 'level' | 'school' | 'additionalType' | 'ritual'>
-  >();
+  defineProps<Pick<SpellDetailResponse, 'level' | 'school' | 'ritual'>>();
 </script>
 
 <template>
@@ -13,8 +11,6 @@
     <span v-else> {{ level }}-й уровень,</span>
 
     <span>{{ school }}</span>
-
-    <span v-if="additionalType">[{{ additionalType }}]</span>
 
     <span v-if="ritual">(ритуал)</span>
   </div>
