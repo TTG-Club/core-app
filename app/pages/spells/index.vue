@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import type { FetchStatusValue } from '~/shared/consts';
   import type {
     SpellDetailResponse,
     SpellLinkResponse,
@@ -7,7 +6,6 @@
     SpellSearchResponse,
   } from '~spells/model';
 
-  import { FetchStatus } from '~/shared/consts';
   import { FilterControls, useFilter } from '~infrastructure/filter';
   import { SpellBody } from '~spells/body';
   import { SpellLegend } from '~spells/legend';
@@ -36,9 +34,6 @@
 
   const { isSplitActive } = useLayoutWidth();
 
-  const route = useRoute();
-  const router = useRouter();
-
   const {
     filter,
     search,
@@ -53,194 +48,19 @@
   const hasNextPage = ref(false);
   const isLoadingMore = ref(false);
 
-  // Локальный LRU-кэш для детальной информации о заклинаниях (максимум 50 записей)
-  const spellCache = createLruCache<string, SpellDetailResponse>(50);
-
-  // Вычисляем выбранный URL заклинания из query-параметров
-  const detailUrl = computed(() => {
-    const detail = route.query.detail;
-
-    return typeof detail === 'string' && detail ? detail : '';
-  });
-
-  // Реактивное состояние детальной информации о заклинании
-  const detailSpell = ref<SpellDetailResponse | null>(null);
-  const detailStatus = ref<FetchStatusValue>(FetchStatus.Idle);
-
-  /**
-   * Загрузка детальных данных заклинания по URL.
-   * @param url Идентификатор заклинания.
-   */
-  async function fetchSpellDetail(url: string): Promise<void> {
-    if (!url) {
-      detailSpell.value = null;
-      detailStatus.value = FetchStatus.Idle;
-
-      return;
-    }
-
-    if (spellCache.has(url)) {
-      detailSpell.value = spellCache.get(url) || null;
-      detailStatus.value = FetchStatus.Success;
-
-      return;
-    }
-
-    detailStatus.value = FetchStatus.Pending;
-
-    try {
-      const response = await $fetch<SpellDetailResponse>(
-        `/api/v2/spells/${url}`,
-      );
-
-      spellCache.set(url, response);
-      detailSpell.value = response;
-      detailStatus.value = FetchStatus.Success;
-    } catch {
-      detailSpell.value = null;
-      detailStatus.value = FetchStatus.Error;
-    }
-  }
-
-  // Флаг, определяющий, что пользователь ЯВНО закрыл деталь (нажал крестик)
-  const isDetailDismissed = ref(false);
-
-  /**
-   * Флаг, определяющий готовность роутера на клиенте.
-   */
-  const isRouterReady = ref(false);
-
-  // Загрузка детальных данных и сброс флага при изменении выбранного заклинания
-  watch(
+  const {
     detailUrl,
-    (url) => {
-      if (url) {
-        isDetailDismissed.value = false;
-      }
-
-      fetchSpellDetail(url);
-    },
-    { immediate: true },
-  );
-
-  const isDetailLoading = computed(
-    () => detailStatus.value === FetchStatus.Pending,
-  );
-
-  const isDetailError = computed(
-    () => detailStatus.value === FetchStatus.Error,
-  );
-
-  const detailUrlForCopy = computed(() =>
-    detailUrl.value ? `${getOrigin()}/spells/${detailUrl.value}` : undefined,
-  );
-
-  const detailEditUrl = computed(() =>
-    detailUrl.value ? `/workshop/spells/${detailUrl.value}` : undefined,
-  );
-
-  // Перенаправление на детальную страницу при выходе из широкого режима
-  watch([isSplitActive, detailUrl], ([splitActive, urlVal]) => {
-    if (isRouterReady.value && !splitActive && urlVal) {
-      navigateTo({
-        name: 'spells-url',
-        params: { url: urlVal },
-      });
-
-      router.replace({
-        query: {
-          ...route.query,
-          detail: undefined,
-        },
-      });
-    }
-  });
-
-  /**
-   * Автоматический выбор первого заклинания в списке.
-   */
-  function autoSelectFirstSpell() {
-    if (!isSplitActive.value || isDetailDismissed.value) {
-      return;
-    }
-
-    const firstSpell = spells.value[0];
-
-    if (firstSpell) {
-      const currentDetail = route.query.detail;
-
-      // Выбираем первое заклинание только если в URL пусто
-      if (!currentDetail) {
-        router.replace({
-          query: {
-            ...route.query,
-            detail: firstSpell.url,
-          },
-        });
-      }
-    }
-  }
-
-  // Вызов автовыбора при монтировании на клиенте после готовности роутера
-  onMounted(async () => {
-    await router.isReady();
-    isRouterReady.value = true;
-
-    // На мобильных устройствах при наличии query-параметра detail перенаправляем на отдельную страницу
-    if (!isSplitActive.value && detailUrl.value) {
-      navigateTo({
-        name: 'spells-url',
-        params: { url: detailUrl.value },
-      });
-
-      router.replace({
-        query: {
-          ...route.query,
-          detail: undefined,
-        },
-      });
-
-      return;
-    }
-
-    autoSelectFirstSpell();
-  });
-
-  // Отслеживание изменений списка или режима для автовыбора
-  watch([spells, isSplitActive], () => {
-    if (isRouterReady.value) {
-      autoSelectFirstSpell();
-    }
-  });
-
-  /**
-   * Закрытие детальной панели (очистка query-параметра detail).
-   */
-  function handleCloseDetail() {
-    isDetailDismissed.value = true;
-
-    router.push({
-      query: {
-        ...route.query,
-        detail: undefined,
-      },
-    });
-  }
-
-  // Добавление canonical ссылки для SEO
-  useHead(() => {
-    if (isSplitActive.value && detailUrl.value) {
-      return {
-        link: [
-          {
-            rel: 'canonical',
-            href: `${getOrigin()}/spells/${detailUrl.value}`,
-          },
-        ],
-      };
-    }
-
-    return {};
+    detailData: detailSpell,
+    isDetailLoading,
+    isDetailError,
+    isDetailDismissed,
+    detailUrlForCopy,
+    detailEditUrl,
+    handleCloseDetail,
+  } = useSectionDetail<SpellDetailResponse>({
+    sectionPath: '/spells',
+    apiBasePath: '/api/v2/spells',
+    items: spells,
   });
 
   // Динамический таргет для бесконечного скролла

@@ -9,6 +9,8 @@
     params: { url },
   } = useRoute();
 
+  useSectionDetailRedirect('species');
+
   const {
     data: species,
     error,

@@ -18,6 +18,8 @@
     params: { url },
   } = useRoute();
 
+  useSectionDetailRedirect('classes');
+
   const {
     data: detail,
     error,
