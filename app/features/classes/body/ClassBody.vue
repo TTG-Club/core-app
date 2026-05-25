@@ -18,6 +18,7 @@
     detail,
     hideGallery = false,
     navigateInPlace = false,
+    inSplit = false,
   } = defineProps<{
     detail: ClassDetailResponse;
     hideGallery?: boolean;
@@ -25,6 +26,10 @@
      * Включает inline-навигацию внутри текущего контейнера (drawer).
      */
     navigateInPlace?: boolean;
+    /**
+     * Отображается в сплит-панели (режиме просмотра во всю ширину).
+     */
+    inSplit?: boolean;
   }>();
 
   const emit = defineEmits<{
@@ -37,18 +42,28 @@
 
 <template>
   <div class="@container">
-    <div class="flex flex-col gap-6 @min-3xl:flex-row @min-3xl:gap-7">
+    <div
+      :class="[
+        'flex flex-col gap-6',
+        inSplit ? '' : '@min-3xl:flex-row @min-3xl:gap-7',
+      ]"
+    >
       <div
         :class="[
           'flex w-full shrink-0 flex-col gap-4',
-          '@min-xl:@max-3xl:flex-row @min-3xl:w-80',
+          inSplit
+            ? '@min-xl:flex-row'
+            : '@min-xl:@max-3xl:flex-row @min-3xl:w-80',
         ]"
       >
         <UiGallery
           v-if="!hideGallery && detail.image"
           :preview="detail.image"
           :images="[detail.image, ...(detail.gallery || [])]"
-          class="min-w-25 @min-xl:@max-3xl:max-w-50"
+          :class="[
+            'min-w-25',
+            inSplit ? '@min-xl:max-w-50' : '@min-xl:@max-3xl:max-w-50',
+          ]"
         />
 
         <StatsBlock
