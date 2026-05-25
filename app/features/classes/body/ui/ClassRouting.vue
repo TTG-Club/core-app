@@ -16,6 +16,7 @@
     parent = undefined,
     hasSpells = false,
     navigateInPlace = false,
+    inSplit = false,
   } = defineProps<{
     url: string;
     name: NameResponse;
@@ -27,6 +28,10 @@
      * внутри текущего контейнера (drawer) без перехода на отдельную страницу.
      */
     navigateInPlace?: boolean;
+    /**
+     * Отображается в сплит-панели — навигация обновляет query.detail.
+     */
+    inSplit?: boolean;
   }>();
 
   const emit = defineEmits<{
@@ -61,16 +66,35 @@
     destroyOnClose: true,
   });
 
+  const route = useRoute();
+  const router = useRouter();
+
   /** Ссылка на popover для программного закрытия после выбора подкласса */
   const popoverOpen = ref(false);
 
+  /** Навигация изолирована от основного роутера (drawer или split) */
+  const isInlineNavigation = computed(() => navigateInPlace || inSplit);
+
   /**
    * Обработчик выбора подкласса из CommandPalette.
-   * При navigateInPlace переключает содержимое inline,
-   * иначе навигирует стандартным роутером.
+   * В drawer — переключает содержимое inline.
+   * В сплит-режиме — обновляет query.detail.
+   * В обычном режиме — навигирует стандартным роутером.
    */
   function handleSubclassSelect(subclassUrl: string): void {
     popoverOpen.value = false;
+
+    if (inSplit) {
+      router.push({
+        query: {
+          ...route.query,
+          detail: subclassUrl,
+        },
+      });
+
+      return;
+    }
+
     emit('navigate', subclassUrl);
   }
 
@@ -78,7 +102,20 @@
    * Обработчик клика по кнопке «Класс» — возврат к основному классу.
    */
   function handleClassClick(): void {
-    emit('navigate', parent ? parent.url : url);
+    const classUrl = parent ? parent.url : url;
+
+    if (inSplit) {
+      router.push({
+        query: {
+          ...route.query,
+          detail: classUrl,
+        },
+      });
+
+      return;
+    }
+
+    emit('navigate', classUrl);
   }
 
   /** Прокрутка к блоку описания внутри текущего контейнера */
@@ -107,7 +144,7 @@
           label: subclass.name.rus,
           suffix: subclass.name.eng ? `[${subclass.name.eng}]` : undefined,
           source: subclass.source,
-          ...(navigateInPlace
+          ...(isInlineNavigation.value
             ? { onSelect: () => handleSubclassSelect(subclass.url) }
             : { to: `/classes/${subclass.url}` }),
         })),
@@ -119,12 +156,12 @@
   <div class="flex w-auto flex-wrap gap-2">
     <UButton
       :to="
-        navigateInPlace ? undefined : `/classes/${parent ? parent.url : url}`
+        isInlineNavigation ? undefined : `/classes/${parent ? parent.url : url}`
       "
       variant="soft"
       color="secondary"
       size="md"
-      @click.left.exact.prevent="navigateInPlace && handleClassClick()"
+      @click.left.exact.prevent="isInlineNavigation && handleClassClick()"
     >
       <div class="flex flex-col items-start leading-tight">
         <span class="text-xs text-secondary"> Класс: </span>
