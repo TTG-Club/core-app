@@ -83,6 +83,7 @@
             :has-description="!!detail.description"
             :has-spells="detail.casterType !== 'NONE'"
             :navigate-in-place="navigateInPlace"
+            :in-split="inSplit"
             @navigate="emit('navigate', $event)"
           />
 
