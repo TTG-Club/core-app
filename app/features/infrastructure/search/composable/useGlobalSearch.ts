@@ -4,7 +4,13 @@ export function useGlobalSearch() {
   const overlay = useOverlay();
   const modal = overlay.create(SearchPalette);
 
-  const isOpen = computed(() => overlay.isOpen(modal.id));
+  const isOpen = computed(() => {
+    if (import.meta.server) {
+      return false;
+    }
+
+    return overlay.isOpen(modal.id);
+  });
 
   function open() {
     if (isOpen.value) {

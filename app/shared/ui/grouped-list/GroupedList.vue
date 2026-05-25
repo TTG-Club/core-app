@@ -623,6 +623,10 @@
   }
 
   async function restoreListScrollPosition(): Promise<void> {
+    if (import.meta.server) {
+      return;
+    }
+
     if (isScrollPositionRestored.value) {
       return;
     }
