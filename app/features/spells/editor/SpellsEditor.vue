@@ -210,25 +210,23 @@
 
         <UFormField
           class="col-span-3"
-          label="Значение 1"
+          label="Радиус/длина"
           name="areaOfEffect.value1"
         >
           <UInput
             v-model.number="state.areaOfEffect!.value1"
             type="number"
-            placeholder="Радиус/длина"
           />
         </UFormField>
 
         <UFormField
           class="col-span-3"
-          label="Значение 2"
+          label="Высота/ширина"
           name="areaOfEffect.value2"
         >
           <UInput
             v-model.number="state.areaOfEffect!.value2"
             type="number"
-            placeholder="Высота/ширина"
           />
         </UFormField>
       </div>
