@@ -8,14 +8,24 @@ export const VTTG_SEO = {
     'VTTG — онлайн-платформа для игры в D&D 5e. Карты, броски кубиков, интеграция с ttg.club.',
 } as const;
 
-export const VTTG_HERO_BACKGROUND = '/s3/vttgw/main-bg.png';
+export const VTTG_HERO_BACKGROUND = '/s3/vttgw/main-bg.webp';
+export const VTTG_HERO_VIDEO = '/s3/vttgw/video.webm';
 
 export const VTTG_HERO_LINKS: ButtonProps[] = [
+  {
+    label: 'Попробовать Demo',
+    icon: 'tabler:player-play',
+    size: 'xl',
+    color: 'primary',
+    to: 'http://demo.ttg.club:30000/play',
+    target: '_blank',
+  },
   {
     label: 'Поддержать проект',
     icon: 'tabler:heart',
     size: 'xl',
-    color: 'primary',
+    color: 'neutral',
+    variant: 'subtle',
   },
 ];
 
@@ -119,9 +129,9 @@ export const FEATURE_ITEMS: FeatureItem[] = [
   {
     badge: 'Погружение',
     badgeVariant: 'new',
-    title: 'Визуальные эффекты',
+    title: 'Система эффектов',
     description:
-      'Добавьте атмосферы вашей сцене с помощью динамической погоды, частиц, заклинаний и фильтров.',
+      'Временные модификаторы характеристик без перезаписи базы. Накладывайте состояния, ауры и бонусы экипировки.',
     img: '/s3/vttgw/blocks/effects.webm',
     icon: 'tabler:wand',
   },
@@ -141,7 +151,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     label: 'Как работает интеграция с ttg.club?',
     content:
-      'В дальнейшем появится возможность оформить подписку, благодаря которой вся база данных сайта ttg.club будет доступна вам прямо внутри приложения VTTG.',
+      'По умолчанию в приложении VTTG доступен только базовый SRD-контент (бесплатный набор официальных правил). Однако оформление подписки открывает доступ к мощному интеграционному модулю на сайте. С его помощью вы сможете в один клик запустить перенос данных и мгновенно получить всю расширенную базу знаний в приложение VTTG.',
   },
   {
     label: 'Можно ли использовать свои изображения для карт?',

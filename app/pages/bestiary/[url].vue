@@ -6,6 +6,8 @@
 
   const route = useRoute();
 
+  useSectionDetailRedirect('bestiary');
+
   const { data: creature } = await useAsyncData(
     `bestiary-${route.params.url}`,
     () =>

@@ -11,18 +11,29 @@
   } from './ui';
   import { getIndexedFeatureAnchorId } from './ui/constants';
 
-  const { detail } = defineProps<{
+  const { detail, inSplit = false } = defineProps<{
     detail: MulticlassDetailResponse;
+    /**
+     * Отображается в сплит-панели (режиме просмотра во всю ширину).
+     */
+    inSplit?: boolean;
   }>();
 </script>
 
 <template>
   <div class="@container">
-    <div class="flex flex-col gap-6 @min-3xl:flex-row @min-3xl:gap-7">
+    <div
+      :class="[
+        'flex flex-col gap-6',
+        inSplit ? '' : '@min-3xl:flex-row @min-3xl:gap-7',
+      ]"
+    >
       <div
         :class="[
           'flex w-full shrink-0 flex-col gap-4',
-          '@min-xl:@max-3xl:flex-row @min-3xl:w-80',
+          inSplit
+            ? '@min-xl:flex-row'
+            : '@min-xl:@max-3xl:flex-row @min-3xl:w-80',
         ]"
       >
         <MulticlassLevelInfo

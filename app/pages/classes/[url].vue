@@ -18,6 +18,8 @@
     params: { url },
   } = useRoute();
 
+  useSectionDetailRedirect('classes');
+
   const {
     data: detail,
     error,
@@ -96,6 +98,7 @@
     :subtitle
     :source="detail?.source"
     :date-time="detail?.updatedAt"
+    :back-to="detail?.parent ? `/classes/${detail.parent.url}` : undefined"
     copy-text
   >
     <template #actions>

@@ -10,6 +10,8 @@
     source: SourceLinkResponse;
   }>();
 
+  const { isDesktop } = useDevice();
+  const { isSplitActive } = useLayoutWidth();
   const overlay = useOverlay();
 
   const drawer = overlay.create(SourceDrawer, {
@@ -20,7 +22,10 @@
     destroyOnClose: true,
   });
 
-  const { isDesktop } = useDevice();
+  const { isOpened, handleOpen } = useSectionLink(source.url, drawer.id, () =>
+    drawer.open(),
+  );
+
   const url = computed(() => `/sources/${source.url}`);
 </script>
 
@@ -30,10 +35,12 @@
     :name="source.name"
     :image="source.image"
     :source="source.source"
+    :is-opened="isOpened"
+    @open-drawer="handleOpen"
   >
     <template #actions>
       <LinkPreview
-        v-if="isDesktop"
+        v-if="isDesktop && !isSplitActive"
         :url="source.url"
       />
     </template>

@@ -6,6 +6,8 @@
 
   const route = useRoute();
 
+  useSectionDetailRedirect('feats');
+
   const { data: feat } = await useAsyncData(`feat-${route.params.url}`, () =>
     $fetch<FeatDetailResponse>(`/api/v2/feats/${route.params.url}`),
   );

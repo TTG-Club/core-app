@@ -77,10 +77,16 @@
     :class="classList"
     :dismissible="isDismissible"
     :inset="isTabletOrGreater"
+    :title="computedTitle || ''"
+    :description="''"
     direction="right"
     handle-only
     fixed
-    :ui="{ container: 'select-text **:select-text' }"
+    :ui="{
+      container: 'select-text **:select-text',
+      title: 'sr-only',
+      description: 'sr-only',
+    }"
     @close="$emit('close')"
   >
     <template #header>

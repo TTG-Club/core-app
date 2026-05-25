@@ -21,7 +21,6 @@
         :class="$style.info"
       >
         <TopBar
-          :additional-type="spell.additionalType"
           :ritual="spell.ritual"
           :school="spell.school"
           :level="spell.level"
@@ -107,7 +106,8 @@
     max-width: 100%;
 
     @container (width > 800px) {
-      max-width: 320px;
+      flex-shrink: 0;
+      width: 320px;
     }
   }
 </style>

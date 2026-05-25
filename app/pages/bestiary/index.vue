@@ -1,10 +1,12 @@
 <script setup lang="ts">
   import type {
+    CreatureDetailResponse,
     CreatureLinkResponse,
     CreatureSearchPageResponse,
     CreatureSearchResponse,
   } from '~bestiary/model';
 
+  import { CreatureBody } from '~bestiary/body';
   import { useChallengeRatingGroupOrder } from '~bestiary/composable';
   import { CreatureLink } from '~bestiary/link';
   import {
@@ -12,6 +14,7 @@
     BESTIARY_LIST_PAGE_SIZE,
   } from '~bestiary/model';
   import { FilterControls, useFilter } from '~infrastructure/filter';
+  import { UiDetailPane } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
@@ -21,6 +24,29 @@
     description: 'Бестиарий из D&D 5 (редакция 2024 года).',
   });
 
+  const { isSplitActive } = useLayoutWidth();
+
+  const currentPage = ref(0);
+  const bestiary = ref<Array<CreatureLinkResponse>>([]);
+  const hasNextPage = ref(false);
+  const isLoadingMore = ref(false);
+
+  const {
+    detailUrl,
+    detailData: detailCreature,
+    isDetailLoading,
+    isDetailError,
+    isDetailDismissed,
+    detailUrlForCopy,
+    detailEditUrl,
+    handleCloseDetail,
+  } = useSectionDetail<CreatureDetailResponse>({
+    sectionPath: '/bestiary',
+    apiBasePath: '/api/v2/bestiary',
+    items: bestiary,
+  });
+
+  // Фильтры (асинхронный вызов)
   const {
     filter,
     search,
@@ -35,14 +61,51 @@
     pending: isChallengeRatingOrderPending,
   } = useChallengeRatingGroupOrder();
 
-  const currentPage = ref(0);
-  const bestiary = ref<Array<CreatureLinkResponse>>([]);
-  const hasNextPage = ref(false);
-  const isLoadingMore = ref(false);
-
-  const infiniteScrollTarget = computed(() =>
-    import.meta.client ? window : null,
+  // Динамический таргет для бесконечного скролла
+  // В стандартном режиме — window с большим distance (900px),
+  // в Wide Mode — контейнер списка с аналогичным distance (900px) для своевременной подгрузки.
+  const windowScrollTarget = computed(() =>
+    import.meta.client && !isSplitActive.value ? window : null,
   );
+
+  const splitScrollTarget = shallowRef<HTMLElement | null>(null);
+
+  /**
+   * Поиск DOM-контейнера для скролла в Wide Mode.
+   * Использует requestAnimationFrame для повторной попытки,
+   * т.к. элемент может ещё не быть в DOM при первом вызове.
+   */
+  function resolveSplitContainer(): void {
+    const container = document.getElementById('section-list-container');
+
+    if (container) {
+      splitScrollTarget.value = container;
+
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      splitScrollTarget.value = document.getElementById(
+        'section-list-container',
+      );
+    });
+  }
+
+  if (import.meta.client) {
+    onMounted(() => {
+      watch(
+        isSplitActive,
+        (active) => {
+          if (active) {
+            resolveSplitContainer();
+          } else {
+            splitScrollTarget.value = null;
+          }
+        },
+        { immediate: true },
+      );
+    });
+  }
 
   const listResetKey = computed(() =>
     JSON.stringify({
@@ -62,24 +125,37 @@
       : BESTIARY_LIST_PAGE_SIZE;
   });
 
-  const isSavedCreatureLoaded = computed(() => {
-    const savedCreatureUrl = savedItemKey.value;
+  // Целевой URL монстра для прокрутки/загрузки: либо сохраненный из скролла, либо из URL
+  const targetCreatureUrl = computed(() => {
+    if (savedItemKey.value) {
+      return savedItemKey.value;
+    }
 
-    if (!savedCreatureUrl) {
+    return detailUrl.value;
+  });
+
+  const isTargetCreatureLoaded = computed(() => {
+    const targetUrl = targetCreatureUrl.value;
+
+    if (!targetUrl) {
       return true;
     }
 
-    return bestiary.value.some((creature) => creature.url === savedCreatureUrl);
+    return bestiary.value.some((creature) => creature.url === targetUrl);
   });
 
-  const isSavedCreatureRestorePending = computed(() => {
+  const isTargetCreatureRestorePending = computed(() => {
     return (
-      hasSavedPosition.value
-      && !isSavedCreatureLoaded.value
+      (hasSavedPosition.value || detailUrl.value)
+      && !isTargetCreatureLoaded.value
       && hasNextPage.value
     );
   });
 
+  /**
+   * Приведение ответа от апи поиска монстров к общему типу.
+   * @param response Ответ от сервера.
+   */
   function normalizeCreaturePage(
     response: CreatureSearchResponse | null | undefined,
   ): CreatureSearchPageResponse {
@@ -96,6 +172,11 @@
     };
   }
 
+  /**
+   * Загрузка страницы со списком монстров.
+   * @param page Номер страницы.
+   * @param size Количество элементов.
+   */
   async function fetchCreaturePage(
     page: number,
     size: number = BESTIARY_LIST_PAGE_SIZE,
@@ -146,6 +227,9 @@
     { immediate: true },
   );
 
+  /**
+   * Подгрузка следующей страницы списка.
+   */
   async function loadNextCreaturePage(): Promise<void> {
     if (isLoadingMore.value || !hasNextPage.value) {
       return;
@@ -165,13 +249,16 @@
     }
   }
 
+  /**
+   * Восстановление сохраненных страниц бестиария до целевого существа.
+   */
   async function restoreSavedCreaturePages(): Promise<void> {
-    const savedCreatureUrl = savedItemKey.value;
+    const targetUrl = targetCreatureUrl.value;
 
     if (
-      !savedCreatureUrl
+      !targetUrl
       || isRestoringSavedPage.value
-      || isSavedCreatureLoaded.value
+      || isTargetCreatureLoaded.value
     ) {
       return;
     }
@@ -179,7 +266,7 @@
     isRestoringSavedPage.value = true;
 
     try {
-      while (hasNextPage.value && !isSavedCreatureLoaded.value) {
+      while (hasNextPage.value && !isTargetCreatureLoaded.value) {
         if (isLoadingMore.value) {
           await until(isLoadingMore).toBe(false);
 
@@ -193,11 +280,19 @@
     }
   }
 
-  useInfiniteScroll(infiniteScrollTarget, loadNextCreaturePage, {
+  useInfiniteScroll(windowScrollTarget, loadNextCreaturePage, {
     distance: BESTIARY_LIST_LOAD_MORE_DISTANCE,
     canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
   });
 
+  useInfiniteScroll(splitScrollTarget, loadNextCreaturePage, {
+    distance: BESTIARY_LIST_LOAD_MORE_DISTANCE,
+    canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
+  });
+
+  /**
+   * Запоминание текущей страницы для сохранения позиции.
+   */
   function rememberSavedCreaturePage(): void {
     const savedCreatureUrl = savedItemKey.value;
 
@@ -221,7 +316,7 @@
   watch(savedItemKey, rememberSavedCreaturePage, { flush: 'sync' });
 
   watch(
-    [bestiary, savedItemKey],
+    [bestiary, targetCreatureUrl],
     () => {
       restoreSavedCreaturePages();
     },
@@ -239,7 +334,7 @@
       isBestiaryLoading
       || isChallengeRatingOrderPending.value
       || isRestoringSavedPage.value
-      || isSavedCreatureRestorePending.value
+      || isTargetCreatureRestorePending.value
     );
   });
 </script>
@@ -287,6 +382,7 @@
             order: challengeRatingOrder,
             unknown: 'before',
           }"
+          :active-item-key="detailUrl"
         >
           <template #default="{ item }">
             <CreatureLink :creature="item" />
@@ -301,6 +397,53 @@
           @refresh="refresh"
         />
       </Transition>
+    </template>
+
+    <template #detail>
+      <UiDetailPane
+        v-if="detailUrl"
+        :title="detailCreature?.name ?? ''"
+        :source="detailCreature?.source"
+        :date-time="detailCreature?.updatedAt"
+        :url="detailUrlForCopy"
+        :edit-url="detailEditUrl"
+        :is-loading="isDetailLoading"
+        :is-error="isDetailError"
+        copy-title
+        @close="handleCloseDetail"
+      >
+        <CreatureBody
+          v-if="detailCreature"
+          :creature="detailCreature"
+        />
+      </UiDetailPane>
+
+      <div
+        v-else-if="isDetailDismissed"
+        class="flex h-full w-full flex-col items-center justify-center p-6 text-center select-none"
+      >
+        <div class="flex max-w-xs flex-col items-center gap-3">
+          <UIcon
+            name="tabler:click"
+            class="size-10 text-muted"
+          />
+
+          <h3 class="text-lg font-semibold text-highlighted">
+            Существо не выбрано
+          </h3>
+
+          <p class="text-sm text-secondary">
+            Выберите существо из списка слева, чтобы просмотреть подробную
+            информацию
+          </p>
+        </div>
+      </div>
+
+      <UiDetailPane
+        v-else
+        title=""
+        :is-loading="true"
+      />
     </template>
   </NuxtLayout>
 </template>

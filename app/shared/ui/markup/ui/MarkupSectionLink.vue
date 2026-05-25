@@ -98,7 +98,14 @@
       destroyOnClose: true,
     });
 
-  const isOpened = computed(() => overlay.isOpen(drawer.id));
+  const isOpened = computed(() => {
+    if (import.meta.server) {
+      return false;
+    }
+
+    return overlay.isOpen(drawer.id);
+  });
+
   const path = computed(() => MARKER_URL_MAP[sectionType]);
   const to = computed(() => `/${path.value}/${url}`);
 

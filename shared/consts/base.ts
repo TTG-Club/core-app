@@ -4,4 +4,6 @@ export const USER_REFRESH_TOKEN_COOKIE = 'ttg-user-refresh-token';
 
 export const THEME_STORE_KEY = 'ttg-theme';
 
+export const LAYOUT_WIDTH_STORE_KEY = 'ttg-layout-width';
+
 export const ONE_DAY_IN_SECONDS = 24 * 60 * 60;

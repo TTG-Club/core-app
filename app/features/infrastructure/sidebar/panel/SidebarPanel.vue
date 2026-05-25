@@ -2,8 +2,8 @@
   import { DiceRollerSidebarButton } from '~dice-roller/sidebar-button';
   import { SearchButton } from '~infrastructure/search/button';
   import { useGlobalSearch } from '~infrastructure/search/composable';
+  import { DisplaySettings } from '~infrastructure/sidebar/display-settings';
   import { AppMenu } from '~infrastructure/sidebar/menu';
-  import { ThemeSwitcher } from '~infrastructure/sidebar/theme-switcher';
   import { SvgLogo } from '~ui/icon';
   import { UserHelmet } from '~user/helmet';
 
@@ -112,7 +112,7 @@
 
           <UserHelmet />
 
-          <ThemeSwitcher />
+          <DisplaySettings />
         </ClientOnly>
       </div>
     </header>

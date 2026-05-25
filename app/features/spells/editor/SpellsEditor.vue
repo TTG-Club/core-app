@@ -5,6 +5,7 @@
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import {
     SelectAbilities,
+    SelectAttackType,
     SelectClass,
     SelectCondition,
     SelectDamageType,
@@ -13,6 +14,7 @@
     SelectLineage,
     SelectMagicSchool,
     SelectSpecies,
+    SelectSpellArea,
     SelectSpellLevel,
     SelectSubclass,
   } from '~ui/select';
@@ -41,7 +43,10 @@
       description: '',
       upper: undefined,
       level: 0,
-      school: undefined,
+      school: {
+        school: undefined,
+        additionalType: undefined,
+      },
       range: [],
       duration: [],
       castingTime: [],
@@ -62,6 +67,12 @@
       healingType: [],
       damageType: [],
       condition: [],
+      attackType: undefined,
+      areaOfEffect: {
+        type: undefined,
+        value1: undefined,
+        value2: undefined,
+      },
     };
   }
 
@@ -105,7 +116,18 @@
           label="Школа"
           name="school"
         >
-          <SelectMagicSchool v-model="state.school" />
+          <SelectMagicSchool v-model="state.school.school" />
+        </UFormField>
+
+        <UFormField
+          class="col-span-full"
+          label="Подшкола"
+          name="additionalType"
+        >
+          <UInput
+            v-model="state.school.additionalType"
+            placeholder="Подшкола"
+          />
         </UFormField>
 
         <SpellCastingTimes v-model="state.castingTime" />
@@ -167,6 +189,44 @@
           <SelectHealType
             v-model="state.healingType"
             multiple
+          />
+        </UFormField>
+
+        <UFormField
+          class="col-span-6"
+          label="Тип атаки"
+          name="attackType"
+        >
+          <SelectAttackType v-model="state.attackType" />
+        </UFormField>
+
+        <UFormField
+          class="col-span-6"
+          label="Область воздействия"
+          name="areaOfEffect.type"
+        >
+          <SelectSpellArea v-model="state.areaOfEffect!.type" />
+        </UFormField>
+
+        <UFormField
+          class="col-span-3"
+          label="Радиус/длина"
+          name="areaOfEffect.value1"
+        >
+          <UInput
+            v-model.number="state.areaOfEffect!.value1"
+            type="number"
+          />
+        </UFormField>
+
+        <UFormField
+          class="col-span-3"
+          label="Высота/ширина"
+          name="areaOfEffect.value2"
+        >
+          <UInput
+            v-model.number="state.areaOfEffect!.value2"
+            type="number"
           />
         </UFormField>
       </div>

@@ -1,17 +1,20 @@
 <script setup lang="ts">
   import type {
+    SpellDetailResponse,
     SpellLinkResponse,
     SpellSearchPageResponse,
     SpellSearchResponse,
   } from '~spells/model';
 
   import { FilterControls, useFilter } from '~infrastructure/filter';
+  import { SpellBody } from '~spells/body';
   import { SpellLegend } from '~spells/legend';
   import { SpellLink } from '~spells/link';
   import {
     SPELL_LIST_LOAD_MORE_DISTANCE,
     SPELL_LIST_PAGE_SIZE,
   } from '~spells/model';
+  import { UiDetailPane } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
@@ -29,6 +32,8 @@
     description: 'Заклинания из D&D 5 (редакция 2024 года).',
   });
 
+  const { isSplitActive } = useLayoutWidth();
+
   const {
     filter,
     search,
@@ -43,9 +48,66 @@
   const hasNextPage = ref(false);
   const isLoadingMore = ref(false);
 
-  const infiniteScrollTarget = computed(() =>
-    import.meta.client ? window : null,
+  const {
+    detailUrl,
+    detailData: detailSpell,
+    isDetailLoading,
+    isDetailError,
+    isDetailDismissed,
+    detailUrlForCopy,
+    detailEditUrl,
+    handleCloseDetail,
+  } = useSectionDetail<SpellDetailResponse>({
+    sectionPath: '/spells',
+    apiBasePath: '/api/v2/spells',
+    items: spells,
+  });
+
+  // Динамический таргет для бесконечного скролла
+  // В стандартном режиме — window с большим distance (900px),
+  // в Wide Mode — контейнер списка с аналогичным distance (900px) для своевременной подгрузки.
+  const windowScrollTarget = computed(() =>
+    import.meta.client && !isSplitActive.value ? window : null,
   );
+
+  const splitScrollTarget = shallowRef<HTMLElement | null>(null);
+
+  /**
+   * Поиск DOM-контейнера для скролла в Wide Mode.
+   * Использует requestAnimationFrame для повторной попытки,
+   * т.к. элемент может ещё не быть в DOM при первом вызове.
+   */
+  function resolveSplitContainer(): void {
+    const container = document.getElementById('section-list-container');
+
+    if (container) {
+      splitScrollTarget.value = container;
+
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      splitScrollTarget.value = document.getElementById(
+        'section-list-container',
+      );
+    });
+  }
+
+  if (import.meta.client) {
+    onMounted(() => {
+      watch(
+        isSplitActive,
+        (active) => {
+          if (active) {
+            resolveSplitContainer();
+          } else {
+            splitScrollTarget.value = null;
+          }
+        },
+        { immediate: true },
+      );
+    });
+  }
 
   const listResetKey = computed(() =>
     JSON.stringify({
@@ -65,19 +127,30 @@
       : SPELL_LIST_PAGE_SIZE;
   });
 
-  const isSavedSpellLoaded = computed(() => {
-    const savedSpellUrl = savedItemKey.value;
+  // Целевой URL заклинания для прокрутки/загрузки: либо сохраненный из скролла, либо из URL
+  const targetSpellUrl = computed(() => {
+    if (savedItemKey.value) {
+      return savedItemKey.value;
+    }
 
-    if (!savedSpellUrl) {
+    return detailUrl.value;
+  });
+
+  const isTargetSpellLoaded = computed(() => {
+    const targetUrl = targetSpellUrl.value;
+
+    if (!targetUrl) {
       return true;
     }
 
-    return spells.value.some((spell) => spell.url === savedSpellUrl);
+    return spells.value.some((spell) => spell.url === targetUrl);
   });
 
-  const isSavedSpellRestorePending = computed(() => {
+  const isTargetSpellRestorePending = computed(() => {
     return (
-      hasSavedPosition.value && !isSavedSpellLoaded.value && hasNextPage.value
+      (hasSavedPosition.value || detailUrl.value)
+      && !isTargetSpellLoaded.value
+      && hasNextPage.value
     );
   });
 
@@ -166,24 +239,20 @@
     }
   }
 
+  /**
+   * Восстановление сохраненных страниц заклинаний до целевого элемента.
+   */
   async function restoreSavedSpellPages(): Promise<void> {
-    const savedSpellUrl = savedItemKey.value;
+    const targetUrl = targetSpellUrl.value;
 
-    if (
-      !savedSpellUrl
-      || isRestoringSavedPage.value
-      || isSavedSpellLoaded.value
-    ) {
+    if (!targetUrl || isRestoringSavedPage.value || isTargetSpellLoaded.value) {
       return;
     }
 
     isRestoringSavedPage.value = true;
 
     try {
-      while (
-        hasNextPage.value
-        && !spells.value.some((spell) => spell.url === savedSpellUrl)
-      ) {
+      while (hasNextPage.value && !isTargetSpellLoaded.value) {
         if (isLoadingMore.value) {
           await until(isLoadingMore).toBe(false);
 
@@ -197,7 +266,12 @@
     }
   }
 
-  useInfiniteScroll(infiniteScrollTarget, loadNextSpellPage, {
+  useInfiniteScroll(windowScrollTarget, loadNextSpellPage, {
+    distance: SPELL_LIST_LOAD_MORE_DISTANCE,
+    canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
+  });
+
+  useInfiniteScroll(splitScrollTarget, loadNextSpellPage, {
     distance: SPELL_LIST_LOAD_MORE_DISTANCE,
     canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
   });
@@ -223,7 +297,7 @@
   watch(savedItemKey, rememberSavedSpellPage, { flush: 'sync' });
 
   watch(
-    [spells, savedItemKey],
+    [spells, targetSpellUrl],
     () => {
       restoreSavedSpellPages();
     },
@@ -237,7 +311,7 @@
     () =>
       (status.value !== 'success' && status.value !== 'error')
       || isRestoringSavedPage.value
-      || isSavedSpellRestorePending.value,
+      || isTargetSpellRestorePending.value,
   );
 </script>
 
@@ -283,6 +357,7 @@
           :separator-label="getSpellLevelLabel"
           :items="spells"
           field="level"
+          :active-item-key="detailUrl"
         >
           <template #default="{ item }">
             <SpellLink :spell="item" />
@@ -297,6 +372,53 @@
           @refresh="refresh"
         />
       </Transition>
+    </template>
+
+    <template #detail>
+      <UiDetailPane
+        v-if="detailUrl"
+        :title="detailSpell?.name ?? ''"
+        :source="detailSpell?.source"
+        :date-time="detailSpell?.updatedAt"
+        :url="detailUrlForCopy"
+        :edit-url="detailEditUrl"
+        :is-loading="isDetailLoading"
+        :is-error="isDetailError"
+        copy-title
+        @close="handleCloseDetail"
+      >
+        <SpellBody
+          v-if="detailSpell"
+          :spell="detailSpell"
+        />
+      </UiDetailPane>
+
+      <div
+        v-else-if="isDetailDismissed"
+        class="flex h-full w-full flex-col items-center justify-center p-6 text-center select-none"
+      >
+        <div class="flex max-w-xs flex-col items-center gap-3">
+          <UIcon
+            name="tabler:click"
+            class="size-10 text-muted"
+          />
+
+          <h3 class="text-lg font-semibold text-highlighted">
+            Заклинание не выбрано
+          </h3>
+
+          <p class="text-sm text-secondary">
+            Выберите заклинание из списка слева, чтобы просмотреть подробную
+            информацию
+          </p>
+        </div>
+      </div>
+
+      <UiDetailPane
+        v-else
+        title=""
+        :is-loading="true"
+      />
     </template>
   </NuxtLayout>
 </template>

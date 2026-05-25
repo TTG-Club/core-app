@@ -6,6 +6,8 @@
 
   const route = useRoute();
 
+  useSectionDetailRedirect('sources');
+
   const { data: source } = await useAsyncData(
     `source-${route.params.url}`,
     () => $fetch<SourceDetailResponse>(`/api/v2/source/${route.params.url}`),
