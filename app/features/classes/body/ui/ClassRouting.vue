@@ -225,7 +225,6 @@
     <UButton
       v-if="hasDescription"
       class="ml-auto hidden md:block"
-      :to="navigateInPlace ? undefined : '#description'"
       variant="soft"
       color="secondary"
       size="md"
