@@ -22,6 +22,10 @@ export function useSectionLink(
       return route.query.detail === itemUrl;
     }
 
+    if (import.meta.server) {
+      return false;
+    }
+
     return overlay.isOpen(drawerId);
   });
 

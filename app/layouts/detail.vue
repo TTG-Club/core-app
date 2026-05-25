@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import type { Dayjs } from 'dayjs';
+  import type { RouteLocationRaw } from 'vue-router';
 
   import type { SourceResponse } from '~/shared/types';
 
@@ -11,6 +12,7 @@
     source = undefined,
     dateTime = undefined,
     dateTimeFormat = 'LLL',
+    backTo = undefined,
   } = defineProps<{
     title: string | undefined;
     copyText?: boolean;
@@ -18,6 +20,7 @@
     dateTime?: string | number | Date | Dayjs | null;
     dateTimeFormat?: string;
     source?: SourceResponse;
+    backTo?: RouteLocationRaw;
   }>();
 
   const { format } = useDayjs();
@@ -40,6 +43,17 @@
         class="mx-auto flex w-full max-w-(--max-content) flex-col gap-1 p-4 md:pt-6"
       >
         <div class="flex items-center gap-1">
+          <UButton
+            v-if="backTo"
+            icon="tabler:arrow-left"
+            variant="ghost"
+            color="neutral"
+            size="md"
+            square
+            class="mr-1 -ml-2"
+            @click.left.exact.prevent="navigateTo(backTo)"
+          />
+
           <h2
             v-if="title"
             class="truncate text-2xl text-(--ui-text-highlighted)"

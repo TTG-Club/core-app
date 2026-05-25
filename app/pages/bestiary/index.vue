@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import type { FetchStatusValue } from '~/shared/consts';
   import type {
     CreatureDetailResponse,
     CreatureLinkResponse,
@@ -7,7 +6,6 @@
     CreatureSearchResponse,
   } from '~bestiary/model';
 
-  import { FetchStatus } from '~/shared/consts';
   import { CreatureBody } from '~bestiary/body';
   import { useChallengeRatingGroupOrder } from '~bestiary/composable';
   import { CreatureLink } from '~bestiary/link';
@@ -28,189 +26,25 @@
 
   const { isSplitActive } = useLayoutWidth();
 
-  const route = useRoute();
-  const router = useRouter();
-
-  // Состояние списка существ (независимые ref)
   const currentPage = ref(0);
   const bestiary = ref<Array<CreatureLinkResponse>>([]);
   const hasNextPage = ref(false);
   const isLoadingMore = ref(false);
 
-  // Локальный LRU-кэш для детальной информации о существах (максимум 50 записей)
-  const creatureCache = createLruCache<string, CreatureDetailResponse>(50);
-
-  // Вычисляем выбранный URL монстра из query-параметров
-  const detailUrl = computed(() => {
-    const detail = route.query.detail;
-
-    return typeof detail === 'string' && detail ? detail : '';
-  });
-
-  // Реактивное состояние детальной информации о существе
-  const detailCreature = ref<CreatureDetailResponse | null>(null);
-  const detailStatus = ref<FetchStatusValue>(FetchStatus.Idle);
-
-  /**
-   * Загрузка детальных данных монстра по URL.
-   * @param url Идентификатор существа.
-   */
-  async function fetchCreatureDetail(url: string): Promise<void> {
-    if (!url) {
-      detailCreature.value = null;
-      detailStatus.value = FetchStatus.Idle;
-
-      return;
-    }
-
-    if (creatureCache.has(url)) {
-      detailCreature.value = creatureCache.get(url) || null;
-      detailStatus.value = FetchStatus.Success;
-
-      return;
-    }
-
-    detailStatus.value = FetchStatus.Pending;
-
-    try {
-      const response = await $fetch<CreatureDetailResponse>(
-        `/api/v2/bestiary/${url}`,
-      );
-
-      creatureCache.set(url, response);
-      detailCreature.value = response;
-      detailStatus.value = FetchStatus.Success;
-    } catch {
-      detailCreature.value = null;
-      detailStatus.value = FetchStatus.Error;
-    }
-  }
-
-  // Флаг, определяющий, что пользователь ЯВНО закрыл деталь (нажал крестик)
-  const isDetailDismissed = ref(false);
-
-  /**
-   * Флаг, определяющий готовность роутера на клиенте.
-   */
-  const isRouterReady = ref(false);
-
-  // Загрузка детальных данных и сброс флага при изменении выбранного существа
-  watch(
+  const {
     detailUrl,
-    (url) => {
-      if (url) {
-        isDetailDismissed.value = false;
-      }
-
-      fetchCreatureDetail(url);
-    },
-    { immediate: true },
-  );
-
-  const isDetailLoading = computed(
-    () => detailStatus.value === FetchStatus.Pending,
-  );
-
-  const isDetailError = computed(
-    () => detailStatus.value === FetchStatus.Error,
-  );
-
-  const detailUrlForCopy = computed(() =>
-    detailUrl.value ? `${getOrigin()}/bestiary/${detailUrl.value}` : undefined,
-  );
-
-  const detailEditUrl = computed(() =>
-    detailUrl.value ? `/workshop/bestiary/${detailUrl.value}` : undefined,
-  );
-
-  // Перенаправление на детальную страницу при выходе из широкого режима
-  watch([isSplitActive, detailUrl], ([splitActive, urlVal]) => {
-    if (isRouterReady.value && !splitActive && urlVal) {
-      navigateTo({
-        name: 'bestiary-url',
-        params: { url: urlVal },
-      });
-
-      router.replace({
-        query: {
-          ...route.query,
-          detail: undefined,
-        },
-      });
-    }
+    detailData: detailCreature,
+    isDetailLoading,
+    isDetailError,
+    isDetailDismissed,
+    detailUrlForCopy,
+    detailEditUrl,
+    handleCloseDetail,
+  } = useSectionDetail<CreatureDetailResponse>({
+    sectionPath: '/bestiary',
+    apiBasePath: '/api/v2/bestiary',
+    items: bestiary,
   });
-
-  /**
-   * Автоматический выбор первого существа в списке.
-   */
-  function autoSelectFirstCreature() {
-    if (!isSplitActive.value || isDetailDismissed.value) {
-      return;
-    }
-
-    const firstCreature = bestiary.value[0];
-
-    if (firstCreature) {
-      const currentDetail = route.query.detail;
-
-      // Выбираем первого монстра только если в URL пусто
-      if (!currentDetail) {
-        router.replace({
-          query: {
-            ...route.query,
-            detail: firstCreature.url,
-          },
-        });
-      }
-    }
-  }
-
-  // Вызов автовыбора при монтировании на клиенте после готовности роутера
-  onMounted(async () => {
-    await router.isReady();
-    isRouterReady.value = true;
-
-    // На мобильных устройствах (где сплит-режим неактивен) при наличии query-параметра
-    // detail перенаправляем на отдельную страницу существа
-    if (!isSplitActive.value && detailUrl.value) {
-      navigateTo({
-        name: 'bestiary-url',
-        params: { url: detailUrl.value },
-      });
-
-      router.replace({
-        query: {
-          ...route.query,
-          detail: undefined,
-        },
-      });
-
-      return;
-    }
-
-    autoSelectFirstCreature();
-  });
-
-  // Отслеживание изменений списка или режима для автовыбора
-  watch([bestiary, isSplitActive], () => {
-    if (isRouterReady.value) {
-      autoSelectFirstCreature();
-    }
-  });
-
-  /**
-   * Закрытие детальной панели (очистка query-параметра detail).
-   */
-  function handleCloseDetail() {
-    isDetailDismissed.value = true;
-
-    router.push({
-      query: {
-        ...route.query,
-        detail: undefined,
-      },
-    });
-  }
 
   // Фильтры (асинхронный вызов)
   const {
@@ -226,22 +60,6 @@
     order: challengeRatingOrder,
     pending: isChallengeRatingOrderPending,
   } = useChallengeRatingGroupOrder();
-
-  // Добавление canonical ссылки для SEO
-  useHead(() => {
-    if (isSplitActive.value && detailUrl.value) {
-      return {
-        link: [
-          {
-            rel: 'canonical',
-            href: `${getOrigin()}/bestiary/${detailUrl.value}`,
-          },
-        ],
-      };
-    }
-
-    return {};
-  });
 
   // Динамический таргет для бесконечного скролла
   // В стандартном режиме — window с большим distance (900px),

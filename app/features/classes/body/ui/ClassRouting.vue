@@ -15,12 +15,25 @@
     name,
     parent = undefined,
     hasSpells = false,
+    navigateInPlace = false,
   } = defineProps<{
     url: string;
     name: NameResponse;
     parent?: ClassLinkResponse;
     hasDescription?: boolean;
     hasSpells?: boolean;
+    /**
+     * Включает inline-навигацию: подкласс/класс переключаются
+     * внутри текущего контейнера (drawer) без перехода на отдельную страницу.
+     */
+    navigateInPlace?: boolean;
+  }>();
+
+  const emit = defineEmits<{
+    /**
+     * Навигация к другому классу/подклассу внутри текущего контейнера.
+     */
+    (event: 'navigate', classUrl: string): void;
   }>();
 
   const { data: subclasses, status } = await useAsyncData(
@@ -30,8 +43,6 @@
         `/api/v2/classes/${parent ? parent.url : url}/subclasses`,
       ),
   );
-
-  const { scrollToAnchor } = useAnchorScroll();
 
   const search = ref<string>();
 
@@ -49,6 +60,34 @@
     },
     destroyOnClose: true,
   });
+
+  /** Ссылка на popover для программного закрытия после выбора подкласса */
+  const popoverOpen = ref(false);
+
+  /**
+   * Обработчик выбора подкласса из CommandPalette.
+   * При navigateInPlace переключает содержимое inline,
+   * иначе навигирует стандартным роутером.
+   */
+  function handleSubclassSelect(subclassUrl: string): void {
+    popoverOpen.value = false;
+    emit('navigate', subclassUrl);
+  }
+
+  /**
+   * Обработчик клика по кнопке «Класс» — возврат к основному классу.
+   */
+  function handleClassClick(): void {
+    emit('navigate', parent ? parent.url : url);
+  }
+
+  /** Прокрутка к блоку описания внутри текущего контейнера */
+  function scrollToDescription(): void {
+    document.getElementById('description')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  }
 
   const groups = computed<Array<CommandPaletteGroup>>(() => {
     if (!subclasses.value?.length) {
@@ -68,7 +107,9 @@
           label: subclass.name.rus,
           suffix: subclass.name.eng ? `[${subclass.name.eng}]` : undefined,
           source: subclass.source,
-          to: `/classes/${subclass.url}`,
+          ...(navigateInPlace
+            ? { onSelect: () => handleSubclassSelect(subclass.url) }
+            : { to: `/classes/${subclass.url}` }),
         })),
     }));
   });
@@ -77,10 +118,13 @@
 <template>
   <div class="flex w-auto flex-wrap gap-2">
     <UButton
-      :to="`/classes/${parent ? parent.url : url}`"
+      :to="
+        navigateInPlace ? undefined : `/classes/${parent ? parent.url : url}`
+      "
       variant="soft"
       color="secondary"
       size="md"
+      @click.left.exact.prevent="navigateInPlace && handleClassClick()"
     >
       <div class="flex flex-col items-start leading-tight">
         <span class="text-xs text-secondary"> Класс: </span>
@@ -90,6 +134,7 @@
     </UButton>
 
     <UPopover
+      v-model:open="popoverOpen"
       :ui="{ content: 'p-0' }"
       modal
       arrow
@@ -180,11 +225,10 @@
     <UButton
       v-if="hasDescription"
       class="ml-auto hidden md:block"
-      to="#description"
       variant="soft"
       color="secondary"
       size="md"
-      @click.left.exact.prevent="scrollToAnchor('description')"
+      @click.left.exact.prevent="scrollToDescription"
     >
       <div class="flex flex-col items-end leading-tight">
         <span class="text-xs text-secondary">О классе</span>
