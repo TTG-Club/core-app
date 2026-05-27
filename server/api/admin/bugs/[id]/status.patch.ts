@@ -2,11 +2,11 @@ import { isNitroError } from '#server/utils/nitroError';
 import { Role } from '~/shared/types';
 
 /**
- * Обработчик для получения списка баг-репортов (админская панель).
+ * Обработчик для обновления статуса баг-репорта (админская панель).
  *
  * Проверяет права пользователя (требуется ADMIN или MODERATOR),
- * считывает входящие query-параметры (фильтры, пагинация)
- * и пересылает запрос на внешний микросервис.
+ * получает ID бага из параметров пути, считывает новый статус из тела запроса
+ * и отправляет PATCH-запрос на внешний микросервис.
  */
 export default defineEventHandler(async (event) => {
   const user = await getUserFromToken(event);
@@ -21,7 +21,8 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const query = getQuery(event);
+  const id = getRouterParam(event, 'id');
+  const body = await readBody(event);
   const authHeader = getHeader(event, 'authorization');
 
   const headers: Record<string, string> = {};
@@ -32,17 +33,20 @@ export default defineEventHandler(async (event) => {
 
   try {
     const response = await $fetch(
-      'https://bug-report.api.ttg.club/api/v1/bugs',
+      `https://bug-report.api.ttg.club/api/v1/bugs/${id}/status`,
       {
-        method: 'GET',
-        query,
+        method: 'PATCH',
+        body,
         headers,
       },
     );
 
     return response;
   } catch (error: unknown) {
-    consola.error('[bug-report-admin] Ошибка получения списка багов:', error);
+    consola.error(
+      `[bug-report-admin] Ошибка обновления статуса бага ${id}:`,
+      error,
+    );
 
     let statusCode = 500;
     let statusMessage = 'Внутренняя ошибка сервера';

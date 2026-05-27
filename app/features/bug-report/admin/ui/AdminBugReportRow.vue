@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { BugReportResponse } from '../../model';
+  import type { BugReportResponse, BugReportStatus } from '../../model';
 
   import {
     BUG_REPORT_PLATFORM_LABELS,
@@ -24,7 +24,7 @@
   const { format } = useDayjs();
 
   /**
-   * Усеченный UUID баг-репорта (первые 8 символов).
+   * Усечённый UUID баг-репорта (первые 8 символов).
    */
   const shortUuid = computed(() => {
     return props.bugReport.id.slice(0, 8);
@@ -45,32 +45,24 @@
   });
 
   /**
-   * Форматированная дата последнего изменения статуса.
-   */
-  const updatedDateFormatted = computed(() => {
-    return format(props.bugReport.statusUpdatedAt, 'DD.MM.YY HH:mm');
-  });
-
-  /**
    * Возвращает цвет бейджа в зависимости от статуса баг-репорта.
    *
    * @param status Статус баг-репорта.
    */
   function getStatusBadgeColor(
-    status: 'NEW' | 'WAIT' | 'FIXED' | 'REJECTED',
+    status: BugReportStatus,
   ): 'warning' | 'neutral' | 'success' | 'error' | 'info' {
-    switch (status) {
-      case 'NEW':
-        return 'warning';
-      case 'WAIT':
-        return 'info';
-      case 'FIXED':
-        return 'success';
-      case 'REJECTED':
-        return 'error';
-      default:
-        return 'neutral';
-    }
+    const colorMap: Record<
+      BugReportStatus,
+      'warning' | 'info' | 'success' | 'error'
+    > = {
+      NEW: 'warning',
+      WAIT: 'info',
+      FIXED: 'success',
+      REJECTED: 'error',
+    };
+
+    return colorMap[status] ?? 'neutral';
   }
 
   /**
@@ -83,7 +75,7 @@
 
 <template>
   <div
-    class="flex cursor-pointer flex-col gap-2 rounded-xl border px-4 py-3 transition-all select-none lg:flex-row lg:items-center lg:justify-between"
+    class="flex cursor-pointer flex-row flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl border px-4 py-3 transition-all select-none"
     :class="
       isOpened
         ? 'border-primary bg-primary/10 shadow-xs ring-1 ring-primary/50'
@@ -91,8 +83,10 @@
     "
     @click.left.exact.prevent="handleClick"
   >
-    <!-- Левая секция: UUID, Автор, Статус, Платформа -->
-    <div class="flex min-w-0 flex-wrap items-center gap-3">
+    <!-- Левая секция: UUID, Статус, Платформа -->
+    <div
+      class="flex min-w-0 flex-1 items-center justify-between gap-4 sm:flex-initial sm:gap-8"
+    >
       <!-- UUID -->
       <span
         class="shrink-0 font-mono text-xs text-secondary"
@@ -101,23 +95,16 @@
         {{ shortUuid }}
       </span>
 
-      <!-- Автор -->
-      <span
-        class="max-w-[120px] truncate text-sm font-semibold text-highlighted"
-        :title="authorName"
-      >
-        {{ authorName }}
-      </span>
-
       <!-- Статус -->
-      <UBadge
-        :color="getStatusBadgeColor(bugReport.status)"
-        variant="subtle"
-        size="sm"
-        class="shrink-0"
-      >
-        {{ BUG_REPORT_STATUS_LABELS[bugReport.status] || bugReport.status }}
-      </UBadge>
+      <div class="flex w-24 shrink-0">
+        <UBadge
+          :color="getStatusBadgeColor(bugReport.status)"
+          variant="subtle"
+          size="sm"
+        >
+          {{ BUG_REPORT_STATUS_LABELS[bugReport.status] || bugReport.status }}
+        </UBadge>
+      </div>
 
       <!-- Платформа -->
       <UBadge
@@ -133,10 +120,20 @@
       </UBadge>
     </div>
 
-    <!-- Правая секция: Иконки медиа, Даты создания/обновления -->
+    <!-- Правая секция: Автор, Иконки медиа, Дата создания -->
     <div
-      class="flex shrink-0 flex-wrap items-center justify-between gap-4 text-xs text-secondary sm:gap-6 lg:justify-end"
+      class="flex flex-1 items-center justify-between gap-4 text-xs text-secondary sm:flex-initial sm:shrink-0 sm:gap-6"
     >
+      <!-- Автор -->
+      <span
+        class="max-w-[120px] truncate font-semibold text-highlighted"
+        :title="authorName"
+      >
+        {{ authorName }}
+      </span>
+
+      <span class="hidden text-muted/30 sm:inline">|</span>
+
       <!-- Наличие скриншота и выделенного текста -->
       <div class="flex items-center gap-2">
         <!-- Скриншот -->
@@ -160,24 +157,15 @@
         />
       </div>
 
-      <!-- Даты создания и изменения -->
-      <div class="flex items-center gap-3">
-        <span
-          class="whitespace-nowrap"
-          title="Дата создания"
-        >
-          Создан: {{ createdDateFormatted }}
-        </span>
+      <span class="hidden text-muted/30 sm:inline">|</span>
 
-        <span class="hidden text-muted/30 sm:inline">|</span>
-
-        <span
-          class="whitespace-nowrap"
-          title="Дата изменения статуса"
-        >
-          Изменен: {{ updatedDateFormatted }}
-        </span>
-      </div>
+      <!-- Дата создания -->
+      <span
+        class="whitespace-nowrap"
+        title="Дата создания"
+      >
+        {{ createdDateFormatted }}
+      </span>
     </div>
   </div>
 </template>

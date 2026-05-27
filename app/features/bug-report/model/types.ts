@@ -28,6 +28,24 @@ export interface BugReportCreateRequest {
   selectedText?: string;
 }
 
+/** Допустимые статусы баг-репорта */
+export type BugReportStatus = 'NEW' | 'WAIT' | 'FIXED' | 'REJECTED';
+
+/** Результат парсинга выделенного текста с контекстом */
+export interface ParsedSelection {
+  /** Текст до выделенного фрагмента */
+  before: string;
+
+  /** Выделенный фрагмент */
+  selected: string;
+
+  /** Текст после выделенного фрагмента */
+  after: string;
+
+  /** Был ли найден выделенный фрагмент в скобках */
+  hasSelection: boolean;
+}
+
 /** Ответ API на создание баг-репорта */
 export interface BugReportResponse {
   /** Уникальный идентификатор бага */
@@ -40,7 +58,7 @@ export interface BugReportResponse {
   url?: string;
 
   /** Текущий статус бага */
-  status: 'NEW' | 'WAIT' | 'FIXED' | 'REJECTED';
+  status: BugReportStatus;
 
   /** Платформа-источник */
   sourcePlatform: 'SITE_5E24' | 'SITE_5E14' | 'VTTG';

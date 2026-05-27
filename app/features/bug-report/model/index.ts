@@ -2,7 +2,9 @@ export type {
   BrushColor,
   BugReportCreateRequest,
   BugReportResponse,
+  BugReportStatus,
   PageBugReportResponse,
+  ParsedSelection,
   TextSelection,
 } from './types';
 
