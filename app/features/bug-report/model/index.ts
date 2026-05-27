@@ -1,5 +1,6 @@
 export type {
   BrushColor,
+  BugCountByStatusResponse,
   BugReportCreateRequest,
   BugReportResponse,
   BugReportStatus,
@@ -27,6 +28,7 @@ export {
   BUG_REPORT_API_URL,
   BUG_REPORT_DATE_FORMAT,
   BUG_REPORT_DETAIL_DATE_FORMAT,
+  BUG_REPORT_MY_COUNT_API_URL,
   BUG_REPORT_PLATFORM_LABELS,
   BUG_REPORT_STATUS_LABELS,
   BUG_REPORT_STATUS_UPDATE_ERROR_DESC,

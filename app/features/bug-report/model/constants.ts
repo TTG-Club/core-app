@@ -31,6 +31,9 @@ export const MODAL_CHROME_WIDTH = 560;
 /** URL API микросервиса баг-репортов через локальный прокси */
 export const BUG_REPORT_API_URL = '/api/bug-report';
 
+/** URL API получения количества багов текущего пользователя */
+export const BUG_REPORT_MY_COUNT_API_URL = `${BUG_REPORT_API_URL}/my/count-by-status`;
+
 /** URL API получения списка баг-репортов (админка) */
 export const ADMIN_BUGS_API_URL = '/api/admin/bugs';
 

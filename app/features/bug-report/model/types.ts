@@ -123,3 +123,12 @@ export interface PageBugReportResponse {
   /** Пуст ли список элементов */
   empty: boolean;
 }
+
+/** Количество багов по статусу */
+export interface BugCountByStatusResponse {
+  /** Статус бага */
+  status: BugReportStatus;
+
+  /** Количество багов с данным статусом */
+  count: number;
+}
