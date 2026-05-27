@@ -1,8 +1,12 @@
 <script setup lang="ts">
+  import { BUG_REPORT_ANONYMOUS_USER } from '../../model';
+
   const { user, isLoggedIn } = useUser();
 
   const authorName = computed(() =>
-    isLoggedIn.value && user.value ? user.value.username : 'Аноним',
+    isLoggedIn.value && user.value
+      ? user.value.username
+      : BUG_REPORT_ANONYMOUS_USER,
   );
 
   const authorIcon = computed(() =>

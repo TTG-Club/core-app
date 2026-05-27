@@ -64,8 +64,6 @@
       if (success) {
         description.value = '';
       }
-    } catch (error) {
-      consola.error('Ошибка при отправке баг-репорта:', error);
     } finally {
       isSubmitting.value = false;
     }

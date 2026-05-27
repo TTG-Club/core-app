@@ -11,7 +11,7 @@ export const BRUSH_COLORS: ReadonlyArray<BrushColor> = [
 ];
 
 /** Цвет кисти по умолчанию (жёлтый) */
-export const DEFAULT_BRUSH_COLOR: BrushColor = {
+export const DEFAULT_BRUSH_COLOR: BrushColor = BRUSH_COLORS[0] || {
   name: 'yellow',
   value: '#FACC15',
 };
@@ -101,8 +101,8 @@ const BUG_REPORT_STATUS_COLOR_MAP: Record<
  */
 export function getBugReportStatusColor(
   status: BugReportStatus,
-): 'warning' | 'neutral' | 'success' | 'error' | 'info' {
-  return BUG_REPORT_STATUS_COLOR_MAP[status] ?? 'neutral';
+): 'warning' | 'info' | 'success' | 'error' {
+  return BUG_REPORT_STATUS_COLOR_MAP[status];
 }
 
 /** Имя анонимного пользователя по умолчанию */
@@ -134,3 +134,12 @@ export const BUG_REPORT_STATUS_UPDATE_SUCCESS_TITLE = 'Статус обновл
 export const BUG_REPORT_STATUS_UPDATE_ERROR_TITLE = 'Ошибка обновления статуса';
 export const BUG_REPORT_STATUS_UPDATE_ERROR_DESC =
   'Не удалось обновить статус баг-репорта на сервере';
+
+/** Значение фильтра "Все" для статуса/платформы */
+export const ADMIN_BUGS_FILTER_ALL = 'ALL';
+
+/** Количество элементов на странице по умолчанию */
+export const ADMIN_BUGS_DEFAULT_PAGE_SIZE = 20;
+
+/** Параметры сортировки по умолчанию */
+export const ADMIN_BUGS_DEFAULT_SORT = 'createdAt,desc';

@@ -1,7 +1,7 @@
 import { FetchError } from 'ofetch';
 
 import { BUG_REPORT_EXTERNAL_API_BASE_URL } from '#server/utils/bugReportApi';
-import { Role } from '~/shared/types';
+import { assertAdminAccess } from '#server/utils/getUser';
 
 /**
  * Обработчик для получения списка баг-репортов (админская панель).
@@ -13,15 +13,7 @@ import { Role } from '~/shared/types';
 export default defineEventHandler(async (event) => {
   const user = await getUserFromToken(event);
 
-  if (
-    !user.roles.includes(Role.ADMIN)
-    && !user.roles.includes(Role.MODERATOR)
-  ) {
-    throw createError({
-      statusCode: 403,
-      statusMessage: 'Доступ запрещен',
-    });
-  }
+  assertAdminAccess(user);
 
   const query = getQuery(event);
   const authHeader = getHeader(event, 'authorization');

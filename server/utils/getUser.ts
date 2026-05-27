@@ -37,3 +37,22 @@ export async function isUserHasAccess(
     return role === Role.ADMIN || role === Role.MODERATOR;
   });
 }
+
+/**
+ * Проверяет, что пользователь имеет роль ADMIN или MODERATOR.
+ * При отсутствии прав выбрасывает ошибку 403.
+ *
+ * @param user Объект пользователя.
+ * @param user.roles Список ролей пользователя.
+ */
+export function assertAdminAccess(user: { roles: string[] }): void {
+  if (
+    !user.roles.includes(Role.ADMIN)
+    && !user.roles.includes(Role.MODERATOR)
+  ) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Доступ запрещен',
+    });
+  }
+}

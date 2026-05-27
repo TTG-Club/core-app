@@ -5,12 +5,15 @@
   } from '~bug-report/model';
 
   import {
-    AdminBugReportDetail,
+    AdminBugReportDetailPane,
     AdminBugReportRow,
   } from '~bug-report/admin/ui';
   import {
     ADMIN_BUGS_API_URL,
+    ADMIN_BUGS_DEFAULT_PAGE_SIZE,
+    ADMIN_BUGS_DEFAULT_SORT,
     ADMIN_BUGS_EMPTY_TEXT,
+    ADMIN_BUGS_FILTER_ALL,
     ADMIN_BUGS_PAGE_DESCRIPTION,
     ADMIN_BUGS_PAGE_TITLE,
     ADMIN_BUGS_PLATFORM_ALL_LABEL,
@@ -19,7 +22,6 @@
     BUG_REPORT_PLATFORM_LABELS,
     BUG_REPORT_STATUS_LABELS,
   } from '~bug-report/model';
-  import { UiDetailPane } from '~ui/detail-pane';
 
   const { isSplitActive } = useLayoutWidth();
 
@@ -31,9 +33,9 @@
   const router = useRouter();
 
   const currentPage = ref(1);
-  const statusFilter = ref('ALL');
-  const platformFilter = ref('ALL');
-  const itemsPerPage = 20;
+  const statusFilter = ref(ADMIN_BUGS_FILTER_ALL);
+  const platformFilter = ref(ADMIN_BUGS_FILTER_ALL);
+  const itemsPerPage = ADMIN_BUGS_DEFAULT_PAGE_SIZE;
 
   // Синхронизация выбранного ID бага с URL query
   const selectedBugId = computed({
@@ -54,7 +56,9 @@
 
   // Опции для фильтра статусов
   const statusOptions = computed(() => {
-    const options = [{ label: ADMIN_BUGS_STATUS_ALL_LABEL, value: 'ALL' }];
+    const options = [
+      { label: ADMIN_BUGS_STATUS_ALL_LABEL, value: ADMIN_BUGS_FILTER_ALL },
+    ];
 
     Object.entries(BUG_REPORT_STATUS_LABELS).forEach(([key, value]) => {
       options.push({ label: value, value: key });
@@ -65,7 +69,9 @@
 
   // Опции для фильтра платформ
   const platformOptions = computed(() => {
-    const options = [{ label: ADMIN_BUGS_PLATFORM_ALL_LABEL, value: 'ALL' }];
+    const options = [
+      { label: ADMIN_BUGS_PLATFORM_ALL_LABEL, value: ADMIN_BUGS_FILTER_ALL },
+    ];
 
     Object.entries(BUG_REPORT_PLATFORM_LABELS).forEach(([key, value]) => {
       options.push({ label: value, value: key });
@@ -95,10 +101,15 @@
         query: {
           page: currentPage.value - 1,
           size: itemsPerPage,
-          sort: 'createdAt,desc',
-          status: statusFilter.value === 'ALL' ? undefined : statusFilter.value,
+          sort: ADMIN_BUGS_DEFAULT_SORT,
+          status:
+            statusFilter.value === ADMIN_BUGS_FILTER_ALL
+              ? undefined
+              : statusFilter.value,
           sourcePlatform:
-            platformFilter.value === 'ALL' ? undefined : platformFilter.value,
+            platformFilter.value === ADMIN_BUGS_FILTER_ALL
+              ? undefined
+              : platformFilter.value,
         },
       });
     },
@@ -293,19 +304,13 @@
 
       <!-- Детальный просмотр бага справа -->
       <template #detail>
-        <UiDetailPane
+        <AdminBugReportDetailPane
           v-if="selectedBug"
-          :title="`Баг-репорт #${selectedBug.id.slice(0, 8)}`"
+          :bug="selectedBug"
           :date-time="detailDateTime"
-          :url="selectedBug.url"
-          copy-title
           @close="closeDetail"
-        >
-          <AdminBugReportDetail
-            :bug-report="selectedBug"
-            @update-status="handleBugStatusUpdate"
-          />
-        </UiDetailPane>
+          @update-status="handleBugStatusUpdate"
+        />
 
         <div
           v-else
@@ -339,19 +344,13 @@
       }"
     >
       <template #content>
-        <UiDetailPane
+        <AdminBugReportDetailPane
           v-if="selectedBug"
-          :title="`Баг-репорт #${selectedBug.id.slice(0, 8)}`"
+          :bug="selectedBug"
           :date-time="detailDateTime"
-          :url="selectedBug.url"
-          copy-title
           @close="closeDetail"
-        >
-          <AdminBugReportDetail
-            :bug-report="selectedBug"
-            @update-status="handleBugStatusUpdate"
-          />
-        </UiDetailPane>
+          @update-status="handleBugStatusUpdate"
+        />
       </template>
     </USlideover>
   </div>

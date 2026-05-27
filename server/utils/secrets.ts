@@ -3,6 +3,7 @@ export function getSecrets() {
     s3: getS3Secrets(),
     api: getApiSecrets(),
     auth: getAuthSecrets(),
+    bugReport: getBugReportSecrets(),
   };
 }
 
@@ -69,5 +70,19 @@ export function getAuthSecrets(): AuthSecrets {
   return {
     secret: authJwtSecret,
     url: authApiUrl,
+  };
+}
+
+/**
+ * Возвращает настройки внешнего сервиса баг-репортов.
+ */
+export function getBugReportSecrets() {
+  const {
+    NITRO_BUG_REPORT_API_URL:
+      bugReportApiUrl = 'https://bug-report.api.ttg.club/api/v1/bugs',
+  } = process.env;
+
+  return {
+    url: bugReportApiUrl,
   };
 }
