@@ -1,1 +1,2 @@
-export { default as AdminBugReportCard } from './AdminBugReportCard.vue';
+export { default as AdminBugReportDetail } from './AdminBugReportDetail.vue';
+export { default as AdminBugReportRow } from './AdminBugReportRow.vue';
