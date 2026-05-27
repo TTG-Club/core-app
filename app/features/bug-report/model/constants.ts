@@ -1,4 +1,4 @@
-import type { BrushColor } from './types';
+import type { BrushColor, BugReportStatus, SourcePlatform } from './types';
 
 /** Предустановленные цвета кисти для рисования на скриншоте */
 export const BRUSH_COLORS: ReadonlyArray<BrushColor> = [
@@ -32,7 +32,7 @@ export const MODAL_CHROME_WIDTH = 560;
 export const BUG_REPORT_API_URL = '/api/bug-report';
 
 /** Платформа-источник бага для сайта TTG */
-export const SOURCE_PLATFORM = 'SITE_5E24';
+export const SOURCE_PLATFORM: SourcePlatform = 'SITE_5E24';
 
 /** Заголовок страницы админки баг-репортов */
 export const ADMIN_BUGS_PAGE_TITLE = 'Баг-репорты: список';
@@ -57,7 +57,7 @@ export const ADMIN_BUGS_STATUS_ALL_LABEL = 'Все статусы';
 export const ADMIN_BUGS_PLATFORM_ALL_LABEL = 'Все платформы';
 
 /** Мапа русских названий для статусов баг-репортов */
-export const BUG_REPORT_STATUS_LABELS: Record<string, string> = {
+export const BUG_REPORT_STATUS_LABELS: Record<BugReportStatus, string> = {
   NEW: 'Новый',
   WAIT: 'В ожидании',
   FIXED: 'Исправлен',
@@ -65,7 +65,7 @@ export const BUG_REPORT_STATUS_LABELS: Record<string, string> = {
 };
 
 /** Мапа русских названий для платформ */
-export const BUG_REPORT_PLATFORM_LABELS: Record<string, string> = {
+export const BUG_REPORT_PLATFORM_LABELS: Record<SourcePlatform, string> = {
   SITE_5E24: 'Сайт 2024',
   SITE_5E14: 'Сайт 2014',
   VTTG: 'VTTG',

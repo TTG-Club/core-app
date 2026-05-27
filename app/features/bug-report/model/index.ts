@@ -5,6 +5,7 @@ export type {
   BugReportStatus,
   PageBugReportResponse,
   ParsedSelection,
+  SourcePlatform,
   TextSelection,
 } from './types';
 

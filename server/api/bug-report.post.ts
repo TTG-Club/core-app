@@ -5,6 +5,8 @@
  * без парсинга и пересборки, используя нативный fetch.
  * Сохраняет оригинальный Content-Type (включая boundary) и Authorization.
  */
+import { BUG_REPORT_EXTERNAL_API_BASE_URL } from '#server/utils/bugReportApi';
+
 export default defineEventHandler(async (event) => {
   const body = await readRawBody(event, false);
 
@@ -29,14 +31,11 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const response = await fetch(
-      'https://bug-report.api.ttg.club/api/v1/bugs',
-      {
-        method: 'POST',
-        body: new Uint8Array(body),
-        headers,
-      },
-    );
+    const response = await fetch(BUG_REPORT_EXTERNAL_API_BASE_URL, {
+      method: 'POST',
+      body: new Uint8Array(body),
+      headers,
+    });
 
     const responseBody = await response.text();
 
@@ -56,7 +55,7 @@ export default defineEventHandler(async (event) => {
 
     return JSON.parse(responseBody);
   } catch (error: unknown) {
-    if ((error as { statusCode?: number }).statusCode) {
+    if (isError(error)) {
       throw error;
     }
 

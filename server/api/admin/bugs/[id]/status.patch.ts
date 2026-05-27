@@ -1,5 +1,6 @@
 import { FetchError } from 'ofetch';
 
+import { BUG_REPORT_EXTERNAL_API_BASE_URL } from '#server/utils/bugReportApi';
 import { Role } from '~/shared/types';
 
 /**
@@ -33,14 +34,11 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    return await $fetch(
-      `https://bug-report.api.ttg.club/api/v1/bugs/${id}/status`,
-      {
-        method: 'PATCH',
-        body,
-        headers,
-      },
-    );
+    return await $fetch(`${BUG_REPORT_EXTERNAL_API_BASE_URL}/${id}/status`, {
+      method: 'PATCH',
+      body,
+      headers,
+    });
   } catch (error: unknown) {
     consola.error(
       `[bug-report-admin] Ошибка обновления статуса бага ${id}:`,

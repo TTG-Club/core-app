@@ -65,7 +65,7 @@ export function useBugReport() {
     screenshotBlob: Blob | null,
   ): Promise<boolean> {
     const userTokenCookie = useCookie<string | null>('ttg-user-token');
-    const guestId = useLocalStorage('ttg_guest_id', () => createUuid());
+    const guestId = useLocalStorage('bug-report:guest-id', () => createUuid());
 
     // Форматируем выделенный текст с окружающим контекстом
     const formattedSelectedText = textSelection.value
