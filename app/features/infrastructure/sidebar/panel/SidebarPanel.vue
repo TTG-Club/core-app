@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { BugReportSidebarButton } from '~bug-report/sidebar-button';
   import { DiceRollerSidebarButton } from '~dice-roller/sidebar-button';
   import { SearchButton } from '~infrastructure/search/button';
   import { useGlobalSearch } from '~infrastructure/search/composable';
@@ -109,6 +110,8 @@
 
         <ClientOnly>
           <DiceRollerSidebarButton />
+
+          <BugReportSidebarButton />
 
           <UserHelmet />
 
