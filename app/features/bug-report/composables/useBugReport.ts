@@ -2,7 +2,14 @@ import type { BugReportCreateRequest, TextSelection } from '../model';
 
 import { v4 as createUuid } from 'uuid';
 
-import { BUG_REPORT_API_URL, SOURCE_PLATFORM } from '../model';
+import {
+  BUG_REPORT_API_URL,
+  BUG_REPORT_SUBMIT_ERROR_DESC,
+  BUG_REPORT_SUBMIT_ERROR_TITLE,
+  BUG_REPORT_SUBMIT_SUCCESS_DESC,
+  BUG_REPORT_SUBMIT_SUCCESS_TITLE,
+  SOURCE_PLATFORM,
+} from '../model';
 
 /**
  * Форматирует выделенный текст с контекстом в строку вида `...before[selected]after...`.
@@ -40,7 +47,7 @@ export function useBugReport() {
    *
    * Сохраняет текущий URL страницы для контекста.
    */
-  function openReport() {
+  function openReport(): void {
     capturedPageUrl.value = route.fullPath;
     isModalOpen.value = true;
   }
@@ -50,7 +57,7 @@ export function useBugReport() {
    *
    * Сохраняет выделенный фрагмент и окружающий текст для отображения в модалке.
    */
-  function openReportWithSelection(selection: TextSelection) {
+  function openReportWithSelection(selection: TextSelection): void {
     textSelection.value = selection;
     openReport();
   }
@@ -58,7 +65,7 @@ export function useBugReport() {
   /**
    * Закрывает модальное окно и сбрасывает состояние.
    */
-  function cancel() {
+  function cancel(): void {
     isModalOpen.value = false;
     screenshot.value = null;
     capturedPageUrl.value = '';
@@ -117,8 +124,8 @@ export function useBugReport() {
 
       $toast.add({
         color: 'success',
-        title: 'Репорт отправлен',
-        description: 'Спасибо за обратную связь! Мы рассмотрим ваш репорт.',
+        title: BUG_REPORT_SUBMIT_SUCCESS_TITLE,
+        description: BUG_REPORT_SUBMIT_SUCCESS_DESC,
         icon: 'tabler:bug',
       });
 
@@ -130,9 +137,8 @@ export function useBugReport() {
 
       $toast.add({
         color: 'error',
-        title: 'Ошибка отправки',
-        description:
-          'Не удалось отправить баг-репорт. Пожалуйста, попробуйте позже.',
+        title: BUG_REPORT_SUBMIT_ERROR_TITLE,
+        description: BUG_REPORT_SUBMIT_ERROR_DESC,
         icon: 'tabler:alert-triangle',
       });
 
@@ -143,21 +149,21 @@ export function useBugReport() {
   /**
    * Устанавливает новый скриншот из буфера обмена.
    */
-  function setScreenshot(blob: Blob) {
+  function setScreenshot(blob: Blob): void {
     screenshot.value = blob;
   }
 
   /**
    * Удаляет текущий скриншот.
    */
-  function clearScreenshot() {
+  function clearScreenshot(): void {
     screenshot.value = null;
   }
 
   /**
    * Удаляет контекст выделенного текста.
    */
-  function clearTextSelection() {
+  function clearTextSelection(): void {
     textSelection.value = null;
   }
 

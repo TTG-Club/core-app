@@ -15,6 +15,7 @@
     ADMIN_BUGS_PAGE_TITLE,
     ADMIN_BUGS_PLATFORM_ALL_LABEL,
     ADMIN_BUGS_STATUS_ALL_LABEL,
+    BUG_REPORT_DETAIL_DATE_FORMAT,
     BUG_REPORT_PLATFORM_LABELS,
     BUG_REPORT_STATUS_LABELS,
   } from '~bug-report/model';
@@ -130,10 +131,13 @@
       return '';
     }
 
-    const created = format(bug.createdAt, 'LLL');
+    const created = format(bug.createdAt, BUG_REPORT_DETAIL_DATE_FORMAT);
 
     if (bug.statusUpdatedAt && bug.statusUpdatedAt !== bug.createdAt) {
-      const updated = format(bug.statusUpdatedAt, 'LLL');
+      const updated = format(
+        bug.statusUpdatedAt,
+        BUG_REPORT_DETAIL_DATE_FORMAT,
+      );
 
       return `${created} (Изменен: ${updated})`;
     }

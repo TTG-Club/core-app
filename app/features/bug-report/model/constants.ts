@@ -104,3 +104,33 @@ export function getBugReportStatusColor(
 ): 'warning' | 'neutral' | 'success' | 'error' | 'info' {
   return BUG_REPORT_STATUS_COLOR_MAP[status] ?? 'neutral';
 }
+
+/** Имя анонимного пользователя по умолчанию */
+export const BUG_REPORT_ANONYMOUS_USER = 'Аноним';
+
+/** Имя анонимного пользователя в родительном падеже */
+export const BUG_REPORT_ANONYMOUS_USER_GENITIVE = 'Анонима';
+
+/** Формат даты создания для строки баг-репорта */
+export const BUG_REPORT_DATE_FORMAT = 'DD.MM.YY HH:mm';
+
+/** Формат подробной даты для детального просмотра */
+export const BUG_REPORT_DETAIL_DATE_FORMAT = 'LLL';
+
+/** Заголовок и описание успешной отправки репорта */
+export const BUG_REPORT_SUBMIT_SUCCESS_TITLE = 'Репорт отправлен';
+export const BUG_REPORT_SUBMIT_SUCCESS_DESC =
+  'Спасибо за обратную связь! Мы рассмотрим ваш репорт.';
+
+/** Заголовок и описание ошибки при отправке репорта */
+export const BUG_REPORT_SUBMIT_ERROR_TITLE = 'Ошибка отправки';
+export const BUG_REPORT_SUBMIT_ERROR_DESC =
+  'Не удалось отправить баг-репорт. Пожалуйста, попробуйте позже.';
+
+/** Успешный заголовок обновления статуса */
+export const BUG_REPORT_STATUS_UPDATE_SUCCESS_TITLE = 'Статус обновлен';
+
+/** Ошибка обновления статуса */
+export const BUG_REPORT_STATUS_UPDATE_ERROR_TITLE = 'Ошибка обновления статуса';
+export const BUG_REPORT_STATUS_UPDATE_ERROR_DESC =
+  'Не удалось обновить статус баг-репорта на сервере';

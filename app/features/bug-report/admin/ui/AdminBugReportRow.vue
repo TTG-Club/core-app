@@ -2,6 +2,8 @@
   import type { BugReportResponse } from '../../model';
 
   import {
+    BUG_REPORT_ANONYMOUS_USER,
+    BUG_REPORT_DATE_FORMAT,
     BUG_REPORT_PLATFORM_LABELS,
     BUG_REPORT_STATUS_LABELS,
     getBugReportStatusColor,
@@ -35,14 +37,14 @@
    * Имя автора или обозначение анонима.
    */
   const authorName = computed(() => {
-    return props.bugReport.userLogin || 'Аноним';
+    return props.bugReport.userLogin || BUG_REPORT_ANONYMOUS_USER;
   });
 
   /**
    * Форматированная дата создания.
    */
   const createdDateFormatted = computed(() => {
-    return format(props.bugReport.createdAt, 'DD.MM.YY HH:mm');
+    return format(props.bugReport.createdAt, BUG_REPORT_DATE_FORMAT);
   });
 
   /**
@@ -82,7 +84,7 @@
           variant="subtle"
           size="sm"
         >
-          {{ BUG_REPORT_STATUS_LABELS[bugReport.status] || bugReport.status }}
+          {{ BUG_REPORT_STATUS_LABELS[bugReport.status] }}
         </UBadge>
       </div>
 
@@ -93,10 +95,7 @@
         size="sm"
         class="shrink-0"
       >
-        {{
-          BUG_REPORT_PLATFORM_LABELS[bugReport.sourcePlatform]
-          || bugReport.sourcePlatform
-        }}
+        {{ BUG_REPORT_PLATFORM_LABELS[bugReport.sourcePlatform] }}
       </UBadge>
     </div>
 

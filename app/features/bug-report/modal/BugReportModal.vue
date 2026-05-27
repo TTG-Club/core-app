@@ -47,7 +47,7 @@
 
   const isFormValid = computed(() => description.value.trim().length > 0);
 
-  async function handleSubmit() {
+  async function handleSubmit(): Promise<void> {
     if (!isFormValid.value) {
       return;
     }
@@ -71,12 +71,12 @@
     }
   }
 
-  function handleCancel() {
+  function handleCancel(): void {
     description.value = '';
     cancel();
   }
 
-  function handleUndo() {
+  function handleUndo(): void {
     canvasRef.value?.undo();
   }
 

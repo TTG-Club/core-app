@@ -6,8 +6,13 @@
   } from '../../model';
 
   import {
+    BUG_REPORT_ANONYMOUS_USER,
+    BUG_REPORT_ANONYMOUS_USER_GENITIVE,
     BUG_REPORT_PLATFORM_LABELS,
     BUG_REPORT_STATUS_LABELS,
+    BUG_REPORT_STATUS_UPDATE_ERROR_DESC,
+    BUG_REPORT_STATUS_UPDATE_ERROR_TITLE,
+    BUG_REPORT_STATUS_UPDATE_SUCCESS_TITLE,
     getAdminBugStatusApiUrl,
   } from '../../model';
 
@@ -111,7 +116,7 @@
       });
 
       toast.add({
-        title: 'Статус обновлен',
+        title: BUG_REPORT_STATUS_UPDATE_SUCCESS_TITLE,
         description: `Новый статус: ${BUG_REPORT_STATUS_LABELS[newStatus]}`,
         color: 'success',
       });
@@ -120,8 +125,8 @@
       currentStatus.value = props.bugReport.status;
 
       toast.add({
-        title: 'Ошибка обновления статуса',
-        description: 'Не удалось обновить статус баг-репорта на сервере',
+        title: BUG_REPORT_STATUS_UPDATE_ERROR_TITLE,
+        description: BUG_REPORT_STATUS_UPDATE_ERROR_DESC,
         color: 'error',
       });
     } finally {
@@ -178,10 +183,7 @@
             variant="subtle"
             size="md"
           >
-            {{
-              BUG_REPORT_PLATFORM_LABELS[bugReport.sourcePlatform]
-              || bugReport.sourcePlatform
-            }}
+            {{ BUG_REPORT_PLATFORM_LABELS[bugReport.sourcePlatform] }}
           </UBadge>
         </div>
       </div>
@@ -193,7 +195,7 @@
         </span>
 
         <span class="text-sm text-highlighted">
-          {{ bugReport.userLogin || 'Аноним' }}
+          {{ bugReport.userLogin || BUG_REPORT_ANONYMOUS_USER }}
         </span>
       </div>
 
@@ -321,7 +323,7 @@
     <!-- Модалка полного скриншота -->
     <UModal
       v-model:open="isImageModalOpen"
-      :title="`Скриншот баг-репорта от ${bugReport.userLogin || 'Анонима'}`"
+      :title="`Скриншот баг-репорта от ${bugReport.userLogin || BUG_REPORT_ANONYMOUS_USER_GENITIVE}`"
       :ui="{ content: 'max-w-5xl' }"
     >
       <template #body>
