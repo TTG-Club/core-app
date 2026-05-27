@@ -8,6 +8,7 @@
   import {
     BUG_REPORT_PLATFORM_LABELS,
     BUG_REPORT_STATUS_LABELS,
+    getAdminBugStatusApiUrl,
   } from '../../model';
 
   /**
@@ -20,14 +21,13 @@
 
   const emit = defineEmits<{
     /** Событие успешного обновления статуса */
-    (
-      event: 'update-status',
+    'update-status': [
       payload: {
         id: string;
         status: BugReportStatus;
         statusUpdatedAt: string;
       },
-    ): void;
+    ];
   }>();
 
   const requestFetch = useRequestFetch();
@@ -99,7 +99,7 @@
     try {
       const statusUpdatedAt = new Date().toISOString();
 
-      await requestFetch(`/api/admin/bugs/${props.bugReport.id}/status`, {
+      await requestFetch(getAdminBugStatusApiUrl(props.bugReport.id), {
         method: 'PATCH',
         body: { status: newStatus },
       });

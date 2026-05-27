@@ -9,6 +9,7 @@
     AdminBugReportRow,
   } from '~bug-report/admin/ui';
   import {
+    ADMIN_BUGS_API_URL,
     ADMIN_BUGS_EMPTY_TEXT,
     ADMIN_BUGS_PAGE_DESCRIPTION,
     ADMIN_BUGS_PAGE_TITLE,
@@ -89,7 +90,7 @@
   } = await useAsyncData<PageBugReportResponse>(
     'admin-bugs-list',
     () => {
-      return requestFetch('/api/admin/bugs', {
+      return requestFetch(ADMIN_BUGS_API_URL, {
         query: {
           page: currentPage.value - 1,
           size: itemsPerPage,

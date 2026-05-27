@@ -1,9 +1,10 @@
 <script setup lang="ts">
-  import type { BugReportResponse, BugReportStatus } from '../../model';
+  import type { BugReportResponse } from '../../model';
 
   import {
     BUG_REPORT_PLATFORM_LABELS,
     BUG_REPORT_STATUS_LABELS,
+    getBugReportStatusColor,
   } from '../../model';
 
   /**
@@ -18,7 +19,7 @@
 
   const emit = defineEmits<{
     /** Событие клика по строке для выбора бага */
-    (event: 'select', id: string): void;
+    select: [id: string];
   }>();
 
   const { format } = useDayjs();
@@ -43,27 +44,6 @@
   const createdDateFormatted = computed(() => {
     return format(props.bugReport.createdAt, 'DD.MM.YY HH:mm');
   });
-
-  /**
-   * Возвращает цвет бейджа в зависимости от статуса баг-репорта.
-   *
-   * @param status Статус баг-репорта.
-   */
-  function getStatusBadgeColor(
-    status: BugReportStatus,
-  ): 'warning' | 'neutral' | 'success' | 'error' | 'info' {
-    const colorMap: Record<
-      BugReportStatus,
-      'warning' | 'info' | 'success' | 'error'
-    > = {
-      NEW: 'warning',
-      WAIT: 'info',
-      FIXED: 'success',
-      REJECTED: 'error',
-    };
-
-    return colorMap[status] ?? 'neutral';
-  }
 
   /**
    * Обработчик клика по строке.
@@ -98,7 +78,7 @@
       <!-- Статус -->
       <div class="flex w-24 shrink-0">
         <UBadge
-          :color="getStatusBadgeColor(bugReport.status)"
+          :color="getBugReportStatusColor(bugReport.status)"
           variant="subtle"
           size="sm"
         >

@@ -31,8 +31,20 @@ export const MODAL_CHROME_WIDTH = 560;
 /** URL API микросервиса баг-репортов через локальный прокси */
 export const BUG_REPORT_API_URL = '/api/bug-report';
 
+/** URL API получения списка баг-репортов (админка) */
+export const ADMIN_BUGS_API_URL = '/api/admin/bugs';
+
 /** Платформа-источник бага для сайта TTG */
 export const SOURCE_PLATFORM: SourcePlatform = 'SITE_5E24';
+
+/**
+ * Возвращает URL для обновления статуса баг-репорта.
+ *
+ * @param bugId Уникальный идентификатор бага.
+ */
+export function getAdminBugStatusApiUrl(bugId: string): string {
+  return `${ADMIN_BUGS_API_URL}/${bugId}/status`;
+}
 
 /** Заголовок страницы админки баг-репортов */
 export const ADMIN_BUGS_PAGE_TITLE = 'Баг-репорты: список';
@@ -70,3 +82,25 @@ export const BUG_REPORT_PLATFORM_LABELS: Record<SourcePlatform, string> = {
   SITE_5E14: 'Сайт 2014',
   VTTG: 'VTTG',
 };
+
+/** Маппинг статусов баг-репорта на цвета компонента UBadge */
+const BUG_REPORT_STATUS_COLOR_MAP: Record<
+  BugReportStatus,
+  'warning' | 'info' | 'success' | 'error'
+> = {
+  NEW: 'warning',
+  WAIT: 'info',
+  FIXED: 'success',
+  REJECTED: 'error',
+};
+
+/**
+ * Возвращает цвет бейджа в зависимости от статуса баг-репорта.
+ *
+ * @param status Статус баг-репорта.
+ */
+export function getBugReportStatusColor(
+  status: BugReportStatus,
+): 'warning' | 'neutral' | 'success' | 'error' | 'info' {
+  return BUG_REPORT_STATUS_COLOR_MAP[status] ?? 'neutral';
+}

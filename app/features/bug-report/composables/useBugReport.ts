@@ -5,6 +5,18 @@ import { v4 as createUuid } from 'uuid';
 import { BUG_REPORT_API_URL, SOURCE_PLATFORM } from '../model';
 
 /**
+ * Форматирует выделенный текст с контекстом в строку вида `...before[selected]after...`.
+ *
+ * @param selection Контекст выделенного текста.
+ */
+function formatSelectionText(selection: TextSelection): string {
+  const prefix = selection.before ? `...${selection.before}` : '';
+  const suffix = selection.after ? `${selection.after}...` : '';
+
+  return `${prefix}[${selection.selected}]${suffix}`;
+}
+
+/**
  * Композабл для управления состоянием баг-репорта.
  *
  * Оркестрирует поток: открытие модалки → вставка скриншота → отправка.
@@ -67,9 +79,8 @@ export function useBugReport() {
     const userTokenCookie = useCookie<string | null>('ttg-user-token');
     const guestId = useLocalStorage('bug-report:guest-id', () => createUuid());
 
-    // Форматируем выделенный текст с окружающим контекстом
     const formattedSelectedText = textSelection.value
-      ? `${textSelection.value.before ? '...' : ''}${textSelection.value.before}[${textSelection.value.selected}]${textSelection.value.after}${textSelection.value.after ? '...' : ''}`
+      ? formatSelectionText(textSelection.value)
       : undefined;
 
     const requestData: BugReportCreateRequest = {
