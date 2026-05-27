@@ -59,8 +59,11 @@
         ? await canvasRef.value.exportToBlob()
         : null;
 
-      submit(description.value.trim(), screenshotBlob);
-      description.value = '';
+      const success = await submit(description.value.trim(), screenshotBlob);
+
+      if (success) {
+        description.value = '';
+      }
     } catch (error) {
       consola.error('Ошибка при отправке баг-репорта:', error);
     } finally {

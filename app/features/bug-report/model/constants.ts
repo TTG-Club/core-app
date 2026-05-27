@@ -27,3 +27,46 @@ export const SELECTION_CONTEXT_LENGTH = 50;
 
 /** Ширина «хрома» модалки (форма + toolbar + отступы), вычитается из viewport для canvas */
 export const MODAL_CHROME_WIDTH = 560;
+
+/** URL API микросервиса баг-репортов через локальный прокси */
+export const BUG_REPORT_API_URL = '/api/bug-report';
+
+/** Платформа-источник бага для сайта TTG */
+export const SOURCE_PLATFORM = 'SITE_5E24';
+
+/** Заголовок страницы админки баг-репортов */
+export const ADMIN_BUGS_PAGE_TITLE = 'Баг-репорты: список';
+
+/** Текст на кнопке возврата/в навигации */
+export const ADMIN_BUGS_NAVIGATION_LABEL = 'Баги';
+
+/** Текст кнопки настройки/просмотра на главной странице админки */
+export const ADMIN_BUGS_CONFIGURE_LABEL = 'Настроить';
+
+/** Описание раздела админки баг-репортов */
+export const ADMIN_BUGS_PAGE_DESCRIPTION =
+  'Просмотр списка сообщений об ошибках, фильтрация по статусу и платформе.';
+
+/** Текст при пустом списке баг-репортов */
+export const ADMIN_BUGS_EMPTY_TEXT = 'Баг-репорты не найдены';
+
+/** Значение фильтра "Все статусы" */
+export const ADMIN_BUGS_STATUS_ALL_LABEL = 'Все статусы';
+
+/** Значение фильтра "Все платформы" */
+export const ADMIN_BUGS_PLATFORM_ALL_LABEL = 'Все платформы';
+
+/** Мапа русских названий для статусов баг-репортов */
+export const BUG_REPORT_STATUS_LABELS: Record<string, string> = {
+  NEW: 'Новый',
+  WAIT: 'В ожидании',
+  FIXED: 'Исправлен',
+  REJECTED: 'Отклонен',
+};
+
+/** Мапа русских названий для платформ */
+export const BUG_REPORT_PLATFORM_LABELS: Record<string, string> = {
+  SITE_5E24: 'Сайт 2024',
+  SITE_5E14: 'Сайт 2014',
+  VTTG: 'VTTG',
+};

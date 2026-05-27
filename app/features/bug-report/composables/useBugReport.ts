@@ -1,4 +1,8 @@
-import type { BugReportPayload, TextSelection } from '../model';
+import type { BugReportCreateRequest, TextSelection } from '../model';
+
+import { v4 as createUuid } from 'uuid';
+
+import { BUG_REPORT_API_URL, SOURCE_PLATFORM } from '../model';
 
 /**
  * Композабл для управления состоянием баг-репорта.
@@ -50,40 +54,79 @@ export function useBugReport() {
   }
 
   /**
-   * Отправляет баг-репорт (заглушка).
+   * Отправляет баг-репорт на сервер.
    *
-   * Пока API не реализовано, логирует данные в консоль и показывает тост.
-   * Структура `BugReportPayload` готова для подключения реального API.
+   * Формирует FormData с JSON-объектом запроса и файлом скриншота,
+   * передает JWT-токен авторизации из кук при его наличии.
+   * Возвращает true при успешной отправке и false при ошибке.
    */
-  function submit(description: string, screenshotBlob: Blob | null) {
-    const { user } = useUser();
+  async function submit(
+    description: string,
+    screenshotBlob: Blob | null,
+  ): Promise<boolean> {
+    const userTokenCookie = useCookie<string | null>('ttg-user-token');
+    const guestId = useLocalStorage('ttg_guest_id', () => createUuid());
 
-    const payload: BugReportPayload = {
-      screenshot: screenshotBlob,
+    // Форматируем выделенный текст с окружающим контекстом
+    const formattedSelectedText = textSelection.value
+      ? `${textSelection.value.before ? '...' : ''}${textSelection.value.before}[${textSelection.value.selected}]${textSelection.value.after}${textSelection.value.after ? '...' : ''}`
+      : undefined;
+
+    const requestData: BugReportCreateRequest = {
       description,
-      author: user.value?.username ?? null,
-      pageUrl: capturedPageUrl.value,
-      selectedText: textSelection.value,
-      userAgent: navigator.userAgent,
-      timestamp: new Date().toISOString(),
+      url: capturedPageUrl.value || undefined,
+      sourcePlatform: SOURCE_PLATFORM,
+      sessionId: userTokenCookie.value ? undefined : guestId.value,
+      selectedText: formattedSelectedText,
     };
 
-    // TODO: заменить на реальный API-вызов
-    consola.info('Bug report payload:', {
-      ...payload,
-      screenshot: payload.screenshot
-        ? `Blob (${payload.screenshot.size} bytes)`
-        : 'Нет скриншота',
-    });
+    const formData = new FormData();
 
-    $toast.add({
-      color: 'success',
-      title: 'Репорт отправлен',
-      description: 'Спасибо за обратную связь! Мы рассмотрим ваш репорт.',
-      icon: 'tabler:bug',
-    });
+    formData.append(
+      'request',
+      new Blob([JSON.stringify(requestData)], { type: 'application/json' }),
+    );
 
-    cancel();
+    if (screenshotBlob) {
+      formData.append('screenshot', screenshotBlob, 'screenshot.png');
+    }
+
+    try {
+      const headers: Record<string, string> = {};
+
+      if (userTokenCookie.value) {
+        headers.Authorization = `Bearer ${userTokenCookie.value}`;
+      }
+
+      await $fetch(BUG_REPORT_API_URL, {
+        method: 'POST',
+        body: formData,
+        headers,
+      });
+
+      $toast.add({
+        color: 'success',
+        title: 'Репорт отправлен',
+        description: 'Спасибо за обратную связь! Мы рассмотрим ваш репорт.',
+        icon: 'tabler:bug',
+      });
+
+      cancel();
+
+      return true;
+    } catch (error) {
+      consola.error('Ошибка при отправке баг-репорта:', error);
+
+      $toast.add({
+        color: 'error',
+        title: 'Ошибка отправки',
+        description:
+          'Не удалось отправить баг-репорт. Пожалуйста, попробуйте позже.',
+        icon: 'tabler:alert-triangle',
+      });
+
+      return false;
+    }
   }
 
   /**

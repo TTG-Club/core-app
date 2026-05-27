@@ -1,12 +1,3 @@
-/** Цвет кисти для рисования на скриншоте */
-export interface BrushColor {
-  /** Уникальное название цвета */
-  name: string;
-
-  /** CSS-значение цвета */
-  value: string;
-}
-
 /** Контекст выделенного текста для баг-репорта */
 export interface TextSelection {
   /** Текст до выделения (~50 символов контекста) */
@@ -19,26 +10,95 @@ export interface TextSelection {
   after: string;
 }
 
-/** Данные баг-репорта для отправки на сервер */
-export interface BugReportPayload {
-  /** Скриншот области экрана с аннотациями (PNG) или null, если не приложен */
-  screenshot: Blob | null;
-
-  /** Текст описания бага */
+/** Запрос на создание баг-репорта для API */
+export interface BugReportCreateRequest {
+  /** Описание бага */
   description: string;
 
-  /** Имя пользователя или null для анонимных репортов */
-  author: string | null;
+  /** URL страницы, на которой обнаружен баг */
+  url?: string;
 
-  /** URL страницы, с которой был сделан репорт */
-  pageUrl: string;
+  /** Платформа-источник бага */
+  sourcePlatform: 'SITE_5E24' | 'SITE_5E14' | 'VTTG';
 
-  /** Контекст выделенного текста или null, если не выделяли */
-  selectedText: TextSelection | null;
+  /** Идентификатор сессии (если не авторизован) */
+  sessionId?: string;
 
-  /** Информация о браузере пользователя */
-  userAgent: string;
+  /** Выделенный текст на странице */
+  selectedText?: string;
+}
 
-  /** ISO-дата создания репорта */
-  timestamp: string;
+/** Ответ API на создание баг-репорта */
+export interface BugReportResponse {
+  /** Уникальный идентификатор бага */
+  id: string;
+
+  /** Описание бага */
+  description: string;
+
+  /** URL страницы, на которой обнаружен баг */
+  url?: string;
+
+  /** Текущий статус бага */
+  status: 'NEW' | 'WAIT' | 'FIXED' | 'REJECTED';
+
+  /** Платформа-источник */
+  sourcePlatform: 'SITE_5E24' | 'SITE_5E14' | 'VTTG';
+
+  /** URL скриншота в S3-хранилище */
+  screenshotUrl?: string;
+
+  /** Логин пользователя */
+  userLogin?: string;
+
+  /** Идентификатор сессии */
+  sessionId?: string;
+
+  /** Дата создания баг-репорта */
+  createdAt: string;
+
+  /** Дата последнего изменения статуса */
+  statusUpdatedAt: string;
+
+  /** Комментарий при последнем изменении статуса */
+  statusComment?: string;
+
+  /** Выделенный текст на странице */
+  selectedText?: string;
+}
+
+/** Цвет кисти для рисования на скриншоте */
+export interface BrushColor {
+  /** Уникальное название цвета */
+  name: string;
+
+  /** CSS-значение цвета */
+  value: string;
+}
+
+/** Ответ API с постраничным списком баг-репортов */
+export interface PageBugReportResponse {
+  /** Список баг-репортов на текущей странице */
+  content: BugReportResponse[];
+
+  /** Общее количество элементов */
+  totalElements: number;
+
+  /** Общее количество страниц */
+  totalPages: number;
+
+  /** Размер страницы */
+  size: number;
+
+  /** Номер текущей страницы (0-indexed) */
+  number: number;
+
+  /** Является ли текущая страница первой */
+  first: boolean;
+
+  /** Является ли текущая страница последней */
+  last: boolean;
+
+  /** Пуст ли список элементов */
+  empty: boolean;
 }

@@ -1,10 +1,27 @@
-export type { BrushColor, BugReportPayload, TextSelection } from './types';
+export type {
+  BrushColor,
+  BugReportCreateRequest,
+  BugReportResponse,
+  PageBugReportResponse,
+  TextSelection,
+} from './types';
 
 export {
+  ADMIN_BUGS_CONFIGURE_LABEL,
+  ADMIN_BUGS_EMPTY_TEXT,
+  ADMIN_BUGS_NAVIGATION_LABEL,
+  ADMIN_BUGS_PAGE_DESCRIPTION,
+  ADMIN_BUGS_PAGE_TITLE,
+  ADMIN_BUGS_PLATFORM_ALL_LABEL,
+  ADMIN_BUGS_STATUS_ALL_LABEL,
   BRUSH_COLORS,
+  BUG_REPORT_API_URL,
+  BUG_REPORT_PLATFORM_LABELS,
+  BUG_REPORT_STATUS_LABELS,
   DEFAULT_BRUSH_COLOR,
   DEFAULT_BRUSH_SIZE,
   MAX_UNDO_STEPS,
   MODAL_CHROME_WIDTH,
   SELECTION_CONTEXT_LENGTH,
+  SOURCE_PLATFORM,
 } from './constants';
