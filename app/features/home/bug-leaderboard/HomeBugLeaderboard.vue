@@ -6,10 +6,13 @@
 
   import {
     BUG_LEADERBOARD_DATA_KEY,
+    BUG_LEADERBOARD_LABEL_FIXED,
+    BUG_LEADERBOARD_LABEL_SENT,
+    BUG_LEADERBOARD_LABEL_TOP,
     BUG_LEADERBOARD_REFRESH_INTERVAL_MS,
+    BUG_LEADERBOARD_TITLE,
+    BUG_LEADERBOARD_TROPHY_COLOR,
   } from './model';
-
-  const TROPHY_COLOR = 'var(--color-warning-400)';
 
   const { isAdmin } = useUserRoles();
 
@@ -29,6 +32,33 @@
 
   /** Максимальное кол-во исправленных у первого в списке — для масштабирования полосок */
   const maxFixed = computed(() => topFixers.value[0]?.fixed ?? 1);
+
+  /** Список лидеров с вычисленными стилями, классами и индексами */
+  const decoratedTopFixers = computed(() => {
+    const maxVal = maxFixed.value;
+
+    return topFixers.value.map((fixer, index) => {
+      const isTopThree = index < 3;
+
+      return {
+        ...fixer,
+        isWinner: index === 0,
+        displayIndex: index + 1,
+        rowStyle: {
+          animationDelay: `${index * 80}ms`,
+        },
+        barClass: isTopThree
+          ? 'bg-(--color-success-500)/8'
+          : 'bg-(--color-success-500)/4',
+        barStyle: {
+          width: `${(fixer.fixed / maxVal) * 100}%`,
+          animationDelay: `${300 + index * 80}ms`,
+        },
+        badgeColor: isTopThree ? ('success' as const) : ('neutral' as const),
+        textClass: isTopThree ? 'font-semibold text-default' : 'text-muted',
+      };
+    });
+  });
 
   /** Автообновление статистики на клиенте */
   onMounted(() => {
@@ -52,7 +82,7 @@
       </div>
 
       <h3 class="text-sm leading-tight font-semibold text-(--color-error-400)">
-        Охотники за багами
+        {{ BUG_LEADERBOARD_TITLE }}
       </h3>
 
       <UButton
@@ -84,7 +114,7 @@
           <span
             class="text-[10px] font-medium tracking-wider text-muted uppercase"
           >
-            Отправлено
+            {{ BUG_LEADERBOARD_LABEL_SENT }}
           </span>
 
           <AnimatedNumber
@@ -110,7 +140,7 @@
           <span
             class="text-[10px] font-medium tracking-wider text-muted uppercase"
           >
-            Исправлено
+            {{ BUG_LEADERBOARD_LABEL_FIXED }}
           </span>
 
           <AnimatedNumber
@@ -123,56 +153,49 @@
 
     <!-- Таблица лидеров -->
     <div
-      v-if="topFixers.length"
+      v-if="decoratedTopFixers.length"
       class="flex flex-col gap-1 pt-1"
     >
       <span
         class="pb-1 text-xs font-medium tracking-[0.5px] text-muted uppercase"
       >
-        Топ охотников
+        {{ BUG_LEADERBOARD_LABEL_TOP }}
       </span>
 
       <div
-        v-for="(fixer, index) in topFixers"
+        v-for="fixer in decoratedTopFixers"
         :key="fixer.login"
         class="fixer-row group relative flex items-center gap-2 rounded-lg px-2.5 py-1.5"
-        :style="{ animationDelay: `${index * 80}ms` }"
+        :style="fixer.rowStyle"
       >
         <!-- Полоска прогресса на фоне строки -->
         <div
           class="fixer-bar absolute inset-y-0 left-0 rounded-lg"
-          :class="
-            index < 3
-              ? 'bg-(--color-success-500)/8'
-              : 'bg-(--color-success-500)/4'
-          "
-          :style="{
-            width: `${(fixer.fixed / maxFixed) * 100}%`,
-            animationDelay: `${300 + index * 80}ms`,
-          }"
+          :class="fixer.barClass"
+          :style="fixer.barStyle"
         />
 
         <!-- Позиция / Кубок -->
         <div class="relative z-1 flex w-5 shrink-0 items-center justify-center">
           <UIcon
-            v-if="index === 0"
+            v-if="fixer.isWinner"
             name="tabler:trophy-filled"
             class="size-4.5"
-            :style="{ color: TROPHY_COLOR }"
+            :style="{ color: BUG_LEADERBOARD_TROPHY_COLOR }"
           />
 
           <span
             v-else
             class="text-xs font-semibold text-muted tabular-nums"
           >
-            {{ index + 1 }}
+            {{ fixer.displayIndex }}
           </span>
         </div>
 
         <!-- Логин -->
         <span
           class="relative z-1 flex-1 truncate text-sm"
-          :class="index < 3 ? 'font-semibold text-default' : 'text-muted'"
+          :class="fixer.textClass"
         >
           {{ fixer.login }}
         </span>
@@ -180,7 +203,7 @@
         <!-- Количество в бейдже -->
         <UBadge
           :label="String(fixer.fixed)"
-          :color="index < 3 ? 'success' : 'neutral'"
+          :color="fixer.badgeColor"
           variant="subtle"
           size="sm"
           class="relative z-1 tabular-nums"

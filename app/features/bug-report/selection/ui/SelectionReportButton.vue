@@ -1,7 +1,10 @@
 <script lang="ts">
   import type { TextSelection } from '../../model';
 
-  import { SELECTION_CONTEXT_LENGTH } from '../../model';
+  import {
+    BUG_REPORT_SELECTION_BUTTON_LABEL,
+    SELECTION_CONTEXT_LENGTH,
+  } from '../../model';
 </script>
 
 <script setup lang="ts">
@@ -168,7 +171,7 @@
           class="size-4"
         />
 
-        <span>Ошибка в тексте</span>
+        <span>{{ BUG_REPORT_SELECTION_BUTTON_LABEL }}</span>
       </button>
     </Transition>
   </Teleport>

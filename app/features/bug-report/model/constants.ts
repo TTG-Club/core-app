@@ -149,3 +149,6 @@ export const ADMIN_BUGS_DEFAULT_PAGE_SIZE = 20;
 
 /** Параметры сортировки по умолчанию */
 export const ADMIN_BUGS_DEFAULT_SORT = 'createdAt,desc';
+
+/** Текст на кнопке сообщения об ошибке в выделенном тексте */
+export const BUG_REPORT_SELECTION_BUTTON_LABEL = 'Ошибка в тексте';
