@@ -1,18 +1,4 @@
-import type { Role } from '~/shared/types';
-
-export interface MenuItem {
-  label: string;
-  href: string;
-  disabled?: boolean;
-  roles?: Array<Role>;
-  action?: string;
-}
-
-export interface MenuSection {
-  label: string;
-  icon: string;
-  items: Array<MenuItem>;
-}
+import type { MenuSection } from './types';
 
 export const MENU_SECTIONS: Array<MenuSection> = [
   {
@@ -122,6 +108,7 @@ export const MENU_SECTIONS: Array<MenuSection> = [
   },
 ];
 
+/** Ссылки на социальные сети в меню */
 export const MENU_LINKS: Array<{
   url: string;
   icon: string;
@@ -144,6 +131,7 @@ export const MENU_LINKS: Array<{
   },
 ];
 
+/** Ссылки на поддержку проекта */
 export const MENU_SUPPORT: Array<{
   url: string;
   icon: string;
@@ -160,3 +148,9 @@ export const MENU_SUPPORT: Array<{
     label: 'Magistrus',
   },
 ];
+
+/** Email адрес службы поддержки */
+export const SUPPORT_EMAIL = 'support@ttg.club';
+
+/** Ссылка mailto для службы поддержки */
+export const SUPPORT_EMAIL_HREF = `mailto:${SUPPORT_EMAIL}`;

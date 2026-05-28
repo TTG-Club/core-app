@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { HomeBackground } from '~home/background';
   import { HomeBanners } from '~home/banners';
+  import { HomeBugLeaderboard } from '~home/bug-leaderboard';
   import { HomeCounters } from '~home/counters';
   import { HomeRecentChanges } from '~home/recent-changes';
   import { HomeSections } from '~home/sections';
@@ -35,7 +36,13 @@
 
       <div class="flex w-full flex-col gap-3 lg:items-start xl:flex-row">
         <div class="flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">
-          <HomeBanners />
+          <div class="grid grid-cols-2 gap-3">
+            <HomeBanners group="tools" />
+
+            <HomeBanners group="info" />
+          </div>
+
+          <HomeBugLeaderboard />
         </div>
 
         <div class="flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">

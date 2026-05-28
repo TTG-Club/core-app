@@ -4,6 +4,7 @@
 
   import type { SourceResponse } from '~/shared/types';
 
+  import { AppFooter } from '~infrastructure/footer';
   import { SourceTag } from '~ui/source-tag';
 
   const {
@@ -37,7 +38,7 @@
 </script>
 
 <template>
-  <div class="flex w-full flex-col">
+  <div class="flex min-h-dvh w-full flex-col">
     <div class="w-full shrink-0">
       <div
         class="mx-auto flex w-full max-w-(--max-content) flex-col gap-1 p-4 md:pt-6"
@@ -122,5 +123,7 @@
         <slot name="default" />
       </div>
     </div>
+
+    <AppFooter />
   </div>
 </template>

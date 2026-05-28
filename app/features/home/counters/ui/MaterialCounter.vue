@@ -5,7 +5,11 @@
     MATERIAL_COUNTER_API_URL,
     MATERIAL_COUNTER_CACHE_API_URL,
     MATERIAL_COUNTER_DATA_KEY,
+    MATERIAL_COUNTER_DESCRIPTION,
+    MATERIAL_COUNTER_LABEL_MATERIALS,
+    MATERIAL_COUNTER_LABEL_VISITORS,
     MATERIAL_COUNTER_RESET_DATA_KEY,
+    MATERIAL_COUNTER_TITLE,
     ONLINE_COUNTER_DATA_KEY,
   } from '../model';
 
@@ -68,7 +72,7 @@
       <h3
         class="text-sm leading-tight font-semibold text-(--color-success-400)"
       >
-        Статистика онлайн
+        {{ MATERIAL_COUNTER_TITLE }}
       </h3>
 
       <UButton
@@ -84,34 +88,61 @@
 
     <!-- Описание -->
     <p class="text-xs leading-normal text-default">
-      TTG — твой проводник в мир Dungeons & Dragons, созданный сообществом для
-      сообщества!
+      {{ MATERIAL_COUNTER_DESCRIPTION }}
     </p>
 
     <!-- Статистика в две колонки -->
-    <div class="flex justify-evenly gap-4 pt-2">
-      <div class="flex flex-col items-center gap-1">
-        <span class="text-xs font-medium tracking-[0.5px] text-muted uppercase">
-          Материалов
-        </span>
+    <div class="grid grid-cols-2 gap-2 pt-2">
+      <div
+        class="flex items-center gap-3 rounded-lg border border-default bg-default/50 px-3 py-2.5"
+      >
+        <div
+          class="flex size-8 shrink-0 items-center justify-center rounded-md bg-(--color-primary-500)/10"
+        >
+          <UIcon
+            name="tabler:books"
+            class="size-4 text-(--color-primary-400)"
+          />
+        </div>
 
-        <AnimatedNumber
-          class="text-2xl leading-tight font-bold text-(--color-primary-400)"
-          :value="materialsValue"
-        />
+        <div class="flex flex-col">
+          <span
+            class="text-[10px] font-medium tracking-wider text-muted uppercase"
+          >
+            {{ MATERIAL_COUNTER_LABEL_MATERIALS }}
+          </span>
+
+          <AnimatedNumber
+            class="text-lg leading-tight font-bold text-(--color-primary-400)"
+            :value="materialsValue"
+          />
+        </div>
       </div>
 
-      <USeparator orientation="vertical" />
+      <div
+        class="flex items-center gap-3 rounded-lg border border-default bg-default/50 px-3 py-2.5"
+      >
+        <div
+          class="flex size-8 shrink-0 items-center justify-center rounded-md bg-(--color-success-500)/10"
+        >
+          <UIcon
+            name="tabler:users"
+            class="size-4 text-(--color-success-400)"
+          />
+        </div>
 
-      <div class="flex flex-col items-center gap-1">
-        <span class="text-xs font-medium tracking-[0.5px] text-muted uppercase">
-          Авантюристов
-        </span>
+        <div class="flex flex-col">
+          <span
+            class="text-[10px] font-medium tracking-wider text-muted uppercase"
+          >
+            {{ MATERIAL_COUNTER_LABEL_VISITORS }}
+          </span>
 
-        <AnimatedNumber
-          class="text-2xl leading-tight font-bold text-(--color-primary-400)"
-          :value="visitorsTotalValue"
-        />
+          <AnimatedNumber
+            class="text-lg leading-tight font-bold text-(--color-success-400)"
+            :value="visitorsTotalValue"
+          />
+        </div>
       </div>
     </div>
   </div>

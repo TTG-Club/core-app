@@ -25,6 +25,8 @@
 
   const isUploadingImage = ref(false);
   const isDeletingImage = ref(false);
+  const isPreviewOpen = ref(false);
+  const isConfirmDeleteOpen = ref(false);
 
   function triggerImageUpload() {
     resetImageDialog();
@@ -111,6 +113,14 @@
       isDeletingImage.value = false;
     }
   }
+
+  /**
+   * Подтверждает удаление изображения и запускает процесс удаления.
+   */
+  async function confirmDelete() {
+    isConfirmDeleteOpen.value = false;
+    await deleteImage();
+  }
 </script>
 
 <template>
@@ -119,32 +129,48 @@
   >
     <template v-if="persona.image">
       <div class="group relative size-full overflow-hidden rounded-md">
-        <img
-          :src="persona.image"
-          class="size-full object-cover transition-opacity"
-          :class="{ 'opacity-50': isDeletingImage }"
-          alt="Аватар персоны"
-        />
-
-        <div
-          class="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/50 opacity-0 transition-all duration-200"
-          :class="{
-            'opacity-100': isDeletingImage,
-            'group-hover:opacity-100': !isDeletingImage,
-          }"
-          title="Удалить картинку"
-          @click.left.exact.prevent="deleteImage"
+        <!-- Кликабельная область изображения для предпросмотра -->
+        <button
+          type="button"
+          class="block size-full cursor-zoom-in overflow-hidden border-none bg-transparent p-0 focus:outline-none"
+          @click.left.exact.prevent="isPreviewOpen = true"
         >
-          <UIcon
-            v-if="isDeletingImage"
-            name="tabler:loader-2"
-            class="size-8 animate-spin text-white"
+          <img
+            :src="persona.image"
+            class="size-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            :class="{ 'opacity-50': isDeletingImage }"
+            alt="Аватар персоны"
           />
 
-          <UIcon
-            v-else
-            name="tabler:trash"
-            class="size-8 text-white transition-colors hover:text-error"
+          <!-- Легкое затемнение при наведении + иконка лупы -->
+          <div
+            class="absolute inset-0 flex items-center justify-center bg-black/25 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+          >
+            <UIcon
+              name="tabler:zoom-in"
+              class="size-8 scale-90 text-white/90 transition-transform duration-200 group-hover:scale-100"
+            />
+          </div>
+        </button>
+
+        <!-- Кнопка удаления в углу -->
+        <div
+          class="absolute top-2 right-2 z-10"
+          :class="{
+            'opacity-100': isDeletingImage,
+            'opacity-0 transition-opacity duration-200 group-hover:opacity-100':
+              !isDeletingImage,
+          }"
+        >
+          <UButton
+            color="error"
+            variant="solid"
+            size="xs"
+            icon="tabler:trash"
+            :loading="isDeletingImage"
+            class="rounded-full shadow-md"
+            title="Удалить картинку"
+            @click.left.exact.stop.prevent="isConfirmDeleteOpen = true"
           />
         </div>
       </div>
@@ -173,4 +199,48 @@
       </UButton>
     </div>
   </div>
+
+  <!-- Модальное окно просмотра оригинального изображения -->
+  <UModal
+    v-model:open="isPreviewOpen"
+    title="Просмотр изображения"
+    class="sm:max-w-[864px]"
+  >
+    <template #body>
+      <div class="flex items-center justify-center overflow-hidden">
+        <img
+          :src="persona.image"
+          class="h-auto max-h-[800px] w-auto max-w-[800px] rounded-md object-contain"
+          alt="Просмотр аватара"
+        />
+      </div>
+    </template>
+  </UModal>
+
+  <!-- Модальное окно подтверждения удаления -->
+  <UModal
+    v-model:open="isConfirmDeleteOpen"
+    title="Удалить изображение?"
+    description="Вы действительно хотите удалить изображение этой персоны?"
+  >
+    <template #body>
+      <div class="flex justify-end gap-2">
+        <UButton
+          variant="ghost"
+          color="neutral"
+          @click.left.exact.prevent="isConfirmDeleteOpen = false"
+        >
+          Отмена
+        </UButton>
+
+        <UButton
+          color="error"
+          :loading="isDeletingImage"
+          @click.left.exact.prevent="confirmDelete"
+        >
+          Удалить
+        </UButton>
+      </div>
+    </template>
+  </UModal>
 </template>
