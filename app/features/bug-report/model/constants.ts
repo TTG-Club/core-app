@@ -82,6 +82,14 @@ export const BUG_REPORT_STATUS_LABELS: Record<BugReportStatus, string> = {
   REJECTED: 'Отклонен',
 };
 
+/** Порядок отображения статусов баг-репорта в панели управления */
+export const BUG_REPORT_STATUS_ORDER: ReadonlyArray<BugReportStatus> = [
+  'NEW',
+  'WAIT',
+  'FIXED',
+  'REJECTED',
+];
+
 /** Мапа русских названий для платформ */
 export const BUG_REPORT_PLATFORM_LABELS: Record<SourcePlatform, string> = {
   SITE_5E24: 'Сайт 2024',

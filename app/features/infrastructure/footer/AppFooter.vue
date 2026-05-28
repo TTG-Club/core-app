@@ -13,6 +13,9 @@
   <UFooter
     :ui="{
       root: 'mt-auto border-t border-default',
+      // sm:px-4 lg:px-4 не избыточны: перекрывают адаптивные паддинги
+      // UContainer (sm:px-6 lg:px-8), чтобы контент-зона была 16px и совпадала
+      // по ширине (max-w-(--max-content) − 2×16px = 1288px) с контентом сайта
       container:
         'mx-auto w-full px-4 sm:px-4 lg:px-4 max-w-(--max-content) py-4 lg:flex lg:items-center lg:justify-between lg:gap-x-3',
       left: 'flex items-center justify-center lg:justify-start lg:flex-1 gap-x-1.5 lg:order-1',
