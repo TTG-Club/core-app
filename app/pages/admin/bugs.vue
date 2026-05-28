@@ -191,12 +191,14 @@
     id: string;
     status: BugReportStatus;
     statusUpdatedAt: string;
+    statusComment?: string;
   }): void {
     const bug = resolvedBugsList.value.find((item) => item.id === payload.id);
 
     if (bug) {
       bug.status = payload.status;
       bug.statusUpdatedAt = payload.statusUpdatedAt;
+      bug.statusComment = payload.statusComment;
     }
   }
 </script>

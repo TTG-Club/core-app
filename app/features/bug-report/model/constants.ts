@@ -141,6 +141,16 @@ export const BUG_REPORT_STATUS_UPDATE_ERROR_TITLE = 'Ошибка обновле
 export const BUG_REPORT_STATUS_UPDATE_ERROR_DESC =
   'Не удалось обновить статус баг-репорта на сервере';
 
+/** Заголовок секции комментария к статусу */
+export const BUG_REPORT_STATUS_COMMENT_LABEL = 'Комментарий к статусу';
+
+/** Placeholder для поля ввода комментария при смене статуса */
+export const BUG_REPORT_STATUS_COMMENT_PLACEHOLDER =
+  'Комментарий к смене статуса (необязательно)';
+
+/** Максимальная длина комментария (ограничение API) */
+export const BUG_REPORT_STATUS_COMMENT_MAX_LENGTH = 2000;
+
 /** Значение фильтра "Все" для статуса/платформы */
 export const ADMIN_BUGS_FILTER_ALL = 'ALL';
 

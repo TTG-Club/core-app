@@ -113,7 +113,7 @@
 
       <span class="hidden text-muted/30 sm:inline">|</span>
 
-      <!-- Наличие скриншота и выделенного текста -->
+      <!-- Наличие скриншота, выделенного текста и комментария -->
       <div class="flex items-center gap-2">
         <!-- Скриншот -->
         <UIcon
@@ -132,6 +132,16 @@
             bugReport.selectedText
               ? 'Есть выделенный текст'
               : 'Нет выделенного текста'
+          "
+        />
+
+        <!-- Комментарий к статусу -->
+        <UIcon
+          name="tabler:message"
+          class="size-5 transition-colors"
+          :class="bugReport.statusComment ? 'text-primary' : 'text-muted/30'"
+          :title="
+            bugReport.statusComment ? 'Есть комментарий' : 'Нет комментария'
           "
         />
       </div>

@@ -21,6 +21,7 @@
         id: string;
         status: BugReportStatus;
         statusUpdatedAt: string;
+        statusComment?: string;
       },
     ];
   }>();
@@ -33,6 +34,7 @@
     id: string;
     status: BugReportStatus;
     statusUpdatedAt: string;
+    statusComment?: string;
   }): void {
     emit('update-status', payload);
   }

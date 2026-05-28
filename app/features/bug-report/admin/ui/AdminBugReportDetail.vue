@@ -9,6 +9,9 @@
     BUG_REPORT_ANONYMOUS_USER,
     BUG_REPORT_ANONYMOUS_USER_GENITIVE,
     BUG_REPORT_PLATFORM_LABELS,
+    BUG_REPORT_STATUS_COMMENT_LABEL,
+    BUG_REPORT_STATUS_COMMENT_MAX_LENGTH,
+    BUG_REPORT_STATUS_COMMENT_PLACEHOLDER,
     BUG_REPORT_STATUS_LABELS,
     BUG_REPORT_STATUS_UPDATE_ERROR_DESC,
     BUG_REPORT_STATUS_UPDATE_ERROR_TITLE,
@@ -31,6 +34,7 @@
         id: string;
         status: BugReportStatus;
         statusUpdatedAt: string;
+        statusComment?: string;
       },
     ];
   }>();
@@ -41,6 +45,11 @@
 
   const isImageModalOpen = ref(false);
   const isUpdating = ref(false);
+
+  /**
+   * Текст комментария — инициализируется из существующего statusComment.
+   */
+  const statusCommentInput = ref(props.bugReport.statusComment ?? '');
 
   /**
    * Текущий статус баг-репорта (для селекта).
@@ -90,30 +99,45 @@
   }
 
   /**
-   * Обработчик автоматического сохранения нового статуса на сервере.
-   *
-   * @param newStatus Новый статус баг-репорта.
+   * Определяет, есть ли несохранённые изменения в статусе или комментарии.
    */
-  async function handleStatusChange(newStatus: BugReportStatus): Promise<void> {
+  const hasUnsavedChanges = computed(
+    () =>
+      currentStatus.value !== props.bugReport.status
+      || statusCommentInput.value.trim()
+        !== (props.bugReport.statusComment ?? ''),
+  );
+
+  /**
+   * Сохраняет изменения статуса и комментарий на сервере.
+   */
+  async function handleSave(): Promise<void> {
     if (isUpdating.value) {
       return;
     }
 
+    const newStatus = currentStatus.value;
+
     isUpdating.value = true;
+
+    const comment = statusCommentInput.value.trim() || undefined;
 
     try {
       const statusUpdatedAt = new Date().toISOString();
 
       await requestFetch(getAdminBugStatusApiUrl(props.bugReport.id), {
         method: 'PATCH',
-        body: { status: newStatus },
+        body: { status: newStatus, comment },
       });
 
       emit('update-status', {
         id: props.bugReport.id,
         status: newStatus,
         statusUpdatedAt,
+        statusComment: comment,
       });
+
+      statusCommentInput.value = comment ?? '';
 
       toast.add({
         title: BUG_REPORT_STATUS_UPDATE_SUCCESS_TITLE,
@@ -134,18 +158,12 @@
     }
   }
 
-  // Следим за изменением currentStatus, чтобы отправить запрос
-  watch(currentStatus, (newVal) => {
-    if (newVal !== props.bugReport.status) {
-      handleStatusChange(newVal);
-    }
-  });
-
-  // Синхронизируем currentStatus, если bugReport поменялся в родителе
+  // Синхронизируем currentStatus и комментарий, если bugReport поменялся в родителе
   watch(
-    () => props.bugReport.status,
-    (newVal) => {
-      currentStatus.value = newVal;
+    [() => props.bugReport.status, () => props.bugReport.statusComment],
+    ([newStatus, newComment]) => {
+      currentStatus.value = newStatus;
+      statusCommentInput.value = newComment ?? '';
     },
   );
 </script>
@@ -229,6 +247,30 @@
           {{ bugReport.sessionId }}
         </span>
       </div>
+    </div>
+
+    <!-- Комментарий к статусу (ввод) -->
+    <div class="space-y-2">
+      <div class="text-xs font-medium tracking-wide text-muted uppercase">
+        {{ BUG_REPORT_STATUS_COMMENT_LABEL }}
+      </div>
+
+      <UTextarea
+        v-model="statusCommentInput"
+        :placeholder="BUG_REPORT_STATUS_COMMENT_PLACEHOLDER"
+        :maxlength="BUG_REPORT_STATUS_COMMENT_MAX_LENGTH"
+        :rows="2"
+        size="sm"
+      />
+
+      <UButton
+        icon="tabler:device-floppy"
+        label="Сохранить"
+        size="sm"
+        :loading="isUpdating"
+        :disabled="!hasUnsavedChanges"
+        @click.left.exact.prevent="handleSave"
+      />
     </div>
 
     <!-- Страница ошибки -->
