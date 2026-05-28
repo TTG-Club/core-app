@@ -70,6 +70,33 @@
       ? 'cursor-pointer text-primary-500'
       : 'cursor-default text-neutral-500',
   );
+
+  const { isSupported: isEyeDropperSupported, open: openEyeDropper } =
+    useEyeDropper();
+
+  async function pickTintColor1() {
+    try {
+      const response = await openEyeDropper();
+
+      if (response?.sRGBHex) {
+        tintColor1Hex.value = response.sRGBHex;
+      }
+    } catch (error) {
+      // Игнорируем ошибку отмены выбора
+    }
+  }
+
+  async function pickTintColor2() {
+    try {
+      const response = await openEyeDropper();
+
+      if (response?.sRGBHex) {
+        tintColor2Hex.value = response.sRGBHex;
+      }
+    } catch (error) {
+      // Игнорируем ошибку отмены выбора
+    }
+  }
 </script>
 
 <template>
@@ -161,6 +188,7 @@
                 variant="outline"
                 size="xs"
                 class="flex size-8 shrink-0 items-center justify-center p-0"
+                title="Выбрать цвет тонировки 1"
               >
                 <span
                   class="size-5 rounded-full border border-neutral-200"
@@ -169,8 +197,20 @@
               </UButton>
 
               <template #content>
-                <div class="p-2">
+                <div class="flex flex-col gap-2 p-2">
                   <UColorPicker v-model="tintColor1Hex" />
+
+                  <UButton
+                    v-if="isEyeDropperSupported"
+                    icon="tabler:color-picker"
+                    label="Пипетка"
+                    color="neutral"
+                    variant="soft"
+                    size="xs"
+                    class="w-full justify-center"
+                    title="Выбрать цвет с экрана"
+                    @click.left.exact.prevent="pickTintColor1"
+                  />
                 </div>
               </template>
             </UPopover>
@@ -232,6 +272,7 @@
                 variant="outline"
                 size="xs"
                 class="flex size-8 shrink-0 items-center justify-center p-0"
+                title="Выбрать цвет тонировки 2"
               >
                 <span
                   class="size-5 rounded-full border border-neutral-200"
@@ -240,8 +281,20 @@
               </UButton>
 
               <template #content>
-                <div class="p-2">
+                <div class="flex flex-col gap-2 p-2">
                   <UColorPicker v-model="tintColor2Hex" />
+
+                  <UButton
+                    v-if="isEyeDropperSupported"
+                    icon="tabler:color-picker"
+                    label="Пипетка"
+                    color="neutral"
+                    variant="soft"
+                    size="xs"
+                    class="w-full justify-center"
+                    title="Выбрать цвет с экрана"
+                    @click.left.exact.prevent="pickTintColor2"
+                  />
                 </div>
               </template>
             </UPopover>
