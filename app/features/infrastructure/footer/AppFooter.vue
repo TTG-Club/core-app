@@ -13,7 +13,8 @@
   <UFooter
     :ui="{
       root: 'mt-auto border-t border-default',
-      container: 'py-4 lg:flex lg:items-center lg:justify-between lg:gap-x-3',
+      container:
+        'mx-auto w-full px-4 sm:px-4 lg:px-4 max-w-(--max-content) py-4 lg:flex lg:items-center lg:justify-between lg:gap-x-3',
       left: 'flex items-center justify-center lg:justify-start lg:flex-1 gap-x-1.5 lg:order-1',
       center: 'mt-3 lg:mt-0 lg:order-2 flex items-center justify-center',
       right:
