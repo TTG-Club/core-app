@@ -5,7 +5,11 @@
     MATERIAL_COUNTER_API_URL,
     MATERIAL_COUNTER_CACHE_API_URL,
     MATERIAL_COUNTER_DATA_KEY,
+    MATERIAL_COUNTER_DESCRIPTION,
+    MATERIAL_COUNTER_LABEL_MATERIALS,
+    MATERIAL_COUNTER_LABEL_VISITORS,
     MATERIAL_COUNTER_RESET_DATA_KEY,
+    MATERIAL_COUNTER_TITLE,
     ONLINE_COUNTER_DATA_KEY,
   } from '../model';
 
@@ -68,7 +72,7 @@
       <h3
         class="text-sm leading-tight font-semibold text-(--color-success-400)"
       >
-        Статистика онлайн
+        {{ MATERIAL_COUNTER_TITLE }}
       </h3>
 
       <UButton
@@ -84,8 +88,7 @@
 
     <!-- Описание -->
     <p class="text-xs leading-normal text-default">
-      TTG — твой проводник в мир Dungeons & Dragons, созданный сообществом для
-      сообщества!
+      {{ MATERIAL_COUNTER_DESCRIPTION }}
     </p>
 
     <!-- Статистика в две колонки -->
@@ -106,7 +109,7 @@
           <span
             class="text-[10px] font-medium tracking-wider text-muted uppercase"
           >
-            Материалов
+            {{ MATERIAL_COUNTER_LABEL_MATERIALS }}
           </span>
 
           <AnimatedNumber
@@ -132,7 +135,7 @@
           <span
             class="text-[10px] font-medium tracking-wider text-muted uppercase"
           >
-            Авантюристов
+            {{ MATERIAL_COUNTER_LABEL_VISITORS }}
           </span>
 
           <AnimatedNumber
