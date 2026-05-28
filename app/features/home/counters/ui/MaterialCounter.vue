@@ -89,29 +89,57 @@
     </p>
 
     <!-- Статистика в две колонки -->
-    <div class="flex justify-evenly gap-4 pt-2">
-      <div class="flex flex-col items-center gap-1">
-        <span class="text-xs font-medium tracking-[0.5px] text-muted uppercase">
-          Материалов
-        </span>
+    <div class="grid grid-cols-2 gap-2 pt-2">
+      <div
+        class="flex items-center gap-3 rounded-lg border border-default bg-default/50 px-3 py-2.5"
+      >
+        <div
+          class="flex size-8 shrink-0 items-center justify-center rounded-md bg-(--color-primary-500)/10"
+        >
+          <UIcon
+            name="tabler:books"
+            class="size-4 text-(--color-primary-400)"
+          />
+        </div>
 
-        <AnimatedNumber
-          class="text-2xl leading-tight font-bold text-(--color-primary-400)"
-          :value="materialsValue"
-        />
+        <div class="flex flex-col">
+          <span
+            class="text-[10px] font-medium tracking-wider text-muted uppercase"
+          >
+            Материалов
+          </span>
+
+          <AnimatedNumber
+            class="text-lg leading-tight font-bold text-(--color-primary-400)"
+            :value="materialsValue"
+          />
+        </div>
       </div>
 
-      <USeparator orientation="vertical" />
+      <div
+        class="flex items-center gap-3 rounded-lg border border-default bg-default/50 px-3 py-2.5"
+      >
+        <div
+          class="flex size-8 shrink-0 items-center justify-center rounded-md bg-(--color-success-500)/10"
+        >
+          <UIcon
+            name="tabler:users"
+            class="size-4 text-(--color-success-400)"
+          />
+        </div>
 
-      <div class="flex flex-col items-center gap-1">
-        <span class="text-xs font-medium tracking-[0.5px] text-muted uppercase">
-          Авантюристов
-        </span>
+        <div class="flex flex-col">
+          <span
+            class="text-[10px] font-medium tracking-wider text-muted uppercase"
+          >
+            Авантюристов
+          </span>
 
-        <AnimatedNumber
-          class="text-2xl leading-tight font-bold text-(--color-primary-400)"
-          :value="visitorsTotalValue"
-        />
+          <AnimatedNumber
+            class="text-lg leading-tight font-bold text-(--color-success-400)"
+            :value="visitorsTotalValue"
+          />
+        </div>
       </div>
     </div>
   </div>

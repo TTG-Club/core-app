@@ -34,6 +34,9 @@ export const BUG_REPORT_API_URL = '/api/bug-report';
 /** URL API получения количества багов текущего пользователя */
 export const BUG_REPORT_MY_COUNT_API_URL = `${BUG_REPORT_API_URL}/my/count-by-status`;
 
+/** URL API получения общей статистики по баг-репортам */
+export const BUG_REPORT_STATS_API_URL = `${BUG_REPORT_API_URL}/stats`;
+
 /** URL API получения списка баг-репортов (админка) */
 export const ADMIN_BUGS_API_URL = '/api/admin/bugs';
 

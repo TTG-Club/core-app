@@ -1,0 +1,236 @@
+<script setup lang="ts">
+  import type { BugReportStatsResponse } from '~bug-report/model';
+
+  import { BUG_REPORT_STATS_API_URL } from '~bug-report/model';
+  import { AnimatedNumber } from '~ui/animated-number';
+
+  import {
+    BUG_LEADERBOARD_DATA_KEY,
+    BUG_LEADERBOARD_REFRESH_INTERVAL_MS,
+  } from './model';
+
+  const TROPHY_COLOR = 'var(--color-warning-400)';
+
+  const { isAdmin } = useUserRoles();
+
+  const {
+    data: stats,
+    refresh,
+    status,
+  } = await useAsyncData(BUG_LEADERBOARD_DATA_KEY, () =>
+    $fetch<BugReportStatsResponse>(BUG_REPORT_STATS_API_URL),
+  );
+
+  const isLoading = computed(() => status.value === 'pending');
+
+  const totalCount = computed(() => stats.value?.totalCount ?? 0);
+  const fixedCount = computed(() => stats.value?.fixedCount ?? 0);
+  const topFixers = computed(() => stats.value?.topFixers ?? []);
+
+  /** Максимальное кол-во исправленных у первого в списке — для масштабирования полосок */
+  const maxFixed = computed(() => topFixers.value[0]?.fixed ?? 1);
+
+  /** Автообновление статистики на клиенте */
+  onMounted(() => {
+    useIntervalFn(() => refresh(), BUG_LEADERBOARD_REFRESH_INTERVAL_MS);
+  });
+</script>
+
+<template>
+  <div
+    class="bug-leaderboard relative flex flex-col gap-3 overflow-hidden rounded-xl border border-default bg-muted p-4 text-default"
+  >
+    <!-- Заголовок -->
+    <div class="flex items-center gap-2">
+      <div
+        class="bug-glow-indicator flex size-5 items-center justify-center rounded bg-linear-to-br from-(--color-error-500) to-(--color-error-600) shadow-[0_0_12px_var(--color-error-500)]"
+      >
+        <UIcon
+          name="tabler:bug"
+          class="size-2.5 text-white"
+        />
+      </div>
+
+      <h3 class="text-sm leading-tight font-semibold text-(--color-error-400)">
+        Охотники за багами
+      </h3>
+
+      <UButton
+        v-if="isAdmin"
+        :loading="isLoading"
+        icon="tabler:refresh"
+        variant="ghost"
+        size="xs"
+        class="ml-auto"
+        @click.left.exact.prevent="refresh()"
+      />
+    </div>
+
+    <!-- Счётчики -->
+    <div class="grid grid-cols-2 gap-2">
+      <div
+        class="flex items-center gap-3 rounded-lg border border-default bg-default/50 px-3 py-2.5"
+      >
+        <div
+          class="flex size-8 shrink-0 items-center justify-center rounded-md bg-(--color-primary-500)/10"
+        >
+          <UIcon
+            name="tabler:send-2"
+            class="size-4 text-(--color-primary-400)"
+          />
+        </div>
+
+        <div class="flex flex-col">
+          <span
+            class="text-[10px] font-medium tracking-wider text-muted uppercase"
+          >
+            Отправлено
+          </span>
+
+          <AnimatedNumber
+            class="text-lg leading-tight font-bold text-(--color-primary-400)"
+            :value="totalCount"
+          />
+        </div>
+      </div>
+
+      <div
+        class="flex items-center gap-3 rounded-lg border border-default bg-default/50 px-3 py-2.5"
+      >
+        <div
+          class="flex size-8 shrink-0 items-center justify-center rounded-md bg-(--color-success-500)/10"
+        >
+          <UIcon
+            name="tabler:check"
+            class="size-4 text-(--color-success-400)"
+          />
+        </div>
+
+        <div class="flex flex-col">
+          <span
+            class="text-[10px] font-medium tracking-wider text-muted uppercase"
+          >
+            Исправлено
+          </span>
+
+          <AnimatedNumber
+            class="text-lg leading-tight font-bold text-(--color-success-400)"
+            :value="fixedCount"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Таблица лидеров -->
+    <div
+      v-if="topFixers.length"
+      class="flex flex-col gap-1 pt-1"
+    >
+      <span
+        class="pb-1 text-xs font-medium tracking-[0.5px] text-muted uppercase"
+      >
+        Топ охотников
+      </span>
+
+      <div
+        v-for="(fixer, index) in topFixers"
+        :key="fixer.login"
+        class="fixer-row group relative flex items-center gap-2 rounded-lg px-2.5 py-1.5"
+        :style="{ animationDelay: `${index * 80}ms` }"
+      >
+        <!-- Полоска прогресса на фоне строки -->
+        <div
+          class="fixer-bar absolute inset-y-0 left-0 rounded-lg"
+          :class="
+            index < 3
+              ? 'bg-(--color-success-500)/8'
+              : 'bg-(--color-success-500)/4'
+          "
+          :style="{
+            width: `${(fixer.fixed / maxFixed) * 100}%`,
+            animationDelay: `${300 + index * 80}ms`,
+          }"
+        />
+
+        <!-- Позиция / Кубок -->
+        <div class="relative z-1 flex w-5 shrink-0 items-center justify-center">
+          <UIcon
+            v-if="index === 0"
+            name="tabler:trophy-filled"
+            class="size-4.5"
+            :style="{ color: TROPHY_COLOR }"
+          />
+
+          <span
+            v-else
+            class="text-xs font-semibold text-muted tabular-nums"
+          >
+            {{ index + 1 }}
+          </span>
+        </div>
+
+        <!-- Логин -->
+        <span
+          class="relative z-1 flex-1 truncate text-sm"
+          :class="index < 3 ? 'font-semibold text-default' : 'text-muted'"
+        >
+          {{ fixer.login }}
+        </span>
+
+        <!-- Количество в бейдже -->
+        <UBadge
+          :label="String(fixer.fixed)"
+          :color="index < 3 ? 'success' : 'neutral'"
+          variant="subtle"
+          size="sm"
+          class="relative z-1 tabular-nums"
+        />
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+  .bug-glow-indicator {
+    animation: bug-pulse-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes bug-pulse-glow {
+    0%,
+    100% {
+      box-shadow: 0 0 8px var(--color-error-500);
+    }
+
+    50% {
+      box-shadow: 0 0 16px var(--color-error-400);
+    }
+  }
+
+  /* Анимация появления строк */
+  .fixer-row {
+    animation: fixer-slide-in 0.4s ease-out both;
+  }
+
+  @keyframes fixer-slide-in {
+    from {
+      transform: translateX(-8px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* Анимация полоски прогресса */
+  .fixer-bar {
+    animation: bar-grow 0.6s ease-out both;
+  }
+
+  @keyframes bar-grow {
+    from {
+      width: 0 !important;
+    }
+  }
+</style>
