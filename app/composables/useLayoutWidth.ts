@@ -16,6 +16,7 @@ import { useBreakpoints } from './useBreakpoints';
  */
 export function useLayoutWidth() {
   const { isLgOrGreater } = useBreakpoints();
+  const { isDesktopOrTablet } = useDevice();
 
   const width = useCookie<LayoutWidth>(LAYOUT_WIDTH_STORE_KEY, {
     maxAge: ONE_DAY_IN_SECONDS * 365,
@@ -24,7 +25,20 @@ export function useLayoutWidth() {
 
   const isWide = computed(() => width.value === LayoutWidthName.Wide);
 
-  const isSplitActive = computed(() => isWide.value && isLgOrGreater.value);
+  const isSplitActive = computed(() => {
+    if (!isWide.value) {
+      return false;
+    }
+
+    // На сервере используем грубую проверку по User-Agent,
+    // т.к. window.matchMedia недоступен при SSR
+    if (import.meta.server) {
+      return isDesktopOrTablet;
+    }
+
+    // На клиенте — точная проверка через matchMedia
+    return isLgOrGreater.value;
+  });
 
   /**
    * Изменение ширины макета.
