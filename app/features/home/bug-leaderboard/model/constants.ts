@@ -12,3 +12,7 @@ export const BUG_LEADERBOARD_TITLE = 'Охотники за багами';
 export const BUG_LEADERBOARD_LABEL_SENT = 'Отправлено';
 export const BUG_LEADERBOARD_LABEL_FIXED = 'Исправлено';
 export const BUG_LEADERBOARD_LABEL_TOP = 'Топ охотников';
+
+/** Подсказка для топа охотников */
+export const BUG_LEADERBOARD_TOP_TOOLTIP =
+  'В зачёт идут только те баги, которые мы отметили как исправленные, а не просто все ваши отправленные баги';

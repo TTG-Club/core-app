@@ -8,8 +8,10 @@
   import {
     BUG_REPORT_ANONYMOUS_USER,
     BUG_REPORT_ANONYMOUS_USER_GENITIVE,
+    BUG_REPORT_COMMENT_SAVE_BUTTON_LABEL,
+    BUG_REPORT_COMMENT_SAVE_SUCCESS_DESC,
+    BUG_REPORT_COMMENT_SAVE_SUCCESS_TITLE,
     BUG_REPORT_PLATFORM_LABELS,
-    BUG_REPORT_STATUS_COMMENT_LABEL,
     BUG_REPORT_STATUS_COMMENT_MAX_LENGTH,
     BUG_REPORT_STATUS_COMMENT_PLACEHOLDER,
     BUG_REPORT_STATUS_LABELS,
@@ -17,7 +19,15 @@
     BUG_REPORT_STATUS_UPDATE_ERROR_TITLE,
     BUG_REPORT_STATUS_UPDATE_SUCCESS_TITLE,
     getAdminBugStatusApiUrl,
+    getBugReportStatusColor,
   } from '../../model';
+
+  const STATUSES: ReadonlyArray<BugReportStatus> = [
+    'NEW',
+    'WAIT',
+    'FIXED',
+    'REJECTED',
+  ];
 
   /**
    * Свойства компонента детального просмотра баг-репорта.
@@ -45,26 +55,38 @@
 
   const isImageModalOpen = ref(false);
   const isUpdating = ref(false);
+  const currentTargetStatus = ref<BugReportStatus | null>(null);
 
   /**
    * Текст комментария — инициализируется из существующего statusComment.
    */
   const statusCommentInput = ref(props.bugReport.statusComment ?? '');
 
-  /**
-   * Текущий статус баг-репорта (для селекта).
-   */
-  const currentStatus = ref<BugReportStatus>(props.bugReport.status);
+  const isSavingComment = ref(false);
 
   /**
-   * Опции для выбора статуса в селекте.
+   * Проверяет, отличается ли текущий введённый комментарий от сохранённого на сервере.
    */
-  const statusOptions = Object.entries(BUG_REPORT_STATUS_LABELS).map(
-    ([key, value]) => ({
-      label: value,
-      value: key,
-    }),
-  );
+  const isCommentChanged = computed<boolean>(() => {
+    const currentComment = statusCommentInput.value.trim();
+    const originalComment = (props.bugReport.statusComment ?? '').trim();
+
+    return currentComment !== originalComment;
+  });
+
+  interface StatusButtonOption {
+    status: BugReportStatus;
+    label: string;
+    color: 'warning' | 'info' | 'success' | 'error';
+  }
+
+  const statusButtons = computed<StatusButtonOption[]>(() => {
+    return STATUSES.map((status) => ({
+      status,
+      label: BUG_REPORT_STATUS_LABELS[status],
+      color: getBugReportStatusColor(status),
+    }));
+  });
 
   /**
    * Разбирает строку выделенного текста на контекст до, выделенный фрагмент и контекст после.
@@ -99,26 +121,19 @@
   }
 
   /**
-   * Определяет, есть ли несохранённые изменения в статусе или комментарии.
-   */
-  const hasUnsavedChanges = computed(
-    () =>
-      currentStatus.value !== props.bugReport.status
-      || statusCommentInput.value.trim()
-        !== (props.bugReport.statusComment ?? ''),
-  );
-
-  /**
    * Сохраняет изменения статуса и комментарий на сервере.
+   *
+   * @param targetStatus Целевой статус для сохранения.
    */
-  async function handleSave(): Promise<void> {
+  async function handleStatusUpdate(
+    targetStatus: BugReportStatus,
+  ): Promise<void> {
     if (isUpdating.value) {
       return;
     }
 
-    const newStatus = currentStatus.value;
-
     isUpdating.value = true;
+    currentTargetStatus.value = targetStatus;
 
     const comment = statusCommentInput.value.trim() || undefined;
 
@@ -127,12 +142,12 @@
 
       await requestFetch(getAdminBugStatusApiUrl(props.bugReport.id), {
         method: 'PATCH',
-        body: { status: newStatus, comment },
+        body: { status: targetStatus, comment },
       });
 
       emit('update-status', {
         id: props.bugReport.id,
-        status: newStatus,
+        status: targetStatus,
         statusUpdatedAt,
         statusComment: comment,
       });
@@ -141,13 +156,10 @@
 
       toast.add({
         title: BUG_REPORT_STATUS_UPDATE_SUCCESS_TITLE,
-        description: `Новый статус: ${BUG_REPORT_STATUS_LABELS[newStatus]}`,
+        description: `Новый статус: ${BUG_REPORT_STATUS_LABELS[targetStatus]}`,
         color: 'success',
       });
     } catch {
-      // Откатываем локальный селект при ошибке
-      currentStatus.value = props.bugReport.status;
-
       toast.add({
         title: BUG_REPORT_STATUS_UPDATE_ERROR_TITLE,
         description: BUG_REPORT_STATUS_UPDATE_ERROR_DESC,
@@ -155,14 +167,61 @@
       });
     } finally {
       isUpdating.value = false;
+      currentTargetStatus.value = null;
     }
   }
 
-  // Синхронизируем currentStatus и комментарий, если bugReport поменялся в родителе
+  /**
+   * Сохраняет только комментарий к баг-репорту, не меняя его текущий статус.
+   */
+  async function handleSaveComment(): Promise<void> {
+    if (isUpdating.value || isSavingComment.value) {
+      return;
+    }
+
+    isUpdating.value = true;
+    isSavingComment.value = true;
+
+    const comment = statusCommentInput.value.trim() || undefined;
+
+    try {
+      const statusUpdatedAt = new Date().toISOString();
+
+      await requestFetch(getAdminBugStatusApiUrl(props.bugReport.id), {
+        method: 'PATCH',
+        body: { status: props.bugReport.status, comment },
+      });
+
+      emit('update-status', {
+        id: props.bugReport.id,
+        status: props.bugReport.status,
+        statusUpdatedAt,
+        statusComment: comment,
+      });
+
+      statusCommentInput.value = comment ?? '';
+
+      toast.add({
+        title: BUG_REPORT_COMMENT_SAVE_SUCCESS_TITLE,
+        description: BUG_REPORT_COMMENT_SAVE_SUCCESS_DESC,
+        color: 'success',
+      });
+    } catch {
+      toast.add({
+        title: BUG_REPORT_STATUS_UPDATE_ERROR_TITLE,
+        description: BUG_REPORT_STATUS_UPDATE_ERROR_DESC,
+        color: 'error',
+      });
+    } finally {
+      isUpdating.value = false;
+      isSavingComment.value = false;
+    }
+  }
+
+  // Синхронизируем комментарий, если bugReport поменялся в родителе
   watch(
-    [() => props.bugReport.status, () => props.bugReport.statusComment],
-    ([newStatus, newComment]) => {
-      currentStatus.value = newStatus;
+    () => props.bugReport.statusComment,
+    (newComment) => {
       statusCommentInput.value = newComment ?? '';
     },
   );
@@ -172,10 +231,10 @@
   <div class="space-y-6">
     <!-- Метаданные баг-репорта -->
     <div
-      class="grid grid-cols-1 gap-x-6 gap-y-4 rounded-xl border border-default bg-default/10 p-4 sm:grid-cols-2"
+      class="grid grid-cols-4 gap-x-6 gap-y-4 rounded-xl border border-default bg-default/10 p-4"
     >
       <!-- ID -->
-      <div class="flex flex-col gap-1">
+      <div class="col-span-2 flex flex-col gap-1">
         <span class="text-xs font-medium tracking-wide text-muted uppercase">
           ID (UUID)
         </span>
@@ -190,7 +249,7 @@
       </div>
 
       <!-- Платформа -->
-      <div class="flex flex-col gap-1">
+      <div class="col-span-1 flex flex-col gap-1">
         <span class="text-xs font-medium tracking-wide text-muted uppercase">
           Платформа
         </span>
@@ -207,7 +266,7 @@
       </div>
 
       <!-- Автор -->
-      <div class="flex flex-col gap-1">
+      <div class="col-span-1 flex flex-col gap-1">
         <span class="text-xs font-medium tracking-wide text-muted uppercase">
           Автор
         </span>
@@ -217,27 +276,10 @@
         </span>
       </div>
 
-      <!-- Статус -->
-      <div class="flex flex-col gap-1">
-        <span class="text-xs font-medium tracking-wide text-muted uppercase">
-          Статус
-        </span>
-
-        <USelectMenu
-          v-model="currentStatus"
-          :items="statusOptions"
-          value-key="value"
-          label-key="label"
-          :disabled="isUpdating"
-          size="sm"
-          class="w-40"
-        />
-      </div>
-
       <!-- Сессия -->
       <div
         v-if="bugReport.sessionId"
-        class="flex flex-col gap-1 sm:col-span-2"
+        class="col-span-4 flex flex-col gap-1"
       >
         <span class="text-xs font-medium tracking-wide text-muted uppercase">
           Сессия
@@ -251,25 +293,48 @@
 
     <!-- Комментарий к статусу (ввод) -->
     <div class="space-y-2">
-      <div class="text-xs font-medium tracking-wide text-muted uppercase">
-        {{ BUG_REPORT_STATUS_COMMENT_LABEL }}
+      <div class="flex flex-wrap gap-2 pb-1">
+        <UButton
+          v-for="button in statusButtons"
+          :key="button.status"
+          :label="button.label"
+          :color="button.color"
+          :variant="bugReport.status === button.status ? 'solid' : 'subtle'"
+          :class="[
+            'transition-all duration-150',
+            bugReport.status !== button.status
+              ? 'opacity-60 hover:opacity-100'
+              : 'font-semibold',
+          ]"
+          size="sm"
+          :loading="isUpdating && currentTargetStatus === button.status"
+          :disabled="isUpdating"
+          @click.left.exact.prevent="handleStatusUpdate(button.status)"
+        />
+
+        <!-- Разделитель -->
+        <div class="mx-1 ml-auto h-6 w-px self-center bg-default" />
+
+        <!-- Кнопка сохранения комментария -->
+        <UButton
+          :label="BUG_REPORT_COMMENT_SAVE_BUTTON_LABEL"
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="tabler:device-floppy"
+          :loading="isSavingComment"
+          :disabled="isUpdating || !isCommentChanged"
+          @click.left.exact.prevent="handleSaveComment"
+        />
       </div>
 
       <UTextarea
         v-model="statusCommentInput"
         :placeholder="BUG_REPORT_STATUS_COMMENT_PLACEHOLDER"
         :maxlength="BUG_REPORT_STATUS_COMMENT_MAX_LENGTH"
-        :rows="2"
+        :rows="3"
         size="sm"
-      />
-
-      <UButton
-        icon="tabler:device-floppy"
-        label="Сохранить"
-        size="sm"
-        :loading="isUpdating"
-        :disabled="!hasUnsavedChanges"
-        @click.left.exact.prevent="handleSave"
+        :disabled="isUpdating"
       />
     </div>
 
