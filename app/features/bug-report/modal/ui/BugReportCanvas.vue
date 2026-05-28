@@ -59,6 +59,14 @@
   const canvasWidth = ref(0);
   const canvasHeight = ref(0);
 
+  /** Смещение изображения относительно canvas (для центрирования маленьких картинок) */
+  const imageOffsetX = ref(0);
+  const imageOffsetY = ref(0);
+
+  /** Размер изображения на canvas (может отличаться от размера canvas для маленьких картинок) */
+  const imageDrawWidth = ref(0);
+  const imageDrawHeight = ref(0);
+
   /** Загружает изображение скриншота и вычисляет размер canvas по картинке */
   function loadBackgroundImage() {
     const image = new Image();
@@ -69,30 +77,35 @@
       const maxWidth = Math.floor(window.innerWidth * 0.9 - MODAL_CHROME_WIDTH);
       const maxHeight = Math.floor(window.innerHeight * 0.7);
 
-      let targetWidth = image.naturalWidth;
-      let targetHeight = image.naturalHeight;
+      let drawWidth = image.naturalWidth;
+      let drawHeight = image.naturalHeight;
 
       // Ограничиваем по ширине
-      if (targetWidth > maxWidth) {
-        const scale = maxWidth / targetWidth;
+      if (drawWidth > maxWidth) {
+        const scale = maxWidth / drawWidth;
 
-        targetWidth = maxWidth;
-        targetHeight = Math.floor(targetHeight * scale);
+        drawWidth = maxWidth;
+        drawHeight = Math.floor(drawHeight * scale);
       }
 
       // Ограничиваем по высоте
-      if (targetHeight > maxHeight) {
-        const scale = maxHeight / targetHeight;
+      if (drawHeight > maxHeight) {
+        const scale = maxHeight / drawHeight;
 
-        targetHeight = maxHeight;
-        targetWidth = Math.floor(targetWidth * scale);
+        drawHeight = maxHeight;
+        drawWidth = Math.floor(drawWidth * scale);
       }
 
-      // Минимальный размер
-      targetWidth = Math.max(targetWidth, 300);
+      imageDrawWidth.value = drawWidth;
+      imageDrawHeight.value = drawHeight;
 
-      canvasWidth.value = targetWidth;
-      canvasHeight.value = targetHeight;
+      // Canvas не меньше минимального размера, но картинка не растягивается
+      canvasWidth.value = Math.max(drawWidth, 300);
+      canvasHeight.value = Math.max(drawHeight, 200);
+
+      // Смещение для центрирования маленькой картинки
+      imageOffsetX.value = Math.floor((canvasWidth.value - drawWidth) / 2);
+      imageOffsetY.value = Math.floor((canvasHeight.value - drawHeight) / 2);
 
       nextTick(() => redrawCanvas());
     };
@@ -111,7 +124,24 @@
 
     context.clearRect(0, 0, canvas.width, canvas.height);
 
-    context.drawImage(backgroundImage.value, 0, 0, canvas.width, canvas.height);
+    // Заливаем область вокруг маленькой картинки нейтральным фоном
+    if (imageOffsetX.value > 0 || imageOffsetY.value > 0) {
+      const computedColor = getComputedStyle(canvas)
+        .getPropertyValue('--ui-bg-elevated')
+        .trim();
+
+      context.fillStyle = computedColor || '#1a1a2e';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // Рисуем изображение по центру в натуральном размере
+    context.drawImage(
+      backgroundImage.value,
+      imageOffsetX.value,
+      imageOffsetY.value,
+      imageDrawWidth.value,
+      imageDrawHeight.value,
+    );
 
     for (const stroke of strokes.value) {
       drawStroke(context, stroke);

@@ -1,5 +1,3 @@
-import { FetchError } from 'ofetch';
-
 import { BUG_REPORT_EXTERNAL_API_BASE_URL } from '#server/utils/bugReportApi';
 
 /**
@@ -27,22 +25,10 @@ export default defineEventHandler(async (event) => {
       },
     );
   } catch (error: unknown) {
-    consola.error(
-      '[bug-report] Ошибка получения количества багов по статусам:',
+    return handleFetchError(
+      '[bug-report]',
+      'Ошибка получения количества багов по статусам',
       error,
     );
-
-    if (error instanceof FetchError) {
-      throw createError({
-        statusCode: error.statusCode || 500,
-        statusMessage: error.statusMessage || 'Внутренняя ошибка сервера',
-        data: error.data,
-      });
-    }
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Внутренняя ошибка сервера',
-    });
   }
 });

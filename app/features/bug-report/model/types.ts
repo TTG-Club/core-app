@@ -132,3 +132,24 @@ export interface BugCountByStatusResponse {
   /** Количество багов с данным статусом */
   count: number;
 }
+
+/** Пользователь и количество решённых багов */
+export interface BugReportUserFixedCount {
+  /** Логин пользователя */
+  login: string;
+
+  /** Количество решённых багов */
+  fixed: number;
+}
+
+/** Общая статистика по баг-репортам */
+export interface BugReportStatsResponse {
+  /** Общее количество баг-репортов */
+  totalCount: number;
+
+  /** Количество решённых баг-репортов (статус FIXED) */
+  fixedCount: number;
+
+  /** Топ-10 пользователей по количеству решённых багов */
+  topFixers: BugReportUserFixedCount[];
+}

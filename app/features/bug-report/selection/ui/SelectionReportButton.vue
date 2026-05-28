@@ -1,7 +1,10 @@
 <script lang="ts">
   import type { TextSelection } from '../../model';
 
-  import { SELECTION_CONTEXT_LENGTH } from '../../model';
+  import {
+    BUG_REPORT_SELECTION_BUTTON_LABEL,
+    SELECTION_CONTEXT_LENGTH,
+  } from '../../model';
 </script>
 
 <script setup lang="ts">
@@ -63,41 +66,66 @@
   const isVisible = ref(false);
   const buttonPosition = ref({ top: 0, left: 0 });
 
-  /** Обработчик события отпускания мыши — показывает кнопку рядом с выделением */
-  function handleMouseUp() {
-    // Небольшая задержка для корректного обновления Selection API
-    setTimeout(() => {
-      const selection = window.getSelection();
+  /** Позиционирует кнопку рядом с текущим выделением */
+  function showButtonAtSelection() {
+    const selection = window.getSelection();
 
-      if (!selection || selection.isCollapsed || !selection.toString().trim()) {
-        return;
-      }
-
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-
-      buttonPosition.value = {
-        top: rect.bottom + window.scrollY + 8,
-        left: rect.left + window.scrollX + rect.width / 2,
-      };
-
-      isVisible.value = true;
-    }, 10);
-  }
-
-  /** Скрывает кнопку при клике вне выделения */
-  function handleMouseDown(event: MouseEvent) {
-    if (!(event.target instanceof HTMLElement)) {
+    if (!selection || selection.isCollapsed || !selection.toString().trim()) {
       return;
     }
 
-    // Не скрываем если клик по самой кнопке
-    if (event.target.closest('[data-selection-report-button]')) {
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    buttonPosition.value = {
+      top: rect.bottom + window.scrollY + 8,
+      left: rect.left + window.scrollX + rect.width / 2,
+    };
+
+    isVisible.value = true;
+  }
+
+  /** Обработчик события отпускания мыши — показывает кнопку рядом с выделением */
+  function handleMouseUp() {
+    // Небольшая задержка для корректного обновления Selection API
+    setTimeout(() => showButtonAtSelection(), 10);
+  }
+
+  /** Скрывает кнопку при клике или тапе вне выделения */
+  function handlePointerDown(event: MouseEvent | TouchEvent) {
+    const target = event.target;
+
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    // Не скрываем если клик/тап по самой кнопке
+    if (target.closest('[data-selection-report-button]')) {
       return;
     }
 
     isVisible.value = false;
   }
+
+  /**
+   * Обработчик изменения выделения текста.
+   *
+   * На мобильных устройствах mouseup не срабатывает при выделении,
+   * поэтому используется selectionchange как универсальное событие.
+   * Задержка нужна, чтобы дождаться финального состояния выделения
+   * после жестов drag-to-select на тач-экранах.
+   */
+  const handleSelectionChange = useDebounceFn(() => {
+    const selection = window.getSelection();
+
+    if (!selection || selection.isCollapsed || !selection.toString().trim()) {
+      isVisible.value = false;
+
+      return;
+    }
+
+    showButtonAtSelection();
+  }, 300);
 
   /** Обрабатывает клик по кнопке: собирает контекст и открывает модалку */
   function handleReportClick() {
@@ -120,7 +148,9 @@
   }
 
   useEventListener('mouseup', handleMouseUp);
-  useEventListener('mousedown', handleMouseDown);
+  useEventListener('mousedown', handlePointerDown);
+  useEventListener('touchstart', handlePointerDown, { passive: true });
+  useEventListener(document, 'selectionchange', handleSelectionChange);
 </script>
 
 <template>
@@ -141,7 +171,7 @@
           class="size-4"
         />
 
-        <span>Ошибка в тексте</span>
+        <span>{{ BUG_REPORT_SELECTION_BUTTON_LABEL }}</span>
       </button>
     </Transition>
   </Teleport>

@@ -1,5 +1,3 @@
-import { FetchError } from 'ofetch';
-
 import { BUG_REPORT_EXTERNAL_API_BASE_URL } from '#server/utils/bugReportApi';
 import { assertAdminAccess } from '#server/utils/getUser';
 
@@ -31,19 +29,10 @@ export default defineEventHandler(async (event) => {
       headers,
     });
   } catch (error: unknown) {
-    consola.error('[bug-report-admin] Ошибка получения списка багов:', error);
-
-    if (error instanceof FetchError) {
-      throw createError({
-        statusCode: error.statusCode || 500,
-        statusMessage: error.statusMessage || 'Внутренняя ошибка сервера',
-        data: error.data,
-      });
-    }
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Внутренняя ошибка сервера',
-    });
+    return handleFetchError(
+      '[bug-report-admin]',
+      'Ошибка получения списка багов',
+      error,
+    );
   }
 });

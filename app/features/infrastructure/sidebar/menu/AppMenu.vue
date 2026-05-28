@@ -3,7 +3,13 @@
   import { HamburgerIcon, SvgLogo } from '~ui/icon';
 
   import { SidebarPopover } from '../popover';
-  import { MENU_LINKS, MENU_SECTIONS, MENU_SUPPORT } from './model';
+  import {
+    MENU_LINKS,
+    MENU_SECTIONS,
+    MENU_SUPPORT,
+    SUPPORT_EMAIL,
+    SUPPORT_EMAIL_HREF,
+  } from './model';
   import { MenuContacts, MenuSection, MenuSupport } from './ui';
 
   const overlay = useOverlay();
@@ -87,6 +93,15 @@
           />
 
           <MenuSupport :support-items="MENU_SUPPORT" />
+
+          <UButton
+            :label="SUPPORT_EMAIL"
+            icon="tabler:mail"
+            :href="SUPPORT_EMAIL_HREF"
+            variant="link"
+            color="neutral"
+            :class="$style.email"
+          />
         </div>
       </div>
     </template>
@@ -152,6 +167,10 @@
       @container (width >= 592px) {
         display: inline-block;
       }
+    }
+
+    .email {
+      margin-left: auto;
     }
   }
 </style>

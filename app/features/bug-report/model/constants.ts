@@ -34,6 +34,9 @@ export const BUG_REPORT_API_URL = '/api/bug-report';
 /** URL API получения количества багов текущего пользователя */
 export const BUG_REPORT_MY_COUNT_API_URL = `${BUG_REPORT_API_URL}/my/count-by-status`;
 
+/** URL API получения общей статистики по баг-репортам */
+export const BUG_REPORT_STATS_API_URL = `${BUG_REPORT_API_URL}/stats`;
+
 /** URL API получения списка баг-репортов (админка) */
 export const ADMIN_BUGS_API_URL = '/api/admin/bugs';
 
@@ -146,3 +149,6 @@ export const ADMIN_BUGS_DEFAULT_PAGE_SIZE = 20;
 
 /** Параметры сортировки по умолчанию */
 export const ADMIN_BUGS_DEFAULT_SORT = 'createdAt,desc';
+
+/** Текст на кнопке сообщения об ошибке в выделенном тексте */
+export const BUG_REPORT_SELECTION_BUTTON_LABEL = 'Ошибка в тексте';
