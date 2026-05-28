@@ -3,6 +3,10 @@
 
   import { BannerCard } from './ui';
 
+  defineProps<{
+    group: 'tools' | 'info';
+  }>();
+
   const overlay = useOverlay();
 
   const multiclassDrawer = overlay.create(MulticlassDrawer, {
@@ -20,31 +24,35 @@
 </script>
 
 <template>
-  <BannerCard
-    title="Создание мультикласса"
-    background-url="/s3/home/multiclassing-banner.webp"
-    description="Собери уникальную комбинацию классов"
-    @click="multiclassDrawer.open()"
-  />
+  <template v-if="group === 'tools'">
+    <BannerCard
+      title="Создание мультикласса"
+      background-url="/s3/home/multiclassing-banner.webp"
+      description="Собери уникальную комбинацию классов"
+      @click="multiclassDrawer.open()"
+    />
 
-  <BannerCard
-    title="Калькулятор характеристик"
-    to="/calculators/abilities"
-    background-url="/s3/home/calculator-abilities-banner.webp"
-    description="Идеальный баланс твоего персонажа"
-  />
+    <BannerCard
+      title="Калькулятор характеристик"
+      to="/calculators/abilities"
+      background-url="/s3/home/calculator-abilities-banner.webp"
+      description="Идеальный баланс твоего персонажа"
+    />
+  </template>
 
-  <BannerCard
-    title="Токенатор"
-    to="/tokenator"
-    background-url="/s3/home/tokenator-banner.webp"
-    description="Создай уникальный токен персонажа!"
-  />
+  <template v-else-if="group === 'info'">
+    <BannerCard
+      title="Токенатор"
+      to="/tokenator"
+      background-url="/s3/home/tokenator-banner.webp"
+      description="Создай уникальный токен персонажа!"
+    />
 
-  <BannerCard
-    title="Дорожная карта"
-    to="/roadmap"
-    background-url="/s3/home/roadmap-banner.webp"
-    description="Выбор за тобой!"
-  />
+    <BannerCard
+      title="Дорожная карта"
+      to="/roadmap"
+      background-url="/s3/home/roadmap-banner.webp"
+      description="Выбор за тобой!"
+    />
+  </template>
 </template>
