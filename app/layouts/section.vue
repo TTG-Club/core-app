@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { SectionContent, SectionSidebar } from '~/shared/ui/section';
+  import { AppFooter } from '~infrastructure/footer';
 
   defineProps<{
     title: string;
@@ -73,16 +74,22 @@
   <!-- Стандартный режим (Default Mode / Mobile) -->
   <div
     v-else
-    class="mx-auto flex min-h-dvh w-full flex-col lg:max-w-330 lg:flex-row"
+    class="flex min-h-dvh w-full flex-col"
   >
-    <SectionSidebar :title="title">
-      <slot name="controls" />
-    </SectionSidebar>
+    <div
+      class="mx-auto flex min-h-dvh w-full flex-col lg:max-w-330 lg:flex-row"
+    >
+      <SectionSidebar :title="title">
+        <slot name="controls" />
+      </SectionSidebar>
 
-    <div class="flex min-h-dvh flex-auto flex-col gap-4 px-4 pb-8 lg:pt-4">
-      <SectionContent :alert="alert">
-        <slot name="default" />
-      </SectionContent>
+      <div class="flex min-h-dvh flex-auto flex-col gap-4 px-4 pb-8 lg:pt-4">
+        <SectionContent :alert="alert">
+          <slot name="default" />
+        </SectionContent>
+      </div>
     </div>
+
+    <AppFooter />
   </div>
 </template>
