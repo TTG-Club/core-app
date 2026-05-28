@@ -153,3 +153,6 @@ export interface BugReportStatsResponse {
   /** Топ-10 пользователей по количеству решённых багов */
   topFixers: BugReportUserFixedCount[];
 }
+
+/** Допустимые инструменты рисования */
+export type DrawingTool = 'brush' | 'circle' | 'rectangle';
