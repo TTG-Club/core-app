@@ -15,6 +15,7 @@
 
   const toast = useToast();
   const isDeleting = ref(false);
+  const isConfirmDeleteOpen = ref(false);
 
   const formattedDate = computed(
     () => useDateFormat(persona.createdAt, 'DD.MM.YYYY').value,
@@ -67,6 +68,14 @@
       isDeleting.value = false;
     }
   }
+
+  /**
+   * Подтверждает удаление персоны и запускает процесс удаления.
+   */
+  async function confirmDelete() {
+    isConfirmDeleteOpen.value = false;
+    await deletePersona();
+  }
 </script>
 
 <template>
@@ -105,8 +114,35 @@
         variant="ghost"
         size="xs"
         :loading="isDeleting"
-        @click.left.exact.prevent="deletePersona"
+        @click.left.exact.prevent="isConfirmDeleteOpen = true"
       />
     </div>
   </div>
+
+  <!-- Модальное окно подтверждения удаления персоны -->
+  <UModal
+    v-model:open="isConfirmDeleteOpen"
+    title="Удалить персону?"
+    :description="`Вы действительно хотите удалить персону «${persona.name}»?`"
+  >
+    <template #body>
+      <div class="flex justify-end gap-2">
+        <UButton
+          variant="ghost"
+          color="neutral"
+          @click.left.exact.prevent="isConfirmDeleteOpen = false"
+        >
+          Отмена
+        </UButton>
+
+        <UButton
+          color="error"
+          :loading="isDeleting"
+          @click.left.exact.prevent="confirmDelete"
+        >
+          Удалить
+        </UButton>
+      </div>
+    </template>
+  </UModal>
 </template>
