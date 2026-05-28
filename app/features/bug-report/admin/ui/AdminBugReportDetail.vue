@@ -15,19 +15,13 @@
     BUG_REPORT_STATUS_COMMENT_MAX_LENGTH,
     BUG_REPORT_STATUS_COMMENT_PLACEHOLDER,
     BUG_REPORT_STATUS_LABELS,
+    BUG_REPORT_STATUS_ORDER,
     BUG_REPORT_STATUS_UPDATE_ERROR_DESC,
     BUG_REPORT_STATUS_UPDATE_ERROR_TITLE,
     BUG_REPORT_STATUS_UPDATE_SUCCESS_TITLE,
     getAdminBugStatusApiUrl,
     getBugReportStatusColor,
   } from '../../model';
-
-  const STATUSES: ReadonlyArray<BugReportStatus> = [
-    'NEW',
-    'WAIT',
-    'FIXED',
-    'REJECTED',
-  ];
 
   /**
    * Свойства компонента детального просмотра баг-репорта.
@@ -81,7 +75,7 @@
   }
 
   const statusButtons = computed<StatusButtonOption[]>(() => {
-    return STATUSES.map((status) => ({
+    return BUG_REPORT_STATUS_ORDER.map((status) => ({
       status,
       label: BUG_REPORT_STATUS_LABELS[status],
       color: getBugReportStatusColor(status),

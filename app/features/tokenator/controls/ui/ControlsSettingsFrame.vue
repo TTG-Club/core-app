@@ -2,7 +2,7 @@
   import { useTokenatorStore } from '~tokenator/composables';
   import { BLEND_MODES, DEFAULT_COLORS } from '~tokenator/model';
 
-  import { useColorWithOpacity } from '../composables';
+  import { useColorEyeDropper, useColorWithOpacity } from '../composables';
 
   const store = useTokenatorStore();
 
@@ -71,31 +71,25 @@
       : 'cursor-default text-neutral-500',
   );
 
-  const { isSupported: isEyeDropperSupported, open: openEyeDropper } =
-    useEyeDropper();
+  const { isSupported: isEyeDropperSupported, pickColor } =
+    useColorEyeDropper();
 
-  async function pickTintColor1() {
-    try {
-      const response = await openEyeDropper();
-
-      if (response?.sRGBHex) {
-        tintColor1Hex.value = response.sRGBHex;
-      }
-    } catch (error) {
-      // Игнорируем ошибку отмены выбора
-    }
+  /**
+   * Применяет выбранный пипеткой цвет к первому цвету тонировки.
+   *
+   * @param color - Выбранный цвет в формате hex.
+   */
+  function applyTintColor1(color: string): void {
+    tintColor1Hex.value = color;
   }
 
-  async function pickTintColor2() {
-    try {
-      const response = await openEyeDropper();
-
-      if (response?.sRGBHex) {
-        tintColor2Hex.value = response.sRGBHex;
-      }
-    } catch (error) {
-      // Игнорируем ошибку отмены выбора
-    }
+  /**
+   * Применяет выбранный пипеткой цвет ко второму цвету тонировки.
+   *
+   * @param color - Выбранный цвет в формате hex.
+   */
+  function applyTintColor2(color: string): void {
+    tintColor2Hex.value = color;
   }
 </script>
 
@@ -209,7 +203,7 @@
                     size="xs"
                     class="w-full justify-center"
                     title="Выбрать цвет с экрана"
-                    @click.left.exact.prevent="pickTintColor1"
+                    @click.left.exact.prevent="pickColor(applyTintColor1)"
                   />
                 </div>
               </template>
@@ -293,7 +287,7 @@
                     size="xs"
                     class="w-full justify-center"
                     title="Выбрать цвет с экрана"
-                    @click.left.exact.prevent="pickTintColor2"
+                    @click.left.exact.prevent="pickColor(applyTintColor2)"
                   />
                 </div>
               </template>

@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import { useTokenatorStore } from '~tokenator/composables';
 
+  import { useColorEyeDropper } from '../composables';
+
   const store = useTokenatorStore();
   const textInput = ref('');
 
@@ -37,22 +39,17 @@
       : 'cursor-default text-neutral-500',
   );
 
-  const { isSupported: isEyeDropperSupported, open: openEyeDropper } =
-    useEyeDropper();
+  const { isSupported: isEyeDropperSupported, pickColor } =
+    useColorEyeDropper();
 
-  async function pickTextColor() {
-    if (!store.activeText) {
-      return;
-    }
-
-    try {
-      const response = await openEyeDropper();
-
-      if (response?.sRGBHex) {
-        store.activeText.color = response.sRGBHex;
-      }
-    } catch (error) {
-      // Игнорируем ошибку отмены выбора
+  /**
+   * Применяет выбранный пипеткой цвет к активному тексту.
+   *
+   * @param color - Выбранный цвет в формате hex.
+   */
+  function applyTextColor(color: string): void {
+    if (store.activeText) {
+      store.activeText.color = color;
     }
   }
 </script>
@@ -141,7 +138,7 @@
                     size="xs"
                     class="w-full justify-center"
                     title="Выбрать цвет с экрана"
-                    @click.left.exact.prevent="pickTextColor"
+                    @click.left.exact.prevent="pickColor(applyTextColor)"
                   />
                 </div>
               </template>

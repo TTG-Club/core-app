@@ -2,7 +2,7 @@
   import { useTokenatorStore } from '~tokenator/composables';
   import { BACKGROUND_BLEND_MODES, DEFAULT_COLORS } from '~tokenator/model';
 
-  import { useColorWithOpacity } from '../composables';
+  import { useColorEyeDropper, useColorWithOpacity } from '../composables';
 
   const store = useTokenatorStore();
 
@@ -39,19 +39,16 @@
       : 'cursor-default text-neutral-500',
   );
 
-  const { isSupported: isEyeDropperSupported, open: openEyeDropper } =
-    useEyeDropper();
+  const { isSupported: isEyeDropperSupported, pickColor } =
+    useColorEyeDropper();
 
-  async function pickBackgroundColor() {
-    try {
-      const response = await openEyeDropper();
-
-      if (response?.sRGBHex) {
-        bgColorHex.value = response.sRGBHex;
-      }
-    } catch (error) {
-      // Игнорируем ошибку отмены выбора
-    }
+  /**
+   * Применяет выбранный пипеткой цвет к фону.
+   *
+   * @param color - Выбранный цвет в формате hex.
+   */
+  function applyBackgroundColor(color: string): void {
+    bgColorHex.value = color;
   }
 </script>
 
@@ -90,7 +87,7 @@
                 size="xs"
                 class="w-full justify-center"
                 title="Выбрать цвет с экрана"
-                @click.left.exact.prevent="pickBackgroundColor"
+                @click.left.exact.prevent="pickColor(applyBackgroundColor)"
               />
             </div>
           </template>
