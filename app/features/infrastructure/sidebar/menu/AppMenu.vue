@@ -87,6 +87,15 @@
           />
 
           <MenuSupport :support-items="MENU_SUPPORT" />
+
+          <UButton
+            label="support@ttg.club"
+            icon="tabler:mail"
+            href="mailto:support@ttg.club"
+            variant="link"
+            color="neutral"
+            :class="$style.email"
+          />
         </div>
       </div>
     </template>
@@ -152,6 +161,10 @@
       @container (width >= 592px) {
         display: inline-block;
       }
+    }
+
+    .email {
+      margin-left: auto;
     }
   }
 </style>
