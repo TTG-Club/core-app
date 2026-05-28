@@ -22,7 +22,7 @@
   }
 
   const LIMIT_VALUES = [5, 10, 20, 50, 100];
-  const DEFAULT_LIMIT = 10;
+  const DEFAULT_LIMIT = 5;
 
   const selectedLimit = useLocalStorage('recent-changes-limit', DEFAULT_LIMIT, {
     initOnMounted: true,

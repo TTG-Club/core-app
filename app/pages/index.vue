@@ -36,14 +36,16 @@
 
       <div class="flex w-full flex-col gap-3 lg:items-start xl:flex-row">
         <div class="flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">
-          <HomeBanners group="tools" />
+          <div class="grid grid-cols-2 gap-3">
+            <HomeBanners group="tools" />
+
+            <HomeBanners group="info" />
+          </div>
 
           <HomeBugLeaderboard />
         </div>
 
         <div class="flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">
-          <HomeBanners group="info" />
-
           <HomeRecentChanges />
         </div>
 

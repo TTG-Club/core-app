@@ -43,8 +43,8 @@
       :alt="title"
     />
 
-    <span class="text-accent relative z-10 text-xl">{{ title }}</span>
+    <span class="text-accent relative z-10 text-base">{{ title }}</span>
 
-    <p class="relative z-10 text-muted">{{ description }}</p>
+    <p class="relative z-10 hidden text-muted">{{ description }}</p>
   </component>
 </template>
