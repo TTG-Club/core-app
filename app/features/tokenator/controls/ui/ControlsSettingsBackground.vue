@@ -2,7 +2,7 @@
   import { useTokenatorStore } from '~tokenator/composables';
   import { BACKGROUND_BLEND_MODES, DEFAULT_COLORS } from '~tokenator/model';
 
-  import { useColorWithOpacity } from '../composables';
+  import { useColorEyeDropper, useColorWithOpacity } from '../composables';
 
   const store = useTokenatorStore();
 
@@ -38,6 +38,18 @@
       ? 'cursor-pointer text-primary-500'
       : 'cursor-default text-neutral-500',
   );
+
+  const { isSupported: isEyeDropperSupported, pickColor } =
+    useColorEyeDropper();
+
+  /**
+   * Применяет выбранный пипеткой цвет к фону.
+   *
+   * @param color - Выбранный цвет в формате hex.
+   */
+  function applyBackgroundColor(color: string): void {
+    bgColorHex.value = color;
+  }
 </script>
 
 <template>
@@ -54,6 +66,7 @@
             variant="outline"
             size="xs"
             class="flex size-8 items-center justify-center p-0"
+            title="Выбрать цвет фона"
           >
             <span
               class="size-5 rounded-full border border-neutral-200"
@@ -62,8 +75,20 @@
           </UButton>
 
           <template #content>
-            <div class="p-2">
+            <div class="flex flex-col gap-2 p-2">
               <UColorPicker v-model="bgColorHex" />
+
+              <UButton
+                v-if="isEyeDropperSupported"
+                icon="tabler:color-picker"
+                label="Пипетка"
+                color="neutral"
+                variant="soft"
+                size="xs"
+                class="w-full justify-center"
+                title="Выбрать цвет с экрана"
+                @click.left.exact.prevent="pickColor(applyBackgroundColor)"
+              />
             </div>
           </template>
         </UPopover>

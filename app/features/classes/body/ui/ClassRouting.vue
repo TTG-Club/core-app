@@ -100,8 +100,15 @@
 
   /**
    * Обработчик клика по кнопке «Класс» — возврат к основному классу.
+   * В обычном режиме не блокирует дефолтную навигацию через `:to`.
    */
-  function handleClassClick(): void {
+  function handleClassNavigation(event: MouseEvent): void {
+    if (!isInlineNavigation.value) {
+      return;
+    }
+
+    event.preventDefault();
+
     const classUrl = parent ? parent.url : url;
 
     if (inSplit) {
@@ -161,7 +168,7 @@
       variant="soft"
       color="secondary"
       size="md"
-      @click.left.exact.prevent="isInlineNavigation && handleClassClick()"
+      @click.left.exact="handleClassNavigation"
     >
       <div class="flex flex-col items-start leading-tight">
         <span class="text-xs text-secondary"> Класс: </span>

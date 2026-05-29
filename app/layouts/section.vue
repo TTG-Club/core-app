@@ -10,19 +10,12 @@
   const alert = computed(() => route.meta.alert);
 
   const { isSplitActive } = useLayoutWidth();
-  const isMounted = ref(false);
-
-  onMounted(() => {
-    isMounted.value = true;
-  });
-
-  const isSplitVisible = computed(() => isMounted.value && isSplitActive.value);
 </script>
 
 <template>
   <!-- Трехколоночный режим (Wide Mode) -->
   <div
-    v-if="isSplitVisible && $slots.detail"
+    v-if="isSplitActive && $slots.detail"
     class="flex min-h-dvh w-full flex-col lg:flex-row"
   >
     <SectionSidebar :title="title">

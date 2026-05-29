@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { WritableComputedRef } from 'vue';
+
   import type {
     BugReportStatus,
     PageBugReportResponse,
@@ -33,9 +35,36 @@
   const router = useRouter();
 
   const currentPage = ref(1);
-  const statusFilter = ref(ADMIN_BUGS_FILTER_ALL);
-  const platformFilter = ref(ADMIN_BUGS_FILTER_ALL);
   const itemsPerPage = ADMIN_BUGS_DEFAULT_PAGE_SIZE;
+
+  /**
+   * Создает вычисляемый фильтр, синхронизированный с URL query.
+   *
+   * @param queryKey Ключ параметра в URL query.
+   */
+  function createQueryFilter(queryKey: string): WritableComputedRef<string> {
+    return computed({
+      get: () => {
+        const queryValue = route.query[queryKey];
+
+        return typeof queryValue === 'string' && queryValue
+          ? queryValue
+          : ADMIN_BUGS_FILTER_ALL;
+      },
+      set: (value) => {
+        router.replace({
+          query: {
+            ...route.query,
+            [queryKey]: value === ADMIN_BUGS_FILTER_ALL ? undefined : value,
+            id: undefined,
+          },
+        });
+      },
+    });
+  }
+
+  const statusFilter = createQueryFilter('status');
+  const platformFilter = createQueryFilter('platform');
 
   // Синхронизация выбранного ID бага с URL query
   const selectedBugId = computed({
@@ -193,13 +222,25 @@
     statusUpdatedAt: string;
     statusComment?: string;
   }): void {
-    const bug = resolvedBugsList.value.find((item) => item.id === payload.id);
-
-    if (bug) {
-      bug.status = payload.status;
-      bug.statusUpdatedAt = payload.statusUpdatedAt;
-      bug.statusComment = payload.statusComment;
+    if (!bugsData.value) {
+      return;
     }
+
+    bugsData.value = {
+      ...bugsData.value,
+      content: bugsData.value.content.map((item) => {
+        if (item.id === payload.id) {
+          return {
+            ...item,
+            status: payload.status,
+            statusUpdatedAt: payload.statusUpdatedAt,
+            statusComment: payload.statusComment,
+          };
+        }
+
+        return item;
+      }),
+    };
   }
 </script>
 
