@@ -227,11 +227,6 @@
                   />
                   +
                   <UKbd
-                    value="Ctrl"
-                    size="sm"
-                  />
-                  +
-                  <UKbd
                     value="Shift"
                     size="sm"
                   />
