@@ -238,10 +238,7 @@
                 </template>
 
                 <template v-else>
-                  <UKbd
-                    value="meta"
-                    size="sm"
-                  />
+                  <UKbd size="sm"> Win </UKbd>
                   +
                   <UKbd
                     value="Shift"
