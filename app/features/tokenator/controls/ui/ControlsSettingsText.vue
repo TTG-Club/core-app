@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import { useTokenatorStore } from '~tokenator/composables';
 
+  import { useColorEyeDropper } from '../composables';
+
   const store = useTokenatorStore();
   const textInput = ref('');
 
@@ -36,6 +38,20 @@
       ? 'cursor-pointer text-primary-500'
       : 'cursor-default text-neutral-500',
   );
+
+  const { isSupported: isEyeDropperSupported, pickColor } =
+    useColorEyeDropper();
+
+  /**
+   * Применяет выбранный пипеткой цвет к активному тексту.
+   *
+   * @param color - Выбранный цвет в формате hex.
+   */
+  function applyTextColor(color: string): void {
+    if (store.activeText) {
+      store.activeText.color = color;
+    }
+  }
 </script>
 
 <template>
@@ -101,6 +117,7 @@
                 variant="outline"
                 size="xs"
                 class="flex size-6 items-center justify-center p-0"
+                title="Выбрать цвет текста"
               >
                 <span
                   class="size-4 rounded-full border border-neutral-200"
@@ -109,8 +126,20 @@
               </UButton>
 
               <template #content>
-                <div class="p-2">
+                <div class="flex flex-col gap-2 p-2">
                   <UColorPicker v-model="store.activeText.color" />
+
+                  <UButton
+                    v-if="isEyeDropperSupported"
+                    icon="tabler:color-picker"
+                    label="Пипетка"
+                    color="neutral"
+                    variant="soft"
+                    size="xs"
+                    class="w-full justify-center"
+                    title="Выбрать цвет с экрана"
+                    @click.left.exact.prevent="pickColor(applyTextColor)"
+                  />
                 </div>
               </template>
             </UPopover>

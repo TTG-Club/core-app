@@ -59,7 +59,7 @@ export const ADMIN_BUGS_PAGE_TITLE = 'Баг-репорты: список';
 export const ADMIN_BUGS_NAVIGATION_LABEL = 'Баги';
 
 /** Текст кнопки настройки/просмотра на главной странице админки */
-export const ADMIN_BUGS_CONFIGURE_LABEL = 'Настроить';
+export const ADMIN_BUGS_CONFIGURE_LABEL = 'Посмотреть';
 
 /** Описание раздела админки баг-репортов */
 export const ADMIN_BUGS_PAGE_DESCRIPTION =
@@ -81,6 +81,14 @@ export const BUG_REPORT_STATUS_LABELS: Record<BugReportStatus, string> = {
   FIXED: 'Исправлен',
   REJECTED: 'Отклонен',
 };
+
+/** Порядок отображения статусов баг-репорта в панели управления */
+export const BUG_REPORT_STATUS_ORDER: ReadonlyArray<BugReportStatus> = [
+  'NEW',
+  'WAIT',
+  'FIXED',
+  'REJECTED',
+];
 
 /** Мапа русских названий для платформ */
 export const BUG_REPORT_PLATFORM_LABELS: Record<SourcePlatform, string> = {
@@ -141,9 +149,6 @@ export const BUG_REPORT_STATUS_UPDATE_ERROR_TITLE = 'Ошибка обновле
 export const BUG_REPORT_STATUS_UPDATE_ERROR_DESC =
   'Не удалось обновить статус баг-репорта на сервере';
 
-/** Заголовок секции комментария к статусу */
-export const BUG_REPORT_STATUS_COMMENT_LABEL = 'Комментарий к статусу';
-
 /** Placeholder для поля ввода комментария при смене статуса */
 export const BUG_REPORT_STATUS_COMMENT_PLACEHOLDER =
   'Комментарий к смене статуса (необязательно)';
@@ -162,3 +167,13 @@ export const ADMIN_BUGS_DEFAULT_SORT = 'createdAt,desc';
 
 /** Текст на кнопке сообщения об ошибке в выделенном тексте */
 export const BUG_REPORT_SELECTION_BUTTON_LABEL = 'Ошибка в тексте';
+
+/** Успешный заголовок обновления комментария */
+export const BUG_REPORT_COMMENT_SAVE_SUCCESS_TITLE = 'Комментарий сохранен';
+
+/** Текст успешного тоста сохранения комментария */
+export const BUG_REPORT_COMMENT_SAVE_SUCCESS_DESC =
+  'Комментарий к статусу успешно обновлен.';
+
+/** Текст кнопки сохранения комментария */
+export const BUG_REPORT_COMMENT_SAVE_BUTTON_LABEL = 'Сохранить';

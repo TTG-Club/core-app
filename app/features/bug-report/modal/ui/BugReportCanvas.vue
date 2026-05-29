@@ -1,15 +1,25 @@
 <script setup lang="ts">
+  import type { DrawingTool } from '../../model';
+
   import { MAX_UNDO_STEPS, MODAL_CHROME_WIDTH } from '../../model';
 
   interface StrokePath {
     color: string;
     size: number;
     points: Array<{ x: number; y: number }>;
+    tool: DrawingTool;
   }
 
   /** Рисует один штрих на canvas */
   function drawStroke(context: CanvasRenderingContext2D, stroke: StrokePath) {
     if (stroke.points.length < 2) {
+      return;
+    }
+
+    const firstPoint = stroke.points[0];
+    const lastPoint = stroke.points[stroke.points.length - 1];
+
+    if (!firstPoint || !lastPoint) {
       return;
     }
 
@@ -19,23 +29,31 @@
     context.lineCap = 'round';
     context.lineJoin = 'round';
 
-    const firstPoint = stroke.points[0];
+    if (stroke.tool === 'rectangle') {
+      const width = lastPoint.x - firstPoint.x;
+      const height = lastPoint.y - firstPoint.y;
 
-    if (!firstPoint) {
-      return;
-    }
+      context.strokeRect(firstPoint.x, firstPoint.y, width, height);
+    } else if (stroke.tool === 'circle') {
+      const radiusX = Math.abs(lastPoint.x - firstPoint.x);
+      const radiusY = Math.abs(lastPoint.y - firstPoint.y);
+      const radius = Math.sqrt(radiusX * radiusX + radiusY * radiusY);
 
-    context.moveTo(firstPoint.x, firstPoint.y);
+      context.arc(firstPoint.x, firstPoint.y, radius, 0, 2 * Math.PI);
+      context.stroke();
+    } else {
+      context.moveTo(firstPoint.x, firstPoint.y);
 
-    for (let i = 1; i < stroke.points.length; i++) {
-      const point = stroke.points[i];
+      for (let i = 1; i < stroke.points.length; i++) {
+        const point = stroke.points[i];
 
-      if (point) {
-        context.lineTo(point.x, point.y);
+        if (point) {
+          context.lineTo(point.x, point.y);
+        }
       }
-    }
 
-    context.stroke();
+      context.stroke();
+    }
   }
 
   const props = defineProps<{
@@ -47,6 +65,9 @@
 
     /** Текущий размер кисти в пикселях */
     brushSize: number;
+
+    /** Текущий инструмент рисования */
+    drawingTool: DrawingTool;
   }>();
 
   const canvasRef = ref<HTMLCanvasElement>();
@@ -177,6 +198,7 @@
       color: props.brushColor,
       size: props.brushSize,
       points: [point],
+      tool: props.drawingTool,
     };
   }
 
@@ -186,8 +208,18 @@
     }
 
     const point = getCanvasPoint(event);
+    const firstPoint = currentStroke.value.points[0];
 
-    currentStroke.value.points.push(point);
+    if (!firstPoint) {
+      return;
+    }
+
+    if (currentStroke.value.tool === 'brush') {
+      currentStroke.value.points.push(point);
+    } else {
+      currentStroke.value.points = [firstPoint, point];
+    }
+
     redrawCanvas();
   }
 

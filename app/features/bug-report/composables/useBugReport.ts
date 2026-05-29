@@ -31,6 +31,7 @@ function formatSelectionText(selection: TextSelection): string {
  */
 export function useBugReport() {
   const route = useRoute();
+  const router = useRouter();
   const $toast = useToast();
 
   const isModalOpen = useState('bug-report:modal-open', () => false);
@@ -45,10 +46,31 @@ export function useBugReport() {
   /**
    * Открывает модальное окно баг-репорта.
    *
-   * Сохраняет текущий URL страницы для контекста.
+   * Сохраняет текущий URL страницы для контекста. Если открыт детальный вид
+   * через параметр query "detail", URL преобразуется в прямой путь вида /path/detailId.
    */
   function openReport(): void {
-    capturedPageUrl.value = route.fullPath;
+    const detailId = route.query.detail;
+
+    if (typeof detailId === 'string' && detailId) {
+      const basePath = route.path.endsWith('/')
+        ? route.path.slice(0, -1)
+        : route.path;
+
+      const nextQuery = { ...route.query };
+
+      delete nextQuery.detail;
+
+      const resolved = router.resolve({
+        path: `${basePath}/${detailId}`,
+        query: nextQuery,
+      });
+
+      capturedPageUrl.value = resolved.fullPath;
+    } else {
+      capturedPageUrl.value = route.fullPath;
+    }
+
     isModalOpen.value = true;
   }
 

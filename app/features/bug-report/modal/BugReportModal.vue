@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { DrawingTool } from '../model';
+
   import { useBugReport } from '../composables';
   import { DEFAULT_BRUSH_COLOR, DEFAULT_BRUSH_SIZE } from '../model';
   import {
@@ -24,11 +26,36 @@
 
   const description = ref('');
   const brushColor = ref(DEFAULT_BRUSH_COLOR.value);
+  const drawingTool = ref<DrawingTool>('brush');
   const isSubmitting = ref(false);
 
   const screenshotUrl = ref('');
 
   const hasScreenshot = computed(() => Boolean(screenshotUrl.value));
+
+  const isMac = ref(false);
+  const fileInputRef = ref<HTMLInputElement | null>(null);
+
+  onMounted(() => {
+    isMac.value = /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
+  });
+
+  function triggerFileSelect(): void {
+    fileInputRef.value?.click();
+  }
+
+  function handleFileChange(event: Event): void {
+    const target = event.target;
+
+    if (target instanceof HTMLInputElement) {
+      const file = target.files?.[0];
+
+      if (file) {
+        setScreenshot(file);
+        target.value = '';
+      }
+    }
+  }
 
   watch(
     screenshot,
@@ -69,6 +96,19 @@
     }
   }
 
+  /**
+   * Обработчик нажатия клавиш в поле ввода описания.
+   * Выполняет отправку формы при нажатии Ctrl+Enter (Windows) или Cmd+Enter (Mac).
+   *
+   * @param event Событие клавиатуры.
+   */
+  function handleKeyDown(event: KeyboardEvent): void {
+    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+      event.preventDefault();
+      handleSubmit();
+    }
+  }
+
   function handleCancel(): void {
     description.value = '';
     cancel();
@@ -82,6 +122,7 @@
     if (!opened) {
       description.value = '';
       brushColor.value = DEFAULT_BRUSH_COLOR.value;
+      drawingTool.value = 'brush';
     }
   });
 
@@ -144,17 +185,27 @@
               !hasScreenshot && 'flex flex-col self-stretch',
             ]"
           >
+            <input
+              ref="fileInputRef"
+              type="file"
+              accept="image/*"
+              class="hidden"
+              @change="handleFileChange"
+            />
+
             <BugReportCanvas
               v-if="hasScreenshot"
               ref="canvasRef"
               :screenshot-url="screenshotUrl"
               :brush-color="brushColor"
               :brush-size="DEFAULT_BRUSH_SIZE"
+              :drawing-tool="drawingTool"
             />
 
             <div
               v-else
-              class="flex min-h-100 w-75 flex-1 flex-col items-center justify-center gap-2 bg-elevated text-muted"
+              class="flex min-h-100 w-75 flex-1 cursor-pointer flex-col items-center justify-center gap-2 bg-elevated text-muted transition-colors hover:bg-elevated/80"
+              @click.left.exact.prevent="triggerFileSelect"
             >
               <UIcon
                 name="tabler:photo-plus"
@@ -169,20 +220,36 @@
                 class="flex max-w-70 flex-wrap items-center justify-center gap-1 text-center text-xs leading-5 text-muted"
               >
                 Сделайте снимок экрана
-                <UKbd
-                  value="meta"
-                  size="sm"
-                />
-                +
-                <UKbd
-                  value="Shift"
-                  size="sm"
-                />
-                +
-                <UKbd
-                  value="S"
-                  size="sm"
-                />
+                <template v-if="isMac">
+                  <UKbd
+                    value="meta"
+                    size="sm"
+                  />
+                  +
+                  <UKbd
+                    value="Shift"
+                    size="sm"
+                  />
+                  +
+                  <UKbd
+                    value="4"
+                    size="sm"
+                  />
+                </template>
+
+                <template v-else>
+                  <UKbd size="sm"> Win </UKbd>
+                  +
+                  <UKbd
+                    value="Shift"
+                    size="sm"
+                  />
+                  +
+                  <UKbd
+                    value="S"
+                    size="sm"
+                  />
+                </template>
                 и нажмите
                 <UKbd
                   value="meta"
@@ -193,6 +260,10 @@
                   value="V"
                   size="sm"
                 />
+              </span>
+
+              <span class="text-xs text-muted">
+                или нажмите для выбора файла с ПК
               </span>
             </div>
           </div>
@@ -208,6 +279,35 @@
               v-model="brushColor"
               :disabled="!hasScreenshot"
               vertical
+            />
+
+            <USeparator class="w-full" />
+
+            <UButton
+              icon="tabler:pencil"
+              :variant="drawingTool === 'brush' ? 'solid' : 'ghost'"
+              :color="drawingTool === 'brush' ? 'primary' : 'neutral'"
+              size="sm"
+              :disabled="!hasScreenshot"
+              @click.left.exact.prevent="drawingTool = 'brush'"
+            />
+
+            <UButton
+              icon="tabler:circle"
+              :variant="drawingTool === 'circle' ? 'solid' : 'ghost'"
+              :color="drawingTool === 'circle' ? 'primary' : 'neutral'"
+              size="sm"
+              :disabled="!hasScreenshot"
+              @click.left.exact.prevent="drawingTool = 'circle'"
+            />
+
+            <UButton
+              icon="tabler:square"
+              :variant="drawingTool === 'rectangle' ? 'solid' : 'ghost'"
+              :color="drawingTool === 'rectangle' ? 'primary' : 'neutral'"
+              size="sm"
+              :disabled="!hasScreenshot"
+              @click.left.exact.prevent="drawingTool = 'rectangle'"
             />
 
             <USeparator class="w-full" />
@@ -292,6 +392,7 @@
               :rows="5"
               :maxrows="10"
               placeholder="Опишите, что произошло..."
+              @keydown="handleKeyDown"
             />
           </UFormField>
         </div>

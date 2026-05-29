@@ -1,5 +1,8 @@
 <script setup lang="ts">
-  import type { BugReportStatsResponse } from '~bug-report/model';
+  import type {
+    BugReportStatsResponse,
+    BugReportStatus,
+  } from '~bug-report/model';
 
   import { BUG_REPORT_STATS_API_URL } from '~bug-report/model';
   import { AnimatedNumber } from '~ui/animated-number';
@@ -11,10 +14,28 @@
     BUG_LEADERBOARD_LABEL_TOP,
     BUG_LEADERBOARD_REFRESH_INTERVAL_MS,
     BUG_LEADERBOARD_TITLE,
+    BUG_LEADERBOARD_TOP_TOOLTIP,
     BUG_LEADERBOARD_TROPHY_COLOR,
   } from './model';
 
   const { isAdmin } = useUserRoles();
+  const router = useRouter();
+
+  /**
+   * Переход в админку багов с фильтрацией по статусу.
+   *
+   * @param status Статус для фильтрации.
+   */
+  function handleCounterClick(status: BugReportStatus): void {
+    if (!isAdmin.value) {
+      return;
+    }
+
+    router.push({
+      path: '/admin/bugs',
+      query: { status },
+    });
+  }
 
   const {
     data: stats,
@@ -100,6 +121,10 @@
     <div class="grid grid-cols-2 gap-2">
       <div
         class="flex items-center gap-3 rounded-lg border border-default bg-default/50 px-3 py-2.5"
+        :class="{
+          'cursor-pointer transition-colors hover:bg-default/80': isAdmin,
+        }"
+        @click.left.exact.prevent="handleCounterClick('NEW')"
       >
         <div
           class="flex size-8 shrink-0 items-center justify-center rounded-md bg-(--color-primary-500)/10"
@@ -126,6 +151,10 @@
 
       <div
         class="flex items-center gap-3 rounded-lg border border-default bg-default/50 px-3 py-2.5"
+        :class="{
+          'cursor-pointer transition-colors hover:bg-default/80': isAdmin,
+        }"
+        @click.left.exact.prevent="handleCounterClick('FIXED')"
       >
         <div
           class="flex size-8 shrink-0 items-center justify-center rounded-md bg-(--color-success-500)/10"
@@ -156,11 +185,18 @@
       v-if="decoratedTopFixers.length"
       class="flex flex-col gap-1 pt-1"
     >
-      <span
-        class="pb-1 text-xs font-medium tracking-[0.5px] text-muted uppercase"
-      >
-        {{ BUG_LEADERBOARD_LABEL_TOP }}
-      </span>
+      <div class="flex items-center gap-1 pb-1">
+        <span class="text-xs font-medium tracking-[0.5px] text-muted uppercase">
+          {{ BUG_LEADERBOARD_LABEL_TOP }}
+        </span>
+
+        <UTooltip :text="BUG_LEADERBOARD_TOP_TOOLTIP">
+          <UIcon
+            name="tabler:help-circle-filled"
+            class="size-3.5 cursor-help text-muted transition-colors hover:text-default"
+          />
+        </UTooltip>
+      </div>
 
       <div
         v-for="fixer in decoratedTopFixers"
