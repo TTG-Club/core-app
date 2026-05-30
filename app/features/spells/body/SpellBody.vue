@@ -75,7 +75,7 @@
           v-if="spell.affiliation?.feats"
           :items="spell.affiliation.feats"
           label="Черты"
-          section="species"
+          section="feats"
         />
       </div>
     </div>
