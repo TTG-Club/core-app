@@ -65,8 +65,9 @@ export default defineAppConfig({
           class: [
             'text-link',
             'hover:text-link',
+            'hover:underline',
             'active:brightness-80',
-            'transition-[filter]',
+            'transition-[filter,text-decoration]',
           ],
         },
       ],
