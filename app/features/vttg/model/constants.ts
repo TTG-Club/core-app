@@ -185,7 +185,7 @@ export const VTTG_CAROUSEL_HEADING: VttgHeading = {
 };
 
 export const VTTG_FEATURES_HEADING: VttgHeading = {
-  title: 'Мощный функционал',
+  title: 'Богатый инструментарий',
   subtitle: 'Созданный для Мастеров, которые ценят своё время',
 };
 

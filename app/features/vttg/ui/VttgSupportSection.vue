@@ -4,7 +4,7 @@
 </script>
 
 <template>
-  <section class="py-28">
+  <section class="vttg-support-section py-28">
     <div class="mx-auto px-6 lg:max-w-330 lg:px-8">
       <div
         class="relative mx-auto max-w-4xl overflow-hidden rounded-3xl border border-[oklch(0.828_0.189_84.429)]/20 bg-elevated px-6 py-16 text-center"
@@ -37,44 +37,7 @@
 </template>
 
 <style scoped>
-  .vttg-support-button {
-    --vttg-gold: oklch(0.828 0.189 84.429);
-
-    border: 1px solid color-mix(in oklch, var(--vttg-gold) 35%, transparent) !important;
-    border-radius: 0.75rem;
-
-    font-weight: 600;
-    color: var(--vttg-gold) !important;
-    letter-spacing: 0.05em;
-
-    background: color-mix(
-      in oklch,
-      var(--vttg-gold) 10%,
-      transparent
-    ) !important;
-    backdrop-filter: blur(8px);
-    box-shadow: 0 4px 12px
-      color-mix(in oklch, var(--vttg-gold) 10%, transparent) !important;
-
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .vttg-support-button:hover {
-    transform: translateY(-2px);
-
-    border-color: var(--vttg-gold) !important;
-
-    color: var(--ui-text-highlighted) !important;
-
-    background: color-mix(
-      in oklch,
-      var(--vttg-gold) 20%,
-      transparent
-    ) !important;
-    box-shadow: 0 0 20px color-mix(in oklch, var(--vttg-gold) 25%, transparent) !important;
-  }
-
-  .vttg-support-button:active {
-    transform: translateY(0);
+  .vttg-support-section {
+    display: block;
   }
 </style>
