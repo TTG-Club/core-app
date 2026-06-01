@@ -28,9 +28,7 @@
         {{ VTTG_CAMPAIGN_BANNER.title }}
       </h2>
 
-      <p
-        class="max-w-3xl text-sm leading-relaxed text-neutral-300 md:text-base"
-      >
+      <p class="max-w-3xl text-xs leading-relaxed text-neutral-300 md:text-sm">
         {{ VTTG_CAMPAIGN_BANNER.description }}
       </p>
     </div>
@@ -44,7 +42,7 @@
         color="neutral"
         variant="subtle"
         size="lg"
-        class="vttg-btn-secondary w-full sm:w-auto"
+        class="w-full vttg-btn-secondary sm:w-auto"
         :style="{
           '--btn-border':
             'color-mix(in oklch, var(--vttg-gold) 35%, transparent)',
@@ -66,7 +64,7 @@
         target="_blank"
         color="primary"
         size="lg"
-        class="vttg-btn-primary w-full sm:w-auto"
+        class="w-full vttg-btn-primary sm:w-auto"
         :style="{
           '--btn-bg': 'var(--vttg-gold)',
           '--btn-text': 'var(--ui-bg)',
@@ -126,44 +124,5 @@
         rgba(0, 0, 0, 0.6) 100%
       );
     }
-  }
-
-  .vttg-btn-primary {
-    font-weight: 600;
-    color: var(--btn-text) !important;
-    background-color: var(--btn-bg) !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .vttg-btn-primary:hover {
-    --btn-bg: color-mix(
-      in oklch,
-      var(--vttg-gold) 90%,
-      var(--ui-text-highlighted)
-    ) !important;
-
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px
-      color-mix(in oklch, var(--vttg-gold) 35%, transparent) !important;
-  }
-
-  .vttg-btn-primary:active {
-    transform: translateY(0);
-  }
-
-  .vttg-btn-secondary {
-    border: 1px solid var(--btn-border) !important;
-    color: var(--btn-text) !important;
-    background-color: var(--btn-bg) !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .vttg-btn-secondary:hover {
-    --btn-text: var(--ui-text-highlighted) !important;
-    --btn-border: var(--vttg-gold) !important;
-    --btn-bg: color-mix(in oklch, var(--vttg-gold) 20%, transparent) !important;
-  }
-  .vttg-btn-secondary:active {
-    transform: translateY(0);
   }
 </style>

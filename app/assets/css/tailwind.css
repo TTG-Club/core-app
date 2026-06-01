@@ -38,3 +38,138 @@
 body {
   @apply bg-muted bg-linear-(--color-bg-main-gradient) bg-cover bg-fixed bg-no-repeat scheme-light dark:scheme-dark svifty7:scheme-dark;
 }
+
+:root {
+  --vttg-gold: oklch(0.828 0.189 84.429);
+}
+
+@utility vttg-btn-primary {
+  font-weight: 600;
+  color: var(--btn-text) !important;
+  background-color: var(--btn-bg) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    --btn-bg: color-mix(
+      in oklch,
+      var(--vttg-gold) 90%,
+      var(--ui-text-highlighted)
+    ) !important;
+
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px
+      color-mix(in oklch, var(--vttg-gold) 35%, transparent) !important;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+@utility vttg-btn-secondary {
+  border: 1px solid var(--btn-border) !important;
+  color: var(--btn-text) !important;
+  background-color: var(--btn-bg) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    --btn-text: var(--ui-text-highlighted) !important;
+    --btn-border: var(--vttg-gold) !important;
+    --btn-bg: color-mix(in oklch, var(--vttg-gold) 20%, transparent) !important;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+@utility vttg-hero-button {
+  border-radius: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@utility vttg-hero-button--primary {
+  color: var(--ui-bg) !important;
+  background: var(--vttg-gold) !important;
+  box-shadow: 0 4px 14px color-mix(in oklch, var(--vttg-gold) 30%, transparent) !important;
+
+  &:hover {
+    transform: translateY(-2px);
+    background: color-mix(
+      in oklch,
+      var(--vttg-gold) 90%,
+      var(--ui-text-highlighted)
+    ) !important;
+    box-shadow: 0 6px 20px
+      color-mix(in oklch, var(--vttg-gold) 50%, transparent) !important;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+@utility vttg-hero-button--support {
+  border: 1px solid color-mix(in oklch, var(--vttg-gold) 35%, transparent) !important;
+
+  color: var(--vttg-gold) !important;
+
+  background: color-mix(in oklch, var(--vttg-gold) 10%, transparent) !important;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px color-mix(in oklch, var(--vttg-gold) 10%, transparent) !important;
+
+  &:hover {
+    transform: translateY(-2px);
+
+    border-color: var(--vttg-gold) !important;
+
+    color: var(--ui-text-highlighted) !important;
+
+    background: color-mix(
+      in oklch,
+      var(--vttg-gold) 20%,
+      transparent
+    ) !important;
+    box-shadow: 0 0 20px color-mix(in oklch, var(--vttg-gold) 25%, transparent) !important;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+@utility vttg-support-button {
+  border: 1px solid color-mix(in oklch, var(--vttg-gold) 35%, transparent) !important;
+  border-radius: 0.75rem;
+
+  font-weight: 600;
+  color: var(--vttg-gold) !important;
+  letter-spacing: 0.05em;
+
+  background: color-mix(in oklch, var(--vttg-gold) 10%, transparent) !important;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px color-mix(in oklch, var(--vttg-gold) 10%, transparent) !important;
+
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    transform: translateY(-2px);
+
+    border-color: var(--vttg-gold) !important;
+
+    color: var(--ui-text-highlighted) !important;
+
+    background: color-mix(
+      in oklch,
+      var(--vttg-gold) 20%,
+      transparent
+    ) !important;
+    box-shadow: 0 0 20px color-mix(in oklch, var(--vttg-gold) 25%, transparent) !important;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
