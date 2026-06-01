@@ -187,7 +187,9 @@ html.dark {
   --ui-text-toned: var(--color-neutral-500); /* #d9d9d9 */
   --ui-text: var(--color-neutral-100); /* #f8f8f8 */
   --ui-text-highlighted: var(--color-neutral-50); /* #ffffff */
-  --ui-text-inverted: var(--color-neutral-50); /* #0d1a22 */
+  --ui-text-inverted: oklch(
+    0.98 0.008 235
+  ); /* #ffffff with subtle theme tint */
   --ui-bg: oklch(0.18 0.025 235); /* #0d1a22 */
   --ui-bg-muted: oklch(0.22 0.028 235); /* #19222A */
   --ui-bg-elevated: oklch(0.24 0.03 235); /* #19222A */

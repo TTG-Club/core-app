@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { HomeBackground } from '~home/background';
-  import { HomeBanners } from '~home/banners';
+  import { HomeBanners, VttgCampaignBanner } from '~home/banners';
   import { HomeBugLeaderboard } from '~home/bug-leaderboard';
   import { HomeCounters } from '~home/counters';
   import { HomeRecentChanges } from '~home/recent-changes';
@@ -31,6 +31,8 @@
       </h1>
 
       <SearchPanel />
+
+      <VttgCampaignBanner />
 
       <HomeSections />
 
