@@ -28,7 +28,9 @@
         {{ VTTG_CAMPAIGN_BANNER.title }}
       </h2>
 
-      <p class="max-w-3xl text-xs leading-relaxed text-neutral-300 md:text-sm">
+      <p
+        class="max-w-3xl text-sm leading-relaxed text-neutral-300 md:text-base"
+      >
         {{ VTTG_CAMPAIGN_BANNER.description }}
       </p>
     </div>
