@@ -180,15 +180,18 @@
             const link = h(
               ULink,
               {
-                href: `#${feature.key}`,
-                replace: true,
+                // Без href/to — это не навигация, а прокрутка к умению внутри
+                // текущего контейнера (страница, дровер или панель). Ссылка с
+                // навигацией закрывала бы дровер-оверлей и скроллила страницу.
+                as: 'a',
                 class: [
+                  'cursor-pointer',
                   feature.isSubclass ? 'text-success hover:text-success' : '',
                   'transition-colors duration-100',
                 ],
                 onClick: withModifiers(
                   () => scrollToAnchor(feature.key),
-                  ['left', 'exact', 'prevent'],
+                  ['left', 'exact'],
                 ),
               },
               {

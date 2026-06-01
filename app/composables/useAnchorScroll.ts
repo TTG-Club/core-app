@@ -9,6 +9,38 @@ function isHTMLElement(value: unknown): value is HTMLElement {
   return value instanceof HTMLElement;
 }
 
+/**
+ * Проверяет, может ли элемент прокручиваться по вертикали.
+ */
+function isScrollable(element: HTMLElement): boolean {
+  const { overflowY } = window.getComputedStyle(element);
+
+  const canScrollY =
+    overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay';
+
+  return canScrollY && element.scrollHeight > element.clientHeight;
+}
+
+/**
+ * Находит ближайшего прокручиваемого предка элемента.
+ * В дровере и в режиме «во всю ширину» якорь лежит внутри своего
+ * контейнера со скроллом, а не документа. Если такого предка нет
+ * (стандартный просмотр) — возвращает корень документа.
+ */
+function getScrollParent(element: HTMLElement): HTMLElement {
+  let current = element.parentElement;
+
+  while (current && current !== document.body) {
+    if (isScrollable(current)) {
+      return current;
+    }
+
+    current = current.parentElement;
+  }
+
+  return document.documentElement;
+}
+
 export function useAnchorScroll(config?: AnchorScrollConfiguration) {
   const resultConfig: AnchorScrollConfiguration = merge(
     {
@@ -46,18 +78,31 @@ export function useAnchorScroll(config?: AnchorScrollConfiguration) {
     const defaultOptions = toValue(resultConfig.toAnchor);
     const mergedOptions = toMerged(defaultOptions ?? {}, options ?? {});
 
+    // Скроллим именно тот контейнер, в котором лежит якорь: документ
+    // в стандартном просмотре или панель/дровер в остальных режимах.
+    const scrollContainer = getScrollParent(anchorElement);
+    const isDocumentScroll = scrollContainer === document.documentElement;
+
+    const containerRect = isDocumentScroll
+      ? { top: 0, left: 0 }
+      : scrollContainer.getBoundingClientRect();
+
     const scrollByOptions: ScrollToOptions = {
       behavior: mergedOptions.behavior,
       ...(mergedOptions.offsetLeft !== undefined && {
-        left: left + mergedOptions.offsetLeft,
+        left: left - containerRect.left + mergedOptions.offsetLeft,
       }),
       ...(mergedOptions.offsetTop !== undefined && {
-        top: top + mergedOptions.offsetTop,
+        top: top - containerRect.top + mergedOptions.offsetTop,
       }),
     };
 
-    document.documentElement.scrollBy(scrollByOptions);
-    document.body.scrollBy(scrollByOptions);
+    if (isDocumentScroll) {
+      document.documentElement.scrollBy(scrollByOptions);
+      document.body.scrollBy(scrollByOptions);
+    } else {
+      scrollContainer.scrollBy(scrollByOptions);
+    }
 
     return true;
   };

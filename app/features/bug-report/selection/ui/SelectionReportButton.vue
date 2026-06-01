@@ -66,6 +66,16 @@
   const isVisible = ref(false);
   const buttonPosition = ref({ top: 0, left: 0 });
 
+  /**
+   * Снимок контекста выделения, зафиксированный в момент показа кнопки.
+   *
+   * Читать `window.getSelection()` в обработчике клика ненадёжно: внутри
+   * дровера (focus trap) клик по кнопке, вынесенной через Teleport в body,
+   * сбрасывает выделение до срабатывания события click. Поэтому контекст
+   * сохраняем заранее.
+   */
+  const capturedSelection = ref<TextSelection | null>(null);
+
   /** Позиционирует кнопку рядом с текущим выделением */
   function showButtonAtSelection() {
     const selection = window.getSelection();
@@ -73,6 +83,14 @@
     if (!selection || selection.isCollapsed || !selection.toString().trim()) {
       return;
     }
+
+    const textContext = extractTextContext(selection);
+
+    if (!textContext) {
+      return;
+    }
+
+    capturedSelection.value = textContext;
 
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
@@ -127,23 +145,16 @@
     showButtonAtSelection();
   }, 300);
 
-  /** Обрабатывает клик по кнопке: собирает контекст и открывает модалку */
+  /** Обрабатывает клик по кнопке: открывает модалку с заранее сохранённым контекстом */
   function handleReportClick() {
-    const selection = window.getSelection();
-
-    if (!selection || selection.isCollapsed) {
-      isVisible.value = false;
-
-      return;
-    }
-
-    const textContext = extractTextContext(selection);
+    const textContext = capturedSelection.value;
 
     if (textContext) {
       openReportWithSelection(textContext);
     }
 
-    selection.removeAllRanges();
+    window.getSelection()?.removeAllRanges();
+    capturedSelection.value = null;
     isVisible.value = false;
   }
 
@@ -159,11 +170,12 @@
       <button
         v-if="isVisible"
         data-selection-report-button
-        class="absolute z-[9999] flex -translate-x-1/2 cursor-pointer items-center gap-1.5 rounded-lg border border-default bg-elevated px-3 py-1.5 text-xs leading-5 font-medium whitespace-nowrap text-highlighted shadow-lg transition-all duration-150 ease-in-out hover:border-accented hover:bg-accented"
+        class="pointer-events-auto absolute z-[9999] flex -translate-x-1/2 cursor-pointer items-center gap-1.5 rounded-lg border border-default bg-elevated px-3 py-1.5 text-xs leading-5 font-medium whitespace-nowrap text-highlighted shadow-lg transition-all duration-150 ease-in-out hover:border-accented hover:bg-accented"
         :style="{
           top: `${buttonPosition.top}px`,
           left: `${buttonPosition.left}px`,
         }"
+        @pointerdown.stop
         @click.left.exact.prevent="handleReportClick"
       >
         <UIcon
