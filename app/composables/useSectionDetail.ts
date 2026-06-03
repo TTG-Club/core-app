@@ -71,6 +71,22 @@ export function useSectionDetail<TDetail>(
     return typeof detail === 'string' && detail ? detail : '';
   });
 
+  /**
+   * Путь детальной страницы для узкого режима (например, '/classes/bard-phb').
+   * Используется для редиректа с query.detail на отдельную страницу,
+   * когда сплит-режим неактивен (зеркальный к useSectionDetailRedirect случай).
+   */
+  const detailPagePath = computed(
+    () => `${options.sectionPath}/${detailUrl.value}`,
+  );
+
+  // Серверный redirect: если сплит-режим неактивен, но в query есть detail
+  // (например, открыли расшаренную из Wide Mode ссылку в узком режиме),
+  // сразу перенаправляем на отдельную детальную страницу.
+  if (import.meta.server && !isSplitActive.value && detailUrl.value) {
+    navigateTo(detailPagePath.value, { replace: true, redirectCode: 302 });
+  }
+
   const detailData = shallowRef<TDetail | null>(null);
   const detailStatus = ref<FetchStatusValue>(FetchStatus.Idle);
   const isDetailDismissed = ref(false);
@@ -185,12 +201,7 @@ export function useSectionDetail<TDetail>(
     isRouterReady.value = true;
 
     if (!isSplitActive.value && detailUrl.value) {
-      router.replace({
-        query: {
-          ...route.query,
-          detail: undefined,
-        },
-      });
+      router.replace(detailPagePath.value);
 
       return;
     }

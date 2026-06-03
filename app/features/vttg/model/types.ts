@@ -19,6 +19,17 @@ export interface FaqItem {
   content: string;
 }
 
+export interface VttgHighlight {
+  icon: string;
+  title: string;
+  description: string;
+}
+
+export interface VttgHeading {
+  title: string;
+  subtitle?: string;
+}
+
 export const VIDEO_EXTENSIONS = ['.webm', '.mp4'] as const;
 
 export type VideoExtension = (typeof VIDEO_EXTENSIONS)[number];

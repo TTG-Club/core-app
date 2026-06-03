@@ -172,6 +172,7 @@
     v-model:open="isModalOpen"
     title="Сообщить о баге"
     class="sm:w-fit sm:max-w-[90vw]"
+    :ui="{ overlay: 'z-[100]', content: 'z-[100]' }"
   >
     <template #body>
       <div class="flex flex-col gap-4 lg:flex-row">

@@ -1,6 +1,12 @@
 import type { ButtonProps } from '@nuxt/ui';
 
-import type { CarouselCard, FaqItem, FeatureItem } from './types';
+import type {
+  CarouselCard,
+  FaqItem,
+  FeatureItem,
+  VttgHeading,
+  VttgHighlight,
+} from './types';
 
 export const VTTG_SEO = {
   title: 'Virtual TTG Club — Виртуальный стол для D&D 5e',
@@ -10,6 +16,13 @@ export const VTTG_SEO = {
 
 export const VTTG_HERO_BACKGROUND = '/s3/vttgw/main-bg.webp';
 export const VTTG_HERO_VIDEO = '/s3/vttgw/video.webm';
+
+export const VTTG_HERO_CONTENT = {
+  titleLead: 'Virtual',
+  titleAccent: 'TTG Club',
+  descriptionLead: 'Полноценный виртуальный стол для D&D 5e.',
+  descriptionTrail: 'Карты, кубики, персонажи — всё в одном месте.',
+} as const;
 
 export const VTTG_HERO_LINKS: ButtonProps[] = [
   {
@@ -25,6 +38,8 @@ export const VTTG_HERO_LINKS: ButtonProps[] = [
     icon: 'tabler:heart',
     size: 'xl',
     color: 'neutral',
+    to: 'https://crowdrepublic.ru/projects/1073013',
+    target: '_blank',
     variant: 'subtle',
   },
 ];
@@ -164,3 +179,42 @@ export const FAQ_ITEMS: FaqItem[] = [
       'Да, это уже реализовано в альфа-режиме. Возможно, пока еще не везде есть полноценное API, но вы уже можете создавать и подключать собственные внешние модули.',
   },
 ];
+
+export const VTTG_CAROUSEL_HEADING: VttgHeading = {
+  title: 'Всё для идеальной игровой сессии',
+};
+
+export const VTTG_FEATURES_HEADING: VttgHeading = {
+  title: 'Богатый инструментарий',
+  subtitle: 'Созданный для Мастеров, которые ценят своё время',
+};
+
+export const VTTG_FAQ_HEADING: VttgHeading = {
+  title: 'Частые вопросы',
+  subtitle: 'Всё, что нужно знать перед первой игрой',
+};
+
+export const VTTG_FEATURES_MORE: VttgHighlight = {
+  icon: 'tabler:apps',
+  title: 'И многое другое',
+  description:
+    'Система плейлистов, готовая система пресетов звуковых эффектов, система освещения, система заклинаний, автоматизация и многое другое.',
+};
+
+export const VTTG_SUPPORT = {
+  title: 'Поддержите проект',
+  description:
+    'Ваша поддержка поможет нам полностью реализовать продукт и сделать его лучше и масштабнее для всех игроков.',
+  action: {
+    label: 'Поддержать проект',
+    icon: 'tabler:heart',
+    color: 'primary',
+    size: 'xl',
+    to: 'https://crowdrepublic.ru/projects/1073013',
+    target: '_blank',
+  },
+} satisfies {
+  title: string;
+  description: string;
+  action: ButtonProps;
+};

@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import type { Cell, ColumnDef, Header } from '@tanstack/vue-table';
-  import type { RouteLocationRaw } from 'vue-router';
 
   import type { Level } from '~/shared/types';
 
@@ -80,8 +79,6 @@
   }, 10);
 
   const { scrollToAnchor } = useAnchorScroll();
-  const route = useRoute();
-  const router = useRouter();
 
   const { getProficiencyBonus } = useDndMechanics({
     casterType: props.casterType,
@@ -271,25 +268,6 @@
     return row;
   }
 
-  /**
-   * Формирует ссылку на умение без потери текущих параметров мультикласса.
-   */
-  function getFeatureRoute(anchorId: string): RouteLocationRaw {
-    return {
-      path: route.path,
-      query: route.query,
-      hash: `#${anchorId}`,
-    };
-  }
-
-  /**
-   * Прокручивает к описанию умения и обновляет hash в текущем URL.
-   */
-  function handleFeatureClick(anchorId: string) {
-    scrollToAnchor(anchorId);
-    router.replace(getFeatureRoute(anchorId));
-  }
-
   const tableColumns = computed<ColumnDef<MulticlassTableRow>[]>(() => {
     const baseColumns: ColumnDef<MulticlassTableRow>[] = [
       {
@@ -328,15 +306,18 @@
             const link = h(
               ULink,
               {
-                to: getFeatureRoute(feature.anchorId),
-                replace: true,
+                // Без href/to — это не навигация, а прокрутка к умению внутри
+                // текущего контейнера (страница, дровер или панель). Ссылка с
+                // навигацией закрывала бы дровер-оверлей и скроллила страницу.
+                as: 'a',
                 class: [
+                  'cursor-pointer',
                   feature.isSubclass ? 'text-success hover:text-success' : '',
                   'transition-colors duration-100',
                 ],
                 onClick: withModifiers(
-                  () => handleFeatureClick(feature.anchorId),
-                  ['left', 'exact', 'prevent'],
+                  () => scrollToAnchor(feature.anchorId),
+                  ['left', 'exact'],
                 ),
               },
               {
