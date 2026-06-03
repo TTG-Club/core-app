@@ -27,7 +27,6 @@
             <UButton
               v-bind="VTTG_SUPPORT.action"
               class="vttg-support-button"
-              @click.left.exact.prevent
             />
           </div>
         </div>
