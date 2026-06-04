@@ -14,11 +14,12 @@
 
   const TARGET_TYPE_OPTIONS: Array<{ label: string; value: SpellTargetType }> =
     [
-      { label: 'Нет', value: 'NONE' },
-      { label: 'На себя', value: 'SELF' },
       { label: 'Существо', value: 'CREATURE' },
       { label: 'Предмет', value: 'OBJECT' },
+      { label: 'Точка', value: 'POINT' },
+      { label: 'На себя', value: 'SELF' },
       { label: 'Область', value: 'AREA' },
+      { label: 'Нет цели', value: 'NONE' },
     ];
 
   const showTargetCount = computed(() => {

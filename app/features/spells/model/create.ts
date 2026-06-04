@@ -4,7 +4,13 @@ import type { EditorBaseInfoState } from '~ui/editor';
 /**
  * Тип цели заклинания.
  */
-export type SpellTargetType = 'NONE' | 'SELF' | 'CREATURE' | 'OBJECT' | 'AREA';
+export type SpellTargetType =
+  | 'CREATURE'
+  | 'OBJECT'
+  | 'POINT'
+  | 'SELF'
+  | 'AREA'
+  | 'NONE';
 
 /**
  * Вложенный объект области воздействия.
