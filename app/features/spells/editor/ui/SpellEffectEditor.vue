@@ -1,0 +1,216 @@
+<script setup lang="ts">
+  import type { SpellEffect, SpellTargetType } from '~spells/model';
+
+  import {
+    SelectAbilities,
+    SelectAttackType,
+    SelectCondition,
+    SelectDamageType,
+    SelectHealType,
+    SelectSpellArea,
+  } from '~ui/select';
+
+  const model = defineModel<SpellEffect>({ required: true });
+
+  const TARGET_TYPE_OPTIONS: Array<{ label: string; value: SpellTargetType }> =
+    [
+      { label: 'Нет', value: 'NONE' },
+      { label: 'На себя', value: 'SELF' },
+      { label: 'Существо', value: 'CREATURE' },
+      { label: 'Предмет', value: 'OBJECT' },
+      { label: 'Область', value: 'AREA' },
+    ];
+
+  const showTargetCount = computed(() => {
+    const targetType = model.value.targetType;
+
+    return targetType === 'CREATURE' || targetType === 'OBJECT';
+  });
+
+  const showAreaOfEffect = computed(() => model.value.targetType === 'AREA');
+
+  const showValue2 = computed(() => {
+    const areaType = model.value.areaOfEffect?.type;
+
+    return areaType === 'LINE' || areaType === 'CYLINDER';
+  });
+
+  const showAutoHitWarning = computed(() => {
+    if (!model.value.autoHit) {
+      return false;
+    }
+
+    const hasAttackType = !!model.value.attackType;
+    const hasSavingThrows = (model.value.savingThrows?.length ?? 0) > 0;
+
+    return hasAttackType || hasSavingThrows;
+  });
+</script>
+
+<template>
+  <UCard variant="subtle">
+    <template #header>
+      <h2 class="truncate text-base text-highlighted">
+        Воздействие заклинания
+      </h2>
+    </template>
+
+    <div class="grid grid-cols-24 gap-4">
+      <!-- Тип цели -->
+      <UFormField
+        class="col-span-6"
+        label="Тип цели"
+        name="effect.targetType"
+      >
+        <USelect
+          v-model="model.targetType"
+          :items="TARGET_TYPE_OPTIONS"
+          placeholder="Выбери тип цели"
+          clearable
+        />
+      </UFormField>
+
+      <!-- Количество целей (только для CREATURE и OBJECT) -->
+      <UFormField
+        v-if="showTargetCount"
+        class="col-span-6"
+        label="Количество целей"
+        name="effect.targetCount"
+      >
+        <UInput
+          v-model.number="model.targetCount"
+          type="number"
+          placeholder="Количество целей"
+          :min="1"
+        />
+      </UFormField>
+
+      <!-- Автопопадание -->
+      <UFormField
+        class="col-span-6"
+        label="Автопопадание"
+        name="effect.autoHit"
+      >
+        <USwitch
+          v-model="model.autoHit"
+          label="Автопопадание"
+        />
+      </UFormField>
+
+      <!-- Тип атаки -->
+      <UFormField
+        class="col-span-6"
+        label="Тип атаки"
+        name="effect.attackType"
+      >
+        <SelectAttackType v-model="model.attackType" />
+      </UFormField>
+
+      <!-- Предупреждение при autoHit + attackType/savingThrows -->
+      <UAlert
+        v-if="showAutoHitWarning"
+        class="col-span-full"
+        color="warning"
+        variant="subtle"
+        title="Конфликт настроек"
+        description="При включённом автопопадании тип атаки и спасброски не должны быть заполнены."
+      />
+
+      <!-- Формула воздействия -->
+      <UFormField
+        class="col-span-12"
+        label="Формула воздействия"
+        name="effect.damageFormula"
+      >
+        <UInput
+          v-model="model.damageFormula"
+          placeholder="Например: 8d6"
+        />
+      </UFormField>
+
+      <!-- Типы урона -->
+      <UFormField
+        class="col-span-6"
+        label="Типы урона"
+        name="effect.damageTypes"
+      >
+        <SelectDamageType
+          v-model="model.damageTypes"
+          multiple
+        />
+      </UFormField>
+
+      <!-- Типы лечения -->
+      <UFormField
+        class="col-span-6"
+        label="Типы лечения"
+        name="effect.healingTypes"
+      >
+        <SelectHealType
+          v-model="model.healingTypes"
+          multiple
+        />
+      </UFormField>
+
+      <!-- Спасброски -->
+      <UFormField
+        class="col-span-6"
+        label="Спасброски"
+        name="effect.savingThrows"
+      >
+        <SelectAbilities
+          v-model="model.savingThrows"
+          multiple
+        />
+      </UFormField>
+
+      <!-- Состояния -->
+      <UFormField
+        class="col-span-6"
+        label="Состояния"
+        name="effect.conditions"
+      >
+        <SelectCondition
+          v-model="model.conditions"
+          multiple
+        />
+      </UFormField>
+
+      <!-- Область воздействия (только для AREA) -->
+      <template v-if="showAreaOfEffect">
+        <UFormField
+          class="col-span-6"
+          label="Область воздействия"
+          name="effect.areaOfEffect.type"
+        >
+          <SelectSpellArea v-model="model.areaOfEffect!.type" />
+        </UFormField>
+
+        <UFormField
+          class="col-span-3"
+          label="Радиус/длина"
+          name="effect.areaOfEffect.value1"
+        >
+          <UInput
+            v-model.number="model.areaOfEffect!.value1"
+            type="number"
+            placeholder="Значение"
+          />
+        </UFormField>
+
+        <UFormField
+          v-if="showValue2"
+          class="col-span-3"
+          label="Высота/ширина"
+          name="effect.areaOfEffect.value2"
+        >
+          <UInput
+            v-model.number="model.areaOfEffect!.value2"
+            type="number"
+            placeholder="Значение"
+          />
+        </UFormField>
+      </template>
+    </div>
+  </UCard>
+</template>
