@@ -7,6 +7,16 @@ import { cloneDeep, isEqual, toMerged } from 'es-toolkit';
 export interface WorkshopFormOptions<T> {
   actionUrl: string;
   getInitialState: () => T;
+  /**
+   * Нормализует загруженные с сервера raw-данные перед слиянием с начальным состоянием.
+   * Используется для миграции старых записей и приведения данных к актуальной структуре.
+   */
+  normalizeLoaded?: (raw: Record<string, unknown>) => Record<string, unknown>;
+  /**
+   * Трансформирует состояние формы перед отправкой на сервер.
+   * Используется для очистки пустых полей, нормализации вложенных объектов и т.д.
+   */
+  transformBeforeSubmit?: (state: T) => T;
 }
 
 export function useWorkshopForm<T extends Record<string, any>>(
@@ -38,7 +48,12 @@ export function useWorkshopForm<T extends Record<string, any>>(
     if (isEditForm.value) {
       try {
         const resp = await $fetch<T>(`${actionUrl.value}/raw`);
-        const merged = toMerged(_options.getInitialState(), resp);
+
+        const normalizedResp = _options.normalizeLoaded
+          ? _options.normalizeLoaded(resp as unknown as Record<string, unknown>)
+          : resp;
+
+        const merged = toMerged(_options.getInitialState(), normalizedResp);
 
         state.value = cloneDeep(merged);
         prevState.value = cloneDeep(merged);
@@ -75,9 +90,13 @@ export function useWorkshopForm<T extends Record<string, any>>(
     }
 
     try {
+      const body = _options.transformBeforeSubmit
+        ? _options.transformBeforeSubmit(toValue(state))
+        : toValue(state);
+
       await $fetch(toValue(actionUrl), {
         method: toValue(isEditForm) ? 'put' : 'post',
-        body: toValue(state),
+        body,
         onResponse,
       });
     } catch (err) {
