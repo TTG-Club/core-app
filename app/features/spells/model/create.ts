@@ -12,6 +12,8 @@ export type SpellTargetType =
   | 'AREA'
   | 'NONE';
 
+export type SpellSaveEffect = 'HALF' | 'NONE' | 'SPECIAL';
+
 /**
  * Вложенный объект области воздействия.
  */
@@ -35,6 +37,7 @@ export interface SpellEffect {
   damageTypes?: string[];
   healingTypes?: string[];
   savingThrows?: AbilityKey[];
+  saveEffect?: SpellSaveEffect;
   conditions?: string[];
 }
 
@@ -114,6 +117,7 @@ export function createEmptySpellEffect(): SpellEffect {
     damageTypes: [],
     healingTypes: [],
     savingThrows: [],
+    saveEffect: undefined,
     conditions: [],
   };
 }
@@ -174,6 +178,10 @@ export function normalizeSpellEffect(
 
   if (effect.savingThrows && effect.savingThrows.length > 0) {
     normalized.savingThrows = effect.savingThrows;
+  }
+
+  if (effect.saveEffect) {
+    normalized.saveEffect = effect.saveEffect;
   }
 
   if (effect.conditions && effect.conditions.length > 0) {

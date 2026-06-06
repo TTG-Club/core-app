@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SpellEffect, SpellTargetType } from '~spells/model';
+  import type { SpellEffect } from '../../model';
 
   import {
     SelectAbilities,
@@ -10,17 +10,12 @@
     SelectSpellArea,
   } from '~ui/select';
 
-  const model = defineModel<SpellEffect>({ required: true });
+  import {
+    SPELL_SAVE_EFFECT_OPTIONS,
+    SPELL_TARGET_TYPE_OPTIONS,
+  } from '../../model';
 
-  const TARGET_TYPE_OPTIONS: Array<{ label: string; value: SpellTargetType }> =
-    [
-      { label: 'Существо', value: 'CREATURE' },
-      { label: 'Предмет', value: 'OBJECT' },
-      { label: 'Точка', value: 'POINT' },
-      { label: 'На себя', value: 'SELF' },
-      { label: 'Область', value: 'AREA' },
-      { label: 'Нет цели', value: 'NONE' },
-    ];
+  const model = defineModel<SpellEffect>({ required: true });
 
   const showTargetCount = computed(() => {
     const targetType = model.value.targetType;
@@ -65,7 +60,7 @@
       >
         <USelect
           v-model="model.targetType"
-          :items="TARGET_TYPE_OPTIONS"
+          :items="SPELL_TARGET_TYPE_OPTIONS"
           placeholder="Выбери тип цели"
           clearable
         />
@@ -162,6 +157,19 @@
         <SelectAbilities
           v-model="model.savingThrows"
           multiple
+        />
+      </UFormField>
+
+      <UFormField
+        class="col-span-6"
+        label="При успехе"
+        name="effect.saveEffect"
+      >
+        <USelect
+          v-model="model.saveEffect"
+          :items="SPELL_SAVE_EFFECT_OPTIONS"
+          placeholder="Выбери эффект"
+          clearable
         />
       </UFormField>
 
