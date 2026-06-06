@@ -81,15 +81,15 @@
         />
       </UFormField>
 
-      <!-- Автопопадание -->
+      <!-- Авто попадание -->
       <UFormField
         class="col-span-6"
-        label="Автопопадание"
+        label="Авто попадание"
         name="effect.autoHit"
       >
         <USwitch
           v-model="model.autoHit"
-          label="Автопопадание"
+          label="Авто попадание"
         />
       </UFormField>
 
