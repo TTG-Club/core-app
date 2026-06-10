@@ -41,6 +41,7 @@ export default defineNuxtConfig({
     '@nuxtjs/device',
     '@nuxtjs/seo',
     '@nuxt/image',
+    '@nuxt/scripts',
     '@nuxt/eslint',
     '@vueuse/nuxt',
     '@pinia/nuxt',
@@ -348,6 +349,16 @@ export default defineNuxtConfig({
       lightGallery: {
         licenseKey:
           process.env.NUXT_LIGHT_GALLERY_LICENSE_KEY || '0000-0000-000-0000',
+      },
+      analytics: {
+        // ID — публичные значения общих счётчиков основного домена. На dev метрика
+        // не грузится (гейт по import.meta.dev в плагине). Можно переопределить или
+        // отключить через env NUXT_PUBLIC_ANALYTICS_*. Пусто => счётчик не подключается.
+        yandexMetrikaId:
+          process.env.NUXT_PUBLIC_ANALYTICS_YANDEX_METRIKA_ID || '86582536',
+        googleAnalyticsId:
+          process.env.NUXT_PUBLIC_ANALYTICS_GOOGLE_ANALYTICS_ID
+          || 'G-WXD97L1HCX',
       },
     },
     site: {
