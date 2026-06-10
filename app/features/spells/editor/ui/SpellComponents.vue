@@ -29,8 +29,8 @@
 </script>
 
 <template>
-  <div class="col-span-full mt-4 flex gap-4">
-    <p class="text-lg">Компоненты</p>
+  <div class="col-span-full mt-4 flex flex-col gap-2 sm:flex-row sm:gap-4">
+    <p class="shrink-0 text-lg">Компоненты</p>
 
     <USeparator />
   </div>
@@ -40,7 +40,7 @@
     attach
     :state="components"
   >
-    <div class="col-span-5">
+    <div class="col-span-full md:col-span-8 xl:col-span-5">
       <UFormField name="v">
         <UCheckbox
           v-model="components.v"
@@ -49,7 +49,7 @@
       </UFormField>
     </div>
 
-    <div class="col-span-5">
+    <div class="col-span-full md:col-span-8 xl:col-span-5">
       <UFormField name="s">
         <UCheckbox
           v-model="components.s"
@@ -58,7 +58,7 @@
       </UFormField>
     </div>
 
-    <div class="col-span-5">
+    <div class="col-span-full md:col-span-8 xl:col-span-5">
       <UFormField>
         <UCheckbox
           :model-value="!!components.m"
@@ -81,7 +81,7 @@
       </UFormField>
 
       <UFormField
-        class="col-span-5"
+        class="col-span-full md:col-span-12 xl:col-span-5"
         name="m.withCost"
       >
         <UCheckbox
@@ -92,7 +92,7 @@
       </UFormField>
 
       <UFormField
-        class="col-span-5"
+        class="col-span-full md:col-span-12 xl:col-span-5"
         name="m.consumable"
       >
         <UCheckbox

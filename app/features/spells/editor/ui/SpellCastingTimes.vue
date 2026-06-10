@@ -80,8 +80,8 @@
 </script>
 
 <template>
-  <div class="col-span-full mt-4 flex gap-4">
-    <p class="w-1/5 text-lg">Время накладывания</p>
+  <div class="col-span-full mt-4 flex flex-col gap-2 sm:flex-row sm:gap-4">
+    <p class="shrink-0 text-lg sm:w-1/5">Время накладывания</p>
 
     <USeparator />
   </div>
@@ -94,7 +94,7 @@
     :state="time"
   >
     <UFormField
-      class="col-span-4"
+      class="col-span-full md:col-span-6 xl:col-span-4"
       label="Время накладывания"
       name="value"
     >
@@ -109,7 +109,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-4"
+      class="col-span-full md:col-span-6 xl:col-span-4"
       label="Единица времени"
       name="unit"
     >
@@ -125,7 +125,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-10"
+      class="col-span-full xl:col-span-10"
       label="Собственное значение"
       name="custom"
     >
@@ -141,6 +141,7 @@
       :item="time"
       :empty-object="getEmpty()"
       :index
+      cols="col-span-full xl:col-span-6"
     />
   </UForm>
 </template>

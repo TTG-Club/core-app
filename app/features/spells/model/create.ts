@@ -1,6 +1,8 @@
 import type { AbilityKey } from '~/shared/types';
 import type { EditorBaseInfoState } from '~ui/editor';
 
+import { SPELL_DAMAGE_TYPE_TAGS } from './constants';
+
 /**
  * Тип цели заклинания.
  */
@@ -33,6 +35,7 @@ export interface SpellEffect {
   areaOfEffect?: SpellAreaOfEffect;
   attackType?: string;
   autoHit?: boolean;
+  damageFormulas?: string[];
   damageFormula?: string;
   damageTypes?: string[];
   healingTypes?: string[];
@@ -113,12 +116,44 @@ export function createEmptySpellEffect(): SpellEffect {
     },
     attackType: undefined,
     autoHit: false,
+    damageFormulas: [],
     damageFormula: undefined,
     damageTypes: [],
     healingTypes: [],
     savingThrows: [],
     saveEffect: undefined,
     conditions: [],
+  };
+}
+
+function getSpellDamageTypeTag(damageType: string): string {
+  return SPELL_DAMAGE_TYPE_TAGS[damageType] ?? damageType;
+}
+
+function createSpellDamageFormula(formula: string, damageType: string): string {
+  return `${formula}@${getSpellDamageTypeTag(damageType)}`;
+}
+
+function migrateSpellEffectDamageFormulas(effect: SpellEffect): SpellEffect {
+  if (effect.damageFormulas && effect.damageFormulas.length > 0) {
+    return {
+      ...effect,
+      damageFormula: undefined,
+      damageTypes: [],
+    };
+  }
+
+  if (!effect.damageFormula || !effect.damageTypes?.length) {
+    return effect;
+  }
+
+  return {
+    ...effect,
+    damageFormulas: effect.damageTypes.map((damageType) =>
+      createSpellDamageFormula(effect.damageFormula ?? '', damageType),
+    ),
+    damageFormula: undefined,
+    damageTypes: [],
   };
 }
 
@@ -134,58 +169,64 @@ export function createEmptySpellEffect(): SpellEffect {
 export function normalizeSpellEffect(
   effect: SpellEffect,
 ): SpellEffect | undefined {
+  const migratedEffect = migrateSpellEffectDamageFormulas(effect);
   const normalized: SpellEffect = {};
 
-  if (effect.targetType) {
-    normalized.targetType = effect.targetType;
+  if (migratedEffect.targetType) {
+    normalized.targetType = migratedEffect.targetType;
   }
 
-  if (effect.targetCount !== undefined && effect.targetCount >= 1) {
-    normalized.targetCount = effect.targetCount;
+  if (
+    migratedEffect.targetCount !== undefined
+    && migratedEffect.targetCount >= 1
+  ) {
+    normalized.targetCount = migratedEffect.targetCount;
   }
 
-  if (effect.targetType === 'AREA' && effect.areaOfEffect?.type) {
+  if (
+    migratedEffect.targetType === 'AREA'
+    && migratedEffect.areaOfEffect?.type
+  ) {
     const showValue2 =
-      effect.areaOfEffect.type === 'LINE'
-      || effect.areaOfEffect.type === 'CYLINDER';
+      migratedEffect.areaOfEffect.type === 'LINE'
+      || migratedEffect.areaOfEffect.type === 'CYLINDER';
 
     normalized.areaOfEffect = {
-      type: effect.areaOfEffect.type,
-      value1: effect.areaOfEffect.value1,
-      value2: showValue2 ? effect.areaOfEffect.value2 : undefined,
+      type: migratedEffect.areaOfEffect.type,
+      value1: migratedEffect.areaOfEffect.value1,
+      value2: showValue2 ? migratedEffect.areaOfEffect.value2 : undefined,
     };
   }
 
-  if (effect.attackType) {
-    normalized.attackType = effect.attackType;
+  if (migratedEffect.attackType) {
+    normalized.attackType = migratedEffect.attackType;
   }
 
-  if (effect.autoHit) {
-    normalized.autoHit = effect.autoHit;
+  if (migratedEffect.autoHit) {
+    normalized.autoHit = migratedEffect.autoHit;
   }
 
-  if (effect.damageFormula) {
-    normalized.damageFormula = effect.damageFormula;
+  if (
+    migratedEffect.damageFormulas
+    && migratedEffect.damageFormulas.length > 0
+  ) {
+    normalized.damageFormulas = migratedEffect.damageFormulas;
   }
 
-  if (effect.damageTypes && effect.damageTypes.length > 0) {
-    normalized.damageTypes = effect.damageTypes;
+  if (migratedEffect.healingTypes && migratedEffect.healingTypes.length > 0) {
+    normalized.healingTypes = migratedEffect.healingTypes;
   }
 
-  if (effect.healingTypes && effect.healingTypes.length > 0) {
-    normalized.healingTypes = effect.healingTypes;
+  if (migratedEffect.savingThrows && migratedEffect.savingThrows.length > 0) {
+    normalized.savingThrows = migratedEffect.savingThrows;
   }
 
-  if (effect.savingThrows && effect.savingThrows.length > 0) {
-    normalized.savingThrows = effect.savingThrows;
+  if (migratedEffect.saveEffect) {
+    normalized.saveEffect = migratedEffect.saveEffect;
   }
 
-  if (effect.saveEffect) {
-    normalized.saveEffect = effect.saveEffect;
-  }
-
-  if (effect.conditions && effect.conditions.length > 0) {
-    normalized.conditions = effect.conditions;
+  if (migratedEffect.conditions && migratedEffect.conditions.length > 0) {
+    normalized.conditions = migratedEffect.conditions;
   }
 
   if (Object.keys(normalized).length === 0) {
@@ -208,7 +249,7 @@ export function normalizeLoadedSpell(
   if (result.effect && typeof result.effect === 'object') {
     const rawEffect = result.effect as Record<string, unknown>;
 
-    result.effect = {
+    result.effect = migrateSpellEffectDamageFormulas({
       ...createEmptySpellEffect(),
       ...rawEffect,
       areaOfEffect:
@@ -220,7 +261,7 @@ export function normalizeLoadedSpell(
               ...(rawEffect.areaOfEffect as Record<string, unknown>),
             }
           : createEmptySpellEffect().areaOfEffect,
-    };
+    });
   } else {
     // Миграция старых записей без effect
     const migratedEffect = createEmptySpellEffect();
@@ -235,6 +276,21 @@ export function normalizeLoadedSpell(
 
     if (Array.isArray(result.damageType)) {
       migratedEffect.damageTypes = result.damageType as string[];
+    }
+
+    if (
+      typeof result.damageFormula === 'string'
+      && migratedEffect.damageTypes
+      && migratedEffect.damageTypes.length > 0
+    ) {
+      const damageFormula = result.damageFormula;
+
+      migratedEffect.damageFormulas = migratedEffect.damageTypes.map(
+        (damageType) => createSpellDamageFormula(damageFormula, damageType),
+      );
+
+      migratedEffect.damageFormula = undefined;
+      migratedEffect.damageTypes = [];
     }
 
     if (Array.isArray(result.condition)) {
@@ -261,6 +317,8 @@ export function normalizeLoadedSpell(
     delete result.savingThrow;
     delete result.healingType;
     delete result.damageType;
+    delete result.damageFormula;
+    delete result.damageTypes;
     delete result.condition;
     delete result.attackType;
     delete result.areaOfEffect;

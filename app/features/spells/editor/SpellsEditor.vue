@@ -104,7 +104,7 @@
 
       <div class="grid grid-cols-24 gap-4">
         <UFormField
-          class="col-span-12"
+          class="col-span-full md:col-span-12"
           label="Уровень заклинания"
           name="level"
         >
@@ -112,7 +112,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-12"
+          class="col-span-full md:col-span-12"
           label="Школа"
           name="school"
         >
@@ -151,7 +151,7 @@
         <UFormField
           label="Описание"
           name="description"
-          class="col-span-12"
+          class="col-span-full lg:col-span-12"
         >
           <UTextarea
             v-model="state.description"
@@ -163,7 +163,7 @@
         <UFormField
           label="На более высоких уровнях"
           name="upper"
-          class="col-span-12"
+          class="col-span-full lg:col-span-12"
         >
           <UTextarea
             v-model="state.upper"
@@ -183,7 +183,7 @@
         <UFormField
           label="Классы"
           name="affiliations.classes"
-          class="col-span-6"
+          class="col-span-full md:col-span-12 xl:col-span-6"
         >
           <SelectClass
             v-model="state.affiliations.classes"
@@ -192,7 +192,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-6"
+          class="col-span-full md:col-span-12 xl:col-span-6"
           label="Подклассы"
           name="affiliations.subclasses"
         >
@@ -203,7 +203,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-6"
+          class="col-span-full md:col-span-12 xl:col-span-6"
           label="Виды"
           name="affiliations.species"
         >
@@ -214,7 +214,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-6"
+          class="col-span-full md:col-span-12 xl:col-span-6"
           label="Происхождения"
           name="affiliations.lineages"
         >
@@ -225,7 +225,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-6"
+          class="col-span-full md:col-span-12 xl:col-span-6"
           label="Черта"
           name="affiliations.feats"
         >

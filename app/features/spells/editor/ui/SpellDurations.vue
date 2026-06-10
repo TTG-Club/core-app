@@ -81,8 +81,8 @@
 </script>
 
 <template>
-  <div class="col-span-full mt-4 flex gap-4">
-    <p class="text-lg">Длительность</p>
+  <div class="col-span-full mt-4 flex flex-col gap-2 sm:flex-row sm:gap-4">
+    <p class="shrink-0 text-lg">Длительность</p>
 
     <USeparator />
   </div>
@@ -97,7 +97,7 @@
     <UFormField
       label="Длительность"
       name="value"
-      class="col-span-4"
+      class="col-span-full md:col-span-6 xl:col-span-4"
     >
       <UInputNumber
         v-model="duration.value"
@@ -110,7 +110,7 @@
     <UFormField
       label="Единица времени"
       name="unit"
-      class="col-span-4"
+      class="col-span-full md:col-span-6 xl:col-span-4"
     >
       <USelect
         :model-value="duration.unit"
@@ -125,7 +125,7 @@
 
     <UFormField
       name="concentration"
-      class="col-span-4 mb-2 flex items-end"
+      class="col-span-full mb-2 flex items-end md:col-span-6 xl:col-span-4"
     >
       <UCheckbox
         v-model="duration.concentration"
@@ -136,7 +136,7 @@
     <UFormField
       label="Собственное значение"
       name="custom"
-      class="col-span-6"
+      class="col-span-full md:col-span-12 xl:col-span-6"
     >
       <UInput
         v-model="duration.custom"
@@ -150,6 +150,7 @@
       :item="duration"
       :empty-object="getEmpty()"
       :index
+      cols="col-span-full md:col-span-12 xl:col-span-6"
     />
   </UForm>
 </template>
