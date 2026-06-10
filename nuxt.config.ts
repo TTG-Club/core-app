@@ -75,14 +75,10 @@ export default defineNuxtConfig({
     },
   },
 
-  // Яндекс.Метрика (nuxt-yandex-metrika). ID — публичное значение общего счётчика
-  // основного домена, переопределяется через env NUXT_PUBLIC_YANDEX_METRIKA_ID.
-  // На dev отдаём пустой id, чтобы боевой счётчик не получал хиты с локалки.
+  // Яндекс.Метрика (nuxt-yandex-metrika). Подключается наличием env-переменной
+  // NUXT_YANDEX_METRIKA_ID на окружении (на dev её нет — счётчик не трекает).
   yandexMetrika: {
-    id:
-      process.env.NODE_ENV === 'development'
-        ? ''
-        : process.env.NUXT_PUBLIC_YANDEX_METRIKA_ID || '86582536',
+    id: process.env.NUXT_YANDEX_METRIKA_ID,
     position: 'head',
     options: {
       clickmap: true,
@@ -92,12 +88,11 @@ export default defineNuxtConfig({
     },
   },
 
-  // Google Analytics (nuxt-gtag). ID — публичное значение GA4-потока,
-  // переопределяется через env NUXT_PUBLIC_GTAG_ID. На dev выключаем, чтобы не
-  // засорять боевую статистику. SPA-переходы трекает Enhanced Measurement GA4.
+  // Google Analytics (nuxt-gtag). Подключается наличием env-переменной
+  // NUXT_GTAG_ID на окружении. SPA-переходы трекает Enhanced Measurement GA4.
   gtag: {
-    enabled: process.env.NODE_ENV !== 'development',
-    id: process.env.NUXT_PUBLIC_GTAG_ID || 'G-WXD97L1HCX',
+    enabled: !!process.env.NUXT_GTAG_ID,
+    id: process.env.NUXT_GTAG_ID,
   },
 
   // SEO и метаданные
