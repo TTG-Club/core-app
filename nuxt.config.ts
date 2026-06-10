@@ -46,6 +46,8 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@pinia/nuxt',
     'nuxt-security',
+    'nuxt-yandex-metrika',
+    'nuxt-gtag',
   ],
 
   // Конфигурация приложения
@@ -71,6 +73,31 @@ export default defineNuxtConfig({
       id: 'ttg-club',
       class: 'ttg-club',
     },
+  },
+
+  // Яндекс.Метрика (nuxt-yandex-metrika). ID — публичное значение общего счётчика
+  // основного домена, переопределяется через env NUXT_PUBLIC_YANDEX_METRIKA_ID.
+  // На dev отдаём пустой id, чтобы боевой счётчик не получал хиты с локалки.
+  yandexMetrika: {
+    id:
+      process.env.NODE_ENV === 'development'
+        ? ''
+        : process.env.NUXT_PUBLIC_YANDEX_METRIKA_ID || '86582536',
+    position: 'head',
+    options: {
+      clickmap: true,
+      trackLinks: true,
+      accurateTrackBounce: true,
+      webvisor: true,
+    },
+  },
+
+  // Google Analytics (nuxt-gtag). ID — публичное значение GA4-потока,
+  // переопределяется через env NUXT_PUBLIC_GTAG_ID. На dev выключаем, чтобы не
+  // засорять боевую статистику. SPA-переходы трекает Enhanced Measurement GA4.
+  gtag: {
+    enabled: process.env.NODE_ENV !== 'development',
+    id: process.env.NUXT_PUBLIC_GTAG_ID || 'G-WXD97L1HCX',
   },
 
   // SEO и метаданные
@@ -349,16 +376,6 @@ export default defineNuxtConfig({
       lightGallery: {
         licenseKey:
           process.env.NUXT_LIGHT_GALLERY_LICENSE_KEY || '0000-0000-000-0000',
-      },
-      analytics: {
-        // ID — публичные значения общих счётчиков основного домена. На dev метрика
-        // не грузится (гейт по import.meta.dev в плагине). Можно переопределить или
-        // отключить через env NUXT_PUBLIC_ANALYTICS_*. Пусто => счётчик не подключается.
-        yandexMetrikaId:
-          process.env.NUXT_PUBLIC_ANALYTICS_YANDEX_METRIKA_ID || '86582536',
-        googleAnalyticsId:
-          process.env.NUXT_PUBLIC_ANALYTICS_GOOGLE_ANALYTICS_ID
-          || 'G-WXD97L1HCX',
       },
     },
     site: {

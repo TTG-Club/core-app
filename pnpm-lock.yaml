@@ -119,9 +119,15 @@ importers:
       nuxt:
         specifier: ^4.4.2
         version: 4.4.2(@babel/core@7.29.0)(@babel/plugin-syntax-jsx@7.28.6(@babel/core@7.29.0))(@parcel/watcher@2.5.6)(@types/node@25.6.2)(@vue/compiler-sfc@3.5.30)(cac@6.7.14)(db0@0.3.4)(eslint@10.0.3(jiti@2.6.1))(idb-keyval@6.2.2)(ioredis@5.10.0)(lightningcss@1.32.0)(magicast@0.5.2)(optionator@0.9.4)(pinia@3.0.4(typescript@5.9.3)(vue@3.5.30(typescript@5.9.3)))(rollup-plugin-visualizer@6.0.11(rollup@4.59.0))(rollup@4.59.0)(sass@1.98.0)(stylelint@17.4.0(typescript@5.9.3))(terser@5.47.1)(typescript@5.9.3)(vite@7.3.1(@types/node@25.6.2)(jiti@2.6.1)(lightningcss@1.32.0)(sass@1.98.0)(terser@5.47.1)(yaml@2.8.2))(vue-tsc@3.2.6(typescript@5.9.3))(yaml@2.8.2)
+      nuxt-gtag:
+        specifier: ^4.1.0
+        version: 4.1.0(magicast@0.5.2)
       nuxt-security:
         specifier: ^2.5.1
         version: 2.5.1(magicast@0.5.2)(rollup@4.59.0)
+      nuxt-yandex-metrika:
+        specifier: ^2.0.2
+        version: 2.0.2(@nuxt/scripts@1.2.1(@unhead/vue@2.1.12(vue@3.5.30(typescript@5.9.3)))(db0@0.3.4)(idb-keyval@6.2.2)(ioredis@5.10.0)(magicast@0.5.2)(typescript@5.9.3)(vite@7.3.1(@types/node@25.6.2)(jiti@2.6.1)(lightningcss@1.32.0)(sass@1.98.0)(terser@5.47.1)(yaml@2.8.2))(vue@3.5.30(typescript@5.9.3)))(magicast@0.5.2)(typescript@5.9.3)(vue@3.5.30(typescript@5.9.3))
       pako:
         specifier: ^2.1.0
         version: 2.1.0
@@ -2226,6 +2232,10 @@ packages:
     resolution: {integrity: sha512-/UyNlHfkuLXG6Ed85KB0WBF283xn2yavR+UtRibBRUcvEJId2DSLdGXwJ/cDa1X++SWDPzq3+GSFniHjkNy7yg==}
     peerDependencies:
       prettier: ^3.0.0
+
+  '@prleasing/utility@5.0.1':
+    resolution: {integrity: sha512-U0/1p6qbUQpeNse4HL0pMkUN8AvPRwCanta3tccRnm6iQD09kxbA+sOaPMxZsShm/lG7BsB9/H61stAqp2P40w==}
+    engines: {node: '>=20.11.0'}
 
   '@remirror/core-constants@3.0.0':
     resolution: {integrity: sha512-42aWfPrimMfDKDi4YegyS7x+/0tlzaqwPQCULLanv3DMIlu96KTJR0fM5isWX2UViOqlGnX6YFgqWepcX+XMNg==}
@@ -5471,6 +5481,9 @@ packages:
     engines: {node: '>=16'}
     hasBin: true
 
+  libphonenumber-js@1.13.6:
+    resolution: {integrity: sha512-NdB6O6QvlGMCoG003m0YIKG2+Xw7DjmCZhmc1RH+K6HncADUbRf8TZeLegxBBN1VFyPHcNpPTKpIhYLXzJVy1Q==}
+
   lightgallery@2.9.0:
     resolution: {integrity: sha512-58Ud1DyhD2ao58t+kPEqSZrjFxg23tGd5ZKr75erm7q31g5xhUtWUJH3sTUkhHzlyJAKHj5eTrJ37HQRXG4Wbg==}
     engines: {node: '>=6.0.0'}
@@ -6064,6 +6077,9 @@ packages:
   nuxt-csurf@1.6.5:
     resolution: {integrity: sha512-/DMNTON8LIVhntamKbBmAuM879B0QnuSJa7ZAkmkZe+21m+1QGcjVUxtSkizaM48NUvkuAGYOG0ncn+kqEgrzw==}
 
+  nuxt-gtag@4.1.0:
+    resolution: {integrity: sha512-2TL7RUA8N8NYGbY4UZ9IqKyMZMgO9cCGu6yqadUU8RF+Y81PXI+k+1giIA11XXStaJoGXaXeNsBUIJXn1tUy3A==}
+
   nuxt-link-checker@4.3.9:
     resolution: {integrity: sha512-iYJU+A/xUhk62v4tol9cdjJS1+ZOSl0+tdUObgifdeSts6IqAUByUAiX4H6yOY2tdQYKjahMFbQr1GJ+/4LYnQ==}
 
@@ -6100,6 +6116,11 @@ packages:
 
   nuxt-site-config@3.2.21:
     resolution: {integrity: sha512-WCqo4cirBc+GLPBZOU1ye5+f4xjC7Sf7qbKt/zpeCtEUqJLHDR0MoKICfsGt/8EdkSDYUo+m5BNZ1oxai0isgQ==}
+
+  nuxt-yandex-metrika@2.0.2:
+    resolution: {integrity: sha512-2QjZLwPyeI1QP2iBqGYcgxjfM8Iwe9YddPyj2XgW9+d5UgXX0SsGg6IoYo3kpjYW51luolijq4ciOdeCWcbK+g==}
+    peerDependencies:
+      '@nuxt/scripts': ^0.13.2
 
   nuxt@4.4.2:
     resolution: {integrity: sha512-iWVFpr/YEqVU/CenqIHMnIkvb2HE/9f+q8oxZ+pj2et+60NljGRClCgnmbvGPdmNFE0F1bEhoBCYfqbDOCim3Q==}
@@ -10381,6 +10402,11 @@ snapshots:
       '@xml-tools/parser': 1.0.11
       prettier: 3.8.1
 
+  '@prleasing/utility@5.0.1':
+    dependencies:
+      dayjs: 1.11.20
+      libphonenumber-js: 1.13.6
+
   '@remirror/core-constants@3.0.0': {}
 
   '@resvg/resvg-js-android-arm-eabi@2.6.2':
@@ -13813,6 +13839,8 @@ snapshots:
     dependencies:
       isomorphic.js: 0.2.5
 
+  libphonenumber-js@1.13.6: {}
+
   lightgallery@2.9.0: {}
 
   lighthouse-logger@2.0.2:
@@ -14612,6 +14640,15 @@ snapshots:
     transitivePeerDependencies:
       - magicast
 
+  nuxt-gtag@4.1.0(magicast@0.5.2):
+    dependencies:
+      '@nuxt/kit': 4.4.2(magicast@0.5.2)
+      defu: 6.1.7
+      pathe: 2.0.3
+      ufo: 1.6.4
+    transitivePeerDependencies:
+      - magicast
+
   nuxt-link-checker@4.3.9(db0@0.3.4)(idb-keyval@6.2.2)(ioredis@5.10.0)(magicast@0.5.2)(vite@7.3.1(@types/node@25.6.2)(jiti@2.6.1)(lightningcss@1.32.0)(sass@1.98.0)(terser@5.47.1)(yaml@2.8.2))(vue@3.5.30(typescript@5.9.3)):
     dependencies:
       '@nuxt/devtools-kit': 3.2.4(magicast@0.5.2)(vite@7.3.1(@types/node@25.6.2)(jiti@2.6.1)(lightningcss@1.32.0)(sass@1.98.0)(terser@5.47.1)(yaml@2.8.2))
@@ -14776,6 +14813,20 @@ snapshots:
     transitivePeerDependencies:
       - magicast
       - vite
+      - vue
+
+  nuxt-yandex-metrika@2.0.2(@nuxt/scripts@1.2.1(@unhead/vue@2.1.12(vue@3.5.30(typescript@5.9.3)))(db0@0.3.4)(idb-keyval@6.2.2)(ioredis@5.10.0)(magicast@0.5.2)(typescript@5.9.3)(vite@7.3.1(@types/node@25.6.2)(jiti@2.6.1)(lightningcss@1.32.0)(sass@1.98.0)(terser@5.47.1)(yaml@2.8.2))(vue@3.5.30(typescript@5.9.3)))(magicast@0.5.2)(typescript@5.9.3)(vue@3.5.30(typescript@5.9.3)):
+    dependencies:
+      '@nuxt/kit': 4.4.2(magicast@0.5.2)
+      '@nuxt/scripts': 1.2.1(@unhead/vue@2.1.12(vue@3.5.30(typescript@5.9.3)))(db0@0.3.4)(idb-keyval@6.2.2)(ioredis@5.10.0)(magicast@0.5.2)(typescript@5.9.3)(vite@7.3.1(@types/node@25.6.2)(jiti@2.6.1)(lightningcss@1.32.0)(sass@1.98.0)(terser@5.47.1)(yaml@2.8.2))(vue@3.5.30(typescript@5.9.3))
+      '@prleasing/utility': 5.0.1
+      '@vueuse/core': 14.3.0(vue@3.5.30(typescript@5.9.3))
+      consola: 3.4.2
+      defu: 6.1.7
+      valibot: 1.2.0(typescript@5.9.3)
+    transitivePeerDependencies:
+      - magicast
+      - typescript
       - vue
 
   nuxt@4.4.2(@babel/core@7.29.0)(@babel/plugin-syntax-jsx@7.28.6(@babel/core@7.29.0))(@parcel/watcher@2.5.6)(@types/node@25.6.2)(@vue/compiler-sfc@3.5.30)(cac@6.7.14)(db0@0.3.4)(eslint@10.0.3(jiti@2.6.1))(idb-keyval@6.2.2)(ioredis@5.10.0)(lightningcss@1.32.0)(magicast@0.5.2)(optionator@0.9.4)(pinia@3.0.4(typescript@5.9.3)(vue@3.5.30(typescript@5.9.3)))(rollup-plugin-visualizer@6.0.11(rollup@4.59.0))(rollup@4.59.0)(sass@1.98.0)(stylelint@17.4.0(typescript@5.9.3))(terser@5.47.1)(typescript@5.9.3)(vite@7.3.1(@types/node@25.6.2)(jiti@2.6.1)(lightningcss@1.32.0)(sass@1.98.0)(terser@5.47.1)(yaml@2.8.2))(vue-tsc@3.2.6(typescript@5.9.3))(yaml@2.8.2):
@@ -15772,7 +15823,7 @@ snapshots:
 
   serve-placeholder@2.0.2:
     dependencies:
-      defu: 6.1.4
+      defu: 6.1.7
 
   serve-static@2.2.1:
     dependencies:
