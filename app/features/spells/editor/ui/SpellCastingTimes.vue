@@ -24,7 +24,7 @@
       return undefined;
     }
 
-    return units.value.find((el) => el.value === unitValue);
+    return units.value.find((option) => option.value === unitValue);
   }
 
   function isValueDisabled(unit: string | undefined) {
@@ -69,6 +69,8 @@
   watch(
     times,
     (value) => {
+      // Цикл синхронизации завершается здесь: если массив пуст, добавляется один пустой элемент,
+      // после чего длина становится больше нуля и повторные триггеры watcher игнорируются.
       if (!value.length) {
         times.value.push(getEmpty());
       }

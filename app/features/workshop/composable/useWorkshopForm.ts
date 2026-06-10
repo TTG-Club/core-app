@@ -19,7 +19,14 @@ export interface WorkshopFormOptions<T> {
   transformBeforeSubmit?: (state: T) => T;
 }
 
-export function useWorkshopForm<T extends Record<string, any>>(
+/**
+ * Проверяет, является ли значение объектом (Record<string, unknown>).
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+export function useWorkshopForm<T extends { url: string }>(
   options: WorkshopFormOptions<T>,
 ) {
   const _options = toValue(options);
@@ -28,7 +35,7 @@ export function useWorkshopForm<T extends Record<string, any>>(
   const router = useRouter();
 
   const state = useState<T>(_options.getInitialState);
-  const prevState = useState<T>(_options.getInitialState);
+  const previousState = useState<T>(_options.getInitialState);
 
   const isEditForm = computed(() => !!route.params.url);
 
@@ -41,22 +48,24 @@ export function useWorkshopForm<T extends Record<string, any>>(
   });
 
   const isFormEdited = computed(
-    () => !isEqual(toRaw(prevState.value), toRaw(state.value)),
+    () => !isEqual(toRaw(previousState.value), toRaw(state.value)),
   );
 
   const { refresh: reset } = useAsyncData(async () => {
     if (isEditForm.value) {
       try {
-        const resp = await $fetch<T>(`${actionUrl.value}/raw`);
+        const rawResponse = await $fetch<T>(`${actionUrl.value}/raw`);
 
-        const normalizedResp = _options.normalizeLoaded
-          ? _options.normalizeLoaded(resp as unknown as Record<string, unknown>)
-          : resp;
+        const rawData = isRecord(rawResponse) ? rawResponse : {};
 
-        const merged = toMerged(_options.getInitialState(), normalizedResp);
+        const normalizedResponse = _options.normalizeLoaded
+          ? _options.normalizeLoaded(rawData)
+          : rawData;
+
+        const merged = toMerged(_options.getInitialState(), normalizedResponse);
 
         state.value = cloneDeep(merged);
-        prevState.value = cloneDeep(merged);
+        previousState.value = cloneDeep(merged);
       } catch (error) {
         consola.error(error);
 
@@ -99,14 +108,14 @@ export function useWorkshopForm<T extends Record<string, any>>(
         body,
         onResponse,
       });
-    } catch (err) {
+    } catch (error) {
       $toast.add({
         title: 'Ошибка сохранения',
         description: 'При попытке отправить форму произошла ошибка',
         color: 'error',
       });
 
-      consola.error(err);
+      consola.error(error);
     }
 
     return Promise.resolve();
@@ -169,7 +178,7 @@ export function useWorkshopForm<T extends Record<string, any>>(
 
   return {
     state,
-    prevState,
+    previousState,
 
     isFormEdited,
 

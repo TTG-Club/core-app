@@ -126,14 +126,23 @@ export function createEmptySpellEffect(): SpellEffect {
   };
 }
 
+/**
+ * Возвращает тег типа урона заклинания.
+ */
 function getSpellDamageTypeTag(damageType: string): string {
   return SPELL_DAMAGE_TYPE_TAGS[damageType] ?? damageType;
 }
 
+/**
+ * Создает формулу урона с привязанным тегом типа урона.
+ */
 function createSpellDamageFormula(formula: string, damageType: string): string {
   return `${formula}@${getSpellDamageTypeTag(damageType)}`;
 }
 
+/**
+ * Мигрирует старые формулы урона SpellEffect к новому формату массивов формул.
+ */
 function migrateSpellEffectDamageFormulas(effect: SpellEffect): SpellEffect {
   if (effect.damageFormulas && effect.damageFormulas.length > 0) {
     return {
@@ -237,6 +246,39 @@ export function normalizeSpellEffect(
 }
 
 /**
+ * Проверяет, является ли значение объектом (Record<string, unknown>).
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+/**
+ * Проверяет, является ли значение массивом строк.
+ */
+function isStringArray(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) && value.every((item) => typeof item === 'string')
+  );
+}
+
+/**
+ * Проверяет, является ли значение корректным ключом характеристики (AbilityKey).
+ */
+function isAbilityKey(value: unknown): value is AbilityKey {
+  return (
+    typeof value === 'string'
+    && ['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(value)
+  );
+}
+
+/**
+ * Проверяет, является ли значение массивом ключей характеристик (AbilityKey[]).
+ */
+function isAbilityKeyArray(value: unknown): value is AbilityKey[] {
+  return Array.isArray(value) && value.every(isAbilityKey);
+}
+
+/**
  * Нормализует загруженный с сервера raw-объект заклинания:
  * - Поддерживает старые записи без effect (мигрирует отдельные поля).
  * - Обеспечивает наличие всех вложенных массивов и areaOfEffect.
@@ -246,19 +288,19 @@ export function normalizeLoadedSpell(
 ): Record<string, unknown> {
   const result = { ...raw };
 
-  if (result.effect && typeof result.effect === 'object') {
-    const rawEffect = result.effect as Record<string, unknown>;
+  if (result.effect && isRecord(result.effect)) {
+    const rawEffect = result.effect;
 
     result.effect = migrateSpellEffectDamageFormulas({
       ...createEmptySpellEffect(),
       ...rawEffect,
       areaOfEffect:
-        rawEffect.areaOfEffect && typeof rawEffect.areaOfEffect === 'object'
+        rawEffect.areaOfEffect && isRecord(rawEffect.areaOfEffect)
           ? {
               type: undefined,
               value1: undefined,
               value2: undefined,
-              ...(rawEffect.areaOfEffect as Record<string, unknown>),
+              ...rawEffect.areaOfEffect,
             }
           : createEmptySpellEffect().areaOfEffect,
     });
@@ -266,16 +308,16 @@ export function normalizeLoadedSpell(
     // Миграция старых записей без effect
     const migratedEffect = createEmptySpellEffect();
 
-    if (Array.isArray(result.savingThrow)) {
-      migratedEffect.savingThrows = result.savingThrow as AbilityKey[];
+    if (isAbilityKeyArray(result.savingThrow)) {
+      migratedEffect.savingThrows = result.savingThrow;
     }
 
-    if (Array.isArray(result.healingType)) {
-      migratedEffect.healingTypes = result.healingType as string[];
+    if (isStringArray(result.healingType)) {
+      migratedEffect.healingTypes = result.healingType;
     }
 
-    if (Array.isArray(result.damageType)) {
-      migratedEffect.damageTypes = result.damageType as string[];
+    if (isStringArray(result.damageType)) {
+      migratedEffect.damageTypes = result.damageType;
     }
 
     if (
@@ -293,16 +335,16 @@ export function normalizeLoadedSpell(
       migratedEffect.damageTypes = [];
     }
 
-    if (Array.isArray(result.condition)) {
-      migratedEffect.conditions = result.condition as string[];
+    if (isStringArray(result.condition)) {
+      migratedEffect.conditions = result.condition;
     }
 
     if (typeof result.attackType === 'string') {
-      migratedEffect.attackType = result.attackType as string;
+      migratedEffect.attackType = result.attackType;
     }
 
-    if (result.areaOfEffect && typeof result.areaOfEffect === 'object') {
-      const oldArea = result.areaOfEffect as Record<string, unknown>;
+    if (result.areaOfEffect && isRecord(result.areaOfEffect)) {
+      const oldArea = result.areaOfEffect;
 
       migratedEffect.areaOfEffect = {
         type: typeof oldArea.type === 'string' ? oldArea.type : undefined,

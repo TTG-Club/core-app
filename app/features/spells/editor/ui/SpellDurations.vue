@@ -24,7 +24,7 @@
       return undefined;
     }
 
-    return units.value.find((el) => el.value === unitValue);
+    return units.value.find((option) => option.value === unitValue);
   }
 
   function isValueDisabled(unit: string | undefined) {
@@ -43,9 +43,9 @@
     }
 
     const unitOption = getUnitOption(value);
-    const time = durations.value[index];
+    const duration = durations.value[index];
 
-    if (!time) {
+    if (!duration) {
       return;
     }
 
@@ -70,6 +70,8 @@
   watch(
     durations,
     (value) => {
+      // Цикл синхронизации завершается здесь: если массив пуст, добавляется один пустой элемент,
+      // после чего длина становится больше нуля и повторные триггеры watcher игнорируются.
       if (!value.length) {
         durations.value.push(getEmpty());
       }
