@@ -59,9 +59,12 @@
           class="col-span-full"
           label="Описание логова"
           name="lair.description"
+          :ui="{ root: 'w-full', container: 'w-full' }"
         >
           <UTextarea
             v-model="model.description"
+            class="w-full"
+            :ui="{ root: 'flex w-full', base: 'w-full' }"
             :maxrows="6"
             :rows="2"
             placeholder="Введите описание (необязательно)"
@@ -113,9 +116,12 @@
             class="col-span-full md:col-span-24"
             label="Описание"
             name="description"
+            :ui="{ root: 'w-full', container: 'w-full' }"
           >
             <UTextarea
               v-model="effect.description"
+              class="w-full"
+              :ui="{ root: 'flex w-full', base: 'w-full' }"
               :rows="3"
               placeholder="Введи описание"
             />
@@ -143,9 +149,12 @@
           class="col-span-full"
           label="Описание окончания действия логова"
           name="lair.ending"
+          :ui="{ root: 'w-full', container: 'w-full' }"
         >
           <UTextarea
             v-model="model.ending"
+            class="w-full"
+            :ui="{ root: 'flex w-full', base: 'w-full' }"
             :maxrows="6"
             :rows="2"
             placeholder="Описание окончания действия логова (необязательно)"

@@ -24,7 +24,7 @@
       skill: undefined,
       text: undefined,
       bonus: 0,
-      multiplier: 0,
+      multiplier: 1,
     };
   }
 

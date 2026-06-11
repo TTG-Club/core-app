@@ -97,9 +97,12 @@
             class="col-span-full md:col-span-24"
             label="Описание"
             :name="`${name}.${actionIndex}.description`"
+            :ui="{ root: 'w-full', container: 'w-full' }"
           >
             <UTextarea
               v-model="action.description"
+              class="w-full"
+              :ui="{ root: 'flex w-full', base: 'w-full' }"
               :rows="3"
               placeholder="Введи описание"
             />

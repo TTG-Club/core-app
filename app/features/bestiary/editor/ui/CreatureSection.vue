@@ -81,9 +81,12 @@
         <UFormField
           label="Описание секции"
           name="description"
+          :ui="{ root: 'w-full', container: 'w-full' }"
         >
           <UTextarea
             v-model="model.description"
+            class="w-full"
+            :ui="{ root: 'flex w-full', base: 'w-full' }"
             :rows="6"
             placeholder="Введи описание"
             clearable

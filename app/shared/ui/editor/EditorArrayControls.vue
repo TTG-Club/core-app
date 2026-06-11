@@ -22,7 +22,9 @@
   const colsClass = computed(() => {
     const colsValue = String(cols);
 
-    return /^\d+$/.test(colsValue) ? `col-span-${colsValue}` : colsValue;
+    return /^\d+$/.test(colsValue)
+      ? `col-span-full md:col-span-${colsValue}`
+      : colsValue;
   });
 
   function add() {

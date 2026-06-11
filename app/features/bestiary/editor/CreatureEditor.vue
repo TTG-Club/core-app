@@ -55,9 +55,14 @@
         <h2 class="truncate text-base text-highlighted">Описание</h2>
       </template>
 
-      <UFormField name="description">
+      <UFormField
+        name="description"
+        :ui="{ root: 'w-full', container: 'w-full' }"
+      >
         <UTextarea
           v-model="state.description"
+          class="w-full"
+          :ui="{ root: 'flex w-full', base: 'w-full' }"
           :rows="4"
           placeholder="Введи описание"
         />
@@ -259,3 +264,14 @@
     </EditorFormControls>
   </UForm>
 </template>
+
+<style scoped>
+  :deep([data-slot='root']:has(> textarea[data-slot='base'])) {
+    display: flex;
+    width: 100%;
+  }
+
+  :deep(textarea[data-slot='base']) {
+    width: 100%;
+  }
+</style>

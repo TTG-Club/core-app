@@ -72,9 +72,12 @@
           class="col-span-full md:col-span-17"
           label="Описание легендарных действий"
           name="description"
+          :ui="{ root: 'w-full', container: 'w-full' }"
         >
           <UTextarea
             v-model="model.description"
+            class="w-full"
+            :ui="{ root: 'flex w-full', base: 'w-full' }"
             :maxrows="0"
             :rows="5"
             placeholder="Введите описание (необязательно)"
@@ -126,9 +129,12 @@
             class="col-span-full md:col-span-24"
             label="Описание"
             name="description"
+            :ui="{ root: 'w-full', container: 'w-full' }"
           >
             <UTextarea
               v-model="action.description"
+              class="w-full"
+              :ui="{ root: 'flex w-full', base: 'w-full' }"
               :rows="3"
               placeholder="Введи описание"
             />
