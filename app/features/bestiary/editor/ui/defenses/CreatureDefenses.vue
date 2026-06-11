@@ -21,7 +21,7 @@
       <h2 class="truncate text-base text-highlighted">Защита</h2>
     </template>
 
-    <div class="col-span-full grid grid-cols-24 gap-4">
+    <div class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24">
       <CreatureVulnerabilities v-model="defenses.vulnerabilities" />
 
       <CreatureResistances v-model="defenses.resistances" />

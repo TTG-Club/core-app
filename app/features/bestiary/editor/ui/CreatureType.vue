@@ -25,13 +25,13 @@
 
 <template>
   <UForm
-    class="col-span-16 grid grid-cols-2 gap-4"
+    class="col-span-full grid grid-cols-1 gap-4 md:col-span-16 md:grid-cols-2"
     attach
     :state="model"
   >
     <UFormField
       label="Типы существа"
-      class="col-span-1"
+      class="col-span-full md:col-span-1"
       name="values"
     >
       <SelectCreatureType
@@ -43,7 +43,7 @@
 
     <UFormField
       label="Уточнение типа"
-      class="col-span-1"
+      class="col-span-full md:col-span-1"
       name="text"
     >
       <UInput

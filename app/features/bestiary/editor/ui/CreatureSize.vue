@@ -31,12 +31,12 @@
 
 <template>
   <UForm
-    class="col-span-18 grid grid-cols-24 gap-4"
+    class="col-span-full grid grid-cols-1 gap-4 md:col-span-18 md:grid-cols-24"
     attach
     :state="model"
   >
     <UFormField
-      class="col-span-8"
+      class="col-span-full md:col-span-8"
       label="Размеры существа"
       name="values"
     >
@@ -47,7 +47,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-8"
+      class="col-span-full md:col-span-8"
       label="Уточнение размера"
       name="text"
     >
@@ -58,7 +58,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-8"
+      class="col-span-full md:col-span-8"
       label="Нестандартный размер"
       name="sizeString"
     >

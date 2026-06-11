@@ -58,12 +58,12 @@
         :key="actionIndex"
       >
         <UForm
-          class="col-span-full grid grid-cols-24 gap-4"
+          class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
           attach
           :state="action"
         >
           <UFormField
-            class="col-span-8"
+            class="col-span-full md:col-span-8"
             label="Название"
             :name="`${name}.${actionIndex}.name.rus`"
           >
@@ -74,7 +74,7 @@
           </UFormField>
 
           <UFormField
-            class="col-span-8"
+            class="col-span-full md:col-span-8"
             label="Название (англ.)"
             :name="`${name}.${actionIndex}.name.eng`"
           >
@@ -94,7 +94,7 @@
           />
 
           <UFormField
-            class="col-span-24"
+            class="col-span-full md:col-span-24"
             label="Описание"
             :name="`${name}.${actionIndex}.description`"
           >

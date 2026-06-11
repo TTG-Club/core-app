@@ -69,12 +69,12 @@
       <UForm
         v-for="(item, index) in model"
         :key="index"
-        class="col-span-full grid grid-cols-24 gap-4"
+        class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
         attach
         :state="item"
       >
         <UFormField
-          class="col-span-6"
+          class="col-span-full md:col-span-6"
           label="Навык"
           name="skill"
         >
@@ -91,7 +91,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-4"
+          class="col-span-full md:col-span-4"
           label="Уровень владения"
           name="multiplier"
         >
@@ -99,7 +99,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-2"
+          class="col-span-full md:col-span-2"
           label="Бонус"
           name="bonus"
         >
@@ -114,7 +114,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-6"
+          class="col-span-full md:col-span-6"
           label="Пояснение"
           name="text"
         >

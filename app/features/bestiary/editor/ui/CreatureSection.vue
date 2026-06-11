@@ -16,11 +16,11 @@
     </template>
 
     <UForm
-      class="grid grid-cols-24 gap-6"
+      class="grid grid-cols-1 gap-6 md:grid-cols-24"
       attach
       :state="model"
     >
-      <div class="col-span-8 grid gap-1">
+      <div class="col-span-full grid gap-1 md:col-span-8">
         <UFormField
           label="Название секции"
           name="name.rus"
@@ -55,8 +55,8 @@
         </UFormField>
       </div>
 
-      <div class="col-span-16 flex flex-col gap-7">
-        <div class="grid grid-cols-2 gap-4">
+      <div class="col-span-full flex flex-col gap-7 md:col-span-16">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           <UFormField
             label="Среда обитания"
             name="habitats"

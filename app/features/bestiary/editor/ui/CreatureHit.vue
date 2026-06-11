@@ -95,12 +95,12 @@
 
 <template>
   <UForm
-    class="grid grid-cols-24 gap-4"
+    class="grid grid-cols-1 gap-4 md:grid-cols-24"
     attach
     :state="model"
   >
     <UFormField
-      class="col-span-4"
+      class="col-span-full md:col-span-4"
       label="Количество костей хитов"
       name="countHitDice"
     >
@@ -112,7 +112,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-4"
+      class="col-span-full md:col-span-4"
       label="Формула"
     >
       <UInput
@@ -122,7 +122,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-6"
+      class="col-span-full md:col-span-6"
       label="Среднее количество хитов"
       name="value"
     >
@@ -134,7 +134,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-10"
+      class="col-span-full md:col-span-10"
       label="Текстовое описание"
       name="text"
     >

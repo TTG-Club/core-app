@@ -12,7 +12,7 @@
   <UForm
     :state="vulnerabilities"
     attach
-    class="col-span-12 flex flex-col gap-4"
+    class="col-span-full flex flex-col gap-4 md:col-span-12"
   >
     <UFormField
       label="Уязвимость к типам урона"

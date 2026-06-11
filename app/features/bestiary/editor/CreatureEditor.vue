@@ -36,7 +36,7 @@
 <template>
   <UForm
     :state
-    class="grid grid-cols-24 gap-6 pb-24"
+    class="grid grid-cols-1 gap-6 pb-24 md:grid-cols-24"
     @error="onError"
     @submit="onSubmit"
   >
@@ -73,12 +73,12 @@
       </template>
 
       <div class="flex flex-col gap-4">
-        <div class="grid grid-cols-24 gap-4">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
           <CreatureType v-model="state.types" />
 
           <UFormField
             label="Мировоззрение существа"
-            class="col-span-8"
+            class="col-span-full md:col-span-8"
             name="alignment"
           >
             <SelectAlignment v-model="state.alignment" />
@@ -97,9 +97,9 @@
         <h2 class="truncate text-base text-highlighted">Статблок</h2>
       </template>
 
-      <div class="grid grid-cols-24 gap-4">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
         <UFormField
-          class="col-span-3"
+          class="col-span-full md:col-span-3"
           label="КД"
           help="Класс доспеха"
           name="ac.value"
@@ -114,7 +114,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-13"
+          class="col-span-full md:col-span-13"
           label="Текст к КД"
           name="ac.text"
         >
@@ -128,7 +128,7 @@
           v-model="state.initiative"
           :dex="state.abilities.dex"
           :proficiency-bonus="state.proficiencyBonus"
-          class="col-span-8"
+          class="col-span-full md:col-span-8"
         />
 
         <CreatureHit
@@ -162,7 +162,7 @@
       </template>
 
       <UFormField
-        class="col-span-13"
+        class="col-span-full md:col-span-13"
         name="ac.text"
       >
         <UInput
@@ -210,7 +210,7 @@
     <CreatureLair v-model="state.lair" />
 
     <UFormField
-      class="col-span-8"
+      class="col-span-full md:col-span-8"
       label="Основное"
       help="Эта картинка отображается при просмотре страницы существа"
       name="image"

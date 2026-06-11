@@ -64,12 +64,12 @@
         <UForm
           v-for="(item, index) in model[key]"
           :key="index"
-          class="col-span-full grid grid-cols-24 gap-4"
+          class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
           attach
           :state="item"
         >
           <UFormField
-            class="col-span-4"
+            class="col-span-full md:col-span-4"
             label="Скорость"
             :name="`${key}.${index}.value`"
           >
@@ -92,7 +92,7 @@
 
           <UFormField
             v-if="key === 'fly'"
-            class="col-span-2 flex h-12 items-end"
+            class="col-span-full flex h-12 items-end md:col-span-2"
             :name="`${key}.${index}.hover`"
           >
             <UCheckbox
@@ -102,7 +102,11 @@
           </UFormField>
 
           <UFormField
-            :class="key !== 'fly' ? 'col-span-14' : 'col-span-12'"
+            :class="
+              key !== 'fly'
+                ? 'col-span-full md:col-span-14'
+                : 'col-span-full md:col-span-12'
+            "
             label="Пояснение к скорости"
             :name="`${key}.${index}.text`"
           >

@@ -40,7 +40,7 @@
 
     <div class="grid gap-6">
       <UForm
-        class="col-span-full grid grid-cols-24 gap-4"
+        class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
         attach
         :state="model"
       >
@@ -74,12 +74,12 @@
         :key="effectIndex"
       >
         <UForm
-          class="col-span-full grid grid-cols-24 gap-4"
+          class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
           attach
           :state="effect"
         >
           <UFormField
-            class="col-span-8"
+            class="col-span-full md:col-span-8"
             label="Название"
             name="name.rus"
           >
@@ -90,7 +90,7 @@
           </UFormField>
 
           <UFormField
-            class="col-span-8"
+            class="col-span-full md:col-span-8"
             label="Название (англ.)"
             name="name.eng"
           >
@@ -110,7 +110,7 @@
           />
 
           <UFormField
-            class="col-span-24"
+            class="col-span-full md:col-span-24"
             label="Описание"
             name="description"
           >
@@ -135,7 +135,7 @@
       </div>
 
       <UForm
-        class="col-span-full grid grid-cols-24 gap-4"
+        class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
         attach
         :state="model"
       >
