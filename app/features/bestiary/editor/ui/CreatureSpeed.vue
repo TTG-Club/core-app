@@ -43,6 +43,12 @@
 
     model.value[key].push(getEmpty(key));
   }
+
+  function getSpeedTextFieldClass(key: SpeedType): string {
+    return key !== SpeedType.FLY
+      ? 'col-span-full md:col-span-14'
+      : 'col-span-full md:col-span-12';
+  }
 </script>
 
 <template>
@@ -102,11 +108,7 @@
           </UFormField>
 
           <UFormField
-            :class="
-              key !== 'fly'
-                ? 'col-span-full md:col-span-14'
-                : 'col-span-full md:col-span-12'
-            "
+            :class="getSpeedTextFieldClass(key)"
             label="Пояснение к скорости"
             :name="`${key}.${index}.text`"
           >
