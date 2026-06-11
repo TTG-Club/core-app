@@ -1,20 +1,19 @@
 <script setup lang="ts">
   import type { SpellCreate } from '~spells/model';
 
+  import {
+    createEmptySpellEffect,
+    normalizeLoadedSpell,
+    normalizeSpellEffect,
+  } from '~spells/model';
   import { SpellPreview } from '~spells/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import {
-    SelectAbilities,
-    SelectAttackType,
     SelectClass,
-    SelectCondition,
-    SelectDamageType,
     SelectFeat,
-    SelectHealType,
     SelectLineage,
     SelectMagicSchool,
     SelectSpecies,
-    SelectSpellArea,
     SelectSpellLevel,
     SelectSubclass,
   } from '~ui/select';
@@ -24,6 +23,7 @@
     SpellCastingTimes,
     SpellComponents,
     SpellDurations,
+    SpellEffectEditor,
     SpellRanges,
   } from './ui';
 
@@ -63,22 +63,22 @@
         feats: [],
       },
       tags: [],
-      savingThrow: [],
-      healingType: [],
-      damageType: [],
-      condition: [],
-      attackType: undefined,
-      areaOfEffect: {
-        type: undefined,
-        value1: undefined,
-        value2: undefined,
-      },
+      effect: createEmptySpellEffect(),
     };
   }
 
   const { state, onError, onSubmit } = useWorkshopForm<SpellCreate>({
     actionUrl: '/api/v2/spells',
     getInitialState,
+    normalizeLoaded: normalizeLoadedSpell,
+    transformBeforeSubmit: (formState) => {
+      const normalizedEffect = normalizeSpellEffect(formState.effect);
+
+      return {
+        ...formState,
+        effect: normalizedEffect ?? createEmptySpellEffect(),
+      };
+    },
   });
 </script>
 
@@ -104,7 +104,7 @@
 
       <div class="grid grid-cols-24 gap-4">
         <UFormField
-          class="col-span-12"
+          class="col-span-full md:col-span-12"
           label="Уровень заклинания"
           name="level"
         >
@@ -112,7 +112,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-12"
+          class="col-span-full md:col-span-12"
           label="Школа"
           name="school"
         >
@@ -140,97 +140,7 @@
       </div>
     </UCard>
 
-    <UCard variant="subtle">
-      <template #header>
-        <h2 class="truncate text-base text-highlighted">
-          Дополнительные фильтры
-        </h2>
-      </template>
-
-      <div class="grid grid-cols-24 gap-4">
-        <UFormField
-          label="Типы урона"
-          name="damageType"
-          class="col-span-6"
-        >
-          <SelectDamageType
-            v-model="state.damageType"
-            multiple
-          />
-        </UFormField>
-
-        <UFormField
-          class="col-span-6"
-          label="Спасброски"
-          name="savingThrow"
-        >
-          <SelectAbilities
-            v-model="state.savingThrow"
-            multiple
-          />
-        </UFormField>
-
-        <UFormField
-          label="Состояния"
-          name="condition"
-          class="col-span-6"
-        >
-          <SelectCondition
-            v-model="state.condition"
-            multiple
-          />
-        </UFormField>
-
-        <UFormField
-          class="col-span-6"
-          label="Типы лечения"
-          name="healingType"
-        >
-          <SelectHealType
-            v-model="state.healingType"
-            multiple
-          />
-        </UFormField>
-
-        <UFormField
-          class="col-span-6"
-          label="Тип атаки"
-          name="attackType"
-        >
-          <SelectAttackType v-model="state.attackType" />
-        </UFormField>
-
-        <UFormField
-          class="col-span-6"
-          label="Область воздействия"
-          name="areaOfEffect.type"
-        >
-          <SelectSpellArea v-model="state.areaOfEffect!.type" />
-        </UFormField>
-
-        <UFormField
-          class="col-span-3"
-          label="Радиус/длина"
-          name="areaOfEffect.value1"
-        >
-          <UInput
-            v-model.number="state.areaOfEffect!.value1"
-            type="number"
-          />
-        </UFormField>
-
-        <UFormField
-          class="col-span-3"
-          label="Высота/ширина"
-          name="areaOfEffect.value2"
-        >
-          <UInput
-            v-model.number="state.areaOfEffect!.value2"
-            type="number"
-          />
-        </UFormField>
-      </div>
-    </UCard>
+    <SpellEffectEditor v-model="state.effect" />
 
     <UCard variant="subtle">
       <template #header>
@@ -241,7 +151,7 @@
         <UFormField
           label="Описание"
           name="description"
-          class="col-span-12"
+          class="col-span-full lg:col-span-12"
         >
           <UTextarea
             v-model="state.description"
@@ -253,7 +163,7 @@
         <UFormField
           label="На более высоких уровнях"
           name="upper"
-          class="col-span-12"
+          class="col-span-full lg:col-span-12"
         >
           <UTextarea
             v-model="state.upper"
@@ -273,7 +183,7 @@
         <UFormField
           label="Классы"
           name="affiliations.classes"
-          class="col-span-6"
+          class="col-span-full md:col-span-12 xl:col-span-6"
         >
           <SelectClass
             v-model="state.affiliations.classes"
@@ -282,7 +192,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-6"
+          class="col-span-full md:col-span-12 xl:col-span-6"
           label="Подклассы"
           name="affiliations.subclasses"
         >
@@ -293,7 +203,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-6"
+          class="col-span-full md:col-span-12 xl:col-span-6"
           label="Виды"
           name="affiliations.species"
         >
@@ -304,7 +214,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-6"
+          class="col-span-full md:col-span-12 xl:col-span-6"
           label="Происхождения"
           name="affiliations.lineages"
         >
@@ -315,7 +225,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-6"
+          class="col-span-full md:col-span-12 xl:col-span-6"
           label="Черта"
           name="affiliations.feats"
         >

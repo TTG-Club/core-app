@@ -7,9 +7,26 @@ import { cloneDeep, isEqual, toMerged } from 'es-toolkit';
 export interface WorkshopFormOptions<T> {
   actionUrl: string;
   getInitialState: () => T;
+  /**
+   * Нормализует загруженные с сервера raw-данные перед слиянием с начальным состоянием.
+   * Используется для миграции старых записей и приведения данных к актуальной структуре.
+   */
+  normalizeLoaded?: (raw: Record<string, unknown>) => Record<string, unknown>;
+  /**
+   * Трансформирует состояние формы перед отправкой на сервер.
+   * Используется для очистки пустых полей, нормализации вложенных объектов и т.д.
+   */
+  transformBeforeSubmit?: (state: T) => T;
 }
 
-export function useWorkshopForm<T extends Record<string, any>>(
+/**
+ * Проверяет, является ли значение объектом (Record<string, unknown>).
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+export function useWorkshopForm<T extends { url: string }>(
   options: WorkshopFormOptions<T>,
 ) {
   const _options = toValue(options);
@@ -18,7 +35,7 @@ export function useWorkshopForm<T extends Record<string, any>>(
   const router = useRouter();
 
   const state = useState<T>(_options.getInitialState);
-  const prevState = useState<T>(_options.getInitialState);
+  const previousState = useState<T>(_options.getInitialState);
 
   const isEditForm = computed(() => !!route.params.url);
 
@@ -31,17 +48,24 @@ export function useWorkshopForm<T extends Record<string, any>>(
   });
 
   const isFormEdited = computed(
-    () => !isEqual(toRaw(prevState.value), toRaw(state.value)),
+    () => !isEqual(toRaw(previousState.value), toRaw(state.value)),
   );
 
   const { refresh: reset } = useAsyncData(async () => {
     if (isEditForm.value) {
       try {
-        const resp = await $fetch<T>(`${actionUrl.value}/raw`);
-        const merged = toMerged(_options.getInitialState(), resp);
+        const rawResponse = await $fetch<T>(`${actionUrl.value}/raw`);
+
+        const rawData = isRecord(rawResponse) ? rawResponse : {};
+
+        const normalizedResponse = _options.normalizeLoaded
+          ? _options.normalizeLoaded(rawData)
+          : rawData;
+
+        const merged = toMerged(_options.getInitialState(), normalizedResponse);
 
         state.value = cloneDeep(merged);
-        prevState.value = cloneDeep(merged);
+        previousState.value = cloneDeep(merged);
       } catch (error) {
         consola.error(error);
 
@@ -75,19 +99,23 @@ export function useWorkshopForm<T extends Record<string, any>>(
     }
 
     try {
+      const body = _options.transformBeforeSubmit
+        ? _options.transformBeforeSubmit(toValue(state))
+        : toValue(state);
+
       await $fetch(toValue(actionUrl), {
         method: toValue(isEditForm) ? 'put' : 'post',
-        body: toValue(state),
+        body,
         onResponse,
       });
-    } catch (err) {
+    } catch (error) {
       $toast.add({
         title: 'Ошибка сохранения',
         description: 'При попытке отправить форму произошла ошибка',
         color: 'error',
       });
 
-      consola.error(err);
+      consola.error(error);
     }
 
     return Promise.resolve();
@@ -150,7 +178,7 @@ export function useWorkshopForm<T extends Record<string, any>>(
 
   return {
     state,
-    prevState,
+    previousState,
 
     isFormEdited,
 

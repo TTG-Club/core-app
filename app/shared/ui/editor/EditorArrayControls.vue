@@ -13,12 +13,17 @@
     emptyObject: T;
     index: number;
     onlyRemove?: boolean;
-    cols?: number | `${number}`;
+    cols?: number | string;
   }>();
 
   const isEmpty = computed(() => isEqual(item, emptyObject));
   const isLast = computed(() => index === model.value.length - 1);
-  const colsClass = computed(() => `col-span-${cols}`);
+
+  const colsClass = computed(() => {
+    const colsValue = String(cols);
+
+    return /^\d+$/.test(colsValue) ? `col-span-${colsValue}` : colsValue;
+  });
 
   function add() {
     model.value.splice(index + 1, 0, getEmpty());

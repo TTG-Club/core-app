@@ -24,7 +24,7 @@
       return undefined;
     }
 
-    return units.value.find((el) => el.value === unitValue);
+    return units.value.find((option) => option.value === unitValue);
   }
 
   function isValueDisabled(unit: string | undefined) {
@@ -43,9 +43,9 @@
     }
 
     const unitOption = getUnitOption(value);
-    const time = ranges.value[index];
+    const range = ranges.value[index];
 
-    if (!time) {
+    if (!range) {
       return;
     }
 
@@ -69,6 +69,8 @@
   watch(
     ranges,
     (value) => {
+      // Цикл синхронизации завершается здесь: если массив пуст, добавляется один пустой элемент,
+      // после чего длина становится больше нуля и повторные триггеры watcher игнорируются.
       if (!value.length) {
         ranges.value.push(getEmpty());
       }
@@ -80,8 +82,8 @@
 </script>
 
 <template>
-  <div class="col-span-full mt-4 flex gap-4">
-    <p class="text-lg">Дистанция</p>
+  <div class="col-span-full mt-4 flex flex-col gap-2 sm:flex-row sm:gap-4">
+    <p class="shrink-0 text-lg">Дистанция</p>
 
     <USeparator />
   </div>
@@ -96,7 +98,7 @@
     <UFormField
       label="Дистанция"
       name="value"
-      class="col-span-4"
+      class="col-span-full md:col-span-6 xl:col-span-4"
     >
       <UInputNumber
         v-model="range.value"
@@ -110,7 +112,7 @@
     <UFormField
       label="Тип дистанции"
       name="unit"
-      class="col-span-4"
+      class="col-span-full md:col-span-6 xl:col-span-4"
     >
       <USelect
         :model-value="range.unit"
@@ -122,7 +124,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-10"
+      class="col-span-full xl:col-span-10"
       label="Собственное значение"
       name="custom"
     >
@@ -137,6 +139,7 @@
       :item="range"
       :empty-object="getEmpty()"
       :index
+      cols="col-span-full xl:col-span-6"
     />
   </UForm>
 </template>

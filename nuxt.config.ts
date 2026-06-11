@@ -41,10 +41,13 @@ export default defineNuxtConfig({
     '@nuxtjs/device',
     '@nuxtjs/seo',
     '@nuxt/image',
+    '@nuxt/scripts',
     '@nuxt/eslint',
     '@vueuse/nuxt',
     '@pinia/nuxt',
     'nuxt-security',
+    'nuxt-yandex-metrika',
+    'nuxt-gtag',
   ],
 
   // Конфигурация приложения
@@ -70,6 +73,26 @@ export default defineNuxtConfig({
       id: 'ttg-club',
       class: 'ttg-club',
     },
+  },
+
+  // Яндекс.Метрика (nuxt-yandex-metrika). Подключается наличием env-переменной
+  // NUXT_YANDEX_METRIKA_ID на окружении (на dev её нет — счётчик не трекает).
+  yandexMetrika: {
+    id: process.env.NUXT_YANDEX_METRIKA_ID,
+    position: 'head',
+    options: {
+      clickmap: true,
+      trackLinks: true,
+      accurateTrackBounce: true,
+      webvisor: true,
+    },
+  },
+
+  // Google Analytics (nuxt-gtag). Подключается наличием env-переменной
+  // NUXT_GTAG_ID на окружении. SPA-переходы трекает Enhanced Measurement GA4.
+  gtag: {
+    enabled: !!process.env.NUXT_GTAG_ID,
+    id: process.env.NUXT_GTAG_ID,
   },
 
   // SEO и метаданные
