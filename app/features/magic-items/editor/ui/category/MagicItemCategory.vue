@@ -17,12 +17,12 @@
 
 <template>
   <UForm
-    class="col-span-full grid grid-cols-24 gap-4"
+    class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
     attach
     :state="model"
   >
     <UFormField
-      class="col-span-8"
+      class="md:col-span-8"
       label="Категория"
       name="type"
     >
@@ -33,7 +33,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-16"
+      class="md:col-span-16"
       label="Уточнение категории"
       name="clarification"
     >

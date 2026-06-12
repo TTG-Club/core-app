@@ -53,9 +53,9 @@
         <h2 class="truncate text-base text-highlighted">Подробности</h2>
       </template>
 
-      <div class="grid grid-cols-24 gap-4">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
         <UFormField
-          class="col-span-8"
+          class="md:col-span-12 lg:col-span-8"
           label="Характеристики"
           help="В предыстории перечислены 3 из ваших характеристик персонажа. Увеличьте одну из них на 2, а другую на 1; или увеличьте каждую из 3 на 1."
           name="abilityScores"
@@ -68,7 +68,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-8"
+          class="md:col-span-12 lg:col-span-8"
           label="Навыки"
           help="Предыстория даёт вашему персонажу владение двумя определёнными навыками."
           name="skillsProficiencies"
@@ -81,7 +81,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-4"
+          class="md:col-span-12 lg:col-span-4"
           label="Черта"
           name="featUrl"
         >
@@ -92,7 +92,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-4"
+          class="md:col-span-12 lg:col-span-4"
           label="Суффикс черты"
           name="featSuffix"
         >
@@ -103,7 +103,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-24"
+          class="col-span-full"
           label="Владение инструментами"
           name="toolProficiency"
         >
@@ -115,7 +115,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-24"
+          class="col-span-full"
           label="Снаряжение"
           name="equipment"
         >
@@ -133,11 +133,8 @@
         <h2 class="truncate text-base text-highlighted">Описание</h2>
       </template>
 
-      <div class="grid grid-cols-24 gap-4">
-        <UFormField
-          class="col-span-24"
-          name="description"
-        >
+      <div class="grid grid-cols-1 gap-4">
+        <UFormField name="description">
           <UTextarea
             v-model="state.description"
             :rows="8"
