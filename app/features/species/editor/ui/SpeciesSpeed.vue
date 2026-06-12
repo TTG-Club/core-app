@@ -6,12 +6,12 @@
 
 <template>
   <UForm
-    class="col-span-full grid grid-cols-24 gap-4"
+    class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
     attach
     :state="speed"
   >
     <UFormField
-      class="col-span-6"
+      class="col-span-full md:col-span-6"
       label="Скорость передвижения"
       name="base"
     >
@@ -22,9 +22,11 @@
       />
     </UFormField>
 
-    <div class="col-span-6 grid grid-cols-12 gap-4">
+    <div
+      class="col-span-full grid grid-cols-1 gap-4 md:col-span-6 md:grid-cols-12"
+    >
       <UFormField
-        class="col-span-8"
+        class="col-span-full md:col-span-8"
         label="Скорость полета"
         name="fly"
       >
@@ -36,7 +38,7 @@
       </UFormField>
 
       <UFormField
-        class="col-span-4"
+        class="col-span-full md:col-span-4"
         label="Парит"
         name="hover"
       >
@@ -48,7 +50,7 @@
     </div>
 
     <UFormField
-      class="col-span-6"
+      class="col-span-full md:col-span-6"
       label="Скорость лазания"
       name="climb"
     >
@@ -60,7 +62,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-6"
+      class="col-span-full md:col-span-6"
       label="Скорость плавания"
       name="swim"
     >

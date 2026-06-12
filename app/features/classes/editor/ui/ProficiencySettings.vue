@@ -20,9 +20,9 @@
         <h2 class="truncate text-base text-highlighted">Владения</h2>
       </template>
 
-      <div class="grid grid-cols-24 gap-4">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
         <UFormField
-          class="col-span-12"
+          class="col-span-full md:col-span-12"
           label="Виды доспехов"
           name="armor.category"
         >
@@ -33,7 +33,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-12"
+          class="col-span-full md:col-span-12"
           label="Дополнительно"
           name="armor.custom"
         >
@@ -44,7 +44,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-12"
+          class="col-span-full md:col-span-12"
           label="Виды оружия"
           name="weapon.category"
         >
@@ -55,7 +55,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-12"
+          class="col-span-full md:col-span-12"
           label="Дополнительно"
           name="weapon.custom"
         >
@@ -66,7 +66,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-24"
+          class="col-span-full"
           label="Инструменты"
           name="tool"
         >
@@ -77,7 +77,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-4"
+          class="col-span-full md:col-span-4"
           label="Кол-во навыков"
           name="skill.count"
         >
@@ -88,7 +88,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-20"
+          class="col-span-full md:col-span-20"
           label="Навыки на выбор"
           name="skill.skills"
         >

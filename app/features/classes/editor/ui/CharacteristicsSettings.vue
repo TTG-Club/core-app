@@ -51,9 +51,9 @@
       </h2>
     </template>
 
-    <div class="grid grid-cols-24 gap-4">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
       <UFormField
-        class="col-span-12"
+        class="col-span-full md:col-span-12"
         label="Родительский класс"
         name="parentUrl"
       >
@@ -61,7 +61,7 @@
       </UFormField>
 
       <UFormField
-        class="col-span-6"
+        class="col-span-full md:col-span-6"
         label="Кость хитов"
         name="hitDice"
       >
@@ -72,7 +72,7 @@
       </UFormField>
 
       <UFormField
-        class="col-span-6"
+        class="col-span-full md:col-span-6"
         label="Тип заклинателя"
         name="casterType"
       >
@@ -82,7 +82,7 @@
       <PrimaryCharacteristics v-model="primaryCharacteristics" />
 
       <UFormField
-        class="col-span-10"
+        class="col-span-full md:col-span-10"
         label="Спасброски"
         name="savingThrows"
       >

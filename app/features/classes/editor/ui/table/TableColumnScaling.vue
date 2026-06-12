@@ -22,16 +22,16 @@
     <span class="font-bold text-secondary"> Масштабирование по уровням </span>
   </USeparator>
 
-  <div class="col-span-full grid grid-cols-24 gap-4">
+  <div class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24">
     <UForm
       v-for="(row, index) in state"
       :key="index"
-      class="col-span-full grid grid-cols-24 gap-4"
+      class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
       attach
       :state="row"
     >
       <UFormField
-        class="col-span-8"
+        class="col-span-full md:col-span-8"
         label="Уровень"
         name="level"
       >
@@ -39,7 +39,7 @@
       </UFormField>
 
       <UFormField
-        class="col-span-8"
+        class="col-span-full md:col-span-8"
         label="Значение"
         name="value"
       >

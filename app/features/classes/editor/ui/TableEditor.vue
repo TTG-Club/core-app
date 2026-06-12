@@ -31,12 +31,12 @@
       >
         <UCard variant="subtle">
           <UForm
-            class="grid grid-cols-24 gap-4"
+            class="grid grid-cols-1 gap-4 md:grid-cols-24"
             attach
             :state="column"
           >
             <UFormField
-              class="col-span-12"
+              class="col-span-full md:col-span-12"
               label="Название"
               name="name"
             >

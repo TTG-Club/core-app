@@ -35,12 +35,12 @@
   <UForm
     v-for="(row, index) in state"
     :key="index"
-    class="col-span-full grid grid-cols-24 gap-4"
+    class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
     attach
     :state="row"
   >
     <UFormField
-      class="col-span-4"
+      class="col-span-full md:col-span-4"
       label="Уровень"
       name="level"
     >
@@ -48,7 +48,11 @@
     </UFormField>
 
     <UFormField
-      :class="isSubclass ? 'col-span-12' : 'col-span-8'"
+      :class="
+        isSubclass
+          ? 'col-span-full md:col-span-12'
+          : 'col-span-full md:col-span-8'
+      "
       label="Название"
       name="name"
     >
@@ -60,7 +64,7 @@
 
     <UFormField
       v-if="!isSubclass"
-      class="col-span-4"
+      class="col-span-full md:col-span-4"
       label="Скрывать в подклассе?"
       name="hideInSubclasses"
     >

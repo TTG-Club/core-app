@@ -125,7 +125,7 @@
         </h2>
       </template>
 
-      <div class="grid grid-cols-24 gap-4">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
         <UFormField
           class="col-span-full"
           name="equipment"
@@ -144,7 +144,7 @@
         <h2 class="truncate text-base text-highlighted">Описание</h2>
       </template>
 
-      <div class="grid grid-cols-24 gap-4">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
         <UFormField
           class="col-span-full"
           name="description"
@@ -170,9 +170,9 @@
         <h2 class="truncate text-base text-highlighted">Изображения</h2>
       </template>
 
-      <div class="grid grid-cols-24 gap-4">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
         <UFormField
-          class="col-span-12"
+          class="col-span-full md:col-span-12"
           label="Основное"
           name="image"
         >
@@ -194,7 +194,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-12"
+          class="col-span-full md:col-span-12"
           label="Галерея"
           name="gallery"
         >

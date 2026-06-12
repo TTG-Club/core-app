@@ -41,14 +41,14 @@
   <UForm
     v-for="(size, index) in sizes"
     :key="index"
-    class="col-span-full grid grid-cols-24 gap-4"
+    class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
     attach
     :state="size"
   >
     <UFormField
       name="type"
       label="Размер"
-      class="col-span-6"
+      class="col-span-full md:col-span-6"
     >
       <SelectSize
         v-model="size.type"
@@ -57,7 +57,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-6"
+      class="col-span-full md:col-span-6"
       label="Высота от"
       name="from"
     >
@@ -80,7 +80,7 @@
     <UFormField
       label="Высота до"
       name="to"
-      class="col-span-6"
+      class="col-span-full md:col-span-6"
     >
       <UFieldGroup>
         <UInputNumber
