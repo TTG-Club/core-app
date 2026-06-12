@@ -12,10 +12,10 @@
   <UForm
     :state="immunities"
     attach
-    class="col-span-full grid grid-cols-24 gap-4"
+    class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
   >
     <UFormField
-      class="col-span-12"
+      class="col-span-full md:col-span-12"
       label="Иммунитет к типам урона"
       name="damage"
     >
@@ -26,7 +26,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-12"
+      class="col-span-full md:col-span-12"
       label="Иммунитет к состояниям"
       name="condition"
     >

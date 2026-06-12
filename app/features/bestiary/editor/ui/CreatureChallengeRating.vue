@@ -20,12 +20,12 @@
     </template>
 
     <UForm
-      class="col-span-full grid grid-cols-24 gap-4"
+      class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
       attach
       :state="model"
     >
       <UFormField
-        class="col-span-4"
+        class="col-span-full md:col-span-4"
         label="Показатель опасности"
         name="value"
       >
@@ -36,7 +36,7 @@
       </UFormField>
 
       <UFormField
-        class="col-span-4"
+        class="col-span-full md:col-span-4"
         label="ПО в логове"
         name="inLair"
       >
@@ -49,7 +49,7 @@
       </UFormField>
 
       <UFormField
-        class="col-span-16"
+        class="col-span-full md:col-span-16"
         label="Суффикс"
         name="suffix"
       >

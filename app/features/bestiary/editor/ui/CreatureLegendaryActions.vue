@@ -40,11 +40,11 @@
 
     <div class="grid gap-6">
       <UForm
-        class="col-span-full grid grid-cols-24 gap-4"
+        class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
         attach
         :state="model"
       >
-        <div class="col-span-7 flex flex-col gap-6">
+        <div class="col-span-full flex flex-col gap-6 md:col-span-7">
           <UFormField
             label="Количество легендарных действий"
             name="count"
@@ -69,12 +69,15 @@
         </div>
 
         <UFormField
-          class="col-span-17"
+          class="col-span-full md:col-span-17"
           label="Описание легендарных действий"
           name="description"
+          :ui="{ root: 'w-full', container: 'w-full' }"
         >
           <UTextarea
             v-model="model.description"
+            class="w-full"
+            :ui="{ root: 'flex w-full', base: 'w-full' }"
             :maxrows="0"
             :rows="5"
             placeholder="Введите описание (необязательно)"
@@ -87,12 +90,12 @@
         :key="actionIndex"
       >
         <UForm
-          class="col-span-full grid grid-cols-24 gap-4"
+          class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
           attach
           :state="action"
         >
           <UFormField
-            class="col-span-8"
+            class="col-span-full md:col-span-8"
             label="Название"
             name="name.rus"
           >
@@ -103,7 +106,7 @@
           </UFormField>
 
           <UFormField
-            class="col-span-8"
+            class="col-span-full md:col-span-8"
             label="Название (англ.)"
             name="name.eng"
           >
@@ -123,12 +126,15 @@
           />
 
           <UFormField
-            class="col-span-24"
+            class="col-span-full md:col-span-24"
             label="Описание"
             name="description"
+            :ui="{ root: 'w-full', container: 'w-full' }"
           >
             <UTextarea
               v-model="action.description"
+              class="w-full"
+              :ui="{ root: 'flex w-full', base: 'w-full' }"
               :rows="3"
               placeholder="Введи описание"
             />

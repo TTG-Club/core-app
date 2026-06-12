@@ -12,7 +12,7 @@
   <UForm
     :state="resistances"
     attach
-    class="col-span-12 flex flex-col gap-4"
+    class="col-span-full flex flex-col gap-4 md:col-span-12"
   >
     <UFormField
       label="Сопротивление к типам урона"

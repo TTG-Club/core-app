@@ -27,12 +27,12 @@
       <UForm
         v-for="(item, index) in model.values"
         :key="index"
-        class="col-span-full grid grid-cols-24 gap-4"
+        class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
         attach
         :state="item"
       >
         <UFormField
-          class="col-span-6"
+          class="col-span-full md:col-span-6"
           label="Язык"
           name="language"
         >
@@ -40,7 +40,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-12"
+          class="col-span-full md:col-span-12"
           label="Пояснение"
           name="text"
         >
@@ -69,12 +69,12 @@
       </div>
 
       <UForm
-        class="col-span-full grid grid-cols-24 gap-4"
+        class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
         attach
         :state="model"
       >
         <UFormField
-          class="col-span-6"
+          class="col-span-full md:col-span-6"
           label="Телепатия"
           name="telepathy"
         >
@@ -85,7 +85,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-18"
+          class="col-span-full md:col-span-18"
           label="Доп. описание"
           name="text"
         >
