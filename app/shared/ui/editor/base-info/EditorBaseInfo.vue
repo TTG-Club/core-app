@@ -90,7 +90,7 @@
       attach
       :state="form"
       :schema="schema"
-      class="grid grid-cols-2 gap-6"
+      class="grid grid-cols-1 gap-6 lg:grid-cols-2"
     >
       <div class="flex flex-col gap-7">
         <UFormField
@@ -148,7 +148,7 @@
         </UFormField>
 
         <UForm
-          class="grid grid-cols-3 gap-4"
+          class="grid grid-cols-1 gap-4 md:grid-cols-3"
           :schema="sourceSchema"
           :state="form.source"
           attach
@@ -157,7 +157,7 @@
             label="Источник"
             help="Книга, из которой взята информация"
             name="url"
-            class="col-span-2"
+            class="md:col-span-2"
           >
             <SelectSource
               :model-value="form.source.url"

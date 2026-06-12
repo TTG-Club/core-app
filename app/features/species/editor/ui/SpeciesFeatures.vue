@@ -38,12 +38,12 @@
     :key="featIndex"
   >
     <UForm
-      class="col-span-full grid grid-cols-24 gap-4"
+      class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
       attach
       :state="feature"
     >
       <UFormField
-        class="col-span-8"
+        class="col-span-full md:col-span-8"
         label="Название"
         name="name.rus"
       >
@@ -54,7 +54,7 @@
       </UFormField>
 
       <UFormField
-        class="col-span-8"
+        class="col-span-full md:col-span-8"
         label="Название (англ.)"
         help="Английское название"
         name="name.eng"
@@ -75,7 +75,7 @@
       />
 
       <UFormField
-        class="col-span-24"
+        class="col-span-full"
         label="Описание"
         name="description"
       >

@@ -66,7 +66,7 @@
         <h2 class="truncate text-base text-highlighted">Описание</h2>
       </template>
 
-      <div class="grid grid-cols-24 gap-4">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
         <UFormField
           class="col-span-full"
           label="Описание"
@@ -86,9 +86,9 @@
         <h2 class="truncate text-base text-highlighted">Характеристики</h2>
       </template>
 
-      <div class="grid grid-cols-24 gap-4">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
         <UFormField
-          class="col-span-12"
+          class="col-span-full md:col-span-12"
           label="Основной вид"
           help="Необходимо указать, если создаешь происхождение вида"
           name="parent"
@@ -97,7 +97,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-12"
+          class="col-span-full md:col-span-12"
           label="Тип"
           name="properties.type"
         >
@@ -117,9 +117,9 @@
         <h2 class="truncate text-base text-highlighted">Изображения</h2>
       </template>
 
-      <div class="grid grid-cols-24 gap-4">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
         <UFormField
-          class="col-span-8"
+          class="col-span-full md:col-span-8"
           label="Основное"
           help="Эта картинка отображается при просмотре страницы вида"
           name="image"
@@ -158,7 +158,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-8"
+          class="col-span-full md:col-span-8"
           label="Для ссылки"
           help="Эта картинка отображается на странице со списком видов"
           name="linkImage"
@@ -197,7 +197,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-8"
+          class="col-span-full md:col-span-8"
           label="Галерея"
           name="gallery"
         >

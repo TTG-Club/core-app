@@ -38,14 +38,14 @@
 
     <div class="grid gap-4">
       <UForm
-        class="col-span-full grid grid-cols-25 gap-4"
+        class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-25"
         attach
         :state="model"
       >
         <UFormField
           label="Тёмное зрение"
           name="darkvision"
-          class="col-span-5"
+          class="col-span-full md:col-span-5"
         >
           <UFieldGroup>
             <UInputNumber
@@ -67,7 +67,7 @@
         <UFormField
           label="Истинное зрение"
           name="truesight"
-          class="col-span-5"
+          class="col-span-full md:col-span-5"
         >
           <UFieldGroup>
             <UInputNumber
@@ -89,7 +89,7 @@
         <UFormField
           label="Слепое зрение"
           name="blindsight"
-          class="col-span-5"
+          class="col-span-full md:col-span-5"
         >
           <UFieldGroup>
             <UInputNumber
@@ -111,7 +111,7 @@
         <UFormField
           label="Чувство вибрации"
           name="tremorsense"
-          class="col-span-5"
+          class="col-span-full md:col-span-5"
         >
           <UFieldGroup>
             <UInputNumber
@@ -133,7 +133,7 @@
         <UFormField
           label="Пассивная Внимательность"
           name="passivePerception"
-          class="col-span-5"
+          class="col-span-full md:col-span-5"
         >
           <UFieldGroup>
             <UInputNumber
@@ -154,7 +154,7 @@
 
         <UFormField
           name="unimpeded"
-          class="w-ful col-span-full"
+          class="col-span-full"
         >
           <UCheckbox
             v-model="model.unimpeded"

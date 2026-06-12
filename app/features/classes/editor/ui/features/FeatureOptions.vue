@@ -39,12 +39,12 @@
   <UForm
     v-for="(option, index) in state"
     :key="index"
-    class="col-span-full grid grid-cols-24 gap-4 rounded-lg border border-default bg-muted p-4"
+    class="col-span-full grid grid-cols-1 gap-4 rounded-lg border border-default bg-muted p-4 md:grid-cols-24"
     attach
     :state="option"
   >
     <UFormField
-      class="col-span-8"
+      class="col-span-full md:col-span-8"
       label="Название"
       name="name.rus"
     >
@@ -55,7 +55,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-8"
+      class="col-span-full md:col-span-8"
       label="Английское название"
       name="name.eng"
     >
@@ -66,7 +66,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-4"
+      class="col-span-full md:col-span-4"
       label="Уровень"
       name="requiredClassLevel"
     >
@@ -75,7 +75,7 @@
 
     <UFormField
       v-if="!isSubclass"
-      class="col-span-4"
+      class="col-span-full md:col-span-4"
       label="Скрыть в подклассе?"
       name="hideInSubclasses"
     >
@@ -95,7 +95,7 @@
     />
 
     <UFormField
-      class="col-span-12 col-start-1"
+      class="col-span-full md:col-span-12 md:col-start-1"
       label="Подсказка"
       name="additional"
     >
@@ -106,7 +106,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-12"
+      class="col-span-full md:col-span-12"
       label="Требования"
       name="prerequisite"
     >

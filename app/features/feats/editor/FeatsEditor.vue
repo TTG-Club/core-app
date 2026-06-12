@@ -58,9 +58,9 @@
         <h2 class="truncate text-base text-highlighted">Подробности</h2>
       </template>
 
-      <div class="grid grid-cols-24 gap-4 pb-24">
+      <div class="grid grid-cols-1 gap-4 pb-24 md:grid-cols-24">
         <UFormField
-          class="col-span-6"
+          class="md:col-span-8 lg:col-span-6"
           label="Категория"
           name="category"
         >
@@ -68,7 +68,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-12"
+          class="md:col-span-16 lg:col-span-12"
           label="Предварительное условие"
           name="prerequisite"
         >
@@ -79,7 +79,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-6"
+          class="md:col-span-12 lg:col-span-6"
           label="Повторяемость"
           name="repeatability"
         >
@@ -90,7 +90,7 @@
         </UFormField>
 
         <UFormField
-          class="col-span-6"
+          class="md:col-span-12 lg:col-span-6"
           label="Улучшаемые характеристики"
           name="abilities"
         >
@@ -108,9 +108,8 @@
         <h2 class="truncate text-base text-highlighted">Описание</h2>
       </template>
 
-      <div class="grid grid-cols-24 gap-4">
+      <div class="grid grid-cols-1 gap-4">
         <UFormField
-          class="col-span-24"
           label="Описание"
           name="description"
         >

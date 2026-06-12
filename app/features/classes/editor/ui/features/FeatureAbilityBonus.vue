@@ -19,12 +19,12 @@
 
   <UForm
     v-if="!!state"
-    class="col-span-full grid grid-cols-24 gap-4"
+    class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
     :state
     attach
   >
     <UFormField
-      class="col-span-12"
+      class="col-span-full md:col-span-12"
       label="Характеристики"
       name="abilities"
     >
@@ -36,7 +36,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-4"
+      class="col-span-full md:col-span-4"
       label="Бонус характеристики"
       name="bonus"
     >
@@ -47,7 +47,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-4"
+      class="col-span-full md:col-span-4"
       label="Лимит увеличения"
       name="upto"
     >
@@ -58,7 +58,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-4"
+      class="col-span-full md:col-span-4"
       label="Управление"
     >
       <UButton

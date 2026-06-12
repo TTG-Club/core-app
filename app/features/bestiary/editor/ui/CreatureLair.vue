@@ -40,7 +40,7 @@
 
     <div class="grid gap-6">
       <UForm
-        class="col-span-full grid grid-cols-24 gap-4"
+        class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
         attach
         :state="model"
       >
@@ -59,9 +59,12 @@
           class="col-span-full"
           label="Описание логова"
           name="lair.description"
+          :ui="{ root: 'w-full', container: 'w-full' }"
         >
           <UTextarea
             v-model="model.description"
+            class="w-full"
+            :ui="{ root: 'flex w-full', base: 'w-full' }"
             :maxrows="6"
             :rows="2"
             placeholder="Введите описание (необязательно)"
@@ -74,12 +77,12 @@
         :key="effectIndex"
       >
         <UForm
-          class="col-span-full grid grid-cols-24 gap-4"
+          class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
           attach
           :state="effect"
         >
           <UFormField
-            class="col-span-8"
+            class="col-span-full md:col-span-8"
             label="Название"
             name="name.rus"
           >
@@ -90,7 +93,7 @@
           </UFormField>
 
           <UFormField
-            class="col-span-8"
+            class="col-span-full md:col-span-8"
             label="Название (англ.)"
             name="name.eng"
           >
@@ -110,12 +113,15 @@
           />
 
           <UFormField
-            class="col-span-24"
+            class="col-span-full md:col-span-24"
             label="Описание"
             name="description"
+            :ui="{ root: 'w-full', container: 'w-full' }"
           >
             <UTextarea
               v-model="effect.description"
+              class="w-full"
+              :ui="{ root: 'flex w-full', base: 'w-full' }"
               :rows="3"
               placeholder="Введи описание"
             />
@@ -135,7 +141,7 @@
       </div>
 
       <UForm
-        class="col-span-full grid grid-cols-24 gap-4"
+        class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
         attach
         :state="model"
       >
@@ -143,9 +149,12 @@
           class="col-span-full"
           label="Описание окончания действия логова"
           name="lair.ending"
+          :ui="{ root: 'w-full', container: 'w-full' }"
         >
           <UTextarea
             v-model="model.ending"
+            class="w-full"
+            :ui="{ root: 'flex w-full', base: 'w-full' }"
             :maxrows="6"
             :rows="2"
             placeholder="Описание окончания действия логова (необязательно)"

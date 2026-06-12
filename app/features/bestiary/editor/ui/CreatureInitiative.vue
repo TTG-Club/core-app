@@ -21,12 +21,12 @@
 
 <template>
   <UForm
-    class="col-span-1 grid grid-cols-22 gap-4"
+    class="grid grid-cols-1 gap-4 md:grid-cols-22"
     attach
     :state="model"
   >
     <UFormField
-      class="col-span-10"
+      class="col-span-full md:col-span-10"
       label="Инициатива"
       name="value"
     >
@@ -48,7 +48,7 @@
     </UFormField>
 
     <UFormField
-      class="col-span-12"
+      class="col-span-full md:col-span-12"
       label="Уровень владения"
       name="multiplier"
     >

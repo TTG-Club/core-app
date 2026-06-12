@@ -25,7 +25,7 @@
 
 <template>
   <UForm
-    class="col-span-full grid grid-cols-24 gap-4"
+    class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
     attach
     :state="attunement"
   >

@@ -31,14 +31,14 @@
 
     <div class="grid gap-4">
       <UForm
-        class="col-span-full grid grid-cols-24 gap-4"
+        class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
         attach
         :state="model"
       >
         <UFormField
           v-for="ability in ABILITIES"
           :key="ability.key"
-          class="col-span-4"
+          class="col-span-full md:col-span-4"
           :label="ability.label"
           :name="ability.shortKey + '.value'"
         >
@@ -61,14 +61,14 @@
       </UForm>
 
       <UForm
-        class="col-span-full grid grid-cols-24 gap-4"
+        class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
         attach
         :state="model"
       >
         <UFormField
           v-for="ability in ABILITIES"
           :key="ability.key"
-          class="col-span-4"
+          class="col-span-full md:col-span-4"
           :label="ability.label"
           :name="ability.shortKey + '.multiplier'"
         >
