@@ -56,55 +56,61 @@
         <h2 class="truncate text-base text-highlighted">Подробности</h2>
       </template>
 
-      <UFormField>
-        <input
-          v-model="state.category"
-          type="hidden"
-          name="category"
-        />
-      </UFormField>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
+        <UFormField class="hidden">
+          <input
+            v-model="state.category"
+            type="hidden"
+            name="category"
+          />
+        </UFormField>
 
-      <UFormField
-        label="Типы предмета"
-        tooltip="Введите типы"
-        name="types"
-      >
-        <ItemType
-          v-model="state.types"
-          multiple
-        />
-      </UFormField>
+        <UFormField
+          class="md:col-span-24"
+          label="Типы предмета"
+          tooltip="Введите типы"
+          name="types"
+        >
+          <ItemType
+            v-model="state.types"
+            multiple
+          />
+        </UFormField>
 
-      <UFormField
-        label="Количество монет"
-        tooltip="Введите количество монет"
-        name="cost"
-      >
-        <UInput
-          v-model="state.cost"
-          :precision="0"
-          placeholder="Введи количество монет"
-          min="0"
-        />
-      </UFormField>
+        <UFormField
+          class="md:col-span-8"
+          label="Количество монет"
+          tooltip="Введите количество монет"
+          name="cost"
+        >
+          <UInput
+            v-model="state.cost"
+            :precision="0"
+            placeholder="Введи количество монет"
+            min="0"
+          />
+        </UFormField>
 
-      <UFormField
-        label="Номинал монет"
-        tooltip="Выберите номинал"
-        name="coin"
-      >
-        <CoinsType v-model="state.coin" />
-      </UFormField>
+        <UFormField
+          class="md:col-span-8"
+          label="Номинал монет"
+          tooltip="Выберите номинал"
+          name="coin"
+        >
+          <CoinsType v-model="state.coin" />
+        </UFormField>
 
-      <UFormField
-        label="Вес"
-        name="weight"
-      >
-        <UInput
-          v-model="state.weight"
-          placeholder="Введи вес"
-        />
-      </UFormField>
+        <UFormField
+          class="md:col-span-8"
+          label="Вес"
+          name="weight"
+        >
+          <UInput
+            v-model="state.weight"
+            placeholder="Введи вес"
+          />
+        </UFormField>
+      </div>
     </UCard>
 
     <UCard variant="subtle">

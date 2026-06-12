@@ -69,14 +69,14 @@
         <h2 class="truncate text-base text-highlighted">Подробности</h2>
       </template>
 
-      <div class="grid grid-cols-24 gap-4">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
         <MagicItemCategory v-model="state.category" />
 
         <MagicItemRarity v-model="state.rarity" />
 
         <MagicItemAttunement v-model="state.attunement" />
 
-        <div class="col-span-4 mt-4 flex flex-col gap-4">
+        <div class="flex flex-col gap-4 md:col-span-8 md:mt-4 lg:col-span-4">
           <UFormField name="curse">
             <UCheckbox
               v-model="state.curse"
@@ -93,7 +93,7 @@
         </div>
 
         <UFormField
-          class="col-span-8"
+          class="md:col-span-16 lg:col-span-8"
           label="Количество зарядов"
           help="Введите количество зарядов магического предмета (если есть)"
           name="charges"
@@ -114,11 +114,8 @@
         <h2 class="truncate text-base text-highlighted">Описание</h2>
       </template>
 
-      <div class="grid grid-cols-24 gap-4">
-        <UFormField
-          class="col-span-24"
-          name="description"
-        >
+      <div class="grid grid-cols-1 gap-4">
+        <UFormField name="description">
           <UTextarea
             v-model="state.description"
             :rows="8"
@@ -133,9 +130,9 @@
         <h2 class="truncate text-base text-highlighted">Изображения</h2>
       </template>
 
-      <div class="grid grid-cols-24 gap-4">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
         <UFormField
-          class="col-span-8"
+          class="md:col-span-12 lg:col-span-8"
           label="Основное"
           help="Эта картинка отображается при просмотре страницы магического предмета"
           name="image"
