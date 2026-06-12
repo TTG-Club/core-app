@@ -41,6 +41,28 @@ export const SPELL_DAMAGE_TYPE_TAGS: Record<string, string> = {
   THUNDER: 'dmg.thunder',
 };
 
+export const SPELL_HEALING_TYPE_TAGS: Record<string, string> = {
+  HEALING: 'heal',
+  TEMPORARY_HIT: 'heal.temp',
+  TEMPORARY_HITPOINTS: 'heal.temp',
+};
+
+export const SPELL_DAMAGE_FORMULA_HEALING_TAGS = [
+  { label: 'Лечение', value: 'heal' },
+  { label: 'Временные ХП', value: 'heal.temp' },
+];
+
+export const SPELL_DAMAGE_FORMULA_DICE = [
+  { label: 'к4', value: 4 },
+  { label: 'к6', value: 6 },
+  { label: 'к8', value: 8 },
+  { label: 'к10', value: 10 },
+  { label: 'к12', value: 12 },
+  { label: 'к20', value: 20 },
+];
+
+export const SPELL_DAMAGE_FORMULA_SEPARATOR = '+';
+
 export const SPELL_DAMAGE_FORMULA_CONDITION_TAGS = [
   { label: 'Полное HP', value: 'target.full' },
   { label: 'Неполное HP', value: 'target.notFull' },
@@ -65,9 +87,11 @@ export const SPELL_DAMAGE_FORMULA_TARGET_OPTIONS = [
 ];
 
 export const SPELL_DAMAGE_FORMULA_TOOLS = [
-  { label: 'Добавить мод', value: 'modifier' },
+  { label: 'Кости', value: 'dice' },
   { label: 'Тип урона', value: 'damage-type' },
+  { label: 'Лечение', value: 'healing' },
   { label: 'Условия', value: 'condition' },
+  { label: 'Добавить мод', value: 'modifier' },
 ];
 
 export const DEFAULT_SPELL_DAMAGE_FORMULA_TOOL = 'modifier';

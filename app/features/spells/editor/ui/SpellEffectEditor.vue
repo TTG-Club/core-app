@@ -5,7 +5,6 @@
     SelectAbilities,
     SelectAttackType,
     SelectCondition,
-    SelectHealType,
     SelectSpellArea,
   } from '~ui/select';
 
@@ -123,18 +122,6 @@
       />
 
       <SpellDamageFormulas v-model="damageFormulas" />
-
-      <!-- Типы лечения -->
-      <UFormField
-        class="col-span-full md:col-span-12 xl:col-span-6"
-        label="Типы лечения"
-        name="effect.healingTypes"
-      >
-        <SelectHealType
-          v-model="model.healingTypes"
-          multiple
-        />
-      </UFormField>
 
       <!-- Спасброски -->
       <UFormField

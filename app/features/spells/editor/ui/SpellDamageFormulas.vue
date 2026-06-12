@@ -4,9 +4,14 @@
   import { DictionaryService } from '~/shared/api';
 
   import {
+    appendSpellDamageFormulaModifier,
+    appendSpellDamageFormulaTag,
     DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
     DEFAULT_SPELL_DAMAGE_FORMULA_TOOL,
+    incrementSpellDamageFormulaDice,
     SPELL_DAMAGE_FORMULA_CONDITION_TAGS,
+    SPELL_DAMAGE_FORMULA_DICE,
+    SPELL_DAMAGE_FORMULA_HEALING_TAGS,
     SPELL_DAMAGE_FORMULA_MODIFIER_TAGS,
     SPELL_DAMAGE_FORMULA_TARGET_OPTIONS,
     SPELL_DAMAGE_FORMULA_TOOLS,
@@ -60,11 +65,19 @@
     model.value = normalizeFormulaRows(rows);
   }
 
-  function updateFormula(rowIndex: number, formula: string): void {
+  function updateFormulaRow(
+    rowIndex: number,
+    updateFormula: (formula: string) => string,
+  ): void {
     const rows = [...formulaRows.value];
+    const formula = rows[rowIndex] ?? '';
 
-    rows[rowIndex] = formula;
+    rows[rowIndex] = updateFormula(formula);
     saveFormulaRows(rows);
+  }
+
+  function updateFormula(rowIndex: number, formula: string): void {
+    updateFormulaRow(rowIndex, () => formula);
   }
 
   function handleFormulaInput(rowIndex: number, modelValue: unknown): void {
@@ -114,12 +127,22 @@
     appendFormulaTag(rowIndex, getDamageTypeTag(damageType));
   }
 
-  function appendFormulaTag(rowIndex: number, tag: string): void {
-    const rows = [...formulaRows.value];
-    const formula = rows[rowIndex] ?? '';
+  function incrementDice(rowIndex: number, diceValue: number): void {
+    updateFormulaRow(rowIndex, (formula) =>
+      incrementSpellDamageFormulaDice(formula, diceValue),
+    );
+  }
 
-    rows[rowIndex] = formula ? `${formula}@${tag}` : `@${tag}`;
-    saveFormulaRows(rows);
+  function appendFormulaTag(rowIndex: number, tag: string): void {
+    updateFormulaRow(rowIndex, (formula) =>
+      appendSpellDamageFormulaTag(formula, tag),
+    );
+  }
+
+  function appendFormulaModifier(rowIndex: number, modifier: string): void {
+    updateFormulaRow(rowIndex, (formula) =>
+      appendSpellDamageFormulaModifier(formula, modifier),
+    );
   }
 
   function addFormula(rowIndex: number): void {
@@ -201,6 +224,32 @@
               </UButton>
             </template>
 
+            <template v-else-if="getActiveTool(rowIndex) === 'dice'">
+              <UButton
+                v-for="dice in SPELL_DAMAGE_FORMULA_DICE"
+                :key="dice.value"
+                size="xs"
+                variant="subtle"
+                @click.left.exact.prevent="incrementDice(rowIndex, dice.value)"
+              >
+                {{ dice.label }}
+              </UButton>
+            </template>
+
+            <template v-else-if="getActiveTool(rowIndex) === 'healing'">
+              <UButton
+                v-for="healingType in SPELL_DAMAGE_FORMULA_HEALING_TAGS"
+                :key="healingType.value"
+                size="xs"
+                variant="subtle"
+                @click.left.exact.prevent="
+                  appendFormulaTag(rowIndex, healingType.value)
+                "
+              >
+                {{ healingType.label }} (@{{ healingType.value }})
+              </UButton>
+            </template>
+
             <template v-else-if="getActiveTool(rowIndex) === 'condition'">
               <UButton
                 v-for="condition in SPELL_DAMAGE_FORMULA_CONDITION_TAGS"
@@ -222,7 +271,7 @@
                 size="xs"
                 variant="subtle"
                 @click.left.exact.prevent="
-                  appendFormulaTag(rowIndex, modifier.value)
+                  appendFormulaModifier(rowIndex, modifier.value)
                 "
               >
                 {{ modifier.label }} (@{{ modifier.value }})

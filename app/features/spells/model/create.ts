@@ -1,7 +1,7 @@
 import type { AbilityKey } from '~/shared/types';
 import type { EditorBaseInfoState } from '~ui/editor';
 
-import { SPELL_DAMAGE_TYPE_TAGS } from './constants';
+import { SPELL_DAMAGE_TYPE_TAGS, SPELL_HEALING_TYPE_TAGS } from './constants';
 
 /**
  * Тип цели заклинания.
@@ -141,6 +141,52 @@ function createSpellDamageFormula(formula: string, damageType: string): string {
 }
 
 /**
+ * Возвращает тег типа лечения для формулы заклинания.
+ */
+function getSpellHealingTypeTag(healingType: string): string | undefined {
+  return SPELL_HEALING_TYPE_TAGS[healingType];
+}
+
+/**
+ * Добавляет тег к формуле, если он еще не указан.
+ */
+function appendMissingFormulaTag(formula: string, tag: string): string {
+  if (formula.includes(`@${tag}`)) {
+    return formula;
+  }
+
+  return `${formula}@${tag}`;
+}
+
+/**
+ * Мигрирует legacy healingTypes в теги формулы лечения.
+ */
+function migrateSpellEffectHealingFormulas(effect: SpellEffect): SpellEffect {
+  if (!effect.healingTypes?.length || !effect.damageFormulas?.length) {
+    return effect;
+  }
+
+  const healingTags = effect.healingTypes
+    .map(getSpellHealingTypeTag)
+    .filter((tag) => tag !== undefined);
+
+  if (healingTags.length === 0) {
+    return {
+      ...effect,
+      healingTypes: [],
+    };
+  }
+
+  return {
+    ...effect,
+    damageFormulas: effect.damageFormulas.map((formula) =>
+      healingTags.reduce(appendMissingFormulaTag, formula),
+    ),
+    healingTypes: [],
+  };
+}
+
+/**
  * Мигрирует старые формулы урона SpellEffect к новому формату массивов формул.
  */
 function migrateSpellEffectDamageFormulas(effect: SpellEffect): SpellEffect {
@@ -178,7 +224,10 @@ function migrateSpellEffectDamageFormulas(effect: SpellEffect): SpellEffect {
 export function normalizeSpellEffect(
   effect: SpellEffect,
 ): SpellEffect | undefined {
-  const migratedEffect = migrateSpellEffectDamageFormulas(effect);
+  const migratedEffect = migrateSpellEffectHealingFormulas(
+    migrateSpellEffectDamageFormulas(effect),
+  );
+
   const normalized: SpellEffect = {};
 
   if (migratedEffect.targetType) {
@@ -220,10 +269,6 @@ export function normalizeSpellEffect(
     && migratedEffect.damageFormulas.length > 0
   ) {
     normalized.damageFormulas = migratedEffect.damageFormulas;
-  }
-
-  if (migratedEffect.healingTypes && migratedEffect.healingTypes.length > 0) {
-    normalized.healingTypes = migratedEffect.healingTypes;
   }
 
   if (migratedEffect.savingThrows && migratedEffect.savingThrows.length > 0) {
@@ -291,19 +336,21 @@ export function normalizeLoadedSpell(
   if (result.effect && isRecord(result.effect)) {
     const rawEffect = result.effect;
 
-    result.effect = migrateSpellEffectDamageFormulas({
-      ...createEmptySpellEffect(),
-      ...rawEffect,
-      areaOfEffect:
-        rawEffect.areaOfEffect && isRecord(rawEffect.areaOfEffect)
-          ? {
-              type: undefined,
-              value1: undefined,
-              value2: undefined,
-              ...rawEffect.areaOfEffect,
-            }
-          : createEmptySpellEffect().areaOfEffect,
-    });
+    result.effect = migrateSpellEffectHealingFormulas(
+      migrateSpellEffectDamageFormulas({
+        ...createEmptySpellEffect(),
+        ...rawEffect,
+        areaOfEffect:
+          rawEffect.areaOfEffect && isRecord(rawEffect.areaOfEffect)
+            ? {
+                type: undefined,
+                value1: undefined,
+                value2: undefined,
+                ...rawEffect.areaOfEffect,
+              }
+            : createEmptySpellEffect().areaOfEffect,
+      }),
+    );
   } else {
     // Миграция старых записей без effect
     const migratedEffect = createEmptySpellEffect();
@@ -333,6 +380,13 @@ export function normalizeLoadedSpell(
 
       migratedEffect.damageFormula = undefined;
       migratedEffect.damageTypes = [];
+    } else if (
+      typeof result.damageFormula === 'string'
+      && migratedEffect.healingTypes
+      && migratedEffect.healingTypes.length > 0
+    ) {
+      migratedEffect.damageFormulas = [result.damageFormula];
+      migratedEffect.damageFormula = undefined;
     }
 
     if (isStringArray(result.condition)) {
@@ -353,7 +407,7 @@ export function normalizeLoadedSpell(
       };
     }
 
-    result.effect = migratedEffect;
+    result.effect = migrateSpellEffectHealingFormulas(migratedEffect);
 
     // Удаляем старые поля
     delete result.savingThrow;
