@@ -2,6 +2,7 @@
   import type { WritableComputedRef } from 'vue';
 
   import type {
+    BugReportStatsResponse,
     BugReportStatus,
     PageBugReportResponse,
   } from '~bug-report/model';
@@ -19,9 +20,13 @@
     ADMIN_BUGS_PAGE_DESCRIPTION,
     ADMIN_BUGS_PAGE_TITLE,
     ADMIN_BUGS_PLATFORM_ALL_LABEL,
+    ADMIN_BUGS_STAT_FIXED_LABEL,
+    ADMIN_BUGS_STAT_TOTAL_LABEL,
+    ADMIN_BUGS_STATS_DATA_KEY,
     ADMIN_BUGS_STATUS_ALL_LABEL,
     BUG_REPORT_DETAIL_DATE_FORMAT,
     BUG_REPORT_PLATFORM_LABELS,
+    BUG_REPORT_STATS_API_URL,
     BUG_REPORT_STATUS_LABELS,
   } from '~bug-report/model';
 
@@ -152,6 +157,29 @@
   const resolvedBugsList = computed(() => bugsData.value?.content ?? []);
   const totalBugsCount = computed(() => bugsData.value?.totalElements ?? 0);
 
+  // Сводная статистика по всем баг-репортам (не зависит от фильтров)
+  const { data: bugStats } = await useAsyncData<BugReportStatsResponse>(
+    ADMIN_BUGS_STATS_DATA_KEY,
+    () => requestFetch<BugReportStatsResponse>(BUG_REPORT_STATS_API_URL),
+  );
+
+  const totalFoundCount = computed(() => bugStats.value?.totalCount ?? 0);
+  const fixedFoundCount = computed(() => bugStats.value?.fixedCount ?? 0);
+
+  /** Отфильтровать список по новым баг-репортам. */
+  function showNewBugs(): void {
+    const status: BugReportStatus = 'NEW';
+
+    statusFilter.value = status;
+  }
+
+  /** Отфильтровать список по исправленным баг-репортам. */
+  function showFixedBugs(): void {
+    const status: BugReportStatus = 'FIXED';
+
+    statusFilter.value = status;
+  }
+
   // Выбранный баг на основе ID из списка
   const selectedBug = computed(() => {
     return resolvedBugsList.value.find(
@@ -256,6 +284,45 @@
           <p class="text-xs leading-normal text-secondary">
             {{ ADMIN_BUGS_PAGE_DESCRIPTION }}
           </p>
+
+          <!-- Сводная статистика по баг-репортам -->
+          <div class="flex flex-col gap-2">
+            <button
+              type="button"
+              class="flex cursor-pointer flex-col rounded-lg border border-default bg-elevated/50 px-3 py-2.5 text-left transition-colors hover:bg-elevated"
+              @click.left.exact.prevent="showNewBugs"
+            >
+              <span
+                class="text-[10px] font-medium tracking-wider text-muted uppercase"
+              >
+                {{ ADMIN_BUGS_STAT_TOTAL_LABEL }}
+              </span>
+
+              <span
+                class="text-lg leading-tight font-bold text-default tabular-nums"
+              >
+                {{ totalFoundCount }}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="flex cursor-pointer flex-col rounded-lg border border-default bg-elevated/50 px-3 py-2.5 text-left transition-colors hover:bg-elevated"
+              @click.left.exact.prevent="showFixedBugs"
+            >
+              <span
+                class="text-[10px] font-medium tracking-wider text-muted uppercase"
+              >
+                {{ ADMIN_BUGS_STAT_FIXED_LABEL }}
+              </span>
+
+              <span
+                class="text-lg leading-tight font-bold text-success-400 tabular-nums"
+              >
+                {{ fixedFoundCount }}
+              </span>
+            </button>
+          </div>
 
           <div class="flex flex-col gap-2">
             <!-- Фильтр по статусу -->

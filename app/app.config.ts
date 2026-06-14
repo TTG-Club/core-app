@@ -179,7 +179,7 @@ export default defineAppConfig({
     },
     select: {
       slots: {
-        base: 'w-full',
+        base: 'w-full cursor-pointer',
       },
       variants: {
         defaultVariants: {
@@ -192,7 +192,7 @@ export default defineAppConfig({
     },
     selectMenu: {
       slots: {
-        base: 'w-full',
+        base: 'w-full cursor-pointer',
       },
       variants: {
         defaultVariants: {
