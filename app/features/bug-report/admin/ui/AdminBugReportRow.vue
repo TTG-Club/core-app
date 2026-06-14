@@ -57,7 +57,7 @@
 
 <template>
   <div
-    class="flex cursor-pointer flex-row flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl border px-4 py-3 transition-all select-none"
+    class="flex cursor-pointer flex-row flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl border px-4 py-3 transition select-none"
     :class="
       isOpened
         ? 'border-primary bg-primary/10 shadow-xs ring-1 ring-primary/50'
@@ -67,7 +67,7 @@
   >
     <!-- Левая секция: UUID, Статус, Платформа -->
     <div
-      class="flex min-w-0 flex-1 items-center justify-between gap-4 sm:flex-initial sm:gap-8"
+      class="flex w-full min-w-0 items-center justify-between gap-4 sm:w-auto sm:flex-initial sm:gap-8"
     >
       <!-- UUID -->
       <span
@@ -101,7 +101,7 @@
 
     <!-- Правая секция: Автор, Иконки медиа, Дата создания -->
     <div
-      class="flex flex-1 items-center justify-between gap-4 text-xs text-secondary sm:flex-initial sm:shrink-0 sm:gap-6"
+      class="flex w-full items-center justify-between gap-4 text-xs text-secondary sm:w-auto sm:flex-initial sm:shrink-0 sm:gap-6"
     >
       <!-- Автор -->
       <span
