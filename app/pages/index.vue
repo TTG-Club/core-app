@@ -1,8 +1,7 @@
 <script setup lang="ts">
   import { HomeBackground } from '~home/background';
   import { HomeBanners, VttgCampaignBanner } from '~home/banners';
-  import { HomeBugLeaderboard } from '~home/bug-leaderboard';
-  import { HomeCounters } from '~home/counters';
+  import { HomeCommunity } from '~home/community';
   import { HomeRecentChanges } from '~home/recent-changes';
   import { HomeSections } from '~home/sections';
   import { SocialLinks } from '~home/social-links';
@@ -37,6 +36,7 @@
       <HomeSections />
 
       <div class="flex w-full flex-col gap-3 lg:items-start xl:flex-row">
+        <!-- Навигация по сайту и соцсети -->
         <div class="flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">
           <div class="grid grid-cols-2 gap-3">
             <HomeBanners group="tools" />
@@ -44,17 +44,17 @@
             <HomeBanners group="info" />
           </div>
 
-          <HomeBugLeaderboard />
+          <SocialLinks />
         </div>
 
+        <!-- Обновления на сайте -->
         <div class="flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">
           <HomeRecentChanges />
         </div>
 
+        <!-- Статистика проекта и охотники за багами -->
         <div class="flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">
-          <HomeCounters />
-
-          <SocialLinks />
+          <HomeCommunity />
         </div>
       </div>
     </div>

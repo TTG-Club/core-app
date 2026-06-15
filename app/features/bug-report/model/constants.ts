@@ -68,6 +68,15 @@ export const ADMIN_BUGS_PAGE_DESCRIPTION =
 /** Текст при пустом списке баг-репортов */
 export const ADMIN_BUGS_EMPTY_TEXT = 'Баг-репорты не найдены';
 
+/** Ключ кеша сводной статистики баг-репортов в админке */
+export const ADMIN_BUGS_STATS_DATA_KEY = 'admin-bugs-stats';
+
+/** Подпись стата «всего найдено багов» в шапке админки */
+export const ADMIN_BUGS_STAT_TOTAL_LABEL = 'Всего найдено';
+
+/** Подпись стата «исправлено багов» в шапке админки */
+export const ADMIN_BUGS_STAT_FIXED_LABEL = 'Исправлено';
+
 /** Значение фильтра "Все статусы" */
 export const ADMIN_BUGS_STATUS_ALL_LABEL = 'Все статусы';
 
