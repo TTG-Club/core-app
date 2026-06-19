@@ -39,6 +39,9 @@ enum DictionaryEndpoints {
   CASTER_TYPES = '/api/v2/dictionaries/caster-types',
   ARMOR_CATEGORIES = '/api/v2/dictionaries/armor/categories',
   WEAPON_CATEGORIES = '/api/v2/dictionaries/weapon/categories',
+  WEAPON_PROPERTIES = '/api/v2/dictionaries/weapon/properties',
+  WEAPON_MASTERY = '/api/v2/dictionaries/weapon/mastery',
+  WEAPON_AMMUNITION = '/api/v2/dictionaries/weapon/ammunition',
   SOURCE_TYPES = '/api/v2/dictionaries/source/types',
   NOTIFICATION_TYPES = '/api/v2/dictionaries/notification/types',
   ATTACK_TYPES = '/api/v2/dictionaries/attack/types',
@@ -278,6 +281,33 @@ class Dictionaries {
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.WEAPON_CATEGORIES, {
+      ...config,
+      method: 'get',
+    });
+  };
+
+  public weaponProperties = <R extends NitroFetchRequest>(
+    config: Omit<NitroFetchOptions<R>, 'method'> = {},
+  ): Promise<Array<SelectOption>> => {
+    return $fetch(DictionaryEndpoints.WEAPON_PROPERTIES, {
+      ...config,
+      method: 'get',
+    });
+  };
+
+  public weaponMastery = <R extends NitroFetchRequest>(
+    config: Omit<NitroFetchOptions<R>, 'method'> = {},
+  ): Promise<Array<SelectOption>> => {
+    return $fetch(DictionaryEndpoints.WEAPON_MASTERY, {
+      ...config,
+      method: 'get',
+    });
+  };
+
+  public weaponAmmunition = <R extends NitroFetchRequest>(
+    config: Omit<NitroFetchOptions<R>, 'method'> = {},
+  ): Promise<Array<SelectOption>> => {
+    return $fetch(DictionaryEndpoints.WEAPON_AMMUNITION, {
       ...config,
       method: 'get',
     });

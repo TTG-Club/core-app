@@ -1,5 +1,6 @@
 export { default as SelectAbilities } from './SelectAbilities.vue';
 export { default as SelectAlignment } from './SelectAlignment.vue';
+export { default as SelectAmmunition } from './SelectAmmunition.vue';
 export { default as SelectArmorCategory } from './SelectArmorCategory.vue';
 export { default as SelectAttackType } from './SelectAttackType.vue';
 export { default as SelectBackground } from './SelectBackground.vue';
@@ -33,3 +34,5 @@ export { default as SelectSubclass } from './SelectSubclass.vue';
 export { default as SelectTimeUnit } from './SelectTimeUnit.vue';
 export { default as SelectTreasure } from './SelectTreasure.vue';
 export { default as SelectWeaponCategory } from './SelectWeaponCategory.vue';
+export { default as SelectWeaponMastery } from './SelectWeaponMastery.vue';
+export { default as SelectWeaponProperty } from './SelectWeaponProperty.vue';
