@@ -4,6 +4,7 @@
   import {
     createEmptySpellEffect,
     normalizeLoadedSpell,
+    normalizeSpellActiveEffects,
     normalizeSpellEffect,
   } from '~spells/model';
   import { SpellPreview } from '~spells/preview';
@@ -20,6 +21,7 @@
   import { useWorkshopForm } from '~workshop/composable';
 
   import {
+    SpellActiveEffects,
     SpellCastingTimes,
     SpellComponents,
     SpellDurations,
@@ -64,6 +66,7 @@
       },
       tags: [],
       effect: createEmptySpellEffect(),
+      activeEffects: [],
     };
   }
 
@@ -77,6 +80,7 @@
       return {
         ...formState,
         effect: normalizedEffect ?? createEmptySpellEffect(),
+        activeEffects: normalizeSpellActiveEffects(formState.activeEffects),
       };
     },
   });
@@ -141,6 +145,8 @@
     </UCard>
 
     <SpellEffectEditor v-model="state.effect" />
+
+    <SpellActiveEffects v-model="state.activeEffects" />
 
     <UCard variant="subtle">
       <template #header>

@@ -1,7 +1,10 @@
 import type { AbilityKey } from '~/shared/types';
 import type { EditorBaseInfoState } from '~ui/editor';
 
+import type { SpellActiveEffect } from './effect';
+
 import { SPELL_DAMAGE_TYPE_TAGS, SPELL_HEALING_TYPE_TAGS } from './constants';
+import { normalizeLoadedSpellActiveEffects } from './effect';
 
 /**
  * Тип цели заклинания.
@@ -55,6 +58,7 @@ export interface SpellCreate extends EditorBaseInfoState {
   components: SpellComponents; // компоненты
   affiliations: SpellAffiliation; // привязка заклинания к сущностям
   effect: SpellEffect; // единый объект воздействия
+  activeEffects: SpellActiveEffect[]; // активные эффекты для экспорта в VTTG
 }
 
 export interface SpellSchool {
@@ -419,6 +423,10 @@ export function normalizeLoadedSpell(
     delete result.attackType;
     delete result.areaOfEffect;
   }
+
+  result.activeEffects = normalizeLoadedSpellActiveEffects(
+    result.activeEffects,
+  );
 
   return result;
 }
