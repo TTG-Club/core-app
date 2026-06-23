@@ -5,9 +5,14 @@
   import { CreaturePreview } from '~bestiary/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { SelectAlignment } from '~ui/select';
-  import { UploadImage } from '~ui/upload';
+  import { UploadGallery, UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
 
+  import {
+    CREATURE_GALLERY_FIELD_LABEL,
+    CREATURE_IMAGE_SECTION_TITLE,
+    CREATURE_UPLOAD_SECTION,
+  } from './constants';
   import {
     CreatureAbilities,
     CreatureAction,
@@ -214,44 +219,68 @@
 
     <CreatureLair v-model="state.lair" />
 
-    <UFormField
-      class="col-span-full md:col-span-8"
-      label="Основное"
-      help="Эта картинка отображается при просмотре страницы существа"
-      name="image"
+    <UCard
+      variant="subtle"
+      class="col-span-full"
     >
-      <UploadImage
-        v-model="state.image"
-        section="bestiary"
-        max-size="1024"
-      >
-        <template #preview>
-          <NuxtImg
-            v-slot="{ src, isLoaded, imgAttrs }"
-            :key="state.image"
-            :src="state.image"
-            custom
-          >
-            <!-- Show the actual image when loaded -->
-            <img
-              v-if="isLoaded"
-              v-bind="imgAttrs"
-              class="w-full rounded-lg object-contain"
-              :src="src"
-              :alt="state.name.rus"
-            />
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">
+          {{ CREATURE_IMAGE_SECTION_TITLE }}
+        </h2>
+      </template>
 
-            <!-- Show a placeholder while loading -->
-            <img
-              v-else
-              class="w-full rounded-lg object-contain"
-              src="/img/no-img.webp"
-              alt="no image"
-            />
-          </NuxtImg>
-        </template>
-      </UploadImage>
-    </UFormField>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
+        <UFormField
+          class="col-span-full md:col-span-8"
+          label="Основное"
+          help="Эта картинка отображается при просмотре страницы существа"
+          name="image"
+        >
+          <UploadImage
+            v-model="state.image"
+            :section="CREATURE_UPLOAD_SECTION"
+            max-size="1024"
+          >
+            <template #preview>
+              <NuxtImg
+                v-slot="{ src, isLoaded, imgAttrs }"
+                :key="state.image"
+                :src="state.image"
+                custom
+              >
+                <!-- Show the actual image when loaded -->
+                <img
+                  v-if="isLoaded"
+                  v-bind="imgAttrs"
+                  class="w-full rounded-lg object-contain"
+                  :src="src"
+                  :alt="state.name.rus"
+                />
+
+                <!-- Show a placeholder while loading -->
+                <img
+                  v-else
+                  class="w-full rounded-lg object-contain"
+                  src="/img/no-img.webp"
+                  alt="no image"
+                />
+              </NuxtImg>
+            </template>
+          </UploadImage>
+        </UFormField>
+
+        <UFormField
+          class="col-span-full md:col-span-16"
+          :label="CREATURE_GALLERY_FIELD_LABEL"
+          name="gallery"
+        >
+          <UploadGallery
+            v-model="state.gallery"
+            :section="CREATURE_UPLOAD_SECTION"
+          />
+        </UFormField>
+      </div>
+    </UCard>
 
     <EditorFormControls>
       <template #preview="{ opened, changeVisibility }">

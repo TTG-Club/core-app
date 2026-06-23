@@ -7,6 +7,7 @@ export interface CreatureDetailResponse {
     eng: string;
   };
   image: string;
+  gallery?: Array<string>;
   source: SourceResponse;
   description: Array<string>;
   updatedAt: string;
