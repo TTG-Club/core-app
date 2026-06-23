@@ -56,7 +56,10 @@
 
         <div :class="$style.block">
           <div :class="$style.portrait">
-            <UiGallery :preview="creature.image || '/img/no-img.webp'" />
+            <UiGallery
+              :preview="creature.image || '/img/no-img.webp'"
+              :images="creature.gallery"
+            />
           </div>
 
           <RatingWidget

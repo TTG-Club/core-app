@@ -5,6 +5,7 @@ import { AbilityKey, AbilityShortKey } from '~/shared/types';
 export interface CreatureCreate extends EditorBaseInfoState {
   description: string; // описание маркап
   image: string | undefined;
+  gallery: Array<string>;
 
   types: CreatureTypes; // типы существа
   sizes: CreatureSizes; // размеры существа
@@ -203,6 +204,7 @@ export function getInitialState(): CreatureCreate {
     srdVersion: undefined,
     description: '',
     image: undefined,
+    gallery: [],
     tags: [],
     types: {
       values: [], // типы существа

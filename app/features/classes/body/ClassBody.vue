@@ -59,7 +59,7 @@
         <UiGallery
           v-if="!hideGallery && detail.image"
           :preview="detail.image"
-          :images="[detail.image, ...(detail.gallery || [])]"
+          :images="detail.gallery"
           :class="[
             'min-w-25',
             inSplit ? '@min-xl:max-w-50' : '@min-xl:@max-3xl:max-w-50',

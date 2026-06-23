@@ -1,12 +1,46 @@
 <script setup lang="ts">
-  import type { ItemCreate } from '~items/model';
+  import type { ArmorCreate, ItemCreate, WeaponCreate } from '~items/model';
+
+  import { isPlainObject } from 'es-toolkit';
 
   import { ItemPreview } from '~items/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
   import { UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
 
-  import { CoinsType, ItemType } from './ui';
+  import {
+    ArmorForm,
+    CoinsType,
+    ItemCategory,
+    ItemType,
+    WeaponForm,
+  } from './ui';
+
+  function getInitialWeapon(): WeaponCreate {
+    return {
+      category: undefined,
+      damage: {
+        roll: { diceCount: undefined, dice: undefined, bonus: undefined },
+        type: undefined,
+      },
+      properties: [],
+      mastery: undefined,
+      range: { normal: undefined, max: undefined },
+      versatile: { diceCount: undefined, dice: undefined, bonus: undefined },
+      ammo: undefined,
+      additional: undefined,
+    };
+  }
+
+  function getInitialArmor(): ArmorCreate {
+    return {
+      category: undefined,
+      armorClass: undefined,
+      mod: undefined,
+      strength: undefined,
+      stealth: false,
+    };
+  }
 
   function getInitialState(): ItemCreate {
     return {
@@ -29,12 +63,49 @@
       weight: undefined,
       image: undefined,
       tags: [],
+      weapon: getInitialWeapon(),
+      armor: getInitialArmor(),
+    };
+  }
+
+  /**
+   * Бэкенд может вернуть weapon/armor как null (или с пропущенными вложенными
+   * объектами). Убираем такие значения, чтобы при слиянии применились дефолты
+   * из getInitialState и форма не падала при переключении категории.
+   */
+  function normalizeLoaded(
+    raw: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const normalized = { ...raw };
+
+    if (!isPlainObject(normalized.weapon)) {
+      delete normalized.weapon;
+    }
+
+    if (!isPlainObject(normalized.armor)) {
+      delete normalized.armor;
+    }
+
+    return normalized;
+  }
+
+  /**
+   * Отправляем только подходящую категории подформу: для оружия — weapon,
+   * для доспеха — armor, иначе пустые объекты, чтобы не сохранять чужие данные.
+   */
+  function transformBeforeSubmit(state: ItemCreate): ItemCreate {
+    return {
+      ...state,
+      weapon: state.category === 'WEAPON' ? state.weapon : getInitialWeapon(),
+      armor: state.category === 'ARMOR' ? state.armor : getInitialArmor(),
     };
   }
 
   const { state, onError, onSubmit } = useWorkshopForm<ItemCreate>({
     actionUrl: '/api/v2/item',
     getInitialState,
+    normalizeLoaded,
+    transformBeforeSubmit,
   });
 </script>
 
@@ -57,12 +128,13 @@
       </template>
 
       <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
-        <UFormField class="hidden">
-          <input
-            v-model="state.category"
-            type="hidden"
-            name="category"
-          />
+        <UFormField
+          class="md:col-span-24"
+          label="Категория предмета"
+          tooltip="Выберите категорию предмета"
+          name="category"
+        >
+          <ItemCategory v-model="state.category" />
         </UFormField>
 
         <UFormField
@@ -112,6 +184,16 @@
         </UFormField>
       </div>
     </UCard>
+
+    <WeaponForm
+      v-if="state.category === 'WEAPON'"
+      v-model="state.weapon"
+    />
+
+    <ArmorForm
+      v-if="state.category === 'ARMOR'"
+      v-model="state.armor"
+    />
 
     <UCard variant="subtle">
       <template #header>
