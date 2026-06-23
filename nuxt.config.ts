@@ -75,10 +75,14 @@ export default defineNuxtConfig({
     },
   },
 
-  // Яндекс.Метрика (nuxt-yandex-metrika). Подключается наличием env-переменной
-  // NUXT_YANDEX_METRIKA_ID на окружении (на dev её нет — счётчик не трекает).
+  // Яндекс.Метрика (nuxt-yandex-metrika).
+  // ВАЖНО: id НЕ берём из env на этапе сборки — Docker-сборка не видит прод-переменных,
+  // поэтому id попадал бы в образ как placeholder 'xxx' и счётчик не трекал.
+  // Реальный id подставляется в РАНТАЙМЕ контейнера через NUXT_PUBLIC_YANDEX_METRIKA_ID
+  // (Nitro override → runtimeConfig.public.yandexMetrika.id). На сборке и на dev id пустой,
+  // поэтому в боевую статистику ничего не уходит.
   yandexMetrika: {
-    id: process.env.NUXT_YANDEX_METRIKA_ID,
+    id: '',
     position: 'head',
     options: {
       clickmap: true,
@@ -88,11 +92,15 @@ export default defineNuxtConfig({
     },
   },
 
-  // Google Analytics (nuxt-gtag). Подключается наличием env-переменной
-  // NUXT_GTAG_ID на окружении. SPA-переходы трекает Enhanced Measurement GA4.
+  // Google Analytics (nuxt-gtag).
+  // enabled:true ОБЯЗАТЕЛЬНО безусловно: при enabled:false модуль на этапе сборки
+  // (где прод-env отсутствует) вырезает плагин и runtimeConfig.public.gtag из образа,
+  // и счётчик не работает даже если id задан на проде. id подставляется в рантайме
+  // через NUXT_PUBLIC_GTAG_ID; при пустом id плагин не инжектит скрипт (resolveTags → []),
+  // поэтому на dev GA не грузится. SPA-переходы трекает Enhanced Measurement GA4.
   gtag: {
-    enabled: !!process.env.NUXT_GTAG_ID,
-    id: process.env.NUXT_GTAG_ID,
+    enabled: true,
+    id: '',
   },
 
   // SEO и метаданные
