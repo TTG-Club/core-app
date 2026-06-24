@@ -144,7 +144,10 @@
       </div>
     </UCard>
 
-    <SpellEffectEditor v-model="state.effect" />
+    <SpellEffectEditor
+      v-model="state.effect"
+      :level="state.level"
+    />
 
     <SpellActiveEffects v-model="state.activeEffects" />
 
