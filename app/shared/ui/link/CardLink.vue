@@ -64,7 +64,7 @@
     :to="to"
   >
     <a
-      :href="href"
+      :href="href ?? undefined"
       :class="[
         'group overflow-hidden transition-all @max-md:flex',
         'rounded-xl border',

@@ -41,7 +41,7 @@
     :to
   >
     <a
-      :href
+      :href="href ?? undefined"
       @click.exact.prevent.stop="handleClick"
     >
       <div
