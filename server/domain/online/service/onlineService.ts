@@ -93,13 +93,13 @@ export async function fetchOnlineService<Payload>(
   const { token } = getOnlineSecrets();
 
   try {
-    return await $fetch<Payload>(getOnlineServicePath(path), {
+    return (await $fetch<Payload>(getOnlineServicePath(path), {
       ...options,
       headers: {
         ...options.headers,
         [ONLINE_SERVICE_TOKEN_HEADER]: token,
       },
-    });
+    })) as Payload;
   } catch (error) {
     throw createOnlineServiceError(error);
   }

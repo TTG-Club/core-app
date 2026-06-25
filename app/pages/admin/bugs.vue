@@ -285,8 +285,8 @@
             {{ ADMIN_BUGS_PAGE_DESCRIPTION }}
           </p>
 
-          <!-- Сводная статистика по баг-репортам -->
-          <div class="flex flex-col gap-2">
+          <!-- Сводная статистика по баг-репортам (скрыта на мобильных) -->
+          <div class="hidden flex-col gap-2 lg:flex">
             <button
               type="button"
               class="flex cursor-pointer flex-col rounded-lg border border-default bg-elevated/50 px-3 py-2.5 text-left transition-colors hover:bg-elevated"

@@ -156,7 +156,7 @@ export async function fetchAuthService<T>(
   options: Parameters<typeof $fetch<T>>[1] = {},
 ): Promise<T> {
   try {
-    return await $fetch<T>(getAuthServicePath(path), options);
+    return (await $fetch<T>(getAuthServicePath(path), options)) as T;
   } catch (error) {
     throw createAuthServiceError(error);
   }
