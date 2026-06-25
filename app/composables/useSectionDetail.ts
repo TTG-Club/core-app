@@ -116,7 +116,9 @@ export function useSectionDetail<TDetail>(
     detailStatus.value = FetchStatus.Pending;
 
     try {
-      const response = await $fetch<TDetail>(`${options.apiBasePath}/${url}`);
+      const response = (await $fetch<TDetail>(
+        `${options.apiBasePath}/${url}`,
+      )) as TDetail;
 
       detailCache.set(url, response);
       detailData.value = response;

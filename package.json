@@ -95,11 +95,6 @@
   "simple-git-hooks": {
     "pre-commit": "pnpm nano-staged"
   },
-  "pnpm": {
-    "overrides": {
-      "esbuild": ">=0.28.1"
-    }
-  },
   "volta": {
     "node": "24.13.0",
     "pnpm": "10.32.1"

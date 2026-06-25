@@ -22,8 +22,14 @@ export default defineEventHandler(async (event) => {
       return createError(getErrorResponse(StatusCodes.NOT_FOUND));
     }
 
-    setHeader(event, 'content-type', file.ContentType);
-    setHeader(event, 'cache-control', file.CacheControl);
+    if (file.ContentType) {
+      setHeader(event, 'content-type', file.ContentType);
+    }
+
+    if (file.CacheControl) {
+      setHeader(event, 'cache-control', file.CacheControl);
+    }
+
     setHeader(event, 'access-control-allow-origin', '*');
 
     const body = file.Body as any;
