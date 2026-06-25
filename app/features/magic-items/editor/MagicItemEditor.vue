@@ -3,6 +3,7 @@
 
   import { MagicItemPreview } from '~magic-items/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { SelectItem } from '~ui/select';
   import { UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
 
@@ -42,6 +43,7 @@
       curse: false,
       consumable: false,
       image: undefined,
+      items: [],
       tags: [],
     };
   }
@@ -104,6 +106,27 @@
             placeholder="Введи количество зарядов"
             min="0"
             step="1"
+          />
+        </UFormField>
+      </div>
+    </UCard>
+
+    <UCard variant="subtle">
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">
+          Немагические предметы
+        </h2>
+      </template>
+
+      <div class="grid grid-cols-1 gap-4">
+        <UFormField
+          label="Связанные предметы"
+          help="Выбери обычные предметы, на основе которых создан магический. Их вес и стоимость используются при экспорте в VTTG и для фильтра. Можно выбрать несколько."
+          name="items"
+        >
+          <SelectItem
+            v-model="state.items"
+            multiple
           />
         </UFormField>
       </div>
