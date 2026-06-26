@@ -6,6 +6,8 @@
     ADMIN_DASHBOARD_PAGE_TITLE,
     ADMIN_DASHBOARD_PERSONAS_DESCRIPTION,
     ADMIN_DASHBOARD_PERSONAS_TITLE,
+    ADMIN_DASHBOARD_SUBSCRIPTIONS_DESCRIPTION,
+    ADMIN_DASHBOARD_SUBSCRIPTIONS_TITLE,
     ADMIN_DASHBOARD_TOKENATOR_DESCRIPTION,
     ADMIN_DASHBOARD_TOKENATOR_TITLE,
   } from '~admin/dashboard/model';
@@ -120,6 +122,27 @@
 
           <div class="text-sm text-muted">
             {{ ADMIN_USERS_PAGE_DESCRIPTION }}
+          </div>
+        </UCard>
+
+        <UCard variant="subtle">
+          <template #header>
+            <div class="flex items-center justify-between gap-2">
+              <h2 class="truncate text-base text-highlighted">
+                {{ ADMIN_DASHBOARD_SUBSCRIPTIONS_TITLE }}
+              </h2>
+
+              <UButton
+                size="sm"
+                to="/admin/subscriptions"
+              >
+                {{ ADMIN_DASHBOARD_CONFIGURE_LABEL }}
+              </UButton>
+            </div>
+          </template>
+
+          <div class="text-sm text-muted">
+            {{ ADMIN_DASHBOARD_SUBSCRIPTIONS_DESCRIPTION }}
           </div>
         </UCard>
 
