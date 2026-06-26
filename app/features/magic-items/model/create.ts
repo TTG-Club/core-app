@@ -9,6 +9,7 @@ export interface MagicItemCreate extends EditorBaseInfoState {
   image: string | undefined;
   rarity: MagicItemRarity;
   category: MagicItemCategory;
+  items: Array<string>; // связанные немагические предметы (url) для веса/стоимости и фильтра
 }
 
 export interface MagicItemAttunement {

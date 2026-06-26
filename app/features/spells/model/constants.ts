@@ -24,6 +24,29 @@ export const SPELL_SAVE_EFFECT_OPTIONS: Array<
   { label: 'Особый', value: 'SPECIAL' },
 ];
 
+/**
+ * Режимы распределения снарядов по целям для радио-группы. `any` — дефолт
+ * «свободно», в `SpellProjectiles.targetDistribution` не пишется. Зеркало
+ * `PROJECTILE_DISTRIBUTION_OPTIONS` из VTTG.
+ */
+export const SPELL_PROJECTILE_DISTRIBUTION_OPTIONS = [
+  {
+    value: 'any',
+    label: 'Свободно',
+    description: 'В одну цель или в несколько — решается при касте',
+  },
+  {
+    value: 'single',
+    label: 'Только одна цель',
+    description: 'Выбирается одна цель, все снаряды летят в неё',
+  },
+  {
+    value: 'distinct',
+    label: 'Каждый снаряд в свою цель',
+    description: 'Нельзя направить два снаряда в одну цель',
+  },
+] as const;
+
 export const SPELL_DAMAGE_TYPE_TAGS: Record<string, string> = {
   ACID: 'dmg.acid',
   BLUDGEONING: 'dmg.bludgeoning',

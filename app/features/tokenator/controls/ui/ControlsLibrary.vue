@@ -162,7 +162,7 @@
     <div
       v-if="frames && frames.length"
       :class="[
-        'scrollbar-thin -my-2 max-h-48 overflow-x-hidden overflow-y-auto',
+        '-my-2 max-h-48 scrollbar-thin overflow-x-hidden overflow-y-auto',
         'mask-[linear-gradient(to_bottom,transparent,black_8px,black_calc(100%-8px),transparent)]',
       ]"
     >

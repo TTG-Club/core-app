@@ -1,8 +1,17 @@
-import type { MultiPartData } from 'h3';
-
 import type { S3UploadFile } from '#server/domain/s3';
 
 import { StatusCodes } from 'http-status-codes';
+
+/**
+ * Один файл из multipart-формы. h3 v2 больше не экспортирует тип публично,
+ * поэтому описываем форму элемента readMultipartFormData локально.
+ */
+interface MultiPartData {
+  data: Uint8Array;
+  name?: string;
+  filename?: string;
+  type?: string;
+}
 
 export function getFileForUpload(
   section: string | undefined,

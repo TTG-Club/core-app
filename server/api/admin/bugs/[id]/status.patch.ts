@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
   assertAdminAccess(user);
 
   const id = getRouterParam(event, 'id');
-  const body = await readBody(event);
+  const body = await readBody<Record<string, unknown>>(event);
   const authHeader = getHeader(event, 'authorization');
 
   const headers: Record<string, string> = {};

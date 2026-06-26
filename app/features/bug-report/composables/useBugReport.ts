@@ -43,11 +43,18 @@ export function useBugReport() {
     () => null,
   );
 
+  // Путь сущности, открытой в overlay-drawer-е (стандартный режим).
+  const { openEntityPath } = useOpenEntityPath();
+
   /**
    * Открывает модальное окно баг-репорта.
    *
-   * Сохраняет текущий URL страницы для контекста. Если открыт детальный вид
-   * через параметр query "detail", URL преобразуется в прямой путь вида /path/detailId.
+   * Сохраняет текущий URL страницы для контекста:
+   * - Широкий режим: если открыт детальный вид через query "detail",
+   *   URL преобразуется в прямой путь вида /path/detailId.
+   * - Стандартный режим: если открыт overlay-drawer, берётся его путь
+   *   из {@link useOpenEntityPath} (маршрут в этом режиме не меняется).
+   * - Иначе — текущий путь страницы.
    */
   function openReport(): void {
     const detailId = route.query.detail;
@@ -67,6 +74,9 @@ export function useBugReport() {
       });
 
       capturedPageUrl.value = resolved.fullPath;
+    } else if (openEntityPath.value) {
+      // openEntityPath — уже относительный путь вида /feats/unarmed-fighting.
+      capturedPageUrl.value = openEntityPath.value;
     } else {
       capturedPageUrl.value = route.fullPath;
     }

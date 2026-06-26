@@ -2,7 +2,7 @@ export interface S3UploadFile {
   name: string;
   path: string;
   type: string;
-  data: Buffer;
+  data: Uint8Array;
 }
 
 export interface S3UploadResponse {

@@ -13,6 +13,11 @@
     SPELL_TARGET_TYPE_OPTIONS,
   } from '../../model';
   import SpellDamageFormulas from './SpellDamageFormulas.vue';
+  import SpellProjectiles from './SpellProjectiles.vue';
+
+  const { level } = defineProps<{
+    level: number; // круг заклинания (нужен снарядному режиму)
+  }>();
 
   const model = defineModel<SpellEffect>({ required: true });
 
@@ -27,9 +32,28 @@
   });
 
   const showTargetCount = computed(() => {
+    // У снарядных заклинаний число целей задаёт снарядный режим.
+    if (model.value.projectiles) {
+      return false;
+    }
+
     const targetType = model.value.targetType;
 
     return targetType === 'CREATURE' || targetType === 'OBJECT';
+  });
+
+  // Нужен ли бросок атаки на каждый снаряд — выводится из «Тип атаки»/«Авто
+  // попадание», поэтому противоречивую комбинацию задать нельзя.
+  const projectileHint = computed(() => {
+    if (model.value.autoHit) {
+      return 'Снаряды попадают автоматически (как Волшебная стрела): урон кидается за каждый снаряд отдельно.';
+    }
+
+    if (model.value.attackType) {
+      return 'Каждый снаряд — отдельный бросок атаки (как Мистический заряд): урон кидается только за попавшие снаряды.';
+    }
+
+    return 'Снаряды распределяются по целям; урон кидается за каждый снаряд отдельно.';
   });
 
   const showAreaOfEffect = computed(() => model.value.targetType === 'AREA');
@@ -119,6 +143,12 @@
         variant="subtle"
         title="Конфликт настроек"
         description="При включённом авто попадании тип атаки и спасброски не должны быть заполнены."
+      />
+
+      <SpellProjectiles
+        v-model="model.projectiles"
+        :level="level"
+        :hint="projectileHint"
       />
 
       <SpellDamageFormulas v-model="damageFormulas" />

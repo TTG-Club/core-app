@@ -1,7 +1,10 @@
 import type { AbilityKey } from '~/shared/types';
 import type { EditorBaseInfoState } from '~ui/editor';
 
+import type { SpellActiveEffect } from './effect';
+
 import { SPELL_DAMAGE_TYPE_TAGS, SPELL_HEALING_TYPE_TAGS } from './constants';
+import { normalizeLoadedSpellActiveEffects } from './effect';
 
 /**
  * Тип цели заклинания.
@@ -26,6 +29,35 @@ export interface SpellAreaOfEffect {
 }
 
 /**
+ * Режим распределения снарядов по целям при касте.
+ * `any` — форменный дефолт «свободно», на сервер НЕ пишется (поле пустое).
+ * Зеркало `SpellProjectiles.targetDistribution` из VTTG.
+ */
+export type SpellProjectileDistribution = 'any' | 'single' | 'distinct';
+
+/**
+ * Порог уровня персонажа → полное число снарядов (для заговоров).
+ * Начиная с указанного уровня базовое число снарядов заменяется целиком.
+ */
+export interface SpellProjectileCountTier {
+  level: number | undefined; // минимальный уровень персонажа
+  count: number | undefined; // полное число снарядов с этого уровня
+}
+
+/**
+ * Снарядный режим заклинания (Волшебная стрела, Мистический заряд, Палящий
+ * луч): каждый снаряд — отдельный бросок урона (и атаки, если заклинание
+ * атакующее), снаряды распределяются по целям. Зеркало `SpellProjectiles`
+ * из VTTG: `damageFormulas` описывают урон ОДНОГО снаряда.
+ */
+export interface SpellProjectiles {
+  count: number | undefined; // базовое число снарядов
+  perSlotLevel?: number; // доп. снарядов за круг ячейки выше базового (уровневые)
+  countByCharacterLevel?: SpellProjectileCountTier[]; // пороги уровня (заговоры)
+  targetDistribution?: 'single' | 'distinct'; // распределение по целям
+}
+
+/**
  * Единый объект воздействия заклинания.
  * Объединяет damageType, savingThrow, areaOfEffect, attackType и другие поля.
  */
@@ -35,6 +67,7 @@ export interface SpellEffect {
   areaOfEffect?: SpellAreaOfEffect;
   attackType?: string;
   autoHit?: boolean;
+  projectiles?: SpellProjectiles;
   damageFormulas?: string[];
   damageFormula?: string;
   damageTypes?: string[];
@@ -55,6 +88,7 @@ export interface SpellCreate extends EditorBaseInfoState {
   components: SpellComponents; // компоненты
   affiliations: SpellAffiliation; // привязка заклинания к сущностям
   effect: SpellEffect; // единый объект воздействия
+  activeEffects: SpellActiveEffect[]; // активные эффекты для экспорта в VTTG
 }
 
 export interface SpellSchool {
@@ -116,6 +150,7 @@ export function createEmptySpellEffect(): SpellEffect {
     },
     attackType: undefined,
     autoHit: false,
+    projectiles: undefined,
     damageFormulas: [],
     damageFormula: undefined,
     damageTypes: [],
@@ -123,6 +158,58 @@ export function createEmptySpellEffect(): SpellEffect {
     savingThrows: [],
     saveEffect: undefined,
     conditions: [],
+  };
+}
+
+/**
+ * Создаёт начальное состояние снарядного режима (галочка «Снаряды» включена).
+ * Базовое число — 1, распределение по целям свободное (targetDistribution пуст).
+ */
+export function createEmptySpellProjectiles(): SpellProjectiles {
+  return {
+    count: 1,
+    perSlotLevel: undefined,
+    countByCharacterLevel: [],
+    targetDistribution: undefined,
+  };
+}
+
+/**
+ * Нормализует снарядный режим перед отправкой на сервер:
+ * - базовое число снарядов не меньше 1;
+ * - perSlotLevel пишется только если > 0;
+ * - пороги уровня очищаются от незаполненных и сортируются по возрастанию;
+ * - targetDistribution `any` (свободно) не пишется.
+ */
+function normalizeSpellProjectiles(
+  projectiles: SpellProjectiles,
+): SpellProjectiles {
+  const count =
+    projectiles.count && projectiles.count > 0 ? projectiles.count : 1;
+
+  const tiers = (projectiles.countByCharacterLevel ?? [])
+    .filter(
+      (tier) =>
+        tier.level !== undefined
+        && tier.level > 0
+        && tier.count !== undefined
+        && tier.count > 0,
+    )
+    .map((tier) => ({ level: tier.level, count: tier.count }))
+    .sort((tierA, tierB) => (tierA.level ?? 0) - (tierB.level ?? 0));
+
+  return {
+    count,
+    perSlotLevel:
+      projectiles.perSlotLevel && projectiles.perSlotLevel > 0
+        ? projectiles.perSlotLevel
+        : undefined,
+    countByCharacterLevel: tiers.length > 0 ? tiers : undefined,
+    targetDistribution:
+      projectiles.targetDistribution === 'single'
+      || projectiles.targetDistribution === 'distinct'
+        ? projectiles.targetDistribution
+        : undefined,
   };
 }
 
@@ -234,8 +321,11 @@ export function normalizeSpellEffect(
     normalized.targetType = migratedEffect.targetType;
   }
 
+  // У снарядных заклинаний число целей определяют сами снаряды и режим
+  // распределения — информационный targetCount не пишется.
   if (
-    migratedEffect.targetCount !== undefined
+    !migratedEffect.projectiles
+    && migratedEffect.targetCount !== undefined
     && migratedEffect.targetCount >= 1
   ) {
     normalized.targetCount = migratedEffect.targetCount;
@@ -262,6 +352,12 @@ export function normalizeSpellEffect(
 
   if (migratedEffect.autoHit) {
     normalized.autoHit = migratedEffect.autoHit;
+  }
+
+  if (migratedEffect.projectiles) {
+    normalized.projectiles = normalizeSpellProjectiles(
+      migratedEffect.projectiles,
+    );
   }
 
   if (
@@ -324,6 +420,37 @@ function isAbilityKeyArray(value: unknown): value is AbilityKey[] {
 }
 
 /**
+ * Восстанавливает снарядный режим из загруженного с сервера raw-значения.
+ * Гарантирует наличие массива порогов уровня для v-model редактора.
+ */
+function normalizeLoadedSpellProjectiles(
+  raw: unknown,
+): SpellProjectiles | undefined {
+  if (!isRecord(raw)) {
+    return undefined;
+  }
+
+  const tiers = Array.isArray(raw.countByCharacterLevel)
+    ? raw.countByCharacterLevel.filter(isRecord).map((tier) => ({
+        level: typeof tier.level === 'number' ? tier.level : undefined,
+        count: typeof tier.count === 'number' ? tier.count : undefined,
+      }))
+    : [];
+
+  return {
+    count: typeof raw.count === 'number' ? raw.count : 1,
+    perSlotLevel:
+      typeof raw.perSlotLevel === 'number' ? raw.perSlotLevel : undefined,
+    countByCharacterLevel: tiers,
+    targetDistribution:
+      raw.targetDistribution === 'single'
+      || raw.targetDistribution === 'distinct'
+        ? raw.targetDistribution
+        : undefined,
+  };
+}
+
+/**
  * Нормализует загруженный с сервера raw-объект заклинания:
  * - Поддерживает старые записи без effect (мигрирует отдельные поля).
  * - Обеспечивает наличие всех вложенных массивов и areaOfEffect.
@@ -349,6 +476,7 @@ export function normalizeLoadedSpell(
                 ...rawEffect.areaOfEffect,
               }
             : createEmptySpellEffect().areaOfEffect,
+        projectiles: normalizeLoadedSpellProjectiles(rawEffect.projectiles),
       }),
     );
   } else {
@@ -419,6 +547,10 @@ export function normalizeLoadedSpell(
     delete result.attackType;
     delete result.areaOfEffect;
   }
+
+  result.activeEffects = normalizeLoadedSpellActiveEffects(
+    result.activeEffects,
+  );
 
   return result;
 }

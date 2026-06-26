@@ -16,6 +16,7 @@ export { default as SelectFeat } from './SelectFeat.vue';
 export { default as SelectFeatCategory } from './SelectFeatCategory.vue';
 export { default as SelectHabitat } from './SelectHabitat.vue';
 export { default as SelectHealType } from './SelectHealType.vue';
+export { default as SelectItem } from './SelectItem.vue';
 export { default as SelectLanguage } from './SelectLanguage.vue';
 export { default as SelectLevel } from './SelectLevel.vue';
 export { default as SelectLineage } from './SelectLineage.vue';

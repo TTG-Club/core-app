@@ -1,6 +1,9 @@
 
 shellEmulator: true
 
+overrides:
+  esbuild: '>=0.28.1'
+
 onlyBuiltDependencies:
   - '@parcel/watcher'
   - '@tailwindcss/oxide'

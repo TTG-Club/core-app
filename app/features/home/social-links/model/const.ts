@@ -1,5 +1,12 @@
 export const SOCIAL_LINKS = [
   {
+    name: 'Boosty',
+    icon: 'ttg:boosty',
+    url: 'https://boosty.to/dnd5club',
+    disabled: false,
+    color: 'oklch(0.68 0.192 39.394)',
+  },
+  {
     name: 'Telegram',
     icon: 'ttg:telegram',
     url: 'https://t.me/ttgclubnews',
@@ -19,12 +26,5 @@ export const SOCIAL_LINKS = [
     url: 'https://vk.com/ttg.club',
     disabled: false,
     color: 'oklch(0.605 0.216 257.551)',
-  },
-  {
-    name: 'Boosty',
-    icon: 'ttg:boosty',
-    url: 'https://boosty.to/dnd5club',
-    disabled: false,
-    color: 'oklch(0.68 0.192 39.394)',
   },
 ];
