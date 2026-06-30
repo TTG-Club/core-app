@@ -10,4 +10,9 @@ export const ADMIN_DASHBOARD_PERSONAS_TITLE = 'Персоны';
 export const ADMIN_DASHBOARD_PERSONAS_DESCRIPTION =
   'Управление персонами и их фразами';
 
+export const ADMIN_DASHBOARD_SUBSCRIPTIONS_TITLE = 'Промокоды';
+
+export const ADMIN_DASHBOARD_SUBSCRIPTIONS_DESCRIPTION =
+  'Выпуск промо-кодов и управление выпущенными кодами';
+
 export const ADMIN_DASHBOARD_CONFIGURE_LABEL = 'Настроить';
