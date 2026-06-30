@@ -7,6 +7,7 @@
 
   const ProfileTabs = {
     GENERAL: 'general',
+    ACTIVATION: 'activation',
     SECURITY: 'security',
     SETTINGS: 'settings',
     STATISTICS: 'statistics',
@@ -18,6 +19,11 @@
       value: ProfileTabs.GENERAL,
       label: 'Общие',
       icon: 'tabler:user',
+    },
+    {
+      value: ProfileTabs.ACTIVATION,
+      label: 'Подписка / Коды',
+      icon: 'tabler:ticket',
     },
     {
       value: ProfileTabs.SECURITY,
