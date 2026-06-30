@@ -12,6 +12,7 @@
     SUBSCRIPTION_MONTHS_MAX,
     SUBSCRIPTION_MONTHS_MIN,
     SUBSCRIPTION_TYPE_OPTIONS,
+    TIER_SUBSCRIPTION_MONTHS,
     tierCumulativePerks,
     toCreateCodesRequest,
   } from '../model';
@@ -36,6 +37,34 @@
         )
       : [],
   );
+
+  // Срок подписки, зашитый в выбранный тир (0 — тир без подписки или тир не выбран).
+  // Бэкенд подставит её автоматически (подарочную), если не задать подписку вручную.
+  const tierSubscriptionMonths = computed(() =>
+    state.rewardTier ? TIER_SUBSCRIPTION_MONTHS[state.rewardTier] : 0,
+  );
+
+  // Тумблер подписки меняет смысл, когда тир уже несёт пресет: это уже «переопределение».
+  const subscriptionSwitchLabel = computed(() =>
+    tierSubscriptionMonths.value
+      ? 'Переопределить подписку тира'
+      : 'Добавить подписку',
+  );
+
+  const subscriptionSwitchDescription = computed(() =>
+    tierSubscriptionMonths.value
+      ? `Задать свой срок и тип вместо пресета тира (${tierSubscriptionMonths.value} мес., подарочная).`
+      : 'Код зарегистрирует подписку; пользователь активирует её сам.',
+  );
+
+  // При включении ручного режима для тира стартуем с его пресета, а не с 1 месяца.
+  function onToggleSubscription(value: boolean): void {
+    state.includeSubscription = value;
+
+    if (value && tierSubscriptionMonths.value > 0) {
+      state.subscriptionMonths = tierSubscriptionMonths.value;
+    }
+  }
 
   // Свободный ввод кодов достижений тегами.
   const achievementDraft = ref('');
@@ -122,20 +151,40 @@
         </UFormField>
 
         <div
-          v-if="tierPerksPreview.length"
-          class="flex flex-wrap items-center gap-1.5 rounded-lg border border-default bg-elevated/50 px-3 py-2.5"
+          v-if="state.rewardTier"
+          class="space-y-2 rounded-lg border border-default bg-elevated/50 px-3 py-2.5"
         >
-          <span class="text-xs text-muted">Даёт перки:</span>
-
-          <UBadge
-            v-for="perk in tierPerksPreview"
-            :key="perk"
-            color="neutral"
-            variant="subtle"
-            size="sm"
+          <div
+            v-if="tierSubscriptionMonths"
+            class="flex flex-wrap items-center gap-1.5"
           >
-            {{ perk }}
-          </UBadge>
+            <span class="text-xs text-muted">Даёт подписку:</span>
+
+            <UBadge
+              color="primary"
+              variant="subtle"
+              size="sm"
+            >
+              {{ tierSubscriptionMonths }} мес. · подарочная
+            </UBadge>
+          </div>
+
+          <div
+            v-if="tierPerksPreview.length"
+            class="flex flex-wrap items-center gap-1.5"
+          >
+            <span class="text-xs text-muted">Даёт перки:</span>
+
+            <UBadge
+              v-for="perk in tierPerksPreview"
+              :key="perk"
+              color="neutral"
+              variant="subtle"
+              size="sm"
+            >
+              {{ perk }}
+            </UBadge>
+          </div>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2">
@@ -187,10 +236,28 @@
         <!-- Подписка -->
         <div class="space-y-3">
           <USwitch
-            v-model="state.includeSubscription"
-            label="Добавить подписку"
-            description="Код зарегистрирует подписку; пользователь активирует её сам."
+            :model-value="state.includeSubscription"
+            :label="subscriptionSwitchLabel"
+            :description="subscriptionSwitchDescription"
+            @update:model-value="onToggleSubscription"
           />
+
+          <!-- Тир уже несёт подписку, а ручной режим выключен — она уйдёт в код автоматически. -->
+          <p
+            v-if="tierSubscriptionMonths && !state.includeSubscription"
+            class="flex items-start gap-1.5 rounded-lg border border-default bg-elevated/50 px-3 py-2 text-xs text-muted"
+          >
+            <UIcon
+              name="tabler:info-circle"
+              class="mt-0.5 size-3.5 shrink-0"
+            />
+
+            <span>
+              Тир уже даёт подарочную подписку на {{ tierSubscriptionMonths }}
+              мес. — она попадёт в код автоматически. Включите тумблер, чтобы
+              задать свой срок и тип.
+            </span>
+          </p>
 
           <div
             v-if="state.includeSubscription"

@@ -88,6 +88,21 @@ export const REWARD_PERK_LABELS: Record<RewardPerk, string> = {
   APP_CREDITS: 'Упоминание в титрах приложения',
 };
 
+/**
+ * Срок подписки, зашитый в каждый тир (в месяцах). Зеркалит RewardTier.subscriptionMonths()
+ * с бэкенда: TIER_1..TIER_4 — 3 мес., TIER_5 — 6, TIER_6 — 12 (0 — тир без подписки).
+ * Нужен только как подсказка в форме: при выборе тира без явной подписки бэкенд всё равно
+ * подставит подарочную подписку на этот срок (см. SubscriptionService.createCodes).
+ */
+export const TIER_SUBSCRIPTION_MONTHS: Record<RewardTier, number> = {
+  TIER_1: 3,
+  TIER_2: 3,
+  TIER_3: 3,
+  TIER_4: 3,
+  TIER_5: 6,
+  TIER_6: 12,
+};
+
 /** Собственные перки каждого тира (без накопления). */
 const TIER_OWN_PERKS: Record<RewardTier, RewardPerk[]> = {
   TIER_1: ['EARLY_ACCESS_DOWNLOAD'],
