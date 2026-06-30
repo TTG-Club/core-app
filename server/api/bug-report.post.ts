@@ -12,8 +12,9 @@ export default defineEventHandler(async (event) => {
 
   if (!body) {
     throw createError({
-      statusCode: 400,
-      statusMessage: 'Пустое тело запроса',
+      status: 400,
+      statusText: 'Bad Request',
+      message: 'Пустое тело запроса',
     });
   }
 
@@ -47,8 +48,9 @@ export default defineEventHandler(async (event) => {
       );
 
       throw createError({
-        statusCode: response.status,
-        statusMessage: response.statusText,
+        status: response.status,
+        statusText: response.statusText,
+        message: responseBody || response.statusText,
         data: responseBody,
       });
     }
@@ -62,8 +64,9 @@ export default defineEventHandler(async (event) => {
     consola.error('[bug-report] Ошибка сети:', error);
 
     throw createError({
-      statusCode: 502,
-      statusMessage: 'Ошибка внешнего сервиса',
+      status: 502,
+      statusText: 'Bad Gateway',
+      message: 'Ошибка внешнего сервиса',
     });
   }
 });
