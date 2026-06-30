@@ -121,7 +121,7 @@
               icon="tabler:user-cog"
               @click.left.exact.prevent="openProfile"
             >
-              Настройка профиля
+              Профиль
             </UButton>
 
             <UButton

@@ -8,7 +8,7 @@ import {
   SUBSCRIPTION_MONTHS_MAX,
   SUBSCRIPTION_MONTHS_MIN,
   SUBSCRIPTION_TYPES,
-} from './consts';
+} from './constants';
 
 /**
  * Схема формы выпуска кодов. Только поле-уровневые правила (count 1..1000, срок >= 1).

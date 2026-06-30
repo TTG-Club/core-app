@@ -1,31 +1,12 @@
 /**
  * Типы предметной области подписок и промо-кодов.
- * Зеркалят DTO бэкенда (club.ttg.dnd5.domain.subscription.rest.dto).
+ * Зеркалят DTO бэкенда subscriber-service (club.ttg.subscriber.domain.subscription.rest.dto).
  */
 
-/** Тип подписки. */
-export type SubscriptionType = 'GIFT' | 'BUY';
+import type { RewardPerk, RewardTier, SubscriptionType } from '~/shared/types';
 
-/** Краудфандинговый тир-пресет (кумулятивный). */
-export type RewardTier =
-  | 'TIER_1'
-  | 'TIER_2'
-  | 'TIER_3'
-  | 'TIER_4'
-  | 'TIER_5'
-  | 'TIER_6';
-
-/** Постоянная косметическая/контентная награда (перк). */
-export type RewardPerk =
-  | 'EARLY_ACCESS_DOWNLOAD'
-  | 'MAP_TOKENS_DOWNLOAD'
-  | 'ADVENTURE_DOWNLOAD'
-  | 'DEV_CHAT_ACCESS'
-  | 'PROFILE_BADGE'
-  | 'AVATAR_FRAME'
-  | 'NICKNAME_COLOR'
-  | 'PROFILE_ICON'
-  | 'APP_CREDITS';
+// Доменные перечисления живут в shared/types — переэкспортируем для потребителей фичи.
+export type { RewardPerk, RewardTier, SubscriptionType };
 
 /**
  * Тело запроса на выпуск пачки кодов (POST /api/subscriptions/codes).
@@ -65,8 +46,6 @@ export interface RedemptionCodeResponse {
   disabled: boolean;
   disabledAt: string | null;
   disabledBy: string | null;
-  /** Кто выпустил код. Появится после добавления поля на бэкенде (пока может отсутствовать). */
-  createdBy?: string | null;
   createdAt: string;
 }
 

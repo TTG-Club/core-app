@@ -19,6 +19,7 @@
     ADMIN_USERS_SAVE_LABEL,
     ADMIN_USERS_SAVED_TOAST,
   } from '../model';
+  import AdminUserSubscription from './AdminUserSubscription.vue';
 
   const props = defineProps<{
     roles: AdminRoleResponse[];
@@ -196,5 +197,9 @@
         {{ ADMIN_USERS_SAVE_LABEL }}
       </UButton>
     </div>
+
+    <USeparator class="my-4" />
+
+    <AdminUserSubscription :username="user.username" />
   </UCard>
 </template>

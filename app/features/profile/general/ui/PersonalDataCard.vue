@@ -1,43 +1,11 @@
 <script setup lang="ts">
   import type { UserProfile } from '~/shared/types';
 
-  import { useGeneral } from '../composables';
   import { ProfileCardUI } from '../model';
 
-  const props = defineProps<{
+  defineProps<{
     profile?: UserProfile;
   }>();
-
-  const { isLoading, updateDisplayName } = useGeneral();
-
-  /**
-   * Локальное состояние для отображаемого имени
-   */
-  const displayName = ref('');
-
-  /**
-   * Инициализация displayName из профиля
-   */
-  watch(
-    () => props.profile?.username,
-    (username) => {
-      if (username) {
-        displayName.value = username;
-      }
-    },
-    { immediate: true },
-  );
-
-  /**
-   * Обработчик изменения отображаемого имени
-   */
-  async function handleDisplayNameChange() {
-    if (!displayName.value.trim()) {
-      return;
-    }
-
-    await updateDisplayName(displayName.value);
-  }
 </script>
 
 <template>
@@ -54,37 +22,36 @@
       </div>
     </template>
 
-    <div class="max-w-xl space-y-6">
-      <!-- Отображаемое имя -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <!-- Отображаемое имя (смена пока не реализована на бэкенде) -->
       <UFormField
         v-if="isDev"
         label="Отображаемое имя"
-        description="Это имя будет видно другим пользователям"
+        description="Сменить имя пока нельзя, добавим позже"
+        class="sm:col-span-2"
       >
         <USkeleton
           v-if="!profile"
-          class="h-10 w-full"
+          class="h-9 w-full"
         />
 
         <UInput
           v-else
-          v-model="displayName"
-          placeholder="Введите имя"
+          :model-value="profile.username"
+          disabled
           icon="tabler:forms"
-          size="lg"
-          :disabled="isLoading"
-          @blur="handleDisplayNameChange"
+          class="w-full"
         />
       </UFormField>
 
       <!-- Логин -->
       <UFormField
         label="Логин"
-        description="Уникальный идентификатор пользователя"
+        description="Уникальный идентификатор"
       >
         <USkeleton
           v-if="!profile"
-          class="h-10 w-full"
+          class="h-9 w-full"
         />
 
         <UInput
@@ -92,9 +59,9 @@
           :model-value="profile.username"
           disabled
           icon="tabler:fingerprint"
-          size="lg"
           variant="outline"
           color="neutral"
+          class="w-full"
         />
       </UFormField>
 
@@ -105,7 +72,7 @@
       >
         <USkeleton
           v-if="!profile"
-          class="h-10 w-full"
+          class="h-9 w-full"
         />
 
         <UInput
@@ -113,7 +80,7 @@
           :model-value="profile.email"
           disabled
           icon="tabler:mail"
-          size="lg"
+          class="w-full"
         />
       </UFormField>
     </div>

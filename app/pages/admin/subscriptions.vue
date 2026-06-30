@@ -21,13 +21,23 @@
   const router = useRouter();
   const requestFetch = useRequestFetch();
 
-  const { data: codes, status } = await useAsyncData<RedemptionCodeResponse[]>(
+  // server: false — приватные данные subscriber-service грузим на клиенте, где
+  // авторизация (cookie → Bearer → subscriber) гарантированно работает. На SSR
+  // запрос возвращался пустым, и Nuxt переиспользовал пустой payload после F5
+  // (та же стратегия, что в profile/activation).
+  const {
+    data: codes,
+    status,
+    error,
+    refresh,
+  } = await useAsyncData<RedemptionCodeResponse[]>(
     'admin-subscription-codes',
     () => requestFetch(SUBSCRIPTION_CODES_API_PATH),
-    { default: () => [] },
+    { default: () => [], server: false },
   );
 
   const isCodesLoading = computed(() => status.value === 'pending');
+  const hasCodesError = computed(() => !!error.value);
 
   // Выбранный код синхронизирован с ?id, режим создания — с ?create=1.
   const selectedId = computed<string | null>(() => {
@@ -145,6 +155,23 @@
             :key="index"
             class="h-14 w-full rounded-xl"
           />
+        </div>
+
+        <div
+          v-else-if="hasCodesError"
+          class="flex flex-col items-center gap-3 py-12 text-center"
+        >
+          <p class="text-sm text-error">Не удалось загрузить коды</p>
+
+          <UButton
+            icon="tabler:refresh"
+            color="neutral"
+            variant="soft"
+            size="sm"
+            @click.left.exact.prevent="() => refresh()"
+          >
+            Повторить
+          </UButton>
         </div>
 
         <div

@@ -225,7 +225,6 @@
 
             <span class="text-highlighted">
               {{ format(code.createdAt, CODE_DETAIL_DATE_FORMAT) }}
-              <template v-if="code.createdBy">· {{ code.createdBy }}</template>
             </span>
           </div>
 
