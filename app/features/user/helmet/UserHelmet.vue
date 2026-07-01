@@ -107,7 +107,10 @@
       #content
     >
       <div class="flex flex-col">
-        <UserInfo :user />
+        <UserInfo
+          :user
+          @open-profile="openProfile"
+        />
 
         <USeparator />
 

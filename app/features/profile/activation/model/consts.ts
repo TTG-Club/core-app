@@ -18,18 +18,28 @@ export const SUBSCRIPTION_MY_CODES_DATA_KEY = 'subscription-my-codes';
 export const SUBSCRIPTION_MY_REWARDS_DATA_KEY = 'subscription-my-rewards';
 
 /**
- * Ключи «живых» данных для фонового опроса: статус подписки и перки — это блок
- * статуса вверху профиля и бейдж/значок/цвет ника в сайдбаре. Список кодов сюда
- * НЕ входит: он меняется только при погашении и обновляется точечно (refreshAll),
- * чтобы фоновый опрос не дёргал историю кодов.
+ * «Живые» данные фонового опроса — статус подписки и перки (блок статуса вверху
+ * профиля и бейдж/значок/цвет ника в сайдбаре). Список кодов сюда НЕ входит: он
+ * меняется только при погашении и обновляется точечно (refreshAll), чтобы фоновый
+ * опрос не дёргал историю кодов. Обновляются через refresh() своих composable
+ * (общий ключ useAsyncData) — см. useSubscriptionAutoRefresh.
  */
-export const SUBSCRIPTION_LIVE_DATA_KEYS = [
-  SUBSCRIPTION_MY_DATA_KEY,
-  SUBSCRIPTION_MY_REWARDS_DATA_KEY,
-];
 
 /** Интервал авто-обновления статуса подписки без F5 (мс). */
 export const SUBSCRIPTION_POLL_INTERVAL_MS = 30_000;
+
+/**
+ * Минимальный интервал между любыми двумя обновлениями (мс). Защита от «спама»
+ * при частом переключении вкладок/окон (focus/visibility) — как cooldown у
+ * online-heartbeat: серия возвратов на вкладку не выдаёт пачку запросов.
+ */
+export const SUBSCRIPTION_POLL_COOLDOWN_MS = 10_000;
+
+/**
+ * Потолок экспоненциального backoff при ответе 429 (слишком много запросов).
+ * Пока сервер лимитирует — опрашиваем реже, чтобы не «залипать» в rate-limit.
+ */
+export const SUBSCRIPTION_POLL_MAX_BACKOFF_MS = 5 * 60_000;
 
 /** Эндпоинт активации подписки (запуск таймера REGISTERED→ACTIVE). */
 export function subscriptionActivatePath(id: string): string {
@@ -64,6 +74,22 @@ export const REWARD_PERK_ICONS: Record<RewardPerk, string> = {
   PROFILE_ICON: 'tabler:icons',
   APP_CREDITS: 'tabler:award',
 };
+
+/**
+ * Готовые S3-загрузки наград — фолбэк, пока бэкенд не проставил `url` в
+ * reward_resource. Ключ отдаётся прокси core-app `/s3/<key>`. Если админ позже
+ * задаст url на бэке — приоритет у бэкенда (см. RewardLinkRow).
+ */
+export const REWARD_PERK_FALLBACK_URLS: Partial<Record<RewardPerk, string>> = {
+  MAP_TOKENS_DOWNLOAD: '/s3/vttgw/rewards/CardsAndTokens.zip',
+};
+
+/**
+ * Изображение рамки аватара (косметический перк AVATAR_FRAME) — накладывается
+ * поверх аватара в сайдбаре профиля, если перк выдан кодом. Ключ отдаётся прокси
+ * core-app `/s3/<key>` (как остальные S3-ассеты).
+ */
+export const AVATAR_FRAME_IMAGE_URL = '/s3/vttgw/rewards/frame.webp';
 
 /** Перки-«загрузки» — для них уместна кнопка «Скачать» (иначе «Открыть»). */
 export const DOWNLOAD_PERKS: ReadonlySet<RewardPerk> = new Set<RewardPerk>([
