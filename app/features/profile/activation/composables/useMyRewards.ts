@@ -13,9 +13,11 @@ import {
 export function useMyRewards() {
   const requestFetch = useRequestFetch();
 
+  // retry: 0 — фоновый опрос не должен удваиваться авто-ретраем ofetch (в т.ч. на
+  // 429), иначе при rate-limit мы сами усиливаем нагрузку. См. useSubscriptionAutoRefresh.
   const { data, status, error, refresh } = useAsyncData<UserReward[]>(
     SUBSCRIPTION_MY_REWARDS_DATA_KEY,
-    () => requestFetch(REWARDS_MY_API_PATH),
+    () => requestFetch(REWARDS_MY_API_PATH, { retry: 0 }),
     { default: () => [], server: false },
   );
 

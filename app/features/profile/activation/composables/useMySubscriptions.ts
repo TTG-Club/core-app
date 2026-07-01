@@ -13,9 +13,11 @@ export function useMySubscriptions() {
   // server: false — приватные данные пользователя грузим на клиенте, где авторизация
   // (cookie → Bearer → subscriber) гарантированно работает. На SSR этот запрос
   // возвращался пустым, и Nuxt переиспользовал пустой payload после F5.
+  // retry: 0 — фоновый опрос не должен удваиваться авто-ретраем ofetch (в т.ч. на
+  // 429), иначе при rate-limit мы сами усиливаем нагрузку. См. useSubscriptionAutoRefresh.
   const { data, status, error, refresh } = useAsyncData<Subscription[]>(
     SUBSCRIPTION_MY_DATA_KEY,
-    () => requestFetch(SUBSCRIPTION_MY_API_PATH),
+    () => requestFetch(SUBSCRIPTION_MY_API_PATH, { retry: 0 }),
     { default: () => [], server: false },
   );
 
