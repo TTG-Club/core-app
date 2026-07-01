@@ -6,8 +6,7 @@
   <div
     :class="[
       'vttg-banner',
-      'relative flex w-full flex-col gap-6 overflow-hidden rounded-2xl border p-6 shadow-xl md:p-8',
-      'md:flex-row md:items-center md:justify-between lg:gap-8',
+      'relative flex w-full flex-col overflow-hidden rounded-2xl border shadow-xl',
     ]"
   >
     <!-- Background image and overlay -->
@@ -22,64 +21,84 @@
       <div class="vttg-banner__overlay absolute inset-0" />
     </div>
 
-    <!-- Content -->
-    <div class="relative z-10 flex flex-1 flex-col items-start gap-3">
-      <h2 class="text-xl font-bold tracking-tight text-white md:text-2xl">
-        {{ VTTG_CAMPAIGN_BANNER.title }}
-      </h2>
+    <!-- Top strip -->
+    <div
+      class="vttg-banner__strip relative z-10 flex items-center justify-center gap-2 px-4 py-2.5 md:py-3"
+    >
+      <UIcon
+        :name="VTTG_CAMPAIGN_BANNER.stripIcon"
+        class="size-4 shrink-0 md:size-5"
+      />
 
-      <p
-        class="max-w-3xl text-sm leading-relaxed text-neutral-300 md:text-base"
-      >
-        {{ VTTG_CAMPAIGN_BANNER.description }}
-      </p>
+      <span class="text-xs font-semibold tracking-wide uppercase md:text-sm">
+        {{ VTTG_CAMPAIGN_BANNER.stripText }}
+      </span>
     </div>
 
-    <!-- Actions -->
+    <!-- Body -->
     <div
-      class="relative z-10 flex shrink-0 flex-wrap items-center gap-3 sm:flex-nowrap"
+      :class="[
+        'relative z-10 flex flex-col gap-6 p-6 md:p-8',
+        'md:flex-row md:items-center md:justify-between lg:gap-8',
+      ]"
     >
-      <UButton
-        :to="VTTG_CAMPAIGN_BANNER.moreInfoTo"
-        color="neutral"
-        variant="subtle"
-        size="lg"
-        class="w-full vttg-btn-secondary sm:w-auto"
-        :style="{
-          '--btn-border':
-            'color-mix(in oklch, var(--vttg-gold) 35%, transparent)',
-          '--btn-text': 'var(--vttg-gold)',
-          '--btn-bg': 'color-mix(in oklch, var(--vttg-gold) 8%, transparent)',
-        }"
-      >
-        Подробнее
-        <template #trailing>
-          <UIcon
-            name="tabler:arrow-right"
-            class="size-4"
-          />
-        </template>
-      </UButton>
+      <!-- Content -->
+      <div class="flex flex-1 flex-col items-start gap-3">
+        <h2 class="text-xl font-bold tracking-tight text-white md:text-2xl">
+          {{ VTTG_CAMPAIGN_BANNER.title }}
+        </h2>
 
-      <UButton
-        :to="VTTG_CAMPAIGN_BANNER.linkTo"
-        target="_blank"
-        color="primary"
-        size="lg"
-        class="w-full vttg-btn-primary sm:w-auto"
-        :style="{
-          '--btn-bg': 'var(--vttg-gold)',
-          '--btn-text': 'var(--ui-bg)',
-        }"
-      >
-        <template #leading>
-          <UIcon
-            name="tabler:heart"
-            class="size-4"
-          />
-        </template>
-        Поддержать проект
-      </UButton>
+        <p
+          class="max-w-3xl text-sm leading-relaxed text-neutral-300 md:text-base"
+        >
+          {{ VTTG_CAMPAIGN_BANNER.description }}
+        </p>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex shrink-0 flex-wrap items-center gap-3 sm:flex-nowrap">
+        <UButton
+          :to="VTTG_CAMPAIGN_BANNER.moreInfoTo"
+          color="neutral"
+          variant="subtle"
+          size="lg"
+          class="w-full vttg-btn-secondary sm:w-auto"
+          :style="{
+            '--btn-border':
+              'color-mix(in oklch, var(--vttg-gold) 35%, transparent)',
+            '--btn-text': 'var(--vttg-gold)',
+            '--btn-bg': 'color-mix(in oklch, var(--vttg-gold) 8%, transparent)',
+          }"
+        >
+          Подробнее
+          <template #trailing>
+            <UIcon
+              name="tabler:arrow-right"
+              class="size-4"
+            />
+          </template>
+        </UButton>
+
+        <UButton
+          :to="VTTG_CAMPAIGN_BANNER.linkTo"
+          target="_blank"
+          color="primary"
+          size="lg"
+          class="w-full vttg-btn-primary sm:w-auto"
+          :style="{
+            '--btn-bg': 'var(--vttg-gold)',
+            '--btn-text': 'var(--ui-bg)',
+          }"
+        >
+          <template #leading>
+            <UIcon
+              name="tabler:heart"
+              class="size-4"
+            />
+          </template>
+          Поддержать проект
+        </UButton>
+      </div>
     </div>
   </div>
 </template>
@@ -106,6 +125,13 @@
 
   .vttg-banner__bg {
     transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .vttg-banner__strip {
+    color: var(--ui-bg);
+    background-color: var(--vttg-gold);
+    box-shadow: 0 2px 12px -4px
+      color-mix(in oklch, var(--vttg-gold) 60%, transparent);
   }
 
   .vttg-banner__overlay {
