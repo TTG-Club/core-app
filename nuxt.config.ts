@@ -311,6 +311,15 @@ export default defineNuxtConfig({
         // Nuxt UI
         '@nuxt/ui/locale',
 
+        // Nuxt UI Editor (TipTap/ProseMirror) — предбандлинг единых инстансов
+        // prosemirror, иначе UEditor падает с "Adding different instances of a
+        // keyed plugin".
+        '@nuxt/ui > prosemirror-state',
+        '@nuxt/ui > prosemirror-transform',
+        '@nuxt/ui > prosemirror-model',
+        '@nuxt/ui > prosemirror-view',
+        '@nuxt/ui > prosemirror-gapcursor',
+
         // Утилиты
         'es-toolkit',
         'es-toolkit/compat',

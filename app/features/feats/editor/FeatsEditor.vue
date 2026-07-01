@@ -3,6 +3,7 @@
 
   import { FeatPreview } from '~feats/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
   import { SelectAbilities, SelectFeatCategory } from '~ui/select';
   import { useWorkshopForm } from '~workshop/composable';
 
@@ -113,9 +114,8 @@
           label="Описание"
           name="description"
         >
-          <UTextarea
+          <MarkupEditor
             v-model="state.description"
-            :rows="8"
             placeholder="Введи описание"
           />
         </UFormField>

@@ -8,6 +8,7 @@
   import { DatePicker } from '~ui/date-picker';
   import { EditorFormControls } from '~ui/editor';
   import { InputUrl } from '~ui/input';
+  import { MarkupEditor } from '~ui/markup-editor';
   import { UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
 
@@ -219,9 +220,8 @@
           class="col-span-full"
           name="description"
         >
-          <UTextarea
+          <MarkupEditor
             v-model="state.description"
-            :rows="8"
             placeholder="Введи описание"
           />
         </UFormField>

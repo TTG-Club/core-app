@@ -2,9 +2,10 @@ import type { VNode } from 'vue';
 
 import type { RenderNode } from './types';
 
-import { createTextVNode, h } from 'vue';
+import { h } from 'vue';
 
 import { MARKER_MAP } from './config';
+import { renderInlineMarkdown } from './markdown/markdown-renderer';
 import { parse } from './parser';
 import { isBlockNode, isMarkerNode, isSimpleTextNode } from './utils';
 
@@ -73,9 +74,12 @@ function renderNode(node: RenderNode): VNode | VNode[] {
     return renderNodes(node);
   }
 
-  // Простой текст
+  // Простой текст — прогоняем через инлайновый Markdown, чтобы **жирный**,
+  // *курсив*, ~~зачёркнутый~~ и т.п. работали и ВНУТРИ маркеров {@...}
+  // (вложенность форматирования). Вложенные {@...} уже разобраны в отдельные
+  // MarkerNode, поэтому в тексте их не будет.
   if (isSimpleTextNode(node)) {
-    return createTextVNode(node.text);
+    return renderInlineMarkdown(node.text);
   }
 
   // Маркер

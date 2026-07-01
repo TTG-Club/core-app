@@ -2,6 +2,7 @@
   import type { ClassFeatureCreate } from '../../model';
 
   import { EditorArrayControls } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
   import { SelectLevel } from '~ui/select';
 
   import {
@@ -163,9 +164,8 @@
               label="Описание"
               name="description"
             >
-              <UTextarea
+              <MarkupEditor
                 v-model="feat.description"
-                :rows="3"
                 placeholder="Описание умения"
               />
             </UFormField>

@@ -5,6 +5,7 @@
 
   import { GlossaryPreview } from '~glossary/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
   import { useWorkshopForm } from '~workshop/composable';
 
   const formRef = useTemplateRef('formRef');
@@ -85,9 +86,8 @@
           name="description"
           required
         >
-          <UTextarea
+          <MarkupEditor
             v-model="state.description"
-            :rows="8"
             placeholder="Введи описание"
           />
         </UFormField>

@@ -5,6 +5,7 @@
 
   import { ItemPreview } from '~items/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
   import { UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
 
@@ -204,11 +205,9 @@
         label="Описание"
         name="description"
       >
-        <UTextarea
+        <MarkupEditor
           v-model="state.description"
-          :rows="8"
           placeholder="Введи описание"
-          allow-clear
         />
       </UFormField>
     </UCard>

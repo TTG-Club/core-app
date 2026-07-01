@@ -2,6 +2,7 @@
   import type { CreateAction, LegendaryActions } from '~bestiary/model';
 
   import { EditorArrayControls } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
 
   function getEmpty(): CreateAction {
     return {
@@ -74,12 +75,8 @@
           name="description"
           :ui="{ root: 'w-full', container: 'w-full' }"
         >
-          <UTextarea
+          <MarkupEditor
             v-model="model.description"
-            class="w-full"
-            :ui="{ root: 'flex w-full', base: 'w-full' }"
-            :maxrows="0"
-            :rows="5"
             placeholder="Введите описание (необязательно)"
           />
         </UFormField>
@@ -131,11 +128,8 @@
             name="description"
             :ui="{ root: 'w-full', container: 'w-full' }"
           >
-            <UTextarea
+            <MarkupEditor
               v-model="action.description"
-              class="w-full"
-              :ui="{ root: 'flex w-full', base: 'w-full' }"
-              :rows="3"
               placeholder="Введи описание"
             />
           </UFormField>

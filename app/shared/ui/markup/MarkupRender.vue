@@ -3,6 +3,7 @@
 
   import { computed } from 'vue';
 
+  import { renderMarkdown } from './markdown';
   import { render } from './renderer';
   import { isBlockNode } from './utils';
 
@@ -12,7 +13,16 @@
 
   const rendered = computed<RenderResult>(() => {
     try {
-      // Одиночный элемент
+      // Строка — это «Markdown + маркеры {@...}» из редактора/бэкенда.
+      // Уже разобранный бэкендом AST (объект/массив) рендерим по-старому.
+      if (typeof renderNode === 'string') {
+        return {
+          isSingle: true,
+          vnodes: renderMarkdown(renderNode),
+        };
+      }
+
+      // Одиночный элемент (MarkerNode/SimpleTextNode)
       if (!Array.isArray(renderNode)) {
         return {
           isSingle: true,

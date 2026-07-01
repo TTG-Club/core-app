@@ -3,6 +3,7 @@
 
   import { MagicItemPreview } from '~magic-items/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
   import { SelectItem } from '~ui/select';
   import { UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
@@ -139,9 +140,8 @@
 
       <div class="grid grid-cols-1 gap-4">
         <UFormField name="description">
-          <UTextarea
+          <MarkupEditor
             v-model="state.description"
-            :rows="8"
             placeholder="Введи описание"
           />
         </UFormField>

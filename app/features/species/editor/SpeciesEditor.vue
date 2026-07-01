@@ -3,6 +3,7 @@
 
   import { SpeciesPreview } from '~species/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
   import { SelectCreatureType, SelectSpecies } from '~ui/select';
   import { UploadGallery, UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
@@ -72,10 +73,9 @@
           label="Описание"
           name="description"
         >
-          <UTextarea
+          <MarkupEditor
             v-model="state.description"
             placeholder="Введи описание"
-            :rows="8"
           />
         </UFormField>
       </div>

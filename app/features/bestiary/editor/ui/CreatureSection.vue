@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { CreateSection } from '~bestiary/model';
 
+  import { MarkupEditor } from '~ui/markup-editor';
   import { SelectHabitat, SelectTreasure } from '~ui/select';
 
   const model = defineModel<CreateSection>({ required: true });
@@ -83,13 +84,9 @@
           name="description"
           :ui="{ root: 'w-full', container: 'w-full' }"
         >
-          <UTextarea
+          <MarkupEditor
             v-model="model.description"
-            class="w-full"
-            :ui="{ root: 'flex w-full', base: 'w-full' }"
-            :rows="6"
             placeholder="Введи описание"
-            clearable
           />
         </UFormField>
       </div>

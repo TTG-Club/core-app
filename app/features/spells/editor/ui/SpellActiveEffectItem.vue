@@ -12,6 +12,8 @@
     SpellEffectSaveTiming,
   } from '../../model';
 
+  import { MarkupEditor } from '~ui/markup-editor';
+
   import {
     DEFAULT_SPELL_EFFECT_AURA,
     DEFAULT_SPELL_EFFECT_SAVE,
@@ -305,9 +307,8 @@
           label="Описание"
           class="col-span-full"
         >
-          <UTextarea
+          <MarkupEditor
             v-model="model.description"
-            :rows="2"
             placeholder="Описание эффекта"
           />
         </UFormField>
