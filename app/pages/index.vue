@@ -39,9 +39,7 @@
         <!-- Навигация по сайту и соцсети -->
         <div class="flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">
           <div class="grid grid-cols-2 gap-3">
-            <HomeBanners group="tools" />
-
-            <HomeBanners group="info" />
+            <HomeBanners />
           </div>
 
           <SocialLinks />
