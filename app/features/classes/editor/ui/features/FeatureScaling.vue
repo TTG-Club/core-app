@@ -2,6 +2,7 @@
   import type { ClassFeatureScalingCreate } from '../../../model';
 
   import { EditorArrayControls } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
   import { SelectLevel } from '~ui/select';
 
   const { isSubclass = false } = defineProps<{
@@ -99,9 +100,8 @@
       label="Описание"
       name="description"
     >
-      <UTextarea
+      <MarkupEditor
         v-model="row.description"
-        :rows="3"
         placeholder="Описание для уровня"
       />
     </UFormField>

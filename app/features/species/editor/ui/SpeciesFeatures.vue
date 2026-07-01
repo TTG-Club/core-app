@@ -2,6 +2,7 @@
   import type { SpeciesCreate } from '~species/model';
 
   import { EditorArrayControls } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
 
   type Features = SpeciesCreate['features'];
 
@@ -79,9 +80,8 @@
         label="Описание"
         name="description"
       >
-        <UTextarea
+        <MarkupEditor
           v-model="feature.description"
-          :rows="3"
           placeholder="Введи описание"
         />
       </UFormField>

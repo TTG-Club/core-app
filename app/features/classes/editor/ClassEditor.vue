@@ -3,6 +3,7 @@
 
   import { ClassPreview } from '~classes/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
   import { UploadGallery, UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
 
@@ -130,10 +131,9 @@
           class="col-span-full"
           name="equipment"
         >
-          <UTextarea
+          <MarkupEditor
             v-model="state.equipment"
             placeholder="Опиши стартовое снаряжение"
-            :rows="4"
           />
         </UFormField>
       </div>
@@ -149,10 +149,9 @@
           class="col-span-full"
           name="description"
         >
-          <UTextarea
+          <MarkupEditor
             v-model="state.description"
             placeholder="Введи описание"
-            :rows="8"
           />
         </UFormField>
       </div>

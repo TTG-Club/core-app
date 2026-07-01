@@ -9,6 +9,7 @@
   } from '~spells/model';
   import { SpellPreview } from '~spells/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
   import {
     SelectClass,
     SelectFeat,
@@ -162,9 +163,8 @@
           name="description"
           class="col-span-full lg:col-span-12"
         >
-          <UTextarea
+          <MarkupEditor
             v-model="state.description"
-            :rows="8"
             placeholder="Введи описание"
           />
         </UFormField>
@@ -174,9 +174,8 @@
           name="upper"
           class="col-span-full lg:col-span-12"
         >
-          <UTextarea
+          <MarkupEditor
             v-model="state.upper"
-            :rows="8"
             placeholder="Введи описание"
           />
         </UFormField>

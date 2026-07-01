@@ -51,6 +51,12 @@ importers:
       '@tanstack/vue-table':
         specifier: ^8.21.3
         version: 8.21.3(vue@3.5.38(typescript@5.9.3))
+      '@tiptap/core':
+        specifier: 3.20.4
+        version: 3.20.4(@tiptap/pm@3.20.4)
+      '@tiptap/vue-3':
+        specifier: 3.20.4
+        version: 3.20.4(@floating-ui/dom@1.7.6)(@tiptap/core@3.20.4(@tiptap/pm@3.20.4))(@tiptap/pm@3.20.4)(vue@3.5.38(typescript@5.9.3))
       '@ttg-club/dice-roller-parser':
         specifier: ^0.3.2
         version: 0.3.2
@@ -111,6 +117,9 @@ importers:
       lightgallery:
         specifier: 2.9.0
         version: 2.9.0
+      markdown-it:
+        specifier: ^14.2.0
+        version: 14.2.0
       mime:
         specifier: ^4.1.0
         version: 4.1.0
@@ -172,6 +181,9 @@ importers:
       '@types/bytes':
         specifier: ^3.1.5
         version: 3.1.5
+      '@types/markdown-it':
+        specifier: ^14.1.2
+        version: 14.1.2
       '@types/ms':
         specifier: ^2.1.0
         version: 2.1.0

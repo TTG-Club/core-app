@@ -3,6 +3,7 @@
 
   import { BackgroundPreview } from '~backgrounds/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
   import { SelectAbilities, SelectFeat, SelectSkill } from '~ui/select';
   import { useWorkshopForm } from '~workshop/composable';
 
@@ -107,9 +108,8 @@
           label="Владение инструментами"
           name="toolProficiency"
         >
-          <UTextarea
+          <MarkupEditor
             v-model="state.toolProficiency"
-            :rows="3"
             placeholder="Введи инструменты"
           />
         </UFormField>
@@ -119,9 +119,8 @@
           label="Снаряжение"
           name="equipment"
         >
-          <UTextarea
+          <MarkupEditor
             v-model="state.equipment"
-            :rows="3"
             placeholder="Введи снаряжение"
           />
         </UFormField>
@@ -135,9 +134,8 @@
 
       <div class="grid grid-cols-1 gap-4">
         <UFormField name="description">
-          <UTextarea
+          <MarkupEditor
             v-model="state.description"
-            :rows="8"
             placeholder="Введи описание"
           />
         </UFormField>

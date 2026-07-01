@@ -2,6 +2,7 @@
   import type { RoadmapRequest } from '~roadmap/types';
 
   import { RoadmapPreview } from '~roadmap/preview';
+  import { MarkupEditor } from '~ui/markup-editor';
 
   const { url = undefined } = defineProps<{
     url?: string;
@@ -88,14 +89,20 @@
           name="preview"
           required
         >
-          <UTextarea v-model="state.preview" />
+          <MarkupEditor
+            v-model="state.preview"
+            placeholder="Краткое описание"
+          />
         </UFormField>
 
         <UFormField
           label="Описание"
           name="description"
         >
-          <UTextarea v-model="state.description" />
+          <MarkupEditor
+            v-model="state.description"
+            placeholder="Введи описание"
+          />
         </UFormField>
 
         <UFormField

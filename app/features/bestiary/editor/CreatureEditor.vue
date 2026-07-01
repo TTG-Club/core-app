@@ -4,6 +4,7 @@
   import { getInitialState } from '~bestiary/model';
   import { CreaturePreview } from '~bestiary/preview';
   import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
   import { SelectAlignment } from '~ui/select';
   import { UploadGallery, UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
@@ -64,11 +65,8 @@
         name="description"
         :ui="{ root: 'w-full', container: 'w-full' }"
       >
-        <UTextarea
+        <MarkupEditor
           v-model="state.description"
-          class="w-full"
-          :ui="{ root: 'flex w-full', base: 'w-full' }"
-          :rows="4"
           placeholder="Введи описание"
         />
       </UFormField>
