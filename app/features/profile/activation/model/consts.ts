@@ -75,6 +75,22 @@ export const REWARD_PERK_ICONS: Record<RewardPerk, string> = {
   APP_CREDITS: 'tabler:award',
 };
 
+/**
+ * Готовые S3-загрузки наград — фолбэк, пока бэкенд не проставил `url` в
+ * reward_resource. Ключ отдаётся прокси core-app `/s3/<key>`. Если админ позже
+ * задаст url на бэке — приоритет у бэкенда (см. RewardLinkRow).
+ */
+export const REWARD_PERK_FALLBACK_URLS: Partial<Record<RewardPerk, string>> = {
+  MAP_TOKENS_DOWNLOAD: '/s3/vttgw/rewards/CardsAndTokens.zip',
+};
+
+/**
+ * Изображение рамки аватара (косметический перк AVATAR_FRAME) — накладывается
+ * поверх аватара в сайдбаре профиля, если перк выдан кодом. Ключ отдаётся прокси
+ * core-app `/s3/<key>` (как остальные S3-ассеты).
+ */
+export const AVATAR_FRAME_IMAGE_URL = '/s3/vttgw/rewards/frame.webp';
+
 /** Перки-«загрузки» — для них уместна кнопка «Скачать» (иначе «Открыть»). */
 export const DOWNLOAD_PERKS: ReadonlySet<RewardPerk> = new Set<RewardPerk>([
   'EARLY_ACCESS_DOWNLOAD',

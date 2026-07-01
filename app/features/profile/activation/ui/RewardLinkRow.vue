@@ -3,6 +3,7 @@
 
   import {
     COSMETIC_PERKS,
+    REWARD_PERK_FALLBACK_URLS,
     REWARD_PERK_ICONS,
     REWARD_PERK_LABELS,
     rewardActionIcon,
@@ -23,8 +24,14 @@
     () => props.reward.availability === 'COMING_SOON',
   );
 
-  // Ссылка кликабельна, только если контент готов и URL задан админом.
-  const hasLink = computed(() => !isComingSoon.value && !!props.reward.url);
+  // URL награды: приоритет у бэкенда (reward_resource), иначе готовый S3-фолбэк.
+  const url = computed(
+    () =>
+      props.reward.url ?? REWARD_PERK_FALLBACK_URLS[props.reward.perk] ?? null,
+  );
+
+  // Ссылка кликабельна, только если контент готов и есть URL (бэкенд или фолбэк).
+  const hasLink = computed(() => !isComingSoon.value && !!url.value);
 
   // Косметический перк — ссылки нет по дизайну, он просто применён к профилю.
   const isCosmetic = computed(() => COSMETIC_PERKS.has(props.reward.perk));
@@ -55,7 +62,7 @@
 
     <UButton
       v-if="hasLink"
-      :to="reward.url!"
+      :to="url!"
       target="_blank"
       rel="noopener noreferrer"
       :icon="rewardActionIcon(reward.perk)"
