@@ -34,6 +34,7 @@ export interface FilterItem {
   value: string; // Used internally or for display
   name: string;
   selected: boolean | null; // UI state
+  relations?: Record<string, Array<string | number>>;
   [p: string]: unknown;
 }
 

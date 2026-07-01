@@ -1,13 +1,19 @@
 <script setup lang="ts">
-  import type { FilterGroup as FilterGroupType } from '~infrastructure/filter/types';
-
-  import { getGroupItems } from '~infrastructure/filter/utils';
+  import type {
+    FilterGroup as FilterGroupType,
+    FilterItems,
+  } from '~infrastructure/filter/types';
 
   import { FilterTag } from '../tag';
 
   type GroupPosition = 'standalone' | 'top' | 'bottom';
 
-  const { preview = false, position = 'standalone' } = defineProps<{
+  const {
+    items,
+    preview = false,
+    position = 'standalone',
+  } = defineProps<{
+    items: FilterItems;
     preview?: boolean;
     position?: GroupPosition;
   }>();
@@ -23,9 +29,7 @@
       return true;
     }
 
-    return getGroupItems(group.value).some(
-      (filterItem) => filterItem.selected !== null,
-    );
+    return items.some((filterItem) => filterItem.selected !== null);
   });
 
   // Классы бордера шапки: нижний блок не имеет скругления сверху
@@ -78,7 +82,7 @@
         :class="bodyClass"
       >
         <FilterTag
-          v-for="item in getGroupItems(group)"
+          v-for="item in items"
           :key="`${item.id}-${item.name}`"
           v-model="item.selected"
           :exclude="group.mode"
@@ -92,7 +96,7 @@
         class="flex flex-wrap gap-2"
       >
         <FilterTag
-          v-for="item in getGroupItems(group)"
+          v-for="item in items"
           :key="`${item.id}-${item.name}`"
           v-model="item.selected"
           preview

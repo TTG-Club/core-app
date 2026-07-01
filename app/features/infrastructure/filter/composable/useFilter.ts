@@ -8,6 +8,7 @@ import {
   buildSearchQuery,
   getFilterKey,
   getGroupItems,
+  normalizeDependentSelections,
 } from '../utils';
 
 export async function useFilter(key: string, url: string) {
@@ -50,6 +51,16 @@ export async function useFilter(key: string, url: string) {
   const filterQuery = computed(() => buildSearchQuery(filter.value));
 
   function syncUrlWithFilter() {
+    const normalizedFilters = normalizeDependentSelections(
+      filter.value?.filters ?? [],
+    );
+
+    if (filter.value && !isEqual(filter.value.filters, normalizedFilters)) {
+      filter.value = { ...filter.value, filters: normalizedFilters };
+
+      return;
+    }
+
     const finalQuery = buildFullQuery(
       filter.value,
       defaults.value ?? undefined,
@@ -72,7 +83,12 @@ export async function useFilter(key: string, url: string) {
 
       const cloned = cloneDeep(value);
 
-      filter.value = applyQueryToFilters(cloned, route.query);
+      const nextFilter = applyQueryToFilters(cloned, route.query);
+
+      filter.value = {
+        ...nextFilter,
+        filters: normalizeDependentSelections(nextFilter.filters),
+      };
     },
     { immediate: true },
   );
@@ -98,7 +114,10 @@ export async function useFilter(key: string, url: string) {
       const nextFiltersQuery = JSON.stringify(buildSearchQuery(testFilter));
 
       if (prevFiltersQuery !== nextFiltersQuery) {
-        filter.value = testFilter;
+        filter.value = {
+          ...testFilter,
+          filters: normalizeDependentSelections(testFilter.filters),
+        };
       }
     },
     { deep: true },
