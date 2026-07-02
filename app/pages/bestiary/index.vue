@@ -357,21 +357,21 @@
     title="Бестиарий"
   >
     <template #controls>
-      <div class="flex flex-col gap-4">
-        <FilterControls
-          v-model:search="search"
-          v-model:filter="filter"
-          :defaults="filterDefaults"
-          :is-pending="isFilterPending"
-          :show-preview="isFilterPreviewShowed"
-        />
-
-        <ListPresentationControls
-          v-model:grouping="presentation.grouping.value"
-          v-model:sorting="presentation.sorting.value"
-          :config="bestiaryListPresentationConfig"
-        />
-      </div>
+      <FilterControls
+        v-model:search="search"
+        v-model:filter="filter"
+        :defaults="filterDefaults"
+        :is-pending="isFilterPending"
+        :show-preview="isFilterPreviewShowed"
+      >
+        <template #actions>
+          <ListPresentationControls
+            v-model:grouping="presentation.grouping.value"
+            v-model:sorting="presentation.sorting.value"
+            :config="bestiaryListPresentationConfig"
+          />
+        </template>
+      </FilterControls>
     </template>
 
     <template #default>

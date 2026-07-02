@@ -321,25 +321,25 @@
     title="Заклинания"
   >
     <template #controls>
-      <div class="flex flex-col gap-4">
-        <FilterControls
-          v-model:search="search"
-          v-model:filter="filter"
-          :defaults="filterDefaults"
-          :is-pending="isFilterPending"
-          :show-preview="isFilterPreviewShowed"
-        >
-          <template #legend>
-            <SpellLegend />
-          </template>
-        </FilterControls>
+      <FilterControls
+        v-model:search="search"
+        v-model:filter="filter"
+        :defaults="filterDefaults"
+        :is-pending="isFilterPending"
+        :show-preview="isFilterPreviewShowed"
+      >
+        <template #legend>
+          <SpellLegend />
+        </template>
 
-        <ListPresentationControls
-          v-model:grouping="presentation.grouping.value"
-          v-model:sorting="presentation.sorting.value"
-          :config="SPELL_LIST_PRESENTATION_CONFIG"
-        />
-      </div>
+        <template #actions>
+          <ListPresentationControls
+            v-model:grouping="presentation.grouping.value"
+            v-model:sorting="presentation.sorting.value"
+            :config="SPELL_LIST_PRESENTATION_CONFIG"
+          />
+        </template>
+      </FilterControls>
     </template>
 
     <template #default>

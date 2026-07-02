@@ -103,25 +103,25 @@
     title="Магические предметы"
   >
     <template #controls>
-      <div class="flex flex-col gap-4">
-        <FilterControls
-          v-model:search="search"
-          v-model:filter="filter"
-          :defaults="filterDefaults"
-          :is-pending="isFilterPending"
-          :show-preview="isFilterPreviewShowed"
-        >
-          <template #legend>
-            <MagicItemLegend />
-          </template>
-        </FilterControls>
+      <FilterControls
+        v-model:search="search"
+        v-model:filter="filter"
+        :defaults="filterDefaults"
+        :is-pending="isFilterPending"
+        :show-preview="isFilterPreviewShowed"
+      >
+        <template #legend>
+          <MagicItemLegend />
+        </template>
 
-        <ListPresentationControls
-          v-model:grouping="presentation.grouping.value"
-          v-model:sorting="presentation.sorting.value"
-          :config="magicItemListPresentationConfig"
-        />
-      </div>
+        <template #actions>
+          <ListPresentationControls
+            v-model:grouping="presentation.grouping.value"
+            v-model:sorting="presentation.sorting.value"
+            :config="magicItemListPresentationConfig"
+          />
+        </template>
+      </FilterControls>
     </template>
 
     <template #default>

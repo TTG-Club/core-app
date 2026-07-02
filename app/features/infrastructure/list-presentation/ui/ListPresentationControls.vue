@@ -3,15 +3,14 @@
   lang="ts"
   generic="TItem, TGrouping extends string, TSorting extends string"
 >
-  import type {
-    ListPresentationConfig,
-    ListPresentationOption,
-  } from '../model';
+  import type { DropdownMenuItem } from '@nuxt/ui';
 
-  import { z } from 'zod';
+  import type { ListPresentationConfig } from '../model';
 
   import {
+    LIST_PRESENTATION_GROUPING_ICON,
     LIST_PRESENTATION_GROUPING_LABEL,
+    LIST_PRESENTATION_SORTING_ICON,
     LIST_PRESENTATION_SORTING_LABEL,
   } from '../model';
 
@@ -22,77 +21,57 @@
   const grouping = defineModel<TGrouping>('grouping', { required: true });
   const sorting = defineModel<TSorting>('sorting', { required: true });
 
-  const groupingItems = computed<Array<ListPresentationOption<string>>>(() =>
-    props.config.groupingOptions.map(({ label, value, apiValue }) => ({
-      label,
-      value,
-      apiValue,
+  const groupingItems = computed<Array<DropdownMenuItem>>(() =>
+    props.config.groupingOptions.map((option) => ({
+      label: option.label,
+      type: 'checkbox',
+      checked: grouping.value === option.value,
+      onSelect: (event: Event) => {
+        event.preventDefault();
+        grouping.value = option.value;
+      },
     })),
   );
 
-  const sortingItems = computed<Array<ListPresentationOption<string>>>(() =>
-    props.config.sortingOptions.map(({ label, value, apiValue }) => ({
-      label,
-      value,
-      apiValue,
+  const sortingItems = computed<Array<DropdownMenuItem>>(() =>
+    props.config.sortingOptions.map((option) => ({
+      label: option.label,
+      type: 'checkbox',
+      checked: sorting.value === option.value,
+      onSelect: (event: Event) => {
+        event.preventDefault();
+        sorting.value = option.value;
+      },
     })),
   );
-
-  /**
-   * Применяет выбранную группировку после проверки значения компонента.
-   */
-  function handleGroupingUpdate(rawValue: unknown): void {
-    const parsedValue = z.string().safeParse(rawValue);
-
-    if (!parsedValue.success) {
-      return;
-    }
-
-    const selectedOption = props.config.groupingOptions.find(
-      (option) => option.value === parsedValue.data,
-    );
-
-    if (selectedOption) {
-      grouping.value = selectedOption.value;
-    }
-  }
-
-  /**
-   * Применяет выбранную сортировку после проверки значения компонента.
-   */
-  function handleSortingUpdate(rawValue: unknown): void {
-    const parsedValue = z.string().safeParse(rawValue);
-
-    if (!parsedValue.success) {
-      return;
-    }
-
-    const selectedOption = props.config.sortingOptions.find(
-      (option) => option.value === parsedValue.data,
-    );
-
-    if (selectedOption) {
-      sorting.value = selectedOption.value;
-    }
-  }
 </script>
 
 <template>
-  <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-    <USelect
+  <div class="flex gap-2">
+    <UDropdownMenu
       v-if="props.config.groupingOptions.length > 1"
-      :model-value="grouping"
-      :aria-label="LIST_PRESENTATION_GROUPING_LABEL"
       :items="groupingItems"
-      @update:model-value="handleGroupingUpdate"
-    />
+      :ui="{ content: 'w-56' }"
+    >
+      <UButton
+        square
+        :icon="LIST_PRESENTATION_GROUPING_ICON"
+        :title="LIST_PRESENTATION_GROUPING_LABEL"
+        :aria-label="LIST_PRESENTATION_GROUPING_LABEL"
+      />
+    </UDropdownMenu>
 
-    <USelect
+    <UDropdownMenu
       v-if="props.config.sortingOptions.length > 1"
-      :model-value="sorting"
-      :aria-label="LIST_PRESENTATION_SORTING_LABEL"
       :items="sortingItems"
-      @update:model-value="handleSortingUpdate"
-    />
+      :ui="{ content: 'w-56' }"
+    >
+      <UButton
+        square
+        :icon="LIST_PRESENTATION_SORTING_ICON"
+        :title="LIST_PRESENTATION_SORTING_LABEL"
+        :aria-label="LIST_PRESENTATION_SORTING_LABEL"
+      />
+    </UDropdownMenu>
   </div>
 </template>
