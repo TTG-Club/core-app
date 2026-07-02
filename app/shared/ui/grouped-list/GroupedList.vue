@@ -79,6 +79,7 @@
     resetKey?: string;
     scrollKey?: string;
     activeItemKey?: string;
+    itemSort?: (firstItem: T, secondItem: T) => number;
   }
 
   const {
@@ -96,6 +97,7 @@
     resetKey = undefined,
     scrollKey = undefined,
     activeItemKey = undefined,
+    itemSort = undefined,
   } = defineProps<Props>();
 
   const route = useRoute();
@@ -243,26 +245,33 @@
     return sortKeysAuto(keys);
   }
 
+  const sortedItems = computed<Array<T>>(() => {
+    return itemSort ? [...items].sort(itemSort) : items;
+  });
+
   const groupedItems = computed<Array<Group<T>>>(() => {
     if (!items.length) {
       return [];
     }
 
     if (groupSort.mode === 'custom') {
-      return groupSort.compare(items);
+      return groupSort.compare(sortedItems.value);
     }
 
     if (!field) {
       return [];
     }
 
-    const grouped = items.reduce<Record<string, Array<T>>>((acc, item) => {
-      const keyText = String(get(item, field) ?? '');
+    const grouped = sortedItems.value.reduce<Record<string, Array<T>>>(
+      (acc, item) => {
+        const keyText = String(get(item, field) ?? '');
 
-      (acc[keyText] ??= []).push(item);
+        (acc[keyText] ??= []).push(item);
 
-      return acc;
-    }, {});
+        return acc;
+      },
+      {},
+    );
 
     const keys = Object.keys(grouped).map(getComparableKey);
     const sortedKeys = sortGroupKeys(keys);
@@ -299,7 +308,7 @@
     return [
       {
         key: 'default',
-        items,
+        items: sortedItems.value,
       },
     ];
   });
@@ -760,7 +769,7 @@
       :columns="columns"
     >
       <div
-        v-for="item in items"
+        v-for="item in sortedItems"
         :id="getItemElementId(item)"
         :key="item.url"
         @click.left.exact.capture="rememberListItem(item)"

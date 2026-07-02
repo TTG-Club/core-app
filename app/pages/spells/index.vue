@@ -7,25 +7,20 @@
   } from '~spells/model';
 
   import { FilterControls, useFilter } from '~infrastructure/filter';
+  import { useListPresentation } from '~infrastructure/list-presentation/composable';
+  import { ListPresentationControls } from '~infrastructure/list-presentation/ui';
   import { SpellBody } from '~spells/body';
   import { SpellLegend } from '~spells/legend';
   import { SpellLink } from '~spells/link';
   import {
     SPELL_LIST_LOAD_MORE_DISTANCE,
     SPELL_LIST_PAGE_SIZE,
+    SPELL_LIST_PRESENTATION_CONFIG,
   } from '~spells/model';
   import { UiDetailPane } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
-
-  function getSpellLevelLabel(level: number | string): string {
-    if (typeof level === 'string') {
-      return level;
-    }
-
-    return !level ? 'Заговоры' : `Уровень ${level}`;
-  }
 
   useSeoMeta({
     title: 'Заклинания [Spells]',
@@ -45,6 +40,9 @@
 
   const currentPage = ref(0);
   const spells = ref<Array<SpellLinkResponse>>([]);
+
+  const presentation = useListPresentation(SPELL_LIST_PRESENTATION_CONFIG);
+
   const hasNextPage = ref(false);
   const isLoadingMore = ref(false);
 
@@ -113,6 +111,7 @@
     JSON.stringify({
       filter: filterQuery.value,
       search: search.value ?? '',
+      presentation: presentation.resetKey.value,
     }),
   );
 
@@ -181,6 +180,7 @@
         query: {
           page,
           size,
+          ...presentation.query.value,
           ...(search.value ? { search: search.value } : {}),
           ...filterQuery.value,
         },
@@ -200,7 +200,7 @@
     () => fetchSpellPage(0, firstSpellPageSize.value),
     {
       deep: false,
-      watch: [search, filterQuery],
+      watch: [search, filterQuery, presentation.resetKey],
     },
   );
 
@@ -321,17 +321,25 @@
     title="Заклинания"
   >
     <template #controls>
-      <FilterControls
-        v-model:search="search"
-        v-model:filter="filter"
-        :defaults="filterDefaults"
-        :is-pending="isFilterPending"
-        :show-preview="isFilterPreviewShowed"
-      >
-        <template #legend>
-          <SpellLegend />
-        </template>
-      </FilterControls>
+      <div class="flex flex-col gap-4">
+        <FilterControls
+          v-model:search="search"
+          v-model:filter="filter"
+          :defaults="filterDefaults"
+          :is-pending="isFilterPending"
+          :show-preview="isFilterPreviewShowed"
+        >
+          <template #legend>
+            <SpellLegend />
+          </template>
+        </FilterControls>
+
+        <ListPresentationControls
+          v-model:grouping="presentation.grouping.value"
+          v-model:sorting="presentation.sorting.value"
+          :config="SPELL_LIST_PRESENTATION_CONFIG"
+        />
+      </div>
     </template>
 
     <template #default>
@@ -354,9 +362,10 @@
           virtual
           :virtual-threshold="SPELL_LIST_PAGE_SIZE"
           :reset-key="listResetKey"
-          :separator-label="getSpellLevelLabel"
+          :separator-label="presentation.separatorLabel.value"
           :items="spells"
-          field="level"
+          :field="presentation.groupField.value"
+          :group-sort="presentation.groupSort.value"
           :active-item-key="detailUrl"
         >
           <template #default="{ item }">
