@@ -27,14 +27,12 @@
   }
 
   /** Загружает следующую страницу, когда конец группы попадает в область просмотра. */
-  function handleLoadMoreVisibility(
-    [isVisible, hasNextPage, isLoading, hasError]: [
-      boolean,
-      boolean,
-      boolean,
-      boolean,
-    ],
-  ): void {
+  function handleLoadMoreVisibility([
+    isVisible,
+    hasNextPage,
+    isLoading,
+    hasError,
+  ]: [boolean, boolean, boolean, boolean]): void {
     if (isVisible && hasNextPage && !isLoading && !hasError) {
       requestNextPage();
     }
