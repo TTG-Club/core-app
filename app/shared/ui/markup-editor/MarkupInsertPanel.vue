@@ -3,10 +3,14 @@
 
   import type { MarkupTag } from './tags';
 
-  /** Режим панели: поиск сущности раздела или ввод нотации кубика. */
+  import { hasMarkerAtom } from './tiptap/node-utils';
+  import { sanitizeMarkerText } from './toolbar-items';
+
+  /** Режим панели: поиск сущности раздела, ввод нотации кубика или подпись таблицы. */
   type PanelMode =
     | { kind: 'section'; tag: MarkupTag }
-    | { kind: 'dice'; tag: MarkupTag };
+    | { kind: 'dice'; tag: MarkupTag }
+    | { kind: 'caption' };
 
   /** Минимальная форма результата поиска раздела (нужны имя и slug). */
   interface SectionSearchResult {
@@ -45,13 +49,69 @@
     .textBetween(range.from, range.to, ' ')
     .trim();
 
-  const query = ref(selectedText);
+  // Если в выделении есть чипы-маркеры (узел ttgMarker), «плоский» selectedText
+  // теряет их (сплющивает в пробел) — такой текст как подпись ненадёжен.
+  const selectionHasChip = hasMarkerAtom(editor, range.from, range.to);
+
+  // В режиме подписи предзаполняем текущим caption таблицы (редактирование), в
+  // остальных — выделенным текстом (как значение по умолчанию для вставки).
+  const query = ref(
+    mode.kind === 'caption'
+      ? String(editor.getAttributes('table').caption ?? '')
+      : selectedText,
+  );
+
   const results = ref<SectionSearchResult[]>([]);
   const loading = ref(false);
   const activeIndex = ref(0);
   const inputRef = useTemplateRef<HTMLInputElement>('input');
 
-  const endpoint = computed(() => SEARCH_ENDPOINTS[mode.tag.key] ?? '');
+  const endpoint = computed(() =>
+    mode.kind === 'section' ? (SEARCH_ENDPOINTS[mode.tag.key] ?? '') : '',
+  );
+
+  /** Иконка поля панели по режиму. */
+  const panelIcon = computed(() => {
+    if (mode.kind === 'dice') {
+      return 'tabler:dice';
+    }
+
+    if (mode.kind === 'caption') {
+      return 'tabler:text-caption';
+    }
+
+    return 'tabler:search';
+  });
+
+  /** Плейсхолдер поля панели по режиму. */
+  const panelPlaceholder = computed(() => {
+    if (mode.kind === 'dice') {
+      return 'Нотация броска, напр. 2d6';
+    }
+
+    if (mode.kind === 'caption') {
+      return 'Подпись таблицы';
+    }
+
+    if (mode.kind === 'section') {
+      return `Поиск: ${mode.tag.label}`;
+    }
+
+    return '';
+  });
+
+  /** aria-label поля панели по режиму. */
+  const panelAriaLabel = computed(() => {
+    if (mode.kind === 'dice') {
+      return 'Нотация броска';
+    }
+
+    if (mode.kind === 'caption') {
+      return 'Подпись таблицы';
+    }
+
+    return 'Поиск сущности';
+  });
 
   onMounted(() => {
     nextTick(() => inputRef.value?.focus());
@@ -105,13 +165,23 @@
   }
 
   function pickResult(result: SectionSearchResult) {
-    const label = selectedText || result.name.rus;
+    // Выбор сущности возможен только в режиме раздела (у него есть tag).
+    if (mode.kind !== 'section') {
+      return;
+    }
+
+    // Подпись — выделенный текст (если он надёжен) либо название сущности;
+    // санитизуем, чтобы `|`/`}` не сломали атрибут url ссылки.
+    const source =
+      selectedText && !selectionHasChip ? selectedText : result.name.rus;
+
+    const label = sanitizeMarkerText(source);
 
     insertRaw(`{@${mode.tag.key} ${label} | url:${result.url}}`);
   }
 
   function confirmDice() {
-    const notation = query.value.trim();
+    const notation = sanitizeMarkerText(query.value.trim());
 
     if (!notation) {
       return;
@@ -120,9 +190,34 @@
     insertRaw(`{@dice ${notation}}`);
   }
 
+  /**
+   * Подпись таблицы — это АТРИБУТ узла table (а не вставка чипа), поэтому пишем
+   * его командой updateAttributes по текущему выделению (курсор внутри таблицы).
+   * Пустая строка очищает подпись.
+   */
+  function confirmCaption() {
+    // Санитизуем как подписи ссылок/нотацию кубика: `|`/`{`/`}` в подписи иначе
+    // ломают {@caption …} при round-trip (обрезание по `|`, разбаланс по `}`).
+    editor
+      .chain()
+      .focus()
+      .updateAttributes('table', {
+        caption: sanitizeMarkerText(query.value.trim()),
+      })
+      .run();
+
+    emit('close');
+  }
+
   function onEnter() {
     if (mode.kind === 'dice') {
       confirmDice();
+
+      return;
+    }
+
+    if (mode.kind === 'caption') {
+      confirmCaption();
 
       return;
     }
@@ -156,19 +251,15 @@
   <div class="border-b border-default bg-default shadow-lg">
     <div class="flex items-center gap-2 p-2">
       <UIcon
-        :name="mode.kind === 'dice' ? 'tabler:dice' : 'tabler:search'"
+        :name="panelIcon"
         class="size-4 shrink-0 text-dimmed"
       />
 
       <input
         ref="input"
         v-model="query"
-        :placeholder="
-          mode.kind === 'dice'
-            ? 'Нотация броска, напр. 2d6'
-            : `Поиск: ${mode.tag.label}`
-        "
-        :aria-label="mode.kind === 'dice' ? 'Нотация броска' : 'Поиск сущности'"
+        :placeholder="panelPlaceholder"
+        :aria-label="panelAriaLabel"
         class="w-full bg-transparent text-sm text-default outline-none"
         @keydown.enter.prevent="onEnter"
         @keydown.esc.prevent="emit('close')"

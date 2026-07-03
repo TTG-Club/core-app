@@ -43,10 +43,11 @@
     };
   }
 
-  const { state, onSubmit, onError } = useWorkshopForm<SourceCreate>({
-    actionUrl: '/api/v2/source',
-    getInitialState,
-  });
+  const { state, submitState, onSubmit, onError } =
+    useWorkshopForm<SourceCreate>({
+      actionUrl: '/api/v2/source',
+      getInitialState,
+    });
 
   const acronym = computed<string>(() => {
     const words = state.value.name.eng
@@ -277,7 +278,7 @@
       <template #preview="{ opened, changeVisibility }">
         <SourcePreview
           :open="opened"
-          :state="state"
+          :state="submitState"
           @update:open="changeVisibility"
         />
       </template>

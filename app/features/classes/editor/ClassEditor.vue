@@ -74,10 +74,11 @@
     };
   }
 
-  const { state, onError, onSubmit } = useWorkshopForm<ClassCreate>({
-    actionUrl: '/api/v2/classes',
-    getInitialState,
-  });
+  const { state, submitState, onError, onSubmit } =
+    useWorkshopForm<ClassCreate>({
+      actionUrl: '/api/v2/classes',
+      getInitialState,
+    });
 
   const { data: classLinks } =
     useNuxtData<ClassLinkResponse[]>('classes-select');
@@ -209,7 +210,7 @@
       <template #preview="{ opened, changeVisibility }">
         <ClassPreview
           :open="opened"
-          :state="state"
+          :state="submitState"
           @update:open="changeVisibility"
         />
       </template>

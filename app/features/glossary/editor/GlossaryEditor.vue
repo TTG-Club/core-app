@@ -38,10 +38,11 @@
     };
   }
 
-  const { state, onSubmit, onError } = useWorkshopForm<GlossaryCreate>({
-    actionUrl: '/api/v2/glossary',
-    getInitialState,
-  });
+  const { state, submitState, onSubmit, onError } =
+    useWorkshopForm<GlossaryCreate>({
+      actionUrl: '/api/v2/glossary',
+      getInitialState,
+    });
 </script>
 
 <template>
@@ -98,7 +99,7 @@
       <template #preview="{ opened, changeVisibility }">
         <GlossaryPreview
           :open="opened"
-          :state="state"
+          :state="submitState"
           @update:open="changeVisibility"
         />
       </template>

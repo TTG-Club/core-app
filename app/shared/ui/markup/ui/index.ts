@@ -3,6 +3,7 @@ export { default as MarkupHeading } from './MarkupHeading.vue';
 export { default as MarkupKbd } from './MarkupKbd.vue';
 export { default as MarkupLink } from './MarkupLink.vue';
 export { default as MarkupList } from './MarkupList.vue';
+export { default as MarkupListItem } from './MarkupListItem.vue';
 export { default as MarkupQuote } from './MarkupQuote.vue';
 export { default as MarkupRoller } from './MarkupRoller.vue';
 export { default as MarkupSectionLink } from './MarkupSectionLink.vue';

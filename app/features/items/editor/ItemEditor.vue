@@ -102,12 +102,14 @@
     };
   }
 
-  const { state, onError, onSubmit } = useWorkshopForm<ItemCreate>({
-    actionUrl: '/api/v2/item',
-    getInitialState,
-    normalizeLoaded,
-    transformBeforeSubmit,
-  });
+  const { state, submitState, onError, onSubmit } = useWorkshopForm<ItemCreate>(
+    {
+      actionUrl: '/api/v2/item',
+      getInitialState,
+      normalizeLoaded,
+      transformBeforeSubmit,
+    },
+  );
 </script>
 
 <template>
@@ -234,7 +236,7 @@
       <template #preview="{ opened, changeVisibility }">
         <ItemPreview
           :open="opened"
-          :state="state"
+          :state="submitState"
           @update:open="changeVisibility"
         />
       </template>

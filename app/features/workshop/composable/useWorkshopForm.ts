@@ -51,6 +51,16 @@ export function useWorkshopForm<T extends { url: string }>(
     () => !isEqual(toRaw(previousState.value), toRaw(state.value)),
   );
 
+  // Тело, которое реально уходит на сервер при сохранении (после нормализации).
+  // Предпросмотр обязан слать РОВНО его же — иначе `/preview` видит сырое
+  // состояние формы (пустые массивы, полупустой effect и т.п.), которое бэкенд
+  // при сохранении не получает, и предпросмотр падает там, где сохранение живёт.
+  const submitState = computed<T>(() =>
+    _options.transformBeforeSubmit
+      ? _options.transformBeforeSubmit(toValue(state))
+      : toValue(state),
+  );
+
   const { refresh: reset } = useAsyncData(async () => {
     if (isEditForm.value) {
       try {
@@ -99,13 +109,9 @@ export function useWorkshopForm<T extends { url: string }>(
     }
 
     try {
-      const body = _options.transformBeforeSubmit
-        ? _options.transformBeforeSubmit(toValue(state))
-        : toValue(state);
-
       await $fetch(toValue(actionUrl), {
         method: toValue(isEditForm) ? 'put' : 'post',
-        body,
+        body: toValue(submitState),
         onResponse,
       });
     } catch (error) {
@@ -179,6 +185,7 @@ export function useWorkshopForm<T extends { url: string }>(
   return {
     state,
     previousState,
+    submitState,
 
     isFormEdited,
 

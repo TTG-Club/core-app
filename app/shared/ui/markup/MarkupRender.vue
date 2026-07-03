@@ -3,9 +3,7 @@
 
   import { computed } from 'vue';
 
-  import { renderMarkdown } from './markdown';
-  import { render } from './renderer';
-  import { isBlockNode } from './utils';
+  import { render, toBlockGroups } from './renderer';
 
   const { renderNode } = defineProps<{
     renderNode: RenderNode;
@@ -13,16 +11,7 @@
 
   const rendered = computed<RenderResult>(() => {
     try {
-      // Строка — это «Markdown + маркеры {@...}» из редактора/бэкенда.
-      // Уже разобранный бэкендом AST (объект/массив) рендерим по-старому.
-      if (typeof renderNode === 'string') {
-        return {
-          isSingle: true,
-          vnodes: renderMarkdown(renderNode),
-        };
-      }
-
-      // Одиночный элемент (MarkerNode/SimpleTextNode)
+      // Одиночный элемент (строка «{@...}»-разметки, MarkerNode или SimpleTextNode).
       if (!Array.isArray(renderNode)) {
         return {
           isSingle: true,
@@ -30,17 +19,16 @@
         };
       }
 
-      // Группируем последовательные inline элементы
+      // Каждый элемент описания разбиваем на блочные/инлайновые группы, чтобы
+      // блочные маркеры ({@h}/{@list}/{@quote}/…) рисовались вне <p>, а не внутри.
       const groups: Group[] = [];
 
       let groupId = 0;
 
       for (const entry of renderNode) {
-        groups.push({
-          id: groupId++,
-          isBlock: isBlockNode(entry),
-          vnodes: render(entry),
-        });
+        for (const group of toBlockGroups(entry)) {
+          groups.push({ id: groupId++, ...group });
+        }
       }
 
       return {
