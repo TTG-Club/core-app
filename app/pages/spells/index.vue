@@ -7,8 +7,10 @@
   } from '~spells/model';
 
   import { FilterControls, useFilter } from '~infrastructure/filter';
-  import { useListPresentation } from '~infrastructure/list-presentation/composable';
-  import { ListPresentationControls } from '~infrastructure/list-presentation/ui';
+  import {
+    useListPresentation,
+    useListPresentationMenus,
+  } from '~infrastructure/list-presentation/composable';
   import { SpellBody } from '~spells/body';
   import { useSpellClassPagination } from '~spells/composable';
   import { SpellClassGroups } from '~spells/groups';
@@ -44,6 +46,12 @@
   const spells = ref<Array<SpellLinkResponse>>([]);
 
   const presentation = useListPresentation(SPELL_LIST_PRESENTATION_CONFIG);
+
+  const presentationMenus = useListPresentationMenus(
+    SPELL_LIST_PRESENTATION_CONFIG,
+    presentation.grouping,
+    presentation.sorting,
+  );
 
   const isClassGrouping = computed(
     () => presentation.grouping.value === 'CLASS',
@@ -375,17 +383,10 @@
         :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
+        :presentation-menus="presentationMenus"
       >
         <template #legend>
           <SpellLegend />
-        </template>
-
-        <template #actions>
-          <ListPresentationControls
-            v-model:grouping="presentation.grouping.value"
-            v-model:sorting="presentation.sorting.value"
-            :config="SPELL_LIST_PRESENTATION_CONFIG"
-          />
         </template>
       </FilterControls>
     </template>

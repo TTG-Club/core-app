@@ -9,8 +9,6 @@ import type {
   ListPresentationSeparatorLabel,
 } from '../model';
 
-import { z } from 'zod';
-
 import {
   LIST_PRESENTATION_GROUPING_STORAGE_SUFFIX,
   LIST_PRESENTATION_SORTING_STORAGE_SUFFIX,
@@ -38,13 +36,11 @@ function findPresentationOption<TValue extends string>(
   rawValue: unknown,
   options: Array<ListPresentationOption<TValue>>,
 ): ListPresentationOption<TValue> | undefined {
-  const parsedValue = z.string().safeParse(rawValue);
-
-  if (!parsedValue.success) {
+  if (typeof rawValue !== 'string') {
     return undefined;
   }
 
-  return options.find((option) => option.value === parsedValue.data);
+  return options.find((option) => option.value === rawValue);
 }
 
 /**

@@ -3,6 +3,7 @@ import type { LocationQuery } from 'vue-router';
 import type { Filter, FilterGroup, FilterGroups, FilterItems } from '../types';
 
 import { getGroupItems } from './getGroupItems';
+import { getSelectedItemIds } from './selection';
 
 /**
  * Создаёт новый массив `items` с обновлённым состоянием `selected`
@@ -31,9 +32,7 @@ export function buildSearchQuery(
   const query: LocationQuery = {};
 
   for (const group of filterState.filters ?? []) {
-    const selectedIds = getGroupItems(group)
-      .filter((item) => item.selected)
-      .map((item) => String(item.id));
+    const selectedIds = getSelectedItemIds(group);
 
     if (selectedIds.length > 0) {
       query[group.key] = selectedIds.join(',');
@@ -49,9 +48,7 @@ export function buildSearchQuery(
   }
 
   const sourceIds = (filterState.sources ?? []).flatMap((group) =>
-    getGroupItems(group)
-      .filter((item) => item.selected)
-      .map((item) => String(item.id)),
+    getSelectedItemIds(group),
   );
 
   if (sourceIds.length > 0) {
@@ -125,11 +122,7 @@ export function serializeSelectedIds(groups?: FilterGroup[]): string {
   }
 
   return groups
-    .flatMap((group) => {
-      return getGroupItems(group)
-        .filter((item) => item.selected)
-        .map((item) => String(item.id));
-    })
+    .flatMap((group) => getSelectedItemIds(group))
     .sort()
     .join(',');
 }

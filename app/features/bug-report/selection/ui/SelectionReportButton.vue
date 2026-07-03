@@ -61,6 +61,24 @@
     };
   }
 
+  /**
+   * Находится ли выделение внутри редактируемого поля (визуальный редактор
+   * {@...} с contenteditable, textarea, input). В таких местах пользователь
+   * правит текст, а не читает его, поэтому кнопка «сообщить об ошибке» не нужна
+   * и только мешает выделять текст для форматирования.
+   */
+  function isSelectionInEditableField(selection: Selection): boolean {
+    const node = selection.anchorNode;
+
+    const element = node instanceof Element ? node : node?.parentElement;
+
+    return Boolean(
+      element?.closest(
+        'input, textarea, [contenteditable]:not([contenteditable="false"])',
+      ),
+    );
+  }
+
   const { openReportWithSelection } = useBugReport();
 
   const isVisible = ref(false);
@@ -81,6 +99,13 @@
     const selection = window.getSelection();
 
     if (!selection || selection.isCollapsed || !selection.toString().trim()) {
+      return;
+    }
+
+    // Правка текста в редактируемом поле — не повод показывать кнопку репорта.
+    if (isSelectionInEditableField(selection)) {
+      isVisible.value = false;
+
       return;
     }
 

@@ -5,37 +5,6 @@ import type { SpellLinkResponse } from './link';
 export type SpellGrouping = 'LEVEL' | 'SCHOOL' | 'CLASS' | 'NONE';
 export type SpellSorting = 'NAME' | 'ENGLISH';
 
-export interface SpellListGroup {
-  key: string;
-  items: Array<SpellLinkResponse>;
-}
-
-/**
- * Группирует заклинания по всем доступным классам. Заклинание нескольких
- * классов присутствует в каждой соответствующей группе.
- */
-export function groupSpellsByClass(
-  spells: Array<SpellLinkResponse>,
-): Array<SpellListGroup> {
-  const groups = new Map<string, Array<SpellLinkResponse>>();
-
-  spells.forEach((spell) => {
-    const classNames = spell.classes.length
-      ? spell.classes.map((characterClass) => characterClass.name)
-      : ['Без класса'];
-
-    classNames.forEach((className) => {
-      const classSpells = groups.get(className) ?? [];
-
-      groups.set(className, [...classSpells, spell]);
-    });
-  });
-
-  return Array.from(groups.entries())
-    .sort(([firstName], [secondName]) => sortString(firstName, secondName))
-    .map(([key, items]) => ({ key, items }));
-}
-
 /**
  * Возвращает подпись группы уровня заклинаний.
  */
@@ -70,11 +39,12 @@ export const SPELL_LIST_PRESENTATION_CONFIG: ListPresentationConfig<
       field: 'school',
     },
     {
+      // Группировка по классу рендерится отдельным путём с независимой
+      // серверной пагинацией групп (useSpellClassPagination + SpellClassGroups),
+      // минуя GroupedList, поэтому здесь не нужны field/groupSort.
       label: 'По классу',
       value: 'CLASS',
       apiValue: 'CLASS',
-      field: 'classes',
-      groupSort: { mode: 'custom', compare: groupSpellsByClass },
     },
     {
       label: 'Без группировки',

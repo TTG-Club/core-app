@@ -15,8 +15,10 @@
     createBestiaryListPresentationConfig,
   } from '~bestiary/model';
   import { FilterControls, useFilter } from '~infrastructure/filter';
-  import { useListPresentation } from '~infrastructure/list-presentation/composable';
-  import { ListPresentationControls } from '~infrastructure/list-presentation/ui';
+  import {
+    useListPresentation,
+    useListPresentationMenus,
+  } from '~infrastructure/list-presentation/composable';
   import { UiDetailPane } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
@@ -69,6 +71,12 @@
   );
 
   const presentation = useListPresentation(bestiaryListPresentationConfig);
+
+  const presentationMenus = useListPresentationMenus(
+    bestiaryListPresentationConfig,
+    presentation.grouping,
+    presentation.sorting,
+  );
 
   // Динамический таргет для бесконечного скролла
   // В стандартном режиме — window с большим distance (900px),
@@ -363,15 +371,8 @@
         :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
-      >
-        <template #actions>
-          <ListPresentationControls
-            v-model:grouping="presentation.grouping.value"
-            v-model:sorting="presentation.sorting.value"
-            :config="bestiaryListPresentationConfig"
-          />
-        </template>
-      </FilterControls>
+        :presentation-menus="presentationMenus"
+      />
     </template>
 
     <template #default>
