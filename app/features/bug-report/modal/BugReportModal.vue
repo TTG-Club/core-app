@@ -174,6 +174,8 @@
     class="sm:w-fit sm:max-w-[90vw]"
     :ui="{ overlay: 'z-[100]', content: 'z-[100]' }"
   >
+    <!-- UModal (Nuxt UI 3) поддерживает слоты body/footer — предупреждение WebStorm ложное -->
+    <!-- suppress VueUnrecognizedSlot -->
     <template #body>
       <div class="flex flex-col gap-4 lg:flex-row">
         <!-- Левая колонка: скриншот + инструменты -->
@@ -343,6 +345,8 @@
           <div class="flex flex-col gap-3">
             <BugReportAuthor />
 
+            <!-- Путь страницы формируется динамически — ложное предупреждение WebStorm о резолве файла -->
+            <!-- suppress HtmlUnknownTarget -->
             <NuxtLink
               :to="capturedPageUrl"
               target="_blank"
@@ -400,6 +404,8 @@
       </div>
     </template>
 
+    <!-- UModal (Nuxt UI 3) поддерживает слот footer — предупреждение WebStorm ложное -->
+    <!-- suppress VueUnrecognizedSlot -->
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
