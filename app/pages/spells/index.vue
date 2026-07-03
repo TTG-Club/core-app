@@ -10,6 +10,8 @@
   import { useListPresentation } from '~infrastructure/list-presentation/composable';
   import { ListPresentationControls } from '~infrastructure/list-presentation/ui';
   import { SpellBody } from '~spells/body';
+  import { useSpellClassPagination } from '~spells/composable';
+  import { SpellClassGroups } from '~spells/groups';
   import { SpellLegend } from '~spells/legend';
   import { SpellLink } from '~spells/link';
   import {
@@ -43,6 +45,31 @@
 
   const presentation = useListPresentation(SPELL_LIST_PRESENTATION_CONFIG);
 
+  const isClassGrouping = computed(
+    () => presentation.grouping.value === 'CLASS',
+  );
+
+  const spellSorting = computed(() => presentation.query.value.sorting);
+
+  const {
+    groups: spellClassGroups,
+    isLoading: areSpellClassGroupsLoading,
+    hasError: hasSpellClassGroupsError,
+    loadedSpells: loadedClassSpells,
+    loadNextPage: loadNextSpellClassPage,
+    refresh: refreshSpellClassGroups,
+  } = useSpellClassPagination({
+    filter,
+    filterQuery,
+    isActive: isClassGrouping,
+    search,
+    sorting: spellSorting,
+  });
+
+  const visibleSpells = computed(() =>
+    isClassGrouping.value ? loadedClassSpells.value : spells.value,
+  );
+
   const hasNextPage = ref(false);
   const isLoadingMore = ref(false);
 
@@ -58,7 +85,7 @@
   } = useSectionDetail<SpellDetailResponse>({
     sectionPath: '/spells',
     apiBasePath: '/api/v2/spells',
-    items: spells,
+    items: visibleSpells,
   });
 
   // Динамический таргет для бесконечного скролла
@@ -197,7 +224,10 @@
     refresh,
   } = await useAsyncData(
     'spells-search-page',
-    () => fetchSpellPage(0, firstSpellPageSize.value),
+    () =>
+      isClassGrouping.value
+        ? Promise.resolve({ value: [], Count: 0 })
+        : fetchSpellPage(0, firstSpellPageSize.value),
     {
       deep: false,
       watch: [search, filterQuery, presentation.resetKey],
@@ -268,12 +298,14 @@
 
   useInfiniteScroll(windowScrollTarget, loadNextSpellPage, {
     distance: SPELL_LIST_LOAD_MORE_DISTANCE,
-    canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
+    canLoadMore: () =>
+      !isClassGrouping.value && hasNextPage.value && !isLoadingMore.value,
   });
 
   useInfiniteScroll(splitScrollTarget, loadNextSpellPage, {
     distance: SPELL_LIST_LOAD_MORE_DISTANCE,
-    canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
+    canLoadMore: () =>
+      !isClassGrouping.value && hasNextPage.value && !isLoadingMore.value,
   });
 
   function rememberSavedSpellPage(): void {
@@ -307,12 +339,28 @@
     },
   );
 
-  const isLoading = computed(
-    () =>
+  const isLoading = computed(() => {
+    if (isClassGrouping.value) {
+      return areSpellClassGroupsLoading.value;
+    }
+
+    return (
       (status.value !== 'success' && status.value !== 'error')
       || isRestoringSavedPage.value
-      || isTargetSpellRestorePending.value,
-  );
+      || isTargetSpellRestorePending.value
+    );
+  });
+
+  /** Повторно загружает текущий режим списка заклинаний. */
+  async function handleRefresh(): Promise<void> {
+    if (isClassGrouping.value) {
+      await refreshSpellClassGroups();
+
+      return;
+    }
+
+    await refresh();
+  }
 </script>
 
 <template>
@@ -357,6 +405,12 @@
           />
         </PageGrid>
 
+        <SpellClassGroups
+          v-else-if="isClassGrouping && spellClassGroups.length"
+          :groups="spellClassGroups"
+          @load-more="loadNextSpellClassPage"
+        />
+
         <GroupedList
           v-else-if="status === 'success' && spells.length"
           virtual
@@ -375,10 +429,12 @@
 
         <PageResult
           v-else
-          :items="spells"
-          :status
+          :items="visibleSpells"
+          :status="
+            isClassGrouping && !hasSpellClassGroupsError ? 'success' : status
+          "
           :error
-          @refresh="refresh"
+          @refresh="handleRefresh"
         />
       </Transition>
     </template>
