@@ -10,12 +10,12 @@
     editUrl?: string;
   }>();
 
-  const { isAdmin } = useUser();
+  const { canEditEntities } = useUserRoles();
 </script>
 
 <template>
   <UTooltip
-    v-if="editUrl && isAdmin"
+    v-if="editUrl && canEditEntities"
     text="Редактировать"
   >
     <UButton

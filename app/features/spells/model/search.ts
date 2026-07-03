@@ -6,10 +6,11 @@ export const SPELL_LIST_PAGE_SIZE = 60;
 // Расстояние до низа страницы, при котором загружается следующая страница.
 export const SPELL_LIST_LOAD_MORE_DISTANCE = 900;
 export const SPELL_CLASS_GROUP_PAGE_SIZE = 20;
-export const SPELL_CLASS_GROUP_LOAD_MORE_LABEL = 'РџРѕРєР°Р·Р°С‚СЊ РµС‰С‘';
-export const SPELL_CLASS_GROUP_RETRY_LABEL = 'РџРѕРІС‚РѕСЂРёС‚СЊ';
+export const SPELL_CLASS_GROUP_COLUMNS = 3;
+export const SPELL_CLASS_GROUP_LOADING_ICON = 'tabler:loader-2';
+export const SPELL_CLASS_GROUP_RETRY_LABEL = 'Повторить';
 export const SPELL_WITHOUT_CLASS_GROUP_KEY = '__without_class__';
-export const SPELL_WITHOUT_CLASS_GROUP_LABEL = 'Р‘РµР· РєР»Р°СЃСЃР°';
+export const SPELL_WITHOUT_CLASS_GROUP_LABEL = 'Без класса';
 
 export interface SpellClassPageGroup {
   key: string;
