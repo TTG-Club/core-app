@@ -5,10 +5,13 @@
   } from '~magic-items/model';
 
   import { FilterControls, useFilter } from '~infrastructure/filter';
+  import { useListPresentation } from '~infrastructure/list-presentation/composable';
+  import { ListPresentationControls } from '~infrastructure/list-presentation/ui';
   import { MagicItemBody } from '~magic-items/body';
   import { useMagicItemRarityGroupOrder } from '~magic-items/composable';
   import { MagicItemLegend } from '~magic-items/legend';
   import { MagicItemLink } from '~magic-items/link';
+  import { createMagicItemListPresentationConfig } from '~magic-items/model';
   import { UiDetailPane } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
@@ -30,6 +33,12 @@
 
   const { order: rarityOrder, pending: isRarityPending } =
     useMagicItemRarityGroupOrder();
+
+  const magicItemListPresentationConfig = createMagicItemListPresentationConfig(
+    () => rarityOrder.value,
+  );
+
+  const presentation = useListPresentation(magicItemListPresentationConfig);
 
   const {
     data: magicItems,
@@ -71,13 +80,19 @@
     const isItemsLoading =
       status.value !== 'success' && status.value !== 'error';
 
-    return isItemsLoading || isRarityPending.value;
+    return (
+      isItemsLoading
+      || ((presentation.grouping.value === 'RARITY'
+        || presentation.sorting.value === 'RARITY')
+        && isRarityPending.value)
+    );
   });
 
   const listResetKey = computed(() =>
     JSON.stringify({
       filter: filterQuery.value,
       search: search.value ?? '',
+      presentation: presentation.resetKey.value,
     }),
   );
 </script>
@@ -97,6 +112,14 @@
       >
         <template #legend>
           <MagicItemLegend />
+        </template>
+
+        <template #actions>
+          <ListPresentationControls
+            v-model:grouping="presentation.grouping.value"
+            v-model:sorting="presentation.sorting.value"
+            :config="magicItemListPresentationConfig"
+          />
         </template>
       </FilterControls>
     </template>
@@ -120,12 +143,9 @@
           v-else-if="status === 'success' && magicItems?.length"
           :items="magicItems"
           :reset-key="listResetKey"
-          field="rarity"
-          :group-sort="{
-            mode: 'ordered',
-            order: rarityOrder,
-            unknown: 'after',
-          }"
+          :field="presentation.groupField.value"
+          :group-sort="presentation.groupSort.value"
+          :item-sort="presentation.itemSort.value"
           :active-item-key="detailUrl"
         >
           <template #default="{ item }">

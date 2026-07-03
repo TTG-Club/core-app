@@ -7,25 +7,22 @@
   } from '~spells/model';
 
   import { FilterControls, useFilter } from '~infrastructure/filter';
+  import { useListPresentation } from '~infrastructure/list-presentation/composable';
+  import { ListPresentationControls } from '~infrastructure/list-presentation/ui';
   import { SpellBody } from '~spells/body';
+  import { useSpellClassPagination } from '~spells/composable';
+  import { SpellClassGroups } from '~spells/groups';
   import { SpellLegend } from '~spells/legend';
   import { SpellLink } from '~spells/link';
   import {
     SPELL_LIST_LOAD_MORE_DISTANCE,
     SPELL_LIST_PAGE_SIZE,
+    SPELL_LIST_PRESENTATION_CONFIG,
   } from '~spells/model';
   import { UiDetailPane } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
-
-  function getSpellLevelLabel(level: number | string): string {
-    if (typeof level === 'string') {
-      return level;
-    }
-
-    return !level ? 'Заговоры' : `Уровень ${level}`;
-  }
 
   useSeoMeta({
     title: 'Заклинания [Spells]',
@@ -45,6 +42,34 @@
 
   const currentPage = ref(0);
   const spells = ref<Array<SpellLinkResponse>>([]);
+
+  const presentation = useListPresentation(SPELL_LIST_PRESENTATION_CONFIG);
+
+  const isClassGrouping = computed(
+    () => presentation.grouping.value === 'CLASS',
+  );
+
+  const spellSorting = computed(() => presentation.query.value.sorting);
+
+  const {
+    groups: spellClassGroups,
+    isLoading: areSpellClassGroupsLoading,
+    hasError: hasSpellClassGroupsError,
+    loadedSpells: loadedClassSpells,
+    loadNextPage: loadNextSpellClassPage,
+    refresh: refreshSpellClassGroups,
+  } = useSpellClassPagination({
+    filter,
+    filterQuery,
+    isActive: isClassGrouping,
+    search,
+    sorting: spellSorting,
+  });
+
+  const visibleSpells = computed(() =>
+    isClassGrouping.value ? loadedClassSpells.value : spells.value,
+  );
+
   const hasNextPage = ref(false);
   const isLoadingMore = ref(false);
 
@@ -60,7 +85,7 @@
   } = useSectionDetail<SpellDetailResponse>({
     sectionPath: '/spells',
     apiBasePath: '/api/v2/spells',
-    items: spells,
+    items: visibleSpells,
   });
 
   // Динамический таргет для бесконечного скролла
@@ -113,6 +138,7 @@
     JSON.stringify({
       filter: filterQuery.value,
       search: search.value ?? '',
+      presentation: presentation.resetKey.value,
     }),
   );
 
@@ -181,6 +207,7 @@
         query: {
           page,
           size,
+          ...presentation.query.value,
           ...(search.value ? { search: search.value } : {}),
           ...filterQuery.value,
         },
@@ -197,10 +224,13 @@
     refresh,
   } = await useAsyncData(
     'spells-search-page',
-    () => fetchSpellPage(0, firstSpellPageSize.value),
+    () =>
+      isClassGrouping.value
+        ? Promise.resolve({ value: [], Count: 0 })
+        : fetchSpellPage(0, firstSpellPageSize.value),
     {
       deep: false,
-      watch: [search, filterQuery],
+      watch: [search, filterQuery, presentation.resetKey],
     },
   );
 
@@ -268,12 +298,14 @@
 
   useInfiniteScroll(windowScrollTarget, loadNextSpellPage, {
     distance: SPELL_LIST_LOAD_MORE_DISTANCE,
-    canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
+    canLoadMore: () =>
+      !isClassGrouping.value && hasNextPage.value && !isLoadingMore.value,
   });
 
   useInfiniteScroll(splitScrollTarget, loadNextSpellPage, {
     distance: SPELL_LIST_LOAD_MORE_DISTANCE,
-    canLoadMore: () => hasNextPage.value && !isLoadingMore.value,
+    canLoadMore: () =>
+      !isClassGrouping.value && hasNextPage.value && !isLoadingMore.value,
   });
 
   function rememberSavedSpellPage(): void {
@@ -307,12 +339,28 @@
     },
   );
 
-  const isLoading = computed(
-    () =>
+  const isLoading = computed(() => {
+    if (isClassGrouping.value) {
+      return areSpellClassGroupsLoading.value;
+    }
+
+    return (
       (status.value !== 'success' && status.value !== 'error')
       || isRestoringSavedPage.value
-      || isTargetSpellRestorePending.value,
-  );
+      || isTargetSpellRestorePending.value
+    );
+  });
+
+  /** Повторно загружает текущий режим списка заклинаний. */
+  async function handleRefresh(): Promise<void> {
+    if (isClassGrouping.value) {
+      await refreshSpellClassGroups();
+
+      return;
+    }
+
+    await refresh();
+  }
 </script>
 
 <template>
@@ -330,6 +378,14 @@
       >
         <template #legend>
           <SpellLegend />
+        </template>
+
+        <template #actions>
+          <ListPresentationControls
+            v-model:grouping="presentation.grouping.value"
+            v-model:sorting="presentation.sorting.value"
+            :config="SPELL_LIST_PRESENTATION_CONFIG"
+          />
         </template>
       </FilterControls>
     </template>
@@ -349,14 +405,21 @@
           />
         </PageGrid>
 
+        <SpellClassGroups
+          v-else-if="isClassGrouping && spellClassGroups.length"
+          :groups="spellClassGroups"
+          @load-more="loadNextSpellClassPage"
+        />
+
         <GroupedList
           v-else-if="status === 'success' && spells.length"
           virtual
           :virtual-threshold="SPELL_LIST_PAGE_SIZE"
           :reset-key="listResetKey"
-          :separator-label="getSpellLevelLabel"
+          :separator-label="presentation.separatorLabel.value"
           :items="spells"
-          field="level"
+          :field="presentation.groupField.value"
+          :group-sort="presentation.groupSort.value"
           :active-item-key="detailUrl"
         >
           <template #default="{ item }">
@@ -366,10 +429,12 @@
 
         <PageResult
           v-else
-          :items="spells"
-          :status
+          :items="visibleSpells"
+          :status="
+            isClassGrouping && !hasSpellClassGroupsError ? 'success' : status
+          "
           :error
-          @refresh="refresh"
+          @refresh="handleRefresh"
         />
       </Transition>
     </template>

@@ -229,6 +229,8 @@
         square
         @click.left.exact.prevent="share(urlForCopy)"
       />
+
+      <slot name="actions" />
     </div>
 
     <ClientOnly>
