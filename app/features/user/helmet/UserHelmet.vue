@@ -13,7 +13,7 @@
     isLoggedIn,
   } = useUser();
 
-  const { isAdmin } = useUserRoles();
+  const { isAdmin, canEditEntities } = useUserRoles();
   const { isTablet } = useBreakpoints();
   const userTokenCookie = useCookie<string | null>(USER_TOKEN_COOKIE);
 
@@ -71,7 +71,7 @@
     }
   }
 
-  if (isAdmin.value) {
+  if (canEditEntities.value) {
     defineShortcuts(
       {
         // eslint-disable-next-line camelcase
@@ -128,7 +128,7 @@
             </UButton>
 
             <UButton
-              v-if="isAdmin"
+              v-if="canEditEntities"
               icon="ttg:menu-filled-workshop"
               color="neutral"
               variant="ghost"

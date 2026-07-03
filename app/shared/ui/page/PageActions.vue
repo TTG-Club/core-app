@@ -15,7 +15,7 @@
   const route = useRoute();
   const router = useRouter();
 
-  const { isAdmin } = useUser();
+  const { canEditEntities } = useUserRoles();
 
   const urlForCopy = computed(() => {
     return getOrigin() + route.fullPath;
@@ -40,7 +40,7 @@
 
 <template>
   <UTooltip
-    v-if="editUrl && isAdmin"
+    v-if="editUrl && canEditEntities"
     text="Редактировать"
   >
     <UButton

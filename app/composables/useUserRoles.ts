@@ -11,11 +11,14 @@ export function useUserRoles() {
 
   const isAdmin = computed(() => !!user.value?.roles.includes(Role.ADMIN));
 
+  const canEditEntities = computed(() => isAdmin.value || isModerator.value);
+
   return {
     roles,
 
     isWriter,
     isModerator,
     isAdmin,
+    canEditEntities,
   };
 }
