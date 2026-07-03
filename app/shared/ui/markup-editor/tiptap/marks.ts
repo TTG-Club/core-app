@@ -9,6 +9,12 @@ import type {
 
 import { Mark, mergeAttributes } from '@tiptap/core';
 
+import { findMarkerEnd } from '../../markup/balance';
+import { isBlockMarker } from './render-chip';
+import { isListMarkerStart } from './ttg-list';
+import { isQuoteMarkerStart } from './ttg-quote';
+import { isTableMarkerStart } from './ttg-table';
+
 const OPEN_BRACE = '{';
 const AT_SIGN = '@';
 const CLOSE_BRACE = '}';
@@ -103,35 +109,6 @@ const ALIAS_TO_SPEC = new Map<string, FormatSpec>(
 );
 
 /**
- * Находит конец маркера {@...} в начале строки (та же балансировка, что и в
- * строковом парсере разметки: уровень растёт на «{@», падает на «}»).
- *
- * @returns Индекс за закрывающей «}», либо -1 если маркер не закрыт
- */
-function findMarkerEnd(source: string): number {
-  let level = 0;
-
-  for (let i = 0; i < source.length; i++) {
-    if (source[i] === OPEN_BRACE && source[i + 1] === AT_SIGN) {
-      level++;
-      i++;
-
-      continue;
-    }
-
-    if (source[i] === CLOSE_BRACE) {
-      level--;
-
-      if (level === 0) {
-        return i + 1;
-      }
-    }
-  }
-
-  return -1;
-}
-
-/**
  * Проверяет, есть ли в строке разделитель атрибутов «|» на верхнем уровне
  * (вне вложенных {@...}). Маркеры с атрибутами остаются атомарными, чтобы не
  * потерять атрибуты при round-trip.
@@ -224,6 +201,68 @@ export const markerMarkdownTokenizer: MarkdownTokenizer = {
     }
 
     return { type: 'ttgMarker', raw };
+  },
+};
+
+/**
+ * БЛОЧНЫЙ токенайзер markdown для маркеров {@...}, занимающих строку целиком
+ * (заголовок/список/цитата/разделитель/таблица). Такой маркер разбирается в
+ * блочный узел `ttgBlockMarker` — он стоит МЕЖДУ абзацами (а не внутри), поэтому
+ * при сериализации выходит своим блоком, отделённым пустой строкой.
+ *
+ * Маркер с текстом на той же строке (`{@h ...}текст`) или НЕблочный маркер сюда
+ * не попадают — их ловит инлайновый `markerMarkdownTokenizer` (чип/марка).
+ */
+export const blockMarkerMarkdownTokenizer: MarkdownTokenizer = {
+  name: 'ttgBlockMarker',
+  level: 'block',
+  // Блочный маркер начинается с начала строки — только туда и «прицеливаемся».
+  start: (source: string) => {
+    if (source.startsWith('{@')) {
+      return 0;
+    }
+
+    const index = source.indexOf('\n{@');
+
+    return index < 0 ? -1 : index + 1;
+  },
+  tokenize: (source: string): MarkdownToken | undefined => {
+    if (!source.startsWith('{@')) {
+      return undefined;
+    }
+
+    // Списки, таблицы и цитаты обрабатывают НАТИВНЫЕ токенайзеры (редактируемые
+    // узлы) — сюда попадают только прочие блочные маркеры (заголовок/разделитель).
+    if (
+      isListMarkerStart(source)
+      || isTableMarkerStart(source)
+      || isQuoteMarkerStart(source)
+    ) {
+      return undefined;
+    }
+
+    const end = findMarkerEnd(source);
+
+    if (end < 0) {
+      return undefined;
+    }
+
+    // Только блочные маркеры (заголовок/список/цитата/разделитель/таблица).
+    if (!isBlockMarker(source.slice(0, end))) {
+      return undefined;
+    }
+
+    // После «}» на строке допустимы только пробелы: иначе это инлайн-случай.
+    const trailing = source.slice(end).match(/^[ \t]*(\n+|$)/);
+
+    if (!trailing) {
+      return undefined;
+    }
+
+    return {
+      type: 'ttgBlockMarker',
+      raw: source.slice(0, end + trailing[0].length),
+    };
   },
 };
 

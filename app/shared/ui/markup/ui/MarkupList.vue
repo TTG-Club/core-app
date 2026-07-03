@@ -16,7 +16,8 @@
   const listClass = computed(() => {
     const baseClass = isOrdered.value ? 'list-decimal' : 'list-disc';
 
-    return ['list-outside pl-6', baseClass];
+    // my-2 — вертикальный отступ, чтобы список отбивался от соседних абзацев.
+    return ['my-2 list-outside pl-6', baseClass];
   });
 
   function isMarkerNode(value: unknown): value is MarkerNode {

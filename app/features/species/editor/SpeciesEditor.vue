@@ -44,10 +44,11 @@
     };
   }
 
-  const { state, onError, onSubmit } = useWorkshopForm<SpeciesCreate>({
-    actionUrl: '/api/v2/species',
-    getInitialState,
-  });
+  const { state, submitState, onError, onSubmit } =
+    useWorkshopForm<SpeciesCreate>({
+      actionUrl: '/api/v2/species',
+      getInitialState,
+    });
 </script>
 
 <template>
@@ -213,7 +214,7 @@
       <template #preview="{ opened, changeVisibility }">
         <SpeciesPreview
           :open="opened"
-          :state="state"
+          :state="submitState"
           @update:open="changeVisibility"
         />
       </template>

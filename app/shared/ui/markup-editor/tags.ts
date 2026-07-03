@@ -1,11 +1,11 @@
 /**
- * Описание вставляемого через тулбар кастомного тега разметки {@...} / Markdown.
+ * Описание вставляемого через тулбар кастомного тега разметки {@...}.
  *
  * Итоговая строка вставки формируется как `${before}${выделение|placeholder}${after}`.
- * Используется РЕЖИМОМ КОДА (сырой текст в textarea). В визуальном режиме
- * форматирование идёт марками, а заголовки/списки — командами TipTap, но набор
- * и порядок кнопок совпадает (см. toolbar-items.ts), чтобы оба режима выглядели
- * одинаково.
+ * Используется РЕЖИМОМ КОДА (сырой текст в textarea). Весь вывод — только {@...}
+ * (Markdown не используется). В визуальном режиме форматирование идёт марками, а
+ * блочные элементы вставляются как {@...}-чипы (см. toolbar-items.ts), набор и
+ * порядок кнопок совпадает, чтобы оба режима выглядели одинаково.
  */
 export interface MarkupTag {
   /** Уникальный ключ тега. */
@@ -24,23 +24,23 @@ export interface MarkupTag {
 
 /**
  * Инлайновое форматирование (жирный/курсив/подчёркнутый/зачёркнутый/индексы/
- * выделение). В коде — Markdown или {@...}, в визуале — марки того же порядка.
+ * выделение). Только {@...}, в визуале — марки того же порядка.
  */
 export const FORMAT_TAGS: MarkupTag[] = [
   {
     key: 'bold',
     label: 'Жирный',
     icon: 'tabler:bold',
-    before: '**',
-    after: '**',
+    before: '{@b ',
+    after: '}',
     placeholder: 'текст',
   },
   {
     key: 'italic',
     label: 'Курсив',
     icon: 'tabler:italic',
-    before: '*',
-    after: '*',
+    before: '{@i ',
+    after: '}',
     placeholder: 'текст',
   },
   {
@@ -55,8 +55,8 @@ export const FORMAT_TAGS: MarkupTag[] = [
     key: 'strike',
     label: 'Зачёркнутый',
     icon: 'tabler:strikethrough',
-    before: '~~',
-    after: '~~',
+    before: '{@s ',
+    after: '}',
     placeholder: 'текст',
   },
   {
@@ -86,7 +86,7 @@ export const FORMAT_TAGS: MarkupTag[] = [
 ];
 
 /**
- * Блочный/структурный Markdown (заголовки H1–H3, списки, цитата, ссылка).
+ * Блочные/структурные теги {@...} (заголовки H1–H3, списки, цитата, ссылка).
  * Порядок и набор совпадают с блочными кнопками визуального тулбара.
  */
 export const BLOCK_TAGS: MarkupTag[] = [
@@ -94,63 +94,63 @@ export const BLOCK_TAGS: MarkupTag[] = [
     key: 'heading-1',
     label: 'Заголовок 1',
     icon: 'tabler:h-1',
-    before: '# ',
-    after: '',
+    before: '{@h ',
+    after: ' | level:1}',
     placeholder: 'Заголовок',
   },
   {
     key: 'heading-2',
     label: 'Заголовок 2',
     icon: 'tabler:h-2',
-    before: '## ',
-    after: '',
+    before: '{@h ',
+    after: ' | level:2}',
     placeholder: 'Заголовок',
   },
   {
     key: 'heading-3',
     label: 'Заголовок 3',
     icon: 'tabler:h-3',
-    before: '### ',
-    after: '',
+    before: '{@h ',
+    after: ' | level:3}',
     placeholder: 'Заголовок',
   },
   {
     key: 'bullet-list',
     label: 'Маркированный список',
     icon: 'tabler:list',
-    before: '- ',
-    after: '',
+    before: '{@list {@li ',
+    after: '}}',
     placeholder: 'пункт',
   },
   {
     key: 'ordered-list',
     label: 'Нумерованный список',
     icon: 'tabler:list-numbers',
-    before: '1. ',
-    after: '',
+    before: '{@list {@li ',
+    after: '} | type:ordered}',
     placeholder: 'пункт',
   },
   {
     key: 'quote',
     label: 'Цитата',
     icon: 'tabler:quote',
-    before: '> ',
-    after: '',
+    before: '{@quote ',
+    after: '}',
     placeholder: 'цитата',
   },
   {
-    key: 'md-link',
-    label: 'Ссылка',
-    icon: 'tabler:link',
-    before: '[',
-    after: '](https://)',
-    placeholder: 'текст',
+    key: 'table',
+    label: 'Таблица',
+    icon: 'tabler:table',
+    before: '{@table {@tr {@th ',
+    after: '}{@th }}{@tr {@td }{@td }}}',
+    placeholder: '',
   },
 ];
 
 /**
- * Листовые инлайновые теги без markdown-аналога, которые остаются {@...}-чипами
- * (не форматирование). Сейчас — только клавиша.
+ * Листовые инлайновые теги-чипы (не форматирование). Ссылка — ИНЛАЙНОВАЯ (её
+ * вставка не должна рвать абзац на части, поэтому она здесь, а не в BLOCK_TAGS).
  */
 export const INLINE_TAGS: MarkupTag[] = [
   {
@@ -160,6 +160,14 @@ export const INLINE_TAGS: MarkupTag[] = [
     before: '{@kbd ',
     after: '}',
     placeholder: 'Ctrl',
+  },
+  {
+    key: 'link',
+    label: 'Ссылка',
+    icon: 'tabler:link',
+    before: '{@link ',
+    after: ' | url:}',
+    placeholder: 'текст',
   },
 ];
 

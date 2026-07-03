@@ -33,10 +33,11 @@
     CreatureType,
   } from './ui';
 
-  const { state, onError, onSubmit } = useWorkshopForm<CreatureCreate>({
-    actionUrl: '/api/v2/bestiary',
-    getInitialState,
-  });
+  const { state, submitState, onError, onSubmit } =
+    useWorkshopForm<CreatureCreate>({
+      actionUrl: '/api/v2/bestiary',
+      getInitialState,
+    });
 </script>
 
 <template>
@@ -283,7 +284,7 @@
     <EditorFormControls>
       <template #preview="{ opened, changeVisibility }">
         <CreaturePreview
-          :state="state"
+          :state="submitState"
           :open="opened"
           @update:open="changeVisibility"
         />

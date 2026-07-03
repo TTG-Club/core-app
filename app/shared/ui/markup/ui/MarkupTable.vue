@@ -30,6 +30,7 @@
     caption?: RenderNode;
     colLabels?: RenderNode[];
     colStyles?: string[];
+    colAligns?: string[];
     rows?: any[][];
   }
 
@@ -271,10 +272,20 @@
   function getColStyle(index: number): string {
     return node.colStyles?.[index] ?? '';
   }
+
+  // Выравнивание заголовка колонки: явный `align` из разметки перебивает дефолт.
+  // Дефолт заголовков — по центру (исторический вид таблиц на странице).
+  function getColAlign(index: number): string {
+    const align = node.colAligns?.[index];
+
+    return align ? `text-${align}` : 'text-center';
+  }
 </script>
 
 <template>
-  <div class="w-full overflow-x-auto rounded-lg border border-default bg-muted">
+  <div
+    class="my-4! w-full overflow-x-auto rounded-lg border border-default bg-muted"
+  >
     <table class="min-w-full border-collapse">
       <caption
         v-if="captionNodes.length"
@@ -296,7 +307,8 @@
             v-for="(header, index) in headerGroup.headers"
             :key="header.id"
             :class="[
-              'border-b border-default p-2 text-center text-xs text-highlighted',
+              'border-b border-default p-2 text-xs text-highlighted',
+              getColAlign(index),
               getColStyle(index),
             ]"
           >

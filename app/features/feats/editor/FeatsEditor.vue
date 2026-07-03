@@ -35,10 +35,12 @@
     };
   }
 
-  const { state, onSubmit, onError } = useWorkshopForm<FeatCreate>({
-    actionUrl: '/api/v2/feats',
-    getInitialState,
-  });
+  const { state, submitState, onSubmit, onError } = useWorkshopForm<FeatCreate>(
+    {
+      actionUrl: '/api/v2/feats',
+      getInitialState,
+    },
+  );
 </script>
 
 <template>
@@ -126,7 +128,7 @@
       <template #preview="{ opened, changeVisibility }">
         <FeatPreview
           :open="opened"
-          :state="state"
+          :state="submitState"
           @update:open="changeVisibility"
         />
       </template>

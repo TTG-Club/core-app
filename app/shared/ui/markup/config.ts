@@ -6,6 +6,7 @@ import {
   MarkupKbd,
   MarkupLink,
   MarkupList,
+  MarkupListItem,
   MarkupQuote,
   MarkupRoller,
   MarkupSectionLink,
@@ -32,7 +33,7 @@ export const MARKER_CONFIGS: MarkerConfig[] = [
   { type: 'superscript', tag: 'sup', aliases: ['sup'] },
   { type: 'subscript', tag: 'sub', aliases: ['sub'] },
   { type: 'highlight', tag: 'mark', aliases: ['mark'] },
-  { type: 'break', tag: 'br', isBlock: true, aliases: ['br'], isEmpty: true },
+  { type: 'break', tag: 'br', aliases: ['br'], isEmpty: true },
 
   // Vue-компоненты (inline)
   { type: 'link', component: MarkupLink, aliases: ['a', 'link'] },
@@ -50,6 +51,12 @@ export const MARKER_CONFIGS: MarkerConfig[] = [
   },
   { type: 'separator', component: MarkupSeparator, isBlock: true },
   { type: 'list', component: MarkupList, isBlock: true },
+  {
+    type: 'li',
+    component: MarkupListItem,
+    aliases: ['listItem'],
+    isBlock: true,
+  },
   { type: 'table', component: MarkupTable, isBlock: true },
 
   // Sections

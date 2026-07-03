@@ -31,10 +31,11 @@
     };
   }
 
-  const { state, onSubmit, onError } = useWorkshopForm<BackgroundCreate>({
-    actionUrl: '/api/v2/backgrounds',
-    getInitialState,
-  });
+  const { state, submitState, onSubmit, onError } =
+    useWorkshopForm<BackgroundCreate>({
+      actionUrl: '/api/v2/backgrounds',
+      getInitialState,
+    });
 </script>
 
 <template>
@@ -146,7 +147,7 @@
       <template #preview="{ opened, changeVisibility }">
         <BackgroundPreview
           :open="opened"
-          :state="state"
+          :state="submitState"
           @update:open="changeVisibility"
         />
       </template>

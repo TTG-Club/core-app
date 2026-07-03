@@ -71,20 +71,21 @@
     };
   }
 
-  const { state, onError, onSubmit } = useWorkshopForm<SpellCreate>({
-    actionUrl: '/api/v2/spells',
-    getInitialState,
-    normalizeLoaded: normalizeLoadedSpell,
-    transformBeforeSubmit: (formState) => {
-      const normalizedEffect = normalizeSpellEffect(formState.effect);
+  const { state, submitState, onError, onSubmit } =
+    useWorkshopForm<SpellCreate>({
+      actionUrl: '/api/v2/spells',
+      getInitialState,
+      normalizeLoaded: normalizeLoadedSpell,
+      transformBeforeSubmit: (formState) => {
+        const normalizedEffect = normalizeSpellEffect(formState.effect);
 
-      return {
-        ...formState,
-        effect: normalizedEffect ?? createEmptySpellEffect(),
-        activeEffects: normalizeSpellActiveEffects(formState.activeEffects),
-      };
-    },
-  });
+        return {
+          ...formState,
+          effect: normalizedEffect ?? createEmptySpellEffect(),
+          activeEffects: normalizeSpellActiveEffects(formState.activeEffects),
+        };
+      },
+    });
 </script>
 
 <template>
@@ -249,7 +250,7 @@
       <template #preview="{ opened, changeVisibility }">
         <SpellPreview
           :open="opened"
-          :state="state"
+          :state="submitState"
           @update:open="changeVisibility"
         />
       </template>

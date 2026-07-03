@@ -17,13 +17,6 @@
       <template v-else> {{ label }}. </template>
     </h5>
 
-    <MarkupRender
-      v-if="Array.isArray(text)"
-      :render-node="text"
-    />
-
-    <p v-else>
-      <MarkupRender :render-node="text" />
-    </p>
+    <MarkupRender :render-node="text" />
   </div>
 </template>

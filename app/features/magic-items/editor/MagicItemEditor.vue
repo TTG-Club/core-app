@@ -49,10 +49,11 @@
     };
   }
 
-  const { state, onError, onSubmit } = useWorkshopForm<MagicItemCreate>({
-    actionUrl: '/api/v2/magic-items',
-    getInitialState,
-  });
+  const { state, submitState, onError, onSubmit } =
+    useWorkshopForm<MagicItemCreate>({
+      actionUrl: '/api/v2/magic-items',
+      getInitialState,
+    });
 </script>
 
 <template>
@@ -199,7 +200,7 @@
       <template #preview="{ opened, changeVisibility }">
         <MagicItemPreview
           :open="opened"
-          :state="state"
+          :state="submitState"
           @update:open="changeVisibility"
         />
       </template>

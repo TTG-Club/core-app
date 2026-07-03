@@ -1,23 +1,52 @@
 import type { VNode } from 'vue';
 
+import type { MarkerNode } from '~ui/markup';
+
 import { h } from 'vue';
 
-import { getNodeText, isMarkerNode, parse, render } from '~ui/markup';
+import {
+  getNodeText,
+  isBlockNode,
+  isMarkerNode,
+  MARKER_ALIASES,
+  MARKER_MAP,
+  parse,
+  render,
+} from '~ui/markup';
 
 /**
- * Рендерит содержимое маркера как VNode-детей (поддерживает Markdown и вложенные
- * {@...}: например `**жирный**` внутри `{@i ...}`). При ошибке — плоский текст.
+ * Является ли маркер {@...} блочным (заголовок, список, цитата, разделитель,
+ * таблица). Нужно, чтобы NodeView отрисовал такой чип блоком, а не инлайном.
+ *
+ * Лёгкая проверка ПО ИМЕНИ маркера через конфиг (алиас → тип → флаг isBlock), без
+ * полного рекурсивного парса — вызывается в токенайзере на каждый блок-кандидат.
+ *
+ * @param raw - Сырая строка маркера
+ */
+export function isBlockMarker(raw: string): boolean {
+  if (!raw.startsWith('{@')) {
+    return false;
+  }
+
+  let cursor = 2;
+
+  while (cursor < raw.length && raw[cursor] !== ' ' && raw[cursor] !== '}') {
+    cursor++;
+  }
+
+  const type = MARKER_ALIASES.get(raw.slice(2, cursor));
+
+  return type ? MARKER_MAP.get(type)?.isBlock === true : false;
+}
+
+/**
+ * Рендерит содержимое маркера как VNode-детей (поддерживает вложенные {@...},
+ * например {@b ...} внутри {@i ...}). При ошибке — плоский текст-подпись.
  *
  * @param marker - Разобранный узел маркера
  * @returns Массив VNode либо строка-подпись
  */
-function renderChildren(
-  marker: ReturnType<typeof parse>[number],
-): VNode[] | string {
-  if (!isMarkerNode(marker)) {
-    return '';
-  }
-
+function renderChildren(marker: MarkerNode): VNode[] | string {
   const content = marker.content ?? [];
   const fallback = getNodeText(content) || marker.type;
 
@@ -33,23 +62,28 @@ function renderChildren(
 }
 
 /**
- * Строит визуальное представление маркера {@...} для показа внутри редактора
- * (чип). Это упрощённый предпросмотр по типу маркера: форматирование —
- * реальными тегами, интерактив/ссылки — стилизованными спанами. Полная точность
- * (дроверы, бросок кубика) не нужна — в редакторе важен именно вид.
+ * Строит визуальный чип маркера {@...} из уже разобранного узла. Блочные маркеры
+ * рисуем РЕАЛЬНЫМ компонентом (как на странице), остальные — упрощённым
+ * предпросмотром по типу (форматирование — тегами, ссылки/интерактив — спанами).
  *
- * @param raw - Сырая строка маркера, например `{@i текст}`
+ * @param marker - Разобранный узел маркера
+ * @param isBlock - Блочный ли маркер (вычислен в buildMarkerChip)
  * @returns VNode-представление чипа
  */
-export function renderMarkerChip(raw: string): VNode {
-  const nodes = parse(raw);
-  const marker = nodes.find((node) => isMarkerNode(node));
-
-  if (!marker || !isMarkerNode(marker)) {
-    return h('span', raw);
-  }
-
+function renderChip(marker: MarkerNode, isBlock: boolean): VNode {
   const children = renderChildren(marker);
+
+  if (isBlock) {
+    try {
+      const [vnode] = render([marker]);
+
+      if (vnode) {
+        return vnode;
+      }
+    } catch {
+      // Падать нельзя — ниже отрисуем упрощённый вариант.
+    }
+  }
 
   switch (marker.type) {
     case 'bold':
@@ -112,4 +146,28 @@ export function renderMarkerChip(raw: string): VNode {
     default:
       return h('span', children);
   }
+}
+
+/**
+ * Разбирает сырую строку маркера {@...} ОДИН раз и отдаёт готовый чип и флаг
+ * блочности — чтобы NodeView (MarkerChip) не парсил raw дважды.
+ *
+ * @param raw - Сырая строка маркера, например `{@i текст}`
+ * @returns Чип-VNode и признак блочного маркера
+ */
+export function buildMarkerChip(raw: string): {
+  chip: VNode;
+  isBlock: boolean;
+} {
+  const marker = parse(raw).find((node): node is MarkerNode =>
+    isMarkerNode(node),
+  );
+
+  if (!marker) {
+    return { chip: h('span', raw), isBlock: false };
+  }
+
+  const isBlock = isBlockNode(marker);
+
+  return { chip: renderChip(marker, isBlock), isBlock };
 }
