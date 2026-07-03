@@ -1,9 +1,11 @@
 <script setup lang="ts">
   import type {
     FilterGroup as FilterGroupType,
+    FilterItem,
     FilterItems,
-  } from '~infrastructure/filter/types';
+  } from '../../../types';
 
+  import { getGroupItems, hasTouchedItem } from '../../../utils';
   import { FilterTag } from '../tag';
 
   type GroupPosition = 'standalone' | 'top' | 'bottom';
@@ -18,19 +20,13 @@
     position?: GroupPosition;
   }>();
 
-  // Используется defineModel — мутация group.mode / group.union через v-model
-  // допустима, т.к. defineModel создаёт двустороннюю привязку и эмитит update
   const group = defineModel<FilterGroupType>({
     required: true,
   });
 
-  const isVisible = computed(() => {
-    if (!preview) {
-      return true;
-    }
+  const isVisible = computed(() => !preview || hasTouchedItem(items));
 
-    return items.some((filterItem) => filterItem.selected !== null);
-  });
+  const contentGapClass = computed(() => (preview ? 'gap-2' : undefined));
 
   // Классы бордера шапки: нижний блок не имеет скругления сверху
   const headerClass = computed(() => ({
@@ -43,13 +39,39 @@
     'rounded-b-xl border-b': position !== 'top',
     'border-x border-default flex flex-wrap gap-3 px-3 py-4': true,
   }));
+
+  // Группа приходит одним пропом (defineModel), но мутировать её (или проп
+  // items) напрямую нельзя. Любое изменение пересобирается иммутабельно и
+  // эмитится наверх через defineModel — родитель обновляет filter.value.
+  function updateGroup(patch: Partial<FilterGroupType>): void {
+    group.value = { ...group.value, ...patch };
+  }
+
+  function handleModeChange(mode: boolean | 'indeterminate'): void {
+    updateGroup({ mode: mode === true });
+  }
+
+  function handleUnionChange(union: boolean | 'indeterminate'): void {
+    updateGroup({ union: union === true });
+  }
+
+  function handleItemSelect(
+    itemId: FilterItem['id'],
+    selected: boolean | null,
+  ): void {
+    const values = getGroupItems(group.value).map((filterItem) =>
+      filterItem.id === itemId ? { ...filterItem, selected } : filterItem,
+    );
+
+    updateGroup({ values });
+  }
 </script>
 
 <template>
   <template v-if="isVisible">
     <div
       class="flex flex-col"
-      :class="preview ? 'gap-2' : undefined"
+      :class="contentGapClass"
     >
       <span v-if="preview">{{ group.name }}:</span>
 
@@ -62,17 +84,19 @@
         <div class="flex flex-wrap items-center gap-3">
           <UCheckbox
             v-if="group.supports?.mode"
-            v-model="group.mode"
+            :model-value="group.mode"
             label="Исключать"
             size="xs"
             color="error"
+            @update:model-value="handleModeChange"
           />
 
           <UCheckbox
             v-if="group.supports?.union"
-            v-model="group.union"
+            :model-value="group.union"
             label="Точное совпадение (AND)"
             size="xs"
+            @update:model-value="handleUnionChange"
           />
         </div>
       </div>
@@ -82,12 +106,13 @@
         :class="bodyClass"
       >
         <FilterTag
-          v-for="item in items"
-          :key="`${item.id}-${item.name}`"
-          v-model="item.selected"
+          v-for="filterItem in items"
+          :key="`${filterItem.id}-${filterItem.name}`"
+          :model-value="filterItem.selected"
           :exclude="group.mode"
+          @update:model-value="handleItemSelect(filterItem.id, $event)"
         >
-          {{ item.name }}
+          {{ filterItem.name }}
         </FilterTag>
       </div>
 
@@ -96,13 +121,14 @@
         class="flex flex-wrap gap-2"
       >
         <FilterTag
-          v-for="item in items"
-          :key="`${item.id}-${item.name}`"
-          v-model="item.selected"
+          v-for="filterItem in items"
+          :key="`${filterItem.id}-${filterItem.name}`"
+          :model-value="filterItem.selected"
           preview
           :exclude="group.mode"
+          @update:model-value="handleItemSelect(filterItem.id, $event)"
         >
-          {{ item.name }}
+          {{ filterItem.name }}
         </FilterTag>
       </div>
     </div>

@@ -1,32 +1,19 @@
-export type ListPresentationGroupKey = string | number;
+import type {
+  Group,
+  GroupKey,
+  GroupSort,
+  SeparatorLabel,
+} from '~ui/grouped-list';
 
-export type ListPresentationSeparatorLabel =
-  | string
-  | ((value: ListPresentationGroupKey) => string);
+// Контракт группировки — общий с GroupedList, который его исполняет.
+// Единый источник правды живёт в ~ui/grouped-list, здесь только доменные псевдонимы.
+export type ListPresentationGroupKey = GroupKey;
 
-export interface ListPresentationGroup<TItem> {
-  key: ListPresentationGroupKey;
-  items: Array<TItem>;
-}
+export type ListPresentationSeparatorLabel = SeparatorLabel;
 
-export type ListPresentationGroupSort<TItem> =
-  | { mode: 'auto' }
-  | {
-      mode: 'ordered';
-      order: Set<ListPresentationGroupKey>;
-      unknown?: 'after' | 'before' | 'auto';
-    }
-  | {
-      mode: 'comparator';
-      compare: (
-        firstKey: ListPresentationGroupKey,
-        secondKey: ListPresentationGroupKey,
-      ) => number;
-    }
-  | {
-      mode: 'custom';
-      compare: (items: Array<TItem>) => Array<ListPresentationGroup<TItem>>;
-    };
+export type ListPresentationGroup<TItem> = Group<TItem>;
+
+export type ListPresentationGroupSort<TItem> = GroupSort<TItem>;
 
 export interface ListPresentationOption<TValue extends string> {
   label: string;

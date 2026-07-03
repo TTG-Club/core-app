@@ -1,7 +1,11 @@
 <script setup lang="ts">
   import type { FilterGroup, FilterGroups, FilterItems } from '../types';
 
-  import { getAvailableGroupItems, isGroupDependentOn } from '../utils';
+  import {
+    getAvailableGroupItems,
+    hasTouchedItem,
+    isGroupDependentOn,
+  } from '../utils';
   import { FilterGroup as FilterGroupComponent } from './ui';
 
   type GroupPosition = 'standalone' | 'top' | 'bottom';
@@ -26,11 +30,7 @@
 
   /** Определяет видимость группы в обычном режиме и режиме предпросмотра. */
   function isGroupVisible(items: FilterItems, isPreview: boolean): boolean {
-    if (!isPreview) {
-      return true;
-    }
-
-    return items.some((filterItem) => filterItem.selected !== null);
+    return !isPreview || hasTouchedItem(items);
   }
 
   const { preview = false } = defineProps<{
@@ -40,6 +40,17 @@
   const filter = defineModel<FilterGroups>({
     required: true,
   });
+
+  const containerGapClass = computed(() => (preview ? 'gap-3' : 'gap-6'));
+  const groupGapClass = computed(() => (preview ? 'gap-3' : undefined));
+
+  /** Позиция группы с учётом предпросмотра (в превью блоки не объединяются). */
+  function resolveGroupPosition(
+    itemIndex: number,
+    groupLength: number,
+  ): GroupPosition {
+    return preview ? 'standalone' : getGroupPosition(itemIndex, groupLength);
+  }
 
   const groupedFilters = computed(() => {
     const displayGroups: DisplayGroup[][] = [];
@@ -75,6 +86,8 @@
           displayGroups.push(combinedGroups);
         }
 
+        // Зависимая группа уже отрисована в паре с текущей — пропускаем её,
+        // чтобы не вывести повторно на следующей итерации.
         i++;
       } else if (isGroupVisible(availableItems, preview)) {
         displayGroups.push([{ group, index: i, availableItems }]);
@@ -96,13 +109,13 @@
 <template>
   <div
     class="flex flex-col"
-    :class="preview ? 'gap-3' : 'gap-6'"
+    :class="containerGapClass"
   >
     <div
       v-for="(itemGroup, groupIndex) in groupedFilters"
       :key="groupIndex"
       class="flex flex-col"
-      :class="preview ? 'gap-3' : undefined"
+      :class="groupGapClass"
     >
       <FilterGroupComponent
         v-for="(item, itemIndex) in itemGroup"
@@ -110,9 +123,7 @@
         :model-value="item.group"
         :items="item.availableItems"
         :preview
-        :position="
-          preview ? 'standalone' : getGroupPosition(itemIndex, itemGroup.length)
-        "
+        :position="resolveGroupPosition(itemIndex, itemGroup.length)"
         @update:model-value="handleGroupUpdate(item.index, $event)"
       />
     </div>

@@ -1,5 +1,13 @@
 <script setup lang="ts" generic="T extends { url: string }">
-  import { get } from 'es-toolkit/compat';
+  import type {
+    Group,
+    GroupKey,
+    GroupSort,
+    GroupSortOrdered,
+    SeparatorLabel,
+  } from './types';
+
+  import { get, upperFirst } from 'es-toolkit/compat';
   import { computed, ref, watch } from 'vue';
 
   import { PageGrid } from '~ui/page';
@@ -16,14 +24,6 @@
     GROUPED_LIST_GRID_CLASSES,
   } from './constants';
 
-  type SeparatorLabel = string | ((value: string | number) => string);
-  type GroupKey = string | number;
-
-  interface Group<TItem> {
-    key: GroupKey;
-    items: Array<TItem>;
-  }
-
   interface SeparatorVirtualRow {
     type: 'separator';
     key: string;
@@ -38,38 +38,12 @@
 
   type VirtualRow<TItem> = SeparatorVirtualRow | ItemsVirtualRow<TItem>;
 
-  interface GroupSortAuto {
-    mode: 'auto';
-  }
-
-  interface GroupSortOrdered {
-    mode: 'ordered';
-    order: Set<GroupKey>;
-    unknown?: 'after' | 'before' | 'auto';
-  }
-
-  interface GroupSortComparator {
-    mode: 'comparator';
-    compare: (a: GroupKey, b: GroupKey) => number;
-  }
-
-  interface GroupSortCustom {
-    mode: 'custom';
-    compare: (items: Array<T>) => Array<Group<T>>;
-  }
-
-  type GroupSort =
-    | GroupSortAuto
-    | GroupSortOrdered
-    | GroupSortComparator
-    | GroupSortCustom;
-
   interface Props {
     items: Array<T>;
     field?: string;
     separatorLabel?: SeparatorLabel;
     columns?: 1 | 2 | 3 | 4 | 5 | 6;
-    groupSort?: GroupSort;
+    groupSort?: GroupSort<T>;
     virtual?: boolean;
     virtualThreshold?: number;
     rowHeight?: number;
@@ -152,16 +126,6 @@
 
       return columnCount;
     }, 1);
-  }
-
-  function upperFirst(text: string): string {
-    const str = text.trim();
-
-    if (!str.length) {
-      return '';
-    }
-
-    return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
   function getComparableKey(rawKey: string): GroupKey {
@@ -286,14 +250,15 @@
     const valueText = String(value);
 
     if (!separatorLabel) {
-      return upperFirst(valueText);
+      return upperFirst(valueText.trim());
     }
 
-    if (typeof separatorLabel === 'function') {
-      return upperFirst(separatorLabel(value));
-    }
+    const labelText =
+      typeof separatorLabel === 'function'
+        ? separatorLabel(value)
+        : separatorLabel.replace('{value}', valueText);
 
-    return upperFirst(separatorLabel.replace('{value}', valueText));
+    return upperFirst(labelText.trim());
   }
 
   const shouldUseVirtual = computed(

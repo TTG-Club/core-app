@@ -5,8 +5,10 @@
   } from '~magic-items/model';
 
   import { FilterControls, useFilter } from '~infrastructure/filter';
-  import { useListPresentation } from '~infrastructure/list-presentation/composable';
-  import { ListPresentationControls } from '~infrastructure/list-presentation/ui';
+  import {
+    useListPresentation,
+    useListPresentationMenus,
+  } from '~infrastructure/list-presentation/composable';
   import { MagicItemBody } from '~magic-items/body';
   import { useMagicItemRarityGroupOrder } from '~magic-items/composable';
   import { MagicItemLegend } from '~magic-items/legend';
@@ -39,6 +41,12 @@
   );
 
   const presentation = useListPresentation(magicItemListPresentationConfig);
+
+  const presentationMenus = useListPresentationMenus(
+    magicItemListPresentationConfig,
+    presentation.grouping,
+    presentation.sorting,
+  );
 
   const {
     data: magicItems,
@@ -109,17 +117,10 @@
         :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
+        :presentation-menus="presentationMenus"
       >
         <template #legend>
           <MagicItemLegend />
-        </template>
-
-        <template #actions>
-          <ListPresentationControls
-            v-model:grouping="presentation.grouping.value"
-            v-model:sorting="presentation.sorting.value"
-            :config="magicItemListPresentationConfig"
-          />
         </template>
       </FilterControls>
     </template>
