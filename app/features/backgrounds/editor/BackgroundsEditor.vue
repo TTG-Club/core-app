@@ -2,10 +2,12 @@
   import type { BackgroundCreate } from '~backgrounds/model';
 
   import { BackgroundPreview } from '~backgrounds/preview';
-  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectAbilities, SelectFeat, SelectSkill } from '~ui/select';
   import { useWorkshopForm } from '~workshop/composable';
+  import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
+  import { WorkshopEditorFormControls } from '~workshop/revision/ui';
 
   function getInitialState(): BackgroundCreate {
     return {
@@ -31,10 +33,11 @@
     };
   }
 
-  const { state, submitState, onSubmit, onError } =
+  const { state, submitState, onSubmit, onError, revisionControl } =
     useWorkshopForm<BackgroundCreate>({
       actionUrl: '/api/v2/backgrounds',
       getInitialState,
+      revisionEntityType: REVISION_ENTITY_TYPES.BACKGROUND,
     });
 </script>
 
@@ -143,7 +146,7 @@
       </div>
     </UCard>
 
-    <EditorFormControls>
+    <WorkshopEditorFormControls :revision-control>
       <template #preview="{ opened, changeVisibility }">
         <BackgroundPreview
           :open="opened"
@@ -151,6 +154,6 @@
           @update:open="changeVisibility"
         />
       </template>
-    </EditorFormControls>
+    </WorkshopEditorFormControls>
   </UForm>
 </template>

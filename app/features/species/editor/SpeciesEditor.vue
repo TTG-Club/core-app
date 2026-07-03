@@ -2,11 +2,13 @@
   import type { SpeciesCreate } from '~species/model';
 
   import { SpeciesPreview } from '~species/preview';
-  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectCreatureType, SelectSpecies } from '~ui/select';
   import { UploadGallery, UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
+  import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
+  import { WorkshopEditorFormControls } from '~workshop/revision/ui';
 
   import { SpeciesFeatures, SpeciesSizes, SpeciesSpeed } from './ui';
 
@@ -44,10 +46,11 @@
     };
   }
 
-  const { state, submitState, onError, onSubmit } =
+  const { state, submitState, onError, onSubmit, revisionControl } =
     useWorkshopForm<SpeciesCreate>({
       actionUrl: '/api/v2/species',
       getInitialState,
+      revisionEntityType: REVISION_ENTITY_TYPES.SPECIES,
     });
 </script>
 
@@ -210,7 +213,7 @@
       </div>
     </UCard>
 
-    <EditorFormControls>
+    <WorkshopEditorFormControls :revision-control>
       <template #preview="{ opened, changeVisibility }">
         <SpeciesPreview
           :open="opened"
@@ -218,6 +221,6 @@
           @update:open="changeVisibility"
         />
       </template>
-    </EditorFormControls>
+    </WorkshopEditorFormControls>
   </UForm>
 </template>

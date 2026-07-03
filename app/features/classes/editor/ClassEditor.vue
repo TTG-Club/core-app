@@ -2,10 +2,12 @@
   import type { ClassCreate, ClassLinkResponse } from '../model';
 
   import { ClassPreview } from '~classes/preview';
-  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { UploadGallery, UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
+  import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
+  import { WorkshopEditorFormControls } from '~workshop/revision/ui';
 
   import {
     CharacteristicsSettings,
@@ -74,10 +76,11 @@
     };
   }
 
-  const { state, submitState, onError, onSubmit } =
+  const { state, submitState, onError, onSubmit, revisionControl } =
     useWorkshopForm<ClassCreate>({
       actionUrl: '/api/v2/classes',
       getInitialState,
+      revisionEntityType: REVISION_ENTITY_TYPES.CLASS,
     });
 
   const { data: classLinks } =
@@ -206,7 +209,7 @@
       </div>
     </UCard>
 
-    <EditorFormControls>
+    <WorkshopEditorFormControls :revision-control>
       <template #preview="{ opened, changeVisibility }">
         <ClassPreview
           :open="opened"
@@ -214,6 +217,6 @@
           @update:open="changeVisibility"
         />
       </template>
-    </EditorFormControls>
+    </WorkshopEditorFormControls>
   </UForm>
 </template>

@@ -8,7 +8,7 @@
     normalizeSpellEffect,
   } from '~spells/model';
   import { SpellPreview } from '~spells/preview';
-  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import {
     SelectClass,
@@ -20,6 +20,8 @@
     SelectSubclass,
   } from '~ui/select';
   import { useWorkshopForm } from '~workshop/composable';
+  import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
+  import { WorkshopEditorFormControls } from '~workshop/revision/ui';
 
   import {
     SpellActiveEffects,
@@ -71,10 +73,11 @@
     };
   }
 
-  const { state, submitState, onError, onSubmit } =
+  const { state, submitState, onError, onSubmit, revisionControl } =
     useWorkshopForm<SpellCreate>({
       actionUrl: '/api/v2/spells',
       getInitialState,
+      revisionEntityType: REVISION_ENTITY_TYPES.SPELL,
       normalizeLoaded: normalizeLoadedSpell,
       transformBeforeSubmit: (formState) => {
         const normalizedEffect = normalizeSpellEffect(formState.effect);
@@ -246,7 +249,7 @@
       </div>
     </UCard>
 
-    <EditorFormControls>
+    <WorkshopEditorFormControls :revision-control>
       <template #preview="{ opened, changeVisibility }">
         <SpellPreview
           :open="opened"
@@ -254,6 +257,6 @@
           @update:open="changeVisibility"
         />
       </template>
-    </EditorFormControls>
+    </WorkshopEditorFormControls>
   </UForm>
 </template>

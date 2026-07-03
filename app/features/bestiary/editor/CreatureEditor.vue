@@ -3,11 +3,13 @@
 
   import { getInitialState } from '~bestiary/model';
   import { CreaturePreview } from '~bestiary/preview';
-  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectAlignment } from '~ui/select';
   import { UploadGallery, UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
+  import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
+  import { WorkshopEditorFormControls } from '~workshop/revision/ui';
 
   import {
     CREATURE_GALLERY_FIELD_LABEL,
@@ -33,10 +35,11 @@
     CreatureType,
   } from './ui';
 
-  const { state, submitState, onError, onSubmit } =
+  const { state, submitState, onError, onSubmit, revisionControl } =
     useWorkshopForm<CreatureCreate>({
       actionUrl: '/api/v2/bestiary',
       getInitialState,
+      revisionEntityType: REVISION_ENTITY_TYPES.CREATURE,
     });
 </script>
 
@@ -281,7 +284,7 @@
       </div>
     </UCard>
 
-    <EditorFormControls>
+    <WorkshopEditorFormControls :revision-control>
       <template #preview="{ opened, changeVisibility }">
         <CreaturePreview
           :state="submitState"
@@ -289,7 +292,7 @@
           @update:open="changeVisibility"
         />
       </template>
-    </EditorFormControls>
+    </WorkshopEditorFormControls>
   </UForm>
 </template>
 

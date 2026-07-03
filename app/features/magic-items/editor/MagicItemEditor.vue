@@ -2,11 +2,13 @@
   import type { MagicItemCreate } from '~magic-items/model';
 
   import { MagicItemPreview } from '~magic-items/preview';
-  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectItem } from '~ui/select';
   import { UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
+  import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
+  import { WorkshopEditorFormControls } from '~workshop/revision/ui';
 
   import {
     MagicItemAttunement,
@@ -49,10 +51,11 @@
     };
   }
 
-  const { state, submitState, onError, onSubmit } =
+  const { state, submitState, onError, onSubmit, revisionControl } =
     useWorkshopForm<MagicItemCreate>({
       actionUrl: '/api/v2/magic-items',
       getInitialState,
+      revisionEntityType: REVISION_ENTITY_TYPES.MAGIC_ITEM,
     });
 </script>
 
@@ -196,7 +199,7 @@
       </div>
     </UCard>
 
-    <EditorFormControls>
+    <WorkshopEditorFormControls :revision-control>
       <template #preview="{ opened, changeVisibility }">
         <MagicItemPreview
           :open="opened"
@@ -204,6 +207,6 @@
           @update:open="changeVisibility"
         />
       </template>
-    </EditorFormControls>
+    </WorkshopEditorFormControls>
   </UForm>
 </template>

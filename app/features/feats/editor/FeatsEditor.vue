@@ -2,10 +2,12 @@
   import type { FeatCreate } from '~feats/model';
 
   import { FeatPreview } from '~feats/preview';
-  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectAbilities, SelectFeatCategory } from '~ui/select';
   import { useWorkshopForm } from '~workshop/composable';
+  import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
+  import { WorkshopEditorFormControls } from '~workshop/revision/ui';
 
   const formRef = useTemplateRef('formRef');
 
@@ -35,12 +37,12 @@
     };
   }
 
-  const { state, submitState, onSubmit, onError } = useWorkshopForm<FeatCreate>(
-    {
+  const { state, submitState, onSubmit, onError, revisionControl } =
+    useWorkshopForm<FeatCreate>({
       actionUrl: '/api/v2/feats',
       getInitialState,
-    },
-  );
+      revisionEntityType: REVISION_ENTITY_TYPES.FEAT,
+    });
 </script>
 
 <template>
@@ -124,7 +126,7 @@
       </div>
     </UCard>
 
-    <EditorFormControls>
+    <WorkshopEditorFormControls :revision-control>
       <template #preview="{ opened, changeVisibility }">
         <FeatPreview
           :open="opened"
@@ -132,6 +134,6 @@
           @update:open="changeVisibility"
         />
       </template>
-    </EditorFormControls>
+    </WorkshopEditorFormControls>
   </UForm>
 </template>
