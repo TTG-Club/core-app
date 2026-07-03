@@ -47,7 +47,7 @@
     :placeholder="revisionPlaceholder"
     value-key="value"
     label-key="label"
-    class="min-w-72"
+    class="min-w-0 flex-1"
     @update:model-value="selectRevision"
   />
 </template>
