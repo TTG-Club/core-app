@@ -21,6 +21,7 @@ export function useEntityRevisions(options: EntityRevisionOptions) {
   const toast = useToast();
   const selectedVersion = ref<number>();
   const snapshotLoading = ref(false);
+  const enabled = computed(() => toValue(options.enabled));
 
   const revisionUrl = computed(() => {
     const entityId = toValue(options.entityId);
@@ -39,7 +40,7 @@ export function useEntityRevisions(options: EntityRevisionOptions) {
   } = useAsyncData(
     `workshop-revisions-${options.entityType ?? 'unsupported'}-${toValue(options.entityId) ?? 'create'}`,
     async () => {
-      if (!toValue(options.enabled) || !revisionUrl.value) {
+      if (!enabled.value || !revisionUrl.value) {
         return [];
       }
 
@@ -47,7 +48,10 @@ export function useEntityRevisions(options: EntityRevisionOptions) {
 
       return entityRevisionListSchema.parse(response);
     },
-    { default: () => [] },
+    {
+      default: () => [],
+      watch: [enabled, revisionUrl],
+    },
   );
 
   const loading = computed(
@@ -60,7 +64,7 @@ export function useEntityRevisions(options: EntityRevisionOptions) {
   async function selectRevision(version: number): Promise<void> {
     const entityId = toValue(options.entityId);
 
-    if (!toValue(options.enabled) || !revisionUrl.value || !entityId) {
+    if (!enabled.value || !revisionUrl.value || !entityId) {
       return;
     }
 
@@ -95,7 +99,7 @@ export function useEntityRevisions(options: EntityRevisionOptions) {
   }
 
   const revisionControl = computed<WorkshopRevisionControl>(() => ({
-    enabled: toValue(options.enabled),
+    enabled: enabled.value,
     revisions: revisions.value,
     selectedVersion: selectedVersion.value,
     loading: loading.value,

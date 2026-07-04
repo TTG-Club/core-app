@@ -117,6 +117,7 @@ export function useWorkshopForm<T extends { url: string }>(
         state.value = loadedState;
         previousState.value = cloneDeep(loadedState);
         clearSelectedRevision();
+        await refreshRevisions();
       } catch (error) {
         consola.error(error);
 
@@ -208,7 +209,6 @@ export function useWorkshopForm<T extends { url: string }>(
 
     if (response._data === state.value.url) {
       await reset();
-      await refreshRevisions();
     } else {
       await router.replace({ params: { url: response._data } });
     }
