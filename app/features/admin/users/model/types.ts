@@ -23,6 +23,21 @@ export interface AdminRoleSelectItem {
   value: number;
 }
 
+/**
+ * Постраничный ответ списка пользователей (envelope Spring Data Page).
+ * Совпадает по полям с PageBugReportResponse.
+ */
+export interface PageAdminUserResponse {
+  content: AdminUserResponse[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+}
+
 /** Статус подписки пользователя (зеркалит subscriber-service). */
 export type AdminSubscriptionStatus = SubscriptionStatus;
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { USER_TOKEN_COOKIE } from '#shared/consts';
+  import { useProfileBadges } from '~profile/activation/composables';
   import { KbdShortcut } from '~ui/kbd-shortcut';
   import { AuthModal } from '~user/auth-modal';
 
@@ -29,6 +30,12 @@
   );
 
   if (userTokenCookie.value) {
+    // Прогреваем статус подписки/перки и картинку рамки заранее: контент поповера
+    // (UserInfo) монтируется лениво при открытии, и без прогрева корона и рамка
+    // «доезжали» уже в открытой панели. Вызов до await — чтобы остаться в
+    // синхронном setup-контексте (useAsyncData/watch завязаны на инстанс).
+    useProfileBadges();
+
     try {
       await fetchUser();
     } catch (err) {
