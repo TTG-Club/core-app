@@ -19,3 +19,22 @@ export const COMMUNITY_TOP_LABEL = 'Охотники за багами';
 /** Подсказка к рейтингу охотников */
 export const COMMUNITY_TOP_TOOLTIP =
   'В зачёт идут только те баги, которые мы отметили как исправленные, а не просто все ваши отправленные баги';
+
+/** Период рейтинга охотников: за всё время / за текущий месяц */
+export type CommunityRatingPeriod = 'all' | 'month';
+
+/** Опции переключателя периода рейтинга (в порядке отображения) */
+export const COMMUNITY_PERIOD_OPTIONS: Array<{
+  value: CommunityRatingPeriod;
+  label: string;
+}> = [
+  { value: 'month', label: 'За текущий месяц' },
+  { value: 'all', label: 'За всё время' },
+];
+
+/** Период рейтинга по умолчанию */
+export const COMMUNITY_PERIOD_DEFAULT: CommunityRatingPeriod = 'month';
+
+/** Заглушка, когда за текущий месяц ещё нет исправленных багов */
+export const COMMUNITY_EMPTY_MONTH_TEXT =
+  'Пока никто не исправил багов в этом месяце';
