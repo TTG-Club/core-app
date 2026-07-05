@@ -30,8 +30,26 @@ const authAdminUserSchema = z.object({
 const authAdminRolesSchema = z.array(authAdminRoleSchema);
 const authAdminUsersSchema = z.array(authAdminUserSchema);
 
+/**
+ * Постраничный ответ списка пользователей (envelope Spring Data Page).
+ * Поля совпадают с PageBugReportResponse на фронте.
+ */
+const authAdminUsersPageSchema = z.object({
+  content: authAdminUsersSchema,
+  totalElements: z.number().int().nonnegative(),
+  totalPages: z.number().int().nonnegative(),
+  size: z.number().int().nonnegative(),
+  number: z.number().int().nonnegative(),
+  first: z.boolean(),
+  last: z.boolean(),
+  empty: z.boolean(),
+});
+
 export type AuthAdminRoleResponse = z.infer<typeof authAdminRoleSchema>;
 export type AuthAdminUserResponse = z.infer<typeof authAdminUserSchema>;
+export type AuthAdminUsersPageResponse = z.infer<
+  typeof authAdminUsersPageSchema
+>;
 
 /**
  * Проверяет, что текущий пользователь может работать с админскими методами auth-service.
@@ -73,12 +91,12 @@ export async function fetchAuthAdminService<T>(
 }
 
 /**
- * Проверяет список пользователей, полученный от auth-service.
+ * Проверяет постраничный ответ списка пользователей от auth-service.
  */
-export function parseAuthAdminUsersResponse(
+export function parseAuthAdminUsersPageResponse(
   payload: unknown,
-): AuthAdminUserResponse[] {
-  return authAdminUsersSchema.parse(payload);
+): AuthAdminUsersPageResponse {
+  return authAdminUsersPageSchema.parse(payload);
 }
 
 /**

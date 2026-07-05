@@ -10,15 +10,18 @@
   import {
     ADMIN_USERS_ACTIVE_BADGE,
     ADMIN_USERS_CREDENTIALS_EXPIRED_BADGE,
+    ADMIN_USERS_DATE_FORMAT,
     ADMIN_USERS_EMAIL_NOT_VERIFIED_BADGE,
     ADMIN_USERS_EMAIL_VERIFIED_BADGE,
     ADMIN_USERS_LOCKED_BADGE,
     ADMIN_USERS_ROLE_FIELD_LABEL,
     ADMIN_USERS_ROLE_PLACEHOLDER,
+    ADMIN_USERS_ROLES_SECTION_TITLE,
     ADMIN_USERS_SAVE_ERROR_TOAST,
     ADMIN_USERS_SAVE_LABEL,
     ADMIN_USERS_SAVED_TOAST,
   } from '../model';
+  import AdminUserRedeemedCodes from './AdminUserRedeemedCodes.vue';
   import AdminUserSubscription from './AdminUserSubscription.vue';
 
   const props = defineProps<{
@@ -31,6 +34,9 @@
   }>();
 
   const toast = useToast();
+  const { copy } = useCopyAndShare();
+  const { format } = useDayjs();
+
   const selectedRoleIds = ref<number[]>([]);
   const isSaving = ref(false);
 
@@ -54,6 +60,18 @@
   const isSaveDisabled = computed(() => {
     return areRoleIdsEqual(sortedSelectedRoleIds.value, originalRoleIds.value);
   });
+
+  const createdAtLabel = computed(() =>
+    props.user.createdAt
+      ? format(props.user.createdAt, ADMIN_USERS_DATE_FORMAT)
+      : '—',
+  );
+
+  const updatedAtLabel = computed(() =>
+    props.user.updatedAt
+      ? format(props.user.updatedAt, ADMIN_USERS_DATE_FORMAT)
+      : '—',
+  );
 
   function getRoleIdsByNames(
     roles: AdminRoleResponse[],
@@ -121,26 +139,71 @@
 </script>
 
 <template>
-  <UCard variant="subtle">
-    <template #header>
-      <div
-        class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
-      >
-        <div class="min-w-0">
-          <h2 class="truncate text-base font-semibold text-highlighted">
-            {{ user.username }}
-          </h2>
+  <div class="space-y-6">
+    <!-- Профиль: метаданные пользователя -->
+    <div
+      class="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border border-default bg-default/10 p-4"
+    >
+      <!-- Email -->
+      <div class="col-span-2 flex flex-col gap-1">
+        <span class="text-xs font-medium tracking-wide text-muted uppercase">
+          Email
+        </span>
 
-          <p class="truncate text-sm text-muted">
-            {{ user.email }}
-          </p>
-        </div>
+        <span
+          class="cursor-pointer text-sm break-all text-highlighted transition-colors select-all hover:text-primary"
+          title="Нажмите, чтобы скопировать email"
+          @click.left.exact.prevent="() => copy(user.email)"
+        >
+          {{ user.email }}
+        </span>
+      </div>
+
+      <!-- ID -->
+      <div class="col-span-2 flex flex-col gap-1">
+        <span class="text-xs font-medium tracking-wide text-muted uppercase">
+          ID (UUID)
+        </span>
+
+        <span
+          class="cursor-pointer font-mono text-sm break-all text-highlighted transition-colors select-all hover:text-primary"
+          title="Нажмите, чтобы скопировать ID"
+          @click.left.exact.prevent="() => copy(user.id)"
+        >
+          {{ user.id }}
+        </span>
+      </div>
+
+      <!-- Регистрация -->
+      <div class="col-span-1 flex flex-col gap-1">
+        <span class="text-xs font-medium tracking-wide text-muted uppercase">
+          Регистрация
+        </span>
+
+        <span class="text-sm text-highlighted">{{ createdAtLabel }}</span>
+      </div>
+
+      <!-- Обновлён -->
+      <div class="col-span-1 flex flex-col gap-1">
+        <span class="text-xs font-medium tracking-wide text-muted uppercase">
+          Обновлён
+        </span>
+
+        <span class="text-sm text-highlighted">{{ updatedAtLabel }}</span>
+      </div>
+
+      <!-- Статусы аккаунта -->
+      <div class="col-span-2 flex flex-col gap-1.5">
+        <span class="text-xs font-medium tracking-wide text-muted uppercase">
+          Состояние
+        </span>
 
         <div class="flex flex-wrap gap-2">
           <UBadge
             v-if="user.enabled"
             color="success"
             variant="subtle"
+            size="sm"
           >
             {{ ADMIN_USERS_ACTIVE_BADGE }}
           </UBadge>
@@ -149,6 +212,7 @@
             v-if="user.accountLocked"
             color="error"
             variant="subtle"
+            size="sm"
           >
             {{ ADMIN_USERS_LOCKED_BADGE }}
           </UBadge>
@@ -156,6 +220,7 @@
           <UBadge
             :color="user.emailVerified ? 'success' : 'warning'"
             variant="subtle"
+            size="sm"
           >
             {{
               user.emailVerified
@@ -168,38 +233,64 @@
             v-if="user.credentialsExpired"
             color="warning"
             variant="subtle"
+            size="sm"
           >
             {{ ADMIN_USERS_CREDENTIALS_EXPIRED_BADGE }}
           </UBadge>
         </div>
       </div>
-    </template>
-
-    <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-      <UFormField :label="ADMIN_USERS_ROLE_FIELD_LABEL">
-        <USelectMenu
-          v-model="selectedRoleIds"
-          :items="roleSelectItems"
-          :placeholder="ADMIN_USERS_ROLE_PLACEHOLDER"
-          label-key="label"
-          value-key="value"
-          multiple
-          class="w-full"
-        />
-      </UFormField>
-
-      <UButton
-        icon="tabler:device-floppy"
-        :loading="isSaving"
-        :disabled="isSaveDisabled"
-        @click.left.exact.prevent="saveRoles"
-      >
-        {{ ADMIN_USERS_SAVE_LABEL }}
-      </UButton>
     </div>
 
-    <USeparator class="my-4" />
+    <!-- Роли -->
+    <div class="space-y-3">
+      <div class="flex items-center gap-2">
+        <UIcon
+          name="tabler:shield-lock"
+          class="size-5 text-primary"
+          aria-hidden="true"
+        />
 
+        <span class="text-sm font-medium text-highlighted">
+          {{ ADMIN_USERS_ROLES_SECTION_TITLE }}
+        </span>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <!-- Подпись совпадает с заголовком секции — прячем визуально, оставляем для a11y -->
+        <UFormField
+          :label="ADMIN_USERS_ROLE_FIELD_LABEL"
+          :ui="{ label: 'sr-only' }"
+        >
+          <USelectMenu
+            v-model="selectedRoleIds"
+            :items="roleSelectItems"
+            :placeholder="ADMIN_USERS_ROLE_PLACEHOLDER"
+            label-key="label"
+            value-key="value"
+            multiple
+            class="w-full"
+          />
+        </UFormField>
+
+        <UButton
+          icon="tabler:device-floppy"
+          :loading="isSaving"
+          :disabled="isSaveDisabled"
+          @click.left.exact.prevent="saveRoles"
+        >
+          {{ ADMIN_USERS_SAVE_LABEL }}
+        </UButton>
+      </div>
+    </div>
+
+    <USeparator />
+
+    <!-- Подписка -->
     <AdminUserSubscription :username="user.username" />
-  </UCard>
+
+    <USeparator />
+
+    <!-- Активированные коды -->
+    <AdminUserRedeemedCodes :username="user.username" />
+  </div>
 </template>
