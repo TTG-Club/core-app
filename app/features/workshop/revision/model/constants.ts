@@ -17,7 +17,7 @@ export const REVISION_ENTITY_TYPES = {
   MAGIC_ITEM: 'magicItem',
   SPECIES: 'species',
   SPELL: 'spell',
-};
+} as const;
 
 export const REVISION_OPERATION_LABELS: Record<RevisionOperation, string> = {
   CREATE: 'Создание',
