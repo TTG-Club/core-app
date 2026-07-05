@@ -4,6 +4,7 @@ import type { MarkerNode } from '~ui/markup';
 
 import { h } from 'vue';
 
+import { UIcon } from '#components';
 import {
   getNodeText,
   isBlockNode,
@@ -13,6 +14,14 @@ import {
   parse,
   render,
 } from '~ui/markup';
+
+import { SECTION_TAGS } from '../tags';
+
+/**
+ * Иконка раздела по типу маркера — единый источник истины с тулбаром
+ * (`SECTION_TAGS`), чтобы чип секционной ссылки и кнопка вставки совпадали.
+ */
+const SECTION_ICONS = new Map(SECTION_TAGS.map((tag) => [tag.key, tag.icon]));
 
 /**
  * Является ли маркер {@...} блочным (заголовок, список, цитата, разделитель,
@@ -59,6 +68,30 @@ function renderChildren(marker: MarkerNode): VNode[] | string {
   } catch {
     return fallback;
   }
+}
+
+/**
+ * Чип секционной ссылки в редакторе: иконка раздела + подпись, цвет primary.
+ * Отличает {@spell}/{@creature}/… от обычной {@link} (нейтральный подчёркнутый
+ * спан) — иначе в превью они выглядят одинаково и заклинание не отличить от ссылки.
+ *
+ * @param type - Тип секционного маркера (`spell`, `creature`, …)
+ * @param children - Уже отрисованное содержимое чипа (подпись)
+ */
+function renderSectionChip(type: string, children: VNode[] | string): VNode {
+  const icon = SECTION_ICONS.get(type);
+
+  return h(
+    'span',
+    {
+      class:
+        'inline-flex items-center gap-0.5 align-middle text-primary underline decoration-primary/40 underline-offset-2',
+    },
+    [
+      icon ? h(UIcon, { name: icon, class: 'size-3.5 shrink-0' }) : null,
+      children,
+    ],
+  );
 }
 
 /**
@@ -128,8 +161,15 @@ function renderChip(marker: MarkerNode, isBlock: boolean): VNode {
       );
     case 'break':
       return h('br');
-    // Ссылки на разделы и обычные ссылки — стилизованный спан-ссылка.
+    // Обычная ссылка — нейтральный спан-ссылка.
     case 'link':
+      return h(
+        'span',
+        { class: 'text-link underline underline-offset-2' },
+        children,
+      );
+    // Ссылки на разделы сайта — та же ссылка, но с иконкой раздела и цветом
+    // primary, чтобы {@spell}/{@creature}/… визуально не сливались с {@link}.
     case 'class':
     case 'spell':
     case 'feat':
@@ -138,11 +178,7 @@ function renderChip(marker: MarkerNode, isBlock: boolean): VNode {
     case 'creature':
     case 'item':
     case 'glossary':
-      return h(
-        'span',
-        { class: 'text-link underline underline-offset-2' },
-        children,
-      );
+      return renderSectionChip(marker.type, children);
     default:
       return h('span', children);
   }
