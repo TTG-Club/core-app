@@ -27,7 +27,7 @@
     COMMUNITY_TROPHY_COLOR,
   } from './model';
 
-  const { isAdmin } = useUserRoles();
+  const { isAdmin, canManageBugReports } = useUserRoles();
   const router = useRouter();
 
   // Материалы и сброс кеша
@@ -117,24 +117,25 @@
     });
   });
 
-  /** Классы кликабельного стата исправленных багов (для админа) */
+  /** Классы кликабельного стата исправленных багов (для админа/модератора) */
   const fixedTileClass = computed(() => ({
-    'cursor-pointer transition-colors hover:bg-default/80': isAdmin.value,
+    'cursor-pointer transition-colors hover:bg-default/80':
+      canManageBugReports.value,
   }));
 
   /**
-   * Переход в админку багов с фильтром по новым (только для админа).
+   * Переход к баг-репортам с фильтром по новым (для админа/модератора).
    * Удобный шорткат для быстрой обработки свежих репортов.
    */
   function handleNewBugsClick(): void {
-    if (!isAdmin.value) {
+    if (!canManageBugReports.value) {
       return;
     }
 
     const status: BugReportStatus = 'NEW';
 
     router.push({
-      path: '/admin/bugs',
+      path: '/bug-reports',
       query: { status },
     });
   }

@@ -13,6 +13,10 @@ export function useUserRoles() {
 
   const canEditEntities = computed(() => isAdmin.value || isModerator.value);
 
+  const canManageBugReports = computed(
+    () => isAdmin.value || isModerator.value,
+  );
+
   return {
     roles,
 
@@ -20,5 +24,6 @@ export function useUserRoles() {
     isModerator,
     isAdmin,
     canEditEntities,
+    canManageBugReports,
   };
 }

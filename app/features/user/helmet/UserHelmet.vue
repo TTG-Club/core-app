@@ -13,7 +13,7 @@
     isLoggedIn,
   } = useUser();
 
-  const { isAdmin, canEditEntities } = useUserRoles();
+  const { isAdmin, canEditEntities, canManageBugReports } = useUserRoles();
   const { isTablet } = useBreakpoints();
   const userTokenCookie = useCookie<string | null>(USER_TOKEN_COOKIE);
 
@@ -155,6 +155,21 @@
             >
               <div class="flex w-full items-center justify-between">
                 <span>Панель администратора</span>
+              </div>
+            </UButton>
+
+            <UButton
+              v-if="canManageBugReports"
+              icon="tabler:bug"
+              color="neutral"
+              variant="ghost"
+              class="w-full"
+              size="lg"
+              to="/bug-reports"
+              @click.left.exact="closeMenu"
+            >
+              <div class="flex w-full items-center justify-between">
+                <span>Баг-репорты</span>
               </div>
             </UButton>
           </div>
