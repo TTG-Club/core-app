@@ -3,7 +3,7 @@ import type { ListPresentationConfig } from '~infrastructure/list-presentation/m
 import type { SpellLinkResponse } from './link';
 
 export type SpellGrouping = 'LEVEL' | 'SCHOOL' | 'CLASS' | 'NONE';
-export type SpellSorting = 'NAME' | 'ENGLISH';
+export type SpellSorting = 'LEVEL' | 'NAME' | 'ENGLISH';
 
 /**
  * Возвращает подпись группы уровня заклинаний.
@@ -53,6 +53,11 @@ export const SPELL_LIST_PRESENTATION_CONFIG: ListPresentationConfig<
     },
   ],
   sortingOptions: [
+    {
+      label: 'По уровню',
+      value: 'LEVEL',
+      apiValue: 'LEVEL',
+    },
     {
       label: 'По русскому названию',
       value: 'NAME',
