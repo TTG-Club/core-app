@@ -4,9 +4,12 @@
   import { isPlainObject } from 'es-toolkit';
 
   import { ItemPreview } from '~items/preview';
-  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { EditorBaseInfo } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
   import { UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
+  import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
+  import { WorkshopEditorFormControls } from '~workshop/revision/ui';
 
   import {
     ArmorForm,
@@ -101,12 +104,14 @@
     };
   }
 
-  const { state, onError, onSubmit } = useWorkshopForm<ItemCreate>({
-    actionUrl: '/api/v2/item',
-    getInitialState,
-    normalizeLoaded,
-    transformBeforeSubmit,
-  });
+  const { state, submitState, onError, onSubmit, revisionControl } =
+    useWorkshopForm<ItemCreate>({
+      actionUrl: '/api/v2/item',
+      getInitialState,
+      normalizeLoaded,
+      transformBeforeSubmit,
+      revisionEntityType: REVISION_ENTITY_TYPES.ITEM,
+    });
 </script>
 
 <template>
@@ -204,11 +209,9 @@
         label="Описание"
         name="description"
       >
-        <UTextarea
+        <MarkupEditor
           v-model="state.description"
-          :rows="8"
           placeholder="Введи описание"
-          allow-clear
         />
       </UFormField>
     </UCard>
@@ -231,14 +234,14 @@
       </UFormField>
     </UCard>
 
-    <EditorFormControls>
+    <WorkshopEditorFormControls :revision-control>
       <template #preview="{ opened, changeVisibility }">
         <ItemPreview
           :open="opened"
-          :state="state"
+          :state="submitState"
           @update:open="changeVisibility"
         />
       </template>
-    </EditorFormControls>
+    </WorkshopEditorFormControls>
   </UForm>
 </template>

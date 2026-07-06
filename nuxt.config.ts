@@ -301,6 +301,51 @@ export default defineNuxtConfig({
       chunkSizeWarningLimit: 1000,
     },
 
+    resolve: {
+      // @tiptap/pm/* — это чистые ре-экспорты (`export * from 'prosemirror-*'`).
+      // Алиасим их на СЫРЫЕ prosemirror-пакеты, чтобы наши @tiptap-расширения и
+      // редактор @nuxt/ui импортировали ОДИН И ТОТ ЖЕ specifier `prosemirror-*`.
+      // Иначе Vite оптимизирует две копии (обёртку @tiptap/pm и сырую) →
+      // "Adding different instances of a keyed plugin" / "Duplicate JSON ID cell".
+      alias: {
+        '@tiptap/pm/state': 'prosemirror-state',
+        '@tiptap/pm/model': 'prosemirror-model',
+        '@tiptap/pm/view': 'prosemirror-view',
+        '@tiptap/pm/transform': 'prosemirror-transform',
+        '@tiptap/pm/tables': 'prosemirror-tables',
+        '@tiptap/pm/keymap': 'prosemirror-keymap',
+        '@tiptap/pm/commands': 'prosemirror-commands',
+        '@tiptap/pm/schema-list': 'prosemirror-schema-list',
+        '@tiptap/pm/gapcursor': 'prosemirror-gapcursor',
+        '@tiptap/pm/history': 'prosemirror-history',
+        '@tiptap/pm/inputrules': 'prosemirror-inputrules',
+        '@tiptap/pm/dropcursor': 'prosemirror-dropcursor',
+        '@tiptap/pm/trailing-node': 'prosemirror-trailing-node',
+      },
+      // Единственный инстанс каждого prosemirror-пакета на все пути импорта.
+      dedupe: [
+        'prosemirror-state',
+        'prosemirror-model',
+        'prosemirror-view',
+        'prosemirror-transform',
+        'prosemirror-tables',
+        'prosemirror-keymap',
+        'prosemirror-commands',
+        'prosemirror-schema-list',
+        'prosemirror-gapcursor',
+        'prosemirror-history',
+        'prosemirror-inputrules',
+        'prosemirror-dropcursor',
+        'prosemirror-trailing-node',
+      ],
+    },
+
+    // Бандлим tiptap/prosemirror и для SSR (не externalize) — единый инстанс
+    // модулей на сервере, иначе prosemirror-tables регистрирует 'cell' повторно.
+    ssr: {
+      noExternal: [/@tiptap\//, /^prosemirror-/],
+    },
+
     optimizeDeps: {
       include: [
         // Vue Core
@@ -310,6 +355,20 @@ export default defineNuxtConfig({
 
         // Nuxt UI
         '@nuxt/ui/locale',
+
+        // Nuxt UI Editor (TipTap/ProseMirror) — предбандлинг единых инстансов
+        // prosemirror, иначе UEditor падает с "Adding different instances of a
+        // keyed plugin". Наши @tiptap-расширения через resolve.alias (ниже)
+        // импортят те же самые `prosemirror-*`, поэтому инстанс общий.
+        '@nuxt/ui > prosemirror-state',
+        '@nuxt/ui > prosemirror-transform',
+        '@nuxt/ui > prosemirror-model',
+        '@nuxt/ui > prosemirror-view',
+        '@nuxt/ui > prosemirror-gapcursor',
+        // prosemirror-tables нужен только нашим таблицам (@nuxt/ui его не тянет) —
+        // оптимизируем один общий инстанс, иначе CellSelection регистрирует
+        // JSON ID 'cell' повторно.
+        'prosemirror-tables',
 
         // Утилиты
         'es-toolkit',

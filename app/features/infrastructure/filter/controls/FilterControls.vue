@@ -1,20 +1,38 @@
 <script setup lang="ts">
+  import type { DropdownMenuItem } from '@nuxt/ui';
+
   import type { Filter, FilterGroups } from '../types';
 
   import { cloneDeep } from 'es-toolkit';
 
   import { FilterDrawer } from '../drawer';
   import { FilterPreview } from '../preview';
-  import { getGroupItems } from '../utils';
+  import {
+    getGroupItems,
+    getSelectedItemIds,
+    hasTouchedItem,
+    normalizeDependentSelections,
+  } from '../utils';
+
+  // Меню представления списка (группировка/сортировка), которое тулбар
+  // раскладывает сам: на десктопе — отдельным рядом, на мобильном — под «⋯».
+  interface PresentationMenu {
+    id: string;
+    label: string;
+    icon: string;
+    items: Array<DropdownMenuItem>;
+  }
 
   const {
     isPending = false,
     showPreview = false,
     defaults = undefined,
+    presentationMenus = [],
   } = defineProps<{
     isPending?: boolean;
     showPreview?: boolean;
     defaults?: Filter;
+    presentationMenus?: Array<PresentationMenu>;
   }>();
 
   const search = defineModel<string>('search');
@@ -42,11 +60,46 @@
     return getOrigin() + useRoute().fullPath;
   });
 
+  const hasPresentationMenus = computed(() => presentationMenus.length > 0);
+
+  // Отдельная кнопка «Поделиться» — на десктопе всегда, а на мобильном только
+  // когда её нечем накрыть (нет меню представления, чтобы собрать «⋯»).
+  const showStandaloneShare = computed(
+    () => isLarge.value || !hasPresentationMenus.value,
+  );
+
+  // Меню «⋯» собирает «Поделиться» + группировку/сортировку — только на мобильном.
+  const showOverflowMenu = computed(
+    () => !isLarge.value && hasPresentationMenus.value,
+  );
+
+  // Второй ряд тулбара с меню представления — только на десктопе.
+  const showPresentationRow = computed(
+    () => isLarge.value && hasPresentationMenus.value,
+  );
+
+  const overflowItems = computed<Array<Array<DropdownMenuItem>>>(() => [
+    [
+      {
+        label: 'Поделиться ссылкой',
+        icon: isApple ? 'tabler:share-2' : 'tabler:share',
+        onSelect: () => {
+          share(urlForCopy.value);
+        },
+      },
+    ],
+    presentationMenus.map((menu) => ({
+      label: menu.label,
+      icon: menu.icon,
+      children: menu.items,
+    })),
+  ]);
+
   const isFilterEdited = computed(
     () =>
       !!filter.value
       && filter.value.filters?.some((group) =>
-        getGroupItems(group).some((item) => item.selected !== null),
+        hasTouchedItem(getGroupItems(group)),
       ),
   );
 
@@ -57,20 +110,12 @@
 
     if (defaults?.sources) {
       const currentKeys = filter.value.sources
-        .flatMap((group) =>
-          getGroupItems(group)
-            .filter((item) => item.selected)
-            .map((item) => String(item.id)),
-        )
+        .flatMap((group) => getSelectedItemIds(group))
         .sort()
         .join(',');
 
       const defaultKeys = defaults.sources
-        .flatMap((group) =>
-          getGroupItems(group)
-            .filter((item) => item.selected)
-            .map((item) => String(item.id)),
-        )
+        .flatMap((group) => getSelectedItemIds(group))
         .sort()
         .join(',');
 
@@ -78,7 +123,7 @@
     }
 
     return filter.value.sources.some((group) =>
-      getGroupItems(group).some((item) => item.selected !== null),
+      hasTouchedItem(getGroupItems(group)),
     );
   });
 
@@ -105,7 +150,13 @@
       return;
     }
 
-    filter.value = { ...filter.value, filters: payload };
+    // Нормализуем перед сохранением: в дровере редактируется клон, и в payload
+    // могут остаться выборы уже скрытых каскадом недоступных значений.
+    filter.value = {
+      ...filter.value,
+      filters: normalizeDependentSelections(payload),
+    };
+
     filterOpened.value = false;
   }
 
@@ -224,11 +275,46 @@
       </UChip>
 
       <UButton
+        v-if="showStandaloneShare"
         :icon="isApple ? 'tabler:share-2' : 'tabler:share'"
         title="Поделиться ссылкой"
         square
         @click.left.exact.prevent="share(urlForCopy)"
       />
+
+      <UDropdownMenu
+        v-if="showOverflowMenu"
+        :items="overflowItems"
+        :ui="{ content: 'w-56' }"
+      >
+        <UButton
+          icon="tabler:dots"
+          title="Ещё"
+          aria-label="Ещё"
+          square
+        />
+      </UDropdownMenu>
+    </div>
+
+    <div
+      v-if="showPresentationRow"
+      class="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-2"
+    >
+      <UDropdownMenu
+        v-for="menu in presentationMenus"
+        :key="menu.id"
+        :items="menu.items"
+        :ui="{ content: 'w-56' }"
+      >
+        <UButton
+          :icon="menu.icon"
+          :label="menu.label"
+          trailing-icon="tabler:chevron-down"
+          color="neutral"
+          variant="subtle"
+          block
+        />
+      </UDropdownMenu>
     </div>
 
     <ClientOnly>

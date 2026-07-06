@@ -13,42 +13,33 @@
     renderNodes: (nodes: RenderNode[]) => VNode[];
   }>();
 
-  const url = node.attrs?.url?.toString();
-  const target = node.attrs?.target?.toString();
+  const router = useRouter();
 
-  if (!url) {
-    throw new Error(`[Markup] Link must have url: ${JSON.stringify(node)}`);
-  }
+  const url = computed(() => node.attrs?.url?.toString() ?? '');
 
-  if (target && target !== '_blank') {
-    throw new Error(
-      `[Markup] target must be "_blank": ${JSON.stringify(node)}`,
-    );
-  }
+  // Внешняя ссылка ждёт target="_blank"; любое иное значение игнорируем (раньше
+  // здесь бросалось исключение — незаполненный/кривой атрибут ронял всю страницу).
+  const isBlankTarget = computed(
+    () => node.attrs?.target?.toString() === '_blank',
+  );
 
   const isExternal = computed(() => {
     try {
-      const parsedUrl = new URL(url, window.location.origin);
+      const parsedUrl = new URL(url.value, window.location.origin);
 
       if (parsedUrl.origin !== window.location.origin) {
         return true;
       }
 
-      const router = useRouter();
+      const resolvedRoute = router.resolve(parsedUrl.pathname);
 
-      if (router) {
-        const resolvedRoute = router.resolve(parsedUrl.pathname);
-
-        return !resolvedRoute.matched.length;
-      }
-
-      return false;
+      return !resolvedRoute.matched.length;
     } catch {
       return true;
     }
   });
 
-  const isNewTab = computed(() => target === '_blank' || isExternal.value);
+  const isNewTab = computed(() => isBlankTarget.value || isExternal.value);
 
   const children = computed(() =>
     node.content ? renderNodes(node.content) : [],
@@ -56,7 +47,9 @@
 </script>
 
 <template>
+  <!-- Пустой url — не роняем рендер: показываем содержимое обычным текстом. -->
   <ULink
+    v-if="url"
     :external="isExternal"
     :to="url"
     :target="isNewTab ? '_blank' : '_self'"
@@ -67,4 +60,12 @@
       :key="index"
     />
   </ULink>
+
+  <span v-else>
+    <component
+      :is="vnode"
+      v-for="(vnode, index) in children"
+      :key="index"
+    />
+  </span>
 </template>

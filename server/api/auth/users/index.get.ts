@@ -1,5 +1,6 @@
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
+
   const rawSearchQuery = query.query;
 
   const searchQuery =
@@ -7,10 +8,16 @@ export default defineEventHandler(async (event) => {
       ? rawSearchQuery.trim()
       : undefined;
 
-  return parseAuthAdminUsersResponse(
+  const rawRole = query.role;
+  const role = typeof rawRole === 'string' && rawRole ? rawRole : undefined;
+
+  return parseAuthAdminUsersPageResponse(
     await fetchAuthAdminService<unknown>(event, '/api/admin/users', {
       query: {
         query: searchQuery,
+        role,
+        page: query.page,
+        size: query.size,
       },
     }),
   );

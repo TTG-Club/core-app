@@ -3,6 +3,7 @@ export function getSecrets() {
     s3: getS3Secrets(),
     api: getApiSecrets(),
     auth: getAuthSecrets(),
+    subscriber: getSubscriberSecrets(),
     bugReport: getBugReportSecrets(),
   };
 }
@@ -70,6 +71,23 @@ export function getAuthSecrets(): AuthSecrets {
   return {
     secret: authJwtSecret,
     url: authApiUrl,
+  };
+}
+
+/**
+ * Возвращает настройки внешнего subscriber-service (подписки, коды, награды).
+ * Сервис принимает тот же SSO-JWT пользователя, что и core-api, поэтому
+ * достаточно базового URL — токен прокидывается обычным прокси-механизмом.
+ */
+export function getSubscriberSecrets() {
+  const { NITRO_SUBSCRIBER_API_URL: url = '' } = process.env;
+
+  if (!url) {
+    throw new Error('[SUBSCRIBER] Variables are not set');
+  }
+
+  return {
+    url,
   };
 }
 

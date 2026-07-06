@@ -3,8 +3,7 @@
 
   import { computed } from 'vue';
 
-  import { render } from './renderer';
-  import { isBlockNode } from './utils';
+  import { render, toBlockGroups } from './renderer';
 
   const { renderNode } = defineProps<{
     renderNode: RenderNode;
@@ -12,7 +11,7 @@
 
   const rendered = computed<RenderResult>(() => {
     try {
-      // Одиночный элемент
+      // Одиночный элемент (строка «{@...}»-разметки, MarkerNode или SimpleTextNode).
       if (!Array.isArray(renderNode)) {
         return {
           isSingle: true,
@@ -20,17 +19,16 @@
         };
       }
 
-      // Группируем последовательные inline элементы
+      // Каждый элемент описания разбиваем на блочные/инлайновые группы, чтобы
+      // блочные маркеры ({@h}/{@list}/{@quote}/…) рисовались вне <p>, а не внутри.
       const groups: Group[] = [];
 
       let groupId = 0;
 
       for (const entry of renderNode) {
-        groups.push({
-          id: groupId++,
-          isBlock: isBlockNode(entry),
-          vnodes: render(entry),
-        });
+        for (const group of toBlockGroups(entry)) {
+          groups.push({ id: groupId++, ...group });
+        }
       }
 
       return {

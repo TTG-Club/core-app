@@ -2,6 +2,7 @@
   import type { CreateAction } from '~bestiary/model';
 
   import { EditorArrayControls } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
 
   type ActionKey = 'actions' | 'bonusActions' | 'reactions';
 
@@ -99,11 +100,8 @@
             :name="`${name}.${actionIndex}.description`"
             :ui="{ root: 'w-full', container: 'w-full' }"
           >
-            <UTextarea
+            <MarkupEditor
               v-model="action.description"
-              class="w-full"
-              :ui="{ root: 'flex w-full', base: 'w-full' }"
-              :rows="3"
               placeholder="Введи описание"
             />
           </UFormField>

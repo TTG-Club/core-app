@@ -4,6 +4,8 @@
     BugReportStatus,
   } from '~bug-report/model';
 
+  import type { CommunityRatingPeriod } from './model';
+
   import { BUG_REPORT_STATS_API_URL } from '~bug-report/model';
   import {
     MATERIAL_COUNTER_API_URL,
@@ -20,14 +22,17 @@
 
   import {
     COMMUNITY_BUG_STATS_DATA_KEY,
+    COMMUNITY_EMPTY_MONTH_TEXT,
     COMMUNITY_LABEL_FIXED,
+    COMMUNITY_PERIOD_DEFAULT,
+    COMMUNITY_PERIOD_OPTIONS,
     COMMUNITY_REFRESH_INTERVAL_MS,
     COMMUNITY_TOP_LABEL,
     COMMUNITY_TOP_TOOLTIP,
     COMMUNITY_TROPHY_COLOR,
   } from './model';
 
-  const { isAdmin } = useUserRoles();
+  const { isAdmin, canManageBugReports } = useUserRoles();
   const router = useRouter();
 
   // Материалы и сброс кеша
@@ -89,14 +94,33 @@
   const fixedCount = computed(() => bugStats.value?.fixedCount ?? 0);
   const topFixers = computed(() => bugStats.value?.topFixers ?? []);
 
+  const topFixersThisMonth = computed(
+    () => bugStats.value?.topFixersThisMonth ?? [],
+  );
+
+  /** Выбранный период рейтинга: за всё время / за месяц */
+  const selectedPeriod = ref<CommunityRatingPeriod>(COMMUNITY_PERIOD_DEFAULT);
+
+  /** Список лидеров активного периода (бэк уже отсортировал и обрезал до топ-10) */
+  const activeFixers = computed(() =>
+    selectedPeriod.value === 'month'
+      ? topFixersThisMonth.value
+      : topFixers.value,
+  );
+
+  /** Есть ли данные хотя бы за один период — иначе блок рейтинга скрыт целиком */
+  const hasAnyFixers = computed(
+    () => topFixers.value.length > 0 || topFixersThisMonth.value.length > 0,
+  );
+
   /** Максимальное кол-во исправленных у первого в списке — для масштабирования полосок */
-  const maxFixed = computed(() => topFixers.value[0]?.fixed ?? 1);
+  const maxFixed = computed(() => activeFixers.value[0]?.fixed ?? 1);
 
   /** Список лидеров с вычисленными стилями, классами и индексами */
   const decoratedTopFixers = computed(() => {
     const maxValue = maxFixed.value;
 
-    return topFixers.value.map((fixer, index) => {
+    return activeFixers.value.map((fixer, index) => {
       const isTopThree = index < 3;
 
       return {
@@ -117,24 +141,25 @@
     });
   });
 
-  /** Классы кликабельного стата исправленных багов (для админа) */
+  /** Классы кликабельного стата исправленных багов (для админа/модератора) */
   const fixedTileClass = computed(() => ({
-    'cursor-pointer transition-colors hover:bg-default/80': isAdmin.value,
+    'cursor-pointer transition-colors hover:bg-default/80':
+      canManageBugReports.value,
   }));
 
   /**
-   * Переход в админку багов с фильтром по новым (только для админа).
+   * Переход к баг-репортам с фильтром по новым (для админа/модератора).
    * Удобный шорткат для быстрой обработки свежих репортов.
    */
   function handleNewBugsClick(): void {
-    if (!isAdmin.value) {
+    if (!canManageBugReports.value) {
       return;
     }
 
     const status: BugReportStatus = 'NEW';
 
     router.push({
-      path: '/admin/bugs',
+      path: '/bug-reports',
       query: { status },
     });
   }
@@ -256,10 +281,10 @@
 
     <!-- Рейтинг охотников за багами -->
     <div
-      v-if="decoratedTopFixers.length"
-      class="flex flex-col gap-1 border-t border-default pt-3"
+      v-if="hasAnyFixers"
+      class="flex flex-col gap-2"
     >
-      <div class="flex items-center gap-1 pb-1">
+      <div class="flex items-center gap-1">
         <span class="text-xs font-medium tracking-[0.5px] text-muted uppercase">
           {{ COMMUNITY_TOP_LABEL }}
         </span>
@@ -272,53 +297,96 @@
         </UTooltip>
       </div>
 
-      <div
-        v-for="fixer in decoratedTopFixers"
-        :key="fixer.login"
-        class="fixer-row group relative flex items-center gap-2 rounded-lg px-2.5 py-1.5"
-        :style="fixer.rowStyle"
-      >
-        <!-- Полоска прогресса на фоне строки -->
-        <div
-          class="fixer-bar absolute inset-y-0 left-0 rounded-lg"
-          :class="fixer.barClass"
-          :style="fixer.barStyle"
-        />
+      <!-- Переключатель периода: за текущий месяц / за всё время.
+           :content="false" — используем табы только как переключатель,
+           панели-контент рисуем сами ниже.
+           :ui — возвращаем прежний вид кнопок: активная = приглушённый
+           полупрозрачный зелёный фон + текст success-400, вместо дефолтной
+           сплошной заливки со светлым текстом. Длинный in-[…]-модификатор
+           переопределяет SSR-заглушку: до гидрации reka не рисует бегунок и
+           подсвечивает активную вкладку через before:bg-success — без этого
+           на первом рендере мелькала бы сплошная зелёная заливка. -->
+      <UTabs
+        v-model="selectedPeriod"
+        :items="COMMUNITY_PERIOD_OPTIONS"
+        :content="false"
+        color="success"
+        size="xs"
+        :ui="{
+          trigger:
+            'flex-1 data-[state=active]:text-success-400 in-[[data-slot=list]:not(:has([data-slot=indicator]))]:data-[state=active]:before:bg-success-500/15',
+          indicator: 'bg-success-500/15 shadow-none',
+        }"
+      />
 
-        <!-- Позиция / Кубок -->
-        <div class="relative z-1 flex w-5 shrink-0 items-center justify-center">
-          <UIcon
-            v-if="fixer.isWinner"
-            name="tabler:trophy-filled"
-            class="size-4.5"
-            :style="{ color: COMMUNITY_TROPHY_COLOR }"
+      <!-- Список лидеров активного периода.
+           :key по периоду — чтобы при переключении список пересоздавался
+           целиком и анимация появления отрабатывала для всех строк, а не
+           только для новых логинов (иначе общие для обоих периодов логины
+           переиспользуются Vue и «проскакивают» анимацию). -->
+      <div
+        v-if="decoratedTopFixers.length"
+        :key="selectedPeriod"
+        class="flex flex-col gap-1"
+      >
+        <div
+          v-for="fixer in decoratedTopFixers"
+          :key="fixer.login"
+          class="fixer-row group relative flex items-center gap-2 rounded-lg px-2.5 py-1.5"
+          :style="fixer.rowStyle"
+        >
+          <!-- Полоска прогресса на фоне строки -->
+          <div
+            class="fixer-bar absolute inset-y-0 left-0 rounded-lg"
+            :class="fixer.barClass"
+            :style="fixer.barStyle"
           />
 
-          <span
-            v-else
-            class="text-xs font-semibold text-muted tabular-nums"
+          <!-- Позиция / Кубок -->
+          <div
+            class="relative z-1 flex w-5 shrink-0 items-center justify-center"
           >
-            {{ fixer.displayIndex }}
+            <UIcon
+              v-if="fixer.isWinner"
+              name="tabler:trophy-filled"
+              class="size-4.5"
+              :style="{ color: COMMUNITY_TROPHY_COLOR }"
+            />
+
+            <span
+              v-else
+              class="text-xs font-semibold text-muted tabular-nums"
+            >
+              {{ fixer.displayIndex }}
+            </span>
+          </div>
+
+          <!-- Логин -->
+          <span
+            class="relative z-1 flex-1 truncate text-sm"
+            :class="fixer.textClass"
+          >
+            {{ fixer.login }}
           </span>
+
+          <!-- Количество в бейдже -->
+          <UBadge
+            :label="String(fixer.fixed)"
+            :color="fixer.badgeColor"
+            variant="subtle"
+            size="sm"
+            class="relative z-1 tabular-nums"
+          />
         </div>
-
-        <!-- Логин -->
-        <span
-          class="relative z-1 flex-1 truncate text-sm"
-          :class="fixer.textClass"
-        >
-          {{ fixer.login }}
-        </span>
-
-        <!-- Количество в бейдже -->
-        <UBadge
-          :label="String(fixer.fixed)"
-          :color="fixer.badgeColor"
-          variant="subtle"
-          size="sm"
-          class="relative z-1 tabular-nums"
-        />
       </div>
+
+      <!-- Заглушка: за выбранный период ещё нет исправленных багов -->
+      <p
+        v-else
+        class="rounded-lg border border-dashed border-default px-3 py-4 text-center text-xs text-muted"
+      >
+        {{ COMMUNITY_EMPTY_MONTH_TEXT }}
+      </p>
     </div>
   </div>
 </template>

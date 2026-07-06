@@ -4,9 +4,12 @@ import type { FormErrorEvent } from '#ui/types';
 
 import { cloneDeep, isEqual, toMerged } from 'es-toolkit';
 
+import { useEntityRevisions } from '../revision/composable';
+
 export interface WorkshopFormOptions<T> {
   actionUrl: string;
   getInitialState: () => T;
+  revisionEntityType?: string;
   /**
    * Нормализует загруженные с сервера raw-данные перед слиянием с начальным состоянием.
    * Используется для миграции старых записей и приведения данных к актуальной структуре.
@@ -26,6 +29,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+/**
+ * Нормализует загруженный снимок и объединяет его с актуальной структурой формы.
+ */
+function createLoadedState<T extends { url: string }>(
+  options: WorkshopFormOptions<T>,
+  rawState: Record<string, unknown>,
+): T {
+  const normalizedState = options.normalizeLoaded
+    ? options.normalizeLoaded(rawState)
+    : rawState;
+
+  return cloneDeep(toMerged(options.getInitialState(), normalizedState));
+}
+
 export function useWorkshopForm<T extends { url: string }>(
   options: WorkshopFormOptions<T>,
 ) {
@@ -33,15 +50,29 @@ export function useWorkshopForm<T extends { url: string }>(
   const $toast = useToast();
   const route = useRoute();
   const router = useRouter();
+  const { isAdmin } = useUserRoles();
 
   const state = useState<T>(_options.getInitialState);
   const previousState = useState<T>(_options.getInitialState);
 
-  const isEditForm = computed(() => !!route.params.url);
+  /**
+   * Подставляет нормализованный снимок ревизии в текущее состояние формы.
+   */
+  function applyRevisionSnapshot(snapshot: Record<string, unknown>): void {
+    state.value = createLoadedState(_options, snapshot);
+  }
+
+  const entityId = computed(() =>
+    typeof route.params.url === 'string' && route.params.url
+      ? route.params.url
+      : undefined,
+  );
+
+  const isEditForm = computed(() => entityId.value !== undefined);
 
   const actionUrl = computed(() => {
     if (isEditForm.value) {
-      return `${_options.actionUrl}/${route.params.url}`;
+      return `${_options.actionUrl}/${entityId.value}`;
     }
 
     return _options.actionUrl;
@@ -51,6 +82,29 @@ export function useWorkshopForm<T extends { url: string }>(
     () => !isEqual(toRaw(previousState.value), toRaw(state.value)),
   );
 
+  const { revisionControl, refreshRevisions, clearSelectedRevision } =
+    useEntityRevisions({
+      entityType: _options.revisionEntityType,
+      entityId,
+      enabled: computed(
+        () =>
+          isAdmin.value
+          && isEditForm.value
+          && _options.revisionEntityType !== undefined,
+      ),
+      applySnapshot: applyRevisionSnapshot,
+    });
+
+  // Тело, которое реально уходит на сервер при сохранении (после нормализации).
+  // Предпросмотр обязан слать РОВНО его же — иначе `/preview` видит сырое
+  // состояние формы (пустые массивы, полупустой effect и т.п.), которое бэкенд
+  // при сохранении не получает, и предпросмотр падает там, где сохранение живёт.
+  const submitState = computed<T>(() =>
+    _options.transformBeforeSubmit
+      ? _options.transformBeforeSubmit(toValue(state))
+      : toValue(state),
+  );
+
   const { refresh: reset } = useAsyncData(async () => {
     if (isEditForm.value) {
       try {
@@ -58,14 +112,12 @@ export function useWorkshopForm<T extends { url: string }>(
 
         const rawData = isRecord(rawResponse) ? rawResponse : {};
 
-        const normalizedResponse = _options.normalizeLoaded
-          ? _options.normalizeLoaded(rawData)
-          : rawData;
+        const loadedState = createLoadedState(_options, rawData);
 
-        const merged = toMerged(_options.getInitialState(), normalizedResponse);
-
-        state.value = cloneDeep(merged);
-        previousState.value = cloneDeep(merged);
+        state.value = loadedState;
+        previousState.value = cloneDeep(loadedState);
+        clearSelectedRevision();
+        await refreshRevisions();
       } catch (error) {
         consola.error(error);
 
@@ -99,13 +151,9 @@ export function useWorkshopForm<T extends { url: string }>(
     }
 
     try {
-      const body = _options.transformBeforeSubmit
-        ? _options.transformBeforeSubmit(toValue(state))
-        : toValue(state);
-
       await $fetch(toValue(actionUrl), {
         method: toValue(isEditForm) ? 'put' : 'post',
-        body,
+        body: toValue(submitState),
         onResponse,
       });
     } catch (error) {
@@ -179,12 +227,13 @@ export function useWorkshopForm<T extends { url: string }>(
   return {
     state,
     previousState,
+    submitState,
 
     isFormEdited,
+    revisionControl,
 
     onSubmit,
     onError,
-
     reset: () => reset(),
   };
 }

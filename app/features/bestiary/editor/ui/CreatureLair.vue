@@ -2,6 +2,7 @@
   import type { CreateAction, CreatureLair } from '~bestiary/model';
 
   import { EditorArrayControls } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
 
   function getEmpty(): CreateAction {
     return {
@@ -61,12 +62,8 @@
           name="lair.description"
           :ui="{ root: 'w-full', container: 'w-full' }"
         >
-          <UTextarea
+          <MarkupEditor
             v-model="model.description"
-            class="w-full"
-            :ui="{ root: 'flex w-full', base: 'w-full' }"
-            :maxrows="6"
-            :rows="2"
             placeholder="Введите описание (необязательно)"
           />
         </UFormField>
@@ -118,11 +115,8 @@
             name="description"
             :ui="{ root: 'w-full', container: 'w-full' }"
           >
-            <UTextarea
+            <MarkupEditor
               v-model="effect.description"
-              class="w-full"
-              :ui="{ root: 'flex w-full', base: 'w-full' }"
-              :rows="3"
               placeholder="Введи описание"
             />
           </UFormField>
@@ -151,12 +145,8 @@
           name="lair.ending"
           :ui="{ root: 'w-full', container: 'w-full' }"
         >
-          <UTextarea
+          <MarkupEditor
             v-model="model.ending"
-            class="w-full"
-            :ui="{ root: 'flex w-full', base: 'w-full' }"
-            :maxrows="6"
-            :rows="2"
             placeholder="Описание окончания действия логова (необязательно)"
           />
         </UFormField>

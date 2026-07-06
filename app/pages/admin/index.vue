@@ -6,6 +6,8 @@
     ADMIN_DASHBOARD_PAGE_TITLE,
     ADMIN_DASHBOARD_PERSONAS_DESCRIPTION,
     ADMIN_DASHBOARD_PERSONAS_TITLE,
+    ADMIN_DASHBOARD_SUBSCRIPTIONS_DESCRIPTION,
+    ADMIN_DASHBOARD_SUBSCRIPTIONS_TITLE,
     ADMIN_DASHBOARD_TOKENATOR_DESCRIPTION,
     ADMIN_DASHBOARD_TOKENATOR_TITLE,
   } from '~admin/dashboard/model';
@@ -19,11 +21,6 @@
     ADMIN_USERS_NAVIGATION_LABEL,
     ADMIN_USERS_PAGE_DESCRIPTION,
   } from '~admin/users/model';
-  import {
-    ADMIN_BUGS_CONFIGURE_LABEL,
-    ADMIN_BUGS_NAVIGATION_LABEL,
-    ADMIN_BUGS_PAGE_DESCRIPTION,
-  } from '~bug-report/model';
 
   const {
     data: onlineStats,
@@ -127,20 +124,20 @@
           <template #header>
             <div class="flex items-center justify-between gap-2">
               <h2 class="truncate text-base text-highlighted">
-                {{ ADMIN_BUGS_NAVIGATION_LABEL }}
+                {{ ADMIN_DASHBOARD_SUBSCRIPTIONS_TITLE }}
               </h2>
 
               <UButton
                 size="sm"
-                to="/admin/bugs"
+                to="/admin/subscriptions"
               >
-                {{ ADMIN_BUGS_CONFIGURE_LABEL }}
+                {{ ADMIN_DASHBOARD_CONFIGURE_LABEL }}
               </UButton>
             </div>
           </template>
 
           <div class="text-sm text-muted">
-            {{ ADMIN_BUGS_PAGE_DESCRIPTION }}
+            {{ ADMIN_DASHBOARD_SUBSCRIPTIONS_DESCRIPTION }}
           </div>
         </UCard>
       </div>

@@ -7,6 +7,7 @@
     PageBugReportResponse,
   } from '~bug-report/model';
 
+  import { Role } from '~/shared/types';
   import {
     AdminBugReportDetailPane,
     AdminBugReportRow,
@@ -29,6 +30,10 @@
     BUG_REPORT_STATS_API_URL,
     BUG_REPORT_STATUS_LABELS,
   } from '~bug-report/model';
+
+  definePageMeta({
+    auth: { roles: [Role.ADMIN, Role.MODERATOR] },
+  });
 
   const { isSplitActive } = useLayoutWidth();
 

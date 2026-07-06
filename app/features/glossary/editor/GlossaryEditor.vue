@@ -4,8 +4,11 @@
   import { z } from 'zod/v4';
 
   import { GlossaryPreview } from '~glossary/preview';
-  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { EditorBaseInfo } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
   import { useWorkshopForm } from '~workshop/composable';
+  import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
+  import { WorkshopEditorFormControls } from '~workshop/revision/ui';
 
   const formRef = useTemplateRef('formRef');
 
@@ -37,10 +40,12 @@
     };
   }
 
-  const { state, onSubmit, onError } = useWorkshopForm<GlossaryCreate>({
-    actionUrl: '/api/v2/glossary',
-    getInitialState,
-  });
+  const { state, submitState, onSubmit, onError, revisionControl } =
+    useWorkshopForm<GlossaryCreate>({
+      actionUrl: '/api/v2/glossary',
+      getInitialState,
+      revisionEntityType: REVISION_ENTITY_TYPES.GLOSSARY,
+    });
 </script>
 
 <template>
@@ -85,23 +90,22 @@
           name="description"
           required
         >
-          <UTextarea
+          <MarkupEditor
             v-model="state.description"
-            :rows="8"
             placeholder="Введи описание"
           />
         </UFormField>
       </div>
     </UCard>
 
-    <EditorFormControls>
+    <WorkshopEditorFormControls :revision-control>
       <template #preview="{ opened, changeVisibility }">
         <GlossaryPreview
           :open="opened"
-          :state="state"
+          :state="submitState"
           @update:open="changeVisibility"
         />
       </template>
-    </EditorFormControls>
+    </WorkshopEditorFormControls>
   </UForm>
 </template>

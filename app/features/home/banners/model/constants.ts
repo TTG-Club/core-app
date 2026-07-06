@@ -5,4 +5,6 @@ export const VTTG_CAMPAIGN_BANNER = {
   backgroundImage: '/s3/home/vttg-banner.webp',
   linkTo: 'https://crowdrepublic.ru/projects/1073013',
   moreInfoTo: '/vttg',
+  stripText: 'Идёт сбор средств на CrowdRepublic',
+  stripIcon: 'tabler:heart-handshake',
 } as const;

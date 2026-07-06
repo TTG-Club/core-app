@@ -2,9 +2,12 @@
   import type { BackgroundCreate } from '~backgrounds/model';
 
   import { BackgroundPreview } from '~backgrounds/preview';
-  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { EditorBaseInfo } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
   import { SelectAbilities, SelectFeat, SelectSkill } from '~ui/select';
   import { useWorkshopForm } from '~workshop/composable';
+  import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
+  import { WorkshopEditorFormControls } from '~workshop/revision/ui';
 
   function getInitialState(): BackgroundCreate {
     return {
@@ -30,10 +33,12 @@
     };
   }
 
-  const { state, onSubmit, onError } = useWorkshopForm<BackgroundCreate>({
-    actionUrl: '/api/v2/backgrounds',
-    getInitialState,
-  });
+  const { state, submitState, onSubmit, onError, revisionControl } =
+    useWorkshopForm<BackgroundCreate>({
+      actionUrl: '/api/v2/backgrounds',
+      getInitialState,
+      revisionEntityType: REVISION_ENTITY_TYPES.BACKGROUND,
+    });
 </script>
 
 <template>
@@ -107,9 +112,8 @@
           label="Владение инструментами"
           name="toolProficiency"
         >
-          <UTextarea
+          <MarkupEditor
             v-model="state.toolProficiency"
-            :rows="3"
             placeholder="Введи инструменты"
           />
         </UFormField>
@@ -119,9 +123,8 @@
           label="Снаряжение"
           name="equipment"
         >
-          <UTextarea
+          <MarkupEditor
             v-model="state.equipment"
-            :rows="3"
             placeholder="Введи снаряжение"
           />
         </UFormField>
@@ -135,23 +138,22 @@
 
       <div class="grid grid-cols-1 gap-4">
         <UFormField name="description">
-          <UTextarea
+          <MarkupEditor
             v-model="state.description"
-            :rows="8"
             placeholder="Введи описание"
           />
         </UFormField>
       </div>
     </UCard>
 
-    <EditorFormControls>
+    <WorkshopEditorFormControls :revision-control>
       <template #preview="{ opened, changeVisibility }">
         <BackgroundPreview
           :open="opened"
-          :state="state"
+          :state="submitState"
           @update:open="changeVisibility"
         />
       </template>
-    </EditorFormControls>
+    </WorkshopEditorFormControls>
   </UForm>
 </template>

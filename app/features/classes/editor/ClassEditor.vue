@@ -2,9 +2,12 @@
   import type { ClassCreate, ClassLinkResponse } from '../model';
 
   import { ClassPreview } from '~classes/preview';
-  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { EditorBaseInfo } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
   import { UploadGallery, UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
+  import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
+  import { WorkshopEditorFormControls } from '~workshop/revision/ui';
 
   import {
     CharacteristicsSettings,
@@ -73,10 +76,12 @@
     };
   }
 
-  const { state, onError, onSubmit } = useWorkshopForm<ClassCreate>({
-    actionUrl: '/api/v2/classes',
-    getInitialState,
-  });
+  const { state, submitState, onError, onSubmit, revisionControl } =
+    useWorkshopForm<ClassCreate>({
+      actionUrl: '/api/v2/classes',
+      getInitialState,
+      revisionEntityType: REVISION_ENTITY_TYPES.CLASS,
+    });
 
   const { data: classLinks } =
     useNuxtData<ClassLinkResponse[]>('classes-select');
@@ -130,10 +135,9 @@
           class="col-span-full"
           name="equipment"
         >
-          <UTextarea
+          <MarkupEditor
             v-model="state.equipment"
             placeholder="Опиши стартовое снаряжение"
-            :rows="4"
           />
         </UFormField>
       </div>
@@ -149,10 +153,9 @@
           class="col-span-full"
           name="description"
         >
-          <UTextarea
+          <MarkupEditor
             v-model="state.description"
             placeholder="Введи описание"
-            :rows="8"
           />
         </UFormField>
       </div>
@@ -206,14 +209,14 @@
       </div>
     </UCard>
 
-    <EditorFormControls>
+    <WorkshopEditorFormControls :revision-control>
       <template #preview="{ opened, changeVisibility }">
         <ClassPreview
           :open="opened"
-          :state="state"
+          :state="submitState"
           @update:open="changeVisibility"
         />
       </template>
-    </EditorFormControls>
+    </WorkshopEditorFormControls>
   </UForm>
 </template>

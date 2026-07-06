@@ -2,6 +2,7 @@
   import type { CreateTrait, CreatureCreate } from '~bestiary/model';
 
   import { EditorArrayControls } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
 
   type Traits = CreatureCreate['traits'];
 
@@ -85,11 +86,8 @@
             name="description"
             :ui="{ root: 'w-full', container: 'w-full' }"
           >
-            <UTextarea
+            <MarkupEditor
               v-model="trait.description"
-              class="w-full"
-              :ui="{ root: 'flex w-full', base: 'w-full' }"
-              :rows="3"
               placeholder="Введи описание"
             />
           </UFormField>

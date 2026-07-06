@@ -1,34 +1,36 @@
 <script setup lang="ts">
-  import type { FilterGroup, FilterGroups } from '../types';
+  import type { FilterGroup, FilterGroups, FilterItems } from '../types';
 
-  import { getGroupItems } from '../utils';
+  import {
+    getAvailableGroupItems,
+    hasTouchedItem,
+    isGroupDependentOn,
+  } from '../utils';
   import { FilterGroup as FilterGroupComponent } from './ui';
 
   type GroupPosition = 'standalone' | 'top' | 'bottom';
 
-  /**
-   * Определяет позицию элемента внутри визуально объединённой группы.
-   * Используется для управления скруглениями бордеров смежных блоков.
-   */
+  interface DisplayGroup {
+    group: FilterGroup;
+    index: number;
+    availableItems: FilterItems;
+  }
+
+  /** Определяет позицию фильтра внутри визуально объединённой группы. */
   function getGroupPosition(
-    subIdx: number,
+    groupIndex: number,
     groupLength: number,
   ): GroupPosition {
     if (groupLength === 1) {
       return 'standalone';
     }
 
-    return subIdx === 0 ? 'top' : 'bottom';
+    return groupIndex === 0 ? 'top' : 'bottom';
   }
 
-  function isGroupVisible(group: FilterGroup, isPreview: boolean) {
-    if (!isPreview) {
-      return true;
-    }
-
-    return getGroupItems(group).some(
-      (filterItem) => filterItem.selected !== null,
-    );
+  /** Определяет видимость группы в обычном режиме и режиме предпросмотра. */
+  function isGroupVisible(items: FilterItems, isPreview: boolean): boolean {
+    return !isPreview || hasTouchedItem(items);
   }
 
   const { preview = false } = defineProps<{
@@ -39,43 +41,64 @@
     required: true,
   });
 
+  const containerGapClass = computed(() => (preview ? 'gap-3' : 'gap-6'));
+  const groupGapClass = computed(() => (preview ? 'gap-3' : undefined));
+
+  /** Позиция группы с учётом предпросмотра (в превью блоки не объединяются). */
+  function resolveGroupPosition(
+    itemIndex: number,
+    groupLength: number,
+  ): GroupPosition {
+    return preview ? 'standalone' : getGroupPosition(itemIndex, groupLength);
+  }
+
   const groupedFilters = computed(() => {
-    const items: Array<Array<{ group: FilterGroup; index: number }>> = [];
+    const displayGroups: DisplayGroup[][] = [];
     const groups = filter.value;
 
     for (let i = 0; i < groups.length; i++) {
       const group = groups[i];
       const nextGroup = groups[i + 1];
 
-      // Если идут подряд Классы и Подклассы, объединяем их (без отступа между ними)
-      if (group?.key === 'className' && nextGroup?.key === 'subclassName') {
-        const groupVisible = isGroupVisible(group, preview);
-        const nextGroupVisible = isGroupVisible(nextGroup, preview);
+      if (!group) {
+        continue;
+      }
 
-        if (groupVisible || nextGroupVisible) {
-          const combined = [];
+      const availableItems = getAvailableGroupItems(group, groups);
 
-          if (groupVisible) {
-            combined.push({ group, index: i });
-          }
+      if (nextGroup && isGroupDependentOn(nextGroup, group.key)) {
+        const nextAvailableItems = getAvailableGroupItems(nextGroup, groups);
+        const combinedGroups: DisplayGroup[] = [];
 
-          if (nextGroupVisible) {
-            combined.push({ group: nextGroup, index: i + 1 });
-          }
-
-          items.push(combined);
+        if (isGroupVisible(availableItems, preview)) {
+          combinedGroups.push({ group, index: i, availableItems });
         }
 
+        if (isGroupVisible(nextAvailableItems, preview)) {
+          combinedGroups.push({
+            group: nextGroup,
+            index: i + 1,
+            availableItems: nextAvailableItems,
+          });
+        }
+
+        if (combinedGroups.length > 0) {
+          displayGroups.push(combinedGroups);
+        }
+
+        // Зависимая группа уже отрисована в паре с текущей — пропускаем её,
+        // чтобы не вывести повторно на следующей итерации.
         i++;
-      } else if (group && isGroupVisible(group, preview)) {
-        items.push([{ group, index: i }]);
+      } else if (isGroupVisible(availableItems, preview)) {
+        displayGroups.push([{ group, index: i, availableItems }]);
       }
     }
 
-    return items;
+    return displayGroups;
   });
 
-  function handleGroupUpdate(index: number, updatedGroup: FilterGroup) {
+  /** Обновляет группу фильтров без мутации массива верхнего уровня. */
+  function handleGroupUpdate(index: number, updatedGroup: FilterGroup): void {
     const updated = [...filter.value];
 
     updated[index] = updatedGroup;
@@ -86,22 +109,21 @@
 <template>
   <div
     class="flex flex-col"
-    :class="preview ? 'gap-3' : 'gap-6'"
+    :class="containerGapClass"
   >
     <div
-      v-for="(itemGroup, idx) in groupedFilters"
-      :key="idx"
+      v-for="(itemGroup, groupIndex) in groupedFilters"
+      :key="groupIndex"
       class="flex flex-col"
-      :class="preview ? 'gap-3' : undefined"
+      :class="groupGapClass"
     >
       <FilterGroupComponent
-        v-for="(item, subIdx) in itemGroup"
+        v-for="(item, itemIndex) in itemGroup"
         :key="`${item.group.key}-${item.group.name}`"
         :model-value="item.group"
+        :items="item.availableItems"
         :preview
-        :position="
-          preview ? 'standalone' : getGroupPosition(subIdx, itemGroup.length)
-        "
+        :position="resolveGroupPosition(itemIndex, itemGroup.length)"
         @update:model-value="handleGroupUpdate(item.index, $event)"
       />
     </div>

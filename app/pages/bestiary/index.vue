@@ -12,8 +12,13 @@
   import {
     BESTIARY_LIST_LOAD_MORE_DISTANCE,
     BESTIARY_LIST_PAGE_SIZE,
+    createBestiaryListPresentationConfig,
   } from '~bestiary/model';
   import { FilterControls, useFilter } from '~infrastructure/filter';
+  import {
+    useListPresentation,
+    useListPresentationMenus,
+  } from '~infrastructure/list-presentation/composable';
   import { UiDetailPane } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
@@ -60,6 +65,18 @@
     order: challengeRatingOrder,
     pending: isChallengeRatingOrderPending,
   } = useChallengeRatingGroupOrder();
+
+  const bestiaryListPresentationConfig = createBestiaryListPresentationConfig(
+    () => challengeRatingOrder.value,
+  );
+
+  const presentation = useListPresentation(bestiaryListPresentationConfig);
+
+  const presentationMenus = useListPresentationMenus(
+    bestiaryListPresentationConfig,
+    presentation.grouping,
+    presentation.sorting,
+  );
 
   // Динамический таргет для бесконечного скролла
   // В стандартном режиме — window с большим distance (900px),
@@ -111,6 +128,7 @@
     JSON.stringify({
       filter: filterQuery.value,
       search: search.value ?? '',
+      presentation: presentation.resetKey.value,
     }),
   );
 
@@ -188,6 +206,7 @@
         query: {
           page,
           size,
+          ...presentation.query.value,
           ...(search.value ? { search: search.value } : {}),
           ...filterQuery.value,
         },
@@ -207,7 +226,7 @@
     () => fetchCreaturePage(0, firstCreaturePageSize.value),
     {
       deep: false,
-      watch: [search, filterQuery],
+      watch: [search, filterQuery, presentation.resetKey],
     },
   );
 
@@ -332,7 +351,8 @@
 
     return (
       isBestiaryLoading
-      || isChallengeRatingOrderPending.value
+      || (presentation.grouping.value === 'CHALLENGE_RATING'
+        && isChallengeRatingOrderPending.value)
       || isRestoringSavedPage.value
       || isTargetCreatureRestorePending.value
     );
@@ -351,6 +371,7 @@
         :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
+        :presentation-menus="presentationMenus"
       />
     </template>
 
@@ -375,13 +396,9 @@
           :virtual-threshold="BESTIARY_LIST_PAGE_SIZE"
           :items="bestiary"
           :reset-key="listResetKey"
-          field="challengeRailing"
-          separator-label="Уровень опасности {value}"
-          :group-sort="{
-            mode: 'ordered',
-            order: challengeRatingOrder,
-            unknown: 'before',
-          }"
+          :field="presentation.groupField.value"
+          :separator-label="presentation.separatorLabel.value"
+          :group-sort="presentation.groupSort.value"
           :active-item-key="detailUrl"
         >
           <template #default="{ item }">

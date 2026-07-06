@@ -9,8 +9,10 @@
 <template>
   <div class="sticky bottom-0 z-20 col-span-full">
     <div
-      class="flex justify-end gap-2 border-t border-default bg-default/95 px-4 py-3 backdrop-blur"
+      class="flex items-center justify-end gap-2 border-t border-default bg-default/95 px-4 py-3 backdrop-blur"
     >
+      <slot name="revision" />
+
       <template v-if="$slots.preview">
         <UButton
           variant="soft"

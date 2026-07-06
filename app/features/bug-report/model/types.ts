@@ -152,6 +152,12 @@ export interface BugReportStatsResponse {
 
   /** Топ-10 пользователей по количеству решённых багов */
   topFixers: BugReportUserFixedCount[];
+
+  /** Количество решённых багов, созданных в текущем календарном месяце */
+  fixedCountThisMonth: number;
+
+  /** Топ-10 пользователей по решённым багам за текущий календарный месяц */
+  topFixersThisMonth: BugReportUserFixedCount[];
 }
 
 /** Допустимые инструменты рисования */

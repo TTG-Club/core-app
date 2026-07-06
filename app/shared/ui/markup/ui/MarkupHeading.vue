@@ -10,14 +10,14 @@
     renderNodes: (nodes: RenderNode[]) => VNode[];
   }>();
 
-  // Пользовательский уровень 1-4
-  const userLevel = Number.parseInt(node.attrs?.level?.toString() || '1');
+  // Пользовательский уровень 1-4. Клампим (а не бросаем ошибку): throw здесь
+  // выполняется во время рендера Vue, ВНЕ try/catch MarkupRender, и уронил бы
+  // всю страницу/предпросмотр из-за одного плохого `level:`.
+  const rawLevel = Number.parseInt(node.attrs?.level?.toString() || '1');
 
-  if (userLevel < 1 || userLevel > 4) {
-    throw new Error(
-      `[Markup] Heading level must be between 1 and 4, got: ${userLevel}`,
-    );
-  }
+  const userLevel = Number.isNaN(rawLevel)
+    ? 1
+    : Math.min(4, Math.max(1, rawLevel));
 
   // Маппинг: пользовательский 1-4 → реальный 3-6
   const actualLevel = userLevel + 2; // 1→3, 2→4, 3→5, 4→6

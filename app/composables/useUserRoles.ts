@@ -3,10 +3,6 @@ import { Role } from '~/shared/types';
 export function useUserRoles() {
   const { user, roles } = useUser();
 
-  const isSubscriber = computed(
-    () => !!user.value?.roles.includes(Role.SUBSCRIBER),
-  );
-
   const isWriter = computed(() => !!user.value?.roles.includes(Role.WRITER));
 
   const isModerator = computed(
@@ -15,12 +11,19 @@ export function useUserRoles() {
 
   const isAdmin = computed(() => !!user.value?.roles.includes(Role.ADMIN));
 
+  const canEditEntities = computed(() => isAdmin.value || isModerator.value);
+
+  const canManageBugReports = computed(
+    () => isAdmin.value || isModerator.value,
+  );
+
   return {
     roles,
 
-    isSubscriber,
     isWriter,
     isModerator,
     isAdmin,
+    canEditEntities,
+    canManageBugReports,
   };
 }

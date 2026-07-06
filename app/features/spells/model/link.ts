@@ -9,6 +9,12 @@ export interface SpellLinkResponse {
   concentration?: boolean;
   ritual?: boolean;
   components: SpellLinkComponents;
+  classes: Array<SpellClassAffiliation>;
+}
+
+export interface SpellClassAffiliation {
+  url: string;
+  name: string;
 }
 
 export interface SpellLinkComponents {

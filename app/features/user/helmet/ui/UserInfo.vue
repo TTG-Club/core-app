@@ -1,9 +1,25 @@
 <script setup lang="ts">
   import type { UserProfile } from '~/shared/types';
 
+  import { useProfileBadges } from '~profile/activation/composables';
+
   defineProps<{
     user: UserProfile;
   }>();
+
+  const emit = defineEmits<{
+    'open-profile': [];
+  }>();
+
+  // Данные бейджей прогреваются заранее в хелмете (см. UserHelmet), поэтому к
+  // моменту открытия панели корона и рамка уже готовы — без «доезда».
+  const { hasAvatarFrame, isSubscriptionActive, frameImageUrl } =
+    useProfileBadges();
+
+  // Клик по аватару открывает профиль; меню закрывает родитель (там состояние поповера).
+  function openProfile() {
+    emit('open-profile');
+  }
 </script>
 
 <template>
@@ -15,17 +31,48 @@
         {{ user.username }}
       </div>
 
-      <div
-        class="overflow-hidden text-xs text-ellipsis whitespace-nowrap text-secondary"
-      >
-        {{ user.email }}
+      <div class="flex flex-wrap items-center gap-1.5">
+        <UBadge
+          color="primary"
+          variant="subtle"
+          size="md"
+        >
+          Авантюрист
+        </UBadge>
+
+        <!-- Бейдж активной подписки — только корона, подпись в тултипе -->
+        <UTooltip
+          v-if="isSubscriptionActive"
+          text="Подписка активна"
+        >
+          <UBadge
+            color="success"
+            variant="subtle"
+            size="md"
+            icon="tabler:crown"
+          />
+        </UTooltip>
       </div>
     </div>
 
-    <UAvatar
-      :alt="user.username"
-      size="3xl"
-      :ui="{ fallback: 'uppercase' }"
-    />
+    <div
+      class="relative shrink-0 cursor-pointer"
+      @click.left.exact.prevent="openProfile"
+    >
+      <UAvatar
+        :alt="user.username"
+        size="3xl"
+        :ui="{ fallback: 'uppercase' }"
+      />
+
+      <!-- Рамка аватара (перк AVATAR_FRAME из кода) — оверлей поверх аватара -->
+      <img
+        v-if="hasAvatarFrame"
+        :src="frameImageUrl"
+        alt=""
+        aria-hidden="true"
+        class="pointer-events-none absolute inset-0 z-10 h-full w-full scale-[1.35] object-contain"
+      />
+    </div>
   </div>
 </template>

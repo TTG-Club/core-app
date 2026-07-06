@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { USER_TOKEN_COOKIE } from '#shared/consts';
+  import { useProfileBadges } from '~profile/activation/composables';
   import { KbdShortcut } from '~ui/kbd-shortcut';
   import { AuthModal } from '~user/auth-modal';
 
@@ -13,7 +14,7 @@
     isLoggedIn,
   } = useUser();
 
-  const { isAdmin } = useUserRoles();
+  const { isAdmin, canEditEntities, canManageBugReports } = useUserRoles();
   const { isTablet } = useBreakpoints();
   const userTokenCookie = useCookie<string | null>(USER_TOKEN_COOKIE);
 
@@ -29,6 +30,12 @@
   );
 
   if (userTokenCookie.value) {
+    // Прогреваем статус подписки/перки и картинку рамки заранее: контент поповера
+    // (UserInfo) монтируется лениво при открытии, и без прогрева корона и рамка
+    // «доезжали» уже в открытой панели. Вызов до await — чтобы остаться в
+    // синхронном setup-контексте (useAsyncData/watch завязаны на инстанс).
+    useProfileBadges();
+
     try {
       await fetchUser();
     } catch (err) {
@@ -71,7 +78,7 @@
     }
   }
 
-  if (isAdmin.value) {
+  if (canEditEntities.value) {
     defineShortcuts(
       {
         // eslint-disable-next-line camelcase
@@ -107,7 +114,10 @@
       #content
     >
       <div class="flex flex-col">
-        <UserInfo :user />
+        <UserInfo
+          :user
+          @open-profile="openProfile"
+        />
 
         <USeparator />
 
@@ -121,11 +131,11 @@
               icon="tabler:user-cog"
               @click.left.exact.prevent="openProfile"
             >
-              Настройка профиля
+              Профиль
             </UButton>
 
             <UButton
-              v-if="isAdmin"
+              v-if="canEditEntities"
               icon="ttg:menu-filled-workshop"
               color="neutral"
               variant="ghost"
@@ -152,6 +162,21 @@
             >
               <div class="flex w-full items-center justify-between">
                 <span>Панель администратора</span>
+              </div>
+            </UButton>
+
+            <UButton
+              v-if="canManageBugReports"
+              icon="tabler:bug"
+              color="neutral"
+              variant="ghost"
+              class="w-full"
+              size="lg"
+              to="/bug-reports"
+              @click.left.exact="closeMenu"
+            >
+              <div class="flex w-full items-center justify-between">
+                <span>Баг-репорты</span>
               </div>
             </UButton>
           </div>

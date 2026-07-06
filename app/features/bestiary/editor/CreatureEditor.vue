@@ -3,10 +3,13 @@
 
   import { getInitialState } from '~bestiary/model';
   import { CreaturePreview } from '~bestiary/preview';
-  import { EditorBaseInfo, EditorFormControls } from '~ui/editor';
+  import { EditorBaseInfo } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
   import { SelectAlignment } from '~ui/select';
   import { UploadGallery, UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
+  import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
+  import { WorkshopEditorFormControls } from '~workshop/revision/ui';
 
   import {
     CREATURE_GALLERY_FIELD_LABEL,
@@ -32,10 +35,12 @@
     CreatureType,
   } from './ui';
 
-  const { state, onError, onSubmit } = useWorkshopForm<CreatureCreate>({
-    actionUrl: '/api/v2/bestiary',
-    getInitialState,
-  });
+  const { state, submitState, onError, onSubmit, revisionControl } =
+    useWorkshopForm<CreatureCreate>({
+      actionUrl: '/api/v2/bestiary',
+      getInitialState,
+      revisionEntityType: REVISION_ENTITY_TYPES.CREATURE,
+    });
 </script>
 
 <template>
@@ -64,11 +69,8 @@
         name="description"
         :ui="{ root: 'w-full', container: 'w-full' }"
       >
-        <UTextarea
+        <MarkupEditor
           v-model="state.description"
-          class="w-full"
-          :ui="{ root: 'flex w-full', base: 'w-full' }"
-          :rows="4"
           placeholder="Введи описание"
         />
       </UFormField>
@@ -282,15 +284,15 @@
       </div>
     </UCard>
 
-    <EditorFormControls>
+    <WorkshopEditorFormControls :revision-control>
       <template #preview="{ opened, changeVisibility }">
         <CreaturePreview
-          :state="state"
+          :state="submitState"
           :open="opened"
           @update:open="changeVisibility"
         />
       </template>
-    </EditorFormControls>
+    </WorkshopEditorFormControls>
   </UForm>
 </template>
 

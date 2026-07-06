@@ -1,0 +1,1 @@
+export { useEntityRevisions } from './useEntityRevisions';

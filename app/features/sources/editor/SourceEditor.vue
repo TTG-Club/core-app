@@ -8,6 +8,7 @@
   import { DatePicker } from '~ui/date-picker';
   import { EditorFormControls } from '~ui/editor';
   import { InputUrl } from '~ui/input';
+  import { MarkupEditor } from '~ui/markup-editor';
   import { UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
 
@@ -42,10 +43,11 @@
     };
   }
 
-  const { state, onSubmit, onError } = useWorkshopForm<SourceCreate>({
-    actionUrl: '/api/v2/source',
-    getInitialState,
-  });
+  const { state, submitState, onSubmit, onError } =
+    useWorkshopForm<SourceCreate>({
+      actionUrl: '/api/v2/source',
+      getInitialState,
+    });
 
   const acronym = computed<string>(() => {
     const words = state.value.name.eng
@@ -219,9 +221,8 @@
           class="col-span-full"
           name="description"
         >
-          <UTextarea
+          <MarkupEditor
             v-model="state.description"
-            :rows="8"
             placeholder="Введи описание"
           />
         </UFormField>
@@ -277,7 +278,7 @@
       <template #preview="{ opened, changeVisibility }">
         <SourcePreview
           :open="opened"
-          :state="state"
+          :state="submitState"
           @update:open="changeVisibility"
         />
       </template>

@@ -2,7 +2,7 @@
   import { Role } from '~/shared/types';
 
   definePageMeta({
-    auth: { roles: [Role.ADMIN] },
+    auth: { roles: [Role.ADMIN, Role.MODERATOR] },
   });
 
   useSeoMeta({

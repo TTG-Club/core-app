@@ -1,9 +1,17 @@
 <script setup lang="ts">
   import type { UserProfile } from '~/shared/types';
 
+  import { useMyRewards } from '~profile/activation/composables';
+  import { AVATAR_FRAME_IMAGE_URL } from '~profile/activation/model';
+
   defineProps<{
     profile?: UserProfile;
   }>();
+
+  const { hasPerk } = useMyRewards();
+
+  // Рамка аватара — косметический перк AVATAR_FRAME, выданный кодом.
+  const hasAvatarFrame = computed(() => hasPerk('AVATAR_FRAME'));
 </script>
 
 <template>
@@ -19,6 +27,15 @@
       :alt="profile?.username"
       size="3xl"
       class="relative z-10 h-32 w-32 text-4xl shadow-2xl ring-4 ring-default transition-transform duration-200 group-active:scale-95"
+    />
+
+    <!-- Рамка аватара (перк AVATAR_FRAME из кода) — оверлей поверх аватара -->
+    <img
+      v-if="hasAvatarFrame"
+      :src="AVATAR_FRAME_IMAGE_URL"
+      alt=""
+      aria-hidden="true"
+      class="pointer-events-none absolute inset-0 z-10 h-full w-full scale-[1.35] object-contain"
     />
 
     <UButton

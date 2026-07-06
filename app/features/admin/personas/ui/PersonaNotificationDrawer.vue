@@ -4,6 +4,7 @@
   import { FetchError } from 'ofetch';
 
   import { DatePicker } from '~ui/date-picker';
+  import { MarkupEditor } from '~ui/markup-editor';
   import { SelectNotificationType } from '~ui/select';
 
   const { persona, notification, isEditing } = defineProps<{
@@ -217,11 +218,7 @@
           </div>
 
           <UFormField label="Текст (поддерживает разметку)">
-            <UTextarea
-              v-model="notificationText"
-              :rows="12"
-              class="w-full"
-            />
+            <MarkupEditor v-model="notificationText" />
           </UFormField>
         </div>
 

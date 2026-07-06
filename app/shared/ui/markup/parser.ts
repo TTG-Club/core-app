@@ -91,6 +91,21 @@ function convertMarker(string: string, depth: number): MarkerNode {
     return { type: marker };
   }
 
+  // Таблица: разбираем {@caption}/{@tr}/{@th}/{@td} ЛОКАЛЬНО в ту же структуру,
+  // что присылает бэкенд-JSON (caption/colLabels/colStyles/rows), — чтобы
+  // MarkupTable рендерил строку-{@table} без изменений.
+  if (marker === 'table') {
+    return buildTableNode(rest, depth);
+  }
+
+  // Разделитель `{@separator}` — блочный маркер БЕЗ текста (только атрибуты
+  // оформления, например `| color:...`). Разбираем локально: иначе проверка
+  // `if (!text)` ниже бросит «must have text», и разделитель потеряется при
+  // разборе строки-исходника (в узловой форме он приходит без текста).
+  if (marker === 'separator') {
+    return { type: marker, attrs: safeAttrs(splitByPipeBase(rest).params) };
+  }
+
   const { text, params } = splitByPipeBase(rest);
 
   if (!text) {
@@ -99,11 +114,166 @@ function convertMarker(string: string, depth: number): MarkerNode {
     );
   }
 
+  let attrs: MarkerAttributes | undefined;
+  let contentSource = text;
+
+  try {
+    attrs = splitAttrs(params);
+  } catch (err) {
+    // Атрибуты не распарсились: скорее всего `|` — это часть текста, а не
+    // разделитель key:value (например форматирующий маркер над текстом «5 | 10»).
+    // Не теряем маркер целиком — трактуем всё тело как контент, `|` остаётся
+    // литеральным. Так текст не пропадает со страницы.
+    logError('Parser', 'Invalid attributes, treating body as content', {
+      rest,
+      err,
+    });
+
+    attrs = undefined;
+    contentSource = rest;
+  }
+
   return {
     type: marker,
-    attrs: splitAttrs(params),
-    content: recursiveParse(text, depth + 1),
+    attrs,
+    content: recursiveParse(contentSource, depth + 1),
   };
+}
+
+/** Разбирает верхнеуровневый чанк `{@name body}` на имя и тело. */
+function readMarker(chunk: string): { name: string; body: string } {
+  const inner = chunk.slice(1, -1); // срезаем внешние { }
+  const { text: rawName, rest } = splitFirstSpace(inner);
+
+  return { name: rawName.replace(/^@/, ''), body: rest };
+}
+
+/** splitAttrs, который не бросает (кривые атрибуты ячейки не рушат таблицу). */
+function safeAttrs(params: string[]): MarkerAttributes | undefined {
+  try {
+    return splitAttrs(params);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Структурная ячейка тела таблицы. */
+interface TableBodyCell {
+  content: RenderNode[];
+  align?: string;
+}
+
+/**
+ * Узел таблицы: `MarkerNode` + структурные поля (сверх маркера), которые читает
+ * MarkupTable (его локальный TableNode). Форма совпадает с бэкенд-AST.
+ */
+interface TableNode extends MarkerNode {
+  caption?: RenderNode[];
+  colLabels?: RenderNode[][];
+  colStyles?: string[];
+  colAligns?: string[];
+  rows?: TableBodyCell[][];
+}
+
+/**
+ * Строит структурный узел таблицы из тела `{@table …}`. Строка-заголовок — это
+ * `{@tr}`, чьи ячейки `{@th}` → colLabels/colStyles; прочие `{@tr}` из `{@td}` →
+ * rows. Форма идентична бэкенд-AST, поэтому MarkupTable не меняется. Содержимое
+ * ячеек и подписи разбираются рекурсивно (внутри может быть {@dice}, {@creature}…).
+ */
+function buildTableNode(rest: string, depth: number): MarkerNode {
+  const { text } = splitByPipeBase(rest); // params таблицы зарезервированы
+  const children = text ? splitByMarkers(text) : [];
+
+  let caption: RenderNode[] | undefined;
+
+  const colLabels: RenderNode[][] = [];
+  const colStyles: string[] = [];
+  const colAligns: string[] = [];
+  const rows: TableBodyCell[][] = [];
+
+  for (const child of children) {
+    const chunk = child.trim();
+
+    if (!chunk.startsWith(`{${LEADING_CHARACTER}`)) {
+      continue; // пробелы между маркерами
+    }
+
+    const { name, body } = readMarker(chunk);
+
+    if (name === 'caption') {
+      const { text: capText } = splitByPipeBase(body);
+
+      caption = recursiveParse(capText ?? '', depth + 1);
+
+      continue;
+    }
+
+    if (name !== 'tr') {
+      continue;
+    }
+
+    const { text: rowText } = splitByPipeBase(body);
+    const cells = rowText ? splitByMarkers(rowText) : [];
+
+    const bodyCells: TableBodyCell[] = [];
+
+    let isHeaderRow = false;
+
+    for (const cell of cells) {
+      const cellChunk = cell.trim();
+
+      if (!cellChunk.startsWith(`{${LEADING_CHARACTER}`)) {
+        continue;
+      }
+
+      const { name: cellName, body: cellBody } = readMarker(cellChunk);
+
+      if (cellName !== 'th' && cellName !== 'td') {
+        continue;
+      }
+
+      const { text: cellText, params } = splitByPipeBase(cellBody);
+      const attrs = safeAttrs(params);
+
+      // Атрибуты не распарсились (например ячейка «5 | 10») — значит `|`
+      // литеральный: весь текст ячейки идёт в контент, чтобы не потерять часть
+      // после `|` (иначе от «5 | 10» осталось бы только «5»). Ср. convertMarker.
+      const content =
+        attrs || params.length === 0
+          ? recursiveParse(cellText ?? '', depth + 1)
+          : recursiveParse(cellBody, depth + 1);
+
+      if (cellName === 'th') {
+        isHeaderRow = true;
+        colLabels.push(content);
+        colStyles.push(typeof attrs?.style === 'string' ? attrs.style : '');
+        colAligns.push(typeof attrs?.align === 'string' ? attrs.align : '');
+      } else {
+        bodyCells.push({
+          content,
+          align: typeof attrs?.align === 'string' ? attrs.align : undefined,
+        });
+      }
+    }
+
+    if (!isHeaderRow) {
+      rows.push(bodyCells);
+    }
+  }
+
+  // Доп. поля (caption/colLabels/colStyles/rows) — сверх MarkerNode; их читает
+  // MarkupTable. Возвращаем как MarkerNode (доп. поля присутствуют в рантайме).
+  const node: TableNode = {
+    type: 'table',
+    caption,
+    colLabels: colLabels.length ? colLabels : undefined,
+    colStyles: colStyles.length ? colStyles : undefined,
+    colAligns: colAligns.length ? colAligns : undefined,
+    rows,
+  };
+
+  return node;
 }
 
 function convertText(text: string | undefined): SimpleTextNode {
