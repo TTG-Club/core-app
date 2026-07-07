@@ -8,6 +8,8 @@ import type {
 
 import type { MarkerNode, RenderNode } from '~ui/markup';
 
+import type { DeferredInlineTokens } from './block-tokenizer';
+
 import { Extension } from '@tiptap/core';
 import { Blockquote } from '@tiptap/extension-blockquote';
 
@@ -15,6 +17,7 @@ import { isMarkerNode, parse, serializeMarkup } from '~ui/markup';
 
 import {
   createBlockMarkerTokenizer,
+  deferInline,
   markerNameMatches,
 } from './block-tokenizer';
 import { dataAttr } from './node-utils';
@@ -24,9 +27,9 @@ const QUOTE_TOKEN = 'ttgQuote';
 /** Имена маркеров, обозначающих цитату (алиасы из markup/config.ts). */
 const QUOTE_NAMES = new Set(['quote', 'blockquote', 'q']);
 
-/** Разобранная цитата: абзацы (инлайн-токены) + атрибуты оформления. */
+/** Разобранная цитата: абзацы (ленивые инлайн-токены) + атрибуты оформления. */
 interface QuoteData {
-  paragraphs: { tokens: MarkdownToken[] }[];
+  paragraphs: { tokens: DeferredInlineTokens }[];
   color?: string;
   variant?: string;
 }
@@ -122,7 +125,7 @@ function buildQuoteData(
   const groups = groupParagraphs(node.content ?? []);
 
   const paragraphs = (groups.length ? groups : [[]]).map((group) => ({
-    tokens: lexer.inlineTokens(serializeInline(group)),
+    tokens: deferInline(lexer, serializeInline(group)),
   }));
 
   return {
@@ -161,7 +164,7 @@ export const TtgQuoteMarkdown = Extension.create({
       { color: data.color ?? null, variant: data.variant ?? null },
       data.paragraphs.map((paragraph) => ({
         type: 'paragraph',
-        content: helpers.parseInline(paragraph.tokens),
+        content: helpers.parseInline(paragraph.tokens()),
       })),
     );
   },
