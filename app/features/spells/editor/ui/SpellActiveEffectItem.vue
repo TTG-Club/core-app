@@ -12,19 +12,15 @@
     SpellEffectSaveTiming,
   } from '../../model';
 
-  import { MarkupEditor } from '~ui/markup-editor';
-
   import {
     DEFAULT_SPELL_EFFECT_AURA,
     DEFAULT_SPELL_EFFECT_SAVE,
     SPELL_EFFECT_ABILITY_OPTIONS,
     SPELL_EFFECT_AREA_TRIGGER_OPTIONS,
     SPELL_EFFECT_AURA_TARGET_OPTIONS,
-    SPELL_EFFECT_CONDITION_OPTIONS,
     SPELL_EFFECT_CONDITION_TEMPLATES,
     SPELL_EFFECT_DURATION_OPTIONS,
     SPELL_EFFECT_DURATION_WITH_VALUE,
-    SPELL_EFFECT_ORIGIN_OPTIONS,
     SPELL_EFFECT_SAVE_OUTCOME_OPTIONS,
     SPELL_EFFECT_SAVE_TIMING_OPTIONS,
     SPELL_EFFECT_TARGET_OPTIONS,
@@ -115,6 +111,18 @@
     set: (value) => {
       model.value.areaTrigger = value === 'stay' ? undefined : value;
     },
+  });
+
+  // Подсказка под выбором триггера ауры (как в редакторе эффектов VTTG).
+  const areaTriggerDescription = computed(() => {
+    switch (areaTrigger.value) {
+      case 'enter':
+        return 'Разовая нагрузка (урон/статус) в момент входа в область/ауру. Срабатывает на каждый вход.';
+      case 'exit':
+        return 'Разовая нагрузка (урон/статус) в момент выхода из области/ауры.';
+      default:
+        return 'Эффект висит на цели, пока она внутри области/ауры, и снимается при выходе.';
+    }
   });
 
   // --- Спасбросок при наложении ---
@@ -284,45 +292,11 @@
 
         <UFormField
           label="Иконка"
-          class="col-span-full md:col-span-8"
+          class="col-span-full md:col-span-14"
         >
           <UInput
             v-model="model.icon"
             placeholder="Напр.: tabler:sparkles"
-          />
-        </UFormField>
-
-        <UFormField
-          label="Источник"
-          class="col-span-full md:col-span-6"
-        >
-          <USelect
-            v-model="model.origin"
-            :items="SPELL_EFFECT_ORIGIN_OPTIONS"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField
-          label="Описание"
-          class="col-span-full"
-        >
-          <MarkupEditor
-            v-model="model.description"
-            placeholder="Описание эффекта"
-          />
-        </UFormField>
-
-        <UFormField
-          label="Состояние D&D"
-          class="col-span-full md:col-span-8"
-        >
-          <USelect
-            v-model="model.conditionKey"
-            :items="SPELL_EFFECT_CONDITION_OPTIONS"
-            placeholder="Нет (обычный бафф)"
-            clearable
-            class="w-full"
           />
         </UFormField>
 
@@ -436,8 +410,8 @@
     <template #combat>
       <div class="flex flex-col gap-3 pt-2">
         <p class="text-xs text-dimmed italic">
-          Срабатывает при наложении эффекта на цель (напр. при попадании). Для
-          само-баффов можно оставить пустым.
+          Срабатывает при наложении эффекта на цель (напр. при попадании
+          атакой). Для само-баффов можно оставить пустым.
         </p>
 
         <!-- Триггер ауры -->
@@ -452,6 +426,10 @@
               class="w-full"
             />
           </UFormField>
+
+          <p class="mt-1.5 text-xs text-muted">
+            {{ areaTriggerDescription }}
+          </p>
         </div>
 
         <!-- Спасбросок при наложении -->
@@ -461,6 +439,11 @@
             label="Спасбросок при наложении"
             :ui="{ label: 'font-medium' }"
           />
+
+          <p class="mt-1.5 text-xs text-muted">
+            При попадании цель совершает спасбросок — от результата зависят
+            статус и урон ниже.
+          </p>
 
           <div
             v-if="hasApplySave"
@@ -504,12 +487,20 @@
               v-model="applyOnSuccess"
               label="Накладывать эффект даже при успешном спасе"
             />
+
+            <p class="mt-1.5 text-xs text-muted">
+              Состояние повиснет на цели, даже если она прошла спасбросок (свой
+              выше или спасбросок области у действия). Урон при успехе — по
+              правилу «При успехе».
+            </p>
           </div>
         </div>
 
         <!-- Урон при наложении -->
-        <div class="rounded-lg border border-muted bg-elevated/30 p-3">
-          <div class="mb-2 flex items-center gap-2">
+        <div
+          class="space-y-2 rounded-lg border border-muted bg-elevated/30 p-3"
+        >
+          <div class="flex items-center gap-2">
             <UIcon
               name="tabler:flame"
               class="size-4 text-warning"
@@ -517,6 +508,11 @@
 
             <span class="text-sm font-medium">Урон при наложении</span>
           </div>
+
+          <p class="text-xs text-muted">
+            Наносится цели при наложении. Если включён спасбросок выше — урон
+            гейтится им (на успехе: нет урона либо половина).
+          </p>
 
           <SpellEffectDamageParts v-model="damageParts" />
         </div>
@@ -528,6 +524,11 @@
             label="Периодический спасбросок снимает эффект"
             :ui="{ label: 'font-medium' }"
           />
+
+          <p class="mt-1.5 text-xs text-muted">
+            Пока эффект активен, цель повторяет спасбросок и при успехе
+            сбрасывает его досрочно.
+          </p>
 
           <div
             v-if="hasRecurringSave"
@@ -574,6 +575,11 @@
             label="Периодический урон (каждый ход)"
             :ui="{ label: 'font-medium' }"
           />
+
+          <p class="mt-1.5 text-xs text-muted">
+            Пока эффект висит на цели, наносит урон каждый ход (напр.
+            «Горение»). Тикает в бою при смене хода.
+          </p>
 
           <div
             v-if="hasRecurringDamage"
