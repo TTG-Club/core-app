@@ -8,6 +8,8 @@ import type {
 
 import type { MarkerNode, RenderNode } from '~ui/markup';
 
+import type { DeferredInlineTokens } from './block-tokenizer';
+
 import { Extension } from '@tiptap/core';
 import {
   Table,
@@ -25,6 +27,7 @@ import {
 
 import {
   createBlockMarkerTokenizer,
+  deferInline,
   markerNameMatches,
 } from './block-tokenizer';
 import { dataAttr } from './node-utils';
@@ -48,10 +51,10 @@ interface ParsedTable extends MarkerNode {
   rows?: ParsedCell[][];
 }
 
-/** Разобранная ячейка редактора: инлайн-токены + атрибуты. */
+/** Разобранная ячейка редактора: ленивые инлайн-токены + атрибуты. */
 interface CellData {
   isHeader: boolean;
-  tokens: MarkdownToken[];
+  tokens: DeferredInlineTokens;
   style?: string;
   align?: string;
 }
@@ -113,7 +116,7 @@ function buildTableData(
     cells.push(
       colLabels.map((label, index) => ({
         isHeader: true,
-        tokens: lexer.inlineTokens(serializeInline(toArray(label))),
+        tokens: deferInline(lexer, serializeInline(toArray(label))),
         style: colStyles[index] || undefined,
         align: colAligns[index] || undefined,
       })),
@@ -124,7 +127,7 @@ function buildTableData(
     cells.push(
       row.map((cell) => ({
         isHeader: false,
-        tokens: lexer.inlineTokens(serializeInline(cell.content ?? [])),
+        tokens: deferInline(lexer, serializeInline(cell.content ?? [])),
         align: cell.align,
       })),
     );
@@ -165,7 +168,12 @@ export const TtgTableMarkdown = Extension.create({
           helpers.createNode(
             cell.isHeader ? 'tableHeader' : 'tableCell',
             { style: cell.style ?? null, align: cell.align ?? null },
-            [{ type: 'paragraph', content: helpers.parseInline(cell.tokens) }],
+            [
+              {
+                type: 'paragraph',
+                content: helpers.parseInline(cell.tokens()),
+              },
+            ],
           ),
         ),
       ),
