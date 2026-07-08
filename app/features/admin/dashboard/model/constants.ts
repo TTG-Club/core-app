@@ -15,4 +15,11 @@ export const ADMIN_DASHBOARD_SUBSCRIPTIONS_TITLE = 'Промокоды';
 export const ADMIN_DASHBOARD_SUBSCRIPTIONS_DESCRIPTION =
   'Выпуск промо-кодов и управление выпущенными кодами';
 
+export const ADMIN_DASHBOARD_ARTICLES_TITLE = 'Статьи / Новости';
+
+export const ADMIN_DASHBOARD_ARTICLES_DESCRIPTION =
+  'Создание и редактирование статей и новостей';
+
+export const ADMIN_DASHBOARD_ARTICLES_ACTION_LABEL = 'Создать';
+
 export const ADMIN_DASHBOARD_CONFIGURE_LABEL = 'Настроить';
