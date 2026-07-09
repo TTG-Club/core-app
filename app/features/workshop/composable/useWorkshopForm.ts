@@ -134,6 +134,16 @@ export function useWorkshopForm<T extends { url: string }>(
           ],
         });
       }
+    } else {
+      // Режим создания: `state`/`previousState` живут в useState всю сессию SPA,
+      // поэтому форма может держать данные предыдущей открытой записи. Явно
+      // сбрасываем к начальному состоянию — иначе «Создать» открывается
+      // предзаполненным прошлой записью (в edit-режиме это делает загрузка /raw).
+      const initialState = _options.getInitialState();
+
+      state.value = initialState;
+      previousState.value = cloneDeep(initialState);
+      clearSelectedRevision();
     }
   });
 

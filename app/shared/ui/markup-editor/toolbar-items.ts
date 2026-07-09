@@ -15,6 +15,8 @@ import { hasMarkerAtom } from './tiptap/node-utils';
 export interface ToolbarHandlers {
   /** Ссылка на раздел — открыть панель поиска сущности. */
   onSection: (tag: MarkupTag) => void;
+  /** Обычная ссылка — открыть панель ввода URL. */
+  onLink: (tag: MarkupTag) => void;
   /** Бросок кубика — открыть панель ввода нотации. */
   onDice: (tag: MarkupTag) => void;
   /** Подпись таблицы — открыть панель ввода (пишет атрибут caption). */
@@ -199,6 +201,27 @@ function markItem(editor: Editor, item: MarkButton): EditorToolbarItem {
       editor.chain().focus().toggleMark(item.mark).run();
     },
   };
+}
+
+/**
+ * Пункт для инлайнового тега: ссылка открывает панель ввода URL (иначе вставилась
+ * бы с пустым `url:` — заполнить можно было только в режиме кода), остальные
+ * (клавиша) вставляются напрямую.
+ */
+function inlineItem(
+  editor: Editor,
+  tag: MarkupTag,
+  handlers: ToolbarHandlers,
+): EditorToolbarItem {
+  if (tag.key === 'link') {
+    return {
+      icon: tag.icon,
+      tooltip: { text: tag.label },
+      onClick: () => handlers.onLink(tag),
+    };
+  }
+
+  return tagItem(editor, tag);
 }
 
 /**
@@ -396,7 +419,7 @@ export function buildToolbarItems(
     FORMAT_MARK_ITEMS.map((item) => markItem(editor, item)),
     BLOCK_TAGS.map((tag) => blockItem(editor, tag, handlers)),
     [
-      ...INLINE_TAGS.map((tag) => tagItem(editor, tag)),
+      ...INLINE_TAGS.map((tag) => inlineItem(editor, tag, handlers)),
       ...INTERACTIVE_TAGS.map((tag) => interactiveItem(editor, tag, handlers)),
     ],
     [sectionDropdown(handlers)],

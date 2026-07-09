@@ -9,6 +9,8 @@ import type {
 
 import type { MarkerNode, RenderNode } from '~ui/markup';
 
+import type { DeferredInlineTokens } from './block-tokenizer';
+
 import { Extension } from '@tiptap/core';
 import { BulletList, ListItem, OrderedList } from '@tiptap/extension-list';
 
@@ -16,6 +18,7 @@ import { isMarkerNode, parse, serializeMarkup } from '~ui/markup';
 
 import {
   createBlockMarkerTokenizer,
+  deferInline,
   markerNameMatches,
 } from './block-tokenizer';
 
@@ -28,10 +31,10 @@ const LIST_TOKEN = 'ttgList';
 /** Имена списочного маркера (алиасов у {@list} нет). */
 const LIST_NAMES = new Set(['list']);
 
-/** Разобранный пункт списка: инлайн-токены абзаца + вложенные списки. */
+/** Разобранный пункт списка: ленивые инлайн-токены абзаца + вложенные списки. */
 interface TtgListItemData {
-  /** Инлайн-токены содержимого пункта (→ узлы абзаца через parseInline). */
-  tokens: MarkdownToken[];
+  /** Ленивые инлайн-токены содержимого пункта (→ узлы абзаца через parseInline). */
+  tokens: DeferredInlineTokens;
   /** Вложенные списки, прикреплённые к этому пункту (как в MarkupList). */
   children: TtgListData[];
 }
@@ -91,14 +94,17 @@ function listNodeToData(
       if (last) {
         last.children.push(nested);
       } else {
-        items.push({ tokens: [], children: [nested] });
+        items.push({ tokens: () => [], children: [nested] });
       }
 
       continue;
     }
 
     // Пункт {@li ...} (или батч-массив из бэкенд-AST) — один <li>.
-    items.push({ tokens: lexer.inlineTokens(itemInner(child)), children: [] });
+    items.push({
+      tokens: deferInline(lexer, itemInner(child)),
+      children: [],
+    });
   }
 
   return { ordered, items };
@@ -144,7 +150,7 @@ function listItemToJSON(
 ): JSONContent {
   const paragraph: JSONContent = {
     type: 'paragraph',
-    content: helpers.parseInline(item.tokens),
+    content: helpers.parseInline(item.tokens()),
   };
 
   return {
