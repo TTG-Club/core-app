@@ -35,7 +35,8 @@ export type ArticleTypeFilter = 'all' | ArticleType;
  * - `publishDateTime` — при `draft=false, active=true` будущая дата = запланирована,
  *   не задана = «сейчас»;
  * - `accessibleByLink` — при `draft=false, active=false` (неактивна) открыть по прямой ссылке;
- * - `publishToTelegram` — при сохранении продублировать новость в Telegram-канал.
+ * - `publishToTelegram` — при сохранении продублировать новость в Telegram-канал;
+ * - `publishToDiscord` — при сохранении продублировать новость в Discord через вебхук.
  */
 export interface ArticleRequest {
   url: string;
@@ -44,6 +45,7 @@ export interface ArticleRequest {
   active: boolean;
   accessibleByLink: boolean;
   publishToTelegram: boolean;
+  publishToDiscord: boolean;
   title: string;
   previewImageUrl: string | null;
   publishDateTime: string | null;

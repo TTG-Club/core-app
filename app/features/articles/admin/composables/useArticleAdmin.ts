@@ -68,17 +68,20 @@ export function useArticleAdmin(): {
         // устаревший `true` — иначе в списке у активной записи повиснет иконка
         // «доступна по ссылке».
         //
-        // `preview ?? ''` / `publishToTelegram ?? false` — бэк возвращает пустой
-        // анонс из `/raw` как `null` (при `@NotNull` на PUT это 400), а
-        // `publishToTelegram` может прийти `null` у записей до миграции бэка. Оба
-        // нормализуем, чтобы эхо `null` из `/raw` не роняло PUT.
+        // `preview ?? ''` / `publishToTelegram ?? false` / `publishToDiscord ??
+        // false` — бэк возвращает пустой анонс из `/raw` как `null` (при
+        // `@NotNull` на PUT это 400), а флаги публикации могут прийти `null` у
+        // записей до миграции бэка. Нормализуем, чтобы эхо `null` из `/raw` не
+        // роняло PUT. Флаги публикации при простом переключении активности —
+        // всегда false: повторно постить в соцсети при снятии/возврате не нужно.
         body: {
           ...raw,
           draft: false,
           active,
           accessibleByLink: active ? false : raw.accessibleByLink,
           preview: raw.preview ?? '',
-          publishToTelegram: raw.publishToTelegram ?? false,
+          publishToTelegram: false,
+          publishToDiscord: false,
         },
       });
 

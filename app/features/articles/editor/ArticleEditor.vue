@@ -15,6 +15,7 @@
     ARTICLE_FALLBACK_IMAGE,
     ARTICLE_IMAGE_MAX_SIZE,
     ARTICLE_IMAGE_SECTION,
+    ARTICLE_POST_CHAR_TARGET_DISCORD,
     ARTICLE_POST_CHAR_TARGET_NO_IMAGE,
     ARTICLE_POST_CHAR_TARGET_WITH_IMAGE,
     ARTICLE_PUB_STATE_OPTIONS,
@@ -48,6 +49,7 @@
       active: true,
       accessibleByLink: false,
       publishToTelegram: false,
+      publishToDiscord: false,
       title: '',
       previewImageUrl: null,
       publishDateTime: null,
@@ -63,12 +65,13 @@
       // Бэк отдаёт пустой анонс из `/raw` как `null` (toMerged не гасит null,
       // а `defineModel({ default: '' })` подставляет дефолт только на undefined),
       // из-за чего `state.preview` остаётся null и PUT падает на `@NotNull`.
-      // Нормализуем при загрузке к пустой строке. `publishToTelegram` также
-      // страхуем на случай null у записей до миграции бэка.
+      // Нормализуем при загрузке к пустой строке. `publishToTelegram` и
+      // `publishToDiscord` также страхуем на случай null у записей до миграции бэка.
       normalizeLoaded: (raw) => ({
         ...raw,
         preview: raw.preview ?? '',
         publishToTelegram: raw.publishToTelegram ?? false,
+        publishToDiscord: raw.publishToDiscord ?? false,
       }),
       transformBeforeSubmit: (formState) => {
         const isActivePublish = !formState.draft && formState.active;
@@ -112,19 +115,39 @@
     () => previewCharCount.value + contentCharCount.value,
   );
 
-  // Желательный максимум зависит от обложки: пост с картинкой = подпись к медиа
-  // (короче), без картинки = текстовый пост (длиннее). Лимит не жёсткий.
+  // Блок счётчика для соцсетей показываем, только когда выбран хотя бы один канал
+  // отправки — без выбора он не о чём.
+  const showSocialStats = computed(
+    () => state.value.publishToTelegram || state.value.publishToDiscord,
+  );
+
+  // Желательный максимум для Telegram зависит от обложки: пост с картинкой =
+  // подпись к медиа (короче), без картинки = текстовый пост (длиннее). У Discord
+  // порог единый при любом раскладе. Лимиты не жёсткие — только подсветка.
   const hasCover = computed(() => !!state.value.previewImageUrl);
 
-  const charTarget = computed(() =>
+  const telegramTarget = computed(() =>
     hasCover.value
       ? ARTICLE_POST_CHAR_TARGET_WITH_IMAGE
       : ARTICLE_POST_CHAR_TARGET_NO_IMAGE,
   );
 
-  // Превышен желательный максимум — только подсветка, отправку не блокируем.
-  const isOverCharTarget = computed(
-    () => postCharCount.value > charTarget.value,
+  const discordTarget = ARTICLE_POST_CHAR_TARGET_DISCORD;
+
+  // Подсказка к порогу Telegram: текущий сценарий (по обложке) + напоминание про
+  // альтернативный лимит. Лимит зависит от обложки: подпись к медиа короче.
+  const telegramHint = computed(() =>
+    hasCover.value
+      ? `с картинкой; без картинки — до ${ARTICLE_POST_CHAR_TARGET_NO_IMAGE}`
+      : `без картинки; с картинкой — до ${ARTICLE_POST_CHAR_TARGET_WITH_IMAGE}`,
+  );
+
+  const isOverTelegramTarget = computed(
+    () => postCharCount.value > telegramTarget.value,
+  );
+
+  const isOverDiscordTarget = computed(
+    () => postCharCount.value > discordTarget,
   );
 
   const hasPreviewText = computed(() => previewCharCount.value > 0);
@@ -233,6 +256,10 @@
     state.value.publishToTelegram = !state.value.publishToTelegram;
   }
 
+  function togglePublishToDiscord(): void {
+    state.value.publishToDiscord = !state.value.publishToDiscord;
+  }
+
   const schema = z.object({
     title: z.string().trim().nonempty(),
     url: z.string().trim().nonempty(),
@@ -241,6 +268,7 @@
     active: z.boolean(),
     accessibleByLink: z.boolean(),
     publishToTelegram: z.boolean(),
+    publishToDiscord: z.boolean(),
     // Анонс необязателен: пустую строку допускаем (бэк принимает пустой preview).
     preview: z.string().trim(),
     content: z.string().trim().nonempty(),
@@ -396,34 +424,54 @@
     </UCard>
 
     <UCard variant="subtle">
-      <UButton
-        icon="tabler:brand-telegram"
-        :variant="state.publishToTelegram ? 'solid' : 'soft'"
-        :color="state.publishToTelegram ? 'primary' : 'neutral'"
-        :aria-pressed="state.publishToTelegram"
-        @click.left.exact.prevent="togglePublishToTelegram"
-      >
-        Опубликовать в Telegram
-      </UButton>
+      <div class="flex flex-wrap gap-2">
+        <UButton
+          icon="ttg:telegram"
+          :variant="state.publishToTelegram ? 'solid' : 'soft'"
+          :color="state.publishToTelegram ? 'primary' : 'neutral'"
+          :aria-pressed="state.publishToTelegram"
+          @click.left.exact.prevent="togglePublishToTelegram"
+        >
+          Опубликовать в Telegram
+        </UButton>
+
+        <UButton
+          icon="ttg:discord"
+          :variant="state.publishToDiscord ? 'solid' : 'soft'"
+          :color="state.publishToDiscord ? 'primary' : 'neutral'"
+          :aria-pressed="state.publishToDiscord"
+          @click.left.exact.prevent="togglePublishToDiscord"
+        >
+          Опубликовать в Discord
+        </UButton>
+      </div>
 
       <div
+        v-if="showSocialStats"
         class="mt-4 flex flex-col gap-1 border-t border-default pt-4 text-sm"
       >
+        <p class="font-medium text-highlighted tabular-nums">
+          Символов в посте: {{ postCharCount }} (анонс {{ previewCharCount }} ·
+          содержание {{ contentCharCount }})
+        </p>
+
         <p
-          class="font-medium tabular-nums"
-          :class="isOverCharTarget ? 'text-warning' : 'text-highlighted'"
+          v-if="state.publishToTelegram"
+          class="tabular-nums"
+          :class="isOverTelegramTarget ? 'text-warning' : 'text-muted'"
         >
-          Символов в посте (анонс + содержание): {{ postCharCount }} /
-          {{ charTarget }}
+          Telegram: {{ postCharCount }} / {{ telegramTarget }} ({{
+            telegramHint
+          }})
         </p>
 
-        <p class="text-muted">
-          {{ hasCover ? 'С картинкой' : 'Без картинки' }} — желательно до
-          {{ charTarget }} символов.
-        </p>
-
-        <p class="text-muted tabular-nums">
-          Анонс: {{ previewCharCount }} · Содержание: {{ contentCharCount }}
+        <p
+          v-if="state.publishToDiscord"
+          class="tabular-nums"
+          :class="isOverDiscordTarget ? 'text-warning' : 'text-muted'"
+        >
+          Discord: {{ postCharCount }} / {{ discordTarget }} (при любом
+          раскладе)
         </p>
       </div>
     </UCard>
