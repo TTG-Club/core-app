@@ -24,11 +24,12 @@
   } from './tiptap';
   import { buildToolbarItems } from './toolbar-items';
 
-  /** Режим панели ввода под тулбаром (поиск раздела / нотация кубика / подпись таблицы). */
+  /** Режим панели ввода под тулбаром (поиск раздела / нотация кубика / подпись таблицы / URL ссылки). */
   type InsertPanelMode =
     | { kind: 'section'; tag: MarkupTag }
     | { kind: 'dice'; tag: MarkupTag }
-    | { kind: 'caption' };
+    | { kind: 'caption' }
+    | { kind: 'link'; tag: MarkupTag };
 
   // Маркеры {@...} в редакторе: форматирующие ({@i}/{@b}/…) — редактируемые марки
   // (можно вкладывать друг в друга и Markdown), остальные — атомарные чипы.
@@ -167,6 +168,10 @@
     insertPanel.value = { kind: 'section', tag };
   }
 
+  function openLinkPanel(tag: MarkupTag) {
+    insertPanel.value = { kind: 'link', tag };
+  }
+
   function openDicePanel(tag: MarkupTag) {
     insertPanel.value = { kind: 'dice', tag };
   }
@@ -295,6 +300,7 @@
                 :items="
                   buildToolbarItems(editor, {
                     onSection: openSectionPanel,
+                    onLink: openLinkPanel,
                     onDice: openDicePanel,
                     onCaption: openCaptionPanel,
                   })

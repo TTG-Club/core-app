@@ -95,6 +95,14 @@ export const MENU_SECTIONS: Array<MenuSection> = [
     icon: 'menu/filled/workshop',
     items: [
       {
+        href: '/news',
+        label: 'Новости',
+      },
+      {
+        href: '/articles',
+        label: 'Статьи',
+      },
+      {
         href: '/roadmap',
         label: 'Дорожная карта',
         disabled: false,

@@ -4,6 +4,7 @@ import {
   ADMIN_USERS_NAVIGATION_ICON,
   ADMIN_USERS_NAVIGATION_LABEL,
 } from '~admin/users/model';
+import { ARTICLES_ADMIN_ROUTE } from '~articles/model';
 
 /**
  * Элементы главной навигации админ-панели
@@ -28,6 +29,11 @@ export const ADMIN_NAVIGATION_ITEMS: NavigationItem[] = [
     label: ADMIN_USERS_NAVIGATION_LABEL,
     icon: ADMIN_USERS_NAVIGATION_ICON,
     to: '/admin/users',
+  },
+  {
+    label: 'Статьи / Новости',
+    icon: 'tabler:news',
+    to: ARTICLES_ADMIN_ROUTE,
   },
 ];
 

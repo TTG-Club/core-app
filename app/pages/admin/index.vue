@@ -2,6 +2,9 @@
   import type { AdminOnlineStatsResponse } from '~admin/online/model';
 
   import {
+    ADMIN_DASHBOARD_ARTICLES_ACTION_LABEL,
+    ADMIN_DASHBOARD_ARTICLES_DESCRIPTION,
+    ADMIN_DASHBOARD_ARTICLES_TITLE,
     ADMIN_DASHBOARD_CONFIGURE_LABEL,
     ADMIN_DASHBOARD_PAGE_TITLE,
     ADMIN_DASHBOARD_PERSONAS_DESCRIPTION,
@@ -21,6 +24,10 @@
     ADMIN_USERS_NAVIGATION_LABEL,
     ADMIN_USERS_PAGE_DESCRIPTION,
   } from '~admin/users/model';
+  import {
+    ARTICLES_ADMIN_CREATE_ROUTE,
+    ARTICLES_ADMIN_ROUTE,
+  } from '~articles/model';
 
   const {
     data: onlineStats,
@@ -138,6 +145,40 @@
 
           <div class="text-sm text-muted">
             {{ ADMIN_DASHBOARD_SUBSCRIPTIONS_DESCRIPTION }}
+          </div>
+        </UCard>
+
+        <UCard variant="subtle">
+          <template #header>
+            <div class="flex items-center justify-between gap-2">
+              <h2 class="truncate text-base text-highlighted">
+                {{ ADMIN_DASHBOARD_ARTICLES_TITLE }}
+              </h2>
+
+              <div class="flex shrink-0 items-center gap-2">
+                <UButton
+                  size="sm"
+                  color="neutral"
+                  variant="subtle"
+                  :to="ARTICLES_ADMIN_ROUTE"
+                >
+                  {{ ADMIN_DASHBOARD_CONFIGURE_LABEL }}
+                </UButton>
+
+                <UTooltip :text="ADMIN_DASHBOARD_ARTICLES_ACTION_LABEL">
+                  <UButton
+                    size="sm"
+                    icon="tabler:plus"
+                    :to="ARTICLES_ADMIN_CREATE_ROUTE"
+                    :aria-label="ADMIN_DASHBOARD_ARTICLES_ACTION_LABEL"
+                  />
+                </UTooltip>
+              </div>
+            </div>
+          </template>
+
+          <div class="text-sm text-muted">
+            {{ ADMIN_DASHBOARD_ARTICLES_DESCRIPTION }}
           </div>
         </UCard>
       </div>

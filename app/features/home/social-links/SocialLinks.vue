@@ -20,7 +20,7 @@
 </script>
 
 <template>
-  <div class="flex w-full flex-col gap-3">
+  <div class="grid w-full grid-cols-2 gap-3">
     <NuxtLink
       v-for="(link, index) in links"
       :key="index"
