@@ -1,5 +1,6 @@
 import type {
   ArticleAdminTab,
+  ArticlePublishChannel,
   ArticlePublishMode,
   ArticlePubState,
   ArticleStatus,
@@ -112,6 +113,21 @@ export const ARTICLE_PUBLISH_MODES: Array<{
 }> = [
   { label: 'Опубликовать сейчас', value: 'now' },
   { label: 'Запланировать', value: 'schedule' },
+];
+
+/**
+ * Каналы кросс-постинга для кнопок-тумблеров в редакторе: ключ флага в
+ * `ArticleRequest`, подпись кнопки и иконка (локальная коллекция `ttg`). Порядок
+ * = порядок кнопок. Добавление нового канала — одна строка здесь.
+ */
+export const ARTICLE_PUBLISH_CHANNELS: ReadonlyArray<{
+  key: ArticlePublishChannel;
+  label: string;
+  icon: string;
+}> = [
+  { key: 'publishToTelegram', label: 'Telegram', icon: 'ttg:telegram' },
+  { key: 'publishToDiscord', label: 'Discord', icon: 'ttg:discord' },
+  { key: 'publishToVk', label: 'ВКонтакте', icon: 'ttg:vk' },
 ];
 
 /** Формат даты публикации для карточек и страницы чтения. */

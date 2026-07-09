@@ -23,6 +23,12 @@ export type ArticleAdminTab = 'published' | 'unpublished' | 'draft';
 /** Значение фильтра по типу (включая «все»). */
 export type ArticleTypeFilter = 'all' | ArticleType;
 
+/** Ключ флага кросс-постинга в `ArticleRequest` (канал публикации в соцсеть). */
+export type ArticlePublishChannel =
+  | 'publishToTelegram'
+  | 'publishToDiscord'
+  | 'publishToVk';
+
 /**
  * Тело запроса на создание/редактирование/предпросмотр записи, а также ответ
  * `GET /articles/{url}/raw` (форма для редактирования). Поля `preview` и
@@ -36,7 +42,8 @@ export type ArticleTypeFilter = 'all' | ArticleType;
  *   не задана = «сейчас»;
  * - `accessibleByLink` — при `draft=false, active=false` (неактивна) открыть по прямой ссылке;
  * - `publishToTelegram` — при сохранении продублировать новость в Telegram-канал;
- * - `publishToDiscord` — при сохранении продублировать новость в Discord через вебхук.
+ * - `publishToDiscord` — при сохранении продублировать новость в Discord через вебхук;
+ * - `publishToVk` — при сохранении продублировать новость в сообщество ВКонтакте.
  */
 export interface ArticleRequest {
   url: string;
@@ -46,6 +53,7 @@ export interface ArticleRequest {
   accessibleByLink: boolean;
   publishToTelegram: boolean;
   publishToDiscord: boolean;
+  publishToVk: boolean;
   title: string;
   previewImageUrl: string | null;
   publishDateTime: string | null;

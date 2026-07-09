@@ -2,6 +2,7 @@
   import type { FormErrorEvent } from '#ui/types';
 
   import type {
+    ArticlePublishChannel,
     ArticlePublishMode,
     ArticlePubState,
     ArticleRequest,
@@ -19,6 +20,7 @@
     ARTICLE_POST_CHAR_TARGET_NO_IMAGE,
     ARTICLE_POST_CHAR_TARGET_WITH_IMAGE,
     ARTICLE_PUB_STATE_OPTIONS,
+    ARTICLE_PUBLISH_CHANNELS,
     ARTICLE_PUBLISH_MODES,
     ARTICLE_TYPE_DEFAULT,
     ARTICLE_TYPE_OPTIONS,
@@ -50,6 +52,7 @@
       accessibleByLink: false,
       publishToTelegram: false,
       publishToDiscord: false,
+      publishToVk: false,
       title: '',
       previewImageUrl: null,
       publishDateTime: null,
@@ -65,13 +68,15 @@
       // Бэк отдаёт пустой анонс из `/raw` как `null` (toMerged не гасит null,
       // а `defineModel({ default: '' })` подставляет дефолт только на undefined),
       // из-за чего `state.preview` остаётся null и PUT падает на `@NotNull`.
-      // Нормализуем при загрузке к пустой строке. `publishToTelegram` и
-      // `publishToDiscord` также страхуем на случай null у записей до миграции бэка.
+      // Нормализуем при загрузке к пустой строке. `publishToTelegram`,
+      // `publishToDiscord` и `publishToVk` также страхуем на случай null у
+      // записей до миграции бэка.
       normalizeLoaded: (raw) => ({
         ...raw,
         preview: raw.preview ?? '',
         publishToTelegram: raw.publishToTelegram ?? false,
         publishToDiscord: raw.publishToDiscord ?? false,
+        publishToVk: raw.publishToVk ?? false,
       }),
       transformBeforeSubmit: (formState) => {
         const isActivePublish = !formState.draft && formState.active;
@@ -252,13 +257,61 @@
     copy(`${getOrigin()}${getArticleRoute(currentUrl.value)}`);
   }
 
-  function togglePublishToTelegram(): void {
-    state.value.publishToTelegram = !state.value.publishToTelegram;
+  // Тумблер одного канала кросс-постинга (по ключу флага в state).
+  function toggleChannel(channel: ArticlePublishChannel): void {
+    state.value[channel] = !state.value[channel];
   }
 
-  function togglePublishToDiscord(): void {
-    state.value.publishToDiscord = !state.value.publishToDiscord;
+  // «Везде» — выбраны все каналы сразу. Клик включает все, повторный (когда уже
+  // все выбраны) — снимает все.
+  const allChannelsSelected = computed(() =>
+    ARTICLE_PUBLISH_CHANNELS.every((channel) => state.value[channel.key]),
+  );
+
+  function toggleAllChannels(): void {
+    const next = !allChannelsSelected.value;
+
+    for (const channel of ARTICLE_PUBLISH_CHANNELS) {
+      state.value[channel.key] = next;
+    }
   }
+
+  // Вид кнопки-тумблера: solid/primary во включённом состоянии, soft/neutral в
+  // выключенном. Подсветку держим в computed, чтобы в шаблоне не было тернарников
+  // (правило проекта). Явные литеральные типы — иначе значения расширятся до string.
+  type ToggleAppearance = {
+    variant: 'solid' | 'soft';
+    color: 'primary' | 'neutral';
+  };
+
+  // Описатели кнопок каналов: конфиг канала + текущее состояние + подсветка.
+  const channelButtons = computed<
+    Array<
+      ToggleAppearance & {
+        key: ArticlePublishChannel;
+        label: string;
+        icon: string;
+        active: boolean;
+      }
+    >
+  >(() =>
+    ARTICLE_PUBLISH_CHANNELS.map((channel) => {
+      const active = state.value[channel.key];
+
+      return {
+        ...channel,
+        active,
+        variant: active ? 'solid' : 'soft',
+        color: active ? 'primary' : 'neutral',
+      };
+    }),
+  );
+
+  // Та же подсветка для кнопки «Везде» — по признаку «выбраны все каналы».
+  const allChannelsButton = computed<ToggleAppearance>(() => ({
+    variant: allChannelsSelected.value ? 'solid' : 'soft',
+    color: allChannelsSelected.value ? 'primary' : 'neutral',
+  }));
 
   const schema = z.object({
     title: z.string().trim().nonempty(),
@@ -269,6 +322,7 @@
     accessibleByLink: z.boolean(),
     publishToTelegram: z.boolean(),
     publishToDiscord: z.boolean(),
+    publishToVk: z.boolean(),
     // Анонс необязателен: пустую строку допускаем (бэк принимает пустой preview).
     preview: z.string().trim(),
     content: z.string().trim().nonempty(),
@@ -424,25 +478,29 @@
     </UCard>
 
     <UCard variant="subtle">
-      <div class="flex flex-wrap gap-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-sm font-medium text-highlighted">Опубликовать:</span>
+
         <UButton
-          icon="ttg:telegram"
-          :variant="state.publishToTelegram ? 'solid' : 'soft'"
-          :color="state.publishToTelegram ? 'primary' : 'neutral'"
-          :aria-pressed="state.publishToTelegram"
-          @click.left.exact.prevent="togglePublishToTelegram"
+          v-for="channel in channelButtons"
+          :key="channel.key"
+          :icon="channel.icon"
+          :variant="channel.variant"
+          :color="channel.color"
+          :aria-pressed="channel.active"
+          @click.left.exact.prevent="toggleChannel(channel.key)"
         >
-          Опубликовать в Telegram
+          {{ channel.label }}
         </UButton>
 
         <UButton
-          icon="ttg:discord"
-          :variant="state.publishToDiscord ? 'solid' : 'soft'"
-          :color="state.publishToDiscord ? 'primary' : 'neutral'"
-          :aria-pressed="state.publishToDiscord"
-          @click.left.exact.prevent="togglePublishToDiscord"
+          icon="tabler:checks"
+          :variant="allChannelsButton.variant"
+          :color="allChannelsButton.color"
+          :aria-pressed="allChannelsSelected"
+          @click.left.exact.prevent="toggleAllChannels"
         >
-          Опубликовать в Discord
+          Везде
         </UButton>
       </div>
 
