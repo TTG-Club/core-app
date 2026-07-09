@@ -7,6 +7,7 @@
 
   import { ArticleAdminRow, useArticleAdmin } from '~articles/admin';
   import {
+    ARTICLE_ADMIN_TAB_STATUSES,
     ARTICLE_ADMIN_TABS,
     ARTICLE_TYPE_FILTER_OPTIONS,
     ARTICLES_ADMIN_CREATE_ROUTE,
@@ -28,7 +29,8 @@
   const search = ref('');
   const debouncedSearch = refDebounced(search, 300);
 
-  // Опубликованные грузим из /search, черновики и отложенные — из /search/unpublished.
+  // Опубликованные грузим из /search; неопубликованные и черновики — из общего
+  // /search/unpublished (дальше делим по `status` на клиенте, см. visibleArticles).
   const searchPath = computed(() =>
     activeTab.value === 'published'
       ? ARTICLES_SEARCH_PATH
@@ -58,17 +60,50 @@
       // lazy: клиент не блокирует первый рендер ожиданием запроса — иначе SSR
       // отдаёт пустое состояние, а клиент после await сразу список → hydration mismatch.
       lazy: true,
-      watch: [activeTab, typeFilter, debouncedSearch],
+      // Следим за searchPath, а не за activeTab: переключение между
+      // «Неопубликованные» и «Черновики» не меняет эндпоинт (оба — /search/unpublished),
+      // поэтому лишний рефетч не нужен — разбор идёт по `status` в visibleArticles.
+      watch: [searchPath, typeFilter, debouncedSearch],
     },
   );
 
-  // idle учитываем наравне с pending: при server:false на SSR статус 'idle',
-  // и обе стороны должны отрендерить скелетон (одинаковый DOM), а не пусто↔список.
+  // Клиентский разбор общего /search/unpublished по вкладкам. Для «Опубликованные»
+  // фильтра нет (null) — /search уже отдаёт ровно активные.
+  const visibleArticles = computed<ArticleShortResponse[]>(() => {
+    const list = articles.value ?? [];
+    const statuses = ARTICLE_ADMIN_TAB_STATUSES[activeTab.value];
+
+    return statuses
+      ? list.filter((article) => statuses.includes(article.status))
+      : list;
+  });
+
+  // Текст пустого состояния зависит от вкладки: «создайте первую» уместно только
+  // для опубликованных; на прочих вкладках это вводило бы в заблуждение.
+  const emptyLabel = computed(() => {
+    switch (activeTab.value) {
+      case 'unpublished':
+        return 'Неопубликованных записей нет';
+      case 'draft':
+        return 'Черновиков пока нет';
+      default:
+        return 'Записей пока нет — создайте первую';
+    }
+  });
+
+  // idle держим наравне с pending: список обёрнут в <ClientOnly>, и на первом
+  // клиентском рендере (до старта запроса) статус ещё 'idle' — показываем скелетон,
+  // а не «пусто↔список». SSR отдаёт скелетон-fallback (см. шаблон), поэтому сверки
+  // DOM сервер↔клиент нет и hydration mismatch не возникает.
   const isLoading = computed(
     () => status.value === 'idle' || status.value === 'pending',
   );
 
   const hasError = computed(() => !!error.value);
+
+  // Скелетон списка нужен в двух местах (клиентское состояние загрузки и
+  // SSR-fallback ClientOnly) — определяем разметку один раз через VueUse.
+  const [DefineSkeleton, ReuseSkeleton] = createReusableTemplate();
 
   const { deletingUrl, togglingUrl, deleteArticle, setActive } =
     useArticleAdmin();
@@ -176,59 +211,69 @@
           </div>
         </div>
 
-        <div
-          v-if="isLoading"
-          class="flex flex-col gap-2"
-        >
-          <USkeleton
-            v-for="index in 6"
-            :key="index"
-            class="h-16 w-full rounded-xl"
-          />
-        </div>
+        <DefineSkeleton>
+          <div class="flex flex-col gap-2">
+            <USkeleton
+              v-for="index in 6"
+              :key="index"
+              class="h-16 w-full rounded-xl"
+            />
+          </div>
+        </DefineSkeleton>
 
-        <div
-          v-else-if="hasError"
-          class="flex flex-col items-center gap-3 py-12 text-center"
-        >
-          <p class="text-sm text-error">Не удалось загрузить записи</p>
+        <ClientOnly>
+          <ReuseSkeleton v-if="isLoading" />
 
-          <UButton
-            icon="tabler:refresh"
-            color="neutral"
-            variant="soft"
-            size="sm"
-            @click.left.exact.prevent="() => refresh()"
+          <div
+            v-else-if="hasError"
+            class="flex flex-col items-center gap-3 py-12 text-center"
           >
-            Повторить
-          </UButton>
-        </div>
+            <p class="text-sm text-error">Не удалось загрузить записи</p>
 
-        <div
-          v-else-if="articles?.length"
-          class="flex flex-col gap-2"
-        >
-          <ArticleAdminRow
-            v-for="article in articles"
-            :key="article.id"
-            :article
-            :deleting="deletingUrl === article.url"
-            :toggling="togglingUrl === article.url"
-            @delete="requestDelete"
-            @toggle-active="handleToggleActive"
-          />
-        </div>
+            <UButton
+              icon="tabler:refresh"
+              color="neutral"
+              variant="soft"
+              size="sm"
+              @click.left.exact.prevent="() => refresh()"
+            >
+              Повторить
+            </UButton>
+          </div>
 
-        <div
-          v-else
-          class="py-12 text-center text-secondary"
-        >
-          {{
-            search.trim()
-              ? `По запросу «${search}» ничего не найдено`
-              : 'Записей пока нет — создайте первую'
-          }}
-        </div>
+          <div
+            v-else-if="visibleArticles.length"
+            class="flex flex-col gap-2"
+          >
+            <ArticleAdminRow
+              v-for="article in visibleArticles"
+              :key="article.id"
+              :article
+              :deleting="deletingUrl === article.url"
+              :toggling="togglingUrl === article.url"
+              @delete="requestDelete"
+              @toggle-active="handleToggleActive"
+            />
+          </div>
+
+          <div
+            v-else
+            class="py-12 text-center text-secondary"
+          >
+            {{
+              search.trim()
+                ? `По запросу «${search}» ничего не найдено`
+                : emptyLabel
+            }}
+          </div>
+
+          <!-- SSR-заглушка: данные приватные (server:false) и появляются только на
+               клиенте, поэтому на сервере всегда показываем скелетон, а список
+               рендерит клиент — без сверки DOM и hydration mismatch. -->
+          <template #fallback>
+            <ReuseSkeleton />
+          </template>
+        </ClientOnly>
       </div>
     </NuxtLayout>
 

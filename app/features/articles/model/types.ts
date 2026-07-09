@@ -12,8 +12,13 @@ export type ArticlePublishMode = 'now' | 'schedule';
 /** Состояние публикации в редакторе (сегментированный выбор). */
 export type ArticlePubState = 'draft' | 'active' | 'inactive';
 
-/** Вкладка списка в админ-панели. */
-export type ArticleAdminTab = 'published' | 'unpublished';
+/**
+ * Вкладка списка в админ-панели:
+ * - `published` — активные (на сайте), эндпоинт `/search`;
+ * - `unpublished` — не на сайте (снятые + запланированные), `/search/unpublished`;
+ * - `draft` — черновики, тот же `/search/unpublished` (разделение по `status`).
+ */
+export type ArticleAdminTab = 'published' | 'unpublished' | 'draft';
 
 /** Значение фильтра по типу (включая «все»). */
 export type ArticleTypeFilter = 'all' | ArticleType;
@@ -29,7 +34,8 @@ export type ArticleTypeFilter = 'all' | ArticleType;
  *   доступе (с учётом даты), false — снята с сайта, но остаётся опубликованной (не черновик);
  * - `publishDateTime` — при `draft=false, active=true` будущая дата = запланирована,
  *   не задана = «сейчас»;
- * - `accessibleByLink` — при `draft=false, active=false` (неактивна) открыть по прямой ссылке.
+ * - `accessibleByLink` — при `draft=false, active=false` (неактивна) открыть по прямой ссылке;
+ * - `publishToTelegram` — при сохранении продублировать новость в Telegram-канал.
  */
 export interface ArticleRequest {
   url: string;
@@ -37,6 +43,7 @@ export interface ArticleRequest {
   draft: boolean;
   active: boolean;
   accessibleByLink: boolean;
+  publishToTelegram: boolean;
   title: string;
   previewImageUrl: string | null;
   publishDateTime: string | null;

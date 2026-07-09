@@ -63,7 +63,23 @@ export function useArticleAdmin(): {
 
       await $fetch(`${ARTICLES_API_PATH}/${url}`, {
         method: 'put',
-        body: { ...raw, draft: false, active },
+        // `accessibleByLink` осмыслен только для неактивной записи (зеркалим
+        // правило редактора): при активации гасим флаг, чтобы не тащить в БД
+        // устаревший `true` — иначе в списке у активной записи повиснет иконка
+        // «доступна по ссылке».
+        //
+        // `preview ?? ''` / `publishToTelegram ?? false` — бэк возвращает пустой
+        // анонс из `/raw` как `null` (при `@NotNull` на PUT это 400), а
+        // `publishToTelegram` может прийти `null` у записей до миграции бэка. Оба
+        // нормализуем, чтобы эхо `null` из `/raw` не роняло PUT.
+        body: {
+          ...raw,
+          draft: false,
+          active,
+          accessibleByLink: active ? false : raw.accessibleByLink,
+          preview: raw.preview ?? '',
+          publishToTelegram: raw.publishToTelegram ?? false,
+        },
       });
 
       $toast.add({

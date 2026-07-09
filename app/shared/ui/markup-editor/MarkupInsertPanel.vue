@@ -6,11 +6,12 @@
   import { hasMarkerAtom } from './tiptap/node-utils';
   import { sanitizeMarkerText } from './toolbar-items';
 
-  /** Режим панели: поиск сущности раздела, ввод нотации кубика или подпись таблицы. */
+  /** Режим панели: поиск сущности раздела, ввод нотации кубика, подпись таблицы или URL ссылки. */
   type PanelMode =
     | { kind: 'section'; tag: MarkupTag }
     | { kind: 'dice'; tag: MarkupTag }
-    | { kind: 'caption' };
+    | { kind: 'caption' }
+    | { kind: 'link'; tag: MarkupTag };
 
   /** Минимальная форма результата поиска раздела (нужны имя и slug). */
   interface SectionSearchResult {
@@ -53,13 +54,22 @@
   // теряет их (сплющивает в пробел) — такой текст как подпись ненадёжен.
   const selectionHasChip = hasMarkerAtom(editor, range.from, range.to);
 
-  // В режиме подписи предзаполняем текущим caption таблицы (редактирование), в
-  // остальных — выделенным текстом (как значение по умолчанию для вставки).
-  const query = ref(
-    mode.kind === 'caption'
-      ? String(editor.getAttributes('table').caption ?? '')
-      : selectedText,
-  );
+  // Начальное значение поля: подпись — текущий caption таблицы (редактирование);
+  // ссылка — ПУСТО (поле = URL, метку берём из выделения при вставке); остальные —
+  // выделенный текст (значение по умолчанию для вставки/поиска).
+  function initialQuery(): string {
+    if (mode.kind === 'caption') {
+      return String(editor.getAttributes('table').caption ?? '');
+    }
+
+    if (mode.kind === 'link') {
+      return '';
+    }
+
+    return selectedText;
+  }
+
+  const query = ref(initialQuery());
 
   const results = ref<SectionSearchResult[]>([]);
   const loading = ref(false);
@@ -80,6 +90,10 @@
       return 'tabler:text-caption';
     }
 
+    if (mode.kind === 'link') {
+      return 'tabler:link';
+    }
+
     return 'tabler:search';
   });
 
@@ -91,6 +105,10 @@
 
     if (mode.kind === 'caption') {
       return 'Подпись таблицы';
+    }
+
+    if (mode.kind === 'link') {
+      return 'Вставьте ссылку, напр. https://…';
     }
 
     if (mode.kind === 'section') {
@@ -108,6 +126,10 @@
 
     if (mode.kind === 'caption') {
       return 'Подпись таблицы';
+    }
+
+    if (mode.kind === 'link') {
+      return 'Ссылка (URL)';
     }
 
     return 'Поиск сущности';
@@ -191,6 +213,28 @@
   }
 
   /**
+   * Обычная ссылка `{@link <текст> | url:<url>}`. Метка — надёжный выделенный текст,
+   * иначе сам URL (чтобы ссылка была видимой), иначе плейсхолдер тега. URL кладём
+   * как есть — обычные ссылки структурных символов маркера (`|`/`{`/`}`) не содержат.
+   */
+  function confirmLink() {
+    if (mode.kind !== 'link') {
+      return;
+    }
+
+    const url = query.value.trim();
+
+    if (!url) {
+      return;
+    }
+
+    const source = selectedText && !selectionHasChip ? selectedText : url;
+    const label = sanitizeMarkerText(source) || mode.tag.placeholder;
+
+    insertRaw(`{@link ${label} | url:${url}}`);
+  }
+
+  /**
    * Подпись таблицы — это АТРИБУТ узла table (а не вставка чипа), поэтому пишем
    * его командой updateAttributes по текущему выделению (курсор внутри таблицы).
    * Пустая строка очищает подпись.
@@ -218,6 +262,12 @@
 
     if (mode.kind === 'caption') {
       confirmCaption();
+
+      return;
+    }
+
+    if (mode.kind === 'link') {
+      confirmLink();
 
       return;
     }

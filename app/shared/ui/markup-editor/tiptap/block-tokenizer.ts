@@ -9,6 +9,37 @@ import { findMarkerEnd } from '../../markup/balance';
 /** Пустая полезная нагрузка токена (блок-чипу нужны только type+raw). */
 const EMPTY_DATA: Record<string, never> = {};
 
+/** Инлайн-токены содержимого блока, вычисляемые ЛЕНИВО (на фазе parseMarkdown). */
+export type DeferredInlineTokens = () => MarkdownToken[];
+
+/**
+ * Откладывает инлайн-токенизацию содержимого блочного маркера (ячейки таблицы,
+ * пункта списка, абзаца цитаты) до фазы `parseMarkdown` вместо немедленного
+ * вызова `lexer.inlineTokens(...)` внутри токенайзера.
+ *
+ * ПОЧЕМУ это обязательно (иначе теряется текст ПОСЛЕ таблицы/списка/цитаты):
+ * `@tiptap/markdown` передаёт блочному токенайзеру `lexer`, чей `inlineTokens`
+ * ходит в ОТДЕЛЬНЫЙ постоянный marked-Lexer менеджера, а НЕ в транзитный лексер,
+ * который прямо сейчас лексит документ. Оба Lexer'а делят ОДИН объект Tokenizer,
+ * а `inlineTokens`/`blockTokens` внутри делают `tokenizer.lexer = this`. Значит
+ * вызов `lexer.inlineTokens` во время блочной токенизации перенаводит общий
+ * токенайзер на лексер менеджера. После этого КАЖДЫЙ следующий абзац документа
+ * встаёт в `inlineQueue` лексера менеджера, который в этом проходе никогда не
+ * сливается (`lex()` сливает очередь ТРАНЗИТНОГО лексера) → инлайн-содержимое
+ * таких абзацев молча теряется (абзац приходит пустым).
+ *
+ * `parseMarkdown` вызывается уже из `parseTokens`, когда весь документ разобран
+ * на блоки: лексинг завершён, перенаводить общий токенайзер не на что, поэтому
+ * ленивый `lexer.inlineTokens(source)` безопасен. НЕ вызывать `lexer.inlineTokens`
+ * из `buildData`.
+ */
+export function deferInline(
+  lexer: MarkdownLexerConfiguration,
+  source: string,
+): DeferredInlineTokens {
+  return () => lexer.inlineTokens(source);
+}
+
 /**
  * Читает имя маркера `{@name …}` (до пробела/`}`) и сверяет со списком имён.
  * Так `{@listfoo}` не пройдёт за `{@list`. Единый предикат для isList/isTable/

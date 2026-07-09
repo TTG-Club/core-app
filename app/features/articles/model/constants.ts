@@ -28,14 +28,30 @@ export const ARTICLES_ADMIN_ROUTE = '/admin/articles';
 /** Маршрут создания новой записи. */
 export const ARTICLES_ADMIN_CREATE_ROUTE = `${ARTICLES_ADMIN_ROUTE}/create`;
 
-/** Вкладки списка в админ-панели (опубликованные / черновики и отложенные). */
+/** Вкладки списка в админ-панели (опубликованные / неопубликованные / черновики). */
 export const ARTICLE_ADMIN_TABS: Array<{
   label: string;
   value: ArticleAdminTab;
 }> = [
   { label: 'Опубликованные', value: 'published' },
-  { label: 'Черновики и отложенные', value: 'unpublished' },
+  { label: 'Неопубликованные', value: 'unpublished' },
+  { label: 'Черновики', value: 'draft' },
 ];
+
+/**
+ * Статусы записей для каждой вкладки админ-списка. `/search/unpublished` отдаёт
+ * общий набор (черновики + снятые + запланированные), поэтому вкладки
+ * «Неопубликованные» и «Черновики» разделяем по `status` на клиенте. `null` =
+ * без фильтра: `/search` уже возвращает ровно опубликованные (активные).
+ */
+export const ARTICLE_ADMIN_TAB_STATUSES: Record<
+  ArticleAdminTab,
+  readonly ArticleStatus[] | null
+> = {
+  published: null,
+  unpublished: ['INACTIVE', 'SCHEDULED'],
+  draft: ['DRAFT'],
+};
 
 /** Опции фильтра по типу записи. */
 export const ARTICLE_TYPE_FILTER_OPTIONS: Array<{
@@ -121,6 +137,14 @@ export const ARTICLES_ADMIN_LIST_COUNT = 100;
 
 /** Количество новостей в блоке на главной (1 «геройская» + сетка из 4). */
 export const HOME_NEWS_COUNT = 5;
+
+/**
+ * Желательный максимум символов поста (анонс + содержание) для кросс-постинга в
+ * соцсети. НЕ жёсткий лимит — только подсказка в редакторе, отправку не блокирует.
+ * Зависит от обложки: текстовый пост длиннее, подпись к картинке — короче.
+ */
+export const ARTICLE_POST_CHAR_TARGET_NO_IMAGE = 4000;
+export const ARTICLE_POST_CHAR_TARGET_WITH_IMAGE = 1000;
 
 /**
  * Возвращает публичный маршрут чтения записи по её `url` (общий для новостей и

@@ -15,12 +15,15 @@
     ARTICLE_FALLBACK_IMAGE,
     ARTICLE_IMAGE_MAX_SIZE,
     ARTICLE_IMAGE_SECTION,
+    ARTICLE_POST_CHAR_TARGET_NO_IMAGE,
+    ARTICLE_POST_CHAR_TARGET_WITH_IMAGE,
     ARTICLE_PUB_STATE_OPTIONS,
     ARTICLE_PUBLISH_MODES,
     ARTICLE_TYPE_DEFAULT,
     ARTICLE_TYPE_OPTIONS,
     ARTICLES_ADMIN_ROUTE,
     ARTICLES_API_PATH,
+    getArticlePreviewText,
     getArticleRoute,
   } from '../model';
   import { ArticlePreview } from '../preview';
@@ -44,6 +47,7 @@
       draft: false,
       active: true,
       accessibleByLink: false,
+      publishToTelegram: false,
       title: '',
       previewImageUrl: null,
       publishDateTime: null,
@@ -56,6 +60,16 @@
     useWorkshopForm<ArticleRequest>({
       actionUrl: ARTICLES_API_PATH,
       getInitialState,
+      // Бэк отдаёт пустой анонс из `/raw` как `null` (toMerged не гасит null,
+      // а `defineModel({ default: '' })` подставляет дефолт только на undefined),
+      // из-за чего `state.preview` остаётся null и PUT падает на `@NotNull`.
+      // Нормализуем при загрузке к пустой строке. `publishToTelegram` также
+      // страхуем на случай null у записей до миграции бэка.
+      normalizeLoaded: (raw) => ({
+        ...raw,
+        preview: raw.preview ?? '',
+        publishToTelegram: raw.publishToTelegram ?? false,
+      }),
       transformBeforeSubmit: (formState) => {
         const isActivePublish = !formState.draft && formState.active;
         const isInactive = !formState.draft && !formState.active;
@@ -74,6 +88,46 @@
         };
       },
     });
+
+  // Анонс по умолчанию свёрнут (не мешает при заполнении) — разворачивается по
+  // клику в шапке блока.
+  const isPreviewOpen = ref(false);
+
+  // Счётчик длины поста для соцсетей: суммарный plain-text (без разметки {@...})
+  // анонса и содержания — примерно столько символов уйдёт в пост. Разбор разметки
+  // тяжеловат на каждое нажатие, поэтому дебаунсим.
+  const previewCharCount = ref(0);
+  const contentCharCount = ref(0);
+
+  watchDebounced(
+    () => [state.value.preview, state.value.content] as const,
+    ([preview, content]) => {
+      previewCharCount.value = getArticlePreviewText(preview).length;
+      contentCharCount.value = getArticlePreviewText(content).length;
+    },
+    { debounce: 200, immediate: true },
+  );
+
+  const postCharCount = computed(
+    () => previewCharCount.value + contentCharCount.value,
+  );
+
+  // Желательный максимум зависит от обложки: пост с картинкой = подпись к медиа
+  // (короче), без картинки = текстовый пост (длиннее). Лимит не жёсткий.
+  const hasCover = computed(() => !!state.value.previewImageUrl);
+
+  const charTarget = computed(() =>
+    hasCover.value
+      ? ARTICLE_POST_CHAR_TARGET_WITH_IMAGE
+      : ARTICLE_POST_CHAR_TARGET_NO_IMAGE,
+  );
+
+  // Превышен желательный максимум — только подсветка, отправку не блокируем.
+  const isOverCharTarget = computed(
+    () => postCharCount.value > charTarget.value,
+  );
+
+  const hasPreviewText = computed(() => previewCharCount.value > 0);
 
   const $toast = useToast();
   const route = useRoute();
@@ -175,6 +229,10 @@
     copy(`${getOrigin()}${getArticleRoute(currentUrl.value)}`);
   }
 
+  function togglePublishToTelegram(): void {
+    state.value.publishToTelegram = !state.value.publishToTelegram;
+  }
+
   const schema = z.object({
     title: z.string().trim().nonempty(),
     url: z.string().trim().nonempty(),
@@ -182,6 +240,7 @@
     draft: z.boolean(),
     active: z.boolean(),
     accessibleByLink: z.boolean(),
+    publishToTelegram: z.boolean(),
     // Анонс необязателен: пустую строку допускаем (бэк принимает пустой preview).
     preview: z.string().trim(),
     content: z.string().trim().nonempty(),
@@ -337,11 +396,71 @@
     </UCard>
 
     <UCard variant="subtle">
+      <UButton
+        icon="tabler:brand-telegram"
+        :variant="state.publishToTelegram ? 'solid' : 'soft'"
+        :color="state.publishToTelegram ? 'primary' : 'neutral'"
+        :aria-pressed="state.publishToTelegram"
+        @click.left.exact.prevent="togglePublishToTelegram"
+      >
+        Опубликовать в Telegram
+      </UButton>
+
+      <div
+        class="mt-4 flex flex-col gap-1 border-t border-default pt-4 text-sm"
+      >
+        <p
+          class="font-medium tabular-nums"
+          :class="isOverCharTarget ? 'text-warning' : 'text-highlighted'"
+        >
+          Символов в посте (анонс + содержание): {{ postCharCount }} /
+          {{ charTarget }}
+        </p>
+
+        <p class="text-muted">
+          {{ hasCover ? 'С картинкой' : 'Без картинки' }} — желательно до
+          {{ charTarget }} символов.
+        </p>
+
+        <p class="text-muted tabular-nums">
+          Анонс: {{ previewCharCount }} · Содержание: {{ contentCharCount }}
+        </p>
+      </div>
+    </UCard>
+
+    <UCard
+      variant="subtle"
+      :ui="{ body: isPreviewOpen ? undefined : 'p-0 sm:p-0' }"
+    >
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Анонс</h2>
+        <button
+          type="button"
+          class="flex w-full cursor-pointer items-center justify-between gap-2 text-left"
+          :aria-expanded="isPreviewOpen"
+          @click.left.exact.prevent="isPreviewOpen = !isPreviewOpen"
+        >
+          <span class="flex min-w-0 items-center gap-2">
+            <h2 class="truncate text-base text-highlighted">Анонс</h2>
+
+            <span
+              v-if="!isPreviewOpen && hasPreviewText"
+              class="shrink-0 text-xs text-muted"
+            >
+              заполнен
+            </span>
+          </span>
+
+          <UIcon
+            :name="isPreviewOpen ? 'tabler:chevron-up' : 'tabler:chevron-down'"
+            class="size-5 shrink-0 text-muted"
+          />
+        </button>
       </template>
 
-      <UFormField name="preview">
+      <UFormField
+        v-if="isPreviewOpen"
+        name="preview"
+      >
         <MarkupEditor
           v-model="state.preview"
           placeholder="Введи короткий анонс"
@@ -368,7 +487,9 @@
       </template>
 
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-start">
-        <div class="overflow-hidden rounded-lg border border-default bg-muted">
+        <div
+          class="relative overflow-hidden rounded-lg border border-default bg-muted"
+        >
           <NuxtImg
             v-slot="{ src, isLoaded, imgAttrs }"
             :key="coverModel"
@@ -390,6 +511,16 @@
               alt="no image"
             />
           </NuxtImg>
+
+          <UButton
+            v-if="coverModel"
+            icon="tabler:trash"
+            color="error"
+            size="sm"
+            class="absolute top-2 right-2"
+            aria-label="Удалить обложку"
+            @click.left.exact.prevent="coverModel = undefined"
+          />
         </div>
 
         <UploadImage

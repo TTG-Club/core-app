@@ -17,7 +17,7 @@
   // Клиентская (не-SSR) загрузка: блок новостей ниже сгиба и не должен держать
   // TTFB главной в ожидании бэкенда статей (как HomeRecentChanges). Пока запрос
   // идёт — показываем скелетон, а не блокируем страницу.
-  const { data, status } = await useAsyncData(
+  const { data, status, refresh } = await useAsyncData(
     'home-news',
     () =>
       $fetch<ArticleShortResponse[]>(ARTICLES_SEARCH_PATH, {
@@ -30,21 +30,35 @@
     { default: () => [], lazy: true, server: false },
   );
 
+  const hasNews = computed(() => (data.value?.length ?? 0) > 0);
+
+  // Главную часто держат открытой, а новости публикуют/снимают в админке (нередко
+  // в другой вкладке). Чтобы блок был актуальным без F5 — перезапрашиваем его при
+  // возврате на вкладку (hidden → visible). Навигация на главную и так тянет свежее.
+  const visibility = useDocumentVisibility();
+
+  watch(visibility, (state, previous) => {
+    if (state === 'visible' && previous === 'hidden') {
+      refresh();
+    }
+  });
+
   const { format } = useDayjs();
 
-  // idle — состояние до клиентского фетча (server: false): тоже показываем скелетон,
-  // чтобы не мигать пустым состоянием перед загрузкой.
+  // Скелетон — только на ПЕРВОЙ загрузке (данных ещё нет); idle тоже держим как
+  // loading (server:false: до клиентского фетча статус 'idle'). Фоновое обновление
+  // при возврате на вкладку не мигает скелетоном поверх уже показанных новостей.
   const isLoading = computed(
-    () => status.value === 'pending' || status.value === 'idle',
+    () =>
+      (status.value === 'pending' || status.value === 'idle') && !hasNews.value,
   );
 
-  // Блок на главной прячем целиком, если новости не загрузились (например, бэкенд
-  // ещё не включён): аккуратнее показать пустую главную, чем ошибку всем гостям.
-  const isError = computed(() => status.value === 'error');
+  // Блок прячем целиком, только если новости ТАК И НЕ загрузились (бэкенд ещё не
+  // включён и т.п.) — аккуратнее показать пустую главную, чем ошибку гостям. Если же
+  // данные есть, а фоновое обновление упало — оставляем показанное, не роняем блок.
+  const isError = computed(() => status.value === 'error' && !hasNews.value);
 
   const heroArticle = computed(() => data.value?.[0] ?? null);
-
-  const hasNews = computed(() => (data.value?.length ?? 0) > 0);
 
   // Остальные новости (после «геройской») — компактной лентой-таймлайном.
   // url — маршрут страницы (для ссылки/ctrl+click), slug — для открытия в дровере.

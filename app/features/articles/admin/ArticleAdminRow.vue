@@ -98,7 +98,7 @@
     </UBadge>
 
     <UTooltip
-      v-if="article.accessibleByLink"
+      v-if="!article.active && article.accessibleByLink"
       text="Доступна по прямой ссылке"
     >
       <UIcon
