@@ -10,7 +10,7 @@
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
   useSeoMeta({
-    title: 'Предметы [Items]',
+    title: 'Предметы [Items] — D&D 5 (2024)',
     description: 'Предметы из D&D 5 (редакция 2024 года).',
   });
 

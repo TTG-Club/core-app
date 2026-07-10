@@ -20,7 +20,7 @@
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
   useSeoMeta({
-    title: 'Магические предметы [Magic Items]',
+    title: 'Магические предметы [Magic Items] — D&D 5 (2024)',
     description: 'Магические предметы из D&D 5 (редакция 2024 года).',
   });
 

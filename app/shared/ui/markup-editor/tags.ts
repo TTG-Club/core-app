@@ -139,6 +139,14 @@ export const BLOCK_TAGS: MarkupTag[] = [
     placeholder: 'цитата',
   },
   {
+    key: 'separator',
+    label: 'Разделитель',
+    icon: 'tabler:separator-horizontal',
+    before: '{@separator ',
+    after: '}',
+    placeholder: '',
+  },
+  {
     key: 'table',
     label: 'Таблица',
     icon: 'tabler:table',

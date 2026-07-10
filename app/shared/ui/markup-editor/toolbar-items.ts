@@ -1,4 +1,4 @@
-import type { EditorToolbarItem } from '@nuxt/ui';
+import type { DropdownMenuItem, EditorToolbarItem } from '@nuxt/ui';
 import type { Editor } from '@tiptap/vue-3';
 
 import type { MarkupTag } from './tags';
@@ -260,30 +260,165 @@ function sectionDropdown(handlers: ToolbarHandlers): EditorToolbarItem {
   };
 }
 
-/**
- * Ставит выравнивание ячейкам таблицы по текущему выделению (одна ячейка или
- * колонка через CellSelection) — и телу (`tableCell`), и заголовку
- * (`tableHeader`). Значение пишем ЯВНО, включая `left`: заголовок на странице по
- * умолчанию центрируется, поэтому `left` должен перебить дефолт, а не свестись к
- * нему. `updateAttributes` для «чужого» типа ячейки — no-op, поэтому оба вызова
- * безопасны независимо от того, в шапке курсор или в теле.
- */
-function setCellAlign(
-  editor: Editor,
-  align: 'left' | 'center' | 'right',
-): void {
-  editor
-    .chain()
-    .focus()
-    .updateAttributes('tableCell', { align })
-    .updateAttributes('tableHeader', { align })
-    .run();
+/** Строковый атрибут `align` активного узла (undefined — нет/не строка/пусто). */
+function readAlign(editor: Editor, nodeName: string): string | undefined {
+  const align: unknown = editor.getAttributes(nodeName).align;
+
+  return typeof align === 'string' && align ? align : undefined;
+}
+
+/** Текущее выравнивание блока под курсором (ячейка таблицы → заголовок → абзац). */
+function activeAlign(editor: Editor): string | undefined {
+  if (editor.isActive('tableCell')) {
+    return readAlign(editor, 'tableCell');
+  }
+
+  if (editor.isActive('tableHeader')) {
+    return readAlign(editor, 'tableHeader');
+  }
+
+  if (editor.isActive('heading')) {
+    return readAlign(editor, 'heading');
+  }
+
+  if (editor.isActive('paragraph')) {
+    return readAlign(editor, 'paragraph');
+  }
+
+  return undefined;
 }
 
 /**
- * Выпадающее меню таблицы: вставка, подпись, кубик-бросок, операции над строками/
- * столбцами (команды @tiptap/extension-table) и выравнивание ячеек. Вне таблицы
- * операции — no-op, «Вставить» работает всегда.
+ * Единое выравнивание для ЛЮБОГО текста. В таблице — ячейке (тело+шапка, как было
+ * в меню таблицы; `left` пишем ЯВНО, чтобы перебить дефолт-центр заголовка). Вне
+ * таблицы — абзацу/заголовку: там `left` — значение по умолчанию, поэтому храним
+ * его как `null` (обычный абзац-строка без `{@p}`). `updateAttributes` для узла не
+ * под курсором — no-op, поэтому все вызовы безопасны.
+ */
+function setAlign(editor: Editor, align: 'left' | 'center' | 'right'): void {
+  const chain = editor.chain().focus();
+
+  if (editor.isActive('tableCell') || editor.isActive('tableHeader')) {
+    chain
+      .updateAttributes('tableCell', { align })
+      .updateAttributes('tableHeader', { align })
+      .run();
+
+    return;
+  }
+
+  const value = align === 'left' ? null : align;
+
+  chain
+    .updateAttributes('paragraph', { align: value })
+    .updateAttributes('heading', { align: value })
+    .run();
+}
+
+/** Текущий уровень заголовка под курсором (0 — не заголовок). */
+function activeHeadingLevel(editor: Editor): number {
+  if (!editor.isActive('heading')) {
+    return 0;
+  }
+
+  const level: unknown = editor.getAttributes('heading').level;
+
+  return typeof level === 'number' ? level : 0;
+}
+
+/**
+ * Выпадающее меню заголовков: ОДНА кнопка «H» вместо трёх (H1–H3) + «Обычный
+ * текст» для возврата к абзацу. Заголовки — нативные узлы (setHeading/setParagraph),
+ * поэтому уровень можно менять и снимать прямо здесь, а сам заголовок — выделять и
+ * править (в отличие от прежнего атомарного чипа).
+ */
+function headingDropdown(editor: Editor): EditorToolbarItem {
+  const level = activeHeadingLevel(editor);
+
+  const levelItem = (value: 1 | 2 | 3): DropdownMenuItem => ({
+    label: `Заголовок ${value}`,
+    icon: `tabler:h-${value}`,
+    active: level === value,
+    onClick: () => editor.chain().focus().setHeading({ level: value }).run(),
+  });
+
+  return {
+    'icon': 'tabler:heading',
+    'tooltip': { text: 'Заголовок' },
+    'aria-label': 'Заголовок',
+    'items': [
+      levelItem(1),
+      levelItem(2),
+      levelItem(3),
+      {
+        label: 'Обычный текст',
+        icon: 'tabler:pilcrow',
+        onClick: () => editor.chain().focus().setParagraph().run(),
+      },
+    ],
+  };
+}
+
+/**
+ * Выпадающее меню выравнивания (единое, «как H»): работает и для ячеек таблицы, и
+ * для абзацев/заголовков — «любой текст». Раньше выравнивание жило только в меню
+ * таблицы; теперь вынесено на общую панель тулбара.
+ */
+function alignDropdown(editor: Editor): EditorToolbarItem {
+  const current = activeAlign(editor);
+
+  const alignItem = (
+    value: 'left' | 'center' | 'right',
+    label: string,
+    icon: string,
+  ): DropdownMenuItem => ({
+    label,
+    icon,
+    active: current === value,
+    onClick: () => setAlign(editor, value),
+  });
+
+  return {
+    'icon': 'tabler:align-left',
+    'tooltip': { text: 'Выравнивание' },
+    'aria-label': 'Выравнивание',
+    'items': [
+      alignItem('left', 'По левому краю', 'tabler:align-left'),
+      alignItem('center', 'По центру', 'tabler:align-center'),
+      alignItem('right', 'По правому краю', 'tabler:align-right'),
+    ],
+  };
+}
+
+/**
+ * Пункт-разделитель `{@separator}`: вставляет блочный маркер-линию в позицию
+ * курсора (выделение НЕ оборачивает — у разделителя нет текста). Остаётся
+ * атомарным блок-чипом: его достаточно выделить и удалить целиком.
+ */
+function separatorItem(editor: Editor, tag: MarkupTag): EditorToolbarItem {
+  return {
+    icon: tag.icon,
+    tooltip: { text: tag.label },
+    onClick: () => {
+      const { to } = editor.state.selection;
+
+      editor
+        .chain()
+        .focus()
+        .insertContentAt(to, {
+          type: 'ttgBlockMarker',
+          attrs: { raw: '{@separator}' },
+        })
+        .run();
+    },
+  };
+}
+
+/**
+ * Выпадающее меню таблицы: вставка, подпись, кубик-бросок и операции над строками/
+ * столбцами (команды @tiptap/extension-table). Выравнивание ячеек ПЕРЕЕХАЛО на
+ * общую панель (см. alignDropdown). Вне таблицы операции — no-op, «Вставить»
+ * работает всегда.
  */
 function tableDropdown(
   editor: Editor,
@@ -356,21 +491,6 @@ function tableDropdown(
         onClick: () => chain().toggleHeaderRow().run(),
       },
       {
-        label: 'Выровнять влево',
-        icon: 'tabler:align-left',
-        onClick: () => setCellAlign(editor, 'left'),
-      },
-      {
-        label: 'Выровнять по центру',
-        icon: 'tabler:align-center',
-        onClick: () => setCellAlign(editor, 'center'),
-      },
-      {
-        label: 'Выровнять вправо',
-        icon: 'tabler:align-right',
-        onClick: () => setCellAlign(editor, 'right'),
-      },
-      {
         label: 'Удалить таблицу',
         icon: 'tabler:trash',
         onClick: () => chain().deleteTable().run(),
@@ -380,8 +500,10 @@ function tableDropdown(
 }
 
 /**
- * Строит пункт блочного тега: списки — нативный переключатель, таблица —
- * выпадающее меню операций, остальное — {@...}-чип отдельным блоком.
+ * Строит пункт блочного тега: списки — нативный переключатель, цитата — нативный
+ * blockquote, таблица — выпадающее меню операций, разделитель — блочный чип,
+ * остальное — {@...}-чип отдельным блоком. Заголовки сюда НЕ попадают — они собраны
+ * в отдельный выпадающий список (см. headingDropdown).
  */
 function blockItem(
   editor: Editor,
@@ -400,13 +522,17 @@ function blockItem(
     return quoteToggleItem(editor, tag);
   }
 
+  if (tag.key === 'separator') {
+    return separatorItem(editor, tag);
+  }
+
   return tagItem(editor, tag, true);
 }
 
 /**
- * Собирает пункты тулбара визуального редактора группами: форматирование
- * (марки) → блочные теги (заголовки/список/таблица/цитата/ссылка) →
- * инлайновые/интерактивные теги → ссылки на разделы.
+ * Собирает пункты тулбара визуального редактора группами: форматирование (марки) →
+ * тип блока (заголовок «H» + выравнивание) → блочные теги (списки/цитата/
+ * разделитель/таблица) → инлайновые/интерактивные теги → ссылки на разделы.
  *
  * @param editor - Экземпляр TipTap из слота UEditor
  * @returns Массив групп пунктов тулбара
@@ -415,9 +541,13 @@ export function buildToolbarItems(
   editor: Editor,
   handlers: ToolbarHandlers,
 ): EditorToolbarItem[][] {
+  // Заголовки собраны в headingDropdown, поэтому из блочной группы их убираем.
+  const blockTags = BLOCK_TAGS.filter((tag) => !tag.key.startsWith('heading-'));
+
   return [
     FORMAT_MARK_ITEMS.map((item) => markItem(editor, item)),
-    BLOCK_TAGS.map((tag) => blockItem(editor, tag, handlers)),
+    [headingDropdown(editor), alignDropdown(editor)],
+    blockTags.map((tag) => blockItem(editor, tag, handlers)),
     [
       ...INLINE_TAGS.map((tag) => inlineItem(editor, tag, handlers)),
       ...INTERACTIVE_TAGS.map((tag) => interactiveItem(editor, tag, handlers)),

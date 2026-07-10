@@ -11,7 +11,9 @@ import { Mark, mergeAttributes } from '@tiptap/core';
 
 import { findMarkerEnd } from '../../markup/balance';
 import { isBlockMarker } from './render-chip';
+import { isHeadingMarkerStart } from './ttg-heading';
 import { isListMarkerStart } from './ttg-list';
+import { isParagraphMarkerStart } from './ttg-paragraph';
 import { isQuoteMarkerStart } from './ttg-quote';
 import { isTableMarkerStart } from './ttg-table';
 
@@ -231,12 +233,15 @@ export const blockMarkerMarkdownTokenizer: MarkdownTokenizer = {
       return undefined;
     }
 
-    // Списки, таблицы и цитаты обрабатывают НАТИВНЫЕ токенайзеры (редактируемые
-    // узлы) — сюда попадают только прочие блочные маркеры (заголовок/разделитель).
+    // Списки, таблицы, цитаты, заголовки и выровненные абзацы обрабатывают
+    // НАТИВНЫЕ токенайзеры (редактируемые узлы) — сюда попадают только прочие
+    // блочные маркеры (разделитель).
     if (
       isListMarkerStart(source)
       || isTableMarkerStart(source)
       || isQuoteMarkerStart(source)
+      || isHeadingMarkerStart(source)
+      || isParagraphMarkerStart(source)
     ) {
       return undefined;
     }

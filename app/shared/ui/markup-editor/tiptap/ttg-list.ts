@@ -14,7 +14,12 @@ import type { DeferredInlineTokens } from './block-tokenizer';
 import { Extension } from '@tiptap/core';
 import { BulletList, ListItem, OrderedList } from '@tiptap/extension-list';
 
-import { isMarkerNode, parse, serializeMarkup } from '~ui/markup';
+import {
+  isMarkerNode,
+  parse,
+  serializeInlineNodes,
+  serializeMarkup,
+} from '~ui/markup';
 
 import {
   createBlockMarkerTokenizer,
@@ -54,19 +59,14 @@ export function isListMarkerStart(source: string): boolean {
   return markerNameMatches(source, LIST_NAMES);
 }
 
-/** Сериализует инлайн-узлы пункта обратно в строку-исходник `{@...}`. */
-function serializeInline(nodes: RenderNode[]): string {
-  return nodes.map((node) => serializeMarkup(node)).join('');
-}
-
 /** Исходник содержимого одного пункта списка (для инлайн-токенизации). */
 function itemInner(child: RenderNode): string {
   if (isMarkerNode(child)) {
-    return serializeInline(child.content ?? []);
+    return serializeInlineNodes(child.content ?? []);
   }
 
   if (Array.isArray(child)) {
-    return serializeInline(child);
+    return serializeInlineNodes(child);
   }
 
   return serializeMarkup(child);
@@ -183,14 +183,16 @@ export const TtgListMarkdown = Extension.create({
 
   markdownTokenName: LIST_TOKEN,
   markdownTokenizer: ttgListMarkdownTokenizer,
-  parseMarkdown: (token: MarkdownToken, helpers: MarkdownParseHelpers) =>
-    listDataToJSON(
-      {
-        ordered: Boolean((token as { ordered?: boolean }).ordered),
-        items: (token as { items?: TtgListItemData[] }).items ?? [],
-      },
-      helpers,
-    ),
+  // Поля ordered/items кладёт в токен listNodeToData (см. TtgListData). `items`
+  // объявлено в MarkdownToken как MarkdownToken[], поэтому читаем его через
+  // unknown (без каста) и сужаем Array.isArray — так своя структура не конфликтует
+  // с базовым типом токена.
+  parseMarkdown: (token: MarkdownToken, helpers: MarkdownParseHelpers) => {
+    const rawItems: unknown = token.items;
+    const items: TtgListItemData[] = Array.isArray(rawItems) ? rawItems : [];
+
+    return listDataToJSON({ ordered: token.ordered === true, items }, helpers);
+  },
 });
 
 /** Сериализует нативный список в `{@list {@li ...}...[ | type:ordered]}`. */

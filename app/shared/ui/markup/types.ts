@@ -4,6 +4,9 @@ import type { MarkerType } from './config';
 
 export type MarkerAttributes = Record<string, string | number | boolean | null>;
 
+/** Пользовательский уровень заголовка `{@h}`: 1 — крупный … 4 — минимальный. */
+export type HeadingLevel = 1 | 2 | 3 | 4;
+
 // Простой текст
 export interface SimpleTextNode {
   type: 'text';

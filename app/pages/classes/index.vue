@@ -11,7 +11,7 @@
   const route = useRoute();
 
   useSeoMeta({
-    title: 'Классы [Classes]',
+    title: 'Классы [Classes] — D&D 5 (2024)',
     description: 'Классы персонажей из D&D 5 (редакция 2024 года).',
   });
 

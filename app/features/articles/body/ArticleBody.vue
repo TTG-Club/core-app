@@ -94,8 +94,6 @@
     display: flex;
     flex: 1 1 0;
     flex-direction: column;
-    gap: 16px;
-
     min-width: 0;
   }
 </style>

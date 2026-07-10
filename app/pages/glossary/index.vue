@@ -13,7 +13,7 @@
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
   useSeoMeta({
-    title: 'Глоссарий [Glossary]',
+    title: 'Глоссарий [Glossary] — D&D 5 (2024)',
     description: 'Глоссарий из D&D 5 (редакция 2024 года).',
   });
 

@@ -14,7 +14,7 @@
   const route = useRoute();
 
   useSeoMeta({
-    title: 'Виды [Species]',
+    title: 'Виды [Species] — D&D 5 (2024)',
     description:
       'Виды и происхождения персонажей из D&D 5 (редакция 2024 года).',
   });

@@ -22,7 +22,7 @@ import {
   CELL_PLACEHOLDER,
   isMarkerNode,
   parse,
-  serializeMarkup,
+  serializeInlineNodes,
 } from '~ui/markup';
 
 import {
@@ -80,11 +80,6 @@ function toArray(value: RenderNode | RenderNode[] | undefined): RenderNode[] {
   return Array.isArray(value) ? value : [value];
 }
 
-/** Инлайн-исходник узлов ячейки (join '' — как в ttg-list). */
-function serializeInline(nodes: RenderNode[]): string {
-  return nodes.map((node) => serializeMarkup(node)).join('');
-}
-
 /**
  * Разбирает сырой `{@table …}` в структуру ячеек с уже разобранными инлайн-
  * токенами. Возвращает undefined для пустой/битой таблицы (невалидный узел).
@@ -94,8 +89,9 @@ function buildTableData(
   lexer: MarkdownLexerConfiguration,
 ): TableData | undefined {
   const node = parse(raw).find(
-    (candidate) => isMarkerNode(candidate) && candidate.type === 'table',
-  ) as ParsedTable | undefined;
+    (candidate): candidate is ParsedTable =>
+      isMarkerNode(candidate) && candidate.type === 'table',
+  );
 
   if (!node) {
     return undefined;
@@ -116,7 +112,7 @@ function buildTableData(
     cells.push(
       colLabels.map((label, index) => ({
         isHeader: true,
-        tokens: deferInline(lexer, serializeInline(toArray(label))),
+        tokens: deferInline(lexer, serializeInlineNodes(toArray(label))),
         style: colStyles[index] || undefined,
         align: colAligns[index] || undefined,
       })),
@@ -127,13 +123,13 @@ function buildTableData(
     cells.push(
       row.map((cell) => ({
         isHeader: false,
-        tokens: deferInline(lexer, serializeInline(cell.content ?? [])),
+        tokens: deferInline(lexer, serializeInlineNodes(cell.content ?? [])),
         align: cell.align,
       })),
     );
   }
 
-  return { caption: serializeInline(toArray(node.caption)), cells };
+  return { caption: serializeInlineNodes(toArray(node.caption)), cells };
 }
 
 /**
@@ -157,10 +153,16 @@ export const TtgTableMarkdown = Extension.create({
 
   markdownTokenName: TABLE_TOKEN,
   markdownTokenizer: ttgTableMarkdownTokenizer,
+  // Поля caption/cells кладёт в токен buildTableData (см. TableData). Читаем их
+  // через typeof-проверку без каста — токен типизирован свободно.
   parseMarkdown: (token: MarkdownToken, helpers: MarkdownParseHelpers) => {
-    const data = token as unknown as TableData;
+    const caption = typeof token.caption === 'string' ? token.caption : '';
 
-    const rows = data.cells.map((row) =>
+    const cells: TableData['cells'] = Array.isArray(token.cells)
+      ? token.cells
+      : [];
+
+    const rows = cells.map((row) =>
       helpers.createNode(
         'tableRow',
         {},
@@ -179,7 +181,7 @@ export const TtgTableMarkdown = Extension.create({
       ),
     );
 
-    return helpers.createNode('table', { caption: data.caption }, rows);
+    return helpers.createNode('table', { caption }, rows);
   },
 });
 

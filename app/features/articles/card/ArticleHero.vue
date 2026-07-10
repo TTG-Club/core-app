@@ -4,6 +4,7 @@
   import {
     ARTICLE_DATE_FORMAT,
     ARTICLE_FALLBACK_IMAGE,
+    ARTICLES_ADMIN_CREATE_ROUTE,
     getArticlePreviewText,
     getArticleRoute,
   } from '../model';
@@ -16,7 +17,14 @@
     (e: 'open'): void;
   }>();
 
+  // Кнопку «Создать новость» показываем только администратору (см. useUserRoles).
+  const { isAdmin } = useUserRoles();
+
   const { format } = useDayjs();
+
+  // Общий вид кнопок-действий поверх обложки (стеклянный тёмный фон).
+  const heroActionClass =
+    'bg-black/40 text-white ring-1 ring-white/20 backdrop-blur-sm hover:bg-black/60 hover:text-white';
 
   const coverImage = computed(
     () => article.previewImageUrl || ARTICLE_FALLBACK_IMAGE,
@@ -55,16 +63,30 @@
       class="absolute inset-0 bg-linear-to-t from-black/90 via-black/60 to-black/20"
     />
 
-    <UButton
-      :to="articleRoute"
-      icon="tabler:external-link"
-      variant="ghost"
-      size="sm"
-      class="absolute top-2 right-2 z-20 bg-black/40 text-white ring-1 ring-white/20 backdrop-blur-sm hover:bg-black/60 hover:text-white"
-      :aria-label="`Открыть «${article.title}» на отдельной странице`"
-      @click.stop
-      @keydown.stop
-    />
+    <div class="absolute top-2 right-2 z-20 flex items-center gap-1">
+      <UButton
+        v-if="isAdmin"
+        :to="ARTICLES_ADMIN_CREATE_ROUTE"
+        icon="tabler:plus"
+        variant="ghost"
+        size="sm"
+        :class="heroActionClass"
+        aria-label="Создать новость"
+        @click.stop
+        @keydown.stop
+      />
+
+      <UButton
+        :to="articleRoute"
+        icon="tabler:external-link"
+        variant="ghost"
+        size="sm"
+        :class="heroActionClass"
+        :aria-label="`Открыть «${article.title}» на отдельной странице`"
+        @click.stop
+        @keydown.stop
+      />
+    </div>
 
     <div class="relative z-10 flex flex-col gap-1 p-4 sm:p-5">
       <span

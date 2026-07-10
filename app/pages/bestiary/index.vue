@@ -25,7 +25,7 @@
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
   useSeoMeta({
-    title: 'Бестиарий [Bestiary]',
+    title: 'Бестиарий [Bestiary] — D&D 5 (2024)',
     description: 'Бестиарий из D&D 5 (редакция 2024 года).',
   });
 
