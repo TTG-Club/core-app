@@ -10,7 +10,7 @@
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
   useSeoMeta({
-    title: 'Черты [Feats]',
+    title: 'Черты [Feats] — D&D 5 (2024)',
     description: 'Черты из D&D 5 (редакция 2024 года).',
   });
 

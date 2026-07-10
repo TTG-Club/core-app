@@ -13,7 +13,7 @@
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
   useSeoMeta({
-    title: 'Предыстории [Backgrounds]',
+    title: 'Предыстории [Backgrounds] — D&D 5 (2024)',
     description: 'Предыстории из D&D 5 (редакция 2024 года).',
   });
 
