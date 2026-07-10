@@ -1,4 +1,9 @@
-import type { MarkerNode, RenderNode, SimpleTextNode } from './types';
+import type {
+  HeadingLevel,
+  MarkerNode,
+  RenderNode,
+  SimpleTextNode,
+} from './types';
 
 import { MARKER_MAP } from './config';
 
@@ -15,6 +20,30 @@ export function logError(
   data?: unknown,
 ): void {
   consola.error(`[Markup ${context}]`, message, data);
+}
+
+/**
+ * Клампит пользовательский уровень заголовка в 1–4 (1 — крупный … 4 —
+ * минимальный). Общая доменная логика для рендера страницы (MarkupHeading) и
+ * редактора (ttg-heading). Нечисловое/пустое значение сводится к 1.
+ *
+ * @param value - Сырое значение уровня (атрибут `level`, любого типа)
+ * @returns Уровень в диапазоне 1–4
+ */
+export function clampHeadingLevel(value: unknown): HeadingLevel {
+  const parsed = Number.parseInt(String(value ?? '1'), 10);
+  const clamped = Number.isNaN(parsed) ? 1 : Math.min(4, Math.max(1, parsed));
+
+  switch (clamped) {
+    case 2:
+      return 2;
+    case 3:
+      return 3;
+    case 4:
+      return 4;
+    default:
+      return 1;
+  }
 }
 
 /**

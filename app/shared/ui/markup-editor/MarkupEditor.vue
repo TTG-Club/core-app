@@ -16,9 +16,11 @@
   import {
     TtgBlockMarker,
     ttgFormatMarks,
+    ttgHeadingExtensions,
     TtgKeymap,
     ttgListExtensions,
     TtgMarker,
+    ttgParagraphExtensions,
     ttgQuoteExtensions,
     ttgTableExtensions,
   } from './tiptap';
@@ -39,6 +41,8 @@
     TtgBlockMarker,
     TtgKeymap,
     ...ttgFormatMarks,
+    ...ttgHeadingExtensions,
+    ...ttgParagraphExtensions,
     ...ttgListExtensions,
     ...ttgTableExtensions,
     ...ttgQuoteExtensions,
@@ -130,9 +134,16 @@
   // Отключаем встроенные Markdown-узлы/марки StarterKit, которые сериализуются в
   // Markdown (заголовки/списки/цитата/ссылка + `**`/`*`/`~~`). Всё
   // форматирование даёт наш ttgFormatMarks ({@b}/{@i}/…), а блочные элементы —
-  // {@...}-чипы. Так визуальный редактор НИКОГДА не выдаёт Markdown наружу.
+  // нативные ttg-узлы ({@h}/{@list}/{@quote}/{@table}) либо {@...}-чипы. Так
+  // визуальный редактор НИКОГДА не выдаёт Markdown наружу.
+  //
+  // heading/paragraph заменяем СВОИМИ узлами (TtgHeading/TtgParagraph): заголовок
+  // становится редактируемым и сериализуется в `{@h … | level:N}`, а абзац несёт
+  // атрибут выравнивания и при align → `{@p … | align:…}` (см. ttg-heading.ts /
+  // ttg-paragraph.ts).
   const starterKit = {
     heading: false,
+    paragraph: false,
     bulletList: false,
     orderedList: false,
     listItem: false,
@@ -468,6 +479,57 @@
 
   .markup-editor-table :deep(.tiptap blockquote > p) {
     margin: 0;
+  }
+
+  /* Нативный заголовок (TtgHeading) в редакторе: StarterKit-heading отключён, а
+     наш узел рендерит h1–h4 по пользовательскому уровню 1–4. Стилизуем размеры
+     под вид заголовка на странице (MarkupHeading), чтобы автор видел иерархию. */
+  .markup-editor-table :deep(.tiptap :is(h1, h2, h3, h4)) {
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--ui-text-highlighted);
+  }
+
+  .markup-editor-table :deep(.tiptap h1) {
+    margin: 0.75rem 0 0.5rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--ui-border);
+    font-size: 1.25rem;
+  }
+
+  .markup-editor-table :deep(.tiptap h2) {
+    margin: 0.6rem 0 0.35rem;
+    font-size: 1.125rem;
+  }
+
+  .markup-editor-table :deep(.tiptap h3) {
+    margin: 0.5rem 0 0.25rem;
+    font-size: 1rem;
+  }
+
+  .markup-editor-table :deep(.tiptap h4) {
+    margin: 0.4rem 0 0.2rem;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  /* Выравнивание любого текстового блока (абзац/заголовок) по атрибуту align →
+     data-align. Значение хранит TtgParagraph/TtgHeading; так автор видит
+     выравнивание прямо в редакторе, как оно будет на странице. */
+  .markup-editor-table
+    :deep(.tiptap :is(p, h1, h2, h3, h4)[data-align='center']) {
+    text-align: center;
+  }
+
+  .markup-editor-table
+    :deep(.tiptap :is(p, h1, h2, h3, h4)[data-align='right']) {
+    text-align: right;
+  }
+
+  .markup-editor-table
+    :deep(.tiptap :is(p, h1, h2, h3, h4)[data-align='left']) {
+    text-align: left;
   }
 
   /* Подсветка выделенной при редактировании ячейки (prosemirror-tables). */

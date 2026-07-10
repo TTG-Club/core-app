@@ -5,27 +5,39 @@
 
   import { computed } from 'vue';
 
+  import { clampHeadingLevel } from '../utils';
+
   const { node, renderNodes } = defineProps<{
     node: MarkerNode;
     renderNodes: (nodes: RenderNode[]) => VNode[];
   }>();
 
-  // Пользовательский уровень 1-4. Клампим (а не бросаем ошибку): throw здесь
-  // выполняется во время рендера Vue, ВНЕ try/catch MarkupRender, и уронил бы
-  // всю страницу/предпросмотр из-за одного плохого `level:`.
-  const rawLevel = Number.parseInt(node.attrs?.level?.toString() || '1');
+  // Пользовательский уровень 1-4 (клампим, а не бросаем: MarkupHeading рендерится
+  // ВНЕ try/catch MarkupRender, и throw из-за одного плохого `level:` уронил бы всю
+  // страницу/предпросмотр). Маппинг пользовательский 1-4 → реальный тег h3-h6.
+  const HEADING_TAGS = { 1: 'h3', 2: 'h4', 3: 'h5', 4: 'h6' } as const;
 
-  const userLevel = Number.isNaN(rawLevel)
-    ? 1
-    : Math.min(4, Math.max(1, rawLevel));
+  const userLevel = clampHeadingLevel(node.attrs?.level);
+  const tag = HEADING_TAGS[userLevel];
 
-  // Маппинг: пользовательский 1-4 → реальный 3-6
-  const actualLevel = userLevel + 2; // 1→3, 2→4, 3→5, 4→6
-  const tag = `h${actualLevel}` as 'h3' | 'h4' | 'h5' | 'h6';
+  // Выравнивание заголовка (`left` — по умолчанию, класс не нужен).
+  const alignClass = computed(() => {
+    const align = node.attrs?.align;
+
+    if (align === 'center') {
+      return 'text-center';
+    }
+
+    if (align === 'right') {
+      return 'text-right';
+    }
+
+    return '';
+  });
 
   // Стили для каждого уровня
   const headingClasses = computed(() => {
-    const baseClasses = 'font-semibold text-default tracking-tight';
+    const baseClasses = `font-semibold text-default tracking-tight ${alignClass.value}`;
 
     switch (userLevel) {
       case 1: // h3 - главный в контенте
