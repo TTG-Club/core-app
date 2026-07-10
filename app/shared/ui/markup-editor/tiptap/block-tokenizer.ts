@@ -135,7 +135,7 @@ export function createBlockMarkerTokenizer(
         type: token,
         raw: source.slice(0, end + trailing[0].length),
         ...data,
-      } as MarkdownToken;
+      };
     },
   };
 }

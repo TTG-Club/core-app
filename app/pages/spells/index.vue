@@ -27,7 +27,7 @@
   import { SkeletonLinkSmall } from '~ui/skeleton';
 
   useSeoMeta({
-    title: 'Заклинания [Spells]',
+    title: 'Заклинания [Spells] — D&D 5 (2024)',
     description: 'Заклинания из D&D 5 (редакция 2024 года).',
   });
 

@@ -13,7 +13,7 @@
   import { SkeletonLinkBig } from '~ui/skeleton';
 
   useSeoMeta({
-    title: 'Источники [Sources]',
+    title: 'Источники [Sources] — D&D 5 (2024–2025)',
     description: 'Источники из D&D 5 (редакция 2024-2025 года).',
   });
 

@@ -7,6 +7,7 @@ import {
   MarkupLink,
   MarkupList,
   MarkupListItem,
+  MarkupParagraph,
   MarkupQuote,
   MarkupRoller,
   MarkupSectionLink,
@@ -43,6 +44,14 @@ export const MARKER_CONFIGS: MarkerConfig[] = [
 
   // Блочные элементы
   { type: 'heading', component: MarkupHeading, aliases: ['h'], isBlock: true },
+  // Абзац с оформлением (например выравниванием). Обычный текст остаётся простой
+  // строкой; `{@p ...}` появляется ТОЛЬКО когда у абзаца есть атрибут (align).
+  {
+    type: 'paragraph',
+    component: MarkupParagraph,
+    aliases: ['p'],
+    isBlock: true,
+  },
   {
     type: 'quote',
     component: MarkupQuote,

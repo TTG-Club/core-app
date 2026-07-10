@@ -11,7 +11,7 @@ import type { Editor } from '@tiptap/vue-3';
  */
 export function dataAttr(domName: string, attrName: string) {
   return {
-    default: null as string | null,
+    default: null,
     parseHTML: (element: HTMLElement) => element.getAttribute(domName),
     renderHTML: (attributes: Record<string, unknown>) => {
       const value = attributes[attrName];

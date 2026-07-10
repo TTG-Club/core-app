@@ -13,7 +13,7 @@ import type { DeferredInlineTokens } from './block-tokenizer';
 import { Extension } from '@tiptap/core';
 import { Blockquote } from '@tiptap/extension-blockquote';
 
-import { isMarkerNode, parse, serializeMarkup } from '~ui/markup';
+import { isMarkerNode, parse, serializeInlineNodes } from '~ui/markup';
 
 import {
   createBlockMarkerTokenizer,
@@ -47,11 +47,6 @@ export function isQuoteMarkerStart(source: string): boolean {
 /** Это узел-перенос строки `{@br}` (в парсере — маркер типа `break`). */
 function isBreakNode(node: RenderNode): boolean {
   return isMarkerNode(node) && node.type === 'break';
-}
-
-/** Инлайн-исходник узлов абзаца (join '' — как в ttg-list/ttg-table). */
-function serializeInline(nodes: RenderNode[]): string {
-  return nodes.map((node) => serializeMarkup(node)).join('');
 }
 
 /**
@@ -125,7 +120,7 @@ function buildQuoteData(
   const groups = groupParagraphs(node.content ?? []);
 
   const paragraphs = (groups.length ? groups : [[]]).map((group) => ({
-    tokens: deferInline(lexer, serializeInline(group)),
+    tokens: deferInline(lexer, serializeInlineNodes(group)),
   }));
 
   return {
@@ -156,13 +151,20 @@ export const TtgQuoteMarkdown = Extension.create({
 
   markdownTokenName: QUOTE_TOKEN,
   markdownTokenizer: ttgQuoteMarkdownTokenizer,
+  // Поля color/variant/paragraphs кладёт в токен buildQuoteData (см. QuoteData).
+  // Читаем их через typeof-проверку без каста — токен типизирован свободно.
   parseMarkdown: (token: MarkdownToken, helpers: MarkdownParseHelpers) => {
-    const data = token as unknown as QuoteData;
+    const color = typeof token.color === 'string' ? token.color : null;
+    const variant = typeof token.variant === 'string' ? token.variant : null;
+
+    const paragraphs: QuoteData['paragraphs'] = Array.isArray(token.paragraphs)
+      ? token.paragraphs
+      : [];
 
     return helpers.createNode(
       'blockquote',
-      { color: data.color ?? null, variant: data.variant ?? null },
-      data.paragraphs.map((paragraph) => ({
+      { color, variant },
+      paragraphs.map((paragraph) => ({
         type: 'paragraph',
         content: helpers.parseInline(paragraph.tokens()),
       })),

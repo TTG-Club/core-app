@@ -217,6 +217,18 @@ function serializeNodes(nodes: unknown[], separator = ''): string {
 }
 
 /**
+ * Сериализует массив узлов в ИНЛАЙН-строку (склейка без разделителя между
+ * блоками). Единый хелпер для содержимого ячеек/пунктов/абзацев/заголовков в
+ * редакторе (ttg-*), чтобы не дублировать `nodes.map(serializeMarkup).join('')`.
+ *
+ * @param nodes - Узлы разметки для инлайн-сериализации
+ * @returns Строка-исходник `{@...}` без разделителей
+ */
+export function serializeInlineNodes(nodes: RenderNode[]): string {
+  return serializeNodes(nodes);
+}
+
+/**
  * Преобразует узел разметки (`RenderNode`) обратно в строку формата
  * «Markdown + маркеры {@...}». Обратный к `parse()`.
  *
