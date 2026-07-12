@@ -131,7 +131,7 @@
       :src="greeting.image"
       :alt="personaName"
       draggable="false"
-      class="h-40 w-32 shrink-0 translate-y-2 self-end object-contain object-bottom select-none sm:h-52 sm:w-44 sm:translate-y-6 md:h-56 md:w-48"
+      class="h-[180px] w-[150px] shrink-0 translate-y-2 self-end object-contain object-bottom select-none sm:translate-y-6"
       @error="handleImageError"
     />
   </div>
