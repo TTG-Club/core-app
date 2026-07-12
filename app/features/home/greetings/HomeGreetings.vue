@@ -4,7 +4,7 @@
   import { v4 as createUuid } from 'uuid';
 
   import { USER_TOKEN_COOKIE } from '#shared/consts';
-  import { MarkupRender } from '~ui/markup';
+  import { MarkupRender, toMarkupSource } from '~ui/markup';
 
   import {
     GUEST_ID_HEADER,
@@ -52,51 +52,166 @@
 
     void fetchHomeGreeting();
   });
+
+  // --- UI-состояние (не влияет на загрузку данных) ---
+
+  /** Флаг сломанной/недоступной картинки персонажа. */
+  const isImageBroken = ref(false);
+
+  /** Показывать фигуру персонажа, только если есть ссылка и картинка цела. */
+  const hasImage = computed<boolean>(
+    () => Boolean(greeting.value?.image) && !isImageBroken.value,
+  );
+
+  /** Имя персонажа для `alt` картинки (может быть пустым). */
+  const personaName = computed<string>(
+    () => greeting.value?.persona.trim() ?? '',
+  );
+
+  /**
+   * Текст реплики строкой-исходником: новый редактор хранит поле как JSON-строку
+   * AST (`["..."]`), поэтому разворачиваем её обратно в разметку — иначе в превью
+   * протекают скобки и кавычки. Обычную строку `toMarkupSource` вернёт как есть.
+   */
+  const greetingText = computed<string>(() =>
+    toMarkupSource(greeting.value?.text ?? ''),
+  );
+
+  // Новое приветствие (новая картинка) сбрасывает флаг ошибки загрузки.
+  watch(
+    () => greeting.value?.image,
+    () => {
+      isImageBroken.value = false;
+    },
+  );
+
+  /**
+   * Помечает картинку как недоступную, чтобы скрыть сломанную фигуру.
+   */
+  function handleImageError(): void {
+    isImageBroken.value = true;
+  }
 </script>
 
 <template>
   <div
     v-if="greeting"
-    class="flex w-10/12 items-center justify-center"
+    :class="[
+      $style.root,
+      'mx-auto flex w-fit max-w-full items-end justify-center gap-2 px-2 sm:max-w-3xl sm:gap-3',
+    ]"
   >
+    <!-- Реплика: текучая ширина, перенос текста, мягкий предел высоты -->
     <div
       :class="[
-        'relative flex items-center justify-center',
-        'w-100 px-5 py-6 max-sm:p-2',
-        'rounded-xl border border-blue-500',
-        'bg-(--color-message) shadow-md',
-        'font-semibold text-black max-sm:text-xs',
-        $style.message,
+        $style.panel,
+        'relative mb-4 flex max-w-md min-w-0 items-start gap-2 rounded-2xl border border-default bg-elevated',
+        'px-4 py-3 shadow-lg ring-1 ring-primary/15 sm:mb-6 sm:gap-2.5 sm:px-5 sm:py-4',
       ]"
     >
-      <span class="text-center">
-        <MarkupRender :render-node="greeting.text" />
-      </span>
+      <!-- Открывающая кавычка-маркер слева: не занимает отдельную строку -->
+      <UIcon
+        name="tabler:quote"
+        class="mt-0.5 size-6 shrink-0 text-primary/60 sm:size-7"
+      />
+
+      <div
+        :class="[
+          $style.scroll,
+          'max-h-40 min-w-0 flex-1 overflow-y-auto pr-1 text-start text-sm leading-relaxed wrap-break-word text-toned sm:max-h-56 sm:text-base',
+        ]"
+      >
+        <MarkupRender :render-node="greetingText" />
+      </div>
     </div>
 
+    <!-- Фигура персонажа: без рамки, прижата к низу — «выглядывает» из-за поиска -->
     <img
+      v-if="hasImage"
       :src="greeting.image"
-      :alt="greeting.persona"
-      class="h-45 w-50 shrink-0 self-end object-contain object-bottom max-sm:h-30 max-sm:w-30"
+      :alt="personaName"
+      draggable="false"
+      class="h-40 w-32 shrink-0 translate-y-2 self-end object-contain object-bottom select-none sm:h-52 sm:w-44 sm:translate-y-6 md:h-56 md:w-48"
+      @error="handleImageError"
     />
   </div>
 </template>
 
 <style module lang="scss">
-  .message {
-    &:after {
+  /* Мягкое появление: проявление + лёгкий подъём, без «пугающего» скачка */
+  .root {
+    animation: greeting-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes greeting-enter {
+    from {
+      transform: translateY(0.5rem);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  /* Хвостик реплики, направленный вправо на персонажа (рамка + заливка) */
+  .panel {
+    &::before,
+    &::after {
       content: '';
 
       position: absolute;
-      top: 30%;
-      right: -10px;
+      top: 50%;
       transform: translateY(-50%);
 
       width: 0;
       height: 0;
-      border-top: 10px solid transparent;
-      border-bottom: 10px solid transparent;
-      border-left: 10px solid var(--color-blue-500); /* Цвет фона */
+      border-style: solid;
+    }
+
+    /* Внешний треугольник — цвет границы */
+    &::before {
+      right: -9px;
+      border-color: transparent transparent transparent var(--ui-border);
+      border-width: 8px 0 8px 9px;
+    }
+
+    /* Внутренний треугольник — заливка панели */
+    &::after {
+      right: -8px;
+      border-color: transparent transparent transparent var(--ui-bg-elevated);
+      border-width: 7px 0 7px 8px;
+    }
+  }
+
+  /* MarkupRender добавляет каждому блоку mb-2 — убираем лишний нижний отступ */
+  .panel :global(.mb-2:last-child) {
+    margin-bottom: 0;
+  }
+
+  /* Тонкий ненавязчивый скролл: длинный текст читается прокруткой, а не обрезкой */
+  .scroll {
+    scrollbar-color: var(--ui-border-accented) transparent;
+    scrollbar-width: thin;
+
+    &::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      border-radius: 9999px;
+      background: var(--ui-border-accented);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .root {
+      animation: none;
     }
   }
 </style>

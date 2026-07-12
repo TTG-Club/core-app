@@ -8,7 +8,7 @@
 
 <template>
   <div
-    class="relative z-10 flex w-full flex-col items-center max-sm:mt-[3dvw] lg:w-1/2"
+    class="relative z-10 flex w-full flex-col items-center gap-4 max-sm:mt-[3dvw] lg:w-2/3 xl:w-3/5"
   >
     <HomeGreetings class="-z-1" />
 
