@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { HomeArticles } from '~home/articles';
   import { HomeBackground } from '~home/background';
   import { HomeBanners, VttgCampaignBanner } from '~home/banners';
   import { HomeCommunity } from '~home/community';
@@ -42,6 +43,8 @@
           <div class="grid grid-cols-2 gap-3">
             <HomeBanners />
           </div>
+
+          <HomeArticles />
 
           <HomeRecentChanges />
         </div>
