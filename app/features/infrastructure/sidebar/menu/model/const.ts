@@ -88,6 +88,10 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         href: '/calculators/abilities',
         label: 'Калькулятор характеристик',
       },
+      {
+        href: '/tools/initiative',
+        label: 'Трекер инициативы',
+      },
     ],
   },
   {

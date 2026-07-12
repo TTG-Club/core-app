@@ -1,0 +1,37 @@
+import type { ParticipantType, TrackerParticipant } from './types';
+
+/**
+ * Считает участников заданного типа.
+ * @param participants Список участников.
+ * @param type Тип участника.
+ */
+export function countParticipantsByType(
+  participants: Array<TrackerParticipant>,
+  type: ParticipantType,
+): number {
+  return participants.filter((participant) => participant.type === type).length;
+}
+
+/**
+ * Форматирует бонус инициативы со знаком: `+2`, `0`, `-1`.
+ * @param bonus Числовой бонус.
+ */
+export function formatInitiativeBonus(bonus: number): string {
+  return bonus > 0 ? `+${bonus}` : String(bonus);
+}
+
+/**
+ * Признак того, что участнику уже прокинута инициатива.
+ * @param participant Участник.
+ */
+export function isParticipantRolled(participant: TrackerParticipant): boolean {
+  return typeof participant.initiativeTotal === 'number';
+}
+
+/**
+ * Ссылка на статблок существа в бестиарии.
+ * @param creatureUrl Слаг существа.
+ */
+export function getCreatureRoute(creatureUrl: string): string {
+  return `/bestiary/${creatureUrl}`;
+}
