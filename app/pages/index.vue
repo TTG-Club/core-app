@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { HomeArticles } from '~home/articles';
   import { HomeBackground } from '~home/background';
   import { HomeBanners, VttgCampaignBanner } from '~home/banners';
   import { HomeCommunity } from '~home/community';
@@ -36,26 +37,35 @@
 
       <HomeSections />
 
+      <!--
+        На мобильном (< xl) колонки-обёртки схлопываются в display:contents, все
+        блоки становятся прямыми флекс-элементами и выстраиваются одной колонкой в
+        порядке order-*: инструменты → Новости → соцсети → статистика онлайн →
+        Статьи → Обновления. На xl колонки восстанавливаются (xl:flex) — раскладка десктопа
+        прежняя, трёхколоночная.
+      -->
       <div class="flex w-full flex-col gap-3 lg:items-start xl:flex-row">
         <!-- Навигация по сайту и обновления -->
-        <div class="flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">
-          <div class="grid grid-cols-2 gap-3">
+        <div class="contents xl:flex xl:w-1/3 xl:flex-col xl:gap-3 2xl:w-1/3">
+          <div class="order-1 grid grid-cols-2 gap-3 xl:order-0">
             <HomeBanners />
           </div>
 
-          <HomeRecentChanges />
+          <HomeArticles class="order-5 xl:order-0" />
+
+          <HomeRecentChanges class="order-6 xl:order-0" />
         </div>
 
         <!-- Новости -->
-        <div class="flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">
-          <HomeNews />
+        <div class="contents xl:flex xl:w-1/3 xl:flex-col xl:gap-3 2xl:w-1/3">
+          <HomeNews class="order-2 xl:order-0" />
         </div>
 
         <!-- Соцсети, статистика проекта и охотники за багами -->
-        <div class="flex w-full flex-col gap-3 xl:w-1/3 2xl:w-1/3">
-          <SocialLinks />
+        <div class="contents xl:flex xl:w-1/3 xl:flex-col xl:gap-3 2xl:w-1/3">
+          <SocialLinks class="order-3 xl:order-0" />
 
-          <HomeCommunity />
+          <HomeCommunity class="order-4 xl:order-0" />
         </div>
       </div>
     </div>

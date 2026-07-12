@@ -1,0 +1,140 @@
+import type {
+  AnonTrackerSlot,
+  CreatureOption,
+  TrackerDetailed,
+  TrackerListItem,
+} from './types';
+
+import { z } from '~/utils/zod';
+
+import { DEFAULT_TRACKER_NAME } from './constants';
+
+/**
+ * Схема одного участника. Числовые поля приведены (`coerce`) и снабжены
+ * `catch`-дефолтами: бэк ещё не развёрнут, поэтому валидация должна быть
+ * устойчивой к мелким расхождениям типов, а не падать на них.
+ */
+const participantSchema = z.object({
+  id: z.string(),
+  type: z.enum(['PLAYER', 'CREATURE']).catch('CREATURE'),
+  typeName: z.string().catch(''),
+  name: z.string().catch(''),
+  dead: z.boolean().catch(false),
+  initiativeBonus: z.coerce.number().catch(0),
+  initiativeRoll: z.coerce.number().optional(),
+  initiativeTotal: z.coerce.number().optional(),
+  creatureUrl: z.string().optional(),
+});
+
+/** Схема полного состояния трекера (ответ мутаций и `GET /{id}`). */
+const trackerDetailedSchema = z.object({
+  id: z.string(),
+  name: z.string().catch(DEFAULT_TRACKER_NAME),
+  status: z.enum(['PREPARING', 'ACTIVE']).catch('PREPARING'),
+  statusName: z.string().catch(''),
+  round: z.coerce.number().catch(0),
+  currentParticipantId: z.string().optional(),
+  accessKey: z.string().optional(),
+  createdAt: z.string().catch(''),
+  updatedAt: z.string().catch(''),
+  participants: z.array(participantSchema).catch([]),
+});
+
+/** Схема короткого объекта трекера из списка `GET /`. */
+const trackerListItemSchema = z.object({
+  id: z.string(),
+  name: z.string().catch(DEFAULT_TRACKER_NAME),
+  status: z.enum(['PREPARING', 'ACTIVE']).catch('PREPARING'),
+  statusName: z.string().catch(''),
+  round: z.coerce.number().catch(0),
+  deleted: z.boolean().catch(false),
+  createdAt: z.string().catch(''),
+  updatedAt: z.string().catch(''),
+});
+
+const trackerListSchema = z.array(trackerListItemSchema);
+
+/**
+ * Валидирует и нормализует полное состояние трекера из ответа API.
+ * @param input Сырой ответ сервера.
+ */
+export function parseTrackerDetailed(input: unknown): TrackerDetailed {
+  return trackerDetailedSchema.parse(input);
+}
+
+/**
+ * Валидирует список трекеров из ответа `GET /`.
+ * @param input Сырой ответ сервера.
+ */
+export function parseTrackerList(input: unknown): Array<TrackerListItem> {
+  return trackerListSchema.parse(input);
+}
+
+/**
+ * Схема слота анонимного трекера в localStorage. Чужое или битое значение
+ * (иная форма, обрезанный JSON) не должно приниматься на веру.
+ */
+const anonTrackerSlotSchema = z.object({
+  trackerId: z.string().min(1),
+  accessKey: z.string().min(1),
+});
+
+/**
+ * Валидирует слот анонимного трекера, прочитанный из localStorage.
+ * @param input Сырое значение из хранилища.
+ * @returns Слот либо `null`, если значение отсутствует или повреждено.
+ */
+export function parseAnonTrackerSlot(input: unknown): AnonTrackerSlot | null {
+  const result = anonTrackerSlotSchema.safeParse(input);
+
+  return result.success ? result.data : null;
+}
+
+/**
+ * Схема ссылки на существо из поиска бестиария. Валидируем только поля, что
+ * реально используем в автокомплите; пропущенные подписи не роняют разбор.
+ */
+const creatureLinkSchema = z.object({
+  url: z.string(),
+  name: z.object({ rus: z.string().catch('') }),
+  challengeRailing: z.string().catch(''),
+});
+
+/** Ответ поиска бестиария: плоский массив или страница `{ value, Count }`. */
+const creatureSearchResponseSchema = z
+  .union([
+    z.array(creatureLinkSchema),
+    z.object({ value: z.array(creatureLinkSchema) }),
+  ])
+  .catch([]);
+
+/**
+ * Валидирует ответ `/api/v2/bestiary/search` и приводит его к плоскому списку
+ * опций автокомплита. Битый или неожиданный ответ даёт пустой список, а не
+ * бросок исключения.
+ * @param input Сырой ответ бестиария.
+ */
+export function parseCreatureOptions(input: unknown): Array<CreatureOption> {
+  const parsed = creatureSearchResponseSchema.parse(input);
+  const list = Array.isArray(parsed) ? parsed : parsed.value;
+
+  return list.map((creature) => ({
+    url: creature.url,
+    label: creature.name.rus,
+    challengeRating: creature.challengeRailing,
+  }));
+}
+
+/** Схема детального ответа существа — для аватара нужен лишь `image`. */
+const creatureImageSchema = z
+  .object({ image: z.string().catch('') })
+  .catch({ image: '' });
+
+/**
+ * Валидирует детальный ответ `GET /api/v2/bestiary/{url}` и возвращает URL
+ * картинки существа (пустая строка — картинки нет либо ответ неожиданный).
+ * @param input Сырой детальный ответ бестиария.
+ */
+export function parseCreatureImage(input: unknown): string {
+  return creatureImageSchema.parse(input).image;
+}
