@@ -45,6 +45,11 @@
         прежняя, трёхколоночная.
       -->
       <div class="flex w-full flex-col gap-3 lg:items-start xl:flex-row">
+        <!-- Новости -->
+        <div class="contents xl:flex xl:w-1/3 xl:flex-col xl:gap-3 2xl:w-1/3">
+          <HomeNews class="order-2 xl:order-0" />
+        </div>
+
         <!-- Навигация по сайту и обновления -->
         <div class="contents xl:flex xl:w-1/3 xl:flex-col xl:gap-3 2xl:w-1/3">
           <div class="order-1 grid grid-cols-2 gap-3 xl:order-0">
@@ -54,11 +59,6 @@
           <HomeArticles class="order-5 xl:order-0" />
 
           <HomeRecentChanges class="order-6 xl:order-0" />
-        </div>
-
-        <!-- Новости -->
-        <div class="contents xl:flex xl:w-1/3 xl:flex-col xl:gap-3 2xl:w-1/3">
-          <HomeNews class="order-2 xl:order-0" />
         </div>
 
         <!-- Соцсети, статистика проекта и охотники за багами -->
