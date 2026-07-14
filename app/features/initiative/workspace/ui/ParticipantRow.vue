@@ -343,19 +343,21 @@
           />
         </div>
 
-        <UTooltip
-          :text="armorClassTooltip"
-          :disabled="!hasArmorClassDetails"
-          class="w-12 flex-1 sm:flex-none"
-        >
-          <ParticipantStatTile
-            label="КД"
-            class="w-full transition-colors"
-            :class="dimmedClass"
+        <div class="w-12 flex-1 sm:flex-none">
+          <UTooltip
+            :text="armorClassTooltip"
+            :disabled="!hasArmorClassDetails"
+            class="w-full"
           >
-            {{ armorClassDisplay }}
-          </ParticipantStatTile>
-        </UTooltip>
+            <ParticipantStatTile
+              label="КД"
+              class="w-full transition-colors"
+              :class="dimmedClass"
+            >
+              {{ armorClassDisplay }}
+            </ParticipantStatTile>
+          </UTooltip>
+        </div>
       </div>
 
       <!-- Группа инициативы и действий (Бонус, Иниц, Меню) -->
