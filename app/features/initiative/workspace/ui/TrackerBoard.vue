@@ -22,6 +22,7 @@
     canAddCreature,
     remainingCreatures,
     isMutating = false,
+    currentHitPoints = undefined,
   } = defineProps<{
     participants: Array<TrackerParticipant>;
     isActive?: boolean;
@@ -33,6 +34,7 @@
     canAddCreature: boolean;
     remainingCreatures: number;
     isMutating?: boolean;
+    currentHitPoints?: Record<string, number>;
   }>();
 
   const emit = defineEmits<{
@@ -42,9 +44,12 @@
     'remove-participant': [id: string];
     'roll-participant': [id: string];
     'toggle-dead': [id: string, dead: boolean];
+    'set-hit-points': [id: string, value: number];
     'roll': [];
+    'roll-creatures': [];
     'start': [];
     'next': [];
+    'prev': [];
     'reset': [];
   }>();
 
@@ -53,10 +58,11 @@
   // при смене статуса не пересоздаётся, поэтому значение сохраняется само.
   const isAddOpen = ref(!isActive);
 
-  const isRerollOpen = ref(false);
   const isResetOpen = ref(false);
 
   const canStart = computed(() => participants.length > 0 && !isMutating);
+
+  const canRollCreatures = computed(() => creatureCount > 0 && !isMutating);
 
   function isCurrent(participant: TrackerParticipant): boolean {
     return participant.id === currentParticipantId;
@@ -89,11 +95,6 @@
     emit('toggle-dead', id, dead);
   }
 
-  function confirmReroll(): void {
-    isRerollOpen.value = false;
-    emit('roll');
-  }
-
   function confirmReset(): void {
     isResetOpen.value = false;
     emit('reset');
@@ -115,6 +116,18 @@
       v-if="isActive"
       class="flex items-center gap-2"
     >
+      <UTooltip text="Предыдущий ход">
+        <UButton
+          size="xl"
+          icon="tabler:arrow-big-left-lines"
+          color="neutral"
+          variant="subtle"
+          :disabled="isMutating"
+          aria-label="Предыдущий ход"
+          @click.left.exact.prevent="emit('prev')"
+        />
+      </UTooltip>
+
       <UButton
         class="flex-1 justify-center"
         size="xl"
@@ -126,47 +139,50 @@
         Следующий ход
       </UButton>
 
-      <UTooltip text="Ре-ролл инициативы">
+      <UTooltip text="Пересоздать бой">
         <UButton
           size="xl"
-          icon="tabler:refresh"
+          icon="tabler:restore"
           color="neutral"
           variant="subtle"
           :disabled="isMutating"
-          aria-label="Ре-ролл инициативы"
-          @click.left.exact.prevent="isRerollOpen = true"
-        />
-      </UTooltip>
-
-      <UTooltip text="Завершить бой">
-        <UButton
-          size="xl"
-          icon="tabler:flag"
-          color="neutral"
-          variant="subtle"
-          :disabled="isMutating"
-          aria-label="Завершить бой"
+          aria-label="Пересоздать бой"
           @click.left.exact.prevent="isResetOpen = true"
         />
       </UTooltip>
     </div>
 
+    <!-- Броски: на мобильном подписи прячутся (остаются иконки + aria-label),
+         кнопка старта всегда с текстом. -->
     <div
       v-if="!isActive"
       class="flex items-center gap-2"
     >
-      <UTooltip text="Прокинуть инициативу всем">
-        <UButton
-          size="xl"
-          icon="tabler:dice-5"
-          color="primary"
-          variant="outline"
-          :loading="isMutating"
-          :disabled="!canStart"
-          aria-label="Прокинуть инициативу всем"
-          @click.left.exact.prevent="emit('roll')"
-        />
-      </UTooltip>
+      <UButton
+        size="xl"
+        icon="tabler:dice-5"
+        color="primary"
+        variant="outline"
+        :loading="isMutating"
+        :disabled="!canStart"
+        aria-label="Прокинуть инициативу всем"
+        @click.left.exact.prevent="emit('roll')"
+      >
+        <span class="hidden sm:inline">Прокинуть всем</span>
+      </UButton>
+
+      <UButton
+        size="xl"
+        icon="tabler:paw"
+        color="primary"
+        variant="outline"
+        :loading="isMutating"
+        :disabled="!canRollCreatures"
+        aria-label="Прокинуть инициативу существам"
+        @click.left.exact.prevent="emit('roll-creatures')"
+      >
+        <span class="hidden sm:inline">Существам</span>
+      </UButton>
 
       <UButton
         class="flex-1 justify-center"
@@ -204,10 +220,12 @@
         :is-current="isActive && isCurrent(participant)"
         :order="index + 1"
         :disabled="isMutating"
+        :current-hit-points="currentHitPoints?.[participant.id]"
         @edit="onEditParticipant"
         @remove="onRemoveParticipant"
         @roll="onRollParticipant"
         @toggle-dead="onToggleDead"
+        @set-hit-points="(id, value) => emit('set-hit-points', id, value)"
       />
     </div>
 
@@ -219,21 +237,12 @@
     </div>
 
     <ConfirmDialog
-      v-model:open="isRerollOpen"
-      title="Ре-ролл инициативы?"
-      description="Все броски будут перекинуты заново, бой начнётся с первого раунда."
-      confirm-label="Перекинуть"
-      confirm-icon="tabler:refresh"
-      @confirm="confirmReroll"
-    />
-
-    <ConfirmDialog
       v-model:open="isResetOpen"
-      title="Завершить бой?"
+      title="Пересоздать бой?"
       description="Броски очистятся, состав сохранится — трекер вернётся к подготовке."
-      confirm-label="Завершить бой"
+      confirm-label="Пересоздать бой"
       confirm-color="warning"
-      confirm-icon="tabler:flag"
+      confirm-icon="tabler:restore"
       @confirm="confirmReset"
     />
   </div>

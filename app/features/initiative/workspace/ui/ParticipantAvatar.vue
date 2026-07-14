@@ -35,8 +35,9 @@
 </script>
 
 <template>
+  <!-- size-11 — в высоту плиток статов строки, чтобы ряд был одной высоты. -->
   <div
-    class="relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-full border border-default bg-elevated"
+    class="relative grid size-11 shrink-0 place-items-center overflow-hidden rounded-full border border-default bg-elevated"
   >
     <img
       v-if="isCreature && image"

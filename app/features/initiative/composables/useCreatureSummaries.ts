@@ -1,34 +1,35 @@
-import type { TrackerParticipant } from '~initiative/model';
+import type { CreatureSummary, TrackerParticipant } from '~initiative/model';
 
-import { parseCreatureImage } from '~initiative/model';
+import { parseCreatureSummary } from '~initiative/model';
 
 /**
- * Догружает и кэширует картинки существ из бестиария по `creatureUrl`.
- * В модели участника картинок нет — они живут только в детальном ответе
- * `GET /api/v2/bestiary/{url}` (поле `image`, как в `CreatureDrawer`/`CreatureBody`).
+ * Догружает и кэширует сводки существ из бестиария по `creatureUrl`:
+ * картинку аватара и КД. В модели участника этих полей нет — они живут только
+ * в детальном ответе `GET /api/v2/bestiary/{url}` (поля `image` и `ac`, как в
+ * `CreatureDrawer`/`CreatureBody`).
  * Кэш и реестр запросов ОБЩИЕ (useState): лента и строки списка тянут одних и
  * тех же существ, поэтому дедупим сеть между всеми потребителями (включая дубли
  * «Крыса 1/2/3» с одним слагом).
  * @param participantsGetter Геттер актуального списка участников (реактивный).
  */
-export function useCreatureImages(
+export function useCreatureSummaries(
   participantsGetter: () => Array<TrackerParticipant>,
 ) {
-  const images = useState<Record<string, string>>(
-    'initiative-creature-images',
+  const summaries = useState<Record<string, CreatureSummary>>(
+    'initiative-creature-summaries',
     () => ({}),
   );
 
   const requested = useState<Set<string>>(
-    'initiative-creature-images-requested',
+    'initiative-creature-summaries-requested',
     () => new Set(),
   );
 
   /**
-   * Тянет картинку одного существа — один раз на слаг.
+   * Тянет сводку одного существа — один раз на слаг.
    * @param url Слаг существа.
    */
-  async function fetchImage(url: string): Promise<void> {
+  async function fetchSummary(url: string): Promise<void> {
     if (requested.value.has(url)) {
       return;
     }
@@ -37,15 +38,12 @@ export function useCreatureImages(
 
     try {
       const detail = await $fetch<unknown>(`/api/v2/bestiary/${url}`);
-      const image = parseCreatureImage(detail);
 
-      if (image) {
-        images.value[url] = image;
-      }
+      summaries.value[url] = parseCreatureSummary(detail);
     } catch {
       // Транзиентная ошибка (503/таймаут) — снимаем метку, чтобы слаг мог
       // перезапроситься при следующей синхронизации/монтировании строки. Аватар
-      // пока останется иконкой/аббревиатурой.
+      // пока останется иконкой/аббревиатурой, а КД — скрытым.
       requested.value.delete(url);
     }
   }
@@ -59,7 +57,7 @@ export function useCreatureImages(
       ),
     (urls) => {
       for (const url of new Set(urls)) {
-        void fetchImage(url);
+        void fetchSummary(url);
       }
     },
     { immediate: true },
@@ -71,21 +69,35 @@ export function useCreatureImages(
    */
   function imageFor(participant: TrackerParticipant): string | undefined {
     return participant.creatureUrl
-      ? images.value[participant.creatureUrl]
+      ? summaries.value[participant.creatureUrl]?.image || undefined
+      : undefined;
+  }
+
+  /**
+   * Сводка существа для участника или `undefined` (игрок / ещё грузится).
+   * @param participant Участник трекера.
+   */
+  function summaryFor(
+    participant: TrackerParticipant,
+  ): CreatureSummary | undefined {
+    return participant.creatureUrl
+      ? summaries.value[participant.creatureUrl]
       : undefined;
   }
 
   /**
    * Сбрасывает битую картинку (по `@error` у `<img>`) — аватар падает на иконку.
-   * Пишем пустую строку (а не удаляем ключ): `imageFor` вернёт её как falsy, а
-   * `requested` уже помечен, так что повторного запроса не будет.
+   * Пишем пустую строку (а не удаляем сводку): `imageFor` вернёт её как falsy,
+   * `requested` уже помечен, так что повторного запроса не будет, а КД уцелеет.
    * @param url Слаг существа (может отсутствовать).
    */
   function dropImage(url: string | undefined): void {
-    if (url) {
-      images.value[url] = '';
+    const summary = url ? summaries.value[url] : undefined;
+
+    if (url && summary) {
+      summaries.value[url] = { ...summary, image: '' };
     }
   }
 
-  return { imageFor, dropImage };
+  return { imageFor, summaryFor, dropImage };
 }

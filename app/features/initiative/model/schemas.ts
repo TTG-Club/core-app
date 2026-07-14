@@ -1,6 +1,7 @@
 import type {
   AnonTrackerSlot,
   CreatureOption,
+  CreatureSummary,
   TrackerDetailed,
   TrackerListItem,
 } from './types';
@@ -125,16 +126,33 @@ export function parseCreatureOptions(input: unknown): Array<CreatureOption> {
   }));
 }
 
-/** Схема детального ответа существа — для аватара нужен лишь `image`. */
-const creatureImageSchema = z
-  .object({ image: z.string().catch('') })
-  .catch({ image: '' });
+/**
+ * Схема детального ответа существа — строке трекера нужны лишь картинка
+ * аватара (`image`), строка КД статблока (`ac`), показатель опасности (`cr`)
+ * и средний максимум хитов (`hit.hit`).
+ */
+const creatureSummarySchema = z
+  .object({
+    image: z.string().catch(''),
+    ac: z.string().catch(''),
+    cr: z.string().catch(''),
+    hit: z.object({ hit: z.coerce.number().catch(0) }).catch({ hit: 0 }),
+  })
+  .catch({ image: '', ac: '', cr: '', hit: { hit: 0 } });
 
 /**
- * Валидирует детальный ответ `GET /api/v2/bestiary/{url}` и возвращает URL
- * картинки существа (пустая строка — картинки нет либо ответ неожиданный).
+ * Валидирует детальный ответ `GET /api/v2/bestiary/{url}` и возвращает сводку
+ * существа для строки трекера (пустые строки и `0` хитов — поля нет либо ответ
+ * неожиданный).
  * @param input Сырой детальный ответ бестиария.
  */
-export function parseCreatureImage(input: unknown): string {
-  return creatureImageSchema.parse(input).image;
+export function parseCreatureSummary(input: unknown): CreatureSummary {
+  const parsed = creatureSummarySchema.parse(input);
+
+  return {
+    image: parsed.image,
+    armorClass: parsed.ac,
+    challengeRating: parsed.cr,
+    maxHitPoints: parsed.hit.hit,
+  };
 }

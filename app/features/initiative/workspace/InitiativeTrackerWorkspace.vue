@@ -34,6 +34,7 @@
     canAddPlayer,
     canAddCreature,
     remainingCreatures,
+    currentHitPoints,
     load,
     rename,
     addPlayer,
@@ -43,10 +44,13 @@
     setDead,
     rollParticipant,
     roll,
+    rollCreatures,
     startCombat,
     advanceTurn,
+    rewindTurn,
     reset,
     destroy,
+    setHitPoints,
   } = useTrackerWorkspace(() => id);
 
   onMounted(load);
@@ -192,15 +196,19 @@
         :can-add-creature="canAddCreature"
         :remaining-creatures="remainingCreatures"
         :is-mutating="isMutating"
+        :current-hit-points="currentHitPoints"
         @add-player="addPlayer"
         @add-creatures="addCreatures"
         @edit-participant="editParticipant"
         @remove-participant="deleteParticipant"
         @roll-participant="rollParticipant"
         @toggle-dead="setDead"
+        @set-hit-points="setHitPoints"
         @roll="roll"
+        @roll-creatures="rollCreatures"
         @start="startCombat"
         @next="advanceTurn"
+        @prev="rewindTurn"
         @reset="reset"
       />
     </template>

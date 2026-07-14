@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { TrackerParticipant } from '~initiative/model';
 
-  import { useCreatureImages } from '~initiative/composables';
+  import { useCreatureSummaries } from '~initiative/composables';
   import { PARTICIPANT_TYPE_ICON } from '~initiative/model';
 
   const {
@@ -14,7 +14,7 @@
     round: number;
   }>();
 
-  const { imageFor, dropImage } = useCreatureImages(() => participants);
+  const { imageFor, dropImage } = useCreatureSummaries(() => participants);
 
   /** Шаг между центрами соседних токенов, px. */
   const STEP = 96;
