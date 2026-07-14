@@ -1,5 +1,9 @@
 <script setup lang="ts">
   import { MulticlassDrawer } from '~classes/multiclass-drawer';
+  import {
+    INITIATIVE_TOOL_ROUTE,
+    INITIATIVE_TOOL_TITLE,
+  } from '~initiative/model';
 
   import { BannerCard } from './ui';
 
@@ -25,7 +29,15 @@
     to="/tokenator"
     background-url="/s3/home/tokenator-banner.webp"
     description="Создай уникальный токен персонажа!"
-    class="col-span-2 min-h-24 justify-center"
+    class="min-h-24 justify-center"
+  />
+
+  <BannerCard
+    :title="INITIATIVE_TOOL_TITLE"
+    :to="INITIATIVE_TOOL_ROUTE"
+    background-url="/s3/home/initiative-banner.webp"
+    description="Управляй порядком ходов в бою"
+    class="min-h-24 justify-center"
   />
 
   <BannerCard

@@ -21,6 +21,12 @@ export const ANON_SLOT_STORAGE_KEY = 'initiative:anon-slot';
 /** Имя HTTP-заголовка с ключом доступа анонимного трекера. */
 export const TRACKER_KEY_HEADER = 'X-Tracker-Key';
 
+/**
+ * Ключ localStorage с текущими хитами существ по трекерам.
+ * На бэке хитов нет — они живут только на устройстве мастера.
+ */
+export const HIT_POINTS_STORAGE_KEY = 'initiative:hit-points';
+
 /** Максимум трекеров у авторизованного пользователя. */
 export const MAX_AUTHORIZED_TRACKERS = 10;
 
@@ -67,6 +73,12 @@ export const UNKNOWN_ERROR_MESSAGE = 'Неизвестная ошибка';
 export const PARTICIPANT_TYPE_ICON: Record<ParticipantType, string> = {
   PLAYER: 'tabler:user',
   CREATURE: 'tabler:paw',
+};
+
+/** Подпись типа участника — фолбэк, когда бэк не прислал `typeName`. */
+export const PARTICIPANT_TYPE_LABEL: Record<ParticipantType, string> = {
+  PLAYER: 'Игрок',
+  CREATURE: 'Существо',
 };
 
 /** Оформление бейджа статуса трекера. */

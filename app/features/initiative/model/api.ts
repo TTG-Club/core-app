@@ -287,6 +287,25 @@ export async function nextTurn(
 }
 
 /**
+ * Вернуть ход предыдущему участнику (откат случайного «Следующего хода»);
+ * с первого участника раунда — назад к предыдущему раунду.
+ * @param id Идентификатор трекера.
+ * @param accessKey Ключ доступа анонимного трекера (если есть).
+ */
+export async function previousTurn(
+  id: string,
+  accessKey?: string,
+): Promise<TrackerDetailed> {
+  const response = await $fetch(`${INITIATIVE_API_PATH}/${id}/turn/prev`, {
+    method: 'POST',
+    headers: trackerHeaders(accessKey),
+    retry: 0,
+  });
+
+  return parseTrackerDetailed(response);
+}
+
+/**
  * Завершить бой: броски очищаются, состав сохраняется, статус снова PREPARING.
  * @param id Идентификатор трекера.
  * @param accessKey Ключ доступа анонимного трекера (если есть).

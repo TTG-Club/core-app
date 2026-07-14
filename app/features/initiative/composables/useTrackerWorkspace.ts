@@ -16,6 +16,7 @@ import {
   MAX_CREATURES,
   MAX_PLAYERS,
   nextTurn,
+  previousTurn,
   removeParticipant,
   renameTracker,
   rollParticipant as requestRollParticipant,
@@ -25,6 +26,7 @@ import {
   updateParticipant,
 } from '~initiative/model';
 
+import { useHitPoints } from './useHitPoints';
 import { useInitiativeStorage } from './useInitiativeStorage';
 
 /**
@@ -70,6 +72,11 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
   );
 
   const canAddCreature = computed(() => remainingCreatures.value > 0);
+
+  const { currentByParticipant, setHitPoints } = useHitPoints(
+    () => trackerId.value,
+    () => participants.value,
+  );
 
   /**
    * Обрабатывает ошибку доступа: для анонима 401/403/404 = ключ невалиден или
@@ -279,6 +286,45 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
   }
 
   /**
+   * Прокидывает инициативу только существам — игроки кидают свои кости сами.
+   * Отдельного эндпоинта на бэке нет, поэтому последовательно зовём
+   * per-participant `/roll` для каждого существа: каждый ответ — полное
+   * состояние трекера, промежуточные сразу показываем (кубики оживают один за
+   * другим). Ошибка на середине прервёт цикл — уже брошенное останется, а
+   * повторный клик просто перебросит существ заново.
+   */
+  function rollCreatures(): Promise<boolean> {
+    const [firstCreatureId, ...restCreatureIds] = participants.value
+      .filter((participant) => participant.type === 'CREATURE')
+      .map((participant) => participant.id);
+
+    // Кнопка задизейблена без существ; guard заодно сужает тип первого id.
+    if (!firstCreatureId) {
+      return Promise.resolve(false);
+    }
+
+    return runMutation(async () => {
+      let state = await requestRollParticipant(
+        trackerId.value,
+        firstCreatureId,
+        accessKey.value,
+      );
+
+      for (const participantId of restCreatureIds) {
+        tracker.value = state;
+
+        state = await requestRollParticipant(
+          trackerId.value,
+          participantId,
+          accessKey.value,
+        );
+      }
+
+      return state;
+    }, 'Не удалось прокинуть инициативу существам');
+  }
+
+  /**
    * Начинает бой, не перебрасывая уже брошенное (ручная раздача по одному).
    */
   function startCombat(): Promise<boolean> {
@@ -295,6 +341,16 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
     return runMutation(
       () => nextTurn(trackerId.value, accessKey.value),
       'Не удалось передать ход',
+    );
+  }
+
+  /**
+   * Возвращает ход предыдущему участнику (откат случайного «Следующего хода»).
+   */
+  function rewindTurn(): Promise<boolean> {
+    return runMutation(
+      () => previousTurn(trackerId.value, accessKey.value),
+      'Не удалось вернуть ход',
     );
   }
 
@@ -353,6 +409,7 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
     canAddPlayer,
     canAddCreature,
     remainingCreatures,
+    currentHitPoints: currentByParticipant,
 
     load,
     rename,
@@ -363,9 +420,12 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
     setDead,
     rollParticipant,
     roll,
+    rollCreatures,
     startCombat,
     advanceTurn,
+    rewindTurn,
     reset,
     destroy,
+    setHitPoints,
   };
 }
