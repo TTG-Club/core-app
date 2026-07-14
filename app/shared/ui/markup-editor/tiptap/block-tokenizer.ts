@@ -12,6 +12,9 @@ const EMPTY_DATA: Record<string, never> = {};
 /** Инлайн-токены содержимого блока, вычисляемые ЛЕНИВО (на фазе parseMarkdown). */
 export type DeferredInlineTokens = () => MarkdownToken[];
 
+/** Блочные токены вложенного содержимого, вычисляемые ЛЕНИВО (на фазе parseMarkdown). */
+export type DeferredBlockTokens = () => MarkdownToken[];
+
 /**
  * Откладывает инлайн-токенизацию содержимого блочного маркера (ячейки таблицы,
  * пункта списка, абзаца цитаты) до фазы `parseMarkdown` вместо немедленного
@@ -38,6 +41,26 @@ export function deferInline(
   source: string,
 ): DeferredInlineTokens {
   return () => lexer.inlineTokens(source);
+}
+
+/**
+ * Откладывает БЛОЧНУЮ токенизацию вложенного блока (например `{@table}`/`{@list}`
+ * внутри ячейки таблицы) до фазы `parseMarkdown` — по той же причине, что и
+ * `deferInline` (см. выше): вызов `lexer.blockTokens(...)` во время токенизации
+ * документа перенаводит общий marked-Tokenizer на постоянный лексер менеджера и
+ * рушит инлайн-содержимое следующих абзацев документа. В `parseMarkdown` лексинг
+ * документа уже завершён, поэтому вложенная блочная токенизация безопасна.
+ *
+ * `source` должен быть ОДНИМ блочным маркером `{@…}` (без окружающего текста):
+ * так `blockTokens` возвращает ровно один кастомный токен без «голого» абзаца,
+ * которому пришлось бы отдельно достраивать инлайн. Полученные токены отдаются в
+ * `helpers.parseChildren`, который соберёт из них нативные редактируемые узлы.
+ */
+export function deferBlock(
+  lexer: MarkdownLexerConfiguration,
+  source: string,
+): DeferredBlockTokens {
+  return () => lexer.blockTokens(source);
 }
 
 /**

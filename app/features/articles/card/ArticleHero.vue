@@ -5,6 +5,7 @@
     ARTICLE_DATE_FORMAT,
     ARTICLE_FALLBACK_IMAGE,
     ARTICLES_ADMIN_CREATE_ROUTE,
+    ARTICLES_ADMIN_NEWS_ROUTE,
     getArticlePreviewText,
     getArticleRoute,
   } from '../model';
@@ -72,6 +73,18 @@
         size="sm"
         :class="heroActionClass"
         aria-label="Создать новость"
+        @click.stop
+        @keydown.stop
+      />
+
+      <UButton
+        v-if="isAdmin"
+        :to="ARTICLES_ADMIN_NEWS_ROUTE"
+        icon="tabler:list-details"
+        variant="ghost"
+        size="sm"
+        :class="heroActionClass"
+        aria-label="Список новостей в админ-панели"
         @click.stop
         @keydown.stop
       />

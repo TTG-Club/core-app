@@ -23,7 +23,21 @@
   const requestFetch = useRequestFetch();
 
   const activeTab = ref<ArticleAdminTab>('published');
-  const typeFilter = ref<ArticleTypeFilter>('all');
+
+  // Начальный фильтр типа можно задать через query (?type=NEWS) — так внешние
+  // ссылки (например, с «геройской» новости на главной) открывают сразу нужный
+  // список. route.query может быть null/массивом/пустой строкой, поэтому сначала
+  // явный гард, затем сверка по белому списку опций; иначе — «Все типы».
+  const route = useRoute();
+  const typeQuery = route.query.type;
+
+  const initialTypeFilter =
+    typeof typeQuery === 'string' && typeQuery
+      ? ARTICLE_TYPE_FILTER_OPTIONS.find((option) => option.value === typeQuery)
+          ?.value
+      : undefined;
+
+  const typeFilter = ref<ArticleTypeFilter>(initialTypeFilter ?? 'all');
 
   // Поиск (серверный, дебаунс) — параметр `search` есть и у /search/unpublished.
   const search = ref('');

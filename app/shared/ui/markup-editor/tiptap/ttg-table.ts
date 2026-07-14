@@ -8,7 +8,10 @@ import type {
 
 import type { MarkerNode, RenderNode } from '~ui/markup';
 
-import type { DeferredInlineTokens } from './block-tokenizer';
+import type {
+  DeferredBlockTokens,
+  DeferredInlineTokens,
+} from './block-tokenizer';
 
 import { Extension } from '@tiptap/core';
 import {
@@ -20,6 +23,7 @@ import {
 
 import {
   CELL_PLACEHOLDER,
+  isBlockNode,
   isMarkerNode,
   parse,
   serializeInlineNodes,
@@ -27,6 +31,7 @@ import {
 
 import {
   createBlockMarkerTokenizer,
+  deferBlock,
   deferInline,
   markerNameMatches,
 } from './block-tokenizer';
@@ -51,10 +56,22 @@ interface ParsedTable extends MarkerNode {
   rows?: ParsedCell[][];
 }
 
-/** Разобранная ячейка редактора: ленивые инлайн-токены + атрибуты. */
+/**
+ * Один сегмент содержимого ячейки. Ячейка обычно инлайновая (один сегмент →
+ * абзац), но может содержать ВЛОЖЕННЫЙ блок ({@table}/{@list}/{@quote}/{@h}) —
+ * тогда сегменты чередуются: инлайн-пробеги → абзацы, блочные узлы → нативные
+ * редактируемые узлы. `block` выбирает, чем разбирать токены на фазе parseMarkdown
+ * (`parseInline` → абзац vs `parseChildren` → блочный узел).
+ */
+interface CellSegment {
+  block: boolean;
+  tokens: DeferredInlineTokens | DeferredBlockTokens;
+}
+
+/** Разобранная ячейка редактора: упорядоченные сегменты содержимого + атрибуты. */
 interface CellData {
   isHeader: boolean;
-  tokens: DeferredInlineTokens;
+  segments: CellSegment[];
   style?: string;
   align?: string;
 }
@@ -78,6 +95,55 @@ function toArray(value: RenderNode | RenderNode[] | undefined): RenderNode[] {
   }
 
   return Array.isArray(value) ? value : [value];
+}
+
+/**
+ * Разбивает содержимое ячейки на сегменты: подряд идущие инлайн-узлы (текст,
+ * форматирование, чипы) сливаются в инлайн-пробег (→ абзац), а блочные узлы
+ * (вложенная таблица/список/цитата/заголовок) выделяются в отдельные сегменты
+ * (→ нативный редактируемый узел). Так вложенная таблица грузится РЕДАКТИРУЕМОЙ,
+ * а не «замерзает» атомарным чипом (инлайн-токенайзер превратил бы `{@table}` в
+ * ttgMarker). Чистая инлайн-ячейка (обычный случай) даёт ровно один сегмент —
+ * поведение таких таблиц не меняется.
+ */
+function buildCellSegments(
+  content: RenderNode[],
+  lexer: MarkdownLexerConfiguration,
+): CellSegment[] {
+  const segments: CellSegment[] = [];
+
+  let inlineRun: RenderNode[] = [];
+
+  const flushInline = (): void => {
+    if (inlineRun.length) {
+      segments.push({
+        block: false,
+        tokens: deferInline(lexer, serializeInlineNodes(inlineRun)),
+      });
+
+      inlineRun = [];
+    }
+  };
+
+  for (const node of content) {
+    if (isBlockNode(node)) {
+      flushInline();
+
+      // Блочный узел сериализуем ОТДЕЛЬНО (один `{@…}`-маркер без окружающего
+      // текста), чтобы blockTokens вернул ровно один кастомный токен — его
+      // parseChildren соберёт в нативный узел (рекурсивно для вложенных таблиц).
+      segments.push({
+        block: true,
+        tokens: deferBlock(lexer, serializeInlineNodes([node])),
+      });
+    } else {
+      inlineRun.push(node);
+    }
+  }
+
+  flushInline();
+
+  return segments;
 }
 
 /**
@@ -112,7 +178,7 @@ function buildTableData(
     cells.push(
       colLabels.map((label, index) => ({
         isHeader: true,
-        tokens: deferInline(lexer, serializeInlineNodes(toArray(label))),
+        segments: buildCellSegments(toArray(label), lexer),
         style: colStyles[index] || undefined,
         align: colAligns[index] || undefined,
       })),
@@ -123,7 +189,7 @@ function buildTableData(
     cells.push(
       row.map((cell) => ({
         isHeader: false,
-        tokens: deferInline(lexer, serializeInlineNodes(cell.content ?? [])),
+        segments: buildCellSegments(cell.content ?? [], lexer),
         align: cell.align,
       })),
     );
@@ -144,9 +210,29 @@ export const ttgTableMarkdownTokenizer = createBlockMarkerTokenizer(
 );
 
 /**
+ * Собирает JSON-содержимое ячейки из её сегментов: инлайн-пробег → абзац
+ * (`parseInline`), блочный узел → нативный редактируемый узел (`parseChildren`
+ * над блочными токенами — рекурсивно для вложенных таблиц). Ячейка обязана иметь
+ * хотя бы один блочный узел (`content: 'block+'`), поэтому пустая → пустой абзац.
+ */
+function buildCellContent(
+  cell: CellData,
+  helpers: MarkdownParseHelpers,
+): JSONContent[] {
+  const content = cell.segments.flatMap((segment) =>
+    segment.block
+      ? helpers.parseChildren(segment.tokens())
+      : [{ type: 'paragraph', content: helpers.parseInline(segment.tokens()) }],
+  );
+
+  return content.length ? content : [{ type: 'paragraph' }];
+}
+
+/**
  * Хендлер markdown для таблиц: токен `ttgTable` → нативный JSON
- * table > tableRow > (tableHeader|tableCell) > paragraph. Отдельным расширением
- * (а не на узле), т.к. один токен порождает всю структуру таблицы.
+ * table > tableRow > (tableHeader|tableCell) > (paragraph|вложенный блок).
+ * Отдельным расширением (а не на узле), т.к. один токен порождает всю структуру
+ * таблицы.
  */
 export const TtgTableMarkdown = Extension.create({
   name: 'ttgTableMarkdown',
@@ -170,12 +256,7 @@ export const TtgTableMarkdown = Extension.create({
           helpers.createNode(
             cell.isHeader ? 'tableHeader' : 'tableCell',
             { style: cell.style ?? null, align: cell.align ?? null },
-            [
-              {
-                type: 'paragraph',
-                content: helpers.parseInline(cell.tokens()),
-              },
-            ],
+            buildCellContent(cell, helpers),
           ),
         ),
       ),
@@ -185,7 +266,13 @@ export const TtgTableMarkdown = Extension.create({
   },
 });
 
-/** Инлайн-исходник содержимого ячейки (абзацы → строка, без переносов). */
+/**
+ * Исходник содержимого ячейки: каждый блок (абзац, вложенная таблица/список/
+ * цитата) рендерится в свой `{@…}`/текст, ТРИМится и склеивается одним пробелом.
+ * Тримить блок ОБЯЗАТЕЛЬНО: хвостовой пробел абзаца плюс разделитель-пробел
+ * иначе накапливались бы с каждым циклом save↔load (ячейка с вложенным блоком —
+ * `outer {@table}` → `outer  {@table}` → …). После тримминга результат идемпотентен.
+ */
 function renderCellInline(
   node: JSONContent,
   helpers: MarkdownRendererHelpers,
@@ -193,9 +280,9 @@ function renderCellInline(
   const blocks = Array.isArray(node.content) ? node.content : [];
 
   return blocks
-    .map((block) => helpers.renderChildren([block]))
-    .join(' ')
-    .trim();
+    .map((block) => helpers.renderChildren([block]).trim())
+    .filter((part) => part.length > 0)
+    .join(' ');
 }
 
 /**
