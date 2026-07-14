@@ -339,6 +339,7 @@
             :current="currentHitPoints"
             :max="maxHitPoints"
             :disabled="disabled"
+            :is-player="participant.type === 'PLAYER'"
             @change="onChangeHitPoints"
           />
         </div>

@@ -7,12 +7,15 @@
     current = undefined,
     max = 0,
     disabled = false,
+    isPlayer = false,
   } = defineProps<{
     /** Текущие хиты (нет записи — существо на полных, игрок — не задано). */
     current?: number;
     /** Максимум хитов из статблока (`0` — неизвестен / игрок). */
     max?: number;
     disabled?: boolean;
+    /** Участник является игроком (всегда имеет интерактивные хиты). */
+    isPlayer?: boolean;
   }>();
 
   const emit = defineEmits<{
@@ -28,6 +31,8 @@
   const isOpen = ref(false);
 
   const isKnown = computed(() => max > 0);
+
+  const isInteractive = computed(() => isKnown.value || isPlayer);
 
   const currentValue = computed(() => {
     if (isKnown.value) {
@@ -114,7 +119,7 @@
 <template>
   <div class="w-full">
     <UPopover
-      v-if="isKnown"
+      v-if="isInteractive"
       v-model:open="isOpen"
       class="w-full"
     >
