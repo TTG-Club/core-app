@@ -1,11 +1,14 @@
 <script setup lang="ts">
   import { clamp } from 'es-toolkit';
 
+  import { useDiceRoller } from '~dice-roller/composables';
+
   import ParticipantStatTile from './ParticipantStatTile.vue';
 
   const {
     current = undefined,
     max = 0,
+    formula = '',
     disabled = false,
     isPlayer = false,
   } = defineProps<{
@@ -13,14 +16,20 @@
     current?: number;
     /** Максимум хитов из статблока (`0` — неизвестен / игрок). */
     max?: number;
+    /** Формула броска хитов из статблока (например, `8к8 + 16`). */
+    formula?: string;
     disabled?: boolean;
     /** Участник является игроком (всегда имеет интерактивные хиты). */
     isPlayer?: boolean;
   }>();
 
   const emit = defineEmits<{
-    change: [value: number];
+    'change': [value: number];
+    /** Новый максимум хитов, прокинутый по формуле статблока. */
+    'set-max': [value: number];
   }>();
+
+  const { rollValue, validateWithError } = useDiceRoller();
 
   /** Быстрые шаги урона/лечения в попапе. */
   const QUICK_STEPS = [-5, -1, 1, 5];
@@ -64,16 +73,19 @@
     return '';
   });
 
-  const draft = ref(0);
+  const draft = ref('');
 
   // Черновик точного значения следует за актуальными хитами, пока попап
   // открыт: быстрые шаги меняют хиты тут же, и устаревший черновик по «ОК»
   // молча откатил бы их.
   watch([() => isOpen.value, currentValue], ([open, value]) => {
     if (open) {
-      draft.value = value;
+      draft.value = String(value);
     }
   });
+
+  /** Ввод хитов: `58` — установить точное значение, `+7`/`-6` — сдвинуть. */
+  const DRAFT_PATTERN = /^([+-])?(\d+)$/;
 
   /**
    * Быстрый шаг урона/лечения — применяется сразу, попап остаётся открытым.
@@ -95,18 +107,89 @@
     return delta > 0 ? `+${delta}` : String(delta);
   }
 
+  // Автоселект значения при фокусе поля: новый ввод сразу затирает текущее
+  // число. Выделение из обработчика focus браузер схлопывает последующим
+  // mouseup, поэтому при фокусе мышью повторяем выделение на первом click.
+  let selectOnClick = false;
+
+  /**
+   * Выделяет всё содержимое поля ввода — цели события.
+   * @param event Событие фокуса или клика по полю.
+   */
+  function selectDraft(event: Event): void {
+    const { target } = event;
+
+    if (target instanceof HTMLInputElement) {
+      target.select();
+    }
+  }
+
+  /**
+   * Выделяет значение при фокусе и взводит повтор для клика мышью.
+   * @param event Событие фокуса поля.
+   */
+  function onDraftFocus(event: FocusEvent): void {
+    selectOnClick = true;
+    selectDraft(event);
+  }
+
+  /**
+   * Повторяет выделение на первом клике после фокуса (см. `selectOnClick`).
+   * @param event Событие клика по полю.
+   */
+  function onDraftClick(event: MouseEvent): void {
+    if (selectOnClick) {
+      selectOnClick = false;
+      selectDraft(event);
+    }
+  }
+
+  /**
+   * Применяет введённое значение по `DRAFT_PATTERN`: без знака — точные хиты,
+   * со знаком — сдвиг от текущих (`+7` — лечение, `-6` — урон). Невалидный
+   * ввод закрывает попап без изменений.
+   */
   function applyDraft(): void {
     isOpen.value = false;
 
-    const clamped = isKnown.value
-      ? clamp(draft.value, 0, max)
-      : Math.max(0, draft.value);
+    const match = DRAFT_PATTERN.exec(draft.value.trim());
+
+    if (!match) {
+      return;
+    }
+
+    const [, sign, digits] = match;
+    const amount = Number(digits);
+
+    const target = sign
+      ? currentValue.value + (sign === '-' ? -amount : amount)
+      : amount;
+
+    const clamped = isKnown.value ? clamp(target, 0, max) : Math.max(0, target);
 
     if (clamped !== currentValue.value) {
       emit('change', clamped);
     }
   }
 
+  // Кнопка броска видна, только когда формула статблока распознаётся роллером.
+  const isFormulaRollable = computed(
+    () => isKnown.value && Boolean(formula) && validateWithError(formula).valid,
+  );
+
+  const rollTooltip = computed(() => `Бросить хиты: ${formula}`);
+
+  /**
+   * Прокидывает максимум хитов по формуле статблока: новый максимум и текущие
+   * хиты устанавливаются в результат броска (минимум 1 — существо живо).
+   */
+  function rollMaxHitPoints(): void {
+    isOpen.value = false;
+
+    emit('set-max', Math.max(1, Math.floor(rollValue(formula))));
+  }
+
+  /** Восстанавливает полные хиты (доступно только при известном максимуме). */
   function restoreFull(): void {
     isOpen.value = false;
 
@@ -165,32 +248,53 @@
             </template>
           </div>
 
-          <UButton
+          <div
             v-if="isKnown"
-            icon="tabler:heart-plus"
-            color="success"
-            variant="soft"
-            block
-            @click.left.exact.prevent="restoreFull"
+            class="flex gap-2"
           >
-            Полные хиты
-          </UButton>
+            <UButton
+              icon="tabler:heart-plus"
+              color="success"
+              variant="soft"
+              class="flex-1 justify-center"
+              @click.left.exact.prevent="restoreFull"
+            >
+              Полные хиты
+            </UButton>
+
+            <!-- Бросок максимума по формуле статблока: новый максимум и
+                 текущие хиты равны результату броска. -->
+            <UTooltip
+              v-if="isFormulaRollable"
+              :text="rollTooltip"
+            >
+              <UButton
+                icon="tabler:dice-5"
+                color="success"
+                variant="soft"
+                aria-label="Бросить хиты по формуле статблока"
+                @click.left.exact.prevent="rollMaxHitPoints"
+              />
+            </UTooltip>
+          </div>
 
           <div class="flex items-center gap-2">
             <span class="shrink-0 text-xs text-secondary">
-              Или точное значение
+              Точное значение, + или -
             </span>
 
             <div class="h-px flex-1 bg-default" />
           </div>
 
           <div class="flex gap-2">
-            <UInputNumber
+            <UInput
               v-model="draft"
-              :min="0"
-              :max="max || undefined"
               class="flex-1"
-              aria-label="Текущие хиты"
+              :ui="{ base: 'text-center' }"
+              aria-label="Текущие хиты или сдвиг"
+              @focus="onDraftFocus"
+              @click.left.exact="onDraftClick"
+              @keydown.enter.prevent="applyDraft"
             />
 
             <UButton

@@ -23,6 +23,8 @@
     remainingCreatures,
     isMutating = false,
     currentHitPoints = undefined,
+    maxHitPoints = undefined,
+    armorClasses = undefined,
   } = defineProps<{
     participants: Array<TrackerParticipant>;
     isActive?: boolean;
@@ -35,6 +37,10 @@
     remainingCreatures: number;
     isMutating?: boolean;
     currentHitPoints?: Record<string, number>;
+    /** Прокинутые максимумы хитов (нет записи — среднее из статблока). */
+    maxHitPoints?: Record<string, number>;
+    /** КД игроков (нет записи — не задан). */
+    armorClasses?: Record<string, number>;
   }>();
 
   const emit = defineEmits<{
@@ -45,6 +51,8 @@
     'roll-participant': [id: string];
     'toggle-dead': [id: string, dead: boolean];
     'set-hit-points': [id: string, value: number];
+    'set-max-hit-points': [id: string, value: number];
+    'set-armor-class': [id: string, value: number];
     'roll': [];
     'roll-creatures': [];
     'start': [];
@@ -93,6 +101,18 @@
 
   function onToggleDead(id: string, dead: boolean): void {
     emit('toggle-dead', id, dead);
+  }
+
+  function onSetHitPoints(id: string, value: number): void {
+    emit('set-hit-points', id, value);
+  }
+
+  function onSetMaxHitPoints(id: string, value: number): void {
+    emit('set-max-hit-points', id, value);
+  }
+
+  function onSetArmorClass(id: string, value: number): void {
+    emit('set-armor-class', id, value);
   }
 
   function confirmReset(): void {
@@ -221,11 +241,15 @@
         :order="index + 1"
         :disabled="isMutating"
         :current-hit-points="currentHitPoints?.[participant.id]"
+        :max-hit-points-override="maxHitPoints?.[participant.id]"
+        :player-armor-class="armorClasses?.[participant.id]"
         @edit="onEditParticipant"
         @remove="onRemoveParticipant"
         @roll="onRollParticipant"
         @toggle-dead="onToggleDead"
-        @set-hit-points="(id, value) => emit('set-hit-points', id, value)"
+        @set-hit-points="onSetHitPoints"
+        @set-max-hit-points="onSetMaxHitPoints"
+        @set-armor-class="onSetArmorClass"
       />
     </div>
 

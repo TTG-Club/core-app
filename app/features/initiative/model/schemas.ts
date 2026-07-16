@@ -128,17 +128,22 @@ export function parseCreatureOptions(input: unknown): Array<CreatureOption> {
 
 /**
  * Схема детального ответа существа — строке трекера нужны лишь картинка
- * аватара (`image`), строка КД статблока (`ac`), показатель опасности (`cr`)
- * и средний максимум хитов (`hit.hit`).
+ * аватара (`image`), строка КД статблока (`ac`), показатель опасности (`cr`),
+ * средний максимум хитов (`hit.hit`) и формула броска хитов (`hit.formula`).
  */
 const creatureSummarySchema = z
   .object({
     image: z.string().catch(''),
     ac: z.string().catch(''),
     cr: z.string().catch(''),
-    hit: z.object({ hit: z.coerce.number().catch(0) }).catch({ hit: 0 }),
+    hit: z
+      .object({
+        hit: z.coerce.number().catch(0),
+        formula: z.string().catch(''),
+      })
+      .catch({ hit: 0, formula: '' }),
   })
-  .catch({ image: '', ac: '', cr: '', hit: { hit: 0 } });
+  .catch({ image: '', ac: '', cr: '', hit: { hit: 0, formula: '' } });
 
 /**
  * Валидирует детальный ответ `GET /api/v2/bestiary/{url}` и возвращает сводку
@@ -154,5 +159,6 @@ export function parseCreatureSummary(input: unknown): CreatureSummary {
     armorClass: parsed.ac,
     challengeRating: parsed.cr,
     maxHitPoints: parsed.hit.hit,
+    hitFormula: parsed.hit.formula,
   };
 }

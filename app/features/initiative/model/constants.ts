@@ -27,6 +27,27 @@ export const TRACKER_KEY_HEADER = 'X-Tracker-Key';
  */
 export const HIT_POINTS_STORAGE_KEY = 'initiative:hit-points';
 
+/**
+ * Ключ localStorage с прокинутыми максимумами хитов существ по трекерам.
+ * Нет записи — максимум берётся из среднего значения статблока.
+ */
+export const MAX_HIT_POINTS_STORAGE_KEY = 'initiative:max-hit-points';
+
+/**
+ * Ключ localStorage с КД игроков по трекерам. У существ КД берётся из
+ * статблока, а игрокам его задаёт мастер вручную.
+ */
+export const ARMOR_CLASS_STORAGE_KEY = 'initiative:armor-class';
+
+/** КД игрока по умолчанию — базовое значение без брони. */
+export const DEFAULT_ARMOR_CLASS = 10;
+
+/** Минимальное значение КД игрока. */
+export const MIN_ARMOR_CLASS = 1;
+
+/** Максимальное значение КД игрока. */
+export const MAX_ARMOR_CLASS = 50;
+
 /** Максимум трекеров у авторизованного пользователя. */
 export const MAX_AUTHORIZED_TRACKERS = 10;
 

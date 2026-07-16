@@ -98,11 +98,13 @@ export interface CreatureOption {
 /**
  * Сводка существа из детального ответа бестиария для строки трекера:
  * картинка аватара, строка КД статблока (например, `15 (кожаный доспех)`),
- * показатель опасности (CR) и максимум хитов (`0` — неизвестен).
+ * показатель опасности (CR), максимум хитов (`0` — неизвестен) и формула
+ * броска хитов (например, `8к8 + 16`; пустая строка — формулы нет).
  */
 export interface CreatureSummary {
   image: string;
   armorClass: string;
   challengeRating: string;
   maxHitPoints: number;
+  hitFormula: string;
 }

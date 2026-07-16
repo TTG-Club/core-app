@@ -1,16 +1,16 @@
 import type { TrackerParticipant } from '~initiative/model';
 
-import { HIT_POINTS_STORAGE_KEY } from '~initiative/model';
+import {
+  HIT_POINTS_STORAGE_KEY,
+  MAX_HIT_POINTS_STORAGE_KEY,
+} from '~initiative/model';
 
-/** Текущие хиты существ по трекерам: `{ [trackerId]: { [participantId]: N } }`. */
-type HitPointsStore = Record<string, Record<string, number>>;
+import { useParticipantValueStore } from './useParticipantValueStore';
 
 /**
- * Текущие хиты существ трекера. На бэке поля хитов нет, поэтому значения живут
- * в localStorage устройства мастера (на другом устройстве счётчик начнётся с
- * полных хитов — приемлемо для инструмента одного ведущего).
- * Ключи — id участников (уникальны между трекерами), но бакеты разделены по
- * трекерам, чтобы чистка не задевала чужие бои.
+ * Текущие и максимальные хиты существ трекера в localStorage мастера.
+ * Максимум хранится отдельно и заполняется только броском формулы статблока;
+ * нет записи — максимум равен среднему значению из статблока.
  * @param trackerIdGetter Геттер идентификатора трекера.
  * @param participantsGetter Геттер актуального списка участников (реактивный).
  */
@@ -18,11 +18,16 @@ export function useHitPoints(
   trackerIdGetter: () => string,
   participantsGetter: () => Array<TrackerParticipant>,
 ) {
-  const store = useLocalStorage<HitPointsStore>(HIT_POINTS_STORAGE_KEY, {});
+  const current = useParticipantValueStore(
+    HIT_POINTS_STORAGE_KEY,
+    trackerIdGetter,
+    participantsGetter,
+  );
 
-  /** Текущие хиты участников активного трекера (нет записи — полные хиты). */
-  const currentByParticipant = computed<Record<string, number>>(
-    () => store.value[trackerIdGetter()] ?? {},
+  const max = useParticipantValueStore(
+    MAX_HIT_POINTS_STORAGE_KEY,
+    trackerIdGetter,
+    participantsGetter,
   );
 
   /**
@@ -32,47 +37,26 @@ export function useHitPoints(
    * @param value Новое значение хитов.
    */
   function setHitPoints(participantId: string, value: number): void {
-    const trackerId = trackerIdGetter();
-    const bucket = store.value[trackerId] ?? {};
-
-    store.value = {
-      ...store.value,
-      [trackerId]: { ...bucket, [participantId]: Math.max(0, value) },
-    };
+    current.setValue(participantId, Math.max(0, value));
   }
 
-  // Чистка записей удалённых участников. Пустой список пропускаем: во время
-  // загрузки participants ещё [], и без guard-а бакет стёрся бы до прихода
-  // данных (последний участник, убранный вручную, оставит запись до следующего
-  // добавления — это безвредно).
-  watch(
-    () => participantsGetter().map((participant) => participant.id),
-    (ids) => {
-      if (!ids.length) {
-        return;
-      }
+  /**
+   * Записывает прокинутый максимум хитов участника и поднимает текущие хиты до
+   * него: свежий бросок формулы статблока означает «существо на полных хитах».
+   * @param participantId Идентификатор участника.
+   * @param value Прокинутый максимум (минимум 1 — существо живо).
+   */
+  function setMaxHitPoints(participantId: string, value: number): void {
+    const maximum = Math.max(1, value);
 
-      const trackerId = trackerIdGetter();
-      const bucket = store.value[trackerId];
+    max.setValue(participantId, maximum);
+    current.setValue(participantId, maximum);
+  }
 
-      if (!bucket) {
-        return;
-      }
-
-      const activeIds = new Set(ids);
-
-      const prunedEntries = Object.entries(bucket).filter(([participantId]) =>
-        activeIds.has(participantId),
-      );
-
-      if (prunedEntries.length !== Object.keys(bucket).length) {
-        store.value = {
-          ...store.value,
-          [trackerId]: Object.fromEntries(prunedEntries),
-        };
-      }
-    },
-  );
-
-  return { currentByParticipant, setHitPoints };
+  return {
+    currentByParticipant: current.valueByParticipant,
+    maxByParticipant: max.valueByParticipant,
+    setHitPoints,
+    setMaxHitPoints,
+  };
 }
