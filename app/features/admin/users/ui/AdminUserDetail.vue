@@ -2,6 +2,7 @@
   import type {
     AdminRoleResponse,
     AdminRoleSelectItem,
+    AdminUserDetailTab,
     AdminUserResponse,
   } from '../model';
 
@@ -13,6 +14,8 @@
     ADMIN_USERS_ACTIVE_BADGE,
     ADMIN_USERS_CREDENTIALS_EXPIRED_BADGE,
     ADMIN_USERS_DATE_FORMAT,
+    ADMIN_USERS_DETAIL_DEFAULT_TAB,
+    ADMIN_USERS_DETAIL_TABS,
     ADMIN_USERS_EMAIL_NOT_VERIFIED_BADGE,
     ADMIN_USERS_EMAIL_VERIFIED_BADGE,
     ADMIN_USERS_LOCKED_BADGE,
@@ -42,6 +45,37 @@
 
   const selectedRoleIds = ref<number[]>([]);
   const isSaving = ref(false);
+
+  const activeTab = ref<AdminUserDetailTab>(ADMIN_USERS_DETAIL_DEFAULT_TAB);
+
+  /**
+   * Содержимое вкладок остаётся смонтированным (`:unmount-on-hide="false"`),
+   * поэтому подписка, коды и комментарии не перезапрашиваются при каждом
+   * переключении и не теряют догруженные страницы. Первый рендер откладываем
+   * до открытия вкладки: списки грузятся в `onMounted`, и без задержки выбор
+   * пользователя дёргал бы все запросы разом.
+   *
+   * Копим посещённые вкладки в watch, а не в обработчике `update:modelValue`:
+   * UTabs отдаёт `string | number`, и обработчику потребовался бы запрещённый
+   * правилами каст к `AdminUserDetailTab`.
+   */
+  const visitedTabs = ref<AdminUserDetailTab[]>([
+    ADMIN_USERS_DETAIL_DEFAULT_TAB,
+  ]);
+
+  watch(activeTab, (tab) => {
+    if (!visitedTabs.value.includes(tab)) {
+      visitedTabs.value = [...visitedTabs.value, tab];
+    }
+  });
+
+  const isSubscriptionTabVisited = computed(() =>
+    visitedTabs.value.includes('subscription'),
+  );
+
+  const isCommentsTabVisited = computed(() =>
+    visitedTabs.value.includes('comments'),
+  );
 
   /**
    * Версия списка комментариев: массовое скрытие/восстановление при бане
@@ -157,175 +191,203 @@
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Профиль: метаданные пользователя -->
-    <div
-      class="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border border-default bg-default/10 p-4"
-    >
-      <!-- Email -->
-      <div class="col-span-2 flex flex-col gap-1">
-        <span class="text-xs font-medium tracking-wide text-muted uppercase">
-          Email
-        </span>
-
-        <span
-          class="cursor-pointer text-sm break-all text-highlighted transition-colors select-all hover:text-primary"
-          title="Нажмите, чтобы скопировать email"
-          @click.left.exact.prevent="() => copy(user.email)"
+  <UTabs
+    v-model="activeTab"
+    :items="ADMIN_USERS_DETAIL_TABS"
+    :unmount-on-hide="false"
+    size="sm"
+    :ui="{ root: 'gap-4', content: 'min-w-0' }"
+  >
+    <!-- Основное: профиль, роли, блокировка -->
+    <template #main>
+      <div class="space-y-6">
+        <!-- Профиль: метаданные пользователя -->
+        <div
+          class="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border border-default bg-default/10 p-4"
         >
-          {{ user.email }}
-        </span>
-      </div>
+          <!-- Email -->
+          <div class="col-span-2 flex flex-col gap-1">
+            <span
+              class="text-xs font-medium tracking-wide text-muted uppercase"
+            >
+              Email
+            </span>
 
-      <!-- ID -->
-      <div class="col-span-2 flex flex-col gap-1">
-        <span class="text-xs font-medium tracking-wide text-muted uppercase">
-          ID (UUID)
-        </span>
+            <span
+              class="cursor-pointer text-sm break-all text-highlighted transition-colors select-all hover:text-primary"
+              title="Нажмите, чтобы скопировать email"
+              @click.left.exact.prevent="() => copy(user.email)"
+            >
+              {{ user.email }}
+            </span>
+          </div>
 
-        <span
-          class="cursor-pointer font-mono text-sm break-all text-highlighted transition-colors select-all hover:text-primary"
-          title="Нажмите, чтобы скопировать ID"
-          @click.left.exact.prevent="() => copy(user.id)"
-        >
-          {{ user.id }}
-        </span>
-      </div>
+          <!-- ID -->
+          <div class="col-span-2 flex flex-col gap-1">
+            <span
+              class="text-xs font-medium tracking-wide text-muted uppercase"
+            >
+              ID (UUID)
+            </span>
 
-      <!-- Регистрация -->
-      <div class="col-span-1 flex flex-col gap-1">
-        <span class="text-xs font-medium tracking-wide text-muted uppercase">
-          Регистрация
-        </span>
+            <span
+              class="cursor-pointer font-mono text-sm break-all text-highlighted transition-colors select-all hover:text-primary"
+              title="Нажмите, чтобы скопировать ID"
+              @click.left.exact.prevent="() => copy(user.id)"
+            >
+              {{ user.id }}
+            </span>
+          </div>
 
-        <span class="text-sm text-highlighted">{{ createdAtLabel }}</span>
-      </div>
+          <!-- Регистрация -->
+          <div class="col-span-1 flex flex-col gap-1">
+            <span
+              class="text-xs font-medium tracking-wide text-muted uppercase"
+            >
+              Регистрация
+            </span>
 
-      <!-- Обновлён -->
-      <div class="col-span-1 flex flex-col gap-1">
-        <span class="text-xs font-medium tracking-wide text-muted uppercase">
-          Обновлён
-        </span>
+            <span class="text-sm text-highlighted">{{ createdAtLabel }}</span>
+          </div>
 
-        <span class="text-sm text-highlighted">{{ updatedAtLabel }}</span>
-      </div>
+          <!-- Обновлён -->
+          <div class="col-span-1 flex flex-col gap-1">
+            <span
+              class="text-xs font-medium tracking-wide text-muted uppercase"
+            >
+              Обновлён
+            </span>
 
-      <!-- Статусы аккаунта -->
-      <div class="col-span-2 flex flex-col gap-1.5">
-        <span class="text-xs font-medium tracking-wide text-muted uppercase">
-          Состояние
-        </span>
+            <span class="text-sm text-highlighted">{{ updatedAtLabel }}</span>
+          </div>
 
-        <div class="flex flex-wrap gap-2">
-          <UBadge
-            v-if="user.enabled"
-            color="success"
-            variant="subtle"
-            size="sm"
-          >
-            {{ ADMIN_USERS_ACTIVE_BADGE }}
-          </UBadge>
+          <!-- Статусы аккаунта -->
+          <div class="col-span-2 flex flex-col gap-1.5">
+            <span
+              class="text-xs font-medium tracking-wide text-muted uppercase"
+            >
+              Состояние
+            </span>
 
-          <UBadge
-            v-if="user.accountLocked"
-            color="error"
-            variant="subtle"
-            size="sm"
-          >
-            {{ ADMIN_USERS_LOCKED_BADGE }}
-          </UBadge>
+            <div class="flex flex-wrap gap-2">
+              <UBadge
+                v-if="user.enabled"
+                color="success"
+                variant="subtle"
+                size="sm"
+              >
+                {{ ADMIN_USERS_ACTIVE_BADGE }}
+              </UBadge>
 
-          <UBadge
-            :color="user.emailVerified ? 'success' : 'warning'"
-            variant="subtle"
-            size="sm"
-          >
-            {{
-              user.emailVerified
-                ? ADMIN_USERS_EMAIL_VERIFIED_BADGE
-                : ADMIN_USERS_EMAIL_NOT_VERIFIED_BADGE
-            }}
-          </UBadge>
+              <UBadge
+                v-if="user.accountLocked"
+                color="error"
+                variant="subtle"
+                size="sm"
+              >
+                {{ ADMIN_USERS_LOCKED_BADGE }}
+              </UBadge>
 
-          <UBadge
-            v-if="user.credentialsExpired"
-            color="warning"
-            variant="subtle"
-            size="sm"
-          >
-            {{ ADMIN_USERS_CREDENTIALS_EXPIRED_BADGE }}
-          </UBadge>
+              <UBadge
+                :color="user.emailVerified ? 'success' : 'warning'"
+                variant="subtle"
+                size="sm"
+              >
+                {{
+                  user.emailVerified
+                    ? ADMIN_USERS_EMAIL_VERIFIED_BADGE
+                    : ADMIN_USERS_EMAIL_NOT_VERIFIED_BADGE
+                }}
+              </UBadge>
+
+              <UBadge
+                v-if="user.credentialsExpired"
+                color="warning"
+                variant="subtle"
+                size="sm"
+              >
+                {{ ADMIN_USERS_CREDENTIALS_EXPIRED_BADGE }}
+              </UBadge>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Роли -->
-    <div class="space-y-3">
-      <div class="flex items-center gap-2">
-        <UIcon
-          name="tabler:shield-lock"
-          class="size-5 text-primary"
-          aria-hidden="true"
+        <!-- Роли -->
+        <div class="space-y-3">
+          <div class="flex items-center gap-2">
+            <UIcon
+              name="tabler:shield-lock"
+              class="size-5 text-primary"
+              aria-hidden="true"
+            />
+
+            <span class="text-sm font-medium text-highlighted">
+              {{ ADMIN_USERS_ROLES_SECTION_TITLE }}
+            </span>
+          </div>
+
+          <div
+            class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+          >
+            <!-- Подпись совпадает с заголовком секции — прячем визуально, оставляем для a11y -->
+            <UFormField
+              :label="ADMIN_USERS_ROLE_FIELD_LABEL"
+              :ui="{ label: 'sr-only' }"
+            >
+              <USelectMenu
+                v-model="selectedRoleIds"
+                :items="roleSelectItems"
+                :placeholder="ADMIN_USERS_ROLE_PLACEHOLDER"
+                label-key="label"
+                value-key="value"
+                multiple
+                class="w-full"
+              />
+            </UFormField>
+
+            <UButton
+              icon="tabler:device-floppy"
+              :loading="isSaving"
+              :disabled="isSaveDisabled"
+              @click.left.exact.prevent="saveRoles"
+            >
+              {{ ADMIN_USERS_SAVE_LABEL }}
+            </UButton>
+          </div>
+        </div>
+
+        <USeparator />
+
+        <!-- Блокировка аккаунта и массовые операции с комментариями -->
+        <AdminUserBan
+          :user="user"
+          @saved="onUserSaved"
+          @comments-changed="refreshComments"
         />
-
-        <span class="text-sm font-medium text-highlighted">
-          {{ ADMIN_USERS_ROLES_SECTION_TITLE }}
-        </span>
       </div>
+    </template>
 
-      <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-        <!-- Подпись совпадает с заголовком секции — прячем визуально, оставляем для a11y -->
-        <UFormField
-          :label="ADMIN_USERS_ROLE_FIELD_LABEL"
-          :ui="{ label: 'sr-only' }"
-        >
-          <USelectMenu
-            v-model="selectedRoleIds"
-            :items="roleSelectItems"
-            :placeholder="ADMIN_USERS_ROLE_PLACEHOLDER"
-            label-key="label"
-            value-key="value"
-            multiple
-            class="w-full"
-          />
-        </UFormField>
+    <!-- Подписка: статус, выдача месяцев и активированные коды -->
+    <template #subscription>
+      <div
+        v-if="isSubscriptionTabVisited"
+        class="space-y-6"
+      >
+        <AdminUserSubscription :username="user.username" />
 
-        <UButton
-          icon="tabler:device-floppy"
-          :loading="isSaving"
-          :disabled="isSaveDisabled"
-          @click.left.exact.prevent="saveRoles"
-        >
-          {{ ADMIN_USERS_SAVE_LABEL }}
-        </UButton>
+        <USeparator />
+
+        <AdminUserRedeemedCodes :username="user.username" />
       </div>
-    </div>
-
-    <USeparator />
-
-    <!-- Блокировка аккаунта и массовые операции с комментариями -->
-    <AdminUserBan
-      :user="user"
-      @saved="onUserSaved"
-      @comments-changed="refreshComments"
-    />
-
-    <USeparator />
-
-    <!-- Подписка -->
-    <AdminUserSubscription :username="user.username" />
-
-    <USeparator />
-
-    <!-- Активированные коды -->
-    <AdminUserRedeemedCodes :username="user.username" />
-
-    <USeparator />
+    </template>
 
     <!-- Комментарии: сервис комментариев ключуется по UUID, а не по логину -->
-    <AdminUserComments
-      :key="commentsListVersion"
-      :author-id="user.id"
-    />
-  </div>
+    <template #comments>
+      <AdminUserComments
+        v-if="isCommentsTabVisited"
+        :key="commentsListVersion"
+        :author-id="user.id"
+      />
+    </template>
+  </UTabs>
 </template>

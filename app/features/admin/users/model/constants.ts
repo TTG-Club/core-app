@@ -1,4 +1,8 @@
-import type { AdminSubscriptionStatus, AdminSubscriptionType } from './types';
+import type {
+  AdminSubscriptionStatus,
+  AdminSubscriptionType,
+  AdminUserDetailTab,
+} from './types';
 
 export const ADMIN_USERS_PAGE_TITLE = 'Пользователи';
 
@@ -34,6 +38,20 @@ export const ADMIN_USERS_DETAIL_EMPTY_ICON = 'tabler:user-search';
 export const ADMIN_USERS_DETAIL_EMPTY_TITLE = 'Пользователь не выбран';
 export const ADMIN_USERS_DETAIL_EMPTY_TEXT =
   'Выберите пользователя из списка слева, чтобы просмотреть профиль и управлять ролями и подпиской.';
+
+/** Вкладки детальной панели пользователя. */
+export const ADMIN_USERS_DETAIL_TABS: Array<{
+  label: string;
+  value: AdminUserDetailTab;
+  slot: AdminUserDetailTab;
+}> = [
+  { label: 'Основное', value: 'main', slot: 'main' },
+  { label: 'Подписка', value: 'subscription', slot: 'subscription' },
+  { label: 'Комментарии', value: 'comments', slot: 'comments' },
+];
+
+/** Вкладка детальной панели, открытая при выборе пользователя. */
+export const ADMIN_USERS_DETAIL_DEFAULT_TAB: AdminUserDetailTab = 'main';
 
 /** Заголовок секции ролей в детальной панели. */
 export const ADMIN_USERS_ROLES_SECTION_TITLE = 'Роли';

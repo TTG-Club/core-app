@@ -34,6 +34,9 @@ export interface AdminAffectedCommentsResponse {
   affected: number;
 }
 
+/** Вкладка детальной панели пользователя в админке. */
+export type AdminUserDetailTab = 'main' | 'subscription' | 'comments';
+
 export interface AdminRoleSelectItem {
   label: string;
   value: number;
