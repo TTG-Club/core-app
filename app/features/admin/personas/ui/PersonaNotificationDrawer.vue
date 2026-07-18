@@ -4,8 +4,11 @@
   import { FetchError } from 'ofetch';
 
   import { DatePicker } from '~ui/date-picker';
+  import { getNodeText, parse, toMarkupSource } from '~ui/markup';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectNotificationType } from '~ui/select';
+
+  import { NOTIFICATION_TEXT_MAX_LENGTH } from '../model';
 
   const { persona, notification, isEditing } = defineProps<{
     persona: PersonaResponse | null;
@@ -35,10 +38,35 @@
     isEditing ? 'Редактирование нотификации' : 'Новая нотификация',
   );
 
+  /**
+   * Длина фразы в символах ЧИСТОГО текста: модель редактора хранит AST-строку,
+   * а маркеры разметки (`{@b ...}`) в лимит попадать не должны — автор считает
+   * то, что увидит читатель.
+   */
+  const textLength = computed<number>(
+    () =>
+      getNodeText(parse(toMarkupSource(notificationText.value))).trim().length,
+  );
+
+  const isTextTooLong = computed(
+    () => textLength.value > NOTIFICATION_TEXT_MAX_LENGTH,
+  );
+
+  const textLengthHint = computed(
+    () => `${textLength.value} / ${NOTIFICATION_TEXT_MAX_LENGTH}`,
+  );
+
+  const textLengthError = computed<string | undefined>(() =>
+    isTextTooLong.value
+      ? `Фраза длиннее ${NOTIFICATION_TEXT_MAX_LENGTH} символов — на главной она не поместится в пузырь`
+      : undefined,
+  );
+
   const canSave = computed(
     () =>
       notificationText.value.trim().length > 0
-      && notificationType.value.trim().length > 0,
+      && notificationType.value.trim().length > 0
+      && !isTextTooLong.value,
   );
 
   function resetForm() {
@@ -217,7 +245,11 @@
             </UFormField>
           </div>
 
-          <UFormField label="Текст (поддерживает разметку)">
+          <UFormField
+            label="Текст (поддерживает разметку)"
+            :hint="textLengthHint"
+            :error="textLengthError"
+          >
             <MarkupEditor v-model="notificationText" />
           </UFormField>
         </div>

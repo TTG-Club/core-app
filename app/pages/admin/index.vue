@@ -5,6 +5,9 @@
     ADMIN_DASHBOARD_ARTICLES_ACTION_LABEL,
     ADMIN_DASHBOARD_ARTICLES_DESCRIPTION,
     ADMIN_DASHBOARD_ARTICLES_TITLE,
+    ADMIN_DASHBOARD_COMMENTS_ACTION_LABEL,
+    ADMIN_DASHBOARD_COMMENTS_DESCRIPTION,
+    ADMIN_DASHBOARD_COMMENTS_TITLE,
     ADMIN_DASHBOARD_CONFIGURE_LABEL,
     ADMIN_DASHBOARD_PAGE_TITLE,
     ADMIN_DASHBOARD_PERSONAS_DESCRIPTION,
@@ -145,6 +148,27 @@
 
           <div class="text-sm text-muted">
             {{ ADMIN_DASHBOARD_SUBSCRIPTIONS_DESCRIPTION }}
+          </div>
+        </UCard>
+
+        <UCard variant="subtle">
+          <template #header>
+            <div class="flex items-center justify-between gap-2">
+              <h2 class="truncate text-base text-highlighted">
+                {{ ADMIN_DASHBOARD_COMMENTS_TITLE }}
+              </h2>
+
+              <UButton
+                size="sm"
+                to="/admin/comments"
+              >
+                {{ ADMIN_DASHBOARD_COMMENTS_ACTION_LABEL }}
+              </UButton>
+            </div>
+          </template>
+
+          <div class="text-sm text-muted">
+            {{ ADMIN_DASHBOARD_COMMENTS_DESCRIPTION }}
           </div>
         </UCard>
 

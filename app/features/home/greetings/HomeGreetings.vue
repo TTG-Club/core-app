@@ -115,10 +115,17 @@
         class="mt-0.5 size-6 shrink-0 text-primary/60 sm:size-7"
       />
 
+      <!--
+        Высота реплики ограничена так, чтобы пузырь целиком (отступ + паддинги +
+        текст = 170px) укладывался в высоту фигуры персонажа (180px). Тогда
+        высота всего блока постоянна и главная не «прыгает» от фразы к фразе, а
+        длинный текст читается прокруткой. Разные значения для sm — компенсация
+        более крупных паддингов на десктопе.
+      -->
       <div
         :class="[
           $style.scroll,
-          'max-h-40 min-w-0 flex-1 overflow-y-auto pr-1 text-start text-sm leading-relaxed wrap-break-word text-toned sm:max-h-56 sm:text-base',
+          'max-h-32 min-w-0 flex-1 overflow-y-auto pr-1 text-start text-sm leading-relaxed wrap-break-word text-toned sm:max-h-28 sm:text-base',
         ]"
       >
         <MarkupRender :render-node="greetingText" />

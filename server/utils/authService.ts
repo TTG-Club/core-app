@@ -20,6 +20,9 @@ const authUserSchema = z.object({
 });
 
 const authJwtPayloadSchema = z.object({
+  // UUID пользователя — нужен фронту для сравнения с authorId внешних
+  // сервисов (комментарии). Опционален: старые токены могли не иметь клейма.
+  sub: z.string().min(1).optional(),
   username: z.string().min(1),
   roles: z.array(z.string().min(1)),
 });

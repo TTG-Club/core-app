@@ -17,6 +17,11 @@ export function useUserRoles() {
     () => isAdmin.value || isModerator.value,
   );
 
+  /** Модерация комментариев: правка и удаление чужих, лента жалоб. */
+  const canModerateComments = computed(
+    () => isAdmin.value || isModerator.value,
+  );
+
   return {
     roles,
 
@@ -25,5 +30,6 @@ export function useUserRoles() {
     isAdmin,
     canEditEntities,
     canManageBugReports,
+    canModerateComments,
   };
 }
