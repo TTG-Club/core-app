@@ -1,4 +1,8 @@
-import type { DropdownMenuItem, EditorToolbarItem } from '@nuxt/ui';
+import type {
+  DropdownMenuItem,
+  EditorToolbarItem,
+  TooltipProps,
+} from '@nuxt/ui';
 import type { Editor } from '@tiptap/vue-3';
 
 import type { MarkupTag } from './tags';
@@ -9,6 +13,7 @@ import {
   INTERACTIVE_TAGS,
   SECTION_TAGS,
 } from './tags';
+import { FORMAT_SPECS } from './tiptap/marks';
 import { hasMarkerAtom } from './tiptap/node-utils';
 
 /** Колбэки для тегов, которые открывают панель ввода вместо прямой вставки. */
@@ -28,6 +33,38 @@ interface MarkButton {
   mark: string;
   icon: string;
   label: string;
+}
+
+/**
+ * Преобразует хоткей из FORMAT_SPECS (`Mod-Shift-s`) в клавиши для подсказки
+ * UTooltip/UKbd: `Mod` → `meta` (Ctrl, на macOS — ⌘), буква — заглавной.
+ */
+function shortcutKbds(shortcut: string): string[] {
+  return shortcut.split('-').map((key) => {
+    if (key === 'Mod') {
+      return 'meta';
+    }
+
+    return key.length === 1 ? key.toUpperCase() : key.toLowerCase();
+  });
+}
+
+/** Клавиши хоткея по имени марки — для подсказок кнопок форматирования. */
+const MARK_KBDS = new Map<string, string[]>(
+  FORMAT_SPECS.map((spec) => [spec.mark, shortcutKbds(spec.shortcut)]),
+);
+
+/**
+ * Подсказка кнопки с хоткеем. Штатная тема UTooltip рисует точку-разделитель
+ * перед клавишами (`not-first-of-type:before:content-['·']` на слоте kbds) —
+ * убираем её: текст и клавиши и так разделены gap'ом контейнера подсказки.
+ */
+function kbdTooltip(text: string, kbds?: string[]): TooltipProps {
+  return {
+    text,
+    kbds,
+    ui: { kbds: 'not-first-of-type:before:content-none' },
+  };
 }
 
 /** Кнопки форматирования в порядке отображения (имена марок — из FORMAT_SPECS). */
@@ -150,6 +187,7 @@ function tagItem(
  * Пункт тулбара для списка: переключает НАТИВНЫЙ список TipTap
  * (bulletList/orderedList). Выделение из нескольких абзацев оборачивается в
  * пункты, повторный клик — разворачивает обратно. Сериализуется в `{@list}`.
+ * Хоткеи в подсказке — штатные BulletList/OrderedList (узлы их наследуют).
  */
 function listToggleItem(editor: Editor, tag: MarkupTag): EditorToolbarItem {
   const ordered = tag.key === 'ordered-list';
@@ -157,7 +195,7 @@ function listToggleItem(editor: Editor, tag: MarkupTag): EditorToolbarItem {
 
   return {
     icon: tag.icon,
-    tooltip: { text: tag.label },
+    tooltip: kbdTooltip(tag.label, ['meta', 'shift', ordered ? '7' : '8']),
     active: editor.isActive(nodeName),
     onClick: () => {
       const chain = editor.chain().focus();
@@ -180,7 +218,8 @@ function listToggleItem(editor: Editor, tag: MarkupTag): EditorToolbarItem {
 function quoteToggleItem(editor: Editor, tag: MarkupTag): EditorToolbarItem {
   return {
     icon: tag.icon,
-    tooltip: { text: tag.label },
+    // Хоткей в подсказке — штатный Blockquote (узел его наследует).
+    tooltip: kbdTooltip(tag.label, ['meta', 'shift', 'B']),
     active: editor.isActive('blockquote'),
     onClick: () => {
       editor.chain().focus().toggleBlockquote().run();
@@ -195,7 +234,7 @@ function quoteToggleItem(editor: Editor, tag: MarkupTag): EditorToolbarItem {
 function markItem(editor: Editor, item: MarkButton): EditorToolbarItem {
   return {
     icon: item.icon,
-    tooltip: { text: item.label },
+    tooltip: kbdTooltip(item.label, MARK_KBDS.get(item.mark)),
     active: editor.isActive(item.mark),
     onClick: () => {
       editor.chain().focus().toggleMark(item.mark).run();
@@ -335,9 +374,11 @@ function activeHeadingLevel(editor: Editor): number {
 function headingDropdown(editor: Editor): EditorToolbarItem {
   const level = activeHeadingLevel(editor);
 
+  // Хоткеи в подсказках — штатные Heading/Paragraph (узлы их наследуют).
   const levelItem = (value: 1 | 2 | 3): DropdownMenuItem => ({
     label: `Заголовок ${value}`,
     icon: `tabler:h-${value}`,
+    kbds: ['meta', 'alt', String(value)],
     active: level === value,
     onClick: () => editor.chain().focus().setHeading({ level: value }).run(),
   });
@@ -353,6 +394,7 @@ function headingDropdown(editor: Editor): EditorToolbarItem {
       {
         label: 'Обычный текст',
         icon: 'tabler:pilcrow',
+        kbds: ['meta', 'alt', '0'],
         onClick: () => editor.chain().focus().setParagraph().run(),
       },
     ],
