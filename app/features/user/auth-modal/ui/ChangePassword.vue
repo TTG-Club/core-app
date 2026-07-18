@@ -31,7 +31,9 @@
     if (error.value) {
       toast.add({
         title: 'Ошибка восстановления пароля',
-        description: error.value.data.message,
+        description:
+          error.value.data?.message
+          ?? 'Не удалось отправить письмо — попробуйте ещё раз.',
         color: 'error',
         icon: 'tabler:user-exclamation',
       });
