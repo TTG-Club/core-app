@@ -1,19 +1,29 @@
 <script setup lang="ts">
   import type { CommentNode, CommentTreeActions } from '../../model';
 
-  import { COMMENTS_MAX_VISUAL_DEPTH } from '../../model';
+  import {
+    COMMENT_THREAD_COLLAPSE_LABEL,
+    COMMENTS_MAX_VISUAL_DEPTH,
+  } from '../../model';
   import CommentCard from './CommentCard.vue';
 
   const {
     node,
     depth,
     actions,
+    replyToName = null,
     highlightedCommentId = null,
   } = defineProps<{
     node: CommentNode;
     /** Глубина в ветке: корни — 0. */
     depth: number;
     actions: CommentTreeActions;
+    /**
+     * Имя автора родителя — подпись «кому ответили». Ветка передаёт его вниз
+     * сама, поэтому оно всегда актуально: восстановление родителя-надгробия
+     * тут же проявляет подпись у его ответов.
+     */
+    replyToName?: string | null;
     /** Комментарий, подсвеченный после перехода по якорной ссылке. */
     highlightedCommentId?: string | null;
   }>();
@@ -52,6 +62,7 @@
     <CommentCard
       :node
       :actions
+      :reply-to-name="replyToName"
       :highlighted-comment-id="highlightedCommentId"
     />
 
@@ -66,7 +77,7 @@
         v-if="threadLineVisible"
         type="button"
         class="group absolute inset-y-0 left-0 flex w-4 cursor-pointer"
-        aria-label="Свернуть ответы"
+        :aria-label="COMMENT_THREAD_COLLAPSE_LABEL"
         @click.left.exact.prevent="handleToggleReplies"
       >
         <span
@@ -80,6 +91,7 @@
         :node="child"
         :depth="depth + 1"
         :actions
+        :reply-to-name="node.comment.authorName"
         :highlighted-comment-id="highlightedCommentId"
       />
     </div>

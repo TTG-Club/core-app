@@ -8,8 +8,17 @@
   import { useCommentsSection } from '../composables';
   import {
     COMMENT_ANCHOR_PREFIX,
+    COMMENT_COMPOSER_ROOT_PLACEHOLDER,
     COMMENT_HIGHLIGHT_DURATION_MS,
+    COMMENTS_EMPTY_MESSAGE,
+    COMMENTS_EXPAND_EMPTY_LABEL,
+    COMMENTS_EXPAND_PREFIX,
+    COMMENTS_LOAD_ERROR_TOAST,
+    COMMENTS_LOAD_MORE_LABEL,
     COMMENTS_PLURAL_FORMS,
+    COMMENTS_PREVIEW_UNAVAILABLE,
+    COMMENTS_RETRY_LABEL,
+    COMMENTS_SECTION_TITLE,
     getCommentAnchorId,
     getCommentErrorMessage,
     getCommentFetchStatus,
@@ -25,7 +34,7 @@
   const {
     section,
     url,
-    title = 'Комментарии',
+    title = COMMENTS_SECTION_TITLE,
   } = defineProps<{
     /** Раздел сайта в сервисе комментариев (например, `articles`). */
     section: string;
@@ -78,6 +87,7 @@
     submitReply,
     submitEdit,
     removeComment,
+    restoreTombstone,
     submitReport,
     isOwnComment,
     isCommentReported,
@@ -88,6 +98,7 @@
     submitReply,
     submitEdit,
     removeComment,
+    restoreTombstone,
     submitReport,
     isOwnComment,
     isCommentReported,
@@ -106,11 +117,18 @@
 
   const hasComments = computed(() => rootNodes.value.length > 0);
 
+  /**
+   * У страницы нет ни одного опубликованного комментария. Считаем по
+   * серверному счётчику, а не по превью: превью может не собраться и при
+   * живом обсуждении (сверху ленты одни надгробия).
+   */
+  const isThreadEmpty = computed(() => totalCount.value === 0);
+
   /** Подпись кнопки разворачивания свёрнутого блока. */
   const expandButtonLabel = computed(() =>
     totalCount.value > 0
-      ? `Показать ${totalCount.value} ${getPlural(totalCount.value, COMMENTS_PLURAL_FORMS)}`
-      : 'Написать комментарий',
+      ? `${COMMENTS_EXPAND_PREFIX} ${totalCount.value} ${getPlural(totalCount.value, COMMENTS_PLURAL_FORMS)}`
+      : COMMENTS_EXPAND_EMPTY_LABEL,
   );
 
   /** Сервис закрыт авторизацией целиком: 401 на чтение = протух токен. */
@@ -354,12 +372,12 @@
         <UiResult
           v-else-if="loadError"
           status="error"
-          title="Не удалось загрузить комментарии"
+          :title="COMMENTS_LOAD_ERROR_TOAST"
           :sub-title="loadErrorMessage"
         >
           <template #extra>
             <UButton @click.left.exact.prevent="handleRetry">
-              Попробовать снова
+              {{ COMMENTS_RETRY_LABEL }}
             </UButton>
           </template>
         </UiResult>
@@ -374,11 +392,23 @@
             <CommentsPreviewCard :comment="latestComment" />
           </button>
 
+          <!--
+            Отсутствие превью ещё не значит отсутствия обсуждения: сверху
+            ленты могут стоять надгробия, из которых карточку не собрать.
+            Пустоту утверждаем только по серверному счётчику.
+          -->
+          <p
+            v-else-if="isThreadEmpty"
+            class="py-2 text-center text-sm text-muted"
+          >
+            {{ COMMENTS_EMPTY_MESSAGE }}
+          </p>
+
           <p
             v-else
             class="py-2 text-center text-sm text-muted"
           >
-            Пока нет комментариев — начните обсуждение первым.
+            {{ COMMENTS_PREVIEW_UNAVAILABLE }}
           </p>
 
           <UButton
@@ -399,12 +429,12 @@
         <UiResult
           v-else-if="loadError"
           status="error"
-          title="Не удалось загрузить комментарии"
+          :title="COMMENTS_LOAD_ERROR_TOAST"
           :sub-title="loadErrorMessage"
         >
           <template #extra>
             <UButton @click.left.exact.prevent="handleRetry">
-              Попробовать снова
+              {{ COMMENTS_RETRY_LABEL }}
             </UButton>
           </template>
         </UiResult>
@@ -414,7 +444,7 @@
             v-if="!hasComments"
             class="py-4 text-center text-sm text-muted"
           >
-            Пока нет комментариев — начните обсуждение первым.
+            {{ COMMENTS_EMPTY_MESSAGE }}
           </p>
 
           <div
@@ -440,11 +470,11 @@
             :loading="isLoadingMore"
             @click.left.exact.prevent="handleLoadMore"
           >
-            Показать ещё
+            {{ COMMENTS_LOAD_MORE_LABEL }}
           </UButton>
 
           <CommentComposer
-            placeholder="Поделитесь мнением…"
+            :placeholder="COMMENT_COMPOSER_ROOT_PLACEHOLDER"
             :submit-action="submitRootAndReveal"
           />
         </template>

@@ -2,6 +2,7 @@
   import type { CommentEntry } from '../../model';
 
   import { useCommentTimestamp } from '../../composables';
+  import { COMMENT_REPLY_TO_PREFIX } from '../../model';
 
   const { comment } = defineProps<{
     comment: CommentEntry;
@@ -44,8 +45,9 @@
       <UIcon
         name="tabler:arrow-back-up"
         class="size-3.5 shrink-0"
+        aria-hidden="true"
       />
-      в ответ {{ comment.parentAuthorName }}
+      {{ COMMENT_REPLY_TO_PREFIX }} {{ comment.parentAuthorName }}
     </p>
 
     <!-- Контент рендерится текстом: сервис не санитизирует ввод -->

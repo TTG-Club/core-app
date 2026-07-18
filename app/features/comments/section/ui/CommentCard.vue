@@ -7,20 +7,46 @@
 
   import { useCommentTimestamp } from '../../composables';
   import {
+    COMMENT_ACTIONS_MENU_LABEL,
+    COMMENT_COPY_LINK_LABEL,
+    COMMENT_DELETE_BRANCH_WARNING,
+    COMMENT_DELETE_CONFIRM_LABEL,
+    COMMENT_DELETE_DIALOG_TITLE,
+    COMMENT_DELETE_IRREVERSIBLE_WARNING,
+    COMMENT_DELETE_MENU_LABEL,
+    COMMENT_EDIT_LABEL,
+    COMMENT_EDIT_PLACEHOLDER,
+    COMMENT_EDIT_SUBMIT_LABEL,
+    COMMENT_EDITED_MARK,
+    COMMENT_OWN_BADGE_LABEL,
+    COMMENT_REPLIES_HIDE_LABEL,
     COMMENT_REPLIES_PLURAL_FORMS,
+    COMMENT_REPLIES_SHOW_LABEL,
+    COMMENT_REPLY_LABEL,
+    COMMENT_REPLY_PLACEHOLDER_PREFIX,
+    COMMENT_REPLY_TO_PREFIX,
+    COMMENT_REPORT_LABEL,
+    COMMENT_REPORTED_LABEL,
+    COMMENT_SHOW_PARENT_LABEL,
+    COMMENT_TOMBSTONE_TEXT,
     countCommentDescendants,
     getCommentAnchorId,
     hasServerReplyTotal,
+    isCommentTombstone,
   } from '../../model';
   import CommentComposer from './CommentComposer.vue';
+  import CommentTombstone from './CommentTombstone.vue';
 
   const {
     node,
     actions,
+    replyToName = null,
     highlightedCommentId = null,
   } = defineProps<{
     node: CommentNode;
     actions: CommentTreeActions;
+    /** Имя автора родителя — приходит от ветки, см. `CommentThread`. */
+    replyToName?: string | null;
     /** Комментарий, подсвеченный после перехода по якорной ссылке. */
     highlightedCommentId?: string | null;
   }>();
@@ -44,6 +70,38 @@
       : 'bg-transparent transition-colors duration-1000',
   );
 
+  /**
+   * Комментарий с содержимым; `null` — это надгробие, и вместо карточки
+   * рисуется заглушка (`CommentTombstone`). Автора и текста у неё нет, а
+   * ответ, жалоба и правка по ней возвращают 409 — поэтому действия
+   * скрываются, а не гасятся ошибкой с бэка.
+   */
+  const publishedComment = computed(() =>
+    isCommentTombstone(node.comment) ? null : node.comment,
+  );
+
+  const isTombstone = computed(() => !publishedComment.value);
+
+  /**
+   * Доступное имя карточки. Обычную называет автор и текст внутри, а у
+   * заглушки их нет — без явного имени она осталась бы в дереве доступности
+   * безымянным `article`.
+   */
+  const articleLabel = computed(() =>
+    isTombstone.value ? COMMENT_TOMBSTONE_TEXT : undefined,
+  );
+
+  /**
+   * Подсказка в форме ответа — адресует автору, которому отвечают. Собирается
+   * только при живом комментарии: опциональная цепочка внутри шаблонной строки
+   * дала бы литеральное «Ответ для undefined».
+   */
+  const replyPlaceholder = computed(() =>
+    publishedComment.value
+      ? `${COMMENT_REPLY_PLACEHOLDER_PREFIX} ${publishedComment.value.authorName}`
+      : '',
+  );
+
   const isReplyOpen = ref(false);
   const isEditOpen = ref(false);
   const isDeleteOpen = ref(false);
@@ -63,13 +121,23 @@
 
   const isReported = computed(() => actions.isCommentReported(node.comment.id));
 
+  /**
+   * Имя автора, которому отвечает комментарий. Берём из ветки, а при её
+   * отсутствии (узел без отрисованного родителя) — из серверного
+   * `parentAuthorName`. У ответа на надгробие имени нет: сервис его не
+   * раскрывает, пока родителя не восстановят.
+   */
+  const replyToAuthorName = computed(
+    () => replyToName ?? node.comment.parentAuthorName,
+  );
+
   /** Подпись «кому ответили» видна на каждом ответе. */
-  const showReplyTo = computed(() => !!node.replyToName);
+  const showReplyTo = computed(() => !!replyToAuthorName.value);
 
   const deleteDescription = computed(() =>
     node.comment.replyCount > 0
-      ? 'Ответы этой ветки тоже перестанут отображаться.'
-      : 'Действие нельзя отменить.',
+      ? COMMENT_DELETE_BRANCH_WARNING
+      : COMMENT_DELETE_IRREVERSIBLE_WARNING,
   );
 
   /**
@@ -87,7 +155,7 @@
 
   const repliesToggleLabel = computed(() => {
     if (node.repliesLoaded && node.repliesExpanded) {
-      return 'Скрыть ответы';
+      return COMMENT_REPLIES_HIDE_LABEL;
     }
 
     // Точное число известно из загруженной ветки либо из серверного
@@ -98,13 +166,22 @@
       return `${repliesTotal.value} ${getPlural(repliesTotal.value, COMMENT_REPLIES_PLURAL_FORMS)}`;
     }
 
-    return 'Показать ответы';
+    return COMMENT_REPLIES_SHOW_LABEL;
   });
 
   const repliesToggleIcon = computed(() =>
     node.repliesLoaded && node.repliesExpanded
       ? 'tabler:chevron-up'
       : 'tabler:chevron-down',
+  );
+
+  /**
+   * Ряд действий под карточкой. У надгробия он сводится к кнопке ветки
+   * (отвечать самой заглушке нельзя), у обычной карточки прячется на время
+   * правки — форма занимает его место.
+   */
+  const showFooter = computed(() =>
+    isTombstone.value ? showRepliesToggle.value : !isEditOpen.value,
   );
 
   function handleToggleReplies(): void {
@@ -126,7 +203,7 @@
     const availableActions: Array<CommentCardAction> = [
       {
         key: 'copy-link',
-        label: 'Скопировать ссылку',
+        label: COMMENT_COPY_LINK_LABEL,
         icon: 'tabler:link',
         handler: copyCommentLink,
       },
@@ -135,7 +212,7 @@
     if (node.comment.parentId) {
       availableActions.push({
         key: 'show-parent',
-        label: 'Показать родительский',
+        label: COMMENT_SHOW_PARENT_LABEL,
         icon: 'tabler:corner-left-up',
         handler: showParentComment,
       });
@@ -145,13 +222,13 @@
       availableActions.push(
         {
           key: 'edit',
-          label: 'Редактировать',
+          label: COMMENT_EDIT_LABEL,
           icon: 'tabler:pencil',
           handler: openEdit,
         },
         {
           key: 'delete',
-          label: 'Удалить',
+          label: COMMENT_DELETE_MENU_LABEL,
           icon: 'tabler:trash',
           color: 'error',
           handler: openDelete,
@@ -164,7 +241,7 @@
     if (isReported.value) {
       availableActions.push({
         key: 'reported',
-        label: 'Жалоба отправлена',
+        label: COMMENT_REPORTED_LABEL,
         icon: 'tabler:flag',
         disabled: true,
       });
@@ -174,7 +251,7 @@
 
     availableActions.push({
       key: 'report',
-      label: 'Пожаловаться',
+      label: COMMENT_REPORT_LABEL,
       icon: 'tabler:flag',
       color: 'error',
       handler: handleReport,
@@ -278,124 +355,138 @@
     :id="anchorId"
     class="group/comment -mx-2 flex scroll-mt-24 flex-col gap-1.5 rounded-lg px-2"
     :class="highlightClass"
+    :aria-label="articleLabel"
   >
-    <!-- На узких экранах мета-блок (бейдж, время, меню) уходит под имя -->
-    <header class="flex items-start gap-2 sm:items-center">
-      <UAvatar
-        :alt="node.comment.authorName"
-        size="xs"
-        class="shrink-0"
-        :ui="{ fallback: 'uppercase' }"
-      />
-
-      <div
-        class="flex min-w-0 flex-1 flex-col gap-y-1 sm:flex-row sm:items-center sm:gap-x-2"
-      >
-        <span class="min-w-0 truncate text-sm/6 font-semibold text-highlighted">
-          {{ node.comment.authorName }}
-        </span>
-
-        <div class="flex min-w-0 items-center gap-2">
-          <UBadge
-            v-if="isOwn"
-            variant="subtle"
-            size="sm"
-          >
-            Вы
-          </UBadge>
-
-          <UTooltip
-            v-if="createdLabel"
-            :text="createdFullLabel"
-          >
-            <time
-              class="text-xs whitespace-nowrap text-muted"
-              :datetime="node.comment.createdAt"
-            >
-              {{ createdLabel }}
-            </time>
-          </UTooltip>
-
-          <UTooltip
-            v-if="node.comment.editedAt"
-            :text="editedTooltip"
-          >
-            <span class="text-xs text-dimmed">(изменено)</span>
-          </UTooltip>
-
-          <!--
-            С мышью (точный указатель) действия — ряд иконок с тултипами,
-            проявляющийся при наведении на карточку (и при фокусе с клавиатуры).
-            На сенсорных экранах ховера нет — там остаётся меню «⋯».
-          -->
-          <div
-            class="hidden items-center gap-0.5 opacity-0 transition-opacity group-hover/comment:opacity-100 focus-within:opacity-100 pointer-fine:flex"
-          >
-            <UTooltip
-              v-for="action in cardActions"
-              :key="action.key"
-              :text="action.label"
-            >
-              <UButton
-                :icon="action.icon"
-                variant="ghost"
-                :color="getCardActionColor(action)"
-                size="xs"
-                :disabled="action.disabled"
-                :aria-label="action.label"
-                @click.left.exact.prevent="runCardAction(action)"
-              />
-            </UTooltip>
-          </div>
-
-          <UDropdownMenu :items="menuItems">
-            <UButton
-              icon="tabler:dots-vertical"
-              variant="ghost"
-              color="neutral"
-              size="xs"
-              aria-label="Действия с комментарием"
-              class="pointer-fine:hidden"
-            />
-          </UDropdownMenu>
-        </div>
-      </div>
-    </header>
-
-    <p
-      v-if="showReplyTo"
-      class="flex items-center gap-1 text-xs text-muted"
-    >
-      <UIcon
-        name="tabler:arrow-back-up"
-        class="size-3.5 shrink-0"
-      />
-      в ответ {{ node.replyToName }}
-    </p>
-
-    <!-- Контент рендерится текстом: сервис не санитизирует ввод -->
-    <p
-      v-if="!isEditOpen"
-      class="text-sm wrap-break-word whitespace-pre-line text-default"
-    >
-      {{ node.comment.content }}
-    </p>
-
-    <CommentComposer
-      v-else
-      :initial-content="node.comment.content"
-      placeholder="Текст комментария"
-      submit-label="Сохранить"
-      cancellable
-      autofocus
-      :with-cooldown="false"
-      :submit-action="submitEditAction"
-      @done="closeEdit"
-      @cancel="closeEdit"
+    <CommentTombstone
+      v-if="isTombstone"
+      :node
+      :actions
+      :reply-to-name="replyToName"
     />
 
+    <template v-else>
+      <!-- На узких экранах мета-блок (бейдж, время, меню) уходит под имя -->
+      <header class="flex items-start gap-2 sm:items-center">
+        <UAvatar
+          :alt="publishedComment?.authorName"
+          size="xs"
+          class="shrink-0"
+          :ui="{ fallback: 'uppercase' }"
+        />
+
+        <div
+          class="flex min-w-0 flex-1 flex-col gap-y-1 sm:flex-row sm:items-center sm:gap-x-2"
+        >
+          <span
+            class="min-w-0 truncate text-sm/6 font-semibold text-highlighted"
+          >
+            {{ publishedComment?.authorName }}
+          </span>
+
+          <div class="flex min-w-0 items-center gap-2">
+            <UBadge
+              v-if="isOwn"
+              variant="subtle"
+              size="sm"
+            >
+              {{ COMMENT_OWN_BADGE_LABEL }}
+            </UBadge>
+
+            <UTooltip
+              v-if="createdLabel"
+              :text="createdFullLabel"
+            >
+              <time
+                class="text-xs whitespace-nowrap text-muted"
+                :datetime="node.comment.createdAt"
+              >
+                {{ createdLabel }}
+              </time>
+            </UTooltip>
+
+            <UTooltip
+              v-if="node.comment.editedAt"
+              :text="editedTooltip"
+            >
+              <span class="text-xs text-dimmed">{{ COMMENT_EDITED_MARK }}</span>
+            </UTooltip>
+
+            <!--
+              С мышью (точный указатель) действия — ряд иконок с тултипами,
+              проявляющийся при наведении на карточку (и при фокусе
+              с клавиатуры). На сенсорных экранах ховера нет — там остаётся
+              меню «⋯».
+            -->
+            <div
+              class="hidden items-center gap-0.5 opacity-0 transition-opacity group-hover/comment:opacity-100 focus-within:opacity-100 pointer-fine:flex"
+            >
+              <UTooltip
+                v-for="action in cardActions"
+                :key="action.key"
+                :text="action.label"
+              >
+                <UButton
+                  :icon="action.icon"
+                  variant="ghost"
+                  :color="getCardActionColor(action)"
+                  size="xs"
+                  :disabled="action.disabled"
+                  :aria-label="action.label"
+                  @click.left.exact.prevent="runCardAction(action)"
+                />
+              </UTooltip>
+            </div>
+
+            <UDropdownMenu :items="menuItems">
+              <UButton
+                icon="tabler:dots-vertical"
+                variant="ghost"
+                color="neutral"
+                size="xs"
+                :aria-label="COMMENT_ACTIONS_MENU_LABEL"
+                class="pointer-fine:hidden"
+              />
+            </UDropdownMenu>
+          </div>
+        </div>
+      </header>
+
+      <p
+        v-if="showReplyTo"
+        class="flex items-center gap-1 text-xs text-muted"
+      >
+        <UIcon
+          name="tabler:arrow-back-up"
+          class="size-3.5 shrink-0"
+          aria-hidden="true"
+        />
+        {{ COMMENT_REPLY_TO_PREFIX }} {{ replyToAuthorName }}
+      </p>
+
+      <!-- Контент рендерится текстом: сервис не санитизирует ввод -->
+      <p
+        v-if="!isEditOpen"
+        class="text-sm wrap-break-word whitespace-pre-line text-default"
+      >
+        {{ publishedComment?.content }}
+      </p>
+
+      <CommentComposer
+        v-else
+        :initial-content="publishedComment?.content"
+        :placeholder="COMMENT_EDIT_PLACEHOLDER"
+        :submit-label="COMMENT_EDIT_SUBMIT_LABEL"
+        cancellable
+        autofocus
+        :with-cooldown="false"
+        :submit-action="submitEditAction"
+        @done="closeEdit"
+        @cancel="closeEdit"
+      />
+    </template>
+
     <footer
-      v-if="!isEditOpen"
+      v-if="showFooter"
       class="-ml-2 flex flex-wrap items-center gap-1"
     >
       <!-- ml-1.25 ставит иконку-стрелку на ось линии ветки (центр аватара) -->
@@ -412,20 +503,26 @@
       </UButton>
 
       <UButton
+        v-if="!isTombstone"
         variant="ghost"
         color="neutral"
         size="xs"
         icon="tabler:arrow-back-up"
         @click.left.exact.prevent="toggleReply"
       >
-        Ответить
+        {{ COMMENT_REPLY_LABEL }}
       </UButton>
     </footer>
 
+    <!--
+      Форма могла остаться открытой с того момента, когда комментарий был
+      живым: фоновая пересборка ветки сохраняет инстанс карточки (ключ — id),
+      а сам комментарий подменяет надгробием.
+    -->
     <CommentComposer
-      v-if="isReplyOpen"
-      :placeholder="`Ответ для ${node.comment.authorName}`"
-      submit-label="Ответить"
+      v-if="isReplyOpen && !isTombstone"
+      :placeholder="replyPlaceholder"
+      :submit-label="COMMENT_REPLY_LABEL"
       cancellable
       autofocus
       :submit-action="submitReplyAction"
@@ -435,9 +532,9 @@
 
     <ConfirmDialog
       v-model:open="isDeleteOpen"
-      title="Удалить комментарий?"
+      :title="COMMENT_DELETE_DIALOG_TITLE"
       :description="deleteDescription"
-      confirm-label="Удалить"
+      :confirm-label="COMMENT_DELETE_CONFIRM_LABEL"
       confirm-color="error"
       confirm-icon="tabler:trash"
       :loading="isDeleting"

@@ -3,6 +3,7 @@ import type {
   CommentRateLimitInfo,
   CommentsPage,
   CreateCommentRequest,
+  PublicComment,
 } from './types';
 
 import { FetchError } from 'ofetch';
@@ -21,9 +22,11 @@ import {
   parseCommentRateLimit,
   parseCommentReplies,
   parseCommentsCount,
-  parseCommentsPage,
   parseCreateCommentRequest,
   parseLatestComment,
+  parseModerationCommentsPage,
+  parsePublicComment,
+  parsePublicCommentsPage,
 } from './schemas';
 
 /**
@@ -85,8 +88,9 @@ export function getCommentRateLimit(error: unknown): CommentRateLimitInfo {
 
 /**
  * Страница корневых комментариев страницы, свежие сверху.
- * Сервис отдаёт только опубликованные корни; ответы приходят отдельным
- * запросом `fetchCommentReplies`.
+ * Кроме опубликованных сервис отдаёт надгробия — удалённые комментарии,
+ * у которых остались живые ответы (см. `CommentEntry`); ответы приходят
+ * отдельным запросом `fetchCommentReplies`.
  * @param section Раздел сайта в сервисе комментариев.
  * @param url URL страницы внутри раздела (ключ обсуждения).
  * @param page Номер страницы (с нуля).
@@ -97,7 +101,7 @@ export async function fetchRootComments(
   url: string,
   page: number,
   size: number = COMMENTS_PAGE_SIZE,
-): Promise<CommentsPage> {
+): Promise<CommentsPage<PublicComment>> {
   const response = await $fetch(COMMENTS_API_PATH, {
     method: 'GET',
     query: {
@@ -110,7 +114,7 @@ export async function fetchRootComments(
     retry: 0,
   });
 
-  return parseCommentsPage(response);
+  return parsePublicCommentsPage(response);
 }
 
 /**
@@ -143,7 +147,7 @@ export async function fetchCommentsCount(
 export async function fetchLatestComment(
   section: string,
   url: string,
-): Promise<CommentEntry | null> {
+): Promise<PublicComment | null> {
   const response = await $fetch(`${COMMENTS_API_PATH}/latest`, {
     method: 'GET',
     query: { section, url },
@@ -154,30 +158,32 @@ export async function fetchLatestComment(
 }
 
 /**
- * Один опубликованный комментарий по идентификатору (404 — нет или удалён).
+ * Один комментарий по идентификатору. Удалённый с живыми ответами приходит
+ * надгробием, удалённый без них — 404 (как и несуществующий).
  * Используется для перехода по прямой ссылке: по `parentId` фронт
  * поднимается по цепочке предков до корня.
  * @param commentId Идентификатор комментария.
  */
 export async function fetchCommentById(
   commentId: string,
-): Promise<CommentEntry> {
+): Promise<PublicComment> {
   const response = await $fetch(`${COMMENTS_API_PATH}/${commentId}`, {
     method: 'GET',
     retry: 0,
   });
 
-  return parseComment(response);
+  return parsePublicComment(response);
 }
 
 /**
  * Прямые ответы на комментарий — сервис отдаёт только один уровень,
- * глубже нужно спускаться отдельными запросами.
+ * глубже нужно спускаться отдельными запросами. Среди ответов могут быть
+ * надгробия удалённых комментариев со своими живыми ветками.
  * @param parentId Идентификатор родительского комментария.
  */
 export async function fetchCommentReplies(
   parentId: string,
-): Promise<Array<CommentEntry>> {
+): Promise<Array<PublicComment>> {
   const response = await $fetch(`${COMMENTS_API_PATH}/${parentId}/replies`, {
     method: 'GET',
     retry: 0,
@@ -239,8 +245,10 @@ export async function updateComment(
 }
 
 /**
- * Мягко удаляет свой комментарий. Сервис прячет из выдачи всю ветку целиком:
- * ответы остаются в базе, но становятся недоступны.
+ * Мягко удаляет свой комментарий. Ветка ответов при этом не прячется:
+ * комментарий с живыми ответами остаётся в выдаче надгробием и исчезает
+ * сам, когда удалят последний ответ под ним. Комментарий без ответов
+ * пропадает из выдачи сразу.
  * @param commentId Идентификатор комментария.
  */
 export async function deleteComment(commentId: string): Promise<void> {
@@ -270,7 +278,7 @@ export async function fetchUserComments(
     retry: 0,
   });
 
-  return parseCommentsPage(response);
+  return parseModerationCommentsPage(response);
 }
 
 /**

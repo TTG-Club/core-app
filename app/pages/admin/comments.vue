@@ -3,18 +3,23 @@
 
   import { AdminCommentRow } from '~comments/admin';
   import {
+    ADMIN_COMMENTS_ALL_DESCRIPTION,
+    ADMIN_COMMENTS_ALL_EMPTY_MESSAGE,
+    ADMIN_COMMENTS_DISLIKED_DESCRIPTION,
+    ADMIN_COMMENTS_DISLIKED_EMPTY_MESSAGE,
+    ADMIN_COMMENTS_PAGE_TITLE,
+    COMMENTS_LOAD_ERROR_TOAST,
     COMMENTS_MODERATION_ALL_PATH,
     COMMENTS_MODERATION_DISLIKED_PATH,
     COMMENTS_MODERATION_PAGE_SIZE,
     COMMENTS_MODERATION_TABS,
+    COMMENTS_RETRY_LABEL,
     getCommentErrorMessage,
-    parseCommentsPage,
+    parseModerationCommentsPage,
   } from '~comments/model';
   import { UiResult } from '~ui/result';
 
-  const PAGE_TITLE = 'Комментарии: Модерация';
-
-  useSeoMeta({ title: PAGE_TITLE });
+  useSeoMeta({ title: ADMIN_COMMENTS_PAGE_TITLE });
 
   // useRequestFetch пробрасывает куки при SSR — иначе прокси не подставит
   // Bearer и сервис ответит 401 ещё на сервере.
@@ -43,7 +48,7 @@
           page: currentPage.value - 1,
           size: COMMENTS_MODERATION_PAGE_SIZE,
         },
-      }).then(parseCommentsPage),
+      }).then(parseModerationCommentsPage),
     { watch: [currentPage, activeTab] },
   );
 
@@ -67,14 +72,14 @@
 
   const pageDescription = computed(() =>
     activeTab.value === 'all'
-      ? 'Все комментарии сайта — от новых к старым, включая удалённые и отклонённые.'
-      : 'Комментарии, на которые пользователи отправили жалобы, — от самых обжалуемых к менее. Ссылка «Открыть» ведёт к комментарию на его странице.',
+      ? ADMIN_COMMENTS_ALL_DESCRIPTION
+      : ADMIN_COMMENTS_DISLIKED_DESCRIPTION,
   );
 
   const emptyMessage = computed(() =>
     activeTab.value === 'all'
-      ? 'Комментариев пока нет.'
-      : 'Жалоб нет — очередь модерации пуста.',
+      ? ADMIN_COMMENTS_ALL_EMPTY_MESSAGE
+      : ADMIN_COMMENTS_DISLIKED_EMPTY_MESSAGE,
   );
 
   function handleRetry(): void {
@@ -93,7 +98,7 @@
 <template>
   <NuxtLayout
     name="detail"
-    :title="PAGE_TITLE"
+    :title="ADMIN_COMMENTS_PAGE_TITLE"
   >
     <div class="flex flex-col gap-4">
       <UTabs
@@ -119,12 +124,12 @@
       <UiResult
         v-else-if="moderationError"
         status="error"
-        title="Не удалось загрузить комментарии"
+        :title="COMMENTS_LOAD_ERROR_TOAST"
         :sub-title="loadErrorMessage"
       >
         <template #extra>
           <UButton @click.left.exact.prevent="handleRetry">
-            Попробовать снова
+            {{ COMMENTS_RETRY_LABEL }}
           </UButton>
         </template>
       </UiResult>

@@ -1,6 +1,20 @@
-import type { CommentEntry } from '../model';
+import type { ComputedRef } from 'vue';
+
+import type { PublicComment } from '../model';
 
 import { COMMENT_DATETIME_FORMAT } from '../model';
+
+/** Возвращаемое значение композабла useCommentTimestamp. */
+export interface UseCommentTimestampReturn {
+  /** Подпись времени создания: относительная либо абсолютная. */
+  createdLabel: ComputedRef<string>;
+
+  /** Абсолютные дата и время создания (подсказка и старые комментарии). */
+  createdFullLabel: ComputedRef<string>;
+
+  /** Подсказка пометки «(изменено)» с полной датой правки. */
+  editedTooltip: ComputedRef<string>;
+}
 
 /**
  * Подписи времени комментария: свежие (до суток) подписываются относительно
@@ -8,7 +22,9 @@ import { COMMENT_DATETIME_FORMAT } from '../model';
  * используется в подсказках.
  * @param getComment Геттер комментария (сохраняет реактивность пропсов).
  */
-export function useCommentTimestamp(getComment: () => CommentEntry) {
+export function useCommentTimestamp(
+  getComment: () => PublicComment,
+): UseCommentTimestampReturn {
   const { $dayjs, format } = useDayjs();
 
   /** Абсолютные дата и время создания — подсказка и старые комментарии. */

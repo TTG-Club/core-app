@@ -5,21 +5,21 @@
 
   import { useCommentTimestamp } from '../../composables';
   import {
-    ADMIN_COMMENT_DELETE_BRANCH_WARNING,
-    ADMIN_COMMENT_DELETE_CONFIRM_LABEL,
-    ADMIN_COMMENT_DELETE_DIALOG_TITLE,
-    ADMIN_COMMENT_DELETE_ERROR_TOAST,
-    ADMIN_COMMENT_DELETE_IRREVERSIBLE_WARNING,
     ADMIN_COMMENT_DELETE_LABEL,
     ADMIN_COMMENT_DELETED_TOAST,
     ADMIN_COMMENT_OPEN_LABEL,
     ADMIN_COMMENT_REPLY_TO_FALLBACK,
-    ADMIN_COMMENT_REPLY_TO_PREFIX,
-    ADMIN_COMMENT_RESTORE_ERROR_TOAST,
-    ADMIN_COMMENT_RESTORE_LABEL,
     ADMIN_COMMENT_RESTORE_TOOLTIP,
-    ADMIN_COMMENT_RESTORED_TOAST,
+    COMMENT_DELETE_BRANCH_WARNING,
+    COMMENT_DELETE_CONFIRM_LABEL,
+    COMMENT_DELETE_DIALOG_TITLE,
+    COMMENT_DELETE_ERROR_TOAST,
+    COMMENT_DELETE_IRREVERSIBLE_WARNING,
     COMMENT_DISLIKES_PLURAL_FORMS,
+    COMMENT_REPLY_TO_PREFIX,
+    COMMENT_RESTORE_ERROR_TOAST,
+    COMMENT_RESTORE_LABEL,
+    COMMENT_RESTORED_TOAST,
     COMMENT_STATUS_COLORS,
     COMMENT_STATUS_LABELS,
     deleteComment,
@@ -78,7 +78,7 @@
     }
 
     return comment.parentAuthorName
-      ? `${ADMIN_COMMENT_REPLY_TO_PREFIX} ${comment.parentAuthorName}`
+      ? `${COMMENT_REPLY_TO_PREFIX} ${comment.parentAuthorName}`
       : ADMIN_COMMENT_REPLY_TO_FALLBACK;
   });
 
@@ -102,8 +102,8 @@
 
   const deleteDescription = computed(() =>
     comment.replyCount > 0
-      ? ADMIN_COMMENT_DELETE_BRANCH_WARNING
-      : ADMIN_COMMENT_DELETE_IRREVERSIBLE_WARNING,
+      ? COMMENT_DELETE_BRANCH_WARNING
+      : COMMENT_DELETE_IRREVERSIBLE_WARNING,
   );
 
   function openDelete(): void {
@@ -126,7 +126,7 @@
       emit('deleted', comment.id);
     } catch (error) {
       toast.add({
-        title: ADMIN_COMMENT_DELETE_ERROR_TOAST,
+        title: COMMENT_DELETE_ERROR_TOAST,
         description: getCommentErrorMessage(error),
         color: 'error',
         icon: 'tabler:alert-triangle',
@@ -147,7 +147,7 @@
       const restored = await restoreComment(comment.id);
 
       toast.add({
-        title: ADMIN_COMMENT_RESTORED_TOAST,
+        title: COMMENT_RESTORED_TOAST,
         color: 'success',
         icon: 'tabler:arrow-back-up',
       });
@@ -155,7 +155,7 @@
       emit('restored', restored);
     } catch (error) {
       toast.add({
-        title: ADMIN_COMMENT_RESTORE_ERROR_TOAST,
+        title: COMMENT_RESTORE_ERROR_TOAST,
         description: getCommentErrorMessage(error),
         color: 'error',
         icon: 'tabler:alert-triangle',
@@ -244,7 +244,7 @@
               color="success"
               icon="tabler:arrow-back-up"
               :loading="isRestoring"
-              :aria-label="ADMIN_COMMENT_RESTORE_LABEL"
+              :aria-label="COMMENT_RESTORE_LABEL"
               @click.left.exact.prevent="restore"
             />
           </UTooltip>
@@ -287,9 +287,9 @@
 
     <ConfirmDialog
       v-model:open="isDeleteOpen"
-      :title="ADMIN_COMMENT_DELETE_DIALOG_TITLE"
+      :title="COMMENT_DELETE_DIALOG_TITLE"
       :description="deleteDescription"
-      :confirm-label="ADMIN_COMMENT_DELETE_CONFIRM_LABEL"
+      :confirm-label="COMMENT_DELETE_CONFIRM_LABEL"
       confirm-color="error"
       confirm-icon="tabler:trash"
       :loading="isDeleting"

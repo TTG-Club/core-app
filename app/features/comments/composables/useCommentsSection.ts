@@ -1,7 +1,23 @@
-import type { CommentEntry, CommentNode } from '../model';
+import type { Ref } from 'vue';
+
+import type { CommentEntry, CommentNode, PublicComment } from '../model';
 
 import {
+  COMMENT_ALREADY_DELETED_TOAST,
+  COMMENT_DELETE_ERROR_TOAST,
+  COMMENT_EDIT_ERROR_TOAST,
+  COMMENT_REPLIES_LOAD_ERROR_TOAST,
+  COMMENT_REPLY_ERROR_TOAST,
+  COMMENT_REPORT_DUPLICATE_DESCRIPTION,
+  COMMENT_REPORT_DUPLICATE_TOAST,
+  COMMENT_REPORT_ERROR_TOAST,
+  COMMENT_REPORT_SUCCESS_DESCRIPTION,
+  COMMENT_REPORT_SUCCESS_TOAST,
+  COMMENT_RESTORE_ERROR_TOAST,
+  COMMENT_RESTORED_TOAST,
   COMMENT_SUBMIT_COOLDOWN_SECONDS,
+  COMMENT_SUBMIT_ERROR_TOAST,
+  COMMENTS_LOAD_ERROR_TOAST,
   COMMENTS_PREVIEW_PAGE_SIZE,
   COMMENTS_REPLIES_DEPTH_LIMIT,
   createCommentNode,
@@ -19,14 +35,19 @@ import {
   getCommentRateLimit,
   hasServerReplyTotal,
   isCommentFromThread,
+  isCommentTombstone,
+  mergeRestoredComment,
   removeCommentNode,
   reportComment,
+  restoreComment,
   updateComment,
 } from '../model';
 import { useCommentSubmitCooldown } from './useCommentSubmitCooldown';
 
 /**
  * Поднимается по цепочке `parentId` до корневого комментария ветки.
+ * Надгробие удалённого комментария — обычное звено цепочки: сервис отдаёт
+ * его вместо 404, пока под ним живы ответы.
  * @param commentId Идентификатор комментария (может быть и корнем).
  * @param threadSection Раздел треда, в который поднимаем ветку.
  * @param threadUrl URL страницы треда.
@@ -38,7 +59,7 @@ async function fetchRootOfComment(
   commentId: string,
   threadSection: string,
   threadUrl: string,
-): Promise<CommentEntry | null> {
+): Promise<PublicComment | null> {
   const visitedIds = new Set<string>([commentId]);
 
   let currentEntry = await fetchCommentById(commentId);
@@ -60,6 +81,47 @@ async function fetchRootOfComment(
   return currentEntry;
 }
 
+/**
+ * Снимает состояние свёртки всего поддерева: перезагрузка ветки пересоздаёт
+ * узлы, и без снимка развёрнутость, заданную пользователем, не восстановить.
+ * @param node Корень ветки.
+ * @param state Накопитель (заполняется рекурсией).
+ */
+function collectRepliesExpanded(
+  node: CommentNode,
+  state: Map<string, boolean> = new Map(),
+): Map<string, boolean> {
+  state.set(node.comment.id, node.repliesExpanded);
+
+  for (const child of node.replies) {
+    collectRepliesExpanded(child, state);
+  }
+
+  return state;
+}
+
+/**
+ * Возвращает поддереву состояние свёртки из снимка. Узлы, которых в снимке
+ * не было (ответы, появившиеся с тех пор), остаются как их создал загрузчик.
+ * Корень пропускается: его свёрткой управляет вызывающий код.
+ * @param node Корень ветки.
+ * @param state Снимок из `collectRepliesExpanded`.
+ */
+function restoreRepliesExpanded(
+  node: CommentNode,
+  state: Map<string, boolean>,
+): void {
+  for (const child of node.replies) {
+    const wasExpanded = state.get(child.comment.id);
+
+    if (wasExpanded !== undefined) {
+      child.repliesExpanded = wasExpanded;
+    }
+
+    restoreRepliesExpanded(child, state);
+  }
+}
+
 interface UseCommentsSectionOptions {
   /** Раздел сайта в сервисе комментариев. */
   section: string;
@@ -67,21 +129,95 @@ interface UseCommentsSectionOptions {
   url: string;
 }
 
+/** Возвращаемое значение композабла useCommentsSection. */
+export interface UseCommentsSectionReturn {
+  /** Корни локального дерева комментариев. */
+  rootNodes: Ref<Array<CommentNode>>;
+
+  /** Опубликованные комментарии страницы вместе с ответами (`/count`). */
+  totalCount: Ref<number>;
+
+  /** Самый свежий комментарий — для свёрнутого превью. */
+  latestComment: Ref<CommentEntry | null>;
+
+  /** Идёт первичная загрузка ленты. */
+  isLoading: Ref<boolean>;
+
+  /** Идёт загрузка свёрнутого превью. */
+  isPreviewLoading: Ref<boolean>;
+
+  /** Идёт догрузка следующей страницы корней. */
+  isLoadingMore: Ref<boolean>;
+
+  /** Страницы корней закончились. */
+  isLastPage: Ref<boolean>;
+
+  /** Ошибка последней загрузки; `null` — последняя попытка удалась. */
+  loadError: Ref<unknown>;
+
+  /** Грузит превью свёрнутого блока (свежий комментарий и счётчик). */
+  loadPreview: () => Promise<void>;
+
+  /** Грузит первую страницу ленты. */
+  loadComments: () => Promise<void>;
+
+  /** Дописывает следующую страницу корней. */
+  loadMoreComments: () => Promise<void>;
+
+  /** Разворачивает или сворачивает ветку ответов узла. */
+  toggleReplies: (node: CommentNode) => Promise<void>;
+
+  /** Готовит комментарий к показу по якорной ссылке. */
+  revealComment: (commentId: string) => Promise<boolean>;
+
+  /** Создаёт корневой комментарий. */
+  submitRootComment: (content: string) => Promise<boolean>;
+
+  /** Создаёт ответ на комментарий. */
+  submitReply: (node: CommentNode, content: string) => Promise<boolean>;
+
+  /** Сохраняет новый текст своего комментария. */
+  submitEdit: (node: CommentNode, content: string) => Promise<boolean>;
+
+  /** Мягко удаляет комментарий. */
+  removeComment: (node: CommentNode) => Promise<boolean>;
+
+  /** Возвращает надгробие в опубликованные (модератор, админ). */
+  restoreTombstone: (node: CommentNode) => Promise<boolean>;
+
+  /** Отправляет жалобу на комментарий. */
+  submitReport: (node: CommentNode) => Promise<void>;
+
+  /** Свой ли это комментарий. */
+  isOwnComment: (node: CommentNode) => boolean;
+
+  /** Жаловался ли пользователь на комментарий в этой сессии. */
+  isCommentReported: (commentId: string) => boolean;
+}
+
 /**
  * Состояние блока комментариев страницы: лента корней с серверной
  * пагинацией, локальное дерево ответов, создание/правка/удаление и жалобы.
  *
  * Сервис отдаёт только прямых детей комментария, поэтому ветка догружается
- * рекурсивно отдельными запросами. Удаление мягкое: сервис прячет всю ветку,
- * локально узел убирается вместе с поддеревом.
+ * рекурсивно отдельными запросами. Удаление мягкое: комментарий с живыми
+ * ответами остаётся в выдаче надгробием (ветка не пропадает), без ответов —
+ * исчезает; итог локально не вычислить, поэтому затронутая ветка после
+ * удаления и восстановления перезапрашивается целиком.
  */
-export function useCommentsSection(options: UseCommentsSectionOptions) {
+export function useCommentsSection(
+  options: UseCommentsSectionOptions,
+): UseCommentsSectionReturn {
   const toast = useToast();
   const { user } = useUser();
 
   const rootNodes = ref<Array<CommentNode>>([]);
 
-  /** Комментарии страницы вместе с ответами (эндпоинт `/count`). */
+  /**
+   * Комментарии страницы вместе с ответами (эндпоинт `/count`). Считает
+   * только опубликованные, поэтому с числом карточек в ленте не совпадает:
+   * надгробия удалённых в счётчик не входят.
+   */
   const totalCount = ref(0);
 
   const currentPage = ref(0);
@@ -141,7 +277,10 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
    */
   async function fetchPreviewComment(): Promise<CommentEntry | null> {
     try {
-      return await fetchLatestComment(options.section, options.url);
+      const latest = await fetchLatestComment(options.section, options.url);
+
+      // Надгробие в превью не показать — ни автора, ни текста у него нет.
+      return latest && !isCommentTombstone(latest) ? latest : null;
     } catch (error) {
       // 401 — не «эндпоинта нет», а протухла сессия: пробрасываем наверх.
       if (getCommentFetchStatus(error) === 401) {
@@ -155,7 +294,13 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
         COMMENTS_PREVIEW_PAGE_SIZE,
       );
 
-      return previewPage.items[0] ?? null;
+      // Среди корней бывают надгробия — превью из них не собрать (нет ни
+      // автора, ни текста), поэтому берём самый свежий живой корень.
+      return (
+        previewPage.items.find(
+          (rootComment) => !isCommentTombstone(rootComment),
+        ) ?? null
+      );
     }
   }
 
@@ -196,7 +341,7 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
       ]);
 
       rootNodes.value = firstPage.items.map((comment) =>
-        createCommentNode(comment, null),
+        createCommentNode(comment),
       );
 
       currentPage.value = 0;
@@ -233,7 +378,7 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
 
       const freshNodes = nextPage.items
         .filter((comment) => !knownIds.has(comment.id))
-        .map((comment) => createCommentNode(comment, null));
+        .map((comment) => createCommentNode(comment));
 
       rootNodes.value = [...rootNodes.value, ...freshNodes];
       currentPage.value += 1;
@@ -241,7 +386,7 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
 
       void prefetchReplyCounts();
     } catch (error) {
-      notifyError(error, 'Не удалось загрузить комментарии');
+      notifyError(error, COMMENTS_LOAD_ERROR_TOAST);
     } finally {
       isLoadingMore.value = false;
     }
@@ -279,9 +424,7 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
 
     const replies = await fetchCommentReplies(node.comment.id);
 
-    node.replies = replies.map((reply) =>
-      createCommentNode(reply, node.comment.authorName),
-    );
+    node.replies = replies.map((reply) => createCommentNode(reply));
 
     node.repliesLoaded = true;
 
@@ -297,22 +440,33 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
   }
 
   /**
-   * Загрузки веток в полёте (ключ — id комментария). Дедупликация нужна,
-   * чтобы клик по ветке во время фонового префетча не запускал второй
-   * набор тех же запросов, а дожидался уже идущего.
+   * Загрузки веток в полёте. Дедупликация нужна, чтобы клик по ветке во время
+   * фонового префетча не запускал второй набор тех же запросов, а дожидался
+   * уже идущего.
+   *
+   * Ключ — сам узел, а не id комментария: перезагрузка ветки пересоздаёт узлы
+   * поддерева, и по строковому ключу новый узел получил бы промис старого,
+   * отцепленного от дерева. Клик по такой ветке раскрыл бы её пустой.
    */
-  const repliesLoadPromises = new Map<string, Promise<void>>();
+  const repliesLoadPromises = new WeakMap<CommentNode, Promise<void>>();
 
   /**
    * Гарантирует, что поддерево ответов узла загружено. Повторные вызовы
    * во время загрузки возвращают уже идущий Promise.
+   * @param node Узел, ветку которого загружаем.
+   * @param force Перечитать уже загруженную ветку. Флаг `repliesLoaded` при
+   * этом не сбрасывается: прежние ответы остаются на экране до самой замены,
+   * иначе ветка на время фонового запроса схлопывалась бы в спиннер.
    */
-  function ensureRepliesLoaded(node: CommentNode): Promise<void> {
-    if (node.repliesLoaded) {
+  function ensureRepliesLoaded(
+    node: CommentNode,
+    force = false,
+  ): Promise<void> {
+    if (node.repliesLoaded && !force) {
       return Promise.resolve();
     }
 
-    const inFlight = repliesLoadPromises.get(node.comment.id);
+    const inFlight = repliesLoadPromises.get(node);
 
     if (inFlight) {
       return inFlight;
@@ -325,11 +479,11 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
         await loadRepliesDeep(node, 0);
       } finally {
         node.repliesLoading = false;
-        repliesLoadPromises.delete(node.comment.id);
+        repliesLoadPromises.delete(node);
       }
     })();
 
-    repliesLoadPromises.set(node.comment.id, loadPromise);
+    repliesLoadPromises.set(node, loadPromise);
 
     return loadPromise;
   }
@@ -349,7 +503,7 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
       await ensureRepliesLoaded(node);
       node.repliesExpanded = true;
     } catch (error) {
-      notifyError(error, 'Не удалось загрузить ответы');
+      notifyError(error, COMMENT_REPLIES_LOAD_ERROR_TOAST);
     }
   }
 
@@ -389,13 +543,13 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
         content,
       });
 
-      rootNodes.value = [createCommentNode(created, null), ...rootNodes.value];
+      rootNodes.value = [createCommentNode(created), ...rootNodes.value];
       totalCount.value += 1;
       startCooldown(COMMENT_SUBMIT_COOLDOWN_SECONDS);
 
       return true;
     } catch (error) {
-      notifySubmitError(error, 'Не удалось отправить комментарий');
+      notifySubmitError(error, COMMENT_SUBMIT_ERROR_TOAST);
 
       return false;
     }
@@ -410,6 +564,12 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
     node: CommentNode,
     content: string,
   ): Promise<boolean> {
+    // Отвечать заглушке нельзя — сервис ответил бы 409. Форма ответа могла
+    // остаться открытой с того момента, когда комментарий ещё был живым.
+    if (isCommentTombstone(node.comment)) {
+      return false;
+    }
+
     try {
       const created = await createCommentReply(node.comment.id, {
         section: options.section,
@@ -425,10 +585,7 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
       totalCount.value += 1;
 
       if (node.repliesLoaded) {
-        node.replies = [
-          ...node.replies,
-          createCommentNode(created, node.comment.authorName),
-        ];
+        node.replies = [...node.replies, createCommentNode(created)];
 
         node.repliesExpanded = true;
       } else {
@@ -439,7 +596,7 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
 
       return true;
     } catch (error) {
-      notifySubmitError(error, 'Не удалось отправить ответ');
+      notifySubmitError(error, COMMENT_REPLY_ERROR_TOAST);
 
       return false;
     }
@@ -453,11 +610,18 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
     node: CommentNode,
     content: string,
   ): Promise<boolean> {
+    const { comment } = node;
+
+    // Править нечего: у надгробия нет текста, а сервис ответил бы 409.
+    if (isCommentTombstone(comment)) {
+      return false;
+    }
+
     try {
-      const updated = await updateComment(node.comment.id, content);
+      const updated = await updateComment(comment.id, content);
 
       node.comment = {
-        ...node.comment,
+        ...comment,
         content: updated.content,
         editedAt: updated.editedAt,
       };
@@ -466,8 +630,8 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
     } catch (error) {
       const title =
         getCommentFetchStatus(error) === 409
-          ? 'Комментарий уже удалён'
-          : 'Не удалось сохранить изменения';
+          ? COMMENT_ALREADY_DELETED_TOAST
+          : COMMENT_EDIT_ERROR_TOAST;
 
       notifyError(error, title);
 
@@ -476,35 +640,144 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
   }
 
   /**
-   * Мягко удаляет свой комментарий. Сервис прячет из выдачи всю ветку —
-   * локально убираем узел с поддеревом и перечитываем счётчик с сервера
-   * (размер скрытой ветки локально не известен).
-   * @returns true при успехе — диалог подтверждения закрывается.
+   * Корневой узел ветки, в которой лежит комментарий (сам корень — тоже
+   * ветка). `undefined` — комментария нет в загруженной части ленты.
+   * @param commentId Идентификатор комментария.
+   */
+  function findBranchRoot(commentId: string): CommentNode | undefined {
+    return rootNodes.value.find((root) => !!findCommentNode([root], commentId));
+  }
+
+  /**
+   * Перечитывает ветку корня целиком — вместе со счётчиками ответов и
+   * надгробиями. Локально исход удаления не вычислить: комментарий с живыми
+   * ответами сервис оставляет в выдаче надгробием, без ответов — убирает
+   * совсем, а вместе с последним ответом уходит и надгробие-родитель.
+   * Перечитывается именно корневая ветка, а не поддерево родителя: удаление
+   * последнего ответа под надгробием убирает и само надгробие, а это может
+   * подняться каскадом до самого корня.
+   * @param rootNode Корневой узел затронутой ветки.
+   * @throws Ошибку запроса; 404 означает, что корень ушёл из выдачи.
+   */
+  async function reloadRootBranch(rootNode: CommentNode): Promise<void> {
+    const refreshed = await fetchCommentById(rootNode.comment.id);
+
+    rootNode.comment = refreshed;
+
+    // Ветка стала листом — та же конвенция, что в createCommentNode:
+    // у листа нечего догружать и нечего сворачивать.
+    if (refreshed.replyCount === 0) {
+      rootNode.replies = [];
+      rootNode.repliesLoaded = true;
+      rootNode.repliesExpanded = true;
+
+      return;
+    }
+
+    // Загрузка, начатая до правки (фоновый префетч), несёт снимок ветки с ещё
+    // живым удалённым комментарием: дожидаемся её, иначе она допишет
+    // устаревшие ответы поверх свежих, если завершится позже нашего запроса.
+    await repliesLoadPromises.get(rootNode)?.catch(() => undefined);
+
+    // Какие ветки пользователь свернул — знает только клиент, а перезагрузка
+    // пересоздаёт узлы поддерева. Без переноса все свёрнутые подветки
+    // раскрылись бы: loadRepliesDeep разворачивает всё глубже корня.
+    const repliesExpandedState = collectRepliesExpanded(rootNode);
+
+    await ensureRepliesLoaded(rootNode, true);
+
+    restoreRepliesExpanded(rootNode, repliesExpandedState);
+  }
+
+  /**
+   * Приводит ленту в соответствие с сервисом после удаления: на месте
+   * комментария с ответами останется надгробие, а комментарий без ответов
+   * (вместе с осиротевшим надгробием-родителем) уйдёт из выдачи.
+   * @param node Удалённый узел.
+   */
+  async function syncBranchAfterRemoval(node: CommentNode): Promise<void> {
+    const rootNode = findBranchRoot(node.comment.id);
+
+    if (rootNode) {
+      try {
+        await reloadRootBranch(rootNode);
+      } catch (error) {
+        if (getCommentFetchStatus(error) === 404) {
+          // Корень ушёл из выдачи вместе со всей веткой.
+          removeCommentNode(rootNodes.value, rootNode.comment.id);
+        } else if (node.comment.replyCount === 0) {
+          // Ветка не перечиталась. Убрать можно только бездетный узел: у
+          // комментария с ответами сервис оставит надгробие, и локальное
+          // удаление спрятало бы вместе с ним живые ответы. Такой узел
+          // подождёт следующей загрузки ленты.
+          removeCommentNode(rootNodes.value, node.comment.id);
+        }
+      }
+    }
+
+    await refreshCount();
+  }
+
+  /**
+   * Мягко удаляет свой комментарий. Ветку приводим в порядок уже в фоне:
+   * перечитывание глубокого треда — это запрос на каждый узел, и держать
+   * ими открытый диалог подтверждения незачем, удаление уже состоялось.
+   * @param node Удаляемый узел.
+   * @returns true, если сервис принял удаление.
    */
   async function removeComment(node: CommentNode): Promise<boolean> {
     try {
       await deleteComment(node.comment.id);
+    } catch (error) {
+      notifyError(error, COMMENT_DELETE_ERROR_TOAST);
 
-      const { parentId } = node.comment;
+      return false;
+    }
 
-      removeCommentNode(rootNodes.value, node.comment.id);
+    void syncBranchAfterRemoval(node);
 
-      if (parentId) {
-        const parentNode = findCommentNode(rootNodes.value, parentId);
+    return true;
+  }
 
-        if (parentNode) {
-          parentNode.comment = {
-            ...parentNode.comment,
-            replyCount: Math.max(parentNode.comment.replyCount - 1, 0),
-          };
-        }
-      }
+  /**
+   * Возвращает надгробие в опубликованные (модератор, админ) — заодно это
+   * единственный способ увидеть текст удалённого: в публичных выдачах сервис
+   * его не отдаёт. Ветку не перезапрашиваем: ответы под надгробием и так были
+   * видны, ответ сервиса — уже актуальная запись самого узла.
+   * @param node Узел-надгробие.
+   * @returns true, если комментарий восстановлен.
+   */
+  async function restoreTombstone(node: CommentNode): Promise<boolean> {
+    try {
+      const restored = await restoreComment(node.comment.id);
 
-      await refreshCount();
+      // Подписи «в ответ …» у детей обновятся сами: ветка берёт имя из
+      // родителя, а не хранит его копию в узле.
+      node.comment = mergeRestoredComment(node.comment, restored);
+
+      toast.add({
+        title: COMMENT_RESTORED_TOAST,
+        color: 'success',
+        icon: 'tabler:arrow-back-up',
+      });
+
+      // Счётчик вторичен — подтверждение действия его не ждёт.
+      void refreshCount();
 
       return true;
     } catch (error) {
-      notifyError(error, 'Не удалось удалить комментарий');
+      notifyError(error, COMMENT_RESTORE_ERROR_TOAST);
+
+      // 409 — комментарий уже не в статусе DELETED: его успел тронуть другой
+      // модератор, и карточка показывает устаревшее состояние. Сверяемся в
+      // фоне: об ошибке уже сказал тост, держать ради этого спиннер незачем.
+      if (getCommentFetchStatus(error) === 409) {
+        const branchRoot = findBranchRoot(node.comment.id);
+
+        if (branchRoot) {
+          void reloadRootBranch(branchRoot).catch(() => undefined);
+        }
+      }
 
       return false;
     }
@@ -515,23 +788,29 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
    * комментарий удалён) — запоминаем и в этом случае, чтобы погасить кнопку.
    */
   async function submitReport(node: CommentNode): Promise<void> {
-    if (reportedCommentIds.value.has(node.comment.id)) {
+    const { comment } = node;
+
+    // Жаловаться не на что: у надгробия нет текста, а сервис ответил бы 409.
+    if (
+      isCommentTombstone(comment)
+      || reportedCommentIds.value.has(comment.id)
+    ) {
       return;
     }
 
     try {
-      const updated = await reportComment(node.comment.id);
+      const updated = await reportComment(comment.id);
 
       node.comment = {
-        ...node.comment,
+        ...comment,
         dislikeCount: updated.dislikeCount,
       };
 
-      markReported(node.comment.id);
+      markReported(comment.id);
 
       toast.add({
-        title: 'Жалоба отправлена',
-        description: 'Спасибо! Модераторы посмотрят на этот комментарий.',
+        title: COMMENT_REPORT_SUCCESS_TOAST,
+        description: COMMENT_REPORT_SUCCESS_DESCRIPTION,
         color: 'success',
         icon: 'tabler:flag',
       });
@@ -540,8 +819,8 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
         markReported(node.comment.id);
 
         toast.add({
-          title: 'Жалоба уже учтена',
-          description: 'На этот комментарий вы уже жаловались.',
+          title: COMMENT_REPORT_DUPLICATE_TOAST,
+          description: COMMENT_REPORT_DUPLICATE_DESCRIPTION,
           color: 'info',
           icon: 'tabler:flag',
         });
@@ -549,7 +828,7 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
         return;
       }
 
-      notifyError(error, 'Не удалось отправить жалобу');
+      notifyError(error, COMMENT_REPORT_ERROR_TOAST);
     }
   }
 
@@ -608,10 +887,7 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
       }
 
       if (!findCommentNode(rootNodes.value, rootEntry.id)) {
-        rootNodes.value = [
-          createCommentNode(rootEntry, null),
-          ...rootNodes.value,
-        ];
+        rootNodes.value = [createCommentNode(rootEntry), ...rootNodes.value];
       }
 
       const rootNode = findCommentNode(rootNodes.value, rootEntry.id);
@@ -695,6 +971,7 @@ export function useCommentsSection(options: UseCommentsSectionOptions) {
     submitReply,
     submitEdit,
     removeComment,
+    restoreTombstone,
     submitReport,
     isOwnComment,
     isCommentReported,

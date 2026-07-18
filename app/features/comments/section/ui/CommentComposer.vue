@@ -1,12 +1,18 @@
 <script setup lang="ts">
   import { useCommentSubmitCooldown } from '../../composables';
-  import { COMMENT_CONTENT_MAX_LENGTH } from '../../model';
+  import {
+    COMMENT_COMPOSER_CANCEL_LABEL,
+    COMMENT_COMPOSER_PLACEHOLDER,
+    COMMENT_COMPOSER_SUBMIT_LABEL,
+    COMMENT_CONTENT_MAX_LENGTH,
+    COMMENT_COOLDOWN_SECONDS_UNIT,
+  } from '../../model';
 
   const {
     submitAction,
     initialContent = '',
-    placeholder = 'Написать комментарий…',
-    submitLabel = 'Отправить',
+    placeholder = COMMENT_COMPOSER_PLACEHOLDER,
+    submitLabel = COMMENT_COMPOSER_SUBMIT_LABEL,
     cancellable = false,
     autofocus = false,
     withCooldown = true,
@@ -57,7 +63,7 @@
   /** Во время паузы кнопка показывает отсчёт до следующей отправки. */
   const submitButtonLabel = computed(() =>
     isCooldownActive.value
-      ? `${submitLabel} · ${remainingSeconds.value} с`
+      ? `${submitLabel} · ${remainingSeconds.value} ${COMMENT_COOLDOWN_SECONDS_UNIT}`
       : submitLabel,
   );
 
@@ -144,7 +150,7 @@
           :disabled="isPending"
           @click.left.exact.prevent="cancel"
         >
-          Отмена
+          {{ COMMENT_COMPOSER_CANCEL_LABEL }}
         </UButton>
 
         <UButton

@@ -6,6 +6,7 @@ import {
   COMMENTS_LOAD_ERROR_TOAST,
   fetchUserComments,
   getCommentErrorMessage,
+  mergeRestoredComment,
 } from '../model';
 
 /** Возвращаемое значение композабла useUserComments. */
@@ -200,13 +201,7 @@ export function useUserComments(
     comments.value = comments.value.map(
       (entry): CommentEntry =>
         entry.id === restored.id
-          ? {
-              ...restored,
-              section: restored.section ?? entry.section,
-              url: restored.url ?? entry.url,
-              parentAuthorName:
-                restored.parentAuthorName ?? entry.parentAuthorName,
-            }
+          ? mergeRestoredComment(entry, restored)
           : entry,
     );
   }

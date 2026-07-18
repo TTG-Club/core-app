@@ -4,14 +4,14 @@
   import { useUserComments } from '../../composables';
   import {
     COMMENTS_LOAD_ERROR_TOAST,
+    COMMENTS_LOAD_MORE_LABEL,
+    COMMENTS_RETRY_LABEL,
+    COMMENTS_SECTION_TITLE,
     getLoadedCountLabel,
     USER_COMMENTS_EMPTY_MESSAGE,
     USER_COMMENTS_EMPTY_TAB_MESSAGES,
-    USER_COMMENTS_LOAD_MORE_LABEL,
     USER_COMMENTS_LOADING_LABEL,
     USER_COMMENTS_PARTIAL_EMPTY_TAB_MESSAGES,
-    USER_COMMENTS_RETRY_LABEL,
-    USER_COMMENTS_SECTION_TITLE,
     USER_COMMENTS_TABS,
   } from '../../model';
   import AdminCommentRow from './AdminCommentRow.vue';
@@ -116,7 +116,7 @@
       />
 
       <span class="text-sm font-medium text-highlighted">
-        {{ USER_COMMENTS_SECTION_TITLE }}
+        {{ COMMENTS_SECTION_TITLE }}
       </span>
 
       <UBadge
@@ -164,7 +164,7 @@
           icon="tabler:refresh"
           @click.left.exact.prevent="load"
         >
-          {{ USER_COMMENTS_RETRY_LABEL }}
+          {{ COMMENTS_RETRY_LABEL }}
         </UButton>
       </div>
 
@@ -223,7 +223,7 @@
           :loading="isLoadingMore"
           @click.left.exact.prevent="loadMore"
         >
-          {{ USER_COMMENTS_LOAD_MORE_LABEL }}
+          {{ COMMENTS_LOAD_MORE_LABEL }}
         </UButton>
 
         <span class="text-xs text-muted">{{ loadedCountLabel }}</span>

@@ -11,17 +11,14 @@ export type CommentStatus =
   | 'SPAM'
   | 'HIDDEN_BY_BAN';
 
-/** Комментарий из ответа сервиса комментариев. */
-export interface CommentEntry {
+/** Поля, которые есть у любого комментария — в том числе у надгробия. */
+export interface CommentBase {
   id: string;
   /** Раздел страницы обсуждения (старые сборки сервиса не присылают). */
   section: string | null;
   /** URL страницы обсуждения (старые сборки сервиса не присылают). */
   url: string | null;
   parentId: string | null;
-  authorId: string;
-  authorName: string;
-  content: string;
   status: CommentStatus;
   /** Число прямых ответов (детей первого уровня). */
   replyCount: number;
@@ -36,14 +33,50 @@ export interface CommentEntry {
    * приходит там, где родитель не загружен на фронте (превью `/latest`).
    */
   parentAuthorName: string | null;
-  dislikeCount: number;
   createdAt: string;
+}
+
+/**
+ * Комментарий с содержимым. Так приходят все модерационные ленты (включая
+ * удалённые — там текст сохраняется), ответы на создание, правку, жалобу и
+ * восстановление, а в публичных выдачах — всё, кроме надгробий.
+ */
+export interface CommentEntry extends CommentBase {
+  authorId: string;
+  authorName: string;
+  content: string;
+  dislikeCount: number;
   editedAt: string | null;
 }
 
-/** Страница корневых комментариев (Spring-пагинация). */
-export interface CommentsPage {
-  items: Array<CommentEntry>;
+/**
+ * Надгробие: заглушка на месте удалённого комментария, которая держит ветку
+ * его ответов видимой. Приходит только в публичных выдачах и только у
+ * удалённого комментария с живыми ответами — без ответов он из выдачи
+ * пропадает совсем. Автора и текста у неё нет, место в дереве и счётчики
+ * ответов есть.
+ */
+export interface CommentTombstone extends CommentBase {
+  status: 'DELETED';
+  authorId: null;
+  authorName: null;
+  content: null;
+  dislikeCount: null;
+  editedAt: null;
+}
+
+/**
+ * Элемент публичной выдачи: обычный комментарий либо надгробие. Различать их
+ * следует через `isCommentTombstone` — предикат сужает тип.
+ */
+export type PublicComment = CommentEntry | CommentTombstone;
+
+/**
+ * Страница комментариев (Spring-пагинация). Публичные ручки отдают
+ * `CommentsPage<PublicComment>`, модерационные — `CommentsPage<CommentEntry>`.
+ */
+export interface CommentsPage<TComment = CommentEntry> {
+  items: Array<TComment>;
   totalElements: number;
   last: boolean;
 }
@@ -85,9 +118,7 @@ export interface CreateCommentRequest {
  * (`/replies`), поэтому дерево собирается на фронте по мере загрузки веток.
  */
 export interface CommentNode {
-  comment: CommentEntry;
-  /** Имя автора родителя — подпись «кому ответили» в плоской части ветки. */
-  replyToName: string | null;
+  comment: PublicComment;
   replies: Array<CommentNode>;
   /** Прямые ответы уже загружены (для листьев — сразу true). */
   repliesLoaded: boolean;
@@ -106,6 +137,11 @@ export interface CommentTreeActions {
   submitReply: (node: CommentNode, content: string) => Promise<boolean>;
   submitEdit: (node: CommentNode, content: string) => Promise<boolean>;
   removeComment: (node: CommentNode) => Promise<boolean>;
+  /**
+   * Возвращает надгробие в опубликованные (модератор, админ). Для остальных
+   * ролей сервис отвечает 403, поэтому кнопка им не показывается.
+   */
+  restoreTombstone: (node: CommentNode) => Promise<boolean>;
   submitReport: (node: CommentNode) => Promise<void>;
   isOwnComment: (node: CommentNode) => boolean;
   isCommentReported: (commentId: string) => boolean;

@@ -1,8 +1,10 @@
 import type {
+  CommentBase,
   CommentEntry,
   CommentRateLimitInfo,
   CommentsPage,
   CreateCommentRequest,
+  PublicComment,
 } from './types';
 
 import { z } from '~/utils/zod';
@@ -60,6 +62,9 @@ const commentDateSchema = z.unknown().transform(normalizeCommentDate);
 /**
  * Схема комментария. Поля снабжены `catch`-дефолтами, чтобы битое поле не
  * роняло всю ленту. Исключение — `id`: без него комментарий бесполезен.
+ *
+ * Автор, текст и счётчик жалоб допускают `null`: так сервис отдаёт надгробие
+ * удалённого комментария, который держит видимой ветку своих ответов.
  */
 const commentSchema = z.object({
   id: z.string().min(1),
@@ -68,9 +73,9 @@ const commentSchema = z.object({
   section: z.string().nullish().catch(null),
   url: z.string().nullish().catch(null),
   parentId: z.string().nullish().catch(null),
-  authorId: z.string().catch(''),
-  authorName: z.string().catch(''),
-  content: z.string().catch(''),
+  authorId: z.string().nullish().catch(null),
+  authorName: z.string().nullish().catch(null),
+  content: z.string().nullish().catch(null),
   status: z
     .enum([
       'PUBLISHED',
@@ -85,7 +90,7 @@ const commentSchema = z.object({
   // Опциональные поля новых сборок сервиса — отсутствие не ломает разбор.
   totalReplyCount: z.coerce.number().nullish().catch(null),
   parentAuthorName: z.string().nullish().catch(null),
-  dislikeCount: z.coerce.number().catch(0),
+  dislikeCount: z.coerce.number().nullish().catch(null),
   createdAt: commentDateSchema,
   editedAt: commentDateSchema.nullable().catch(null),
 });
@@ -143,23 +148,69 @@ const createCommentRequestSchema = z.object({
   content: commentContentSchema,
 });
 
-/**
- * Приводит разобранный zod-объект к доменному типу с нормализованными null.
- */
-function toCommentEntry(parsed: z.infer<typeof commentSchema>): CommentEntry {
+/** Поля, общие для комментария и надгробия. */
+function toCommentBase(parsed: z.infer<typeof commentSchema>): CommentBase {
   return {
-    ...parsed,
+    id: parsed.id,
     section: parsed.section ?? null,
     url: parsed.url ?? null,
     parentId: parsed.parentId ?? null,
+    status: parsed.status,
+    replyCount: parsed.replyCount,
     totalReplyCount: parsed.totalReplyCount ?? null,
     parentAuthorName: parsed.parentAuthorName ?? null,
+    createdAt: parsed.createdAt,
+  };
+}
+
+/**
+ * Приводит разобранный zod-объект к комментарию с содержимым. Пустые автор,
+ * текст и счётчик жалоб подставляются здесь, на границе с сервисом: в этих
+ * ответах их не бывает, и дальше по коду поля уже гарантированно есть.
+ */
+function toCommentEntry(parsed: z.infer<typeof commentSchema>): CommentEntry {
+  return {
+    ...toCommentBase(parsed),
+    authorId: parsed.authorId ?? '',
+    authorName: parsed.authorName ?? '',
+    content: parsed.content ?? '',
+    dislikeCount: parsed.dislikeCount ?? 0,
     editedAt: parsed.editedAt ?? null,
   };
 }
 
 /**
- * Валидирует один комментарий из ответа сервиса (создание, правка, жалоба).
+ * Приводит разобранный zod-объект к элементу публичной выдачи. Удалённый
+ * комментарий без текста — надгробие: сервис не раскрывает ни автора, ни
+ * содержимое, и дальше такой узел рисуется заглушкой. Всё остальное (в том
+ * числе битая запись с текстом, но без статуса) разбирается как обычный
+ * комментарий.
+ *
+ * Пустая строка приравнена к отсутствию текста: сборка сервиса, которая
+ * затирает содержимое вместо `null`, иначе доехала бы до ленты карточкой без
+ * автора и текста, но с рабочими кнопками ответа и жалобы (сервис отбил бы их
+ * 409). Ниже по коду надгробие узнаётся уже строго по `content === null` —
+ * других способов собрать `PublicComment` нет.
+ */
+function toPublicComment(parsed: z.infer<typeof commentSchema>): PublicComment {
+  if (parsed.status === 'DELETED' && !parsed.content?.trim()) {
+    return {
+      ...toCommentBase(parsed),
+      status: 'DELETED',
+      authorId: null,
+      authorName: null,
+      content: null,
+      dislikeCount: null,
+      editedAt: null,
+    };
+  }
+
+  return toCommentEntry(parsed);
+}
+
+/**
+ * Валидирует один комментарий из ответа сервиса на действие (создание,
+ * правка, жалоба, восстановление) — в них содержимое есть всегда.
  * @param input Сырой ответ сервера.
  */
 export function parseComment(input: unknown): CommentEntry {
@@ -167,23 +218,50 @@ export function parseComment(input: unknown): CommentEntry {
 }
 
 /**
+ * Валидирует один комментарий публичной выдачи — им может оказаться
+ * надгробие удалённого.
+ * @param input Сырой ответ сервера.
+ */
+export function parsePublicComment(input: unknown): PublicComment {
+  return toPublicComment(commentSchema.parse(input));
+}
+
+/**
  * Валидирует ответ `/latest`: комментарий либо `null`, если у страницы
  * ещё нет комментариев (сервис может ответить пустым телом/204).
  * @param input Сырой ответ сервера.
  */
-export function parseLatestComment(input: unknown): CommentEntry | null {
+export function parseLatestComment(input: unknown): PublicComment | null {
   if (input == null || input === '') {
     return null;
   }
 
-  return toCommentEntry(commentSchema.parse(input));
+  return toPublicComment(commentSchema.parse(input));
 }
 
 /**
- * Валидирует страницу корневых комментариев.
+ * Валидирует страницу комментариев публичной ленты — среди них бывают
+ * надгробия удалённых.
  * @param input Сырой ответ сервера.
  */
-export function parseCommentsPage(input: unknown): CommentsPage {
+export function parsePublicCommentsPage(
+  input: unknown,
+): CommentsPage<PublicComment> {
+  const parsed = commentsPageSchema.parse(input);
+
+  return {
+    items: parsed.content.map(toPublicComment),
+    totalElements: parsed.totalElements,
+    last: parsed.last,
+  };
+}
+
+/**
+ * Валидирует страницу модерационной ленты: там удалённые приходят с полным
+ * текстом и автором, надгробий не бывает.
+ * @param input Сырой ответ сервера.
+ */
+export function parseModerationCommentsPage(input: unknown): CommentsPage {
   const parsed = commentsPageSchema.parse(input);
 
   return {
@@ -195,12 +273,12 @@ export function parseCommentsPage(input: unknown): CommentsPage {
 
 /**
  * Валидирует список прямых ответов и сортирует их от старых к новым,
- * чтобы ветка читалась хронологически.
+ * чтобы ветка читалась хронологически. Среди ответов бывают надгробия.
  * @param input Сырой ответ сервера.
  */
-export function parseCommentReplies(input: unknown): Array<CommentEntry> {
+export function parseCommentReplies(input: unknown): Array<PublicComment> {
   return parseCommentList(input)
-    .map(toCommentEntry)
+    .map(toPublicComment)
     .sort((first, second) => first.createdAt.localeCompare(second.createdAt));
 }
 
