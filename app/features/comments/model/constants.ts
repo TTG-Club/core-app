@@ -1,4 +1,8 @@
-import type { CommentsModerationTab, CommentStatus } from './types';
+import type {
+  CommentsModerationTab,
+  CommentStatus,
+  UserCommentsTab,
+} from './types';
 
 /** Базовый путь сервиса комментариев (Nitro проксирует на NITRO_COMMENTS_API_URL). */
 export const COMMENTS_API_PATH = '/api/v1/comments';
@@ -27,6 +31,110 @@ export const COMMENTS_MODERATION_TABS: Array<{
 /** Размер страницы модерационного списка жалоб. */
 export const COMMENTS_MODERATION_PAGE_SIZE = 20;
 
+/** Вкладки списка комментариев пользователя в админ-детали. */
+export const USER_COMMENTS_TABS: Array<{
+  label: string;
+  value: UserCommentsTab;
+}> = [
+  { label: 'Опубликованные', value: 'published' },
+  { label: 'Удалённые', value: 'deleted' },
+  { label: 'Все', value: 'all' },
+];
+
+/** Заголовок секции комментариев пользователя в админ-детали. */
+export const USER_COMMENTS_SECTION_TITLE = 'Комментарии';
+
+/** Подпись, когда автор не оставлял комментариев вообще. */
+export const USER_COMMENTS_EMPTY_MESSAGE =
+  'Пользователь не оставлял комментариев';
+
+/** Подписи пустых вкладок, когда загружены все комментарии автора. */
+export const USER_COMMENTS_EMPTY_TAB_MESSAGES: Record<UserCommentsTab, string> =
+  {
+    published: 'Опубликованных комментариев нет',
+    deleted: 'Удалённых комментариев нет',
+    all: 'Комментариев нет',
+  };
+
+/**
+ * Подписи пустых вкладок, когда загружена только часть ленты: утверждать
+ * отсутствие нельзя — нужные комментарии могут лежать на следующих страницах.
+ */
+export const USER_COMMENTS_PARTIAL_EMPTY_TAB_MESSAGES: Record<
+  UserCommentsTab,
+  string
+> = {
+  published: 'Среди загруженных опубликованных нет — загрузите ещё',
+  deleted: 'Среди загруженных удалённых нет — загрузите ещё',
+  all: 'Среди загруженных ничего нет — загрузите ещё',
+};
+
+/** Подпись кнопки повторной попытки после ошибки загрузки. */
+export const USER_COMMENTS_RETRY_LABEL = 'Попробовать снова';
+
+/** Подпись кнопки догрузки следующей страницы. */
+export const USER_COMMENTS_LOAD_MORE_LABEL = 'Показать ещё';
+
+/** Подпись состояния загрузки списка. */
+export const USER_COMMENTS_LOADING_LABEL = 'Загрузка…';
+
+/** Подпись «это ответ», когда сервис прислал имя автора родителя. */
+export const ADMIN_COMMENT_REPLY_TO_PREFIX = 'в ответ';
+
+/** Подпись «это ответ», когда имя автора родителя неизвестно. */
+export const ADMIN_COMMENT_REPLY_TO_FALLBACK = 'ответ на комментарий';
+
+/** Подпись кнопки перехода к комментарию на его странице. */
+export const ADMIN_COMMENT_OPEN_LABEL = 'Открыть';
+
+/** Подпись кнопки удаления (тултип и aria-label — один текст). */
+export const ADMIN_COMMENT_DELETE_LABEL = 'Удалить комментарий';
+
+/** Заголовок диалога подтверждения удаления. */
+export const ADMIN_COMMENT_DELETE_DIALOG_TITLE = 'Удалить комментарий?';
+
+/** Подпись кнопки подтверждения в диалоге удаления. */
+export const ADMIN_COMMENT_DELETE_CONFIRM_LABEL = 'Удалить';
+
+/** Предупреждение диалога, когда у комментария есть ответы. */
+export const ADMIN_COMMENT_DELETE_BRANCH_WARNING =
+  'Ответы этой ветки тоже перестанут отображаться.';
+
+/** Предупреждение диалога для комментария без ответов. */
+export const ADMIN_COMMENT_DELETE_IRREVERSIBLE_WARNING =
+  'Действие нельзя отменить.';
+
+/** Тост успешного удаления. */
+export const ADMIN_COMMENT_DELETED_TOAST = 'Комментарий удалён';
+
+/** Тост неудачного удаления. */
+export const ADMIN_COMMENT_DELETE_ERROR_TOAST =
+  'Не удалось удалить комментарий';
+
+/** Тултип кнопки восстановления. */
+export const ADMIN_COMMENT_RESTORE_TOOLTIP =
+  'Вернуть комментарий в опубликованные';
+
+/** Доступное имя кнопки восстановления (у кнопки только иконка). */
+export const ADMIN_COMMENT_RESTORE_LABEL = 'Восстановить комментарий';
+
+/** Тост успешного восстановления. */
+export const ADMIN_COMMENT_RESTORED_TOAST = 'Комментарий восстановлен';
+
+/** Тост неудачного восстановления. */
+export const ADMIN_COMMENT_RESTORE_ERROR_TOAST =
+  'Не удалось восстановить комментарий';
+
+/** Тост и заголовок ошибки загрузки списка комментариев. */
+export const COMMENTS_LOAD_ERROR_TOAST = 'Не удалось загрузить комментарии';
+
+/**
+ * Размер страницы списка комментариев пользователя. Крупнее модерационного:
+ * лента приходит без фильтра по статусу, а вкладки делят её уже на клиенте —
+ * чем больше загружено за раз, тем реже счётчики вкладок неполные.
+ */
+export const COMMENTS_USER_PAGE_SIZE = 50;
+
 /** Подписи статусов комментария. */
 export const COMMENT_STATUS_LABELS: Record<CommentStatus, string> = {
   PUBLISHED: 'Опубликован',
@@ -34,9 +142,13 @@ export const COMMENT_STATUS_LABELS: Record<CommentStatus, string> = {
   PENDING_MODERATION: 'На модерации',
   REJECTED: 'Отклонён',
   SPAM: 'Спам',
+  HIDDEN_BY_BAN: 'Скрыт (бан автора)',
 };
 
-/** Цвета бейджей статусов комментария. */
+/**
+ * Цвета бейджей статусов комментария. `HIDDEN_BY_BAN` — предупреждение, а не
+ * ошибка: это следствие блокировки автора, а не решение модератора по тексту.
+ */
 export const COMMENT_STATUS_COLORS: Record<
   CommentStatus,
   'success' | 'neutral' | 'warning' | 'error'
@@ -46,6 +158,7 @@ export const COMMENT_STATUS_COLORS: Record<
   PENDING_MODERATION: 'warning',
   REJECTED: 'error',
   SPAM: 'error',
+  HIDDEN_BY_BAN: 'warning',
 };
 
 /** Словоформы для счётчика жалоб. */

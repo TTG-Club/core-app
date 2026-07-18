@@ -9,9 +9,11 @@ import { FetchError } from 'ofetch';
 
 import {
   COMMENTS_API_PATH,
+  COMMENTS_MODERATION_ALL_PATH,
   COMMENTS_PAGE_SIZE,
   COMMENTS_ROOT_SORT,
   COMMENTS_UNKNOWN_ERROR_MESSAGE,
+  COMMENTS_USER_PAGE_SIZE,
 } from './constants';
 import {
   normalizeCommentContent,
@@ -246,6 +248,45 @@ export async function deleteComment(commentId: string): Promise<void> {
     method: 'DELETE',
     retry: 0,
   });
+}
+
+/**
+ * Страница комментариев одного автора из модерационной ленты — доступна
+ * модератору и администратору. Фильтра по статусу у сервиса нет, поэтому
+ * приходят и удалённые, и скрытые баном: делить их по вкладкам нужно на
+ * клиенте. Сортировку сервис не принимает — лента всегда от новых к старым.
+ * @param authorId UUID автора (тот же идентификатор, что и клейм `sub` в JWT).
+ * @param page Номер страницы (с нуля).
+ * @param size Размер страницы.
+ */
+export async function fetchUserComments(
+  authorId: string,
+  page: number,
+  size: number = COMMENTS_USER_PAGE_SIZE,
+): Promise<CommentsPage> {
+  const response = await $fetch(COMMENTS_MODERATION_ALL_PATH, {
+    method: 'GET',
+    query: { authorId, page, size },
+    retry: 0,
+  });
+
+  return parseCommentsPage(response);
+}
+
+/**
+ * Возвращает мягко удалённый комментарий в опубликованные (модератор, админ).
+ * Восстанавливается только сам узел: ответы под ним остались опубликованными
+ * и снова становятся видны вместе с ним. Комментарий в любом другом статусе —
+ * 409; скрытие баном снимается разблокировкой автора в auth-service.
+ * @param commentId Идентификатор комментария.
+ */
+export async function restoreComment(commentId: string): Promise<CommentEntry> {
+  const response = await $fetch(`${COMMENTS_API_PATH}/${commentId}/restore`, {
+    method: 'POST',
+    retry: 0,
+  });
+
+  return parseComment(response);
 }
 
 /**

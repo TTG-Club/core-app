@@ -72,7 +72,14 @@ const commentSchema = z.object({
   authorName: z.string().catch(''),
   content: z.string().catch(''),
   status: z
-    .enum(['PUBLISHED', 'DELETED', 'PENDING_MODERATION', 'REJECTED', 'SPAM'])
+    .enum([
+      'PUBLISHED',
+      'DELETED',
+      'PENDING_MODERATION',
+      'REJECTED',
+      'SPAM',
+      'HIDDEN_BY_BAN',
+    ])
     .catch('PUBLISHED'),
   replyCount: z.coerce.number().catch(0),
   // Опциональные поля новых сборок сервиса — отсутствие не ломает разбор.
@@ -83,14 +90,39 @@ const commentSchema = z.object({
   editedAt: commentDateSchema.nullable().catch(null),
 });
 
+/**
+ * Разбирает массив комментариев, отсеивая битые записи поштучно и сообщая о
+ * каждой в консоль. Важно именно поэлементно: `catch` на самом массиве отдал
+ * бы пустую выдачу целиком из-за одного комментария без `id` — на экране это
+ * выглядит как «комментариев нет» при непустом счётчике.
+ * @param input Сырой массив из ответа сервиса.
+ */
+function parseCommentList(
+  input: unknown,
+): Array<z.infer<typeof commentSchema>> {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input.flatMap((item) => {
+    const parsed = commentSchema.safeParse(item);
+
+    if (!parsed.success) {
+      consola.warn('[comments] Комментарий не прошёл разбор:', item);
+
+      return [];
+    }
+
+    return [parsed.data];
+  });
+}
+
 /** Схема страницы Spring-пагинации корневых комментариев. */
 const commentsPageSchema = z.object({
-  content: z.array(commentSchema).catch([]),
+  content: z.unknown().transform(parseCommentList),
   totalElements: z.coerce.number().catch(0),
   last: z.boolean().catch(true),
 });
-
-const commentRepliesSchema = z.array(commentSchema).catch([]);
 
 const commentsCountSchema = z.coerce.number().catch(0);
 
@@ -167,8 +199,7 @@ export function parseCommentsPage(input: unknown): CommentsPage {
  * @param input Сырой ответ сервера.
  */
 export function parseCommentReplies(input: unknown): Array<CommentEntry> {
-  return commentRepliesSchema
-    .parse(input)
+  return parseCommentList(input)
     .map(toCommentEntry)
     .sort((first, second) => first.createdAt.localeCompare(second.createdAt));
 }

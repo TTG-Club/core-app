@@ -7,6 +7,8 @@
 
   import { FetchError } from 'ofetch';
 
+  import { AdminUserComments } from '~comments/admin';
+
   import {
     ADMIN_USERS_ACTIVE_BADGE,
     ADMIN_USERS_CREDENTIALS_EXPIRED_BADGE,
@@ -292,5 +294,10 @@
 
     <!-- Активированные коды -->
     <AdminUserRedeemedCodes :username="user.username" />
+
+    <USeparator />
+
+    <!-- Комментарии: сервис комментариев ключуется по UUID, а не по логину -->
+    <AdminUserComments :author-id="user.id" />
   </div>
 </template>

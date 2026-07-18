@@ -81,8 +81,11 @@
     void refreshModeration();
   }
 
-  /** После удаления перечитываем текущую страницу списка. */
-  function handleCommentDeleted(): void {
+  /**
+   * Любое изменение статуса строки (удаление, восстановление, разошедшийся с
+   * сервисом статус) перечитывает текущую страницу ленты.
+   */
+  function handleCommentChanged(): void {
     void refreshModeration();
   }
 </script>
@@ -138,7 +141,9 @@
           v-for="comment in moderationComments"
           :key="comment.id"
           :comment="comment"
-          @deleted="handleCommentDeleted"
+          @deleted="handleCommentChanged"
+          @restored="handleCommentChanged"
+          @stale="handleCommentChanged"
         />
 
         <div

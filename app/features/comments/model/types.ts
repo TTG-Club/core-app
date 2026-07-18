@@ -1,10 +1,15 @@
-/** Статус комментария на стороне сервиса. */
+/**
+ * Статус комментария на стороне сервиса. `HIDDEN_BY_BAN` приходит только в
+ * модерационных лентах: сервис ставит его всем комментариям заблокированного
+ * автора и снимает при разблокировке (межсервисный вызов из auth-service).
+ */
 export type CommentStatus =
   | 'PUBLISHED'
   | 'DELETED'
   | 'PENDING_MODERATION'
   | 'REJECTED'
-  | 'SPAM';
+  | 'SPAM'
+  | 'HIDDEN_BY_BAN';
 
 /** Комментарий из ответа сервиса комментариев. */
 export interface CommentEntry {
@@ -45,6 +50,9 @@ export interface CommentsPage {
 
 /** Вкладка модерационного раздела админки. */
 export type CommentsModerationTab = 'disliked' | 'all';
+
+/** Вкладка списка комментариев пользователя в админ-детали. */
+export type UserCommentsTab = 'published' | 'deleted' | 'all';
 
 /** Параметры антиспам-лимита из отказа 429 на отправку комментария. */
 export interface CommentRateLimitInfo {
