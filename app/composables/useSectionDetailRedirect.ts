@@ -9,9 +9,11 @@ export function useSectionDetailRedirect(parentRouteName: string) {
   const route = useRoute();
   const { isSplitActive } = useLayoutWidth();
 
+  // Якорь сохраняется: deep-link на комментарий должен пережить редирект.
   const splitLocation = {
     name: parentRouteName,
     query: { detail: route.params.url },
+    hash: route.hash,
   };
 
   // Серверный redirect: если Wide Mode + десктоп,

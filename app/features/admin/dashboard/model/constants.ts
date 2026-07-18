@@ -22,4 +22,11 @@ export const ADMIN_DASHBOARD_ARTICLES_DESCRIPTION =
 
 export const ADMIN_DASHBOARD_ARTICLES_ACTION_LABEL = 'Создать';
 
+export const ADMIN_DASHBOARD_COMMENTS_TITLE = 'Комментарии';
+
+export const ADMIN_DASHBOARD_COMMENTS_DESCRIPTION =
+  'Жалобы пользователей и модерация всех комментариев сайта';
+
+export const ADMIN_DASHBOARD_COMMENTS_ACTION_LABEL = 'Открыть';
+
 export const ADMIN_DASHBOARD_CONFIGURE_LABEL = 'Настроить';

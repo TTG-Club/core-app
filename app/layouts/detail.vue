@@ -4,6 +4,7 @@
 
   import type { SourceResponse } from '~/shared/types';
 
+  import { CommentsBlock } from '~comments/section';
   import { AppFooter } from '~infrastructure/footer';
   import { SourceTag } from '~ui/source-tag';
 
@@ -27,6 +28,7 @@
   const { format } = useDayjs();
   const { copy } = useCopyAndShare();
   const navbarHidden = useState('navbar-hidden');
+  const route = useRoute();
 
   const formattedDateTime = computed(() => {
     if (!dateTime) {
@@ -121,6 +123,9 @@
         class="mx-auto flex w-full max-w-(--max-content) flex-col gap-2 px-4 pb-8 lg:gap-3"
       >
         <slot name="default" />
+
+        <!-- Блок сам решает по пути, включены ли в разделе комментарии -->
+        <CommentsBlock :path="route.path" />
       </div>
     </div>
 

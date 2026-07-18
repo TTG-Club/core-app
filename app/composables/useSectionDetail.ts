@@ -203,7 +203,8 @@ export function useSectionDetail<TDetail>(
     isRouterReady.value = true;
 
     if (!isSplitActive.value && detailUrl.value) {
-      router.replace(detailPagePath.value);
+      // Якорь сохраняется: deep-link на комментарий должен пережить редирект.
+      router.replace({ path: detailPagePath.value, hash: route.hash });
 
       return;
     }

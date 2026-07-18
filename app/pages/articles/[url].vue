@@ -77,6 +77,7 @@
       />
     </template>
 
+    <!-- Блок комментариев вставляет layout detail — общий для всех разделов -->
     <template #default>
       <ArticleBody
         v-if="article"

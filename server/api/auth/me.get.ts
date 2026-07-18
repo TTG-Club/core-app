@@ -18,6 +18,7 @@ export default defineEventHandler(async (event) => {
 
   return {
     ...user,
+    id: tokenPayload.sub ?? null,
     roles: tokenPayload.roles,
   };
 });
