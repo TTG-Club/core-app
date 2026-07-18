@@ -5,6 +5,9 @@ export interface AdminRoleResponse {
   name: string;
 }
 
+/** Статус аккаунта пользователя в auth-service. */
+export type AdminUserStatus = 'ACTIVE' | 'BANNED' | 'DELETED';
+
 export interface AdminUserResponse {
   id: string;
   username: string;
@@ -13,9 +16,22 @@ export interface AdminUserResponse {
   emailVerified: boolean;
   accountLocked: boolean;
   credentialsExpired: boolean;
+  /** Поля статуса блокировки опциональны: старые сборки auth-service их не отдают. */
+  status?: AdminUserStatus | null;
+  statusReason?: string | null;
+  statusChangedAt?: string | null;
+  bannedUntil?: string | null;
   roles: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Результат массовой операции над комментариями автора
+ * (скрытие при бане / восстановление при разблокировке).
+ */
+export interface AdminAffectedCommentsResponse {
+  affected: number;
 }
 
 export interface AdminRoleSelectItem {

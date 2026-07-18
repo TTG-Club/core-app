@@ -66,6 +66,101 @@ export const ADMIN_USERS_EMAIL_NOT_VERIFIED_BADGE = 'Email не подтверж
 
 export const ADMIN_USERS_CREDENTIALS_EXPIRED_BADGE = 'Пароль устарел';
 
+/** Заголовок секции блокировки в детальной панели. */
+export const ADMIN_USERS_BAN_SECTION_TITLE = 'Блокировка';
+
+/** Подписи кнопок блокировки/разблокировки. */
+export const ADMIN_USERS_BAN_LABEL = 'Заблокировать';
+export const ADMIN_USERS_UNBAN_LABEL = 'Разблокировать';
+
+/** Заголовки и описания диалога подтверждения. */
+export const ADMIN_USERS_BAN_DIALOG_TITLE = 'Заблокировать пользователя?';
+export const ADMIN_USERS_BAN_DIALOG_DESCRIPTION =
+  'Аккаунт перейдёт в статус BANNED, все сессии будут отозваны, вход станет невозможен.';
+export const ADMIN_USERS_UNBAN_DIALOG_TITLE = 'Разблокировать пользователя?';
+export const ADMIN_USERS_UNBAN_DIALOG_DESCRIPTION =
+  'Пользователь снова сможет входить в аккаунт.';
+
+/** Поле причины блокировки (уходит в statusReason auth-service). */
+export const ADMIN_USERS_BAN_REASON_LABEL = 'Причина блокировки';
+export const ADMIN_USERS_BAN_REASON_PLACEHOLDER =
+  'Например: спам в комментариях';
+export const ADMIN_USERS_BAN_REASON_MAX_LENGTH = 500;
+
+/** Переключатель «забанить вместе с комментариями». */
+export const ADMIN_USERS_BAN_HIDE_COMMENTS_LABEL =
+  'Скрыть все комментарии пользователя';
+export const ADMIN_USERS_BAN_HIDE_COMMENTS_DESCRIPTION =
+  'Опубликованные комментарии пропадут с сайта. Их можно вернуть при разблокировке.';
+
+/** Переключатель «разблокировать вместе с комментариями». */
+export const ADMIN_USERS_UNBAN_RESTORE_COMMENTS_LABEL =
+  'Восстановить комментарии';
+export const ADMIN_USERS_UNBAN_RESTORE_COMMENTS_DESCRIPTION =
+  'Вернуть комментарии, скрытые при блокировке. Удалённые вручную не вернутся.';
+
+/** Тосты результатов блокировки/разблокировки. */
+export const ADMIN_USERS_BANNED_TOAST = 'Пользователь заблокирован';
+export const ADMIN_USERS_UNBANNED_TOAST = 'Пользователь разблокирован';
+export const ADMIN_USERS_BAN_ERROR_TOAST =
+  'Не удалось заблокировать пользователя';
+export const ADMIN_USERS_UNBAN_ERROR_TOAST =
+  'Не удалось разблокировать пользователя';
+export const ADMIN_USERS_HIDE_COMMENTS_ERROR_TOAST =
+  'Пользователь заблокирован, но скрыть комментарии не удалось';
+export const ADMIN_USERS_RESTORE_COMMENTS_ERROR_TOAST =
+  'Пользователь разблокирован, но восстановить комментарии не удалось';
+
+/** Подпись кнопки отмены в диалоге блокировки. */
+export const ADMIN_USERS_BAN_CANCEL_LABEL = 'Отмена';
+
+/** Подписи текущего состояния блокировки в карточке. */
+export const ADMIN_USERS_BAN_PERMANENT_LABEL = 'Бессрочно';
+export const ADMIN_USERS_BANNED_UNTIL_PREFIX = 'До';
+export const ADMIN_USERS_BAN_REASON_TITLE = 'Причина';
+
+/**
+ * Возвращает описание тоста со счётчиком скрытых комментариев.
+ */
+export function getHiddenCommentsToastDescription(affected: number): string {
+  return `Скрыто комментариев: ${affected}`;
+}
+
+/**
+ * Возвращает описание тоста со счётчиком восстановленных комментариев.
+ */
+export function getRestoredCommentsToastDescription(affected: number): string {
+  return `Восстановлено комментариев: ${affected}`;
+}
+
+/**
+ * Возвращает путь server-роута блокировки пользователя.
+ */
+export function adminUserLockPath(userId: string): string {
+  return `/api/auth/users/${encodeURIComponent(userId)}/lock`;
+}
+
+/**
+ * Возвращает путь server-роута разблокировки пользователя.
+ */
+export function adminUserUnlockPath(userId: string): string {
+  return `/api/auth/users/${encodeURIComponent(userId)}/unlock`;
+}
+
+/**
+ * Возвращает путь server-роута массового скрытия комментариев автора.
+ */
+export function adminUserCommentsHidePath(userId: string): string {
+  return `/api/admin/comments/${encodeURIComponent(userId)}/hide`;
+}
+
+/**
+ * Возвращает путь server-роута восстановления комментариев автора.
+ */
+export function adminUserCommentsRestorePath(userId: string): string {
+  return `/api/admin/comments/${encodeURIComponent(userId)}/restore`;
+}
+
 /** Формат даты периода подписки в карточке (без времени). */
 export const ADMIN_SUBSCRIPTION_DATE_FORMAT = 'DD.MM.YYYY';
 

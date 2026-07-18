@@ -23,6 +23,7 @@
     ADMIN_USERS_SAVE_LABEL,
     ADMIN_USERS_SAVED_TOAST,
   } from '../model';
+  import AdminUserBan from './AdminUserBan.vue';
   import AdminUserRedeemedCodes from './AdminUserRedeemedCodes.vue';
   import AdminUserSubscription from './AdminUserSubscription.vue';
 
@@ -41,6 +42,21 @@
 
   const selectedRoleIds = ref<number[]>([]);
   const isSaving = ref(false);
+
+  /**
+   * Версия списка комментариев: массовое скрытие/восстановление при бане
+   * меняет статусы на сервере, смена `:key` перемонтирует блок и перечитывает
+   * ленту (список грузится в onMounted).
+   */
+  const commentsListVersion = ref(0);
+
+  function refreshComments(): void {
+    commentsListVersion.value += 1;
+  }
+
+  function onUserSaved(updated: AdminUserResponse): void {
+    emit('saved', updated);
+  }
 
   const roleSelectItems = computed<AdminRoleSelectItem[]>(() => {
     return props.roles.map((role) => ({
@@ -287,6 +303,15 @@
 
     <USeparator />
 
+    <!-- Блокировка аккаунта и массовые операции с комментариями -->
+    <AdminUserBan
+      :user="user"
+      @saved="onUserSaved"
+      @comments-changed="refreshComments"
+    />
+
+    <USeparator />
+
     <!-- Подписка -->
     <AdminUserSubscription :username="user.username" />
 
@@ -298,6 +323,9 @@
     <USeparator />
 
     <!-- Комментарии: сервис комментариев ключуется по UUID, а не по логину -->
-    <AdminUserComments :author-id="user.id" />
+    <AdminUserComments
+      :key="commentsListVersion"
+      :author-id="user.id"
+    />
   </div>
 </template>

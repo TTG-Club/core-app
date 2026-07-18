@@ -95,15 +95,20 @@ export function getSubscriberSecrets() {
 /**
  * Возвращает настройки внешнего сервиса комментариев.
  * Сервис принимает тот же SSO-JWT пользователя, что и core-api, поэтому
- * достаточно базового URL — токен прокидывается обычным прокси-механизмом.
+ * публичному API достаточно базового URL — токен прокидывается обычным
+ * прокси-механизмом. Межсервисный токен нужен только internal-эндпоинтам
+ * (массовое скрытие/восстановление комментариев при бане) и может быть
+ * не задан — тогда эти операции отвечают 503.
  */
 export function getCommentsSecrets() {
   const {
     NITRO_COMMENTS_API_URL: commentsApiUrl = 'https://comments.ttg.club',
+    NITRO_COMMENTS_SERVICE_TOKEN: commentsServiceToken = '',
   } = process.env;
 
   return {
     url: commentsApiUrl,
+    serviceToken: commentsServiceToken,
   };
 }
 

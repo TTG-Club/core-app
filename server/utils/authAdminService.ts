@@ -14,6 +14,9 @@ const authAdminRoleSchema = z.object({
   name: z.string().min(1),
 });
 
+/** Статус аккаунта пользователя в auth-service. */
+const authAdminUserStatusSchema = z.enum(['ACTIVE', 'BANNED', 'DELETED']);
+
 const authAdminUserSchema = z.object({
   id: z.string().uuid(),
   username: z.string().min(1),
@@ -22,6 +25,11 @@ const authAdminUserSchema = z.object({
   emailVerified: z.boolean(),
   accountLocked: z.boolean(),
   credentialsExpired: z.boolean(),
+  // Поля статуса блокировки опциональны: старые сборки auth-service их не отдают.
+  status: authAdminUserStatusSchema.nullish(),
+  statusReason: z.string().nullish(),
+  statusChangedAt: z.string().datetime().nullish(),
+  bannedUntil: z.string().datetime().nullish(),
   roles: z.array(z.string().min(1)),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -106,4 +114,13 @@ export function parseAuthAdminRolesResponse(
   payload: unknown,
 ): AuthAdminRoleResponse[] {
   return authAdminRolesSchema.parse(payload);
+}
+
+/**
+ * Проверяет ответ auth-service с одним пользователем (блокировка/разблокировка).
+ */
+export function parseAuthAdminUserResponse(
+  payload: unknown,
+): AuthAdminUserResponse {
+  return authAdminUserSchema.parse(payload);
 }
