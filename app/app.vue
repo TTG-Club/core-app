@@ -3,6 +3,7 @@
 
   import { DiceRollerFloatButton } from '~dice-roller/float-button';
   import { DiceRollerModal } from '~dice-roller/modal';
+  import { CookieConsentBanner } from '~infrastructure/cookie-consent';
   import { PwaConfig } from '~infrastructure/pwa';
   import { SidebarPanel } from '~infrastructure/sidebar';
 
@@ -46,6 +47,8 @@
           <DiceRollerFloatButton />
 
           <DiceRollerModal />
+
+          <CookieConsentBanner />
         </Teleport>
       </ClientOnly>
     </div>

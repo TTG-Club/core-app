@@ -21,6 +21,7 @@
     PARTICIPANT_TYPE_LABEL,
   } from '~initiative/model';
 
+  import ParticipantArmorClassControl from './ParticipantArmorClassControl.vue';
   import ParticipantAvatar from './ParticipantAvatar.vue';
   import ParticipantHitPointsControl from './ParticipantHitPointsControl.vue';
   import ParticipantRenameControl from './ParticipantRenameControl.vue';
@@ -34,6 +35,8 @@
     order = 0,
     disabled = false,
     currentHitPoints = undefined,
+    maxHitPointsOverride = undefined,
+    playerArmorClass = undefined,
   } = defineProps<{
     participant: TrackerParticipant;
     /** Идёт бой: бонус — только чтение. Макет строки от режима не меняется. */
@@ -43,6 +46,10 @@
     disabled?: boolean;
     /** Текущие хиты из localStorage (нет записи — существо на полных). */
     currentHitPoints?: number;
+    /** Прокинутый максимум хитов (нет записи — среднее из статблока). */
+    maxHitPointsOverride?: number;
+    /** КД игрока из localStorage (нет записи — не задан). */
+    playerArmorClass?: number;
   }>();
 
   const emit = defineEmits<{
@@ -51,6 +58,8 @@
     'roll': [id: string];
     'toggle-dead': [id: string, dead: boolean];
     'set-hit-points': [id: string, value: number];
+    'set-max-hit-points': [id: string, value: number];
+    'set-armor-class': [id: string, value: number];
   }>();
 
   const { openCreature } = useCreatureDrawer();
@@ -119,7 +128,12 @@
 
   const armorClassDisplay = computed(() => armorClassValue.value || '—');
 
-  const maxHitPoints = computed(() => summary.value?.maxHitPoints ?? 0);
+  // Прокинутый максимум приоритетнее среднего из статблока.
+  const maxHitPoints = computed(
+    () => maxHitPointsOverride ?? summary.value?.maxHitPoints ?? 0,
+  );
+
+  const hitFormula = computed(() => summary.value?.hitFormula ?? '');
 
   // Полная строка статблока («15 (кожаный доспех)») — в тултипе и только
   // когда она содержит что-то сверх числа из плитки.
@@ -264,6 +278,22 @@
     emit('set-hit-points', participant.id, value);
   }
 
+  /**
+   * Пробрасывает прокинутый максимум хитов с id участника.
+   * @param value Новый максимум хитов.
+   */
+  function onSetMaxHitPoints(value: number): void {
+    emit('set-max-hit-points', participant.id, value);
+  }
+
+  /**
+   * Пробрасывает новый КД игрока с id участника.
+   * @param value Новое значение КД.
+   */
+  function onChangeArmorClass(value: number): void {
+    emit('set-armor-class', participant.id, value);
+  }
+
   function onRoll(id: string): void {
     emit('roll', id);
   }
@@ -338,14 +368,26 @@
           <ParticipantHitPointsControl
             :current="currentHitPoints"
             :max="maxHitPoints"
+            :formula="hitFormula"
             :disabled="disabled"
             :is-player="participant.type === 'PLAYER'"
             @change="onChangeHitPoints"
+            @set-max="onSetMaxHitPoints"
           />
         </div>
 
         <div class="w-12 flex-1 sm:flex-none">
+          <!-- Игроку КД задаёт мастер вручную, существам — из статблока. -->
+          <ParticipantArmorClassControl
+            v-if="participant.type === 'PLAYER'"
+            :current="playerArmorClass"
+            :disabled
+            :class="dimmedClass"
+            @change="onChangeArmorClass"
+          />
+
           <UTooltip
+            v-else
             :text="armorClassTooltip"
             :disabled="!hasArmorClassDetails"
             class="w-full"

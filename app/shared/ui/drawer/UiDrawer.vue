@@ -97,6 +97,13 @@
     typeof title === 'string' ? undefined : title?.eng,
   );
 
+  /**
+   * Путь для блока комментариев под телом сущности: только у контентных
+   * дроверов с каноническим адресом (служебные — мультикласс, подклассы,
+   * превью мастерской — без url или с notDetail).
+   */
+  const commentsPath = computed(() => (notDetail ? undefined : url));
+
   const classList = computed(() => {
     if (!_class) {
       return 'w-2xl';
@@ -153,6 +160,7 @@
       <DrawerBody
         :is-loading="isLoading"
         :is-error="isError"
+        :comments-path="commentsPath"
       >
         <slot name="default" />
       </DrawerBody>

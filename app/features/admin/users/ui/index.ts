@@ -1,3 +1,4 @@
+export { default as AdminUserBan } from './AdminUserBan.vue';
 export { default as AdminUserDetail } from './AdminUserDetail.vue';
 export { default as AdminUserDetailPane } from './AdminUserDetailPane.vue';
 export { default as AdminUserRedeemedCodes } from './AdminUserRedeemedCodes.vue';

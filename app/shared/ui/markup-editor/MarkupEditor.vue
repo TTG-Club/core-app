@@ -152,6 +152,9 @@
     bold: false,
     italic: false,
     strike: false,
+    // Underline StarterKit не сериализуется в {@u} и вешает СВОЙ Mod-u —
+    // отключаем, чтобы Ctrl+U однозначно переключал ttgUnderline (marks.ts).
+    underline: false,
     // Shift+Enter (hardBreak) сериализуется в «  \n» — одиночный перенос строки,
     // на котором падает бэкенд-десериализатор описания. Отключаем: перенос — это
     // новый абзац (Enter). Так наружу не уходит «сырой» одиночный \n.

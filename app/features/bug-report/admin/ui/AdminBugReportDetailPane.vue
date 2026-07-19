@@ -46,6 +46,7 @@
     :date-time="dateTime"
     :url="bug.url"
     copy-title
+    no-comments
     @close="handleClose"
   >
     <AdminBugReportDetail

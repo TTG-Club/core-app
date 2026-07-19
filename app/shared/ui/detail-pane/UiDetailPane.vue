@@ -17,6 +17,7 @@
     dateTime = undefined,
     dateTimeFormat = undefined,
     backTo = undefined,
+    noComments = false,
   } = defineProps<{
     /** Заголовок панели */
     title: DrawerTitleName;
@@ -38,6 +39,12 @@
     dateTimeFormat?: string;
     /** Путь/маршрут возврата назад */
     backTo?: RouteLocationRaw;
+    /**
+     * Не показывать блок комментариев под телом — для панелей, где `url`
+     * указывает не на открытую сущность (например, адрес страницы
+     * из баг-репорта).
+     */
+    noComments?: boolean;
   }>();
 
   defineEmits<{
@@ -52,6 +59,9 @@
   const computedSubtitle = computed(() =>
     typeof title === 'string' ? undefined : title?.eng,
   );
+
+  /** Путь для блока комментариев под телом открытой сущности. */
+  const commentsPath = computed(() => (noComments ? undefined : url));
 </script>
 
 <template>
@@ -86,6 +96,7 @@
       <DrawerBody
         :is-loading="isLoading"
         :is-error="isError"
+        :comments-path="commentsPath"
       >
         <slot name="default" />
       </DrawerBody>

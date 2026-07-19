@@ -1,5 +1,10 @@
 <script setup lang="ts">
   import { USER_TOKEN_COOKIE } from '#shared/consts';
+  import {
+    MODERATION_PANEL_ICON,
+    MODERATION_PANEL_TITLE,
+    MODERATION_ROUTE,
+  } from '~moderation/model';
   import { useProfileBadges } from '~profile/activation/composables';
   import { KbdShortcut } from '~ui/kbd-shortcut';
   import { AuthModal } from '~user/auth-modal';
@@ -14,7 +19,7 @@
     isLoggedIn,
   } = useUser();
 
-  const { isAdmin, canEditEntities, canManageBugReports } = useUserRoles();
+  const { isAdmin, canEditEntities, canAccessModerationPanel } = useUserRoles();
   const { isTablet } = useBreakpoints();
   const userTokenCookie = useCookie<string | null>(USER_TOKEN_COOKIE);
 
@@ -166,17 +171,17 @@
             </UButton>
 
             <UButton
-              v-if="canManageBugReports"
-              icon="tabler:bug"
+              v-if="canAccessModerationPanel"
+              :icon="MODERATION_PANEL_ICON"
               color="neutral"
               variant="ghost"
               class="w-full"
               size="lg"
-              to="/bug-reports"
+              :to="MODERATION_ROUTE"
               @click.left.exact="closeMenu"
             >
               <div class="flex w-full items-center justify-between">
-                <span>Баг-репорты</span>
+                <span>{{ MODERATION_PANEL_TITLE }}</span>
               </div>
             </UButton>
           </div>

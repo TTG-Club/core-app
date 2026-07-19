@@ -26,6 +26,7 @@ import {
   updateParticipant,
 } from '~initiative/model';
 
+import { useArmorClass } from './useArmorClass';
 import { useHitPoints } from './useHitPoints';
 import { useInitiativeStorage } from './useInitiativeStorage';
 
@@ -73,7 +74,17 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
 
   const canAddCreature = computed(() => remainingCreatures.value > 0);
 
-  const { currentByParticipant, setHitPoints } = useHitPoints(
+  const {
+    currentByParticipant,
+    maxByParticipant,
+    setHitPoints,
+    setMaxHitPoints,
+  } = useHitPoints(
+    () => trackerId.value,
+    () => participants.value,
+  );
+
+  const { armorClassByParticipant, setArmorClass } = useArmorClass(
     () => trackerId.value,
     () => participants.value,
   );
@@ -410,6 +421,8 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
     canAddCreature,
     remainingCreatures,
     currentHitPoints: currentByParticipant,
+    maxHitPoints: maxByParticipant,
+    armorClasses: armorClassByParticipant,
 
     load,
     rename,
@@ -427,5 +440,7 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
     reset,
     destroy,
     setHitPoints,
+    setMaxHitPoints,
+    setArmorClass,
   };
 }

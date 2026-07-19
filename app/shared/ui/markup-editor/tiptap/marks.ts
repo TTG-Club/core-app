@@ -40,6 +40,8 @@ interface FormatSpec {
   token: string;
   /** Tailwind-классы для отображения марки в редакторе. */
   className: string;
+  /** Хоткей переключения марки в нотации TipTap (`Mod` = Ctrl/⌘). */
+  shortcut: string;
 }
 
 /**
@@ -55,6 +57,7 @@ export const FORMAT_SPECS: FormatSpec[] = [
     aliases: ['b', 'bold'],
     token: 'ttgMark_bold',
     className: 'font-bold',
+    shortcut: 'Mod-b',
   },
   {
     type: 'italic',
@@ -63,6 +66,7 @@ export const FORMAT_SPECS: FormatSpec[] = [
     aliases: ['i', 'italic'],
     token: 'ttgMark_italic',
     className: 'italic',
+    shortcut: 'Mod-i',
   },
   {
     type: 'underline',
@@ -71,6 +75,7 @@ export const FORMAT_SPECS: FormatSpec[] = [
     aliases: ['u', 'underline'],
     token: 'ttgMark_underline',
     className: 'underline underline-offset-2',
+    shortcut: 'Mod-u',
   },
   {
     type: 'strikethrough',
@@ -79,6 +84,7 @@ export const FORMAT_SPECS: FormatSpec[] = [
     aliases: ['s', 'strikethrough'],
     token: 'ttgMark_strike',
     className: 'line-through',
+    shortcut: 'Mod-Shift-s',
   },
   {
     type: 'superscript',
@@ -87,6 +93,7 @@ export const FORMAT_SPECS: FormatSpec[] = [
     aliases: ['sup', 'superscript'],
     token: 'ttgMark_superscript',
     className: 'align-super text-[0.75em]',
+    shortcut: 'Mod-.',
   },
   {
     type: 'subscript',
@@ -95,6 +102,7 @@ export const FORMAT_SPECS: FormatSpec[] = [
     aliases: ['sub', 'subscript'],
     token: 'ttgMark_subscript',
     className: 'align-sub text-[0.75em]',
+    shortcut: 'Mod-,',
   },
   {
     type: 'highlight',
@@ -103,6 +111,7 @@ export const FORMAT_SPECS: FormatSpec[] = [
     aliases: ['mark', 'highlight'],
     token: 'ttgMark_highlight',
     className: 'rounded bg-warning/30 px-0.5',
+    shortcut: 'Mod-Shift-h',
   },
 ];
 
@@ -272,12 +281,38 @@ export const blockMarkerMarkdownTokenizer: MarkdownTokenizer = {
 };
 
 /**
+ * Варианты хоткея для регистрации в keymap: для буквенной клавиши добавляется
+ * дубль с ЗАГЛАВНОЙ буквой (как у штатных Bold/Italic TipTap) — при включённом
+ * CapsLock событие приходит с key в верхнем регистре, и без дубля хоткей молчит.
+ */
+function shortcutVariants(shortcut: string): string[] {
+  const parts = shortcut.split('-');
+  const key = parts.at(-1) ?? '';
+
+  if (!/^[a-z]$/.test(key)) {
+    return [shortcut];
+  }
+
+  return [shortcut, [...parts.slice(0, -1), key.toUpperCase()].join('-')];
+}
+
+/**
  * Создаёт марку TipTap для форматирующего маркера {@...}: редактируемое
- * содержимое, отображение стилем, round-trip `{@<alias> …}` через markdown-API.
+ * содержимое, отображение стилем, round-trip `{@<alias> …}` через markdown-API
+ * и хоткей переключения (стандартные комбинации TipTap; StarterKit-марки со
+ * своими хоткеями в редакторе отключены — см. starterKit в MarkupEditor.vue).
  */
 function createFormatMark(spec: FormatSpec) {
   return Mark.create({
     name: spec.mark,
+
+    addKeyboardShortcuts() {
+      const toggle = () => this.editor.commands.toggleMark(spec.mark);
+
+      return Object.fromEntries(
+        shortcutVariants(spec.shortcut).map((combo) => [combo, toggle]),
+      );
+    },
 
     markdownTokenName: spec.token,
     parseMarkdown: (token: MarkdownToken, helpers: MarkdownParseHelpers) =>

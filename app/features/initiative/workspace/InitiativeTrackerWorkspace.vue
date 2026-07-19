@@ -35,6 +35,8 @@
     canAddCreature,
     remainingCreatures,
     currentHitPoints,
+    maxHitPoints,
+    armorClasses,
     load,
     rename,
     addPlayer,
@@ -51,6 +53,8 @@
     reset,
     destroy,
     setHitPoints,
+    setMaxHitPoints,
+    setArmorClass,
   } = useTrackerWorkspace(() => id);
 
   onMounted(load);
@@ -197,6 +201,8 @@
         :remaining-creatures="remainingCreatures"
         :is-mutating="isMutating"
         :current-hit-points="currentHitPoints"
+        :max-hit-points="maxHitPoints"
+        :armor-classes="armorClasses"
         @add-player="addPlayer"
         @add-creatures="addCreatures"
         @edit-participant="editParticipant"
@@ -204,6 +210,8 @@
         @roll-participant="rollParticipant"
         @toggle-dead="setDead"
         @set-hit-points="setHitPoints"
+        @set-max-hit-points="setMaxHitPoints"
+        @set-armor-class="setArmorClass"
         @roll="roll"
         @roll-creatures="rollCreatures"
         @start="startCombat"

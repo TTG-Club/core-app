@@ -12,6 +12,24 @@
     throw createError(getErrorResponse(StatusCodes.BAD_REQUEST));
   }
 
+  // Проверяем токен сразу при открытии страницы, чтобы не заставлять
+  // пользователя вводить пароль ради протухшей ссылки.
+  const { status: tokenCheckStatus, error: tokenCheckError } = useFetch(
+    '/api/auth/password/reset-token/validate',
+    {
+      query: { token: passwordResetToken },
+      retry: false,
+    },
+  );
+
+  const tokenInvalid = computed(() => tokenCheckStatus.value === 'error');
+
+  const tokenInvalidMessage = computed(
+    () =>
+      tokenCheckError.value?.data?.message
+      ?? 'Ссылка для сброса пароля недействительна — запросите новую.',
+  );
+
   const state = reactive({
     newPassword: '',
     repeatPassword: '',
@@ -74,7 +92,9 @@
     if (error.value) {
       toast.add({
         title: 'Ошибка сброса пароля',
-        description: error.value.data.message,
+        description:
+          error.value.data?.message
+          ?? 'Не удалось сбросить пароль — попробуйте ещё раз.',
         color: 'error',
         icon: 'tabler:user-exclamation',
       });
@@ -113,12 +133,33 @@
       <div class="flex flex-col gap-2">
         <h1 class="text-2xl font-semibold text-primary">Сброс пароля</h1>
 
-        <p class="text-sm text-secondary">
+        <p
+          v-if="tokenInvalid"
+          class="text-sm text-error"
+        >
+          {{ tokenInvalidMessage }}
+        </p>
+
+        <p
+          v-else
+          class="text-sm text-secondary"
+        >
           Введите новый пароль для вашей учетной записи.
         </p>
       </div>
 
+      <UButton
+        v-if="tokenInvalid"
+        class="md:w-auto"
+        variant="soft"
+        block
+        @click.left.exact.prevent="navigateToHome"
+      >
+        На главную
+      </UButton>
+
       <UForm
+        v-else
         class="flex flex-col gap-4"
         :state
         @submit.prevent.stop="onSubmit"

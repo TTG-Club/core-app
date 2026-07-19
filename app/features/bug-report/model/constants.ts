@@ -55,6 +55,9 @@ export function getAdminBugStatusApiUrl(bugId: string): string {
 /** Заголовок страницы админки баг-репортов */
 export const ADMIN_BUGS_PAGE_TITLE = 'Баг-репорты: список';
 
+/** Заголовок в шапке layout'а на странице баг-репортов */
+export const ADMIN_BUGS_LAYOUT_TITLE = 'Баг-репорты';
+
 /** Текст на кнопке возврата/в навигации */
 export const ADMIN_BUGS_NAVIGATION_LABEL = 'Баги';
 
