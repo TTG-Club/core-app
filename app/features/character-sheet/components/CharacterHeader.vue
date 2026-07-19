@@ -11,31 +11,31 @@
     <!-- Avatar with Gold Ring -->
     <div class="relative shrink-0">
       <div
-        class="h-24 w-24 rounded-full border-2 border-amber-500/80 p-1 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+        class="h-24 w-24 rounded-full border-2 border-[color-mix(in_oklch,var(--vttg-gold)_80%,transparent)] p-1 shadow-[0_0_15px_color-mix(in_oklch,var(--vttg-gold)_30%,transparent)]"
       >
         <img
           src="https://placehold.co/400"
           alt="Avatar"
-          class="h-full w-full rounded-full bg-gray-800 object-cover"
+          class="h-full w-full rounded-full bg-elevated object-cover"
         />
       </div>
     </div>
 
     <!-- Info -->
     <div class="flex grow flex-col gap-1">
-      <h1 class="font-serif text-3xl tracking-wide text-gray-100">
+      <h1 class="font-serif text-3xl tracking-wide text-highlighted">
         {{ character.name }}
       </h1>
 
       <div
-        class="text-sm font-medium tracking-wider text-amber-500/80 uppercase"
+        class="text-sm font-medium tracking-wider text-(--vttg-gold) uppercase"
       >
         {{ character.race }} - {{ character.class }}
       </div>
 
       <!-- XP Bar -->
       <div class="relative mt-2 max-w-lg">
-        <div class="flex items-center gap-3 text-xs text-gray-400">
+        <div class="flex items-center gap-3 text-xs text-toned">
           <span class="shrink-0 whitespace-nowrap"
             >Уровень {{ character.level }}</span
           >
@@ -56,7 +56,7 @@
 
         <!-- XP text below (absolute positioned) -->
         <div
-          class="pointer-events-none absolute top-full left-0 mt-1 w-full text-center text-[10px] text-gray-500"
+          class="pointer-events-none absolute top-full left-0 mt-1 w-full text-center text-[10px] text-muted"
         >
           {{ character.xp.current }} / {{ character.xp.max }} XP
         </div>
@@ -66,17 +66,15 @@
     <!-- Right Controls -->
     <div class="flex gap-2 self-start">
       <UButton
-        icon="i-fluent-lock-closed-16-regular"
+        icon="i-tabler-lock"
         color="neutral"
         variant="ghost"
-        class="text-gray-400 hover:text-white"
       />
 
       <UButton
-        icon="i-fluent-dismiss-16-regular"
+        icon="i-tabler-x"
         color="neutral"
         variant="ghost"
-        class="text-gray-400 hover:text-white"
       />
     </div>
   </div>

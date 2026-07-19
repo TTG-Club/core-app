@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import CharacterSheet from '~/features/character-sheet/components/CharacterSheet.vue';
-
   import type { Character } from '~/features/character-sheet/types';
+
+  import CharacterSheet from '~/features/character-sheet/components/CharacterSheet.vue';
 
   const character = ref<Character>({
     id: '1',

@@ -26,23 +26,23 @@
     <div
       v-for="stat in statsList"
       :key="stat.label"
-      class="group relative flex flex-col items-center overflow-hidden rounded-xl border border-gray-800/50 bg-gray-900/30 p-3"
+      class="group relative flex flex-col items-center overflow-hidden rounded-xl border border-default/50 bg-elevated/30 p-3"
     >
       <div
-        class="pointer-events-none absolute inset-0 bg-linear-to-b from-transparent to-black/40"
+        class="pointer-events-none absolute inset-0 bg-linear-to-b from-transparent to-default/40"
       />
 
       <span
-        class="z-10 mb-1 text-[10px] font-bold tracking-widest text-gray-500 uppercase"
+        class="z-10 mb-1 text-[10px] font-bold tracking-widest text-muted uppercase"
         >{{ stat.label }}</span
       >
 
-      <div class="z-10 font-serif text-3xl font-bold text-gray-200">
+      <div class="z-10 font-serif text-3xl font-bold text-highlighted">
         {{ getModifier(stat.value) }}
       </div>
 
       <div
-        class="z-10 mt-1 rounded-full border border-gray-800/50 bg-black/30 px-2 py-0.5 text-xs font-medium text-gray-500"
+        class="z-10 mt-1 rounded-full border border-default/50 bg-default/60 px-2 py-0.5 text-xs font-medium text-muted"
       >
         {{ stat.value }}
       </div>

@@ -42,10 +42,10 @@
       <!-- Actions Tab -->
       <template #actions>
         <div
-          class="min-h-96 rounded-lg border border-gray-800/50 bg-gray-900/20 p-4"
+          class="min-h-96 rounded-lg border border-default/50 bg-elevated/20 p-4"
         >
           <div class="mb-4 flex items-center justify-between">
-            <h3 class="text-sm font-bold text-gray-500 uppercase">Действия</h3>
+            <h3 class="text-sm font-bold text-muted uppercase">Действия</h3>
 
             <UButton
               size="xs"
@@ -57,7 +57,7 @@
           </div>
           <!-- Placeholder content -->
           <div
-            class="flex h-full items-center justify-center text-sm text-gray-600"
+            class="flex h-full items-center justify-center text-sm text-dimmed"
           >
             Список действий пуст
           </div>
@@ -67,7 +67,7 @@
       <!-- Spells Tab -->
       <template #spells>
         <div
-          class="flex h-96 items-center justify-center rounded-lg border border-gray-800 bg-gray-800/20 p-4 text-sm text-gray-600"
+          class="flex h-96 items-center justify-center rounded-lg border border-default bg-elevated/20 p-4 text-sm text-dimmed"
         >
           Книга заклинаний пуста
         </div>
@@ -76,7 +76,7 @@
       <!-- Equipment Tab -->
       <template #equipment>
         <div
-          class="flex h-96 items-center justify-center rounded-lg border border-gray-800 bg-gray-800/20 p-4 text-sm text-gray-600"
+          class="flex h-96 items-center justify-center rounded-lg border border-default bg-elevated/20 p-4 text-sm text-dimmed"
         >
           Инвентарь пуст
         </div>
@@ -85,7 +85,7 @@
       <!-- Features Tab -->
       <template #features>
         <div
-          class="flex h-96 items-center justify-center rounded-lg border border-gray-800 bg-gray-800/20 p-4 text-sm text-gray-600"
+          class="flex h-96 items-center justify-center rounded-lg border border-default bg-elevated/20 p-4 text-sm text-dimmed"
         >
           Нет особенностей
         </div>
@@ -94,7 +94,7 @@
       <!-- Effects Tab -->
       <template #effects>
         <div
-          class="flex h-96 items-center justify-center rounded-lg border border-gray-800 bg-gray-800/20 p-4 text-sm text-gray-600"
+          class="flex h-96 items-center justify-center rounded-lg border border-default bg-elevated/20 p-4 text-sm text-dimmed"
         >
           Нет активных эффектов
         </div>
@@ -103,7 +103,7 @@
       <!-- Notes Tab -->
       <template #notes>
         <div
-          class="flex h-96 items-center justify-center rounded-lg border border-gray-800 bg-gray-800/20 p-4 text-sm text-gray-600"
+          class="flex h-96 items-center justify-center rounded-lg border border-default bg-elevated/20 p-4 text-sm text-dimmed"
         >
           Нет заметок
         </div>

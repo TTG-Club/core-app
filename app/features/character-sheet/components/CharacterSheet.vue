@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { Character } from '../types';
+
   import CharacterHeader from './CharacterHeader.vue';
   import CharacterMainStats from './CharacterMainStats.vue';
   import CharacterPassives from './CharacterPassives.vue';
@@ -8,8 +10,6 @@
   import CharacterTabs from './CharacterTabs.vue';
   import CharacterVitals from './CharacterVitals.vue';
 
-  import type { Character } from '../types';
-
   defineProps<{
     character: Character;
   }>();
@@ -17,12 +17,12 @@
 
 <template>
   <div
-    class="mx-auto flex w-full max-w-[1400px] flex-col gap-6 p-4 font-sans text-gray-100"
+    class="mx-auto flex w-full max-w-[1400px] flex-col gap-6 p-4 text-default"
   >
     <CharacterHeader :character="character" />
 
     <div
-      class="my-2 h-px w-full bg-linear-to-r from-transparent via-amber-500/50 to-transparent"
+      class="my-2 h-px w-full bg-linear-to-r from-transparent via-[color-mix(in_oklch,var(--vttg-gold)_50%,transparent)] to-transparent"
     />
 
     <!-- Main Grid Layout -->
