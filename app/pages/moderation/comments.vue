@@ -118,7 +118,7 @@
         <USkeleton
           v-for="index in 3"
           :key="index"
-          class="h-28 w-full"
+          class="h-20 w-full"
         />
       </template>
 
@@ -143,14 +143,16 @@
       </p>
 
       <template v-else>
-        <AdminCommentRow
-          v-for="comment in moderationComments"
-          :key="comment.id"
-          :comment="comment"
-          @deleted="handleCommentChanged"
-          @restored="handleCommentChanged"
-          @stale="handleCommentChanged"
-        />
+        <div class="flex flex-col gap-2">
+          <AdminCommentRow
+            v-for="comment in moderationComments"
+            :key="comment.id"
+            :comment="comment"
+            @deleted="handleCommentChanged"
+            @restored="handleCommentChanged"
+            @stale="handleCommentChanged"
+          />
+        </div>
 
         <div
           v-if="totalModerationCount > COMMENTS_MODERATION_PAGE_SIZE"

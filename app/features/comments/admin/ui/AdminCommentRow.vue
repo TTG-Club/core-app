@@ -45,8 +45,13 @@
     (event: 'stale'): void;
   }>();
 
-  /** Отступы карточки: в узкой панели стандартные p-6 съедают содержимое. */
-  const cardUi = computed(() => (dense ? { body: 'p-3 sm:p-4' } : undefined));
+  /**
+   * Отступы карточки: стандартные p-6 для строки ленты избыточны, а в узкой
+   * панели ещё и съедают содержимое.
+   */
+  const cardUi = computed(() => ({
+    body: dense ? 'p-2.5 sm:p-3' : 'p-3 sm:p-4',
+  }));
 
   const { createdLabel, createdFullLabel } = useCommentTimestamp(() => comment);
 
@@ -177,7 +182,7 @@
     variant="subtle"
     :ui="cardUi"
   >
-    <div class="flex flex-col gap-2">
+    <div class="flex flex-col gap-1.5">
       <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
         <UAvatar
           :alt="comment.authorName"
