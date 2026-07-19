@@ -35,6 +35,7 @@ import {
   getCommentErrorMessage,
   getCommentFetchStatus,
   getCommentRateLimit,
+  hasLiveReplies,
   hasServerReplyTotal,
   isCommentFromThread,
   isCommentTombstone,
@@ -700,7 +701,7 @@ export function useCommentsSection(
 
     // Ветка стала листом — та же конвенция, что в createCommentNode:
     // у листа нечего догружать и нечего сворачивать.
-    if (refreshed.replyCount === 0) {
+    if (!hasLiveReplies(refreshed)) {
       rootNode.replies = [];
       rootNode.repliesLoaded = true;
       rootNode.repliesExpanded = true;
@@ -739,11 +740,12 @@ export function useCommentsSection(
         if (getCommentFetchStatus(error) === 404) {
           // Корень ушёл из выдачи вместе со всей веткой.
           removeCommentNode(rootNodes.value, rootNode.comment.id);
-        } else if (node.comment.replyCount === 0) {
-          // Ветка не перечиталась. Убрать можно только бездетный узел: у
-          // комментария с ответами сервис оставит надгробие, и локальное
-          // удаление спрятало бы вместе с ним живые ответы. Такой узел
-          // подождёт следующей загрузки ленты.
+        } else if (!hasLiveReplies(node.comment)) {
+          // Ветка не перечиталась. Убрать можно только узел без живых
+          // потомков: у комментария с ответами сервис оставит надгробие, и
+          // локальное удаление спрятало бы вместе с ним живые ответы —
+          // в том числе те, что лежат глубже вложенного надгробия. Такой
+          // узел подождёт следующей загрузки ленты.
           removeCommentNode(rootNodes.value, node.comment.id);
         }
       }

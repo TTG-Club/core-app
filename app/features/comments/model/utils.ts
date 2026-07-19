@@ -90,9 +90,27 @@ export function getLoadedCountLabel(loaded: number, total: number): string {
 }
 
 /**
- * Создаёт узел локального дерева комментариев. Листья (без ответов) сразу
- * считаются загруженными и развёрнутыми, чтобы не показывать для них кнопку
- * догрузки и сразу отображать ответы, добавленные текущим пользователем.
+ * Есть ли под комментарием живые ответы — то, ради чего ветку нужно грузить
+ * и держать. Считает потомков на любой глубине, а не прямых детей: между
+ * комментарием и живым ответом может стоять надгробие, а оно в `replyCount`
+ * родителя не входит (там только опубликованные дети). По `replyCount` такой
+ * узел выглядел бы листом, и живая ветка под надгробием не догрузилась бы
+ * совсем — сервис отдал бы её, но за ней никто бы не пришёл.
+ *
+ * Старые сборки сервиса `totalReplyCount` не присылают — тогда известны
+ * только прямые ответы, и вложенное надгробие остаётся невидимым; лучшего
+ * источника у клиента нет.
+ * @param comment Комментарий сервиса.
+ */
+export function hasLiveReplies(comment: PublicComment): boolean {
+  return (comment.totalReplyCount ?? comment.replyCount) > 0;
+}
+
+/**
+ * Создаёт узел локального дерева комментариев. Листья (без живых ответов)
+ * сразу считаются загруженными и развёрнутыми, чтобы не показывать для них
+ * кнопку догрузки и сразу отображать ответы, добавленные текущим
+ * пользователем.
  *
  * Имя автора родителя в узле не хранится: подпись «кому ответили» ветка
  * передаёт вниз пропом. Иначе её пришлось бы обновлять руками — например,
@@ -100,12 +118,14 @@ export function getLoadedCountLabel(loaded: number, total: number): string {
  * @param comment Комментарий сервиса.
  */
 export function createCommentNode(comment: PublicComment): CommentNode {
+  const isLeaf = !hasLiveReplies(comment);
+
   return {
     comment,
     replies: [],
-    repliesLoaded: comment.replyCount === 0,
+    repliesLoaded: isLeaf,
     repliesLoading: false,
-    repliesExpanded: comment.replyCount === 0,
+    repliesExpanded: isLeaf,
   };
 }
 
