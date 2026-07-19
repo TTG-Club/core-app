@@ -4,6 +4,9 @@ import type {
   AdminUserDetailTab,
 } from './types';
 
+/** Маршрут раздела управления пользователями в админ-панели. */
+export const ADMIN_USERS_ROUTE = '/admin/users';
+
 export const ADMIN_USERS_PAGE_TITLE = 'Пользователи';
 
 export const ADMIN_USERS_NAVIGATION_LABEL = 'Пользователи';

@@ -3,8 +3,9 @@
 > **Purpose:** Online D&D 5e reference **and toolset** — reference content
 > (species, classes, spells, bestiary, magic items, items, feats, backgrounds,
 > glossary, sources), interactive tools (tokenator, dice roller, ability
-> calculator), news/articles publishing, user accounts & subscriptions,
-> admin & moderation, and a VTTG virtual-tabletop landing.
+> calculator, initiative tracker), news/articles publishing, page discussions,
+> user accounts & subscriptions, admin & moderation, and a VTTG
+> virtual-tabletop landing.
 > **⚠️ ATTENTION:** This file contains only the domain map and project
 > structure.
 > **All coding rules, styles, DDD constraints, and AI agent guidelines have been
@@ -18,12 +19,13 @@
 core-app/
 ├── app/                            # 🖥️ Client-side (Nuxt app directory)
 │   ├── app.vue                     # Root component
+│   ├── error.vue                   # Root error page
 │   ├── app.config.ts               # Nuxt UI configuration (icons, variants)
 │   ├── assets/
 │   │   ├── css/                    # Tailwind v4 + SCSS: themes (dark/light/svifty7), variables, lib overrides
 │   │   └── icons/                  # Custom SVG icons (`ttg` collection, glob-registered)
 │   ├── composables/                # ⚡ Global composables (auto-import)
-│   ├── features/                   # 🏗️ DDD domains (23) — core business logic
+│   ├── features/                   # 🏗️ DDD domains (26) — core business logic
 │   ├── layouts/                    # Layouts: default, detail, section, vttg
 │   ├── middleware/                 # Route middleware: auth.global, close-overlay.global
 │   ├── pages/                      # 📄 Routes (file-based routing)
@@ -32,20 +34,20 @@ core-app/
 │   │   ├── api/                    # Typed API fetchers (dictionaries/select-options)
 │   │   ├── consts/                 # Global constants (levels, layout-width, theme)
 │   │   ├── enums/                  # Enums (comparison, …)
-│   │   ├── types/                  # base, wiki, user, subscription, upload, composable
+│   │   ├── types/                  # base, wiki, user, subscription, upload, composable, abilities, dictionaries
 │   │   ├── ui/                     # 🎨 UI Kit (27 components)
-│   │   └── utils/                  # Global utilities (+ validation)
+│   │   └── utils/                  # Dictionary validation only (`validation/dictionaries.ts`)
 │   └── utils/                      # ⚡ Global utilities (auto-import)
 ├── server/                         # 🔒 Server-side (Nitro)
 │   ├── api/                        # HTTP handlers: catch-all proxy + auth/*, admin/*, bug-report, online
-│   ├── domain/                     # Server domains: online, s3 (model / service / utils)
+│   ├── domain/                     # Server domains: s3 (model / service / utils), online (service only)
 │   ├── middleware/                 # 001 validate/refresh token, 002 append auth header
 │   ├── routes/                     # manifest.json, online/heartbeat, s3 (upload/get/delete)
-│   └── utils/                      # Service clients (auth/admin/subscriber), JWT, proxy, image compression
+│   └── utils/                      # Service clients (auth/admin/subscriber/comments), secrets, JWT, proxy, image compression
 ├── shared/                         # 📦 Isomorphic shared (client + server)
 │   ├── consts/                     # Cookie/theme keys, durations
 │   ├── types/                      # auth (JWT payload)
-│   └── utils/                      # consola, env, faker, slug, plural, status message, sort
+│   └── utils/                      # consola, env, faker, slug, plural, status message, sort, error response
 ├── modules/                        # 🧩 Nuxt modules
 │   └── auto-aliases.ts             # Auto-generation of ~domain aliases from app/features
 ├── public/                         # Static files
@@ -59,15 +61,17 @@ core-app/
 
 ## 🌍 Domains (DDD Architecture in `app/features/`)
 
-23 feature domains, grouped below by area.
+26 feature domains, grouped below by area.
 
 ### 📚 Reference content (D&D 5e wiki)
 
 > **Uniform layout per domain:** `body` (full detail renderer) · `drawer`
 > (side-panel that fetches `/api/v2/{domain}/{url}`) · `editor` (workshop CRUD
 > form) · `link` (list card that opens the drawer) · `preview` (live editor
-> preview via `POST /{domain}/preview`) · `model` (create/detail/link types +
-> schemas). The table lists only what each domain adds on top.
+> preview via `POST /api/v2/{domain}/preview`) · `model` (create/detail/link
+> types + schemas). The table lists only what each domain adds on top.
+> **Endpoint exceptions:** `items` and `sources` call the API in the singular —
+> `/api/v2/item/…` and `/api/v2/source/…`, not the domain folder name.
 
 | Domain        | Purpose                                            | Notable extras                                                       |
 | ------------- | -------------------------------------------------- | -------------------------------------------------------------------- |
@@ -84,27 +88,30 @@ core-app/
 
 ### 🛠️ Interactive tools
 
-| Domain        | Purpose                                                                                               | Sub-features                                                                |
-| ------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `tokenator`   | Canvas VTT token generator: mask/frame/tint/text/3D lighting, export. Dexie (IndexedDB) + Pinia store | `canvas`, `controls`, `preview`, `model`, `composables`                     |
-| `dice-roller` | Dice-notation roller w/ crit detection + history; float/sidebar toggle, inline links, modal           | `modal`, `float-button`, `sidebar-button`, `link`, `composables`, `model`   |
-| `calculator`  | Character-math tools container                                                                        | `abilities` — ability-score calc (Point Buy / Standard Array / Random Roll) |
+| Domain        | Purpose                                                                                                                                            | Sub-features                                                                                                                             |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `tokenator`   | Canvas VTT token generator: mask/frame/tint/text/3D lighting, export. Dexie (IndexedDB) + Pinia store                                              | `canvas`, `controls`, `preview`, `model`, `composables`                                                                                  |
+| `dice-roller` | Dice-notation roller w/ crit detection + history; float/sidebar toggle, inline links, modal                                                        | `modal`, `float-button`, `sidebar-button`, `link`, `composables`, `model` (+ legacy `const.ts` / `types.ts` / `utils.ts` at domain root) |
+| `calculator`  | Character-math tools container                                                                                                                     | `abilities` — ability-score calc (Point Buy / Standard Array / Random Roll)                                                              |
+| `initiative`  | **NEW** — Initiative tracker (`/tools/initiative`): participants, HP/AC editing, bestiary lookup; anonymous slot in localStorage + `X-Tracker-Key` | `list`, `workspace`, `ui-kit`, `composables`, `model`                                                                                    |
 
 ### 📰 Content & publishing
 
-| Domain     | Purpose                                                                                                        | Sub-features                                                                                                                              |
-| ---------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `articles` | **NEW** — News/article publishing (`NEWS`/`ARTICLE`; draft·active·scheduled·link-access flags); markup content | `admin`, `body`, `card`, `drawer`, `editor`, `link`, `listing`, `preview`, `model`                                                        |
-| `home`     | Landing-page building blocks composed on `pages/index.vue`                                                     | `news` (NEW), `sections`, `banners`, `community`, `counters`, `greetings`, `recent-changes`, `background`, `social-links`, `link-to-5e14` |
-| `workshop` | Content-creation admin: reusable form engine + section entry cards + revision history                          | `composable` (`useWorkshopForm`), `section`, `revision`                                                                                   |
-| `roadmap`  | Project roadmap: feature cards with community ratings + admin editor                                           | `feature`, `detail`, `editor`, `preview`, `types`                                                                                         |
+| Domain     | Purpose                                                                                                                                              | Sub-features                                                                                                                                                                                   |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `articles` | **NEW** — News/article publishing (`NEWS`/`ARTICLE`; draft·active·scheduled·link-access flags); markup content                                       | `admin`, `body`, `card`, `drawer`, `editor`, `link`, `listing`, `preview`, `model`                                                                                                             |
+| `home`     | Landing-page building blocks composed on `pages/index.vue`                                                                                           | `news` (NEW), `articles` (NEW — separate index block from `news`), `sections`, `banners`, `community`, `counters`, `greetings`, `recent-changes`, `background`, `social-links`, `link-to-5e14` |
+| `workshop` | Content-creation admin: reusable form engine + section entry cards + revision history                                                                | `composable` (`useWorkshopForm`), `section`, `revision`                                                                                                                                        |
+| `roadmap`  | Project roadmap: feature cards with community ratings + admin editor                                                                                 | `feature`, `detail`, `editor`, `preview`, `types`                                                                                                                                              |
+| `comments` | **NEW** — Threaded discussions on wiki & article pages via external **comments-service**; public read, auth to post, soft-delete tombstones, reports | `section` (page block + feed), `admin` (moderation rows), `composables`, `model`                                                                                                               |
 
 ### 🛡️ Admin & moderation
 
-| Domain       | Purpose                                                                                         | Sub-features                                                              |
-| ------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `admin`      | Admin panel: dashboard tiles, top nav, live presence, personas, promo codes, users              | `dashboard`, `navigation`, `online`, `personas`, `subscriptions`, `users` |
-| `bug-report` | **NEW** — Bug reporting (screenshot + annotate + text-selection → submit) + admin triage/rating | `modal`, `selection`, `sidebar-button`, `admin`, `composables`, `model`   |
+| Domain       | Purpose                                                                                                                   | Sub-features                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `admin`      | Admin panel (`/admin`, ADMIN-only): dashboard tiles, top nav, live presence, personas, subscriptions & promo codes, users | `dashboard`, `navigation`, `online`, `personas`, `subscriptions`, `users` |
+| `moderation` | **NEW** — Moderator panel (`/moderation`, ADMIN or MODERATOR): dashboard routing to bug triage & comment moderation       | `model` (routes + dashboard labels)                                       |
+| `bug-report` | **NEW** — Bug reporting (screenshot + annotate + text-selection → submit) + admin triage/rating                           | `modal`, `selection`, `sidebar-button`, `admin`, `composables`, `model`   |
 
 ### 👤 User & account
 
@@ -115,16 +122,17 @@ core-app/
 
 ### 🌐 Landing & infrastructure
 
-| Domain           | Purpose                                                   | Sub-features                                                                    |
-| ---------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `vttg`           | **NEW** — Marketing landing for the VTTG virtual tabletop | `model`, `ui` (hero / features / FAQ / support / video sections)                |
-| `infrastructure` | Cross-cutting app shell & chrome                          | `sidebar`, `search`, `filter`, `list-presentation` (NEW), `footer` (NEW), `pwa` |
+| Domain           | Purpose                                                   | Sub-features                                                                                            |
+| ---------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `vttg`           | **NEW** — Marketing landing for the VTTG virtual tabletop | `model`, `ui` (hero / features / FAQ / support / video sections)                                        |
+| `infrastructure` | Cross-cutting app shell & chrome                          | `sidebar`, `search`, `filter`, `list-presentation` (NEW), `footer` (NEW), `cookie-consent` (NEW), `pwa` |
 
 ### Anatomy of a Feature (Example: `tokenator`)
 
 ```
 app/features/tokenator/
 ├── canvas/                     # "Canvas" Feature
+│   ├── TokenatorCanvas.vue     # Root component: [Domain][Feature].vue
 │   ├── ui/                     # Feature UI components
 │   └── index.ts                # Public API
 ├── controls/                   # "Controls" Feature
@@ -133,12 +141,13 @@ app/features/tokenator/
 │   ├── ui/                     # Internal UI components
 │   └── index.ts                # Public API
 ├── model/                      # Shared domain model
-│   ├── constants.ts            # Constants
+│   ├── consts.ts               # Constants
 │   ├── types.ts                # Types
 │   ├── db.ts                   # IndexedDB (Dexie)
 │   ├── utils/                  # Model utilities
 │   └── index.ts                # Public API
 ├── preview/                    # "Preview" Feature
+│   ├── TokenatorPreview.vue    # Root component: [Domain][Feature].vue
 │   ├── ui/
 │   └── index.ts
 └── composables/                # Domain-level composables
@@ -191,8 +200,10 @@ imported via the auto-generated `~<domain>` alias (see
 - **Composables** (`app/composables/`) — layout & navigation glue: the Wide/split
   mode triad (`useLayoutWidth` → `useSectionDetail` / `useSectionDetailRedirect`
   / `useSectionLink`) switches entities between an overlay drawer and a
-  `?detail=` query pane; plus `useUser` / `useUserRoles`, `useTheme`, `useDrawer`,
-  `useAnchorScroll`, `useCanvasExport`, `useCopyAndShare`, `useDayjs`, and more.
+  `?detail=` query pane, joined by `useOpenEntityPath` and `useSectionListScroll`;
+  plus `useUser` / `useUserRoles`, `useTheme`, `useDrawer`, `useAnchorScroll`,
+  `useBreakpoints`, `useCanvasExport`, `useCopyAndShare`, `useDayjs`,
+  `useResizableHeight`, `useSidebarPopover` (17 in total).
 - **Plugins** (`app/plugins/`) — `anchorScroll.client`, `dayjs`,
   `online-heartbeat.client` (30 s presence ping), `scrollBehavior`, `scrollbarWidth`.
 - **Middleware** (`app/middleware/`) — `auth.global` (role guard vs
@@ -208,20 +219,21 @@ imported via the auto-generated `~<domain>` alias (see
 Thin Nitro layer that proxies to external microservices and handles auth,
 uploads and presence.
 
-| Area                                    | Responsibility                                                                                                    |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `api/[...].ts`                          | Catch-all proxy → `core-api`, or `subscriber-service` for `/api/subscriptions` & `/api/rewards` (`getProxyPath`)  |
-| `api/auth/*`                            | Sign-in/up, logout, me, email confirm, password reset/change, roles, admin users — proxied to **auth-service**    |
-| `api/admin/*`                           | Admin bug list/status, subscription grant/revoke/codes — ADMIN-gated proxies to bug-report & subscriber services  |
-| `api/bug-report*`                       | Create report (streams multipart), public stats, my count-by-status → external **bug-report** service             |
-| `api/online`, `routes/online/heartbeat` | Presence heartbeat + stats via **online-app**                                                                     |
-| `domain/s3`, `routes/s3/*`              | S3 upload (image compression via sharp) / get / delete                                                            |
-| `routes/manifest.json`                  | Theme-aware PWA manifest from `runtimeConfig.pwa`                                                                 |
-| `middleware/`                           | `001` verify access JWT + silent refresh, `002` inject `Bearer` from cookie                                       |
-| `utils/`                                | Service clients (auth / auth-admin / subscriber-admin), JWT (jose), proxy, error normalization, image compression |
+| Area                                    | Responsibility                                                                                                                                                                                                             |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api/[...].ts`                          | Catch-all proxy (`getProxyPath`) → `subscriber-service` for `/api/subscriptions` & `/api/rewards`, `comments-service` for `/api/v1/comments`, otherwise `core-api`                                                         |
+| `api/auth/*`                            | Sign-in/up, logout, me, email confirm, password reset/change, roles, admin users — proxied to **auth-service**                                                                                                             |
+| `api/admin/*`                           | Admin bug list/status, subscription grant/revoke/codes, comment hide/restore by author — ADMIN-gated proxies to bug-report, subscriber & comments services (the last via `X-Service-Token` internal API, not the user JWT) |
+| `api/bug-report*`                       | Create report (streams multipart), public stats, my count-by-status → external **bug-report** service                                                                                                                      |
+| `api/online`, `routes/online/heartbeat` | Presence heartbeat + stats via **online-app**                                                                                                                                                                              |
+| `domain/s3`, `routes/s3/*`              | S3 upload (image compression via sharp) / get / delete                                                                                                                                                                     |
+| `routes/manifest.json`                  | Theme-aware PWA manifest from `runtimeConfig.pwa`                                                                                                                                                                          |
+| `middleware/`                           | `001` verify access JWT + silent refresh, `002` inject `Bearer` from cookie                                                                                                                                                |
+| `utils/`                                | Service clients (auth / auth-admin / subscriber-admin / comments-admin / bug-report), `secrets` (env accessor), JWT (jose), proxy, error normalization, image compression                                                  |
 
 **Backend topology:** `core-api` (default), `auth-service` (auth), `subscriber-service`
-(subscriptions/rewards), `online-app` (presence), external `bug-report` service.
+(subscriptions/rewards), `comments-service` (discussions, `NITRO_COMMENTS_API_URL`),
+`online-app` (presence), external `bug-report` service.
 Access token in cookie `ttg-user-token`, refresh in httpOnly `ttg-user-refresh-token`.
 
 ---
@@ -231,10 +243,12 @@ Access token in cookie `ttg-user-token`, refresh in httpOnly `ttg-user-refresh-t
 | File / Folder             | Purpose                                                                              |
 | ------------------------- | ------------------------------------------------------------------------------------ |
 | `AGENTS.md`               | **Primary source of coding rules and style**                                         |
+| `CLAUDE.md`               | Entry point for AI agents — points to `AGENTS.md`, this map and the skills           |
 | `.agents/skills/`         | **Directory containing AI agents skills**                                            |
+| `docs/`                   | Author-facing guides (e.g. `markup-formatting-guide.md` for `{@...}` markup)         |
 | `nuxt.config.ts`          | Nuxt configuration (modules, security/CSP, Nitro proxy, rate limiter, runtimeConfig) |
 | `app/app.config.ts`       | Nuxt UI configuration (icons, variants)                                              |
 | `modules/auto-aliases.ts` | Generates `~<domain>` aliases from `app/features/`                                   |
-| `eslint.config.js`        | ESLint (via @svifty7/eslint-config)                                                  |
+| `eslint.config.ts`        | ESLint (via @svifty7/eslint-config)                                                  |
 | `stylelint.config.js`     | Stylelint (clean-order)                                                              |
 | `.editorconfig`           | LF, 2 spaces, final newline                                                          |

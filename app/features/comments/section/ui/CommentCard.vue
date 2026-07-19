@@ -109,6 +109,13 @@
 
   const isOwn = computed(() => actions.isOwnComment(node));
 
+  /**
+   * Гость обсуждение только читает: ответ и жалоба требуют входа (сервис
+   * отвечает на них 401), поэтому такие действия ему не показываются —
+   * приглашение войти стоит под лентой, на месте формы отправки.
+   */
+  const canComment = computed(() => actions.canComment());
+
   const { canModerateComments } = useUserRoles();
 
   /**
@@ -175,14 +182,59 @@
       : 'tabler:chevron-down',
   );
 
+  /** Кнопка ответа: отвечают живому комментарию и только авторизованные. */
+  const showReplyButton = computed(
+    () => !isTombstone.value && canComment.value,
+  );
+
+  /**
+   * Форма ответа. Открытой она могла остаться с того момента, когда
+   * комментарий был живым, а пользователь — авторизованным: фоновая
+   * пересборка ветки сохраняет инстанс карточки (ключ — id), а сам
+   * комментарий подменяет надгробием; выход же гасит право писать,
+   * не трогая дерево.
+   */
+  const showReplyForm = computed(
+    () => isReplyOpen.value && showReplyButton.value,
+  );
+
+  /**
+   * Форма правки — по той же причине, что и форма ответа: выход из аккаунта
+   * не размонтирует карточку (дерево остаётся на месте, гасится только право
+   * писать), и без проверки гость дошёл бы до отправки и получил 401. Сам
+   * `isEditOpen` не сбрасываем: после повторного входа правка вернётся
+   * вместе с набранным текстом.
+   */
+  const showEditForm = computed(
+    () => isEditOpen.value && canManageComment.value,
+  );
+
   /**
    * Ряд действий под карточкой. У надгробия он сводится к кнопке ветки
    * (отвечать самой заглушке нельзя), у обычной карточки прячется на время
-   * правки — форма занимает его место.
+   * правки — форма занимает его место. У гостя от ряда остаётся только ветка
+   * ответов: без неё рисовать пустую полосу незачем.
    */
-  const showFooter = computed(() =>
-    isTombstone.value ? showRepliesToggle.value : !isEditOpen.value,
-  );
+  const showFooter = computed(() => {
+    if (isTombstone.value) {
+      return showRepliesToggle.value;
+    }
+
+    return (
+      !showEditForm.value && (showRepliesToggle.value || showReplyButton.value)
+    );
+  });
+
+  // Диалог удаления, в отличие от форм, закрываем по-настоящему: право
+  // управлять комментарием может погаснуть, пока он открыт (выход из
+  // аккаунта, снятие роли), а подтверждение ушло бы в 401. Возвращать его
+  // после повторного входа незачем — подтверждение удаления не черновик.
+  // Цикла нет: вотчер меняет только локальный флаг, на права он не влияет.
+  watch(canManageComment, (canManage) => {
+    if (!canManage) {
+      isDeleteOpen.value = false;
+    }
+  });
 
   function handleToggleReplies(): void {
     void actions.toggleReplies(node);
@@ -235,6 +287,10 @@
         },
       );
 
+      return availableActions;
+    }
+
+    if (!canComment.value) {
       return availableActions;
     }
 
@@ -465,7 +521,7 @@
 
       <!-- Контент рендерится текстом: сервис не санитизирует ввод -->
       <p
-        v-if="!isEditOpen"
+        v-if="!showEditForm"
         class="text-sm wrap-break-word whitespace-pre-line text-default"
       >
         {{ publishedComment?.content }}
@@ -503,7 +559,7 @@
       </UButton>
 
       <UButton
-        v-if="!isTombstone"
+        v-if="showReplyButton"
         variant="ghost"
         color="neutral"
         size="xs"
@@ -514,13 +570,8 @@
       </UButton>
     </footer>
 
-    <!--
-      Форма могла остаться открытой с того момента, когда комментарий был
-      живым: фоновая пересборка ветки сохраняет инстанс карточки (ключ — id),
-      а сам комментарий подменяет надгробием.
-    -->
     <CommentComposer
-      v-if="isReplyOpen && !isTombstone"
+      v-if="showReplyForm"
       :placeholder="replyPlaceholder"
       :submit-label="COMMENT_REPLY_LABEL"
       cancellable

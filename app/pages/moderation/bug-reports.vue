@@ -7,7 +7,6 @@
     PageBugReportResponse,
   } from '~bug-report/model';
 
-  import { Role } from '~/shared/types';
   import {
     AdminBugReportDetailPane,
     AdminBugReportRow,
@@ -18,6 +17,7 @@
     ADMIN_BUGS_DEFAULT_SORT,
     ADMIN_BUGS_EMPTY_TEXT,
     ADMIN_BUGS_FILTER_ALL,
+    ADMIN_BUGS_LAYOUT_TITLE,
     ADMIN_BUGS_PAGE_DESCRIPTION,
     ADMIN_BUGS_PAGE_TITLE,
     ADMIN_BUGS_PLATFORM_ALL_LABEL,
@@ -30,10 +30,6 @@
     BUG_REPORT_STATS_API_URL,
     BUG_REPORT_STATUS_LABELS,
   } from '~bug-report/model';
-
-  definePageMeta({
-    auth: { roles: [Role.ADMIN, Role.MODERATOR] },
-  });
 
   const { isSplitActive } = useLayoutWidth();
 
@@ -281,7 +277,7 @@
   <div>
     <NuxtLayout
       name="section"
-      title="Баг-репорты"
+      :title="ADMIN_BUGS_LAYOUT_TITLE"
     >
       <!-- Элементы управления (Фильтры) -->
       <template #controls>

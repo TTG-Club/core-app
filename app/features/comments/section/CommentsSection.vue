@@ -11,6 +11,7 @@
     COMMENT_COMPOSER_ROOT_PLACEHOLDER,
     COMMENT_HIGHLIGHT_DURATION_MS,
     COMMENTS_EMPTY_MESSAGE,
+    COMMENTS_EXPAND_EMPTY_GUEST_LABEL,
     COMMENTS_EXPAND_EMPTY_LABEL,
     COMMENTS_EXPAND_PREFIX,
     COMMENTS_LOAD_ERROR_TOAST,
@@ -21,7 +22,6 @@
     COMMENTS_SECTION_TITLE,
     getCommentAnchorId,
     getCommentErrorMessage,
-    getCommentFetchStatus,
   } from '../model';
   import {
     CommentComposer,
@@ -52,6 +52,8 @@
    * Есть ли сессия: профиль уже загружен (вход через шлем сайта) или есть
    * кука токена. Одной куки мало: Nuxt кэширует её значение с момента
    * гидрации, и после входа через общую модалку кэш остаётся пустым.
+   * Читать обсуждение можно и без сессии — от неё зависит только право
+   * писать: комментарий, ответ, правку и жалобу сервис требует авторизовать.
    */
   const hasSession = computed(() => isLoggedIn.value || Boolean(token.value));
 
@@ -102,9 +104,18 @@
     submitReport,
     isOwnComment,
     isCommentReported,
+    canComment,
     highlightComment,
     getCommentLink,
   };
+
+  /**
+   * Право писать: гостю не показываются ответ, правка и жалоба — сервис
+   * отвечает на них 401. Читать обсуждение можно и без входа.
+   */
+  function canComment(): boolean {
+    return hasSession.value;
+  }
 
   /**
    * Абсолютная якорная ссылка на комментарий. Строится от канонического
@@ -124,19 +135,25 @@
    */
   const isThreadEmpty = computed(() => totalCount.value === 0);
 
+  /**
+   * Гость на пустом обсуждении: разворачивать нечего, а единственное, что ему
+   * тут доступно, — войти и начать разговор. Кнопка свёрнутого блока в этом
+   * случае и подписана, и работает как вход.
+   */
+  const isGuestOnEmptyThread = computed(
+    () => !hasSession.value && isThreadEmpty.value,
+  );
+
   /** Подпись кнопки разворачивания свёрнутого блока. */
-  const expandButtonLabel = computed(() =>
-    totalCount.value > 0
-      ? `${COMMENTS_EXPAND_PREFIX} ${totalCount.value} ${getPlural(totalCount.value, COMMENTS_PLURAL_FORMS)}`
-      : COMMENTS_EXPAND_EMPTY_LABEL,
-  );
+  const expandButtonLabel = computed(() => {
+    if (totalCount.value > 0) {
+      return `${COMMENTS_EXPAND_PREFIX} ${totalCount.value} ${getPlural(totalCount.value, COMMENTS_PLURAL_FORMS)}`;
+    }
 
-  /** Сервис закрыт авторизацией целиком: 401 на чтение = протух токен. */
-  const isAuthError = computed(
-    () => getCommentFetchStatus(loadError.value) === 401,
-  );
-
-  const showLoginNote = computed(() => !hasSession.value || isAuthError.value);
+    return isGuestOnEmptyThread.value
+      ? COMMENTS_EXPAND_EMPTY_GUEST_LABEL
+      : COMMENTS_EXPAND_EMPTY_LABEL;
+  });
 
   const loadErrorMessage = computed(() =>
     getCommentErrorMessage(loadError.value),
@@ -231,7 +248,17 @@
     await loadComments();
   }
 
+  /**
+   * Клик по кнопке свёрнутого блока. Гостю на пустом обсуждении она ведёт
+   * сразу в окно входа: разворачивать нечего, а подпись обещает вход.
+   */
   function handleExpand(): void {
+    if (isGuestOnEmptyThread.value) {
+      openAuth();
+
+      return;
+    }
+
     void expandComments();
   }
 
@@ -245,19 +272,19 @@
   }
 
   /**
-   * Первичная загрузка — только при живой сессии (сервис отвечает 401 даже
-   * на чтение). Профиль тянем принудительно: свой `id` нужен для сравнения
-   * с `authorId` (кнопки правки и удаления). Без якоря в адресе блок
-   * стартует свёрнутым — грузится только превью.
+   * Первичная загрузка. Обсуждение читают все, включая гостей, — вход нужен
+   * только чтобы писать. Профиль при живой сессии тянем принудительно: свой
+   * `id` нужен для сравнения с `authorId` (кнопки правки и удаления). Без
+   * якоря в адресе блок стартует свёрнутым — грузится только превью.
    */
   async function initializeComments(): Promise<void> {
-    if (!hasSession.value || isInitialized.value) {
+    if (isInitialized.value) {
       return;
     }
 
     isInitialized.value = true;
 
-    if (!isLoggedIn.value) {
+    if (hasSession.value && !isLoggedIn.value) {
       void fetchProfile();
     }
 
@@ -272,38 +299,20 @@
 
   onMounted(initializeComments);
 
-  // Вход и выход происходят в том числе через шлем сайта (общая модалка),
-  // поэтому реагируем на общее состояние профиля: перечитываем кэш куки и
-  // грузим ленту после входа; после выхода сбрасываем флаг — вернётся CTA,
-  // а повторный вход перезагрузит ленту. Цикла нет: вотчер меняет только
-  // локальный флаг и кэш куки, на isLoggedIn они не влияют.
-  watch(isLoggedIn, (loggedIn) => {
+  // Вход и выход меняют куку: и через общую модалку в шлеме сайта (там
+  // меняется isLoggedIn), и через локальное окно (там о конце входа говорит
+  // закрытие). Ленту это не трогает — гостю и авторизованному сервис отдаёт
+  // одно и то же, меняется только право писать. За него отвечает hasSession,
+  // а он читает кэш куки: без сброса кэш помнит состояние на момент гидрации,
+  // и форма отправки не сменилась бы приглашением войти (и наоборот).
+  // Цикла нет: вотчер меняет только кэш куки, на источники он не влияет.
+  watch([isLoggedIn, isAuthOpen], () => {
     refreshCookie(USER_TOKEN_COOKIE);
-
-    if (!loggedIn) {
-      isInitialized.value = false;
-      isExpanded.value = false;
-
-      return;
-    }
-
-    void initializeComments();
   });
 
   function openAuth(): void {
     isAuthOpen.value = true;
   }
-
-  // После закрытия локального окна входа кука могла обновиться —
-  // перечитываем её кэш и загружаем обсуждение уже с токеном.
-  watch(isAuthOpen, (open) => {
-    if (open) {
-      return;
-    }
-
-    refreshCookie(USER_TOKEN_COOKIE);
-    void initializeComments();
-  });
 
   function handleLoadMore(): void {
     void loadMoreComments();
@@ -357,13 +366,8 @@
         </UBadge>
       </header>
 
-      <CommentsLoginNote
-        v-if="showLoginNote"
-        @login="openAuth"
-      />
-
       <!-- Свёрнутый режим: последний комментарий и кнопка разворачивания -->
-      <template v-else-if="!isExpanded">
+      <template v-if="!isExpanded">
         <CommentsSkeleton
           v-if="isPreviewLoading"
           :rows="1"
@@ -473,9 +477,19 @@
             {{ COMMENTS_LOAD_MORE_LABEL }}
           </UButton>
 
+          <!--
+            Гостю на месте формы — приглашение войти: читать обсуждение может
+            любой, отправлять комментарии — только авторизованный.
+          -->
           <CommentComposer
+            v-if="hasSession"
             :placeholder="COMMENT_COMPOSER_ROOT_PLACEHOLDER"
             :submit-action="submitRootAndReveal"
+          />
+
+          <CommentsLoginNote
+            v-else
+            @login="openAuth"
           />
         </template>
       </template>

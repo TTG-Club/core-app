@@ -2,6 +2,8 @@ import type { Ref } from 'vue';
 
 import type { CommentEntry, CommentNode, PublicComment } from '../model';
 
+import { USER_TOKEN_COOKIE } from '#shared/consts';
+
 import {
   COMMENT_ALREADY_DELETED_TOAST,
   COMMENT_DELETE_ERROR_TOAST,
@@ -33,6 +35,7 @@ import {
   getCommentErrorMessage,
   getCommentFetchStatus,
   getCommentRateLimit,
+  hasLiveReplies,
   hasServerReplyTotal,
   isCommentFromThread,
   isCommentTombstone,
@@ -119,6 +122,34 @@ function restoreRepliesExpanded(
     }
 
     restoreRepliesExpanded(child, state);
+  }
+}
+
+/**
+ * Выполняет чтение, повторяя его один раз при 401. Публичные выдачи сервиса
+ * открыты гостям, но протухший токен из куки делает их 401: Nitro шлёт его
+ * заголовком, а сервис отбивает запрос ещё до проверки прав. Тот же запрос
+ * чистит куки в middleware (обновить токен не удалось), поэтому повтор уходит
+ * уже анонимно и обсуждение читается.
+ *
+ * Общий `retry` из es-toolkit здесь не подходит: повторять нужно ровно один
+ * отказ (401) и только после сброса кэша куки, а не любую ошибку сервиса.
+ * @param read Читающий запрос.
+ * @returns Результат запроса — с первой либо со второй попытки.
+ */
+async function readWithoutStaleToken<T>(read: () => Promise<T>): Promise<T> {
+  try {
+    return await read();
+  } catch (error) {
+    if (getCommentFetchStatus(error) !== 401) {
+      throw error;
+    }
+
+    // Кэш куки помнит уже удалённый токен — без сброса сессия так и считалась
+    // бы живой, и приглашение войти не встало бы на место формы отправки.
+    refreshCookie(USER_TOKEN_COOKIE);
+
+    return await read();
   }
 }
 
@@ -313,10 +344,12 @@ export function useCommentsSection(
     loadError.value = null;
 
     try {
-      const [preview, commentsCount] = await Promise.all([
-        fetchPreviewComment(),
-        fetchCommentsCount(options.section, options.url),
-      ]);
+      const [preview, commentsCount] = await readWithoutStaleToken(() =>
+        Promise.all([
+          fetchPreviewComment(),
+          fetchCommentsCount(options.section, options.url),
+        ]),
+      );
 
       latestComment.value = preview;
       totalCount.value = commentsCount;
@@ -335,10 +368,12 @@ export function useCommentsSection(
     loadError.value = null;
 
     try {
-      const [firstPage, commentsCount] = await Promise.all([
-        fetchRootComments(options.section, options.url, 0),
-        fetchCommentsCount(options.section, options.url),
-      ]);
+      const [firstPage, commentsCount] = await readWithoutStaleToken(() =>
+        Promise.all([
+          fetchRootComments(options.section, options.url, 0),
+          fetchCommentsCount(options.section, options.url),
+        ]),
+      );
 
       rootNodes.value = firstPage.items.map((comment) =>
         createCommentNode(comment),
@@ -666,7 +701,7 @@ export function useCommentsSection(
 
     // Ветка стала листом — та же конвенция, что в createCommentNode:
     // у листа нечего догружать и нечего сворачивать.
-    if (refreshed.replyCount === 0) {
+    if (!hasLiveReplies(refreshed)) {
       rootNode.replies = [];
       rootNode.repliesLoaded = true;
       rootNode.repliesExpanded = true;
@@ -705,11 +740,12 @@ export function useCommentsSection(
         if (getCommentFetchStatus(error) === 404) {
           // Корень ушёл из выдачи вместе со всей веткой.
           removeCommentNode(rootNodes.value, rootNode.comment.id);
-        } else if (node.comment.replyCount === 0) {
-          // Ветка не перечиталась. Убрать можно только бездетный узел: у
-          // комментария с ответами сервис оставит надгробие, и локальное
-          // удаление спрятало бы вместе с ним живые ответы. Такой узел
-          // подождёт следующей загрузки ленты.
+        } else if (!hasLiveReplies(node.comment)) {
+          // Ветка не перечиталась. Убрать можно только узел без живых
+          // потомков: у комментария с ответами сервис оставит надгробие, и
+          // локальное удаление спрятало бы вместе с ним живые ответы —
+          // в том числе те, что лежат глубже вложенного надгробия. Такой
+          // узел подождёт следующей загрузки ленты.
           removeCommentNode(rootNodes.value, node.comment.id);
         }
       }

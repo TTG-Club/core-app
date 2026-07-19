@@ -22,6 +22,11 @@ export function useUserRoles() {
     () => isAdmin.value || isModerator.value,
   );
 
+  /** Доступ к панели модератора: открыт хотя бы один её раздел. */
+  const canAccessModerationPanel = computed(
+    () => canManageBugReports.value || canModerateComments.value,
+  );
+
   return {
     roles,
 
@@ -31,5 +36,6 @@ export function useUserRoles() {
     canEditEntities,
     canManageBugReports,
     canModerateComments,
+    canAccessModerationPanel,
   };
 }
