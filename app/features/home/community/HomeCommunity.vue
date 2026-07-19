@@ -6,6 +6,7 @@
 
   import type { CommunityRatingPeriod } from './model';
 
+  import { ADMIN_USERS_ROUTE } from '~admin/users/model';
   import { BUG_REPORT_STATS_API_URL } from '~bug-report/model';
   import {
     MATERIAL_COUNTER_API_URL,
@@ -148,6 +149,23 @@
       canManageBugReports.value,
   }));
 
+  /** Классы кликабельного стата авантюристов (для админа) */
+  const visitorsTileClass = computed(() => ({
+    'cursor-pointer transition-colors hover:bg-default/80': isAdmin.value,
+  }));
+
+  /**
+   * Переход к управлению пользователями (для админа) — шорткат из статистики
+   * туда, где авантюристов видно поимённо.
+   */
+  function handleVisitorsClick(): void {
+    if (!isAdmin.value) {
+      return;
+    }
+
+    router.push(ADMIN_USERS_ROUTE);
+  }
+
   /**
    * Переход к баг-репортам с фильтром по новым (для админа/модератора).
    * Удобный шорткат для быстрой обработки свежих репортов.
@@ -216,6 +234,8 @@
     <div class="grid grid-cols-3 gap-2">
       <div
         class="flex flex-col rounded-lg border border-default bg-default/50 px-3 py-2.5"
+        :class="visitorsTileClass"
+        @click.left.exact.prevent="handleVisitorsClick"
       >
         <span
           class="text-[10px] font-medium tracking-wider text-muted uppercase"
