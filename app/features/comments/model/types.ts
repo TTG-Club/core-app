@@ -145,6 +145,14 @@ export interface CommentTreeActions {
   submitReport: (node: CommentNode) => Promise<void>;
   isOwnComment: (node: CommentNode) => boolean;
   isCommentReported: (commentId: string) => boolean;
+  /**
+   * Есть ли у пользователя право писать. Читать обсуждение может любой
+   * гость, а ответ, жалоба и правка требуют входа — без него сервис
+   * отвечает 401, поэтому такие действия скрываются, а не гасятся ошибкой.
+   * Функция, а не флаг: объект действий собирается один раз, значение
+   * должно перечитываться после входа и выхода.
+   */
+  canComment: () => boolean;
   /** Скроллит к отрисованному комментарию и коротко подсвечивает его. */
   highlightComment: (commentId: string) => void;
   /**

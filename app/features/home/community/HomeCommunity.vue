@@ -18,6 +18,7 @@
     MATERIAL_COUNTER_TITLE,
     ONLINE_COUNTER_DATA_KEY,
   } from '~home/counters/model';
+  import { MODERATION_BUGS_ROUTE } from '~moderation/model';
   import { AnimatedNumber } from '~ui/animated-number';
 
   import {
@@ -159,7 +160,7 @@
     const status: BugReportStatus = 'NEW';
 
     router.push({
-      path: '/bug-reports',
+      path: MODERATION_BUGS_ROUTE,
       query: { status },
     });
   }

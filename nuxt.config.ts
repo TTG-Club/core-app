@@ -125,6 +125,7 @@ export default defineNuxtConfig({
     disallow: [
       '/user',
       '/admin',
+      '/moderation',
       '/auth',
       '/search',
       '/profile',

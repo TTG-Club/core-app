@@ -82,6 +82,7 @@
       : ADMIN_COMMENTS_DISLIKED_EMPTY_MESSAGE,
   );
 
+  /** Повторяет загрузку ленты после ошибки. */
   function handleRetry(): void {
     void refreshModeration();
   }
