@@ -1,8 +1,11 @@
 <script setup lang="ts">
   import {
+    DEFAULT_ARMOR_CLASS,
+    MAX_ARMOR_CLASS,
     MAX_INITIATIVE_BONUS,
     MAX_PARTICIPANT_NAME_LENGTH,
     MAX_PLAYERS,
+    MIN_ARMOR_CLASS,
     MIN_INITIATIVE_BONUS,
   } from '~initiative/model';
 
@@ -17,11 +20,14 @@
   }>();
 
   const emit = defineEmits<{
-    add: [name: string, bonus: number];
+    add: [name: string, bonus: number, armorClass: number];
   }>();
 
   const name = ref('');
   const bonus = ref(0);
+  // У игрока нет статблока — КД задаёт мастер; дефолт совпадает с контролом КД
+  // в строке участника.
+  const armorClass = ref(DEFAULT_ARMOR_CLASS);
 
   const canSubmit = computed(() => Boolean(name.value.trim()) && !disabled);
 
@@ -35,9 +41,10 @@
       return;
     }
 
-    emit('add', name.value.trim(), bonus.value);
+    emit('add', name.value.trim(), bonus.value, armorClass.value);
     name.value = '';
     bonus.value = 0;
+    armorClass.value = DEFAULT_ARMOR_CLASS;
   }
 </script>
 
@@ -61,16 +68,30 @@
       </span>
     </div>
 
-    <div class="flex items-end gap-2">
+    <div class="flex flex-wrap items-end gap-2">
       <UFormField
         label="Имя игрока"
-        class="min-w-0 flex-1"
+        class="min-w-0 basis-full"
       >
         <UInput
           v-model="name"
           placeholder="Арагорн"
           :maxlength="MAX_PARTICIPANT_NAME_LENGTH"
           :disabled
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField
+        label="КД"
+        class="shrink-0"
+      >
+        <UInputNumber
+          v-model="armorClass"
+          :min="MIN_ARMOR_CLASS"
+          :max="MAX_ARMOR_CLASS"
+          :disabled
+          class="w-24"
         />
       </UFormField>
 
@@ -83,14 +104,14 @@
           :min="MIN_INITIATIVE_BONUS"
           :max="MAX_INITIATIVE_BONUS"
           :disabled
-          class="w-28"
+          class="w-24"
         />
       </UFormField>
 
       <UButton
         type="submit"
         icon="tabler:plus"
-        class="shrink-0"
+        class="ml-auto shrink-0"
         :loading
         :disabled="!canSubmit || loading"
         aria-label="Добавить игрока"

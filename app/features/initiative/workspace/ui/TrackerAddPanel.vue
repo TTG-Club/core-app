@@ -22,12 +22,12 @@
 
   const emit = defineEmits<{
     'update:open': [value: boolean];
-    'add-player': [name: string, bonus: number];
+    'add-player': [name: string, bonus: number, armorClass: number];
     'add-creatures': [url: string, count: number, name?: string];
   }>();
 
-  function onAddPlayer(name: string, bonus: number): void {
-    emit('add-player', name, bonus);
+  function onAddPlayer(name: string, bonus: number, armorClass: number): void {
+    emit('add-player', name, bonus, armorClass);
   }
 
   function onAddCreatures(url: string, count: number, name?: string): void {
