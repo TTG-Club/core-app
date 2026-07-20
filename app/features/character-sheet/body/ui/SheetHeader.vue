@@ -5,13 +5,28 @@
 
   const props = defineProps<{
     character: Character;
+    locked: boolean;
   }>();
 
   const emit = defineEmits<{
     'edit-name': [];
     'edit-progress': [];
     'edit-vision': [];
+    'toggle-inspiration': [];
+    'toggle-lock': [];
   }>();
+
+  const lockIcon = computed(() =>
+    props.locked ? 'tabler:lock' : 'tabler:lock-open',
+  );
+
+  const lockColor = computed(() => (props.locked ? 'warning' : 'neutral'));
+
+  const lockTooltip = computed(() =>
+    props.locked
+      ? 'Редактирование заблокировано'
+      : 'Заблокировать редактирование',
+  );
 
   const subtitle = computed(() => {
     const species = props.character.species ?? SHEET_EMPTY_LABELS.species;
@@ -26,6 +41,16 @@
 
   const inspirationVariant = computed(() =>
     props.character.inspiration ? 'soft' : 'outline',
+  );
+
+  const inspirationClass = computed(() =>
+    props.character.inspiration
+      ? 'rounded-full'
+      : 'rounded-full opacity-50 grayscale-50',
+  );
+
+  const inspirationTooltip = computed(() =>
+    props.character.inspiration ? 'Вдохновение есть' : 'Вдохновения нет',
   );
 
   const visionRows = computed(() => getVisionRows(props.character.vision));
@@ -52,16 +77,22 @@
       </div>
 
       <UTooltip>
-        <UButton
-          icon="tabler:eye"
-          color="warning"
-          variant="soft"
-          size="xs"
-          square
-          class="absolute -bottom-3 left-1/2 -translate-x-1/2 rounded-full"
-          aria-label="Настроить зрение"
-          @click.left.exact.prevent="emit('edit-vision')"
-        />
+        <!-- Непрозрачная подложка: soft-вариант кнопки полупрозрачный,
+          без неё сквозь глаз просвечивает край аватара -->
+        <span
+          class="absolute -bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-default"
+        >
+          <UButton
+            icon="tabler:eye"
+            color="warning"
+            variant="soft"
+            size="xs"
+            square
+            class="rounded-full"
+            aria-label="Настроить зрение"
+            @click.left.exact.prevent="emit('edit-vision')"
+          />
+        </span>
 
         <template #content>
           <div class="flex flex-col gap-1 p-1">
@@ -125,6 +156,17 @@
 
     <div class="flex shrink-0 flex-col items-end gap-4 self-stretch">
       <div class="flex gap-1">
+        <UTooltip :text="lockTooltip">
+          <UButton
+            :icon="lockIcon"
+            :color="lockColor"
+            variant="ghost"
+            square
+            :aria-label="lockTooltip"
+            @click.left.exact.prevent="emit('toggle-lock')"
+          />
+        </UTooltip>
+
         <UButton
           icon="tabler:settings"
           color="neutral"
@@ -141,16 +183,20 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <UButton
-          icon="tabler:sparkles"
-          label="Вдохновение"
-          color="warning"
-          :variant="inspirationVariant"
-          class="rounded-full"
-        />
+        <UTooltip :text="inspirationTooltip">
+          <UButton
+            icon="tabler:sparkles"
+            label="Вдохновение"
+            color="warning"
+            :variant="inspirationVariant"
+            :class="inspirationClass"
+            :aria-pressed="character.inspiration"
+            @click.left.exact.prevent="emit('toggle-inspiration')"
+          />
+        </UTooltip>
 
         <UButton
-          icon="tabler:flask"
+          icon="tabler:campfire"
           color="neutral"
           variant="ghost"
           square

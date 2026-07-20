@@ -25,10 +25,19 @@
   >
     <legend
       v-if="title"
-      class="px-2 text-[10px] font-bold tracking-wider text-muted uppercase"
+      class="relative px-2 text-[10px] font-bold tracking-wider text-muted uppercase"
       :class="legendClass"
     >
       {{ title }}
+
+      <!-- Абсолютное позиционирование: скрытые действия не расширяют легенду
+        и не оставляют дыру в обводке рамки -->
+      <span
+        v-if="$slots['title-actions']"
+        class="absolute top-1/2 left-full mt-px flex -translate-y-1/2 items-center"
+      >
+        <slot name="title-actions" />
+      </span>
     </legend>
 
     <slot />

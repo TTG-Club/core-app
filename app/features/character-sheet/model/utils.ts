@@ -9,6 +9,7 @@ import type {
   CharacterSpeed,
   CharacterVision,
   PrimarySpeed,
+  ProficiencyCatalogGroup,
   RollMode,
   SavingThrowRow,
   SkillRow,
@@ -253,6 +254,23 @@ export function getSpeedRows(speed: CharacterSpeed): SpeedRow[] {
 }
 
 /**
+ * Итоговый класс доспеха: базовое значение плюс модификатор выбранной
+ * характеристики.
+ *
+ * @param character персонаж.
+ * @returns итоговое значение класса доспеха.
+ */
+export function getArmorClassValue(character: Character): number {
+  const { base, ability } = character.armorClass;
+
+  if (!ability) {
+    return base;
+  }
+
+  return base + getModifier(character.abilities[ability]);
+}
+
+/**
  * Формула броска d20 для дайс-роллера с учётом режима, модификатора и
  * дополнительного бонуса. Использует ASCII-минус: формула передаётся в парсер.
  *
@@ -312,4 +330,25 @@ export function getHitDiceTotals(
     current: allDice.reduce((total, hitDie) => total + hitDie.current, 0),
     max: allDice.reduce((total, hitDie) => total + hitDie.max, 0),
   };
+}
+
+/**
+ * Схлопывание списка владений для отображения: если есть запись «вся группа»,
+ * отдельные виды этой группы из списка убираются.
+ *
+ * @param proficiencies список владений.
+ * @param groups группы каталога владений.
+ * @returns список без видов, уже покрытых записью «вся группа».
+ */
+export function collapseProficiencies(
+  proficiencies: string[],
+  groups: ProficiencyCatalogGroup[],
+): string[] {
+  const coveredNames = new Set(
+    groups
+      .filter((group) => proficiencies.includes(group.all))
+      .flatMap((group) => group.items),
+  );
+
+  return proficiencies.filter((name) => !coveredNames.has(name));
 }

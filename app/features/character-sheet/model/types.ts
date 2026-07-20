@@ -69,6 +69,34 @@ export interface CharacterExtraHitDie extends CharacterHitDie {
 /** Режим броска d20. */
 export type RollMode = 'normal' | 'advantage' | 'disadvantage';
 
+/** Тип восстановления ресурса класса. */
+export type ResourceRecovery = 'short-rest' | 'long-rest';
+
+/** Ресурс класса (счётчик). */
+export interface CharacterClassResource {
+  id: string;
+  name: string;
+
+  /** Короткая подпись для строки на листе (например, «НС»). */
+  shortLabel: string;
+
+  recovery: ResourceRecovery;
+  current: number;
+  max: number;
+}
+
+/** Класс доспеха персонажа. */
+export interface CharacterArmorClass {
+  /** Базовое значение КД без модификатора характеристики. */
+  base: number;
+
+  /** Характеристика, чей модификатор прибавляется; null — без модификатора. */
+  ability: AbilityKey | null;
+
+  /** Природная ли броня. */
+  natural: boolean;
+}
+
 /** Ключ типа зрения. */
 export type VisionKey = 'normal' | 'darkvision';
 
@@ -142,8 +170,49 @@ export interface CharacterProficiencies {
   /** Оружие. */
   weapons: string[];
 
+  /** Мастерство оружием (D&D 2024) — подмножество владения оружием. */
+  weaponMasteries: string[];
+
   /** Инструменты. */
   tools: string[];
+
+  /** Языки. */
+  languages: string[];
+}
+
+/** Ключ группы владений персонажа. */
+export type ProficiencyGroupKey = keyof CharacterProficiencies;
+
+/** Группа каталога владений: пункт «вся группа целиком» и отдельные виды. */
+export interface ProficiencyCatalogGroup {
+  key: string;
+  title: string;
+
+  /** Подпись пункта «вся группа целиком». */
+  all: string;
+
+  /** Виды снаряжения группы. */
+  items: string[];
+}
+
+/** Группа каталога брони в настройках владения. */
+export interface ArmorProficiencyGroup extends ProficiencyCatalogGroup {
+  key: 'light' | 'medium' | 'heavy' | 'shields';
+}
+
+/** Группа каталога оружия в настройках владения и мастерства. */
+export interface WeaponProficiencyGroup extends ProficiencyCatalogGroup {
+  key: 'simple' | 'martial';
+}
+
+/** Группа каталога инструментов в настройках владения. */
+export interface ToolProficiencyGroup extends ProficiencyCatalogGroup {
+  key: 'artisan' | 'gaming' | 'musical' | 'other';
+}
+
+/** Группа каталога языков в настройках владения. */
+export interface LanguageProficiencyGroup extends ProficiencyCatalogGroup {
+  key: 'standard' | 'rare' | 'exotic';
 }
 
 /** Отображаемый параметр предмета инвентаря (например, «Атака +6»). */
@@ -203,7 +272,7 @@ export interface Character {
   inspiration: boolean;
 
   /** Класс доспеха. */
-  armorClass: number;
+  armorClass: CharacterArmorClass;
 
   /** Скорости передвижения. */
   speed: CharacterSpeed;
@@ -225,8 +294,8 @@ export interface Character {
   /** Дополнительные кости хитов. */
   extraHitDice: CharacterExtraHitDie[];
 
-  /** Ресурсы класса (например, ячейки заклинаний). */
-  classResources: string[];
+  /** Ресурсы класса (счётчики с восстановлением на отдыхе). */
+  classResources: CharacterClassResource[];
 
   proficiencies: CharacterProficiencies;
   currency: CharacterCurrency;

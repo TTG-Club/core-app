@@ -1,11 +1,23 @@
 <script setup lang="ts">
-  import type { AbilityKey, SavingThrowRow, SkillRow } from '../model';
+  import type {
+    AbilityKey,
+    ProficiencyGroupKey,
+    SavingThrowRow,
+    SkillRow,
+  } from '../model';
 
   import { useCharacterSheet } from '../composables';
-  import { ABILITY_LABELS } from '../model';
+  import {
+    ABILITY_LABELS,
+    ARMOR_PROFICIENCY_GROUPS,
+    LANGUAGE_PROFICIENCY_GROUPS,
+    TOOL_PROFICIENCY_GROUPS,
+  } from '../model';
   import {
     SheetAbilitiesRow,
     SheetAbilityModal,
+    SheetArmorClassModal,
+    SheetClassResourcesModal,
     SheetClassResourcesPanel,
     SheetExperienceModal,
     SheetHeader,
@@ -14,6 +26,7 @@
     SheetInventoryTabs,
     SheetNameModal,
     SheetProficienciesPanel,
+    SheetProficiencyGroupsModal,
     SheetRollModal,
     SheetSavingThrowsPanel,
     SheetSkillsPanel,
@@ -21,19 +34,26 @@
     SheetSpeedTile,
     SheetStatTile,
     SheetVisionModal,
+    SheetWeaponProficienciesModal,
   } from './ui';
 
   const {
     character,
+    isLocked,
+    toggleLock,
+    ensureEditable,
     abilityRows,
     savingThrowRows,
     skillRows,
     formattedProficiencyBonus,
     formattedInitiative,
+    armorClassValue,
     totalWeight,
     carryingCapacity,
     toggleSavingThrowProficiency,
     cycleSkillProficiency,
+    adjustClassResource,
+    toggleInspiration,
   } = useCharacterSheet();
 
   const overlay = useOverlay();
@@ -64,7 +84,27 @@
 
   const experienceModal = overlay.create(SheetExperienceModal);
 
+  const armorClassModal = overlay.create(SheetArmorClassModal);
+
+  const classResourcesModal = overlay.create(SheetClassResourcesModal);
+
+  const proficiencyGroupsModal = overlay.create(SheetProficiencyGroupsModal, {
+    props: {
+      title: '',
+      target: 'armor',
+      groups: [],
+    },
+  });
+
+  const weaponProficienciesModal = overlay.create(
+    SheetWeaponProficienciesModal,
+  );
+
   function handleAbilityEdit(abilityKey: AbilityKey) {
+    if (!ensureEditable()) {
+      return;
+    }
+
     abilityModal.open({ abilityKey });
   }
 
@@ -76,19 +116,85 @@
   }
 
   function handleSpeedEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
     speedModal.open();
   }
 
   function handleHealthEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
     healthModal.open();
   }
 
   function handleNameEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
     nameModal.open();
   }
 
   function handleProgressEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
     experienceModal.open();
+  }
+
+  function handleArmorClassEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    armorClassModal.open();
+  }
+
+  function handleClassResourcesEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    classResourcesModal.open();
+  }
+
+  function handleProficienciesEdit(group: ProficiencyGroupKey) {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    if (group === 'armor') {
+      proficiencyGroupsModal.open({
+        title: 'Владение бронёй',
+        target: 'armor',
+        groups: ARMOR_PROFICIENCY_GROUPS,
+      });
+    }
+
+    if (group === 'weapons') {
+      weaponProficienciesModal.open();
+    }
+
+    if (group === 'tools') {
+      proficiencyGroupsModal.open({
+        title: 'Владение инструментами',
+        target: 'tools',
+        groups: TOOL_PROFICIENCY_GROUPS,
+      });
+    }
+
+    if (group === 'languages') {
+      proficiencyGroupsModal.open({
+        title: 'Владение языками',
+        target: 'languages',
+        groups: LANGUAGE_PROFICIENCY_GROUPS,
+      });
+    }
   }
 
   function handleInitiativeRoll() {
@@ -115,6 +221,10 @@
   }
 
   function handleVisionEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
     visionModal.open();
   }
 </script>
@@ -123,9 +233,12 @@
   <div class="mx-auto flex w-full max-w-[1400px] flex-col gap-4">
     <SheetHeader
       :character="character"
+      :locked="isLocked"
       @edit-name="handleNameEdit"
       @edit-progress="handleProgressEdit"
       @edit-vision="handleVisionEdit"
+      @toggle-inspiration="toggleInspiration"
+      @toggle-lock="toggleLock"
     />
 
     <div class="relative flex items-center justify-center py-1">
@@ -146,7 +259,10 @@
 
           <SheetStatTile
             label="Класс доспеха"
-            :value="character.armorClass"
+            :value="armorClassValue"
+            interactive
+            press-label="Настроить класс доспеха"
+            @press="handleArmorClassEdit"
           />
         </div>
 
@@ -163,7 +279,10 @@
           @toggle="toggleSavingThrowProficiency"
         />
 
-        <SheetProficienciesPanel :proficiencies="character.proficiencies" />
+        <SheetProficienciesPanel
+          :proficiencies="character.proficiencies"
+          @edit="handleProficienciesEdit"
+        />
       </div>
 
       <div class="flex flex-col gap-4 lg:col-span-3">
@@ -181,7 +300,11 @@
           />
         </div>
 
-        <SheetClassResourcesPanel :resources="character.classResources" />
+        <SheetClassResourcesPanel
+          :resources="character.classResources"
+          @adjust="adjustClassResource"
+          @edit="handleClassResourcesEdit"
+        />
 
         <SheetSkillsPanel
           :rows="skillRows"

@@ -1,18 +1,28 @@
 <script setup lang="ts">
   import SheetPanel from './SheetPanel.vue';
 
-  const { interactive = false, unit = undefined } = defineProps<{
+  const {
+    label,
+    interactive = false,
+    unit = undefined,
+    pressLabel = undefined,
+  } = defineProps<{
     label: string;
     value: string | number;
     unit?: string;
 
     /** Плитка кликабельна: клик отправляет событие `press`. */
     interactive?: boolean;
+
+    /** Подпись действия для скринридера; по умолчанию — бросок. */
+    pressLabel?: string;
   }>();
 
   const emit = defineEmits<{
     press: [];
   }>();
+
+  const pressAriaLabel = computed(() => pressLabel ?? `Бросок: ${label}`);
 </script>
 
 <template>
@@ -25,7 +35,7 @@
       v-if="interactive"
       type="button"
       class="flex w-full cursor-pointer items-center justify-center pt-1 after:absolute after:inset-0 after:cursor-pointer"
-      :aria-label="`Бросок: ${label}`"
+      :aria-label="pressAriaLabel"
       @click.left.exact.prevent="emit('press')"
     >
       <span class="text-2xl leading-none font-bold text-highlighted">

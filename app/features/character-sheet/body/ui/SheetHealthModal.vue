@@ -24,14 +24,12 @@
     character.value.extraHitDice.map((hitDie) => ({ ...hitDie })),
   );
 
-  function adjustClassDie(dieIndex: number, delta: number) {
-    const hitDie = draftHitDice.value[dieIndex];
+  function handleAddClassDie() {
+    draftHitDice.value.push({ die: 6, current: 1, max: 1 });
+  }
 
-    if (!hitDie) {
-      return;
-    }
-
-    hitDie.current = Math.min(hitDie.max, Math.max(0, hitDie.current + delta));
+  function handleRemoveClassDie(dieIndex: number) {
+    draftHitDice.value.splice(dieIndex, 1);
   }
 
   function handleAddExtraDie() {
@@ -107,58 +105,80 @@
         <USeparator />
 
         <div class="flex flex-col gap-2">
-          <span
-            class="text-[10px] font-bold tracking-wider text-muted uppercase"
-          >
-            Кости хитов (из классов)
-          </span>
+          <div class="flex items-center justify-between">
+            <span
+              class="text-[10px] font-bold tracking-wider text-muted uppercase"
+            >
+              Кости хитов (из классов)
+            </span>
+
+            <UButton
+              icon="tabler:plus"
+              label="Добавить"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              @click.left.exact.prevent="handleAddClassDie"
+            />
+          </div>
 
           <div
-            v-for="(hitDie, dieIndex) in draftHitDice"
-            :key="hitDie.die"
-            class="flex items-center gap-3 rounded-lg border border-default/50 bg-elevated/20 px-3 py-2"
+            v-if="draftHitDice.length"
+            class="grid grid-cols-[1fr_1fr_1.2fr_auto] items-center gap-2"
           >
-            <UIcon
-              name="tabler:dice-5"
-              class="size-5 text-success"
-            />
-
-            <span class="text-sm font-bold text-highlighted">
-              к{{ hitDie.die }}
+            <span class="text-[10px] font-bold text-muted uppercase">
+              Сейчас
             </span>
 
-            <span class="ml-auto text-sm text-muted">
-              Доступно:
-
-              <span class="font-bold text-highlighted">
-                {{ hitDie.current }}
-              </span>
-
-              / {{ hitDie.max }}
+            <span class="text-[10px] font-bold text-muted uppercase">
+              Всего
             </span>
 
-            <div class="flex items-center gap-1">
-              <UButton
-                icon="tabler:minus"
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                square
-                aria-label="Потратить кость хитов"
-                @click.left.exact.prevent="adjustClassDie(dieIndex, -1)"
+            <span class="text-[10px] font-bold text-muted uppercase">
+              Кость
+            </span>
+
+            <span />
+
+            <template
+              v-for="(hitDie, dieIndex) in draftHitDice"
+              :key="dieIndex"
+            >
+              <UInputNumber
+                v-model="hitDie.current"
+                :min="HIT_DICE_COUNT_MIN"
+                :max="HIT_DICE_COUNT_MAX"
+              />
+
+              <UInputNumber
+                v-model="hitDie.max"
+                :min="HIT_DICE_COUNT_MIN"
+                :max="HIT_DICE_COUNT_MAX"
+              />
+
+              <USelect
+                v-model="hitDie.die"
+                :items="HIT_DIE_OPTIONS"
               />
 
               <UButton
-                icon="tabler:plus"
-                color="neutral"
+                icon="tabler:trash"
+                color="error"
                 variant="ghost"
                 size="xs"
                 square
-                aria-label="Восстановить кость хитов"
-                @click.left.exact.prevent="adjustClassDie(dieIndex, 1)"
+                aria-label="Удалить кость хитов"
+                @click.left.exact.prevent="handleRemoveClassDie(dieIndex)"
               />
-            </div>
+            </template>
           </div>
+
+          <span
+            v-else
+            class="text-xs text-dimmed italic"
+          >
+            Нет костей хитов
+          </span>
         </div>
 
         <USeparator />

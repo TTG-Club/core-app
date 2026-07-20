@@ -11,7 +11,11 @@ export const DEMO_CHARACTER: Character = {
   level: 1,
   experience: { current: 0, nextLevel: 300 },
   inspiration: true,
-  armorClass: 13,
+  armorClass: {
+    base: 10,
+    ability: 'dexterity',
+    natural: false,
+  },
   speed: {
     values: {
       walk: 30,
@@ -58,13 +62,15 @@ export const DEMO_CHARACTER: Character = {
     { name: 'Уход за животными', ability: 'wisdom', proficiency: 'none' },
   ],
   health: { current: 7, max: 7, temporary: 0 },
-  hitDice: [{ die: 6, current: 1, max: 1 }],
+  hitDice: [],
   extraHitDice: [],
   classResources: [],
   proficiencies: {
     armor: ['Стёганый доспех'],
-    weapons: ['Все простые'],
+    weapons: ['Всё простое оружие'],
+    weaponMasteries: ['Кинжал'],
     tools: [],
+    languages: ['Общий'],
   },
   currency: {
     copper: 0,
