@@ -1,5 +1,7 @@
 import type { MenuSection } from './types';
 
+import { Role } from '~/shared/types';
+
 export const MENU_SECTIONS: Array<MenuSection> = [
   {
     label: 'Персонаж',
@@ -91,6 +93,11 @@ export const MENU_SECTIONS: Array<MenuSection> = [
       {
         href: '/tools/initiative',
         label: 'Трекер инициативы',
+      },
+      {
+        href: '/tools/character-sheet',
+        label: 'Лист персонажа',
+        roles: [Role.ADMIN],
       },
     ],
   },

@@ -18,20 +18,14 @@
 
   const { user } = useUser();
 
+  // Пункты с ролями видны только пользователям с подходящей ролью
   const links = computed(() =>
-    items.map((link) => {
+    items.filter((link) => {
       if (!Array.isArray(link.roles)) {
-        return link;
+        return true;
       }
 
-      const available = link.roles.some((role) =>
-        user.value?.roles.includes(role),
-      );
-
-      return {
-        ...link,
-        disabled: link.disabled || !available,
-      };
+      return link.roles.some((role) => user.value?.roles.includes(role));
     }),
   );
 

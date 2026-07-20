@@ -81,6 +81,9 @@ export interface BugReportResponse {
   /** Дата последнего изменения статуса */
   statusUpdatedAt: string;
 
+  /** Логин пользователя, последним изменившего статус (null — статус ещё не меняли) */
+  statusUpdatedBy?: string | null;
+
   /** Комментарий при последнем изменении статуса */
   statusComment?: string;
 

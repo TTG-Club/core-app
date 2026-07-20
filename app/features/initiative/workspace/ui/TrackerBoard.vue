@@ -44,7 +44,7 @@
   }>();
 
   const emit = defineEmits<{
-    'add-player': [name: string, bonus: number];
+    'add-player': [name: string, bonus: number, armorClass: number];
     'add-creatures': [url: string, count: number, name?: string];
     'edit-participant': [id: string, patch: UpdateParticipantRequest];
     'remove-participant': [id: string];
@@ -76,8 +76,8 @@
     return participant.id === currentParticipantId;
   }
 
-  function onAddPlayer(name: string, bonus: number): void {
-    emit('add-player', name, bonus);
+  function onAddPlayer(name: string, bonus: number, armorClass: number): void {
+    emit('add-player', name, bonus, armorClass);
   }
 
   function onAddCreatures(url: string, count: number, name?: string): void {
