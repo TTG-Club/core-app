@@ -11,6 +11,7 @@
     BUG_REPORT_COMMENT_SAVE_BUTTON_LABEL,
     BUG_REPORT_COMMENT_SAVE_SUCCESS_DESC,
     BUG_REPORT_COMMENT_SAVE_SUCCESS_TITLE,
+    BUG_REPORT_DETAIL_DATE_FORMAT,
     BUG_REPORT_PLATFORM_LABELS,
     BUG_REPORT_STATUS_COMMENT_MAX_LENGTH,
     BUG_REPORT_STATUS_COMMENT_PLACEHOLDER,
@@ -19,6 +20,7 @@
     BUG_REPORT_STATUS_UPDATE_ERROR_DESC,
     BUG_REPORT_STATUS_UPDATE_ERROR_TITLE,
     BUG_REPORT_STATUS_UPDATE_SUCCESS_TITLE,
+    BUG_REPORT_STATUS_UPDATED_BY_LABEL,
     getAdminBugStatusApiUrl,
     getBugReportStatusColor,
   } from '../../model';
@@ -38,6 +40,7 @@
         id: string;
         status: BugReportStatus;
         statusUpdatedAt: string;
+        statusUpdatedBy?: string | null;
         statusComment?: string;
       },
     ];
@@ -57,6 +60,17 @@
   const statusCommentInput = ref(props.bugReport.statusComment ?? '');
 
   const isSavingComment = ref(false);
+
+  const { format } = useDayjs();
+
+  /**
+   * Форматированная дата последнего изменения статуса.
+   */
+  const statusUpdatedAtFormatted = computed<string>(() => {
+    return props.bugReport.statusUpdatedAt
+      ? format(props.bugReport.statusUpdatedAt, BUG_REPORT_DETAIL_DATE_FORMAT)
+      : '';
+  });
 
   /**
    * Проверяет, отличается ли текущий введённый комментарий от сохранённого на сервере.
@@ -132,21 +146,23 @@
     const comment = statusCommentInput.value.trim() || undefined;
 
     try {
-      const statusUpdatedAt = new Date().toISOString();
-
-      await requestFetch(getAdminBugStatusApiUrl(props.bugReport.id), {
-        method: 'PATCH',
-        body: { status: targetStatus, comment },
-      });
+      const updatedBug = await requestFetch<BugReportResponse>(
+        getAdminBugStatusApiUrl(props.bugReport.id),
+        {
+          method: 'PATCH',
+          body: { status: targetStatus, comment },
+        },
+      );
 
       emit('update-status', {
         id: props.bugReport.id,
-        status: targetStatus,
-        statusUpdatedAt,
-        statusComment: comment,
+        status: updatedBug.status,
+        statusUpdatedAt: updatedBug.statusUpdatedAt,
+        statusUpdatedBy: updatedBug.statusUpdatedBy,
+        statusComment: updatedBug.statusComment ?? undefined,
       });
 
-      statusCommentInput.value = comment ?? '';
+      statusCommentInput.value = updatedBug.statusComment ?? '';
 
       toast.add({
         title: BUG_REPORT_STATUS_UPDATE_SUCCESS_TITLE,
@@ -179,21 +195,23 @@
     const comment = statusCommentInput.value.trim() || undefined;
 
     try {
-      const statusUpdatedAt = new Date().toISOString();
-
-      await requestFetch(getAdminBugStatusApiUrl(props.bugReport.id), {
-        method: 'PATCH',
-        body: { status: props.bugReport.status, comment },
-      });
+      const updatedBug = await requestFetch<BugReportResponse>(
+        getAdminBugStatusApiUrl(props.bugReport.id),
+        {
+          method: 'PATCH',
+          body: { status: props.bugReport.status, comment },
+        },
+      );
 
       emit('update-status', {
         id: props.bugReport.id,
-        status: props.bugReport.status,
-        statusUpdatedAt,
-        statusComment: comment,
+        status: updatedBug.status,
+        statusUpdatedAt: updatedBug.statusUpdatedAt,
+        statusUpdatedBy: updatedBug.statusUpdatedBy,
+        statusComment: updatedBug.statusComment ?? undefined,
       });
 
-      statusCommentInput.value = comment ?? '';
+      statusCommentInput.value = updatedBug.statusComment ?? '';
 
       toast.add({
         title: BUG_REPORT_COMMENT_SAVE_SUCCESS_TITLE,
@@ -321,6 +339,28 @@
           @click.left.exact.prevent="handleSaveComment"
         />
       </div>
+
+      <!-- Кто и когда последним менял статус (скрыт, если статус ещё не меняли) -->
+      <p
+        v-if="bugReport.statusUpdatedBy"
+        class="flex items-center gap-1.5 text-xs text-muted"
+      >
+        <UIcon
+          name="tabler:user-edit"
+          class="size-4 shrink-0"
+        />
+
+        <span>
+          {{ BUG_REPORT_STATUS_UPDATED_BY_LABEL }}
+          <span class="font-medium text-secondary">
+            {{ bugReport.statusUpdatedBy }}
+          </span>
+
+          <template v-if="statusUpdatedAtFormatted">
+            · {{ statusUpdatedAtFormatted }}
+          </template>
+        </span>
+      </p>
 
       <UTextarea
         v-model="statusCommentInput"
