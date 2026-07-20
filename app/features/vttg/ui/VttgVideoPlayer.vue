@@ -6,7 +6,11 @@
     poster?: string;
   }>();
 
-  const isPlaying = ref(false);
+  // Флаг «плеер уже запускали»: после первого клика по Play нативные контролы
+  // остаются видимыми всегда, а не только во время воспроизведения. Иначе при
+  // перемотке (браузер ставит видео на паузу на время перетаскивания ползунка)
+  // контролы бы прятались, а поверх всплывала большая кнопка Play.
+  const hasStarted = ref(false);
   const videoRef = useTemplateRef<HTMLVideoElement>('video');
 
   function handlePlayClick() {
@@ -14,12 +18,8 @@
       return;
     }
 
-    isPlaying.value = true;
+    hasStarted.value = true;
     videoRef.value.play();
-  }
-
-  function handleVideoPause() {
-    isPlaying.value = false;
   }
 </script>
 
@@ -30,16 +30,15 @@
       :src="props.src"
       :poster="props.poster"
       preload="auto"
-      :controls="isPlaying"
+      :controls="hasStarted"
       controlsList="nodownload noplaybackrate"
       playsinline
       class="size-full object-cover"
-      @pause="handleVideoPause"
     />
 
-    <!-- Overlay с кнопкой Play -->
+    <!-- Overlay с кнопкой Play (только до первого запуска) -->
     <div
-      v-if="!isPlaying"
+      v-if="!hasStarted"
       class="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/40 transition-colors hover:bg-black/50"
       @click="handlePlayClick"
     >
