@@ -230,8 +230,8 @@
       {{ MATERIAL_COUNTER_DESCRIPTION }}
     </p>
 
-    <!-- Ключевые показатели проекта -->
-    <div class="grid grid-cols-3 gap-2">
+    <!-- Ключевые показатели проекта. < 420px — в столбец, чтобы подписи не жались -->
+    <div class="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
       <div
         class="flex flex-col rounded-lg border border-default bg-default/50 px-3 py-2.5"
         :class="visitorsTileClass"

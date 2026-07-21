@@ -44,7 +44,7 @@
         Статьи → Обновления. На xl колонки восстанавливаются (xl:flex) — раскладка десктопа
         прежняя, трёхколоночная.
       -->
-      <div class="flex w-full flex-col gap-3 lg:items-start xl:flex-row">
+      <div class="flex w-full flex-col gap-3 xl:flex-row xl:items-start">
         <!-- Новости -->
         <div class="contents xl:flex xl:w-1/3 xl:flex-col xl:gap-3 2xl:w-1/3">
           <HomeNews class="order-2 xl:order-0" />
