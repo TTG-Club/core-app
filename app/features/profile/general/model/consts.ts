@@ -5,6 +5,9 @@ export const ProfileCardUI = {
 
 export const DISPLAY_NAME_API_PATH = '/api/user/profile/display-name';
 
+export const DISPLAY_NAME_MIN_LENGTH = 2;
+export const DISPLAY_NAME_MAX_LENGTH = 24;
+
 export const PERSONAL_DATA_CARD_TITLE = 'Личные данные';
 
 export const DISPLAY_NAME_LABEL = 'Отображаемое имя';

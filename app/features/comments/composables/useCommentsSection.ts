@@ -249,8 +249,10 @@ export function useCommentsSection(
     () => user.value?.displayName || user.value?.username || '',
   );
 
-  // Подменяет имя автора у только что созданного комментария на отображаемое —
-  // до того, как syncCommentsName пересчитает снимок на бэкенде.
+  /**
+   * Подменяет имя автора у только что созданного комментария на отображаемое —
+   * до того, как syncCommentsName пересчитает снимок на бэкенде.
+   */
   function withSelfDisplayName(created: CommentEntry): CommentEntry {
     return selfDisplayName.value
       ? { ...created, authorName: selfDisplayName.value }

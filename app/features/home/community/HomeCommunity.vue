@@ -352,7 +352,7 @@
       >
         <div
           v-for="fixer in decoratedTopFixers"
-          :key="fixer.login"
+          :key="fixer.name"
           class="fixer-row group relative flex items-center gap-2 rounded-lg px-2.5 py-1.5"
           :style="fixer.rowStyle"
         >
@@ -382,12 +382,12 @@
             </span>
           </div>
 
-          <!-- Логин -->
+          <!-- Имя охотника (логин, если имя не задано) -->
           <span
             class="relative z-1 flex-1 truncate text-sm"
             :class="fixer.textClass"
           >
-            {{ fixer.login }}
+            {{ fixer.name }}
           </span>
 
           <!-- Количество в бейдже -->

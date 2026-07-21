@@ -6,6 +6,7 @@
   import {
     DISPLAY_NAME_DESCRIPTION,
     DISPLAY_NAME_LABEL,
+    DISPLAY_NAME_MAX_LENGTH,
     DISPLAY_NAME_PLACEHOLDER,
     DISPLAY_NAME_SUBMIT_LABEL,
     displayNameSchema,
@@ -52,6 +53,9 @@
     () => isLoading.value || isUnchanged.value || !props.profile,
   );
 
+  /**
+   * Обработчик отправки формы смены отображаемого имени.
+   */
   async function handleSubmit(event: FormSubmitEvent<DisplayNameForm>) {
     await changeDisplayName(event.data.displayName.trim());
   }
@@ -98,7 +102,7 @@
               v-model="displayNameForm.displayName"
               :placeholder="DISPLAY_NAME_PLACEHOLDER"
               :disabled="isLoading"
-              :maxlength="24"
+              :maxlength="DISPLAY_NAME_MAX_LENGTH"
               icon="tabler:forms"
               class="flex-1"
             />

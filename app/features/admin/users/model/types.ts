@@ -8,10 +8,18 @@ export interface AdminRoleResponse {
 /** Статус аккаунта пользователя в auth-service. */
 export type AdminUserStatus = 'ACTIVE' | 'BANNED' | 'DELETED';
 
+/** Совпадение поиска по отображаемому имени (подсказка в админке). */
+export interface AdminDisplayNameMatch {
+  login: string;
+  displayName: string;
+}
+
 export interface AdminUserResponse {
   id: string;
   username: string;
   email: string;
+  /** Отображаемое имя из core-api; null, если не задано или core-api недоступен. */
+  displayName?: string | null;
   enabled: boolean;
   emailVerified: boolean;
   accountLocked: boolean;

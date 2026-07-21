@@ -21,6 +21,10 @@ export function useDisplayName() {
   const isLoading = ref(false);
   const error = ref<string | null>(null);
 
+  /**
+   * Сохраняет новое отображаемое имя, обновляет профиль и синхронизирует имя
+   * в комментариях. Возвращает true при успехе.
+   */
   async function changeDisplayName(displayName: string): Promise<boolean> {
     isLoading.value = true;
     error.value = null;
