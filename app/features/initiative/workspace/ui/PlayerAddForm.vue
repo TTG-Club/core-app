@@ -71,7 +71,7 @@
     <div class="flex flex-wrap items-end gap-2">
       <UFormField
         label="Имя игрока"
-        class="min-w-0 flex-1"
+        class="min-w-0 basis-full"
       >
         <UInput
           v-model="name"
