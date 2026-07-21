@@ -1,11 +1,64 @@
 <script setup lang="ts">
+  import type { FormSubmitEvent } from '#ui/types';
   import type { UserProfile } from '~/shared/types';
 
-  import { ProfileCardUI } from '../model';
+  import { useDisplayName } from '../composables';
+  import {
+    DISPLAY_NAME_DESCRIPTION,
+    DISPLAY_NAME_LABEL,
+    DISPLAY_NAME_MAX_LENGTH,
+    DISPLAY_NAME_PLACEHOLDER,
+    DISPLAY_NAME_SUBMIT_LABEL,
+    displayNameSchema,
+    EMAIL_DESCRIPTION,
+    EMAIL_LABEL,
+    LOGIN_DESCRIPTION,
+    LOGIN_LABEL,
+    PERSONAL_DATA_CARD_TITLE,
+    ProfileCardUI,
+  } from '../model';
 
-  defineProps<{
+  interface DisplayNameForm {
+    displayName: string;
+  }
+
+  const props = defineProps<{
     profile?: UserProfile;
   }>();
+
+  const { changeDisplayName, isLoading } = useDisplayName();
+
+  const displayNameForm = reactive<DisplayNameForm>({ displayName: '' });
+
+  // Текущее сохранённое имя: отображаемое, иначе логин (фолбэк «пусто → логин»).
+  const savedDisplayName = computed(
+    () => props.profile?.displayName || props.profile?.username || '',
+  );
+
+  // Синхронизируем поле с профилем при загрузке и после успешной смены:
+  // refreshUser обновляет profile → поле сбрасывается на сохранённое значение.
+  watch(
+    savedDisplayName,
+    (value) => {
+      displayNameForm.displayName = value;
+    },
+    { immediate: true },
+  );
+
+  const isUnchanged = computed(
+    () => displayNameForm.displayName.trim() === savedDisplayName.value,
+  );
+
+  const isSubmitDisabled = computed(
+    () => isLoading.value || isUnchanged.value || !props.profile,
+  );
+
+  /**
+   * Обработчик отправки формы смены отображаемого имени.
+   */
+  async function handleSubmit(event: FormSubmitEvent<DisplayNameForm>) {
+    await changeDisplayName(event.data.displayName.trim());
+  }
 </script>
 
 <template>
@@ -18,71 +71,95 @@
           aria-hidden="true"
         />
 
-        <h3 class="font-semibold text-primary">Личные данные</h3>
+        <h3 class="font-semibold text-primary">
+          {{ PERSONAL_DATA_CARD_TITLE }}
+        </h3>
       </div>
     </template>
 
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <!-- Отображаемое имя (смена пока не реализована на бэкенде) -->
-      <UFormField
-        v-if="isDev"
-        label="Отображаемое имя"
-        description="Сменить имя пока нельзя, добавим позже"
-        class="sm:col-span-2"
+    <div class="space-y-4">
+      <!-- Отображаемое имя — единственное редактируемое поле -->
+      <UForm
+        :state="displayNameForm"
+        :schema="displayNameSchema"
+        @submit="handleSubmit"
       >
-        <USkeleton
-          v-if="!profile"
-          class="h-9 w-full"
-        />
+        <UFormField
+          :label="DISPLAY_NAME_LABEL"
+          :description="DISPLAY_NAME_DESCRIPTION"
+          name="displayName"
+        >
+          <USkeleton
+            v-if="!profile"
+            class="h-9 w-full"
+          />
 
-        <UInput
-          v-else
-          :model-value="profile.username"
-          disabled
-          icon="tabler:forms"
-          class="w-full"
-        />
-      </UFormField>
+          <div
+            v-else
+            class="flex items-start gap-2"
+          >
+            <UInput
+              v-model="displayNameForm.displayName"
+              :placeholder="DISPLAY_NAME_PLACEHOLDER"
+              :disabled="isLoading"
+              :maxlength="DISPLAY_NAME_MAX_LENGTH"
+              icon="tabler:forms"
+              class="flex-1"
+            />
 
-      <!-- Логин -->
-      <UFormField
-        label="Логин"
-        description="Уникальный идентификатор"
-      >
-        <USkeleton
-          v-if="!profile"
-          class="h-9 w-full"
-        />
+            <UButton
+              type="submit"
+              color="primary"
+              :loading="isLoading"
+              :disabled="isSubmitDisabled"
+            >
+              {{ DISPLAY_NAME_SUBMIT_LABEL }}
+            </UButton>
+          </div>
+        </UFormField>
+      </UForm>
 
-        <UInput
-          v-else
-          :model-value="profile.username"
-          disabled
-          icon="tabler:fingerprint"
-          variant="outline"
-          color="neutral"
-          class="w-full"
-        />
-      </UFormField>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <!-- Логин -->
+        <UFormField
+          :label="LOGIN_LABEL"
+          :description="LOGIN_DESCRIPTION"
+        >
+          <USkeleton
+            v-if="!profile"
+            class="h-9 w-full"
+          />
 
-      <!-- Email -->
-      <UFormField
-        label="Email"
-        description="Адрес электронной почты"
-      >
-        <USkeleton
-          v-if="!profile"
-          class="h-9 w-full"
-        />
+          <UInput
+            v-else
+            :model-value="profile.username"
+            disabled
+            icon="tabler:fingerprint"
+            variant="outline"
+            color="neutral"
+            class="w-full"
+          />
+        </UFormField>
 
-        <UInput
-          v-else
-          :model-value="profile.email"
-          disabled
-          icon="tabler:mail"
-          class="w-full"
-        />
-      </UFormField>
+        <!-- Email -->
+        <UFormField
+          :label="EMAIL_LABEL"
+          :description="EMAIL_DESCRIPTION"
+        >
+          <USkeleton
+            v-if="!profile"
+            class="h-9 w-full"
+          />
+
+          <UInput
+            v-else
+            :model-value="profile.email"
+            disabled
+            icon="tabler:mail"
+            class="w-full"
+          />
+        </UFormField>
+      </div>
     </div>
   </UCard>
 </template>

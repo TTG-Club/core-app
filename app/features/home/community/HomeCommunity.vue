@@ -230,8 +230,8 @@
       {{ MATERIAL_COUNTER_DESCRIPTION }}
     </p>
 
-    <!-- Ключевые показатели проекта -->
-    <div class="grid grid-cols-3 gap-2">
+    <!-- Ключевые показатели проекта. < 420px — в столбец, чтобы подписи не жались -->
+    <div class="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
       <div
         class="flex flex-col rounded-lg border border-default bg-default/50 px-3 py-2.5"
         :class="visitorsTileClass"
@@ -352,7 +352,7 @@
       >
         <div
           v-for="fixer in decoratedTopFixers"
-          :key="fixer.login"
+          :key="fixer.name"
           class="fixer-row group relative flex items-center gap-2 rounded-lg px-2.5 py-1.5"
           :style="fixer.rowStyle"
         >
@@ -382,12 +382,12 @@
             </span>
           </div>
 
-          <!-- Логин -->
+          <!-- Имя охотника (логин, если имя не задано) -->
           <span
             class="relative z-1 flex-1 truncate text-sm"
             :class="fixer.textClass"
           >
-            {{ fixer.login }}
+            {{ fixer.name }}
           </span>
 
           <!-- Количество в бейдже -->

@@ -4,11 +4,16 @@
   import { useMyRewards } from '~profile/activation/composables';
   import { AVATAR_FRAME_IMAGE_URL } from '~profile/activation/model';
 
-  defineProps<{
+  const props = defineProps<{
     profile?: UserProfile;
   }>();
 
   const { hasPerk } = useMyRewards();
+
+  // Инициалы аватара берём из отображаемого имени, иначе из логина.
+  const avatarAlt = computed(
+    () => props.profile?.displayName || props.profile?.username,
+  );
 
   // Рамка аватара — косметический перк AVATAR_FRAME, выданный кодом.
   const hasAvatarFrame = computed(() => hasPerk('AVATAR_FRAME'));
@@ -24,7 +29,7 @@
     />
 
     <UAvatar
-      :alt="profile?.username"
+      :alt="avatarAlt"
       size="3xl"
       class="relative z-10 h-32 w-32 text-4xl shadow-2xl ring-4 ring-default transition-transform duration-200 group-active:scale-95"
     />

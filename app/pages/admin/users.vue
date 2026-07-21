@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import type {
+    AdminDisplayNameMatch,
     AdminRoleResponse,
     AdminUserResponse,
     PageAdminUserResponse,
@@ -13,6 +14,8 @@
     ADMIN_USERS_EMPTY_TEXT,
     ADMIN_USERS_FOUND_LABEL,
     ADMIN_USERS_LOAD_ERROR_TEXT,
+    ADMIN_USERS_NAME_SEARCH_API_PATH,
+    ADMIN_USERS_NAME_SEARCH_MIN_LENGTH,
     ADMIN_USERS_PAGE_DESCRIPTION,
     ADMIN_USERS_PAGE_TITLE,
     ADMIN_USERS_ROLE_FILTER_ALL,
@@ -21,7 +24,11 @@
     ADMIN_USERS_SEARCH_PLACEHOLDER,
     ADMIN_USERS_TOTAL_LABEL,
   } from '~admin/users/model';
-  import { AdminUserDetailPane, AdminUserRow } from '~admin/users/ui';
+  import {
+    AdminUserDetailPane,
+    AdminUserNameMatches,
+    AdminUserRow,
+  } from '~admin/users/ui';
 
   useSeoMeta({
     title: ADMIN_USERS_PAGE_TITLE,
@@ -72,10 +79,34 @@
     { default: () => [] },
   );
 
+  // Поиск по отображаемому имени — отдельным запросом в core-api (имена живут там,
+  // а auth-service ищет только по username/email). Best-effort: недоступность → [].
+  const { data: nameMatchesData } = await useAsyncData<AdminDisplayNameMatch[]>(
+    'admin-users-name-matches',
+    () =>
+      searchQuery.value.length >= ADMIN_USERS_NAME_SEARCH_MIN_LENGTH
+        ? requestFetch(ADMIN_USERS_NAME_SEARCH_API_PATH, {
+            query: { query: searchQuery.value },
+          })
+        : Promise.resolve([]),
+    { watch: [searchQuery], default: () => [] },
+  );
+
   const isUsersLoading = computed(() => usersStatus.value === 'pending');
   const hasUsersError = computed(() => !!usersError.value);
   const resolvedUsers = computed(() => usersPage.value?.content ?? []);
   const totalUsers = computed(() => usersPage.value?.totalElements ?? 0);
+
+  // Подсказки по имени, которых нет в основной выдаче (там поиск по username/email).
+  const nameMatches = computed<AdminDisplayNameMatch[]>(() => {
+    const knownLogins = new Set(
+      resolvedUsers.value.map((user) => user.username.toLowerCase()),
+    );
+
+    return (nameMatchesData.value ?? []).filter(
+      (match) => !knownLogins.has(match.login.toLowerCase()),
+    );
+  });
 
   // Активен ли поиск/фильтр — от этого зависит подпись счётчика («Найдено» vs «Всего»).
   const isFiltered = computed(
@@ -105,6 +136,11 @@
 
   function selectUser(id: string): void {
     router.replace({ query: { ...route.query, id } });
+  }
+
+  // Клик по подсказке подставляет логин в поиск — основной список найдёт пользователя.
+  function applyNameMatch(login: string): void {
+    search.value = login;
   }
 
   function closePanel(): void {
@@ -211,70 +247,79 @@
 
       <!-- Список пользователей -->
       <template #default>
-        <!-- Загрузка -->
-        <div
-          v-if="isUsersLoading"
-          class="flex flex-col gap-2"
-        >
-          <USkeleton
-            v-for="index in 6"
-            :key="index"
-            class="h-16 w-full rounded-xl"
-          />
-        </div>
-
-        <!-- Ошибка загрузки -->
-        <div
-          v-else-if="hasUsersError"
-          class="flex flex-col items-center gap-3 py-12 text-center"
-        >
-          <p class="text-sm text-error">{{ ADMIN_USERS_LOAD_ERROR_TEXT }}</p>
-
-          <UButton
-            icon="tabler:refresh"
-            color="neutral"
-            variant="soft"
-            size="sm"
-            @click.left.exact.prevent="() => refreshUsers()"
-          >
-            Повторить
-          </UButton>
-        </div>
-
-        <!-- Строки -->
-        <div
-          v-else-if="resolvedUsers.length"
-          class="flex flex-col gap-2"
-        >
-          <AdminUserRow
-            v-for="user in resolvedUsers"
-            :key="user.id"
-            :user="user"
-            :is-opened="selectedId === user.id"
-            @select="selectUser"
+        <div class="flex flex-col gap-3">
+          <!-- Подсказки по отображаемому имени (поиск по имени в core-api) -->
+          <AdminUserNameMatches
+            v-if="nameMatches.length"
+            :matches="nameMatches"
+            @select="applyNameMatch"
           />
 
-          <!-- Пагинация -->
+          <!-- Загрузка -->
           <div
-            v-if="totalUsers > itemsPerPage"
-            class="flex justify-center pt-4"
+            v-if="isUsersLoading"
+            class="flex flex-col gap-2"
           >
-            <UPagination
-              v-model:page="currentPage"
-              :total="totalUsers"
-              :items-per-page="itemsPerPage"
-              show-edges
-              :sibling-count="1"
+            <USkeleton
+              v-for="index in 6"
+              :key="index"
+              class="h-16 w-full rounded-xl"
             />
           </div>
-        </div>
 
-        <!-- Пустое состояние -->
-        <div
-          v-else
-          class="py-12 text-center text-secondary"
-        >
-          {{ ADMIN_USERS_EMPTY_TEXT }}
+          <!-- Ошибка загрузки -->
+          <div
+            v-else-if="hasUsersError"
+            class="flex flex-col items-center gap-3 py-12 text-center"
+          >
+            <p class="text-sm text-error">{{ ADMIN_USERS_LOAD_ERROR_TEXT }}</p>
+
+            <UButton
+              icon="tabler:refresh"
+              color="neutral"
+              variant="soft"
+              size="sm"
+              @click.left.exact.prevent="() => refreshUsers()"
+            >
+              Повторить
+            </UButton>
+          </div>
+
+          <!-- Строки -->
+          <div
+            v-else-if="resolvedUsers.length"
+            class="flex flex-col gap-2"
+          >
+            <AdminUserRow
+              v-for="user in resolvedUsers"
+              :key="user.id"
+              :user="user"
+              :is-opened="selectedId === user.id"
+              @select="selectUser"
+            />
+
+            <!-- Пагинация -->
+            <div
+              v-if="totalUsers > itemsPerPage"
+              class="flex justify-center pt-4"
+            >
+              <UPagination
+                v-model:page="currentPage"
+                :total="totalUsers"
+                :items-per-page="itemsPerPage"
+                show-edges
+                :sibling-count="1"
+              />
+            </div>
+          </div>
+
+          <!-- Пустое состояние (скрыто, если есть подсказки по имени) -->
+          <div
+            v-else-if="!nameMatches.length"
+            class="py-12 text-center text-secondary"
+          >
+            {{ ADMIN_USERS_EMPTY_TEXT }}
+          </div>
         </div>
       </template>
 

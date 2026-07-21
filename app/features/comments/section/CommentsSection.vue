@@ -351,6 +351,13 @@
 
 <template>
   <section class="flex flex-col gap-4">
+    <!--
+      Разделитель отбивает обсуждение от контента материала как отдельный
+      блок. Вынесен из ClientOnly, чтобы линия стояла всегда — и во время
+      загрузки ленты, и после.
+    -->
+    <USeparator />
+
     <ClientOnly>
       <header class="flex items-center gap-2">
         <h2 class="text-lg font-semibold text-highlighted">
