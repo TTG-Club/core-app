@@ -138,8 +138,8 @@ export interface BugCountByStatusResponse {
 
 /** Пользователь и количество решённых багов */
 export interface BugReportUserFixedCount {
-  /** Логин пользователя */
-  login: string;
+  /** Отображаемое имя пользователя (логин, если имя не задано) */
+  name: string;
 
   /** Количество решённых багов */
   fixed: number;

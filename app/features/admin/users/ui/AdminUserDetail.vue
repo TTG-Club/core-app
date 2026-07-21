@@ -125,6 +125,8 @@
       : '—',
   );
 
+  const displayNameLabel = computed(() => props.user.displayName || '—');
+
   function getRoleIdsByNames(
     roles: AdminRoleResponse[],
     roleNames: string[],
@@ -206,7 +208,7 @@
           class="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border border-default bg-default/10 p-4"
         >
           <!-- Email -->
-          <div class="col-span-2 flex flex-col gap-1">
+          <div class="col-span-1 flex flex-col gap-1">
             <span
               class="text-xs font-medium tracking-wide text-muted uppercase"
             >
@@ -220,6 +222,17 @@
             >
               {{ user.email }}
             </span>
+          </div>
+
+          <!-- Отображаемое имя -->
+          <div class="col-span-1 flex flex-col gap-1">
+            <span
+              class="text-xs font-medium tracking-wide text-muted uppercase"
+            >
+              Отображаемое имя
+            </span>
+
+            <span class="text-sm text-highlighted">{{ displayNameLabel }}</span>
           </div>
 
           <!-- ID -->

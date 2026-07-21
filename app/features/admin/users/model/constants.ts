@@ -16,9 +16,24 @@ export const ADMIN_USERS_NAVIGATION_ICON = 'tabler:user-cog';
 export const ADMIN_USERS_PAGE_DESCRIPTION =
   'Поиск пользователей по имени или email и управление назначенными ролями.';
 
-export const ADMIN_USERS_SEARCH_PLACEHOLDER = 'Имя пользователя или email';
+export const ADMIN_USERS_SEARCH_PLACEHOLDER =
+  'Имя пользователя, email или отображаемое имя';
 
 export const ADMIN_USERS_SEARCH_DEBOUNCE = 300;
+
+/**
+ * Ручка core-api для поиска пользователей по отображаемому имени (подсказки).
+ * Поиск в auth-service идёт по username/email, а имена живут в core-api, поэтому
+ * совпадения по имени добираются отдельным запросом.
+ */
+export const ADMIN_USERS_NAME_SEARCH_API_PATH =
+  '/api/user/display-names/search';
+
+/** С какой длины запроса искать по имени (короче — лишний шум). */
+export const ADMIN_USERS_NAME_SEARCH_MIN_LENGTH = 2;
+
+/** Заголовок блока подсказок по отображаемому имени. */
+export const ADMIN_USERS_NAME_MATCHES_LABEL = 'Найдено по имени';
 
 /** Размер страницы списка пользователей. */
 export const ADMIN_USERS_DEFAULT_PAGE_SIZE = 20;
