@@ -49,9 +49,10 @@
 
     <div
       v-if="open"
-      class="grid items-start gap-4 md:grid-cols-3"
+      class="grid items-start gap-4 md:grid-cols-5"
     >
       <PlayerAddForm
+        class="md:col-span-2"
         :count="playerCount"
         :disabled="!canAddPlayer"
         :loading="isMutating"
@@ -59,7 +60,7 @@
       />
 
       <CreatureAddForm
-        class="md:col-span-2"
+        class="md:col-span-3"
         :count="creatureCount"
         :disabled="!canAddCreature"
         :loading="isMutating"
