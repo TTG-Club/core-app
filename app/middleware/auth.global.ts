@@ -6,21 +6,21 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return true;
   }
 
-  const { roles, pending, fetch } = useUser();
+  const { roles, fetch } = useUser();
 
   try {
-    if (!roles.value && !pending.value) {
-      await fetch();
-    }
+    // Перепроверяем сессию при каждом входе в защищённый раздел: доверять
+    // закешированным roles нельзя — серверная сессия могла молча умереть
+    // (протух/отозван refresh-токен), а клиентское состояние осталось
+    // «залогинен». Иначе мы пускали в админку по мёртвой сессии, раздел молча
+    // не грузился (данные отдавали 401), а разлогин был виден только после F5.
+    await fetch();
 
     if (!roles.value) {
       return preventRouting(StatusCodes.UNAUTHORIZED);
     }
 
-    const intersectionRoles = intersection(
-      roles.value || [],
-      to.meta.auth.roles,
-    );
+    const intersectionRoles = intersection(roles.value, to.meta.auth.roles);
 
     if (intersectionRoles.length > 0) {
       return true;
