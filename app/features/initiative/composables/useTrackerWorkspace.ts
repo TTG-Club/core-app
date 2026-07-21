@@ -178,12 +178,23 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
   }
 
   /**
-   * Добавляет игрока.
+   * Добавляет игрока и сохраняет заданный мастером КД локально: на бэке КД
+   * игроков нет, поэтому оно живёт в localStorage по id участника. Сам id берём
+   * из ответа диффом по прежним id — в ответе появляется ровно один новый игрок.
    * @param name Имя игрока.
    * @param initiativeBonus Бонус инициативы.
+   * @param armorClass Класс доспеха, заданный мастером.
    */
-  function addPlayer(name: string, initiativeBonus: number): Promise<boolean> {
-    return runMutation(
+  async function addPlayer(
+    name: string,
+    initiativeBonus: number,
+    armorClass: number,
+  ): Promise<boolean> {
+    const knownIds = new Set(
+      participants.value.map((participant) => participant.id),
+    );
+
+    const isAdded = await runMutation(
       () =>
         addParticipants(
           trackerId.value,
@@ -192,6 +203,21 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
         ),
       'Не удалось добавить игрока',
     );
+
+    if (!isAdded) {
+      return false;
+    }
+
+    const addedPlayer = participants.value.find(
+      (participant) =>
+        participant.type === 'PLAYER' && !knownIds.has(participant.id),
+    );
+
+    if (addedPlayer) {
+      setArmorClass(addedPlayer.id, armorClass);
+    }
+
+    return true;
   }
 
   /**

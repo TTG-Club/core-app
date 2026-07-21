@@ -298,7 +298,37 @@ export function clearUserAuthCookies(event: H3Event): void {
 }
 
 /**
+ * Схлопывает конкурентные обновления одного refresh token в один запрос к
+ * auth-service (single-flight, ключ — значение refresh token).
+ *
+ * Без этого каждый параллельный запрос при возврате на вкладку (heartbeat,
+ * поллеры подписок, SSR-навигация) шлёт свой /api/auth/refresh с одной и той же
+ * кукой. При ротации refresh token на стороне auth-service первый запрос
+ * гасит токен, а остальные получают 401 и через clearUserAuthCookies стирают
+ * только что выданную сессию — пользователя молча разлогинивает.
+ */
+const inFlightTokenRefreshes = new Map<string, Promise<AuthTokenResponse>>();
+
+/**
+ * Выполняет один запрос обновления пары token к внешнему auth-service.
+ */
+async function requestTokenRefresh(
+  refreshToken: string,
+): Promise<AuthTokenResponse> {
+  return parseAuthTokenResponse(
+    await fetchAuthService<unknown>('/api/auth/refresh', {
+      body: { refreshToken },
+      method: 'POST',
+    }),
+  );
+}
+
+/**
  * Обновляет пару token через auth-service и сохраняет результат в cookie приложения.
+ *
+ * Конкурентные вызовы с одним refresh token ждут общий запрос и получают
+ * одинаковый результат, поэтому каждый ответ выставляет одни и те же cookie
+ * (без гонки «удаляющего» Set-Cookie).
  */
 export async function refreshUserAuthCookies(
   event: H3Event,
@@ -309,16 +339,54 @@ export async function refreshUserAuthCookies(
     throw createError(getErrorResponse(StatusCodes.UNAUTHORIZED));
   }
 
-  const tokenResponse = parseAuthTokenResponse(
-    await fetchAuthService<unknown>('/api/auth/refresh', {
-      body: { refreshToken },
-      method: 'POST',
-    }),
-  );
+  let pendingRefresh = inFlightTokenRefreshes.get(refreshToken);
+
+  if (!pendingRefresh) {
+    pendingRefresh = requestTokenRefresh(refreshToken).finally(() => {
+      inFlightTokenRefreshes.delete(refreshToken);
+    });
+
+    inFlightTokenRefreshes.set(refreshToken, pendingRefresh);
+  }
+
+  const tokenResponse = await pendingRefresh;
 
   setUserAuthCookies(event, tokenResponse);
 
   return tokenResponse;
+}
+
+/**
+ * Возвращает HTTP-статус из нормализованной ошибки (H3Error/createError).
+ */
+function getErrorStatusCode(error: unknown): number | undefined {
+  if (
+    typeof error === 'object'
+    && error !== null
+    && 'statusCode' in error
+    && typeof error.statusCode === 'number'
+  ) {
+    return error.statusCode;
+  }
+
+  return undefined;
+}
+
+/**
+ * Проверяет, что ошибка обновления token — однозначный отказ auth-service
+ * (refresh token недействителен), а не временный сбой (сеть/5xx/429).
+ *
+ * Куки авторизации стоит чистить только на однозначном отказе: иначе
+ * кратковременная недоступность auth-service разлогинивает пользователя с
+ * ещё живым refresh token.
+ */
+export function isInvalidRefreshTokenError(error: unknown): boolean {
+  const statusCode = getErrorStatusCode(error);
+
+  return (
+    statusCode === StatusCodes.UNAUTHORIZED
+    || statusCode === StatusCodes.BAD_REQUEST
+  );
 }
 
 /**
