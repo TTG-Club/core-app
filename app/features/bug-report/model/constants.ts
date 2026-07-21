@@ -189,3 +189,6 @@ export const BUG_REPORT_COMMENT_SAVE_SUCCESS_DESC =
 
 /** Текст кнопки сохранения комментария */
 export const BUG_REPORT_COMMENT_SAVE_BUTTON_LABEL = 'Сохранить';
+
+/** Префикс-подпись строки «кто последним менял статус» */
+export const BUG_REPORT_STATUS_UPDATED_BY_LABEL = 'Статус изменил';

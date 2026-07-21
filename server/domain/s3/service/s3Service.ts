@@ -35,7 +35,10 @@ export function createS3Service() {
     },
   });
 
-  function get(key: string | undefined): Promise<GetObjectCommandOutput> {
+  function get(
+    key: string | undefined,
+    range?: string,
+  ): Promise<GetObjectCommandOutput> {
     if (!key) {
       throw new Error('Некорректный путь файла');
     }
@@ -43,6 +46,7 @@ export function createS3Service() {
     return s3.getObject({
       Bucket: bucket,
       Key: key,
+      Range: range,
       ResponseCacheControl:
         'public, must-revalidate, proxy-revalidate, max-age=31536000, s-maxage=31536000',
     });

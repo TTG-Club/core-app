@@ -249,6 +249,7 @@
     id: string;
     status: BugReportStatus;
     statusUpdatedAt: string;
+    statusUpdatedBy?: string | null;
     statusComment?: string;
   }): void {
     if (!bugsData.value) {
@@ -263,6 +264,7 @@
             ...item,
             status: payload.status,
             statusUpdatedAt: payload.statusUpdatedAt,
+            statusUpdatedBy: payload.statusUpdatedBy,
             statusComment: payload.statusComment,
           };
         }
