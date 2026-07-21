@@ -241,6 +241,21 @@ export function useCommentsSection(
 ): UseCommentsSectionReturn {
   const toast = useToast();
   const { user } = useUser();
+  const { syncCommentsName } = useCommentsNameSync();
+
+  // Отображаемое имя автора (заменяет логин). Нужно, чтобы свежесозданный
+  // комментарий сразу показывал имя, а не логин из токена (сервис стамперит логин).
+  const selfDisplayName = computed(
+    () => user.value?.displayName || user.value?.username || '',
+  );
+
+  // Подменяет имя автора у только что созданного комментария на отображаемое —
+  // до того, как syncCommentsName пересчитает снимок на бэкенде.
+  function withSelfDisplayName(created: CommentEntry): CommentEntry {
+    return selfDisplayName.value
+      ? { ...created, authorName: selfDisplayName.value }
+      : created;
+  }
 
   const rootNodes = ref<Array<CommentNode>>([]);
 
@@ -578,9 +593,16 @@ export function useCommentsSection(
         content,
       });
 
-      rootNodes.value = [createCommentNode(created), ...rootNodes.value];
+      rootNodes.value = [
+        createCommentNode(withSelfDisplayName(created)),
+        ...rootNodes.value,
+      ];
+
       totalCount.value += 1;
       startCooldown(COMMENT_SUBMIT_COOLDOWN_SECONDS);
+
+      // Заменяем логин на отображаемое имя во всех комментариях автора (best-effort).
+      syncCommentsName();
 
       return true;
     } catch (error) {
@@ -620,7 +642,10 @@ export function useCommentsSection(
       totalCount.value += 1;
 
       if (node.repliesLoaded) {
-        node.replies = [...node.replies, createCommentNode(created)];
+        node.replies = [
+          ...node.replies,
+          createCommentNode(withSelfDisplayName(created)),
+        ];
 
         node.repliesExpanded = true;
       } else {
@@ -628,6 +653,9 @@ export function useCommentsSection(
       }
 
       startCooldown(COMMENT_SUBMIT_COOLDOWN_SECONDS);
+
+      // Заменяем логин на отображаемое имя во всех комментариях автора (best-effort).
+      syncCommentsName();
 
       return true;
     } catch (error) {

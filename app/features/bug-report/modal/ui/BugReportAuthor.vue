@@ -5,7 +5,7 @@
 
   const authorName = computed(() =>
     isLoggedIn.value && user.value
-      ? user.value.username
+      ? user.value.displayName || user.value.username
       : BUG_REPORT_ANONYMOUS_USER,
   );
 

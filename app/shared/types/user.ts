@@ -11,5 +11,10 @@ export interface UserProfile {
   id: string | null;
   email: string;
   username: string;
+  /**
+   * Отображаемое имя — заменяет логин в UI (профиль, комментарии, рейтинги).
+   * Хранится в core-api; null, если core-api недоступен, — тогда показываем логин.
+   */
+  displayName: string | null;
   roles: string[];
 }
