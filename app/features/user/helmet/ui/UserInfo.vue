@@ -3,13 +3,18 @@
 
   import { useProfileBadges } from '~profile/activation/composables';
 
-  defineProps<{
+  const props = defineProps<{
     user: UserProfile;
   }>();
 
   const emit = defineEmits<{
     'open-profile': [];
   }>();
+
+  // Отображаемое имя вместо логина; фолбэк — логин.
+  const displayName = computed(
+    () => props.user.displayName || props.user.username,
+  );
 
   // Данные бейджей прогреваются заранее в хелмете (см. UserHelmet), поэтому к
   // моменту открытия панели корона и рамка уже готовы — без «доезда».
@@ -28,7 +33,7 @@
       <div
         class="mb-1 overflow-hidden text-2xl font-semibold text-ellipsis whitespace-nowrap"
       >
-        {{ user.username }}
+        {{ displayName }}
       </div>
 
       <div class="flex flex-wrap items-center gap-1.5">
@@ -60,7 +65,7 @@
       @click.left.exact.prevent="openProfile"
     >
       <UAvatar
-        :alt="user.username"
+        :alt="displayName"
         size="3xl"
         :ui="{ fallback: 'uppercase' }"
       />

@@ -6,12 +6,18 @@
     useMySubscriptions,
   } from '~profile/activation/composables';
 
-  defineProps<{
+  const props = defineProps<{
     profile?: UserProfile;
   }>();
 
   const { subscriptions } = useMySubscriptions();
   const { hasPerk } = useMyRewards();
+
+  // Отображаемое имя вместо логина; фолбэки — логин, затем общий плейсхолдер.
+  const displayName = computed(
+    () =>
+      props.profile?.displayName || props.profile?.username || 'Путешественник',
+  );
 
   // Бейдж активной подписки — если есть хотя бы одна подписка в статусе ACTIVE.
   const isSubscriptionActive = computed(() =>
@@ -43,7 +49,7 @@
             : 'text-primary'
         "
       >
-        {{ profile?.username || 'Путешественник' }}
+        {{ displayName }}
       </h2>
     </div>
 
