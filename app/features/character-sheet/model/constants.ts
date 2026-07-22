@@ -470,6 +470,12 @@ export const TOOL_PROFICIENCY_GROUPS: ToolProficiencyGroup[] = [
   },
 ];
 
+/** Эндпоинт поиска черт (раздел «Черты»). */
+export const FEATS_SEARCH_PATH = '/api/v2/feats/search';
+
+/** Базовый путь деталей черты (`/{url}`). */
+export const FEATS_DETAIL_BASE_PATH = '/api/v2/feats';
+
 /** Эндпоинт поиска видов. */
 export const SPECIES_SEARCH_PATH = '/api/v2/species/search';
 
@@ -525,6 +531,7 @@ export const FEATURE_ORIGIN_LABELS: Record<FeatureOrigin, string> = {
   species: 'Вид',
   lineage: 'Подвид',
   class: 'Класс',
+  feat: 'Черта',
   none: 'Нет',
 };
 

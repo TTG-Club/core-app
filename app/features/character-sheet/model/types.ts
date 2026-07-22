@@ -230,7 +230,7 @@ export interface CharacterSpecies {
 }
 
 /** Происхождение особенности персонажа; none — добавлена вручную без источника. */
-export type FeatureOrigin = 'species' | 'lineage' | 'class' | 'none';
+export type FeatureOrigin = 'species' | 'lineage' | 'class' | 'feat' | 'none';
 
 /** Узел описания особенности (элемент верхнего уровня разметки сайта). */
 export type FeatureDescriptionNode = string | SimpleTextNode | MarkerNode;
@@ -250,6 +250,33 @@ export interface CharacterFeature {
 
   /** Выбор игрока в особенности (например, цвет драконорождённого). */
   choice: string | null;
+}
+
+/** Черта каталога в модалке добавления (ссылка из поиска раздела «Черты»). */
+export interface FeatCatalogItem {
+  url: string;
+
+  /** Русское название. */
+  name: string;
+
+  /** Английское название (для поиска). */
+  nameEng: string;
+
+  /** Категория черты (например, «Общая», «Категория происхождения»). */
+  category: string;
+
+  /** Подпись источника черты; '' — не задан. */
+  sourceLabel: string;
+}
+
+/** Деталь черты из ответа API (нужные листу поля). */
+export interface FeatSummary {
+  url: string;
+  name: string;
+  category: string;
+
+  /** Описание в разметке сайта (строки верхнего уровня). */
+  description: string[];
 }
 
 /** Заклинание в книге персонажа (и опция поиска заклинаний). */

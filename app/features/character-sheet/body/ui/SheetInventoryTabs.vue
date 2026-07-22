@@ -30,6 +30,7 @@
 
   const emit = defineEmits<{
     'add-feature': [];
+    'add-feat': [];
     'add-spell': [];
     'edit-choice': [featureId: string, choice: string];
     'remove-feature': [featureId: string];
@@ -46,6 +47,10 @@
 
   function handleFeatureAdd() {
     emit('add-feature');
+  }
+
+  function handleFeatAdd() {
+    emit('add-feat');
   }
 
   function handleChoiceEdit(featureId: string, choice: string) {
@@ -107,6 +112,7 @@
       <SheetFeaturesTab
         :features="features"
         @add-feature="handleFeatureAdd"
+        @add-feat="handleFeatAdd"
         @edit-choice="handleChoiceEdit"
         @remove-feature="handleFeatureRemove"
       />

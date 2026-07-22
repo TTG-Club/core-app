@@ -11,6 +11,7 @@
 
   const emit = defineEmits<{
     'add-feature': [];
+    'add-feat': [];
     'edit-choice': [featureId: string, choice: string];
     'remove-feature': [featureId: string];
   }>();
@@ -73,11 +74,15 @@
     emit('remove-feature', featureId);
   }
 
-  /** Цвета бейджа происхождения: вид — зелёный, подвид — синий, класс — жёлтый. */
+  /**
+   * Цвета бейджа происхождения: вид — зелёный, подвид — синий, класс — жёлтый,
+   * черта — акцентный.
+   */
   const ORIGIN_BADGE_COLORS = {
     species: 'success',
     lineage: 'info',
     class: 'warning',
+    feat: 'secondary',
     none: 'neutral',
   } as const;
 
@@ -102,7 +107,16 @@
 
 <template>
   <div class="flex flex-col gap-3 pt-2">
-    <div class="flex justify-end">
+    <div class="flex justify-end gap-2">
+      <UButton
+        icon="tabler:award"
+        label="Добавить черту"
+        color="neutral"
+        variant="ghost"
+        size="sm"
+        @click.left.exact.prevent="emit('add-feat')"
+      />
+
       <UButton
         icon="tabler:plus"
         label="Добавить особенность"

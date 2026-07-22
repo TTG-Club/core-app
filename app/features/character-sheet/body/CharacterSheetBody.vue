@@ -20,6 +20,7 @@
     SheetClassResourcesModal,
     SheetClassResourcesPanel,
     SheetExperienceModal,
+    SheetFeatAddModal,
     SheetFeatureAddModal,
     SheetHeader,
     SheetHealthModal,
@@ -112,6 +113,8 @@
   const sizeModal = overlay.create(SheetSizeModal);
 
   const featureAddModal = overlay.create(SheetFeatureAddModal);
+
+  const featAddModal = overlay.create(SheetFeatAddModal);
 
   const spellAddModal = overlay.create(SheetSpellAddModal);
 
@@ -267,6 +270,14 @@
     featureAddModal.open();
   }
 
+  function handleFeatAdd() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    featAddModal.open();
+  }
+
   function handleSpellAdd() {
     if (!ensureEditable()) {
       return;
@@ -378,6 +389,7 @@
           :features="character.features"
           :spells="character.spells"
           @add-feature="handleFeatureAdd"
+          @add-feat="handleFeatAdd"
           @add-spell="handleSpellAdd"
           @edit-choice="setFeatureChoice"
           @remove-feature="removeFeature"

@@ -513,6 +513,41 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Добавление особенностей из каталога (черты раздела «Черты»). Идентификаторы
+   * устойчивы (`feat:url`), поэтому уже добавленные черты отбрасываются.
+   *
+   * @param features особенности с готовыми идентификаторами.
+   */
+  function addFeats(features: CharacterFeature[]): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const existingIds = new Set(
+      character.value.features.map((feature) => feature.id),
+    );
+
+    const freshFeatures = features.filter(
+      (feature) => !existingIds.has(feature.id),
+    );
+
+    if (!freshFeatures.length) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      features: [
+        ...character.value.features,
+        ...freshFeatures.map((feature) => ({
+          ...feature,
+          description: [...feature.description],
+        })),
+      ],
+    };
+  }
+
+  /**
    * Удаление особенности персонажа с листа.
    *
    * @param featureId идентификатор особенности.
@@ -622,6 +657,7 @@ export function useCharacterSheet() {
     adjustClassResource,
     toggleInspiration,
     addFeature,
+    addFeats,
     removeFeature,
     removeSpell,
     setFeatureChoice,

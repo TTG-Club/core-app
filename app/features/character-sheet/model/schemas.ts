@@ -1,4 +1,6 @@
 import type {
+  FeatCatalogItem,
+  FeatSummary,
   SpeciesFeatureSummary,
   SpeciesOption,
   SpeciesSummary,
@@ -120,6 +122,80 @@ export function parseSpellCatalog(input: unknown): SpellCatalogItem[] {
     concentration: spell.concentration,
     ritual: spell.ritual,
   }));
+}
+
+/**
+ * Схема ссылки на черту из поиска. Валидируем только используемые поля.
+ */
+const featLinkSchema = z.object({
+  url: z.string(),
+  name: z.object({
+    rus: z.string().catch(''),
+    eng: z.string().catch(''),
+  }),
+  category: z.string().catch(''),
+  source: z
+    .object({
+      name: z.object({ label: z.string().catch('') }).catch({ label: '' }),
+    })
+    .catch({ name: { label: '' } }),
+});
+
+/** Ответ поиска черт: плоский массив или конверт `{ value }`. */
+const featSearchResponseSchema = z
+  .union([
+    z.array(featLinkSchema),
+    z.object({ value: z.array(featLinkSchema) }),
+  ])
+  .catch([]);
+
+/**
+ * Валидация ответа `GET /api/v2/feats/search` и приведение к списку каталога.
+ * Битый ответ даёт пустой список, а не исключение.
+ *
+ * @param input сырой ответ поиска черт.
+ * @returns черты каталога для модалки добавления.
+ */
+export function parseFeatCatalog(input: unknown): FeatCatalogItem[] {
+  const parsed = featSearchResponseSchema.parse(input);
+  const list = Array.isArray(parsed) ? parsed : parsed.value;
+
+  return list.map((feat) => ({
+    url: feat.url,
+    name: feat.name.rus,
+    nameEng: feat.name.eng,
+    category: feat.category,
+    sourceLabel: feat.source.name.label,
+  }));
+}
+
+/** Схема детального ответа черты (нужные листу поля). */
+const featDetailSchema = z.object({
+  url: z.string(),
+  name: z.object({ rus: z.string().catch('') }),
+  category: z.string().catch(''),
+  description: z.array(z.string()).catch([]),
+});
+
+/**
+ * Валидация детального ответа `GET /api/v2/feats/{url}`.
+ *
+ * @param input сырой детальный ответ черты.
+ * @returns деталь черты или null при неожиданном ответе.
+ */
+export function parseFeatDetail(input: unknown): FeatSummary | null {
+  const result = featDetailSchema.safeParse(input);
+
+  if (!result.success) {
+    return null;
+  }
+
+  return {
+    url: result.data.url,
+    name: result.data.name.rus,
+    category: result.data.category,
+    description: result.data.description,
+  };
 }
 
 /**

@@ -12,6 +12,7 @@ import type {
   CharacterSpell,
   CharacterSpellGroup,
   CharacterVision,
+  FeatSummary,
   FeatureDescriptionNode,
   FeatureOrigin,
   PrimarySpeed,
@@ -564,6 +565,24 @@ export function buildCharacterFeatures(
     ...toFeatures(species, 'species'),
     ...(lineage ? toFeatures(lineage, 'lineage') : []),
   ];
+}
+
+/**
+ * Сборка особенности персонажа из детали черты раздела «Черты». Категория
+ * черты сохраняется как источник особенности (для подсказки на бейдже).
+ *
+ * @param summary деталь черты.
+ * @returns особенность персонажа с происхождением «Черта».
+ */
+export function buildFeatFeature(summary: FeatSummary): CharacterFeature {
+  return {
+    id: getCharacterFeatureId('feat', summary.url),
+    name: summary.name,
+    description: [...summary.description],
+    origin: 'feat',
+    originName: summary.category,
+    choice: null,
+  };
 }
 
 /**

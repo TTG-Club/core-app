@@ -6,6 +6,7 @@ export { default as SheetClassResourcesModal } from './SheetClassResourcesModal.
 export { default as SheetClassResourcesPanel } from './SheetClassResourcesPanel.vue';
 export { default as SheetCurrencyRow } from './SheetCurrencyRow.vue';
 export { default as SheetExperienceModal } from './SheetExperienceModal.vue';
+export { default as SheetFeatAddModal } from './SheetFeatAddModal.vue';
 export { default as SheetFeatureAddModal } from './SheetFeatureAddModal.vue';
 export { default as SheetFeaturesTab } from './SheetFeaturesTab.vue';
 export { default as SheetHeader } from './SheetHeader.vue';
