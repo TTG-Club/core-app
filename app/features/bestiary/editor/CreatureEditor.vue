@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import type { CreatureCreate } from '~bestiary/model';
+  import type { CreateExperience, CreatureCreate } from '~bestiary/model';
 
+  import { DictionaryService } from '~/shared/api';
   import { getInitialState } from '~bestiary/model';
   import { CreaturePreview } from '~bestiary/preview';
   import { EditorBaseInfo } from '~ui/editor';
@@ -35,10 +36,37 @@
     CreatureType,
   } from './ui';
 
+  const { data: challengeRatings } = await useAsyncData(
+    'dictionaries-challenge-rating',
+    () => DictionaryService.challengeRating(),
+    { dedupe: 'defer' },
+  );
+
+  /**
+   * Восстанавливает бонус мастерства по показателю опасности.
+   *
+   * `/raw` его не возвращает — на бэкенде он выводится из ПО. Без этого форма
+   * редактирования всегда стартовала с БМ +2 и пересчитывала зависимые поля
+   * (пассивная внимательность, модификаторы навыков, инициатива) неверно для
+   * всех существ с ПО 5 и выше.
+   */
+  function normalizeLoaded(
+    raw: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const experience = raw.experience as CreateExperience | undefined;
+
+    const option = challengeRatings.value?.find(
+      (item) => item.value === experience?.value,
+    );
+
+    return option ? { ...raw, proficiencyBonus: option.pb } : raw;
+  }
+
   const { state, submitState, onError, onSubmit, revisionControl } =
     useWorkshopForm<CreatureCreate>({
       actionUrl: '/api/v2/bestiary',
       getInitialState,
+      normalizeLoaded,
       revisionEntityType: REVISION_ENTITY_TYPES.CREATURE,
     });
 </script>
