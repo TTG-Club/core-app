@@ -1,16 +1,23 @@
 import type { Character } from './types';
 
-/** Демонстрационный персонаж листа (волшебник 1-го уровня). */
-export const DEMO_CHARACTER: Character = {
-  id: 'demo-wizard',
+/**
+ * Пустой персонаж по умолчанию: характеристики 10, без владений, навыков и
+ * прогресса. Разделы инвентаря заполнены временными данными вкладки
+ * «Снаряжение» до реализации её редактирования.
+ */
+export const DEFAULT_CHARACTER: Character = {
+  id: 'new-character',
   name: 'Персонаж',
   avatarUrl: null,
   species: null,
-  className: 'Волшебник',
+  size: null,
+  features: [],
+  spells: [],
+  className: null,
   background: null,
   level: 1,
   experience: { current: 0, nextLevel: 300 },
-  inspiration: true,
+  inspiration: false,
   armorClass: {
     base: 10,
     ability: 'dexterity',
@@ -33,44 +40,44 @@ export const DEMO_CHARACTER: Character = {
     unit: 'feet',
   },
   abilities: {
-    strength: 19,
-    dexterity: 16,
-    constitution: 13,
+    strength: 10,
+    dexterity: 10,
+    constitution: 10,
     intelligence: 10,
     wisdom: 10,
     charisma: 10,
   },
-  savingThrowProficiencies: ['intelligence', 'wisdom'],
+  savingThrowProficiencies: [],
   skills: [
     { name: 'Акробатика', ability: 'dexterity', proficiency: 'none' },
-    { name: 'Анализ', ability: 'intelligence', proficiency: 'expertise' },
+    { name: 'Анализ', ability: 'intelligence', proficiency: 'none' },
     { name: 'Аркана', ability: 'intelligence', proficiency: 'none' },
     { name: 'Атлетика', ability: 'strength', proficiency: 'none' },
-    { name: 'Внимательность', ability: 'wisdom', proficiency: 'half' },
-    { name: 'Выживание', ability: 'wisdom', proficiency: 'proficient' },
+    { name: 'Внимательность', ability: 'wisdom', proficiency: 'none' },
+    { name: 'Выживание', ability: 'wisdom', proficiency: 'none' },
     { name: 'Выступление', ability: 'charisma', proficiency: 'none' },
     { name: 'Запугивание', ability: 'charisma', proficiency: 'none' },
     { name: 'История', ability: 'intelligence', proficiency: 'none' },
     { name: 'Ловкость рук', ability: 'dexterity', proficiency: 'none' },
-    { name: 'Медицина', ability: 'wisdom', proficiency: 'proficient' },
+    { name: 'Медицина', ability: 'wisdom', proficiency: 'none' },
     { name: 'Обман', ability: 'charisma', proficiency: 'none' },
-    { name: 'Природа', ability: 'intelligence', proficiency: 'proficient' },
+    { name: 'Природа', ability: 'intelligence', proficiency: 'none' },
     { name: 'Проницательность', ability: 'wisdom', proficiency: 'none' },
     { name: 'Религия', ability: 'intelligence', proficiency: 'none' },
     { name: 'Скрытность', ability: 'dexterity', proficiency: 'none' },
     { name: 'Убеждение', ability: 'charisma', proficiency: 'none' },
     { name: 'Уход за животными', ability: 'wisdom', proficiency: 'none' },
   ],
-  health: { current: 7, max: 7, temporary: 0 },
+  health: { current: 0, max: 0, temporary: 0 },
   hitDice: [],
   extraHitDice: [],
   classResources: [],
   proficiencies: {
-    armor: ['Стёганый доспех'],
-    weapons: ['Всё простое оружие'],
-    weaponMasteries: ['Кинжал'],
+    armor: [],
+    weapons: [],
+    weaponMasteries: [],
     tools: [],
-    languages: ['Общий'],
+    languages: [],
   },
   currency: {
     copper: 0,

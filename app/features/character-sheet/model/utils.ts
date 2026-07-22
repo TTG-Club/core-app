@@ -3,29 +3,42 @@ import type {
   AbilityRow,
   Character,
   CharacterExtraHitDie,
+  CharacterFeature,
   CharacterHitDie,
   CharacterInventorySection,
   CharacterSkill,
+  CharacterSpecies,
   CharacterSpeed,
+  CharacterSpell,
+  CharacterSpellGroup,
   CharacterVision,
+  FeatureDescriptionNode,
+  FeatureOrigin,
   PrimarySpeed,
   ProficiencyCatalogGroup,
   RollMode,
   SavingThrowRow,
   SkillRow,
+  SpeciesFeatureSummary,
+  SpeciesSummary,
   SpeedRow,
   SpeedTypeKey,
   VisionRow,
 } from './types';
+
+import { isBlockNode, isMarkerNode, parse, toMarkupSource } from '~ui/markup';
 
 import {
   ABILITY_LABELS,
   ABILITY_ORDER,
   ABILITY_SHORT_LABELS,
   CARRYING_CAPACITY_MULTIPLIER,
+  DARKVISION_PARSE_FALLBACK,
   LEVEL_XP_THRESHOLDS,
   ROLL_MODE_DICE_NOTATION,
+  SIZE_LABEL_WORDS,
   SKILL_PROFICIENCY_MULTIPLIERS,
+  SPEED_PARSE_FALLBACK,
   SPEED_PRIMARY_ORDER,
   SPEED_TYPE_LABELS,
   SPEED_UNIT_SHORT_LABELS,
@@ -330,6 +343,239 @@ export function getHitDiceTotals(
     current: allDice.reduce((total, hitDie) => total + hitDie.current, 0),
     max: allDice.reduce((total, hitDie) => total + hitDie.max, 0),
   };
+}
+
+/**
+ * Разбор строки скорости вида (например, «30 футов, полёт 50 футов»). Первое
+ * число считается скоростью ходьбы (бэкенд всегда ставит её первой), остальные
+ * типы ищутся по корням слов; «парит»/«парение» включает парение.
+ *
+ * @param speedText строка скорости из ответа API.
+ * @returns скорости персонажа в футах.
+ */
+export function parseSpeedFromText(speedText: string): CharacterSpeed {
+  const walkMatch = /(\d+)/.exec(speedText);
+  const flyMatch = /пол[её]т\D{0,12}(\d+)/i.exec(speedText);
+  const climbMatch = /лазан\D{0,12}(\d+)/i.exec(speedText);
+  const swimMatch = /плаван\D{0,12}(\d+)/i.exec(speedText);
+  const burrowMatch = /копан\D{0,12}(\d+)/i.exec(speedText);
+
+  return {
+    values: {
+      walk: walkMatch?.[1] ? Number(walkMatch[1]) : SPEED_PARSE_FALLBACK,
+      fly: flyMatch?.[1] ? Number(flyMatch[1]) : 0,
+      climb: climbMatch?.[1] ? Number(climbMatch[1]) : 0,
+      swim: swimMatch?.[1] ? Number(swimMatch[1]) : 0,
+      burrow: burrowMatch?.[1] ? Number(burrowMatch[1]) : 0,
+    },
+    hover: /пар(?:ит|ен)/i.test(speedText),
+    unit: 'feet',
+  };
+}
+
+/**
+ * Разбор строки размера вида: возвращает найденные размеры в порядке каталога
+ * (у видов D&D 2024 бывает выбор, например «Средний или Маленький»).
+ *
+ * @param sizeText строка размера из ответа API.
+ * @returns найденные подписи размеров.
+ */
+export function parseSizeOptionsFromText(sizeText: string): string[] {
+  const normalizedText = sizeText.toLowerCase();
+
+  return SIZE_LABEL_WORDS.filter((word) =>
+    normalizedText.includes(word.toLowerCase()),
+  );
+}
+
+/**
+ * Дистанция тёмного зрения из особенностей вида: ищется особенность с
+ * упоминанием тёмного зрения, из её текста берётся первое число с футами.
+ *
+ * @param features особенности вида и подвида.
+ * @returns дистанция в футах; 0 — тёмного зрения нет.
+ */
+export function getDarkvisionDistance(
+  features: SpeciesFeatureSummary[],
+): number {
+  for (const feature of features) {
+    const featureText = [feature.name, ...feature.description]
+      .join(' ')
+      .toLowerCase()
+      .replaceAll('ё', 'е');
+
+    if (!/темн\S*\s+зрен/.test(featureText)) {
+      continue;
+    }
+
+    const distanceMatch = /(\d+)\s*фут/.exec(featureText);
+
+    return distanceMatch?.[1]
+      ? Number(distanceMatch[1])
+      : DARKVISION_PARSE_FALLBACK;
+  }
+
+  return 0;
+}
+
+/**
+ * Подпись круга заклинания для строки списка.
+ *
+ * @param level круг заклинания; 0 — заговор.
+ * @returns подпись круга (например, «Заговор» или «3 круг»).
+ */
+export function getSpellLevelLabel(level: number): string {
+  return level === 0 ? 'Заговор' : `${level} круг`;
+}
+
+/**
+ * Подпись группы заклинаний одного круга для разделителя списка.
+ *
+ * @param level круг заклинания; 0 — заговоры.
+ * @returns подпись группы (например, «Заговоры» или «3 круг»).
+ */
+export function getSpellGroupLabel(level: number): string {
+  return level === 0 ? 'Заговоры' : `${level} круг`;
+}
+
+/**
+ * Группировка заклинаний по кругам: заговоры, затем круги по возрастанию;
+ * внутри круга — по алфавиту.
+ *
+ * @param spells заклинания книги персонажа.
+ * @returns группы заклинаний с подписями для разделителей.
+ */
+export function getSpellGroups(
+  spells: CharacterSpell[],
+): CharacterSpellGroup[] {
+  const sortedSpells = [...spells].sort(
+    (left, right) =>
+      left.level - right.level || left.name.localeCompare(right.name, 'ru'),
+  );
+
+  const groups: CharacterSpellGroup[] = [];
+
+  for (const spell of sortedSpells) {
+    const lastGroup = groups.at(-1);
+
+    if (!lastGroup || lastGroup.level !== spell.level) {
+      groups.push({
+        level: spell.level,
+        label: getSpellGroupLabel(spell.level),
+        spells: [spell],
+      });
+    } else {
+      lastGroup.spells.push(spell);
+    }
+  }
+
+  return groups;
+}
+
+/**
+ * Разбор хранимого значения редактора разметки в узлы для рендера. Значение —
+ * JSON-строка массива узлов (`toStoredMarkup`) либо исходник/пустая строка;
+ * сегментация повторяет форму хранения: блочные маркеры — узлами, абзацы —
+ * строками.
+ *
+ * @param stored значение модели редактора разметки.
+ * @returns узлы описания для `MarkupRender`.
+ */
+export function parseStoredMarkupNodes(
+  stored: string,
+): FeatureDescriptionNode[] {
+  const sourceText = toMarkupSource(stored);
+
+  const nodes: FeatureDescriptionNode[] = [];
+
+  for (const segment of sourceText.split(/\n{2,}/)) {
+    const text = segment.trim();
+
+    if (!text) {
+      continue;
+    }
+
+    const parsedNodes = parse(text);
+
+    const [firstNode] = parsedNodes;
+
+    if (
+      parsedNodes.length === 1
+      && isMarkerNode(firstNode)
+      && isBlockNode(firstNode)
+    ) {
+      nodes.push(firstNode);
+    } else {
+      nodes.push(text);
+    }
+  }
+
+  return nodes;
+}
+
+/**
+ * Идентификатор особенности персонажа по происхождению и URL особенности.
+ *
+ * @param origin происхождение особенности.
+ * @param featureUrl URL особенности из ответа API.
+ * @returns устойчивый идентификатор особенности.
+ */
+export function getCharacterFeatureId(
+  origin: FeatureOrigin,
+  featureUrl: string,
+): string {
+  return `${origin}:${featureUrl}`;
+}
+
+/**
+ * Сборка особенностей персонажа из деталей вида и подвида. Выбор игрока
+ * подставляется по идентификатору особенности (`origin:url`).
+ *
+ * @param species деталь вида.
+ * @param lineage деталь подвида; null — подвида нет.
+ * @param choices выборы игрока по идентификаторам особенностей.
+ * @returns особенности персонажа для вкладки «Особенности».
+ */
+export function buildCharacterFeatures(
+  species: SpeciesSummary,
+  lineage: SpeciesSummary | null,
+  choices: Record<string, string>,
+): CharacterFeature[] {
+  const toFeatures = (
+    summary: SpeciesSummary,
+    origin: FeatureOrigin,
+  ): CharacterFeature[] =>
+    summary.features.map((feature) => {
+      const id = getCharacterFeatureId(origin, feature.url);
+
+      const choice = choices[id]?.trim();
+
+      return {
+        id,
+        name: feature.name,
+        description: [...feature.description],
+        origin,
+        originName: summary.name,
+        choice: choice || null,
+      };
+    });
+
+  return [
+    ...toFeatures(species, 'species'),
+    ...(lineage ? toFeatures(lineage, 'lineage') : []),
+  ];
+}
+
+/**
+ * Отображаемое название вида с подвидом (например, «Эльф (Высший эльф)»).
+ *
+ * @param species выбранный вид персонажа.
+ * @returns название вида, при наличии — с подвидом в скобках.
+ */
+export function getSpeciesDisplayName(species: CharacterSpecies): string {
+  return species.lineageName
+    ? `${species.name} (${species.lineageName})`
+    : species.name;
 }
 
 /**

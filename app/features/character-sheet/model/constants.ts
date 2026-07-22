@@ -3,6 +3,7 @@ import type {
   ArmorProficiencyGroup,
   CharacterClassResource,
   CurrencyKey,
+  FeatureOrigin,
   LanguageProficiencyGroup,
   ResourceRecovery,
   RollMode,
@@ -469,6 +470,62 @@ export const TOOL_PROFICIENCY_GROUPS: ToolProficiencyGroup[] = [
   },
 ];
 
+/** Эндпоинт поиска видов. */
+export const SPECIES_SEARCH_PATH = '/api/v2/species/search';
+
+/** Эндпоинт поиска заклинаний. */
+export const SPELLS_SEARCH_PATH = '/api/v2/spells/search';
+
+/** Размер страницы загрузки каталога заклинаний. */
+export const SPELL_CATALOG_PAGE_SIZE = 200;
+
+/** Предохранитель от бесконечной пагинации каталога заклинаний. */
+export const SPELL_CATALOG_MAX_PAGES = 20;
+
+/** Круги заклинаний для быстрого фильтра (0 — заговоры). */
+export const SPELL_LEVELS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+/** Базовый путь деталей вида (`/{url}` и `/{url}/lineages`). */
+export const SPECIES_DETAIL_BASE_PATH = '/api/v2/species';
+
+/** Слова размеров для разбора строки размера вида. */
+export const SIZE_LABEL_WORDS = [
+  'Крошечный',
+  'Маленький',
+  'Средний',
+  'Большой',
+  'Огромный',
+  'Громадный',
+  'Исполинский',
+];
+
+/** Скорость ходьбы по умолчанию, если разбор строки скорости не удался. */
+export const SPEED_PARSE_FALLBACK = 30;
+
+/**
+ * Дистанция тёмного зрения по умолчанию, если особенность найдена, но число в
+ * тексте не распознано.
+ */
+export const DARKVISION_PARSE_FALLBACK = 60;
+
+/** Подписи происхождения особенности персонажа. */
+export const FEATURE_ORIGIN_LABELS: Record<FeatureOrigin, string> = {
+  species: 'Вид',
+  lineage: 'Подвид',
+  class: 'Класс',
+  none: 'Нет',
+};
+
+/** Варианты происхождения при добавлении особенности вручную. */
+export const FEATURE_ORIGIN_OPTIONS: Array<{
+  label: string;
+  value: FeatureOrigin;
+}> = [
+  { label: 'Нет', value: 'none' },
+  { label: 'Вид', value: 'species' },
+  { label: 'Класс', value: 'class' },
+];
+
 /** Каталог языков для настройки владения: группы и языки. */
 export const LANGUAGE_PROFICIENCY_GROUPS: LanguageProficiencyGroup[] = [
   {
@@ -526,10 +583,16 @@ export const WEAPON_GROUP_TITLE_CLASSES: Record<
 
 /** Подписи для незаполненных полей листа. */
 export const SHEET_EMPTY_LABELS: Record<
-  'species' | 'background' | 'classResources' | 'proficiencies' | 'inventory',
+  | 'species'
+  | 'className'
+  | 'background'
+  | 'classResources'
+  | 'proficiencies'
+  | 'inventory',
   string
 > = {
   species: 'Вид не выбран',
+  className: 'Класс не выбран',
   background: 'Предыстория не выбрана',
   classResources: 'Нет ресурсов',
   proficiencies: 'Нет',

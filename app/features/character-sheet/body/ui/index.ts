@@ -6,6 +6,8 @@ export { default as SheetClassResourcesModal } from './SheetClassResourcesModal.
 export { default as SheetClassResourcesPanel } from './SheetClassResourcesPanel.vue';
 export { default as SheetCurrencyRow } from './SheetCurrencyRow.vue';
 export { default as SheetExperienceModal } from './SheetExperienceModal.vue';
+export { default as SheetFeatureAddModal } from './SheetFeatureAddModal.vue';
+export { default as SheetFeaturesTab } from './SheetFeaturesTab.vue';
 export { default as SheetHeader } from './SheetHeader.vue';
 export { default as SheetHealthModal } from './SheetHealthModal.vue';
 export { default as SheetHealthPanel } from './SheetHealthPanel.vue';
@@ -18,9 +20,13 @@ export { default as SheetProficienciesPanel } from './SheetProficienciesPanel.vu
 export { default as SheetProficiencyGroupsModal } from './SheetProficiencyGroupsModal.vue';
 export { default as SheetRollModal } from './SheetRollModal.vue';
 export { default as SheetSavingThrowsPanel } from './SheetSavingThrowsPanel.vue';
+export { default as SheetSizeModal } from './SheetSizeModal.vue';
 export { default as SheetSkillsPanel } from './SheetSkillsPanel.vue';
+export { default as SheetSpeciesWizardModal } from './SheetSpeciesWizardModal.vue';
 export { default as SheetSpeedModal } from './SheetSpeedModal.vue';
 export { default as SheetSpeedTile } from './SheetSpeedTile.vue';
+export { default as SheetSpellAddModal } from './SheetSpellAddModal.vue';
+export { default as SheetSpellsTab } from './SheetSpellsTab.vue';
 export { default as SheetStatTile } from './SheetStatTile.vue';
 export { default as SheetVisionModal } from './SheetVisionModal.vue';
 export { default as SheetWeaponProficienciesModal } from './SheetWeaponProficienciesModal.vue';

@@ -1,7 +1,11 @@
 <script setup lang="ts">
   import type { Character } from '../../model';
 
-  import { getVisionRows, SHEET_EMPTY_LABELS } from '../../model';
+  import {
+    getSpeciesDisplayName,
+    getVisionRows,
+    SHEET_EMPTY_LABELS,
+  } from '../../model';
 
   const props = defineProps<{
     character: Character;
@@ -11,6 +15,8 @@
   const emit = defineEmits<{
     'edit-name': [];
     'edit-progress': [];
+    'edit-size': [];
+    'edit-species': [];
     'edit-vision': [];
     'toggle-inspiration': [];
     'toggle-lock': [];
@@ -28,16 +34,30 @@
       : 'Заблокировать редактирование',
   );
 
-  const subtitle = computed(() => {
-    const species = props.character.species ?? SHEET_EMPTY_LABELS.species;
+  const speciesLabel = computed(() =>
+    props.character.species
+      ? getSpeciesDisplayName(props.character.species)
+      : SHEET_EMPTY_LABELS.species,
+  );
 
+  const subtitleRest = computed(() => {
     const background =
       props.character.background ?? SHEET_EMPTY_LABELS.background;
 
-    const classWithLevel = `${props.character.className} ${props.character.level}`;
+    const classWithLevel = props.character.className
+      ? `${props.character.className} ${props.character.level}`
+      : SHEET_EMPTY_LABELS.className;
 
-    return `${species} — ${classWithLevel} — ${background}`;
+    return `${classWithLevel} — ${background}`;
   });
+
+  const sizeLetter = computed(() => props.character.size?.charAt(0) ?? null);
+
+  const sizeTooltip = computed(() =>
+    props.character.size
+      ? `Размер: ${props.character.size}`
+      : 'Размер не указан',
+  );
 
   const inspirationVariant = computed(() =>
     props.character.inspiration ? 'soft' : 'outline',
@@ -76,43 +96,72 @@
         />
       </div>
 
-      <UTooltip>
-        <!-- Непрозрачная подложка: soft-вариант кнопки полупрозрачный,
-          без неё сквозь глаз просвечивает край аватара -->
-        <span
-          class="absolute -bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-default"
-        >
-          <UButton
-            icon="tabler:eye"
-            color="warning"
-            variant="soft"
-            size="xs"
-            square
-            class="rounded-full"
-            aria-label="Настроить зрение"
-            @click.left.exact.prevent="emit('edit-vision')"
-          />
-        </span>
+      <div
+        class="absolute -bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1"
+      >
+        <UTooltip>
+          <!-- Непрозрачная подложка: soft-вариант кнопки полупрозрачный,
+            без неё сквозь кнопку просвечивает край аватара -->
+          <span class="rounded-full bg-default">
+            <UButton
+              icon="tabler:eye"
+              color="warning"
+              variant="soft"
+              size="xs"
+              square
+              class="rounded-full"
+              aria-label="Настроить зрение"
+              @click.left.exact.prevent="emit('edit-vision')"
+            />
+          </span>
 
-        <template #content>
-          <div class="flex flex-col gap-1 p-1">
-            <div
-              v-for="row in visionRows"
-              :key="row.key"
-              class="flex items-baseline gap-2 text-xs"
-            >
-              <span class="text-muted">{{ row.label }}</span>
-
-              <span
-                v-if="row.formattedValue"
-                class="font-bold text-highlighted"
+          <template #content>
+            <div class="flex flex-col gap-1 p-1">
+              <div
+                v-for="row in visionRows"
+                :key="row.key"
+                class="flex items-baseline gap-2 text-xs"
               >
-                {{ row.formattedValue }}
-              </span>
+                <span class="text-muted">{{ row.label }}</span>
+
+                <span
+                  v-if="row.formattedValue"
+                  class="font-bold text-highlighted"
+                >
+                  {{ row.formattedValue }}
+                </span>
+              </div>
             </div>
-          </div>
-        </template>
-      </UTooltip>
+          </template>
+        </UTooltip>
+
+        <UTooltip :text="sizeTooltip">
+          <span class="rounded-full bg-default">
+            <UButton
+              color="warning"
+              variant="soft"
+              size="xs"
+              square
+              class="rounded-full"
+              :aria-label="sizeTooltip"
+              @click.left.exact.prevent="emit('edit-size')"
+            >
+              <span
+                v-if="sizeLetter"
+                class="w-4 text-center text-xs font-bold"
+              >
+                {{ sizeLetter }}
+              </span>
+
+              <UIcon
+                v-else
+                name="tabler:ruler-2"
+                class="size-4"
+              />
+            </UButton>
+          </span>
+        </UTooltip>
+      </div>
     </div>
 
     <div class="flex min-w-0 grow flex-col gap-1">
@@ -125,7 +174,20 @@
         {{ character.name }}
       </button>
 
-      <span class="truncate text-sm text-muted italic">{{ subtitle }}</span>
+      <span
+        class="flex min-w-0 flex-wrap items-center gap-1 text-sm text-muted italic"
+      >
+        <button
+          type="button"
+          class="cursor-pointer rounded px-1 transition-colors hover:bg-elevated/60 hover:text-warning"
+          aria-label="Выбрать вид персонажа"
+          @click.left.exact.prevent="emit('edit-species')"
+        >
+          {{ speciesLabel }}
+        </button>
+
+        <span class="truncate">— {{ subtitleRest }}</span>
+      </span>
 
       <button
         type="button"

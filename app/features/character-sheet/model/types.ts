@@ -1,3 +1,5 @@
+import type { MarkerNode, SimpleTextNode } from '~ui/markup';
+
 /** Ключ характеристики персонажа. */
 export type AbilityKey =
   | 'strength'
@@ -215,6 +217,104 @@ export interface LanguageProficiencyGroup extends ProficiencyCatalogGroup {
   key: 'standard' | 'rare' | 'exotic';
 }
 
+/** Выбранный вид персонажа. */
+export interface CharacterSpecies {
+  url: string;
+  name: string;
+
+  /** URL подвида; null — у вида нет подвидов. */
+  lineageUrl: string | null;
+
+  /** Название подвида; null — у вида нет подвидов. */
+  lineageName: string | null;
+}
+
+/** Происхождение особенности персонажа; none — добавлена вручную без источника. */
+export type FeatureOrigin = 'species' | 'lineage' | 'class' | 'none';
+
+/** Узел описания особенности (элемент верхнего уровня разметки сайта). */
+export type FeatureDescriptionNode = string | SimpleTextNode | MarkerNode;
+
+/** Особенность персонажа (из вида, подвида, класса или своя). */
+export interface CharacterFeature {
+  id: string;
+  name: string;
+
+  /** Описание в разметке сайта (строки и блочные узлы `{@...}`). */
+  description: FeatureDescriptionNode[];
+
+  origin: FeatureOrigin;
+
+  /** Название источника особенности (вида, подвида, класса); '' — нет. */
+  originName: string;
+
+  /** Выбор игрока в особенности (например, цвет драконорождённого). */
+  choice: string | null;
+}
+
+/** Заклинание в книге персонажа (и опция поиска заклинаний). */
+export interface CharacterSpell {
+  url: string;
+  name: string;
+
+  /** Круг заклинания; 0 — заговор. */
+  level: number;
+
+  /** Название школы магии. */
+  school: string;
+}
+
+/** Группа заклинаний одного круга для списка с разделителями. */
+export interface CharacterSpellGroup {
+  level: number;
+  label: string;
+  spells: CharacterSpell[];
+}
+
+/** Заклинание каталога в модалке добавления (расширенная ссылка). */
+export interface SpellCatalogItem extends CharacterSpell {
+  /** Английское название — участвует в поиске. */
+  nameEng: string;
+
+  concentration: boolean;
+  ritual: boolean;
+
+  /** Названия классов, которым доступно заклинание. */
+  classes: string[];
+}
+
+/** Опция автокомплита выбора вида. */
+export interface SpeciesOption {
+  url: string;
+  name: string;
+  sourceLabel: string;
+  hasLineages: boolean;
+}
+
+/** Особенность вида из ответа API. */
+export interface SpeciesFeatureSummary {
+  url: string;
+  name: string;
+
+  /** Описание в разметке сайта. */
+  description: string[];
+}
+
+/** Деталь вида или подвида из ответа API (нужные листу поля). */
+export interface SpeciesSummary {
+  url: string;
+  name: string;
+  hasLineages: boolean;
+
+  /** Строка размера (например, «Средний или Маленький»). */
+  sizeText: string;
+
+  /** Строка скорости (например, «30 футов, полёт 50 футов»). */
+  speedText: string;
+
+  features: SpeciesFeatureSummary[];
+}
+
 /** Отображаемый параметр предмета инвентаря (например, «Атака +6»). */
 export interface InventoryItemStat {
   label: string;
@@ -257,10 +357,19 @@ export interface Character {
   avatarUrl: string | null;
 
   /** Вид персонажа; null — не выбран. */
-  species: string | null;
+  species: CharacterSpecies | null;
 
-  /** Название класса. */
-  className: string;
+  /** Размер персонажа (русская подпись); null — не указан. */
+  size: string | null;
+
+  /** Особенности персонажа (вид и подвид). */
+  features: CharacterFeature[];
+
+  /** Книга заклинаний персонажа. */
+  spells: CharacterSpell[];
+
+  /** Название класса; null — не выбран. */
+  className: string | null;
 
   /** Предыстория; null — не выбрана. */
   background: string | null;

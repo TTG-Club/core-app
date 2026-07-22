@@ -20,6 +20,7 @@
     SheetClassResourcesModal,
     SheetClassResourcesPanel,
     SheetExperienceModal,
+    SheetFeatureAddModal,
     SheetHeader,
     SheetHealthModal,
     SheetHealthPanel,
@@ -29,9 +30,12 @@
     SheetProficiencyGroupsModal,
     SheetRollModal,
     SheetSavingThrowsPanel,
+    SheetSizeModal,
     SheetSkillsPanel,
+    SheetSpeciesWizardModal,
     SheetSpeedModal,
     SheetSpeedTile,
+    SheetSpellAddModal,
     SheetStatTile,
     SheetVisionModal,
     SheetWeaponProficienciesModal,
@@ -53,6 +57,9 @@
     toggleSavingThrowProficiency,
     cycleSkillProficiency,
     adjustClassResource,
+    removeFeature,
+    removeSpell,
+    setFeatureChoice,
     toggleInspiration,
   } = useCharacterSheet();
 
@@ -99,6 +106,14 @@
   const weaponProficienciesModal = overlay.create(
     SheetWeaponProficienciesModal,
   );
+
+  const speciesWizardModal = overlay.create(SheetSpeciesWizardModal);
+
+  const sizeModal = overlay.create(SheetSizeModal);
+
+  const featureAddModal = overlay.create(SheetFeatureAddModal);
+
+  const spellAddModal = overlay.create(SheetSpellAddModal);
 
   function handleAbilityEdit(abilityKey: AbilityKey) {
     if (!ensureEditable()) {
@@ -227,6 +242,38 @@
 
     visionModal.open();
   }
+
+  function handleSpeciesEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    speciesWizardModal.open();
+  }
+
+  function handleSizeEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    sizeModal.open();
+  }
+
+  function handleFeatureAdd() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    featureAddModal.open();
+  }
+
+  function handleSpellAdd() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    spellAddModal.open();
+  }
 </script>
 
 <template>
@@ -236,6 +283,8 @@
       :locked="isLocked"
       @edit-name="handleNameEdit"
       @edit-progress="handleProgressEdit"
+      @edit-size="handleSizeEdit"
+      @edit-species="handleSpeciesEdit"
       @edit-vision="handleVisionEdit"
       @toggle-inspiration="toggleInspiration"
       @toggle-lock="toggleLock"
@@ -326,6 +375,13 @@
           :inventory="character.inventory"
           :total-weight="totalWeight"
           :carrying-capacity="carryingCapacity"
+          :features="character.features"
+          :spells="character.spells"
+          @add-feature="handleFeatureAdd"
+          @add-spell="handleSpellAdd"
+          @edit-choice="setFeatureChoice"
+          @remove-feature="removeFeature"
+          @remove-spell="removeSpell"
         />
       </div>
     </div>

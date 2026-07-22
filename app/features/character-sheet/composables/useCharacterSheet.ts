@@ -4,9 +4,12 @@ import type {
   CharacterArmorClass,
   CharacterClassResource,
   CharacterExtraHitDie,
+  CharacterFeature,
   CharacterHealth,
   CharacterHitDie,
+  CharacterSpecies,
   CharacterSpeed,
+  CharacterSpell,
   CharacterVision,
   ProficiencyGroupKey,
 } from '../model';
@@ -18,7 +21,7 @@ import {
   ABILITY_SCORE_MIN,
   ARMOR_CLASS_BASE_MAX,
   ARMOR_CLASS_BASE_MIN,
-  DEMO_CHARACTER,
+  DEFAULT_CHARACTER,
   EXPERIENCE_MAX,
   getAbilityRows,
   getArmorClassValue,
@@ -50,7 +53,7 @@ export function useCharacterSheet() {
   const toast = useToast();
 
   const character = useState<Character>('character-sheet:character', () =>
-    structuredClone(DEMO_CHARACTER),
+    structuredClone(DEFAULT_CHARACTER),
   );
 
   const isLocked = useState<boolean>('character-sheet:locked', () => false);
@@ -377,6 +380,173 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Применение выбранного вида: название, размер, скорости, зрение и
+   * особенности устанавливаются атомарно одним обновлением.
+   *
+   * @param payload вид и производные от него значения листа.
+   * @param payload.species выбранный вид с подвидом.
+   * @param payload.size подпись размера; null — не распознан.
+   * @param payload.speed скорости передвижения из данных вида.
+   * @param payload.vision зрение из данных вида.
+   * @param payload.features особенности вида и подвида.
+   */
+  function setSpecies(payload: {
+    species: CharacterSpecies;
+    size: string | null;
+    speed: CharacterSpeed;
+    vision: CharacterVision;
+    features: CharacterFeature[];
+  }): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    // Смена вида заменяет только особенности вида и подвида; добавленные
+    // вручную (класс, без источника) сохраняются.
+    const preservedFeatures = character.value.features.filter(
+      (feature) => feature.origin !== 'species' && feature.origin !== 'lineage',
+    );
+
+    character.value = {
+      ...character.value,
+      species: { ...payload.species },
+      size: payload.size,
+      speed: {
+        ...payload.speed,
+        values: { ...payload.speed.values },
+      },
+      vision: { ...payload.vision },
+      features: [
+        ...payload.features.map((feature) => ({
+          ...feature,
+          description: [...feature.description],
+        })),
+        ...preservedFeatures,
+      ],
+    };
+  }
+
+  /**
+   * Установка выбора игрока в особенности (например, цвет драконорождённого).
+   *
+   * @param featureId идентификатор особенности.
+   * @param choice текст выбора; пустая строка снимает выбор.
+   */
+  function setFeatureChoice(featureId: string, choice: string): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const trimmedChoice = choice.trim();
+
+    character.value = {
+      ...character.value,
+      features: character.value.features.map((feature) =>
+        feature.id === featureId
+          ? { ...feature, choice: trimmedChoice || null }
+          : feature,
+      ),
+    };
+  }
+
+  /**
+   * Установка книги заклинаний персонажа; дубли по URL отбрасываются.
+   *
+   * @param spells новый список заклинаний.
+   */
+  function setSpells(spells: CharacterSpell[]): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const seenUrls = new Set<string>();
+
+    character.value = {
+      ...character.value,
+      spells: spells
+        .filter((spell) => {
+          if (seenUrls.has(spell.url)) {
+            return false;
+          }
+
+          seenUrls.add(spell.url);
+
+          return true;
+        })
+        .map((spell) => ({ ...spell })),
+    };
+  }
+
+  /**
+   * Удаление заклинания из книги персонажа.
+   *
+   * @param spellUrl URL заклинания.
+   */
+  function removeSpell(spellUrl: string): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      spells: character.value.spells.filter((spell) => spell.url !== spellUrl),
+    };
+  }
+
+  /**
+   * Добавление особенности вручную; идентификатор генерируется.
+   *
+   * @param feature особенность без идентификатора.
+   */
+  function addFeature(feature: Omit<CharacterFeature, 'id'>): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      features: [
+        ...character.value.features,
+        { ...feature, id: `custom:${crypto.randomUUID()}` },
+      ],
+    };
+  }
+
+  /**
+   * Удаление особенности персонажа с листа.
+   *
+   * @param featureId идентификатор особенности.
+   */
+  function removeFeature(featureId: string): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      features: character.value.features.filter(
+        (feature) => feature.id !== featureId,
+      ),
+    };
+  }
+
+  /**
+   * Установка размера персонажа.
+   *
+   * @param size русская подпись размера; null — размер не указан.
+   */
+  function setSize(size: string | null): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      size,
+    };
+  }
+
+  /**
    * Установка списка владений группы (броня, оружие или инструменты).
    *
    * @param group ключ группы владений.
@@ -435,9 +605,16 @@ export function useCharacterSheet() {
     setClassResources,
     adjustClassResource,
     toggleInspiration,
+    addFeature,
+    removeFeature,
+    removeSpell,
+    setFeatureChoice,
     setName,
     setProficiencies,
     setProgress,
+    setSize,
+    setSpecies,
+    setSpells,
     setVision,
     setSpeed,
     setHealth,

@@ -3,6 +3,8 @@
 
   import type {
     CharacterCurrency,
+    CharacterFeature,
+    CharacterSpell,
     CharacterInventorySection as InventorySection,
   } from '../../model';
 
@@ -12,18 +14,52 @@
     WEIGHT_UNIT_LABEL,
   } from '../../model';
   import SheetCurrencyRow from './SheetCurrencyRow.vue';
+  import SheetFeaturesTab from './SheetFeaturesTab.vue';
   import SheetInventorySection from './SheetInventorySection.vue';
+  import SheetSpellsTab from './SheetSpellsTab.vue';
 
   const props = defineProps<{
     currency: CharacterCurrency;
     inventory: InventorySection[];
     totalWeight: number;
     carryingCapacity: number;
+    features: CharacterFeature[];
+    spells: CharacterSpell[];
   }>();
 
-  const emptyTabItems = Object.entries(SHEET_TAB_EMPTY_LABELS).map(
-    ([slot, label]) => ({ slot, label }),
-  );
+  const emit = defineEmits<{
+    'add-feature': [];
+    'add-spell': [];
+    'edit-choice': [featureId: string, choice: string];
+    'remove-feature': [featureId: string];
+    'remove-spell': [spellUrl: string];
+  }>();
+
+  function handleSpellAdd() {
+    emit('add-spell');
+  }
+
+  function handleSpellRemove(spellUrl: string) {
+    emit('remove-spell', spellUrl);
+  }
+
+  function handleFeatureAdd() {
+    emit('add-feature');
+  }
+
+  function handleChoiceEdit(featureId: string, choice: string) {
+    emit('edit-choice', featureId, choice);
+  }
+
+  function handleFeatureRemove(featureId: string) {
+    emit('remove-feature', featureId);
+  }
+
+  // Вкладки «Особенности» и «Заклинания» больше не пустышки — у них свой
+  // контент.
+  const emptyTabItems = Object.entries(SHEET_TAB_EMPTY_LABELS)
+    .filter(([slot]) => slot !== 'features' && slot !== 'spells')
+    .map(([slot, label]) => ({ slot, label }));
 
   const tabItems = computed<TabsItem[]>(() =>
     SHEET_TABS.map((tab) =>
@@ -54,6 +90,23 @@
           :section="section"
         />
       </div>
+    </template>
+
+    <template #spells>
+      <SheetSpellsTab
+        :spells="spells"
+        @add-spell="handleSpellAdd"
+        @remove-spell="handleSpellRemove"
+      />
+    </template>
+
+    <template #features>
+      <SheetFeaturesTab
+        :features="features"
+        @add-feature="handleFeatureAdd"
+        @edit-choice="handleChoiceEdit"
+        @remove-feature="handleFeatureRemove"
+      />
     </template>
 
     <template
