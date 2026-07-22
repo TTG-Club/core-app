@@ -1,16 +1,16 @@
 <script setup lang="ts">
+  import type { FilterGroups } from '~infrastructure/filter';
+
   import type { CharacterSpell, SpellCatalogItem } from '../../model';
 
+  import { FilterDrawer } from '~infrastructure/filter';
   import { SpellDrawer } from '~spells/drawer';
 
-  import { useCharacterSheet } from '../../composables';
+  import { useCharacterSheet, useSpellCatalogSearch } from '../../composables';
   import {
     getSpellGroupLabel,
-    parseSpellCatalog,
-    SPELL_CATALOG_MAX_PAGES,
-    SPELL_CATALOG_PAGE_SIZE,
+    SPELL_CATALOG_LOAD_MORE_DISTANCE,
     SPELL_LEVELS,
-    SPELLS_SEARCH_PATH,
   } from '../../model';
 
   const emit = defineEmits<{
@@ -34,39 +34,61 @@
     spellPreviewDrawer.open({ url });
   }
 
-  // Каталог загружается постранично до конца (с предохранителем от
-  // бесконечной пагинации) и кешируется по ключу на сессию.
-  const { data: catalog, status: catalogStatus } = await useAsyncData(
-    'character-sheet:spell-catalog',
-    async () => {
-      const allSpells: SpellCatalogItem[] = [];
+  // Каталог грузится постранично с сервера (как раздел «Заклинания»):
+  // фильтры и поиск уходят в query, следующая страница — по скроллу.
+  const {
+    searchTerm,
+    selectedLevels,
+    selectedClassIds,
+    onlyConcentration,
+    onlyRitual,
+    hasActiveFilters,
+    classOptions,
+    filterGroups,
+    spells,
+    isLoadingFirstPage,
+    isLoadingMore,
+    hasLoadError,
+    hasNextPage,
+    toggleLevel,
+    toggleClassId,
+    toggleConcentration,
+    toggleRitual,
+    applyFilterGroups,
+    resetFilterSelections,
+    resetFilters,
+    loadNextPage,
+    retryLoad,
+  } = useSpellCatalogSearch();
 
-      for (let page = 0; page < SPELL_CATALOG_MAX_PAGES; page += 1) {
-        const response = await $fetch<unknown>(SPELLS_SEARCH_PATH, {
-          method: 'GET',
-          query: {
-            page,
-            size: SPELL_CATALOG_PAGE_SIZE,
-            grouping: 'NONE',
-          },
-          retry: 0,
-        });
+  // Дровер «Все фильтры» — переиспользованный FilterDrawer раздела; работает
+  // с тем же состоянием фильтра, что и быстрые чипы.
+  const isFilterDrawerOpened = ref(false);
 
-        const batch = parseSpellCatalog(response);
+  function openFilterDrawer() {
+    isFilterDrawerOpened.value = true;
+  }
 
-        allSpells.push(...batch);
+  function handleFilterDrawerSave(groups: FilterGroups) {
+    applyFilterGroups(groups);
+    isFilterDrawerOpened.value = false;
+  }
 
-        if (batch.length < SPELL_CATALOG_PAGE_SIZE) {
-          break;
-        }
-      }
+  function handleFilterDrawerReset() {
+    resetFilterSelections();
+    isFilterDrawerOpened.value = false;
+  }
 
-      return allSpells;
-    },
-    { server: false },
-  );
+  const spellListContainer = useTemplateRef<HTMLElement>('spellListContainer');
 
-  const isCatalogLoading = computed(() => catalogStatus.value === 'pending');
+  useInfiniteScroll(spellListContainer, loadNextPage, {
+    distance: SPELL_CATALOG_LOAD_MORE_DISTANCE,
+    canLoadMore: () =>
+      hasNextPage.value
+      && !isLoadingFirstPage.value
+      && !isLoadingMore.value
+      && !hasLoadError.value,
+  });
 
   /** Черновик книги: выбранные заклинания по URL. */
   const draftSpells = ref(
@@ -91,19 +113,10 @@
       name: spell.name,
       level: spell.level,
       school: spell.school,
+      concentration: spell.concentration,
+      ritual: spell.ritual,
     });
   }
-
-  // Быстрые фильтры.
-  const searchTerm = ref('');
-
-  const selectedLevels = ref(new Set<number>());
-
-  const selectedClasses = ref(new Set<string>());
-
-  const onlyConcentration = ref(false);
-
-  const onlyRitual = ref(false);
 
   const CHIP_BASE_CLASS =
     'cursor-pointer rounded border px-2 py-1 text-xs transition-colors';
@@ -114,30 +127,6 @@
 
   function getChipClass(isSelected: boolean): string {
     return `${CHIP_BASE_CLASS} ${isSelected ? CHIP_SELECTED_CLASS : CHIP_IDLE_CLASS}`;
-  }
-
-  function toggleLevel(level: number) {
-    if (selectedLevels.value.has(level)) {
-      selectedLevels.value.delete(level);
-    } else {
-      selectedLevels.value.add(level);
-    }
-  }
-
-  function toggleClass(className: string) {
-    if (selectedClasses.value.has(className)) {
-      selectedClasses.value.delete(className);
-    } else {
-      selectedClasses.value.add(className);
-    }
-  }
-
-  function toggleConcentration() {
-    onlyConcentration.value = !onlyConcentration.value;
-  }
-
-  function toggleRitual() {
-    onlyRitual.value = !onlyRitual.value;
   }
 
   const displayLevels = computed(() =>
@@ -163,104 +152,29 @@
     },
   ]);
 
-  const displayClasses = computed(() => {
-    const uniqueClasses = new Set<string>();
-
-    for (const spell of catalog.value ?? []) {
-      for (const className of spell.classes) {
-        uniqueClasses.add(className);
-      }
-    }
-
-    return [...uniqueClasses]
-      .sort((left, right) => left.localeCompare(right, 'ru'))
-      .map((className) => ({
-        name: className,
-        chipClass: getChipClass(selectedClasses.value.has(className)),
-      }));
-  });
-
-  const hasActiveFilters = computed(
-    () =>
-      Boolean(searchTerm.value.trim())
-      || selectedLevels.value.size > 0
-      || selectedClasses.value.size > 0
-      || onlyConcentration.value
-      || onlyRitual.value,
+  const displayClasses = computed(() =>
+    [...classOptions.value]
+      .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+      .map((classOption) => ({
+        id: classOption.id,
+        name: classOption.name,
+        chipClass: getChipClass(selectedClassIds.value.has(classOption.id)),
+      })),
   );
 
-  function resetFilters() {
-    searchTerm.value = '';
-    selectedLevels.value = new Set<number>();
-    selectedClasses.value = new Set<string>();
-    onlyConcentration.value = false;
-    onlyRitual.value = false;
+  interface SpellCatalogGroup {
+    level: number;
+    label: string;
+    spells: Array<SpellCatalogItem & { isSelected: boolean; rowClass: string }>;
   }
 
-  const filteredSpells = computed(() => {
-    const query = searchTerm.value.trim().toLowerCase();
-
-    // Запрос в неверной раскладке («ашкуифдд» → «fireball») тоже находит.
-    const layoutQuery = convertKeyboardLayout(query);
-
-    const queries = layoutQuery === query ? [query] : [query, layoutQuery];
-
-    return (catalog.value ?? []).filter((spell) => {
-      if (query) {
-        const name = spell.name.toLowerCase();
-
-        const nameEng = spell.nameEng.toLowerCase();
-
-        const matchesSearch = queries.some(
-          (candidate) =>
-            name.includes(candidate) || nameEng.includes(candidate),
-        );
-
-        if (!matchesSearch) {
-          return false;
-        }
-      }
-
-      if (selectedLevels.value.size && !selectedLevels.value.has(spell.level)) {
-        return false;
-      }
-
-      if (onlyConcentration.value && !spell.concentration) {
-        return false;
-      }
-
-      if (onlyRitual.value && !spell.ritual) {
-        return false;
-      }
-
-      if (
-        selectedClasses.value.size
-        && !spell.classes.some((className) =>
-          selectedClasses.value.has(className),
-        )
-      ) {
-        return false;
-      }
-
-      return true;
-    });
-  });
-
+  // Сервер отдаёт заклинания в порядке групп кругов (grouping=LEVEL),
+  // поэтому пересортировка не нужна; Map сливает заклинания одного круга
+  // из соседних страниц в единственную группу.
   const displayGroups = computed(() => {
-    const sortedSpells = [...filteredSpells.value].sort(
-      (left, right) =>
-        left.level - right.level || left.name.localeCompare(right.name, 'ru'),
-    );
+    const groupsByLevel = new Map<number, SpellCatalogGroup>();
 
-    const groups: Array<{
-      level: number;
-      label: string;
-      spells: Array<
-        SpellCatalogItem & { isSelected: boolean; rowClass: string }
-      >;
-    }> = [];
-
-    for (const spell of sortedSpells) {
+    for (const spell of spells.value) {
       const isSelected = draftSpells.value.has(spell.url);
 
       const row = {
@@ -269,20 +183,20 @@
         rowClass: isSelected ? 'bg-elevated' : '',
       };
 
-      const lastGroup = groups.at(-1);
+      const existingGroup = groupsByLevel.get(spell.level);
 
-      if (!lastGroup || lastGroup.level !== spell.level) {
-        groups.push({
+      if (existingGroup) {
+        existingGroup.spells.push(row);
+      } else {
+        groupsByLevel.set(spell.level, {
           level: spell.level,
           label: getSpellGroupLabel(spell.level),
           spells: [row],
         });
-      } else {
-        lastGroup.spells.push(row);
       }
     }
 
-    return groups;
+    return [...groupsByLevel.values()];
   });
 
   function handleApply() {
@@ -301,15 +215,29 @@
     :ui="{ content: 'sm:max-w-4xl' }"
   >
     <template #body>
-      <div class="flex min-h-96 gap-4">
-        <aside class="flex w-44 shrink-0 flex-col gap-4">
-          <div class="flex items-center gap-1">
-            <UInput
-              v-model="searchTerm"
-              icon="tabler:search"
+      <!-- Высота ряда фиксирована от вьюпорта, чтобы список тянулся до низа
+        модалки независимо от высоты сайдбара фильтров. -->
+      <div class="flex h-[65dvh] min-h-96 gap-4">
+        <aside class="flex w-44 shrink-0 flex-col gap-4 overflow-y-auto">
+          <UInput
+            v-model="searchTerm"
+            icon="tabler:search"
+            size="sm"
+            placeholder="Поиск…"
+            class="shrink-0"
+          />
+
+          <div class="flex shrink-0 items-center gap-1">
+            <UButton
+              icon="tabler:filter"
+              label="Все фильтры"
+              color="neutral"
+              variant="subtle"
               size="sm"
-              placeholder="Поиск…"
+              block
               class="min-w-0 grow"
+              :disabled="!filterGroups.length"
+              @click.left.exact.prevent="openFilterDrawer"
             />
 
             <UTooltip
@@ -382,11 +310,11 @@
             <div class="flex flex-col gap-1">
               <button
                 v-for="classChip in displayClasses"
-                :key="classChip.name"
+                :key="classChip.id"
                 type="button"
                 class="truncate text-left"
                 :class="classChip.chipClass"
-                @click.left.exact.prevent="toggleClass(classChip.name)"
+                @click.left.exact.prevent="toggleClassId(classChip.id)"
               >
                 {{ classChip.name }}
               </button>
@@ -396,114 +324,157 @@
 
         <div class="flex min-w-0 grow flex-col">
           <div
-            v-if="isCatalogLoading"
-            class="flex grow items-center justify-center py-10"
-          >
-            <UIcon
-              name="tabler:loader-2"
-              class="size-6 animate-spin text-muted"
-            />
-          </div>
-
-          <div
-            v-else
-            class="flex max-h-128 flex-col gap-3 overflow-y-auto pr-1"
+            ref="spellListContainer"
+            class="flex min-h-0 grow flex-col gap-3 overflow-y-auto pr-1"
           >
             <div
-              v-for="group in displayGroups"
-              :key="group.level"
-              class="flex flex-col gap-1"
+              v-if="isLoadingFirstPage"
+              class="flex grow items-center justify-center py-10"
             >
-              <div class="flex items-center gap-2">
-                <span
-                  class="shrink-0 text-[10px] font-bold tracking-wider text-muted uppercase"
+              <UIcon
+                name="tabler:loader-2"
+                class="size-6 animate-spin text-muted"
+              />
+            </div>
+
+            <template v-else>
+              <div
+                v-for="group in displayGroups"
+                :key="group.level"
+                class="flex flex-col gap-1"
+              >
+                <div class="flex items-center gap-2">
+                  <span
+                    class="shrink-0 text-[10px] font-bold tracking-wider text-muted uppercase"
+                  >
+                    {{ group.label }}
+                  </span>
+
+                  <div class="h-px grow bg-default/50" />
+                </div>
+
+                <div
+                  v-for="spell in group.spells"
+                  :key="spell.url"
+                  class="relative flex items-center gap-2 rounded-md pr-2 transition-colors hover:bg-elevated/60"
+                  :class="spell.rowClass"
                 >
-                  {{ group.label }}
+                  <button
+                    type="button"
+                    class="flex min-w-0 grow cursor-pointer items-center gap-2 px-3 py-1.5 text-left after:absolute after:inset-0 after:cursor-pointer"
+                    :aria-label="`Выбрать заклинание: ${spell.name}`"
+                    @click.left.exact.prevent="toggleSpell(spell)"
+                  >
+                    <span class="truncate text-sm font-medium text-highlighted">
+                      {{ spell.name }}
+                    </span>
+
+                    <span
+                      v-if="spell.school"
+                      class="shrink-0 text-xs text-muted"
+                    >
+                      {{ spell.school }}
+                    </span>
+                  </button>
+
+                  <UTooltip
+                    v-if="spell.concentration"
+                    text="Концентрация"
+                  >
+                    <UBadge
+                      size="sm"
+                      color="warning"
+                      variant="subtle"
+                      class="relative z-10 shrink-0"
+                    >
+                      К
+                    </UBadge>
+                  </UTooltip>
+
+                  <UTooltip
+                    v-if="spell.ritual"
+                    text="Ритуал"
+                  >
+                    <UBadge
+                      size="sm"
+                      color="info"
+                      variant="subtle"
+                      class="relative z-10 shrink-0"
+                    >
+                      Р
+                    </UBadge>
+                  </UTooltip>
+
+                  <UTooltip text="Открыть описание заклинания">
+                    <UButton
+                      icon="tabler:layout-sidebar-right-expand"
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      square
+                      class="relative z-10 shrink-0"
+                      :aria-label="`Описание заклинания: ${spell.name}`"
+                      @click.left.exact.prevent="handlePreview(spell.url)"
+                    />
+                  </UTooltip>
+
+                  <UIcon
+                    v-if="spell.isSelected"
+                    name="tabler:check"
+                    class="size-4 shrink-0 text-warning"
+                  />
+                </div>
+              </div>
+
+              <span
+                v-if="!displayGroups.length && !hasLoadError"
+                class="px-3 py-6 text-center text-sm text-dimmed"
+              >
+                Ничего не найдено
+              </span>
+
+              <div
+                v-if="hasLoadError"
+                class="flex flex-col items-center gap-2 py-4"
+              >
+                <span class="text-sm text-dimmed">
+                  Не удалось загрузить заклинания
                 </span>
 
-                <div class="h-px grow bg-default/50" />
+                <UButton
+                  label="Повторить"
+                  color="neutral"
+                  variant="soft"
+                  size="sm"
+                  @click.left.exact.prevent="retryLoad"
+                />
               </div>
 
               <div
-                v-for="spell in group.spells"
-                :key="spell.url"
-                class="relative flex items-center gap-2 rounded-md pr-2 transition-colors hover:bg-elevated/60"
-                :class="spell.rowClass"
+                v-else-if="isLoadingMore"
+                class="flex justify-center py-3"
               >
-                <button
-                  type="button"
-                  class="flex min-w-0 grow cursor-pointer items-center gap-2 px-3 py-1.5 text-left after:absolute after:inset-0 after:cursor-pointer"
-                  :aria-label="`Выбрать заклинание: ${spell.name}`"
-                  @click.left.exact.prevent="toggleSpell(spell)"
-                >
-                  <span class="truncate text-sm font-medium text-highlighted">
-                    {{ spell.name }}
-                  </span>
-
-                  <span
-                    v-if="spell.school"
-                    class="shrink-0 text-xs text-muted"
-                  >
-                    {{ spell.school }}
-                  </span>
-                </button>
-
-                <UTooltip
-                  v-if="spell.concentration"
-                  text="Концентрация"
-                >
-                  <UBadge
-                    size="sm"
-                    color="warning"
-                    variant="subtle"
-                  >
-                    К
-                  </UBadge>
-                </UTooltip>
-
-                <UTooltip
-                  v-if="spell.ritual"
-                  text="Ритуал"
-                >
-                  <UBadge
-                    size="sm"
-                    color="info"
-                    variant="subtle"
-                  >
-                    Р
-                  </UBadge>
-                </UTooltip>
-
-                <UTooltip text="Открыть описание заклинания">
-                  <UButton
-                    icon="tabler:layout-sidebar-right-expand"
-                    color="neutral"
-                    variant="ghost"
-                    size="xs"
-                    square
-                    class="relative z-10 shrink-0"
-                    :aria-label="`Описание заклинания: ${spell.name}`"
-                    @click.left.exact.prevent="handlePreview(spell.url)"
-                  />
-                </UTooltip>
-
                 <UIcon
-                  v-if="spell.isSelected"
-                  name="tabler:check"
-                  class="size-4 shrink-0 text-warning"
+                  name="tabler:loader-2"
+                  class="size-5 animate-spin text-muted"
                 />
               </div>
-            </div>
-
-            <span
-              v-if="!displayGroups.length"
-              class="px-3 py-6 text-center text-sm text-dimmed"
-            >
-              Ничего не найдено
-            </span>
+            </template>
           </div>
         </div>
       </div>
+
+      <!-- Слайсовер телепортируется в body; внутри #body он держит у модалки
+        единственный корень, чтобы open/after:leave от useOverlay доходили
+        до UModal. -->
+      <FilterDrawer
+        v-if="filterGroups.length"
+        v-model="isFilterDrawerOpened"
+        title="Фильтры заклинаний"
+        :groups="filterGroups"
+        @save="handleFilterDrawerSave"
+        @reset="handleFilterDrawerReset"
+      />
     </template>
 
     <template #footer>

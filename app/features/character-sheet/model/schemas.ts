@@ -86,13 +86,11 @@ const spellLinkSchema = z.object({
   url: z.string(),
   name: z.object({
     rus: z.string().catch(''),
-    eng: z.string().catch(''),
   }),
   level: z.coerce.number().catch(0),
   school: z.string().catch(''),
   concentration: z.boolean().catch(false),
   ritual: z.boolean().catch(false),
-  classes: z.array(z.object({ name: z.string().catch('') })).catch([]),
 });
 
 /** Ответ поиска заклинаний: плоский массив или страница `{ value, Count }`. */
@@ -117,12 +115,10 @@ export function parseSpellCatalog(input: unknown): SpellCatalogItem[] {
   return list.map((spell) => ({
     url: spell.url,
     name: spell.name.rus,
-    nameEng: spell.name.eng,
     level: spell.level,
     school: spell.school,
     concentration: spell.concentration,
     ritual: spell.ritual,
-    classes: spell.classes.map((spellClass) => spellClass.name).filter(Boolean),
   }));
 }
 

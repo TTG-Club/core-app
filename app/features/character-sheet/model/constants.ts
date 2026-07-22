@@ -476,11 +476,23 @@ export const SPECIES_SEARCH_PATH = '/api/v2/species/search';
 /** Эндпоинт поиска заклинаний. */
 export const SPELLS_SEARCH_PATH = '/api/v2/spells/search';
 
-/** Размер страницы загрузки каталога заклинаний. */
-export const SPELL_CATALOG_PAGE_SIZE = 200;
+/** Эндпоинт фильтров заклинаний — источник списка классов для чипов. */
+export const SPELLS_FILTERS_PATH = '/api/v2/spells/filters';
 
-/** Предохранитель от бесконечной пагинации каталога заклинаний. */
-export const SPELL_CATALOG_MAX_PAGES = 20;
+/** Размер страницы каталога заклинаний (как в разделе «Заклинания»). */
+export const SPELL_CATALOG_PAGE_SIZE = 60;
+
+/** Группировка каталога: сервер отдаёт заклинания кругами по порядку. */
+export const SPELL_CATALOG_GROUPING = 'LEVEL';
+
+/** Сортировка каталога внутри круга — по русскому названию. */
+export const SPELL_CATALOG_SORTING = 'NAME';
+
+/** Дистанция до низа списка каталога для подгрузки следующей страницы. */
+export const SPELL_CATALOG_LOAD_MORE_DISTANCE = 300;
+
+/** Дебаунс поискового запроса каталога заклинаний. */
+export const SPELL_CATALOG_SEARCH_DEBOUNCE_MS = 300;
 
 /** Круги заклинаний для быстрого фильтра (0 — заговоры). */
 export const SPELL_LEVELS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];

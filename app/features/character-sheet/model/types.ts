@@ -262,6 +262,12 @@ export interface CharacterSpell {
 
   /** Название школы магии. */
   school: string;
+
+  /** Требует концентрации; нет у записей, добавленных до этого поля. */
+  concentration?: boolean;
+
+  /** Ритуальное заклинание; нет у записей, добавленных до этого поля. */
+  ritual?: boolean;
 }
 
 /** Группа заклинаний одного круга для списка с разделителями. */
@@ -273,14 +279,16 @@ export interface CharacterSpellGroup {
 
 /** Заклинание каталога в модалке добавления (расширенная ссылка). */
 export interface SpellCatalogItem extends CharacterSpell {
-  /** Английское название — участвует в поиске. */
-  nameEng: string;
-
   concentration: boolean;
   ritual: boolean;
+}
 
-  /** Названия классов, которым доступно заклинание. */
-  classes: string[];
+/** Опция чипа класса из фильтров заклинаний (`className`). */
+export interface SpellClassOption {
+  /** Идентификатор значения фильтра, уходит в query `className`. */
+  id: string;
+
+  name: string;
 }
 
 /** Опция автокомплита выбора вида. */

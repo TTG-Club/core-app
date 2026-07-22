@@ -107,6 +107,34 @@
             </span>
           </button>
 
+          <UTooltip
+            v-if="spell.concentration"
+            text="Концентрация"
+          >
+            <UBadge
+              size="sm"
+              color="warning"
+              variant="subtle"
+              class="relative z-10 shrink-0"
+            >
+              К
+            </UBadge>
+          </UTooltip>
+
+          <UTooltip
+            v-if="spell.ritual"
+            text="Ритуал"
+          >
+            <UBadge
+              size="sm"
+              color="info"
+              variant="subtle"
+              class="relative z-10 shrink-0"
+            >
+              Р
+            </UBadge>
+          </UTooltip>
+
           <UButton
             icon="tabler:trash"
             color="error"
