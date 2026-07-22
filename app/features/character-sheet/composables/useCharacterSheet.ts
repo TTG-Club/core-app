@@ -531,6 +531,22 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Установка заметок персонажа; значение — хранимая форма редактора разметки.
+   *
+   * @param notes новые заметки персонажа.
+   */
+  function setNotes(notes: string): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      notes,
+    };
+  }
+
+  /**
    * Установка размера персонажа.
    *
    * @param size русская подпись размера; null — размер не указан.
@@ -610,6 +626,7 @@ export function useCharacterSheet() {
     removeSpell,
     setFeatureChoice,
     setName,
+    setNotes,
     setProficiencies,
     setProgress,
     setSize,

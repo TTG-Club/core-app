@@ -168,4 +168,5 @@ export const DEFAULT_CHARACTER: Character = {
       items: [],
     },
   ],
+  notes: '',
 };

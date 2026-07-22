@@ -409,6 +409,9 @@ export interface Character {
   proficiencies: CharacterProficiencies;
   currency: CharacterCurrency;
   inventory: CharacterInventorySection[];
+
+  /** Заметки игрока в разметке сайта (хранимая форма редактора `MarkupEditor`). */
+  notes: string;
 }
 
 /** Вкладка правой панели листа персонажа. */

@@ -15,6 +15,7 @@ export { default as SheetInventoryItemRow } from './SheetInventoryItemRow.vue';
 export { default as SheetInventorySection } from './SheetInventorySection.vue';
 export { default as SheetInventoryTabs } from './SheetInventoryTabs.vue';
 export { default as SheetNameModal } from './SheetNameModal.vue';
+export { default as SheetNotesTab } from './SheetNotesTab.vue';
 export { default as SheetPanel } from './SheetPanel.vue';
 export { default as SheetProficienciesPanel } from './SheetProficienciesPanel.vue';
 export { default as SheetProficiencyGroupsModal } from './SheetProficiencyGroupsModal.vue';

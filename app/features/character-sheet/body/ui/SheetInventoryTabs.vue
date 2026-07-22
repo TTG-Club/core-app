@@ -16,6 +16,7 @@
   import SheetCurrencyRow from './SheetCurrencyRow.vue';
   import SheetFeaturesTab from './SheetFeaturesTab.vue';
   import SheetInventorySection from './SheetInventorySection.vue';
+  import SheetNotesTab from './SheetNotesTab.vue';
   import SheetSpellsTab from './SheetSpellsTab.vue';
 
   const props = defineProps<{
@@ -55,10 +56,12 @@
     emit('remove-feature', featureId);
   }
 
-  // Вкладки «Особенности» и «Заклинания» больше не пустышки — у них свой
-  // контент.
+  // Вкладки «Особенности», «Заклинания» и «Заметки» больше не пустышки —
+  // у них свой контент.
   const emptyTabItems = Object.entries(SHEET_TAB_EMPTY_LABELS)
-    .filter(([slot]) => slot !== 'features' && slot !== 'spells')
+    .filter(
+      ([slot]) => slot !== 'features' && slot !== 'spells' && slot !== 'notes',
+    )
     .map(([slot, label]) => ({ slot, label }));
 
   const tabItems = computed<TabsItem[]>(() =>
@@ -107,6 +110,10 @@
         @edit-choice="handleChoiceEdit"
         @remove-feature="handleFeatureRemove"
       />
+    </template>
+
+    <template #notes>
+      <SheetNotesTab />
     </template>
 
     <template
