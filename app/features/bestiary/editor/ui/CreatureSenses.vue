@@ -18,12 +18,18 @@
 
     const perception = skills.find((skill) => skill.skill === 'PERCEPTION');
 
-    if (perception) {
-      model.value.passivePerception =
-        10 + wisdomMod + perception.multiplier * proficiencyBonus;
-    } else {
+    if (!perception) {
       model.value.passivePerception = 10 + wisdomMod;
+
+      return;
     }
+
+    // `bonus` у загруженных записей приходит как `null`, поэтому `?? 0`.
+    model.value.passivePerception =
+      10
+      + wisdomMod
+      + perception.multiplier * proficiencyBonus
+      + (perception.bonus ?? 0);
   });
 </script>
 
