@@ -6,4 +6,5 @@ export { ttgListExtensions } from './ttg-list';
 export { TtgMarker } from './ttg-marker';
 export { ttgParagraphExtensions } from './ttg-paragraph';
 export { ttgQuoteExtensions } from './ttg-quote';
+export { TtgSectionLink } from './ttg-section-link';
 export { ttgTableExtensions } from './ttg-table';

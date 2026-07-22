@@ -10,6 +10,7 @@ import type {
 import { Mark, mergeAttributes } from '@tiptap/core';
 
 import { findMarkerEnd } from '../../markup/balance';
+import { classifyLinkMarker } from './link-markers';
 import { isBlockMarker } from './render-chip';
 import { isHeadingMarkerStart } from './ttg-heading';
 import { isListMarkerStart } from './ttg-list';
@@ -209,6 +210,13 @@ export const markerMarkdownTokenizer: MarkdownTokenizer = {
         raw,
         tokens: lexer.inlineTokens(format.inner),
       };
+    }
+
+    // Ссылка на раздел / внешняя ссылка ({@spell}/{@species}/…/{@link} с url:) —
+    // редактируемый узел с текстовой подписью (курсор внутрь, правка по буквам),
+    // а не атомарный чип. Всё прочее (badge/kbd/dice/…) остаётся атомом.
+    if (classifyLinkMarker(raw)) {
+      return { type: 'ttgSectionLink', raw };
     }
 
     return { type: 'ttgMarker', raw };
