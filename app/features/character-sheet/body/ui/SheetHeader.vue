@@ -5,6 +5,7 @@
     getSpeciesDisplayName,
     getVisionRows,
     SHEET_EMPTY_LABELS,
+    VISION_LABELS,
   } from '../../model';
 
   const props = defineProps<{
@@ -74,6 +75,10 @@
   );
 
   const visionRows = computed(() => getVisionRows(props.character.vision));
+
+  const hasVisionDetails = computed(() =>
+    visionRows.value.some((row) => row.formattedValue !== null),
+  );
 </script>
 
 <template>
@@ -99,7 +104,7 @@
       <div
         class="absolute -bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1"
       >
-        <UTooltip>
+        <UTooltip :text="VISION_LABELS.normal">
           <!-- Непрозрачная подложка: soft-вариант кнопки полупрозрачный,
             без неё сквозь кнопку просвечивает край аватара -->
           <span class="rounded-full bg-default">
@@ -115,7 +120,12 @@
             />
           </span>
 
-          <template #content>
+          <!-- Строки с дистанциями — только когда есть особые чувства,
+            иначе обычный текстовый тултип, как у соседней кнопки размера -->
+          <template
+            v-if="hasVisionDetails"
+            #content
+          >
             <div class="flex flex-col gap-1 p-1">
               <div
                 v-for="row in visionRows"
