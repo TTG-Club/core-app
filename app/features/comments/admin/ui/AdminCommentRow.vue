@@ -1,12 +1,14 @@
 <script setup lang="ts">
   import type { CommentEntry } from '../../model';
 
+  import { SOURCE_PLATFORM, SOURCE_PLATFORM_LABELS } from '#shared/consts';
   import { ConfirmDialog } from '~initiative/ui-kit';
 
   import { useCommentTimestamp } from '../../composables';
   import {
     ADMIN_COMMENT_DELETE_LABEL,
     ADMIN_COMMENT_DELETED_TOAST,
+    ADMIN_COMMENT_FOREIGN_SITE_HINT,
     ADMIN_COMMENT_OPEN_LABEL,
     ADMIN_COMMENT_REPLY_TO_FALLBACK,
     ADMIN_COMMENT_RESTORE_TOOLTIP,
@@ -20,6 +22,7 @@
     COMMENT_RESTORE_ERROR_TOAST,
     COMMENT_RESTORE_LABEL,
     COMMENT_RESTORED_TOAST,
+    COMMENT_SOURCE_PLATFORM_LABEL,
     COMMENT_STATUS_COLORS,
     COMMENT_STATUS_LABELS,
     deleteComment,
@@ -55,13 +58,46 @@
 
   const { createdLabel, createdFullLabel } = useCommentTimestamp(() => comment);
 
+  const { oldSiteUrl } = useRuntimeConfig().public;
+
+  /**
+   * Комментарий пришёл не с этого сайта. Лента модерации общая на все сайты
+   * сервиса, а `url` в записи — путь внутри своего сайта: открывать его тем же
+   * роутером нельзя, там либо 404, либо чужая сущность с совпавшим слагом.
+   *
+   * Записи без платформы созданы до появления поля — они все из сайта 2024.
+   */
+  const isForeignSite = computed(
+    () =>
+      !!comment.sourcePlatform && comment.sourcePlatform !== SOURCE_PLATFORM,
+  );
+
   /**
    * Якорная ссылка на комментарий на канонической странице обсуждения —
    * переход раскрывает ветку и подсвечивает цель (deep-link ленты).
+   * Для чужого сайта строится абсолютный адрес по базе из конфига; без неё
+   * ссылки нет — погашенная кнопка честнее перехода в 404.
    * Старые записи без `url` открыть не получится.
    */
-  const commentPageLink = computed(() =>
-    comment.url ? `${comment.url}#${getCommentAnchorId(comment.id)}` : null,
+  const commentPageLink = computed(() => {
+    if (!comment.url) {
+      return null;
+    }
+
+    const anchor = `${comment.url}#${getCommentAnchorId(comment.id)}`;
+
+    if (!isForeignSite.value) {
+      return anchor;
+    }
+
+    return oldSiteUrl ? `${oldSiteUrl}${anchor}` : null;
+  });
+
+  /** Подсказка на кнопке «Открыть», когда открывать нечем. */
+  const openHint = computed(() =>
+    isForeignSite.value && !commentPageLink.value
+      ? ADMIN_COMMENT_FOREIGN_SITE_HINT
+      : undefined,
   );
 
   const statusLabel = computed(() => COMMENT_STATUS_LABELS[comment.status]);
@@ -227,6 +263,17 @@
             </time>
           </UTooltip>
 
+          <!-- Сайт-источник виден только у чужих записей: у своих он лишний шум -->
+          <UBadge
+            v-if="isForeignSite"
+            variant="subtle"
+            color="neutral"
+            size="sm"
+            :title="COMMENT_SOURCE_PLATFORM_LABEL"
+          >
+            {{ SOURCE_PLATFORM_LABELS[comment.sourcePlatform!] }}
+          </UBadge>
+
           <UButton
             v-if="commentPageLink"
             size="xs"
@@ -238,6 +285,21 @@
           >
             {{ ADMIN_COMMENT_OPEN_LABEL }}
           </UButton>
+
+          <UTooltip
+            v-else-if="openHint"
+            :text="openHint"
+          >
+            <UButton
+              size="xs"
+              variant="soft"
+              color="neutral"
+              icon="tabler:external-link"
+              disabled
+            >
+              {{ ADMIN_COMMENT_OPEN_LABEL }}
+            </UButton>
+          </UTooltip>
 
           <UTooltip
             v-if="showRestoreButton"

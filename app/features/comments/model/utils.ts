@@ -6,6 +6,8 @@ import type {
   PublicComment,
 } from './types';
 
+import { SOURCE_PLATFORM } from '#shared/consts';
+
 import {
   COMMENT_ANCHOR_PREFIX,
   COMMENT_SECTION_MAX_LENGTH,
@@ -142,6 +144,7 @@ export function mergeRestoredComment(
 ): CommentEntry {
   return {
     ...restored,
+    sourcePlatform: restored.sourcePlatform ?? previous.sourcePlatform,
     section: restored.section ?? previous.section,
     url: restored.url ?? previous.url,
     parentAuthorName: restored.parentAuthorName ?? previous.parentAuthorName,
@@ -181,6 +184,9 @@ export function findCommentNode(
 /**
  * Принадлежит ли комментарий треду `section`/`url`. Старые сборки сервиса
  * этих полей не присылают — тогда принадлежность не проверяется (доверяем).
+ * Сайт проверяется по той же причине: комментарий по прямой ссылке достаётся по
+ * идентификатору, а он глобальный — без сверки якорь на комментарий другого сайта
+ * развернул бы чужую ветку.
  * @param comment Комментарий сервиса.
  * @param section Раздел треда.
  * @param url URL страницы треда.
@@ -191,7 +197,9 @@ export function isCommentFromThread(
   url: string,
 ): boolean {
   return (
-    (comment.section == null || comment.section === section)
+    (comment.sourcePlatform == null
+      || comment.sourcePlatform === SOURCE_PLATFORM)
+    && (comment.section == null || comment.section === section)
     && (comment.url == null || comment.url === url)
   );
 }

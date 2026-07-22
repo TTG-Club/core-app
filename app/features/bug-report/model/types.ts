@@ -1,3 +1,10 @@
+/**
+ * Платформы-источники переехали в `#shared/consts`: набор общий с комментариями,
+ * и держать его в фиче значило бы дублировать значения, которые обязаны совпадать.
+ * Реэкспорт оставлен, чтобы не переписывать импорты внутри фичи.
+ */
+import type { SourcePlatform } from '#shared/consts';
+
 /** Контекст выделенного текста для баг-репорта */
 export interface TextSelection {
   /** Текст до выделения (~50 символов контекста) */
@@ -10,8 +17,7 @@ export interface TextSelection {
   after: string;
 }
 
-/** Допустимые платформы-источники баг-репорта */
-export type SourcePlatform = 'SITE_5E24' | 'SITE_5E14' | 'VTTG';
+export type { SourcePlatform };
 
 /** Запрос на создание баг-репорта для API */
 export interface BugReportCreateRequest {

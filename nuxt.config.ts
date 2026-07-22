@@ -440,6 +440,12 @@ export default defineNuxtConfig({
         licenseKey:
           process.env.NUXT_LIGHT_GALLERY_LICENSE_KEY || '0000-0000-000-0000',
       },
+      // Origin старого сайта без завершающего слэша — нужен ленте модерации
+      // комментариев: она общая на оба сайта сервиса, а url в записи это путь
+      // внутри своего сайта. Пусто — кнопка «Открыть» у чужих записей гаснет
+      // с подсказкой, вместо перехода в 404. Задаётся через
+      // NUXT_PUBLIC_OLD_SITE_URL.
+      oldSiteUrl: '',
     },
     site: {
       url: process.env.NUXT_SITE_URL,
