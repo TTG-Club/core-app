@@ -4,6 +4,7 @@ import type {
   CharacterClassResource,
   CurrencyKey,
   FeatureOrigin,
+  InventoryItemCategory,
   LanguageProficiencyGroup,
   ResourceRecovery,
   RollMode,
@@ -506,6 +507,49 @@ export const SPELL_LEVELS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 /** Базовый путь деталей вида (`/{url}` и `/{url}/lineages`). */
 export const SPECIES_DETAIL_BASE_PATH = '/api/v2/species';
 
+/** Эндпоинт поиска предметов (раздел «Предметы»). */
+export const ITEMS_SEARCH_PATH = '/api/v2/item/search';
+
+/** Эндпоинт фильтров предметов — источник списка категорий для чипов. */
+export const ITEMS_FILTERS_PATH = '/api/v2/item/filters';
+
+/** Базовый путь деталей предмета (`/{url}`). */
+export const ITEMS_DETAIL_BASE_PATH = '/api/v2/item';
+
+/** Эндпоинт поиска магических предметов (раздел «Магические предметы»). */
+export const MAGIC_ITEMS_SEARCH_PATH = '/api/v2/magic-items/search';
+
+/** Эндпоинт фильтров магических предметов. */
+export const MAGIC_ITEMS_FILTERS_PATH = '/api/v2/magic-items/filters';
+
+/** Порядок групп инвентаря по категориям предмета. */
+export const INVENTORY_CATEGORY_ORDER: InventoryItemCategory[] = [
+  'WEAPON',
+  'ARMOR',
+  'ITEM',
+  'MAGIC_ITEM',
+];
+
+/** Названия групп инвентаря по категориям предмета. */
+export const INVENTORY_CATEGORY_TITLES: Record<InventoryItemCategory, string> =
+  {
+    WEAPON: 'Оружие',
+    ARMOR: 'Доспехи',
+    ITEM: 'Прочее',
+    MAGIC_ITEM: 'Магические предметы',
+  };
+
+/** Иконки предметов инвентаря по категориям. */
+export const INVENTORY_CATEGORY_ICONS: Record<InventoryItemCategory, string> = {
+  WEAPON: 'tabler:sword',
+  ARMOR: 'tabler:shield',
+  ITEM: 'tabler:backpack',
+  MAGIC_ITEM: 'tabler:sparkles',
+};
+
+/** Максимальное количество одного предмета в инвентаре. */
+export const INVENTORY_QUANTITY_MAX = 999;
+
 /** Слова размеров для разбора строки размера вида. */
 export const SIZE_LABEL_WORDS = [
   'Крошечный',
@@ -602,12 +646,7 @@ export const WEAPON_GROUP_TITLE_CLASSES: Record<
 
 /** Подписи для незаполненных полей листа. */
 export const SHEET_EMPTY_LABELS: Record<
-  | 'species'
-  | 'className'
-  | 'background'
-  | 'classResources'
-  | 'proficiencies'
-  | 'inventory',
+  'species' | 'className' | 'background' | 'classResources' | 'proficiencies',
   string
 > = {
   species: 'Вид не выбран',
@@ -615,7 +654,6 @@ export const SHEET_EMPTY_LABELS: Record<
   background: 'Предыстория не выбрана',
   classResources: 'Нет ресурсов',
   proficiencies: 'Нет',
-  inventory: 'Пусто',
 };
 
 /** Вкладки правой панели листа персонажа. */
@@ -629,9 +667,10 @@ export const SHEET_TABS: SheetTab[] = [
 
 /** Подписи пустых вкладок листа персонажа. */
 export const SHEET_TAB_EMPTY_LABELS: Record<
-  'spells' | 'features' | 'effects' | 'notes',
+  'equipment' | 'spells' | 'features' | 'effects' | 'notes',
   string
 > = {
+  equipment: 'Инвентарь пуст',
   spells: 'Книга заклинаний пуста',
   features: 'Нет особенностей',
   effects: 'Нет активных эффектов',

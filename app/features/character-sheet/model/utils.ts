@@ -5,7 +5,8 @@ import type {
   CharacterExtraHitDie,
   CharacterFeature,
   CharacterHitDie,
-  CharacterInventorySection,
+  CharacterInventoryGroup,
+  CharacterInventoryItem,
   CharacterSkill,
   CharacterSpecies,
   CharacterSpeed,
@@ -15,6 +16,9 @@ import type {
   FeatSummary,
   FeatureDescriptionNode,
   FeatureOrigin,
+  InventoryItemOrigin,
+  ItemSummary,
+  MagicItemCatalogItem,
   PrimarySpeed,
   ProficiencyCatalogGroup,
   RollMode,
@@ -27,6 +31,8 @@ import type {
   VisionRow,
 } from './types';
 
+import { capitalize } from 'es-toolkit';
+
 import { isBlockNode, isMarkerNode, parse, toMarkupSource } from '~ui/markup';
 
 import {
@@ -35,6 +41,8 @@ import {
   ABILITY_SHORT_LABELS,
   CARRYING_CAPACITY_MULTIPLIER,
   DARKVISION_PARSE_FALLBACK,
+  INVENTORY_CATEGORY_ORDER,
+  INVENTORY_CATEGORY_TITLES,
   LEVEL_XP_THRESHOLDS,
   ROLL_MODE_DICE_NOTATION,
   SIZE_LABEL_WORDS,
@@ -179,24 +187,114 @@ export function getSkillRows(character: Character): SkillRow[] {
 }
 
 /**
- * Суммарный вес инвентаря в фунтах.
+ * Суммарный вес инвентаря в фунтах с учётом количества. Округляется до одного
+ * знака: вес предмета бывает дробным (например, 0,5 фунта).
  *
- * @param sections разделы инвентаря.
- * @returns суммарный вес всех предметов с учётом количества.
+ * @param inventoryItems предметы инвентаря.
+ * @returns суммарный вес всех предметов.
  */
 export function getInventoryWeight(
-  sections: CharacterInventorySection[],
+  inventoryItems: CharacterInventoryItem[],
 ): number {
-  return sections.reduce(
-    (total, section) =>
-      total
-      + section.items.reduce(
-        (sectionTotal, inventoryItem) =>
-          sectionTotal + inventoryItem.weight * inventoryItem.quantity,
-        0,
-      ),
+  const total = inventoryItems.reduce(
+    (sum, inventoryItem) => sum + inventoryItem.weight * inventoryItem.quantity,
     0,
   );
+
+  return Math.round(total * 10) / 10;
+}
+
+/**
+ * Группировка предметов инвентаря по категориям в порядке каталога: оружие,
+ * доспехи, прочее; внутри группы — по алфавиту. Пустые группы пропускаются.
+ *
+ * @param inventoryItems предметы инвентаря.
+ * @returns группы предметов с подписями для разделителей.
+ */
+export function getInventoryGroups(
+  inventoryItems: CharacterInventoryItem[],
+): CharacterInventoryGroup[] {
+  return INVENTORY_CATEGORY_ORDER.map((category) => ({
+    category,
+    title: INVENTORY_CATEGORY_TITLES[category],
+    items: inventoryItems
+      .filter((inventoryItem) => inventoryItem.category === category)
+      .sort((left, right) => left.name.localeCompare(right.name, 'ru')),
+  })).filter((group) => group.items.length > 0);
+}
+
+/**
+ * Идентификатор предмета инвентаря по разделу-источнику и URL предмета.
+ *
+ * @param origin раздел-источник предмета.
+ * @param itemUrl URL предмета из ответа API.
+ * @returns устойчивый идентификатор предмета инвентаря.
+ */
+export function getInventoryItemId(
+  origin: InventoryItemOrigin,
+  itemUrl: string,
+): string {
+  return `${origin}:${itemUrl}`;
+}
+
+/**
+ * Разбор строки веса предмета (например, «20 фнт.» или «0,5 фнт.»).
+ *
+ * @param weightText строка веса из ответа API.
+ * @returns вес в фунтах; 0 — не распознан.
+ */
+export function parseItemWeight(weightText: string): number {
+  const weightMatch = /(\d+(?:[.,]\d+)?)/.exec(weightText);
+
+  return weightMatch?.[1] ? Number(weightMatch[1].replace(',', '.')) : 0;
+}
+
+/**
+ * Сборка предмета инвентаря из детали предмета раздела «Предметы»: одна штука.
+ *
+ * @param summary деталь предмета.
+ * @returns предмет инвентаря для вкладки «Снаряжение».
+ */
+export function buildInventoryItem(
+  summary: ItemSummary,
+): CharacterInventoryItem {
+  return {
+    id: getInventoryItemId('item', summary.url),
+    url: summary.url,
+    name: summary.name,
+    category: summary.category,
+    typesLabel: summary.typesLabel,
+    cost: summary.cost,
+    weight: summary.weight,
+    quantity: 1,
+  };
+}
+
+/**
+ * Сборка предмета инвентаря из ссылки каталога магических предметов: категория
+ * и редкость известны прямо из поиска, поэтому деталь не запрашивается; вес и
+ * стоимость у магических предметов раздел не отдаёт.
+ *
+ * @param catalogItem магический предмет каталога.
+ * @returns предмет инвентаря для вкладки «Снаряжение».
+ */
+export function buildMagicItemInventoryItem(
+  catalogItem: MagicItemCatalogItem,
+): CharacterInventoryItem {
+  const typesLabel = [capitalize(catalogItem.category), catalogItem.rarity]
+    .filter(Boolean)
+    .join(', ');
+
+  return {
+    id: getInventoryItemId('magic-item', catalogItem.url),
+    url: catalogItem.url,
+    name: catalogItem.name,
+    category: 'MAGIC_ITEM',
+    typesLabel,
+    cost: '',
+    weight: 0,
+    quantity: 1,
+  };
 }
 
 /**

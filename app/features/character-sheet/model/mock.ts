@@ -2,8 +2,7 @@ import type { Character } from './types';
 
 /**
  * Пустой персонаж по умолчанию: характеристики 10, без владений, навыков и
- * прогресса. Разделы инвентаря заполнены временными данными вкладки
- * «Снаряжение» до реализации её редактирования.
+ * прогресса.
  */
 export const DEFAULT_CHARACTER: Character = {
   id: 'new-character',
@@ -86,87 +85,6 @@ export const DEFAULT_CHARACTER: Character = {
     gold: 0,
     platinum: 0,
   },
-  inventory: [
-    {
-      title: 'Оружие',
-      items: [
-        {
-          id: 'club',
-          name: 'Дубинка',
-          category: 'Простое оружие',
-          icon: 'tabler:sword',
-          stats: [
-            { label: 'Атака', value: '+6' },
-            { label: 'Дробящий', value: '1к4+4' },
-          ],
-          quantity: 1,
-          weight: 2,
-          equipped: false,
-        },
-        {
-          id: 'handaxe',
-          name: 'Ручной топор',
-          category: 'Простое оружие',
-          icon: 'tabler:axe',
-          stats: [
-            { label: 'Атака', value: '+4' },
-            { label: 'Рубящий', value: '1к6+4' },
-          ],
-          quantity: 1,
-          weight: 2,
-          equipped: false,
-        },
-      ],
-    },
-    {
-      title: 'Экипировка',
-      items: [
-        {
-          id: 'padded-armor',
-          name: 'Стёганый доспех',
-          category: 'Лёгкая броня',
-          icon: 'tabler:shirt',
-          stats: [{ label: 'КД', value: '11' }],
-          quantity: 1,
-          weight: 8,
-          equipped: true,
-        },
-        {
-          id: 'padded-armor-spare',
-          name: 'Стёганый доспех',
-          category: 'Лёгкая броня',
-          icon: 'tabler:shirt',
-          stats: [{ label: 'КД', value: '11' }],
-          quantity: 1,
-          weight: 8,
-          equipped: false,
-        },
-        {
-          id: 'plate-armor',
-          name: 'Латный доспех +3',
-          category: 'Тяжёлая броня',
-          icon: 'tabler:shirt',
-          stats: [{ label: 'КД', value: '21' }],
-          quantity: 1,
-          weight: 65,
-          equipped: false,
-        },
-        {
-          id: 'shield',
-          name: 'Щит +3',
-          category: 'Щит',
-          icon: 'tabler:shield',
-          stats: [{ label: 'КД', value: '5' }],
-          quantity: 1,
-          weight: 6,
-          equipped: false,
-        },
-      ],
-    },
-    {
-      title: 'Инструменты',
-      items: [],
-    },
-  ],
+  inventory: [],
   notes: '',
 };

@@ -7,6 +7,7 @@ import type {
   CharacterFeature,
   CharacterHealth,
   CharacterHitDie,
+  CharacterInventoryItem,
   CharacterSpecies,
   CharacterSpeed,
   CharacterSpell,
@@ -32,6 +33,7 @@ import {
   getProficiencyBonus,
   getSavingThrowRows,
   getSkillRows,
+  INVENTORY_QUANTITY_MAX,
   LEVEL_MAX,
   LEVEL_MIN,
   RESOURCE_COUNT_MAX,
@@ -494,6 +496,86 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Добавление предметов инвентаря из каталога раздела «Предметы».
+   * Идентификаторы устойчивы (`item:url`), поэтому уже добавленные предметы
+   * отбрасываются.
+   *
+   * @param inventoryItems предметы с готовыми идентификаторами.
+   */
+  function addInventoryItems(inventoryItems: CharacterInventoryItem[]): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const existingIds = new Set(
+      character.value.inventory.map((inventoryItem) => inventoryItem.id),
+    );
+
+    const freshItems = inventoryItems.filter(
+      (inventoryItem) => !existingIds.has(inventoryItem.id),
+    );
+
+    if (!freshItems.length) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      inventory: [
+        ...character.value.inventory,
+        ...freshItems.map((inventoryItem) => ({ ...inventoryItem })),
+      ],
+    };
+  }
+
+  /**
+   * Удаление предмета из инвентаря.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   */
+  function removeInventoryItem(inventoryItemId: string): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.filter(
+        (inventoryItem) => inventoryItem.id !== inventoryItemId,
+      ),
+    };
+  }
+
+  /**
+   * Изменение количества предмета в пределах от одной штуки до максимума.
+   * Игровое действие (трата и пополнение расходников) — блокировкой листа не
+   * ограничивается; удаление предмета — отдельным экшеном.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   * @param delta изменение количества.
+   */
+  function adjustInventoryItemQuantity(
+    inventoryItemId: string,
+    delta: number,
+  ): void {
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.map((inventoryItem) =>
+        inventoryItem.id === inventoryItemId
+          ? {
+              ...inventoryItem,
+              quantity: clamp(
+                inventoryItem.quantity + delta,
+                1,
+                INVENTORY_QUANTITY_MAX,
+              ),
+            }
+          : inventoryItem,
+      ),
+    };
+  }
+
+  /**
    * Добавление особенности вручную; идентификатор генерируется.
    *
    * @param feature особенность без идентификатора.
@@ -655,10 +737,13 @@ export function useCharacterSheet() {
     setArmorClass,
     setClassResources,
     adjustClassResource,
+    adjustInventoryItemQuantity,
     toggleInspiration,
     addFeature,
     addFeats,
+    addInventoryItems,
     removeFeature,
+    removeInventoryItem,
     removeSpell,
     setFeatureChoice,
     setName,

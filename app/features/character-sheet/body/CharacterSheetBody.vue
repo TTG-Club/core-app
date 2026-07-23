@@ -26,6 +26,8 @@
     SheetHealthModal,
     SheetHealthPanel,
     SheetInventoryTabs,
+    SheetItemAddModal,
+    SheetMagicItemAddModal,
     SheetNameModal,
     SheetProficienciesPanel,
     SheetProficiencyGroupsModal,
@@ -58,7 +60,9 @@
     toggleSavingThrowProficiency,
     cycleSkillProficiency,
     adjustClassResource,
+    adjustInventoryItemQuantity,
     removeFeature,
+    removeInventoryItem,
     removeSpell,
     setFeatureChoice,
     toggleInspiration,
@@ -117,6 +121,10 @@
   const featAddModal = overlay.create(SheetFeatAddModal);
 
   const spellAddModal = overlay.create(SheetSpellAddModal);
+
+  const itemAddModal = overlay.create(SheetItemAddModal);
+
+  const magicItemAddModal = overlay.create(SheetMagicItemAddModal);
 
   function handleAbilityEdit(abilityKey: AbilityKey) {
     if (!ensureEditable()) {
@@ -285,6 +293,22 @@
 
     spellAddModal.open();
   }
+
+  function handleItemAdd() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    itemAddModal.open();
+  }
+
+  function handleMagicItemAdd() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    magicItemAddModal.open();
+  }
 </script>
 
 <template>
@@ -390,9 +414,13 @@
           :spells="character.spells"
           @add-feature="handleFeatureAdd"
           @add-feat="handleFeatAdd"
+          @add-item="handleItemAdd"
+          @add-magic-item="handleMagicItemAdd"
           @add-spell="handleSpellAdd"
+          @adjust-item-quantity="adjustInventoryItemQuantity"
           @edit-choice="setFeatureChoice"
           @remove-feature="removeFeature"
+          @remove-item="removeInventoryItem"
           @remove-spell="removeSpell"
         />
       </div>

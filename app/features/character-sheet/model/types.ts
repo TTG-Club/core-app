@@ -350,37 +350,96 @@ export interface SpeciesSummary {
   features: SpeciesFeatureSummary[];
 }
 
-/** Отображаемый параметр предмета инвентаря (например, «Атака +6»). */
-export interface InventoryItemStat {
-  label: string;
-  value: string;
-}
+/**
+ * Категория предмета инвентаря: категории раздела «Предметы» плюс отдельная
+ * группа для магических предметов.
+ */
+export type InventoryItemCategory = 'WEAPON' | 'ARMOR' | 'ITEM' | 'MAGIC_ITEM';
 
-/** Предмет инвентаря. */
+/** Раздел-источник предмета инвентаря. */
+export type InventoryItemOrigin = 'item' | 'magic-item';
+
+/** Предмет инвентаря (добавлен из раздела «Предметы» или «Магические предметы»). */
 export interface CharacterInventoryItem {
   id: string;
+
+  /** URL предмета в разделе-источнике. */
+  url: string;
+
   name: string;
 
-  /** Категория предмета (например, «Простое оружие»). */
-  category: string;
+  /** Категория предмета — определяет группу и иконку в списке. */
+  category: InventoryItemCategory;
 
-  /** Иконка предмета в формате `tabler:<имя>`. */
-  icon: string;
+  /** Подпись типов предмета (например, «Оружие, Воинское оружие»); '' — нет. */
+  typesLabel: string;
 
-  stats: InventoryItemStat[];
-  quantity: number;
+  /** Подпись стоимости (например, «75 зм»); '' — не указана. */
+  cost: string;
 
-  /** Вес одной единицы в фунтах. */
+  /** Вес одной единицы в фунтах; 0 — не указан. */
   weight: number;
 
-  /** Экипирован ли предмет. */
-  equipped: boolean;
+  quantity: number;
 }
 
-/** Раздел инвентаря (оружие, экипировка, инструменты). */
-export interface CharacterInventorySection {
+/** Группа предметов инвентаря одной категории для списка с разделителями. */
+export interface CharacterInventoryGroup {
+  category: InventoryItemCategory;
   title: string;
   items: CharacterInventoryItem[];
+}
+
+/** Предмет каталога в модалке добавления (ссылка из поиска раздела). */
+export interface ItemCatalogItem {
+  url: string;
+
+  /** Русское название. */
+  name: string;
+
+  /** Английское название (для поиска). */
+  nameEng: string;
+
+  /** Подпись стоимости; '' — не указана. */
+  cost: string;
+
+  /** Подпись источника предмета; '' — не задан. */
+  sourceLabel: string;
+}
+
+/** Магический предмет каталога в модалке добавления (ссылка из поиска). */
+export interface MagicItemCatalogItem {
+  url: string;
+
+  /** Русское название. */
+  name: string;
+
+  /** Английское название (для поиска). */
+  nameEng: string;
+
+  /** Категория (например, «оружие»); '' — не указана. */
+  category: string;
+
+  /** Редкость (например, «редкий»); '' — не указана. */
+  rarity: string;
+
+  /** Подпись источника; '' — не задан. */
+  sourceLabel: string;
+}
+
+/** Деталь предмета из ответа API (нужные листу поля). */
+export interface ItemSummary {
+  url: string;
+  name: string;
+  category: InventoryItemCategory;
+
+  /** Подпись типов предмета (например, «Доспехи, Тяжелый доспех»). */
+  typesLabel: string;
+
+  cost: string;
+
+  /** Вес одной единицы в фунтах; 0 — не распознан. */
+  weight: number;
 }
 
 /** Персонаж на листе персонажа. */
@@ -443,7 +502,7 @@ export interface Character {
 
   proficiencies: CharacterProficiencies;
   currency: CharacterCurrency;
-  inventory: CharacterInventorySection[];
+  inventory: CharacterInventoryItem[];
 
   /** Заметки игрока в разметке сайта (хранимая форма редактора `MarkupEditor`). */
   notes: string;

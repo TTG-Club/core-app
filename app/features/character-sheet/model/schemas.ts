@@ -1,6 +1,9 @@
 import type {
   FeatCatalogItem,
   FeatSummary,
+  ItemCatalogItem,
+  ItemSummary,
+  MagicItemCatalogItem,
   SpeciesFeatureSummary,
   SpeciesOption,
   SpeciesSummary,
@@ -8,6 +11,8 @@ import type {
 } from './types';
 
 import { z } from '~/utils/zod';
+
+import { parseItemWeight } from './utils';
 
 /**
  * Схема ссылки на вид из поиска. Валидируем только используемые поля;
@@ -195,6 +200,132 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
     name: result.data.name.rus,
     category: result.data.category,
     description: result.data.description,
+  };
+}
+
+/**
+ * Схема ссылки на предмет из поиска. Валидируем только используемые поля.
+ */
+const itemLinkSchema = z.object({
+  url: z.string(),
+  name: z.object({
+    rus: z.string().catch(''),
+    eng: z.string().catch(''),
+  }),
+  cost: z.string().catch(''),
+  source: z
+    .object({
+      name: z.object({ label: z.string().catch('') }).catch({ label: '' }),
+    })
+    .catch({ name: { label: '' } }),
+});
+
+/** Ответ поиска предметов: плоский массив или конверт `{ value }`. */
+const itemSearchResponseSchema = z
+  .union([
+    z.array(itemLinkSchema),
+    z.object({ value: z.array(itemLinkSchema) }),
+  ])
+  .catch([]);
+
+/**
+ * Валидация ответа `GET /api/v2/item/search` и приведение к списку каталога.
+ * Битый ответ даёт пустой список, а не исключение.
+ *
+ * @param input сырой ответ поиска предметов.
+ * @returns предметы каталога для модалки добавления.
+ */
+export function parseItemCatalog(input: unknown): ItemCatalogItem[] {
+  const parsed = itemSearchResponseSchema.parse(input);
+  const list = Array.isArray(parsed) ? parsed : parsed.value;
+
+  return list.map((catalogItem) => ({
+    url: catalogItem.url,
+    name: catalogItem.name.rus,
+    nameEng: catalogItem.name.eng,
+    cost: catalogItem.cost,
+    sourceLabel: catalogItem.source.name.label,
+  }));
+}
+
+/**
+ * Схема ссылки на магический предмет из поиска. Валидируем только используемые
+ * поля.
+ */
+const magicItemLinkSchema = z.object({
+  url: z.string(),
+  name: z.object({
+    rus: z.string().catch(''),
+    eng: z.string().catch(''),
+  }),
+  category: z.string().catch(''),
+  rarity: z.string().catch(''),
+  source: z
+    .object({
+      name: z.object({ label: z.string().catch('') }).catch({ label: '' }),
+    })
+    .catch({ name: { label: '' } }),
+});
+
+/** Ответ поиска магических предметов: плоский массив или конверт `{ value }`. */
+const magicItemSearchResponseSchema = z
+  .union([
+    z.array(magicItemLinkSchema),
+    z.object({ value: z.array(magicItemLinkSchema) }),
+  ])
+  .catch([]);
+
+/**
+ * Валидация ответа `GET /api/v2/magic-items/search` и приведение к списку
+ * каталога. Битый ответ даёт пустой список, а не исключение.
+ *
+ * @param input сырой ответ поиска магических предметов.
+ * @returns магические предметы каталога для модалки добавления.
+ */
+export function parseMagicItemCatalog(input: unknown): MagicItemCatalogItem[] {
+  const parsed = magicItemSearchResponseSchema.parse(input);
+  const list = Array.isArray(parsed) ? parsed : parsed.value;
+
+  return list.map((catalogItem) => ({
+    url: catalogItem.url,
+    name: catalogItem.name.rus,
+    nameEng: catalogItem.name.eng,
+    category: catalogItem.category,
+    rarity: catalogItem.rarity,
+    sourceLabel: catalogItem.source.name.label,
+  }));
+}
+
+/** Схема детального ответа предмета (нужные листу поля). */
+const itemDetailSchema = z.object({
+  url: z.string(),
+  name: z.object({ rus: z.string().catch('') }),
+  category: z.enum(['WEAPON', 'ARMOR', 'ITEM']).catch('ITEM'),
+  types: z.string().catch(''),
+  cost: z.string().catch(''),
+  weight: z.string().catch(''),
+});
+
+/**
+ * Валидация детального ответа `GET /api/v2/item/{url}`.
+ *
+ * @param input сырой детальный ответ предмета.
+ * @returns деталь предмета или null при неожиданном ответе.
+ */
+export function parseItemDetail(input: unknown): ItemSummary | null {
+  const result = itemDetailSchema.safeParse(input);
+
+  if (!result.success) {
+    return null;
+  }
+
+  return {
+    url: result.data.url,
+    name: result.data.name.rus,
+    category: result.data.category,
+    typesLabel: result.data.types,
+    cost: result.data.cost,
+    weight: parseItemWeight(result.data.weight),
   };
 }
 

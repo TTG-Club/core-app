@@ -4,8 +4,8 @@
   import type {
     CharacterCurrency,
     CharacterFeature,
+    CharacterInventoryItem,
     CharacterSpell,
-    CharacterInventorySection as InventorySection,
   } from '../../model';
 
   import {
@@ -13,15 +13,14 @@
     SHEET_TABS,
     WEIGHT_UNIT_LABEL,
   } from '../../model';
-  import SheetCurrencyRow from './SheetCurrencyRow.vue';
+  import SheetEquipmentTab from './SheetEquipmentTab.vue';
   import SheetFeaturesTab from './SheetFeaturesTab.vue';
-  import SheetInventorySection from './SheetInventorySection.vue';
   import SheetNotesTab from './SheetNotesTab.vue';
   import SheetSpellsTab from './SheetSpellsTab.vue';
 
   const props = defineProps<{
     currency: CharacterCurrency;
-    inventory: InventorySection[];
+    inventory: CharacterInventoryItem[];
     totalWeight: number;
     carryingCapacity: number;
     features: CharacterFeature[];
@@ -31,11 +30,31 @@
   const emit = defineEmits<{
     'add-feature': [];
     'add-feat': [];
+    'add-item': [];
+    'add-magic-item': [];
     'add-spell': [];
+    'adjust-item-quantity': [inventoryItemId: string, delta: number];
     'edit-choice': [featureId: string, choice: string];
     'remove-feature': [featureId: string];
+    'remove-item': [inventoryItemId: string];
     'remove-spell': [spellUrl: string];
   }>();
+
+  function handleItemAdd() {
+    emit('add-item');
+  }
+
+  function handleMagicItemAdd() {
+    emit('add-magic-item');
+  }
+
+  function handleItemRemove(inventoryItemId: string) {
+    emit('remove-item', inventoryItemId);
+  }
+
+  function handleItemQuantityAdjust(inventoryItemId: string, delta: number) {
+    emit('adjust-item-quantity', inventoryItemId, delta);
+  }
 
   function handleSpellAdd() {
     emit('add-spell');
@@ -61,12 +80,9 @@
     emit('remove-feature', featureId);
   }
 
-  // Вкладки «Особенности», «Заклинания» и «Заметки» больше не пустышки —
-  // у них свой контент.
+  // Заглушкой осталась только вкладка «Эффекты» — у остальных свой контент.
   const emptyTabItems = Object.entries(SHEET_TAB_EMPTY_LABELS)
-    .filter(
-      ([slot]) => slot !== 'features' && slot !== 'spells' && slot !== 'notes',
-    )
+    .filter(([slot]) => slot === 'effects')
     .map(([slot, label]) => ({ slot, label }));
 
   const tabItems = computed<TabsItem[]>(() =>
@@ -89,15 +105,14 @@
     class="w-full"
   >
     <template #equipment>
-      <div class="flex flex-col gap-4 pt-2">
-        <SheetCurrencyRow :currency="currency" />
-
-        <SheetInventorySection
-          v-for="section in inventory"
-          :key="section.title"
-          :section="section"
-        />
-      </div>
+      <SheetEquipmentTab
+        :currency="currency"
+        :inventory="inventory"
+        @add-item="handleItemAdd"
+        @add-magic-item="handleMagicItemAdd"
+        @remove-item="handleItemRemove"
+        @adjust-quantity="handleItemQuantityAdjust"
+      />
     </template>
 
     <template #spells>
