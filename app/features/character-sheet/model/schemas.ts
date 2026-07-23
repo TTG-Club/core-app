@@ -1,6 +1,9 @@
 import type { RenderNode } from '~ui/markup';
 
 import type {
+  BackgroundOption,
+  BackgroundSummary,
+  ClassChoice,
   ClassFeatureSummary,
   ClassOption,
   ClassSummary,
@@ -19,8 +22,10 @@ import type {
 import { z } from '~/utils/zod';
 
 import {
+  getClassToolChoice,
+  parseAbilityKeys,
+  parseFeatMarker,
   parseItemWeight,
-  parseSavingThrows,
   toDescriptionNodes,
 } from './utils';
 
@@ -503,7 +508,7 @@ function toClassSummary(
     hitDie: detail.hitDice.maxValue,
     hitDieLabel: detail.hitDice.label,
     savingThrowsText: detail.savingThrows,
-    savingThrows: parseSavingThrows(detail.savingThrows),
+    savingThrows: parseAbilityKeys(detail.savingThrows),
     proficiencyText: detail.proficiency,
     table,
     features,
@@ -520,4 +525,105 @@ export function parseClassDetail(input: unknown): ClassSummary | null {
   const result = classDetailSchema.safeParse(input);
 
   return result.success ? toClassSummary(result.data) : null;
+}
+
+/** Схема ссылки на предысторию из поиска. Валидируем нужные листу поля. */
+const backgroundLinkSchema = z.object({
+  url: z.string(),
+  name: z.object({ rus: z.string().catch('') }),
+  source: z
+    .object({
+      name: z.object({ label: z.string().catch('') }).catch({ label: '' }),
+    })
+    .catch({ name: { label: '' } }),
+});
+
+/** Ответ поиска предысторий: плоский массив или конверт `{ value }`. */
+const backgroundSearchResponseSchema = z
+  .union([
+    z.array(backgroundLinkSchema),
+    z.object({ value: z.array(backgroundLinkSchema) }),
+  ])
+  .catch([]);
+
+/**
+ * Валидация ответа `GET /api/v2/backgrounds/search` и приведение к опциям
+ * списка. Битый ответ даёт пустой список, а не исключение.
+ *
+ * @param input сырой ответ поиска предысторий.
+ * @returns опции предысторий для визарда.
+ */
+export function parseBackgroundOptions(input: unknown): BackgroundOption[] {
+  const parsed = backgroundSearchResponseSchema.parse(input);
+  const list = Array.isArray(parsed) ? parsed : parsed.value;
+
+  return list.map((background) => ({
+    url: background.url,
+    name: background.name.rus,
+    sourceLabel: background.source.name.label,
+  }));
+}
+
+/** Схема детального ответа предыстории (нужные листу поля). */
+const backgroundDetailSchema = z.object({
+  url: z.string(),
+  name: z.object({ rus: z.string().catch('') }),
+  abilityScores: z.string().catch(''),
+  skillProficiencies: z.string().catch(''),
+  feat: z.string().catch(''),
+  toolProficiency: z.array(z.string()).catch([]),
+  equipment: z.array(z.string()).catch([]),
+});
+
+/**
+ * Валидация детального ответа `GET /api/v2/backgrounds/{url}`.
+ *
+ * @param input сырой детальный ответ предыстории.
+ * @param skillNames имена всех навыков персонажа (для распознавания навыков).
+ * @returns деталь предыстории или null при неожиданном ответе.
+ */
+export function parseBackgroundDetail(
+  input: unknown,
+  skillNames: string[],
+): BackgroundSummary | null {
+  const result = backgroundDetailSchema.safeParse(input);
+
+  if (!result.success) {
+    return null;
+  }
+
+  const detail = result.data;
+
+  const toolFixed: string[] = [];
+
+  let toolChoice: ClassChoice | null = null;
+
+  for (const toolText of detail.toolProficiency) {
+    const choice = getClassToolChoice(toolText, 'background-tool');
+
+    if (choice) {
+      toolChoice = toolChoice ?? choice;
+    } else if (toolText.trim()) {
+      toolFixed.push(toolText.trim());
+    }
+  }
+
+  const feat = parseFeatMarker(detail.feat);
+
+  return {
+    url: detail.url,
+    name: detail.name.rus,
+    abilities: parseAbilityKeys(detail.abilityScores),
+    abilitiesText: detail.abilityScores,
+    skills: skillNames.filter((name) =>
+      detail.skillProficiencies.includes(name),
+    ),
+    skillsText: detail.skillProficiencies,
+    toolFixed,
+    toolChoice,
+    featUrl: feat.url,
+    featName: feat.name,
+    featSubchoice: feat.subchoice,
+    equipment: detail.equipment,
+  };
 }

@@ -13,7 +13,7 @@ export const DEFAULT_CHARACTER: Character = {
   features: [],
   spells: [],
   characterClass: null,
-  background: null,
+  characterBackground: null,
   level: 1,
   experience: { current: 0, nextLevel: 300 },
   inspiration: false,
@@ -76,7 +76,7 @@ export const DEFAULT_CHARACTER: Character = {
     weapons: [],
     weaponMasteries: [],
     tools: [],
-    languages: [],
+    languages: ['Общий'],
   },
   currency: {
     copper: 0,

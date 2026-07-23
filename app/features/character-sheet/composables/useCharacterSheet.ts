@@ -19,8 +19,10 @@ import type {
 import { clamp, union } from 'es-toolkit';
 
 import {
+  ABILITY_ORDER,
   ABILITY_SCORE_MAX,
   ABILITY_SCORE_MIN,
+  applySkillProficiencies,
   ARMOR_CLASS_BASE_MAX,
   ARMOR_CLASS_BASE_MIN,
   DEFAULT_CHARACTER,
@@ -383,8 +385,9 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Применение выбранного вида: название, размер, скорости, зрение и
-   * особенности устанавливаются атомарно одним обновлением.
+   * Применение выбранного вида: название, размер, скорости, зрение,
+   * особенности, а также выбранные владения (навыки/языки/инструменты)
+   * устанавливаются атомарно одним обновлением.
    *
    * @param payload вид и производные от него значения листа.
    * @param payload.species выбранный вид с подвидом.
@@ -392,6 +395,11 @@ export function useCharacterSheet() {
    * @param payload.speed скорости передвижения из данных вида.
    * @param payload.vision зрение из данных вида.
    * @param payload.features особенности вида и подвида.
+   * @param payload.skills выбранные навыки (владение и экспертиза).
+   * @param payload.skills.proficient навыки для владения.
+   * @param payload.skills.expertise навыки для экспертизы.
+   * @param payload.proficiencies распознанные владения из выборов вида.
+   * @param payload.proficiencies.languages владения языками.
    */
   function setSpecies(payload: {
     species: CharacterSpecies;
@@ -399,6 +407,8 @@ export function useCharacterSheet() {
     speed: CharacterSpeed;
     vision: CharacterVision;
     features: CharacterFeature[];
+    skills: { proficient: string[]; expertise: string[] };
+    proficiencies: { languages: string[] };
   }): void {
     if (!ensureEditable()) {
       return;
@@ -419,6 +429,18 @@ export function useCharacterSheet() {
         values: { ...payload.speed.values },
       },
       vision: { ...payload.vision },
+      proficiencies: {
+        ...character.value.proficiencies,
+        languages: union(
+          character.value.proficiencies.languages,
+          payload.proficiencies.languages,
+        ),
+      },
+      skills: applySkillProficiencies(
+        character.value.skills,
+        payload.skills.proficient,
+        payload.skills.expertise,
+      ),
       features: [
         ...payload.features.map((feature) => ({
           ...feature,
@@ -482,12 +504,8 @@ export function useCharacterSheet() {
       (resource) => !resource.id.startsWith('class:res:'),
     );
 
-    // Выбранные навыки: экспертиза перекрывает владение; уже более высокий
-    // уровень владения не понижается.
-    const proficientSkills = new Set(payload.skills.proficient);
-    const expertiseSkills = new Set(payload.skills.expertise);
-
-    // Владения класса объединяются с уже указанными без дублей (`union`).
+    // Владения класса объединяются с уже указанными без дублей (`union`),
+    // навыки применяются через общий помощник (экспертиза перекрывает владение).
     character.value = {
       ...character.value,
       characterClass: { ...payload.characterClass },
@@ -512,17 +530,11 @@ export function useCharacterSheet() {
           payload.proficiencies.languages,
         ),
       },
-      skills: character.value.skills.map((skill) => {
-        if (expertiseSkills.has(skill.name)) {
-          return { ...skill, proficiency: 'expertise' };
-        }
-
-        if (proficientSkills.has(skill.name) && skill.proficiency === 'none') {
-          return { ...skill, proficiency: 'proficient' };
-        }
-
-        return skill;
-      }),
+      skills: applySkillProficiencies(
+        character.value.skills,
+        payload.skills.proficient,
+        payload.skills.expertise,
+      ),
       classResources: [...preservedResources, ...payload.classResources],
       features: [
         ...payload.features.map((feature) => ({
@@ -531,6 +543,86 @@ export function useCharacterSheet() {
         })),
         ...preservedFeatures,
       ],
+    };
+  }
+
+  /**
+   * Применение выбранной предыстории: навыки, инструмент, черта происхождения и
+   * прибавки к характеристикам устанавливаются атомарно. Прибавки к
+   * характеристикам и черта предыстории откатываются при смене (идемпотентно);
+   * навыки и владения объединяются, ручные особенности сохраняются.
+   *
+   * @param payload предыстория и производные значения листа.
+   * @param payload.background выбранная предыстория (url, name).
+   * @param payload.background.url URL предыстории.
+   * @param payload.background.name название предыстории.
+   * @param payload.abilityBonuses прибавки к характеристикам.
+   * @param payload.skills фиксированные навыки предыстории (владение).
+   * @param payload.tools владения инструментами (фикс + выбранный).
+   * @param payload.featUrl URL черты происхождения; null — нет.
+   * @param payload.featFeature особенность черты; null — не добавлять.
+   */
+  function setBackground(payload: {
+    background: { url: string; name: string };
+    abilityBonuses: Partial<Record<AbilityKey, number>>;
+    skills: string[];
+    tools: string[];
+    featUrl: string | null;
+    featFeature: CharacterFeature | null;
+  }): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const previous = character.value.characterBackground;
+
+    // Прибавки к характеристикам: снять прошлые бонусы предыстории и применить
+    // новые с ограничением диапазона (без двойного начисления при смене).
+    const abilities = { ...character.value.abilities };
+
+    for (const key of ABILITY_ORDER) {
+      const previousBonus = previous?.abilityBonuses[key] ?? 0;
+      const nextBonus = payload.abilityBonuses[key] ?? 0;
+
+      abilities[key] = clamp(
+        character.value.abilities[key] - previousBonus + nextBonus,
+        ABILITY_SCORE_MIN,
+        ABILITY_SCORE_MAX,
+      );
+    }
+
+    // Черта предыстории: убрать прошлую и любую копию новой, затем добавить.
+    const previousFeatId = previous?.featUrl
+      ? `feat:${previous.featUrl}`
+      : null;
+
+    const newFeatId = payload.featFeature?.id ?? null;
+
+    const preservedFeatures = character.value.features.filter(
+      (feature) => feature.id !== previousFeatId && feature.id !== newFeatId,
+    );
+
+    character.value = {
+      ...character.value,
+      characterBackground: {
+        url: payload.background.url,
+        name: payload.background.name,
+        featUrl: payload.featUrl,
+        abilityBonuses: { ...payload.abilityBonuses },
+      },
+      abilities,
+      proficiencies: {
+        ...character.value.proficiencies,
+        tools: union(character.value.proficiencies.tools, payload.tools),
+      },
+      skills: applySkillProficiencies(
+        character.value.skills,
+        payload.skills,
+        [],
+      ),
+      features: payload.featFeature
+        ? [payload.featFeature, ...preservedFeatures]
+        : preservedFeatures,
     };
   }
 
@@ -852,6 +944,7 @@ export function useCharacterSheet() {
     removeInventoryItem,
     removeSpell,
     setFeatureChoice,
+    setBackground,
     setClass,
     setName,
     setNotes,

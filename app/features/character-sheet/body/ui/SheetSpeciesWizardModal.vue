@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SpeciesOption, SpeciesSummary } from '../../model';
+  import type { ClassChoice, SpeciesOption, SpeciesSummary } from '../../model';
 
   import { SpeciesDrawer } from '~species/drawer';
   import { MarkupRender } from '~ui/markup';
@@ -7,17 +7,22 @@
   import { useCharacterSheet } from '../../composables';
   import {
     buildCharacterFeatures,
+    detectFeatureChoice,
     FEATURE_ORIGIN_LABELS,
     getCharacterFeatureId,
     getDarkvisionDistance,
+    LANGUAGE_PROFICIENCY_GROUPS,
     parseSizeOptionsFromText,
     parseSpeciesDetail,
     parseSpeciesLineages,
     parseSpeciesOptions,
     parseSpeedFromText,
+    resolveChoiceOptions,
     SPECIES_DETAIL_BASE_PATH,
     SPECIES_SEARCH_PATH,
+    TOOL_PROFICIENCY_GROUPS,
   } from '../../model';
+  import SheetChoiceSelect from './SheetChoiceSelect.vue';
 
   type WizardStep = 'species' | 'features';
 
@@ -81,6 +86,27 @@
   const sizeChoice = ref<string | undefined>();
 
   const choices = ref<Record<string, string>>({});
+
+  /** Черновик выборов-селекторов по id выбора: id → выбранные значения. */
+  const selections = ref<Record<string, string[]>>({});
+
+  const skillNames = computed(() =>
+    character.value.skills.map((skill) => skill.name),
+  );
+
+  const proficientSkillNames = computed(() =>
+    character.value.skills
+      .filter((skill) => skill.proficiency !== 'none')
+      .map((skill) => skill.name),
+  );
+
+  const allLanguages = computed(() =>
+    LANGUAGE_PROFICIENCY_GROUPS.flatMap((group) => group.items),
+  );
+
+  const allTools = computed(() =>
+    TOOL_PROFICIENCY_GROUPS.flatMap((group) => group.items),
+  );
 
   const filteredOptions = computed(() => {
     const query = searchTerm.value.trim().toLowerCase();
@@ -157,17 +183,25 @@
       name: string;
       description: string[];
       originLabel: string;
+      choiceControl: ClassChoice | null;
     }> = [];
 
     const detail = speciesDetail.value;
 
     if (detail) {
       for (const feature of detail.features) {
+        const id = getCharacterFeatureId('species', feature.url);
+
         rows.push({
-          id: getCharacterFeatureId('species', feature.url),
+          id,
           name: feature.name,
           description: feature.description,
           originLabel: `${FEATURE_ORIGIN_LABELS.species}: ${detail.name}`,
+          choiceControl: detectFeatureChoice(
+            id,
+            feature.description,
+            skillNames.value,
+          ),
         });
       }
     }
@@ -176,17 +210,51 @@
 
     if (lineage) {
       for (const feature of lineage.features) {
+        const id = getCharacterFeatureId('lineage', feature.url);
+
         rows.push({
-          id: getCharacterFeatureId('lineage', feature.url),
+          id,
           name: feature.name,
           description: feature.description,
           originLabel: `${FEATURE_ORIGIN_LABELS.lineage}: ${lineage.name}`,
+          choiceControl: detectFeatureChoice(
+            id,
+            feature.description,
+            skillNames.value,
+          ),
         });
       }
     }
 
     return rows;
   });
+
+  const chosenProficientSkills = computed(() =>
+    featureRows.value
+      .filter((row) => row.choiceControl?.kind === 'skill-proficiency')
+      .flatMap((row) => selections.value[row.id] ?? []),
+  );
+
+  /** Опции пикера выбора в зависимости от его типа. */
+  function choiceOptions(choice: ClassChoice): string[] {
+    return resolveChoiceOptions(choice, {
+      skillNames: skillNames.value,
+      proficientSkillNames: proficientSkillNames.value,
+      chosenProficientSkills: chosenProficientSkills.value,
+      knownLanguages: character.value.proficiencies.languages,
+      knownTools: character.value.proficiencies.tools,
+      allLanguages: allLanguages.value,
+      allTools: allTools.value,
+    });
+  }
+
+  /** Обновление выбора с ограничением по требуемому количеству. */
+  function updateSelection(choice: ClassChoice, values: string[]): void {
+    selections.value = {
+      ...selections.value,
+      [choice.id]: values.slice(0, choice.count),
+    };
+  }
 
   const isNextDisabled = computed(() => {
     if (!selectedOption.value) {
@@ -307,6 +375,7 @@
       }
 
       choices.value = {};
+      selections.value = {};
       sizeChoice.value = sizeOptions.value[0];
       step.value = 'features';
     } catch (error) {
@@ -335,6 +404,37 @@
       ...(lineage?.features ?? []),
     ];
 
+    // Сбор выборов-селекторов: навыки (владение/экспертиза) и языки; выбранные
+    // значения также идут в текст особенности, чтобы отображаться на листе.
+    const proficientSkills: string[] = [];
+    const expertiseSkills: string[] = [];
+    const chosenLanguages: string[] = [];
+    const featureChoices: Record<string, string> = { ...choices.value };
+
+    for (const row of featureRows.value) {
+      const control = row.choiceControl;
+
+      if (!control) {
+        continue;
+      }
+
+      const values = selections.value[control.id] ?? [];
+
+      if (!values.length) {
+        continue;
+      }
+
+      if (control.kind === 'skill-proficiency') {
+        proficientSkills.push(...values);
+      } else if (control.kind === 'skill-expertise') {
+        expertiseSkills.push(...values);
+      } else {
+        chosenLanguages.push(...values);
+      }
+
+      featureChoices[control.id] = values.join(', ');
+    }
+
     setSpecies({
       species: {
         url: detail.url,
@@ -349,7 +449,14 @@
         darkvision: getDarkvisionDistance(allFeatureSummaries),
         unit: 'feet',
       },
-      features: buildCharacterFeatures(detail, lineage, choices.value),
+      features: buildCharacterFeatures(detail, lineage, featureChoices),
+      skills: {
+        proficient: [...new Set(proficientSkills)],
+        expertise: [...new Set(expertiseSkills)],
+      },
+      proficiencies: {
+        languages: [...new Set(chosenLanguages)],
+      },
     });
 
     emit('close');
@@ -575,7 +682,27 @@
                 </UBadge>
               </div>
 
+              <div
+                v-if="row.choiceControl"
+                class="flex flex-col gap-1"
+              >
+                <span class="text-xs text-muted">
+                  Выберите {{ row.choiceControl.count }}
+                </span>
+
+                <SheetChoiceSelect
+                  :model-value="selections[row.choiceControl.id] ?? []"
+                  :items="choiceOptions(row.choiceControl)"
+                  :count="row.choiceControl.count"
+                  :placeholder="`Выберите ${row.choiceControl.count}`"
+                  @update:model-value="
+                    updateSelection(row.choiceControl, $event)
+                  "
+                />
+              </div>
+
               <UInput
+                v-else
                 v-model="choices[row.id]"
                 size="sm"
                 placeholder="Ваш выбор в особенности (необязательно)"

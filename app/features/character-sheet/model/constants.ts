@@ -1,4 +1,5 @@
 import type {
+  AbilityBonusMode,
   AbilityKey,
   ArmorProficiencyGroup,
   CharacterClassResource,
@@ -515,6 +516,21 @@ export const CLASSES_DETAIL_BASE_PATH = '/api/v2/classes';
 
 /** Минимальный уровень персонажа для выбора подкласса (D&D 2024 — 3-й). */
 export const SUBCLASS_SELECTION_MIN_LEVEL = 3;
+
+/** Эндпоинт поиска предысторий (раздел «Предыстории»). */
+export const BACKGROUNDS_SEARCH_PATH = '/api/v2/backgrounds/search';
+
+/** Базовый путь деталей предыстории (`/{url}`). */
+export const BACKGROUNDS_DETAIL_BASE_PATH = '/api/v2/backgrounds';
+
+/** Варианты распределения прибавок к характеристикам от предыстории. */
+export const BACKGROUND_ABILITY_MODE_OPTIONS: Array<{
+  label: string;
+  value: AbilityBonusMode;
+}> = [
+  { label: '+2 / +1', value: '2-1' },
+  { label: '+1 / +1 / +1', value: '1-1-1' },
+];
 
 /** Ключевые слова групп брони для сопоставления прозы владений класса. */
 export const ARMOR_MATCH_KEYWORDS: Record<

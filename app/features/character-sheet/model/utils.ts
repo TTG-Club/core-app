@@ -1,6 +1,7 @@
 import type { RenderNode } from '~ui/markup';
 
 import type {
+  AbilityBonusMode,
   AbilityKey,
   AbilityRow,
   Character,
@@ -17,6 +18,7 @@ import type {
   CharacterSpell,
   CharacterSpellGroup,
   CharacterVision,
+  ChoiceOptionContext,
   ClassChoice,
   ClassFeatureSummary,
   ClassSummary,
@@ -740,13 +742,14 @@ export function collapseProficiencies(
 }
 
 /**
- * Распознавание владений спасбросками из прозы ответа класса (например,
- * «Сила и Телосложение»): совпадения ищутся по полным названиям характеристик.
+ * Распознавание характеристик из прозы (например, спасброски класса «Сила и
+ * Телосложение» или характеристики предыстории): совпадения ищутся по полным
+ * названиям характеристик.
  *
- * @param text строка спасбросков из ответа API.
- * @returns характеристики, спасбросками которых владеет класс.
+ * @param text строка с названиями характеристик из ответа API.
+ * @returns распознанные характеристики.
  */
-export function parseSavingThrows(text: string): AbilityKey[] {
+export function parseAbilityKeys(text: string): AbilityKey[] {
   const normalizedText = text.toLowerCase();
 
   return ABILITY_ORDER.filter((key) =>
@@ -1058,15 +1061,20 @@ export function getClassSkillChoice(
 }
 
 /**
- * Выбор владения инструментами из прозы `proficiency.tool` («Выберите N …
- * инструмента»). Группа определяется по ключевому слову (например, «музыкальн»
- * → музыкальные инструменты); иначе опции резолвятся всем каталогом в визарде.
+ * Выбор владения инструментами из прозы («Выберите N … инструмента», «N … на
+ * ваш выбор»). Группа определяется по ключевому слову (например, «музыкальн» →
+ * музыкальные инструменты); иначе опции резолвятся всем каталогом в визарде.
  *
- * @param toolText проза владения инструментами класса.
+ * @param toolText проза владения инструментами.
+ * @param id идентификатор выбора (для class/background).
  * @returns выбор инструментов или null, если выбора нет.
  */
-export function getClassToolChoice(toolText: string): ClassChoice | null {
-  if (!/выбер/i.test(toolText)) {
+export function getClassToolChoice(
+  toolText: string,
+  id = 'class-tools',
+): ClassChoice | null {
+  // «выбер…» (Выберите) и «выбор» (на выбор) — разные корни, оба означают выбор.
+  if (!/выб[ео]р/i.test(toolText)) {
     return null;
   }
 
@@ -1079,7 +1087,7 @@ export function getClassToolChoice(toolText: string): ClassChoice | null {
   );
 
   return {
-    id: 'class-tools',
+    id,
     kind: 'tool',
     label: 'Владение инструментами',
     count: parseChoiceCount(toolText),
@@ -1088,41 +1096,187 @@ export function getClassToolChoice(toolText: string): ClassChoice | null {
 }
 
 /**
- * Распознавание выбора внутри умения класса: компетентность (экспертиза в
- * навыках, которыми владеет персонаж) или язык на выбор. Иначе — null (умение
- * остаётся со свободным текстовым выбором).
+ * Распознавание выбора внутри особенности класса или вида: компетентность
+ * (экспертиза), владение навыком на выбор или язык на выбор. Иначе — null
+ * (особенность остаётся со свободным текстовым выбором). Инструменты здесь не
+ * распознаются: у классов они идут из владений (`proficiency.tool`), а в тексте
+ * особенностей «инструмент» часто упоминается как фокусировка заклинателя.
  *
- * @param feature особенность класса.
- * @returns выбор умения или null.
+ * @param featureId идентификатор особенности (он же id выбора).
+ * @param description описание особенности (узлы разметки или строки).
+ * @param skillNames имена всех навыков персонажа (для списка навыков в выборе).
+ * @returns выбор особенности или null.
  */
 export function detectFeatureChoice(
-  feature: ClassFeatureSummary,
+  featureId: string,
+  description: RenderNode | RenderNode[],
+  skillNames: string[],
 ): ClassChoice | null {
-  const text = getNodeText(feature.description)
-    .toLowerCase()
-    .replaceAll('ё', 'е');
+  const rawText = getNodeText(description);
 
-  const id = getCharacterFeatureId('class', feature.key);
+  const text = rawText.toLowerCase().replaceAll('ё', 'е');
 
   if (text.includes('компетентност')) {
     return {
-      id,
+      id: featureId,
       kind: 'skill-expertise',
-      label: feature.name,
+      label: '',
       count: parseChoiceCount(text.slice(text.indexOf('компетентност'))),
       listed: [],
     };
   }
 
+  if (
+    text.includes('навык')
+    && text.includes('владени')
+    && text.includes('выбор')
+  ) {
+    return {
+      id: featureId,
+      kind: 'skill-proficiency',
+      label: '',
+      count: parseChoiceCount(text),
+      listed: skillNames.filter((name) => rawText.includes(name)),
+    };
+  }
+
   if (text.includes('язык') && text.includes('выбор')) {
     return {
-      id,
+      id: featureId,
       kind: 'language',
-      label: feature.name,
+      label: '',
       count: parseChoiceCount(text),
       listed: [],
     };
   }
 
   return null;
+}
+
+/**
+ * Опции пикера выбора в зависимости от его типа. Единая логика для визардов
+ * класса и вида.
+ *
+ * @param choice распознанный выбор.
+ * @param context контекст резолюции (навыки, языки, инструменты).
+ * @returns список опций для селектора.
+ */
+export function resolveChoiceOptions(
+  choice: ClassChoice,
+  context: ChoiceOptionContext,
+): string[] {
+  if (choice.kind === 'skill-proficiency') {
+    return choice.listed.length ? choice.listed : context.skillNames;
+  }
+
+  if (choice.kind === 'skill-expertise') {
+    return [
+      ...new Set([
+        ...context.proficientSkillNames,
+        ...context.chosenProficientSkills,
+      ]),
+    ];
+  }
+
+  if (choice.kind === 'language') {
+    const known = new Set(context.knownLanguages);
+
+    return context.allLanguages.filter((name) => !known.has(name));
+  }
+
+  const knownTools = new Set(context.knownTools);
+
+  const toolOptions = choice.listed.length ? choice.listed : context.allTools;
+
+  return toolOptions.filter((name) => !knownTools.has(name));
+}
+
+/**
+ * Применение выбранных навыков к списку навыков персонажа: экспертиза
+ * перекрывает владение; уровень владения повышается только с «нет владения».
+ *
+ * @param skills навыки персонажа.
+ * @param proficient навыки для владения.
+ * @param expertise навыки для экспертизы.
+ * @returns новый список навыков с применёнными уровнями.
+ */
+export function applySkillProficiencies(
+  skills: CharacterSkill[],
+  proficient: string[],
+  expertise: string[],
+): CharacterSkill[] {
+  const proficientSet = new Set(proficient);
+  const expertiseSet = new Set(expertise);
+
+  return skills.map((skill): CharacterSkill => {
+    if (expertiseSet.has(skill.name)) {
+      return { ...skill, proficiency: 'expertise' };
+    }
+
+    if (proficientSet.has(skill.name) && skill.proficiency === 'none') {
+      return { ...skill, proficiency: 'proficient' };
+    }
+
+    return skill;
+  });
+}
+
+/**
+ * Разбор маркера черты предыстории («{@feat Название [Eng]|url:...} (Уточнение)»):
+ * url черты, её название и уточнение в скобках.
+ *
+ * @param featText строка черты из ответа API.
+ * @returns url, название и уточнение черты.
+ */
+export function parseFeatMarker(featText: string): {
+  url: string | null;
+  name: string;
+  subchoice: string;
+} {
+  const urlMatch = /url:([\w-]+)/.exec(featText);
+  const nameMatch = /@feat\s+([^[|]+)/.exec(featText);
+  const subchoiceMatch = /\(([^)]+)\)\s*$/.exec(featText);
+
+  return {
+    url: urlMatch?.[1] ?? null,
+    name: nameMatch?.[1]?.trim() ?? '',
+    subchoice: subchoiceMatch?.[1]?.trim() ?? '',
+  };
+}
+
+/**
+ * Прибавки к характеристикам от предыстории: режим «+2/+1» даёт +2 и +1 двум
+ * характеристикам, «+1/+1/+1» — по +1 всем трём из списка.
+ *
+ * @param abilities характеристики предыстории (до трёх).
+ * @param mode режим распределения прибавок.
+ * @param plusTwo характеристика с +2 (для режима «+2/+1»); null — не выбрана.
+ * @param plusOne характеристика с +1 (для режима «+2/+1»); null — не выбрана.
+ * @returns прибавки по характеристикам.
+ */
+export function computeAbilityBonuses(
+  abilities: AbilityKey[],
+  mode: AbilityBonusMode,
+  plusTwo: AbilityKey | null,
+  plusOne: AbilityKey | null,
+): Partial<Record<AbilityKey, number>> {
+  const bonuses: Partial<Record<AbilityKey, number>> = {};
+
+  if (mode === '1-1-1') {
+    for (const key of abilities) {
+      bonuses[key] = 1;
+    }
+
+    return bonuses;
+  }
+
+  if (plusTwo) {
+    bonuses[plusTwo] = 2;
+  }
+
+  if (plusOne && plusOne !== plusTwo) {
+    bonuses[plusOne] = 1;
+  }
+
+  return bonuses;
 }

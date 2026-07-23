@@ -244,6 +244,21 @@ export interface CharacterClass {
   hitDie: number;
 }
 
+/** Режим распределения прибавок к характеристикам от предыстории. */
+export type AbilityBonusMode = '2-1' | '1-1-1';
+
+/** Выбранная предыстория персонажа. */
+export interface CharacterBackground {
+  url: string;
+  name: string;
+
+  /** URL черты происхождения; null — не распознана. */
+  featUrl: string | null;
+
+  /** Применённые прибавки к характеристикам (для отката при смене предыстории). */
+  abilityBonuses: Partial<Record<AbilityKey, number>>;
+}
+
 /** Происхождение особенности персонажа; none — добавлена вручную без источника. */
 export type FeatureOrigin = 'species' | 'lineage' | 'class' | 'feat' | 'none';
 
@@ -456,6 +471,73 @@ export interface ClassChoice {
   listed: string[];
 }
 
+/** Контекст резолюции опций выбора (навыки/языки/инструменты) в визарде. */
+export interface ChoiceOptionContext {
+  /** Все имена навыков персонажа. */
+  skillNames: string[];
+
+  /** Навыки, которыми персонаж уже владеет. */
+  proficientSkillNames: string[];
+
+  /** Навыки, выбранные во владение в этом визарде (для опций экспертизы). */
+  chosenProficientSkills: string[];
+
+  /** Уже известные языки. */
+  knownLanguages: string[];
+
+  /** Уже известные инструменты. */
+  knownTools: string[];
+
+  /** Все языки каталога. */
+  allLanguages: string[];
+
+  /** Все инструменты каталога. */
+  allTools: string[];
+}
+
+/** Опция предыстории в списке визарда. */
+export interface BackgroundOption {
+  url: string;
+  name: string;
+  sourceLabel: string;
+}
+
+/** Деталь предыстории из ответа API (нужные листу поля). */
+export interface BackgroundSummary {
+  url: string;
+  name: string;
+
+  /** Характеристики для прибавок (3 из ответа). */
+  abilities: AbilityKey[];
+
+  /** Характеристики прозой. */
+  abilitiesText: string;
+
+  /** Фиксированные навыки предыстории (владение). */
+  skills: string[];
+
+  /** Навыки прозой. */
+  skillsText: string;
+
+  /** Фиксированные инструменты (применяются как есть). */
+  toolFixed: string[];
+
+  /** Выбор инструмента; null — инструмент фиксирован. */
+  toolChoice: ClassChoice | null;
+
+  /** URL черты происхождения; null — не распознана. */
+  featUrl: string | null;
+
+  /** Название черты для отображения. */
+  featName: string;
+
+  /** Уточнение черты в скобках (например, «Жрец»); '' — нет. */
+  featSubchoice: string;
+
+  /** Стартовое снаряжение в разметке (справка). */
+  equipment: string[];
+}
+
 /**
  * Категория предмета инвентаря: категории раздела «Предметы» плюс отдельная
  * группа для магических предметов.
@@ -571,8 +653,8 @@ export interface Character {
   /** Класс персонажа; null — не выбран. */
   characterClass: CharacterClass | null;
 
-  /** Предыстория; null — не выбрана. */
-  background: string | null;
+  /** Предыстория персонажа; null — не выбрана. */
+  characterBackground: CharacterBackground | null;
 
   level: number;
   experience: CharacterExperience;

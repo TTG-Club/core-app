@@ -15,6 +15,7 @@
   }>();
 
   const emit = defineEmits<{
+    'edit-background': [];
     'edit-class': [];
     'edit-name': [];
     'edit-progress': [];
@@ -50,7 +51,9 @@
   );
 
   const backgroundLabel = computed(
-    () => props.character.background ?? SHEET_EMPTY_LABELS.background,
+    () =>
+      props.character.characterBackground?.name
+      ?? SHEET_EMPTY_LABELS.background,
   );
 
   const sizeLetter = computed(() => props.character.size?.charAt(0) ?? null);
@@ -208,7 +211,16 @@
           {{ classLabel }}
         </button>
 
-        <span class="truncate">— {{ backgroundLabel }}</span>
+        <span>—</span>
+
+        <button
+          type="button"
+          class="cursor-pointer truncate rounded px-1 transition-colors hover:bg-elevated/60 hover:text-warning"
+          aria-label="Выбрать предысторию персонажа"
+          @click.left.exact.prevent="emit('edit-background')"
+        >
+          {{ backgroundLabel }}
+        </button>
       </span>
 
       <button

@@ -20,9 +20,11 @@
     matchClassProficiencies,
     parseClassDetail,
     parseClassOptions,
+    resolveChoiceOptions,
     SUBCLASS_SELECTION_MIN_LEVEL,
     TOOL_PROFICIENCY_GROUPS,
   } from '../../model';
+  import SheetChoiceSelect from './SheetChoiceSelect.vue';
 
   type WizardStep = 'class' | 'review';
 
@@ -210,26 +212,15 @@
 
   /** Опции пикера выбора в зависимости от его типа. */
   function choiceOptions(choice: ClassChoice): string[] {
-    if (choice.kind === 'skill-proficiency') {
-      return choice.listed.length ? choice.listed : skillNames.value;
-    }
-
-    if (choice.kind === 'skill-expertise') {
-      const chosen = selections.value['class-skills'] ?? [];
-
-      return [...new Set([...proficientSkillNames.value, ...chosen])];
-    }
-
-    if (choice.kind === 'language') {
-      const known = new Set(character.value.proficiencies.languages);
-
-      return allLanguages.value.filter((name) => !known.has(name));
-    }
-
-    const knownTools = new Set(character.value.proficiencies.tools);
-    const toolOptions = choice.listed.length ? choice.listed : allTools.value;
-
-    return toolOptions.filter((name) => !knownTools.has(name));
+    return resolveChoiceOptions(choice, {
+      skillNames: skillNames.value,
+      proficientSkillNames: proficientSkillNames.value,
+      chosenProficientSkills: selections.value['class-skills'] ?? [],
+      knownLanguages: character.value.proficiencies.languages,
+      knownTools: character.value.proficiencies.tools,
+      allLanguages: allLanguages.value,
+      allTools: allTools.value,
+    });
   }
 
   /** Обновление выбора с ограничением по требуемому количеству. */
@@ -274,13 +265,19 @@
 
         seenKeys.add(feature.key);
 
+        const id = getCharacterFeatureId('class', feature.key);
+
         rows.push({
-          id: getCharacterFeatureId('class', feature.key),
+          id,
           name: feature.name,
           level: feature.level,
           description: feature.description,
           originLabel,
-          choiceControl: detectFeatureChoice(feature),
+          choiceControl: detectFeatureChoice(
+            id,
+            feature.description,
+            skillNames.value,
+          ),
         });
       }
     };
@@ -455,14 +452,14 @@
       (choice) => choice.id === 'class-skills',
     );
 
-    const proficientSkills = skillsChoice
+    const proficientSkills: string[] = skillsChoice
       ? (selections.value['class-skills'] ?? []).slice(0, skillsChoice.count)
       : [];
 
     const chosenTools = selections.value['class-tools'] ?? [];
 
-    // Выборы внутри умений: экспертиза и языки; выбранные значения также идут в
-    // текст умения, чтобы отображаться на листе.
+    // Выборы внутри умений: владение навыком, экспертиза и языки; выбранные
+    // значения также идут в текст умения, чтобы отображаться на листе.
     const expertiseSkills: string[] = [];
     const chosenLanguages: string[] = [];
     const featureChoices: Record<string, string> = { ...choices.value };
@@ -480,7 +477,9 @@
         continue;
       }
 
-      if (control.kind === 'skill-expertise') {
+      if (control.kind === 'skill-proficiency') {
+        proficientSkills.push(...values);
+      } else if (control.kind === 'skill-expertise') {
         expertiseSkills.push(...values);
       } else if (control.kind === 'language') {
         chosenLanguages.push(...values);
@@ -506,7 +505,7 @@
         languages: chosenLanguages,
       },
       skills: {
-        proficient: proficientSkills,
+        proficient: [...new Set(proficientSkills)],
         expertise: [...new Set(expertiseSkills)],
       },
       classResources: derivedResources.value,
@@ -827,11 +826,10 @@
                 {{ choice.label }} (выберите {{ choice.count }})
               </span>
 
-              <USelectMenu
+              <SheetChoiceSelect
                 :model-value="selections[choice.id] ?? []"
                 :items="choiceOptions(choice)"
-                multiple
-                searchable
+                :count="choice.count"
                 :placeholder="`Выберите ${choice.count}`"
                 @update:model-value="updateSelection(choice, $event)"
               />
@@ -872,11 +870,10 @@
                   Выберите {{ row.choiceControl.count }}
                 </span>
 
-                <USelectMenu
+                <SheetChoiceSelect
                   :model-value="selections[row.choiceControl.id] ?? []"
                   :items="choiceOptions(row.choiceControl)"
-                  multiple
-                  searchable
+                  :count="row.choiceControl.count"
                   :placeholder="`Выберите ${row.choiceControl.count}`"
                   @update:model-value="
                     updateSelection(row.choiceControl, $event)
