@@ -86,8 +86,10 @@
 </script>
 
 <template>
-  <header class="flex items-start gap-6">
-    <div class="relative shrink-0">
+  <header
+    class="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6"
+  >
+    <div class="relative mb-2 shrink-0 sm:mb-0">
       <div
         class="flex size-24 items-center justify-center overflow-hidden rounded-full border-2 border-warning/70 bg-elevated"
       >
@@ -178,10 +180,10 @@
       </div>
     </div>
 
-    <div class="flex min-w-0 grow flex-col gap-1">
+    <div class="flex w-full min-w-0 grow flex-col gap-1 sm:w-auto">
       <button
         type="button"
-        class="max-w-fit cursor-pointer truncate text-left text-3xl font-bold tracking-wide text-highlighted transition-colors hover:text-warning"
+        class="max-w-full cursor-pointer truncate text-center text-3xl font-bold tracking-wide text-highlighted transition-colors hover:text-warning sm:max-w-fit sm:text-left"
         aria-label="Изменить имя персонажа"
         @click.left.exact.prevent="emit('edit-name')"
       >
@@ -189,7 +191,7 @@
       </button>
 
       <span
-        class="flex min-w-0 flex-wrap items-center gap-1 text-sm text-muted italic"
+        class="flex min-w-0 flex-wrap items-center justify-center gap-1 text-sm text-muted italic sm:justify-start"
       >
         <button
           type="button"
@@ -225,32 +227,42 @@
 
       <button
         type="button"
-        class="mt-2 flex max-w-lg cursor-pointer flex-col gap-1 rounded p-1 transition-colors hover:bg-elevated/40"
+        class="mt-2 flex w-full cursor-pointer items-center gap-3 rounded p-1 text-xs text-toned transition-colors hover:bg-elevated/40 lg:max-w-lg"
         aria-label="Настроить опыт и уровень"
         @click.left.exact.prevent="emit('edit-progress')"
       >
-        <span class="flex w-full items-center gap-3 text-xs text-toned">
-          <span class="shrink-0">Уровень {{ character.level }}</span>
+        <span class="shrink-0"
+          ><span class="hidden lg:inline">Уровень </span
+          >{{ character.level }}</span
+        >
 
+        <span class="relative grow">
           <UProgress
             :model-value="character.experience.current"
             :max="character.experience.nextLevel"
             size="sm"
             color="warning"
-            class="grow"
+            class="w-full"
           />
 
-          <span class="shrink-0">Уровень {{ character.level + 1 }}</span>
+          <span
+            class="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-default/60 px-2 py-0.5 text-[10px] leading-none font-medium text-toned backdrop-blur-md"
+          >
+            {{ character.experience.current }} /
+            {{ character.experience.nextLevel }} XP
+          </span>
         </span>
 
-        <span class="w-full text-center text-[10px] text-muted">
-          {{ character.experience.current }} /
-          {{ character.experience.nextLevel }} XP
-        </span>
+        <span class="shrink-0"
+          ><span class="hidden lg:inline">Уровень </span
+          >{{ character.level + 1 }}</span
+        >
       </button>
     </div>
 
-    <div class="flex shrink-0 flex-col items-end gap-4 self-stretch">
+    <div
+      class="order-first flex w-full shrink-0 flex-row flex-wrap items-center justify-between gap-3 sm:order-0 sm:w-auto sm:flex-col sm:flex-nowrap sm:items-end sm:justify-start sm:gap-4 sm:self-stretch"
+    >
       <div class="flex gap-1">
         <UTooltip :text="lockTooltip">
           <UButton
@@ -268,6 +280,7 @@
           color="neutral"
           variant="ghost"
           square
+          disabled
         />
 
         <UButton
@@ -278,15 +291,30 @@
         />
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 max-sm:order-first">
         <UTooltip :text="inspirationTooltip">
           <UButton
             icon="tabler:sparkles"
             label="Вдохновение"
             color="warning"
             :variant="inspirationVariant"
+            class="max-lg:hidden"
             :class="inspirationClass"
             :aria-pressed="character.inspiration"
+            @click.left.exact.prevent="emit('toggle-inspiration')"
+          />
+        </UTooltip>
+
+        <UTooltip :text="inspirationTooltip">
+          <UButton
+            icon="tabler:sparkles"
+            color="warning"
+            :variant="inspirationVariant"
+            square
+            class="lg:hidden"
+            :class="inspirationClass"
+            :aria-pressed="character.inspiration"
+            aria-label="Вдохновение"
             @click.left.exact.prevent="emit('toggle-inspiration')"
           />
         </UTooltip>
@@ -296,6 +324,7 @@
           color="neutral"
           variant="ghost"
           square
+          disabled
         />
 
         <UButton
@@ -303,6 +332,7 @@
           color="neutral"
           variant="ghost"
           square
+          disabled
         />
       </div>
     </div>

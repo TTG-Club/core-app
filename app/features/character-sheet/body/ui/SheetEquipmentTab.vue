@@ -61,19 +61,21 @@
     <div class="flex flex-wrap justify-end gap-2">
       <UButton
         icon="tabler:sparkles"
-        label="Добавить магический предмет"
+        label="Магический предмет"
         color="neutral"
         variant="ghost"
         size="sm"
+        aria-label="Добавить магический предмет"
         @click.left.exact.prevent="emit('add-magic-item')"
       />
 
       <UButton
         icon="tabler:plus"
-        label="Добавить предмет"
+        label="Предмет"
         color="neutral"
         variant="ghost"
         size="sm"
+        aria-label="Добавить предмет"
         @click.left.exact.prevent="emit('add-item')"
       />
     </div>

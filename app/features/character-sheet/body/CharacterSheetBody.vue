@@ -72,6 +72,13 @@
 
   const overlay = useOverlay();
 
+  // Блок из двух колонок нужен в двух местах: на десктопе — как левая часть
+  // сетки, при ≤1023 — внутри первой вкладки «Основное». Единое определение
+  // через reusable-template держит обработчики здесь и не плодит дубли разметки.
+  const { isDesktop } = useBreakpoints();
+
+  const [DefineSummary, ReuseSummary] = createReusableTemplate();
+
   // Без destroyOnClose: закрытый оверлей удаляется из реестра useOverlay,
   // и повторный open() бросает «Overlay not found». Компонент модалки и так
   // размонтируется после закрытия, поэтому черновики сбрасываются.
@@ -357,97 +364,115 @@
       <div class="absolute size-2 rotate-45 border border-warning bg-default" />
     </div>
 
-    <div class="grid grid-cols-1 gap-4 lg:grid-cols-12">
-      <div class="flex flex-col gap-4 lg:col-span-3">
-        <div class="grid grid-cols-2 gap-4">
-          <SheetStatTile
-            label="Мастерство"
-            :value="formattedProficiencyBonus"
+    <DefineSummary>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div class="flex flex-col gap-4">
+          <div class="grid grid-cols-2 gap-4">
+            <SheetStatTile
+              label="Мастерство"
+              :value="formattedProficiencyBonus"
+            />
+
+            <SheetStatTile
+              label="Класс доспеха"
+              :value="armorClassValue"
+              interactive
+              press-label="Настроить класс доспеха"
+              @press="handleArmorClassEdit"
+            />
+          </div>
+
+          <SheetHealthPanel
+            :health="character.health"
+            :hit-dice="character.hitDice"
+            :extra-hit-dice="character.extraHitDice"
+            @edit="handleHealthEdit"
           />
 
-          <SheetStatTile
-            label="Класс доспеха"
-            :value="armorClassValue"
-            interactive
-            press-label="Настроить класс доспеха"
-            @press="handleArmorClassEdit"
-          />
-        </div>
-
-        <SheetHealthPanel
-          :health="character.health"
-          :hit-dice="character.hitDice"
-          :extra-hit-dice="character.extraHitDice"
-          @edit="handleHealthEdit"
-        />
-
-        <SheetSavingThrowsPanel
-          :rows="savingThrowRows"
-          @roll="handleSavingThrowRoll"
-          @toggle="toggleSavingThrowProficiency"
-        />
-
-        <SheetProficienciesPanel
-          :proficiencies="character.proficiencies"
-          @edit="handleProficienciesEdit"
-        />
-      </div>
-
-      <div class="flex flex-col gap-4 lg:col-span-3">
-        <div class="grid grid-cols-2 gap-4">
-          <SheetSpeedTile
-            :speed="character.speed"
-            @edit="handleSpeedEdit"
+          <SheetSavingThrowsPanel
+            :rows="savingThrowRows"
+            @roll="handleSavingThrowRoll"
+            @toggle="toggleSavingThrowProficiency"
           />
 
-          <SheetStatTile
-            label="Инициатива"
-            :value="formattedInitiative"
-            interactive
-            @press="handleInitiativeRoll"
+          <SheetProficienciesPanel
+            :proficiencies="character.proficiencies"
+            @edit="handleProficienciesEdit"
           />
         </div>
 
-        <SheetClassResourcesPanel
-          :resources="character.classResources"
-          @adjust="adjustClassResource"
-          @edit="handleClassResourcesEdit"
-        />
+        <div class="flex flex-col gap-4">
+          <div class="grid grid-cols-2 gap-4">
+            <SheetSpeedTile
+              :speed="character.speed"
+              @edit="handleSpeedEdit"
+            />
 
-        <SheetSkillsPanel
-          :rows="skillRows"
-          class="grow"
-          @cycle="cycleSkillProficiency"
-          @roll="handleSkillRoll"
-        />
+            <SheetStatTile
+              label="Инициатива"
+              :value="formattedInitiative"
+              interactive
+              @press="handleInitiativeRoll"
+            />
+          </div>
+
+          <SheetClassResourcesPanel
+            :resources="character.classResources"
+            @adjust="adjustClassResource"
+            @edit="handleClassResourcesEdit"
+          />
+
+          <SheetSkillsPanel
+            :rows="skillRows"
+            class="grow"
+            @cycle="cycleSkillProficiency"
+            @roll="handleSkillRoll"
+          />
+        </div>
+      </div>
+    </DefineSummary>
+
+    <div
+      class="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:grid-rows-[min-content_1fr]"
+    >
+      <SheetAbilitiesRow
+        :rows="abilityRows"
+        class="lg:col-span-6 lg:col-start-7 lg:row-start-1"
+        @roll="handleAbilityRoll"
+        @settings="handleAbilityEdit"
+      />
+
+      <div
+        v-if="isDesktop"
+        class="lg:col-span-6 lg:col-start-1 lg:row-span-2 lg:row-start-1"
+      >
+        <ReuseSummary />
       </div>
 
-      <div class="flex flex-col gap-4 lg:col-span-6">
-        <SheetAbilitiesRow
-          :rows="abilityRows"
-          @roll="handleAbilityRoll"
-          @settings="handleAbilityEdit"
-        />
-
-        <SheetInventoryTabs
-          :currency="character.currency"
-          :inventory="character.inventory"
-          :total-weight="totalWeight"
-          :carrying-capacity="carryingCapacity"
-          :features="character.features"
-          :spells="character.spells"
-          @add-feature="handleFeatureAdd"
-          @add-feat="handleFeatAdd"
-          @add-item="handleItemAdd"
-          @add-magic-item="handleMagicItemAdd"
-          @add-spell="handleSpellAdd"
-          @adjust-item-quantity="adjustInventoryItemQuantity"
-          @edit-choice="setFeatureChoice"
-          @remove-feature="removeFeature"
-          @remove-item="removeInventoryItem"
-          @remove-spell="removeSpell"
-        />
-      </div>
+      <SheetInventoryTabs
+        :currency="character.currency"
+        :inventory="character.inventory"
+        :total-weight="totalWeight"
+        :carrying-capacity="carryingCapacity"
+        :features="character.features"
+        :spells="character.spells"
+        :has-main-tab="!isDesktop"
+        class="lg:col-span-6 lg:col-start-7 lg:row-start-2"
+        @add-feature="handleFeatureAdd"
+        @add-feat="handleFeatAdd"
+        @add-item="handleItemAdd"
+        @add-magic-item="handleMagicItemAdd"
+        @add-spell="handleSpellAdd"
+        @adjust-item-quantity="adjustInventoryItemQuantity"
+        @edit-choice="setFeatureChoice"
+        @remove-feature="removeFeature"
+        @remove-item="removeInventoryItem"
+        @remove-spell="removeSpell"
+      >
+        <template #main>
+          <ReuseSummary />
+        </template>
+      </SheetInventoryTabs>
     </div>
   </div>
 </template>

@@ -110,19 +110,21 @@
     <div class="flex justify-end gap-2">
       <UButton
         icon="tabler:award"
-        label="Добавить черту"
+        label="Черта"
         color="neutral"
         variant="ghost"
         size="sm"
+        aria-label="Добавить черту"
         @click.left.exact.prevent="emit('add-feat')"
       />
 
       <UButton
         icon="tabler:plus"
-        label="Добавить особенность"
+        label="Особенность"
         color="neutral"
         variant="ghost"
         size="sm"
+        aria-label="Добавить особенность"
         @click.left.exact.prevent="emit('add-feature')"
       />
     </div>

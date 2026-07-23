@@ -731,21 +731,26 @@ export const SHEET_EMPTY_LABELS: Record<
 
 /** Вкладки правой панели листа персонажа. */
 export const SHEET_TABS: SheetTab[] = [
-  { slot: 'equipment', label: 'Снаряжение' },
-  { slot: 'spells', label: 'Заклинания' },
-  { slot: 'features', label: 'Особенности' },
-  { slot: 'effects', label: 'Эффекты' },
-  { slot: 'notes', label: 'Заметки' },
+  { slot: 'equipment', label: 'Снаряжение', shortLabel: 'Снаряж.' },
+  { slot: 'spells', label: 'Заклинания', shortLabel: 'Закл.' },
+  { slot: 'features', label: 'Особенности', shortLabel: 'Особ.' },
+  { slot: 'notes', label: 'Заметки', shortLabel: 'Замет.' },
 ];
+
+/** Вкладка «Основное» — добавляется первой при ≤1023 (см. `hasMainTab`). */
+export const SHEET_MAIN_TAB: SheetTab = {
+  slot: 'main',
+  label: 'Основное',
+  shortLabel: 'Осн.',
+};
 
 /** Подписи пустых вкладок листа персонажа. */
 export const SHEET_TAB_EMPTY_LABELS: Record<
-  'equipment' | 'spells' | 'features' | 'effects' | 'notes',
+  'equipment' | 'spells' | 'features' | 'notes',
   string
 > = {
   equipment: 'Инвентарь пуст',
   spells: 'Книга заклинаний пуста',
   features: 'Нет особенностей',
-  effects: 'Нет активных эффектов',
   notes: 'Нет заметок',
 };

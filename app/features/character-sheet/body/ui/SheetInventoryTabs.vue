@@ -8,11 +8,7 @@
     CharacterSpell,
   } from '../../model';
 
-  import {
-    SHEET_TAB_EMPTY_LABELS,
-    SHEET_TABS,
-    WEIGHT_UNIT_LABEL,
-  } from '../../model';
+  import { SHEET_MAIN_TAB, SHEET_TABS, WEIGHT_UNIT_LABEL } from '../../model';
   import SheetEquipmentTab from './SheetEquipmentTab.vue';
   import SheetFeaturesTab from './SheetFeaturesTab.vue';
   import SheetNotesTab from './SheetNotesTab.vue';
@@ -25,6 +21,12 @@
     carryingCapacity: number;
     features: CharacterFeature[];
     spells: CharacterSpell[];
+
+    /**
+     * Добавляет первой вкладку «Основное» (контент — через слот `#main`).
+     * Включается при ≤1023, где двух колонок в сетке уже нет.
+     */
+    hasMainTab?: boolean;
   }>();
 
   const emit = defineEmits<{
@@ -80,21 +82,35 @@
     emit('remove-feature', featureId);
   }
 
-  // Заглушкой осталась только вкладка «Эффекты» — у остальных свой контент.
-  const emptyTabItems = Object.entries(SHEET_TAB_EMPTY_LABELS)
-    .filter(([slot]) => slot === 'effects')
-    .map(([slot, label]) => ({ slot, label }));
+  // Ниже md пять вкладок с полными подписями не помещаются и режутся
+  // многоточием — подставляем короткие подписи вместо обрезки.
+  const { isMdOrGreater } = useBreakpoints();
 
-  const tabItems = computed<TabsItem[]>(() =>
-    SHEET_TABS.map((tab) =>
-      tab.slot === 'equipment'
-        ? {
-            ...tab,
-            label: `${tab.label} (${props.totalWeight} / ${props.carryingCapacity} ${WEIGHT_UNIT_LABEL})`,
-          }
-        : { ...tab },
-    ),
-  );
+  const tabItems = computed<TabsItem[]>(() => {
+    const useShort = !isMdOrGreater.value;
+
+    const items = SHEET_TABS.map((tab) => {
+      const base = useShort ? tab.shortLabel : tab.label;
+
+      return {
+        slot: tab.slot,
+        label:
+          tab.slot === 'equipment' && !useShort
+            ? `${base} (${props.totalWeight} / ${props.carryingCapacity} ${WEIGHT_UNIT_LABEL})`
+            : base,
+      };
+    });
+
+    return props.hasMainTab
+      ? [
+          {
+            slot: SHEET_MAIN_TAB.slot,
+            label: useShort ? SHEET_MAIN_TAB.shortLabel : SHEET_MAIN_TAB.label,
+          },
+          ...items,
+        ]
+      : items;
+  });
 </script>
 
 <template>
@@ -104,6 +120,12 @@
     variant="link"
     class="w-full"
   >
+    <template #main>
+      <div class="pt-4">
+        <slot name="main" />
+      </div>
+    </template>
+
     <template #equipment>
       <SheetEquipmentTab
         :currency="currency"
@@ -135,18 +157,6 @@
 
     <template #notes>
       <SheetNotesTab />
-    </template>
-
-    <template
-      v-for="emptyTab in emptyTabItems"
-      :key="emptyTab.slot"
-      #[emptyTab.slot]
-    >
-      <div
-        class="mt-2 flex h-64 items-center justify-center rounded-lg border border-dashed border-default text-sm text-dimmed"
-      >
-        {{ emptyTab.label }}
-      </div>
     </template>
   </UTabs>
 </template>

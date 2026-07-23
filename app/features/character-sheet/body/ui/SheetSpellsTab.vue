@@ -49,10 +49,11 @@
     <div class="flex justify-end">
       <UButton
         icon="tabler:plus"
-        label="Добавить заклинание"
+        label="Заклинание"
         color="neutral"
         variant="ghost"
         size="sm"
+        aria-label="Добавить заклинание"
         @click.left.exact.prevent="emit('add-spell')"
       />
     </div>

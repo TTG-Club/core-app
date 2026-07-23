@@ -14,7 +14,9 @@
 </script>
 
 <template>
-  <div class="grid grid-cols-3 gap-3 pb-2 xl:grid-cols-6">
+  <div
+    class="grid grid-cols-3 gap-3 pb-2 sm:grid-cols-6 lg:grid-cols-3 xl:grid-cols-6"
+  >
     <SheetAbilityTile
       v-for="row in rows"
       :key="row.key"

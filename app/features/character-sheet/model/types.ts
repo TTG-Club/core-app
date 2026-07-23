@@ -700,6 +700,9 @@ export interface Character {
 export interface SheetTab {
   slot: string;
   label: string;
+
+  /** Короткая подпись — подставляется, когда вкладки не помещаются. */
+  shortLabel: string;
 }
 
 /** Строка блока характеристик. */
