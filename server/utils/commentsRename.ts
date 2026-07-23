@@ -1,3 +1,5 @@
+import { SOURCE_PLATFORM } from '#shared/consts';
+
 /** Заголовок межсервисной авторизации internal API comments-service. */
 const COMMENTS_SERVICE_TOKEN_HEADER = 'X-Service-Token';
 
@@ -5,9 +7,13 @@ const COMMENTS_SERVICE_TOKEN_HEADER = 'X-Service-Token';
 const COMMENTS_RENAME_PATH = '/api/v1/internal/comments/rename-by-author';
 
 /**
- * Best-effort: просит comments-service привести имя автора во ВСЕХ его комментариях
- * к текущему отображаемому имени (по `authorId` = `sub` токена). Вызывается после
- * смены имени и после публикации комментария.
+ * Best-effort: просит comments-service привести имя автора к текущему отображаемому
+ * имени (по `authorId` = `sub` токена). Вызывается после смены имени и после
+ * публикации комментария.
+ *
+ * Переименование скоупится платформой этого сайта (`SOURCE_PLATFORM`): `authorId`
+ * общий у пользователя на всех сайтах, а имя у каждого сайта своё — без скоупа этот
+ * вызов переписал бы и комментарии автора на старом сайте.
  *
  * Ошибки и отсутствие межсервисного токена (`NITRO_COMMENTS_SERVICE_TOKEN`) не
  * пробрасываются — синхронизация имени не должна ронять пользовательский поток.
@@ -25,7 +31,7 @@ export async function renameCommentsAuthor(
 
   try {
     await $fetch(`${url}${COMMENTS_RENAME_PATH}`, {
-      body: { authorId, displayName },
+      body: { authorId, displayName, sourcePlatform: SOURCE_PLATFORM },
       headers: {
         [COMMENTS_SERVICE_TOKEN_HEADER]: serviceToken,
       },
