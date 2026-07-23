@@ -4,6 +4,7 @@ export { default as SheetAbilityTile } from './SheetAbilityTile.vue';
 export { default as SheetArmorClassModal } from './SheetArmorClassModal.vue';
 export { default as SheetClassResourcesModal } from './SheetClassResourcesModal.vue';
 export { default as SheetClassResourcesPanel } from './SheetClassResourcesPanel.vue';
+export { default as SheetClassWizardModal } from './SheetClassWizardModal.vue';
 export { default as SheetCurrencyRow } from './SheetCurrencyRow.vue';
 export { default as SheetEquipmentTab } from './SheetEquipmentTab.vue';
 export { default as SheetExperienceModal } from './SheetExperienceModal.vue';

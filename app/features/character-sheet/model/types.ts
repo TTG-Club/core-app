@@ -229,6 +229,21 @@ export interface CharacterSpecies {
   lineageName: string | null;
 }
 
+/** Выбранный класс персонажа. */
+export interface CharacterClass {
+  url: string;
+  name: string;
+
+  /** URL подкласса; null — подкласс не выбран. */
+  subclassUrl: string | null;
+
+  /** Название подкласса; null — подкласс не выбран. */
+  subclassName: string | null;
+
+  /** Номинал кости хитов класса (например, 10). */
+  hitDie: number;
+}
+
 /** Происхождение особенности персонажа; none — добавлена вручную без источника. */
 export type FeatureOrigin = 'species' | 'lineage' | 'class' | 'feat' | 'none';
 
@@ -350,6 +365,97 @@ export interface SpeciesSummary {
   features: SpeciesFeatureSummary[];
 }
 
+/** Опция класса в списке визарда (аналог `SpeciesOption`). */
+export interface ClassOption {
+  url: string;
+  name: string;
+  sourceLabel: string;
+
+  /** Есть ли у класса подклассы (строку можно развернуть). */
+  hasSubclasses: boolean;
+}
+
+/** Особенность класса из ответа API (для визарда). */
+export interface ClassFeatureSummary {
+  /** Устойчивый ключ особенности из ответа. */
+  key: string;
+
+  /** Уровень получения особенности (1..20). */
+  level: number;
+
+  name: string;
+
+  /** Описание в разметке сайта. */
+  description: FeatureDescriptionNode[];
+
+  /** Особенность подкласса (а не базового класса). */
+  isSubclass: boolean;
+}
+
+/** Колонка таблицы прогрессии класса (для вывода ресурсов). */
+export interface ClassTableColumn {
+  name: string;
+
+  /** Значения колонки по уровням. */
+  scaling: Array<{ level: number; value: string }>;
+}
+
+/** Деталь класса или подкласса из ответа API (нужные листу поля). */
+export interface ClassSummary {
+  url: string;
+  name: string;
+  hasSubclasses: boolean;
+
+  /** Номинал кости хитов (например, 10). */
+  hitDie: number;
+
+  /** Подпись кости хитов (например, «к10»). */
+  hitDieLabel: string;
+
+  /** Спасброски прозой из ответа. */
+  savingThrowsText: string;
+
+  /** Спасброски, распознанные из текста. */
+  savingThrows: AbilityKey[];
+
+  /** Владения прозой из ответа (броня/оружие/инструменты/навыки). */
+  proficiencyText: {
+    armor: string;
+    weapon: string;
+    tool: string;
+    skill: string;
+  };
+
+  /** Таблица прогрессии для вывода ресурсов класса. */
+  table: ClassTableColumn[];
+
+  features: ClassFeatureSummary[];
+}
+
+/** Тип структурированного выбора внутри класса (селектор в визарде). */
+export type ClassChoiceKind =
+  | 'skill-proficiency'
+  | 'skill-expertise'
+  | 'language'
+  | 'tool';
+
+/** Распознанный выбор класса, отображаемый селектором вместо свободного текста. */
+export interface ClassChoice {
+  /** Устойчивый id: 'class-skills' | 'class-tools' | `class:${featureKey}`. */
+  id: string;
+
+  kind: ClassChoiceKind;
+
+  /** Заголовок пикера. */
+  label: string;
+
+  /** Сколько значений нужно выбрать. */
+  count: number;
+
+  /** Явные опции из прозы; пусто — резолвятся по типу в визарде. */
+  listed: string[];
+}
+
 /**
  * Категория предмета инвентаря: категории раздела «Предметы» плюс отдельная
  * группа для магических предметов.
@@ -462,8 +568,8 @@ export interface Character {
   /** Книга заклинаний персонажа. */
   spells: CharacterSpell[];
 
-  /** Название класса; null — не выбран. */
-  className: string | null;
+  /** Класс персонажа; null — не выбран. */
+  characterClass: CharacterClass | null;
 
   /** Предыстория; null — не выбрана. */
   background: string | null;

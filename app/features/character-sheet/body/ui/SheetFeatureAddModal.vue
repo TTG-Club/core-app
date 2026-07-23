@@ -27,7 +27,7 @@
     }
 
     if (draftOrigin.value === 'class') {
-      return character.value.className ?? '';
+      return character.value.characterClass?.name ?? '';
     }
 
     return '';

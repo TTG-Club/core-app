@@ -1,7 +1,11 @@
+import type { RenderNode } from '~ui/markup';
+
 import type {
   AbilityKey,
   AbilityRow,
   Character,
+  CharacterClass,
+  CharacterClassResource,
   CharacterExtraHitDie,
   CharacterFeature,
   CharacterHitDie,
@@ -13,6 +17,10 @@ import type {
   CharacterSpell,
   CharacterSpellGroup,
   CharacterVision,
+  ClassChoice,
+  ClassFeatureSummary,
+  ClassSummary,
+  ClassTableColumn,
   FeatSummary,
   FeatureDescriptionNode,
   FeatureOrigin,
@@ -33,17 +41,28 @@ import type {
 
 import { capitalize } from 'es-toolkit';
 
-import { isBlockNode, isMarkerNode, parse, toMarkupSource } from '~ui/markup';
+import {
+  getNodeText,
+  isBlockNode,
+  isMarkerNode,
+  parse,
+  toMarkupSource,
+} from '~ui/markup';
 
 import {
   ABILITY_LABELS,
   ABILITY_ORDER,
   ABILITY_SHORT_LABELS,
+  ARMOR_MATCH_KEYWORDS,
+  ARMOR_PROFICIENCY_GROUPS,
   CARRYING_CAPACITY_MULTIPLIER,
+  CLASS_RESOURCE_DENY_KEYWORDS,
   DARKVISION_PARSE_FALLBACK,
   INVENTORY_CATEGORY_ORDER,
   INVENTORY_CATEGORY_TITLES,
   LEVEL_XP_THRESHOLDS,
+  RESOURCE_COUNT_MAX,
+  RESOURCE_SHORT_LABEL_MAX_LENGTH,
   ROLL_MODE_DICE_NOTATION,
   SIZE_LABEL_WORDS,
   SKILL_PROFICIENCY_MULTIPLIERS,
@@ -51,8 +70,12 @@ import {
   SPEED_PRIMARY_ORDER,
   SPEED_TYPE_LABELS,
   SPEED_UNIT_SHORT_LABELS,
+  TOOL_MATCH_KEYWORDS,
+  TOOL_PROFICIENCY_GROUPS,
   VISION_LABELS,
   VISION_ORDER,
+  WEAPON_MATCH_KEYWORDS,
+  WEAPON_PROFICIENCY_GROUPS,
 } from './constants';
 
 /**
@@ -714,4 +737,392 @@ export function collapseProficiencies(
   );
 
   return proficiencies.filter((name) => !coveredNames.has(name));
+}
+
+/**
+ * Распознавание владений спасбросками из прозы ответа класса (например,
+ * «Сила и Телосложение»): совпадения ищутся по полным названиям характеристик.
+ *
+ * @param text строка спасбросков из ответа API.
+ * @returns характеристики, спасбросками которых владеет класс.
+ */
+export function parseSavingThrows(text: string): AbilityKey[] {
+  const normalizedText = text.toLowerCase();
+
+  return ABILITY_ORDER.filter((key) =>
+    normalizedText.includes(ABILITY_LABELS[key].toLowerCase()),
+  );
+}
+
+/**
+ * Сопоставление прозы владений класса с каталогом: если проза содержит
+ * ключевое слово группы — добавляется «вся группа», иначе ищутся отдельные виды
+ * по вхождению названия.
+ *
+ * @param prose строка владений из ответа API.
+ * @param groups группы каталога владений.
+ * @param keywordsByKey ключевые слова групп по ключу группы.
+ * @returns список подписей владений для листа.
+ */
+export function matchProficiencyGroups(
+  prose: string,
+  groups: ProficiencyCatalogGroup[],
+  keywordsByKey: Record<string, string[]>,
+): string[] {
+  const normalizedProse = prose.toLowerCase();
+
+  const matched = new Set<string>();
+
+  for (const group of groups) {
+    const keywords = keywordsByKey[group.key] ?? [];
+
+    const hasGroupKeyword = keywords.some((keyword) =>
+      normalizedProse.includes(keyword),
+    );
+
+    if (hasGroupKeyword) {
+      matched.add(group.all);
+
+      continue;
+    }
+
+    for (const item of group.items) {
+      if (normalizedProse.includes(item.toLowerCase())) {
+        matched.add(item);
+      }
+    }
+  }
+
+  return [...matched];
+}
+
+/**
+ * Владения класса, распознанные из прозы ответа (best-effort). Броня, оружие и
+ * инструменты сопоставляются с существующими каталогами владений; распознанное
+ * игрок затем правит существующими модалками.
+ *
+ * @param proficiencyText владения класса прозой (armor/weapon/tool).
+ * @param proficiencyText.armor владения бронёй прозой.
+ * @param proficiencyText.weapon владения оружием прозой.
+ * @param proficiencyText.tool владения инструментами прозой.
+ * @returns списки владений по группам листа.
+ */
+export function matchClassProficiencies(proficiencyText: {
+  armor: string;
+  weapon: string;
+  tool: string;
+}): { armor: string[]; weapons: string[]; tools: string[] } {
+  return {
+    armor: matchProficiencyGroups(
+      proficiencyText.armor,
+      ARMOR_PROFICIENCY_GROUPS,
+      ARMOR_MATCH_KEYWORDS,
+    ),
+    weapons: matchProficiencyGroups(
+      proficiencyText.weapon,
+      WEAPON_PROFICIENCY_GROUPS,
+      WEAPON_MATCH_KEYWORDS,
+    ),
+    tools: matchProficiencyGroups(
+      proficiencyText.tool,
+      TOOL_PROFICIENCY_GROUPS,
+      TOOL_MATCH_KEYWORDS,
+    ),
+  };
+}
+
+/**
+ * Значение колонки таблицы прогрессии на заданном уровне: берётся запись с
+ * наибольшим уровнем, не превышающим текущий.
+ *
+ * @param column колонка таблицы прогрессии.
+ * @param level уровень персонажа.
+ * @returns значение колонки; null — записи для уровня нет.
+ */
+function getColumnValueAtLevel(
+  column: ClassTableColumn,
+  level: number,
+): string | null {
+  let value: string | null = null;
+  let bestLevel = 0;
+
+  for (const entry of column.scaling) {
+    if (entry.level <= level && entry.level >= bestLevel) {
+      bestLevel = entry.level;
+      value = entry.value;
+    }
+  }
+
+  return value;
+}
+
+/**
+ * Эвристический вывод ресурсов класса из таблицы прогрессии: колонка становится
+ * ресурсом, только если её значение на текущем уровне — целое число в
+ * допустимом диапазоне, а название не входит в стоп-слова (заклинания, ячейки,
+ * бонусы, урон, уровень). Значения игрок затем правит вручную.
+ *
+ * @param table таблица прогрессии класса.
+ * @param level уровень персонажа.
+ * @returns ресурсы класса с устойчивыми идентификаторами.
+ */
+export function deriveClassResources(
+  table: ClassTableColumn[],
+  level: number,
+): CharacterClassResource[] {
+  const resources: CharacterClassResource[] = [];
+
+  for (const column of table) {
+    const normalizedName = column.name.toLowerCase().replaceAll('ё', 'е');
+
+    const isDenied = CLASS_RESOURCE_DENY_KEYWORDS.some((keyword) =>
+      normalizedName.includes(keyword.replaceAll('ё', 'е')),
+    );
+
+    if (isDenied) {
+      continue;
+    }
+
+    const value = getColumnValueAtLevel(column, level)?.trim();
+
+    if (!value || !/^\d+$/.test(value)) {
+      continue;
+    }
+
+    const max = Number(value);
+
+    if (max < 1 || max > RESOURCE_COUNT_MAX) {
+      continue;
+    }
+
+    resources.push({
+      id: `class:res:${column.name}`,
+      name: column.name,
+      shortLabel: column.name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
+      recovery: 'long-rest',
+      current: max,
+      max,
+    });
+  }
+
+  return resources;
+}
+
+/**
+ * Приведение узла разметки класса (`RenderNode`) к массиву узлов описания
+ * особенности: строка и одиночный узел заворачиваются в массив.
+ *
+ * @param node узел описания из ответа класса.
+ * @returns узлы описания для листа.
+ */
+export function toDescriptionNodes(node: RenderNode): FeatureDescriptionNode[] {
+  return Array.isArray(node) ? [...node] : [node];
+}
+
+/**
+ * Сборка классовых особенностей персонажа из деталей класса и подкласса.
+ * Берутся особенности с уровнем не выше уровня персонажа: базовый класс даёт
+ * особенности без пометки подкласса, подкласс — с пометкой. Дубли по ключу
+ * отбрасываются. Выбор игрока подставляется по идентификатору особенности
+ * (`class:key`).
+ *
+ * @param base деталь базового класса.
+ * @param subclass деталь подкласса; null — подкласс не выбран.
+ * @param level уровень персонажа.
+ * @param choices выборы игрока по идентификаторам особенностей.
+ * @returns классовые особенности для вкладки «Особенности».
+ */
+export function buildClassFeatures(
+  base: ClassSummary,
+  subclass: ClassSummary | null,
+  level: number,
+  choices: Record<string, string>,
+): CharacterFeature[] {
+  const seenKeys = new Set<string>();
+  const features: CharacterFeature[] = [];
+
+  const append = (
+    summaries: ClassFeatureSummary[],
+    originName: string,
+    onlySubclass: boolean,
+  ): void => {
+    for (const summary of summaries) {
+      if (
+        summary.isSubclass !== onlySubclass
+        || summary.level > level
+        || seenKeys.has(summary.key)
+      ) {
+        continue;
+      }
+
+      seenKeys.add(summary.key);
+
+      const id = getCharacterFeatureId('class', summary.key);
+
+      const choice = choices[id]?.trim();
+
+      features.push({
+        id,
+        name: summary.name,
+        description: [...summary.description],
+        origin: 'class',
+        originName,
+        choice: choice || null,
+      });
+    }
+  };
+
+  append(base.features, base.name, false);
+
+  if (subclass) {
+    append(subclass.features, subclass.name, true);
+  }
+
+  return features;
+}
+
+/**
+ * Отображаемое название класса с подклассом (например, «Плут (Мистический
+ * ловкач)»).
+ *
+ * @param characterClass выбранный класс персонажа.
+ * @returns название класса, при наличии — с подклассом в скобках.
+ */
+export function getClassDisplayName(characterClass: CharacterClass): string {
+  return characterClass.subclassName
+    ? `${characterClass.name} (${characterClass.subclassName})`
+    : characterClass.name;
+}
+
+/**
+ * Количество для выбора из прозы: первое число либо числительное словом
+ * (один/два/три/четыре); по умолчанию 1.
+ *
+ * @param text строка с описанием выбора.
+ * @returns распознанное количество.
+ */
+export function parseChoiceCount(text: string): number {
+  const match = /(\d+)|оди?н|(дв[ае])|(тр[иеё])|(четыр)/i.exec(text);
+
+  if (!match) {
+    return 1;
+  }
+
+  if (match[1]) {
+    return Number(match[1]);
+  }
+
+  if (match[2]) {
+    return 2;
+  }
+
+  if (match[3]) {
+    return 3;
+  }
+
+  if (match[4]) {
+    return 4;
+  }
+
+  return 1;
+}
+
+/**
+ * Выбор владения навыками из прозы `proficiency.skill` («Выберите N навыка из…»
+ * или «Выберите любые N навыка»). Перечисленные навыки распознаются по вхождению
+ * известных названий; «любые» — опции резолвятся всеми навыками в визарде.
+ *
+ * @param skillText проза выбора навыков класса.
+ * @param skillNames имена всех навыков персонажа.
+ * @returns выбор навыков или null, если проза не о навыках.
+ */
+export function getClassSkillChoice(
+  skillText: string,
+  skillNames: string[],
+): ClassChoice | null {
+  if (!/навык/i.test(skillText)) {
+    return null;
+  }
+
+  const listed = /любы/i.test(skillText)
+    ? []
+    : skillNames.filter((name) => skillText.includes(name));
+
+  return {
+    id: 'class-skills',
+    kind: 'skill-proficiency',
+    label: 'Владение навыками',
+    count: parseChoiceCount(skillText),
+    listed,
+  };
+}
+
+/**
+ * Выбор владения инструментами из прозы `proficiency.tool` («Выберите N …
+ * инструмента»). Группа определяется по ключевому слову (например, «музыкальн»
+ * → музыкальные инструменты); иначе опции резолвятся всем каталогом в визарде.
+ *
+ * @param toolText проза владения инструментами класса.
+ * @returns выбор инструментов или null, если выбора нет.
+ */
+export function getClassToolChoice(toolText: string): ClassChoice | null {
+  if (!/выбер/i.test(toolText)) {
+    return null;
+  }
+
+  const normalized = toolText.toLowerCase();
+
+  const matchedGroup = TOOL_PROFICIENCY_GROUPS.find((group) =>
+    TOOL_MATCH_KEYWORDS[group.key].some((keyword) =>
+      normalized.includes(keyword),
+    ),
+  );
+
+  return {
+    id: 'class-tools',
+    kind: 'tool',
+    label: 'Владение инструментами',
+    count: parseChoiceCount(toolText),
+    listed: matchedGroup ? [...matchedGroup.items] : [],
+  };
+}
+
+/**
+ * Распознавание выбора внутри умения класса: компетентность (экспертиза в
+ * навыках, которыми владеет персонаж) или язык на выбор. Иначе — null (умение
+ * остаётся со свободным текстовым выбором).
+ *
+ * @param feature особенность класса.
+ * @returns выбор умения или null.
+ */
+export function detectFeatureChoice(
+  feature: ClassFeatureSummary,
+): ClassChoice | null {
+  const text = getNodeText(feature.description)
+    .toLowerCase()
+    .replaceAll('ё', 'е');
+
+  const id = getCharacterFeatureId('class', feature.key);
+
+  if (text.includes('компетентност')) {
+    return {
+      id,
+      kind: 'skill-expertise',
+      label: feature.name,
+      count: parseChoiceCount(text.slice(text.indexOf('компетентност'))),
+      listed: [],
+    };
+  }
+
+  if (text.includes('язык') && text.includes('выбор')) {
+    return {
+      id,
+      kind: 'language',
+      label: feature.name,
+      count: parseChoiceCount(text),
+      listed: [],
+    };
+  }
+
+  return null;
 }

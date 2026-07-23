@@ -2,6 +2,7 @@
   import type { Character } from '../../model';
 
   import {
+    getClassDisplayName,
     getSpeciesDisplayName,
     getVisionRows,
     SHEET_EMPTY_LABELS,
@@ -14,6 +15,7 @@
   }>();
 
   const emit = defineEmits<{
+    'edit-class': [];
     'edit-name': [];
     'edit-progress': [];
     'edit-size': [];
@@ -41,16 +43,15 @@
       : SHEET_EMPTY_LABELS.species,
   );
 
-  const subtitleRest = computed(() => {
-    const background =
-      props.character.background ?? SHEET_EMPTY_LABELS.background;
+  const classLabel = computed(() =>
+    props.character.characterClass
+      ? `${getClassDisplayName(props.character.characterClass)} ${props.character.level}`
+      : SHEET_EMPTY_LABELS.className,
+  );
 
-    const classWithLevel = props.character.className
-      ? `${props.character.className} ${props.character.level}`
-      : SHEET_EMPTY_LABELS.className;
-
-    return `${classWithLevel} — ${background}`;
-  });
+  const backgroundLabel = computed(
+    () => props.character.background ?? SHEET_EMPTY_LABELS.background,
+  );
 
   const sizeLetter = computed(() => props.character.size?.charAt(0) ?? null);
 
@@ -196,7 +197,18 @@
           {{ speciesLabel }}
         </button>
 
-        <span class="truncate">— {{ subtitleRest }}</span>
+        <span>—</span>
+
+        <button
+          type="button"
+          class="cursor-pointer rounded px-1 transition-colors hover:bg-elevated/60 hover:text-warning"
+          aria-label="Выбрать класс персонажа"
+          @click.left.exact.prevent="emit('edit-class')"
+        >
+          {{ classLabel }}
+        </button>
+
+        <span class="truncate">— {{ backgroundLabel }}</span>
       </span>
 
       <button

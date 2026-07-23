@@ -12,7 +12,7 @@ export const DEFAULT_CHARACTER: Character = {
   size: null,
   features: [],
   spells: [],
-  className: null,
+  characterClass: null,
   background: null,
   level: 1,
   experience: { current: 0, nextLevel: 300 },

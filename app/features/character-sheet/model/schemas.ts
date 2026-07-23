@@ -1,4 +1,10 @@
+import type { RenderNode } from '~ui/markup';
+
 import type {
+  ClassFeatureSummary,
+  ClassOption,
+  ClassSummary,
+  ClassTableColumn,
   FeatCatalogItem,
   FeatSummary,
   ItemCatalogItem,
@@ -12,7 +18,11 @@ import type {
 
 import { z } from '~/utils/zod';
 
-import { parseItemWeight } from './utils';
+import {
+  parseItemWeight,
+  parseSavingThrows,
+  toDescriptionNodes,
+} from './utils';
 
 /**
  * Схема ссылки на вид из поиска. Валидируем только используемые поля;
@@ -368,4 +378,146 @@ export function parseSpeciesDetail(input: unknown): SpeciesSummary | null {
  */
 export function parseSpeciesLineages(input: unknown): SpeciesSummary[] {
   return speciesLineagesResponseSchema.parse(input).map(toSpeciesSummary);
+}
+
+/** Схема ссылки на класс/подкласс из поиска. Валидируем нужные листу поля. */
+const classLinkSchema = z.object({
+  url: z.string(),
+  name: z.object({ rus: z.string().catch('') }),
+  source: z
+    .object({
+      name: z.object({ label: z.string().catch('') }).catch({ label: '' }),
+    })
+    .catch({ name: { label: '' } }),
+  hasSubclasses: z.boolean().catch(false),
+});
+
+/** Ответ поиска классов/подклассов: плоский массив или конверт `{ value }`. */
+const classSearchResponseSchema = z
+  .union([
+    z.array(classLinkSchema),
+    z.object({ value: z.array(classLinkSchema) }),
+  ])
+  .catch([]);
+
+/**
+ * Валидация ответа `GET /api/v2/classes/search` (и `/{url}/subclasses`) и
+ * приведение к опциям списка. Битый ответ даёт пустой список, а не исключение.
+ *
+ * @param input сырой ответ поиска классов или подклассов.
+ * @param forceNoSubclasses принудительно снять флаг подклассов (для подклассов).
+ * @returns опции классов для визарда.
+ */
+export function parseClassOptions(
+  input: unknown,
+  forceNoSubclasses = false,
+): ClassOption[] {
+  const parsed = classSearchResponseSchema.parse(input);
+  const list = Array.isArray(parsed) ? parsed : parsed.value;
+
+  return list.map((classLink) => ({
+    url: classLink.url,
+    name: classLink.name.rus,
+    sourceLabel: classLink.source.name.label,
+    hasSubclasses: forceNoSubclasses ? false : classLink.hasSubclasses,
+  }));
+}
+
+/** Схема колонки таблицы прогрессии класса. */
+const classTableColumnSchema = z.object({
+  name: z.string().catch(''),
+  scaling: z
+    .array(
+      z.object({
+        level: z.coerce.number().catch(1),
+        value: z.string().catch(''),
+      }),
+    )
+    .catch([]),
+});
+
+/** Узел разметки описания класса; отсутствие приводится к пустой строке. */
+const renderNodeSchema = z
+  .custom<RenderNode>((value) => value !== undefined)
+  .catch('');
+
+/** Схема особенности класса в детальном ответе. */
+const classFeatureSchema = z.object({
+  key: z.string().catch(''),
+  level: z.coerce.number().catch(1),
+  name: z.string().catch(''),
+  description: renderNodeSchema,
+  isSubclass: z.boolean().catch(false),
+});
+
+/** Схема детального ответа класса или подкласса (нужные листу поля). */
+const classDetailSchema = z.object({
+  url: z.string(),
+  name: z.object({ rus: z.string().catch('') }),
+  hasSubclasses: z.boolean().catch(false),
+  hitDice: z
+    .object({
+      label: z.string().catch(''),
+      maxValue: z.coerce.number().catch(0),
+    })
+    .catch({ label: '', maxValue: 0 }),
+  savingThrows: z.string().catch(''),
+  proficiency: z
+    .object({
+      armor: z.string().catch(''),
+      weapon: z.string().catch(''),
+      tool: z.string().catch(''),
+      skill: z.string().catch(''),
+    })
+    .catch({ armor: '', weapon: '', tool: '', skill: '' }),
+  table: z.array(classTableColumnSchema).catch([]),
+  features: z.array(classFeatureSchema).catch([]),
+});
+
+/**
+ * Приведение детального ответа класса к полям, нужным листу персонажа.
+ *
+ * @param detail разобранный детальный ответ.
+ * @returns деталь класса для листа.
+ */
+function toClassSummary(
+  detail: z.infer<typeof classDetailSchema>,
+): ClassSummary {
+  const features: ClassFeatureSummary[] = detail.features.map((feature) => ({
+    key: feature.key,
+    level: feature.level,
+    name: feature.name,
+    description: toDescriptionNodes(feature.description),
+    isSubclass: feature.isSubclass,
+  }));
+
+  const table: ClassTableColumn[] = detail.table.map((column) => ({
+    name: column.name,
+    scaling: column.scaling,
+  }));
+
+  return {
+    url: detail.url,
+    name: detail.name.rus,
+    hasSubclasses: detail.hasSubclasses,
+    hitDie: detail.hitDice.maxValue,
+    hitDieLabel: detail.hitDice.label,
+    savingThrowsText: detail.savingThrows,
+    savingThrows: parseSavingThrows(detail.savingThrows),
+    proficiencyText: detail.proficiency,
+    table,
+    features,
+  };
+}
+
+/**
+ * Валидация детального ответа `GET /api/v2/classes/{url}`.
+ *
+ * @param input сырой детальный ответ класса или подкласса.
+ * @returns деталь класса или null при неожиданном ответе.
+ */
+export function parseClassDetail(input: unknown): ClassSummary | null {
+  const result = classDetailSchema.safeParse(input);
+
+  return result.success ? toClassSummary(result.data) : null;
 }

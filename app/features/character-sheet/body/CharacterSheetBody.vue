@@ -19,6 +19,7 @@
     SheetArmorClassModal,
     SheetClassResourcesModal,
     SheetClassResourcesPanel,
+    SheetClassWizardModal,
     SheetExperienceModal,
     SheetFeatAddModal,
     SheetFeatureAddModal,
@@ -113,6 +114,8 @@
   );
 
   const speciesWizardModal = overlay.create(SheetSpeciesWizardModal);
+
+  const classWizardModal = overlay.create(SheetClassWizardModal);
 
   const sizeModal = overlay.create(SheetSizeModal);
 
@@ -262,6 +265,14 @@
     speciesWizardModal.open();
   }
 
+  function handleClassEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    classWizardModal.open();
+  }
+
   function handleSizeEdit() {
     if (!ensureEditable()) {
       return;
@@ -316,6 +327,7 @@
     <SheetHeader
       :character="character"
       :locked="isLocked"
+      @edit-class="handleClassEdit"
       @edit-name="handleNameEdit"
       @edit-progress="handleProgressEdit"
       @edit-size="handleSizeEdit"

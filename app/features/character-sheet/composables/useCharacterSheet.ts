@@ -2,6 +2,7 @@ import type {
   AbilityKey,
   Character,
   CharacterArmorClass,
+  CharacterClass,
   CharacterClassResource,
   CharacterExtraHitDie,
   CharacterFeature,
@@ -15,7 +16,7 @@ import type {
   ProficiencyGroupKey,
 } from '../model';
 
-import { clamp } from 'es-toolkit';
+import { clamp, union } from 'es-toolkit';
 
 import {
   ABILITY_SCORE_MAX,
@@ -429,6 +430,111 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Применение выбранного класса: имя (с подклассом), кость хитов, спасброски,
+   * распознанные владения, производные ресурсы и классовые особенности
+   * устанавливаются атомарно одним обновлением. Спасброски и кость хитов
+   * перезаписываются; владения объединяются с уже имеющимися; классовые
+   * особенности и производные ресурсы заменяются целиком, ручные — сохраняются.
+   *
+   * @param payload класс и производные от него значения листа.
+   * @param payload.characterClass выбранный класс с подклассом.
+   * @param payload.savingThrows спасброски класса.
+   * @param payload.hitDie номинал кости хитов класса.
+   * @param payload.proficiencies распознанные владения (броня/оружие/инструменты/языки).
+   * @param payload.proficiencies.armor владения бронёй.
+   * @param payload.proficiencies.weapons владения оружием.
+   * @param payload.proficiencies.tools владения инструментами.
+   * @param payload.proficiencies.languages владения языками.
+   * @param payload.skills выбранные навыки (владение и экспертиза).
+   * @param payload.skills.proficient навыки для владения.
+   * @param payload.skills.expertise навыки для экспертизы.
+   * @param payload.classResources производные ресурсы класса.
+   * @param payload.features классовые особенности по уровню.
+   */
+  function setClass(payload: {
+    characterClass: CharacterClass;
+    savingThrows: AbilityKey[];
+    hitDie: number;
+    proficiencies: {
+      armor: string[];
+      weapons: string[];
+      tools: string[];
+      languages: string[];
+    };
+    skills: { proficient: string[]; expertise: string[] };
+    classResources: CharacterClassResource[];
+    features: CharacterFeature[];
+  }): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const { level } = character.value;
+
+    // Классовые особенности заменяются целиком (id `class:*`); добавленные
+    // вручную сохраняются.
+    const preservedFeatures = character.value.features.filter(
+      (feature) => !feature.id.startsWith('class:'),
+    );
+
+    // Производные ресурсы (id `class:res:*`) заменяются; ручные — сохраняются.
+    const preservedResources = character.value.classResources.filter(
+      (resource) => !resource.id.startsWith('class:res:'),
+    );
+
+    // Выбранные навыки: экспертиза перекрывает владение; уже более высокий
+    // уровень владения не понижается.
+    const proficientSkills = new Set(payload.skills.proficient);
+    const expertiseSkills = new Set(payload.skills.expertise);
+
+    // Владения класса объединяются с уже указанными без дублей (`union`).
+    character.value = {
+      ...character.value,
+      characterClass: { ...payload.characterClass },
+      savingThrowProficiencies: [...payload.savingThrows],
+      hitDice: [{ die: payload.hitDie, current: level, max: level }],
+      proficiencies: {
+        ...character.value.proficiencies,
+        armor: union(
+          character.value.proficiencies.armor,
+          payload.proficiencies.armor,
+        ),
+        weapons: union(
+          character.value.proficiencies.weapons,
+          payload.proficiencies.weapons,
+        ),
+        tools: union(
+          character.value.proficiencies.tools,
+          payload.proficiencies.tools,
+        ),
+        languages: union(
+          character.value.proficiencies.languages,
+          payload.proficiencies.languages,
+        ),
+      },
+      skills: character.value.skills.map((skill) => {
+        if (expertiseSkills.has(skill.name)) {
+          return { ...skill, proficiency: 'expertise' };
+        }
+
+        if (proficientSkills.has(skill.name) && skill.proficiency === 'none') {
+          return { ...skill, proficiency: 'proficient' };
+        }
+
+        return skill;
+      }),
+      classResources: [...preservedResources, ...payload.classResources],
+      features: [
+        ...payload.features.map((feature) => ({
+          ...feature,
+          description: [...feature.description],
+        })),
+        ...preservedFeatures,
+      ],
+    };
+  }
+
+  /**
    * Установка выбора игрока в особенности (например, цвет драконорождённого).
    *
    * @param featureId идентификатор особенности.
@@ -746,6 +852,7 @@ export function useCharacterSheet() {
     removeInventoryItem,
     removeSpell,
     setFeatureChoice,
+    setClass,
     setName,
     setNotes,
     setProficiencies,

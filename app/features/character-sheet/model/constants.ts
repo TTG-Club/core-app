@@ -507,6 +507,63 @@ export const SPELL_LEVELS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 /** Базовый путь деталей вида (`/{url}` и `/{url}/lineages`). */
 export const SPECIES_DETAIL_BASE_PATH = '/api/v2/species';
 
+/** Эндпоинт поиска классов (раздел «Классы»). */
+export const CLASSES_SEARCH_PATH = '/api/v2/classes/search';
+
+/** Базовый путь деталей класса (`/{url}` и `/{url}/subclasses`). */
+export const CLASSES_DETAIL_BASE_PATH = '/api/v2/classes';
+
+/** Минимальный уровень персонажа для выбора подкласса (D&D 2024 — 3-й). */
+export const SUBCLASS_SELECTION_MIN_LEVEL = 3;
+
+/** Ключевые слова групп брони для сопоставления прозы владений класса. */
+export const ARMOR_MATCH_KEYWORDS: Record<
+  ArmorProficiencyGroup['key'],
+  string[]
+> = {
+  light: ['лёгк', 'легк'],
+  medium: ['средн'],
+  heavy: ['тяжёл', 'тяжел'],
+  shields: ['щит'],
+};
+
+/** Ключевые слова групп оружия для сопоставления прозы владений класса. */
+export const WEAPON_MATCH_KEYWORDS: Record<
+  WeaponProficiencyGroup['key'],
+  string[]
+> = {
+  simple: ['прост'],
+  martial: ['воинск'],
+};
+
+/** Ключевые слова групп инструментов для сопоставления прозы владений класса. */
+export const TOOL_MATCH_KEYWORDS: Record<
+  ToolProficiencyGroup['key'],
+  string[]
+> = {
+  artisan: ['ремесленник'],
+  gaming: ['игров'],
+  musical: ['музыкальн'],
+  other: [],
+};
+
+/**
+ * Стоп-слова названий колонок таблицы прогрессии: такие колонки не считаются
+ * ресурсами класса (заклинания, ячейки, бонусы, урон, уровень и т. п.).
+ */
+export const CLASS_RESOURCE_DENY_KEYWORDS: string[] = [
+  'заговор',
+  'заклинани',
+  'ячейк',
+  'круг',
+  'мастерств',
+  'известн',
+  'бонус',
+  'урон',
+  'черт',
+  'уровень',
+];
+
 /** Эндпоинт поиска предметов (раздел «Предметы»). */
 export const ITEMS_SEARCH_PATH = '/api/v2/item/search';
 
