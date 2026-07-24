@@ -47,10 +47,10 @@
   const expression = ref('');
 
   /** Ввод хитов: `20` — точное значение, `+3`/`-7` — сдвиг от текущих. */
-  const HP_INPUT_PATTERN = /^([+-])?(\d+)$/;
+  const HIT_POINT_INPUT_PATTERN = /^([+-])?(\d+)$/;
 
   const isExpressionValid = computed(() =>
-    HP_INPUT_PATTERN.test(expression.value.trim()),
+    HIT_POINT_INPUT_PATTERN.test(expression.value.trim()),
   );
 
   /**
@@ -59,7 +59,7 @@
    * Невалидный ввод просто очищает поле.
    */
   function applyExpression(): void {
-    const match = HP_INPUT_PATTERN.exec(expression.value.trim());
+    const match = HIT_POINT_INPUT_PATTERN.exec(expression.value.trim());
 
     if (!match) {
       expression.value = '';
