@@ -77,6 +77,7 @@
     armorClassValue,
     totalWeight,
     carryingCapacity,
+    setAbilityScore,
     toggleSavingThrowProficiency,
     cycleSkillProficiency,
     adjustClassResource,
@@ -219,6 +220,14 @@
       title: `Проверка: ${ABILITY_LABELS[abilityKey]}`,
       modifier: getModifier(character.value.abilities[abilityKey]),
     });
+  }
+
+  function handleAbilityAdjust(abilityKey: AbilityKey, delta: number) {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    setAbilityScore(abilityKey, character.value.abilities[abilityKey] + delta);
   }
 
   function handleSpeedEdit() {
@@ -536,6 +545,7 @@
           :rows="abilityRows"
           @roll="handleAbilityRoll"
           @settings="handleAbilityEdit"
+          @adjust="handleAbilityAdjust"
         />
       </div>
 
