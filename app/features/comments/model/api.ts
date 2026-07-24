@@ -8,6 +8,8 @@ import type {
 
 import { FetchError } from 'ofetch';
 
+import { SOURCE_PLATFORM } from '#shared/consts';
+
 import {
   COMMENTS_API_PATH,
   COMMENTS_MODERATION_ALL_PATH,
@@ -28,6 +30,12 @@ import {
   parsePublicComment,
   parsePublicCommentsPage,
 } from './schemas';
+
+/**
+ * Данные формы отправки. Платформа-источник у всего фронта одна и подставляется
+ * здесь, на границе с сервисом, — вызывающему коду про неё знать незачем.
+ */
+type CommentDraft = Omit<CreateCommentRequest, 'sourcePlatform'>;
 
 /**
  * Достаёт HTTP-статус из ошибки `$fetch`.
@@ -105,6 +113,7 @@ export async function fetchRootComments(
   const response = await $fetch(COMMENTS_API_PATH, {
     method: 'GET',
     query: {
+      sourcePlatform: SOURCE_PLATFORM,
       section,
       url,
       page,
@@ -129,7 +138,7 @@ export async function fetchCommentsCount(
 ): Promise<number> {
   const response = await $fetch(`${COMMENTS_API_PATH}/count`, {
     method: 'GET',
-    query: { section, url },
+    query: { sourcePlatform: SOURCE_PLATFORM, section, url },
     retry: 0,
   });
 
@@ -150,7 +159,7 @@ export async function fetchLatestComment(
 ): Promise<PublicComment | null> {
   const response = await $fetch(`${COMMENTS_API_PATH}/latest`, {
     method: 'GET',
-    query: { section, url },
+    query: { sourcePlatform: SOURCE_PLATFORM, section, url },
     retry: 0,
   });
 
@@ -197,11 +206,14 @@ export async function fetchCommentReplies(
  * @param request Раздел, URL страницы и текст.
  */
 export async function createRootComment(
-  request: CreateCommentRequest,
+  request: CommentDraft,
 ): Promise<CommentEntry> {
   const response = await $fetch(COMMENTS_API_PATH, {
     method: 'POST',
-    body: parseCreateCommentRequest(request),
+    body: parseCreateCommentRequest({
+      ...request,
+      sourcePlatform: SOURCE_PLATFORM,
+    }),
     retry: 0,
   });
 
@@ -215,11 +227,14 @@ export async function createRootComment(
  */
 export async function createCommentReply(
   parentId: string,
-  request: CreateCommentRequest,
+  request: CommentDraft,
 ): Promise<CommentEntry> {
   const response = await $fetch(`${COMMENTS_API_PATH}/${parentId}/replies`, {
     method: 'POST',
-    body: parseCreateCommentRequest(request),
+    body: parseCreateCommentRequest({
+      ...request,
+      sourcePlatform: SOURCE_PLATFORM,
+    }),
     retry: 0,
   });
 

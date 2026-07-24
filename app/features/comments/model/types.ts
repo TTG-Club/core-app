@@ -1,3 +1,5 @@
+import type { SourcePlatform } from '#shared/consts';
+
 /**
  * Статус комментария на стороне сервиса. `HIDDEN_BY_BAN` приходит только в
  * модерационных лентах: сервис ставит его всем комментариям заблокированного
@@ -14,6 +16,8 @@ export type CommentStatus =
 /** Поля, которые есть у любого комментария — в том числе у надгробия. */
 export interface CommentBase {
   id: string;
+  /** Платформа-источник обсуждения (старые сборки сервиса не присылают). */
+  sourcePlatform: SourcePlatform | null;
   /** Раздел страницы обсуждения (старые сборки сервиса не присылают). */
   section: string | null;
   /** URL страницы обсуждения (старые сборки сервиса не присылают). */
@@ -108,6 +112,7 @@ export interface CommentsTarget {
 
 /** Тело создания корневого комментария или ответа. */
 export interface CreateCommentRequest {
+  sourcePlatform: SourcePlatform;
   section: string;
   url: string;
   content: string;

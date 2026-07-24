@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { CommentsModerationTab } from '~comments/model';
 
+  import { SOURCE_PLATFORM_LABELS } from '#shared/consts';
   import { AdminCommentRow } from '~comments/admin';
   import {
     ADMIN_COMMENTS_ALL_DESCRIPTION,
@@ -8,6 +9,8 @@
     ADMIN_COMMENTS_DISLIKED_DESCRIPTION,
     ADMIN_COMMENTS_DISLIKED_EMPTY_MESSAGE,
     ADMIN_COMMENTS_PAGE_TITLE,
+    ADMIN_COMMENTS_PLATFORM_ALL,
+    ADMIN_COMMENTS_PLATFORM_ALL_LABEL,
     COMMENTS_LOAD_ERROR_TOAST,
     COMMENTS_MODERATION_ALL_PATH,
     COMMENTS_MODERATION_DISLIKED_PATH,
@@ -29,6 +32,29 @@
 
   const currentPage = ref(1);
 
+  /**
+   * Фильтр платформы-источника. Лента модерации общая на все сайты сервиса,
+   * `ADMIN_COMMENTS_PLATFORM_ALL` снимает фильтр — тогда параметр на бэкенд не
+   * уходит и возвращаются комментарии всех платформ.
+   */
+  const platformFilter = ref<string>(ADMIN_COMMENTS_PLATFORM_ALL);
+
+  /** Пункты селекта: «все платформы» плюс список из общих подписей сервисов. */
+  const platformOptions = computed(() => {
+    const options = [
+      {
+        label: ADMIN_COMMENTS_PLATFORM_ALL_LABEL,
+        value: ADMIN_COMMENTS_PLATFORM_ALL,
+      },
+    ];
+
+    Object.entries(SOURCE_PLATFORM_LABELS).forEach(([value, label]) => {
+      options.push({ label, value });
+    });
+
+    return options;
+  });
+
   const moderationPath = computed(() =>
     activeTab.value === 'all'
       ? COMMENTS_MODERATION_ALL_PATH
@@ -47,14 +73,20 @@
         query: {
           page: currentPage.value - 1,
           size: COMMENTS_MODERATION_PAGE_SIZE,
+          // «Все» — это отсутствие параметра: бэкенд трактует пустой фильтр
+          // как «со всех платформ», а не как отдельную платформу.
+          sourcePlatform:
+            platformFilter.value === ADMIN_COMMENTS_PLATFORM_ALL
+              ? undefined
+              : platformFilter.value,
         },
       }).then(parseModerationCommentsPage),
-    { watch: [currentPage, activeTab] },
+    { watch: [currentPage, activeTab, platformFilter] },
   );
 
-  // Смена вкладки начинает просмотр с первой страницы. Цикла нет: вотчер
-  // меняет только currentPage, на activeTab он не влияет.
-  watch(activeTab, () => {
+  // Смена вкладки или платформы начинает просмотр с первой страницы. Цикла нет:
+  // вотчер меняет только currentPage, на источники он не влияет.
+  watch([activeTab, platformFilter], () => {
     currentPage.value = 1;
   });
 
@@ -102,13 +134,25 @@
     :title="ADMIN_COMMENTS_PAGE_TITLE"
   >
     <div class="flex flex-col gap-4">
-      <UTabs
-        v-model="activeTab"
-        :items="COMMENTS_MODERATION_TABS"
-        :content="false"
-        size="sm"
-        class="w-fit"
-      />
+      <div class="flex flex-wrap items-center gap-3">
+        <UTabs
+          v-model="activeTab"
+          :items="COMMENTS_MODERATION_TABS"
+          :content="false"
+          size="sm"
+          class="w-fit"
+        />
+
+        <!-- Фильтр по платформе: лента общая на все сайты сервиса -->
+        <USelectMenu
+          v-model="platformFilter"
+          :items="platformOptions"
+          value-key="value"
+          label-key="label"
+          size="sm"
+          class="w-44"
+        />
+      </div>
 
       <p class="text-sm text-muted">
         {{ pageDescription }}
