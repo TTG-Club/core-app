@@ -12,9 +12,15 @@
   const props = defineProps<{
     character: Character;
     locked: boolean;
+    /** Показать кнопку «открыть на отдельной странице» (панель). */
+    canExpand?: boolean;
+    /** Показать кнопку закрытия. Скрывается, когда закрытие даёт контейнер. */
+    canClose?: boolean;
   }>();
 
   const emit = defineEmits<{
+    'close': [];
+    'expand': [];
     'edit-background': [];
     'edit-class': [];
     'edit-name': [];
@@ -87,9 +93,9 @@
 
 <template>
   <header
-    class="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6"
+    class="flex flex-col items-center gap-4 @2xl:flex-row @2xl:items-start @2xl:gap-6"
   >
-    <div class="relative mb-2 shrink-0 sm:mb-0">
+    <div class="relative mb-2 shrink-0 @2xl:mb-0">
       <div
         class="flex size-24 items-center justify-center overflow-hidden rounded-full border-2 border-warning/70 bg-elevated"
       >
@@ -180,10 +186,10 @@
       </div>
     </div>
 
-    <div class="flex w-full min-w-0 grow flex-col gap-1 sm:w-auto">
+    <div class="flex w-full min-w-0 grow flex-col gap-1 @2xl:w-auto">
       <button
         type="button"
-        class="max-w-full cursor-pointer truncate text-center text-3xl font-bold tracking-wide text-highlighted transition-colors hover:text-warning sm:max-w-fit sm:text-left"
+        class="max-w-full cursor-pointer truncate text-center text-3xl font-bold tracking-wide text-highlighted transition-colors hover:text-warning @2xl:max-w-fit @2xl:text-left"
         aria-label="Изменить имя персонажа"
         @click.left.exact.prevent="emit('edit-name')"
       >
@@ -191,7 +197,7 @@
       </button>
 
       <span
-        class="flex min-w-0 flex-wrap items-center justify-center gap-1 text-sm text-muted italic sm:justify-start"
+        class="flex min-w-0 flex-wrap items-center justify-center gap-1 text-sm text-muted italic @2xl:justify-start"
       >
         <button
           type="button"
@@ -227,12 +233,12 @@
 
       <button
         type="button"
-        class="mt-2 flex w-full cursor-pointer items-center gap-3 rounded p-1 text-xs text-toned transition-colors hover:bg-elevated/40 lg:max-w-lg"
+        class="mt-2 flex w-full cursor-pointer items-center gap-3 rounded p-1 text-xs text-toned transition-colors hover:bg-elevated/40 @5xl:max-w-lg"
         aria-label="Настроить опыт и уровень"
         @click.left.exact.prevent="emit('edit-progress')"
       >
         <span class="shrink-0"
-          ><span class="hidden lg:inline">Уровень </span
+          ><span class="hidden @5xl:inline">Уровень </span
           >{{ character.level }}</span
         >
 
@@ -254,14 +260,14 @@
         </span>
 
         <span class="shrink-0"
-          ><span class="hidden lg:inline">Уровень </span
+          ><span class="hidden @5xl:inline">Уровень </span
           >{{ character.level + 1 }}</span
         >
       </button>
     </div>
 
     <div
-      class="order-first flex w-full shrink-0 flex-row flex-wrap items-center justify-between gap-3 sm:order-0 sm:w-auto sm:flex-col sm:flex-nowrap sm:items-end sm:justify-start sm:gap-4 sm:self-stretch"
+      class="order-first flex w-full shrink-0 flex-row flex-wrap items-center justify-between gap-3 @2xl:order-0 @2xl:w-auto @2xl:flex-col @2xl:flex-nowrap @2xl:items-end @2xl:justify-start @2xl:gap-4 @2xl:self-stretch"
     >
       <div class="flex gap-1">
         <UTooltip :text="lockTooltip">
@@ -283,22 +289,43 @@
           disabled
         />
 
-        <UButton
-          icon="tabler:x"
-          color="neutral"
-          variant="ghost"
-          square
-        />
+        <UTooltip
+          v-if="canExpand"
+          text="Открыть на отдельной странице"
+        >
+          <UButton
+            icon="tabler:arrow-up-right"
+            color="neutral"
+            variant="ghost"
+            square
+            aria-label="Открыть на отдельной странице"
+            @click.left.exact.prevent="emit('expand')"
+          />
+        </UTooltip>
+
+        <UTooltip
+          v-if="canClose"
+          text="Закрыть"
+        >
+          <UButton
+            icon="tabler:x"
+            color="neutral"
+            variant="ghost"
+            square
+            aria-label="Закрыть"
+            @click.left.exact.prevent="emit('close')"
+          />
+        </UTooltip>
       </div>
 
-      <div class="flex items-center gap-2 max-sm:order-first">
+      <div class="flex items-center gap-2 @max-2xl:order-first">
         <UTooltip :text="inspirationTooltip">
           <UButton
             icon="tabler:sparkles"
             label="Вдохновение"
             color="warning"
             :variant="inspirationVariant"
-            class="max-lg:hidden"
+            class="@max-5xl:hidden"
             :class="inspirationClass"
             :aria-pressed="character.inspiration"
             @click.left.exact.prevent="emit('toggle-inspiration')"
@@ -311,7 +338,7 @@
             color="warning"
             :variant="inspirationVariant"
             square
-            class="lg:hidden"
+            class="@5xl:hidden"
             :class="inspirationClass"
             :aria-pressed="character.inspiration"
             aria-label="Вдохновение"

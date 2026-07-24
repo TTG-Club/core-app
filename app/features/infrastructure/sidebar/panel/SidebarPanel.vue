@@ -195,6 +195,11 @@
     border-right: 1px solid var(--ui-border);
     border-bottom: 0;
 
+    // На узких экранах (≤360px) логотип не помещается — скрываем его
+    @media screen and (max-width: 360px) {
+      display: none;
+    }
+
     @include media-min($md) {
       width: 44px;
       height: 60px;

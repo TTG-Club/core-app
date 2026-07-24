@@ -82,20 +82,37 @@
     emit('remove-feature', featureId);
   }
 
-  // Ниже md пять вкладок с полными подписями не помещаются и режутся
-  // многоточием — подставляем короткие подписи вместо обрезки.
+  // Короткие подписи подставляем по фактической ширине РЯДА ВКЛАДОК (а не
+  // вьюпорта): в узком drawer/панели полные подписи режутся многоточием, поэтому
+  // переключаемся на аббревиатуры раньше — как только места становится мало.
+  // До первого измерения (ширина 0) ориентируемся на вьюпорт.
   const { isMdOrGreater } = useBreakpoints();
+  const tabsRef = ref<HTMLElement | null>(null);
+  const { width: tabsWidth } = useElementSize(tabsRef);
+
+  // Порог перехода на короткие подписи зависит от числа вкладок. С вкладкой
+  // «Основное» (компакт/drawer — 5 вкладок) полные подписи требуют больше места,
+  // поэтому аббревиатуры включаются раньше. Без неё (широкий режим — 4 вкладки)
+  // полные подписи помещаются даже на узкой половине колонки (~636px на Full HD),
+  // поэтому порог ниже — аббревиатуры там не нужны.
+  const tabsShortThreshold = computed(() => (props.hasMainTab ? 680 : 580));
+
+  const useShort = computed(() =>
+    tabsWidth.value > 0
+      ? tabsWidth.value < tabsShortThreshold.value
+      : !isMdOrGreater.value,
+  );
 
   const tabItems = computed<TabsItem[]>(() => {
-    const useShort = !isMdOrGreater.value;
-
     const items = SHEET_TABS.map((tab) => {
-      const base = useShort ? tab.shortLabel : tab.label;
+      const base = useShort.value ? tab.shortLabel : tab.label;
 
+      // Подсчёт веса на вкладке снаряжения показываем всегда — даже в коротком
+      // режиме подпись становится «Снар. (0 / 150 фнт)», а не голой аббревиатурой.
       return {
         slot: tab.slot,
         label:
-          tab.slot === 'equipment' && !useShort
+          tab.slot === 'equipment'
             ? `${base} (${props.totalWeight} / ${props.carryingCapacity} ${WEIGHT_UNIT_LABEL})`
             : base,
       };
@@ -105,58 +122,83 @@
       ? [
           {
             slot: SHEET_MAIN_TAB.slot,
-            label: useShort ? SHEET_MAIN_TAB.shortLabel : SHEET_MAIN_TAB.label,
+            label: useShort.value
+              ? SHEET_MAIN_TAB.shortLabel
+              : SHEET_MAIN_TAB.label,
           },
           ...items,
         ]
       : items;
   });
+
+  // Широкий режим (нет вкладки «Основное») = вкладки стоят в правой колонке сетки
+  // рядом с левой сводкой. Тогда высоту блока ограничиваем высотой левой колонки,
+  // а содержимое активной вкладки скроллим внутри (полоса вкладок остаётся на
+  // месте). В компактном режиме высоту не ограничиваем — скроллится вся страница.
+  const isWideLayout = computed(() => !props.hasMainTab);
+
+  const tabsUi = computed(() =>
+    isWideLayout.value
+      ? {
+          list: 'shrink-0',
+          content: 'min-h-0 flex-1 overflow-y-auto',
+        }
+      : undefined,
+  );
 </script>
 
 <template>
-  <UTabs
-    :items="tabItems"
-    color="warning"
-    variant="link"
+  <div
+    ref="tabsRef"
     class="w-full"
+    :class="isWideLayout && 'flex h-full min-h-0 flex-col'"
   >
-    <template #main>
-      <div class="pt-4">
-        <slot name="main" />
-      </div>
-    </template>
+    <UTabs
+      :items="tabItems"
+      color="warning"
+      variant="link"
+      class="w-full"
+      :class="isWideLayout && 'min-h-0 flex-1'"
+      :ui="tabsUi"
+    >
+      <template #main>
+        <div class="pt-4">
+          <slot name="main" />
+        </div>
+      </template>
 
-    <template #equipment>
-      <SheetEquipmentTab
-        :currency="currency"
-        :inventory="inventory"
-        @add-item="handleItemAdd"
-        @add-magic-item="handleMagicItemAdd"
-        @remove-item="handleItemRemove"
-        @adjust-quantity="handleItemQuantityAdjust"
-      />
-    </template>
+      <template #equipment>
+        <SheetEquipmentTab
+          :currency="currency"
+          :inventory="inventory"
+          @add-item="handleItemAdd"
+          @add-magic-item="handleMagicItemAdd"
+          @remove-item="handleItemRemove"
+          @adjust-quantity="handleItemQuantityAdjust"
+        />
+      </template>
 
-    <template #spells>
-      <SheetSpellsTab
-        :spells="spells"
-        @add-spell="handleSpellAdd"
-        @remove-spell="handleSpellRemove"
-      />
-    </template>
+      <template #spells>
+        <SheetSpellsTab
+          :spells="spells"
+          @add-spell="handleSpellAdd"
+          @remove-spell="handleSpellRemove"
+        />
+      </template>
 
-    <template #features>
-      <SheetFeaturesTab
-        :features="features"
-        @add-feature="handleFeatureAdd"
-        @add-feat="handleFeatAdd"
-        @edit-choice="handleChoiceEdit"
-        @remove-feature="handleFeatureRemove"
-      />
-    </template>
+      <template #features>
+        <SheetFeaturesTab
+          :features="features"
+          @add-feature="handleFeatureAdd"
+          @add-feat="handleFeatAdd"
+          @edit-choice="handleChoiceEdit"
+          @remove-feature="handleFeatureRemove"
+        />
+      </template>
 
-    <template #notes>
-      <SheetNotesTab />
-    </template>
-  </UTabs>
+      <template #notes>
+        <SheetNotesTab />
+      </template>
+    </UTabs>
+  </div>
 </template>

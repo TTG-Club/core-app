@@ -21,6 +21,12 @@ import type {
 /** Название инструмента «Лист персонажа». */
 export const CHARACTER_SHEET_TITLE = 'Лист персонажа';
 
+/** Заголовок раздела со списком листов персонажей. */
+export const CHARACTER_SHEET_LIST_TITLE = 'Листы персонажей';
+
+/** Базовый путь раздела листов персонажей. */
+export const CHARACTER_SHEET_ROUTE = '/tools/character-sheet';
+
 /** Сообщение при попытке редактирования заблокированного листа. */
 export const SHEET_LOCKED_MESSAGE = 'Лист заблокирован от редактирования';
 
