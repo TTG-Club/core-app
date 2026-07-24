@@ -30,6 +30,7 @@ export { default as SheetProficienciesPanel } from './SheetProficienciesPanel.vu
 export { default as SheetProficiencyGroupsModal } from './SheetProficiencyGroupsModal.vue';
 export { default as SheetRollModal } from './SheetRollModal.vue';
 export { default as SheetSavingThrowsPanel } from './SheetSavingThrowsPanel.vue';
+export { default as SheetSettingsModal } from './SheetSettingsModal.vue';
 export { default as SheetSizeModal } from './SheetSizeModal.vue';
 export { default as SheetSkillsPanel } from './SheetSkillsPanel.vue';
 export { default as SheetSpeciesWizardModal } from './SheetSpeciesWizardModal.vue';

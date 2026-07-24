@@ -103,6 +103,14 @@ const spellcastingSchema = z
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.spellcasting }));
 
+// По умолчанию — правила D&D (легаси-листы без блока настроек): базовая
+// характеристика атаки оружием определяется свойствами оружия.
+const settingsSchema = z
+  .object({
+    weaponAttackAbility: abilityKeySchema.nullable().catch(null),
+  })
+  .catch(() => ({ ...DEFAULT_CHARACTER.settings }));
+
 const experienceSchema = z
   .object({
     current: z.coerce.number().catch(0),
@@ -284,6 +292,7 @@ const characterSchema = z.object({
   customCurrencies: z.array(customCurrencySchema).catch([]),
   inventory: z.array(inventoryItemSchema).catch([]),
   notes: z.string().catch(''),
+  settings: settingsSchema,
 });
 
 /**

@@ -17,9 +17,12 @@
 </script>
 
 <template>
+  <!-- Минимальная высота совпадает с карточкой персонажа: в гриде строка
+    тянется по самому высокому элементу, и более высокий слот создания
+    растягивал бы соседние карточки -->
   <button
     type="button"
-    class="group flex min-h-28 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-default bg-elevated/40 p-3 text-muted transition-all hover:border-primary hover:bg-primary/5 hover:text-primary disabled:pointer-events-none disabled:opacity-60"
+    class="group flex min-h-20 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-default bg-elevated/40 p-3 text-muted transition-all hover:border-primary hover:bg-primary/5 hover:text-primary disabled:pointer-events-none disabled:opacity-60"
     :disabled="disabled || loading"
     aria-label="Создать лист персонажа"
     @click.left.exact.prevent="emit('create')"

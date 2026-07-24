@@ -5,10 +5,9 @@
 
   import {
     getClassDisplayName,
+    getSheetActionMenuItems,
     getSpeciesDisplayName,
     getVisionRows,
-    SHEET_ACTION_SOON_HINT,
-    SHEET_COPY_LIMIT_HINT,
     SHEET_EMPTY_LABELS,
     SHEET_SAVE_STATUS_META,
     VISION_LABELS,
@@ -37,6 +36,7 @@
     'edit-class': [];
     'edit-name': [];
     'edit-progress': [];
+    'edit-settings': [];
     'edit-size': [];
     'edit-species': [];
     'edit-vision': [];
@@ -44,40 +44,18 @@
     'toggle-lock': [];
   }>();
 
-  // Меню действий листа (кнопка-троеточие в шапке): экспорт и копия, настройки
-  // (ещё не реализованы) и удаление отдельной группой — оно необратимее прочих.
-  const menuItems = computed<Array<Array<DropdownMenuItem>>>(() => [
-    [
-      {
-        label: 'Скачать JSON',
-        icon: 'tabler:download',
-        onSelect: () => emit('download'),
-      },
-      {
-        label: 'Создать копию',
-        icon: 'tabler:copy',
-        // Причина недоступности прямо в пункте: без неё серый пункт выглядит
-        // поломкой, а тултипа у пунктов меню нет.
-        description: props.canDuplicate ? undefined : SHEET_COPY_LIMIT_HINT,
-        disabled: !props.canDuplicate,
-        onSelect: () => emit('duplicate'),
-      },
-      {
-        label: 'Настройки',
-        icon: 'tabler:settings',
-        description: SHEET_ACTION_SOON_HINT,
-        disabled: true,
-      },
-    ],
-    [
-      {
-        label: 'Удалить лист',
-        icon: 'tabler:trash',
-        color: 'error',
-        onSelect: () => emit('remove'),
-      },
-    ],
-  ]);
+  // Меню действий листа (кнопка-троеточие в шапке) — то же, что в карточке
+  // списка персонажей.
+  const menuItems = computed<Array<Array<DropdownMenuItem>>>(() =>
+    getSheetActionMenuItems({
+      canDuplicate: props.canDuplicate ?? false,
+      canRemove: true,
+      onDownload: () => emit('download'),
+      onDuplicate: () => emit('duplicate'),
+      onRemove: () => emit('remove'),
+      onSettings: () => emit('edit-settings'),
+    }),
+  );
 
   const saveStatusMeta = computed(() =>
     props.saveStatus ? SHEET_SAVE_STATUS_META[props.saveStatus] : null,

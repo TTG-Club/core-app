@@ -1,3 +1,5 @@
+import type { DropdownMenuItem } from '@nuxt/ui';
+
 import type { RenderNode } from '~ui/markup';
 
 import type {
@@ -63,12 +65,15 @@ import {
   ARMOR_MEDIUM_DEX_CAP,
   ARMOR_PROFICIENCY_GROUPS,
   CARRYING_CAPACITY_MULTIPLIER,
+  CHARACTER_FILE_NAME_FALLBACK,
   CLASS_SPELLCASTING_ABILITIES,
   DARKVISION_PARSE_FALLBACK,
+  DEFAULT_WEAPON_ATTACK_ABILITY,
   INVENTORY_CATEGORY_ORDER,
   INVENTORY_CATEGORY_TITLES,
   LEVEL_XP_THRESHOLDS,
   ROLL_MODE_DICE_NOTATION,
+  SHEET_COPY_LIMIT_HINT,
   SIZE_LABEL_WORDS,
   SKILL_PROFICIENCY_MULTIPLIERS,
   SPEED_PARSE_FALLBACK,
@@ -522,9 +527,22 @@ export function getArmorClassValue(character: Character): number {
 }
 
 /**
+ * Базовая характеристика атаки оружием: настройка листа, а если она не задана —
+ * характеристика по правилам (Сила).
+ *
+ * @param character персонаж.
+ * @returns характеристика, от которой считается атака обычным оружием.
+ */
+export function getWeaponAttackAbility(character: Character): AbilityKey {
+  return (
+    character.settings.weaponAttackAbility ?? DEFAULT_WEAPON_ATTACK_ABILITY
+  );
+}
+
+/**
  * Бонус к броску атаки оружием: бонус мастерства (БаБ) плюс модификатор
- * характеристики. Характеристика по умолчанию — Сила; фехтовальное и
- * дальнобойное оружие бьёт от Ловкости.
+ * характеристики. Базовая характеристика берётся из настроек листа (по
+ * умолчанию — Сила); фехтовальное и дальнобойное оружие бьёт от Ловкости.
  *
  * @param character персонаж.
  * @param weapon параметры оружия.
@@ -535,7 +553,9 @@ export function getWeaponAttackBonus(
   weapon: InventoryWeapon,
 ): WeaponAttack {
   const ability: AbilityKey =
-    weapon.finesse || weapon.ranged ? 'dexterity' : 'strength';
+    weapon.finesse || weapon.ranged
+      ? 'dexterity'
+      : getWeaponAttackAbility(character);
 
   const value =
     getProficiencyBonus(character.level)
@@ -1427,4 +1447,105 @@ export function computeAbilityBonuses(
   }
 
   return bonuses;
+}
+
+/**
+ * Имя файла для экспорта листа: имя персонажа без запрещённых в файловой
+ * системе символов. Пустое имя заменяется общим запасным значением.
+ *
+ * @param name имя персонажа.
+ * @returns безопасное имя файла без расширения.
+ */
+function getCharacterFileName(name: string): string {
+  const safeName = name
+    .trim()
+    .replace(/[/:*?"<>|]+/g, ' ')
+    .trim();
+
+  return safeName || CHARACTER_FILE_NAME_FALLBACK;
+}
+
+/**
+ * Скачивание листа в виде JSON-файла: сериализует персонажа целиком (та же
+ * форма, что уходит в автосохранение) и отдаёт браузеру ссылку на blob.
+ * Работает только в браузере — вызывается по действию пользователя.
+ *
+ * @param character персонаж скачиваемого листа.
+ */
+export function downloadCharacterJson(character: Character): void {
+  const json = JSON.stringify(character, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = url;
+  link.download = `${getCharacterFileName(character.name)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/** Доступность действий и обработчики пунктов меню действий над листом. */
+export interface SheetActionMenuOptions {
+  /** Копия листа доступна: в лимите активных листов есть свободное место. */
+  canDuplicate: boolean;
+
+  /** Удаление листа доступно из этого места. */
+  canRemove: boolean;
+
+  onDownload: () => void;
+  onDuplicate: () => void;
+  onRemove: () => void;
+  onSettings: () => void;
+}
+
+/**
+ * Пункты меню действий над листом — общие для шапки открытого листа и карточки
+ * в списке персонажей: экспорт, копия и настройки одной группой, удаление —
+ * отдельной, оно необратимее прочих.
+ *
+ * @param options доступность действий и обработчики пунктов.
+ * @returns группы пунктов для `UDropdownMenu`.
+ */
+export function getSheetActionMenuItems(
+  options: SheetActionMenuOptions,
+): Array<Array<DropdownMenuItem>> {
+  const actions: DropdownMenuItem[] = [
+    {
+      label: 'Скачать JSON',
+      icon: 'tabler:download',
+      onSelect: options.onDownload,
+    },
+    {
+      label: 'Создать копию',
+      icon: 'tabler:copy',
+      // Причина недоступности прямо в пункте: без неё серый пункт выглядит
+      // поломкой, а тултипа у пунктов меню нет.
+      description: options.canDuplicate ? undefined : SHEET_COPY_LIMIT_HINT,
+      disabled: !options.canDuplicate,
+      onSelect: options.onDuplicate,
+    },
+    {
+      label: 'Настройки',
+      icon: 'tabler:settings',
+      onSelect: options.onSettings,
+    },
+  ];
+
+  if (!options.canRemove) {
+    return [actions];
+  }
+
+  return [
+    actions,
+    [
+      {
+        label: 'Удалить лист',
+        icon: 'tabler:trash',
+        color: 'error',
+        onSelect: options.onRemove,
+      },
+    ],
+  ];
 }

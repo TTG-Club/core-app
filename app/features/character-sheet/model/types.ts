@@ -455,6 +455,15 @@ export interface CharacterSpellcasting {
   ability: AbilityKey | null;
 }
 
+/** Настройки листа персонажа (правила подсчёта, общие для всего листа). */
+export interface CharacterSettings {
+  /**
+   * Базовая характеристика бонуса атаки оружием; null — по умолчанию (Сила).
+   * Фехтовальное и дальнобойное оружие всё равно бьёт от Ловкости.
+   */
+  weaponAttackAbility: AbilityKey | null;
+}
+
 /** Разбор заклинательства для вкладки заклинаний и модалки настройки. */
 export interface SpellcastingBreakdown {
   /** Заклинательная характеристика; null — не определена (нет класса-заклинателя). */
@@ -844,6 +853,9 @@ export interface Character {
 
   /** Заметки игрока в разметке сайта (хранимая форма редактора `MarkupEditor`). */
   notes: string;
+
+  /** Настройки листа (правила подсчёта). */
+  settings: CharacterSettings;
 }
 
 /** Статус автосохранения листа персонажа. */

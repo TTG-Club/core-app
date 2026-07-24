@@ -16,7 +16,6 @@
   import {
     ABILITY_LABELS,
     ARMOR_PROFICIENCY_GROUPS,
-    CHARACTER_SHEET_ROUTE,
     LANGUAGE_PROFICIENCY_GROUPS,
     TOOL_PROFICIENCY_GROUPS,
   } from '../model';
@@ -45,6 +44,7 @@
     SheetProficiencyGroupsModal,
     SheetRollModal,
     SheetSavingThrowsPanel,
+    SheetSettingsModal,
     SheetSizeModal,
     SheetSkillsPanel,
     SheetSpeciesWizardModal,
@@ -230,6 +230,12 @@
   const backgroundWizardModal = overlay.create(SheetBackgroundWizardModal);
 
   const sizeModal = overlay.create(SheetSizeModal);
+
+  const settingsModal = overlay.create(SheetSettingsModal, {
+    props: {
+      character: character.value,
+    },
+  });
 
   const featureAddModal = overlay.create(SheetFeatureAddModal);
 
@@ -469,6 +475,14 @@
     spellcastingModal.open();
   }
 
+  function handleSettingsEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    settingsModal.open({ character: character.value });
+  }
+
   function handleItemAdd() {
     if (!ensureEditable()) {
       return;
@@ -486,31 +500,11 @@
   }
 
   /**
-   * Копия открытого листа. Копируется текущее состояние вместе с правками,
-   * которые ещё не успел отправить автосейв. Открывать копию сразу не станем —
-   * контейнеры листа разные, поэтому переход отдаётся кнопкой в тосте.
+   * Копия открытого листа: копируется текущее состояние вместе с правками,
+   * которые ещё не успел отправить автосейв. Тост об успехе показывает список.
    */
   async function handleDuplicate() {
-    const created = await duplicate(character.value);
-
-    if (!created) {
-      return;
-    }
-
-    toast.add({
-      title: 'Копия листа создана',
-      description: `«${created.name}» появился в списке ваших персонажей.`,
-      color: 'success',
-      icon: 'tabler:copy-check',
-      actions: [
-        {
-          label: 'Открыть',
-          icon: 'tabler:arrow-up-right',
-          variant: 'ghost',
-          to: `${CHARACTER_SHEET_ROUTE}/${created.id}`,
-        },
-      ],
-    });
+    await duplicate(character.value);
   }
 
   /** Запрос на удаление листа — подтверждение показывает диалог. */
@@ -568,6 +562,7 @@
       @edit-class="handleClassEdit"
       @edit-name="handleNameEdit"
       @edit-progress="handleProgressEdit"
+      @edit-settings="handleSettingsEdit"
       @edit-size="handleSizeEdit"
       @edit-species="handleSpeciesEdit"
       @edit-vision="handleVisionEdit"

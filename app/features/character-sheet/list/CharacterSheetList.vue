@@ -18,6 +18,7 @@
     loadErrorMessage,
     load,
     create,
+    duplicate,
     remove,
     restore,
   } = useCharacterSheetList();
@@ -131,6 +132,8 @@
             :character="card.character"
             removable
             :disabled="isMutating"
+            :can-duplicate="canCreate"
+            @duplicate="duplicate"
             @remove="remove"
           />
 

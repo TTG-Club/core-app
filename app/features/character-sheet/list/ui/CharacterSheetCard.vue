@@ -1,12 +1,17 @@
 <script setup lang="ts">
+  import type { DropdownMenuItem } from '@nuxt/ui';
+
   import type { Character } from '../../model';
 
   import { ConfirmDialog } from '~initiative/ui-kit';
 
+  import { SheetSettingsModal } from '../../body/ui';
   import { CharacterSheetDrawer } from '../../drawer';
   import {
     CHARACTER_SHEET_ROUTE,
+    downloadCharacterJson,
     getClassDisplayName,
+    getSheetActionMenuItems,
     getSpeciesDisplayName,
     SHEET_EMPTY_LABELS,
   } from '../../model';
@@ -15,17 +20,22 @@
     character,
     removable = false,
     disabled = false,
+    canDuplicate = false,
   } = defineProps<{
     character: Character;
 
-    /** Показать кнопку удаления листа (список сохранённых). */
+    /** Показать пункт удаления листа в меню (список сохранённых). */
     removable?: boolean;
 
     /** Заблокировать действия на время мутаций списка. */
     disabled?: boolean;
+
+    /** В лимите активных листов есть свободное место — копия разрешена. */
+    canDuplicate?: boolean;
   }>();
 
   const emit = defineEmits<{
+    duplicate: [character: Character];
     remove: [id: string];
   }>();
 
@@ -89,6 +99,44 @@
   function openOnPage(): void {
     navigateTo(to.value);
   }
+
+  const settingsModal = overlay.create(SheetSettingsModal, {
+    props: {
+      character,
+    },
+  });
+
+  /** Экспорт листа в JSON — читает документ карточки, запросов не делает. */
+  function handleDownload(): void {
+    downloadCharacterJson(character);
+  }
+
+  /** Запрос на копию листа — создаёт её список (у него лимит и обновление). */
+  function handleDuplicate(): void {
+    emit('duplicate', character);
+  }
+
+  /** Настройки листа — модалка сохраняет их сама. */
+  function handleSettings(): void {
+    settingsModal.open({ character });
+  }
+
+  /** Запрос на удаление листа — подтверждение показывает диалог. */
+  function handleRemove(): void {
+    isDeleteOpen.value = true;
+  }
+
+  // Меню действий карточки — то же, что в шапке открытого листа.
+  const menuItems = computed<Array<Array<DropdownMenuItem>>>(() =>
+    getSheetActionMenuItems({
+      canDuplicate,
+      canRemove: removable,
+      onDownload: handleDownload,
+      onDuplicate: handleDuplicate,
+      onRemove: handleRemove,
+      onSettings: handleSettings,
+    }),
+  );
 </script>
 
 <template>
@@ -163,21 +211,17 @@
       />
     </UTooltip>
 
-    <UTooltip
-      v-if="removable"
-      text="Удалить лист"
-    >
+    <UDropdownMenu :items="menuItems">
       <UButton
-        icon="tabler:trash"
-        color="error"
+        icon="tabler:dots-vertical"
+        color="neutral"
         variant="soft"
         square
         class="shrink-0"
         :disabled
-        aria-label="Удалить лист"
-        @click.left.exact.prevent="isDeleteOpen = true"
+        aria-label="Действия с листом"
       />
-    </UTooltip>
+    </UDropdownMenu>
 
     <ConfirmDialog
       v-model:open="isDeleteOpen"

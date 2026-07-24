@@ -48,8 +48,8 @@ export const SHEET_COPY_NAME_SUFFIX = ' (копия)';
 /** Причина недоступности копии: свободных мест в лимите не осталось. */
 export const SHEET_COPY_LIMIT_HINT = 'Достигнут лимит листов';
 
-/** Подпись пунктов меню листа, которые ещё не реализованы. */
-export const SHEET_ACTION_SOON_HINT = 'В разработке';
+/** Имя файла экспорта листа, когда у персонажа пустое имя. */
+export const CHARACTER_FILE_NAME_FALLBACK = 'персонаж';
 
 /** Общее сообщение об ошибке, когда бэк не вернул текст. */
 export const SHEET_UNKNOWN_ERROR_MESSAGE = 'Неизвестная ошибка';
@@ -233,6 +233,33 @@ export const ARMOR_CLASS_ABILITY_OPTIONS: Array<{
   { label: 'Нет', value: ARMOR_CLASS_NO_ABILITY },
   ...ABILITY_ORDER.map((key) => ({ label: ABILITY_LABELS[key], value: key })),
 ];
+
+/**
+ * Характеристика бонуса атаки оружием по правилам: большинство оружия бьёт от
+ * Силы. Значение по умолчанию для настройки листа.
+ */
+export const DEFAULT_WEAPON_ATTACK_ABILITY: AbilityKey = 'strength';
+
+/** Значение «Авто (по правилам)» в селекте характеристики атаки оружием. */
+export const WEAPON_ATTACK_ABILITY_AUTO = 'auto';
+
+/** Варианты выбора базовой характеристики атаки оружием. */
+export const WEAPON_ATTACK_ABILITY_OPTIONS: Array<{
+  label: string;
+  value: AbilityKey | typeof WEAPON_ATTACK_ABILITY_AUTO;
+}> = [
+  { label: 'Авто (по правилам)', value: WEAPON_ATTACK_ABILITY_AUTO },
+  ...ABILITY_ORDER.map((key) => ({ label: ABILITY_LABELS[key], value: key })),
+];
+
+/** Пояснение к режиму «Авто» базовой характеристики атаки оружием. */
+export const WEAPON_ATTACK_ABILITY_AUTO_HINT = `По правилам: ${ABILITY_LABELS[DEFAULT_WEAPON_ATTACK_ABILITY]}`;
+
+/**
+ * Пояснение к исключению из базовой характеристики: фехтовальное и
+ * дальнобойное оружие считается от Ловкости независимо от настройки.
+ */
+export const WEAPON_ATTACK_FINESSE_HINT = `Фехтовальное и дальнобойное оружие бьёт от характеристики «${ABILITY_LABELS.dexterity}» независимо от настройки.`;
 
 /** Минимальное значение характеристики. */
 export const ABILITY_SCORE_MIN = 1;

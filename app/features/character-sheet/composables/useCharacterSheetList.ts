@@ -1,10 +1,12 @@
 import type {
   Character,
+  CharacterSettings,
   CharacterSheetDetail,
   CharacterSheetListItem,
 } from '../model';
 
 import {
+  CHARACTER_SHEET_ROUTE,
   createCharacterSheet,
   DEFAULT_CHARACTER,
   deleteCharacterSheet,
@@ -14,6 +16,7 @@ import {
   restoreCharacterSheet,
   SHEET_COPY_LIMIT_HINT,
   SHEET_COPY_NAME_SUFFIX,
+  updateCharacterSheet,
 } from '../model';
 import { useCharacterSheet } from './useCharacterSheet';
 
@@ -83,7 +86,7 @@ function getCopyName(name: string, existingNames: string[]): string {
 export function useCharacterSheetList() {
   const toast = useToast();
 
-  const { character } = useCharacterSheet();
+  const { character, ensureEditable, setSettings } = useCharacterSheet();
 
   const sheets = useState<CharacterSheetListItem[]>(
     'character-sheet:list',
@@ -217,6 +220,10 @@ export function useCharacterSheetList() {
    * (открытый лист — вместе с несохранёнными правками), идентификатор внутри
    * него сбрасывается к черновику: свой UUID копии выдаст сервер.
    *
+   * Открывать копию сразу не станем — вызвать копирование можно из разных мест
+   * (карточка списка и шапка открытого листа), поэтому переход отдаётся кнопкой
+   * в тосте.
+   *
    * @param source персонаж исходного листа.
    * @returns созданная копия или null (лимит исчерпан либо ошибка).
    */
@@ -248,11 +255,71 @@ export function useCharacterSheetList() {
 
       await load();
 
+      toast.add({
+        title: 'Копия листа создана',
+        description: `«${created.name}» появился в списке ваших персонажей.`,
+        color: 'success',
+        icon: 'tabler:copy-check',
+        actions: [
+          {
+            label: 'Открыть',
+            icon: 'tabler:arrow-up-right',
+            variant: 'ghost',
+            to: `${CHARACTER_SHEET_ROUTE}/${created.id}`,
+          },
+        ],
+      });
+
       return created;
     } catch (error) {
       notifyError(error, 'Не удалось создать копию листа');
 
       return null;
+    } finally {
+      isMutating.value = false;
+    }
+  }
+
+  /**
+   * Сохраняет настройки листа из списка. Открытый рядом лист (drawer или
+   * панель) правится через общее состояние — его допишет автосейв; прямой PUT
+   * здесь устроил бы гонку: автосейв перезаписал бы настройки своей копией
+   * документа. Остальные листы уходят на бэк сразу.
+   *
+   * @param target персонаж листа, чьи настройки меняются.
+   * @param settings новые настройки листа.
+   * @returns удалось ли сохранить.
+   */
+  async function saveSettings(
+    target: Character,
+    settings: CharacterSettings,
+  ): Promise<boolean> {
+    if (character.value.id === target.id) {
+      if (!ensureEditable()) {
+        return false;
+      }
+
+      setSettings(settings);
+
+      return true;
+    }
+
+    isMutating.value = true;
+
+    const next: Character = { ...target, settings };
+
+    try {
+      await updateCharacterSheet(next.id, next);
+
+      sheets.value = sheets.value.map((sheet) =>
+        sheet.id === next.id ? { ...sheet, data: next } : sheet,
+      );
+
+      return true;
+    } catch (error) {
+      notifyError(error, 'Не удалось сохранить настройки листа');
+
+      return false;
     } finally {
       isMutating.value = false;
     }
@@ -319,5 +386,6 @@ export function useCharacterSheetList() {
     duplicate,
     remove,
     restore,
+    saveSettings,
   };
 }

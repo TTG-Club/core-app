@@ -11,6 +11,7 @@ import type {
   CharacterHealth,
   CharacterHitDie,
   CharacterInventoryItem,
+  CharacterSettings,
   CharacterSpecies,
   CharacterSpeed,
   CharacterSpell,
@@ -31,6 +32,7 @@ import {
   CURRENCY_AMOUNT_MAX,
   CURRENCY_AMOUNT_MIN,
   DEFAULT_CHARACTER,
+  downloadCharacterJson,
   EXPERIENCE_MAX,
   getAbilityRows,
   getArmorClassBreakdown,
@@ -62,22 +64,6 @@ import {
  */
 function clampCurrencyAmount(amount: number): number {
   return clamp(Math.trunc(amount), CURRENCY_AMOUNT_MIN, CURRENCY_AMOUNT_MAX);
-}
-
-/**
- * Имя файла для экспорта листа: имя персонажа без запрещённых в файловой системе
- * символов. Пустое имя заменяется общим запасным значением.
- *
- * @param name имя персонажа.
- * @returns безопасное имя файла без расширения.
- */
-function getCharacterFileName(name: string): string {
-  const safeName = name
-    .trim()
-    .replace(/[\\/:*?"<>|]+/g, ' ')
-    .trim();
-
-  return safeName || 'персонаж';
 }
 
 /**
@@ -262,22 +248,11 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Скачивание листа в виде JSON-файла: сериализует персонажа целиком (та же
-   * форма, что уходит в автосохранение) и отдаёт браузеру ссылку на blob. Только
-   * читает состояние, поэтому блокировкой листа не ограничивается.
+   * Скачивание открытого листа в виде JSON-файла. Только читает состояние,
+   * поэтому блокировкой листа не ограничивается.
    */
   function downloadCharacter(): void {
-    const json = JSON.stringify(character.value, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-
-    link.href = url;
-    link.download = `${getCharacterFileName(character.value.name)}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadCharacterJson(character.value);
   }
 
   /**
@@ -827,6 +802,22 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Установка настроек листа (правил подсчёта).
+   *
+   * @param settings новые настройки листа.
+   */
+  function setSettings(settings: CharacterSettings): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      settings: { weaponAttackAbility: settings.weaponAttackAbility },
+    };
+  }
+
+  /**
    * Удаление заклинания из книги персонажа.
    *
    * @param spellUrl URL заклинания.
@@ -1160,6 +1151,7 @@ export function useCharacterSheet() {
     setNotes,
     setProficiencies,
     setProgress,
+    setSettings,
     setSize,
     setSpecies,
     setSpells,
