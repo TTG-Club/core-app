@@ -1,3 +1,5 @@
+import type { MarkerNode, SimpleTextNode } from '~ui/markup';
+
 /** Ключ характеристики персонажа. */
 export type AbilityKey =
   | 'strength'
@@ -215,37 +217,417 @@ export interface LanguageProficiencyGroup extends ProficiencyCatalogGroup {
   key: 'standard' | 'rare' | 'exotic';
 }
 
-/** Отображаемый параметр предмета инвентаря (например, «Атака +6»). */
-export interface InventoryItemStat {
-  label: string;
-  value: string;
+/** Выбранный вид персонажа. */
+export interface CharacterSpecies {
+  url: string;
+  name: string;
+
+  /** URL подвида; null — у вида нет подвидов. */
+  lineageUrl: string | null;
+
+  /** Название подвида; null — у вида нет подвидов. */
+  lineageName: string | null;
 }
 
-/** Предмет инвентаря. */
-export interface CharacterInventoryItem {
+/** Выбранный класс персонажа. */
+export interface CharacterClass {
+  url: string;
+  name: string;
+
+  /** URL подкласса; null — подкласс не выбран. */
+  subclassUrl: string | null;
+
+  /** Название подкласса; null — подкласс не выбран. */
+  subclassName: string | null;
+
+  /** Номинал кости хитов класса (например, 10). */
+  hitDie: number;
+}
+
+/** Режим распределения прибавок к характеристикам от предыстории. */
+export type AbilityBonusMode = '2-1' | '1-1-1';
+
+/** Выбранная предыстория персонажа. */
+export interface CharacterBackground {
+  url: string;
+  name: string;
+
+  /** URL черты происхождения; null — не распознана. */
+  featUrl: string | null;
+
+  /** Применённые прибавки к характеристикам (для отката при смене предыстории). */
+  abilityBonuses: Partial<Record<AbilityKey, number>>;
+}
+
+/** Происхождение особенности персонажа; none — добавлена вручную без источника. */
+export type FeatureOrigin = 'species' | 'lineage' | 'class' | 'feat' | 'none';
+
+/** Узел описания особенности (элемент верхнего уровня разметки сайта). */
+export type FeatureDescriptionNode = string | SimpleTextNode | MarkerNode;
+
+/** Особенность персонажа (из вида, подвида, класса или своя). */
+export interface CharacterFeature {
   id: string;
   name: string;
 
-  /** Категория предмета (например, «Простое оружие»). */
-  category: string;
+  /** Описание в разметке сайта (строки и блочные узлы `{@...}`). */
+  description: FeatureDescriptionNode[];
 
-  /** Иконка предмета в формате `tabler:<имя>`. */
-  icon: string;
+  origin: FeatureOrigin;
 
-  stats: InventoryItemStat[];
-  quantity: number;
+  /** Название источника особенности (вида, подвида, класса); '' — нет. */
+  originName: string;
 
-  /** Вес одной единицы в фунтах. */
-  weight: number;
-
-  /** Экипирован ли предмет. */
-  equipped: boolean;
+  /** Выбор игрока в особенности (например, цвет драконорождённого). */
+  choice: string | null;
 }
 
-/** Раздел инвентаря (оружие, экипировка, инструменты). */
-export interface CharacterInventorySection {
+/** Черта каталога в модалке добавления (ссылка из поиска раздела «Черты»). */
+export interface FeatCatalogItem {
+  url: string;
+
+  /** Русское название. */
+  name: string;
+
+  /** Английское название (для поиска). */
+  nameEng: string;
+
+  /** Категория черты (например, «Общая», «Категория происхождения»). */
+  category: string;
+
+  /** Подпись источника черты; '' — не задан. */
+  sourceLabel: string;
+}
+
+/** Деталь черты из ответа API (нужные листу поля). */
+export interface FeatSummary {
+  url: string;
+  name: string;
+  category: string;
+
+  /** Описание в разметке сайта (строки верхнего уровня). */
+  description: string[];
+}
+
+/** Заклинание в книге персонажа (и опция поиска заклинаний). */
+export interface CharacterSpell {
+  url: string;
+  name: string;
+
+  /** Круг заклинания; 0 — заговор. */
+  level: number;
+
+  /** Название школы магии. */
+  school: string;
+
+  /** Требует концентрации; нет у записей, добавленных до этого поля. */
+  concentration?: boolean;
+
+  /** Ритуальное заклинание; нет у записей, добавленных до этого поля. */
+  ritual?: boolean;
+}
+
+/** Группа заклинаний одного круга для списка с разделителями. */
+export interface CharacterSpellGroup {
+  level: number;
+  label: string;
+  spells: CharacterSpell[];
+}
+
+/** Заклинание каталога в модалке добавления (расширенная ссылка). */
+export interface SpellCatalogItem extends CharacterSpell {
+  concentration: boolean;
+  ritual: boolean;
+}
+
+/** Опция чипа класса из фильтров заклинаний (`className`). */
+export interface SpellClassOption {
+  /** Идентификатор значения фильтра, уходит в query `className`. */
+  id: string;
+
+  name: string;
+}
+
+/** Опция автокомплита выбора вида. */
+export interface SpeciesOption {
+  url: string;
+  name: string;
+  sourceLabel: string;
+  hasLineages: boolean;
+}
+
+/** Особенность вида из ответа API. */
+export interface SpeciesFeatureSummary {
+  url: string;
+  name: string;
+
+  /** Описание в разметке сайта. */
+  description: string[];
+}
+
+/** Деталь вида или подвида из ответа API (нужные листу поля). */
+export interface SpeciesSummary {
+  url: string;
+  name: string;
+  hasLineages: boolean;
+
+  /** Строка размера (например, «Средний или Маленький»). */
+  sizeText: string;
+
+  /** Строка скорости (например, «30 футов, полёт 50 футов»). */
+  speedText: string;
+
+  features: SpeciesFeatureSummary[];
+}
+
+/** Опция класса в списке визарда (аналог `SpeciesOption`). */
+export interface ClassOption {
+  url: string;
+  name: string;
+  sourceLabel: string;
+
+  /** Есть ли у класса подклассы (строку можно развернуть). */
+  hasSubclasses: boolean;
+}
+
+/** Особенность класса из ответа API (для визарда). */
+export interface ClassFeatureSummary {
+  /** Устойчивый ключ особенности из ответа. */
+  key: string;
+
+  /** Уровень получения особенности (1..20). */
+  level: number;
+
+  name: string;
+
+  /** Описание в разметке сайта. */
+  description: FeatureDescriptionNode[];
+
+  /** Особенность подкласса (а не базового класса). */
+  isSubclass: boolean;
+}
+
+/** Колонка таблицы прогрессии класса (для вывода ресурсов). */
+export interface ClassTableColumn {
+  name: string;
+
+  /** Значения колонки по уровням. */
+  scaling: Array<{ level: number; value: string }>;
+}
+
+/** Деталь класса или подкласса из ответа API (нужные листу поля). */
+export interface ClassSummary {
+  url: string;
+  name: string;
+  hasSubclasses: boolean;
+
+  /** Номинал кости хитов (например, 10). */
+  hitDie: number;
+
+  /** Подпись кости хитов (например, «к10»). */
+  hitDieLabel: string;
+
+  /** Спасброски прозой из ответа. */
+  savingThrowsText: string;
+
+  /** Спасброски, распознанные из текста. */
+  savingThrows: AbilityKey[];
+
+  /** Владения прозой из ответа (броня/оружие/инструменты/навыки). */
+  proficiencyText: {
+    armor: string;
+    weapon: string;
+    tool: string;
+    skill: string;
+  };
+
+  /** Таблица прогрессии для вывода ресурсов класса. */
+  table: ClassTableColumn[];
+
+  features: ClassFeatureSummary[];
+}
+
+/** Тип структурированного выбора внутри класса (селектор в визарде). */
+export type ClassChoiceKind =
+  | 'skill-proficiency'
+  | 'skill-expertise'
+  | 'language'
+  | 'tool';
+
+/** Распознанный выбор класса, отображаемый селектором вместо свободного текста. */
+export interface ClassChoice {
+  /** Устойчивый id: 'class-skills' | 'class-tools' | `class:${featureKey}`. */
+  id: string;
+
+  kind: ClassChoiceKind;
+
+  /** Заголовок пикера. */
+  label: string;
+
+  /** Сколько значений нужно выбрать. */
+  count: number;
+
+  /** Явные опции из прозы; пусто — резолвятся по типу в визарде. */
+  listed: string[];
+}
+
+/** Контекст резолюции опций выбора (навыки/языки/инструменты) в визарде. */
+export interface ChoiceOptionContext {
+  /** Все имена навыков персонажа. */
+  skillNames: string[];
+
+  /** Навыки, которыми персонаж уже владеет. */
+  proficientSkillNames: string[];
+
+  /** Навыки, выбранные во владение в этом визарде (для опций экспертизы). */
+  chosenProficientSkills: string[];
+
+  /** Уже известные языки. */
+  knownLanguages: string[];
+
+  /** Уже известные инструменты. */
+  knownTools: string[];
+
+  /** Все языки каталога. */
+  allLanguages: string[];
+
+  /** Все инструменты каталога. */
+  allTools: string[];
+}
+
+/** Опция предыстории в списке визарда. */
+export interface BackgroundOption {
+  url: string;
+  name: string;
+  sourceLabel: string;
+}
+
+/** Деталь предыстории из ответа API (нужные листу поля). */
+export interface BackgroundSummary {
+  url: string;
+  name: string;
+
+  /** Характеристики для прибавок (3 из ответа). */
+  abilities: AbilityKey[];
+
+  /** Характеристики прозой. */
+  abilitiesText: string;
+
+  /** Фиксированные навыки предыстории (владение). */
+  skills: string[];
+
+  /** Навыки прозой. */
+  skillsText: string;
+
+  /** Фиксированные инструменты (применяются как есть). */
+  toolFixed: string[];
+
+  /** Выбор инструмента; null — инструмент фиксирован. */
+  toolChoice: ClassChoice | null;
+
+  /** URL черты происхождения; null — не распознана. */
+  featUrl: string | null;
+
+  /** Название черты для отображения. */
+  featName: string;
+
+  /** Уточнение черты в скобках (например, «Жрец»); '' — нет. */
+  featSubchoice: string;
+
+  /** Стартовое снаряжение в разметке (справка). */
+  equipment: string[];
+}
+
+/**
+ * Категория предмета инвентаря: категории раздела «Предметы» плюс отдельная
+ * группа для магических предметов.
+ */
+export type InventoryItemCategory = 'WEAPON' | 'ARMOR' | 'ITEM' | 'MAGIC_ITEM';
+
+/** Раздел-источник предмета инвентаря. */
+export type InventoryItemOrigin = 'item' | 'magic-item';
+
+/** Предмет инвентаря (добавлен из раздела «Предметы» или «Магические предметы»). */
+export interface CharacterInventoryItem {
+  id: string;
+
+  /** URL предмета в разделе-источнике. */
+  url: string;
+
+  name: string;
+
+  /** Категория предмета — определяет группу и иконку в списке. */
+  category: InventoryItemCategory;
+
+  /** Подпись типов предмета (например, «Оружие, Воинское оружие»); '' — нет. */
+  typesLabel: string;
+
+  /** Подпись стоимости (например, «75 зм»); '' — не указана. */
+  cost: string;
+
+  /** Вес одной единицы в фунтах; 0 — не указан. */
+  weight: number;
+
+  quantity: number;
+}
+
+/** Группа предметов инвентаря одной категории для списка с разделителями. */
+export interface CharacterInventoryGroup {
+  category: InventoryItemCategory;
   title: string;
   items: CharacterInventoryItem[];
+}
+
+/** Предмет каталога в модалке добавления (ссылка из поиска раздела). */
+export interface ItemCatalogItem {
+  url: string;
+
+  /** Русское название. */
+  name: string;
+
+  /** Английское название (для поиска). */
+  nameEng: string;
+
+  /** Подпись стоимости; '' — не указана. */
+  cost: string;
+
+  /** Подпись источника предмета; '' — не задан. */
+  sourceLabel: string;
+}
+
+/** Магический предмет каталога в модалке добавления (ссылка из поиска). */
+export interface MagicItemCatalogItem {
+  url: string;
+
+  /** Русское название. */
+  name: string;
+
+  /** Английское название (для поиска). */
+  nameEng: string;
+
+  /** Категория (например, «оружие»); '' — не указана. */
+  category: string;
+
+  /** Редкость (например, «редкий»); '' — не указана. */
+  rarity: string;
+
+  /** Подпись источника; '' — не задан. */
+  sourceLabel: string;
+}
+
+/** Деталь предмета из ответа API (нужные листу поля). */
+export interface ItemSummary {
+  url: string;
+  name: string;
+  category: InventoryItemCategory;
+
+  /** Подпись типов предмета (например, «Доспехи, Тяжелый доспех»). */
+  typesLabel: string;
+
+  cost: string;
+
+  /** Вес одной единицы в фунтах; 0 — не распознан. */
+  weight: number;
 }
 
 /** Персонаж на листе персонажа. */
@@ -257,13 +639,22 @@ export interface Character {
   avatarUrl: string | null;
 
   /** Вид персонажа; null — не выбран. */
-  species: string | null;
+  species: CharacterSpecies | null;
 
-  /** Название класса. */
-  className: string;
+  /** Размер персонажа (русская подпись); null — не указан. */
+  size: string | null;
 
-  /** Предыстория; null — не выбрана. */
-  background: string | null;
+  /** Особенности персонажа (вид и подвид). */
+  features: CharacterFeature[];
+
+  /** Книга заклинаний персонажа. */
+  spells: CharacterSpell[];
+
+  /** Класс персонажа; null — не выбран. */
+  characterClass: CharacterClass | null;
+
+  /** Предыстория персонажа; null — не выбрана. */
+  characterBackground: CharacterBackground | null;
 
   level: number;
   experience: CharacterExperience;
@@ -299,13 +690,58 @@ export interface Character {
 
   proficiencies: CharacterProficiencies;
   currency: CharacterCurrency;
-  inventory: CharacterInventorySection[];
+  inventory: CharacterInventoryItem[];
+
+  /** Заметки игрока в разметке сайта (хранимая форма редактора `MarkupEditor`). */
+  notes: string;
+}
+
+/** Статус автосохранения листа персонажа. */
+export type SheetSaveStatus = 'saved' | 'saving' | 'error';
+
+/** Лист персонажа в списке пользователя. */
+export interface CharacterSheetListItem {
+  id: string;
+  name: string;
+
+  /** Лист удалён (строка истории с возможностью восстановления). */
+  deleted: boolean;
+
+  /** Персонаж листа; null — у удалённых (сервер не отдаёт документ). */
+  data: Character | null;
+
+  /** Дата создания (ISO); null — не пришла. */
+  createdAt: string | null;
+
+  /** Дата последнего изменения (ISO); null — не пришла. */
+  updatedAt: string | null;
+}
+
+/** Список листов пользователя с серверным лимитом. */
+export interface CharacterSheetListPage {
+  /** Максимум активных листов (серверный, в будущем зависит от подписки). */
+  limit: number;
+
+  /** Число активных (неудалённых) листов. */
+  count: number;
+
+  sheets: CharacterSheetListItem[];
+}
+
+/** Полный лист персонажа из ответа API. */
+export interface CharacterSheetDetail {
+  id: string;
+  name: string;
+  data: Character;
 }
 
 /** Вкладка правой панели листа персонажа. */
 export interface SheetTab {
   slot: string;
   label: string;
+
+  /** Короткая подпись — подставляется, когда вкладки не помещаются. */
+  shortLabel: string;
 }
 
 /** Строка блока характеристик. */

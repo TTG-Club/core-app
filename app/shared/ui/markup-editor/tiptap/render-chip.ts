@@ -20,8 +20,11 @@ import { SECTION_TAGS } from '../tags';
 /**
  * Иконка раздела по типу маркера — единый источник истины с тулбаром
  * (`SECTION_TAGS`), чтобы чип секционной ссылки и кнопка вставки совпадали.
+ * Экспортируется и для редактируемого узла ссылки (SectionLinkChip).
  */
-const SECTION_ICONS = new Map(SECTION_TAGS.map((tag) => [tag.key, tag.icon]));
+export const SECTION_ICONS = new Map(
+  SECTION_TAGS.map((tag) => [tag.key, tag.icon]),
+);
 
 /**
  * Является ли маркер {@...} блочным (заголовок, список, цитата, разделитель,
@@ -151,14 +154,21 @@ function renderChip(marker: MarkerNode, isBlock: boolean): VNode {
         },
         children,
       );
-    case 'roll':
+    case 'roll': {
+      // Показываем текст (`text`), если задан — как на странице; иначе контент
+      // (сама формула, напр. простой `{@dice 2к6}`).
+      const text = marker.attrs?.text;
+      const raw = text == null ? '' : String(text);
+      const label = raw.trim() ? raw : children;
+
       return h(
         'span',
         {
           class: 'text-link underline decoration-dotted underline-offset-2',
         },
-        children,
+        label,
       );
+    }
     case 'break':
       return h('br');
     // Обычная ссылка — нейтральный спан-ссылка.
@@ -171,6 +181,7 @@ function renderChip(marker: MarkerNode, isBlock: boolean): VNode {
     // Ссылки на разделы сайта — та же ссылка, но с иконкой раздела и цветом
     // primary, чтобы {@spell}/{@creature}/… визуально не сливались с {@link}.
     case 'class':
+    case 'species':
     case 'spell':
     case 'feat':
     case 'background':

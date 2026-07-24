@@ -232,6 +232,14 @@ export const SECTION_TAGS: MarkupTag[] = [
     placeholder: 'название',
   },
   {
+    key: 'species',
+    label: 'Вид',
+    icon: 'tabler:friends',
+    before: '{@species ',
+    after: ' | url:}',
+    placeholder: 'название',
+  },
+  {
     key: 'feat',
     label: 'Черта',
     icon: 'tabler:award',

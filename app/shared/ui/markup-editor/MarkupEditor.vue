@@ -22,6 +22,7 @@
     TtgMarker,
     ttgParagraphExtensions,
     ttgQuoteExtensions,
+    TtgSectionLink,
     ttgTableExtensions,
   } from './tiptap';
   import { buildToolbarItems } from './toolbar-items';
@@ -39,6 +40,7 @@
   const editorExtensions = [
     TtgMarker,
     TtgBlockMarker,
+    TtgSectionLink,
     TtgKeymap,
     ...ttgFormatMarks,
     ...ttgHeadingExtensions,

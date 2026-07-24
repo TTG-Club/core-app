@@ -14,6 +14,7 @@
   import { GlossaryDrawer } from '~glossary/drawer';
   import { ItemDrawer } from '~items/drawer';
   import { MagicItemDrawer } from '~magic-items/drawer';
+  import { SpeciesDrawer } from '~species/drawer';
   import { SpellDrawer } from '~spells/drawer';
 
   const { node, renderNodes } = defineProps<{
@@ -25,6 +26,7 @@
   type SectionLinkType = Extract<
     MarkerType,
     | 'class'
+    | 'species'
     | 'spell'
     | 'feat'
     | 'background'
@@ -43,6 +45,7 @@
   // Маппинг URL путей - все ключи обязательны
   const MARKER_URL_MAP: Record<SectionLinkType, string> = {
     class: 'classes',
+    species: 'species',
     spell: 'spells',
     feat: 'feats',
     background: 'backgrounds',
@@ -55,6 +58,7 @@
   // Маппинг компонентов - все ключи обязательны
   const DRAWER_COMPONENT_MAP: Record<SectionLinkType, DrawerComponent> = {
     class: ClassDrawer,
+    species: SpeciesDrawer,
     background: BackgroundDrawer,
     creature: CreatureDrawer,
     feat: FeatDrawer,

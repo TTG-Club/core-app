@@ -70,6 +70,7 @@ export const MARKER_CONFIGS: MarkerConfig[] = [
 
   // Sections
   { type: 'class', component: MarkupSectionLink },
+  { type: 'species', component: MarkupSectionLink, aliases: ['race'] },
   { type: 'spell', component: MarkupSectionLink },
   { type: 'feat', component: MarkupSectionLink },
   { type: 'background', component: MarkupSectionLink },

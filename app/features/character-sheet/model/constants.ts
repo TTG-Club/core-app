@@ -1,11 +1,15 @@
 import type {
+  AbilityBonusMode,
   AbilityKey,
   ArmorProficiencyGroup,
   CharacterClassResource,
   CurrencyKey,
+  FeatureOrigin,
+  InventoryItemCategory,
   LanguageProficiencyGroup,
   ResourceRecovery,
   RollMode,
+  SheetSaveStatus,
   SheetTab,
   SkillProficiencyLevel,
   SpeedTypeKey,
@@ -17,6 +21,37 @@ import type {
 
 /** Название инструмента «Лист персонажа». */
 export const CHARACTER_SHEET_TITLE = 'Лист персонажа';
+
+/** Заголовок раздела со списком листов персонажей. */
+export const CHARACTER_SHEET_LIST_TITLE = 'Листы персонажей';
+
+/** Базовый путь раздела листов персонажей. */
+export const CHARACTER_SHEET_ROUTE = '/tools/character-sheet';
+
+/** Эндпоинт листов персонажей (проксируется на core-api). */
+export const CHARACTER_SHEET_API_PATH = '/api/v2/tools/character-sheet';
+
+/**
+ * Идентификатор несохранённого черновика (`DEFAULT_CHARACTER`). У загруженного
+ * листа id — серверный UUID; черновик с этим id автосохранению не подлежит.
+ */
+export const DRAFT_CHARACTER_ID = 'new-character';
+
+/** Дебаунс автосохранения листа персонажа. */
+export const SHEET_SAVE_DEBOUNCE_MS = 1500;
+
+/** Общее сообщение об ошибке, когда бэк не вернул текст. */
+export const SHEET_UNKNOWN_ERROR_MESSAGE = 'Неизвестная ошибка';
+
+/** Подписи и иконки статусов автосохранения листа. */
+export const SHEET_SAVE_STATUS_META: Record<
+  SheetSaveStatus,
+  { label: string; icon: string }
+> = {
+  saved: { label: 'Сохранено', icon: 'tabler:cloud-check' },
+  saving: { label: 'Сохранение…', icon: 'tabler:loader-2' },
+  error: { label: 'Не удалось сохранить', icon: 'tabler:cloud-x' },
+};
 
 /** Сообщение при попытке редактирования заблокированного листа. */
 export const SHEET_LOCKED_MESSAGE = 'Лист заблокирован от редактирования';
@@ -469,6 +504,196 @@ export const TOOL_PROFICIENCY_GROUPS: ToolProficiencyGroup[] = [
   },
 ];
 
+/** Эндпоинт поиска черт (раздел «Черты»). */
+export const FEATS_SEARCH_PATH = '/api/v2/feats/search';
+
+/** Базовый путь деталей черты (`/{url}`). */
+export const FEATS_DETAIL_BASE_PATH = '/api/v2/feats';
+
+/** Эндпоинт поиска видов. */
+export const SPECIES_SEARCH_PATH = '/api/v2/species/search';
+
+/** Эндпоинт поиска заклинаний. */
+export const SPELLS_SEARCH_PATH = '/api/v2/spells/search';
+
+/** Эндпоинт фильтров заклинаний — источник списка классов для чипов. */
+export const SPELLS_FILTERS_PATH = '/api/v2/spells/filters';
+
+/** Размер страницы каталога заклинаний (как в разделе «Заклинания»). */
+export const SPELL_CATALOG_PAGE_SIZE = 60;
+
+/** Группировка каталога: сервер отдаёт заклинания кругами по порядку. */
+export const SPELL_CATALOG_GROUPING = 'LEVEL';
+
+/** Сортировка каталога внутри круга — по русскому названию. */
+export const SPELL_CATALOG_SORTING = 'NAME';
+
+/** Дистанция до низа списка каталога для подгрузки следующей страницы. */
+export const SPELL_CATALOG_LOAD_MORE_DISTANCE = 300;
+
+/** Дебаунс поискового запроса каталога заклинаний. */
+export const SPELL_CATALOG_SEARCH_DEBOUNCE_MS = 300;
+
+/** Круги заклинаний для быстрого фильтра (0 — заговоры). */
+export const SPELL_LEVELS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+/** Базовый путь деталей вида (`/{url}` и `/{url}/lineages`). */
+export const SPECIES_DETAIL_BASE_PATH = '/api/v2/species';
+
+/** Эндпоинт поиска классов (раздел «Классы»). */
+export const CLASSES_SEARCH_PATH = '/api/v2/classes/search';
+
+/** Базовый путь деталей класса (`/{url}` и `/{url}/subclasses`). */
+export const CLASSES_DETAIL_BASE_PATH = '/api/v2/classes';
+
+/** Минимальный уровень персонажа для выбора подкласса (D&D 2024 — 3-й). */
+export const SUBCLASS_SELECTION_MIN_LEVEL = 3;
+
+/** Эндпоинт поиска предысторий (раздел «Предыстории»). */
+export const BACKGROUNDS_SEARCH_PATH = '/api/v2/backgrounds/search';
+
+/** Базовый путь деталей предыстории (`/{url}`). */
+export const BACKGROUNDS_DETAIL_BASE_PATH = '/api/v2/backgrounds';
+
+/** Варианты распределения прибавок к характеристикам от предыстории. */
+export const BACKGROUND_ABILITY_MODE_OPTIONS: Array<{
+  label: string;
+  value: AbilityBonusMode;
+}> = [
+  { label: '+2 / +1', value: '2-1' },
+  { label: '+1 / +1 / +1', value: '1-1-1' },
+];
+
+/** Ключевые слова групп брони для сопоставления прозы владений класса. */
+export const ARMOR_MATCH_KEYWORDS: Record<
+  ArmorProficiencyGroup['key'],
+  string[]
+> = {
+  light: ['лёгк', 'легк'],
+  medium: ['средн'],
+  heavy: ['тяжёл', 'тяжел'],
+  shields: ['щит'],
+};
+
+/** Ключевые слова групп оружия для сопоставления прозы владений класса. */
+export const WEAPON_MATCH_KEYWORDS: Record<
+  WeaponProficiencyGroup['key'],
+  string[]
+> = {
+  simple: ['прост'],
+  martial: ['воинск'],
+};
+
+/** Ключевые слова групп инструментов для сопоставления прозы владений класса. */
+export const TOOL_MATCH_KEYWORDS: Record<
+  ToolProficiencyGroup['key'],
+  string[]
+> = {
+  artisan: ['ремесленник'],
+  gaming: ['игров'],
+  musical: ['музыкальн'],
+  other: [],
+};
+
+/**
+ * Стоп-слова названий колонок таблицы прогрессии: такие колонки не считаются
+ * ресурсами класса (заклинания, ячейки, бонусы, урон, уровень и т. п.).
+ */
+export const CLASS_RESOURCE_DENY_KEYWORDS: string[] = [
+  'заговор',
+  'заклинани',
+  'ячейк',
+  'круг',
+  'мастерств',
+  'известн',
+  'бонус',
+  'урон',
+  'черт',
+  'уровень',
+];
+
+/** Эндпоинт поиска предметов (раздел «Предметы»). */
+export const ITEMS_SEARCH_PATH = '/api/v2/item/search';
+
+/** Эндпоинт фильтров предметов — источник списка категорий для чипов. */
+export const ITEMS_FILTERS_PATH = '/api/v2/item/filters';
+
+/** Базовый путь деталей предмета (`/{url}`). */
+export const ITEMS_DETAIL_BASE_PATH = '/api/v2/item';
+
+/** Эндпоинт поиска магических предметов (раздел «Магические предметы»). */
+export const MAGIC_ITEMS_SEARCH_PATH = '/api/v2/magic-items/search';
+
+/** Эндпоинт фильтров магических предметов. */
+export const MAGIC_ITEMS_FILTERS_PATH = '/api/v2/magic-items/filters';
+
+/** Порядок групп инвентаря по категориям предмета. */
+export const INVENTORY_CATEGORY_ORDER: InventoryItemCategory[] = [
+  'WEAPON',
+  'ARMOR',
+  'ITEM',
+  'MAGIC_ITEM',
+];
+
+/** Названия групп инвентаря по категориям предмета. */
+export const INVENTORY_CATEGORY_TITLES: Record<InventoryItemCategory, string> =
+  {
+    WEAPON: 'Оружие',
+    ARMOR: 'Доспехи',
+    ITEM: 'Прочее',
+    MAGIC_ITEM: 'Магические предметы',
+  };
+
+/** Иконки предметов инвентаря по категориям. */
+export const INVENTORY_CATEGORY_ICONS: Record<InventoryItemCategory, string> = {
+  WEAPON: 'tabler:sword',
+  ARMOR: 'tabler:shield',
+  ITEM: 'tabler:backpack',
+  MAGIC_ITEM: 'tabler:sparkles',
+};
+
+/** Максимальное количество одного предмета в инвентаре. */
+export const INVENTORY_QUANTITY_MAX = 999;
+
+/** Слова размеров для разбора строки размера вида. */
+export const SIZE_LABEL_WORDS = [
+  'Крошечный',
+  'Маленький',
+  'Средний',
+  'Большой',
+  'Огромный',
+  'Громадный',
+  'Исполинский',
+];
+
+/** Скорость ходьбы по умолчанию, если разбор строки скорости не удался. */
+export const SPEED_PARSE_FALLBACK = 30;
+
+/**
+ * Дистанция тёмного зрения по умолчанию, если особенность найдена, но число в
+ * тексте не распознано.
+ */
+export const DARKVISION_PARSE_FALLBACK = 60;
+
+/** Подписи происхождения особенности персонажа. */
+export const FEATURE_ORIGIN_LABELS: Record<FeatureOrigin, string> = {
+  species: 'Вид',
+  lineage: 'Подвид',
+  class: 'Класс',
+  feat: 'Черта',
+  none: 'Нет',
+};
+
+/** Варианты происхождения при добавлении особенности вручную. */
+export const FEATURE_ORIGIN_OPTIONS: Array<{
+  label: string;
+  value: FeatureOrigin;
+}> = [
+  { label: 'Нет', value: 'none' },
+  { label: 'Вид', value: 'species' },
+  { label: 'Класс', value: 'class' },
+];
+
 /** Каталог языков для настройки владения: группы и языки. */
 export const LANGUAGE_PROFICIENCY_GROUPS: LanguageProficiencyGroup[] = [
   {
@@ -526,32 +751,38 @@ export const WEAPON_GROUP_TITLE_CLASSES: Record<
 
 /** Подписи для незаполненных полей листа. */
 export const SHEET_EMPTY_LABELS: Record<
-  'species' | 'background' | 'classResources' | 'proficiencies' | 'inventory',
+  'species' | 'className' | 'background' | 'classResources' | 'proficiencies',
   string
 > = {
   species: 'Вид не выбран',
+  className: 'Класс не выбран',
   background: 'Предыстория не выбрана',
   classResources: 'Нет ресурсов',
   proficiencies: 'Нет',
-  inventory: 'Пусто',
 };
 
 /** Вкладки правой панели листа персонажа. */
 export const SHEET_TABS: SheetTab[] = [
-  { slot: 'equipment', label: 'Снаряжение' },
-  { slot: 'spells', label: 'Заклинания' },
-  { slot: 'features', label: 'Особенности' },
-  { slot: 'effects', label: 'Эффекты' },
-  { slot: 'notes', label: 'Заметки' },
+  { slot: 'equipment', label: 'Снаряжение', shortLabel: 'Снаряж.' },
+  { slot: 'spells', label: 'Заклинания', shortLabel: 'Закл.' },
+  { slot: 'features', label: 'Особенности', shortLabel: 'Особ.' },
+  { slot: 'notes', label: 'Заметки', shortLabel: 'Замет.' },
 ];
+
+/** Вкладка «Основное» — добавляется первой при ≤1023 (см. `hasMainTab`). */
+export const SHEET_MAIN_TAB: SheetTab = {
+  slot: 'main',
+  label: 'Основное',
+  shortLabel: 'Осн.',
+};
 
 /** Подписи пустых вкладок листа персонажа. */
 export const SHEET_TAB_EMPTY_LABELS: Record<
-  'spells' | 'features' | 'effects' | 'notes',
+  'equipment' | 'spells' | 'features' | 'notes',
   string
 > = {
+  equipment: 'Инвентарь пуст',
   spells: 'Книга заклинаний пуста',
   features: 'Нет особенностей',
-  effects: 'Нет активных эффектов',
   notes: 'Нет заметок',
 };

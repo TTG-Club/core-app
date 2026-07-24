@@ -2,23 +2,30 @@ import type {
   AbilityKey,
   Character,
   CharacterArmorClass,
+  CharacterClass,
   CharacterClassResource,
   CharacterExtraHitDie,
+  CharacterFeature,
   CharacterHealth,
   CharacterHitDie,
+  CharacterInventoryItem,
+  CharacterSpecies,
   CharacterSpeed,
+  CharacterSpell,
   CharacterVision,
   ProficiencyGroupKey,
 } from '../model';
 
-import { clamp } from 'es-toolkit';
+import { clamp, union } from 'es-toolkit';
 
 import {
+  ABILITY_ORDER,
   ABILITY_SCORE_MAX,
   ABILITY_SCORE_MIN,
+  applySkillProficiencies,
   ARMOR_CLASS_BASE_MAX,
   ARMOR_CLASS_BASE_MIN,
-  DEMO_CHARACTER,
+  DEFAULT_CHARACTER,
   EXPERIENCE_MAX,
   getAbilityRows,
   getArmorClassValue,
@@ -29,6 +36,7 @@ import {
   getProficiencyBonus,
   getSavingThrowRows,
   getSkillRows,
+  INVENTORY_QUANTITY_MAX,
   LEVEL_MAX,
   LEVEL_MIN,
   RESOURCE_COUNT_MAX,
@@ -50,7 +58,7 @@ export function useCharacterSheet() {
   const toast = useToast();
 
   const character = useState<Character>('character-sheet:character', () =>
-    structuredClone(DEMO_CHARACTER),
+    structuredClone(DEFAULT_CHARACTER),
   );
 
   const isLocked = useState<boolean>('character-sheet:locked', () => false);
@@ -79,6 +87,24 @@ export function useCharacterSheet() {
     });
 
     return false;
+  }
+
+  /**
+   * Загрузка сохранённого листа в общее состояние (открытие страницы листа,
+   * панели или дровера).
+   *
+   * @param loaded персонаж из ответа API.
+   */
+  function loadCharacter(loaded: Character): void {
+    character.value = loaded;
+  }
+
+  /**
+   * Сброс состояния к пустому персонажу (уход со страницы листа), чтобы
+   * следующий открытый лист не мигал данными предыдущего.
+   */
+  function resetCharacter(): void {
+    character.value = structuredClone(DEFAULT_CHARACTER);
   }
 
   const abilityRows = computed(() => getAbilityRows(character.value));
@@ -377,6 +403,499 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Применение выбранного вида: название, размер, скорости, зрение,
+   * особенности, а также выбранные владения (навыки/языки/инструменты)
+   * устанавливаются атомарно одним обновлением.
+   *
+   * @param payload вид и производные от него значения листа.
+   * @param payload.species выбранный вид с подвидом.
+   * @param payload.size подпись размера; null — не распознан.
+   * @param payload.speed скорости передвижения из данных вида.
+   * @param payload.vision зрение из данных вида.
+   * @param payload.features особенности вида и подвида.
+   * @param payload.skills выбранные навыки (владение и экспертиза).
+   * @param payload.skills.proficient навыки для владения.
+   * @param payload.skills.expertise навыки для экспертизы.
+   * @param payload.proficiencies распознанные владения из выборов вида.
+   * @param payload.proficiencies.languages владения языками.
+   */
+  function setSpecies(payload: {
+    species: CharacterSpecies;
+    size: string | null;
+    speed: CharacterSpeed;
+    vision: CharacterVision;
+    features: CharacterFeature[];
+    skills: { proficient: string[]; expertise: string[] };
+    proficiencies: { languages: string[] };
+  }): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    // Смена вида заменяет только особенности вида и подвида; добавленные
+    // вручную (класс, без источника) сохраняются.
+    const preservedFeatures = character.value.features.filter(
+      (feature) => feature.origin !== 'species' && feature.origin !== 'lineage',
+    );
+
+    character.value = {
+      ...character.value,
+      species: { ...payload.species },
+      size: payload.size,
+      speed: {
+        ...payload.speed,
+        values: { ...payload.speed.values },
+      },
+      vision: { ...payload.vision },
+      proficiencies: {
+        ...character.value.proficiencies,
+        languages: union(
+          character.value.proficiencies.languages,
+          payload.proficiencies.languages,
+        ),
+      },
+      skills: applySkillProficiencies(
+        character.value.skills,
+        payload.skills.proficient,
+        payload.skills.expertise,
+      ),
+      features: [
+        ...payload.features.map((feature) => ({
+          ...feature,
+          description: [...feature.description],
+        })),
+        ...preservedFeatures,
+      ],
+    };
+  }
+
+  /**
+   * Применение выбранного класса: имя (с подклассом), кость хитов, спасброски,
+   * распознанные владения, производные ресурсы и классовые особенности
+   * устанавливаются атомарно одним обновлением. Спасброски и кость хитов
+   * перезаписываются; владения объединяются с уже имеющимися; классовые
+   * особенности и производные ресурсы заменяются целиком, ручные — сохраняются.
+   *
+   * @param payload класс и производные от него значения листа.
+   * @param payload.characterClass выбранный класс с подклассом.
+   * @param payload.savingThrows спасброски класса.
+   * @param payload.hitDie номинал кости хитов класса.
+   * @param payload.proficiencies распознанные владения (броня/оружие/инструменты/языки).
+   * @param payload.proficiencies.armor владения бронёй.
+   * @param payload.proficiencies.weapons владения оружием.
+   * @param payload.proficiencies.tools владения инструментами.
+   * @param payload.proficiencies.languages владения языками.
+   * @param payload.skills выбранные навыки (владение и экспертиза).
+   * @param payload.skills.proficient навыки для владения.
+   * @param payload.skills.expertise навыки для экспертизы.
+   * @param payload.classResources производные ресурсы класса.
+   * @param payload.features классовые особенности по уровню.
+   */
+  function setClass(payload: {
+    characterClass: CharacterClass;
+    savingThrows: AbilityKey[];
+    hitDie: number;
+    proficiencies: {
+      armor: string[];
+      weapons: string[];
+      tools: string[];
+      languages: string[];
+    };
+    skills: { proficient: string[]; expertise: string[] };
+    classResources: CharacterClassResource[];
+    features: CharacterFeature[];
+  }): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const { level } = character.value;
+
+    // Классовые особенности заменяются целиком (id `class:*`); добавленные
+    // вручную сохраняются.
+    const preservedFeatures = character.value.features.filter(
+      (feature) => !feature.id.startsWith('class:'),
+    );
+
+    // Производные ресурсы (id `class:res:*`) заменяются; ручные — сохраняются.
+    const preservedResources = character.value.classResources.filter(
+      (resource) => !resource.id.startsWith('class:res:'),
+    );
+
+    // Владения класса объединяются с уже указанными без дублей (`union`),
+    // навыки применяются через общий помощник (экспертиза перекрывает владение).
+    character.value = {
+      ...character.value,
+      characterClass: { ...payload.characterClass },
+      savingThrowProficiencies: [...payload.savingThrows],
+      hitDice: [{ die: payload.hitDie, current: level, max: level }],
+      proficiencies: {
+        ...character.value.proficiencies,
+        armor: union(
+          character.value.proficiencies.armor,
+          payload.proficiencies.armor,
+        ),
+        weapons: union(
+          character.value.proficiencies.weapons,
+          payload.proficiencies.weapons,
+        ),
+        tools: union(
+          character.value.proficiencies.tools,
+          payload.proficiencies.tools,
+        ),
+        languages: union(
+          character.value.proficiencies.languages,
+          payload.proficiencies.languages,
+        ),
+      },
+      skills: applySkillProficiencies(
+        character.value.skills,
+        payload.skills.proficient,
+        payload.skills.expertise,
+      ),
+      classResources: [...preservedResources, ...payload.classResources],
+      features: [
+        ...payload.features.map((feature) => ({
+          ...feature,
+          description: [...feature.description],
+        })),
+        ...preservedFeatures,
+      ],
+    };
+  }
+
+  /**
+   * Применение выбранной предыстории: навыки, инструмент, черта происхождения и
+   * прибавки к характеристикам устанавливаются атомарно. Прибавки к
+   * характеристикам и черта предыстории откатываются при смене (идемпотентно);
+   * навыки и владения объединяются, ручные особенности сохраняются.
+   *
+   * @param payload предыстория и производные значения листа.
+   * @param payload.background выбранная предыстория (url, name).
+   * @param payload.background.url URL предыстории.
+   * @param payload.background.name название предыстории.
+   * @param payload.abilityBonuses прибавки к характеристикам.
+   * @param payload.skills фиксированные навыки предыстории (владение).
+   * @param payload.tools владения инструментами (фикс + выбранный).
+   * @param payload.featUrl URL черты происхождения; null — нет.
+   * @param payload.featFeature особенность черты; null — не добавлять.
+   */
+  function setBackground(payload: {
+    background: { url: string; name: string };
+    abilityBonuses: Partial<Record<AbilityKey, number>>;
+    skills: string[];
+    tools: string[];
+    featUrl: string | null;
+    featFeature: CharacterFeature | null;
+  }): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const previous = character.value.characterBackground;
+
+    // Прибавки к характеристикам: снять прошлые бонусы предыстории и применить
+    // новые с ограничением диапазона (без двойного начисления при смене).
+    const abilities = { ...character.value.abilities };
+
+    for (const key of ABILITY_ORDER) {
+      const previousBonus = previous?.abilityBonuses[key] ?? 0;
+      const nextBonus = payload.abilityBonuses[key] ?? 0;
+
+      abilities[key] = clamp(
+        character.value.abilities[key] - previousBonus + nextBonus,
+        ABILITY_SCORE_MIN,
+        ABILITY_SCORE_MAX,
+      );
+    }
+
+    // Черта предыстории: убрать прошлую и любую копию новой, затем добавить.
+    const previousFeatId = previous?.featUrl
+      ? `feat:${previous.featUrl}`
+      : null;
+
+    const newFeatId = payload.featFeature?.id ?? null;
+
+    const preservedFeatures = character.value.features.filter(
+      (feature) => feature.id !== previousFeatId && feature.id !== newFeatId,
+    );
+
+    character.value = {
+      ...character.value,
+      characterBackground: {
+        url: payload.background.url,
+        name: payload.background.name,
+        featUrl: payload.featUrl,
+        abilityBonuses: { ...payload.abilityBonuses },
+      },
+      abilities,
+      proficiencies: {
+        ...character.value.proficiencies,
+        tools: union(character.value.proficiencies.tools, payload.tools),
+      },
+      skills: applySkillProficiencies(
+        character.value.skills,
+        payload.skills,
+        [],
+      ),
+      features: payload.featFeature
+        ? [payload.featFeature, ...preservedFeatures]
+        : preservedFeatures,
+    };
+  }
+
+  /**
+   * Установка выбора игрока в особенности (например, цвет драконорождённого).
+   *
+   * @param featureId идентификатор особенности.
+   * @param choice текст выбора; пустая строка снимает выбор.
+   */
+  function setFeatureChoice(featureId: string, choice: string): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const trimmedChoice = choice.trim();
+
+    character.value = {
+      ...character.value,
+      features: character.value.features.map((feature) =>
+        feature.id === featureId
+          ? { ...feature, choice: trimmedChoice || null }
+          : feature,
+      ),
+    };
+  }
+
+  /**
+   * Установка книги заклинаний персонажа; дубли по URL отбрасываются.
+   *
+   * @param spells новый список заклинаний.
+   */
+  function setSpells(spells: CharacterSpell[]): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const seenUrls = new Set<string>();
+
+    character.value = {
+      ...character.value,
+      spells: spells
+        .filter((spell) => {
+          if (seenUrls.has(spell.url)) {
+            return false;
+          }
+
+          seenUrls.add(spell.url);
+
+          return true;
+        })
+        .map((spell) => ({ ...spell })),
+    };
+  }
+
+  /**
+   * Удаление заклинания из книги персонажа.
+   *
+   * @param spellUrl URL заклинания.
+   */
+  function removeSpell(spellUrl: string): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      spells: character.value.spells.filter((spell) => spell.url !== spellUrl),
+    };
+  }
+
+  /**
+   * Добавление предметов инвентаря из каталога раздела «Предметы».
+   * Идентификаторы устойчивы (`item:url`), поэтому уже добавленные предметы
+   * отбрасываются.
+   *
+   * @param inventoryItems предметы с готовыми идентификаторами.
+   */
+  function addInventoryItems(inventoryItems: CharacterInventoryItem[]): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const existingIds = new Set(
+      character.value.inventory.map((inventoryItem) => inventoryItem.id),
+    );
+
+    const freshItems = inventoryItems.filter(
+      (inventoryItem) => !existingIds.has(inventoryItem.id),
+    );
+
+    if (!freshItems.length) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      inventory: [
+        ...character.value.inventory,
+        ...freshItems.map((inventoryItem) => ({ ...inventoryItem })),
+      ],
+    };
+  }
+
+  /**
+   * Удаление предмета из инвентаря.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   */
+  function removeInventoryItem(inventoryItemId: string): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.filter(
+        (inventoryItem) => inventoryItem.id !== inventoryItemId,
+      ),
+    };
+  }
+
+  /**
+   * Изменение количества предмета в пределах от одной штуки до максимума.
+   * Игровое действие (трата и пополнение расходников) — блокировкой листа не
+   * ограничивается; удаление предмета — отдельным экшеном.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   * @param delta изменение количества.
+   */
+  function adjustInventoryItemQuantity(
+    inventoryItemId: string,
+    delta: number,
+  ): void {
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.map((inventoryItem) =>
+        inventoryItem.id === inventoryItemId
+          ? {
+              ...inventoryItem,
+              quantity: clamp(
+                inventoryItem.quantity + delta,
+                1,
+                INVENTORY_QUANTITY_MAX,
+              ),
+            }
+          : inventoryItem,
+      ),
+    };
+  }
+
+  /**
+   * Добавление особенности вручную; идентификатор генерируется.
+   *
+   * @param feature особенность без идентификатора.
+   */
+  function addFeature(feature: Omit<CharacterFeature, 'id'>): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      features: [
+        ...character.value.features,
+        { ...feature, id: `custom:${crypto.randomUUID()}` },
+      ],
+    };
+  }
+
+  /**
+   * Добавление особенностей из каталога (черты раздела «Черты»). Идентификаторы
+   * устойчивы (`feat:url`), поэтому уже добавленные черты отбрасываются.
+   *
+   * @param features особенности с готовыми идентификаторами.
+   */
+  function addFeats(features: CharacterFeature[]): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const existingIds = new Set(
+      character.value.features.map((feature) => feature.id),
+    );
+
+    const freshFeatures = features.filter(
+      (feature) => !existingIds.has(feature.id),
+    );
+
+    if (!freshFeatures.length) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      features: [
+        ...character.value.features,
+        ...freshFeatures.map((feature) => ({
+          ...feature,
+          description: [...feature.description],
+        })),
+      ],
+    };
+  }
+
+  /**
+   * Удаление особенности персонажа с листа.
+   *
+   * @param featureId идентификатор особенности.
+   */
+  function removeFeature(featureId: string): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      features: character.value.features.filter(
+        (feature) => feature.id !== featureId,
+      ),
+    };
+  }
+
+  /**
+   * Установка заметок персонажа; значение — хранимая форма редактора разметки.
+   *
+   * @param notes новые заметки персонажа.
+   */
+  function setNotes(notes: string): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      notes,
+    };
+  }
+
+  /**
+   * Установка размера персонажа.
+   *
+   * @param size русская подпись размера; null — размер не указан.
+   */
+  function setSize(size: string | null): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      size,
+    };
+  }
+
+  /**
    * Установка списка владений группы (броня, оружие или инструменты).
    *
    * @param group ключ группы владений.
@@ -422,6 +941,8 @@ export function useCharacterSheet() {
     isLocked,
     toggleLock,
     ensureEditable,
+    loadCharacter,
+    resetCharacter,
     abilityRows,
     savingThrowRows,
     skillRows,
@@ -434,10 +955,24 @@ export function useCharacterSheet() {
     setArmorClass,
     setClassResources,
     adjustClassResource,
+    adjustInventoryItemQuantity,
     toggleInspiration,
+    addFeature,
+    addFeats,
+    addInventoryItems,
+    removeFeature,
+    removeInventoryItem,
+    removeSpell,
+    setFeatureChoice,
+    setBackground,
+    setClass,
     setName,
+    setNotes,
     setProficiencies,
     setProgress,
+    setSize,
+    setSpecies,
+    setSpells,
     setVision,
     setSpeed,
     setHealth,
