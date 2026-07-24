@@ -42,6 +42,15 @@ export const DRAFT_CHARACTER_ID = 'new-character';
 /** Дебаунс автосохранения листа персонажа. */
 export const SHEET_SAVE_DEBOUNCE_MS = 1500;
 
+/** Раздел S3 для изображений персонажей (первый сегмент ключа объекта). */
+export const SHEET_AVATAR_S3_SECTION = 'character-sheet';
+
+/**
+ * Длина короткой стороны, до которой сервер сожмёт изображение персонажа.
+ * Аватар рисуется в 96px — 512 даёт запас на экраны с высокой плотностью.
+ */
+export const SHEET_AVATAR_MAX_SIZE = '512';
+
 /** Суффикс имени копии листа персонажа. */
 export const SHEET_COPY_NAME_SUFFIX = ' (копия)';
 

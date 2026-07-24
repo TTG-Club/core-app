@@ -83,6 +83,40 @@ export function createS3Service() {
     };
   }
 
+  /**
+   * Копия объекта с новым ключом. Метаданные (тип и `Cache-Control`)
+   * наследуются от исходного объекта.
+   *
+   * @param sourceKey ключ исходного объекта.
+   * @param targetKey ключ копии.
+   */
+  async function copy(sourceKey: string, targetKey: string) {
+    if (!sourceKey || !targetKey) {
+      throw createError(
+        getErrorResponse(StatusCodes.BAD_REQUEST, {
+          message: 'Неизвестный ключ объекта',
+        }),
+      );
+    }
+
+    try {
+      await s3.copyObject({
+        Bucket: bucket,
+        CopySource: `${bucket}/${sourceKey}`,
+        Key: targetKey,
+        MetadataDirective: 'COPY',
+      });
+    } catch (err) {
+      consola.error(err);
+
+      throw createError(
+        getErrorResponse(StatusCodes.INTERNAL_SERVER_ERROR, {
+          message: 'Не удалось скопировать файл',
+        }),
+      );
+    }
+  }
+
   async function remove(key: string) {
     if (!key) {
       throw createError(
@@ -130,6 +164,7 @@ export function createS3Service() {
   return {
     get,
     upload,
+    copy,
     delete: remove,
     list,
   };

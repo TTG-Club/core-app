@@ -12,6 +12,7 @@
     SHEET_SAVE_STATUS_META,
     VISION_LABELS,
   } from '../../model';
+  import SheetAvatar from './SheetAvatar.vue';
 
   const props = defineProps<{
     character: Character;
@@ -137,22 +138,7 @@
     class="flex flex-col items-center gap-4 @2xl:flex-row @2xl:items-start @2xl:gap-6"
   >
     <div class="relative mb-2 shrink-0 @2xl:mb-0">
-      <div
-        class="flex size-24 items-center justify-center overflow-hidden rounded-full border-2 border-warning/70 bg-elevated"
-      >
-        <img
-          v-if="character.avatarUrl"
-          :src="character.avatarUrl"
-          :alt="character.name"
-          class="size-full object-cover"
-        />
-
-        <UIcon
-          v-else
-          name="tabler:user"
-          class="size-10 text-muted"
-        />
-      </div>
+      <SheetAvatar />
 
       <div
         class="absolute -bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1"
