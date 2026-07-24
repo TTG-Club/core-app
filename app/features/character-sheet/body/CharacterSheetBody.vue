@@ -24,6 +24,7 @@
     SheetClassResourcesModal,
     SheetClassResourcesPanel,
     SheetClassWizardModal,
+    SheetCurrencyModal,
     SheetExperienceModal,
     SheetFeatAddModal,
     SheetFeatureAddModal,
@@ -46,6 +47,7 @@
     SheetSpeedModal,
     SheetSpeedTile,
     SheetSpellAddModal,
+    SheetSpellcastingModal,
     SheetStatTile,
     SheetVisionModal,
     SheetWeaponProficienciesModal,
@@ -76,6 +78,7 @@
     formattedProficiencyBonus,
     formattedInitiative,
     armorClassValue,
+    spellcastingBreakdown,
     totalWeight,
     carryingCapacity,
     setAbilityScore,
@@ -83,10 +86,12 @@
     cycleSkillProficiency,
     adjustClassResource,
     adjustInventoryItemQuantity,
+    toggleInventoryItemEquipped,
     removeFeature,
     removeInventoryItem,
     removeSpell,
     toggleInspiration,
+    downloadCharacter,
   } = useCharacterSheet();
 
   const overlay = useOverlay();
@@ -174,6 +179,8 @@
 
   const classResourcesModal = overlay.create(SheetClassResourcesModal);
 
+  const currencyModal = overlay.create(SheetCurrencyModal);
+
   const proficiencyGroupsModal = overlay.create(SheetProficiencyGroupsModal, {
     props: {
       title: '',
@@ -205,6 +212,8 @@
   const featAddModal = overlay.create(SheetFeatAddModal);
 
   const spellAddModal = overlay.create(SheetSpellAddModal);
+
+  const spellcastingModal = overlay.create(SheetSpellcastingModal);
 
   const itemAddModal = overlay.create(SheetItemAddModal);
 
@@ -283,6 +292,14 @@
     }
 
     classResourcesModal.open();
+  }
+
+  function handleCurrencyEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    currencyModal.open();
   }
 
   function handleProficienciesEdit(group: ProficiencyGroupKey) {
@@ -414,6 +431,14 @@
     spellAddModal.open();
   }
 
+  function handleSpellcastingEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    spellcastingModal.open();
+  }
+
   function handleItemAdd() {
     if (!ensureEditable()) {
       return;
@@ -453,6 +478,7 @@
       :can-close="canClose"
       :save-status="saveStatus"
       @close="handleClose"
+      @download="downloadCharacter"
       @expand="handleExpand"
       @edit-background="handleBackgroundEdit"
       @edit-class="handleClassEdit"
@@ -566,11 +592,13 @@
 
       <SheetInventoryTabs
         :currency="character.currency"
+        :custom-currencies="character.customCurrencies"
         :inventory="character.inventory"
         :total-weight="totalWeight"
         :carrying-capacity="carryingCapacity"
         :features="character.features"
         :spells="character.spells"
+        :spellcasting="spellcastingBreakdown"
         :has-main-tab="!isWide"
         :style="tabsStyle"
         class="@5xl:col-span-6 @5xl:col-start-7 @5xl:row-start-2 @5xl:min-h-0"
@@ -579,7 +607,10 @@
         @add-item="handleItemAdd"
         @add-magic-item="handleMagicItemAdd"
         @add-spell="handleSpellAdd"
+        @edit-spellcasting="handleSpellcastingEdit"
+        @edit-currency="handleCurrencyEdit"
         @adjust-item-quantity="adjustInventoryItemQuantity"
+        @toggle-item-equip="toggleInventoryItemEquipped"
         @edit-feature="handleFeatureEdit"
         @remove-feature="removeFeature"
         @remove-item="removeInventoryItem"

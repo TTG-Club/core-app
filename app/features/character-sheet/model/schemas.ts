@@ -1,6 +1,7 @@
 import type { RenderNode } from '~ui/markup';
 
 import type {
+  ArmorDexterityMod,
   BackgroundOption,
   BackgroundSummary,
   ClassChoice,
@@ -10,6 +11,8 @@ import type {
   ClassTableColumn,
   FeatCatalogItem,
   FeatSummary,
+  InventoryArmor,
+  InventoryWeapon,
   ItemCatalogItem,
   ItemSummary,
   MagicItemCatalogItem,
@@ -377,6 +380,117 @@ export function parseItemDetail(input: unknown): ItemSummary | null {
     typesLabel: result.data.types,
     cost: result.data.cost,
     weight: parseItemWeight(result.data.weight),
+    // Публичная деталь структуру доспеха/оружия не отдаёт — её докладывает /raw.
+    armor: null,
+    weapon: null,
+  };
+}
+
+/** Правила Ловкости из «сырого» ответа доспеха к внутреннему представлению. */
+const ARMOR_DEXTERITY_MOD_MAP: Record<
+  'PLUS' | 'PLUS_MAX_2' | 'NONE',
+  ArmorDexterityMod
+> = {
+  PLUS: 'full',
+  PLUS_MAX_2: 'capped',
+  NONE: 'none',
+};
+
+/**
+ * Схема «сырого» ответа предмета `GET /api/v2/item/{url}/raw` в части доспеха.
+ * Форма — как у формы редактора предметов (`ArmorCreate`): объект `armor` с
+ * числовым КД и правилом Ловкости; у не-доспехов приходит null.
+ */
+const itemRawArmorSchema = z
+  .object({
+    armor: z
+      .object({
+        category: z.string().catch(''),
+        armorClass: z.coerce.number().catch(0),
+        mod: z.enum(['PLUS', 'PLUS_MAX_2', 'NONE']).catch('PLUS'),
+      })
+      .nullable()
+      .catch(null),
+  })
+  .catch({ armor: null });
+
+/**
+ * Признак щита: доспех, который складывается с бронёй, а не заменяет её.
+ * Определяется по категории доспеха или по названию/типам предмета — устойчиво
+ * к формату enum категории на бэке.
+ *
+ * @param category категория доспеха из «сырого» ответа.
+ * @param item деталь предмета (имя и подпись типов).
+ * @returns это щит.
+ */
+function isShieldArmor(category: string, item: ItemSummary): boolean {
+  return /щит|shield/i.test(`${category} ${item.name} ${item.typesLabel}`);
+}
+
+/**
+ * Разбор параметров доспеха из «сырого» ответа предмета для подсчёта КД.
+ *
+ * @param input сырой ответ `GET /api/v2/item/{url}/raw`.
+ * @param item уже разобранная деталь предмета (имя, типы — для признака щита).
+ * @returns параметры доспеха или null (не доспех либо нет данных).
+ */
+export function parseItemArmor(
+  input: unknown,
+  item: ItemSummary,
+): InventoryArmor | null {
+  const { armor } = itemRawArmorSchema.parse(input);
+
+  if (!armor) {
+    return null;
+  }
+
+  return {
+    baseArmorClass: armor.armorClass,
+    dexterityMod: ARMOR_DEXTERITY_MOD_MAP[armor.mod],
+    shield: isShieldArmor(armor.category, item),
+  };
+}
+
+/**
+ * Схема «сырого» ответа предмета в части оружия (форма `WeaponCreate` редактора):
+ * категория (простое/воинское, рукопашное/дальнобойное), свойства и боеприпас.
+ */
+const itemRawWeaponSchema = z
+  .object({
+    weapon: z
+      .object({
+        category: z.string().catch(''),
+        properties: z.array(z.string()).catch([]),
+        ammo: z.string().nullable().catch(null),
+      })
+      .nullable()
+      .catch(null),
+  })
+  .catch({ weapon: null });
+
+/**
+ * Разбор параметров оружия из «сырого» ответа предмета для подсчёта бонуса атаки.
+ * Категория владения и признаки «дальнобойное»/«фехтовальное» распознаются по
+ * категории/свойствам (RU- и EN-корни) — устойчиво к формату справочника на бэке.
+ *
+ * @param input сырой ответ `GET /api/v2/item/{url}/raw`.
+ * @returns параметры оружия или null (не оружие либо нет данных).
+ */
+export function parseItemWeapon(input: unknown): InventoryWeapon | null {
+  const { weapon } = itemRawWeaponSchema.parse(input);
+
+  if (!weapon) {
+    return null;
+  }
+
+  return {
+    category: /martial|воинск/i.test(weapon.category) ? 'martial' : 'simple',
+    ranged:
+      /ranged|дальноб|дистанц|стрелк/i.test(weapon.category)
+      || Boolean(weapon.ammo),
+    finesse: weapon.properties.some((property) =>
+      /фехтов|finesse/i.test(property),
+    ),
   };
 }
 

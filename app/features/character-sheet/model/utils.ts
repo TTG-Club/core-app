@@ -4,6 +4,8 @@ import type {
   AbilityBonusMode,
   AbilityKey,
   AbilityRow,
+  ArmorClassBreakdown,
+  ArmorDexterityMod,
   Character,
   CharacterClass,
   CharacterExtraHitDie,
@@ -24,7 +26,9 @@ import type {
   FeatSummary,
   FeatureDescriptionNode,
   FeatureOrigin,
+  InventoryArmor,
   InventoryItemOrigin,
+  InventoryWeapon,
   ItemSummary,
   MagicItemCatalogItem,
   PrimarySpeed,
@@ -36,7 +40,9 @@ import type {
   SpeciesSummary,
   SpeedRow,
   SpeedTypeKey,
+  SpellcastingBreakdown,
   VisionRow,
+  WeaponAttack,
 } from './types';
 
 import { capitalize } from 'es-toolkit';
@@ -54,8 +60,10 @@ import {
   ABILITY_ORDER,
   ABILITY_SHORT_LABELS,
   ARMOR_MATCH_KEYWORDS,
+  ARMOR_MEDIUM_DEX_CAP,
   ARMOR_PROFICIENCY_GROUPS,
   CARRYING_CAPACITY_MULTIPLIER,
+  CLASS_SPELLCASTING_ABILITIES,
   DARKVISION_PARSE_FALLBACK,
   INVENTORY_CATEGORY_ORDER,
   INVENTORY_CATEGORY_TITLES,
@@ -67,8 +75,10 @@ import {
   SPEED_PRIMARY_ORDER,
   SPEED_TYPE_LABELS,
   SPEED_UNIT_SHORT_LABELS,
+  SPELL_SAVE_DC_BASE,
   TOOL_MATCH_KEYWORDS,
   TOOL_PROFICIENCY_GROUPS,
+  UNARMORED_ARMOR_CLASS_BASE,
   VISION_LABELS,
   VISION_ORDER,
   WEAPON_MATCH_KEYWORDS,
@@ -287,6 +297,9 @@ export function buildInventoryItem(
     cost: summary.cost,
     weight: summary.weight,
     quantity: 1,
+    armor: summary.armor,
+    weapon: summary.weapon,
+    equipped: false,
   };
 }
 
@@ -314,6 +327,9 @@ export function buildMagicItemInventoryItem(
     cost: '',
     weight: 0,
     quantity: 1,
+    armor: null,
+    weapon: null,
+    equipped: false,
   };
 }
 
@@ -386,20 +402,146 @@ export function getSpeedRows(speed: CharacterSpeed): SpeedRow[] {
 }
 
 /**
- * Итоговый класс доспеха: базовое значение плюс модификатор выбранной
- * характеристики.
+ * Вклад модификатора Ловкости в КД по правилу доспеха: лёгкая — модификатор
+ * целиком, средняя — не больше +2 (штраф по Ловкости), тяжёлая и щит — без
+ * Ловкости.
+ *
+ * @param mode правило применения модификатора Ловкости.
+ * @param dexModifier модификатор Ловкости персонажа.
+ * @returns применяемый бонус Ловкости.
+ */
+function getArmorDexBonus(
+  mode: ArmorDexterityMod,
+  dexModifier: number,
+): number {
+  if (mode === 'none') {
+    return 0;
+  }
+
+  if (mode === 'capped') {
+    return Math.min(dexModifier, ARMOR_MEDIUM_DEX_CAP);
+  }
+
+  return dexModifier;
+}
+
+/**
+ * Разбор итогового класса доспеха. В ручном режиме (`custom`) — базовое значение
+ * плюс модификатор выбранной характеристики. В автоматическом — по надетой
+ * броне: тело даёт лучшая надетая броня (или безброневой `10 + Ловкость`), щит
+ * складывается сверху (в зачёт — лучший щит); модификатор Ловкости учитывается
+ * по правилу брони.
+ *
+ * @param character персонаж.
+ * @returns разбор класса доспеха для листа и модалки.
+ */
+export function getArmorClassBreakdown(
+  character: Character,
+): ArmorClassBreakdown {
+  const { base, ability, custom } = character.armorClass;
+
+  if (custom) {
+    const value = ability
+      ? base + getModifier(character.abilities[ability])
+      : base;
+
+    return {
+      value,
+      custom: true,
+      bodyArmorName: null,
+      bodyArmorValue: value,
+      dexBonus: 0,
+      dexCapped: false,
+      shieldBonus: 0,
+    };
+  }
+
+  const dexModifier = getModifier(character.abilities.dexterity);
+
+  const equippedArmor = character.inventory.filter(
+    (item): item is CharacterInventoryItem & { armor: InventoryArmor } =>
+      item.equipped && item.category === 'ARMOR' && item.armor !== null,
+  );
+
+  // КД тела: сравниваем по эффективному значению (база брони + Ловкость по её
+  // правилу). Стартуем с безброневого КД, чтобы надетая слабая броня не роняла
+  // защиту ниже `10 + Ловкость`.
+  let bodyArmorName: string | null = null;
+  let bodyArmorValue = UNARMORED_ARMOR_CLASS_BASE + dexModifier;
+  let dexBonus = dexModifier;
+  let dexCapped = false;
+
+  for (const item of equippedArmor) {
+    if (item.armor.shield) {
+      continue;
+    }
+
+    const armorDexBonus = getArmorDexBonus(
+      item.armor.dexterityMod,
+      dexModifier,
+    );
+
+    const effectiveValue = item.armor.baseArmorClass + armorDexBonus;
+
+    if (effectiveValue >= bodyArmorValue) {
+      bodyArmorName = item.name;
+      bodyArmorValue = effectiveValue;
+      dexBonus = armorDexBonus;
+      dexCapped = armorDexBonus < dexModifier;
+    }
+  }
+
+  // Щит: в зачёт идёт лучший из надетых (несколько щитов не складываются).
+  let shieldBonus = 0;
+
+  for (const item of equippedArmor) {
+    if (item.armor.shield && item.armor.baseArmorClass > shieldBonus) {
+      shieldBonus = item.armor.baseArmorClass;
+    }
+  }
+
+  return {
+    value: bodyArmorValue + shieldBonus,
+    custom: false,
+    bodyArmorName,
+    bodyArmorValue,
+    dexBonus,
+    dexCapped,
+    shieldBonus,
+  };
+}
+
+/**
+ * Итоговое числовое значение класса доспеха.
  *
  * @param character персонаж.
  * @returns итоговое значение класса доспеха.
  */
 export function getArmorClassValue(character: Character): number {
-  const { base, ability } = character.armorClass;
+  return getArmorClassBreakdown(character).value;
+}
 
-  if (!ability) {
-    return base;
-  }
+/**
+ * Бонус к броску атаки оружием: бонус мастерства (БаБ) плюс модификатор
+ * характеристики. Характеристика по умолчанию — Сила; фехтовальное и
+ * дальнобойное оружие бьёт от Ловкости.
+ *
+ * @param character персонаж.
+ * @param weapon параметры оружия.
+ * @returns бонус атаки и использованная характеристика.
+ */
+export function getWeaponAttackBonus(
+  character: Character,
+  weapon: InventoryWeapon,
+): WeaponAttack {
+  const ability: AbilityKey =
+    weapon.finesse || weapon.ranged ? 'dexterity' : 'strength';
 
-  return base + getModifier(character.abilities[ability]);
+  const value =
+    getProficiencyBonus(character.level)
+    + getModifier(character.abilities[ability]);
+
+  return { value, ability };
 }
 
 /**
@@ -589,6 +731,65 @@ export function getSpellGroups(
   }
 
   return groups;
+}
+
+/**
+ * Заклинательная характеристика класса по его базовому названию (для режима
+ * «Авто»). Классы-незаклинатели и отсутствие класса дают null.
+ *
+ * @param characterClass класс персонажа; null — не выбран.
+ * @returns заклинательная характеристика или null, если не определена.
+ */
+export function getClassSpellcastingAbility(
+  characterClass: CharacterClass | null,
+): AbilityKey | null {
+  if (!characterClass) {
+    return null;
+  }
+
+  const normalizedName = characterClass.name
+    .trim()
+    .toLowerCase()
+    .replaceAll('ё', 'е');
+
+  return CLASS_SPELLCASTING_ABILITIES[normalizedName] ?? null;
+}
+
+/**
+ * Разбор заклинательства: сложность спасброска от заклинаний и бонус на
+ * попадание атакой заклинанием. Заклинательная характеристика — заданная
+ * вручную либо (при null) определяемая по классу. Если характеристика не
+ * определена, её модификатор считается нулевым.
+ *
+ * Сложность спасброска — `8 + бонус мастерства + модификатор характеристики`;
+ * бонус атаки — `бонус мастерства + модификатор характеристики` (D&D 2024).
+ *
+ * @param character персонаж.
+ * @returns разбор заклинательства для вкладки и модалки настройки.
+ */
+export function getSpellcastingBreakdown(
+  character: Character,
+): SpellcastingBreakdown {
+  const explicitAbility = character.spellcasting.ability;
+  const auto = explicitAbility === null;
+
+  const ability =
+    explicitAbility ?? getClassSpellcastingAbility(character.characterClass);
+
+  const abilityModifier = ability
+    ? getModifier(character.abilities[ability])
+    : 0;
+
+  const proficiencyBonus = getProficiencyBonus(character.level);
+
+  return {
+    ability,
+    auto,
+    abilityModifier,
+    proficiencyBonus,
+    saveDc: SPELL_SAVE_DC_BASE + proficiencyBonus + abilityModifier,
+    attackBonus: proficiencyBonus + abilityModifier,
+  };
 }
 
 /**

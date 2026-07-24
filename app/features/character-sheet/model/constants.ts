@@ -1,8 +1,10 @@
 import type {
   AbilityBonusMode,
   AbilityKey,
+  ArmorDexterityMod,
   ArmorProficiencyGroup,
   CharacterClassResource,
+  CharacterCustomCurrency,
   CurrencyKey,
   FeatureOrigin,
   InventoryItemCategory,
@@ -104,6 +106,34 @@ export const CURRENCY_LABELS: Record<CurrencyKey, string> = {
   platinum: 'ПМ',
 };
 
+/** Полные названия денежных единиц (расшифровка для тултипов). */
+export const CURRENCY_NAMES: Record<CurrencyKey, string> = {
+  copper: 'Медные монеты',
+  silver: 'Серебряные монеты',
+  electrum: 'Электрумовые монеты',
+  gold: 'Золотые монеты',
+  platinum: 'Платиновые монеты',
+};
+
+/** Минимальное количество денежной единицы. */
+export const CURRENCY_AMOUNT_MIN = 0;
+
+/** Максимальное количество денежной единицы. */
+export const CURRENCY_AMOUNT_MAX = 9999999;
+
+/** Максимальная длина сокращения пользовательской валюты. */
+export const CUSTOM_CURRENCY_LABEL_MAX_LENGTH = 4;
+
+/** Максимальная длина полного названия пользовательской валюты. */
+export const CUSTOM_CURRENCY_NAME_MAX_LENGTH = 40;
+
+/** Заготовка новой пользовательской валюты (без идентификатора). */
+export const NEW_CUSTOM_CURRENCY: Omit<CharacterCustomCurrency, 'id'> = {
+  name: '',
+  label: '',
+  amount: 0,
+};
+
 /** Минимальный уровень персонажа. */
 export const LEVEL_MIN = 1;
 
@@ -169,6 +199,22 @@ export const ARMOR_CLASS_BASE_MAX = 40;
 
 /** Значение «без характеристики» в селекте класса доспеха. */
 export const ARMOR_CLASS_NO_ABILITY = 'none';
+
+/** Безброневой класс доспеха (без надетой брони): база `10 + Ловкость`. */
+export const UNARMORED_ARMOR_CLASS_BASE = 10;
+
+/** Максимальный бонус Ловкости к КД средней брони (штраф по Ловкости). */
+export const ARMOR_MEDIUM_DEX_CAP = 2;
+
+/** Подпись «без брони» для разбора класса доспеха. */
+export const SHEET_UNARMORED_LABEL = 'Без брони (10 + Ловкость)';
+
+/** Пояснение правила модификатора Ловкости к КД для подсказки на плитке брони. */
+export const ARMOR_DEXTERITY_HINT_LABELS: Record<ArmorDexterityMod, string> = {
+  full: ' + модификатор Ловкости',
+  capped: ' + модификатор Ловкости (максимум +2)',
+  none: ' (без модификатора Ловкости)',
+};
 
 /** Варианты характеристики для бонуса класса доспеха. */
 export const ARMOR_CLASS_ABILITY_OPTIONS: Array<{
@@ -307,10 +353,19 @@ export const ROLL_BONUS_MAX = 99;
 export const VISION_LABELS: Record<VisionKey, string> = {
   normal: 'Обычное зрение',
   darkvision: 'Тёмное зрение',
+  blindsight: 'Слепое зрение',
+  tremorsense: 'Чувство вибрации',
+  truesight: 'Истинное зрение',
 };
 
 /** Порядок типов зрения в модалке и подсказке. */
-export const VISION_ORDER: VisionKey[] = ['normal', 'darkvision'];
+export const VISION_ORDER: VisionKey[] = [
+  'normal',
+  'darkvision',
+  'blindsight',
+  'tremorsense',
+  'truesight',
+];
 
 /** Минимальная дистанция зрения. */
 export const VISION_DISTANCE_MIN = 0;
@@ -559,6 +614,38 @@ export const SPELL_CATALOG_SEARCH_DEBOUNCE_MS = 300;
 /** Круги заклинаний для быстрого фильтра (0 — заговоры). */
 export const SPELL_LEVELS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
+/** Базовая величина сложности спасброска от заклинаний (D&D 2024). */
+export const SPELL_SAVE_DC_BASE = 8;
+
+/**
+ * Заклинательная характеристика по базовому названию класса (режим «Авто»).
+ * Ключ — название в нижнем регистре. Классы-незаклинатели (варвар, воин, монах,
+ * плут) в карту не входят: у них характеристика остаётся неопределённой.
+ */
+export const CLASS_SPELLCASTING_ABILITIES: Record<string, AbilityKey> = {
+  бард: 'charisma',
+  волшебник: 'intelligence',
+  друид: 'wisdom',
+  жрец: 'wisdom',
+  изобретатель: 'intelligence',
+  колдун: 'charisma',
+  паладин: 'charisma',
+  следопыт: 'wisdom',
+  чародей: 'charisma',
+};
+
+/** Значение «Авто (по классу)» в селекте заклинательной характеристики. */
+export const SPELLCASTING_ABILITY_AUTO = 'auto';
+
+/** Варианты выбора заклинательной характеристики (авто или конкретная). */
+export const SPELLCASTING_ABILITY_OPTIONS: Array<{
+  label: string;
+  value: AbilityKey | typeof SPELLCASTING_ABILITY_AUTO;
+}> = [
+  { label: 'Авто (по классу)', value: SPELLCASTING_ABILITY_AUTO },
+  ...ABILITY_ORDER.map((key) => ({ label: ABILITY_LABELS[key], value: key })),
+];
+
 /** Базовый путь деталей вида (`/{url}` и `/{url}/lineages`). */
 export const SPECIES_DETAIL_BASE_PATH = '/api/v2/species';
 
@@ -756,7 +843,12 @@ export const WEAPON_GROUP_TITLE_CLASSES: Record<
 
 /** Подписи для незаполненных полей листа. */
 export const SHEET_EMPTY_LABELS: Record<
-  'species' | 'className' | 'background' | 'classResources' | 'proficiencies',
+  | 'species'
+  | 'className'
+  | 'background'
+  | 'classResources'
+  | 'proficiencies'
+  | 'customCurrencies',
   string
 > = {
   species: 'Вид не выбран',
@@ -764,6 +856,7 @@ export const SHEET_EMPTY_LABELS: Record<
   background: 'Предыстория не выбрана',
   classResources: 'Нет ресурсов',
   proficiencies: 'Нет',
+  customCurrencies: 'Своих валют пока нет',
 };
 
 /** Вкладки правой панели листа персонажа. */

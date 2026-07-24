@@ -3,12 +3,14 @@
 
   import type {
     CharacterCurrency,
+    CharacterCustomCurrency,
     CharacterFeature,
     CharacterInventoryItem,
     CharacterSpell,
+    SpellcastingBreakdown,
   } from '../../model';
 
-  import { SHEET_MAIN_TAB, SHEET_TABS, WEIGHT_UNIT_LABEL } from '../../model';
+  import { SHEET_MAIN_TAB, SHEET_TABS } from '../../model';
   import SheetEquipmentTab from './SheetEquipmentTab.vue';
   import SheetFeaturesTab from './SheetFeaturesTab.vue';
   import SheetNotesTab from './SheetNotesTab.vue';
@@ -16,11 +18,13 @@
 
   const props = defineProps<{
     currency: CharacterCurrency;
+    customCurrencies: CharacterCustomCurrency[];
     inventory: CharacterInventoryItem[];
     totalWeight: number;
     carryingCapacity: number;
     features: CharacterFeature[];
     spells: CharacterSpell[];
+    spellcasting: SpellcastingBreakdown;
 
     /**
      * Добавляет первой вкладку «Основное» (контент — через слот `#main`).
@@ -35,7 +39,10 @@
     'add-item': [];
     'add-magic-item': [];
     'add-spell': [];
+    'edit-spellcasting': [];
+    'edit-currency': [];
     'adjust-item-quantity': [inventoryItemId: string, delta: number];
+    'toggle-item-equip': [inventoryItemId: string];
     'edit-feature': [featureId: string];
     'remove-feature': [featureId: string];
     'remove-item': [inventoryItemId: string];
@@ -50,6 +57,10 @@
     emit('add-magic-item');
   }
 
+  function handleCurrencyEdit() {
+    emit('edit-currency');
+  }
+
   function handleItemRemove(inventoryItemId: string) {
     emit('remove-item', inventoryItemId);
   }
@@ -58,8 +69,16 @@
     emit('adjust-item-quantity', inventoryItemId, delta);
   }
 
+  function handleItemEquipToggle(inventoryItemId: string) {
+    emit('toggle-item-equip', inventoryItemId);
+  }
+
   function handleSpellAdd() {
     emit('add-spell');
+  }
+
+  function handleSpellcastingEdit() {
+    emit('edit-spellcasting');
   }
 
   function handleSpellRemove(spellUrl: string) {
@@ -104,19 +123,10 @@
   );
 
   const tabItems = computed<TabsItem[]>(() => {
-    const items = SHEET_TABS.map((tab) => {
-      const base = useShort.value ? tab.shortLabel : tab.label;
-
-      // Подсчёт веса на вкладке снаряжения показываем всегда — даже в коротком
-      // режиме подпись становится «Снар. (0 / 150 фнт)», а не голой аббревиатурой.
-      return {
-        slot: tab.slot,
-        label:
-          tab.slot === 'equipment'
-            ? `${base} (${props.totalWeight} / ${props.carryingCapacity} ${WEIGHT_UNIT_LABEL})`
-            : base,
-      };
-    });
+    const items = SHEET_TABS.map((tab) => ({
+      slot: tab.slot,
+      label: useShort.value ? tab.shortLabel : tab.label,
+    }));
 
     return props.hasMainTab
       ? [
@@ -170,18 +180,25 @@
       <template #equipment>
         <SheetEquipmentTab
           :currency="currency"
+          :custom-currencies="customCurrencies"
           :inventory="inventory"
+          :total-weight="totalWeight"
+          :carrying-capacity="carryingCapacity"
           @add-item="handleItemAdd"
           @add-magic-item="handleMagicItemAdd"
+          @edit-currency="handleCurrencyEdit"
           @remove-item="handleItemRemove"
           @adjust-quantity="handleItemQuantityAdjust"
+          @toggle-equip="handleItemEquipToggle"
         />
       </template>
 
       <template #spells>
         <SheetSpellsTab
           :spells="spells"
+          :spellcasting="spellcasting"
           @add-spell="handleSpellAdd"
+          @edit-spellcasting="handleSpellcastingEdit"
           @remove-spell="handleSpellRemove"
         />
       </template>

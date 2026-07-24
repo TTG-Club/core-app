@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { DropdownMenuItem } from '@nuxt/ui';
+
   import type { Character, SheetSaveStatus } from '../../model';
 
   import {
@@ -23,6 +25,7 @@
 
   const emit = defineEmits<{
     'close': [];
+    'download': [];
     'expand': [];
     'edit-background': [];
     'edit-class': [];
@@ -34,6 +37,16 @@
     'toggle-inspiration': [];
     'toggle-lock': [];
   }>();
+
+  // Меню действий листа (кнопка-троеточие в шапке). Пока один пункт — экспорт в
+  // JSON; сюда же добавляются будущие действия над листом.
+  const menuItems = computed<Array<DropdownMenuItem>>(() => [
+    {
+      label: 'Скачать JSON',
+      icon: 'tabler:download',
+      onSelect: () => emit('download'),
+    },
+  ]);
 
   const saveStatusMeta = computed(() =>
     props.saveStatus ? SHEET_SAVE_STATUS_META[props.saveStatus] : null,
@@ -317,13 +330,15 @@
           />
         </UTooltip>
 
-        <UButton
-          icon="tabler:settings"
-          color="neutral"
-          variant="ghost"
-          square
-          disabled
-        />
+        <UDropdownMenu :items="menuItems">
+          <UButton
+            icon="tabler:dots-vertical"
+            color="neutral"
+            variant="ghost"
+            square
+            aria-label="Действия с листом"
+          />
+        </UDropdownMenu>
 
         <UTooltip
           v-if="canExpand"

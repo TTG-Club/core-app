@@ -4,6 +4,8 @@ import type {
   CharacterArmorClass,
   CharacterClass,
   CharacterClassResource,
+  CharacterCurrency,
+  CharacterCustomCurrency,
   CharacterExtraHitDie,
   CharacterFeature,
   CharacterHealth,
@@ -12,6 +14,7 @@ import type {
   CharacterSpecies,
   CharacterSpeed,
   CharacterSpell,
+  CharacterSpellcasting,
   CharacterVision,
   ProficiencyGroupKey,
 } from '../model';
@@ -25,9 +28,12 @@ import {
   applySkillProficiencies,
   ARMOR_CLASS_BASE_MAX,
   ARMOR_CLASS_BASE_MIN,
+  CURRENCY_AMOUNT_MAX,
+  CURRENCY_AMOUNT_MIN,
   DEFAULT_CHARACTER,
   EXPERIENCE_MAX,
   getAbilityRows,
+  getArmorClassBreakdown,
   getArmorClassValue,
   getCarryingCapacity,
   getFormattedBonus,
@@ -36,6 +42,7 @@ import {
   getProficiencyBonus,
   getSavingThrowRows,
   getSkillRows,
+  getSpellcastingBreakdown,
   INVENTORY_QUANTITY_MAX,
   LEVEL_MAX,
   LEVEL_MIN,
@@ -46,6 +53,32 @@ import {
   VISION_DISTANCE_MAX,
   VISION_DISTANCE_MIN,
 } from '../model';
+
+/**
+ * Приведение количества денежной единицы к целому в допустимом диапазоне.
+ *
+ * @param amount введённое количество.
+ * @returns целое количество в диапазоне `[CURRENCY_AMOUNT_MIN, CURRENCY_AMOUNT_MAX]`.
+ */
+function clampCurrencyAmount(amount: number): number {
+  return clamp(Math.trunc(amount), CURRENCY_AMOUNT_MIN, CURRENCY_AMOUNT_MAX);
+}
+
+/**
+ * Имя файла для экспорта листа: имя персонажа без запрещённых в файловой системе
+ * символов. Пустое имя заменяется общим запасным значением.
+ *
+ * @param name имя персонажа.
+ * @returns безопасное имя файла без расширения.
+ */
+function getCharacterFileName(name: string): string {
+  const safeName = name
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, ' ')
+    .trim();
+
+  return safeName || 'персонаж';
+}
 
 /**
  * Состояние листа персонажа: реактивный персонаж, производные значения по
@@ -122,6 +155,14 @@ export function useCharacterSheet() {
   );
 
   const armorClassValue = computed(() => getArmorClassValue(character.value));
+
+  const armorClassBreakdown = computed(() =>
+    getArmorClassBreakdown(character.value),
+  );
+
+  const spellcastingBreakdown = computed(() =>
+    getSpellcastingBreakdown(character.value),
+  );
 
   const totalWeight = computed(() =>
     getInventoryWeight(character.value.inventory),
@@ -218,6 +259,25 @@ export function useCharacterSheet() {
       ...character.value,
       inspiration: !character.value.inspiration,
     };
+  }
+
+  /**
+   * Скачивание листа в виде JSON-файла: сериализует персонажа целиком (та же
+   * форма, что уходит в автосохранение) и отдаёт браузеру ссылку на blob. Только
+   * читает состояние, поэтому блокировкой листа не ограничивается.
+   */
+  function downloadCharacter(): void {
+    const json = JSON.stringify(character.value, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = `${getCharacterFileName(character.value.name)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   /**
@@ -325,6 +385,21 @@ export function useCharacterSheet() {
         normal: clamp(vision.normal, VISION_DISTANCE_MIN, VISION_DISTANCE_MAX),
         darkvision: clamp(
           vision.darkvision,
+          VISION_DISTANCE_MIN,
+          VISION_DISTANCE_MAX,
+        ),
+        blindsight: clamp(
+          vision.blindsight,
+          VISION_DISTANCE_MIN,
+          VISION_DISTANCE_MAX,
+        ),
+        tremorsense: clamp(
+          vision.tremorsense,
+          VISION_DISTANCE_MIN,
+          VISION_DISTANCE_MAX,
+        ),
+        truesight: clamp(
+          vision.truesight,
           VISION_DISTANCE_MIN,
           VISION_DISTANCE_MAX,
         ),
@@ -736,6 +811,22 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Установка настроек заклинательства (заклинательной характеристики).
+   *
+   * @param spellcasting новые настройки заклинательства.
+   */
+  function setSpellcasting(spellcasting: CharacterSpellcasting): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      spellcasting: { ability: spellcasting.ability },
+    };
+  }
+
+  /**
    * Удаление заклинания из книги персонажа.
    *
    * @param spellUrl URL заклинания.
@@ -826,6 +917,24 @@ export function useCharacterSheet() {
                 INVENTORY_QUANTITY_MAX,
               ),
             }
+          : inventoryItem,
+      ),
+    };
+  }
+
+  /**
+   * Надеть/снять доспех: переключает `equipped` у предмета, у которого есть
+   * параметры доспеха. Игровое действие (смена брони по ходу игры) — блокировкой
+   * листа не ограничивается. Итоговый КД пересчитывается автоматически.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   */
+  function toggleInventoryItemEquipped(inventoryItemId: string): void {
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.map((inventoryItem) =>
+        inventoryItem.id === inventoryItemId && inventoryItem.armor
+          ? { ...inventoryItem, equipped: !inventoryItem.equipped }
           : inventoryItem,
       ),
     };
@@ -976,6 +1085,42 @@ export function useCharacterSheet() {
     };
   }
 
+  /**
+   * Установка кошелька: количества стандартных монет ограничиваются диапазоном;
+   * пользовательские валюты обрезаются по краям, их количество ограничивается, а
+   * записи без сокращения (нечего показать в ряду) отбрасываются.
+   *
+   * @param currency количества пяти стандартных денежных единиц.
+   * @param customCurrencies пользовательские денежные единицы.
+   */
+  function setCurrency(
+    currency: CharacterCurrency,
+    customCurrencies: CharacterCustomCurrency[],
+  ): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      currency: {
+        copper: clampCurrencyAmount(currency.copper),
+        silver: clampCurrencyAmount(currency.silver),
+        electrum: clampCurrencyAmount(currency.electrum),
+        gold: clampCurrencyAmount(currency.gold),
+        platinum: clampCurrencyAmount(currency.platinum),
+      },
+      customCurrencies: customCurrencies
+        .map((customCurrency) => ({
+          id: customCurrency.id,
+          name: customCurrency.name.trim(),
+          label: customCurrency.label.trim(),
+          amount: clampCurrencyAmount(customCurrency.amount),
+        }))
+        .filter((customCurrency) => customCurrency.label.length > 0),
+    };
+  }
+
   return {
     character,
     isLocked,
@@ -989,6 +1134,8 @@ export function useCharacterSheet() {
     formattedProficiencyBonus,
     formattedInitiative,
     armorClassValue,
+    armorClassBreakdown,
+    spellcastingBreakdown,
     totalWeight,
     carryingCapacity,
     setAbilityScore,
@@ -996,7 +1143,9 @@ export function useCharacterSheet() {
     setClassResources,
     adjustClassResource,
     adjustInventoryItemQuantity,
+    toggleInventoryItemEquipped,
     toggleInspiration,
+    downloadCharacter,
     addFeature,
     addFeats,
     addInventoryItems,
@@ -1006,6 +1155,7 @@ export function useCharacterSheet() {
     updateFeature,
     setBackground,
     setClass,
+    setCurrency,
     setName,
     setNotes,
     setProficiencies,
@@ -1013,6 +1163,7 @@ export function useCharacterSheet() {
     setSize,
     setSpecies,
     setSpells,
+    setSpellcasting,
     setVision,
     setSpeed,
     setHealth,

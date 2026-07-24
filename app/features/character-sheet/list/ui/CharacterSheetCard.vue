@@ -65,10 +65,6 @@
       : SHEET_EMPTY_LABELS.species,
   );
 
-  const backgroundLabel = computed(
-    () => character.characterBackground?.name ?? SHEET_EMPTY_LABELS.background,
-  );
-
   const cardClass = computed(() =>
     isOpened.value
       ? 'border-primary bg-primary/10 ring-1 ring-primary/50'
@@ -133,11 +129,8 @@
           </span>
 
           <span class="truncate text-sm text-secondary">
-            {{ character.level }} уровень · {{ classLabel }}
-          </span>
-
-          <span class="truncate text-xs text-muted">
-            {{ speciesLabel }} · {{ backgroundLabel }}
+            {{ classLabel }} ({{ character.level }} уровень) ·
+            {{ speciesLabel }}
           </span>
 
           <span
@@ -150,7 +143,8 @@
             />
 
             <span class="truncate">
-              Хиты: {{ character.health.current }} / {{ character.health.max }}
+              Хиты: {{ character.health.current }} /
+              {{ character.health.max }} · Уровень: {{ character.level }}
             </span>
           </span>
         </div>

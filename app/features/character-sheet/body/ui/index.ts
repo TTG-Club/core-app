@@ -7,6 +7,7 @@ export { default as SheetChoiceSelect } from './SheetChoiceSelect.vue';
 export { default as SheetClassResourcesModal } from './SheetClassResourcesModal.vue';
 export { default as SheetClassResourcesPanel } from './SheetClassResourcesPanel.vue';
 export { default as SheetClassWizardModal } from './SheetClassWizardModal.vue';
+export { default as SheetCurrencyModal } from './SheetCurrencyModal.vue';
 export { default as SheetCurrencyRow } from './SheetCurrencyRow.vue';
 export { default as SheetEquipmentTab } from './SheetEquipmentTab.vue';
 export { default as SheetExperienceModal } from './SheetExperienceModal.vue';
@@ -35,6 +36,7 @@ export { default as SheetSpeciesWizardModal } from './SheetSpeciesWizardModal.vu
 export { default as SheetSpeedModal } from './SheetSpeedModal.vue';
 export { default as SheetSpeedTile } from './SheetSpeedTile.vue';
 export { default as SheetSpellAddModal } from './SheetSpellAddModal.vue';
+export { default as SheetSpellcastingModal } from './SheetSpellcastingModal.vue';
 export { default as SheetSpellsTab } from './SheetSpellsTab.vue';
 export { default as SheetStatTile } from './SheetStatTile.vue';
 export { default as SheetVisionModal } from './SheetVisionModal.vue';

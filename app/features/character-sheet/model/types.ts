@@ -30,6 +30,21 @@ export type CharacterAbilities = Record<AbilityKey, number>;
 /** Кошелёк персонажа. */
 export type CharacterCurrency = Record<CurrencyKey, number>;
 
+/** Пользовательская денежная единица (сверх пяти стандартных). */
+export interface CharacterCustomCurrency {
+  /** Устойчивый идентификатор (ключи списка и обновления). */
+  id: string;
+
+  /** Полное название (показывается в тултипе). */
+  name: string;
+
+  /** Сокращение (подпись в ряду валют). */
+  label: string;
+
+  /** Количество. */
+  amount: number;
+}
+
 /** Опыт персонажа. */
 export interface CharacterExperience {
   /** Текущее количество опыта. */
@@ -97,10 +112,81 @@ export interface CharacterArmorClass {
 
   /** Природная ли броня. */
   natural: boolean;
+
+  /**
+   * Использовать ручное значение (`base` + модификатор `ability`) вместо
+   * автоподсчёта по надетой броне. false — КД считается по инвентарю.
+   */
+  custom: boolean;
+}
+
+/** Способ применения модификатора Ловкости к КД доспеха. */
+export type ArmorDexterityMod = 'full' | 'capped' | 'none';
+
+/** Параметры доспеха предмета инвентаря для подсчёта класса доспеха. */
+export interface InventoryArmor {
+  /** Базовый КД брони; у щита — его бонус к КД. */
+  baseArmorClass: number;
+
+  /** Как применяется модификатор Ловкости (штраф средней/тяжёлой брони). */
+  dexterityMod: ArmorDexterityMod;
+
+  /** Щит: складывается поверх лучшей брони, а не заменяет её. */
+  shield: boolean;
+}
+
+/** Параметры оружия предмета инвентаря для подсчёта бонуса атаки. */
+export interface InventoryWeapon {
+  /** Категория владения: простое или воинское. */
+  category: 'simple' | 'martial';
+
+  /** Дальнобойное оружие (атака от Ловкости). */
+  ranged: boolean;
+
+  /** Фехтовальное свойство (можно бить от Ловкости вместо Силы). */
+  finesse: boolean;
+}
+
+/** Разбор бонуса атаки оружием. */
+export interface WeaponAttack {
+  /** Итоговый бонус к броску атаки. */
+  value: number;
+
+  /** Характеристика, от которой считается атака. */
+  ability: AbilityKey;
+}
+
+/** Разбор итогового класса доспеха для модалки настройки. */
+export interface ArmorClassBreakdown {
+  /** Итоговое значение КД. */
+  value: number;
+
+  /** Взято ручное значение (режим «Использовать своё»). */
+  custom: boolean;
+
+  /** Название учтённой брони; null — без брони (безброневой КД). */
+  bodyArmorName: string | null;
+
+  /** КД тела: лучшая надетая броня либо безброневой `10 + Ловкость`. */
+  bodyArmorValue: number;
+
+  /** Фактически применённый бонус Ловкости. */
+  dexBonus: number;
+
+  /** Модификатор Ловкости был урезан правилом брони. */
+  dexCapped: boolean;
+
+  /** Бонус к КД от надетого щита; 0 — щита нет. */
+  shieldBonus: number;
 }
 
 /** Ключ типа зрения. */
-export type VisionKey = 'normal' | 'darkvision';
+export type VisionKey =
+  | 'normal'
+  | 'darkvision'
+  | 'blindsight'
+  | 'tremorsense'
+  | 'truesight';
 
 /** Зрение персонажа. */
 export interface CharacterVision {
@@ -109,6 +195,15 @@ export interface CharacterVision {
 
   /** Дистанция тёмного зрения; 0 — нет тёмного зрения. */
   darkvision: number;
+
+  /** Дистанция слепого зрения; 0 — нет слепого зрения. */
+  blindsight: number;
+
+  /** Дистанция чувства вибрации; 0 — нет чувства вибрации. */
+  tremorsense: number;
+
+  /** Дистанция истинного зрения; 0 — нет истинного зрения. */
+  truesight: number;
 
   /** Единица измерения дистанции. */
   unit: SpeedUnit;
@@ -351,6 +446,36 @@ export interface SpellClassOption {
   name: string;
 }
 
+/** Настройки заклинательства персонажа. */
+export interface CharacterSpellcasting {
+  /**
+   * Заклинательная характеристика; null — авто (определяется по классу
+   * персонажа).
+   */
+  ability: AbilityKey | null;
+}
+
+/** Разбор заклинательства для вкладки заклинаний и модалки настройки. */
+export interface SpellcastingBreakdown {
+  /** Заклинательная характеристика; null — не определена (нет класса-заклинателя). */
+  ability: AbilityKey | null;
+
+  /** Характеристика определена автоматически по классу (не задана вручную). */
+  auto: boolean;
+
+  /** Модификатор заклинательной характеристики; 0 — характеристика не определена. */
+  abilityModifier: number;
+
+  /** Бонус мастерства персонажа. */
+  proficiencyBonus: number;
+
+  /** Сложность спасброска от заклинаний. */
+  saveDc: number;
+
+  /** Бонус на попадание атакой заклинанием. */
+  attackBonus: number;
+}
+
 /** Опция автокомплита выбора вида. */
 export interface SpeciesOption {
   url: string;
@@ -572,6 +697,15 @@ export interface CharacterInventoryItem {
   weight: number;
 
   quantity: number;
+
+  /** Параметры доспеха; заданы только у доспехов раздела «Предметы». */
+  armor: InventoryArmor | null;
+
+  /** Параметры оружия; заданы только у оружия раздела «Предметы». */
+  weapon: InventoryWeapon | null;
+
+  /** Доспех надет — учитывается в автоподсчёте класса доспеха. */
+  equipped: boolean;
 }
 
 /** Группа предметов инвентаря одной категории для списка с разделителями. */
@@ -631,6 +765,12 @@ export interface ItemSummary {
 
   /** Вес одной единицы в фунтах; 0 — не распознан. */
   weight: number;
+
+  /** Параметры доспеха из «сырого» ответа; null — не доспех или нет данных. */
+  armor: InventoryArmor | null;
+
+  /** Параметры оружия из «сырого» ответа; null — не оружие или нет данных. */
+  weapon: InventoryWeapon | null;
 }
 
 /** Персонаж на листе персонажа. */
@@ -652,6 +792,9 @@ export interface Character {
 
   /** Книга заклинаний персонажа. */
   spells: CharacterSpell[];
+
+  /** Настройки заклинательства (заклинательная характеристика). */
+  spellcasting: CharacterSpellcasting;
 
   /** Класс персонажа; null — не выбран. */
   characterClass: CharacterClass | null;
@@ -693,6 +836,10 @@ export interface Character {
 
   proficiencies: CharacterProficiencies;
   currency: CharacterCurrency;
+
+  /** Пользовательские денежные единицы (сверх пяти стандартных). */
+  customCurrencies: CharacterCustomCurrency[];
+
   inventory: CharacterInventoryItem[];
 
   /** Заметки игрока в разметке сайта (хранимая форма редактора `MarkupEditor`). */

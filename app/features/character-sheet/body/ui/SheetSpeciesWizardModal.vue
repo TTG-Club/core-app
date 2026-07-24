@@ -447,6 +447,9 @@
       vision: {
         normal: character.value.vision.normal,
         darkvision: getDarkvisionDistance(allFeatureSummaries),
+        blindsight: character.value.vision.blindsight,
+        tremorsense: character.value.vision.tremorsense,
+        truesight: character.value.vision.truesight,
         unit: 'feet',
       },
       features: buildCharacterFeatures(detail, lineage, featureChoices),
