@@ -6,7 +6,7 @@
 
   import { useCharacterSheetList } from '../composables';
   import { CHARACTER_SHEET_ROUTE, getSheetErrorMessage } from '../model';
-  import { CharacterSheetCard } from './ui';
+  import { CharacterSheetCard, CharacterSheetCreateCard } from './ui';
 
   const {
     activeSheets,
@@ -48,11 +48,6 @@
       `Активных листов — ${activeSheets.value.length} из ${limit.value} возможных`,
   );
 
-  // Пока список не загружен, серверный лимит неизвестен — создание недоступно.
-  const isCreateDisabled = computed(
-    () => isLoading.value || Boolean(loadError.value) || !canCreate.value,
-  );
-
   const isLimitReached = computed(
     () => !canCreate.value && limit.value > 0 && !isLoading.value,
   );
@@ -84,53 +79,6 @@
 
 <template>
   <div class="flex flex-col gap-6">
-    <!-- Герой: создание нового листа — не ждёт загрузки списка -->
-    <div
-      class="flex flex-col gap-3 rounded-xl border border-default bg-elevated p-4 ring-1 ring-primary/15 sm:p-6"
-    >
-      <div class="flex items-center gap-4">
-        <div
-          class="hidden shrink-0 place-items-center rounded-xl bg-primary/5 p-2.5 sm:grid"
-        >
-          <UIcon
-            name="tabler:user-plus"
-            class="size-8 text-primary"
-          />
-        </div>
-
-        <div class="flex min-w-0 flex-col gap-1">
-          <h3 class="text-lg font-semibold text-highlighted">
-            Создать персонажа
-          </h3>
-
-          <p class="text-sm text-secondary">
-            Пустой лист сохранится в вашем списке — изменения улетают на сервер
-            автоматически.
-          </p>
-        </div>
-
-        <UButton
-          type="button"
-          icon="tabler:user-plus"
-          size="lg"
-          class="ml-auto shrink-0 justify-center transition-transform hover:-translate-y-px active:translate-y-0"
-          :loading="isMutating"
-          :disabled="isCreateDisabled"
-          @click.left.exact.prevent="handleCreate"
-        >
-          Создать лист
-        </UButton>
-      </div>
-
-      <p
-        v-if="isLimitReached"
-        class="text-xs text-error"
-      >
-        Достигнут лимит {{ limit }} листов — удалите один, чтобы создать новый.
-      </p>
-    </div>
-
-    <!-- Второй план: список листов -->
     <div
       v-if="isLoading"
       class="flex flex-col gap-2"
@@ -160,10 +108,7 @@
     </UiResult>
 
     <template v-else>
-      <section
-        v-if="activeCards.length"
-        class="flex flex-col gap-2"
-      >
+      <section class="flex flex-col gap-2">
         <div class="flex items-center gap-2">
           <span class="text-xs font-medium tracking-wide text-muted uppercase">
             Ваши персонажи
@@ -192,15 +137,24 @@
             :disabled="isMutating"
             @remove="remove"
           />
-        </PageGrid>
-      </section>
 
-      <p
-        v-else
-        class="text-sm text-muted"
-      >
-        Здесь появятся ваши персонажи.
-      </p>
+          <!-- Плейсхолдер-слот создания — исчезает на достигнутом лимите -->
+          <CharacterSheetCreateCard
+            v-if="canCreate"
+            :loading="isMutating"
+            :disabled="isMutating"
+            @create="handleCreate"
+          />
+        </PageGrid>
+
+        <p
+          v-if="isLimitReached"
+          class="text-xs text-muted"
+        >
+          Достигнут лимит {{ limit }} листов — удалите один, чтобы создать
+          новый.
+        </p>
+      </section>
 
       <!-- История удалённых листов — свёрнута, во втором плане -->
       <UCollapsible
