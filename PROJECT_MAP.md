@@ -25,7 +25,7 @@ core-app/
 │   │   ├── css/                    # Tailwind v4 + SCSS: themes (dark/light/svifty7), variables, lib overrides
 │   │   └── icons/                  # Custom SVG icons (`ttg` collection, glob-registered)
 │   ├── composables/                # ⚡ Global composables (auto-import)
-│   ├── features/                   # 🏗️ DDD domains (26) — core business logic
+│   ├── features/                   # 🏗️ DDD domains (27) — core business logic
 │   ├── layouts/                    # Layouts: default, detail, section, vttg
 │   ├── middleware/                 # Route middleware: auth.global, close-overlay.global
 │   ├── pages/                      # 📄 Routes (file-based routing)
@@ -61,7 +61,7 @@ core-app/
 
 ## 🌍 Domains (DDD Architecture in `app/features/`)
 
-26 feature domains, grouped below by area.
+27 feature domains, grouped below by area.
 
 ### 📚 Reference content (D&D 5e wiki)
 
@@ -88,12 +88,13 @@ core-app/
 
 ### 🛠️ Interactive tools
 
-| Domain        | Purpose                                                                                                                                            | Sub-features                                                                                                                             |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `tokenator`   | Canvas VTT token generator: mask/frame/tint/text/3D lighting, export. Dexie (IndexedDB) + Pinia store                                              | `canvas`, `controls`, `preview`, `model`, `composables`                                                                                  |
-| `dice-roller` | Dice-notation roller w/ crit detection + history; float/sidebar toggle, inline links, modal                                                        | `modal`, `float-button`, `sidebar-button`, `link`, `composables`, `model` (+ legacy `const.ts` / `types.ts` / `utils.ts` at domain root) |
-| `calculator`  | Character-math tools container                                                                                                                     | `abilities` — ability-score calc (Point Buy / Standard Array / Random Roll)                                                              |
-| `initiative`  | **NEW** — Initiative tracker (`/tools/initiative`): participants, HP/AC editing, bestiary lookup; anonymous slot in localStorage + `X-Tracker-Key` | `list`, `workspace`, `ui-kit`, `composables`, `model`                                                                                    |
+| Domain            | Purpose                                                                                                                                                                                                                                                                                                                                          | Sub-features                                                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `tokenator`       | Canvas VTT token generator: mask/frame/tint/text/3D lighting, export. Dexie (IndexedDB) + Pinia store                                                                                                                                                                                                                                            | `canvas`, `controls`, `preview`, `model`, `composables`                                                                                  |
+| `dice-roller`     | Dice-notation roller w/ crit detection + history; float/sidebar toggle, inline links, modal                                                                                                                                                                                                                                                      | `modal`, `float-button`, `sidebar-button`, `link`, `composables`, `model` (+ legacy `const.ts` / `types.ts` / `utils.ts` at domain root) |
+| `calculator`      | Character-math tools container                                                                                                                                                                                                                                                                                                                   | `abilities` — ability-score calc (Point Buy / Standard Array / Random Roll)                                                              |
+| `initiative`      | **NEW** — Initiative tracker (`/tools/initiative`): participants, HP/AC editing, bestiary lookup; anonymous slot in localStorage + `X-Tracker-Key`                                                                                                                                                                                               | `list`, `workspace`, `ui-kit`, `composables`, `model`                                                                                    |
+| `character-sheet` | **NEW** — D&D 2024 character sheet (`/tools/character-sheet`, ADMIN-only): wizards for species/class/background, rolls via `dice-roller`, debounced autosave, server limit of active sheets, soft delete with restore history, copy & JSON export, sheet settings (weapon attack ability) — shared action menu in the sheet header and list card | `body`, `list`, `drawer`, `composables`, `model`                                                                                         |
 
 ### 📰 Content & publishing
 

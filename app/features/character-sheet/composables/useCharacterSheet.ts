@@ -4,14 +4,18 @@ import type {
   CharacterArmorClass,
   CharacterClass,
   CharacterClassResource,
+  CharacterCurrency,
+  CharacterCustomCurrency,
   CharacterExtraHitDie,
   CharacterFeature,
   CharacterHealth,
   CharacterHitDie,
   CharacterInventoryItem,
+  CharacterSettings,
   CharacterSpecies,
   CharacterSpeed,
   CharacterSpell,
+  CharacterSpellcasting,
   CharacterVision,
   ProficiencyGroupKey,
 } from '../model';
@@ -25,9 +29,13 @@ import {
   applySkillProficiencies,
   ARMOR_CLASS_BASE_MAX,
   ARMOR_CLASS_BASE_MIN,
+  CURRENCY_AMOUNT_MAX,
+  CURRENCY_AMOUNT_MIN,
   DEFAULT_CHARACTER,
+  downloadCharacterJson,
   EXPERIENCE_MAX,
   getAbilityRows,
+  getArmorClassBreakdown,
   getArmorClassValue,
   getCarryingCapacity,
   getFormattedBonus,
@@ -36,6 +44,7 @@ import {
   getProficiencyBonus,
   getSavingThrowRows,
   getSkillRows,
+  getSpellcastingBreakdown,
   INVENTORY_QUANTITY_MAX,
   LEVEL_MAX,
   LEVEL_MIN,
@@ -46,6 +55,16 @@ import {
   VISION_DISTANCE_MAX,
   VISION_DISTANCE_MIN,
 } from '../model';
+
+/**
+ * Приведение количества денежной единицы к целому в допустимом диапазоне.
+ *
+ * @param amount введённое количество.
+ * @returns целое количество в диапазоне `[CURRENCY_AMOUNT_MIN, CURRENCY_AMOUNT_MAX]`.
+ */
+function clampCurrencyAmount(amount: number): number {
+  return clamp(Math.trunc(amount), CURRENCY_AMOUNT_MIN, CURRENCY_AMOUNT_MAX);
+}
 
 /**
  * Состояние листа персонажа: реактивный персонаж, производные значения по
@@ -122,6 +141,14 @@ export function useCharacterSheet() {
   );
 
   const armorClassValue = computed(() => getArmorClassValue(character.value));
+
+  const armorClassBreakdown = computed(() =>
+    getArmorClassBreakdown(character.value),
+  );
+
+  const spellcastingBreakdown = computed(() =>
+    getSpellcastingBreakdown(character.value),
+  );
 
   const totalWeight = computed(() =>
     getInventoryWeight(character.value.inventory),
@@ -218,6 +245,14 @@ export function useCharacterSheet() {
       ...character.value,
       inspiration: !character.value.inspiration,
     };
+  }
+
+  /**
+   * Скачивание открытого листа в виде JSON-файла. Только читает состояние,
+   * поэтому блокировкой листа не ограничивается.
+   */
+  function downloadCharacter(): void {
+    downloadCharacterJson(character.value);
   }
 
   /**
@@ -328,6 +363,21 @@ export function useCharacterSheet() {
           VISION_DISTANCE_MIN,
           VISION_DISTANCE_MAX,
         ),
+        blindsight: clamp(
+          vision.blindsight,
+          VISION_DISTANCE_MIN,
+          VISION_DISTANCE_MAX,
+        ),
+        tremorsense: clamp(
+          vision.tremorsense,
+          VISION_DISTANCE_MIN,
+          VISION_DISTANCE_MAX,
+        ),
+        truesight: clamp(
+          vision.truesight,
+          VISION_DISTANCE_MIN,
+          VISION_DISTANCE_MAX,
+        ),
         unit: vision.unit,
       },
     };
@@ -371,6 +421,28 @@ export function useCharacterSheet() {
         max,
         current: clamp(health.current, 0, max),
         temporary: Math.max(0, health.temporary),
+      },
+    };
+  }
+
+  /**
+   * Быстрое изменение текущих и временных хитов в игровом режиме (модалка
+   * урона/лечения из заблокированного листа). Игровое действие — блокировкой
+   * листа не ограничивается. Максимум хитов не меняется; текущие ограничиваются
+   * диапазоном [0, max], временные — не ниже нуля.
+   *
+   * @param current новые текущие хиты.
+   * @param temporary новые временные хиты.
+   */
+  function setHitPoints(current: number, temporary: number): void {
+    const { max } = character.value.health;
+
+    character.value = {
+      ...character.value,
+      health: {
+        ...character.value.health,
+        current: clamp(Math.trunc(current), 0, max),
+        temporary: Math.max(0, Math.trunc(temporary)),
       },
     };
   }
@@ -488,7 +560,6 @@ export function useCharacterSheet() {
    * @param payload.skills выбранные навыки (владение и экспертиза).
    * @param payload.skills.proficient навыки для владения.
    * @param payload.skills.expertise навыки для экспертизы.
-   * @param payload.classResources производные ресурсы класса.
    * @param payload.features классовые особенности по уровню.
    */
   function setClass(payload: {
@@ -502,7 +573,6 @@ export function useCharacterSheet() {
       languages: string[];
     };
     skills: { proficient: string[]; expertise: string[] };
-    classResources: CharacterClassResource[];
     features: CharacterFeature[];
   }): void {
     if (!ensureEditable()) {
@@ -517,7 +587,8 @@ export function useCharacterSheet() {
       (feature) => !feature.id.startsWith('class:'),
     );
 
-    // Производные ресурсы (id `class:res:*`) заменяются; ручные — сохраняются.
+    // Устаревшие производные ресурсы (id `class:res:*`) убираются, ресурсы,
+    // добавленные вручную, сохраняются: класс их автоматически не создаёт.
     const preservedResources = character.value.classResources.filter(
       (resource) => !resource.id.startsWith('class:res:'),
     );
@@ -553,7 +624,7 @@ export function useCharacterSheet() {
         payload.skills.proficient,
         payload.skills.expertise,
       ),
-      classResources: [...preservedResources, ...payload.classResources],
+      classResources: preservedResources,
       features: [
         ...payload.features.map((feature) => ({
           ...feature,
@@ -645,23 +716,42 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Установка выбора игрока в особенности (например, цвет драконорождённого).
+   * Полное редактирование особенности: название, описание, происхождение и
+   * выбор игрока. Идентификатор особенности не меняется. Пустое название
+   * игнорируется (особенность без названия не сохраняем).
    *
-   * @param featureId идентификатор особенности.
-   * @param choice текст выбора; пустая строка снимает выбор.
+   * @param featureId идентификатор редактируемой особенности.
+   * @param patch новые значения полей особенности.
    */
-  function setFeatureChoice(featureId: string, choice: string): void {
+  function updateFeature(
+    featureId: string,
+    patch: Pick<
+      CharacterFeature,
+      'name' | 'description' | 'origin' | 'originName' | 'choice'
+    >,
+  ): void {
     if (!ensureEditable()) {
       return;
     }
 
-    const trimmedChoice = choice.trim();
+    const name = patch.name.trim();
+
+    if (!name) {
+      return;
+    }
 
     character.value = {
       ...character.value,
       features: character.value.features.map((feature) =>
         feature.id === featureId
-          ? { ...feature, choice: trimmedChoice || null }
+          ? {
+              ...feature,
+              name,
+              description: [...patch.description],
+              origin: patch.origin,
+              originName: patch.originName,
+              choice: patch.choice?.trim() || null,
+            }
           : feature,
       ),
     };
@@ -692,6 +782,38 @@ export function useCharacterSheet() {
           return true;
         })
         .map((spell) => ({ ...spell })),
+    };
+  }
+
+  /**
+   * Установка настроек заклинательства (заклинательной характеристики).
+   *
+   * @param spellcasting новые настройки заклинательства.
+   */
+  function setSpellcasting(spellcasting: CharacterSpellcasting): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      spellcasting: { ability: spellcasting.ability },
+    };
+  }
+
+  /**
+   * Установка настроек листа (правил подсчёта).
+   *
+   * @param settings новые настройки листа.
+   */
+  function setSettings(settings: CharacterSettings): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      settings: { weaponAttackAbility: settings.weaponAttackAbility },
     };
   }
 
@@ -786,6 +908,24 @@ export function useCharacterSheet() {
                 INVENTORY_QUANTITY_MAX,
               ),
             }
+          : inventoryItem,
+      ),
+    };
+  }
+
+  /**
+   * Надеть/снять доспех: переключает `equipped` у предмета, у которого есть
+   * параметры доспеха. Игровое действие (смена брони по ходу игры) — блокировкой
+   * листа не ограничивается. Итоговый КД пересчитывается автоматически.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   */
+  function toggleInventoryItemEquipped(inventoryItemId: string): void {
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.map((inventoryItem) =>
+        inventoryItem.id === inventoryItemId && inventoryItem.armor
+          ? { ...inventoryItem, equipped: !inventoryItem.equipped }
           : inventoryItem,
       ),
     };
@@ -936,6 +1076,42 @@ export function useCharacterSheet() {
     };
   }
 
+  /**
+   * Установка кошелька: количества стандартных монет ограничиваются диапазоном;
+   * пользовательские валюты обрезаются по краям, их количество ограничивается, а
+   * записи без сокращения (нечего показать в ряду) отбрасываются.
+   *
+   * @param currency количества пяти стандартных денежных единиц.
+   * @param customCurrencies пользовательские денежные единицы.
+   */
+  function setCurrency(
+    currency: CharacterCurrency,
+    customCurrencies: CharacterCustomCurrency[],
+  ): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      currency: {
+        copper: clampCurrencyAmount(currency.copper),
+        silver: clampCurrencyAmount(currency.silver),
+        electrum: clampCurrencyAmount(currency.electrum),
+        gold: clampCurrencyAmount(currency.gold),
+        platinum: clampCurrencyAmount(currency.platinum),
+      },
+      customCurrencies: customCurrencies
+        .map((customCurrency) => ({
+          id: customCurrency.id,
+          name: customCurrency.name.trim(),
+          label: customCurrency.label.trim(),
+          amount: clampCurrencyAmount(customCurrency.amount),
+        }))
+        .filter((customCurrency) => customCurrency.label.length > 0),
+    };
+  }
+
   return {
     character,
     isLocked,
@@ -949,6 +1125,8 @@ export function useCharacterSheet() {
     formattedProficiencyBonus,
     formattedInitiative,
     armorClassValue,
+    armorClassBreakdown,
+    spellcastingBreakdown,
     totalWeight,
     carryingCapacity,
     setAbilityScore,
@@ -956,26 +1134,32 @@ export function useCharacterSheet() {
     setClassResources,
     adjustClassResource,
     adjustInventoryItemQuantity,
+    toggleInventoryItemEquipped,
     toggleInspiration,
+    downloadCharacter,
     addFeature,
     addFeats,
     addInventoryItems,
     removeFeature,
     removeInventoryItem,
     removeSpell,
-    setFeatureChoice,
+    updateFeature,
     setBackground,
     setClass,
+    setCurrency,
     setName,
     setNotes,
     setProficiencies,
     setProgress,
+    setSettings,
     setSize,
     setSpecies,
     setSpells,
+    setSpellcasting,
     setVision,
     setSpeed,
     setHealth,
+    setHitPoints,
     setHitDice,
     toggleSavingThrowProficiency,
     cycleSkillProficiency,

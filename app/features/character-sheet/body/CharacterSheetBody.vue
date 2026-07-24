@@ -6,8 +6,11 @@
     SkillRow,
   } from '../model';
 
+  import { ConfirmDialog } from '~initiative/ui-kit';
+
   import {
     useCharacterSheet,
+    useCharacterSheetList,
     useCharacterSheetSaveStatus,
   } from '../composables';
   import {
@@ -24,12 +27,15 @@
     SheetClassResourcesModal,
     SheetClassResourcesPanel,
     SheetClassWizardModal,
+    SheetCurrencyModal,
     SheetExperienceModal,
     SheetFeatAddModal,
     SheetFeatureAddModal,
+    SheetFeatureEditModal,
     SheetHeader,
     SheetHealthModal,
     SheetHealthPanel,
+    SheetHealthQuickModal,
     SheetInventoryTabs,
     SheetItemAddModal,
     SheetMagicItemAddModal,
@@ -38,12 +44,14 @@
     SheetProficiencyGroupsModal,
     SheetRollModal,
     SheetSavingThrowsPanel,
+    SheetSettingsModal,
     SheetSizeModal,
     SheetSkillsPanel,
     SheetSpeciesWizardModal,
     SheetSpeedModal,
     SheetSpeedTile,
     SheetSpellAddModal,
+    SheetSpellcastingModal,
     SheetStatTile,
     SheetVisionModal,
     SheetWeaponProficienciesModal,
@@ -74,24 +82,53 @@
     formattedProficiencyBonus,
     formattedInitiative,
     armorClassValue,
+    spellcastingBreakdown,
     totalWeight,
     carryingCapacity,
+    setAbilityScore,
     toggleSavingThrowProficiency,
     cycleSkillProficiency,
     adjustClassResource,
     adjustInventoryItemQuantity,
+    toggleInventoryItemEquipped,
     removeFeature,
     removeInventoryItem,
     removeSpell,
-    setFeatureChoice,
     toggleInspiration,
+    downloadCharacter,
   } = useCharacterSheet();
 
+  // Действия над листом целиком (копия и удаление) живут в общем состоянии
+  // списка: оттуда же берётся остаток лимита активных листов, а список за
+  // мутацией обновляется сам.
+  const {
+    canCreate,
+    isMutating,
+    ensureLoaded,
+    duplicate,
+    remove: removeSheet,
+  } = useCharacterSheetList();
+
   const overlay = useOverlay();
+
+  const toast = useToast();
 
   // Статус автосохранения пишет автосейв контейнера (страница/панель/drawer),
   // тело листа лишь показывает его в шапке.
   const saveStatus = useCharacterSheetSaveStatus();
+
+  const isRemoveOpen = ref(false);
+
+  const removeDescription = computed(
+    () =>
+      `Лист «${character.value.name}» переедет в историю — его можно будет восстановить, пока в лимите есть свободное место.`,
+  );
+
+  // Лимит нужен пункту «Создать копию»: на отдельной странице листа список ещё
+  // не загружался, в панели и дровере — уже загружен списком.
+  onMounted(() => {
+    void ensureLoaded();
+  });
 
   // Блок из двух колонок нужен в двух местах: в широком контейнере — как левая
   // часть сетки, в узком (<1024px) — внутри первой вкладки «Основное». Единое
@@ -153,6 +190,8 @@
 
   const healthModal = overlay.create(SheetHealthModal);
 
+  const healthQuickModal = overlay.create(SheetHealthQuickModal);
+
   const nameModal = overlay.create(SheetNameModal);
 
   const visionModal = overlay.create(SheetVisionModal);
@@ -169,6 +208,8 @@
   const armorClassModal = overlay.create(SheetArmorClassModal);
 
   const classResourcesModal = overlay.create(SheetClassResourcesModal);
+
+  const currencyModal = overlay.create(SheetCurrencyModal);
 
   const proficiencyGroupsModal = overlay.create(SheetProficiencyGroupsModal, {
     props: {
@@ -190,11 +231,25 @@
 
   const sizeModal = overlay.create(SheetSizeModal);
 
+  const settingsModal = overlay.create(SheetSettingsModal, {
+    props: {
+      character: character.value,
+    },
+  });
+
   const featureAddModal = overlay.create(SheetFeatureAddModal);
+
+  const featureEditModal = overlay.create(SheetFeatureEditModal, {
+    props: {
+      featureId: '',
+    },
+  });
 
   const featAddModal = overlay.create(SheetFeatAddModal);
 
   const spellAddModal = overlay.create(SheetSpellAddModal);
+
+  const spellcastingModal = overlay.create(SheetSpellcastingModal);
 
   const itemAddModal = overlay.create(SheetItemAddModal);
 
@@ -215,6 +270,14 @@
     });
   }
 
+  function handleAbilityAdjust(abilityKey: AbilityKey, delta: number) {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    setAbilityScore(abilityKey, character.value.abilities[abilityKey] + delta);
+  }
+
   function handleSpeedEdit() {
     if (!ensureEditable()) {
       return;
@@ -224,7 +287,11 @@
   }
 
   function handleHealthEdit() {
-    if (!ensureEditable()) {
+    // В заблокированном (игровом) режиме клик по хитам открывает быструю
+    // модалку урона/лечения; в режиме редактирования — полную настройку.
+    if (isLocked.value) {
+      healthQuickModal.open();
+
       return;
     }
 
@@ -261,6 +328,14 @@
     }
 
     classResourcesModal.open();
+  }
+
+  function handleCurrencyEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    currencyModal.open();
   }
 
   function handleProficienciesEdit(group: ProficiencyGroupKey) {
@@ -376,12 +451,36 @@
     featAddModal.open();
   }
 
+  function handleFeatureEdit(featureId: string) {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    featureEditModal.open({ featureId });
+  }
+
   function handleSpellAdd() {
     if (!ensureEditable()) {
       return;
     }
 
     spellAddModal.open();
+  }
+
+  function handleSpellcastingEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    spellcastingModal.open();
+  }
+
+  function handleSettingsEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    settingsModal.open({ character: character.value });
   }
 
   function handleItemAdd() {
@@ -398,6 +497,37 @@
     }
 
     magicItemAddModal.open();
+  }
+
+  /**
+   * Копия открытого листа: копируется текущее состояние вместе с правками,
+   * которые ещё не успел отправить автосейв. Тост об успехе показывает список.
+   */
+  async function handleDuplicate() {
+    await duplicate(character.value);
+  }
+
+  /** Запрос на удаление листа — подтверждение показывает диалог. */
+  function handleRemove() {
+    isRemoveOpen.value = true;
+  }
+
+  /** Подтверждённое удаление: лист уходит в историю, затем закрывается. */
+  async function handleRemoveConfirm() {
+    if (!(await removeSheet(character.value.id))) {
+      return;
+    }
+
+    isRemoveOpen.value = false;
+
+    toast.add({
+      title: 'Лист персонажа удалён',
+      description: 'Его можно восстановить из истории листов.',
+      color: 'success',
+      icon: 'tabler:trash',
+    });
+
+    emit('close');
   }
 
   /** Закрытие листа — конкретное действие определяет контейнер. */
@@ -421,13 +551,18 @@
       :locked="isLocked"
       :can-expand="canExpand"
       :can-close="canClose"
+      :can-duplicate="canCreate"
       :save-status="saveStatus"
       @close="handleClose"
+      @download="downloadCharacter"
+      @duplicate="handleDuplicate"
+      @remove="handleRemove"
       @expand="handleExpand"
       @edit-background="handleBackgroundEdit"
       @edit-class="handleClassEdit"
       @edit-name="handleNameEdit"
       @edit-progress="handleProgressEdit"
+      @edit-settings="handleSettingsEdit"
       @edit-size="handleSizeEdit"
       @edit-species="handleSpeciesEdit"
       @edit-vision="handleVisionEdit"
@@ -522,6 +657,7 @@
           :rows="abilityRows"
           @roll="handleAbilityRoll"
           @settings="handleAbilityEdit"
+          @adjust="handleAbilityAdjust"
         />
       </div>
 
@@ -535,11 +671,13 @@
 
       <SheetInventoryTabs
         :currency="character.currency"
+        :custom-currencies="character.customCurrencies"
         :inventory="character.inventory"
         :total-weight="totalWeight"
         :carrying-capacity="carryingCapacity"
         :features="character.features"
         :spells="character.spells"
+        :spellcasting="spellcastingBreakdown"
         :has-main-tab="!isWide"
         :style="tabsStyle"
         class="@5xl:col-span-6 @5xl:col-start-7 @5xl:row-start-2 @5xl:min-h-0"
@@ -548,8 +686,11 @@
         @add-item="handleItemAdd"
         @add-magic-item="handleMagicItemAdd"
         @add-spell="handleSpellAdd"
+        @edit-spellcasting="handleSpellcastingEdit"
+        @edit-currency="handleCurrencyEdit"
         @adjust-item-quantity="adjustInventoryItemQuantity"
-        @edit-choice="setFeatureChoice"
+        @toggle-item-equip="toggleInventoryItemEquipped"
+        @edit-feature="handleFeatureEdit"
         @remove-feature="removeFeature"
         @remove-item="removeInventoryItem"
         @remove-spell="removeSpell"
@@ -559,5 +700,16 @@
         </template>
       </SheetInventoryTabs>
     </div>
+
+    <ConfirmDialog
+      v-model:open="isRemoveOpen"
+      title="Удалить лист персонажа?"
+      :description="removeDescription"
+      confirm-label="Удалить"
+      confirm-color="error"
+      confirm-icon="tabler:trash"
+      :loading="isMutating"
+      @confirm="handleRemoveConfirm"
+    />
   </div>
 </template>

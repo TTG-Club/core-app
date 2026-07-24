@@ -10,6 +10,7 @@
   const emit = defineEmits<{
     roll: [abilityKey: AbilityKey];
     settings: [abilityKey: AbilityKey];
+    adjust: [abilityKey: AbilityKey, delta: number];
   }>();
 </script>
 
@@ -26,6 +27,7 @@
         :ability-row="row"
         @roll="emit('roll', row.key)"
         @settings="emit('settings', row.key)"
+        @adjust="emit('adjust', row.key, $event)"
       />
     </div>
   </div>

@@ -1,12 +1,15 @@
+import type { DropdownMenuItem } from '@nuxt/ui';
+
 import type { RenderNode } from '~ui/markup';
 
 import type {
   AbilityBonusMode,
   AbilityKey,
   AbilityRow,
+  ArmorClassBreakdown,
+  ArmorDexterityMod,
   Character,
   CharacterClass,
-  CharacterClassResource,
   CharacterExtraHitDie,
   CharacterFeature,
   CharacterHitDie,
@@ -22,11 +25,12 @@ import type {
   ClassChoice,
   ClassFeatureSummary,
   ClassSummary,
-  ClassTableColumn,
   FeatSummary,
   FeatureDescriptionNode,
   FeatureOrigin,
+  InventoryArmor,
   InventoryItemOrigin,
+  InventoryWeapon,
   ItemSummary,
   MagicItemCatalogItem,
   PrimarySpeed,
@@ -38,7 +42,9 @@ import type {
   SpeciesSummary,
   SpeedRow,
   SpeedTypeKey,
+  SpellcastingBreakdown,
   VisionRow,
+  WeaponAttack,
 } from './types';
 
 import { capitalize } from 'es-toolkit';
@@ -56,24 +62,28 @@ import {
   ABILITY_ORDER,
   ABILITY_SHORT_LABELS,
   ARMOR_MATCH_KEYWORDS,
+  ARMOR_MEDIUM_DEX_CAP,
   ARMOR_PROFICIENCY_GROUPS,
   CARRYING_CAPACITY_MULTIPLIER,
-  CLASS_RESOURCE_DENY_KEYWORDS,
+  CHARACTER_FILE_NAME_FALLBACK,
+  CLASS_SPELLCASTING_ABILITIES,
   DARKVISION_PARSE_FALLBACK,
+  DEFAULT_WEAPON_ATTACK_ABILITY,
   INVENTORY_CATEGORY_ORDER,
   INVENTORY_CATEGORY_TITLES,
   LEVEL_XP_THRESHOLDS,
-  RESOURCE_COUNT_MAX,
-  RESOURCE_SHORT_LABEL_MAX_LENGTH,
   ROLL_MODE_DICE_NOTATION,
+  SHEET_COPY_LIMIT_HINT,
   SIZE_LABEL_WORDS,
   SKILL_PROFICIENCY_MULTIPLIERS,
   SPEED_PARSE_FALLBACK,
   SPEED_PRIMARY_ORDER,
   SPEED_TYPE_LABELS,
   SPEED_UNIT_SHORT_LABELS,
+  SPELL_SAVE_DC_BASE,
   TOOL_MATCH_KEYWORDS,
   TOOL_PROFICIENCY_GROUPS,
+  UNARMORED_ARMOR_CLASS_BASE,
   VISION_LABELS,
   VISION_ORDER,
   WEAPON_MATCH_KEYWORDS,
@@ -292,6 +302,9 @@ export function buildInventoryItem(
     cost: summary.cost,
     weight: summary.weight,
     quantity: 1,
+    armor: summary.armor,
+    weapon: summary.weapon,
+    equipped: false,
   };
 }
 
@@ -319,6 +332,9 @@ export function buildMagicItemInventoryItem(
     cost: '',
     weight: 0,
     quantity: 1,
+    armor: null,
+    weapon: null,
+    equipped: false,
   };
 }
 
@@ -391,20 +407,161 @@ export function getSpeedRows(speed: CharacterSpeed): SpeedRow[] {
 }
 
 /**
- * Итоговый класс доспеха: базовое значение плюс модификатор выбранной
- * характеристики.
+ * Вклад модификатора Ловкости в КД по правилу доспеха: лёгкая — модификатор
+ * целиком, средняя — не больше +2 (штраф по Ловкости), тяжёлая и щит — без
+ * Ловкости.
+ *
+ * @param mode правило применения модификатора Ловкости.
+ * @param dexModifier модификатор Ловкости персонажа.
+ * @returns применяемый бонус Ловкости.
+ */
+function getArmorDexBonus(
+  mode: ArmorDexterityMod,
+  dexModifier: number,
+): number {
+  if (mode === 'none') {
+    return 0;
+  }
+
+  if (mode === 'capped') {
+    return Math.min(dexModifier, ARMOR_MEDIUM_DEX_CAP);
+  }
+
+  return dexModifier;
+}
+
+/**
+ * Разбор итогового класса доспеха. В ручном режиме (`custom`) — базовое значение
+ * плюс модификатор выбранной характеристики. В автоматическом — по надетой
+ * броне: тело даёт лучшая надетая броня (или безброневой `10 + Ловкость`), щит
+ * складывается сверху (в зачёт — лучший щит); модификатор Ловкости учитывается
+ * по правилу брони.
+ *
+ * @param character персонаж.
+ * @returns разбор класса доспеха для листа и модалки.
+ */
+export function getArmorClassBreakdown(
+  character: Character,
+): ArmorClassBreakdown {
+  const { base, ability, custom } = character.armorClass;
+
+  if (custom) {
+    const value = ability
+      ? base + getModifier(character.abilities[ability])
+      : base;
+
+    return {
+      value,
+      custom: true,
+      bodyArmorName: null,
+      bodyArmorValue: value,
+      dexBonus: 0,
+      dexCapped: false,
+      shieldBonus: 0,
+    };
+  }
+
+  const dexModifier = getModifier(character.abilities.dexterity);
+
+  const equippedArmor = character.inventory.filter(
+    (item): item is CharacterInventoryItem & { armor: InventoryArmor } =>
+      item.equipped && item.category === 'ARMOR' && item.armor !== null,
+  );
+
+  // КД тела: сравниваем по эффективному значению (база брони + Ловкость по её
+  // правилу). Стартуем с безброневого КД, чтобы надетая слабая броня не роняла
+  // защиту ниже `10 + Ловкость`.
+  let bodyArmorName: string | null = null;
+  let bodyArmorValue = UNARMORED_ARMOR_CLASS_BASE + dexModifier;
+  let dexBonus = dexModifier;
+  let dexCapped = false;
+
+  for (const item of equippedArmor) {
+    if (item.armor.shield) {
+      continue;
+    }
+
+    const armorDexBonus = getArmorDexBonus(
+      item.armor.dexterityMod,
+      dexModifier,
+    );
+
+    const effectiveValue = item.armor.baseArmorClass + armorDexBonus;
+
+    if (effectiveValue >= bodyArmorValue) {
+      bodyArmorName = item.name;
+      bodyArmorValue = effectiveValue;
+      dexBonus = armorDexBonus;
+      dexCapped = armorDexBonus < dexModifier;
+    }
+  }
+
+  // Щит: в зачёт идёт лучший из надетых (несколько щитов не складываются).
+  let shieldBonus = 0;
+
+  for (const item of equippedArmor) {
+    if (item.armor.shield && item.armor.baseArmorClass > shieldBonus) {
+      shieldBonus = item.armor.baseArmorClass;
+    }
+  }
+
+  return {
+    value: bodyArmorValue + shieldBonus,
+    custom: false,
+    bodyArmorName,
+    bodyArmorValue,
+    dexBonus,
+    dexCapped,
+    shieldBonus,
+  };
+}
+
+/**
+ * Итоговое числовое значение класса доспеха.
  *
  * @param character персонаж.
  * @returns итоговое значение класса доспеха.
  */
 export function getArmorClassValue(character: Character): number {
-  const { base, ability } = character.armorClass;
+  return getArmorClassBreakdown(character).value;
+}
 
-  if (!ability) {
-    return base;
-  }
+/**
+ * Базовая характеристика атаки оружием: настройка листа, а если она не задана —
+ * характеристика по правилам (Сила).
+ *
+ * @param character персонаж.
+ * @returns характеристика, от которой считается атака обычным оружием.
+ */
+export function getWeaponAttackAbility(character: Character): AbilityKey {
+  return (
+    character.settings.weaponAttackAbility ?? DEFAULT_WEAPON_ATTACK_ABILITY
+  );
+}
 
-  return base + getModifier(character.abilities[ability]);
+/**
+ * Бонус к броску атаки оружием: бонус мастерства (БаБ) плюс модификатор
+ * характеристики. Базовая характеристика берётся из настроек листа (по
+ * умолчанию — Сила); фехтовальное и дальнобойное оружие бьёт от Ловкости.
+ *
+ * @param character персонаж.
+ * @param weapon параметры оружия.
+ * @returns бонус атаки и использованная характеристика.
+ */
+export function getWeaponAttackBonus(
+  character: Character,
+  weapon: InventoryWeapon,
+): WeaponAttack {
+  const ability: AbilityKey =
+    weapon.finesse || weapon.ranged
+      ? 'dexterity'
+      : getWeaponAttackAbility(character);
+
+  const value =
+    getProficiencyBonus(character.level)
+    + getModifier(character.abilities[ability]);
+
+  return { value, ability };
 }
 
 /**
@@ -597,6 +754,65 @@ export function getSpellGroups(
 }
 
 /**
+ * Заклинательная характеристика класса по его базовому названию (для режима
+ * «Авто»). Классы-незаклинатели и отсутствие класса дают null.
+ *
+ * @param characterClass класс персонажа; null — не выбран.
+ * @returns заклинательная характеристика или null, если не определена.
+ */
+export function getClassSpellcastingAbility(
+  characterClass: CharacterClass | null,
+): AbilityKey | null {
+  if (!characterClass) {
+    return null;
+  }
+
+  const normalizedName = characterClass.name
+    .trim()
+    .toLowerCase()
+    .replaceAll('ё', 'е');
+
+  return CLASS_SPELLCASTING_ABILITIES[normalizedName] ?? null;
+}
+
+/**
+ * Разбор заклинательства: сложность спасброска от заклинаний и бонус на
+ * попадание атакой заклинанием. Заклинательная характеристика — заданная
+ * вручную либо (при null) определяемая по классу. Если характеристика не
+ * определена, её модификатор считается нулевым.
+ *
+ * Сложность спасброска — `8 + бонус мастерства + модификатор характеристики`;
+ * бонус атаки — `бонус мастерства + модификатор характеристики` (D&D 2024).
+ *
+ * @param character персонаж.
+ * @returns разбор заклинательства для вкладки и модалки настройки.
+ */
+export function getSpellcastingBreakdown(
+  character: Character,
+): SpellcastingBreakdown {
+  const explicitAbility = character.spellcasting.ability;
+  const auto = explicitAbility === null;
+
+  const ability =
+    explicitAbility ?? getClassSpellcastingAbility(character.characterClass);
+
+  const abilityModifier = ability
+    ? getModifier(character.abilities[ability])
+    : 0;
+
+  const proficiencyBonus = getProficiencyBonus(character.level);
+
+  return {
+    ability,
+    auto,
+    abilityModifier,
+    proficiencyBonus,
+    saveDc: SPELL_SAVE_DC_BASE + proficiencyBonus + abilityModifier,
+    attackBonus: proficiencyBonus + abilityModifier,
+  };
+}
+
+/**
  * Разбор хранимого значения редактора разметки в узлы для рендера. Значение —
  * JSON-строка массива узлов (`toStoredMarkup`) либо исходник/пустая строка;
  * сегментация повторяет форму хранения: блочные маркеры — узлами, абзацы —
@@ -652,6 +868,27 @@ export function getCharacterFeatureId(
 }
 
 /**
+ * Извлекает url черты из идентификатора особенности. Обычная черта — `feat:url`,
+ * повторяемая — `feat:url:uuid` (у каждой копии свой суффикс). Url черты не
+ * содержит двоеточий, поэтому берём сегмент между первым и вторым `:`.
+ *
+ * @param featureId идентификатор особенности.
+ * @returns url черты или null, если особенность — не черта.
+ */
+export function getFeatUrlFromFeatureId(featureId: string): string | null {
+  if (!featureId.startsWith('feat:')) {
+    return null;
+  }
+
+  const afterPrefix = featureId.slice('feat:'.length);
+  const separatorIndex = afterPrefix.indexOf(':');
+
+  return separatorIndex === -1
+    ? afterPrefix
+    : afterPrefix.slice(0, separatorIndex);
+}
+
+/**
  * Сборка особенностей персонажа из деталей вида и подвида. Выбор игрока
  * подставляется по идентификатору особенности (`origin:url`).
  *
@@ -693,13 +930,21 @@ export function buildCharacterFeatures(
 /**
  * Сборка особенности персонажа из детали черты раздела «Черты». Категория
  * черты сохраняется как источник особенности (для подсказки на бейдже).
+ * Повторяемая черта получает уникальный суффикс в идентификаторе — так копии
+ * одной черты не схлопываются дедупом и удаляются/правятся независимо.
  *
  * @param summary деталь черты.
+ * @param repeatable черту можно брать несколько раз (уникальный id для копии).
  * @returns особенность персонажа с происхождением «Черта».
  */
-export function buildFeatFeature(summary: FeatSummary): CharacterFeature {
+export function buildFeatFeature(
+  summary: FeatSummary,
+  repeatable = false,
+): CharacterFeature {
+  const baseId = getCharacterFeatureId('feat', summary.url);
+
   return {
-    id: getCharacterFeatureId('feat', summary.url),
+    id: repeatable ? `${baseId}:${crypto.randomUUID()}` : baseId,
     name: summary.name,
     description: [...summary.description],
     origin: 'feat',
@@ -832,83 +1077,6 @@ export function matchClassProficiencies(proficiencyText: {
       TOOL_MATCH_KEYWORDS,
     ),
   };
-}
-
-/**
- * Значение колонки таблицы прогрессии на заданном уровне: берётся запись с
- * наибольшим уровнем, не превышающим текущий.
- *
- * @param column колонка таблицы прогрессии.
- * @param level уровень персонажа.
- * @returns значение колонки; null — записи для уровня нет.
- */
-function getColumnValueAtLevel(
-  column: ClassTableColumn,
-  level: number,
-): string | null {
-  let value: string | null = null;
-  let bestLevel = 0;
-
-  for (const entry of column.scaling) {
-    if (entry.level <= level && entry.level >= bestLevel) {
-      bestLevel = entry.level;
-      value = entry.value;
-    }
-  }
-
-  return value;
-}
-
-/**
- * Эвристический вывод ресурсов класса из таблицы прогрессии: колонка становится
- * ресурсом, только если её значение на текущем уровне — целое число в
- * допустимом диапазоне, а название не входит в стоп-слова (заклинания, ячейки,
- * бонусы, урон, уровень). Значения игрок затем правит вручную.
- *
- * @param table таблица прогрессии класса.
- * @param level уровень персонажа.
- * @returns ресурсы класса с устойчивыми идентификаторами.
- */
-export function deriveClassResources(
-  table: ClassTableColumn[],
-  level: number,
-): CharacterClassResource[] {
-  const resources: CharacterClassResource[] = [];
-
-  for (const column of table) {
-    const normalizedName = column.name.toLowerCase().replaceAll('ё', 'е');
-
-    const isDenied = CLASS_RESOURCE_DENY_KEYWORDS.some((keyword) =>
-      normalizedName.includes(keyword.replaceAll('ё', 'е')),
-    );
-
-    if (isDenied) {
-      continue;
-    }
-
-    const value = getColumnValueAtLevel(column, level)?.trim();
-
-    if (!value || !/^\d+$/.test(value)) {
-      continue;
-    }
-
-    const max = Number(value);
-
-    if (max < 1 || max > RESOURCE_COUNT_MAX) {
-      continue;
-    }
-
-    resources.push({
-      id: `class:res:${column.name}`,
-      name: column.name,
-      shortLabel: column.name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
-      recovery: 'long-rest',
-      current: max,
-      max,
-    });
-  }
-
-  return resources;
 }
 
 /**
@@ -1279,4 +1447,105 @@ export function computeAbilityBonuses(
   }
 
   return bonuses;
+}
+
+/**
+ * Имя файла для экспорта листа: имя персонажа без запрещённых в файловой
+ * системе символов. Пустое имя заменяется общим запасным значением.
+ *
+ * @param name имя персонажа.
+ * @returns безопасное имя файла без расширения.
+ */
+function getCharacterFileName(name: string): string {
+  const safeName = name
+    .trim()
+    .replace(/[/:*?"<>|]+/g, ' ')
+    .trim();
+
+  return safeName || CHARACTER_FILE_NAME_FALLBACK;
+}
+
+/**
+ * Скачивание листа в виде JSON-файла: сериализует персонажа целиком (та же
+ * форма, что уходит в автосохранение) и отдаёт браузеру ссылку на blob.
+ * Работает только в браузере — вызывается по действию пользователя.
+ *
+ * @param character персонаж скачиваемого листа.
+ */
+export function downloadCharacterJson(character: Character): void {
+  const json = JSON.stringify(character, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = url;
+  link.download = `${getCharacterFileName(character.name)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/** Доступность действий и обработчики пунктов меню действий над листом. */
+export interface SheetActionMenuOptions {
+  /** Копия листа доступна: в лимите активных листов есть свободное место. */
+  canDuplicate: boolean;
+
+  /** Удаление листа доступно из этого места. */
+  canRemove: boolean;
+
+  onDownload: () => void;
+  onDuplicate: () => void;
+  onRemove: () => void;
+  onSettings: () => void;
+}
+
+/**
+ * Пункты меню действий над листом — общие для шапки открытого листа и карточки
+ * в списке персонажей: экспорт, копия и настройки одной группой, удаление —
+ * отдельной, оно необратимее прочих.
+ *
+ * @param options доступность действий и обработчики пунктов.
+ * @returns группы пунктов для `UDropdownMenu`.
+ */
+export function getSheetActionMenuItems(
+  options: SheetActionMenuOptions,
+): Array<Array<DropdownMenuItem>> {
+  const actions: DropdownMenuItem[] = [
+    {
+      label: 'Скачать JSON',
+      icon: 'tabler:download',
+      onSelect: options.onDownload,
+    },
+    {
+      label: 'Создать копию',
+      icon: 'tabler:copy',
+      // Причина недоступности прямо в пункте: без неё серый пункт выглядит
+      // поломкой, а тултипа у пунктов меню нет.
+      description: options.canDuplicate ? undefined : SHEET_COPY_LIMIT_HINT,
+      disabled: !options.canDuplicate,
+      onSelect: options.onDuplicate,
+    },
+    {
+      label: 'Настройки',
+      icon: 'tabler:settings',
+      onSelect: options.onSettings,
+    },
+  ];
+
+  if (!options.canRemove) {
+    return [actions];
+  }
+
+  return [
+    actions,
+    [
+      {
+        label: 'Удалить лист',
+        icon: 'tabler:trash',
+        color: 'error',
+        onSelect: options.onRemove,
+      },
+    ],
+  ];
 }

@@ -1,8 +1,11 @@
 <script setup lang="ts">
+  import type { DropdownMenuItem } from '@nuxt/ui';
+
   import type { Character, SheetSaveStatus } from '../../model';
 
   import {
     getClassDisplayName,
+    getSheetActionMenuItems,
     getSpeciesDisplayName,
     getVisionRows,
     SHEET_EMPTY_LABELS,
@@ -19,21 +22,40 @@
     canClose?: boolean;
     /** Статус автосохранения листа; null — индикатор скрыт. */
     saveStatus?: SheetSaveStatus | null;
+    /** В лимите активных листов есть свободное место — копия разрешена. */
+    canDuplicate?: boolean;
   }>();
 
   const emit = defineEmits<{
     'close': [];
+    'download': [];
+    'duplicate': [];
     'expand': [];
+    'remove': [];
     'edit-background': [];
     'edit-class': [];
     'edit-name': [];
     'edit-progress': [];
+    'edit-settings': [];
     'edit-size': [];
     'edit-species': [];
     'edit-vision': [];
     'toggle-inspiration': [];
     'toggle-lock': [];
   }>();
+
+  // Меню действий листа (кнопка-троеточие в шапке) — то же, что в карточке
+  // списка персонажей.
+  const menuItems = computed<Array<Array<DropdownMenuItem>>>(() =>
+    getSheetActionMenuItems({
+      canDuplicate: props.canDuplicate ?? false,
+      canRemove: true,
+      onDownload: () => emit('download'),
+      onDuplicate: () => emit('duplicate'),
+      onRemove: () => emit('remove'),
+      onSettings: () => emit('edit-settings'),
+    }),
+  );
 
   const saveStatusMeta = computed(() =>
     props.saveStatus ? SHEET_SAVE_STATUS_META[props.saveStatus] : null,
@@ -317,13 +339,15 @@
           />
         </UTooltip>
 
-        <UButton
-          icon="tabler:settings"
-          color="neutral"
-          variant="ghost"
-          square
-          disabled
-        />
+        <UDropdownMenu :items="menuItems">
+          <UButton
+            icon="tabler:dots-vertical"
+            color="neutral"
+            variant="ghost"
+            square
+            aria-label="Действия с листом"
+          />
+        </UDropdownMenu>
 
         <UTooltip
           v-if="canExpand"

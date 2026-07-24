@@ -1,9 +1,10 @@
 <script setup lang="ts">
-  import type { CharacterSpell } from '../../model';
+  import type { CharacterSpell, SpellcastingBreakdown } from '../../model';
 
   import { SpellDrawer } from '~spells/drawer';
 
   import {
+    getFormattedBonus,
     getSpellGroups,
     getSpellLevelLabel,
     SHEET_TAB_EMPTY_LABELS,
@@ -11,12 +12,18 @@
 
   const props = defineProps<{
     spells: CharacterSpell[];
+    spellcasting: SpellcastingBreakdown;
   }>();
 
   const emit = defineEmits<{
     'add-spell': [];
+    'edit-spellcasting': [];
     'remove-spell': [spellUrl: string];
   }>();
+
+  const formattedAttackBonus = computed(() =>
+    getFormattedBonus(props.spellcasting.attackBonus),
+  );
 
   const overlay = useOverlay();
 
@@ -46,7 +53,40 @@
 
 <template>
   <div class="flex flex-col gap-3 pt-2">
-    <div class="flex justify-end">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <button
+        type="button"
+        class="flex h-7 cursor-pointer items-center gap-3 rounded-lg border border-default/50 bg-elevated/20 px-3 transition-colors hover:border-warning/60"
+        aria-label="Настроить заклинательство"
+        @click.left.exact.prevent="emit('edit-spellcasting')"
+      >
+        <span class="flex items-center gap-1.5">
+          <span
+            class="text-[10px] font-bold tracking-wider text-muted uppercase"
+          >
+            Сл. спасброска
+          </span>
+
+          <span class="text-sm font-bold text-highlighted">
+            {{ spellcasting.saveDc }}
+          </span>
+        </span>
+
+        <span class="h-5 w-px bg-default/60" />
+
+        <span class="flex items-center gap-1.5">
+          <span
+            class="text-[10px] font-bold tracking-wider text-muted uppercase"
+          >
+            Атака заклинанием
+          </span>
+
+          <span class="text-sm font-bold text-highlighted">
+            {{ formattedAttackBonus }}
+          </span>
+        </span>
+      </button>
+
       <UButton
         icon="tabler:plus"
         label="Заклинание"

@@ -1,23 +1,36 @@
 <script setup lang="ts">
-  import type { CharacterCurrency, CharacterInventoryItem } from '../../model';
+  import type {
+    CharacterCurrency,
+    CharacterCustomCurrency,
+    CharacterInventoryItem,
+  } from '../../model';
 
   import { ItemDrawer } from '~items/drawer';
   import { MagicItemDrawer } from '~magic-items/drawer';
 
-  import { getInventoryGroups, SHEET_TAB_EMPTY_LABELS } from '../../model';
+  import {
+    getInventoryGroups,
+    SHEET_TAB_EMPTY_LABELS,
+    WEIGHT_UNIT_LABEL,
+  } from '../../model';
   import SheetCurrencyRow from './SheetCurrencyRow.vue';
   import SheetInventoryItemRow from './SheetInventoryItemRow.vue';
 
   const props = defineProps<{
     currency: CharacterCurrency;
+    customCurrencies: CharacterCustomCurrency[];
     inventory: CharacterInventoryItem[];
+    totalWeight: number;
+    carryingCapacity: number;
   }>();
 
   const emit = defineEmits<{
     'add-item': [];
     'add-magic-item': [];
+    'edit-currency': [];
     'remove-item': [inventoryItemId: string];
     'adjust-quantity': [inventoryItemId: string, delta: number];
+    'toggle-equip': [inventoryItemId: string];
   }>();
 
   const overlay = useOverlay();
@@ -54,33 +67,60 @@
   }
 
   const displayGroups = computed(() => getInventoryGroups(props.inventory));
+
+  // Красный при перегрузе (переносимый вес больше грузоподъёмности), иначе
+  // приглушённый — как у прочих статусных подписей листа.
+  const weightColorClass = computed(() =>
+    props.totalWeight > props.carryingCapacity ? 'text-error' : 'text-muted',
+  );
 </script>
 
 <template>
   <div class="flex flex-col gap-4 pt-2">
-    <div class="flex flex-wrap justify-end gap-2">
-      <UButton
-        icon="tabler:sparkles"
-        label="Магический предмет"
-        color="neutral"
-        variant="ghost"
-        size="sm"
-        aria-label="Добавить магический предмет"
-        @click.left.exact.prevent="emit('add-magic-item')"
-      />
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div
+        class="flex items-center gap-1.5 text-sm"
+        :class="weightColorClass"
+      >
+        <UIcon
+          name="tabler:weight"
+          class="size-4 shrink-0"
+        />
 
-      <UButton
-        icon="tabler:plus"
-        label="Предмет"
-        color="neutral"
-        variant="ghost"
-        size="sm"
-        aria-label="Добавить предмет"
-        @click.left.exact.prevent="emit('add-item')"
-      />
+        <span>
+          Переносимый вес: {{ totalWeight }} / {{ carryingCapacity }}
+          {{ WEIGHT_UNIT_LABEL }}
+        </span>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <UButton
+          icon="tabler:sparkles"
+          label="Магический предмет"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          aria-label="Добавить магический предмет"
+          @click.left.exact.prevent="emit('add-magic-item')"
+        />
+
+        <UButton
+          icon="tabler:plus"
+          label="Предмет"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          aria-label="Добавить предмет"
+          @click.left.exact.prevent="emit('add-item')"
+        />
+      </div>
     </div>
 
-    <SheetCurrencyRow :currency="currency" />
+    <SheetCurrencyRow
+      :currency="currency"
+      :custom-currencies="customCurrencies"
+      @edit="emit('edit-currency')"
+    />
 
     <template v-if="displayGroups.length">
       <div
@@ -105,6 +145,7 @@
           @preview="handlePreview(inventoryItem)"
           @remove="emit('remove-item', inventoryItem.id)"
           @adjust="(delta) => handleQuantityAdjust(inventoryItem.id, delta)"
+          @toggle-equip="emit('toggle-equip', inventoryItem.id)"
         />
       </div>
     </template>

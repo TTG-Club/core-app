@@ -1,16 +1,28 @@
 <script setup lang="ts">
   import type { AbilityRow } from '../../model';
 
+  import { ABILITY_SCORE_MAX, ABILITY_SCORE_MIN } from '../../model';
   import SheetPanel from './SheetPanel.vue';
 
-  defineProps<{
+  const props = defineProps<{
     abilityRow: AbilityRow;
   }>();
 
   const emit = defineEmits<{
     roll: [];
     settings: [];
+    adjust: [delta: number];
   }>();
+
+  // Границы диапазона характеристики гасят соответствующую кнопку, чтобы
+  // быстрая правка не «упиралась» в клампинг молча.
+  const isDecreaseDisabled = computed(
+    () => props.abilityRow.score <= ABILITY_SCORE_MIN,
+  );
+
+  const isIncreaseDisabled = computed(
+    () => props.abilityRow.score >= ABILITY_SCORE_MAX,
+  );
 
   const panelRef = useTemplateRef('panel');
 
@@ -58,22 +70,43 @@
         </span>
       </button>
 
-      <UButton
-        icon="tabler:settings"
-        color="neutral"
-        variant="soft"
-        size="xs"
-        square
-        class="absolute -right-2 -bottom-2 z-10 rounded-full opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-        :aria-label="`Настроить характеристику: ${abilityRow.label}`"
-        @click.left.exact.prevent="emit('settings')"
-      />
-
-      <span
-        class="pointer-events-none absolute -bottom-2.5 left-1/2 -translate-x-1/2 rounded-full border border-default/50 bg-default px-2 py-0.5 text-xs leading-none font-medium text-muted"
+      <!-- Быстрая правка значения прямо на плитке: ± по бокам от значения,
+        появляются при наведении. Скрытые кнопки держат место в ряду, поэтому
+        плашка со значением остаётся по центру. Модалка (долгое удержание)
+        остаётся для точного ввода. -->
+      <div
+        class="absolute -bottom-2.5 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1"
       >
-        {{ abilityRow.score }}
-      </span>
+        <UButton
+          icon="tabler:minus"
+          color="neutral"
+          variant="soft"
+          size="xs"
+          square
+          :disabled="isDecreaseDisabled"
+          class="rounded-full opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+          :aria-label="`Уменьшить значение: ${abilityRow.label}`"
+          @click.left.exact.prevent.stop="emit('adjust', -1)"
+        />
+
+        <span
+          class="pointer-events-none rounded-full border border-default/50 bg-default px-2 py-0.5 text-xs leading-none font-medium text-muted"
+        >
+          {{ abilityRow.score }}
+        </span>
+
+        <UButton
+          icon="tabler:plus"
+          color="neutral"
+          variant="soft"
+          size="xs"
+          square
+          :disabled="isIncreaseDisabled"
+          class="rounded-full opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+          :aria-label="`Увеличить значение: ${abilityRow.label}`"
+          @click.left.exact.prevent.stop="emit('adjust', 1)"
+        />
+      </div>
     </SheetPanel>
   </UTooltip>
 </template>

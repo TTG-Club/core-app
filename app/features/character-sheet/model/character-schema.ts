@@ -95,6 +95,22 @@ const spellSchema = z.object({
   ritual: z.boolean().optional(),
 });
 
+// По умолчанию — авто (легаси-листы без поля заклинательства): характеристика
+// определяется по классу.
+const spellcastingSchema = z
+  .object({
+    ability: abilityKeySchema.nullable().catch(null),
+  })
+  .catch(() => ({ ...DEFAULT_CHARACTER.spellcasting }));
+
+// По умолчанию — правила D&D (легаси-листы без блока настроек): базовая
+// характеристика атаки оружием определяется свойствами оружия.
+const settingsSchema = z
+  .object({
+    weaponAttackAbility: abilityKeySchema.nullable().catch(null),
+  })
+  .catch(() => ({ ...DEFAULT_CHARACTER.settings }));
+
 const experienceSchema = z
   .object({
     current: z.coerce.number().catch(0),
@@ -109,6 +125,8 @@ const armorClassSchema = z
       .nullable()
       .catch(DEFAULT_CHARACTER.armorClass.ability),
     natural: z.boolean().catch(false),
+    // По умолчанию — автоподсчёт по надетой броне (легаси-листы без поля).
+    custom: z.boolean().catch(false),
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.armorClass }));
 
@@ -132,6 +150,9 @@ const visionSchema = z
   .object({
     normal: z.coerce.number().catch(0),
     darkvision: z.coerce.number().catch(0),
+    blindsight: z.coerce.number().catch(0),
+    tremorsense: z.coerce.number().catch(0),
+    truesight: z.coerce.number().catch(0),
     unit: speedUnitSchema.catch('feet'),
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.vision }));
@@ -200,6 +221,31 @@ const currencySchema = z
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.currency }));
 
+const customCurrencySchema = z.object({
+  id: z.string(),
+  name: z.string().catch(''),
+  label: z.string().catch(''),
+  amount: z.coerce.number().catch(0),
+});
+
+const inventoryArmorSchema = z
+  .object({
+    baseArmorClass: z.coerce.number().catch(0),
+    dexterityMod: z.enum(['full', 'capped', 'none']).catch('full'),
+    shield: z.boolean().catch(false),
+  })
+  .nullable()
+  .catch(null);
+
+const inventoryWeaponSchema = z
+  .object({
+    category: z.enum(['simple', 'martial']).catch('simple'),
+    ranged: z.boolean().catch(false),
+    finesse: z.boolean().catch(false),
+  })
+  .nullable()
+  .catch(null);
+
 const inventoryItemSchema = z.object({
   id: z.string(),
   url: z.string().catch(''),
@@ -209,6 +255,9 @@ const inventoryItemSchema = z.object({
   cost: z.string().catch(''),
   weight: z.coerce.number().catch(0),
   quantity: z.coerce.number().catch(1),
+  armor: inventoryArmorSchema,
+  weapon: inventoryWeaponSchema,
+  equipped: z.boolean().catch(false),
 });
 
 /** Схема персонажа целиком (jsonb-документ листа). */
@@ -220,6 +269,7 @@ const characterSchema = z.object({
   size: z.string().nullable().catch(null),
   features: z.array(featureSchema).catch([]),
   spells: z.array(spellSchema).catch([]),
+  spellcasting: spellcastingSchema,
   characterClass: characterClassSchema,
   characterBackground: characterBackgroundSchema,
   level: z.coerce.number().catch(DEFAULT_CHARACTER.level),
@@ -239,8 +289,10 @@ const characterSchema = z.object({
   classResources: z.array(classResourceSchema).catch([]),
   proficiencies: proficienciesSchema,
   currency: currencySchema,
+  customCurrencies: z.array(customCurrencySchema).catch([]),
   inventory: z.array(inventoryItemSchema).catch([]),
   notes: z.string().catch(''),
+  settings: settingsSchema,
 });
 
 /**
