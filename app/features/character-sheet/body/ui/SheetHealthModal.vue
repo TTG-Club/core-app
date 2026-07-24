@@ -4,6 +4,7 @@
     HIT_DICE_COUNT_MAX,
     HIT_DICE_COUNT_MIN,
     HIT_DIE_OPTIONS,
+    HIT_POINT_STEP_BUTTONS,
     HIT_POINTS_MAX,
     HIT_POINTS_MIN,
   } from '../../model';
@@ -23,6 +24,19 @@
   const draftExtraHitDice = ref(
     character.value.extraHitDice.map((hitDie) => ({ ...hitDie })),
   );
+
+  /**
+   * Быстрое изменение текущих хитов в редакторе: значение ограничивается
+   * диапазоном [0, макс].
+   *
+   * @param step смещение хитов (отрицательное — урон, положительное — лечение).
+   */
+  function adjustCurrent(step: number): void {
+    draftHealth.value.current = Math.min(
+      draftHealth.value.max,
+      Math.max(HIT_POINTS_MIN, draftHealth.value.current + step),
+    );
+  }
 
   function handleAddClassDie() {
     draftHitDice.value.push({ die: 6, current: 1, max: 1 });
@@ -98,6 +112,27 @@
               v-model="draftHealth.temporary"
               :min="HIT_POINTS_MIN"
               :max="HIT_POINTS_MAX"
+            />
+          </div>
+        </div>
+
+        <!-- Быстрые шаги урона/лечения для текущих хитов. -->
+        <div class="flex items-center gap-2">
+          <span class="shrink-0 text-[10px] font-bold text-muted uppercase">
+            Текущие
+          </span>
+
+          <div class="flex grow gap-1.5">
+            <UButton
+              v-for="button in HIT_POINT_STEP_BUTTONS"
+              :key="button.step"
+              :color="button.color"
+              variant="soft"
+              size="sm"
+              :label="button.label"
+              :aria-label="`Изменить текущие хиты на ${button.label}`"
+              class="flex-1 justify-center"
+              @click.left.exact.prevent="adjustCurrent(button.step)"
             />
           </div>
         </div>

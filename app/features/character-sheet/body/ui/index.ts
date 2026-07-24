@@ -17,6 +17,7 @@ export { default as SheetFeaturesTab } from './SheetFeaturesTab.vue';
 export { default as SheetHeader } from './SheetHeader.vue';
 export { default as SheetHealthModal } from './SheetHealthModal.vue';
 export { default as SheetHealthPanel } from './SheetHealthPanel.vue';
+export { default as SheetHealthQuickModal } from './SheetHealthQuickModal.vue';
 export { default as SheetInventoryItemRow } from './SheetInventoryItemRow.vue';
 export { default as SheetInventoryTabs } from './SheetInventoryTabs.vue';
 export { default as SheetItemAddModal } from './SheetItemAddModal.vue';

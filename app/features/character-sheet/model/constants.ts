@@ -330,6 +330,22 @@ export const HIT_POINTS_MIN = 0;
 /** Максимальное значение хитов. */
 export const HIT_POINTS_MAX = 999;
 
+/**
+ * Кнопки быстрой правки хитов: шаг (урон — отрицательный, лечение —
+ * положительный), подпись со знаком и семантический цвет. Общие для полной и
+ * быстрой модалок хитов.
+ */
+export const HIT_POINT_STEP_BUTTONS: Array<{
+  step: number;
+  label: string;
+  color: 'error' | 'success';
+}> = [
+  { step: -5, label: '-5', color: 'error' },
+  { step: -1, label: '-1', color: 'error' },
+  { step: 1, label: '+1', color: 'success' },
+  { step: 5, label: '+5', color: 'success' },
+];
+
 /** Минимальное количество костей хитов. */
 export const HIT_DICE_COUNT_MIN = 0;
 
@@ -600,23 +616,6 @@ export const TOOL_MATCH_KEYWORDS: Record<
   musical: ['музыкальн'],
   other: [],
 };
-
-/**
- * Стоп-слова названий колонок таблицы прогрессии: такие колонки не считаются
- * ресурсами класса (заклинания, ячейки, бонусы, урон, уровень и т. п.).
- */
-export const CLASS_RESOURCE_DENY_KEYWORDS: string[] = [
-  'заговор',
-  'заклинани',
-  'ячейк',
-  'круг',
-  'мастерств',
-  'известн',
-  'бонус',
-  'урон',
-  'черт',
-  'уровень',
-];
 
 /** Эндпоинт поиска предметов (раздел «Предметы»). */
 export const ITEMS_SEARCH_PATH = '/api/v2/item/search';

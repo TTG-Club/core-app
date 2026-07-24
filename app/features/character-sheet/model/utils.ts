@@ -6,7 +6,6 @@ import type {
   AbilityRow,
   Character,
   CharacterClass,
-  CharacterClassResource,
   CharacterExtraHitDie,
   CharacterFeature,
   CharacterHitDie,
@@ -22,7 +21,6 @@ import type {
   ClassChoice,
   ClassFeatureSummary,
   ClassSummary,
-  ClassTableColumn,
   FeatSummary,
   FeatureDescriptionNode,
   FeatureOrigin,
@@ -58,13 +56,10 @@ import {
   ARMOR_MATCH_KEYWORDS,
   ARMOR_PROFICIENCY_GROUPS,
   CARRYING_CAPACITY_MULTIPLIER,
-  CLASS_RESOURCE_DENY_KEYWORDS,
   DARKVISION_PARSE_FALLBACK,
   INVENTORY_CATEGORY_ORDER,
   INVENTORY_CATEGORY_TITLES,
   LEVEL_XP_THRESHOLDS,
-  RESOURCE_COUNT_MAX,
-  RESOURCE_SHORT_LABEL_MAX_LENGTH,
   ROLL_MODE_DICE_NOTATION,
   SIZE_LABEL_WORDS,
   SKILL_PROFICIENCY_MULTIPLIERS,
@@ -861,83 +856,6 @@ export function matchClassProficiencies(proficiencyText: {
       TOOL_MATCH_KEYWORDS,
     ),
   };
-}
-
-/**
- * Значение колонки таблицы прогрессии на заданном уровне: берётся запись с
- * наибольшим уровнем, не превышающим текущий.
- *
- * @param column колонка таблицы прогрессии.
- * @param level уровень персонажа.
- * @returns значение колонки; null — записи для уровня нет.
- */
-function getColumnValueAtLevel(
-  column: ClassTableColumn,
-  level: number,
-): string | null {
-  let value: string | null = null;
-  let bestLevel = 0;
-
-  for (const entry of column.scaling) {
-    if (entry.level <= level && entry.level >= bestLevel) {
-      bestLevel = entry.level;
-      value = entry.value;
-    }
-  }
-
-  return value;
-}
-
-/**
- * Эвристический вывод ресурсов класса из таблицы прогрессии: колонка становится
- * ресурсом, только если её значение на текущем уровне — целое число в
- * допустимом диапазоне, а название не входит в стоп-слова (заклинания, ячейки,
- * бонусы, урон, уровень). Значения игрок затем правит вручную.
- *
- * @param table таблица прогрессии класса.
- * @param level уровень персонажа.
- * @returns ресурсы класса с устойчивыми идентификаторами.
- */
-export function deriveClassResources(
-  table: ClassTableColumn[],
-  level: number,
-): CharacterClassResource[] {
-  const resources: CharacterClassResource[] = [];
-
-  for (const column of table) {
-    const normalizedName = column.name.toLowerCase().replaceAll('ё', 'е');
-
-    const isDenied = CLASS_RESOURCE_DENY_KEYWORDS.some((keyword) =>
-      normalizedName.includes(keyword.replaceAll('ё', 'е')),
-    );
-
-    if (isDenied) {
-      continue;
-    }
-
-    const value = getColumnValueAtLevel(column, level)?.trim();
-
-    if (!value || !/^\d+$/.test(value)) {
-      continue;
-    }
-
-    const max = Number(value);
-
-    if (max < 1 || max > RESOURCE_COUNT_MAX) {
-      continue;
-    }
-
-    resources.push({
-      id: `class:res:${column.name}`,
-      name: column.name,
-      shortLabel: column.name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
-      recovery: 'long-rest',
-      current: max,
-      max,
-    });
-  }
-
-  return resources;
 }
 
 /**

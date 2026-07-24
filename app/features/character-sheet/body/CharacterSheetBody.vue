@@ -31,6 +31,7 @@
     SheetHeader,
     SheetHealthModal,
     SheetHealthPanel,
+    SheetHealthQuickModal,
     SheetInventoryTabs,
     SheetItemAddModal,
     SheetMagicItemAddModal,
@@ -154,6 +155,8 @@
 
   const healthModal = overlay.create(SheetHealthModal);
 
+  const healthQuickModal = overlay.create(SheetHealthQuickModal);
+
   const nameModal = overlay.create(SheetNameModal);
 
   const visionModal = overlay.create(SheetVisionModal);
@@ -239,7 +242,11 @@
   }
 
   function handleHealthEdit() {
-    if (!ensureEditable()) {
+    // В заблокированном (игровом) режиме клик по хитам открывает быструю
+    // модалку урона/лечения; в режиме редактирования — полную настройку.
+    if (isLocked.value) {
+      healthQuickModal.open();
+
       return;
     }
 

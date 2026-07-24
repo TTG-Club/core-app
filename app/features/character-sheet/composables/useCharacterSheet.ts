@@ -376,6 +376,28 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Быстрое изменение текущих и временных хитов в игровом режиме (модалка
+   * урона/лечения из заблокированного листа). Игровое действие — блокировкой
+   * листа не ограничивается. Максимум хитов не меняется; текущие ограничиваются
+   * диапазоном [0, max], временные — не ниже нуля.
+   *
+   * @param current новые текущие хиты.
+   * @param temporary новые временные хиты.
+   */
+  function setHitPoints(current: number, temporary: number): void {
+    const { max } = character.value.health;
+
+    character.value = {
+      ...character.value,
+      health: {
+        ...character.value.health,
+        current: clamp(Math.trunc(current), 0, max),
+        temporary: Math.max(0, Math.trunc(temporary)),
+      },
+    };
+  }
+
+  /**
    * Установка костей хитов: оставшееся количество не превышает максимум.
    *
    * @param hitDice кости хитов из классов.
@@ -488,7 +510,6 @@ export function useCharacterSheet() {
    * @param payload.skills выбранные навыки (владение и экспертиза).
    * @param payload.skills.proficient навыки для владения.
    * @param payload.skills.expertise навыки для экспертизы.
-   * @param payload.classResources производные ресурсы класса.
    * @param payload.features классовые особенности по уровню.
    */
   function setClass(payload: {
@@ -502,7 +523,6 @@ export function useCharacterSheet() {
       languages: string[];
     };
     skills: { proficient: string[]; expertise: string[] };
-    classResources: CharacterClassResource[];
     features: CharacterFeature[];
   }): void {
     if (!ensureEditable()) {
@@ -517,7 +537,8 @@ export function useCharacterSheet() {
       (feature) => !feature.id.startsWith('class:'),
     );
 
-    // Производные ресурсы (id `class:res:*`) заменяются; ручные — сохраняются.
+    // Устаревшие производные ресурсы (id `class:res:*`) убираются, ресурсы,
+    // добавленные вручную, сохраняются: класс их автоматически не создаёт.
     const preservedResources = character.value.classResources.filter(
       (resource) => !resource.id.startsWith('class:res:'),
     );
@@ -553,7 +574,7 @@ export function useCharacterSheet() {
         payload.skills.proficient,
         payload.skills.expertise,
       ),
-      classResources: [...preservedResources, ...payload.classResources],
+      classResources: preservedResources,
       features: [
         ...payload.features.map((feature) => ({
           ...feature,
@@ -995,6 +1016,7 @@ export function useCharacterSheet() {
     setVision,
     setSpeed,
     setHealth,
+    setHitPoints,
     setHitDice,
     toggleSavingThrowProficiency,
     cycleSkillProficiency,
