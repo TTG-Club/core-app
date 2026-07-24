@@ -319,8 +319,46 @@
     <template #body>
       <!-- Высота ряда фиксирована от вьюпорта, чтобы список тянулся до низа
         модалки независимо от высоты сайдбара фильтров. -->
-      <div class="flex h-[65dvh] min-h-96 gap-4">
-        <aside class="flex w-44 shrink-0 flex-col gap-4 overflow-y-auto">
+      <div class="flex h-[65dvh] min-h-96 flex-col gap-3 sm:flex-row sm:gap-4">
+        <!-- Мобильная панель: поиск над списком + кнопка «Фильтр». -->
+        <div class="flex shrink-0 items-center gap-2 sm:hidden">
+          <UInput
+            v-model="searchTerm"
+            icon="tabler:search"
+            size="sm"
+            placeholder="Поиск…"
+            class="min-w-0 grow"
+          />
+
+          <UButton
+            icon="tabler:filter"
+            label="Фильтр"
+            color="neutral"
+            variant="subtle"
+            size="sm"
+            :disabled="!filterGroups.length"
+            @click.left.exact.prevent="openFilterDrawer"
+          />
+
+          <UTooltip
+            v-if="hasActiveFilters"
+            text="Сбросить фильтры"
+          >
+            <UButton
+              icon="tabler:filter-off"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              square
+              aria-label="Сбросить фильтры"
+              @click.left.exact.prevent="resetFilters"
+            />
+          </UTooltip>
+        </div>
+
+        <aside
+          class="hidden w-44 shrink-0 flex-col gap-4 overflow-y-auto sm:flex"
+        >
           <UInput
             v-model="searchTerm"
             icon="tabler:search"
