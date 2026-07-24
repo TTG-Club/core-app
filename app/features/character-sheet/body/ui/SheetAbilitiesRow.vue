@@ -14,13 +14,19 @@
 </script>
 
 <template>
-  <div class="grid grid-cols-3 gap-3 pb-2 xl:grid-cols-6">
-    <SheetAbilityTile
-      v-for="row in rows"
-      :key="row.key"
-      :ability-row="row"
-      @roll="emit('roll', row.key)"
-      @settings="emit('settings', row.key)"
-    />
+  <!-- Свой @container: колонки считаем по фактической ширине ряда, а не
+    вьюпорта. Так 6 характеристик встают в одну строку, когда места хватает
+    (≥576px) — и в узком drawer, и в правой половине широкого режима, — а на
+    узких ширинах сворачиваются в 3 колонки. -->
+  <div class="@container">
+    <div class="grid grid-cols-3 gap-3 pb-2 @xl:grid-cols-6">
+      <SheetAbilityTile
+        v-for="row in rows"
+        :key="row.key"
+        :ability-row="row"
+        @roll="emit('roll', row.key)"
+        @settings="emit('settings', row.key)"
+      />
+    </div>
   </div>
 </template>

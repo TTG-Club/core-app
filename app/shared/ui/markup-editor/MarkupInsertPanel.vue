@@ -32,6 +32,7 @@
     spell: 'spells',
     creature: 'bestiary',
     class: 'classes',
+    species: 'species',
     feat: 'feats',
     background: 'backgrounds',
     magicItem: 'magic-items',
@@ -62,7 +63,9 @@
       return String(editor.getAttributes('table').caption ?? '');
     }
 
-    if (mode.kind === 'link') {
+    // Ссылка → поле = URL (метку берём из выделения при вставке). Кубик → поле =
+    // ФОРМУЛА (обязательна, пусто и в фокусе); выделение уходит в текст справа.
+    if (mode.kind === 'link' || mode.kind === 'dice') {
       return '';
     }
 
@@ -70,6 +73,12 @@
   }
 
   const query = ref(initialQuery());
+
+  // Показанный текст броска (что видно, напр. «+5»), если отличается от формулы
+  // (query, напр. «1к20+5»). Пусто → показывается сама формула. По умолчанию —
+  // выделение: выделил «+5», нажал кубик — «+5» останется видимым. Пишется в
+  // атрибут `text`: `{@dice <формула> | text:<текст>}`. См. confirmDice.
+  const diceDisplay = ref(mode.kind === 'dice' ? selectedText : '');
 
   const results = ref<SectionSearchResult[]>([]);
   const loading = ref(false);
@@ -82,6 +91,8 @@
 
   /** Иконка поля панели по режиму. */
   const panelIcon = computed(() => {
+    // Кубик: ведущее поле — формула (что катить), иконка кубика; у второго поля
+    // (показанный текст) — иконка «текст».
     if (mode.kind === 'dice') {
       return 'tabler:dice';
     }
@@ -100,7 +111,7 @@
   /** Плейсхолдер поля панели по режиму. */
   const panelPlaceholder = computed(() => {
     if (mode.kind === 'dice') {
-      return 'Нотация броска, напр. 2d6';
+      return 'Формула, напр. 1к20+5';
     }
 
     if (mode.kind === 'caption') {
@@ -121,7 +132,7 @@
   /** aria-label поля панели по режиму. */
   const panelAriaLabel = computed(() => {
     if (mode.kind === 'dice') {
-      return 'Нотация броска';
+      return 'Формула броска';
     }
 
     if (mode.kind === 'caption') {
@@ -186,6 +197,25 @@
     emit('close');
   }
 
+  /**
+   * Вставляет ссылку (раздел или обычную) РЕДАКТИРУЕМЫМ узлом `ttgSectionLink`:
+   * подпись — текстовый контент (правится по буквам), `kind`/`url` — атрибуты.
+   * Так вставленную ссылку можно править сразу, а не только после перезагрузки.
+   */
+  function insertSectionLink(kind: string, label: string, url: string) {
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(range, {
+        type: 'ttgSectionLink',
+        attrs: { kind, url },
+        content: label ? [{ type: 'text', text: label }] : [],
+      })
+      .run();
+
+    emit('close');
+  }
+
   function pickResult(result: SectionSearchResult) {
     // Выбор сущности возможен только в режиме раздела (у него есть tag).
     if (mode.kind !== 'section') {
@@ -199,17 +229,30 @@
 
     const label = sanitizeMarkerText(source);
 
-    insertRaw(`{@${mode.tag.key} ${label} | url:${result.url}}`);
+    insertSectionLink(mode.tag.key, label, result.url);
   }
 
   function confirmDice() {
-    const notation = sanitizeMarkerText(query.value.trim());
+    // Формула (content) — что катится; она же показывается, если не задан
+    // отдельный текст. Обязательна.
+    const formula = sanitizeMarkerText(query.value.trim());
 
-    if (!notation) {
+    if (!formula) {
       return;
     }
 
-    insertRaw(`{@dice ${notation}}`);
+    // Задан отдельный показанный текст, отличный от формулы → катим формулу, а
+    // показываем текст: `{@dice 1к20+5 | text:+5}` (роллер катит контент-формулу,
+    // а `text` рисует подпись). Иначе — обычный `{@dice 2к6}`.
+    const display = sanitizeMarkerText(diceDisplay.value.trim());
+
+    if (display && display !== formula) {
+      insertRaw(`{@dice ${formula} | text:${display}}`);
+
+      return;
+    }
+
+    insertRaw(`{@dice ${formula}}`);
   }
 
   /**
@@ -231,7 +274,7 @@
     const source = selectedText && !selectionHasChip ? selectedText : url;
     const label = sanitizeMarkerText(source) || mode.tag.placeholder;
 
-    insertRaw(`{@link ${label} | url:${url}}`);
+    insertSectionLink('link', label, url);
   }
 
   /**
@@ -310,12 +353,35 @@
         v-model="query"
         :placeholder="panelPlaceholder"
         :aria-label="panelAriaLabel"
-        class="w-full bg-transparent text-sm text-default outline-none"
+        class="min-w-0 flex-1 bg-transparent text-sm text-default outline-none"
         @keydown.enter.prevent="onEnter"
         @keydown.esc.prevent="emit('close')"
         @keydown.down.prevent="moveActive(1)"
         @keydown.up.prevent="moveActive(-1)"
       />
+
+      <!-- Кубик: второе поле в той же строке — показанный текст (что видно),
+           отдельно от формулы слева (что катится). Пусто → показывается формула. -->
+      <template v-if="mode.kind === 'dice'">
+        <div
+          class="h-5 w-px shrink-0 bg-border"
+          aria-hidden="true"
+        />
+
+        <UIcon
+          name="tabler:cursor-text"
+          class="size-4 shrink-0 text-dimmed"
+        />
+
+        <input
+          v-model="diceDisplay"
+          placeholder="Текст (необяз.), напр. +5"
+          aria-label="Показанный текст броска"
+          class="min-w-0 flex-1 bg-transparent text-sm text-default outline-none"
+          @keydown.enter.prevent="onEnter"
+          @keydown.esc.prevent="emit('close')"
+        />
+      </template>
 
       <UButton
         icon="tabler:x"
