@@ -7,6 +7,7 @@ import type {
   PublicComment,
 } from './types';
 
+import { SOURCE_PLATFORMS } from '#shared/consts';
 import { z } from '~/utils/zod';
 
 import {
@@ -70,6 +71,7 @@ const commentSchema = z.object({
   id: z.string().min(1),
   // Принадлежность треду: на экране может жить несколько блоков сразу
   // (страница + дровер), по этим полям отсекаются чужие deep-link'и.
+  sourcePlatform: z.enum(SOURCE_PLATFORMS).nullish().catch(null),
   section: z.string().nullish().catch(null),
   url: z.string().nullish().catch(null),
   parentId: z.string().nullish().catch(null),
@@ -143,6 +145,10 @@ const commentContentSchema = z
 
 /** Схема тела создания комментария с лимитами сервиса на `section` и `url`. */
 const createCommentRequestSchema = z.object({
+  // Перечисление, а не строка: опечатка иначе завела бы обсуждение с ключом,
+  // к которому больше никто не обратится, и заметить это можно было бы только
+  // по опустевшей ленте.
+  sourcePlatform: z.enum(SOURCE_PLATFORMS),
   section: z.string().trim().min(1).max(COMMENT_SECTION_MAX_LENGTH),
   url: z.string().trim().min(1).max(COMMENT_URL_MAX_LENGTH),
   content: commentContentSchema,
@@ -152,6 +158,7 @@ const createCommentRequestSchema = z.object({
 function toCommentBase(parsed: z.infer<typeof commentSchema>): CommentBase {
   return {
     id: parsed.id,
+    sourcePlatform: parsed.sourcePlatform ?? null,
     section: parsed.section ?? null,
     url: parsed.url ?? null,
     parentId: parsed.parentId ?? null,

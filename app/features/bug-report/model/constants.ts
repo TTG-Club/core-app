@@ -1,4 +1,6 @@
-import type { BrushColor, BugReportStatus, SourcePlatform } from './types';
+import type { BrushColor, BugReportStatus } from './types';
+
+import { SOURCE_PLATFORM_LABELS } from '#shared/consts';
 
 /** Предустановленные цвета кисти для рисования на скриншоте */
 export const BRUSH_COLORS: ReadonlyArray<BrushColor> = [
@@ -40,8 +42,11 @@ export const BUG_REPORT_STATS_API_URL = `${BUG_REPORT_API_URL}/stats`;
 /** URL API получения списка баг-репортов (админка) */
 export const ADMIN_BUGS_API_URL = '/api/admin/bugs';
 
-/** Платформа-источник бага для сайта TTG */
-export const SOURCE_PLATFORM: SourcePlatform = 'SITE_5E24';
+/**
+ * Платформа-источник бага. Реэкспорт из `#shared/consts`: идентичность сайта —
+ * общее знание, её нельзя разнести по константам двух фич.
+ */
+export { SOURCE_PLATFORM } from '#shared/consts';
 
 /**
  * Возвращает URL для обновления статуса баг-репорта.
@@ -102,12 +107,11 @@ export const BUG_REPORT_STATUS_ORDER: ReadonlyArray<BugReportStatus> = [
   'REJECTED',
 ];
 
-/** Мапа русских названий для платформ */
-export const BUG_REPORT_PLATFORM_LABELS: Record<SourcePlatform, string> = {
-  SITE_5E24: 'Сайт 2024',
-  SITE_5E14: 'Сайт 2014',
-  VTTG: 'VTTG',
-};
+/**
+ * Мапа русских названий для платформ. Сам набор живёт в `#shared/consts`: теми же
+ * подписями пользуется лента модерации комментариев.
+ */
+export const BUG_REPORT_PLATFORM_LABELS = SOURCE_PLATFORM_LABELS;
 
 /** Маппинг статусов баг-репорта на цвета компонента UBadge */
 const BUG_REPORT_STATUS_COLOR_MAP: Record<
