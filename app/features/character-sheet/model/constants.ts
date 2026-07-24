@@ -42,6 +42,15 @@ export const DRAFT_CHARACTER_ID = 'new-character';
 /** Дебаунс автосохранения листа персонажа. */
 export const SHEET_SAVE_DEBOUNCE_MS = 1500;
 
+/** Суффикс имени копии листа персонажа. */
+export const SHEET_COPY_NAME_SUFFIX = ' (копия)';
+
+/** Причина недоступности копии: свободных мест в лимите не осталось. */
+export const SHEET_COPY_LIMIT_HINT = 'Достигнут лимит листов';
+
+/** Подпись пунктов меню листа, которые ещё не реализованы. */
+export const SHEET_ACTION_SOON_HINT = 'В разработке';
+
 /** Общее сообщение об ошибке, когда бэк не вернул текст. */
 export const SHEET_UNKNOWN_ERROR_MESSAGE = 'Неизвестная ошибка';
 

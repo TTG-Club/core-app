@@ -7,6 +7,8 @@
     getClassDisplayName,
     getSpeciesDisplayName,
     getVisionRows,
+    SHEET_ACTION_SOON_HINT,
+    SHEET_COPY_LIMIT_HINT,
     SHEET_EMPTY_LABELS,
     SHEET_SAVE_STATUS_META,
     VISION_LABELS,
@@ -21,12 +23,16 @@
     canClose?: boolean;
     /** Статус автосохранения листа; null — индикатор скрыт. */
     saveStatus?: SheetSaveStatus | null;
+    /** В лимите активных листов есть свободное место — копия разрешена. */
+    canDuplicate?: boolean;
   }>();
 
   const emit = defineEmits<{
     'close': [];
     'download': [];
+    'duplicate': [];
     'expand': [];
+    'remove': [];
     'edit-background': [];
     'edit-class': [];
     'edit-name': [];
@@ -38,14 +44,39 @@
     'toggle-lock': [];
   }>();
 
-  // Меню действий листа (кнопка-троеточие в шапке). Пока один пункт — экспорт в
-  // JSON; сюда же добавляются будущие действия над листом.
-  const menuItems = computed<Array<DropdownMenuItem>>(() => [
-    {
-      label: 'Скачать JSON',
-      icon: 'tabler:download',
-      onSelect: () => emit('download'),
-    },
+  // Меню действий листа (кнопка-троеточие в шапке): экспорт и копия, настройки
+  // (ещё не реализованы) и удаление отдельной группой — оно необратимее прочих.
+  const menuItems = computed<Array<Array<DropdownMenuItem>>>(() => [
+    [
+      {
+        label: 'Скачать JSON',
+        icon: 'tabler:download',
+        onSelect: () => emit('download'),
+      },
+      {
+        label: 'Создать копию',
+        icon: 'tabler:copy',
+        // Причина недоступности прямо в пункте: без неё серый пункт выглядит
+        // поломкой, а тултипа у пунктов меню нет.
+        description: props.canDuplicate ? undefined : SHEET_COPY_LIMIT_HINT,
+        disabled: !props.canDuplicate,
+        onSelect: () => emit('duplicate'),
+      },
+      {
+        label: 'Настройки',
+        icon: 'tabler:settings',
+        description: SHEET_ACTION_SOON_HINT,
+        disabled: true,
+      },
+    ],
+    [
+      {
+        label: 'Удалить лист',
+        icon: 'tabler:trash',
+        color: 'error',
+        onSelect: () => emit('remove'),
+      },
+    ],
   ]);
 
   const saveStatusMeta = computed(() =>

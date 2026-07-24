@@ -5,7 +5,7 @@
   import { UiResult } from '~ui/result';
 
   import { useCharacterSheetList } from '../composables';
-  import { CHARACTER_SHEET_ROUTE, getSheetErrorMessage } from '../model';
+  import { CHARACTER_SHEET_ROUTE } from '../model';
   import { CharacterSheetCard, CharacterSheetCreateCard } from './ui';
 
   const {
@@ -15,7 +15,7 @@
     canCreate,
     isLoading,
     isMutating,
-    loadError,
+    loadErrorMessage,
     load,
     create,
     remove,
@@ -32,10 +32,6 @@
       (sheet): Array<{ id: string; character: Character }> =>
         sheet.data ? [{ id: sheet.id, character: sheet.data }] : [],
     ),
-  );
-
-  const listErrorSubTitle = computed(() =>
-    getSheetErrorMessage(loadError.value),
   );
 
   // Счётчик листов краснеет на достигнутом лимите. Логика вынесена из шаблона.
@@ -97,10 +93,10 @@
     </div>
 
     <UiResult
-      v-else-if="loadError"
+      v-else-if="loadErrorMessage"
       status="error"
       title="Не удалось загрузить листы персонажей"
-      :sub-title="listErrorSubTitle"
+      :sub-title="loadErrorMessage"
     >
       <template #extra>
         <UButton @click.left.exact.prevent="load"> Обновить </UButton>

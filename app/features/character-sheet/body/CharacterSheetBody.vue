@@ -6,13 +6,17 @@
     SkillRow,
   } from '../model';
 
+  import { ConfirmDialog } from '~initiative/ui-kit';
+
   import {
     useCharacterSheet,
+    useCharacterSheetList,
     useCharacterSheetSaveStatus,
   } from '../composables';
   import {
     ABILITY_LABELS,
     ARMOR_PROFICIENCY_GROUPS,
+    CHARACTER_SHEET_ROUTE,
     LANGUAGE_PROFICIENCY_GROUPS,
     TOOL_PROFICIENCY_GROUPS,
   } from '../model';
@@ -94,11 +98,37 @@
     downloadCharacter,
   } = useCharacterSheet();
 
+  // Действия над листом целиком (копия и удаление) живут в общем состоянии
+  // списка: оттуда же берётся остаток лимита активных листов, а список за
+  // мутацией обновляется сам.
+  const {
+    canCreate,
+    isMutating,
+    ensureLoaded,
+    duplicate,
+    remove: removeSheet,
+  } = useCharacterSheetList();
+
   const overlay = useOverlay();
+
+  const toast = useToast();
 
   // Статус автосохранения пишет автосейв контейнера (страница/панель/drawer),
   // тело листа лишь показывает его в шапке.
   const saveStatus = useCharacterSheetSaveStatus();
+
+  const isRemoveOpen = ref(false);
+
+  const removeDescription = computed(
+    () =>
+      `Лист «${character.value.name}» переедет в историю — его можно будет восстановить, пока в лимите есть свободное место.`,
+  );
+
+  // Лимит нужен пункту «Создать копию»: на отдельной странице листа список ещё
+  // не загружался, в панели и дровере — уже загружен списком.
+  onMounted(() => {
+    void ensureLoaded();
+  });
 
   // Блок из двух колонок нужен в двух местах: в широком контейнере — как левая
   // часть сетки, в узком (<1024px) — внутри первой вкладки «Основное». Единое
@@ -455,6 +485,57 @@
     magicItemAddModal.open();
   }
 
+  /**
+   * Копия открытого листа. Копируется текущее состояние вместе с правками,
+   * которые ещё не успел отправить автосейв. Открывать копию сразу не станем —
+   * контейнеры листа разные, поэтому переход отдаётся кнопкой в тосте.
+   */
+  async function handleDuplicate() {
+    const created = await duplicate(character.value);
+
+    if (!created) {
+      return;
+    }
+
+    toast.add({
+      title: 'Копия листа создана',
+      description: `«${created.name}» появился в списке ваших персонажей.`,
+      color: 'success',
+      icon: 'tabler:copy-check',
+      actions: [
+        {
+          label: 'Открыть',
+          icon: 'tabler:arrow-up-right',
+          variant: 'ghost',
+          to: `${CHARACTER_SHEET_ROUTE}/${created.id}`,
+        },
+      ],
+    });
+  }
+
+  /** Запрос на удаление листа — подтверждение показывает диалог. */
+  function handleRemove() {
+    isRemoveOpen.value = true;
+  }
+
+  /** Подтверждённое удаление: лист уходит в историю, затем закрывается. */
+  async function handleRemoveConfirm() {
+    if (!(await removeSheet(character.value.id))) {
+      return;
+    }
+
+    isRemoveOpen.value = false;
+
+    toast.add({
+      title: 'Лист персонажа удалён',
+      description: 'Его можно восстановить из истории листов.',
+      color: 'success',
+      icon: 'tabler:trash',
+    });
+
+    emit('close');
+  }
+
   /** Закрытие листа — конкретное действие определяет контейнер. */
   function handleClose() {
     emit('close');
@@ -476,9 +557,12 @@
       :locked="isLocked"
       :can-expand="canExpand"
       :can-close="canClose"
+      :can-duplicate="canCreate"
       :save-status="saveStatus"
       @close="handleClose"
       @download="downloadCharacter"
+      @duplicate="handleDuplicate"
+      @remove="handleRemove"
       @expand="handleExpand"
       @edit-background="handleBackgroundEdit"
       @edit-class="handleClassEdit"
@@ -621,5 +705,16 @@
         </template>
       </SheetInventoryTabs>
     </div>
+
+    <ConfirmDialog
+      v-model:open="isRemoveOpen"
+      title="Удалить лист персонажа?"
+      :description="removeDescription"
+      confirm-label="Удалить"
+      confirm-color="error"
+      confirm-icon="tabler:trash"
+      :loading="isMutating"
+      @confirm="handleRemoveConfirm"
+    />
   </div>
 </template>
