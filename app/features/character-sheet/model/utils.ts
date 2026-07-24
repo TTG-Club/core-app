@@ -652,6 +652,27 @@ export function getCharacterFeatureId(
 }
 
 /**
+ * Извлекает url черты из идентификатора особенности. Обычная черта — `feat:url`,
+ * повторяемая — `feat:url:uuid` (у каждой копии свой суффикс). Url черты не
+ * содержит двоеточий, поэтому берём сегмент между первым и вторым `:`.
+ *
+ * @param featureId идентификатор особенности.
+ * @returns url черты или null, если особенность — не черта.
+ */
+export function getFeatUrlFromFeatureId(featureId: string): string | null {
+  if (!featureId.startsWith('feat:')) {
+    return null;
+  }
+
+  const afterPrefix = featureId.slice('feat:'.length);
+  const separatorIndex = afterPrefix.indexOf(':');
+
+  return separatorIndex === -1
+    ? afterPrefix
+    : afterPrefix.slice(0, separatorIndex);
+}
+
+/**
  * Сборка особенностей персонажа из деталей вида и подвида. Выбор игрока
  * подставляется по идентификатору особенности (`origin:url`).
  *
@@ -693,13 +714,21 @@ export function buildCharacterFeatures(
 /**
  * Сборка особенности персонажа из детали черты раздела «Черты». Категория
  * черты сохраняется как источник особенности (для подсказки на бейдже).
+ * Повторяемая черта получает уникальный суффикс в идентификаторе — так копии
+ * одной черты не схлопываются дедупом и удаляются/правятся независимо.
  *
  * @param summary деталь черты.
+ * @param repeatable черту можно брать несколько раз (уникальный id для копии).
  * @returns особенность персонажа с происхождением «Черта».
  */
-export function buildFeatFeature(summary: FeatSummary): CharacterFeature {
+export function buildFeatFeature(
+  summary: FeatSummary,
+  repeatable = false,
+): CharacterFeature {
+  const baseId = getCharacterFeatureId('feat', summary.url);
+
   return {
-    id: getCharacterFeatureId('feat', summary.url),
+    id: repeatable ? `${baseId}:${crypto.randomUUID()}` : baseId,
     name: summary.name,
     description: [...summary.description],
     origin: 'feat',

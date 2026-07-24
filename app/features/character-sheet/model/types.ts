@@ -297,6 +297,9 @@ export interface FeatCatalogItem {
 
   /** Подпись источника черты; '' — не задан. */
   sourceLabel: string;
+
+  /** Черту можно брать несколько раз (флаг `repeatability` с бэка). */
+  repeatability: boolean;
 }
 
 /** Деталь черты из ответа API (нужные листу поля). */

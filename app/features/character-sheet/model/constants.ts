@@ -507,6 +507,12 @@ export const TOOL_PROFICIENCY_GROUPS: ToolProficiencyGroup[] = [
 /** Эндпоинт поиска черт (раздел «Черты»). */
 export const FEATS_SEARCH_PATH = '/api/v2/feats/search';
 
+/**
+ * Эндпоинт списка черт для выбора. В отличие от `/search`, отдаёт флаг
+ * `repeatability` (можно ли взять черту несколько раз), но категорией-энумом.
+ */
+export const FEATS_SELECT_PATH = '/api/v2/feats/select';
+
 /** Базовый путь деталей черты (`/{url}`). */
 export const FEATS_DETAIL_BASE_PATH = '/api/v2/feats';
 

@@ -36,7 +36,7 @@
     'add-magic-item': [];
     'add-spell': [];
     'adjust-item-quantity': [inventoryItemId: string, delta: number];
-    'edit-choice': [featureId: string, choice: string];
+    'edit-feature': [featureId: string];
     'remove-feature': [featureId: string];
     'remove-item': [inventoryItemId: string];
     'remove-spell': [spellUrl: string];
@@ -74,8 +74,8 @@
     emit('add-feat');
   }
 
-  function handleChoiceEdit(featureId: string, choice: string) {
-    emit('edit-choice', featureId, choice);
+  function handleFeatureEdit(featureId: string) {
+    emit('edit-feature', featureId);
   }
 
   function handleFeatureRemove(featureId: string) {
@@ -191,7 +191,7 @@
           :features="features"
           @add-feature="handleFeatureAdd"
           @add-feat="handleFeatAdd"
-          @edit-choice="handleChoiceEdit"
+          @edit-feature="handleFeatureEdit"
           @remove-feature="handleFeatureRemove"
         />
       </template>

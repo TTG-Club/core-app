@@ -645,23 +645,42 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Установка выбора игрока в особенности (например, цвет драконорождённого).
+   * Полное редактирование особенности: название, описание, происхождение и
+   * выбор игрока. Идентификатор особенности не меняется. Пустое название
+   * игнорируется (особенность без названия не сохраняем).
    *
-   * @param featureId идентификатор особенности.
-   * @param choice текст выбора; пустая строка снимает выбор.
+   * @param featureId идентификатор редактируемой особенности.
+   * @param patch новые значения полей особенности.
    */
-  function setFeatureChoice(featureId: string, choice: string): void {
+  function updateFeature(
+    featureId: string,
+    patch: Pick<
+      CharacterFeature,
+      'name' | 'description' | 'origin' | 'originName' | 'choice'
+    >,
+  ): void {
     if (!ensureEditable()) {
       return;
     }
 
-    const trimmedChoice = choice.trim();
+    const name = patch.name.trim();
+
+    if (!name) {
+      return;
+    }
 
     character.value = {
       ...character.value,
       features: character.value.features.map((feature) =>
         feature.id === featureId
-          ? { ...feature, choice: trimmedChoice || null }
+          ? {
+              ...feature,
+              name,
+              description: [...patch.description],
+              origin: patch.origin,
+              originName: patch.originName,
+              choice: patch.choice?.trim() || null,
+            }
           : feature,
       ),
     };
@@ -963,7 +982,7 @@ export function useCharacterSheet() {
     removeFeature,
     removeInventoryItem,
     removeSpell,
-    setFeatureChoice,
+    updateFeature,
     setBackground,
     setClass,
     setName,

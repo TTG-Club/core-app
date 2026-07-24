@@ -27,6 +27,7 @@
     SheetExperienceModal,
     SheetFeatAddModal,
     SheetFeatureAddModal,
+    SheetFeatureEditModal,
     SheetHeader,
     SheetHealthModal,
     SheetHealthPanel,
@@ -83,7 +84,6 @@
     removeFeature,
     removeInventoryItem,
     removeSpell,
-    setFeatureChoice,
     toggleInspiration,
   } = useCharacterSheet();
 
@@ -191,6 +191,12 @@
   const sizeModal = overlay.create(SheetSizeModal);
 
   const featureAddModal = overlay.create(SheetFeatureAddModal);
+
+  const featureEditModal = overlay.create(SheetFeatureEditModal, {
+    props: {
+      featureId: '',
+    },
+  });
 
   const featAddModal = overlay.create(SheetFeatAddModal);
 
@@ -376,6 +382,14 @@
     featAddModal.open();
   }
 
+  function handleFeatureEdit(featureId: string) {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    featureEditModal.open({ featureId });
+  }
+
   function handleSpellAdd() {
     if (!ensureEditable()) {
       return;
@@ -549,7 +563,7 @@
         @add-magic-item="handleMagicItemAdd"
         @add-spell="handleSpellAdd"
         @adjust-item-quantity="adjustInventoryItemQuantity"
-        @edit-choice="setFeatureChoice"
+        @edit-feature="handleFeatureEdit"
         @remove-feature="removeFeature"
         @remove-item="removeInventoryItem"
         @remove-spell="removeSpell"

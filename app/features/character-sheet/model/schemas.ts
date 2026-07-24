@@ -171,12 +171,17 @@ const featSearchResponseSchema = z
 
 /**
  * Валидация ответа `GET /api/v2/feats/search` и приведение к списку каталога.
- * Битый ответ даёт пустой список, а не исключение.
+ * Битый ответ даёт пустой список, а не исключение. Повторяемость (`repeatability`)
+ * приходит из отдельного эндпоинта `/select` и передаётся набором url.
  *
  * @param input сырой ответ поиска черт.
+ * @param repeatableUrls url черт, которые можно брать несколько раз.
  * @returns черты каталога для модалки добавления.
  */
-export function parseFeatCatalog(input: unknown): FeatCatalogItem[] {
+export function parseFeatCatalog(
+  input: unknown,
+  repeatableUrls: Set<string> = new Set(),
+): FeatCatalogItem[] {
   const parsed = featSearchResponseSchema.parse(input);
   const list = Array.isArray(parsed) ? parsed : parsed.value;
 
@@ -186,7 +191,38 @@ export function parseFeatCatalog(input: unknown): FeatCatalogItem[] {
     nameEng: feat.name.eng,
     category: feat.category,
     sourceLabel: feat.source.name.label,
+    repeatability: repeatableUrls.has(feat.url),
   }));
+}
+
+/** Схема пункта `GET /api/v2/feats/select` (нужен только флаг повторяемости). */
+const featSelectItemSchema = z.object({
+  url: z.string(),
+  repeatability: z.boolean().catch(false),
+});
+
+/** Ответ `/select`: плоский массив или конверт `{ value }`. */
+const featSelectResponseSchema = z
+  .union([
+    z.array(featSelectItemSchema),
+    z.object({ value: z.array(featSelectItemSchema) }),
+  ])
+  .catch([]);
+
+/**
+ * Валидация ответа `GET /api/v2/feats/select` и выборка url повторяемых черт.
+ * Битый ответ даёт пустой набор — тогда повторяемых черт просто нет.
+ *
+ * @param input сырой ответ `/select`.
+ * @returns набор url черт, которые можно брать несколько раз.
+ */
+export function parseRepeatableFeatUrls(input: unknown): Set<string> {
+  const parsed = featSelectResponseSchema.parse(input);
+  const list = Array.isArray(parsed) ? parsed : parsed.value;
+
+  return new Set(
+    list.filter((feat) => feat.repeatability).map((feat) => feat.url),
+  );
 }
 
 /** Схема детального ответа черты (нужные листу поля). */
