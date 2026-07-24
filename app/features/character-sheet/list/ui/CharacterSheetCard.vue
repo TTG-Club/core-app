@@ -47,7 +47,6 @@
     isDeleteOpen.value = false;
   }
 
-  const { isDesktop } = useDevice();
   const overlay = useOverlay();
 
   const to = computed(() => `${CHARACTER_SHEET_ROUTE}/${character.id}`);
@@ -80,20 +79,6 @@
       ? 'border-primary bg-primary/10 ring-1 ring-primary/50'
       : 'border-default bg-elevated hover:border-accented hover:bg-accented',
   );
-
-  /**
-   * На десктопе клик открывает drawer (стандартный режим) или правую панель
-   * (широкий режим); на мобильных — переходит на отдельную страницу листа.
-   */
-  function handleClick(): void {
-    if (!isDesktop) {
-      navigateTo(to.value);
-
-      return;
-    }
-
-    handleOpen();
-  }
 
   /** Открывает лист на отдельной странице (в обход drawer). */
   function openOnPage(): void {
@@ -149,10 +134,13 @@
       custom
       :to
     >
+      <!-- Клик открывает лист рядом: drawer в стандартном режиме, правая панель
+        в широком — как во всех остальных разделах. Отдельная страница остаётся
+        за кнопкой «↗» и за обычным переходом по ссылке (новая вкладка). -->
       <a
         :href="href ?? undefined"
         class="flex min-w-0 flex-auto items-center gap-4"
-        @click.left.exact.prevent="handleClick"
+        @click.left.exact.prevent="handleOpen"
       >
         <div
           class="grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-primary/5 ring-1 ring-primary/15"

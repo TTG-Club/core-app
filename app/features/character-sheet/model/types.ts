@@ -897,13 +897,18 @@ export interface CharacterSheetDetail {
   data: Character;
 }
 
+/** Раздел листа персонажа — значение вкладки и ключ её содержимого. */
+export type SheetTabSlot =
+  | 'main'
+  | 'equipment'
+  | 'spells'
+  | 'features'
+  | 'notes';
+
 /** Вкладка правой панели листа персонажа. */
 export interface SheetTab {
-  slot: string;
+  slot: SheetTabSlot;
   label: string;
-
-  /** Короткая подпись — подставляется, когда вкладки не помещаются. */
-  shortLabel: string;
 }
 
 /** Строка блока характеристик. */

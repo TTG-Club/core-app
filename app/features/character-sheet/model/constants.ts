@@ -895,20 +895,28 @@ export const SHEET_EMPTY_LABELS: Record<
   customCurrencies: 'Своих валют пока нет',
 };
 
+/**
+ * Раздел, открытый по умолчанию, когда вкладки «Основное» нет. Подписи разделов
+ * всегда полные — узкий ряд вкладок прокручивается свайпом, а не сокращается.
+ */
+export const SHEET_DEFAULT_TAB: SheetTab = {
+  slot: 'equipment',
+  label: 'Снаряжение',
+};
+
 /** Вкладки правой панели листа персонажа. */
 export const SHEET_TABS: SheetTab[] = [
-  { slot: 'equipment', label: 'Снаряжение', shortLabel: 'Снаряж.' },
-  { slot: 'spells', label: 'Заклинания', shortLabel: 'Закл.' },
-  { slot: 'features', label: 'Особенности', shortLabel: 'Особ.' },
-  { slot: 'notes', label: 'Заметки', shortLabel: 'Замет.' },
+  SHEET_DEFAULT_TAB,
+  { slot: 'spells', label: 'Заклинания' },
+  { slot: 'features', label: 'Особенности' },
+  { slot: 'notes', label: 'Заметки' },
 ];
 
 /** Вкладка «Основное» — добавляется первой при ≤1023 (см. `hasMainTab`). */
-export const SHEET_MAIN_TAB: SheetTab = {
-  slot: 'main',
-  label: 'Основное',
-  shortLabel: 'Осн.',
-};
+export const SHEET_MAIN_TAB: SheetTab = { slot: 'main', label: 'Основное' };
+
+/** Шаг прокрутки ленты вкладок стрелками — доля её видимой ширины. */
+export const SHEET_TABS_SCROLL_STEP_RATIO = 0.6;
 
 /** Подписи пустых вкладок листа персонажа. */
 export const SHEET_TAB_EMPTY_LABELS: Record<
