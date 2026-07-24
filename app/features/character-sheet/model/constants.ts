@@ -190,7 +190,7 @@ export const SKILL_PROFICIENCY_LABELS: Record<SkillProficiencyLevel, string> = {
   none: 'Нет владения',
   half: 'Половина владения',
   proficient: 'Владение',
-  expertise: 'Экспертиза',
+  expertise: 'Компетенция',
 };
 
 /** Следующий уровень владения навыком при переключении по кругу. */

@@ -34,19 +34,23 @@
         :key="row.name"
         class="relative flex items-center gap-3 rounded px-2 py-1.5 transition-colors hover:bg-accented/40"
       >
-        <button
-          type="button"
-          class="z-10 flex cursor-pointer items-center"
-          :title="row.proficiencyLabel"
-          :aria-label="`Владение навыком: ${row.name}`"
-          @click.left.exact.prevent="emit('cycle', row.name)"
+        <UTooltip
+          :text="row.proficiencyLabel"
+          :content="{ side: 'top' }"
         >
-          <UIcon
-            :name="row.icon"
-            class="size-3.5 shrink-0 transition-colors hover:text-warning"
-            :class="row.iconClass"
-          />
-        </button>
+          <button
+            type="button"
+            class="z-10 flex cursor-pointer items-center"
+            :aria-label="`Владение навыком: ${row.name}`"
+            @click.left.exact.prevent="emit('cycle', row.name)"
+          >
+            <UIcon
+              :name="row.icon"
+              class="size-3.5 shrink-0 transition-colors hover:text-warning"
+              :class="row.iconClass"
+            />
+          </button>
+        </UTooltip>
 
         <button
           type="button"
