@@ -2,14 +2,16 @@
   import { Role } from '~/shared/types';
   import { CharacterSheetBody } from '~character-sheet/body';
   import {
-    useCharacterSheet,
+    useCharacterSheetAutosave,
     useCharacterSheetDetail,
+    useCharacterSheetLoader,
   } from '~character-sheet/composables';
   import { CharacterSheetList } from '~character-sheet/list';
   import {
     CHARACTER_SHEET_LIST_TITLE,
     CHARACTER_SHEET_ROUTE,
   } from '~character-sheet/model';
+  import { UiResult } from '~ui/result';
 
   definePageMeta({
     auth: { roles: [Role.ADMIN] },
@@ -19,11 +21,12 @@
     title: CHARACTER_SHEET_LIST_TITLE,
   });
 
-  const { character } = useCharacterSheet();
-  const characterId = computed(() => character.value.id);
+  const { detailId, isDetailOpen, closeDetail } = useCharacterSheetDetail();
 
-  const { detailId, isDetailOpen, isDetailDismissed, closeDetail } =
-    useCharacterSheetDetail(characterId);
+  const { status: detailStatus, load: reloadDetail } =
+    useCharacterSheetLoader(detailId);
+
+  useCharacterSheetAutosave();
 
   /** Открывает выбранный лист на отдельной странице. */
   function handleExpand() {
@@ -36,12 +39,6 @@
     name="section"
     :title="CHARACTER_SHEET_LIST_TITLE"
   >
-    <template #controls>
-      <p class="text-sm text-muted">
-        Черновой лист. Сохранение появится позже.
-      </p>
-    </template>
-
     <template #default>
       <ClientOnly>
         <CharacterSheetList />
@@ -63,7 +60,43 @@
           v-if="isDetailOpen"
           class="flex h-full flex-col overflow-y-auto p-4"
         >
+          <div
+            v-if="detailStatus === 'pending'"
+            class="flex justify-center py-16"
+          >
+            <UIcon
+              name="tabler:loader-2"
+              class="size-8 animate-spin text-muted"
+            />
+          </div>
+
+          <UiResult
+            v-else-if="detailStatus === 'notFound'"
+            status="404"
+            title="Лист не найден"
+            sub-title="Возможно, он был удалён или принадлежит другому пользователю"
+          >
+            <template #extra>
+              <UButton @click.left.exact.prevent="closeDetail">
+                К списку листов
+              </UButton>
+            </template>
+          </UiResult>
+
+          <UiResult
+            v-else-if="detailStatus === 'error'"
+            status="error"
+            title="Не удалось загрузить лист"
+          >
+            <template #extra>
+              <UButton @click.left.exact.prevent="reloadDetail">
+                Повторить
+              </UButton>
+            </template>
+          </UiResult>
+
           <CharacterSheetBody
+            v-else-if="detailStatus === 'ready'"
             can-expand
             @close="closeDetail"
             @expand="handleExpand"
@@ -71,7 +104,7 @@
         </div>
 
         <div
-          v-else-if="isDetailDismissed"
+          v-else
           class="flex h-full w-full flex-col items-center justify-center p-6 text-center select-none"
         >
           <div class="flex max-w-xs flex-col items-center gap-3">
@@ -88,16 +121,6 @@
               Выберите лист персонажа из списка слева, чтобы открыть его здесь
             </p>
           </div>
-        </div>
-
-        <div
-          v-else
-          class="flex justify-center py-16"
-        >
-          <UIcon
-            name="tabler:loader-2"
-            class="size-8 animate-spin text-muted"
-          />
         </div>
       </ClientOnly>
     </template>

@@ -9,6 +9,7 @@ import type {
   LanguageProficiencyGroup,
   ResourceRecovery,
   RollMode,
+  SheetSaveStatus,
   SheetTab,
   SkillProficiencyLevel,
   SpeedTypeKey,
@@ -26,6 +27,31 @@ export const CHARACTER_SHEET_LIST_TITLE = 'Листы персонажей';
 
 /** Базовый путь раздела листов персонажей. */
 export const CHARACTER_SHEET_ROUTE = '/tools/character-sheet';
+
+/** Эндпоинт листов персонажей (проксируется на core-api). */
+export const CHARACTER_SHEET_API_PATH = '/api/v2/tools/character-sheet';
+
+/**
+ * Идентификатор несохранённого черновика (`DEFAULT_CHARACTER`). У загруженного
+ * листа id — серверный UUID; черновик с этим id автосохранению не подлежит.
+ */
+export const DRAFT_CHARACTER_ID = 'new-character';
+
+/** Дебаунс автосохранения листа персонажа. */
+export const SHEET_SAVE_DEBOUNCE_MS = 1500;
+
+/** Общее сообщение об ошибке, когда бэк не вернул текст. */
+export const SHEET_UNKNOWN_ERROR_MESSAGE = 'Неизвестная ошибка';
+
+/** Подписи и иконки статусов автосохранения листа. */
+export const SHEET_SAVE_STATUS_META: Record<
+  SheetSaveStatus,
+  { label: string; icon: string }
+> = {
+  saved: { label: 'Сохранено', icon: 'tabler:cloud-check' },
+  saving: { label: 'Сохранение…', icon: 'tabler:loader-2' },
+  error: { label: 'Не удалось сохранить', icon: 'tabler:cloud-x' },
+};
 
 /** Сообщение при попытке редактирования заблокированного листа. */
 export const SHEET_LOCKED_MESSAGE = 'Лист заблокирован от редактирования';

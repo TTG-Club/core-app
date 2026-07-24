@@ -1,11 +1,13 @@
 import type { Character } from './types';
 
+import { DRAFT_CHARACTER_ID } from './constants';
+
 /**
  * Пустой персонаж по умолчанию: характеристики 10, без владений, навыков и
  * прогресса.
  */
 export const DEFAULT_CHARACTER: Character = {
-  id: 'new-character',
+  id: DRAFT_CHARACTER_ID,
   name: 'Персонаж',
   avatarUrl: null,
   species: null,

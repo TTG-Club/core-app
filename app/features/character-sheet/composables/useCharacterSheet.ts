@@ -89,6 +89,24 @@ export function useCharacterSheet() {
     return false;
   }
 
+  /**
+   * Загрузка сохранённого листа в общее состояние (открытие страницы листа,
+   * панели или дровера).
+   *
+   * @param loaded персонаж из ответа API.
+   */
+  function loadCharacter(loaded: Character): void {
+    character.value = loaded;
+  }
+
+  /**
+   * Сброс состояния к пустому персонажу (уход со страницы листа), чтобы
+   * следующий открытый лист не мигал данными предыдущего.
+   */
+  function resetCharacter(): void {
+    character.value = structuredClone(DEFAULT_CHARACTER);
+  }
+
   const abilityRows = computed(() => getAbilityRows(character.value));
 
   const savingThrowRows = computed(() => getSavingThrowRows(character.value));
@@ -923,6 +941,8 @@ export function useCharacterSheet() {
     isLocked,
     toggleLock,
     ensureEditable,
+    loadCharacter,
+    resetCharacter,
     abilityRows,
     savingThrowRows,
     skillRows,

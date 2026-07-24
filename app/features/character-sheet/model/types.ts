@@ -696,6 +696,45 @@ export interface Character {
   notes: string;
 }
 
+/** Статус автосохранения листа персонажа. */
+export type SheetSaveStatus = 'saved' | 'saving' | 'error';
+
+/** Лист персонажа в списке пользователя. */
+export interface CharacterSheetListItem {
+  id: string;
+  name: string;
+
+  /** Лист удалён (строка истории с возможностью восстановления). */
+  deleted: boolean;
+
+  /** Персонаж листа; null — у удалённых (сервер не отдаёт документ). */
+  data: Character | null;
+
+  /** Дата создания (ISO); null — не пришла. */
+  createdAt: string | null;
+
+  /** Дата последнего изменения (ISO); null — не пришла. */
+  updatedAt: string | null;
+}
+
+/** Список листов пользователя с серверным лимитом. */
+export interface CharacterSheetListPage {
+  /** Максимум активных листов (серверный, в будущем зависит от подписки). */
+  limit: number;
+
+  /** Число активных (неудалённых) листов. */
+  count: number;
+
+  sheets: CharacterSheetListItem[];
+}
+
+/** Полный лист персонажа из ответа API. */
+export interface CharacterSheetDetail {
+  id: string;
+  name: string;
+  data: Character;
+}
+
 /** Вкладка правой панели листа персонажа. */
 export interface SheetTab {
   slot: string;

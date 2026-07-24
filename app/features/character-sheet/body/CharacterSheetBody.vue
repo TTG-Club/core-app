@@ -6,7 +6,10 @@
     SkillRow,
   } from '../model';
 
-  import { useCharacterSheet } from '../composables';
+  import {
+    useCharacterSheet,
+    useCharacterSheetSaveStatus,
+  } from '../composables';
   import {
     ABILITY_LABELS,
     ARMOR_PROFICIENCY_GROUPS,
@@ -85,6 +88,10 @@
   } = useCharacterSheet();
 
   const overlay = useOverlay();
+
+  // Статус автосохранения пишет автосейв контейнера (страница/панель/drawer),
+  // тело листа лишь показывает его в шапке.
+  const saveStatus = useCharacterSheetSaveStatus();
 
   // Блок из двух колонок нужен в двух местах: в широком контейнере — как левая
   // часть сетки, в узком (<1024px) — внутри первой вкладки «Основное». Единое
@@ -414,6 +421,7 @@
       :locked="isLocked"
       :can-expand="canExpand"
       :can-close="canClose"
+      :save-status="saveStatus"
       @close="handleClose"
       @expand="handleExpand"
       @edit-background="handleBackgroundEdit"

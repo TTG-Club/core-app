@@ -1,11 +1,12 @@
 <script setup lang="ts">
-  import type { Character } from '../../model';
+  import type { Character, SheetSaveStatus } from '../../model';
 
   import {
     getClassDisplayName,
     getSpeciesDisplayName,
     getVisionRows,
     SHEET_EMPTY_LABELS,
+    SHEET_SAVE_STATUS_META,
     VISION_LABELS,
   } from '../../model';
 
@@ -16,6 +17,8 @@
     canExpand?: boolean;
     /** Показать кнопку закрытия. Скрывается, когда закрытие даёт контейнер. */
     canClose?: boolean;
+    /** Статус автосохранения листа; null — индикатор скрыт. */
+    saveStatus?: SheetSaveStatus | null;
   }>();
 
   const emit = defineEmits<{
@@ -31,6 +34,22 @@
     'toggle-inspiration': [];
     'toggle-lock': [];
   }>();
+
+  const saveStatusMeta = computed(() =>
+    props.saveStatus ? SHEET_SAVE_STATUS_META[props.saveStatus] : null,
+  );
+
+  const saveStatusIconClass = computed(() => {
+    if (props.saveStatus === 'error') {
+      return 'text-error';
+    }
+
+    if (props.saveStatus === 'saving') {
+      return 'animate-spin text-muted';
+    }
+
+    return 'text-muted';
+  });
 
   const lockIcon = computed(() =>
     props.locked ? 'tabler:lock' : 'tabler:lock-open',
@@ -269,7 +288,24 @@
     <div
       class="order-first flex w-full shrink-0 flex-row flex-wrap items-center justify-between gap-3 @2xl:order-0 @2xl:w-auto @2xl:flex-col @2xl:flex-nowrap @2xl:items-end @2xl:justify-start @2xl:gap-4 @2xl:self-stretch"
     >
-      <div class="flex gap-1">
+      <div class="flex items-center gap-1">
+        <UTooltip
+          v-if="saveStatusMeta"
+          :text="saveStatusMeta.label"
+        >
+          <span
+            role="status"
+            class="grid size-8 place-items-center"
+            :aria-label="saveStatusMeta.label"
+          >
+            <UIcon
+              :name="saveStatusMeta.icon"
+              class="size-5"
+              :class="saveStatusIconClass"
+            />
+          </span>
+        </UTooltip>
+
         <UTooltip :text="lockTooltip">
           <UButton
             :icon="lockIcon"

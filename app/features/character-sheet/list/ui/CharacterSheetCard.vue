@@ -1,17 +1,41 @@
 <script setup lang="ts">
-  import type { Character } from '~character-sheet/model';
+  import type { Character } from '../../model';
 
-  import { CharacterSheetDrawer } from '~character-sheet/drawer';
+  import { ConfirmDialog } from '~initiative/ui-kit';
+
+  import { CharacterSheetDrawer } from '../../drawer';
   import {
     CHARACTER_SHEET_ROUTE,
     getClassDisplayName,
     getSpeciesDisplayName,
     SHEET_EMPTY_LABELS,
-  } from '~character-sheet/model';
+  } from '../../model';
 
-  const { character } = defineProps<{
+  const {
+    character,
+    removable = false,
+    disabled = false,
+  } = defineProps<{
     character: Character;
+
+    /** Показать кнопку удаления листа (список сохранённых). */
+    removable?: boolean;
+
+    /** Заблокировать действия на время мутаций списка. */
+    disabled?: boolean;
   }>();
+
+  const emit = defineEmits<{
+    remove: [id: string];
+  }>();
+
+  const isDeleteOpen = ref(false);
+
+  /** Подтверждённое удаление листа — событие обрабатывает список. */
+  function confirmRemove(): void {
+    emit('remove', character.id);
+    isDeleteOpen.value = false;
+  }
 
   const { isDesktop } = useDevice();
   const overlay = useOverlay();
@@ -144,5 +168,31 @@
         @click.left.exact.prevent="openOnPage"
       />
     </UTooltip>
+
+    <UTooltip
+      v-if="removable"
+      text="Удалить лист"
+    >
+      <UButton
+        icon="tabler:trash"
+        color="error"
+        variant="soft"
+        square
+        class="shrink-0"
+        :disabled
+        aria-label="Удалить лист"
+        @click.left.exact.prevent="isDeleteOpen = true"
+      />
+    </UTooltip>
+
+    <ConfirmDialog
+      v-model:open="isDeleteOpen"
+      title="Удалить лист персонажа?"
+      :description="`Лист «${character.name}» переедет в историю — его можно будет восстановить.`"
+      confirm-label="Удалить"
+      confirm-color="error"
+      confirm-icon="tabler:trash"
+      @confirm="confirmRemove"
+    />
   </div>
 </template>

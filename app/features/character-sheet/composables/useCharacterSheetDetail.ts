@@ -1,19 +1,14 @@
-import type { MaybeRefOrGetter } from 'vue';
-
-import { toValue } from 'vue';
-
 import { CHARACTER_SHEET_ROUTE } from '../model';
 
 /**
  * Управление правой панелью списка листов персонажей в широком режиме.
- * Зеркалит логику `useSectionDetail`, но без загрузки с API — лист живёт в
- * общем состоянии `useCharacterSheet`, поэтому «деталь» здесь — это лишь факт
- * выбора листа через `?detail=<id>`.
+ * Зеркалит логику `useSectionDetail`: выбранный лист задаётся кликом по
+ * карточке через `?detail=<id>`, документ панель грузит сама
+ * (`useCharacterSheetLoader`).
  *
- * @param characterId Идентификатор единственного листа для автовыбора.
  * @returns Реактивный id выбранного листа и обработчики панели.
  */
-export function useCharacterSheetDetail(characterId: MaybeRefOrGetter<string>) {
+export function useCharacterSheetDetail() {
   const route = useRoute();
   const router = useRouter();
   const { isSplitActive } = useLayoutWidth();
@@ -25,7 +20,6 @@ export function useCharacterSheetDetail(characterId: MaybeRefOrGetter<string>) {
   });
 
   const isDetailOpen = computed(() => Boolean(detailId.value));
-  const isDetailDismissed = ref(false);
   const isRouterReady = ref(false);
 
   const detailPagePath = computed(
@@ -38,31 +32,13 @@ export function useCharacterSheetDetail(characterId: MaybeRefOrGetter<string>) {
     navigateTo(detailPagePath.value, { replace: true, redirectCode: 302 });
   }
 
-  /** Автовыбор единственного листа при активном широком режиме. */
-  function autoSelectFirst(): void {
-    if (!isSplitActive.value || isDetailDismissed.value || detailId.value) {
-      return;
-    }
-
-    router.replace({
-      query: {
-        ...route.query,
-        detail: toValue(characterId),
-      },
-    });
-  }
-
   onMounted(async () => {
     await router.isReady();
     isRouterReady.value = true;
 
     if (!isSplitActive.value && detailId.value) {
       router.replace({ path: detailPagePath.value });
-
-      return;
     }
-
-    autoSelectFirst();
   });
 
   watch(isSplitActive, (splitActive) => {
@@ -79,17 +55,11 @@ export function useCharacterSheetDetail(characterId: MaybeRefOrGetter<string>) {
           detail: undefined,
         },
       });
-
-      return;
     }
-
-    autoSelectFirst();
   });
 
   /** Закрывает правую панель и снимает выбор листа. */
   function closeDetail(): void {
-    isDetailDismissed.value = true;
-
     router.push({
       query: {
         ...route.query,
@@ -101,7 +71,6 @@ export function useCharacterSheetDetail(characterId: MaybeRefOrGetter<string>) {
   return {
     detailId,
     isDetailOpen,
-    isDetailDismissed,
     isSplitActive,
     closeDetail,
   };
