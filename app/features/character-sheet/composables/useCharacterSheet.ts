@@ -345,6 +345,23 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Установка изображения персонажа. Файлом в хранилище распоряжается
+   * `useSheetAvatar` — здесь меняется только ссылка в документе листа.
+   *
+   * @param avatarUrl ссылка на изображение; null — изображения нет.
+   */
+  function setAvatar(avatarUrl: string | null): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      avatarUrl,
+    };
+  }
+
+  /**
    * Установка зрения персонажа с ограничением дистанций.
    *
    * @param vision новое зрение персонажа.
@@ -1131,6 +1148,7 @@ export function useCharacterSheet() {
     carryingCapacity,
     setAbilityScore,
     setArmorClass,
+    setAvatar,
     setClassResources,
     adjustClassResource,
     adjustInventoryItemQuantity,

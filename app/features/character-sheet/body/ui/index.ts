@@ -2,6 +2,7 @@ export { default as SheetAbilitiesRow } from './SheetAbilitiesRow.vue';
 export { default as SheetAbilityModal } from './SheetAbilityModal.vue';
 export { default as SheetAbilityTile } from './SheetAbilityTile.vue';
 export { default as SheetArmorClassModal } from './SheetArmorClassModal.vue';
+export { default as SheetAvatar } from './SheetAvatar.vue';
 export { default as SheetBackgroundWizardModal } from './SheetBackgroundWizardModal.vue';
 export { default as SheetChoiceSelect } from './SheetChoiceSelect.vue';
 export { default as SheetClassResourcesModal } from './SheetClassResourcesModal.vue';

@@ -14,6 +14,8 @@ import {
   fetchCharacterSheetList,
   getSheetErrorMessage,
   restoreCharacterSheet,
+  SHEET_AVATAR_MAX_SIZE,
+  SHEET_AVATAR_S3_SECTION,
   SHEET_COPY_LIMIT_HINT,
   SHEET_COPY_NAME_SUFFIX,
   updateCharacterSheet,
@@ -87,6 +89,11 @@ export function useCharacterSheetList() {
   const toast = useToast();
 
   const { character, ensureEditable, setSettings } = useCharacterSheet();
+
+  const { copyImage } = useImageUpload({
+    section: SHEET_AVATAR_S3_SECTION,
+    maxSize: SHEET_AVATAR_MAX_SIZE,
+  });
 
   const sheets = useState<CharacterSheetListItem[]>(
     'character-sheet:list',
@@ -244,9 +251,17 @@ export function useCharacterSheetList() {
     isMutating.value = true;
 
     try {
+      // Изображение копируется в отдельный файл: иначе оба листа ссылались бы
+      // на один объект в хранилище и замена картинки в копии стёрла бы её у
+      // оригинала. Не скопировалось — копия просто остаётся без изображения.
+      const avatarUrl = source.avatarUrl
+        ? await copyImage(source.avatarUrl)
+        : null;
+
       const created = await createCharacterSheet({
         ...source,
         id: DRAFT_CHARACTER_ID,
+        avatarUrl,
         name: getCopyName(
           source.name,
           activeSheets.value.map((sheet) => sheet.name),
