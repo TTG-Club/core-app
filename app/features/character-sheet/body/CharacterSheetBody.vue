@@ -13,6 +13,7 @@
   import {
     useCharacterSheet,
     useCharacterSheetList,
+    useCharacterSheetPdf,
     useCharacterSheetSaveStatus,
     useCharacterSheetShare,
   } from '../composables';
@@ -124,6 +125,15 @@
 
   // Доступ по ссылке: состояние читает меню шапки, меняет — модалка.
   const { isShared } = useCharacterSheetShare();
+
+  // Экспорт в PDF: сборщик грузится по клику, поэтому у пункта меню есть
+  // собственное состояние загрузки.
+  const { isExporting: isPdfExporting, exportToPdf } = useCharacterSheetPdf();
+
+  /** Экспорт открытого листа в PDF. */
+  function handleDownloadPdf(): void {
+    void exportToPdf(character.value);
+  }
 
   const overlay = useOverlay();
 
@@ -703,8 +713,10 @@
       :readonly="isReadonly"
       :shared="isShared"
       :save-status="headerSaveStatus"
+      :pdf-loading="isPdfExporting"
       @close="handleClose"
       @download="downloadCharacter"
+      @download-pdf="handleDownloadPdf"
       @duplicate="handleDuplicate"
       @remove="handleRemove"
       @share="handleShare"

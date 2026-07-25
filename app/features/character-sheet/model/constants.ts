@@ -119,6 +119,21 @@ export const SHEET_IMPORT_PARSE_ERROR =
 /** Общее сообщение об ошибке, когда бэк не вернул текст. */
 export const SHEET_UNKNOWN_ERROR_MESSAGE = 'Неизвестная ошибка';
 
+/** Подпись пункта меню «скачать JSON». */
+export const SHEET_DOWNLOAD_JSON_LABEL = 'Скачать JSON';
+
+/** Подпись пункта меню «скачать PDF». */
+export const SHEET_DOWNLOAD_PDF_LABEL = 'Скачать PDF';
+
+/** Пояснение к пункту «скачать PDF» в меню действий. */
+export const SHEET_DOWNLOAD_PDF_HINT = 'Лист для печати';
+
+/** MIME-тип файла листа в PDF. */
+export const SHEET_PDF_MIME_TYPE = 'application/pdf';
+
+/** Заголовок тоста при сбое сборки PDF. */
+export const SHEET_PDF_ERROR_TITLE = 'Не удалось собрать PDF листа';
+
 /** Подписи и иконки статусов автосохранения листа. */
 export const SHEET_SAVE_STATUS_META: Record<
   SheetSaveStatus,
@@ -908,6 +923,9 @@ export const SPECIES_SEARCH_PATH = '/api/v2/species/search';
 /** Эндпоинт поиска заклинаний. */
 export const SPELLS_SEARCH_PATH = '/api/v2/spells/search';
 
+/** Базовый путь детали заклинания (`/{url}` — слаг из каталога). */
+export const SPELLS_DETAIL_BASE_PATH = '/api/v2/spells';
+
 /** Эндпоинт фильтров заклинаний — источник списка классов для чипов. */
 export const SPELLS_FILTERS_PATH = '/api/v2/spells/filters';
 
@@ -949,6 +967,17 @@ export const SPELL_SCHOOL_OPTIONS: string[] = [
   'Преобразование',
   'Прорицание',
 ];
+
+/**
+ * Подписи компонентов заклинания. Деталь каталога отдаёт компоненты флагами
+ * (`{ v, s, m }`), а лист хранит их строкой — при дозагрузке описаний строка
+ * собирается этими подписями (те же слова, что на странице заклинания).
+ */
+export const SPELL_COMPONENT_LABELS = {
+  verbal: 'Вербальный',
+  somatic: 'Соматический',
+  material: 'Материальный',
+} as const;
 
 /** Текстовые поля своего заклинания: строки формы и развёрнутой карточки. */
 export const CUSTOM_SPELL_FIELDS: CustomSpellField[] = [
@@ -1098,6 +1127,9 @@ export const ITEMS_DETAIL_BASE_PATH = '/api/v2/item';
 
 /** Эндпоинт поиска магических предметов (раздел «Магические предметы»). */
 export const MAGIC_ITEMS_SEARCH_PATH = '/api/v2/magic-items/search';
+
+/** Базовый путь детали магического предмета. */
+export const MAGIC_ITEMS_DETAIL_BASE_PATH = '/api/v2/magic-items';
 
 /** Эндпоинт фильтров магических предметов. */
 export const MAGIC_ITEMS_FILTERS_PATH = '/api/v2/magic-items/filters';
@@ -1578,3 +1610,34 @@ export const SHEET_TAB_EMPTY_LABELS: Record<
   features: 'Нет особенностей',
   notes: 'Нет заметок',
 };
+
+/**
+ * Скелетон листа: сколько плашек рисовать в блоках, длина которых зависит от
+ * самого документа. Числа подобраны под типовой лист — подложка совпадает с
+ * ним по высоте, и после загрузки страница не прыгает.
+ */
+export const SHEET_SKELETON_COUNTS = {
+  /** Кнопки статуса в шапке: замок и меню действий. */
+  headerStatusControls: 2,
+
+  /** Игровые кнопки шапки: вдохновение, короткий и продолжительный отдых. */
+  headerGameControls: 3,
+
+  /** Плитки-показатели в одном ряду сводки. */
+  summaryTiles: 2,
+
+  /** Навыки: полный список правил. */
+  skills: 18,
+
+  /** Группы владений: броня, оружие, инструменты, языки. */
+  proficiencyGroups: 4,
+
+  /** Чипы владений внутри одной группы. */
+  proficiencyChips: 3,
+
+  /** Ресурсы класса. */
+  classResources: 2,
+
+  /** Строки содержимого вкладки (снаряжение, заклинания, особенности). */
+  tabRows: 6,
+} as const;

@@ -35,11 +35,14 @@
     readonly?: boolean;
     /** Доступ по ссылке уже включён (пометка в меню действий). */
     shared?: boolean;
+    /** Идёт сборка PDF — пункт меню показывает загрузку. */
+    pdfLoading?: boolean;
   }>();
 
   const emit = defineEmits<{
     'close': [];
     'download': [];
+    'download-pdf': [];
     'duplicate': [];
     'expand': [];
     'remove': [];
@@ -69,7 +72,9 @@
       isShared: props.shared,
       isReadonly: props.readonly,
       isLocked: props.locked,
+      isPdfLoading: props.pdfLoading,
       onDownload: () => emit('download'),
+      onDownloadPdf: () => emit('download-pdf'),
       onDuplicate: () => emit('duplicate'),
       onRemove: () => emit('remove'),
       onSettings: () => emit('edit-settings'),

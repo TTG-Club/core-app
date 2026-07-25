@@ -1,5 +1,8 @@
 <script setup lang="ts">
-  import { CharacterSheetBody } from '~character-sheet/body';
+  import {
+    CharacterSheetBody,
+    CharacterSheetSkeleton,
+  } from '~character-sheet/body';
   import { useCharacterSheetLoader } from '~character-sheet/composables';
   import { CHARACTER_SHEET_TITLE } from '~character-sheet/model';
   import { UiResult } from '~ui/result';
@@ -35,15 +38,9 @@
     :title="CHARACTER_SHEET_TITLE"
   >
     <ClientOnly>
-      <div
+      <CharacterSheetSkeleton
         v-if="status === 'pending' || status === 'idle'"
-        class="flex justify-center py-16"
-      >
-        <UIcon
-          name="tabler:loader-2"
-          class="size-8 animate-spin text-muted"
-        />
-      </div>
+      />
 
       <UiResult
         v-else-if="status === 'notFound'"
@@ -72,12 +69,7 @@
       />
 
       <template #fallback>
-        <div class="flex justify-center py-16">
-          <UIcon
-            name="tabler:loader-2"
-            class="size-8 animate-spin text-muted"
-          />
-        </div>
+        <CharacterSheetSkeleton />
       </template>
     </ClientOnly>
   </NuxtLayout>

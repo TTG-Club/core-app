@@ -29,6 +29,12 @@ export function getSheetErrorMessage(error: unknown): string {
     return error.data?.message || error.message || SHEET_UNKNOWN_ERROR_MESSAGE;
   }
 
+  // Не только запросы: сборка PDF падает обычной ошибкой (не загрузился шрифт,
+  // не пришёл чанк), и её текст полезнее общей заглушки.
+  if (error instanceof Error) {
+    return error.message || SHEET_UNKNOWN_ERROR_MESSAGE;
+  }
+
   return SHEET_UNKNOWN_ERROR_MESSAGE;
 }
 

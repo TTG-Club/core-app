@@ -126,6 +126,10 @@ import {
   RESOURCE_RECOVERY_LABELS,
   ROLL_MODE_DICE_NOTATION,
   SHEET_COPY_LIMIT_HINT,
+  SHEET_DOWNLOAD_JSON_LABEL,
+  SHEET_DOWNLOAD_PDF_HINT,
+  SHEET_DOWNLOAD_PDF_LABEL,
+  SHEET_PDF_MIME_TYPE,
   SHEET_SHARE_ACTIVE_HINT,
   SIZE_LABEL_WORDS,
   SKILL_PROFICIENCY_MULTIPLIERS,
@@ -1388,9 +1392,7 @@ export function isCustomSpell(spell: CharacterSpell): boolean {
  * @param spell заклинание книги персонажа.
  * @returns строки «подпись — значение».
  */
-export function getCustomSpellStatRows(
-  spell: CharacterSpell,
-): CustomSpellStatRow[] {
+export function getSpellStatRows(spell: CharacterSpell): CustomSpellStatRow[] {
   return CUSTOM_SPELL_FIELDS.map((field) => ({
     key: field.key,
     label: field.label,
@@ -2344,8 +2346,7 @@ function getCharacterFileName(name: string): string {
 
 /**
  * Скачивание листа в виде JSON-файла: сериализует персонажа (та же форма, что
- * уходит в автосохранение) и отдаёт браузеру ссылку на blob. Работает только в
- * браузере — вызывается по действию пользователя.
+ * уходит в автосохранение).
  *
  * Ссылка на изображение в файл не попадает: она ведёт в наше хранилище и
  * действительна только для своего владельца — в чужом аккаунте или стороннем
@@ -2355,16 +2356,35 @@ function getCharacterFileName(name: string): string {
  */
 export function downloadCharacterJson(character: Character): void {
   const json = JSON.stringify({ ...character, avatarUrl: null }, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
 
-  link.href = url;
-  link.download = `${getCharacterFileName(character.name)}.json`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  downloadBlob(
+    new Blob([json], { type: 'application/json' }),
+    `${getCharacterFileName(character.name)}.json`,
+  );
+}
+
+/**
+ * Скачивание листа в виде PDF: раскладка близка к официальному листу D&D 2024,
+ * дальше идут снаряжение, заклинания и справочник с полными описаниями.
+ *
+ * Сборщик и pdf-lib загружаются динамически: они нужны только в момент экспорта,
+ * а в основном бандле весили бы больше самого листа.
+ *
+ * @param character персонаж скачиваемого листа.
+ */
+export async function downloadCharacterPdf(
+  character: Character,
+): Promise<void> {
+  const { buildCharacterSheetPdf } = await import('./pdf');
+
+  const bytes = await buildCharacterSheetPdf(character);
+
+  // Копия байтов в свежий массив: `Blob` принимает только представления над
+  // `ArrayBuffer`, а pdf-lib отдаёт массив над `ArrayBufferLike`.
+  downloadBlob(
+    new Blob([new Uint8Array(bytes)], { type: SHEET_PDF_MIME_TYPE }),
+    `${getCharacterFileName(character.name)}.pdf`,
+  );
 }
 
 /** Доступность действий и обработчики пунктов меню действий над листом. */
@@ -2393,7 +2413,11 @@ export interface SheetActionMenuOptions {
    */
   isLocked?: boolean;
 
+  /** Идёт сборка PDF: пункт показывает загрузку и не принимает повторный клик. */
+  isPdfLoading?: boolean;
+
   onDownload: () => void;
+  onDownloadPdf: () => void;
   onDuplicate: () => void;
   onRemove: () => void;
   onSettings: () => void;
@@ -2416,17 +2440,28 @@ export interface SheetActionMenuOptions {
 export function getSheetActionMenuItems(
   options: SheetActionMenuOptions,
 ): Array<Array<DropdownMenuItem>> {
+  // Экспорт в PDF идёт первым: играют по нему, а JSON нужен для переноса листа.
+  const downloadPdf: DropdownMenuItem = {
+    label: SHEET_DOWNLOAD_PDF_LABEL,
+    icon: 'tabler:file-type-pdf',
+    description: SHEET_DOWNLOAD_PDF_HINT,
+    loading: options.isPdfLoading,
+    disabled: options.isPdfLoading,
+    onSelect: options.onDownloadPdf,
+  };
+
   const download: DropdownMenuItem = {
-    label: 'Скачать JSON',
+    label: SHEET_DOWNLOAD_JSON_LABEL,
     icon: 'tabler:download',
     onSelect: options.onDownload,
   };
 
   if (options.isReadonly) {
-    return [[download]];
+    return [[downloadPdf, download]];
   }
 
   const actions: DropdownMenuItem[] = [
+    downloadPdf,
     download,
     {
       label: 'Создать копию',

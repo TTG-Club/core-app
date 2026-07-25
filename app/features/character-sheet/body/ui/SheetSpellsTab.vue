@@ -10,12 +10,12 @@
 
   import { useCharacterSheet } from '../../composables';
   import {
-    getCustomSpellStatRows,
     getFormattedBonus,
     getSpellGroups,
     getSpellsAddMenuItems,
     getSpellSlotCircles,
     getSpellSlotSummary,
+    getSpellStatRows,
     isCustomSpell,
     SHEET_TAB_EMPTY_LABELS,
     SPELL_SLOTS_LABEL,
@@ -113,7 +113,7 @@
             isCustom,
             isExpanded,
             // У каталожных заклинаний этих полей нет — список выйдет пустым.
-            statRows: getCustomSpellStatRows(spell),
+            statRows: getSpellStatRows(spell),
             descriptionNodes: spell.description ?? [],
             // Раскрывается только своё заклинание — у каталожного строка ведёт в
             // дровер раздела, состояния «развёрнуто» у неё нет.

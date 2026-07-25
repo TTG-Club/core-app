@@ -39,6 +39,7 @@ export { default as SheetSettingsModal } from './SheetSettingsModal.vue';
 export { default as SheetShareModal } from './SheetShareModal.vue';
 export { default as SheetShortRestModal } from './SheetShortRestModal.vue';
 export { default as SheetSizeModal } from './SheetSizeModal.vue';
+export { default as SheetSkeletonPanel } from './SheetSkeletonPanel.vue';
 export { default as SheetSkillsPanel } from './SheetSkillsPanel.vue';
 export { default as SheetSpeciesWizardModal } from './SheetSpeciesWizardModal.vue';
 export { default as SheetSpeedModal } from './SheetSpeedModal.vue';

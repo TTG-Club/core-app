@@ -492,6 +492,18 @@ export interface CharacterSpell {
   description?: FeatureDescriptionNode[];
 }
 
+/**
+ * Дозагруженная деталь каталожного заклинания. Поля повторяют форму своего
+ * заклинания: так карточка справочника рисуется одним кодом для обоих видов
+ * записей.
+ */
+export type CatalogSpellDetail = Required<
+  Pick<
+    CharacterSpell,
+    'castingTime' | 'range' | 'components' | 'duration' | 'description'
+  >
+>;
+
 /** Ключ текстового поля своего заклинания. */
 export type CustomSpellFieldKey =
   | 'castingTime'

@@ -1,6 +1,9 @@
 <script setup lang="ts">
   import { Role } from '~/shared/types';
-  import { CharacterSheetBody } from '~character-sheet/body';
+  import {
+    CharacterSheetBody,
+    CharacterSheetSkeleton,
+  } from '~character-sheet/body';
   import {
     useCharacterSheetAutosave,
     useCharacterSheetDetail,
@@ -77,15 +80,7 @@
           v-if="isDetailOpen"
           class="flex h-full flex-col overflow-y-auto p-4"
         >
-          <div
-            v-if="detailStatus === 'pending'"
-            class="flex justify-center py-16"
-          >
-            <UIcon
-              name="tabler:loader-2"
-              class="size-8 animate-spin text-muted"
-            />
-          </div>
+          <CharacterSheetSkeleton v-if="detailStatus === 'pending'" />
 
           <UiResult
             v-else-if="detailStatus === 'notFound'"

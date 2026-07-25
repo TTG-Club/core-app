@@ -33,11 +33,15 @@
     class="relative min-w-0 rounded-lg border border-default px-3 pt-1 pb-3"
     :class="frameClass"
   >
+    <!-- Слот заголовка нужен скелетону: там на месте подписи серая плашка,
+      а рамка должна остаться той же самой, а не её копией -->
     <legend
-      v-if="title"
+      v-if="title || $slots.title"
       class="relative px-2 text-[10px] font-bold tracking-wider text-muted uppercase"
       :class="legendClass"
     >
+      <slot name="title" />
+
       <template v-if="shortTitle">
         <!-- Обе подписи в разметке: полная упирается в углы узкой плитки,
           поэтому ниже 11rem показываем короткую. Скринридеру название группы
