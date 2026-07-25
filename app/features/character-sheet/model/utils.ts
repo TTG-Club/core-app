@@ -119,6 +119,7 @@ import {
   INVENTORY_CATEGORY_TITLES,
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
+  INVENTORY_REMOVE_MENU_LABEL,
   LEVEL_XP_THRESHOLDS,
   NEW_CUSTOM_INVENTORY_ITEM,
   PACT_SPELL_SLOTS_LABEL,
@@ -2573,6 +2574,48 @@ export function getFeaturesAddMenuItems(
       onSelect: options.onAddFeat,
     },
   ];
+}
+
+/** Обработчики пунктов меню строки снаряжения. */
+export interface InventoryItemMenuOptions {
+  /**
+   * Правка предмета; не передан — пункта нет. У каталожного предмета править
+   * нечего: его поля приходят из раздела сайта.
+   */
+  onEdit?: () => void;
+
+  onRemove: () => void;
+}
+
+/**
+ * Пункты меню строки снаряжения: правка своего предмета и удаление. Действия
+ * убраны под многоточие, а не стоят кнопками в строке: у каталожного предмета
+ * их одно, у своего — два, и трейлинг соседних строк не выравнивался бы.
+ *
+ * @param options обработчики пунктов.
+ * @returns пункты для `UDropdownMenu`.
+ */
+export function getInventoryItemMenuItems(
+  options: InventoryItemMenuOptions,
+): DropdownMenuItem[] {
+  const items: DropdownMenuItem[] = [];
+
+  if (options.onEdit) {
+    items.push({
+      label: 'Редактировать',
+      icon: 'tabler:pencil',
+      onSelect: options.onEdit,
+    });
+  }
+
+  items.push({
+    label: INVENTORY_REMOVE_MENU_LABEL,
+    icon: 'tabler:trash',
+    color: 'error',
+    onSelect: options.onRemove,
+  });
+
+  return items;
 }
 
 /**

@@ -1562,6 +1562,12 @@ export const INVENTORY_REMOVE_CONFIRM_TITLE = 'Убрать предмет?';
 /** Подпись кнопки подтверждения удаления предмета. */
 export const INVENTORY_REMOVE_CONFIRM_LABEL = 'Убрать';
 
+/**
+ * Подпись удаления в меню строки снаряжения: рядом с «Редактировать» одного
+ * слова «Убрать» мало — непонятно, откуда именно исчезнет предмет.
+ */
+export const INVENTORY_REMOVE_MENU_LABEL = 'Убрать из снаряжения';
+
 /** Подписи пустых вкладок листа персонажа. */
 export const SHEET_TAB_EMPTY_LABELS: Record<
   'equipment' | 'spells' | 'features' | 'notes',

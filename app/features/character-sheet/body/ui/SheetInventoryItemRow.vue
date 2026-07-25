@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { DropdownMenuItem } from '@nuxt/ui';
+
   import type {
     AbilityKey,
     CharacterInventoryItem,
@@ -14,6 +16,7 @@
     ABILITY_LABELS,
     ARMOR_DEXTERITY_HINT_LABELS,
     getFormattedBonus,
+    getInventoryItemMenuItems,
     getProficiencyBonus,
     getWeaponAttackBonus,
     getWeaponDamage,
@@ -87,15 +90,6 @@
     'flex shrink-0 grow basis-0 flex-col items-center rounded border px-2 py-0.5 whitespace-nowrap @xl:grow-0 @xl:basis-auto';
 
   /**
-   * Кнопки правки и удаления. На узкой карточке (до `@xl`) видны всегда — там
-   * их нечем вызвать, а прозрачная кнопка удаления рядом с «+/−» ловит
-   * случайные нажатия. На широкой строке прячем их только там, где есть
-   * наведение: `pointer-fine` оставляет кнопки видимыми на сенсорном планшете.
-   */
-  const ROW_ACTION_CLASSES =
-    'shrink-0 transition-opacity @xl:pointer-fine:opacity-0 @xl:group-hover/item:opacity-100 @xl:focus-visible:opacity-100';
-
-  /**
    * Дополняет плитку классами оформления по признаку акцента и броска (логика
    * вынесена из шаблона).
    *
@@ -155,7 +149,15 @@
     () => props.inventoryItem.description ?? [],
   );
 
-  const chevronClass = computed(() => (isExpanded.value ? 'rotate-180' : ''));
+  // Правка и удаление — под многоточием: строка и без них плотная (иконка,
+  // название, плитки, «+/−»), а два разных набора кнопок ломали бы её ритм.
+  // Каталожный предмет правится в своём разделе — пункта правки у него нет.
+  const menuItems = computed<Array<DropdownMenuItem>>(() =>
+    getInventoryItemMenuItems({
+      onEdit: isCustom.value ? () => emit('edit') : undefined,
+      onRemove: () => emit('remove'),
+    }),
+  );
 
   const openLabel = computed(() =>
     isCustom.value
@@ -356,7 +358,7 @@
   <!-- Свой @container: строка перестраивается по ширине самой карточки, а не
     окна — лист бывает узким и на широком экране (дровер, правая панель) -->
   <div
-    class="group/item @container flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-warning/60"
+    class="@container flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-warning/60"
     :class="rowClass"
   >
     <!-- Перестроение по брейкпоинту, а не по факту переполнения: до @xl
@@ -510,68 +512,52 @@
 
       <!-- Количество и действия держатся вместе и прижимаются вправо: на
         широкой строке место им и так остаётся справа, на второй строке узкой
-        карточки — отделяет их от плиток параметров. Стрелка вне слоя z-10:
-        нажатие на неё должно попадать в подложку названия и разворачивать
-        карточку -->
-      <div class="ml-auto flex shrink-0 items-center gap-1">
-        <div class="relative z-10 flex items-center gap-1">
-          <UButton
-            icon="tabler:minus"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            square
-            :class="gameControlClass"
-            :disabled="isDecreaseDisabled"
-            :aria-label="`Уменьшить количество: ${inventoryItem.name}`"
-            @click.left.exact.prevent="handleDecrease"
-          />
-
-          <span class="w-6 text-center text-sm font-medium text-default">
-            {{ inventoryItem.quantity }}
-          </span>
-
-          <UButton
-            icon="tabler:plus"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            square
-            :class="gameControlClass"
-            :aria-label="`Увеличить количество: ${inventoryItem.name}`"
-            @click.left.exact.prevent="handleIncrease"
-          />
-
-          <UButton
-            v-if="isCustom"
-            icon="tabler:pencil"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            square
-            :class="[ROW_ACTION_CLASSES, editControlClass]"
-            :aria-label="`Редактировать предмет: ${inventoryItem.name}`"
-            @click.left.exact.prevent="emit('edit')"
-          />
-
-          <UButton
-            icon="tabler:trash"
-            color="error"
-            variant="ghost"
-            size="xs"
-            square
-            :class="[ROW_ACTION_CLASSES, editControlClass]"
-            :aria-label="`Убрать предмет: ${inventoryItem.name}`"
-            @click.left.exact.prevent="emit('remove')"
-          />
-        </div>
-
-        <UIcon
-          v-if="isCustom"
-          name="tabler:chevron-down"
-          class="size-4 shrink-0 text-muted transition-transform"
-          :class="chevronClass"
+        карточки — отделяет их от плиток параметров. Слой z-10 поднимает их над
+        подложкой названия, которая накрывает всю строку -->
+      <div class="relative z-10 ml-auto flex shrink-0 items-center gap-1">
+        <UButton
+          icon="tabler:minus"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          square
+          :class="gameControlClass"
+          :disabled="isDecreaseDisabled"
+          :aria-label="`Уменьшить количество: ${inventoryItem.name}`"
+          @click.left.exact.prevent="handleDecrease"
         />
+
+        <span class="w-6 text-center text-sm font-medium text-default">
+          {{ inventoryItem.quantity }}
+        </span>
+
+        <UButton
+          icon="tabler:plus"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          square
+          :class="gameControlClass"
+          :aria-label="`Увеличить количество: ${inventoryItem.name}`"
+          @click.left.exact.prevent="handleIncrease"
+        />
+
+        <!-- Меню действий над предметом: один и тот же трейлинг у своей и
+          каталожной строки, а удаление больше не стоит вплотную к «+/−» -->
+        <UDropdownMenu
+          :items="menuItems"
+          :content="{ align: 'end' }"
+        >
+          <UButton
+            icon="tabler:dots-vertical"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            square
+            :class="editControlClass"
+            :aria-label="`Действия с предметом: ${inventoryItem.name}`"
+          />
+        </UDropdownMenu>
       </div>
     </div>
 
