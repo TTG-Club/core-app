@@ -13,8 +13,12 @@
   /** Ссылка есть, но файл не открылся (пропал из хранилища). */
   const isImageBroken = ref(false);
 
+  /** Действия вызваны нажатием по аватару (сенсорные экраны без наведения). */
+  const areActionsRevealed = ref(false);
+
   watch(avatarUrl, () => {
     isImageBroken.value = false;
+    areActionsRevealed.value = false;
   });
 
   const hasImage = computed(
@@ -75,15 +79,29 @@
 
   /** Открывает выбор файла (добавление или замена изображения). */
   function handleUploadClick(): void {
+    areActionsRevealed.value = false;
+
     openFileDialog();
   }
 
   /** Удаляет изображение персонажа вместе с файлом в хранилище. */
   function handleRemoveClick(): void {
+    areActionsRevealed.value = false;
+
     void clearAvatar();
   }
 
+  /** Показывает действия по нажатию на аватар (сенсорный экран). */
+  function handleRevealClick(): void {
+    areActionsRevealed.value = true;
+  }
+
   const dropZoneRef = useTemplateRef<HTMLElement>('dropZoneRef');
+
+  // Нажатие мимо аватара возвращает картинку к обычному виду.
+  onClickOutside(dropZoneRef, () => {
+    areActionsRevealed.value = false;
+  });
 
   const { isOverDropZone } = useDropZone(dropZoneRef, {
     dataTypes: IMAGE_UPLOAD_TYPES,
@@ -99,10 +117,18 @@
       : 'border-warning/70',
   );
 
-  // Действия проявляются при наведении (и при переходе с клавиатуры), а на
-  // сенсорных экранах наведения нет — там они видны всегда.
-  const overlayClass =
-    'absolute inset-0 flex items-center justify-center gap-1 bg-elevated/85 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100';
+  const OVERLAY_CLASS =
+    'absolute inset-0 flex items-center justify-center gap-1 bg-elevated/85 transition-opacity';
+
+  /** Слой скрыт, пока на него не навели курсор или не перешли с клавиатуры. */
+  const HOVER_REVEAL_CLASS =
+    'opacity-0 group-hover:opacity-100 focus-within:opacity-100 focus-visible:opacity-100';
+
+  // На сенсорных экранах наведения нет: пока действия не вызваны нажатием по
+  // аватару, виден только сам аватар.
+  const actionsRevealClass = computed(() =>
+    areActionsRevealed.value ? 'opacity-100' : HOVER_REVEAL_CLASS,
+  );
 </script>
 
 <template>
@@ -146,7 +172,7 @@
       >
         <button
           type="button"
-          :class="overlayClass"
+          :class="[OVERLAY_CLASS, HOVER_REVEAL_CLASS]"
           class="cursor-pointer"
           aria-label="Добавить изображение персонажа"
           @click.left.exact.prevent="handleUploadClick"
@@ -160,7 +186,7 @@
 
       <div
         v-else
-        :class="overlayClass"
+        :class="[OVERLAY_CLASS, actionsRevealClass]"
       >
         <UTooltip text="Заменить изображение">
           <UButton
@@ -188,6 +214,14 @@
           />
         </UTooltip>
       </div>
+
+      <button
+        v-if="hasImage && !areActionsRevealed"
+        type="button"
+        class="absolute inset-0 cursor-pointer pointer-fine:hidden"
+        aria-label="Показать действия с изображением персонажа"
+        @click.left.exact.prevent="handleRevealClick"
+      />
     </template>
   </div>
 </template>
