@@ -1,5 +1,6 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
 
+import type { Level } from '~/shared/types';
 import type { RenderNode } from '~ui/markup';
 
 import type {
@@ -25,6 +26,11 @@ import type {
   ClassChoice,
   ClassFeatureSummary,
   ClassSummary,
+  CustomArmorType,
+  CustomInventoryItemDraft,
+  CustomInventoryKind,
+  CustomSpellDraft,
+  CustomSpellStatRow,
   FeatSummary,
   FeatureDescriptionNode,
   FeatureOrigin,
@@ -35,6 +41,7 @@ import type {
   MagicItemCatalogItem,
   PrimarySpeed,
   ProficiencyCatalogGroup,
+  ResourceRecovery,
   RollMode,
   SavingThrowRow,
   SkillRow,
@@ -43,12 +50,25 @@ import type {
   SpeedRow,
   SpeedTypeKey,
   SpellcastingBreakdown,
+  SpellSlotCircle,
+  SpellSlotRow,
   VisionRow,
   WeaponAttack,
+  WeaponDamage,
 } from './types';
 
-import { capitalize } from 'es-toolkit';
+import { capitalize, clamp } from 'es-toolkit';
 
+import { LEVELS } from '~/shared/consts';
+import {
+  CasterType,
+  FULL_CASTER_SPELL_SLOTS,
+  HALF_CASTER_SPELL_SLOTS,
+  MULTICLASS_SPELL_SLOTS,
+  PACT_CASTER_SPELL_SLOTS_COUNT,
+  PACT_CASTER_SPELL_SLOTS_LEVEL,
+  THIRD_CASTER_SPELL_SLOTS,
+} from '~classes/model';
 import {
   getNodeText,
   isBlockNode,
@@ -61,19 +81,43 @@ import {
   ABILITY_LABELS,
   ABILITY_ORDER,
   ABILITY_SHORT_LABELS,
+  ARMOR_CLASS_BASE_MAX,
+  ARMOR_CLASS_BASE_MIN,
   ARMOR_MATCH_KEYWORDS,
   ARMOR_MEDIUM_DEX_CAP,
   ARMOR_PROFICIENCY_GROUPS,
   CARRYING_CAPACITY_MULTIPLIER,
   CHARACTER_FILE_NAME_FALLBACK,
+  CLASS_SPELL_PROGRESSIONS,
   CLASS_SPELLCASTING_ABILITIES,
+  CUSTOM_ARMOR_TYPE_BY_DEXTERITY_MOD,
+  CUSTOM_ARMOR_TYPE_META,
+  CUSTOM_INVENTORY_KIND_CATEGORIES,
+  CUSTOM_INVENTORY_URL_PREFIX,
+  CUSTOM_ITEM_WEIGHT_MAX,
+  CUSTOM_ITEM_WEIGHT_MIN,
+  CUSTOM_SPELL_FIELDS,
+  CUSTOM_SPELL_URL_PREFIX,
+  CUSTOM_TRINKET_TYPES_LABEL,
+  CUSTOM_WEAPON_PROPERTY_LABELS,
+  DAMAGE_BONUS_MAX,
+  DAMAGE_BONUS_MIN,
+  DAMAGE_DICE_COUNT_MAX,
+  DAMAGE_DICE_COUNT_MIN,
+  DAMAGE_TYPE_LABELS,
   DARKVISION_PARSE_FALLBACK,
   DEFAULT_WEAPON_ATTACK_ABILITY,
+  DICE_NOTATION_LETTER,
   INVENTORY_CATEGORY_ORDER,
   INVENTORY_CATEGORY_TITLES,
+  INVENTORY_QUANTITY_MAX,
+  INVENTORY_QUANTITY_MIN,
   LEVEL_XP_THRESHOLDS,
+  NEW_CUSTOM_INVENTORY_ITEM,
+  RESOURCE_RECOVERY_LABELS,
   ROLL_MODE_DICE_NOTATION,
   SHEET_COPY_LIMIT_HINT,
+  SHEET_SHARE_ACTIVE_HINT,
   SIZE_LABEL_WORDS,
   SKILL_PROFICIENCY_MULTIPLIERS,
   SPEED_PARSE_FALLBACK,
@@ -81,13 +125,18 @@ import {
   SPEED_TYPE_LABELS,
   SPEED_UNIT_SHORT_LABELS,
   SPELL_SAVE_DC_BASE,
+  SPELL_SLOT_FREE_LABEL,
+  SPELL_SLOT_USED_LABEL,
+  THIRD_CASTER_SUBCLASSES,
   TOOL_MATCH_KEYWORDS,
   TOOL_PROFICIENCY_GROUPS,
   UNARMORED_ARMOR_CLASS_BASE,
   VISION_LABELS,
   VISION_ORDER,
+  WEAPON_CATEGORY_LABELS,
   WEAPON_MATCH_KEYWORDS,
   WEAPON_PROFICIENCY_GROUPS,
+  WEIGHT_DECIMALS,
 } from './constants';
 
 /**
@@ -236,7 +285,9 @@ export function getInventoryWeight(
     0,
   );
 
-  return Math.round(total * 10) / 10;
+  const factor = 10 ** WEIGHT_DECIMALS;
+
+  return Math.round(total * factor) / factor;
 }
 
 /**
@@ -335,6 +386,278 @@ export function buildMagicItemInventoryItem(
     armor: null,
     weapon: null,
     equipped: false,
+  };
+}
+
+/**
+ * Свой ли это предмет инвентаря: заполнен формой листа, а не добавлен из
+ * разделов сайта. У своих предметов нет страницы в каталоге, поэтому описание
+ * они хранят прямо в листе.
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns true — предмет свой.
+ */
+export function isCustomInventoryItem(
+  inventoryItem: CharacterInventoryItem,
+): boolean {
+  return inventoryItem.url.startsWith(CUSTOM_INVENTORY_URL_PREFIX);
+}
+
+/**
+ * Подпись типов своего предмета для строки инвентаря: у доспеха — его тип, у
+ * оружия — категория владения и свойства, у безделушки — общая подпись.
+ *
+ * @param draft значения формы своего предмета.
+ * @returns подпись типов предмета.
+ */
+function getCustomInventoryTypesLabel(draft: CustomInventoryItemDraft): string {
+  if (draft.kind === 'armor') {
+    return CUSTOM_ARMOR_TYPE_META[draft.armorType].typesLabel;
+  }
+
+  if (draft.kind === 'trinket') {
+    return CUSTOM_TRINKET_TYPES_LABEL;
+  }
+
+  const labelParts = [WEAPON_CATEGORY_LABELS[draft.weaponCategory]];
+
+  if (draft.ranged) {
+    labelParts.push(CUSTOM_WEAPON_PROPERTY_LABELS.ranged);
+  }
+
+  if (draft.finesse) {
+    labelParts.push(CUSTOM_WEAPON_PROPERTY_LABELS.finesse);
+  }
+
+  return labelParts.join(', ');
+}
+
+/**
+ * Параметры доспеха из значений формы: КД и правило Ловкости берутся из типа
+ * доспеха. null — вид предмета не «Доспех».
+ *
+ * @param draft значения формы своего предмета.
+ * @returns параметры доспеха или null.
+ */
+function getCustomInventoryArmor(
+  draft: CustomInventoryItemDraft,
+): InventoryArmor | null {
+  if (draft.kind !== 'armor') {
+    return null;
+  }
+
+  const { dexterityMod, shield } = CUSTOM_ARMOR_TYPE_META[draft.armorType];
+
+  return {
+    baseArmorClass: getClampedInteger(
+      draft.baseArmorClass,
+      ARMOR_CLASS_BASE_MIN,
+      ARMOR_CLASS_BASE_MAX,
+    ),
+    dexterityMod,
+    shield,
+  };
+}
+
+/**
+ * Параметры оружия из значений формы. Нулевое количество костей означает оружие
+ * без броска урона — плитка урона у такого не показывается. null — вид предмета
+ * не «Оружие».
+ *
+ * @param draft значения формы своего предмета.
+ * @returns параметры оружия или null.
+ */
+function getCustomInventoryWeapon(
+  draft: CustomInventoryItemDraft,
+): InventoryWeapon | null {
+  if (draft.kind !== 'weapon') {
+    return null;
+  }
+
+  const diceCount = getClampedInteger(
+    draft.damageDiceCount,
+    DAMAGE_DICE_COUNT_MIN,
+    DAMAGE_DICE_COUNT_MAX,
+  );
+
+  return {
+    category: draft.weaponCategory,
+    ranged: draft.ranged,
+    finesse: draft.finesse,
+    damage:
+      diceCount > 0
+        ? {
+            diceCount,
+            diceFaces: draft.damageDiceFaces,
+            bonus: getClampedInteger(
+              draft.damageBonus,
+              DAMAGE_BONUS_MIN,
+              DAMAGE_BONUS_MAX,
+            ),
+            type: draft.damageType,
+          }
+        : null,
+  };
+}
+
+/**
+ * Приведение значения числового поля формы к допустимому диапазону. Очищенное
+ * поле ввода отдаёт пустое значение, поэтому нечисловое считается нулём — оно
+ * же будет подтянуто к границе диапазона.
+ *
+ * @param value значение поля формы.
+ * @param min нижняя граница.
+ * @param max верхняя граница.
+ * @returns значение в пределах диапазона.
+ */
+function getClampedNumber(value: number, min: number, max: number): number {
+  return clamp(Number.isFinite(value) ? value : 0, min, max);
+}
+
+/**
+ * То же для целочисленных полей (количество, кости урона, класс доспеха):
+ * дробная часть отбрасывается.
+ *
+ * @param value значение поля формы.
+ * @param min нижняя граница.
+ * @param max верхняя граница.
+ * @returns целое значение в пределах диапазона.
+ */
+function getClampedInteger(value: number, min: number, max: number): number {
+  return Math.trunc(getClampedNumber(value, min, max));
+}
+
+/**
+ * Вес предмета из значения формы: дробный вес округляется до одного знака —
+ * половина фунта у мелочи вроде кинжала обычное дело.
+ *
+ * @param weight значение поля веса.
+ * @returns вес в фунтах.
+ */
+function getDraftWeight(weight: number): number {
+  const factor = 10 ** WEIGHT_DECIMALS;
+
+  const clampedWeight = getClampedNumber(
+    weight,
+    CUSTOM_ITEM_WEIGHT_MIN,
+    CUSTOM_ITEM_WEIGHT_MAX,
+  );
+
+  return Math.round(clampedWeight * factor) / factor;
+}
+
+/**
+ * Предмет инвентаря из значений формы своего предмета. Пустое название означает
+ * незаполненную форму — такой предмет не создаётся. Числа приводятся к
+ * допустимым диапазонам: поля ввода ограничивают шаг, но не защищают от
+ * очищенного или вставленного значения.
+ *
+ * @param url URL предмета (`custom:` + идентификатор); он же его id.
+ * @param draft значения формы.
+ * @param equipped доспех надет (сохраняется при редактировании).
+ * @returns предмет инвентаря; null — название пустое.
+ */
+export function toCustomInventoryItem(
+  url: string,
+  draft: CustomInventoryItemDraft,
+  equipped = false,
+): CharacterInventoryItem | null {
+  const name = draft.name.trim();
+
+  if (!name) {
+    return null;
+  }
+
+  return {
+    id: url,
+    url,
+    name,
+    category: CUSTOM_INVENTORY_KIND_CATEGORIES[draft.kind],
+    typesLabel: getCustomInventoryTypesLabel(draft),
+    cost: draft.cost.trim(),
+    weight: getDraftWeight(draft.weight),
+    quantity: getClampedInteger(
+      draft.quantity,
+      INVENTORY_QUANTITY_MIN,
+      INVENTORY_QUANTITY_MAX,
+    ),
+    armor: getCustomInventoryArmor(draft),
+    weapon: getCustomInventoryWeapon(draft),
+    // Надетым остаётся только доспех: у оружия и безделушки параметров доспеха
+    // нет, и в подсчёт КД они не идут.
+    equipped: draft.kind === 'armor' && equipped,
+    description: [...draft.description],
+  };
+}
+
+/**
+ * Вид своего предмета по его категории инвентаря (обратный разбор для формы
+ * редактирования).
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns вид своего предмета.
+ */
+function getCustomInventoryKind(
+  inventoryItem: CharacterInventoryItem,
+): CustomInventoryKind {
+  if (inventoryItem.category === 'WEAPON') {
+    return 'weapon';
+  }
+
+  return inventoryItem.category === 'ARMOR' ? 'armor' : 'trinket';
+}
+
+/**
+ * Тип доспеха по его параметрам: щит распознаётся флагом, остальные типы — по
+ * правилу применения модификатора Ловкости.
+ *
+ * @param armor параметры доспеха; null — предмет не доспех.
+ * @returns тип доспеха для формы.
+ */
+function getCustomArmorType(armor: InventoryArmor | null): CustomArmorType {
+  if (!armor) {
+    return NEW_CUSTOM_INVENTORY_ITEM.armorType;
+  }
+
+  return armor.shield
+    ? 'shield'
+    : CUSTOM_ARMOR_TYPE_BY_DEXTERITY_MOD[armor.dexterityMod];
+}
+
+/**
+ * Значения формы своего предмета из записи инвентаря — для редактирования.
+ * Незаполненные для этого вида поля берутся из заготовки: игрок может сменить
+ * вид предмета прямо в форме, и они должны быть осмысленными.
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns значения формы своего предмета.
+ */
+export function getCustomInventoryItemDraft(
+  inventoryItem: CharacterInventoryItem,
+): CustomInventoryItemDraft {
+  const { armor, weapon } = inventoryItem;
+
+  return {
+    ...NEW_CUSTOM_INVENTORY_ITEM,
+    kind: getCustomInventoryKind(inventoryItem),
+    name: inventoryItem.name,
+    cost: inventoryItem.cost,
+    weight: inventoryItem.weight,
+    quantity: inventoryItem.quantity,
+    armorType: getCustomArmorType(armor),
+    baseArmorClass:
+      armor?.baseArmorClass ?? NEW_CUSTOM_INVENTORY_ITEM.baseArmorClass,
+    weaponCategory:
+      weapon?.category ?? NEW_CUSTOM_INVENTORY_ITEM.weaponCategory,
+    ranged: weapon?.ranged ?? NEW_CUSTOM_INVENTORY_ITEM.ranged,
+    finesse: weapon?.finesse ?? NEW_CUSTOM_INVENTORY_ITEM.finesse,
+    damageDiceCount:
+      weapon?.damage?.diceCount ?? NEW_CUSTOM_INVENTORY_ITEM.damageDiceCount,
+    damageDiceFaces:
+      weapon?.damage?.diceFaces ?? NEW_CUSTOM_INVENTORY_ITEM.damageDiceFaces,
+    damageBonus: weapon?.damage?.bonus ?? NEW_CUSTOM_INVENTORY_ITEM.damageBonus,
+    damageType: weapon?.damage?.type ?? NEW_CUSTOM_INVENTORY_ITEM.damageType,
+    description: [...(inventoryItem.description ?? [])],
   };
 }
 
@@ -552,16 +875,68 @@ export function getWeaponAttackBonus(
   character: Character,
   weapon: InventoryWeapon,
 ): WeaponAttack {
-  const ability: AbilityKey =
-    weapon.finesse || weapon.ranged
-      ? 'dexterity'
-      : getWeaponAttackAbility(character);
+  const ability = getWeaponAbility(character, weapon);
 
   const value =
     getProficiencyBonus(character.level)
     + getModifier(character.abilities[ability]);
 
   return { value, ability };
+}
+
+/**
+ * Характеристика конкретного оружия: фехтовальное и дальнобойное бьёт от
+ * Ловкости, остальное — от базовой характеристики атаки из настроек листа.
+ *
+ * @param character персонаж.
+ * @param weapon параметры оружия.
+ * @returns характеристика атаки и урона этим оружием.
+ */
+function getWeaponAbility(
+  character: Character,
+  weapon: InventoryWeapon,
+): AbilityKey {
+  return weapon.finesse || weapon.ranged
+    ? 'dexterity'
+    : getWeaponAttackAbility(character);
+}
+
+/**
+ * Бросок урона оружием: кости из справочника, собственный бонус оружия и
+ * модификатор той же характеристики, что и у атаки. Использует ASCII-минус —
+ * формула уходит в парсер дайс-роллера.
+ *
+ * @param character персонаж.
+ * @param weapon параметры оружия.
+ * @returns разбор броска урона или null, если справочник не дал костей урона.
+ */
+export function getWeaponDamage(
+  character: Character,
+  weapon: InventoryWeapon,
+): WeaponDamage | null {
+  if (!weapon.damage) {
+    return null;
+  }
+
+  const ability = getWeaponAbility(character, weapon);
+
+  const diceNotation = `${weapon.damage.diceCount}${DICE_NOTATION_LETTER}${weapon.damage.diceFaces}`;
+
+  const totalBonus =
+    weapon.damage.bonus + getModifier(character.abilities[ability]);
+
+  const sign = totalBonus < 0 ? '-' : '+';
+
+  return {
+    formula:
+      totalBonus === 0
+        ? diceNotation
+        : `${diceNotation}${sign}${Math.abs(totalBonus)}`,
+    diceNotation,
+    weaponBonus: weapon.damage.bonus,
+    ability,
+    typeLabel: DAMAGE_TYPE_LABELS[weapon.damage.type] ?? '',
+  };
 }
 
 /**
@@ -721,36 +1096,101 @@ export function getSpellGroupLabel(level: number): string {
 
 /**
  * Группировка заклинаний по кругам: заговоры, затем круги по возрастанию;
- * внутри круга — по алфавиту.
+ * внутри круга — по алфавиту. Круги из `slotLevels` попадают в результат даже
+ * без заклинаний: ячейки этих кругов тратятся и на повышение круга уже
+ * известных заклинаний, поэтому их разделитель нужен всегда.
  *
  * @param spells заклинания книги персонажа.
+ * @param slotLevels круги, у которых есть ячейки заклинаний.
  * @returns группы заклинаний с подписями для разделителей.
  */
 export function getSpellGroups(
   spells: CharacterSpell[],
+  slotLevels: number[],
 ): CharacterSpellGroup[] {
-  const sortedSpells = [...spells].sort(
-    (left, right) =>
-      left.level - right.level || left.name.localeCompare(right.name, 'ru'),
-  );
+  const levels = [
+    ...new Set([...spells.map((spell) => spell.level), ...slotLevels]),
+  ].sort((left, right) => left - right);
 
-  const groups: CharacterSpellGroup[] = [];
+  return levels.map((level) => ({
+    level,
+    label: getSpellGroupLabel(level),
+    spells: spells
+      .filter((spell) => spell.level === level)
+      .sort((left, right) => left.name.localeCompare(right.name, 'ru')),
+  }));
+}
 
-  for (const spell of sortedSpells) {
-    const lastGroup = groups.at(-1);
+/**
+ * Своё ли это заклинание: добавлено формой листа, а не выбрано из каталога.
+ * У своих заклинаний нет страницы в разделе «Заклинания», поэтому описание они
+ * хранят прямо в листе.
+ *
+ * @param spell заклинание книги персонажа.
+ * @returns true — заклинание своё.
+ */
+export function isCustomSpell(spell: CharacterSpell): boolean {
+  return spell.url.startsWith(CUSTOM_SPELL_URL_PREFIX);
+}
 
-    if (!lastGroup || lastGroup.level !== spell.level) {
-      groups.push({
-        level: spell.level,
-        label: getSpellGroupLabel(spell.level),
-        spells: [spell],
-      });
-    } else {
-      lastGroup.spells.push(spell);
-    }
+/**
+ * Заполненные характеристики своего заклинания (время, дистанция, компоненты,
+ * длительность) для развёрнутой карточки; незаполненные поля пропускаются.
+ *
+ * @param spell заклинание книги персонажа.
+ * @returns строки «подпись — значение».
+ */
+export function getCustomSpellStatRows(
+  spell: CharacterSpell,
+): CustomSpellStatRow[] {
+  return CUSTOM_SPELL_FIELDS.map((field) => ({
+    key: field.key,
+    label: field.label,
+    value: spell[field.key]?.trim() ?? '',
+  })).filter((row) => row.value);
+}
+
+/**
+ * Заклинание книги из значений формы своего заклинания. Пустое название
+ * означает незаполненную форму — такое заклинание не создаётся.
+ *
+ * @param url URL заклинания (`custom:` + идентификатор).
+ * @param draft значения формы.
+ * @returns заклинание книги; null — название пустое.
+ */
+export function toCustomSpell(
+  url: string,
+  draft: CustomSpellDraft,
+): CharacterSpell | null {
+  const name = draft.name.trim();
+
+  if (!name) {
+    return null;
   }
 
-  return groups;
+  return {
+    url,
+    name,
+    level: draft.level,
+    school: draft.school.trim(),
+    concentration: draft.concentration,
+    ritual: draft.ritual,
+    castingTime: draft.castingTime.trim(),
+    range: draft.range.trim(),
+    components: draft.components.trim(),
+    duration: draft.duration.trim(),
+    description: [...draft.description],
+  };
+}
+
+/**
+ * Приведение названия класса или подкласса к ключу карт заклинательства.
+ *
+ * @param name название класса или подкласса.
+ * @returns название без крайних пробелов, в нижнем регистре и без «ё».
+ */
+function normalizeClassName(name: string): string {
+  return name.trim().toLowerCase().replaceAll('ё', 'е');
 }
 
 /**
@@ -767,12 +1207,201 @@ export function getClassSpellcastingAbility(
     return null;
   }
 
-  const normalizedName = characterClass.name
-    .trim()
-    .toLowerCase()
-    .replaceAll('ё', 'е');
+  return (
+    CLASS_SPELLCASTING_ABILITIES[normalizeClassName(characterClass.name)]
+    ?? null
+  );
+}
 
-  return CLASS_SPELLCASTING_ABILITIES[normalizedName] ?? null;
+/**
+ * Тип заклинательства класса по его названию и названию подкласса. Запасной
+ * путь для листов, сохранённых до появления `casterType`: у воина и плута
+ * ячейки даёт подкласс (мистический рыцарь и мистический ловкач).
+ *
+ * @param characterClass класс персонажа.
+ * @returns тип заклинательства; null — класс ячеек заклинаний не даёт.
+ */
+function getLegacyCasterType(
+  characterClass: CharacterClass,
+): CasterType | null {
+  const casterType =
+    CLASS_SPELL_PROGRESSIONS[normalizeClassName(characterClass.name)];
+
+  if (casterType) {
+    return casterType;
+  }
+
+  const { subclassName } = characterClass;
+
+  return subclassName
+    && THIRD_CASTER_SUBCLASSES.includes(normalizeClassName(subclassName))
+    ? CasterType.THIRD
+    : null;
+}
+
+/**
+ * Тип заклинательства класса персонажа: берётся из листа (`casterType`
+ * справочника, записанный визардом класса), а у листов без этого поля
+ * определяется по названию класса и подкласса.
+ *
+ * @param characterClass класс персонажа; null — не выбран.
+ * @returns тип заклинательства; null — класс ячеек заклинаний не даёт.
+ */
+export function getClassCasterType(
+  characterClass: CharacterClass | null,
+): CasterType | null {
+  if (!characterClass) {
+    return null;
+  }
+
+  return characterClass.casterType ?? getLegacyCasterType(characterClass);
+}
+
+/**
+ * Тип заклинательства выбранной в визарде пары «класс — подкласс». Подкласс
+ * перекрывает класс, только когда сам даёт заклинательство: ячейки воина и
+ * плута появляются лишь у мистического рыцаря и мистического ловкача, а
+ * остальные их подклассы (как и класс) заклинательства не дают.
+ *
+ * @param classSummary деталь выбранного класса.
+ * @param subclassSummary деталь выбранного подкласса; null — не выбран.
+ * @returns тип заклинательства для записи в лист.
+ */
+export function getSelectedCasterType(
+  classSummary: ClassSummary,
+  subclassSummary: ClassSummary | null,
+): CasterType | null {
+  const subclassCasterType = subclassSummary?.casterType;
+
+  return subclassCasterType && subclassCasterType !== CasterType.NONE
+    ? subclassCasterType
+    : classSummary.casterType;
+}
+
+/**
+ * Строка таблицы ячеек заклинаний для типа заклинательства и уровня персонажа.
+ * Таблицы общие с разделом «Классы» — там ими рисуется прогрессия класса.
+ *
+ * @param casterType тип заклинательства класса.
+ * @param level уровень персонажа (нормализованный).
+ * @returns количество ячеек по кругам, индекс — круг минус 1.
+ */
+function getCasterTypeSpellSlots(
+  casterType: CasterType,
+  level: Level,
+): number[] {
+  if (casterType === CasterType.FULL) {
+    return FULL_CASTER_SPELL_SLOTS[level];
+  }
+
+  if (casterType === CasterType.HALF) {
+    return HALF_CASTER_SPELL_SLOTS[level];
+  }
+
+  if (casterType === CasterType.THIRD) {
+    return THIRD_CASTER_SPELL_SLOTS[level];
+  }
+
+  if (casterType === CasterType.MULTICLASS) {
+    return MULTICLASS_SPELL_SLOTS[level];
+  }
+
+  // Все ячейки колдуна — одного круга: младшие круги остаются пустыми и в
+  // разделители списка не попадают.
+  if (casterType === CasterType.PACT) {
+    const pactLevel = PACT_CASTER_SPELL_SLOTS_LEVEL[level];
+
+    return Array.from({ length: pactLevel }, (_slot, index) =>
+      index === pactLevel - 1 ? PACT_CASTER_SPELL_SLOTS_COUNT[level] : 0,
+    );
+  }
+
+  return [];
+}
+
+/**
+ * Количество ячеек заклинаний по кругам для класса и уровня персонажа. Уровень
+ * вне диапазона таблиц (битый документ) ячеек не даёт.
+ *
+ * @param casterType тип заклинательства класса.
+ * @param level уровень персонажа.
+ * @returns количество ячеек, индекс — круг минус 1.
+ */
+function getSpellSlotMaximums(casterType: CasterType, level: number): number[] {
+  const characterLevel = LEVELS.find(
+    (tableLevel) => tableLevel === Math.trunc(level),
+  );
+
+  return characterLevel
+    ? getCasterTypeSpellSlots(casterType, characterLevel)
+    : [];
+}
+
+/**
+ * Ряды ячеек заклинаний персонажа: максимум круга считается по классу и уровню,
+ * трата берётся с листа и обрезается по максимуму (уровень мог измениться после
+ * траты). Круги без ячеек в результат не входят.
+ *
+ * @param character персонаж.
+ * @returns ряды ячеек по возрастанию круга.
+ */
+export function getSpellSlotRows(character: Character): SpellSlotRow[] {
+  const casterType = getClassCasterType(character.characterClass);
+
+  if (!casterType) {
+    return [];
+  }
+
+  // Ячейки договора колдуна возвращаются коротким отдыхом, обычные — только
+  // продолжительным.
+  const recovery: ResourceRecovery =
+    casterType === CasterType.PACT ? 'short-rest' : 'long-rest';
+
+  const usedByLevel = new Map(
+    character.spellSlots.map((slot) => [slot.level, slot.used]),
+  );
+
+  return getSpellSlotMaximums(casterType, character.level)
+    .map((max, index) => ({
+      level: index + 1,
+      max,
+      used: clamp(usedByLevel.get(index + 1) ?? 0, 0, max),
+      recovery,
+    }))
+    .filter((row) => row.max > 0);
+}
+
+/**
+ * Кружки ячеек круга для разделителя списка заклинаний: закрашенные кружки —
+ * потраченные ячейки, пустые — оставшиеся.
+ *
+ * @param row ряд ячеек круга.
+ * @returns кружки по порядку с подписями для скринридера.
+ */
+export function getSpellSlotCircles(row: SpellSlotRow): SpellSlotCircle[] {
+  return Array.from({ length: row.max }, (_slot, index) => {
+    const used = index < row.used;
+
+    return {
+      index,
+      used,
+      label: `${getSpellLevelLabel(row.level)}, ячейка ${index + 1}: ${
+        used ? SPELL_SLOT_USED_LABEL : SPELL_SLOT_FREE_LABEL
+      }`,
+    };
+  });
+}
+
+/**
+ * Подсказка ряда ячеек круга: сколько ячеек осталось и чем они восстанавливаются.
+ *
+ * @param row ряд ячеек круга.
+ * @returns строка подсказки для тултипа разделителя.
+ */
+export function getSpellSlotSummary(row: SpellSlotRow): string {
+  const free = row.max - row.used;
+
+  return `Свободно ячеек: ${free} из ${row.max} · ${RESOURCE_RECOVERY_LABELS[row.recovery]}`;
 }
 
 /**
@@ -1466,14 +2095,18 @@ function getCharacterFileName(name: string): string {
 }
 
 /**
- * Скачивание листа в виде JSON-файла: сериализует персонажа целиком (та же
- * форма, что уходит в автосохранение) и отдаёт браузеру ссылку на blob.
- * Работает только в браузере — вызывается по действию пользователя.
+ * Скачивание листа в виде JSON-файла: сериализует персонажа (та же форма, что
+ * уходит в автосохранение) и отдаёт браузеру ссылку на blob. Работает только в
+ * браузере — вызывается по действию пользователя.
+ *
+ * Ссылка на изображение в файл не попадает: она ведёт в наше хранилище и
+ * действительна только для своего владельца — в чужом аккаунте или стороннем
+ * сервисе картинка всё равно не откроется. Пустое поле честнее битой ссылки.
  *
  * @param character персонаж скачиваемого листа.
  */
 export function downloadCharacterJson(character: Character): void {
-  const json = JSON.stringify(character, null, 2);
+  const json = JSON.stringify({ ...character, avatarUrl: null }, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -1494,16 +2127,34 @@ export interface SheetActionMenuOptions {
   /** Удаление листа доступно из этого места. */
   canRemove: boolean;
 
+  /**
+   * Доступ по ссылке уже включён — пункт подсказывает состояние, не открывая
+   * модалку. Учитывается только вместе с `onShare`.
+   */
+  isShared?: boolean;
+
+  /**
+   * Лист открыт по ссылке: остаётся только выгрузка документа. Копия, удаление,
+   * настройки и управление доступом — права владельца, зрителю их не показываем.
+   */
+  isReadonly?: boolean;
+
   onDownload: () => void;
   onDuplicate: () => void;
   onRemove: () => void;
   onSettings: () => void;
+
+  /**
+   * Открытие модалки «Поделиться»; не передан — пункта в меню нет. Так меню
+   * чужого листа и мест без управления доступом остаётся без лишнего действия.
+   */
+  onShare?: () => void;
 }
 
 /**
  * Пункты меню действий над листом — общие для шапки открытого листа и карточки
- * в списке персонажей: экспорт, копия и настройки одной группой, удаление —
- * отдельной, оно необратимее прочих.
+ * в списке персонажей: экспорт, копия, доступ по ссылке и настройки одной
+ * группой, удаление — отдельной, оно необратимее прочих.
  *
  * @param options доступность действий и обработчики пунктов.
  * @returns группы пунктов для `UDropdownMenu`.
@@ -1511,12 +2162,18 @@ export interface SheetActionMenuOptions {
 export function getSheetActionMenuItems(
   options: SheetActionMenuOptions,
 ): Array<Array<DropdownMenuItem>> {
+  const download: DropdownMenuItem = {
+    label: 'Скачать JSON',
+    icon: 'tabler:download',
+    onSelect: options.onDownload,
+  };
+
+  if (options.isReadonly) {
+    return [[download]];
+  }
+
   const actions: DropdownMenuItem[] = [
-    {
-      label: 'Скачать JSON',
-      icon: 'tabler:download',
-      onSelect: options.onDownload,
-    },
+    download,
     {
       label: 'Создать копию',
       icon: 'tabler:copy',
@@ -1526,12 +2183,24 @@ export function getSheetActionMenuItems(
       disabled: !options.canDuplicate,
       onSelect: options.onDuplicate,
     },
-    {
-      label: 'Настройки',
-      icon: 'tabler:settings',
-      onSelect: options.onSettings,
-    },
   ];
+
+  if (options.onShare) {
+    actions.push({
+      label: 'Поделиться листом',
+      icon: options.isShared ? 'tabler:link' : 'tabler:share',
+      // Включённый доступ виден прямо в меню: иначе о том, что лист уже открыт
+      // по ссылке, нельзя узнать, не заглянув в модалку.
+      description: options.isShared ? SHEET_SHARE_ACTIVE_HINT : undefined,
+      onSelect: options.onShare,
+    });
+  }
+
+  actions.push({
+    label: 'Настройки',
+    icon: 'tabler:settings',
+    onSelect: options.onSettings,
+  });
 
   if (!options.canRemove) {
     return [actions];
@@ -1547,5 +2216,106 @@ export function getSheetActionMenuItems(
         onSelect: options.onRemove,
       },
     ],
+  ];
+}
+
+// Меню «Добавить» на вкладках листа: варианты добавления живут в выпадающем
+// меню, а не в ряду кнопок — ряд не растёт с каждым новым источником и не
+// переносится на вторую строку в узком дровере.
+
+/** Обработчики пунктов меню «Добавить» на вкладке снаряжения. */
+export interface EquipmentAddMenuOptions {
+  onAddItem: () => void;
+  onAddMagicItem: () => void;
+  onAddCustomItem: () => void;
+}
+
+/**
+ * Пункты меню «Добавить» на вкладке снаряжения: предмет из каталога,
+ * магический предмет и свой, заполняемый вручную.
+ *
+ * @param options обработчики пунктов.
+ * @returns пункты для `UDropdownMenu`.
+ */
+export function getEquipmentAddMenuItems(
+  options: EquipmentAddMenuOptions,
+): DropdownMenuItem[] {
+  return [
+    {
+      label: 'Предмет',
+      icon: 'tabler:package',
+      onSelect: options.onAddItem,
+    },
+    {
+      label: 'Магический предмет',
+      icon: 'tabler:sparkles',
+      onSelect: options.onAddMagicItem,
+    },
+    {
+      label: 'Свой предмет',
+      icon: 'tabler:pencil-plus',
+      onSelect: options.onAddCustomItem,
+    },
+  ];
+}
+
+/** Обработчики пунктов меню «Добавить» на вкладке заклинаний. */
+export interface SpellsAddMenuOptions {
+  onAddSpell: () => void;
+  onAddCustomSpell: () => void;
+}
+
+/**
+ * Пункты меню «Добавить» на вкладке заклинаний: заклинание из каталога и своё,
+ * заполняемое вручную.
+ *
+ * @param options обработчики пунктов.
+ * @returns пункты для `UDropdownMenu`.
+ */
+export function getSpellsAddMenuItems(
+  options: SpellsAddMenuOptions,
+): DropdownMenuItem[] {
+  return [
+    {
+      label: 'Заклинание',
+      icon: 'tabler:wand',
+      onSelect: options.onAddSpell,
+    },
+    {
+      label: 'Своё заклинание',
+      icon: 'tabler:pencil-plus',
+      onSelect: options.onAddCustomSpell,
+    },
+  ];
+}
+
+/** Обработчики пунктов меню «Добавить» на вкладке особенностей. */
+export interface FeaturesAddMenuOptions {
+  onAddFeature: () => void;
+  onAddFeat: () => void;
+}
+
+/**
+ * Пункты меню «Добавить» на вкладке особенностей: своя особенность и черта из
+ * каталога. Иконка карандаша — та же, что у своего заклинания: заполняется
+ * вручную, а не выбирается из раздела сайта.
+ *
+ * @param options обработчики пунктов.
+ * @returns пункты для `UDropdownMenu`.
+ */
+export function getFeaturesAddMenuItems(
+  options: FeaturesAddMenuOptions,
+): DropdownMenuItem[] {
+  return [
+    {
+      label: 'Особенность',
+      icon: 'tabler:pencil-plus',
+      onSelect: options.onAddFeature,
+    },
+    {
+      label: 'Черта',
+      icon: 'tabler:award',
+      onSelect: options.onAddFeat,
+    },
   ];
 }

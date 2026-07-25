@@ -17,6 +17,8 @@ import type {
   CharacterSpell,
   CharacterSpellcasting,
   CharacterVision,
+  CustomInventoryItemDraft,
+  CustomSpellDraft,
   ProficiencyGroupKey,
 } from '../model';
 
@@ -31,6 +33,8 @@ import {
   ARMOR_CLASS_BASE_MIN,
   CURRENCY_AMOUNT_MAX,
   CURRENCY_AMOUNT_MIN,
+  CUSTOM_INVENTORY_URL_PREFIX,
+  CUSTOM_SPELL_URL_PREFIX,
   DEFAULT_CHARACTER,
   downloadCharacterJson,
   EXPERIENCE_MAX,
@@ -45,13 +49,20 @@ import {
   getSavingThrowRows,
   getSkillRows,
   getSpellcastingBreakdown,
+  getSpellSlotRows,
   INVENTORY_QUANTITY_MAX,
+  INVENTORY_QUANTITY_MIN,
+  isCustomInventoryItem,
+  isCustomSpell,
   LEVEL_MAX,
   LEVEL_MIN,
   RESOURCE_COUNT_MAX,
   RESOURCE_COUNT_MIN,
   SHEET_LOCKED_MESSAGE,
+  SHEET_READONLY_MESSAGE,
   SKILL_PROFICIENCY_NEXT,
+  toCustomInventoryItem,
+  toCustomSpell,
   VISION_DISTANCE_MAX,
   VISION_DISTANCE_MIN,
 } from '../model';
@@ -82,8 +93,23 @@ export function useCharacterSheet() {
 
   const isLocked = useState<boolean>('character-sheet:locked', () => false);
 
+  /**
+   * Лист открыт по ссылке «поделиться»: чужой зритель может только смотреть.
+   * В отличие от {@link isLocked} снять этот режим нельзя — ставит его загрузчик
+   * страницы просмотра, а на бэке ручек записи по ссылке попросту нет.
+   */
+  const isReadonly = useState<boolean>('character-sheet:readonly', () => false);
+
+  /** Правки листа разрешены: лист свой и не заперт замком. */
+  const canEdit = computed(() => !isReadonly.value && !isLocked.value);
+
   /** Переключение блокировки редактирования листа. */
   function toggleLock(): void {
+    // Замок чужого листа ничего не даёт: правки всё равно запрещены.
+    if (isReadonly.value) {
+      return;
+    }
+
     isLocked.value = !isLocked.value;
   }
 
@@ -92,20 +118,52 @@ export function useCharacterSheet() {
    * подсказку и возвращает false — редактирующие экшены и модалки настроек
    * должны прерываться; броски и трата ресурсов не ограничиваются.
    *
-   * @returns true, если лист не заблокирован.
+   * @returns true, если лист доступен для правок.
    */
   function ensureEditable(): boolean {
-    if (!isLocked.value) {
+    if (canEdit.value) {
       return true;
     }
 
     toast.add({
       color: 'warning',
-      icon: 'tabler:lock',
-      title: SHEET_LOCKED_MESSAGE,
+      icon: isReadonly.value ? 'tabler:eye' : 'tabler:lock',
+      title: isReadonly.value ? SHEET_READONLY_MESSAGE : SHEET_LOCKED_MESSAGE,
     });
 
     return false;
+  }
+
+  /**
+   * Проверка для игровых действий (вдохновение, хиты, слоты, ресурсы, экипировка).
+   * Запертый лист их разрешает — играть с закрытым от правок листом можно, — а
+   * чужой запрещает: автосохранения у зрителя нет, и такая правка молча пропала
+   * бы при перезагрузке страницы.
+   *
+   * @returns true, если лист свой.
+   */
+  function ensureOwnSheet(): boolean {
+    if (!isReadonly.value) {
+      return true;
+    }
+
+    toast.add({
+      color: 'warning',
+      icon: 'tabler:eye',
+      title: SHEET_READONLY_MESSAGE,
+    });
+
+    return false;
+  }
+
+  /**
+   * Перевод листа в режим просмотра по ссылке и обратно. Вызывает загрузчик:
+   * страница просмотра включает режим, свои страницы — выключают.
+   *
+   * @param readonly включить ли режим «только просмотр».
+   */
+  function setReadonly(readonly: boolean): void {
+    isReadonly.value = readonly;
   }
 
   /**
@@ -149,6 +207,8 @@ export function useCharacterSheet() {
   const spellcastingBreakdown = computed(() =>
     getSpellcastingBreakdown(character.value),
   );
+
+  const spellSlotRows = computed(() => getSpellSlotRows(character.value));
 
   const totalWeight = computed(() =>
     getInventoryWeight(character.value.inventory),
@@ -241,6 +301,10 @@ export function useCharacterSheet() {
    * ограничивается.
    */
   function toggleInspiration(): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
     character.value = {
       ...character.value,
       inspiration: !character.value.inspiration,
@@ -262,6 +326,10 @@ export function useCharacterSheet() {
    * @param delta изменение текущего значения.
    */
   function adjustClassResource(resourceId: string, delta: number): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
     character.value = {
       ...character.value,
       classResources: character.value.classResources.map((resource) =>
@@ -272,6 +340,44 @@ export function useCharacterSheet() {
             }
           : resource,
       ),
+    };
+  }
+
+  /**
+   * Трата или возврат ячейки заклинаний круга по нажатию на кружок. Нажатие на
+   * свободный кружок тратит ячейки по него включительно, на потраченный —
+   * возвращает его и все следующие. Игровое действие: запертый лист его
+   * разрешает, чужой (открытый по ссылке) — нет.
+   *
+   * @param level круг ячейки.
+   * @param index порядковый номер кружка в круге (с нуля).
+   */
+  function toggleSpellSlot(level: number, index: number): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    const row = spellSlotRows.value.find((slotRow) => slotRow.level === level);
+
+    if (!row) {
+      return;
+    }
+
+    const used = clamp(index < row.used ? index : index + 1, 0, row.max);
+
+    // Хранится только трата: круги без потраченных ячеек в документе не нужны.
+    const otherSlots = character.value.spellSlots.filter(
+      (slot) => slot.level !== level,
+    );
+
+    character.value = {
+      ...character.value,
+      spellSlots:
+        used > 0
+          ? [...otherSlots, { level, used }].sort(
+              (left, right) => left.level - right.level,
+            )
+          : otherSlots,
     };
   }
 
@@ -452,6 +558,10 @@ export function useCharacterSheet() {
    * @param temporary новые временные хиты.
    */
   function setHitPoints(current: number, temporary: number): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
     const { max } = character.value.health;
 
     character.value = {
@@ -803,6 +913,69 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Добавление своего заклинания (не из каталога). URL генерируется с
+   * префиксом `custom:` — со слагами каталога он не столкнётся, а книга
+   * заклинаний остаётся единым списком.
+   *
+   * @param draft значения формы своего заклинания.
+   */
+  function addCustomSpell(draft: CustomSpellDraft): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const spell = toCustomSpell(
+      `${CUSTOM_SPELL_URL_PREFIX}${crypto.randomUUID()}`,
+      draft,
+    );
+
+    if (!spell) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      spells: [...character.value.spells, spell],
+    };
+  }
+
+  /**
+   * Редактирование своего заклинания; URL (идентификатор записи) не меняется.
+   * Пустое название игнорируется — заклинание без названия не сохраняем.
+   * Каталожные записи форма не правит: их описание живёт в разделе, а не в
+   * листе, и превращать их в свои нельзя.
+   *
+   * @param spellUrl URL редактируемого заклинания.
+   * @param draft новые значения формы.
+   */
+  function updateCustomSpell(spellUrl: string, draft: CustomSpellDraft): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const editedSpell = character.value.spells.find(
+      (spell) => spell.url === spellUrl,
+    );
+
+    if (!editedSpell || !isCustomSpell(editedSpell)) {
+      return;
+    }
+
+    const updatedSpell = toCustomSpell(spellUrl, draft);
+
+    if (!updatedSpell) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      spells: character.value.spells.map((spell) =>
+        spell.url === spellUrl ? updatedSpell : spell,
+      ),
+    };
+  }
+
+  /**
    * Установка настроек заклинательства (заклинательной характеристики).
    *
    * @param spellcasting новые настройки заклинательства.
@@ -884,6 +1057,76 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Добавление своего предмета (заполненного формой, а не выбранного из
+   * разделов сайта). Идентификатор генерируется с префиксом `custom:` — со
+   * слагами каталога он не столкнётся, а инвентарь остаётся единым списком.
+   *
+   * @param draft значения формы своего предмета.
+   */
+  function addCustomInventoryItem(draft: CustomInventoryItemDraft): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const inventoryItem = toCustomInventoryItem(
+      `${CUSTOM_INVENTORY_URL_PREFIX}${crypto.randomUUID()}`,
+      draft,
+    );
+
+    if (!inventoryItem) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      inventory: [...character.value.inventory, inventoryItem],
+    };
+  }
+
+  /**
+   * Редактирование своего предмета; идентификатор записи не меняется, надетый
+   * доспех остаётся надетым. Пустое название игнорируется — предмет без названия
+   * не сохраняем. Каталожные записи форма не правит: их описание живёт в
+   * разделе-источнике, а не в листе.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   * @param draft новые значения формы.
+   */
+  function updateCustomInventoryItem(
+    inventoryItemId: string,
+    draft: CustomInventoryItemDraft,
+  ): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const editedItem = character.value.inventory.find(
+      (inventoryItem) => inventoryItem.id === inventoryItemId,
+    );
+
+    if (!editedItem || !isCustomInventoryItem(editedItem)) {
+      return;
+    }
+
+    const updatedItem = toCustomInventoryItem(
+      editedItem.url,
+      draft,
+      editedItem.equipped,
+    );
+
+    if (!updatedItem) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.map((inventoryItem) =>
+        inventoryItem.id === inventoryItemId ? updatedItem : inventoryItem,
+      ),
+    };
+  }
+
+  /**
    * Удаление предмета из инвентаря.
    *
    * @param inventoryItemId идентификатор предмета инвентаря.
@@ -913,6 +1156,10 @@ export function useCharacterSheet() {
     inventoryItemId: string,
     delta: number,
   ): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
     character.value = {
       ...character.value,
       inventory: character.value.inventory.map((inventoryItem) =>
@@ -921,7 +1168,7 @@ export function useCharacterSheet() {
               ...inventoryItem,
               quantity: clamp(
                 inventoryItem.quantity + delta,
-                1,
+                INVENTORY_QUANTITY_MIN,
                 INVENTORY_QUANTITY_MAX,
               ),
             }
@@ -938,6 +1185,10 @@ export function useCharacterSheet() {
    * @param inventoryItemId идентификатор предмета инвентаря.
    */
   function toggleInventoryItemEquipped(inventoryItemId: string): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
     character.value = {
       ...character.value,
       inventory: character.value.inventory.map((inventoryItem) =>
@@ -1132,7 +1383,10 @@ export function useCharacterSheet() {
   return {
     character,
     isLocked,
+    isReadonly,
+    canEdit,
     toggleLock,
+    setReadonly,
     ensureEditable,
     loadCharacter,
     resetCharacter,
@@ -1144,6 +1398,7 @@ export function useCharacterSheet() {
     armorClassValue,
     armorClassBreakdown,
     spellcastingBreakdown,
+    spellSlotRows,
     totalWeight,
     carryingCapacity,
     setAbilityScore,
@@ -1158,10 +1413,14 @@ export function useCharacterSheet() {
     addFeature,
     addFeats,
     addInventoryItems,
+    addCustomInventoryItem,
+    addCustomSpell,
     removeFeature,
     removeInventoryItem,
     removeSpell,
     updateFeature,
+    updateCustomInventoryItem,
+    updateCustomSpell,
     setBackground,
     setClass,
     setCurrency,
@@ -1180,6 +1439,7 @@ export function useCharacterSheet() {
     setHitPoints,
     setHitDice,
     toggleSavingThrowProficiency,
+    toggleSpellSlot,
     cycleSkillProficiency,
   };
 }

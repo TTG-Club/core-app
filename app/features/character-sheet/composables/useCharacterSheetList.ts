@@ -13,11 +13,19 @@ import {
   DRAFT_CHARACTER_ID,
   fetchCharacterSheetList,
   getSheetErrorMessage,
+  parseImportedCharacter,
   restoreCharacterSheet,
   SHEET_AVATAR_MAX_SIZE,
   SHEET_AVATAR_S3_SECTION,
+  SHEET_COPY_ERROR_TITLE,
   SHEET_COPY_LIMIT_HINT,
   SHEET_COPY_NAME_SUFFIX,
+  SHEET_COPY_SUCCESS_TITLE,
+  SHEET_IMPORT_ERROR_TITLE,
+  SHEET_IMPORT_MAX_WEIGHT,
+  SHEET_IMPORT_PARSE_ERROR,
+  SHEET_IMPORT_SIZE_ERROR,
+  SHEET_IMPORT_SUCCESS_TITLE,
   updateCharacterSheet,
 } from '../model';
 import { useCharacterSheet } from './useCharacterSheet';
@@ -71,6 +79,23 @@ function getCopyName(name: string, existingNames: string[]): string {
 }
 
 /**
+ * Разбор персонажа из выбранного JSON-файла. Ни битый JSON, ни посторонний
+ * файл наружу ошибкой не выходят — вызывающий код объясняет отказ тостом.
+ *
+ * @param file файл, выбранный пользователем.
+ * @returns персонаж из файла; null — в файле не лист персонажа.
+ */
+async function readCharacterFromFile(file: File): Promise<Character | null> {
+  try {
+    const content: unknown = JSON.parse(await file.text());
+
+    return parseImportedCharacter(content);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Список листов персонажей пользователя: активные, история удалённых и
  * серверный лимит активных листов (в будущем зависит от подписки, поэтому на
  * клиенте не хардкодится).
@@ -81,9 +106,10 @@ function getCopyName(name: string, existingNames: string[]): string {
  * куки.
  *
  * Состояние общее (`useState`): списком пользуется не только страница со
- * списком, но и меню открытого листа (удаление, копия и остаток лимита) — после
- * мутации из шапки список за ней обновляется сам. На сервере композабл не
- * выполняется: оба потребителя внутри `<ClientOnly>`.
+ * списком, но и меню открытого листа (удаление, копия и остаток лимита), и
+ * кнопка импорта в шапке раздела — после мутации из любого места список
+ * обновляется сам. На сервере композабл не выполняется: все его потребители
+ * внутри `<ClientOnly>`.
  */
 export function useCharacterSheetList() {
   const toast = useToast();
@@ -166,6 +192,21 @@ export function useCharacterSheetList() {
     });
   }
 
+  /**
+   * Показывает тост об отказе импорта: до запроса на бэк дело не дошло, ошибка
+   * в самом файле.
+   *
+   * @param description причина отказа.
+   */
+  function notifyImportRejection(description: string): void {
+    toast.add({
+      title: SHEET_IMPORT_ERROR_TITLE,
+      description,
+      color: 'error',
+      icon: 'tabler:alert-triangle',
+    });
+  }
+
   /** Загружает список листов (включая удалённые для истории) и лимит. */
   async function load(): Promise<void> {
     isLoading.value = true;
@@ -223,37 +264,49 @@ export function useCharacterSheetList() {
   }
 
   /**
-   * Создаёт копию листа и обновляет список. Копируется переданный документ
-   * (открытый лист — вместе с несохранёнными правками), идентификатор внутри
-   * него сбрасывается к черновику: свой UUID копии выдаст сервер.
+   * Проверяет, осталось ли в лимите место под новый лист: в него одинаково
+   * упираются и копия, и импорт. Занятый лимит объясняется тостом.
    *
-   * Открывать копию сразу не станем — вызвать копирование можно из разных мест
-   * (карточка списка и шапка открытого листа), поэтому переход отдаётся кнопкой
-   * в тосте.
-   *
-   * @param source персонаж исходного листа.
-   * @returns созданная копия или null (лимит исчерпан либо ошибка).
+   * @param title заголовок тоста при отказе.
+   * @returns true, если лист можно создавать.
    */
-  async function duplicate(
-    source: Character,
-  ): Promise<CharacterSheetDetail | null> {
-    if (!canCreate.value) {
-      toast.add({
-        title: 'Не удалось создать копию листа',
-        description: `${SHEET_COPY_LIMIT_HINT} — удалите один, чтобы освободить место.`,
-        color: 'warning',
-        icon: 'tabler:alert-triangle',
-      });
-
-      return null;
+  function ensureFreeSlot(title: string): boolean {
+    if (canCreate.value) {
+      return true;
     }
 
+    toast.add({
+      title,
+      description: `${SHEET_COPY_LIMIT_HINT} — удалите один, чтобы освободить место.`,
+      color: 'warning',
+      icon: 'tabler:alert-triangle',
+    });
+
+    return false;
+  }
+
+  /**
+   * Создаёт лист из готового документа — общее тело копии и импорта.
+   *
+   * Изображение копируется в отдельный файл: иначе два листа ссылались бы на
+   * один объект в хранилище и замена картинки в одном стёрла бы её у другого.
+   * Не скопировалось (чужой файл при импорте или ссылка мимо хранилища) — лист
+   * просто остаётся без изображения. Идентификатор внутри документа
+   * сбрасывается к черновику: свой UUID новому листу выдаст сервер.
+   *
+   * @param source документ-источник.
+   * @param options параметры создания.
+   * @param options.name имя нового листа.
+   * @param options.errorTitle заголовок тоста при ошибке.
+   * @returns созданный лист или null.
+   */
+  async function createSheetFromDocument(
+    source: Character,
+    options: { name: string; errorTitle: string },
+  ): Promise<CharacterSheetDetail | null> {
     isMutating.value = true;
 
     try {
-      // Изображение копируется в отдельный файл: иначе оба листа ссылались бы
-      // на один объект в хранилище и замена картинки в копии стёрла бы её у
-      // оригинала. Не скопировалось — копия просто остаётся без изображения.
       const avatarUrl = source.avatarUrl
         ? await copyImage(source.avatarUrl)
         : null;
@@ -262,37 +315,125 @@ export function useCharacterSheetList() {
         ...source,
         id: DRAFT_CHARACTER_ID,
         avatarUrl,
-        name: getCopyName(
-          source.name,
-          activeSheets.value.map((sheet) => sheet.name),
-        ),
+        name: options.name,
       });
 
       await load();
 
-      toast.add({
-        title: 'Копия листа создана',
-        description: `«${created.name}» появился в списке ваших персонажей.`,
-        color: 'success',
-        icon: 'tabler:copy-check',
-        actions: [
-          {
-            label: 'Открыть',
-            icon: 'tabler:arrow-up-right',
-            variant: 'ghost',
-            to: `${CHARACTER_SHEET_ROUTE}/${created.id}`,
-          },
-        ],
-      });
-
       return created;
     } catch (error) {
-      notifyError(error, 'Не удалось создать копию листа');
+      notifyError(error, options.errorTitle);
 
       return null;
     } finally {
       isMutating.value = false;
     }
+  }
+
+  /**
+   * Тост о созданном листе с переходом к нему. Открывать лист сразу не станем —
+   * создать его можно из разных мест (карточка списка, шапка открытого листа,
+   * импорт из раздела), поэтому переход отдаётся кнопкой в тосте.
+   *
+   * @param created созданный лист.
+   * @param options оформление тоста.
+   * @param options.title заголовок тоста.
+   * @param options.icon иконка тоста.
+   */
+  function notifySheetCreated(
+    created: CharacterSheetDetail,
+    options: { title: string; icon: string },
+  ): void {
+    toast.add({
+      title: options.title,
+      description: `«${created.name}» появился в списке ваших персонажей.`,
+      color: 'success',
+      icon: options.icon,
+      actions: [
+        {
+          label: 'Открыть',
+          icon: 'tabler:arrow-up-right',
+          variant: 'ghost',
+          to: `${CHARACTER_SHEET_ROUTE}/${created.id}`,
+        },
+      ],
+    });
+  }
+
+  /**
+   * Создаёт копию листа и обновляет список. Копируется переданный документ
+   * (открытый лист — вместе с несохранёнными правками).
+   *
+   * @param source персонаж исходного листа.
+   * @returns созданная копия или null (лимит исчерпан либо ошибка).
+   */
+  async function duplicate(
+    source: Character,
+  ): Promise<CharacterSheetDetail | null> {
+    if (!ensureFreeSlot(SHEET_COPY_ERROR_TITLE)) {
+      return null;
+    }
+
+    const created = await createSheetFromDocument(source, {
+      name: getCopyName(
+        source.name,
+        activeSheets.value.map((sheet) => sheet.name),
+      ),
+      errorTitle: SHEET_COPY_ERROR_TITLE,
+    });
+
+    if (created) {
+      notifySheetCreated(created, {
+        title: SHEET_COPY_SUCCESS_TITLE,
+        icon: 'tabler:copy-check',
+      });
+    }
+
+    return created;
+  }
+
+  /**
+   * Создаёт лист из JSON-файла, скачанного экспортом. Имя из файла остаётся
+   * как есть: совпадение с уже существующим листом ничему не мешает, а
+   * переименование при импорте выглядело бы потерей данных.
+   *
+   * @param file выбранный пользователем файл.
+   * @returns созданный лист или null (лимит, негодный файл либо ошибка).
+   */
+  async function importFromFile(
+    file: File,
+  ): Promise<CharacterSheetDetail | null> {
+    if (!ensureFreeSlot(SHEET_IMPORT_ERROR_TITLE)) {
+      return null;
+    }
+
+    if (file.size > SHEET_IMPORT_MAX_WEIGHT) {
+      notifyImportRejection(SHEET_IMPORT_SIZE_ERROR);
+
+      return null;
+    }
+
+    const source = await readCharacterFromFile(file);
+
+    if (!source) {
+      notifyImportRejection(SHEET_IMPORT_PARSE_ERROR);
+
+      return null;
+    }
+
+    const created = await createSheetFromDocument(source, {
+      name: source.name,
+      errorTitle: SHEET_IMPORT_ERROR_TITLE,
+    });
+
+    if (created) {
+      notifySheetCreated(created, {
+        title: SHEET_IMPORT_SUCCESS_TITLE,
+        icon: 'tabler:file-import',
+      });
+    }
+
+    return created;
   }
 
   /**
@@ -399,6 +540,7 @@ export function useCharacterSheetList() {
     ensureLoaded,
     create,
     duplicate,
+    importFromFile,
     remove,
     restore,
     saveSettings,

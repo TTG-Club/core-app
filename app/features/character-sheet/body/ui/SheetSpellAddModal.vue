@@ -9,6 +9,7 @@
   import { useCharacterSheet, useSpellCatalogSearch } from '../../composables';
   import {
     getSpellGroupLabel,
+    isCustomSpell,
     SPELL_CATALOG_LOAD_MORE_DISTANCE,
     SPELL_LEVELS,
   } from '../../model';
@@ -90,16 +91,23 @@
       && !hasLoadError.value,
   });
 
-  /** Черновик книги: выбранные заклинания по URL. */
+  // Черновик книги: заклинания по URL. Свои заклинания в каталоге не ищутся,
+  // но лежат в черновике — иначе применение выбора стёрло бы их из книги.
   const draftSpells = ref(
     new Map<string, CharacterSpell>(
       character.value.spells.map((spell) => [spell.url, { ...spell }]),
     ),
   );
 
-  const selectedCountLabel = computed(
-    () => `Выбрано: ${draftSpells.value.size}`,
-  );
+  // Считаем только каталожные: свои заклинания в этом списке не выбираются, и
+  // в счётчике выглядели бы выбором из ниоткуда.
+  const selectedCountLabel = computed(() => {
+    const selectedCount = [...draftSpells.value.values()].filter(
+      (spell) => !isCustomSpell(spell),
+    ).length;
+
+    return `Выбрано: ${selectedCount}`;
+  });
 
   function toggleSpell(spell: SpellCatalogItem) {
     if (draftSpells.value.has(spell.url)) {

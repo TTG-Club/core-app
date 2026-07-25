@@ -9,6 +9,7 @@
   import { MagicItemDrawer } from '~magic-items/drawer';
 
   import {
+    getEquipmentAddMenuItems,
     getInventoryGroups,
     SHEET_TAB_EMPTY_LABELS,
     WEIGHT_UNIT_LABEL,
@@ -27,11 +28,21 @@
   const emit = defineEmits<{
     'add-item': [];
     'add-magic-item': [];
+    'add-custom-item': [];
+    'edit-item': [inventoryItemId: string];
     'edit-currency': [];
     'remove-item': [inventoryItemId: string];
     'adjust-quantity': [inventoryItemId: string, delta: number];
     'toggle-equip': [inventoryItemId: string];
+    'roll-attack': [inventoryItem: CharacterInventoryItem];
+    'roll-damage': [inventoryItem: CharacterInventoryItem];
   }>();
+
+  const addMenuItems = getEquipmentAddMenuItems({
+    onAddItem: () => emit('add-item'),
+    onAddMagicItem: () => emit('add-magic-item'),
+    onAddCustomItem: () => emit('add-custom-item'),
+  });
 
   const overlay = useOverlay();
 
@@ -76,7 +87,9 @@
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 pt-2">
+  <!-- Свой @container: строку веса ужимаем по фактической ширине вкладки, а не
+    окна — в дровере и правой панели лист бывает узким и на широком экране -->
+  <div class="@container flex flex-col gap-4 pt-2">
     <div class="flex flex-wrap items-center justify-between gap-2">
       <div
         class="flex items-center gap-1.5 text-sm"
@@ -88,32 +101,31 @@
         />
 
         <span>
-          Переносимый вес: {{ totalWeight }} / {{ carryingCapacity }}
-          {{ WEIGHT_UNIT_LABEL }}
+          <!-- В узкой колонке от подписи остаётся одно «Вес»: рядом стоит
+            кнопка «Добавить», и полный вариант переносит ряд на две строки.
+            Двоеточие входит в обе подписи — тогда пробел между ними ни на что
+            не влияет, какой бы вариант ни был скрыт -->
+          <span class="hidden @md:inline">Переносимый вес:</span>
+
+          <span class="@md:hidden">Вес:</span>
+
+          {{ totalWeight }} / {{ carryingCapacity }} {{ WEIGHT_UNIT_LABEL }}
         </span>
       </div>
 
-      <div class="flex flex-wrap gap-2">
-        <UButton
-          icon="tabler:sparkles"
-          label="Магический предмет"
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          aria-label="Добавить магический предмет"
-          @click.left.exact.prevent="emit('add-magic-item')"
-        />
-
+      <UDropdownMenu
+        :items="addMenuItems"
+        :content="{ align: 'end' }"
+      >
         <UButton
           icon="tabler:plus"
-          label="Предмет"
+          label="Добавить"
+          trailing-icon="tabler:chevron-down"
           color="neutral"
           variant="ghost"
           size="sm"
-          aria-label="Добавить предмет"
-          @click.left.exact.prevent="emit('add-item')"
         />
-      </div>
+      </UDropdownMenu>
     </div>
 
     <SheetCurrencyRow
@@ -143,9 +155,12 @@
           :key="inventoryItem.id"
           :inventory-item="inventoryItem"
           @preview="handlePreview(inventoryItem)"
+          @edit="emit('edit-item', inventoryItem.id)"
           @remove="emit('remove-item', inventoryItem.id)"
           @adjust="(delta) => handleQuantityAdjust(inventoryItem.id, delta)"
           @toggle-equip="emit('toggle-equip', inventoryItem.id)"
+          @roll-attack="emit('roll-attack', inventoryItem)"
+          @roll-damage="emit('roll-damage', inventoryItem)"
         />
       </div>
     </template>

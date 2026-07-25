@@ -6,8 +6,14 @@ import type {
   CharacterClassResource,
   CharacterCustomCurrency,
   CurrencyKey,
+  CustomArmorType,
+  CustomArmorTypeMeta,
+  CustomInventoryItemDraft,
+  CustomInventoryKind,
+  CustomSpellField,
   FeatureOrigin,
   InventoryItemCategory,
+  InventoryStatRollKind,
   LanguageProficiencyGroup,
   ResourceRecovery,
   RollMode,
@@ -18,8 +24,13 @@ import type {
   SpeedUnit,
   ToolProficiencyGroup,
   VisionKey,
+  WeaponCategory,
   WeaponProficiencyGroup,
 } from './types';
+
+import bytes from 'bytes';
+
+import { CasterType } from '~classes/model';
 
 /** Название инструмента «Лист персонажа». */
 export const CHARACTER_SHEET_TITLE = 'Лист персонажа';
@@ -32,6 +43,15 @@ export const CHARACTER_SHEET_ROUTE = '/tools/character-sheet';
 
 /** Эндпоинт листов персонажей (проксируется на core-api). */
 export const CHARACTER_SHEET_API_PATH = '/api/v2/tools/character-sheet';
+
+/**
+ * Базовый путь просмотра листа по ссылке «поделиться». Открывается без
+ * авторизации и без роли — в отличие от остальных страниц раздела.
+ */
+export const CHARACTER_SHEET_SHARED_ROUTE = `${CHARACTER_SHEET_ROUTE}/shared`;
+
+/** Эндпоинт чтения листа по ссылке (публичный, без авторизации). */
+export const CHARACTER_SHEET_SHARED_API_PATH = `${CHARACTER_SHEET_API_PATH}/shared`;
 
 /**
  * Идентификатор несохранённого черновика (`DEFAULT_CHARACTER`). У загруженного
@@ -57,8 +77,44 @@ export const SHEET_COPY_NAME_SUFFIX = ' (копия)';
 /** Причина недоступности копии: свободных мест в лимите не осталось. */
 export const SHEET_COPY_LIMIT_HINT = 'Достигнут лимит листов';
 
+/** Заголовок тоста с ошибкой копирования листа. */
+export const SHEET_COPY_ERROR_TITLE = 'Не удалось создать копию листа';
+
+/** Заголовок тоста о созданной копии листа. */
+export const SHEET_COPY_SUCCESS_TITLE = 'Копия листа создана';
+
 /** Имя файла экспорта листа, когда у персонажа пустое имя. */
 export const CHARACTER_FILE_NAME_FALLBACK = 'персонаж';
+
+/** Подпись кнопки импорта листа из файла. */
+export const SHEET_IMPORT_LABEL = 'Импорт JSON';
+
+/** Пояснение к кнопке импорта: какой файл от пользователя ждут. */
+export const SHEET_IMPORT_HINT =
+  'Создаст лист из JSON-файла, скачанного экспортом';
+
+/** Строка для атрибута `accept` диалога выбора файла листа. */
+export const SHEET_IMPORT_ACCEPT = 'application/json,.json';
+
+/**
+ * Максимальный вес импортируемого файла: документ листа весит десятки
+ * килобайт, поэтому всё, что заметно крупнее, читать в память незачем.
+ */
+export const SHEET_IMPORT_MAX_WEIGHT = bytes('2MB')!;
+
+/** Заголовок тоста с ошибкой импорта листа. */
+export const SHEET_IMPORT_ERROR_TITLE = 'Не удалось импортировать лист';
+
+/** Заголовок тоста об импортированном листе. */
+export const SHEET_IMPORT_SUCCESS_TITLE = 'Лист импортирован';
+
+/** Причина отказа импорта: файл слишком большой для документа листа. */
+export const SHEET_IMPORT_SIZE_ERROR =
+  'Файл слишком большой для листа персонажа';
+
+/** Причина отказа импорта: в файле не лист персонажа. */
+export const SHEET_IMPORT_PARSE_ERROR =
+  'Выберите JSON-файл, скачанный из листа персонажа';
 
 /** Общее сообщение об ошибке, когда бэк не вернул текст. */
 export const SHEET_UNKNOWN_ERROR_MESSAGE = 'Неизвестная ошибка';
@@ -75,6 +131,65 @@ export const SHEET_SAVE_STATUS_META: Record<
 
 /** Сообщение при попытке редактирования заблокированного листа. */
 export const SHEET_LOCKED_MESSAGE = 'Лист заблокирован от редактирования';
+
+/**
+ * Сообщение при попытке правки листа, открытого по ссылке. Страховка на случай,
+ * если редактирующее действие всё же вызвано: сервер такой запрос не примет.
+ */
+export const SHEET_READONLY_MESSAGE =
+  'Лист открыт по ссылке — доступен только просмотр';
+
+/** Подпись и подсказка режима просмотра в шапке чужого листа. */
+export const SHEET_READONLY_LABELS: Record<'badge' | 'tooltip', string> = {
+  badge: 'Только просмотр',
+  tooltip: 'Лист открыт по ссылке: правки недоступны',
+};
+
+/** Подписи модалки «Поделиться листом». */
+export const SHEET_SHARE_LABELS: Record<
+  | 'title'
+  | 'linkTitle'
+  | 'linkAriaLabel'
+  | 'copy'
+  | 'share'
+  | 'enable'
+  | 'disable'
+  | 'close'
+  | 'enabledHint'
+  | 'disabledHint'
+  | 'viewerNoteTitle'
+  | 'viewerNoteDescription',
+  string
+> = {
+  title: 'Поделиться листом',
+  linkTitle: 'Ссылка на лист',
+  linkAriaLabel: 'Ссылка на лист персонажа',
+  copy: 'Скопировать ссылку',
+  share: 'Поделиться ссылкой',
+  enable: 'Включить доступ по ссылке',
+  disable: 'Отключить доступ',
+  close: 'Закрыть',
+  enabledHint:
+    'Лист откроется у любого, кто перейдёт по ссылке. Редактировать его смогут только вы.',
+  disabledHint:
+    'Пока доступ выключен, лист виден только вам. Ссылку можно отозвать в любой момент.',
+  viewerNoteTitle: 'Гость видит лист целиком',
+  viewerNoteDescription:
+    'Правки, броски и настройки ему недоступны — редактирование остаётся только у вас.',
+};
+
+/** Заголовок тоста с ошибкой доступа по ссылке. */
+export const SHEET_SHARE_ERROR_TITLE = 'Не удалось изменить доступ по ссылке';
+
+/** Заголовок тоста об отозванной ссылке. */
+export const SHEET_SHARE_REVOKED_TITLE = 'Доступ по ссылке отключён';
+
+/** Пояснение тоста об отозванной ссылке. */
+export const SHEET_SHARE_REVOKED_DESCRIPTION =
+  'Прежняя ссылка больше не откроет лист.';
+
+/** Пометка в меню действий: доступ по ссылке уже включён. */
+export const SHEET_SHARE_ACTIVE_HINT = 'Ссылка активна';
 
 /** Порядок отображения характеристик. */
 export const ABILITY_ORDER: AbilityKey[] = [
@@ -663,6 +778,36 @@ export const SPELL_LEVELS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 export const SPELL_SAVE_DC_BASE = 8;
 
 /**
+ * Префикс URL своего заклинания. Каталожные ссылки — обычные слаги раздела,
+ * поэтому по префиксу лист отличает свои заклинания от выбранных из базы.
+ */
+export const CUSTOM_SPELL_URL_PREFIX = 'custom:';
+
+/** Школы магии в форме своего заклинания. */
+export const SPELL_SCHOOL_OPTIONS: string[] = [
+  'Воплощение',
+  'Вызов',
+  'Иллюзия',
+  'Некромантия',
+  'Ограждение',
+  'Очарование',
+  'Преобразование',
+  'Прорицание',
+];
+
+/** Текстовые поля своего заклинания: строки формы и развёрнутой карточки. */
+export const CUSTOM_SPELL_FIELDS: CustomSpellField[] = [
+  {
+    key: 'castingTime',
+    label: 'Время накладывания',
+    placeholder: 'Например: 1 действие',
+  },
+  { key: 'range', label: 'Дистанция', placeholder: 'Например: 30 футов' },
+  { key: 'components', label: 'Компоненты', placeholder: 'Например: В, С, М' },
+  { key: 'duration', label: 'Длительность', placeholder: 'Например: 1 минута' },
+];
+
+/**
  * Заклинательная характеристика по базовому названию класса (режим «Авто»).
  * Ключ — название в нижнем регистре. Классы-незаклинатели (варвар, воин, монах,
  * плут) в карту не входят: у них характеристика остаётся неопределённой.
@@ -678,6 +823,44 @@ export const CLASS_SPELLCASTING_ABILITIES: Record<string, AbilityKey> = {
   следопыт: 'wisdom',
   чародей: 'charisma',
 };
+
+/**
+ * Запасной тип заклинательства по базовому названию класса (ключ — название в
+ * нижнем регистре). Нужен листам, сохранённым до появления `casterType`: у них
+ * в документе типа нет, а перевыбирать класс ради ячеек незачем. Классы-
+ * незаклинатели в карту не входят. Воин и плут получают ячейки только через
+ * подкласс — см. `THIRD_CASTER_SUBCLASSES`.
+ */
+export const CLASS_SPELL_PROGRESSIONS: Record<string, CasterType> = {
+  бард: CasterType.FULL,
+  волшебник: CasterType.FULL,
+  друид: CasterType.FULL,
+  жрец: CasterType.FULL,
+  чародей: CasterType.FULL,
+  изобретатель: CasterType.HALF,
+  паладин: CasterType.HALF,
+  следопыт: CasterType.HALF,
+  колдун: CasterType.PACT,
+};
+
+/**
+ * Запасной список подклассов-треть заклинателей (названия в нижнем регистре):
+ * мистический рыцарь воина и мистический ловкач плута. Как и
+ * `CLASS_SPELL_PROGRESSIONS`, нужен только листам без `casterType`.
+ */
+export const THIRD_CASTER_SUBCLASSES: string[] = [
+  'мистический рыцарь',
+  'мистический ловкач',
+];
+
+/** Подпись ряда кружков ячеек в разделителе круга заклинаний. */
+export const SPELL_SLOTS_LABEL = 'Ячейки';
+
+/** Подпись кружка потраченной ячейки заклинаний (для скринридера). */
+export const SPELL_SLOT_USED_LABEL = 'потрачена';
+
+/** Подпись кружка свободной ячейки заклинаний (для скринридера). */
+export const SPELL_SLOT_FREE_LABEL = 'свободна';
 
 /** Значение «Авто (по классу)» в селекте заклинательной характеристики. */
 export const SPELLCASTING_ABILITY_AUTO = 'auto';
@@ -789,8 +972,246 @@ export const INVENTORY_CATEGORY_ICONS: Record<InventoryItemCategory, string> = {
   MAGIC_ITEM: 'tabler:sparkles',
 };
 
+/** Минимальное количество одного предмета в инвентаре. */
+export const INVENTORY_QUANTITY_MIN = 1;
+
 /** Максимальное количество одного предмета в инвентаре. */
 export const INVENTORY_QUANTITY_MAX = 999;
+
+/** Короткие подписи плиток параметров предмета в строке инвентаря. */
+export const INVENTORY_STAT_LABELS: Record<
+  'armorClass' | 'attack' | 'damage' | 'cost',
+  string
+> = {
+  armorClass: 'КД',
+  attack: 'Атака',
+  damage: 'Урон',
+  cost: 'Цена',
+};
+
+/** Подписи броска с плитки оружия для скринридера. */
+export const INVENTORY_ROLL_KIND_LABELS: Record<InventoryStatRollKind, string> =
+  {
+    attack: 'Бросок атаки',
+    damage: 'Бросок урона',
+  };
+
+/** Подсказка в тултипе о том, что плитка бросается по нажатию. */
+export const INVENTORY_ROLL_HINT_LABEL = 'нажми, чтобы бросить';
+
+/**
+ * Названия типов урона справочника предметов
+ * (`/api/v2/dictionaries/damage/types`) — для подписи урона оружия.
+ */
+export const DAMAGE_TYPE_LABELS: Record<string, string> = {
+  ACID: 'Кислотный',
+  BLUDGEONING: 'Дробящий',
+  COLD: 'Холодный',
+  FAIR: 'Огненный',
+  FIRE: 'Огненный',
+  FORCE: 'Силовое поле',
+  LIGHTNING: 'Электрический',
+  NECROTIC: 'Некротический',
+  PIERCING: 'Колющий',
+  POISON: 'Ядовитый',
+  PSYCHIC: 'Психический',
+  RADIANT: 'Излучение',
+  SLASHING: 'Рубящий',
+  THUNDER: 'Звуковой',
+};
+
+/**
+ * Варианты типа урона своего оружия: подписи берутся из справочника типов
+ * урона, порядок — по алфавиту. Ключ `FAIR` — дубль огненного урона из старых
+ * записей справочника, в выборе он не нужен.
+ */
+export const DAMAGE_TYPE_OPTIONS: Array<{ label: string; value: string }> =
+  Object.entries(DAMAGE_TYPE_LABELS)
+    .filter(([type]) => type !== 'FAIR')
+    .map(([type, label]) => ({ label, value: type }))
+    .sort((left, right) => left.label.localeCompare(right.label, 'ru'));
+
+/**
+ * Префикс идентификатора и URL своего предмета инвентаря. Каталожные ссылки —
+ * слаги разделов, поэтому по префиксу лист отличает предметы, заполненные
+ * вручную, от добавленных из «Предметов» и «Магических предметов».
+ */
+export const CUSTOM_INVENTORY_URL_PREFIX = 'custom:';
+
+/** Виды своего предмета для селекта формы. */
+export const CUSTOM_INVENTORY_KIND_OPTIONS: Array<{
+  label: string;
+  value: CustomInventoryKind;
+}> = [
+  { label: 'Оружие', value: 'weapon' },
+  { label: 'Доспех', value: 'armor' },
+  { label: 'Безделушка', value: 'trinket' },
+];
+
+/** Категория инвентаря по виду своего предмета (группа и иконка в списке). */
+export const CUSTOM_INVENTORY_KIND_CATEGORIES: Record<
+  CustomInventoryKind,
+  InventoryItemCategory
+> = {
+  weapon: 'WEAPON',
+  armor: 'ARMOR',
+  trinket: 'ITEM',
+};
+
+/** Подпись типов своего предмета вида «Безделушка». */
+export const CUSTOM_TRINKET_TYPES_LABEL = 'Безделушка';
+
+/** Названия категорий владения оружием. */
+export const WEAPON_CATEGORY_LABELS: Record<WeaponCategory, string> = {
+  simple: 'Простое оружие',
+  martial: 'Воинское оружие',
+};
+
+/** Варианты категории владения оружием для селекта формы. */
+export const WEAPON_CATEGORY_OPTIONS: Array<{
+  label: string;
+  value: WeaponCategory;
+}> = [
+  { label: WEAPON_CATEGORY_LABELS.simple, value: 'simple' },
+  { label: WEAPON_CATEGORY_LABELS.martial, value: 'martial' },
+];
+
+/** Подписи свойств своего оружия для строки типов предмета. */
+export const CUSTOM_WEAPON_PROPERTY_LABELS: Record<
+  'ranged' | 'finesse',
+  string
+> = {
+  ranged: 'Дальнобойное',
+  finesse: 'Фехтовальное',
+};
+
+/** Порядок типов доспеха в селекте формы. */
+const CUSTOM_ARMOR_TYPE_ORDER: CustomArmorType[] = [
+  'light',
+  'medium',
+  'heavy',
+  'shield',
+];
+
+/**
+ * Правила доспеха по типу: как считается КД и как предмет подписан в списке.
+ * Щит не заменяет броню, а складывается с ней — поэтому у него отдельный тип,
+ * а не только правило Ловкости.
+ */
+export const CUSTOM_ARMOR_TYPE_META: Record<
+  CustomArmorType,
+  CustomArmorTypeMeta
+> = {
+  light: {
+    label: 'Лёгкий доспех',
+    armorClassLabel: 'Класс доспеха',
+    hint: 'КД доспеха + модификатор Ловкости',
+    dexterityMod: 'full',
+    shield: false,
+    typesLabel: 'Доспехи, Лёгкий доспех',
+  },
+  medium: {
+    label: 'Средний доспех',
+    armorClassLabel: 'Класс доспеха',
+    hint: 'КД доспеха + модификатор Ловкости (максимум +2)',
+    dexterityMod: 'capped',
+    shield: false,
+    typesLabel: 'Доспехи, Средний доспех',
+  },
+  heavy: {
+    label: 'Тяжёлый доспех',
+    armorClassLabel: 'Класс доспеха',
+    hint: 'КД доспеха без модификатора Ловкости',
+    dexterityMod: 'none',
+    shield: false,
+    typesLabel: 'Доспехи, Тяжёлый доспех',
+  },
+  shield: {
+    label: 'Щит',
+    armorClassLabel: 'Бонус к КД',
+    hint: 'Бонус к КД поверх надетой брони',
+    dexterityMod: 'none',
+    shield: true,
+    typesLabel: 'Доспехи, Щит',
+  },
+};
+
+/** Варианты типа доспеха для селекта формы. */
+export const CUSTOM_ARMOR_TYPE_OPTIONS: Array<{
+  label: string;
+  value: CustomArmorType;
+}> = CUSTOM_ARMOR_TYPE_ORDER.map((armorType) => ({
+  label: CUSTOM_ARMOR_TYPE_META[armorType].label,
+  value: armorType,
+}));
+
+/**
+ * Тип доспеха по правилу Ловкости — для обратного разбора сохранённого предмета
+ * в значения формы. Щит распознаётся отдельным флагом.
+ */
+export const CUSTOM_ARMOR_TYPE_BY_DEXTERITY_MOD: Record<
+  ArmorDexterityMod,
+  CustomArmorType
+> = {
+  full: 'light',
+  capped: 'medium',
+  none: 'heavy',
+};
+
+/** Варианты грани кости урона своего оружия. */
+export const DAMAGE_DIE_OPTIONS: Array<{ label: string; value: number }> = [
+  { label: 'к4', value: 4 },
+  { label: 'к6', value: 6 },
+  { label: 'к8', value: 8 },
+  { label: 'к10', value: 10 },
+  { label: 'к12', value: 12 },
+];
+
+/** Минимальное количество костей урона (0 — оружие без броска урона). */
+export const DAMAGE_DICE_COUNT_MIN = 0;
+
+/** Максимальное количество костей урона. */
+export const DAMAGE_DICE_COUNT_MAX = 20;
+
+/** Минимальный собственный бонус урона оружия. */
+export const DAMAGE_BONUS_MIN = -10;
+
+/** Максимальный собственный бонус урона оружия. */
+export const DAMAGE_BONUS_MAX = 20;
+
+/** Минимальный вес своего предмета в фунтах. */
+export const CUSTOM_ITEM_WEIGHT_MIN = 0;
+
+/** Максимальный вес своего предмета в фунтах. */
+export const CUSTOM_ITEM_WEIGHT_MAX = 999;
+
+/** Шаг веса своего предмета: половина фунта (вес бывает дробным). */
+export const CUSTOM_ITEM_WEIGHT_STEP = 0.5;
+
+/** Знаков после запятой в весе предмета (вес бывает дробным — 0,5 фунта). */
+export const WEIGHT_DECIMALS = 1;
+
+/** Заготовка формы своего предмета (значения по умолчанию). */
+export const NEW_CUSTOM_INVENTORY_ITEM: CustomInventoryItemDraft = {
+  kind: 'weapon',
+  name: '',
+  cost: '',
+  weight: 0,
+  quantity: 1,
+  armorType: 'light',
+  baseArmorClass: 11,
+  weaponCategory: 'simple',
+  ranged: false,
+  finesse: false,
+  damageDiceCount: 1,
+  damageDiceFaces: 6,
+  damageBonus: 0,
+  damageType: '',
+  description: [],
+};
+
+/** Обозначение кости в формуле броска (русская нотация дайс-роллера). */
+export const DICE_NOTATION_LETTER = 'к';
 
 /** Слова размеров для разбора строки размера вида. */
 export const SIZE_LABEL_WORDS = [

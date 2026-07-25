@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { useCharacterSheet, useSheetAvatar } from '../../composables';
 
-  const { character, isLocked } = useCharacterSheet();
+  const { character, canEdit } = useCharacterSheet();
 
   const { avatarUrl, isUploading, replaceAvatar, clearAvatar } =
     useSheetAvatar();
@@ -64,10 +64,10 @@
     onDrop: handleFiles,
   });
 
-  // Подсветка рамки — только когда файл действительно примут: у запертого листа
-  // перетаскивание ничего не меняет, обещать приём нельзя.
+  // Подсветка рамки — только когда файл действительно примут: у запертого и у
+  // чужого листа перетаскивание ничего не меняет, обещать приём нельзя.
   const borderClass = computed(() =>
-    isOverDropZone.value && !isLocked.value
+    isOverDropZone.value && canEdit.value
       ? 'border-primary'
       : 'border-warning/70',
   );
@@ -112,7 +112,7 @@
       />
     </div>
 
-    <template v-else-if="!isLocked">
+    <template v-else-if="canEdit">
       <UTooltip
         v-if="!hasImage"
         text="Добавить изображение"

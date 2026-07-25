@@ -1,21 +1,26 @@
 <script setup lang="ts">
   import type {
     AbilityKey,
+    CharacterInventoryItem,
     ProficiencyGroupKey,
     SavingThrowRow,
     SkillRow,
   } from '../model';
 
+  import { useDiceRollHandler } from '~dice-roller/composables';
   import { ConfirmDialog } from '~initiative/ui-kit';
 
   import {
     useCharacterSheet,
     useCharacterSheetList,
     useCharacterSheetSaveStatus,
+    useCharacterSheetShare,
   } from '../composables';
   import {
     ABILITY_LABELS,
     ARMOR_PROFICIENCY_GROUPS,
+    getWeaponAttackBonus,
+    getWeaponDamage,
     LANGUAGE_PROFICIENCY_GROUPS,
     TOOL_PROFICIENCY_GROUPS,
   } from '../model';
@@ -28,6 +33,8 @@
     SheetClassResourcesPanel,
     SheetClassWizardModal,
     SheetCurrencyModal,
+    SheetCustomItemModal,
+    SheetCustomSpellModal,
     SheetExperienceModal,
     SheetFeatAddModal,
     SheetFeatureAddModal,
@@ -45,6 +52,7 @@
     SheetRollModal,
     SheetSavingThrowsPanel,
     SheetSettingsModal,
+    SheetShareModal,
     SheetSizeModal,
     SheetSkillsPanel,
     SheetSpeciesWizardModal,
@@ -74,6 +82,7 @@
   const {
     character,
     isLocked,
+    isReadonly,
     toggleLock,
     ensureEditable,
     abilityRows,
@@ -83,10 +92,12 @@
     formattedInitiative,
     armorClassValue,
     spellcastingBreakdown,
+    spellSlotRows,
     totalWeight,
     carryingCapacity,
     setAbilityScore,
     toggleSavingThrowProficiency,
+    toggleSpellSlot,
     cycleSkillProficiency,
     adjustClassResource,
     adjustInventoryItemQuantity,
@@ -109,13 +120,25 @@
     remove: removeSheet,
   } = useCharacterSheetList();
 
+  // Доступ по ссылке: состояние читает меню шапки, меняет — модалка.
+  const { isShared } = useCharacterSheetShare();
+
   const overlay = useOverlay();
 
   const toast = useToast();
 
+  // Урон оружия катится напрямую дайс-роллером — без модалки режимов броска.
+  const { handleRoll } = useDiceRollHandler();
+
   // Статус автосохранения пишет автосейв контейнера (страница/панель/drawer),
   // тело листа лишь показывает его в шапке.
   const saveStatus = useCharacterSheetSaveStatus();
+
+  // У листа по ссылке автосейва нет: индикатор скрывается, иначе гость видел бы
+  // «Сохранено» о чужом листе, который он не сохранял.
+  const headerSaveStatus = computed(() =>
+    isReadonly.value ? null : saveStatus.value,
+  );
 
   const isRemoveOpen = ref(false);
 
@@ -125,8 +148,14 @@
   );
 
   // Лимит нужен пункту «Создать копию»: на отдельной странице листа список ещё
-  // не загружался, в панели и дровере — уже загружен списком.
+  // не загружался, в панели и дровере — уже загружен списком. У листа, открытого
+  // по ссылке, этого пункта нет, а сам список — приватная ручка: гостю она
+  // ответила бы 401 и зря зажгла ошибку в общем состоянии списка.
   onMounted(() => {
+    if (isReadonly.value) {
+      return;
+    }
+
     void ensureLoaded();
   });
 
@@ -237,6 +266,12 @@
     },
   });
 
+  const shareModal = overlay.create(SheetShareModal, {
+    props: {
+      sheetId: '',
+    },
+  });
+
   const featureAddModal = overlay.create(SheetFeatureAddModal);
 
   const featureEditModal = overlay.create(SheetFeatureEditModal, {
@@ -249,11 +284,27 @@
 
   const spellAddModal = overlay.create(SheetSpellAddModal);
 
+  // Одна модалка на добавление и редактирование своего заклинания: URL пустой —
+  // форма создаёт новое.
+  const customSpellModal = overlay.create(SheetCustomSpellModal, {
+    props: {
+      spellUrl: null,
+    },
+  });
+
   const spellcastingModal = overlay.create(SheetSpellcastingModal);
 
   const itemAddModal = overlay.create(SheetItemAddModal);
 
   const magicItemAddModal = overlay.create(SheetMagicItemAddModal);
+
+  // Одна модалка на добавление и редактирование своего предмета: идентификатор
+  // пустой — форма создаёт новый.
+  const customItemModal = overlay.create(SheetCustomItemModal, {
+    props: {
+      inventoryItemId: null,
+    },
+  });
 
   function handleAbilityEdit(abilityKey: AbilityKey) {
     if (!ensureEditable()) {
@@ -287,6 +338,12 @@
   }
 
   function handleHealthEdit() {
+    // Чужой лист хиты не меняет ни быстрой модалкой, ни полной — обе пишут
+    // в документ, а сохранять зрителю некуда.
+    if (isReadonly.value) {
+      return;
+    }
+
     // В заблокированном (игровом) режиме клик по хитам открывает быструю
     // модалку урона/лечения; в режиме редактирования — полную настройку.
     if (isLocked.value) {
@@ -395,6 +452,33 @@
     });
   }
 
+  function handleItemAttackRoll(inventoryItem: CharacterInventoryItem) {
+    if (!inventoryItem.weapon) {
+      return;
+    }
+
+    rollModal.open({
+      title: `Атака: ${inventoryItem.name}`,
+      modifier: getWeaponAttackBonus(character.value, inventoryItem.weapon)
+        .value,
+      actionLabel: 'Бросить атаку',
+    });
+  }
+
+  // Урон катится сразу: режимов преимущества у него нет, а доп. бонус к урону
+  // всегда можно докинуть в самом дайс-роллере.
+  function handleItemDamageRoll(inventoryItem: CharacterInventoryItem) {
+    const damage = inventoryItem.weapon
+      ? getWeaponDamage(character.value, inventoryItem.weapon)
+      : null;
+
+    if (!damage) {
+      return;
+    }
+
+    handleRoll(damage.formula);
+  }
+
   function handleVisionEdit() {
     if (!ensureEditable()) {
       return;
@@ -467,6 +551,22 @@
     spellAddModal.open();
   }
 
+  function handleCustomSpellAdd() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    customSpellModal.open({ spellUrl: null });
+  }
+
+  function handleSpellEdit(spellUrl: string) {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    customSpellModal.open({ spellUrl });
+  }
+
   function handleSpellcastingEdit() {
     if (!ensureEditable()) {
       return;
@@ -499,6 +599,22 @@
     magicItemAddModal.open();
   }
 
+  function handleCustomItemAdd() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    customItemModal.open({ inventoryItemId: null });
+  }
+
+  function handleItemEdit(inventoryItemId: string) {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    customItemModal.open({ inventoryItemId });
+  }
+
   /**
    * Копия открытого листа: копируется текущее состояние вместе с правками,
    * которые ещё не успел отправить автосейв. Тост об успехе показывает список.
@@ -510,6 +626,11 @@
   /** Запрос на удаление листа — подтверждение показывает диалог. */
   function handleRemove() {
     isRemoveOpen.value = true;
+  }
+
+  /** Управление доступом по ссылке — только у владельца открытого листа. */
+  function handleShare() {
+    shareModal.open({ sheetId: character.value.id });
   }
 
   /** Подтверждённое удаление: лист уходит в историю, затем закрывается. */
@@ -552,11 +673,14 @@
       :can-expand="canExpand"
       :can-close="canClose"
       :can-duplicate="canCreate"
-      :save-status="saveStatus"
+      :readonly="isReadonly"
+      :shared="isShared"
+      :save-status="headerSaveStatus"
       @close="handleClose"
       @download="downloadCharacter"
       @duplicate="handleDuplicate"
       @remove="handleRemove"
+      @share="handleShare"
       @expand="handleExpand"
       @edit-background="handleBackgroundEdit"
       @edit-class="handleClassEdit"
@@ -678,6 +802,7 @@
         :features="character.features"
         :spells="character.spells"
         :spellcasting="spellcastingBreakdown"
+        :spell-slots="spellSlotRows"
         :has-main-tab="!isWide"
         :style="tabsStyle"
         class="@5xl:col-span-6 @5xl:col-start-7 @5xl:row-start-2 @5xl:min-h-0"
@@ -685,15 +810,22 @@
         @add-feat="handleFeatAdd"
         @add-item="handleItemAdd"
         @add-magic-item="handleMagicItemAdd"
+        @add-custom-item="handleCustomItemAdd"
+        @edit-item="handleItemEdit"
         @add-spell="handleSpellAdd"
+        @add-custom-spell="handleCustomSpellAdd"
+        @edit-spell="handleSpellEdit"
         @edit-spellcasting="handleSpellcastingEdit"
         @edit-currency="handleCurrencyEdit"
         @adjust-item-quantity="adjustInventoryItemQuantity"
         @toggle-item-equip="toggleInventoryItemEquipped"
+        @roll-item-attack="handleItemAttackRoll"
+        @roll-item-damage="handleItemDamageRoll"
         @edit-feature="handleFeatureEdit"
         @remove-feature="removeFeature"
         @remove-item="removeInventoryItem"
         @remove-spell="removeSpell"
+        @toggle-spell-slot="toggleSpellSlot"
       >
         <template #main>
           <ReuseSummary />

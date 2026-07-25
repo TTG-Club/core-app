@@ -3,7 +3,11 @@
 
   import { MarkupRender } from '~ui/markup';
 
-  import { FEATURE_ORIGIN_LABELS, SHEET_TAB_EMPTY_LABELS } from '../../model';
+  import {
+    FEATURE_ORIGIN_LABELS,
+    getFeaturesAddMenuItems,
+    SHEET_TAB_EMPTY_LABELS,
+  } from '../../model';
 
   const props = defineProps<{
     features: CharacterFeature[];
@@ -15,6 +19,11 @@
     'edit-feature': [featureId: string];
     'remove-feature': [featureId: string];
   }>();
+
+  const addMenuItems = getFeaturesAddMenuItems({
+    onAddFeature: () => emit('add-feature'),
+    onAddFeat: () => emit('add-feat'),
+  });
 
   const expandedIds = ref(new Set<string>());
 
@@ -68,26 +77,20 @@
 
 <template>
   <div class="flex flex-col gap-3 pt-2">
-    <div class="flex justify-end gap-2">
-      <UButton
-        icon="tabler:award"
-        label="Черта"
-        color="neutral"
-        variant="ghost"
-        size="sm"
-        aria-label="Добавить черту"
-        @click.left.exact.prevent="emit('add-feat')"
-      />
-
-      <UButton
-        icon="tabler:plus"
-        label="Особенность"
-        color="neutral"
-        variant="ghost"
-        size="sm"
-        aria-label="Добавить особенность"
-        @click.left.exact.prevent="emit('add-feature')"
-      />
+    <div class="flex justify-end">
+      <UDropdownMenu
+        :items="addMenuItems"
+        :content="{ align: 'end' }"
+      >
+        <UButton
+          icon="tabler:plus"
+          label="Добавить"
+          trailing-icon="tabler:chevron-down"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+        />
+      </UDropdownMenu>
     </div>
 
     <template v-if="displayRows.length">

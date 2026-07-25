@@ -15,6 +15,7 @@ export const DEFAULT_CHARACTER: Character = {
   features: [],
   spells: [],
   spellcasting: { ability: null },
+  spellSlots: [],
   characterClass: null,
   characterBackground: null,
   level: 1,

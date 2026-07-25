@@ -7,7 +7,9 @@ import type {
 } from './types';
 
 import { z } from '~/utils/zod';
+import { CasterType } from '~classes/model';
 
+import { DRAFT_CHARACTER_ID } from './constants';
 import { DEFAULT_CHARACTER } from './mock';
 
 /**
@@ -60,6 +62,9 @@ const characterClassSchema = z
     name: z.string().catch(''),
     subclassUrl: z.string().nullable().catch(null),
     subclassName: z.string().nullable().catch(null),
+    // Листы, сохранённые до появления поля, приходят без типа заклинательства:
+    // для них он определяется по названию класса (см. `getClassCasterType`).
+    casterType: z.nativeEnum(CasterType).nullable().catch(null),
     hitDie: z.coerce.number().catch(8),
   })
   .nullable()
@@ -86,6 +91,9 @@ const featureSchema = z.object({
   choice: z.string().nullable().catch(null),
 });
 
+// Поля своих заклинаний (`custom:<uuid>`) отсутствуют у записей из каталога,
+// поэтому необязательны; битое значение отбрасывается вместе с полем, а не
+// роняет всю книгу заклинаний.
 const spellSchema = z.object({
   url: z.string(),
   name: z.string().catch(''),
@@ -93,6 +101,18 @@ const spellSchema = z.object({
   school: z.string().catch(''),
   concentration: z.boolean().optional(),
   ritual: z.boolean().optional(),
+  castingTime: z.string().optional().catch(undefined),
+  range: z.string().optional().catch(undefined),
+  components: z.string().optional().catch(undefined),
+  duration: z.string().optional().catch(undefined),
+  description: z.array(descriptionNodeSchema).optional().catch(undefined),
+});
+
+// Потраченные ячейки круга. Максимум считается по классу и уровню, поэтому в
+// документе его нет: круг с битым номером просто отбрасывается схемой массива.
+const spellSlotSchema = z.object({
+  level: z.coerce.number(),
+  used: z.coerce.number().catch(0),
 });
 
 // По умолчанию — авто (легаси-листы без поля заклинательства): характеристика
@@ -237,11 +257,24 @@ const inventoryArmorSchema = z
   .nullable()
   .catch(null);
 
+const inventoryWeaponDamageSchema = z
+  .object({
+    diceCount: z.coerce.number().catch(0),
+    diceFaces: z.coerce.number().catch(0),
+    bonus: z.coerce.number().catch(0),
+    type: z.string().catch(''),
+  })
+  .nullable()
+  .catch(null);
+
 const inventoryWeaponSchema = z
   .object({
     category: z.enum(['simple', 'martial']).catch('simple'),
     ranged: z.boolean().catch(false),
     finesse: z.boolean().catch(false),
+    // Оружие из листов, сохранённых до появления урона, приходит без блока —
+    // схема даёт null, и плитка урона просто не показывается.
+    damage: inventoryWeaponDamageSchema,
   })
   .nullable()
   .catch(null);
@@ -258,6 +291,9 @@ const inventoryItemSchema = z.object({
   armor: inventoryArmorSchema,
   weapon: inventoryWeaponSchema,
   equipped: z.boolean().catch(false),
+  // Описание есть только у своих предметов (`custom:<uuid>`): у каталожных оно
+  // живёт в разделе-источнике, а не в листе.
+  description: z.array(descriptionNodeSchema).optional().catch(undefined),
 });
 
 /** Схема персонажа целиком (jsonb-документ листа). */
@@ -270,6 +306,7 @@ const characterSchema = z.object({
   features: z.array(featureSchema).catch([]),
   spells: z.array(spellSchema).catch([]),
   spellcasting: spellcastingSchema,
+  spellSlots: z.array(spellSlotSchema).catch([]),
   characterClass: characterClassSchema,
   characterBackground: characterBackgroundSchema,
   level: z.coerce.number().catch(DEFAULT_CHARACTER.level),
@@ -309,6 +346,40 @@ export function parseCharacter(input: unknown, sheetId: string): Character {
   return { ...characterSchema.parse(input), id: sheetId };
 }
 
+/**
+ * Минимальная форма документа, по которой лист узнаётся среди посторонних
+ * JSON-файлов: имя и все шесть характеристик. Основная схема почти всё чинит
+ * `catch`-дефолтами, поэтому без этой проверки импорт превратил бы любой файл
+ * в пустого персонажа.
+ */
+const importedCharacterGuardSchema = z.object({
+  name: z.string(),
+  abilities: z.object({
+    strength: z.coerce.number(),
+    dexterity: z.coerce.number(),
+    constitution: z.coerce.number(),
+    intelligence: z.coerce.number(),
+    wisdom: z.coerce.number(),
+    charisma: z.coerce.number(),
+  }),
+});
+
+/**
+ * Валидация и нормализация персонажа из импортируемого файла. Форма проверяется
+ * строже, чем у документа из БД: файл выбирает пользователь, и промахнуться
+ * файлом он может так же легко, как и попасть. Идентификатор сбрасывается к
+ * черновику — свой UUID листу выдаст сервер при создании.
+ *
+ * @param input разобранное содержимое JSON-файла.
+ * @returns персонаж импортируемого листа.
+ * @throws ZodError, если в файле не лист персонажа.
+ */
+export function parseImportedCharacter(input: unknown): Character {
+  importedCharacterGuardSchema.parse(input);
+
+  return parseCharacter(input, DRAFT_CHARACTER_ID);
+}
+
 /** Схема элемента списка листов. */
 const sheetListItemSchema = z.object({
   id: z.string(),
@@ -329,11 +400,15 @@ const sheetListPageSchema = z.object({
   sheets: z.array(sheetListItemSchema).catch([]),
 });
 
-/** Схема полного листа (ответ создания и `GET /{id}`). */
+/**
+ * Схема полного листа (ответ создания и `GET /{id}`). `shareToken` с `catch`:
+ * бэк без фичи «поделиться» поле не пришлёт, и это не повод ронять лист.
+ */
 const sheetDetailSchema = z.object({
   id: z.string(),
   name: z.string().catch(''),
   data: z.unknown(),
+  shareToken: z.string().nullable().catch(null),
 });
 
 /**
@@ -388,6 +463,24 @@ export function parseCharacterSheetListPage(
 }
 
 /**
+ * Схема ответа на включение доступа по ссылке. Токен без `catch`: ответ без
+ * него означает, что ссылку собрать не из чего — это ошибка, а не «нет доступа».
+ */
+const sheetShareSchema = z.object({
+  shareToken: z.string(),
+});
+
+/**
+ * Валидация ответа `POST /{id}/share`.
+ *
+ * @param input сырой ответ сервера.
+ * @returns токен ссылки «поделиться».
+ */
+export function parseCharacterSheetShare(input: unknown): string {
+  return sheetShareSchema.parse(input).shareToken;
+}
+
+/**
  * Валидация полного листа из ответа создания или `GET /{id}`.
  *
  * @param input сырой ответ сервера.
@@ -402,5 +495,6 @@ export function parseCharacterSheetDetail(
     id: detail.id,
     name: detail.name,
     data: parseCharacter(detail.data, detail.id),
+    shareToken: detail.shareToken,
   };
 }

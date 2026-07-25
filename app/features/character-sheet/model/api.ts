@@ -9,9 +9,11 @@ import { FetchError } from 'ofetch';
 import {
   parseCharacterSheetDetail,
   parseCharacterSheetListPage,
+  parseCharacterSheetShare,
 } from './character-schema';
 import {
   CHARACTER_SHEET_API_PATH,
+  CHARACTER_SHEET_SHARED_API_PATH,
   SHEET_UNKNOWN_ERROR_MESSAGE,
 } from './constants';
 
@@ -126,4 +128,50 @@ export async function restoreCharacterSheet(id: string): Promise<void> {
     method: 'POST',
     retry: 0,
   });
+}
+
+/**
+ * Включение доступа по ссылке. Идемпотентно: у уже расшаренного листа бэк
+ * возвращает прежний токен, поэтому разосланные ранее ссылки не ломаются.
+ *
+ * @param id идентификатор листа.
+ * @returns токен ссылки.
+ */
+export async function shareCharacterSheet(id: string): Promise<string> {
+  const response = await $fetch(`${CHARACTER_SHEET_API_PATH}/${id}/share`, {
+    method: 'POST',
+    retry: 0,
+  });
+
+  return parseCharacterSheetShare(response);
+}
+
+/**
+ * Отзыв доступа по ссылке: выданная ранее ссылка перестаёт открываться.
+ *
+ * @param id идентификатор листа.
+ */
+export async function revokeCharacterSheetShare(id: string): Promise<void> {
+  await $fetch(`${CHARACTER_SHEET_API_PATH}/${id}/share`, {
+    method: 'DELETE',
+    retry: 0,
+  });
+}
+
+/**
+ * Лист по ссылке «поделиться»: чтение без авторизации. Неизвестный, отозванный
+ * или битый токен бэк отдаёт как 404.
+ *
+ * @param token токен ссылки из адреса страницы.
+ * @returns лист с разобранным персонажем.
+ */
+export async function fetchSharedCharacterSheet(
+  token: string,
+): Promise<CharacterSheetDetail> {
+  const response = await $fetch(`${CHARACTER_SHEET_SHARED_API_PATH}/${token}`, {
+    method: 'GET',
+    retry: 0,
+  });
+
+  return parseCharacterSheetDetail(response);
 }

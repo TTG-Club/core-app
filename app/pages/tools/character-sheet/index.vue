@@ -6,6 +6,7 @@
     useCharacterSheetDetail,
     useCharacterSheetLoader,
   } from '~character-sheet/composables';
+  import { CharacterSheetControls } from '~character-sheet/controls';
   import { CharacterSheetList } from '~character-sheet/list';
   import {
     CHARACTER_SHEET_LIST_TITLE,
@@ -39,6 +40,22 @@
     name="section"
     :title="CHARACTER_SHEET_LIST_TITLE"
   >
+    <!-- Импорт живёт там же, где в остальных разделах фильтры: под названием
+      раздела. Действия над конкретным листом остаются в меню его карточки. -->
+    <template #controls>
+      <ClientOnly>
+        <CharacterSheetControls />
+
+        <template #fallback>
+          <div class="flex flex-col gap-2">
+            <USkeleton class="h-8 w-full rounded-md" />
+
+            <USkeleton class="h-3 w-3/4 rounded-sm" />
+          </div>
+        </template>
+      </ClientOnly>
+    </template>
+
     <template #default>
       <ClientOnly>
         <CharacterSheetList />

@@ -13,6 +13,7 @@ import type {
   FeatSummary,
   InventoryArmor,
   InventoryWeapon,
+  InventoryWeaponDamage,
   ItemCatalogItem,
   ItemSummary,
   MagicItemCatalogItem,
@@ -23,6 +24,7 @@ import type {
 } from './types';
 
 import { z } from '~/utils/zod';
+import { CasterType } from '~classes/model';
 
 import {
   getClassToolChoice,
@@ -452,8 +454,28 @@ export function parseItemArmor(
 }
 
 /**
+ * Схема урона оружия в «сыром» ответе (форма `Damage` редактора): бросок костей
+ * и тип урона. Незаполненные поля редактор отдаёт как null.
+ */
+const itemRawWeaponDamageSchema = z
+  .object({
+    roll: z
+      .object({
+        diceCount: z.coerce.number().nullable().catch(null),
+        dice: z.string().nullable().catch(null),
+        bonus: z.coerce.number().nullable().catch(null),
+      })
+      .nullable()
+      .catch(null),
+    type: z.string().nullable().catch(null),
+  })
+  .nullable()
+  .catch(null);
+
+/**
  * Схема «сырого» ответа предмета в части оружия (форма `WeaponCreate` редактора):
- * категория (простое/воинское, рукопашное/дальнобойное), свойства и боеприпас.
+ * категория (простое/воинское, рукопашное/дальнобойное), свойства, боеприпас и
+ * урон.
  */
 const itemRawWeaponSchema = z
   .object({
@@ -462,11 +484,49 @@ const itemRawWeaponSchema = z
         category: z.string().catch(''),
         properties: z.array(z.string()).catch([]),
         ammo: z.string().nullable().catch(null),
+        damage: itemRawWeaponDamageSchema,
       })
       .nullable()
       .catch(null),
   })
   .catch({ weapon: null });
+
+/**
+ * Число граней кости из значения справочника (`d8` → 8).
+ *
+ * @param dice значение кости из «сырого» ответа.
+ * @returns количество граней; 0 — значение не распознано.
+ */
+function parseDiceFaces(dice: string | null): number {
+  const match = /\d+/.exec(dice ?? '');
+
+  return match ? Number(match[0]) : 0;
+}
+
+/**
+ * Разбор урона оружия из «сырого» ответа предмета: кости, собственный бонус и
+ * тип урона. Оружие без костей урона (например, боеприпас) даёт null.
+ *
+ * @param damage блок урона из «сырого» ответа оружия.
+ * @returns урон оружия или null (костей нет).
+ */
+function parseWeaponDamage(
+  damage: z.infer<typeof itemRawWeaponDamageSchema>,
+): InventoryWeaponDamage | null {
+  const diceFaces = parseDiceFaces(damage?.roll?.dice ?? null);
+  const diceCount = damage?.roll?.diceCount ?? 0;
+
+  if (diceFaces <= 0 || diceCount <= 0) {
+    return null;
+  }
+
+  return {
+    diceCount,
+    diceFaces,
+    bonus: damage?.roll?.bonus ?? 0,
+    type: damage?.type ?? '',
+  };
+}
 
 /**
  * Разбор параметров оружия из «сырого» ответа предмета для подсчёта бонуса атаки.
@@ -491,6 +551,7 @@ export function parseItemWeapon(input: unknown): InventoryWeapon | null {
     finesse: weapon.properties.some((property) =>
       /фехтов|finesse/i.test(property),
     ),
+    damage: parseWeaponDamage(weapon.damage),
   };
 }
 
@@ -625,6 +686,9 @@ const classDetailSchema = z.object({
       skill: z.string().catch(''),
     })
     .catch({ armor: '', weapon: '', tool: '', skill: '' }),
+  // Тип заклинательства класса; незнакомое значение приводится к null — ячеек
+  // такому классу лист не даст.
+  casterType: z.nativeEnum(CasterType).nullable().catch(null),
   table: z.array(classTableColumnSchema).catch([]),
   features: z.array(classFeatureSchema).catch([]),
 });
@@ -655,6 +719,7 @@ function toClassSummary(
     url: detail.url,
     name: detail.name.rus,
     hasSubclasses: detail.hasSubclasses,
+    casterType: detail.casterType,
     hitDie: detail.hitDice.maxValue,
     hitDieLabel: detail.hitDice.label,
     savingThrowsText: detail.savingThrows,

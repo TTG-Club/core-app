@@ -10,6 +10,7 @@
     SheetTab,
     SheetTabSlot,
     SpellcastingBreakdown,
+    SpellSlotRow,
   } from '../../model';
 
   import {
@@ -33,6 +34,9 @@
     spells: CharacterSpell[];
     spellcasting: SpellcastingBreakdown;
 
+    /** Ячейки заклинаний по кругам; пусто — класс ячеек не даёт. */
+    spellSlots: SpellSlotRow[];
+
     /**
      * Добавляет первой вкладку «Основное» (контент — через слот `#main`).
      * Включается при ≤1023, где двух колонок в сетке уже нет.
@@ -45,15 +49,22 @@
     'add-feat': [];
     'add-item': [];
     'add-magic-item': [];
+    'add-custom-item': [];
+    'edit-item': [inventoryItemId: string];
     'add-spell': [];
+    'add-custom-spell': [];
+    'edit-spell': [spellUrl: string];
     'edit-spellcasting': [];
     'edit-currency': [];
     'adjust-item-quantity': [inventoryItemId: string, delta: number];
     'toggle-item-equip': [inventoryItemId: string];
+    'roll-item-attack': [inventoryItem: CharacterInventoryItem];
+    'roll-item-damage': [inventoryItem: CharacterInventoryItem];
     'edit-feature': [featureId: string];
     'remove-feature': [featureId: string];
     'remove-item': [inventoryItemId: string];
     'remove-spell': [spellUrl: string];
+    'toggle-spell-slot': [level: number, index: number];
   }>();
 
   function handleItemAdd() {
@@ -62,6 +73,14 @@
 
   function handleMagicItemAdd() {
     emit('add-magic-item');
+  }
+
+  function handleCustomItemAdd() {
+    emit('add-custom-item');
+  }
+
+  function handleItemEdit(inventoryItemId: string) {
+    emit('edit-item', inventoryItemId);
   }
 
   function handleCurrencyEdit() {
@@ -80,8 +99,24 @@
     emit('toggle-item-equip', inventoryItemId);
   }
 
+  function handleItemAttackRoll(inventoryItem: CharacterInventoryItem) {
+    emit('roll-item-attack', inventoryItem);
+  }
+
+  function handleItemDamageRoll(inventoryItem: CharacterInventoryItem) {
+    emit('roll-item-damage', inventoryItem);
+  }
+
   function handleSpellAdd() {
     emit('add-spell');
+  }
+
+  function handleCustomSpellAdd() {
+    emit('add-custom-spell');
+  }
+
+  function handleSpellEdit(spellUrl: string) {
+    emit('edit-spell', spellUrl);
   }
 
   function handleSpellcastingEdit() {
@@ -90,6 +125,10 @@
 
   function handleSpellRemove(spellUrl: string) {
     emit('remove-spell', spellUrl);
+  }
+
+  function handleSpellSlotToggle(level: number, index: number) {
+    emit('toggle-spell-slot', level, index);
   }
 
   function handleFeatureAdd() {
@@ -339,19 +378,27 @@
         :carrying-capacity="carryingCapacity"
         @add-item="handleItemAdd"
         @add-magic-item="handleMagicItemAdd"
+        @add-custom-item="handleCustomItemAdd"
+        @edit-item="handleItemEdit"
         @edit-currency="handleCurrencyEdit"
         @remove-item="handleItemRemove"
         @adjust-quantity="handleItemQuantityAdjust"
         @toggle-equip="handleItemEquipToggle"
+        @roll-attack="handleItemAttackRoll"
+        @roll-damage="handleItemDamageRoll"
       />
 
       <SheetSpellsTab
         v-else-if="activeSlot === 'spells'"
         :spells="spells"
         :spellcasting="spellcasting"
+        :spell-slots="spellSlots"
         @add-spell="handleSpellAdd"
+        @add-custom-spell="handleCustomSpellAdd"
+        @edit-spell="handleSpellEdit"
         @edit-spellcasting="handleSpellcastingEdit"
         @remove-spell="handleSpellRemove"
+        @toggle-spell-slot="handleSpellSlotToggle"
       />
 
       <SheetFeaturesTab

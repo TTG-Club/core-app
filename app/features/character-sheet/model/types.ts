@@ -1,3 +1,4 @@
+import type { CasterType } from '~classes/model';
 import type { MarkerNode, SimpleTextNode } from '~ui/markup';
 
 /** Ключ характеристики персонажа. */
@@ -135,16 +136,37 @@ export interface InventoryArmor {
   shield: boolean;
 }
 
+/** Урон оружия из справочника: кости, собственный бонус и тип. */
+export interface InventoryWeaponDamage {
+  /** Количество костей урона. */
+  diceCount: number;
+
+  /** Количество граней кости урона (8 — к8). */
+  diceFaces: number;
+
+  /** Собственный бонус урона оружия (0 — нет). */
+  bonus: number;
+
+  /** Тип урона из справочника (`SLASHING`); пустая строка — не указан. */
+  type: string;
+}
+
+/** Категория владения оружием. */
+export type WeaponCategory = 'simple' | 'martial';
+
 /** Параметры оружия предмета инвентаря для подсчёта бонуса атаки. */
 export interface InventoryWeapon {
   /** Категория владения: простое или воинское. */
-  category: 'simple' | 'martial';
+  category: WeaponCategory;
 
   /** Дальнобойное оружие (атака от Ловкости). */
   ranged: boolean;
 
   /** Фехтовальное свойство (можно бить от Ловкости вместо Силы). */
   finesse: boolean;
+
+  /** Урон оружия; null — справочник его не отдал. */
+  damage: InventoryWeaponDamage | null;
 }
 
 /** Разбор бонуса атаки оружием. */
@@ -154,6 +176,24 @@ export interface WeaponAttack {
 
   /** Характеристика, от которой считается атака. */
   ability: AbilityKey;
+}
+
+/** Разбор броска урона оружием. */
+export interface WeaponDamage {
+  /** Формула броска для дайс-роллера с учётом всех бонусов («1к8+3»). */
+  formula: string;
+
+  /** Нотация костей урона без бонусов («1к8»). */
+  diceNotation: string;
+
+  /** Собственный бонус урона оружия (0 — нет). */
+  weaponBonus: number;
+
+  /** Характеристика, чей модификатор идёт в урон. */
+  ability: AbilityKey;
+
+  /** Название типа урона («Рубящий»); пустая строка — тип не указан. */
+  typeLabel: string;
 }
 
 /** Разбор итогового класса доспеха для модалки настройки. */
@@ -335,6 +375,13 @@ export interface CharacterClass {
   /** Название подкласса; null — подкласс не выбран. */
   subclassName: string | null;
 
+  /**
+   * Тип заклинательства класса (`casterType` из справочника, у треть-заклинателей
+   * берётся у подкласса); null — класс ячеек не даёт либо лист сохранён до
+   * появления поля (тогда тип определяется по названию класса).
+   */
+  casterType: CasterType | null;
+
   /** Номинал кости хитов класса (например, 10). */
   hitDie: number;
 }
@@ -409,7 +456,9 @@ export interface FeatSummary {
 
 /** Заклинание в книге персонажа (и опция поиска заклинаний). */
 export interface CharacterSpell {
+  /** Ссылка каталога; у своих заклинаний — `custom:<uuid>`. */
   url: string;
+
   name: string;
 
   /** Круг заклинания; 0 — заговор. */
@@ -423,6 +472,66 @@ export interface CharacterSpell {
 
   /** Ритуальное заклинание; нет у записей, добавленных до этого поля. */
   ritual?: boolean;
+
+  /** Время накладывания; только у своих заклинаний. */
+  castingTime?: string;
+
+  /** Дистанция; только у своих заклинаний. */
+  range?: string;
+
+  /** Компоненты; только у своих заклинаний. */
+  components?: string;
+
+  /** Длительность; только у своих заклинаний. */
+  duration?: string;
+
+  /**
+   * Описание в разметке сайта; только у своих заклинаний (у каталожных оно
+   * приходит с сервера в дровере раздела).
+   */
+  description?: FeatureDescriptionNode[];
+}
+
+/** Ключ текстового поля своего заклинания. */
+export type CustomSpellFieldKey =
+  | 'castingTime'
+  | 'range'
+  | 'components'
+  | 'duration';
+
+/** Текстовое поле своего заклинания: подпись формы и развёрнутой карточки. */
+export interface CustomSpellField {
+  key: CustomSpellFieldKey;
+  label: string;
+
+  /** Подсказка поля формы. */
+  placeholder: string;
+}
+
+/** Заполненная характеристика своего заклинания в развёрнутой карточке. */
+export interface CustomSpellStatRow {
+  key: CustomSpellFieldKey;
+  label: string;
+  value: string;
+}
+
+/** Значения формы своего заклинания (добавление и редактирование). */
+export interface CustomSpellDraft {
+  name: string;
+  level: number;
+
+  /** Школа магии; '' — не выбрана. */
+  school: string;
+
+  castingTime: string;
+  range: string;
+  components: string;
+  duration: string;
+  concentration: boolean;
+  ritual: boolean;
+
+  /** Описание в разметке сайта. */
+  description: FeatureDescriptionNode[];
 }
 
 /** Группа заклинаний одного круга для списка с разделителями. */
@@ -453,6 +562,42 @@ export interface CharacterSpellcasting {
    * персонажа).
    */
   ability: AbilityKey | null;
+}
+
+/** Потраченные ячейки заклинаний одного круга. */
+export interface CharacterSpellSlot {
+  /** Круг ячеек (1..9). */
+  level: number;
+
+  /** Сколько ячеек круга потрачено. */
+  used: number;
+}
+
+/** Ряд ячеек заклинаний одного круга для разделителя списка заклинаний. */
+export interface SpellSlotRow {
+  /** Круг ячеек (1..9). */
+  level: number;
+
+  /** Всего ячеек круга по таблице класса. */
+  max: number;
+
+  /** Потрачено ячеек (не больше `max`). */
+  used: number;
+
+  /** Чем восстанавливаются ячейки; у колдуна — короткий отдых. */
+  recovery: ResourceRecovery;
+}
+
+/** Кружок ячейки заклинаний в разделителе круга. */
+export interface SpellSlotCircle {
+  /** Порядковый номер ячейки в круге (с нуля). */
+  index: number;
+
+  /** Ячейка потрачена (кружок закрашен). */
+  used: boolean;
+
+  /** Подпись кнопки для скринридера. */
+  label: string;
 }
 
 /** Настройки листа персонажа (правила подсчёта, общие для всего листа). */
@@ -557,6 +702,12 @@ export interface ClassSummary {
   url: string;
   name: string;
   hasSubclasses: boolean;
+
+  /**
+   * Тип заклинательства из справочника (`casterType`); null — значение не
+   * пришло или неизвестно.
+   */
+  casterType: CasterType | null;
 
   /** Номинал кости хитов (например, 10). */
   hitDie: number;
@@ -684,6 +835,16 @@ export type InventoryItemCategory = 'WEAPON' | 'ARMOR' | 'ITEM' | 'MAGIC_ITEM';
 /** Раздел-источник предмета инвентаря. */
 export type InventoryItemOrigin = 'item' | 'magic-item';
 
+/**
+ * Вид своего предмета: от него зависят и поля формы, и параметры записи
+ * инвентаря (оружие даёт атаку с уроном, доспех — класс доспеха, безделушка —
+ * только описание).
+ */
+export type CustomInventoryKind = 'weapon' | 'armor' | 'trinket';
+
+/** Тип доспеха своего предмета: правило Ловкости и признак щита. */
+export type CustomArmorType = 'light' | 'medium' | 'heavy' | 'shield';
+
 /** Предмет инвентаря (добавлен из раздела «Предметы» или «Магические предметы»). */
 export interface CharacterInventoryItem {
   id: string;
@@ -715,7 +876,81 @@ export interface CharacterInventoryItem {
 
   /** Доспех надет — учитывается в автоподсчёте класса доспеха. */
   equipped: boolean;
+
+  /**
+   * Описание в разметке сайта; только у своих предметов (у каталожных оно
+   * приходит с сервера в дровере раздела).
+   */
+  description?: FeatureDescriptionNode[];
 }
+
+/** Значения формы своего предмета (добавление и редактирование). */
+export interface CustomInventoryItemDraft {
+  kind: CustomInventoryKind;
+  name: string;
+
+  /** Подпись стоимости как её ввёл игрок (например, «75 зм»); '' — не указана. */
+  cost: string;
+
+  /** Вес одной единицы в фунтах; 0 — не указан. */
+  weight: number;
+
+  quantity: number;
+
+  /** Тип доспеха (вид «Доспех»). */
+  armorType: CustomArmorType;
+
+  /** Базовый КД доспеха, у щита — его бонус к КД (вид «Доспех»). */
+  baseArmorClass: number;
+
+  /** Категория владения оружием (вид «Оружие»). */
+  weaponCategory: WeaponCategory;
+
+  /** Дальнобойное оружие — атака от Ловкости (вид «Оружие»). */
+  ranged: boolean;
+
+  /** Фехтовальное оружие — атака от Ловкости (вид «Оружие»). */
+  finesse: boolean;
+
+  /** Количество костей урона; 0 — урон не задан (вид «Оружие»). */
+  damageDiceCount: number;
+
+  /** Количество граней кости урона (вид «Оружие»). */
+  damageDiceFaces: number;
+
+  /** Собственный бонус урона оружия (вид «Оружие»). */
+  damageBonus: number;
+
+  /** Ключ типа урона из справочника; '' — не указан (вид «Оружие»). */
+  damageType: string;
+
+  /** Описание в разметке сайта. */
+  description: FeatureDescriptionNode[];
+}
+
+/** Правила доспеха своего предмета по его типу. */
+export interface CustomArmorTypeMeta {
+  /** Подпись типа для селекта формы. */
+  label: string;
+
+  /** Подпись поля значения КД: у щита это бонус, а не полный класс доспеха. */
+  armorClassLabel: string;
+
+  /** Пояснение, как тип считает КД (подсказка под селектом). */
+  hint: string;
+
+  /** Как применяется модификатор Ловкости. */
+  dexterityMod: ArmorDexterityMod;
+
+  /** Щит: складывается поверх лучшей брони, а не заменяет её. */
+  shield: boolean;
+
+  /** Подпись типов предмета для строки инвентаря. */
+  typesLabel: string;
+}
+
+/** Бросок, который запускает нажатие на плитку параметра предмета. */
+export type InventoryStatRollKind = 'attack' | 'damage';
 
 /** Группа предметов инвентаря одной категории для списка с разделителями. */
 export interface CharacterInventoryGroup {
@@ -804,6 +1039,12 @@ export interface Character {
 
   /** Настройки заклинательства (заклинательная характеристика). */
   spellcasting: CharacterSpellcasting;
+
+  /**
+   * Потраченные ячейки заклинаний по кругам. Максимум ячеек считается по классу
+   * и уровню, поэтому хранится только трата; круги без трат в список не входят.
+   */
+  spellSlots: CharacterSpellSlot[];
 
   /** Класс персонажа; null — не выбран. */
   characterClass: CharacterClass | null;
@@ -895,6 +1136,12 @@ export interface CharacterSheetDetail {
   id: string;
   name: string;
   data: Character;
+
+  /**
+   * Токен ссылки «поделиться»; null — доступ по ссылке выключен. Приходит только
+   * владельцу: у листа, открытого по ссылке, поля нет.
+   */
+  shareToken: string | null;
 }
 
 /** Раздел листа персонажа — значение вкладки и ключ её содержимого. */

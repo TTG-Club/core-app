@@ -9,6 +9,7 @@
     getSpeciesDisplayName,
     getVisionRows,
     SHEET_EMPTY_LABELS,
+    SHEET_READONLY_LABELS,
     SHEET_SAVE_STATUS_META,
     VISION_LABELS,
   } from '../../model';
@@ -25,6 +26,13 @@
     saveStatus?: SheetSaveStatus | null;
     /** В лимите активных листов есть свободное место — копия разрешена. */
     canDuplicate?: boolean;
+    /**
+     * Лист открыт по ссылке: вместо замка и действий владельца — пометка
+     * «только просмотр», из меню остаётся один экспорт.
+     */
+    readonly?: boolean;
+    /** Доступ по ссылке уже включён (пометка в меню действий). */
+    shared?: boolean;
   }>();
 
   const emit = defineEmits<{
@@ -43,18 +51,23 @@
     'edit-vision': [];
     'toggle-inspiration': [];
     'toggle-lock': [];
+    'share': [];
   }>();
 
   // Меню действий листа (кнопка-троеточие в шапке) — то же, что в карточке
-  // списка персонажей.
+  // списка персонажей. У листа, открытого по ссылке, владельческих действий нет:
+  // состав пунктов решает сам хелпер по флагу `isReadonly`.
   const menuItems = computed<Array<Array<DropdownMenuItem>>>(() =>
     getSheetActionMenuItems({
       canDuplicate: props.canDuplicate ?? false,
       canRemove: true,
+      isShared: props.shared,
+      isReadonly: props.readonly,
       onDownload: () => emit('download'),
       onDuplicate: () => emit('duplicate'),
       onRemove: () => emit('remove'),
       onSettings: () => emit('edit-settings'),
+      onShare: () => emit('share'),
     }),
   );
 
@@ -314,7 +327,24 @@
           </span>
         </UTooltip>
 
-        <UTooltip :text="lockTooltip">
+        <!-- Замок чужого листа бессмысленен: снять его зритель всё равно не
+          может, поэтому вместо него — пометка о режиме просмотра -->
+        <UTooltip
+          v-if="readonly"
+          :text="SHEET_READONLY_LABELS.tooltip"
+        >
+          <UBadge
+            :label="SHEET_READONLY_LABELS.badge"
+            icon="tabler:eye"
+            color="neutral"
+            variant="subtle"
+          />
+        </UTooltip>
+
+        <UTooltip
+          v-else
+          :text="lockTooltip"
+        >
           <UButton
             :icon="lockIcon"
             :color="lockColor"
