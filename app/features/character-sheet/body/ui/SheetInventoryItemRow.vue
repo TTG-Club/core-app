@@ -117,8 +117,10 @@
   }>();
 
   // Бонус атаки зависит от характеристик/уровня персонажа — читаем общее
-  // состояние листа через composable (как модалки).
-  const { character } = useCharacterSheet();
+  // состояние листа через composable (как модалки). Оттуда же классы кнопок:
+  // правка и удаление предмета меняют лист, а количество — игровое действие,
+  // его запертый лист разрешает, чужой — нет.
+  const { character, editControlClass, gameControlClass } = useCharacterSheet();
 
   const categoryIcon = computed(
     () => INVENTORY_CATEGORY_ICONS[props.inventoryItem.category],
@@ -471,6 +473,7 @@
           variant="ghost"
           size="xs"
           square
+          :class="gameControlClass"
           :disabled="isDecreaseDisabled"
           :aria-label="`Уменьшить количество: ${inventoryItem.name}`"
           @click.left.exact.prevent="handleDecrease"
@@ -486,6 +489,7 @@
           variant="ghost"
           size="xs"
           square
+          :class="gameControlClass"
           :aria-label="`Увеличить количество: ${inventoryItem.name}`"
           @click.left.exact.prevent="handleIncrease"
         />
@@ -499,6 +503,7 @@
         size="xs"
         square
         class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/item:opacity-100 focus-visible:opacity-100"
+        :class="editControlClass"
         :aria-label="`Редактировать предмет: ${inventoryItem.name}`"
         @click.left.exact.prevent="emit('edit')"
       />
@@ -510,6 +515,7 @@
         size="xs"
         square
         class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/item:opacity-100 focus-visible:opacity-100"
+        :class="editControlClass"
         :aria-label="`Убрать предмет: ${inventoryItem.name}`"
         @click.left.exact.prevent="emit('remove')"
       />

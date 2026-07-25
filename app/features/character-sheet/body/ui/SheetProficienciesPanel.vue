@@ -4,6 +4,7 @@
     ProficiencyGroupKey,
   } from '../../model';
 
+  import { useCharacterSheet } from '../../composables';
   import {
     ARMOR_PROFICIENCY_GROUPS,
     collapseProficiencies,
@@ -38,6 +39,10 @@
   const emit = defineEmits<{
     edit: [group: ProficiencyGroupKey];
   }>();
+
+  // Шестерёнка на плашке группы — вход в правку владений: без прав она
+  // прячется, а сама плашка остаётся прежней.
+  const { editControlClass } = useCharacterSheet();
 
   const weaponChips = computed((): ProficiencyChip[] => {
     const collapsed = collapseProficiencies(
@@ -120,6 +125,7 @@
             <UIcon
               name="tabler:settings"
               class="size-3.5 shrink-0 text-muted opacity-0 transition-opacity group-hover/header:text-warning group-hover/header:opacity-100 group-focus-visible/header:opacity-100"
+              :class="editControlClass"
             />
           </button>
 

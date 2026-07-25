@@ -2139,6 +2139,12 @@ export interface SheetActionMenuOptions {
    */
   isReadonly?: boolean;
 
+  /**
+   * Лист заперт замком: правки запрещены, поэтому пункт настроек скрыт — он
+   * упёрся бы в ту же блокировку. Действий над листом целиком замок не касается.
+   */
+  isLocked?: boolean;
+
   onDownload: () => void;
   onDuplicate: () => void;
   onRemove: () => void;
@@ -2196,11 +2202,13 @@ export function getSheetActionMenuItems(
     });
   }
 
-  actions.push({
-    label: 'Настройки',
-    icon: 'tabler:settings',
-    onSelect: options.onSettings,
-  });
+  if (!options.isLocked) {
+    actions.push({
+      label: 'Настройки',
+      icon: 'tabler:settings',
+      onSelect: options.onSettings,
+    });
+  }
 
   if (!options.canRemove) {
     return [actions];

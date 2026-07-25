@@ -8,6 +8,7 @@
   import { SpellDrawer } from '~spells/drawer';
   import { MarkupRender } from '~ui/markup';
 
+  import { useCharacterSheet } from '../../composables';
   import {
     getCustomSpellStatRows,
     getFormattedBonus,
@@ -36,6 +37,10 @@
     'remove-spell': [spellUrl: string];
     'toggle-spell-slot': [level: number, index: number];
   }>();
+
+  // Пополнение книги, правка и удаление заклинаний меняют лист: без прав кнопки
+  // прячутся, а ряды заклинаний и шапка вкладки остаются на прежних местах.
+  const { editControlClass } = useCharacterSheet();
 
   const addMenuItems = getSpellsAddMenuItems({
     onAddSpell: () => emit('add-spell'),
@@ -194,6 +199,7 @@
           color="neutral"
           variant="ghost"
           size="sm"
+          :class="editControlClass"
         />
       </UDropdownMenu>
     </div>
@@ -329,6 +335,7 @@
               size="xs"
               square
               class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/spell:opacity-100 focus-visible:opacity-100"
+              :class="editControlClass"
               :aria-label="`Редактировать заклинание: ${spell.name}`"
               @click.left.exact.prevent="emit('edit-spell', spell.url)"
             />
@@ -340,6 +347,7 @@
               size="xs"
               square
               class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/spell:opacity-100 focus-visible:opacity-100"
+              :class="editControlClass"
               :aria-label="`Убрать заклинание: ${spell.name}`"
               @click.left.exact.prevent="emit('remove-spell', spell.url)"
             />

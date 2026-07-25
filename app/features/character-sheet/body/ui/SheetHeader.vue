@@ -55,14 +55,16 @@
   }>();
 
   // Меню действий листа (кнопка-троеточие в шапке) — то же, что в карточке
-  // списка персонажей. У листа, открытого по ссылке, владельческих действий нет:
-  // состав пунктов решает сам хелпер по флагу `isReadonly`.
+  // списка персонажей. У листа, открытого по ссылке, владельческих действий нет,
+  // у запертого нет настроек: состав пунктов решает сам хелпер по флагам
+  // `isReadonly` и `isLocked`.
   const menuItems = computed<Array<Array<DropdownMenuItem>>>(() =>
     getSheetActionMenuItems({
       canDuplicate: props.canDuplicate ?? false,
       canRemove: true,
       isShared: props.shared,
       isReadonly: props.readonly,
+      isLocked: props.locked,
       onDownload: () => emit('download'),
       onDuplicate: () => emit('duplicate'),
       onRemove: () => emit('remove'),

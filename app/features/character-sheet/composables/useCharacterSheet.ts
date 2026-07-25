@@ -58,6 +58,7 @@ import {
   LEVEL_MIN,
   RESOURCE_COUNT_MAX,
   RESOURCE_COUNT_MIN,
+  SHEET_HIDDEN_CONTROL_CLASS,
   SHEET_LOCKED_MESSAGE,
   SHEET_READONLY_MESSAGE,
   SKILL_PROFICIENCY_NEXT,
@@ -102,6 +103,23 @@ export function useCharacterSheet() {
 
   /** Правки листа разрешены: лист свой и не заперт замком. */
   const canEdit = computed(() => !isReadonly.value && !isLocked.value);
+
+  /**
+   * Класс кнопок правки листа (шестерёнки, ±, карандаши, корзины, «Добавить»):
+   * без прав они прячутся, но место в раскладке за собой сохраняют.
+   * `undefined` — кнопка видна как обычно.
+   */
+  const editControlClass = computed(() =>
+    canEdit.value ? undefined : SHEET_HIDDEN_CONTROL_CLASS,
+  );
+
+  /**
+   * То же для кнопок игровых действий (траты ресурсов, количество предметов):
+   * их запертый лист разрешает, а чужой — нет.
+   */
+  const gameControlClass = computed(() =>
+    isReadonly.value ? SHEET_HIDDEN_CONTROL_CLASS : undefined,
+  );
 
   /** Переключение блокировки редактирования листа. */
   function toggleLock(): void {
@@ -1385,6 +1403,8 @@ export function useCharacterSheet() {
     isLocked,
     isReadonly,
     canEdit,
+    editControlClass,
+    gameControlClass,
     toggleLock,
     setReadonly,
     ensureEditable,

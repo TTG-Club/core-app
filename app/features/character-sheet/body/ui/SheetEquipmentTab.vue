@@ -8,6 +8,7 @@
   import { ItemDrawer } from '~items/drawer';
   import { MagicItemDrawer } from '~magic-items/drawer';
 
+  import { useCharacterSheet } from '../../composables';
   import {
     getEquipmentAddMenuItems,
     getInventoryGroups,
@@ -37,6 +38,10 @@
     'roll-attack': [inventoryItem: CharacterInventoryItem];
     'roll-damage': [inventoryItem: CharacterInventoryItem];
   }>();
+
+  // Пополнение снаряжения — правка листа: у запертого и у чужого листа кнопка
+  // «Добавить» прячется, а ряд с переносимым весом остаётся прежним.
+  const { editControlClass } = useCharacterSheet();
 
   const addMenuItems = getEquipmentAddMenuItems({
     onAddItem: () => emit('add-item'),
@@ -124,6 +129,7 @@
           color="neutral"
           variant="ghost"
           size="sm"
+          :class="editControlClass"
         />
       </UDropdownMenu>
     </div>

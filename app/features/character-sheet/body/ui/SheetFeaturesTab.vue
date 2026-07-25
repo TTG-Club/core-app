@@ -3,6 +3,7 @@
 
   import { MarkupRender } from '~ui/markup';
 
+  import { useCharacterSheet } from '../../composables';
   import {
     FEATURE_ORIGIN_LABELS,
     getFeaturesAddMenuItems,
@@ -19,6 +20,10 @@
     'edit-feature': [featureId: string];
     'remove-feature': [featureId: string];
   }>();
+
+  // Добавление, правка и удаление особенностей меняют лист: без прав кнопки
+  // прячутся, а карточки остаются на прежних местах.
+  const { editControlClass } = useCharacterSheet();
 
   const addMenuItems = getFeaturesAddMenuItems({
     onAddFeature: () => emit('add-feature'),
@@ -89,6 +94,7 @@
           color="neutral"
           variant="ghost"
           size="sm"
+          :class="editControlClass"
         />
       </UDropdownMenu>
     </div>
@@ -135,6 +141,7 @@
             size="xs"
             square
             class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/feature:opacity-100 focus-visible:opacity-100"
+            :class="editControlClass"
             :aria-label="`Редактировать особенность: ${feature.name}`"
             @click.left.exact.prevent="handleEditClick(feature.id)"
           />
@@ -146,6 +153,7 @@
             size="xs"
             square
             class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/feature:opacity-100 focus-visible:opacity-100"
+            :class="editControlClass"
             :aria-label="`Удалить особенность: ${feature.name}`"
             @click.left.exact.prevent="handleRemove(feature.id)"
           />

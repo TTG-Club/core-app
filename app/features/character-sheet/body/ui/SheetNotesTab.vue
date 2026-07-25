@@ -5,7 +5,10 @@
   import { useCharacterSheet } from '../../composables';
   import { parseStoredMarkupNodes, SHEET_TAB_EMPTY_LABELS } from '../../model';
 
-  const { character, ensureEditable, setNotes } = useCharacterSheet();
+  // Кнопка «Редактировать» без прав прячется, а ряд над заметками сохраняет
+  // высоту — текст остаётся на прежнем месте.
+  const { character, editControlClass, ensureEditable, setNotes } =
+    useCharacterSheet();
 
   /** true — режим редактирования, false — режим просмотра. */
   const isEditing = ref(false);
@@ -72,6 +75,7 @@
           color="neutral"
           variant="ghost"
           size="sm"
+          :class="editControlClass"
           @click.left.exact.prevent="handleEdit"
         />
       </div>

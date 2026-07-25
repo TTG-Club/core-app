@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { AbilityRow } from '../../model';
 
+  import { useCharacterSheet } from '../../composables';
   import { ABILITY_SCORE_MAX, ABILITY_SCORE_MIN } from '../../model';
   import SheetPanel from './SheetPanel.vue';
 
@@ -13,6 +14,10 @@
     settings: [];
     adjust: [delta: number];
   }>();
+
+  // Быстрая правка ± — действие редактирования: у запертого и у чужого листа
+  // кнопки прячутся, а плашка со значением остаётся на прежнем месте.
+  const { editControlClass } = useCharacterSheet();
 
   // Границы диапазона характеристики гасят соответствующую кнопку, чтобы
   // быстрая правка не «упиралась» в клампинг молча.
@@ -85,6 +90,7 @@
           square
           :disabled="isDecreaseDisabled"
           class="rounded-full opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+          :class="editControlClass"
           :aria-label="`Уменьшить значение: ${abilityRow.label}`"
           @click.left.exact.prevent.stop="emit('adjust', -1)"
         />
@@ -103,6 +109,7 @@
           square
           :disabled="isIncreaseDisabled"
           class="rounded-full opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+          :class="editControlClass"
           :aria-label="`Увеличить значение: ${abilityRow.label}`"
           @click.left.exact.prevent.stop="emit('adjust', 1)"
         />
