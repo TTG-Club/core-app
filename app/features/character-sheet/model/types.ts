@@ -1213,12 +1213,18 @@ export interface HitDicePool {
   max: number;
 }
 
-/** Трата костей хитов одного номинала. */
-export interface HitDiceSpend {
+/** Пул костей хитов с пределом выбора для строки выбора костей на отдыхе. */
+export interface HitDiceSelectPool extends HitDicePool {
+  /** Сколько костей номинала разрешено выбрать. */
+  limit: number;
+}
+
+/** Количество костей хитов одного номинала: трата или возврат на отдыхе. */
+export interface HitDiceAmount {
   /** Номинал кости. */
   die: number;
 
-  /** Сколько костей номинала потрачено. */
+  /** Сколько костей номинала затронуто. */
   count: number;
 }
 

@@ -34,8 +34,9 @@ import type {
   FeatSummary,
   FeatureDescriptionNode,
   FeatureOrigin,
+  HitDiceAmount,
   HitDicePool,
-  HitDiceSpend,
+  HitDiceSelectPool,
   InventoryArmor,
   InventoryItemOrigin,
   InventoryWeapon,
@@ -83,6 +84,7 @@ import {
   ABILITY_LABELS,
   ABILITY_ORDER,
   ABILITY_SHORT_LABELS,
+  ALL_SPELL_SLOTS_LABEL,
   ARMOR_CLASS_BASE_MAX,
   ARMOR_CLASS_BASE_MIN,
   ARMOR_MATCH_KEYWORDS,
@@ -110,6 +112,8 @@ import {
   DARKVISION_PARSE_FALLBACK,
   DEFAULT_WEAPON_ATTACK_ABILITY,
   DICE_NOTATION_LETTER,
+  HIT_DICE_LONG_REST_DIVISOR,
+  HIT_DICE_LONG_REST_MIN,
   HIT_DICE_ROLL_COUNT,
   INVENTORY_CATEGORY_ORDER,
   INVENTORY_CATEGORY_TITLES,
@@ -1042,10 +1046,14 @@ export function getHitDicePools(
 
   for (const hitDie of [...hitDice, ...extraHitDice]) {
     const pool = totalsByDie.get(hitDie.die) ?? { current: 0, max: 0 };
+    const max = Math.max(0, hitDie.max);
 
     totalsByDie.set(hitDie.die, {
-      current: pool.current + hitDie.current,
-      max: pool.max + hitDie.max,
+      // Схема документа значения костей не обрезает, поэтому импортированный
+      // вручную лист может принести остаток больше максимума или отрицательный —
+      // выбор костей на отдыхе такие значения не должны ломать.
+      current: pool.current + clamp(hitDie.current, 0, max),
+      max: pool.max + max,
     });
   }
 
@@ -1061,43 +1069,150 @@ export function getHitDicePools(
 }
 
 /**
- * Списание потраченных на отдыхе костей хитов: сперва расходуются классовые
- * кости номинала, затем дополнительные. Больше, чем осталось, не спишется.
+ * Изменение остатка костей хитов по номиналам: положительное количество кости
+ * возвращает (продолжительный отдых), отрицательное — тратит (короткий).
+ * Сперва затрагиваются классовые кости номинала, затем дополнительные; остаток
+ * каждой кости не выходит за границы `[0, max]`, поэтому лишнее просто не
+ * применится.
  *
  * @param hitDice кости хитов из классов.
  * @param extraHitDice дополнительные кости хитов.
- * @param spent потраченные кости по номиналам.
+ * @param amounts изменение количества костей по номиналам.
  * @returns новые списки костей хитов.
  */
-export function withdrawHitDice(
+export function adjustHitDice(
   hitDice: CharacterHitDie[],
   extraHitDice: CharacterExtraHitDie[],
-  spent: HitDiceSpend[],
+  amounts: HitDiceAmount[],
 ): { hitDice: CharacterHitDie[]; extraHitDice: CharacterExtraHitDie[] } {
-  // Остаток к списанию по номиналу: уменьшается по мере обхода костей, поэтому
-  // одна и та же трата не спишется дважды.
+  // Неприменённый остаток по номиналу: тает по мере обхода костей, поэтому одно
+  // и то же изменение не применится к номиналу дважды.
   const pending = new Map(
-    spent.map((pool) => [pool.die, Math.max(0, Math.trunc(pool.count))]),
+    amounts.map((pool) => [pool.die, Math.trunc(pool.count)]),
   );
 
-  const withdraw = <Die extends CharacterHitDie>(hitDie: Die): Die => {
+  const adjust = <Die extends CharacterHitDie>(hitDie: Die): Die => {
     const left = pending.get(hitDie.die) ?? 0;
 
-    if (left <= 0) {
+    if (left === 0) {
       return hitDie;
     }
 
-    const taken = Math.min(left, hitDie.current);
+    // Отсчёт ведётся от остатка в допустимых границах: импортированный вручную
+    // лист мог принести значение вне `[0, max]`, и без этого правка такой кости
+    // засчиталась бы как часть изменения, раздув его для следующих костей.
+    const sane = clamp(hitDie.current, 0, hitDie.max);
+    const current = clamp(sane + left, 0, hitDie.max);
 
-    pending.set(hitDie.die, left - taken);
+    if (current === hitDie.current) {
+      return hitDie;
+    }
 
-    return { ...hitDie, current: hitDie.current - taken };
+    pending.set(hitDie.die, left - (current - sane));
+
+    return { ...hitDie, current };
   };
 
   return {
-    hitDice: hitDice.map((hitDie) => withdraw(hitDie)),
-    extraHitDice: extraHitDice.map((hitDie) => withdraw(hitDie)),
+    hitDice: hitDice.map((hitDie) => adjust(hitDie)),
+    extraHitDice: extraHitDice.map((hitDie) => adjust(hitDie)),
   };
+}
+
+/**
+ * Выбранные на отдыхе кости, обрезанные пределами номиналов: выбор живёт в
+ * модалке, а пределы (остаток костей или нехватка до максимума) меняются после
+ * каждого применения. Номиналы без выбора в результат не входят.
+ *
+ * @param pools пулы костей хитов с пределом выбора.
+ * @param counts выбранное количество костей по номиналам.
+ * @returns количество костей по номиналам.
+ */
+export function getSelectedHitDice(
+  pools: HitDiceSelectPool[],
+  counts: Record<number, number>,
+): HitDiceAmount[] {
+  return pools
+    .map((pool) => ({
+      die: pool.die,
+      count: clamp(counts[pool.die] ?? 0, 0, pool.limit),
+    }))
+    .filter((pool) => pool.count > 0);
+}
+
+/**
+ * Сколько костей хитов возвращает продолжительный отдых: половина от общего
+ * количества костей, но не меньше одной (правило D&D 2024). Больше, чем
+ * потрачено, вернуть нельзя, а без костей возвращать нечего.
+ *
+ * @param pools пулы костей хитов по номиналам.
+ * @returns количество костей к возврату.
+ */
+export function getLongRestHitDiceCount(pools: HitDicePool[]): number {
+  const totals = pools.reduce(
+    (total, pool) => ({
+      current: total.current + pool.current,
+      max: total.max + pool.max,
+    }),
+    { current: 0, max: 0 },
+  );
+
+  const spent = totals.max - totals.current;
+
+  if (spent <= 0) {
+    return 0;
+  }
+
+  return Math.min(
+    spent,
+    Math.max(
+      HIT_DICE_LONG_REST_MIN,
+      Math.floor(totals.max / HIT_DICE_LONG_REST_DIVISOR),
+    ),
+  );
+}
+
+/**
+ * Раскладка возвращаемых костей по умолчанию: сперва крупные номиналы —
+ * они полезнее в бою, а перераспределить выбор игрок может сам.
+ *
+ * @param pools пулы костей хитов с пределом возврата по номиналу.
+ * @param count сколько костей возвращается всего.
+ * @returns количество костей к возврату по номиналам.
+ */
+export function getDefaultHitDiceRecovery(
+  pools: HitDiceSelectPool[],
+  count: number,
+): HitDiceAmount[] {
+  let pending = Math.max(0, Math.trunc(count));
+
+  return [...pools]
+    .sort((left, right) => right.die - left.die)
+    .map((pool) => {
+      const taken = clamp(pending, 0, pool.limit);
+
+      pending -= taken;
+
+      return { die: pool.die, count: taken };
+    })
+    .filter((pool) => pool.count > 0);
+}
+
+/**
+ * Что вернёт продолжительный отдых, кроме хитов и костей: ячейки заклинаний и
+ * все счётчики умений — и с продолжительным, и с коротким восстановлением.
+ *
+ * @param character персонаж.
+ * @returns подписи восстанавливаемого; пустой список — восстанавливать нечего.
+ */
+export function getLongRestRecoveryLabels(character: Character): string[] {
+  const resourceLabels = character.classResources.map(
+    (resource) => resource.name,
+  );
+
+  return getSpellSlotRows(character).length > 0
+    ? [ALL_SPELL_SLOTS_LABEL, ...resourceLabels]
+    : resourceLabels;
 }
 
 /**

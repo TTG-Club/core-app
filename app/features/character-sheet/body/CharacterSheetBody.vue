@@ -45,6 +45,7 @@
     SheetHealthQuickModal,
     SheetInventoryTabs,
     SheetItemAddModal,
+    SheetLongRestModal,
     SheetMagicItemAddModal,
     SheetNameModal,
     SheetProficienciesPanel,
@@ -224,6 +225,8 @@
 
   const shortRestModal = overlay.create(SheetShortRestModal);
 
+  const longRestModal = overlay.create(SheetLongRestModal);
+
   const nameModal = overlay.create(SheetNameModal);
 
   const visionModal = overlay.create(SheetVisionModal);
@@ -368,6 +371,15 @@
     }
 
     shortRestModal.open();
+  }
+
+  /** Продолжительный отдых — такое же игровое действие, как короткий. */
+  function handleLongRest() {
+    if (isReadonly.value) {
+      return;
+    }
+
+    longRestModal.open();
   }
 
   function handleNameEdit() {
@@ -705,6 +717,7 @@
       @edit-size="handleSizeEdit"
       @edit-species="handleSpeciesEdit"
       @edit-vision="handleVisionEdit"
+      @long-rest="handleLongRest"
       @short-rest="handleShortRest"
       @toggle-inspiration="toggleInspiration"
       @toggle-lock="toggleLock"

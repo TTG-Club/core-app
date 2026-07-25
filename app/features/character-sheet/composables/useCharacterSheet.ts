@@ -19,7 +19,7 @@ import type {
   CharacterVision,
   CustomInventoryItemDraft,
   CustomSpellDraft,
-  HitDiceSpend,
+  HitDiceAmount,
   ProficiencyGroupKey,
 } from '../model';
 
@@ -29,6 +29,7 @@ import {
   ABILITY_ORDER,
   ABILITY_SCORE_MAX,
   ABILITY_SCORE_MIN,
+  adjustHitDice,
   applySkillProficiencies,
   ARMOR_CLASS_BASE_MAX,
   ARMOR_CLASS_BASE_MIN,
@@ -67,7 +68,6 @@ import {
   toCustomSpell,
   VISION_DISTANCE_MAX,
   VISION_DISTANCE_MIN,
-  withdrawHitDice,
 } from '../model';
 
 /**
@@ -630,17 +630,18 @@ export function useCharacterSheet() {
    * @param spent потраченные кости по номиналам.
    * @param restored восстановленные хиты по броскам.
    */
-  function spendHitDice(spent: HitDiceSpend[], restored: number): void {
+  function spendHitDice(spent: HitDiceAmount[], restored: number): void {
     if (!ensureOwnSheet()) {
       return;
     }
 
     const { health } = character.value;
 
-    const remainingDice = withdrawHitDice(
+    // Трата — отрицательное изменение остатка костей.
+    const remainingDice = adjustHitDice(
       character.value.hitDice,
       character.value.extraHitDice,
-      spent,
+      spent.map((pool) => ({ die: pool.die, count: -pool.count })),
     );
 
     character.value = {
@@ -688,6 +689,44 @@ export function useCharacterSheet() {
       spellSlots: character.value.spellSlots.filter(
         (slot) => !shortRestLevels.has(slot.level),
       ),
+    };
+  }
+
+  /**
+   * Завершение продолжительного отдыха: хиты поднимаются до максимума, временные
+   * хиты пропадают (держатся только до конца отдыха), возвращаются все ячейки
+   * заклинаний и все счётчики умений, а кости хитов — в выбранном количестве.
+   * Сколько костей возвращать, решают правила и игрок — считает это модалка
+   * отдыха. Игровое действие: запертый лист его разрешает, чужой — нет.
+   *
+   * @param restoredDice возвращаемые кости хитов по номиналам.
+   */
+  function completeLongRest(restoredDice: HitDiceAmount[]): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    const remainingDice = adjustHitDice(
+      character.value.hitDice,
+      character.value.extraHitDice,
+      restoredDice,
+    );
+
+    character.value = {
+      ...character.value,
+      hitDice: remainingDice.hitDice,
+      extraHitDice: remainingDice.extraHitDice,
+      health: {
+        ...character.value.health,
+        current: character.value.health.max,
+        temporary: 0,
+      },
+      classResources: character.value.classResources.map((resource) => ({
+        ...resource,
+        current: resource.max,
+      })),
+      // Хранится только трата ячеек, поэтому пустой список — все ячейки на месте.
+      spellSlots: [],
     };
   }
 
@@ -1532,6 +1571,7 @@ export function useCharacterSheet() {
     setHitDice,
     spendHitDice,
     completeShortRest,
+    completeLongRest,
     toggleSavingThrowProficiency,
     toggleSpellSlot,
     cycleSkillProficiency,

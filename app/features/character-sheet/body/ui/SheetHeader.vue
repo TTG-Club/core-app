@@ -8,6 +8,7 @@
     getSheetActionMenuItems,
     getSpeciesDisplayName,
     getVisionRows,
+    LONG_REST_LABELS,
     SHEET_EMPTY_LABELS,
     SHEET_READONLY_LABELS,
     SHEET_SAVE_STATUS_META,
@@ -50,6 +51,7 @@
     'edit-size': [];
     'edit-species': [];
     'edit-vision': [];
+    'long-rest': [];
     'short-rest': [];
     'toggle-inspiration': [];
     'toggle-lock': [];
@@ -437,13 +439,16 @@
           />
         </UTooltip>
 
-        <UButton
-          icon="tabler:moon"
-          color="neutral"
-          variant="ghost"
-          square
-          disabled
-        />
+        <UTooltip :text="LONG_REST_LABELS.title">
+          <UButton
+            icon="tabler:moon"
+            color="neutral"
+            variant="ghost"
+            square
+            :aria-label="LONG_REST_LABELS.title"
+            @click.left.exact.prevent="emit('long-rest')"
+          />
+        </UTooltip>
       </div>
     </div>
   </header>
