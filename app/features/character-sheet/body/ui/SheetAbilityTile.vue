@@ -5,6 +5,14 @@
   import { ABILITY_SCORE_MAX, ABILITY_SCORE_MIN } from '../../model';
   import SheetPanel from './SheetPanel.vue';
 
+  /**
+   * Кнопки быстрой правки ± висят на нижней грани плитки поверх её рамки:
+   * мягкая заливка сливалась бы с ней, поэтому у кнопок своя обводка — тем же
+   * тоном, каким плитка подсвечивается при наведении.
+   */
+  const ADJUST_BUTTON_CLASSES =
+    'rounded-full border border-warning/60 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100';
+
   const props = defineProps<{
     abilityRow: AbilityRow;
   }>();
@@ -89,8 +97,7 @@
           size="xs"
           square
           :disabled="isDecreaseDisabled"
-          class="rounded-full opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-          :class="editControlClass"
+          :class="[ADJUST_BUTTON_CLASSES, editControlClass]"
           :aria-label="`Уменьшить значение: ${abilityRow.label}`"
           @click.left.exact.prevent.stop="emit('adjust', -1)"
         />
@@ -108,8 +115,7 @@
           size="xs"
           square
           :disabled="isIncreaseDisabled"
-          class="rounded-full opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-          :class="editControlClass"
+          :class="[ADJUST_BUTTON_CLASSES, editControlClass]"
           :aria-label="`Увеличить значение: ${abilityRow.label}`"
           @click.left.exact.prevent.stop="emit('adjust', 1)"
         />

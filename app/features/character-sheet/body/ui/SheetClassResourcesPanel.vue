@@ -96,13 +96,14 @@
           v-for="row in displayRows"
           :key="row.id"
           class="flex items-center gap-1.5 rounded bg-default/30 px-2 py-1.5"
-          :title="row.name"
         >
-          <span
-            class="w-9 shrink-0 truncate text-sm font-bold text-highlighted uppercase"
-          >
-            {{ row.shortLabel }}
-          </span>
+          <UTooltip :text="row.name">
+            <span
+              class="w-9 shrink-0 cursor-help truncate text-sm font-bold text-highlighted uppercase"
+            >
+              {{ row.shortLabel }}
+            </span>
+          </UTooltip>
 
           <UButton
             icon="tabler:minus"

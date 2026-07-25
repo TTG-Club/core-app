@@ -26,8 +26,11 @@
 </script>
 
 <template>
+  <!-- Обводка непрозрачным `border-default`: своей заливки у панели нет, и
+    рамка читается только за счёт контраста с фоном страницы. Приглушённый
+    бордер остаётся у внутренних элементов — там их отделяет ещё и заливка -->
   <fieldset
-    class="relative min-w-0 rounded-lg border border-default/50 px-3 pt-1 pb-3"
+    class="relative min-w-0 rounded-lg border border-default px-3 pt-1 pb-3"
     :class="frameClass"
   >
     <legend
