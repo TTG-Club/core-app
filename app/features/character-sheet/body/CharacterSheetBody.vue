@@ -713,6 +713,7 @@
 
             <SheetStatTile
               label="Класс доспеха"
+              short-label="КД"
               :value="armorClassValue"
               interactive
               press-label="Настроить класс доспеха"
