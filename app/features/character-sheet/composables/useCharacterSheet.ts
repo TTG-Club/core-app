@@ -19,7 +19,7 @@ import type {
   CharacterVision,
   CustomInventoryItemDraft,
   CustomSpellDraft,
-  HitDiceSpend,
+  HitDiceAmount,
   ProficiencyGroupKey,
 } from '../model';
 
@@ -29,9 +29,11 @@ import {
   ABILITY_ORDER,
   ABILITY_SCORE_MAX,
   ABILITY_SCORE_MIN,
+  adjustHitDice,
   applySkillProficiencies,
   ARMOR_CLASS_BASE_MAX,
   ARMOR_CLASS_BASE_MIN,
+  CATALOG_COPY_TOAST_DESCRIPTION,
   CURRENCY_AMOUNT_MAX,
   CURRENCY_AMOUNT_MIN,
   CUSTOM_INVENTORY_URL_PREFIX,
@@ -39,6 +41,8 @@ import {
   DEFAULT_CHARACTER,
   downloadCharacterJson,
   EXPERIENCE_MAX,
+  fetchCatalogSpellDetail,
+  fetchInventoryItemDescription,
   getAbilityRows,
   getArmorClassBreakdown,
   getArmorClassValue,
@@ -51,6 +55,7 @@ import {
   getSkillRows,
   getSpellcastingBreakdown,
   getSpellSlotRows,
+  INVENTORY_COPY_TOAST_TITLE,
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
   isCustomInventoryItem,
@@ -63,11 +68,14 @@ import {
   SHEET_LOCKED_MESSAGE,
   SHEET_READONLY_MESSAGE,
   SKILL_PROFICIENCY_NEXT,
+  SPELL_COPY_TOAST_TITLE,
+  toCopiedInventoryItem,
+  toCopiedSpell,
   toCustomInventoryItem,
   toCustomSpell,
+  toUpdatedCustomInventoryItem,
   VISION_DISTANCE_MAX,
   VISION_DISTANCE_MIN,
-  withdrawHitDice,
 } from '../model';
 
 /**
@@ -630,17 +638,18 @@ export function useCharacterSheet() {
    * @param spent потраченные кости по номиналам.
    * @param restored восстановленные хиты по броскам.
    */
-  function spendHitDice(spent: HitDiceSpend[], restored: number): void {
+  function spendHitDice(spent: HitDiceAmount[], restored: number): void {
     if (!ensureOwnSheet()) {
       return;
     }
 
     const { health } = character.value;
 
-    const remainingDice = withdrawHitDice(
+    // Трата — отрицательное изменение остатка костей.
+    const remainingDice = adjustHitDice(
       character.value.hitDice,
       character.value.extraHitDice,
-      spent,
+      spent.map((pool) => ({ die: pool.die, count: -pool.count })),
     );
 
     character.value = {
@@ -688,6 +697,44 @@ export function useCharacterSheet() {
       spellSlots: character.value.spellSlots.filter(
         (slot) => !shortRestLevels.has(slot.level),
       ),
+    };
+  }
+
+  /**
+   * Завершение продолжительного отдыха: хиты поднимаются до максимума, временные
+   * хиты пропадают (держатся только до конца отдыха), возвращаются все ячейки
+   * заклинаний и все счётчики умений, а кости хитов — в выбранном количестве.
+   * Сколько костей возвращать, решают правила и игрок — считает это модалка
+   * отдыха. Игровое действие: запертый лист его разрешает, чужой — нет.
+   *
+   * @param restoredDice возвращаемые кости хитов по номиналам.
+   */
+  function completeLongRest(restoredDice: HitDiceAmount[]): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    const remainingDice = adjustHitDice(
+      character.value.hitDice,
+      character.value.extraHitDice,
+      restoredDice,
+    );
+
+    character.value = {
+      ...character.value,
+      hitDice: remainingDice.hitDice,
+      extraHitDice: remainingDice.extraHitDice,
+      health: {
+        ...character.value.health,
+        current: character.value.health.max,
+        temporary: 0,
+      },
+      classResources: character.value.classResources.map((resource) => ({
+        ...resource,
+        current: resource.max,
+      })),
+      // Хранится только трата ячеек, поэтому пустой список — все ячейки на месте.
+      spellSlots: [],
     };
   }
 
@@ -1066,6 +1113,61 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Копия каталожного заклинания в лист: запись перестаёт зависеть от раздела
+   * сайта и дальше правится формой листа, как добавленная вручную. Описание и
+   * характеристики дозагружаются из справочника — в документе листа у каталожных
+   * записей их нет.
+   *
+   * @param spellUrl URL каталожного заклинания.
+   */
+  async function copySpellToSheet(spellUrl: string): Promise<void> {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const catalogSpell = character.value.spells.find(
+      (spell) => spell.url === spellUrl,
+    );
+
+    if (!catalogSpell || isCustomSpell(catalogSpell)) {
+      return;
+    }
+
+    const detail = await fetchCatalogSpellDetail(spellUrl);
+
+    // Пока шёл запрос, книга могла измениться (заклинание убрали, лист закрыли
+    // и открыли другой, копию уже сделал соседний клик) — перечитываем запись и
+    // отступаем, если её больше нет или она уже своя.
+    const currentSpell = character.value.spells.find(
+      (spell) => spell.url === spellUrl,
+    );
+
+    if (!currentSpell || isCustomSpell(currentSpell)) {
+      return;
+    }
+
+    const ownSpell = toCopiedSpell(
+      `${CUSTOM_SPELL_URL_PREFIX}${crypto.randomUUID()}`,
+      currentSpell,
+      detail,
+    );
+
+    character.value = {
+      ...character.value,
+      spells: character.value.spells.map((spell) =>
+        spell.url === spellUrl ? ownSpell : spell,
+      ),
+    };
+
+    toast.add({
+      color: 'success',
+      icon: 'tabler:copy',
+      title: SPELL_COPY_TOAST_TITLE,
+      description: CATALOG_COPY_TOAST_DESCRIPTION,
+    });
+  }
+
+  /**
    * Установка настроек заклинательства (заклинательной характеристики).
    *
    * @param spellcasting новые настройки заклинательства.
@@ -1198,11 +1300,7 @@ export function useCharacterSheet() {
       return;
     }
 
-    const updatedItem = toCustomInventoryItem(
-      editedItem.url,
-      draft,
-      editedItem.equipped,
-    );
+    const updatedItem = toUpdatedCustomInventoryItem(editedItem, draft);
 
     if (!updatedItem) {
       return;
@@ -1214,6 +1312,61 @@ export function useCharacterSheet() {
         inventoryItem.id === inventoryItemId ? updatedItem : inventoryItem,
       ),
     };
+  }
+
+  /**
+   * Копия каталожного предмета в лист — то же, что и у заклинания: запись
+   * становится своей (количество, надетый доспех и параметры сохраняются), а
+   * описание переезжает из справочника в лист.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   */
+  async function copyInventoryItemToSheet(
+    inventoryItemId: string,
+  ): Promise<void> {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const catalogItem = character.value.inventory.find(
+      (inventoryItem) => inventoryItem.id === inventoryItemId,
+    );
+
+    if (!catalogItem || isCustomInventoryItem(catalogItem)) {
+      return;
+    }
+
+    const description = await fetchInventoryItemDescription(catalogItem);
+
+    // Инвентарь за время запроса мог измениться — перечитываем предмет, как в
+    // {@link copySpellToSheet}.
+    const currentItem = character.value.inventory.find(
+      (inventoryItem) => inventoryItem.id === inventoryItemId,
+    );
+
+    if (!currentItem || isCustomInventoryItem(currentItem)) {
+      return;
+    }
+
+    const ownItem = toCopiedInventoryItem(
+      `${CUSTOM_INVENTORY_URL_PREFIX}${crypto.randomUUID()}`,
+      currentItem,
+      description,
+    );
+
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.map((inventoryItem) =>
+        inventoryItem.id === inventoryItemId ? ownItem : inventoryItem,
+      ),
+    };
+
+    toast.add({
+      color: 'success',
+      icon: 'tabler:copy',
+      title: INVENTORY_COPY_TOAST_TITLE,
+      description: CATALOG_COPY_TOAST_DESCRIPTION,
+    });
   }
 
   /**
@@ -1507,6 +1660,8 @@ export function useCharacterSheet() {
     addInventoryItems,
     addCustomInventoryItem,
     addCustomSpell,
+    copyInventoryItemToSheet,
+    copySpellToSheet,
     removeFeature,
     removeInventoryItem,
     removeSpell,
@@ -1532,6 +1687,7 @@ export function useCharacterSheet() {
     setHitDice,
     spendHitDice,
     completeShortRest,
+    completeLongRest,
     toggleSavingThrowProficiency,
     toggleSpellSlot,
     cycleSkillProficiency,

@@ -492,6 +492,18 @@ export interface CharacterSpell {
   description?: FeatureDescriptionNode[];
 }
 
+/**
+ * Дозагруженная деталь каталожного заклинания. Поля повторяют форму своего
+ * заклинания: так карточка справочника рисуется одним кодом для обоих видов
+ * записей.
+ */
+export type CatalogSpellDetail = Required<
+  Pick<
+    CharacterSpell,
+    'castingTime' | 'range' | 'components' | 'duration' | 'description'
+  >
+>;
+
 /** Ключ текстового поля своего заклинания. */
 export type CustomSpellFieldKey =
   | 'castingTime'
@@ -1213,12 +1225,18 @@ export interface HitDicePool {
   max: number;
 }
 
-/** Трата костей хитов одного номинала. */
-export interface HitDiceSpend {
+/** Пул костей хитов с пределом выбора для строки выбора костей на отдыхе. */
+export interface HitDiceSelectPool extends HitDicePool {
+  /** Сколько костей номинала разрешено выбрать. */
+  limit: number;
+}
+
+/** Количество костей хитов одного номинала: трата или возврат на отдыхе. */
+export interface HitDiceAmount {
   /** Номинал кости. */
   die: number;
 
-  /** Сколько костей номинала потрачено. */
+  /** Сколько костей номинала затронуто. */
   count: number;
 }
 

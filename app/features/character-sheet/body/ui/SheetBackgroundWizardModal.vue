@@ -147,6 +147,24 @@
     })),
   );
 
+  /**
+   * Одну характеристику нельзя усилить дважды (+3): выбранная под +1
+   * недоступна для +2 и наоборот.
+   */
+  const plusTwoAbilityItems = computed(() =>
+    abilityItems.value.map((option) => ({
+      ...option,
+      disabled: option.value === plusOneAbility.value,
+    })),
+  );
+
+  const plusOneAbilityItems = computed(() =>
+    abilityItems.value.map((option) => ({
+      ...option,
+      disabled: option.value === plusTwoAbility.value,
+    })),
+  );
+
   const abilityBonuses = computed(() =>
     computeAbilityBonuses(
       backgroundDetail.value?.abilities ?? [],
@@ -516,7 +534,7 @@
 
                 <USelect
                   v-model="plusTwoAbility"
-                  :items="abilityItems"
+                  :items="plusTwoAbilityItems"
                   placeholder="Характеристика"
                   class="w-44"
                 />
@@ -527,7 +545,7 @@
 
                 <USelect
                   v-model="plusOneAbility"
-                  :items="abilityItems"
+                  :items="plusOneAbilityItems"
                   placeholder="Характеристика"
                   class="w-44"
                 />

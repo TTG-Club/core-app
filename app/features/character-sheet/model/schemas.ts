@@ -4,6 +4,7 @@ import type {
   ArmorDexterityMod,
   BackgroundOption,
   BackgroundSummary,
+  CatalogSpellDetail,
   ClassChoice,
   ClassFeatureSummary,
   ClassOption,
@@ -26,6 +27,7 @@ import type {
 import { z } from '~/utils/zod';
 import { CasterType } from '~classes/model';
 
+import { SPELL_COMPONENT_LABELS } from './constants';
 import {
   getClassToolChoice,
   parseAbilityKeys,
@@ -840,5 +842,107 @@ export function parseBackgroundDetail(
     featName: feat.name,
     featSubchoice: feat.subchoice,
     equipment: detail.equipment,
+  };
+}
+
+/**
+ * Схема описания записи каталога. У деталей заклинаний, предметов и магических
+ * предметов описание лежит одинаково — массивом строк разметки сайта.
+ */
+const catalogDescriptionSchema = z.object({
+  description: z.array(z.string()).catch([]),
+});
+
+/**
+ * Валидация описания из детального ответа каталога
+ * (`GET /api/v2/{spells,item,magic-items}/{url}`).
+ *
+ * @param input сырой детальный ответ записи каталога.
+ * @returns строки описания; пустой массив при неожиданном ответе.
+ */
+export function parseCatalogDescription(input: unknown): string[] {
+  const result = catalogDescriptionSchema.safeParse(input);
+
+  return result.success ? result.data.description : [];
+}
+
+/** Компоненты заклинания в детальном ответе: флаги и материальный компонент. */
+interface SpellComponentsResponse {
+  /** Вербальный компонент. */
+  v?: boolean;
+
+  /** Соматический компонент. */
+  s?: boolean;
+
+  /** Описание материального компонента; пусто — компонента нет. */
+  m?: string;
+}
+
+/** Схема компонентов заклинания из детального ответа. */
+const spellComponentsSchema = z
+  .object({
+    v: z.boolean().catch(false),
+    s: z.boolean().catch(false),
+    m: z.string().catch(''),
+  })
+  .partial()
+  .catch({});
+
+/** Схема детального ответа заклинания (нужные справочнику поля). */
+const catalogSpellDetailSchema = catalogDescriptionSchema.extend({
+  castingTime: z.string().catch(''),
+  range: z.string().catch(''),
+  duration: z.string().catch(''),
+  components: spellComponentsSchema,
+});
+
+/**
+ * Компоненты заклинания строкой. Деталь каталога отдаёт их флагами, а лист
+ * хранит строкой — приводим к форме листа, чтобы карточка справочника рисовалась
+ * тем же кодом, что и у своих заклинаний.
+ *
+ * @param components компоненты из детального ответа.
+ * @returns компоненты через запятую; пустая строка — компонентов нет.
+ */
+function getSpellComponentsText(components: SpellComponentsResponse): string {
+  const parts: string[] = [];
+
+  if (components.v) {
+    parts.push(SPELL_COMPONENT_LABELS.verbal);
+  }
+
+  if (components.s) {
+    parts.push(SPELL_COMPONENT_LABELS.somatic);
+  }
+
+  if (components.m) {
+    parts.push(`${SPELL_COMPONENT_LABELS.material} (${components.m})`);
+  }
+
+  return parts.join(', ');
+}
+
+/**
+ * Валидация детального ответа `GET /api/v2/spells/{url}` для справочника PDF:
+ * описание и характеристики в той же форме, в какой их хранит своё заклинание.
+ *
+ * @param input сырой детальный ответ заклинания.
+ * @returns характеристики и описание заклинания; null при неожиданном ответе.
+ */
+export function parseCatalogSpellDetail(
+  input: unknown,
+): CatalogSpellDetail | null {
+  const result = catalogSpellDetailSchema.safeParse(input);
+
+  if (!result.success) {
+    return null;
+  }
+
+  return {
+    castingTime: result.data.castingTime,
+    range: result.data.range,
+    components: getSpellComponentsText(result.data.components),
+    duration: result.data.duration,
+    description: result.data.description,
   };
 }

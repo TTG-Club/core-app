@@ -2,7 +2,7 @@
   import { UiDrawer } from '~ui/drawer';
   import { UiResult } from '~ui/result';
 
-  import { CharacterSheetBody } from '../body';
+  import { CharacterSheetBody, CharacterSheetSkeleton } from '../body';
   import {
     useCharacterSheetAutosave,
     useCharacterSheetLoader,
@@ -48,15 +48,9 @@
     </template>
 
     <template #default>
-      <div
+      <CharacterSheetSkeleton
         v-if="status === 'pending' || status === 'idle'"
-        class="flex justify-center py-16"
-      >
-        <UIcon
-          name="tabler:loader-2"
-          class="size-8 animate-spin text-muted"
-        />
-      </div>
+      />
 
       <UiResult
         v-else-if="status === 'notFound'"

@@ -17,7 +17,16 @@
     SHEET_DEFAULT_TAB,
     SHEET_MAIN_TAB,
     SHEET_TABS,
+    SHEET_TABS_AXIS_LOCK_THRESHOLD,
+    SHEET_TABS_DRAG_DEADZONE,
+    SHEET_TABS_DRAG_FADE_SPAN,
+    SHEET_TABS_DRAG_MAX_FADE,
+    SHEET_TABS_DRAG_RESISTANCE,
+    SHEET_TABS_OVERFLOW_EPSILON,
+    SHEET_TABS_SCROLL_EDGE_GAP,
+    SHEET_TABS_SCROLL_EPSILON,
     SHEET_TABS_SCROLL_STEP_RATIO,
+    SHEET_TABS_SWIPE_THRESHOLD,
   } from '../../model';
   import SheetEquipmentTab from './SheetEquipmentTab.vue';
   import SheetFeaturesTab from './SheetFeaturesTab.vue';
@@ -51,9 +60,11 @@
     'add-magic-item': [];
     'add-custom-item': [];
     'edit-item': [inventoryItemId: string];
+    'copy-item': [inventoryItemId: string];
     'add-spell': [];
     'add-custom-spell': [];
     'edit-spell': [spellUrl: string];
+    'copy-spell': [spellUrl: string];
     'edit-spellcasting': [];
     'edit-currency': [];
     'adjust-item-quantity': [inventoryItemId: string, delta: number];
@@ -81,6 +92,10 @@
 
   function handleItemEdit(inventoryItemId: string) {
     emit('edit-item', inventoryItemId);
+  }
+
+  function handleItemCopy(inventoryItemId: string) {
+    emit('copy-item', inventoryItemId);
   }
 
   function handleCurrencyEdit() {
@@ -119,6 +134,10 @@
     emit('edit-spell', spellUrl);
   }
 
+  function handleSpellCopy(spellUrl: string) {
+    emit('copy-spell', spellUrl);
+  }
+
   function handleSpellcastingEdit() {
     emit('edit-spellcasting');
   }
@@ -153,26 +172,44 @@
   const stripRef = ref<HTMLElement | null>(null);
   const stripContentRef = ref<HTMLElement | null>(null);
 
-  const {
-    style: scrollShadowStyle,
-    isOverflowing,
-    arrivedState,
-  } = useScrollShadow(stripRef, { orientation: 'horizontal' });
+  const { style: scrollShadowStyle } = useScrollShadow(stripRef, {
+    orientation: 'horizontal',
+  });
+
+  // Позицию ленты держим сами: `arrivedState` из `useScrollShadow` требует
+  // ровного нуля и ровного края, а прокрутка оставляет доли пикселя — стрелка
+  // «влево» продолжала висеть над первой вкладкой, а «вправо» не давала
+  // досмотреть последнюю.
+  const stripScroll = reactive({ left: 0, max: 0 });
+
+  /** Перечитывает позицию ленты и остаток прокрутки для стрелок. */
+  function updateStripScroll() {
+    const strip = stripRef.value;
+
+    if (!strip) {
+      return;
+    }
+
+    stripScroll.left = strip.scrollLeft;
+    stripScroll.max = strip.scrollWidth - strip.clientWidth;
+  }
 
   const canScrollLeft = computed(
-    () => isOverflowing.value && !arrivedState.left,
+    () => stripScroll.left > SHEET_TABS_SCROLL_EPSILON,
   );
 
   const canScrollRight = computed(
-    () => isOverflowing.value && !arrivedState.right,
+    () => stripScroll.left < stripScroll.max - SHEET_TABS_SCROLL_EPSILON,
   );
 
-  // `useScrollShadow` пересчитывает состояние только по событию прокрутки, а
-  // ширина ленты меняется и без неё: другой размер контейнера, появление
-  // вкладки «Основное». Дёргаем событие руками, иначе стрелки и затенение
-  // остаются от прежней раскладки. Следим за содержимым ленты — его ширина
-  // реагирует на оба случая (`min-w-full` + число вкладок).
+  useEventListener(stripRef, 'scroll', updateStripScroll, { passive: true });
+
+  // Ширина ленты меняется и без прокрутки: другой размер контейнера, появление
+  // вкладки «Основное». Пересчитываем метрики сами, а событие прокрутки дёргаем
+  // для маски затенения — она живёт внутри `useScrollShadow`. Следим за
+  // содержимым ленты: его ширина реагирует на оба случая (`min-w-full`).
   useResizeObserver(stripContentRef, () => {
+    updateStripScroll();
     stripRef.value?.dispatchEvent(new Event('scroll'));
   });
 
@@ -206,28 +243,61 @@
 
   /**
    * Подтягивает активную вкладку в видимую часть ленты. Двигаем только саму
-   * ленту (`scrollBy` у контейнера), чтобы страница под ней не дёргалась.
+   * ленту, чтобы страница под ней не дёргалась. Крайние вкладки доводим ровно
+   * до края: остаток в доли пикселя оставлял бы стрелку зажжённой поверх
+   * подписи. Остальные — с зазором под стрелку, иначе она ложится на подпись.
    */
   function scrollActiveTabIntoView() {
     const strip = stripRef.value;
 
-    const activeTrigger = strip?.querySelector(
-      '[data-slot="trigger"][data-state="active"]',
+    if (!strip) {
+      return;
+    }
+
+    const triggers = [...strip.querySelectorAll('[data-slot="trigger"]')];
+
+    const activeIndex = triggers.findIndex(
+      (trigger) => trigger.getAttribute('data-state') === 'active',
     );
 
-    if (!strip || !activeTrigger) {
+    const activeTrigger = triggers[activeIndex];
+
+    if (!activeTrigger) {
+      return;
+    }
+
+    if (activeIndex === 0) {
+      strip.scrollTo({ left: 0, behavior: 'smooth' });
+
+      return;
+    }
+
+    if (activeIndex === triggers.length - 1) {
+      strip.scrollTo({
+        left: strip.scrollWidth - strip.clientWidth,
+        behavior: 'smooth',
+      });
+
       return;
     }
 
     const stripBox = strip.getBoundingClientRect();
     const triggerBox = activeTrigger.getBoundingClientRect();
 
-    if (triggerBox.left < stripBox.left) {
-      strip.scrollBy({ left: triggerBox.left - stripBox.left });
+    if (triggerBox.left < stripBox.left + SHEET_TABS_SCROLL_EDGE_GAP) {
+      strip.scrollBy({
+        left: triggerBox.left - stripBox.left - SHEET_TABS_SCROLL_EDGE_GAP,
+        behavior: 'smooth',
+      });
+
+      return;
     }
 
-    if (triggerBox.right > stripBox.right) {
-      strip.scrollBy({ left: triggerBox.right - stripBox.right });
+    if (triggerBox.right > stripBox.right - SHEET_TABS_SCROLL_EDGE_GAP) {
+      strip.scrollBy({
+        left: triggerBox.right - stripBox.right + SHEET_TABS_SCROLL_EDGE_GAP,
+        behavior: 'smooth',
+      });
     }
   }
 
@@ -287,14 +357,330 @@
     isWideLayout.value ? 'min-h-0 flex-1 overflow-y-auto pt-2' : 'pt-2',
   );
 
-  // Прокрутку при смене вкладки не трогаем: страница остаётся там, где была.
+  /**
+   * Сторона, в которую уезжает уходящий раздел: вперёд по ленте — влево,
+   * назад — вправо. Приезжающий раздел не едет следом, а просто проявляется.
+   */
+  const tabTransition = ref<'tab-forward' | 'tab-backward'>('tab-forward');
+
+  /**
+   * Переключение раздела самим пользователем — вкладкой или свайпом. Прокрутку
+   * страницы не трогаем: она остаётся там, где была; двигается только лента,
+   * чтобы выбранная вкладка не осталась за её краем.
+   */
+  function selectTab(slot: SheetTabSlot) {
+    const currentIndex = tabs.value.findIndex(
+      (tab) => tab.slot === activeSlot.value,
+    );
+
+    const nextIndex = tabs.value.findIndex((tab) => tab.slot === slot);
+
+    tabTransition.value =
+      nextIndex > currentIndex ? 'tab-forward' : 'tab-backward';
+
+    hasUserChoice.value = true;
+    activeSlot.value = slot;
+
+    void nextTick(scrollActiveTabIntoView);
+  }
+
+  /**
+   * Выбор раздела кликом по ленте вкладок.
+   *
+   * @param value Значение вкладки из `UTabs` — слот раздела.
+   */
   function handleTabChange(value: string | number) {
     const tab = tabs.value.find((item) => item.slot === value);
 
     if (tab) {
-      hasUserChoice.value = true;
-      activeSlot.value = tab.slot;
+      selectTab(tab.slot);
     }
+  }
+
+  /**
+   * Соседний раздел ленты или `undefined`, если дальше край: зацикливание сбивает
+   * ощущение места в списке разделов.
+   *
+   * @param step -1 — предыдущий раздел, 1 — следующий.
+   */
+  function getAdjacentTab(step: number): SheetTab | undefined {
+    const currentIndex = tabs.value.findIndex(
+      (tab) => tab.slot === activeSlot.value,
+    );
+
+    return tabs.value[currentIndex + step];
+  }
+
+  /** Переключает на соседний раздел; по краям ленты жест ничего не делает. */
+  function shiftTab(step: number) {
+    const nextTab = getAdjacentTab(step);
+
+    if (!nextTab) {
+      return;
+    }
+
+    selectTab(nextTab.slot);
+  }
+
+  /**
+   * Проверяет, обрабатывает ли жест сам элемент под пальцем: поля ввода,
+   * редактор заметок и блоки с горизонтальной прокруткой (широкая таблица в
+   * разметке) — свайп по ним листать разделы не должен.
+   *
+   * @param target Элемент, на котором начался жест.
+   * @param root Контейнер содержимого раздела — до него идёт проверка.
+   */
+  function isGestureOwnedByContent(
+    target: EventTarget | null,
+    root: HTMLElement | null,
+  ): boolean {
+    let element = target instanceof Element ? target : null;
+
+    while (element && element !== root) {
+      if (element.matches('input, textarea, select, [contenteditable]')) {
+        return true;
+      }
+
+      const { overflowX } = window.getComputedStyle(element);
+
+      const canScrollX =
+        overflowX === 'auto'
+        || overflowX === 'scroll'
+        || overflowX === 'overlay';
+
+      if (
+        canScrollX
+        && element.scrollWidth
+          > element.clientWidth + SHEET_TABS_OVERFLOW_EPSILON
+      ) {
+        return true;
+      }
+
+      element = element.parentElement;
+    }
+
+    return false;
+  }
+
+  // Свайп по самому содержимому листает разделы: на телефоне это привычнее, чем
+  // целиться в узкую ленту вкладок. Жест ведём сами, а не через `useSwipe`:
+  // тому нужен пассивный слушатель (страницу под пальцем не удержать) либо
+  // `passive: false`, который глушит прокрутку с первого же касания. Нам нужна
+  // середина — ось выбирается на первых пикселях, и только горизонтальный жест
+  // забирает событие себе.
+  const contentRef = ref<HTMLElement | null>(null);
+
+  /** Ось жеста: пока `none` — решаем, чей он, вертикальный отдаём странице. */
+  type GestureAxis = 'none' | 'horizontal' | 'vertical';
+
+  let gestureAxis: GestureAxis = 'none';
+  let gestureStartX = 0;
+  let gestureStartY = 0;
+
+  /** Жест начался на элементе, который обрабатывает свайп сам. */
+  let isSwipeIgnored = false;
+
+  /** Сдвиг раздела под пальцем (px) и прозрачность на этом сдвиге. */
+  const dragOffset = ref(0);
+  const dragOpacity = ref(1);
+
+  /** Палец отпущен: сдвиг доигрывает переходом, а не следует за пальцем. */
+  const isDragSettling = ref(false);
+
+  // Позицию и затухание отдаём в CSS переменными: класс перехода Vue объявлен
+  // ниже них и перебивает обе величины, поэтому уход в сторону доигрывает
+  // ровно с той точки, где палец отпустили.
+  const paneStyle = computed(() => ({
+    '--tab-drag-x': `${dragOffset.value}px`,
+    '--tab-drag-opacity': `${dragOpacity.value}`,
+  }));
+
+  /**
+   * Ведёт раздел за пальцем: контент отъезжает в сторону жеста и гаснет. У края
+   * ленты, где листать некуда, сдвиг гасится сопротивлением и без затухания —
+   * жест видно, но он ничем не закончится.
+   *
+   * @param deltaX Путь пальца по горизонтали; меньше нуля — палец идёт влево.
+   */
+  function updateDragOffset(deltaX: number) {
+    const width = contentRef.value?.clientWidth ?? 0;
+
+    // Дальше своей ширины раздел не уезжает: иначе уход в сторону (ровно −100%)
+    // доигрывал бы назад, к пальцу.
+    const distance = Math.min(
+      Math.abs(deltaX) - SHEET_TABS_DRAG_DEADZONE,
+      width,
+    );
+
+    if (width <= 0 || distance <= 0) {
+      dragOffset.value = 0;
+      dragOpacity.value = 1;
+
+      return;
+    }
+
+    const step = deltaX < 0 ? 1 : -1;
+    const hasTarget = Boolean(getAdjacentTab(step));
+
+    dragOffset.value =
+      -step * distance * (hasTarget ? 1 : SHEET_TABS_DRAG_RESISTANCE);
+
+    const progress = Math.min(
+      1,
+      distance / (width * SHEET_TABS_DRAG_FADE_SPAN),
+    );
+
+    dragOpacity.value = hasTarget ? 1 - progress * SHEET_TABS_DRAG_MAX_FADE : 1;
+  }
+
+  /**
+   * Палец отпущен (или жест прерван системой): сдвиг снимается с переходом.
+   * Переключился раздел — уходящий доигрывает уход в сторону от этой же точки,
+   * не переключился — содержимое возвращается на место.
+   */
+  function handleSwipeSettle() {
+    // Обычное касание и вертикальная прокрутка содержимое не сдвигают —
+    // возвращать нечего.
+    if (dragOffset.value === 0) {
+      return;
+    }
+
+    isDragSettling.value = true;
+    dragOffset.value = 0;
+    dragOpacity.value = 1;
+  }
+
+  /**
+   * Начало касания: запоминаем точку отсчёта и решаем, наш ли это жест вообще.
+   * Мультитач — это масштабирование, его не перехватываем.
+   */
+  function handleTouchStart(event: TouchEvent) {
+    const touch = event.touches[0];
+
+    isSwipeIgnored =
+      !touch
+      || event.touches.length > 1
+      || isGestureOwnedByContent(event.target, contentRef.value);
+
+    gestureAxis = 'none';
+    isDragSettling.value = false;
+
+    if (!touch) {
+      return;
+    }
+
+    gestureStartX = touch.clientX;
+    gestureStartY = touch.clientY;
+  }
+
+  /**
+   * Движение пальца: выбирает ось жеста и ведёт раздел, если ось наша.
+   */
+  function handleTouchMove(event: TouchEvent) {
+    const touch = event.touches[0];
+
+    if (isSwipeIgnored || !touch) {
+      return;
+    }
+
+    const deltaX = touch.clientX - gestureStartX;
+    const deltaY = touch.clientY - gestureStartY;
+
+    // Ось выбираем на первых же пикселях: дальше браузер решает сам, начал
+    // прокрутку — и отменить её уже нельзя, событие приходит непрерываемым.
+    if (gestureAxis === 'none') {
+      if (
+        Math.max(Math.abs(deltaX), Math.abs(deltaY))
+        < SHEET_TABS_AXIS_LOCK_THRESHOLD
+      ) {
+        return;
+      }
+
+      gestureAxis =
+        Math.abs(deltaX) > Math.abs(deltaY) ? 'horizontal' : 'vertical';
+    }
+
+    // Вертикаль — прокрутка страницы, в неё не вмешиваемся.
+    if (gestureAxis === 'vertical') {
+      return;
+    }
+
+    // Жест наш: страница под пальцем стоит, иначе её тянет вертикальным
+    // дрейфом пальца и лист дёргается прямо во время листания.
+    if (event.cancelable) {
+      event.preventDefault();
+    }
+
+    updateDragOffset(deltaX);
+  }
+
+  /**
+   * Палец отпущен: раздел снимается со сдвига, а дотянувший до порога жест
+   * переключает вкладку.
+   */
+  function handleTouchEnd(event: TouchEvent) {
+    const wasHorizontal = gestureAxis === 'horizontal' && !isSwipeIgnored;
+
+    gestureAxis = 'none';
+    handleSwipeSettle();
+
+    const touch = event.changedTouches[0];
+
+    if (!wasHorizontal || !touch) {
+      return;
+    }
+
+    const deltaX = touch.clientX - gestureStartX;
+
+    if (Math.abs(deltaX) < SHEET_TABS_SWIPE_THRESHOLD) {
+      return;
+    }
+
+    // Палец влево — следующий раздел, как при листании ленты.
+    shiftTab(deltaX < 0 ? 1 : -1);
+  }
+
+  /** Жест прерван системой (звонок, шторка) — раздел просто возвращается. */
+  function handleTouchCancel() {
+    gestureAxis = 'none';
+    handleSwipeSettle();
+  }
+
+  // touchmove слушаем активно: только так работает `preventDefault`. Остальные
+  // события ничего не отменяют и остаются пассивными.
+  useEventListener(contentRef, 'touchstart', handleTouchStart, {
+    passive: true,
+  });
+
+  useEventListener(contentRef, 'touchmove', handleTouchMove, {
+    passive: false,
+  });
+
+  useEventListener(contentRef, 'touchend', handleTouchEnd, { passive: true });
+
+  useEventListener(contentRef, 'touchcancel', handleTouchCancel, {
+    passive: true,
+  });
+
+  /**
+   * Высота уходящего раздела: держит блок, пока приходящий не встал на место.
+   * Без неё содержимое на кадр схлопывается в ноль, браузер подтягивает
+   * прокрутку под укоротившуюся страницу — и лента вкладок дёргается вверх.
+   */
+  const paneMinHeight = ref('');
+
+  /**
+   * Запоминает высоту уходящего раздела перед его удалением.
+   *
+   * @param element Корень уходящего раздела.
+   */
+  function handlePaneBeforeLeave(element: Element) {
+    paneMinHeight.value = `${element.getBoundingClientRect().height}px`;
+  }
+
+  /** Приходящий раздел встал на место — держать высоту больше не нужно. */
+  function handlePaneAfterEnter() {
+    paneMinHeight.value = '';
   }
 </script>
 
@@ -361,56 +747,82 @@
       </Transition>
     </div>
 
-    <div :class="contentClass">
-      <div
-        v-if="activeSlot === 'main'"
-        class="pt-4"
+    <!-- overflow-x-clip (не hidden): обрезает уезжающий раздел, но не делает
+      блок горизонтальным скролл-контейнером и не ломает прокрутку по вертикали
+      в широком режиме -->
+    <div
+      ref="contentRef"
+      class="tab-content overflow-x-clip"
+      :class="contentClass"
+      :style="{ minHeight: paneMinHeight }"
+    >
+      <!-- Ключ по разделу: смена вкладки = смена узла, поэтому уходящий раздел
+        успевает уехать в сторону, а приходящий появляется уже на его месте -->
+      <Transition
+        :name="tabTransition"
+        mode="out-in"
+        @before-leave="handlePaneBeforeLeave"
+        @after-enter="handlePaneAfterEnter"
       >
-        <slot name="main" />
-      </div>
+        <div
+          :key="activeSlot"
+          class="tab-pane"
+          :class="{ 'tab-pane--settling': isDragSettling }"
+          :style="paneStyle"
+        >
+          <div
+            v-if="activeSlot === 'main'"
+            class="pt-4"
+          >
+            <slot name="main" />
+          </div>
 
-      <SheetEquipmentTab
-        v-else-if="activeSlot === 'equipment'"
-        :currency="currency"
-        :custom-currencies="customCurrencies"
-        :inventory="inventory"
-        :total-weight="totalWeight"
-        :carrying-capacity="carryingCapacity"
-        @add-item="handleItemAdd"
-        @add-magic-item="handleMagicItemAdd"
-        @add-custom-item="handleCustomItemAdd"
-        @edit-item="handleItemEdit"
-        @edit-currency="handleCurrencyEdit"
-        @remove-item="handleItemRemove"
-        @adjust-quantity="handleItemQuantityAdjust"
-        @toggle-equip="handleItemEquipToggle"
-        @roll-attack="handleItemAttackRoll"
-        @roll-damage="handleItemDamageRoll"
-      />
+          <SheetEquipmentTab
+            v-else-if="activeSlot === 'equipment'"
+            :currency="currency"
+            :custom-currencies="customCurrencies"
+            :inventory="inventory"
+            :total-weight="totalWeight"
+            :carrying-capacity="carryingCapacity"
+            @add-item="handleItemAdd"
+            @add-magic-item="handleMagicItemAdd"
+            @add-custom-item="handleCustomItemAdd"
+            @edit-item="handleItemEdit"
+            @copy-item="handleItemCopy"
+            @edit-currency="handleCurrencyEdit"
+            @remove-item="handleItemRemove"
+            @adjust-quantity="handleItemQuantityAdjust"
+            @toggle-equip="handleItemEquipToggle"
+            @roll-attack="handleItemAttackRoll"
+            @roll-damage="handleItemDamageRoll"
+          />
 
-      <SheetSpellsTab
-        v-else-if="activeSlot === 'spells'"
-        :spells="spells"
-        :spellcasting="spellcasting"
-        :spell-slots="spellSlots"
-        @add-spell="handleSpellAdd"
-        @add-custom-spell="handleCustomSpellAdd"
-        @edit-spell="handleSpellEdit"
-        @edit-spellcasting="handleSpellcastingEdit"
-        @remove-spell="handleSpellRemove"
-        @toggle-spell-slot="handleSpellSlotToggle"
-      />
+          <SheetSpellsTab
+            v-else-if="activeSlot === 'spells'"
+            :spells="spells"
+            :spellcasting="spellcasting"
+            :spell-slots="spellSlots"
+            @add-spell="handleSpellAdd"
+            @add-custom-spell="handleCustomSpellAdd"
+            @edit-spell="handleSpellEdit"
+            @copy-spell="handleSpellCopy"
+            @edit-spellcasting="handleSpellcastingEdit"
+            @remove-spell="handleSpellRemove"
+            @toggle-spell-slot="handleSpellSlotToggle"
+          />
 
-      <SheetFeaturesTab
-        v-else-if="activeSlot === 'features'"
-        :features="features"
-        @add-feature="handleFeatureAdd"
-        @add-feat="handleFeatAdd"
-        @edit-feature="handleFeatureEdit"
-        @remove-feature="handleFeatureRemove"
-      />
+          <SheetFeaturesTab
+            v-else-if="activeSlot === 'features'"
+            :features="features"
+            @add-feature="handleFeatureAdd"
+            @add-feat="handleFeatAdd"
+            @edit-feature="handleFeatureEdit"
+            @remove-feature="handleFeatureRemove"
+          />
 
-      <SheetNotesTab v-else />
+          <SheetNotesTab v-else />
+        </div>
+      </Transition>
     </div>
   </div>
 </template>
@@ -424,5 +836,64 @@
   .fade-enter-from,
   .fade-leave-to {
     opacity: 0;
+  }
+
+  /* Подмена раздела меняет высоту страницы, и браузер «якорит» прокрутку —
+     из-за этого лента вкладок дёргалась вверх на пару пикселей */
+  .tab-content {
+    overflow-anchor: none;
+  }
+
+  /* Раздел едет за пальцем и гаснет: величины приходят переменными из скрипта.
+     Правила переходов ниже — они перебивают позицию пальца, поэтому уход в
+     сторону доигрывает с той точки, где палец отпустили */
+  .tab-pane {
+    transform: translateX(var(--tab-drag-x, 0));
+    opacity: var(--tab-drag-opacity, 1);
+  }
+
+  /* Палец отпущен, а переключения не вышло — раздел возвращается на место */
+  .tab-pane--settling {
+    transition:
+      transform 0.2s ease-out,
+      opacity 0.2s ease-out;
+  }
+
+  /* Уходит только текущий раздел — уезжает в сторону свайпа и гаснет.
+     Следующий не едет следом, а проявляется уже на месте */
+  .tab-forward-leave-active,
+  .tab-backward-leave-active {
+    transition:
+      transform 0.18s ease-in,
+      opacity 0.18s ease-in;
+  }
+
+  .tab-forward-leave-to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+
+  .tab-backward-leave-to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  .tab-forward-enter-active,
+  .tab-backward-enter-active {
+    transition: opacity 0.15s ease-out;
+  }
+
+  .tab-forward-enter-from,
+  .tab-backward-enter-from {
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tab-forward-leave-active,
+    .tab-backward-leave-active,
+    .tab-forward-enter-active,
+    .tab-backward-enter-active {
+      transition: none;
+    }
   }
 </style>

@@ -9,6 +9,7 @@ import type {
   AbilityRow,
   ArmorClassBreakdown,
   ArmorDexterityMod,
+  CatalogSpellDetail,
   Character,
   CharacterClass,
   CharacterExtraHitDie,
@@ -34,8 +35,9 @@ import type {
   FeatSummary,
   FeatureDescriptionNode,
   FeatureOrigin,
+  HitDiceAmount,
   HitDicePool,
-  HitDiceSpend,
+  HitDiceSelectPool,
   InventoryArmor,
   InventoryItemOrigin,
   InventoryWeapon,
@@ -83,12 +85,14 @@ import {
   ABILITY_LABELS,
   ABILITY_ORDER,
   ABILITY_SHORT_LABELS,
+  ALL_SPELL_SLOTS_LABEL,
   ARMOR_CLASS_BASE_MAX,
   ARMOR_CLASS_BASE_MIN,
   ARMOR_MATCH_KEYWORDS,
   ARMOR_MEDIUM_DEX_CAP,
   ARMOR_PROFICIENCY_GROUPS,
   CARRYING_CAPACITY_MULTIPLIER,
+  CATALOG_COPY_MENU_LABEL,
   CHARACTER_FILE_NAME_FALLBACK,
   CLASS_SPELL_PROGRESSIONS,
   CLASS_SPELLCASTING_ABILITIES,
@@ -110,17 +114,26 @@ import {
   DARKVISION_PARSE_FALLBACK,
   DEFAULT_WEAPON_ATTACK_ABILITY,
   DICE_NOTATION_LETTER,
+  HIT_DICE_LONG_REST_DIVISOR,
+  HIT_DICE_LONG_REST_MIN,
   HIT_DICE_ROLL_COUNT,
   INVENTORY_CATEGORY_ORDER,
   INVENTORY_CATEGORY_TITLES,
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
+  INVENTORY_REMOVE_MENU_LABEL,
+  ITEMS_DETAIL_BASE_PATH,
   LEVEL_XP_THRESHOLDS,
+  MAGIC_ITEMS_DETAIL_BASE_PATH,
   NEW_CUSTOM_INVENTORY_ITEM,
   PACT_SPELL_SLOTS_LABEL,
   RESOURCE_RECOVERY_LABELS,
   ROLL_MODE_DICE_NOTATION,
   SHEET_COPY_LIMIT_HINT,
+  SHEET_DOWNLOAD_JSON_LABEL,
+  SHEET_DOWNLOAD_PDF_HINT,
+  SHEET_DOWNLOAD_PDF_LABEL,
+  SHEET_PDF_MIME_TYPE,
   SHEET_SHARE_ACTIVE_HINT,
   SIZE_LABEL_WORDS,
   SKILL_PROFICIENCY_MULTIPLIERS,
@@ -128,6 +141,7 @@ import {
   SPEED_PRIMARY_ORDER,
   SPEED_TYPE_LABELS,
   SPEED_UNIT_SHORT_LABELS,
+  SPELL_REMOVE_MENU_LABEL,
   SPELL_SAVE_DC_BASE,
   SPELL_SLOT_FREE_LABEL,
   SPELL_SLOT_USED_LABEL,
@@ -408,6 +422,48 @@ export function isCustomInventoryItem(
 }
 
 /**
+ * Путь детального ответа каталога для предмета инвентаря: магические предметы
+ * живут в своём разделе.
+ *
+ * @param inventoryItem каталожный предмет инвентаря.
+ * @returns путь детали предмета.
+ */
+export function getInventoryItemDetailPath(
+  inventoryItem: CharacterInventoryItem,
+): string {
+  const basePath =
+    inventoryItem.category === 'MAGIC_ITEM'
+      ? MAGIC_ITEMS_DETAIL_BASE_PATH
+      : ITEMS_DETAIL_BASE_PATH;
+
+  return `${basePath}/${inventoryItem.url}`;
+}
+
+/**
+ * Своя копия каталожного предмета: параметры, количество и надетый доспех
+ * остаются прежними, а запись перестаёт зависеть от раздела сайта — она
+ * получает свой идентификатор с префиксом `custom:` и забирает описание в лист
+ * (у каталожных записей его в документе нет).
+ *
+ * @param url URL копии (`custom:` + идентификатор); он же её id.
+ * @param inventoryItem каталожный предмет инвентаря.
+ * @param description описание из справочника; пустое — не загрузилось.
+ * @returns предмет инвентаря, помеченный как свой.
+ */
+export function toCopiedInventoryItem(
+  url: string,
+  inventoryItem: CharacterInventoryItem,
+  description: FeatureDescriptionNode[],
+): CharacterInventoryItem {
+  return {
+    ...inventoryItem,
+    id: url,
+    url,
+    description: [...description],
+  };
+}
+
+/**
  * Подпись типов своего предмета для строки инвентаря: у доспеха — его тип, у
  * оружия — категория владения и свойства, у безделушки — общая подпись.
  *
@@ -591,6 +647,42 @@ export function toCustomInventoryItem(
     // нет, и в подсчёт КД они не идут.
     equipped: draft.kind === 'armor' && equipped,
     description: [...draft.description],
+  };
+}
+
+/**
+ * Правка своего предмета формой листа. Скопированный магический предмет
+ * остаётся в своей группе с прежней подписью типов, пока его вид — «Безделушка»:
+ * вида «Магический предмет» в форме нет, и без этой оговорки правка уносила бы
+ * копию из «Магических предметов» в «Прочее». Смена вида на оружие или доспех
+ * группу меняет — её задаёт вид предмета.
+ *
+ * @param editedItem редактируемый предмет (свой либо его копия из справочника).
+ * @param draft новые значения формы.
+ * @returns предмет инвентаря; null — название пустое.
+ */
+export function toUpdatedCustomInventoryItem(
+  editedItem: CharacterInventoryItem,
+  draft: CustomInventoryItemDraft,
+): CharacterInventoryItem | null {
+  const updatedItem = toCustomInventoryItem(
+    editedItem.url,
+    draft,
+    editedItem.equipped,
+  );
+
+  if (
+    !updatedItem
+    || editedItem.category !== 'MAGIC_ITEM'
+    || draft.kind !== 'trinket'
+  ) {
+    return updatedItem;
+  }
+
+  return {
+    ...updatedItem,
+    category: editedItem.category,
+    typesLabel: editedItem.typesLabel,
   };
 }
 
@@ -1042,10 +1134,14 @@ export function getHitDicePools(
 
   for (const hitDie of [...hitDice, ...extraHitDice]) {
     const pool = totalsByDie.get(hitDie.die) ?? { current: 0, max: 0 };
+    const max = Math.max(0, hitDie.max);
 
     totalsByDie.set(hitDie.die, {
-      current: pool.current + hitDie.current,
-      max: pool.max + hitDie.max,
+      // Схема документа значения костей не обрезает, поэтому импортированный
+      // вручную лист может принести остаток больше максимума или отрицательный —
+      // выбор костей на отдыхе такие значения не должны ломать.
+      current: pool.current + clamp(hitDie.current, 0, max),
+      max: pool.max + max,
     });
   }
 
@@ -1061,43 +1157,150 @@ export function getHitDicePools(
 }
 
 /**
- * Списание потраченных на отдыхе костей хитов: сперва расходуются классовые
- * кости номинала, затем дополнительные. Больше, чем осталось, не спишется.
+ * Изменение остатка костей хитов по номиналам: положительное количество кости
+ * возвращает (продолжительный отдых), отрицательное — тратит (короткий).
+ * Сперва затрагиваются классовые кости номинала, затем дополнительные; остаток
+ * каждой кости не выходит за границы `[0, max]`, поэтому лишнее просто не
+ * применится.
  *
  * @param hitDice кости хитов из классов.
  * @param extraHitDice дополнительные кости хитов.
- * @param spent потраченные кости по номиналам.
+ * @param amounts изменение количества костей по номиналам.
  * @returns новые списки костей хитов.
  */
-export function withdrawHitDice(
+export function adjustHitDice(
   hitDice: CharacterHitDie[],
   extraHitDice: CharacterExtraHitDie[],
-  spent: HitDiceSpend[],
+  amounts: HitDiceAmount[],
 ): { hitDice: CharacterHitDie[]; extraHitDice: CharacterExtraHitDie[] } {
-  // Остаток к списанию по номиналу: уменьшается по мере обхода костей, поэтому
-  // одна и та же трата не спишется дважды.
+  // Неприменённый остаток по номиналу: тает по мере обхода костей, поэтому одно
+  // и то же изменение не применится к номиналу дважды.
   const pending = new Map(
-    spent.map((pool) => [pool.die, Math.max(0, Math.trunc(pool.count))]),
+    amounts.map((pool) => [pool.die, Math.trunc(pool.count)]),
   );
 
-  const withdraw = <Die extends CharacterHitDie>(hitDie: Die): Die => {
+  const adjust = <Die extends CharacterHitDie>(hitDie: Die): Die => {
     const left = pending.get(hitDie.die) ?? 0;
 
-    if (left <= 0) {
+    if (left === 0) {
       return hitDie;
     }
 
-    const taken = Math.min(left, hitDie.current);
+    // Отсчёт ведётся от остатка в допустимых границах: импортированный вручную
+    // лист мог принести значение вне `[0, max]`, и без этого правка такой кости
+    // засчиталась бы как часть изменения, раздув его для следующих костей.
+    const sane = clamp(hitDie.current, 0, hitDie.max);
+    const current = clamp(sane + left, 0, hitDie.max);
 
-    pending.set(hitDie.die, left - taken);
+    if (current === hitDie.current) {
+      return hitDie;
+    }
 
-    return { ...hitDie, current: hitDie.current - taken };
+    pending.set(hitDie.die, left - (current - sane));
+
+    return { ...hitDie, current };
   };
 
   return {
-    hitDice: hitDice.map((hitDie) => withdraw(hitDie)),
-    extraHitDice: extraHitDice.map((hitDie) => withdraw(hitDie)),
+    hitDice: hitDice.map((hitDie) => adjust(hitDie)),
+    extraHitDice: extraHitDice.map((hitDie) => adjust(hitDie)),
   };
+}
+
+/**
+ * Выбранные на отдыхе кости, обрезанные пределами номиналов: выбор живёт в
+ * модалке, а пределы (остаток костей или нехватка до максимума) меняются после
+ * каждого применения. Номиналы без выбора в результат не входят.
+ *
+ * @param pools пулы костей хитов с пределом выбора.
+ * @param counts выбранное количество костей по номиналам.
+ * @returns количество костей по номиналам.
+ */
+export function getSelectedHitDice(
+  pools: HitDiceSelectPool[],
+  counts: Record<number, number>,
+): HitDiceAmount[] {
+  return pools
+    .map((pool) => ({
+      die: pool.die,
+      count: clamp(counts[pool.die] ?? 0, 0, pool.limit),
+    }))
+    .filter((pool) => pool.count > 0);
+}
+
+/**
+ * Сколько костей хитов возвращает продолжительный отдых: половина от общего
+ * количества костей, но не меньше одной (правило D&D 2024). Больше, чем
+ * потрачено, вернуть нельзя, а без костей возвращать нечего.
+ *
+ * @param pools пулы костей хитов по номиналам.
+ * @returns количество костей к возврату.
+ */
+export function getLongRestHitDiceCount(pools: HitDicePool[]): number {
+  const totals = pools.reduce(
+    (total, pool) => ({
+      current: total.current + pool.current,
+      max: total.max + pool.max,
+    }),
+    { current: 0, max: 0 },
+  );
+
+  const spent = totals.max - totals.current;
+
+  if (spent <= 0) {
+    return 0;
+  }
+
+  return Math.min(
+    spent,
+    Math.max(
+      HIT_DICE_LONG_REST_MIN,
+      Math.floor(totals.max / HIT_DICE_LONG_REST_DIVISOR),
+    ),
+  );
+}
+
+/**
+ * Раскладка возвращаемых костей по умолчанию: сперва крупные номиналы —
+ * они полезнее в бою, а перераспределить выбор игрок может сам.
+ *
+ * @param pools пулы костей хитов с пределом возврата по номиналу.
+ * @param count сколько костей возвращается всего.
+ * @returns количество костей к возврату по номиналам.
+ */
+export function getDefaultHitDiceRecovery(
+  pools: HitDiceSelectPool[],
+  count: number,
+): HitDiceAmount[] {
+  let pending = Math.max(0, Math.trunc(count));
+
+  return [...pools]
+    .sort((left, right) => right.die - left.die)
+    .map((pool) => {
+      const taken = clamp(pending, 0, pool.limit);
+
+      pending -= taken;
+
+      return { die: pool.die, count: taken };
+    })
+    .filter((pool) => pool.count > 0);
+}
+
+/**
+ * Что вернёт продолжительный отдых, кроме хитов и костей: ячейки заклинаний и
+ * все счётчики умений — и с продолжительным, и с коротким восстановлением.
+ *
+ * @param character персонаж.
+ * @returns подписи восстанавливаемого; пустой список — восстанавливать нечего.
+ */
+export function getLongRestRecoveryLabels(character: Character): string[] {
+  const resourceLabels = character.classResources.map(
+    (resource) => resource.name,
+  );
+
+  return getSpellSlotRows(character).length > 0
+    ? [ALL_SPELL_SLOTS_LABEL, ...resourceLabels]
+    : resourceLabels;
 }
 
 /**
@@ -1272,9 +1475,7 @@ export function isCustomSpell(spell: CharacterSpell): boolean {
  * @param spell заклинание книги персонажа.
  * @returns строки «подпись — значение».
  */
-export function getCustomSpellStatRows(
-  spell: CharacterSpell,
-): CustomSpellStatRow[] {
+export function getSpellStatRows(spell: CharacterSpell): CustomSpellStatRow[] {
   return CUSTOM_SPELL_FIELDS.map((field) => ({
     key: field.key,
     label: field.label,
@@ -1312,6 +1513,33 @@ export function toCustomSpell(
     components: draft.components.trim(),
     duration: draft.duration.trim(),
     description: [...draft.description],
+  };
+}
+
+/**
+ * Своя копия каталожного заклинания: круг, школа и признаки концентрации с
+ * ритуалом остаются прежними, а характеристики с описанием переезжают из
+ * справочника в лист — у каталожных записей их в документе нет. Новый URL с
+ * префиксом `custom:` делает запись своей: дальше её правит форма листа.
+ *
+ * @param url URL копии (`custom:` + идентификатор).
+ * @param spell каталожное заклинание книги.
+ * @param detail деталь из справочника; null — не загрузилась.
+ * @returns заклинание книги, помеченное как своё.
+ */
+export function toCopiedSpell(
+  url: string,
+  spell: CharacterSpell,
+  detail: CatalogSpellDetail | null,
+): CharacterSpell {
+  return {
+    ...spell,
+    url,
+    castingTime: detail?.castingTime ?? '',
+    range: detail?.range ?? '',
+    components: detail?.components ?? '',
+    duration: detail?.duration ?? '',
+    description: detail ? [...detail.description] : [],
   };
 }
 
@@ -2228,8 +2456,7 @@ function getCharacterFileName(name: string): string {
 
 /**
  * Скачивание листа в виде JSON-файла: сериализует персонажа (та же форма, что
- * уходит в автосохранение) и отдаёт браузеру ссылку на blob. Работает только в
- * браузере — вызывается по действию пользователя.
+ * уходит в автосохранение).
  *
  * Ссылка на изображение в файл не попадает: она ведёт в наше хранилище и
  * действительна только для своего владельца — в чужом аккаунте или стороннем
@@ -2239,16 +2466,35 @@ function getCharacterFileName(name: string): string {
  */
 export function downloadCharacterJson(character: Character): void {
   const json = JSON.stringify({ ...character, avatarUrl: null }, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
 
-  link.href = url;
-  link.download = `${getCharacterFileName(character.name)}.json`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  downloadBlob(
+    new Blob([json], { type: 'application/json' }),
+    `${getCharacterFileName(character.name)}.json`,
+  );
+}
+
+/**
+ * Скачивание листа в виде PDF: раскладка близка к официальному листу D&D 2024,
+ * дальше идут снаряжение, заклинания и справочник с полными описаниями.
+ *
+ * Сборщик и pdf-lib загружаются динамически: они нужны только в момент экспорта,
+ * а в основном бандле весили бы больше самого листа.
+ *
+ * @param character персонаж скачиваемого листа.
+ */
+export async function downloadCharacterPdf(
+  character: Character,
+): Promise<void> {
+  const { buildCharacterSheetPdf } = await import('./pdf');
+
+  const bytes = await buildCharacterSheetPdf(character);
+
+  // Копия байтов в свежий массив: `Blob` принимает только представления над
+  // `ArrayBuffer`, а pdf-lib отдаёт массив над `ArrayBufferLike`.
+  downloadBlob(
+    new Blob([new Uint8Array(bytes)], { type: SHEET_PDF_MIME_TYPE }),
+    `${getCharacterFileName(character.name)}.pdf`,
+  );
 }
 
 /** Доступность действий и обработчики пунктов меню действий над листом. */
@@ -2277,7 +2523,11 @@ export interface SheetActionMenuOptions {
    */
   isLocked?: boolean;
 
+  /** Идёт сборка PDF: пункт показывает загрузку и не принимает повторный клик. */
+  isPdfLoading?: boolean;
+
   onDownload: () => void;
+  onDownloadPdf: () => void;
   onDuplicate: () => void;
   onRemove: () => void;
   onSettings: () => void;
@@ -2300,17 +2550,28 @@ export interface SheetActionMenuOptions {
 export function getSheetActionMenuItems(
   options: SheetActionMenuOptions,
 ): Array<Array<DropdownMenuItem>> {
+  // Экспорт в PDF идёт первым: играют по нему, а JSON нужен для переноса листа.
+  const downloadPdf: DropdownMenuItem = {
+    label: SHEET_DOWNLOAD_PDF_LABEL,
+    icon: 'tabler:file-type-pdf',
+    description: SHEET_DOWNLOAD_PDF_HINT,
+    loading: options.isPdfLoading,
+    disabled: options.isPdfLoading,
+    onSelect: options.onDownloadPdf,
+  };
+
   const download: DropdownMenuItem = {
-    label: 'Скачать JSON',
+    label: SHEET_DOWNLOAD_JSON_LABEL,
     icon: 'tabler:download',
     onSelect: options.onDownload,
   };
 
   if (options.isReadonly) {
-    return [[download]];
+    return [[downloadPdf, download]];
   }
 
   const actions: DropdownMenuItem[] = [
+    downloadPdf,
     download,
     {
       label: 'Создать копию',
@@ -2458,6 +2719,91 @@ export function getFeaturesAddMenuItems(
       onSelect: options.onAddFeat,
     },
   ];
+}
+
+/** Обработчики пунктов меню строки каталожной или своей записи листа. */
+export interface SheetEntryMenuOptions {
+  /**
+   * Правка записи; не передан — пункта нет. У каталожной записи править нечего:
+   * её поля приходят из раздела сайта.
+   */
+  onEdit?: () => void;
+
+  /**
+   * Копия каталожной записи в лист; не передан — пункта нет. Своя запись уже
+   * живёт в листе, копировать её незачем.
+   */
+  onCopy?: () => void;
+
+  onRemove: () => void;
+}
+
+/**
+ * Пункты меню строки: правка своей записи, копия каталожной в лист и удаление.
+ * Порядок общий для снаряжения и заклинаний — сначала то, что меняет саму
+ * запись, потом удаление.
+ *
+ * @param options обработчики пунктов.
+ * @param removeLabel подпись удаления (у снаряжения и книги она своя).
+ * @returns пункты для `UDropdownMenu`.
+ */
+function getSheetEntryMenuItems(
+  options: SheetEntryMenuOptions,
+  removeLabel: string,
+): DropdownMenuItem[] {
+  const items: DropdownMenuItem[] = [];
+
+  if (options.onEdit) {
+    items.push({
+      label: 'Редактировать',
+      icon: 'tabler:pencil',
+      onSelect: options.onEdit,
+    });
+  }
+
+  if (options.onCopy) {
+    items.push({
+      label: CATALOG_COPY_MENU_LABEL,
+      icon: 'tabler:copy',
+      onSelect: options.onCopy,
+    });
+  }
+
+  items.push({
+    label: removeLabel,
+    icon: 'tabler:trash',
+    color: 'error',
+    onSelect: options.onRemove,
+  });
+
+  return items;
+}
+
+/**
+ * Пункты меню строки снаряжения. Действия убраны под многоточие, а не стоят
+ * кнопками в строке: у каталожного предмета их два, у своего — тоже два, но
+ * другие, и трейлинг соседних строк не выравнивался бы.
+ *
+ * @param options обработчики пунктов.
+ * @returns пункты для `UDropdownMenu`.
+ */
+export function getInventoryItemMenuItems(
+  options: SheetEntryMenuOptions,
+): DropdownMenuItem[] {
+  return getSheetEntryMenuItems(options, INVENTORY_REMOVE_MENU_LABEL);
+}
+
+/**
+ * Пункты меню строки заклинания — те же действия, что и у снаряжения: строки
+ * обеих вкладок ведут себя одинаково.
+ *
+ * @param options обработчики пунктов.
+ * @returns пункты для `UDropdownMenu`.
+ */
+export function getSpellMenuItems(
+  options: SheetEntryMenuOptions,
+): DropdownMenuItem[] {
+  return getSheetEntryMenuItems(options, SPELL_REMOVE_MENU_LABEL);
 }
 
 /**

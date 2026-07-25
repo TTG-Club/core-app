@@ -35,6 +35,7 @@
     'add-magic-item': [];
     'add-custom-item': [];
     'edit-item': [inventoryItemId: string];
+    'copy-item': [inventoryItemId: string];
     'edit-currency': [];
     'remove-item': [inventoryItemId: string];
     'adjust-quantity': [inventoryItemId: string, delta: number];
@@ -86,11 +87,11 @@
     emit('adjust-quantity', inventoryItemId, delta);
   }
 
-  // Удаление подтверждаем: кнопка стоит вплотную к «+/−», отменить её нечем, а
-  // на узкой карточке она видна всегда — попасть по ней случайно легко. Предмет
-  // держим до закрытия диалога, иначе на анимации закрытия описание мигало бы
-  // пустым. shallowRef: предмет всегда заменяется целиком, следить за его
-  // полями незачем — читаем только название и id.
+  // Удаление подтверждаем: отменить его нечем, а предмет из каталога
+  // приходится искать заново. Предмет держим до закрытия диалога, иначе на
+  // анимации закрытия описание мигало бы пустым. shallowRef: предмет всегда
+  // заменяется целиком, следить за его полями незачем — читаем только название
+  // и id.
   const removalItem = shallowRef<CharacterInventoryItem | null>(null);
 
   const isRemoveOpen = ref(false);
@@ -200,6 +201,7 @@
           :inventory-item="inventoryItem"
           @preview="handlePreview(inventoryItem)"
           @edit="emit('edit-item', inventoryItem.id)"
+          @copy="emit('copy-item', inventoryItem.id)"
           @remove="handleRemoveRequest(inventoryItem)"
           @adjust="(delta) => handleQuantityAdjust(inventoryItem.id, delta)"
           @toggle-equip="emit('toggle-equip', inventoryItem.id)"

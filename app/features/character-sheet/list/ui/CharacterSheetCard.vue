@@ -6,6 +6,7 @@
   import { ConfirmDialog } from '~initiative/ui-kit';
 
   import { SheetSettingsModal } from '../../body/ui';
+  import { useCharacterSheetPdf } from '../../composables';
   import { CharacterSheetDrawer } from '../../drawer';
   import {
     CHARACTER_SHEET_ROUTE,
@@ -96,6 +97,13 @@
     downloadCharacterJson(character);
   }
 
+  const { isExporting, exportToPdf } = useCharacterSheetPdf();
+
+  /** Экспорт листа в PDF — собирается из того же документа карточки. */
+  function handleDownloadPdf(): void {
+    void exportToPdf(character);
+  }
+
   /** Запрос на копию листа — создаёт её список (у него лимит и обновление). */
   function handleDuplicate(): void {
     emit('duplicate', character);
@@ -116,7 +124,9 @@
     getSheetActionMenuItems({
       canDuplicate,
       canRemove: removable,
+      isPdfLoading: isExporting.value,
       onDownload: handleDownload,
+      onDownloadPdf: handleDownloadPdf,
       onDuplicate: handleDuplicate,
       onRemove: handleRemove,
       onSettings: handleSettings,

@@ -8,6 +8,7 @@
     getSheetActionMenuItems,
     getSpeciesDisplayName,
     getVisionRows,
+    LONG_REST_LABELS,
     SHEET_EMPTY_LABELS,
     SHEET_READONLY_LABELS,
     SHEET_SAVE_STATUS_META,
@@ -34,11 +35,14 @@
     readonly?: boolean;
     /** Доступ по ссылке уже включён (пометка в меню действий). */
     shared?: boolean;
+    /** Идёт сборка PDF — пункт меню показывает загрузку. */
+    pdfLoading?: boolean;
   }>();
 
   const emit = defineEmits<{
     'close': [];
     'download': [];
+    'download-pdf': [];
     'duplicate': [];
     'expand': [];
     'remove': [];
@@ -50,6 +54,7 @@
     'edit-size': [];
     'edit-species': [];
     'edit-vision': [];
+    'long-rest': [];
     'short-rest': [];
     'toggle-inspiration': [];
     'toggle-lock': [];
@@ -67,7 +72,9 @@
       isShared: props.shared,
       isReadonly: props.readonly,
       isLocked: props.locked,
+      isPdfLoading: props.pdfLoading,
       onDownload: () => emit('download'),
+      onDownloadPdf: () => emit('download-pdf'),
       onDuplicate: () => emit('duplicate'),
       onRemove: () => emit('remove'),
       onSettings: () => emit('edit-settings'),
@@ -437,13 +444,16 @@
           />
         </UTooltip>
 
-        <UButton
-          icon="tabler:moon"
-          color="neutral"
-          variant="ghost"
-          square
-          disabled
-        />
+        <UTooltip :text="LONG_REST_LABELS.title">
+          <UButton
+            icon="tabler:moon"
+            color="neutral"
+            variant="ghost"
+            square
+            :aria-label="LONG_REST_LABELS.title"
+            @click.left.exact.prevent="emit('long-rest')"
+          />
+        </UTooltip>
       </div>
     </div>
   </header>

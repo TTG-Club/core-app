@@ -1,11 +1,9 @@
 <script setup lang="ts">
   import type {
-    HitDicePool,
-    HitDiceSpend,
+    HitDiceAmount,
+    HitDiceSelectPool,
     HitDieRollResult,
   } from '../../model';
-
-  import { clamp } from 'es-toolkit';
 
   import { useDiceRoller } from '~dice-roller/composables';
 
@@ -15,29 +13,13 @@
     getHitDieFormula,
     getHitDieLabel,
     getHitDieRestore,
+    getSelectedHitDice,
     getShortRestRecoveryLabels,
     RESOURCE_RECOVERY_ICONS,
     SHORT_REST_LABELS,
     SHORT_REST_RULES,
   } from '../../model';
-
-  /** Строка пула костей хитов с выбором, сколько костей потратить. */
-  interface HitDiceRow extends HitDicePool {
-    /** Сколько костей номинала выбрано к броску. */
-    selected: number;
-
-    /** Класс числа выбранных костей: ноль показывается приглушённым. */
-    selectedClass: string;
-
-    /** Подпись кнопки «−» для скринридера. */
-    removeLabel: string;
-
-    /** Подпись кнопки «+» для скринридера. */
-    addLabel: string;
-
-    isMinusDisabled: boolean;
-    isPlusDisabled: boolean;
-  }
+  import SheetHitDiceSelect from './SheetHitDiceSelect.vue';
 
   const emit = defineEmits<{
     close: [];
@@ -82,32 +64,20 @@
     getHitDicePools(character.value.hitDice, character.value.extraHitDice),
   );
 
+  /** Тратить можно только оставшиеся кости номинала. */
+  const selectPools = computed<HitDiceSelectPool[]>(() =>
+    hitDicePools.value.map((pool) => ({ ...pool, limit: pool.current })),
+  );
+
   /** Выбранное к броску количество костей по номиналу. */
   const selectedCounts = ref<Record<number, number>>({});
 
-  const hitDiceRows = computed<HitDiceRow[]>(() =>
-    hitDicePools.value.map((pool) => {
-      // Остаток костей уменьшается после каждого броска, поэтому выбор всегда
-      // обрезается по нему — иначе кнопка предлагала бы бросить уже потраченное.
-      const selected = Math.min(
-        selectedCounts.value[pool.die] ?? 0,
-        pool.current,
-      );
-
-      return {
-        ...pool,
-        selected,
-        selectedClass: selected > 0 ? 'text-warning' : 'text-dimmed',
-        removeLabel: `${SHORT_REST_LABELS.diceRemove} ${pool.label}`,
-        addLabel: `${SHORT_REST_LABELS.diceAdd} ${pool.label}`,
-        isMinusDisabled: selected <= 0,
-        isPlusDisabled: selected >= pool.current,
-      };
-    }),
+  const spentDice = computed(() =>
+    getSelectedHitDice(selectPools.value, selectedCounts.value),
   );
 
   const selectedTotal = computed(() =>
-    hitDiceRows.value.reduce((total, row) => total + row.selected, 0),
+    spentDice.value.reduce((total, pool) => total + pool.count, 0),
   );
 
   const isRollDisabled = computed(() => selectedTotal.value === 0);
@@ -155,20 +125,6 @@
   });
 
   /**
-   * Изменение количества костей номинала к броску: значение ограничивается
-   * остатком костей.
-   *
-   * @param row строка пула костей.
-   * @param delta смещение количества.
-   */
-  function handleSelectAdjust(row: HitDiceRow, delta: number): void {
-    selectedCounts.value = {
-      ...selectedCounts.value,
-      [row.die]: clamp(row.selected + delta, 0, row.current),
-    };
-  }
-
-  /**
    * Бросок потраченных костей: каждая кость катится отдельно, потому что
    * минимум восстановления (ноль хитов) правила применяют к каждой кости, а
    * игрок видит результат каждого броска.
@@ -176,7 +132,7 @@
    * @param spent потраченные кости по номиналам.
    * @returns результаты бросков по одной кости.
    */
-  function rollHitDice(spent: HitDiceSpend[]): HitDieRollResult[] {
+  function rollHitDice(spent: HitDiceAmount[]): HitDieRollResult[] {
     const modifier = constitutionModifier.value;
     const formattedModifier = formattedConstitutionModifier.value;
 
@@ -200,9 +156,7 @@
    * сумму бросков одним действием, а сами броски пополняют журнал отдыха.
    */
   function handleRoll(): void {
-    const spent: HitDiceSpend[] = hitDiceRows.value
-      .filter((row) => row.selected > 0)
-      .map((row) => ({ die: row.die, count: row.selected }));
+    const spent = spentDice.value;
 
     if (spent.length === 0) {
       return;
@@ -355,54 +309,13 @@
             </span>
           </div>
 
-          <template v-if="hitDiceRows.length">
-            <div
-              v-for="row in hitDiceRows"
-              :key="row.die"
-              class="flex items-center gap-2 rounded bg-default/30 px-2 py-1.5"
-            >
-              <span class="w-9 shrink-0 text-sm font-bold text-highlighted">
-                {{ row.label }}
-              </span>
-
-              <span class="text-xs text-muted">
-                <span class="font-bold text-highlighted">{{
-                  row.current
-                }}</span>
-                / {{ row.max }}
-              </span>
-
-              <div class="ml-auto flex items-center gap-1">
-                <UButton
-                  icon="tabler:minus"
-                  color="neutral"
-                  variant="ghost"
-                  size="xs"
-                  square
-                  :disabled="row.isMinusDisabled"
-                  :aria-label="row.removeLabel"
-                  @click.left.exact.prevent="handleSelectAdjust(row, -1)"
-                />
-
-                <span
-                  class="w-6 text-center text-sm font-bold tabular-nums"
-                  :class="row.selectedClass"
-                >
-                  {{ row.selected }}
-                </span>
-
-                <UButton
-                  icon="tabler:plus"
-                  color="neutral"
-                  variant="ghost"
-                  size="xs"
-                  square
-                  :disabled="row.isPlusDisabled"
-                  :aria-label="row.addLabel"
-                  @click.left.exact.prevent="handleSelectAdjust(row, 1)"
-                />
-              </div>
-            </div>
+          <template v-if="selectPools.length">
+            <SheetHitDiceSelect
+              v-model="selectedCounts"
+              :pools="selectPools"
+              :add-label="SHORT_REST_LABELS.diceAdd"
+              :remove-label="SHORT_REST_LABELS.diceRemove"
+            />
 
             <span
               v-if="isAllDiceSpent"

@@ -13,6 +13,7 @@
   import {
     useCharacterSheet,
     useCharacterSheetList,
+    useCharacterSheetPdf,
     useCharacterSheetSaveStatus,
     useCharacterSheetShare,
   } from '../composables';
@@ -45,6 +46,7 @@
     SheetHealthQuickModal,
     SheetInventoryTabs,
     SheetItemAddModal,
+    SheetLongRestModal,
     SheetMagicItemAddModal,
     SheetNameModal,
     SheetProficienciesPanel,
@@ -103,6 +105,8 @@
     adjustClassResource,
     adjustInventoryItemQuantity,
     toggleInventoryItemEquipped,
+    copyInventoryItemToSheet,
+    copySpellToSheet,
     removeFeature,
     removeInventoryItem,
     removeSpell,
@@ -123,6 +127,15 @@
 
   // Доступ по ссылке: состояние читает меню шапки, меняет — модалка.
   const { isShared } = useCharacterSheetShare();
+
+  // Экспорт в PDF: сборщик грузится по клику, поэтому у пункта меню есть
+  // собственное состояние загрузки.
+  const { isExporting: isPdfExporting, exportToPdf } = useCharacterSheetPdf();
+
+  /** Экспорт открытого листа в PDF. */
+  function handleDownloadPdf(): void {
+    void exportToPdf(character.value);
+  }
 
   const overlay = useOverlay();
 
@@ -223,6 +236,8 @@
   const healthQuickModal = overlay.create(SheetHealthQuickModal);
 
   const shortRestModal = overlay.create(SheetShortRestModal);
+
+  const longRestModal = overlay.create(SheetLongRestModal);
 
   const nameModal = overlay.create(SheetNameModal);
 
@@ -368,6 +383,15 @@
     }
 
     shortRestModal.open();
+  }
+
+  /** Продолжительный отдых — такое же игровое действие, как короткий. */
+  function handleLongRest() {
+    if (isReadonly.value) {
+      return;
+    }
+
+    longRestModal.open();
   }
 
   function handleNameEdit() {
@@ -582,6 +606,14 @@
     customSpellModal.open({ spellUrl });
   }
 
+  /**
+   * Копия каталожного заклинания в лист: экшен дозагружает описание из
+   * справочника, поэтому асинхронный — ошибку запроса он гасит сам.
+   */
+  function handleSpellCopy(spellUrl: string) {
+    void copySpellToSheet(spellUrl);
+  }
+
   function handleSpellcastingEdit() {
     if (!ensureEditable()) {
       return;
@@ -628,6 +660,11 @@
     }
 
     customItemModal.open({ inventoryItemId });
+  }
+
+  /** Копия каталожного предмета в лист — как и у заклинания, с дозагрузкой. */
+  function handleItemCopy(inventoryItemId: string) {
+    void copyInventoryItemToSheet(inventoryItemId);
   }
 
   /**
@@ -691,8 +728,10 @@
       :readonly="isReadonly"
       :shared="isShared"
       :save-status="headerSaveStatus"
+      :pdf-loading="isPdfExporting"
       @close="handleClose"
       @download="downloadCharacter"
+      @download-pdf="handleDownloadPdf"
       @duplicate="handleDuplicate"
       @remove="handleRemove"
       @share="handleShare"
@@ -705,6 +744,7 @@
       @edit-size="handleSizeEdit"
       @edit-species="handleSpeciesEdit"
       @edit-vision="handleVisionEdit"
+      @long-rest="handleLongRest"
       @short-rest="handleShortRest"
       @toggle-inspiration="toggleInspiration"
       @toggle-lock="toggleLock"
@@ -829,9 +869,11 @@
         @add-magic-item="handleMagicItemAdd"
         @add-custom-item="handleCustomItemAdd"
         @edit-item="handleItemEdit"
+        @copy-item="handleItemCopy"
         @add-spell="handleSpellAdd"
         @add-custom-spell="handleCustomSpellAdd"
         @edit-spell="handleSpellEdit"
+        @copy-spell="handleSpellCopy"
         @edit-spellcasting="handleSpellcastingEdit"
         @edit-currency="handleCurrencyEdit"
         @adjust-item-quantity="adjustInventoryItemQuantity"
