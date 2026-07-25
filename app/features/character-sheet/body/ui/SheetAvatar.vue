@@ -1,10 +1,14 @@
 <script setup lang="ts">
+  import { ImageCropModal } from '~ui/image-crop';
+
   import { useCharacterSheet, useSheetAvatar } from '../../composables';
 
-  const { character, canEdit } = useCharacterSheet();
+  const { character, canEdit, ensureEditable } = useCharacterSheet();
 
   const { avatarUrl, isUploading, replaceAvatar, clearAvatar } =
     useSheetAvatar();
+
+  const overlay = useOverlay();
 
   /** Ссылка есть, но файл не открылся (пропал из хранилища). */
   const isImageBroken = ref(false);
@@ -25,18 +29,41 @@
   }
 
   /**
-   * Загрузка выбранного (или перетащенного) файла.
+   * Выбор области и загрузка результата. Редактор создаётся на каждый файл:
+   * `destroyOnClose` снимает его после закрытия, поэтому следующий выбор
+   * открывает редактор с новой картинкой, а не с прежней.
+   *
+   * @param file выбранный файл.
+   */
+  async function cropAndUpload(file: File): Promise<void> {
+    const cropModal = overlay.create(ImageCropModal, {
+      destroyOnClose: true,
+      props: { file },
+    });
+
+    const cropped = await cropModal.open();
+
+    if (!cropped) {
+      return;
+    }
+
+    await replaceAvatar(cropped);
+  }
+
+  /**
+   * Загрузка выбранного (или перетащенного) файла. Право на правку проверяется
+   * до редактора: выбирать область на запертом или чужом листе бессмысленно.
    *
    * @param files выбор из диалога или из перетаскивания.
    */
   function handleFiles(files: File[] | FileList | null): void {
     const file = files ? Array.from(files)[0] : undefined;
 
-    if (!file) {
+    if (!file || !ensureEditable()) {
       return;
     }
 
-    void replaceAvatar(file);
+    void cropAndUpload(file);
   }
 
   const { open: openFileDialog, onChange } = useFileDialog({
