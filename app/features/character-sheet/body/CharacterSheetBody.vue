@@ -105,6 +105,8 @@
     adjustClassResource,
     adjustInventoryItemQuantity,
     toggleInventoryItemEquipped,
+    copyInventoryItemToSheet,
+    copySpellToSheet,
     removeFeature,
     removeInventoryItem,
     removeSpell,
@@ -604,6 +606,14 @@
     customSpellModal.open({ spellUrl });
   }
 
+  /**
+   * Копия каталожного заклинания в лист: экшен дозагружает описание из
+   * справочника, поэтому асинхронный — ошибку запроса он гасит сам.
+   */
+  function handleSpellCopy(spellUrl: string) {
+    void copySpellToSheet(spellUrl);
+  }
+
   function handleSpellcastingEdit() {
     if (!ensureEditable()) {
       return;
@@ -650,6 +660,11 @@
     }
 
     customItemModal.open({ inventoryItemId });
+  }
+
+  /** Копия каталожного предмета в лист — как и у заклинания, с дозагрузкой. */
+  function handleItemCopy(inventoryItemId: string) {
+    void copyInventoryItemToSheet(inventoryItemId);
   }
 
   /**
@@ -854,9 +869,11 @@
         @add-magic-item="handleMagicItemAdd"
         @add-custom-item="handleCustomItemAdd"
         @edit-item="handleItemEdit"
+        @copy-item="handleItemCopy"
         @add-spell="handleSpellAdd"
         @add-custom-spell="handleCustomSpellAdd"
         @edit-spell="handleSpellEdit"
+        @copy-spell="handleSpellCopy"
         @edit-spellcasting="handleSpellcastingEdit"
         @edit-currency="handleCurrencyEdit"
         @adjust-item-quantity="adjustInventoryItemQuantity"

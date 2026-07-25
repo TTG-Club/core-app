@@ -15,6 +15,7 @@
   import {
     ABILITY_LABELS,
     ARMOR_DEXTERITY_HINT_LABELS,
+    CUSTOM_INVENTORY_BADGE_HINT,
     getFormattedBonus,
     getInventoryItemMenuItems,
     getProficiencyBonus,
@@ -122,6 +123,7 @@
   const emit = defineEmits<{
     'preview': [];
     'edit': [];
+    'copy': [];
     'remove': [];
     'adjust': [delta: number];
     'toggle-equip': [];
@@ -151,10 +153,12 @@
 
   // Правка и удаление — под многоточием: строка и без них плотная (иконка,
   // название, плитки, «+/−»), а два разных набора кнопок ломали бы её ритм.
-  // Каталожный предмет правится в своём разделе — пункта правки у него нет.
+  // Каталожный предмет правится в своём разделе — вместо правки ему предлагается
+  // копия в лист, после которой он становится своим.
   const menuItems = computed<Array<DropdownMenuItem>>(() =>
     getInventoryItemMenuItems({
       onEdit: isCustom.value ? () => emit('edit') : undefined,
+      onCopy: isCustom.value ? undefined : () => emit('copy'),
       onRemove: () => emit('remove'),
     }),
   );
@@ -429,7 +433,7 @@
 
             <UTooltip
               v-if="isCustom"
-              text="Предмет добавлен вручную"
+              :text="CUSTOM_INVENTORY_BADGE_HINT"
             >
               <UBadge
                 size="sm"

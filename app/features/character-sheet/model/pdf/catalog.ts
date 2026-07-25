@@ -8,13 +8,13 @@ import type {
 
 import { chunk } from 'es-toolkit';
 
-import {
-  ITEMS_DETAIL_BASE_PATH,
-  MAGIC_ITEMS_DETAIL_BASE_PATH,
-  SPELLS_DETAIL_BASE_PATH,
-} from '../constants';
+import { SPELLS_DETAIL_BASE_PATH } from '../constants';
 import { parseCatalogDescription, parseCatalogSpellDetail } from '../schemas';
-import { isCustomInventoryItem, isCustomSpell } from '../utils';
+import {
+  getInventoryItemDetailPath,
+  isCustomInventoryItem,
+  isCustomSpell,
+} from '../utils';
 import { PDF_CATALOG_REQUEST_BATCH_SIZE } from './constants';
 
 /**
@@ -104,21 +104,6 @@ function getPendingItems(
 }
 
 /**
- * Путь детали предмета: магические предметы живут в своём разделе.
- *
- * @param item предмет инвентаря.
- * @returns путь детального ответа.
- */
-function getItemDetailPath(item: CharacterInventoryItem): string {
-  const base =
-    item.category === 'MAGIC_ITEM'
-      ? MAGIC_ITEMS_DETAIL_BASE_PATH
-      : ITEMS_DETAIL_BASE_PATH;
-
-  return `${base}/${item.url}`;
-}
-
-/**
  * Дозагрузка описаний каталожных заклинаний и предметов перед сборкой PDF.
  * В документе листа их нет — на сайте они приходят с сервера при открытии
  * страницы раздела, поэтому для полного справочника нужны запросы.
@@ -145,7 +130,9 @@ export async function loadCatalogDescriptions(
     }),
 
     processInBatches(pendingItems, async (item) => {
-      const response = await fetchCatalogDetail(getItemDetailPath(item));
+      const response = await fetchCatalogDetail(
+        getInventoryItemDetailPath(item),
+      );
 
       itemDescriptionCache.set(item.url, parseCatalogDescription(response));
     }),

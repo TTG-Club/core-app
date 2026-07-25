@@ -35,6 +35,7 @@
     'add-magic-item': [];
     'add-custom-item': [];
     'edit-item': [inventoryItemId: string];
+    'copy-item': [inventoryItemId: string];
     'edit-currency': [];
     'remove-item': [inventoryItemId: string];
     'adjust-quantity': [inventoryItemId: string, delta: number];
@@ -200,6 +201,7 @@
           :inventory-item="inventoryItem"
           @preview="handlePreview(inventoryItem)"
           @edit="emit('edit-item', inventoryItem.id)"
+          @copy="emit('copy-item', inventoryItem.id)"
           @remove="handleRemoveRequest(inventoryItem)"
           @adjust="(delta) => handleQuantityAdjust(inventoryItem.id, delta)"
           @toggle-equip="emit('toggle-equip', inventoryItem.id)"

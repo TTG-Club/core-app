@@ -60,9 +60,11 @@
     'add-magic-item': [];
     'add-custom-item': [];
     'edit-item': [inventoryItemId: string];
+    'copy-item': [inventoryItemId: string];
     'add-spell': [];
     'add-custom-spell': [];
     'edit-spell': [spellUrl: string];
+    'copy-spell': [spellUrl: string];
     'edit-spellcasting': [];
     'edit-currency': [];
     'adjust-item-quantity': [inventoryItemId: string, delta: number];
@@ -90,6 +92,10 @@
 
   function handleItemEdit(inventoryItemId: string) {
     emit('edit-item', inventoryItemId);
+  }
+
+  function handleItemCopy(inventoryItemId: string) {
+    emit('copy-item', inventoryItemId);
   }
 
   function handleCurrencyEdit() {
@@ -126,6 +132,10 @@
 
   function handleSpellEdit(spellUrl: string) {
     emit('edit-spell', spellUrl);
+  }
+
+  function handleSpellCopy(spellUrl: string) {
+    emit('copy-spell', spellUrl);
   }
 
   function handleSpellcastingEdit() {
@@ -778,6 +788,7 @@
             @add-magic-item="handleMagicItemAdd"
             @add-custom-item="handleCustomItemAdd"
             @edit-item="handleItemEdit"
+            @copy-item="handleItemCopy"
             @edit-currency="handleCurrencyEdit"
             @remove-item="handleItemRemove"
             @adjust-quantity="handleItemQuantityAdjust"
@@ -794,6 +805,7 @@
             @add-spell="handleSpellAdd"
             @add-custom-spell="handleCustomSpellAdd"
             @edit-spell="handleSpellEdit"
+            @copy-spell="handleSpellCopy"
             @edit-spellcasting="handleSpellcastingEdit"
             @remove-spell="handleSpellRemove"
             @toggle-spell-slot="handleSpellSlotToggle"

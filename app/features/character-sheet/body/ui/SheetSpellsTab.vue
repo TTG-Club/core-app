@@ -10,8 +10,10 @@
 
   import { useCharacterSheet } from '../../composables';
   import {
+    CUSTOM_SPELL_BADGE_HINT,
     getFormattedBonus,
     getSpellGroups,
+    getSpellMenuItems,
     getSpellsAddMenuItems,
     getSpellSlotCircles,
     getSpellSlotSummary,
@@ -33,6 +35,7 @@
     'add-spell': [];
     'add-custom-spell': [];
     'edit-spell': [spellUrl: string];
+    'copy-spell': [spellUrl: string];
     'edit-spellcasting': [];
     'remove-spell': [spellUrl: string];
     'toggle-spell-slot': [level: number, index: number];
@@ -112,6 +115,18 @@
             ...spell,
             isCustom,
             isExpanded,
+            // Действия строки — те же, что и у предмета снаряжения: своё
+            // заклинание правится формой листа, каталожное сначала копируется в
+            // лист, а убирается из книги и то, и другое.
+            menuItems: getSpellMenuItems({
+              onEdit: isCustom
+                ? () => emit('edit-spell', spell.url)
+                : undefined,
+              onCopy: isCustom
+                ? undefined
+                : () => emit('copy-spell', spell.url),
+              onRemove: () => emit('remove-spell', spell.url),
+            }),
             // У каталожных заклинаний этих полей нет — список выйдет пустым.
             statRows: getSpellStatRows(spell),
             descriptionNodes: spell.description ?? [],
@@ -252,7 +267,7 @@
         <div
           v-for="spell in group.spells"
           :key="spell.url"
-          class="group/spell flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-warning/60"
+          class="flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-warning/60"
         >
           <div class="relative flex items-center gap-3 p-3">
             <button
@@ -287,7 +302,7 @@
 
             <UTooltip
               v-if="spell.isCustom"
-              text="Заклинание добавлено вручную"
+              :text="CUSTOM_SPELL_BADGE_HINT"
             >
               <UBadge
                 size="sm"
@@ -327,30 +342,23 @@
               </UBadge>
             </UTooltip>
 
-            <UButton
-              v-if="spell.isCustom"
-              icon="tabler:pencil"
-              color="neutral"
-              variant="ghost"
-              size="xs"
-              square
-              class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/spell:opacity-100 focus-visible:opacity-100"
-              :class="editControlClass"
-              :aria-label="`Редактировать заклинание: ${spell.name}`"
-              @click.left.exact.prevent="emit('edit-spell', spell.url)"
-            />
-
-            <UButton
-              icon="tabler:trash"
-              color="error"
-              variant="ghost"
-              size="xs"
-              square
-              class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/spell:opacity-100 focus-visible:opacity-100"
-              :class="editControlClass"
-              :aria-label="`Убрать заклинание: ${spell.name}`"
-              @click.left.exact.prevent="emit('remove-spell', spell.url)"
-            />
+            <!-- Меню действий над заклинанием: тот же трейлинг, что и у строки
+              снаряжения — правка своего, копия каталожного в лист и удаление -->
+            <UDropdownMenu
+              :items="spell.menuItems"
+              :content="{ align: 'end' }"
+            >
+              <UButton
+                icon="tabler:dots-vertical"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                square
+                class="relative z-10 shrink-0"
+                :class="editControlClass"
+                :aria-label="`Действия с заклинанием: ${spell.name}`"
+              />
+            </UDropdownMenu>
 
             <UIcon
               v-if="spell.isCustom"

@@ -1,7 +1,10 @@
 import type {
+  CatalogSpellDetail,
   Character,
+  CharacterInventoryItem,
   CharacterSheetDetail,
   CharacterSheetListPage,
+  FeatureDescriptionNode,
 } from './types';
 
 import { FetchError } from 'ofetch';
@@ -15,7 +18,10 @@ import {
   CHARACTER_SHEET_API_PATH,
   CHARACTER_SHEET_SHARED_API_PATH,
   SHEET_UNKNOWN_ERROR_MESSAGE,
+  SPELLS_DETAIL_BASE_PATH,
 } from './constants';
+import { parseCatalogDescription, parseCatalogSpellDetail } from './schemas';
+import { getInventoryItemDetailPath } from './utils';
 
 /**
  * Человекочитаемое сообщение об ошибке запроса к листам персонажей.
@@ -162,6 +168,53 @@ export async function revokeCharacterSheetShare(id: string): Promise<void> {
     method: 'DELETE',
     retry: 0,
   });
+}
+
+/**
+ * Описание каталожного предмета из его раздела: в документе листа у каталожных
+ * записей описания нет, а своей копии оно нужно — редактировать пустое описание
+ * игроку пришлось бы с нуля. Отказ запроса копирование не срывает: предмет
+ * получит пустое описание, которое можно заполнить самому.
+ *
+ * @param inventoryItem каталожный предмет инвентаря.
+ * @returns узлы описания; пустой массив — описание не загрузилось.
+ */
+export async function fetchInventoryItemDescription(
+  inventoryItem: CharacterInventoryItem,
+): Promise<FeatureDescriptionNode[]> {
+  try {
+    const response = await $fetch<unknown>(
+      getInventoryItemDetailPath(inventoryItem),
+      { retry: 0 },
+    );
+
+    return parseCatalogDescription(response);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Характеристики и описание каталожного заклинания из раздела «Заклинания» —
+ * то же, чего не хватает своей копии. Отказ запроса, как и у предмета, не
+ * срывает копирование.
+ *
+ * @param spellUrl слаг заклинания в каталоге.
+ * @returns деталь заклинания; null — не загрузилась.
+ */
+export async function fetchCatalogSpellDetail(
+  spellUrl: string,
+): Promise<CatalogSpellDetail | null> {
+  try {
+    const response = await $fetch<unknown>(
+      `${SPELLS_DETAIL_BASE_PATH}/${spellUrl}`,
+      { retry: 0 },
+    );
+
+    return parseCatalogSpellDetail(response);
+  } catch {
+    return null;
+  }
 }
 
 /**

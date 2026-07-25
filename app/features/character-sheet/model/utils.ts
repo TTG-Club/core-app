@@ -9,6 +9,7 @@ import type {
   AbilityRow,
   ArmorClassBreakdown,
   ArmorDexterityMod,
+  CatalogSpellDetail,
   Character,
   CharacterClass,
   CharacterExtraHitDie,
@@ -91,6 +92,7 @@ import {
   ARMOR_MEDIUM_DEX_CAP,
   ARMOR_PROFICIENCY_GROUPS,
   CARRYING_CAPACITY_MULTIPLIER,
+  CATALOG_COPY_MENU_LABEL,
   CHARACTER_FILE_NAME_FALLBACK,
   CLASS_SPELL_PROGRESSIONS,
   CLASS_SPELLCASTING_ABILITIES,
@@ -120,7 +122,9 @@ import {
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
   INVENTORY_REMOVE_MENU_LABEL,
+  ITEMS_DETAIL_BASE_PATH,
   LEVEL_XP_THRESHOLDS,
+  MAGIC_ITEMS_DETAIL_BASE_PATH,
   NEW_CUSTOM_INVENTORY_ITEM,
   PACT_SPELL_SLOTS_LABEL,
   RESOURCE_RECOVERY_LABELS,
@@ -137,6 +141,7 @@ import {
   SPEED_PRIMARY_ORDER,
   SPEED_TYPE_LABELS,
   SPEED_UNIT_SHORT_LABELS,
+  SPELL_REMOVE_MENU_LABEL,
   SPELL_SAVE_DC_BASE,
   SPELL_SLOT_FREE_LABEL,
   SPELL_SLOT_USED_LABEL,
@@ -417,6 +422,48 @@ export function isCustomInventoryItem(
 }
 
 /**
+ * Путь детального ответа каталога для предмета инвентаря: магические предметы
+ * живут в своём разделе.
+ *
+ * @param inventoryItem каталожный предмет инвентаря.
+ * @returns путь детали предмета.
+ */
+export function getInventoryItemDetailPath(
+  inventoryItem: CharacterInventoryItem,
+): string {
+  const basePath =
+    inventoryItem.category === 'MAGIC_ITEM'
+      ? MAGIC_ITEMS_DETAIL_BASE_PATH
+      : ITEMS_DETAIL_BASE_PATH;
+
+  return `${basePath}/${inventoryItem.url}`;
+}
+
+/**
+ * Своя копия каталожного предмета: параметры, количество и надетый доспех
+ * остаются прежними, а запись перестаёт зависеть от раздела сайта — она
+ * получает свой идентификатор с префиксом `custom:` и забирает описание в лист
+ * (у каталожных записей его в документе нет).
+ *
+ * @param url URL копии (`custom:` + идентификатор); он же её id.
+ * @param inventoryItem каталожный предмет инвентаря.
+ * @param description описание из справочника; пустое — не загрузилось.
+ * @returns предмет инвентаря, помеченный как свой.
+ */
+export function toCopiedInventoryItem(
+  url: string,
+  inventoryItem: CharacterInventoryItem,
+  description: FeatureDescriptionNode[],
+): CharacterInventoryItem {
+  return {
+    ...inventoryItem,
+    id: url,
+    url,
+    description: [...description],
+  };
+}
+
+/**
  * Подпись типов своего предмета для строки инвентаря: у доспеха — его тип, у
  * оружия — категория владения и свойства, у безделушки — общая подпись.
  *
@@ -600,6 +647,42 @@ export function toCustomInventoryItem(
     // нет, и в подсчёт КД они не идут.
     equipped: draft.kind === 'armor' && equipped,
     description: [...draft.description],
+  };
+}
+
+/**
+ * Правка своего предмета формой листа. Скопированный магический предмет
+ * остаётся в своей группе с прежней подписью типов, пока его вид — «Безделушка»:
+ * вида «Магический предмет» в форме нет, и без этой оговорки правка уносила бы
+ * копию из «Магических предметов» в «Прочее». Смена вида на оружие или доспех
+ * группу меняет — её задаёт вид предмета.
+ *
+ * @param editedItem редактируемый предмет (свой либо его копия из справочника).
+ * @param draft новые значения формы.
+ * @returns предмет инвентаря; null — название пустое.
+ */
+export function toUpdatedCustomInventoryItem(
+  editedItem: CharacterInventoryItem,
+  draft: CustomInventoryItemDraft,
+): CharacterInventoryItem | null {
+  const updatedItem = toCustomInventoryItem(
+    editedItem.url,
+    draft,
+    editedItem.equipped,
+  );
+
+  if (
+    !updatedItem
+    || editedItem.category !== 'MAGIC_ITEM'
+    || draft.kind !== 'trinket'
+  ) {
+    return updatedItem;
+  }
+
+  return {
+    ...updatedItem,
+    category: editedItem.category,
+    typesLabel: editedItem.typesLabel,
   };
 }
 
@@ -1430,6 +1513,33 @@ export function toCustomSpell(
     components: draft.components.trim(),
     duration: draft.duration.trim(),
     description: [...draft.description],
+  };
+}
+
+/**
+ * Своя копия каталожного заклинания: круг, школа и признаки концентрации с
+ * ритуалом остаются прежними, а характеристики с описанием переезжают из
+ * справочника в лист — у каталожных записей их в документе нет. Новый URL с
+ * префиксом `custom:` делает запись своей: дальше её правит форма листа.
+ *
+ * @param url URL копии (`custom:` + идентификатор).
+ * @param spell каталожное заклинание книги.
+ * @param detail деталь из справочника; null — не загрузилась.
+ * @returns заклинание книги, помеченное как своё.
+ */
+export function toCopiedSpell(
+  url: string,
+  spell: CharacterSpell,
+  detail: CatalogSpellDetail | null,
+): CharacterSpell {
+  return {
+    ...spell,
+    url,
+    castingTime: detail?.castingTime ?? '',
+    range: detail?.range ?? '',
+    components: detail?.components ?? '',
+    duration: detail?.duration ?? '',
+    description: detail ? [...detail.description] : [],
   };
 }
 
@@ -2611,27 +2721,35 @@ export function getFeaturesAddMenuItems(
   ];
 }
 
-/** Обработчики пунктов меню строки снаряжения. */
-export interface InventoryItemMenuOptions {
+/** Обработчики пунктов меню строки каталожной или своей записи листа. */
+export interface SheetEntryMenuOptions {
   /**
-   * Правка предмета; не передан — пункта нет. У каталожного предмета править
-   * нечего: его поля приходят из раздела сайта.
+   * Правка записи; не передан — пункта нет. У каталожной записи править нечего:
+   * её поля приходят из раздела сайта.
    */
   onEdit?: () => void;
+
+  /**
+   * Копия каталожной записи в лист; не передан — пункта нет. Своя запись уже
+   * живёт в листе, копировать её незачем.
+   */
+  onCopy?: () => void;
 
   onRemove: () => void;
 }
 
 /**
- * Пункты меню строки снаряжения: правка своего предмета и удаление. Действия
- * убраны под многоточие, а не стоят кнопками в строке: у каталожного предмета
- * их одно, у своего — два, и трейлинг соседних строк не выравнивался бы.
+ * Пункты меню строки: правка своей записи, копия каталожной в лист и удаление.
+ * Порядок общий для снаряжения и заклинаний — сначала то, что меняет саму
+ * запись, потом удаление.
  *
  * @param options обработчики пунктов.
+ * @param removeLabel подпись удаления (у снаряжения и книги она своя).
  * @returns пункты для `UDropdownMenu`.
  */
-export function getInventoryItemMenuItems(
-  options: InventoryItemMenuOptions,
+function getSheetEntryMenuItems(
+  options: SheetEntryMenuOptions,
+  removeLabel: string,
 ): DropdownMenuItem[] {
   const items: DropdownMenuItem[] = [];
 
@@ -2643,14 +2761,49 @@ export function getInventoryItemMenuItems(
     });
   }
 
+  if (options.onCopy) {
+    items.push({
+      label: CATALOG_COPY_MENU_LABEL,
+      icon: 'tabler:copy',
+      onSelect: options.onCopy,
+    });
+  }
+
   items.push({
-    label: INVENTORY_REMOVE_MENU_LABEL,
+    label: removeLabel,
     icon: 'tabler:trash',
     color: 'error',
     onSelect: options.onRemove,
   });
 
   return items;
+}
+
+/**
+ * Пункты меню строки снаряжения. Действия убраны под многоточие, а не стоят
+ * кнопками в строке: у каталожного предмета их два, у своего — тоже два, но
+ * другие, и трейлинг соседних строк не выравнивался бы.
+ *
+ * @param options обработчики пунктов.
+ * @returns пункты для `UDropdownMenu`.
+ */
+export function getInventoryItemMenuItems(
+  options: SheetEntryMenuOptions,
+): DropdownMenuItem[] {
+  return getSheetEntryMenuItems(options, INVENTORY_REMOVE_MENU_LABEL);
+}
+
+/**
+ * Пункты меню строки заклинания — те же действия, что и у снаряжения: строки
+ * обеих вкладок ведут себя одинаково.
+ *
+ * @param options обработчики пунктов.
+ * @returns пункты для `UDropdownMenu`.
+ */
+export function getSpellMenuItems(
+  options: SheetEntryMenuOptions,
+): DropdownMenuItem[] {
+  return getSheetEntryMenuItems(options, SPELL_REMOVE_MENU_LABEL);
 }
 
 /**
