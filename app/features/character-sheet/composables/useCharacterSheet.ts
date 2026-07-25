@@ -19,6 +19,7 @@ import type {
   CharacterVision,
   CustomInventoryItemDraft,
   CustomSpellDraft,
+  HitDiceSpend,
   ProficiencyGroupKey,
 } from '../model';
 
@@ -66,6 +67,7 @@ import {
   toCustomSpell,
   VISION_DISTANCE_MAX,
   VISION_DISTANCE_MIN,
+  withdrawHitDice,
 } from '../model';
 
 /**
@@ -616,6 +618,76 @@ export function useCharacterSheet() {
         ...hitDie,
         current: clamp(hitDie.current, 0, hitDie.max),
       })),
+    };
+  }
+
+  /**
+   * Трата костей хитов на отдыхе: кости выбранных номиналов списываются, а
+   * текущие хиты поднимаются на восстановленное количество (в пределах
+   * максимума). Бросок делает модалка отдыха — здесь применяется его итог.
+   * Игровое действие — блокировкой листа не ограничивается.
+   *
+   * @param spent потраченные кости по номиналам.
+   * @param restored восстановленные хиты по броскам.
+   */
+  function spendHitDice(spent: HitDiceSpend[], restored: number): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    const { health } = character.value;
+
+    const remainingDice = withdrawHitDice(
+      character.value.hitDice,
+      character.value.extraHitDice,
+      spent,
+    );
+
+    character.value = {
+      ...character.value,
+      hitDice: remainingDice.hitDice,
+      extraHitDice: remainingDice.extraHitDice,
+      health: {
+        ...health,
+        current: clamp(
+          health.current + Math.max(0, Math.trunc(restored)),
+          0,
+          health.max,
+        ),
+      },
+    };
+  }
+
+  /**
+   * Завершение короткого отдыха: восстанавливаются ресурсы класса с типом
+   * «короткий отдых» и ячейки заклинаний договора колдуна (у остальных классов
+   * ячейки возвращает только продолжительный отдых). Кости хитов и хиты тратит
+   * {@link spendHitDice} — отдых их не возвращает. Игровое действие —
+   * блокировкой листа не ограничивается.
+   */
+  function completeShortRest(): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    const shortRestLevels = new Set(
+      spellSlotRows.value
+        .filter((row) => row.recovery === 'short-rest')
+        .map((row) => row.level),
+    );
+
+    character.value = {
+      ...character.value,
+      classResources: character.value.classResources.map((resource) =>
+        resource.recovery === 'short-rest'
+          ? { ...resource, current: resource.max }
+          : resource,
+      ),
+      // Хранится только трата ячеек, поэтому восстановление круга — это
+      // удаление его записи из списка.
+      spellSlots: character.value.spellSlots.filter(
+        (slot) => !shortRestLevels.has(slot.level),
+      ),
     };
   }
 
@@ -1458,6 +1530,8 @@ export function useCharacterSheet() {
     setHealth,
     setHitPoints,
     setHitDice,
+    spendHitDice,
+    completeShortRest,
     toggleSavingThrowProficiency,
     toggleSpellSlot,
     cycleSkillProficiency,

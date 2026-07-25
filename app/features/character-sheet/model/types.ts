@@ -1194,3 +1194,48 @@ export interface SkillRow {
   formattedModifier: string;
   passiveValue: number;
 }
+
+/**
+ * Кости хитов одного номинала: классовые и дополнительные считаются вместе,
+ * потому что на отдыхе они равнозначны.
+ */
+export interface HitDicePool {
+  /** Номинал кости (8 — к8). */
+  die: number;
+
+  /** Подпись номинала («к8»). */
+  label: string;
+
+  /** Осталось костей номинала. */
+  current: number;
+
+  /** Всего костей номинала. */
+  max: number;
+}
+
+/** Трата костей хитов одного номинала. */
+export interface HitDiceSpend {
+  /** Номинал кости. */
+  die: number;
+
+  /** Сколько костей номинала потрачено. */
+  count: number;
+}
+
+/** Результат броска одной кости хитов на отдыхе. */
+export interface HitDieRollResult {
+  /** Идентификатор строки журнала бросков. */
+  id: string;
+
+  /** Подпись номинала («к8»). */
+  label: string;
+
+  /** Выпавшее на кости значение. */
+  rolled: number;
+
+  /** Модификатор Телосложения со знаком, прибавленный к броску. */
+  formattedModifier: string;
+
+  /** Восстановленные хиты за кость (не меньше нуля). */
+  restored: number;
+}

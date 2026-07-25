@@ -5,6 +5,7 @@
     CharacterInventoryItem,
   } from '../../model';
 
+  import { ConfirmDialog } from '~initiative/ui-kit';
   import { ItemDrawer } from '~items/drawer';
   import { MagicItemDrawer } from '~magic-items/drawer';
 
@@ -12,6 +13,9 @@
   import {
     getEquipmentAddMenuItems,
     getInventoryGroups,
+    getInventoryRemoveDescription,
+    INVENTORY_REMOVE_CONFIRM_LABEL,
+    INVENTORY_REMOVE_CONFIRM_TITLE,
     SHEET_TAB_EMPTY_LABELS,
     WEIGHT_UNIT_LABEL,
   } from '../../model';
@@ -80,6 +84,40 @@
 
   function handleQuantityAdjust(inventoryItemId: string, delta: number) {
     emit('adjust-quantity', inventoryItemId, delta);
+  }
+
+  // Удаление подтверждаем: кнопка стоит вплотную к «+/−», отменить её нечем, а
+  // на узкой карточке она видна всегда — попасть по ней случайно легко. Предмет
+  // держим до закрытия диалога, иначе на анимации закрытия описание мигало бы
+  // пустым. shallowRef: предмет всегда заменяется целиком, следить за его
+  // полями незачем — читаем только название и id.
+  const removalItem = shallowRef<CharacterInventoryItem | null>(null);
+
+  const isRemoveOpen = ref(false);
+
+  const removeDescription = computed(() =>
+    removalItem.value
+      ? getInventoryRemoveDescription(removalItem.value.name)
+      : '',
+  );
+
+  /**
+   * Спрашивает подтверждение удаления: предмет пока остаётся в снаряжении.
+   *
+   * @param inventoryItem предмет, который просят убрать.
+   */
+  function handleRemoveRequest(inventoryItem: CharacterInventoryItem) {
+    removalItem.value = inventoryItem;
+    isRemoveOpen.value = true;
+  }
+
+  /** Убирает подтверждённый предмет из снаряжения и закрывает диалог. */
+  function handleRemoveConfirm() {
+    if (removalItem.value) {
+      emit('remove-item', removalItem.value.id);
+    }
+
+    isRemoveOpen.value = false;
   }
 
   const displayGroups = computed(() => getInventoryGroups(props.inventory));
@@ -162,7 +200,7 @@
           :inventory-item="inventoryItem"
           @preview="handlePreview(inventoryItem)"
           @edit="emit('edit-item', inventoryItem.id)"
-          @remove="emit('remove-item', inventoryItem.id)"
+          @remove="handleRemoveRequest(inventoryItem)"
           @adjust="(delta) => handleQuantityAdjust(inventoryItem.id, delta)"
           @toggle-equip="emit('toggle-equip', inventoryItem.id)"
           @roll-attack="emit('roll-attack', inventoryItem)"
@@ -177,5 +215,15 @@
     >
       {{ SHEET_TAB_EMPTY_LABELS.equipment }}
     </div>
+
+    <ConfirmDialog
+      v-model:open="isRemoveOpen"
+      :title="INVENTORY_REMOVE_CONFIRM_TITLE"
+      :description="removeDescription"
+      :confirm-label="INVENTORY_REMOVE_CONFIRM_LABEL"
+      confirm-color="error"
+      confirm-icon="tabler:trash"
+      @confirm="handleRemoveConfirm"
+    />
   </div>
 </template>

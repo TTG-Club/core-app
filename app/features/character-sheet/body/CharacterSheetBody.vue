@@ -53,6 +53,7 @@
     SheetSavingThrowsPanel,
     SheetSettingsModal,
     SheetShareModal,
+    SheetShortRestModal,
     SheetSizeModal,
     SheetSkillsPanel,
     SheetSpeciesWizardModal,
@@ -221,6 +222,8 @@
 
   const healthQuickModal = overlay.create(SheetHealthQuickModal);
 
+  const shortRestModal = overlay.create(SheetShortRestModal);
+
   const nameModal = overlay.create(SheetNameModal);
 
   const visionModal = overlay.create(SheetVisionModal);
@@ -353,6 +356,18 @@
     }
 
     healthModal.open();
+  }
+
+  /**
+   * Короткий отдых — игровое действие: запертый лист его разрешает, чужой
+   * (открытый по ссылке) нет, потому что траты костей зрителю некуда сохранить.
+   */
+  function handleShortRest() {
+    if (isReadonly.value) {
+      return;
+    }
+
+    shortRestModal.open();
   }
 
   function handleNameEdit() {
@@ -690,6 +705,7 @@
       @edit-size="handleSizeEdit"
       @edit-species="handleSpeciesEdit"
       @edit-vision="handleVisionEdit"
+      @short-rest="handleShortRest"
       @toggle-inspiration="toggleInspiration"
       @toggle-lock="toggleLock"
     />

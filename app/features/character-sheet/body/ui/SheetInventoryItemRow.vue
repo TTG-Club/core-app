@@ -77,6 +77,25 @@
     'relative z-10 cursor-pointer hover:border-warning hover:bg-warning/20';
 
   /**
+   * Раскладка плитки параметра: на второй строке узкой карточки плитки делят
+   * свободное место поровну (`basis-0`) и заполняют её целиком, на широкой
+   * строке остаются по содержимому — там растягивать нечего. `whitespace-nowrap`
+   * держит нижнюю границу ширины: без него на узком экране плитка сжималась бы
+   * до самого длинного слова и «400 зм» переносилось бы на две строки.
+   */
+  const STAT_LAYOUT_CLASSES =
+    'flex shrink-0 grow basis-0 flex-col items-center rounded border px-2 py-0.5 whitespace-nowrap @xl:grow-0 @xl:basis-auto';
+
+  /**
+   * Кнопки правки и удаления. На узкой карточке (до `@xl`) видны всегда — там
+   * их нечем вызвать, а прозрачная кнопка удаления рядом с «+/−» ловит
+   * случайные нажатия. На широкой строке прячем их только там, где есть
+   * наведение: `pointer-fine` оставляет кнопки видимыми на сенсорном планшете.
+   */
+  const ROW_ACTION_CLASSES =
+    'shrink-0 transition-opacity @xl:pointer-fine:opacity-0 @xl:group-hover/item:opacity-100 @xl:focus-visible:opacity-100';
+
+  /**
    * Дополняет плитку классами оформления по признаку акцента и броска (логика
    * вынесена из шаблона).
    *
@@ -334,86 +353,110 @@
 </script>
 
 <template>
+  <!-- Свой @container: строка перестраивается по ширине самой карточки, а не
+    окна — лист бывает узким и на широком экране (дровер, правая панель) -->
   <div
-    class="group/item flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-warning/60"
+    class="group/item @container flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-warning/60"
     :class="rowClass"
   >
-    <div class="relative flex items-center gap-3 p-3">
-      <UTooltip
-        v-if="isEquippable"
-        :text="equipTooltip"
-      >
-        <button
-          type="button"
-          class="relative z-10 flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border transition-colors"
-          :class="equipButtonClass"
-          :aria-pressed="isEquipped"
-          :aria-label="`${equipTooltip}: ${inventoryItem.name}`"
-          @click.left.exact.prevent="emit('toggle-equip')"
+    <!-- Перестроение по брейкпоинту, а не по факту переполнения: до @xl
+      (36rem) иконка с названием занимают всю первую строку, а параметры,
+      количество и действия уходят на вторую. Иначе раскладка зависела бы от
+      длины названия и соседние карточки выглядели бы по-разному -->
+    <div class="relative flex flex-wrap items-center gap-x-3 gap-y-2 p-3">
+      <div class="flex w-full min-w-0 items-center gap-3 @xl:w-auto @xl:flex-1">
+        <UTooltip
+          v-if="isEquippable"
+          :text="equipTooltip"
         >
-          <UIcon
-            :name="equipIcon"
-            class="size-5"
-          />
-        </button>
-      </UTooltip>
-
-      <span
-        v-else
-        class="flex size-10 shrink-0 items-center justify-center rounded-lg border border-default/50 bg-default/40"
-      >
-        <UIcon
-          :name="categoryIcon"
-          class="size-5 text-muted"
-        />
-      </span>
-
-      <button
-        type="button"
-        class="flex min-w-0 grow cursor-pointer flex-col text-left after:absolute after:inset-0 after:cursor-pointer"
-        :aria-label="openLabel"
-        :aria-expanded="ariaExpanded"
-        @click.left.exact.prevent="handleOpen"
-      >
-        <span class="flex min-w-0 items-center gap-2">
-          <span class="truncate text-sm font-medium text-highlighted">
-            {{ inventoryItem.name }}
-          </span>
-
-          <UBadge
-            v-if="isEquipped"
-            color="warning"
-            variant="subtle"
-            size="sm"
-            class="shrink-0"
+          <button
+            type="button"
+            class="relative z-10 flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border transition-colors"
+            :class="equipButtonClass"
+            :aria-pressed="isEquipped"
+            :aria-label="`${equipTooltip}: ${inventoryItem.name}`"
+            @click.left.exact.prevent="emit('toggle-equip')"
           >
-            Надет
-          </UBadge>
-        </span>
+            <UIcon
+              :name="equipIcon"
+              class="size-5"
+            />
+          </button>
+        </UTooltip>
 
         <span
-          v-if="inventoryItem.typesLabel"
-          class="truncate text-xs text-dimmed"
+          v-else
+          class="flex size-10 shrink-0 items-center justify-center rounded-lg border border-default/50 bg-default/40"
         >
-          {{ inventoryItem.typesLabel }}
+          <UIcon
+            :name="categoryIcon"
+            class="size-5 text-muted"
+          />
         </span>
-      </button>
 
-      <UTooltip
-        v-if="isCustom"
-        text="Предмет добавлен вручную"
-      >
-        <UBadge
-          size="sm"
-          color="neutral"
-          variant="subtle"
-          class="relative z-10 shrink-0"
+        <button
+          type="button"
+          class="flex min-w-0 grow cursor-pointer flex-col text-left after:absolute after:inset-0 after:cursor-pointer"
+          :aria-label="openLabel"
+          :aria-expanded="ariaExpanded"
+          @click.left.exact.prevent="handleOpen"
         >
-          Свой
-        </UBadge>
-      </UTooltip>
+          <!-- Значки переносятся под название на узкой карточке; на широкой
+            строке они, как и раньше, стоят рядом, а длинное название
+            обрезается -->
+          <span
+            class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 @xl:flex-nowrap"
+          >
+            <!-- На узкой карточке название переносится целиком: места под ним
+              достаточно, а обрезка вида «Була…» ничего не говорит о предмете -->
+            <span
+              class="text-sm font-medium wrap-break-word text-highlighted @xl:truncate"
+            >
+              {{ inventoryItem.name }}
+            </span>
 
-      <div class="flex shrink-0 items-center gap-1.5">
+            <UBadge
+              v-if="isEquipped"
+              color="warning"
+              variant="subtle"
+              size="sm"
+              class="shrink-0"
+            >
+              Надет
+            </UBadge>
+
+            <UTooltip
+              v-if="isCustom"
+              text="Предмет добавлен вручную"
+            >
+              <UBadge
+                size="sm"
+                color="neutral"
+                variant="subtle"
+                class="relative z-10 shrink-0"
+              >
+                Свой
+              </UBadge>
+            </UTooltip>
+          </span>
+
+          <span
+            v-if="inventoryItem.typesLabel"
+            class="text-xs wrap-break-word text-dimmed @xl:truncate"
+          >
+            {{ inventoryItem.typesLabel }}
+          </span>
+        </button>
+      </div>
+
+      <!-- На второй строке группа забирает всё свободное место (плитки внутри
+        делят его поровну), на широкой строке — только по содержимому. Плитки
+        переносятся внутри группы, поэтому shrink-0 ей нельзя: иначе она
+        осталась бы шириной во все плитки в строку и растянула бы карточку -->
+      <div
+        v-if="displayStats.length"
+        class="flex grow flex-wrap items-center gap-1.5 @xl:grow-0"
+      >
         <UTooltip
           v-for="stat in displayStats"
           :key="stat.label"
@@ -424,8 +467,8 @@
           <button
             v-if="stat.roll"
             type="button"
-            class="flex flex-col items-center rounded border px-2 py-0.5 transition-colors"
-            :class="stat.containerClass"
+            class="transition-colors"
+            :class="[STAT_LAYOUT_CLASSES, stat.containerClass]"
             :aria-label="stat.roll.ariaLabel"
             @click.left.exact.prevent="handleStatRoll(stat.roll.kind)"
           >
@@ -446,8 +489,7 @@
 
           <div
             v-else
-            class="flex flex-col items-center rounded border px-2 py-0.5"
-            :class="stat.containerClass"
+            :class="[STAT_LAYOUT_CLASSES, stat.containerClass]"
           >
             <span
               class="text-xs font-bold"
@@ -466,66 +508,71 @@
         </UTooltip>
       </div>
 
-      <div class="relative z-10 flex shrink-0 items-center gap-1">
-        <UButton
-          icon="tabler:minus"
-          color="neutral"
-          variant="ghost"
-          size="xs"
-          square
-          :class="gameControlClass"
-          :disabled="isDecreaseDisabled"
-          :aria-label="`Уменьшить количество: ${inventoryItem.name}`"
-          @click.left.exact.prevent="handleDecrease"
-        />
+      <!-- Количество и действия держатся вместе и прижимаются вправо: на
+        широкой строке место им и так остаётся справа, на второй строке узкой
+        карточки — отделяет их от плиток параметров. Стрелка вне слоя z-10:
+        нажатие на неё должно попадать в подложку названия и разворачивать
+        карточку -->
+      <div class="ml-auto flex shrink-0 items-center gap-1">
+        <div class="relative z-10 flex items-center gap-1">
+          <UButton
+            icon="tabler:minus"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            square
+            :class="gameControlClass"
+            :disabled="isDecreaseDisabled"
+            :aria-label="`Уменьшить количество: ${inventoryItem.name}`"
+            @click.left.exact.prevent="handleDecrease"
+          />
 
-        <span class="w-6 text-center text-sm font-medium text-default">
-          {{ inventoryItem.quantity }}
-        </span>
+          <span class="w-6 text-center text-sm font-medium text-default">
+            {{ inventoryItem.quantity }}
+          </span>
 
-        <UButton
-          icon="tabler:plus"
-          color="neutral"
-          variant="ghost"
-          size="xs"
-          square
-          :class="gameControlClass"
-          :aria-label="`Увеличить количество: ${inventoryItem.name}`"
-          @click.left.exact.prevent="handleIncrease"
+          <UButton
+            icon="tabler:plus"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            square
+            :class="gameControlClass"
+            :aria-label="`Увеличить количество: ${inventoryItem.name}`"
+            @click.left.exact.prevent="handleIncrease"
+          />
+
+          <UButton
+            v-if="isCustom"
+            icon="tabler:pencil"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            square
+            :class="[ROW_ACTION_CLASSES, editControlClass]"
+            :aria-label="`Редактировать предмет: ${inventoryItem.name}`"
+            @click.left.exact.prevent="emit('edit')"
+          />
+
+          <UButton
+            icon="tabler:trash"
+            color="error"
+            variant="ghost"
+            size="xs"
+            square
+            :class="[ROW_ACTION_CLASSES, editControlClass]"
+            :aria-label="`Убрать предмет: ${inventoryItem.name}`"
+            @click.left.exact.prevent="emit('remove')"
+          />
+        </div>
+
+        <UIcon
+          v-if="isCustom"
+          name="tabler:chevron-down"
+          class="size-4 shrink-0 text-muted transition-transform"
+          :class="chevronClass"
         />
       </div>
-
-      <UButton
-        v-if="isCustom"
-        icon="tabler:pencil"
-        color="neutral"
-        variant="ghost"
-        size="xs"
-        square
-        class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/item:opacity-100 focus-visible:opacity-100"
-        :class="editControlClass"
-        :aria-label="`Редактировать предмет: ${inventoryItem.name}`"
-        @click.left.exact.prevent="emit('edit')"
-      />
-
-      <UButton
-        icon="tabler:trash"
-        color="error"
-        variant="ghost"
-        size="xs"
-        square
-        class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/item:opacity-100 focus-visible:opacity-100"
-        :class="editControlClass"
-        :aria-label="`Убрать предмет: ${inventoryItem.name}`"
-        @click.left.exact.prevent="emit('remove')"
-      />
-
-      <UIcon
-        v-if="isCustom"
-        name="tabler:chevron-down"
-        class="size-4 shrink-0 text-muted transition-transform"
-        :class="chevronClass"
-      />
     </div>
 
     <div

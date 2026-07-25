@@ -11,6 +11,7 @@
     SHEET_EMPTY_LABELS,
     SHEET_READONLY_LABELS,
     SHEET_SAVE_STATUS_META,
+    SHORT_REST_LABELS,
     VISION_LABELS,
   } from '../../model';
   import SheetAvatar from './SheetAvatar.vue';
@@ -49,6 +50,7 @@
     'edit-size': [];
     'edit-species': [];
     'edit-vision': [];
+    'short-rest': [];
     'toggle-inspiration': [];
     'toggle-lock': [];
     'share': [];
@@ -424,13 +426,16 @@
           />
         </UTooltip>
 
-        <UButton
-          icon="tabler:campfire"
-          color="neutral"
-          variant="ghost"
-          square
-          disabled
-        />
+        <UTooltip :text="SHORT_REST_LABELS.title">
+          <UButton
+            icon="tabler:campfire"
+            color="neutral"
+            variant="ghost"
+            square
+            :aria-label="SHORT_REST_LABELS.title"
+            @click.left.exact.prevent="emit('short-rest')"
+          />
+        </UTooltip>
 
         <UButton
           icon="tabler:moon"

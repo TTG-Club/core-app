@@ -34,6 +34,8 @@ import type {
   FeatSummary,
   FeatureDescriptionNode,
   FeatureOrigin,
+  HitDicePool,
+  HitDiceSpend,
   InventoryArmor,
   InventoryItemOrigin,
   InventoryWeapon,
@@ -108,12 +110,14 @@ import {
   DARKVISION_PARSE_FALLBACK,
   DEFAULT_WEAPON_ATTACK_ABILITY,
   DICE_NOTATION_LETTER,
+  HIT_DICE_ROLL_COUNT,
   INVENTORY_CATEGORY_ORDER,
   INVENTORY_CATEGORY_TITLES,
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
   LEVEL_XP_THRESHOLDS,
   NEW_CUSTOM_INVENTORY_ITEM,
+  PACT_SPELL_SLOTS_LABEL,
   RESOURCE_RECOVERY_LABELS,
   ROLL_MODE_DICE_NOTATION,
   SHEET_COPY_LIMIT_HINT,
@@ -999,6 +1003,134 @@ export function getHitDiceTotals(
     current: allDice.reduce((total, hitDie) => total + hitDie.current, 0),
     max: allDice.reduce((total, hitDie) => total + hitDie.max, 0),
   };
+}
+
+/**
+ * Подпись номинала кости хитов в русской нотации.
+ *
+ * @param die номинал кости.
+ * @returns подпись вида «к8».
+ */
+export function getHitDieLabel(die: number): string {
+  return `${DICE_NOTATION_LETTER}${die}`;
+}
+
+/**
+ * Нотация броска одной кости хитов для дайс-роллера.
+ *
+ * @param die номинал кости.
+ * @returns формула вида «1к8».
+ */
+export function getHitDieFormula(die: number): string {
+  return `${HIT_DICE_ROLL_COUNT}${getHitDieLabel(die)}`;
+}
+
+/**
+ * Кости хитов, сгруппированные по номиналу: классовые и дополнительные
+ * складываются, потому что на отдыхе тратятся одинаково. Номиналы без костей в
+ * список не входят.
+ *
+ * @param hitDice кости хитов из классов.
+ * @param extraHitDice дополнительные кости хитов.
+ * @returns пулы костей по возрастанию номинала.
+ */
+export function getHitDicePools(
+  hitDice: CharacterHitDie[],
+  extraHitDice: CharacterExtraHitDie[],
+): HitDicePool[] {
+  const totalsByDie = new Map<number, { current: number; max: number }>();
+
+  for (const hitDie of [...hitDice, ...extraHitDice]) {
+    const pool = totalsByDie.get(hitDie.die) ?? { current: 0, max: 0 };
+
+    totalsByDie.set(hitDie.die, {
+      current: pool.current + hitDie.current,
+      max: pool.max + hitDie.max,
+    });
+  }
+
+  return [...totalsByDie.entries()]
+    .filter(([, pool]) => pool.max > 0)
+    .map(([die, pool]) => ({
+      die,
+      label: getHitDieLabel(die),
+      current: pool.current,
+      max: pool.max,
+    }))
+    .sort((left, right) => left.die - right.die);
+}
+
+/**
+ * Списание потраченных на отдыхе костей хитов: сперва расходуются классовые
+ * кости номинала, затем дополнительные. Больше, чем осталось, не спишется.
+ *
+ * @param hitDice кости хитов из классов.
+ * @param extraHitDice дополнительные кости хитов.
+ * @param spent потраченные кости по номиналам.
+ * @returns новые списки костей хитов.
+ */
+export function withdrawHitDice(
+  hitDice: CharacterHitDie[],
+  extraHitDice: CharacterExtraHitDie[],
+  spent: HitDiceSpend[],
+): { hitDice: CharacterHitDie[]; extraHitDice: CharacterExtraHitDie[] } {
+  // Остаток к списанию по номиналу: уменьшается по мере обхода костей, поэтому
+  // одна и та же трата не спишется дважды.
+  const pending = new Map(
+    spent.map((pool) => [pool.die, Math.max(0, Math.trunc(pool.count))]),
+  );
+
+  const withdraw = <Die extends CharacterHitDie>(hitDie: Die): Die => {
+    const left = pending.get(hitDie.die) ?? 0;
+
+    if (left <= 0) {
+      return hitDie;
+    }
+
+    const taken = Math.min(left, hitDie.current);
+
+    pending.set(hitDie.die, left - taken);
+
+    return { ...hitDie, current: hitDie.current - taken };
+  };
+
+  return {
+    hitDice: hitDice.map((hitDie) => withdraw(hitDie)),
+    extraHitDice: extraHitDice.map((hitDie) => withdraw(hitDie)),
+  };
+}
+
+/**
+ * Хиты, восстановленные одной костью хитов: выпавшее значение плюс модификатор
+ * Телосложения, но не меньше нуля (правило D&D 2024).
+ *
+ * @param rolled выпавшее на кости значение.
+ * @param modifier модификатор Телосложения.
+ * @returns восстановленные хиты за кость.
+ */
+export function getHitDieRestore(rolled: number, modifier: number): number {
+  return Math.max(0, rolled + modifier);
+}
+
+/**
+ * Что вернёт короткий отдых, кроме хитов: ресурсы класса с восстановлением
+ * «короткий отдых» и ячейки заклинаний договора колдуна.
+ *
+ * @param character персонаж.
+ * @returns подписи восстанавливаемого; пустой список — восстанавливать нечего.
+ */
+export function getShortRestRecoveryLabels(character: Character): string[] {
+  const resourceLabels = character.classResources
+    .filter((resource) => resource.recovery === 'short-rest')
+    .map((resource) => resource.name);
+
+  const hasPactSlots = getSpellSlotRows(character).some(
+    (row) => row.recovery === 'short-rest',
+  );
+
+  return hasPactSlots
+    ? [PACT_SPELL_SLOTS_LABEL, ...resourceLabels]
+    : resourceLabels;
 }
 
 /**
@@ -2326,4 +2458,15 @@ export function getFeaturesAddMenuItems(
       onSelect: options.onAddFeat,
     },
   ];
+}
+
+/**
+ * Текст подтверждения удаления предмета: называет предмет, чтобы в длинном
+ * списке было видно, какая именно строка исчезнет.
+ *
+ * @param name название предмета.
+ * @returns описание для диалога подтверждения.
+ */
+export function getInventoryRemoveDescription(name: string): string {
+  return `«${name}» исчезнет из снаряжения — вернуть его можно только заново добавив.`;
 }
