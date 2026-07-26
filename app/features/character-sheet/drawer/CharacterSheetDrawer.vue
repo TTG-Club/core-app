@@ -7,24 +7,53 @@
     useCharacterSheetAutosave,
     useCharacterSheetLoader,
   } from '../composables';
-  import { CHARACTER_SHEET_ROUTE, CHARACTER_SHEET_TITLE } from '../model';
+  import {
+    CHARACTER_SHEET_ROUTE,
+    CHARACTER_SHEET_SHARED_ROUTE,
+    CHARACTER_SHEET_TITLE,
+    SHEET_NOT_FOUND_SUBTITLES,
+  } from '../model';
 
-  const { characterId } = defineProps<{
-    /** Идентификатор листа: загрузка документа и переход на страницу. */
-    characterId: string;
+  const { characterId = '', shareToken = '' } = defineProps<{
+    /** Идентификатор своего листа: загрузка документа и переход на страницу. */
+    characterId?: string;
+
+    /**
+     * Токен ссылки чужого листа. Задан — лист грузится публичной ручкой и
+     * открывается только на просмотр, а «развернуть» ведёт на страницу ссылки.
+     */
+    shareToken?: string;
   }>();
 
   const emit = defineEmits<{
     close: [];
   }>();
 
-  const { status, load } = useCharacterSheetLoader(() => characterId);
+  const isShared = computed(() => Boolean(shareToken));
 
+  const { status, load } = useCharacterSheetLoader(
+    () => shareToken || characterId,
+    { shared: isShared },
+  );
+
+  // Правок в чужом листе не бывает: автосейв сам молчит в режиме просмотра.
   useCharacterSheetAutosave();
+
+  const pagePath = computed(() =>
+    isShared.value
+      ? `${CHARACTER_SHEET_SHARED_ROUTE}/${shareToken}`
+      : `${CHARACTER_SHEET_ROUTE}/${characterId}`,
+  );
+
+  const notFoundSubtitle = computed(() =>
+    isShared.value
+      ? SHEET_NOT_FOUND_SUBTITLES.shared
+      : SHEET_NOT_FOUND_SUBTITLES.own,
+  );
 
   /** Открывает лист на отдельной странице и закрывает drawer. */
   function handleExpand() {
-    navigateTo(`${CHARACTER_SHEET_ROUTE}/${characterId}`);
+    navigateTo(pagePath.value);
     emit('close');
   }
 </script>
@@ -56,7 +85,7 @@
         v-else-if="status === 'notFound'"
         status="404"
         title="Лист не найден"
-        sub-title="Возможно, он был удалён или принадлежит другому пользователю"
+        :sub-title="notFoundSubtitle"
       >
         <template #extra>
           <UButton @click.left.exact.prevent="emit('close')"> Закрыть </UButton>

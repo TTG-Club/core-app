@@ -64,7 +64,7 @@ let timer: ReturnType<typeof setTimeout> | null = null;
  * @returns статус сохранения и повтор после ошибки.
  */
 export function useCharacterSheetAutosave() {
-  const { character } = useCharacterSheet();
+  const { character, isReadonly } = useCharacterSheet();
 
   const saveStatus = useCharacterSheetSaveStatus();
 
@@ -132,6 +132,13 @@ export function useCharacterSheetAutosave() {
    * @param next новое состояние персонажа.
    */
   function scheduleSave(next: Character): void {
+    // Лист открыт по ссылке: правок в нём быть не должно, а ручек записи по
+    // токену на бэке нет. Страховка на случай, если контейнер (дровер чужого
+    // листа) подключил автосейв тем же кодом, что и для своего листа.
+    if (isReadonly.value) {
+      return;
+    }
+
     const currentSheetId = next.id === DRAFT_CHARACTER_ID ? '' : next.id;
 
     if (!currentSheetId) {

@@ -6,12 +6,14 @@
 
   import { useCharacterSheetList } from '../composables';
   import { CHARACTER_SHEET_ROUTE } from '../model';
+  import { CharacterSheetSavedList } from '../saved';
   import { CharacterSheetCard, CharacterSheetCreateCard } from './ui';
 
   const {
     activeSheets,
     deletedSheets,
     limit,
+    historyLimit,
     canCreate,
     isLoading,
     isMutating,
@@ -30,8 +32,22 @@
   /** Активные листы с гарантированным документом для карточки. */
   const activeCards = computed(() =>
     activeSheets.value.flatMap(
-      (sheet): Array<{ id: string; character: Character }> =>
-        sheet.data ? [{ id: sheet.id, character: sheet.data }] : [],
+      (
+        sheet,
+      ): Array<{
+        id: string;
+        character: Character;
+        shareToken: string | null;
+      }> =>
+        sheet.data
+          ? [
+              {
+                id: sheet.id,
+                character: sheet.data,
+                shareToken: sheet.shareToken,
+              },
+            ]
+          : [],
     ),
   );
 
@@ -48,6 +64,23 @@
   const isLimitReached = computed(
     () => !canCreate.value && limit.value > 0 && !isLoading.value,
   );
+
+  // Глубина истории приходит с сервера: без неё (старый бэк) остаётся один
+  // счётчик, иначе рядом с ним видно, сколько удалений история ещё вместит.
+  const historyCountLabel = computed(() =>
+    historyLimit.value > 0
+      ? `${deletedSheets.value.length} из ${historyLimit.value}`
+      : `${deletedSheets.value.length}`,
+  );
+
+  const historyTooltip = computed(() => {
+    const restoreHint =
+      'Удалённые листы можно восстановить, пока в лимите активных есть свободное место.';
+
+    return historyLimit.value > 0
+      ? `${restoreHint} В истории хранятся последние ${historyLimit.value} удалённых листов — более старые вытесняются новыми удалениями.`
+      : restoreHint;
+  });
 
   onMounted(() => {
     load();
@@ -130,11 +163,13 @@
             v-for="card in activeCards"
             :key="card.id"
             :character="card.character"
+            :share-token="card.shareToken"
             removable
             :disabled="isMutating"
             :can-duplicate="canCreate"
             @duplicate="duplicate"
             @remove="remove"
+            @share-change="load"
           />
 
           <!-- Плейсхолдер-слот создания — исчезает на достигнутом лимите -->
@@ -154,7 +189,13 @@
           новый.
         </p>
       </section>
+    </template>
 
+    <!-- Чужие листы, сохранённые по ссылке: свой запрос, свой лимит и своя
+      ошибка, поэтому раздел не прячется вместе со своими листами -->
+    <CharacterSheetSavedList />
+
+    <template v-if="!isLoading && !loadErrorMessage">
       <!-- История удалённых листов — свёрнута, во втором плане -->
       <UCollapsible
         v-if="deletedSheets.length"
@@ -171,11 +212,9 @@
           class="justify-between text-muted"
         >
           <span class="flex items-center gap-1.5">
-            История листов ({{ deletedSheets.length }})
+            История листов ({{ historyCountLabel }})
 
-            <UTooltip
-              text="Удалённые листы можно восстановить, пока в лимите есть свободное место"
-            >
+            <UTooltip :text="historyTooltip">
               <UIcon
                 name="tabler:help-circle-filled"
                 class="size-4 shrink-0"

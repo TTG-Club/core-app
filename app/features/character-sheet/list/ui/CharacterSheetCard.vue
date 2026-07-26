@@ -5,13 +5,17 @@
 
   import { ConfirmDialog } from '~initiative/ui-kit';
 
-  import { SheetSettingsModal } from '../../body/ui';
-  import { useCharacterSheetPdf } from '../../composables';
+  import { SheetSettingsModal, SheetShareModal } from '../../body/ui';
+  import {
+    useCharacterSheetPdf,
+    useCharacterSheetShare,
+  } from '../../composables';
   import { CharacterSheetDrawer } from '../../drawer';
   import {
     CHARACTER_SHEET_ROUTE,
     downloadCharacterJson,
     getClassDisplayName,
+    getDisplayLevel,
     getSheetActionMenuItems,
     getSpeciesDisplayName,
     SHEET_EMPTY_LABELS,
@@ -19,11 +23,15 @@
 
   const {
     character,
+    shareToken = null,
     removable = false,
     disabled = false,
     canDuplicate = false,
   } = defineProps<{
     character: Character;
+
+    /** Токен ссылки листа; null — доступ по ссылке выключен. */
+    shareToken?: string | null;
 
     /** Показать пункт удаления листа в меню (список сохранённых). */
     removable?: boolean;
@@ -36,8 +44,9 @@
   }>();
 
   const emit = defineEmits<{
-    duplicate: [character: Character];
-    remove: [id: string];
+    'duplicate': [character: Character];
+    'remove': [id: string];
+    'share-change': [];
   }>();
 
   const isDeleteOpen = ref(false);
@@ -81,6 +90,8 @@
       : 'border-default bg-elevated hover:border-accented hover:bg-accented',
   );
 
+  const levelValue = computed(() => getDisplayLevel(character));
+
   /** Открывает лист на отдельной странице (в обход drawer). */
   function openOnPage(): void {
     navigateTo(to.value);
@@ -119,17 +130,46 @@
     isDeleteOpen.value = true;
   }
 
+  const { isSheetShared, setShareToken } = useCharacterSheetShare();
+
+  const isShared = computed(() => isSheetShared(character.id));
+
+  const shareModal = overlay.create(SheetShareModal, {
+    props: {
+      sheetId: character.id,
+      onClose: handleShareClose,
+    },
+  });
+
+  /**
+   * Управление доступом по ссылке. Токен листа кладётся в общее состояние перед
+   * открытием: модалка читает его оттуда, а карточка знает токен из списка — так
+   * состояние доступа не приходится тянуть отдельным запросом.
+   */
+  function handleShare(): void {
+    setShareToken(character.id, shareToken);
+    shareModal.open({ sheetId: character.id });
+  }
+
+  /** Закрытие модалки: список перечитывается — токен карточки мог смениться. */
+  function handleShareClose(): void {
+    shareModal.close();
+    emit('share-change');
+  }
+
   // Меню действий карточки — то же, что в шапке открытого листа.
   const menuItems = computed<Array<Array<DropdownMenuItem>>>(() =>
     getSheetActionMenuItems({
       canDuplicate,
       canRemove: removable,
+      isShared: isShared.value,
       isPdfLoading: isExporting.value,
       onDownload: handleDownload,
       onDownloadPdf: handleDownloadPdf,
       onDuplicate: handleDuplicate,
       onRemove: handleRemove,
       onSettings: handleSettings,
+      onShare: handleShare,
     }),
   );
 </script>
@@ -175,8 +215,7 @@
           </span>
 
           <span class="truncate text-sm text-secondary">
-            {{ classLabel }} ({{ character.level }} уровень) ·
-            {{ speciesLabel }}
+            {{ classLabel }} · {{ speciesLabel }}
           </span>
 
           <span
@@ -190,36 +229,38 @@
 
             <span class="truncate">
               Хиты: {{ character.health.current }} /
-              {{ character.health.max }} · Уровень: {{ character.level }}
+              {{ character.health.max }} · Уровень: {{ levelValue }}
             </span>
           </span>
         </div>
       </a>
     </NuxtLink>
 
-    <UTooltip text="Открыть на отдельной странице">
-      <UButton
-        icon="tabler:arrow-up-right"
-        color="neutral"
-        variant="soft"
-        square
-        class="shrink-0"
-        aria-label="Открыть на отдельной странице"
-        @click.left.exact.prevent="openOnPage"
-      />
-    </UTooltip>
+    <!-- Кнопки столбиком: карточка низкая и широкая, в ряд они съедали бы
+      ширину у имени персонажа -->
+    <div class="flex shrink-0 flex-col gap-1">
+      <UTooltip text="Открыть на отдельной странице">
+        <UButton
+          icon="tabler:arrow-up-right"
+          color="neutral"
+          variant="soft"
+          square
+          aria-label="Открыть на отдельной странице"
+          @click.left.exact.prevent="openOnPage"
+        />
+      </UTooltip>
 
-    <UDropdownMenu :items="menuItems">
-      <UButton
-        icon="tabler:dots-vertical"
-        color="neutral"
-        variant="soft"
-        square
-        class="shrink-0"
-        :disabled
-        aria-label="Действия с листом"
-      />
-    </UDropdownMenu>
+      <UDropdownMenu :items="menuItems">
+        <UButton
+          icon="tabler:dots-vertical"
+          color="neutral"
+          variant="soft"
+          square
+          :disabled
+          aria-label="Действия с листом"
+        />
+      </UDropdownMenu>
+    </div>
 
     <ConfirmDialog
       v-model:open="isDeleteOpen"

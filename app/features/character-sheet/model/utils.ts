@@ -123,6 +123,7 @@ import {
   INVENTORY_QUANTITY_MIN,
   INVENTORY_REMOVE_MENU_LABEL,
   ITEMS_DETAIL_BASE_PATH,
+  LEVEL_MIN,
   LEVEL_XP_THRESHOLDS,
   MAGIC_ITEMS_DETAIL_BASE_PATH,
   NEW_CUSTOM_INVENTORY_ITEM,
@@ -134,6 +135,7 @@ import {
   SHEET_DOWNLOAD_PDF_HINT,
   SHEET_DOWNLOAD_PDF_LABEL,
   SHEET_PDF_MIME_TYPE,
+  SHEET_SAVE_SHARED_LABELS,
   SHEET_SHARE_ACTIVE_HINT,
   SIZE_LABEL_WORDS,
   SKILL_PROFICIENCY_MULTIPLIERS,
@@ -2142,6 +2144,17 @@ export function buildClassFeatures(
 }
 
 /**
+ * Уровень персонажа для подписи в списке: не ниже первого. У листа без класса
+ * уровень ещё не набран, но персонаж всё равно первого уровня, а не нулевого.
+ *
+ * @param character персонаж листа.
+ * @returns уровень для отображения.
+ */
+export function getDisplayLevel(character: Character): number {
+  return Math.max(character.level, LEVEL_MIN);
+}
+
+/**
  * Отображаемое название класса с подклассом (например, «Плут (Мистический
  * ловкач)»).
  *
@@ -2542,7 +2555,9 @@ export interface SheetActionMenuOptions {
 /**
  * Пункты меню действий над листом — общие для шапки открытого листа и карточки
  * в списке персонажей: экспорт, копия, доступ по ссылке и настройки одной
- * группой, удаление — отдельной, оно необратимее прочих.
+ * группой, удаление — отдельной, оно необратимее прочих. У листа, открытого по
+ * ссылке, остаётся только выгрузка: сохранить его к себе зритель может кнопками
+ * в шапке, а не отсюда.
  *
  * @param options доступность действий и обработчики пунктов.
  * @returns группы пунктов для `UDropdownMenu`.
@@ -2618,6 +2633,80 @@ export function getSheetActionMenuItems(
       },
     ],
   ];
+}
+
+/** Доступность действий и обработчики меню сохранённого чужого листа. */
+export interface SavedSheetActionMenuOptions {
+  /** Копия доступна: в лимите своих активных листов есть свободное место. */
+  canCopy: boolean;
+
+  /** Идёт сборка PDF: пункт показывает загрузку и не принимает повторный клик. */
+  isPdfLoading?: boolean;
+
+  onDownload: () => void;
+  onDownloadPdf: () => void;
+  onCopy: () => void;
+  onRemove: () => void;
+}
+
+/**
+ * Пункты меню карточки чужого листа, сохранённого по ссылке. От меню своего
+ * листа отличается тем, чего у зрителя нет: правок, настроек и управления
+ * доступом. Копия остаётся — она создаёт уже свой лист.
+ *
+ * @param options доступность действий и обработчики пунктов.
+ * @returns группы пунктов для `UDropdownMenu`.
+ */
+export function getSavedSheetActionMenuItems(
+  options: SavedSheetActionMenuOptions,
+): Array<Array<DropdownMenuItem>> {
+  return [
+    [
+      {
+        label: SHEET_DOWNLOAD_PDF_LABEL,
+        icon: 'tabler:file-type-pdf',
+        description: SHEET_DOWNLOAD_PDF_HINT,
+        loading: options.isPdfLoading,
+        disabled: options.isPdfLoading,
+        onSelect: options.onDownloadPdf,
+      },
+      {
+        label: SHEET_DOWNLOAD_JSON_LABEL,
+        icon: 'tabler:download',
+        onSelect: options.onDownload,
+      },
+      {
+        label: SHEET_SAVE_SHARED_LABELS.copy,
+        icon: 'tabler:copy',
+        // Причина недоступности прямо в пункте — как и у копии своего листа.
+        description: options.canCopy ? undefined : SHEET_COPY_LIMIT_HINT,
+        disabled: !options.canCopy,
+        onSelect: options.onCopy,
+      },
+    ],
+    [
+      {
+        label: 'Убрать из списка',
+        icon: 'tabler:link-off',
+        color: 'error',
+        onSelect: options.onRemove,
+      },
+    ],
+  ];
+}
+
+/**
+ * Подпись счётчика сохранённых чужих листов для тултипа раздела.
+ *
+ * @param count число сохранённых записей.
+ * @param limit лимит сохранённых записей.
+ * @returns текст тултипа.
+ */
+export function getSavedSheetsCountTooltip(
+  count: number,
+  limit: number,
+): string {
+  return `Чужих листов, сохранённых по ссылке, — ${count} из ${limit} возможных`;
 }
 
 // Меню «Добавить» на вкладках листа: варианты добавления живут в выпадающем

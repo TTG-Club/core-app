@@ -13,7 +13,7 @@
   import { CharacterSheetList } from '~character-sheet/list';
   import {
     CHARACTER_SHEET_LIST_TITLE,
-    CHARACTER_SHEET_ROUTE,
+    SHEET_NOT_FOUND_SUBTITLES,
   } from '~character-sheet/model';
   import { UiResult } from '~ui/result';
 
@@ -25,16 +25,33 @@
     title: CHARACTER_SHEET_LIST_TITLE,
   });
 
-  const { detailId, isDetailOpen, closeDetail } = useCharacterSheetDetail();
+  // Панель показывает и свои листы (`?detail=<id>`), и чужие, сохранённые по
+  // ссылке (`?detail=shared:<token>`): загрузчику хватает цели и режима.
+  const {
+    detailTarget,
+    isSharedDetail,
+    isDetailOpen,
+    detailPagePath,
+    closeDetail,
+  } = useCharacterSheetDetail();
 
-  const { status: detailStatus, load: reloadDetail } =
-    useCharacterSheetLoader(detailId);
+  const { status: detailStatus, load: reloadDetail } = useCharacterSheetLoader(
+    detailTarget,
+    { shared: isSharedDetail },
+  );
 
+  // Правок в чужом листе не бывает: автосейв сам молчит в режиме просмотра.
   useCharacterSheetAutosave();
+
+  const detailNotFoundSubtitle = computed(() =>
+    isSharedDetail.value
+      ? SHEET_NOT_FOUND_SUBTITLES.shared
+      : SHEET_NOT_FOUND_SUBTITLES.own,
+  );
 
   /** Открывает выбранный лист на отдельной странице. */
   function handleExpand() {
-    navigateTo(`${CHARACTER_SHEET_ROUTE}/${detailId.value}`);
+    navigateTo(detailPagePath.value);
   }
 </script>
 
@@ -86,7 +103,7 @@
             v-else-if="detailStatus === 'notFound'"
             status="404"
             title="Лист не найден"
-            sub-title="Возможно, он был удалён или принадлежит другому пользователю"
+            :sub-title="detailNotFoundSubtitle"
           >
             <template #extra>
               <UButton @click.left.exact.prevent="closeDetail">

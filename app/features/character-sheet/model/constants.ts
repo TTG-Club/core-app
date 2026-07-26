@@ -53,6 +53,16 @@ export const CHARACTER_SHEET_SHARED_ROUTE = `${CHARACTER_SHEET_ROUTE}/shared`;
 /** Эндпоинт чтения листа по ссылке (публичный, без авторизации). */
 export const CHARACTER_SHEET_SHARED_API_PATH = `${CHARACTER_SHEET_API_PATH}/shared`;
 
+/** Эндпоинт чужих листов, сохранённых по ссылке. */
+export const CHARACTER_SHEET_SAVED_API_PATH = `${CHARACTER_SHEET_API_PATH}/saved`;
+
+/**
+ * Префикс значения `?detail=` у листа, открытого по ссылке: за префиксом идёт токен, а не
+ * идентификатор листа. Один query-параметр на оба вида карточек — иначе пришлось бы гасить
+ * второй параметр при каждом переключении и учить это `useSectionLink`.
+ */
+export const SHARED_DETAIL_QUERY_PREFIX = 'shared:';
+
 /**
  * Идентификатор несохранённого черновика (`DEFAULT_CHARACTER`). У загруженного
  * листа id — серверный UUID; черновик с этим id автосохранению не подлежит.
@@ -168,6 +178,15 @@ export const SHEET_READONLY_LABELS: Record<'badge' | 'tooltip', string> = {
   tooltip: 'Лист открыт по ссылке: правки недоступны',
 };
 
+/**
+ * Подзаголовки экрана «Лист не найден». У листа по ссылке 404 означает не
+ * «чужой лист», а отозванный доступ — причина объясняется по-разному.
+ */
+export const SHEET_NOT_FOUND_SUBTITLES: Record<'own' | 'shared', string> = {
+  own: 'Возможно, он был удалён или принадлежит другому пользователю',
+  shared: 'Владелец отозвал ссылку или удалил лист',
+};
+
 /** Подписи модалки «Поделиться листом». */
 export const SHEET_SHARE_LABELS: Record<
   | 'title'
@@ -213,6 +232,66 @@ export const SHEET_SHARE_REVOKED_DESCRIPTION =
 
 /** Пометка в меню действий: доступ по ссылке уже включён. */
 export const SHEET_SHARE_ACTIVE_HINT = 'Ссылка активна';
+
+/** Заголовок раздела с чужими листами, сохранёнными по ссылке. */
+export const SAVED_SHEETS_TITLE = 'Другие листы';
+
+/** Подписи раздела «Другие листы» в списке персонажей. */
+export const SAVED_SHEETS_LABELS: Record<
+  | 'empty'
+  | 'limitReached'
+  | 'unavailable'
+  | 'unavailableHint'
+  | 'readonlyBadge'
+  | 'open'
+  | 'remove'
+  | 'removeTitle'
+  | 'removeDescription',
+  string
+> = {
+  empty:
+    'Сюда попадают чужие листы, открытые вам по ссылке: сохраните лист со страницы ссылки, чтобы держать его под рукой.',
+  limitReached:
+    'Достигнут лимит сохранённых листов — уберите один, чтобы сохранить новый.',
+  unavailable: 'Доступ к листу закрыт',
+  unavailableHint:
+    'Владелец отозвал ссылку или удалил лист. Попросите новую ссылку и сохраните её заново.',
+  readonlyBadge: 'Только просмотр',
+  open: 'Открыть на отдельной странице',
+  remove: 'Убрать',
+  removeTitle: 'Убрать лист из сохранённых?',
+  removeDescription:
+    'Лист останется у владельца — пропадёт только ссылка на него в вашем списке.',
+};
+
+/** Подписи пунктов меню, которыми чужой лист сохраняется к себе. */
+export const SHEET_SAVE_SHARED_LABELS: Record<
+  'copy' | 'save' | 'saved',
+  string
+> = {
+  copy: 'Создать копию',
+  save: `Добавить в «${SAVED_SHEETS_TITLE}»`,
+  saved: `Уже в «${SAVED_SHEETS_TITLE}»`,
+};
+
+/** Заголовок тоста с ошибкой сохранения чужого листа по ссылке. */
+export const SHEET_SAVE_LINK_ERROR_TITLE = 'Не удалось сохранить лист';
+
+/** Заголовок тоста о сохранённой ссылке на чужой лист. */
+export const SHEET_SAVE_LINK_SUCCESS_TITLE = 'Лист сохранён';
+
+/** Заголовок тоста с ошибкой удаления сохранённой ссылки. */
+export const SHEET_SAVE_LINK_REMOVE_ERROR_TITLE =
+  'Не удалось убрать лист из сохранённых';
+
+/** Заголовок тоста с ошибкой копирования чужого листа себе. */
+export const SHEET_SHARED_COPY_ERROR_TITLE = 'Не удалось скопировать лист';
+
+/** Заголовок тоста о скопированном чужом листе. */
+export const SHEET_SHARED_COPY_SUCCESS_TITLE = 'Лист скопирован';
+
+/** Причина недоступности сохранения: свободных мест в лимите не осталось. */
+export const SHEET_SAVE_LINK_LIMIT_HINT = 'Достигнут лимит сохранённых листов';
 
 /** Порядок отображения характеристик. */
 export const ABILITY_ORDER: AbilityKey[] = [
