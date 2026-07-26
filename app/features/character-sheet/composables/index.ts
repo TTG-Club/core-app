@@ -13,6 +13,7 @@ export { useCharacterSheetDetail } from './useCharacterSheetDetail';
 export { useCharacterSheetList } from './useCharacterSheetList';
 export { useCharacterSheetLoader } from './useCharacterSheetLoader';
 export { useCharacterSheetPdf } from './useCharacterSheetPdf';
+export { useCharacterSheetSaved } from './useCharacterSheetSaved';
 export { useCharacterSheetShare } from './useCharacterSheetShare';
 export { useSheetAvatar } from './useSheetAvatar';
 export { useSpellCatalogSearch } from './useSpellCatalogSearch';

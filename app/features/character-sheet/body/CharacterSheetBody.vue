@@ -14,6 +14,7 @@
     useCharacterSheet,
     useCharacterSheetList,
     useCharacterSheetPdf,
+    useCharacterSheetSaved,
     useCharacterSheetSaveStatus,
     useCharacterSheetShare,
   } from '../composables';
@@ -122,11 +123,35 @@
     isMutating,
     ensureLoaded,
     duplicate,
+    copyShared,
     remove: removeSheet,
   } = useCharacterSheetList();
 
   // Доступ по ссылке: состояние читает меню шапки, меняет — модалка.
-  const { isShared } = useCharacterSheetShare();
+  // `viewedShareToken` — токен, по которому открыт чужой лист: им меню
+  // сохраняет его к себе.
+  const { viewedShareToken, isSheetShared } = useCharacterSheetShare();
+
+  const isShared = computed(() => isSheetShared(character.value.id));
+
+  // Сохранить чужой лист к себе может только тот, у кого есть доступ к самому
+  // инструменту: обе ручки закрыты ролью, анониму их показывать нечестно.
+  const { isAdmin } = useUserRoles();
+
+  const {
+    canSave: canSaveLink,
+    ensureLoaded: ensureSavedLoaded,
+    isTokenSaved,
+    save: saveLink,
+  } = useCharacterSheetSaved();
+
+  const canSaveShared = computed(
+    () => isReadonly.value && isAdmin.value && Boolean(viewedShareToken.value),
+  );
+
+  const isLinkSaved = computed(() =>
+    viewedShareToken.value ? isTokenSaved(viewedShareToken.value) : false,
+  );
 
   // Экспорт в PDF: сборщик грузится по клику, поэтому у пункта меню есть
   // собственное состояние загрузки.
@@ -161,10 +186,28 @@
       `Лист «${character.value.name}» переедет в историю — его можно будет восстановить, пока в лимите есть свободное место.`,
   );
 
-  // Лимит нужен пункту «Создать копию»: на отдельной странице листа список ещё
-  // не загружался, в панели и дровере — уже загружен списком. У листа, открытого
-  // по ссылке, этого пункта нет, а сам список — приватная ручка: гостю она
-  // ответила бы 401 и зря зажгла ошибку в общем состоянии списка.
+  // Лимиты нужны пунктам меню «Создать копию» и сохранения чужого листа: на
+  // отдельной странице списки ещё не загружались, в панели и дровере — уже
+  // загружены. Оба списка — приватные ручки: анониму они ответили бы 401 и зря
+  // зажгли ошибку в общем состоянии, поэтому у листа по ссылке грузим их только
+  // зрителю с доступом к инструменту.
+  //
+  // Наблюдатель, а не разовый вызов на маунте: страница листа по ссылке —
+  // единственная в разделе без гарда, профиль на ней догружается уже после
+  // монтирования, и к первому рендеру роль ещё неизвестна.
+  watch(
+    canSaveShared,
+    (saveShared) => {
+      if (!saveShared) {
+        return;
+      }
+
+      void ensureLoaded();
+      void ensureSavedLoaded();
+    },
+    { immediate: true },
+  );
+
   onMounted(() => {
     if (isReadonly.value) {
       return;
@@ -185,7 +228,18 @@
   // так полноэкранная страница не мигает компактной раскладкой при загрузке.
   const { isDesktop } = useBreakpoints();
   const rootRef = ref<HTMLElement | null>(null);
-  const { width: rootWidth } = useElementSize(rootRef);
+  const { width: observedWidth } = useElementSize(rootRef);
+
+  // Первое измерение снимаем сами на маунте: `ResizeObserver` сообщает ширину
+  // только после кадра, и лист успевал мигнуть широкой раскладкой — в дровере
+  // это особенно заметно, там он вообще никогда не широкий.
+  const mountedWidth = ref(0);
+
+  onMounted(() => {
+    mountedWidth.value = rootRef.value?.clientWidth ?? 0;
+  });
+
+  const rootWidth = computed(() => observedWidth.value || mountedWidth.value);
 
   const isWide = computed(() =>
     rootWidth.value > 0 ? rootWidth.value >= 1024 : isDesktop.value,
@@ -685,6 +739,20 @@
     shareModal.open({ sheetId: character.value.id });
   }
 
+  /** Копия чужого листа себе: дальше это обычный свой лист. */
+  async function handleCopyShared() {
+    await copyShared(character.value);
+  }
+
+  /** Сохранение ссылки на чужой лист в раздел «Другие листы». */
+  async function handleSaveLink() {
+    if (!viewedShareToken.value) {
+      return;
+    }
+
+    await saveLink(viewedShareToken.value);
+  }
+
   /** Подтверждённое удаление: лист уходит в историю, затем закрывается. */
   async function handleRemoveConfirm() {
     if (!(await removeSheet(character.value.id))) {
@@ -729,12 +797,18 @@
       :shared="isShared"
       :save-status="headerSaveStatus"
       :pdf-loading="isPdfExporting"
+      :can-save-shared="canSaveShared"
+      :can-copy-shared="canCreate && !isMutating"
+      :can-save-link="canSaveLink"
+      :link-saved="isLinkSaved"
       @close="handleClose"
       @download="downloadCharacter"
       @download-pdf="handleDownloadPdf"
       @duplicate="handleDuplicate"
       @remove="handleRemove"
       @share="handleShare"
+      @copy-shared="handleCopyShared"
+      @save-link="handleSaveLink"
       @expand="handleExpand"
       @edit-background="handleBackgroundEdit"
       @edit-class="handleClassEdit"

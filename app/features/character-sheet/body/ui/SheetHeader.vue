@@ -9,8 +9,11 @@
     getSpeciesDisplayName,
     getVisionRows,
     LONG_REST_LABELS,
+    SHEET_COPY_LIMIT_HINT,
     SHEET_EMPTY_LABELS,
     SHEET_READONLY_LABELS,
+    SHEET_SAVE_LINK_LIMIT_HINT,
+    SHEET_SAVE_SHARED_LABELS,
     SHEET_SAVE_STATUS_META,
     SHORT_REST_LABELS,
     VISION_LABELS,
@@ -37,6 +40,17 @@
     shared?: boolean;
     /** Идёт сборка PDF — пункт меню показывает загрузку. */
     pdfLoading?: boolean;
+    /**
+     * Чужой лист можно сохранить к себе: у зрителя есть доступ к инструменту и
+     * известен токен ссылки. false — в меню остаётся только выгрузка.
+     */
+    canSaveShared?: boolean;
+    /** В лимите своих активных листов есть место — копия чужого разрешена. */
+    canCopyShared?: boolean;
+    /** В лимите сохранённых ссылок есть место. */
+    canSaveLink?: boolean;
+    /** Ссылка на этот лист уже сохранена. */
+    linkSaved?: boolean;
   }>();
 
   const emit = defineEmits<{
@@ -59,6 +73,8 @@
     'toggle-inspiration': [];
     'toggle-lock': [];
     'share': [];
+    'copy-shared': [];
+    'save-link': [];
   }>();
 
   // Меню действий листа (кнопка-троеточие в шапке) — то же, что в карточке
@@ -96,6 +112,31 @@
     }
 
     return 'text-muted';
+  });
+
+  // Сохранить чужой лист к себе — главное, зачем зритель пришёл по ссылке,
+  // поэтому оба действия стоят кнопками рядом с пометкой «только просмотр», а
+  // не прячутся в меню за троеточием.
+  const copySharedTooltip = computed(() =>
+    props.canCopyShared ? SHEET_SAVE_SHARED_LABELS.copy : SHEET_COPY_LIMIT_HINT,
+  );
+
+  const saveLinkIcon = computed(() =>
+    props.linkSaved ? 'tabler:bookmark-filled' : 'tabler:bookmark-plus',
+  );
+
+  const saveLinkColor = computed(() =>
+    props.linkSaved ? 'primary' : 'neutral',
+  );
+
+  const saveLinkTooltip = computed(() => {
+    if (props.linkSaved) {
+      return SHEET_SAVE_SHARED_LABELS.saved;
+    }
+
+    return props.canSaveLink
+      ? SHEET_SAVE_SHARED_LABELS.save
+      : SHEET_SAVE_LINK_LIMIT_HINT;
   });
 
   const lockIcon = computed(() =>
@@ -349,8 +390,47 @@
             icon="tabler:eye"
             color="neutral"
             variant="subtle"
+            size="lg"
+            class="@max-2xl:hidden"
+          />
+
+          <!-- В компактной шапке подписи не остаётся: ряд с кнопками
+            сохранения и без неё занимает всю ширину -->
+          <UBadge
+            icon="tabler:eye"
+            color="neutral"
+            variant="subtle"
+            size="lg"
+            class="@2xl:hidden"
+            :aria-label="SHEET_READONLY_LABELS.badge"
           />
         </UTooltip>
+
+        <template v-if="canSaveShared">
+          <UTooltip :text="copySharedTooltip">
+            <UButton
+              icon="tabler:user-plus"
+              color="neutral"
+              variant="ghost"
+              square
+              :disabled="!canCopyShared"
+              :aria-label="copySharedTooltip"
+              @click.left.exact.prevent="emit('copy-shared')"
+            />
+          </UTooltip>
+
+          <UTooltip :text="saveLinkTooltip">
+            <UButton
+              :icon="saveLinkIcon"
+              :color="saveLinkColor"
+              variant="ghost"
+              square
+              :disabled="linkSaved || !canSaveLink"
+              :aria-label="saveLinkTooltip"
+              @click.left.exact.prevent="emit('save-link')"
+            />
+          </UTooltip>
+        </template>
 
         <UTooltip
           v-else

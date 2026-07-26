@@ -17,8 +17,12 @@
     close: [];
   }>();
 
-  const { isShared, shareUrl, isPending, enableShare, disableShare } =
+  const { isPending, isSheetShared, getShareUrl, enableShare, disableShare } =
     useCharacterSheetShare();
+
+  const isShared = computed(() => isSheetShared(props.sheetId));
+
+  const shareUrl = computed(() => getShareUrl(props.sheetId));
 
   const { copy, share } = useCopyAndShare();
 

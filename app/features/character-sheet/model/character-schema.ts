@@ -4,6 +4,8 @@ import type {
   CharacterSheetListItem,
   CharacterSheetListPage,
   FeatureDescriptionNode,
+  SavedCharacterSheet,
+  SavedCharacterSheetListPage,
 } from './types';
 
 import { z } from '~/utils/zod';
@@ -386,16 +388,22 @@ const sheetListItemSchema = z.object({
   name: z.string().catch(''),
   deleted: z.boolean().catch(false),
   data: z.unknown(),
+  // Токен нужен карточке: по нему её меню знает, включён ли доступ по ссылке,
+  // не открывая лист. Как и у полного листа, с `catch` — бэк без фичи
+  // «поделиться» поля не пришлёт.
+  shareToken: z.string().nullable().catch(null),
   createdAt: z.string().nullable().catch(null),
   updatedAt: z.string().nullable().catch(null),
 });
 
 /**
  * Схема списка листов. `limit` без `catch`: серверный лимит обязателен —
- * его отсутствие означает несовместимый ответ, а не «лимит 0».
+ * его отсутствие означает несовместимый ответ, а не «лимит 0». Глубина истории,
+ * наоборот, с `catch`: бэк без этого поля просто не покажет её в подписи.
  */
 const sheetListPageSchema = z.object({
   limit: z.number(),
+  historyLimit: z.coerce.number().catch(0),
   count: z.coerce.number().catch(0),
   sheets: z.array(sheetListItemSchema).catch([]),
 });
@@ -455,11 +463,115 @@ export function parseCharacterSheetListPage(
     name: sheet.name,
     deleted: sheet.deleted,
     data: toListItemCharacter(sheet),
+    shareToken: sheet.shareToken,
     createdAt: sheet.createdAt,
     updatedAt: sheet.updatedAt,
   }));
 
-  return { limit: page.limit, count: page.count, sheets };
+  return {
+    limit: page.limit,
+    historyLimit: page.historyLimit,
+    count: page.count,
+    sheets,
+  };
+}
+
+/**
+ * Схема сохранённого чужого листа. `data` приходит только у доступных записей —
+ * у остальных сервер отдаёт null вместе с `available: false`.
+ */
+const savedSheetSchema = z.object({
+  id: z.string(),
+  sheetId: z.string(),
+  shareToken: z.string(),
+  name: z.string().catch(''),
+  data: z.unknown(),
+  available: z.boolean().catch(false),
+});
+
+/**
+ * Схема списка сохранённых листов. `limit`, как и у своих листов, без `catch`:
+ * серверный лимит обязателен.
+ */
+const savedSheetListPageSchema = z.object({
+  limit: z.number(),
+  count: z.coerce.number().catch(0),
+  sheets: z.array(savedSheetSchema).catch([]),
+});
+
+/**
+ * Документ сохранённого листа для карточки. Как и у своих листов, битый документ
+ * не роняет весь раздел: карточка строится на пустом персонаже с именем из
+ * ответа.
+ *
+ * @param sheet разобранная сохранённая запись.
+ * @returns персонаж карточки; null — доступ к листу закрыт.
+ */
+function toSavedSheetCharacter(
+  sheet: z.infer<typeof savedSheetSchema>,
+): Character | null {
+  if (!sheet.available || sheet.data === null || sheet.data === undefined) {
+    return null;
+  }
+
+  const result = characterSchema.safeParse(sheet.data);
+
+  if (!result.success) {
+    return {
+      ...structuredClone(DEFAULT_CHARACTER),
+      id: sheet.sheetId,
+      name: sheet.name,
+    };
+  }
+
+  return { ...result.data, id: sheet.sheetId };
+}
+
+/**
+ * Приводит разобранную запись к модели сохранённого листа.
+ *
+ * @param sheet разобранная сохранённая запись.
+ * @returns сохранённый лист с документом персонажа.
+ */
+function toSavedSheet(
+  sheet: z.infer<typeof savedSheetSchema>,
+): SavedCharacterSheet {
+  return {
+    id: sheet.id,
+    sheetId: sheet.sheetId,
+    shareToken: sheet.shareToken,
+    name: sheet.name,
+    data: toSavedSheetCharacter(sheet),
+    available: sheet.available,
+  };
+}
+
+/**
+ * Валидация списка сохранённых чужих листов из ответа `GET /saved`.
+ *
+ * @param input сырой ответ сервера.
+ * @returns список сохранённых листов с серверным лимитом.
+ */
+export function parseSavedCharacterSheetListPage(
+  input: unknown,
+): SavedCharacterSheetListPage {
+  const page = savedSheetListPageSchema.parse(input);
+
+  return {
+    limit: page.limit,
+    count: page.count,
+    sheets: page.sheets.map(toSavedSheet),
+  };
+}
+
+/**
+ * Валидация ответа `POST /saved` — только что сохранённой записи.
+ *
+ * @param input сырой ответ сервера.
+ * @returns сохранённый лист с документом персонажа.
+ */
+export function parseSavedCharacterSheet(input: unknown): SavedCharacterSheet {
+  return toSavedSheet(savedSheetSchema.parse(input));
 }
 
 /**

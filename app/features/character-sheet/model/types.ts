@@ -1125,6 +1125,9 @@ export interface CharacterSheetListItem {
   /** Персонаж листа; null — у удалённых (сервер не отдаёт документ). */
   data: Character | null;
 
+  /** Токен ссылки «поделиться»; null — доступ по ссылке выключен. */
+  shareToken: string | null;
+
   /** Дата создания (ISO); null — не пришла. */
   createdAt: string | null;
 
@@ -1132,15 +1135,50 @@ export interface CharacterSheetListItem {
   updatedAt: string | null;
 }
 
-/** Список листов пользователя с серверным лимитом. */
+/** Список листов пользователя с серверными лимитами. */
 export interface CharacterSheetListPage {
   /** Максимум активных листов (серверный, в будущем зависит от подписки). */
   limit: number;
+
+  /** Максимум листов в истории удалённых; 0 — сервер лимит не прислал. */
+  historyLimit: number;
 
   /** Число активных (неудалённых) листов. */
   count: number;
 
   sheets: CharacterSheetListItem[];
+}
+
+/** Чужой лист, сохранённый по ссылке «поделиться». */
+export interface SavedCharacterSheet {
+  /** Идентификатор сохранённой записи (им же она и удаляется). */
+  id: string;
+
+  /** Идентификатор самого листа персонажа. */
+  sheetId: string;
+
+  /** Токен ссылки: по нему лист открывается на чтение. */
+  shareToken: string;
+
+  /** Название: живое у доступного листа, снимок сохранения — у остальных. */
+  name: string;
+
+  /** Персонаж листа; null — доступ к листу закрыт. */
+  data: Character | null;
+
+  /** Лист всё ещё открыт по этой ссылке: не удалён и токен не отозван. */
+  available: boolean;
+}
+
+/** Список сохранённых чужих листов с серверным лимитом. */
+export interface SavedCharacterSheetListPage {
+  /** Максимум сохранённых ссылок (серверный, в будущем зависит от подписки). */
+  limit: number;
+
+  /** Число сохранённых записей, включая ставшие недоступными. */
+  count: number;
+
+  sheets: SavedCharacterSheet[];
 }
 
 /** Полный лист персонажа из ответа API. */

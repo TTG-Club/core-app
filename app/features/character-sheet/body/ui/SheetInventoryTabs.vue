@@ -246,8 +246,12 @@
    * ленту, чтобы страница под ней не дёргалась. Крайние вкладки доводим ровно
    * до края: остаток в доли пикселя оставлял бы стрелку зажжённой поверх
    * подписи. Остальные — с зазором под стрелку, иначе она ложится на подпись.
+   *
+   * @param behavior `smooth` — переключение вкладки пользователем, за ним видно
+   *   движение ленты; `auto` — установка ленты на место (открытие листа, смена
+   *   раскладки), её показывать нечего: лист должен появляться уже собранным.
    */
-  function scrollActiveTabIntoView() {
+  function scrollActiveTabIntoView(behavior: 'auto' | 'smooth' = 'smooth') {
     const strip = stripRef.value;
 
     if (!strip) {
@@ -267,7 +271,7 @@
     }
 
     if (activeIndex === 0) {
-      strip.scrollTo({ left: 0, behavior: 'smooth' });
+      strip.scrollTo({ left: 0, behavior });
 
       return;
     }
@@ -275,7 +279,7 @@
     if (activeIndex === triggers.length - 1) {
       strip.scrollTo({
         left: strip.scrollWidth - strip.clientWidth,
-        behavior: 'smooth',
+        behavior,
       });
 
       return;
@@ -287,7 +291,7 @@
     if (triggerBox.left < stripBox.left + SHEET_TABS_SCROLL_EDGE_GAP) {
       strip.scrollBy({
         left: triggerBox.left - stripBox.left - SHEET_TABS_SCROLL_EDGE_GAP,
-        behavior: 'smooth',
+        behavior,
       });
 
       return;
@@ -296,7 +300,7 @@
     if (triggerBox.right > stripBox.right - SHEET_TABS_SCROLL_EDGE_GAP) {
       strip.scrollBy({
         left: triggerBox.right - stripBox.right + SHEET_TABS_SCROLL_EDGE_GAP,
-        behavior: 'smooth',
+        behavior,
       });
     }
   }
@@ -333,12 +337,15 @@
         activeSlot.value = SHEET_MAIN_TAB.slot;
       }
 
-      void nextTick(scrollActiveTabIntoView);
+      // Смена раскладки — не выбор пользователя: ленту ставим на место разом.
+      // В дровере она случается сразу после открытия (контейнер измеряется уже
+      // на клиенте), и плавная прокрутка читалась бы как «лист доезжает».
+      void nextTick(() => scrollActiveTabIntoView('auto'));
     },
   );
 
   onMounted(() => {
-    void nextTick(scrollActiveTabIntoView);
+    void nextTick(() => scrollActiveTabIntoView('auto'));
   });
 
   // Широкий режим (нет вкладки «Основное») = вкладки стоят в правой колонке сетки

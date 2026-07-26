@@ -26,6 +26,8 @@ import {
   SHEET_IMPORT_PARSE_ERROR,
   SHEET_IMPORT_SIZE_ERROR,
   SHEET_IMPORT_SUCCESS_TITLE,
+  SHEET_SHARED_COPY_ERROR_TITLE,
+  SHEET_SHARED_COPY_SUCCESS_TITLE,
   updateCharacterSheet,
 } from '../model';
 import { useCharacterSheet } from './useCharacterSheet';
@@ -128,6 +130,11 @@ export function useCharacterSheetList() {
 
   const limit = useState<number>('character-sheet:list-limit', () => 0);
 
+  const historyLimit = useState<number>(
+    'character-sheet:list-history-limit',
+    () => 0,
+  );
+
   const isLoaded = useState<boolean>(
     'character-sheet:list-loaded',
     () => false,
@@ -217,6 +224,7 @@ export function useCharacterSheetList() {
 
       sheets.value = page.sheets;
       limit.value = page.limit;
+      historyLimit.value = page.historyLimit;
       isLoaded.value = true;
     } catch (error) {
       loadErrorMessage.value = getSheetErrorMessage(error);
@@ -393,6 +401,36 @@ export function useCharacterSheetList() {
   }
 
   /**
+   * Создаёт свой лист из чужого, открытого по ссылке. Имя остаётся как есть, без
+   * суффикса «(копия)»: это отдельный персонаж, а не копия своего листа, и
+   * называть его копией было бы неверно.
+   *
+   * @param source персонаж чужого листа.
+   * @returns созданный лист или null (лимит исчерпан либо ошибка).
+   */
+  async function copyShared(
+    source: Character,
+  ): Promise<CharacterSheetDetail | null> {
+    if (!ensureFreeSlot(SHEET_SHARED_COPY_ERROR_TITLE)) {
+      return null;
+    }
+
+    const created = await createSheetFromDocument(source, {
+      name: source.name,
+      errorTitle: SHEET_SHARED_COPY_ERROR_TITLE,
+    });
+
+    if (created) {
+      notifySheetCreated(created, {
+        title: SHEET_SHARED_COPY_SUCCESS_TITLE,
+        icon: 'tabler:user-plus',
+      });
+    }
+
+    return created;
+  }
+
+  /**
    * Создаёт лист из JSON-файла, скачанного экспортом. Имя из файла остаётся
    * как есть: совпадение с уже существующим листом ничему не мешает, а
    * переименование при импорте выглядело бы потерей данных.
@@ -531,6 +569,7 @@ export function useCharacterSheetList() {
     activeSheets,
     deletedSheets,
     limit,
+    historyLimit,
     canCreate,
     isLoading,
     isMutating,
@@ -540,6 +579,7 @@ export function useCharacterSheetList() {
     ensureLoaded,
     create,
     duplicate,
+    copyShared,
     importFromFile,
     remove,
     restore,

@@ -5,6 +5,8 @@ import type {
   CharacterSheetDetail,
   CharacterSheetListPage,
   FeatureDescriptionNode,
+  SavedCharacterSheet,
+  SavedCharacterSheetListPage,
 } from './types';
 
 import { FetchError } from 'ofetch';
@@ -13,9 +15,12 @@ import {
   parseCharacterSheetDetail,
   parseCharacterSheetListPage,
   parseCharacterSheetShare,
+  parseSavedCharacterSheet,
+  parseSavedCharacterSheetListPage,
 } from './character-schema';
 import {
   CHARACTER_SHEET_API_PATH,
+  CHARACTER_SHEET_SAVED_API_PATH,
   CHARACTER_SHEET_SHARED_API_PATH,
   SHEET_UNKNOWN_ERROR_MESSAGE,
   SPELLS_DETAIL_BASE_PATH,
@@ -233,4 +238,52 @@ export async function fetchSharedCharacterSheet(
   });
 
   return parseCharacterSheetDetail(response);
+}
+
+/**
+ * Чужие листы, сохранённые пользователем по ссылке, с серверным лимитом. Листы,
+ * к которым доступ закрыт, из ответа не пропадают — приходят без документа.
+ *
+ * @returns список сохранённых листов и лимит.
+ */
+export async function fetchSavedCharacterSheets(): Promise<SavedCharacterSheetListPage> {
+  const response = await $fetch(CHARACTER_SHEET_SAVED_API_PATH, {
+    method: 'GET',
+    retry: 0,
+  });
+
+  return parseSavedCharacterSheetListPage(response);
+}
+
+/**
+ * Сохранение чужого листа по токену ссылки. Идемпотентно: у уже сохранённого
+ * листа обновляется токен, второй записи не появляется.
+ *
+ * @param shareToken токен ссылки из присланного адреса.
+ * @returns сохранённая запись.
+ */
+export async function saveSharedCharacterSheet(
+  shareToken: string,
+): Promise<SavedCharacterSheet> {
+  const response = await $fetch(CHARACTER_SHEET_SAVED_API_PATH, {
+    method: 'POST',
+    body: { shareToken },
+    retry: 0,
+  });
+
+  return parseSavedCharacterSheet(response);
+}
+
+/**
+ * Удаление сохранённой ссылки. Сам лист остаётся у владельца.
+ *
+ * @param savedId идентификатор сохранённой записи.
+ */
+export async function deleteSavedCharacterSheet(
+  savedId: string,
+): Promise<void> {
+  await $fetch(`${CHARACTER_SHEET_SAVED_API_PATH}/${savedId}`, {
+    method: 'DELETE',
+    retry: 0,
+  });
 }
