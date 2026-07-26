@@ -848,9 +848,18 @@
       </div>
 
       <DefineSummary>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div class="flex flex-col gap-4">
-            <div class="grid grid-cols-2 gap-4">
+        <!--
+          На мобильном (< sm) колонки-обёртки и пары плиток схлопываются в
+          display:contents: все блоки становятся прямыми элементами сетки.
+          Четыре плитки показателей без order-* всплывают наверх (2×2, а с @md —
+          одной строкой), остальные блоки растягиваются на всю ширину и идут в
+          порядке order-*: здоровье → ресурсы класса → навыки → спасброски →
+          владения. На sm колонки восстанавливаются — двухколоночная раскладка
+          прежняя.
+        -->
+        <div class="grid grid-cols-2 gap-4 max-sm:@md:grid-cols-4">
+          <div class="flex flex-col gap-4 max-sm:contents">
+            <div class="grid grid-cols-2 gap-4 max-sm:contents">
               <SheetStatTile
                 label="Мастерство"
                 :value="formattedProficiencyBonus"
@@ -870,23 +879,26 @@
               :health="character.health"
               :hit-dice="character.hitDice"
               :extra-hit-dice="character.extraHitDice"
+              class="max-sm:order-1 max-sm:col-span-full"
               @edit="handleHealthEdit"
             />
 
             <SheetSavingThrowsPanel
               :rows="savingThrowRows"
+              class="max-sm:order-4 max-sm:col-span-full"
               @roll="handleSavingThrowRoll"
               @toggle="toggleSavingThrowProficiency"
             />
 
             <SheetProficienciesPanel
               :proficiencies="character.proficiencies"
+              class="max-sm:order-5 max-sm:col-span-full"
               @edit="handleProficienciesEdit"
             />
           </div>
 
-          <div class="flex flex-col gap-4">
-            <div class="grid grid-cols-2 gap-4">
+          <div class="flex flex-col gap-4 max-sm:contents">
+            <div class="grid grid-cols-2 gap-4 max-sm:contents">
               <SheetSpeedTile
                 :speed="character.speed"
                 @edit="handleSpeedEdit"
@@ -902,13 +914,14 @@
 
             <SheetClassResourcesPanel
               :resources="character.classResources"
+              class="max-sm:order-2 max-sm:col-span-full"
               @adjust="adjustClassResource"
               @edit="handleClassResourcesEdit"
             />
 
             <SheetSkillsPanel
               :rows="skillRows"
-              class="grow"
+              class="grow max-sm:order-3 max-sm:col-span-full"
               @cycle="cycleSkillProficiency"
               @roll="handleSkillRoll"
             />

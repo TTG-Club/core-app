@@ -82,9 +82,15 @@
     </div>
 
     <DefineSummary>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div class="flex flex-col gap-4">
-          <div class="grid grid-cols-2 gap-4">
+      <!--
+        На мобильном (< sm) колонки-обёртки и пары плиток схлопываются в
+        display:contents — блоки идут в том же порядке order-*, что и в сводке
+        самого листа: плитки → здоровье → ресурсы класса → навыки → спасброски →
+        владения. На sm колонки восстанавливаются.
+      -->
+      <div class="grid grid-cols-2 gap-4 max-sm:@md:grid-cols-4">
+        <div class="flex flex-col gap-4 max-sm:contents">
+          <div class="grid grid-cols-2 gap-4 max-sm:contents">
             <SheetSkeletonPanel
               v-for="index in SHEET_SKELETON_COUNTS.summaryTiles"
               :key="index"
@@ -98,7 +104,10 @@
           </div>
 
           <!-- Здоровье: три значения и строка костей хитов под чертой -->
-          <SheetSkeletonPanel title-class="w-20">
+          <SheetSkeletonPanel
+            title-class="w-20"
+            class="max-sm:order-1 max-sm:col-span-full"
+          >
             <div class="grid grid-cols-3 items-end gap-2 pt-1">
               <div class="flex flex-col items-start gap-1.5">
                 <USkeleton class="h-2 w-10 rounded-sm" />
@@ -128,7 +137,10 @@
             </div>
           </SheetSkeletonPanel>
 
-          <SheetSkeletonPanel title-class="w-24">
+          <SheetSkeletonPanel
+            title-class="w-24"
+            class="max-sm:order-4 max-sm:col-span-full"
+          >
             <div class="grid grid-flow-col grid-cols-2 grid-rows-3 gap-2">
               <div
                 v-for="abilityKey in ABILITY_ORDER"
@@ -145,7 +157,10 @@
           </SheetSkeletonPanel>
 
           <!-- Владения: плашка группы и чипы под ней -->
-          <SheetSkeletonPanel title-class="w-20">
+          <SheetSkeletonPanel
+            title-class="w-20"
+            class="max-sm:order-5 max-sm:col-span-full"
+          >
             <div class="flex flex-col gap-4 pt-2">
               <div
                 v-for="index in SHEET_SKELETON_COUNTS.proficiencyGroups"
@@ -166,8 +181,8 @@
           </SheetSkeletonPanel>
         </div>
 
-        <div class="flex flex-col gap-4">
-          <div class="grid grid-cols-2 gap-4">
+        <div class="flex flex-col gap-4 max-sm:contents">
+          <div class="grid grid-cols-2 gap-4 max-sm:contents">
             <SheetSkeletonPanel
               v-for="index in SHEET_SKELETON_COUNTS.summaryTiles"
               :key="index"
@@ -180,7 +195,10 @@
             </SheetSkeletonPanel>
           </div>
 
-          <SheetSkeletonPanel title-class="w-28">
+          <SheetSkeletonPanel
+            title-class="w-28"
+            class="max-sm:order-2 max-sm:col-span-full"
+          >
             <div class="flex flex-col gap-2">
               <div
                 v-for="index in SHEET_SKELETON_COUNTS.classResources"
@@ -198,7 +216,7 @@
 
           <SheetSkeletonPanel
             title-class="w-16"
-            class="grow"
+            class="grow max-sm:order-3 max-sm:col-span-full"
           >
             <div class="flex flex-col gap-0.5">
               <div
