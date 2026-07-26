@@ -26,6 +26,7 @@
     LANGUAGE_PROFICIENCY_GROUPS,
     TOOL_PROFICIENCY_GROUPS,
   } from '../model';
+  import CharacterSheetSkeleton from './CharacterSheetSkeleton.vue';
   import {
     SheetAbilitiesRow,
     SheetAbilityModal,
@@ -224,15 +225,19 @@
   // Адаптив считаем по ширине КОНТЕЙНЕРА, а не вьюпорта: в узком drawer/панели
   // лист должен сворачиваться в один столбец, даже когда окно шире 1024px
   // (иначе внутри drawer остаётся десктопная сетка и всё сжимается).
-  // До первого измерения контейнера (ширина 0) ориентируемся на вьюпорт —
-  // так полноэкранная страница не мигает компактной раскладкой при загрузке.
-  const { isDesktop } = useBreakpoints();
+  //
+  // До первого замера содержимое не рендерим вовсе — вместо него скелетон.
+  // Угадывать раскладку по вьюпорту нельзя: в дровере и панели догадка почти
+  // всегда неверна, лист монтировался широким и тут же перестраивался — было
+  // видно, как вкладка «Основное» «подгружается» после открытия. Все
+  // контейнеры листа клиентские (`ClientOnly`, drawer), поэтому замер в
+  // `onMounted` успевает до первой отрисовки кадра и скелетон в обычном
+  // случае даже не показывается.
   const rootRef = ref<HTMLElement | null>(null);
   const { width: observedWidth } = useElementSize(rootRef);
 
   // Первое измерение снимаем сами на маунте: `ResizeObserver` сообщает ширину
-  // только после кадра, и лист успевал мигнуть широкой раскладкой — в дровере
-  // это особенно заметно, там он вообще никогда не широкий.
+  // только после кадра — лист лишний кадр стоял бы скелетоном.
   const mountedWidth = ref(0);
 
   onMounted(() => {
@@ -241,9 +246,10 @@
 
   const rootWidth = computed(() => observedWidth.value || mountedWidth.value);
 
-  const isWide = computed(() =>
-    rootWidth.value > 0 ? rootWidth.value >= 1024 : isDesktop.value,
-  );
+  /** Контейнер измерен — лист можно рендерить сразу в верной раскладке. */
+  const isMeasured = computed(() => rootWidth.value > 0);
+
+  const isWide = computed(() => rootWidth.value >= 1024);
 
   // Синхронизация высоты правой колонки (характеристики + вкладки) с левой
   // сводкой. Grid-трек `1fr` не ограничивает высоту в auto-высотном контейнере,
@@ -787,194 +793,204 @@
     ref="rootRef"
     class="@container mx-auto flex w-full max-w-350 flex-col gap-4"
   >
-    <SheetHeader
-      :character="character"
-      :locked="isLocked"
-      :can-expand="canExpand"
-      :can-close="canClose"
-      :can-duplicate="canCreate"
-      :readonly="isReadonly"
-      :shared="isShared"
-      :save-status="headerSaveStatus"
-      :pdf-loading="isPdfExporting"
-      :can-save-shared="canSaveShared"
-      :can-copy-shared="canCreate && !isMutating"
-      :can-save-link="canSaveLink"
-      :link-saved="isLinkSaved"
-      @close="handleClose"
-      @download="downloadCharacter"
-      @download-pdf="handleDownloadPdf"
-      @duplicate="handleDuplicate"
-      @remove="handleRemove"
-      @share="handleShare"
-      @copy-shared="handleCopyShared"
-      @save-link="handleSaveLink"
-      @expand="handleExpand"
-      @edit-background="handleBackgroundEdit"
-      @edit-class="handleClassEdit"
-      @edit-name="handleNameEdit"
-      @edit-progress="handleProgressEdit"
-      @edit-settings="handleSettingsEdit"
-      @edit-size="handleSizeEdit"
-      @edit-species="handleSpeciesEdit"
-      @edit-vision="handleVisionEdit"
-      @long-rest="handleLongRest"
-      @short-rest="handleShortRest"
-      @toggle-inspiration="toggleInspiration"
-      @toggle-lock="toggleLock"
-    />
+    <!-- До замера ширины контейнера — скелетон: он свёрстан на
+      container-запросах и совпадает с листом в любой раскладке, а подмена
+      происходит до первой отрисовки, поэтому глазу видна только когда контейнер
+      действительно ещё не готов -->
+    <CharacterSheetSkeleton v-if="!isMeasured" />
 
-    <div class="relative flex items-center justify-center py-1">
-      <div
-        class="h-px w-full bg-linear-to-r from-transparent via-warning/40 to-transparent"
+    <template v-else>
+      <SheetHeader
+        :character="character"
+        :locked="isLocked"
+        :can-expand="canExpand"
+        :can-close="canClose"
+        :can-duplicate="canCreate"
+        :readonly="isReadonly"
+        :shared="isShared"
+        :save-status="headerSaveStatus"
+        :pdf-loading="isPdfExporting"
+        :can-save-shared="canSaveShared"
+        :can-copy-shared="canCreate && !isMutating"
+        :can-save-link="canSaveLink"
+        :link-saved="isLinkSaved"
+        @close="handleClose"
+        @download="downloadCharacter"
+        @download-pdf="handleDownloadPdf"
+        @duplicate="handleDuplicate"
+        @remove="handleRemove"
+        @share="handleShare"
+        @copy-shared="handleCopyShared"
+        @save-link="handleSaveLink"
+        @expand="handleExpand"
+        @edit-background="handleBackgroundEdit"
+        @edit-class="handleClassEdit"
+        @edit-name="handleNameEdit"
+        @edit-progress="handleProgressEdit"
+        @edit-settings="handleSettingsEdit"
+        @edit-size="handleSizeEdit"
+        @edit-species="handleSpeciesEdit"
+        @edit-vision="handleVisionEdit"
+        @long-rest="handleLongRest"
+        @short-rest="handleShortRest"
+        @toggle-inspiration="toggleInspiration"
+        @toggle-lock="toggleLock"
       />
 
-      <div class="absolute size-2 rotate-45 border border-warning bg-default" />
-    </div>
+      <div class="relative flex items-center justify-center py-1">
+        <div
+          class="h-px w-full bg-linear-to-r from-transparent via-warning/40 to-transparent"
+        />
 
-    <DefineSummary>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div class="flex flex-col gap-4">
-          <div class="grid grid-cols-2 gap-4">
-            <SheetStatTile
-              label="Мастерство"
-              :value="formattedProficiencyBonus"
-            />
-
-            <SheetStatTile
-              label="Класс доспеха"
-              short-label="КД"
-              :value="armorClassValue"
-              interactive
-              press-label="Настроить класс доспеха"
-              @press="handleArmorClassEdit"
-            />
-          </div>
-
-          <SheetHealthPanel
-            :health="character.health"
-            :hit-dice="character.hitDice"
-            :extra-hit-dice="character.extraHitDice"
-            @edit="handleHealthEdit"
-          />
-
-          <SheetSavingThrowsPanel
-            :rows="savingThrowRows"
-            @roll="handleSavingThrowRoll"
-            @toggle="toggleSavingThrowProficiency"
-          />
-
-          <SheetProficienciesPanel
-            :proficiencies="character.proficiencies"
-            @edit="handleProficienciesEdit"
-          />
-        </div>
-
-        <div class="flex flex-col gap-4">
-          <div class="grid grid-cols-2 gap-4">
-            <SheetSpeedTile
-              :speed="character.speed"
-              @edit="handleSpeedEdit"
-            />
-
-            <SheetStatTile
-              label="Инициатива"
-              :value="formattedInitiative"
-              interactive
-              @press="handleInitiativeRoll"
-            />
-          </div>
-
-          <SheetClassResourcesPanel
-            :resources="character.classResources"
-            @adjust="adjustClassResource"
-            @edit="handleClassResourcesEdit"
-          />
-
-          <SheetSkillsPanel
-            :rows="skillRows"
-            class="grow"
-            @cycle="cycleSkillProficiency"
-            @roll="handleSkillRoll"
-          />
-        </div>
-      </div>
-    </DefineSummary>
-
-    <div
-      class="grid grid-cols-1 gap-4 @5xl:grid-cols-12 @5xl:grid-rows-[min-content_1fr]"
-    >
-      <div
-        ref="abilitiesRef"
-        class="@5xl:col-span-6 @5xl:col-start-7 @5xl:row-start-1"
-      >
-        <SheetAbilitiesRow
-          :rows="abilityRows"
-          @roll="handleAbilityRoll"
-          @settings="handleAbilityEdit"
-          @adjust="handleAbilityAdjust"
+        <div
+          class="absolute size-2 rotate-45 border border-warning bg-default"
         />
       </div>
 
+      <DefineSummary>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="flex flex-col gap-4">
+            <div class="grid grid-cols-2 gap-4">
+              <SheetStatTile
+                label="Мастерство"
+                :value="formattedProficiencyBonus"
+              />
+
+              <SheetStatTile
+                label="Класс доспеха"
+                short-label="КД"
+                :value="armorClassValue"
+                interactive
+                press-label="Настроить класс доспеха"
+                @press="handleArmorClassEdit"
+              />
+            </div>
+
+            <SheetHealthPanel
+              :health="character.health"
+              :hit-dice="character.hitDice"
+              :extra-hit-dice="character.extraHitDice"
+              @edit="handleHealthEdit"
+            />
+
+            <SheetSavingThrowsPanel
+              :rows="savingThrowRows"
+              @roll="handleSavingThrowRoll"
+              @toggle="toggleSavingThrowProficiency"
+            />
+
+            <SheetProficienciesPanel
+              :proficiencies="character.proficiencies"
+              @edit="handleProficienciesEdit"
+            />
+          </div>
+
+          <div class="flex flex-col gap-4">
+            <div class="grid grid-cols-2 gap-4">
+              <SheetSpeedTile
+                :speed="character.speed"
+                @edit="handleSpeedEdit"
+              />
+
+              <SheetStatTile
+                label="Инициатива"
+                :value="formattedInitiative"
+                interactive
+                @press="handleInitiativeRoll"
+              />
+            </div>
+
+            <SheetClassResourcesPanel
+              :resources="character.classResources"
+              @adjust="adjustClassResource"
+              @edit="handleClassResourcesEdit"
+            />
+
+            <SheetSkillsPanel
+              :rows="skillRows"
+              class="grow"
+              @cycle="cycleSkillProficiency"
+              @roll="handleSkillRoll"
+            />
+          </div>
+        </div>
+      </DefineSummary>
+
       <div
-        v-if="isWide"
-        ref="leftColumnRef"
-        class="@5xl:col-span-6 @5xl:col-start-1 @5xl:row-span-2 @5xl:row-start-1 @5xl:self-start"
+        class="grid grid-cols-1 gap-4 @5xl:grid-cols-12 @5xl:grid-rows-[min-content_1fr]"
       >
-        <ReuseSummary />
+        <div
+          ref="abilitiesRef"
+          class="@5xl:col-span-6 @5xl:col-start-7 @5xl:row-start-1"
+        >
+          <SheetAbilitiesRow
+            :rows="abilityRows"
+            @roll="handleAbilityRoll"
+            @settings="handleAbilityEdit"
+            @adjust="handleAbilityAdjust"
+          />
+        </div>
+
+        <div
+          v-if="isWide"
+          ref="leftColumnRef"
+          class="@5xl:col-span-6 @5xl:col-start-1 @5xl:row-span-2 @5xl:row-start-1 @5xl:self-start"
+        >
+          <ReuseSummary />
+        </div>
+
+        <SheetInventoryTabs
+          :currency="character.currency"
+          :custom-currencies="character.customCurrencies"
+          :inventory="character.inventory"
+          :total-weight="totalWeight"
+          :carrying-capacity="carryingCapacity"
+          :features="character.features"
+          :spells="character.spells"
+          :spellcasting="spellcastingBreakdown"
+          :spell-slots="spellSlotRows"
+          :has-main-tab="!isWide"
+          :style="tabsStyle"
+          class="@5xl:col-span-6 @5xl:col-start-7 @5xl:row-start-2 @5xl:min-h-0"
+          @add-feature="handleFeatureAdd"
+          @add-feat="handleFeatAdd"
+          @add-item="handleItemAdd"
+          @add-magic-item="handleMagicItemAdd"
+          @add-custom-item="handleCustomItemAdd"
+          @edit-item="handleItemEdit"
+          @copy-item="handleItemCopy"
+          @add-spell="handleSpellAdd"
+          @add-custom-spell="handleCustomSpellAdd"
+          @edit-spell="handleSpellEdit"
+          @copy-spell="handleSpellCopy"
+          @edit-spellcasting="handleSpellcastingEdit"
+          @edit-currency="handleCurrencyEdit"
+          @adjust-item-quantity="adjustInventoryItemQuantity"
+          @toggle-item-equip="toggleInventoryItemEquipped"
+          @roll-item-attack="handleItemAttackRoll"
+          @roll-item-damage="handleItemDamageRoll"
+          @edit-feature="handleFeatureEdit"
+          @remove-feature="removeFeature"
+          @remove-item="removeInventoryItem"
+          @remove-spell="removeSpell"
+          @toggle-spell-slot="toggleSpellSlot"
+        >
+          <template #main>
+            <ReuseSummary />
+          </template>
+        </SheetInventoryTabs>
       </div>
 
-      <SheetInventoryTabs
-        :currency="character.currency"
-        :custom-currencies="character.customCurrencies"
-        :inventory="character.inventory"
-        :total-weight="totalWeight"
-        :carrying-capacity="carryingCapacity"
-        :features="character.features"
-        :spells="character.spells"
-        :spellcasting="spellcastingBreakdown"
-        :spell-slots="spellSlotRows"
-        :has-main-tab="!isWide"
-        :style="tabsStyle"
-        class="@5xl:col-span-6 @5xl:col-start-7 @5xl:row-start-2 @5xl:min-h-0"
-        @add-feature="handleFeatureAdd"
-        @add-feat="handleFeatAdd"
-        @add-item="handleItemAdd"
-        @add-magic-item="handleMagicItemAdd"
-        @add-custom-item="handleCustomItemAdd"
-        @edit-item="handleItemEdit"
-        @copy-item="handleItemCopy"
-        @add-spell="handleSpellAdd"
-        @add-custom-spell="handleCustomSpellAdd"
-        @edit-spell="handleSpellEdit"
-        @copy-spell="handleSpellCopy"
-        @edit-spellcasting="handleSpellcastingEdit"
-        @edit-currency="handleCurrencyEdit"
-        @adjust-item-quantity="adjustInventoryItemQuantity"
-        @toggle-item-equip="toggleInventoryItemEquipped"
-        @roll-item-attack="handleItemAttackRoll"
-        @roll-item-damage="handleItemDamageRoll"
-        @edit-feature="handleFeatureEdit"
-        @remove-feature="removeFeature"
-        @remove-item="removeInventoryItem"
-        @remove-spell="removeSpell"
-        @toggle-spell-slot="toggleSpellSlot"
-      >
-        <template #main>
-          <ReuseSummary />
-        </template>
-      </SheetInventoryTabs>
-    </div>
-
-    <ConfirmDialog
-      v-model:open="isRemoveOpen"
-      title="Удалить лист персонажа?"
-      :description="removeDescription"
-      confirm-label="Удалить"
-      confirm-color="error"
-      confirm-icon="tabler:trash"
-      :loading="isMutating"
-      @confirm="handleRemoveConfirm"
-    />
+      <ConfirmDialog
+        v-model:open="isRemoveOpen"
+        title="Удалить лист персонажа?"
+        :description="removeDescription"
+        confirm-label="Удалить"
+        confirm-color="error"
+        confirm-icon="tabler:trash"
+        :loading="isMutating"
+        @confirm="handleRemoveConfirm"
+      />
+    </template>
   </div>
 </template>
