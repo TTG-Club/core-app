@@ -1,5 +1,10 @@
 <script setup lang="ts">
-  import type { ClassChoice, SpeciesOption, SpeciesSummary } from '../../model';
+  import type {
+    ClassChoice,
+    FeatureDescriptionNode,
+    SpeciesOption,
+    SpeciesSummary,
+  } from '../../model';
 
   import { SpeciesDrawer } from '~species/drawer';
   import { MarkupRender } from '~ui/markup';
@@ -181,7 +186,7 @@
     const rows: Array<{
       id: string;
       name: string;
-      description: string[];
+      description: FeatureDescriptionNode[];
       originLabel: string;
       choiceControl: ClassChoice | null;
     }> = [];

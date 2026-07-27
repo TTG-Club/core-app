@@ -453,8 +453,8 @@ export interface FeatSummary {
   name: string;
   category: string;
 
-  /** Описание в разметке сайта (строки верхнего уровня). */
-  description: string[];
+  /** Описание в разметке сайта (строки и блочные узлы верхнего уровня). */
+  description: FeatureDescriptionNode[];
 }
 
 /** Заклинание в книге персонажа (и опция поиска заклинаний). */
@@ -658,8 +658,8 @@ export interface SpeciesFeatureSummary {
   url: string;
   name: string;
 
-  /** Описание в разметке сайта. */
-  description: string[];
+  /** Описание в разметке сайта (строки и блочные узлы верхнего уровня). */
+  description: FeatureDescriptionNode[];
 }
 
 /** Деталь вида или подвида из ответа API (нужные листу поля). */

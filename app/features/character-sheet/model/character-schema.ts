@@ -48,6 +48,14 @@ const descriptionNodeSchema = z.custom<FeatureDescriptionNode>(
     typeof value === 'string' || (typeof value === 'object' && value !== null),
 );
 
+/**
+ * Описание целиком: строки-абзацы и блочные узлы вперемешку. Разделы отдают
+ * описания в той же форме, что хранит документ листа, поэтому схема одна на
+ * оба случая (`schemas.ts` разбирает ей ответы API). Битое значение даёт пустое
+ * описание, а не исключение.
+ */
+export const descriptionNodesSchema = z.array(descriptionNodeSchema).catch([]);
+
 const speciesSchema = z
   .object({
     url: z.string(),
@@ -87,7 +95,7 @@ const characterBackgroundSchema = z
 const featureSchema = z.object({
   id: z.string(),
   name: z.string().catch(''),
-  description: z.array(descriptionNodeSchema).catch([]),
+  description: descriptionNodesSchema,
   origin: z.enum(['species', 'lineage', 'class', 'feat', 'none']).catch('none'),
   originName: z.string().catch(''),
   choice: z.string().nullable().catch(null),
