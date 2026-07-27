@@ -357,6 +357,9 @@ export const CURRENCY_AMOUNT_MIN = 0;
 /** Максимальное количество денежной единицы. */
 export const CURRENCY_AMOUNT_MAX = 9999999;
 
+/** Монет в одном фунте веса: по правилам 2024 монета весит 1/50 фунта. */
+export const COINS_PER_WEIGHT_UNIT = 50;
+
 /** Максимальная длина сокращения пользовательской валюты. */
 export const CUSTOM_CURRENCY_LABEL_MAX_LENGTH = 4;
 

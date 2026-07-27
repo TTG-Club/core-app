@@ -120,7 +120,7 @@ export function drawEquipmentPage(
 
   drawSectionHeader(context, flow, PDF_TITLES.equipment);
 
-  const carried = getInventoryWeight(character.inventory);
+  const carried = getInventoryWeight(character.inventory, character.currency);
   const capacity = getCarryingCapacity(character.abilities.strength);
 
   const columns = getEquipmentColumns();

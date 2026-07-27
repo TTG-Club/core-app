@@ -12,6 +12,7 @@ import type {
   CatalogSpellDetail,
   Character,
   CharacterClass,
+  CharacterCurrency,
   CharacterExtraHitDie,
   CharacterFeature,
   CharacterHealth,
@@ -97,6 +98,8 @@ import {
   CHARACTER_FILE_NAME_FALLBACK,
   CLASS_SPELL_PROGRESSIONS,
   CLASS_SPELLCASTING_ABILITIES,
+  COINS_PER_WEIGHT_UNIT,
+  CURRENCY_ORDER,
   CUSTOM_ARMOR_TYPE_BY_DEXTERITY_MOD,
   CUSTOM_ARMOR_TYPE_META,
   CUSTOM_INVENTORY_KIND_CATEGORIES,
@@ -293,19 +296,29 @@ export function getSkillRows(character: Character): SkillRow[] {
 }
 
 /**
- * Суммарный вес инвентаря в фунтах с учётом количества. Округляется до одного
- * знака: вес предмета бывает дробным (например, 0,5 фунта).
+ * Суммарный переносимый вес в фунтах: предметы с учётом количества плюс
+ * стандартные монеты — по правилам 2024 монета весит 1/50 фунта. Округляется
+ * до одного знака: вес предмета бывает дробным (например, 0,5 фунта).
  *
  * @param inventoryItems предметы инвентаря.
- * @returns суммарный вес всех предметов.
+ * @param currency стандартные монеты персонажа.
+ * @returns суммарный переносимый вес.
  */
 export function getInventoryWeight(
   inventoryItems: CharacterInventoryItem[],
+  currency: CharacterCurrency,
 ): number {
-  const total = inventoryItems.reduce(
+  const itemsWeight = inventoryItems.reduce(
     (sum, inventoryItem) => sum + inventoryItem.weight * inventoryItem.quantity,
     0,
   );
+
+  const coinsCount = CURRENCY_ORDER.reduce(
+    (sum, key) => sum + currency[key],
+    0,
+  );
+
+  const total = itemsWeight + coinsCount / COINS_PER_WEIGHT_UNIT;
 
   const factor = 10 ** WEIGHT_DECIMALS;
 

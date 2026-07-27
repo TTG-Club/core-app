@@ -88,6 +88,11 @@ import {
  * @returns целое количество в диапазоне `[CURRENCY_AMOUNT_MIN, CURRENCY_AMOUNT_MAX]`.
  */
 function clampCurrencyAmount(amount: number): number {
+  // Очищенное поле ввода отдаёт NaN — считаем его нулём, а не сохраняем.
+  if (!Number.isFinite(amount)) {
+    return CURRENCY_AMOUNT_MIN;
+  }
+
   return clamp(Math.trunc(amount), CURRENCY_AMOUNT_MIN, CURRENCY_AMOUNT_MAX);
 }
 
@@ -242,7 +247,7 @@ export function useCharacterSheet() {
   const spellSlotRows = computed(() => getSpellSlotRows(character.value));
 
   const totalWeight = computed(() =>
-    getInventoryWeight(character.value.inventory),
+    getInventoryWeight(character.value.inventory, character.value.currency),
   );
 
   const carryingCapacity = computed(() =>
