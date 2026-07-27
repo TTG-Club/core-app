@@ -66,6 +66,7 @@ import {
   LEVEL_MIN,
   RESOURCE_COUNT_MAX,
   RESOURCE_COUNT_MIN,
+  RESOURCE_SHORT_LABEL_MAX_LENGTH,
   SHEET_HIDDEN_CONTROL_CLASS,
   SHEET_LOCKED_MESSAGE,
   SHEET_READONLY_MESSAGE,
@@ -251,7 +252,10 @@ export function useCharacterSheet() {
   );
 
   const carryingCapacity = computed(() =>
-    getCarryingCapacity(character.value.abilities.strength),
+    getCarryingCapacity(
+      character.value.abilities.strength,
+      character.value.size,
+    ),
   );
 
   /**
@@ -327,19 +331,34 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
-      classResources: resources.map((resource) => {
-        const max = clamp(
-          Math.trunc(resource.max),
-          RESOURCE_COUNT_MIN,
-          RESOURCE_COUNT_MAX,
-        );
+      // Подписи новой строки пустые (в полях только плейсхолдеры): недостающую
+      // достраиваем из соседней, а строку без обеих не сохраняем — на панели
+      // она осталась бы пустым рядом.
+      classResources: resources
+        .map((resource) => {
+          const name = resource.name.trim();
+          const shortLabel = resource.shortLabel.trim();
 
-        return {
-          ...resource,
-          max,
-          current: clamp(Math.trunc(resource.current), RESOURCE_COUNT_MIN, max),
-        };
-      }),
+          const max = clamp(
+            Math.trunc(resource.max),
+            RESOURCE_COUNT_MIN,
+            RESOURCE_COUNT_MAX,
+          );
+
+          return {
+            ...resource,
+            name: name || shortLabel,
+            shortLabel:
+              shortLabel || name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
+            max,
+            current: clamp(
+              Math.trunc(resource.current),
+              RESOURCE_COUNT_MIN,
+              max,
+            ),
+          };
+        })
+        .filter((resource) => resource.shortLabel.length > 0),
     };
   }
 

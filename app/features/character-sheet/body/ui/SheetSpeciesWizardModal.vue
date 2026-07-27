@@ -9,7 +9,7 @@
   import { SpeciesDrawer } from '~species/drawer';
   import { MarkupRender } from '~ui/markup';
 
-  import { useCharacterSheet } from '../../composables';
+  import { useCatalogSourceQuery, useCharacterSheet } from '../../composables';
   import {
     buildCharacterFeatures,
     detectFeatureChoice,
@@ -23,11 +23,14 @@
     parseSpeciesOptions,
     parseSpeedFromText,
     resolveChoiceOptions,
+    SHEET_SEARCH_LABELS,
     SPECIES_DETAIL_BASE_PATH,
+    SPECIES_FILTERS_PATH,
     SPECIES_SEARCH_PATH,
     TOOL_PROFICIENCY_GROUPS,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetSearchInput from './SheetSearchInput.vue';
 
   type WizardStep = 'species' | 'features';
 
@@ -56,12 +59,21 @@
 
   const step = ref<WizardStep>('species');
 
+  // Источники берутся из глобальной настройки профиля — визард не показывает
+  // виды из отключённых книг. Запрос ждём до списка: иначе первая выдача
+  // пришла бы по всем источникам и мигнула лишними строками.
+  const { sourceQuery } = await useCatalogSourceQuery(
+    'character-sheet:species-sources',
+    SPECIES_FILTERS_PATH,
+  );
+
   // Полный список видов загружается сразу при открытии визарда.
   const { data: speciesList, status: listStatus } = await useAsyncData(
     'character-sheet:species-list',
     async () => {
       const response = await $fetch<unknown>(SPECIES_SEARCH_PATH, {
         method: 'GET',
+        query: { ...sourceQuery.value },
         retry: 0,
       });
 
@@ -483,10 +495,9 @@
     <template #body>
       <div class="flex min-h-48 flex-col gap-4">
         <template v-if="step === 'species'">
-          <UInput
+          <SheetSearchInput
             v-model="searchTerm"
-            icon="tabler:search"
-            placeholder="Поиск по названию…"
+            :placeholder="SHEET_SEARCH_LABELS.byNamePlaceholder"
           />
 
           <div

@@ -18,6 +18,8 @@
     CUSTOM_ITEM_WEIGHT_MAX,
     CUSTOM_ITEM_WEIGHT_MIN,
     CUSTOM_ITEM_WEIGHT_STEP,
+    CUSTOM_MAGIC_ITEM_HINT,
+    CUSTOM_MAGIC_ITEM_LABEL,
     DAMAGE_BONUS_MAX,
     DAMAGE_BONUS_MIN,
     DAMAGE_DICE_COUNT_MAX,
@@ -63,6 +65,8 @@
   const draftKind = ref<CustomInventoryKind>(initialDraft.kind);
 
   const draftName = ref(initialDraft.name);
+
+  const draftMagic = ref(initialDraft.magic);
 
   const draftCost = ref(initialDraft.cost);
 
@@ -138,6 +142,7 @@
     return {
       kind: draftKind.value,
       name: draftName.value,
+      magic: draftMagic.value,
       cost: draftCost.value,
       weight: draftWeight.value,
       quantity: draftQuantity.value,
@@ -196,6 +201,17 @@
             color="warning"
             :ui="{ fieldset: 'flex-wrap gap-y-2' }"
           />
+
+          <!-- Магическим бывает предмет любого вида, поэтому пометка стоит
+            отдельно от него: она меняет только группу в снаряжении, а урон и
+            класс доспеха остаются при предмете -->
+          <UCheckbox
+            v-model="draftMagic"
+            :label="CUSTOM_MAGIC_ITEM_LABEL"
+            class="pt-1"
+          />
+
+          <span class="text-xs text-dimmed">{{ CUSTOM_MAGIC_ITEM_HINT }}</span>
         </div>
 
         <!-- Количество уезжает на вторую строку, пока форма узкая: рядом с ним

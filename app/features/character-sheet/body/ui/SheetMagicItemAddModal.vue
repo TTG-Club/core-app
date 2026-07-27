@@ -5,8 +5,6 @@
 
   import type { MagicItemCatalogItem } from '../../model';
 
-  import { omit } from 'es-toolkit';
-
   import {
     buildSearchQuery,
     FilterDrawer,
@@ -25,6 +23,7 @@
     MAGIC_ITEMS_SEARCH_PATH,
     parseMagicItemCatalog,
   } from '../../model';
+  import SheetSearchInput from './SheetSearchInput.vue';
 
   const emit = defineEmits<{
     close: [];
@@ -79,10 +78,11 @@
     () => filterState.value?.filters ?? [],
   );
 
-  // Источники в модалке не редактируются и в запрос не уходят: каталог ищет
-  // по всем источникам. buildSearchQuery иначе добавил бы дефолтный выбор.
+  // Источники в модалке не редактируются, но в запрос уходят: их выбор —
+  // глобальная настройка профиля, которую бэкенд проставляет в ответе фильтров.
+  // Фильтры дождались `await` выше, поэтому первый запрос каталога уже с ними.
   const catalogFilterQuery = computed<LocationQuery>(() =>
-    omit(buildSearchQuery(filterState.value), ['source']),
+    buildSearchQuery(filterState.value),
   );
 
   // Перезагрузка по фактическому изменению query (сравнение по JSON):
@@ -322,11 +322,9 @@
       <div class="flex h-[65dvh] min-h-96 flex-col gap-3 sm:flex-row sm:gap-4">
         <!-- Мобильная панель: поиск над списком + кнопка «Фильтр». -->
         <div class="flex shrink-0 items-center gap-2 sm:hidden">
-          <UInput
+          <SheetSearchInput
             v-model="searchTerm"
-            icon="tabler:search"
             size="sm"
-            placeholder="Поиск…"
             class="min-w-0 grow"
           />
 
@@ -359,11 +357,9 @@
         <aside
           class="hidden w-44 shrink-0 flex-col gap-4 overflow-y-auto sm:flex"
         >
-          <UInput
+          <SheetSearchInput
             v-model="searchTerm"
-            icon="tabler:search"
             size="sm"
-            placeholder="Поиск…"
             class="shrink-0"
           />
 

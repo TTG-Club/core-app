@@ -1,6 +1,10 @@
 <script setup lang="ts">
   import { USER_TOKEN_COOKIE } from '#shared/consts';
   import {
+    CHARACTER_SHEET_LIST_TITLE,
+    CHARACTER_SHEET_ROUTE,
+  } from '~character-sheet/model';
+  import {
     MODERATION_PANEL_ICON,
     MODERATION_PANEL_TITLE,
     MODERATION_ROUTE,
@@ -137,6 +141,20 @@
               @click.left.exact.prevent="openProfile"
             >
               Профиль
+            </UButton>
+
+            <!-- Короткий путь к своим листам: раздел лежит в «Инструментах»
+              бокового меню, а из шапки до него было не добраться -->
+            <UButton
+              icon="tabler:id"
+              color="neutral"
+              variant="ghost"
+              class="w-full"
+              size="lg"
+              :to="CHARACTER_SHEET_ROUTE"
+              @click.left.exact="closeMenu"
+            >
+              {{ CHARACTER_SHEET_LIST_TITLE }}
             </UButton>
 
             <UButton

@@ -235,6 +235,20 @@ export const SHEET_SHARE_LABELS: Record<
     'Правки, броски и настройки ему недоступны — редактирование остаётся только у вас.',
 };
 
+/**
+ * Подписи поиска в модалках добавления. Разные подсказки на месте: в узком
+ * сайдбаре с фильтрами помещается только короткая, в широкой форме визарда
+ * уточняем, что ищем по названию.
+ */
+export const SHEET_SEARCH_LABELS: Record<
+  'placeholder' | 'byNamePlaceholder' | 'clear',
+  string
+> = {
+  placeholder: 'Поиск…',
+  byNamePlaceholder: 'Поиск по названию…',
+  clear: 'Очистить поиск',
+};
+
 /** Заголовок тоста с ошибкой доступа по ссылке. */
 export const SHEET_SHARE_ERROR_TITLE = 'Не удалось изменить доступ по ссылке';
 
@@ -435,10 +449,19 @@ export const RESOURCE_COUNT_MAX = 99;
 /** Максимальная длина короткой подписи ресурса. */
 export const RESOURCE_SHORT_LABEL_MAX_LENGTH = 4;
 
-/** Заготовка нового ресурса класса (без идентификатора). */
+/** Подсказки полей ресурса класса: пример вместо подставленного текста. */
+export const RESOURCE_PLACEHOLDERS: Record<'name' | 'shortLabel', string> = {
+  name: 'Например, Ярость',
+  shortLabel: 'ЯР',
+};
+
+/**
+ * Заготовка нового ресурса класса (без идентификатора). Подписи пустые —
+ * пример показывает плейсхолдер, чтобы не стирать текст перед вводом своего.
+ */
 export const NEW_CLASS_RESOURCE: Omit<CharacterClassResource, 'id'> = {
-  name: 'Новый счётчик',
-  shortLabel: 'НС',
+  name: '',
+  shortLabel: '',
   recovery: 'long-rest',
   current: 1,
   max: 1,
@@ -551,6 +574,22 @@ export const SKILL_PROFICIENCY_MULTIPLIERS: Record<
 
 /** Множитель грузоподъёмности от значения Силы. */
 export const CARRYING_CAPACITY_MULTIPLIER = 15;
+
+/**
+ * Поправка грузоподъёмности на размер (правила 2024): у Крошечного она вдвое
+ * меньше, а с Большого удваивается на каждую категорию. Ключи — подписи размеров
+ * в нижнем регистре: размер лист хранит русским словом из словаря сайта.
+ * «Исполинский» — та же категория, что «Громадный», в текстах встречаются оба.
+ */
+export const CARRYING_CAPACITY_SIZE_MULTIPLIERS: Record<string, number> = {
+  крошечный: 0.5,
+  маленький: 1,
+  средний: 1,
+  большой: 2,
+  огромный: 4,
+  громадный: 8,
+  исполинский: 8,
+};
 
 /** Единица измерения веса инвентаря. */
 export const WEIGHT_UNIT_LABEL = 'фнт.';
@@ -1056,8 +1095,14 @@ export const FEATS_SELECT_PATH = '/api/v2/feats/select';
 /** Базовый путь деталей черты (`/{url}`). */
 export const FEATS_DETAIL_BASE_PATH = '/api/v2/feats';
 
+/** Эндпоинт фильтров черт — источник глобальной настройки источников. */
+export const FEATS_FILTERS_PATH = '/api/v2/feats/filters';
+
 /** Эндпоинт поиска видов. */
 export const SPECIES_SEARCH_PATH = '/api/v2/species/search';
+
+/** Эндпоинт фильтров видов — источник глобальной настройки источников. */
+export const SPECIES_FILTERS_PATH = '/api/v2/species/filters';
 
 /** Эндпоинт поиска заклинаний. */
 export const SPELLS_SEARCH_PATH = '/api/v2/spells/search';
@@ -1206,6 +1251,9 @@ export const CLASSES_SEARCH_PATH = '/api/v2/classes/search';
 /** Базовый путь деталей класса (`/{url}` и `/{url}/subclasses`). */
 export const CLASSES_DETAIL_BASE_PATH = '/api/v2/classes';
 
+/** Эндпоинт фильтров классов — источник глобальной настройки источников. */
+export const CLASSES_FILTERS_PATH = '/api/v2/classes/filters';
+
 /** Минимальный уровень персонажа для выбора подкласса (D&D 2024 — 3-й). */
 export const SUBCLASS_SELECTION_MIN_LEVEL = 3;
 
@@ -1214,6 +1262,9 @@ export const BACKGROUNDS_SEARCH_PATH = '/api/v2/backgrounds/search';
 
 /** Базовый путь деталей предыстории (`/{url}`). */
 export const BACKGROUNDS_DETAIL_BASE_PATH = '/api/v2/backgrounds';
+
+/** Эндпоинт фильтров предысторий — источник глобальной настройки источников. */
+export const BACKGROUNDS_FILTERS_PATH = '/api/v2/backgrounds/filters';
 
 /** Варианты распределения прибавок к характеристикам от предыстории. */
 export const BACKGROUND_ABILITY_MODE_OPTIONS: Array<{
@@ -1273,12 +1324,15 @@ export const MAGIC_ITEMS_DETAIL_BASE_PATH = '/api/v2/magic-items';
 /** Эндпоинт фильтров магических предметов. */
 export const MAGIC_ITEMS_FILTERS_PATH = '/api/v2/magic-items/filters';
 
-/** Порядок групп инвентаря по категориям предмета. */
+/**
+ * Порядок групп инвентаря по категориям предмета: «Прочее» — самая длинная
+ * группа, поэтому магические предметы идут перед ней, а не в самом низу списка.
+ */
 export const INVENTORY_CATEGORY_ORDER: InventoryItemCategory[] = [
   'WEAPON',
   'ARMOR',
-  'ITEM',
   'MAGIC_ITEM',
+  'ITEM',
 ];
 
 /** Названия групп инвентаря по категориям предмета. */
@@ -1386,6 +1440,16 @@ export const CUSTOM_INVENTORY_KIND_CATEGORIES: Record<
 
 /** Подпись типов своего предмета вида «Безделушка». */
 export const CUSTOM_TRINKET_TYPES_LABEL = 'Безделушка';
+
+/**
+ * Подпись пометки «магический»: ею подписан и чекбокс формы своего предмета, и
+ * типы магической безделушки в строке снаряжения — параметров, которые стоило
+ * бы назвать точнее, у неё нет.
+ */
+export const CUSTOM_MAGIC_ITEM_LABEL = 'Магический предмет';
+
+/** Пояснение к пометке: она переносит предмет в группу магических. */
+export const CUSTOM_MAGIC_ITEM_HINT = `${CUSTOM_MAGIC_ITEM_LABEL} попадёт в группу «${INVENTORY_CATEGORY_TITLES.MAGIC_ITEM}».`;
 
 /** Названия категорий владения оружием. */
 export const WEAPON_CATEGORY_LABELS: Record<WeaponCategory, string> = {
@@ -1521,6 +1585,7 @@ export const WEIGHT_DECIMALS = 1;
 export const NEW_CUSTOM_INVENTORY_ITEM: CustomInventoryItemDraft = {
   kind: 'weapon',
   name: '',
+  magic: false,
   cost: '',
   weight: 0,
   quantity: 1,

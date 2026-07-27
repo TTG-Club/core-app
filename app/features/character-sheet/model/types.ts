@@ -907,6 +907,12 @@ export interface CustomInventoryItemDraft {
   kind: CustomInventoryKind;
   name: string;
 
+  /**
+   * Магический предмет — попадает в группу «Магические предметы» независимо от
+   * вида; параметры оружия и доспеха при этом сохраняются.
+   */
+  magic: boolean;
+
   /** Подпись стоимости как её ввёл игрок (например, «75 зм»); '' — не указана. */
   cost: string;
 

@@ -8,6 +8,7 @@ export {
   useCharacterSheetSaveStatus,
 } from './useCharacterSheetAutosave';
 
+export { useCatalogSourceQuery } from './useCatalogSourceQuery';
 export { useCharacterSheet } from './useCharacterSheet';
 export { useCharacterSheetDetail } from './useCharacterSheetDetail';
 export { useCharacterSheetList } from './useCharacterSheetList';

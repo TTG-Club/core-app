@@ -35,6 +35,7 @@ export { default as SheetProficienciesPanel } from './SheetProficienciesPanel.vu
 export { default as SheetProficiencyGroupsModal } from './SheetProficiencyGroupsModal.vue';
 export { default as SheetRollModal } from './SheetRollModal.vue';
 export { default as SheetSavingThrowsPanel } from './SheetSavingThrowsPanel.vue';
+export { default as SheetSearchInput } from './SheetSearchInput.vue';
 export { default as SheetSettingsModal } from './SheetSettingsModal.vue';
 export { default as SheetShareModal } from './SheetShareModal.vue';
 export { default as SheetShortRestModal } from './SheetShortRestModal.vue';
