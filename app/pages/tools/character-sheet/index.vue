@@ -18,7 +18,7 @@
   import { UiResult } from '~ui/result';
 
   definePageMeta({
-    auth: { roles: [Role.ADMIN] },
+    auth: { roles: [Role.USER] },
   });
 
   useSeoMeta({

@@ -136,8 +136,8 @@
   const isShared = computed(() => isSheetShared(character.value.id));
 
   // Сохранить чужой лист к себе может только тот, у кого есть доступ к самому
-  // инструменту: обе ручки закрыты ролью, анониму их показывать нечестно.
-  const { isAdmin } = useUserRoles();
+  // инструменту: обе ручки закрыты авторизацией, анониму их показывать нечестно.
+  const { isLoggedIn } = useUser();
 
   const {
     canSave: canSaveLink,
@@ -147,7 +147,8 @@
   } = useCharacterSheetSaved();
 
   const canSaveShared = computed(
-    () => isReadonly.value && isAdmin.value && Boolean(viewedShareToken.value),
+    () =>
+      isReadonly.value && isLoggedIn.value && Boolean(viewedShareToken.value),
   );
 
   const isLinkSaved = computed(() =>

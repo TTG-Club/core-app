@@ -97,7 +97,7 @@ export const MENU_SECTIONS: Array<MenuSection> = [
       {
         href: '/tools/character-sheet',
         label: 'Лист персонажа',
-        roles: [Role.ADMIN],
+        roles: [Role.USER],
       },
     ],
   },
