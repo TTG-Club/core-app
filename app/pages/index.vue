@@ -1,12 +1,13 @@
 <script setup lang="ts">
   import { HomeArticles } from '~home/articles';
   import { HomeBackground } from '~home/background';
-  import { HomeBanners, VttgCampaignBanner } from '~home/banners';
+  import { VttgCampaignBanner } from '~home/banners';
   import { HomeCommunity } from '~home/community';
   import { HomeNews } from '~home/news';
   import { HomeRecentChanges } from '~home/recent-changes';
   import { HomeSections } from '~home/sections';
   import { SocialLinks } from '~home/social-links';
+  import { HomeTools } from '~home/tools';
   import { SearchPanel } from '~infrastructure/search';
 
   definePageMeta({
@@ -52,9 +53,7 @@
 
         <!-- Навигация по сайту и обновления -->
         <div class="contents xl:flex xl:w-1/3 xl:flex-col xl:gap-3 2xl:w-1/3">
-          <div class="order-1 grid grid-cols-2 gap-3 xl:order-0">
-            <HomeBanners />
-          </div>
+          <HomeTools class="order-1 xl:order-0" />
 
           <HomeArticles class="order-5 xl:order-0" />
 
