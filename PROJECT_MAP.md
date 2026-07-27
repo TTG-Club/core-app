@@ -88,13 +88,13 @@ core-app/
 
 ### 🛠️ Interactive tools
 
-| Domain            | Purpose                                                                                                                                        | Sub-features                                                                                                                             |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `tokenator`       | Canvas VTT token generator (`/tokenator`): mask/frame/tint/text/3D lighting, export. Dexie (IndexedDB) + Pinia store                           | `canvas`, `controls`, `preview`, `model`, `composables`                                                                                  |
-| `dice-roller`     | Dice-notation roller w/ crit detection + history; float/sidebar toggle, inline links, modal                                                    | `modal`, `float-button`, `sidebar-button`, `link`, `composables`, `model` (+ legacy `const.ts` / `types.ts` / `utils.ts` at domain root) |
-| `calculator`      | Character-math tools container (`/calculators/abilities`)                                                                                      | `abilities` — ability-score calc (Point Buy / Standard Array / Random Roll)                                                              |
-| `initiative`      | Initiative tracker (`/tools/initiative[/:id]`): participants, HP/AC editing, bestiary lookup; anonymous slot in localStorage + `X-Tracker-Key` | `list`, `workspace`, `ui-kit`, `composables`, `model`                                                                                    |
-| `character-sheet` | D&D 2024 character sheet (`/tools/character-sheet[/:id]`, ADMIN-only) — see the breakdown below                                                | `body`, `list`, `controls`, `drawer`, `composables`, `model`                                                                             |
+| Domain            | Purpose                                                                                                                                                                             | Sub-features                                                                                                                             |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `tokenator`       | Canvas VTT token generator (`/tokenator`): mask/frame/tint/text/3D lighting, export. Dexie (IndexedDB) + Pinia store                                                                | `canvas`, `controls`, `preview`, `model`, `composables`                                                                                  |
+| `dice-roller`     | Dice-notation roller w/ crit detection + history; float/sidebar toggle, inline links, modal                                                                                         | `modal`, `float-button`, `sidebar-button`, `link`, `composables`, `model` (+ legacy `const.ts` / `types.ts` / `utils.ts` at domain root) |
+| `calculator`      | Character-math tools container (`/calculators/abilities`)                                                                                                                           | `abilities` — ability-score calc (Point Buy / Standard Array / Random Roll)                                                              |
+| `initiative`      | Initiative tracker (`/tools/initiative[/:id]`): participants, HP/AC editing, bestiary lookup; anonymous slot in localStorage + `X-Tracker-Key`                                      | `list`, `workspace`, `ui-kit`, `composables`, `model`                                                                                    |
+| `character-sheet` | D&D 2024 character sheet (`/tools/character-sheet[/:id]`; the list page is public and shows a sign-in prompt to guests, creating/saving needs an account) — see the breakdown below | `body`, `list`, `controls`, `drawer`, `composables`, `model`                                                                             |
 
 #### `character-sheet` in detail
 
@@ -158,8 +158,10 @@ modals), so its capabilities are listed here rather than squeezed into the table
 **Sharing**
 
 - Share-by-link from the header action menu: the owner issues / revokes a token
-  and guests open `/tools/character-sheet/shared/<token>` — the only page of the
-  section without an auth guard — in a read-only mode with no autosave.
+  and guests open `/tools/character-sheet/shared/<token>` — access is decided by
+  the token, not the session — in a read-only mode with no autosave. Of the
+  section pages only `/:id` keeps an auth guard: the list page is public and
+  swaps its private content for a sign-in prompt when there is no session.
 - A viewer with access to the tool gets two extra items in the header action
   menu of a shared sheet: **copy** the document into their own sheets
   (`copyShared`, no backend of its own — a plain `POST` of the copied document)
@@ -174,13 +176,13 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 ### 📰 Content & publishing
 
-| Domain     | Purpose                                                                                                                                    | Sub-features                                                                                                                                                                       |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `articles` | News/article publishing (`NEWS`/`ARTICLE`; draft·active·scheduled·link-access flags); markup content. Public `/articles`, `/news`          | `admin`, `body`, `card`, `drawer`, `editor`, `link`, `listing`, `preview`, `model`                                                                                                 |
+| Domain     | Purpose                                                                                                                                    | Sub-features                                                                                                                                                                                                                                       |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `articles` | News/article publishing (`NEWS`/`ARTICLE`; draft·active·scheduled·link-access flags); markup content. Public `/articles`, `/news`          | `admin`, `body`, `card`, `drawer`, `editor`, `link`, `listing`, `preview`, `model`                                                                                                                                                                 |
 | `home`     | Landing-page building blocks composed on `pages/index.vue`                                                                                 | `news`, `articles` (separate index block from `news`), `sections`, `banners` (VTTG campaign), `tools` (compact tools card, role-gated items), `community`, `counters`, `greetings`, `recent-changes`, `background`, `social-links`, `link-to-5e14` |
-| `workshop` | Content-creation admin (`/workshop/*`, ADMIN or MODERATOR): reusable form engine + section entry cards + revision history                  | `composable` (`useWorkshopForm`), `section`, `revision`                                                                                                                            |
-| `roadmap`  | Project roadmap (`/roadmap`): feature cards with community ratings + admin editor                                                          | `feature`, `detail`, `editor`, `preview`, `types`                                                                                                                                  |
-| `comments` | Threaded discussions on wiki & article pages via external **comments-service**; public read, auth to post, soft-delete tombstones, reports | `section` (page block + feed), `admin` (moderation rows), `composables`, `model`                                                                                                   |
+| `workshop` | Content-creation admin (`/workshop/*`, ADMIN or MODERATOR): reusable form engine + section entry cards + revision history                  | `composable` (`useWorkshopForm`), `section`, `revision`                                                                                                                                                                                            |
+| `roadmap`  | Project roadmap (`/roadmap`): feature cards with community ratings + admin editor                                                          | `feature`, `detail`, `editor`, `preview`, `types`                                                                                                                                                                                                  |
+| `comments` | Threaded discussions on wiki & article pages via external **comments-service**; public read, auth to post, soft-delete tombstones, reports | `section` (page block + feed), `admin` (moderation rows), `composables`, `model`                                                                                                                                                                   |
 
 ### 🛡️ Admin & moderation
 

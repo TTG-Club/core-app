@@ -47,7 +47,7 @@ export const CHARACTER_SHEET_API_PATH = '/api/v2/tools/character-sheet';
 
 /**
  * Базовый путь просмотра листа по ссылке «поделиться». Открывается без
- * авторизации и без роли — в отличие от остальных страниц раздела.
+ * авторизации и без роли: доступ решает токен ссылки, а не сессия.
  */
 export const CHARACTER_SHEET_SHARED_ROUTE = `${CHARACTER_SHEET_ROUTE}/shared`;
 
@@ -186,6 +186,20 @@ export const SHEET_READONLY_LABELS: Record<'badge' | 'tooltip', string> = {
 export const SHEET_NOT_FOUND_SUBTITLES: Record<'own' | 'shared', string> = {
   own: 'Возможно, он был удалён или принадлежит другому пользователю',
   shared: 'Владелец отозвал ссылку или удалил лист',
+};
+
+/**
+ * Приглашение войти на странице списка листов: раздел виден и анониму, но
+ * листы хранятся в профиле — без входа их не создать и не сохранить.
+ */
+export const SHEET_LOGIN_PROMPT: Record<
+  'title' | 'subtitle' | 'action',
+  string
+> = {
+  title: 'Войдите, чтобы создавать листы персонажей',
+  subtitle:
+    'Листы хранятся в профиле и доступны после входа. Чужой лист по ссылке «поделиться» открывается и без него.',
+  action: 'Войти',
 };
 
 /** Подписи модалки «Поделиться листом». */

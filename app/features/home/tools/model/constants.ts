@@ -1,6 +1,5 @@
 import type { HomeTool } from './types';
 
-import { Role } from '~/shared/types';
 import { CHARACTER_SHEET_ROUTE } from '~character-sheet/model';
 import {
   INITIATIVE_TOOL_ROUTE,
@@ -33,6 +32,5 @@ export const HOME_TOOLS: Array<HomeTool> = [
     label: 'Лист персонажа',
     icon: 'tabler:id',
     to: CHARACTER_SHEET_ROUTE,
-    roles: [Role.USER],
   },
 ];

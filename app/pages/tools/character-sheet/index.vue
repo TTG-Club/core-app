@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { Role } from '~/shared/types';
+  import { USER_TOKEN_COOKIE } from '#shared/consts';
   import {
     CharacterSheetBody,
     CharacterSheetSkeleton,
@@ -13,17 +13,44 @@
   import { CharacterSheetList } from '~character-sheet/list';
   import {
     CHARACTER_SHEET_LIST_TITLE,
+    SHEET_LOGIN_PROMPT,
     SHEET_NOT_FOUND_SUBTITLES,
   } from '~character-sheet/model';
   import { UiResult } from '~ui/result';
+  import { AuthModal } from '~user/auth-modal';
 
-  definePageMeta({
-    auth: { roles: [Role.USER] },
-  });
-
+  // Без definePageMeta с `auth`: пункт «Лист персонажа» в меню и на главной
+  // виден всем, поэтому и страница открывается анониму. Приватное содержимое
+  // (список, импорт, панель деталей) остаётся за сессией — анониму вместо него
+  // показывается приглашение войти.
   useSeoMeta({
     title: CHARACTER_SHEET_LIST_TITLE,
   });
+
+  // Сессию решает кука токена, а не профиль: профиль догружается лениво уже
+  // после монтирования, и залогиненный успевал бы увидеть приглашение войти.
+  // Кука известна и на SSR, поэтому разметка сервера и клиента совпадает.
+  const token = useCookie<string | null>(USER_TOKEN_COOKIE);
+
+  const { isLoggedIn } = useUser();
+
+  const hasSession = computed(() => isLoggedIn.value || Boolean(token.value));
+
+  const isAuthOpen = ref(false);
+
+  // Вход и выход меняют куку: и через общую модалку в шлеме сайта (там
+  // меняется isLoggedIn), и через локальное окно (о конце входа говорит его
+  // закрытие). Без сброса кэш `useCookie` помнит состояние на момент гидрации,
+  // и приглашение не сменилось бы списком листов. Цикла нет: вотчер меняет
+  // только кэш куки, на свои источники он не влияет.
+  watch([isLoggedIn, isAuthOpen], () => {
+    refreshCookie(USER_TOKEN_COOKIE);
+  });
+
+  /** Открывает окно входа из приглашения. */
+  function openAuth(): void {
+    isAuthOpen.value = true;
+  }
 
   // Панель показывает и свои листы (`?detail=<id>`), и чужие, сохранённые по
   // ссылке (`?detail=shared:<token>`): загрузчику хватает цели и режима.
@@ -61,8 +88,12 @@
     :title="CHARACTER_SHEET_LIST_TITLE"
   >
     <!-- Импорт живёт там же, где в остальных разделах фильтры: под названием
-      раздела. Действия над конкретным листом остаются в меню его карточки. -->
-    <template #controls>
+      раздела. Действия над конкретным листом остаются в меню его карточки.
+      Анониму слот не отдаётся: импорт — та же приватная ручка создания. -->
+    <template
+      v-if="hasSession"
+      #controls
+    >
       <ClientOnly>
         <CharacterSheetControls />
 
@@ -77,7 +108,25 @@
     </template>
 
     <template #default>
-      <ClientOnly>
+      <!-- Приглашение рендерится и на сервере: страница публичная, сессия
+        известна по куке уже на SSR — анониму не мигает спиннер. -->
+      <UiResult
+        v-if="!hasSession"
+        status="info"
+        :title="SHEET_LOGIN_PROMPT.title"
+        :sub-title="SHEET_LOGIN_PROMPT.subtitle"
+      >
+        <template #extra>
+          <UButton
+            icon="tabler:user"
+            @click.left.exact.prevent="openAuth"
+          >
+            {{ SHEET_LOGIN_PROMPT.action }}
+          </UButton>
+        </template>
+      </UiResult>
+
+      <ClientOnly v-else>
         <CharacterSheetList />
 
         <template #fallback>
@@ -89,9 +138,16 @@
           </div>
         </template>
       </ClientOnly>
+
+      <AuthModal v-model="isAuthOpen" />
     </template>
 
-    <template #detail>
+    <!-- Правой панели у анонима нет вовсе: без слота layout не включает
+      трёхколоночный режим, и приглашение занимает всю ширину. -->
+    <template
+      v-if="hasSession"
+      #detail
+    >
       <ClientOnly>
         <div
           v-if="isDetailOpen"

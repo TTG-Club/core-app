@@ -7,9 +7,9 @@
   import { CHARACTER_SHEET_TITLE } from '~character-sheet/model';
   import { UiResult } from '~ui/result';
 
-  // Без definePageMeta с `auth`: в отличие от остальных страниц раздела эта
-  // открывается кем угодно, включая анонима. Доступ решает токен, а не сессия —
-  // лист отдаёт публичная ручка, а ручек записи по токену на бэке нет.
+  // Без definePageMeta с `auth`: страница открывается кем угодно, включая
+  // анонима. Доступ решает токен, а не сессия — лист отдаёт публичная ручка,
+  // а ручек записи по токену на бэке нет.
   useSeoMeta({
     title: CHARACTER_SHEET_TITLE,
     robots: 'noindex, nofollow',
