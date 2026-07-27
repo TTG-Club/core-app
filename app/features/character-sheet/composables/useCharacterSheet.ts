@@ -29,6 +29,7 @@ import {
   ABILITY_ORDER,
   ABILITY_SCORE_MAX,
   ABILITY_SCORE_MIN,
+  adjustHealthForConstitution,
   adjustHitDice,
   applySkillProficiencies,
   ARMOR_CLASS_BASE_MAX,
@@ -47,6 +48,7 @@ import {
   getArmorClassBreakdown,
   getArmorClassValue,
   getCarryingCapacity,
+  getClassMaxHitPoints,
   getFormattedBonus,
   getInventoryWeight,
   getNextLevelExperience,
@@ -67,6 +69,7 @@ import {
   SHEET_HIDDEN_CONTROL_CLASS,
   SHEET_LOCKED_MESSAGE,
   SHEET_READONLY_MESSAGE,
+  shiftClassHitDice,
   SKILL_PROFICIENCY_NEXT,
   SPELL_COPY_TOAST_TITLE,
   toCopiedInventoryItem,
@@ -248,6 +251,8 @@ export function useCharacterSheet() {
 
   /**
    * Установка значения характеристики с ограничением допустимого диапазона.
+   * Смена модификатора Телосложения двигает максимум и текущие хиты: он входит
+   * в максимум на каждом уровне.
    *
    * @param ability ключ характеристики.
    * @param score новое значение характеристики.
@@ -269,6 +274,15 @@ export function useCharacterSheet() {
         ...character.value.abilities,
         [ability]: clampedScore,
       },
+      health:
+        ability === 'constitution'
+          ? adjustHealthForConstitution(
+              character.value.health,
+              character.value.level,
+              character.value.abilities.constitution,
+              clampedScore,
+            )
+          : character.value.health,
     };
   }
 
@@ -434,17 +448,34 @@ export function useCharacterSheet() {
 
   /**
    * Установка уровня и суммарного опыта; порог следующего уровня берётся из
-   * таблицы опыта D&D.
+   * таблицы опыта D&D. Кости хитов класса следуют за уровнем: новые уровни
+   * добавляют непотраченные кости, снижение уровня их забирает. Прирост хитов
+   * за повышение считает модалка опыта (среднее, бросок или максимум кости с
+   * модификатором Телосложения) — здесь он поднимает максимум и текущие хиты;
+   * при снижении уровня хиты не меняются.
    *
    * @param level новый уровень персонажа.
    * @param experience суммарный опыт персонажа.
+   * @param hitPointsGain прирост максимума хитов за взятые уровни.
    */
-  function setProgress(level: number, experience: number): void {
+  function setProgress(
+    level: number,
+    experience: number,
+    hitPointsGain = 0,
+  ): void {
     if (!ensureEditable()) {
       return;
     }
 
     const clampedLevel = clamp(Math.trunc(level), LEVEL_MIN, LEVEL_MAX);
+
+    const levelDelta = clampedLevel - character.value.level;
+
+    const classDie = character.value.characterClass?.hitDie;
+
+    const gain = Math.max(0, Math.trunc(hitPointsGain));
+
+    const { health } = character.value;
 
     character.value = {
       ...character.value,
@@ -453,6 +484,18 @@ export function useCharacterSheet() {
         current: clamp(Math.trunc(experience), 0, EXPERIENCE_MAX),
         nextLevel: getNextLevelExperience(clampedLevel),
       },
+      hitDice:
+        classDie !== undefined && levelDelta !== 0
+          ? shiftClassHitDice(character.value.hitDice, classDie, levelDelta)
+          : character.value.hitDice,
+      health:
+        gain > 0
+          ? {
+              ...health,
+              max: health.max + gain,
+              current: clamp(health.current + gain, 0, health.max + gain),
+            }
+          : health,
     };
   }
 
@@ -811,6 +854,9 @@ export function useCharacterSheet() {
    * устанавливаются атомарно одним обновлением. Спасброски и кость хитов
    * перезаписываются; владения объединяются с уже имеющимися; классовые
    * особенности и производные ресурсы заменяются целиком, ручные — сохраняются.
+   * Хиты пересчитываются по кости класса с модификатором Телосложения (первый
+   * уровень — максимум кости, следующие — среднее) и заполняются целиком —
+   * как и кости хитов, которые класс выдаёт непотраченными.
    *
    * @param payload класс и производные от него значения листа.
    * @param payload.characterClass выбранный класс с подклассом.
@@ -845,6 +891,12 @@ export function useCharacterSheet() {
 
     const { level } = character.value;
 
+    const maxHitPoints = getClassMaxHitPoints(
+      payload.hitDie,
+      level,
+      getModifier(character.value.abilities.constitution),
+    );
+
     // Классовые особенности заменяются целиком (id `class:*`); добавленные
     // вручную сохраняются.
     const preservedFeatures = character.value.features.filter(
@@ -864,6 +916,11 @@ export function useCharacterSheet() {
       characterClass: { ...payload.characterClass },
       savingThrowProficiencies: [...payload.savingThrows],
       hitDice: [{ die: payload.hitDie, current: level, max: level }],
+      health: {
+        ...character.value.health,
+        max: maxHitPoints,
+        current: maxHitPoints,
+      },
       proficiencies: {
         ...character.value.proficiencies,
         armor: union(
@@ -903,7 +960,9 @@ export function useCharacterSheet() {
    * Применение выбранной предыстории: навыки, инструмент, черта происхождения и
    * прибавки к характеристикам устанавливаются атомарно. Прибавки к
    * характеристикам и черта предыстории откатываются при смене (идемпотентно);
-   * навыки и владения объединяются, ручные особенности сохраняются.
+   * навыки и владения объединяются, ручные особенности сохраняются. Если
+   * прибавки сменили модификатор Телосложения, максимум и текущие хиты
+   * двигаются вслед за ним.
    *
    * @param payload предыстория и производные значения листа.
    * @param payload.background выбранная предыстория (url, name).
@@ -964,6 +1023,12 @@ export function useCharacterSheet() {
         abilityBonuses: { ...payload.abilityBonuses },
       },
       abilities,
+      health: adjustHealthForConstitution(
+        character.value.health,
+        character.value.level,
+        character.value.abilities.constitution,
+        abilities.constitution,
+      ),
       proficiencies: {
         ...character.value.proficiencies,
         tools: union(character.value.proficiencies.tools, payload.tools),

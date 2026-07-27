@@ -14,6 +14,7 @@ import type {
   CharacterClass,
   CharacterExtraHitDie,
   CharacterFeature,
+  CharacterHealth,
   CharacterHitDie,
   CharacterInventoryGroup,
   CharacterInventoryItem,
@@ -117,6 +118,7 @@ import {
   HIT_DICE_LONG_REST_DIVISOR,
   HIT_DICE_LONG_REST_MIN,
   HIT_DICE_ROLL_COUNT,
+  HIT_POINTS_LEVEL_GAIN_MIN,
   INVENTORY_CATEGORY_ORDER,
   INVENTORY_CATEGORY_TITLES,
   INVENTORY_QUANTITY_MAX,
@@ -1315,6 +1317,123 @@ export function getLongRestRecoveryLabels(character: Character): string[] {
  */
 export function getHitDieRestore(rolled: number, modifier: number): number {
   return Math.max(0, rolled + modifier);
+}
+
+/**
+ * Среднее значение кости хитов по правилам D&D 2024: половина номинала плюс
+ * один (среднее броска, округлённое вверх).
+ *
+ * @param die номинал кости хитов.
+ * @returns среднее значение кости.
+ */
+export function getHitDieAverage(die: number): number {
+  return Math.floor(die / 2) + 1;
+}
+
+/**
+ * Прирост максимума хитов за один уровень: значение кости плюс модификатор
+ * Телосложения, но не меньше одного хита (правило D&D 2024).
+ *
+ * @param dieValue значение кости (среднее, максимум или бросок).
+ * @param modifier модификатор Телосложения.
+ * @returns прирост максимума хитов.
+ */
+export function getLevelHitPointsGain(
+  dieValue: number,
+  modifier: number,
+): number {
+  return Math.max(HIT_POINTS_LEVEL_GAIN_MIN, dieValue + modifier);
+}
+
+/**
+ * Максимум хитов класса на уровне: первый уровень даёт максимум кости, каждый
+ * следующий — её среднее значение; модификатор Телосложения прибавляется на
+ * каждом уровне (правило D&D 2024).
+ *
+ * @param die номинал кости хитов класса.
+ * @param level уровень персонажа.
+ * @param modifier модификатор Телосложения.
+ * @returns максимум хитов на уровне.
+ */
+export function getClassMaxHitPoints(
+  die: number,
+  level: number,
+  modifier: number,
+): number {
+  const firstLevelGain = getLevelHitPointsGain(die, modifier);
+
+  const perLevelGain = getLevelHitPointsGain(getHitDieAverage(die), modifier);
+
+  return firstLevelGain + Math.max(0, level - 1) * perLevelGain;
+}
+
+/**
+ * Смещение количества классовых костей хитов при смене уровня: изменение
+ * применяется к кости номинала класса — новые кости приходят непотраченными, а
+ * снижение уровня забирает сперва непотраченные. Кости других номиналов
+ * (например, добавленные вручную) не трогаются; если кости класса в списке нет,
+ * положительное изменение её создаёт.
+ *
+ * @param hitDice кости хитов из классов.
+ * @param die номинал кости хитов класса.
+ * @param delta изменение количества костей (разница уровней).
+ * @returns новый список костей хитов.
+ */
+export function shiftClassHitDice(
+  hitDice: CharacterHitDie[],
+  die: number,
+  delta: number,
+): CharacterHitDie[] {
+  const hasClassDie = hitDice.some((hitDie) => hitDie.die === die);
+
+  if (!hasClassDie) {
+    return delta > 0
+      ? [...hitDice, { die, current: delta, max: delta }]
+      : hitDice;
+  }
+
+  return hitDice.map((hitDie) => {
+    if (hitDie.die !== die) {
+      return hitDie;
+    }
+
+    const max = Math.max(0, hitDie.max + delta);
+
+    return { ...hitDie, max, current: clamp(hitDie.current + delta, 0, max) };
+  });
+}
+
+/**
+ * Пересчёт здоровья при смене значения Телосложения: его модификатор входит в
+ * максимум хитов на каждом уровне, поэтому изменение модификатора двигает
+ * максимум и текущие хиты на разницу, умноженную на уровень. Незаполненное
+ * здоровье (нулевой максимум) не трогается — прибавлять не к чему.
+ *
+ * @param health здоровье персонажа.
+ * @param level уровень персонажа.
+ * @param previousScore прежнее значение Телосложения.
+ * @param nextScore новое значение Телосложения.
+ * @returns новое здоровье персонажа.
+ */
+export function adjustHealthForConstitution(
+  health: CharacterHealth,
+  level: number,
+  previousScore: number,
+  nextScore: number,
+): CharacterHealth {
+  const delta = (getModifier(nextScore) - getModifier(previousScore)) * level;
+
+  if (delta === 0 || health.max <= 0) {
+    return health;
+  }
+
+  const max = Math.max(HIT_POINTS_LEVEL_GAIN_MIN, health.max + delta);
+
+  return {
+    ...health,
+    max,
+    current: clamp(health.current + delta, 0, max),
+  };
 }
 
 /**

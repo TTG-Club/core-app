@@ -87,6 +87,9 @@ export interface CharacterExtraHitDie extends CharacterHitDie {
 /** Режим броска d20. */
 export type RollMode = 'normal' | 'advantage' | 'disadvantage';
 
+/** Способ прироста максимума хитов за взятые уровни в модалке опыта. */
+export type HitPointsGainMode = 'average' | 'roll' | 'max';
+
 /** Тип восстановления ресурса класса. */
 export type ResourceRecovery = 'short-rest' | 'long-rest';
 

@@ -13,6 +13,7 @@
     detectFeatureChoice,
     FEATURE_ORIGIN_LABELS,
     getCharacterFeatureId,
+    getClassMaxHitPoints,
     getClassSkillChoice,
     getClassToolChoice,
     getSelectedCasterType,
@@ -172,6 +173,18 @@
 
   const hitDieLabel = computed(() =>
     classDetail.value ? `1${classDetail.value.hitDieLabel}` : '',
+  );
+
+  // Хиты, которые получит лист при применении: первый уровень — максимум кости,
+  // следующие — среднее; модификатор Телосложения входит в каждый уровень.
+  const maxHitPointsPreview = computed(() =>
+    classDetail.value
+      ? getClassMaxHitPoints(
+          classDetail.value.hitDie,
+          level.value,
+          getModifier(character.value.abilities.constitution),
+        )
+      : 0,
   );
 
   const savingThrowLabels = computed(() =>
@@ -702,8 +715,8 @@
 
           <span class="text-xs text-muted">
             Класс с подклассами разворачивается стрелкой — подкласс
-            необязателен. При применении кость хитов, спасброски, владения,
-            ресурсы и умения по текущему уровню сразу заполнят лист.
+            необязателен. При применении кость хитов, хиты, спасброски,
+            владения, ресурсы и умения по текущему уровню сразу заполнят лист.
           </span>
         </template>
 
@@ -724,6 +737,18 @@
 
               <span class="text-sm font-medium text-highlighted">
                 {{ hitDieLabel }}
+              </span>
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <span
+                class="text-[10px] font-bold tracking-wider text-muted uppercase"
+              >
+                Хиты
+              </span>
+
+              <span class="text-sm font-medium text-highlighted">
+                {{ maxHitPointsPreview }}
               </span>
             </div>
 

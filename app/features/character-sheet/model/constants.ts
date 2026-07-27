@@ -12,6 +12,7 @@ import type {
   CustomInventoryKind,
   CustomSpellField,
   FeatureOrigin,
+  HitPointsGainMode,
   InventoryItemCategory,
   InventoryStatRollKind,
   LanguageProficiencyGroup,
@@ -663,6 +664,12 @@ export const HIT_POINT_STEP_BUTTONS: Array<{
   { step: 5, label: '+5', color: 'success' },
 ];
 
+/**
+ * Минимальный прирост максимума хитов за уровень: даже с отрицательным
+ * модификатором Телосложения уровень даёт хотя бы один хит (правило D&D 2024).
+ */
+export const HIT_POINTS_LEVEL_GAIN_MIN = 1;
+
 /** Минимальное количество костей хитов. */
 export const HIT_DICE_COUNT_MIN = 0;
 
@@ -684,6 +691,42 @@ export const HIT_DIE_OPTIONS: Array<{ label: string; value: number }> = [
  * игрок видит результат каждого броска.
  */
 export const HIT_DICE_ROLL_COUNT = 1;
+
+/** Подписи способов прироста хитов за повышение уровня. */
+export const HIT_POINTS_GAIN_MODE_LABELS: Record<HitPointsGainMode, string> = {
+  average: 'Взять среднее',
+  roll: 'Бросить кость',
+  max: 'Взять максимум',
+};
+
+/** Подписи секции «Хиты за повышение уровня» в модалке опыта. */
+export const LEVEL_UP_HIT_POINTS_LABELS: Record<
+  | 'title'
+  | 'constitutionTitle'
+  | 'perLevelSuffix'
+  | 'hitPointsPerLevelSuffix'
+  | 'rollModeDescriptionSuffix'
+  | 'roll'
+  | 'reroll'
+  | 'maxHitPointsTitle'
+  | 'rollPending'
+  | 'growthHint'
+  | 'levelDownHint',
+  string
+> = {
+  title: 'Хиты за повышение уровня',
+  constitutionTitle: 'Телосложение',
+  perLevelSuffix: 'за уровень',
+  hitPointsPerLevelSuffix: 'хитов за уровень',
+  rollModeDescriptionSuffix: 'и модификатор Телосложения за уровень',
+  roll: 'Бросить',
+  reroll: 'Перебросить',
+  maxHitPointsTitle: 'Максимум хитов',
+  rollPending: 'бросьте кости',
+  growthHint: 'Кости хитов и текущие хиты вырастут вместе с максимумом.',
+  levelDownHint:
+    'Кости хитов уменьшатся до нового уровня. Максимум хитов при снижении уровня не меняется — поправьте его в настройке здоровья при необходимости.',
+};
 
 /** Подпись ячеек заклинаний договора колдуна в списке того, что вернёт отдых. */
 export const PACT_SPELL_SLOTS_LABEL = 'Ячейки заклинаний договора';
