@@ -11,6 +11,7 @@
     LONG_REST_LABELS,
     SHEET_COPY_LIMIT_HINT,
     SHEET_EMPTY_LABELS,
+    SHEET_OPEN_ON_PAGE_LABEL,
     SHEET_READONLY_LABELS,
     SHEET_SAVE_LINK_LIMIT_HINT,
     SHEET_SAVE_SHARED_LABELS,
@@ -458,14 +459,14 @@
 
         <UTooltip
           v-if="canExpand"
-          text="Открыть на отдельной странице"
+          :text="SHEET_OPEN_ON_PAGE_LABEL"
         >
           <UButton
             icon="tabler:arrow-up-right"
             color="neutral"
             variant="ghost"
             square
-            aria-label="Открыть на отдельной странице"
+            :aria-label="SHEET_OPEN_ON_PAGE_LABEL"
             @click.left.exact.prevent="emit('expand')"
           />
         </UTooltip>
