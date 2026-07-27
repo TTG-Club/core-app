@@ -2291,9 +2291,7 @@ export function deriveClassResources(
       name: column.name,
       shortLabel: column.name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
       recovery:
-        column.resourceRecovery === 'SHORT_REST'
-          ? 'short-rest'
-          : 'long-rest',
+        column.resourceRecovery === 'SHORT_REST' ? 'short-rest' : 'long-rest',
       current: max,
       max,
     });

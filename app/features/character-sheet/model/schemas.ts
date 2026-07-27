@@ -646,9 +646,7 @@ export function parseClassOptions(
 /** Схема колонки таблицы прогрессии класса. */
 const classTableColumnSchema = z.object({
   name: z.string().catch(''),
-  resourceRecovery: z
-    .enum(['NONE', 'SHORT_REST', 'LONG_REST'])
-    .catch('NONE'),
+  resourceRecovery: z.enum(['NONE', 'SHORT_REST', 'LONG_REST']).catch('NONE'),
   scaling: z
     .array(
       z.object({

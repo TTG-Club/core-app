@@ -1,10 +1,9 @@
 <script setup lang="ts">
   import type { ClassColumnCreate } from '../../model';
 
-  import { CLASS_RESOURCE_RECOVERY_OPTIONS } from '../../model';
-
   import { EditorArrayControls } from '~ui/editor';
 
+  import { CLASS_RESOURCE_RECOVERY_OPTIONS } from '../../model';
   import { TableColumnScaling } from './table';
 
   const state = defineModel<Array<ClassColumnCreate>>({ required: true });
