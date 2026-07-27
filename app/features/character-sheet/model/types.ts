@@ -365,6 +365,15 @@ export interface CharacterSpecies {
 
   /** Название подвида; null — у вида нет подвидов. */
   lineageName: string | null;
+
+  /** Заклинания вида и происхождения с уровнем, на котором они открываются. */
+  innateSpells: CharacterInnateSpell[];
+}
+
+/** Врождённое заклинание и минимальный уровень персонажа для его получения. */
+export interface CharacterInnateSpell {
+  spell: CharacterSpell;
+  requiredLevel: number;
 }
 
 /** Выбранный класс персонажа. */
@@ -675,6 +684,8 @@ export interface SpeciesSummary {
   speedText: string;
 
   features: SpeciesFeatureSummary[];
+
+  innateSpells: CharacterInnateSpell[];
 }
 
 /** Опция класса в списке визарда (аналог `SpeciesOption`). */

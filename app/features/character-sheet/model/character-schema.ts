@@ -56,16 +56,6 @@ const descriptionNodeSchema = z.custom<FeatureDescriptionNode>(
  */
 export const descriptionNodesSchema = z.array(descriptionNodeSchema).catch([]);
 
-const speciesSchema = z
-  .object({
-    url: z.string(),
-    name: z.string().catch(''),
-    lineageUrl: z.string().nullable().catch(null),
-    lineageName: z.string().nullable().catch(null),
-  })
-  .nullable()
-  .catch(null);
-
 const characterClassSchema = z
   .object({
     url: z.string(),
@@ -117,6 +107,24 @@ const spellSchema = z.object({
   duration: z.string().optional().catch(undefined),
   description: z.array(descriptionNodeSchema).optional().catch(undefined),
 });
+
+const speciesSchema = z
+  .object({
+    url: z.string(),
+    name: z.string().catch(''),
+    lineageUrl: z.string().nullable().catch(null),
+    lineageName: z.string().nullable().catch(null),
+    innateSpells: z
+      .array(
+        z.object({
+          spell: spellSchema,
+          requiredLevel: z.coerce.number().min(1).max(20).catch(1),
+        }),
+      )
+      .catch([]),
+  })
+  .nullable()
+  .catch(null);
 
 // Потраченные ячейки круга. Максимум считается по классу и уровню, поэтому в
 // документе его нет: круг с битым номером просто отбрасывается схемой массива.

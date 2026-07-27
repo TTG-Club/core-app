@@ -5,6 +5,7 @@ import type {
   BackgroundOption,
   BackgroundSummary,
   CatalogSpellDetail,
+  CharacterInnateSpell,
   ClassChoice,
   ClassFeatureSummary,
   ClassOption,
@@ -68,6 +69,18 @@ const speciesFeatureSchema = z.object({
   description: descriptionNodesSchema,
 });
 
+const speciesInnateSpellSchema = z.object({
+  spell: z.object({
+    url: z.string(),
+    name: z.object({ rus: z.string().catch('') }),
+    level: z.coerce.number().catch(0),
+    school: z.string().catch(''),
+    concentration: z.boolean().catch(false),
+    ritual: z.boolean().catch(false),
+  }),
+  requiredLevel: z.coerce.number().min(1).max(20).catch(1),
+});
+
 /** Схема детального ответа вида или подвида (нужные листу поля). */
 const speciesDetailSchema = z.object({
   url: z.string(),
@@ -80,6 +93,7 @@ const speciesDetailSchema = z.object({
     })
     .catch({ size: '', speed: '' }),
   features: z.array(speciesFeatureSchema).catch([]),
+  innateSpells: z.array(speciesInnateSpellSchema).catch([]),
 });
 
 /** Ответ списка подвидов: массив детальных ответов. */
@@ -100,6 +114,20 @@ function toSpeciesSummary(
     description: feature.description,
   }));
 
+  const innateSpells: CharacterInnateSpell[] = detail.innateSpells.map(
+    (innateSpell) => ({
+      spell: {
+        url: innateSpell.spell.url,
+        name: innateSpell.spell.name.rus,
+        level: innateSpell.spell.level,
+        school: innateSpell.spell.school,
+        concentration: innateSpell.spell.concentration,
+        ritual: innateSpell.spell.ritual,
+      },
+      requiredLevel: innateSpell.requiredLevel,
+    }),
+  );
+
   return {
     url: detail.url,
     name: detail.name.rus,
@@ -107,6 +135,7 @@ function toSpeciesSummary(
     sizeText: detail.properties.size,
     speedText: detail.properties.speed,
     features,
+    innateSpells,
   };
 }
 

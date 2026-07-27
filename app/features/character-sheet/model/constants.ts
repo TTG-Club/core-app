@@ -1123,6 +1123,15 @@ export const SPELLS_SEARCH_PATH = '/api/v2/spells/search';
 /** Базовый путь детали заклинания (`/{url}` — слаг из каталога). */
 export const SPELLS_DETAIL_BASE_PATH = '/api/v2/spells';
 
+/** Подпись отдельной группы заклинаний, полученных от вида и происхождения. */
+export const INNATE_SPELL_GROUP_LABEL = 'Врождённые';
+
+/** Служебный ключ группы врождённых заклинаний, не пересекающийся с кругами 0–9. */
+export const INNATE_SPELL_GROUP_LEVEL = -1;
+
+/** Локаль сортировки русских названий заклинаний. */
+export const SPELL_NAME_SORT_LOCALE = 'ru';
+
 /** Эндпоинт фильтров заклинаний — источник списка классов для чипов. */
 export const SPELLS_FILTERS_PATH = '/api/v2/spells/filters';
 

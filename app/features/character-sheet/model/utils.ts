@@ -1618,6 +1618,20 @@ export function getSpellGroups(
 }
 
 /**
+ * Возвращает врождённые заклинания, уже открытые на текущем уровне персонажа.
+ *
+ * @param character персонаж листа.
+ * @returns доступные врождённые заклинания вида и происхождения.
+ */
+export function getAvailableInnateSpells(
+  character: Character,
+): CharacterSpell[] {
+  return (character.species?.innateSpells ?? [])
+    .filter((innateSpell) => innateSpell.requiredLevel <= character.level)
+    .map((innateSpell) => innateSpell.spell);
+}
+
+/**
  * Своё ли это заклинание: добавлено формой листа, а не выбрано из каталога.
  * У своих заклинаний нет страницы в разделе «Заклинания», поэтому описание они
  * хранят прямо в листе.

@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import type {
+    CharacterInnateSpell,
     ClassChoice,
     FeatureDescriptionNode,
     SpeciesOption,
@@ -33,6 +34,27 @@
   import SheetSearchInput from './SheetSearchInput.vue';
 
   type WizardStep = 'species' | 'features';
+
+  /** Объединяет заклинания вида и происхождения, сохраняя самый ранний уровень открытия. */
+  function mergeInnateSpells(
+    speciesSpells: CharacterInnateSpell[],
+    lineageSpells: CharacterInnateSpell[],
+  ): CharacterInnateSpell[] {
+    const spellsByUrl = new Map<string, CharacterInnateSpell>();
+
+    for (const innateSpell of [...speciesSpells, ...lineageSpells]) {
+      const existingSpell = spellsByUrl.get(innateSpell.spell.url);
+
+      if (
+        !existingSpell
+        || innateSpell.requiredLevel < existingSpell.requiredLevel
+      ) {
+        spellsByUrl.set(innateSpell.spell.url, innateSpell);
+      }
+    }
+
+    return [...spellsByUrl.values()];
+  }
 
   const emit = defineEmits<{
     close: [];
@@ -458,6 +480,10 @@
         name: detail.name,
         lineageUrl: lineage?.url ?? null,
         lineageName: lineage?.name ?? null,
+        innateSpells: mergeInnateSpells(
+          detail.innateSpells,
+          lineage?.innateSpells ?? [],
+        ),
       },
       size: sizeChoice.value ?? null,
       speed: parseSpeedFromText(effectiveSpeedText.value),

@@ -64,6 +64,10 @@ export interface SpeciesCreate extends EditorBaseInfoState {
     };
     description: string;
   }>;
+  innateSpells: Array<{
+    spell: string;
+    requiredLevel: number;
+  }>;
 }
 
 export interface SpeciesCreateSpeed {
