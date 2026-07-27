@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { CharacterClassResource } from '../../model';
 
+  import { useCharacterSheet } from '../../composables';
   import {
     RESOURCE_RECOVERY_ICONS,
     RESOURCE_RECOVERY_LABELS,
@@ -16,6 +17,11 @@
     adjust: [resourceId: string, delta: number];
     edit: [];
   }>();
+
+  // Шестерёнка настраивает состав ресурсов (правка листа), а ± тратят и
+  // восстанавливают их (игровое действие): запертый лист оставляет ±, чужой —
+  // не оставляет ничего.
+  const { editControlClass, gameControlClass } = useCharacterSheet();
 
   const panelRef = useTemplateRef('panel');
 
@@ -73,6 +79,7 @@
       <button
         type="button"
         class="cursor-pointer rounded-full bg-default p-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+        :class="editControlClass"
         aria-label="Настроить ресурсы класса"
         @click.left.exact.prevent="handleEditClick"
       >
@@ -89,13 +96,14 @@
           v-for="row in displayRows"
           :key="row.id"
           class="flex items-center gap-1.5 rounded bg-default/30 px-2 py-1.5"
-          :title="row.name"
         >
-          <span
-            class="w-9 shrink-0 truncate text-sm font-bold text-highlighted uppercase"
-          >
-            {{ row.shortLabel }}
-          </span>
+          <UTooltip :text="row.name">
+            <span
+              class="w-9 shrink-0 cursor-help truncate text-sm font-bold text-highlighted uppercase"
+            >
+              {{ row.shortLabel }}
+            </span>
+          </UTooltip>
 
           <UButton
             icon="tabler:minus"
@@ -103,6 +111,7 @@
             variant="ghost"
             size="xs"
             square
+            :class="gameControlClass"
             :disabled="row.isMinusDisabled"
             :aria-label="`Потратить: ${row.name}`"
             @click.left.exact.prevent="handleAdjust(row.id, -1)"
@@ -119,6 +128,7 @@
             variant="ghost"
             size="xs"
             square
+            :class="gameControlClass"
             :disabled="row.isPlusDisabled"
             :aria-label="`Восстановить: ${row.name}`"
             @click.left.exact.prevent="handleAdjust(row.id, 1)"

@@ -1,14 +1,24 @@
 <script setup lang="ts">
+  import type { DropdownMenuItem } from '@nuxt/ui';
+
   import type { Character, SheetSaveStatus } from '../../model';
 
   import {
     getClassDisplayName,
+    getSheetActionMenuItems,
     getSpeciesDisplayName,
     getVisionRows,
+    LONG_REST_LABELS,
+    SHEET_COPY_LIMIT_HINT,
     SHEET_EMPTY_LABELS,
+    SHEET_READONLY_LABELS,
+    SHEET_SAVE_LINK_LIMIT_HINT,
+    SHEET_SAVE_SHARED_LABELS,
     SHEET_SAVE_STATUS_META,
+    SHORT_REST_LABELS,
     VISION_LABELS,
   } from '../../model';
+  import SheetAvatar from './SheetAvatar.vue';
 
   const props = defineProps<{
     character: Character;
@@ -19,21 +29,74 @@
     canClose?: boolean;
     /** Статус автосохранения листа; null — индикатор скрыт. */
     saveStatus?: SheetSaveStatus | null;
+    /** В лимите активных листов есть свободное место — копия разрешена. */
+    canDuplicate?: boolean;
+    /**
+     * Лист открыт по ссылке: вместо замка и действий владельца — пометка
+     * «только просмотр», из меню остаётся один экспорт.
+     */
+    readonly?: boolean;
+    /** Доступ по ссылке уже включён (пометка в меню действий). */
+    shared?: boolean;
+    /** Идёт сборка PDF — пункт меню показывает загрузку. */
+    pdfLoading?: boolean;
+    /**
+     * Чужой лист можно сохранить к себе: у зрителя есть доступ к инструменту и
+     * известен токен ссылки. false — в меню остаётся только выгрузка.
+     */
+    canSaveShared?: boolean;
+    /** В лимите своих активных листов есть место — копия чужого разрешена. */
+    canCopyShared?: boolean;
+    /** В лимите сохранённых ссылок есть место. */
+    canSaveLink?: boolean;
+    /** Ссылка на этот лист уже сохранена. */
+    linkSaved?: boolean;
   }>();
 
   const emit = defineEmits<{
     'close': [];
+    'download': [];
+    'download-pdf': [];
+    'duplicate': [];
     'expand': [];
+    'remove': [];
     'edit-background': [];
     'edit-class': [];
     'edit-name': [];
     'edit-progress': [];
+    'edit-settings': [];
     'edit-size': [];
     'edit-species': [];
     'edit-vision': [];
+    'long-rest': [];
+    'short-rest': [];
     'toggle-inspiration': [];
     'toggle-lock': [];
+    'share': [];
+    'copy-shared': [];
+    'save-link': [];
   }>();
+
+  // Меню действий листа (кнопка-троеточие в шапке) — то же, что в карточке
+  // списка персонажей. У листа, открытого по ссылке, владельческих действий нет,
+  // у запертого нет настроек: состав пунктов решает сам хелпер по флагам
+  // `isReadonly` и `isLocked`.
+  const menuItems = computed<Array<Array<DropdownMenuItem>>>(() =>
+    getSheetActionMenuItems({
+      canDuplicate: props.canDuplicate ?? false,
+      canRemove: true,
+      isShared: props.shared,
+      isReadonly: props.readonly,
+      isLocked: props.locked,
+      isPdfLoading: props.pdfLoading,
+      onDownload: () => emit('download'),
+      onDownloadPdf: () => emit('download-pdf'),
+      onDuplicate: () => emit('duplicate'),
+      onRemove: () => emit('remove'),
+      onSettings: () => emit('edit-settings'),
+      onShare: () => emit('share'),
+    }),
+  );
 
   const saveStatusMeta = computed(() =>
     props.saveStatus ? SHEET_SAVE_STATUS_META[props.saveStatus] : null,
@@ -49,6 +112,31 @@
     }
 
     return 'text-muted';
+  });
+
+  // Сохранить чужой лист к себе — главное, зачем зритель пришёл по ссылке,
+  // поэтому оба действия стоят кнопками рядом с пометкой «только просмотр», а
+  // не прячутся в меню за троеточием.
+  const copySharedTooltip = computed(() =>
+    props.canCopyShared ? SHEET_SAVE_SHARED_LABELS.copy : SHEET_COPY_LIMIT_HINT,
+  );
+
+  const saveLinkIcon = computed(() =>
+    props.linkSaved ? 'tabler:bookmark-filled' : 'tabler:bookmark-plus',
+  );
+
+  const saveLinkColor = computed(() =>
+    props.linkSaved ? 'primary' : 'neutral',
+  );
+
+  const saveLinkTooltip = computed(() => {
+    if (props.linkSaved) {
+      return SHEET_SAVE_SHARED_LABELS.saved;
+    }
+
+    return props.canSaveLink
+      ? SHEET_SAVE_SHARED_LABELS.save
+      : SHEET_SAVE_LINK_LIMIT_HINT;
   });
 
   const lockIcon = computed(() =>
@@ -115,22 +203,7 @@
     class="flex flex-col items-center gap-4 @2xl:flex-row @2xl:items-start @2xl:gap-6"
   >
     <div class="relative mb-2 shrink-0 @2xl:mb-0">
-      <div
-        class="flex size-24 items-center justify-center overflow-hidden rounded-full border-2 border-warning/70 bg-elevated"
-      >
-        <img
-          v-if="character.avatarUrl"
-          :src="character.avatarUrl"
-          :alt="character.name"
-          class="size-full object-cover"
-        />
-
-        <UIcon
-          v-else
-          name="tabler:user"
-          class="size-10 text-muted"
-        />
-      </div>
+      <SheetAvatar />
 
       <div
         class="absolute -bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1"
@@ -306,7 +379,63 @@
           </span>
         </UTooltip>
 
-        <UTooltip :text="lockTooltip">
+        <!-- Замок чужого листа бессмысленен: снять его зритель всё равно не
+          может, поэтому вместо него — пометка о режиме просмотра -->
+        <UTooltip
+          v-if="readonly"
+          :text="SHEET_READONLY_LABELS.tooltip"
+        >
+          <UBadge
+            :label="SHEET_READONLY_LABELS.badge"
+            icon="tabler:eye"
+            color="neutral"
+            variant="subtle"
+            size="lg"
+            class="@max-2xl:hidden"
+          />
+
+          <!-- В компактной шапке подписи не остаётся: ряд с кнопками
+            сохранения и без неё занимает всю ширину -->
+          <UBadge
+            icon="tabler:eye"
+            color="neutral"
+            variant="subtle"
+            size="lg"
+            class="@2xl:hidden"
+            :aria-label="SHEET_READONLY_LABELS.badge"
+          />
+        </UTooltip>
+
+        <template v-if="canSaveShared">
+          <UTooltip :text="copySharedTooltip">
+            <UButton
+              icon="tabler:user-plus"
+              color="neutral"
+              variant="ghost"
+              square
+              :disabled="!canCopyShared"
+              :aria-label="copySharedTooltip"
+              @click.left.exact.prevent="emit('copy-shared')"
+            />
+          </UTooltip>
+
+          <UTooltip :text="saveLinkTooltip">
+            <UButton
+              :icon="saveLinkIcon"
+              :color="saveLinkColor"
+              variant="ghost"
+              square
+              :disabled="linkSaved || !canSaveLink"
+              :aria-label="saveLinkTooltip"
+              @click.left.exact.prevent="emit('save-link')"
+            />
+          </UTooltip>
+        </template>
+
+        <UTooltip
+          v-else
+          :text="lockTooltip"
+        >
           <UButton
             :icon="lockIcon"
             :color="lockColor"
@@ -317,13 +446,15 @@
           />
         </UTooltip>
 
-        <UButton
-          icon="tabler:settings"
-          color="neutral"
-          variant="ghost"
-          square
-          disabled
-        />
+        <UDropdownMenu :items="menuItems">
+          <UButton
+            icon="tabler:dots-vertical"
+            color="neutral"
+            variant="ghost"
+            square
+            aria-label="Действия с листом"
+          />
+        </UDropdownMenu>
 
         <UTooltip
           v-if="canExpand"
@@ -382,21 +513,27 @@
           />
         </UTooltip>
 
-        <UButton
-          icon="tabler:campfire"
-          color="neutral"
-          variant="ghost"
-          square
-          disabled
-        />
+        <UTooltip :text="SHORT_REST_LABELS.title">
+          <UButton
+            icon="tabler:campfire"
+            color="neutral"
+            variant="ghost"
+            square
+            :aria-label="SHORT_REST_LABELS.title"
+            @click.left.exact.prevent="emit('short-rest')"
+          />
+        </UTooltip>
 
-        <UButton
-          icon="tabler:moon"
-          color="neutral"
-          variant="ghost"
-          square
-          disabled
-        />
+        <UTooltip :text="LONG_REST_LABELS.title">
+          <UButton
+            icon="tabler:moon"
+            color="neutral"
+            variant="ghost"
+            square
+            :aria-label="LONG_REST_LABELS.title"
+            @click.left.exact.prevent="emit('long-rest')"
+          />
+        </UTooltip>
       </div>
     </div>
   </header>

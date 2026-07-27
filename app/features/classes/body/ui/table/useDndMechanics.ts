@@ -1,11 +1,11 @@
 import { computed } from 'vue';
 
-import { CasterType } from '../../../model';
 import {
+  CasterType,
   FULL_CASTER_SPELL_SLOTS,
   HALF_CASTER_SPELL_SLOTS,
   THIRD_CASTER_SPELL_SLOTS,
-} from './const';
+} from '../../../model';
 
 interface UseDndMechanicsOptions {
   casterType: MaybeRefOrGetter<CasterType>;

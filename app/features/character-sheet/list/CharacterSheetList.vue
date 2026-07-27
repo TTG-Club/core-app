@@ -5,19 +5,22 @@
   import { UiResult } from '~ui/result';
 
   import { useCharacterSheetList } from '../composables';
-  import { CHARACTER_SHEET_ROUTE, getSheetErrorMessage } from '../model';
-  import { CharacterSheetCard } from './ui';
+  import { CHARACTER_SHEET_ROUTE } from '../model';
+  import { CharacterSheetSavedList } from '../saved';
+  import { CharacterSheetCard, CharacterSheetCreateCard } from './ui';
 
   const {
     activeSheets,
     deletedSheets,
     limit,
+    historyLimit,
     canCreate,
     isLoading,
     isMutating,
-    loadError,
+    loadErrorMessage,
     load,
     create,
+    duplicate,
     remove,
     restore,
   } = useCharacterSheetList();
@@ -29,13 +32,23 @@
   /** Активные листы с гарантированным документом для карточки. */
   const activeCards = computed(() =>
     activeSheets.value.flatMap(
-      (sheet): Array<{ id: string; character: Character }> =>
-        sheet.data ? [{ id: sheet.id, character: sheet.data }] : [],
+      (
+        sheet,
+      ): Array<{
+        id: string;
+        character: Character;
+        shareToken: string | null;
+      }> =>
+        sheet.data
+          ? [
+              {
+                id: sheet.id,
+                character: sheet.data,
+                shareToken: sheet.shareToken,
+              },
+            ]
+          : [],
     ),
-  );
-
-  const listErrorSubTitle = computed(() =>
-    getSheetErrorMessage(loadError.value),
   );
 
   // Счётчик листов краснеет на достигнутом лимите. Логика вынесена из шаблона.
@@ -48,14 +61,26 @@
       `Активных листов — ${activeSheets.value.length} из ${limit.value} возможных`,
   );
 
-  // Пока список не загружен, серверный лимит неизвестен — создание недоступно.
-  const isCreateDisabled = computed(
-    () => isLoading.value || Boolean(loadError.value) || !canCreate.value,
-  );
-
   const isLimitReached = computed(
     () => !canCreate.value && limit.value > 0 && !isLoading.value,
   );
+
+  // Глубина истории приходит с сервера: без неё (старый бэк) остаётся один
+  // счётчик, иначе рядом с ним видно, сколько удалений история ещё вместит.
+  const historyCountLabel = computed(() =>
+    historyLimit.value > 0
+      ? `${deletedSheets.value.length} из ${historyLimit.value}`
+      : `${deletedSheets.value.length}`,
+  );
+
+  const historyTooltip = computed(() => {
+    const restoreHint =
+      'Удалённые листы можно восстановить, пока в лимите активных есть свободное место.';
+
+    return historyLimit.value > 0
+      ? `${restoreHint} В истории хранятся последние ${historyLimit.value} удалённых листов — более старые вытесняются новыми удалениями.`
+      : restoreHint;
+  });
 
   onMounted(() => {
     load();
@@ -84,53 +109,6 @@
 
 <template>
   <div class="flex flex-col gap-6">
-    <!-- Герой: создание нового листа — не ждёт загрузки списка -->
-    <div
-      class="flex flex-col gap-3 rounded-xl border border-default bg-elevated p-4 ring-1 ring-primary/15 sm:p-6"
-    >
-      <div class="flex items-center gap-4">
-        <div
-          class="hidden shrink-0 place-items-center rounded-xl bg-primary/5 p-2.5 sm:grid"
-        >
-          <UIcon
-            name="tabler:user-plus"
-            class="size-8 text-primary"
-          />
-        </div>
-
-        <div class="flex min-w-0 flex-col gap-1">
-          <h3 class="text-lg font-semibold text-highlighted">
-            Создать персонажа
-          </h3>
-
-          <p class="text-sm text-secondary">
-            Пустой лист сохранится в вашем списке — изменения улетают на сервер
-            автоматически.
-          </p>
-        </div>
-
-        <UButton
-          type="button"
-          icon="tabler:user-plus"
-          size="lg"
-          class="ml-auto shrink-0 justify-center transition-transform hover:-translate-y-px active:translate-y-0"
-          :loading="isMutating"
-          :disabled="isCreateDisabled"
-          @click.left.exact.prevent="handleCreate"
-        >
-          Создать лист
-        </UButton>
-      </div>
-
-      <p
-        v-if="isLimitReached"
-        class="text-xs text-error"
-      >
-        Достигнут лимит {{ limit }} листов — удалите один, чтобы создать новый.
-      </p>
-    </div>
-
-    <!-- Второй план: список листов -->
     <div
       v-if="isLoading"
       class="flex flex-col gap-2"
@@ -149,10 +127,10 @@
     </div>
 
     <UiResult
-      v-else-if="loadError"
+      v-else-if="loadErrorMessage"
       status="error"
       title="Не удалось загрузить листы персонажей"
-      :sub-title="listErrorSubTitle"
+      :sub-title="loadErrorMessage"
     >
       <template #extra>
         <UButton @click.left.exact.prevent="load"> Обновить </UButton>
@@ -160,10 +138,7 @@
     </UiResult>
 
     <template v-else>
-      <section
-        v-if="activeCards.length"
-        class="flex flex-col gap-2"
-      >
+      <section class="flex flex-col gap-2">
         <div class="flex items-center gap-2">
           <span class="text-xs font-medium tracking-wide text-muted uppercase">
             Ваши персонажи
@@ -188,20 +163,39 @@
             v-for="card in activeCards"
             :key="card.id"
             :character="card.character"
+            :share-token="card.shareToken"
             removable
             :disabled="isMutating"
+            :can-duplicate="canCreate"
+            @duplicate="duplicate"
             @remove="remove"
+            @share-change="load"
+          />
+
+          <!-- Плейсхолдер-слот создания — исчезает на достигнутом лимите -->
+          <CharacterSheetCreateCard
+            v-if="canCreate"
+            :loading="isMutating"
+            :disabled="isMutating"
+            @create="handleCreate"
           />
         </PageGrid>
+
+        <p
+          v-if="isLimitReached"
+          class="text-xs text-muted"
+        >
+          Достигнут лимит {{ limit }} листов — удалите один, чтобы создать
+          новый.
+        </p>
       </section>
+    </template>
 
-      <p
-        v-else
-        class="text-sm text-muted"
-      >
-        Здесь появятся ваши персонажи.
-      </p>
+    <!-- Чужие листы, сохранённые по ссылке: свой запрос, свой лимит и своя
+      ошибка, поэтому раздел не прячется вместе со своими листами -->
+    <CharacterSheetSavedList />
 
+    <template v-if="!isLoading && !loadErrorMessage">
       <!-- История удалённых листов — свёрнута, во втором плане -->
       <UCollapsible
         v-if="deletedSheets.length"
@@ -218,11 +212,9 @@
           class="justify-between text-muted"
         >
           <span class="flex items-center gap-1.5">
-            История листов ({{ deletedSheets.length }})
+            История листов ({{ historyCountLabel }})
 
-            <UTooltip
-              text="Удалённые листы можно восстановить, пока в лимите есть свободное место"
-            >
+            <UTooltip :text="historyTooltip">
               <UIcon
                 name="tabler:help-circle-filled"
                 class="size-4 shrink-0"

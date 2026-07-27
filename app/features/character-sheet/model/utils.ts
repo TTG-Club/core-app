@@ -1,14 +1,21 @@
+import type { DropdownMenuItem } from '@nuxt/ui';
+
+import type { Level } from '~/shared/types';
 import type { RenderNode } from '~ui/markup';
 
 import type {
   AbilityBonusMode,
   AbilityKey,
   AbilityRow,
+  ArmorClassBreakdown,
+  ArmorDexterityMod,
+  CatalogSpellDetail,
   Character,
   CharacterClass,
-  CharacterClassResource,
+  CharacterCurrency,
   CharacterExtraHitDie,
   CharacterFeature,
+  CharacterHealth,
   CharacterHitDie,
   CharacterInventoryGroup,
   CharacterInventoryItem,
@@ -22,15 +29,25 @@ import type {
   ClassChoice,
   ClassFeatureSummary,
   ClassSummary,
-  ClassTableColumn,
+  CustomArmorType,
+  CustomInventoryItemDraft,
+  CustomInventoryKind,
+  CustomSpellDraft,
+  CustomSpellStatRow,
   FeatSummary,
   FeatureDescriptionNode,
   FeatureOrigin,
+  HitDiceAmount,
+  HitDicePool,
+  HitDiceSelectPool,
+  InventoryArmor,
   InventoryItemOrigin,
+  InventoryWeapon,
   ItemSummary,
   MagicItemCatalogItem,
   PrimarySpeed,
   ProficiencyCatalogGroup,
+  ResourceRecovery,
   RollMode,
   SavingThrowRow,
   SkillRow,
@@ -38,11 +55,26 @@ import type {
   SpeciesSummary,
   SpeedRow,
   SpeedTypeKey,
+  SpellcastingBreakdown,
+  SpellSlotCircle,
+  SpellSlotRow,
   VisionRow,
+  WeaponAttack,
+  WeaponDamage,
 } from './types';
 
-import { capitalize } from 'es-toolkit';
+import { capitalize, clamp } from 'es-toolkit';
 
+import { LEVELS } from '~/shared/consts';
+import {
+  CasterType,
+  FULL_CASTER_SPELL_SLOTS,
+  HALF_CASTER_SPELL_SLOTS,
+  MULTICLASS_SPELL_SLOTS,
+  PACT_CASTER_SPELL_SLOTS_COUNT,
+  PACT_CASTER_SPELL_SLOTS_LEVEL,
+  THIRD_CASTER_SPELL_SLOTS,
+} from '~classes/model';
 import {
   getNodeText,
   isBlockNode,
@@ -55,29 +87,81 @@ import {
   ABILITY_LABELS,
   ABILITY_ORDER,
   ABILITY_SHORT_LABELS,
+  ALL_SPELL_SLOTS_LABEL,
+  ARMOR_CLASS_BASE_MAX,
+  ARMOR_CLASS_BASE_MIN,
   ARMOR_MATCH_KEYWORDS,
+  ARMOR_MEDIUM_DEX_CAP,
   ARMOR_PROFICIENCY_GROUPS,
   CARRYING_CAPACITY_MULTIPLIER,
-  CLASS_RESOURCE_DENY_KEYWORDS,
+  CATALOG_COPY_MENU_LABEL,
+  CHARACTER_FILE_NAME_FALLBACK,
+  CLASS_SPELL_PROGRESSIONS,
+  CLASS_SPELLCASTING_ABILITIES,
+  COINS_PER_WEIGHT_UNIT,
+  CURRENCY_ORDER,
+  CUSTOM_ARMOR_TYPE_BY_DEXTERITY_MOD,
+  CUSTOM_ARMOR_TYPE_META,
+  CUSTOM_INVENTORY_KIND_CATEGORIES,
+  CUSTOM_INVENTORY_URL_PREFIX,
+  CUSTOM_ITEM_WEIGHT_MAX,
+  CUSTOM_ITEM_WEIGHT_MIN,
+  CUSTOM_SPELL_FIELDS,
+  CUSTOM_SPELL_URL_PREFIX,
+  CUSTOM_TRINKET_TYPES_LABEL,
+  CUSTOM_WEAPON_PROPERTY_LABELS,
+  DAMAGE_BONUS_MAX,
+  DAMAGE_BONUS_MIN,
+  DAMAGE_DICE_COUNT_MAX,
+  DAMAGE_DICE_COUNT_MIN,
+  DAMAGE_TYPE_LABELS,
   DARKVISION_PARSE_FALLBACK,
+  DEFAULT_WEAPON_ATTACK_ABILITY,
+  DICE_NOTATION_LETTER,
+  HIT_DICE_LONG_REST_DIVISOR,
+  HIT_DICE_LONG_REST_MIN,
+  HIT_DICE_ROLL_COUNT,
+  HIT_POINTS_LEVEL_GAIN_MIN,
   INVENTORY_CATEGORY_ORDER,
   INVENTORY_CATEGORY_TITLES,
+  INVENTORY_QUANTITY_MAX,
+  INVENTORY_QUANTITY_MIN,
+  INVENTORY_REMOVE_MENU_LABEL,
+  ITEMS_DETAIL_BASE_PATH,
+  LEVEL_MIN,
   LEVEL_XP_THRESHOLDS,
-  RESOURCE_COUNT_MAX,
-  RESOURCE_SHORT_LABEL_MAX_LENGTH,
+  MAGIC_ITEMS_DETAIL_BASE_PATH,
+  NEW_CUSTOM_INVENTORY_ITEM,
+  PACT_SPELL_SLOTS_LABEL,
+  RESOURCE_RECOVERY_LABELS,
   ROLL_MODE_DICE_NOTATION,
+  SHEET_COPY_LIMIT_HINT,
+  SHEET_DOWNLOAD_JSON_LABEL,
+  SHEET_DOWNLOAD_PDF_HINT,
+  SHEET_DOWNLOAD_PDF_LABEL,
+  SHEET_PDF_MIME_TYPE,
+  SHEET_SAVE_SHARED_LABELS,
+  SHEET_SHARE_ACTIVE_HINT,
   SIZE_LABEL_WORDS,
   SKILL_PROFICIENCY_MULTIPLIERS,
   SPEED_PARSE_FALLBACK,
   SPEED_PRIMARY_ORDER,
   SPEED_TYPE_LABELS,
   SPEED_UNIT_SHORT_LABELS,
+  SPELL_REMOVE_MENU_LABEL,
+  SPELL_SAVE_DC_BASE,
+  SPELL_SLOT_FREE_LABEL,
+  SPELL_SLOT_USED_LABEL,
+  THIRD_CASTER_SUBCLASSES,
   TOOL_MATCH_KEYWORDS,
   TOOL_PROFICIENCY_GROUPS,
+  UNARMORED_ARMOR_CLASS_BASE,
   VISION_LABELS,
   VISION_ORDER,
+  WEAPON_CATEGORY_LABELS,
   WEAPON_MATCH_KEYWORDS,
   WEAPON_PROFICIENCY_GROUPS,
+  WEIGHT_DECIMALS,
 } from './constants';
 
 /**
@@ -212,21 +296,33 @@ export function getSkillRows(character: Character): SkillRow[] {
 }
 
 /**
- * Суммарный вес инвентаря в фунтах с учётом количества. Округляется до одного
- * знака: вес предмета бывает дробным (например, 0,5 фунта).
+ * Суммарный переносимый вес в фунтах: предметы с учётом количества плюс
+ * стандартные монеты — по правилам 2024 монета весит 1/50 фунта. Округляется
+ * до одного знака: вес предмета бывает дробным (например, 0,5 фунта).
  *
  * @param inventoryItems предметы инвентаря.
- * @returns суммарный вес всех предметов.
+ * @param currency стандартные монеты персонажа.
+ * @returns суммарный переносимый вес.
  */
 export function getInventoryWeight(
   inventoryItems: CharacterInventoryItem[],
+  currency: CharacterCurrency,
 ): number {
-  const total = inventoryItems.reduce(
+  const itemsWeight = inventoryItems.reduce(
     (sum, inventoryItem) => sum + inventoryItem.weight * inventoryItem.quantity,
     0,
   );
 
-  return Math.round(total * 10) / 10;
+  const coinsCount = CURRENCY_ORDER.reduce(
+    (sum, key) => sum + currency[key],
+    0,
+  );
+
+  const total = itemsWeight + coinsCount / COINS_PER_WEIGHT_UNIT;
+
+  const factor = 10 ** WEIGHT_DECIMALS;
+
+  return Math.round(total * factor) / factor;
 }
 
 /**
@@ -292,6 +388,9 @@ export function buildInventoryItem(
     cost: summary.cost,
     weight: summary.weight,
     quantity: 1,
+    armor: summary.armor,
+    weapon: summary.weapon,
+    equipped: false,
   };
 }
 
@@ -319,6 +418,359 @@ export function buildMagicItemInventoryItem(
     cost: '',
     weight: 0,
     quantity: 1,
+    armor: null,
+    weapon: null,
+    equipped: false,
+  };
+}
+
+/**
+ * Свой ли это предмет инвентаря: заполнен формой листа, а не добавлен из
+ * разделов сайта. У своих предметов нет страницы в каталоге, поэтому описание
+ * они хранят прямо в листе.
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns true — предмет свой.
+ */
+export function isCustomInventoryItem(
+  inventoryItem: CharacterInventoryItem,
+): boolean {
+  return inventoryItem.url.startsWith(CUSTOM_INVENTORY_URL_PREFIX);
+}
+
+/**
+ * Путь детального ответа каталога для предмета инвентаря: магические предметы
+ * живут в своём разделе.
+ *
+ * @param inventoryItem каталожный предмет инвентаря.
+ * @returns путь детали предмета.
+ */
+export function getInventoryItemDetailPath(
+  inventoryItem: CharacterInventoryItem,
+): string {
+  const basePath =
+    inventoryItem.category === 'MAGIC_ITEM'
+      ? MAGIC_ITEMS_DETAIL_BASE_PATH
+      : ITEMS_DETAIL_BASE_PATH;
+
+  return `${basePath}/${inventoryItem.url}`;
+}
+
+/**
+ * Своя копия каталожного предмета: параметры, количество и надетый доспех
+ * остаются прежними, а запись перестаёт зависеть от раздела сайта — она
+ * получает свой идентификатор с префиксом `custom:` и забирает описание в лист
+ * (у каталожных записей его в документе нет).
+ *
+ * @param url URL копии (`custom:` + идентификатор); он же её id.
+ * @param inventoryItem каталожный предмет инвентаря.
+ * @param description описание из справочника; пустое — не загрузилось.
+ * @returns предмет инвентаря, помеченный как свой.
+ */
+export function toCopiedInventoryItem(
+  url: string,
+  inventoryItem: CharacterInventoryItem,
+  description: FeatureDescriptionNode[],
+): CharacterInventoryItem {
+  return {
+    ...inventoryItem,
+    id: url,
+    url,
+    description: [...description],
+  };
+}
+
+/**
+ * Подпись типов своего предмета для строки инвентаря: у доспеха — его тип, у
+ * оружия — категория владения и свойства, у безделушки — общая подпись.
+ *
+ * @param draft значения формы своего предмета.
+ * @returns подпись типов предмета.
+ */
+function getCustomInventoryTypesLabel(draft: CustomInventoryItemDraft): string {
+  if (draft.kind === 'armor') {
+    return CUSTOM_ARMOR_TYPE_META[draft.armorType].typesLabel;
+  }
+
+  if (draft.kind === 'trinket') {
+    return CUSTOM_TRINKET_TYPES_LABEL;
+  }
+
+  const labelParts = [WEAPON_CATEGORY_LABELS[draft.weaponCategory]];
+
+  if (draft.ranged) {
+    labelParts.push(CUSTOM_WEAPON_PROPERTY_LABELS.ranged);
+  }
+
+  if (draft.finesse) {
+    labelParts.push(CUSTOM_WEAPON_PROPERTY_LABELS.finesse);
+  }
+
+  return labelParts.join(', ');
+}
+
+/**
+ * Параметры доспеха из значений формы: КД и правило Ловкости берутся из типа
+ * доспеха. null — вид предмета не «Доспех».
+ *
+ * @param draft значения формы своего предмета.
+ * @returns параметры доспеха или null.
+ */
+function getCustomInventoryArmor(
+  draft: CustomInventoryItemDraft,
+): InventoryArmor | null {
+  if (draft.kind !== 'armor') {
+    return null;
+  }
+
+  const { dexterityMod, shield } = CUSTOM_ARMOR_TYPE_META[draft.armorType];
+
+  return {
+    baseArmorClass: getClampedInteger(
+      draft.baseArmorClass,
+      ARMOR_CLASS_BASE_MIN,
+      ARMOR_CLASS_BASE_MAX,
+    ),
+    dexterityMod,
+    shield,
+  };
+}
+
+/**
+ * Параметры оружия из значений формы. Нулевое количество костей означает оружие
+ * без броска урона — плитка урона у такого не показывается. null — вид предмета
+ * не «Оружие».
+ *
+ * @param draft значения формы своего предмета.
+ * @returns параметры оружия или null.
+ */
+function getCustomInventoryWeapon(
+  draft: CustomInventoryItemDraft,
+): InventoryWeapon | null {
+  if (draft.kind !== 'weapon') {
+    return null;
+  }
+
+  const diceCount = getClampedInteger(
+    draft.damageDiceCount,
+    DAMAGE_DICE_COUNT_MIN,
+    DAMAGE_DICE_COUNT_MAX,
+  );
+
+  return {
+    category: draft.weaponCategory,
+    ranged: draft.ranged,
+    finesse: draft.finesse,
+    damage:
+      diceCount > 0
+        ? {
+            diceCount,
+            diceFaces: draft.damageDiceFaces,
+            bonus: getClampedInteger(
+              draft.damageBonus,
+              DAMAGE_BONUS_MIN,
+              DAMAGE_BONUS_MAX,
+            ),
+            type: draft.damageType,
+          }
+        : null,
+  };
+}
+
+/**
+ * Приведение значения числового поля формы к допустимому диапазону. Очищенное
+ * поле ввода отдаёт пустое значение, поэтому нечисловое считается нулём — оно
+ * же будет подтянуто к границе диапазона.
+ *
+ * @param value значение поля формы.
+ * @param min нижняя граница.
+ * @param max верхняя граница.
+ * @returns значение в пределах диапазона.
+ */
+function getClampedNumber(value: number, min: number, max: number): number {
+  return clamp(Number.isFinite(value) ? value : 0, min, max);
+}
+
+/**
+ * То же для целочисленных полей (количество, кости урона, класс доспеха):
+ * дробная часть отбрасывается.
+ *
+ * @param value значение поля формы.
+ * @param min нижняя граница.
+ * @param max верхняя граница.
+ * @returns целое значение в пределах диапазона.
+ */
+function getClampedInteger(value: number, min: number, max: number): number {
+  return Math.trunc(getClampedNumber(value, min, max));
+}
+
+/**
+ * Вес предмета из значения формы: дробный вес округляется до одного знака —
+ * половина фунта у мелочи вроде кинжала обычное дело.
+ *
+ * @param weight значение поля веса.
+ * @returns вес в фунтах.
+ */
+function getDraftWeight(weight: number): number {
+  const factor = 10 ** WEIGHT_DECIMALS;
+
+  const clampedWeight = getClampedNumber(
+    weight,
+    CUSTOM_ITEM_WEIGHT_MIN,
+    CUSTOM_ITEM_WEIGHT_MAX,
+  );
+
+  return Math.round(clampedWeight * factor) / factor;
+}
+
+/**
+ * Предмет инвентаря из значений формы своего предмета. Пустое название означает
+ * незаполненную форму — такой предмет не создаётся. Числа приводятся к
+ * допустимым диапазонам: поля ввода ограничивают шаг, но не защищают от
+ * очищенного или вставленного значения.
+ *
+ * @param url URL предмета (`custom:` + идентификатор); он же его id.
+ * @param draft значения формы.
+ * @param equipped доспех надет (сохраняется при редактировании).
+ * @returns предмет инвентаря; null — название пустое.
+ */
+export function toCustomInventoryItem(
+  url: string,
+  draft: CustomInventoryItemDraft,
+  equipped = false,
+): CharacterInventoryItem | null {
+  const name = draft.name.trim();
+
+  if (!name) {
+    return null;
+  }
+
+  return {
+    id: url,
+    url,
+    name,
+    category: CUSTOM_INVENTORY_KIND_CATEGORIES[draft.kind],
+    typesLabel: getCustomInventoryTypesLabel(draft),
+    cost: draft.cost.trim(),
+    weight: getDraftWeight(draft.weight),
+    quantity: getClampedInteger(
+      draft.quantity,
+      INVENTORY_QUANTITY_MIN,
+      INVENTORY_QUANTITY_MAX,
+    ),
+    armor: getCustomInventoryArmor(draft),
+    weapon: getCustomInventoryWeapon(draft),
+    // Надетым остаётся только доспех: у оружия и безделушки параметров доспеха
+    // нет, и в подсчёт КД они не идут.
+    equipped: draft.kind === 'armor' && equipped,
+    description: [...draft.description],
+  };
+}
+
+/**
+ * Правка своего предмета формой листа. Скопированный магический предмет
+ * остаётся в своей группе с прежней подписью типов, пока его вид — «Безделушка»:
+ * вида «Магический предмет» в форме нет, и без этой оговорки правка уносила бы
+ * копию из «Магических предметов» в «Прочее». Смена вида на оружие или доспех
+ * группу меняет — её задаёт вид предмета.
+ *
+ * @param editedItem редактируемый предмет (свой либо его копия из справочника).
+ * @param draft новые значения формы.
+ * @returns предмет инвентаря; null — название пустое.
+ */
+export function toUpdatedCustomInventoryItem(
+  editedItem: CharacterInventoryItem,
+  draft: CustomInventoryItemDraft,
+): CharacterInventoryItem | null {
+  const updatedItem = toCustomInventoryItem(
+    editedItem.url,
+    draft,
+    editedItem.equipped,
+  );
+
+  if (
+    !updatedItem
+    || editedItem.category !== 'MAGIC_ITEM'
+    || draft.kind !== 'trinket'
+  ) {
+    return updatedItem;
+  }
+
+  return {
+    ...updatedItem,
+    category: editedItem.category,
+    typesLabel: editedItem.typesLabel,
+  };
+}
+
+/**
+ * Вид своего предмета по его категории инвентаря (обратный разбор для формы
+ * редактирования).
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns вид своего предмета.
+ */
+function getCustomInventoryKind(
+  inventoryItem: CharacterInventoryItem,
+): CustomInventoryKind {
+  if (inventoryItem.category === 'WEAPON') {
+    return 'weapon';
+  }
+
+  return inventoryItem.category === 'ARMOR' ? 'armor' : 'trinket';
+}
+
+/**
+ * Тип доспеха по его параметрам: щит распознаётся флагом, остальные типы — по
+ * правилу применения модификатора Ловкости.
+ *
+ * @param armor параметры доспеха; null — предмет не доспех.
+ * @returns тип доспеха для формы.
+ */
+function getCustomArmorType(armor: InventoryArmor | null): CustomArmorType {
+  if (!armor) {
+    return NEW_CUSTOM_INVENTORY_ITEM.armorType;
+  }
+
+  return armor.shield
+    ? 'shield'
+    : CUSTOM_ARMOR_TYPE_BY_DEXTERITY_MOD[armor.dexterityMod];
+}
+
+/**
+ * Значения формы своего предмета из записи инвентаря — для редактирования.
+ * Незаполненные для этого вида поля берутся из заготовки: игрок может сменить
+ * вид предмета прямо в форме, и они должны быть осмысленными.
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns значения формы своего предмета.
+ */
+export function getCustomInventoryItemDraft(
+  inventoryItem: CharacterInventoryItem,
+): CustomInventoryItemDraft {
+  const { armor, weapon } = inventoryItem;
+
+  return {
+    ...NEW_CUSTOM_INVENTORY_ITEM,
+    kind: getCustomInventoryKind(inventoryItem),
+    name: inventoryItem.name,
+    cost: inventoryItem.cost,
+    weight: inventoryItem.weight,
+    quantity: inventoryItem.quantity,
+    armorType: getCustomArmorType(armor),
+    baseArmorClass:
+      armor?.baseArmorClass ?? NEW_CUSTOM_INVENTORY_ITEM.baseArmorClass,
+    weaponCategory:
+      weapon?.category ?? NEW_CUSTOM_INVENTORY_ITEM.weaponCategory,
+    ranged: weapon?.ranged ?? NEW_CUSTOM_INVENTORY_ITEM.ranged,
+    finesse: weapon?.finesse ?? NEW_CUSTOM_INVENTORY_ITEM.finesse,
+    damageDiceCount:
+      weapon?.damage?.diceCount ?? NEW_CUSTOM_INVENTORY_ITEM.damageDiceCount,
+    damageDiceFaces:
+      weapon?.damage?.diceFaces ?? NEW_CUSTOM_INVENTORY_ITEM.damageDiceFaces,
+    damageBonus: weapon?.damage?.bonus ?? NEW_CUSTOM_INVENTORY_ITEM.damageBonus,
+    damageType: weapon?.damage?.type ?? NEW_CUSTOM_INVENTORY_ITEM.damageType,
+    description: [...(inventoryItem.description ?? [])],
   };
 }
 
@@ -391,20 +843,213 @@ export function getSpeedRows(speed: CharacterSpeed): SpeedRow[] {
 }
 
 /**
- * Итоговый класс доспеха: базовое значение плюс модификатор выбранной
- * характеристики.
+ * Вклад модификатора Ловкости в КД по правилу доспеха: лёгкая — модификатор
+ * целиком, средняя — не больше +2 (штраф по Ловкости), тяжёлая и щит — без
+ * Ловкости.
+ *
+ * @param mode правило применения модификатора Ловкости.
+ * @param dexModifier модификатор Ловкости персонажа.
+ * @returns применяемый бонус Ловкости.
+ */
+function getArmorDexBonus(
+  mode: ArmorDexterityMod,
+  dexModifier: number,
+): number {
+  if (mode === 'none') {
+    return 0;
+  }
+
+  if (mode === 'capped') {
+    return Math.min(dexModifier, ARMOR_MEDIUM_DEX_CAP);
+  }
+
+  return dexModifier;
+}
+
+/**
+ * Разбор итогового класса доспеха. В ручном режиме (`custom`) — базовое значение
+ * плюс модификатор выбранной характеристики. В автоматическом — по надетой
+ * броне: тело даёт лучшая надетая броня (или безброневой `10 + Ловкость`), щит
+ * складывается сверху (в зачёт — лучший щит); модификатор Ловкости учитывается
+ * по правилу брони.
+ *
+ * @param character персонаж.
+ * @returns разбор класса доспеха для листа и модалки.
+ */
+export function getArmorClassBreakdown(
+  character: Character,
+): ArmorClassBreakdown {
+  const { base, ability, custom } = character.armorClass;
+
+  if (custom) {
+    const value = ability
+      ? base + getModifier(character.abilities[ability])
+      : base;
+
+    return {
+      value,
+      custom: true,
+      bodyArmorName: null,
+      bodyArmorValue: value,
+      dexBonus: 0,
+      dexCapped: false,
+      shieldBonus: 0,
+    };
+  }
+
+  const dexModifier = getModifier(character.abilities.dexterity);
+
+  const equippedArmor = character.inventory.filter(
+    (item): item is CharacterInventoryItem & { armor: InventoryArmor } =>
+      item.equipped && item.category === 'ARMOR' && item.armor !== null,
+  );
+
+  // КД тела: сравниваем по эффективному значению (база брони + Ловкость по её
+  // правилу). Стартуем с безброневого КД, чтобы надетая слабая броня не роняла
+  // защиту ниже `10 + Ловкость`.
+  let bodyArmorName: string | null = null;
+  let bodyArmorValue = UNARMORED_ARMOR_CLASS_BASE + dexModifier;
+  let dexBonus = dexModifier;
+  let dexCapped = false;
+
+  for (const item of equippedArmor) {
+    if (item.armor.shield) {
+      continue;
+    }
+
+    const armorDexBonus = getArmorDexBonus(
+      item.armor.dexterityMod,
+      dexModifier,
+    );
+
+    const effectiveValue = item.armor.baseArmorClass + armorDexBonus;
+
+    if (effectiveValue >= bodyArmorValue) {
+      bodyArmorName = item.name;
+      bodyArmorValue = effectiveValue;
+      dexBonus = armorDexBonus;
+      dexCapped = armorDexBonus < dexModifier;
+    }
+  }
+
+  // Щит: в зачёт идёт лучший из надетых (несколько щитов не складываются).
+  let shieldBonus = 0;
+
+  for (const item of equippedArmor) {
+    if (item.armor.shield && item.armor.baseArmorClass > shieldBonus) {
+      shieldBonus = item.armor.baseArmorClass;
+    }
+  }
+
+  return {
+    value: bodyArmorValue + shieldBonus,
+    custom: false,
+    bodyArmorName,
+    bodyArmorValue,
+    dexBonus,
+    dexCapped,
+    shieldBonus,
+  };
+}
+
+/**
+ * Итоговое числовое значение класса доспеха.
  *
  * @param character персонаж.
  * @returns итоговое значение класса доспеха.
  */
 export function getArmorClassValue(character: Character): number {
-  const { base, ability } = character.armorClass;
+  return getArmorClassBreakdown(character).value;
+}
 
-  if (!ability) {
-    return base;
+/**
+ * Базовая характеристика атаки оружием: настройка листа, а если она не задана —
+ * характеристика по правилам (Сила).
+ *
+ * @param character персонаж.
+ * @returns характеристика, от которой считается атака обычным оружием.
+ */
+export function getWeaponAttackAbility(character: Character): AbilityKey {
+  return (
+    character.settings.weaponAttackAbility ?? DEFAULT_WEAPON_ATTACK_ABILITY
+  );
+}
+
+/**
+ * Бонус к броску атаки оружием: бонус мастерства (БаБ) плюс модификатор
+ * характеристики. Базовая характеристика берётся из настроек листа (по
+ * умолчанию — Сила); фехтовальное и дальнобойное оружие бьёт от Ловкости.
+ *
+ * @param character персонаж.
+ * @param weapon параметры оружия.
+ * @returns бонус атаки и использованная характеристика.
+ */
+export function getWeaponAttackBonus(
+  character: Character,
+  weapon: InventoryWeapon,
+): WeaponAttack {
+  const ability = getWeaponAbility(character, weapon);
+
+  const value =
+    getProficiencyBonus(character.level)
+    + getModifier(character.abilities[ability]);
+
+  return { value, ability };
+}
+
+/**
+ * Характеристика конкретного оружия: фехтовальное и дальнобойное бьёт от
+ * Ловкости, остальное — от базовой характеристики атаки из настроек листа.
+ *
+ * @param character персонаж.
+ * @param weapon параметры оружия.
+ * @returns характеристика атаки и урона этим оружием.
+ */
+function getWeaponAbility(
+  character: Character,
+  weapon: InventoryWeapon,
+): AbilityKey {
+  return weapon.finesse || weapon.ranged
+    ? 'dexterity'
+    : getWeaponAttackAbility(character);
+}
+
+/**
+ * Бросок урона оружием: кости из справочника, собственный бонус оружия и
+ * модификатор той же характеристики, что и у атаки. Использует ASCII-минус —
+ * формула уходит в парсер дайс-роллера.
+ *
+ * @param character персонаж.
+ * @param weapon параметры оружия.
+ * @returns разбор броска урона или null, если справочник не дал костей урона.
+ */
+export function getWeaponDamage(
+  character: Character,
+  weapon: InventoryWeapon,
+): WeaponDamage | null {
+  if (!weapon.damage) {
+    return null;
   }
 
-  return base + getModifier(character.abilities[ability]);
+  const ability = getWeaponAbility(character, weapon);
+
+  const diceNotation = `${weapon.damage.diceCount}${DICE_NOTATION_LETTER}${weapon.damage.diceFaces}`;
+
+  const totalBonus =
+    weapon.damage.bonus + getModifier(character.abilities[ability]);
+
+  const sign = totalBonus < 0 ? '-' : '+';
+
+  return {
+    formula:
+      totalBonus === 0
+        ? diceNotation
+        : `${diceNotation}${sign}${Math.abs(totalBonus)}`,
+    diceNotation,
+    weaponBonus: weapon.damage.bonus,
+    ability,
+    typeLabel: DAMAGE_TYPE_LABELS[weapon.damage.type] ?? '',
+  };
 }
 
 /**
@@ -467,6 +1112,362 @@ export function getHitDiceTotals(
     current: allDice.reduce((total, hitDie) => total + hitDie.current, 0),
     max: allDice.reduce((total, hitDie) => total + hitDie.max, 0),
   };
+}
+
+/**
+ * Подпись номинала кости хитов в русской нотации.
+ *
+ * @param die номинал кости.
+ * @returns подпись вида «к8».
+ */
+export function getHitDieLabel(die: number): string {
+  return `${DICE_NOTATION_LETTER}${die}`;
+}
+
+/**
+ * Нотация броска одной кости хитов для дайс-роллера.
+ *
+ * @param die номинал кости.
+ * @returns формула вида «1к8».
+ */
+export function getHitDieFormula(die: number): string {
+  return `${HIT_DICE_ROLL_COUNT}${getHitDieLabel(die)}`;
+}
+
+/**
+ * Кости хитов, сгруппированные по номиналу: классовые и дополнительные
+ * складываются, потому что на отдыхе тратятся одинаково. Номиналы без костей в
+ * список не входят.
+ *
+ * @param hitDice кости хитов из классов.
+ * @param extraHitDice дополнительные кости хитов.
+ * @returns пулы костей по возрастанию номинала.
+ */
+export function getHitDicePools(
+  hitDice: CharacterHitDie[],
+  extraHitDice: CharacterExtraHitDie[],
+): HitDicePool[] {
+  const totalsByDie = new Map<number, { current: number; max: number }>();
+
+  for (const hitDie of [...hitDice, ...extraHitDice]) {
+    const pool = totalsByDie.get(hitDie.die) ?? { current: 0, max: 0 };
+    const max = Math.max(0, hitDie.max);
+
+    totalsByDie.set(hitDie.die, {
+      // Схема документа значения костей не обрезает, поэтому импортированный
+      // вручную лист может принести остаток больше максимума или отрицательный —
+      // выбор костей на отдыхе такие значения не должны ломать.
+      current: pool.current + clamp(hitDie.current, 0, max),
+      max: pool.max + max,
+    });
+  }
+
+  return [...totalsByDie.entries()]
+    .filter(([, pool]) => pool.max > 0)
+    .map(([die, pool]) => ({
+      die,
+      label: getHitDieLabel(die),
+      current: pool.current,
+      max: pool.max,
+    }))
+    .sort((left, right) => left.die - right.die);
+}
+
+/**
+ * Изменение остатка костей хитов по номиналам: положительное количество кости
+ * возвращает (продолжительный отдых), отрицательное — тратит (короткий).
+ * Сперва затрагиваются классовые кости номинала, затем дополнительные; остаток
+ * каждой кости не выходит за границы `[0, max]`, поэтому лишнее просто не
+ * применится.
+ *
+ * @param hitDice кости хитов из классов.
+ * @param extraHitDice дополнительные кости хитов.
+ * @param amounts изменение количества костей по номиналам.
+ * @returns новые списки костей хитов.
+ */
+export function adjustHitDice(
+  hitDice: CharacterHitDie[],
+  extraHitDice: CharacterExtraHitDie[],
+  amounts: HitDiceAmount[],
+): { hitDice: CharacterHitDie[]; extraHitDice: CharacterExtraHitDie[] } {
+  // Неприменённый остаток по номиналу: тает по мере обхода костей, поэтому одно
+  // и то же изменение не применится к номиналу дважды.
+  const pending = new Map(
+    amounts.map((pool) => [pool.die, Math.trunc(pool.count)]),
+  );
+
+  const adjust = <Die extends CharacterHitDie>(hitDie: Die): Die => {
+    const left = pending.get(hitDie.die) ?? 0;
+
+    if (left === 0) {
+      return hitDie;
+    }
+
+    // Отсчёт ведётся от остатка в допустимых границах: импортированный вручную
+    // лист мог принести значение вне `[0, max]`, и без этого правка такой кости
+    // засчиталась бы как часть изменения, раздув его для следующих костей.
+    const sane = clamp(hitDie.current, 0, hitDie.max);
+    const current = clamp(sane + left, 0, hitDie.max);
+
+    if (current === hitDie.current) {
+      return hitDie;
+    }
+
+    pending.set(hitDie.die, left - (current - sane));
+
+    return { ...hitDie, current };
+  };
+
+  return {
+    hitDice: hitDice.map((hitDie) => adjust(hitDie)),
+    extraHitDice: extraHitDice.map((hitDie) => adjust(hitDie)),
+  };
+}
+
+/**
+ * Выбранные на отдыхе кости, обрезанные пределами номиналов: выбор живёт в
+ * модалке, а пределы (остаток костей или нехватка до максимума) меняются после
+ * каждого применения. Номиналы без выбора в результат не входят.
+ *
+ * @param pools пулы костей хитов с пределом выбора.
+ * @param counts выбранное количество костей по номиналам.
+ * @returns количество костей по номиналам.
+ */
+export function getSelectedHitDice(
+  pools: HitDiceSelectPool[],
+  counts: Record<number, number>,
+): HitDiceAmount[] {
+  return pools
+    .map((pool) => ({
+      die: pool.die,
+      count: clamp(counts[pool.die] ?? 0, 0, pool.limit),
+    }))
+    .filter((pool) => pool.count > 0);
+}
+
+/**
+ * Сколько костей хитов возвращает продолжительный отдых: половина от общего
+ * количества костей, но не меньше одной (правило D&D 2024). Больше, чем
+ * потрачено, вернуть нельзя, а без костей возвращать нечего.
+ *
+ * @param pools пулы костей хитов по номиналам.
+ * @returns количество костей к возврату.
+ */
+export function getLongRestHitDiceCount(pools: HitDicePool[]): number {
+  const totals = pools.reduce(
+    (total, pool) => ({
+      current: total.current + pool.current,
+      max: total.max + pool.max,
+    }),
+    { current: 0, max: 0 },
+  );
+
+  const spent = totals.max - totals.current;
+
+  if (spent <= 0) {
+    return 0;
+  }
+
+  return Math.min(
+    spent,
+    Math.max(
+      HIT_DICE_LONG_REST_MIN,
+      Math.floor(totals.max / HIT_DICE_LONG_REST_DIVISOR),
+    ),
+  );
+}
+
+/**
+ * Раскладка возвращаемых костей по умолчанию: сперва крупные номиналы —
+ * они полезнее в бою, а перераспределить выбор игрок может сам.
+ *
+ * @param pools пулы костей хитов с пределом возврата по номиналу.
+ * @param count сколько костей возвращается всего.
+ * @returns количество костей к возврату по номиналам.
+ */
+export function getDefaultHitDiceRecovery(
+  pools: HitDiceSelectPool[],
+  count: number,
+): HitDiceAmount[] {
+  let pending = Math.max(0, Math.trunc(count));
+
+  return [...pools]
+    .sort((left, right) => right.die - left.die)
+    .map((pool) => {
+      const taken = clamp(pending, 0, pool.limit);
+
+      pending -= taken;
+
+      return { die: pool.die, count: taken };
+    })
+    .filter((pool) => pool.count > 0);
+}
+
+/**
+ * Что вернёт продолжительный отдых, кроме хитов и костей: ячейки заклинаний и
+ * все счётчики умений — и с продолжительным, и с коротким восстановлением.
+ *
+ * @param character персонаж.
+ * @returns подписи восстанавливаемого; пустой список — восстанавливать нечего.
+ */
+export function getLongRestRecoveryLabels(character: Character): string[] {
+  const resourceLabels = character.classResources.map(
+    (resource) => resource.name,
+  );
+
+  return getSpellSlotRows(character).length > 0
+    ? [ALL_SPELL_SLOTS_LABEL, ...resourceLabels]
+    : resourceLabels;
+}
+
+/**
+ * Хиты, восстановленные одной костью хитов: выпавшее значение плюс модификатор
+ * Телосложения, но не меньше нуля (правило D&D 2024).
+ *
+ * @param rolled выпавшее на кости значение.
+ * @param modifier модификатор Телосложения.
+ * @returns восстановленные хиты за кость.
+ */
+export function getHitDieRestore(rolled: number, modifier: number): number {
+  return Math.max(0, rolled + modifier);
+}
+
+/**
+ * Среднее значение кости хитов по правилам D&D 2024: половина номинала плюс
+ * один (среднее броска, округлённое вверх).
+ *
+ * @param die номинал кости хитов.
+ * @returns среднее значение кости.
+ */
+export function getHitDieAverage(die: number): number {
+  return Math.floor(die / 2) + 1;
+}
+
+/**
+ * Прирост максимума хитов за один уровень: значение кости плюс модификатор
+ * Телосложения, но не меньше одного хита (правило D&D 2024).
+ *
+ * @param dieValue значение кости (среднее, максимум или бросок).
+ * @param modifier модификатор Телосложения.
+ * @returns прирост максимума хитов.
+ */
+export function getLevelHitPointsGain(
+  dieValue: number,
+  modifier: number,
+): number {
+  return Math.max(HIT_POINTS_LEVEL_GAIN_MIN, dieValue + modifier);
+}
+
+/**
+ * Максимум хитов класса на уровне: первый уровень даёт максимум кости, каждый
+ * следующий — её среднее значение; модификатор Телосложения прибавляется на
+ * каждом уровне (правило D&D 2024).
+ *
+ * @param die номинал кости хитов класса.
+ * @param level уровень персонажа.
+ * @param modifier модификатор Телосложения.
+ * @returns максимум хитов на уровне.
+ */
+export function getClassMaxHitPoints(
+  die: number,
+  level: number,
+  modifier: number,
+): number {
+  const firstLevelGain = getLevelHitPointsGain(die, modifier);
+
+  const perLevelGain = getLevelHitPointsGain(getHitDieAverage(die), modifier);
+
+  return firstLevelGain + Math.max(0, level - 1) * perLevelGain;
+}
+
+/**
+ * Смещение количества классовых костей хитов при смене уровня: изменение
+ * применяется к кости номинала класса — новые кости приходят непотраченными, а
+ * снижение уровня забирает сперва непотраченные. Кости других номиналов
+ * (например, добавленные вручную) не трогаются; если кости класса в списке нет,
+ * положительное изменение её создаёт.
+ *
+ * @param hitDice кости хитов из классов.
+ * @param die номинал кости хитов класса.
+ * @param delta изменение количества костей (разница уровней).
+ * @returns новый список костей хитов.
+ */
+export function shiftClassHitDice(
+  hitDice: CharacterHitDie[],
+  die: number,
+  delta: number,
+): CharacterHitDie[] {
+  const hasClassDie = hitDice.some((hitDie) => hitDie.die === die);
+
+  if (!hasClassDie) {
+    return delta > 0
+      ? [...hitDice, { die, current: delta, max: delta }]
+      : hitDice;
+  }
+
+  return hitDice.map((hitDie) => {
+    if (hitDie.die !== die) {
+      return hitDie;
+    }
+
+    const max = Math.max(0, hitDie.max + delta);
+
+    return { ...hitDie, max, current: clamp(hitDie.current + delta, 0, max) };
+  });
+}
+
+/**
+ * Пересчёт здоровья при смене значения Телосложения: его модификатор входит в
+ * максимум хитов на каждом уровне, поэтому изменение модификатора двигает
+ * максимум и текущие хиты на разницу, умноженную на уровень. Незаполненное
+ * здоровье (нулевой максимум) не трогается — прибавлять не к чему.
+ *
+ * @param health здоровье персонажа.
+ * @param level уровень персонажа.
+ * @param previousScore прежнее значение Телосложения.
+ * @param nextScore новое значение Телосложения.
+ * @returns новое здоровье персонажа.
+ */
+export function adjustHealthForConstitution(
+  health: CharacterHealth,
+  level: number,
+  previousScore: number,
+  nextScore: number,
+): CharacterHealth {
+  const delta = (getModifier(nextScore) - getModifier(previousScore)) * level;
+
+  if (delta === 0 || health.max <= 0) {
+    return health;
+  }
+
+  const max = Math.max(HIT_POINTS_LEVEL_GAIN_MIN, health.max + delta);
+
+  return {
+    ...health,
+    max,
+    current: clamp(health.current + delta, 0, max),
+  };
+}
+
+/**
+ * Что вернёт короткий отдых, кроме хитов: ресурсы класса с восстановлением
+ * «короткий отдых» и ячейки заклинаний договора колдуна.
+ *
+ * @param character персонаж.
+ * @returns подписи восстанавливаемого; пустой список — восстанавливать нечего.
+ */
+export function getShortRestRecoveryLabels(character: Character): string[] {
+  const resourceLabels = character.classResources
+    .filter((resource) => resource.recovery === 'short-rest')
+    .map((resource) => resource.name);
+
+  const hasPactSlots = getSpellSlotRows(character).some(
+    (row) => row.recovery === 'short-rest',
+  );
+
+  return hasPactSlots
+    ? [PACT_SPELL_SLOTS_LABEL, ...resourceLabels]
+    : resourceLabels;
 }
 
 /**
@@ -564,36 +1565,374 @@ export function getSpellGroupLabel(level: number): string {
 
 /**
  * Группировка заклинаний по кругам: заговоры, затем круги по возрастанию;
- * внутри круга — по алфавиту.
+ * внутри круга — по алфавиту. Круги из `slotLevels` попадают в результат даже
+ * без заклинаний: ячейки этих кругов тратятся и на повышение круга уже
+ * известных заклинаний, поэтому их разделитель нужен всегда.
  *
  * @param spells заклинания книги персонажа.
+ * @param slotLevels круги, у которых есть ячейки заклинаний.
  * @returns группы заклинаний с подписями для разделителей.
  */
 export function getSpellGroups(
   spells: CharacterSpell[],
+  slotLevels: number[],
 ): CharacterSpellGroup[] {
-  const sortedSpells = [...spells].sort(
-    (left, right) =>
-      left.level - right.level || left.name.localeCompare(right.name, 'ru'),
-  );
+  const levels = [
+    ...new Set([...spells.map((spell) => spell.level), ...slotLevels]),
+  ].sort((left, right) => left - right);
 
-  const groups: CharacterSpellGroup[] = [];
+  return levels.map((level) => ({
+    level,
+    label: getSpellGroupLabel(level),
+    spells: spells
+      .filter((spell) => spell.level === level)
+      .sort((left, right) => left.name.localeCompare(right.name, 'ru')),
+  }));
+}
 
-  for (const spell of sortedSpells) {
-    const lastGroup = groups.at(-1);
+/**
+ * Своё ли это заклинание: добавлено формой листа, а не выбрано из каталога.
+ * У своих заклинаний нет страницы в разделе «Заклинания», поэтому описание они
+ * хранят прямо в листе.
+ *
+ * @param spell заклинание книги персонажа.
+ * @returns true — заклинание своё.
+ */
+export function isCustomSpell(spell: CharacterSpell): boolean {
+  return spell.url.startsWith(CUSTOM_SPELL_URL_PREFIX);
+}
 
-    if (!lastGroup || lastGroup.level !== spell.level) {
-      groups.push({
-        level: spell.level,
-        label: getSpellGroupLabel(spell.level),
-        spells: [spell],
-      });
-    } else {
-      lastGroup.spells.push(spell);
-    }
+/**
+ * Заполненные характеристики своего заклинания (время, дистанция, компоненты,
+ * длительность) для развёрнутой карточки; незаполненные поля пропускаются.
+ *
+ * @param spell заклинание книги персонажа.
+ * @returns строки «подпись — значение».
+ */
+export function getSpellStatRows(spell: CharacterSpell): CustomSpellStatRow[] {
+  return CUSTOM_SPELL_FIELDS.map((field) => ({
+    key: field.key,
+    label: field.label,
+    value: spell[field.key]?.trim() ?? '',
+  })).filter((row) => row.value);
+}
+
+/**
+ * Заклинание книги из значений формы своего заклинания. Пустое название
+ * означает незаполненную форму — такое заклинание не создаётся.
+ *
+ * @param url URL заклинания (`custom:` + идентификатор).
+ * @param draft значения формы.
+ * @returns заклинание книги; null — название пустое.
+ */
+export function toCustomSpell(
+  url: string,
+  draft: CustomSpellDraft,
+): CharacterSpell | null {
+  const name = draft.name.trim();
+
+  if (!name) {
+    return null;
   }
 
-  return groups;
+  return {
+    url,
+    name,
+    level: draft.level,
+    school: draft.school.trim(),
+    concentration: draft.concentration,
+    ritual: draft.ritual,
+    castingTime: draft.castingTime.trim(),
+    range: draft.range.trim(),
+    components: draft.components.trim(),
+    duration: draft.duration.trim(),
+    description: [...draft.description],
+  };
+}
+
+/**
+ * Своя копия каталожного заклинания: круг, школа и признаки концентрации с
+ * ритуалом остаются прежними, а характеристики с описанием переезжают из
+ * справочника в лист — у каталожных записей их в документе нет. Новый URL с
+ * префиксом `custom:` делает запись своей: дальше её правит форма листа.
+ *
+ * @param url URL копии (`custom:` + идентификатор).
+ * @param spell каталожное заклинание книги.
+ * @param detail деталь из справочника; null — не загрузилась.
+ * @returns заклинание книги, помеченное как своё.
+ */
+export function toCopiedSpell(
+  url: string,
+  spell: CharacterSpell,
+  detail: CatalogSpellDetail | null,
+): CharacterSpell {
+  return {
+    ...spell,
+    url,
+    castingTime: detail?.castingTime ?? '',
+    range: detail?.range ?? '',
+    components: detail?.components ?? '',
+    duration: detail?.duration ?? '',
+    description: detail ? [...detail.description] : [],
+  };
+}
+
+/**
+ * Приведение названия класса или подкласса к ключу карт заклинательства.
+ *
+ * @param name название класса или подкласса.
+ * @returns название без крайних пробелов, в нижнем регистре и без «ё».
+ */
+function normalizeClassName(name: string): string {
+  return name.trim().toLowerCase().replaceAll('ё', 'е');
+}
+
+/**
+ * Заклинательная характеристика класса по его базовому названию (для режима
+ * «Авто»). Классы-незаклинатели и отсутствие класса дают null.
+ *
+ * @param characterClass класс персонажа; null — не выбран.
+ * @returns заклинательная характеристика или null, если не определена.
+ */
+export function getClassSpellcastingAbility(
+  characterClass: CharacterClass | null,
+): AbilityKey | null {
+  if (!characterClass) {
+    return null;
+  }
+
+  return (
+    CLASS_SPELLCASTING_ABILITIES[normalizeClassName(characterClass.name)]
+    ?? null
+  );
+}
+
+/**
+ * Тип заклинательства класса по его названию и названию подкласса. Запасной
+ * путь для листов, сохранённых до появления `casterType`: у воина и плута
+ * ячейки даёт подкласс (мистический рыцарь и мистический ловкач).
+ *
+ * @param characterClass класс персонажа.
+ * @returns тип заклинательства; null — класс ячеек заклинаний не даёт.
+ */
+function getLegacyCasterType(
+  characterClass: CharacterClass,
+): CasterType | null {
+  const casterType =
+    CLASS_SPELL_PROGRESSIONS[normalizeClassName(characterClass.name)];
+
+  if (casterType) {
+    return casterType;
+  }
+
+  const { subclassName } = characterClass;
+
+  return subclassName
+    && THIRD_CASTER_SUBCLASSES.includes(normalizeClassName(subclassName))
+    ? CasterType.THIRD
+    : null;
+}
+
+/**
+ * Тип заклинательства класса персонажа: берётся из листа (`casterType`
+ * справочника, записанный визардом класса), а у листов без этого поля
+ * определяется по названию класса и подкласса.
+ *
+ * @param characterClass класс персонажа; null — не выбран.
+ * @returns тип заклинательства; null — класс ячеек заклинаний не даёт.
+ */
+export function getClassCasterType(
+  characterClass: CharacterClass | null,
+): CasterType | null {
+  if (!characterClass) {
+    return null;
+  }
+
+  return characterClass.casterType ?? getLegacyCasterType(characterClass);
+}
+
+/**
+ * Тип заклинательства выбранной в визарде пары «класс — подкласс». Подкласс
+ * перекрывает класс, только когда сам даёт заклинательство: ячейки воина и
+ * плута появляются лишь у мистического рыцаря и мистического ловкача, а
+ * остальные их подклассы (как и класс) заклинательства не дают.
+ *
+ * @param classSummary деталь выбранного класса.
+ * @param subclassSummary деталь выбранного подкласса; null — не выбран.
+ * @returns тип заклинательства для записи в лист.
+ */
+export function getSelectedCasterType(
+  classSummary: ClassSummary,
+  subclassSummary: ClassSummary | null,
+): CasterType | null {
+  const subclassCasterType = subclassSummary?.casterType;
+
+  return subclassCasterType && subclassCasterType !== CasterType.NONE
+    ? subclassCasterType
+    : classSummary.casterType;
+}
+
+/**
+ * Строка таблицы ячеек заклинаний для типа заклинательства и уровня персонажа.
+ * Таблицы общие с разделом «Классы» — там ими рисуется прогрессия класса.
+ *
+ * @param casterType тип заклинательства класса.
+ * @param level уровень персонажа (нормализованный).
+ * @returns количество ячеек по кругам, индекс — круг минус 1.
+ */
+function getCasterTypeSpellSlots(
+  casterType: CasterType,
+  level: Level,
+): number[] {
+  if (casterType === CasterType.FULL) {
+    return FULL_CASTER_SPELL_SLOTS[level];
+  }
+
+  if (casterType === CasterType.HALF) {
+    return HALF_CASTER_SPELL_SLOTS[level];
+  }
+
+  if (casterType === CasterType.THIRD) {
+    return THIRD_CASTER_SPELL_SLOTS[level];
+  }
+
+  if (casterType === CasterType.MULTICLASS) {
+    return MULTICLASS_SPELL_SLOTS[level];
+  }
+
+  // Все ячейки колдуна — одного круга: младшие круги остаются пустыми и в
+  // разделители списка не попадают.
+  if (casterType === CasterType.PACT) {
+    const pactLevel = PACT_CASTER_SPELL_SLOTS_LEVEL[level];
+
+    return Array.from({ length: pactLevel }, (_slot, index) =>
+      index === pactLevel - 1 ? PACT_CASTER_SPELL_SLOTS_COUNT[level] : 0,
+    );
+  }
+
+  return [];
+}
+
+/**
+ * Количество ячеек заклинаний по кругам для класса и уровня персонажа. Уровень
+ * вне диапазона таблиц (битый документ) ячеек не даёт.
+ *
+ * @param casterType тип заклинательства класса.
+ * @param level уровень персонажа.
+ * @returns количество ячеек, индекс — круг минус 1.
+ */
+function getSpellSlotMaximums(casterType: CasterType, level: number): number[] {
+  const characterLevel = LEVELS.find(
+    (tableLevel) => tableLevel === Math.trunc(level),
+  );
+
+  return characterLevel
+    ? getCasterTypeSpellSlots(casterType, characterLevel)
+    : [];
+}
+
+/**
+ * Ряды ячеек заклинаний персонажа: максимум круга считается по классу и уровню,
+ * трата берётся с листа и обрезается по максимуму (уровень мог измениться после
+ * траты). Круги без ячеек в результат не входят.
+ *
+ * @param character персонаж.
+ * @returns ряды ячеек по возрастанию круга.
+ */
+export function getSpellSlotRows(character: Character): SpellSlotRow[] {
+  const casterType = getClassCasterType(character.characterClass);
+
+  if (!casterType) {
+    return [];
+  }
+
+  // Ячейки договора колдуна возвращаются коротким отдыхом, обычные — только
+  // продолжительным.
+  const recovery: ResourceRecovery =
+    casterType === CasterType.PACT ? 'short-rest' : 'long-rest';
+
+  const usedByLevel = new Map(
+    character.spellSlots.map((slot) => [slot.level, slot.used]),
+  );
+
+  return getSpellSlotMaximums(casterType, character.level)
+    .map((max, index) => ({
+      level: index + 1,
+      max,
+      used: clamp(usedByLevel.get(index + 1) ?? 0, 0, max),
+      recovery,
+    }))
+    .filter((row) => row.max > 0);
+}
+
+/**
+ * Кружки ячеек круга для разделителя списка заклинаний: закрашенные кружки —
+ * потраченные ячейки, пустые — оставшиеся.
+ *
+ * @param row ряд ячеек круга.
+ * @returns кружки по порядку с подписями для скринридера.
+ */
+export function getSpellSlotCircles(row: SpellSlotRow): SpellSlotCircle[] {
+  return Array.from({ length: row.max }, (_slot, index) => {
+    const used = index < row.used;
+
+    return {
+      index,
+      used,
+      label: `${getSpellLevelLabel(row.level)}, ячейка ${index + 1}: ${
+        used ? SPELL_SLOT_USED_LABEL : SPELL_SLOT_FREE_LABEL
+      }`,
+    };
+  });
+}
+
+/**
+ * Подсказка ряда ячеек круга: сколько ячеек осталось и чем они восстанавливаются.
+ *
+ * @param row ряд ячеек круга.
+ * @returns строка подсказки для тултипа разделителя.
+ */
+export function getSpellSlotSummary(row: SpellSlotRow): string {
+  const free = row.max - row.used;
+
+  return `Свободно ячеек: ${free} из ${row.max} · ${RESOURCE_RECOVERY_LABELS[row.recovery]}`;
+}
+
+/**
+ * Разбор заклинательства: сложность спасброска от заклинаний и бонус на
+ * попадание атакой заклинанием. Заклинательная характеристика — заданная
+ * вручную либо (при null) определяемая по классу. Если характеристика не
+ * определена, её модификатор считается нулевым.
+ *
+ * Сложность спасброска — `8 + бонус мастерства + модификатор характеристики`;
+ * бонус атаки — `бонус мастерства + модификатор характеристики` (D&D 2024).
+ *
+ * @param character персонаж.
+ * @returns разбор заклинательства для вкладки и модалки настройки.
+ */
+export function getSpellcastingBreakdown(
+  character: Character,
+): SpellcastingBreakdown {
+  const explicitAbility = character.spellcasting.ability;
+  const auto = explicitAbility === null;
+
+  const ability =
+    explicitAbility ?? getClassSpellcastingAbility(character.characterClass);
+
+  const abilityModifier = ability
+    ? getModifier(character.abilities[ability])
+    : 0;
+
+  const proficiencyBonus = getProficiencyBonus(character.level);
+
+  return {
+    ability,
+    auto,
+    abilityModifier,
+    proficiencyBonus,
+    saveDc: SPELL_SAVE_DC_BASE + proficiencyBonus + abilityModifier,
+    attackBonus: proficiencyBonus + abilityModifier,
+  };
 }
 
 /**
@@ -652,6 +1991,27 @@ export function getCharacterFeatureId(
 }
 
 /**
+ * Извлекает url черты из идентификатора особенности. Обычная черта — `feat:url`,
+ * повторяемая — `feat:url:uuid` (у каждой копии свой суффикс). Url черты не
+ * содержит двоеточий, поэтому берём сегмент между первым и вторым `:`.
+ *
+ * @param featureId идентификатор особенности.
+ * @returns url черты или null, если особенность — не черта.
+ */
+export function getFeatUrlFromFeatureId(featureId: string): string | null {
+  if (!featureId.startsWith('feat:')) {
+    return null;
+  }
+
+  const afterPrefix = featureId.slice('feat:'.length);
+  const separatorIndex = afterPrefix.indexOf(':');
+
+  return separatorIndex === -1
+    ? afterPrefix
+    : afterPrefix.slice(0, separatorIndex);
+}
+
+/**
  * Сборка особенностей персонажа из деталей вида и подвида. Выбор игрока
  * подставляется по идентификатору особенности (`origin:url`).
  *
@@ -693,13 +2053,21 @@ export function buildCharacterFeatures(
 /**
  * Сборка особенности персонажа из детали черты раздела «Черты». Категория
  * черты сохраняется как источник особенности (для подсказки на бейдже).
+ * Повторяемая черта получает уникальный суффикс в идентификаторе — так копии
+ * одной черты не схлопываются дедупом и удаляются/правятся независимо.
  *
  * @param summary деталь черты.
+ * @param repeatable черту можно брать несколько раз (уникальный id для копии).
  * @returns особенность персонажа с происхождением «Черта».
  */
-export function buildFeatFeature(summary: FeatSummary): CharacterFeature {
+export function buildFeatFeature(
+  summary: FeatSummary,
+  repeatable = false,
+): CharacterFeature {
+  const baseId = getCharacterFeatureId('feat', summary.url);
+
   return {
-    id: getCharacterFeatureId('feat', summary.url),
+    id: repeatable ? `${baseId}:${crypto.randomUUID()}` : baseId,
     name: summary.name,
     description: [...summary.description],
     origin: 'feat',
@@ -835,83 +2203,6 @@ export function matchClassProficiencies(proficiencyText: {
 }
 
 /**
- * Значение колонки таблицы прогрессии на заданном уровне: берётся запись с
- * наибольшим уровнем, не превышающим текущий.
- *
- * @param column колонка таблицы прогрессии.
- * @param level уровень персонажа.
- * @returns значение колонки; null — записи для уровня нет.
- */
-function getColumnValueAtLevel(
-  column: ClassTableColumn,
-  level: number,
-): string | null {
-  let value: string | null = null;
-  let bestLevel = 0;
-
-  for (const entry of column.scaling) {
-    if (entry.level <= level && entry.level >= bestLevel) {
-      bestLevel = entry.level;
-      value = entry.value;
-    }
-  }
-
-  return value;
-}
-
-/**
- * Эвристический вывод ресурсов класса из таблицы прогрессии: колонка становится
- * ресурсом, только если её значение на текущем уровне — целое число в
- * допустимом диапазоне, а название не входит в стоп-слова (заклинания, ячейки,
- * бонусы, урон, уровень). Значения игрок затем правит вручную.
- *
- * @param table таблица прогрессии класса.
- * @param level уровень персонажа.
- * @returns ресурсы класса с устойчивыми идентификаторами.
- */
-export function deriveClassResources(
-  table: ClassTableColumn[],
-  level: number,
-): CharacterClassResource[] {
-  const resources: CharacterClassResource[] = [];
-
-  for (const column of table) {
-    const normalizedName = column.name.toLowerCase().replaceAll('ё', 'е');
-
-    const isDenied = CLASS_RESOURCE_DENY_KEYWORDS.some((keyword) =>
-      normalizedName.includes(keyword.replaceAll('ё', 'е')),
-    );
-
-    if (isDenied) {
-      continue;
-    }
-
-    const value = getColumnValueAtLevel(column, level)?.trim();
-
-    if (!value || !/^\d+$/.test(value)) {
-      continue;
-    }
-
-    const max = Number(value);
-
-    if (max < 1 || max > RESOURCE_COUNT_MAX) {
-      continue;
-    }
-
-    resources.push({
-      id: `class:res:${column.name}`,
-      name: column.name,
-      shortLabel: column.name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
-      recovery: 'long-rest',
-      current: max,
-      max,
-    });
-  }
-
-  return resources;
-}
-
-/**
  * Приведение узла разметки класса (`RenderNode`) к массиву узлов описания
  * особенности: строка и одиночный узел заворачиваются в массив.
  *
@@ -982,6 +2273,17 @@ export function buildClassFeatures(
   }
 
   return features;
+}
+
+/**
+ * Уровень персонажа для подписи в списке: не ниже первого. У листа без класса
+ * уровень ещё не набран, но персонаж всё равно первого уровня, а не нулевого.
+ *
+ * @param character персонаж листа.
+ * @returns уровень для отображения.
+ */
+export function getDisplayLevel(character: Character): number {
+  return Math.max(character.level, LEVEL_MIN);
 }
 
 /**
@@ -1279,4 +2581,459 @@ export function computeAbilityBonuses(
   }
 
   return bonuses;
+}
+
+/**
+ * Имя файла для экспорта листа: имя персонажа без запрещённых в файловой
+ * системе символов. Пустое имя заменяется общим запасным значением.
+ *
+ * @param name имя персонажа.
+ * @returns безопасное имя файла без расширения.
+ */
+function getCharacterFileName(name: string): string {
+  const safeName = name
+    .trim()
+    .replace(/[/:*?"<>|]+/g, ' ')
+    .trim();
+
+  return safeName || CHARACTER_FILE_NAME_FALLBACK;
+}
+
+/**
+ * Скачивание листа в виде JSON-файла: сериализует персонажа (та же форма, что
+ * уходит в автосохранение).
+ *
+ * Ссылка на изображение в файл не попадает: она ведёт в наше хранилище и
+ * действительна только для своего владельца — в чужом аккаунте или стороннем
+ * сервисе картинка всё равно не откроется. Пустое поле честнее битой ссылки.
+ *
+ * @param character персонаж скачиваемого листа.
+ */
+export function downloadCharacterJson(character: Character): void {
+  const json = JSON.stringify({ ...character, avatarUrl: null }, null, 2);
+
+  downloadBlob(
+    new Blob([json], { type: 'application/json' }),
+    `${getCharacterFileName(character.name)}.json`,
+  );
+}
+
+/**
+ * Скачивание листа в виде PDF: раскладка близка к официальному листу D&D 2024,
+ * дальше идут снаряжение, заклинания и справочник с полными описаниями.
+ *
+ * Сборщик и pdf-lib загружаются динамически: они нужны только в момент экспорта,
+ * а в основном бандле весили бы больше самого листа.
+ *
+ * @param character персонаж скачиваемого листа.
+ */
+export async function downloadCharacterPdf(
+  character: Character,
+): Promise<void> {
+  const { buildCharacterSheetPdf } = await import('./pdf');
+
+  const bytes = await buildCharacterSheetPdf(character);
+
+  // Копия байтов в свежий массив: `Blob` принимает только представления над
+  // `ArrayBuffer`, а pdf-lib отдаёт массив над `ArrayBufferLike`.
+  downloadBlob(
+    new Blob([new Uint8Array(bytes)], { type: SHEET_PDF_MIME_TYPE }),
+    `${getCharacterFileName(character.name)}.pdf`,
+  );
+}
+
+/** Доступность действий и обработчики пунктов меню действий над листом. */
+export interface SheetActionMenuOptions {
+  /** Копия листа доступна: в лимите активных листов есть свободное место. */
+  canDuplicate: boolean;
+
+  /** Удаление листа доступно из этого места. */
+  canRemove: boolean;
+
+  /**
+   * Доступ по ссылке уже включён — пункт подсказывает состояние, не открывая
+   * модалку. Учитывается только вместе с `onShare`.
+   */
+  isShared?: boolean;
+
+  /**
+   * Лист открыт по ссылке: остаётся только выгрузка документа. Копия, удаление,
+   * настройки и управление доступом — права владельца, зрителю их не показываем.
+   */
+  isReadonly?: boolean;
+
+  /**
+   * Лист заперт замком: правки запрещены, поэтому пункт настроек скрыт — он
+   * упёрся бы в ту же блокировку. Действий над листом целиком замок не касается.
+   */
+  isLocked?: boolean;
+
+  /** Идёт сборка PDF: пункт показывает загрузку и не принимает повторный клик. */
+  isPdfLoading?: boolean;
+
+  onDownload: () => void;
+  onDownloadPdf: () => void;
+  onDuplicate: () => void;
+  onRemove: () => void;
+  onSettings: () => void;
+
+  /**
+   * Открытие модалки «Поделиться»; не передан — пункта в меню нет. Так меню
+   * чужого листа и мест без управления доступом остаётся без лишнего действия.
+   */
+  onShare?: () => void;
+}
+
+/**
+ * Пункты меню действий над листом — общие для шапки открытого листа и карточки
+ * в списке персонажей: экспорт, копия, доступ по ссылке и настройки одной
+ * группой, удаление — отдельной, оно необратимее прочих. У листа, открытого по
+ * ссылке, остаётся только выгрузка: сохранить его к себе зритель может кнопками
+ * в шапке, а не отсюда.
+ *
+ * @param options доступность действий и обработчики пунктов.
+ * @returns группы пунктов для `UDropdownMenu`.
+ */
+export function getSheetActionMenuItems(
+  options: SheetActionMenuOptions,
+): Array<Array<DropdownMenuItem>> {
+  // Экспорт в PDF идёт первым: играют по нему, а JSON нужен для переноса листа.
+  const downloadPdf: DropdownMenuItem = {
+    label: SHEET_DOWNLOAD_PDF_LABEL,
+    icon: 'tabler:file-type-pdf',
+    description: SHEET_DOWNLOAD_PDF_HINT,
+    loading: options.isPdfLoading,
+    disabled: options.isPdfLoading,
+    onSelect: options.onDownloadPdf,
+  };
+
+  const download: DropdownMenuItem = {
+    label: SHEET_DOWNLOAD_JSON_LABEL,
+    icon: 'tabler:download',
+    onSelect: options.onDownload,
+  };
+
+  if (options.isReadonly) {
+    return [[downloadPdf, download]];
+  }
+
+  const actions: DropdownMenuItem[] = [
+    downloadPdf,
+    download,
+    {
+      label: 'Создать копию',
+      icon: 'tabler:copy',
+      // Причина недоступности прямо в пункте: без неё серый пункт выглядит
+      // поломкой, а тултипа у пунктов меню нет.
+      description: options.canDuplicate ? undefined : SHEET_COPY_LIMIT_HINT,
+      disabled: !options.canDuplicate,
+      onSelect: options.onDuplicate,
+    },
+  ];
+
+  if (options.onShare) {
+    actions.push({
+      label: 'Поделиться листом',
+      icon: options.isShared ? 'tabler:link' : 'tabler:share',
+      // Включённый доступ виден прямо в меню: иначе о том, что лист уже открыт
+      // по ссылке, нельзя узнать, не заглянув в модалку.
+      description: options.isShared ? SHEET_SHARE_ACTIVE_HINT : undefined,
+      onSelect: options.onShare,
+    });
+  }
+
+  if (!options.isLocked) {
+    actions.push({
+      label: 'Настройки',
+      icon: 'tabler:settings',
+      onSelect: options.onSettings,
+    });
+  }
+
+  if (!options.canRemove) {
+    return [actions];
+  }
+
+  return [
+    actions,
+    [
+      {
+        label: 'Удалить лист',
+        icon: 'tabler:trash',
+        color: 'error',
+        onSelect: options.onRemove,
+      },
+    ],
+  ];
+}
+
+/** Доступность действий и обработчики меню сохранённого чужого листа. */
+export interface SavedSheetActionMenuOptions {
+  /** Копия доступна: в лимите своих активных листов есть свободное место. */
+  canCopy: boolean;
+
+  /** Идёт сборка PDF: пункт показывает загрузку и не принимает повторный клик. */
+  isPdfLoading?: boolean;
+
+  onDownload: () => void;
+  onDownloadPdf: () => void;
+  onCopy: () => void;
+  onRemove: () => void;
+}
+
+/**
+ * Пункты меню карточки чужого листа, сохранённого по ссылке. От меню своего
+ * листа отличается тем, чего у зрителя нет: правок, настроек и управления
+ * доступом. Копия остаётся — она создаёт уже свой лист.
+ *
+ * @param options доступность действий и обработчики пунктов.
+ * @returns группы пунктов для `UDropdownMenu`.
+ */
+export function getSavedSheetActionMenuItems(
+  options: SavedSheetActionMenuOptions,
+): Array<Array<DropdownMenuItem>> {
+  return [
+    [
+      {
+        label: SHEET_DOWNLOAD_PDF_LABEL,
+        icon: 'tabler:file-type-pdf',
+        description: SHEET_DOWNLOAD_PDF_HINT,
+        loading: options.isPdfLoading,
+        disabled: options.isPdfLoading,
+        onSelect: options.onDownloadPdf,
+      },
+      {
+        label: SHEET_DOWNLOAD_JSON_LABEL,
+        icon: 'tabler:download',
+        onSelect: options.onDownload,
+      },
+      {
+        label: SHEET_SAVE_SHARED_LABELS.copy,
+        icon: 'tabler:copy',
+        // Причина недоступности прямо в пункте — как и у копии своего листа.
+        description: options.canCopy ? undefined : SHEET_COPY_LIMIT_HINT,
+        disabled: !options.canCopy,
+        onSelect: options.onCopy,
+      },
+    ],
+    [
+      {
+        label: 'Убрать из списка',
+        icon: 'tabler:link-off',
+        color: 'error',
+        onSelect: options.onRemove,
+      },
+    ],
+  ];
+}
+
+/**
+ * Подпись счётчика сохранённых чужих листов для тултипа раздела.
+ *
+ * @param count число сохранённых записей.
+ * @param limit лимит сохранённых записей.
+ * @returns текст тултипа.
+ */
+export function getSavedSheetsCountTooltip(
+  count: number,
+  limit: number,
+): string {
+  return `Чужих листов, сохранённых по ссылке, — ${count} из ${limit} возможных`;
+}
+
+// Меню «Добавить» на вкладках листа: варианты добавления живут в выпадающем
+// меню, а не в ряду кнопок — ряд не растёт с каждым новым источником и не
+// переносится на вторую строку в узком дровере.
+
+/** Обработчики пунктов меню «Добавить» на вкладке снаряжения. */
+export interface EquipmentAddMenuOptions {
+  onAddItem: () => void;
+  onAddMagicItem: () => void;
+  onAddCustomItem: () => void;
+}
+
+/**
+ * Пункты меню «Добавить» на вкладке снаряжения: предмет из каталога,
+ * магический предмет и свой, заполняемый вручную.
+ *
+ * @param options обработчики пунктов.
+ * @returns пункты для `UDropdownMenu`.
+ */
+export function getEquipmentAddMenuItems(
+  options: EquipmentAddMenuOptions,
+): DropdownMenuItem[] {
+  return [
+    {
+      label: 'Предмет',
+      icon: 'tabler:package',
+      onSelect: options.onAddItem,
+    },
+    {
+      label: 'Магический предмет',
+      icon: 'tabler:sparkles',
+      onSelect: options.onAddMagicItem,
+    },
+    {
+      label: 'Свой предмет',
+      icon: 'tabler:pencil-plus',
+      onSelect: options.onAddCustomItem,
+    },
+  ];
+}
+
+/** Обработчики пунктов меню «Добавить» на вкладке заклинаний. */
+export interface SpellsAddMenuOptions {
+  onAddSpell: () => void;
+  onAddCustomSpell: () => void;
+}
+
+/**
+ * Пункты меню «Добавить» на вкладке заклинаний: заклинание из каталога и своё,
+ * заполняемое вручную.
+ *
+ * @param options обработчики пунктов.
+ * @returns пункты для `UDropdownMenu`.
+ */
+export function getSpellsAddMenuItems(
+  options: SpellsAddMenuOptions,
+): DropdownMenuItem[] {
+  return [
+    {
+      label: 'Заклинание',
+      icon: 'tabler:wand',
+      onSelect: options.onAddSpell,
+    },
+    {
+      label: 'Своё заклинание',
+      icon: 'tabler:pencil-plus',
+      onSelect: options.onAddCustomSpell,
+    },
+  ];
+}
+
+/** Обработчики пунктов меню «Добавить» на вкладке особенностей. */
+export interface FeaturesAddMenuOptions {
+  onAddFeature: () => void;
+  onAddFeat: () => void;
+}
+
+/**
+ * Пункты меню «Добавить» на вкладке особенностей: своя особенность и черта из
+ * каталога. Иконка карандаша — та же, что у своего заклинания: заполняется
+ * вручную, а не выбирается из раздела сайта.
+ *
+ * @param options обработчики пунктов.
+ * @returns пункты для `UDropdownMenu`.
+ */
+export function getFeaturesAddMenuItems(
+  options: FeaturesAddMenuOptions,
+): DropdownMenuItem[] {
+  return [
+    {
+      label: 'Особенность',
+      icon: 'tabler:pencil-plus',
+      onSelect: options.onAddFeature,
+    },
+    {
+      label: 'Черта',
+      icon: 'tabler:award',
+      onSelect: options.onAddFeat,
+    },
+  ];
+}
+
+/** Обработчики пунктов меню строки каталожной или своей записи листа. */
+export interface SheetEntryMenuOptions {
+  /**
+   * Правка записи; не передан — пункта нет. У каталожной записи править нечего:
+   * её поля приходят из раздела сайта.
+   */
+  onEdit?: () => void;
+
+  /**
+   * Копия каталожной записи в лист; не передан — пункта нет. Своя запись уже
+   * живёт в листе, копировать её незачем.
+   */
+  onCopy?: () => void;
+
+  onRemove: () => void;
+}
+
+/**
+ * Пункты меню строки: правка своей записи, копия каталожной в лист и удаление.
+ * Порядок общий для снаряжения и заклинаний — сначала то, что меняет саму
+ * запись, потом удаление.
+ *
+ * @param options обработчики пунктов.
+ * @param removeLabel подпись удаления (у снаряжения и книги она своя).
+ * @returns пункты для `UDropdownMenu`.
+ */
+function getSheetEntryMenuItems(
+  options: SheetEntryMenuOptions,
+  removeLabel: string,
+): DropdownMenuItem[] {
+  const items: DropdownMenuItem[] = [];
+
+  if (options.onEdit) {
+    items.push({
+      label: 'Редактировать',
+      icon: 'tabler:pencil',
+      onSelect: options.onEdit,
+    });
+  }
+
+  if (options.onCopy) {
+    items.push({
+      label: CATALOG_COPY_MENU_LABEL,
+      icon: 'tabler:copy',
+      onSelect: options.onCopy,
+    });
+  }
+
+  items.push({
+    label: removeLabel,
+    icon: 'tabler:trash',
+    color: 'error',
+    onSelect: options.onRemove,
+  });
+
+  return items;
+}
+
+/**
+ * Пункты меню строки снаряжения. Действия убраны под многоточие, а не стоят
+ * кнопками в строке: у каталожного предмета их два, у своего — тоже два, но
+ * другие, и трейлинг соседних строк не выравнивался бы.
+ *
+ * @param options обработчики пунктов.
+ * @returns пункты для `UDropdownMenu`.
+ */
+export function getInventoryItemMenuItems(
+  options: SheetEntryMenuOptions,
+): DropdownMenuItem[] {
+  return getSheetEntryMenuItems(options, INVENTORY_REMOVE_MENU_LABEL);
+}
+
+/**
+ * Пункты меню строки заклинания — те же действия, что и у снаряжения: строки
+ * обеих вкладок ведут себя одинаково.
+ *
+ * @param options обработчики пунктов.
+ * @returns пункты для `UDropdownMenu`.
+ */
+export function getSpellMenuItems(
+  options: SheetEntryMenuOptions,
+): DropdownMenuItem[] {
+  return getSheetEntryMenuItems(options, SPELL_REMOVE_MENU_LABEL);
+}
+
+/**
+ * Текст подтверждения удаления предмета: называет предмет, чтобы в длинном
+ * списке было видно, какая именно строка исчезнет.
+ *
+ * @param name название предмета.
+ * @returns описание для диалога подтверждения.
+ */
+export function getInventoryRemoveDescription(name: string): string {
+  return `«${name}» исчезнет из снаряжения — вернуть его можно только заново добавив.`;
 }

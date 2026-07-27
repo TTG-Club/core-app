@@ -14,6 +14,8 @@ export const DEFAULT_CHARACTER: Character = {
   size: null,
   features: [],
   spells: [],
+  spellcasting: { ability: null },
+  spellSlots: [],
   characterClass: null,
   characterBackground: null,
   level: 1,
@@ -23,6 +25,7 @@ export const DEFAULT_CHARACTER: Character = {
     base: 10,
     ability: 'dexterity',
     natural: false,
+    custom: false,
   },
   speed: {
     values: {
@@ -38,6 +41,9 @@ export const DEFAULT_CHARACTER: Character = {
   vision: {
     normal: 0,
     darkvision: 0,
+    blindsight: 0,
+    tremorsense: 0,
+    truesight: 0,
     unit: 'feet',
   },
   abilities: {
@@ -87,6 +93,8 @@ export const DEFAULT_CHARACTER: Character = {
     gold: 0,
     platinum: 0,
   },
+  customCurrencies: [],
   inventory: [],
   notes: '',
+  settings: { weaponAttackAbility: null },
 };

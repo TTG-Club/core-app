@@ -4,12 +4,16 @@
   const {
     label,
     interactive = false,
+    shortLabel = undefined,
     unit = undefined,
     pressLabel = undefined,
   } = defineProps<{
     label: string;
     value: string | number;
     unit?: string;
+
+    /** Короткая подпись для узкой плитки (например, «КД» вместо «Класс доспеха»). */
+    shortLabel?: string;
 
     /** Плитка кликабельна: клик отправляет событие `press`. */
     interactive?: boolean;
@@ -28,6 +32,7 @@
 <template>
   <SheetPanel
     :title="label"
+    :short-title="shortLabel"
     center-title
     :interactive="interactive"
   >

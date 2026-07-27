@@ -16,11 +16,11 @@
   import { ULink } from '#components';
   import { LEVELS } from '~/shared/consts';
 
-  import { CasterType } from '../../../model';
   import {
+    CasterType,
     PACT_CASTER_SPELL_SLOTS_COUNT,
     PACT_CASTER_SPELL_SLOTS_LEVEL,
-  } from './const';
+  } from '../../../model';
   import { useDndMechanics } from './useDndMechanics';
 
   const props =

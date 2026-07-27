@@ -171,7 +171,7 @@
   // Класс контейнера редактора: при ошибке валидации подсвечиваем рамкой error,
   // иначе обычная рамка с подсветкой primary при фокусе.
   const containerClass = computed(() => [
-    'flex h-72 min-h-40 min-w-0 resize-y flex-col overflow-hidden rounded-md border',
+    'flex h-60 min-h-40 min-w-0 resize-y flex-col overflow-hidden rounded-md border',
     highlight.value
       ? 'border-error'
       : 'border-default focus-within:border-primary',

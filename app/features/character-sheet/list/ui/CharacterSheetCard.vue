@@ -1,32 +1,52 @@
 <script setup lang="ts">
+  import type { DropdownMenuItem } from '@nuxt/ui';
+
   import type { Character } from '../../model';
 
   import { ConfirmDialog } from '~initiative/ui-kit';
 
+  import { SheetSettingsModal, SheetShareModal } from '../../body/ui';
+  import {
+    useCharacterSheetPdf,
+    useCharacterSheetShare,
+  } from '../../composables';
   import { CharacterSheetDrawer } from '../../drawer';
   import {
     CHARACTER_SHEET_ROUTE,
+    downloadCharacterJson,
     getClassDisplayName,
+    getDisplayLevel,
+    getSheetActionMenuItems,
     getSpeciesDisplayName,
     SHEET_EMPTY_LABELS,
   } from '../../model';
 
   const {
     character,
+    shareToken = null,
     removable = false,
     disabled = false,
+    canDuplicate = false,
   } = defineProps<{
     character: Character;
 
-    /** Показать кнопку удаления листа (список сохранённых). */
+    /** Токен ссылки листа; null — доступ по ссылке выключен. */
+    shareToken?: string | null;
+
+    /** Показать пункт удаления листа в меню (список сохранённых). */
     removable?: boolean;
 
     /** Заблокировать действия на время мутаций списка. */
     disabled?: boolean;
+
+    /** В лимите активных листов есть свободное место — копия разрешена. */
+    canDuplicate?: boolean;
   }>();
 
   const emit = defineEmits<{
-    remove: [id: string];
+    'duplicate': [character: Character];
+    'remove': [id: string];
+    'share-change': [];
   }>();
 
   const isDeleteOpen = ref(false);
@@ -37,7 +57,6 @@
     isDeleteOpen.value = false;
   }
 
-  const { isDesktop } = useDevice();
   const overlay = useOverlay();
 
   const to = computed(() => `${CHARACTER_SHEET_ROUTE}/${character.id}`);
@@ -65,34 +84,94 @@
       : SHEET_EMPTY_LABELS.species,
   );
 
-  const backgroundLabel = computed(
-    () => character.characterBackground?.name ?? SHEET_EMPTY_LABELS.background,
-  );
-
   const cardClass = computed(() =>
     isOpened.value
       ? 'border-primary bg-primary/10 ring-1 ring-primary/50'
       : 'border-default bg-elevated hover:border-accented hover:bg-accented',
   );
 
-  /**
-   * На десктопе клик открывает drawer (стандартный режим) или правую панель
-   * (широкий режим); на мобильных — переходит на отдельную страницу листа.
-   */
-  function handleClick(): void {
-    if (!isDesktop) {
-      navigateTo(to.value);
-
-      return;
-    }
-
-    handleOpen();
-  }
+  const levelValue = computed(() => getDisplayLevel(character));
 
   /** Открывает лист на отдельной странице (в обход drawer). */
   function openOnPage(): void {
     navigateTo(to.value);
   }
+
+  const settingsModal = overlay.create(SheetSettingsModal, {
+    props: {
+      character,
+    },
+  });
+
+  /** Экспорт листа в JSON — читает документ карточки, запросов не делает. */
+  function handleDownload(): void {
+    downloadCharacterJson(character);
+  }
+
+  const { isExporting, exportToPdf } = useCharacterSheetPdf();
+
+  /** Экспорт листа в PDF — собирается из того же документа карточки. */
+  function handleDownloadPdf(): void {
+    void exportToPdf(character);
+  }
+
+  /** Запрос на копию листа — создаёт её список (у него лимит и обновление). */
+  function handleDuplicate(): void {
+    emit('duplicate', character);
+  }
+
+  /** Настройки листа — модалка сохраняет их сама. */
+  function handleSettings(): void {
+    settingsModal.open({ character });
+  }
+
+  /** Запрос на удаление листа — подтверждение показывает диалог. */
+  function handleRemove(): void {
+    isDeleteOpen.value = true;
+  }
+
+  const { isSheetShared, setShareToken } = useCharacterSheetShare();
+
+  const isShared = computed(() => isSheetShared(character.id));
+
+  const shareModal = overlay.create(SheetShareModal, {
+    props: {
+      sheetId: character.id,
+      onClose: handleShareClose,
+    },
+  });
+
+  /**
+   * Управление доступом по ссылке. Токен листа кладётся в общее состояние перед
+   * открытием: модалка читает его оттуда, а карточка знает токен из списка — так
+   * состояние доступа не приходится тянуть отдельным запросом.
+   */
+  function handleShare(): void {
+    setShareToken(character.id, shareToken);
+    shareModal.open({ sheetId: character.id });
+  }
+
+  /** Закрытие модалки: список перечитывается — токен карточки мог смениться. */
+  function handleShareClose(): void {
+    shareModal.close();
+    emit('share-change');
+  }
+
+  // Меню действий карточки — то же, что в шапке открытого листа.
+  const menuItems = computed<Array<Array<DropdownMenuItem>>>(() =>
+    getSheetActionMenuItems({
+      canDuplicate,
+      canRemove: removable,
+      isShared: isShared.value,
+      isPdfLoading: isExporting.value,
+      onDownload: handleDownload,
+      onDownloadPdf: handleDownloadPdf,
+      onDuplicate: handleDuplicate,
+      onRemove: handleRemove,
+      onSettings: handleSettings,
+      onShare: handleShare,
+    }),
+  );
 </script>
 
 <template>
@@ -105,10 +184,13 @@
       custom
       :to
     >
+      <!-- Клик открывает лист рядом: drawer в стандартном режиме, правая панель
+        в широком — как во всех остальных разделах. Отдельная страница остаётся
+        за кнопкой «↗» и за обычным переходом по ссылке (новая вкладка). -->
       <a
         :href="href ?? undefined"
         class="flex min-w-0 flex-auto items-center gap-4"
-        @click.left.exact.prevent="handleClick"
+        @click.left.exact.prevent="handleOpen"
       >
         <div
           class="grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-primary/5 ring-1 ring-primary/15"
@@ -133,11 +215,7 @@
           </span>
 
           <span class="truncate text-sm text-secondary">
-            {{ character.level }} уровень · {{ classLabel }}
-          </span>
-
-          <span class="truncate text-xs text-muted">
-            {{ speciesLabel }} · {{ backgroundLabel }}
+            {{ classLabel }} · {{ speciesLabel }}
           </span>
 
           <span
@@ -150,40 +228,39 @@
             />
 
             <span class="truncate">
-              Хиты: {{ character.health.current }} / {{ character.health.max }}
+              Хиты: {{ character.health.current }} /
+              {{ character.health.max }} · Уровень: {{ levelValue }}
             </span>
           </span>
         </div>
       </a>
     </NuxtLink>
 
-    <UTooltip text="Открыть на отдельной странице">
-      <UButton
-        icon="tabler:arrow-up-right"
-        color="neutral"
-        variant="soft"
-        square
-        class="shrink-0"
-        aria-label="Открыть на отдельной странице"
-        @click.left.exact.prevent="openOnPage"
-      />
-    </UTooltip>
+    <!-- Кнопки столбиком: карточка низкая и широкая, в ряд они съедали бы
+      ширину у имени персонажа -->
+    <div class="flex shrink-0 flex-col gap-1">
+      <UTooltip text="Открыть на отдельной странице">
+        <UButton
+          icon="tabler:arrow-up-right"
+          color="neutral"
+          variant="soft"
+          square
+          aria-label="Открыть на отдельной странице"
+          @click.left.exact.prevent="openOnPage"
+        />
+      </UTooltip>
 
-    <UTooltip
-      v-if="removable"
-      text="Удалить лист"
-    >
-      <UButton
-        icon="tabler:trash"
-        color="error"
-        variant="soft"
-        square
-        class="shrink-0"
-        :disabled
-        aria-label="Удалить лист"
-        @click.left.exact.prevent="isDeleteOpen = true"
-      />
-    </UTooltip>
+      <UDropdownMenu :items="menuItems">
+        <UButton
+          icon="tabler:dots-vertical"
+          color="neutral"
+          variant="soft"
+          square
+          :disabled
+          aria-label="Действия с листом"
+        />
+      </UDropdownMenu>
+    </div>
 
     <ConfirmDialog
       v-model:open="isDeleteOpen"

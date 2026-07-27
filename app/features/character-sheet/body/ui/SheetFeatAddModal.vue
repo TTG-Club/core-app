@@ -8,9 +8,11 @@
     buildFeatFeature,
     FEATS_DETAIL_BASE_PATH,
     FEATS_SEARCH_PATH,
-    getCharacterFeatureId,
+    FEATS_SELECT_PATH,
+    getFeatUrlFromFeatureId,
     parseFeatCatalog,
     parseFeatDetail,
+    parseRepeatableFeatUrls,
   } from '../../model';
 
   const emit = defineEmits<{
@@ -37,16 +39,24 @@
   }
 
   // Весь список черт грузится сразу при открытии (раздел «Черты» отдаёт его
-  // одним запросом без пагинации), фильтрация по названию — на клиенте.
+  // одним запросом без пагинации), фильтрация по названию — на клиенте. Флаг
+  // повторяемости приходит только с `/select` (у `/search` его нет), поэтому
+  // тянем оба и мёржим по url. Ошибка `/select` не роняет список — тогда
+  // повторяемых черт просто нет.
   const { data: featsList, status: listStatus } = await useAsyncData(
     'character-sheet:feats-list',
     async () => {
-      const response = await $fetch<unknown>(FEATS_SEARCH_PATH, {
-        method: 'GET',
-        retry: 0,
-      });
+      const [catalogResponse, selectResponse] = await Promise.all([
+        $fetch<unknown>(FEATS_SEARCH_PATH, { method: 'GET', retry: 0 }),
+        $fetch<unknown>(FEATS_SELECT_PATH, { method: 'GET', retry: 0 }).catch(
+          () => null,
+        ),
+      ]);
 
-      return parseFeatCatalog(response);
+      return parseFeatCatalog(
+        catalogResponse,
+        parseRepeatableFeatUrls(selectResponse),
+      );
     },
     { server: false },
   );
@@ -62,9 +72,29 @@
 
   const isApplying = ref(false);
 
-  /** Идентификаторы уже добавленных на лист особенностей. */
-  const existingFeatureIds = computed(
-    () => new Set(character.value.features.map((feature) => feature.id)),
+  /** Сколько копий каждой черты уже на листе (по url черты). */
+  const featInstanceCounts = computed(() => {
+    const counts = new Map<string, number>();
+
+    for (const feature of character.value.features) {
+      const url = getFeatUrlFromFeatureId(feature.id);
+
+      if (url) {
+        counts.set(url, (counts.get(url) ?? 0) + 1);
+      }
+    }
+
+    return counts;
+  });
+
+  /** Url черт, которые можно брать несколько раз. */
+  const repeatableUrls = computed(
+    () =>
+      new Set(
+        (featsList.value ?? [])
+          .filter((feat) => feat.repeatability)
+          .map((feat) => feat.url),
+      ),
   );
 
   const filteredFeats = computed<FeatCatalogItem[]>(() => {
@@ -84,7 +114,12 @@
   });
 
   interface FeatCatalogRow extends FeatCatalogItem {
+    /** Черта уже на листе и добавить её повторно нельзя (неповторяемая). */
     isAdded: boolean;
+
+    /** Сколько копий черты уже на листе (для повторяемых). */
+    addedCount: number;
+
     isSelected: boolean;
     rowClass: string;
 
@@ -98,20 +133,22 @@
   }
 
   // Группировка по категории (как в разделе «Черты»): категории и черты внутри
-  // сортируются по алфавиту, уже добавленные черты помечаются отдельно.
+  // сортируются по алфавиту. Неповторяемая уже добавленная черта помечается и
+  // недоступна для выбора; повторяемую можно взять снова (со счётчиком копий).
   const displayGroups = computed<FeatCatalogGroup[]>(() => {
     const groupsByCategory = new Map<string, FeatCatalogRow[]>();
 
     for (const feat of filteredFeats.value) {
-      const isAdded = existingFeatureIds.value.has(
-        getCharacterFeatureId('feat', feat.url),
-      );
+      const addedCount = featInstanceCounts.value.get(feat.url) ?? 0;
+
+      const isAdded = !feat.repeatability && addedCount > 0;
 
       const isSelected = draftUrls.value.has(feat.url);
 
       const row: FeatCatalogRow = {
         ...feat,
         isAdded,
+        addedCount,
         isSelected,
         rowClass: isSelected ? 'bg-elevated' : '',
         cursorClass: isAdded
@@ -185,7 +222,9 @@
       const features = results
         .map((result) => (result.status === 'fulfilled' ? result.value : null))
         .filter((summary): summary is FeatSummary => summary !== null)
-        .map(buildFeatFeature);
+        .map((summary) =>
+          buildFeatFeature(summary, repeatableUrls.value.has(summary.url)),
+        );
 
       if (features.length) {
         addFeats(features);
@@ -304,7 +343,28 @@
               </UTooltip>
 
               <UTooltip
-                v-if="feat.isAdded"
+                v-if="feat.repeatability"
+                text="Можно взять несколько раз"
+              >
+                <span
+                  class="relative z-10 flex shrink-0 items-center gap-0.5 text-muted"
+                >
+                  <UIcon
+                    name="tabler:repeat"
+                    class="size-3.5"
+                  />
+
+                  <span
+                    v-if="feat.addedCount"
+                    class="text-xs tabular-nums"
+                  >
+                    ×{{ feat.addedCount }}
+                  </span>
+                </span>
+              </UTooltip>
+
+              <UTooltip
+                v-else-if="feat.isAdded"
                 text="Уже добавлена"
               >
                 <UIcon
@@ -314,7 +374,7 @@
               </UTooltip>
 
               <UIcon
-                v-else-if="feat.isSelected"
+                v-if="feat.isSelected"
                 name="tabler:check"
                 class="relative z-10 size-4 shrink-0 text-warning"
               />

@@ -1,6 +1,9 @@
 <script setup lang="ts">
   import { Role } from '~/shared/types';
-  import { CharacterSheetBody } from '~character-sheet/body';
+  import {
+    CharacterSheetBody,
+    CharacterSheetSkeleton,
+  } from '~character-sheet/body';
   import {
     useCharacterSheetAutosave,
     useCharacterSheetLoader,
@@ -12,7 +15,7 @@
   import { UiResult } from '~ui/result';
 
   definePageMeta({
-    auth: { roles: [Role.ADMIN] },
+    auth: { roles: [Role.USER] },
   });
 
   useSeoMeta({
@@ -45,15 +48,9 @@
     :title="CHARACTER_SHEET_TITLE"
   >
     <ClientOnly>
-      <div
+      <CharacterSheetSkeleton
         v-if="status === 'pending' || status === 'idle'"
-        class="flex justify-center py-16"
-      >
-        <UIcon
-          name="tabler:loader-2"
-          class="size-8 animate-spin text-muted"
-        />
-      </div>
+      />
 
       <UiResult
         v-else-if="status === 'notFound'"
@@ -82,12 +79,7 @@
       />
 
       <template #fallback>
-        <div class="flex justify-center py-16">
-          <UIcon
-            name="tabler:loader-2"
-            class="size-8 animate-spin text-muted"
-          />
-        </div>
+        <CharacterSheetSkeleton />
       </template>
     </ClientOnly>
   </NuxtLayout>

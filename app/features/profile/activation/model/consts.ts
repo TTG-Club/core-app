@@ -110,14 +110,31 @@ export const COSMETIC_PERKS: ReadonlySet<RewardPerk> = new Set<RewardPerk>([
   'APP_CREDITS',
 ]);
 
+/**
+ * Точечные переопределения кнопки действия по перку. Для чата разработки url —
+ * одноразовое Telegram-приглашение, закреплённое за кодом на бэке, поэтому кнопка
+ * зовёт присоединиться, а не «Открыть».
+ */
+const REWARD_PERK_ACTION_OVERRIDES: Partial<
+  Record<RewardPerk, { label: string; icon: string }>
+> = {
+  DEV_CHAT_ACCESS: { label: 'Присоединиться', icon: 'ttg:telegram' },
+};
+
 /** Подпись действия по перку: скачать (загрузки) или открыть (доступы/прочее). */
 export function rewardActionLabel(perk: RewardPerk): string {
-  return DOWNLOAD_PERKS.has(perk) ? 'Скачать' : 'Открыть';
+  return (
+    REWARD_PERK_ACTION_OVERRIDES[perk]?.label
+    ?? (DOWNLOAD_PERKS.has(perk) ? 'Скачать' : 'Открыть')
+  );
 }
 
 /** Иконка кнопки действия по перку. */
 export function rewardActionIcon(perk: RewardPerk): string {
-  return DOWNLOAD_PERKS.has(perk) ? 'tabler:download' : 'tabler:external-link';
+  return (
+    REWARD_PERK_ACTION_OVERRIDES[perk]?.icon
+    ?? (DOWNLOAD_PERKS.has(perk) ? 'tabler:download' : 'tabler:external-link')
+  );
 }
 
 export const REWARD_TIER_LABELS: Record<RewardTier, string> = {

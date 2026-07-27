@@ -3,7 +3,12 @@
 
   import { MarkupRender } from '~ui/markup';
 
-  import { FEATURE_ORIGIN_LABELS, SHEET_TAB_EMPTY_LABELS } from '../../model';
+  import { useCharacterSheet } from '../../composables';
+  import {
+    FEATURE_ORIGIN_LABELS,
+    getFeaturesAddMenuItems,
+    SHEET_TAB_EMPTY_LABELS,
+  } from '../../model';
 
   const props = defineProps<{
     features: CharacterFeature[];
@@ -12,25 +17,24 @@
   const emit = defineEmits<{
     'add-feature': [];
     'add-feat': [];
-    'edit-choice': [featureId: string, choice: string];
+    'edit-feature': [featureId: string];
     'remove-feature': [featureId: string];
   }>();
 
+  // Добавление, правка и удаление особенностей меняют лист: без прав кнопки
+  // прячутся, а карточки остаются на прежних местах.
+  const { editControlClass } = useCharacterSheet();
+
+  const addMenuItems = getFeaturesAddMenuItems({
+    onAddFeature: () => emit('add-feature'),
+    onAddFeat: () => emit('add-feat'),
+  });
+
   const expandedIds = ref(new Set<string>());
-
-  /** Особенность, у которой сейчас редактируется выбор. */
-  const editingId = ref<string | null>(null);
-
-  /** Черновики выбора по особенностям; заполняются при входе в редактирование. */
-  const choiceDrafts = ref<Record<string, string>>({});
 
   function toggleFeature(featureId: string) {
     if (expandedIds.value.has(featureId)) {
       expandedIds.value.delete(featureId);
-
-      if (editingId.value === featureId) {
-        editingId.value = null;
-      }
 
       return;
     }
@@ -39,35 +43,7 @@
   }
 
   function handleEditClick(featureId: string) {
-    const feature = props.features.find(
-      (characterFeature) => characterFeature.id === featureId,
-    );
-
-    choiceDrafts.value[featureId] = feature?.choice ?? '';
-    expandedIds.value.add(featureId);
-    editingId.value = featureId;
-  }
-
-  function handleChoiceSave(featureId: string) {
-    // Blur после Enter не должен сохранять повторно.
-    if (editingId.value !== featureId) {
-      return;
-    }
-
-    editingId.value = null;
-
-    const draft = choiceDrafts.value[featureId] ?? '';
-
-    const feature = props.features.find(
-      (characterFeature) => characterFeature.id === featureId,
-    );
-
-    // Не дёргаем экшен (и тост блокировки), если выбор не изменился.
-    if ((feature?.choice ?? '') === draft.trim()) {
-      return;
-    }
-
-    emit('edit-choice', featureId, draft);
+    emit('edit-feature', featureId);
   }
 
   function handleRemove(featureId: string) {
@@ -93,7 +69,6 @@
       return {
         ...feature,
         isExpanded,
-        isEditing: editingId.value === feature.id,
         showBadge: feature.origin !== 'none',
         originLabel: FEATURE_ORIGIN_LABELS[feature.origin],
         originTooltip:
@@ -107,26 +82,21 @@
 
 <template>
   <div class="flex flex-col gap-3 pt-2">
-    <div class="flex justify-end gap-2">
-      <UButton
-        icon="tabler:award"
-        label="Черта"
-        color="neutral"
-        variant="ghost"
-        size="sm"
-        aria-label="Добавить черту"
-        @click.left.exact.prevent="emit('add-feat')"
-      />
-
-      <UButton
-        icon="tabler:plus"
-        label="Особенность"
-        color="neutral"
-        variant="ghost"
-        size="sm"
-        aria-label="Добавить особенность"
-        @click.left.exact.prevent="emit('add-feature')"
-      />
+    <div class="flex justify-end">
+      <UDropdownMenu
+        :items="addMenuItems"
+        :content="{ align: 'end' }"
+      >
+        <UButton
+          icon="tabler:plus"
+          label="Добавить"
+          trailing-icon="tabler:chevron-down"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          :class="editControlClass"
+        />
+      </UDropdownMenu>
     </div>
 
     <template v-if="displayRows.length">
@@ -171,7 +141,8 @@
             size="xs"
             square
             class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/feature:opacity-100 focus-visible:opacity-100"
-            :aria-label="`Изменить выбор: ${feature.name}`"
+            :class="editControlClass"
+            :aria-label="`Редактировать особенность: ${feature.name}`"
             @click.left.exact.prevent="handleEditClick(feature.id)"
           />
 
@@ -182,6 +153,7 @@
             size="xs"
             square
             class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/feature:opacity-100 focus-visible:opacity-100"
+            :class="editControlClass"
             :aria-label="`Удалить особенность: ${feature.name}`"
             @click.left.exact.prevent="handleRemove(feature.id)"
           />
@@ -204,25 +176,8 @@
           v-if="feature.isExpanded"
           class="flex flex-col gap-2 border-t border-default/50 px-3 py-2"
         >
-          <label
-            v-if="feature.isEditing"
-            class="flex items-center gap-2 text-xs"
-          >
-            <span class="shrink-0 text-muted">Выбор:</span>
-
-            <UInput
-              v-model="choiceDrafts[feature.id]"
-              size="sm"
-              class="max-w-64 grow"
-              placeholder="Например: красный дракон"
-              autofocus
-              @blur="handleChoiceSave(feature.id)"
-              @keydown.enter="handleChoiceSave(feature.id)"
-            />
-          </label>
-
           <div
-            v-else-if="feature.choice"
+            v-if="feature.choice"
             class="flex items-baseline gap-1 text-xs"
           >
             <span class="text-muted">Выбор:</span>

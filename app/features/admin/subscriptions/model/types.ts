@@ -41,6 +41,8 @@ export interface RedemptionCodeResponse {
   perks: RewardPerk[];
   achievements: string[];
   label: string | null;
+  /** Одноразовая ссылка-приглашение в чат разработки (null — код её не несёт). */
+  telegramInviteLink: string | null;
   redeemedBy: string | null;
   redeemedAt: string | null;
   disabled: boolean;

@@ -9,6 +9,7 @@
   import { useCharacterSheet, useSpellCatalogSearch } from '../../composables';
   import {
     getSpellGroupLabel,
+    isCustomSpell,
     SPELL_CATALOG_LOAD_MORE_DISTANCE,
     SPELL_LEVELS,
   } from '../../model';
@@ -90,16 +91,23 @@
       && !hasLoadError.value,
   });
 
-  /** Черновик книги: выбранные заклинания по URL. */
+  // Черновик книги: заклинания по URL. Свои заклинания в каталоге не ищутся,
+  // но лежат в черновике — иначе применение выбора стёрло бы их из книги.
   const draftSpells = ref(
     new Map<string, CharacterSpell>(
       character.value.spells.map((spell) => [spell.url, { ...spell }]),
     ),
   );
 
-  const selectedCountLabel = computed(
-    () => `Выбрано: ${draftSpells.value.size}`,
-  );
+  // Считаем только каталожные: свои заклинания в этом списке не выбираются, и
+  // в счётчике выглядели бы выбором из ниоткуда.
+  const selectedCountLabel = computed(() => {
+    const selectedCount = [...draftSpells.value.values()].filter(
+      (spell) => !isCustomSpell(spell),
+    ).length;
+
+    return `Выбрано: ${selectedCount}`;
+  });
 
   function toggleSpell(spell: SpellCatalogItem) {
     if (draftSpells.value.has(spell.url)) {
@@ -217,8 +225,47 @@
     <template #body>
       <!-- Высота ряда фиксирована от вьюпорта, чтобы список тянулся до низа
         модалки независимо от высоты сайдбара фильтров. -->
-      <div class="flex h-[65dvh] min-h-96 gap-4">
-        <aside class="flex w-44 shrink-0 flex-col gap-4 overflow-y-auto">
+      <div class="flex h-[65dvh] min-h-96 flex-col gap-3 sm:flex-row sm:gap-4">
+        <!-- Мобильная панель: поиск над списком + кнопка «Фильтр». Быстрых
+          чипов на мобильном нет — все фильтры открывает дровер. -->
+        <div class="flex shrink-0 items-center gap-2 sm:hidden">
+          <UInput
+            v-model="searchTerm"
+            icon="tabler:search"
+            size="sm"
+            placeholder="Поиск…"
+            class="min-w-0 grow"
+          />
+
+          <UButton
+            icon="tabler:filter"
+            label="Фильтр"
+            color="neutral"
+            variant="subtle"
+            size="sm"
+            :disabled="!filterGroups.length"
+            @click.left.exact.prevent="openFilterDrawer"
+          />
+
+          <UTooltip
+            v-if="hasActiveFilters"
+            text="Сбросить фильтры"
+          >
+            <UButton
+              icon="tabler:filter-off"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              square
+              aria-label="Сбросить фильтры"
+              @click.left.exact.prevent="resetFilters"
+            />
+          </UTooltip>
+        </div>
+
+        <aside
+          class="hidden w-44 shrink-0 flex-col gap-4 overflow-y-auto sm:flex"
+        >
           <UInput
             v-model="searchTerm"
             icon="tabler:search"

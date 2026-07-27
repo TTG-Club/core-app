@@ -4,15 +4,22 @@ import type {
   CharacterArmorClass,
   CharacterClass,
   CharacterClassResource,
+  CharacterCurrency,
+  CharacterCustomCurrency,
   CharacterExtraHitDie,
   CharacterFeature,
   CharacterHealth,
   CharacterHitDie,
   CharacterInventoryItem,
+  CharacterSettings,
   CharacterSpecies,
   CharacterSpeed,
   CharacterSpell,
+  CharacterSpellcasting,
   CharacterVision,
+  CustomInventoryItemDraft,
+  CustomSpellDraft,
+  HitDiceAmount,
   ProficiencyGroupKey,
 } from '../model';
 
@@ -22,30 +29,72 @@ import {
   ABILITY_ORDER,
   ABILITY_SCORE_MAX,
   ABILITY_SCORE_MIN,
+  adjustHealthForConstitution,
+  adjustHitDice,
   applySkillProficiencies,
   ARMOR_CLASS_BASE_MAX,
   ARMOR_CLASS_BASE_MIN,
+  CATALOG_COPY_TOAST_DESCRIPTION,
+  CURRENCY_AMOUNT_MAX,
+  CURRENCY_AMOUNT_MIN,
+  CUSTOM_INVENTORY_URL_PREFIX,
+  CUSTOM_SPELL_URL_PREFIX,
   DEFAULT_CHARACTER,
+  downloadCharacterJson,
   EXPERIENCE_MAX,
+  fetchCatalogSpellDetail,
+  fetchInventoryItemDescription,
   getAbilityRows,
+  getArmorClassBreakdown,
   getArmorClassValue,
   getCarryingCapacity,
+  getClassMaxHitPoints,
   getFormattedBonus,
   getInventoryWeight,
   getNextLevelExperience,
   getProficiencyBonus,
   getSavingThrowRows,
   getSkillRows,
+  getSpellcastingBreakdown,
+  getSpellSlotRows,
+  INVENTORY_COPY_TOAST_TITLE,
   INVENTORY_QUANTITY_MAX,
+  INVENTORY_QUANTITY_MIN,
+  isCustomInventoryItem,
+  isCustomSpell,
   LEVEL_MAX,
   LEVEL_MIN,
   RESOURCE_COUNT_MAX,
   RESOURCE_COUNT_MIN,
+  SHEET_HIDDEN_CONTROL_CLASS,
   SHEET_LOCKED_MESSAGE,
+  SHEET_READONLY_MESSAGE,
+  shiftClassHitDice,
   SKILL_PROFICIENCY_NEXT,
+  SPELL_COPY_TOAST_TITLE,
+  toCopiedInventoryItem,
+  toCopiedSpell,
+  toCustomInventoryItem,
+  toCustomSpell,
+  toUpdatedCustomInventoryItem,
   VISION_DISTANCE_MAX,
   VISION_DISTANCE_MIN,
 } from '../model';
+
+/**
+ * Приведение количества денежной единицы к целому в допустимом диапазоне.
+ *
+ * @param amount введённое количество.
+ * @returns целое количество в диапазоне `[CURRENCY_AMOUNT_MIN, CURRENCY_AMOUNT_MAX]`.
+ */
+function clampCurrencyAmount(amount: number): number {
+  // Очищенное поле ввода отдаёт NaN — считаем его нулём, а не сохраняем.
+  if (!Number.isFinite(amount)) {
+    return CURRENCY_AMOUNT_MIN;
+  }
+
+  return clamp(Math.trunc(amount), CURRENCY_AMOUNT_MIN, CURRENCY_AMOUNT_MAX);
+}
 
 /**
  * Состояние листа персонажа: реактивный персонаж, производные значения по
@@ -63,8 +112,40 @@ export function useCharacterSheet() {
 
   const isLocked = useState<boolean>('character-sheet:locked', () => false);
 
+  /**
+   * Лист открыт по ссылке «поделиться»: чужой зритель может только смотреть.
+   * В отличие от {@link isLocked} снять этот режим нельзя — ставит его загрузчик
+   * страницы просмотра, а на бэке ручек записи по ссылке попросту нет.
+   */
+  const isReadonly = useState<boolean>('character-sheet:readonly', () => false);
+
+  /** Правки листа разрешены: лист свой и не заперт замком. */
+  const canEdit = computed(() => !isReadonly.value && !isLocked.value);
+
+  /**
+   * Класс кнопок правки листа (шестерёнки, ±, карандаши, корзины, «Добавить»):
+   * без прав они прячутся, но место в раскладке за собой сохраняют.
+   * `undefined` — кнопка видна как обычно.
+   */
+  const editControlClass = computed(() =>
+    canEdit.value ? undefined : SHEET_HIDDEN_CONTROL_CLASS,
+  );
+
+  /**
+   * То же для кнопок игровых действий (траты ресурсов, количество предметов):
+   * их запертый лист разрешает, а чужой — нет.
+   */
+  const gameControlClass = computed(() =>
+    isReadonly.value ? SHEET_HIDDEN_CONTROL_CLASS : undefined,
+  );
+
   /** Переключение блокировки редактирования листа. */
   function toggleLock(): void {
+    // Замок чужого листа ничего не даёт: правки всё равно запрещены.
+    if (isReadonly.value) {
+      return;
+    }
+
     isLocked.value = !isLocked.value;
   }
 
@@ -73,20 +154,52 @@ export function useCharacterSheet() {
    * подсказку и возвращает false — редактирующие экшены и модалки настроек
    * должны прерываться; броски и трата ресурсов не ограничиваются.
    *
-   * @returns true, если лист не заблокирован.
+   * @returns true, если лист доступен для правок.
    */
   function ensureEditable(): boolean {
-    if (!isLocked.value) {
+    if (canEdit.value) {
       return true;
     }
 
     toast.add({
       color: 'warning',
-      icon: 'tabler:lock',
-      title: SHEET_LOCKED_MESSAGE,
+      icon: isReadonly.value ? 'tabler:eye' : 'tabler:lock',
+      title: isReadonly.value ? SHEET_READONLY_MESSAGE : SHEET_LOCKED_MESSAGE,
     });
 
     return false;
+  }
+
+  /**
+   * Проверка для игровых действий (вдохновение, хиты, слоты, ресурсы, экипировка).
+   * Запертый лист их разрешает — играть с закрытым от правок листом можно, — а
+   * чужой запрещает: автосохранения у зрителя нет, и такая правка молча пропала
+   * бы при перезагрузке страницы.
+   *
+   * @returns true, если лист свой.
+   */
+  function ensureOwnSheet(): boolean {
+    if (!isReadonly.value) {
+      return true;
+    }
+
+    toast.add({
+      color: 'warning',
+      icon: 'tabler:eye',
+      title: SHEET_READONLY_MESSAGE,
+    });
+
+    return false;
+  }
+
+  /**
+   * Перевод листа в режим просмотра по ссылке и обратно. Вызывает загрузчик:
+   * страница просмотра включает режим, свои страницы — выключают.
+   *
+   * @param readonly включить ли режим «только просмотр».
+   */
+  function setReadonly(readonly: boolean): void {
+    isReadonly.value = readonly;
   }
 
   /**
@@ -123,8 +236,18 @@ export function useCharacterSheet() {
 
   const armorClassValue = computed(() => getArmorClassValue(character.value));
 
+  const armorClassBreakdown = computed(() =>
+    getArmorClassBreakdown(character.value),
+  );
+
+  const spellcastingBreakdown = computed(() =>
+    getSpellcastingBreakdown(character.value),
+  );
+
+  const spellSlotRows = computed(() => getSpellSlotRows(character.value));
+
   const totalWeight = computed(() =>
-    getInventoryWeight(character.value.inventory),
+    getInventoryWeight(character.value.inventory, character.value.currency),
   );
 
   const carryingCapacity = computed(() =>
@@ -133,6 +256,8 @@ export function useCharacterSheet() {
 
   /**
    * Установка значения характеристики с ограничением допустимого диапазона.
+   * Смена модификатора Телосложения двигает максимум и текущие хиты: он входит
+   * в максимум на каждом уровне.
    *
    * @param ability ключ характеристики.
    * @param score новое значение характеристики.
@@ -154,6 +279,15 @@ export function useCharacterSheet() {
         ...character.value.abilities,
         [ability]: clampedScore,
       },
+      health:
+        ability === 'constitution'
+          ? adjustHealthForConstitution(
+              character.value.health,
+              character.value.level,
+              character.value.abilities.constitution,
+              clampedScore,
+            )
+          : character.value.health,
     };
   }
 
@@ -214,10 +348,22 @@ export function useCharacterSheet() {
    * ограничивается.
    */
   function toggleInspiration(): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
     character.value = {
       ...character.value,
       inspiration: !character.value.inspiration,
     };
+  }
+
+  /**
+   * Скачивание открытого листа в виде JSON-файла. Только читает состояние,
+   * поэтому блокировкой листа не ограничивается.
+   */
+  function downloadCharacter(): void {
+    downloadCharacterJson(character.value);
   }
 
   /**
@@ -227,6 +373,10 @@ export function useCharacterSheet() {
    * @param delta изменение текущего значения.
    */
   function adjustClassResource(resourceId: string, delta: number): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
     character.value = {
       ...character.value,
       classResources: character.value.classResources.map((resource) =>
@@ -237,6 +387,44 @@ export function useCharacterSheet() {
             }
           : resource,
       ),
+    };
+  }
+
+  /**
+   * Трата или возврат ячейки заклинаний круга по нажатию на кружок. Нажатие на
+   * свободный кружок тратит ячейки по него включительно, на потраченный —
+   * возвращает его и все следующие. Игровое действие: запертый лист его
+   * разрешает, чужой (открытый по ссылке) — нет.
+   *
+   * @param level круг ячейки.
+   * @param index порядковый номер кружка в круге (с нуля).
+   */
+  function toggleSpellSlot(level: number, index: number): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    const row = spellSlotRows.value.find((slotRow) => slotRow.level === level);
+
+    if (!row) {
+      return;
+    }
+
+    const used = clamp(index < row.used ? index : index + 1, 0, row.max);
+
+    // Хранится только трата: круги без потраченных ячеек в документе не нужны.
+    const otherSlots = character.value.spellSlots.filter(
+      (slot) => slot.level !== level,
+    );
+
+    character.value = {
+      ...character.value,
+      spellSlots:
+        used > 0
+          ? [...otherSlots, { level, used }].sort(
+              (left, right) => left.level - right.level,
+            )
+          : otherSlots,
     };
   }
 
@@ -265,17 +453,34 @@ export function useCharacterSheet() {
 
   /**
    * Установка уровня и суммарного опыта; порог следующего уровня берётся из
-   * таблицы опыта D&D.
+   * таблицы опыта D&D. Кости хитов класса следуют за уровнем: новые уровни
+   * добавляют непотраченные кости, снижение уровня их забирает. Прирост хитов
+   * за повышение считает модалка опыта (среднее, бросок или максимум кости с
+   * модификатором Телосложения) — здесь он поднимает максимум и текущие хиты;
+   * при снижении уровня хиты не меняются.
    *
    * @param level новый уровень персонажа.
    * @param experience суммарный опыт персонажа.
+   * @param hitPointsGain прирост максимума хитов за взятые уровни.
    */
-  function setProgress(level: number, experience: number): void {
+  function setProgress(
+    level: number,
+    experience: number,
+    hitPointsGain = 0,
+  ): void {
     if (!ensureEditable()) {
       return;
     }
 
     const clampedLevel = clamp(Math.trunc(level), LEVEL_MIN, LEVEL_MAX);
+
+    const levelDelta = clampedLevel - character.value.level;
+
+    const classDie = character.value.characterClass?.hitDie;
+
+    const gain = Math.max(0, Math.trunc(hitPointsGain));
+
+    const { health } = character.value;
 
     character.value = {
       ...character.value,
@@ -284,6 +489,18 @@ export function useCharacterSheet() {
         current: clamp(Math.trunc(experience), 0, EXPERIENCE_MAX),
         nextLevel: getNextLevelExperience(clampedLevel),
       },
+      hitDice:
+        classDie !== undefined && levelDelta !== 0
+          ? shiftClassHitDice(character.value.hitDice, classDie, levelDelta)
+          : character.value.hitDice,
+      health:
+        gain > 0
+          ? {
+              ...health,
+              max: health.max + gain,
+              current: clamp(health.current + gain, 0, health.max + gain),
+            }
+          : health,
     };
   }
 
@@ -310,6 +527,23 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Установка изображения персонажа. Файлом в хранилище распоряжается
+   * `useSheetAvatar` — здесь меняется только ссылка в документе листа.
+   *
+   * @param avatarUrl ссылка на изображение; null — изображения нет.
+   */
+  function setAvatar(avatarUrl: string | null): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      avatarUrl,
+    };
+  }
+
+  /**
    * Установка зрения персонажа с ограничением дистанций.
    *
    * @param vision новое зрение персонажа.
@@ -325,6 +559,21 @@ export function useCharacterSheet() {
         normal: clamp(vision.normal, VISION_DISTANCE_MIN, VISION_DISTANCE_MAX),
         darkvision: clamp(
           vision.darkvision,
+          VISION_DISTANCE_MIN,
+          VISION_DISTANCE_MAX,
+        ),
+        blindsight: clamp(
+          vision.blindsight,
+          VISION_DISTANCE_MIN,
+          VISION_DISTANCE_MAX,
+        ),
+        tremorsense: clamp(
+          vision.tremorsense,
+          VISION_DISTANCE_MIN,
+          VISION_DISTANCE_MAX,
+        ),
+        truesight: clamp(
+          vision.truesight,
           VISION_DISTANCE_MIN,
           VISION_DISTANCE_MAX,
         ),
@@ -376,6 +625,32 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Быстрое изменение текущих и временных хитов в игровом режиме (модалка
+   * урона/лечения из заблокированного листа). Игровое действие — блокировкой
+   * листа не ограничивается. Максимум хитов не меняется; текущие ограничиваются
+   * диапазоном [0, max], временные — не ниже нуля.
+   *
+   * @param current новые текущие хиты.
+   * @param temporary новые временные хиты.
+   */
+  function setHitPoints(current: number, temporary: number): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    const { max } = character.value.health;
+
+    character.value = {
+      ...character.value,
+      health: {
+        ...character.value.health,
+        current: clamp(Math.trunc(current), 0, max),
+        temporary: Math.max(0, Math.trunc(temporary)),
+      },
+    };
+  }
+
+  /**
    * Установка костей хитов: оставшееся количество не превышает максимум.
    *
    * @param hitDice кости хитов из классов.
@@ -399,6 +674,115 @@ export function useCharacterSheet() {
         ...hitDie,
         current: clamp(hitDie.current, 0, hitDie.max),
       })),
+    };
+  }
+
+  /**
+   * Трата костей хитов на отдыхе: кости выбранных номиналов списываются, а
+   * текущие хиты поднимаются на восстановленное количество (в пределах
+   * максимума). Бросок делает модалка отдыха — здесь применяется его итог.
+   * Игровое действие — блокировкой листа не ограничивается.
+   *
+   * @param spent потраченные кости по номиналам.
+   * @param restored восстановленные хиты по броскам.
+   */
+  function spendHitDice(spent: HitDiceAmount[], restored: number): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    const { health } = character.value;
+
+    // Трата — отрицательное изменение остатка костей.
+    const remainingDice = adjustHitDice(
+      character.value.hitDice,
+      character.value.extraHitDice,
+      spent.map((pool) => ({ die: pool.die, count: -pool.count })),
+    );
+
+    character.value = {
+      ...character.value,
+      hitDice: remainingDice.hitDice,
+      extraHitDice: remainingDice.extraHitDice,
+      health: {
+        ...health,
+        current: clamp(
+          health.current + Math.max(0, Math.trunc(restored)),
+          0,
+          health.max,
+        ),
+      },
+    };
+  }
+
+  /**
+   * Завершение короткого отдыха: восстанавливаются ресурсы класса с типом
+   * «короткий отдых» и ячейки заклинаний договора колдуна (у остальных классов
+   * ячейки возвращает только продолжительный отдых). Кости хитов и хиты тратит
+   * {@link spendHitDice} — отдых их не возвращает. Игровое действие —
+   * блокировкой листа не ограничивается.
+   */
+  function completeShortRest(): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    const shortRestLevels = new Set(
+      spellSlotRows.value
+        .filter((row) => row.recovery === 'short-rest')
+        .map((row) => row.level),
+    );
+
+    character.value = {
+      ...character.value,
+      classResources: character.value.classResources.map((resource) =>
+        resource.recovery === 'short-rest'
+          ? { ...resource, current: resource.max }
+          : resource,
+      ),
+      // Хранится только трата ячеек, поэтому восстановление круга — это
+      // удаление его записи из списка.
+      spellSlots: character.value.spellSlots.filter(
+        (slot) => !shortRestLevels.has(slot.level),
+      ),
+    };
+  }
+
+  /**
+   * Завершение продолжительного отдыха: хиты поднимаются до максимума, временные
+   * хиты пропадают (держатся только до конца отдыха), возвращаются все ячейки
+   * заклинаний и все счётчики умений, а кости хитов — в выбранном количестве.
+   * Сколько костей возвращать, решают правила и игрок — считает это модалка
+   * отдыха. Игровое действие: запертый лист его разрешает, чужой — нет.
+   *
+   * @param restoredDice возвращаемые кости хитов по номиналам.
+   */
+  function completeLongRest(restoredDice: HitDiceAmount[]): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    const remainingDice = adjustHitDice(
+      character.value.hitDice,
+      character.value.extraHitDice,
+      restoredDice,
+    );
+
+    character.value = {
+      ...character.value,
+      hitDice: remainingDice.hitDice,
+      extraHitDice: remainingDice.extraHitDice,
+      health: {
+        ...character.value.health,
+        current: character.value.health.max,
+        temporary: 0,
+      },
+      classResources: character.value.classResources.map((resource) => ({
+        ...resource,
+        current: resource.max,
+      })),
+      // Хранится только трата ячеек, поэтому пустой список — все ячейки на месте.
+      spellSlots: [],
     };
   }
 
@@ -475,6 +859,9 @@ export function useCharacterSheet() {
    * устанавливаются атомарно одним обновлением. Спасброски и кость хитов
    * перезаписываются; владения объединяются с уже имеющимися; классовые
    * особенности и производные ресурсы заменяются целиком, ручные — сохраняются.
+   * Хиты пересчитываются по кости класса с модификатором Телосложения (первый
+   * уровень — максимум кости, следующие — среднее) и заполняются целиком —
+   * как и кости хитов, которые класс выдаёт непотраченными.
    *
    * @param payload класс и производные от него значения листа.
    * @param payload.characterClass выбранный класс с подклассом.
@@ -488,7 +875,6 @@ export function useCharacterSheet() {
    * @param payload.skills выбранные навыки (владение и экспертиза).
    * @param payload.skills.proficient навыки для владения.
    * @param payload.skills.expertise навыки для экспертизы.
-   * @param payload.classResources производные ресурсы класса.
    * @param payload.features классовые особенности по уровню.
    */
   function setClass(payload: {
@@ -502,7 +888,6 @@ export function useCharacterSheet() {
       languages: string[];
     };
     skills: { proficient: string[]; expertise: string[] };
-    classResources: CharacterClassResource[];
     features: CharacterFeature[];
   }): void {
     if (!ensureEditable()) {
@@ -511,13 +896,20 @@ export function useCharacterSheet() {
 
     const { level } = character.value;
 
+    const maxHitPoints = getClassMaxHitPoints(
+      payload.hitDie,
+      level,
+      getModifier(character.value.abilities.constitution),
+    );
+
     // Классовые особенности заменяются целиком (id `class:*`); добавленные
     // вручную сохраняются.
     const preservedFeatures = character.value.features.filter(
       (feature) => !feature.id.startsWith('class:'),
     );
 
-    // Производные ресурсы (id `class:res:*`) заменяются; ручные — сохраняются.
+    // Устаревшие производные ресурсы (id `class:res:*`) убираются, ресурсы,
+    // добавленные вручную, сохраняются: класс их автоматически не создаёт.
     const preservedResources = character.value.classResources.filter(
       (resource) => !resource.id.startsWith('class:res:'),
     );
@@ -529,6 +921,11 @@ export function useCharacterSheet() {
       characterClass: { ...payload.characterClass },
       savingThrowProficiencies: [...payload.savingThrows],
       hitDice: [{ die: payload.hitDie, current: level, max: level }],
+      health: {
+        ...character.value.health,
+        max: maxHitPoints,
+        current: maxHitPoints,
+      },
       proficiencies: {
         ...character.value.proficiencies,
         armor: union(
@@ -553,7 +950,7 @@ export function useCharacterSheet() {
         payload.skills.proficient,
         payload.skills.expertise,
       ),
-      classResources: [...preservedResources, ...payload.classResources],
+      classResources: preservedResources,
       features: [
         ...payload.features.map((feature) => ({
           ...feature,
@@ -568,7 +965,9 @@ export function useCharacterSheet() {
    * Применение выбранной предыстории: навыки, инструмент, черта происхождения и
    * прибавки к характеристикам устанавливаются атомарно. Прибавки к
    * характеристикам и черта предыстории откатываются при смене (идемпотентно);
-   * навыки и владения объединяются, ручные особенности сохраняются.
+   * навыки и владения объединяются, ручные особенности сохраняются. Если
+   * прибавки сменили модификатор Телосложения, максимум и текущие хиты
+   * двигаются вслед за ним.
    *
    * @param payload предыстория и производные значения листа.
    * @param payload.background выбранная предыстория (url, name).
@@ -629,6 +1028,12 @@ export function useCharacterSheet() {
         abilityBonuses: { ...payload.abilityBonuses },
       },
       abilities,
+      health: adjustHealthForConstitution(
+        character.value.health,
+        character.value.level,
+        character.value.abilities.constitution,
+        abilities.constitution,
+      ),
       proficiencies: {
         ...character.value.proficiencies,
         tools: union(character.value.proficiencies.tools, payload.tools),
@@ -645,23 +1050,42 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Установка выбора игрока в особенности (например, цвет драконорождённого).
+   * Полное редактирование особенности: название, описание, происхождение и
+   * выбор игрока. Идентификатор особенности не меняется. Пустое название
+   * игнорируется (особенность без названия не сохраняем).
    *
-   * @param featureId идентификатор особенности.
-   * @param choice текст выбора; пустая строка снимает выбор.
+   * @param featureId идентификатор редактируемой особенности.
+   * @param patch новые значения полей особенности.
    */
-  function setFeatureChoice(featureId: string, choice: string): void {
+  function updateFeature(
+    featureId: string,
+    patch: Pick<
+      CharacterFeature,
+      'name' | 'description' | 'origin' | 'originName' | 'choice'
+    >,
+  ): void {
     if (!ensureEditable()) {
       return;
     }
 
-    const trimmedChoice = choice.trim();
+    const name = patch.name.trim();
+
+    if (!name) {
+      return;
+    }
 
     character.value = {
       ...character.value,
       features: character.value.features.map((feature) =>
         feature.id === featureId
-          ? { ...feature, choice: trimmedChoice || null }
+          ? {
+              ...feature,
+              name,
+              description: [...patch.description],
+              origin: patch.origin,
+              originName: patch.originName,
+              choice: patch.choice?.trim() || null,
+            }
           : feature,
       ),
     };
@@ -692,6 +1116,156 @@ export function useCharacterSheet() {
           return true;
         })
         .map((spell) => ({ ...spell })),
+    };
+  }
+
+  /**
+   * Добавление своего заклинания (не из каталога). URL генерируется с
+   * префиксом `custom:` — со слагами каталога он не столкнётся, а книга
+   * заклинаний остаётся единым списком.
+   *
+   * @param draft значения формы своего заклинания.
+   */
+  function addCustomSpell(draft: CustomSpellDraft): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const spell = toCustomSpell(
+      `${CUSTOM_SPELL_URL_PREFIX}${crypto.randomUUID()}`,
+      draft,
+    );
+
+    if (!spell) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      spells: [...character.value.spells, spell],
+    };
+  }
+
+  /**
+   * Редактирование своего заклинания; URL (идентификатор записи) не меняется.
+   * Пустое название игнорируется — заклинание без названия не сохраняем.
+   * Каталожные записи форма не правит: их описание живёт в разделе, а не в
+   * листе, и превращать их в свои нельзя.
+   *
+   * @param spellUrl URL редактируемого заклинания.
+   * @param draft новые значения формы.
+   */
+  function updateCustomSpell(spellUrl: string, draft: CustomSpellDraft): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const editedSpell = character.value.spells.find(
+      (spell) => spell.url === spellUrl,
+    );
+
+    if (!editedSpell || !isCustomSpell(editedSpell)) {
+      return;
+    }
+
+    const updatedSpell = toCustomSpell(spellUrl, draft);
+
+    if (!updatedSpell) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      spells: character.value.spells.map((spell) =>
+        spell.url === spellUrl ? updatedSpell : spell,
+      ),
+    };
+  }
+
+  /**
+   * Копия каталожного заклинания в лист: запись перестаёт зависеть от раздела
+   * сайта и дальше правится формой листа, как добавленная вручную. Описание и
+   * характеристики дозагружаются из справочника — в документе листа у каталожных
+   * записей их нет.
+   *
+   * @param spellUrl URL каталожного заклинания.
+   */
+  async function copySpellToSheet(spellUrl: string): Promise<void> {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const catalogSpell = character.value.spells.find(
+      (spell) => spell.url === spellUrl,
+    );
+
+    if (!catalogSpell || isCustomSpell(catalogSpell)) {
+      return;
+    }
+
+    const detail = await fetchCatalogSpellDetail(spellUrl);
+
+    // Пока шёл запрос, книга могла измениться (заклинание убрали, лист закрыли
+    // и открыли другой, копию уже сделал соседний клик) — перечитываем запись и
+    // отступаем, если её больше нет или она уже своя.
+    const currentSpell = character.value.spells.find(
+      (spell) => spell.url === spellUrl,
+    );
+
+    if (!currentSpell || isCustomSpell(currentSpell)) {
+      return;
+    }
+
+    const ownSpell = toCopiedSpell(
+      `${CUSTOM_SPELL_URL_PREFIX}${crypto.randomUUID()}`,
+      currentSpell,
+      detail,
+    );
+
+    character.value = {
+      ...character.value,
+      spells: character.value.spells.map((spell) =>
+        spell.url === spellUrl ? ownSpell : spell,
+      ),
+    };
+
+    toast.add({
+      color: 'success',
+      icon: 'tabler:copy',
+      title: SPELL_COPY_TOAST_TITLE,
+      description: CATALOG_COPY_TOAST_DESCRIPTION,
+    });
+  }
+
+  /**
+   * Установка настроек заклинательства (заклинательной характеристики).
+   *
+   * @param spellcasting новые настройки заклинательства.
+   */
+  function setSpellcasting(spellcasting: CharacterSpellcasting): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      spellcasting: { ability: spellcasting.ability },
+    };
+  }
+
+  /**
+   * Установка настроек листа (правил подсчёта).
+   *
+   * @param settings новые настройки листа.
+   */
+  function setSettings(settings: CharacterSettings): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      settings: { weaponAttackAbility: settings.weaponAttackAbility },
     };
   }
 
@@ -745,6 +1319,127 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Добавление своего предмета (заполненного формой, а не выбранного из
+   * разделов сайта). Идентификатор генерируется с префиксом `custom:` — со
+   * слагами каталога он не столкнётся, а инвентарь остаётся единым списком.
+   *
+   * @param draft значения формы своего предмета.
+   */
+  function addCustomInventoryItem(draft: CustomInventoryItemDraft): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const inventoryItem = toCustomInventoryItem(
+      `${CUSTOM_INVENTORY_URL_PREFIX}${crypto.randomUUID()}`,
+      draft,
+    );
+
+    if (!inventoryItem) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      inventory: [...character.value.inventory, inventoryItem],
+    };
+  }
+
+  /**
+   * Редактирование своего предмета; идентификатор записи не меняется, надетый
+   * доспех остаётся надетым. Пустое название игнорируется — предмет без названия
+   * не сохраняем. Каталожные записи форма не правит: их описание живёт в
+   * разделе-источнике, а не в листе.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   * @param draft новые значения формы.
+   */
+  function updateCustomInventoryItem(
+    inventoryItemId: string,
+    draft: CustomInventoryItemDraft,
+  ): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const editedItem = character.value.inventory.find(
+      (inventoryItem) => inventoryItem.id === inventoryItemId,
+    );
+
+    if (!editedItem || !isCustomInventoryItem(editedItem)) {
+      return;
+    }
+
+    const updatedItem = toUpdatedCustomInventoryItem(editedItem, draft);
+
+    if (!updatedItem) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.map((inventoryItem) =>
+        inventoryItem.id === inventoryItemId ? updatedItem : inventoryItem,
+      ),
+    };
+  }
+
+  /**
+   * Копия каталожного предмета в лист — то же, что и у заклинания: запись
+   * становится своей (количество, надетый доспех и параметры сохраняются), а
+   * описание переезжает из справочника в лист.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   */
+  async function copyInventoryItemToSheet(
+    inventoryItemId: string,
+  ): Promise<void> {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const catalogItem = character.value.inventory.find(
+      (inventoryItem) => inventoryItem.id === inventoryItemId,
+    );
+
+    if (!catalogItem || isCustomInventoryItem(catalogItem)) {
+      return;
+    }
+
+    const description = await fetchInventoryItemDescription(catalogItem);
+
+    // Инвентарь за время запроса мог измениться — перечитываем предмет, как в
+    // {@link copySpellToSheet}.
+    const currentItem = character.value.inventory.find(
+      (inventoryItem) => inventoryItem.id === inventoryItemId,
+    );
+
+    if (!currentItem || isCustomInventoryItem(currentItem)) {
+      return;
+    }
+
+    const ownItem = toCopiedInventoryItem(
+      `${CUSTOM_INVENTORY_URL_PREFIX}${crypto.randomUUID()}`,
+      currentItem,
+      description,
+    );
+
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.map((inventoryItem) =>
+        inventoryItem.id === inventoryItemId ? ownItem : inventoryItem,
+      ),
+    };
+
+    toast.add({
+      color: 'success',
+      icon: 'tabler:copy',
+      title: INVENTORY_COPY_TOAST_TITLE,
+      description: CATALOG_COPY_TOAST_DESCRIPTION,
+    });
+  }
+
+  /**
    * Удаление предмета из инвентаря.
    *
    * @param inventoryItemId идентификатор предмета инвентаря.
@@ -774,6 +1469,10 @@ export function useCharacterSheet() {
     inventoryItemId: string,
     delta: number,
   ): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
     character.value = {
       ...character.value,
       inventory: character.value.inventory.map((inventoryItem) =>
@@ -782,10 +1481,32 @@ export function useCharacterSheet() {
               ...inventoryItem,
               quantity: clamp(
                 inventoryItem.quantity + delta,
-                1,
+                INVENTORY_QUANTITY_MIN,
                 INVENTORY_QUANTITY_MAX,
               ),
             }
+          : inventoryItem,
+      ),
+    };
+  }
+
+  /**
+   * Надеть/снять доспех: переключает `equipped` у предмета, у которого есть
+   * параметры доспеха. Игровое действие (смена брони по ходу игры) — блокировкой
+   * листа не ограничивается. Итоговый КД пересчитывается автоматически.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   */
+  function toggleInventoryItemEquipped(inventoryItemId: string): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.map((inventoryItem) =>
+        inventoryItem.id === inventoryItemId && inventoryItem.armor
+          ? { ...inventoryItem, equipped: !inventoryItem.equipped }
           : inventoryItem,
       ),
     };
@@ -936,10 +1657,51 @@ export function useCharacterSheet() {
     };
   }
 
+  /**
+   * Установка кошелька: количества стандартных монет ограничиваются диапазоном;
+   * пользовательские валюты обрезаются по краям, их количество ограничивается, а
+   * записи без сокращения (нечего показать в ряду) отбрасываются.
+   *
+   * @param currency количества пяти стандартных денежных единиц.
+   * @param customCurrencies пользовательские денежные единицы.
+   */
+  function setCurrency(
+    currency: CharacterCurrency,
+    customCurrencies: CharacterCustomCurrency[],
+  ): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      currency: {
+        copper: clampCurrencyAmount(currency.copper),
+        silver: clampCurrencyAmount(currency.silver),
+        electrum: clampCurrencyAmount(currency.electrum),
+        gold: clampCurrencyAmount(currency.gold),
+        platinum: clampCurrencyAmount(currency.platinum),
+      },
+      customCurrencies: customCurrencies
+        .map((customCurrency) => ({
+          id: customCurrency.id,
+          name: customCurrency.name.trim(),
+          label: customCurrency.label.trim(),
+          amount: clampCurrencyAmount(customCurrency.amount),
+        }))
+        .filter((customCurrency) => customCurrency.label.length > 0),
+    };
+  }
+
   return {
     character,
     isLocked,
+    isReadonly,
+    canEdit,
+    editControlClass,
+    gameControlClass,
     toggleLock,
+    setReadonly,
     ensureEditable,
     loadCharacter,
     resetCharacter,
@@ -949,35 +1711,55 @@ export function useCharacterSheet() {
     formattedProficiencyBonus,
     formattedInitiative,
     armorClassValue,
+    armorClassBreakdown,
+    spellcastingBreakdown,
+    spellSlotRows,
     totalWeight,
     carryingCapacity,
     setAbilityScore,
     setArmorClass,
+    setAvatar,
     setClassResources,
     adjustClassResource,
     adjustInventoryItemQuantity,
+    toggleInventoryItemEquipped,
     toggleInspiration,
+    downloadCharacter,
     addFeature,
     addFeats,
     addInventoryItems,
+    addCustomInventoryItem,
+    addCustomSpell,
+    copyInventoryItemToSheet,
+    copySpellToSheet,
     removeFeature,
     removeInventoryItem,
     removeSpell,
-    setFeatureChoice,
+    updateFeature,
+    updateCustomInventoryItem,
+    updateCustomSpell,
     setBackground,
     setClass,
+    setCurrency,
     setName,
     setNotes,
     setProficiencies,
     setProgress,
+    setSettings,
     setSize,
     setSpecies,
     setSpells,
+    setSpellcasting,
     setVision,
     setSpeed,
     setHealth,
+    setHitPoints,
     setHitDice,
+    spendHitDice,
+    completeShortRest,
+    completeLongRest,
     toggleSavingThrowProficiency,
+    toggleSpellSlot,
     cycleSkillProficiency,
   };
 }

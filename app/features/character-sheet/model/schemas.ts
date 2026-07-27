@@ -1,8 +1,10 @@
 import type { RenderNode } from '~ui/markup';
 
 import type {
+  ArmorDexterityMod,
   BackgroundOption,
   BackgroundSummary,
+  CatalogSpellDetail,
   ClassChoice,
   ClassFeatureSummary,
   ClassOption,
@@ -10,6 +12,9 @@ import type {
   ClassTableColumn,
   FeatCatalogItem,
   FeatSummary,
+  InventoryArmor,
+  InventoryWeapon,
+  InventoryWeaponDamage,
   ItemCatalogItem,
   ItemSummary,
   MagicItemCatalogItem,
@@ -20,7 +25,9 @@ import type {
 } from './types';
 
 import { z } from '~/utils/zod';
+import { CasterType } from '~classes/model';
 
+import { SPELL_COMPONENT_LABELS } from './constants';
 import {
   getClassToolChoice,
   parseAbilityKeys,
@@ -171,12 +178,17 @@ const featSearchResponseSchema = z
 
 /**
  * Валидация ответа `GET /api/v2/feats/search` и приведение к списку каталога.
- * Битый ответ даёт пустой список, а не исключение.
+ * Битый ответ даёт пустой список, а не исключение. Повторяемость (`repeatability`)
+ * приходит из отдельного эндпоинта `/select` и передаётся набором url.
  *
  * @param input сырой ответ поиска черт.
+ * @param repeatableUrls url черт, которые можно брать несколько раз.
  * @returns черты каталога для модалки добавления.
  */
-export function parseFeatCatalog(input: unknown): FeatCatalogItem[] {
+export function parseFeatCatalog(
+  input: unknown,
+  repeatableUrls: Set<string> = new Set(),
+): FeatCatalogItem[] {
   const parsed = featSearchResponseSchema.parse(input);
   const list = Array.isArray(parsed) ? parsed : parsed.value;
 
@@ -186,7 +198,38 @@ export function parseFeatCatalog(input: unknown): FeatCatalogItem[] {
     nameEng: feat.name.eng,
     category: feat.category,
     sourceLabel: feat.source.name.label,
+    repeatability: repeatableUrls.has(feat.url),
   }));
+}
+
+/** Схема пункта `GET /api/v2/feats/select` (нужен только флаг повторяемости). */
+const featSelectItemSchema = z.object({
+  url: z.string(),
+  repeatability: z.boolean().catch(false),
+});
+
+/** Ответ `/select`: плоский массив или конверт `{ value }`. */
+const featSelectResponseSchema = z
+  .union([
+    z.array(featSelectItemSchema),
+    z.object({ value: z.array(featSelectItemSchema) }),
+  ])
+  .catch([]);
+
+/**
+ * Валидация ответа `GET /api/v2/feats/select` и выборка url повторяемых черт.
+ * Битый ответ даёт пустой набор — тогда повторяемых черт просто нет.
+ *
+ * @param input сырой ответ `/select`.
+ * @returns набор url черт, которые можно брать несколько раз.
+ */
+export function parseRepeatableFeatUrls(input: unknown): Set<string> {
+  const parsed = featSelectResponseSchema.parse(input);
+  const list = Array.isArray(parsed) ? parsed : parsed.value;
+
+  return new Set(
+    list.filter((feat) => feat.repeatability).map((feat) => feat.url),
+  );
 }
 
 /** Схема детального ответа черты (нужные листу поля). */
@@ -341,6 +384,176 @@ export function parseItemDetail(input: unknown): ItemSummary | null {
     typesLabel: result.data.types,
     cost: result.data.cost,
     weight: parseItemWeight(result.data.weight),
+    // Публичная деталь структуру доспеха/оружия не отдаёт — её докладывает /raw.
+    armor: null,
+    weapon: null,
+  };
+}
+
+/** Правила Ловкости из «сырого» ответа доспеха к внутреннему представлению. */
+const ARMOR_DEXTERITY_MOD_MAP: Record<
+  'PLUS' | 'PLUS_MAX_2' | 'NONE',
+  ArmorDexterityMod
+> = {
+  PLUS: 'full',
+  PLUS_MAX_2: 'capped',
+  NONE: 'none',
+};
+
+/**
+ * Схема «сырого» ответа предмета `GET /api/v2/item/{url}/raw` в части доспеха.
+ * Форма — как у формы редактора предметов (`ArmorCreate`): объект `armor` с
+ * числовым КД и правилом Ловкости; у не-доспехов приходит null.
+ */
+const itemRawArmorSchema = z
+  .object({
+    armor: z
+      .object({
+        category: z.string().catch(''),
+        armorClass: z.coerce.number().catch(0),
+        mod: z.enum(['PLUS', 'PLUS_MAX_2', 'NONE']).catch('PLUS'),
+      })
+      .nullable()
+      .catch(null),
+  })
+  .catch({ armor: null });
+
+/**
+ * Признак щита: доспех, который складывается с бронёй, а не заменяет её.
+ * Определяется по категории доспеха или по названию/типам предмета — устойчиво
+ * к формату enum категории на бэке.
+ *
+ * @param category категория доспеха из «сырого» ответа.
+ * @param item деталь предмета (имя и подпись типов).
+ * @returns это щит.
+ */
+function isShieldArmor(category: string, item: ItemSummary): boolean {
+  return /щит|shield/i.test(`${category} ${item.name} ${item.typesLabel}`);
+}
+
+/**
+ * Разбор параметров доспеха из «сырого» ответа предмета для подсчёта КД.
+ *
+ * @param input сырой ответ `GET /api/v2/item/{url}/raw`.
+ * @param item уже разобранная деталь предмета (имя, типы — для признака щита).
+ * @returns параметры доспеха или null (не доспех либо нет данных).
+ */
+export function parseItemArmor(
+  input: unknown,
+  item: ItemSummary,
+): InventoryArmor | null {
+  const { armor } = itemRawArmorSchema.parse(input);
+
+  if (!armor) {
+    return null;
+  }
+
+  return {
+    baseArmorClass: armor.armorClass,
+    dexterityMod: ARMOR_DEXTERITY_MOD_MAP[armor.mod],
+    shield: isShieldArmor(armor.category, item),
+  };
+}
+
+/**
+ * Схема урона оружия в «сыром» ответе (форма `Damage` редактора): бросок костей
+ * и тип урона. Незаполненные поля редактор отдаёт как null.
+ */
+const itemRawWeaponDamageSchema = z
+  .object({
+    roll: z
+      .object({
+        diceCount: z.coerce.number().nullable().catch(null),
+        dice: z.string().nullable().catch(null),
+        bonus: z.coerce.number().nullable().catch(null),
+      })
+      .nullable()
+      .catch(null),
+    type: z.string().nullable().catch(null),
+  })
+  .nullable()
+  .catch(null);
+
+/**
+ * Схема «сырого» ответа предмета в части оружия (форма `WeaponCreate` редактора):
+ * категория (простое/воинское, рукопашное/дальнобойное), свойства, боеприпас и
+ * урон.
+ */
+const itemRawWeaponSchema = z
+  .object({
+    weapon: z
+      .object({
+        category: z.string().catch(''),
+        properties: z.array(z.string()).catch([]),
+        ammo: z.string().nullable().catch(null),
+        damage: itemRawWeaponDamageSchema,
+      })
+      .nullable()
+      .catch(null),
+  })
+  .catch({ weapon: null });
+
+/**
+ * Число граней кости из значения справочника (`d8` → 8).
+ *
+ * @param dice значение кости из «сырого» ответа.
+ * @returns количество граней; 0 — значение не распознано.
+ */
+function parseDiceFaces(dice: string | null): number {
+  const match = /\d+/.exec(dice ?? '');
+
+  return match ? Number(match[0]) : 0;
+}
+
+/**
+ * Разбор урона оружия из «сырого» ответа предмета: кости, собственный бонус и
+ * тип урона. Оружие без костей урона (например, боеприпас) даёт null.
+ *
+ * @param damage блок урона из «сырого» ответа оружия.
+ * @returns урон оружия или null (костей нет).
+ */
+function parseWeaponDamage(
+  damage: z.infer<typeof itemRawWeaponDamageSchema>,
+): InventoryWeaponDamage | null {
+  const diceFaces = parseDiceFaces(damage?.roll?.dice ?? null);
+  const diceCount = damage?.roll?.diceCount ?? 0;
+
+  if (diceFaces <= 0 || diceCount <= 0) {
+    return null;
+  }
+
+  return {
+    diceCount,
+    diceFaces,
+    bonus: damage?.roll?.bonus ?? 0,
+    type: damage?.type ?? '',
+  };
+}
+
+/**
+ * Разбор параметров оружия из «сырого» ответа предмета для подсчёта бонуса атаки.
+ * Категория владения и признаки «дальнобойное»/«фехтовальное» распознаются по
+ * категории/свойствам (RU- и EN-корни) — устойчиво к формату справочника на бэке.
+ *
+ * @param input сырой ответ `GET /api/v2/item/{url}/raw`.
+ * @returns параметры оружия или null (не оружие либо нет данных).
+ */
+export function parseItemWeapon(input: unknown): InventoryWeapon | null {
+  const { weapon } = itemRawWeaponSchema.parse(input);
+
+  if (!weapon) {
+    return null;
+  }
+
+  return {
+    category: /martial|воинск/i.test(weapon.category) ? 'martial' : 'simple',
+    ranged:
+      /ranged|дальноб|дистанц|стрелк/i.test(weapon.category)
+      || Boolean(weapon.ammo),
+    finesse: weapon.properties.some((property) =>
+      /фехтов|finesse/i.test(property),
+    ),
+    damage: parseWeaponDamage(weapon.damage),
   };
 }
 
@@ -475,6 +688,9 @@ const classDetailSchema = z.object({
       skill: z.string().catch(''),
     })
     .catch({ armor: '', weapon: '', tool: '', skill: '' }),
+  // Тип заклинательства класса; незнакомое значение приводится к null — ячеек
+  // такому классу лист не даст.
+  casterType: z.nativeEnum(CasterType).nullable().catch(null),
   table: z.array(classTableColumnSchema).catch([]),
   features: z.array(classFeatureSchema).catch([]),
 });
@@ -505,6 +721,7 @@ function toClassSummary(
     url: detail.url,
     name: detail.name.rus,
     hasSubclasses: detail.hasSubclasses,
+    casterType: detail.casterType,
     hitDie: detail.hitDice.maxValue,
     hitDieLabel: detail.hitDice.label,
     savingThrowsText: detail.savingThrows,
@@ -625,5 +842,107 @@ export function parseBackgroundDetail(
     featName: feat.name,
     featSubchoice: feat.subchoice,
     equipment: detail.equipment,
+  };
+}
+
+/**
+ * Схема описания записи каталога. У деталей заклинаний, предметов и магических
+ * предметов описание лежит одинаково — массивом строк разметки сайта.
+ */
+const catalogDescriptionSchema = z.object({
+  description: z.array(z.string()).catch([]),
+});
+
+/**
+ * Валидация описания из детального ответа каталога
+ * (`GET /api/v2/{spells,item,magic-items}/{url}`).
+ *
+ * @param input сырой детальный ответ записи каталога.
+ * @returns строки описания; пустой массив при неожиданном ответе.
+ */
+export function parseCatalogDescription(input: unknown): string[] {
+  const result = catalogDescriptionSchema.safeParse(input);
+
+  return result.success ? result.data.description : [];
+}
+
+/** Компоненты заклинания в детальном ответе: флаги и материальный компонент. */
+interface SpellComponentsResponse {
+  /** Вербальный компонент. */
+  v?: boolean;
+
+  /** Соматический компонент. */
+  s?: boolean;
+
+  /** Описание материального компонента; пусто — компонента нет. */
+  m?: string;
+}
+
+/** Схема компонентов заклинания из детального ответа. */
+const spellComponentsSchema = z
+  .object({
+    v: z.boolean().catch(false),
+    s: z.boolean().catch(false),
+    m: z.string().catch(''),
+  })
+  .partial()
+  .catch({});
+
+/** Схема детального ответа заклинания (нужные справочнику поля). */
+const catalogSpellDetailSchema = catalogDescriptionSchema.extend({
+  castingTime: z.string().catch(''),
+  range: z.string().catch(''),
+  duration: z.string().catch(''),
+  components: spellComponentsSchema,
+});
+
+/**
+ * Компоненты заклинания строкой. Деталь каталога отдаёт их флагами, а лист
+ * хранит строкой — приводим к форме листа, чтобы карточка справочника рисовалась
+ * тем же кодом, что и у своих заклинаний.
+ *
+ * @param components компоненты из детального ответа.
+ * @returns компоненты через запятую; пустая строка — компонентов нет.
+ */
+function getSpellComponentsText(components: SpellComponentsResponse): string {
+  const parts: string[] = [];
+
+  if (components.v) {
+    parts.push(SPELL_COMPONENT_LABELS.verbal);
+  }
+
+  if (components.s) {
+    parts.push(SPELL_COMPONENT_LABELS.somatic);
+  }
+
+  if (components.m) {
+    parts.push(`${SPELL_COMPONENT_LABELS.material} (${components.m})`);
+  }
+
+  return parts.join(', ');
+}
+
+/**
+ * Валидация детального ответа `GET /api/v2/spells/{url}` для справочника PDF:
+ * описание и характеристики в той же форме, в какой их хранит своё заклинание.
+ *
+ * @param input сырой детальный ответ заклинания.
+ * @returns характеристики и описание заклинания; null при неожиданном ответе.
+ */
+export function parseCatalogSpellDetail(
+  input: unknown,
+): CatalogSpellDetail | null {
+  const result = catalogSpellDetailSchema.safeParse(input);
+
+  if (!result.success) {
+    return null;
+  }
+
+  return {
+    castingTime: result.data.castingTime,
+    range: result.data.range,
+    components: getSpellComponentsText(result.data.components),
+    duration: result.data.duration,
+    description: result.data.description,
   };
 }

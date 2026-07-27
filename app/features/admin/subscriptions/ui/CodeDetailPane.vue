@@ -57,6 +57,12 @@
       emit('updated', updated);
     }
   }
+
+  function copyInviteLink(): void {
+    if (code.telegramInviteLink) {
+      copy(code.telegramInviteLink);
+    }
+  }
 </script>
 
 <template>
@@ -211,6 +217,24 @@
         <p class="text-sm text-highlighted">
           {{ code.label }}
         </p>
+      </div>
+
+      <!-- Одноразовое приглашение в чат разработки (закреплено за кодом при выпуске) -->
+      <div
+        v-if="code.telegramInviteLink"
+        class="space-y-2"
+      >
+        <div class="text-xs font-medium tracking-wide text-muted uppercase">
+          Приглашение в чат разработки
+        </div>
+
+        <span
+          class="cursor-pointer font-mono text-sm break-all text-highlighted transition-colors select-all hover:text-primary"
+          title="Нажмите, чтобы скопировать"
+          @click.left.exact.prevent="copyInviteLink"
+        >
+          {{ code.telegramInviteLink }}
+        </span>
       </div>
 
       <!-- История -->

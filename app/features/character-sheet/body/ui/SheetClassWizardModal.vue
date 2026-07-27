@@ -10,12 +10,13 @@
     buildClassFeatures,
     CLASSES_DETAIL_BASE_PATH,
     CLASSES_SEARCH_PATH,
-    deriveClassResources,
     detectFeatureChoice,
     FEATURE_ORIGIN_LABELS,
     getCharacterFeatureId,
+    getClassMaxHitPoints,
     getClassSkillChoice,
     getClassToolChoice,
+    getSelectedCasterType,
     LANGUAGE_PROFICIENCY_GROUPS,
     matchClassProficiencies,
     parseClassDetail,
@@ -174,6 +175,18 @@
     classDetail.value ? `1${classDetail.value.hitDieLabel}` : '',
   );
 
+  // Хиты, которые получит лист при применении: первый уровень — максимум кости,
+  // следующие — среднее; модификатор Телосложения входит в каждый уровень.
+  const maxHitPointsPreview = computed(() =>
+    classDetail.value
+      ? getClassMaxHitPoints(
+          classDetail.value.hitDie,
+          level.value,
+          getModifier(character.value.abilities.constitution),
+        )
+      : 0,
+  );
+
   const savingThrowLabels = computed(() =>
     (classDetail.value?.savingThrows ?? []).map((key) => ABILITY_LABELS[key]),
   );
@@ -189,12 +202,6 @@
     ...matchedProficiencies.value.weapons,
     ...matchedProficiencies.value.tools,
   ]);
-
-  const derivedResources = computed(() =>
-    classDetail.value
-      ? deriveClassResources(classDetail.value.table, level.value)
-      : [],
-  );
 
   // Выборы уровня класса (владение навыками/инструментами) из прозы владений.
   const classChoices = computed<ClassChoice[]>(() => {
@@ -494,6 +501,7 @@
         name: base.name,
         subclassUrl: selectedSubclass.value?.url ?? null,
         subclassName: subclassDetail.value?.name ?? null,
+        casterType: getSelectedCasterType(base, subclassDetail.value),
         hitDie: base.hitDie,
       },
       savingThrows: base.savingThrows,
@@ -508,7 +516,6 @@
         proficient: [...new Set(proficientSkills)],
         expertise: [...new Set(expertiseSkills)],
       },
-      classResources: derivedResources.value,
       features: buildClassFeatures(
         base,
         subclassDetail.value,
@@ -708,8 +715,8 @@
 
           <span class="text-xs text-muted">
             Класс с подклассами разворачивается стрелкой — подкласс
-            необязателен. При применении кость хитов, спасброски, владения,
-            ресурсы и умения по текущему уровню сразу заполнят лист.
+            необязателен. При применении кость хитов, хиты, спасброски,
+            владения, ресурсы и умения по текущему уровню сразу заполнят лист.
           </span>
         </template>
 
@@ -730,6 +737,18 @@
 
               <span class="text-sm font-medium text-highlighted">
                 {{ hitDieLabel }}
+              </span>
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <span
+                class="text-[10px] font-bold tracking-wider text-muted uppercase"
+              >
+                Хиты
+              </span>
+
+              <span class="text-sm font-medium text-highlighted">
+                {{ maxHitPointsPreview }}
               </span>
             </div>
 
@@ -780,29 +799,6 @@
                 variant="subtle"
               >
                 {{ chip }}
-              </UBadge>
-            </div>
-          </div>
-
-          <div
-            v-if="derivedResources.length"
-            class="flex flex-col gap-1"
-          >
-            <span
-              class="text-[10px] font-bold tracking-wider text-muted uppercase"
-            >
-              Ресурсы (распознаны, редактируются на листе)
-            </span>
-
-            <div class="flex flex-wrap gap-1">
-              <UBadge
-                v-for="resource in derivedResources"
-                :key="resource.id"
-                size="sm"
-                color="neutral"
-                variant="subtle"
-              >
-                {{ resource.name }}: {{ resource.max }}
               </UBadge>
             </div>
           </div>
