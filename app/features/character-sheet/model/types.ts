@@ -708,6 +708,9 @@ export interface ClassFeatureSummary {
 export interface ClassTableColumn {
   name: string;
 
+  /** Колонка хранит расходуемый ресурс класса. */
+  resource: boolean;
+
   /** Значения колонки по уровням. */
   scaling: Array<{ level: number; value: string }>;
 }

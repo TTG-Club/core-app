@@ -12,7 +12,7 @@
   }
 
   function getEmptyColumn(): ClassColumnCreate {
-    return { name: '', scaling: [] };
+    return { name: '', resource: false, scaling: [] };
   }
 </script>
 
@@ -36,7 +36,7 @@
             :state="column"
           >
             <UFormField
-              class="col-span-full md:col-span-12"
+              class="col-span-full md:col-span-10"
               label="Название"
               name="name"
             >
@@ -46,12 +46,23 @@
               />
             </UFormField>
 
+            <UFormField
+              class="col-span-full md:col-span-4"
+              label="Ресурс"
+              name="resource"
+            >
+              <USwitch
+                v-model="column.resource"
+                description="Добавлять в ресурсы персонажа"
+              />
+            </UFormField>
+
             <EditorArrayControls
               v-model="state"
               :item="column"
               :empty-object="getEmptyColumn()"
               :index="index"
-              cols="12"
+              cols="10"
               only-remove
             />
 

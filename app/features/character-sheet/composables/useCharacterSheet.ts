@@ -875,6 +875,7 @@ export function useCharacterSheet() {
    * @param payload.skills выбранные навыки (владение и экспертиза).
    * @param payload.skills.proficient навыки для владения.
    * @param payload.skills.expertise навыки для экспертизы.
+   * @param payload.classResources ресурсы класса из отмеченных колонок.
    * @param payload.features классовые особенности по уровню.
    */
   function setClass(payload: {
@@ -888,6 +889,7 @@ export function useCharacterSheet() {
       languages: string[];
     };
     skills: { proficient: string[]; expertise: string[] };
+    classResources: CharacterClassResource[];
     features: CharacterFeature[];
   }): void {
     if (!ensureEditable()) {
@@ -908,8 +910,8 @@ export function useCharacterSheet() {
       (feature) => !feature.id.startsWith('class:'),
     );
 
-    // Устаревшие производные ресурсы (id `class:res:*`) убираются, ресурсы,
-    // добавленные вручную, сохраняются: класс их автоматически не создаёт.
+    // Производные ресурсы (id `class:res:*`) заменяются значениями выбранного
+    // класса и подкласса; добавленные вручную ресурсы сохраняются.
     const preservedResources = character.value.classResources.filter(
       (resource) => !resource.id.startsWith('class:res:'),
     );
@@ -950,7 +952,7 @@ export function useCharacterSheet() {
         payload.skills.proficient,
         payload.skills.expertise,
       ),
-      classResources: preservedResources,
+      classResources: [...preservedResources, ...payload.classResources],
       features: [
         ...payload.features.map((feature) => ({
           ...feature,

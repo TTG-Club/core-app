@@ -62,6 +62,7 @@ export interface MulticlassRequest {
 
 export interface ClassTable {
   name: string;
+  resource: boolean;
   scaling: Array<{
     level: Level;
     value: string;

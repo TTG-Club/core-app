@@ -12,6 +12,7 @@ import type {
   CatalogSpellDetail,
   Character,
   CharacterClass,
+  CharacterClassResource,
   CharacterCurrency,
   CharacterExtraHitDie,
   CharacterFeature,
@@ -29,6 +30,7 @@ import type {
   ClassChoice,
   ClassFeatureSummary,
   ClassSummary,
+  ClassTableColumn,
   CustomArmorType,
   CustomInventoryItemDraft,
   CustomInventoryKind,
@@ -133,7 +135,9 @@ import {
   MAGIC_ITEMS_DETAIL_BASE_PATH,
   NEW_CUSTOM_INVENTORY_ITEM,
   PACT_SPELL_SLOTS_LABEL,
+  RESOURCE_COUNT_MAX,
   RESOURCE_RECOVERY_LABELS,
+  RESOURCE_SHORT_LABEL_MAX_LENGTH,
   ROLL_MODE_DICE_NOTATION,
   SHEET_COPY_LIMIT_HINT,
   SHEET_DOWNLOAD_JSON_LABEL,
@@ -2200,6 +2204,76 @@ export function matchClassProficiencies(proficiencyText: {
       TOOL_MATCH_KEYWORDS,
     ),
   };
+}
+
+/**
+ * Значение колонки таблицы прогрессии на заданном уровне: берётся запись с
+ * наибольшим уровнем, не превышающим текущий.
+ *
+ * @param column колонка таблицы прогрессии.
+ * @param level уровень персонажа.
+ * @returns значение колонки; null — записи для уровня нет.
+ */
+function getColumnValueAtLevel(
+  column: ClassTableColumn,
+  level: number,
+): string | null {
+  let value: string | null = null;
+  let bestLevel = 0;
+
+  for (const entry of column.scaling) {
+    if (entry.level <= level && entry.level >= bestLevel) {
+      bestLevel = entry.level;
+      value = entry.value;
+    }
+  }
+
+  return value;
+}
+
+/**
+ * Вывод отмеченных ресурсов класса из таблицы прогрессии. Значение на текущем
+ * уровне должно быть целым числом в допустимом диапазоне. Значения игрок затем
+ * правит вручную.
+ *
+ * @param table таблица прогрессии класса.
+ * @param level уровень персонажа.
+ * @returns ресурсы класса с устойчивыми идентификаторами.
+ */
+export function deriveClassResources(
+  table: ClassTableColumn[],
+  level: number,
+): CharacterClassResource[] {
+  const resources: CharacterClassResource[] = [];
+
+  for (const column of table) {
+    if (!column.resource) {
+      continue;
+    }
+
+    const value = getColumnValueAtLevel(column, level)?.trim();
+
+    if (!value || !/^\d+$/.test(value)) {
+      continue;
+    }
+
+    const max = Number(value);
+
+    if (max < 1 || max > RESOURCE_COUNT_MAX) {
+      continue;
+    }
+
+    resources.push({
+      id: `class:res:${column.name}`,
+      name: column.name,
+      shortLabel: column.name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
+      recovery: 'long-rest',
+      current: max,
+      max,
+    });
+  }
+
+  return resources;
 }
 
 /**

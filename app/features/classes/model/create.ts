@@ -50,6 +50,7 @@ export interface ClassColumnScalingCreate {
 
 export interface ClassColumnCreate {
   name: string;
+  resource: boolean;
   scaling: Array<ClassColumnScalingCreate>;
 }
 

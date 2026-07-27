@@ -10,6 +10,7 @@
     buildClassFeatures,
     CLASSES_DETAIL_BASE_PATH,
     CLASSES_SEARCH_PATH,
+    deriveClassResources,
     detectFeatureChoice,
     FEATURE_ORIGIN_LABELS,
     getCharacterFeatureId,
@@ -202,6 +203,17 @@
     ...matchedProficiencies.value.weapons,
     ...matchedProficiencies.value.tools,
   ]);
+
+  const derivedResources = computed(() => {
+    if (!classDetail.value) {
+      return [];
+    }
+
+    return deriveClassResources(
+      [...classDetail.value.table, ...(subclassDetail.value?.table ?? [])],
+      level.value,
+    );
+  });
 
   // Выборы уровня класса (владение навыками/инструментами) из прозы владений.
   const classChoices = computed<ClassChoice[]>(() => {
@@ -516,6 +528,7 @@
         proficient: [...new Set(proficientSkills)],
         expertise: [...new Set(expertiseSkills)],
       },
+      classResources: derivedResources.value,
       features: buildClassFeatures(
         base,
         subclassDetail.value,
