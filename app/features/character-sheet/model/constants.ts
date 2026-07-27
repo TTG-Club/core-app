@@ -262,6 +262,19 @@ export const SHEET_SHARE_REVOKED_DESCRIPTION =
 /** Пометка в меню действий: доступ по ссылке уже включён. */
 export const SHEET_SHARE_ACTIVE_HINT = 'Ссылка активна';
 
+/**
+ * Подпись кнопки быстрого просмотра листа рядом со списком: drawer в
+ * стандартном режиме, правая панель в широком. Общая для карточки своего листа
+ * и карточки чужого — действие у них одно и то же.
+ */
+export const SHEET_OPEN_IN_PANEL_LABEL = 'Открыть в панели';
+
+/**
+ * Подпись обратного действия — «развернуть» лист из drawer или правой панели на
+ * отдельную страницу. Общая для шапки листа и для шапки drawer.
+ */
+export const SHEET_OPEN_ON_PAGE_LABEL = 'Открыть на отдельной странице';
+
 /** Заголовок раздела с чужими листами, сохранёнными по ссылке. */
 export const SAVED_SHEETS_TITLE = 'Другие листы';
 
@@ -286,7 +299,7 @@ export const SAVED_SHEETS_LABELS: Record<
   unavailableHint:
     'Владелец отозвал ссылку или удалил лист. Попросите новую ссылку и сохраните её заново.',
   readonlyBadge: 'Только просмотр',
-  open: 'Открыть на отдельной странице',
+  open: SHEET_OPEN_IN_PANEL_LABEL,
   remove: 'Убрать',
   removeTitle: 'Убрать лист из сохранённых?',
   removeDescription:

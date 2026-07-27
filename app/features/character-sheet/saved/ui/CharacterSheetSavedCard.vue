@@ -86,11 +86,6 @@
 
   const { isExporting, exportToPdf } = useCharacterSheetPdf();
 
-  /** Открывает лист на отдельной странице (в обход drawer). */
-  function openOnPage(): void {
-    navigateTo(to.value);
-  }
-
   /** Экспорт в JSON — читает документ карточки, запросов не делает. */
   function handleDownload(): void {
     if (sheet.data) {
@@ -182,85 +177,79 @@
     class="flex min-h-20 w-full items-center gap-3 rounded-xl border p-3 transition-all"
     :class="cardClass"
   >
+    <!-- Клик ведёт на отдельную страницу — как у карточки своего листа -->
     <NuxtLink
-      v-slot="{ href }"
-      custom
       :to
+      class="flex min-w-0 flex-auto items-center gap-4"
     >
-      <a
-        :href="href ?? undefined"
-        class="flex min-w-0 flex-auto items-center gap-4"
-        @click.left.exact.prevent="handleOpen"
+      <div
+        class="grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-primary/5 ring-1 ring-primary/15"
       >
-        <div
-          class="grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-primary/5 ring-1 ring-primary/15"
+        <img
+          v-if="sheet.data?.avatarUrl"
+          :src="sheet.data.avatarUrl"
+          :alt="sheet.name"
+          class="size-full object-cover"
+        />
+
+        <UIcon
+          v-else
+          name="tabler:user"
+          class="size-7 text-primary"
+        />
+      </div>
+
+      <div class="flex min-w-0 flex-auto flex-col gap-0.5">
+        <span class="flex min-w-0 items-center gap-2">
+          <span class="truncate text-base font-semibold text-highlighted">
+            {{ sheet.name }}
+          </span>
+
+          <UBadge
+            :label="SAVED_SHEETS_LABELS.readonlyBadge"
+            icon="tabler:eye"
+            color="neutral"
+            variant="subtle"
+            size="sm"
+            class="shrink-0"
+          />
+        </span>
+
+        <span
+          v-if="sheet.data"
+          class="truncate text-sm text-secondary"
         >
-          <img
-            v-if="sheet.data?.avatarUrl"
-            :src="sheet.data.avatarUrl"
-            :alt="sheet.name"
-            class="size-full object-cover"
-          />
+          {{ classLabel }} · {{ speciesLabel }}
+        </span>
 
+        <span
+          v-if="sheet.data"
+          class="mt-0.5 flex items-center gap-1 text-xs text-muted"
+          title="Хиты: сейчас / всего"
+        >
           <UIcon
-            v-else
-            name="tabler:user"
-            class="size-7 text-primary"
+            name="tabler:heart"
+            class="size-3.5 shrink-0 text-error"
           />
-        </div>
 
-        <div class="flex min-w-0 flex-auto flex-col gap-0.5">
-          <span class="flex min-w-0 items-center gap-2">
-            <span class="truncate text-base font-semibold text-highlighted">
-              {{ sheet.name }}
-            </span>
-
-            <UBadge
-              :label="SAVED_SHEETS_LABELS.readonlyBadge"
-              icon="tabler:eye"
-              color="neutral"
-              variant="subtle"
-              size="sm"
-              class="shrink-0"
-            />
+          <span class="truncate">
+            Хиты: {{ sheet.data.health.current }} /
+            {{ sheet.data.health.max }} · Уровень: {{ levelValue }}
           </span>
-
-          <span
-            v-if="sheet.data"
-            class="truncate text-sm text-secondary"
-          >
-            {{ classLabel }} · {{ speciesLabel }}
-          </span>
-
-          <span
-            v-if="sheet.data"
-            class="mt-0.5 flex items-center gap-1 text-xs text-muted"
-            title="Хиты: сейчас / всего"
-          >
-            <UIcon
-              name="tabler:heart"
-              class="size-3.5 shrink-0 text-error"
-            />
-
-            <span class="truncate">
-              Хиты: {{ sheet.data.health.current }} /
-              {{ sheet.data.health.max }} · Уровень: {{ levelValue }}
-            </span>
-          </span>
-        </div>
-      </a>
+        </span>
+      </div>
     </NuxtLink>
 
     <!-- Кнопки столбиком — как у карточки своего листа -->
     <div class="flex shrink-0 flex-col gap-1">
       <UTooltip :text="SAVED_SHEETS_LABELS.open">
         <UButton
-          icon="tabler:arrow-up-right"
+          icon="tabler:layout-sidebar-right-expand"
           color="neutral"
           variant="soft"
           square
           :aria-label="SAVED_SHEETS_LABELS.open"
-          @click.left.exact.prevent="openOnPage"
+          @click.left.exact.prevent="handleOpen"
         />
       </UTooltip>
 
