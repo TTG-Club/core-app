@@ -60,9 +60,11 @@ export interface MulticlassRequest {
   levels: Array<MulticlassLevelEntry>;
 }
 
+export type ClassResourceRecovery = 'NONE' | 'SHORT_REST' | 'LONG_REST';
+
 export interface ClassTable {
   name: string;
-  resource: boolean;
+  resourceRecovery: ClassResourceRecovery;
   scaling: Array<{
     level: Level;
     value: string;

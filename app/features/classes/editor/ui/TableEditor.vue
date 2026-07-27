@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { ClassColumnCreate } from '../../model';
 
+  import { CLASS_RESOURCE_RECOVERY_OPTIONS } from '../../model';
+
   import { EditorArrayControls } from '~ui/editor';
 
   import { TableColumnScaling } from './table';
@@ -12,7 +14,7 @@
   }
 
   function getEmptyColumn(): ClassColumnCreate {
-    return { name: '', resource: false, scaling: [] };
+    return { name: '', resourceRecovery: 'NONE', scaling: [] };
   }
 </script>
 
@@ -36,7 +38,7 @@
             :state="column"
           >
             <UFormField
-              class="col-span-full md:col-span-10"
+              class="col-span-full md:col-span-8"
               label="Название"
               name="name"
             >
@@ -47,13 +49,14 @@
             </UFormField>
 
             <UFormField
-              class="col-span-full md:col-span-4"
-              label="Ресурс"
-              name="resource"
+              class="col-span-full md:col-span-8"
+              label="Восстановление ресурса"
+              name="resourceRecovery"
             >
-              <USwitch
-                v-model="column.resource"
-                description="Добавлять в ресурсы персонажа"
+              <USelect
+                v-model="column.resourceRecovery"
+                :items="CLASS_RESOURCE_RECOVERY_OPTIONS"
+                class="w-full"
               />
             </UFormField>
 
@@ -62,7 +65,7 @@
               :item="column"
               :empty-object="getEmptyColumn()"
               :index="index"
-              cols="10"
+              cols="8"
               only-remove
             />
 

@@ -1,4 +1,4 @@
-import type { CasterType } from '~classes/model';
+import type { CasterType, ClassResourceRecovery } from '~classes/model';
 import type { MarkerNode, SimpleTextNode } from '~ui/markup';
 
 /** Ключ характеристики персонажа. */
@@ -708,8 +708,8 @@ export interface ClassFeatureSummary {
 export interface ClassTableColumn {
   name: string;
 
-  /** Колонка хранит расходуемый ресурс класса. */
-  resource: boolean;
+  /** Когда восстанавливается ресурс; NONE — колонка не является ресурсом. */
+  resourceRecovery: ClassResourceRecovery;
 
   /** Значения колонки по уровням. */
   scaling: Array<{ level: number; value: string }>;

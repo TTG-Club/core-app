@@ -1,6 +1,8 @@
 import type { AbilityKey } from '~/shared/types';
 import type { EditorBaseInfoState } from '~ui/editor';
 
+import type { ClassResourceRecovery } from './detail';
+
 export type AbilityDelimiter = 'AND' | 'OR';
 
 export interface ClassFeatureScalingCreate {
@@ -50,7 +52,7 @@ export interface ClassColumnScalingCreate {
 
 export interface ClassColumnCreate {
   name: string;
-  resource: boolean;
+  resourceRecovery: ClassResourceRecovery;
   scaling: Array<ClassColumnScalingCreate>;
 }
 

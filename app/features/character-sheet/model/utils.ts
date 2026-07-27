@@ -2247,7 +2247,7 @@ export function deriveClassResources(
   const resources: CharacterClassResource[] = [];
 
   for (const column of table) {
-    if (!column.resource) {
+    if (column.resourceRecovery === 'NONE') {
       continue;
     }
 
@@ -2267,7 +2267,10 @@ export function deriveClassResources(
       id: `class:res:${column.name}`,
       name: column.name,
       shortLabel: column.name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
-      recovery: 'long-rest',
+      recovery:
+        column.resourceRecovery === 'SHORT_REST'
+          ? 'short-rest'
+          : 'long-rest',
       current: max,
       max,
     });

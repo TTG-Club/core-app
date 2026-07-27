@@ -644,7 +644,9 @@ export function parseClassOptions(
 /** Схема колонки таблицы прогрессии класса. */
 const classTableColumnSchema = z.object({
   name: z.string().catch(''),
-  resource: z.boolean().catch(false),
+  resourceRecovery: z
+    .enum(['NONE', 'SHORT_REST', 'LONG_REST'])
+    .catch('NONE'),
   scaling: z
     .array(
       z.object({
@@ -715,7 +717,7 @@ function toClassSummary(
 
   const table: ClassTableColumn[] = detail.table.map((column) => ({
     name: column.name,
-    resource: column.resource,
+    resourceRecovery: column.resourceRecovery,
     scaling: column.scaling,
   }));
 
