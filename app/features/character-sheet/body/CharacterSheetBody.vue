@@ -21,6 +21,7 @@
   import {
     ABILITY_LABELS,
     ARMOR_PROFICIENCY_GROUPS,
+    getAvailableInnateSpells,
     getWeaponAttackBonus,
     getWeaponDamage,
     LANGUAGE_PROFICIENCY_GROUPS,
@@ -595,6 +596,10 @@
     speciesWizardModal.open();
   }
 
+  const availableInnateSpells = computed(() =>
+    getAvailableInnateSpells(character.value),
+  );
+
   function handleClassEdit() {
     if (!ensureEditable()) {
       return;
@@ -961,6 +966,7 @@
           :carrying-capacity="carryingCapacity"
           :features="character.features"
           :spells="character.spells"
+          :innate-spells="availableInnateSpells"
           :spellcasting="spellcastingBreakdown"
           :spell-slots="spellSlotRows"
           :has-main-tab="!isWide"

@@ -843,7 +843,13 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
-      species: { ...payload.species },
+      species: {
+        ...payload.species,
+        innateSpells: payload.species.innateSpells.map((innateSpell) => ({
+          ...innateSpell,
+          spell: { ...innateSpell.spell },
+        })),
+      },
       size: payload.size,
       speed: {
         ...payload.speed,

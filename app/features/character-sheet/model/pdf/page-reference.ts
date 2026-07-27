@@ -10,6 +10,7 @@ import type { PdfBuildContext, PdfFlow } from './types';
 
 import { FEATURE_ORIGIN_LABELS } from '../constants';
 import {
+  getAvailableInnateSpells,
   getInventoryGroups,
   getSpellGroups,
   getSpellLevelLabel,
@@ -137,7 +138,15 @@ function getReferenceEntries(
       description: feature.description,
     }));
 
-  const spells = getSpellGroups(character.spells, [])
+  const uniqueSpells = [
+    ...new Map(
+      [...getAvailableInnateSpells(character), ...character.spells].map(
+        (spell) => [spell.url, spell],
+      ),
+    ).values(),
+  ];
+
+  const spells = getSpellGroups(uniqueSpells, [])
     .flatMap((group) => group.spells)
     .map((spell) => getSpellEntry(spell, descriptions.spells.get(spell.url)))
     .filter((entry): entry is ReferenceEntry => entry !== null);

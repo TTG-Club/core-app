@@ -41,6 +41,7 @@
     carryingCapacity: number;
     features: CharacterFeature[];
     spells: CharacterSpell[];
+    innateSpells: CharacterSpell[];
     spellcasting: SpellcastingBreakdown;
 
     /** Ячейки заклинаний по кругам; пусто — класс ячеек не даёт. */
@@ -821,6 +822,7 @@
           <SheetSpellsTab
             v-else-if="activeSlot === 'spells'"
             :spells="spells"
+            :innate-spells="innateSpells"
             :spellcasting="spellcasting"
             :spell-slots="spellSlots"
             @add-spell="handleSpellAdd"
