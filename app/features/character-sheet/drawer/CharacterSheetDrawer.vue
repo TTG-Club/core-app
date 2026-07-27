@@ -12,6 +12,7 @@
     CHARACTER_SHEET_SHARED_ROUTE,
     CHARACTER_SHEET_TITLE,
     SHEET_NOT_FOUND_SUBTITLES,
+    SHEET_OPEN_ON_PAGE_LABEL,
   } from '../model';
 
   const { characterId = '', shareToken = '' } = defineProps<{
@@ -64,13 +65,13 @@
     @close="emit('close')"
   >
     <template #actions>
-      <UTooltip text="Открыть на отдельной странице">
+      <UTooltip :text="SHEET_OPEN_ON_PAGE_LABEL">
         <UButton
           icon="tabler:arrow-up-right"
           color="neutral"
           variant="ghost"
           square
-          aria-label="Открыть на отдельной странице"
+          :aria-label="SHEET_OPEN_ON_PAGE_LABEL"
           @click.left.exact.prevent="handleExpand"
         />
       </UTooltip>

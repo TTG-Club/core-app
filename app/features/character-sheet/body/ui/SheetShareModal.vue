@@ -24,7 +24,7 @@
 
   const shareUrl = computed(() => getShareUrl(props.sheetId));
 
-  const { copy, share } = useCopyAndShare();
+  const { copy, share, isShareAvailable } = useCopyAndShare();
 
   const toast = useToast();
 
@@ -118,7 +118,12 @@
                 />
               </UTooltip>
 
-              <UTooltip :text="SHEET_SHARE_LABELS.share">
+              <!-- Кнопка системного «Поделиться» — только там, где оно есть:
+                на десктопе она просто копировала бы ссылку, дублируя соседнюю -->
+              <UTooltip
+                v-if="isShareAvailable"
+                :text="SHEET_SHARE_LABELS.share"
+              >
                 <UButton
                   icon="tabler:share"
                   color="neutral"

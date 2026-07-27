@@ -13,6 +13,7 @@
     SPELL_CATALOG_LOAD_MORE_DISTANCE,
     SPELL_LEVELS,
   } from '../../model';
+  import SheetSearchInput from './SheetSearchInput.vue';
 
   const emit = defineEmits<{
     close: [];
@@ -229,11 +230,9 @@
         <!-- Мобильная панель: поиск над списком + кнопка «Фильтр». Быстрых
           чипов на мобильном нет — все фильтры открывает дровер. -->
         <div class="flex shrink-0 items-center gap-2 sm:hidden">
-          <UInput
+          <SheetSearchInput
             v-model="searchTerm"
-            icon="tabler:search"
             size="sm"
-            placeholder="Поиск…"
             class="min-w-0 grow"
           />
 
@@ -266,11 +265,9 @@
         <aside
           class="hidden w-44 shrink-0 flex-col gap-4 overflow-y-auto sm:flex"
         >
-          <UInput
+          <SheetSearchInput
             v-model="searchTerm"
-            icon="tabler:search"
             size="sm"
-            placeholder="Поиск…"
             class="shrink-0"
           />
 

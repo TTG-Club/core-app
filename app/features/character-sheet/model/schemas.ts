@@ -12,6 +12,7 @@ import type {
   ClassTableColumn,
   FeatCatalogItem,
   FeatSummary,
+  FeatureDescriptionNode,
   InventoryArmor,
   InventoryWeapon,
   InventoryWeaponDamage,
@@ -27,6 +28,7 @@ import type {
 import { z } from '~/utils/zod';
 import { CasterType } from '~classes/model';
 
+import { descriptionNodesSchema } from './character-schema';
 import { SPELL_COMPONENT_LABELS } from './constants';
 import {
   getClassToolChoice,
@@ -63,7 +65,7 @@ const speciesSearchResponseSchema = z
 const speciesFeatureSchema = z.object({
   url: z.string().catch(''),
   name: z.object({ rus: z.string().catch('') }),
-  description: z.array(z.string()).catch([]),
+  description: descriptionNodesSchema,
 });
 
 /** Схема детального ответа вида или подвида (нужные листу поля). */
@@ -237,7 +239,7 @@ const featDetailSchema = z.object({
   url: z.string(),
   name: z.object({ rus: z.string().catch('') }),
   category: z.string().catch(''),
-  description: z.array(z.string()).catch([]),
+  description: descriptionNodesSchema,
 });
 
 /**
@@ -644,6 +646,7 @@ export function parseClassOptions(
 /** Схема колонки таблицы прогрессии класса. */
 const classTableColumnSchema = z.object({
   name: z.string().catch(''),
+  resourceRecovery: z.enum(['NONE', 'SHORT_REST', 'LONG_REST']).catch('NONE'),
   scaling: z
     .array(
       z.object({
@@ -714,6 +717,7 @@ function toClassSummary(
 
   const table: ClassTableColumn[] = detail.table.map((column) => ({
     name: column.name,
+    resourceRecovery: column.resourceRecovery,
     scaling: column.scaling,
   }));
 
@@ -847,10 +851,10 @@ export function parseBackgroundDetail(
 
 /**
  * Схема описания записи каталога. У деталей заклинаний, предметов и магических
- * предметов описание лежит одинаково — массивом строк разметки сайта.
+ * предметов описание лежит одинаково — массивом строк и узлов разметки сайта.
  */
 const catalogDescriptionSchema = z.object({
-  description: z.array(z.string()).catch([]),
+  description: descriptionNodesSchema,
 });
 
 /**
@@ -858,9 +862,11 @@ const catalogDescriptionSchema = z.object({
  * (`GET /api/v2/{spells,item,magic-items}/{url}`).
  *
  * @param input сырой детальный ответ записи каталога.
- * @returns строки описания; пустой массив при неожиданном ответе.
+ * @returns узлы описания; пустой массив при неожиданном ответе.
  */
-export function parseCatalogDescription(input: unknown): string[] {
+export function parseCatalogDescription(
+  input: unknown,
+): FeatureDescriptionNode[] {
   const result = catalogDescriptionSchema.safeParse(input);
 
   return result.success ? result.data.description : [];

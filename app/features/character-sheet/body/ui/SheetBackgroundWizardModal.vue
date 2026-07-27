@@ -12,12 +12,13 @@
   import { FeatDrawer } from '~feats/drawer';
   import { MarkupRender } from '~ui/markup';
 
-  import { useCharacterSheet } from '../../composables';
+  import { useCatalogSourceQuery, useCharacterSheet } from '../../composables';
   import {
     ABILITY_LABELS,
     ABILITY_ORDER,
     BACKGROUND_ABILITY_MODE_OPTIONS,
     BACKGROUNDS_DETAIL_BASE_PATH,
+    BACKGROUNDS_FILTERS_PATH,
     BACKGROUNDS_SEARCH_PATH,
     buildFeatFeature,
     computeAbilityBonuses,
@@ -27,9 +28,11 @@
     parseBackgroundOptions,
     parseFeatDetail,
     resolveChoiceOptions,
+    SHEET_SEARCH_LABELS,
     TOOL_PROFICIENCY_GROUPS,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetSearchInput from './SheetSearchInput.vue';
 
   type WizardStep = 'background' | 'review';
 
@@ -81,12 +84,21 @@
     TOOL_PROFICIENCY_GROUPS.flatMap((group) => group.items),
   );
 
+  // Источники берутся из глобальной настройки профиля — визард не показывает
+  // предыстории из отключённых книг. Запрос ждём до списка: иначе первая выдача
+  // пришла бы по всем источникам и мигнула лишними строками.
+  const { sourceQuery } = await useCatalogSourceQuery(
+    'character-sheet:background-sources',
+    BACKGROUNDS_FILTERS_PATH,
+  );
+
   // Полный список предысторий загружается сразу при открытии визарда.
   const { data: backgroundList, status: listStatus } = await useAsyncData(
     'character-sheet:background-list',
     async () => {
       const response = await $fetch<unknown>(BACKGROUNDS_SEARCH_PATH, {
         method: 'GET',
+        query: { ...sourceQuery.value },
         retry: 0,
       });
 
@@ -350,10 +362,9 @@
     <template #body>
       <div class="flex min-h-48 flex-col gap-4">
         <template v-if="step === 'background'">
-          <UInput
+          <SheetSearchInput
             v-model="searchTerm"
-            icon="tabler:search"
-            placeholder="Поиск по названию…"
+            :placeholder="SHEET_SEARCH_LABELS.byNamePlaceholder"
           />
 
           <div

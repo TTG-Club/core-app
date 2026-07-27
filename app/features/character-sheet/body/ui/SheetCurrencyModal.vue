@@ -68,14 +68,14 @@
   <UModal title="Валюта">
     <template #body>
       <div class="flex flex-col gap-5">
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div class="flex flex-col gap-2">
           <div
             v-for="field in standardCurrencyFields"
             :key="field.key"
             class="flex items-center justify-between gap-3 rounded-lg border border-default/50 bg-elevated/20 p-3"
           >
             <div class="flex min-w-0 flex-col">
-              <span class="truncate text-sm text-toned">{{ field.name }}</span>
+              <span class="text-sm text-toned">{{ field.name }}</span>
 
               <span class="text-[10px] font-bold text-muted uppercase">
                 {{ field.label }}

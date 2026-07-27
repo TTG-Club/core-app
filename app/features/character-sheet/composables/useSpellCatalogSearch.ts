@@ -5,8 +5,6 @@ import type { Filter, FilterGroups } from '~infrastructure/filter';
 
 import type { SpellCatalogItem, SpellClassOption } from '../model';
 
-import { omit } from 'es-toolkit';
-
 import {
   buildSearchQuery,
   getGroupItems,
@@ -99,8 +97,14 @@ export function useSpellCatalogSearch(): SpellCatalogSearch {
    */
   let requestGeneration = 0;
 
+  /**
+   * Query последней запущенной загрузки: заезд дефолтов фильтра в состояние
+   * тоже меняет query, но эту загрузку уже ведёт `loadInitialPage`.
+   */
+  let loadedQueryJson: string | null = null;
+
   // Полный набор групп фильтров — лёгкий запрос вместо полного каталога.
-  const { data: filterDefaults } = useAsyncData(
+  const filtersRequest = useAsyncData(
     'character-sheet:spell-filters',
     async () => {
       const response = await $fetch<unknown>(SPELLS_FILTERS_PATH, {
@@ -111,18 +115,6 @@ export function useSpellCatalogSearch(): SpellCatalogSearch {
       return parseFilter(response);
     },
     { server: false },
-  );
-
-  // Рабочая копия фильтра инициализируется из загруженных дефолтов один раз;
-  // дальнейшие правки иммутабельны, поэтому кешированный ответ не мутируется.
-  watch(
-    filterDefaults,
-    (defaults) => {
-      if (defaults && !filterState.value) {
-        filterState.value = defaults;
-      }
-    },
-    { immediate: true },
   );
 
   const filterGroups = computed<FilterGroups>(
@@ -185,10 +177,16 @@ export function useSpellCatalogSearch(): SpellCatalogSearch {
       ),
   );
 
-  // Источники в модалке не редактируются и в запрос не уходят: каталог ищет
-  // по всем источникам. buildSearchQuery иначе добавил бы дефолтный выбор.
+  // Источники в модалке не редактируются, но в запрос уходят: их выбор —
+  // глобальная настройка профиля, которую бэкенд проставляет в ответе фильтров.
   const catalogFilterQuery = computed<LocationQuery>(() =>
-    omit(buildSearchQuery(filterState.value), ['source']),
+    buildSearchQuery(filterState.value),
+  );
+
+  // Перезагрузка по фактическому изменению query (сравнение по JSON):
+  // иммутабельные обновления фильтра меняют ссылки чаще, чем содержимое.
+  const catalogFilterQueryJson = computed(() =>
+    JSON.stringify(catalogFilterQuery.value),
   );
 
   /** Собирает query-параметры страницы каталога с учётом активных фильтров. */
@@ -228,6 +226,8 @@ export function useSpellCatalogSearch(): SpellCatalogSearch {
   /** Перезагружает выдачу с первой страницы под текущие фильтры и поиск. */
   async function reload(): Promise<void> {
     const generation = ++requestGeneration;
+
+    loadedQueryJson = catalogFilterQueryJson.value;
 
     isLoadingFirstPage.value = true;
     hasLoadError.value = false;
@@ -408,21 +408,40 @@ export function useSpellCatalogSearch(): SpellCatalogSearch {
     resetFilterSelections();
   }
 
-  // Перезагрузка по фактическому изменению query (сравнение по JSON):
-  // иммутабельные обновления фильтра меняют ссылки чаще, чем содержимое.
-  const catalogFilterQueryJson = computed(() =>
-    JSON.stringify(catalogFilterQuery.value),
-  );
+  /** Перезагружает выдачу под новые фильтры, пропуская уже загруженный query. */
+  function handleFilterQueryChange(queryJson: string): void {
+    if (queryJson !== loadedQueryJson) {
+      void reload();
+    }
+  }
+
+  /**
+   * Первая загрузка каталога. Ждёт фильтры: их ответ несёт глобальный выбор
+   * источников (профиль → «Настройка источников»), иначе первая выдача пришла
+   * бы по всем книгам. Ошибка фильтров каталог не блокирует — тогда поиск идёт
+   * без ограничения по источникам.
+   */
+  async function loadInitialPage(): Promise<void> {
+    await filtersRequest;
+
+    // Рабочая копия фильтра инициализируется из загруженных дефолтов один раз;
+    // дальнейшие правки иммутабельны, поэтому кешированный ответ не мутируется.
+    if (filtersRequest.data.value) {
+      filterState.value = filtersRequest.data.value;
+    }
+
+    await reload();
+  }
 
   // Вотчеры не объединены сознательно: фильтры перезагружают выдачу сразу,
   // а поисковый ввод — с дебаунсом, чтобы не дёргать сервер на каждый символ.
-  watch(catalogFilterQueryJson, reload);
+  watch(catalogFilterQueryJson, handleFilterQueryChange);
 
   watchDebounced(searchTerm, reload, {
     debounce: SPELL_CATALOG_SEARCH_DEBOUNCE_MS,
   });
 
-  onMounted(reload);
+  onMounted(loadInitialPage);
 
   return {
     searchTerm,

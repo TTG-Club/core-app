@@ -12,6 +12,7 @@ import type {
   CatalogSpellDetail,
   Character,
   CharacterClass,
+  CharacterClassResource,
   CharacterCurrency,
   CharacterExtraHitDie,
   CharacterFeature,
@@ -29,6 +30,7 @@ import type {
   ClassChoice,
   ClassFeatureSummary,
   ClassSummary,
+  ClassTableColumn,
   CustomArmorType,
   CustomInventoryItemDraft,
   CustomInventoryKind,
@@ -94,6 +96,7 @@ import {
   ARMOR_MEDIUM_DEX_CAP,
   ARMOR_PROFICIENCY_GROUPS,
   CARRYING_CAPACITY_MULTIPLIER,
+  CARRYING_CAPACITY_SIZE_MULTIPLIERS,
   CATALOG_COPY_MENU_LABEL,
   CHARACTER_FILE_NAME_FALLBACK,
   CLASS_SPELL_PROGRESSIONS,
@@ -106,6 +109,7 @@ import {
   CUSTOM_INVENTORY_URL_PREFIX,
   CUSTOM_ITEM_WEIGHT_MAX,
   CUSTOM_ITEM_WEIGHT_MIN,
+  CUSTOM_MAGIC_ITEM_LABEL,
   CUSTOM_SPELL_FIELDS,
   CUSTOM_SPELL_URL_PREFIX,
   CUSTOM_TRINKET_TYPES_LABEL,
@@ -133,7 +137,9 @@ import {
   MAGIC_ITEMS_DETAIL_BASE_PATH,
   NEW_CUSTOM_INVENTORY_ITEM,
   PACT_SPELL_SLOTS_LABEL,
+  RESOURCE_COUNT_MAX,
   RESOURCE_RECOVERY_LABELS,
+  RESOURCE_SHORT_LABEL_MAX_LENGTH,
   ROLL_MODE_DICE_NOTATION,
   SHEET_COPY_LIMIT_HINT,
   SHEET_DOWNLOAD_JSON_LABEL,
@@ -483,6 +489,8 @@ export function toCopiedInventoryItem(
 /**
  * Подпись типов своего предмета для строки инвентаря: у доспеха — его тип, у
  * оружия — категория владения и свойства, у безделушки — общая подпись.
+ * Магической безделушке подпись «Безделушка» не подходит — группа у неё уже
+ * магическая, а параметров, которые стоило бы назвать, нет.
  *
  * @param draft значения формы своего предмета.
  * @returns подпись типов предмета.
@@ -493,7 +501,7 @@ function getCustomInventoryTypesLabel(draft: CustomInventoryItemDraft): string {
   }
 
   if (draft.kind === 'trinket') {
-    return CUSTOM_TRINKET_TYPES_LABEL;
+    return draft.magic ? CUSTOM_MAGIC_ITEM_LABEL : CUSTOM_TRINKET_TYPES_LABEL;
   }
 
   const labelParts = [WEAPON_CATEGORY_LABELS[draft.weaponCategory]];
@@ -649,7 +657,12 @@ export function toCustomInventoryItem(
     id: url,
     url,
     name,
-    category: CUSTOM_INVENTORY_KIND_CATEGORIES[draft.kind],
+    // Магическая пометка перебивает группу вида: своё магическое оружие игрок
+    // ищет среди магических предметов, а его параметры атаки живут в `weapon`
+    // и от группы не зависят.
+    category: draft.magic
+      ? 'MAGIC_ITEM'
+      : CUSTOM_INVENTORY_KIND_CATEGORIES[draft.kind],
     typesLabel: getCustomInventoryTypesLabel(draft),
     cost: draft.cost.trim(),
     weight: getDraftWeight(draft.weight),
@@ -668,11 +681,10 @@ export function toCustomInventoryItem(
 }
 
 /**
- * Правка своего предмета формой листа. Скопированный магический предмет
- * остаётся в своей группе с прежней подписью типов, пока его вид — «Безделушка»:
- * вида «Магический предмет» в форме нет, и без этой оговорки правка уносила бы
- * копию из «Магических предметов» в «Прочее». Смена вида на оружие или доспех
- * группу меняет — её задаёт вид предмета.
+ * Правка своего предмета формой листа. Группу задаёт форма (вид предмета плюс
+ * магическая пометка), но скопированному магическому предмету, оставшемуся
+ * безделушкой, сохраняем подпись типов из каталога («Чудесный предмет, редкий»)
+ * — она точнее общей «Магический предмет».
  *
  * @param editedItem редактируемый предмет (свой либо его копия из справочника).
  * @param draft новые значения формы.
@@ -691,6 +703,7 @@ export function toUpdatedCustomInventoryItem(
   if (
     !updatedItem
     || editedItem.category !== 'MAGIC_ITEM'
+    || !draft.magic
     || draft.kind !== 'trinket'
   ) {
     return updatedItem;
@@ -698,14 +711,14 @@ export function toUpdatedCustomInventoryItem(
 
   return {
     ...updatedItem,
-    category: editedItem.category,
     typesLabel: editedItem.typesLabel,
   };
 }
 
 /**
- * Вид своего предмета по его категории инвентаря (обратный разбор для формы
- * редактирования).
+ * Вид своего предмета по записи инвентаря (обратный разбор для формы
+ * редактирования). У магического предмета группа вид не выдаёт — его узнаём по
+ * параметрам оружия и доспеха.
  *
  * @param inventoryItem предмет инвентаря.
  * @returns вид своего предмета.
@@ -713,11 +726,13 @@ export function toUpdatedCustomInventoryItem(
 function getCustomInventoryKind(
   inventoryItem: CharacterInventoryItem,
 ): CustomInventoryKind {
-  if (inventoryItem.category === 'WEAPON') {
+  if (inventoryItem.category === 'WEAPON' || inventoryItem.weapon) {
     return 'weapon';
   }
 
-  return inventoryItem.category === 'ARMOR' ? 'armor' : 'trinket';
+  return inventoryItem.category === 'ARMOR' || inventoryItem.armor
+    ? 'armor'
+    : 'trinket';
 }
 
 /**
@@ -754,6 +769,7 @@ export function getCustomInventoryItemDraft(
     ...NEW_CUSTOM_INVENTORY_ITEM,
     kind: getCustomInventoryKind(inventoryItem),
     name: inventoryItem.name,
+    magic: inventoryItem.category === 'MAGIC_ITEM',
     cost: inventoryItem.cost,
     weight: inventoryItem.weight,
     quantity: inventoryItem.quantity,
@@ -775,13 +791,22 @@ export function getCustomInventoryItemDraft(
 }
 
 /**
- * Грузоподъёмность персонажа по значению Силы.
+ * Грузоподъёмность персонажа: Сила × 15 с поправкой на размер (правила 2024).
+ * Неизвестный или неуказанный размер считаем средним — так лист вёл себя до
+ * появления поправки.
  *
  * @param strength значение Силы.
+ * @param size подпись размера персонажа; null — не указан.
  * @returns грузоподъёмность в фунтах.
  */
-export function getCarryingCapacity(strength: number): number {
-  return strength * CARRYING_CAPACITY_MULTIPLIER;
+export function getCarryingCapacity(
+  strength: number,
+  size: string | null = null,
+): number {
+  const sizeMultiplier =
+    CARRYING_CAPACITY_SIZE_MULTIPLIERS[size?.trim().toLowerCase() ?? ''] ?? 1;
+
+  return strength * CARRYING_CAPACITY_MULTIPLIER * sizeMultiplier;
 }
 
 /**
@@ -899,9 +924,11 @@ export function getArmorClassBreakdown(
 
   const dexModifier = getModifier(character.abilities.dexterity);
 
+  // Группа предмета здесь не важна: доспех со своей магической пометкой лежит
+  // среди магических предметов, но КД считается по тем же параметрам `armor`.
   const equippedArmor = character.inventory.filter(
     (item): item is CharacterInventoryItem & { armor: InventoryArmor } =>
-      item.equipped && item.category === 'ARMOR' && item.armor !== null,
+      item.equipped && item.armor !== null,
   );
 
   // КД тела: сравниваем по эффективному значению (база брони + Ловкость по её
@@ -2200,6 +2227,77 @@ export function matchClassProficiencies(proficiencyText: {
       TOOL_MATCH_KEYWORDS,
     ),
   };
+}
+
+/**
+ * Значение колонки таблицы прогрессии на заданном уровне: берётся запись с
+ * наибольшим уровнем, не превышающим текущий.
+ *
+ * @param column колонка таблицы прогрессии.
+ * @param level уровень персонажа.
+ * @returns значение колонки; null — записи для уровня нет.
+ */
+function getColumnValueAtLevel(
+  column: ClassTableColumn,
+  level: number,
+): string | null {
+  let value: string | null = null;
+  let bestLevel = 0;
+
+  for (const entry of column.scaling) {
+    if (entry.level <= level && entry.level >= bestLevel) {
+      bestLevel = entry.level;
+      value = entry.value;
+    }
+  }
+
+  return value;
+}
+
+/**
+ * Вывод отмеченных ресурсов класса из таблицы прогрессии. Значение на текущем
+ * уровне должно быть целым числом в допустимом диапазоне. Значения игрок затем
+ * правит вручную.
+ *
+ * @param table таблица прогрессии класса.
+ * @param level уровень персонажа.
+ * @returns ресурсы класса с устойчивыми идентификаторами.
+ */
+export function deriveClassResources(
+  table: ClassTableColumn[],
+  level: number,
+): CharacterClassResource[] {
+  const resources: CharacterClassResource[] = [];
+
+  for (const column of table) {
+    if (column.resourceRecovery === 'NONE') {
+      continue;
+    }
+
+    const value = getColumnValueAtLevel(column, level)?.trim();
+
+    if (!value || !/^\d+$/.test(value)) {
+      continue;
+    }
+
+    const max = Number(value);
+
+    if (max < 1 || max > RESOURCE_COUNT_MAX) {
+      continue;
+    }
+
+    resources.push({
+      id: `class:res:${column.name}`,
+      name: column.name,
+      shortLabel: column.name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
+      recovery:
+        column.resourceRecovery === 'SHORT_REST' ? 'short-rest' : 'long-rest',
+      current: max,
+      max,
+    });
+  }
+
+  return resources;
 }
 
 /**

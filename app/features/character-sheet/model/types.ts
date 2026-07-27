@@ -1,4 +1,4 @@
-import type { CasterType } from '~classes/model';
+import type { CasterType, ClassResourceRecovery } from '~classes/model';
 import type { MarkerNode, SimpleTextNode } from '~ui/markup';
 
 /** Ключ характеристики персонажа. */
@@ -453,8 +453,8 @@ export interface FeatSummary {
   name: string;
   category: string;
 
-  /** Описание в разметке сайта (строки верхнего уровня). */
-  description: string[];
+  /** Описание в разметке сайта (строки и блочные узлы верхнего уровня). */
+  description: FeatureDescriptionNode[];
 }
 
 /** Заклинание в книге персонажа (и опция поиска заклинаний). */
@@ -658,8 +658,8 @@ export interface SpeciesFeatureSummary {
   url: string;
   name: string;
 
-  /** Описание в разметке сайта. */
-  description: string[];
+  /** Описание в разметке сайта (строки и блочные узлы верхнего уровня). */
+  description: FeatureDescriptionNode[];
 }
 
 /** Деталь вида или подвида из ответа API (нужные листу поля). */
@@ -707,6 +707,9 @@ export interface ClassFeatureSummary {
 /** Колонка таблицы прогрессии класса (для вывода ресурсов). */
 export interface ClassTableColumn {
   name: string;
+
+  /** Когда восстанавливается ресурс; NONE — колонка не является ресурсом. */
+  resourceRecovery: ClassResourceRecovery;
 
   /** Значения колонки по уровням. */
   scaling: Array<{ level: number; value: string }>;
@@ -903,6 +906,12 @@ export interface CharacterInventoryItem {
 export interface CustomInventoryItemDraft {
   kind: CustomInventoryKind;
   name: string;
+
+  /**
+   * Магический предмет — попадает в группу «Магические предметы» независимо от
+   * вида; параметры оружия и доспеха при этом сохраняются.
+   */
+  magic: boolean;
 
   /** Подпись стоимости как её ввёл игрок (например, «75 зм»); '' — не указана. */
   cost: string;

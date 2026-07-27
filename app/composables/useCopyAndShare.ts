@@ -38,6 +38,11 @@ export function useCopyAndShare() {
   const { share: openShare, isSupported: isShareSupported } = useShare();
   const { isMobile } = useDevice();
 
+  // Системное «Поделиться» есть только на мобильных: на десктопе `share()`
+  // просто копирует ссылку. Флаг наружу, чтобы интерфейс не рисовал вторую
+  // кнопку, делающую то же самое, что кнопка копирования.
+  const isShareAvailable = computed(() => isMobile && isShareSupported.value);
+
   async function copy(value: MaybeRefOrGetter<string>) {
     if (!isClipboardSupported.value) {
       $toast.add({
@@ -74,7 +79,7 @@ export function useCopyAndShare() {
   }
 
   async function share(url: MaybeRefOrGetter<string>) {
-    if (!isShareAvailable()) {
+    if (!isShareAvailable.value) {
       await copy(url);
 
       return;
@@ -101,12 +106,9 @@ export function useCopyAndShare() {
     });
   }
 
-  function isShareAvailable() {
-    return isMobile && isShareSupported.value;
-  }
-
   return {
     copy,
     share,
+    isShareAvailable,
   };
 }

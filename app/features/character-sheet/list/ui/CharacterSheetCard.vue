@@ -19,6 +19,7 @@
     getSheetActionMenuItems,
     getSpeciesDisplayName,
     SHEET_EMPTY_LABELS,
+    SHEET_OPEN_IN_PANEL_LABEL,
   } from '../../model';
 
   const {
@@ -91,11 +92,6 @@
   );
 
   const levelValue = computed(() => getDisplayLevel(character));
-
-  /** Открывает лист на отдельной странице (в обход drawer). */
-  function openOnPage(): void {
-    navigateTo(to.value);
-  }
 
   const settingsModal = overlay.create(SheetSettingsModal, {
     props: {
@@ -179,74 +175,67 @@
     class="flex min-h-20 w-full items-center gap-3 rounded-xl border p-3 transition-all"
     :class="cardClass"
   >
+    <!-- Клик открывает лист на отдельной странице: лист — рабочий инструмент, а
+      не карточка справочника, поэтому основное действие ведёт в полноэкранный
+      режим. Быстрый просмотр рядом остаётся за кнопкой «в панель». -->
     <NuxtLink
-      v-slot="{ href }"
-      custom
       :to
+      class="flex min-w-0 flex-auto items-center gap-4"
     >
-      <!-- Клик открывает лист рядом: drawer в стандартном режиме, правая панель
-        в широком — как во всех остальных разделах. Отдельная страница остаётся
-        за кнопкой «↗» и за обычным переходом по ссылке (новая вкладка). -->
-      <a
-        :href="href ?? undefined"
-        class="flex min-w-0 flex-auto items-center gap-4"
-        @click.left.exact.prevent="handleOpen"
+      <div
+        class="grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-primary/5 ring-1 ring-primary/15"
       >
-        <div
-          class="grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-primary/5 ring-1 ring-primary/15"
+        <img
+          v-if="character.avatarUrl"
+          :src="character.avatarUrl"
+          :alt="character.name"
+          class="size-full object-cover"
+        />
+
+        <UIcon
+          v-else
+          name="tabler:user"
+          class="size-7 text-primary"
+        />
+      </div>
+
+      <div class="flex min-w-0 flex-auto flex-col gap-0.5">
+        <span class="truncate text-base font-semibold text-highlighted">
+          {{ character.name }}
+        </span>
+
+        <span class="truncate text-sm text-secondary">
+          {{ classLabel }} · {{ speciesLabel }}
+        </span>
+
+        <span
+          class="mt-0.5 flex items-center gap-1 text-xs text-muted"
+          title="Хиты: сейчас / всего"
         >
-          <img
-            v-if="character.avatarUrl"
-            :src="character.avatarUrl"
-            :alt="character.name"
-            class="size-full object-cover"
-          />
-
           <UIcon
-            v-else
-            name="tabler:user"
-            class="size-7 text-primary"
+            name="tabler:heart"
+            class="size-3.5 shrink-0 text-error"
           />
-        </div>
 
-        <div class="flex min-w-0 flex-auto flex-col gap-0.5">
-          <span class="truncate text-base font-semibold text-highlighted">
-            {{ character.name }}
+          <span class="truncate">
+            Хиты: {{ character.health.current }} / {{ character.health.max }} ·
+            Уровень: {{ levelValue }}
           </span>
-
-          <span class="truncate text-sm text-secondary">
-            {{ classLabel }} · {{ speciesLabel }}
-          </span>
-
-          <span
-            class="mt-0.5 flex items-center gap-1 text-xs text-muted"
-            title="Хиты: сейчас / всего"
-          >
-            <UIcon
-              name="tabler:heart"
-              class="size-3.5 shrink-0 text-error"
-            />
-
-            <span class="truncate">
-              Хиты: {{ character.health.current }} /
-              {{ character.health.max }} · Уровень: {{ levelValue }}
-            </span>
-          </span>
-        </div>
-      </a>
+        </span>
+      </div>
     </NuxtLink>
 
     <!-- Кнопки столбиком: карточка низкая и широкая, в ряд они съедали бы
       ширину у имени персонажа -->
     <div class="flex shrink-0 flex-col gap-1">
-      <UTooltip text="Открыть на отдельной странице">
+      <UTooltip :text="SHEET_OPEN_IN_PANEL_LABEL">
         <UButton
-          icon="tabler:arrow-up-right"
+          icon="tabler:layout-sidebar-right-expand"
           color="neutral"
           variant="soft"
           square
-          aria-label="Открыть на отдельной странице"
-          @click.left.exact.prevent="openOnPage"
+          :aria-label="SHEET_OPEN_IN_PANEL_LABEL"
+          @click.left.exact.prevent="handleOpen"
         />
       </UTooltip>
 

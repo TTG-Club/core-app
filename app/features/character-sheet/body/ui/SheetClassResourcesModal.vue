@@ -4,6 +4,7 @@
     NEW_CLASS_RESOURCE,
     RESOURCE_COUNT_MAX,
     RESOURCE_COUNT_MIN,
+    RESOURCE_PLACEHOLDERS,
     RESOURCE_RECOVERY_OPTIONS,
     RESOURCE_SHORT_LABEL_MAX_LENGTH,
     SHEET_EMPTY_LABELS,
@@ -74,7 +75,7 @@
 
               <UInput
                 v-model="resource.name"
-                placeholder="Название ресурса"
+                :placeholder="RESOURCE_PLACEHOLDERS.name"
               />
             </div>
 
@@ -85,6 +86,7 @@
 
               <UInput
                 v-model="resource.shortLabel"
+                :placeholder="RESOURCE_PLACEHOLDERS.shortLabel"
                 :maxlength="RESOURCE_SHORT_LABEL_MAX_LENGTH"
               />
             </div>

@@ -66,6 +66,7 @@ import {
   LEVEL_MIN,
   RESOURCE_COUNT_MAX,
   RESOURCE_COUNT_MIN,
+  RESOURCE_SHORT_LABEL_MAX_LENGTH,
   SHEET_HIDDEN_CONTROL_CLASS,
   SHEET_LOCKED_MESSAGE,
   SHEET_READONLY_MESSAGE,
@@ -251,7 +252,10 @@ export function useCharacterSheet() {
   );
 
   const carryingCapacity = computed(() =>
-    getCarryingCapacity(character.value.abilities.strength),
+    getCarryingCapacity(
+      character.value.abilities.strength,
+      character.value.size,
+    ),
   );
 
   /**
@@ -327,19 +331,34 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
-      classResources: resources.map((resource) => {
-        const max = clamp(
-          Math.trunc(resource.max),
-          RESOURCE_COUNT_MIN,
-          RESOURCE_COUNT_MAX,
-        );
+      // Подписи новой строки пустые (в полях только плейсхолдеры): недостающую
+      // достраиваем из соседней, а строку без обеих не сохраняем — на панели
+      // она осталась бы пустым рядом.
+      classResources: resources
+        .map((resource) => {
+          const name = resource.name.trim();
+          const shortLabel = resource.shortLabel.trim();
 
-        return {
-          ...resource,
-          max,
-          current: clamp(Math.trunc(resource.current), RESOURCE_COUNT_MIN, max),
-        };
-      }),
+          const max = clamp(
+            Math.trunc(resource.max),
+            RESOURCE_COUNT_MIN,
+            RESOURCE_COUNT_MAX,
+          );
+
+          return {
+            ...resource,
+            name: name || shortLabel,
+            shortLabel:
+              shortLabel || name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
+            max,
+            current: clamp(
+              Math.trunc(resource.current),
+              RESOURCE_COUNT_MIN,
+              max,
+            ),
+          };
+        })
+        .filter((resource) => resource.shortLabel.length > 0),
     };
   }
 
@@ -875,6 +894,7 @@ export function useCharacterSheet() {
    * @param payload.skills выбранные навыки (владение и экспертиза).
    * @param payload.skills.proficient навыки для владения.
    * @param payload.skills.expertise навыки для экспертизы.
+   * @param payload.classResources ресурсы класса из отмеченных колонок.
    * @param payload.features классовые особенности по уровню.
    */
   function setClass(payload: {
@@ -888,6 +908,7 @@ export function useCharacterSheet() {
       languages: string[];
     };
     skills: { proficient: string[]; expertise: string[] };
+    classResources: CharacterClassResource[];
     features: CharacterFeature[];
   }): void {
     if (!ensureEditable()) {
@@ -908,8 +929,8 @@ export function useCharacterSheet() {
       (feature) => !feature.id.startsWith('class:'),
     );
 
-    // Устаревшие производные ресурсы (id `class:res:*`) убираются, ресурсы,
-    // добавленные вручную, сохраняются: класс их автоматически не создаёт.
+    // Производные ресурсы (id `class:res:*`) заменяются значениями выбранного
+    // класса и подкласса; добавленные вручную ресурсы сохраняются.
     const preservedResources = character.value.classResources.filter(
       (resource) => !resource.id.startsWith('class:res:'),
     );
@@ -950,7 +971,7 @@ export function useCharacterSheet() {
         payload.skills.proficient,
         payload.skills.expertise,
       ),
-      classResources: preservedResources,
+      classResources: [...preservedResources, ...payload.classResources],
       features: [
         ...payload.features.map((feature) => ({
           ...feature,

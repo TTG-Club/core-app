@@ -4,12 +4,14 @@
   import { ClassDrawer } from '~classes/drawer';
   import { MarkupRender } from '~ui/markup';
 
-  import { useCharacterSheet } from '../../composables';
+  import { useCatalogSourceQuery, useCharacterSheet } from '../../composables';
   import {
     ABILITY_LABELS,
     buildClassFeatures,
     CLASSES_DETAIL_BASE_PATH,
+    CLASSES_FILTERS_PATH,
     CLASSES_SEARCH_PATH,
+    deriveClassResources,
     detectFeatureChoice,
     FEATURE_ORIGIN_LABELS,
     getCharacterFeatureId,
@@ -22,10 +24,12 @@
     parseClassDetail,
     parseClassOptions,
     resolveChoiceOptions,
+    SHEET_SEARCH_LABELS,
     SUBCLASS_SELECTION_MIN_LEVEL,
     TOOL_PROFICIENCY_GROUPS,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetSearchInput from './SheetSearchInput.vue';
 
   type WizardStep = 'class' | 'review';
 
@@ -56,12 +60,21 @@
 
   const level = computed(() => character.value.level);
 
+  // Источники берутся из глобальной настройки профиля — визард не показывает
+  // классы из отключённых книг. Запрос ждём до списка: иначе первая выдача
+  // пришла бы по всем источникам и мигнула лишними строками.
+  const { sourceQuery } = await useCatalogSourceQuery(
+    'character-sheet:class-sources',
+    CLASSES_FILTERS_PATH,
+  );
+
   // Полный список классов загружается сразу при открытии визарда.
   const { data: classList, status: listStatus } = await useAsyncData(
     'character-sheet:class-list',
     async () => {
       const response = await $fetch<unknown>(CLASSES_SEARCH_PATH, {
         method: 'GET',
+        query: { ...sourceQuery.value },
         retry: 0,
       });
 
@@ -202,6 +215,17 @@
     ...matchedProficiencies.value.weapons,
     ...matchedProficiencies.value.tools,
   ]);
+
+  const derivedResources = computed(() => {
+    if (!classDetail.value) {
+      return [];
+    }
+
+    return deriveClassResources(
+      [...classDetail.value.table, ...(subclassDetail.value?.table ?? [])],
+      level.value,
+    );
+  });
 
   // Выборы уровня класса (владение навыками/инструментами) из прозы владений.
   const classChoices = computed<ClassChoice[]>(() => {
@@ -516,6 +540,7 @@
         proficient: [...new Set(proficientSkills)],
         expertise: [...new Set(expertiseSkills)],
       },
+      classResources: derivedResources.value,
       features: buildClassFeatures(
         base,
         subclassDetail.value,
@@ -540,10 +565,9 @@
     <template #body>
       <div class="flex min-h-48 flex-col gap-4">
         <template v-if="step === 'class'">
-          <UInput
+          <SheetSearchInput
             v-model="searchTerm"
-            icon="tabler:search"
-            placeholder="Поиск по названию…"
+            :placeholder="SHEET_SEARCH_LABELS.byNamePlaceholder"
           />
 
           <div

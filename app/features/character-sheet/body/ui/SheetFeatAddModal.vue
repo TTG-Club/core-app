@@ -3,17 +3,20 @@
 
   import { FeatDrawer } from '~feats/drawer';
 
-  import { useCharacterSheet } from '../../composables';
+  import { useCatalogSourceQuery, useCharacterSheet } from '../../composables';
   import {
     buildFeatFeature,
     FEATS_DETAIL_BASE_PATH,
+    FEATS_FILTERS_PATH,
     FEATS_SEARCH_PATH,
     FEATS_SELECT_PATH,
     getFeatUrlFromFeatureId,
     parseFeatCatalog,
     parseFeatDetail,
     parseRepeatableFeatUrls,
+    SHEET_SEARCH_LABELS,
   } from '../../model';
+  import SheetSearchInput from './SheetSearchInput.vue';
 
   const emit = defineEmits<{
     close: [];
@@ -38,16 +41,29 @@
     featPreviewDrawer.open({ url });
   }
 
+  // Источники берутся из глобальной настройки профиля — модалка не показывает
+  // черты из отключённых книг. Запрос ждём до списка: иначе первая выдача
+  // пришла бы по всем источникам и мигнула лишними строками.
+  const { sourceQuery } = await useCatalogSourceQuery(
+    'character-sheet:feat-sources',
+    FEATS_FILTERS_PATH,
+  );
+
   // Весь список черт грузится сразу при открытии (раздел «Черты» отдаёт его
   // одним запросом без пагинации), фильтрация по названию — на клиенте. Флаг
   // повторяемости приходит только с `/select` (у `/search` его нет), поэтому
   // тянем оба и мёржим по url. Ошибка `/select` не роняет список — тогда
-  // повторяемых черт просто нет.
+  // повторяемых черт просто нет. Список источников ограничивает `/search`:
+  // `/select` нужен лишь ради флага, лишние url в нём безвредны.
   const { data: featsList, status: listStatus } = await useAsyncData(
     'character-sheet:feats-list',
     async () => {
       const [catalogResponse, selectResponse] = await Promise.all([
-        $fetch<unknown>(FEATS_SEARCH_PATH, { method: 'GET', retry: 0 }),
+        $fetch<unknown>(FEATS_SEARCH_PATH, {
+          method: 'GET',
+          query: { ...sourceQuery.value },
+          retry: 0,
+        }),
         $fetch<unknown>(FEATS_SELECT_PATH, { method: 'GET', retry: 0 }).catch(
           () => null,
         ),
@@ -257,10 +273,9 @@
   >
     <template #body>
       <div class="flex h-[65dvh] min-h-96 flex-col gap-4">
-        <UInput
+        <SheetSearchInput
           v-model="searchTerm"
-          icon="tabler:search"
-          placeholder="Поиск по названию…"
+          :placeholder="SHEET_SEARCH_LABELS.byNamePlaceholder"
           class="shrink-0"
         />
 

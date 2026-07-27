@@ -175,12 +175,9 @@
   );
 
   // Экипировать можно только доспехи (оружие — нет). Иконку доспеха с данными
-  // о КД можно нажать, чтобы надеть/снять.
-  const isEquippable = computed(
-    () =>
-      props.inventoryItem.category === 'ARMOR'
-      && props.inventoryItem.armor !== null,
-  );
+  // о КД можно нажать, чтобы надеть/снять. Смотрим на параметры, а не на группу:
+  // свой магический доспех лежит среди магических предметов.
+  const isEquippable = computed(() => props.inventoryItem.armor !== null);
 
   const isEquipped = computed(
     () => isEquippable.value && props.inventoryItem.equipped,
@@ -294,17 +291,17 @@
 
   /**
    * Плитки параметров предмета: боевой параметр (КД доспеха или атака и урон
-   * оружия) по категории, стоимость и вес, если известны. У оружия с уроном
+   * оружия) по самим параметрам, стоимость и вес, если известны. У оружия
    * плитка урона занимает место цены — в бою она нужнее, а ряд не растёт.
    */
   const displayStats = computed<DecoratedStat[]>(() => {
     const stats: ItemStat[] = [];
 
-    const { category, armor, weapon, cost, weight } = props.inventoryItem;
+    const { armor, weapon, cost, weight } = props.inventoryItem;
 
-    if (category === 'ARMOR' && armor) {
+    if (armor) {
       stats.push(getArmorStat(armor));
-    } else if (category === 'WEAPON' && weapon) {
+    } else if (weapon) {
       stats.push(...getWeaponStats(weapon));
     }
 

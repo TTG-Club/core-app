@@ -81,6 +81,7 @@ const hitDiceSchema: z.ZodType<HitDice> = z.object({
 
 const classTableSchema: z.ZodType<ClassTable> = z.object({
   name: z.string(),
+  resourceRecovery: z.enum(['NONE', 'SHORT_REST', 'LONG_REST']).catch('NONE'),
   scaling: z.array(
     z.object({
       level: levelSchema,
