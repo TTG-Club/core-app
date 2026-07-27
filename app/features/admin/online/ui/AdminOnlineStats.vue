@@ -16,7 +16,7 @@
     ADMIN_ONLINE_STATS_WINDOW_LABEL,
   } from '../model';
 
-  defineProps<{
+  const props = defineProps<{
     hasError: boolean;
     isLoading: boolean;
     stats: AdminOnlineStatsResponse | null;
@@ -25,6 +25,22 @@
   const emit = defineEmits<{
     refresh: [];
   }>();
+
+  const slots = useSlots();
+
+  // Сетку карточек держим отдельно от ответа online-app: в неё через слот
+  // добавляются карточки другой статистики (листы персонажа), и падение
+  // online-app не должно их прятать.
+  const hasCards = computed(
+    () => !!props.stats?.sites.length || !!slots.default,
+  );
+
+  // Сообщение показываем, когда online-app ответил без сайтов, — даже если сетка
+  // рендерится ради карточек из слота, иначе пропажу online-данных не заметить.
+  // При ошибке хватает алерта, при загрузке говорить «сайтов нет» рано.
+  const hasEmptySites = computed(
+    () => !props.hasError && !!props.stats && !props.stats.sites.length,
+  );
 
   /**
    * Запрашивает актуальные данные online-статистики.
@@ -68,79 +84,79 @@
 
     <div
       v-else-if="stats"
-      class="space-y-4"
+      class="flex flex-wrap items-center gap-3 text-sm text-muted"
     >
-      <div class="flex flex-wrap items-center gap-3 text-sm text-muted">
-        <UBadge
-          color="neutral"
-          variant="subtle"
-        >
-          {{ ADMIN_ONLINE_STATS_WINDOW_LABEL }}:
-          {{ stats.windowMinutes }}
-          {{ ADMIN_ONLINE_STATS_MINUTES_LABEL }}
-        </UBadge>
-
-        <span>
-          {{ ADMIN_ONLINE_STATS_SUMMARY_LABEL }}:
-          {{ stats.total.total }}
-        </span>
-      </div>
-
-      <div
-        v-if="stats.sites.length"
-        class="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4"
+      <UBadge
+        color="neutral"
+        variant="subtle"
       >
-        <UCard
-          v-for="siteStats in stats.sites"
-          :key="siteStats.siteId"
-          variant="subtle"
-        >
-          <dl class="space-y-3 text-sm">
-            <div class="flex items-center justify-between gap-4">
-              <dt class="text-muted">{{ ADMIN_ONLINE_STATS_SITE_LABEL }}</dt>
+        {{ ADMIN_ONLINE_STATS_WINDOW_LABEL }}:
+        {{ stats.windowMinutes }}
+        {{ ADMIN_ONLINE_STATS_MINUTES_LABEL }}
+      </UBadge>
 
-              <dd class="font-semibold text-highlighted">
-                {{ siteStats.siteId }}
-              </dd>
-            </div>
+      <span>
+        {{ ADMIN_ONLINE_STATS_SUMMARY_LABEL }}:
+        {{ stats.total.total }}
+      </span>
+    </div>
 
-            <div class="flex items-center justify-between gap-4">
-              <dt class="text-muted">{{ ADMIN_ONLINE_STATS_GUESTS_LABEL }}</dt>
+    <div
+      v-if="hasEmptySites"
+      class="rounded-lg border border-dashed border-default p-6 text-center text-sm text-muted"
+    >
+      {{ ADMIN_ONLINE_STATS_EMPTY_TEXT }}
+    </div>
 
-              <dd class="font-medium text-default">{{ siteStats.guests }}</dd>
-            </div>
-
-            <div class="flex items-center justify-between gap-4">
-              <dt class="text-muted">
-                {{ ADMIN_ONLINE_STATS_REGISTERED_LABEL }}
-              </dt>
-
-              <dd class="font-medium text-default">
-                {{ siteStats.registered }}
-              </dd>
-            </div>
-
-            <div
-              class="flex items-center justify-between gap-4 border-t border-default pt-3"
-            >
-              <dt class="font-medium text-default">
-                {{ ADMIN_ONLINE_STATS_TOTAL_LABEL }}
-              </dt>
-
-              <dd class="text-lg font-semibold text-primary">
-                {{ siteStats.total }}
-              </dd>
-            </div>
-          </dl>
-        </UCard>
-      </div>
-
-      <div
-        v-else
-        class="rounded-lg border border-dashed border-default p-6 text-center text-sm text-muted"
+    <div
+      v-if="hasCards"
+      class="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4"
+    >
+      <UCard
+        v-for="siteStats in stats?.sites ?? []"
+        :key="siteStats.siteId"
+        variant="subtle"
       >
-        {{ ADMIN_ONLINE_STATS_EMPTY_TEXT }}
-      </div>
+        <dl class="space-y-3 text-sm">
+          <div class="flex items-center justify-between gap-4">
+            <dt class="text-muted">{{ ADMIN_ONLINE_STATS_SITE_LABEL }}</dt>
+
+            <dd class="font-semibold text-highlighted">
+              {{ siteStats.siteId }}
+            </dd>
+          </div>
+
+          <div class="flex items-center justify-between gap-4">
+            <dt class="text-muted">{{ ADMIN_ONLINE_STATS_GUESTS_LABEL }}</dt>
+
+            <dd class="font-medium text-default">{{ siteStats.guests }}</dd>
+          </div>
+
+          <div class="flex items-center justify-between gap-4">
+            <dt class="text-muted">
+              {{ ADMIN_ONLINE_STATS_REGISTERED_LABEL }}
+            </dt>
+
+            <dd class="font-medium text-default">
+              {{ siteStats.registered }}
+            </dd>
+          </div>
+
+          <div
+            class="flex items-center justify-between gap-4 border-t border-default pt-3"
+          >
+            <dt class="font-medium text-default">
+              {{ ADMIN_ONLINE_STATS_TOTAL_LABEL }}
+            </dt>
+
+            <dd class="text-lg font-semibold text-primary">
+              {{ siteStats.total }}
+            </dd>
+          </div>
+        </dl>
+      </UCard>
+
+      <slot />
     </div>
   </section>
 </template>
