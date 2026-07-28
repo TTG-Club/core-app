@@ -2,7 +2,7 @@
   import { CommentsBlock } from '~comments/section';
   import { UiResult } from '~ui/result';
 
-  defineProps<{
+  const { commentsPath = undefined, entityPath = undefined } = defineProps<{
     isLoading?: boolean;
     isError?: boolean;
     /**
@@ -12,7 +12,16 @@
      * не рендерится вовсе.
      */
     commentsPath?: string | null;
+
+    /**
+     * Относительный путь открытой сущности для баг-репорта. Публикация висит
+     * на теле дровера, а не на `UiDrawer`: тело монтируется вместе с
+     * содержимым и размонтируется при закрытии, поэтому путь снимается сам.
+     */
+    entityPath?: string;
   }>();
+
+  usePublishOpenEntityPath(() => entityPath);
 </script>
 
 <template>
