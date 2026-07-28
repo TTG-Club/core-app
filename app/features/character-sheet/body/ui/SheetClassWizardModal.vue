@@ -1,20 +1,29 @@
 <script setup lang="ts">
-  import type { ClassChoice, ClassOption, ClassSummary } from '../../model';
+  import type {
+    CharacterFeature,
+    ClassChoice,
+    ClassOption,
+    ClassSummary,
+  } from '../../model';
 
   import { ClassDrawer } from '~classes/drawer';
   import { MarkupRender } from '~ui/markup';
+  import { SelectFeat } from '~ui/select';
 
   import { useCatalogSourceQuery, useCharacterSheet } from '../../composables';
   import {
     ABILITY_LABELS,
     buildClassFeatures,
+    buildFeatFeature,
     CLASS_SOURCES_ASYNC_DATA_KEY,
     CLASSES_DETAIL_BASE_PATH,
     CLASSES_FILTERS_PATH,
     CLASSES_SEARCH_PATH,
     deriveClassResources,
     detectFeatureChoice,
+    FEATS_DETAIL_BASE_PATH,
     FEATURE_ORIGIN_LABELS,
+    FIGHTING_STYLE_FEAT_CATEGORIES,
     getCharacterFeatureId,
     getClassMaxHitPoints,
     getClassSkillChoice,
@@ -24,6 +33,7 @@
     matchClassProficiencies,
     parseClassDetail,
     parseClassOptions,
+    parseFeatDetail,
     resolveChoiceOptions,
     SHEET_SEARCH_LABELS,
     SUBCLASS_SELECTION_MIN_LEVEL,
@@ -108,6 +118,11 @@
 
   /** Черновик выборов-селекторов по id выбора: id → выбранные значения. */
   const selections = ref<Record<string, string[]>>({});
+
+  /** Выбранные черты боевого стиля по id классового умения. */
+  const fightingStyleSelections = ref<Record<string, string>>({});
+
+  const isApplying = ref(false);
 
   const subclassAvailable = computed(
     () => level.value >= SUBCLASS_SELECTION_MIN_LEVEL,
@@ -281,6 +296,7 @@
       description: ClassSummary['features'][number]['description'];
       originLabel: string;
       choiceControl: ClassChoice | null;
+      fightingStyleChoice: boolean;
     }> = [];
 
     const seenKeys = new Set<string>();
@@ -309,6 +325,7 @@
           level: feature.level,
           description: feature.description,
           originLabel,
+          fightingStyleChoice: feature.fightingStyleChoice,
           choiceControl: detectFeatureChoice(
             id,
             feature.description,
@@ -332,6 +349,15 @@
   });
 
   const isNextDisabled = computed(() => !selectedClass.value);
+
+  const isApplyDisabled = computed(
+    () =>
+      isApplying.value
+      || featureRows.value.some(
+        (row) =>
+          row.fightingStyleChoice && !fightingStyleSelections.value[row.id],
+      ),
+  );
 
   function showLoadError() {
     toast.add({
@@ -461,6 +487,7 @@
 
       choices.value = {};
       selections.value = {};
+      fightingStyleSelections.value = {};
       step.value = 'review';
     } catch (error) {
       consola.error('Ошибка загрузки класса:', error);
@@ -474,87 +501,155 @@
     step.value = 'class';
   }
 
-  function handleApply() {
+  /**
+   * Загружает выбранные черты боевого стиля и делает их классовыми записями,
+   * чтобы смена класса удаляла прежний выбор.
+   */
+  function buildFightingStyleFeatures(): Promise<
+    Array<{ feature: CharacterFeature; rowId: string; featName: string }>
+  > {
+    const selectedRows = featureRows.value.filter(
+      (row) => row.fightingStyleChoice,
+    );
+
+    return Promise.all(
+      selectedRows.map(async (row) => {
+        const featUrl = fightingStyleSelections.value[row.id];
+
+        if (!featUrl) {
+          throw new Error(`Fighting style is not selected for ${row.id}`);
+        }
+
+        const response = await $fetch<unknown>(
+          `${FEATS_DETAIL_BASE_PATH}/${featUrl}`,
+          {
+            method: 'GET',
+            retry: 0,
+          },
+        );
+
+        const summary = parseFeatDetail(response);
+
+        if (!summary) {
+          throw new Error(`Invalid fighting style response for ${featUrl}`);
+        }
+
+        return {
+          rowId: row.id,
+          featName: summary.name,
+          feature: {
+            ...buildFeatFeature(summary, false),
+            id: `${row.id}:fighting-style:${summary.url}`,
+          },
+        };
+      }),
+    );
+  }
+
+  async function handleApply() {
     const base = classDetail.value;
 
-    if (!base) {
+    if (!base || isApplyDisabled.value) {
       return;
     }
 
-    const matched = matchClassProficiencies(base.proficiencyText);
+    isApplying.value = true;
 
-    // Выбор владения навыками (уровень класса).
-    const skillsChoice = classChoices.value.find(
-      (choice) => choice.id === 'class-skills',
-    );
+    try {
+      const matched = matchClassProficiencies(base.proficiencyText);
 
-    const proficientSkills: string[] = skillsChoice
-      ? (selections.value['class-skills'] ?? []).slice(0, skillsChoice.count)
-      : [];
+      // Выбор владения навыками (уровень класса).
+      const skillsChoice = classChoices.value.find(
+        (choice) => choice.id === 'class-skills',
+      );
 
-    const chosenTools = selections.value['class-tools'] ?? [];
+      const proficientSkills: string[] = skillsChoice
+        ? (selections.value['class-skills'] ?? []).slice(0, skillsChoice.count)
+        : [];
 
-    // Выборы внутри умений: владение навыком, экспертиза и языки; выбранные
-    // значения также идут в текст умения, чтобы отображаться на листе.
-    const expertiseSkills: string[] = [];
-    const chosenLanguages: string[] = [];
-    const featureChoices: Record<string, string> = { ...choices.value };
+      const chosenTools = selections.value['class-tools'] ?? [];
 
-    for (const row of featureRows.value) {
-      const control = row.choiceControl;
+      // Выборы внутри умений: владение навыком, экспертиза и языки; выбранные
+      // значения также идут в текст умения, чтобы отображаться на листе.
+      const expertiseSkills: string[] = [];
+      const chosenLanguages: string[] = [];
+      const featureChoices: Record<string, string> = { ...choices.value };
 
-      if (!control) {
-        continue;
+      const fightingStyleFeatures = await buildFightingStyleFeatures();
+
+      for (const selection of fightingStyleFeatures) {
+        featureChoices[selection.rowId] = selection.featName;
       }
 
-      const values = selections.value[control.id] ?? [];
+      for (const row of featureRows.value) {
+        const control = row.choiceControl;
 
-      if (!values.length) {
-        continue;
+        if (!control) {
+          continue;
+        }
+
+        const values = selections.value[control.id] ?? [];
+
+        if (!values.length) {
+          continue;
+        }
+
+        if (control.kind === 'skill-proficiency') {
+          proficientSkills.push(...values);
+        } else if (control.kind === 'skill-expertise') {
+          expertiseSkills.push(...values);
+        } else if (control.kind === 'language') {
+          chosenLanguages.push(...values);
+        }
+
+        featureChoices[control.id] = values.join(', ');
       }
 
-      if (control.kind === 'skill-proficiency') {
-        proficientSkills.push(...values);
-      } else if (control.kind === 'skill-expertise') {
-        expertiseSkills.push(...values);
-      } else if (control.kind === 'language') {
-        chosenLanguages.push(...values);
-      }
-
-      featureChoices[control.id] = values.join(', ');
-    }
-
-    setClass({
-      characterClass: {
-        url: base.url,
-        name: base.name,
-        subclassUrl: selectedSubclass.value?.url ?? null,
-        subclassName: subclassDetail.value?.name ?? null,
-        casterType: getSelectedCasterType(base, subclassDetail.value),
+      setClass({
+        characterClass: {
+          url: base.url,
+          name: base.name,
+          subclassUrl: selectedSubclass.value?.url ?? null,
+          subclassName: subclassDetail.value?.name ?? null,
+          casterType: getSelectedCasterType(base, subclassDetail.value),
+          hitDie: base.hitDie,
+        },
+        savingThrows: base.savingThrows,
         hitDie: base.hitDie,
-      },
-      savingThrows: base.savingThrows,
-      hitDie: base.hitDie,
-      proficiencies: {
-        armor: matched.armor,
-        weapons: matched.weapons,
-        tools: [...matched.tools, ...chosenTools],
-        languages: chosenLanguages,
-      },
-      skills: {
-        proficient: [...new Set(proficientSkills)],
-        expertise: [...new Set(expertiseSkills)],
-      },
-      classResources: derivedResources.value,
-      features: buildClassFeatures(
-        base,
-        subclassDetail.value,
-        level.value,
-        featureChoices,
-      ),
-    });
+        proficiencies: {
+          armor: matched.armor,
+          weapons: matched.weapons,
+          tools: [...matched.tools, ...chosenTools],
+          languages: chosenLanguages,
+        },
+        skills: {
+          proficient: [...new Set(proficientSkills)],
+          expertise: [...new Set(expertiseSkills)],
+        },
+        classResources: derivedResources.value,
+        features: [
+          ...buildClassFeatures(
+            base,
+            subclassDetail.value,
+            level.value,
+            featureChoices,
+          ),
+          ...fightingStyleFeatures.map((selection) => selection.feature),
+        ],
+      });
 
-    emit('close');
+      emit('close');
+    } catch (error) {
+      consola.error('Ошибка добавления боевого стиля:', error);
+
+      toast.add({
+        color: 'error',
+        icon: 'tabler:alert-triangle',
+        title: 'Не удалось добавить выбранный боевой стиль',
+      });
+    } finally {
+      isApplying.value = false;
+    }
   }
 
   function handleCancel() {
@@ -898,7 +993,21 @@
               </div>
 
               <div
-                v-if="row.choiceControl"
+                v-if="row.fightingStyleChoice"
+                class="flex flex-col gap-1"
+              >
+                <span class="text-xs text-muted">
+                  Выберите 1 черту категории «Боевой стиль»
+                </span>
+
+                <SelectFeat
+                  v-model="fightingStyleSelections[row.id]"
+                  :categories="FIGHTING_STYLE_FEAT_CATEGORIES"
+                />
+              </div>
+
+              <div
+                v-else-if="row.choiceControl"
                 class="flex flex-col gap-1"
               >
                 <span class="text-xs text-muted">
@@ -965,6 +1074,8 @@
             v-if="step === 'review'"
             label="Применить"
             color="primary"
+            :loading="isApplying"
+            :disabled="isApplyDisabled"
             @click.left.exact.prevent="handleApply"
           />
 

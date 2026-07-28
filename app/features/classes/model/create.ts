@@ -34,6 +34,7 @@ export interface ClassFeatureCreate {
   additional: string;
   hideInSubclasses: boolean | undefined;
   abilityImprovement: boolean | undefined;
+  fightingStyleChoice: boolean | undefined;
   scaling: Array<ClassFeatureScalingCreate>;
   options: Array<ClassFeatureOptionCreate>;
   abilityBonus?: ClassFeatureAbilityBonusCreate;

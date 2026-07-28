@@ -700,6 +700,7 @@ const classFeatureSchema = z.object({
   name: z.string().catch(''),
   description: renderNodeSchema,
   isSubclass: z.boolean().catch(false),
+  fightingStyleChoice: z.boolean().catch(false),
 });
 
 /** Схема детального ответа класса или подкласса (нужные листу поля). */
@@ -744,6 +745,7 @@ function toClassSummary(
     name: feature.name,
     description: toDescriptionNodes(feature.description),
     isSubclass: feature.isSubclass,
+    fightingStyleChoice: feature.fightingStyleChoice,
   }));
 
   const table: ClassTableColumn[] = detail.table.map((column) => ({

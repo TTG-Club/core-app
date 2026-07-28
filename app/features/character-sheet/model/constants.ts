@@ -1105,6 +1105,9 @@ export const FEATS_SELECT_PATH = '/api/v2/feats/select';
 /** Базовый путь деталей черты (`/{url}`). */
 export const FEATS_DETAIL_BASE_PATH = '/api/v2/feats';
 
+/** Категория черт, доступных через классовое умение выбора боевого стиля. */
+export const FIGHTING_STYLE_FEAT_CATEGORIES = ['FIGHTING_STYLE'];
+
 /** Эндпоинт фильтров черт — источник глобальной настройки источников. */
 export const FEATS_FILTERS_PATH = '/api/v2/feats/filters';
 

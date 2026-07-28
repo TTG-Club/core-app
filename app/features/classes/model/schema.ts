@@ -108,6 +108,7 @@ const classFeatureSchema: z.ZodType<ClassFeature> = z.object({
   description: renderNodeSchema,
   additional: z.string(),
   isSubclass: z.boolean().optional(),
+  fightingStyleChoice: z.boolean().catch(false),
   scaling: z
     .array(
       z.object({
