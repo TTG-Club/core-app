@@ -737,6 +737,9 @@ export interface ClassFeatureSummary {
 
   /** Особенность подкласса (а не базового класса). */
   isSubclass: boolean;
+
+  /** Умение даёт выбор одной черты категории «Боевой стиль». */
+  fightingStyleChoice: boolean;
 }
 
 /** Колонка таблицы прогрессии класса (для вывода ресурсов). */
