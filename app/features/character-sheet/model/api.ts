@@ -4,6 +4,7 @@ import type {
   CharacterInventoryItem,
   CharacterSheetDetail,
   CharacterSheetListPage,
+  FeatSummary,
   FeatureDescriptionNode,
   SavedCharacterSheet,
   SavedCharacterSheetListPage,
@@ -22,10 +23,15 @@ import {
   CHARACTER_SHEET_API_PATH,
   CHARACTER_SHEET_SAVED_API_PATH,
   CHARACTER_SHEET_SHARED_API_PATH,
+  FEATS_DETAIL_BASE_PATH,
   SHEET_UNKNOWN_ERROR_MESSAGE,
   SPELLS_DETAIL_BASE_PATH,
 } from './constants';
-import { parseCatalogDescription, parseCatalogSpellDetail } from './schemas';
+import {
+  parseCatalogDescription,
+  parseCatalogSpellDetail,
+  parseFeatDetail,
+} from './schemas';
 import { getInventoryItemDetailPath } from './utils';
 
 /**
@@ -47,6 +53,26 @@ export function getSheetErrorMessage(error: unknown): string {
   }
 
   return SHEET_UNKNOWN_ERROR_MESSAGE;
+}
+
+/**
+ * Загружает и валидирует детальную информацию о черте из каталога.
+ *
+ * @param featUrl URL черты в каталоге.
+ * @returns разобранная черта или null, если ответ не соответствует контракту.
+ */
+export async function fetchFeatDetail(
+  featUrl: string,
+): Promise<FeatSummary | null> {
+  const response = await $fetch<unknown>(
+    `${FEATS_DETAIL_BASE_PATH}/${featUrl}`,
+    {
+      method: 'GET',
+      retry: 0,
+    },
+  );
+
+  return parseFeatDetail(response);
 }
 
 /**

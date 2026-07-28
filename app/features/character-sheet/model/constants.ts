@@ -1108,6 +1108,28 @@ export const FEATS_DETAIL_BASE_PATH = '/api/v2/feats';
 /** Категория черт, доступных через классовое умение выбора боевого стиля. */
 export const FIGHTING_STYLE_FEAT_CATEGORIES = ['FIGHTING_STYLE'];
 
+/** Тексты и технические значения выбора боевого стиля в мастере класса. */
+export const FIGHTING_STYLE_CHOICE_LABEL =
+  'Выберите 1 черту категории «Боевой стиль»';
+
+export const FIGHTING_STYLE_CHOICE_REQUIRED_ERROR =
+  'Не выбран обязательный боевой стиль';
+
+export const FIGHTING_STYLE_INVALID_RESPONSE_ERROR =
+  'Сервер вернул некорректную черту боевого стиля';
+
+export const FIGHTING_STYLE_FEATURE_ID_SEGMENT = 'fighting-style';
+
+export const FIGHTING_STYLE_ERROR_TOAST_COLOR = 'error';
+
+export const FIGHTING_STYLE_ERROR_TOAST_ICON = 'tabler:alert-triangle';
+
+export const FIGHTING_STYLE_ERROR_TOAST_TITLE =
+  'Не удалось добавить выбранный боевой стиль';
+
+export const FIGHTING_STYLE_ERROR_LOG_MESSAGE =
+  'Ошибка добавления боевого стиля:';
+
 /** Эндпоинт фильтров черт — источник глобальной настройки источников. */
 export const FEATS_FILTERS_PATH = '/api/v2/feats/filters';
 

@@ -21,9 +21,17 @@
     CLASSES_SEARCH_PATH,
     deriveClassResources,
     detectFeatureChoice,
-    FEATS_DETAIL_BASE_PATH,
     FEATURE_ORIGIN_LABELS,
+    fetchFeatDetail,
+    FIGHTING_STYLE_CHOICE_LABEL,
+    FIGHTING_STYLE_CHOICE_REQUIRED_ERROR,
+    FIGHTING_STYLE_ERROR_LOG_MESSAGE,
+    FIGHTING_STYLE_ERROR_TOAST_COLOR,
+    FIGHTING_STYLE_ERROR_TOAST_ICON,
+    FIGHTING_STYLE_ERROR_TOAST_TITLE,
     FIGHTING_STYLE_FEAT_CATEGORIES,
+    FIGHTING_STYLE_FEATURE_ID_SEGMENT,
+    FIGHTING_STYLE_INVALID_RESPONSE_ERROR,
     getCharacterFeatureId,
     getClassMaxHitPoints,
     getClassSkillChoice,
@@ -33,7 +41,6 @@
     matchClassProficiencies,
     parseClassDetail,
     parseClassOptions,
-    parseFeatDetail,
     resolveChoiceOptions,
     SHEET_SEARCH_LABELS,
     SUBCLASS_SELECTION_MIN_LEVEL,
@@ -122,7 +129,7 @@
   /** Выбранные черты боевого стиля по id классового умения. */
   const fightingStyleSelections = ref<Record<string, string>>({});
 
-  const isApplying = ref(false);
+  const isApplying = shallowRef(false);
 
   const subclassAvailable = computed(
     () => level.value >= SUBCLASS_SELECTION_MIN_LEVEL,
@@ -517,35 +524,28 @@
         const featUrl = fightingStyleSelections.value[row.id];
 
         if (!featUrl) {
-          throw new Error(`Fighting style is not selected for ${row.id}`);
+          throw new Error(FIGHTING_STYLE_CHOICE_REQUIRED_ERROR);
         }
 
-        const response = await $fetch<unknown>(
-          `${FEATS_DETAIL_BASE_PATH}/${featUrl}`,
-          {
-            method: 'GET',
-            retry: 0,
-          },
-        );
-
-        const summary = parseFeatDetail(response);
+        const summary = await fetchFeatDetail(featUrl);
 
         if (!summary) {
-          throw new Error(`Invalid fighting style response for ${featUrl}`);
+          throw new Error(FIGHTING_STYLE_INVALID_RESPONSE_ERROR);
         }
 
         return {
           rowId: row.id,
           featName: summary.name,
           feature: {
-            ...buildFeatFeature(summary, false),
-            id: `${row.id}:fighting-style:${summary.url}`,
+            ...buildFeatFeature(summary),
+            id: `${row.id}:${FIGHTING_STYLE_FEATURE_ID_SEGMENT}:${summary.url}`,
           },
         };
       }),
     );
   }
 
+  /** Применяет выбранный класс и все связанные с ним выборы к листу. */
   async function handleApply() {
     const base = classDetail.value;
 
@@ -640,12 +640,12 @@
 
       emit('close');
     } catch (error) {
-      consola.error('Ошибка добавления боевого стиля:', error);
+      consola.error(FIGHTING_STYLE_ERROR_LOG_MESSAGE, error);
 
       toast.add({
-        color: 'error',
-        icon: 'tabler:alert-triangle',
-        title: 'Не удалось добавить выбранный боевой стиль',
+        color: FIGHTING_STYLE_ERROR_TOAST_COLOR,
+        icon: FIGHTING_STYLE_ERROR_TOAST_ICON,
+        title: FIGHTING_STYLE_ERROR_TOAST_TITLE,
       });
     } finally {
       isApplying.value = false;
@@ -997,7 +997,7 @@
                 class="flex flex-col gap-1"
               >
                 <span class="text-xs text-muted">
-                  Выберите 1 черту категории «Боевой стиль»
+                  {{ FIGHTING_STYLE_CHOICE_LABEL }}
                 </span>
 
                 <SelectFeat

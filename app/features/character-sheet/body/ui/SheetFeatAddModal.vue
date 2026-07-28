@@ -6,13 +6,12 @@
   import { useCatalogSourceQuery, useCharacterSheet } from '../../composables';
   import {
     buildFeatFeature,
-    FEATS_DETAIL_BASE_PATH,
     FEATS_FILTERS_PATH,
     FEATS_SEARCH_PATH,
     FEATS_SELECT_PATH,
+    fetchFeatDetail,
     getFeatUrlFromFeatureId,
     parseFeatCatalog,
-    parseFeatDetail,
     parseRepeatableFeatUrls,
     SHEET_SEARCH_LABELS,
   } from '../../model';
@@ -211,16 +210,6 @@
     }
 
     draftUrls.value = nextUrls;
-  }
-
-  /** Загружает деталь черты по url; null — ответ не распознан. */
-  async function fetchFeatDetail(url: string): Promise<FeatSummary | null> {
-    const response = await $fetch<unknown>(`${FEATS_DETAIL_BASE_PATH}/${url}`, {
-      method: 'GET',
-      retry: 0,
-    });
-
-    return parseFeatDetail(response);
   }
 
   async function handleApply() {
