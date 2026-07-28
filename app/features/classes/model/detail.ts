@@ -79,7 +79,7 @@ export interface ClassFeature {
   description: RenderNode;
   additional: string;
   isSubclass?: boolean;
-  fightingStyleChoice: boolean;
+  fightingStyleChoice?: boolean;
   scaling?: Array<{
     level: Level;
     name: string;

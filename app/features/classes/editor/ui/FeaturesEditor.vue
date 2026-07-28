@@ -6,10 +6,6 @@
   import { SelectLevel } from '~ui/select';
 
   import {
-    CLASS_FEATURE_FIGHTING_STYLE_DESCRIPTION,
-    CLASS_FEATURE_FIGHTING_STYLE_LABEL,
-  } from '../../model';
-  import {
     FeatureAbilityBonus,
     FeatureOptions,
     FeatureScaling,
@@ -166,12 +162,12 @@
 
             <UFormField
               class="col-span-full md:col-span-6"
-              :label="CLASS_FEATURE_FIGHTING_STYLE_LABEL"
+              label="Даёт выбор боевого стиля?"
               name="fightingStyleChoice"
             >
               <UCheckbox
                 v-model="feat.fightingStyleChoice"
-                :description="CLASS_FEATURE_FIGHTING_STYLE_DESCRIPTION"
+                description="Да"
               />
             </UFormField>
 

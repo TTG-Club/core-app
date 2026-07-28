@@ -127,6 +127,7 @@ import {
   DEFAULT_WEAPON_ATTACK_ABILITY,
   DICE_NOTATION_LETTER,
   FEATURE_ORIGIN_LABELS,
+  FIGHTING_STYLE_FEATURE_ID_SEGMENT,
   HIT_DICE_ROLL_COUNT,
   HIT_POINTS_LEVEL_GAIN_MIN,
   INVENTORY_CATEGORY_ORDER,
@@ -2174,11 +2175,21 @@ export function getCharacterFeatureId(
  * Извлекает url черты из идентификатора особенности. Обычная черта — `feat:url`,
  * повторяемая — `feat:url:uuid` (у каждой копии свой суффикс). Url черты не
  * содержит двоеточий, поэтому берём сегмент между первым и вторым `:`.
+ * Боевой стиль лежит под классовым идентификатором
+ * (`class:{featureKey}:fighting-style:{url}`) — иначе его копия не удалялась бы
+ * при смене класса, — поэтому url берётся из хвоста после сегмента.
  *
  * @param featureId идентификатор особенности.
  * @returns url черты или null, если особенность — не черта.
  */
 export function getFeatUrlFromFeatureId(featureId: string): string | null {
+  const fightingStyleSegment = `:${FIGHTING_STYLE_FEATURE_ID_SEGMENT}:`;
+  const fightingStyleIndex = featureId.indexOf(fightingStyleSegment);
+
+  if (fightingStyleIndex !== -1) {
+    return featureId.slice(fightingStyleIndex + fightingStyleSegment.length);
+  }
+
   if (!featureId.startsWith('feat:')) {
     return null;
   }
