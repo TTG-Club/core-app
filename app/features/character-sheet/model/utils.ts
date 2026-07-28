@@ -127,8 +127,6 @@ import {
   DEFAULT_WEAPON_ATTACK_ABILITY,
   DICE_NOTATION_LETTER,
   FEATURE_ORIGIN_LABELS,
-  HIT_DICE_LONG_REST_DIVISOR,
-  HIT_DICE_LONG_REST_MIN,
   HIT_DICE_ROLL_COUNT,
   HIT_POINTS_LEVEL_GAIN_MIN,
   INVENTORY_CATEGORY_ORDER,
@@ -1257,6 +1255,31 @@ export function adjustHitDice(
 }
 
 /**
+ * Полный возврат костей хитов: остаток каждой кости поднимается до максимума —
+ * так продолжительный отдых работает в редакции 2024 года. Импортированный
+ * вручную лист мог принести отрицательный максимум, поэтому остаток не
+ * опускается ниже нуля.
+ *
+ * @param hitDice кости хитов из классов.
+ * @param extraHitDice дополнительные кости хитов.
+ * @returns новые списки костей хитов.
+ */
+export function restoreHitDice(
+  hitDice: CharacterHitDie[],
+  extraHitDice: CharacterExtraHitDie[],
+): { hitDice: CharacterHitDie[]; extraHitDice: CharacterExtraHitDie[] } {
+  const restore = <Die extends CharacterHitDie>(hitDie: Die): Die => ({
+    ...hitDie,
+    current: Math.max(0, hitDie.max),
+  });
+
+  return {
+    hitDice: hitDice.map((hitDie) => restore(hitDie)),
+    extraHitDice: extraHitDice.map((hitDie) => restore(hitDie)),
+  };
+}
+
+/**
  * Выбранные на отдыхе кости, обрезанные пределами номиналов: выбор живёт в
  * модалке, а пределы (остаток костей или нехватка до максимума) меняются после
  * каждого применения. Номиналы без выбора в результат не входят.
@@ -1278,60 +1301,18 @@ export function getSelectedHitDice(
 }
 
 /**
- * Сколько костей хитов возвращает продолжительный отдых: половина от общего
- * количества костей, но не меньше одной (правило D&D 2024). Больше, чем
- * потрачено, вернуть нельзя, а без костей возвращать нечего.
+ * Какие кости хитов возвращает продолжительный отдых: по правилам D&D 2024 —
+ * все потраченные, без деления пополам и без выбора номиналов. Номиналы без
+ * траты в список не входят.
  *
  * @param pools пулы костей хитов по номиналам.
- * @returns количество костей к возврату.
- */
-export function getLongRestHitDiceCount(pools: HitDicePool[]): number {
-  const totals = pools.reduce(
-    (total, pool) => ({
-      current: total.current + pool.current,
-      max: total.max + pool.max,
-    }),
-    { current: 0, max: 0 },
-  );
-
-  const spent = totals.max - totals.current;
-
-  if (spent <= 0) {
-    return 0;
-  }
-
-  return Math.min(
-    spent,
-    Math.max(
-      HIT_DICE_LONG_REST_MIN,
-      Math.floor(totals.max / HIT_DICE_LONG_REST_DIVISOR),
-    ),
-  );
-}
-
-/**
- * Раскладка возвращаемых костей по умолчанию: сперва крупные номиналы —
- * они полезнее в бою, а перераспределить выбор игрок может сам.
- *
- * @param pools пулы костей хитов с пределом возврата по номиналу.
- * @param count сколько костей возвращается всего.
  * @returns количество костей к возврату по номиналам.
  */
-export function getDefaultHitDiceRecovery(
-  pools: HitDiceSelectPool[],
-  count: number,
+export function getLongRestHitDiceRecovery(
+  pools: HitDicePool[],
 ): HitDiceAmount[] {
-  let pending = Math.max(0, Math.trunc(count));
-
-  return [...pools]
-    .sort((left, right) => right.die - left.die)
-    .map((pool) => {
-      const taken = clamp(pending, 0, pool.limit);
-
-      pending -= taken;
-
-      return { die: pool.die, count: taken };
-    })
+  return pools
+    .map((pool) => ({ die: pool.die, count: pool.max - pool.current }))
     .filter((pool) => pool.count > 0);
 }
 

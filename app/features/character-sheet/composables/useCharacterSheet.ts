@@ -73,6 +73,7 @@ import {
   RESOURCE_COUNT_MAX,
   RESOURCE_COUNT_MIN,
   RESOURCE_SHORT_LABEL_MAX_LENGTH,
+  restoreHitDice,
   SHEET_HIDDEN_CONTROL_CLASS,
   SHEET_LOCKED_MESSAGE,
   SHEET_READONLY_MESSAGE,
@@ -855,27 +856,24 @@ export function useCharacterSheet() {
   /**
    * Завершение продолжительного отдыха: хиты поднимаются до максимума, временные
    * хиты пропадают (держатся только до конца отдыха), возвращаются все ячейки
-   * заклинаний и все счётчики умений, а кости хитов — в выбранном количестве.
-   * Сколько костей возвращать, решают правила и игрок — считает это модалка
-   * отдыха. Игровое действие: запертый лист его разрешает, чужой — нет.
-   *
-   * @param restoredDice возвращаемые кости хитов по номиналам.
+   * заклинаний, все счётчики умений и все потраченные кости хитов — в редакции
+   * 2024 года отдых возвращает их полностью, а не половину. Игровое действие:
+   * запертый лист его разрешает, чужой — нет.
    */
-  function completeLongRest(restoredDice: HitDiceAmount[]): void {
+  function completeLongRest(): void {
     if (!ensureOwnSheet()) {
       return;
     }
 
-    const remainingDice = adjustHitDice(
+    const restoredDice = restoreHitDice(
       character.value.hitDice,
       character.value.extraHitDice,
-      restoredDice,
     );
 
     character.value = {
       ...character.value,
-      hitDice: remainingDice.hitDice,
-      extraHitDice: remainingDice.extraHitDice,
+      hitDice: restoredDice.hitDice,
+      extraHitDice: restoredDice.extraHitDice,
       health: {
         ...character.value.health,
         current: character.value.health.max,
