@@ -45,6 +45,8 @@
       description: parseStoredMarkupNodes(draftDescription.value),
       origin: draftOrigin.value,
       originName: getOriginName(),
+      // Ручная особенность к уровню не привязана: снятие уровня её не заберёт.
+      level: null,
       choice: null,
     });
 

@@ -1,18 +1,13 @@
 <script setup lang="ts">
-  import type { HitDiceSelectPool } from '../../model';
-
   import { useCharacterSheet } from '../../composables';
   import {
-    getDefaultHitDiceRecovery,
     getHitDicePools,
-    getLongRestHitDiceCount,
+    getLongRestHitDiceRecovery,
     getLongRestRecoveryLabels,
-    getSelectedHitDice,
     LONG_REST_LABELS,
     LONG_REST_RULES,
     RESOURCE_RECOVERY_ICONS,
   } from '../../model';
-  import SheetHitDiceSelect from './SheetHitDiceSelect.vue';
 
   const emit = defineEmits<{
     close: [];
@@ -30,54 +25,25 @@
     getHitDicePools(character.value.hitDice, character.value.extraHitDice),
   );
 
-  /** Возвращать можно только недостающие до максимума кости номинала. */
-  const selectPools = computed<HitDiceSelectPool[]>(() =>
-    hitDicePools.value.map((pool) => ({
-      ...pool,
-      limit: pool.max - pool.current,
-    })),
-  );
-
-  /** Сколько костей хитов вернёт отдых по правилам. */
-  const recoveryLimit = computed(() =>
-    getLongRestHitDiceCount(hitDicePools.value),
-  );
-
-  /**
-   * Раскладка возвращаемых костей на момент открытия модалки: сперва крупные
-   * номиналы. Пулы за время отдыха не меняются, поэтому считается однажды.
-   *
-   * @returns количество костей к возврату по номиналам.
-   */
-  function getInitialCounts(): Record<number, number> {
-    const recovery = getDefaultHitDiceRecovery(
-      selectPools.value,
-      recoveryLimit.value,
-    );
-
-    return Object.fromEntries(recovery.map((pool) => [pool.die, pool.count]));
-  }
-
-  /** Выбранные к возврату кости по номиналам; игрок может перераспределить. */
-  const selectedCounts = ref<Record<number, number>>(getInitialCounts());
-
-  /** Выбранные кости, обрезанные пределами номиналов. */
+  /** Возвращаемые кости по номиналам: по правилам — все потраченные. */
   const restoredDice = computed(() =>
-    getSelectedHitDice(selectPools.value, selectedCounts.value),
+    getLongRestHitDiceRecovery(hitDicePools.value),
   );
 
   const restoredDiceTotal = computed(() =>
     restoredDice.value.reduce((total, pool) => total + pool.count, 0),
   );
 
-  const diceSelectedLabel = computed(
-    () =>
-      `${LONG_REST_LABELS.diceSelected}: ${restoredDiceTotal.value} / ${recoveryLimit.value}`,
-  );
-
   /** Все кости хитов на месте — возвращать нечего. */
   const isDiceFull = computed(
-    () => hitDicePools.value.length > 0 && recoveryLimit.value === 0,
+    () => hitDicePools.value.length > 0 && restoredDiceTotal.value === 0,
+  );
+
+  /** Примечание под костями: возвращать нечего или вернутся все потраченные. */
+  const diceRecoveryNote = computed(() =>
+    isDiceFull.value
+      ? LONG_REST_LABELS.fullDice
+      : LONG_REST_LABELS.diceRecovery,
   );
 
   const recoveryLabels = computed(() =>
@@ -104,11 +70,11 @@
   });
 
   /**
-   * Завершение отдыха: хиты и ячейки восстанавливаются полностью, кости хитов —
-   * в выбранном количестве; итог показывается тостом.
+   * Завершение отдыха: хиты, ячейки и кости хитов восстанавливаются полностью;
+   * итог показывается тостом.
    */
   function handleFinish(): void {
-    completeLongRest(restoredDice.value);
+    completeLongRest();
 
     toast.add({
       title: LONG_REST_LABELS.finishedTitle,
@@ -229,29 +195,44 @@
             </span>
           </div>
 
-          <template v-if="selectPools.length">
-            <SheetHitDiceSelect
-              v-model="selectedCounts"
-              :pools="selectPools"
-              :total-limit="recoveryLimit"
-              :add-label="LONG_REST_LABELS.diceAdd"
-              :remove-label="LONG_REST_LABELS.diceRemove"
-            />
+          <div
+            v-if="hitDicePools.length"
+            class="flex flex-col gap-1.5 rounded-lg bg-elevated/40 p-3"
+          >
+            <div
+              v-for="pool in hitDicePools"
+              :key="pool.die"
+              class="flex items-center gap-2"
+            >
+              <span class="w-9 shrink-0 text-sm font-bold text-highlighted">
+                {{ pool.label }}
+              </span>
+
+              <span class="text-xs text-muted">
+                <span class="font-bold text-highlighted">
+                  {{ pool.current }}
+                </span>
+                / {{ pool.max }}
+              </span>
+
+              <span
+                class="ml-auto flex items-center gap-1 text-sm font-bold text-success"
+              >
+                <UIcon
+                  name="tabler:arrow-up"
+                  class="size-4"
+                />
+
+                {{ pool.max }}
+              </span>
+            </div>
 
             <span
-              v-if="isDiceFull"
-              class="text-xs text-dimmed italic"
+              class="border-t border-default/50 pt-2 text-[10px] text-dimmed"
             >
-              {{ LONG_REST_LABELS.fullDice }}
+              {{ diceRecoveryNote }}
             </span>
-
-            <span
-              v-else
-              class="text-xs font-medium text-muted"
-            >
-              {{ diceSelectedLabel }}
-            </span>
-          </template>
+          </div>
 
           <span
             v-else

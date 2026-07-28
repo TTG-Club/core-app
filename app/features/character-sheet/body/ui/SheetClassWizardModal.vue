@@ -8,6 +8,7 @@
   import {
     ABILITY_LABELS,
     buildClassFeatures,
+    CLASS_SOURCES_ASYNC_DATA_KEY,
     CLASSES_DETAIL_BASE_PATH,
     CLASSES_FILTERS_PATH,
     CLASSES_SEARCH_PATH,
@@ -64,7 +65,7 @@
   // классы из отключённых книг. Запрос ждём до списка: иначе первая выдача
   // пришла бы по всем источникам и мигнула лишними строками.
   const { sourceQuery } = await useCatalogSourceQuery(
-    'character-sheet:class-sources',
+    CLASS_SOURCES_ASYNC_DATA_KEY,
     CLASSES_FILTERS_PATH,
   );
 
@@ -164,6 +165,10 @@
             return {
               url: subclass.url,
               name: subclass.name,
+              // Источник обязателен в строке: одноимённые подклассы приходят из
+              // разных книг (например, «Наследник троих» из FRHoF и UAFRS), и
+              // без него они выглядят дубликатом.
+              sourceLabel: subclass.sourceLabel,
               isSelectable: subclassAvailable.value,
               isSelected: isSubclassSelected,
               rowClass: isSubclassSelected ? 'bg-elevated' : '',
@@ -699,6 +704,16 @@
                       {{ subclass.name }}
                     </span>
                   </span>
+
+                  <UBadge
+                    v-if="subclass.sourceLabel"
+                    size="sm"
+                    color="neutral"
+                    variant="subtle"
+                    class="relative z-10 shrink-0"
+                  >
+                    {{ subclass.sourceLabel }}
+                  </UBadge>
 
                   <UTooltip text="Открыть описание подкласса">
                     <UButton

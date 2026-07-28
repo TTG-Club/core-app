@@ -11,6 +11,7 @@ import type {
   CharacterHealth,
   CharacterHitDie,
   CharacterInventoryItem,
+  CharacterNote,
   CharacterSettings,
   CharacterSpecies,
   CharacterSpeed,
@@ -20,6 +21,7 @@ import type {
   CustomInventoryItemDraft,
   CustomSpellDraft,
   HitDiceAmount,
+  LevelUpPayload,
   ProficiencyGroupKey,
 } from '../model';
 
@@ -30,6 +32,7 @@ import {
   ABILITY_SCORE_MAX,
   ABILITY_SCORE_MIN,
   adjustHealthForConstitution,
+  adjustHealthForLevel,
   adjustHitDice,
   applySkillProficiencies,
   ARMOR_CLASS_BASE_MAX,
@@ -48,7 +51,7 @@ import {
   getArmorClassBreakdown,
   getArmorClassValue,
   getCarryingCapacity,
-  getClassMaxHitPoints,
+  getClassLevelHitPoints,
   getFormattedBonus,
   getInventoryWeight,
   getNextLevelExperience,
@@ -64,9 +67,13 @@ import {
   isCustomSpell,
   LEVEL_MAX,
   LEVEL_MIN,
+  mergeCharacterFeatures,
+  mergeClassResources,
+  removeFeaturesAboveLevel,
   RESOURCE_COUNT_MAX,
   RESOURCE_COUNT_MIN,
   RESOURCE_SHORT_LABEL_MAX_LENGTH,
+  restoreHitDice,
   SHEET_HIDDEN_CONTROL_CLASS,
   SHEET_LOCKED_MESSAGE,
   SHEET_READONLY_MESSAGE,
@@ -475,17 +482,20 @@ export function useCharacterSheet() {
    * таблицы опыта D&D. Кости хитов класса следуют за уровнем: новые уровни
    * добавляют непотраченные кости, снижение уровня их забирает. Прирост хитов
    * за повышение считает модалка опыта (среднее, бросок или максимум кости с
-   * модификатором Телосложения) — здесь он поднимает максимум и текущие хиты;
-   * при снижении уровня хиты не меняются.
+   * модификатором Телосложения) — здесь он поднимает максимум и текущие хиты и
+   * записывается по уровням, чтобы снижение уровня вернуло ровно его.
+   *
+   * Снижение уровня забирает и классовые умения снятых уровней — на листе
+   * остаются только те, что персонаж на новом уровне действительно имеет.
    *
    * @param level новый уровень персонажа.
    * @param experience суммарный опыт персонажа.
-   * @param hitPointsGain прирост максимума хитов за взятые уровни.
+   * @param hitPointsGains прирост максимума хитов за каждый взятый уровень.
    */
   function setProgress(
     level: number,
     experience: number,
-    hitPointsGain = 0,
+    hitPointsGains: number[] = [],
   ): void {
     if (!ensureEditable()) {
       return;
@@ -493,13 +503,11 @@ export function useCharacterSheet() {
 
     const clampedLevel = clamp(Math.trunc(level), LEVEL_MIN, LEVEL_MAX);
 
-    const levelDelta = clampedLevel - character.value.level;
+    const previousLevel = character.value.level;
+
+    const levelDelta = clampedLevel - previousLevel;
 
     const classDie = character.value.characterClass?.hitDie;
-
-    const gain = Math.max(0, Math.trunc(hitPointsGain));
-
-    const { health } = character.value;
 
     character.value = {
       ...character.value,
@@ -512,14 +520,91 @@ export function useCharacterSheet() {
         classDie !== undefined && levelDelta !== 0
           ? shiftClassHitDice(character.value.hitDice, classDie, levelDelta)
           : character.value.hitDice,
-      health:
-        gain > 0
+      health: adjustHealthForLevel(
+        character.value.health,
+        previousLevel,
+        clampedLevel,
+        hitPointsGains,
+      ),
+      features:
+        levelDelta < 0
+          ? removeFeaturesAboveLevel(character.value.features, clampedLevel)
+          : character.value.features,
+    };
+  }
+
+  /**
+   * Применение итога мастера повышения уровня одним изменением документа:
+   * уровень с опытом, хиты по каждому взятому уровню, умения и ресурсы новых
+   * уровней, выбранный подкласс и выборы внутри умений.
+   *
+   * В отличие от выбора класса здоровье и кости хитов не пересобираются с нуля:
+   * броски на хиты и потраченные кости сохраняются. Ячейки заклинаний и бонус
+   * мастерства считаются от уровня сами и здесь не участвуют.
+   *
+   * @param payload итог мастера повышения уровня.
+   */
+  function applyLevelUp(payload: LevelUpPayload): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const clampedLevel = clamp(Math.trunc(payload.level), LEVEL_MIN, LEVEL_MAX);
+
+    const previousLevel = character.value.level;
+
+    const levelDelta = clampedLevel - previousLevel;
+
+    const classDie = character.value.characterClass?.hitDie;
+
+    const { characterClass } = character.value;
+
+    character.value = {
+      ...character.value,
+      level: clampedLevel,
+      experience: {
+        current: clamp(Math.trunc(payload.experience), 0, EXPERIENCE_MAX),
+        nextLevel: getNextLevelExperience(clampedLevel),
+      },
+      characterClass:
+        characterClass && payload.subclass
           ? {
-              ...health,
-              max: health.max + gain,
-              current: clamp(health.current + gain, 0, health.max + gain),
+              ...characterClass,
+              subclassUrl: payload.subclass.url,
+              subclassName: payload.subclass.name,
+              casterType: payload.subclass.casterType,
             }
-          : health,
+          : characterClass,
+      hitDice:
+        classDie !== undefined && levelDelta !== 0
+          ? shiftClassHitDice(character.value.hitDice, classDie, levelDelta)
+          : character.value.hitDice,
+      health: adjustHealthForLevel(
+        character.value.health,
+        previousLevel,
+        clampedLevel,
+        payload.hitPointsGains,
+      ),
+      features: mergeCharacterFeatures(
+        character.value.features,
+        payload.features,
+      ),
+      classResources: mergeClassResources(
+        character.value.classResources,
+        payload.classResources,
+      ),
+      skills: applySkillProficiencies(
+        character.value.skills,
+        payload.skills.proficient,
+        payload.skills.expertise,
+      ),
+      proficiencies: {
+        ...character.value.proficiencies,
+        languages: union(
+          character.value.proficiencies.languages,
+          payload.languages,
+        ),
+      },
     };
   }
 
@@ -636,6 +721,7 @@ export function useCharacterSheet() {
     character.value = {
       ...character.value,
       health: {
+        ...health,
         max,
         current: clamp(health.current, 0, max),
         temporary: Math.max(0, health.temporary),
@@ -770,27 +856,24 @@ export function useCharacterSheet() {
   /**
    * Завершение продолжительного отдыха: хиты поднимаются до максимума, временные
    * хиты пропадают (держатся только до конца отдыха), возвращаются все ячейки
-   * заклинаний и все счётчики умений, а кости хитов — в выбранном количестве.
-   * Сколько костей возвращать, решают правила и игрок — считает это модалка
-   * отдыха. Игровое действие: запертый лист его разрешает, чужой — нет.
-   *
-   * @param restoredDice возвращаемые кости хитов по номиналам.
+   * заклинаний, все счётчики умений и все потраченные кости хитов — в редакции
+   * 2024 года отдых возвращает их полностью, а не половину. Игровое действие:
+   * запертый лист его разрешает, чужой — нет.
    */
-  function completeLongRest(restoredDice: HitDiceAmount[]): void {
+  function completeLongRest(): void {
     if (!ensureOwnSheet()) {
       return;
     }
 
-    const remainingDice = adjustHitDice(
+    const restoredDice = restoreHitDice(
       character.value.hitDice,
       character.value.extraHitDice,
-      restoredDice,
     );
 
     character.value = {
       ...character.value,
-      hitDice: remainingDice.hitDice,
-      extraHitDice: remainingDice.extraHitDice,
+      hitDice: restoredDice.hitDice,
+      extraHitDice: restoredDice.extraHitDice,
       health: {
         ...character.value.health,
         current: character.value.health.max,
@@ -923,10 +1006,17 @@ export function useCharacterSheet() {
 
     const { level } = character.value;
 
-    const maxHitPoints = getClassMaxHitPoints(
+    // Класс пересобирает здоровье целиком, поэтому и раскладка прироста по
+    // уровням переписывается: снижение уровня вернёт ровно её значения.
+    const levelGains = getClassLevelHitPoints(
       payload.hitDie,
       level,
       getModifier(character.value.abilities.constitution),
+    );
+
+    const maxHitPoints = levelGains.reduce(
+      (total, gain) => total + gain.amount,
+      0,
     );
 
     // Классовые особенности заменяются целиком (id `class:*`); добавленные
@@ -952,6 +1042,7 @@ export function useCharacterSheet() {
         ...character.value.health,
         max: maxHitPoints,
         current: maxHitPoints,
+        levelGains,
       },
       proficiencies: {
         ...character.value.proficiencies,
@@ -1612,18 +1703,73 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Установка заметок персонажа; значение — хранимая форма редактора разметки.
+   * Добавление заметки в конец списка. Пустая запись (без заголовка и текста)
+   * не добавляется.
    *
-   * @param notes новые заметки персонажа.
+   * @param note заголовок и текст заметки в хранимой форме редактора разметки.
    */
-  function setNotes(notes: string): void {
+  function addNote(note: Omit<CharacterNote, 'id'>): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const title = note.title.trim();
+
+    const content = note.content.trim();
+
+    if (!title && !content) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      notes: [
+        ...character.value.notes,
+        { id: crypto.randomUUID(), title, content },
+      ],
+    };
+  }
+
+  /**
+   * Правка заметки; опустошённая запись (без заголовка и текста) не сохраняется.
+   *
+   * @param noteId идентификатор заметки.
+   * @param patch новые заголовок и текст заметки.
+   */
+  function updateNote(noteId: string, patch: Omit<CharacterNote, 'id'>): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const title = patch.title.trim();
+
+    const content = patch.content.trim();
+
+    if (!title && !content) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      notes: character.value.notes.map((note) =>
+        note.id === noteId ? { ...note, title, content } : note,
+      ),
+    };
+  }
+
+  /**
+   * Удаление заметки.
+   *
+   * @param noteId идентификатор заметки.
+   */
+  function removeNote(noteId: string): void {
     if (!ensureEditable()) {
       return;
     }
 
     character.value = {
       ...character.value,
-      notes,
+      notes: character.value.notes.filter((note) => note.id !== noteId),
     };
   }
 
@@ -1754,6 +1900,8 @@ export function useCharacterSheet() {
     downloadCharacter,
     addFeature,
     addFeats,
+    addNote,
+    applyLevelUp,
     addInventoryItems,
     addCustomInventoryItem,
     addCustomSpell,
@@ -1761,15 +1909,16 @@ export function useCharacterSheet() {
     copySpellToSheet,
     removeFeature,
     removeInventoryItem,
+    removeNote,
     removeSpell,
     updateFeature,
+    updateNote,
     updateCustomInventoryItem,
     updateCustomSpell,
     setBackground,
     setClass,
     setCurrency,
     setName,
-    setNotes,
     setProficiencies,
     setProgress,
     setSettings,

@@ -1,7 +1,11 @@
 import type { ComputedRef } from 'vue';
 import type { LocationQuery } from 'vue-router';
 
-import { buildSearchQuery, parseFilter } from '~infrastructure/filter';
+import {
+  buildSearchQuery,
+  getSelectedItemIds,
+  parseFilter,
+} from '~infrastructure/filter';
 
 interface CatalogSourceQuery {
   /**
@@ -9,6 +13,69 @@ interface CatalogSourceQuery {
    * `{ source: 'PHB,XGE' }` либо `{}`, если выбор источников неизвестен.
    */
   sourceQuery: ComputedRef<LocationQuery>;
+
+  /**
+   * Идентификаторы включённых источников (`['PHB', 'FRHoF']`) — для разделов,
+   * чей эндпоинт по источникам не фильтрует и отбор идёт на клиенте. Пустой
+   * список означает, что ограничения нет.
+   */
+  selectedSourceIds: ComputedRef<string[]>;
+}
+
+interface LazyCatalogSourceQuery extends CatalogSourceQuery {
+  /** Загружает фильтры раздела; повторный вызов после успеха ничего не делает. */
+  load: () => Promise<void>;
+}
+
+/**
+ * Глобальная настройка источников (профиль → «Настройка источников») для
+ * каталогов листа персонажа без немедленного запроса.
+ *
+ * Нужна модалкам, которые открываются мгновенно и лезут в каталог только по
+ * действию игрока: `await` на верхнем уровне сделал бы компонент асинхронным, и
+ * даже правка опыта ждала бы сеть.
+ *
+ * @param key ключ `useAsyncData` — ответ кешируется между открытиями модалок.
+ * @param filtersPath эндпоинт фильтров раздела (`/api/v2/{section}/filters`).
+ * @returns источники раздела и функция их загрузки.
+ */
+export function useLazyCatalogSourceQuery(
+  key: string,
+  filtersPath: string,
+): LazyCatalogSourceQuery {
+  const sourceRequest = useAsyncData(
+    key,
+    async () => {
+      const response = await $fetch<unknown>(filtersPath, {
+        method: 'GET',
+        retry: 0,
+      });
+
+      return parseFilter(response).sources ?? [];
+    },
+    { server: false, default: () => [], immediate: false },
+  );
+
+  // Сборщик query тот же, что у разделов, — источники сериализуются одинаково.
+  const sourceQuery = computed<LocationQuery>(() =>
+    buildSearchQuery({ filters: [], sources: sourceRequest.data.value }),
+  );
+
+  const selectedSourceIds = computed(() =>
+    sourceRequest.data.value.flatMap(getSelectedItemIds),
+  );
+
+  async function load(): Promise<void> {
+    // Ответ общий по ключу: если фильтры уже пришли в другой модалке, повторный
+    // запрос не нужен.
+    if (sourceRequest.status.value === 'success') {
+      return;
+    }
+
+    await sourceRequest.execute();
+  }
+
+  return { sourceQuery, selectedSourceIds, load };
 }
 
 /**
@@ -27,33 +94,18 @@ interface CatalogSourceQuery {
  *
  * @param key ключ `useAsyncData` — ответ кешируется между открытиями модалки.
  * @param filtersPath эндпоинт фильтров раздела (`/api/v2/{section}/filters`).
- * @returns query-параметр источников для запроса каталога.
+ * @returns источники раздела.
  */
 export async function useCatalogSourceQuery(
   key: string,
   filtersPath: string,
 ): Promise<CatalogSourceQuery> {
-  const sourceRequest = useAsyncData(
+  const { sourceQuery, selectedSourceIds, load } = useLazyCatalogSourceQuery(
     key,
-    async () => {
-      const response = await $fetch<unknown>(filtersPath, {
-        method: 'GET',
-        retry: 0,
-      });
-
-      return parseFilter(response).sources ?? [];
-    },
-    { server: false, default: () => [] },
+    filtersPath,
   );
 
-  // Сборщик query тот же, что у разделов, — источники сериализуются одинаково.
-  // Computed создаётся до `await`: после него у композабла уже нет активного
-  // scope компонента, и вычисляемое значение не было бы к нему привязано.
-  const sourceQuery = computed<LocationQuery>(() =>
-    buildSearchQuery({ filters: [], sources: sourceRequest.data.value }),
-  );
+  await load();
 
-  await sourceRequest;
-
-  return { sourceQuery };
+  return { sourceQuery, selectedSourceIds };
 }

@@ -20,6 +20,7 @@ import type {
   CharacterHitDie,
   CharacterInventoryGroup,
   CharacterInventoryItem,
+  CharacterLevelHitPoints,
   CharacterSkill,
   CharacterSpecies,
   CharacterSpeed,
@@ -28,7 +29,9 @@ import type {
   CharacterVision,
   ChoiceOptionContext,
   ClassChoice,
+  ClassFeatureRow,
   ClassFeatureSummary,
+  ClassOption,
   ClassSummary,
   ClassTableColumn,
   CustomArmorType,
@@ -42,6 +45,7 @@ import type {
   HitDiceAmount,
   HitDicePool,
   HitDiceSelectPool,
+  HitPointsGainMode,
   InventoryArmor,
   InventoryItemOrigin,
   InventoryWeapon,
@@ -122,8 +126,7 @@ import {
   DARKVISION_PARSE_FALLBACK,
   DEFAULT_WEAPON_ATTACK_ABILITY,
   DICE_NOTATION_LETTER,
-  HIT_DICE_LONG_REST_DIVISOR,
-  HIT_DICE_LONG_REST_MIN,
+  FEATURE_ORIGIN_LABELS,
   HIT_DICE_ROLL_COUNT,
   HIT_POINTS_LEVEL_GAIN_MIN,
   INVENTORY_CATEGORY_ORDER,
@@ -1252,6 +1255,31 @@ export function adjustHitDice(
 }
 
 /**
+ * Полный возврат костей хитов: остаток каждой кости поднимается до максимума —
+ * так продолжительный отдых работает в редакции 2024 года. Импортированный
+ * вручную лист мог принести отрицательный максимум, поэтому остаток не
+ * опускается ниже нуля.
+ *
+ * @param hitDice кости хитов из классов.
+ * @param extraHitDice дополнительные кости хитов.
+ * @returns новые списки костей хитов.
+ */
+export function restoreHitDice(
+  hitDice: CharacterHitDie[],
+  extraHitDice: CharacterExtraHitDie[],
+): { hitDice: CharacterHitDie[]; extraHitDice: CharacterExtraHitDie[] } {
+  const restore = <Die extends CharacterHitDie>(hitDie: Die): Die => ({
+    ...hitDie,
+    current: Math.max(0, hitDie.max),
+  });
+
+  return {
+    hitDice: hitDice.map((hitDie) => restore(hitDie)),
+    extraHitDice: extraHitDice.map((hitDie) => restore(hitDie)),
+  };
+}
+
+/**
  * Выбранные на отдыхе кости, обрезанные пределами номиналов: выбор живёт в
  * модалке, а пределы (остаток костей или нехватка до максимума) меняются после
  * каждого применения. Номиналы без выбора в результат не входят.
@@ -1273,60 +1301,18 @@ export function getSelectedHitDice(
 }
 
 /**
- * Сколько костей хитов возвращает продолжительный отдых: половина от общего
- * количества костей, но не меньше одной (правило D&D 2024). Больше, чем
- * потрачено, вернуть нельзя, а без костей возвращать нечего.
+ * Какие кости хитов возвращает продолжительный отдых: по правилам D&D 2024 —
+ * все потраченные, без деления пополам и без выбора номиналов. Номиналы без
+ * траты в список не входят.
  *
  * @param pools пулы костей хитов по номиналам.
- * @returns количество костей к возврату.
- */
-export function getLongRestHitDiceCount(pools: HitDicePool[]): number {
-  const totals = pools.reduce(
-    (total, pool) => ({
-      current: total.current + pool.current,
-      max: total.max + pool.max,
-    }),
-    { current: 0, max: 0 },
-  );
-
-  const spent = totals.max - totals.current;
-
-  if (spent <= 0) {
-    return 0;
-  }
-
-  return Math.min(
-    spent,
-    Math.max(
-      HIT_DICE_LONG_REST_MIN,
-      Math.floor(totals.max / HIT_DICE_LONG_REST_DIVISOR),
-    ),
-  );
-}
-
-/**
- * Раскладка возвращаемых костей по умолчанию: сперва крупные номиналы —
- * они полезнее в бою, а перераспределить выбор игрок может сам.
- *
- * @param pools пулы костей хитов с пределом возврата по номиналу.
- * @param count сколько костей возвращается всего.
  * @returns количество костей к возврату по номиналам.
  */
-export function getDefaultHitDiceRecovery(
-  pools: HitDiceSelectPool[],
-  count: number,
+export function getLongRestHitDiceRecovery(
+  pools: HitDicePool[],
 ): HitDiceAmount[] {
-  let pending = Math.max(0, Math.trunc(count));
-
-  return [...pools]
-    .sort((left, right) => right.die - left.die)
-    .map((pool) => {
-      const taken = clamp(pending, 0, pool.limit);
-
-      pending -= taken;
-
-      return { die: pool.die, count: taken };
-    })
+  return pools
+    .map((pool) => ({ die: pool.die, count: pool.max - pool.current }))
     .filter((pool) => pool.count > 0);
 }
 
@@ -1386,9 +1372,33 @@ export function getLevelHitPointsGain(
 }
 
 /**
- * Максимум хитов класса на уровне: первый уровень даёт максимум кости, каждый
- * следующий — её среднее значение; модификатор Телосложения прибавляется на
- * каждом уровне (правило D&D 2024).
+ * Раскладка максимума хитов класса по уровням: первый уровень даёт максимум
+ * кости, каждый следующий — её среднее значение; модификатор Телосложения
+ * прибавляется на каждом уровне (правило D&D 2024).
+ *
+ * @param die номинал кости хитов класса.
+ * @param level уровень персонажа.
+ * @param modifier модификатор Телосложения.
+ * @returns прирост максимума хитов по уровням.
+ */
+export function getClassLevelHitPoints(
+  die: number,
+  level: number,
+  modifier: number,
+): CharacterLevelHitPoints[] {
+  const levels = Math.max(0, Math.trunc(level));
+
+  return Array.from({ length: levels }, (_, index) => ({
+    level: index + 1,
+    amount:
+      index === 0
+        ? getLevelHitPointsGain(die, modifier)
+        : getLevelHitPointsGain(getHitDieAverage(die), modifier),
+  }));
+}
+
+/**
+ * Максимум хитов класса на уровне — сумма раскладки по уровням.
  *
  * @param die номинал кости хитов класса.
  * @param level уровень персонажа.
@@ -1400,11 +1410,132 @@ export function getClassMaxHitPoints(
   level: number,
   modifier: number,
 ): number {
-  const firstLevelGain = getLevelHitPointsGain(die, modifier);
+  return getTotalLevelHitPoints(getClassLevelHitPoints(die, level, modifier));
+}
 
-  const perLevelGain = getLevelHitPointsGain(getHitDieAverage(die), modifier);
+/**
+ * Сумма прироста максимума хитов по записям уровней.
+ *
+ * @param gains записи прироста максимума хитов.
+ * @returns суммарный прирост максимума хитов.
+ */
+function getTotalLevelHitPoints(gains: CharacterLevelHitPoints[]): number {
+  return gains.reduce((total, gain) => total + gain.amount, 0);
+}
 
-  return firstLevelGain + Math.max(0, level - 1) * perLevelGain;
+/**
+ * Учёт хитов за взятые уровни: прирост записывается по уровням, максимум и
+ * текущие хиты растут на его сумму. Записи уровней с теми же номерами
+ * заменяются — уровень мог быть взят заново после понижения.
+ *
+ * @param health здоровье персонажа.
+ * @param previousLevel уровень до повышения.
+ * @param gains прирост максимума хитов за каждый взятый уровень по порядку.
+ * @returns новое здоровье персонажа.
+ */
+function applyLevelHitPoints(
+  health: CharacterHealth,
+  previousLevel: number,
+  gains: number[],
+): CharacterHealth {
+  const addedGains = gains.map((amount, index) => ({
+    level: previousLevel + index + 1,
+    amount: Math.max(0, Math.trunc(amount)),
+  }));
+
+  const addedLevels = new Set(addedGains.map((gain) => gain.level));
+
+  const levelGains = [
+    ...health.levelGains.filter((gain) => !addedLevels.has(gain.level)),
+    ...addedGains,
+  ].sort((left, right) => left.level - right.level);
+
+  const total = getTotalLevelHitPoints(addedGains);
+
+  const max = health.max + total;
+
+  return {
+    ...health,
+    max,
+    current: clamp(health.current + total, 0, max),
+    levelGains,
+  };
+}
+
+/**
+ * Сколько максимума хитов дали уровни выше указанного — столько вернёт
+ * снижение уровня.
+ *
+ * @param health здоровье персонажа.
+ * @param level новый уровень персонажа.
+ * @returns прирост, записанный за снимаемые уровни.
+ */
+export function getLevelHitPointsLoss(
+  health: CharacterHealth,
+  level: number,
+): number {
+  return getTotalLevelHitPoints(
+    health.levelGains.filter((gain) => gain.level > level),
+  );
+}
+
+/**
+ * Снятие хитов за уровни выше нового: максимум уменьшается на записанный за них
+ * прирост, записи этих уровней удаляются, текущие хиты обрезаются новым
+ * максимумом. Уровни без записи максимум не двигают.
+ *
+ * @param health здоровье персонажа.
+ * @param level новый уровень персонажа.
+ * @returns новое здоровье персонажа.
+ */
+function removeLevelHitPoints(
+  health: CharacterHealth,
+  level: number,
+): CharacterHealth {
+  const levelGains = health.levelGains.filter((gain) => gain.level <= level);
+
+  const loss = getLevelHitPointsLoss(health, level);
+
+  if (loss === 0) {
+    return { ...health, levelGains };
+  }
+
+  const max = Math.max(0, health.max - loss);
+
+  return {
+    ...health,
+    max,
+    current: clamp(health.current, 0, max),
+    levelGains,
+  };
+}
+
+/**
+ * Пересчёт здоровья при смене уровня: взятые уровни дописывают прирост в
+ * максимум и текущие хиты, снятые — возвращают записанный за них прирост.
+ * Уровень без изменений здоровье не трогает.
+ *
+ * @param health здоровье персонажа.
+ * @param previousLevel уровень до смены.
+ * @param nextLevel новый уровень персонажа.
+ * @param gains прирост максимума хитов за каждый взятый уровень по порядку.
+ * @returns новое здоровье персонажа.
+ */
+export function adjustHealthForLevel(
+  health: CharacterHealth,
+  previousLevel: number,
+  nextLevel: number,
+  gains: number[],
+): CharacterHealth {
+  if (nextLevel > previousLevel) {
+    return applyLevelHitPoints(health, previousLevel, gains);
+  }
+
+  if (nextLevel < previousLevel) {
+    return removeLevelHitPoints(health, nextLevel);
+  }
+
+  return health;
 }
 
 /**
@@ -1461,7 +1592,9 @@ export function adjustHealthForConstitution(
   previousScore: number,
   nextScore: number,
 ): CharacterHealth {
-  const delta = (getModifier(nextScore) - getModifier(previousScore)) * level;
+  const modifierDelta = getModifier(nextScore) - getModifier(previousScore);
+
+  const delta = modifierDelta * level;
 
   if (delta === 0 || health.max <= 0) {
     return health;
@@ -1473,6 +1606,12 @@ export function adjustHealthForConstitution(
     ...health,
     max,
     current: clamp(health.current + delta, 0, max),
+    // Модификатор входит в прирост каждого уровня, поэтому записи двигаются
+    // вместе с максимумом: иначе снижение уровня вернуло бы устаревшую сумму.
+    levelGains: health.levelGains.map((gain) => ({
+      ...gain,
+      amount: Math.max(HIT_POINTS_LEVEL_GAIN_MIN, gain.amount + modifierDelta),
+    })),
   };
 }
 
@@ -2081,6 +2220,7 @@ export function buildCharacterFeatures(
         description: [...feature.description],
         origin,
         originName: summary.name,
+        level: null,
         choice: choice || null,
       };
     });
@@ -2113,6 +2253,7 @@ export function buildFeatFeature(
     description: [...summary.description],
     origin: 'feat',
     originName: summary.category,
+    level: null,
     choice: null,
   };
 }
@@ -2344,6 +2485,84 @@ export function buildClassFeatures(
   level: number,
   choices: Record<string, string>,
 ): CharacterFeature[] {
+  return collectClassFeatures(
+    base,
+    subclass,
+    (featureLevel) => featureLevel <= level,
+    choices,
+  );
+}
+
+/**
+ * Классовые особенности ровно указанного уровня: базовый класс даёт свои,
+ * выбранный подкласс — свои. Нужны мастеру повышения уровня, который выдаёт
+ * умения по шагу на уровень.
+ *
+ * @param base деталь базового класса.
+ * @param subclass деталь подкласса; null — подкласс не выбран.
+ * @param level уровень, умения которого нужны.
+ * @param choices выборы игрока по идентификаторам особенностей.
+ * @returns особенности этого уровня.
+ */
+export function buildLevelClassFeatures(
+  base: ClassSummary,
+  subclass: ClassSummary | null,
+  level: number,
+  choices: Record<string, string>,
+): CharacterFeature[] {
+  return collectClassFeatures(
+    base,
+    subclass,
+    (featureLevel) => featureLevel === level,
+    choices,
+  );
+}
+
+/**
+ * Особенность листа из описания особенности класса.
+ *
+ * @param summary особенность из ответа класса.
+ * @param originName название источника (класса или подкласса).
+ * @param choices выборы игрока по идентификаторам особенностей.
+ * @returns особенность персонажа.
+ */
+function toCharacterFeature(
+  summary: ClassFeatureSummary,
+  originName: string,
+  choices: Record<string, string>,
+): CharacterFeature {
+  const id = getCharacterFeatureId('class', summary.key);
+
+  const choice = choices[id]?.trim();
+
+  return {
+    id,
+    name: summary.name,
+    description: [...summary.description],
+    origin: 'class',
+    originName,
+    level: summary.level,
+    choice: choice || null,
+  };
+}
+
+/**
+ * Общая сборка классовых особенностей по предикату уровня: дубли по ключу
+ * отбрасываются, идентификатор — `class:<key>`, выбор игрока подставляется по
+ * нему же.
+ *
+ * @param base деталь базового класса.
+ * @param subclass деталь подкласса; null — подкласс не выбран.
+ * @param matchesLevel предикат уровня особенности.
+ * @param choices выборы игрока по идентификаторам особенностей.
+ * @returns особенности, прошедшие предикат.
+ */
+function collectClassFeatures(
+  base: ClassSummary,
+  subclass: ClassSummary | null,
+  matchesLevel: (featureLevel: number) => boolean,
+  choices: Record<string, string>,
+): CharacterFeature[] {
   const seenKeys = new Set<string>();
   const features: CharacterFeature[] = [];
 
@@ -2355,7 +2574,7 @@ export function buildClassFeatures(
     for (const summary of summaries) {
       if (
         summary.isSubclass !== onlySubclass
-        || summary.level > level
+        || !matchesLevel(summary.level)
         || seenKeys.has(summary.key)
       ) {
         continue;
@@ -2363,18 +2582,7 @@ export function buildClassFeatures(
 
       seenKeys.add(summary.key);
 
-      const id = getCharacterFeatureId('class', summary.key);
-
-      const choice = choices[id]?.trim();
-
-      features.push({
-        id,
-        name: summary.name,
-        description: [...summary.description],
-        origin: 'class',
-        originName,
-        choice: choice || null,
-      });
+      features.push(toCharacterFeature(summary, originName, choices));
     }
   };
 
@@ -2385,6 +2593,302 @@ export function buildClassFeatures(
   }
 
   return features;
+}
+
+/**
+ * Умения подкласса до указанного уровня включительно. Нужны, когда подкласс
+ * выбирается позже порогового уровня: вместе с ним персонаж получает и умения
+ * более ранних уровней подкласса.
+ *
+ * @param subclass деталь подкласса.
+ * @param level уровень персонажа.
+ * @param choices выборы игрока по идентификаторам особенностей.
+ * @returns умения подкласса.
+ */
+export function buildSubclassFeatures(
+  subclass: ClassSummary,
+  level: number,
+  choices: Record<string, string>,
+): CharacterFeature[] {
+  return subclass.features
+    .filter((summary) => summary.isSubclass && summary.level <= level)
+    .map((summary) => toCharacterFeature(summary, subclass.name, choices));
+}
+
+/**
+ * Строки карточек умений уровня для мастера повышения: к каждому умению
+ * распознаётся выбор внутри описания (навык, компетентность, язык).
+ *
+ * @param base деталь базового класса.
+ * @param subclass деталь подкласса; null — подкласс не выбран.
+ * @param level уровень, умения которого нужны.
+ * @param skillNames имена навыков персонажа.
+ * @returns строки умений этого уровня.
+ */
+export function getLevelFeatureRows(
+  base: ClassSummary,
+  subclass: ClassSummary | null,
+  level: number,
+  skillNames: string[],
+): ClassFeatureRow[] {
+  const rows: ClassFeatureRow[] = [];
+
+  const append = (
+    summaries: ClassFeatureSummary[],
+    originLabel: string,
+    onlySubclass: boolean,
+  ): void => {
+    for (const summary of summaries) {
+      if (summary.isSubclass !== onlySubclass || summary.level !== level) {
+        continue;
+      }
+
+      const id = getCharacterFeatureId('class', summary.key);
+
+      rows.push({
+        id,
+        name: summary.name,
+        level: summary.level,
+        description: [...summary.description],
+        originLabel,
+        choice: detectFeatureChoice(id, summary.description, skillNames),
+      });
+    }
+  };
+
+  append(base.features, `${FEATURE_ORIGIN_LABELS.class}: ${base.name}`, false);
+
+  if (subclass) {
+    append(subclass.features, `Подкласс: ${subclass.name}`, true);
+  }
+
+  return rows;
+}
+
+/**
+ * Сбор выборов игрока из карточек умений: навыки, компетентность, языки и
+ * текст выбора для самого умения.
+ *
+ * @param rows строки умений с распознанными выборами.
+ * @param selections значения пикеров по идентификатору выбора.
+ * @returns выбранные навыки, языки и подписи выбора по идентификатору умения.
+ */
+export function collectChoiceSelections(
+  rows: ClassFeatureRow[],
+  selections: Record<string, string[]>,
+): {
+  proficientSkills: string[];
+  expertiseSkills: string[];
+  languages: string[];
+  featureChoices: Record<string, string>;
+} {
+  const proficientSkills: string[] = [];
+  const expertiseSkills: string[] = [];
+  const languages: string[] = [];
+  const featureChoices: Record<string, string> = {};
+
+  for (const row of rows) {
+    const choice = row.choice;
+
+    if (!choice) {
+      continue;
+    }
+
+    const values = selections[choice.id] ?? [];
+
+    if (!values.length) {
+      continue;
+    }
+
+    if (choice.kind === 'skill-proficiency') {
+      proficientSkills.push(...values);
+    } else if (choice.kind === 'skill-expertise') {
+      expertiseSkills.push(...values);
+    } else if (choice.kind === 'language') {
+      languages.push(...values);
+    }
+
+    featureChoices[choice.id] = values.join(', ');
+  }
+
+  return { proficientSkills, expertiseSkills, languages, featureChoices };
+}
+
+/**
+ * Слияние особенностей листа с новыми: запись с тем же идентификатором
+ * заменяется входящей, остальные сохраняются на своих местах, новые
+ * дописываются в конец. В отличие от выбора класса, ручные особенности и
+ * умения прошлых уровней не теряются.
+ *
+ * @param current особенности листа.
+ * @param incoming новые особенности.
+ * @returns объединённый список особенностей.
+ */
+export function mergeCharacterFeatures(
+  current: CharacterFeature[],
+  incoming: CharacterFeature[],
+): CharacterFeature[] {
+  const incomingById = new Map(
+    incoming.map((feature) => [feature.id, feature]),
+  );
+
+  const merged = current.map((feature) => {
+    const replacement = incomingById.get(feature.id);
+
+    if (replacement) {
+      incomingById.delete(feature.id);
+    }
+
+    return replacement ?? feature;
+  });
+
+  return [...merged, ...incomingById.values()];
+}
+
+/**
+ * Слияние ресурсов класса при повышении уровня: максимум берётся новый, а
+ * потраченное сохраняется — прибавка максимума приходит непотраченной, как
+ * новые кости хитов. Ресурсы без пары среди новых (добавленные вручную) не
+ * трогаются.
+ *
+ * @param current ресурсы листа.
+ * @param incoming ресурсы, пересчитанные на новый уровень.
+ * @returns объединённый список ресурсов.
+ */
+export function mergeClassResources(
+  current: CharacterClassResource[],
+  incoming: CharacterClassResource[],
+): CharacterClassResource[] {
+  const incomingById = new Map(
+    incoming.map((resource) => [resource.id, resource]),
+  );
+
+  const merged = current.map((resource) => {
+    const next = incomingById.get(resource.id);
+
+    if (!next) {
+      return resource;
+    }
+
+    incomingById.delete(resource.id);
+
+    const gain = Math.max(0, next.max - resource.max);
+
+    return {
+      ...resource,
+      name: next.name,
+      shortLabel: next.shortLabel,
+      recovery: next.recovery,
+      max: next.max,
+      current: clamp(resource.current + gain, 0, next.max),
+    };
+  });
+
+  return [...merged, ...incomingById.values()];
+}
+
+/**
+ * Классовые умения, которые даются выше указанного уровня, — их забирает
+ * снижение уровня. Записи без уровня (умения вида, черты, ручные и листы до
+ * учёта уровня) не трогаются.
+ *
+ * @param features особенности листа.
+ * @param level новый уровень персонажа.
+ * @returns умения снимаемых уровней.
+ */
+export function getFeaturesAboveLevel(
+  features: CharacterFeature[],
+  level: number,
+): CharacterFeature[] {
+  return features.filter(
+    (feature) =>
+      feature.origin === 'class'
+      && feature.level !== null
+      && feature.level > level,
+  );
+}
+
+/**
+ * Снятие классовых умений за уровни выше указанного.
+ *
+ * @param features особенности листа.
+ * @param level новый уровень персонажа.
+ * @returns особенности без умений снятых уровней.
+ */
+export function removeFeaturesAboveLevel(
+  features: CharacterFeature[],
+  level: number,
+): CharacterFeature[] {
+  const removedIds = new Set(
+    getFeaturesAboveLevel(features, level).map((feature) => feature.id),
+  );
+
+  if (!removedIds.size) {
+    return features;
+  }
+
+  return features.filter((feature) => !removedIds.has(feature.id));
+}
+
+/**
+ * Отбор опций каталога по источникам, включённым в профиле. Пустой список
+ * источников означает, что ограничения нет (настройка не задана или её не
+ * удалось загрузить).
+ *
+ * @param options опции класса или подкласса.
+ * @param selectedSourceIds идентификаторы включённых источников (`PHB`).
+ * @returns опции разрешённых источников.
+ */
+export function filterClassOptionsBySources(
+  options: ClassOption[],
+  selectedSourceIds: string[],
+): ClassOption[] {
+  if (!selectedSourceIds.length) {
+    return options;
+  }
+
+  const allowed = new Set(selectedSourceIds);
+
+  return options.filter((option) => allowed.has(option.sourceLabel));
+}
+
+/**
+ * Проверка значения способа прироста хитов: контролы отдают его нетипизированным.
+ *
+ * @param value значение из контрола.
+ * @returns true — значение является способом прироста хитов.
+ */
+export function isHitPointsGainMode(
+  value: unknown,
+): value is HitPointsGainMode {
+  return value === 'average' || value === 'roll' || value === 'max';
+}
+
+/**
+ * Прирост максимума хитов за уровень по выбранному способу: среднее кости,
+ * максимум кости или брошенное значение.
+ *
+ * @param mode способ прироста.
+ * @param die номинал кости хитов класса.
+ * @param modifier модификатор Телосложения.
+ * @param rolled выпавшее на кости значение; null — кость ещё не брошена.
+ * @returns прирост максимума хитов; 0 — в режиме броска до броска.
+ */
+export function getHitPointsGainForMode(
+  mode: HitPointsGainMode,
+  die: number,
+  modifier: number,
+  rolled: number | null,
+): number {
+  if (mode === 'max') {
+    return getLevelHitPointsGain(die, modifier);
+  }
+
+  if (mode === 'average') {
+    return getLevelHitPointsGain(getHitDieAverage(die), modifier);
+  }
+
+  return rolled === null ? 0 : getLevelHitPointsGain(rolled, modifier);
 }
 
 /**
@@ -2633,6 +3137,41 @@ export function applySkillProficiencies(
 
     return skill;
   });
+}
+
+/**
+ * Снятие маркеров разметки каталога с прозы владений («{@item Инструменты
+ * повара|url:cook-s-utensils-phb}» → «Инструменты повара»). Разбор идёт общим
+ * парсером разметки: в ответах API маркеры бывают битыми (пропущена `}`, лишние
+ * пробелы у `|`), а он такие строки не роняет и не теряет подпись.
+ *
+ * @param text проза владений с маркерами разметки.
+ * @returns та же проза с подписями маркеров вместо самих маркеров.
+ */
+export function stripMarkupMarkers(text: string): string {
+  return getNodeText(parse(text)).replaceAll(/\s+/g, ' ').trim();
+}
+
+/**
+ * Приведение названия инструмента к каталогу владений: подпись маркера бывает
+ * строчной («инструменты стеклодува»), а чекбоксы владений сопоставляются по
+ * точному названию. Незнакомое название остаётся как есть.
+ *
+ * @param name название инструмента из ответа API.
+ * @returns название из каталога или исходное, если совпадения нет.
+ */
+export function matchToolProficiencyName(name: string): string {
+  const trimmed = name.trim();
+
+  const normalized = trimmed.toLowerCase().replaceAll('ё', 'е');
+
+  const catalogName = TOOL_PROFICIENCY_GROUPS.flatMap(
+    (group) => group.items,
+  ).find(
+    (toolName) => toolName.toLowerCase().replaceAll('ё', 'е') === normalized,
+  );
+
+  return catalogName ?? trimmed;
 }
 
 /**
