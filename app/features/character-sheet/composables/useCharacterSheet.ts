@@ -30,6 +30,7 @@ import {
   ABILITY_SCORE_MAX,
   ABILITY_SCORE_MIN,
   adjustHealthForConstitution,
+  adjustHealthForLevel,
   adjustHitDice,
   applySkillProficiencies,
   ARMOR_CLASS_BASE_MAX,
@@ -48,7 +49,7 @@ import {
   getArmorClassBreakdown,
   getArmorClassValue,
   getCarryingCapacity,
-  getClassMaxHitPoints,
+  getClassLevelHitPoints,
   getFormattedBonus,
   getInventoryWeight,
   getNextLevelExperience,
@@ -475,17 +476,17 @@ export function useCharacterSheet() {
    * таблицы опыта D&D. Кости хитов класса следуют за уровнем: новые уровни
    * добавляют непотраченные кости, снижение уровня их забирает. Прирост хитов
    * за повышение считает модалка опыта (среднее, бросок или максимум кости с
-   * модификатором Телосложения) — здесь он поднимает максимум и текущие хиты;
-   * при снижении уровня хиты не меняются.
+   * модификатором Телосложения) — здесь он поднимает максимум и текущие хиты и
+   * записывается по уровням, чтобы снижение уровня вернуло ровно его.
    *
    * @param level новый уровень персонажа.
    * @param experience суммарный опыт персонажа.
-   * @param hitPointsGain прирост максимума хитов за взятые уровни.
+   * @param hitPointsGains прирост максимума хитов за каждый взятый уровень.
    */
   function setProgress(
     level: number,
     experience: number,
-    hitPointsGain = 0,
+    hitPointsGains: number[] = [],
   ): void {
     if (!ensureEditable()) {
       return;
@@ -493,13 +494,11 @@ export function useCharacterSheet() {
 
     const clampedLevel = clamp(Math.trunc(level), LEVEL_MIN, LEVEL_MAX);
 
-    const levelDelta = clampedLevel - character.value.level;
+    const previousLevel = character.value.level;
+
+    const levelDelta = clampedLevel - previousLevel;
 
     const classDie = character.value.characterClass?.hitDie;
-
-    const gain = Math.max(0, Math.trunc(hitPointsGain));
-
-    const { health } = character.value;
 
     character.value = {
       ...character.value,
@@ -512,14 +511,12 @@ export function useCharacterSheet() {
         classDie !== undefined && levelDelta !== 0
           ? shiftClassHitDice(character.value.hitDice, classDie, levelDelta)
           : character.value.hitDice,
-      health:
-        gain > 0
-          ? {
-              ...health,
-              max: health.max + gain,
-              current: clamp(health.current + gain, 0, health.max + gain),
-            }
-          : health,
+      health: adjustHealthForLevel(
+        character.value.health,
+        previousLevel,
+        clampedLevel,
+        hitPointsGains,
+      ),
     };
   }
 
@@ -636,6 +633,7 @@ export function useCharacterSheet() {
     character.value = {
       ...character.value,
       health: {
+        ...health,
         max,
         current: clamp(health.current, 0, max),
         temporary: Math.max(0, health.temporary),
@@ -923,10 +921,17 @@ export function useCharacterSheet() {
 
     const { level } = character.value;
 
-    const maxHitPoints = getClassMaxHitPoints(
+    // Класс пересобирает здоровье целиком, поэтому и раскладка прироста по
+    // уровням переписывается: снижение уровня вернёт ровно её значения.
+    const levelGains = getClassLevelHitPoints(
       payload.hitDie,
       level,
       getModifier(character.value.abilities.constitution),
+    );
+
+    const maxHitPoints = levelGains.reduce(
+      (total, gain) => total + gain.amount,
+      0,
     );
 
     // Классовые особенности заменяются целиком (id `class:*`); добавленные
@@ -952,6 +957,7 @@ export function useCharacterSheet() {
         ...character.value.health,
         max: maxHitPoints,
         current: maxHitPoints,
+        levelGains,
       },
       proficiencies: {
         ...character.value.proficiencies,

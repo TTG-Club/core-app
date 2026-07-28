@@ -55,6 +55,15 @@ export interface CharacterExperience {
   nextLevel: number;
 }
 
+/** Прирост максимума хитов за один уровень. */
+export interface CharacterLevelHitPoints {
+  /** Уровень, на котором получен прирост. */
+  level: number;
+
+  /** Сколько максимума хитов дал уровень. */
+  amount: number;
+}
+
 /** Здоровье персонажа. */
 export interface CharacterHealth {
   /** Текущие хиты. */
@@ -65,6 +74,14 @@ export interface CharacterHealth {
 
   /** Временные хиты. */
   temporary: number;
+
+  /**
+   * Прирост максимума за каждый уровень: при снижении уровня из максимума
+   * снимается ровно то, что этот уровень дал. Уровни без записи (лист собран
+   * до появления учёта или уровень взят без известной кости хитов) максимум
+   * не двигают.
+   */
+  levelGains: CharacterLevelHitPoints[];
 }
 
 /** Кость хитов. */

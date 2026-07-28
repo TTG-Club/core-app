@@ -212,11 +212,19 @@ const skillSchema = z.object({
   proficiency: skillProficiencySchema.catch('none'),
 });
 
+const levelHitPointsSchema = z.object({
+  level: z.coerce.number(),
+  amount: z.coerce.number().catch(0),
+});
+
 const healthSchema = z
   .object({
     current: z.coerce.number().catch(0),
     max: z.coerce.number().catch(0),
     temporary: z.coerce.number().catch(0),
+    // Листы до появления учёта прироста записей не имеют: снижение уровня у них
+    // максимум не тронет, пока уровни не будут взяты заново.
+    levelGains: z.array(levelHitPointsSchema).catch([]),
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.health }));
 

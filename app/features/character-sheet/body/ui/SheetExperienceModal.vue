@@ -10,6 +10,7 @@
     getHitDieFormula,
     getHitDieLabel,
     getLevelHitPointsGain,
+    getLevelHitPointsLoss,
     HIT_POINTS_GAIN_MODE_LABELS,
     LEVEL_MAX,
     LEVEL_MIN,
@@ -53,10 +54,8 @@
     () => levelsGained.value > 0 && classDie.value !== null,
   );
 
-  /** Подсказка о снижении уровня: кости уменьшатся, хиты остаются как есть. */
-  const isLevelDownHintVisible = computed(
-    () => levelsLost.value > 0 && classDie.value !== null,
-  );
+  /** Секция снятия хитов: уровень падает, показываем что вернётся из максимума. */
+  const isLevelDownSectionVisible = computed(() => levelsLost.value > 0);
 
   const constitutionModifier = computed(() =>
     getModifier(character.value.abilities.constitution),
@@ -118,25 +117,52 @@
     rollResults.value = [];
   });
 
-  const rolledGain = computed(() =>
-    rollResults.value.reduce((total, result) => total + result.restored, 0),
+  /**
+   * Прирост максимума хитов за каждый взятый уровень по порядку. Лист хранит
+   * его поуровнево, чтобы снижение уровня вернуло ровно эти значения, поэтому
+   * броски не схлопываются в сумму.
+   */
+  const hitPointsGains = computed<number[]>(() => {
+    if (!isHitPointsSectionVisible.value) {
+      return [];
+    }
+
+    if (gainMode.value === 'roll') {
+      return rollResults.value.map((result) => result.restored);
+    }
+
+    const gainPerLevel =
+      gainMode.value === 'max'
+        ? maxGainPerLevel.value
+        : averageGainPerLevel.value;
+
+    return Array.from({ length: levelsGained.value }, () => gainPerLevel);
+  });
+
+  const hitPointsGain = computed(() =>
+    hitPointsGains.value.reduce((total, gain) => total + gain, 0),
   );
 
-  const hitPointsGain = computed(() => {
-    if (!isHitPointsSectionVisible.value) {
-      return 0;
-    }
+  /** Сколько максимума вернут снимаемые уровни; 0 — прирост за них не записан. */
+  const hitPointsLoss = computed(() =>
+    isLevelDownSectionVisible.value
+      ? getLevelHitPointsLoss(character.value.health, draftLevel.value)
+      : 0,
+  );
 
-    if (gainMode.value === 'average') {
-      return levelsGained.value * averageGainPerLevel.value;
-    }
+  /** Прирост за снимаемые уровни записан — показываем, каким станет максимум. */
+  const isLevelDownLossVisible = computed(() => hitPointsLoss.value > 0);
 
-    if (gainMode.value === 'max') {
-      return levelsGained.value * maxGainPerLevel.value;
-    }
+  const maxHitPointsLossLabel = computed(
+    () =>
+      `${character.value.health.max} → ${Math.max(0, character.value.health.max - hitPointsLoss.value)}`,
+  );
 
-    return rolledGain.value;
-  });
+  const levelDownHint = computed(() =>
+    isLevelDownLossVisible.value
+      ? LEVEL_UP_HIT_POINTS_LABELS.levelDownHint
+      : LEVEL_UP_HIT_POINTS_LABELS.levelDownUnknownHint,
+  );
 
   /** В режиме броска применять нечего, пока кости не брошены. */
   const isRollPending = computed(
@@ -199,7 +225,7 @@
       return;
     }
 
-    setProgress(draftLevel.value, totalExperience.value, hitPointsGain.value);
+    setProgress(draftLevel.value, totalExperience.value, hitPointsGains.value);
     emit('close');
   }
 
@@ -332,12 +358,34 @@
           </div>
         </template>
 
-        <span
-          v-else-if="isLevelDownHintVisible"
-          class="text-xs text-dimmed"
-        >
-          {{ LEVEL_UP_HIT_POINTS_LABELS.levelDownHint }}
-        </span>
+        <template v-else-if="isLevelDownSectionVisible">
+          <USeparator class="my-1" />
+
+          <div class="flex flex-col gap-2">
+            <span
+              class="text-[10px] font-bold tracking-wider text-muted uppercase"
+            >
+              {{ LEVEL_UP_HIT_POINTS_LABELS.levelDownTitle }}
+            </span>
+
+            <div
+              v-if="isLevelDownLossVisible"
+              class="flex items-center justify-between text-sm"
+            >
+              <span class="text-muted">
+                {{ LEVEL_UP_HIT_POINTS_LABELS.maxHitPointsTitle }}
+              </span>
+
+              <span class="font-bold text-highlighted">
+                {{ maxHitPointsLossLabel }}
+              </span>
+            </div>
+
+            <span class="text-xs text-dimmed">
+              {{ levelDownHint }}
+            </span>
+          </div>
+        </template>
       </div>
     </template>
 

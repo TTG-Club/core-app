@@ -20,6 +20,7 @@ import type {
   CharacterHitDie,
   CharacterInventoryGroup,
   CharacterInventoryItem,
+  CharacterLevelHitPoints,
   CharacterSkill,
   CharacterSpecies,
   CharacterSpeed,
@@ -1386,9 +1387,33 @@ export function getLevelHitPointsGain(
 }
 
 /**
- * Максимум хитов класса на уровне: первый уровень даёт максимум кости, каждый
- * следующий — её среднее значение; модификатор Телосложения прибавляется на
- * каждом уровне (правило D&D 2024).
+ * Раскладка максимума хитов класса по уровням: первый уровень даёт максимум
+ * кости, каждый следующий — её среднее значение; модификатор Телосложения
+ * прибавляется на каждом уровне (правило D&D 2024).
+ *
+ * @param die номинал кости хитов класса.
+ * @param level уровень персонажа.
+ * @param modifier модификатор Телосложения.
+ * @returns прирост максимума хитов по уровням.
+ */
+export function getClassLevelHitPoints(
+  die: number,
+  level: number,
+  modifier: number,
+): CharacterLevelHitPoints[] {
+  const levels = Math.max(0, Math.trunc(level));
+
+  return Array.from({ length: levels }, (_, index) => ({
+    level: index + 1,
+    amount:
+      index === 0
+        ? getLevelHitPointsGain(die, modifier)
+        : getLevelHitPointsGain(getHitDieAverage(die), modifier),
+  }));
+}
+
+/**
+ * Максимум хитов класса на уровне — сумма раскладки по уровням.
  *
  * @param die номинал кости хитов класса.
  * @param level уровень персонажа.
@@ -1400,11 +1425,132 @@ export function getClassMaxHitPoints(
   level: number,
   modifier: number,
 ): number {
-  const firstLevelGain = getLevelHitPointsGain(die, modifier);
+  return getTotalLevelHitPoints(getClassLevelHitPoints(die, level, modifier));
+}
 
-  const perLevelGain = getLevelHitPointsGain(getHitDieAverage(die), modifier);
+/**
+ * Сумма прироста максимума хитов по записям уровней.
+ *
+ * @param gains записи прироста максимума хитов.
+ * @returns суммарный прирост максимума хитов.
+ */
+function getTotalLevelHitPoints(gains: CharacterLevelHitPoints[]): number {
+  return gains.reduce((total, gain) => total + gain.amount, 0);
+}
 
-  return firstLevelGain + Math.max(0, level - 1) * perLevelGain;
+/**
+ * Учёт хитов за взятые уровни: прирост записывается по уровням, максимум и
+ * текущие хиты растут на его сумму. Записи уровней с теми же номерами
+ * заменяются — уровень мог быть взят заново после понижения.
+ *
+ * @param health здоровье персонажа.
+ * @param previousLevel уровень до повышения.
+ * @param gains прирост максимума хитов за каждый взятый уровень по порядку.
+ * @returns новое здоровье персонажа.
+ */
+function applyLevelHitPoints(
+  health: CharacterHealth,
+  previousLevel: number,
+  gains: number[],
+): CharacterHealth {
+  const addedGains = gains.map((amount, index) => ({
+    level: previousLevel + index + 1,
+    amount: Math.max(0, Math.trunc(amount)),
+  }));
+
+  const addedLevels = new Set(addedGains.map((gain) => gain.level));
+
+  const levelGains = [
+    ...health.levelGains.filter((gain) => !addedLevels.has(gain.level)),
+    ...addedGains,
+  ].sort((left, right) => left.level - right.level);
+
+  const total = getTotalLevelHitPoints(addedGains);
+
+  const max = health.max + total;
+
+  return {
+    ...health,
+    max,
+    current: clamp(health.current + total, 0, max),
+    levelGains,
+  };
+}
+
+/**
+ * Сколько максимума хитов дали уровни выше указанного — столько вернёт
+ * снижение уровня.
+ *
+ * @param health здоровье персонажа.
+ * @param level новый уровень персонажа.
+ * @returns прирост, записанный за снимаемые уровни.
+ */
+export function getLevelHitPointsLoss(
+  health: CharacterHealth,
+  level: number,
+): number {
+  return getTotalLevelHitPoints(
+    health.levelGains.filter((gain) => gain.level > level),
+  );
+}
+
+/**
+ * Снятие хитов за уровни выше нового: максимум уменьшается на записанный за них
+ * прирост, записи этих уровней удаляются, текущие хиты обрезаются новым
+ * максимумом. Уровни без записи максимум не двигают.
+ *
+ * @param health здоровье персонажа.
+ * @param level новый уровень персонажа.
+ * @returns новое здоровье персонажа.
+ */
+function removeLevelHitPoints(
+  health: CharacterHealth,
+  level: number,
+): CharacterHealth {
+  const levelGains = health.levelGains.filter((gain) => gain.level <= level);
+
+  const loss = getLevelHitPointsLoss(health, level);
+
+  if (loss === 0) {
+    return { ...health, levelGains };
+  }
+
+  const max = Math.max(0, health.max - loss);
+
+  return {
+    ...health,
+    max,
+    current: clamp(health.current, 0, max),
+    levelGains,
+  };
+}
+
+/**
+ * Пересчёт здоровья при смене уровня: взятые уровни дописывают прирост в
+ * максимум и текущие хиты, снятые — возвращают записанный за них прирост.
+ * Уровень без изменений здоровье не трогает.
+ *
+ * @param health здоровье персонажа.
+ * @param previousLevel уровень до смены.
+ * @param nextLevel новый уровень персонажа.
+ * @param gains прирост максимума хитов за каждый взятый уровень по порядку.
+ * @returns новое здоровье персонажа.
+ */
+export function adjustHealthForLevel(
+  health: CharacterHealth,
+  previousLevel: number,
+  nextLevel: number,
+  gains: number[],
+): CharacterHealth {
+  if (nextLevel > previousLevel) {
+    return applyLevelHitPoints(health, previousLevel, gains);
+  }
+
+  if (nextLevel < previousLevel) {
+    return removeLevelHitPoints(health, nextLevel);
+  }
+
+  return health;
 }
 
 /**
@@ -1461,7 +1607,9 @@ export function adjustHealthForConstitution(
   previousScore: number,
   nextScore: number,
 ): CharacterHealth {
-  const delta = (getModifier(nextScore) - getModifier(previousScore)) * level;
+  const modifierDelta = getModifier(nextScore) - getModifier(previousScore);
+
+  const delta = modifierDelta * level;
 
   if (delta === 0 || health.max <= 0) {
     return health;
@@ -1473,6 +1621,12 @@ export function adjustHealthForConstitution(
     ...health,
     max,
     current: clamp(health.current + delta, 0, max),
+    // Модификатор входит в прирост каждого уровня, поэтому записи двигаются
+    // вместе с максимумом: иначе снижение уровня вернуло бы устаревшую сумму.
+    levelGains: health.levelGains.map((gain) => ({
+      ...gain,
+      amount: Math.max(HIT_POINTS_LEVEL_GAIN_MIN, gain.amount + modifierDelta),
+    })),
   };
 }
 
