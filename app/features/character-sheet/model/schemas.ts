@@ -33,9 +33,11 @@ import { descriptionNodesSchema } from './character-schema';
 import { SPELL_COMPONENT_LABELS } from './constants';
 import {
   getClassToolChoice,
+  matchToolProficiencyName,
   parseAbilityKeys,
   parseFeatMarker,
   parseItemWeight,
+  stripMarkupMarkers,
   toDescriptionNodes,
 } from './utils';
 
@@ -849,12 +851,17 @@ export function parseBackgroundDetail(
   let toolChoice: ClassChoice | null = null;
 
   for (const toolText of detail.toolProficiency) {
-    const choice = getClassToolChoice(toolText, 'background-tool');
+    // Владения приходят с разметкой каталога («{@item Воровские
+    // инструменты|url:thieves-tools-phb}»): без её снятия подпись попадала в
+    // лист сырым маркером и не совпадала с чекбоксом владения.
+    const plainText = stripMarkupMarkers(toolText);
+
+    const choice = getClassToolChoice(plainText, 'background-tool');
 
     if (choice) {
       toolChoice = toolChoice ?? choice;
-    } else if (toolText.trim()) {
-      toolFixed.push(toolText.trim());
+    } else if (plainText) {
+      toolFixed.push(matchToolProficiencyName(plainText));
     }
   }
 

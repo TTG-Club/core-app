@@ -3159,6 +3159,41 @@ export function applySkillProficiencies(
 }
 
 /**
+ * Снятие маркеров разметки каталога с прозы владений («{@item Инструменты
+ * повара|url:cook-s-utensils-phb}» → «Инструменты повара»). Разбор идёт общим
+ * парсером разметки: в ответах API маркеры бывают битыми (пропущена `}`, лишние
+ * пробелы у `|`), а он такие строки не роняет и не теряет подпись.
+ *
+ * @param text проза владений с маркерами разметки.
+ * @returns та же проза с подписями маркеров вместо самих маркеров.
+ */
+export function stripMarkupMarkers(text: string): string {
+  return getNodeText(parse(text)).replaceAll(/\s+/g, ' ').trim();
+}
+
+/**
+ * Приведение названия инструмента к каталогу владений: подпись маркера бывает
+ * строчной («инструменты стеклодува»), а чекбоксы владений сопоставляются по
+ * точному названию. Незнакомое название остаётся как есть.
+ *
+ * @param name название инструмента из ответа API.
+ * @returns название из каталога или исходное, если совпадения нет.
+ */
+export function matchToolProficiencyName(name: string): string {
+  const trimmed = name.trim();
+
+  const normalized = trimmed.toLowerCase().replaceAll('ё', 'е');
+
+  const catalogName = TOOL_PROFICIENCY_GROUPS.flatMap(
+    (group) => group.items,
+  ).find(
+    (toolName) => toolName.toLowerCase().replaceAll('ё', 'е') === normalized,
+  );
+
+  return catalogName ?? trimmed;
+}
+
+/**
  * Разбор маркера черты предыстории («{@feat Название [Eng]|url:...} (Уточнение)»):
  * url черты, её название и уточнение в скобках.
  *
