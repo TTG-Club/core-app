@@ -29,6 +29,7 @@ export { default as SheetItemAddModal } from './SheetItemAddModal.vue';
 export { default as SheetLongRestModal } from './SheetLongRestModal.vue';
 export { default as SheetMagicItemAddModal } from './SheetMagicItemAddModal.vue';
 export { default as SheetNameModal } from './SheetNameModal.vue';
+export { default as SheetNoteModal } from './SheetNoteModal.vue';
 export { default as SheetNotesTab } from './SheetNotesTab.vue';
 export { default as SheetPanel } from './SheetPanel.vue';
 export { default as SheetProficienciesPanel } from './SheetProficienciesPanel.vue';

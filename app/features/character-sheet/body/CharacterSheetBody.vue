@@ -52,6 +52,7 @@
     SheetLongRestModal,
     SheetMagicItemAddModal,
     SheetNameModal,
+    SheetNoteModal,
     SheetProficienciesPanel,
     SheetProficiencyGroupsModal,
     SheetRollModal,
@@ -112,6 +113,7 @@
     copySpellToSheet,
     removeFeature,
     removeInventoryItem,
+    removeNote,
     removeSpell,
     toggleInspiration,
     downloadCharacter,
@@ -361,6 +363,14 @@
   });
 
   const featAddModal = overlay.create(SheetFeatAddModal);
+
+  // Одна модалка на добавление и правку заметки: идентификатор пустой — форма
+  // создаёт новую запись.
+  const noteModal = overlay.create(SheetNoteModal, {
+    props: {
+      noteId: null,
+    },
+  });
 
   const spellAddModal = overlay.create(SheetSpellAddModal);
 
@@ -646,6 +656,22 @@
     }
 
     featureEditModal.open({ featureId });
+  }
+
+  function handleNoteAdd() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    noteModal.open({ noteId: null });
+  }
+
+  function handleNoteEdit(noteId: string) {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    noteModal.open({ noteId });
   }
 
   function handleSpellAdd() {
@@ -990,6 +1016,9 @@
           @roll-item-attack="handleItemAttackRoll"
           @roll-item-damage="handleItemDamageRoll"
           @edit-feature="handleFeatureEdit"
+          @add-note="handleNoteAdd"
+          @edit-note="handleNoteEdit"
+          @remove-note="removeNote"
           @remove-feature="removeFeature"
           @remove-item="removeInventoryItem"
           @remove-spell="removeSpell"

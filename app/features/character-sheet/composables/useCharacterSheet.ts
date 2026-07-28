@@ -11,6 +11,7 @@ import type {
   CharacterHealth,
   CharacterHitDie,
   CharacterInventoryItem,
+  CharacterNote,
   CharacterSettings,
   CharacterSpecies,
   CharacterSpeed,
@@ -1618,18 +1619,73 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Установка заметок персонажа; значение — хранимая форма редактора разметки.
+   * Добавление заметки в конец списка. Пустая запись (без заголовка и текста)
+   * не добавляется.
    *
-   * @param notes новые заметки персонажа.
+   * @param note заголовок и текст заметки в хранимой форме редактора разметки.
    */
-  function setNotes(notes: string): void {
+  function addNote(note: Omit<CharacterNote, 'id'>): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const title = note.title.trim();
+
+    const content = note.content.trim();
+
+    if (!title && !content) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      notes: [
+        ...character.value.notes,
+        { id: crypto.randomUUID(), title, content },
+      ],
+    };
+  }
+
+  /**
+   * Правка заметки; опустошённая запись (без заголовка и текста) не сохраняется.
+   *
+   * @param noteId идентификатор заметки.
+   * @param patch новые заголовок и текст заметки.
+   */
+  function updateNote(noteId: string, patch: Omit<CharacterNote, 'id'>): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const title = patch.title.trim();
+
+    const content = patch.content.trim();
+
+    if (!title && !content) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      notes: character.value.notes.map((note) =>
+        note.id === noteId ? { ...note, title, content } : note,
+      ),
+    };
+  }
+
+  /**
+   * Удаление заметки.
+   *
+   * @param noteId идентификатор заметки.
+   */
+  function removeNote(noteId: string): void {
     if (!ensureEditable()) {
       return;
     }
 
     character.value = {
       ...character.value,
-      notes,
+      notes: character.value.notes.filter((note) => note.id !== noteId),
     };
   }
 
@@ -1760,6 +1816,7 @@ export function useCharacterSheet() {
     downloadCharacter,
     addFeature,
     addFeats,
+    addNote,
     addInventoryItems,
     addCustomInventoryItem,
     addCustomSpell,
@@ -1767,15 +1824,16 @@ export function useCharacterSheet() {
     copySpellToSheet,
     removeFeature,
     removeInventoryItem,
+    removeNote,
     removeSpell,
     updateFeature,
+    updateNote,
     updateCustomInventoryItem,
     updateCustomSpell,
     setBackground,
     setClass,
     setCurrency,
     setName,
-    setNotes,
     setProficiencies,
     setProgress,
     setSettings,

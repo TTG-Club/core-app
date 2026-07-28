@@ -1069,6 +1069,18 @@ export interface ItemSummary {
   weapon: InventoryWeapon | null;
 }
 
+/** Заметка игрока на листе персонажа. */
+export interface CharacterNote {
+  /** Идентификатор записи. */
+  id: string;
+
+  /** Заголовок заметки; пустой — заметка без названия. */
+  title: string;
+
+  /** Текст заметки в хранимой форме редактора `MarkupEditor`. */
+  content: string;
+}
+
 /** Персонаж на листе персонажа. */
 export interface Character {
   id: string;
@@ -1144,8 +1156,8 @@ export interface Character {
 
   inventory: CharacterInventoryItem[];
 
-  /** Заметки игрока в разметке сайта (хранимая форма редактора `MarkupEditor`). */
-  notes: string;
+  /** Заметки игрока отдельными записями. */
+  notes: CharacterNote[];
 
   /** Настройки листа (правила подсчёта). */
   settings: CharacterSettings;

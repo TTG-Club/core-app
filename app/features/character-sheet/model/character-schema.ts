@@ -1,5 +1,6 @@
 import type {
   Character,
+  CharacterNote,
   CharacterSheetDetail,
   CharacterSheetListItem,
   CharacterSheetListPage,
@@ -11,7 +12,11 @@ import type {
 import { z } from '~/utils/zod';
 import { CasterType } from '~classes/model';
 
-import { DRAFT_CHARACTER_ID } from './constants';
+import {
+  DRAFT_CHARACTER_ID,
+  LEGACY_NOTE_ID,
+  SHEET_NOTE_LABELS,
+} from './constants';
 import { DEFAULT_CHARACTER } from './mock';
 
 /**
@@ -305,6 +310,42 @@ const inventoryWeaponSchema = z
   .nullable()
   .catch(null);
 
+const noteSchema = z.object({
+  id: z.string(),
+  title: z.string().catch(''),
+  content: z.string().catch(''),
+});
+
+/**
+ * Заметки листа, собранного до их разделения на записи, — одна строка разметки.
+ * Переносим её в единственную заметку, иначе записи игрока просто пропали бы.
+ *
+ * @param notes заметки старого листа в хранимой форме редактора.
+ * @returns список заметок; пустой текст записи не даёт.
+ */
+function toLegacyNotes(notes: string): CharacterNote[] {
+  const content = notes.trim();
+
+  if (!content) {
+    return [];
+  }
+
+  return [
+    {
+      id: LEGACY_NOTE_ID,
+      title: SHEET_NOTE_LABELS.legacyTitle,
+      content,
+    },
+  ];
+}
+
+const notesSchema = z
+  .union([z.array(noteSchema), z.string()])
+  .catch([])
+  .transform((notes) =>
+    typeof notes === 'string' ? toLegacyNotes(notes) : notes,
+  );
+
 const inventoryItemSchema = z.object({
   id: z.string(),
   url: z.string().catch(''),
@@ -354,7 +395,7 @@ const characterSchema = z.object({
   currency: currencySchema,
   customCurrencies: z.array(customCurrencySchema).catch([]),
   inventory: z.array(inventoryItemSchema).catch([]),
-  notes: z.string().catch(''),
+  notes: notesSchema,
   settings: settingsSchema,
 });
 

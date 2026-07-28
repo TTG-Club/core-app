@@ -34,7 +34,7 @@ import {
   drawTextBlocks,
   drawValueBox,
 } from './layout';
-import { toPdfTextBlocks } from './markup-text';
+import { toPdfHeadingBlock, toPdfTextBlocks } from './markup-text';
 
 /**
  * Столбцы таблицы снаряжения.
@@ -185,7 +185,11 @@ export function drawEquipmentPage(
     drawTableRow(context, flow, columns, []);
   }
 
-  const noteBlocks = toPdfTextBlocks(parseStoredMarkupNodes(character.notes));
+  // Заметки идут записями: название каждой рисуется заголовком над её текстом.
+  const noteBlocks = character.notes.flatMap((note) => [
+    ...(note.title ? [toPdfHeadingBlock(note.title)] : []),
+    ...toPdfTextBlocks(parseStoredMarkupNodes(note.content)),
+  ]);
 
   if (!noteBlocks.length) {
     return;

@@ -1875,6 +1875,41 @@ export const SHEET_TAB_EMPTY_LABELS: Record<
 };
 
 /**
+ * Идентификатор заметки, в которую переносится текст листа, собранного до
+ * разделения заметок на записи. Значение постоянное: при каждой загрузке такого
+ * листа получается одна и та же запись.
+ */
+export const LEGACY_NOTE_ID = 'note:legacy';
+
+/** Подписи вкладки «Заметки» и модалки заметки. */
+export const SHEET_NOTE_LABELS: Record<
+  | 'add'
+  | 'addTitle'
+  | 'editTitle'
+  | 'titleField'
+  | 'titlePlaceholder'
+  | 'contentField'
+  | 'contentPlaceholder'
+  | 'untitled'
+  | 'legacyTitle'
+  | 'addAction'
+  | 'saveAction',
+  string
+> = {
+  add: 'Добавить заметку',
+  addTitle: 'Новая заметка',
+  editTitle: 'Редактирование заметки',
+  addAction: 'Добавить',
+  saveAction: 'Сохранить',
+  titleField: 'Заголовок',
+  titlePlaceholder: 'Например: зацепки в Глубоководье',
+  contentField: 'Текст',
+  contentPlaceholder: 'Заметки о персонаже, зацепки, цели, союзники…',
+  untitled: 'Без названия',
+  legacyTitle: 'Заметки',
+};
+
+/**
  * Скелетон листа: сколько плашек рисовать в блоках, длина которых зависит от
  * самого документа. Числа подобраны под типовой лист — подложка совпадает с
  * ним по высоте, и после загрузки страница не прыгает.
