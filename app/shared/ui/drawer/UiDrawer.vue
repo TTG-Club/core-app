@@ -37,13 +37,6 @@
     (e: 'close'): void;
   }>();
 
-  // Публикуем путь открытой сущности для баг-репорта (стандартный режим).
-  const { openEntityPath, setOpenEntityPath, clearOpenEntityPath } =
-    useOpenEntityPath();
-
-  // Путь, записанный именно этим экземпляром drawer-а, — для guard «чистим только своё».
-  let lastSetPath = '';
-
   /** Извлекает относительный путь из абсолютного url для копирования. */
   function extractRelativePath(absoluteUrl: string): string {
     try {
@@ -53,28 +46,15 @@
     }
   }
 
-  watch(
-    () => url,
-    (newUrl) => {
-      // Drawer без url (подклассы, мультикласс, превью) не трогает канал,
-      // чтобы не затереть путь родительского drawer-а.
-      if (!newUrl) {
-        return;
-      }
-
-      lastSetPath = extractRelativePath(newUrl);
-      setOpenEntityPath(lastSetPath);
-    },
-    { immediate: true },
+  /**
+   * Путь открытой сущности для баг-репорта (стандартный режим). Публикует его
+   * `DrawerBody`, а не этот компонент: тело живёт ровно пока drawer открыт,
+   * а сам `UiDrawer` после закрытия остаётся смонтированным.
+   * Drawer без url (подклассы, мультикласс, превью) канал не трогает.
+   */
+  const entityPath = computed(() =>
+    url ? extractRelativePath(url) : undefined,
   );
-
-  onBeforeUnmount(() => {
-    // Чистим только если в канале всё ещё наш путь: защита от вложенных
-    // drawer-ов и гонки close/open при быстром переключении.
-    if (lastSetPath && openEntityPath.value === lastSetPath) {
-      clearOpenEntityPath();
-    }
-  });
 
   const isGalleryOpened = useState('ui-gallery-opened', () => false);
   const { greaterOrEqual } = useBreakpoints();
@@ -161,6 +141,7 @@
         :is-loading="isLoading"
         :is-error="isError"
         :comments-path="commentsPath"
+        :entity-path="entityPath"
       >
         <slot name="default" />
       </DrawerBody>

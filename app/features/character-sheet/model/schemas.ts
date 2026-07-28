@@ -5,6 +5,7 @@ import type {
   BackgroundOption,
   BackgroundSummary,
   CatalogSpellDetail,
+  CharacterInnateSpell,
   ClassChoice,
   ClassFeatureSummary,
   ClassOption,
@@ -32,9 +33,11 @@ import { descriptionNodesSchema } from './character-schema';
 import { SPELL_COMPONENT_LABELS } from './constants';
 import {
   getClassToolChoice,
+  matchToolProficiencyName,
   parseAbilityKeys,
   parseFeatMarker,
   parseItemWeight,
+  stripMarkupMarkers,
   toDescriptionNodes,
 } from './utils';
 
@@ -68,6 +71,18 @@ const speciesFeatureSchema = z.object({
   description: descriptionNodesSchema,
 });
 
+const speciesInnateSpellSchema = z.object({
+  spell: z.object({
+    url: z.string(),
+    name: z.object({ rus: z.string().catch('') }),
+    level: z.coerce.number().catch(0),
+    school: z.string().catch(''),
+    concentration: z.boolean().catch(false),
+    ritual: z.boolean().catch(false),
+  }),
+  requiredLevel: z.coerce.number().min(1).max(20).catch(1),
+});
+
 /** Схема детального ответа вида или подвида (нужные листу поля). */
 const speciesDetailSchema = z.object({
   url: z.string(),
@@ -80,6 +95,7 @@ const speciesDetailSchema = z.object({
     })
     .catch({ size: '', speed: '' }),
   features: z.array(speciesFeatureSchema).catch([]),
+  innateSpells: z.array(speciesInnateSpellSchema).catch([]),
 });
 
 /** Ответ списка подвидов: массив детальных ответов. */
@@ -100,6 +116,20 @@ function toSpeciesSummary(
     description: feature.description,
   }));
 
+  const innateSpells: CharacterInnateSpell[] = detail.innateSpells.map(
+    (innateSpell) => ({
+      spell: {
+        url: innateSpell.spell.url,
+        name: innateSpell.spell.name.rus,
+        level: innateSpell.spell.level,
+        school: innateSpell.spell.school,
+        concentration: innateSpell.spell.concentration,
+        ritual: innateSpell.spell.ritual,
+      },
+      requiredLevel: innateSpell.requiredLevel,
+    }),
+  );
+
   return {
     url: detail.url,
     name: detail.name.rus,
@@ -107,6 +137,7 @@ function toSpeciesSummary(
     sizeText: detail.properties.size,
     speedText: detail.properties.speed,
     features,
+    innateSpells,
   };
 }
 
@@ -820,12 +851,17 @@ export function parseBackgroundDetail(
   let toolChoice: ClassChoice | null = null;
 
   for (const toolText of detail.toolProficiency) {
-    const choice = getClassToolChoice(toolText, 'background-tool');
+    // Владения приходят с разметкой каталога («{@item Воровские
+    // инструменты|url:thieves-tools-phb}»): без её снятия подпись попадала в
+    // лист сырым маркером и не совпадала с чекбоксом владения.
+    const plainText = stripMarkupMarkers(toolText);
+
+    const choice = getClassToolChoice(plainText, 'background-tool');
 
     if (choice) {
       toolChoice = toolChoice ?? choice;
-    } else if (toolText.trim()) {
-      toolFixed.push(toolText.trim());
+    } else if (plainText) {
+      toolFixed.push(matchToolProficiencyName(plainText));
     }
   }
 

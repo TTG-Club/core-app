@@ -1,5 +1,6 @@
 import type {
   Character,
+  CharacterNote,
   CharacterSheetDetail,
   CharacterSheetListItem,
   CharacterSheetListPage,
@@ -11,7 +12,11 @@ import type {
 import { z } from '~/utils/zod';
 import { CasterType } from '~classes/model';
 
-import { DRAFT_CHARACTER_ID } from './constants';
+import {
+  DRAFT_CHARACTER_ID,
+  LEGACY_NOTE_ID,
+  SHEET_NOTE_LABELS,
+} from './constants';
 import { DEFAULT_CHARACTER } from './mock';
 
 /**
@@ -56,16 +61,6 @@ const descriptionNodeSchema = z.custom<FeatureDescriptionNode>(
  */
 export const descriptionNodesSchema = z.array(descriptionNodeSchema).catch([]);
 
-const speciesSchema = z
-  .object({
-    url: z.string(),
-    name: z.string().catch(''),
-    lineageUrl: z.string().nullable().catch(null),
-    lineageName: z.string().nullable().catch(null),
-  })
-  .nullable()
-  .catch(null);
-
 const characterClassSchema = z
   .object({
     url: z.string(),
@@ -98,6 +93,9 @@ const featureSchema = z.object({
   description: descriptionNodesSchema,
   origin: z.enum(['species', 'lineage', 'class', 'feat', 'none']).catch('none'),
   originName: z.string().catch(''),
+  // Листы до учёта уровня умений его не хранят: снятие уровня такие записи не
+  // трогает, пока уровень не будет взят заново.
+  level: z.coerce.number().nullable().catch(null),
   choice: z.string().nullable().catch(null),
 });
 
@@ -117,6 +115,24 @@ const spellSchema = z.object({
   duration: z.string().optional().catch(undefined),
   description: z.array(descriptionNodeSchema).optional().catch(undefined),
 });
+
+const speciesSchema = z
+  .object({
+    url: z.string(),
+    name: z.string().catch(''),
+    lineageUrl: z.string().nullable().catch(null),
+    lineageName: z.string().nullable().catch(null),
+    innateSpells: z
+      .array(
+        z.object({
+          spell: spellSchema,
+          requiredLevel: z.coerce.number().min(1).max(20).catch(1),
+        }),
+      )
+      .catch([]),
+  })
+  .nullable()
+  .catch(null);
 
 // Потраченные ячейки круга. Максимум считается по классу и уровню, поэтому в
 // документе его нет: круг с битым номером просто отбрасывается схемой массива.
@@ -204,11 +220,19 @@ const skillSchema = z.object({
   proficiency: skillProficiencySchema.catch('none'),
 });
 
+const levelHitPointsSchema = z.object({
+  level: z.coerce.number(),
+  amount: z.coerce.number().catch(0),
+});
+
 const healthSchema = z
   .object({
     current: z.coerce.number().catch(0),
     max: z.coerce.number().catch(0),
     temporary: z.coerce.number().catch(0),
+    // Листы до появления учёта прироста записей не имеют: снижение уровня у них
+    // максимум не тронет, пока уровни не будут взяты заново.
+    levelGains: z.array(levelHitPointsSchema).catch([]),
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.health }));
 
@@ -289,6 +313,42 @@ const inventoryWeaponSchema = z
   .nullable()
   .catch(null);
 
+const noteSchema = z.object({
+  id: z.string(),
+  title: z.string().catch(''),
+  content: z.string().catch(''),
+});
+
+/**
+ * Заметки листа, собранного до их разделения на записи, — одна строка разметки.
+ * Переносим её в единственную заметку, иначе записи игрока просто пропали бы.
+ *
+ * @param notes заметки старого листа в хранимой форме редактора.
+ * @returns список заметок; пустой текст записи не даёт.
+ */
+function toLegacyNotes(notes: string): CharacterNote[] {
+  const content = notes.trim();
+
+  if (!content) {
+    return [];
+  }
+
+  return [
+    {
+      id: LEGACY_NOTE_ID,
+      title: SHEET_NOTE_LABELS.legacyTitle,
+      content,
+    },
+  ];
+}
+
+const notesSchema = z
+  .union([z.array(noteSchema), z.string()])
+  .catch([])
+  .transform((notes) =>
+    typeof notes === 'string' ? toLegacyNotes(notes) : notes,
+  );
+
 const inventoryItemSchema = z.object({
   id: z.string(),
   url: z.string().catch(''),
@@ -338,7 +398,7 @@ const characterSchema = z.object({
   currency: currencySchema,
   customCurrencies: z.array(customCurrencySchema).catch([]),
   inventory: z.array(inventoryItemSchema).catch([]),
-  notes: z.string().catch(''),
+  notes: notesSchema,
   settings: settingsSchema,
 });
 

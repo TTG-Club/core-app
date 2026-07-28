@@ -1,8 +1,13 @@
 import type { Character, CharacterSpell } from '../types';
 import type { PdfBuildContext, PdfFlow, PdfTableColumn } from './types';
 
-import { RESOURCE_RECOVERY_LABELS } from '../constants';
 import {
+  INNATE_SPELL_GROUP_LABEL,
+  INNATE_SPELL_GROUP_LEVEL,
+  RESOURCE_RECOVERY_LABELS,
+} from '../constants';
+import {
+  getAvailableInnateSpells,
   getSpellGroups,
   getSpellLevelLabel,
   getSpellSlotCircles,
@@ -146,8 +151,9 @@ export function drawSpellsPage(
   character: Character,
 ): void {
   const slotRows = getSpellSlotRows(character);
+  const innateSpells = getAvailableInnateSpells(character);
 
-  if (!character.spells.length && !slotRows.length) {
+  if (!character.spells.length && !innateSpells.length && !slotRows.length) {
     return;
   }
 
@@ -159,7 +165,7 @@ export function drawSpellsPage(
 
   drawSpellSlots(context, character, flow);
 
-  if (!character.spells.length) {
+  if (!character.spells.length && !innateSpells.length) {
     return;
   }
 
@@ -169,10 +175,21 @@ export function drawSpellsPage(
 
   drawTableHead(context, flow, columns);
 
-  const groups = getSpellGroups(
-    character.spells,
-    slotRows.map((row) => row.level),
-  );
+  const groups = [
+    ...(innateSpells.length
+      ? [
+          {
+            level: INNATE_SPELL_GROUP_LEVEL,
+            label: INNATE_SPELL_GROUP_LABEL,
+            spells: innateSpells,
+          },
+        ]
+      : []),
+    ...getSpellGroups(
+      character.spells,
+      slotRows.map((row) => row.level),
+    ),
+  ];
 
   for (const group of groups) {
     if (!group.spells.length) {

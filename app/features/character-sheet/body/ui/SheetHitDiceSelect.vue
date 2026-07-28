@@ -21,20 +21,12 @@
     isPlusDisabled: boolean;
   }
 
-  // Общий блок выбора костей хитов для обоих отдыхов: короткий тратит кости
-  // (предел — остаток), продолжительный возвращает (предел — нехватка до
-  // максимума и общее ограничение по правилам).
-  const {
-    pools,
-    totalLimit = Number.POSITIVE_INFINITY,
-    addLabel,
-    removeLabel,
-  } = defineProps<{
+  // Блок выбора костей хитов к трате на коротком отдыхе: предел номинала —
+  // его остаток. Продолжительный отдых выбора не требует: по правилам 2024 года
+  // он возвращает все потраченные кости.
+  const { pools, addLabel, removeLabel } = defineProps<{
     /** Пулы костей хитов по номиналам с пределом выбора. */
     pools: HitDiceSelectPool[];
-
-    /** Ограничение суммы выбранных костей по всем номиналам. */
-    totalLimit?: number;
 
     /** Подпись кнопки «+» для скринридера; к ней добавляется номинал. */
     addLabel: string;
@@ -57,12 +49,6 @@
     return Math.min(counts.value[pool.die] ?? 0, pool.limit);
   }
 
-  const selectedTotal = computed(() =>
-    pools.reduce((total, pool) => total + getSelected(pool), 0),
-  );
-
-  const isTotalReached = computed(() => selectedTotal.value >= totalLimit);
-
   const rows = computed<HitDiceSelectRow[]>(() =>
     pools.map((pool) => {
       const selected = getSelected(pool);
@@ -74,27 +60,21 @@
         removeAriaLabel: `${removeLabel} ${pool.label}`,
         addAriaLabel: `${addLabel} ${pool.label}`,
         isMinusDisabled: selected <= 0,
-        isPlusDisabled: selected >= pool.limit || isTotalReached.value,
+        isPlusDisabled: selected >= pool.limit,
       };
     }),
   );
 
   /**
-   * Изменение количества костей номинала: значение ограничивается пределом
-   * пула, а прирост — ещё и остатком общего ограничения.
+   * Изменение количества костей номинала: значение ограничивается пределом пула.
    *
    * @param row строка выбора костей номинала.
    * @param delta смещение количества.
    */
   function handleAdjust(row: HitDiceSelectRow, delta: number): void {
-    const limit = Math.min(
-      row.limit,
-      row.selected + Math.max(0, totalLimit - selectedTotal.value),
-    );
-
     counts.value = {
       ...counts.value,
-      [row.die]: clamp(row.selected + delta, 0, limit),
+      [row.die]: clamp(row.selected + delta, 0, row.limit),
     };
   }
 </script>

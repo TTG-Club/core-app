@@ -313,6 +313,17 @@ export function toPdfTextBlocks(
 }
 
 /**
+ * Блок-заголовок для текста, которого нет в разметке (например, название
+ * заметки над её содержимым).
+ *
+ * @param text текст заголовка.
+ * @returns блок заголовка, готовый к отрисовке в потоке.
+ */
+export function toPdfHeadingBlock(text: string): PdfTextBlock {
+  return createBlock('heading', [{ text, style: 'bold' }]);
+}
+
+/**
  * Плоский текст описания одной строкой — для мест, где на абзацы места нет
  * (подпись особенности в списке первой страницы).
  *

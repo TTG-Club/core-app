@@ -41,6 +41,7 @@
     carryingCapacity: number;
     features: CharacterFeature[];
     spells: CharacterSpell[];
+    innateSpells: CharacterSpell[];
     spellcasting: SpellcastingBreakdown;
 
     /** Ячейки заклинаний по кругам; пусто — класс ячеек не даёт. */
@@ -73,6 +74,9 @@
     'roll-item-damage': [inventoryItem: CharacterInventoryItem];
     'edit-feature': [featureId: string];
     'remove-feature': [featureId: string];
+    'add-note': [];
+    'edit-note': [noteId: string];
+    'remove-note': [noteId: string];
     'remove-item': [inventoryItemId: string];
     'remove-spell': [spellUrl: string];
     'toggle-spell-slot': [level: number, index: number];
@@ -164,6 +168,18 @@
 
   function handleFeatureRemove(featureId: string) {
     emit('remove-feature', featureId);
+  }
+
+  function handleNoteAdd() {
+    emit('add-note');
+  }
+
+  function handleNoteEdit(noteId: string) {
+    emit('edit-note', noteId);
+  }
+
+  function handleNoteRemove(noteId: string) {
+    emit('remove-note', noteId);
   }
 
   // Подписи разделов всегда полные — сокращений нет. Когда ряд не помещается
@@ -821,6 +837,7 @@
           <SheetSpellsTab
             v-else-if="activeSlot === 'spells'"
             :spells="spells"
+            :innate-spells="innateSpells"
             :spellcasting="spellcasting"
             :spell-slots="spellSlots"
             @add-spell="handleSpellAdd"
@@ -841,7 +858,12 @@
             @remove-feature="handleFeatureRemove"
           />
 
-          <SheetNotesTab v-else />
+          <SheetNotesTab
+            v-else
+            @add-note="handleNoteAdd"
+            @edit-note="handleNoteEdit"
+            @remove-note="handleNoteRemove"
+          />
         </div>
       </Transition>
     </div>

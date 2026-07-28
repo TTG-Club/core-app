@@ -21,6 +21,7 @@
   import {
     ABILITY_LABELS,
     ARMOR_PROFICIENCY_GROUPS,
+    getAvailableInnateSpells,
     getWeaponAttackBonus,
     getWeaponDamage,
     LANGUAGE_PROFICIENCY_GROUPS,
@@ -51,6 +52,7 @@
     SheetLongRestModal,
     SheetMagicItemAddModal,
     SheetNameModal,
+    SheetNoteModal,
     SheetProficienciesPanel,
     SheetProficiencyGroupsModal,
     SheetRollModal,
@@ -111,6 +113,7 @@
     copySpellToSheet,
     removeFeature,
     removeInventoryItem,
+    removeNote,
     removeSpell,
     toggleInspiration,
     downloadCharacter,
@@ -361,6 +364,14 @@
 
   const featAddModal = overlay.create(SheetFeatAddModal);
 
+  // Одна модалка на добавление и правку заметки: идентификатор пустой — форма
+  // создаёт новую запись.
+  const noteModal = overlay.create(SheetNoteModal, {
+    props: {
+      noteId: null,
+    },
+  });
+
   const spellAddModal = overlay.create(SheetSpellAddModal);
 
   // Одна модалка на добавление и редактирование своего заклинания: URL пустой —
@@ -595,6 +606,10 @@
     speciesWizardModal.open();
   }
 
+  const availableInnateSpells = computed(() =>
+    getAvailableInnateSpells(character.value),
+  );
+
   function handleClassEdit() {
     if (!ensureEditable()) {
       return;
@@ -641,6 +656,22 @@
     }
 
     featureEditModal.open({ featureId });
+  }
+
+  function handleNoteAdd() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    noteModal.open({ noteId: null });
+  }
+
+  function handleNoteEdit(noteId: string) {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    noteModal.open({ noteId });
   }
 
   function handleSpellAdd() {
@@ -961,6 +992,7 @@
           :carrying-capacity="carryingCapacity"
           :features="character.features"
           :spells="character.spells"
+          :innate-spells="availableInnateSpells"
           :spellcasting="spellcastingBreakdown"
           :spell-slots="spellSlotRows"
           :has-main-tab="!isWide"
@@ -984,6 +1016,9 @@
           @roll-item-attack="handleItemAttackRoll"
           @roll-item-damage="handleItemDamageRoll"
           @edit-feature="handleFeatureEdit"
+          @add-note="handleNoteAdd"
+          @edit-note="handleNoteEdit"
+          @remove-note="removeNote"
           @remove-feature="removeFeature"
           @remove-item="removeInventoryItem"
           @remove-spell="removeSpell"

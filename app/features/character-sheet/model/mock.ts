@@ -75,7 +75,7 @@ export const DEFAULT_CHARACTER: Character = {
     { name: 'Убеждение', ability: 'charisma', proficiency: 'none' },
     { name: 'Уход за животными', ability: 'wisdom', proficiency: 'none' },
   ],
-  health: { current: 0, max: 0, temporary: 0 },
+  health: { current: 0, max: 0, temporary: 0, levelGains: [] },
   hitDice: [],
   extraHitDice: [],
   classResources: [],
@@ -95,6 +95,6 @@ export const DEFAULT_CHARACTER: Character = {
   },
   customCurrencies: [],
   inventory: [],
-  notes: '',
+  notes: [],
   settings: { weaponAttackAbility: null },
 };

@@ -18,13 +18,17 @@
     getSpellSlotCircles,
     getSpellSlotSummary,
     getSpellStatRows,
+    INNATE_SPELL_GROUP_LABEL,
+    INNATE_SPELL_GROUP_LEVEL,
     isCustomSpell,
     SHEET_TAB_EMPTY_LABELS,
+    SPELL_NAME_SORT_LOCALE,
     SPELL_SLOTS_LABEL,
   } from '../../model';
 
   const props = defineProps<{
     spells: CharacterSpell[];
+    innateSpells: CharacterSpell[];
     spellcasting: SpellcastingBreakdown;
 
     /** Ячейки заклинаний по кругам; пусто — класс ячеек не даёт. */
@@ -86,12 +90,35 @@
     () => new Map(props.spellSlots.map((row) => [row.level, row])),
   );
 
-  const displayGroups = computed(() =>
-    getSpellGroups(
+  const displayGroups = computed(() => {
+    const regularGroups = getSpellGroups(
       props.spells,
       props.spellSlots.map((row) => row.level),
-    ).map((group) => {
-      const slotRow = slotRowByLevel.value.get(group.level);
+    ).map((group) => ({ ...group, innate: false }));
+
+    const groups = props.innateSpells.length
+      ? [
+          {
+            level: INNATE_SPELL_GROUP_LEVEL,
+            label: INNATE_SPELL_GROUP_LABEL,
+            spells: [...props.innateSpells].sort(
+              (firstSpell, secondSpell) =>
+                firstSpell.level - secondSpell.level
+                || firstSpell.name.localeCompare(
+                  secondSpell.name,
+                  SPELL_NAME_SORT_LOCALE,
+                ),
+            ),
+            innate: true,
+          },
+          ...regularGroups,
+        ]
+      : regularGroups;
+
+    return groups.map((group) => {
+      const slotRow = group.innate
+        ? undefined
+        : slotRowByLevel.value.get(group.level);
 
       return {
         ...group,
@@ -113,20 +140,23 @@
 
           return {
             ...spell,
+            isInnate: group.innate,
             isCustom,
             isExpanded,
             // Действия строки — те же, что и у предмета снаряжения: своё
             // заклинание правится формой листа, каталожное сначала копируется в
             // лист, а убирается из книги и то, и другое.
-            menuItems: getSpellMenuItems({
-              onEdit: isCustom
-                ? () => emit('edit-spell', spell.url)
-                : undefined,
-              onCopy: isCustom
-                ? undefined
-                : () => emit('copy-spell', spell.url),
-              onRemove: () => emit('remove-spell', spell.url),
-            }),
+            menuItems: group.innate
+              ? []
+              : getSpellMenuItems({
+                  onEdit: isCustom
+                    ? () => emit('edit-spell', spell.url)
+                    : undefined,
+                  onCopy: isCustom
+                    ? undefined
+                    : () => emit('copy-spell', spell.url),
+                  onRemove: () => emit('remove-spell', spell.url),
+                }),
             // У каталожных заклинаний этих полей нет — список выйдет пустым.
             statRows: getSpellStatRows(spell),
             descriptionNodes: spell.description ?? [],
@@ -140,8 +170,8 @@
           };
         }),
       };
-    }),
-  );
+    });
+  });
 
   type DisplaySpell = (typeof displayGroups.value)[number]['spells'][number];
 
@@ -345,6 +375,7 @@
             <!-- Меню действий над заклинанием: тот же трейлинг, что и у строки
               снаряжения — правка своего, копия каталожного в лист и удаление -->
             <UDropdownMenu
+              v-if="!spell.isInnate"
               :items="spell.menuItems"
               :content="{ align: 'end' }"
             >
@@ -407,7 +438,7 @@
     <!-- Ряды ячеек показываются и без заклинаний (ими повышают круг уже
       известных), поэтому подсказка о пустой книге зависит от самих заклинаний -->
     <div
-      v-if="!spells.length"
+      v-if="!spells.length && !innateSpells.length"
       class="flex h-64 items-center justify-center rounded-lg border border-dashed border-default text-sm text-dimmed"
     >
       {{ SHEET_TAB_EMPTY_LABELS.spells }}

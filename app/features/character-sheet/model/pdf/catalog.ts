@@ -11,6 +11,7 @@ import { chunk } from 'es-toolkit';
 import { SPELLS_DETAIL_BASE_PATH } from '../constants';
 import { parseCatalogDescription, parseCatalogSpellDetail } from '../schemas';
 import {
+  getAvailableInnateSpells,
   getInventoryItemDetailPath,
   isCustomInventoryItem,
   isCustomSpell,
@@ -117,7 +118,12 @@ function getPendingItems(
 export async function loadCatalogDescriptions(
   character: Character,
 ): Promise<CatalogDescriptions> {
-  const pendingSpellUrls = getPendingSpellUrls(character.spells);
+  const allSpells = [
+    ...character.spells,
+    ...getAvailableInnateSpells(character),
+  ];
+
+  const pendingSpellUrls = getPendingSpellUrls(allSpells);
   const pendingItems = getPendingItems(character.inventory);
 
   await Promise.all([
@@ -140,7 +146,7 @@ export async function loadCatalogDescriptions(
 
   const spells = new Map<string, CatalogSpellDetail>();
 
-  for (const spell of character.spells) {
+  for (const spell of allSpells) {
     const detail = spellDetailCache.get(spell.url);
 
     if (detail) {

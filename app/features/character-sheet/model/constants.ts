@@ -780,7 +780,11 @@ export const LEVEL_UP_HIT_POINTS_LABELS: Record<
   | 'maxHitPointsTitle'
   | 'rollPending'
   | 'growthHint'
-  | 'levelDownHint',
+  | 'levelDownTitle'
+  | 'levelDownFeaturesTitle'
+  | 'levelDownFeaturesHint'
+  | 'levelDownHint'
+  | 'levelDownUnknownHint',
   string
 > = {
   title: 'Хиты за повышение уровня',
@@ -793,8 +797,14 @@ export const LEVEL_UP_HIT_POINTS_LABELS: Record<
   maxHitPointsTitle: 'Максимум хитов',
   rollPending: 'бросьте кости',
   growthHint: 'Кости хитов и текущие хиты вырастут вместе с максимумом.',
+  levelDownTitle: 'Что вернут снятые уровни',
+  levelDownFeaturesTitle: 'Умения снятых уровней',
+  levelDownFeaturesHint:
+    'Эти умения класса уйдут с вкладки «Особенности» — их дают снимаемые уровни. Ручные записи и умения оставшихся уровней не тронутся.',
   levelDownHint:
-    'Кости хитов уменьшатся до нового уровня. Максимум хитов при снижении уровня не меняется — поправьте его в настройке здоровья при необходимости.',
+    'Из максимума вернётся ровно тот прирост, который дали снимаемые уровни; кости хитов уменьшатся вместе с уровнем.',
+  levelDownUnknownHint:
+    'Прирост хитов за снимаемые уровни не записан (лист собран до его учёта), поэтому максимум не изменится — поправьте его в настройке здоровья при необходимости.',
 };
 
 /** Подпись ячеек заклинаний договора колдуна в списке того, что вернёт отдых. */
@@ -860,15 +870,6 @@ export const SHORT_REST_LABELS: Record<
   finishedEmpty: 'Кости хитов не тратились.',
 };
 
-/**
- * Делитель максимума костей хитов для возврата в продолжительный отдых:
- * возвращается половина от общего количества костей (правило D&D 2024).
- */
-export const HIT_DICE_LONG_REST_DIVISOR = 2;
-
-/** Минимум костей хитов, возвращаемых продолжительным отдыхом. */
-export const HIT_DICE_LONG_REST_MIN = 1;
-
 /** Подписи модалки продолжительного отдыха. */
 export const LONG_REST_LABELS: Record<
   | 'title'
@@ -878,9 +879,7 @@ export const LONG_REST_LABELS: Record<
   | 'hitPointsRecovery'
   | 'diceTitle'
   | 'diceHint'
-  | 'diceAdd'
-  | 'diceRemove'
-  | 'diceSelected'
+  | 'diceRecovery'
   | 'noDice'
   | 'fullDice'
   | 'recoveryTitle'
@@ -895,15 +894,13 @@ export const LONG_REST_LABELS: Record<
 > = {
   title: 'Продолжительный отдых',
   intro:
-    'Продолжительный отдых — не меньше 8 часов, из них минимум 6 часов сна, а остальное время — необременительные занятия. По его окончании персонаж восстанавливает все хиты, все ячейки заклинаний, счётчики умений и часть костей хитов.',
+    'Продолжительный отдых — не меньше 8 часов, из них минимум 6 часов сна, а остальное время — необременительные занятия. По его окончании персонаж восстанавливает все хиты, все кости хитов, все ячейки заклинаний и счётчики умений.',
   rulesTitle: 'Правила продолжительного отдыха',
   hitPointsTitle: 'Хиты',
   hitPointsRecovery: 'Восстановятся полностью.',
   diceTitle: 'Кости хитов',
-  diceHint: 'Выберите, какие кости вернуть',
-  diceAdd: 'Вернуть ещё кость',
-  diceRemove: 'Вернуть на одну кость меньше',
-  diceSelected: 'Выбрано костей',
+  diceHint: 'Вернутся полностью',
+  diceRecovery: 'Все потраченные кости хитов вернутся на лист.',
   noDice: 'Кости хитов не заданы — их можно настроить в блоке «Здоровье».',
   fullDice: 'Все кости хитов на месте — возвращать нечего.',
   recoveryTitle: 'Вернётся по окончании отдыха',
@@ -921,7 +918,7 @@ export const LONG_REST_RULES: string[] = [
   'Отдых длится не меньше 8 часов: минимум 6 часов сна и не больше 2 часов необременительных занятий — чтения, разговоров, еды, дежурства.',
   'Прерванный час боя, ходьбы или другой утомительной деятельности обнуляет отдых: его придётся начинать заново.',
   'По окончании отдыха восстанавливаются все хиты и все потраченные ячейки заклинаний.',
-  'Кости хитов возвращаются наполовину: половина от их общего количества, но не меньше одной.',
+  'Все потраченные кости хитов возвращаются: в редакции 2024 года отдых возвращает их полностью, а не половину.',
   'Возвращаются счётчики умений и с продолжительным, и с коротким восстановлением.',
   'Временные хиты держатся до конца продолжительного отдыха и пропадают вместе с ним.',
   'За одни сутки можно получить пользу только от одного продолжительного отдыха.',
@@ -1122,6 +1119,15 @@ export const SPELLS_SEARCH_PATH = '/api/v2/spells/search';
 
 /** Базовый путь детали заклинания (`/{url}` — слаг из каталога). */
 export const SPELLS_DETAIL_BASE_PATH = '/api/v2/spells';
+
+/** Подпись отдельной группы заклинаний, полученных от вида и происхождения. */
+export const INNATE_SPELL_GROUP_LABEL = 'Врождённые';
+
+/** Служебный ключ группы врождённых заклинаний, не пересекающийся с кругами 0–9. */
+export const INNATE_SPELL_GROUP_LEVEL = -1;
+
+/** Локаль сортировки русских названий заклинаний. */
+export const SPELL_NAME_SORT_LOCALE = 'ru';
 
 /** Эндпоинт фильтров заклинаний — источник списка классов для чипов. */
 export const SPELLS_FILTERS_PATH = '/api/v2/spells/filters';
@@ -1646,6 +1652,20 @@ export const FEATURE_ORIGIN_LABELS: Record<FeatureOrigin, string> = {
   none: 'Нет',
 };
 
+/**
+ * Подписи развёрнутой строки особенности. Источник показан строкой, а не
+ * подсказкой у значка: строку целиком накрывает кнопка-раскрытие, да и на
+ * сенсорном экране подсказки по наведению недоступны.
+ */
+export const SHEET_FEATURE_ROW_LABELS: Record<
+  'origin' | 'choice' | 'emptyDescription',
+  string
+> = {
+  origin: 'Источник:',
+  choice: 'Выбор:',
+  emptyDescription: 'Описание не заполнено',
+};
+
 /** Варианты происхождения при добавлении особенности вручную. */
 export const FEATURE_ORIGIN_OPTIONS: Array<{
   label: string;
@@ -1858,6 +1878,93 @@ export const SHEET_TAB_EMPTY_LABELS: Record<
   spells: 'Книга заклинаний пуста',
   features: 'Нет особенностей',
   notes: 'Нет заметок',
+};
+
+/**
+ * Идентификатор заметки, в которую переносится текст листа, собранного до
+ * разделения заметок на записи. Значение постоянное: при каждой загрузке такого
+ * листа получается одна и та же запись.
+ */
+export const LEGACY_NOTE_ID = 'note:legacy';
+
+/**
+ * Ключ `useAsyncData` для источников каталога классов. Общий у визарда класса и
+ * мастера повышения уровня: ответ фильтров переиспользуется между модалками.
+ */
+export const CLASS_SOURCES_ASYNC_DATA_KEY = 'character-sheet:class-sources';
+
+/** Подписи мастера повышения уровня. */
+export const LEVEL_UP_WIZARD_LABELS: Record<
+  | 'progressStep'
+  | 'levelStepTitle'
+  | 'levelStepDescription'
+  | 'featuresTitle'
+  | 'noFeatures'
+  | 'noClassHint'
+  | 'featureChoicePlaceholder'
+  | 'subclassTitle'
+  | 'subclassHint'
+  | 'subclassEmpty'
+  | 'subclassError'
+  | 'subclassSearchPlaceholder'
+  | 'subclassPreviewTooltip'
+  | 'chooseLabel'
+  | 'loadError'
+  | 'retry'
+  | 'next'
+  | 'back'
+  | 'apply',
+  string
+> = {
+  progressStep: 'Уровень и опыт',
+  levelStepTitle: 'Уровень',
+  levelStepDescription: 'Прирост хитов и умения этого уровня',
+  featuresTitle: 'Умения уровня',
+  noFeatures: 'На этом уровне класс умений не даёт',
+  noClassHint:
+    'Класс не выбран — умения и ресурсы за уровни не добавятся. Выберите класс в шапке листа.',
+  featureChoicePlaceholder: 'Ваш выбор в умении (необязательно)',
+  subclassTitle: 'Подкласс',
+  subclassHint:
+    'Список ограничен источниками из настройки профиля. Одноимённые подклассы различаются книгой в бейдже.',
+  subclassEmpty: 'Подклассы не найдены',
+  subclassError: 'Не удалось загрузить подклассы — выбор можно сделать позже',
+  subclassSearchPlaceholder: 'Поиск по названию',
+  subclassPreviewTooltip: 'Открыть описание подкласса',
+  chooseLabel: 'Выберите',
+  loadError: 'Не удалось загрузить данные класса',
+  retry: 'Повторить',
+  next: 'Далее',
+  back: 'Назад',
+  apply: 'Применить',
+};
+
+/** Подписи вкладки «Заметки» и модалки заметки. */
+export const SHEET_NOTE_LABELS: Record<
+  | 'add'
+  | 'addTitle'
+  | 'editTitle'
+  | 'titleField'
+  | 'titlePlaceholder'
+  | 'contentField'
+  | 'contentPlaceholder'
+  | 'untitled'
+  | 'legacyTitle'
+  | 'addAction'
+  | 'saveAction',
+  string
+> = {
+  add: 'Добавить заметку',
+  addTitle: 'Новая заметка',
+  editTitle: 'Редактирование заметки',
+  addAction: 'Добавить',
+  saveAction: 'Сохранить',
+  titleField: 'Заголовок',
+  titlePlaceholder: 'Например: зацепки в Глубоководье',
+  contentField: 'Текст',
+  contentPlaceholder: 'Заметки о персонаже, зацепки, цели, союзники…',
+  untitled: 'Без названия',
+  legacyTitle: 'Заметки',
 };
 
 /**

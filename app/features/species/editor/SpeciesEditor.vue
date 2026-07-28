@@ -10,7 +10,12 @@
   import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
   import { WorkshopEditorFormControls } from '~workshop/revision/ui';
 
-  import { SpeciesFeatures, SpeciesSizes, SpeciesSpeed } from './ui';
+  import {
+    SpeciesFeatures,
+    SpeciesInnateSpells,
+    SpeciesSizes,
+    SpeciesSpeed,
+  } from './ui';
 
   function getInitialState(): SpeciesCreate {
     return {
@@ -42,6 +47,7 @@
         },
       },
       features: [],
+      innateSpells: [],
       tags: [],
     };
   }
@@ -113,6 +119,8 @@
         <SpeciesSpeed v-model="state.properties.speed" />
 
         <SpeciesFeatures v-model="state.features" />
+
+        <SpeciesInnateSpells v-model="state.innateSpells" />
       </div>
     </UCard>
 
