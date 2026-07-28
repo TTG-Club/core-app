@@ -164,6 +164,10 @@
             return {
               url: subclass.url,
               name: subclass.name,
+              // Источник обязателен в строке: одноимённые подклассы приходят из
+              // разных книг (например, «Наследник троих» из FRHoF и UAFRS), и
+              // без него они выглядят дубликатом.
+              sourceLabel: subclass.sourceLabel,
               isSelectable: subclassAvailable.value,
               isSelected: isSubclassSelected,
               rowClass: isSubclassSelected ? 'bg-elevated' : '',
@@ -699,6 +703,16 @@
                       {{ subclass.name }}
                     </span>
                   </span>
+
+                  <UBadge
+                    v-if="subclass.sourceLabel"
+                    size="sm"
+                    color="neutral"
+                    variant="subtle"
+                    class="relative z-10 shrink-0"
+                  >
+                    {{ subclass.sourceLabel }}
+                  </UBadge>
 
                   <UTooltip text="Открыть описание подкласса">
                     <UButton
