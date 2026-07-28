@@ -7,6 +7,7 @@
   import {
     FEATURE_ORIGIN_LABELS,
     getFeaturesAddMenuItems,
+    SHEET_FEATURE_ROW_LABELS,
     SHEET_TAB_EMPTY_LABELS,
   } from '../../model';
 
@@ -62,6 +63,14 @@
     none: 'neutral',
   } as const;
 
+  /**
+   * Кнопки правки строки: с мышью проявляются по наведению на строку, а на
+   * сенсорном экране ховера нет — там они видны всегда, иначе правку и удаление
+   * особенности с телефона не найти.
+   */
+  const ROW_ACTIONS_CLASS =
+    'relative flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover/feature:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100';
+
   const displayRows = computed(() =>
     props.features.map((feature) => {
       const isExpanded = expandedIds.value.has(feature.id);
@@ -71,10 +80,9 @@
         isExpanded,
         showBadge: feature.origin !== 'none',
         originLabel: FEATURE_ORIGIN_LABELS[feature.origin],
-        originTooltip:
-          feature.originName || FEATURE_ORIGIN_LABELS[feature.origin],
         badgeColor: ORIGIN_BADGE_COLORS[feature.origin],
         chevronClass: isExpanded ? 'rotate-180' : '',
+        hasDescription: feature.description.length > 0,
       };
     }),
   );
@@ -103,60 +111,37 @@
       <div
         v-for="feature in displayRows"
         :key="feature.id"
-        class="flex flex-col rounded-lg border border-default/50 bg-elevated/20"
+        class="flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-warning/60"
       >
         <div
           class="group/feature relative flex w-full items-center gap-2 px-3 py-2"
         >
+          <!-- Кнопка-раскрытие растянута на всю строку: разворачивают описание
+            и стрелка, и поля строки, и пустое место у названия. Кнопки правки
+            идут в разметке после неё и позиционированы — остаются сверху. -->
           <button
             type="button"
-            class="flex min-w-0 grow cursor-pointer items-center gap-3 text-left after:absolute after:inset-0 after:cursor-pointer"
+            class="absolute inset-0 cursor-pointer rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             :aria-expanded="feature.isExpanded"
             :aria-label="`Особенность: ${feature.name}`"
             @click.left.exact.prevent="toggleFeature(feature.id)"
-          >
-            <UTooltip
+          />
+
+          <div class="flex min-w-0 grow items-center gap-3">
+            <UBadge
               v-if="feature.showBadge"
-              :text="feature.originTooltip"
+              size="sm"
+              :color="feature.badgeColor"
+              variant="subtle"
               class="shrink-0"
             >
-              <UBadge
-                size="sm"
-                :color="feature.badgeColor"
-                variant="subtle"
-              >
-                {{ feature.originLabel }}
-              </UBadge>
-            </UTooltip>
+              {{ feature.originLabel }}
+            </UBadge>
 
             <span class="grow truncate text-sm font-medium text-highlighted">
               {{ feature.name }}
             </span>
-          </button>
-
-          <UButton
-            icon="tabler:pencil"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            square
-            class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/feature:opacity-100 focus-visible:opacity-100"
-            :class="editControlClass"
-            :aria-label="`Редактировать особенность: ${feature.name}`"
-            @click.left.exact.prevent="handleEditClick(feature.id)"
-          />
-
-          <UButton
-            icon="tabler:trash"
-            color="error"
-            variant="ghost"
-            size="xs"
-            square
-            class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/feature:opacity-100 focus-visible:opacity-100"
-            :class="editControlClass"
-            :aria-label="`Удалить особенность: ${feature.name}`"
-            @click.left.exact.prevent="handleRemove(feature.id)"
-          />
+          </div>
 
           <span
             v-if="feature.choice"
@@ -164,6 +149,30 @@
           >
             {{ feature.choice }}
           </span>
+
+          <div :class="ROW_ACTIONS_CLASS">
+            <UButton
+              icon="tabler:pencil"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              square
+              :class="editControlClass"
+              :aria-label="`Редактировать особенность: ${feature.name}`"
+              @click.left.exact.prevent="handleEditClick(feature.id)"
+            />
+
+            <UButton
+              icon="tabler:trash"
+              color="error"
+              variant="ghost"
+              size="xs"
+              square
+              :class="editControlClass"
+              :aria-label="`Удалить особенность: ${feature.name}`"
+              @click.left.exact.prevent="handleRemove(feature.id)"
+            />
+          </div>
 
           <UIcon
             name="tabler:chevron-down"
@@ -177,18 +186,41 @@
           class="flex flex-col gap-2 border-t border-default/50 px-3 py-2"
         >
           <div
+            v-if="feature.originName"
+            class="flex items-baseline gap-1 text-xs"
+          >
+            <span class="text-muted">
+              {{ SHEET_FEATURE_ROW_LABELS.origin }}
+            </span>
+
+            <span class="font-medium text-default">
+              {{ feature.originName }}
+            </span>
+          </div>
+
+          <div
             v-if="feature.choice"
             class="flex items-baseline gap-1 text-xs"
           >
-            <span class="text-muted">Выбор:</span>
+            <span class="text-muted">
+              {{ SHEET_FEATURE_ROW_LABELS.choice }}
+            </span>
 
             <span class="font-medium text-warning">{{ feature.choice }}</span>
           </div>
 
           <MarkupRender
+            v-if="feature.hasDescription"
             :render-node="feature.description"
             class="text-sm"
           />
+
+          <span
+            v-else
+            class="text-xs text-dimmed"
+          >
+            {{ SHEET_FEATURE_ROW_LABELS.emptyDescription }}
+          </span>
         </div>
       </div>
     </template>

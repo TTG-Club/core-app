@@ -20,6 +20,7 @@
     getSpeciesDisplayName,
     SHEET_EMPTY_LABELS,
     SHEET_OPEN_IN_PANEL_LABEL,
+    SHEET_OPEN_ON_PAGE_LABEL,
   } from '../../model';
 
   const {
@@ -172,16 +173,23 @@
 
 <template>
   <div
-    class="flex min-h-20 w-full items-center gap-3 rounded-xl border p-3 transition-all"
+    class="relative flex min-h-20 w-full items-center gap-3 rounded-xl border p-3 transition-all"
     :class="cardClass"
   >
     <!-- Клик открывает лист на отдельной странице: лист — рабочий инструмент, а
       не карточка справочника, поэтому основное действие ведёт в полноэкранный
-      режим. Быстрый просмотр рядом остаётся за кнопкой «в панель». -->
+      режим. Быстрый просмотр рядом остаётся за кнопкой «в панель».
+
+      Ссылка растянута на всю карточку, а не обёрнута вокруг аватара с текстом:
+      иначе поля карточки и пустое место справа от текста кликом не ловились.
+      Кнопки идут в разметке после неё и позиционированы — они остаются сверху. -->
     <NuxtLink
       :to
-      class="flex min-w-0 flex-auto items-center gap-4"
-    >
+      class="absolute inset-0 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      :aria-label="`${SHEET_OPEN_ON_PAGE_LABEL}: ${character.name}`"
+    />
+
+    <div class="flex min-w-0 flex-auto items-center gap-4">
       <div
         class="grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-primary/5 ring-1 ring-primary/15"
       >
@@ -208,10 +216,9 @@
           {{ classLabel }} · {{ speciesLabel }}
         </span>
 
-        <span
-          class="mt-0.5 flex items-center gap-1 text-xs text-muted"
-          title="Хиты: сейчас / всего"
-        >
+        <!-- Без нативного title: карточку накрывает ссылка, и подсказка от
+          элемента под ней всё равно не всплывёт -->
+        <span class="mt-0.5 flex items-center gap-1 text-xs text-muted">
           <UIcon
             name="tabler:heart"
             class="size-3.5 shrink-0 text-error"
@@ -223,11 +230,11 @@
           </span>
         </span>
       </div>
-    </NuxtLink>
+    </div>
 
     <!-- Кнопки столбиком: карточка низкая и широкая, в ряд они съедали бы
       ширину у имени персонажа -->
-    <div class="flex shrink-0 flex-col gap-1">
+    <div class="relative flex shrink-0 flex-col gap-1">
       <UTooltip :text="SHEET_OPEN_IN_PANEL_LABEL">
         <UButton
           icon="tabler:layout-sidebar-right-expand"

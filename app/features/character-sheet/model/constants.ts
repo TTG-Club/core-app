@@ -1665,6 +1665,20 @@ export const FEATURE_ORIGIN_LABELS: Record<FeatureOrigin, string> = {
   none: 'Нет',
 };
 
+/**
+ * Подписи развёрнутой строки особенности. Источник показан строкой, а не
+ * подсказкой у значка: строку целиком накрывает кнопка-раскрытие, да и на
+ * сенсорном экране подсказки по наведению недоступны.
+ */
+export const SHEET_FEATURE_ROW_LABELS: Record<
+  'origin' | 'choice' | 'emptyDescription',
+  string
+> = {
+  origin: 'Источник:',
+  choice: 'Выбор:',
+  emptyDescription: 'Описание не заполнено',
+};
+
 /** Варианты происхождения при добавлении особенности вручную. */
 export const FEATURE_ORIGIN_OPTIONS: Array<{
   label: string;
