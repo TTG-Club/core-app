@@ -449,6 +449,13 @@ export interface CharacterFeature {
   /** Название источника особенности (вида, подвида, класса); '' — нет. */
   originName: string;
 
+  /**
+   * Уровень класса, на котором получена особенность; null — уровень не при чём
+   * (особенность вида, черта, ручная запись) либо лист собран до учёта уровней.
+   * По нему снятие уровня забирает ровно те умения, которые эти уровни дали.
+   */
+  level: number | null;
+
   /** Выбор игрока в особенности (например, цвет драконорождённого). */
   choice: string | null;
 }
@@ -827,6 +834,90 @@ export interface ChoiceOptionContext {
 
   /** Все инструменты каталога. */
   allTools: string[];
+}
+
+/** Строка умения класса в карточке визарда. */
+export interface ClassFeatureRow {
+  /** Идентификатор умения на листе (`class:<key>`). */
+  id: string;
+
+  name: string;
+
+  /** Уровень получения умения. */
+  level: number;
+
+  description: FeatureDescriptionNode[];
+
+  /** Подпись источника («Класс: Бард», «Подкласс: Коллегия знаний»). */
+  originLabel: string;
+
+  /** Распознанный выбор внутри умения; null — свободный текст. */
+  choice: ClassChoice | null;
+}
+
+/** Черновик одного шага мастера повышения уровня — один взятый уровень. */
+export interface LevelUpStepDraft {
+  /** Уровень, который берётся на этом шаге. */
+  level: number;
+
+  /** Способ прироста максимума хитов за уровень. */
+  gainMode: HitPointsGainMode;
+
+  /** Результат броска кости хитов; null — в режиме броска кость ещё не брошена. */
+  roll: HitDieRollResult | null;
+
+  /** Значения пикеров по идентификатору выбора. */
+  selections: Record<string, string[]>;
+
+  /** Свободный текст выбора по идентификатору умения. */
+  notes: Record<string, string>;
+}
+
+/** Шаг мастера повышения уровня, готовый к отрисовке. */
+export interface LevelUpStepView {
+  /** Порядковый номер шага с нуля. */
+  index: number;
+
+  level: number;
+
+  /** Умения класса и подкласса, которые даёт этот уровень. */
+  features: ClassFeatureRow[];
+
+  /** На этом шаге выбирается подкласс. */
+  isSubclassStep: boolean;
+
+  /** Прирост максимума хитов по текущему выбору шага. */
+  hitPointsGain: number;
+}
+
+/** Итог мастера повышения уровня для применения к листу. */
+export interface LevelUpPayload {
+  level: number;
+
+  /** Суммарный опыт персонажа. */
+  experience: number;
+
+  /** Прирост максимума хитов за каждый взятый уровень по порядку. */
+  hitPointsGains: number[];
+
+  /** Умения взятых уровней (и подкласса, если он выбран в мастере). */
+  features: CharacterFeature[];
+
+  /** Ресурсы класса, пересчитанные на новый уровень. */
+  classResources: CharacterClassResource[];
+
+  /** Выбранный в мастере подкласс; null — подкласс не менялся. */
+  subclass: {
+    url: string;
+    name: string;
+    casterType: CasterType | null;
+  } | null;
+
+  /** Навыки, выбранные в умениях уровней. */
+  skills: { proficient: string[]; expertise: string[] };
+
+  /** Языки, выбранные в умениях уровней. */
+  languages: string[];
 }
 
 /** Опция предыстории в списке визарда. */

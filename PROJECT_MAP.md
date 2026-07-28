@@ -105,6 +105,12 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 - Wizards for species / class / background; rolls go through `dice-roller`
   (universal `SheetRollModal`).
+- Level-up wizard inside the experience modal (`composables/useLevelUpWizard.ts`):
+  one step per gained level with its own hit-point mode (average / roll / max),
+  the class and subclass features of that level with their choices, and the
+  subclass picker at level 3 filtered by the profile sources on the client
+  (`/classes/{url}/subclasses` ignores `source`). Applied atomically by
+  `applyLevelUp`, which keeps spent hit dice and class resources.
 - Debounced autosave, a server-side limit of active sheets, soft delete with
   restore history, and copy — `model/api.ts` covers
   `POST|GET|PUT|DELETE /…/{id}` plus `/{id}/restore` and `/{id}/share`.

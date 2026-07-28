@@ -21,6 +21,7 @@ import type {
   CustomInventoryItemDraft,
   CustomSpellDraft,
   HitDiceAmount,
+  LevelUpPayload,
   ProficiencyGroupKey,
 } from '../model';
 
@@ -66,6 +67,9 @@ import {
   isCustomSpell,
   LEVEL_MAX,
   LEVEL_MIN,
+  mergeCharacterFeatures,
+  mergeClassResources,
+  removeFeaturesAboveLevel,
   RESOURCE_COUNT_MAX,
   RESOURCE_COUNT_MIN,
   RESOURCE_SHORT_LABEL_MAX_LENGTH,
@@ -480,6 +484,9 @@ export function useCharacterSheet() {
    * модификатором Телосложения) — здесь он поднимает максимум и текущие хиты и
    * записывается по уровням, чтобы снижение уровня вернуло ровно его.
    *
+   * Снижение уровня забирает и классовые умения снятых уровней — на листе
+   * остаются только те, что персонаж на новом уровне действительно имеет.
+   *
    * @param level новый уровень персонажа.
    * @param experience суммарный опыт персонажа.
    * @param hitPointsGains прирост максимума хитов за каждый взятый уровень.
@@ -518,6 +525,85 @@ export function useCharacterSheet() {
         clampedLevel,
         hitPointsGains,
       ),
+      features:
+        levelDelta < 0
+          ? removeFeaturesAboveLevel(character.value.features, clampedLevel)
+          : character.value.features,
+    };
+  }
+
+  /**
+   * Применение итога мастера повышения уровня одним изменением документа:
+   * уровень с опытом, хиты по каждому взятому уровню, умения и ресурсы новых
+   * уровней, выбранный подкласс и выборы внутри умений.
+   *
+   * В отличие от выбора класса здоровье и кости хитов не пересобираются с нуля:
+   * броски на хиты и потраченные кости сохраняются. Ячейки заклинаний и бонус
+   * мастерства считаются от уровня сами и здесь не участвуют.
+   *
+   * @param payload итог мастера повышения уровня.
+   */
+  function applyLevelUp(payload: LevelUpPayload): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const clampedLevel = clamp(Math.trunc(payload.level), LEVEL_MIN, LEVEL_MAX);
+
+    const previousLevel = character.value.level;
+
+    const levelDelta = clampedLevel - previousLevel;
+
+    const classDie = character.value.characterClass?.hitDie;
+
+    const { characterClass } = character.value;
+
+    character.value = {
+      ...character.value,
+      level: clampedLevel,
+      experience: {
+        current: clamp(Math.trunc(payload.experience), 0, EXPERIENCE_MAX),
+        nextLevel: getNextLevelExperience(clampedLevel),
+      },
+      characterClass:
+        characterClass && payload.subclass
+          ? {
+              ...characterClass,
+              subclassUrl: payload.subclass.url,
+              subclassName: payload.subclass.name,
+              casterType: payload.subclass.casterType,
+            }
+          : characterClass,
+      hitDice:
+        classDie !== undefined && levelDelta !== 0
+          ? shiftClassHitDice(character.value.hitDice, classDie, levelDelta)
+          : character.value.hitDice,
+      health: adjustHealthForLevel(
+        character.value.health,
+        previousLevel,
+        clampedLevel,
+        payload.hitPointsGains,
+      ),
+      features: mergeCharacterFeatures(
+        character.value.features,
+        payload.features,
+      ),
+      classResources: mergeClassResources(
+        character.value.classResources,
+        payload.classResources,
+      ),
+      skills: applySkillProficiencies(
+        character.value.skills,
+        payload.skills.proficient,
+        payload.skills.expertise,
+      ),
+      proficiencies: {
+        ...character.value.proficiencies,
+        languages: union(
+          character.value.proficiencies.languages,
+          payload.languages,
+        ),
+      },
     };
   }
 
@@ -1817,6 +1903,7 @@ export function useCharacterSheet() {
     addFeature,
     addFeats,
     addNote,
+    applyLevelUp,
     addInventoryItems,
     addCustomInventoryItem,
     addCustomSpell,

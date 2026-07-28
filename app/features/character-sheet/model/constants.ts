@@ -781,6 +781,8 @@ export const LEVEL_UP_HIT_POINTS_LABELS: Record<
   | 'rollPending'
   | 'growthHint'
   | 'levelDownTitle'
+  | 'levelDownFeaturesTitle'
+  | 'levelDownFeaturesHint'
   | 'levelDownHint'
   | 'levelDownUnknownHint',
   string
@@ -795,7 +797,10 @@ export const LEVEL_UP_HIT_POINTS_LABELS: Record<
   maxHitPointsTitle: 'Максимум хитов',
   rollPending: 'бросьте кости',
   growthHint: 'Кости хитов и текущие хиты вырастут вместе с максимумом.',
-  levelDownTitle: 'Хиты за снятые уровни',
+  levelDownTitle: 'Что вернут снятые уровни',
+  levelDownFeaturesTitle: 'Умения снятых уровней',
+  levelDownFeaturesHint:
+    'Эти умения класса уйдут с вкладки «Особенности» — их дают снимаемые уровни. Ручные записи и умения оставшихся уровней не тронутся.',
   levelDownHint:
     'Из максимума вернётся ровно тот прирост, который дали снимаемые уровни; кости хитов уменьшатся вместе с уровнем.',
   levelDownUnknownHint:
@@ -1880,6 +1885,58 @@ export const SHEET_TAB_EMPTY_LABELS: Record<
  * листа получается одна и та же запись.
  */
 export const LEGACY_NOTE_ID = 'note:legacy';
+
+/**
+ * Ключ `useAsyncData` для источников каталога классов. Общий у визарда класса и
+ * мастера повышения уровня: ответ фильтров переиспользуется между модалками.
+ */
+export const CLASS_SOURCES_ASYNC_DATA_KEY = 'character-sheet:class-sources';
+
+/** Подписи мастера повышения уровня. */
+export const LEVEL_UP_WIZARD_LABELS: Record<
+  | 'progressStep'
+  | 'levelStepTitle'
+  | 'levelStepDescription'
+  | 'featuresTitle'
+  | 'noFeatures'
+  | 'noClassHint'
+  | 'featureChoicePlaceholder'
+  | 'subclassTitle'
+  | 'subclassHint'
+  | 'subclassEmpty'
+  | 'subclassError'
+  | 'subclassSearchPlaceholder'
+  | 'subclassPreviewTooltip'
+  | 'chooseLabel'
+  | 'loadError'
+  | 'retry'
+  | 'next'
+  | 'back'
+  | 'apply',
+  string
+> = {
+  progressStep: 'Уровень и опыт',
+  levelStepTitle: 'Уровень',
+  levelStepDescription: 'Прирост хитов и умения этого уровня',
+  featuresTitle: 'Умения уровня',
+  noFeatures: 'На этом уровне класс умений не даёт',
+  noClassHint:
+    'Класс не выбран — умения и ресурсы за уровни не добавятся. Выберите класс в шапке листа.',
+  featureChoicePlaceholder: 'Ваш выбор в умении (необязательно)',
+  subclassTitle: 'Подкласс',
+  subclassHint:
+    'Список ограничен источниками из настройки профиля. Одноимённые подклассы различаются книгой в бейдже.',
+  subclassEmpty: 'Подклассы не найдены',
+  subclassError: 'Не удалось загрузить подклассы — выбор можно сделать позже',
+  subclassSearchPlaceholder: 'Поиск по названию',
+  subclassPreviewTooltip: 'Открыть описание подкласса',
+  chooseLabel: 'Выберите',
+  loadError: 'Не удалось загрузить данные класса',
+  retry: 'Повторить',
+  next: 'Далее',
+  back: 'Назад',
+  apply: 'Применить',
+};
 
 /** Подписи вкладки «Заметки» и модалки заметки. */
 export const SHEET_NOTE_LABELS: Record<

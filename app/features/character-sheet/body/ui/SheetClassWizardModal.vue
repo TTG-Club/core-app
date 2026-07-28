@@ -8,6 +8,7 @@
   import {
     ABILITY_LABELS,
     buildClassFeatures,
+    CLASS_SOURCES_ASYNC_DATA_KEY,
     CLASSES_DETAIL_BASE_PATH,
     CLASSES_FILTERS_PATH,
     CLASSES_SEARCH_PATH,
@@ -64,7 +65,7 @@
   // классы из отключённых книг. Запрос ждём до списка: иначе первая выдача
   // пришла бы по всем источникам и мигнула лишними строками.
   const { sourceQuery } = await useCatalogSourceQuery(
-    'character-sheet:class-sources',
+    CLASS_SOURCES_ASYNC_DATA_KEY,
     CLASSES_FILTERS_PATH,
   );
 

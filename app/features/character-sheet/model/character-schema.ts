@@ -93,6 +93,9 @@ const featureSchema = z.object({
   description: descriptionNodesSchema,
   origin: z.enum(['species', 'lineage', 'class', 'feat', 'none']).catch('none'),
   originName: z.string().catch(''),
+  // Листы до учёта уровня умений его не хранят: снятие уровня такие записи не
+  // трогает, пока уровень не будет взят заново.
+  level: z.coerce.number().nullable().catch(null),
   choice: z.string().nullable().catch(null),
 });
 
