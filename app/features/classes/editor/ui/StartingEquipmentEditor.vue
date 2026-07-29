@@ -16,27 +16,38 @@
     required: true,
   });
 
-  // Класс без снаряжения открывается с двумя пустыми вариантами — «А» и «Б».
-  // Guard по длине разрывает цикл: после наполнения массив уже не пуст,
+  // Класс без снаряжения открывается с двумя пустыми вариантами — «А» и «Б»,
+  // а вариант, пришедший из API без предметов, получает одну пустую строку.
+  // Guard разрывает цикл: после нормализации оба условия перестают выполняться,
   // поэтому повторное присвоение state.value не происходит.
   watch(
     state,
     (options) => {
-      if (options.length) {
+      if (!options.length) {
+        state.value = Array.from(
+          { length: DEFAULT_CLASS_EQUIPMENT_OPTIONS_COUNT },
+          getEmptyEquipmentOption,
+        );
+
         return;
       }
 
-      state.value = Array.from(
-        { length: DEFAULT_CLASS_EQUIPMENT_OPTIONS_COUNT },
-        getEmptyEquipmentOption,
+      if (options.every((option) => option.items.length)) {
+        return;
+      }
+
+      state.value = options.map((option) =>
+        option.items.length
+          ? option
+          : { ...option, items: [getEmptyEquipmentItem()] },
       );
     },
     { immediate: true, deep: false },
   );
 
-  /** Пустой вариант снаряжения: без предметов и без монет. */
+  /** Пустой вариант снаряжения: одна пустая строка предмета и без монет. */
   function getEmptyEquipmentOption(): ClassEquipmentOptionCreate {
-    return { items: [], coins: undefined };
+    return { items: [getEmptyEquipmentItem()], coins: undefined };
   }
 
   /** Пустая строка предмета внутри варианта снаряжения. */
