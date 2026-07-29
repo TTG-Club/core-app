@@ -1,3 +1,5 @@
+import type { ListPresentationConfig } from '~infrastructure/list-presentation/model';
+
 import type {
   AbilityBonusMode,
   AbilityKey,
@@ -16,6 +18,9 @@ import type {
   InventoryItemCategory,
   InventoryStatRollKind,
   LanguageProficiencyGroup,
+  MagicItemCatalogGrouping,
+  MagicItemCatalogItem,
+  MagicItemCatalogSorting,
   ResourceRecovery,
   RollMode,
   SheetSaveStatus,
@@ -1477,6 +1482,38 @@ export const MAGIC_ITEMS_DETAIL_BASE_PATH = '/api/v2/magic-items';
 
 /** Эндпоинт фильтров магических предметов. */
 export const MAGIC_ITEMS_FILTERS_PATH = '/api/v2/magic-items/filters';
+
+/** Подписи групп каталога для предметов без значения поля группировки. */
+export const MAGIC_ITEM_CATALOG_EMPTY_GROUP_LABELS: Record<
+  Exclude<MagicItemCatalogGrouping, 'NONE'>,
+  string
+> = {
+  RARITY: 'Без редкости',
+  CATEGORY: 'Без категории',
+};
+
+/**
+ * Представление каталога магических предметов в модалке добавления:
+ * группировка та же, что в разделе «Магические предметы», а порядок внутри
+ * группы один (по русскому названию) — меню сортировки поэтому не появляется.
+ */
+export const MAGIC_ITEM_CATALOG_PRESENTATION_CONFIG: ListPresentationConfig<
+  MagicItemCatalogItem,
+  MagicItemCatalogGrouping,
+  MagicItemCatalogSorting
+> = {
+  sectionKey: 'character-sheet:magic-item-catalog',
+  defaultGrouping: 'RARITY',
+  defaultSorting: 'NAME',
+  groupingOptions: [
+    { label: 'По редкости', value: 'RARITY', apiValue: 'RARITY' },
+    { label: 'По категории', value: 'CATEGORY', apiValue: 'CATEGORY' },
+    { label: 'Без группировки', value: 'NONE', apiValue: 'NONE' },
+  ],
+  sortingOptions: [
+    { label: 'По русскому названию', value: 'NAME', apiValue: 'NAME' },
+  ],
+};
 
 /**
  * Порядок групп инвентаря по категориям предмета: «Прочее» — самая длинная

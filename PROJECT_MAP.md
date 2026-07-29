@@ -155,6 +155,13 @@ modals), so its capabilities are listed here rather than squeezed into the table
   casting time / range / components / duration — from the section detail into
   the sheet document; it is edited afterwards by the same homebrew form. A
   copied magic item keeps its group while its kind stays «trinket».
+- The «Добавить магический предмет» catalog groups its rows the way the section
+  does, and the grouping is picked from a dropdown under the filter button (by
+  rarity in the dictionary order — the shared `useMagicItemRarityGroupOrder` —
+  by category, or none). State and menu come from the section infrastructure
+  (`~infrastructure/list-presentation`), so the choice survives reopening in
+  `localStorage`; only grouping is offered because the order inside a group is
+  always the Russian name.
 - The «Добавить заклинание» catalog opens preset to what the character can
   actually learn: the class chip is picked by the class slug (the same id the
   `className` filter group uses) and the level chips cover every circle the

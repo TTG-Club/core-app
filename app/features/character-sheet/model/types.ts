@@ -1297,6 +1297,23 @@ export interface MagicItemCatalogItem {
   sourceLabel: string;
 }
 
+/** Варианты группировки каталога магических предметов в модалке добавления. */
+export type MagicItemCatalogGrouping = 'RARITY' | 'CATEGORY' | 'NONE';
+
+/** Порядок предметов внутри группы каталога: выбора нет, только по названию. */
+export type MagicItemCatalogSorting = 'NAME';
+
+/** Группа каталога магических предметов для списка с разделителями. */
+export interface MagicItemCatalogGroup<TItem extends MagicItemCatalogItem> {
+  /** Значение поля группировки; '' — предметы без значения. */
+  key: string;
+
+  /** Подпись разделителя; '' — разделитель не нужен (без группировки). */
+  label: string;
+
+  items: TItem[];
+}
+
 /** Деталь предмета из ответа API (нужные листу поля). */
 export interface ItemSummary {
   url: string;

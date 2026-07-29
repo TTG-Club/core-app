@@ -3,7 +3,10 @@
 
   import type { Filter, FilterGroups } from '~infrastructure/filter';
 
-  import type { MagicItemCatalogItem } from '../../model';
+  import type {
+    MagicItemCatalogGroup,
+    MagicItemCatalogItem,
+  } from '../../model';
 
   import {
     buildSearchQuery,
@@ -13,12 +16,19 @@
     normalizeDependentSelections,
     parseFilter,
   } from '~infrastructure/filter';
+  import {
+    useListPresentation,
+    useListPresentationMenus,
+  } from '~infrastructure/list-presentation/composable';
+  import { useMagicItemRarityGroupOrder } from '~magic-items/composable';
   import { MagicItemDrawer } from '~magic-items/drawer';
 
   import { useCharacterSheet } from '../../composables';
   import {
     buildMagicItemInventoryItem,
     getInventoryItemId,
+    getMagicItemCatalogGroups,
+    MAGIC_ITEM_CATALOG_PRESENTATION_CONFIG,
     MAGIC_ITEMS_FILTERS_PATH,
     MAGIC_ITEMS_SEARCH_PATH,
     parseMagicItemCatalog,
@@ -107,7 +117,29 @@
     { server: false, watch: [catalogFilterQueryJson] },
   );
 
-  const isListLoading = computed(() => listStatus.value === 'pending');
+  // Группировка каталога — как в разделе «Магические предметы»; выбор
+  // пользователя хранится между открытиями модалки.
+  const presentation = useListPresentation(
+    MAGIC_ITEM_CATALOG_PRESENTATION_CONFIG,
+  );
+
+  const presentationMenus = useListPresentationMenus(
+    MAGIC_ITEM_CATALOG_PRESENTATION_CONFIG,
+    presentation.grouping,
+    presentation.sorting,
+  );
+
+  // Порядок групп редкости задаёт словарь: по алфавиту он не строится.
+  const { order: rarityOrder, pending: isRarityPending } =
+    useMagicItemRarityGroupOrder();
+
+  // Словарь редкостей ждём вместе с каталогом, иначе группы успевают
+  // перестроиться из алфавитного порядка в словарный на глазах у пользователя.
+  const isListLoading = computed(
+    () =>
+      listStatus.value === 'pending'
+      || (presentation.grouping.value === 'RARITY' && isRarityPending.value),
+  );
 
   const isListError = computed(() => listStatus.value === 'error');
 
@@ -265,6 +297,15 @@
     }),
   );
 
+  const displayGroups = computed<MagicItemCatalogGroup<MagicItemCatalogRow>[]>(
+    () =>
+      getMagicItemCatalogGroups(
+        displayMagicItems.value,
+        presentation.grouping.value,
+        rarityOrder.value,
+      ),
+  );
+
   const selectedCountLabel = computed(
     () => `Выбрано: ${draftMagicItems.value.size}`,
   );
@@ -338,6 +379,23 @@
             @click.left.exact.prevent="openFilterDrawer"
           />
 
+          <UDropdownMenu
+            v-for="menu in presentationMenus"
+            :key="menu.id"
+            :items="menu.items"
+            :ui="{ content: 'w-56' }"
+          >
+            <UButton
+              :icon="menu.icon"
+              :title="menu.label"
+              :aria-label="menu.label"
+              color="neutral"
+              variant="subtle"
+              size="sm"
+              square
+            />
+          </UDropdownMenu>
+
           <UTooltip
             v-if="hasActiveFilters"
             text="Сбросить фильтры"
@@ -391,10 +449,28 @@
               />
             </UTooltip>
           </div>
+
+          <UDropdownMenu
+            v-for="menu in presentationMenus"
+            :key="menu.id"
+            :items="menu.items"
+            :ui="{ content: 'w-56' }"
+          >
+            <UButton
+              :icon="menu.icon"
+              :label="menu.label"
+              trailing-icon="tabler:chevron-down"
+              color="neutral"
+              variant="subtle"
+              size="sm"
+              block
+              class="shrink-0"
+            />
+          </UDropdownMenu>
         </aside>
 
         <div class="flex min-w-0 grow flex-col">
-          <div class="flex min-h-0 grow flex-col gap-1 overflow-y-auto pr-1">
+          <div class="flex min-h-0 grow flex-col gap-3 overflow-y-auto pr-1">
             <div
               v-if="isListLoading"
               class="flex grow items-center justify-center py-10"
@@ -414,73 +490,92 @@
 
             <template v-else>
               <div
-                v-for="catalogRow in displayMagicItems"
-                :key="catalogRow.url"
-                class="relative flex items-center gap-2 rounded-md pr-2 transition-colors hover:bg-elevated/60"
-                :class="catalogRow.rowClass"
+                v-for="group in displayGroups"
+                :key="group.key"
+                class="flex flex-col gap-1"
               >
-                <button
-                  type="button"
-                  class="flex min-w-0 grow items-center gap-2 px-3 py-1.5 text-left after:absolute after:inset-0"
-                  :class="catalogRow.cursorClass"
-                  :disabled="catalogRow.isAdded"
-                  :aria-label="`Выбрать магический предмет: ${catalogRow.name}`"
-                  @click.left.exact.prevent="toggleMagicItem(catalogRow)"
+                <div
+                  v-if="group.label"
+                  class="flex items-center gap-2"
                 >
-                  <span class="truncate text-sm font-medium text-highlighted">
-                    {{ catalogRow.name }}
-                  </span>
-
                   <span
-                    v-if="catalogRow.rarity"
-                    class="shrink-0 text-xs text-muted"
+                    class="shrink-0 text-[10px] font-bold tracking-wider text-muted uppercase"
                   >
-                    {{ catalogRow.rarity }}
+                    {{ group.label }}
                   </span>
-                </button>
 
-                <UBadge
-                  v-if="catalogRow.sourceLabel"
-                  size="sm"
-                  color="neutral"
-                  variant="subtle"
-                  class="relative z-10 shrink-0"
+                  <div class="h-px grow bg-default/50" />
+                </div>
+
+                <div
+                  v-for="catalogRow in group.items"
+                  :key="catalogRow.url"
+                  class="relative flex items-center gap-2 rounded-md pr-2 transition-colors hover:bg-elevated/60"
+                  :class="catalogRow.rowClass"
                 >
-                  {{ catalogRow.sourceLabel }}
-                </UBadge>
+                  <button
+                    type="button"
+                    class="flex min-w-0 grow items-center gap-2 px-3 py-1.5 text-left after:absolute after:inset-0"
+                    :class="catalogRow.cursorClass"
+                    :disabled="catalogRow.isAdded"
+                    :aria-label="`Выбрать магический предмет: ${catalogRow.name}`"
+                    @click.left.exact.prevent="toggleMagicItem(catalogRow)"
+                  >
+                    <span class="truncate text-sm font-medium text-highlighted">
+                      {{ catalogRow.name }}
+                    </span>
 
-                <UTooltip text="Открыть описание магического предмета">
-                  <UButton
-                    icon="tabler:layout-sidebar-right-expand"
+                    <span
+                      v-if="catalogRow.rarity"
+                      class="shrink-0 text-xs text-muted"
+                    >
+                      {{ catalogRow.rarity }}
+                    </span>
+                  </button>
+
+                  <UBadge
+                    v-if="catalogRow.sourceLabel"
+                    size="sm"
                     color="neutral"
-                    variant="ghost"
-                    size="xs"
-                    square
+                    variant="subtle"
                     class="relative z-10 shrink-0"
-                    :aria-label="`Описание магического предмета: ${catalogRow.name}`"
-                    @click.left.exact.prevent="handlePreview(catalogRow.url)"
-                  />
-                </UTooltip>
+                  >
+                    {{ catalogRow.sourceLabel }}
+                  </UBadge>
 
-                <UTooltip
-                  v-if="catalogRow.isAdded"
-                  text="Уже добавлен"
-                >
+                  <UTooltip text="Открыть описание магического предмета">
+                    <UButton
+                      icon="tabler:layout-sidebar-right-expand"
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      square
+                      class="relative z-10 shrink-0"
+                      :aria-label="`Описание магического предмета: ${catalogRow.name}`"
+                      @click.left.exact.prevent="handlePreview(catalogRow.url)"
+                    />
+                  </UTooltip>
+
+                  <UTooltip
+                    v-if="catalogRow.isAdded"
+                    text="Уже добавлен"
+                  >
+                    <UIcon
+                      name="tabler:check"
+                      class="relative z-10 size-4 shrink-0 text-success"
+                    />
+                  </UTooltip>
+
                   <UIcon
+                    v-else-if="catalogRow.isSelected"
                     name="tabler:check"
-                    class="relative z-10 size-4 shrink-0 text-success"
+                    class="relative z-10 size-4 shrink-0 text-warning"
                   />
-                </UTooltip>
-
-                <UIcon
-                  v-else-if="catalogRow.isSelected"
-                  name="tabler:check"
-                  class="relative z-10 size-4 shrink-0 text-warning"
-                />
+                </div>
               </div>
 
               <span
-                v-if="!displayMagicItems.length"
+                v-if="!displayGroups.length"
                 class="px-3 py-6 text-center text-sm text-dimmed"
               >
                 Ничего не найдено

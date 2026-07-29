@@ -51,6 +51,8 @@ import type {
   InventoryItemOrigin,
   InventoryWeapon,
   ItemSummary,
+  MagicItemCatalogGroup,
+  MagicItemCatalogGrouping,
   MagicItemCatalogItem,
   PreparedSpellsBreakdown,
   PreparedSpellsScaling,
@@ -76,7 +78,7 @@ import type {
   WeaponDamage,
 } from './types';
 
-import { capitalize, clamp } from 'es-toolkit';
+import { capitalize, clamp, upperFirst } from 'es-toolkit';
 
 import { LEVELS } from '~/shared/consts';
 import {
@@ -149,6 +151,7 @@ import {
   ITEMS_DETAIL_BASE_PATH,
   LEVEL_MIN,
   LEVEL_XP_THRESHOLDS,
+  MAGIC_ITEM_CATALOG_EMPTY_GROUP_LABELS,
   MAGIC_ITEMS_DETAIL_BASE_PATH,
   NEW_CUSTOM_INVENTORY_ITEM,
   PACT_SPELL_SLOTS_LABEL,
@@ -377,6 +380,90 @@ export function getInventoryGroups(
       .filter((inventoryItem) => inventoryItem.category === category)
       .sort((left, right) => left.name.localeCompare(right.name, 'ru')),
   })).filter((group) => group.items.length > 0);
+}
+
+/**
+ * Порядок групп редкости: сначала редкости в порядке словаря, затем
+ * незнакомые словарю — по алфавиту.
+ *
+ * @param rarityKeys редкости, встретившиеся в каталоге.
+ * @param rarityOrder редкости в порядке словаря.
+ * @returns редкости в порядке следования групп.
+ */
+function getMagicItemRarityKeyOrder(
+  rarityKeys: string[],
+  rarityOrder: Set<string>,
+): string[] {
+  const knownKeys = [...rarityOrder].filter((rarity) =>
+    rarityKeys.includes(rarity),
+  );
+
+  const unknownKeys = rarityKeys
+    .filter((rarityKey) => !rarityOrder.has(rarityKey))
+    .sort(sortString);
+
+  return [...knownKeys, ...unknownKeys];
+}
+
+/**
+ * Группировка каталога магических предметов в модалке добавления: по редкости
+ * в порядке словаря, по категории — по алфавиту, либо одной группой без
+ * подписи. Внутри группы предметы идут по русскому названию, а предметы без
+ * значения поля собираются в отдельную группу в конце списка.
+ *
+ * @param catalogItems магические предметы каталога.
+ * @param grouping выбранная группировка.
+ * @param rarityOrder редкости в порядке словаря.
+ * @returns группы предметов с подписями для разделителей.
+ */
+export function getMagicItemCatalogGroups<TItem extends MagicItemCatalogItem>(
+  catalogItems: TItem[],
+  grouping: MagicItemCatalogGrouping,
+  rarityOrder: Set<string>,
+): MagicItemCatalogGroup<TItem>[] {
+  const sortedItems = [...catalogItems].sort((left, right) =>
+    sortString(left.name, right.name),
+  );
+
+  if (grouping === 'NONE') {
+    return sortedItems.length
+      ? [{ key: '', label: '', items: sortedItems }]
+      : [];
+  }
+
+  const itemsByKey = new Map<string, TItem[]>();
+
+  for (const catalogItem of sortedItems) {
+    const groupKey =
+      grouping === 'RARITY' ? catalogItem.rarity : catalogItem.category;
+
+    const groupItems = itemsByKey.get(groupKey);
+
+    if (groupItems) {
+      groupItems.push(catalogItem);
+    } else {
+      itemsByKey.set(groupKey, [catalogItem]);
+    }
+  }
+
+  const filledKeys = [...itemsByKey.keys()].filter((groupKey) => groupKey);
+
+  const orderedKeys =
+    grouping === 'RARITY'
+      ? getMagicItemRarityKeyOrder(filledKeys, rarityOrder)
+      : filledKeys.sort(sortString);
+
+  // Предметы без редкости или категории выпадают и из словаря, и из алфавита,
+  // поэтому их группа всегда последняя.
+  const groupKeys = itemsByKey.has('') ? [...orderedKeys, ''] : orderedKeys;
+
+  return groupKeys.map((groupKey) => ({
+    key: groupKey,
+    label: groupKey
+      ? upperFirst(groupKey)
+      : MAGIC_ITEM_CATALOG_EMPTY_GROUP_LABELS[grouping],
+    items: itemsByKey.get(groupKey) ?? [],
+  }));
 }
 
 /**
