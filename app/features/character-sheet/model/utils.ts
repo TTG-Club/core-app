@@ -130,6 +130,7 @@ import {
   CURRENCY_ORDER,
   CUSTOM_ARMOR_TYPE_BY_DEXTERITY_MOD,
   CUSTOM_ARMOR_TYPE_META,
+  CUSTOM_BACKGROUND_URL_PREFIX,
   CUSTOM_INVENTORY_KIND_CATEGORIES,
   CUSTOM_INVENTORY_URL_PREFIX,
   CUSTOM_ITEM_WEIGHT_MAX,
@@ -168,6 +169,7 @@ import {
   MAGIC_ITEM_CATALOG_EMPTY_GROUP_LABELS,
   MAGIC_ITEMS_DETAIL_BASE_PATH,
   NEW_CUSTOM_INVENTORY_ITEM,
+  ORIGIN_FEAT_CATEGORY,
   PACT_SPELL_SLOTS_LABEL,
   PREPARED_SPELLS_COLUMN_KEYWORD,
   PREPARED_SPELLS_COLUMN_PREFIX,
@@ -4545,6 +4547,41 @@ export function computeAbilityBonuses(
   }
 
   return bonuses;
+}
+
+/**
+ * URL своей предыстории: ссылки на раздел у неё нет, поэтому запись листа
+ * получает свой идентификатор с префиксом `custom:` — как свои предметы и
+ * заклинания.
+ *
+ * @returns URL своей предыстории (`custom:` + идентификатор).
+ */
+export function buildCustomBackgroundUrl(): string {
+  return `${CUSTOM_BACKGROUND_URL_PREFIX}${crypto.randomUUID()}`;
+}
+
+/**
+ * Черты происхождения для своей предыстории: из каталога `/select` остаются
+ * только черты категории происхождения, а при заданной настройке источников —
+ * ещё и книги, включённые в профиле (сам эндпоинт по источникам не фильтрует).
+ *
+ * @param options черты каталога.
+ * @param selectedSourceIds включённые источники; пусто — ограничения нет.
+ * @returns черты происхождения для селектора.
+ */
+export function getOriginFeatOptions(
+  options: FeatSelectOption[],
+  selectedSourceIds: string[] = [],
+): FeatSelectOption[] {
+  const allowedSources = new Set(selectedSourceIds);
+
+  return options.filter((option) => {
+    if (option.category !== ORIGIN_FEAT_CATEGORY) {
+      return false;
+    }
+
+    return allowedSources.size === 0 || allowedSources.has(option.sourceLabel);
+  });
 }
 
 /**

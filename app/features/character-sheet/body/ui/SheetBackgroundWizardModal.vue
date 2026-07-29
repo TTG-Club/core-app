@@ -26,6 +26,7 @@
     BACKGROUNDS_SEARCH_PATH,
     buildFeatFeature,
     computeAbilityBonuses,
+    CUSTOM_BACKGROUND_LABELS,
     FEATS_DETAIL_BASE_PATH,
     getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
@@ -36,6 +37,7 @@
     SHEET_SEARCH_LABELS,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetCustomBackgroundModal from './SheetCustomBackgroundModal.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
   type WizardStep = 'background' | 'review';
@@ -66,8 +68,21 @@
     },
   });
 
+  // Своя предыстория собирается в отдельной модалке поверх списка: сама она и
+  // применяет её к листу, поэтому мастер после успеха только закрывается, а
+  // отмена возвращает к списку каталога.
+  const customBackgroundModal = overlay.create(SheetCustomBackgroundModal);
+
   function handlePreview(url: string) {
     backgroundPreviewDrawer.open({ url });
+  }
+
+  async function handleCustomBackground() {
+    const isCreated = await customBackgroundModal.open();
+
+    if (isCreated) {
+      emit('close');
+    }
   }
 
   function handleFeatPreview(url: string) {
@@ -660,7 +675,14 @@
           @click.left.exact.prevent="handleBack"
         />
 
-        <span v-else />
+        <UButton
+          v-else
+          :label="CUSTOM_BACKGROUND_LABELS.openButton"
+          icon="tabler:plus"
+          color="neutral"
+          variant="subtle"
+          @click.left.exact.prevent="handleCustomBackground"
+        />
 
         <div class="flex gap-2">
           <UButton

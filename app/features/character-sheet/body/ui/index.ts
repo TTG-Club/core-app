@@ -10,6 +10,7 @@ export { default as SheetClassResourcesPanel } from './SheetClassResourcesPanel.
 export { default as SheetClassWizardModal } from './SheetClassWizardModal.vue';
 export { default as SheetCurrencyModal } from './SheetCurrencyModal.vue';
 export { default as SheetCurrencyRow } from './SheetCurrencyRow.vue';
+export { default as SheetCustomBackgroundModal } from './SheetCustomBackgroundModal.vue';
 export { default as SheetCustomItemModal } from './SheetCustomItemModal.vue';
 export { default as SheetCustomSpellModal } from './SheetCustomSpellModal.vue';
 export { default as SheetDamageModal } from './SheetDamageModal.vue';

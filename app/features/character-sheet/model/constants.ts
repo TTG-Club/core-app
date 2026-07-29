@@ -1536,6 +1536,72 @@ export const BACKGROUND_ABILITY_MODE_OPTIONS: Array<{
   { label: '+1 / +1 / +1', value: '1-1-1' },
 ];
 
+/**
+ * Префикс URL своей предыстории. Ссылки на раздел у неё нет, поэтому запись
+ * листа получает свой идентификатор (как свои предметы и заклинания) — так своя
+ * предыстория не путается с предысторией каталога.
+ */
+export const CUSTOM_BACKGROUND_URL_PREFIX = 'custom:';
+
+/**
+ * Категория черт происхождения (`/api/v2/feats/select`). Такие черты даёт
+ * предыстория, поэтому в своей предыстории выбор ограничен ими.
+ */
+export const ORIGIN_FEAT_CATEGORY = 'ORIGIN';
+
+/** Сколько навыков даёт своя предыстория (правило D&D 2024). */
+export const CUSTOM_BACKGROUND_SKILL_COUNT = 2;
+
+/** Сколько инструментов даёт своя предыстория (правило D&D 2024). */
+export const CUSTOM_BACKGROUND_TOOL_COUNT = 1;
+
+/** Ограничение длины названия своей предыстории. */
+export const CUSTOM_BACKGROUND_NAME_MAX_LENGTH = 80;
+
+/**
+ * Подписи слотов прибавок своей предыстории по режиму распределения: в «+2/+1»
+ * игрок называет две характеристики, в «+1/+1/+1» — три.
+ */
+export const CUSTOM_BACKGROUND_ABILITY_SLOT_LABELS: Record<
+  AbilityBonusMode,
+  string[]
+> = {
+  '2-1': ['+2 к характеристике', '+1 к характеристике'],
+  '1-1-1': [
+    '+1 к характеристике',
+    '+1 к характеристике',
+    '+1 к характеристике',
+  ],
+};
+
+/** Подписи формы своей предыстории. */
+export const CUSTOM_BACKGROUND_LABELS = {
+  openButton: 'Своя предыстория',
+  title: 'Своя предыстория',
+  nameTitle: 'Название',
+  namePlaceholder: 'Например: Странствующий книготорговец',
+  abilitiesTitle: 'Характеристики',
+  abilityPlaceholder: 'Характеристика',
+  skillsTitle: `Навыки (${CUSTOM_BACKGROUND_SKILL_COUNT})`,
+  skillsPlaceholder: `Выберите ${CUSTOM_BACKGROUND_SKILL_COUNT}`,
+  toolTitle: 'Инструмент',
+  toolPlaceholder: `Выберите ${CUSTOM_BACKGROUND_TOOL_COUNT}`,
+  toolEmpty: 'Каталог инструментов недоступен',
+  featTitle: 'Черта происхождения',
+  featPlaceholder: 'Выберите черту',
+  featEmpty: 'Без черты',
+  featPreview: 'Открыть описание черты',
+  featPreviewAriaLabel: 'Описание выбранной черты',
+  featLoadError: 'Не удалось загрузить черты происхождения',
+  featLoadErrorLog: 'Ошибка загрузки черт происхождения:',
+  featDetailError: 'Не удалось загрузить выбранную черту',
+  featDetailErrorLog: 'Ошибка загрузки черты своей предыстории:',
+  hint:
+    'Своя предыстория применяется как каталожная: навыки, инструмент, черта и '
+    + 'прибавки к характеристикам сразу заполнят лист.',
+  apply: 'Создать',
+};
+
 /** Ключевые слова групп брони для сопоставления прозы владений класса. */
 export const ARMOR_MATCH_KEYWORDS: Record<
   ArmorProficiencyGroup['key'],

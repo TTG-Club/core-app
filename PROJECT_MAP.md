@@ -105,6 +105,12 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 - Wizards for species / class / background; rolls go through `dice-roller`
   (universal `SheetRollModal`).
+- The background wizard also creates a homebrew one (`SheetCustomBackgroundModal`,
+  opened over the catalog list): name, a +2/+1 or +1/+1/+1 ability spread, two
+  skills, one tool from the catalog and an origin feat (category `ORIGIN` of
+  `/feats/select`, profile sources respected). It goes through the same
+  `setBackground` and is stored with a `custom:<uuid>` url, so it never mixes with
+  a catalog background.
 - Level-up wizard inside the experience modal (`composables/useLevelUpWizard.ts`):
   one step per gained level with its own hit-point mode (average / roll / max),
   the class and subclass features of that level with their choices, and the
