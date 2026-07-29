@@ -1,3 +1,5 @@
+import type { ListPresentationConfig } from '~infrastructure/list-presentation/model';
+
 import type {
   AbilityBonusMode,
   AbilityKey,
@@ -11,11 +13,16 @@ import type {
   CustomInventoryItemDraft,
   CustomInventoryKind,
   CustomSpellField,
+  DamageRollSource,
   FeatureOrigin,
+  FeatureOriginGroup,
   HitPointsGainMode,
   InventoryItemCategory,
   InventoryStatRollKind,
   LanguageProficiencyGroup,
+  MagicItemCatalogGrouping,
+  MagicItemCatalogItem,
+  MagicItemCatalogSorting,
   ResourceRecovery,
   RollMode,
   SheetSaveStatus,
@@ -23,10 +30,11 @@ import type {
   SkillProficiencyLevel,
   SpeedTypeKey,
   SpeedUnit,
-  ToolProficiencyGroup,
+  ToolProficiencyGroupKey,
   VisionKey,
   WeaponCategory,
   WeaponProficiencyGroup,
+  WeaponTraitKey,
 } from './types';
 
 import bytes from 'bytes';
@@ -585,6 +593,24 @@ export const SKILL_PROFICIENCY_MULTIPLIERS: Record<
   expertise: 2,
 };
 
+/** Пометки навыка, которым персонаж уже владеет, в списках выбора. */
+export const SKILL_OWNED_HINTS: Record<SkillProficiencyLevel, string> = {
+  none: '',
+  half: 'уже есть: половина владения',
+  proficient: 'уже есть: владение',
+  expertise: 'уже есть: компетенция',
+};
+
+/**
+ * Предупреждение о выборе навыка, которым персонаж уже владеет. По правилам
+ * 2024 бонус мастерства не складывается сам с собой, а компетенция даётся
+ * только умением, где она названа прямо, — повторный выбор навыка пропадает
+ * впустую.
+ */
+export const SKILL_DUPLICATE_WARNING =
+  'Такие навыки у персонажа уже есть: по правилам 2024 повторное владение '
+  + 'ничего не даёт и компетенцию не выдаёт — лучше выбрать другие навыки.';
+
 /** Множитель грузоподъёмности от значения Силы. */
 export const CARRYING_CAPACITY_MULTIPLIER = 15;
 
@@ -668,12 +694,40 @@ export const ROLL_MODE_OPTIONS: Array<{
   },
 ];
 
-/** Нотация кубов d20 по режиму броска (нотация дайс-роллера). */
-export const ROLL_MODE_DICE_NOTATION: Record<RollMode, string> = {
-  normal: '1к20',
-  advantage: '2к20вл1',
-  disadvantage: '2к20вх1',
+/** Количество костей в броске по его режиму: преимущество и помеха катят две. */
+export const ROLL_MODE_DICE_COUNT: Record<RollMode, number> = {
+  normal: 1,
+  advantage: 2,
+  disadvantage: 2,
 };
+
+/**
+ * Отбор кости по режиму броска в нотации дайс-роллера: «вл1» — взять лучшую,
+ * «вх1» — худшую. Пустая строка — обычный бросок, отбирать нечего.
+ */
+export const ROLL_MODE_DICE_SUFFIX: Record<RollMode, string> = {
+  normal: '',
+  advantage: 'вл1',
+  disadvantage: 'вх1',
+};
+
+/** Значение «Авто» в селекте характеристики броска. */
+export const ROLL_ABILITY_AUTO = 'auto';
+
+/** Варианты характеристики, чей модификатор идёт в бросок. */
+export const ROLL_ABILITY_OPTIONS: Array<{
+  label: string;
+  value: AbilityKey | typeof ROLL_ABILITY_AUTO;
+}> = [
+  { label: 'Авто', value: ROLL_ABILITY_AUTO },
+  ...ABILITY_ORDER.map((key) => ({ label: ABILITY_LABELS[key], value: key })),
+];
+
+/** Надпись кнопки в модалке броска проверки по умолчанию. */
+export const ROLL_CHECK_ACTION_LABEL = 'Бросить проверку';
+
+/** Надпись кнопки в модалке броска урона по умолчанию. */
+export const DAMAGE_ROLL_ACTION_LABEL = 'Бросить урон';
 
 /** Минимальный дополнительный бонус броска. */
 export const ROLL_BONUS_MIN = -99;
@@ -968,130 +1022,164 @@ export const ARMOR_PROFICIENCY_GROUPS: ArmorProficiencyGroup[] = [
   },
 ];
 
+/** Виды простого оружия каталога владений. */
+const SIMPLE_WEAPON_ITEMS = [
+  'Дубинка',
+  'Кинжал',
+  'Палица',
+  'Ручной топор',
+  'Метательное копьё',
+  'Лёгкий молот',
+  'Булава',
+  'Боевой посох',
+  'Серп',
+  'Копьё',
+  'Дротик',
+  'Короткий лук',
+  'Лёгкий арбалет',
+  'Праща',
+] as const;
+
+/** Виды воинского оружия каталога владений. */
+const MARTIAL_WEAPON_ITEMS = [
+  'Боевой топор',
+  'Цеп',
+  'Глефа',
+  'Секира',
+  'Двуручный меч',
+  'Алебарда',
+  'Длинное копьё',
+  'Длинный меч',
+  'Молот',
+  'Моргенштерн',
+  'Пика',
+  'Рапира',
+  'Скимитар',
+  'Короткий меч',
+  'Трезубец',
+  'Боевой клевец',
+  'Боевой молот',
+  'Кнут',
+  'Духовая трубка',
+  'Ручной арбалет',
+  'Тяжёлый арбалет',
+  'Длинный лук',
+  'Мушкет',
+  'Пистоль',
+] as const;
+
+/** Название оружия каталога владений — ключ списков признаков ниже. */
+type CatalogWeaponName =
+  | (typeof SIMPLE_WEAPON_ITEMS)[number]
+  | (typeof MARTIAL_WEAPON_ITEMS)[number];
+
+/** Дальнобойное оружие каталога; остальное считается рукопашным. */
+const RANGED_WEAPON_ITEMS: CatalogWeaponName[] = [
+  'Дротик',
+  'Короткий лук',
+  'Лёгкий арбалет',
+  'Праща',
+  'Духовая трубка',
+  'Ручной арбалет',
+  'Тяжёлый арбалет',
+  'Длинный лук',
+  'Мушкет',
+  'Пистоль',
+];
+
+/** Оружие каталога со свойством «Фехтовальное». */
+const FINESSE_WEAPON_ITEMS: CatalogWeaponName[] = [
+  'Кинжал',
+  'Дротик',
+  'Рапира',
+  'Скимитар',
+  'Короткий меч',
+  'Кнут',
+];
+
+/**
+ * Оружие каталога со свойством «Лёгкое». Свойство задаётся списком, а не
+ * названием: «Лёгкий арбалет» и «Лёгкий молот» — разный случай, лёгкое из них
+ * только второе.
+ */
+const LIGHT_WEAPON_ITEMS: CatalogWeaponName[] = [
+  'Дубинка',
+  'Кинжал',
+  'Ручной топор',
+  'Лёгкий молот',
+  'Серп',
+  'Скимитар',
+  'Короткий меч',
+  'Ручной арбалет',
+];
+
 /** Каталог оружия для настройки владения и мастерства: группы и виды. */
 export const WEAPON_PROFICIENCY_GROUPS: WeaponProficiencyGroup[] = [
   {
     key: 'simple',
     title: 'Простое',
     all: 'Всё простое оружие',
-    items: [
-      'Дубинка',
-      'Кинжал',
-      'Палица',
-      'Ручной топор',
-      'Метательное копьё',
-      'Лёгкий молот',
-      'Булава',
-      'Боевой посох',
-      'Серп',
-      'Копьё',
-      'Дротик',
-      'Короткий лук',
-      'Лёгкий арбалет',
-      'Праща',
-    ],
+    items: [...SIMPLE_WEAPON_ITEMS],
   },
   {
     key: 'martial',
     title: 'Воинское',
     all: 'Всё воинское оружие',
-    items: [
-      'Боевой топор',
-      'Цеп',
-      'Глефа',
-      'Секира',
-      'Двуручный меч',
-      'Алебарда',
-      'Длинное копьё',
-      'Длинный меч',
-      'Молот',
-      'Моргенштерн',
-      'Пика',
-      'Рапира',
-      'Скимитар',
-      'Короткий меч',
-      'Трезубец',
-      'Боевой клевец',
-      'Боевой молот',
-      'Кнут',
-      'Духовая трубка',
-      'Ручной арбалет',
-      'Тяжёлый арбалет',
-      'Длинный лук',
-      'Мушкет',
-      'Пистоль',
-    ],
+    items: [...MARTIAL_WEAPON_ITEMS],
   },
 ];
 
-/** Каталог инструментов для настройки владения: группы и виды. */
-export const TOOL_PROFICIENCY_GROUPS: ToolProficiencyGroup[] = [
+/** Оружие каталога по признакам, которыми проза владений сужает группу. */
+export const WEAPON_TRAIT_ITEMS: Record<WeaponTraitKey, string[]> = {
+  finesse: [...FINESSE_WEAPON_ITEMS],
+  light: [...LIGHT_WEAPON_ITEMS],
+  ranged: [...RANGED_WEAPON_ITEMS],
+  melee: [...SIMPLE_WEAPON_ITEMS, ...MARTIAL_WEAPON_ITEMS].filter(
+    (weapon) => !RANGED_WEAPON_ITEMS.includes(weapon),
+  ),
+};
+
+/**
+ * Устаревшие названия инструментов из листов и ответов API. Это НЕ каталог —
+ * каталог целиком приходит из раздела «Предметы»; карта нужна лишь чтобы старая
+ * запись листа сошлась с записью каталога и не выглядела своим инструментом.
+ */
+export const TOOL_NAME_ALIASES: Record<string, string> = {
+  'набор костей': 'Игральные кости',
+  'набор игральных карт': 'Игральные карты',
+  'шахматы «копье дракона»': 'Набор драконьих шахмат',
+  'набор для игры «три дракона»': 'Набор Ставка трех драконов',
+  'флейта пана': 'Свирель',
+  'инструменты жестянщика': 'Инструменты ремонтника',
+};
+
+/**
+ * Категории раздела «Предметы», из которых собирается каталог инструментов, в
+ * порядке отображения. `TOOL` — надмножество ремесленных и прочих инструментов,
+ * поэтому «прочие» получаются вычитанием ремесленных.
+ */
+export const TOOL_CATALOG_ITEM_TYPES: Record<ToolProficiencyGroupKey, string> =
   {
-    key: 'artisan',
-    title: 'Инструменты ремесленника',
-    all: 'Все инструменты ремесленника',
-    items: [
-      'Инструменты алхимика',
-      'Инструменты пивовара',
-      'Инструменты каллиграфа',
-      'Инструменты плотника',
-      'Инструменты картографа',
-      'Инструменты сапожника',
-      'Инструменты повара',
-      'Инструменты стеклодува',
-      'Инструменты ювелира',
-      'Инструменты кожевника',
-      'Инструменты каменщика',
-      'Инструменты художника',
-      'Инструменты гончара',
-      'Инструменты кузнеца',
-      'Инструменты ремонтника',
-      'Инструменты ткача',
-      'Инструменты резчика по дереву',
-    ],
-  },
-  {
-    key: 'gaming',
-    title: 'Игровые наборы',
-    all: 'Все игровые наборы',
-    items: [
-      'Набор костей',
-      'Шахматы «Копьё дракона»',
-      'Набор игральных карт',
-      'Набор для игры «Три дракона»',
-    ],
-  },
-  {
-    key: 'musical',
-    title: 'Музыкальные инструменты',
-    all: 'Все музыкальные инструменты',
-    items: [
-      'Волынка',
-      'Барабан',
-      'Цимбалы',
-      'Флейта',
-      'Лютня',
-      'Лира',
-      'Рожок',
-      'Флейта Пана',
-      'Шалмей',
-      'Виола',
-    ],
-  },
-  {
-    key: 'other',
-    title: 'Прочие инструменты',
-    all: 'Все прочие инструменты',
-    items: [
-      'Набор для маскировки',
-      'Набор для фальсификации',
-      'Набор травника',
-      'Инструменты навигатора',
-      'Набор отравителя',
-      'Воровские инструменты',
-    ],
-  },
+    artisan: 'ARTISAN_S_TOOLS',
+    gaming: 'GAMING_SET',
+    musical: 'INSTRUMENT',
+    other: 'TOOL',
+  };
+
+/** Порядок групп каталога инструментов в модалке владения. */
+export const TOOL_CATALOG_GROUP_ORDER: ToolProficiencyGroupKey[] = [
+  'artisan',
+  'gaming',
+  'musical',
+  'other',
 ];
+
+/**
+ * Подпись группы «прочие инструменты». Категория `TOOL` в разделе называется
+ * просто «Инструменты», а в модалке она стоит рядом с ремесленными — без своей
+ * подписи колонка читалась бы как дубль.
+ */
+export const TOOL_CATALOG_OTHER_GROUP_TITLE = 'Прочие инструменты';
 
 /** Эндпоинт поиска черт (раздел «Черты»). */
 export const FEATS_SEARCH_PATH = '/api/v2/feats/search';
@@ -1124,12 +1212,70 @@ export const FIGHTING_STYLE_INVALID_RESPONSE_ERROR =
  */
 export const FIGHTING_STYLE_FEATURE_ID_SEGMENT = 'fighting-style';
 
+/**
+ * Категории черт, недоступные при выборе за классовое улучшение характеристик:
+ * черты происхождения даются предысторией, эпические — умением 19 уровня.
+ * Список именно запрещающий: новая категория с бэка становится доступной сама.
+ */
+export const ABILITY_IMPROVEMENT_EXCLUDED_FEAT_CATEGORIES = [
+  'ORIGIN',
+  'EPIC_BOON',
+];
+
+/** Предел характеристики для прибавок от черты (правило D&D 2024). */
+export const ABILITY_IMPROVEMENT_SCORE_MAX = 20;
+
+/**
+ * Названия классового умения, дающего черту (в нижнем регистре, без «ё»).
+ * Справочник пишет его по-разному: у колдуна это «Увеличение характеристик».
+ */
+export const ABILITY_IMPROVEMENT_FEATURE_NAMES = [
+  'улучшение характеристик',
+  'увеличение характеристик',
+];
+
+/** Начало url черты «Улучшение характеристик» (у каждого источника свой суффикс). */
+export const ABILITY_IMPROVEMENT_FEAT_URL_PREFIX = 'ability-score-improvement';
+
+/** Тексты выбора черты за улучшение характеристик в мастере повышения уровня. */
+export const ABILITY_IMPROVEMENT_LABELS = {
+  featTitle: 'Выберите черту',
+  featPlaceholder: 'Выбери черту',
+  abilitiesTitle: 'Улучшение характеристик',
+  abilityPlaceholder: 'Выбери характеристику',
+  previewTooltip: 'Открыть описание черты',
+  previewAriaLabel: 'Описание выбранной черты',
+  loadError: 'Не удалось загрузить черты',
+  applyError: 'Не удалось добавить выбранную черту',
+  applyErrorLog: 'Ошибка добавления черты за улучшение характеристик:',
+  maxHint: `Характеристика не поднимается выше ${ABILITY_IMPROVEMENT_SCORE_MAX}`,
+};
+
+/**
+ * Сегмент идентификатора особенности с чертой, выбранной за улучшение
+ * характеристик: `class:{featureKey}:{level}:ability-improvement:{featUrl}`.
+ * Уровень в идентификаторе разводит выборы разных уровней, а префикс `class:`
+ * привязывает черту к умению, которое её дало.
+ */
+export const ABILITY_IMPROVEMENT_FEATURE_ID_SEGMENT = 'ability-improvement';
+
+/**
+ * Служебные сегменты идентификаторов черт, выданных классовыми умениями. По ним
+ * из идентификатора достаётся url черты, поэтому такие черты считаются взятыми
+ * и не предлагаются повторно.
+ */
+export const CLASS_FEAT_CHOICE_ID_SEGMENTS = [
+  FIGHTING_STYLE_FEATURE_ID_SEGMENT,
+  ABILITY_IMPROVEMENT_FEATURE_ID_SEGMENT,
+];
+
 /** Эндпоинт фильтров черт — источник глобальной настройки источников. */
 export const FEATS_FILTERS_PATH = '/api/v2/feats/filters';
 
 /**
- * Ключ `useAsyncData` для источников каталога черт. Общий у модалки черт и
- * визарда класса: ответ фильтров переиспользуется между модалками.
+ * Ключ `useAsyncData` для источников каталога черт. Общий у модалки черт,
+ * визарда класса и мастера повышения уровня: ответ фильтров переиспользуется
+ * между модалками.
  */
 export const FEAT_SOURCES_ASYNC_DATA_KEY = 'character-sheet:feat-sources';
 
@@ -1144,6 +1290,15 @@ export const SPELLS_SEARCH_PATH = '/api/v2/spells/search';
 
 /** Базовый путь детали заклинания (`/{url}` — слаг из каталога). */
 export const SPELLS_DETAIL_BASE_PATH = '/api/v2/spells';
+
+/**
+ * Хвост пути «сырого» ответа заклинания: публичная деталь урон не отдаёт, его
+ * формулы лежат только в ответе для редактора (как и боевые числа предметов).
+ */
+export const SPELLS_RAW_DETAIL_PATH_SUFFIX = 'raw';
+
+/** Ключ общего кэша формул урона заклинаний (каталожные данные, не листа). */
+export const SPELL_DAMAGE_STATE_KEY = 'character-sheet:spell-damage';
 
 /** Подпись отдельной группы заклинаний, полученных от вида и происхождения. */
 export const INNATE_SPELL_GROUP_LABEL = 'Врождённые';
@@ -1174,6 +1329,9 @@ export const SPELL_CATALOG_SEARCH_DEBOUNCE_MS = 300;
 
 /** Круги заклинаний для быстрого фильтра (0 — заговоры). */
 export const SPELL_LEVELS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+/** Круг заговора: ячеек у него нет, накладывается он без них. */
+export const CANTRIP_SPELL_LEVEL = 0;
 
 /** Базовая величина сложности спасброска от заклинаний (D&D 2024). */
 export const SPELL_SAVE_DC_BASE = 8;
@@ -1274,6 +1432,140 @@ export const SPELL_SLOT_USED_LABEL = 'потрачена';
 /** Подпись кружка свободной ячейки заклинаний (для скринридера). */
 export const SPELL_SLOT_FREE_LABEL = 'свободна';
 
+/** Подпись блока подготовленных заклинаний на вкладке заклинаний. */
+export const PREPARED_SPELLS_LABEL = 'Подготовленные';
+
+/** Значение блока, когда число подготовленных заклинаний не определено. */
+export const PREPARED_SPELLS_EMPTY_VALUE = '—';
+
+/** Минимальное своё число подготовленных заклинаний. */
+export const PREPARED_SPELLS_MIN = 0;
+
+/** Максимальное своё число подготовленных заклинаний. */
+export const PREPARED_SPELLS_MAX = 99;
+
+/** Минимальный бонус к числу подготовленных заклинаний. */
+export const PREPARED_SPELLS_BONUS_MIN = -99;
+
+/** Максимальный бонус к числу подготовленных заклинаний. */
+export const PREPARED_SPELLS_BONUS_MAX = 99;
+
+/**
+ * Начало названия колонки таблицы класса с числом подготовленных заклинаний.
+ * Справочник сокращает название по-разному («Подг. закл.», «Подг. Закл»),
+ * поэтому сравниваются только буквы названия.
+ */
+export const PREPARED_SPELLS_COLUMN_PREFIX = 'подг';
+
+/** Обязательная часть названия той же колонки (отсекает «Подготовка» и т. п.). */
+export const PREPARED_SPELLS_COLUMN_KEYWORD = 'закл';
+
+/** Разделитель «подготовлено / всего можно» в блоке подготовленных. */
+export const PREPARED_SPELLS_VALUE_SEPARATOR = ' / ';
+
+/** Подписи значка подготовки в строке заклинания. */
+export const PREPARED_SPELL_TOGGLE_LABELS: Record<
+  'prepare' | 'unprepare' | 'cantrip' | 'innate' | 'limit',
+  string
+> = {
+  prepare: 'Подготовить',
+  unprepare: 'Снять подготовку',
+  cantrip: 'Заговор подготавливать не нужно — он всегда доступен',
+  innate: 'Врождённое заклинание подготавливать не нужно',
+  limit: 'Больше заклинаний подготовить нельзя',
+};
+
+/** Начало подсказки блока подготовленных: сколько заклинаний отмечено. */
+export const PREPARED_SPELLS_COUNT_HINT = 'Подготовлено заклинаний';
+
+/** Заголовок предупреждения о достигнутом пределе подготовленных заклинаний. */
+export const PREPARED_SPELLS_LIMIT_TOAST_TITLE =
+  'Предел подготовленных заклинаний';
+
+/** Подсказки блока подготовленных заклинаний на вкладке заклинаний. */
+export const PREPARED_SPELLS_HINTS: Record<
+  'auto' | 'custom' | 'unknown',
+  string
+> = {
+  auto: 'Подготовленных заклинаний по таблице класса',
+  custom: 'Своё число подготовленных заклинаний: подсчёт по классу выключен',
+  unknown:
+    'Класс не даёт числа подготовленных заклинаний — нажмите, чтобы задать своё',
+};
+
+/** Подписи модалки настройки подготовленных заклинаний. */
+export const PREPARED_SPELLS_LABELS: Record<
+  | 'title'
+  | 'customToggle'
+  | 'customHint'
+  | 'customValue'
+  | 'classValue'
+  | 'bonus'
+  | 'total'
+  | 'unknownClassValue'
+  | 'autoHint',
+  string
+> = {
+  title: 'Подготовленные заклинания',
+  customToggle: 'Использовать своё число',
+  customHint: 'Иначе число считается по таблице класса',
+  customValue: 'Число заклинаний',
+  classValue: 'Число из таблицы класса',
+  bonus: 'Бонус к числу класса',
+  total: 'Всего можно подготовить',
+  unknownClassValue:
+    'Класс не даёт числа подготовленных заклинаний. Если оно должно быть, выберите класс заново или повысьте уровень — лист запомнит таблицу класса.',
+  autoHint:
+    'Число берётся из таблицы класса на текущем уровне; бонус прибавляется к нему (например, от черты или предмета).',
+};
+
+/**
+ * Общие подписи ряда отбора на вкладках листа: сброс и пустое место под отбором
+ * одинаковы и у заклинаний, и у особенностей.
+ */
+export const SHEET_FILTER_LABELS: Record<
+  'reset' | 'resetHint' | 'empty',
+  string
+> = {
+  reset: 'Сбросить',
+  resetHint: 'Снять отбор и вернуть список целиком',
+  empty: 'Под отбор ничего не подошло',
+};
+
+/** Подписи чипов отбора заклинаний на вкладке заклинаний. */
+export const SPELL_FILTER_LABELS: Record<
+  'prepared' | 'preparedHint' | 'cantrip',
+  string
+> = {
+  prepared: 'Подготовленные',
+  preparedHint: 'Оставить в списке только заклинания, помеченные значком',
+  cantrip: 'З',
+};
+
+/** Общая часть оформления чипа отбора (каталог заклинаний, вкладка). */
+export const FILTER_CHIP_CLASS =
+  'cursor-pointer rounded border px-2 py-1 text-xs transition-colors';
+
+/** Невыбранный чип отбора: рамка теплеет только под курсором. */
+export const FILTER_CHIP_IDLE_CLASS =
+  'border-default text-toned hover:border-warning/60';
+
+/** Выбранный чип отбора: горит тёплым, как отмеченное значком заклинание. */
+export const FILTER_CHIP_SELECTED_CLASS =
+  'border-warning bg-warning/10 text-warning';
+
+/**
+ * Подписи чисел заклинательства: в узкую плитку вкладки идёт короткая, полное
+ * название показывает подсказка по наведению.
+ */
+export const SPELLCASTING_STAT_LABELS: Record<
+  'saveDc' | 'attack',
+  { short: string; full: string }
+> = {
+  saveDc: { short: 'Сл. спасброска', full: 'Сложность спасброска' },
+  attack: { short: 'Атака закл.', full: 'Атака заклинанием' },
+};
+
 /** Значение «Авто (по классу)» в селекте заклинательной характеристики. */
 export const SPELLCASTING_ABILITY_AUTO = 'auto';
 
@@ -1319,6 +1611,194 @@ export const BACKGROUND_ABILITY_MODE_OPTIONS: Array<{
   { label: '+1 / +1 / +1', value: '1-1-1' },
 ];
 
+/**
+ * Префикс URL своей предыстории. Ссылки на раздел у неё нет, поэтому запись
+ * листа получает свой идентификатор (как свои предметы и заклинания) — так своя
+ * предыстория не путается с предысторией каталога.
+ */
+export const CUSTOM_BACKGROUND_URL_PREFIX = 'custom:';
+
+/**
+ * Категория черт происхождения (`/api/v2/feats/select`). Такие черты даёт
+ * предыстория, поэтому в своей предыстории выбор ограничен ими.
+ */
+export const ORIGIN_FEAT_CATEGORY = 'ORIGIN';
+
+/** Сколько навыков даёт своя предыстория (правило D&D 2024). */
+export const CUSTOM_BACKGROUND_SKILL_COUNT = 2;
+
+/** Сколько инструментов даёт своя предыстория (правило D&D 2024). */
+export const CUSTOM_BACKGROUND_TOOL_COUNT = 1;
+
+/** Ограничение длины названия своей предыстории. */
+export const CUSTOM_BACKGROUND_NAME_MAX_LENGTH = 80;
+
+/**
+ * Подписи слотов прибавок своей предыстории по режиму распределения: в «+2/+1»
+ * игрок называет две характеристики, в «+1/+1/+1» — три.
+ */
+export const CUSTOM_BACKGROUND_ABILITY_SLOT_LABELS: Record<
+  AbilityBonusMode,
+  string[]
+> = {
+  '2-1': ['+2 к характеристике', '+1 к характеристике'],
+  '1-1-1': [
+    '+1 к характеристике',
+    '+1 к характеристике',
+    '+1 к характеристике',
+  ],
+};
+
+/** Подписи формы своей предыстории. */
+export const CUSTOM_BACKGROUND_LABELS = {
+  openButton: 'Своя предыстория',
+  title: 'Своя предыстория',
+  nameTitle: 'Название',
+  namePlaceholder: 'Например: Странствующий книготорговец',
+  abilitiesTitle: 'Характеристики',
+  abilityPlaceholder: 'Характеристика',
+  skillsTitle: `Навыки (${CUSTOM_BACKGROUND_SKILL_COUNT})`,
+  skillsPlaceholder: `Выберите ${CUSTOM_BACKGROUND_SKILL_COUNT}`,
+  toolTitle: 'Инструмент',
+  toolPlaceholder: `Выберите ${CUSTOM_BACKGROUND_TOOL_COUNT}`,
+  toolEmpty: 'Каталог инструментов недоступен',
+  featTitle: 'Черта происхождения',
+  featPlaceholder: 'Выберите черту',
+  featEmpty: 'Без черты',
+  featPreview: 'Открыть описание черты',
+  featPreviewAriaLabel: 'Описание выбранной черты',
+  featLoadError: 'Не удалось загрузить черты происхождения',
+  featLoadErrorLog: 'Ошибка загрузки черт происхождения:',
+  featDetailError: 'Не удалось загрузить выбранную черту',
+  featDetailErrorLog: 'Ошибка загрузки черты своей предыстории:',
+  hint:
+    'Своя предыстория применяется как каталожная: навыки, инструмент, черта и '
+    + 'прибавки к характеристикам сразу заполнят лист.',
+  apply: 'Создать',
+};
+
+/**
+ * Префикс URL своего вида. Ссылки на раздел у него нет, поэтому запись листа
+ * получает свой идентификатор (как своя предыстория) — так свой вид не
+ * путается с видом каталога.
+ */
+export const CUSTOM_SPECIES_URL_PREFIX = 'custom:';
+
+/** Ограничение длины названия своего вида. */
+export const CUSTOM_SPECIES_NAME_MAX_LENGTH = 80;
+
+/** Ограничение длины названия особенности своего вида. */
+export const CUSTOM_SPECIES_FEATURE_NAME_MAX_LENGTH = 120;
+
+/** Размер своего вида по умолчанию; значение из `SIZE_LABEL_WORDS`. */
+export const CUSTOM_SPECIES_DEFAULT_SIZE = 'Средний';
+
+/** Скорость ходьбы своего вида по умолчанию, футы. */
+export const CUSTOM_SPECIES_DEFAULT_SPEED = 30;
+
+/** Дистанция новой строки зрения своего вида по умолчанию, футы. */
+export const CUSTOM_SPECIES_DEFAULT_VISION = 60;
+
+/** Подписи формы своего вида. */
+export const CUSTOM_SPECIES_LABELS = {
+  openButton: 'Свой вид',
+  title: 'Свой вид',
+  nameTitle: 'Название',
+  namePlaceholder: 'Например: Пепельный странник',
+  sizeTitle: 'Размер',
+  speedTitle: 'Передвижение, футы',
+  speedAdd: 'Добавить передвижение',
+  speedRemove: 'Убрать передвижение',
+  speedEmpty: 'Передвижение не задано',
+  hoverLabel: 'Парение',
+  visionTitle: 'Зрение, футы',
+  visionAdd: 'Добавить зрение',
+  visionRemove: 'Убрать зрение',
+  visionEmpty: 'Зрение не задано',
+  distanceTypePlaceholder: 'Тип',
+  featuresTitle: 'Особенности',
+  featureNamePlaceholder: 'Название особенности',
+  featureDescriptionPlaceholder: 'Опиши особенность',
+  featureAdd: 'Добавить особенность',
+  featureRemove: 'Удалить особенность',
+  featuresEmpty:
+    'Особенностей нет — их можно добавить и позже, на вкладке «Особенности».',
+  hint:
+    'Свой вид применяется как каталожный: размер, передвижение, зрение и '
+    + 'особенности сразу заполнят лист.',
+  apply: 'Создать',
+};
+
+/**
+ * Префикс URL своего класса: ссылки на раздел у него нет, поэтому запись листа
+ * получает свой идентификатор (как своя предыстория и свой вид) — так свой
+ * класс не путается с классом каталога.
+ */
+export const CUSTOM_CLASS_URL_PREFIX = 'custom:';
+
+/** Ограничение длины названия своего класса и его подкласса. */
+export const CUSTOM_CLASS_NAME_MAX_LENGTH = 80;
+
+/** Ограничение длины названия умения своего класса. */
+export const CUSTOM_CLASS_FEATURE_NAME_MAX_LENGTH = 120;
+
+/** Кость хитов своего класса по умолчанию; номинал из `HIT_DIE_OPTIONS`. */
+export const CUSTOM_CLASS_DEFAULT_HIT_DIE = 8;
+
+/** Сколько спасбросков даёт класс по правилам D&D. */
+export const CUSTOM_CLASS_SAVING_THROW_COUNT = 2;
+
+/**
+ * Варианты заклинательства своего класса: тип задаёт прогрессию ячеек, поэтому
+ * каждый подписан классами-примерами — иначе выбор пришлось бы сверять с
+ * правилами.
+ */
+export const CUSTOM_CLASS_CASTER_TYPE_OPTIONS: Array<{
+  label: string;
+  value: CasterType;
+}> = [
+  { label: 'Класс не даёт заклинаний', value: CasterType.NONE },
+  { label: 'Полный заклинатель (волшебник, жрец)', value: CasterType.FULL },
+  {
+    label: 'Половина заклинателя (паладин, следопыт)',
+    value: CasterType.HALF,
+  },
+  {
+    label: 'Треть заклинателя (мистический рыцарь)',
+    value: CasterType.THIRD,
+  },
+  { label: 'Заклинатель договора (колдун)', value: CasterType.PACT },
+];
+
+/** Подписи формы своего класса. */
+export const CUSTOM_CLASS_LABELS = {
+  openButton: 'Свой класс',
+  title: 'Свой класс',
+  nameTitle: 'Название',
+  namePlaceholder: 'Например: Охотник за бурями',
+  subclassTitle: 'Подкласс (необязательно)',
+  subclassPlaceholder: 'Например: Путь громового шага',
+  hitDieTitle: 'Кость хитов',
+  savingThrowsTitle: `Спасброски (обычно ${CUSTOM_CLASS_SAVING_THROW_COUNT})`,
+  savingThrowsPlaceholder: 'Выберите характеристики',
+  skillsTitle: 'Владение навыками',
+  skillsPlaceholder: 'Выберите навыки',
+  casterTypeTitle: 'Заклинательство',
+  featuresTitle: 'Умения',
+  featureNamePlaceholder: 'Название умения',
+  featureDescriptionPlaceholder: 'Опиши умение',
+  featureAdd: 'Добавить умение',
+  featureRemove: 'Удалить умение',
+  featuresEmpty:
+    'Умений нет — их можно добавить и позже, на вкладке «Особенности».',
+  hint:
+    'Свой класс применяется как каталожный: кость хитов, хиты, спасброски, '
+    + 'владение навыками, ячейки заклинаний и умения сразу заполнят лист. '
+    + 'Владения бронёй, оружием и инструментами задаются на панели владений, '
+    + 'ресурсы класса — на панели ресурсов.',
+  apply: 'Создать',
+};
+
 /** Ключевые слова групп брони для сопоставления прозы владений класса. */
 export const ARMOR_MATCH_KEYWORDS: Record<
   ArmorProficiencyGroup['key'],
@@ -1339,12 +1819,31 @@ export const WEAPON_MATCH_KEYWORDS: Record<
   martial: ['воинск'],
 };
 
-/** Ключевые слова групп инструментов для сопоставления прозы владений класса. */
-export const TOOL_MATCH_KEYWORDS: Record<
-  ToolProficiencyGroup['key'],
-  string[]
-> = {
-  artisan: ['ремесленник'],
+/** Ключевые слова признаков, которыми проза владений сужает группу оружия. */
+export const WEAPON_TRAIT_MATCH_KEYWORDS: Record<WeaponTraitKey, string[]> = {
+  finesse: ['фехтовальн'],
+  light: ['лёгк', 'легк'],
+  melee: ['рукопашн'],
+  ranged: ['дальнобойн'],
+};
+
+/**
+ * Оси признаков оружия: внутри оси признаки объединяются («фехтовальное или
+ * лёгкое» — любое из двух), между осями пересекаются («воинское рукопашное
+ * фехтовальное» — и рукопашное, и фехтовальное).
+ */
+export const WEAPON_TRAIT_AXES: WeaponTraitKey[][] = [
+  ['finesse', 'light'],
+  ['melee', 'ranged'],
+];
+
+/**
+ * Корни слов, по которым в прозе владений («Выберите один вид ремесленных
+ * инструментов») опознаётся группа каталога. Это языковая эвристика, а не
+ * список инструментов: сами инструменты приходят из раздела «Предметы».
+ */
+export const TOOL_MATCH_KEYWORDS: Record<ToolProficiencyGroupKey, string[]> = {
+  artisan: ['ремесленн'],
   gaming: ['игров'],
   musical: ['музыкальн'],
   other: [],
@@ -1367,6 +1866,38 @@ export const MAGIC_ITEMS_DETAIL_BASE_PATH = '/api/v2/magic-items';
 
 /** Эндпоинт фильтров магических предметов. */
 export const MAGIC_ITEMS_FILTERS_PATH = '/api/v2/magic-items/filters';
+
+/** Подписи групп каталога для предметов без значения поля группировки. */
+export const MAGIC_ITEM_CATALOG_EMPTY_GROUP_LABELS: Record<
+  Exclude<MagicItemCatalogGrouping, 'NONE'>,
+  string
+> = {
+  RARITY: 'Без редкости',
+  CATEGORY: 'Без категории',
+};
+
+/**
+ * Представление каталога магических предметов в модалке добавления:
+ * группировка та же, что в разделе «Магические предметы», а порядок внутри
+ * группы один (по русскому названию) — меню сортировки поэтому не появляется.
+ */
+export const MAGIC_ITEM_CATALOG_PRESENTATION_CONFIG: ListPresentationConfig<
+  MagicItemCatalogItem,
+  MagicItemCatalogGrouping,
+  MagicItemCatalogSorting
+> = {
+  sectionKey: 'character-sheet:magic-item-catalog',
+  defaultGrouping: 'RARITY',
+  defaultSorting: 'NAME',
+  groupingOptions: [
+    { label: 'По редкости', value: 'RARITY', apiValue: 'RARITY' },
+    { label: 'По категории', value: 'CATEGORY', apiValue: 'CATEGORY' },
+    { label: 'Без группировки', value: 'NONE', apiValue: 'NONE' },
+  ],
+  sortingOptions: [
+    { label: 'По русскому названию', value: 'NAME', apiValue: 'NAME' },
+  ],
+};
 
 /**
  * Порядок групп инвентаря по категориям предмета: «Прочее» — самая длинная
@@ -1396,11 +1927,51 @@ export const INVENTORY_CATEGORY_ICONS: Record<InventoryItemCategory, string> = {
   MAGIC_ITEM: 'tabler:sparkles',
 };
 
-/** Минимальное количество одного предмета в инвентаре. */
-export const INVENTORY_QUANTITY_MIN = 1;
+/**
+ * Минимальное количество одного предмета в инвентаре. Ноль разрешён: у
+ * потраченного расходника запись остаётся в списке (её не приходится искать в
+ * каталоге заново), но предмет считается отсутствующим — его нельзя надеть,
+ * им нельзя атаковать.
+ */
+export const INVENTORY_QUANTITY_MIN = 0;
 
 /** Максимальное количество одного предмета в инвентаре. */
 export const INVENTORY_QUANTITY_MAX = 999;
+
+/** Подписи кнопки доспеха в строке инвентаря по его текущему состоянию. */
+export const INVENTORY_EQUIP_ACTION_LABELS: Record<
+  'equip' | 'unequip',
+  string
+> = {
+  equip: 'Надеть',
+  unequip: 'Снять',
+};
+
+/**
+ * Подписи пункта меню о смене хвата универсального оружия — по хвату, в который
+ * его после нажатия возьмут (а не по нынешнему).
+ */
+export const INVENTORY_GRIP_MENU_LABELS: Record<
+  'oneHanded' | 'twoHanded',
+  string
+> = {
+  oneHanded: 'Взять в одну руку',
+  twoHanded: 'Взять в две руки',
+};
+
+/** Значок универсального оружия, взятого двумя руками. */
+export const INVENTORY_TWO_HANDED_BADGE_LABEL = 'Двумя руками';
+
+/** Подсказка значка «Двумя руками»: почему у оружия выросла кость урона. */
+export const INVENTORY_TWO_HANDED_BADGE_HINT =
+  'Универсальное оружие взято двумя руками: урон катится большей костью';
+
+/** Значок предмета, которого у персонажа не осталось (количество — ноль). */
+export const INVENTORY_MISSING_BADGE_LABEL = 'Отсутствует';
+
+/** Подсказка значка «Отсутствует»: что именно запрещает нулевое количество. */
+export const INVENTORY_MISSING_BADGE_HINT =
+  'Предмета не осталось: его нельзя надеть, им нельзя атаковать и бросать урон';
 
 /** Короткие подписи плиток параметров предмета в строке инвентаря. */
 export const INVENTORY_STAT_LABELS: Record<
@@ -1421,7 +1992,10 @@ export const INVENTORY_ROLL_KIND_LABELS: Record<InventoryStatRollKind, string> =
   };
 
 /** Подсказка в тултипе о том, что плитка бросается по нажатию. */
-export const INVENTORY_ROLL_HINT_LABEL = 'нажми, чтобы бросить';
+export const SHEET_ROLL_HINT_LABEL = 'нажми, чтобы бросить';
+
+/** Заголовок предупреждения о том, что тратить ячейки круга уже нечего. */
+export const SPELL_SLOTS_EMPTY_TOAST_TITLE = 'Ячейки закончились';
 
 /**
  * Названия типов урона справочника предметов
@@ -1454,6 +2028,50 @@ export const DAMAGE_TYPE_OPTIONS: Array<{ label: string; value: string }> =
     .filter(([type]) => type !== 'FAIR')
     .map(([type, label]) => ({ label, value: type }))
     .sort((left, right) => left.label.localeCompare(right.label, 'ru'));
+
+/** Префикс тега типа урона в формулах заклинаний (`8к6@dmg.fire`). */
+export const SPELL_DAMAGE_TYPE_TAG_PREFIX = 'dmg.';
+
+/**
+ * Названия типов урона заклинаний по тегам формул: справочник заклинаний
+ * записывает тип не ключом словаря (`FIRE`), а тегом формулы (`dmg.fire`).
+ */
+export const SPELL_DAMAGE_TYPE_TAG_LABELS: Record<string, string> =
+  Object.fromEntries(
+    Object.entries(DAMAGE_TYPE_LABELS).map(([damageType, label]) => [
+      `${SPELL_DAMAGE_TYPE_TAG_PREFIX}${damageType.toLowerCase()}`,
+      label,
+    ]),
+  );
+
+/**
+ * Условия, при которых катится своя формула урона: у части заклинаний кость
+ * зависит от состояния цели, и справочник помечает такие формулы тегом.
+ */
+export const SPELL_DAMAGE_CONDITION_TAG_LABELS: Record<string, string> = {
+  'target.full': 'Цель с полными хитами',
+  'target.notFull': 'Цель с неполными хитами',
+};
+
+/** Тег формулы, подставляющий модификатор заклинательной характеристики. */
+export const SPELL_DAMAGE_ABILITY_MODIFIER_TAG = 'mod.spell';
+
+/** Разделитель типов урона одного броска («Кислотный/Холодный» — на выбор). */
+export const SPELL_DAMAGE_TYPE_SEPARATOR = '/';
+
+/** Короткая подпись плитки урона заклинания — та же, что и у оружия. */
+export const SPELL_DAMAGE_STAT_LABEL = 'Урон';
+
+/** Подпись кнопки броска урона заклинанием для скринридера. */
+export const SPELL_DAMAGE_ROLL_LABEL = 'Бросок урона заклинанием';
+
+/**
+ * Подсказка плитки урона заклинания круга: бросок из окна настройки считается
+ * накладыванием и, в отличие от плитки оружия, ещё и занимает ячейку. У
+ * заговоров подсказка обычная — ячеек они не тратят.
+ */
+export const SPELL_DAMAGE_ROLL_HINT_LABEL =
+  'нажми, чтобы настроить бросок; ячейка тратится при броске';
 
 /**
  * Префикс идентификатора и URL своего предмета инвентаря. Каталожные ссылки —
@@ -1648,6 +2266,49 @@ export const NEW_CUSTOM_INVENTORY_ITEM: CustomInventoryItemDraft = {
 /** Обозначение кости в формуле броска (русская нотация дайс-роллера). */
 export const DICE_NOTATION_LETTER = 'к';
 
+/** Номиналы костей, доступные в модалках броска. */
+export const ROLL_DICE_FACES = [4, 6, 8, 10, 12, 20, 100];
+
+/** Варианты номинала кости для селекта в модалках броска. */
+export const ROLL_DICE_FACES_OPTIONS: Array<{
+  label: string;
+  value: number;
+}> = ROLL_DICE_FACES.map((faces) => ({
+  label: `${DICE_NOTATION_LETTER}${faces}`,
+  value: faces,
+}));
+
+/** Номинал кости проверки по умолчанию. */
+export const DEFAULT_ROLL_DICE_FACES = 20;
+
+/** Номинал кости, с которым добавляется новая кость урона. */
+export const DEFAULT_DAMAGE_DICE_FACES = 6;
+
+/**
+ * Минимальное количество костей в группе броска урона: верхнюю границу группа
+ * делит с формой своего оружия (`DAMAGE_DICE_COUNT_MAX`), а нулевая группа в
+ * броске бессмысленна — вместо неё кость убирают из списка.
+ */
+export const DAMAGE_ROLL_DICE_COUNT_MIN = 1;
+
+/**
+ * Максимум групп костей в модалке урона: больше в бросок не набирают, а список
+ * перестал бы помещаться в окно.
+ */
+export const DAMAGE_DICE_GROUPS_MAX = 6;
+
+/**
+ * Пустой бросок урона: заглушка для создания модалки настройки — настоящий
+ * разбор приходит в `open()` вместе с оружием или заклинанием.
+ */
+export const EMPTY_DAMAGE_ROLL_SOURCE: DamageRollSource = {
+  diceNotation: '',
+  flatBonus: 0,
+  ability: null,
+  abilityModifierCount: 0,
+  typeLabel: '',
+};
+
 /** Слова размеров для разбора строки размера вида. */
 export const SIZE_LABEL_WORDS = [
   'Крошечный',
@@ -1668,13 +2329,36 @@ export const SPEED_PARSE_FALLBACK = 30;
  */
 export const DARKVISION_PARSE_FALLBACK = 60;
 
-/** Подписи происхождения особенности персонажа. */
+/**
+ * Подписи происхождения особенности персонажа. Особенность без источника
+ * добавлена в лист руками, поэтому подписана «Своё» — как своё заклинание или
+ * свой предмет.
+ */
 export const FEATURE_ORIGIN_LABELS: Record<FeatureOrigin, string> = {
   species: 'Вид',
   lineage: 'Подвид',
   class: 'Класс',
   feat: 'Черта',
-  none: 'Нет',
+  none: 'Своё',
+};
+
+/**
+ * Порядок чипов отбора по источнику на вкладке особенностей: сперва то, что
+ * лист выдал сам (вид, класс, черты), свои записи — последними.
+ */
+export const FEATURE_ORIGIN_GROUP_ORDER: FeatureOriginGroup[] = [
+  'species',
+  'class',
+  'feat',
+  'none',
+];
+
+/** Подсказки чипов отбора особенностей по источнику. */
+export const FEATURE_ORIGIN_GROUP_HINTS: Record<FeatureOriginGroup, string> = {
+  species: 'Оставить в списке особенности вида и подвида',
+  class: 'Оставить в списке особенности класса',
+  feat: 'Оставить в списке черты',
+  none: 'Оставить в списке свои особенности',
 };
 
 /**
@@ -1691,14 +2375,18 @@ export const SHEET_FEATURE_ROW_LABELS: Record<
   emptyDescription: 'Описание не заполнено',
 };
 
-/** Варианты происхождения при добавлении особенности вручную. */
+/**
+ * Варианты происхождения при добавлении особенности вручную: те же группы, что
+ * и у чипов отбора вкладки, — «Своё» стоит первым, оно же и по умолчанию.
+ */
 export const FEATURE_ORIGIN_OPTIONS: Array<{
   label: string;
   value: FeatureOrigin;
 }> = [
-  { label: 'Нет', value: 'none' },
-  { label: 'Вид', value: 'species' },
-  { label: 'Класс', value: 'class' },
+  { label: FEATURE_ORIGIN_LABELS.none, value: 'none' },
+  { label: FEATURE_ORIGIN_LABELS.species, value: 'species' },
+  { label: FEATURE_ORIGIN_LABELS.class, value: 'class' },
+  { label: FEATURE_ORIGIN_LABELS.feat, value: 'feat' },
 ];
 
 /** Каталог языков для настройки владения: группы и языки. */
@@ -1709,6 +2397,7 @@ export const LANGUAGE_PROFICIENCY_GROUPS: LanguageProficiencyGroup[] = [
     all: 'Все стандартные языки',
     items: [
       'Общий',
+      'Общий язык жестов',
       'Дварфийский',
       'Эльфийский',
       'Гигантский',
@@ -1773,6 +2462,23 @@ export const SHEET_EMPTY_LABELS: Record<
   proficiencies: 'Нет',
   customCurrencies: 'Своих валют пока нет',
 };
+
+/** Подписи модалки и чипов владения инструментами. */
+export const SHEET_TOOL_LABELS = {
+  title: 'Владение инструментами',
+  preview: 'Открыть описание инструмента',
+  removeCustom: 'Удалить инструмент',
+  selectAll: 'Выбрать все',
+  catalogEmpty:
+    'В разделе «Предметы» инструментов нет — впишите нужный как свой.',
+  customTitle: 'Свой инструмент',
+  customHint: 'Инструмента нет на сайте — описание у него не откроется.',
+  customPlaceholder: 'Название инструмента',
+  customEmpty: 'Своих инструментов пока нет',
+};
+
+/** Ограничение длины названия своего инструмента. */
+export const CUSTOM_TOOL_NAME_MAX_LENGTH = 80;
 
 /**
  * Раздел, открытый по умолчанию, когда вкладки «Основное» нет. Подписи разделов
@@ -1866,6 +2572,12 @@ export const INVENTORY_REMOVE_MENU_LABEL = 'Убрать из снаряжени
 export const SPELL_REMOVE_MENU_LABEL = 'Убрать из книги';
 
 /**
+ * То же для врождённого заклинания: в книгу оно не входит, а приходит от вида,
+ * поэтому убирается именно из листа. Вернуть его можно, заново выбрав вид.
+ */
+export const INNATE_SPELL_REMOVE_MENU_LABEL = 'Убрать из листа';
+
+/**
  * Подпись копирования каталожной записи в лист (снаряжение и заклинания). После
  * копирования запись живёт в листе как добавленная вручную: её можно
  * редактировать, а справочник остаётся нетронутым.
@@ -1881,6 +2593,13 @@ export const SPELL_COPY_TOAST_TITLE = 'Заклинание скопирован
 /** Пояснение тоста: копия живёт в листе и правится его формой. */
 export const CATALOG_COPY_TOAST_DESCRIPTION =
   'Теперь запись правится прямо в листе — в справочнике ничего не изменится.';
+
+/**
+ * То же для врождённого заклинания: копия уходит в книгу заклинаний, поэтому
+ * из группы врождённых оно пропадает — иначе стояло бы в листе дважды.
+ */
+export const INNATE_SPELL_COPY_TOAST_DESCRIPTION =
+  'Заклинание переехало в книгу и теперь правится прямо в листе.';
 
 /**
  * Подсказка значка «Свой» у предмета. Говорит о том, где запись хранится, а не

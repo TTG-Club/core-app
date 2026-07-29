@@ -6,12 +6,14 @@ import type {
   BackgroundSummary,
   CatalogSpellDetail,
   CharacterInnateSpell,
+  CharacterToolProficiency,
   ClassChoice,
   ClassFeatureSummary,
   ClassOption,
   ClassSummary,
   ClassTableColumn,
   FeatCatalogItem,
+  FeatSelectOption,
   FeatSummary,
   FeatureDescriptionNode,
   InventoryArmor,
@@ -33,11 +35,12 @@ import { descriptionNodesSchema } from './character-schema';
 import { SPELL_COMPONENT_LABELS } from './constants';
 import {
   getClassToolChoice,
-  matchToolProficiencyName,
+  isAbilityImprovementFeature,
   parseAbilityKeys,
+  parseApiAbilityKey,
   parseFeatMarker,
   parseItemWeight,
-  stripMarkupMarkers,
+  parseToolMarker,
   toDescriptionNodes,
 } from './utils';
 
@@ -248,6 +251,61 @@ const featSelectResponseSchema = z
     z.object({ value: z.array(featSelectItemSchema) }),
   ])
   .catch([]);
+
+/**
+ * Схема пункта `/select` с полями выбора черты за улучшение характеристик:
+ * помимо повторяемости нужны категория, источник и прибавки к характеристикам.
+ */
+const featSelectOptionSchema = z.object({
+  url: z.string(),
+  name: z.object({ rus: z.string().catch('') }).catch({ rus: '' }),
+  category: z.string().catch(''),
+  repeatability: z.boolean().catch(false),
+  // Характеристики приходят в верхнем регистре (`STRENGTH`); нераспознанные
+  // значения отбрасываются разбором ниже.
+  abilities: z.array(z.string()).nullable().catch(null),
+  abilityScoreIncreaseOptions: z.number().nullable().catch(null),
+  source: z
+    .object({
+      name: z.object({ label: z.string().catch('') }).catch({ label: '' }),
+    })
+    .catch({ name: { label: '' } }),
+});
+
+/** Ответ `/select` для выбора черты: плоский массив или конверт `{ value }`. */
+const featSelectOptionsResponseSchema = z
+  .union([
+    z.array(featSelectOptionSchema),
+    z.object({ value: z.array(featSelectOptionSchema) }),
+  ])
+  .catch([]);
+
+/**
+ * Валидация ответа `GET /api/v2/feats/select` и приведение к опциям выбора
+ * черты за классовое улучшение характеристик. Битый ответ даёт пустой список,
+ * а не исключение.
+ *
+ * @param input сырой ответ `/select`.
+ * @returns опции черт для селектора мастера повышения уровня.
+ */
+export function parseFeatSelectOptions(input: unknown): FeatSelectOption[] {
+  const parsed = featSelectOptionsResponseSchema.parse(input);
+  const list = Array.isArray(parsed) ? parsed : parsed.value;
+
+  return list.map((feat) => ({
+    url: feat.url,
+    name: feat.name.rus,
+    category: feat.category,
+    sourceLabel: feat.source.name.label,
+    repeatability: feat.repeatability,
+    abilities: (feat.abilities ?? []).flatMap((ability) => {
+      const key = parseApiAbilityKey(ability);
+
+      return key ? [key] : [];
+    }),
+    abilityIncreaseCount: Math.max(0, feat.abilityScoreIncreaseOptions ?? 0),
+  }));
+}
 
 /**
  * Валидация ответа `GET /api/v2/feats/select` и выборка url повторяемых черт.
@@ -508,9 +566,22 @@ const itemRawWeaponDamageSchema = z
   .catch(null);
 
 /**
+ * Схема броска урона свойства «Универсальное» в «сыром» ответе: тот же бросок
+ * костей, но без типа урона — он у оружия один на оба хвата.
+ */
+const itemRawWeaponVersatileSchema = z
+  .object({
+    diceCount: z.coerce.number().nullable().catch(null),
+    dice: z.string().nullable().catch(null),
+    bonus: z.coerce.number().nullable().catch(null),
+  })
+  .nullable()
+  .catch(null);
+
+/**
  * Схема «сырого» ответа предмета в части оружия (форма `WeaponCreate` редактора):
  * категория (простое/воинское, рукопашное/дальнобойное), свойства, боеприпас и
- * урон.
+ * урон — обычный и по свойству «Универсальное».
  */
 const itemRawWeaponSchema = z
   .object({
@@ -520,6 +591,7 @@ const itemRawWeaponSchema = z
         properties: z.array(z.string()).catch([]),
         ammo: z.string().nullable().catch(null),
         damage: itemRawWeaponDamageSchema,
+        versatile: itemRawWeaponVersatileSchema,
       })
       .nullable()
       .catch(null),
@@ -564,6 +636,33 @@ function parseWeaponDamage(
 }
 
 /**
+ * Разбор урона свойства «Универсальное»: справочник отдаёт только бросок, а тип
+ * урона у оружия один на оба хвата — берём его из обычного урона.
+ *
+ * @param versatile блок броска двумя руками из «сырого» ответа оружия.
+ * @param damage уже разобранный обычный урон оружия.
+ * @returns урон двумя руками или null (свойства нет либо костей не отдали).
+ */
+function parseWeaponVersatileDamage(
+  versatile: z.infer<typeof itemRawWeaponVersatileSchema>,
+  damage: InventoryWeaponDamage | null,
+): InventoryWeaponDamage | null {
+  const diceFaces = parseDiceFaces(versatile?.dice ?? null);
+  const diceCount = versatile?.diceCount ?? 0;
+
+  if (diceFaces <= 0 || diceCount <= 0) {
+    return null;
+  }
+
+  return {
+    diceCount,
+    diceFaces,
+    bonus: versatile?.bonus ?? 0,
+    type: damage?.type ?? '',
+  };
+}
+
+/**
  * Разбор параметров оружия из «сырого» ответа предмета для подсчёта бонуса атаки.
  * Категория владения и признаки «дальнобойное»/«фехтовальное» распознаются по
  * категории/свойствам (RU- и EN-корни) — устойчиво к формату справочника на бэке.
@@ -578,6 +677,8 @@ export function parseItemWeapon(input: unknown): InventoryWeapon | null {
     return null;
   }
 
+  const damage = parseWeaponDamage(weapon.damage);
+
   return {
     category: /martial|воинск/i.test(weapon.category) ? 'martial' : 'simple',
     ranged:
@@ -586,7 +687,10 @@ export function parseItemWeapon(input: unknown): InventoryWeapon | null {
     finesse: weapon.properties.some((property) =>
       /фехтов|finesse/i.test(property),
     ),
-    damage: parseWeaponDamage(weapon.damage),
+    damage,
+    // Свойство «Универсальное» распознаём по самому броску, а не по строке в
+    // `properties`: без второй кости переключать хват всё равно нечем.
+    versatileDamage: parseWeaponVersatileDamage(weapon.versatile, damage),
   };
 }
 
@@ -701,6 +805,11 @@ const classFeatureSchema = z.object({
   description: renderNodeSchema,
   isSubclass: z.boolean().catch(false),
   fightingStyleChoice: z.boolean().catch(false),
+  abilityImprovement: z.boolean().catch(false),
+  scaling: z
+    .array(z.object({ level: z.coerce.number().catch(0) }))
+    .nullable()
+    .catch(null),
 });
 
 /** Схема детального ответа класса или подкласса (нужные листу поля). */
@@ -746,6 +855,16 @@ function toClassSummary(
     description: toDescriptionNodes(feature.description),
     isSubclass: feature.isSubclass,
     fightingStyleChoice: feature.fightingStyleChoice,
+    // Флага в ответе класса пока нет — тогда умение распознаётся по описанию,
+    // где «Улучшение характеристик» ссылается на одноимённую черту.
+    // Флаг приходит с бэка; распознавание по названию и описанию остаётся
+    // страховкой для записей, где он не проставлен.
+    abilityImprovement:
+      feature.abilityImprovement
+      || isAbilityImprovementFeature(feature.name, feature.description),
+    scalingLevels: (feature.scaling ?? [])
+      .map((entry) => entry.level)
+      .filter((entry) => entry > 0),
   }));
 
   const table: ClassTableColumn[] = detail.table.map((column) => ({
@@ -848,22 +967,22 @@ export function parseBackgroundDetail(
 
   const detail = result.data;
 
-  const toolFixed: string[] = [];
+  const toolFixed: CharacterToolProficiency[] = [];
 
   let toolChoice: ClassChoice | null = null;
 
   for (const toolText of detail.toolProficiency) {
     // Владения приходят с разметкой каталога («{@item Воровские
-    // инструменты|url:thieves-tools-phb}»): без её снятия подпись попадала в
-    // лист сырым маркером и не совпадала с чекбоксом владения.
-    const plainText = stripMarkupMarkers(toolText);
+    // инструменты|url:thieves-tools-phb}»): подпись идёт в лист, ссылка —
+    // в кнопку описания инструмента.
+    const tool = parseToolMarker(toolText);
 
-    const choice = getClassToolChoice(plainText, 'background-tool');
+    const choice = getClassToolChoice(tool.name, 'background-tool');
 
     if (choice) {
       toolChoice = toolChoice ?? choice;
-    } else if (plainText) {
-      toolFixed.push(matchToolProficiencyName(plainText));
+    } else if (tool.name) {
+      toolFixed.push(tool);
     }
   }
 
@@ -964,6 +1083,33 @@ function getSpellComponentsText(components: SpellComponentsResponse): string {
   }
 
   return parts.join(', ');
+}
+
+/**
+ * Схема «сырого» ответа заклинания в части урона: формулы вида `8к6@dmg.fire`
+ * лежат в блоке воздействия, который публичная деталь не отдаёт.
+ */
+const spellRawDamageSchema = z
+  .object({
+    effect: z
+      .object({
+        damageFormulas: z.array(z.string()).catch([]),
+      })
+      .nullable()
+      .catch(null),
+  })
+  .catch({ effect: null });
+
+/**
+ * Валидация «сырого» ответа `GET /api/v2/spells/{url}/raw` в части урона.
+ * Неожиданный ответ даёт пустой список, а не исключение: заклинание просто
+ * останется без плитки урона.
+ *
+ * @param input сырой ответ заклинания.
+ * @returns формулы урона из справочника.
+ */
+export function parseSpellDamageFormulas(input: unknown): string[] {
+  return spellRawDamageSchema.parse(input).effect?.damageFormulas ?? [];
 }
 
 /**

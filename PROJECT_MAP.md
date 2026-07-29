@@ -105,12 +105,45 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 - Wizards for species / class / background; rolls go through `dice-roller`
   (universal `SheetRollModal`).
+- The background wizard also creates a homebrew one (`SheetCustomBackgroundModal`,
+  opened over the catalog list): name, a +2/+1 or +1/+1/+1 ability spread, two
+  skills, one tool from the catalog and an origin feat (category `ORIGIN` of
+  `/feats/select`, profile sources respected). It goes through the same
+  `setBackground` and is stored with a `custom:<uuid>` url, so it never mixes with
+  a catalog background.
+- The species wizard does the same for a homebrew species
+  (`SheetCustomSpeciesModal`, opened over the catalog list): name, size,
+  movement and vision as add-a-row lists (`SheetDistanceRows` — type select +
+  distance in feet, each type once, options from the `SPEED_*` / `VISION_*`
+  orders of the sheet's own modals; hover appears once a flying speed exists),
+  plus any number of features (name + `MarkupEditor` description).
+  It goes through the same `setSpecies` and is stored with a
+  `custom:<uuid>` url; features land with origin `species`, so re-picking a
+  species replaces them like catalog ones.
+- The class wizard does the same for a homebrew class (`SheetCustomClassModal`,
+  opened over the catalog list): name, an optional subclass name, hit die,
+  saving throws, skill proficiencies, a caster type
+  (`CUSTOM_CLASS_CASTER_TYPE_OPTIONS` — spell slots follow it) and any number of
+  features (name + `MarkupEditor` description). It goes through the same
+  `setClass` and is stored with a `custom:<uuid>` url; features land with origin
+  `class`, so re-picking a class replaces them like catalog ones. Armour, weapon
+  and tool proficiencies plus class resources are left to the sheet's own panels
+  — a homebrew class has no proficiency prose or table to derive them from.
+  Levelling one up falls back to the wizard's no-class path (average hit points,
+  no feature steps), since the level-up wizard resolves features by class url.
 - Level-up wizard inside the experience modal (`composables/useLevelUpWizard.ts`):
   one step per gained level with its own hit-point mode (average / roll / max),
   the class and subclass features of that level with their choices, and the
   subclass picker at level 3 filtered by the profile sources on the client
   (`/classes/{url}/subclasses` ignores `source`). Applied atomically by
   `applyLevelUp`, which keeps spent hit dice and class resources.
+- Every skill picker (`SheetChoiceSelect` in the class / species / background
+  wizards, in level-up features and in the homebrew class / background modals)
+  marks skills the character already has with a `SKILL_OWNED_HINTS` badge and
+  shows `SKILL_DUPLICATE_WARNING` once such a skill is picked again: under the
+  2024 rules a duplicate proficiency grants nothing and never turns into
+  Expertise. It stays selectable on purpose — a DM may still run the 2014
+  «take another proficiency instead» rule.
 - Debounced autosave, a server-side limit of active sheets, soft delete with
   restore history, and copy — `model/api.ts` covers
   `POST|GET|PUT|DELETE /…/{id}` plus `/{id}/restore` and `/{id}/share`.
@@ -133,6 +166,14 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 **Content on the sheet**
 
+- Tool proficiencies are catalog-backed: the sheet keeps no tool list of its own,
+  `composables/useToolCatalog.ts` builds one from the «Предметы» section
+  (`itemType` = `ARTISAN_S_TOOLS` / `GAMING_SET` / `INSTRUMENT` / `TOOL`, group
+  titles taken from `/item/filters`, profile sources respected). A proficiency
+  stores `{ name, url }`, so its chip opens the item drawer; anything the site
+  does not have — including tools named in class or background prose — is kept as
+  the player's own entry without a link, and one can be typed in by hand in the
+  proficiency modal.
 - Character portrait uploaded to S3 (hover the avatar to add / replace /
   remove); the chosen file first goes through the `shared/ui/image-crop`
   square-crop editor.
@@ -147,14 +188,67 @@ modals), so its capabilities are listed here rather than squeezed into the table
   casting time / range / components / duration — from the section detail into
   the sheet document; it is edited afterwards by the same homebrew form. A
   copied magic item keeps its group while its kind stays «trinket».
+- The «Добавить магический предмет» catalog groups its rows the way the section
+  does, and the grouping is picked from a dropdown under the filter button (by
+  rarity in the dictionary order — the shared `useMagicItemRarityGroupOrder` —
+  by category, or none). State and menu come from the section infrastructure
+  (`~infrastructure/list-presentation`), so the choice survives reopening in
+  `localStorage`; only grouping is offered because the order inside a group is
+  always the Russian name.
+- The «Добавить заклинание» catalog opens preset to what the character can
+  actually learn: the class chip is picked by the class slug (the same id the
+  `className` filter group uses) and the level chips cover every circle the
+  class grants slots for at its level, cantrips included. Nothing is stored for
+  it — the preset is derived from `casterType` + level on every open, so a
+  level-up or level-down changes it by itself, and the usual filter reset drops
+  it when the player wants the whole catalog.
+- Innate spells granted by the species stand in their own «Врождённые» group and
+  have the same row menu: copying one moves it into the spell book as a `custom:`
+  record (editable afterwards), removing one drops it from
+  `species.innateSpells` so the next level-up does not bring it back. Both are
+  undone by picking the species again in the wizard.
 
 **Play**
 
 - Spell slots derived from the reference `casterType` of the class/subclass
   (full / half / third caster, warlock pact magic) plus the character level;
   spent by clicking the circles in each spell-level divider.
+- Prepared-spell count on the spells tab, next to the save DC / attack tile. The
+  reference class table has it as a column («Подг. закл.», matched by letters
+  because the wording is abbreviated differently per class and sometimes lives
+  only on the subclass), so its progression is snapshotted into the sheet by the
+  class wizard and refreshed by every level-up; the tile shows the value for the
+  current level. Clicking it opens the settings: either a custom number (the
+  class count is then ignored) or a bonus added to the class count. The tile
+  reads «marked / allowed» (`4 / 17`) and turns red when the allowance drops
+  below what is already marked.
+- Prepared spells marked by clicking the spell icon in the row — the same
+  gesture as equipping armour. Only the icon square lights up (the row itself
+  keeps its usual look), the flag lives in `spell.prepared`, and marking more
+  than the allowed number warns instead. Cantrips and innate spells are always
+  available, so their icon toggles nothing; with no allowance known (the class
+  gives none and no custom number is set) marking is unlimited.
+- Spell list narrowed by a chip row above the groups: «Подготовленные» plus one
+  chip per circle (cantrips as «З», the full name in the tooltip), several
+  circles at a time, and a reset button once anything is picked. Nothing is
+  stored — the chips are derived from what the list already shows
+  (`getSpellListLevels`: spell circles + circles with slots), so a circle the
+  character has not reached never appears and a pick that disappears stops
+  narrowing by itself. The prepared chip is skipped when there is nothing to
+  prepare (cantrips or innate spells only).
 - Weapon attack & damage rolled straight from their tiles in the equipment list
-  (damage dice come from the item `/raw` response).
+  (damage dice come from the item `/raw` response). A versatile weapon also
+  keeps the second roll of that response, and the row action menu switches its
+  grip — taken in two hands it rolls the bigger die on the tile, in the roll and
+  in the PDF attack table, and the row is marked with a «Двумя руками» badge.
+  Weapons added before the second roll was stored do not offer the switch until
+  they are added from the catalog again.
+- Spell damage rolled from the same kind of tile on the spells tab. The formulas
+  (`8к6@dmg.fire`) are not stored in the sheet: `composables/useSpellDamage.ts`
+  pulls them from the spell `/raw` response on demand and caches them per app,
+  so old sheets and innate spells get the tile too. A roll of a levelled spell
+  also spends a slot of its circle — cantrips and circles the class does not
+  grant spend nothing, and an exhausted circle warns instead.
 - Short & long rest from the header: short rest spends Hit Point Dice one by
   one, adding the Constitution modifier to every roll; long rest refills hit
   points, spell slots, feature counters and half the Hit Point Dice. The shared

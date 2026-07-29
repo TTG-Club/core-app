@@ -10,7 +10,11 @@
   import { MarkupRender } from '~ui/markup';
   import { SelectFeat } from '~ui/select';
 
-  import { useCatalogSourceQuery, useCharacterSheet } from '../../composables';
+  import {
+    useCatalogSourceQuery,
+    useCharacterSheet,
+    useToolCatalog,
+  } from '../../composables';
   import {
     ABILITY_LABELS,
     buildClassFeatures,
@@ -19,7 +23,9 @@
     CLASSES_DETAIL_BASE_PATH,
     CLASSES_FILTERS_PATH,
     CLASSES_SEARCH_PATH,
+    CUSTOM_CLASS_LABELS,
     deriveClassResources,
+    derivePreparedSpellsScaling,
     detectFeatureChoice,
     FEAT_SOURCES_ASYNC_DATA_KEY,
     FEATS_FILTERS_PATH,
@@ -30,20 +36,25 @@
     FIGHTING_STYLE_FEATURE_ID_SEGMENT,
     FIGHTING_STYLE_INVALID_RESPONSE_ERROR,
     getCharacterFeatureId,
+    getChoiceSkillHints,
     getClassMaxHitPoints,
     getClassSkillChoice,
     getClassToolChoice,
     getSelectedCasterType,
+    getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
     matchClassProficiencies,
+    matchToolProficiencies,
     parseClassDetail,
     parseClassOptions,
     resolveChoiceOptions,
     SHEET_SEARCH_LABELS,
+    SKILL_DUPLICATE_WARNING,
     SUBCLASS_SELECTION_MIN_LEVEL,
-    TOOL_PROFICIENCY_GROUPS,
+    unionToolProficiencies,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetCustomClassModal from './SheetCustomClassModal.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
   type WizardStep = 'class' | 'review';
@@ -79,8 +90,21 @@
     },
   });
 
+  // Свой класс собирается в отдельной модалке поверх списка: сама она и
+  // применяет его к листу, поэтому мастер после успеха только закрывается, а
+  // отмена возвращает к списку каталога.
+  const customClassModal = overlay.create(SheetCustomClassModal);
+
   function handlePreview(url: string) {
     classPreviewDrawer.open({ url });
+  }
+
+  async function handleCustomClass() {
+    const isCreated = await customClassModal.open();
+
+    if (isCreated) {
+      emit('close');
+    }
   }
 
   const step = ref<WizardStep>('class');
@@ -162,9 +186,16 @@
     LANGUAGE_PROFICIENCY_GROUPS.flatMap((group) => group.items),
   );
 
-  const allTools = computed(() =>
-    TOOL_PROFICIENCY_GROUPS.flatMap((group) => group.items),
-  );
+  // Каталог инструментов грузится фоном: он нужен только на шаге владений, а
+  // список классов не должен ждать ещё один запрос.
+  const {
+    catalogItems: toolCatalogItems,
+    getToolNamesForGroups,
+    resolveTools,
+    load: loadToolCatalog,
+  } = useToolCatalog();
+
+  void loadToolCatalog();
 
   const filteredOptions = computed(() => {
     const query = searchTerm.value.trim().toLowerCase();
@@ -247,13 +278,24 @@
   const matchedProficiencies = computed(() =>
     classDetail.value
       ? matchClassProficiencies(classDetail.value.proficiencyText)
-      : { armor: [], weapons: [], tools: [] },
+      : { armor: [], weapons: [] },
+  );
+
+  // Фиксированные инструменты класса сверяются с каталогом сайта: найденное
+  // получает ссылку, ненайденное остаётся своим инструментом игрока.
+  const matchedTools = computed(() =>
+    classDetail.value
+      ? matchToolProficiencies(
+          classDetail.value.proficiencyText.tool,
+          toolCatalogItems.value,
+        )
+      : [],
   );
 
   const proficiencyChips = computed(() => [
     ...matchedProficiencies.value.armor,
     ...matchedProficiencies.value.weapons,
-    ...matchedProficiencies.value.tools,
+    ...getToolNames(matchedTools.value),
   ]);
 
   const derivedResources = computed(() => {
@@ -288,10 +330,17 @@
       proficientSkillNames: proficientSkillNames.value,
       chosenProficientSkills: selections.value['class-skills'] ?? [],
       knownLanguages: character.value.proficiencies.languages,
-      knownTools: character.value.proficiencies.tools,
+      knownTools: getToolNames(character.value.proficiencies.tools),
       allLanguages: allLanguages.value,
-      allTools: allTools.value,
+      // Опции выбора инструмента — из каталога сайта, сузженные до групп,
+      // названных в прозе («один вид ремесленных инструментов»).
+      allTools: getToolNamesForGroups(choice.toolGroups),
     });
+  }
+
+  /** Пометки опций: навыки, которыми персонаж уже владеет. */
+  function choiceHints(choice: ClassChoice): Record<string, string> {
+    return getChoiceSkillHints(choice, character.value.skills);
   }
 
   /** Обновление выбора с ограничением по требуемому количеству. */
@@ -648,13 +697,25 @@
         subclassName: subclassDetail.value?.name ?? null,
         casterType: getSelectedCasterType(base, subclassDetail.value),
         hitDie: base.hitDie,
+        // Колонка подготовленных заклинаний бывает и у класса, и только у
+        // подкласса (мистический рыцарь), поэтому таблицы просматриваются
+        // вместе.
+        preparedSpells: derivePreparedSpellsScaling([
+          ...base.table,
+          ...(subclassDetail.value?.table ?? []),
+        ]),
       },
       savingThrows: base.savingThrows,
       hitDie: base.hitDie,
       proficiencies: {
         armor: matched.armor,
         weapons: matched.weapons,
-        tools: [...matched.tools, ...chosenTools],
+        // Фиксированные инструменты уже сверены с каталогом, выбранные игроком
+        // приходят названиями — их сверяет `resolveTools`.
+        tools: unionToolProficiencies(
+          matchedTools.value,
+          resolveTools(chosenTools.map((name) => ({ name, url: null }))),
+        ),
         languages: chosenLanguages,
       },
       skills: {
@@ -775,7 +836,7 @@
                 <UIcon
                   v-if="row.isSelected"
                   name="tabler:check"
-                  class="size-4 shrink-0 text-warning"
+                  class="size-4 shrink-0 text-primary"
                 />
               </div>
 
@@ -850,7 +911,7 @@
                   <UIcon
                     v-if="subclass.isSelected"
                     name="tabler:check"
-                    class="size-4 shrink-0 text-warning"
+                    class="size-4 shrink-0 text-primary"
                   />
                 </div>
 
@@ -922,7 +983,7 @@
                   v-for="label in savingThrowLabels"
                   :key="label"
                   size="sm"
-                  color="warning"
+                  color="primary"
                   variant="subtle"
                 >
                   {{ label }}
@@ -983,6 +1044,8 @@
               <SheetChoiceSelect
                 :model-value="selections[choice.id] ?? []"
                 :items="choiceOptions(choice)"
+                :hints="choiceHints(choice)"
+                :warning="SKILL_DUPLICATE_WARNING"
                 :count="choice.count"
                 :placeholder="`Выберите ${choice.count}`"
                 @update:model-value="updateSelection(choice, $event)"
@@ -1042,6 +1105,8 @@
                 <SheetChoiceSelect
                   :model-value="selections[row.choiceControl.id] ?? []"
                   :items="choiceOptions(row.choiceControl)"
+                  :hints="choiceHints(row.choiceControl)"
+                  :warning="SKILL_DUPLICATE_WARNING"
                   :count="row.choiceControl.count"
                   :placeholder="`Выберите ${row.choiceControl.count}`"
                   @update:model-value="
@@ -1085,7 +1150,14 @@
           @click.left.exact.prevent="handleBack"
         />
 
-        <span v-else />
+        <UButton
+          v-else
+          :label="CUSTOM_CLASS_LABELS.openButton"
+          icon="tabler:plus"
+          color="neutral"
+          variant="subtle"
+          @click.left.exact.prevent="handleCustomClass"
+        />
 
         <div class="flex gap-2">
           <UButton

@@ -22,11 +22,18 @@
     getWeaponAttackBonus,
     getWeaponDamage,
     INVENTORY_CATEGORY_ICONS,
+    INVENTORY_EQUIP_ACTION_LABELS,
+    INVENTORY_MISSING_BADGE_HINT,
+    INVENTORY_MISSING_BADGE_LABEL,
     INVENTORY_QUANTITY_MIN,
-    INVENTORY_ROLL_HINT_LABEL,
     INVENTORY_ROLL_KIND_LABELS,
     INVENTORY_STAT_LABELS,
+    INVENTORY_TWO_HANDED_BADGE_HINT,
+    INVENTORY_TWO_HANDED_BADGE_LABEL,
     isCustomInventoryItem,
+    isMissingInventoryItem,
+    isVersatileInventoryItem,
+    SHEET_ROLL_HINT_LABEL,
     WEIGHT_UNIT_LABEL,
   } from '../../model';
 
@@ -64,9 +71,9 @@
 
   /** Классы плитки боевого параметра (тёплый акцент). */
   const ACCENT_STAT_CLASSES = {
-    container: 'border-warning/40 bg-warning/10',
-    value: 'text-warning',
-    label: 'text-warning/80',
+    container: 'border-primary/40 bg-primary/10',
+    value: 'text-primary',
+    label: 'text-primary/80',
   };
 
   /** Классы обычной плитки (стоимость, вес). */
@@ -78,7 +85,7 @@
 
   /** Дополнительное оформление плитки-кнопки броска. */
   const ROLL_STAT_CLASS =
-    'relative z-10 cursor-pointer hover:border-warning hover:bg-warning/20';
+    'relative z-10 cursor-pointer hover:border-primary hover:bg-primary/20';
 
   /**
    * Раскладка плитки параметра: на второй строке узкой карточки плитки делят
@@ -95,20 +102,21 @@
    * вынесена из шаблона).
    *
    * @param stat исходная плитка параметра.
+   * @param rollable броски разрешены; false — плитка остаётся справочной
+   *   (предмета не осталось, катить им нечего).
    * @returns плитка с разрешёнными классами.
    */
-  function decorateStat(stat: ItemStat): DecoratedStat {
+  function decorateStat(stat: ItemStat, rollable: boolean): DecoratedStat {
     const classes = stat.accent ? ACCENT_STAT_CLASSES : PLAIN_STAT_CLASSES;
     const tooltip = stat.tooltip ?? '';
+    const roll = rollable ? (stat.roll ?? null) : null;
 
     return {
       label: stat.label,
       value: stat.value,
-      tooltip: stat.roll
-        ? `${tooltip} · ${INVENTORY_ROLL_HINT_LABEL}`
-        : tooltip,
-      roll: stat.roll ?? null,
-      containerClass: stat.roll
+      tooltip: roll ? `${tooltip} · ${SHEET_ROLL_HINT_LABEL}` : tooltip,
+      roll,
+      containerClass: roll
         ? `${classes.container} ${ROLL_STAT_CLASS}`
         : classes.container,
       valueClass: classes.value,
@@ -127,6 +135,7 @@
     'remove': [];
     'adjust': [delta: number];
     'toggle-equip': [];
+    'toggle-two-handed': [];
     'roll-attack': [];
     'roll-damage': [];
   }>();
@@ -151,12 +160,27 @@
     () => props.inventoryItem.description ?? [],
   );
 
+  // Универсальное оружие (у справочника для него есть второй бросок урона):
+  // хват переключается пунктом меню, отдельной кнопки в строке ему не нашлось бы
+  // — трейлинг и так занят количеством.
+  const isVersatile = computed(() =>
+    isVersatileInventoryItem(props.inventoryItem),
+  );
+
+  const isTwoHanded = computed(
+    () => isVersatile.value && props.inventoryItem.twoHanded,
+  );
+
   // Правка и удаление — под многоточием: строка и без них плотная (иконка,
   // название, плитки, «+/−»), а два разных набора кнопок ломали бы её ритм.
   // Каталожный предмет правится в своём разделе — вместо правки ему предлагается
   // копия в лист, после которой он становится своим.
   const menuItems = computed<Array<DropdownMenuItem>>(() =>
     getInventoryItemMenuItems({
+      onToggleGrip: isVersatile.value
+        ? () => emit('toggle-two-handed')
+        : undefined,
+      twoHanded: isTwoHanded.value,
       onEdit: isCustom.value ? () => emit('edit') : undefined,
       onCopy: isCustom.value ? undefined : () => emit('copy'),
       onRemove: () => emit('remove'),
@@ -174,6 +198,11 @@
     isCustom.value ? isExpanded.value : undefined,
   );
 
+  // Количество доведено до нуля: запись остаётся в снаряжении (чтобы не искать
+  // предмет в каталоге заново), но самого предмета у персонажа нет — надеть его
+  // и катить им атаку с уроном нельзя.
+  const isMissing = computed(() => isMissingInventoryItem(props.inventoryItem));
+
   // Экипировать можно только доспехи (оружие — нет). Иконку доспеха с данными
   // о КД можно нажать, чтобы надеть/снять. Смотрим на параметры, а не на группу:
   // свой магический доспех лежит среди магических предметов.
@@ -183,20 +212,53 @@
     () => isEquippable.value && props.inventoryItem.equipped,
   );
 
-  const equipTooltip = computed(() => (isEquipped.value ? 'Снять' : 'Надеть'));
+  const equipActionLabel = computed(() =>
+    isEquipped.value
+      ? INVENTORY_EQUIP_ACTION_LABELS.unequip
+      : INVENTORY_EQUIP_ACTION_LABELS.equip,
+  );
+
+  // Отсутствующий доспех объясняет тултипом, почему кнопка не нажимается;
+  // подпись для скринридера остаётся действием — состояние «недоступна» он
+  // читает по самому `disabled`.
+  const equipTooltip = computed(() =>
+    isMissing.value ? INVENTORY_MISSING_BADGE_HINT : equipActionLabel.value,
+  );
 
   const equipIcon = computed(() =>
     isEquipped.value ? 'tabler:shield-check' : 'tabler:shield',
   );
 
-  const equipButtonClass = computed(() =>
-    isEquipped.value
-      ? 'border-warning/60 bg-warning/15 text-warning'
-      : 'border-default/50 bg-default/40 text-muted hover:border-warning/60',
+  const equipButtonClass = computed(() => {
+    if (isMissing.value) {
+      return 'cursor-not-allowed border-default/40 bg-default/20 text-dimmed';
+    }
+
+    return isEquipped.value
+      ? 'cursor-pointer border-primary/60 bg-primary/15 text-primary'
+      : 'cursor-pointer border-default/50 bg-default/40 text-muted hover:border-primary/60';
+  });
+
+  // Отсутствующий предмет остаётся читаемым (его правят и пополняют), но
+  // пунктирная рамка отличает его от снаряжения, которое у персонажа есть.
+  const rowClass = computed(() => {
+    if (isMissing.value) {
+      return 'border-dashed';
+    }
+
+    return isEquipped.value
+      ? 'bg-primary/5 ring-1 ring-primary/50 ring-inset'
+      : '';
+  });
+
+  const nameClass = computed(() =>
+    isMissing.value ? 'text-muted' : 'text-highlighted',
   );
 
-  const rowClass = computed(() =>
-    isEquipped.value ? 'bg-warning/5 ring-1 ring-warning/50 ring-inset' : '',
+  // Ноль в счётчике — тот же сигнал, что и значок «Отсутствует»: значок виден
+  // не всегда (узкая карточка переносит его под название), а число — всегда.
+  const quantityClass = computed(() =>
+    isMissing.value ? 'text-error' : 'text-default',
   );
 
   /** Плитка класса доспеха: сколько КД даёт предмет (щит — бонусом). */
@@ -256,7 +318,7 @@
    * нет (например, у предмета, добавленного до появления урона в листе).
    */
   function getWeaponDamageStat(weapon: InventoryWeapon): ItemStat | null {
-    const damage = getWeaponDamage(character.value, weapon);
+    const damage = getWeaponDamage(character.value, weapon, isTwoHanded.value);
 
     if (!damage) {
       return null;
@@ -315,7 +377,7 @@
       stats.push({ label: WEIGHT_UNIT_LABEL, value: String(weight) });
     }
 
-    return stats.map(decorateStat);
+    return stats.map((stat) => decorateStat(stat, !isMissing.value));
   });
 
   const isDecreaseDisabled = computed(
@@ -344,6 +406,19 @@
     emit('preview');
   }
 
+  /**
+   * Надеть/снять доспех. Отсутствующий предмет кнопка отбивает сама: атрибут
+   * `disabled` ей не подходит — отключённая кнопка не получает событий мыши, и
+   * тултип с причиной («Предмета не осталось…») не открывался бы.
+   */
+  function handleEquipToggle() {
+    if (isMissing.value) {
+      return;
+    }
+
+    emit('toggle-equip');
+  }
+
   function handleStatRoll(rollKind: InventoryStatRollKind) {
     if (rollKind === 'attack') {
       emit('roll-attack');
@@ -359,7 +434,7 @@
   <!-- Свой @container: строка перестраивается по ширине самой карточки, а не
     окна — лист бывает узким и на широком экране (дровер, правая панель) -->
   <div
-    class="@container flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-warning/60"
+    class="@container flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-primary/60"
     :class="rowClass"
   >
     <!-- Перестроение по брейкпоинту, а не по факту переполнения: до @xl
@@ -374,11 +449,12 @@
         >
           <button
             type="button"
-            class="relative z-10 flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border transition-colors"
+            class="relative z-10 flex size-10 shrink-0 items-center justify-center rounded-lg border transition-colors"
             :class="equipButtonClass"
+            :aria-disabled="isMissing"
             :aria-pressed="isEquipped"
-            :aria-label="`${equipTooltip}: ${inventoryItem.name}`"
-            @click.left.exact.prevent="emit('toggle-equip')"
+            :aria-label="`${equipActionLabel}: ${inventoryItem.name}`"
+            @click.left.exact.prevent="handleEquipToggle"
           >
             <UIcon
               :name="equipIcon"
@@ -413,20 +489,53 @@
             <!-- На узкой карточке название переносится целиком: места под ним
               достаточно, а обрезка вида «Була…» ничего не говорит о предмете -->
             <span
-              class="text-sm font-medium wrap-break-word text-highlighted @xl:truncate"
+              class="text-sm font-medium wrap-break-word @xl:truncate"
+              :class="nameClass"
             >
               {{ inventoryItem.name }}
             </span>
 
             <UBadge
               v-if="isEquipped"
-              color="warning"
+              color="primary"
               variant="subtle"
               size="sm"
               class="shrink-0"
             >
               Надет
             </UBadge>
+
+            <!-- Хват стоит там же, где «Надет»: у оружия своего значка нет, а
+              без него выросшая кость урона выглядела бы ошибкой листа -->
+            <UTooltip
+              v-if="isTwoHanded"
+              :text="INVENTORY_TWO_HANDED_BADGE_HINT"
+            >
+              <UBadge
+                size="sm"
+                color="primary"
+                variant="subtle"
+                class="relative z-10 shrink-0"
+              >
+                {{ INVENTORY_TWO_HANDED_BADGE_LABEL }}
+              </UBadge>
+            </UTooltip>
+
+            <!-- Значок отсутствия стоит там же, где «Надет»: у одного предмета
+              они взаимоисключающие — обнулённый доспех снимается -->
+            <UTooltip
+              v-if="isMissing"
+              :text="INVENTORY_MISSING_BADGE_HINT"
+            >
+              <UBadge
+                size="sm"
+                color="error"
+                variant="subtle"
+                class="relative z-10 shrink-0"
+              >
+                {{ INVENTORY_MISSING_BADGE_LABEL }}
+              </UBadge>
+            </UTooltip>
 
             <UTooltip
               v-if="isCustom"
@@ -528,7 +637,10 @@
           @click.left.exact.prevent="handleDecrease"
         />
 
-        <span class="w-6 text-center text-sm font-medium text-default">
+        <span
+          class="w-6 text-center text-sm font-medium"
+          :class="quantityClass"
+        >
           {{ inventoryItem.quantity }}
         </span>
 

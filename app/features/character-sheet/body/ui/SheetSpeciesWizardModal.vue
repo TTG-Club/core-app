@@ -10,13 +10,20 @@
   import { SpeciesDrawer } from '~species/drawer';
   import { MarkupRender } from '~ui/markup';
 
-  import { useCatalogSourceQuery, useCharacterSheet } from '../../composables';
+  import {
+    useCatalogSourceQuery,
+    useCharacterSheet,
+    useToolCatalog,
+  } from '../../composables';
   import {
     buildCharacterFeatures,
+    CUSTOM_SPECIES_LABELS,
     detectFeatureChoice,
     FEATURE_ORIGIN_LABELS,
     getCharacterFeatureId,
+    getChoiceSkillHints,
     getDarkvisionDistance,
+    getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
     parseSizeOptionsFromText,
     parseSpeciesDetail,
@@ -25,12 +32,13 @@
     parseSpeedFromText,
     resolveChoiceOptions,
     SHEET_SEARCH_LABELS,
+    SKILL_DUPLICATE_WARNING,
     SPECIES_DETAIL_BASE_PATH,
     SPECIES_FILTERS_PATH,
     SPECIES_SEARCH_PATH,
-    TOOL_PROFICIENCY_GROUPS,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetCustomSpeciesModal from './SheetCustomSpeciesModal.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
   type WizardStep = 'species' | 'features';
@@ -75,8 +83,21 @@
     },
   });
 
+  // Свой вид собирается в отдельной модалке поверх списка: сама она и применяет
+  // его к листу, поэтому мастер после успеха только закрывается, а отмена
+  // возвращает к списку каталога.
+  const customSpeciesModal = overlay.create(SheetCustomSpeciesModal);
+
   function handlePreview(url: string) {
     speciesPreviewDrawer.open({ url });
+  }
+
+  async function handleCustomSpecies() {
+    const isCreated = await customSpeciesModal.open();
+
+    if (isCreated) {
+      emit('close');
+    }
   }
 
   const step = ref<WizardStep>('species');
@@ -143,9 +164,12 @@
     LANGUAGE_PROFICIENCY_GROUPS.flatMap((group) => group.items),
   );
 
-  const allTools = computed(() =>
-    TOOL_PROFICIENCY_GROUPS.flatMap((group) => group.items),
-  );
+  // Инструменты виды не выдают (`detectFeatureChoice` их не распознаёт), но
+  // контекст резолва выборов общий — список тянем из каталога сайта, а не из
+  // своего перечня.
+  const { getToolNamesForGroups, load: loadToolCatalog } = useToolCatalog();
+
+  void loadToolCatalog();
 
   const filteredOptions = computed(() => {
     const query = searchTerm.value.trim().toLowerCase();
@@ -281,10 +305,15 @@
       proficientSkillNames: proficientSkillNames.value,
       chosenProficientSkills: chosenProficientSkills.value,
       knownLanguages: character.value.proficiencies.languages,
-      knownTools: character.value.proficiencies.tools,
+      knownTools: getToolNames(character.value.proficiencies.tools),
       allLanguages: allLanguages.value,
-      allTools: allTools.value,
+      allTools: getToolNamesForGroups(choice.toolGroups),
     });
+  }
+
+  /** Пометки опций: навыки, которыми персонаж уже владеет. */
+  function choiceHints(choice: ClassChoice): Record<string, string> {
+    return getChoiceSkillHints(choice, character.value.skills);
   }
 
   /** Обновление выбора с ограничением по требуемому количеству. */
@@ -599,7 +628,7 @@
                 <UIcon
                   v-if="row.isSelected"
                   name="tabler:check"
-                  class="size-4 shrink-0 text-warning"
+                  class="size-4 shrink-0 text-primary"
                 />
               </div>
 
@@ -654,7 +683,7 @@
                   <UIcon
                     v-if="lineage.isSelected"
                     name="tabler:check"
-                    class="size-4 shrink-0 text-warning"
+                    class="size-4 shrink-0 text-primary"
                   />
                 </div>
               </div>
@@ -697,7 +726,7 @@
               :items="sizeOptions"
               orientation="horizontal"
               variant="list"
-              color="warning"
+              color="primary"
             />
           </div>
 
@@ -738,6 +767,8 @@
                 <SheetChoiceSelect
                   :model-value="selections[row.choiceControl.id] ?? []"
                   :items="choiceOptions(row.choiceControl)"
+                  :hints="choiceHints(row.choiceControl)"
+                  :warning="SKILL_DUPLICATE_WARNING"
                   :count="row.choiceControl.count"
                   :placeholder="`Выберите ${row.choiceControl.count}`"
                   @update:model-value="
@@ -781,7 +812,14 @@
           @click.left.exact.prevent="handleBack"
         />
 
-        <span v-else />
+        <UButton
+          v-else
+          :label="CUSTOM_SPECIES_LABELS.openButton"
+          icon="tabler:plus"
+          color="neutral"
+          variant="subtle"
+          @click.left.exact.prevent="handleCustomSpecies"
+        />
 
         <div class="flex gap-2">
           <UButton

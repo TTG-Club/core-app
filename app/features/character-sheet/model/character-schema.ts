@@ -14,6 +14,8 @@ import { CasterType } from '~classes/model';
 
 import {
   DRAFT_CHARACTER_ID,
+  INVENTORY_QUANTITY_MAX,
+  INVENTORY_QUANTITY_MIN,
   LEGACY_NOTE_ID,
   SHEET_NOTE_LABELS,
 } from './constants';
@@ -71,6 +73,17 @@ const characterClassSchema = z
     // для них он определяется по названию класса (см. `getClassCasterType`).
     casterType: z.nativeEnum(CasterType).nullable().catch(null),
     hitDie: z.coerce.number().catch(8),
+    // Листы, сохранённые до появления поля, приходят без прогрессии
+    // подготовленных заклинаний: она запишется при следующем выборе класса
+    // или повышении уровня.
+    preparedSpells: z
+      .array(
+        z.object({
+          level: z.coerce.number(),
+          value: z.coerce.number(),
+        }),
+      )
+      .catch([]),
   })
   .nullable()
   .catch(null);
@@ -109,6 +122,7 @@ const spellSchema = z.object({
   school: z.string().catch(''),
   concentration: z.boolean().optional(),
   ritual: z.boolean().optional(),
+  prepared: z.boolean().optional().catch(undefined),
   castingTime: z.string().optional().catch(undefined),
   range: z.string().optional().catch(undefined),
   components: z.string().optional().catch(undefined),
@@ -146,8 +160,19 @@ const spellSlotSchema = z.object({
 const spellcastingSchema = z
   .object({
     ability: abilityKeySchema.nullable().catch(null),
+    // Настройка подготовленных заклинаний появилась позже: у листов без неё
+    // число считается по таблице класса без бонуса.
+    prepared: z
+      .object({
+        custom: z.coerce.number().nullable().catch(null),
+        bonus: z.coerce.number().catch(0),
+      })
+      .catch(() => ({ ...DEFAULT_CHARACTER.spellcasting.prepared })),
   })
-  .catch(() => ({ ...DEFAULT_CHARACTER.spellcasting }));
+  .catch(() => ({
+    ...DEFAULT_CHARACTER.spellcasting,
+    prepared: { ...DEFAULT_CHARACTER.spellcasting.prepared },
+  }));
 
 // По умолчанию — правила D&D (легаси-листы без блока настроек): базовая
 // характеристика атаки оружием определяется свойствами оружия.
@@ -255,12 +280,22 @@ const classResourceSchema = z.object({
   max: z.coerce.number().catch(0),
 });
 
+// Листы до появления ссылок на инструменты хранят владения строками: такая
+// запись читается без ссылки, а url подставится при следующей правке владений.
+const toolProficiencySchema = z.union([
+  z.string().transform((name) => ({ name, url: null })),
+  z.object({
+    name: z.string().catch(''),
+    url: z.string().nullable().catch(null),
+  }),
+]);
+
 const proficienciesSchema = z
   .object({
     armor: z.array(z.string()).catch([]),
     weapons: z.array(z.string()).catch([]),
     weaponMasteries: z.array(z.string()).catch([]),
-    tools: z.array(z.string()).catch([]),
+    tools: z.array(toolProficiencySchema).catch([]),
     languages: z.array(z.string()).catch([]),
   })
   .catch(() => structuredClone(DEFAULT_CHARACTER.proficiencies));
@@ -309,6 +344,9 @@ const inventoryWeaponSchema = z
     // Оружие из листов, сохранённых до появления урона, приходит без блока —
     // схема даёт null, и плитка урона просто не показывается.
     damage: inventoryWeaponDamageSchema,
+    // То же с уроном двумя руками: у листов, сохранённых до появления хвата,
+    // блока нет — переключать нечего, пока предмет не добавят заново.
+    versatileDamage: inventoryWeaponDamageSchema,
   })
   .nullable()
   .catch(null);
@@ -357,10 +395,19 @@ const inventoryItemSchema = z.object({
   typesLabel: z.string().catch(''),
   cost: z.string().catch(''),
   weight: z.coerce.number().catch(0),
-  quantity: z.coerce.number().catch(1),
+  // Ноль — рабочее состояние («Отсутствует»), а вот дробное и отрицательное
+  // количество запись листа держать не должна: строка показывала бы «−2», и
+  // предмет молча считался бы отсутствующим.
+  quantity: z.coerce
+    .number()
+    .int()
+    .min(INVENTORY_QUANTITY_MIN)
+    .max(INVENTORY_QUANTITY_MAX)
+    .catch(1),
   armor: inventoryArmorSchema,
   weapon: inventoryWeaponSchema,
   equipped: z.boolean().catch(false),
+  twoHanded: z.boolean().catch(false),
   // Описание есть только у своих предметов (`custom:<uuid>`): у каталожных оно
   // живёт в разделе-источнике, а не в листе.
   description: z.array(descriptionNodeSchema).optional().catch(undefined),

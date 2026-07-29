@@ -75,10 +75,10 @@
     <!-- Разделитель листа рисуем как есть: он не зависит от данных -->
     <div class="relative flex items-center justify-center py-1">
       <div
-        class="h-px w-full bg-linear-to-r from-transparent via-warning/40 to-transparent"
+        class="h-px w-full bg-linear-to-r from-transparent via-primary/40 to-transparent"
       />
 
-      <div class="absolute size-2 rotate-45 border border-warning bg-default" />
+      <div class="absolute size-2 rotate-45 border border-primary bg-default" />
     </div>
 
     <DefineSummary>

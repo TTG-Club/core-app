@@ -23,3 +23,5 @@ export { useCharacterSheetShare } from './useCharacterSheetShare';
 export { useLevelUpWizard } from './useLevelUpWizard';
 export { useSheetAvatar } from './useSheetAvatar';
 export { useSpellCatalogSearch } from './useSpellCatalogSearch';
+export { useSpellDamage } from './useSpellDamage';
+export { useToolCatalog } from './useToolCatalog';

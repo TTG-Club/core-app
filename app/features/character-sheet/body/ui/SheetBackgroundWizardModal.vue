@@ -12,7 +12,11 @@
   import { FeatDrawer } from '~feats/drawer';
   import { MarkupRender } from '~ui/markup';
 
-  import { useCatalogSourceQuery, useCharacterSheet } from '../../composables';
+  import {
+    useCatalogSourceQuery,
+    useCharacterSheet,
+    useToolCatalog,
+  } from '../../composables';
   import {
     ABILITY_LABELS,
     ABILITY_ORDER,
@@ -22,16 +26,19 @@
     BACKGROUNDS_SEARCH_PATH,
     buildFeatFeature,
     computeAbilityBonuses,
+    CUSTOM_BACKGROUND_LABELS,
     FEATS_DETAIL_BASE_PATH,
+    getOwnedSkillHints,
+    getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
     parseBackgroundDetail,
     parseBackgroundOptions,
     parseFeatDetail,
     resolveChoiceOptions,
     SHEET_SEARCH_LABELS,
-    TOOL_PROFICIENCY_GROUPS,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetCustomBackgroundModal from './SheetCustomBackgroundModal.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
   type WizardStep = 'background' | 'review';
@@ -62,8 +69,21 @@
     },
   });
 
+  // Своя предыстория собирается в отдельной модалке поверх списка: сама она и
+  // применяет её к листу, поэтому мастер после успеха только закрывается, а
+  // отмена возвращает к списку каталога.
+  const customBackgroundModal = overlay.create(SheetCustomBackgroundModal);
+
   function handlePreview(url: string) {
     backgroundPreviewDrawer.open({ url });
+  }
+
+  async function handleCustomBackground() {
+    const isCreated = await customBackgroundModal.open();
+
+    if (isCreated) {
+      emit('close');
+    }
   }
 
   function handleFeatPreview(url: string) {
@@ -80,9 +100,15 @@
     LANGUAGE_PROFICIENCY_GROUPS.flatMap((group) => group.items),
   );
 
-  const allTools = computed(() =>
-    TOOL_PROFICIENCY_GROUPS.flatMap((group) => group.items),
-  );
+  // Каталог инструментов грузится фоном: выбор инструмента появляется только на
+  // втором шаге, а модалка не должна ждать ещё один запрос при открытии.
+  const {
+    getToolNamesForGroups,
+    resolveTools,
+    load: loadToolCatalog,
+  } = useToolCatalog();
+
+  void loadToolCatalog();
 
   // Источники берутся из глобальной настройки профиля — визард не показывает
   // предыстории из отключённых книг. Запрос ждём до списка: иначе первая выдача
@@ -160,6 +186,27 @@
   );
 
   /**
+   * Навыки предыстории с пометкой уже имеющихся: предыстория выдаёт их без
+   * выбора, поэтому вместо запрета показывается сама пометка — по правилам 2024
+   * повторное владение просто ничего не даёт.
+   */
+  const backgroundSkillRows = computed<
+    Array<{ name: string; label: string; color: 'neutral' | 'primary' }>
+  >(() => {
+    const hints = getOwnedSkillHints(character.value.skills);
+
+    return (backgroundDetail.value?.skills ?? []).map((name) => {
+      const hint = hints[name];
+
+      return {
+        name,
+        label: hint ? `${name} · ${hint}` : name,
+        color: hint ? 'neutral' : 'primary',
+      };
+    });
+  });
+
+  /**
    * Одну характеристику нельзя усилить дважды (+3): выбранная под +1
    * недоступна для +2 и наоборот.
    */
@@ -220,9 +267,11 @@
       proficientSkillNames: [],
       chosenProficientSkills: [],
       knownLanguages: character.value.proficiencies.languages,
-      knownTools: character.value.proficiencies.tools,
+      knownTools: getToolNames(character.value.proficiencies.tools),
       allLanguages: allLanguages.value,
-      allTools: allTools.value,
+      // Опции выбора инструмента — из каталога сайта, сузженные до групп,
+      // названных в прозе («один вид игрового набора»).
+      allTools: getToolNamesForGroups(choice.toolGroups),
     });
   }
 
@@ -335,10 +384,15 @@
           plusOneAbility.value ?? null,
         ),
         skills: detail.skills,
-        tools: [
+        // И фиксированные владения предыстории, и выбранные игроком сверяются с
+        // каталогом сайта: ненайденное станет своим инструментом без ссылки.
+        tools: resolveTools([
           ...detail.toolFixed,
-          ...(selections.value['background-tool'] ?? []),
-        ],
+          ...(selections.value['background-tool'] ?? []).map((name) => ({
+            name,
+            url: null,
+          })),
+        ]),
         featUrl: detail.featUrl,
         featFeature,
       });
@@ -426,7 +480,7 @@
               <UIcon
                 v-if="row.isSelected"
                 name="tabler:check"
-                class="size-4 shrink-0 text-warning"
+                class="size-4 shrink-0 text-primary"
               />
             </div>
 
@@ -462,13 +516,13 @@
 
             <div class="flex flex-wrap gap-1">
               <UBadge
-                v-for="skill in backgroundDetail.skills"
-                :key="skill"
+                v-for="skill in backgroundSkillRows"
+                :key="skill.name"
                 size="sm"
-                color="warning"
+                :color="skill.color"
                 variant="subtle"
               >
-                {{ skill }}
+                {{ skill.label }}
               </UBadge>
 
               <span
@@ -504,12 +558,12 @@
             >
               <UBadge
                 v-for="tool in backgroundDetail.toolFixed"
-                :key="tool"
+                :key="tool.name"
                 size="sm"
                 color="neutral"
                 variant="subtle"
               >
-                {{ tool }}
+                {{ tool.name }}
               </UBadge>
 
               <span
@@ -533,7 +587,7 @@
               :items="BACKGROUND_ABILITY_MODE_OPTIONS"
               orientation="horizontal"
               variant="list"
-              color="warning"
+              color="primary"
             />
 
             <div
@@ -568,7 +622,7 @@
                 v-for="row in bonusRows"
                 :key="row.key"
                 size="sm"
-                color="warning"
+                color="primary"
                 variant="subtle"
               >
                 {{ row.label }} {{ row.bonus }}
@@ -643,7 +697,14 @@
           @click.left.exact.prevent="handleBack"
         />
 
-        <span v-else />
+        <UButton
+          v-else
+          :label="CUSTOM_BACKGROUND_LABELS.openButton"
+          icon="tabler:plus"
+          color="neutral"
+          variant="subtle"
+          @click.left.exact.prevent="handleCustomBackground"
+        />
 
         <div class="flex gap-2">
           <UButton

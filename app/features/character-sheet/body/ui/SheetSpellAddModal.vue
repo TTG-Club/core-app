@@ -8,6 +8,8 @@
 
   import { useCharacterSheet, useSpellCatalogSearch } from '../../composables';
   import {
+    getFilterChipClass,
+    getSpellCatalogPreset,
     getSpellGroupLabel,
     isCustomSpell,
     SPELL_CATALOG_LOAD_MORE_DISTANCE,
@@ -36,6 +38,15 @@
     spellPreviewDrawer.open({ url });
   }
 
+  // Класс и доступные ему круги проставляются в фильтры сразу: каталог
+  // открывается на том, что персонаж способен выучить. Пресет снимается общей
+  // кнопкой сброса фильтров, а круги и класс переключаются чипами.
+  //
+  // Снимок листа, а не вычисляемое значение: пресет читается один раз при
+  // первой загрузке каталога, а модалка размонтируется при закрытии — новый
+  // уровень приезжает со следующим открытием.
+  const catalogPreset = getSpellCatalogPreset(character.value);
+
   // Каталог грузится постранично с сервера (как раздел «Заклинания»):
   // фильтры и поиск уходят в query, следующая страница — по скроллу.
   const {
@@ -61,7 +72,7 @@
     resetFilters,
     loadNextPage,
     retryLoad,
-  } = useSpellCatalogSearch();
+  } = useSpellCatalogSearch(catalogPreset);
 
   // Дровер «Все фильтры» — переиспользованный FilterDrawer раздела; работает
   // с тем же состоянием фильтра, что и быстрые чипы.
@@ -127,22 +138,11 @@
     });
   }
 
-  const CHIP_BASE_CLASS =
-    'cursor-pointer rounded border px-2 py-1 text-xs transition-colors';
-
-  const CHIP_IDLE_CLASS = 'border-default text-toned hover:border-warning/60';
-
-  const CHIP_SELECTED_CLASS = 'border-warning bg-warning/10 text-warning';
-
-  function getChipClass(isSelected: boolean): string {
-    return `${CHIP_BASE_CLASS} ${isSelected ? CHIP_SELECTED_CLASS : CHIP_IDLE_CLASS}`;
-  }
-
   const displayLevels = computed(() =>
     SPELL_LEVELS.map((level) => ({
       level,
       isSelected: selectedLevels.value.has(level),
-      chipClass: getChipClass(selectedLevels.value.has(level)),
+      chipClass: getFilterChipClass(selectedLevels.value.has(level)),
     })),
   );
 
@@ -150,13 +150,13 @@
     {
       key: 'concentration',
       label: 'Концентрация',
-      chipClass: getChipClass(onlyConcentration.value),
+      chipClass: getFilterChipClass(onlyConcentration.value),
       toggle: toggleConcentration,
     },
     {
       key: 'ritual',
       label: 'Ритуал',
-      chipClass: getChipClass(onlyRitual.value),
+      chipClass: getFilterChipClass(onlyRitual.value),
       toggle: toggleRitual,
     },
   ]);
@@ -167,7 +167,9 @@
       .map((classOption) => ({
         id: classOption.id,
         name: classOption.name,
-        chipClass: getChipClass(selectedClassIds.value.has(classOption.id)),
+        chipClass: getFilterChipClass(
+          selectedClassIds.value.has(classOption.id),
+        ),
       })),
   );
 
@@ -427,7 +429,7 @@
                   >
                     <UBadge
                       size="sm"
-                      color="warning"
+                      color="primary"
                       variant="subtle"
                       class="relative z-10 shrink-0"
                     >
@@ -465,7 +467,7 @@
                   <UIcon
                     v-if="spell.isSelected"
                     name="tabler:check"
-                    class="size-4 shrink-0 text-warning"
+                    class="size-4 shrink-0 text-primary"
                   />
                 </div>
               </div>

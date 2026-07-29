@@ -10,6 +10,7 @@
     SPELL_SAVE_DC_BASE,
     SPELLCASTING_ABILITY_AUTO,
     SPELLCASTING_ABILITY_OPTIONS,
+    SPELLCASTING_STAT_LABELS,
   } from '../../model';
 
   const emit = defineEmits<{
@@ -85,6 +86,9 @@
         draftAbility.value === SPELLCASTING_ABILITY_AUTO
           ? null
           : draftAbility.value,
+      // Подготовленные заклинания правит своя модалка — здесь настройка
+      // переносится как есть.
+      prepared: character.value.spellcasting.prepared,
     });
 
     emit('close');
@@ -139,7 +143,7 @@
             <span
               class="text-[10px] font-bold tracking-wider text-muted uppercase"
             >
-              Сл. спасброска
+              {{ SPELLCASTING_STAT_LABELS.saveDc.short }}
             </span>
 
             <span class="text-2xl leading-none font-bold text-highlighted">
@@ -153,7 +157,7 @@
             <span
               class="text-[10px] font-bold tracking-wider text-muted uppercase"
             >
-              Атака заклинанием
+              {{ SPELLCASTING_STAT_LABELS.attack.full }}
             </span>
 
             <span class="text-2xl leading-none font-bold text-highlighted">

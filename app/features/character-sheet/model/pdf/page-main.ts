@@ -20,7 +20,6 @@ import {
   LANGUAGE_PROFICIENCY_GROUPS,
   RESOURCE_RECOVERY_LABELS,
   SHEET_EMPTY_LABELS,
-  TOOL_PROFICIENCY_GROUPS,
   WEAPON_PROFICIENCY_GROUPS,
 } from '../constants';
 import {
@@ -37,9 +36,11 @@ import {
   getSpeciesDisplayName,
   getSpeedRows,
   getSpellcastingBreakdown,
+  getToolNames,
   getVisionRows,
   getWeaponAttackBonus,
   getWeaponDamage,
+  isMissingInventoryItem,
 } from '../utils';
 import {
   PDF_ABILITY_BOX_HEIGHT,
@@ -442,10 +443,7 @@ function drawProficienciesPanel(
     },
     {
       label: PDF_LABELS.toolProficiency,
-      values: collapseProficiencies(
-        proficiencies.tools,
-        TOOL_PROFICIENCY_GROUPS,
-      ),
+      values: getToolNames(proficiencies.tools),
     },
     {
       label: PDF_LABELS.languageProficiency,
@@ -774,8 +772,10 @@ function drawWeaponsPanel(
 
       const contentLeft = options.left + PDF_PANEL_PADDING;
 
+      // Оружия, которого не осталось (количество — ноль), в списке атак нет:
+      // им нельзя атаковать и на самом листе.
       const rows = character.inventory
-        .filter((item) => item.weapon !== null)
+        .filter((item) => item.weapon !== null && !isMissingInventoryItem(item))
         .map((item) => {
           const weapon = item.weapon;
 
@@ -784,7 +784,9 @@ function drawWeaponsPanel(
           }
 
           const attack = getWeaponAttackBonus(character, weapon);
-          const damage = getWeaponDamage(character, weapon);
+          // Урон печатаем по нынешнему хвату: универсальное оружие, взятое
+          // двумя руками, и на бумаге катит свою большую кость.
+          const damage = getWeaponDamage(character, weapon, item.twoHanded);
 
           return [
             item.name,

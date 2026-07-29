@@ -10,6 +10,7 @@
     SheetTab,
     SheetTabSlot,
     SpellcastingBreakdown,
+    SpellDamageRoll,
     SpellSlotRow,
   } from '../../model';
 
@@ -67,9 +68,11 @@
     'edit-spell': [spellUrl: string];
     'copy-spell': [spellUrl: string];
     'edit-spellcasting': [];
+    'edit-prepared-spells': [];
     'edit-currency': [];
     'adjust-item-quantity': [inventoryItemId: string, delta: number];
     'toggle-item-equip': [inventoryItemId: string];
+    'toggle-item-two-handed': [inventoryItemId: string];
     'roll-item-attack': [inventoryItem: CharacterInventoryItem];
     'roll-item-damage': [inventoryItem: CharacterInventoryItem];
     'edit-feature': [featureId: string];
@@ -79,6 +82,10 @@
     'remove-note': [noteId: string];
     'remove-item': [inventoryItemId: string];
     'remove-spell': [spellUrl: string];
+    'copy-innate-spell': [spellUrl: string];
+    'remove-innate-spell': [spellUrl: string];
+    'roll-spell-damage': [roll: SpellDamageRoll];
+    'toggle-spell-prepared': [spellUrl: string];
     'toggle-spell-slot': [level: number, index: number];
   }>();
 
@@ -118,6 +125,10 @@
     emit('toggle-item-equip', inventoryItemId);
   }
 
+  function handleItemTwoHandedToggle(inventoryItemId: string) {
+    emit('toggle-item-two-handed', inventoryItemId);
+  }
+
   function handleItemAttackRoll(inventoryItem: CharacterInventoryItem) {
     emit('roll-item-attack', inventoryItem);
   }
@@ -146,8 +157,28 @@
     emit('edit-spellcasting');
   }
 
+  function handlePreparedSpellsEdit() {
+    emit('edit-prepared-spells');
+  }
+
   function handleSpellRemove(spellUrl: string) {
     emit('remove-spell', spellUrl);
+  }
+
+  function handleInnateSpellCopy(spellUrl: string) {
+    emit('copy-innate-spell', spellUrl);
+  }
+
+  function handleInnateSpellRemove(spellUrl: string) {
+    emit('remove-innate-spell', spellUrl);
+  }
+
+  function handleSpellDamageRoll(roll: SpellDamageRoll) {
+    emit('roll-spell-damage', roll);
+  }
+
+  function handleSpellPreparedToggle(spellUrl: string) {
+    emit('toggle-spell-prepared', spellUrl);
   }
 
   function handleSpellSlotToggle(level: number, index: number) {
@@ -742,7 +773,7 @@
             :items="tabItems"
             :model-value="activeSlot"
             :content="false"
-            color="warning"
+            color="primary"
             variant="link"
             :ui="{
               list: 'w-max min-w-full mb-0 self-start',
@@ -830,6 +861,7 @@
             @remove-item="handleItemRemove"
             @adjust-quantity="handleItemQuantityAdjust"
             @toggle-equip="handleItemEquipToggle"
+            @toggle-two-handed="handleItemTwoHandedToggle"
             @roll-attack="handleItemAttackRoll"
             @roll-damage="handleItemDamageRoll"
           />
@@ -845,7 +877,12 @@
             @edit-spell="handleSpellEdit"
             @copy-spell="handleSpellCopy"
             @edit-spellcasting="handleSpellcastingEdit"
+            @edit-prepared-spells="handlePreparedSpellsEdit"
             @remove-spell="handleSpellRemove"
+            @copy-innate-spell="handleInnateSpellCopy"
+            @remove-innate-spell="handleInnateSpellRemove"
+            @roll-spell-damage="handleSpellDamageRoll"
+            @toggle-spell-prepared="handleSpellPreparedToggle"
             @toggle-spell-slot="handleSpellSlotToggle"
           />
 

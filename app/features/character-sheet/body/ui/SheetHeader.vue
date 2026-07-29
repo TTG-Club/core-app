@@ -144,7 +144,7 @@
     props.locked ? 'tabler:lock' : 'tabler:lock-open',
   );
 
-  const lockColor = computed(() => (props.locked ? 'warning' : 'neutral'));
+  const lockColor = computed(() => (props.locked ? 'primary' : 'neutral'));
 
   const lockTooltip = computed(() =>
     props.locked
@@ -215,7 +215,7 @@
           <span class="rounded-full bg-default">
             <UButton
               icon="tabler:eye"
-              color="warning"
+              color="primary"
               variant="soft"
               size="xs"
               square
@@ -253,7 +253,7 @@
         <UTooltip :text="sizeTooltip">
           <span class="rounded-full bg-default">
             <UButton
-              color="warning"
+              color="primary"
               variant="soft"
               size="xs"
               square
@@ -282,7 +282,7 @@
     <div class="flex w-full min-w-0 grow flex-col gap-1 @2xl:w-auto">
       <button
         type="button"
-        class="max-w-full cursor-pointer truncate text-center text-3xl font-bold tracking-wide text-highlighted transition-colors hover:text-warning @2xl:max-w-fit @2xl:text-left"
+        class="max-w-full cursor-pointer truncate text-center text-3xl font-bold tracking-wide text-highlighted transition-colors hover:text-primary @2xl:max-w-fit @2xl:text-left"
         aria-label="Изменить имя персонажа"
         @click.left.exact.prevent="emit('edit-name')"
       >
@@ -294,7 +294,7 @@
       >
         <button
           type="button"
-          class="cursor-pointer rounded px-1 transition-colors hover:bg-elevated/60 hover:text-warning"
+          class="cursor-pointer rounded px-1 transition-colors hover:bg-elevated/60 hover:text-primary"
           aria-label="Выбрать вид персонажа"
           @click.left.exact.prevent="emit('edit-species')"
         >
@@ -305,7 +305,7 @@
 
         <button
           type="button"
-          class="cursor-pointer rounded px-1 transition-colors hover:bg-elevated/60 hover:text-warning"
+          class="cursor-pointer rounded px-1 transition-colors hover:bg-elevated/60 hover:text-primary"
           aria-label="Выбрать класс персонажа"
           @click.left.exact.prevent="emit('edit-class')"
         >
@@ -316,7 +316,7 @@
 
         <button
           type="button"
-          class="cursor-pointer truncate rounded px-1 transition-colors hover:bg-elevated/60 hover:text-warning"
+          class="cursor-pointer truncate rounded px-1 transition-colors hover:bg-elevated/60 hover:text-primary"
           aria-label="Выбрать предысторию персонажа"
           @click.left.exact.prevent="emit('edit-background')"
         >
@@ -340,7 +340,7 @@
             :model-value="character.experience.current"
             :max="character.experience.nextLevel"
             size="sm"
-            color="warning"
+            color="primary"
             class="w-full"
           />
 
@@ -491,7 +491,7 @@
           <UButton
             icon="tabler:sparkles"
             label="Вдохновение"
-            color="warning"
+            color="primary"
             :variant="inspirationVariant"
             class="@max-5xl:hidden"
             :class="inspirationClass"
@@ -503,7 +503,7 @@
         <UTooltip :text="inspirationTooltip">
           <UButton
             icon="tabler:sparkles"
-            color="warning"
+            color="primary"
             :variant="inspirationVariant"
             square
             class="@5xl:hidden"

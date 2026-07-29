@@ -123,7 +123,7 @@
               >
                 <UIcon
                   name="tabler:point-filled"
-                  class="mt-1 size-3 shrink-0 text-warning"
+                  class="mt-1 size-3 shrink-0 text-primary"
                 />
 
                 <span>{{ rule }}</span>
@@ -154,7 +154,7 @@
 
                 <span
                   v-if="health.temporary > 0"
-                  class="text-sm leading-none font-bold text-warning"
+                  class="text-sm leading-none font-bold text-primary"
                 >
                   +{{ health.temporary }}
                 </span>

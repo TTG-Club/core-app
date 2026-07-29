@@ -85,7 +85,7 @@
       >
         <UIcon
           name="tabler:settings"
-          class="size-3.5 text-muted transition-colors hover:text-warning"
+          class="size-3.5 text-muted transition-colors hover:text-primary"
         />
       </button>
     </template>
