@@ -10,7 +10,11 @@
   import { MarkupRender } from '~ui/markup';
   import { SelectFeat } from '~ui/select';
 
-  import { useCatalogSourceQuery, useCharacterSheet } from '../../composables';
+  import {
+    useCatalogSourceQuery,
+    useCharacterSheet,
+    useToolCatalog,
+  } from '../../composables';
   import {
     ABILITY_LABELS,
     buildClassFeatures,
@@ -38,14 +42,16 @@
     getClassSkillChoice,
     getClassToolChoice,
     getSelectedCasterType,
+    getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
     matchClassProficiencies,
+    matchToolProficiencies,
     parseClassDetail,
     parseClassOptions,
     resolveChoiceOptions,
     SHEET_SEARCH_LABELS,
     SUBCLASS_SELECTION_MIN_LEVEL,
-    TOOL_PROFICIENCY_GROUPS,
+    unionToolProficiencies,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
@@ -150,9 +156,16 @@
     LANGUAGE_PROFICIENCY_GROUPS.flatMap((group) => group.items),
   );
 
-  const allTools = computed(() =>
-    TOOL_PROFICIENCY_GROUPS.flatMap((group) => group.items),
-  );
+  // Каталог инструментов грузится фоном: он нужен только на шаге владений, а
+  // список классов не должен ждать ещё один запрос.
+  const {
+    catalogItems: toolCatalogItems,
+    getToolNamesForGroups,
+    resolveTools,
+    load: loadToolCatalog,
+  } = useToolCatalog();
+
+  void loadToolCatalog();
 
   const filteredOptions = computed(() => {
     const query = searchTerm.value.trim().toLowerCase();
@@ -235,13 +248,24 @@
   const matchedProficiencies = computed(() =>
     classDetail.value
       ? matchClassProficiencies(classDetail.value.proficiencyText)
-      : { armor: [], weapons: [], tools: [] },
+      : { armor: [], weapons: [] },
+  );
+
+  // Фиксированные инструменты класса сверяются с каталогом сайта: найденное
+  // получает ссылку, ненайденное остаётся своим инструментом игрока.
+  const matchedTools = computed(() =>
+    classDetail.value
+      ? matchToolProficiencies(
+          classDetail.value.proficiencyText.tool,
+          toolCatalogItems.value,
+        )
+      : [],
   );
 
   const proficiencyChips = computed(() => [
     ...matchedProficiencies.value.armor,
     ...matchedProficiencies.value.weapons,
-    ...matchedProficiencies.value.tools,
+    ...getToolNames(matchedTools.value),
   ]);
 
   const derivedResources = computed(() => {
@@ -276,9 +300,11 @@
       proficientSkillNames: proficientSkillNames.value,
       chosenProficientSkills: selections.value['class-skills'] ?? [],
       knownLanguages: character.value.proficiencies.languages,
-      knownTools: character.value.proficiencies.tools,
+      knownTools: getToolNames(character.value.proficiencies.tools),
       allLanguages: allLanguages.value,
-      allTools: allTools.value,
+      // Опции выбора инструмента — из каталога сайта, сузженные до групп,
+      // названных в прозе («один вид ремесленных инструментов»).
+      allTools: getToolNamesForGroups(choice.toolGroups),
     });
   }
 
@@ -627,7 +653,12 @@
         proficiencies: {
           armor: matched.armor,
           weapons: matched.weapons,
-          tools: [...matched.tools, ...chosenTools],
+          // Фиксированные инструменты уже сверены с каталогом, выбранные игроком
+          // приходят названиями — их сверяет `resolveTools`.
+          tools: unionToolProficiencies(
+            matchedTools.value,
+            resolveTools(chosenTools.map((name) => ({ name, url: null }))),
+          ),
           languages: chosenLanguages,
         },
         skills: {

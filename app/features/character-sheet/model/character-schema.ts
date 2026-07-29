@@ -278,12 +278,22 @@ const classResourceSchema = z.object({
   max: z.coerce.number().catch(0),
 });
 
+// Листы до появления ссылок на инструменты хранят владения строками: такая
+// запись читается без ссылки, а url подставится при следующей правке владений.
+const toolProficiencySchema = z.union([
+  z.string().transform((name) => ({ name, url: null })),
+  z.object({
+    name: z.string().catch(''),
+    url: z.string().nullable().catch(null),
+  }),
+]);
+
 const proficienciesSchema = z
   .object({
     armor: z.array(z.string()).catch([]),
     weapons: z.array(z.string()).catch([]),
     weaponMasteries: z.array(z.string()).catch([]),
-    tools: z.array(z.string()).catch([]),
+    tools: z.array(toolProficiencySchema).catch([]),
     languages: z.array(z.string()).catch([]),
   })
   .catch(() => structuredClone(DEFAULT_CHARACTER.proficiencies));

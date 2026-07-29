@@ -319,6 +319,22 @@ export interface CharacterSkill {
   proficiency: SkillProficiencyLevel;
 }
 
+/**
+ * Владение инструментом. В отличие от прочих владений хранится не строкой:
+ * инструменты живут в разделе «Предметы», и ссылка на предмет нужна, чтобы
+ * открыть его описание в дровере прямо из листа.
+ */
+export interface CharacterToolProficiency {
+  /** Подпись инструмента (она же попадает в PDF). */
+  name: string;
+
+  /**
+   * Относительный url предмета каталога (`thieves-tools-phb`); null —
+   * инструмента нет на сайте (свой инструмент игрока) либо он не распознан.
+   */
+  url: string | null;
+}
+
 /** Владения персонажа. */
 export interface CharacterProficiencies {
   /** Броня и снаряжение. */
@@ -331,7 +347,7 @@ export interface CharacterProficiencies {
   weaponMasteries: string[];
 
   /** Инструменты. */
-  tools: string[];
+  tools: CharacterToolProficiency[];
 
   /** Языки. */
   languages: string[];
@@ -339,6 +355,9 @@ export interface CharacterProficiencies {
 
 /** Ключ группы владений персонажа. */
 export type ProficiencyGroupKey = keyof CharacterProficiencies;
+
+/** Ключ группы владений, хранящейся плоским списком названий. */
+export type PlainProficiencyGroupKey = Exclude<ProficiencyGroupKey, 'tools'>;
 
 /** Группа каталога владений: пункт «вся группа целиком» и отдельные виды. */
 export interface ProficiencyCatalogGroup {
@@ -362,9 +381,31 @@ export interface WeaponProficiencyGroup extends ProficiencyCatalogGroup {
   key: 'simple' | 'martial';
 }
 
-/** Группа каталога инструментов в настройках владения. */
-export interface ToolProficiencyGroup extends ProficiencyCatalogGroup {
-  key: 'artisan' | 'gaming' | 'musical' | 'other';
+/** Ключ группы каталога инструментов (категория раздела «Предметы»). */
+export type ToolProficiencyGroupKey =
+  | 'artisan'
+  | 'gaming'
+  | 'musical'
+  | 'other';
+
+/** Запись каталога инструментов: подпись и ссылка на предмет раздела. */
+export interface ToolCatalogEntry {
+  name: string;
+
+  /** url предмета каталога — по нему открывается описание. */
+  url: string;
+}
+
+/**
+ * Группа каталога инструментов для модалки владения. Своего списка инструментов
+ * у листа нет: группы целиком собираются из раздела «Предметы».
+ */
+export interface ToolCatalogGroup {
+  key: ToolProficiencyGroupKey;
+  title: string;
+
+  /** Виды инструментов группы. */
+  items: ToolCatalogEntry[];
 }
 
 /** Группа каталога языков в настройках владения. */
@@ -915,6 +956,12 @@ export interface ClassChoice {
 
   /** Явные опции из прозы; пусто — резолвятся по типу в визарде. */
   listed: string[];
+
+  /**
+   * Группы каталога инструментов, из которых идёт выбор («один вид ремесленных
+   * инструментов»); пусто — выбор из всего каталога. Только для `kind: 'tool'`.
+   */
+  toolGroups?: ToolProficiencyGroupKey[];
 }
 
 /** Контекст резолюции опций выбора (навыки/языки/инструменты) в визарде. */
@@ -1055,8 +1102,8 @@ export interface BackgroundSummary {
   /** Навыки прозой. */
   skillsText: string;
 
-  /** Фиксированные инструменты (применяются как есть). */
-  toolFixed: string[];
+  /** Фиксированные инструменты со ссылками каталога (применяются как есть). */
+  toolFixed: CharacterToolProficiency[];
 
   /** Выбор инструмента; null — инструмент фиксирован. */
   toolChoice: ClassChoice | null;

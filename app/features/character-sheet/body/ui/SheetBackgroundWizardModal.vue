@@ -12,7 +12,11 @@
   import { FeatDrawer } from '~feats/drawer';
   import { MarkupRender } from '~ui/markup';
 
-  import { useCatalogSourceQuery, useCharacterSheet } from '../../composables';
+  import {
+    useCatalogSourceQuery,
+    useCharacterSheet,
+    useToolCatalog,
+  } from '../../composables';
   import {
     ABILITY_LABELS,
     ABILITY_ORDER,
@@ -23,13 +27,13 @@
     buildFeatFeature,
     computeAbilityBonuses,
     FEATS_DETAIL_BASE_PATH,
+    getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
     parseBackgroundDetail,
     parseBackgroundOptions,
     parseFeatDetail,
     resolveChoiceOptions,
     SHEET_SEARCH_LABELS,
-    TOOL_PROFICIENCY_GROUPS,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
@@ -80,9 +84,15 @@
     LANGUAGE_PROFICIENCY_GROUPS.flatMap((group) => group.items),
   );
 
-  const allTools = computed(() =>
-    TOOL_PROFICIENCY_GROUPS.flatMap((group) => group.items),
-  );
+  // Каталог инструментов грузится фоном: выбор инструмента появляется только на
+  // втором шаге, а модалка не должна ждать ещё один запрос при открытии.
+  const {
+    getToolNamesForGroups,
+    resolveTools,
+    load: loadToolCatalog,
+  } = useToolCatalog();
+
+  void loadToolCatalog();
 
   // Источники берутся из глобальной настройки профиля — визард не показывает
   // предыстории из отключённых книг. Запрос ждём до списка: иначе первая выдача
@@ -220,9 +230,11 @@
       proficientSkillNames: [],
       chosenProficientSkills: [],
       knownLanguages: character.value.proficiencies.languages,
-      knownTools: character.value.proficiencies.tools,
+      knownTools: getToolNames(character.value.proficiencies.tools),
       allLanguages: allLanguages.value,
-      allTools: allTools.value,
+      // Опции выбора инструмента — из каталога сайта, сузженные до групп,
+      // названных в прозе («один вид игрового набора»).
+      allTools: getToolNamesForGroups(choice.toolGroups),
     });
   }
 
@@ -335,10 +347,15 @@
           plusOneAbility.value ?? null,
         ),
         skills: detail.skills,
-        tools: [
+        // И фиксированные владения предыстории, и выбранные игроком сверяются с
+        // каталогом сайта: ненайденное станет своим инструментом без ссылки.
+        tools: resolveTools([
           ...detail.toolFixed,
-          ...(selections.value['background-tool'] ?? []),
-        ],
+          ...(selections.value['background-tool'] ?? []).map((name) => ({
+            name,
+            url: null,
+          })),
+        ]),
         featUrl: detail.featUrl,
         featFeature,
       });
@@ -504,12 +521,12 @@
             >
               <UBadge
                 v-for="tool in backgroundDetail.toolFixed"
-                :key="tool"
+                :key="tool.name"
                 size="sm"
                 color="neutral"
                 variant="subtle"
               >
-                {{ tool }}
+                {{ tool.name }}
               </UBadge>
 
               <span

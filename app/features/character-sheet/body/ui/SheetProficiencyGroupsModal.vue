@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type {
+    PlainProficiencyGroupKey,
     ProficiencyCatalogGroup,
-    ProficiencyGroupKey,
   } from '../../model';
 
   import { useCharacterSheet } from '../../composables';
@@ -11,7 +11,7 @@
     title: string;
 
     /** Редактируемая группа владений персонажа. */
-    target: Extract<ProficiencyGroupKey, 'armor' | 'tools' | 'languages'>;
+    target: Extract<PlainProficiencyGroupKey, 'armor' | 'languages'>;
 
     /** Каталог групп владений. */
     groups: ProficiencyCatalogGroup[];

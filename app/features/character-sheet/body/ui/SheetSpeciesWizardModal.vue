@@ -10,13 +10,18 @@
   import { SpeciesDrawer } from '~species/drawer';
   import { MarkupRender } from '~ui/markup';
 
-  import { useCatalogSourceQuery, useCharacterSheet } from '../../composables';
+  import {
+    useCatalogSourceQuery,
+    useCharacterSheet,
+    useToolCatalog,
+  } from '../../composables';
   import {
     buildCharacterFeatures,
     detectFeatureChoice,
     FEATURE_ORIGIN_LABELS,
     getCharacterFeatureId,
     getDarkvisionDistance,
+    getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
     parseSizeOptionsFromText,
     parseSpeciesDetail,
@@ -28,7 +33,6 @@
     SPECIES_DETAIL_BASE_PATH,
     SPECIES_FILTERS_PATH,
     SPECIES_SEARCH_PATH,
-    TOOL_PROFICIENCY_GROUPS,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
@@ -143,9 +147,12 @@
     LANGUAGE_PROFICIENCY_GROUPS.flatMap((group) => group.items),
   );
 
-  const allTools = computed(() =>
-    TOOL_PROFICIENCY_GROUPS.flatMap((group) => group.items),
-  );
+  // Инструменты виды не выдают (`detectFeatureChoice` их не распознаёт), но
+  // контекст резолва выборов общий — список тянем из каталога сайта, а не из
+  // своего перечня.
+  const { getToolNamesForGroups, load: loadToolCatalog } = useToolCatalog();
+
+  void loadToolCatalog();
 
   const filteredOptions = computed(() => {
     const query = searchTerm.value.trim().toLowerCase();
@@ -281,9 +288,9 @@
       proficientSkillNames: proficientSkillNames.value,
       chosenProficientSkills: chosenProficientSkills.value,
       knownLanguages: character.value.proficiencies.languages,
-      knownTools: character.value.proficiencies.tools,
+      knownTools: getToolNames(character.value.proficiencies.tools),
       allLanguages: allLanguages.value,
-      allTools: allTools.value,
+      allTools: getToolNamesForGroups(choice.toolGroups),
     });
   }
 

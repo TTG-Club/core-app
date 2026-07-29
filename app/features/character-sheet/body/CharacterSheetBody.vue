@@ -25,7 +25,6 @@
     getWeaponAttackBonus,
     getWeaponDamage,
     LANGUAGE_PROFICIENCY_GROUPS,
-    TOOL_PROFICIENCY_GROUPS,
   } from '../model';
   import CharacterSheetSkeleton from './CharacterSheetSkeleton.vue';
   import {
@@ -69,6 +68,7 @@
     SheetSpellAddModal,
     SheetSpellcastingModal,
     SheetStatTile,
+    SheetToolProficienciesModal,
     SheetVisionModal,
     SheetWeaponProficienciesModal,
   } from './ui';
@@ -339,6 +339,8 @@
     SheetWeaponProficienciesModal,
   );
 
+  const toolProficienciesModal = overlay.create(SheetToolProficienciesModal);
+
   const speciesWizardModal = overlay.create(SheetSpeciesWizardModal);
 
   const classWizardModal = overlay.create(SheetClassWizardModal);
@@ -531,11 +533,7 @@
     }
 
     if (group === 'tools') {
-      proficiencyGroupsModal.open({
-        title: 'Владение инструментами',
-        target: 'tools',
-        groups: TOOL_PROFICIENCY_GROUPS,
-      });
+      toolProficienciesModal.open();
     }
 
     if (group === 'languages') {

@@ -26,6 +26,7 @@ import type {
   CharacterSpeed,
   CharacterSpell,
   CharacterSpellGroup,
+  CharacterToolProficiency,
   CharacterVision,
   ChoiceOptionContext,
   ClassChoice,
@@ -69,6 +70,7 @@ import type {
   SpellSlotCircle,
   SpellSlotRow,
   SpellTabFilter,
+  ToolCatalogEntry,
   VisionRow,
   WeaponAttack,
   WeaponDamage,
@@ -185,8 +187,9 @@ import {
   SPELL_SLOT_FREE_LABEL,
   SPELL_SLOT_USED_LABEL,
   THIRD_CASTER_SUBCLASSES,
+  TOOL_CATALOG_GROUP_ORDER,
   TOOL_MATCH_KEYWORDS,
-  TOOL_PROFICIENCY_GROUPS,
+  TOOL_NAME_ALIASES,
   UNARMORED_ARMOR_CLASS_BASE,
   VISION_LABELS,
   VISION_ORDER,
@@ -2752,6 +2755,159 @@ export function collapseProficiencies(
 }
 
 /**
+ * Названия владений инструментами — для мест, где ссылка не нужна (PDF, опции
+ * выбора в мастерах).
+ *
+ * @param tools владения инструментами.
+ * @returns подписи владений.
+ */
+export function getToolNames(tools: CharacterToolProficiency[]): string[] {
+  return tools.map((tool) => tool.name);
+}
+
+/**
+ * Приведение названия инструмента к сопоставимому виду: регистр, `ё` и лишние
+ * пробелы у названий каталога и листа расходятся («инструменты стеклодува»,
+ * «Инструменты ткача »).
+ *
+ * @param name название инструмента.
+ * @returns нормализованное название.
+ */
+function normalizeToolName(name: string): string {
+  return name.trim().toLowerCase().replaceAll('ё', 'е');
+}
+
+/**
+ * Подпись инструмента, которого нет в каталоге: API отдаёт названия и с
+ * маленькой буквы («инструменты стеклодува»). Регистр остальных слов не
+ * трогаем — в названиях встречаются имена собственные.
+ *
+ * @param name название инструмента из ответа API.
+ * @returns название с заглавной первой буквой.
+ */
+function toDisplayToolName(name: string): string {
+  const trimmed = name.trim();
+
+  return trimmed ? `${trimmed[0]?.toUpperCase()}${trimmed.slice(1)}` : trimmed;
+}
+
+/**
+ * Ключ сопоставления владения инструментом — нормализованное название с учётом
+ * устаревших названий каталога. Ключ именно по названию, а не по ссылке: одно и
+ * то же владение приходит из класса прозой (без ссылки) и из предыстории
+ * разметкой (со ссылкой), и по ссылке они бы не сошлись.
+ *
+ * @param name название инструмента (владения листа либо записи каталога).
+ * @returns ключ для сравнения и дедупликации.
+ */
+export function getToolProficiencyKey(name: string): string {
+  const normalized = normalizeToolName(name);
+
+  const alias = TOOL_NAME_ALIASES[normalized];
+
+  return alias ? normalizeToolName(alias) : normalized;
+}
+
+/**
+ * Список владений инструментами без дублей: запись со ссылкой вытесняет такую
+ * же без ссылки, поэтому владение, выданное классом по прозе, получает ссылку
+ * от предыстории с разметкой.
+ *
+ * @param tools владения инструментами.
+ * @returns владения без повторов.
+ */
+export function dedupeToolProficiencies(
+  tools: CharacterToolProficiency[],
+): CharacterToolProficiency[] {
+  const merged = new Map<string, CharacterToolProficiency>();
+
+  for (const tool of tools) {
+    const key = getToolProficiencyKey(tool.name);
+
+    const existing = merged.get(key);
+
+    if (!existing) {
+      merged.set(key, tool);
+
+      continue;
+    }
+
+    if (!existing.url && tool.url) {
+      merged.set(key, { ...existing, url: tool.url });
+    }
+  }
+
+  return [...merged.values()];
+}
+
+/**
+ * Объединение владений инструментами без дублей.
+ *
+ * @param current владения листа.
+ * @param incoming добавляемые владения.
+ * @returns объединённый список владений.
+ */
+export function unionToolProficiencies(
+  current: CharacterToolProficiency[],
+  incoming: CharacterToolProficiency[],
+): CharacterToolProficiency[] {
+  return dedupeToolProficiencies([...current, ...incoming]);
+}
+
+/**
+ * Поиск инструмента в каталоге раздела «Предметы»: сперва по названию (с учётом
+ * регистра, `ё` и устаревших названий), затем по ссылке — в ответах API имя и
+ * ссылка расходятся независимо друг от друга («Инструменты жестянщика» с url
+ * ремонтника; «инструменты стеклодува» с устаревшим url).
+ *
+ * @param tool владение инструментом (из листа или из ответа API).
+ * @param catalog записи каталога инструментов.
+ * @returns запись каталога либо undefined, если инструмента на сайте нет.
+ */
+export function findToolInCatalog(
+  tool: CharacterToolProficiency,
+  catalog: ToolCatalogEntry[],
+): ToolCatalogEntry | undefined {
+  const key = getToolProficiencyKey(tool.name);
+
+  const byName = catalog.find(
+    (catalogItem) => getToolProficiencyKey(catalogItem.name) === key,
+  );
+
+  if (byName) {
+    return byName;
+  }
+
+  return tool.url
+    ? catalog.find((catalogItem) => catalogItem.url === tool.url)
+    : undefined;
+}
+
+/**
+ * Приведение владений к каталогу: найденное берёт название и ссылку с сайта,
+ * ненайденное остаётся своим инструментом игрока (без ссылки — описание такому
+ * не откроется).
+ *
+ * @param tools владения инструментами.
+ * @param catalog записи каталога инструментов.
+ * @returns владения, сверенные с каталогом, без дублей.
+ */
+export function resolveToolProficiencies(
+  tools: CharacterToolProficiency[],
+  catalog: ToolCatalogEntry[],
+): CharacterToolProficiency[] {
+  return dedupeToolProficiencies(
+    tools.map((tool) => {
+      const catalogItem = findToolInCatalog(tool, catalog);
+
+      return catalogItem
+        ? { name: catalogItem.name, url: catalogItem.url }
+        : { name: tool.name, url: null };
+    }),
+  );
+}
+
+/**
  * Распознавание характеристик из прозы (например, спасброски класса «Сила и
  * Телосложение» или характеристики предыстории): совпадения ищутся по полным
  * названиям характеристик.
@@ -2810,21 +2966,19 @@ export function matchProficiencyGroups(
 }
 
 /**
- * Владения класса, распознанные из прозы ответа (best-effort). Броня, оружие и
- * инструменты сопоставляются с существующими каталогами владений; распознанное
- * игрок затем правит существующими модалками.
+ * Владения класса бронёй и оружием, распознанные из прозы ответа (best-effort);
+ * распознанное игрок затем правит существующими модалками. Инструменты сюда не
+ * входят — у них свой каталог с сайта (`matchToolProficiencies`).
  *
- * @param proficiencyText владения класса прозой (armor/weapon/tool).
+ * @param proficiencyText владения класса прозой (armor/weapon).
  * @param proficiencyText.armor владения бронёй прозой.
  * @param proficiencyText.weapon владения оружием прозой.
- * @param proficiencyText.tool владения инструментами прозой.
  * @returns списки владений по группам листа.
  */
 export function matchClassProficiencies(proficiencyText: {
   armor: string;
   weapon: string;
-  tool: string;
-}): { armor: string[]; weapons: string[]; tools: string[] } {
+}): { armor: string[]; weapons: string[] } {
   return {
     armor: matchProficiencyGroups(
       proficiencyText.armor,
@@ -2836,12 +2990,88 @@ export function matchClassProficiencies(proficiencyText: {
       WEAPON_PROFICIENCY_GROUPS,
       WEAPON_MATCH_KEYWORDS,
     ),
-    tools: matchProficiencyGroups(
-      proficiencyText.tool,
-      TOOL_PROFICIENCY_GROUPS,
-      TOOL_MATCH_KEYWORDS,
-    ),
   };
+}
+
+/**
+ * Разбиение прозы владений инструментами на отдельные упоминания: «Воровские
+ * инструменты, Инструменты ремонтника и один тип ремесленных инструментов» —
+ * три записи, из которых последняя окажется выбором.
+ *
+ * @param prose проза владений инструментами.
+ * @returns непустые фрагменты прозы.
+ */
+function splitToolProse(prose: string): string[] {
+  return prose
+    .split(/[,;.]|\sи\s/i)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Инструмент каталога, названный во фрагменте прозы. Приоритет строгий: сперва
+ * точное совпадение названия, затем вхождение — во фрагменте бывает лишнее
+ * («владение инструментами ремонтника»). Из нескольких вхождений берётся самое
+ * длинное название: короткое («Виола») иначе перебило бы более точное.
+ *
+ * @param segment фрагмент прозы владений.
+ * @param catalog записи каталога инструментов.
+ * @returns запись каталога либо undefined, если инструмент не назван.
+ */
+function findToolInProseSegment(
+  segment: string,
+  catalog: ToolCatalogEntry[],
+): ToolCatalogEntry | undefined {
+  const segmentKey = getToolProficiencyKey(segment);
+
+  const exactMatch = catalog.find(
+    (toolEntry) => getToolProficiencyKey(toolEntry.name) === segmentKey,
+  );
+
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  const normalized = normalizeToolName(segment);
+
+  return catalog
+    .filter((toolEntry) =>
+      normalized.includes(normalizeToolName(toolEntry.name)),
+    )
+    .sort((first, second) => second.name.length - first.name.length)
+    .at(0);
+}
+
+/**
+ * Фиксированные владения инструментами из прозы класса. Каждый фрагмент, не
+ * похожий на выбор, ищется в каталоге сайта; ненайденное становится своим
+ * инструментом (без ссылки), чтобы владение не потерялось.
+ *
+ * @param prose проза владений инструментами (`proficiency.tool`).
+ * @param catalog записи каталога инструментов.
+ * @returns владения инструментами для листа.
+ */
+export function matchToolProficiencies(
+  prose: string,
+  catalog: ToolCatalogEntry[],
+): CharacterToolProficiency[] {
+  const matched: CharacterToolProficiency[] = [];
+
+  for (const segment of splitToolProse(stripMarkupMarkers(prose))) {
+    if (isToolChoiceProse(segment)) {
+      continue;
+    }
+
+    const catalogItem = findToolInProseSegment(segment, catalog);
+
+    matched.push(
+      catalogItem
+        ? { name: catalogItem.name, url: catalogItem.url }
+        : { name: toDisplayToolName(segment), url: null },
+    );
+  }
+
+  return dedupeToolProficiencies(matched);
 }
 
 /**
@@ -3439,9 +3669,30 @@ export function getClassSkillChoice(
 }
 
 /**
- * Выбор владения инструментами из прозы («Выберите N … инструмента», «N … на
- * ваш выбор»). Группа определяется по ключевому слову (например, «музыкальн» →
- * музыкальные инструменты); иначе опции резолвятся всем каталогом в визарде.
+ * Проза владения инструментами описывает ВЫБОР, а не фиксированную выдачу.
+ * Формулировки в ответах API разные: «Выберите…», «на ваш выбор», «Один из
+ * музыкальных инструментов», «один тип ремесленных инструментов», «Один
+ * музыкальный инструмент или инструмент ремесленников».
+ *
+ * @param toolText проза владения инструментами.
+ * @returns true — фрагмент описывает выбор.
+ */
+export function isToolChoiceProse(toolText: string): boolean {
+  const normalized = toolText.toLowerCase().replaceAll('ё', 'е');
+
+  // «выбер…» (Выберите) и «выбор» (на выбор) — разные корни, оба означают выбор.
+  return (
+    /выб[ео]р/.test(normalized)
+    || /\bодн(?:ин|им|ого|ой|ому)?\s+(?:вид|тип|из)/.test(normalized)
+    || (/\bодин\b/.test(normalized) && /\bили\b/.test(normalized))
+  );
+}
+
+/**
+ * Выбор владения инструментами из прозы. Группы каталога определяются по
+ * ключевому слову («музыкальн» → музыкальные инструменты), их может быть
+ * несколько («музыкальный инструмент или инструмент ремесленников»); пустой
+ * список групп означает выбор из всего каталога сайта.
  *
  * @param toolText проза владения инструментами.
  * @param id идентификатор выбора (для class/background).
@@ -3451,15 +3702,14 @@ export function getClassToolChoice(
   toolText: string,
   id = 'class-tools',
 ): ClassChoice | null {
-  // «выбер…» (Выберите) и «выбор» (на выбор) — разные корни, оба означают выбор.
-  if (!/выб[ео]р/i.test(toolText)) {
+  if (!isToolChoiceProse(toolText)) {
     return null;
   }
 
-  const normalized = toolText.toLowerCase();
+  const normalized = toolText.toLowerCase().replaceAll('ё', 'е');
 
-  const matchedGroup = TOOL_PROFICIENCY_GROUPS.find((group) =>
-    TOOL_MATCH_KEYWORDS[group.key].some((keyword) =>
+  const toolGroups = TOOL_CATALOG_GROUP_ORDER.filter((groupKey) =>
+    TOOL_MATCH_KEYWORDS[groupKey].some((keyword) =>
       normalized.includes(keyword),
     ),
   );
@@ -3469,7 +3719,8 @@ export function getClassToolChoice(
     kind: 'tool',
     label: 'Владение инструментами',
     count: parseChoiceCount(toolText),
-    listed: matchedGroup ? [...matchedGroup.items] : [],
+    listed: [],
+    toolGroups,
   };
 }
 
@@ -3613,25 +3864,22 @@ export function stripMarkupMarkers(text: string): string {
 }
 
 /**
- * Приведение названия инструмента к каталогу владений: подпись маркера бывает
- * строчной («инструменты стеклодува»), а чекбоксы владений сопоставляются по
- * точному названию. Незнакомое название остаётся как есть.
+ * Разбор владения инструментом из ответа API: подпись и относительная ссылка на
+ * предмет каталога. На проде владения приходят маркером
+ * («{@item Воровские инструменты|url:thieves-tools-phb}»), на деве — плоским
+ * текстом, поэтому ссылка необязательна. Подпись остаётся сырой: сверит её с
+ * каталогом сайта `resolveToolProficiencies`.
  *
- * @param name название инструмента из ответа API.
- * @returns название из каталога или исходное, если совпадения нет.
+ * @param toolText строка владения инструментом.
+ * @returns владение инструментом с ссылкой либо без неё.
  */
-export function matchToolProficiencyName(name: string): string {
-  const trimmed = name.trim();
+export function parseToolMarker(toolText: string): CharacterToolProficiency {
+  const urlMatch = /url:([\w-]+)/.exec(toolText);
 
-  const normalized = trimmed.toLowerCase().replaceAll('ё', 'е');
-
-  const catalogName = TOOL_PROFICIENCY_GROUPS.flatMap(
-    (group) => group.items,
-  ).find(
-    (toolName) => toolName.toLowerCase().replaceAll('ё', 'е') === normalized,
-  );
-
-  return catalogName ?? trimmed;
+  return {
+    name: toDisplayToolName(stripMarkupMarkers(toolText)),
+    url: urlMatch?.[1] ?? null,
+  };
 }
 
 /**

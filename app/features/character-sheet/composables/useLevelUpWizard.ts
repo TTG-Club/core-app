@@ -28,6 +28,7 @@ import {
   getLevelFeatureRows,
   getLevelHitPointsGain,
   getSelectedCasterType,
+  getToolNames,
   LANGUAGE_PROFICIENCY_GROUPS,
   LEVEL_UP_WIZARD_LABELS,
   mergeCharacterFeatures,
@@ -35,10 +36,10 @@ import {
   parseClassOptions,
   resolveChoiceOptions,
   SUBCLASS_SELECTION_MIN_LEVEL,
-  TOOL_PROFICIENCY_GROUPS,
 } from '../model';
 import { useLazyCatalogSourceQuery } from './useCatalogSourceQuery';
 import { useCharacterSheet } from './useCharacterSheet';
+import { useToolCatalog } from './useToolCatalog';
 
 /**
  * Черновики шагов по взятым уровням: прирост хитов по умолчанию средний — так
@@ -198,9 +199,12 @@ export function useLevelUpWizard(): LevelUpWizard {
     LANGUAGE_PROFICIENCY_GROUPS.flatMap((group) => group.items),
   );
 
-  const allTools = computed(() =>
-    TOOL_PROFICIENCY_GROUPS.flatMap((group) => group.items),
-  );
+  // Инструменты умения уровня не выдают (`detectFeatureChoice` их не
+  // распознаёт), но контекст резолва выборов общий — список берём из каталога
+  // сайта, своего перечня инструментов у листа нет.
+  const { getToolNamesForGroups, load: loadToolCatalog } = useToolCatalog();
+
+  void loadToolCatalog();
 
   /**
    * Уровень, на котором мастер предлагает подкласс: первый взятый уровень не
@@ -534,9 +538,9 @@ export function useLevelUpWizard(): LevelUpWizard {
       proficientSkillNames: proficientSkillNames.value,
       chosenProficientSkills: chosenProficientSkills.value,
       knownLanguages: character.value.proficiencies.languages,
-      knownTools: character.value.proficiencies.tools,
+      knownTools: getToolNames(character.value.proficiencies.tools),
       allLanguages: allLanguages.value,
-      allTools: allTools.value,
+      allTools: getToolNamesForGroups(choice.toolGroups),
     });
   }
 

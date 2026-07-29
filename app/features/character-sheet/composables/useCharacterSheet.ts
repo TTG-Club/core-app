@@ -18,12 +18,13 @@ import type {
   CharacterSpeed,
   CharacterSpell,
   CharacterSpellcasting,
+  CharacterToolProficiency,
   CharacterVision,
   CustomInventoryItemDraft,
   CustomSpellDraft,
   HitDiceAmount,
   LevelUpPayload,
-  ProficiencyGroupKey,
+  PlainProficiencyGroupKey,
 } from '../model';
 
 import { clamp, union } from 'es-toolkit';
@@ -96,6 +97,7 @@ import {
   toCustomInventoryItem,
   toCustomSpell,
   toUpdatedCustomInventoryItem,
+  unionToolProficiencies,
   VISION_DISTANCE_MAX,
   VISION_DISTANCE_MIN,
 } from '../model';
@@ -1052,7 +1054,7 @@ export function useCharacterSheet() {
     proficiencies: {
       armor: string[];
       weapons: string[];
-      tools: string[];
+      tools: CharacterToolProficiency[];
       languages: string[];
     };
     skills: { proficient: string[]; expertise: string[] };
@@ -1113,7 +1115,7 @@ export function useCharacterSheet() {
           character.value.proficiencies.weapons,
           payload.proficiencies.weapons,
         ),
-        tools: union(
+        tools: unionToolProficiencies(
           character.value.proficiencies.tools,
           payload.proficiencies.tools,
         ),
@@ -1160,7 +1162,7 @@ export function useCharacterSheet() {
     background: { url: string; name: string };
     abilityBonuses: Partial<Record<AbilityKey, number>>;
     skills: string[];
-    tools: string[];
+    tools: CharacterToolProficiency[];
     featUrl: string | null;
     featFeature: CharacterFeature | null;
   }): void {
@@ -1213,7 +1215,10 @@ export function useCharacterSheet() {
       ),
       proficiencies: {
         ...character.value.proficiencies,
-        tools: union(character.value.proficiencies.tools, payload.tools),
+        tools: unionToolProficiencies(
+          character.value.proficiencies.tools,
+          payload.tools,
+        ),
       },
       skills: applySkillProficiencies(
         character.value.skills,
@@ -2035,12 +2040,16 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Установка списка владений группы (броня, оружие или инструменты).
+   * Установка списка владений группы (броня, оружие, мастерство или языки).
+   * Инструменты хранятся записями со ссылкой — у них свой сеттер.
    *
    * @param group ключ группы владений.
    * @param items новый список владений группы.
    */
-  function setProficiencies(group: ProficiencyGroupKey, items: string[]): void {
+  function setProficiencies(
+    group: PlainProficiencyGroupKey,
+    items: string[],
+  ): void {
     if (!ensureEditable()) {
       return;
     }
@@ -2050,6 +2059,26 @@ export function useCharacterSheet() {
       proficiencies: {
         ...character.value.proficiencies,
         [group]: [...items],
+      },
+    };
+  }
+
+  /**
+   * Установка владений инструментами: помимо названия хранится ссылка на
+   * предмет каталога, чтобы его описание открывалось из листа.
+   *
+   * @param tools новый список владений инструментами.
+   */
+  function setToolProficiencies(tools: CharacterToolProficiency[]): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      proficiencies: {
+        ...character.value.proficiencies,
+        tools: tools.map((tool) => ({ ...tool })),
       },
     };
   }
@@ -2167,6 +2196,7 @@ export function useCharacterSheet() {
     setCurrency,
     setName,
     setProficiencies,
+    setToolProficiencies,
     setProgress,
     setSettings,
     setSize,

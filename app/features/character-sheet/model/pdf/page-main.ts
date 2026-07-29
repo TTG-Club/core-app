@@ -20,7 +20,6 @@ import {
   LANGUAGE_PROFICIENCY_GROUPS,
   RESOURCE_RECOVERY_LABELS,
   SHEET_EMPTY_LABELS,
-  TOOL_PROFICIENCY_GROUPS,
   WEAPON_PROFICIENCY_GROUPS,
 } from '../constants';
 import {
@@ -37,6 +36,7 @@ import {
   getSpeciesDisplayName,
   getSpeedRows,
   getSpellcastingBreakdown,
+  getToolNames,
   getVisionRows,
   getWeaponAttackBonus,
   getWeaponDamage,
@@ -442,10 +442,7 @@ function drawProficienciesPanel(
     },
     {
       label: PDF_LABELS.toolProficiency,
-      values: collapseProficiencies(
-        proficiencies.tools,
-        TOOL_PROFICIENCY_GROUPS,
-      ),
+      values: getToolNames(proficiencies.tools),
     },
     {
       label: PDF_LABELS.languageProficiency,

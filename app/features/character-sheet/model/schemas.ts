@@ -6,6 +6,7 @@ import type {
   BackgroundSummary,
   CatalogSpellDetail,
   CharacterInnateSpell,
+  CharacterToolProficiency,
   ClassChoice,
   ClassFeatureSummary,
   ClassOption,
@@ -33,11 +34,10 @@ import { descriptionNodesSchema } from './character-schema';
 import { SPELL_COMPONENT_LABELS } from './constants';
 import {
   getClassToolChoice,
-  matchToolProficiencyName,
   parseAbilityKeys,
   parseFeatMarker,
   parseItemWeight,
-  stripMarkupMarkers,
+  parseToolMarker,
   toDescriptionNodes,
 } from './utils';
 
@@ -848,22 +848,22 @@ export function parseBackgroundDetail(
 
   const detail = result.data;
 
-  const toolFixed: string[] = [];
+  const toolFixed: CharacterToolProficiency[] = [];
 
   let toolChoice: ClassChoice | null = null;
 
   for (const toolText of detail.toolProficiency) {
     // Владения приходят с разметкой каталога («{@item Воровские
-    // инструменты|url:thieves-tools-phb}»): без её снятия подпись попадала в
-    // лист сырым маркером и не совпадала с чекбоксом владения.
-    const plainText = stripMarkupMarkers(toolText);
+    // инструменты|url:thieves-tools-phb}»): подпись идёт в лист, ссылка —
+    // в кнопку описания инструмента.
+    const tool = parseToolMarker(toolText);
 
-    const choice = getClassToolChoice(plainText, 'background-tool');
+    const choice = getClassToolChoice(tool.name, 'background-tool');
 
     if (choice) {
       toolChoice = toolChoice ?? choice;
-    } else if (plainText) {
-      toolFixed.push(matchToolProficiencyName(plainText));
+    } else if (tool.name) {
+      toolFixed.push(tool);
     }
   }
 
