@@ -8,6 +8,7 @@
 
   import { useCharacterSheet, useSpellCatalogSearch } from '../../composables';
   import {
+    getSpellCatalogPreset,
     getSpellGroupLabel,
     isCustomSpell,
     SPELL_CATALOG_LOAD_MORE_DISTANCE,
@@ -36,6 +37,15 @@
     spellPreviewDrawer.open({ url });
   }
 
+  // Класс и доступные ему круги проставляются в фильтры сразу: каталог
+  // открывается на том, что персонаж способен выучить. Пресет снимается общей
+  // кнопкой сброса фильтров, а круги и класс переключаются чипами.
+  //
+  // Снимок листа, а не вычисляемое значение: пресет читается один раз при
+  // первой загрузке каталога, а модалка размонтируется при закрытии — новый
+  // уровень приезжает со следующим открытием.
+  const catalogPreset = getSpellCatalogPreset(character.value);
+
   // Каталог грузится постранично с сервера (как раздел «Заклинания»):
   // фильтры и поиск уходят в query, следующая страница — по скроллу.
   const {
@@ -61,7 +71,7 @@
     resetFilters,
     loadNextPage,
     retryLoad,
-  } = useSpellCatalogSearch();
+  } = useSpellCatalogSearch(catalogPreset);
 
   // Дровер «Все фильтры» — переиспользованный FilterDrawer раздела; работает
   // с тем же состоянием фильтра, что и быстрые чипы.

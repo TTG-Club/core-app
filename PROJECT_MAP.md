@@ -147,6 +147,13 @@ modals), so its capabilities are listed here rather than squeezed into the table
   casting time / range / components / duration — from the section detail into
   the sheet document; it is edited afterwards by the same homebrew form. A
   copied magic item keeps its group while its kind stays «trinket».
+- The «Добавить заклинание» catalog opens preset to what the character can
+  actually learn: the class chip is picked by the class slug (the same id the
+  `className` filter group uses) and the level chips cover every circle the
+  class grants slots for at its level, cantrips included. Nothing is stored for
+  it — the preset is derived from `casterType` + level on every open, so a
+  level-up or level-down changes it by itself, and the usual filter reset drops
+  it when the player wants the whole catalog.
 - Innate spells granted by the species stand in their own «Врождённые» group and
   have the same row menu: copying one moves it into the spell book as a `custom:`
   record (editable afterwards), removing one drops it from

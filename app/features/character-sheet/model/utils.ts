@@ -64,6 +64,7 @@ import type {
   SpeedRow,
   SpeedTypeKey,
   SpellcastingBreakdown,
+  SpellCatalogPreset,
   SpellDamage,
   SpellSlotCircle,
   SpellSlotRow,
@@ -2279,6 +2280,49 @@ export function getSpellSlotSummary(row: SpellSlotRow): string {
   const free = row.max - row.used;
 
   return `Свободно ячеек: ${free} из ${row.max} · ${RESOURCE_RECOVERY_LABELS[row.recovery]}`;
+}
+
+/**
+ * Круги заклинаний, доступные персонажу на его уровне класса: заговоры и все
+ * круги вплоть до старшего, для которого класс даёт ячейки. Отдельно нигде не
+ * хранится — считается от `casterType` и уровня, поэтому повышение и снижение
+ * уровня меняют список сами собой.
+ *
+ * @param character персонаж.
+ * @returns круги по возрастанию; пусто — класс заклинаний пока не даёт.
+ */
+export function getAvailableSpellLevels(character: Character): number[] {
+  const slotRows = getSpellSlotRows(character);
+
+  if (!slotRows.length) {
+    return [];
+  }
+
+  // Ячейки колдуна одного круга: младших рядов у него нет, но заклинания этих
+  // кругов ему доступны — считаем по старшему ряду, а не по их количеству.
+  const maxLevel = Math.max(...slotRows.map((row) => row.level));
+
+  return Array.from(
+    { length: maxLevel + 1 },
+    (_availableLevel, index) => index,
+  );
+}
+
+/**
+ * Начальный выбор фильтров каталога заклинаний по персонажу: доступные круги и
+ * его класс. Каталог открывается уже суженным до того, что персонаж способен
+ * выучить, а не до всего справочника.
+ *
+ * @param character персонаж.
+ * @returns пресет фильтров модалки добавления заклинаний.
+ */
+export function getSpellCatalogPreset(
+  character: Character,
+): SpellCatalogPreset {
+  return {
+    levels: getAvailableSpellLevels(character),
+    classUrl: character.characterClass?.url ?? '',
+  };
 }
 
 /** Всё, кроме букв: названия колонок таблицы класса сравниваются без них. */
