@@ -2304,6 +2304,7 @@ export const LANGUAGE_PROFICIENCY_GROUPS: LanguageProficiencyGroup[] = [
     all: 'Все стандартные языки',
     items: [
       'Общий',
+      'Общий язык жестов',
       'Дварфийский',
       'Эльфийский',
       'Гигантский',
