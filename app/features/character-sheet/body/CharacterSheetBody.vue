@@ -5,9 +5,9 @@
     ProficiencyGroupKey,
     SavingThrowRow,
     SkillRow,
+    SpellDamageRoll,
   } from '../model';
 
-  import { useDiceRollHandler } from '~dice-roller/composables';
   import { ConfirmDialog } from '~initiative/ui-kit';
 
   import {
@@ -21,9 +21,10 @@
   import {
     ABILITY_LABELS,
     ARMOR_PROFICIENCY_GROUPS,
+    EMPTY_DAMAGE_ROLL_SOURCE,
     getAvailableInnateSpells,
     getWeaponAttackBonus,
-    getWeaponDamage,
+    getWeaponDamageSource,
     LANGUAGE_PROFICIENCY_GROUPS,
   } from '../model';
   import CharacterSheetSkeleton from './CharacterSheetSkeleton.vue';
@@ -38,6 +39,7 @@
     SheetCurrencyModal,
     SheetCustomItemModal,
     SheetCustomSpellModal,
+    SheetDamageModal,
     SheetExperienceModal,
     SheetFeatAddModal,
     SheetFeatureAddModal,
@@ -177,9 +179,6 @@
 
   const toast = useToast();
 
-  // Урон оружия катится напрямую дайс-роллером — без модалки режимов броска.
-  const { handleRoll } = useDiceRollHandler();
-
   // Статус автосохранения пишет автосейв контейнера (страница/панель/drawer),
   // тело листа лишь показывает его в шапке.
   const saveStatus = useCharacterSheetSaveStatus();
@@ -317,6 +316,14 @@
     props: {
       title: '',
       modifier: 0,
+      ability: 'strength',
+    },
+  });
+
+  const damageModal = overlay.create(SheetDamageModal, {
+    props: {
+      title: '',
+      damage: EMPTY_DAMAGE_ROLL_SOURCE,
     },
   });
 
@@ -418,6 +425,7 @@
     rollModal.open({
       title: `Проверка: ${ABILITY_LABELS[abilityKey]}`,
       modifier: getModifier(character.value.abilities[abilityKey]),
+      ability: abilityKey,
     });
   }
 
@@ -550,6 +558,7 @@
     rollModal.open({
       title: 'Инициатива',
       modifier: getModifier(character.value.abilities.dexterity),
+      ability: 'dexterity',
       actionLabel: 'Бросить инициативу',
     });
   }
@@ -558,6 +567,7 @@
     rollModal.open({
       title: `Спасбросок: ${ABILITY_LABELS[row.key]}`,
       modifier: row.value,
+      ability: row.key,
       actionLabel: 'Бросить спасбросок',
     });
   }
@@ -566,6 +576,7 @@
     rollModal.open({
       title: `Проверка: ${row.name}`,
       modifier: row.value,
+      ability: row.ability,
     });
   }
 
@@ -574,19 +585,19 @@
       return;
     }
 
+    const attack = getWeaponAttackBonus(character.value, inventoryItem.weapon);
+
     rollModal.open({
       title: `Атака: ${inventoryItem.name}`,
-      modifier: getWeaponAttackBonus(character.value, inventoryItem.weapon)
-        .value,
+      modifier: attack.value,
+      ability: attack.ability,
       actionLabel: 'Бросить атаку',
     });
   }
 
-  // Урон катится сразу: режимов преимущества у него нет, а доп. бонус к урону
-  // всегда можно докинуть в самом дайс-роллере.
   function handleItemDamageRoll(inventoryItem: CharacterInventoryItem) {
     const damage = inventoryItem.weapon
-      ? getWeaponDamage(
+      ? getWeaponDamageSource(
           character.value,
           inventoryItem.weapon,
           inventoryItem.twoHanded,
@@ -597,17 +608,26 @@
       return;
     }
 
-    handleRoll(damage.formula);
+    damageModal.open({ title: `Урон: ${inventoryItem.name}`, damage });
   }
 
   /**
-   * Бросок урона заклинанием: кроме кубов тратится ячейка его круга — нажатие
-   * на плитку и есть накладывание. Заговорам и кругам, которых класс не даёт,
-   * тратить нечего.
+   * Бросок урона заклинанием: кроме кубов тратится ячейка его круга — бросок и
+   * есть накладывание. Ячейка уходит только после подтверждённого броска: окно
+   * настройки можно и закрыть, ничего не бросив. Заговорам и кругам, которых
+   * класс не даёт, тратить нечего.
    */
-  function handleSpellDamageRoll(formula: string, spellLevel: number) {
-    handleRoll(formula);
-    spendSpellSlot(spellLevel);
+  async function handleSpellDamageRoll(roll: SpellDamageRoll) {
+    const isRolled = await damageModal.open({
+      title: roll.title,
+      damage: roll.damage,
+    }).result;
+
+    if (!isRolled) {
+      return;
+    }
+
+    spendSpellSlot(roll.level);
   }
 
   function handleVisionEdit() {

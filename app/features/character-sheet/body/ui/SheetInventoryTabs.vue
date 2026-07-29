@@ -10,6 +10,7 @@
     SheetTab,
     SheetTabSlot,
     SpellcastingBreakdown,
+    SpellDamageRoll,
     SpellSlotRow,
   } from '../../model';
 
@@ -83,7 +84,7 @@
     'remove-spell': [spellUrl: string];
     'copy-innate-spell': [spellUrl: string];
     'remove-innate-spell': [spellUrl: string];
-    'roll-spell-damage': [formula: string, spellLevel: number];
+    'roll-spell-damage': [roll: SpellDamageRoll];
     'toggle-spell-prepared': [spellUrl: string];
     'toggle-spell-slot': [level: number, index: number];
   }>();
@@ -172,8 +173,8 @@
     emit('remove-innate-spell', spellUrl);
   }
 
-  function handleSpellDamageRoll(formula: string, spellLevel: number) {
-    emit('roll-spell-damage', formula, spellLevel);
+  function handleSpellDamageRoll(roll: SpellDamageRoll) {
+    emit('roll-spell-damage', roll);
   }
 
   function handleSpellPreparedToggle(spellUrl: string) {

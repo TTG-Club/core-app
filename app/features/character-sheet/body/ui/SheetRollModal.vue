@@ -1,13 +1,22 @@
 <script setup lang="ts">
-  import type { RollMode } from '../../model';
+  import type { AbilityKey, RollMode } from '../../model';
 
   import { useDiceRollHandler } from '~dice-roller/composables';
 
+  import { useCharacterSheet } from '../../composables';
   import {
+    ABILITY_LABELS,
+    DEFAULT_ROLL_DICE_FACES,
+    DICE_NOTATION_LETTER,
     getCheckFormula,
     getFormattedBonus,
+    getSwappedRollModifier,
+    ROLL_ABILITY_AUTO,
+    ROLL_ABILITY_OPTIONS,
     ROLL_BONUS_MAX,
     ROLL_BONUS_MIN,
+    ROLL_CHECK_ACTION_LABEL,
+    ROLL_DICE_FACES_OPTIONS,
     ROLL_MODE_OPTIONS,
   } from '../../model';
 
@@ -19,16 +28,24 @@
     variant: 'soft' | 'outline';
   }
 
-  const { actionLabel = 'Бросить проверку', ...props } = defineProps<{
-    /** Заголовок модалки (например, «Проверка: Сила»). */
-    title: string;
+  const props = withDefaults(
+    defineProps<{
+      /** Заголовок модалки (например, «Проверка: Сила»). */
+      title: string;
 
-    /** Модификатор проверки. */
-    modifier: number;
+      /** Модификатор проверки по правилам. */
+      modifier: number;
 
-    /** Надпись на кнопке броска. */
-    actionLabel?: string;
-  }>();
+      /** Характеристика, от которой бросок идёт по правилам. */
+      ability: AbilityKey;
+
+      /** Надпись на кнопке броска. */
+      actionLabel?: string;
+    }>(),
+    {
+      actionLabel: ROLL_CHECK_ACTION_LABEL,
+    },
+  );
 
   const emit = defineEmits<{
     close: [];
@@ -36,17 +53,52 @@
 
   const { handleRoll } = useDiceRollHandler();
 
+  // Подмена характеристики считается по значениям листа, а не по переданному
+  // модификатору: в нём уже сложены мастерство и владение, их трогать нельзя.
+  const { character } = useCharacterSheet();
+
   const draftBonus = ref(0);
 
   const rollMode = ref<RollMode>('normal');
 
-  const formula = computed(() =>
-    getCheckFormula(props.modifier, rollMode.value, draftBonus.value),
+  // Черновики живут только пока модалка открыта: оверлей размонтирует её после
+  // закрытия, поэтому следующий бросок снова начинается с «Авто» и к20.
+  const draftAbility = ref<AbilityKey | typeof ROLL_ABILITY_AUTO>(
+    ROLL_ABILITY_AUTO,
   );
 
+  const draftDiceFaces = ref(DEFAULT_ROLL_DICE_FACES);
+
+  const modifier = computed(() =>
+    draftAbility.value === ROLL_ABILITY_AUTO
+      ? props.modifier
+      : getSwappedRollModifier(
+          character.value,
+          props.modifier,
+          props.ability,
+          draftAbility.value,
+        ),
+  );
+
+  const formula = computed(() =>
+    getCheckFormula(
+      modifier.value,
+      rollMode.value,
+      draftBonus.value,
+      draftDiceFaces.value,
+    ),
+  );
+
+  // Поля стоят в ряд, поэтому подсказки под ними короткие: длинные фразы
+  // растянули бы соседние колонки по высоте.
+  const abilityHelp = computed(
+    () => `По правилам — ${ABILITY_LABELS[props.ability]}`,
+  );
+
+  const diceHelp = `По умолчанию — ${DICE_NOTATION_LETTER}${DEFAULT_ROLL_DICE_FACES}`;
+
   const bonusHelp = computed(
-    () =>
-      `Модификатор проверки (${getFormattedBonus(props.modifier)}) уже учтён в формуле`,
+    () => `Модификатор (${getFormattedBonus(modifier.value)}) уже в формуле`,
   );
 
   const modeButtons = computed<RollModeButton[]>(() =>
@@ -85,17 +137,46 @@
           </span>
         </div>
 
-        <UFormField
-          label="Доп. бонус"
-          :help="bonusHelp"
-        >
-          <UInputNumber
-            v-model="draftBonus"
-            :min="ROLL_BONUS_MIN"
-            :max="ROLL_BONUS_MAX"
-            class="w-full"
-          />
-        </UFormField>
+        <!-- Настройки броска идут одним рядом; на узком экране колонки
+          складываются друг под друга -->
+        <div class="flex flex-col gap-4 sm:flex-row">
+          <UFormField
+            label="Характеристика"
+            :help="abilityHelp"
+            class="min-w-0 flex-1"
+          >
+            <USelect
+              v-model="draftAbility"
+              :items="ROLL_ABILITY_OPTIONS"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField
+            label="Кость"
+            :help="diceHelp"
+            class="min-w-0 flex-1"
+          >
+            <USelect
+              v-model="draftDiceFaces"
+              :items="ROLL_DICE_FACES_OPTIONS"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField
+            label="Доп. бонус"
+            :help="bonusHelp"
+            class="min-w-0 flex-1"
+          >
+            <UInputNumber
+              v-model="draftBonus"
+              :min="ROLL_BONUS_MIN"
+              :max="ROLL_BONUS_MAX"
+              class="w-full"
+            />
+          </UFormField>
+        </div>
 
         <div class="flex flex-col gap-2">
           <span

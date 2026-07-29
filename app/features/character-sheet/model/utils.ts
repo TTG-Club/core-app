@@ -41,6 +41,8 @@ import type {
   CustomInventoryKind,
   CustomSpellDraft,
   CustomSpellStatRow,
+  DamageDiceGroup,
+  DamageRollSource,
   FeatSelectOption,
   FeatSummary,
   FeatureDescriptionNode,
@@ -141,6 +143,7 @@ import {
   DAMAGE_DICE_COUNT_MIN,
   DAMAGE_TYPE_LABELS,
   DARKVISION_PARSE_FALLBACK,
+  DEFAULT_ROLL_DICE_FACES,
   DEFAULT_WEAPON_ATTACK_ABILITY,
   DICE_NOTATION_LETTER,
   FEATURE_ORIGIN_LABELS,
@@ -174,7 +177,8 @@ import {
   RESOURCE_COUNT_MAX,
   RESOURCE_RECOVERY_LABELS,
   RESOURCE_SHORT_LABEL_MAX_LENGTH,
-  ROLL_MODE_DICE_NOTATION,
+  ROLL_MODE_DICE_COUNT,
+  ROLL_MODE_DICE_SUFFIX,
   SHEET_COPY_LIMIT_HINT,
   SHEET_DOWNLOAD_JSON_LABEL,
   SHEET_DOWNLOAD_PDF_HINT,
@@ -332,6 +336,7 @@ export function getSkillRows(character: Character): SkillRow[] {
 
     return {
       name: skill.name,
+      ability: skill.ability,
       abilityLabel: ABILITY_SHORT_LABELS[skill.ability],
       proficiency: skill.proficiency,
       value,
@@ -1283,20 +1288,133 @@ export function getWeaponDamage(
 }
 
 /**
- * Формула броска d20 для дайс-роллера с учётом режима, модификатора и
+ * Исходные данные броска урона оружием для модалки настройки: кости, бонус
+ * оружия и характеристика идут в неё по отдельности, чтобы игрок мог поменять
+ * кость, подменить характеристику и докинуть бонус мастера.
+ *
+ * @param character персонаж.
+ * @param weapon параметры оружия.
+ * @param twoHanded оружие взято двумя руками (свойство «Универсальное»).
+ * @returns данные броска или null, если справочник не дал костей урона.
+ */
+export function getWeaponDamageSource(
+  character: Character,
+  weapon: InventoryWeapon,
+  twoHanded: boolean,
+): DamageRollSource | null {
+  const damage = getWeaponDamage(character, weapon, twoHanded);
+
+  if (!damage) {
+    return null;
+  }
+
+  return {
+    diceNotation: damage.diceNotation,
+    flatBonus: damage.weaponBonus,
+    ability: damage.ability,
+    // Модификатор характеристики входит в урон оружия ровно один раз.
+    abilityModifierCount: 1,
+    typeLabel: damage.typeLabel,
+  };
+}
+
+/** Слагаемое нотации урона: кости («2к6») либо плоское число («3»). */
+const DAMAGE_NOTATION_TERM_PATTERN = new RegExp(
+  `([+-]?)(\\d+)(?:${DICE_NOTATION_LETTER}(\\d+))?`,
+  'g',
+);
+
+/**
+ * Разбор нотации урона на группы костей и плоский остаток: формула справочника
+ * бывает составной («1к4+1», «2к6+1к8»), а модалка правит кости и бонус по
+ * отдельности.
+ *
+ * @param notation нотация урона в записи дайс-роллера.
+ * @returns группы костей в порядке записи и суммарный плоский бонус.
+ */
+export function parseDamageNotation(notation: string): {
+  dice: DamageDiceGroup[];
+  flatBonus: number;
+} {
+  const dice: DamageDiceGroup[] = [];
+
+  let flatBonus = 0;
+
+  for (const term of notation.matchAll(DAMAGE_NOTATION_TERM_PATTERN)) {
+    const [, sign, amount, faces] = term;
+
+    const value = Number(amount);
+    const signedValue = sign === '-' ? -value : value;
+
+    if (!faces) {
+      flatBonus += signedValue;
+
+      continue;
+    }
+
+    // Отрицательных костей в бросках урона не бывает: знак минуса перед костью
+    // трактуем как обычную кость — иначе формула стала бы неразбираемой.
+    dice.push({ count: value, faces: Number(faces) });
+  }
+
+  return { dice, flatBonus };
+}
+
+/**
+ * Нотация урона из групп костей и суммарного бонуса. Использует ASCII-минус —
+ * формула уходит в парсер дайс-роллера.
+ *
+ * @param dice группы костей урона.
+ * @param bonus суммарный плоский бонус.
+ * @returns формула для дайс-роллера («1к8+1к6+3»); '' — костей и бонуса нет.
+ */
+export function getDamageFormula(
+  dice: DamageDiceGroup[],
+  bonus: number,
+): string {
+  const dicePart = dice
+    .map((group) => `${group.count}${DICE_NOTATION_LETTER}${group.faces}`)
+    .join('+');
+
+  if (bonus === 0) {
+    return dicePart;
+  }
+
+  const sign = bonus < 0 ? '-' : '+';
+  const bonusPart = `${sign}${Math.abs(bonus)}`;
+
+  return dicePart ? `${dicePart}${bonusPart}` : String(bonus);
+}
+
+/**
+ * Нотация костей броска проверки: режим задаёт их количество и отбор лучшей
+ * либо худшей. Номинал приходит извне — бросают не только к20.
+ *
+ * @param mode режим броска.
+ * @param faces номинал кости (20 — к20).
+ * @returns нотация костей для дайс-роллера («2к20вл1»).
+ */
+export function getRollDiceNotation(mode: RollMode, faces: number): string {
+  return `${ROLL_MODE_DICE_COUNT[mode]}${DICE_NOTATION_LETTER}${faces}${ROLL_MODE_DICE_SUFFIX[mode]}`;
+}
+
+/**
+ * Формула броска проверки для дайс-роллера с учётом режима, модификатора и
  * дополнительного бонуса. Использует ASCII-минус: формула передаётся в парсер.
  *
  * @param modifier модификатор проверки.
  * @param mode режим броска.
  * @param bonus дополнительный бонус.
+ * @param faces номинал кости; по умолчанию к20.
  * @returns формула в нотации дайс-роллера (например, «2к20вл1+4»).
  */
 export function getCheckFormula(
   modifier: number,
   mode: RollMode,
   bonus: number,
+  faces: number = DEFAULT_ROLL_DICE_FACES,
 ): string {
-  const dicePart = ROLL_MODE_DICE_NOTATION[mode];
+  const dicePart = getRollDiceNotation(mode, faces);
   const totalModifier = modifier + bonus;
 
   if (totalModifier === 0) {
@@ -1306,6 +1424,30 @@ export function getCheckFormula(
   const sign = totalModifier < 0 ? '-' : '+';
 
   return `${dicePart}${sign}${Math.abs(totalModifier)}`;
+}
+
+/**
+ * Модификатор броска с подменой характеристики: из готового модификатора
+ * вычитается вклад базовой характеристики и прибавляется вклад выбранной.
+ * Остальные слагаемые (мастерство, владение) остаются на месте.
+ *
+ * @param character персонаж.
+ * @param modifier модификатор броска по правилам.
+ * @param baseAbility характеристика, от которой бросок считается по правилам.
+ * @param ability характеристика, выбранная игроком.
+ * @returns модификатор броска от выбранной характеристики.
+ */
+export function getSwappedRollModifier(
+  character: Character,
+  modifier: number,
+  baseAbility: AbilityKey,
+  ability: AbilityKey,
+): number {
+  return (
+    modifier
+    - getModifier(character.abilities[baseAbility])
+    + getModifier(character.abilities[ability])
+  );
 }
 
 /**
@@ -2159,29 +2301,38 @@ function parseSpellDamageTags(formula: string): SpellDamageTags | null {
 }
 
 /**
- * Формула броска из записи справочника: теги вырезаются, кость приводится к
- * нотации дайс-роллера, а модификатор заклинательной характеристики
- * подставляется числом.
+ * Кости броска из записи справочника: теги вырезаются, а кость приводится к
+ * нотации дайс-роллера. Модификатор заклинательной характеристики сюда не
+ * входит — его подставляют отдельно, чтобы его можно было пересчитать.
  *
  * @param formula формула урона из справочника.
+ * @returns нотация костей для дайс-роллера («8к6»).
+ */
+function getSpellDamageDiceNotation(formula: string): string {
+  return formula
+    .replace(SPELL_FORMULA_TAG_WITH_SIGN_PATTERN, '')
+    .replace(SPELL_FORMULA_SPACE_PATTERN, '')
+    .replace(SPELL_FORMULA_DICE_LETTER_PATTERN, `$1${DICE_NOTATION_LETTER}$2`);
+}
+
+/**
+ * Формула броска из записи справочника: к костям добавляется модификатор
+ * заклинательной характеристики числом.
+ *
+ * @param diceNotation нотация костей броска.
  * @param abilityBonus суммарный модификатор из тегов `mod.spell`.
  * @returns формула для дайс-роллера; '' — разобрать её не удалось.
  */
 function getSpellDamageExpression(
-  formula: string,
+  diceNotation: string,
   abilityBonus: number,
 ): string {
-  const diceExpression = formula
-    .replace(SPELL_FORMULA_TAG_WITH_SIGN_PATTERN, '')
-    .replace(SPELL_FORMULA_SPACE_PATTERN, '')
-    .replace(SPELL_FORMULA_DICE_LETTER_PATTERN, `$1${DICE_NOTATION_LETTER}$2`);
-
   const sign = abilityBonus < 0 ? '-' : '+';
 
   const expression =
     abilityBonus === 0
-      ? diceExpression
-      : `${diceExpression}${sign}${Math.abs(abilityBonus)}`;
+      ? diceNotation
+      : `${diceNotation}${sign}${Math.abs(abilityBonus)}`;
 
   return SPELL_DAMAGE_EXPRESSION_PATTERN.test(expression) ? expression : '';
 }
@@ -2211,8 +2362,10 @@ export function getSpellDamage(
         return null;
       }
 
+      const diceNotation = getSpellDamageDiceNotation(formula);
+
       const expression = getSpellDamageExpression(
-        formula,
+        diceNotation,
         tags.abilityModifierCount * spellAbilityModifier,
       );
 
@@ -2222,6 +2375,8 @@ export function getSpellDamage(
 
       return {
         formula: expression,
+        diceNotation,
+        abilityModifierCount: tags.abilityModifierCount,
         typeLabel: tags.typeLabels.join(SPELL_DAMAGE_TYPE_SEPARATOR),
         conditionLabel: tags.conditionLabel,
       };

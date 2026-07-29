@@ -13,6 +13,7 @@ import type {
   CustomInventoryItemDraft,
   CustomInventoryKind,
   CustomSpellField,
+  DamageRollSource,
   FeatureOrigin,
   HitPointsGainMode,
   InventoryItemCategory,
@@ -673,12 +674,40 @@ export const ROLL_MODE_OPTIONS: Array<{
   },
 ];
 
-/** Нотация кубов d20 по режиму броска (нотация дайс-роллера). */
-export const ROLL_MODE_DICE_NOTATION: Record<RollMode, string> = {
-  normal: '1к20',
-  advantage: '2к20вл1',
-  disadvantage: '2к20вх1',
+/** Количество костей в броске по его режиму: преимущество и помеха катят две. */
+export const ROLL_MODE_DICE_COUNT: Record<RollMode, number> = {
+  normal: 1,
+  advantage: 2,
+  disadvantage: 2,
 };
+
+/**
+ * Отбор кости по режиму броска в нотации дайс-роллера: «вл1» — взять лучшую,
+ * «вх1» — худшую. Пустая строка — обычный бросок, отбирать нечего.
+ */
+export const ROLL_MODE_DICE_SUFFIX: Record<RollMode, string> = {
+  normal: '',
+  advantage: 'вл1',
+  disadvantage: 'вх1',
+};
+
+/** Значение «Авто» в селекте характеристики броска. */
+export const ROLL_ABILITY_AUTO = 'auto';
+
+/** Варианты характеристики, чей модификатор идёт в бросок. */
+export const ROLL_ABILITY_OPTIONS: Array<{
+  label: string;
+  value: AbilityKey | typeof ROLL_ABILITY_AUTO;
+}> = [
+  { label: 'Авто', value: ROLL_ABILITY_AUTO },
+  ...ABILITY_ORDER.map((key) => ({ label: ABILITY_LABELS[key], value: key })),
+];
+
+/** Надпись кнопки в модалке броска проверки по умолчанию. */
+export const ROLL_CHECK_ACTION_LABEL = 'Бросить проверку';
+
+/** Надпись кнопки в модалке броска урона по умолчанию. */
+export const DAMAGE_ROLL_ACTION_LABEL = 'Бросить урон';
 
 /** Минимальный дополнительный бонус броска. */
 export const ROLL_BONUS_MIN = -99;
@@ -1745,12 +1774,12 @@ export const SPELL_DAMAGE_STAT_LABEL = 'Урон';
 export const SPELL_DAMAGE_ROLL_LABEL = 'Бросок урона заклинанием';
 
 /**
- * Подсказка плитки урона заклинания круга: нажатие считается накладыванием и,
- * в отличие от плитки оружия, ещё и занимает ячейку. У заговоров подсказка
- * обычная — ячеек они не тратят.
+ * Подсказка плитки урона заклинания круга: бросок из окна настройки считается
+ * накладыванием и, в отличие от плитки оружия, ещё и занимает ячейку. У
+ * заговоров подсказка обычная — ячеек они не тратят.
  */
 export const SPELL_DAMAGE_ROLL_HINT_LABEL =
-  'нажми, чтобы бросить и потратить ячейку';
+  'нажми, чтобы настроить бросок; ячейка тратится при броске';
 
 /**
  * Префикс идентификатора и URL своего предмета инвентаря. Каталожные ссылки —
@@ -1944,6 +1973,49 @@ export const NEW_CUSTOM_INVENTORY_ITEM: CustomInventoryItemDraft = {
 
 /** Обозначение кости в формуле броска (русская нотация дайс-роллера). */
 export const DICE_NOTATION_LETTER = 'к';
+
+/** Номиналы костей, доступные в модалках броска. */
+export const ROLL_DICE_FACES = [4, 6, 8, 10, 12, 20, 100];
+
+/** Варианты номинала кости для селекта в модалках броска. */
+export const ROLL_DICE_FACES_OPTIONS: Array<{
+  label: string;
+  value: number;
+}> = ROLL_DICE_FACES.map((faces) => ({
+  label: `${DICE_NOTATION_LETTER}${faces}`,
+  value: faces,
+}));
+
+/** Номинал кости проверки по умолчанию. */
+export const DEFAULT_ROLL_DICE_FACES = 20;
+
+/** Номинал кости, с которым добавляется новая кость урона. */
+export const DEFAULT_DAMAGE_DICE_FACES = 6;
+
+/**
+ * Минимальное количество костей в группе броска урона: верхнюю границу группа
+ * делит с формой своего оружия (`DAMAGE_DICE_COUNT_MAX`), а нулевая группа в
+ * броске бессмысленна — вместо неё кость убирают из списка.
+ */
+export const DAMAGE_ROLL_DICE_COUNT_MIN = 1;
+
+/**
+ * Максимум групп костей в модалке урона: больше в бросок не набирают, а список
+ * перестал бы помещаться в окно.
+ */
+export const DAMAGE_DICE_GROUPS_MAX = 6;
+
+/**
+ * Пустой бросок урона: заглушка для создания модалки настройки — настоящий
+ * разбор приходит в `open()` вместе с оружием или заклинанием.
+ */
+export const EMPTY_DAMAGE_ROLL_SOURCE: DamageRollSource = {
+  diceNotation: '',
+  flatBonus: 0,
+  ability: null,
+  abilityModifierCount: 0,
+  typeLabel: '',
+};
 
 /** Слова размеров для разбора строки размера вида. */
 export const SIZE_LABEL_WORDS = [

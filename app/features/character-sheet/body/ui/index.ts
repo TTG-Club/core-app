@@ -12,6 +12,7 @@ export { default as SheetCurrencyModal } from './SheetCurrencyModal.vue';
 export { default as SheetCurrencyRow } from './SheetCurrencyRow.vue';
 export { default as SheetCustomItemModal } from './SheetCustomItemModal.vue';
 export { default as SheetCustomSpellModal } from './SheetCustomSpellModal.vue';
+export { default as SheetDamageModal } from './SheetDamageModal.vue';
 export { default as SheetEquipmentTab } from './SheetEquipmentTab.vue';
 export { default as SheetExperienceModal } from './SheetExperienceModal.vue';
 export { default as SheetFeatAddModal } from './SheetFeatAddModal.vue';

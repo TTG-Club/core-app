@@ -1,7 +1,9 @@
 <script setup lang="ts">
   import type {
     CharacterSpell,
+    DamageRollSource,
     SpellcastingBreakdown,
+    SpellDamageRoll,
     SpellSlotRow,
     SpellTabFilter,
   } from '../../model';
@@ -116,7 +118,7 @@
     'remove-spell': [spellUrl: string];
     'copy-innate-spell': [spellUrl: string];
     'remove-innate-spell': [spellUrl: string];
-    'roll-spell-damage': [formula: string, spellLevel: number];
+    'roll-spell-damage': [roll: SpellDamageRoll];
     'toggle-spell-prepared': [spellUrl: string];
     'toggle-spell-slot': [level: number, index: number];
   }>();
@@ -365,9 +367,22 @@
       return {
         key: `${spell.url}:${damageIndex}`,
         formula: damage.formula,
-        // Круг заклинания едет вместе с формулой: бросок урона считается
-        // накладыванием и занимает ячейку этого круга.
-        level: spell.level,
+        // Всё, что нужно окну настройки: кости и число вхождений модификатора
+        // приходят из справочника, характеристика — из листа. Круг едет здесь
+        // же: бросок урона считается накладыванием и занимает ячейку.
+        roll: {
+          title: `${SPELL_DAMAGE_STAT_LABEL}: ${spell.name}`,
+          damage: {
+            diceNotation: damage.diceNotation,
+            // Своего плоского бонуса у заклинания нет: всё, что есть в записи
+            // справочника, уже сидит в её нотации.
+            flatBonus: 0,
+            ability: props.spellcasting.ability,
+            abilityModifierCount: damage.abilityModifierCount,
+            typeLabel: damage.typeLabel,
+          } satisfies DamageRollSource,
+          level: spell.level,
+        } satisfies SpellDamageRoll,
         label: SPELL_DAMAGE_STAT_LABEL,
         tooltip: `${SPELL_DAMAGE_STAT_LABEL} = ${tooltipParts.join(DAMAGE_TOOLTIP_SEPARATOR)}`,
         ariaLabel: `${SPELL_DAMAGE_ROLL_LABEL}: ${spell.name}`,
@@ -538,9 +553,9 @@
 
   type DisplayDamageStat = DisplaySpell['damageStats'][number];
 
-  /** Нажатие на плитку урона: формула справочника уходит в дайс-роллер. */
+  /** Нажатие на плитку урона: разбор броска уходит в модалку настройки. */
   function handleDamageRoll(damageStat: DisplayDamageStat) {
-    emit('roll-spell-damage', damageStat.formula, damageStat.level);
+    emit('roll-spell-damage', damageStat.roll);
   }
 
   /** Нажатие на кружок ячейки: трата до него включительно либо возврат. */
