@@ -36,6 +36,7 @@ import {
   adjustHealthForConstitution,
   adjustHealthForLevel,
   adjustHitDice,
+  applyAbilityIncreases,
   applySkillProficiencies,
   ARMOR_CLASS_BASE_MAX,
   ARMOR_CLASS_BASE_MIN,
@@ -615,9 +616,30 @@ export function useCharacterSheet() {
 
     const { characterClass } = character.value;
 
+    const abilities = applyAbilityIncreases(
+      character.value.abilities,
+      payload.abilityIncreases,
+    );
+
+    // Прирост хитов за уровни считался по прежнему Телосложению, поэтому его
+    // прибавка от черты применяется отдельно — она поднимает максимум на всех
+    // уровнях, включая только что взятые.
+    const health = adjustHealthForConstitution(
+      adjustHealthForLevel(
+        character.value.health,
+        previousLevel,
+        clampedLevel,
+        payload.hitPointsGains,
+      ),
+      clampedLevel,
+      character.value.abilities.constitution,
+      abilities.constitution,
+    );
+
     character.value = {
       ...character.value,
       level: clampedLevel,
+      abilities,
       experience: {
         current: clamp(Math.trunc(payload.experience), 0, EXPERIENCE_MAX),
         nextLevel: getNextLevelExperience(clampedLevel),
@@ -640,12 +662,7 @@ export function useCharacterSheet() {
         classDie !== undefined && levelDelta !== 0
           ? shiftClassHitDice(character.value.hitDice, classDie, levelDelta)
           : character.value.hitDice,
-      health: adjustHealthForLevel(
-        character.value.health,
-        previousLevel,
-        clampedLevel,
-        payload.hitPointsGains,
-      ),
+      health,
       features: mergeCharacterFeatures(
         character.value.features,
         payload.features,

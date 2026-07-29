@@ -1108,8 +1108,71 @@ export const FIGHTING_STYLE_ERROR_TOAST_TITLE =
 export const FIGHTING_STYLE_ERROR_LOG_MESSAGE =
   'Ошибка добавления боевого стиля:';
 
+/**
+ * Категории черт, недоступные при выборе за классовое улучшение характеристик:
+ * черты происхождения даются предысторией, эпические — умением 19 уровня.
+ * Список именно запрещающий: новая категория с бэка становится доступной сама.
+ */
+export const ABILITY_IMPROVEMENT_EXCLUDED_FEAT_CATEGORIES = [
+  'ORIGIN',
+  'EPIC_BOON',
+];
+
+/** Предел характеристики для прибавок от черты (правило D&D 2024). */
+export const ABILITY_IMPROVEMENT_SCORE_MAX = 20;
+
+/**
+ * Названия классового умения, дающего черту (в нижнем регистре, без «ё»).
+ * Справочник пишет его по-разному: у колдуна это «Увеличение характеристик».
+ */
+export const ABILITY_IMPROVEMENT_FEATURE_NAMES = [
+  'улучшение характеристик',
+  'увеличение характеристик',
+];
+
+/** Начало url черты «Улучшение характеристик» (у каждого источника свой суффикс). */
+export const ABILITY_IMPROVEMENT_FEAT_URL_PREFIX = 'ability-score-improvement';
+
+/** Тексты выбора черты за улучшение характеристик в мастере повышения уровня. */
+export const ABILITY_IMPROVEMENT_LABELS = {
+  featTitle: 'Выберите черту',
+  featPlaceholder: 'Выбери черту',
+  abilitiesTitle: 'Улучшение характеристик',
+  abilityPlaceholder: 'Выбери характеристику',
+  previewTooltip: 'Открыть описание черты',
+  previewAriaLabel: 'Описание выбранной черты',
+  loadError: 'Не удалось загрузить черты',
+  applyError: 'Не удалось добавить выбранную черту',
+  applyErrorLog: 'Ошибка добавления черты за улучшение характеристик:',
+  maxHint: `Характеристика не поднимается выше ${ABILITY_IMPROVEMENT_SCORE_MAX}`,
+};
+
+/**
+ * Сегмент идентификатора особенности с чертой, выбранной за улучшение
+ * характеристик: `class:{featureKey}:{level}:ability-improvement:{featUrl}`.
+ * Уровень в идентификаторе разводит выборы разных уровней, а префикс `class:`
+ * привязывает черту к умению, которое её дало.
+ */
+export const ABILITY_IMPROVEMENT_FEATURE_ID_SEGMENT = 'ability-improvement';
+
+/**
+ * Служебные сегменты идентификаторов черт, выданных классовыми умениями. По ним
+ * из идентификатора достаётся url черты, поэтому такие черты считаются взятыми
+ * и не предлагаются повторно.
+ */
+export const CLASS_FEAT_CHOICE_ID_SEGMENTS = [
+  FIGHTING_STYLE_FEATURE_ID_SEGMENT,
+  ABILITY_IMPROVEMENT_FEATURE_ID_SEGMENT,
+];
+
 /** Эндпоинт фильтров черт — источник глобальной настройки источников. */
 export const FEATS_FILTERS_PATH = '/api/v2/feats/filters';
+
+/**
+ * Ключ `useAsyncData` для источников каталога черт. Общий у модалки черт и
+ * мастера повышения уровня: ответ фильтров переиспользуется между модалками.
+ */
+export const FEAT_SOURCES_ASYNC_DATA_KEY = 'character-sheet:feat-sources';
 
 /** Эндпоинт поиска видов. */
 export const SPECIES_SEARCH_PATH = '/api/v2/species/search';

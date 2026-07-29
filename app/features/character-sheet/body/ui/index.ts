@@ -26,6 +26,7 @@ export { default as SheetHitDiceSelect } from './SheetHitDiceSelect.vue';
 export { default as SheetInventoryItemRow } from './SheetInventoryItemRow.vue';
 export { default as SheetInventoryTabs } from './SheetInventoryTabs.vue';
 export { default as SheetItemAddModal } from './SheetItemAddModal.vue';
+export { default as SheetLevelUpFeatChoice } from './SheetLevelUpFeatChoice.vue';
 export { default as SheetLevelUpStep } from './SheetLevelUpStep.vue';
 export { default as SheetLevelUpSubclassPicker } from './SheetLevelUpSubclassPicker.vue';
 export { default as SheetLongRestModal } from './SheetLongRestModal.vue';

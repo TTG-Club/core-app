@@ -1,6 +1,9 @@
 <script setup lang="ts">
   import type {
+    AbilityKey,
+    CharacterAbilities,
     ClassChoice,
+    FeatSelectOption,
     HitPointsGainMode,
     LevelUpStepDraft,
     LevelUpStepView,
@@ -19,29 +22,59 @@
     LEVEL_UP_WIZARD_LABELS,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetLevelUpFeatChoice from './SheetLevelUpFeatChoice.vue';
 
-  const { step, draft, hitDie, constitutionModifier, choiceOptions } =
-    defineProps<{
-      /** Шаг мастера: уровень, его умения и прирост хитов. */
-      step: LevelUpStepView;
+  const {
+    step,
+    draft,
+    hitDie,
+    constitutionModifier,
+    abilities,
+    choiceOptions,
+    featOptions,
+    selectedFeat,
+    isFeatsLoading = false,
+    hasFeatsError = false,
+  } = defineProps<{
+    /** Шаг мастера: уровень, его умения и прирост хитов. */
+    step: LevelUpStepView;
 
-      /** Черновик шага: выбранный способ прироста, бросок и выборы игрока. */
-      draft: LevelUpStepDraft;
+    /** Черновик шага: выбранный способ прироста, бросок и выборы игрока. */
+    draft: LevelUpStepDraft;
 
-      /** Номинал кости хитов класса; 0 — класс неизвестен. */
-      hitDie: number;
+    /** Номинал кости хитов класса; 0 — класс неизвестен. */
+    hitDie: number;
 
-      constitutionModifier: number;
+    constitutionModifier: number;
 
-      /** Опции пикера для выбора внутри умения. */
-      choiceOptions: (choice: ClassChoice) => string[];
-    }>();
+    /** Текущие характеристики персонажа (для предела прибавок в чертах). */
+    abilities: CharacterAbilities;
+
+    /** Опции пикера для выбора внутри умения. */
+    choiceOptions: (choice: ClassChoice) => string[];
+
+    /** Черты, доступные в умении улучшения характеристик. */
+    featOptions: (featureId: string) => FeatSelectOption[];
+
+    /** Черта, выбранная в умении; null — выбора не было. */
+    selectedFeat: (featureId: string) => FeatSelectOption | null;
+
+    isFeatsLoading?: boolean;
+
+    /** Каталог черт загрузить не удалось. */
+    hasFeatsError?: boolean;
+  }>();
 
   const emit = defineEmits<{
     'update:gain-mode': [mode: HitPointsGainMode];
     'roll': [];
     'update:selection': [choiceId: string, values: string[]];
     'update:note': [featureId: string, value: string];
+    'update:feat': [featureId: string, featUrl: string];
+    'update:feat-ability': [
+      featureId: string,
+      payload: { slot: number; ability: AbilityKey | null },
+    ];
   }>();
 
   const formattedConstitutionModifier = computed(() =>
@@ -103,6 +136,11 @@
         ? `${LEVEL_UP_WIZARD_LABELS.chooseLabel} ${feature.choice.count}`
         : '',
       options: feature.choice ? choiceOptions(feature.choice) : [],
+      featOptions: feature.abilityImprovement ? featOptions(feature.id) : [],
+      selectedFeat: feature.abilityImprovement
+        ? selectedFeat(feature.id)
+        : null,
+      featAbilities: draft.featChoices[feature.id]?.abilities ?? [],
     })),
   );
 
@@ -123,6 +161,17 @@
 
   function handleNote(featureId: string, value: string) {
     emit('update:note', featureId, value);
+  }
+
+  function handleFeat(featureId: string, featUrl: string) {
+    emit('update:feat', featureId, featUrl);
+  }
+
+  function handleFeatAbility(
+    featureId: string,
+    payload: { slot: number; ability: AbilityKey | null },
+  ) {
+    emit('update:feat-ability', featureId, payload);
   }
 </script>
 
@@ -233,6 +282,18 @@
             @update:model-value="handleSelection(feature.choice, $event)"
           />
         </div>
+
+        <SheetLevelUpFeatChoice
+          v-else-if="feature.abilityImprovement"
+          :options="feature.featOptions"
+          :selected="feature.selectedFeat"
+          :abilities="feature.featAbilities"
+          :scores="abilities"
+          :is-loading="isFeatsLoading"
+          :has-error="hasFeatsError"
+          @update:feat="handleFeat(feature.id, $event)"
+          @update:ability="handleFeatAbility(feature.id, $event)"
+        />
 
         <UInput
           v-else
