@@ -112,6 +112,7 @@
     adjustClassResource,
     adjustInventoryItemQuantity,
     toggleInventoryItemEquipped,
+    toggleInventoryItemTwoHanded,
     copyInnateSpellToSheet,
     copyInventoryItemToSheet,
     copySpellToSheet,
@@ -585,7 +586,11 @@
   // всегда можно докинуть в самом дайс-роллере.
   function handleItemDamageRoll(inventoryItem: CharacterInventoryItem) {
     const damage = inventoryItem.weapon
-      ? getWeaponDamage(character.value, inventoryItem.weapon)
+      ? getWeaponDamage(
+          character.value,
+          inventoryItem.weapon,
+          inventoryItem.twoHanded,
+        )
       : null;
 
     if (!damage) {
@@ -1041,6 +1046,7 @@
           @edit-currency="handleCurrencyEdit"
           @adjust-item-quantity="adjustInventoryItemQuantity"
           @toggle-item-equip="toggleInventoryItemEquipped"
+          @toggle-item-two-handed="toggleInventoryItemTwoHanded"
           @roll-item-attack="handleItemAttackRoll"
           @roll-item-damage="handleItemDamageRoll"
           @edit-feature="handleFeatureEdit"

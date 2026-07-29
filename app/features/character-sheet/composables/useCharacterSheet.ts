@@ -73,6 +73,7 @@ import {
   isCustomSpell,
   isMissingInventoryItem,
   isPreparableSpell,
+  isVersatileInventoryItem,
   LEVEL_MAX,
   LEVEL_MIN,
   mergeCharacterFeatures,
@@ -1908,6 +1909,29 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Смена хвата универсального оружия: взять его двумя руками (урон катится
+   * большей костью) или вернуть в одну. Игровое действие — блокировкой листа не
+   * ограничивается. У остального снаряжения хвата нет: переключать нечего.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   */
+  function toggleInventoryItemTwoHanded(inventoryItemId: string): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.map((inventoryItem) =>
+        inventoryItem.id === inventoryItemId
+        && isVersatileInventoryItem(inventoryItem)
+          ? { ...inventoryItem, twoHanded: !inventoryItem.twoHanded }
+          : inventoryItem,
+      ),
+    };
+  }
+
+  /**
    * Добавление особенности вручную; идентификатор генерируется.
    *
    * @param feature особенность без идентификатора.
@@ -2197,6 +2221,7 @@ export function useCharacterSheet() {
     adjustClassResource,
     adjustInventoryItemQuantity,
     toggleInventoryItemEquipped,
+    toggleInventoryItemTwoHanded,
     toggleInspiration,
     downloadCharacter,
     addFeature,

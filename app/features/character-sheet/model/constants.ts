@@ -1626,6 +1626,25 @@ export const INVENTORY_EQUIP_ACTION_LABELS: Record<
   unequip: 'Снять',
 };
 
+/**
+ * Подписи пункта меню о смене хвата универсального оружия — по хвату, в который
+ * его после нажатия возьмут (а не по нынешнему).
+ */
+export const INVENTORY_GRIP_MENU_LABELS: Record<
+  'oneHanded' | 'twoHanded',
+  string
+> = {
+  oneHanded: 'Взять в одну руку',
+  twoHanded: 'Взять в две руки',
+};
+
+/** Значок универсального оружия, взятого двумя руками. */
+export const INVENTORY_TWO_HANDED_BADGE_LABEL = 'Двумя руками';
+
+/** Подсказка значка «Двумя руками»: почему у оружия выросла кость урона. */
+export const INVENTORY_TWO_HANDED_BADGE_HINT =
+  'Универсальное оружие взято двумя руками: урон катится большей костью';
+
 /** Значок предмета, которого у персонажа не осталось (количество — ноль). */
 export const INVENTORY_MISSING_BADGE_LABEL = 'Отсутствует';
 

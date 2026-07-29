@@ -28,8 +28,11 @@
     INVENTORY_QUANTITY_MIN,
     INVENTORY_ROLL_KIND_LABELS,
     INVENTORY_STAT_LABELS,
+    INVENTORY_TWO_HANDED_BADGE_HINT,
+    INVENTORY_TWO_HANDED_BADGE_LABEL,
     isCustomInventoryItem,
     isMissingInventoryItem,
+    isVersatileInventoryItem,
     SHEET_ROLL_HINT_LABEL,
     WEIGHT_UNIT_LABEL,
   } from '../../model';
@@ -132,6 +135,7 @@
     'remove': [];
     'adjust': [delta: number];
     'toggle-equip': [];
+    'toggle-two-handed': [];
     'roll-attack': [];
     'roll-damage': [];
   }>();
@@ -156,12 +160,27 @@
     () => props.inventoryItem.description ?? [],
   );
 
+  // Универсальное оружие (у справочника для него есть второй бросок урона):
+  // хват переключается пунктом меню, отдельной кнопки в строке ему не нашлось бы
+  // — трейлинг и так занят количеством.
+  const isVersatile = computed(() =>
+    isVersatileInventoryItem(props.inventoryItem),
+  );
+
+  const isTwoHanded = computed(
+    () => isVersatile.value && props.inventoryItem.twoHanded,
+  );
+
   // Правка и удаление — под многоточием: строка и без них плотная (иконка,
   // название, плитки, «+/−»), а два разных набора кнопок ломали бы её ритм.
   // Каталожный предмет правится в своём разделе — вместо правки ему предлагается
   // копия в лист, после которой он становится своим.
   const menuItems = computed<Array<DropdownMenuItem>>(() =>
     getInventoryItemMenuItems({
+      onToggleGrip: isVersatile.value
+        ? () => emit('toggle-two-handed')
+        : undefined,
+      twoHanded: isTwoHanded.value,
       onEdit: isCustom.value ? () => emit('edit') : undefined,
       onCopy: isCustom.value ? undefined : () => emit('copy'),
       onRemove: () => emit('remove'),
@@ -299,7 +318,7 @@
    * нет (например, у предмета, добавленного до появления урона в листе).
    */
   function getWeaponDamageStat(weapon: InventoryWeapon): ItemStat | null {
-    const damage = getWeaponDamage(character.value, weapon);
+    const damage = getWeaponDamage(character.value, weapon, isTwoHanded.value);
 
     if (!damage) {
       return null;
@@ -485,6 +504,22 @@
             >
               Надет
             </UBadge>
+
+            <!-- Хват стоит там же, где «Надет»: у оружия своего значка нет, а
+              без него выросшая кость урона выглядела бы ошибкой листа -->
+            <UTooltip
+              v-if="isTwoHanded"
+              :text="INVENTORY_TWO_HANDED_BADGE_HINT"
+            >
+              <UBadge
+                size="sm"
+                color="warning"
+                variant="subtle"
+                class="relative z-10 shrink-0"
+              >
+                {{ INVENTORY_TWO_HANDED_BADGE_LABEL }}
+              </UBadge>
+            </UTooltip>
 
             <!-- Значок отсутствия стоит там же, где «Надет»: у одного предмета
               они взаимоисключающие — обнулённый доспех снимается -->

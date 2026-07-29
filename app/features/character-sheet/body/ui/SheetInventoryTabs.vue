@@ -71,6 +71,7 @@
     'edit-currency': [];
     'adjust-item-quantity': [inventoryItemId: string, delta: number];
     'toggle-item-equip': [inventoryItemId: string];
+    'toggle-item-two-handed': [inventoryItemId: string];
     'roll-item-attack': [inventoryItem: CharacterInventoryItem];
     'roll-item-damage': [inventoryItem: CharacterInventoryItem];
     'edit-feature': [featureId: string];
@@ -121,6 +122,10 @@
 
   function handleItemEquipToggle(inventoryItemId: string) {
     emit('toggle-item-equip', inventoryItemId);
+  }
+
+  function handleItemTwoHandedToggle(inventoryItemId: string) {
+    emit('toggle-item-two-handed', inventoryItemId);
   }
 
   function handleItemAttackRoll(inventoryItem: CharacterInventoryItem) {
@@ -855,6 +860,7 @@
             @remove-item="handleItemRemove"
             @adjust-quantity="handleItemQuantityAdjust"
             @toggle-equip="handleItemEquipToggle"
+            @toggle-two-handed="handleItemTwoHandedToggle"
             @roll-attack="handleItemAttackRoll"
             @roll-damage="handleItemDamageRoll"
           />

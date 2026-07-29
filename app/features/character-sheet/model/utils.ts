@@ -152,6 +152,7 @@ import {
   INNATE_SPELL_REMOVE_MENU_LABEL,
   INVENTORY_CATEGORY_ORDER,
   INVENTORY_CATEGORY_TITLES,
+  INVENTORY_GRIP_MENU_LABELS,
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
   INVENTORY_REMOVE_MENU_LABEL,
@@ -520,6 +521,7 @@ export function buildInventoryItem(
     armor: summary.armor,
     weapon: summary.weapon,
     equipped: false,
+    twoHanded: false,
   };
 }
 
@@ -550,6 +552,7 @@ export function buildMagicItemInventoryItem(
     armor: null,
     weapon: null,
     equipped: false,
+    twoHanded: false,
   };
 }
 
@@ -578,6 +581,20 @@ export function isMissingInventoryItem(
   inventoryItem: CharacterInventoryItem,
 ): boolean {
   return inventoryItem.quantity <= 0;
+}
+
+/**
+ * Универсальное ли это оружие: справочник дал ему второй бросок урона — тот, что
+ * катится, если взять оружие двумя руками. Только у такого предмета есть смысл
+ * в смене хвата.
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns true — хват можно переключать.
+ */
+export function isVersatileInventoryItem(
+  inventoryItem: CharacterInventoryItem,
+): boolean {
+  return Boolean(inventoryItem.weapon?.versatileDamage);
 }
 
 /**
@@ -705,6 +722,9 @@ function getCustomInventoryWeapon(
     category: draft.weaponCategory,
     ranged: draft.ranged,
     finesse: draft.finesse,
+    // Второй бросок форма не задаёт: у своего оружия свойства «Универсальное»
+    // нет — копии каталожного его сохраняет `toUpdatedCustomInventoryItem`.
+    versatileDamage: null,
     damage:
       diceCount > 0
         ? {
@@ -815,7 +835,39 @@ export function toCustomInventoryItem(
     // нет, и в подсчёт КД они не идут. Форма может обнулить количество — тогда
     // доспех снимается вместе с ним.
     equipped: draft.kind === 'armor' && equipped && quantity > 0,
+    // Хват формой не задаётся: универсальным бывает только каталожное оружие, и
+    // его копии хват возвращает `toUpdatedCustomInventoryItem`.
+    twoHanded: false,
     description: [...draft.description],
+  };
+}
+
+/**
+ * Возврат свойства «Универсальное» правленому предмету: второго броска в форме
+ * нет, и без этого правка копии каталожного меча молча отбирала бы у него хват
+ * двумя руками. Кости обычного урона при этом остаются такими, как их задали в
+ * форме, — редактируется именно она.
+ *
+ * @param updatedItem предмет, собранный из значений формы.
+ * @param editedItem предмет до правки.
+ * @returns предмет с сохранённым вторым броском и хватом.
+ */
+function withKeptVersatileGrip(
+  updatedItem: CharacterInventoryItem,
+  editedItem: CharacterInventoryItem,
+): CharacterInventoryItem {
+  const versatileDamage = editedItem.weapon?.versatileDamage ?? null;
+
+  // Оружие могли переделать в доспех или безделушку — хвату там взяться не от
+  // чего.
+  if (!updatedItem.weapon || !versatileDamage) {
+    return updatedItem;
+  }
+
+  return {
+    ...updatedItem,
+    weapon: { ...updatedItem.weapon, versatileDamage },
+    twoHanded: editedItem.twoHanded,
   };
 }
 
@@ -833,11 +885,15 @@ export function toUpdatedCustomInventoryItem(
   editedItem: CharacterInventoryItem,
   draft: CustomInventoryItemDraft,
 ): CharacterInventoryItem | null {
-  const updatedItem = toCustomInventoryItem(
+  const draftItem = toCustomInventoryItem(
     editedItem.url,
     draft,
     editedItem.equipped,
   );
+
+  const updatedItem = draftItem
+    ? withKeptVersatileGrip(draftItem, editedItem)
+    : null;
 
   if (
     !updatedItem
@@ -1184,27 +1240,33 @@ function getWeaponAbility(
 
 /**
  * Бросок урона оружием: кости из справочника, собственный бонус оружия и
- * модификатор той же характеристики, что и у атаки. Использует ASCII-минус —
- * формула уходит в парсер дайс-роллера.
+ * модификатор той же характеристики, что и у атаки. Универсальное оружие, взятое
+ * двумя руками, катит свой второй бросок — кость у него больше. Использует
+ * ASCII-минус — формула уходит в парсер дайс-роллера.
  *
  * @param character персонаж.
  * @param weapon параметры оружия.
+ * @param twoHanded оружие взято двумя руками (свойство «Универсальное»).
  * @returns разбор броска урона или null, если справочник не дал костей урона.
  */
 export function getWeaponDamage(
   character: Character,
   weapon: InventoryWeapon,
+  twoHanded: boolean,
 ): WeaponDamage | null {
-  if (!weapon.damage) {
+  // Хват двумя руками без второго броска ничего не меняет: оружие катит свой
+  // обычный урон.
+  const damage = (twoHanded ? weapon.versatileDamage : null) ?? weapon.damage;
+
+  if (!damage) {
     return null;
   }
 
   const ability = getWeaponAbility(character, weapon);
 
-  const diceNotation = `${weapon.damage.diceCount}${DICE_NOTATION_LETTER}${weapon.damage.diceFaces}`;
+  const diceNotation = `${damage.diceCount}${DICE_NOTATION_LETTER}${damage.diceFaces}`;
 
-  const totalBonus =
-    weapon.damage.bonus + getModifier(character.abilities[ability]);
+  const totalBonus = damage.bonus + getModifier(character.abilities[ability]);
 
   const sign = totalBonus < 0 ? '-' : '+';
 
@@ -1214,9 +1276,9 @@ export function getWeaponDamage(
         ? diceNotation
         : `${diceNotation}${sign}${Math.abs(totalBonus)}`,
     diceNotation,
-    weaponBonus: weapon.damage.bonus,
+    weaponBonus: damage.bonus,
     ability,
-    typeLabel: DAMAGE_TYPE_LABELS[weapon.damage.type] ?? '',
+    typeLabel: DAMAGE_TYPE_LABELS[damage.type] ?? '',
   };
 }
 
@@ -4678,18 +4740,47 @@ function getSheetEntryMenuItems(
   return items;
 }
 
+/** Обработчики пунктов меню строки снаряжения. */
+export interface InventoryItemMenuOptions extends SheetEntryMenuOptions {
+  /**
+   * Смена хвата универсального оружия; не передан — пункта нет (второго броска
+   * у предмета нет, и переключать нечего).
+   */
+  onToggleGrip?: () => void;
+
+  /** Оружие уже взято двумя руками — пункт предлагает вернуть его в одну. */
+  twoHanded: boolean;
+}
+
 /**
  * Пункты меню строки снаряжения. Действия убраны под многоточие, а не стоят
  * кнопками в строке: у каталожного предмета их два, у своего — тоже два, но
- * другие, и трейлинг соседних строк не выравнивался бы.
+ * другие, и трейлинг соседних строк не выравнивался бы. Смена хвата стоит
+ * первой: это игровое действие, к нему возвращаются в бою, а правка и удаление
+ * меняют саму запись.
  *
  * @param options обработчики пунктов.
  * @returns пункты для `UDropdownMenu`.
  */
 export function getInventoryItemMenuItems(
-  options: SheetEntryMenuOptions,
+  options: InventoryItemMenuOptions,
 ): DropdownMenuItem[] {
-  return getSheetEntryMenuItems(options, INVENTORY_REMOVE_MENU_LABEL);
+  const items = getSheetEntryMenuItems(options, INVENTORY_REMOVE_MENU_LABEL);
+
+  if (!options.onToggleGrip) {
+    return items;
+  }
+
+  return [
+    {
+      label: options.twoHanded
+        ? INVENTORY_GRIP_MENU_LABELS.oneHanded
+        : INVENTORY_GRIP_MENU_LABELS.twoHanded,
+      icon: 'tabler:sword',
+      onSelect: options.onToggleGrip,
+    },
+    ...items,
+  ];
 }
 
 /**

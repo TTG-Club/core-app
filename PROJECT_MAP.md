@@ -204,7 +204,12 @@ modals), so its capabilities are listed here rather than squeezed into the table
   narrowing by itself. The prepared chip is skipped when there is nothing to
   prepare (cantrips or innate spells only).
 - Weapon attack & damage rolled straight from their tiles in the equipment list
-  (damage dice come from the item `/raw` response).
+  (damage dice come from the item `/raw` response). A versatile weapon also
+  keeps the second roll of that response, and the row action menu switches its
+  grip — taken in two hands it rolls the bigger die on the tile, in the roll and
+  in the PDF attack table, and the row is marked with a «Двумя руками» badge.
+  Weapons added before the second roll was stored do not offer the switch until
+  they are added from the catalog again.
 - Spell damage rolled from the same kind of tile on the spells tab. The formulas
   (`8к6@dmg.fire`) are not stored in the sheet: `composables/useSpellDamage.ts`
   pulls them from the spell `/raw` response on demand and caches them per app,

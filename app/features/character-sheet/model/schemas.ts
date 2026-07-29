@@ -566,9 +566,22 @@ const itemRawWeaponDamageSchema = z
   .catch(null);
 
 /**
+ * Схема броска урона свойства «Универсальное» в «сыром» ответе: тот же бросок
+ * костей, но без типа урона — он у оружия один на оба хвата.
+ */
+const itemRawWeaponVersatileSchema = z
+  .object({
+    diceCount: z.coerce.number().nullable().catch(null),
+    dice: z.string().nullable().catch(null),
+    bonus: z.coerce.number().nullable().catch(null),
+  })
+  .nullable()
+  .catch(null);
+
+/**
  * Схема «сырого» ответа предмета в части оружия (форма `WeaponCreate` редактора):
  * категория (простое/воинское, рукопашное/дальнобойное), свойства, боеприпас и
- * урон.
+ * урон — обычный и по свойству «Универсальное».
  */
 const itemRawWeaponSchema = z
   .object({
@@ -578,6 +591,7 @@ const itemRawWeaponSchema = z
         properties: z.array(z.string()).catch([]),
         ammo: z.string().nullable().catch(null),
         damage: itemRawWeaponDamageSchema,
+        versatile: itemRawWeaponVersatileSchema,
       })
       .nullable()
       .catch(null),
@@ -622,6 +636,33 @@ function parseWeaponDamage(
 }
 
 /**
+ * Разбор урона свойства «Универсальное»: справочник отдаёт только бросок, а тип
+ * урона у оружия один на оба хвата — берём его из обычного урона.
+ *
+ * @param versatile блок броска двумя руками из «сырого» ответа оружия.
+ * @param damage уже разобранный обычный урон оружия.
+ * @returns урон двумя руками или null (свойства нет либо костей не отдали).
+ */
+function parseWeaponVersatileDamage(
+  versatile: z.infer<typeof itemRawWeaponVersatileSchema>,
+  damage: InventoryWeaponDamage | null,
+): InventoryWeaponDamage | null {
+  const diceFaces = parseDiceFaces(versatile?.dice ?? null);
+  const diceCount = versatile?.diceCount ?? 0;
+
+  if (diceFaces <= 0 || diceCount <= 0) {
+    return null;
+  }
+
+  return {
+    diceCount,
+    diceFaces,
+    bonus: versatile?.bonus ?? 0,
+    type: damage?.type ?? '',
+  };
+}
+
+/**
  * Разбор параметров оружия из «сырого» ответа предмета для подсчёта бонуса атаки.
  * Категория владения и признаки «дальнобойное»/«фехтовальное» распознаются по
  * категории/свойствам (RU- и EN-корни) — устойчиво к формату справочника на бэке.
@@ -636,6 +677,8 @@ export function parseItemWeapon(input: unknown): InventoryWeapon | null {
     return null;
   }
 
+  const damage = parseWeaponDamage(weapon.damage);
+
   return {
     category: /martial|воинск/i.test(weapon.category) ? 'martial' : 'simple',
     ranged:
@@ -644,7 +687,10 @@ export function parseItemWeapon(input: unknown): InventoryWeapon | null {
     finesse: weapon.properties.some((property) =>
       /фехтов|finesse/i.test(property),
     ),
-    damage: parseWeaponDamage(weapon.damage),
+    damage,
+    // Свойство «Универсальное» распознаём по самому броску, а не по строке в
+    // `properties`: без второй кости переключать хват всё равно нечем.
+    versatileDamage: parseWeaponVersatileDamage(weapon.versatile, damage),
   };
 }
 

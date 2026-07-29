@@ -784,7 +784,9 @@ function drawWeaponsPanel(
           }
 
           const attack = getWeaponAttackBonus(character, weapon);
-          const damage = getWeaponDamage(character, weapon);
+          // Урон печатаем по нынешнему хвату: универсальное оружие, взятое
+          // двумя руками, и на бумаге катит свою большую кость.
+          const damage = getWeaponDamage(character, weapon, item.twoHanded);
 
           return [
             item.name,

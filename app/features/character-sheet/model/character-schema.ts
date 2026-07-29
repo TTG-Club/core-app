@@ -344,6 +344,9 @@ const inventoryWeaponSchema = z
     // Оружие из листов, сохранённых до появления урона, приходит без блока —
     // схема даёт null, и плитка урона просто не показывается.
     damage: inventoryWeaponDamageSchema,
+    // То же с уроном двумя руками: у листов, сохранённых до появления хвата,
+    // блока нет — переключать нечего, пока предмет не добавят заново.
+    versatileDamage: inventoryWeaponDamageSchema,
   })
   .nullable()
   .catch(null);
@@ -404,6 +407,7 @@ const inventoryItemSchema = z.object({
   armor: inventoryArmorSchema,
   weapon: inventoryWeaponSchema,
   equipped: z.boolean().catch(false),
+  twoHanded: z.boolean().catch(false),
   // Описание есть только у своих предметов (`custom:<uuid>`): у каталожных оно
   // живёт в разделе-источнике, а не в листе.
   description: z.array(descriptionNodeSchema).optional().catch(undefined),
