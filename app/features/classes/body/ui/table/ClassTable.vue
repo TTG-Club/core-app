@@ -79,7 +79,6 @@
           ...feature.scaling.map((scale) => ({
             key: feature.key,
             isSubclass: feature.isSubclass,
-            fightingStyleChoice: false,
             ...scale,
           })),
         );

@@ -28,6 +28,8 @@ import {
   collectChoiceSelections,
   collectFeatAbilityIncreases,
   deriveClassResources,
+  FEAT_SOURCES_ASYNC_DATA_KEY,
+  FEATS_FILTERS_PATH,
   FEATS_SELECT_PATH,
   fetchFeatDetail,
   filterClassOptionsBySources,
@@ -198,6 +200,11 @@ export function useLevelUpWizard(): LevelUpWizard {
     CLASS_SOURCES_ASYNC_DATA_KEY,
     CLASSES_FILTERS_PATH,
   );
+
+  // Источники черт живут в своём разделе, поэтому и фильтры у них свои. Ключ
+  // общий с модалкой черт и визардом класса — ответ переиспользуется.
+  const { selectedSourceIds: selectedFeatSourceIds, load: loadFeatSources } =
+    useLazyCatalogSourceQuery(FEAT_SOURCES_ASYNC_DATA_KEY, FEATS_FILTERS_PATH);
 
   const classDetail = ref<ClassSummary | null>(null);
 
@@ -389,10 +396,10 @@ export function useLevelUpWizard(): LevelUpWizard {
     hasFeatsError.value = false;
 
     try {
-      const response = await $fetch<unknown>(FEATS_SELECT_PATH, {
-        method: 'GET',
-        retry: 0,
-      });
+      const [response] = await Promise.all([
+        $fetch<unknown>(FEATS_SELECT_PATH, { method: 'GET', retry: 0 }),
+        loadFeatSources(),
+      ]);
 
       featCatalog.value = parseFeatSelectOptions(response);
     } catch (error) {
@@ -735,6 +742,7 @@ export function useLevelUpWizard(): LevelUpWizard {
       featCatalog.value,
       new Set([...takenFeatUrls.value, ...chosenElsewhere]),
       selectedUrl ?? '',
+      selectedFeatSourceIds.value,
     );
   }
 

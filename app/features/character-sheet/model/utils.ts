@@ -109,6 +109,7 @@ import {
   CARRYING_CAPACITY_SIZE_MULTIPLIERS,
   CATALOG_COPY_MENU_LABEL,
   CHARACTER_FILE_NAME_FALLBACK,
+  CLASS_FEAT_CHOICE_ID_SEGMENTS,
   CLASS_SPELL_PROGRESSIONS,
   CLASS_SPELLCASTING_ABILITIES,
   COINS_PER_WEIGHT_UNIT,
@@ -2180,11 +2181,24 @@ export function getCharacterFeatureId(
  * Извлекает url черты из идентификатора особенности. Обычная черта — `feat:url`,
  * повторяемая — `feat:url:uuid` (у каждой копии свой суффикс). Url черты не
  * содержит двоеточий, поэтому берём сегмент между первым и вторым `:`.
+ * Черты, выданные классовым умением, лежат под классовым идентификатором
+ * (`class:{featureKey}:fighting-style:{url}`, `class:{featureKey}:{level}:ability-improvement:{url}`)
+ * — иначе их копии не удалялись бы вместе с умением, — поэтому url берётся из
+ * хвоста после служебного сегмента.
  *
  * @param featureId идентификатор особенности.
  * @returns url черты или null, если особенность — не черта.
  */
 export function getFeatUrlFromFeatureId(featureId: string): string | null {
+  for (const segment of CLASS_FEAT_CHOICE_ID_SEGMENTS) {
+    const marker = `:${segment}:`;
+    const markerIndex = featureId.indexOf(marker);
+
+    if (markerIndex !== -1) {
+      return featureId.slice(markerIndex + marker.length);
+    }
+  }
+
   if (!featureId.startsWith('feat:')) {
     return null;
   }
@@ -3266,34 +3280,45 @@ export function isAbilityImprovementFeature(
 
 /**
  * Опции черт, доступных за классовое улучшение характеристик: убираются черты
- * запрещённых категорий (происхождения и эпические) и уже взятые на листе —
- * кроме повторяемых, их можно брать снова. Черта, уже выбранная на другом шаге
- * мастера, из списка тоже уходит.
+ * запрещённых категорий (происхождения и эпические), черты из отключённых в
+ * профиле источников и уже взятые на листе — кроме повторяемых, их можно брать
+ * снова. Черта, уже выбранная на другом шаге мастера, из списка тоже уходит.
+ *
+ * Источники отбираются на клиенте: ручка `/feats/select` по ним не фильтрует.
+ * Пустой список источников ограничения не накладывает.
  *
  * @param options все черты каталога.
  * @param takenUrls url черт, уже взятых на листе или в мастере.
  * @param selectedUrl url черты, выбранной в этом же селекторе; '' — не выбрана.
+ * @param selectedSourceIds источники, разрешённые настройкой профиля.
  * @returns черты, доступные для выбора.
  */
 export function getAbilityImprovementFeatOptions(
   options: FeatSelectOption[],
   takenUrls: Set<string>,
   selectedUrl: string,
+  selectedSourceIds: string[] = [],
 ): FeatSelectOption[] {
+  const allowedSources = new Set(selectedSourceIds);
+
   return options.filter((option) => {
+    // Выбранная здесь черта остаётся видимой, иначе селектор показал бы пустое
+    // значение вместо сделанного выбора.
+    if (option.url === selectedUrl) {
+      return true;
+    }
+
     if (
       ABILITY_IMPROVEMENT_EXCLUDED_FEAT_CATEGORIES.includes(option.category)
     ) {
       return false;
     }
 
-    // Выбранная здесь черта остаётся видимой, иначе селектор показал бы пустое
-    // значение вместо сделанного выбора.
-    return (
-      option.repeatability
-      || option.url === selectedUrl
-      || !takenUrls.has(option.url)
-    );
+    if (allowedSources.size > 0 && !allowedSources.has(option.sourceLabel)) {
+      return false;
+    }
+
+    return option.repeatability || !takenUrls.has(option.url);
   });
 }
 

@@ -1108,27 +1108,21 @@ export const FEATS_DETAIL_BASE_PATH = '/api/v2/feats';
 /** Категория черт, доступных через классовое умение выбора боевого стиля. */
 export const FIGHTING_STYLE_FEAT_CATEGORIES = ['FIGHTING_STYLE'];
 
-/** Тексты и технические значения выбора боевого стиля в мастере класса. */
+/** Подпись выбора боевого стиля в визарде класса. */
 export const FIGHTING_STYLE_CHOICE_LABEL =
   'Выберите 1 черту категории «Боевой стиль»';
 
-export const FIGHTING_STYLE_CHOICE_REQUIRED_ERROR =
-  'Не выбран обязательный боевой стиль';
-
+/** Ошибка: деталь выбранной черты не прошла разбор по схеме. */
 export const FIGHTING_STYLE_INVALID_RESPONSE_ERROR =
   'Сервер вернул некорректную черту боевого стиля';
 
+/**
+ * Сегмент идентификатора особенности с выбранным боевым стилем:
+ * `class:{featureKey}:fighting-style:{featUrl}`. Префикс `class:` нужен, чтобы
+ * смена класса удаляла прежний выбор, а сегмент — чтобы из идентификатора
+ * можно было достать url черты.
+ */
 export const FIGHTING_STYLE_FEATURE_ID_SEGMENT = 'fighting-style';
-
-export const FIGHTING_STYLE_ERROR_TOAST_COLOR = 'error';
-
-export const FIGHTING_STYLE_ERROR_TOAST_ICON = 'tabler:alert-triangle';
-
-export const FIGHTING_STYLE_ERROR_TOAST_TITLE =
-  'Не удалось добавить выбранный боевой стиль';
-
-export const FIGHTING_STYLE_ERROR_LOG_MESSAGE =
-  'Ошибка добавления боевого стиля:';
 
 /**
  * Категории черт, недоступные при выборе за классовое улучшение характеристик:
@@ -1169,11 +1163,32 @@ export const ABILITY_IMPROVEMENT_LABELS = {
   maxHint: `Характеристика не поднимается выше ${ABILITY_IMPROVEMENT_SCORE_MAX}`,
 };
 
-/** Служебный сегмент идентификатора умения-черты за улучшение характеристик. */
+/**
+ * Сегмент идентификатора особенности с чертой, выбранной за улучшение
+ * характеристик: `class:{featureKey}:{level}:ability-improvement:{featUrl}`.
+ * Уровень в идентификаторе разводит выборы разных уровней, а префикс `class:`
+ * привязывает черту к умению, которое её дало.
+ */
 export const ABILITY_IMPROVEMENT_FEATURE_ID_SEGMENT = 'ability-improvement';
+
+/**
+ * Служебные сегменты идентификаторов черт, выданных классовыми умениями. По ним
+ * из идентификатора достаётся url черты, поэтому такие черты считаются взятыми
+ * и не предлагаются повторно.
+ */
+export const CLASS_FEAT_CHOICE_ID_SEGMENTS = [
+  FIGHTING_STYLE_FEATURE_ID_SEGMENT,
+  ABILITY_IMPROVEMENT_FEATURE_ID_SEGMENT,
+];
 
 /** Эндпоинт фильтров черт — источник глобальной настройки источников. */
 export const FEATS_FILTERS_PATH = '/api/v2/feats/filters';
+
+/**
+ * Ключ `useAsyncData` для источников каталога черт. Общий у модалки черт и
+ * визарда класса: ответ фильтров переиспользуется между модалками.
+ */
+export const FEAT_SOURCES_ASYNC_DATA_KEY = 'character-sheet:feat-sources';
 
 /** Эндпоинт поиска видов. */
 export const SPECIES_SEARCH_PATH = '/api/v2/species/search';
