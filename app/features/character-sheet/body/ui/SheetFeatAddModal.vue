@@ -6,6 +6,7 @@
   import { useCatalogSourceQuery, useCharacterSheet } from '../../composables';
   import {
     buildFeatFeature,
+    FEAT_SOURCES_ASYNC_DATA_KEY,
     FEATS_FILTERS_PATH,
     FEATS_SEARCH_PATH,
     FEATS_SELECT_PATH,
@@ -44,7 +45,7 @@
   // черты из отключённых книг. Запрос ждём до списка: иначе первая выдача
   // пришла бы по всем источникам и мигнула лишними строками.
   const { sourceQuery } = await useCatalogSourceQuery(
-    'character-sheet:feat-sources',
+    FEAT_SOURCES_ASYNC_DATA_KEY,
     FEATS_FILTERS_PATH,
   );
 
