@@ -9,7 +9,11 @@ export const CLASS_RESOURCE_RECOVERY_OPTIONS: Array<{
   { label: 'Продолжительный отдых', value: 'LONG_REST' },
 ];
 
-/** Подписи настройки выбора боевого стиля в редакторе умения класса. */
-export const CLASS_FEATURE_FIGHTING_STYLE_LABEL = 'Даёт выбор боевого стиля?';
+/**
+ * Метки вариантов стартового снаряжения. Выводятся из порядка вариантов —
+ * так же, как их выводит API при отдаче класса, поэтому в форме не хранятся.
+ */
+export const CLASS_EQUIPMENT_OPTION_LABELS = 'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯ';
 
-export const CLASS_FEATURE_FIGHTING_STYLE_DESCRIPTION = 'Да';
+/** Сколько вариантов снаряжения показывать у класса, где снаряжение ещё не заполнено. */
+export const DEFAULT_CLASS_EQUIPMENT_OPTIONS_COUNT = 2;

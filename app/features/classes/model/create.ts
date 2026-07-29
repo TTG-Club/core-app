@@ -91,6 +91,22 @@ export interface ClassPrimaryCharacteristicsCreate {
   delimiter: AbilityDelimiter | undefined;
 }
 
+export interface ClassEquipmentItemCreate {
+  url: string | undefined;
+  quantity: number | undefined;
+  description: string | undefined;
+}
+
+export interface ClassEquipmentOptionCreate {
+  items: Array<ClassEquipmentItemCreate>;
+  coins: number | undefined;
+  /**
+   * Тип монет варианта. В редакторе не задаётся — API проставляет золото по умолчанию,
+   * поле нужно, чтобы сохранённое значение не терялось при повторном сохранении.
+   */
+  coin?: string;
+}
+
 export interface ClassCreate extends EditorBaseInfoState {
   gallery: Array<string>;
   description: string | undefined;
@@ -100,6 +116,7 @@ export interface ClassCreate extends EditorBaseInfoState {
   proficiency: ClassProficiencyCreate;
   multiclassProficiency: ClassMulticlassProficiencyCreate;
   equipment: string | undefined;
+  startingEquipment: Array<ClassEquipmentOptionCreate>;
   features: Array<ClassFeatureCreate>;
   table: Array<ClassColumnCreate>;
   casterType: string | undefined;

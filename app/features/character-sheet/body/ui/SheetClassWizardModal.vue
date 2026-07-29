@@ -27,14 +27,11 @@
     deriveClassResources,
     derivePreparedSpellsScaling,
     detectFeatureChoice,
+    FEAT_SOURCES_ASYNC_DATA_KEY,
+    FEATS_FILTERS_PATH,
     FEATURE_ORIGIN_LABELS,
     fetchFeatDetail,
     FIGHTING_STYLE_CHOICE_LABEL,
-    FIGHTING_STYLE_CHOICE_REQUIRED_ERROR,
-    FIGHTING_STYLE_ERROR_LOG_MESSAGE,
-    FIGHTING_STYLE_ERROR_TOAST_COLOR,
-    FIGHTING_STYLE_ERROR_TOAST_ICON,
-    FIGHTING_STYLE_ERROR_TOAST_TITLE,
     FIGHTING_STYLE_FEAT_CATEGORIES,
     FIGHTING_STYLE_FEATURE_ID_SEGMENT,
     FIGHTING_STYLE_INVALID_RESPONSE_ERROR,
@@ -61,6 +58,18 @@
   import SheetSearchInput from './SheetSearchInput.vue';
 
   type WizardStep = 'class' | 'review';
+
+  /** Загруженная черта боевого стиля и умение класса, к которому она выбрана. */
+  interface FightingStyleSelection {
+    /** Идентификатор строки умения класса (`class:{featureKey}`). */
+    rowId: string;
+
+    /** Название черты — идёт в подпись выбора у самого умения. */
+    featName: string;
+
+    /** Готовая запись особенности для листа. */
+    feature: CharacterFeature;
+  }
 
   const emit = defineEmits<{
     close: [];
@@ -104,11 +113,15 @@
 
   // Источники берутся из глобальной настройки профиля — визард не показывает
   // классы из отключённых книг. Запрос ждём до списка: иначе первая выдача
-  // пришла бы по всем источникам и мигнула лишними строками.
-  const { sourceQuery } = await useCatalogSourceQuery(
-    CLASS_SOURCES_ASYNC_DATA_KEY,
-    CLASSES_FILTERS_PATH,
-  );
+  // пришла бы по всем источникам и мигнула лишними строками. Черты боевого
+  // стиля отбираются теми же источниками, но их эндпоинт `/feats/select` по
+  // источникам не фильтрует, поэтому отбор идёт на клиенте — в селекторе.
+  // Оба набора фильтров грузятся параллельно: открытие визарда ждёт их обоих.
+  const [{ sourceQuery }, { selectedSourceIds: featSourceIds }] =
+    await Promise.all([
+      useCatalogSourceQuery(CLASS_SOURCES_ASYNC_DATA_KEY, CLASSES_FILTERS_PATH),
+      useCatalogSourceQuery(FEAT_SOURCES_ASYNC_DATA_KEY, FEATS_FILTERS_PATH),
+    ]);
 
   // Полный список классов загружается сразу при открытии визарда.
   const { data: classList, status: listStatus } = await useAsyncData(
@@ -423,6 +436,14 @@
     });
   }
 
+  function showFightingStyleError() {
+    toast.add({
+      color: 'error',
+      icon: 'tabler:alert-triangle',
+      title: 'Не удалось добавить выбранный боевой стиль',
+    });
+  }
+
   function findClassOption(classUrl: string): ClassOption | undefined {
     return (classList.value ?? []).find((option) => option.url === classUrl);
   }
@@ -559,23 +580,24 @@
 
   /**
    * Загружает выбранные черты боевого стиля и делает их классовыми записями,
-   * чтобы смена класса удаляла прежний выбор.
+   * чтобы смена класса удаляла прежний выбор. Строки без выбора пропускаются:
+   * применение до полного выбора блокирует `isApplyDisabled`.
    */
   function buildFightingStyleFeatures(): Promise<
-    Array<{ feature: CharacterFeature; rowId: string; featName: string }>
+    Array<FightingStyleSelection>
   > {
-    const selectedRows = featureRows.value.filter(
-      (row) => row.fightingStyleChoice,
-    );
+    const selectedRows: Array<{ rowId: string; featUrl: string }> = [];
+
+    for (const row of featureRows.value) {
+      const featUrl = fightingStyleSelections.value[row.id];
+
+      if (row.fightingStyleChoice && featUrl) {
+        selectedRows.push({ rowId: row.id, featUrl });
+      }
+    }
 
     return Promise.all(
-      selectedRows.map(async (row) => {
-        const featUrl = fightingStyleSelections.value[row.id];
-
-        if (!featUrl) {
-          throw new Error(FIGHTING_STYLE_CHOICE_REQUIRED_ERROR);
-        }
-
+      selectedRows.map(async ({ rowId, featUrl }) => {
         const summary = await fetchFeatDetail(featUrl);
 
         if (!summary) {
@@ -583,11 +605,11 @@
         }
 
         return {
-          rowId: row.id,
+          rowId,
           featName: summary.name,
           feature: {
             ...buildFeatFeature(summary),
-            id: `${row.id}:${FIGHTING_STYLE_FEATURE_ID_SEGMENT}:${summary.url}`,
+            id: `${rowId}:${FIGHTING_STYLE_FEATURE_ID_SEGMENT}:${summary.url}`,
           },
         };
       }),
@@ -604,113 +626,115 @@
 
     isApplying.value = true;
 
+    // Под `try` только загрузка черт: ошибка сети не должна выглядеть как сбой
+    // применения класса, а применение ниже — синхронное и не бросает.
+    let fightingStyleFeatures: Array<FightingStyleSelection>;
+
     try {
-      const matched = matchClassProficiencies(base.proficiencyText);
-
-      // Выбор владения навыками (уровень класса).
-      const skillsChoice = classChoices.value.find(
-        (choice) => choice.id === 'class-skills',
-      );
-
-      const proficientSkills: string[] = skillsChoice
-        ? (selections.value['class-skills'] ?? []).slice(0, skillsChoice.count)
-        : [];
-
-      const chosenTools = selections.value['class-tools'] ?? [];
-
-      // Выборы внутри умений: владение навыком, экспертиза и языки; выбранные
-      // значения также идут в текст умения, чтобы отображаться на листе.
-      const expertiseSkills: string[] = [];
-      const chosenLanguages: string[] = [];
-      const featureChoices: Record<string, string> = { ...choices.value };
-
-      const fightingStyleFeatures = await buildFightingStyleFeatures();
-
-      for (const selection of fightingStyleFeatures) {
-        featureChoices[selection.rowId] = selection.featName;
-      }
-
-      for (const row of featureRows.value) {
-        const control = row.choiceControl;
-
-        if (!control) {
-          continue;
-        }
-
-        const values = selections.value[control.id] ?? [];
-
-        if (!values.length) {
-          continue;
-        }
-
-        if (control.kind === 'skill-proficiency') {
-          proficientSkills.push(...values);
-        } else if (control.kind === 'skill-expertise') {
-          expertiseSkills.push(...values);
-        } else if (control.kind === 'language') {
-          chosenLanguages.push(...values);
-        }
-
-        featureChoices[control.id] = values.join(', ');
-      }
-
-      setClass({
-        characterClass: {
-          url: base.url,
-          name: base.name,
-          subclassUrl: selectedSubclass.value?.url ?? null,
-          subclassName: subclassDetail.value?.name ?? null,
-          casterType: getSelectedCasterType(base, subclassDetail.value),
-          hitDie: base.hitDie,
-          // Колонка подготовленных заклинаний бывает и у класса, и только у
-          // подкласса (мистический рыцарь), поэтому таблицы просматриваются
-          // вместе.
-          preparedSpells: derivePreparedSpellsScaling([
-            ...base.table,
-            ...(subclassDetail.value?.table ?? []),
-          ]),
-        },
-        savingThrows: base.savingThrows,
-        hitDie: base.hitDie,
-        proficiencies: {
-          armor: matched.armor,
-          weapons: matched.weapons,
-          // Фиксированные инструменты уже сверены с каталогом, выбранные игроком
-          // приходят названиями — их сверяет `resolveTools`.
-          tools: unionToolProficiencies(
-            matchedTools.value,
-            resolveTools(chosenTools.map((name) => ({ name, url: null }))),
-          ),
-          languages: chosenLanguages,
-        },
-        skills: {
-          proficient: [...new Set(proficientSkills)],
-          expertise: [...new Set(expertiseSkills)],
-        },
-        classResources: derivedResources.value,
-        features: [
-          ...buildClassFeatures(
-            base,
-            subclassDetail.value,
-            level.value,
-            featureChoices,
-          ),
-          ...fightingStyleFeatures.map((selection) => selection.feature),
-        ],
-      });
-
-      emit('close');
+      fightingStyleFeatures = await buildFightingStyleFeatures();
     } catch (error) {
-      consola.error(FIGHTING_STYLE_ERROR_LOG_MESSAGE, error);
+      consola.error('Ошибка добавления боевого стиля:', error);
 
-      toast.add({
-        color: FIGHTING_STYLE_ERROR_TOAST_COLOR,
-        icon: FIGHTING_STYLE_ERROR_TOAST_ICON,
-        title: FIGHTING_STYLE_ERROR_TOAST_TITLE,
-      });
+      showFightingStyleError();
+
+      return;
     } finally {
       isApplying.value = false;
     }
+
+    const matched = matchClassProficiencies(base.proficiencyText);
+
+    // Выбор владения навыками (уровень класса).
+    const skillsChoice = classChoices.value.find(
+      (choice) => choice.id === 'class-skills',
+    );
+
+    const proficientSkills: string[] = skillsChoice
+      ? (selections.value['class-skills'] ?? []).slice(0, skillsChoice.count)
+      : [];
+
+    const chosenTools = selections.value['class-tools'] ?? [];
+
+    // Выборы внутри умений: владение навыком, экспертиза и языки; выбранные
+    // значения также идут в текст умения, чтобы отображаться на листе.
+    const expertiseSkills: string[] = [];
+    const chosenLanguages: string[] = [];
+    const featureChoices: Record<string, string> = { ...choices.value };
+
+    for (const selection of fightingStyleFeatures) {
+      featureChoices[selection.rowId] = selection.featName;
+    }
+
+    for (const row of featureRows.value) {
+      const control = row.choiceControl;
+
+      if (!control) {
+        continue;
+      }
+
+      const values = selections.value[control.id] ?? [];
+
+      if (!values.length) {
+        continue;
+      }
+
+      if (control.kind === 'skill-proficiency') {
+        proficientSkills.push(...values);
+      } else if (control.kind === 'skill-expertise') {
+        expertiseSkills.push(...values);
+      } else if (control.kind === 'language') {
+        chosenLanguages.push(...values);
+      }
+
+      featureChoices[control.id] = values.join(', ');
+    }
+
+    setClass({
+      characterClass: {
+        url: base.url,
+        name: base.name,
+        subclassUrl: selectedSubclass.value?.url ?? null,
+        subclassName: subclassDetail.value?.name ?? null,
+        casterType: getSelectedCasterType(base, subclassDetail.value),
+        hitDie: base.hitDie,
+        // Колонка подготовленных заклинаний бывает и у класса, и только у
+        // подкласса (мистический рыцарь), поэтому таблицы просматриваются
+        // вместе.
+        preparedSpells: derivePreparedSpellsScaling([
+          ...base.table,
+          ...(subclassDetail.value?.table ?? []),
+        ]),
+      },
+      savingThrows: base.savingThrows,
+      hitDie: base.hitDie,
+      proficiencies: {
+        armor: matched.armor,
+        weapons: matched.weapons,
+        // Фиксированные инструменты уже сверены с каталогом, выбранные игроком
+        // приходят названиями — их сверяет `resolveTools`.
+        tools: unionToolProficiencies(
+          matchedTools.value,
+          resolveTools(chosenTools.map((name) => ({ name, url: null }))),
+        ),
+        languages: chosenLanguages,
+      },
+      skills: {
+        proficient: [...new Set(proficientSkills)],
+        expertise: [...new Set(expertiseSkills)],
+      },
+      classResources: derivedResources.value,
+      features: [
+        ...buildClassFeatures(
+          base,
+          subclassDetail.value,
+          level.value,
+          featureChoices,
+        ),
+        ...fightingStyleFeatures.map((selection) => selection.feature),
+      ],
+    });
+
+    emit('close');
   }
 
   function handleCancel() {
@@ -1066,6 +1090,7 @@
                 <SelectFeat
                   v-model="fightingStyleSelections[row.id]"
                   :categories="FIGHTING_STYLE_FEAT_CATEGORIES"
+                  :sources="featSourceIds"
                 />
               </div>
 
