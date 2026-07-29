@@ -471,6 +471,39 @@ export interface CharacterInnateSpell {
   requiredLevel: number;
 }
 
+/** Черновик особенности своего вида в форме создания. */
+export interface CustomSpeciesFeatureDraft {
+  /**
+   * Идентификатор строки формы; он же становится частью id особенности листа,
+   * поэтому две особенности с одинаковым названием не схлопываются.
+   */
+  id: string;
+
+  name: string;
+
+  /** Описание в хранимой разметке редактора. */
+  description: string;
+}
+
+/**
+ * Черновик строки «тип + дистанция» в форме своего вида: передвижение и зрение
+ * заводятся по одному нужному типу, а не всем списком сразу.
+ */
+export interface DistanceRowDraft {
+  /** Идентификатор строки формы; он же ключ списка. */
+  id: string;
+
+  /**
+   * Тип передвижения или зрения. Строкой, а не объединением ключей: строки
+   * общие для обоих списков, а сужение до точного набора делают
+   * `buildSpeedValuesFromRows` и `buildVisionValuesFromRows`.
+   */
+  key: string;
+
+  /** Дистанция в футах. */
+  value: number;
+}
+
 /** Выбранный класс персонажа. */
 export interface CharacterClass {
   url: string;

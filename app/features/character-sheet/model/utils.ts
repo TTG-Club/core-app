@@ -39,10 +39,12 @@ import type {
   CustomArmorType,
   CustomInventoryItemDraft,
   CustomInventoryKind,
+  CustomSpeciesFeatureDraft,
   CustomSpellDraft,
   CustomSpellStatRow,
   DamageDiceGroup,
   DamageRollSource,
+  DistanceRowDraft,
   FeatSelectOption,
   FeatSummary,
   FeatureDescriptionNode,
@@ -79,6 +81,7 @@ import type {
   SpellSlotRow,
   SpellTabFilter,
   ToolCatalogEntry,
+  VisionKey,
   VisionRow,
   WeaponAttack,
   WeaponDamage,
@@ -136,6 +139,8 @@ import {
   CUSTOM_ITEM_WEIGHT_MAX,
   CUSTOM_ITEM_WEIGHT_MIN,
   CUSTOM_MAGIC_ITEM_LABEL,
+  CUSTOM_SPECIES_DEFAULT_SPEED,
+  CUSTOM_SPECIES_URL_PREFIX,
   CUSTOM_SPELL_FIELDS,
   CUSTOM_SPELL_URL_PREFIX,
   CUSTOM_TRINKET_TYPES_LABEL,
@@ -211,6 +216,7 @@ import {
   TOOL_MATCH_KEYWORDS,
   TOOL_NAME_ALIASES,
   UNARMORED_ARMOR_CLASS_BASE,
+  VISION_DISTANCE_MIN,
   VISION_LABELS,
   VISION_ORDER,
   WEAPON_CATEGORY_LABELS,
@@ -4558,6 +4564,121 @@ export function computeAbilityBonuses(
  */
 export function buildCustomBackgroundUrl(): string {
   return `${CUSTOM_BACKGROUND_URL_PREFIX}${crypto.randomUUID()}`;
+}
+
+/**
+ * URL своего вида: ссылки на раздел у него нет, поэтому запись листа получает
+ * свой идентификатор с префиксом `custom:` — как своя предыстория.
+ *
+ * @returns URL своего вида (`custom:` + идентификатор).
+ */
+export function buildCustomSpeciesUrl(): string {
+  return `${CUSTOM_SPECIES_URL_PREFIX}${crypto.randomUUID()}`;
+}
+
+/**
+ * Дистанция строки указанного типа.
+ *
+ * @param rows строки формы «тип + дистанция».
+ * @param key искомый тип передвижения или зрения.
+ * @returns дистанция в футах; 0 — строки такого типа в форме нет.
+ */
+function getRowDistance(rows: DistanceRowDraft[], key: string): number {
+  return rows.find((row) => row.key === key)?.value ?? 0;
+}
+
+/**
+ * Строки передвижения своего вида по умолчанию: заранее заведена только
+ * ходьба — остальные типы игрок добавляет сам.
+ *
+ * @returns строки формы с одной ходьбой.
+ */
+export function buildDefaultSpeedRows(): DistanceRowDraft[] {
+  return [
+    {
+      id: crypto.randomUUID(),
+      key: 'walk',
+      value: CUSTOM_SPECIES_DEFAULT_SPEED,
+    },
+  ];
+}
+
+/**
+ * Строки зрения из зрения персонажа: заводятся только заданные дистанции —
+ * форма не показывает типы, которых у персонажа нет.
+ *
+ * @param vision текущее зрение персонажа.
+ * @returns строки формы по ненулевым дистанциям.
+ */
+export function buildVisionRows(vision: CharacterVision): DistanceRowDraft[] {
+  return VISION_ORDER.filter((key) => vision[key] > VISION_DISTANCE_MIN).map(
+    (key) => ({ id: crypto.randomUUID(), key, value: vision[key] }),
+  );
+}
+
+/**
+ * Скорости листа из строк формы: незаведённые типы получают ноль — на листе это
+ * и означает «такого передвижения нет».
+ *
+ * @param rows строки передвижения формы.
+ * @returns скорости по всем типам передвижения.
+ */
+export function buildSpeedValuesFromRows(
+  rows: DistanceRowDraft[],
+): Record<SpeedTypeKey, number> {
+  return {
+    walk: getRowDistance(rows, 'walk'),
+    burrow: getRowDistance(rows, 'burrow'),
+    climb: getRowDistance(rows, 'climb'),
+    fly: getRowDistance(rows, 'fly'),
+    swim: getRowDistance(rows, 'swim'),
+  };
+}
+
+/**
+ * Зрение листа из строк формы: незаведённые типы получают ноль — на листе это и
+ * означает «такого зрения нет».
+ *
+ * @param rows строки зрения формы.
+ * @returns дистанции по всем типам зрения.
+ */
+export function buildVisionValuesFromRows(
+  rows: DistanceRowDraft[],
+): Record<VisionKey, number> {
+  return {
+    normal: getRowDistance(rows, 'normal'),
+    darkvision: getRowDistance(rows, 'darkvision'),
+    blindsight: getRowDistance(rows, 'blindsight'),
+    tremorsense: getRowDistance(rows, 'tremorsense'),
+    truesight: getRowDistance(rows, 'truesight'),
+  };
+}
+
+/**
+ * Особенности листа из черновиков формы своего вида: строки без названия
+ * отбрасываются, описание разбирается из хранимой разметки редактора.
+ *
+ * @param drafts черновики особенностей формы.
+ * @param speciesName название своего вида — источник особенности на листе.
+ * @returns особенности с происхождением «вид».
+ */
+export function buildCustomSpeciesFeatures(
+  drafts: CustomSpeciesFeatureDraft[],
+  speciesName: string,
+): CharacterFeature[] {
+  return drafts
+    .filter((draft) => draft.name.trim())
+    .map((draft) => ({
+      id: getCharacterFeatureId('species', draft.id),
+      name: draft.name.trim(),
+      description: parseStoredMarkupNodes(draft.description),
+      origin: 'species',
+      originName: speciesName,
+      // Особенность своего вида к уровню класса не привязана: снятие уровня её
+      // не заберёт.
+      level: null,
+      choice: null,
+    }));
 }
 
 /**

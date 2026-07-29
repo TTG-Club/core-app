@@ -111,6 +111,15 @@ modals), so its capabilities are listed here rather than squeezed into the table
   `/feats/select`, profile sources respected). It goes through the same
   `setBackground` and is stored with a `custom:<uuid>` url, so it never mixes with
   a catalog background.
+- The species wizard does the same for a homebrew species
+  (`SheetCustomSpeciesModal`, opened over the catalog list): name, size,
+  movement and vision as add-a-row lists (`SheetDistanceRows` — type select +
+  distance in feet, each type once, options from the `SPEED_*` / `VISION_*`
+  orders of the sheet's own modals; hover appears once a flying speed exists),
+  plus any number of features (name + `MarkupEditor` description).
+  It goes through the same `setSpecies` and is stored with a
+  `custom:<uuid>` url; features land with origin `species`, so re-picking a
+  species replaces them like catalog ones.
 - Level-up wizard inside the experience modal (`composables/useLevelUpWizard.ts`):
   one step per gained level with its own hit-point mode (average / roll / max),
   the class and subclass features of that level with their choices, and the

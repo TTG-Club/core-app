@@ -1602,6 +1602,58 @@ export const CUSTOM_BACKGROUND_LABELS = {
   apply: 'Создать',
 };
 
+/**
+ * Префикс URL своего вида. Ссылки на раздел у него нет, поэтому запись листа
+ * получает свой идентификатор (как своя предыстория) — так свой вид не
+ * путается с видом каталога.
+ */
+export const CUSTOM_SPECIES_URL_PREFIX = 'custom:';
+
+/** Ограничение длины названия своего вида. */
+export const CUSTOM_SPECIES_NAME_MAX_LENGTH = 80;
+
+/** Ограничение длины названия особенности своего вида. */
+export const CUSTOM_SPECIES_FEATURE_NAME_MAX_LENGTH = 120;
+
+/** Размер своего вида по умолчанию; значение из `SIZE_LABEL_WORDS`. */
+export const CUSTOM_SPECIES_DEFAULT_SIZE = 'Средний';
+
+/** Скорость ходьбы своего вида по умолчанию, футы. */
+export const CUSTOM_SPECIES_DEFAULT_SPEED = 30;
+
+/** Дистанция новой строки зрения своего вида по умолчанию, футы. */
+export const CUSTOM_SPECIES_DEFAULT_VISION = 60;
+
+/** Подписи формы своего вида. */
+export const CUSTOM_SPECIES_LABELS = {
+  openButton: 'Свой вид',
+  title: 'Свой вид',
+  nameTitle: 'Название',
+  namePlaceholder: 'Например: Пепельный странник',
+  sizeTitle: 'Размер',
+  speedTitle: 'Передвижение, футы',
+  speedAdd: 'Добавить передвижение',
+  speedRemove: 'Убрать передвижение',
+  speedEmpty: 'Передвижение не задано',
+  hoverLabel: 'Парение',
+  visionTitle: 'Зрение, футы',
+  visionAdd: 'Добавить зрение',
+  visionRemove: 'Убрать зрение',
+  visionEmpty: 'Зрение не задано',
+  distanceTypePlaceholder: 'Тип',
+  featuresTitle: 'Особенности',
+  featureNamePlaceholder: 'Название особенности',
+  featureDescriptionPlaceholder: 'Опиши особенность',
+  featureAdd: 'Добавить особенность',
+  featureRemove: 'Удалить особенность',
+  featuresEmpty:
+    'Особенностей нет — их можно добавить и позже, на вкладке «Особенности».',
+  hint:
+    'Свой вид применяется как каталожный: размер, передвижение, зрение и '
+    + 'особенности сразу заполнят лист.',
+  apply: 'Создать',
+};
+
 /** Ключевые слова групп брони для сопоставления прозы владений класса. */
 export const ARMOR_MATCH_KEYWORDS: Record<
   ArmorProficiencyGroup['key'],

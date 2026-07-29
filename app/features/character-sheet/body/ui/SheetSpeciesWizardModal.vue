@@ -17,6 +17,7 @@
   } from '../../composables';
   import {
     buildCharacterFeatures,
+    CUSTOM_SPECIES_LABELS,
     detectFeatureChoice,
     FEATURE_ORIGIN_LABELS,
     getCharacterFeatureId,
@@ -35,6 +36,7 @@
     SPECIES_SEARCH_PATH,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetCustomSpeciesModal from './SheetCustomSpeciesModal.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
   type WizardStep = 'species' | 'features';
@@ -79,8 +81,21 @@
     },
   });
 
+  // Свой вид собирается в отдельной модалке поверх списка: сама она и применяет
+  // его к листу, поэтому мастер после успеха только закрывается, а отмена
+  // возвращает к списку каталога.
+  const customSpeciesModal = overlay.create(SheetCustomSpeciesModal);
+
   function handlePreview(url: string) {
     speciesPreviewDrawer.open({ url });
+  }
+
+  async function handleCustomSpecies() {
+    const isCreated = await customSpeciesModal.open();
+
+    if (isCreated) {
+      emit('close');
+    }
   }
 
   const step = ref<WizardStep>('species');
@@ -788,7 +803,14 @@
           @click.left.exact.prevent="handleBack"
         />
 
-        <span v-else />
+        <UButton
+          v-else
+          :label="CUSTOM_SPECIES_LABELS.openButton"
+          icon="tabler:plus"
+          color="neutral"
+          variant="subtle"
+          @click.left.exact.prevent="handleCustomSpecies"
+        />
 
         <div class="flex gap-2">
           <UButton
