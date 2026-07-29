@@ -14,6 +14,7 @@
     FeaturesEditor,
     MulticlassProficiencySettings,
     ProficiencySettings,
+    StartingEquipmentEditor,
     TableEditor,
   } from './ui';
 
@@ -68,6 +69,7 @@
         skills: 0,
       },
       equipment: undefined,
+      startingEquipment: [],
       features: [],
       table: [],
       abilityTemplate: undefined,
@@ -142,6 +144,8 @@
         </UFormField>
       </div>
     </UCard>
+
+    <StartingEquipmentEditor v-model="state.startingEquipment" />
 
     <UCard variant="subtle">
       <template #header>
