@@ -52,13 +52,13 @@
   }
 
   /**
-   * Цвета бейджа происхождения: вид — зелёный, подвид — синий, класс — жёлтый,
-   * черта — акцентный.
+   * Цвета бейджа происхождения: вид — зелёный, подвид — синий, класс —
+   * основной цвет темы, черта — акцентный.
    */
   const ORIGIN_BADGE_COLORS = {
     species: 'success',
     lineage: 'info',
-    class: 'warning',
+    class: 'primary',
     feat: 'secondary',
     none: 'neutral',
   } as const;
@@ -111,7 +111,7 @@
       <div
         v-for="feature in displayRows"
         :key="feature.id"
-        class="flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-warning/60"
+        class="flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-primary/60"
       >
         <div
           class="group/feature relative flex w-full items-center gap-2 px-3 py-2"
@@ -145,7 +145,7 @@
 
           <span
             v-if="feature.choice"
-            class="shrink-0 text-xs text-warning"
+            class="shrink-0 text-xs text-primary"
           >
             {{ feature.choice }}
           </span>
@@ -206,7 +206,7 @@
               {{ SHEET_FEATURE_ROW_LABELS.choice }}
             </span>
 
-            <span class="font-medium text-warning">{{ feature.choice }}</span>
+            <span class="font-medium text-primary">{{ feature.choice }}</span>
           </div>
 
           <MarkupRender

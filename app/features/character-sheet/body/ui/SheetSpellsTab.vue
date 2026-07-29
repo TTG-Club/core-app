@@ -68,14 +68,14 @@
    * акцент и нажатие, катящее формулу.
    */
   const DAMAGE_STAT_CLASS =
-    'relative z-10 flex shrink-0 cursor-pointer flex-col items-center rounded border border-warning/40 bg-warning/10 px-2 py-0.5 whitespace-nowrap transition-colors hover:border-warning hover:bg-warning/20';
+    'relative z-10 flex shrink-0 cursor-pointer flex-col items-center rounded border border-primary/40 bg-primary/10 px-2 py-0.5 whitespace-nowrap transition-colors hover:border-primary hover:bg-primary/20';
 
   /** Разделитель частей подсказки плитки урона (формула, тип, условие). */
   const DAMAGE_TOOLTIP_SEPARATOR = ' · ';
 
   /** Плитка-кнопка шапки вкладки: открывает настройку своих значений. */
   const HEADER_STAT_CLASS =
-    'flex h-7 cursor-pointer items-center gap-3 rounded-lg border border-default/50 bg-elevated/20 px-3 transition-colors hover:border-warning/60';
+    'flex h-7 cursor-pointer items-center gap-3 rounded-lg border border-default/50 bg-elevated/20 px-3 transition-colors hover:border-primary/60';
 
   /** Квадрат со значком заклинания в начале строки. */
   const SPELL_ICON_CLASS =
@@ -88,11 +88,11 @@
    * Подготовленное заклинание: тёплым горит только квадрат со значком — сама
    * строка остаётся такой же, как у остальных заклинаний.
    */
-  const PREPARED_ICON_CLASS = 'border-warning/60 bg-warning/15 text-warning';
+  const PREPARED_ICON_CLASS = 'border-primary/60 bg-primary/15 text-primary';
 
   /** Неподготовленное заклинание: квадрат тёплый только под курсором. */
   const UNPREPARED_ICON_CLASS =
-    'border-default/50 bg-default/40 text-muted hover:border-warning/60';
+    'border-default/50 bg-default/40 text-muted hover:border-primary/60';
 
   /** Заклинание, которому подготовка не нужна (заговор, врождённое). */
   const PLAIN_ICON_CLASS = 'border-default/50 bg-default/40 text-muted';
@@ -466,8 +466,8 @@
               ...circle,
               level: slotRow.level,
               circleClass: circle.used
-                ? 'border-warning bg-warning'
-                : 'border-default hover:border-warning',
+                ? 'border-primary bg-primary'
+                : 'border-default hover:border-primary',
             }))
           : [],
         slotsLabel: slotRow ? getSpellSlotSummary(slotRow) : '',
@@ -780,7 +780,7 @@
         <div
           v-for="spell in group.spells"
           :key="spell.url"
-          class="flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-warning/60"
+          class="flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-primary/60"
         >
           <div class="relative flex items-center gap-3 p-3">
             <!-- Значок заклинания — переключатель подготовки: нажатие метит
@@ -859,11 +859,11 @@
                   :aria-label="damageStat.ariaLabel"
                   @click.left.exact.prevent="handleDamageRoll(damageStat)"
                 >
-                  <span class="text-xs font-bold text-warning">
+                  <span class="text-xs font-bold text-primary">
                     {{ damageStat.formula }}
                   </span>
 
-                  <span class="text-[9px] text-warning/80 uppercase">
+                  <span class="text-[9px] text-primary/80 uppercase">
                     {{ damageStat.label }}
                   </span>
                 </button>
@@ -890,7 +890,7 @@
             >
               <UBadge
                 size="sm"
-                color="warning"
+                color="primary"
                 variant="subtle"
                 class="relative z-10 shrink-0"
               >

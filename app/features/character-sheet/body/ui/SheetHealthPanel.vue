@@ -54,7 +54,7 @@
         <span class="flex flex-col items-end">
           <span class="text-[10px] text-muted uppercase">Врем.</span>
 
-          <span class="mt-1 text-xl leading-none font-bold text-warning">
+          <span class="mt-1 text-xl leading-none font-bold text-primary">
             {{ health.temporary }}
           </span>
         </span>

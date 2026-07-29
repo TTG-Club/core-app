@@ -138,7 +138,7 @@
           class="flex flex-col gap-2 rounded-lg border border-default/50 bg-elevated/20 p-3"
         >
           <span
-            class="border-b border-default/50 pb-2 text-center text-xs font-bold tracking-wider text-warning uppercase"
+            class="border-b border-default/50 pb-2 text-center text-xs font-bold tracking-wider text-primary uppercase"
           >
             {{ group.title }}
           </span>

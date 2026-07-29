@@ -558,7 +558,7 @@
                 <UIcon
                   v-else-if="catalogRow.isSelected"
                   name="tabler:check"
-                  class="relative z-10 size-4 shrink-0 text-warning"
+                  class="relative z-10 size-4 shrink-0 text-primary"
                 />
               </div>
 

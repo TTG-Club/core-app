@@ -89,7 +89,7 @@
 
     <span
       v-else-if="hasError"
-      class="px-3 py-2 text-xs text-warning"
+      class="px-3 py-2 text-xs text-primary"
     >
       {{ LEVEL_UP_WIZARD_LABELS.subclassError }}
     </span>
@@ -141,7 +141,7 @@
         <UIcon
           v-if="subclass.isSelected"
           name="tabler:check"
-          class="size-4 shrink-0 text-warning"
+          class="size-4 shrink-0 text-primary"
         />
       </div>
 

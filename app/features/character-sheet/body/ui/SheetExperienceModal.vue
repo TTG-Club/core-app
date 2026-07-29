@@ -396,7 +396,7 @@
 
           <span
             v-if="hasLoadError"
-            class="text-xs text-warning"
+            class="text-xs text-primary"
           >
             {{ LEVEL_UP_WIZARD_LABELS.loadError }}
           </span>

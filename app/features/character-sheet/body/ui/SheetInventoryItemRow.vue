@@ -71,9 +71,9 @@
 
   /** Классы плитки боевого параметра (тёплый акцент). */
   const ACCENT_STAT_CLASSES = {
-    container: 'border-warning/40 bg-warning/10',
-    value: 'text-warning',
-    label: 'text-warning/80',
+    container: 'border-primary/40 bg-primary/10',
+    value: 'text-primary',
+    label: 'text-primary/80',
   };
 
   /** Классы обычной плитки (стоимость, вес). */
@@ -85,7 +85,7 @@
 
   /** Дополнительное оформление плитки-кнопки броска. */
   const ROLL_STAT_CLASS =
-    'relative z-10 cursor-pointer hover:border-warning hover:bg-warning/20';
+    'relative z-10 cursor-pointer hover:border-primary hover:bg-primary/20';
 
   /**
    * Раскладка плитки параметра: на второй строке узкой карточки плитки делят
@@ -235,8 +235,8 @@
     }
 
     return isEquipped.value
-      ? 'cursor-pointer border-warning/60 bg-warning/15 text-warning'
-      : 'cursor-pointer border-default/50 bg-default/40 text-muted hover:border-warning/60';
+      ? 'cursor-pointer border-primary/60 bg-primary/15 text-primary'
+      : 'cursor-pointer border-default/50 bg-default/40 text-muted hover:border-primary/60';
   });
 
   // Отсутствующий предмет остаётся читаемым (его правят и пополняют), но
@@ -247,7 +247,7 @@
     }
 
     return isEquipped.value
-      ? 'bg-warning/5 ring-1 ring-warning/50 ring-inset'
+      ? 'bg-primary/5 ring-1 ring-primary/50 ring-inset'
       : '';
   });
 
@@ -434,7 +434,7 @@
   <!-- Свой @container: строка перестраивается по ширине самой карточки, а не
     окна — лист бывает узким и на широком экране (дровер, правая панель) -->
   <div
-    class="@container flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-warning/60"
+    class="@container flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-primary/60"
     :class="rowClass"
   >
     <!-- Перестроение по брейкпоинту, а не по факту переполнения: до @xl
@@ -497,7 +497,7 @@
 
             <UBadge
               v-if="isEquipped"
-              color="warning"
+              color="primary"
               variant="subtle"
               size="sm"
               class="shrink-0"
@@ -513,7 +513,7 @@
             >
               <UBadge
                 size="sm"
-                color="warning"
+                color="primary"
                 variant="subtle"
                 class="relative z-10 shrink-0"
               >

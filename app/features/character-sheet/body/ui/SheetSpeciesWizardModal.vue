@@ -606,7 +606,7 @@
                 <UIcon
                   v-if="row.isSelected"
                   name="tabler:check"
-                  class="size-4 shrink-0 text-warning"
+                  class="size-4 shrink-0 text-primary"
                 />
               </div>
 
@@ -661,7 +661,7 @@
                   <UIcon
                     v-if="lineage.isSelected"
                     name="tabler:check"
-                    class="size-4 shrink-0 text-warning"
+                    class="size-4 shrink-0 text-primary"
                   />
                 </div>
               </div>
@@ -704,7 +704,7 @@
               :items="sizeOptions"
               orientation="horizontal"
               variant="list"
-              color="warning"
+              color="primary"
             />
           </div>
 

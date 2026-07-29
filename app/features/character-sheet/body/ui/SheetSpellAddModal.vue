@@ -429,7 +429,7 @@
                   >
                     <UBadge
                       size="sm"
-                      color="warning"
+                      color="primary"
                       variant="subtle"
                       class="relative z-10 shrink-0"
                     >
@@ -467,7 +467,7 @@
                   <UIcon
                     v-if="spell.isSelected"
                     name="tabler:check"
-                    class="size-4 shrink-0 text-warning"
+                    class="size-4 shrink-0 text-primary"
                   />
                 </div>
               </div>

@@ -56,7 +56,7 @@
       return {
         ...pool,
         selected,
-        selectedClass: selected > 0 ? 'text-warning' : 'text-dimmed',
+        selectedClass: selected > 0 ? 'text-primary' : 'text-dimmed',
         removeAriaLabel: `${removeLabel} ${pool.label}`,
         addAriaLabel: `${addLabel} ${pool.label}`,
         isMinusDisabled: selected <= 0,

@@ -172,7 +172,7 @@
 
             <UIcon
               name="tabler:settings"
-              class="size-3.5 shrink-0 text-muted opacity-0 transition-opacity group-hover/header:text-warning group-hover/header:opacity-100 group-focus-visible/header:opacity-100"
+              class="size-3.5 shrink-0 text-muted opacity-0 transition-opacity group-hover/header:text-primary group-hover/header:opacity-100 group-focus-visible/header:opacity-100"
               :class="editControlClass"
             />
           </button>

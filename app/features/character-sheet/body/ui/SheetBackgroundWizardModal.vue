@@ -443,7 +443,7 @@
               <UIcon
                 v-if="row.isSelected"
                 name="tabler:check"
-                class="size-4 shrink-0 text-warning"
+                class="size-4 shrink-0 text-primary"
               />
             </div>
 
@@ -482,7 +482,7 @@
                 v-for="skill in backgroundDetail.skills"
                 :key="skill"
                 size="sm"
-                color="warning"
+                color="primary"
                 variant="subtle"
               >
                 {{ skill }}
@@ -550,7 +550,7 @@
               :items="BACKGROUND_ABILITY_MODE_OPTIONS"
               orientation="horizontal"
               variant="list"
-              color="warning"
+              color="primary"
             />
 
             <div
@@ -585,7 +585,7 @@
                 v-for="row in bonusRows"
                 :key="row.key"
                 size="sm"
-                color="warning"
+                color="primary"
                 variant="subtle"
               >
                 {{ row.label }} {{ row.bonus }}

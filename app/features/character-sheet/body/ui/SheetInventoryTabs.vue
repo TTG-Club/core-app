@@ -772,7 +772,7 @@
             :items="tabItems"
             :model-value="activeSlot"
             :content="false"
-            color="warning"
+            color="primary"
             variant="link"
             :ui="{
               list: 'w-max min-w-full mb-0 self-start',

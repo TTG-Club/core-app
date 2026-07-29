@@ -20,7 +20,7 @@
     props.rows.map((row) => ({
       ...row,
       icon: SKILL_PROFICIENCY_ICONS[row.proficiency],
-      iconClass: row.proficiency === 'none' ? 'text-muted' : 'text-warning',
+      iconClass: row.proficiency === 'none' ? 'text-muted' : 'text-primary',
       proficiencyLabel: SKILL_PROFICIENCY_LABELS[row.proficiency],
     })),
   );
@@ -46,7 +46,7 @@
           >
             <UIcon
               :name="row.icon"
-              class="size-3.5 shrink-0 transition-colors hover:text-warning"
+              class="size-3.5 shrink-0 transition-colors hover:text-primary"
               :class="row.iconClass"
             />
           </button>

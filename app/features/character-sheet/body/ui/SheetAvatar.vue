@@ -114,7 +114,7 @@
   const borderClass = computed(() =>
     isOverDropZone.value && canEdit.value
       ? 'border-primary'
-      : 'border-warning/70',
+      : 'border-primary/70',
   );
 
   const OVERLAY_CLASS =

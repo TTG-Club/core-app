@@ -114,7 +114,7 @@
 
     <span
       v-if="hasError"
-      class="text-xs text-warning"
+      class="text-xs text-primary"
     >
       {{ ABILITY_IMPROVEMENT_LABELS.loadError }}
     </span>

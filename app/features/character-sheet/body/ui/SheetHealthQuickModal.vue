@@ -101,7 +101,7 @@
 
           <span
             v-if="health.temporary > 0"
-            class="pb-1 text-xl leading-none font-bold text-warning"
+            class="pb-1 text-xl leading-none font-bold text-primary"
           >
             +{{ health.temporary }}
           </span>

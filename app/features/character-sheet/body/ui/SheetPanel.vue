@@ -11,7 +11,7 @@
 
   const frameClass = computed(() => [
     props.interactive
-      ? 'transition-colors hover:border-warning/60 hover:bg-elevated/40'
+      ? 'transition-colors hover:border-primary/60 hover:bg-elevated/40'
       : undefined,
 
     // Свой @container только с короткой подписью: подпись переключаем по

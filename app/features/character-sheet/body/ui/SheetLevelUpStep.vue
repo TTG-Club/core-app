@@ -193,7 +193,7 @@
         :model-value="draft.gainMode"
         :items="gainModeOptions"
         variant="list"
-        color="warning"
+        color="primary"
         @update:model-value="handleGainMode"
       />
 
