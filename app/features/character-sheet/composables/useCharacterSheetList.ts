@@ -99,7 +99,7 @@ async function readCharacterFromFile(file: File): Promise<Character | null> {
 
 /**
  * Список листов персонажей пользователя: активные, история удалённых и
- * серверный лимит активных листов (в будущем зависит от подписки, поэтому на
+ * серверный лимит активных листов (зависит от действующей подписки, поэтому на
  * клиенте не хардкодится).
  *
  * За один запрос (`includeDeleted=true`) получаем весь набор и делим его на
@@ -132,6 +132,19 @@ export function useCharacterSheetList() {
 
   const historyLimit = useState<number>(
     'character-sheet:list-history-limit',
+    () => 0,
+  );
+
+  // Лимиты по подписке приходят с сервера всегда, независимо от того, есть ли
+  // она у пользователя: по разнице с выданным лимитом и видно, предлагать ли
+  // подписку (числа на клиенте не хардкодятся).
+  const subscriberLimit = useState<number>(
+    'character-sheet:list-subscriber-limit',
+    () => 0,
+  );
+
+  const subscriberHistoryLimit = useState<number>(
+    'character-sheet:list-subscriber-history-limit',
     () => 0,
   );
 
@@ -184,6 +197,10 @@ export function useCharacterSheetList() {
 
   const canCreate = computed(() => activeSheets.value.length < limit.value);
 
+  // Подписку предлагаем, только если она реально поднимет лимит: у подписчика
+  // выданный лимит уже равен лимиту подписки, и подсказка ему не нужна.
+  const canRaiseLimit = computed(() => subscriberLimit.value > limit.value);
+
   /**
    * Показывает тост с ошибкой (текст берётся из ответа бэка).
    *
@@ -225,6 +242,8 @@ export function useCharacterSheetList() {
       sheets.value = page.sheets;
       limit.value = page.limit;
       historyLimit.value = page.historyLimit;
+      subscriberLimit.value = page.subscriberLimit;
+      subscriberHistoryLimit.value = page.subscriberHistoryLimit;
       isLoaded.value = true;
     } catch (error) {
       loadErrorMessage.value = getSheetErrorMessage(error);
@@ -570,7 +589,10 @@ export function useCharacterSheetList() {
     deletedSheets,
     limit,
     historyLimit,
+    subscriberLimit,
+    subscriberHistoryLimit,
     canCreate,
+    canRaiseLimit,
     isLoading,
     isMutating,
     loadErrorMessage,

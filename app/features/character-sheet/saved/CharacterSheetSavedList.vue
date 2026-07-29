@@ -5,8 +5,10 @@
     useCharacterSheetList,
     useCharacterSheetSaved,
   } from '../composables';
+  import { SheetLimitHint } from '../list/ui';
   import {
     getSavedSheetsCountTooltip,
+    getSavedSheetsSubscriptionHint,
     SAVED_SHEETS_LABELS,
     SAVED_SHEETS_TITLE,
   } from '../model';
@@ -15,7 +17,9 @@
   const {
     savedSheets,
     limit,
+    subscriberLimit,
     canSave,
+    canRaiseLimit,
     isLoading,
     isMutating,
     loadErrorMessage,
@@ -45,11 +49,20 @@
   );
 
   const countTooltip = computed(() =>
-    getSavedSheetsCountTooltip(savedSheets.value.length, limit.value),
+    getSavedSheetsCountTooltip(
+      savedSheets.value.length,
+      limit.value,
+      subscriberLimit.value,
+    ),
   );
 
   const isLimitReached = computed(
     () => !canSave.value && limit.value > 0 && !isLoading.value,
+  );
+
+  // Подсказка про подписку — только на достигнутом лимите, как у своих листов.
+  const subscriptionHint = computed(() =>
+    getSavedSheetsSubscriptionHint(subscriberLimit.value),
   );
 </script>
 
@@ -129,12 +142,16 @@
         {{ SAVED_SHEETS_LABELS.empty }}
       </p>
 
-      <p
-        v-if="isLimitReached"
-        class="text-xs text-muted"
-      >
-        {{ SAVED_SHEETS_LABELS.limitReached }}
-      </p>
+      <template v-if="isLimitReached">
+        <p class="text-xs text-muted">
+          {{ SAVED_SHEETS_LABELS.limitReached }}
+        </p>
+
+        <SheetLimitHint
+          v-if="canRaiseLimit"
+          :text="subscriptionHint"
+        />
+      </template>
     </template>
   </section>
 </template>

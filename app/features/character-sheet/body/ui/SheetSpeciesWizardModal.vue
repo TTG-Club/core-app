@@ -802,7 +802,7 @@
     </template>
 
     <template #footer>
-      <div class="flex w-full items-center justify-between gap-2">
+      <div class="flex w-full flex-wrap items-center justify-between gap-2">
         <UButton
           v-if="step === 'features'"
           label="Назад"
@@ -821,7 +821,7 @@
           @click.left.exact.prevent="handleCustomSpecies"
         />
 
-        <div class="flex gap-2">
+        <div class="ml-auto flex gap-2">
           <UButton
             label="Отмена"
             color="neutral"

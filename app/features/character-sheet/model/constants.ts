@@ -343,6 +343,22 @@ export const SHEET_SHARED_COPY_SUCCESS_TITLE = 'Лист скопирован';
 /** Причина недоступности сохранения: свободных мест в лимите не осталось. */
 export const SHEET_SAVE_LINK_LIMIT_HINT = 'Достигнут лимит сохранённых листов';
 
+/**
+ * Раздел профиля с подпиской и кодами: туда ведёт подсказка о лимитах — там
+ * подписка и активируется, и видно её статус.
+ */
+export const SUBSCRIPTION_PROFILE_ROUTE = '/user/profile/activation';
+
+/** Подпись ссылки в подсказке о расширении лимитов подпиской. */
+export const SUBSCRIPTION_HINT_LINK_LABEL = 'Подписка и коды';
+
+/** Формы слова «лист» для подписей лимитов. */
+export const SHEET_PLURAL_FORMS: [string, string, string] = [
+  'лист',
+  'листа',
+  'листов',
+];
+
 /** Порядок отображения характеристик. */
 export const ABILITY_ORDER: AbilityKey[] = [
   'strength',
