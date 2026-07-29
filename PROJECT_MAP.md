@@ -120,6 +120,17 @@ modals), so its capabilities are listed here rather than squeezed into the table
   It goes through the same `setSpecies` and is stored with a
   `custom:<uuid>` url; features land with origin `species`, so re-picking a
   species replaces them like catalog ones.
+- The class wizard does the same for a homebrew class (`SheetCustomClassModal`,
+  opened over the catalog list): name, an optional subclass name, hit die,
+  saving throws, skill proficiencies, a caster type
+  (`CUSTOM_CLASS_CASTER_TYPE_OPTIONS` — spell slots follow it) and any number of
+  features (name + `MarkupEditor` description). It goes through the same
+  `setClass` and is stored with a `custom:<uuid>` url; features land with origin
+  `class`, so re-picking a class replaces them like catalog ones. Armour, weapon
+  and tool proficiencies plus class resources are left to the sheet's own panels
+  — a homebrew class has no proficiency prose or table to derive them from.
+  Levelling one up falls back to the wizard's no-class path (average hit points,
+  no feature steps), since the level-up wizard resolves features by class url.
 - Level-up wizard inside the experience modal (`composables/useLevelUpWizard.ts`):
   one step per gained level with its own hit-point mode (average / roll / max),
   the class and subclass features of that level with their choices, and the

@@ -1654,6 +1654,76 @@ export const CUSTOM_SPECIES_LABELS = {
   apply: 'Создать',
 };
 
+/**
+ * Префикс URL своего класса: ссылки на раздел у него нет, поэтому запись листа
+ * получает свой идентификатор (как своя предыстория и свой вид) — так свой
+ * класс не путается с классом каталога.
+ */
+export const CUSTOM_CLASS_URL_PREFIX = 'custom:';
+
+/** Ограничение длины названия своего класса и его подкласса. */
+export const CUSTOM_CLASS_NAME_MAX_LENGTH = 80;
+
+/** Ограничение длины названия умения своего класса. */
+export const CUSTOM_CLASS_FEATURE_NAME_MAX_LENGTH = 120;
+
+/** Кость хитов своего класса по умолчанию; номинал из `HIT_DIE_OPTIONS`. */
+export const CUSTOM_CLASS_DEFAULT_HIT_DIE = 8;
+
+/** Сколько спасбросков даёт класс по правилам D&D. */
+export const CUSTOM_CLASS_SAVING_THROW_COUNT = 2;
+
+/**
+ * Варианты заклинательства своего класса: тип задаёт прогрессию ячеек, поэтому
+ * каждый подписан классами-примерами — иначе выбор пришлось бы сверять с
+ * правилами.
+ */
+export const CUSTOM_CLASS_CASTER_TYPE_OPTIONS: Array<{
+  label: string;
+  value: CasterType;
+}> = [
+  { label: 'Класс не даёт заклинаний', value: CasterType.NONE },
+  { label: 'Полный заклинатель (волшебник, жрец)', value: CasterType.FULL },
+  {
+    label: 'Половина заклинателя (паладин, следопыт)',
+    value: CasterType.HALF,
+  },
+  {
+    label: 'Треть заклинателя (мистический рыцарь)',
+    value: CasterType.THIRD,
+  },
+  { label: 'Заклинатель договора (колдун)', value: CasterType.PACT },
+];
+
+/** Подписи формы своего класса. */
+export const CUSTOM_CLASS_LABELS = {
+  openButton: 'Свой класс',
+  title: 'Свой класс',
+  nameTitle: 'Название',
+  namePlaceholder: 'Например: Охотник за бурями',
+  subclassTitle: 'Подкласс (необязательно)',
+  subclassPlaceholder: 'Например: Путь громового шага',
+  hitDieTitle: 'Кость хитов',
+  savingThrowsTitle: `Спасброски (обычно ${CUSTOM_CLASS_SAVING_THROW_COUNT})`,
+  savingThrowsPlaceholder: 'Выберите характеристики',
+  skillsTitle: 'Владение навыками',
+  skillsPlaceholder: 'Выберите навыки',
+  casterTypeTitle: 'Заклинательство',
+  featuresTitle: 'Умения',
+  featureNamePlaceholder: 'Название умения',
+  featureDescriptionPlaceholder: 'Опиши умение',
+  featureAdd: 'Добавить умение',
+  featureRemove: 'Удалить умение',
+  featuresEmpty:
+    'Умений нет — их можно добавить и позже, на вкладке «Особенности».',
+  hint:
+    'Свой класс применяется как каталожный: кость хитов, хиты, спасброски, '
+    + 'владение навыками, ячейки заклинаний и умения сразу заполнят лист. '
+    + 'Владения бронёй, оружием и инструментами задаются на панели владений, '
+    + 'ресурсы класса — на панели ресурсов.',
+  apply: 'Создать',
+};
+
 /** Ключевые слова групп брони для сопоставления прозы владений класса. */
 export const ARMOR_MATCH_KEYWORDS: Record<
   ArmorProficiencyGroup['key'],

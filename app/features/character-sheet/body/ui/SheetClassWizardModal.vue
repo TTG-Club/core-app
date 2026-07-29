@@ -23,6 +23,7 @@
     CLASSES_DETAIL_BASE_PATH,
     CLASSES_FILTERS_PATH,
     CLASSES_SEARCH_PATH,
+    CUSTOM_CLASS_LABELS,
     deriveClassResources,
     derivePreparedSpellsScaling,
     detectFeatureChoice,
@@ -54,6 +55,7 @@
     unionToolProficiencies,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetCustomClassModal from './SheetCustomClassModal.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
   type WizardStep = 'class' | 'review';
@@ -77,8 +79,21 @@
     },
   });
 
+  // Свой класс собирается в отдельной модалке поверх списка: сама она и
+  // применяет его к листу, поэтому мастер после успеха только закрывается, а
+  // отмена возвращает к списку каталога.
+  const customClassModal = overlay.create(SheetCustomClassModal);
+
   function handlePreview(url: string) {
     classPreviewDrawer.open({ url });
+  }
+
+  async function handleCustomClass() {
+    const isCreated = await customClassModal.open();
+
+    if (isCreated) {
+      emit('close');
+    }
   }
 
   const step = ref<WizardStep>('class');
@@ -1099,7 +1114,14 @@
           @click.left.exact.prevent="handleBack"
         />
 
-        <span v-else />
+        <UButton
+          v-else
+          :label="CUSTOM_CLASS_LABELS.openButton"
+          icon="tabler:plus"
+          color="neutral"
+          variant="subtle"
+          @click.left.exact.prevent="handleCustomClass"
+        />
 
         <div class="flex gap-2">
           <UButton

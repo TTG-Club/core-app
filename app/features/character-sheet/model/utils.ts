@@ -37,9 +37,9 @@ import type {
   ClassSummary,
   ClassTableColumn,
   CustomArmorType,
+  CustomFeatureDraft,
   CustomInventoryItemDraft,
   CustomInventoryKind,
-  CustomSpeciesFeatureDraft,
   CustomSpellDraft,
   CustomSpellStatRow,
   DamageDiceGroup,
@@ -134,6 +134,7 @@ import {
   CUSTOM_ARMOR_TYPE_BY_DEXTERITY_MOD,
   CUSTOM_ARMOR_TYPE_META,
   CUSTOM_BACKGROUND_URL_PREFIX,
+  CUSTOM_CLASS_URL_PREFIX,
   CUSTOM_INVENTORY_KIND_CATEGORIES,
   CUSTOM_INVENTORY_URL_PREFIX,
   CUSTOM_ITEM_WEIGHT_MAX,
@@ -4663,7 +4664,7 @@ export function buildVisionValuesFromRows(
  * @returns особенности с происхождением «вид».
  */
 export function buildCustomSpeciesFeatures(
-  drafts: CustomSpeciesFeatureDraft[],
+  drafts: CustomFeatureDraft[],
   speciesName: string,
 ): CharacterFeature[] {
   return drafts
@@ -4676,6 +4677,45 @@ export function buildCustomSpeciesFeatures(
       originName: speciesName,
       // Особенность своего вида к уровню класса не привязана: снятие уровня её
       // не заберёт.
+      level: null,
+      choice: null,
+    }));
+}
+
+/**
+ * URL своего класса: ссылки на раздел у него нет, поэтому запись листа получает
+ * свой идентификатор с префиксом `custom:` — как своя предыстория и свой вид.
+ *
+ * @returns URL своего класса (`custom:` + идентификатор).
+ */
+export function buildCustomClassUrl(): string {
+  return `${CUSTOM_CLASS_URL_PREFIX}${crypto.randomUUID()}`;
+}
+
+/**
+ * Умения листа из черновиков формы своего класса: строки без названия
+ * отбрасываются, описание разбирается из хранимой разметки редактора.
+ * Идентификатор классовый (`class:`) — смена класса заберёт эти умения вместе с
+ * самим классом, как и умения класса каталога.
+ *
+ * @param drafts черновики умений формы.
+ * @param className название своего класса — источник умения на листе.
+ * @returns умения с происхождением «класс».
+ */
+export function buildCustomClassFeatures(
+  drafts: CustomFeatureDraft[],
+  className: string,
+): CharacterFeature[] {
+  return drafts
+    .filter((draft) => draft.name.trim())
+    .map((draft) => ({
+      id: getCharacterFeatureId('class', draft.id),
+      name: draft.name.trim(),
+      description: parseStoredMarkupNodes(draft.description),
+      origin: 'class',
+      originName: className,
+      // Уровень форма не спрашивает: без него снятие уровня умение не заберёт —
+      // свой класс правится вручную на вкладке «Особенности».
       level: null,
       choice: null,
     }));

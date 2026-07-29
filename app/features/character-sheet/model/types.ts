@@ -471,8 +471,8 @@ export interface CharacterInnateSpell {
   requiredLevel: number;
 }
 
-/** Черновик особенности своего вида в форме создания. */
-export interface CustomSpeciesFeatureDraft {
+/** Черновик особенности или умения в форме создания своего вида или класса. */
+export interface CustomFeatureDraft {
   /**
    * Идентификатор строки формы; он же становится частью id особенности листа,
    * поэтому две особенности с одинаковым названием не схлопываются.

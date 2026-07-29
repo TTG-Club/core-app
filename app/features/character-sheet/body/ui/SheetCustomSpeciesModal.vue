@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CustomSpeciesFeatureDraft } from '../../model';
+  import type { CustomFeatureDraft } from '../../model';
 
   import { MarkupEditor } from '~ui/markup-editor';
 
@@ -50,7 +50,7 @@
   // модалкой, и форма не должна молча обнулять уже введённые дистанции.
   const visionRows = ref(buildVisionRows(character.value.vision));
 
-  const draftFeatures = ref<CustomSpeciesFeatureDraft[]>([]);
+  const draftFeatures = ref<CustomFeatureDraft[]>([]);
 
   const speedOptions = SPEED_MODAL_ORDER.map((key) => ({
     label: SPEED_TYPE_LABELS[key],

@@ -11,6 +11,7 @@ export { default as SheetClassWizardModal } from './SheetClassWizardModal.vue';
 export { default as SheetCurrencyModal } from './SheetCurrencyModal.vue';
 export { default as SheetCurrencyRow } from './SheetCurrencyRow.vue';
 export { default as SheetCustomBackgroundModal } from './SheetCustomBackgroundModal.vue';
+export { default as SheetCustomClassModal } from './SheetCustomClassModal.vue';
 export { default as SheetCustomItemModal } from './SheetCustomItemModal.vue';
 export { default as SheetCustomSpeciesModal } from './SheetCustomSpeciesModal.vue';
 export { default as SheetCustomSpellModal } from './SheetCustomSpellModal.vue';
