@@ -4135,6 +4135,20 @@ export function getClassToolChoice(
   };
 }
 
+/** Корень слова «компетентность»: от него отсчитывается количество навыков. */
+const EXPERTISE_KEYWORD = 'компетентност';
+
+/**
+ * Компетентность как выдача умения («вы получаете компетентность»), а не
+ * упоминание слова в прозе: у «Острого словца» барда компетентность — фигура
+ * речи («подрывать уверенность и компетентность других»), и распознанный выбор
+ * требовал бы 60 навыков (число приезжало из «в пределах 60 фт.»).
+ */
+const EXPERTISE_GRANT_PATTERN = new RegExp(
+  `(?:получ|приобрет)\\p{L}*\\s+${EXPERTISE_KEYWORD}`,
+  'u',
+);
+
 /**
  * Распознавание выбора внутри особенности класса или вида: компетентность
  * (экспертиза), владение навыком на выбор или язык на выбор. Иначе — null
@@ -4156,12 +4170,15 @@ export function detectFeatureChoice(
 
   const text = rawText.toLowerCase().replaceAll('ё', 'е');
 
-  if (text.includes('компетентност')) {
+  // Количество считается от первого упоминания компетентности, а не от самой
+  // выдачи: у следопыта число стоит до неё («Выберите одно из ваших владений
+  // навыком… Вы получаете компетентность»).
+  if (EXPERTISE_GRANT_PATTERN.test(text)) {
     return {
       id: featureId,
       kind: 'skill-expertise',
       label: '',
-      count: parseChoiceCount(text.slice(text.indexOf('компетентност'))),
+      count: parseChoiceCount(text.slice(text.indexOf(EXPERTISE_KEYWORD))),
       listed: [],
     };
   }
