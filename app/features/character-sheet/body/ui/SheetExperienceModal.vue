@@ -1,10 +1,11 @@
 <script setup lang="ts">
   import type { StepperItem } from '@nuxt/ui';
 
-  import type { HitPointsGainMode } from '../../model';
+  import type { AbilityKey, HitPointsGainMode } from '../../model';
 
   import { useCharacterSheet, useLevelUpWizard } from '../../composables';
   import {
+    ABILITY_IMPROVEMENT_LABELS,
     EXPERIENCE_MAX,
     getFeaturesAboveLevel,
     getHitDieAverage,
@@ -22,6 +23,8 @@
     close: [];
   }>();
 
+  const toast = useToast();
+
   const { character, setProgress, applyLevelUp } = useCharacterSheet();
 
   const {
@@ -33,17 +36,26 @@
     isSubclassLoading,
     hasSubclassError,
     selectedSubclassUrl,
+    isFeatsLoading,
+    hasFeatsError,
     prepare,
     reset,
     setGainMode,
     rollHitDie,
     setSelection,
     setNote,
+    setFeatChoice,
+    setFeatAbility,
     selectSubclass,
     choiceOptions,
+    featOptions,
+    selectedFeat,
     isStepValid,
     buildPayload,
   } = useLevelUpWizard();
+
+  /** Идёт применение повышения: догружаются описания выбранных черт. */
+  const isApplying = ref(false);
 
   const draftLevel = ref(character.value.level);
 
@@ -227,25 +239,70 @@
     setNote(stepIndex.value - 1, featureId, value);
   }
 
+  function handleFeat(featureId: string, featUrl: string) {
+    setFeatChoice(stepIndex.value - 1, featureId, featUrl);
+  }
+
+  function handleFeatAbility(
+    featureId: string,
+    payload: { slot: number; ability: AbilityKey | null },
+  ) {
+    setFeatAbility(
+      stepIndex.value - 1,
+      featureId,
+      payload.slot,
+      payload.ability,
+    );
+  }
+
+  /** Черты, доступные умению текущего шага. */
+  function currentFeatOptions(featureId: string) {
+    return featOptions(stepIndex.value - 1, featureId);
+  }
+
+  /** Черта, выбранная в умении текущего шага. */
+  function currentSelectedFeat(featureId: string) {
+    return selectedFeat(stepIndex.value - 1, featureId);
+  }
+
   function handleSubclassSelect(subclassUrl: string | null) {
     if (subclassUrl) {
       void selectSubclass(subclassUrl);
     }
   }
 
-  function handleApply() {
-    if (isStepBlocked.value) {
+  async function handleApply() {
+    if (isStepBlocked.value || isApplying.value) {
       return;
     }
 
     if (isStepsMode.value) {
-      const payload = buildPayload(draftLevel.value, totalExperience.value);
+      isApplying.value = true;
 
-      if (payload) {
-        applyLevelUp(payload);
-        emit('close');
+      try {
+        const payload = await buildPayload(
+          draftLevel.value,
+          totalExperience.value,
+        );
+
+        if (payload) {
+          applyLevelUp(payload);
+          emit('close');
+
+          return;
+        }
+
+        // Выбранную черту загрузить не удалось: молча применять повышение
+        // нельзя — игрок остался бы без неё, не заметив потери.
+        toast.add({
+          color: 'error',
+          icon: 'tabler:alert-triangle',
+          title: ABILITY_IMPROVEMENT_LABELS.applyError,
+        });
 
         return;
+      } finally {
+        isApplying.value = false;
       }
     }
 
@@ -396,11 +453,18 @@
           :draft="currentDraft"
           :hit-die="classDie"
           :constitution-modifier="constitutionModifier"
+          :abilities="character.abilities"
           :choice-options="choiceOptions"
+          :feat-options="currentFeatOptions"
+          :selected-feat="currentSelectedFeat"
+          :is-feats-loading="isFeatsLoading"
+          :has-feats-error="hasFeatsError"
           @update:gain-mode="handleGainMode"
           @roll="handleRoll"
           @update:selection="handleSelection"
           @update:note="handleNote"
+          @update:feat="handleFeat"
+          @update:feat-ability="handleFeatAbility"
         >
           <template
             v-if="currentStep.isSubclassStep"
@@ -463,6 +527,7 @@
             v-if="isApplyVisible"
             :label="LEVEL_UP_WIZARD_LABELS.apply"
             color="primary"
+            :loading="isApplying"
             :disabled="isStepBlocked"
             @click.left.exact.prevent="handleApply"
           />

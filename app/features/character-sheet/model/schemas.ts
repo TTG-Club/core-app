@@ -12,6 +12,7 @@ import type {
   ClassSummary,
   ClassTableColumn,
   FeatCatalogItem,
+  FeatSelectOption,
   FeatSummary,
   FeatureDescriptionNode,
   InventoryArmor,
@@ -33,8 +34,10 @@ import { descriptionNodesSchema } from './character-schema';
 import { SPELL_COMPONENT_LABELS } from './constants';
 import {
   getClassToolChoice,
+  isAbilityImprovementFeature,
   matchToolProficiencyName,
   parseAbilityKeys,
+  parseApiAbilityKey,
   parseFeatMarker,
   parseItemWeight,
   stripMarkupMarkers,
@@ -248,6 +251,61 @@ const featSelectResponseSchema = z
     z.object({ value: z.array(featSelectItemSchema) }),
   ])
   .catch([]);
+
+/**
+ * Схема пункта `/select` с полями выбора черты за улучшение характеристик:
+ * помимо повторяемости нужны категория, источник и прибавки к характеристикам.
+ */
+const featSelectOptionSchema = z.object({
+  url: z.string(),
+  name: z.object({ rus: z.string().catch('') }).catch({ rus: '' }),
+  category: z.string().catch(''),
+  repeatability: z.boolean().catch(false),
+  // Характеристики приходят в верхнем регистре (`STRENGTH`); нераспознанные
+  // значения отбрасываются разбором ниже.
+  abilities: z.array(z.string()).nullable().catch(null),
+  abilityScoreIncreaseOptions: z.number().nullable().catch(null),
+  source: z
+    .object({
+      name: z.object({ label: z.string().catch('') }).catch({ label: '' }),
+    })
+    .catch({ name: { label: '' } }),
+});
+
+/** Ответ `/select` для выбора черты: плоский массив или конверт `{ value }`. */
+const featSelectOptionsResponseSchema = z
+  .union([
+    z.array(featSelectOptionSchema),
+    z.object({ value: z.array(featSelectOptionSchema) }),
+  ])
+  .catch([]);
+
+/**
+ * Валидация ответа `GET /api/v2/feats/select` и приведение к опциям выбора
+ * черты за классовое улучшение характеристик. Битый ответ даёт пустой список,
+ * а не исключение.
+ *
+ * @param input сырой ответ `/select`.
+ * @returns опции черт для селектора мастера повышения уровня.
+ */
+export function parseFeatSelectOptions(input: unknown): FeatSelectOption[] {
+  const parsed = featSelectOptionsResponseSchema.parse(input);
+  const list = Array.isArray(parsed) ? parsed : parsed.value;
+
+  return list.map((feat) => ({
+    url: feat.url,
+    name: feat.name.rus,
+    category: feat.category,
+    sourceLabel: feat.source.name.label,
+    repeatability: feat.repeatability,
+    abilities: (feat.abilities ?? []).flatMap((ability) => {
+      const key = parseApiAbilityKey(ability);
+
+      return key ? [key] : [];
+    }),
+    abilityIncreaseCount: Math.max(0, feat.abilityScoreIncreaseOptions ?? 0),
+  }));
+}
 
 /**
  * Валидация ответа `GET /api/v2/feats/select` и выборка url повторяемых черт.
@@ -701,6 +759,11 @@ const classFeatureSchema = z.object({
   description: renderNodeSchema,
   isSubclass: z.boolean().catch(false),
   fightingStyleChoice: z.boolean().catch(false),
+  abilityImprovement: z.boolean().catch(false),
+  scaling: z
+    .array(z.object({ level: z.coerce.number().catch(0) }))
+    .nullable()
+    .catch(null),
 });
 
 /** Схема детального ответа класса или подкласса (нужные листу поля). */
@@ -746,6 +809,16 @@ function toClassSummary(
     description: toDescriptionNodes(feature.description),
     isSubclass: feature.isSubclass,
     fightingStyleChoice: feature.fightingStyleChoice,
+    // Флага в ответе класса пока нет — тогда умение распознаётся по описанию,
+    // где «Улучшение характеристик» ссылается на одноимённую черту.
+    // Флаг приходит с бэка; распознавание по названию и описанию остаётся
+    // страховкой для записей, где он не проставлен.
+    abilityImprovement:
+      feature.abilityImprovement
+      || isAbilityImprovementFeature(feature.name, feature.description),
+    scalingLevels: (feature.scaling ?? [])
+      .map((entry) => entry.level)
+      .filter((entry) => entry > 0),
   }));
 
   const table: ClassTableColumn[] = detail.table.map((column) => ({

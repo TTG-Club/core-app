@@ -11,6 +11,7 @@ import type {
   ArmorDexterityMod,
   CatalogSpellDetail,
   Character,
+  CharacterAbilities,
   CharacterClass,
   CharacterClassResource,
   CharacterCurrency,
@@ -39,6 +40,7 @@ import type {
   CustomInventoryKind,
   CustomSpellDraft,
   CustomSpellStatRow,
+  FeatSelectOption,
   FeatSummary,
   FeatureDescriptionNode,
   FeatureOrigin,
@@ -90,6 +92,10 @@ import {
 } from '~ui/markup';
 
 import {
+  ABILITY_IMPROVEMENT_EXCLUDED_FEAT_CATEGORIES,
+  ABILITY_IMPROVEMENT_FEAT_URL_PREFIX,
+  ABILITY_IMPROVEMENT_FEATURE_NAMES,
+  ABILITY_IMPROVEMENT_SCORE_MAX,
   ABILITY_LABELS,
   ABILITY_ORDER,
   ABILITY_SHORT_LABELS,
@@ -2639,19 +2645,38 @@ export function getLevelFeatureRows(
     onlySubclass: boolean,
   ): void => {
     for (const summary of summaries) {
-      if (summary.isSubclass !== onlySubclass || summary.level !== level) {
+      // Улучшение характеристик справочник даёт один раз, а повторы держит в
+      // таблице прогрессии: без них выбор черты был бы только на первом уровне
+      // умения (у воина — на 4-м, но не на 6, 8, 12 …).
+      const isRepeatedImprovement =
+        summary.abilityImprovement && summary.scalingLevels.includes(level);
+
+      if (
+        summary.isSubclass !== onlySubclass
+        || (summary.level !== level && !isRepeatedImprovement)
+      ) {
         continue;
       }
 
-      const id = getCharacterFeatureId('class', summary.key);
+      const baseId = getCharacterFeatureId('class', summary.key);
+
+      // Каждый уровень улучшения характеристик — свой выбор, поэтому в
+      // идентификатор строки идёт уровень: иначе выборы разных уровней
+      // затирали бы друг друга общим ключом умения.
+      const id = summary.abilityImprovement ? `${baseId}:${level}` : baseId;
 
       rows.push({
         id,
         name: summary.name,
-        level: summary.level,
+        level,
         description: [...summary.description],
         originLabel,
-        choice: detectFeatureChoice(id, summary.description, skillNames),
+        // Выбор черты рисуется своим блоком, поэтому текстовый выбор такому
+        // умению не нужен — иначе под чертой висело бы пустое поле ввода.
+        choice: summary.abilityImprovement
+          ? null
+          : detectFeatureChoice(id, summary.description, skillNames),
+        abilityImprovement: summary.abilityImprovement,
       });
     }
   };
@@ -2788,9 +2813,10 @@ export function mergeClassResources(
 }
 
 /**
- * Классовые умения, которые даются выше указанного уровня, — их забирает
- * снижение уровня. Записи без уровня (умения вида, черты, ручные и листы до
- * учёта уровня) не трогаются.
+ * Умения, полученные выше указанного уровня, — их забирает снижение уровня.
+ * Уровень проставлен у классовых умений и у черт, взятых за классовое улучшение
+ * характеристик, поэтому уходят и они. Записи без уровня (умения вида, черты,
+ * добавленные вручную, и листы до учёта уровня) не трогаются.
  *
  * @param features особенности листа.
  * @param level новый уровень персонажа.
@@ -2801,10 +2827,7 @@ export function getFeaturesAboveLevel(
   level: number,
 ): CharacterFeature[] {
   return features.filter(
-    (feature) =>
-      feature.origin === 'class'
-      && feature.level !== null
-      && feature.level > level,
+    (feature) => feature.level !== null && feature.level > level,
   );
 }
 
@@ -3195,6 +3218,172 @@ export function parseFeatMarker(featText: string): {
     name: nameMatch?.[1]?.trim() ?? '',
     subchoice: subchoiceMatch?.[1]?.trim() ?? '',
   };
+}
+
+/**
+ * Разбор ключа характеристики из ответа API (`STRENGTH`) в ключ листа
+ * (`strength`). Регистр приводится, неизвестное значение отбрасывается.
+ *
+ * @param value значение характеристики из ответа API.
+ * @returns ключ характеристики листа; null — значение не распознано.
+ */
+export function parseApiAbilityKey(value: string): AbilityKey | null {
+  const normalized = value.trim().toLowerCase();
+
+  return ABILITY_ORDER.find((key) => key === normalized) ?? null;
+}
+
+/**
+ * Запасное распознавание умения, дающего черту за улучшение характеристик:
+ * по названию либо по ссылке на черту «Улучшение характеристик» в описании.
+ *
+ * Основной источник — флаг `abilityImprovement` из ответа класса; проверка
+ * нужна для записей, где он ещё не проставлен (самодельные классы, строки до
+ * бэкфилла).
+ *
+ * @param name название умения класса.
+ * @param description описание умения в разметке сайта.
+ * @returns true — умение даёт выбор черты.
+ */
+export function isAbilityImprovementFeature(
+  name: string,
+  description: RenderNode,
+): boolean {
+  const normalizedName = name.toLowerCase().replaceAll('ё', 'е');
+
+  if (
+    ABILITY_IMPROVEMENT_FEATURE_NAMES.some((featureName) =>
+      normalizedName.includes(featureName),
+    )
+  ) {
+    return true;
+  }
+
+  const { url } = parseFeatMarker(getNodeText(description));
+
+  return url !== null && url.startsWith(ABILITY_IMPROVEMENT_FEAT_URL_PREFIX);
+}
+
+/**
+ * Опции черт, доступных за классовое улучшение характеристик: убираются черты
+ * запрещённых категорий (происхождения и эпические) и уже взятые на листе —
+ * кроме повторяемых, их можно брать снова. Черта, уже выбранная на другом шаге
+ * мастера, из списка тоже уходит.
+ *
+ * @param options все черты каталога.
+ * @param takenUrls url черт, уже взятых на листе или в мастере.
+ * @param selectedUrl url черты, выбранной в этом же селекторе; '' — не выбрана.
+ * @returns черты, доступные для выбора.
+ */
+export function getAbilityImprovementFeatOptions(
+  options: FeatSelectOption[],
+  takenUrls: Set<string>,
+  selectedUrl: string,
+): FeatSelectOption[] {
+  return options.filter((option) => {
+    if (
+      ABILITY_IMPROVEMENT_EXCLUDED_FEAT_CATEGORIES.includes(option.category)
+    ) {
+      return false;
+    }
+
+    // Выбранная здесь черта остаётся видимой, иначе селектор показал бы пустое
+    // значение вместо сделанного выбора.
+    return (
+      option.repeatability
+      || option.url === selectedUrl
+      || !takenUrls.has(option.url)
+    );
+  });
+}
+
+/**
+ * Прибавки к характеристикам по выбору игрока в черте: каждый заполненный слот
+ * даёт +1 своей характеристике, повтор характеристики складывается (так «+2 к
+ * одной» получается двумя одинаковыми слотами).
+ *
+ * @param abilities выбранные характеристики (null — слот не заполнен).
+ * @returns прибавки по характеристикам.
+ */
+export function collectFeatAbilityIncreases(
+  abilities: (AbilityKey | null)[],
+): Partial<Record<AbilityKey, number>> {
+  const increases: Partial<Record<AbilityKey, number>> = {};
+
+  for (const ability of abilities) {
+    if (ability) {
+      increases[ability] = (increases[ability] ?? 0) + 1;
+    }
+  }
+
+  return increases;
+}
+
+/**
+ * Сложение прибавок к характеристикам из нескольких черт.
+ *
+ * @param increases прибавки по чертам.
+ * @returns суммарные прибавки по характеристикам.
+ */
+export function mergeAbilityIncreases(
+  increases: Partial<Record<AbilityKey, number>>[],
+): Partial<Record<AbilityKey, number>> {
+  const total: Partial<Record<AbilityKey, number>> = {};
+
+  for (const increase of increases) {
+    for (const key of ABILITY_ORDER) {
+      const amount = increase[key];
+
+      if (amount) {
+        total[key] = (total[key] ?? 0) + amount;
+      }
+    }
+  }
+
+  return total;
+}
+
+/**
+ * Применение прибавок к характеристикам с потолком в 20: выбор не поднимает
+ * характеристику выше предела, но и не опускает уже превышающее его значение
+ * (оно могло прийти от эпического дара или ручной правки).
+ *
+ * @param abilities значения характеристик персонажа.
+ * @param increases прибавки по характеристикам.
+ * @returns новые значения характеристик.
+ */
+export function applyAbilityIncreases(
+  abilities: CharacterAbilities,
+  increases: Partial<Record<AbilityKey, number>>,
+): CharacterAbilities {
+  const result = { ...abilities };
+
+  for (const key of ABILITY_ORDER) {
+    const amount = increases[key];
+
+    if (amount) {
+      // `clamp` здесь не подходит: у характеристики выше предела (эпический
+      // дар, ручная правка) нижняя граница окажется больше верхней, и значение
+      // не выросло бы, а упало до предела.
+      result[key] = Math.max(
+        abilities[key],
+        Math.min(abilities[key] + amount, ABILITY_IMPROVEMENT_SCORE_MAX),
+      );
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Сколько ещё можно прибавить характеристике до предела: по нему выбор
+ * подсказывает, что характеристика уже упёрлась в 20.
+ *
+ * @param score текущее значение характеристики.
+ * @returns остаток до предела; 0 — предел уже достигнут.
+ */
+export function getAbilityIncreaseHeadroom(score: number): number {
+  return Math.max(0, ABILITY_IMPROVEMENT_SCORE_MAX - score);
 }
 
 /**
