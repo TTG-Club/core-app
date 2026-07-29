@@ -223,6 +223,9 @@ import {
   WEAPON_CATEGORY_LABELS,
   WEAPON_MATCH_KEYWORDS,
   WEAPON_PROFICIENCY_GROUPS,
+  WEAPON_TRAIT_AXES,
+  WEAPON_TRAIT_ITEMS,
+  WEAPON_TRAIT_MATCH_KEYWORDS,
   WEIGHT_DECIMALS,
 } from './constants';
 
@@ -3327,51 +3330,144 @@ export function parseAbilityKeys(text: string): AbilityKey[] {
 }
 
 /**
- * Сопоставление прозы владений класса с каталогом: если проза содержит
- * ключевое слово группы — добавляется «вся группа», иначе ищутся отдельные виды
- * по вхождению названия.
+ * Сегменты прозы владений по группам каталога: сегмент группы тянется от её
+ * ключевого слова до упоминания следующей группы. Так уточнение остаётся при
+ * своей группе — в «Простое оружие, воинское оружие со свойством лёгкое»
+ * «лёгкое» относится только к воинскому.
+ *
+ * @param normalizedProse строка владений в нижнем регистре.
+ * @param groups группы каталога владений.
+ * @param keywordsByKey ключевые слова групп по ключу группы.
+ * @returns сегмент прозы по ключу группы; групп без упоминания в карте нет.
+ */
+function getProseSegmentsByGroup(
+  normalizedProse: string,
+  groups: ProficiencyCatalogGroup[],
+  keywordsByKey: Record<string, string[]>,
+): Map<string, string> {
+  const mentions = groups
+    .map((group) => ({
+      key: group.key,
+      // Math.min пустого списка — Infinity: группа в прозе не упомянута.
+      index: Math.min(
+        ...(keywordsByKey[group.key] ?? [])
+          .map((keyword) => normalizedProse.indexOf(keyword))
+          .filter((index) => index >= 0),
+      ),
+    }))
+    .filter((mention) => Number.isFinite(mention.index))
+    .sort((first, second) => first.index - second.index);
+
+  return new Map(
+    mentions.map((mention, position) => [
+      mention.key,
+      normalizedProse.slice(
+        mention.index,
+        mentions[position + 1]?.index ?? normalizedProse.length,
+      ),
+    ]),
+  );
+}
+
+/**
+ * Сужение группы оружия признаками из прозы: «воинское оружие со свойством
+ * фехтовальное или лёгкое» — это не вся группа, а только её оружие с такими
+ * свойствами. Признаки одной оси объединяются, оси пересекаются
+ * (`WEAPON_TRAIT_AXES`).
+ *
+ * @param group группа каталога оружия.
+ * @param segment сегмент прозы владений этой группы в нижнем регистре.
+ * @returns виды оружия группы либо null, если проза группу не сужает.
+ */
+function narrowWeaponGroupItems(
+  group: ProficiencyCatalogGroup,
+  segment: string,
+): string[] | null {
+  const matchedAxes = WEAPON_TRAIT_AXES.map((axis) =>
+    axis.filter((trait) =>
+      WEAPON_TRAIT_MATCH_KEYWORDS[trait].some((keyword) =>
+        segment.includes(keyword),
+      ),
+    ),
+  ).filter((traits) => traits.length > 0);
+
+  if (!matchedAxes.length) {
+    return null;
+  }
+
+  return group.items.filter((weapon) =>
+    matchedAxes.every((traits) =>
+      traits.some((trait) => WEAPON_TRAIT_ITEMS[trait].includes(weapon)),
+    ),
+  );
+}
+
+/**
+ * Виды группы, названные в прозе поимённо: так разбирается проза без упоминания
+ * самой группы («Ручные арбалеты, длинные мечи, рапиры, короткие мечи»).
+ *
+ * @param group группа каталога владений.
+ * @param normalizedProse строка владений в нижнем регистре.
+ * @returns виды группы, встреченные в прозе.
+ */
+function getNamedGroupItems(
+  group: ProficiencyCatalogGroup,
+  normalizedProse: string,
+): string[] {
+  return group.items.filter((catalogItem) =>
+    normalizedProse.includes(catalogItem.toLowerCase()),
+  );
+}
+
+/**
+ * Сопоставление прозы владений класса с каталогом: упомянутая группа даётся
+ * целиком, если её сегмент прозы не сужен признаками (тогда берутся только
+ * подходящие виды), а не упомянутая — отдельными видами по вхождению названия.
  *
  * @param prose строка владений из ответа API.
  * @param groups группы каталога владений.
  * @param keywordsByKey ключевые слова групп по ключу группы.
+ * @param narrowGroupItems сужение группы по её сегменту прозы (только оружие).
  * @returns список подписей владений для листа.
  */
 export function matchProficiencyGroups(
   prose: string,
   groups: ProficiencyCatalogGroup[],
   keywordsByKey: Record<string, string[]>,
+  narrowGroupItems?: (
+    group: ProficiencyCatalogGroup,
+    segment: string,
+  ) => string[] | null,
 ): string[] {
   const normalizedProse = prose.toLowerCase();
 
-  const matched = new Set<string>();
+  const segmentsByGroup = getProseSegmentsByGroup(
+    normalizedProse,
+    groups,
+    keywordsByKey,
+  );
 
-  for (const group of groups) {
-    const keywords = keywordsByKey[group.key] ?? [];
+  const matched = groups.flatMap((group) => {
+    const segment = segmentsByGroup.get(group.key);
 
-    const hasGroupKeyword = keywords.some((keyword) =>
-      normalizedProse.includes(keyword),
-    );
-
-    if (hasGroupKeyword) {
-      matched.add(group.all);
-
-      continue;
+    if (segment === undefined) {
+      return getNamedGroupItems(group, normalizedProse);
     }
 
-    for (const item of group.items) {
-      if (normalizedProse.includes(item.toLowerCase())) {
-        matched.add(item);
-      }
-    }
-  }
+    // Пустой список сужения — проза назвала признаки, под которые в группе
+    // ничего не подходит; вся группа в этом случае всё равно не даётся.
+    return narrowGroupItems?.(group, segment) ?? [group.all];
+  });
 
-  return [...matched];
+  return [...new Set(matched)];
 }
 
 /**
  * Владения класса бронёй и оружием, распознанные из прозы ответа (best-effort);
  * распознанное игрок затем правит существующими модалками. Инструменты сюда не
- * входят — у них свой каталог с сайта (`matchToolProficiencies`).
+ * входят — у них свой каталог с сайта (`matchToolProficiencies`). Уточнённая
+ * группа оружия («воинское оружие со свойством фехтовальное или лёгкое» у
+ * плута) даётся подходящими видами, а не целиком.
  *
  * @param proficiencyText владения класса прозой (armor/weapon).
  * @param proficiencyText.armor владения бронёй прозой.
@@ -3392,6 +3488,7 @@ export function matchClassProficiencies(proficiencyText: {
       proficiencyText.weapon,
       WEAPON_PROFICIENCY_GROUPS,
       WEAPON_MATCH_KEYWORDS,
+      narrowWeaponGroupItems,
     ),
   };
 }

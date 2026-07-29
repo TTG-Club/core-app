@@ -418,6 +418,12 @@ export interface WeaponProficiencyGroup extends ProficiencyCatalogGroup {
   key: 'simple' | 'martial';
 }
 
+/**
+ * Признак оружия, которым проза владений класса сужает группу: «воинское оружие
+ * со свойством фехтовальное или лёгкое» (плут), «воинское рукопашное» (друид).
+ */
+export type WeaponTraitKey = 'finesse' | 'light' | 'melee' | 'ranged';
+
 /** Ключ группы каталога инструментов (категория раздела «Предметы»). */
 export type ToolProficiencyGroupKey =
   | 'artisan'
