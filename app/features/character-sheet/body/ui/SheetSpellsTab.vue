@@ -36,6 +36,7 @@
     PREPARED_SPELL_TOGGLE_LABELS,
     PREPARED_SPELLS_HINTS,
     PREPARED_SPELLS_LABEL,
+    SHEET_FILTER_LABELS,
     SHEET_ROLL_HINT_LABEL,
     SHEET_TAB_EMPTY_LABELS,
     SPELL_DAMAGE_ROLL_HINT_LABEL,
@@ -544,7 +545,7 @@
       return SHEET_TAB_EMPTY_LABELS.spells;
     }
 
-    return displayGroups.value.length ? '' : SPELL_FILTER_LABELS.empty;
+    return displayGroups.value.length ? '' : SHEET_FILTER_LABELS.empty;
   });
 
   type DisplaySpell = (typeof displayGroups.value)[number]['spells'][number];
@@ -733,11 +734,11 @@
         пустой кнопке в ряду делать нечего -->
       <UTooltip
         v-if="hasActiveFilter"
-        :text="SPELL_FILTER_LABELS.resetHint"
+        :text="SHEET_FILTER_LABELS.resetHint"
       >
         <UButton
           icon="tabler:filter-off"
-          :label="SPELL_FILTER_LABELS.reset"
+          :label="SHEET_FILTER_LABELS.reset"
           color="neutral"
           variant="ghost"
           size="xs"

@@ -1,13 +1,22 @@
 <script setup lang="ts">
-  import type { CharacterFeature } from '../../model';
+  import type {
+    CharacterFeature,
+    FeatureOriginGroup,
+    FeatureTabFilter,
+  } from '../../model';
 
   import { MarkupRender } from '~ui/markup';
 
   import { useCharacterSheet } from '../../composables';
   import {
+    FEATURE_ORIGIN_GROUP_HINTS,
     FEATURE_ORIGIN_LABELS,
+    getFeatureOriginGroups,
     getFeaturesAddMenuItems,
+    getFilterChipClass,
+    matchesFeatureFilter,
     SHEET_FEATURE_ROW_LABELS,
+    SHEET_FILTER_LABELS,
     SHEET_TAB_EMPTY_LABELS,
   } from '../../model';
 
@@ -96,40 +105,157 @@
       : ROW_ACTIONS_CLASS,
   );
 
-  const displayRows = computed(() =>
-    props.features.map((feature) => {
-      const isExpanded = expandedIds.value.has(feature.id);
+  /** Отмеченные чипами источники; пусто — список не сужается. */
+  const pickedOrigins = ref(new Set<FeatureOriginGroup>());
+
+  /** Источники, которые вкладка уже показывает: по ним и отбирают. */
+  const availableOrigins = computed(() =>
+    getFeatureOriginGroups(props.features),
+  );
+
+  /**
+   * Действующий отбор: источники считаются от доступных, поэтому выбор, которого
+   * в списке уже нет (особенность убрали вместе с последним её источником), сам
+   * собой перестаёт сужать список.
+   */
+  const featureFilter = computed<FeatureTabFilter>(() => ({
+    origins: availableOrigins.value.filter((originGroup) =>
+      pickedOrigins.value.has(originGroup),
+    ),
+  }));
+
+  /** Список сужен: отбор есть что сбросить. */
+  const hasActiveFilter = computed(
+    () => featureFilter.value.origins.length > 0,
+  );
+
+  /** Ряд отбора: одного источника на весь список мало, отбирать нечего. */
+  const hasFilterControls = computed(() => availableOrigins.value.length > 1);
+
+  /**
+   * Чипы источников, которые есть в списке: подпись целиком («Вид», «Черта») —
+   * ряд коротких слов помещается и на узком листе. Чипы набираются по одному,
+   * повторное нажатие снимает источник с отбора.
+   */
+  const originChips = computed(() =>
+    availableOrigins.value.map((originGroup) => {
+      const isPicked = featureFilter.value.origins.includes(originGroup);
 
       return {
-        ...feature,
-        isExpanded,
-        showBadge: feature.origin !== 'none',
-        originLabel: FEATURE_ORIGIN_LABELS[feature.origin],
-        badgeColor: ORIGIN_BADGE_COLORS[feature.origin],
-        chevronClass: isExpanded ? 'rotate-180' : '',
-        hasDescription: feature.description.length > 0,
+        originGroup,
+        label: FEATURE_ORIGIN_LABELS[originGroup],
+        tooltip: FEATURE_ORIGIN_GROUP_HINTS[originGroup],
+        isPicked,
+        chipClass: getFilterChipClass(isPicked),
       };
     }),
   );
+
+  /** Нажатие на чип источника: тем же чипом источник с отбора и снимается. */
+  function handleOriginPick(originGroup: FeatureOriginGroup) {
+    if (pickedOrigins.value.has(originGroup)) {
+      pickedOrigins.value.delete(originGroup);
+
+      return;
+    }
+
+    pickedOrigins.value.add(originGroup);
+  }
+
+  /** Нажатие на «Сбросить»: список возвращается целиком. */
+  function handleFilterReset() {
+    pickedOrigins.value.clear();
+  }
+
+  const displayRows = computed(() =>
+    props.features
+      .filter((feature) => matchesFeatureFilter(feature, featureFilter.value))
+      .map((feature) => {
+        const isExpanded = expandedIds.value.has(feature.id);
+
+        return {
+          ...feature,
+          isExpanded,
+          showBadge: feature.origin !== 'none',
+          originLabel: FEATURE_ORIGIN_LABELS[feature.origin],
+          badgeColor: ORIGIN_BADGE_COLORS[feature.origin],
+          chevronClass: isExpanded ? 'rotate-180' : '',
+          hasDescription: feature.description.length > 0,
+        };
+      }),
+  );
+
+  /**
+   * Подпись пустого места вкладки: пустой список либо отбор, под который ничего
+   * не подошло; '' — списку есть что показать.
+   */
+  const emptyLabel = computed(() => {
+    if (!props.features.length) {
+      return SHEET_TAB_EMPTY_LABELS.features;
+    }
+
+    return displayRows.value.length ? '' : SHEET_FILTER_LABELS.empty;
+  });
 </script>
 
 <template>
   <div class="flex flex-col gap-3 pt-2">
-    <div class="flex justify-end">
-      <UDropdownMenu
-        :items="addMenuItems"
-        :content="{ align: 'end' }"
+    <!-- Отбор стоит в одном ряду с «Добавить»: своей строки ряд из нескольких
+      коротких чипов не стоит. Чипы идут от самого списка — источника, которого
+      в нём нет, нет и среди чипов -->
+    <div class="flex flex-wrap items-center gap-2">
+      <div
+        v-if="hasFilterControls"
+        class="flex flex-wrap items-center gap-x-1.5 gap-y-2"
       >
-        <UButton
-          icon="tabler:plus"
-          label="Добавить"
-          trailing-icon="tabler:chevron-down"
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          :class="editControlClass"
-        />
-      </UDropdownMenu>
+        <UTooltip
+          v-for="originChip in originChips"
+          :key="originChip.originGroup"
+          :text="originChip.tooltip"
+        >
+          <button
+            type="button"
+            :class="originChip.chipClass"
+            :aria-pressed="originChip.isPicked"
+            @click.left.exact.prevent="handleOriginPick(originChip.originGroup)"
+          >
+            {{ originChip.label }}
+          </button>
+        </UTooltip>
+
+        <!-- Сброс появляется только при отборе: пустой кнопке в ряду делать
+          нечего -->
+        <UTooltip
+          v-if="hasActiveFilter"
+          :text="SHEET_FILTER_LABELS.resetHint"
+        >
+          <UButton
+            icon="tabler:filter-off"
+            :label="SHEET_FILTER_LABELS.reset"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            @click.left.exact.prevent="handleFilterReset"
+          />
+        </UTooltip>
+      </div>
+
+      <div class="ml-auto">
+        <UDropdownMenu
+          :items="addMenuItems"
+          :content="{ align: 'end' }"
+        >
+          <UButton
+            icon="tabler:plus"
+            label="Добавить"
+            trailing-icon="tabler:chevron-down"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            :class="editControlClass"
+          />
+        </UDropdownMenu>
+      </div>
     </div>
 
     <template v-if="displayRows.length">
@@ -262,11 +388,13 @@
       </div>
     </template>
 
+    <!-- Пустое место объявляет о себе подписью: пустой список особенностей либо
+      отбор, под который ничего не подошло -->
     <div
-      v-else
+      v-if="emptyLabel"
       class="flex h-64 items-center justify-center rounded-lg border border-dashed border-default text-sm text-dimmed"
     >
-      {{ SHEET_TAB_EMPTY_LABELS.features }}
+      {{ emptyLabel }}
     </div>
   </div>
 </template>

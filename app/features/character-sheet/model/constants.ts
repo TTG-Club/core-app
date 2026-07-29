@@ -15,6 +15,7 @@ import type {
   CustomSpellField,
   DamageRollSource,
   FeatureOrigin,
+  FeatureOriginGroup,
   HitPointsGainMode,
   InventoryItemCategory,
   InventoryStatRollKind,
@@ -1443,17 +1444,27 @@ export const PREPARED_SPELLS_LABELS: Record<
     'Число берётся из таблицы класса на текущем уровне; бонус прибавляется к нему (например, от черты или предмета).',
 };
 
+/**
+ * Общие подписи ряда отбора на вкладках листа: сброс и пустое место под отбором
+ * одинаковы и у заклинаний, и у особенностей.
+ */
+export const SHEET_FILTER_LABELS: Record<
+  'reset' | 'resetHint' | 'empty',
+  string
+> = {
+  reset: 'Сбросить',
+  resetHint: 'Снять отбор и вернуть список целиком',
+  empty: 'Под отбор ничего не подошло',
+};
+
 /** Подписи чипов отбора заклинаний на вкладке заклинаний. */
 export const SPELL_FILTER_LABELS: Record<
-  'prepared' | 'preparedHint' | 'cantrip' | 'reset' | 'resetHint' | 'empty',
+  'prepared' | 'preparedHint' | 'cantrip',
   string
 > = {
   prepared: 'Подготовленные',
   preparedHint: 'Оставить в списке только заклинания, помеченные значком',
   cantrip: 'З',
-  reset: 'Сбросить',
-  resetHint: 'Снять отбор и вернуть список целиком',
-  empty: 'Под отбор ничего не подошло',
 };
 
 /** Общая часть оформления чипа отбора (каталог заклинаний, вкладка). */
@@ -2037,13 +2048,36 @@ export const SPEED_PARSE_FALLBACK = 30;
  */
 export const DARKVISION_PARSE_FALLBACK = 60;
 
-/** Подписи происхождения особенности персонажа. */
+/**
+ * Подписи происхождения особенности персонажа. Особенность без источника
+ * добавлена в лист руками, поэтому подписана «Своё» — как своё заклинание или
+ * свой предмет.
+ */
 export const FEATURE_ORIGIN_LABELS: Record<FeatureOrigin, string> = {
   species: 'Вид',
   lineage: 'Подвид',
   class: 'Класс',
   feat: 'Черта',
-  none: 'Нет',
+  none: 'Своё',
+};
+
+/**
+ * Порядок чипов отбора по источнику на вкладке особенностей: сперва то, что
+ * лист выдал сам (вид, класс, черты), свои записи — последними.
+ */
+export const FEATURE_ORIGIN_GROUP_ORDER: FeatureOriginGroup[] = [
+  'species',
+  'class',
+  'feat',
+  'none',
+];
+
+/** Подсказки чипов отбора особенностей по источнику. */
+export const FEATURE_ORIGIN_GROUP_HINTS: Record<FeatureOriginGroup, string> = {
+  species: 'Оставить в списке особенности вида и подвида',
+  class: 'Оставить в списке особенности класса',
+  feat: 'Оставить в списке черты',
+  none: 'Оставить в списке свои особенности',
 };
 
 /**
@@ -2060,14 +2094,18 @@ export const SHEET_FEATURE_ROW_LABELS: Record<
   emptyDescription: 'Описание не заполнено',
 };
 
-/** Варианты происхождения при добавлении особенности вручную. */
+/**
+ * Варианты происхождения при добавлении особенности вручную: те же группы, что
+ * и у чипов отбора вкладки, — «Своё» стоит первым, оно же и по умолчанию.
+ */
 export const FEATURE_ORIGIN_OPTIONS: Array<{
   label: string;
   value: FeatureOrigin;
 }> = [
-  { label: 'Нет', value: 'none' },
-  { label: 'Вид', value: 'species' },
-  { label: 'Класс', value: 'class' },
+  { label: FEATURE_ORIGIN_LABELS.none, value: 'none' },
+  { label: FEATURE_ORIGIN_LABELS.species, value: 'species' },
+  { label: FEATURE_ORIGIN_LABELS.class, value: 'class' },
+  { label: FEATURE_ORIGIN_LABELS.feat, value: 'feat' },
 ];
 
 /** Каталог языков для настройки владения: группы и языки. */

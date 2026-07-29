@@ -527,6 +527,12 @@ export interface CharacterBackground {
 /** Происхождение особенности персонажа; none — добавлена вручную без источника. */
 export type FeatureOrigin = 'species' | 'lineage' | 'class' | 'feat' | 'none';
 
+/**
+ * Группа отбора особенностей по источнику: подвид отбирается вместе с видом —
+ * отдельного чипа под него на вкладке нет.
+ */
+export type FeatureOriginGroup = Exclude<FeatureOrigin, 'lineage'>;
+
 /** Узел описания особенности (элемент верхнего уровня разметки сайта). */
 export type FeatureDescriptionNode = string | SimpleTextNode | MarkerNode;
 
@@ -552,6 +558,12 @@ export interface CharacterFeature {
 
   /** Выбор игрока в особенности (например, цвет драконорождённого). */
   choice: string | null;
+}
+
+/** Отбор особенностей на вкладке особенностей. */
+export interface FeatureTabFilter {
+  /** Отобранные группы источников; пусто — список не сужается. */
+  origins: FeatureOriginGroup[];
 }
 
 /** Черта каталога в модалке добавления (ссылка из поиска раздела «Черты»). */

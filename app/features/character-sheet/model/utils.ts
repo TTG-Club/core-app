@@ -47,6 +47,8 @@ import type {
   FeatSummary,
   FeatureDescriptionNode,
   FeatureOrigin,
+  FeatureOriginGroup,
+  FeatureTabFilter,
   HitDiceAmount,
   HitDicePool,
   HitDiceSelectPool,
@@ -146,6 +148,7 @@ import {
   DEFAULT_ROLL_DICE_FACES,
   DEFAULT_WEAPON_ATTACK_ABILITY,
   DICE_NOTATION_LETTER,
+  FEATURE_ORIGIN_GROUP_ORDER,
   FEATURE_ORIGIN_LABELS,
   FILTER_CHIP_CLASS,
   FILTER_CHIP_IDLE_CLASS,
@@ -2946,6 +2949,55 @@ export function parseStoredMarkupNodes(
   }
 
   return nodes;
+}
+
+/**
+ * Группа отбора по источнику особенности: подвид попадает в группу вида (свой
+ * чип ради подвида ряд отбора не растит), ручная запись — в свои особенности.
+ *
+ * @param origin происхождение особенности.
+ * @returns группа отбора вкладки особенностей.
+ */
+export function getFeatureOriginGroup(
+  origin: FeatureOrigin,
+): FeatureOriginGroup {
+  return origin === 'lineage' ? 'species' : origin;
+}
+
+/**
+ * Группы источников, которые вкладка уже показывает: по ним и отбирают. Пустых
+ * чипов не бывает — источника, которого нет в списке, нет и в ряду отбора.
+ *
+ * @param features особенности персонажа.
+ * @returns группы источников в порядке чипов.
+ */
+export function getFeatureOriginGroups(
+  features: CharacterFeature[],
+): FeatureOriginGroup[] {
+  const listGroups = new Set(
+    features.map((feature) => getFeatureOriginGroup(feature.origin)),
+  );
+
+  return FEATURE_ORIGIN_GROUP_ORDER.filter((originGroup) =>
+    listGroups.has(originGroup),
+  );
+}
+
+/**
+ * Проходит ли особенность отбор вкладки: источник — любой из отобранных.
+ *
+ * @param feature особенность списка.
+ * @param filter отбор вкладки особенностей.
+ * @returns true — особенность остаётся в списке.
+ */
+export function matchesFeatureFilter(
+  feature: CharacterFeature,
+  filter: FeatureTabFilter,
+): boolean {
+  return (
+    !filter.origins.length
+    || filter.origins.includes(getFeatureOriginGroup(feature.origin))
+  );
 }
 
 /**
