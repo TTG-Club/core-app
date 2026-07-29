@@ -1606,11 +1606,32 @@ export const INVENTORY_CATEGORY_ICONS: Record<InventoryItemCategory, string> = {
   MAGIC_ITEM: 'tabler:sparkles',
 };
 
-/** Минимальное количество одного предмета в инвентаре. */
-export const INVENTORY_QUANTITY_MIN = 1;
+/**
+ * Минимальное количество одного предмета в инвентаре. Ноль разрешён: у
+ * потраченного расходника запись остаётся в списке (её не приходится искать в
+ * каталоге заново), но предмет считается отсутствующим — его нельзя надеть,
+ * им нельзя атаковать.
+ */
+export const INVENTORY_QUANTITY_MIN = 0;
 
 /** Максимальное количество одного предмета в инвентаре. */
 export const INVENTORY_QUANTITY_MAX = 999;
+
+/** Подписи кнопки доспеха в строке инвентаря по его текущему состоянию. */
+export const INVENTORY_EQUIP_ACTION_LABELS: Record<
+  'equip' | 'unequip',
+  string
+> = {
+  equip: 'Надеть',
+  unequip: 'Снять',
+};
+
+/** Значок предмета, которого у персонажа не осталось (количество — ноль). */
+export const INVENTORY_MISSING_BADGE_LABEL = 'Отсутствует';
+
+/** Подсказка значка «Отсутствует»: что именно запрещает нулевое количество. */
+export const INVENTORY_MISSING_BADGE_HINT =
+  'Предмета не осталось: его нельзя надеть, им нельзя атаковать и бросать урон';
 
 /** Короткие подписи плиток параметров предмета в строке инвентаря. */
 export const INVENTORY_STAT_LABELS: Record<

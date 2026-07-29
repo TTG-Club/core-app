@@ -14,6 +14,8 @@ import { CasterType } from '~classes/model';
 
 import {
   DRAFT_CHARACTER_ID,
+  INVENTORY_QUANTITY_MAX,
+  INVENTORY_QUANTITY_MIN,
   LEGACY_NOTE_ID,
   SHEET_NOTE_LABELS,
 } from './constants';
@@ -390,7 +392,15 @@ const inventoryItemSchema = z.object({
   typesLabel: z.string().catch(''),
   cost: z.string().catch(''),
   weight: z.coerce.number().catch(0),
-  quantity: z.coerce.number().catch(1),
+  // Ноль — рабочее состояние («Отсутствует»), а вот дробное и отрицательное
+  // количество запись листа держать не должна: строка показывала бы «−2», и
+  // предмет молча считался бы отсутствующим.
+  quantity: z.coerce
+    .number()
+    .int()
+    .min(INVENTORY_QUANTITY_MIN)
+    .max(INVENTORY_QUANTITY_MAX)
+    .catch(1),
   armor: inventoryArmorSchema,
   weapon: inventoryWeaponSchema,
   equipped: z.boolean().catch(false),

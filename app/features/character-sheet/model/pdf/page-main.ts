@@ -40,6 +40,7 @@ import {
   getVisionRows,
   getWeaponAttackBonus,
   getWeaponDamage,
+  isMissingInventoryItem,
 } from '../utils';
 import {
   PDF_ABILITY_BOX_HEIGHT,
@@ -771,8 +772,10 @@ function drawWeaponsPanel(
 
       const contentLeft = options.left + PDF_PANEL_PADDING;
 
+      // Оружия, которого не осталось (количество — ноль), в списке атак нет:
+      // им нельзя атаковать и на самом листе.
       const rows = character.inventory
-        .filter((item) => item.weapon !== null)
+        .filter((item) => item.weapon !== null && !isMissingInventoryItem(item))
         .map((item) => {
           const weapon = item.weapon;
 

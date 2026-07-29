@@ -22,10 +22,14 @@
     getWeaponAttackBonus,
     getWeaponDamage,
     INVENTORY_CATEGORY_ICONS,
+    INVENTORY_EQUIP_ACTION_LABELS,
+    INVENTORY_MISSING_BADGE_HINT,
+    INVENTORY_MISSING_BADGE_LABEL,
     INVENTORY_QUANTITY_MIN,
     INVENTORY_ROLL_KIND_LABELS,
     INVENTORY_STAT_LABELS,
     isCustomInventoryItem,
+    isMissingInventoryItem,
     SHEET_ROLL_HINT_LABEL,
     WEIGHT_UNIT_LABEL,
   } from '../../model';
@@ -95,18 +99,21 @@
    * вынесена из шаблона).
    *
    * @param stat исходная плитка параметра.
+   * @param rollable броски разрешены; false — плитка остаётся справочной
+   *   (предмета не осталось, катить им нечего).
    * @returns плитка с разрешёнными классами.
    */
-  function decorateStat(stat: ItemStat): DecoratedStat {
+  function decorateStat(stat: ItemStat, rollable: boolean): DecoratedStat {
     const classes = stat.accent ? ACCENT_STAT_CLASSES : PLAIN_STAT_CLASSES;
     const tooltip = stat.tooltip ?? '';
+    const roll = rollable ? (stat.roll ?? null) : null;
 
     return {
       label: stat.label,
       value: stat.value,
-      tooltip: stat.roll ? `${tooltip} · ${SHEET_ROLL_HINT_LABEL}` : tooltip,
-      roll: stat.roll ?? null,
-      containerClass: stat.roll
+      tooltip: roll ? `${tooltip} · ${SHEET_ROLL_HINT_LABEL}` : tooltip,
+      roll,
+      containerClass: roll
         ? `${classes.container} ${ROLL_STAT_CLASS}`
         : classes.container,
       valueClass: classes.value,
@@ -172,6 +179,11 @@
     isCustom.value ? isExpanded.value : undefined,
   );
 
+  // Количество доведено до нуля: запись остаётся в снаряжении (чтобы не искать
+  // предмет в каталоге заново), но самого предмета у персонажа нет — надеть его
+  // и катить им атаку с уроном нельзя.
+  const isMissing = computed(() => isMissingInventoryItem(props.inventoryItem));
+
   // Экипировать можно только доспехи (оружие — нет). Иконку доспеха с данными
   // о КД можно нажать, чтобы надеть/снять. Смотрим на параметры, а не на группу:
   // свой магический доспех лежит среди магических предметов.
@@ -181,20 +193,53 @@
     () => isEquippable.value && props.inventoryItem.equipped,
   );
 
-  const equipTooltip = computed(() => (isEquipped.value ? 'Снять' : 'Надеть'));
+  const equipActionLabel = computed(() =>
+    isEquipped.value
+      ? INVENTORY_EQUIP_ACTION_LABELS.unequip
+      : INVENTORY_EQUIP_ACTION_LABELS.equip,
+  );
+
+  // Отсутствующий доспех объясняет тултипом, почему кнопка не нажимается;
+  // подпись для скринридера остаётся действием — состояние «недоступна» он
+  // читает по самому `disabled`.
+  const equipTooltip = computed(() =>
+    isMissing.value ? INVENTORY_MISSING_BADGE_HINT : equipActionLabel.value,
+  );
 
   const equipIcon = computed(() =>
     isEquipped.value ? 'tabler:shield-check' : 'tabler:shield',
   );
 
-  const equipButtonClass = computed(() =>
-    isEquipped.value
-      ? 'border-warning/60 bg-warning/15 text-warning'
-      : 'border-default/50 bg-default/40 text-muted hover:border-warning/60',
+  const equipButtonClass = computed(() => {
+    if (isMissing.value) {
+      return 'cursor-not-allowed border-default/40 bg-default/20 text-dimmed';
+    }
+
+    return isEquipped.value
+      ? 'cursor-pointer border-warning/60 bg-warning/15 text-warning'
+      : 'cursor-pointer border-default/50 bg-default/40 text-muted hover:border-warning/60';
+  });
+
+  // Отсутствующий предмет остаётся читаемым (его правят и пополняют), но
+  // пунктирная рамка отличает его от снаряжения, которое у персонажа есть.
+  const rowClass = computed(() => {
+    if (isMissing.value) {
+      return 'border-dashed';
+    }
+
+    return isEquipped.value
+      ? 'bg-warning/5 ring-1 ring-warning/50 ring-inset'
+      : '';
+  });
+
+  const nameClass = computed(() =>
+    isMissing.value ? 'text-muted' : 'text-highlighted',
   );
 
-  const rowClass = computed(() =>
-    isEquipped.value ? 'bg-warning/5 ring-1 ring-warning/50 ring-inset' : '',
+  // Ноль в счётчике — тот же сигнал, что и значок «Отсутствует»: значок виден
+  // не всегда (узкая карточка переносит его под название), а число — всегда.
+  const quantityClass = computed(() =>
+    isMissing.value ? 'text-error' : 'text-default',
   );
 
   /** Плитка класса доспеха: сколько КД даёт предмет (щит — бонусом). */
@@ -313,7 +358,7 @@
       stats.push({ label: WEIGHT_UNIT_LABEL, value: String(weight) });
     }
 
-    return stats.map(decorateStat);
+    return stats.map((stat) => decorateStat(stat, !isMissing.value));
   });
 
   const isDecreaseDisabled = computed(
@@ -340,6 +385,19 @@
     }
 
     emit('preview');
+  }
+
+  /**
+   * Надеть/снять доспех. Отсутствующий предмет кнопка отбивает сама: атрибут
+   * `disabled` ей не подходит — отключённая кнопка не получает событий мыши, и
+   * тултип с причиной («Предмета не осталось…») не открывался бы.
+   */
+  function handleEquipToggle() {
+    if (isMissing.value) {
+      return;
+    }
+
+    emit('toggle-equip');
   }
 
   function handleStatRoll(rollKind: InventoryStatRollKind) {
@@ -372,11 +430,12 @@
         >
           <button
             type="button"
-            class="relative z-10 flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border transition-colors"
+            class="relative z-10 flex size-10 shrink-0 items-center justify-center rounded-lg border transition-colors"
             :class="equipButtonClass"
+            :aria-disabled="isMissing"
             :aria-pressed="isEquipped"
-            :aria-label="`${equipTooltip}: ${inventoryItem.name}`"
-            @click.left.exact.prevent="emit('toggle-equip')"
+            :aria-label="`${equipActionLabel}: ${inventoryItem.name}`"
+            @click.left.exact.prevent="handleEquipToggle"
           >
             <UIcon
               :name="equipIcon"
@@ -411,7 +470,8 @@
             <!-- На узкой карточке название переносится целиком: места под ним
               достаточно, а обрезка вида «Була…» ничего не говорит о предмете -->
             <span
-              class="text-sm font-medium wrap-break-word text-highlighted @xl:truncate"
+              class="text-sm font-medium wrap-break-word @xl:truncate"
+              :class="nameClass"
             >
               {{ inventoryItem.name }}
             </span>
@@ -425,6 +485,22 @@
             >
               Надет
             </UBadge>
+
+            <!-- Значок отсутствия стоит там же, где «Надет»: у одного предмета
+              они взаимоисключающие — обнулённый доспех снимается -->
+            <UTooltip
+              v-if="isMissing"
+              :text="INVENTORY_MISSING_BADGE_HINT"
+            >
+              <UBadge
+                size="sm"
+                color="error"
+                variant="subtle"
+                class="relative z-10 shrink-0"
+              >
+                {{ INVENTORY_MISSING_BADGE_LABEL }}
+              </UBadge>
+            </UTooltip>
 
             <UTooltip
               v-if="isCustom"
@@ -526,7 +602,10 @@
           @click.left.exact.prevent="handleDecrease"
         />
 
-        <span class="w-6 text-center text-sm font-medium text-default">
+        <span
+          class="w-6 text-center text-sm font-medium"
+          :class="quantityClass"
+        >
           {{ inventoryItem.quantity }}
         </span>
 

@@ -568,6 +568,19 @@ export function isCustomInventoryItem(
 }
 
 /**
+ * Кончился ли предмет: количество доведено до нуля. Запись остаётся в списке,
+ * но предмета у персонажа нет — надеть его и катить им атаку с уроном нельзя.
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns true — предмета не осталось.
+ */
+export function isMissingInventoryItem(
+  inventoryItem: CharacterInventoryItem,
+): boolean {
+  return inventoryItem.quantity <= 0;
+}
+
+/**
  * Путь детального ответа каталога для предмета инвентаря: магические предметы
  * живут в своём разделе.
  *
@@ -776,6 +789,12 @@ export function toCustomInventoryItem(
     return null;
   }
 
+  const quantity = getClampedInteger(
+    draft.quantity,
+    INVENTORY_QUANTITY_MIN,
+    INVENTORY_QUANTITY_MAX,
+  );
+
   return {
     id: url,
     url,
@@ -789,16 +808,13 @@ export function toCustomInventoryItem(
     typesLabel: getCustomInventoryTypesLabel(draft),
     cost: draft.cost.trim(),
     weight: getDraftWeight(draft.weight),
-    quantity: getClampedInteger(
-      draft.quantity,
-      INVENTORY_QUANTITY_MIN,
-      INVENTORY_QUANTITY_MAX,
-    ),
+    quantity,
     armor: getCustomInventoryArmor(draft),
     weapon: getCustomInventoryWeapon(draft),
     // Надетым остаётся только доспех: у оружия и безделушки параметров доспеха
-    // нет, и в подсчёт КД они не идут.
-    equipped: draft.kind === 'armor' && equipped,
+    // нет, и в подсчёт КД они не идут. Форма может обнулить количество — тогда
+    // доспех снимается вместе с ним.
+    equipped: draft.kind === 'armor' && equipped && quantity > 0,
     description: [...draft.description],
   };
 }
@@ -1049,9 +1065,11 @@ export function getArmorClassBreakdown(
 
   // Группа предмета здесь не важна: доспех со своей магической пометкой лежит
   // среди магических предметов, но КД считается по тем же параметрам `armor`.
+  // Отсутствующий доспех (количество — ноль) в зачёт не идёт, даже если остался
+  // помеченным надетым в старой записи листа.
   const equippedArmor = character.inventory.filter(
     (item): item is CharacterInventoryItem & { armor: InventoryArmor } =>
-      item.equipped && item.armor !== null,
+      item.equipped && item.armor !== null && !isMissingInventoryItem(item),
   );
 
   // КД тела: сравниваем по эффективному значению (база брони + Ловкость по её

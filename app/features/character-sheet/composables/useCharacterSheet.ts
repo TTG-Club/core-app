@@ -71,6 +71,7 @@ import {
   INVENTORY_QUANTITY_MIN,
   isCustomInventoryItem,
   isCustomSpell,
+  isMissingInventoryItem,
   isPreparableSpell,
   LEVEL_MAX,
   LEVEL_MIN,
@@ -1843,9 +1844,10 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Изменение количества предмета в пределах от одной штуки до максимума.
-   * Игровое действие (трата и пополнение расходников) — блокировкой листа не
-   * ограничивается; удаление предмета — отдельным экшеном.
+   * Изменение количества предмета в пределах от нуля до максимума. Игровое
+   * действие (трата и пополнение расходников) — блокировкой листа не
+   * ограничивается; удаление предмета — отдельным экшеном. Обнулённый доспех
+   * снимается: предмета у персонажа нет, и в КД он идти не должен.
    *
    * @param inventoryItemId идентификатор предмета инвентаря.
    * @param delta изменение количества.
@@ -1860,18 +1862,23 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
-      inventory: character.value.inventory.map((inventoryItem) =>
-        inventoryItem.id === inventoryItemId
-          ? {
-              ...inventoryItem,
-              quantity: clamp(
-                inventoryItem.quantity + delta,
-                INVENTORY_QUANTITY_MIN,
-                INVENTORY_QUANTITY_MAX,
-              ),
-            }
-          : inventoryItem,
-      ),
+      inventory: character.value.inventory.map((inventoryItem) => {
+        if (inventoryItem.id !== inventoryItemId) {
+          return inventoryItem;
+        }
+
+        const quantity = clamp(
+          inventoryItem.quantity + delta,
+          INVENTORY_QUANTITY_MIN,
+          INVENTORY_QUANTITY_MAX,
+        );
+
+        return {
+          ...inventoryItem,
+          quantity,
+          equipped: quantity > 0 && inventoryItem.equipped,
+        };
+      }),
     };
   }
 
@@ -1879,6 +1886,7 @@ export function useCharacterSheet() {
    * Надеть/снять доспех: переключает `equipped` у предмета, у которого есть
    * параметры доспеха. Игровое действие (смена брони по ходу игры) — блокировкой
    * листа не ограничивается. Итоговый КД пересчитывается автоматически.
+   * Отсутствующий доспех (количество — ноль) надеть нельзя.
    *
    * @param inventoryItemId идентификатор предмета инвентаря.
    */
@@ -1890,7 +1898,9 @@ export function useCharacterSheet() {
     character.value = {
       ...character.value,
       inventory: character.value.inventory.map((inventoryItem) =>
-        inventoryItem.id === inventoryItemId && inventoryItem.armor
+        inventoryItem.id === inventoryItemId
+        && inventoryItem.armor
+        && !isMissingInventoryItem(inventoryItem)
           ? { ...inventoryItem, equipped: !inventoryItem.equipped }
           : inventoryItem,
       ),
