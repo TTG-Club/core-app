@@ -62,6 +62,7 @@ import type {
   SpeedRow,
   SpeedTypeKey,
   SpellcastingBreakdown,
+  SpellDamage,
   SpellSlotCircle,
   SpellSlotRow,
   VisionRow,
@@ -129,6 +130,7 @@ import {
   FEATURE_ORIGIN_LABELS,
   HIT_DICE_ROLL_COUNT,
   HIT_POINTS_LEVEL_GAIN_MIN,
+  INNATE_SPELL_REMOVE_MENU_LABEL,
   INVENTORY_CATEGORY_ORDER,
   INVENTORY_CATEGORY_TITLES,
   INVENTORY_QUANTITY_MAX,
@@ -157,6 +159,11 @@ import {
   SPEED_PRIMARY_ORDER,
   SPEED_TYPE_LABELS,
   SPEED_UNIT_SHORT_LABELS,
+  SPELL_DAMAGE_ABILITY_MODIFIER_TAG,
+  SPELL_DAMAGE_CONDITION_TAG_LABELS,
+  SPELL_DAMAGE_TYPE_SEPARATOR,
+  SPELL_DAMAGE_TYPE_TAG_LABELS,
+  SPELL_DAMAGE_TYPE_TAG_PREFIX,
   SPELL_REMOVE_MENU_LABEL,
   SPELL_SAVE_DC_BASE,
   SPELL_SLOT_FREE_LABEL,
@@ -1730,6 +1737,17 @@ export function getSpellGroupLabel(level: number): string {
 }
 
 /**
+ * Пояснение к предупреждению о потраченных ячейках круга: бросок при этом
+ * состоялся, поэтому текст говорит, что именно осталось несделанным.
+ *
+ * @param level круг заклинания.
+ * @returns описание для тоста.
+ */
+export function getSpellSlotsEmptyDescription(level: number): string {
+  return `Все ячейки (${getSpellLevelLabel(level).toLowerCase()}) уже потрачены — бросок сделан, ячейка не списана.`;
+}
+
+/**
  * Группировка заклинаний по кругам: заговоры, затем круги по возрастанию;
  * внутри круга — по алфавиту. Круги из `slotLevels` попадают в результат даже
  * без заклинаний: ячейки этих кругов тратятся и на повышение круга уже
@@ -1795,6 +1813,168 @@ export function getSpellStatRows(spell: CharacterSpell): CustomSpellStatRow[] {
     label: field.label,
     value: spell[field.key]?.trim() ?? '',
   })).filter((row) => row.value);
+}
+
+/**
+ * Разделитель взаимоисключающих формул урона внутри одной записи справочника:
+ * пробелы вокруг плюса отличают выбор формулы от слагаемого («+1»).
+ */
+const SPELL_DAMAGE_VARIANT_SEPARATOR = ' + ';
+
+/** Тег формулы справочника: `@dmg.fire`, `@target.full`, `@mod.spell`. */
+const SPELL_FORMULA_TAG_PATTERN = /@[a-z]+(?:\.[a-z]+)*/gi;
+
+/** Тег вместе с предшествующим плюсом — так его вырезают из формулы целиком. */
+const SPELL_FORMULA_TAG_WITH_SIGN_PATTERN = /\+?@[a-z]+(?:\.[a-z]+)*/gi;
+
+/** Латинское и русское обозначение кости в формуле справочника (`8d6`). */
+const SPELL_FORMULA_DICE_LETTER_PATTERN = /(\d)[dд](\d)/gi;
+
+/** Пробелы внутри формулы — дайс-роллеру они не нужны. */
+const SPELL_FORMULA_SPACE_PATTERN = /\s+/g;
+
+/**
+ * Формула, которую понимает дайс-роллер: кости и слагаемые через плюс-минус.
+ * Всё, что после разбора тегов в неё не уложилось, показывать нельзя — бросок
+ * с потерянной частью формулы врал бы.
+ */
+const SPELL_DAMAGE_EXPRESSION_PATTERN = new RegExp(
+  `^\\d+(?:${DICE_NOTATION_LETTER}\\d+)?(?:[+-]\\d+(?:${DICE_NOTATION_LETTER}\\d+)?)*$`,
+);
+
+/** Разобранные теги одной формулы урона. */
+interface SpellDamageTags {
+  /** Названия типов урона в порядке появления; пусто — тип не распознан. */
+  typeLabels: string[];
+
+  /** Формула помечена тегом типа урона (а не лечения). */
+  hasDamageType: boolean;
+
+  /** Название условия применения формулы; '' — условия нет. */
+  conditionLabel: string;
+
+  /** Сколько раз в формулу входит модификатор заклинательной характеристики. */
+  abilityModifierCount: number;
+}
+
+/**
+ * Разбор тегов одной формулы справочника. Незнакомый тег (лечение, чужой
+ * модификатор) делает формулу непригодной: подставить его нечем, а выкинуть —
+ * значит соврать в броске.
+ *
+ * @param formula формула урона из справочника.
+ * @returns разобранные теги; null — встретился неподдерживаемый тег.
+ */
+function parseSpellDamageTags(formula: string): SpellDamageTags | null {
+  const tags: SpellDamageTags = {
+    typeLabels: [],
+    hasDamageType: false,
+    conditionLabel: '',
+    abilityModifierCount: 0,
+  };
+
+  for (const match of formula.matchAll(SPELL_FORMULA_TAG_PATTERN)) {
+    const tag = match[0].slice(1);
+
+    if (tag.startsWith(SPELL_DAMAGE_TYPE_TAG_PREFIX)) {
+      tags.hasDamageType = true;
+
+      const typeLabel = SPELL_DAMAGE_TYPE_TAG_LABELS[tag];
+
+      if (typeLabel && !tags.typeLabels.includes(typeLabel)) {
+        tags.typeLabels.push(typeLabel);
+      }
+
+      continue;
+    }
+
+    if (tag in SPELL_DAMAGE_CONDITION_TAG_LABELS) {
+      tags.conditionLabel = SPELL_DAMAGE_CONDITION_TAG_LABELS[tag] ?? '';
+
+      continue;
+    }
+
+    if (tag === SPELL_DAMAGE_ABILITY_MODIFIER_TAG) {
+      tags.abilityModifierCount += 1;
+
+      continue;
+    }
+
+    return null;
+  }
+
+  return tags.hasDamageType ? tags : null;
+}
+
+/**
+ * Формула броска из записи справочника: теги вырезаются, кость приводится к
+ * нотации дайс-роллера, а модификатор заклинательной характеристики
+ * подставляется числом.
+ *
+ * @param formula формула урона из справочника.
+ * @param abilityBonus суммарный модификатор из тегов `mod.spell`.
+ * @returns формула для дайс-роллера; '' — разобрать её не удалось.
+ */
+function getSpellDamageExpression(
+  formula: string,
+  abilityBonus: number,
+): string {
+  const diceExpression = formula
+    .replace(SPELL_FORMULA_TAG_WITH_SIGN_PATTERN, '')
+    .replace(SPELL_FORMULA_SPACE_PATTERN, '')
+    .replace(SPELL_FORMULA_DICE_LETTER_PATTERN, `$1${DICE_NOTATION_LETTER}$2`);
+
+  const sign = abilityBonus < 0 ? '-' : '+';
+
+  const expression =
+    abilityBonus === 0
+      ? diceExpression
+      : `${diceExpression}${sign}${Math.abs(abilityBonus)}`;
+
+  return SPELL_DAMAGE_EXPRESSION_PATTERN.test(expression) ? expression : '';
+}
+
+/**
+ * Броски урона заклинания из формул справочника. Одна запись справочника может
+ * описывать несколько взаимоисключающих бросков (кость зависит от состояния
+ * цели) — каждый становится отдельной плиткой. Лечение и формулы с
+ * неподдерживаемыми тегами пропускаются: плитка урона о них не говорит.
+ *
+ * @param damageFormulas формулы урона заклинания из справочника.
+ * @param spellAbilityModifier модификатор заклинательной характеристики.
+ * @returns броски урона в порядке справочника; пусто — урона у заклинания нет.
+ */
+export function getSpellDamage(
+  damageFormulas: string[],
+  spellAbilityModifier: number,
+): SpellDamage[] {
+  return damageFormulas
+    .flatMap((damageFormula) =>
+      damageFormula.split(SPELL_DAMAGE_VARIANT_SEPARATOR),
+    )
+    .map((formula) => {
+      const tags = parseSpellDamageTags(formula);
+
+      if (!tags) {
+        return null;
+      }
+
+      const expression = getSpellDamageExpression(
+        formula,
+        tags.abilityModifierCount * spellAbilityModifier,
+      );
+
+      if (!expression) {
+        return null;
+      }
+
+      return {
+        formula: expression,
+        typeLabel: tags.typeLabels.join(SPELL_DAMAGE_TYPE_SEPARATOR),
+        conditionLabel: tags.conditionLabel,
+      };
+    })
+    .filter((damage): damage is SpellDamage => damage !== null);
 }
 
 /**
@@ -3676,6 +3856,20 @@ export function getSpellMenuItems(
   options: SheetEntryMenuOptions,
 ): DropdownMenuItem[] {
   return getSheetEntryMenuItems(options, SPELL_REMOVE_MENU_LABEL);
+}
+
+/**
+ * Пункты меню строки врождённого заклинания: править нечего — запись приходит
+ * от вида, поэтому вместо правки ей, как и каталожной, предлагается копия в
+ * лист, после которой она становится своей.
+ *
+ * @param options обработчики пунктов (копия в лист и удаление).
+ * @returns пункты для `UDropdownMenu`.
+ */
+export function getInnateSpellMenuItems(
+  options: SheetEntryMenuOptions,
+): DropdownMenuItem[] {
+  return getSheetEntryMenuItems(options, INNATE_SPELL_REMOVE_MENU_LABEL);
 }
 
 /**

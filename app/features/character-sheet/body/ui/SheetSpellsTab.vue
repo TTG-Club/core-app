@@ -8,10 +8,12 @@
   import { SpellDrawer } from '~spells/drawer';
   import { MarkupRender } from '~ui/markup';
 
-  import { useCharacterSheet } from '../../composables';
+  import { useCharacterSheet, useSpellDamage } from '../../composables';
   import {
+    CANTRIP_SPELL_LEVEL,
     CUSTOM_SPELL_BADGE_HINT,
     getFormattedBonus,
+    getInnateSpellMenuItems,
     getSpellGroups,
     getSpellMenuItems,
     getSpellsAddMenuItems,
@@ -21,10 +23,24 @@
     INNATE_SPELL_GROUP_LABEL,
     INNATE_SPELL_GROUP_LEVEL,
     isCustomSpell,
+    SHEET_ROLL_HINT_LABEL,
     SHEET_TAB_EMPTY_LABELS,
+    SPELL_DAMAGE_ROLL_HINT_LABEL,
+    SPELL_DAMAGE_ROLL_LABEL,
+    SPELL_DAMAGE_STAT_LABEL,
     SPELL_NAME_SORT_LOCALE,
     SPELL_SLOTS_LABEL,
   } from '../../model';
+
+  /**
+   * Плитка урона заклинания повторяет боевую плитку строки снаряжения: тёплый
+   * акцент и нажатие, катящее формулу.
+   */
+  const DAMAGE_STAT_CLASS =
+    'relative z-10 flex shrink-0 cursor-pointer flex-col items-center rounded border border-warning/40 bg-warning/10 px-2 py-0.5 whitespace-nowrap transition-colors hover:border-warning hover:bg-warning/20';
+
+  /** Разделитель частей подсказки плитки урона (формула, тип, условие). */
+  const DAMAGE_TOOLTIP_SEPARATOR = ' · ';
 
   const props = defineProps<{
     spells: CharacterSpell[];
@@ -42,12 +58,22 @@
     'copy-spell': [spellUrl: string];
     'edit-spellcasting': [];
     'remove-spell': [spellUrl: string];
+    'copy-innate-spell': [spellUrl: string];
+    'remove-innate-spell': [spellUrl: string];
+    'roll-spell-damage': [formula: string, spellLevel: number];
     'toggle-spell-slot': [level: number, index: number];
   }>();
 
   // Пополнение книги, правка и удаление заклинаний меняют лист: без прав кнопки
   // прячутся, а ряды заклинаний и шапка вкладки остаются на прежних местах.
   const { editControlClass } = useCharacterSheet();
+
+  // Урон заклинаний живёт в справочнике, а не в листе: подгружаем его для всей
+  // вкладки — и для книги, и для врождённых заклинаний вида.
+  const { getDamage } = useSpellDamage(
+    () => [...props.spells, ...props.innateSpells],
+    () => props.spellcasting.abilityModifier,
+  );
 
   const addMenuItems = getSpellsAddMenuItems({
     onAddSpell: () => emit('add-spell'),
@@ -89,6 +115,44 @@
   const slotRowByLevel = computed(
     () => new Map(props.spellSlots.map((row) => [row.level, row])),
   );
+
+  /**
+   * Плитки урона заклинания: у одного заклинания их бывает несколько —
+   * справочник описывает броски по состоянию цели отдельными формулами.
+   *
+   * @param spell заклинание вкладки.
+   * @returns плитки урона с подписями; пусто — урона в справочнике нет.
+   */
+  function getSpellDamageStats(spell: CharacterSpell) {
+    return getDamage(spell.url).map((damage, damageIndex) => {
+      const tooltipParts = [damage.formula];
+
+      if (damage.typeLabel) {
+        tooltipParts.push(damage.typeLabel);
+      }
+
+      if (damage.conditionLabel) {
+        tooltipParts.push(damage.conditionLabel);
+      }
+
+      tooltipParts.push(
+        spell.level > CANTRIP_SPELL_LEVEL
+          ? SPELL_DAMAGE_ROLL_HINT_LABEL
+          : SHEET_ROLL_HINT_LABEL,
+      );
+
+      return {
+        key: `${spell.url}:${damageIndex}`,
+        formula: damage.formula,
+        // Круг заклинания едет вместе с формулой: бросок урона считается
+        // накладыванием и занимает ячейку этого круга.
+        level: spell.level,
+        label: SPELL_DAMAGE_STAT_LABEL,
+        tooltip: `${SPELL_DAMAGE_STAT_LABEL} = ${tooltipParts.join(DAMAGE_TOOLTIP_SEPARATOR)}`,
+        ariaLabel: `${SPELL_DAMAGE_ROLL_LABEL}: ${spell.name}`,
+      };
+    });
+  }
 
   const displayGroups = computed(() => {
     const regularGroups = getSpellGroups(
@@ -140,14 +204,17 @@
 
           return {
             ...spell,
-            isInnate: group.innate,
             isCustom,
             isExpanded,
             // Действия строки — те же, что и у предмета снаряжения: своё
             // заклинание правится формой листа, каталожное сначала копируется в
-            // лист, а убирается из книги и то, и другое.
+            // лист, а убирается из книги и то, и другое. Врождённое правится
+            // так же — через копию, только уезжает она в книгу заклинаний.
             menuItems: group.innate
-              ? []
+              ? getInnateSpellMenuItems({
+                  onCopy: () => emit('copy-innate-spell', spell.url),
+                  onRemove: () => emit('remove-innate-spell', spell.url),
+                })
               : getSpellMenuItems({
                   onEdit: isCustom
                     ? () => emit('edit-spell', spell.url)
@@ -157,6 +224,9 @@
                     : () => emit('copy-spell', spell.url),
                   onRemove: () => emit('remove-spell', spell.url),
                 }),
+            // Урон каталожного заклинания приходит из справочника; у своего его
+            // нет — форма листа урон не заполняет.
+            damageStats: getSpellDamageStats(spell),
             // У каталожных заклинаний этих полей нет — список выйдет пустым.
             statRows: getSpellStatRows(spell),
             descriptionNodes: spell.description ?? [],
@@ -176,6 +246,13 @@
   type DisplaySpell = (typeof displayGroups.value)[number]['spells'][number];
 
   type DisplayCircle = (typeof displayGroups.value)[number]['circles'][number];
+
+  type DisplayDamageStat = DisplaySpell['damageStats'][number];
+
+  /** Нажатие на плитку урона: формула справочника уходит в дайс-роллер. */
+  function handleDamageRoll(damageStat: DisplayDamageStat) {
+    emit('roll-spell-damage', damageStat.formula, damageStat.level);
+  }
 
   /** Нажатие на кружок ячейки: трата до него включительно либо возврат. */
   function handleSlotToggle(circle: DisplayCircle) {
@@ -330,6 +407,35 @@
               </span>
             </button>
 
+            <!-- Плитки урона — те же, что и у оружия в снаряжении: нажатие
+              катит формулу справочника. Взаимоисключающие броски (по состоянию
+              цели) стоят отдельными плитками, их различает подсказка -->
+            <div
+              v-if="spell.damageStats.length"
+              class="relative z-10 flex shrink-0 items-center gap-1.5"
+            >
+              <UTooltip
+                v-for="damageStat in spell.damageStats"
+                :key="damageStat.key"
+                :text="damageStat.tooltip"
+              >
+                <button
+                  type="button"
+                  :class="DAMAGE_STAT_CLASS"
+                  :aria-label="damageStat.ariaLabel"
+                  @click.left.exact.prevent="handleDamageRoll(damageStat)"
+                >
+                  <span class="text-xs font-bold text-warning">
+                    {{ damageStat.formula }}
+                  </span>
+
+                  <span class="text-[9px] text-warning/80 uppercase">
+                    {{ damageStat.label }}
+                  </span>
+                </button>
+              </UTooltip>
+            </div>
+
             <UTooltip
               v-if="spell.isCustom"
               :text="CUSTOM_SPELL_BADGE_HINT"
@@ -373,9 +479,9 @@
             </UTooltip>
 
             <!-- Меню действий над заклинанием: тот же трейлинг, что и у строки
-              снаряжения — правка своего, копия каталожного в лист и удаление -->
+              снаряжения — правка своего, копия каталожного в лист и удаление.
+              У врождённого в меню только удаление -->
             <UDropdownMenu
-              v-if="!spell.isInnate"
               :items="spell.menuItems"
               :content="{ align: 'end' }"
             >

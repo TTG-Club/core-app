@@ -147,6 +147,11 @@ modals), so its capabilities are listed here rather than squeezed into the table
   casting time / range / components / duration — from the section detail into
   the sheet document; it is edited afterwards by the same homebrew form. A
   copied magic item keeps its group while its kind stays «trinket».
+- Innate spells granted by the species stand in their own «Врождённые» group and
+  have the same row menu: copying one moves it into the spell book as a `custom:`
+  record (editable afterwards), removing one drops it from
+  `species.innateSpells` so the next level-up does not bring it back. Both are
+  undone by picking the species again in the wizard.
 
 **Play**
 
@@ -155,6 +160,12 @@ modals), so its capabilities are listed here rather than squeezed into the table
   spent by clicking the circles in each spell-level divider.
 - Weapon attack & damage rolled straight from their tiles in the equipment list
   (damage dice come from the item `/raw` response).
+- Spell damage rolled from the same kind of tile on the spells tab. The formulas
+  (`8к6@dmg.fire`) are not stored in the sheet: `composables/useSpellDamage.ts`
+  pulls them from the spell `/raw` response on demand and caches them per app,
+  so old sheets and innate spells get the tile too. A roll of a levelled spell
+  also spends a slot of its circle — cantrips and circles the class does not
+  grant spend nothing, and an exhausted circle warns instead.
 - Short & long rest from the header: short rest spends Hit Point Dice one by
   one, adding the Constitution modifier to every roll; long rest refills hit
   points, spell slots, feature counters and half the Hit Point Dice. The shared

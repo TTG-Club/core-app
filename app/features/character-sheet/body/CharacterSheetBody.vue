@@ -103,15 +103,18 @@
     totalWeight,
     carryingCapacity,
     setAbilityScore,
+    spendSpellSlot,
     toggleSavingThrowProficiency,
     toggleSpellSlot,
     cycleSkillProficiency,
     adjustClassResource,
     adjustInventoryItemQuantity,
     toggleInventoryItemEquipped,
+    copyInnateSpellToSheet,
     copyInventoryItemToSheet,
     copySpellToSheet,
     removeFeature,
+    removeInnateSpell,
     removeInventoryItem,
     removeNote,
     removeSpell,
@@ -590,6 +593,16 @@
     handleRoll(damage.formula);
   }
 
+  /**
+   * Бросок урона заклинанием: кроме кубов тратится ячейка его круга — нажатие
+   * на плитку и есть накладывание. Заговорам и кругам, которых класс не даёт,
+   * тратить нечего.
+   */
+  function handleSpellDamageRoll(formula: string, spellLevel: number) {
+    handleRoll(formula);
+    spendSpellSlot(spellLevel);
+  }
+
   function handleVisionEdit() {
     if (!ensureEditable()) {
       return;
@@ -704,6 +717,10 @@
    */
   function handleSpellCopy(spellUrl: string) {
     void copySpellToSheet(spellUrl);
+  }
+
+  function handleInnateSpellCopy(spellUrl: string) {
+    void copyInnateSpellToSheet(spellUrl);
   }
 
   function handleSpellcastingEdit() {
@@ -1022,6 +1039,9 @@
           @remove-feature="removeFeature"
           @remove-item="removeInventoryItem"
           @remove-spell="removeSpell"
+          @copy-innate-spell="handleInnateSpellCopy"
+          @remove-innate-spell="removeInnateSpell"
+          @roll-spell-damage="handleSpellDamageRoll"
           @toggle-spell-slot="toggleSpellSlot"
         >
           <template #main>

@@ -60,6 +60,8 @@ import {
   getSkillRows,
   getSpellcastingBreakdown,
   getSpellSlotRows,
+  getSpellSlotsEmptyDescription,
+  INNATE_SPELL_COPY_TOAST_DESCRIPTION,
   INVENTORY_COPY_TOAST_TITLE,
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
@@ -80,6 +82,7 @@ import {
   shiftClassHitDice,
   SKILL_PROFICIENCY_NEXT,
   SPELL_COPY_TOAST_TITLE,
+  SPELL_SLOTS_EMPTY_TOAST_TITLE,
   toCopiedInventoryItem,
   toCopiedSpell,
   toCustomInventoryItem,
@@ -451,6 +454,49 @@ export function useCharacterSheet() {
               (left, right) => left.level - right.level,
             )
           : otherSlots,
+    };
+  }
+
+  /**
+   * Трата одной ячейки круга — по факту накладывания заклинания. Занимается
+   * первая свободная ячейка, как если бы игрок нажал на её кружок.
+   *
+   * Круги, которых класс не даёт (заговоры, незаклинатель), ячеек не тратят и
+   * молчат. На чужом листе трата тоже пропускается без предупреждения: бросок
+   * кубов зрителю никто не запрещает, а документ ему всё равно не сохранить.
+   *
+   * @param level круг заклинания.
+   */
+  function spendSpellSlot(level: number): void {
+    const row = spellSlotRows.value.find((slotRow) => slotRow.level === level);
+
+    if (!row || isReadonly.value) {
+      return;
+    }
+
+    // Ячейки круга кончились — молча пропустить нельзя: игрок ждёт, что счётчик
+    // сдвинется, и должен узнать, что тратить уже нечего.
+    if (row.used >= row.max) {
+      toast.add({
+        color: 'warning',
+        icon: 'tabler:sparkles',
+        title: SPELL_SLOTS_EMPTY_TOAST_TITLE,
+        description: getSpellSlotsEmptyDescription(level),
+      });
+
+      return;
+    }
+
+    // Хранится только трата, поэтому круг переписывается целиком.
+    const otherSlots = character.value.spellSlots.filter(
+      (slot) => slot.level !== level,
+    );
+
+    character.value = {
+      ...character.value,
+      spellSlots: [...otherSlots, { level, used: row.used + 1 }].sort(
+        (left, right) => left.level - right.level,
+      ),
     };
   }
 
@@ -1404,6 +1450,96 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Копия врождённого заклинания в книгу персонажа: запись перестаёт зависеть
+   * и от вида, и от раздела сайта — дальше её правит форма листа. Из группы
+   * врождённых заклинание при этом уходит, иначе оно осталось бы в листе
+   * дважды. Характеристики и описание дозагружаются из справочника: у вида их
+   * нет.
+   *
+   * @param spellUrl URL врождённого заклинания.
+   */
+  async function copyInnateSpellToSheet(spellUrl: string): Promise<void> {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const requestedInnateSpell = character.value.species?.innateSpells.find(
+      (innateSpell) => innateSpell.spell.url === spellUrl,
+    );
+
+    if (!requestedInnateSpell) {
+      return;
+    }
+
+    const detail = await fetchCatalogSpellDetail(spellUrl);
+
+    // Пока шёл запрос, вид могли сменить или заклинание убрать — перечитываем
+    // запись и отступаем, если её больше нет.
+    const species = character.value.species;
+
+    const currentInnateSpell = species?.innateSpells.find(
+      (innateSpell) => innateSpell.spell.url === spellUrl,
+    );
+
+    if (!species || !currentInnateSpell) {
+      return;
+    }
+
+    const ownSpell = toCopiedSpell(
+      `${CUSTOM_SPELL_URL_PREFIX}${crypto.randomUUID()}`,
+      currentInnateSpell.spell,
+      detail,
+    );
+
+    character.value = {
+      ...character.value,
+      species: {
+        ...species,
+        innateSpells: species.innateSpells.filter(
+          (innateSpell) => innateSpell.spell.url !== spellUrl,
+        ),
+      },
+      spells: [...character.value.spells, ownSpell],
+    };
+
+    toast.add({
+      color: 'success',
+      icon: 'tabler:copy',
+      title: SPELL_COPY_TOAST_TITLE,
+      description: INNATE_SPELL_COPY_TOAST_DESCRIPTION,
+    });
+  }
+
+  /**
+   * Удаление врождённого заклинания вида: запись выбрасывается из самого вида,
+   * иначе она вернулась бы на следующем повышении уровня. Заново получить её
+   * можно, ещё раз выбрав вид в мастере.
+   *
+   * @param spellUrl URL врождённого заклинания.
+   */
+  function removeInnateSpell(spellUrl: string): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const species = character.value.species;
+
+    if (!species) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      species: {
+        ...species,
+        innateSpells: species.innateSpells.filter(
+          (innateSpell) => innateSpell.spell.url !== spellUrl,
+        ),
+      },
+    };
+  }
+
+  /**
    * Добавление предметов инвентаря из каталога раздела «Предметы».
    * Идентификаторы устойчивы (`item:url`), поэтому уже добавленные предметы
    * отбрасываются.
@@ -1905,9 +2041,11 @@ export function useCharacterSheet() {
     addInventoryItems,
     addCustomInventoryItem,
     addCustomSpell,
+    copyInnateSpellToSheet,
     copyInventoryItemToSheet,
     copySpellToSheet,
     removeFeature,
+    removeInnateSpell,
     removeInventoryItem,
     removeNote,
     removeSpell,
@@ -1934,6 +2072,7 @@ export function useCharacterSheet() {
     spendHitDice,
     completeShortRest,
     completeLongRest,
+    spendSpellSlot,
     toggleSavingThrowProficiency,
     toggleSpellSlot,
     cycleSkillProficiency,

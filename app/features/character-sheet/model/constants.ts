@@ -1145,6 +1145,15 @@ export const SPELLS_SEARCH_PATH = '/api/v2/spells/search';
 /** Базовый путь детали заклинания (`/{url}` — слаг из каталога). */
 export const SPELLS_DETAIL_BASE_PATH = '/api/v2/spells';
 
+/**
+ * Хвост пути «сырого» ответа заклинания: публичная деталь урон не отдаёт, его
+ * формулы лежат только в ответе для редактора (как и боевые числа предметов).
+ */
+export const SPELLS_RAW_DETAIL_PATH_SUFFIX = 'raw';
+
+/** Ключ общего кэша формул урона заклинаний (каталожные данные, не листа). */
+export const SPELL_DAMAGE_STATE_KEY = 'character-sheet:spell-damage';
+
 /** Подпись отдельной группы заклинаний, полученных от вида и происхождения. */
 export const INNATE_SPELL_GROUP_LABEL = 'Врождённые';
 
@@ -1174,6 +1183,9 @@ export const SPELL_CATALOG_SEARCH_DEBOUNCE_MS = 300;
 
 /** Круги заклинаний для быстрого фильтра (0 — заговоры). */
 export const SPELL_LEVELS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+/** Круг заговора: ячеек у него нет, накладывается он без них. */
+export const CANTRIP_SPELL_LEVEL = 0;
 
 /** Базовая величина сложности спасброска от заклинаний (D&D 2024). */
 export const SPELL_SAVE_DC_BASE = 8;
@@ -1421,7 +1433,10 @@ export const INVENTORY_ROLL_KIND_LABELS: Record<InventoryStatRollKind, string> =
   };
 
 /** Подсказка в тултипе о том, что плитка бросается по нажатию. */
-export const INVENTORY_ROLL_HINT_LABEL = 'нажми, чтобы бросить';
+export const SHEET_ROLL_HINT_LABEL = 'нажми, чтобы бросить';
+
+/** Заголовок предупреждения о том, что тратить ячейки круга уже нечего. */
+export const SPELL_SLOTS_EMPTY_TOAST_TITLE = 'Ячейки закончились';
 
 /**
  * Названия типов урона справочника предметов
@@ -1454,6 +1469,50 @@ export const DAMAGE_TYPE_OPTIONS: Array<{ label: string; value: string }> =
     .filter(([type]) => type !== 'FAIR')
     .map(([type, label]) => ({ label, value: type }))
     .sort((left, right) => left.label.localeCompare(right.label, 'ru'));
+
+/** Префикс тега типа урона в формулах заклинаний (`8к6@dmg.fire`). */
+export const SPELL_DAMAGE_TYPE_TAG_PREFIX = 'dmg.';
+
+/**
+ * Названия типов урона заклинаний по тегам формул: справочник заклинаний
+ * записывает тип не ключом словаря (`FIRE`), а тегом формулы (`dmg.fire`).
+ */
+export const SPELL_DAMAGE_TYPE_TAG_LABELS: Record<string, string> =
+  Object.fromEntries(
+    Object.entries(DAMAGE_TYPE_LABELS).map(([damageType, label]) => [
+      `${SPELL_DAMAGE_TYPE_TAG_PREFIX}${damageType.toLowerCase()}`,
+      label,
+    ]),
+  );
+
+/**
+ * Условия, при которых катится своя формула урона: у части заклинаний кость
+ * зависит от состояния цели, и справочник помечает такие формулы тегом.
+ */
+export const SPELL_DAMAGE_CONDITION_TAG_LABELS: Record<string, string> = {
+  'target.full': 'Цель с полными хитами',
+  'target.notFull': 'Цель с неполными хитами',
+};
+
+/** Тег формулы, подставляющий модификатор заклинательной характеристики. */
+export const SPELL_DAMAGE_ABILITY_MODIFIER_TAG = 'mod.spell';
+
+/** Разделитель типов урона одного броска («Кислотный/Холодный» — на выбор). */
+export const SPELL_DAMAGE_TYPE_SEPARATOR = '/';
+
+/** Короткая подпись плитки урона заклинания — та же, что и у оружия. */
+export const SPELL_DAMAGE_STAT_LABEL = 'Урон';
+
+/** Подпись кнопки броска урона заклинанием для скринридера. */
+export const SPELL_DAMAGE_ROLL_LABEL = 'Бросок урона заклинанием';
+
+/**
+ * Подсказка плитки урона заклинания круга: нажатие считается накладыванием и,
+ * в отличие от плитки оружия, ещё и занимает ячейку. У заговоров подсказка
+ * обычная — ячеек они не тратят.
+ */
+export const SPELL_DAMAGE_ROLL_HINT_LABEL =
+  'нажми, чтобы бросить и потратить ячейку';
 
 /**
  * Префикс идентификатора и URL своего предмета инвентаря. Каталожные ссылки —
@@ -1866,6 +1925,12 @@ export const INVENTORY_REMOVE_MENU_LABEL = 'Убрать из снаряжени
 export const SPELL_REMOVE_MENU_LABEL = 'Убрать из книги';
 
 /**
+ * То же для врождённого заклинания: в книгу оно не входит, а приходит от вида,
+ * поэтому убирается именно из листа. Вернуть его можно, заново выбрав вид.
+ */
+export const INNATE_SPELL_REMOVE_MENU_LABEL = 'Убрать из листа';
+
+/**
  * Подпись копирования каталожной записи в лист (снаряжение и заклинания). После
  * копирования запись живёт в листе как добавленная вручную: её можно
  * редактировать, а справочник остаётся нетронутым.
@@ -1881,6 +1946,13 @@ export const SPELL_COPY_TOAST_TITLE = 'Заклинание скопирован
 /** Пояснение тоста: копия живёт в листе и правится его формой. */
 export const CATALOG_COPY_TOAST_DESCRIPTION =
   'Теперь запись правится прямо в листе — в справочнике ничего не изменится.';
+
+/**
+ * То же для врождённого заклинания: копия уходит в книгу заклинаний, поэтому
+ * из группы врождённых оно пропадает — иначе стояло бы в листе дважды.
+ */
+export const INNATE_SPELL_COPY_TOAST_DESCRIPTION =
+  'Заклинание переехало в книгу и теперь правится прямо в листе.';
 
 /**
  * Подсказка значка «Свой» у предмета. Говорит о том, где запись хранится, а не

@@ -79,6 +79,9 @@
     'remove-note': [noteId: string];
     'remove-item': [inventoryItemId: string];
     'remove-spell': [spellUrl: string];
+    'copy-innate-spell': [spellUrl: string];
+    'remove-innate-spell': [spellUrl: string];
+    'roll-spell-damage': [formula: string, spellLevel: number];
     'toggle-spell-slot': [level: number, index: number];
   }>();
 
@@ -148,6 +151,18 @@
 
   function handleSpellRemove(spellUrl: string) {
     emit('remove-spell', spellUrl);
+  }
+
+  function handleInnateSpellCopy(spellUrl: string) {
+    emit('copy-innate-spell', spellUrl);
+  }
+
+  function handleInnateSpellRemove(spellUrl: string) {
+    emit('remove-innate-spell', spellUrl);
+  }
+
+  function handleSpellDamageRoll(formula: string, spellLevel: number) {
+    emit('roll-spell-damage', formula, spellLevel);
   }
 
   function handleSpellSlotToggle(level: number, index: number) {
@@ -846,6 +861,9 @@
             @copy-spell="handleSpellCopy"
             @edit-spellcasting="handleSpellcastingEdit"
             @remove-spell="handleSpellRemove"
+            @copy-innate-spell="handleInnateSpellCopy"
+            @remove-innate-spell="handleInnateSpellRemove"
+            @roll-spell-damage="handleSpellDamageRoll"
             @toggle-spell-slot="handleSpellSlotToggle"
           />
 

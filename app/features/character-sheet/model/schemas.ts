@@ -967,6 +967,33 @@ function getSpellComponentsText(components: SpellComponentsResponse): string {
 }
 
 /**
+ * Схема «сырого» ответа заклинания в части урона: формулы вида `8к6@dmg.fire`
+ * лежат в блоке воздействия, который публичная деталь не отдаёт.
+ */
+const spellRawDamageSchema = z
+  .object({
+    effect: z
+      .object({
+        damageFormulas: z.array(z.string()).catch([]),
+      })
+      .nullable()
+      .catch(null),
+  })
+  .catch({ effect: null });
+
+/**
+ * Валидация «сырого» ответа `GET /api/v2/spells/{url}/raw` в части урона.
+ * Неожиданный ответ даёт пустой список, а не исключение: заклинание просто
+ * останется без плитки урона.
+ *
+ * @param input сырой ответ заклинания.
+ * @returns формулы урона из справочника.
+ */
+export function parseSpellDamageFormulas(input: unknown): string[] {
+  return spellRawDamageSchema.parse(input).effect?.damageFormulas ?? [];
+}
+
+/**
  * Валидация детального ответа `GET /api/v2/spells/{url}` для справочника PDF:
  * описание и характеристики в той же форме, в какой их хранит своё заклинание.
  *

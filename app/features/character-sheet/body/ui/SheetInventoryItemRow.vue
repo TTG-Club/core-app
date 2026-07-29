@@ -23,10 +23,10 @@
     getWeaponDamage,
     INVENTORY_CATEGORY_ICONS,
     INVENTORY_QUANTITY_MIN,
-    INVENTORY_ROLL_HINT_LABEL,
     INVENTORY_ROLL_KIND_LABELS,
     INVENTORY_STAT_LABELS,
     isCustomInventoryItem,
+    SHEET_ROLL_HINT_LABEL,
     WEIGHT_UNIT_LABEL,
   } from '../../model';
 
@@ -104,9 +104,7 @@
     return {
       label: stat.label,
       value: stat.value,
-      tooltip: stat.roll
-        ? `${tooltip} · ${INVENTORY_ROLL_HINT_LABEL}`
-        : tooltip,
+      tooltip: stat.roll ? `${tooltip} · ${SHEET_ROLL_HINT_LABEL}` : tooltip,
       roll: stat.roll ?? null,
       containerClass: stat.roll
         ? `${classes.container} ${ROLL_STAT_CLASS}`

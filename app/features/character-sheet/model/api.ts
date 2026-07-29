@@ -26,11 +26,13 @@ import {
   FEATS_DETAIL_BASE_PATH,
   SHEET_UNKNOWN_ERROR_MESSAGE,
   SPELLS_DETAIL_BASE_PATH,
+  SPELLS_RAW_DETAIL_PATH_SUFFIX,
 } from './constants';
 import {
   parseCatalogDescription,
   parseCatalogSpellDetail,
   parseFeatDetail,
+  parseSpellDamageFormulas,
 } from './schemas';
 import { getInventoryItemDetailPath } from './utils';
 
@@ -245,6 +247,29 @@ export async function fetchCatalogSpellDetail(
     return parseCatalogSpellDetail(response);
   } catch {
     return null;
+  }
+}
+
+/**
+ * Формулы урона каталожного заклинания. Публичная деталь их не отдаёт — как и
+ * боевые числа предметов, они лежат в «сыром» ответе раздела. Отказ запроса не
+ * ломает вкладку: заклинание останется без плитки урона.
+ *
+ * @param spellUrl слаг заклинания в каталоге.
+ * @returns формулы урона; пустой список — урона нет или он не загрузился.
+ */
+export async function fetchSpellDamageFormulas(
+  spellUrl: string,
+): Promise<string[]> {
+  try {
+    const response = await $fetch<unknown>(
+      `${SPELLS_DETAIL_BASE_PATH}/${spellUrl}/${SPELLS_RAW_DETAIL_PATH_SUFFIX}`,
+      { method: 'GET', retry: 0 },
+    );
+
+    return parseSpellDamageFormulas(response);
+  } catch {
+    return [];
   }
 }
 
