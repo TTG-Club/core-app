@@ -67,6 +67,7 @@
     'edit-spell': [spellUrl: string];
     'copy-spell': [spellUrl: string];
     'edit-spellcasting': [];
+    'edit-prepared-spells': [];
     'edit-currency': [];
     'adjust-item-quantity': [inventoryItemId: string, delta: number];
     'toggle-item-equip': [inventoryItemId: string];
@@ -147,6 +148,10 @@
 
   function handleSpellcastingEdit() {
     emit('edit-spellcasting');
+  }
+
+  function handlePreparedSpellsEdit() {
+    emit('edit-prepared-spells');
   }
 
   function handleSpellRemove(spellUrl: string) {
@@ -860,6 +865,7 @@
             @edit-spell="handleSpellEdit"
             @copy-spell="handleSpellCopy"
             @edit-spellcasting="handleSpellcastingEdit"
+            @edit-prepared-spells="handlePreparedSpellsEdit"
             @remove-spell="handleSpellRemove"
             @copy-innate-spell="handleInnateSpellCopy"
             @remove-innate-spell="handleInnateSpellRemove"

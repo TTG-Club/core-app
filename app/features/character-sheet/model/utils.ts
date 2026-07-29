@@ -51,6 +51,8 @@ import type {
   InventoryWeapon,
   ItemSummary,
   MagicItemCatalogItem,
+  PreparedSpellsBreakdown,
+  PreparedSpellsScaling,
   PrimarySpeed,
   ProficiencyCatalogGroup,
   ResourceRecovery,
@@ -142,6 +144,10 @@ import {
   MAGIC_ITEMS_DETAIL_BASE_PATH,
   NEW_CUSTOM_INVENTORY_ITEM,
   PACT_SPELL_SLOTS_LABEL,
+  PREPARED_SPELLS_COLUMN_KEYWORD,
+  PREPARED_SPELLS_COLUMN_PREFIX,
+  PREPARED_SPELLS_MAX,
+  PREPARED_SPELLS_MIN,
   RESOURCE_COUNT_MAX,
   RESOURCE_RECOVERY_LABELS,
   RESOURCE_SHORT_LABEL_MAX_LENGTH,
@@ -2258,6 +2264,117 @@ export function getSpellSlotSummary(row: SpellSlotRow): string {
   return `Свободно ячеек: ${free} из ${row.max} · ${RESOURCE_RECOVERY_LABELS[row.recovery]}`;
 }
 
+/** Всё, кроме букв: названия колонок таблицы класса сравниваются без них. */
+const NON_LETTER_PATTERN = /\P{L}/gu;
+
+/** Целое неотрицательное число целиком (значение колонки таблицы класса). */
+const INTEGER_VALUE_PATTERN = /^\d+$/;
+
+/**
+ * Колонка таблицы класса с числом подготовленных заклинаний. Название
+ * справочник сокращает по-разному («Подг. закл.», «Подг. Закл»), поэтому
+ * сравниваются только буквы: название начинается с «подг» и содержит «закл».
+ *
+ * @param column колонка таблицы прогрессии класса.
+ * @returns колонка описывает подготовленные заклинания.
+ */
+function isPreparedSpellsColumn(column: ClassTableColumn): boolean {
+  const letters = column.name.toLowerCase().replace(NON_LETTER_PATTERN, '');
+
+  return (
+    letters.startsWith(PREPARED_SPELLS_COLUMN_PREFIX)
+    && letters.includes(PREPARED_SPELLS_COLUMN_KEYWORD)
+  );
+}
+
+/**
+ * Прогрессия числа подготовленных заклинаний из таблицы прогрессии. Таблицу
+ * отдаёт справочник, поэтому лист запоминает её при выборе класса: колонка
+ * бывает и у класса (заклинатели), и только у подкласса (мистический рыцарь).
+ * Нечисловые значения колонки отбрасываются.
+ *
+ * @param table таблица прогрессии класса и подкласса.
+ * @returns записи «с уровня — столько заклинаний» по возрастанию уровня.
+ */
+export function derivePreparedSpellsScaling(
+  table: ClassTableColumn[],
+): PreparedSpellsScaling[] {
+  const column = table.find(isPreparedSpellsColumn);
+
+  if (!column) {
+    return [];
+  }
+
+  return column.scaling
+    .filter((entry) => INTEGER_VALUE_PATTERN.test(entry.value.trim()))
+    .map((entry) => ({ level: entry.level, value: Number(entry.value) }))
+    .sort((firstEntry, secondEntry) => firstEntry.level - secondEntry.level);
+}
+
+/**
+ * Число подготовленных заклинаний по таблице класса на уровне персонажа:
+ * берётся запись с наибольшим уровнем, не превышающим текущий.
+ *
+ * @param scaling прогрессия подготовленных заклинаний класса.
+ * @param level уровень персонажа.
+ * @returns число заклинаний; null — записи для уровня нет.
+ */
+function getPreparedSpellsAtLevel(
+  scaling: PreparedSpellsScaling[],
+  level: number,
+): number | null {
+  let value: number | null = null;
+
+  for (const entry of scaling) {
+    if (entry.level <= level) {
+      value = entry.value;
+    }
+  }
+
+  return value;
+}
+
+/**
+ * Разбор числа подготовленных заклинаний: сколько их даёт таблица класса на
+ * текущем уровне, какой бонус к этому числу задан вручную и какое значение
+ * выходит итогом. Своё число выключает подсчёт по классу целиком (бонус к нему
+ * не прибавляется).
+ *
+ * @param character персонаж.
+ * @returns разбор для блока вкладки и модалки настройки.
+ */
+export function getPreparedSpellsBreakdown(
+  character: Character,
+): PreparedSpellsBreakdown {
+  const { custom, bonus } = character.spellcasting.prepared;
+
+  const classValue = getPreparedSpellsAtLevel(
+    character.characterClass?.preparedSpells ?? [],
+    character.level,
+  );
+
+  // Класс подготовку не считает: бонус прибавлять не к чему, число остаётся
+  // неопределённым, пока игрок не задаст своё.
+  const autoValue =
+    classValue === null
+      ? null
+      : clamp(classValue + bonus, PREPARED_SPELLS_MIN, PREPARED_SPELLS_MAX);
+
+  // Своё число клампится и здесь, а не только в экшене: документ мог прийти
+  // импортом руками, а схема числа не обрезает.
+  const customValue =
+    custom === null
+      ? null
+      : clamp(custom, PREPARED_SPELLS_MIN, PREPARED_SPELLS_MAX);
+
+  return {
+    value: customValue ?? autoValue,
+    classValue,
+    custom: custom !== null,
+    bonus,
+  };
+}
+
 /**
  * Разбор заклинательства: сложность спасброска от заклинаний и бонус на
  * попадание атакой заклинанием. Заклинательная характеристика — заданная
@@ -2292,6 +2409,7 @@ export function getSpellcastingBreakdown(
     proficiencyBonus,
     saveDc: SPELL_SAVE_DC_BASE + proficiencyBonus + abilityModifier,
     attackBonus: proficiencyBonus + abilityModifier,
+    prepared: getPreparedSpellsBreakdown(character),
   };
 }
 
@@ -2611,7 +2729,7 @@ export function deriveClassResources(
 
     const value = getColumnValueAtLevel(column, level)?.trim();
 
-    if (!value || !/^\d+$/.test(value)) {
+    if (!value || !INTEGER_VALUE_PATTERN.test(value)) {
       continue;
     }
 

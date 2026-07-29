@@ -34,6 +34,7 @@ export { default as SheetNameModal } from './SheetNameModal.vue';
 export { default as SheetNoteModal } from './SheetNoteModal.vue';
 export { default as SheetNotesTab } from './SheetNotesTab.vue';
 export { default as SheetPanel } from './SheetPanel.vue';
+export { default as SheetPreparedSpellsModal } from './SheetPreparedSpellsModal.vue';
 export { default as SheetProficienciesPanel } from './SheetProficienciesPanel.vue';
 export { default as SheetProficiencyGroupsModal } from './SheetProficiencyGroupsModal.vue';
 export { default as SheetRollModal } from './SheetRollModal.vue';

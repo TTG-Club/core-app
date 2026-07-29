@@ -12,6 +12,7 @@ import type {
   CharacterHitDie,
   CharacterInventoryItem,
   CharacterNote,
+  CharacterPreparedSpells,
   CharacterSettings,
   CharacterSpecies,
   CharacterSpeed,
@@ -71,6 +72,10 @@ import {
   LEVEL_MIN,
   mergeCharacterFeatures,
   mergeClassResources,
+  PREPARED_SPELLS_BONUS_MAX,
+  PREPARED_SPELLS_BONUS_MIN,
+  PREPARED_SPELLS_MAX,
+  PREPARED_SPELLS_MIN,
   removeFeaturesAboveLevel,
   RESOURCE_COUNT_MAX,
   RESOURCE_COUNT_MIN,
@@ -612,15 +617,20 @@ export function useCharacterSheet() {
         current: clamp(Math.trunc(payload.experience), 0, EXPERIENCE_MAX),
         nextLevel: getNextLevelExperience(clampedLevel),
       },
-      characterClass:
-        characterClass && payload.subclass
-          ? {
-              ...characterClass,
-              subclassUrl: payload.subclass.url,
-              subclassName: payload.subclass.name,
-              casterType: payload.subclass.casterType,
-            }
-          : characterClass,
+      // Мастер грузит деталь класса, поэтому заодно обновляет прогрессию
+      // подготовленных заклинаний: у листов, собранных до её появления, она
+      // запишется первым же повышением уровня.
+      characterClass: characterClass
+        ? {
+            ...characterClass,
+            subclassUrl: payload.subclass?.url ?? characterClass.subclassUrl,
+            subclassName: payload.subclass?.name ?? characterClass.subclassName,
+            casterType: payload.subclass
+              ? payload.subclass.casterType
+              : characterClass.casterType,
+            preparedSpells: [...payload.preparedSpells],
+          }
+        : characterClass,
       hitDice:
         classDie !== undefined && levelDelta !== 0
           ? shiftClassHitDice(character.value.hitDice, classDie, levelDelta)
@@ -1413,7 +1423,44 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
-      spellcasting: { ability: spellcasting.ability },
+      spellcasting: {
+        ability: spellcasting.ability,
+        prepared: { ...spellcasting.prepared },
+      },
+    };
+  }
+
+  /**
+   * Установка настройки числа подготовленных заклинаний: своё число выключает
+   * подсчёт по таблице класса, бонус прибавляется к числу класса.
+   *
+   * @param prepared новая настройка подготовленных заклинаний.
+   */
+  function setPreparedSpells(prepared: CharacterPreparedSpells): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      spellcasting: {
+        ...character.value.spellcasting,
+        prepared: {
+          custom:
+            prepared.custom === null
+              ? null
+              : clamp(
+                  Math.trunc(prepared.custom),
+                  PREPARED_SPELLS_MIN,
+                  PREPARED_SPELLS_MAX,
+                ),
+          bonus: clamp(
+            Math.trunc(prepared.bonus),
+            PREPARED_SPELLS_BONUS_MIN,
+            PREPARED_SPELLS_BONUS_MAX,
+          ),
+        },
+      },
     };
   }
 
@@ -2064,6 +2111,7 @@ export function useCharacterSheet() {
     setSpecies,
     setSpells,
     setSpellcasting,
+    setPreparedSpells,
     setVision,
     setSpeed,
     setHealth,

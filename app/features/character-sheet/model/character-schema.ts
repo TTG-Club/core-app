@@ -71,6 +71,17 @@ const characterClassSchema = z
     // для них он определяется по названию класса (см. `getClassCasterType`).
     casterType: z.nativeEnum(CasterType).nullable().catch(null),
     hitDie: z.coerce.number().catch(8),
+    // Листы, сохранённые до появления поля, приходят без прогрессии
+    // подготовленных заклинаний: она запишется при следующем выборе класса
+    // или повышении уровня.
+    preparedSpells: z
+      .array(
+        z.object({
+          level: z.coerce.number(),
+          value: z.coerce.number(),
+        }),
+      )
+      .catch([]),
   })
   .nullable()
   .catch(null);
@@ -146,8 +157,19 @@ const spellSlotSchema = z.object({
 const spellcastingSchema = z
   .object({
     ability: abilityKeySchema.nullable().catch(null),
+    // Настройка подготовленных заклинаний появилась позже: у листов без неё
+    // число считается по таблице класса без бонуса.
+    prepared: z
+      .object({
+        custom: z.coerce.number().nullable().catch(null),
+        bonus: z.coerce.number().catch(0),
+      })
+      .catch(() => ({ ...DEFAULT_CHARACTER.spellcasting.prepared })),
   })
-  .catch(() => ({ ...DEFAULT_CHARACTER.spellcasting }));
+  .catch(() => ({
+    ...DEFAULT_CHARACTER.spellcasting,
+    prepared: { ...DEFAULT_CHARACTER.spellcasting.prepared },
+  }));
 
 // По умолчанию — правила D&D (легаси-листы без блока настроек): базовая
 // характеристика атаки оружием определяется свойствами оружия.

@@ -20,6 +20,7 @@
     CLASSES_FILTERS_PATH,
     CLASSES_SEARCH_PATH,
     deriveClassResources,
+    derivePreparedSpellsScaling,
     detectFeatureChoice,
     FEATURE_ORIGIN_LABELS,
     fetchFeatDetail,
@@ -613,6 +614,13 @@
           subclassName: subclassDetail.value?.name ?? null,
           casterType: getSelectedCasterType(base, subclassDetail.value),
           hitDie: base.hitDie,
+          // Колонка подготовленных заклинаний бывает и у класса, и только у
+          // подкласса (мистический рыцарь), поэтому таблицы просматриваются
+          // вместе.
+          preparedSpells: derivePreparedSpellsScaling([
+            ...base.table,
+            ...(subclassDetail.value?.table ?? []),
+          ]),
         },
         savingThrows: base.savingThrows,
         hitDie: base.hitDie,

@@ -158,6 +158,14 @@ modals), so its capabilities are listed here rather than squeezed into the table
 - Spell slots derived from the reference `casterType` of the class/subclass
   (full / half / third caster, warlock pact magic) plus the character level;
   spent by clicking the circles in each spell-level divider.
+- Prepared-spell count on the spells tab, next to the save DC / attack tile. The
+  reference class table has it as a column («Подг. закл.», matched by letters
+  because the wording is abbreviated differently per class and sometimes lives
+  only on the subclass), so its progression is snapshotted into the sheet by the
+  class wizard and refreshed by every level-up; the tile shows the value for the
+  current level. Clicking it opens the settings: either a custom number (the
+  class count is then ignored) or a bonus added to the class count. Marking
+  which spells are prepared is not implemented yet.
 - Weapon attack & damage rolled straight from their tiles in the equipment list
   (damage dice come from the item `/raw` response).
 - Spell damage rolled from the same kind of tile on the spells tab. The formulas

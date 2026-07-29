@@ -23,6 +23,9 @@
     INNATE_SPELL_GROUP_LABEL,
     INNATE_SPELL_GROUP_LEVEL,
     isCustomSpell,
+    PREPARED_SPELLS_EMPTY_VALUE,
+    PREPARED_SPELLS_HINTS,
+    PREPARED_SPELLS_LABEL,
     SHEET_ROLL_HINT_LABEL,
     SHEET_TAB_EMPTY_LABELS,
     SPELL_DAMAGE_ROLL_HINT_LABEL,
@@ -42,6 +45,10 @@
   /** Разделитель частей подсказки плитки урона (формула, тип, условие). */
   const DAMAGE_TOOLTIP_SEPARATOR = ' · ';
 
+  /** Плитка-кнопка шапки вкладки: открывает настройку своих значений. */
+  const HEADER_STAT_CLASS =
+    'flex h-7 cursor-pointer items-center gap-3 rounded-lg border border-default/50 bg-elevated/20 px-3 transition-colors hover:border-warning/60';
+
   const props = defineProps<{
     spells: CharacterSpell[];
     innateSpells: CharacterSpell[];
@@ -57,6 +64,7 @@
     'edit-spell': [spellUrl: string];
     'copy-spell': [spellUrl: string];
     'edit-spellcasting': [];
+    'edit-prepared-spells': [];
     'remove-spell': [spellUrl: string];
     'copy-innate-spell': [spellUrl: string];
     'remove-innate-spell': [spellUrl: string];
@@ -83,6 +91,36 @@
   const formattedAttackBonus = computed(() =>
     getFormattedBonus(props.spellcasting.attackBonus),
   );
+
+  const preparedSpells = computed(() => props.spellcasting.prepared);
+
+  const preparedSpellsValue = computed(() =>
+    preparedSpells.value.value === null
+      ? PREPARED_SPELLS_EMPTY_VALUE
+      : String(preparedSpells.value.value),
+  );
+
+  /**
+   * Подсказка блока подготовленных: откуда взялось число — из таблицы класса
+   * (с бонусом, если он задан) либо оно указано вручную.
+   */
+  const preparedSpellsHint = computed(() => {
+    const { value, classValue, custom, bonus } = preparedSpells.value;
+
+    if (custom) {
+      return PREPARED_SPELLS_HINTS.custom;
+    }
+
+    if (classValue === null) {
+      return PREPARED_SPELLS_HINTS.unknown;
+    }
+
+    if (bonus === 0) {
+      return `${PREPARED_SPELLS_HINTS.auto}: ${classValue}`;
+    }
+
+    return `${PREPARED_SPELLS_HINTS.auto}: ${classValue} ${getFormattedBonus(bonus)} = ${value}`;
+  });
 
   const overlay = useOverlay();
 
@@ -277,38 +315,63 @@
 <template>
   <div class="flex flex-col gap-3 pt-2">
     <div class="flex flex-wrap items-center justify-between gap-2">
-      <button
-        type="button"
-        class="flex h-7 cursor-pointer items-center gap-3 rounded-lg border border-default/50 bg-elevated/20 px-3 transition-colors hover:border-warning/60"
-        aria-label="Настроить заклинательство"
-        @click.left.exact.prevent="emit('edit-spellcasting')"
-      >
-        <span class="flex items-center gap-1.5">
-          <span
-            class="text-[10px] font-bold tracking-wider text-muted uppercase"
+      <div class="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          :class="HEADER_STAT_CLASS"
+          aria-label="Настроить заклинательство"
+          @click.left.exact.prevent="emit('edit-spellcasting')"
+        >
+          <span class="flex items-center gap-1.5">
+            <span
+              class="text-[10px] font-bold tracking-wider text-muted uppercase"
+            >
+              Сл. спасброска
+            </span>
+
+            <span class="text-sm font-bold text-highlighted">
+              {{ spellcasting.saveDc }}
+            </span>
+          </span>
+
+          <span class="h-5 w-px bg-default/60" />
+
+          <span class="flex items-center gap-1.5">
+            <span
+              class="text-[10px] font-bold tracking-wider text-muted uppercase"
+            >
+              Атака заклинанием
+            </span>
+
+            <span class="text-sm font-bold text-highlighted">
+              {{ formattedAttackBonus }}
+            </span>
+          </span>
+        </button>
+
+        <!-- Сколько заклинаний можно подготовить: число берётся из таблицы
+          класса, нажатие открывает настройку своего числа или бонуса к нему -->
+        <UTooltip :text="preparedSpellsHint">
+          <button
+            type="button"
+            :class="HEADER_STAT_CLASS"
+            aria-label="Настроить подготовленные заклинания"
+            @click.left.exact.prevent="emit('edit-prepared-spells')"
           >
-            Сл. спасброска
-          </span>
+            <span class="flex items-center gap-1.5">
+              <span
+                class="text-[10px] font-bold tracking-wider text-muted uppercase"
+              >
+                {{ PREPARED_SPELLS_LABEL }}
+              </span>
 
-          <span class="text-sm font-bold text-highlighted">
-            {{ spellcasting.saveDc }}
-          </span>
-        </span>
-
-        <span class="h-5 w-px bg-default/60" />
-
-        <span class="flex items-center gap-1.5">
-          <span
-            class="text-[10px] font-bold tracking-wider text-muted uppercase"
-          >
-            Атака заклинанием
-          </span>
-
-          <span class="text-sm font-bold text-highlighted">
-            {{ formattedAttackBonus }}
-          </span>
-        </span>
-      </button>
+              <span class="text-sm font-bold text-highlighted">
+                {{ preparedSpellsValue }}
+              </span>
+            </span>
+          </button>
+        </UTooltip>
+      </div>
 
       <UDropdownMenu
         :items="addMenuItems"

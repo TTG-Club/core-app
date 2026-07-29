@@ -53,6 +53,7 @@
     SheetMagicItemAddModal,
     SheetNameModal,
     SheetNoteModal,
+    SheetPreparedSpellsModal,
     SheetProficienciesPanel,
     SheetProficiencyGroupsModal,
     SheetRollModal,
@@ -386,6 +387,8 @@
   });
 
   const spellcastingModal = overlay.create(SheetSpellcastingModal);
+
+  const preparedSpellsModal = overlay.create(SheetPreparedSpellsModal);
 
   const itemAddModal = overlay.create(SheetItemAddModal);
 
@@ -731,6 +734,14 @@
     spellcastingModal.open();
   }
 
+  function handlePreparedSpellsEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    preparedSpellsModal.open();
+  }
+
   function handleSettingsEdit() {
     if (!ensureEditable()) {
       return;
@@ -1027,6 +1038,7 @@
           @edit-spell="handleSpellEdit"
           @copy-spell="handleSpellCopy"
           @edit-spellcasting="handleSpellcastingEdit"
+          @edit-prepared-spells="handlePreparedSpellsEdit"
           @edit-currency="handleCurrencyEdit"
           @adjust-item-quantity="adjustInventoryItemQuantity"
           @toggle-item-equip="toggleInventoryItemEquipped"

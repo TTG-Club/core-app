@@ -20,6 +20,7 @@ import {
   CLASSES_FILTERS_PATH,
   collectChoiceSelections,
   deriveClassResources,
+  derivePreparedSpellsScaling,
   filterClassOptionsBySources,
   getHitDieFormula,
   getHitDieLabel,
@@ -637,6 +638,10 @@ export function useLevelUpWizard(): LevelUpWizard {
         [...base.table, ...(subclassDetail.value?.table ?? [])],
         level,
       ),
+      preparedSpells: derivePreparedSpellsScaling([
+        ...base.table,
+        ...(subclassDetail.value?.table ?? []),
+      ]),
       subclass: chosenSubclass,
       skills: {
         proficient: [...new Set(proficientSkills)],
