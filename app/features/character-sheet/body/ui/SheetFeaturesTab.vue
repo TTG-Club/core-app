@@ -22,9 +22,9 @@
     'remove-feature': [featureId: string];
   }>();
 
-  // Добавление, правка и удаление особенностей меняют лист: без прав кнопки
-  // прячутся, а карточки остаются на прежних местах.
-  const { editControlClass } = useCharacterSheet();
+  // Добавление, правка и удаление особенностей меняют лист: без прав кнопка
+  // «Добавить» прячется, а строчные кнопки правки и вовсе не разъезжаются.
+  const { canEdit, editControlClass } = useCharacterSheet();
 
   const addMenuItems = getFeaturesAddMenuItems({
     onAddFeature: () => emit('add-feature'),
@@ -64,12 +64,37 @@
   } as const;
 
   /**
-   * Кнопки правки строки: с мышью проявляются по наведению на строку, а на
-   * сенсорном экране ховера нет — там они видны всегда, иначе правку и удаление
-   * особенности с телефона не найти.
+   * Колонка кнопок правки строки: пока на строку не навели, она схлопнута в
+   * нулевую ширину — место под ней занимает название.
    */
   const ROW_ACTIONS_CLASS =
-    'relative flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover/feature:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100';
+    'grid shrink-0 grid-cols-[0fr] transition-[grid-template-columns] duration-200';
+
+  /**
+   * Наведение (или переход с клавиатуры) раздвигает колонку, и название уступает
+   * кнопкам место. На сенсорном экране ховера нет — там кнопки развёрнуты
+   * всегда, иначе правку и удаление особенности с телефона не найти.
+   */
+  const ROW_ACTIONS_REVEAL_CLASS =
+    'group-hover/feature:grid-cols-[1fr] focus-within:grid-cols-[1fr] pointer-coarse:grid-cols-[1fr]';
+
+  /**
+   * Внутренняя обёртка кнопок: `overflow-hidden` обнуляет минимальную ширину
+   * ячейки грида (без него `0fr` не схлопнется под содержимое), а прозрачность
+   * убирает кнопки из виду, пока колонка ещё разъезжается.
+   */
+  const ROW_ACTIONS_INNER_CLASS =
+    'flex items-center gap-1 overflow-hidden pl-2 opacity-0 transition-opacity duration-200 group-hover/feature:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100';
+
+  /**
+   * Без прав на правку (лист чужой или заперт замком) колонка не разъезжается
+   * вовсе: раздвигать строку ради пустоты на месте спрятанных кнопок незачем.
+   */
+  const rowActionsClass = computed(() =>
+    canEdit.value
+      ? `${ROW_ACTIONS_CLASS} ${ROW_ACTIONS_REVEAL_CLASS}`
+      : ROW_ACTIONS_CLASS,
+  );
 
   const displayRows = computed(() =>
     props.features.map((feature) => {
@@ -113,21 +138,18 @@
         :key="feature.id"
         class="flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-primary/60"
       >
-        <div
-          class="group/feature relative flex w-full items-center gap-2 px-3 py-2"
-        >
-          <!-- Кнопка-раскрытие растянута на всю строку: разворачивают описание
-            и стрелка, и поля строки, и пустое место у названия. Кнопки правки
-            идут в разметке после неё и позиционированы — остаются сверху. -->
+        <div class="group/feature flex w-full items-center">
+          <!-- Раскрытие описания повешено на две настоящие кнопки — название с
+            пустым местом строки и стрелку. Растянутого на всю строку
+            прозрачного слоя тут нет: кнопки правки стоят между ними, и слой
+            пришлось бы перекрывать позиционированием, а поверх него нажатия по
+            стрелке уже не доходили. -->
           <button
             type="button"
-            class="absolute inset-0 cursor-pointer rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            class="flex min-w-0 grow cursor-pointer items-center gap-3 rounded-lg py-2 pl-3 text-left focus-visible:outline-2 focus-visible:outline-primary"
             :aria-expanded="feature.isExpanded"
-            :aria-label="`Особенность: ${feature.name}`"
             @click.left.exact.prevent="toggleFeature(feature.id)"
-          />
-
-          <div class="flex min-w-0 grow items-center gap-3">
+          >
             <UBadge
               v-if="feature.showBadge"
               size="sm"
@@ -138,47 +160,62 @@
               {{ feature.originLabel }}
             </UBadge>
 
-            <span class="grow truncate text-sm font-medium text-highlighted">
+            <span
+              class="min-w-0 grow truncate text-sm font-medium text-highlighted"
+            >
               {{ feature.name }}
             </span>
+
+            <span
+              v-if="feature.choice"
+              class="shrink-0 text-xs text-primary"
+            >
+              {{ feature.choice }}
+            </span>
+          </button>
+
+          <div :class="rowActionsClass">
+            <div :class="ROW_ACTIONS_INNER_CLASS">
+              <UButton
+                icon="tabler:pencil"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                square
+                :class="editControlClass"
+                :aria-label="`Редактировать особенность: ${feature.name}`"
+                @click.left.exact.prevent="handleEditClick(feature.id)"
+              />
+
+              <UButton
+                icon="tabler:trash"
+                color="error"
+                variant="ghost"
+                size="xs"
+                square
+                :class="editControlClass"
+                :aria-label="`Удалить особенность: ${feature.name}`"
+                @click.left.exact.prevent="handleRemove(feature.id)"
+              />
+            </div>
           </div>
 
-          <span
-            v-if="feature.choice"
-            class="shrink-0 text-xs text-primary"
+          <!-- Стрелка повторяет действие кнопки с названием, поэтому из обхода
+            с клавиатуры и от скринридера скрыта: иначе одна и та же особенность
+            занимала бы две остановки табом. -->
+          <button
+            type="button"
+            tabindex="-1"
+            aria-hidden="true"
+            class="flex shrink-0 cursor-pointer items-center rounded-lg py-2 pr-3 pl-2"
+            @click.left.exact.prevent="toggleFeature(feature.id)"
           >
-            {{ feature.choice }}
-          </span>
-
-          <div :class="ROW_ACTIONS_CLASS">
-            <UButton
-              icon="tabler:pencil"
-              color="neutral"
-              variant="ghost"
-              size="xs"
-              square
-              :class="editControlClass"
-              :aria-label="`Редактировать особенность: ${feature.name}`"
-              @click.left.exact.prevent="handleEditClick(feature.id)"
+            <UIcon
+              name="tabler:chevron-down"
+              class="size-4 text-muted transition-transform"
+              :class="feature.chevronClass"
             />
-
-            <UButton
-              icon="tabler:trash"
-              color="error"
-              variant="ghost"
-              size="xs"
-              square
-              :class="editControlClass"
-              :aria-label="`Удалить особенность: ${feature.name}`"
-              @click.left.exact.prevent="handleRemove(feature.id)"
-            />
-          </div>
-
-          <UIcon
-            name="tabler:chevron-down"
-            class="size-4 shrink-0 text-muted transition-transform"
-            :class="feature.chevronClass"
-          />
+          </button>
         </div>
 
         <div
