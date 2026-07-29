@@ -39,6 +39,7 @@
     FIGHTING_STYLE_FEATURE_ID_SEGMENT,
     FIGHTING_STYLE_INVALID_RESPONSE_ERROR,
     getCharacterFeatureId,
+    getChoiceSkillHints,
     getClassMaxHitPoints,
     getClassSkillChoice,
     getClassToolChoice,
@@ -51,6 +52,7 @@
     parseClassOptions,
     resolveChoiceOptions,
     SHEET_SEARCH_LABELS,
+    SKILL_DUPLICATE_WARNING,
     SUBCLASS_SELECTION_MIN_LEVEL,
     unionToolProficiencies,
   } from '../../model';
@@ -321,6 +323,11 @@
       // названных в прозе («один вид ремесленных инструментов»).
       allTools: getToolNamesForGroups(choice.toolGroups),
     });
+  }
+
+  /** Пометки опций: навыки, которыми персонаж уже владеет. */
+  function choiceHints(choice: ClassChoice): Record<string, string> {
+    return getChoiceSkillHints(choice, character.value.skills);
   }
 
   /** Обновление выбора с ограничением по требуемому количеству. */
@@ -1013,6 +1020,8 @@
               <SheetChoiceSelect
                 :model-value="selections[choice.id] ?? []"
                 :items="choiceOptions(choice)"
+                :hints="choiceHints(choice)"
+                :warning="SKILL_DUPLICATE_WARNING"
                 :count="choice.count"
                 :placeholder="`Выберите ${choice.count}`"
                 @update:model-value="updateSelection(choice, $event)"
@@ -1071,6 +1080,8 @@
                 <SheetChoiceSelect
                   :model-value="selections[row.choiceControl.id] ?? []"
                   :items="choiceOptions(row.choiceControl)"
+                  :hints="choiceHints(row.choiceControl)"
+                  :warning="SKILL_DUPLICATE_WARNING"
                   :count="row.choiceControl.count"
                   :placeholder="`Выберите ${row.choiceControl.count}`"
                   @update:model-value="

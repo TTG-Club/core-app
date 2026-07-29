@@ -20,6 +20,7 @@
     isHitPointsGainMode,
     LEVEL_UP_HIT_POINTS_LABELS,
     LEVEL_UP_WIZARD_LABELS,
+    SKILL_DUPLICATE_WARNING,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
   import SheetLevelUpFeatChoice from './SheetLevelUpFeatChoice.vue';
@@ -31,6 +32,7 @@
     constitutionModifier,
     abilities,
     choiceOptions,
+    choiceHints,
     featOptions,
     selectedFeat,
     isFeatsLoading = false,
@@ -52,6 +54,9 @@
 
     /** Опции пикера для выбора внутри умения. */
     choiceOptions: (choice: ClassChoice) => string[];
+
+    /** Пометки опций пикера: навыки, которыми персонаж уже владеет. */
+    choiceHints: (choice: ClassChoice) => Record<string, string>;
 
     /** Черты, доступные в умении улучшения характеристик. */
     featOptions: (featureId: string) => FeatSelectOption[];
@@ -136,6 +141,7 @@
         ? `${LEVEL_UP_WIZARD_LABELS.chooseLabel} ${feature.choice.count}`
         : '',
       options: feature.choice ? choiceOptions(feature.choice) : [],
+      hints: feature.choice ? choiceHints(feature.choice) : {},
       featOptions: feature.abilityImprovement ? featOptions(feature.id) : [],
       selectedFeat: feature.abilityImprovement
         ? selectedFeat(feature.id)
@@ -277,6 +283,8 @@
           <SheetChoiceSelect
             :model-value="draft.selections[feature.choice.id] ?? []"
             :items="feature.options"
+            :hints="feature.hints"
+            :warning="SKILL_DUPLICATE_WARNING"
             :count="feature.choice.count"
             :placeholder="feature.chooseLabel"
             @update:model-value="handleSelection(feature.choice, $event)"

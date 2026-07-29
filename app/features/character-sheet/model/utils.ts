@@ -198,6 +198,7 @@ import {
   SHEET_SAVE_SHARED_LABELS,
   SHEET_SHARE_ACTIVE_HINT,
   SIZE_LABEL_WORDS,
+  SKILL_OWNED_HINTS,
   SKILL_PROFICIENCY_MULTIPLIERS,
   SPEED_PARSE_FALLBACK,
   SPEED_PRIMARY_ORDER,
@@ -4352,6 +4353,42 @@ export function resolveChoiceOptions(
   const toolOptions = choice.listed.length ? choice.listed : context.allTools;
 
   return toolOptions.filter((name) => !knownTools.has(name));
+}
+
+/**
+ * Пометки навыков, которыми персонаж уже владеет: название навыка → подпись для
+ * списка выбора. По правилам 2024 повторное владение ничего не даёт (бонус
+ * мастерства не складывается) и компетенцию не выдаёт, поэтому такие навыки
+ * помечаются, но остаются доступными: у мастера может действовать правило 2014
+ * «возьми взамен другое владение».
+ *
+ * @param skills навыки персонажа.
+ * @returns пометки по названиям навыков, которыми персонаж владеет.
+ */
+export function getOwnedSkillHints(
+  skills: CharacterSkill[],
+): Record<string, string> {
+  return Object.fromEntries(
+    skills
+      .filter((skill) => skill.proficiency !== 'none')
+      .map((skill) => [skill.name, SKILL_OWNED_HINTS[skill.proficiency]]),
+  );
+}
+
+/**
+ * Пометки опций выбора: они нужны только выбору владения навыком. Опции выбора
+ * компетенции и так собраны из навыков с владением, а известные языки и
+ * инструменты `resolveChoiceOptions` вырезает из списка.
+ *
+ * @param choice распознанный выбор.
+ * @param skills навыки персонажа.
+ * @returns пометки по названиям опций выбора.
+ */
+export function getChoiceSkillHints(
+  choice: ClassChoice,
+  skills: CharacterSkill[],
+): Record<string, string> {
+  return choice.kind === 'skill-proficiency' ? getOwnedSkillHints(skills) : {};
 }
 
 /**

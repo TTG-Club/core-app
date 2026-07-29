@@ -30,7 +30,9 @@
     FEATS_SELECT_PATH,
     fetchFeatDetail,
     getOriginFeatOptions,
+    getOwnedSkillHints,
     parseFeatSelectOptions,
+    SKILL_DUPLICATE_WARNING,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
 
@@ -90,6 +92,10 @@
 
   const skillNames = computed(() =>
     character.value.skills.map((skill) => skill.name),
+  );
+
+  const ownedSkillHints = computed(() =>
+    getOwnedSkillHints(character.value.skills),
   );
 
   const toolNames = computed(() => getToolNamesForGroups());
@@ -366,6 +372,8 @@
           <SheetChoiceSelect
             v-model="draftSkills"
             :items="skillNames"
+            :hints="ownedSkillHints"
+            :warning="SKILL_DUPLICATE_WARNING"
             :count="CUSTOM_BACKGROUND_SKILL_COUNT"
             :placeholder="CUSTOM_BACKGROUND_LABELS.skillsPlaceholder"
           />

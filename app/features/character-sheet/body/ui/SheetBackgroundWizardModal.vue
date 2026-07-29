@@ -28,6 +28,7 @@
     computeAbilityBonuses,
     CUSTOM_BACKGROUND_LABELS,
     FEATS_DETAIL_BASE_PATH,
+    getOwnedSkillHints,
     getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
     parseBackgroundDetail,
@@ -183,6 +184,27 @@
       value: key,
     })),
   );
+
+  /**
+   * Навыки предыстории с пометкой уже имеющихся: предыстория выдаёт их без
+   * выбора, поэтому вместо запрета показывается сама пометка — по правилам 2024
+   * повторное владение просто ничего не даёт.
+   */
+  const backgroundSkillRows = computed<
+    Array<{ name: string; label: string; color: 'neutral' | 'primary' }>
+  >(() => {
+    const hints = getOwnedSkillHints(character.value.skills);
+
+    return (backgroundDetail.value?.skills ?? []).map((name) => {
+      const hint = hints[name];
+
+      return {
+        name,
+        label: hint ? `${name} · ${hint}` : name,
+        color: hint ? 'neutral' : 'primary',
+      };
+    });
+  });
 
   /**
    * Одну характеристику нельзя усилить дважды (+3): выбранная под +1
@@ -494,13 +516,13 @@
 
             <div class="flex flex-wrap gap-1">
               <UBadge
-                v-for="skill in backgroundDetail.skills"
-                :key="skill"
+                v-for="skill in backgroundSkillRows"
+                :key="skill.name"
                 size="sm"
-                color="primary"
+                :color="skill.color"
                 variant="subtle"
               >
-                {{ skill }}
+                {{ skill.label }}
               </UBadge>
 
               <span

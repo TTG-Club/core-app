@@ -35,6 +35,7 @@ import {
   fetchFeatDetail,
   filterClassOptionsBySources,
   getAbilityImprovementFeatOptions,
+  getChoiceSkillHints,
   getFeatUrlFromFeatureId,
   getHitDieFormula,
   getHitDieLabel,
@@ -158,6 +159,9 @@ interface LevelUpWizard {
   ) => void;
   selectSubclass: (subclassUrl: string) => Promise<void>;
   choiceOptions: (choice: ClassChoice) => string[];
+
+  /** Пометки опций пикера: навыки, которыми персонаж уже владеет. */
+  choiceHints: (choice: ClassChoice) => Record<string, string>;
 
   /** Черты, доступные для выбора в умении шага. */
   featOptions: (index: number, featureId: string) => FeatSelectOption[];
@@ -727,6 +731,16 @@ export function useLevelUpWizard(): LevelUpWizard {
   }
 
   /**
+   * Пометки опций пикера: навыки, которыми персонаж уже владеет.
+   *
+   * @param choice распознанный выбор внутри умения.
+   * @returns пометки по названиям опций выбора.
+   */
+  function choiceHints(choice: ClassChoice): Record<string, string> {
+    return getChoiceSkillHints(choice, character.value.skills);
+  }
+
+  /**
    * Черты, доступные в умении шага: из каталога уходят черты запрещённых
    * категорий, уже взятые на листе и выбранные на других шагах мастера.
    *
@@ -1019,6 +1033,7 @@ export function useLevelUpWizard(): LevelUpWizard {
     setFeatAbility,
     selectSubclass,
     choiceOptions,
+    choiceHints,
     featOptions,
     selectedFeat,
     isStepValid,

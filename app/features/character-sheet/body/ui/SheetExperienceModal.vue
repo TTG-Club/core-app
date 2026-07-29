@@ -48,6 +48,7 @@
     setFeatAbility,
     selectSubclass,
     choiceOptions,
+    choiceHints,
     featOptions,
     selectedFeat,
     isStepValid,
@@ -455,6 +456,7 @@
           :constitution-modifier="constitutionModifier"
           :abilities="character.abilities"
           :choice-options="choiceOptions"
+          :choice-hints="choiceHints"
           :feat-options="currentFeatOptions"
           :selected-feat="currentSelectedFeat"
           :is-feats-loading="isFeatsLoading"

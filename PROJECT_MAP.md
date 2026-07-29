@@ -137,6 +137,13 @@ modals), so its capabilities are listed here rather than squeezed into the table
   subclass picker at level 3 filtered by the profile sources on the client
   (`/classes/{url}/subclasses` ignores `source`). Applied atomically by
   `applyLevelUp`, which keeps spent hit dice and class resources.
+- Every skill picker (`SheetChoiceSelect` in the class / species / background
+  wizards, in level-up features and in the homebrew class / background modals)
+  marks skills the character already has with a `SKILL_OWNED_HINTS` badge and
+  shows `SKILL_DUPLICATE_WARNING` once such a skill is picked again: under the
+  2024 rules a duplicate proficiency grants nothing and never turns into
+  Expertise. It stays selectable on purpose — a DM may still run the 2014
+  «take another proficiency instead» rule.
 - Debounced autosave, a server-side limit of active sheets, soft delete with
   restore history, and copy — `model/api.ts` covers
   `POST|GET|PUT|DELETE /…/{id}` plus `/{id}/restore` and `/{id}/share`.

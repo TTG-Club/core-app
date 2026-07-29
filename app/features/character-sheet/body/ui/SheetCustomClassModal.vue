@@ -15,8 +15,11 @@
     CUSTOM_CLASS_FEATURE_NAME_MAX_LENGTH,
     CUSTOM_CLASS_LABELS,
     CUSTOM_CLASS_NAME_MAX_LENGTH,
+    getOwnedSkillHints,
     HIT_DIE_OPTIONS,
+    SKILL_DUPLICATE_WARNING,
   } from '../../model';
+  import SheetChoiceSelect from './SheetChoiceSelect.vue';
 
   const emit = defineEmits<{
     /** `true` — свой класс применён к листу. */
@@ -44,6 +47,10 @@
 
   const skillNames = computed(() =>
     character.value.skills.map((skill) => skill.name),
+  );
+
+  const ownedSkillHints = computed(() =>
+    getOwnedSkillHints(character.value.skills),
   );
 
   const abilityItems = ABILITY_ORDER.map((key) => ({
@@ -201,11 +208,12 @@
             {{ CUSTOM_CLASS_LABELS.skillsTitle }}
           </span>
 
-          <USelectMenu
+          <SheetChoiceSelect
             v-model="draftSkills"
             :items="skillNames"
+            :hints="ownedSkillHints"
+            :warning="SKILL_DUPLICATE_WARNING"
             :placeholder="CUSTOM_CLASS_LABELS.skillsPlaceholder"
-            multiple
           />
         </div>
 

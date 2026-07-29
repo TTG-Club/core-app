@@ -21,6 +21,7 @@
     detectFeatureChoice,
     FEATURE_ORIGIN_LABELS,
     getCharacterFeatureId,
+    getChoiceSkillHints,
     getDarkvisionDistance,
     getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
@@ -31,6 +32,7 @@
     parseSpeedFromText,
     resolveChoiceOptions,
     SHEET_SEARCH_LABELS,
+    SKILL_DUPLICATE_WARNING,
     SPECIES_DETAIL_BASE_PATH,
     SPECIES_FILTERS_PATH,
     SPECIES_SEARCH_PATH,
@@ -307,6 +309,11 @@
       allLanguages: allLanguages.value,
       allTools: getToolNamesForGroups(choice.toolGroups),
     });
+  }
+
+  /** Пометки опций: навыки, которыми персонаж уже владеет. */
+  function choiceHints(choice: ClassChoice): Record<string, string> {
+    return getChoiceSkillHints(choice, character.value.skills);
   }
 
   /** Обновление выбора с ограничением по требуемому количеству. */
@@ -760,6 +767,8 @@
                 <SheetChoiceSelect
                   :model-value="selections[row.choiceControl.id] ?? []"
                   :items="choiceOptions(row.choiceControl)"
+                  :hints="choiceHints(row.choiceControl)"
+                  :warning="SKILL_DUPLICATE_WARNING"
                   :count="row.choiceControl.count"
                   :placeholder="`Выберите ${row.choiceControl.count}`"
                   @update:model-value="
