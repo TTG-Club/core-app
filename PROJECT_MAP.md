@@ -164,8 +164,15 @@ modals), so its capabilities are listed here rather than squeezed into the table
   only on the subclass), so its progression is snapshotted into the sheet by the
   class wizard and refreshed by every level-up; the tile shows the value for the
   current level. Clicking it opens the settings: either a custom number (the
-  class count is then ignored) or a bonus added to the class count. Marking
-  which spells are prepared is not implemented yet.
+  class count is then ignored) or a bonus added to the class count. The tile
+  reads «marked / allowed» (`4 / 17`) and turns red when the allowance drops
+  below what is already marked.
+- Prepared spells marked by clicking the spell icon in the row — the same
+  gesture as equipping armour. Only the icon square lights up (the row itself
+  keeps its usual look), the flag lives in `spell.prepared`, and marking more
+  than the allowed number warns instead. Cantrips and innate spells are always
+  available, so their icon toggles nothing; with no allowance known (the class
+  gives none and no custom number is set) marking is unlimited.
 - Weapon attack & damage rolled straight from their tiles in the equipment list
   (damage dice come from the item `/raw` response).
 - Spell damage rolled from the same kind of tile on the spells tab. The formulas

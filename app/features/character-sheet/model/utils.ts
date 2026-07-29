@@ -102,6 +102,7 @@ import {
   ARMOR_MATCH_KEYWORDS,
   ARMOR_MEDIUM_DEX_CAP,
   ARMOR_PROFICIENCY_GROUPS,
+  CANTRIP_SPELL_LEVEL,
   CARRYING_CAPACITY_MULTIPLIER,
   CARRYING_CAPACITY_SIZE_MULTIPLIERS,
   CATALOG_COPY_MENU_LABEL,
@@ -146,8 +147,12 @@ import {
   PACT_SPELL_SLOTS_LABEL,
   PREPARED_SPELLS_COLUMN_KEYWORD,
   PREPARED_SPELLS_COLUMN_PREFIX,
+  PREPARED_SPELLS_COUNT_HINT,
+  PREPARED_SPELLS_EMPTY_VALUE,
+  PREPARED_SPELLS_LABEL,
   PREPARED_SPELLS_MAX,
   PREPARED_SPELLS_MIN,
+  PREPARED_SPELLS_VALUE_SEPARATOR,
   RESOURCE_COUNT_MAX,
   RESOURCE_RECOVERY_LABELS,
   RESOURCE_SHORT_LABEL_MAX_LENGTH,
@@ -1807,6 +1812,18 @@ export function isCustomSpell(spell: CharacterSpell): boolean {
 }
 
 /**
+ * Требует ли заклинание подготовки: заговоры доступны всегда и в число
+ * подготовленных не входят, поэтому пометить их нельзя. Врождённые заклинания
+ * вида в книге персонажа не лежат — подготовка их тоже не касается.
+ *
+ * @param spell заклинание книги персонажа.
+ * @returns true — заклинание можно пометить подготовленным.
+ */
+export function isPreparableSpell(spell: CharacterSpell): boolean {
+  return spell.level > CANTRIP_SPELL_LEVEL;
+}
+
+/**
  * Заполненные характеристики своего заклинания (время, дистанция, компоненты,
  * длительность) для развёрнутой карточки; незаполненные поля пропускаются.
  *
@@ -2369,10 +2386,60 @@ export function getPreparedSpellsBreakdown(
 
   return {
     value: customValue ?? autoValue,
+    count: character.spells.filter(
+      (spell) => isPreparableSpell(spell) && spell.prepared,
+    ).length,
     classValue,
     custom: custom !== null,
     bonus,
   };
+}
+
+/**
+ * Значение блока подготовленных заклинаний: сколько отмечено из того, сколько
+ * можно держать («4 / 17»). Предел неизвестен — вместо числа прочерк: пометить
+ * при этом можно сколько угодно.
+ *
+ * @param prepared разбор числа подготовленных заклинаний.
+ * @returns строка блока вкладки заклинаний.
+ */
+export function getPreparedSpellsValue(
+  prepared: PreparedSpellsBreakdown,
+): string {
+  const limit =
+    prepared.value === null
+      ? PREPARED_SPELLS_EMPTY_VALUE
+      : String(prepared.value);
+
+  return `${prepared.count}${PREPARED_SPELLS_VALUE_SEPARATOR}${limit}`;
+}
+
+/**
+ * Начало подсказки блока подготовленных заклинаний: сколько отмечено и сколько
+ * держать можно. Предел неизвестен — вместо числа прочерк.
+ *
+ * @param prepared разбор числа подготовленных заклинаний.
+ * @returns строка вида «Подготовлено заклинаний: 4 из 17».
+ */
+export function getPreparedSpellsCountHint(
+  prepared: PreparedSpellsBreakdown,
+): string {
+  const limit =
+    prepared.value === null
+      ? PREPARED_SPELLS_EMPTY_VALUE
+      : String(prepared.value);
+
+  return `${PREPARED_SPELLS_COUNT_HINT}: ${prepared.count} из ${limit}`;
+}
+
+/**
+ * Описание предупреждения о достигнутом пределе подготовленных заклинаний.
+ *
+ * @param limit сколько заклинаний можно держать подготовленными.
+ * @returns текст тоста.
+ */
+export function getPreparedSpellsLimitDescription(limit: number): string {
+  return `Подготовлено ${limit} из ${limit} — снимите подготовку с другого заклинания или измените число в блоке «${PREPARED_SPELLS_LABEL}».`;
 }
 
 /**

@@ -14,6 +14,8 @@
     CUSTOM_SPELL_BADGE_HINT,
     getFormattedBonus,
     getInnateSpellMenuItems,
+    getPreparedSpellsCountHint,
+    getPreparedSpellsValue,
     getSpellGroups,
     getSpellMenuItems,
     getSpellsAddMenuItems,
@@ -23,7 +25,8 @@
     INNATE_SPELL_GROUP_LABEL,
     INNATE_SPELL_GROUP_LEVEL,
     isCustomSpell,
-    PREPARED_SPELLS_EMPTY_VALUE,
+    isPreparableSpell,
+    PREPARED_SPELL_TOGGLE_LABELS,
     PREPARED_SPELLS_HINTS,
     PREPARED_SPELLS_LABEL,
     SHEET_ROLL_HINT_LABEL,
@@ -33,7 +36,26 @@
     SPELL_DAMAGE_STAT_LABEL,
     SPELL_NAME_SORT_LOCALE,
     SPELL_SLOTS_LABEL,
+    SPELLCASTING_STAT_LABELS,
   } from '../../model';
+
+  /** Состояние квадрата со значком заклинания в строке. */
+  interface PreparedIconState {
+    /** Значок переключает подготовку (кнопка), а не просто стоит в строке. */
+    canPrepare: boolean;
+
+    /** Заклинание подготовлено: квадрат горит тёплым. */
+    isPrepared: boolean;
+
+    /** Классы оформления квадрата. */
+    iconClass: string;
+
+    /** Подсказка по наведению. */
+    tooltip: string;
+
+    /** Подпись кнопки для скринридера; '' — значок не нажимается. */
+    ariaLabel: string;
+  }
 
   /**
    * Плитка урона заклинания повторяет боевую плитку строки снаряжения: тёплый
@@ -48,6 +70,26 @@
   /** Плитка-кнопка шапки вкладки: открывает настройку своих значений. */
   const HEADER_STAT_CLASS =
     'flex h-7 cursor-pointer items-center gap-3 rounded-lg border border-default/50 bg-elevated/20 px-3 transition-colors hover:border-warning/60';
+
+  /** Квадрат со значком заклинания в начале строки. */
+  const SPELL_ICON_CLASS =
+    'flex size-10 shrink-0 items-center justify-center rounded-lg border transition-colors';
+
+  /** Значок-кнопка подготовки: нажатием заклинание помечается подготовленным. */
+  const SPELL_ICON_BUTTON_CLASS = 'relative z-10 cursor-pointer';
+
+  /**
+   * Подготовленное заклинание: тёплым горит только квадрат со значком — сама
+   * строка остаётся такой же, как у остальных заклинаний.
+   */
+  const PREPARED_ICON_CLASS = 'border-warning/60 bg-warning/15 text-warning';
+
+  /** Неподготовленное заклинание: квадрат тёплый только под курсором. */
+  const UNPREPARED_ICON_CLASS =
+    'border-default/50 bg-default/40 text-muted hover:border-warning/60';
+
+  /** Заклинание, которому подготовка не нужна (заговор, врождённое). */
+  const PLAIN_ICON_CLASS = 'border-default/50 bg-default/40 text-muted';
 
   const props = defineProps<{
     spells: CharacterSpell[];
@@ -69,6 +111,7 @@
     'copy-innate-spell': [spellUrl: string];
     'remove-innate-spell': [spellUrl: string];
     'roll-spell-damage': [formula: string, spellLevel: number];
+    'toggle-spell-prepared': [spellUrl: string];
     'toggle-spell-slot': [level: number, index: number];
   }>();
 
@@ -95,31 +138,49 @@
   const preparedSpells = computed(() => props.spellcasting.prepared);
 
   const preparedSpellsValue = computed(() =>
-    preparedSpells.value.value === null
-      ? PREPARED_SPELLS_EMPTY_VALUE
-      : String(preparedSpells.value.value),
+    getPreparedSpellsValue(preparedSpells.value),
   );
 
   /**
-   * Подсказка блока подготовленных: откуда взялось число — из таблицы класса
-   * (с бонусом, если он задан) либо оно указано вручную.
+   * Отмеченных больше, чем можно держать: так бывает после снижения уровня или
+   * смены своего числа — значение блока об этом предупреждает цветом.
+   */
+  const preparedSpellsValueClass = computed(() =>
+    preparedSpells.value.value !== null
+    && preparedSpells.value.count > preparedSpells.value.value
+      ? 'text-error'
+      : 'text-highlighted',
+  );
+
+  /** Предел выбран целиком: пометить ещё одно заклинание уже нельзя. */
+  const isPreparedLimitReached = computed(
+    () =>
+      preparedSpells.value.value !== null
+      && preparedSpells.value.count >= preparedSpells.value.value,
+  );
+
+  /**
+   * Подсказка блока подготовленных: сколько заклинаний отмечено и откуда взялось
+   * число — из таблицы класса (с бонусом, если он задан) либо указано вручную.
    */
   const preparedSpellsHint = computed(() => {
     const { value, classValue, custom, bonus } = preparedSpells.value;
 
+    const countHint = getPreparedSpellsCountHint(preparedSpells.value);
+
     if (custom) {
-      return PREPARED_SPELLS_HINTS.custom;
+      return `${countHint}. ${PREPARED_SPELLS_HINTS.custom}`;
     }
 
     if (classValue === null) {
-      return PREPARED_SPELLS_HINTS.unknown;
+      return `${countHint}. ${PREPARED_SPELLS_HINTS.unknown}`;
     }
 
     if (bonus === 0) {
-      return `${PREPARED_SPELLS_HINTS.auto}: ${classValue}`;
+      return `${countHint}. ${PREPARED_SPELLS_HINTS.auto}: ${classValue}`;
     }
 
-    return `${PREPARED_SPELLS_HINTS.auto}: ${classValue} ${getFormattedBonus(bonus)} = ${value}`;
+    return `${countHint}. ${PREPARED_SPELLS_HINTS.auto}: ${classValue} ${getFormattedBonus(bonus)} = ${value}`;
   });
 
   const overlay = useOverlay();
@@ -192,6 +253,52 @@
     });
   }
 
+  /**
+   * Состояние квадрата со значком заклинания: подготовку переключает только он,
+   * поэтому здесь же его подсказка, подпись для скринридера и цвет.
+   *
+   * @param spell заклинание строки.
+   * @param innate заклинание из группы врождённых.
+   * @returns состояние значка для шаблона строки.
+   */
+  function getPreparedIconState(
+    spell: CharacterSpell,
+    innate: boolean,
+  ): PreparedIconState {
+    // Заговоры и врождённые заклинания доступны всегда: подготовка их не
+    // касается, значок у них обычный и ничего не переключает.
+    if (innate || !isPreparableSpell(spell)) {
+      return {
+        canPrepare: false,
+        isPrepared: false,
+        iconClass: PLAIN_ICON_CLASS,
+        tooltip: innate
+          ? PREPARED_SPELL_TOGGLE_LABELS.innate
+          : PREPARED_SPELL_TOGGLE_LABELS.cantrip,
+        ariaLabel: '',
+      };
+    }
+
+    const isPrepared = Boolean(spell.prepared);
+
+    const label = isPrepared
+      ? PREPARED_SPELL_TOGGLE_LABELS.unprepare
+      : PREPARED_SPELL_TOGGLE_LABELS.prepare;
+
+    return {
+      canPrepare: true,
+      isPrepared,
+      iconClass: isPrepared ? PREPARED_ICON_CLASS : UNPREPARED_ICON_CLASS,
+      // Предел выбран целиком — значок остаётся нажимаемым: подсказка и
+      // предупреждение объясняют отказ понятнее, чем погашенная кнопка.
+      tooltip:
+        !isPrepared && isPreparedLimitReached.value
+          ? `${label}. ${PREPARED_SPELL_TOGGLE_LABELS.limit}`
+          : label,
+      ariaLabel: `${label}: ${spell.name}`,
+    };
+  }
+
   const displayGroups = computed(() => {
     const regularGroups = getSpellGroups(
       props.spells,
@@ -244,6 +351,10 @@
             ...spell,
             isCustom,
             isExpanded,
+            // Подготовку переключает значок строки — как надевание доспеха в
+            // снаряжении. Врождённые заклинания и заговоры значком не
+            // переключаются.
+            preparedIcon: getPreparedIconState(spell, group.innate),
             // Действия строки — те же, что и у предмета снаряжения: своё
             // заклинание правится формой листа, каталожное сначала копируется в
             // лист, а убирается из книги и то, и другое. Врождённое правится
@@ -297,6 +408,11 @@
     emit('toggle-spell-slot', circle.level, circle.index);
   }
 
+  /** Нажатие на значок заклинания: пометка подготовленным либо снятие пометки. */
+  function handlePreparedToggle(spell: DisplaySpell) {
+    emit('toggle-spell-prepared', spell.url);
+  }
+
   /**
    * Клик по строке: своё заклинание разворачивается прямо на листе (описание
    * хранится в нём), каталожное открывается дровером раздела.
@@ -314,7 +430,9 @@
 
 <template>
   <div class="flex flex-col gap-3 pt-2">
-    <div class="flex flex-wrap items-center justify-between gap-2">
+    <!-- Свой @container: подписи шапки сокращаются по ширине самого ряда, а не
+      окна — лист бывает узким и на широком экране (дровер, правая панель) -->
+    <div class="@container flex flex-wrap items-center justify-between gap-2">
       <div class="flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -322,31 +440,37 @@
           aria-label="Настроить заклинательство"
           @click.left.exact.prevent="emit('edit-spellcasting')"
         >
-          <span class="flex items-center gap-1.5">
-            <span
-              class="text-[10px] font-bold tracking-wider text-muted uppercase"
-            >
-              Сл. спасброска
-            </span>
+          <!-- Подписи чисел в плитке короткие, чтобы ряд помещался на узком
+            листе; полное название показывает подсказка по наведению -->
+          <UTooltip :text="SPELLCASTING_STAT_LABELS.saveDc.full">
+            <span class="flex items-center gap-1.5">
+              <span
+                class="text-[10px] font-bold tracking-wider text-muted uppercase"
+              >
+                {{ SPELLCASTING_STAT_LABELS.saveDc.short }}
+              </span>
 
-            <span class="text-sm font-bold text-highlighted">
-              {{ spellcasting.saveDc }}
+              <span class="text-sm font-bold text-highlighted">
+                {{ spellcasting.saveDc }}
+              </span>
             </span>
-          </span>
+          </UTooltip>
 
           <span class="h-5 w-px bg-default/60" />
 
-          <span class="flex items-center gap-1.5">
-            <span
-              class="text-[10px] font-bold tracking-wider text-muted uppercase"
-            >
-              Атака заклинанием
-            </span>
+          <UTooltip :text="SPELLCASTING_STAT_LABELS.attack.full">
+            <span class="flex items-center gap-1.5">
+              <span
+                class="text-[10px] font-bold tracking-wider text-muted uppercase"
+              >
+                {{ SPELLCASTING_STAT_LABELS.attack.short }}
+              </span>
 
-            <span class="text-sm font-bold text-highlighted">
-              {{ formattedAttackBonus }}
+              <span class="text-sm font-bold text-highlighted">
+                {{ formattedAttackBonus }}
+              </span>
             </span>
-          </span>
+          </UTooltip>
         </button>
 
         <!-- Сколько заклинаний можно подготовить: число берётся из таблицы
@@ -359,13 +483,23 @@
             @click.left.exact.prevent="emit('edit-prepared-spells')"
           >
             <span class="flex items-center gap-1.5">
+              <!-- На узком ряду подпись занимает больше места, чем само число,
+                поэтому уступает значку: название остаётся в подсказке -->
+              <UIcon
+                name="tabler:checklist"
+                class="size-4 shrink-0 text-muted @lg:hidden"
+              />
+
               <span
-                class="text-[10px] font-bold tracking-wider text-muted uppercase"
+                class="hidden text-[10px] font-bold tracking-wider text-muted uppercase @lg:inline"
               >
                 {{ PREPARED_SPELLS_LABEL }}
               </span>
 
-              <span class="text-sm font-bold text-highlighted">
+              <span
+                class="text-sm font-bold"
+                :class="preparedSpellsValueClass"
+              >
                 {{ preparedSpellsValue }}
               </span>
             </span>
@@ -440,6 +574,43 @@
           class="flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-warning/60"
         >
           <div class="relative flex items-center gap-3 p-3">
+            <!-- Значок заклинания — переключатель подготовки: нажатие метит
+              заклинание подготовленным, повторное — снимает пометку. Горит при
+              этом только сам квадрат, строка остаётся обычной -->
+            <UTooltip
+              v-if="spell.preparedIcon.canPrepare"
+              :text="spell.preparedIcon.tooltip"
+            >
+              <button
+                type="button"
+                :class="[
+                  SPELL_ICON_CLASS,
+                  SPELL_ICON_BUTTON_CLASS,
+                  spell.preparedIcon.iconClass,
+                ]"
+                :aria-pressed="spell.preparedIcon.isPrepared"
+                :aria-label="spell.preparedIcon.ariaLabel"
+                @click.left.exact.prevent="handlePreparedToggle(spell)"
+              >
+                <UIcon
+                  name="tabler:wand"
+                  class="size-5"
+                />
+              </button>
+            </UTooltip>
+
+            <UTooltip
+              v-else
+              :text="spell.preparedIcon.tooltip"
+            >
+              <span :class="[SPELL_ICON_CLASS, spell.preparedIcon.iconClass]">
+                <UIcon
+                  name="tabler:wand"
+                  class="size-5"
+                />
+              </span>
+            </UTooltip>
+
             <button
               type="button"
               class="flex min-w-0 grow cursor-pointer items-center gap-3 text-left after:absolute after:inset-0 after:cursor-pointer"
@@ -447,15 +618,6 @@
               :aria-expanded="spell.ariaExpanded"
               @click.left.exact.prevent="handleSpellOpen(spell)"
             >
-              <span
-                class="flex size-10 shrink-0 items-center justify-center rounded-lg border border-default/50 bg-default/40"
-              >
-                <UIcon
-                  name="tabler:wand"
-                  class="size-5 text-muted"
-                />
-              </span>
-
               <span class="flex min-w-0 grow flex-col">
                 <span class="truncate text-sm font-medium text-highlighted">
                   {{ spell.name }}

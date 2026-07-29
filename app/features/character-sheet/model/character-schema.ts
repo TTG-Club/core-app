@@ -120,6 +120,7 @@ const spellSchema = z.object({
   school: z.string().catch(''),
   concentration: z.boolean().optional(),
   ritual: z.boolean().optional(),
+  prepared: z.boolean().optional().catch(undefined),
   castingTime: z.string().optional().catch(undefined),
   range: z.string().optional().catch(undefined),
   components: z.string().optional().catch(undefined),

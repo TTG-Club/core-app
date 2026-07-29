@@ -56,6 +56,7 @@ import {
   getFormattedBonus,
   getInventoryWeight,
   getNextLevelExperience,
+  getPreparedSpellsLimitDescription,
   getProficiencyBonus,
   getSavingThrowRows,
   getSkillRows,
@@ -68,12 +69,14 @@ import {
   INVENTORY_QUANTITY_MIN,
   isCustomInventoryItem,
   isCustomSpell,
+  isPreparableSpell,
   LEVEL_MAX,
   LEVEL_MIN,
   mergeCharacterFeatures,
   mergeClassResources,
   PREPARED_SPELLS_BONUS_MAX,
   PREPARED_SPELLS_BONUS_MIN,
+  PREPARED_SPELLS_LIMIT_TOAST_TITLE,
   PREPARED_SPELLS_MAX,
   PREPARED_SPELLS_MIN,
   removeFeaturesAboveLevel,
@@ -1351,7 +1354,17 @@ export function useCharacterSheet() {
     character.value = {
       ...character.value,
       spells: character.value.spells.map((spell) =>
-        spell.url === spellUrl ? updatedSpell : spell,
+        spell.url === spellUrl
+          ? {
+              ...updatedSpell,
+              // Пометка подготовки формой не правится, поэтому переносится с
+              // прежней записи. Заговором заклинание становится
+              // неподготовленным: заговоры подготовки не требуют.
+              prepared: isPreparableSpell(updatedSpell)
+                ? editedSpell.prepared
+                : undefined,
+            }
+          : spell,
       ),
     };
   }
@@ -1461,6 +1474,55 @@ export function useCharacterSheet() {
           ),
         },
       },
+    };
+  }
+
+  /**
+   * Пометка заклинания подготовленным по нажатию на его значок (как надевание
+   * доспеха в снаряжении). Больше числа из блока «Подготовленные» пометить
+   * нельзя — лишнее нажатие предупреждает и ничего не меняет. Предел неизвестен
+   * (класс его не даёт, своё число не задано) — пометок сколько угодно.
+   *
+   * Заговоры подготовки не требуют, поэтому их значок ничего не переключает.
+   * Игровое действие: запертый лист его разрешает, чужой — нет.
+   *
+   * @param spellUrl URL заклинания книги персонажа.
+   */
+  function toggleSpellPrepared(spellUrl: string): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    const currentSpell = character.value.spells.find(
+      (spell) => spell.url === spellUrl,
+    );
+
+    if (!currentSpell || !isPreparableSpell(currentSpell)) {
+      return;
+    }
+
+    const { value: limit, count } = spellcastingBreakdown.value.prepared;
+
+    // Предел уже выбран: молча пропустить нельзя — игрок ждёт, что значок
+    // загорится, и должен узнать, почему этого не произошло.
+    if (!currentSpell.prepared && limit !== null && count >= limit) {
+      toast.add({
+        color: 'warning',
+        icon: 'tabler:wand',
+        title: PREPARED_SPELLS_LIMIT_TOAST_TITLE,
+        description: getPreparedSpellsLimitDescription(limit),
+      });
+
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      spells: character.value.spells.map((spell) =>
+        spell.url === spellUrl
+          ? { ...spell, prepared: !spell.prepared }
+          : spell,
+      ),
     };
   }
 
@@ -2122,6 +2184,7 @@ export function useCharacterSheet() {
     completeLongRest,
     spendSpellSlot,
     toggleSavingThrowProficiency,
+    toggleSpellPrepared,
     toggleSpellSlot,
     cycleSkillProficiency,
   };
