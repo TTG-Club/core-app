@@ -68,6 +68,7 @@ import type {
   SpellDamage,
   SpellSlotCircle,
   SpellSlotRow,
+  SpellTabFilter,
   VisionRow,
   WeaponAttack,
   WeaponDamage,
@@ -132,6 +133,9 @@ import {
   DEFAULT_WEAPON_ATTACK_ABILITY,
   DICE_NOTATION_LETTER,
   FEATURE_ORIGIN_LABELS,
+  FILTER_CHIP_CLASS,
+  FILTER_CHIP_IDLE_CLASS,
+  FILTER_CHIP_SELECTED_CLASS,
   HIT_DICE_ROLL_COUNT,
   HIT_POINTS_LEVEL_GAIN_MIN,
   INNATE_SPELL_REMOVE_MENU_LABEL,
@@ -1760,6 +1764,57 @@ export function getSpellSlotsEmptyDescription(level: number): string {
 }
 
 /**
+ * Круги, которые список заклинаний уже показывает: круги самих заклинаний и
+ * круги с ячейками. Ячейки идут отдельно — их тратят и на повышение круга уже
+ * известного заклинания, поэтому круг с ячейками виден и без своих заклинаний.
+ * Не путать с `getAvailableSpellLevels`: там круги, которые даёт класс, здесь —
+ * круги, которые уже есть на руках.
+ *
+ * @param spells заклинания списка (книга, врождённые).
+ * @param slotLevels круги, у которых есть ячейки заклинаний.
+ * @returns круги по возрастанию, заговоры первыми.
+ */
+export function getSpellListLevels(
+  spells: CharacterSpell[],
+  slotLevels: number[],
+): number[] {
+  return [
+    ...new Set([...spells.map((spell) => spell.level), ...slotLevels]),
+  ].sort((left, right) => left - right);
+}
+
+/**
+ * Проходит ли заклинание отбор вкладки: подготовленное — только помеченное
+ * значком (заговоры и врождённые подготовки не требуют, поэтому под таким
+ * отбором их не остаётся), круг — любой из отобранных.
+ *
+ * @param spell заклинание списка.
+ * @param filter отбор вкладки заклинаний.
+ * @returns true — заклинание остаётся в списке.
+ */
+export function matchesSpellFilter(
+  spell: CharacterSpell,
+  filter: SpellTabFilter,
+): boolean {
+  if (filter.preparedOnly && !(isPreparableSpell(spell) && spell.prepared)) {
+    return false;
+  }
+
+  return !filter.levels.length || filter.levels.includes(spell.level);
+}
+
+/**
+ * Оформление чипа отбора: выбранный горит тёплым, невыбранный теплеет только
+ * под курсором.
+ *
+ * @param isSelected чип выбран.
+ * @returns классы чипа.
+ */
+export function getFilterChipClass(isSelected: boolean): string {
+  return `${FILTER_CHIP_CLASS} ${isSelected ? FILTER_CHIP_SELECTED_CLASS : FILTER_CHIP_IDLE_CLASS}`;
+}
+
+/**
  * Группировка заклинаний по кругам: заговоры, затем круги по возрастанию;
  * внутри круга — по алфавиту. Круги из `slotLevels` попадают в результат даже
  * без заклинаний: ячейки этих кругов тратятся и на повышение круга уже
@@ -1773,11 +1828,7 @@ export function getSpellGroups(
   spells: CharacterSpell[],
   slotLevels: number[],
 ): CharacterSpellGroup[] {
-  const levels = [
-    ...new Set([...spells.map((spell) => spell.level), ...slotLevels]),
-  ].sort((left, right) => left - right);
-
-  return levels.map((level) => ({
+  return getSpellListLevels(spells, slotLevels).map((level) => ({
     level,
     label: getSpellGroupLabel(level),
     spells: spells

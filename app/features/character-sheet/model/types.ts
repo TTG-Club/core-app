@@ -631,6 +631,15 @@ export interface CharacterSpellGroup {
   spells: CharacterSpell[];
 }
 
+/** Отбор заклинаний на вкладке заклинаний. */
+export interface SpellTabFilter {
+  /** Показывать только подготовленные заклинания. */
+  preparedOnly: boolean;
+
+  /** Отобранные круги заклинаний; пусто — круги не сужаются. */
+  levels: number[];
+}
+
 /** Заклинание каталога в модалке добавления (расширенная ссылка). */
 export interface SpellCatalogItem extends CharacterSpell {
   concentration: boolean;

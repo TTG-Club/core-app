@@ -180,6 +180,14 @@ modals), so its capabilities are listed here rather than squeezed into the table
   than the allowed number warns instead. Cantrips and innate spells are always
   available, so their icon toggles nothing; with no allowance known (the class
   gives none and no custom number is set) marking is unlimited.
+- Spell list narrowed by a chip row above the groups: «Подготовленные» plus one
+  chip per circle (cantrips as «З», the full name in the tooltip), several
+  circles at a time, and a reset button once anything is picked. Nothing is
+  stored — the chips are derived from what the list already shows
+  (`getSpellListLevels`: spell circles + circles with slots), so a circle the
+  character has not reached never appears and a pick that disappears stops
+  narrowing by itself. The prepared chip is skipped when there is nothing to
+  prepare (cantrips or innate spells only).
 - Weapon attack & damage rolled straight from their tiles in the equipment list
   (damage dice come from the item `/raw` response).
 - Spell damage rolled from the same kind of tile on the spells tab. The formulas

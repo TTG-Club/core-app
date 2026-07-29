@@ -3,6 +3,7 @@
     CharacterSpell,
     SpellcastingBreakdown,
     SpellSlotRow,
+    SpellTabFilter,
   } from '../../model';
 
   import { SpellDrawer } from '~spells/drawer';
@@ -12,11 +13,14 @@
   import {
     CANTRIP_SPELL_LEVEL,
     CUSTOM_SPELL_BADGE_HINT,
+    getFilterChipClass,
     getFormattedBonus,
     getInnateSpellMenuItems,
     getPreparedSpellsCountHint,
     getPreparedSpellsValue,
+    getSpellGroupLabel,
     getSpellGroups,
+    getSpellListLevels,
     getSpellMenuItems,
     getSpellsAddMenuItems,
     getSpellSlotCircles,
@@ -26,6 +30,7 @@
     INNATE_SPELL_GROUP_LEVEL,
     isCustomSpell,
     isPreparableSpell,
+    matchesSpellFilter,
     PREPARED_SPELL_TOGGLE_LABELS,
     PREPARED_SPELLS_HINTS,
     PREPARED_SPELLS_LABEL,
@@ -34,6 +39,7 @@
     SPELL_DAMAGE_ROLL_HINT_LABEL,
     SPELL_DAMAGE_ROLL_LABEL,
     SPELL_DAMAGE_STAT_LABEL,
+    SPELL_FILTER_LABELS,
     SPELL_NAME_SORT_LOCALE,
     SPELL_SLOTS_LABEL,
     SPELLCASTING_STAT_LABELS,
@@ -215,6 +221,122 @@
     () => new Map(props.spellSlots.map((row) => [row.level, row])),
   );
 
+  /** Отмечен чип «Подготовленные». */
+  const isPreparedOnlyPicked = ref(false);
+
+  /** Отмеченные чипами круги; пусто — круги списка не сужаются. */
+  const pickedLevels = ref(new Set<number>());
+
+  /** Круги, которые вкладка уже показывает: по ним и отбирают. */
+  const availableLevels = computed(() =>
+    getSpellListLevels(
+      [...props.spells, ...props.innateSpells],
+      props.spellSlots.map((row) => row.level),
+    ),
+  );
+
+  /**
+   * Подготовка касается не всякой книги: пока в ней одни заговоры (или только
+   * врождённые заклинания вида), помечать нечего — чипа отбора нет.
+   */
+  const isPreparedFilterAvailable = computed(() =>
+    props.spells.some(isPreparableSpell),
+  );
+
+  /** Кругов больше одного — есть между чем выбирать. */
+  const hasLevelChips = computed(() => availableLevels.value.length > 1);
+
+  /**
+   * Действующий отбор: круги считаются от доступных, поэтому выбор, которого в
+   * списке уже нет (заклинание убрали, круг пропал вместе с ячейками), сам
+   * собой перестаёт сужать список.
+   */
+  const spellFilter = computed<SpellTabFilter>(() => ({
+    preparedOnly: isPreparedOnlyPicked.value && isPreparedFilterAvailable.value,
+    levels: availableLevels.value.filter((level) =>
+      pickedLevels.value.has(level),
+    ),
+  }));
+
+  /** Список сужен: отбор есть что сбросить. */
+  const hasActiveFilter = computed(
+    () => spellFilter.value.preparedOnly || spellFilter.value.levels.length > 0,
+  );
+
+  /**
+   * Ряд отбора: нужен, только когда в списке есть что отбирать — помечаемые
+   * заклинания либо больше одного круга.
+   */
+  const hasFilterControls = computed(
+    () =>
+      Boolean(props.spells.length || props.innateSpells.length)
+      && (isPreparedFilterAvailable.value || hasLevelChips.value),
+  );
+
+  const preparedChipClass = computed(() =>
+    getFilterChipClass(spellFilter.value.preparedOnly),
+  );
+
+  /**
+   * Чипы кругов, которые есть в списке: сам чип — номер круга, у заговоров
+   * вместо номера буква. Полную подпись («Заговоры», «3 круг») показывает
+   * подсказка по наведению.
+   */
+  const levelChips = computed(() =>
+    availableLevels.value.map((level) => ({
+      level,
+      label:
+        level === CANTRIP_SPELL_LEVEL
+          ? SPELL_FILTER_LABELS.cantrip
+          : String(level),
+      tooltip: getSpellGroupLabel(level),
+      isPicked: spellFilter.value.levels.includes(level),
+      chipClass: getFilterChipClass(spellFilter.value.levels.includes(level)),
+    })),
+  );
+
+  /** Нажатие на чип подготовленных: тем же чипом отбор и снимается. */
+  function handlePreparedFilterToggle() {
+    isPreparedOnlyPicked.value = !isPreparedOnlyPicked.value;
+  }
+
+  /**
+   * Нажатие на чип круга: круги набираются по одному, повторное нажатие снимает
+   * круг с отбора.
+   */
+  function handleLevelPick(level: number) {
+    if (pickedLevels.value.has(level)) {
+      pickedLevels.value.delete(level);
+
+      return;
+    }
+
+    pickedLevels.value.add(level);
+  }
+
+  /** Нажатие на «Сбросить»: список возвращается целиком. */
+  function handleFilterReset() {
+    isPreparedOnlyPicked.value = false;
+    pickedLevels.value.clear();
+  }
+
+  /**
+   * Круги ячеек в списке: разделитель круга без заклинаний нужен ради кружков —
+   * ячейки тратят и на повышение круга уже известного заклинания. Под отбором
+   * подготовленных пустые разделители только мешают списку отмеченных.
+   */
+  const groupSlotLevels = computed(() => {
+    if (spellFilter.value.preparedOnly) {
+      return [];
+    }
+
+    const slotLevels = props.spellSlots.map((row) => row.level);
+
+    return spellFilter.value.levels.length
+      ? slotLevels.filter((level) => spellFilter.value.levels.includes(level))
+      : slotLevels;
+  });
+
   /**
    * Плитки урона заклинания: у одного заклинания их бывает несколько —
    * справочник описывает броски по состоянию цели отдельными формулами.
@@ -301,16 +423,22 @@
 
   const displayGroups = computed(() => {
     const regularGroups = getSpellGroups(
-      props.spells,
-      props.spellSlots.map((row) => row.level),
+      props.spells.filter((spell) =>
+        matchesSpellFilter(spell, spellFilter.value),
+      ),
+      groupSlotLevels.value,
     ).map((group) => ({ ...group, innate: false }));
 
-    const groups = props.innateSpells.length
+    const innateSpells = props.innateSpells.filter((spell) =>
+      matchesSpellFilter(spell, spellFilter.value),
+    );
+
+    const groups = innateSpells.length
       ? [
           {
             level: INNATE_SPELL_GROUP_LEVEL,
             label: INNATE_SPELL_GROUP_LABEL,
-            spells: [...props.innateSpells].sort(
+            spells: [...innateSpells].sort(
               (firstSpell, secondSpell) =>
                 firstSpell.level - secondSpell.level
                 || firstSpell.name.localeCompare(
@@ -390,6 +518,18 @@
         }),
       };
     });
+  });
+
+  /**
+   * Подпись пустого места вкладки: пустая книга либо отбор, под который ничего
+   * не подошло; '' — списку есть что показать.
+   */
+  const emptyLabel = computed(() => {
+    if (!props.spells.length && !props.innateSpells.length) {
+      return SHEET_TAB_EMPTY_LABELS.spells;
+    }
+
+    return displayGroups.value.length ? '' : SPELL_FILTER_LABELS.empty;
   });
 
   type DisplaySpell = (typeof displayGroups.value)[number]['spells'][number];
@@ -521,6 +661,75 @@
           :class="editControlClass"
         />
       </UDropdownMenu>
+    </div>
+
+    <!-- Отбор списка: подготовка и круги. Чипы идут от самого списка — круга
+      без заклинаний и ячеек среди них не бывает, а помечать подготовку бывает и
+      нечего. Лежат они в ряду поштучно, без вложенных групп: иначе круги
+      переносятся на новую строку все разом, даже когда место ещё есть -->
+    <div
+      v-if="hasFilterControls"
+      class="flex flex-wrap items-center gap-x-1.5 gap-y-2"
+    >
+      <UTooltip
+        v-if="isPreparedFilterAvailable"
+        :text="SPELL_FILTER_LABELS.preparedHint"
+      >
+        <button
+          type="button"
+          class="mr-1.5 flex items-center gap-1"
+          :class="preparedChipClass"
+          :aria-pressed="spellFilter.preparedOnly"
+          @click.left.exact.prevent="handlePreparedFilterToggle"
+        >
+          <UIcon
+            name="tabler:wand"
+            class="size-3.5"
+          />
+
+          {{ SPELL_FILTER_LABELS.prepared }}
+        </button>
+      </UTooltip>
+
+      <!-- Круги — числами, как в каталоге заклинаний: подписью целиком
+        («Заговоры», «3 круг») ряд бы не поместился на узком листе, поэтому
+        она уходит в подсказку. Круги набираются по одному, повторное нажатие
+        снимает круг с отбора -->
+      <template v-if="hasLevelChips">
+        <UTooltip
+          v-for="levelChip in levelChips"
+          :key="levelChip.level"
+          :text="levelChip.tooltip"
+        >
+          <button
+            type="button"
+            class="min-w-7 text-center"
+            :class="levelChip.chipClass"
+            :aria-pressed="levelChip.isPicked"
+            :aria-label="levelChip.tooltip"
+            @click.left.exact.prevent="handleLevelPick(levelChip.level)"
+          >
+            {{ levelChip.label }}
+          </button>
+        </UTooltip>
+      </template>
+
+      <!-- Сброс стоит у правого края ряда и появляется только при отборе:
+        пустой кнопке в ряду делать нечего -->
+      <UTooltip
+        v-if="hasActiveFilter"
+        :text="SPELL_FILTER_LABELS.resetHint"
+      >
+        <UButton
+          icon="tabler:filter-off"
+          :label="SPELL_FILTER_LABELS.reset"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          class="ml-auto"
+          @click.left.exact.prevent="handleFilterReset"
+        />
+      </UTooltip>
     </div>
 
     <template v-if="displayGroups.length">
@@ -767,12 +976,13 @@
     </template>
 
     <!-- Ряды ячеек показываются и без заклинаний (ими повышают круг уже
-      известных), поэтому подсказка о пустой книге зависит от самих заклинаний -->
+      известных), поэтому пустое место объявляет о себе подписью: пустая книга
+      либо отбор, под который ничего не подошло -->
     <div
-      v-if="!spells.length && !innateSpells.length"
+      v-if="emptyLabel"
       class="flex h-64 items-center justify-center rounded-lg border border-dashed border-default text-sm text-dimmed"
     >
-      {{ SHEET_TAB_EMPTY_LABELS.spells }}
+      {{ emptyLabel }}
     </div>
   </div>
 </template>

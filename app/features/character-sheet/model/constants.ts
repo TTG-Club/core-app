@@ -1373,6 +1373,31 @@ export const PREPARED_SPELLS_LABELS: Record<
     'Число берётся из таблицы класса на текущем уровне; бонус прибавляется к нему (например, от черты или предмета).',
 };
 
+/** Подписи чипов отбора заклинаний на вкладке заклинаний. */
+export const SPELL_FILTER_LABELS: Record<
+  'prepared' | 'preparedHint' | 'cantrip' | 'reset' | 'resetHint' | 'empty',
+  string
+> = {
+  prepared: 'Подготовленные',
+  preparedHint: 'Оставить в списке только заклинания, помеченные значком',
+  cantrip: 'З',
+  reset: 'Сбросить',
+  resetHint: 'Снять отбор и вернуть список целиком',
+  empty: 'Под отбор ничего не подошло',
+};
+
+/** Общая часть оформления чипа отбора (каталог заклинаний, вкладка). */
+export const FILTER_CHIP_CLASS =
+  'cursor-pointer rounded border px-2 py-1 text-xs transition-colors';
+
+/** Невыбранный чип отбора: рамка теплеет только под курсором. */
+export const FILTER_CHIP_IDLE_CLASS =
+  'border-default text-toned hover:border-warning/60';
+
+/** Выбранный чип отбора: горит тёплым, как отмеченное значком заклинание. */
+export const FILTER_CHIP_SELECTED_CLASS =
+  'border-warning bg-warning/10 text-warning';
+
 /**
  * Подписи чисел заклинательства: в узкую плитку вкладки идёт короткая, полное
  * название показывает подсказка по наведению.
