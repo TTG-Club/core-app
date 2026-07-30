@@ -1,3 +1,4 @@
+export { default as VttgDownloadPlatforms } from './VttgDownloadPlatforms.vue';
 export { default as VttgFaqSection } from './VttgFaqSection.vue';
 export { default as VttgFeatureMedia } from './VttgFeatureMedia.vue';
 export { default as VttgFeaturesSection } from './VttgFeaturesSection.vue';

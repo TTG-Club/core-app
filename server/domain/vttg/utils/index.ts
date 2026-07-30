@@ -1,0 +1,1 @@
+export { parseUpdateManifest } from './updateManifest';

@@ -40,13 +40,13 @@ core-app/
 │   └── utils/                      # ⚡ Global utilities (auto-import)
 ├── server/                         # 🔒 Server-side (Nitro)
 │   ├── api/                        # HTTP handlers: catch-all proxy + auth/*, admin/*, user/*, bug-report, online
-│   ├── domain/                     # Server domains: s3 (model / service / utils), online (service only)
+│   ├── domain/                     # Server domains: s3 (model / service / utils), online (service only), vttg (service / utils)
 │   ├── middleware/                 # 001 validate/refresh token, 002 append auth header
 │   ├── routes/                     # manifest.json, online/heartbeat, s3 (upload/get/delete/copy)
 │   └── utils/                      # Service clients (auth/admin/subscriber/comments), secrets, JWT, proxy, display-name, image compression
 ├── shared/                         # 📦 Isomorphic shared (client + server)
 │   ├── consts/                     # Cookie/theme keys, durations, source platform (`SITE_5E24`)
-│   ├── types/                      # auth (JWT payload)
+│   ├── types/                      # auth (JWT payload), vttg (desktop release DTO)
 │   └── utils/                      # consola, env, faker, slug, plural, status message, sort, error response
 ├── modules/                        # 🧩 Nuxt modules
 │   └── auto-aliases.ts             # Auto-generation of ~domain aliases from app/features
@@ -306,10 +306,10 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 ### 🌐 Landing & infrastructure
 
-| Domain           | Purpose                                                   | Sub-features                                                                          |
-| ---------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `vttg`           | Marketing landing for the VTTG virtual tabletop (`/vttg`) | `model`, `ui` (hero / features / FAQ / support / video sections)                      |
-| `infrastructure` | Cross-cutting app shell & chrome                          | `sidebar`, `search`, `filter`, `list-presentation`, `footer`, `cookie-consent`, `pwa` |
+| Domain           | Purpose                                                                      | Sub-features                                                                                                                                                              |
+| ---------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vttg`           | Marketing landing for the VTTG virtual tabletop (`/vttg`) + desktop download | `model`, `ui` (hero / features / FAQ / support / video sections, `VttgDownloadPlatforms`), `composables` (`useVttgDesktopRelease` — latest build from the update channel) |
+| `infrastructure` | Cross-cutting app shell & chrome                                             | `sidebar`, `search`, `filter`, `list-presentation`, `footer`, `cookie-consent`, `pwa`                                                                                     |
 
 ### Anatomy of a Feature (Example: `tokenator`)
 
@@ -411,18 +411,19 @@ imported via the auto-generated `~<domain>` alias (see
 Thin Nitro layer that proxies to external microservices and handles auth,
 uploads and presence.
 
-| Area                                    | Responsibility                                                                                                                                                                                                                                 |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `api/[...].ts`                          | Catch-all proxy (`getProxyPath`) → `subscriber-service` for `/api/subscriptions` & `/api/rewards`, `comments-service` for `/api/v1/comments`, otherwise `core-api`                                                                             |
-| `api/auth/*`                            | Sign-in/up, logout, me, email confirm, password reset/change, roles, admin users — proxied to **auth-service**                                                                                                                                 |
-| `api/admin/*`                           | Admin bug list/status, subscription grant/revoke/codes, comment hide/restore by author — ADMIN-gated proxies to bug-report, subscriber & comments services (the last via `X-Service-Token` internal API, not the user JWT)                     |
-| `api/bug-report*`                       | Create report (streams multipart), public stats, my count-by-status → external **bug-report** service                                                                                                                                          |
-| `api/user/comments/sync-name`           | Best-effort display-name sync: reads the name from core-api, then renames the author's comments through the comments internal API, scoped by `SOURCE_PLATFORM`                                                                                 |
-| `api/online`, `routes/online/heartbeat` | Presence heartbeat + stats via **online-app**                                                                                                                                                                                                  |
-| `domain/s3`, `routes/s3/*`              | S3 upload (image compression via sharp) / get / delete / copy (new key for a duplicated entity)                                                                                                                                                |
-| `routes/manifest.json`                  | Theme-aware PWA manifest from `runtimeConfig.pwa`                                                                                                                                                                                              |
-| `middleware/`                           | `001` verify access JWT + silent single-flight refresh, `002` inject `Bearer` from cookie                                                                                                                                                      |
-| `utils/`                                | Service clients (auth / auth-admin / subscriber-admin / comments-admin / bug-report), `displayName` + `commentsRename`, `getUser` / `getTokenFromRequest`, `secrets` (env accessor), JWT (jose), proxy, error normalization, image compression |
+| Area                                     | Responsibility                                                                                                                                                                                                                                 |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api/[...].ts`                           | Catch-all proxy (`getProxyPath`) → `subscriber-service` for `/api/subscriptions` & `/api/rewards`, `comments-service` for `/api/v1/comments`, otherwise `core-api`                                                                             |
+| `api/auth/*`                             | Sign-in/up, logout, me, email confirm, password reset/change, roles, admin users — proxied to **auth-service**                                                                                                                                 |
+| `api/admin/*`                            | Admin bug list/status, subscription grant/revoke/codes, comment hide/restore by author — ADMIN-gated proxies to bug-report, subscriber & comments services (the last via `X-Service-Token` internal API, not the user JWT)                     |
+| `api/bug-report*`                        | Create report (streams multipart), public stats, my count-by-status → external **bug-report** service                                                                                                                                          |
+| `api/user/comments/sync-name`            | Best-effort display-name sync: reads the name from core-api, then renames the author's comments through the comments internal API, scoped by `SOURCE_PLATFORM`                                                                                 |
+| `api/online`, `routes/online/heartbeat`  | Presence heartbeat + stats via **online-app**                                                                                                                                                                                                  |
+| `api/vttg/desktop/latest`, `domain/vttg` | Latest VTTG desktop build: reads `latest.yml` from the electron-updater channel (`runtimeConfig.vttg.desktopUpdateUrl`), returns version / size / installer link, cached by Nitro                                                              |
+| `domain/s3`, `routes/s3/*`               | S3 upload (image compression via sharp) / get / delete / copy (new key for a duplicated entity)                                                                                                                                                |
+| `routes/manifest.json`                   | Theme-aware PWA manifest from `runtimeConfig.pwa`                                                                                                                                                                                              |
+| `middleware/`                            | `001` verify access JWT + silent single-flight refresh, `002` inject `Bearer` from cookie                                                                                                                                                      |
+| `utils/`                                 | Service clients (auth / auth-admin / subscriber-admin / comments-admin / bug-report), `displayName` + `commentsRename`, `getUser` / `getTokenFromRequest`, `secrets` (env accessor), JWT (jose), proxy, error normalization, image compression |
 
 **Backend topology:** `core-api` (default), `auth-service` (auth), `subscriber-service`
 (subscriptions/rewards), `comments-service` (discussions, `NITRO_COMMENTS_API_URL`),
