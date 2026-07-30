@@ -6,6 +6,7 @@
     GroupSortOrdered,
     SeparatorLabel,
   } from './types';
+  import type { ItemsRow, ListRow } from './utils';
 
   import { get, upperFirst } from 'es-toolkit/compat';
   import { computed, ref, watch } from 'vue';
@@ -23,20 +24,7 @@
     GROUPED_LIST_DEFAULT_VIRTUAL_THRESHOLD,
     GROUPED_LIST_GRID_CLASSES,
   } from './constants';
-
-  interface SeparatorVirtualRow {
-    type: 'separator';
-    key: string;
-    groupKey: GroupKey;
-  }
-
-  interface ItemsVirtualRow<TItem> {
-    type: 'items';
-    key: string;
-    items: Array<TItem>;
-  }
-
-  type VirtualRow<TItem> = SeparatorVirtualRow | ItemsVirtualRow<TItem>;
+  import { chunkItems, flattenGroupTree } from './utils';
 
   interface Props {
     items: Array<T>;
@@ -94,26 +82,6 @@
   const isScrollPositionRestored = ref(false);
 
   const { isSplitActive } = useLayoutWidth();
-
-  /**
-   * Разбивает элементы на строки виртуальной сетки.
-   */
-  function chunkItems<TItem>(
-    sourceItems: Array<TItem>,
-    columnsCount: number,
-  ): Array<Array<TItem>> {
-    const chunks: Array<Array<TItem>> = [];
-
-    for (
-      let itemIndex = 0;
-      itemIndex < sourceItems.length;
-      itemIndex += columnsCount
-    ) {
-      chunks.push(sourceItems.slice(itemIndex, itemIndex + columnsCount));
-    }
-
-    return chunks;
-  }
 
   /**
    * Возвращает количество колонок для текущей ширины контейнера.
@@ -261,6 +229,16 @@
     return upperFirst(labelText.trim());
   }
 
+  const isTreeMode = computed(() => groupSort.mode === 'tree');
+
+  const treeRows = computed<Array<ListRow<T>>>(() => {
+    if (groupSort.mode !== 'tree') {
+      return [];
+    }
+
+    return flattenGroupTree(groupSort.build(sortedItems.value));
+  });
+
   const shouldUseVirtual = computed(
     () => virtual && items.length >= virtualThreshold,
   );
@@ -345,10 +323,26 @@
     return GROUPED_LIST_GRID_CLASSES.slice(0, activeVirtualColumns.value);
   });
 
-  const virtualRows = computed<Array<VirtualRow<T>>>(() => {
+  const virtualRows = computed<Array<ListRow<T>>>(() => {
+    if (isTreeMode.value) {
+      return treeRows.value.flatMap((row): Array<ListRow<T>> => {
+        if (row.type === 'separator') {
+          return [row];
+        }
+
+        return chunkItems(row.items, activeVirtualColumns.value).map(
+          (rowItems, rowIndex): ItemsRow<T> => ({
+            type: 'items',
+            key: `${row.key}:${rowIndex}`,
+            items: rowItems,
+          }),
+        );
+      });
+    }
+
     return virtualSource.value.flatMap((group) => {
       const rows = chunkItems(group.items, activeVirtualColumns.value).map(
-        (rowItems, rowIndex): ItemsVirtualRow<T> => ({
+        (rowItems, rowIndex): ItemsRow<T> => ({
           type: 'items',
           key: `items:${String(group.key)}:${rowIndex}`,
           items: rowItems,
@@ -363,7 +357,7 @@
         {
           type: 'separator',
           key: `separator:${String(group.key)}`,
-          groupKey: group.key,
+          label: getSeparatorText(group.key),
         },
         ...rows,
       ];
@@ -703,9 +697,7 @@
               class="flex items-center pb-2.5"
               :style="{ height: `${separatorHeight}px` }"
             >
-              <USeparator>
-                {{ getSeparatorText(virtualItem.row.groupKey) }}
-              </USeparator>
+              <USeparator :label="virtualItem.row.label" />
             </div>
 
             <div
@@ -726,6 +718,35 @@
             </div>
           </div>
         </template>
+      </template>
+    </div>
+
+    <div
+      v-else-if="isTreeMode"
+      class="flex flex-col gap-4"
+    >
+      <template
+        v-for="treeRow in treeRows"
+        :key="treeRow.key"
+      >
+        <USeparator
+          v-if="treeRow.type === 'separator'"
+          :label="treeRow.label"
+        />
+
+        <PageGrid
+          v-else
+          :columns="columns"
+        >
+          <div
+            v-for="item in treeRow.items"
+            :id="getItemElementId(item)"
+            :key="item.url"
+            @click.left.exact.capture="rememberListItem(item)"
+          >
+            <slot :item="item" />
+          </div>
+        </PageGrid>
       </template>
     </div>
 
