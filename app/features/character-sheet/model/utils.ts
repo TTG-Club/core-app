@@ -3314,6 +3314,24 @@ export function getFeatureOriginGroups(
 }
 
 /**
+ * Особенности, разложенные по источникам: сперва вид с подвидом, затем класс,
+ * черты и свои записи — тем же порядком, что и чипы отбора. Внутри источника
+ * порядок листа сохранён, поэтому умения класса так и идут по уровням.
+ *
+ * @param features особенности персонажа.
+ * @returns особенности в порядке групп источников.
+ */
+export function sortFeaturesByOriginGroup(
+  features: CharacterFeature[],
+): CharacterFeature[] {
+  return [...features].sort(
+    (left, right) =>
+      FEATURE_ORIGIN_GROUP_ORDER.indexOf(getFeatureOriginGroup(left.origin))
+      - FEATURE_ORIGIN_GROUP_ORDER.indexOf(getFeatureOriginGroup(right.origin)),
+  );
+}
+
+/**
  * Проходит ли особенность отбор вкладки: источник — любой из отобранных.
  *
  * @param feature особенность списка.
