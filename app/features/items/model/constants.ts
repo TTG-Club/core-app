@@ -39,6 +39,16 @@ export const ITEM_GROUP_ROOTS: Array<ItemGroupRoot> = [
         type: 'SIMPLE_WEAPON',
         children: [
           {
+            type: 'FIREARM',
+            label: 'Простое огнестрельное оружие',
+            children: [],
+          },
+          {
+            type: 'FUTURISTIC',
+            label: 'Простое футуристическое оружие',
+            children: [],
+          },
+          {
             type: 'MELEE_WEAPON',
             label: 'Простое рукопашное оружие',
             children: [],
@@ -51,8 +61,21 @@ export const ITEM_GROUP_ROOTS: Array<ItemGroupRoot> = [
         ],
       },
       {
+        // Огнестрел и футуристика идут перед разделением на рукопашное и
+        // дальнобойное: у них те же типы (`RANGED_WEAPON`), но своя группа —
+        // иначе револьвер потерялся бы среди луков и арбалетов.
         type: 'MARTIAL_WEAPON',
         children: [
+          {
+            type: 'FIREARM',
+            label: 'Воинское огнестрельное оружие',
+            children: [],
+          },
+          {
+            type: 'FUTURISTIC',
+            label: 'Воинское футуристическое оружие',
+            children: [],
+          },
           {
             type: 'MELEE_WEAPON',
             label: 'Воинское рукопашное оружие',

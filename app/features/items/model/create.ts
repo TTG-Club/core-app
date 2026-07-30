@@ -67,6 +67,7 @@ export interface WeaponCreate {
   range: Range; // дистанция
   versatile: Roll; // универсальный урон
   ammo: string | undefined; // тип боеприпаса
+  magazine: number | undefined; // боекомплект: выстрелов до перезарядки
   additional: string | undefined; // дополнительно
 }
 
