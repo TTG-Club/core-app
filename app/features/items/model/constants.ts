@@ -25,8 +25,10 @@ export const ITEM_OTHER_GROUP_LABEL = 'Прочее';
  * заданы здесь. Вложенные уровни — типы предмета (`ItemType`); их подписи
  * берутся из группы фильтров `itemType`, чтобы не расходиться с фильтром.
  *
- * Порядок ветвей задаёт порядок групп в списке, а вложенность — уровень
- * разделителя: «Оружие» → «Воинское оружие» → «Рукопашное оружие».
+ * Вложенность задаёт только правило отбора (воинское рукопашное оружие — это
+ * предмет с типами `MARTIAL_WEAPON` и `MELEE_WEAPON`); в списке группы идут
+ * плоско, в порядке обхода дерева, а узел без своих предметов разделителя не
+ * получает — поэтому подписи листьев заданы целиком.
  */
 export const ITEM_GROUP_ROOTS: Array<ItemGroupRoot> = [
   {
@@ -36,15 +38,31 @@ export const ITEM_GROUP_ROOTS: Array<ItemGroupRoot> = [
       {
         type: 'SIMPLE_WEAPON',
         children: [
-          { type: 'MELEE_WEAPON', children: [] },
-          { type: 'RANGED_WEAPON', children: [] },
+          {
+            type: 'MELEE_WEAPON',
+            label: 'Простое рукопашное оружие',
+            children: [],
+          },
+          {
+            type: 'RANGED_WEAPON',
+            label: 'Простое дальнобойное оружие',
+            children: [],
+          },
         ],
       },
       {
         type: 'MARTIAL_WEAPON',
         children: [
-          { type: 'MELEE_WEAPON', children: [] },
-          { type: 'RANGED_WEAPON', children: [] },
+          {
+            type: 'MELEE_WEAPON',
+            label: 'Воинское рукопашное оружие',
+            children: [],
+          },
+          {
+            type: 'RANGED_WEAPON',
+            label: 'Воинское дальнобойное оружие',
+            children: [],
+          },
         ],
       },
       { type: 'FIREARM', children: [] },

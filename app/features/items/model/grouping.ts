@@ -14,6 +14,13 @@ export interface ItemGroupBranch {
   /** Тип предмета, по которому отбираются предметы ветви. */
   type: ItemType;
 
+  /**
+   * Своя подпись группы вместо словарной. Нужна там, где подпись зависит от
+   * родителя: «Простое» + «Рукопашное оружие» по-русски не склеиваются
+   * механически, а «Рукопашное оружие» под двумя родителями неоднозначно.
+   */
+  label?: string;
+
   /** Подтипы внутри ветви в порядке вывода. */
   children: Array<ItemGroupBranch>;
 }
@@ -88,7 +95,7 @@ function buildGroupNode(
   });
 
   const children = branches.flatMap((branch) => {
-    const branchLabel = typeLabels.get(branch.type);
+    const branchLabel = branch.label ?? typeLabels.get(branch.type);
 
     // Тип, которого нет в словаре фильтров, не создаёт группу без подписи:
     // его предметы остаются в родительском узле.

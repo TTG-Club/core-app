@@ -24,12 +24,7 @@
     GROUPED_LIST_DEFAULT_VIRTUAL_THRESHOLD,
     GROUPED_LIST_GRID_CLASSES,
   } from './constants';
-  import {
-    chunkItems,
-    flattenGroupTree,
-    getSeparatorIndentClass,
-    getSeparatorLabelClass,
-  } from './utils';
+  import { chunkItems, flattenGroupTree } from './utils';
 
   interface Props {
     items: Array<T>;
@@ -241,7 +236,7 @@
       return [];
     }
 
-    return flattenGroupTree(groupSort.build(sortedItems.value), 0);
+    return flattenGroupTree(groupSort.build(sortedItems.value));
   });
 
   const shouldUseVirtual = computed(
@@ -363,7 +358,6 @@
           type: 'separator',
           key: `separator:${String(group.key)}`,
           label: getSeparatorText(group.key),
-          level: 0,
         },
         ...rows,
       ];
@@ -701,13 +695,9 @@
             <div
               v-if="virtualItem.row.type === 'separator'"
               class="flex items-center pb-2.5"
-              :class="getSeparatorIndentClass(virtualItem.row.level)"
               :style="{ height: `${separatorHeight}px` }"
             >
-              <USeparator
-                :label="virtualItem.row.label"
-                :ui="{ label: getSeparatorLabelClass(virtualItem.row.level) }"
-              />
+              <USeparator :label="virtualItem.row.label" />
             </div>
 
             <div
@@ -742,8 +732,6 @@
         <USeparator
           v-if="treeRow.type === 'separator'"
           :label="treeRow.label"
-          :class="getSeparatorIndentClass(treeRow.level)"
-          :ui="{ label: getSeparatorLabelClass(treeRow.level) }"
         />
 
         <PageGrid
