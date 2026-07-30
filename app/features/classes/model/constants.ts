@@ -8,12 +8,3 @@ export const CLASS_RESOURCE_RECOVERY_OPTIONS: Array<{
   { label: 'Короткий отдых', value: 'SHORT_REST' },
   { label: 'Продолжительный отдых', value: 'LONG_REST' },
 ];
-
-/**
- * Метки вариантов стартового снаряжения. Выводятся из порядка вариантов —
- * так же, как их выводит API при отдаче класса, поэтому в форме не хранятся.
- */
-export const CLASS_EQUIPMENT_OPTION_LABELS = 'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯ';
-
-/** Сколько вариантов снаряжения показывать у класса, где снаряжение ещё не заполнено. */
-export const DEFAULT_CLASS_EQUIPMENT_OPTIONS_COUNT = 2;
