@@ -19,6 +19,17 @@ export const GROUPED_LIST_DEFAULT_SEPARATOR_TOP_OFFSET = 18;
 // Отступ от нижней границы экрана для расчета видимой области.
 export const GROUPED_LIST_DEFAULT_BOTTOM_OFFSET = 32;
 
+// Классы подписи разделителя по уровню вложенности группы: чем глубже уровень,
+// тем мельче подпись. Уровни глубже последнего элемента берут его классы.
+export const GROUPED_LIST_SEPARATOR_LABEL_CLASSES = [
+  'text-base font-semibold text-highlighted',
+  'text-sm font-medium text-default',
+  'text-xs font-medium text-muted',
+];
+
+// Отступ слева у разделителей вложенных уровней; сетка карточек не сдвигается.
+export const GROUPED_LIST_SEPARATOR_INDENT_CLASSES = ['', 'pl-3', 'pl-6'];
+
 // Ширины контейнера, при которых увеличивается количество колонок.
 export const GROUPED_LIST_COLUMN_BREAKPOINTS = [
   { width: 448, columns: 2 },

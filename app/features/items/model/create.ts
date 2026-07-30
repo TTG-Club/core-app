@@ -1,6 +1,45 @@
 import type { EditorBaseInfoState } from '~ui/editor';
 
-export type ItemCategory = 'WEAPON' | 'ARMOR' | 'ITEM';
+/** Категории предмета (`ItemCategory` бэкенда). */
+export type ItemCategory =
+  | 'WEAPON'
+  | 'ARMOR'
+  | 'ITEM'
+  | 'TOOL'
+  | 'VEHICLE'
+  | 'MOUNT';
+
+/** Типы предмета (`ItemType` бэкенда) — значения группы фильтров `itemType`. */
+export type ItemType =
+  | 'ADVENTURING_GEAR'
+  | 'SIEGE_EQUIPMENT'
+  | 'ARTISAN_S_TOOLS'
+  | 'TOOL'
+  | 'INSTRUMENT'
+  | 'FOOD_AND_DRINK'
+  | 'GAMING_SET'
+  | 'AMMUNITION'
+  | 'WEAPON'
+  | 'MARTIAL_WEAPON'
+  | 'SIMPLE_WEAPON'
+  | 'MELEE_WEAPON'
+  | 'RANGED_WEAPON'
+  | 'FIREARM'
+  | 'FUTURISTIC'
+  | 'EXPLOSIVE'
+  | 'ARMOR'
+  | 'LIGHT_ARMOR'
+  | 'MEDIUM_ARMOR'
+  | 'HEAVY_ARMOR'
+  | 'SHIELD'
+  | 'SPELLCASTING_FOCUS'
+  | 'POISON'
+  | 'MOUNT'
+  | 'TACK_AND_HARNESS'
+  | 'VEHICLE'
+  | 'VEHICLE_AIR'
+  | 'VEHICLE_LAND'
+  | 'VEHICLE_WATER';
 
 export type DexterityMod = 'PLUS' | 'PLUS_MAX_2' | 'NONE';
 

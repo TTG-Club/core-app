@@ -1,9 +1,18 @@
 <script setup lang="ts">
-  import type { ItemDetailResponse, ItemLinkResponse } from '~items/model';
+  import type { ItemDetailResponse } from '~items/model';
 
   import { FilterControls, useFilter } from '~infrastructure/filter';
+  import {
+    useListPresentation,
+    useListPresentationMenus,
+  } from '~infrastructure/list-presentation/composable';
   import { ItemBody } from '~items/body';
   import { ItemLink } from '~items/link';
+  import {
+    createItemListPresentationConfig,
+    getItemTypeLabels,
+    parseItemLinks,
+  } from '~items/model';
   import { UiDetailPane } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
@@ -23,6 +32,24 @@
     defaults: filterDefaults,
   } = await useFilter('items', '/api/v2/item/filters');
 
+  // Подписи групп живут в фильтрах раздела, поэтому иерархия строится по уже
+  // провалидированному состоянию фильтра, а не отдельным запросом.
+  const itemTypeLabels = computed(() =>
+    getItemTypeLabels(filter.value?.filters ?? []),
+  );
+
+  const itemListPresentationConfig = createItemListPresentationConfig(
+    () => itemTypeLabels.value,
+  );
+
+  const presentation = useListPresentation(itemListPresentationConfig);
+
+  const presentationMenus = useListPresentationMenus(
+    itemListPresentationConfig,
+    presentation.grouping,
+    presentation.sorting,
+  );
+
   const {
     data: items,
     error,
@@ -30,14 +57,16 @@
     refresh,
   } = await useAsyncData(
     'items',
-    () =>
-      $fetch<Array<ItemLinkResponse>>('/api/v2/item/search', {
-        method: 'GET',
-        query: {
-          search: search.value,
-          ...filterQuery.value,
-        },
-      }),
+    async () =>
+      parseItemLinks(
+        await $fetch<unknown>('/api/v2/item/search', {
+          method: 'GET',
+          query: {
+            search: search.value,
+            ...filterQuery.value,
+          },
+        }),
+      ),
     {
       deep: false,
       watch: [search, filterQuery],
@@ -59,10 +88,23 @@
     items,
   });
 
+  // Группировка по категории берёт подписи из фильтров: пока они грузятся,
+  // список показывать нечем — иначе группы мигнут без подписей подгрупп.
+  const isLoading = computed(() => {
+    const isItemsLoading =
+      status.value !== 'success' && status.value !== 'error';
+
+    return (
+      isItemsLoading
+      || (presentation.grouping.value === 'CATEGORY' && isFilterPending.value)
+    );
+  });
+
   const listResetKey = computed(() =>
     JSON.stringify({
       filter: filterQuery.value,
       search: search.value ?? '',
+      presentation: presentation.resetKey.value,
     }),
   );
 </script>
@@ -79,6 +121,7 @@
         :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
+        :presentation-menus="presentationMenus"
       >
       </FilterControls>
     </template>
@@ -89,7 +132,7 @@
         mode="out-in"
       >
         <PageGrid
-          v-if="status !== 'success' && status !== 'error'"
+          v-if="isLoading"
           :columns="3"
         >
           <SkeletonLinkSmall
@@ -102,6 +145,8 @@
           v-else-if="status === 'success' && items?.length"
           :items="items"
           :reset-key="listResetKey"
+          :field="presentation.groupField.value"
+          :group-sort="presentation.groupSort.value"
           :active-item-key="detailUrl"
         >
           <template #default="{ item }">
