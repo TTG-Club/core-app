@@ -73,7 +73,7 @@
         <UCheckbox
           v-model="draftCustom"
           label="Использовать своё значение"
-          description="Иначе КД считается автоматически по надетой броне"
+          description="Иначе КД считается автоматически по надетому доспеху"
         />
 
         <USeparator class="my-1" />
@@ -101,11 +101,11 @@
           </div>
 
           <div class="flex items-center justify-between gap-4">
-            <span class="text-sm text-toned">Тип брони</span>
+            <span class="text-sm text-toned">Тип доспеха</span>
 
             <UCheckbox
               v-model="draftNatural"
-              label="Природная броня"
+              label="Природный доспех"
             />
           </div>
 
@@ -122,7 +122,7 @@
 
         <template v-else>
           <div class="flex items-center justify-between gap-4 text-sm">
-            <span class="text-toned">Броня</span>
+            <span class="text-toned">Доспех</span>
 
             <span class="text-toned">
               {{ autoBreakdown.bodyArmorName ?? SHEET_UNARMORED_LABEL }}
@@ -136,7 +136,7 @@
             v-if="autoBreakdown.dexCapped"
             class="text-xs text-dimmed"
           >
-            Модификатор Ловкости ограничен бронёй (+{{
+            Модификатор Ловкости ограничен доспехом (+{{
               autoBreakdown.dexBonus
             }})
           </div>
@@ -161,8 +161,8 @@
           </div>
 
           <p class="text-xs text-dimmed">
-            Надевайте доспехи и щит на вкладке «Снаряжение» — в зачёт идёт броня
-            с наибольшим КД, щит складывается сверху.
+            Надевайте доспехи и щит на вкладке «Снаряжение» — в зачёт идёт
+            доспех с наибольшим КД, щит складывается сверху.
           </p>
         </template>
       </div>

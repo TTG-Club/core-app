@@ -528,8 +528,8 @@ export const UNARMORED_ARMOR_CLASS_BASE = 10;
 /** Максимальный бонус Ловкости к КД средней брони (штраф по Ловкости). */
 export const ARMOR_MEDIUM_DEX_CAP = 2;
 
-/** Подпись «без брони» для разбора класса доспеха. */
-export const SHEET_UNARMORED_LABEL = 'Без брони (10 + Ловкость)';
+/** Подпись «без доспеха» для разбора класса доспеха. */
+export const SHEET_UNARMORED_LABEL = 'Без доспеха (10 + Ловкость)';
 
 /** Пояснение правила модификатора Ловкости к КД для подсказки на плитке брони. */
 export const ARMOR_DEXTERITY_HINT_LABELS: Record<ArmorDexterityMod, string> = {
