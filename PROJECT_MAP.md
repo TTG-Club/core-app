@@ -153,6 +153,17 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 - JSON export (without the portrait link) and JSON import from the section
   controls.
+- The same import button also accepts a Long Story Short export (its character
+  document is a JSON string inside `data`). `model/import` is a lazily imported
+  sub-module (like `model/pdf`, so it stays out of the main bundle): `schema.ts`
+  parses the foreign file with catch-everything Zod, `tiptap.ts` rewrites its
+  TipTap texts into site markup (`{@list}` / `{@bold}` / `{@link}`), `convert.ts`
+  maps abilities, skills, hit points, resources, coins and text blocks (traits
+  and feats become sheet features, the rest become notes), and `catalog.ts`
+  matches class, subclass, species, background and every equipment line against
+  the site catalogs by name — anything not found stays a homebrew entry. Spells
+  cannot be carried over (the file keeps only LSS-internal ids), so the import
+  says so in a toast.
 - PDF export from the same action menu. `model/pdf` draws its own vector layout
   close to the official D&D 2024 sheet with Russian labels: main page,
   equipment, spells, and a reference section with full descriptions.

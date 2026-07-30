@@ -110,7 +110,7 @@ export const SHEET_IMPORT_LABEL = 'Импорт JSON';
 
 /** Пояснение к кнопке импорта: какой файл от пользователя ждут. */
 export const SHEET_IMPORT_HINT =
-  'Создаст лист из JSON-файла, скачанного экспортом';
+  'Создаст лист из JSON-файла: нашего экспорта или выгрузки Long Story Short';
 
 /** Строка для атрибута `accept` диалога выбора файла листа. */
 export const SHEET_IMPORT_ACCEPT = 'application/json,.json';
@@ -133,7 +133,16 @@ export const SHEET_IMPORT_SIZE_ERROR =
 
 /** Причина отказа импорта: в файле не лист персонажа. */
 export const SHEET_IMPORT_PARSE_ERROR =
-  'Выберите JSON-файл, скачанный из листа персонажа';
+  'Выберите JSON-файл листа персонажа: наш экспорт или выгрузку Long Story Short';
+
+/** Заголовок тоста о данных чужого формата, которым на листе нет места. */
+export const SHEET_IMPORT_WARNINGS_TITLE = 'Часть данных перенести не удалось';
+
+/**
+ * Сколько держать тост с предупреждениями импорта: текста там на несколько
+ * строк, и обычные пять секунд его не дают дочитать.
+ */
+export const SHEET_IMPORT_WARNINGS_DURATION = 15_000;
 
 /** Общее сообщение об ошибке, когда бэк не вернул текст. */
 export const SHEET_UNKNOWN_ERROR_MESSAGE = 'Неизвестная ошибка';
@@ -1873,6 +1882,12 @@ export const ITEMS_FILTERS_PATH = '/api/v2/item/filters';
 
 /** Базовый путь деталей предмета (`/{url}`). */
 export const ITEMS_DETAIL_BASE_PATH = '/api/v2/item';
+
+/**
+ * Хвост пути «сырого» ответа предмета: числовой КД доспеха и урон оружия есть
+ * только в нём (публичная деталь их не отдаёт).
+ */
+export const ITEMS_RAW_DETAIL_PATH_SUFFIX = 'raw';
 
 /** Эндпоинт поиска магических предметов (раздел «Магические предметы»). */
 export const MAGIC_ITEMS_SEARCH_PATH = '/api/v2/magic-items/search';

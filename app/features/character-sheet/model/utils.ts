@@ -2462,13 +2462,16 @@ export function toCopiedSpell(
 }
 
 /**
- * Приведение названия класса или подкласса к ключу карт заклинательства.
+ * Приведение названия записи справочника к сопоставимому виду: регистр, «ё» и
+ * лишние пробелы у названий каталога, листа и чужих файлов расходятся
+ * («инструменты стеклодува», «Инструменты  ткача »). Одна на все сопоставления
+ * по названию — классы, инструменты, предметы импорта.
  *
- * @param name название класса или подкласса.
- * @returns название без крайних пробелов, в нижнем регистре и без «ё».
+ * @param name название записи.
+ * @returns нормализованное название.
  */
-function normalizeClassName(name: string): string {
-  return name.trim().toLowerCase().replaceAll('ё', 'е');
+export function normalizeCatalogName(name: string): string {
+  return name.trim().toLowerCase().replaceAll('ё', 'е').replace(/\s+/gu, ' ');
 }
 
 /**
@@ -2486,7 +2489,7 @@ export function getClassSpellcastingAbility(
   }
 
   return (
-    CLASS_SPELLCASTING_ABILITIES[normalizeClassName(characterClass.name)]
+    CLASS_SPELLCASTING_ABILITIES[normalizeCatalogName(characterClass.name)]
     ?? null
   );
 }
@@ -2503,7 +2506,7 @@ function getLegacyCasterType(
   characterClass: CharacterClass,
 ): CasterType | null {
   const casterType =
-    CLASS_SPELL_PROGRESSIONS[normalizeClassName(characterClass.name)];
+    CLASS_SPELL_PROGRESSIONS[normalizeCatalogName(characterClass.name)];
 
   if (casterType) {
     return casterType;
@@ -2512,7 +2515,7 @@ function getLegacyCasterType(
   const { subclassName } = characterClass;
 
   return subclassName
-    && THIRD_CASTER_SUBCLASSES.includes(normalizeClassName(subclassName))
+    && THIRD_CASTER_SUBCLASSES.includes(normalizeCatalogName(subclassName))
     ? CasterType.THIRD
     : null;
 }
@@ -3174,18 +3177,6 @@ export function getToolNames(tools: CharacterToolProficiency[]): string[] {
 }
 
 /**
- * Приведение названия инструмента к сопоставимому виду: регистр, `ё` и лишние
- * пробелы у названий каталога и листа расходятся («инструменты стеклодува»,
- * «Инструменты ткача »).
- *
- * @param name название инструмента.
- * @returns нормализованное название.
- */
-function normalizeToolName(name: string): string {
-  return name.trim().toLowerCase().replaceAll('ё', 'е');
-}
-
-/**
  * Подпись инструмента, которого нет в каталоге: API отдаёт названия и с
  * маленькой буквы («инструменты стеклодува»). Регистр остальных слов не
  * трогаем — в названиях встречаются имена собственные.
@@ -3209,11 +3200,11 @@ function toDisplayToolName(name: string): string {
  * @returns ключ для сравнения и дедупликации.
  */
 export function getToolProficiencyKey(name: string): string {
-  const normalized = normalizeToolName(name);
+  const normalized = normalizeCatalogName(name);
 
   const alias = TOOL_NAME_ALIASES[normalized];
 
-  return alias ? normalizeToolName(alias) : normalized;
+  return alias ? normalizeCatalogName(alias) : normalized;
 }
 
 /**
@@ -3534,11 +3525,11 @@ function findToolInProseSegment(
     return exactMatch;
   }
 
-  const normalized = normalizeToolName(segment);
+  const normalized = normalizeCatalogName(segment);
 
   return catalog
     .filter((toolEntry) =>
-      normalized.includes(normalizeToolName(toolEntry.name)),
+      normalized.includes(normalizeCatalogName(toolEntry.name)),
     )
     .sort((first, second) => second.name.length - first.name.length)
     .at(0);

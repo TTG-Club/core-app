@@ -6,6 +6,7 @@ import type {
   CharacterSheetListPage,
   FeatSummary,
   FeatureDescriptionNode,
+  ItemSummary,
   SavedCharacterSheet,
   SavedCharacterSheetListPage,
 } from './types';
@@ -24,6 +25,8 @@ import {
   CHARACTER_SHEET_SAVED_API_PATH,
   CHARACTER_SHEET_SHARED_API_PATH,
   FEATS_DETAIL_BASE_PATH,
+  ITEMS_DETAIL_BASE_PATH,
+  ITEMS_RAW_DETAIL_PATH_SUFFIX,
   SHEET_UNKNOWN_ERROR_MESSAGE,
   SPELLS_DETAIL_BASE_PATH,
   SPELLS_RAW_DETAIL_PATH_SUFFIX,
@@ -32,6 +35,9 @@ import {
   parseCatalogDescription,
   parseCatalogSpellDetail,
   parseFeatDetail,
+  parseItemArmor,
+  parseItemDetail,
+  parseItemWeapon,
   parseSpellDamageFormulas,
 } from './schemas';
 import { getInventoryItemDetailPath } from './utils';
@@ -225,6 +231,65 @@ export async function fetchInventoryItemDescription(
   } catch {
     return [];
   }
+}
+
+/**
+ * Боевые параметры предмета (доспех, оружие) из «сырого» ответа раздела:
+ * публичная деталь их не отдаёт, а без чисел не посчитать ни КД, ни бонус
+ * атаки. Ошибку глотаем — предмет добавится без боевых данных.
+ *
+ * @param itemUrl слаг предмета в каталоге.
+ * @param summary разобранная деталь предмета (категория и типы — для щита).
+ * @returns параметры доспеха и оружия.
+ */
+async function fetchItemCombatStats(
+  itemUrl: string,
+  summary: ItemSummary,
+): Promise<Pick<ItemSummary, 'armor' | 'weapon'>> {
+  try {
+    const response = await $fetch<unknown>(
+      `${ITEMS_DETAIL_BASE_PATH}/${itemUrl}/${ITEMS_RAW_DETAIL_PATH_SUFFIX}`,
+      { method: 'GET', retry: 0 },
+    );
+
+    // Разбираем только профиль своей категории: редактор шлёт заготовки
+    // armor/weapon даже у чужих категорий (пустые объекты), поэтому чужой
+    // профиль дал бы ложные КД/атаку.
+    return {
+      armor:
+        summary.category === 'ARMOR' ? parseItemArmor(response, summary) : null,
+      weapon: summary.category === 'WEAPON' ? parseItemWeapon(response) : null,
+    };
+  } catch {
+    return { armor: null, weapon: null };
+  }
+}
+
+/**
+ * Деталь предмета раздела «Предметы» вместе с боевыми параметрами доспеха и
+ * оружия. Общая для модалки добавления предметов и импорта чужого листа.
+ *
+ * @param itemUrl слаг предмета в каталоге.
+ * @returns деталь предмета; null — ответ не распознан.
+ */
+export async function fetchItemSummary(
+  itemUrl: string,
+): Promise<ItemSummary | null> {
+  const response = await $fetch<unknown>(
+    `${ITEMS_DETAIL_BASE_PATH}/${itemUrl}`,
+    { method: 'GET', retry: 0 },
+  );
+
+  const summary = parseItemDetail(response);
+
+  if (
+    !summary
+    || (summary.category !== 'ARMOR' && summary.category !== 'WEAPON')
+  ) {
+    return summary;
+  }
+
+  return { ...summary, ...(await fetchItemCombatStats(itemUrl, summary)) };
 }
 
 /**
