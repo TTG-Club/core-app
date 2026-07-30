@@ -24,6 +24,8 @@ import type {
   MagicItemCatalogItem,
   MagicItemCatalogSorting,
   ResourceRecovery,
+  ResourceRecoveryField,
+  ResourceRecoveryMode,
   RollMode,
   SheetSaveStatus,
   SheetTab,
@@ -110,7 +112,7 @@ export const SHEET_IMPORT_LABEL = 'Импорт JSON';
 
 /** Пояснение к кнопке импорта: какой файл от пользователя ждут. */
 export const SHEET_IMPORT_HINT =
-  'Создаст лист из JSON-файла, скачанного экспортом';
+  'Создаст лист из JSON-файла: нашего экспорта или выгрузки Long Story Short';
 
 /** Строка для атрибута `accept` диалога выбора файла листа. */
 export const SHEET_IMPORT_ACCEPT = 'application/json,.json';
@@ -133,7 +135,16 @@ export const SHEET_IMPORT_SIZE_ERROR =
 
 /** Причина отказа импорта: в файле не лист персонажа. */
 export const SHEET_IMPORT_PARSE_ERROR =
-  'Выберите JSON-файл, скачанный из листа персонажа';
+  'Выберите JSON-файл листа персонажа: наш экспорт или выгрузку Long Story Short';
+
+/** Заголовок тоста о данных чужого формата, которым на листе нет места. */
+export const SHEET_IMPORT_WARNINGS_TITLE = 'Часть данных перенести не удалось';
+
+/**
+ * Сколько держать тост с предупреждениями импорта: текста там на несколько
+ * строк, и обычные пять секунд его не дают дочитать.
+ */
+export const SHEET_IMPORT_WARNINGS_DURATION = 15_000;
 
 /** Общее сообщение об ошибке, когда бэк не вернул текст. */
 export const SHEET_UNKNOWN_ERROR_MESSAGE = 'Неизвестная ошибка';
@@ -389,6 +400,10 @@ export const ABILITY_SHORT_LABELS: Record<AbilityKey, string> = {
   charisma: 'Хар',
 };
 
+/** Варианты характеристик для селектов листа — в порядке отображения. */
+export const ABILITY_OPTIONS: Array<{ label: string; value: AbilityKey }> =
+  ABILITY_ORDER.map((key) => ({ label: ABILITY_LABELS[key], value: key }));
+
 /** Порядок отображения денежных единиц. */
 export const CURRENCY_ORDER: CurrencyKey[] = [
   'copper',
@@ -456,22 +471,52 @@ export const LEVEL_XP_THRESHOLDS: number[] = [
   120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000,
 ];
 
-/** Названия типов восстановления ресурса класса. */
+/** Названия видов отдыха. */
 export const RESOURCE_RECOVERY_LABELS: Record<ResourceRecovery, string> = {
   'short-rest': 'Короткий отдых',
   'long-rest': 'Продолжительный отдых',
 };
 
-/** Варианты восстановления для селекта в настройке ресурсов. */
-export const RESOURCE_RECOVERY_OPTIONS: Array<{
+/** Названия режимов восстановления ресурса на отдыхе. */
+export const RESOURCE_RECOVERY_MODE_LABELS: Record<
+  ResourceRecoveryMode,
+  string
+> = {
+  none: 'Ничего',
+  all: 'Все заряды',
+  amount: 'Своё число',
+};
+
+/** Варианты режима восстановления для селекта в настройке ресурсов. */
+export const RESOURCE_RECOVERY_MODE_OPTIONS: Array<{
   label: string;
-  value: ResourceRecovery;
+  value: ResourceRecoveryMode;
 }> = [
-  { label: 'Короткий отдых', value: 'short-rest' },
-  { label: 'Продолжительный отдых', value: 'long-rest' },
+  { label: RESOURCE_RECOVERY_MODE_LABELS.none, value: 'none' },
+  { label: RESOURCE_RECOVERY_MODE_LABELS.all, value: 'all' },
+  { label: RESOURCE_RECOVERY_MODE_LABELS.amount, value: 'amount' },
 ];
 
-/** Иконки типов восстановления ресурса класса. */
+/** Правила восстановления ресурса в порядке вывода в форме и на панели. */
+export const RESOURCE_RECOVERY_FIELDS: ResourceRecoveryField[] = [
+  { key: 'shortRest', rest: 'short-rest' },
+  { key: 'longRest', rest: 'long-rest' },
+];
+
+/** Подпись полного восстановления в подсказках и в списках отдыха. */
+export const RESOURCE_RECOVERY_ALL_LABEL = 'все заряды';
+
+/** Подпись полного восстановления в компактной пометке на панели листа. */
+export const RESOURCE_RECOVERY_ALL_SHORT_LABEL = 'все';
+
+/** Формы слова «заряд» для числа возвращаемых зарядов. */
+export const RESOURCE_CHARGE_FORMS: [string, string, string] = [
+  'заряд',
+  'заряда',
+  'зарядов',
+];
+
+/** Иконки видов отдыха. */
 export const RESOURCE_RECOVERY_ICONS: Record<ResourceRecovery, string> = {
   'short-rest': 'tabler:campfire',
   'long-rest': 'tabler:sun',
@@ -483,8 +528,17 @@ export const RESOURCE_COUNT_MIN = 0;
 /** Максимальное количество зарядов ресурса. */
 export const RESOURCE_COUNT_MAX = 99;
 
+/** Минимальное число зарядов, возвращаемых отдыхом. */
+export const RESOURCE_RECOVERY_AMOUNT_MIN = 1;
+
 /** Максимальная длина короткой подписи ресурса. */
 export const RESOURCE_SHORT_LABEL_MAX_LENGTH = 4;
+
+/** Заголовки окна ресурса класса: добавление и правка. */
+export const CLASS_RESOURCE_MODAL_TITLES: Record<'add' | 'edit', string> = {
+  add: 'Новый ресурс',
+  edit: 'Ресурс класса',
+};
 
 /** Подсказки полей ресурса класса: пример вместо подставленного текста. */
 export const RESOURCE_PLACEHOLDERS: Record<'name' | 'shortLabel', string> = {
@@ -495,11 +549,14 @@ export const RESOURCE_PLACEHOLDERS: Record<'name' | 'shortLabel', string> = {
 /**
  * Заготовка нового ресурса класса (без идентификатора). Подписи пустые —
  * пример показывает плейсхолдер, чтобы не стирать текст перед вводом своего.
+ * Восстановление по умолчанию — продолжительный отдых целиком: так работает
+ * большинство классовых счётчиков.
  */
 export const NEW_CLASS_RESOURCE: Omit<CharacterClassResource, 'id'> = {
   name: '',
   shortLabel: '',
-  recovery: 'long-rest',
+  shortRest: { mode: 'none', amount: RESOURCE_RECOVERY_AMOUNT_MIN },
+  longRest: { mode: 'all', amount: RESOURCE_RECOVERY_AMOUNT_MIN },
   current: 1,
   max: 1,
 };
@@ -510,17 +567,17 @@ export const ARMOR_CLASS_BASE_MIN = 0;
 /** Максимальное базовое значение класса доспеха. */
 export const ARMOR_CLASS_BASE_MAX = 40;
 
-/** Значение «без характеристики» в селекте класса доспеха. */
-export const ARMOR_CLASS_NO_ABILITY = 'none';
-
 /** Безброневой класс доспеха (без надетой брони): база `10 + Ловкость`. */
 export const UNARMORED_ARMOR_CLASS_BASE = 10;
 
 /** Максимальный бонус Ловкости к КД средней брони (штраф по Ловкости). */
 export const ARMOR_MEDIUM_DEX_CAP = 2;
 
-/** Подпись «без брони» для разбора класса доспеха. */
-export const SHEET_UNARMORED_LABEL = 'Без брони (10 + Ловкость)';
+/** Подпись «без доспеха» для разбора класса доспеха. */
+export const SHEET_UNARMORED_LABEL = 'Без доспеха';
+
+/** Характеристика КД по правилам: к доспеху прибавляется модификатор Ловкости. */
+export const DEFAULT_ARMOR_CLASS_ABILITY: AbilityKey = 'dexterity';
 
 /** Пояснение правила модификатора Ловкости к КД для подсказки на плитке брони. */
 export const ARMOR_DEXTERITY_HINT_LABELS: Record<ArmorDexterityMod, string> = {
@@ -529,14 +586,51 @@ export const ARMOR_DEXTERITY_HINT_LABELS: Record<ArmorDexterityMod, string> = {
   none: ' (без модификатора Ловкости)',
 };
 
-/** Варианты характеристики для бонуса класса доспеха. */
-export const ARMOR_CLASS_ABILITY_OPTIONS: Array<{
-  label: string;
-  value: AbilityKey | typeof ARMOR_CLASS_NO_ABILITY;
-}> = [
-  { label: 'Нет', value: ARMOR_CLASS_NO_ABILITY },
-  ...ABILITY_ORDER.map((key) => ({ label: ABILITY_LABELS[key], value: key })),
-];
+/** Подписи модалки настройки класса доспеха. */
+export const ARMOR_CLASS_LABELS: Record<
+  | 'title'
+  | 'customToggle'
+  | 'customToggleHint'
+  | 'valueTitle'
+  | 'abilitiesTitle'
+  | 'abilitiesPlaceholder'
+  | 'abilitiesArmorHint'
+  | 'abilitiesArmorEmptyHint'
+  | 'abilitiesCustomHint'
+  | 'abilitiesCustomEmptyHint'
+  | 'armorTypeTitle'
+  | 'naturalArmor'
+  | 'armorTitle'
+  | 'dexCappedHint'
+  | 'shieldTitle'
+  | 'totalTitle'
+  | 'equipmentHint',
+  string
+> = {
+  title: 'Класс доспеха',
+  customToggle: 'Использовать своё значение',
+  customToggleHint: 'Иначе КД считается автоматически по надетому доспеху',
+  valueTitle: 'Значение',
+  abilitiesTitle: 'Характеристики',
+  abilitiesPlaceholder: 'Без модификаторов',
+  abilitiesArmorHint: `Модификаторы этих характеристик идут в КД. ${ABILITY_LABELS.dexterity} учитывается по правилу надетого доспеха (средний ограничивает бонус, тяжёлый не даёт его вовсе), остальные складываются сверху — как безброневая защита варвара и монаха или песнь клинка.`,
+  abilitiesArmorEmptyHint:
+    'Ни одна характеристика в КД не идёт — считается только доспех со щитом.',
+  abilitiesCustomHint:
+    'Модификаторы этих характеристик прибавляются к значению.',
+  abilitiesCustomEmptyHint:
+    'Ни одна характеристика не прибавляется — КД равен значению.',
+  armorTypeTitle: 'Тип доспеха',
+  naturalArmor: 'Природный доспех',
+  armorTitle: 'Доспех',
+  // Подпись в родительном падеже, поэтому название характеристики здесь текстом,
+  // а не из `ABILITY_LABELS` (там именительный: «Ловкость»).
+  dexCappedHint: 'Модификатор Ловкости ограничен доспехом',
+  shieldTitle: 'Щит',
+  totalTitle: 'Итоговый КД',
+  equipmentHint:
+    'Надевайте доспехи и щит на вкладке «Снаряжение» — в зачёт идёт доспех с наибольшим КД, щит складывается сверху.',
+};
 
 /**
  * Характеристика бонуса атаки оружием по правилам: большинство оружия бьёт от
@@ -564,6 +658,67 @@ export const WEAPON_ATTACK_ABILITY_AUTO_HINT = `По правилам: ${ABILITY
  * дальнобойное оружие считается от Ловкости независимо от настройки.
  */
 export const WEAPON_ATTACK_FINESSE_HINT = `Фехтовальное и дальнобойное оружие бьёт от характеристики «${ABILITY_LABELS.dexterity}» независимо от настройки.`;
+
+/** Вкладка модалки настроек листа с правилом подсчёта атаки оружием. */
+export const SHEET_SETTINGS_WEAPON_TAB = 'weapon-attack';
+
+/** Вкладка модалки настроек листа со своими бонусами. */
+export const SHEET_SETTINGS_BONUSES_TAB = 'custom-bonuses';
+
+/**
+ * Вкладки модалки настроек листа: правило подсчёта атаки и свои бонусы —
+ * разные задачи, показывать их разом незачем.
+ */
+export const SHEET_SETTINGS_TABS = [
+  {
+    label: 'Атака оружием',
+    value: SHEET_SETTINGS_WEAPON_TAB,
+    slot: SHEET_SETTINGS_WEAPON_TAB,
+  },
+  {
+    label: 'Свои бонусы',
+    value: SHEET_SETTINGS_BONUSES_TAB,
+    slot: SHEET_SETTINGS_BONUSES_TAB,
+  },
+];
+
+/** Минимальный свой бонус в настройках листа (мастерство, инициатива). */
+export const CUSTOM_BONUS_MIN = -10;
+
+/** Максимальный свой бонус в настройках листа (мастерство, инициатива). */
+export const CUSTOM_BONUS_MAX = 10;
+
+/**
+ * Формат полей своих бонусов: знак виден и у плюса, чтобы поле читалось
+ * бонусом, а не количеством.
+ */
+export const CUSTOM_BONUS_FORMAT_OPTIONS: Intl.NumberFormatOptions = {
+  signDisplay: 'exceptZero',
+};
+
+/** Пояснение к своему бонусу мастерства. */
+export const CUSTOM_PROFICIENCY_BONUS_HINT =
+  'Складывается с бонусом по уровню везде, где тот участвует: спасброски, навыки, атака оружием, заклинательство.';
+
+/** Пояснение к своему бонусу инициативы. */
+export const CUSTOM_INITIATIVE_BONUS_HINT = `Складывается с модификатором характеристики «${ABILITY_LABELS.dexterity}» в плитке инициативы и в её броске.`;
+
+/** Подписи модалки настроек листа. */
+export const SHEET_SETTINGS_LABELS = {
+  title: 'Настройки листа',
+  weaponAbilityTitle: 'Базовая характеристика',
+  normalWeaponTitle: 'Обычное оружие',
+  finesseWeaponTitle: 'Фехтовальное и дальнобойное',
+  abilityModifierTitle: 'Модификатор характеристики',
+  proficiencyBonusTitle: 'Бонус мастерства',
+  attackFormulaHint:
+    'Бонус атаки = бонус мастерства + модификатор характеристики.',
+  initiativeTitle: 'Инициатива',
+  customBonusTitle: 'Свой бонус',
+  levelProficiencyBonusTitle: 'По уровню',
+  totalProficiencyBonusTitle: 'Итоговый бонус мастерства',
+  totalInitiativeTitle: 'Итоговая инициатива',
+};
 
 /** Минимальное значение характеристики. */
 export const ABILITY_SCORE_MIN = 1;
@@ -964,7 +1119,7 @@ export const LONG_REST_LABELS: Record<
 > = {
   title: 'Продолжительный отдых',
   intro:
-    'Продолжительный отдых — не меньше 8 часов, из них минимум 6 часов сна, а остальное время — необременительные занятия. По его окончании персонаж восстанавливает все хиты, все кости хитов, все ячейки заклинаний и счётчики умений.',
+    'Продолжительный отдых — не меньше 8 часов, из них минимум 6 часов сна, а остальное время — необременительные занятия. По его окончании персонаж восстанавливает все хиты, все кости хитов, все ячейки заклинаний и заряды счётчиков умений.',
   rulesTitle: 'Правила продолжительного отдыха',
   hitPointsTitle: 'Хиты',
   hitPointsRecovery: 'Восстановятся полностью.',
@@ -989,7 +1144,7 @@ export const LONG_REST_RULES: string[] = [
   'Прерванный час боя, ходьбы или другой утомительной деятельности обнуляет отдых: его придётся начинать заново.',
   'По окончании отдыха восстанавливаются все хиты и все потраченные ячейки заклинаний.',
   'Все потраченные кости хитов возвращаются: в редакции 2024 года отдых возвращает их полностью, а не половину.',
-  'Возвращаются счётчики умений и с продолжительным, и с коротким восстановлением.',
+  'Счётчикам умений возвращается столько зарядов, сколько задано им на продолжительный отдых: обычно это все заряды.',
   'Временные хиты держатся до конца продолжительного отдыха и пропадают вместе с ним.',
   'За одни сутки можно получить пользу только от одного продолжительного отдыха.',
 ];
@@ -1001,7 +1156,7 @@ export const SHORT_REST_RULES: string[] = [
   'В конце отдыха тратится любое количество оставшихся костей хитов. За каждую кость бросается её номинал и прибавляется модификатор Телосложения — столько хитов и восстанавливается, но не меньше нуля за кость.',
   'Сколько костей бросить дальше, решается после каждого броска.',
   'Потраченные кости хитов возвращает только продолжительный отдых.',
-  'Умения и ячейки с восстановлением «короткий отдых» возвращаются по окончании отдыха.',
+  'По окончании отдыха возвращаются ячейки договора колдуна, а счётчикам умений — столько зарядов, сколько задано им на короткий отдых.',
 ];
 
 /** Каталог брони для настройки владения: группы, пункт «вся группа» и виды. */
@@ -1873,6 +2028,12 @@ export const ITEMS_FILTERS_PATH = '/api/v2/item/filters';
 
 /** Базовый путь деталей предмета (`/{url}`). */
 export const ITEMS_DETAIL_BASE_PATH = '/api/v2/item';
+
+/**
+ * Хвост пути «сырого» ответа предмета: числовой КД доспеха и урон оружия есть
+ * только в нём (публичная деталь их не отдаёт).
+ */
+export const ITEMS_RAW_DETAIL_PATH_SUFFIX = 'raw';
 
 /** Эндпоинт поиска магических предметов (раздел «Магические предметы»). */
 export const MAGIC_ITEMS_SEARCH_PATH = '/api/v2/magic-items/search';

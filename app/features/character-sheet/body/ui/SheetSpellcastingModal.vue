@@ -4,9 +4,9 @@
   import { useCharacterSheet } from '../../composables';
   import {
     ABILITY_LABELS,
+    getCharacterProficiencyBonus,
     getClassSpellcastingAbility,
     getFormattedBonus,
-    getProficiencyBonus,
     SPELL_SAVE_DC_BASE,
     SPELLCASTING_ABILITY_AUTO,
     SPELLCASTING_ABILITY_OPTIONS,
@@ -45,7 +45,7 @@
   );
 
   const proficiencyBonus = computed(() =>
-    getProficiencyBonus(character.value.level),
+    getCharacterProficiencyBonus(character.value),
   );
 
   const abilityModifier = computed(() =>

@@ -7,6 +7,7 @@ import type {
   AbilityBonusMode,
   AbilityKey,
   AbilityRow,
+  ArmorClassAbilityBonus,
   ArmorClassBreakdown,
   ArmorDexterityMod,
   CatalogSpellDetail,
@@ -34,6 +35,7 @@ import type {
   ClassFeatureRow,
   ClassFeatureSummary,
   ClassOption,
+  ClassResourceRecoveryBadge,
   ClassSummary,
   ClassTableColumn,
   CustomArmorType,
@@ -67,6 +69,8 @@ import type {
   PrimarySpeed,
   ProficiencyCatalogGroup,
   ResourceRecovery,
+  ResourceRecoveryMode,
+  ResourceRecoveryRule,
   RollMode,
   SavingThrowRow,
   SkillRow,
@@ -152,6 +156,7 @@ import {
   DAMAGE_DICE_COUNT_MIN,
   DAMAGE_TYPE_LABELS,
   DARKVISION_PARSE_FALLBACK,
+  DEFAULT_ARMOR_CLASS_ABILITY,
   DEFAULT_ROLL_DICE_FACES,
   DEFAULT_WEAPON_ATTACK_ABILITY,
   DICE_NOTATION_LETTER,
@@ -185,7 +190,13 @@ import {
   PREPARED_SPELLS_MAX,
   PREPARED_SPELLS_MIN,
   PREPARED_SPELLS_VALUE_SEPARATOR,
+  RESOURCE_CHARGE_FORMS,
   RESOURCE_COUNT_MAX,
+  RESOURCE_RECOVERY_ALL_LABEL,
+  RESOURCE_RECOVERY_ALL_SHORT_LABEL,
+  RESOURCE_RECOVERY_AMOUNT_MIN,
+  RESOURCE_RECOVERY_FIELDS,
+  RESOURCE_RECOVERY_ICONS,
   RESOURCE_RECOVERY_LABELS,
   RESOURCE_SHORT_LABEL_MAX_LENGTH,
   ROLL_MODE_DICE_COUNT,
@@ -198,6 +209,7 @@ import {
   SHEET_PLURAL_FORMS,
   SHEET_SAVE_SHARED_LABELS,
   SHEET_SHARE_ACTIVE_HINT,
+  SHEET_UNARMORED_LABEL,
   SIZE_LABEL_WORDS,
   SKILL_OWNED_HINTS,
   SKILL_PROFICIENCY_MULTIPLIERS,
@@ -252,6 +264,33 @@ export function getProficiencyBonus(level: number): number {
 }
 
 /**
+ * Бонус мастерства листа: бонус по уровню плюс свой бонус из настроек. Считать
+ * бонус мастерства персонажа нужно именно так — везде, где он участвует.
+ *
+ * @param character персонаж.
+ * @returns итоговый бонус мастерства.
+ */
+export function getCharacterProficiencyBonus(character: Character): number {
+  return (
+    getProficiencyBonus(character.level)
+    + character.settings.customProficiencyBonus
+  );
+}
+
+/**
+ * Бонус инициативы: модификатор Ловкости плюс свой бонус из настроек.
+ *
+ * @param character персонаж.
+ * @returns итоговый бонус инициативы.
+ */
+export function getInitiativeBonus(character: Character): number {
+  return (
+    getModifier(character.abilities.dexterity)
+    + character.settings.customInitiativeBonus
+  );
+}
+
+/**
  * Суммарный опыт, необходимый для достижения следующего уровня. Для 20-го
  * уровня возвращается порог самого 20-го уровня — выше расти некуда.
  *
@@ -282,7 +321,7 @@ export function getSavingThrowValue(
     return modifier;
   }
 
-  return modifier + getProficiencyBonus(character.level);
+  return modifier + getCharacterProficiencyBonus(character);
 }
 
 /**
@@ -299,10 +338,47 @@ export function getSkillValue(
   const modifier = getModifier(character.abilities[skill.ability]);
 
   const proficiencyPart =
-    getProficiencyBonus(character.level)
+    getCharacterProficiencyBonus(character)
     * SKILL_PROFICIENCY_MULTIPLIERS[skill.proficiency];
 
   return modifier + Math.floor(proficiencyPart);
+}
+
+/**
+ * Проверка, что значение — ключ характеристики: известный ключ тот, у которого
+ * есть подпись в `ABILITY_LABELS`.
+ *
+ * @param candidate проверяемое значение.
+ * @returns `true`, если значение — ключ характеристики.
+ */
+function isAbilityKey(candidate: unknown): candidate is AbilityKey {
+  return typeof candidate === 'string' && candidate in ABILITY_LABELS;
+}
+
+/**
+ * Характеристики в порядке листа (`ABILITY_ORDER`), а не в очерёдности выбора:
+ * в селектах порядок задают клики игрока, а читаться список должен так же, как
+ * блок характеристик. Повторы отбрасываются.
+ *
+ * @param abilities выбранные характеристики в произвольном порядке.
+ * @returns выбранные характеристики в порядке листа.
+ */
+export function sortAbilityKeys(abilities: AbilityKey[]): AbilityKey[] {
+  return ABILITY_ORDER.filter((key) => abilities.includes(key));
+}
+
+/**
+ * Разбор значения множественного селекта характеристик: компонент отдаёт его
+ * нетипизированным, поэтому в список попадают только известные ключи — сразу в
+ * порядке листа.
+ *
+ * @param value значение множественного селекта характеристик.
+ * @returns выбранные характеристики в порядке листа.
+ */
+export function toSelectedAbilityKeys(value: unknown): AbilityKey[] {
+  const selected = Array.isArray(value) ? value : [];
+
+  return sortAbilityKeys(selected.filter(isAbilityKey));
 }
 
 /**
@@ -1109,11 +1185,48 @@ function getArmorDexBonus(
 }
 
 /**
+ * Вклад характеристик в КД: модификатор каждой выбранной характеристики в
+ * порядке листа.
+ *
+ * @param character персонаж.
+ * @param abilities выбранные характеристики класса доспеха.
+ * @returns модификаторы выбранных характеристик.
+ */
+function getArmorClassAbilityBonuses(
+  character: Character,
+  abilities: AbilityKey[],
+): ArmorClassAbilityBonus[] {
+  return sortAbilityKeys(abilities).map((ability) => ({
+    ability,
+    modifier: getModifier(character.abilities[ability]),
+  }));
+}
+
+/**
+ * Подпись безброневого класса доспеха (например, `Без доспеха (10 + Ловкость)`).
+ * В подпись идёт только Ловкость: остальные выбранные характеристики правило
+ * доспеха не ограничивает, и в разборе они показываются отдельными строками.
+ *
+ * @param abilities выбранные характеристики класса доспеха.
+ * @returns подпись безброневого класса доспеха.
+ */
+export function getUnarmoredArmorClassLabel(abilities: AbilityKey[]): string {
+  const parts = [String(UNARMORED_ARMOR_CLASS_BASE)];
+
+  if (abilities.includes(DEFAULT_ARMOR_CLASS_ABILITY)) {
+    parts.push(ABILITY_LABELS[DEFAULT_ARMOR_CLASS_ABILITY]);
+  }
+
+  return `${SHEET_UNARMORED_LABEL} (${parts.join(' + ')})`;
+}
+
+/**
  * Разбор итогового класса доспеха. В ручном режиме (`custom`) — базовое значение
- * плюс модификатор выбранной характеристики. В автоматическом — по надетой
+ * плюс модификаторы выбранных характеристик. В автоматическом — по надетой
  * броне: тело даёт лучшая надетая броня (или безброневой `10 + Ловкость`), щит
  * складывается сверху (в зачёт — лучший щит); модификатор Ловкости учитывается
- * по правилу брони.
+ * по правилу брони, а остальные выбранные характеристики (безброневая защита,
+ * песнь клинка) прибавляются к итогу целиком.
  *
  * @param character персонаж.
  * @returns разбор класса доспеха для листа и модалки.
@@ -1121,25 +1234,42 @@ function getArmorDexBonus(
 export function getArmorClassBreakdown(
   character: Character,
 ): ArmorClassBreakdown {
-  const { base, ability, custom } = character.armorClass;
+  const { base, abilities, custom } = character.armorClass;
+
+  const abilityBonuses = getArmorClassAbilityBonuses(character, abilities);
 
   if (custom) {
-    const value = ability
-      ? base + getModifier(character.abilities[ability])
-      : base;
+    const value = abilityBonuses.reduce(
+      (total, bonus) => total + bonus.modifier,
+      base,
+    );
 
     return {
       value,
       custom: true,
       bodyArmorName: null,
-      bodyArmorValue: value,
+      bodyArmorValue: base,
       dexBonus: 0,
       dexCapped: false,
       shieldBonus: 0,
+      extraAbilities: abilityBonuses,
     };
   }
 
-  const dexModifier = getModifier(character.abilities.dexterity);
+  // Ловкость идёт в КД по правилу доспеха, поэтому её из общего списка
+  // выделяем: остальные характеристики правило доспеха не ограничивает.
+  const extraAbilities = abilityBonuses.filter(
+    (bonus) => bonus.ability !== DEFAULT_ARMOR_CLASS_ABILITY,
+  );
+
+  const extraBonus = extraAbilities.reduce(
+    (total, bonus) => total + bonus.modifier,
+    0,
+  );
+
+  const dexModifier = abilities.includes(DEFAULT_ARMOR_CLASS_ABILITY)
+    ? getModifier(character.abilities.dexterity)
+    : 0;
 
   // Группа предмета здесь не важна: доспех со своей магической пометкой лежит
   // среди магических предметов, но КД считается по тем же параметрам `armor`.
@@ -1188,13 +1318,14 @@ export function getArmorClassBreakdown(
   }
 
   return {
-    value: bodyArmorValue + shieldBonus,
+    value: bodyArmorValue + shieldBonus + extraBonus,
     custom: false,
     bodyArmorName,
     bodyArmorValue,
     dexBonus,
     dexCapped,
     shieldBonus,
+    extraAbilities,
   };
 }
 
@@ -1237,7 +1368,7 @@ export function getWeaponAttackBonus(
   const ability = getWeaponAbility(character, weapon);
 
   const value =
-    getProficiencyBonus(character.level)
+    getCharacterProficiencyBonus(character)
     + getModifier(character.abilities[ability]);
 
   return { value, ability };
@@ -1677,14 +1808,15 @@ export function getLongRestHitDiceRecovery(
 
 /**
  * Что вернёт продолжительный отдых, кроме хитов и костей: ячейки заклинаний и
- * все счётчики умений — и с продолжительным, и с коротким восстановлением.
+ * счётчики умений с восстановлением на продолжительном отдыхе.
  *
  * @param character персонаж.
  * @returns подписи восстанавливаемого; пустой список — восстанавливать нечего.
  */
 export function getLongRestRecoveryLabels(character: Character): string[] {
-  const resourceLabels = character.classResources.map(
-    (resource) => resource.name,
+  const resourceLabels = getResourceRecoveryLabels(
+    character.classResources,
+    'long-rest',
   );
 
   return getSpellSlotRows(character).length > 0
@@ -1975,16 +2107,197 @@ export function adjustHealthForConstitution(
 }
 
 /**
- * Что вернёт короткий отдых, кроме хитов: ресурсы класса с восстановлением
- * «короткий отдых» и ячейки заклинаний договора колдуна.
+ * Правило восстановления ресурса для вида отдыха.
+ *
+ * @param resource ресурс класса.
+ * @param rest вид отдыха.
+ * @returns правило восстановления на этом отдыхе.
+ */
+export function getResourceRecoveryRule(
+  resource: CharacterClassResource,
+  rest: ResourceRecovery,
+): ResourceRecoveryRule {
+  return rest === 'short-rest' ? resource.shortRest : resource.longRest;
+}
+
+/**
+ * Сколько зарядов вернёт правило восстановления: «все заряды» — до максимума,
+ * «своё число» — заданное количество (выше максимума оно не поднимет).
+ *
+ * @param rule правило восстановления.
+ * @param max максимум зарядов ресурса.
+ * @returns число возвращаемых зарядов.
+ */
+export function getResourceRecoveryAmount(
+  rule: ResourceRecoveryRule,
+  max: number,
+): number {
+  if (rule.mode === 'none') {
+    return 0;
+  }
+
+  return rule.mode === 'all' ? max : clamp(Math.trunc(rule.amount), 0, max);
+}
+
+/**
+ * Подпись правила восстановления: «все заряды» либо число зарядов. Пустая
+ * строка — отдых ресурс не возвращает.
+ *
+ * @param rule правило восстановления.
+ * @returns подпись правила.
+ */
+export function getResourceRecoveryLabel(rule: ResourceRecoveryRule): string {
+  if (rule.mode === 'none') {
+    return '';
+  }
+
+  return rule.mode === 'all'
+    ? RESOURCE_RECOVERY_ALL_LABEL
+    : `${rule.amount} ${getPlural(rule.amount, RESOURCE_CHARGE_FORMS)}`;
+}
+
+/**
+ * Независимая копия ресурса для формы: правила восстановления копируются
+ * отдельно, иначе поля формы правили бы запись листа до сохранения.
+ *
+ * @param resource ресурс класса.
+ * @returns копия ресурса без общих с исходником вложенных объектов.
+ */
+export function toClassResourceDraft(
+  resource: CharacterClassResource,
+): CharacterClassResource {
+  return {
+    ...resource,
+    shortRest: { ...resource.shortRest },
+    longRest: { ...resource.longRest },
+  };
+}
+
+/**
+ * Приведение правила восстановления к допустимым значениям: число зарядов —
+ * целое не меньше минимума и не больше максимума ресурса.
+ *
+ * @param rule правило восстановления.
+ * @param max максимум зарядов ресурса.
+ * @returns правило с допустимым числом зарядов.
+ */
+export function normalizeResourceRecoveryRule(
+  rule: ResourceRecoveryRule,
+  max: number,
+): ResourceRecoveryRule {
+  return {
+    mode: rule.mode,
+    amount: clamp(
+      Math.trunc(rule.amount),
+      RESOURCE_RECOVERY_AMOUNT_MIN,
+      Math.max(RESOURCE_RECOVERY_AMOUNT_MIN, max),
+    ),
+  };
+}
+
+/**
+ * Пометки восстановления ресурса для строки панели: по одной на вид отдыха,
+ * который возвращает заряды. Пустой список — ресурс отдыхом не восстанавливается.
+ *
+ * @param resource ресурс класса.
+ * @returns пометки восстановления в порядке «короткий, продолжительный».
+ */
+export function getResourceRecoveryBadges(
+  resource: CharacterClassResource,
+): ClassResourceRecoveryBadge[] {
+  return RESOURCE_RECOVERY_FIELDS.filter(
+    (field) => resource[field.key].mode !== 'none',
+  ).map((field) => {
+    const rule = resource[field.key];
+
+    return {
+      rest: field.rest,
+      icon: RESOURCE_RECOVERY_ICONS[field.rest],
+      text:
+        rule.mode === 'all'
+          ? RESOURCE_RECOVERY_ALL_SHORT_LABEL
+          : String(rule.amount),
+      hint: `${RESOURCE_RECOVERY_LABELS[field.rest]}: ${getResourceRecoveryLabel(rule)}`,
+    };
+  });
+}
+
+/**
+ * Восстановление ресурса одной строкой: виды отдыха, возвращающие заряды, с
+ * количеством. Пустая строка — ресурс отдыхом не восстанавливается.
+ *
+ * @param resource ресурс класса.
+ * @returns строка для подсказки и PDF.
+ */
+export function getResourceRecoverySummary(
+  resource: CharacterClassResource,
+): string {
+  return getResourceRecoveryBadges(resource)
+    .map((badge) => badge.hint)
+    .join(' · ');
+}
+
+/**
+ * Ресурсы класса после отдыха: каждому возвращается столько зарядов, сколько
+ * задано его правилом для этого вида отдыха, но не выше максимума.
+ *
+ * @param resources ресурсы класса.
+ * @param rest вид отдыха.
+ * @returns ресурсы с обновлённым остатком зарядов.
+ */
+export function restoreClassResources(
+  resources: CharacterClassResource[],
+  rest: ResourceRecovery,
+): CharacterClassResource[] {
+  return resources.map((resource) => {
+    const restored = getResourceRecoveryAmount(
+      getResourceRecoveryRule(resource, rest),
+      resource.max,
+    );
+
+    return {
+      ...resource,
+      current: clamp(resource.current + restored, 0, resource.max),
+    };
+  });
+}
+
+/**
+ * Подписи ресурсов, которые вернёт отдых: название и сколько зарядов
+ * возвращается. Ресурсы, которых этот отдых не касается, в список не входят.
+ *
+ * @param resources ресурсы класса.
+ * @param rest вид отдыха.
+ * @returns подписи вида «Ярость: все заряды».
+ */
+function getResourceRecoveryLabels(
+  resources: CharacterClassResource[],
+  rest: ResourceRecovery,
+): string[] {
+  return resources
+    .map((resource) => ({
+      name: resource.name,
+      rule: getResourceRecoveryRule(resource, rest),
+    }))
+    .filter((recovery) => recovery.rule.mode !== 'none')
+    .map(
+      (recovery) =>
+        `${recovery.name}: ${getResourceRecoveryLabel(recovery.rule)}`,
+    );
+}
+
+/**
+ * Что вернёт короткий отдых, кроме хитов: ресурсы класса с восстановлением на
+ * коротком отдыхе и ячейки заклинаний договора колдуна.
  *
  * @param character персонаж.
  * @returns подписи восстанавливаемого; пустой список — восстанавливать нечего.
  */
 export function getShortRestRecoveryLabels(character: Character): string[] {
-  const resourceLabels = character.classResources
-    .filter((resource) => resource.recovery === 'short-rest')
-    .map((resource) => resource.name);
+  const resourceLabels = getResourceRecoveryLabels(
+    character.classResources,
+    'short-rest',
+  );
 
   const hasPactSlots = getSpellSlotRows(character).some(
     (row) => row.recovery === 'short-rest',
@@ -2462,13 +2775,16 @@ export function toCopiedSpell(
 }
 
 /**
- * Приведение названия класса или подкласса к ключу карт заклинательства.
+ * Приведение названия записи справочника к сопоставимому виду: регистр, «ё» и
+ * лишние пробелы у названий каталога, листа и чужих файлов расходятся
+ * («инструменты стеклодува», «Инструменты  ткача »). Одна на все сопоставления
+ * по названию — классы, инструменты, предметы импорта.
  *
- * @param name название класса или подкласса.
- * @returns название без крайних пробелов, в нижнем регистре и без «ё».
+ * @param name название записи.
+ * @returns нормализованное название.
  */
-function normalizeClassName(name: string): string {
-  return name.trim().toLowerCase().replaceAll('ё', 'е');
+export function normalizeCatalogName(name: string): string {
+  return name.trim().toLowerCase().replaceAll('ё', 'е').replace(/\s+/gu, ' ');
 }
 
 /**
@@ -2486,7 +2802,7 @@ export function getClassSpellcastingAbility(
   }
 
   return (
-    CLASS_SPELLCASTING_ABILITIES[normalizeClassName(characterClass.name)]
+    CLASS_SPELLCASTING_ABILITIES[normalizeCatalogName(characterClass.name)]
     ?? null
   );
 }
@@ -2503,7 +2819,7 @@ function getLegacyCasterType(
   characterClass: CharacterClass,
 ): CasterType | null {
   const casterType =
-    CLASS_SPELL_PROGRESSIONS[normalizeClassName(characterClass.name)];
+    CLASS_SPELL_PROGRESSIONS[normalizeCatalogName(characterClass.name)];
 
   if (casterType) {
     return casterType;
@@ -2512,7 +2828,7 @@ function getLegacyCasterType(
   const { subclassName } = characterClass;
 
   return subclassName
-    && THIRD_CASTER_SUBCLASSES.includes(normalizeClassName(subclassName))
+    && THIRD_CASTER_SUBCLASSES.includes(normalizeCatalogName(subclassName))
     ? CasterType.THIRD
     : null;
 }
@@ -2911,7 +3227,7 @@ export function getSpellcastingBreakdown(
     ? getModifier(character.abilities[ability])
     : 0;
 
-  const proficiencyBonus = getProficiencyBonus(character.level);
+  const proficiencyBonus = getCharacterProficiencyBonus(character);
 
   return {
     ability,
@@ -2994,6 +3310,24 @@ export function getFeatureOriginGroups(
 
   return FEATURE_ORIGIN_GROUP_ORDER.filter((originGroup) =>
     listGroups.has(originGroup),
+  );
+}
+
+/**
+ * Особенности, разложенные по источникам: сперва вид с подвидом, затем класс,
+ * черты и свои записи — тем же порядком, что и чипы отбора. Внутри источника
+ * порядок листа сохранён, поэтому умения класса так и идут по уровням.
+ *
+ * @param features особенности персонажа.
+ * @returns особенности в порядке групп источников.
+ */
+export function sortFeaturesByOriginGroup(
+  features: CharacterFeature[],
+): CharacterFeature[] {
+  return [...features].sort(
+    (left, right) =>
+      FEATURE_ORIGIN_GROUP_ORDER.indexOf(getFeatureOriginGroup(left.origin))
+      - FEATURE_ORIGIN_GROUP_ORDER.indexOf(getFeatureOriginGroup(right.origin)),
   );
 }
 
@@ -3174,18 +3508,6 @@ export function getToolNames(tools: CharacterToolProficiency[]): string[] {
 }
 
 /**
- * Приведение названия инструмента к сопоставимому виду: регистр, `ё` и лишние
- * пробелы у названий каталога и листа расходятся («инструменты стеклодува»,
- * «Инструменты ткача »).
- *
- * @param name название инструмента.
- * @returns нормализованное название.
- */
-function normalizeToolName(name: string): string {
-  return name.trim().toLowerCase().replaceAll('ё', 'е');
-}
-
-/**
  * Подпись инструмента, которого нет в каталоге: API отдаёт названия и с
  * маленькой буквы («инструменты стеклодува»). Регистр остальных слов не
  * трогаем — в названиях встречаются имена собственные.
@@ -3209,11 +3531,11 @@ function toDisplayToolName(name: string): string {
  * @returns ключ для сравнения и дедупликации.
  */
 export function getToolProficiencyKey(name: string): string {
-  const normalized = normalizeToolName(name);
+  const normalized = normalizeCatalogName(name);
 
   const alias = TOOL_NAME_ALIASES[normalized];
 
-  return alias ? normalizeToolName(alias) : normalized;
+  return alias ? normalizeCatalogName(alias) : normalized;
 }
 
 /**
@@ -3534,11 +3856,11 @@ function findToolInProseSegment(
     return exactMatch;
   }
 
-  const normalized = normalizeToolName(segment);
+  const normalized = normalizeCatalogName(segment);
 
   return catalog
     .filter((toolEntry) =>
-      normalized.includes(normalizeToolName(toolEntry.name)),
+      normalized.includes(normalizeCatalogName(toolEntry.name)),
     )
     .sort((first, second) => second.name.length - first.name.length)
     .at(0);
@@ -3633,12 +3955,17 @@ export function deriveClassResources(
       continue;
     }
 
+    // Таблица класса знает только вид отдыха, поэтому ресурс возвращается
+    // целиком: точные порции игрок задаёт в настройке ресурсов сам.
+    const shortRestMode: ResourceRecoveryMode =
+      column.resourceRecovery === 'SHORT_REST' ? 'all' : 'none';
+
     resources.push({
       id: `class:res:${column.name}`,
       name: column.name,
       shortLabel: column.name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
-      recovery:
-        column.resourceRecovery === 'SHORT_REST' ? 'short-rest' : 'long-rest',
+      shortRest: { mode: shortRestMode, amount: RESOURCE_RECOVERY_AMOUNT_MIN },
+      longRest: { mode: 'all', amount: RESOURCE_RECOVERY_AMOUNT_MIN },
       current: max,
       max,
     });
@@ -3959,8 +4286,9 @@ export function mergeCharacterFeatures(
 /**
  * Слияние ресурсов класса при повышении уровня: максимум берётся новый, а
  * потраченное сохраняется — прибавка максимума приходит непотраченной, как
- * новые кости хитов. Ресурсы без пары среди новых (добавленные вручную) не
- * трогаются.
+ * новые кости хитов. Правила восстановления остаются как есть: таблица класса
+ * знает только вид отдыха и затёрла бы порции, настроенные игроком вручную.
+ * Ресурсы без пары среди новых (добавленные вручную) не трогаются.
  *
  * @param current ресурсы листа.
  * @param incoming ресурсы, пересчитанные на новый уровень.
@@ -3989,7 +4317,6 @@ export function mergeClassResources(
       ...resource,
       name: next.name,
       shortLabel: next.shortLabel,
-      recovery: next.recovery,
       max: next.max,
       current: clamp(resource.current + gain, 0, next.max),
     };

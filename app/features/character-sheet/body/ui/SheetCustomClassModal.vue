@@ -6,8 +6,7 @@
 
   import { useCharacterSheet } from '../../composables';
   import {
-    ABILITY_LABELS,
-    ABILITY_ORDER,
+    ABILITY_OPTIONS,
     buildCustomClassFeatures,
     buildCustomClassUrl,
     CUSTOM_CLASS_CASTER_TYPE_OPTIONS,
@@ -18,6 +17,7 @@
     getOwnedSkillHints,
     HIT_DIE_OPTIONS,
     SKILL_DUPLICATE_WARNING,
+    toSelectedAbilityKeys,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
 
@@ -53,21 +53,10 @@
     getOwnedSkillHints(character.value.skills),
   );
 
-  const abilityItems = ABILITY_ORDER.map((key) => ({
-    label: ABILITY_LABELS[key],
-    value: key,
-  }));
-
   const isApplyDisabled = computed(() => !draftName.value.trim());
 
   function handleSavingThrows(value: unknown): void {
-    const selected = Array.isArray(value) ? value : [];
-
-    // Порядок задаёт `ABILITY_ORDER`, а не очерёдность кликов: на листе
-    // спасброски идут в том же порядке, что и характеристики.
-    draftSavingThrows.value = ABILITY_ORDER.filter((key) =>
-      selected.includes(key),
-    );
+    draftSavingThrows.value = toSelectedAbilityKeys(value);
   }
 
   function handleCasterType(value: unknown): void {
@@ -192,7 +181,7 @@
 
           <USelectMenu
             :model-value="draftSavingThrows"
-            :items="abilityItems"
+            :items="ABILITY_OPTIONS"
             :placeholder="CUSTOM_CLASS_LABELS.savingThrowsPlaceholder"
             label-key="label"
             value-key="value"

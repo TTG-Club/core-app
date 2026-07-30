@@ -51,15 +51,15 @@ import {
   fetchCatalogSpellDetail,
   fetchInventoryItemDescription,
   getAbilityRows,
-  getArmorClassBreakdown,
   getArmorClassValue,
   getCarryingCapacity,
+  getCharacterProficiencyBonus,
   getClassLevelHitPoints,
   getFormattedBonus,
+  getInitiativeBonus,
   getInventoryWeight,
   getNextLevelExperience,
   getPreparedSpellsLimitDescription,
-  getProficiencyBonus,
   getSavingThrowRows,
   getSkillRows,
   getSpellcastingBreakdown,
@@ -78,6 +78,7 @@ import {
   LEVEL_MIN,
   mergeCharacterFeatures,
   mergeClassResources,
+  normalizeResourceRecoveryRule,
   PREPARED_SPELLS_BONUS_MAX,
   PREPARED_SPELLS_BONUS_MIN,
   PREPARED_SPELLS_LIMIT_TOAST_TITLE,
@@ -87,12 +88,14 @@ import {
   RESOURCE_COUNT_MAX,
   RESOURCE_COUNT_MIN,
   RESOURCE_SHORT_LABEL_MAX_LENGTH,
+  restoreClassResources,
   restoreHitDice,
   SHEET_HIDDEN_CONTROL_CLASS,
   SHEET_LOCKED_MESSAGE,
   SHEET_READONLY_MESSAGE,
   shiftClassHitDice,
   SKILL_PROFICIENCY_NEXT,
+  sortAbilityKeys,
   SPELL_COPY_TOAST_TITLE,
   SPELL_SLOTS_EMPTY_TOAST_TITLE,
   toCopiedInventoryItem,
@@ -251,18 +254,18 @@ export function useCharacterSheet() {
   const skillRows = computed(() => getSkillRows(character.value));
 
   const formattedProficiencyBonus = computed(() =>
-    getFormattedBonus(getProficiencyBonus(character.value.level)),
+    getFormattedBonus(getCharacterProficiencyBonus(character.value)),
   );
 
+  // Бонус инициативы нужен и плиткой, и модалкой броска, поэтому наружу уходит
+  // и число, и его подпись.
+  const initiativeBonus = computed(() => getInitiativeBonus(character.value));
+
   const formattedInitiative = computed(() =>
-    getFormattedModifier(character.value.abilities.dexterity),
+    getFormattedBonus(initiativeBonus.value),
   );
 
   const armorClassValue = computed(() => getArmorClassValue(character.value));
-
-  const armorClassBreakdown = computed(() =>
-    getArmorClassBreakdown(character.value),
-  );
 
   const spellcastingBreakdown = computed(() =>
     getSpellcastingBreakdown(character.value),
@@ -373,6 +376,8 @@ export function useCharacterSheet() {
             name: name || shortLabel,
             shortLabel:
               shortLabel || name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
+            shortRest: normalizeResourceRecoveryRule(resource.shortRest, max),
+            longRest: normalizeResourceRecoveryRule(resource.longRest, max),
             max,
             current: clamp(
               Math.trunc(resource.current),
@@ -532,6 +537,7 @@ export function useCharacterSheet() {
           ARMOR_CLASS_BASE_MIN,
           ARMOR_CLASS_BASE_MAX,
         ),
+        abilities: sortAbilityKeys(armorClass.abilities),
       },
     };
   }
@@ -901,11 +907,12 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Завершение короткого отдыха: восстанавливаются ресурсы класса с типом
-   * «короткий отдых» и ячейки заклинаний договора колдуна (у остальных классов
-   * ячейки возвращает только продолжительный отдых). Кости хитов и хиты тратит
-   * {@link spendHitDice} — отдых их не возвращает. Игровое действие —
-   * блокировкой листа не ограничивается.
+   * Завершение короткого отдыха: ресурсам класса возвращается столько зарядов,
+   * сколько задано их правилом для короткого отдыха, и восстанавливаются ячейки
+   * заклинаний договора колдуна (у остальных классов ячейки возвращает только
+   * продолжительный отдых). Кости хитов и хиты тратит {@link spendHitDice} —
+   * отдых их не возвращает. Игровое действие — блокировкой листа не
+   * ограничивается.
    */
   function completeShortRest(): void {
     if (!ensureOwnSheet()) {
@@ -920,10 +927,9 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
-      classResources: character.value.classResources.map((resource) =>
-        resource.recovery === 'short-rest'
-          ? { ...resource, current: resource.max }
-          : resource,
+      classResources: restoreClassResources(
+        character.value.classResources,
+        'short-rest',
       ),
       // Хранится только трата ячеек, поэтому восстановление круга — это
       // удаление его записи из списка.
@@ -936,9 +942,10 @@ export function useCharacterSheet() {
   /**
    * Завершение продолжительного отдыха: хиты поднимаются до максимума, временные
    * хиты пропадают (держатся только до конца отдыха), возвращаются все ячейки
-   * заклинаний, все счётчики умений и все потраченные кости хитов — в редакции
-   * 2024 года отдых возвращает их полностью, а не половину. Игровое действие:
-   * запертый лист его разрешает, чужой — нет.
+   * заклинаний и все потраченные кости хитов — в редакции 2024 года отдых
+   * возвращает их полностью, а не половину. Счётчикам умений возвращается
+   * столько зарядов, сколько задано их правилом для продолжительного отдыха.
+   * Игровое действие: запертый лист его разрешает, чужой — нет.
    */
   function completeLongRest(): void {
     if (!ensureOwnSheet()) {
@@ -959,10 +966,10 @@ export function useCharacterSheet() {
         current: character.value.health.max,
         temporary: 0,
       },
-      classResources: character.value.classResources.map((resource) => ({
-        ...resource,
-        current: resource.max,
-      })),
+      classResources: restoreClassResources(
+        character.value.classResources,
+        'long-rest',
+      ),
       // Хранится только трата ячеек, поэтому пустой список — все ячейки на месте.
       spellSlots: [],
     };
@@ -1562,7 +1569,7 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
-      settings: { weaponAttackAbility: settings.weaponAttackAbility },
+      settings: { ...settings },
     };
   }
 
@@ -2207,9 +2214,9 @@ export function useCharacterSheet() {
     savingThrowRows,
     skillRows,
     formattedProficiencyBonus,
+    initiativeBonus,
     formattedInitiative,
     armorClassValue,
-    armorClassBreakdown,
     spellcastingBreakdown,
     spellSlotRows,
     totalWeight,

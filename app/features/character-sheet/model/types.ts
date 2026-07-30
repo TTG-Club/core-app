@@ -107,8 +107,19 @@ export type RollMode = 'normal' | 'advantage' | 'disadvantage';
 /** Способ прироста максимума хитов за взятые уровни в модалке опыта. */
 export type HitPointsGainMode = 'average' | 'roll' | 'max';
 
-/** Тип восстановления ресурса класса. */
+/** Вид отдыха, восстанавливающего ресурсы и ячейки. */
 export type ResourceRecovery = 'short-rest' | 'long-rest';
+
+/** Сколько зарядов возвращает отдых: ничего, все или заданное число. */
+export type ResourceRecoveryMode = 'none' | 'all' | 'amount';
+
+/** Восстановление ресурса на одном виде отдыха. */
+export interface ResourceRecoveryRule {
+  mode: ResourceRecoveryMode;
+
+  /** Число возвращаемых зарядов; учитывается только при режиме `amount`. */
+  amount: number;
+}
 
 /** Ресурс класса (счётчик). */
 export interface CharacterClassResource {
@@ -118,9 +129,37 @@ export interface CharacterClassResource {
   /** Короткая подпись для строки на листе (например, «НС»). */
   shortLabel: string;
 
-  recovery: ResourceRecovery;
+  /** Что возвращает короткий отдых. */
+  shortRest: ResourceRecoveryRule;
+
+  /** Что возвращает продолжительный отдых. */
+  longRest: ResourceRecoveryRule;
+
   current: number;
   max: number;
+}
+
+/** Правило восстановления ресурса как поле формы и строка панели. */
+export interface ResourceRecoveryField {
+  /** Ключ правила в ресурсе класса. */
+  key: 'shortRest' | 'longRest';
+
+  /** Вид отдыха, к которому относится правило. */
+  rest: ResourceRecovery;
+}
+
+/** Компактная пометка восстановления ресурса в строке панели листа. */
+export interface ClassResourceRecoveryBadge {
+  /** Вид отдыха — он же ключ строки. */
+  rest: ResourceRecovery;
+
+  icon: string;
+
+  /** Короткая подпись: «все» или число зарядов. */
+  text: string;
+
+  /** Подсказка целиком: «Короткий отдых: 1 заряд». */
+  hint: string;
 }
 
 /** Класс доспеха персонажа. */
@@ -128,8 +167,12 @@ export interface CharacterArmorClass {
   /** Базовое значение КД без модификатора характеристики. */
   base: number;
 
-  /** Характеристика, чей модификатор прибавляется; null — без модификатора. */
-  ability: AbilityKey | null;
+  /**
+   * Характеристики, чьи модификаторы прибавляются к КД; пустой список — без
+   * модификаторов. По правилам это Ловкость, но безброневая защита варвара и
+   * монаха и песнь клинка добавляют вторую характеристику.
+   */
+  abilities: AbilityKey[];
 
   /** Природная ли броня. */
   natural: boolean;
@@ -253,6 +296,15 @@ export interface DamageRollSource {
   typeLabel: string;
 }
 
+/** Вклад одной характеристики в класс доспеха. */
+export interface ArmorClassAbilityBonus {
+  /** Характеристика, чей модификатор идёт в КД. */
+  ability: AbilityKey;
+
+  /** Модификатор характеристики. */
+  modifier: number;
+}
+
 /** Разбор итогового класса доспеха для модалки настройки. */
 export interface ArmorClassBreakdown {
   /** Итоговое значение КД. */
@@ -264,7 +316,11 @@ export interface ArmorClassBreakdown {
   /** Название учтённой брони; null — без брони (безброневой КД). */
   bodyArmorName: string | null;
 
-  /** КД тела: лучшая надетая броня либо безброневой `10 + Ловкость`. */
+  /**
+   * КД тела: лучшая надетая броня либо безброневой `10 + Ловкость`. В ручном
+   * режиме — само базовое значение, без модификаторов характеристик: они идут
+   * отдельными строками в `extraAbilities`.
+   */
   bodyArmorValue: number;
 
   /** Фактически применённый бонус Ловкости. */
@@ -275,6 +331,13 @@ export interface ArmorClassBreakdown {
 
   /** Бонус к КД от надетого щита; 0 — щита нет. */
   shieldBonus: number;
+
+  /**
+   * Характеристики КД, кроме Ловкости: их модификаторы идут сверх доспеха, ведь
+   * правило доспеха ограничивает только Ловкость. В ручном режиме — все
+   * выбранные характеристики.
+   */
+  extraAbilities: ArmorClassAbilityBonus[];
 }
 
 /** Ключ типа зрения. */
@@ -905,6 +968,16 @@ export interface CharacterSettings {
    * Фехтовальное и дальнобойное оружие всё равно бьёт от Ловкости.
    */
   weaponAttackAbility: AbilityKey | null;
+
+  /**
+   * Свой бонус мастерства сверх бонуса по уровню (0 — нет). Складывается с
+   * бонусом по уровню везде, где тот участвует: спасброски, навыки, атака
+   * оружием, заклинательство.
+   */
+  customProficiencyBonus: number;
+
+  /** Свой бонус к инициативе сверх модификатора Ловкости (0 — нет). */
+  customInitiativeBonus: number;
 }
 
 /** Разбор заклинательства для вкладки заклинаний и модалки настройки. */

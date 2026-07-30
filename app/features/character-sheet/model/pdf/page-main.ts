@@ -18,7 +18,6 @@ import {
   ABILITY_LABELS,
   ARMOR_PROFICIENCY_GROUPS,
   LANGUAGE_PROFICIENCY_GROUPS,
-  RESOURCE_RECOVERY_LABELS,
   SHEET_EMPTY_LABELS,
   WEAPON_PROFICIENCY_GROUPS,
 } from '../constants';
@@ -26,11 +25,13 @@ import {
   collapseProficiencies,
   getAbilityRows,
   getArmorClassValue,
+  getCharacterProficiencyBonus,
   getClassDisplayName,
   getFormattedBonus,
   getHitDicePools,
+  getInitiativeBonus,
   getPrimarySpeed,
-  getProficiencyBonus,
+  getResourceRecoverySummary,
   getSavingThrowRows,
   getSkillValue,
   getSpeciesDisplayName,
@@ -546,7 +547,7 @@ function drawCombatTiles(
     },
     {
       label: PDF_LABELS.initiative,
-      value: getFormattedModifier(character.abilities.dexterity),
+      value: getFormattedBonus(getInitiativeBonus(character)),
     },
     {
       label: PDF_LABELS.speed,
@@ -560,7 +561,7 @@ function drawCombatTiles(
   const secondRow: CombatTile[] = [
     {
       label: PDF_LABELS.proficiencyBonus,
-      value: getFormattedBonus(getProficiencyBonus(character.level)),
+      value: getFormattedBonus(getCharacterProficiencyBonus(character)),
     },
     {
       label: PDF_LABELS.size,
@@ -1020,10 +1021,10 @@ function drawClassResourcesPanel(
 
         cursor += PDF_ROW_HEIGHT;
 
-        // Способ восстановления — отдельной строкой: в скобках после названия он
-        // обрезался, а знать его нужно на каждом отдыхе.
+        // Восстановление — отдельной строкой: в скобках после названия оно
+        // обрезалось, а знать его нужно на каждом отдыхе.
         drawTextLine(page, {
-          text: RESOURCE_RECOVERY_LABELS[resource.recovery],
+          text: getResourceRecoverySummary(resource),
           left: contentLeft,
           top: cursor - 3,
           font: context.fonts.italic,
