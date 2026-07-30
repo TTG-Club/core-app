@@ -195,6 +195,7 @@ import {
   SHEET_DOWNLOAD_PDF_HINT,
   SHEET_DOWNLOAD_PDF_LABEL,
   SHEET_PDF_MIME_TYPE,
+  SHEET_PLURAL_FORMS,
   SHEET_SAVE_SHARED_LABELS,
   SHEET_SHARE_ACTIVE_HINT,
   SIZE_LABEL_WORDS,
@@ -5124,17 +5125,104 @@ export function getSavedSheetActionMenuItems(
 }
 
 /**
+ * Хвост подписи лимита: что с ним делает подписка. Числа приходят с сервера —
+ * на клиенте лимиты не хардкодятся, поэтому равенство лимитов и означает
+ * «подписка уже действует», а ноль — «сервер про подписку не рассказал».
+ *
+ * @param limit выданный пользователю лимит.
+ * @param subscriberLimit лимит, который даёт подписка.
+ * @returns фраза о подписке или пустая строка, если сказать нечего.
+ */
+function getSubscriptionLimitSuffix(
+  limit: number,
+  subscriberLimit: number,
+): string {
+  if (!subscriberLimit) {
+    return '';
+  }
+
+  if (subscriberLimit <= limit) {
+    return ' Лимит расширен подпиской.';
+  }
+
+  return ` С подпиской — до ${subscriberLimit} ${getPlural(subscriberLimit, SHEET_PLURAL_FORMS)}.`;
+}
+
+/**
+ * Подпись счётчика своих листов для тултипа раздела.
+ *
+ * @param count число активных листов.
+ * @param limit лимит активных листов.
+ * @param subscriberLimit лимит активных листов по подписке.
+ * @returns текст тултипа.
+ */
+export function getSheetsCountTooltip(
+  count: number,
+  limit: number,
+  subscriberLimit: number,
+): string {
+  return `Активных листов — ${count} из ${limit} возможных.${getSubscriptionLimitSuffix(limit, subscriberLimit)}`;
+}
+
+/**
  * Подпись счётчика сохранённых чужих листов для тултипа раздела.
  *
  * @param count число сохранённых записей.
  * @param limit лимит сохранённых записей.
+ * @param subscriberLimit лимит сохранённых записей по подписке.
  * @returns текст тултипа.
  */
 export function getSavedSheetsCountTooltip(
   count: number,
   limit: number,
+  subscriberLimit: number,
 ): string {
-  return `Чужих листов, сохранённых по ссылке, — ${count} из ${limit} возможных`;
+  return `Чужих листов, сохранённых по ссылке, — ${count} из ${limit} возможных.${getSubscriptionLimitSuffix(limit, subscriberLimit)}`;
+}
+
+/**
+ * Подпись тултипа истории удалённых листов: как её восстанавливать, насколько
+ * она глубока и что с глубиной делает подписка.
+ *
+ * @param historyLimit глубина истории; 0 — сервер лимит не прислал.
+ * @param subscriberHistoryLimit глубина истории по подписке.
+ * @returns текст тултипа.
+ */
+export function getSheetsHistoryTooltip(
+  historyLimit: number,
+  subscriberHistoryLimit: number,
+): string {
+  const restoreHint =
+    'Удалённые листы можно восстановить, пока в лимите активных есть свободное место.';
+
+  if (!historyLimit) {
+    return restoreHint;
+  }
+
+  return `${restoreHint} В истории хранятся последние ${historyLimit} удалённых листов — более старые вытесняются новыми удалениями.${getSubscriptionLimitSuffix(historyLimit, subscriberHistoryLimit)}`;
+}
+
+/**
+ * Подсказка о расширении лимита своих листов подпиской: показывается там, где
+ * пользователь в лимит упёрся.
+ *
+ * @param subscriberLimit лимит активных листов по подписке.
+ * @returns текст подсказки.
+ */
+export function getSheetsSubscriptionHint(subscriberLimit: number): string {
+  return `Подписка расширяет лимит активных листов до ${subscriberLimit}.`;
+}
+
+/**
+ * Подсказка о расширении лимита сохранённых чужих листов подпиской.
+ *
+ * @param subscriberLimit лимит сохранённых записей по подписке.
+ * @returns текст подсказки.
+ */
+export function getSavedSheetsSubscriptionHint(
+  subscriberLimit: number,
+): string {
+  return `Подписка расширяет лимит сохранённых листов до ${subscriberLimit}.`;
 }
 
 // Меню «Добавить» на вкладках листа: варианты добавления живут в выпадающем

@@ -5,16 +5,28 @@
   import { UiResult } from '~ui/result';
 
   import { useCharacterSheetList } from '../composables';
-  import { CHARACTER_SHEET_ROUTE } from '../model';
+  import {
+    CHARACTER_SHEET_ROUTE,
+    getSheetsCountTooltip,
+    getSheetsHistoryTooltip,
+    getSheetsSubscriptionHint,
+  } from '../model';
   import { CharacterSheetSavedList } from '../saved';
-  import { CharacterSheetCard, CharacterSheetCreateCard } from './ui';
+  import {
+    CharacterSheetCard,
+    CharacterSheetCreateCard,
+    SheetLimitHint,
+  } from './ui';
 
   const {
     activeSheets,
     deletedSheets,
     limit,
     historyLimit,
+    subscriberLimit,
+    subscriberHistoryLimit,
     canCreate,
+    canRaiseLimit,
     isLoading,
     isMutating,
     loadErrorMessage,
@@ -56,13 +68,22 @@
     canCreate.value ? 'text-muted' : 'text-error',
   );
 
-  const countTooltip = computed(
-    () =>
-      `Активных листов — ${activeSheets.value.length} из ${limit.value} возможных`,
+  const countTooltip = computed(() =>
+    getSheetsCountTooltip(
+      activeSheets.value.length,
+      limit.value,
+      subscriberLimit.value,
+    ),
   );
 
   const isLimitReached = computed(
     () => !canCreate.value && limit.value > 0 && !isLoading.value,
+  );
+
+  // Подсказку про подписку показываем там, где пользователь в лимит упёрся:
+  // постоянная реклама рядом со счётчиком превратила бы страницу в баннер.
+  const subscriptionHint = computed(() =>
+    getSheetsSubscriptionHint(subscriberLimit.value),
   );
 
   // Глубина истории приходит с сервера: без неё (старый бэк) остаётся один
@@ -73,14 +94,9 @@
       : `${deletedSheets.value.length}`,
   );
 
-  const historyTooltip = computed(() => {
-    const restoreHint =
-      'Удалённые листы можно восстановить, пока в лимите активных есть свободное место.';
-
-    return historyLimit.value > 0
-      ? `${restoreHint} В истории хранятся последние ${historyLimit.value} удалённых листов — более старые вытесняются новыми удалениями.`
-      : restoreHint;
-  });
+  const historyTooltip = computed(() =>
+    getSheetsHistoryTooltip(historyLimit.value, subscriberHistoryLimit.value),
+  );
 
   onMounted(() => {
     load();
@@ -181,13 +197,17 @@
           />
         </PageGrid>
 
-        <p
-          v-if="isLimitReached"
-          class="text-xs text-muted"
-        >
-          Достигнут лимит {{ limit }} листов — удалите один, чтобы создать
-          новый.
-        </p>
+        <template v-if="isLimitReached">
+          <p class="text-xs text-muted">
+            Достигнут лимит {{ limit }} листов — удалите один, чтобы создать
+            новый.
+          </p>
+
+          <SheetLimitHint
+            v-if="canRaiseLimit"
+            :text="subscriptionHint"
+          />
+        </template>
       </section>
     </template>
 

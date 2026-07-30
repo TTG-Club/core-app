@@ -515,10 +515,14 @@ const sheetListItemSchema = z.object({
  * Схема списка листов. `limit` без `catch`: серверный лимит обязателен —
  * его отсутствие означает несовместимый ответ, а не «лимит 0». Глубина истории,
  * наоборот, с `catch`: бэк без этого поля просто не покажет её в подписи.
+ * Лимиты по подписке — тоже с `catch`: без них подсказка про подписку не
+ * показывается, а сам список работает как раньше.
  */
 const sheetListPageSchema = z.object({
   limit: z.number(),
+  subscriberLimit: z.coerce.number().catch(0),
   historyLimit: z.coerce.number().catch(0),
+  subscriberHistoryLimit: z.coerce.number().catch(0),
   count: z.coerce.number().catch(0),
   sheets: z.array(sheetListItemSchema).catch([]),
 });
@@ -585,7 +589,9 @@ export function parseCharacterSheetListPage(
 
   return {
     limit: page.limit,
+    subscriberLimit: page.subscriberLimit,
     historyLimit: page.historyLimit,
+    subscriberHistoryLimit: page.subscriberHistoryLimit,
     count: page.count,
     sheets,
   };
@@ -606,10 +612,11 @@ const savedSheetSchema = z.object({
 
 /**
  * Схема списка сохранённых листов. `limit`, как и у своих листов, без `catch`:
- * серверный лимит обязателен.
+ * серверный лимит обязателен, а лимит по подписке — нет.
  */
 const savedSheetListPageSchema = z.object({
   limit: z.number(),
+  subscriberLimit: z.coerce.number().catch(0),
   count: z.coerce.number().catch(0),
   sheets: z.array(savedSheetSchema).catch([]),
 });
@@ -674,6 +681,7 @@ export function parseSavedCharacterSheetListPage(
 
   return {
     limit: page.limit,
+    subscriberLimit: page.subscriberLimit,
     count: page.count,
     sheets: page.sheets.map(toSavedSheet),
   };

@@ -1,0 +1,1 @@
+export { getVttgDesktopRelease } from './vttgReleaseService';
