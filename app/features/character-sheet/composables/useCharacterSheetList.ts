@@ -26,6 +26,8 @@ import {
   SHEET_IMPORT_PARSE_ERROR,
   SHEET_IMPORT_SIZE_ERROR,
   SHEET_IMPORT_SUCCESS_TITLE,
+  SHEET_IMPORT_WARNINGS_DURATION,
+  SHEET_IMPORT_WARNINGS_TITLE,
   SHEET_SHARED_COPY_ERROR_TITLE,
   SHEET_SHARED_COPY_SUCCESS_TITLE,
   updateCharacterSheet,
@@ -80,18 +82,44 @@ function getCopyName(name: string, existingNames: string[]): string {
   return `${copyName} ${copyNumber}`;
 }
 
+/** Персонаж из выбранного файла и всё, о чём импорт должен предупредить. */
+interface ImportedSheetSource {
+  character: Character;
+
+  /** Что перенести не удалось (только у файлов чужих форматов). */
+  warnings: string[];
+}
+
 /**
- * Разбор персонажа из выбранного JSON-файла. Ни битый JSON, ни посторонний
- * файл наружу ошибкой не выходят — вызывающий код объясняет отказ тостом.
+ * Разбор персонажа из выбранного JSON-файла: сперва наш экспорт, затем чужие
+ * форматы (Long Story Short). Конвертер чужого формата грузится отдельным
+ * чанком — в основном бандле он не нужен. Ни битый JSON, ни посторонний файл
+ * наружу ошибкой не выходят: вызывающий код объясняет отказ тостом.
  *
  * @param file файл, выбранный пользователем.
  * @returns персонаж из файла; null — в файле не лист персонажа.
  */
-async function readCharacterFromFile(file: File): Promise<Character | null> {
-  try {
-    const content: unknown = JSON.parse(await file.text());
+async function readCharacterFromFile(
+  file: File,
+): Promise<ImportedSheetSource | null> {
+  let content: unknown;
 
-    return parseImportedCharacter(content);
+  try {
+    content = JSON.parse(await file.text());
+  } catch {
+    return null;
+  }
+
+  try {
+    return { character: parseImportedCharacter(content), warnings: [] };
+  } catch {
+    // Не наш формат — пробуем чужие.
+  }
+
+  try {
+    const { importExternalCharacter } = await import('../model/import');
+
+    return await importExternalCharacter(content);
   } catch {
     return null;
   }
@@ -228,6 +256,27 @@ export function useCharacterSheetList() {
       description,
       color: 'error',
       icon: 'tabler:alert-triangle',
+    });
+  }
+
+  /**
+   * Показывает тост о том, что часть данных чужого формата на лист не
+   * переехала. Отдельным тостом, а не вместо успеха: лист создан, и открыть
+   * его предлагает предыдущий тост.
+   *
+   * @param warnings что перенести не удалось; пусто — тост не нужен.
+   */
+  function notifyImportWarnings(warnings: string[]): void {
+    if (!warnings.length) {
+      return;
+    }
+
+    toast.add({
+      title: SHEET_IMPORT_WARNINGS_TITLE,
+      description: warnings.join(' '),
+      color: 'warning',
+      icon: 'tabler:alert-triangle',
+      duration: SHEET_IMPORT_WARNINGS_DURATION,
     });
   }
 
@@ -478,8 +527,8 @@ export function useCharacterSheetList() {
       return null;
     }
 
-    const created = await createSheetFromDocument(source, {
-      name: source.name,
+    const created = await createSheetFromDocument(source.character, {
+      name: source.character.name,
       errorTitle: SHEET_IMPORT_ERROR_TITLE,
     });
 
@@ -488,6 +537,8 @@ export function useCharacterSheetList() {
         title: SHEET_IMPORT_SUCCESS_TITLE,
         icon: 'tabler:file-import',
       });
+
+      notifyImportWarnings(source.warnings);
     }
 
     return created;

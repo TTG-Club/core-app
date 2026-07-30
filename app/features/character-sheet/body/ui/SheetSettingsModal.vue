@@ -4,9 +4,17 @@
   import { useCharacterSheetList } from '../../composables';
   import {
     ABILITY_LABELS,
+    CUSTOM_BONUS_FORMAT_OPTIONS,
+    CUSTOM_BONUS_MAX,
+    CUSTOM_BONUS_MIN,
+    CUSTOM_INITIATIVE_BONUS_HINT,
+    CUSTOM_PROFICIENCY_BONUS_HINT,
     DEFAULT_WEAPON_ATTACK_ABILITY,
     getFormattedBonus,
     getProficiencyBonus,
+    SHEET_SETTINGS_LABELS,
+    SHEET_SETTINGS_TABS,
+    SHEET_SETTINGS_WEAPON_TAB,
     WEAPON_ATTACK_ABILITY_AUTO,
     WEAPON_ATTACK_ABILITY_AUTO_HINT,
     WEAPON_ATTACK_ABILITY_OPTIONS,
@@ -30,6 +38,27 @@
     AbilityKey | typeof WEAPON_ATTACK_ABILITY_AUTO
   >(props.character.settings.weaponAttackAbility ?? WEAPON_ATTACK_ABILITY_AUTO);
 
+  const draftProficiencyBonus = ref(
+    props.character.settings.customProficiencyBonus,
+  );
+
+  const draftInitiativeBonus = ref(
+    props.character.settings.customInitiativeBonus,
+  );
+
+  /**
+   * Подпись модификатора характеристики: название и значение — одинаково в
+   * разборе атаки и инициативы.
+   *
+   * @param ability ключ характеристики.
+   * @returns подпись модификатора характеристики.
+   */
+  function getAbilityModifierLabel(ability: AbilityKey): string {
+    return `${ABILITY_LABELS[ability]} · ${getFormattedBonus(
+      getModifier(props.character.abilities[ability]),
+    )}`;
+  }
+
   const isWeaponAbilityAuto = computed(
     () => draftWeaponAbility.value === WEAPON_ATTACK_ABILITY_AUTO,
   );
@@ -43,8 +72,18 @@
       : draftWeaponAbility.value,
   );
 
-  const proficiencyBonus = computed(() =>
+  const levelProficiencyBonus = computed(() =>
     getProficiencyBonus(props.character.level),
+  );
+
+  const formattedLevelProficiencyBonus = computed(() =>
+    getFormattedBonus(levelProficiencyBonus.value),
+  );
+
+  // Итоги считаются от черновика, а не от сохранённых настроек: числа в модалке
+  // меняются сразу, ещё до «Применить».
+  const proficiencyBonus = computed(
+    () => levelProficiencyBonus.value + draftProficiencyBonus.value,
   );
 
   const formattedProficiencyBonus = computed(() =>
@@ -55,11 +94,8 @@
     getModifier(props.character.abilities[effectiveWeaponAbility.value]),
   );
 
-  const weaponAbilityModifierLabel = computed(
-    () =>
-      `${ABILITY_LABELS[effectiveWeaponAbility.value]} · ${getFormattedBonus(
-        weaponAbilityModifier.value,
-      )}`,
+  const weaponAbilityModifierLabel = computed(() =>
+    getAbilityModifierLabel(effectiveWeaponAbility.value),
   );
 
   const formattedWeaponAttackBonus = computed(() =>
@@ -74,6 +110,18 @@
     ),
   );
 
+  const dexterityModifier = computed(() =>
+    getModifier(props.character.abilities.dexterity),
+  );
+
+  const dexterityModifierLabel = computed(() =>
+    getAbilityModifierLabel('dexterity'),
+  );
+
+  const formattedInitiativeBonus = computed(() =>
+    getFormattedBonus(dexterityModifier.value + draftInitiativeBonus.value),
+  );
+
   const isSaving = ref(false);
 
   async function handleApply() {
@@ -84,6 +132,8 @@
         draftWeaponAbility.value === WEAPON_ATTACK_ABILITY_AUTO
           ? null
           : draftWeaponAbility.value,
+      customProficiencyBonus: draftProficiencyBonus.value,
+      customInitiativeBonus: draftInitiativeBonus.value,
     });
 
     isSaving.value = false;
@@ -101,79 +151,175 @@
 </script>
 
 <template>
-  <UModal title="Настройки листа">
+  <UModal :title="SHEET_SETTINGS_LABELS.title">
     <template #body>
-      <div class="flex flex-col gap-3">
-        <h3 class="text-sm font-semibold text-highlighted">Атака оружием</h3>
+      <UTabs
+        :items="SHEET_SETTINGS_TABS"
+        :default-value="SHEET_SETTINGS_WEAPON_TAB"
+        :ui="{ root: 'flex flex-col gap-4' }"
+      >
+        <template #weapon-attack>
+          <div class="flex flex-col gap-3">
+            <div class="flex items-center justify-between gap-4">
+              <span class="text-sm text-toned">
+                {{ SHEET_SETTINGS_LABELS.weaponAbilityTitle }}
+              </span>
 
-        <div class="flex items-center justify-between gap-4">
-          <span class="text-sm text-toned">Базовая характеристика</span>
+              <USelect
+                v-model="draftWeaponAbility"
+                :items="WEAPON_ATTACK_ABILITY_OPTIONS"
+                class="w-48"
+              />
+            </div>
 
-          <USelect
-            v-model="draftWeaponAbility"
-            :items="WEAPON_ATTACK_ABILITY_OPTIONS"
-            class="w-48"
-          />
-        </div>
-
-        <p
-          v-if="isWeaponAbilityAuto"
-          class="text-xs text-dimmed"
-        >
-          {{ WEAPON_ATTACK_ABILITY_AUTO_HINT }}
-        </p>
-
-        <USeparator class="my-1" />
-
-        <div class="flex items-center justify-between gap-4 text-sm">
-          <span class="text-toned">Модификатор характеристики</span>
-
-          <span class="text-toned">{{ weaponAbilityModifierLabel }}</span>
-        </div>
-
-        <div class="flex items-center justify-between gap-4 text-sm">
-          <span class="text-toned">Бонус мастерства</span>
-
-          <span class="text-toned">{{ formattedProficiencyBonus }}</span>
-        </div>
-
-        <USeparator class="my-1" />
-
-        <div class="grid grid-cols-2 gap-3">
-          <div
-            class="flex flex-col items-center gap-1 rounded-lg border border-default/50 bg-elevated/20 p-3"
-          >
-            <span
-              class="text-center text-[10px] font-bold tracking-wider text-muted uppercase"
+            <p
+              v-if="isWeaponAbilityAuto"
+              class="text-xs text-dimmed"
             >
-              Обычное оружие
-            </span>
+              {{ WEAPON_ATTACK_ABILITY_AUTO_HINT }}
+            </p>
 
-            <span class="text-2xl leading-none font-bold text-highlighted">
-              {{ formattedWeaponAttackBonus }}
-            </span>
+            <div class="grid grid-cols-2 gap-3">
+              <div
+                class="flex flex-col items-center gap-1 rounded-lg border border-default/50 bg-elevated/20 p-3"
+              >
+                <span
+                  class="text-center text-[10px] font-bold tracking-wider text-muted uppercase"
+                >
+                  {{ SHEET_SETTINGS_LABELS.normalWeaponTitle }}
+                </span>
+
+                <span class="text-2xl leading-none font-bold text-highlighted">
+                  {{ formattedWeaponAttackBonus }}
+                </span>
+              </div>
+
+              <div
+                class="flex flex-col items-center gap-1 rounded-lg border border-default/50 bg-elevated/20 p-3"
+              >
+                <span
+                  class="text-center text-[10px] font-bold tracking-wider text-muted uppercase"
+                >
+                  {{ SHEET_SETTINGS_LABELS.finesseWeaponTitle }}
+                </span>
+
+                <span class="text-2xl leading-none font-bold text-highlighted">
+                  {{ formattedFinesseAttackBonus }}
+                </span>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-4 text-sm">
+              <span class="text-toned">
+                {{ SHEET_SETTINGS_LABELS.abilityModifierTitle }}
+              </span>
+
+              <span class="text-toned">{{ weaponAbilityModifierLabel }}</span>
+            </div>
+
+            <div class="flex items-center justify-between gap-4 text-sm">
+              <span class="text-toned">
+                {{ SHEET_SETTINGS_LABELS.proficiencyBonusTitle }}
+              </span>
+
+              <span class="text-toned">{{ formattedProficiencyBonus }}</span>
+            </div>
+
+            <p class="text-xs text-dimmed">
+              {{ SHEET_SETTINGS_LABELS.attackFormulaHint }}
+              {{ WEAPON_ATTACK_FINESSE_HINT }}
+            </p>
           </div>
+        </template>
 
-          <div
-            class="flex flex-col items-center gap-1 rounded-lg border border-default/50 bg-elevated/20 p-3"
-          >
-            <span
-              class="text-center text-[10px] font-bold tracking-wider text-muted uppercase"
-            >
-              Фехтовальное и дальнобойное
-            </span>
+        <template #custom-bonuses>
+          <div class="flex flex-col gap-3">
+            <h3 class="text-sm font-semibold text-highlighted">
+              {{ SHEET_SETTINGS_LABELS.proficiencyBonusTitle }}
+            </h3>
 
-            <span class="text-2xl leading-none font-bold text-highlighted">
-              {{ formattedFinesseAttackBonus }}
-            </span>
+            <div class="flex items-center justify-between gap-4">
+              <span class="text-sm text-toned">
+                {{ SHEET_SETTINGS_LABELS.customBonusTitle }}
+              </span>
+
+              <UInputNumber
+                v-model="draftProficiencyBonus"
+                :min="CUSTOM_BONUS_MIN"
+                :max="CUSTOM_BONUS_MAX"
+                :format-options="CUSTOM_BONUS_FORMAT_OPTIONS"
+                class="w-48"
+              />
+            </div>
+
+            <div class="flex items-center justify-between gap-4 text-sm">
+              <span class="text-toned">
+                {{ SHEET_SETTINGS_LABELS.levelProficiencyBonusTitle }}
+              </span>
+
+              <span class="text-toned">
+                {{ formattedLevelProficiencyBonus }}
+              </span>
+            </div>
+
+            <div class="flex items-center justify-between gap-4 text-sm">
+              <span class="text-toned">
+                {{ SHEET_SETTINGS_LABELS.totalProficiencyBonusTitle }}
+              </span>
+
+              <span class="font-semibold text-highlighted">
+                {{ formattedProficiencyBonus }}
+              </span>
+            </div>
+
+            <p class="text-xs text-dimmed">
+              {{ CUSTOM_PROFICIENCY_BONUS_HINT }}
+            </p>
+
+            <USeparator class="my-1" />
+
+            <h3 class="text-sm font-semibold text-highlighted">
+              {{ SHEET_SETTINGS_LABELS.initiativeTitle }}
+            </h3>
+
+            <div class="flex items-center justify-between gap-4">
+              <span class="text-sm text-toned">
+                {{ SHEET_SETTINGS_LABELS.customBonusTitle }}
+              </span>
+
+              <UInputNumber
+                v-model="draftInitiativeBonus"
+                :min="CUSTOM_BONUS_MIN"
+                :max="CUSTOM_BONUS_MAX"
+                :format-options="CUSTOM_BONUS_FORMAT_OPTIONS"
+                class="w-48"
+              />
+            </div>
+
+            <div class="flex items-center justify-between gap-4 text-sm">
+              <span class="text-toned">
+                {{ SHEET_SETTINGS_LABELS.abilityModifierTitle }}
+              </span>
+
+              <span class="text-toned">{{ dexterityModifierLabel }}</span>
+            </div>
+
+            <div class="flex items-center justify-between gap-4 text-sm">
+              <span class="text-toned">
+                {{ SHEET_SETTINGS_LABELS.totalInitiativeTitle }}
+              </span>
+
+              <span class="font-semibold text-highlighted">
+                {{ formattedInitiativeBonus }}
+              </span>
+            </div>
+
+            <p class="text-xs text-dimmed">
+              {{ CUSTOM_INITIATIVE_BONUS_HINT }}
+            </p>
           </div>
-        </div>
-
-        <p class="text-xs text-dimmed">
-          Бонус атаки = бонус мастерства + модификатор характеристики.
-          {{ WEAPON_ATTACK_FINESSE_HINT }}
-        </p>
-      </div>
+        </template>
+      </UTabs>
     </template>
 
     <template #footer>

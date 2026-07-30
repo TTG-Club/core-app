@@ -1,10 +1,14 @@
 import type {
+  AbilityKey,
   Character,
   CharacterNote,
   CharacterSheetDetail,
   CharacterSheetListItem,
   CharacterSheetListPage,
   FeatureDescriptionNode,
+  ResourceRecovery,
+  ResourceRecoveryMode,
+  ResourceRecoveryRule,
   SavedCharacterSheet,
   SavedCharacterSheetListPage,
 } from './types';
@@ -17,6 +21,7 @@ import {
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
   LEGACY_NOTE_ID,
+  RESOURCE_RECOVERY_AMOUNT_MIN,
   SHEET_NOTE_LABELS,
 } from './constants';
 import { DEFAULT_CHARACTER } from './mock';
@@ -179,6 +184,10 @@ const spellcastingSchema = z
 const settingsSchema = z
   .object({
     weaponAttackAbility: abilityKeySchema.nullable().catch(null),
+    // Свои бонусы появились позже настройки атаки: у листов без них бонусы
+    // нулевые, то есть подсчёт идёт строго по правилам.
+    customProficiencyBonus: z.coerce.number().int().catch(0),
+    customInitiativeBonus: z.coerce.number().int().catch(0),
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.settings }));
 
@@ -189,17 +198,55 @@ const experienceSchema = z
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.experience }));
 
+/**
+ * Характеристики класса доспеха: список появился позже одиночного поля
+ * `ability`, поэтому у старых листов он собирается из него — так, чтобы уже
+ * посчитанный КД не поехал.
+ *
+ * @param abilities список характеристик записи листа.
+ * @param ability легаси-характеристика записи листа.
+ * @param custom взято ли ручное значение КД.
+ * @returns характеристики, чьи модификаторы идут в КД.
+ */
+function toArmorClassAbilities(
+  abilities: AbilityKey[] | undefined,
+  ability: AbilityKey | null | undefined,
+  custom: boolean,
+): AbilityKey[] {
+  if (abilities) {
+    return abilities;
+  }
+
+  // В ручном значении `null` означал «без модификатора», а отсутствие поля —
+  // запись до появления настройки: там работал дефолт листа.
+  if (custom && ability !== undefined) {
+    return ability ? [ability] : [];
+  }
+
+  // Автоподсчёт по доспеху всегда брал Ловкость и на `ability` не смотрел:
+  // перенос его значения поменял бы КД задним числом.
+  return [...DEFAULT_CHARACTER.armorClass.abilities];
+}
+
 const armorClassSchema = z
   .object({
     base: z.coerce.number().catch(DEFAULT_CHARACTER.armorClass.base),
-    ability: abilityKeySchema
-      .nullable()
-      .catch(DEFAULT_CHARACTER.armorClass.ability),
+    // Легаси-поле одной характеристики: `null` в нём означал «без модификатора»,
+    // а отсутствие — запись до появления настройки.
+    ability: abilityKeySchema.nullable().optional().catch(undefined),
+    abilities: z.array(abilityKeySchema).optional().catch(undefined),
     natural: z.boolean().catch(false),
     // По умолчанию — автоподсчёт по надетой броне (легаси-листы без поля).
     custom: z.boolean().catch(false),
   })
-  .catch(() => ({ ...DEFAULT_CHARACTER.armorClass }));
+  .catch(() => ({
+    ...DEFAULT_CHARACTER.armorClass,
+    abilities: [...DEFAULT_CHARACTER.armorClass.abilities],
+  }))
+  .transform(({ ability, abilities, ...armorClass }) => ({
+    ...armorClass,
+    abilities: toArmorClassAbilities(abilities, ability, armorClass.custom),
+  }));
 
 const speedSchema = z
   .object({
@@ -271,14 +318,55 @@ const extraHitDieSchema = hitDieSchema.extend({
   id: z.string(),
 });
 
-const classResourceSchema = z.object({
-  id: z.string(),
-  name: z.string().catch(''),
-  shortLabel: z.string().catch(''),
-  recovery: z.enum(['short-rest', 'long-rest']).catch('long-rest'),
-  current: z.coerce.number().catch(0),
-  max: z.coerce.number().catch(0),
+const resourceRecoveryRuleSchema = z.object({
+  mode: z.enum(['none', 'all', 'amount']).catch('none'),
+  amount: z.coerce.number().catch(RESOURCE_RECOVERY_AMOUNT_MIN),
 });
+
+/**
+ * Правила восстановления ресурса: раздельные порции появились позже одного
+ * поля `recovery`, где отдых возвращал ресурс целиком. У старых листов
+ * продолжительный отдых возвращал всё всегда, а короткий — только ресурсам,
+ * отмеченным коротким отдыхом.
+ *
+ * @param rule правило записи листа.
+ * @param recovery легаси-вид отдыха записи листа.
+ * @param isShortRest собирается ли правило короткого отдыха.
+ * @returns правило восстановления ресурса.
+ */
+function toResourceRecoveryRule(
+  rule: ResourceRecoveryRule | undefined,
+  recovery: ResourceRecovery | undefined,
+  isShortRest: boolean,
+): ResourceRecoveryRule {
+  if (rule) {
+    return rule;
+  }
+
+  const mode: ResourceRecoveryMode =
+    !isShortRest || recovery === 'short-rest' ? 'all' : 'none';
+
+  return { mode, amount: RESOURCE_RECOVERY_AMOUNT_MIN };
+}
+
+const classResourceSchema = z
+  .object({
+    id: z.string(),
+    name: z.string().catch(''),
+    shortLabel: z.string().catch(''),
+    // Легаси-поле одного вида отдыха: у листов до раздельных порций оно
+    // задавало, возвращает ли ресурс короткий отдых.
+    recovery: z.enum(['short-rest', 'long-rest']).optional().catch(undefined),
+    shortRest: resourceRecoveryRuleSchema.optional().catch(undefined),
+    longRest: resourceRecoveryRuleSchema.optional().catch(undefined),
+    current: z.coerce.number().catch(0),
+    max: z.coerce.number().catch(0),
+  })
+  .transform(({ recovery, shortRest, longRest, ...resource }) => ({
+    ...resource,
+    shortRest: toResourceRecoveryRule(shortRest, recovery, true),
+    longRest: toResourceRecoveryRule(longRest, recovery, false),
+  }));
 
 // Листы до появления ссылок на инструменты хранят владения строками: такая
 // запись читается без ссылки, а url подставится при следующей правке владений.

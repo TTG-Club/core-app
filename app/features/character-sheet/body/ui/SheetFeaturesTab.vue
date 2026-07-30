@@ -18,6 +18,7 @@
     SHEET_FEATURE_ROW_LABELS,
     SHEET_FILTER_LABELS,
     SHEET_TAB_EMPTY_LABELS,
+    sortFeaturesByOriginGroup,
   } from '../../model';
 
   const props = defineProps<{
@@ -167,22 +168,29 @@
     pickedOrigins.value.clear();
   }
 
+  /**
+   * Список идёт группами источников, а не тем порядком, в котором особенности
+   * попали в лист: вид, класс, черты, свои записи. Вперемешку их читать
+   * невозможно — особенности вида оказывались между умениями класса.
+   */
   const displayRows = computed(() =>
-    props.features
-      .filter((feature) => matchesFeatureFilter(feature, featureFilter.value))
-      .map((feature) => {
-        const isExpanded = expandedIds.value.has(feature.id);
+    sortFeaturesByOriginGroup(
+      props.features.filter((feature) =>
+        matchesFeatureFilter(feature, featureFilter.value),
+      ),
+    ).map((feature) => {
+      const isExpanded = expandedIds.value.has(feature.id);
 
-        return {
-          ...feature,
-          isExpanded,
-          showBadge: feature.origin !== 'none',
-          originLabel: FEATURE_ORIGIN_LABELS[feature.origin],
-          badgeColor: ORIGIN_BADGE_COLORS[feature.origin],
-          chevronClass: isExpanded ? 'rotate-180' : '',
-          hasDescription: feature.description.length > 0,
-        };
-      }),
+      return {
+        ...feature,
+        isExpanded,
+        showBadge: feature.origin !== 'none',
+        originLabel: FEATURE_ORIGIN_LABELS[feature.origin],
+        badgeColor: ORIGIN_BADGE_COLORS[feature.origin],
+        chevronClass: isExpanded ? 'rotate-180' : '',
+        hasDescription: feature.description.length > 0,
+      };
+    }),
   );
 
   /**

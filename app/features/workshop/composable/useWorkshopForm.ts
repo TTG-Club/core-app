@@ -20,6 +20,13 @@ export interface WorkshopFormOptions<T> {
    * Используется для очистки пустых полей, нормализации вложенных объектов и т.д.
    */
   transformBeforeSubmit?: (state: T) => T;
+  /**
+   * Маршрут страницы редактирования по url созданной записи. Если задан, после
+   * успешного создания форма переводится в режим редактирования (replace на
+   * страницу записи): без этого поздние правки не сохраняются — повторный
+   * сабмит уходит POST-ом и падает на занятом url.
+   */
+  getEditRoute?: (url: string) => string;
 }
 
 /**
@@ -214,6 +221,13 @@ export function useWorkshopForm<T extends { url: string }>(
     });
 
     if (!isEditForm.value) {
+      // Создание: переводим форму на страницу записи (edit-режим), если фича
+      // сообщила свой маршрут. Страница редактирования перезагрузит состояние
+      // из /raw, и дальнейшие сохранения пойдут PUT-ом.
+      if (_options.getEditRoute) {
+        await router.replace(_options.getEditRoute(response._data));
+      }
+
       return;
     }
 

@@ -99,6 +99,7 @@
     savingThrowRows,
     skillRows,
     formattedProficiencyBonus,
+    initiativeBonus,
     formattedInitiative,
     armorClassValue,
     spellcastingBreakdown,
@@ -557,7 +558,7 @@
   function handleInitiativeRoll() {
     rollModal.open({
       title: 'Инициатива',
-      modifier: getModifier(character.value.abilities.dexterity),
+      modifier: initiativeBonus.value,
       ability: 'dexterity',
       actionLabel: 'Бросить инициативу',
     });

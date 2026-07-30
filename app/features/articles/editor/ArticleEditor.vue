@@ -43,6 +43,16 @@
   // Идёт сохранение — для индикации загрузки на кнопке.
   const isSubmitting = ref(false);
 
+  // Обложка ещё загружается в S3 — сабмит в это время заблокирован: иначе
+  // запись уйдёт на бэк с previewImageUrl=null, и пост в соцсети опубликуется
+  // без картинки (гонка «прикрепил и сразу опубликовал»).
+  const isCoverUploading = ref(false);
+
+  // Кнопка сохранения занята: идёт отправка формы либо ещё грузится обложка.
+  const isSubmitBlocked = computed(
+    () => isSubmitting.value || isCoverUploading.value,
+  );
+
   function getInitialState(): ArticleRequest {
     return {
       url: '',
@@ -65,6 +75,10 @@
     useWorkshopForm<ArticleRequest>({
       actionUrl: ARTICLES_API_PATH,
       getInitialState,
+      // После создания переводим форму в режим редактирования: иначе поздние
+      // правки не сохранятся (повторный сабмит уйдёт POST-ом и упрётся в
+      // занятый url), а админ уверен, что редактирует созданную запись.
+      getEditRoute: (url) => `${ARTICLES_ADMIN_ROUTE}/${url}`,
       // Бэк отдаёт пустой анонс из `/raw` как `null` (toMerged не гасит null,
       // а `defineModel({ default: '' })` подставляет дефолт только на undefined),
       // из-за чего `state.preview` остаётся null и PUT падает на `@NotNull`.
@@ -335,6 +349,21 @@
   }
 
   async function handleSubmit(): Promise<void> {
+    // Обложка ещё не долетела до S3 — сохранять рано: в тело уйдёт
+    // previewImageUrl=null. Проверка в submit-хуке (единая точка отправки),
+    // чтобы гонку не обошёл сабмит по Enter при задизейбленной кнопке.
+    if (isCoverUploading.value) {
+      $toast.add({
+        title: 'Обложка ещё загружается',
+        description: 'Дождись окончания загрузки картинки и сохрани ещё раз.',
+        color: 'warning',
+      });
+
+      isSubmitting.value = false;
+
+      return;
+    }
+
     // Для отложенной публикации дата обязательна и должна быть в будущем.
     // Проверяем в submit-хуке (единая точка отправки), а не в обработчике кнопки:
     // гарантия при любом пути сабмита. В схему не выносим — режим «запланировать»
@@ -631,6 +660,7 @@
 
         <UploadImage
           v-model="coverModel"
+          v-model:uploading="isCoverUploading"
           :section="ARTICLE_IMAGE_SECTION"
           :max-size="ARTICLE_IMAGE_MAX_SIZE"
         />
@@ -665,8 +695,8 @@
         />
 
         <UButton
-          :loading="isSubmitting"
-          :disabled="isSubmitting"
+          :loading="isSubmitBlocked"
+          :disabled="isSubmitBlocked"
           @click.left.exact.prevent="submitMain"
         >
           {{ mainActionLabel }}

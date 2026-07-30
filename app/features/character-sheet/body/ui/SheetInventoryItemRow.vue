@@ -16,9 +16,9 @@
     ABILITY_LABELS,
     ARMOR_DEXTERITY_HINT_LABELS,
     CUSTOM_INVENTORY_BADGE_HINT,
+    getCharacterProficiencyBonus,
     getFormattedBonus,
     getInventoryItemMenuItems,
-    getProficiencyBonus,
     getWeaponAttackBonus,
     getWeaponDamage,
     INVENTORY_CATEGORY_ICONS,
@@ -300,7 +300,7 @@
     const attack = getWeaponAttackBonus(character.value, weapon);
 
     const masteryPart = `мастерство ${getFormattedBonus(
-      getProficiencyBonus(character.value.level),
+      getCharacterProficiencyBonus(character.value),
     )}`;
 
     return {

@@ -2,7 +2,7 @@
   import type { BackgroundCreate } from '~backgrounds/model';
 
   import { BackgroundPreview } from '~backgrounds/preview';
-  import { EditorBaseInfo } from '~ui/editor';
+  import { EditorBaseInfo, StartingEquipmentEditor } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectAbilities, SelectFeat, SelectSkill } from '~ui/select';
   import { useWorkshopForm } from '~workshop/composable';
@@ -29,6 +29,7 @@
       skillsProficiencies: [],
       toolProficiency: '',
       equipment: '',
+      startingEquipment: [],
       tags: [],
     };
   }
@@ -130,6 +131,8 @@
         </UFormField>
       </div>
     </UCard>
+
+    <StartingEquipmentEditor v-model="state.startingEquipment" />
 
     <UCard variant="subtle">
       <template #header>
