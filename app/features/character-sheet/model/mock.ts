@@ -96,5 +96,9 @@ export const DEFAULT_CHARACTER: Character = {
   customCurrencies: [],
   inventory: [],
   notes: [],
-  settings: { weaponAttackAbility: null },
+  settings: {
+    weaponAttackAbility: null,
+    customProficiencyBonus: 0,
+    customInitiativeBonus: 0,
+  },
 };

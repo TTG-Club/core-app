@@ -255,6 +255,33 @@ export function getProficiencyBonus(level: number): number {
 }
 
 /**
+ * Бонус мастерства листа: бонус по уровню плюс свой бонус из настроек. Считать
+ * бонус мастерства персонажа нужно именно так — везде, где он участвует.
+ *
+ * @param character персонаж.
+ * @returns итоговый бонус мастерства.
+ */
+export function getCharacterProficiencyBonus(character: Character): number {
+  return (
+    getProficiencyBonus(character.level)
+    + character.settings.customProficiencyBonus
+  );
+}
+
+/**
+ * Бонус инициативы: модификатор Ловкости плюс свой бонус из настроек.
+ *
+ * @param character персонаж.
+ * @returns итоговый бонус инициативы.
+ */
+export function getInitiativeBonus(character: Character): number {
+  return (
+    getModifier(character.abilities.dexterity)
+    + character.settings.customInitiativeBonus
+  );
+}
+
+/**
  * Суммарный опыт, необходимый для достижения следующего уровня. Для 20-го
  * уровня возвращается порог самого 20-го уровня — выше расти некуда.
  *
@@ -285,7 +312,7 @@ export function getSavingThrowValue(
     return modifier;
   }
 
-  return modifier + getProficiencyBonus(character.level);
+  return modifier + getCharacterProficiencyBonus(character);
 }
 
 /**
@@ -302,7 +329,7 @@ export function getSkillValue(
   const modifier = getModifier(character.abilities[skill.ability]);
 
   const proficiencyPart =
-    getProficiencyBonus(character.level)
+    getCharacterProficiencyBonus(character)
     * SKILL_PROFICIENCY_MULTIPLIERS[skill.proficiency];
 
   return modifier + Math.floor(proficiencyPart);
@@ -1332,7 +1359,7 @@ export function getWeaponAttackBonus(
   const ability = getWeaponAbility(character, weapon);
 
   const value =
-    getProficiencyBonus(character.level)
+    getCharacterProficiencyBonus(character)
     + getModifier(character.abilities[ability]);
 
   return { value, ability };
@@ -3009,7 +3036,7 @@ export function getSpellcastingBreakdown(
     ? getModifier(character.abilities[ability])
     : 0;
 
-  const proficiencyBonus = getProficiencyBonus(character.level);
+  const proficiencyBonus = getCharacterProficiencyBonus(character);
 
   return {
     ability,

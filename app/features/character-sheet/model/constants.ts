@@ -615,6 +615,67 @@ export const WEAPON_ATTACK_ABILITY_AUTO_HINT = `По правилам: ${ABILITY
  */
 export const WEAPON_ATTACK_FINESSE_HINT = `Фехтовальное и дальнобойное оружие бьёт от характеристики «${ABILITY_LABELS.dexterity}» независимо от настройки.`;
 
+/** Вкладка модалки настроек листа с правилом подсчёта атаки оружием. */
+export const SHEET_SETTINGS_WEAPON_TAB = 'weapon-attack';
+
+/** Вкладка модалки настроек листа со своими бонусами. */
+export const SHEET_SETTINGS_BONUSES_TAB = 'custom-bonuses';
+
+/**
+ * Вкладки модалки настроек листа: правило подсчёта атаки и свои бонусы —
+ * разные задачи, показывать их разом незачем.
+ */
+export const SHEET_SETTINGS_TABS = [
+  {
+    label: 'Атака оружием',
+    value: SHEET_SETTINGS_WEAPON_TAB,
+    slot: SHEET_SETTINGS_WEAPON_TAB,
+  },
+  {
+    label: 'Свои бонусы',
+    value: SHEET_SETTINGS_BONUSES_TAB,
+    slot: SHEET_SETTINGS_BONUSES_TAB,
+  },
+];
+
+/** Минимальный свой бонус в настройках листа (мастерство, инициатива). */
+export const CUSTOM_BONUS_MIN = -10;
+
+/** Максимальный свой бонус в настройках листа (мастерство, инициатива). */
+export const CUSTOM_BONUS_MAX = 10;
+
+/**
+ * Формат полей своих бонусов: знак виден и у плюса, чтобы поле читалось
+ * бонусом, а не количеством.
+ */
+export const CUSTOM_BONUS_FORMAT_OPTIONS: Intl.NumberFormatOptions = {
+  signDisplay: 'exceptZero',
+};
+
+/** Пояснение к своему бонусу мастерства. */
+export const CUSTOM_PROFICIENCY_BONUS_HINT =
+  'Складывается с бонусом по уровню везде, где тот участвует: спасброски, навыки, атака оружием, заклинательство.';
+
+/** Пояснение к своему бонусу инициативы. */
+export const CUSTOM_INITIATIVE_BONUS_HINT = `Складывается с модификатором характеристики «${ABILITY_LABELS.dexterity}» в плитке инициативы и в её броске.`;
+
+/** Подписи модалки настроек листа. */
+export const SHEET_SETTINGS_LABELS = {
+  title: 'Настройки листа',
+  weaponAbilityTitle: 'Базовая характеристика',
+  normalWeaponTitle: 'Обычное оружие',
+  finesseWeaponTitle: 'Фехтовальное и дальнобойное',
+  abilityModifierTitle: 'Модификатор характеристики',
+  proficiencyBonusTitle: 'Бонус мастерства',
+  attackFormulaHint:
+    'Бонус атаки = бонус мастерства + модификатор характеристики.',
+  initiativeTitle: 'Инициатива',
+  customBonusTitle: 'Свой бонус',
+  levelProficiencyBonusTitle: 'По уровню',
+  totalProficiencyBonusTitle: 'Итоговый бонус мастерства',
+  totalInitiativeTitle: 'Итоговая инициатива',
+};
+
 /** Минимальное значение характеристики. */
 export const ABILITY_SCORE_MIN = 1;
 

@@ -53,12 +53,13 @@ import {
   getAbilityRows,
   getArmorClassValue,
   getCarryingCapacity,
+  getCharacterProficiencyBonus,
   getClassLevelHitPoints,
   getFormattedBonus,
+  getInitiativeBonus,
   getInventoryWeight,
   getNextLevelExperience,
   getPreparedSpellsLimitDescription,
-  getProficiencyBonus,
   getSavingThrowRows,
   getSkillRows,
   getSpellcastingBreakdown,
@@ -251,11 +252,15 @@ export function useCharacterSheet() {
   const skillRows = computed(() => getSkillRows(character.value));
 
   const formattedProficiencyBonus = computed(() =>
-    getFormattedBonus(getProficiencyBonus(character.value.level)),
+    getFormattedBonus(getCharacterProficiencyBonus(character.value)),
   );
 
+  // Бонус инициативы нужен и плиткой, и модалкой броска, поэтому наружу уходит
+  // и число, и его подпись.
+  const initiativeBonus = computed(() => getInitiativeBonus(character.value));
+
   const formattedInitiative = computed(() =>
-    getFormattedModifier(character.value.abilities.dexterity),
+    getFormattedBonus(initiativeBonus.value),
   );
 
   const armorClassValue = computed(() => getArmorClassValue(character.value));
@@ -1559,7 +1564,7 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
-      settings: { weaponAttackAbility: settings.weaponAttackAbility },
+      settings: { ...settings },
     };
   }
 
@@ -2204,6 +2209,7 @@ export function useCharacterSheet() {
     savingThrowRows,
     skillRows,
     formattedProficiencyBonus,
+    initiativeBonus,
     formattedInitiative,
     armorClassValue,
     spellcastingBreakdown,

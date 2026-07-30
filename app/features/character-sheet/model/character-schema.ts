@@ -180,6 +180,10 @@ const spellcastingSchema = z
 const settingsSchema = z
   .object({
     weaponAttackAbility: abilityKeySchema.nullable().catch(null),
+    // Свои бонусы появились позже настройки атаки: у листов без них бонусы
+    // нулевые, то есть подсчёт идёт строго по правилам.
+    customProficiencyBonus: z.coerce.number().int().catch(0),
+    customInitiativeBonus: z.coerce.number().int().catch(0),
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.settings }));
 

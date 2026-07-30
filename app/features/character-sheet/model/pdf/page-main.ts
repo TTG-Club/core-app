@@ -26,11 +26,12 @@ import {
   collapseProficiencies,
   getAbilityRows,
   getArmorClassValue,
+  getCharacterProficiencyBonus,
   getClassDisplayName,
   getFormattedBonus,
   getHitDicePools,
+  getInitiativeBonus,
   getPrimarySpeed,
-  getProficiencyBonus,
   getSavingThrowRows,
   getSkillValue,
   getSpeciesDisplayName,
@@ -546,7 +547,7 @@ function drawCombatTiles(
     },
     {
       label: PDF_LABELS.initiative,
-      value: getFormattedModifier(character.abilities.dexterity),
+      value: getFormattedBonus(getInitiativeBonus(character)),
     },
     {
       label: PDF_LABELS.speed,
@@ -560,7 +561,7 @@ function drawCombatTiles(
   const secondRow: CombatTile[] = [
     {
       label: PDF_LABELS.proficiencyBonus,
-      value: getFormattedBonus(getProficiencyBonus(character.level)),
+      value: getFormattedBonus(getCharacterProficiencyBonus(character)),
     },
     {
       label: PDF_LABELS.size,

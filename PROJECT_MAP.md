@@ -264,7 +264,13 @@ modals), so its capabilities are listed here rather than squeezed into the table
   one, adding the Constitution modifier to every roll; long rest refills hit
   points, spell slots, feature counters and half the Hit Point Dice. The shared
   `SheetHitDiceSelect` picks which dice.
-- Sheet settings (weapon attack ability).
+- Sheet settings (`SheetSettingsModal`, opened from the sheet header and from the
+  list card) split into two tabs: «Атака оружием» (base attack ability) and
+  «Свои бонусы» — a custom proficiency bonus added on top of the one from the
+  level (it flows into saving throws, skills, weapon attacks and spellcasting via
+  `getCharacterProficiencyBonus`) and a custom initiative bonus added to the
+  Dexterity modifier (`getInitiativeBonus`, used by the tile, its roll and the
+  PDF). Sheets saved before the bonuses existed read them as `0`.
 
 **Sharing**
 
