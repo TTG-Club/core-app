@@ -679,7 +679,7 @@ export function convertLssCharacter(source: LssCharacter): Character {
               ARMOR_CLASS_BASE_MIN,
               ARMOR_CLASS_BASE_MAX,
             ),
-            ability: null,
+            abilities: [],
             natural: false,
             // Значение из LSS учитывает и броню, и щит, поэтому автоподсчёт по
             // надетому снаряжению выключен: игрок включит его галкой.

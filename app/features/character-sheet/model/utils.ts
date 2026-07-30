@@ -7,6 +7,7 @@ import type {
   AbilityBonusMode,
   AbilityKey,
   AbilityRow,
+  ArmorClassAbilityBonus,
   ArmorClassBreakdown,
   ArmorDexterityMod,
   CatalogSpellDetail,
@@ -152,6 +153,7 @@ import {
   DAMAGE_DICE_COUNT_MIN,
   DAMAGE_TYPE_LABELS,
   DARKVISION_PARSE_FALLBACK,
+  DEFAULT_ARMOR_CLASS_ABILITY,
   DEFAULT_ROLL_DICE_FACES,
   DEFAULT_WEAPON_ATTACK_ABILITY,
   DICE_NOTATION_LETTER,
@@ -198,6 +200,7 @@ import {
   SHEET_PLURAL_FORMS,
   SHEET_SAVE_SHARED_LABELS,
   SHEET_SHARE_ACTIVE_HINT,
+  SHEET_UNARMORED_LABEL,
   SIZE_LABEL_WORDS,
   SKILL_OWNED_HINTS,
   SKILL_PROFICIENCY_MULTIPLIERS,
@@ -303,6 +306,43 @@ export function getSkillValue(
     * SKILL_PROFICIENCY_MULTIPLIERS[skill.proficiency];
 
   return modifier + Math.floor(proficiencyPart);
+}
+
+/**
+ * Проверка, что значение — ключ характеристики: известный ключ тот, у которого
+ * есть подпись в `ABILITY_LABELS`.
+ *
+ * @param candidate проверяемое значение.
+ * @returns `true`, если значение — ключ характеристики.
+ */
+function isAbilityKey(candidate: unknown): candidate is AbilityKey {
+  return typeof candidate === 'string' && candidate in ABILITY_LABELS;
+}
+
+/**
+ * Характеристики в порядке листа (`ABILITY_ORDER`), а не в очерёдности выбора:
+ * в селектах порядок задают клики игрока, а читаться список должен так же, как
+ * блок характеристик. Повторы отбрасываются.
+ *
+ * @param abilities выбранные характеристики в произвольном порядке.
+ * @returns выбранные характеристики в порядке листа.
+ */
+export function sortAbilityKeys(abilities: AbilityKey[]): AbilityKey[] {
+  return ABILITY_ORDER.filter((key) => abilities.includes(key));
+}
+
+/**
+ * Разбор значения множественного селекта характеристик: компонент отдаёт его
+ * нетипизированным, поэтому в список попадают только известные ключи — сразу в
+ * порядке листа.
+ *
+ * @param value значение множественного селекта характеристик.
+ * @returns выбранные характеристики в порядке листа.
+ */
+export function toSelectedAbilityKeys(value: unknown): AbilityKey[] {
+  const selected = Array.isArray(value) ? value : [];
+
+  return sortAbilityKeys(selected.filter(isAbilityKey));
 }
 
 /**
@@ -1109,11 +1149,48 @@ function getArmorDexBonus(
 }
 
 /**
+ * Вклад характеристик в КД: модификатор каждой выбранной характеристики в
+ * порядке листа.
+ *
+ * @param character персонаж.
+ * @param abilities выбранные характеристики класса доспеха.
+ * @returns модификаторы выбранных характеристик.
+ */
+function getArmorClassAbilityBonuses(
+  character: Character,
+  abilities: AbilityKey[],
+): ArmorClassAbilityBonus[] {
+  return sortAbilityKeys(abilities).map((ability) => ({
+    ability,
+    modifier: getModifier(character.abilities[ability]),
+  }));
+}
+
+/**
+ * Подпись безброневого класса доспеха (например, `Без доспеха (10 + Ловкость)`).
+ * В подпись идёт только Ловкость: остальные выбранные характеристики правило
+ * доспеха не ограничивает, и в разборе они показываются отдельными строками.
+ *
+ * @param abilities выбранные характеристики класса доспеха.
+ * @returns подпись безброневого класса доспеха.
+ */
+export function getUnarmoredArmorClassLabel(abilities: AbilityKey[]): string {
+  const parts = [String(UNARMORED_ARMOR_CLASS_BASE)];
+
+  if (abilities.includes(DEFAULT_ARMOR_CLASS_ABILITY)) {
+    parts.push(ABILITY_LABELS[DEFAULT_ARMOR_CLASS_ABILITY]);
+  }
+
+  return `${SHEET_UNARMORED_LABEL} (${parts.join(' + ')})`;
+}
+
+/**
  * Разбор итогового класса доспеха. В ручном режиме (`custom`) — базовое значение
- * плюс модификатор выбранной характеристики. В автоматическом — по надетой
+ * плюс модификаторы выбранных характеристик. В автоматическом — по надетой
  * броне: тело даёт лучшая надетая броня (или безброневой `10 + Ловкость`), щит
  * складывается сверху (в зачёт — лучший щит); модификатор Ловкости учитывается
- * по правилу брони.
+ * по правилу брони, а остальные выбранные характеристики (безброневая защита,
+ * песнь клинка) прибавляются к итогу целиком.
  *
  * @param character персонаж.
  * @returns разбор класса доспеха для листа и модалки.
@@ -1121,25 +1198,42 @@ function getArmorDexBonus(
 export function getArmorClassBreakdown(
   character: Character,
 ): ArmorClassBreakdown {
-  const { base, ability, custom } = character.armorClass;
+  const { base, abilities, custom } = character.armorClass;
+
+  const abilityBonuses = getArmorClassAbilityBonuses(character, abilities);
 
   if (custom) {
-    const value = ability
-      ? base + getModifier(character.abilities[ability])
-      : base;
+    const value = abilityBonuses.reduce(
+      (total, bonus) => total + bonus.modifier,
+      base,
+    );
 
     return {
       value,
       custom: true,
       bodyArmorName: null,
-      bodyArmorValue: value,
+      bodyArmorValue: base,
       dexBonus: 0,
       dexCapped: false,
       shieldBonus: 0,
+      extraAbilities: abilityBonuses,
     };
   }
 
-  const dexModifier = getModifier(character.abilities.dexterity);
+  // Ловкость идёт в КД по правилу доспеха, поэтому её из общего списка
+  // выделяем: остальные характеристики правило доспеха не ограничивает.
+  const extraAbilities = abilityBonuses.filter(
+    (bonus) => bonus.ability !== DEFAULT_ARMOR_CLASS_ABILITY,
+  );
+
+  const extraBonus = extraAbilities.reduce(
+    (total, bonus) => total + bonus.modifier,
+    0,
+  );
+
+  const dexModifier = abilities.includes(DEFAULT_ARMOR_CLASS_ABILITY)
+    ? getModifier(character.abilities.dexterity)
+    : 0;
 
   // Группа предмета здесь не важна: доспех со своей магической пометкой лежит
   // среди магических предметов, но КД считается по тем же параметрам `armor`.
@@ -1188,13 +1282,14 @@ export function getArmorClassBreakdown(
   }
 
   return {
-    value: bodyArmorValue + shieldBonus,
+    value: bodyArmorValue + shieldBonus + extraBonus,
     custom: false,
     bodyArmorName,
     bodyArmorValue,
     dexBonus,
     dexCapped,
     shieldBonus,
+    extraAbilities,
   };
 }
 

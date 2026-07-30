@@ -51,7 +51,6 @@ import {
   fetchCatalogSpellDetail,
   fetchInventoryItemDescription,
   getAbilityRows,
-  getArmorClassBreakdown,
   getArmorClassValue,
   getCarryingCapacity,
   getClassLevelHitPoints,
@@ -93,6 +92,7 @@ import {
   SHEET_READONLY_MESSAGE,
   shiftClassHitDice,
   SKILL_PROFICIENCY_NEXT,
+  sortAbilityKeys,
   SPELL_COPY_TOAST_TITLE,
   SPELL_SLOTS_EMPTY_TOAST_TITLE,
   toCopiedInventoryItem,
@@ -259,10 +259,6 @@ export function useCharacterSheet() {
   );
 
   const armorClassValue = computed(() => getArmorClassValue(character.value));
-
-  const armorClassBreakdown = computed(() =>
-    getArmorClassBreakdown(character.value),
-  );
 
   const spellcastingBreakdown = computed(() =>
     getSpellcastingBreakdown(character.value),
@@ -532,6 +528,7 @@ export function useCharacterSheet() {
           ARMOR_CLASS_BASE_MIN,
           ARMOR_CLASS_BASE_MAX,
         ),
+        abilities: sortAbilityKeys(armorClass.abilities),
       },
     };
   }
@@ -2209,7 +2206,6 @@ export function useCharacterSheet() {
     formattedProficiencyBonus,
     formattedInitiative,
     armorClassValue,
-    armorClassBreakdown,
     spellcastingBreakdown,
     spellSlotRows,
     totalWeight,

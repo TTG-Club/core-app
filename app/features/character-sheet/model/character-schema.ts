@@ -1,4 +1,5 @@
 import type {
+  AbilityKey,
   Character,
   CharacterNote,
   CharacterSheetDetail,
@@ -189,17 +190,55 @@ const experienceSchema = z
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.experience }));
 
+/**
+ * Характеристики класса доспеха: список появился позже одиночного поля
+ * `ability`, поэтому у старых листов он собирается из него — так, чтобы уже
+ * посчитанный КД не поехал.
+ *
+ * @param abilities список характеристик записи листа.
+ * @param ability легаси-характеристика записи листа.
+ * @param custom взято ли ручное значение КД.
+ * @returns характеристики, чьи модификаторы идут в КД.
+ */
+function toArmorClassAbilities(
+  abilities: AbilityKey[] | undefined,
+  ability: AbilityKey | null | undefined,
+  custom: boolean,
+): AbilityKey[] {
+  if (abilities) {
+    return abilities;
+  }
+
+  // В ручном значении `null` означал «без модификатора», а отсутствие поля —
+  // запись до появления настройки: там работал дефолт листа.
+  if (custom && ability !== undefined) {
+    return ability ? [ability] : [];
+  }
+
+  // Автоподсчёт по доспеху всегда брал Ловкость и на `ability` не смотрел:
+  // перенос его значения поменял бы КД задним числом.
+  return [...DEFAULT_CHARACTER.armorClass.abilities];
+}
+
 const armorClassSchema = z
   .object({
     base: z.coerce.number().catch(DEFAULT_CHARACTER.armorClass.base),
-    ability: abilityKeySchema
-      .nullable()
-      .catch(DEFAULT_CHARACTER.armorClass.ability),
+    // Легаси-поле одной характеристики: `null` в нём означал «без модификатора»,
+    // а отсутствие — запись до появления настройки.
+    ability: abilityKeySchema.nullable().optional().catch(undefined),
+    abilities: z.array(abilityKeySchema).optional().catch(undefined),
     natural: z.boolean().catch(false),
     // По умолчанию — автоподсчёт по надетой броне (легаси-листы без поля).
     custom: z.boolean().catch(false),
   })
-  .catch(() => ({ ...DEFAULT_CHARACTER.armorClass }));
+  .catch(() => ({
+    ...DEFAULT_CHARACTER.armorClass,
+    abilities: [...DEFAULT_CHARACTER.armorClass.abilities],
+  }))
+  .transform(({ ability, abilities, ...armorClass }) => ({
+    ...armorClass,
+    abilities: toArmorClassAbilities(abilities, ability, armorClass.custom),
+  }));
 
 const speedSchema = z
   .object({

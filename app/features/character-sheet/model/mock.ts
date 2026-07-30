@@ -23,7 +23,7 @@ export const DEFAULT_CHARACTER: Character = {
   inspiration: false,
   armorClass: {
     base: 10,
-    ability: 'dexterity',
+    abilities: ['dexterity'],
     natural: false,
     custom: false,
   },

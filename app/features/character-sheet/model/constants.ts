@@ -398,6 +398,10 @@ export const ABILITY_SHORT_LABELS: Record<AbilityKey, string> = {
   charisma: 'Хар',
 };
 
+/** Варианты характеристик для селектов листа — в порядке отображения. */
+export const ABILITY_OPTIONS: Array<{ label: string; value: AbilityKey }> =
+  ABILITY_ORDER.map((key) => ({ label: ABILITY_LABELS[key], value: key }));
+
 /** Порядок отображения денежных единиц. */
 export const CURRENCY_ORDER: CurrencyKey[] = [
   'copper',
@@ -519,9 +523,6 @@ export const ARMOR_CLASS_BASE_MIN = 0;
 /** Максимальное базовое значение класса доспеха. */
 export const ARMOR_CLASS_BASE_MAX = 40;
 
-/** Значение «без характеристики» в селекте класса доспеха. */
-export const ARMOR_CLASS_NO_ABILITY = 'none';
-
 /** Безброневой класс доспеха (без надетой брони): база `10 + Ловкость`. */
 export const UNARMORED_ARMOR_CLASS_BASE = 10;
 
@@ -529,7 +530,10 @@ export const UNARMORED_ARMOR_CLASS_BASE = 10;
 export const ARMOR_MEDIUM_DEX_CAP = 2;
 
 /** Подпись «без доспеха» для разбора класса доспеха. */
-export const SHEET_UNARMORED_LABEL = 'Без доспеха (10 + Ловкость)';
+export const SHEET_UNARMORED_LABEL = 'Без доспеха';
+
+/** Характеристика КД по правилам: к доспеху прибавляется модификатор Ловкости. */
+export const DEFAULT_ARMOR_CLASS_ABILITY: AbilityKey = 'dexterity';
 
 /** Пояснение правила модификатора Ловкости к КД для подсказки на плитке брони. */
 export const ARMOR_DEXTERITY_HINT_LABELS: Record<ArmorDexterityMod, string> = {
@@ -538,14 +542,51 @@ export const ARMOR_DEXTERITY_HINT_LABELS: Record<ArmorDexterityMod, string> = {
   none: ' (без модификатора Ловкости)',
 };
 
-/** Варианты характеристики для бонуса класса доспеха. */
-export const ARMOR_CLASS_ABILITY_OPTIONS: Array<{
-  label: string;
-  value: AbilityKey | typeof ARMOR_CLASS_NO_ABILITY;
-}> = [
-  { label: 'Нет', value: ARMOR_CLASS_NO_ABILITY },
-  ...ABILITY_ORDER.map((key) => ({ label: ABILITY_LABELS[key], value: key })),
-];
+/** Подписи модалки настройки класса доспеха. */
+export const ARMOR_CLASS_LABELS: Record<
+  | 'title'
+  | 'customToggle'
+  | 'customToggleHint'
+  | 'valueTitle'
+  | 'abilitiesTitle'
+  | 'abilitiesPlaceholder'
+  | 'abilitiesArmorHint'
+  | 'abilitiesArmorEmptyHint'
+  | 'abilitiesCustomHint'
+  | 'abilitiesCustomEmptyHint'
+  | 'armorTypeTitle'
+  | 'naturalArmor'
+  | 'armorTitle'
+  | 'dexCappedHint'
+  | 'shieldTitle'
+  | 'totalTitle'
+  | 'equipmentHint',
+  string
+> = {
+  title: 'Класс доспеха',
+  customToggle: 'Использовать своё значение',
+  customToggleHint: 'Иначе КД считается автоматически по надетому доспеху',
+  valueTitle: 'Значение',
+  abilitiesTitle: 'Характеристики',
+  abilitiesPlaceholder: 'Без модификаторов',
+  abilitiesArmorHint: `Модификаторы этих характеристик идут в КД. ${ABILITY_LABELS.dexterity} учитывается по правилу надетого доспеха (средний ограничивает бонус, тяжёлый не даёт его вовсе), остальные складываются сверху — как безброневая защита варвара и монаха или песнь клинка.`,
+  abilitiesArmorEmptyHint:
+    'Ни одна характеристика в КД не идёт — считается только доспех со щитом.',
+  abilitiesCustomHint:
+    'Модификаторы этих характеристик прибавляются к значению.',
+  abilitiesCustomEmptyHint:
+    'Ни одна характеристика не прибавляется — КД равен значению.',
+  armorTypeTitle: 'Тип доспеха',
+  naturalArmor: 'Природный доспех',
+  armorTitle: 'Доспех',
+  // Подпись в родительном падеже, поэтому название характеристики здесь текстом,
+  // а не из `ABILITY_LABELS` (там именительный: «Ловкость»).
+  dexCappedHint: 'Модификатор Ловкости ограничен доспехом',
+  shieldTitle: 'Щит',
+  totalTitle: 'Итоговый КД',
+  equipmentHint:
+    'Надевайте доспехи и щит на вкладке «Снаряжение» — в зачёт идёт доспех с наибольшим КД, щит складывается сверху.',
+};
 
 /**
  * Характеристика бонуса атаки оружием по правилам: большинство оружия бьёт от
