@@ -1,22 +1,19 @@
 <script setup lang="ts">
-  import type {
-    ClassEquipmentItemCreate,
-    ClassEquipmentOptionCreate,
-  } from '../../model';
+  import type { EquipmentItemCreate, EquipmentOptionCreate } from './types';
 
-  import { EditorArrayControls } from '~ui/editor';
   import { SelectItem } from '~ui/select';
 
+  import EditorArrayControls from '../EditorArrayControls.vue';
   import {
-    CLASS_EQUIPMENT_OPTION_LABELS,
-    DEFAULT_CLASS_EQUIPMENT_OPTIONS_COUNT,
-  } from '../../model';
+    DEFAULT_EQUIPMENT_OPTIONS_COUNT,
+    EQUIPMENT_OPTION_LABELS,
+  } from './constants';
 
-  const state = defineModel<Array<ClassEquipmentOptionCreate>>({
+  const state = defineModel<Array<EquipmentOptionCreate>>({
     required: true,
   });
 
-  // Класс без снаряжения открывается с двумя пустыми вариантами — «А» и «Б»,
+  // Сущность без снаряжения открывается с двумя пустыми вариантами — «А» и «Б»,
   // а вариант, пришедший из API без предметов, получает одну пустую строку.
   // Guard разрывает цикл: после нормализации оба условия перестают выполняться,
   // поэтому повторное присвоение state.value не происходит.
@@ -25,7 +22,7 @@
     (options) => {
       if (!options.length) {
         state.value = Array.from(
-          { length: DEFAULT_CLASS_EQUIPMENT_OPTIONS_COUNT },
+          { length: DEFAULT_EQUIPMENT_OPTIONS_COUNT },
           getEmptyEquipmentOption,
         );
 
@@ -46,12 +43,12 @@
   );
 
   /** Пустой вариант снаряжения: одна пустая строка предмета и без монет. */
-  function getEmptyEquipmentOption(): ClassEquipmentOptionCreate {
+  function getEmptyEquipmentOption(): EquipmentOptionCreate {
     return { items: [getEmptyEquipmentItem()], coins: undefined };
   }
 
   /** Пустая строка предмета внутри варианта снаряжения. */
-  function getEmptyEquipmentItem(): ClassEquipmentItemCreate {
+  function getEmptyEquipmentItem(): EquipmentItemCreate {
     return { url: undefined, quantity: undefined, description: undefined };
   }
 
@@ -66,15 +63,13 @@
   }
 
   /** Добавляет пустую строку предмета в указанный вариант снаряжения. */
-  function addEmptyEquipmentItem(option: ClassEquipmentOptionCreate): void {
+  function addEmptyEquipmentItem(option: EquipmentOptionCreate): void {
     option.items.push(getEmptyEquipmentItem());
   }
 
   /** Метка варианта по его порядку: «А», «Б», … — так же, как её выводит API. */
   function getEquipmentOptionLabel(optionIndex: number): string {
-    return (
-      CLASS_EQUIPMENT_OPTION_LABELS[optionIndex] ?? String(optionIndex + 1)
-    );
+    return EQUIPMENT_OPTION_LABELS[optionIndex] ?? String(optionIndex + 1);
   }
 </script>
 
