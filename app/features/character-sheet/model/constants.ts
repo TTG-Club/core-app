@@ -24,6 +24,8 @@ import type {
   MagicItemCatalogItem,
   MagicItemCatalogSorting,
   ResourceRecovery,
+  ResourceRecoveryField,
+  ResourceRecoveryMode,
   RollMode,
   SheetSaveStatus,
   SheetTab,
@@ -469,22 +471,52 @@ export const LEVEL_XP_THRESHOLDS: number[] = [
   120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000,
 ];
 
-/** Названия типов восстановления ресурса класса. */
+/** Названия видов отдыха. */
 export const RESOURCE_RECOVERY_LABELS: Record<ResourceRecovery, string> = {
   'short-rest': 'Короткий отдых',
   'long-rest': 'Продолжительный отдых',
 };
 
-/** Варианты восстановления для селекта в настройке ресурсов. */
-export const RESOURCE_RECOVERY_OPTIONS: Array<{
+/** Названия режимов восстановления ресурса на отдыхе. */
+export const RESOURCE_RECOVERY_MODE_LABELS: Record<
+  ResourceRecoveryMode,
+  string
+> = {
+  none: 'Ничего',
+  all: 'Все заряды',
+  amount: 'Своё число',
+};
+
+/** Варианты режима восстановления для селекта в настройке ресурсов. */
+export const RESOURCE_RECOVERY_MODE_OPTIONS: Array<{
   label: string;
-  value: ResourceRecovery;
+  value: ResourceRecoveryMode;
 }> = [
-  { label: 'Короткий отдых', value: 'short-rest' },
-  { label: 'Продолжительный отдых', value: 'long-rest' },
+  { label: RESOURCE_RECOVERY_MODE_LABELS.none, value: 'none' },
+  { label: RESOURCE_RECOVERY_MODE_LABELS.all, value: 'all' },
+  { label: RESOURCE_RECOVERY_MODE_LABELS.amount, value: 'amount' },
 ];
 
-/** Иконки типов восстановления ресурса класса. */
+/** Правила восстановления ресурса в порядке вывода в форме и на панели. */
+export const RESOURCE_RECOVERY_FIELDS: ResourceRecoveryField[] = [
+  { key: 'shortRest', rest: 'short-rest' },
+  { key: 'longRest', rest: 'long-rest' },
+];
+
+/** Подпись полного восстановления в подсказках и в списках отдыха. */
+export const RESOURCE_RECOVERY_ALL_LABEL = 'все заряды';
+
+/** Подпись полного восстановления в компактной пометке на панели листа. */
+export const RESOURCE_RECOVERY_ALL_SHORT_LABEL = 'все';
+
+/** Формы слова «заряд» для числа возвращаемых зарядов. */
+export const RESOURCE_CHARGE_FORMS: [string, string, string] = [
+  'заряд',
+  'заряда',
+  'зарядов',
+];
+
+/** Иконки видов отдыха. */
 export const RESOURCE_RECOVERY_ICONS: Record<ResourceRecovery, string> = {
   'short-rest': 'tabler:campfire',
   'long-rest': 'tabler:sun',
@@ -496,8 +528,17 @@ export const RESOURCE_COUNT_MIN = 0;
 /** Максимальное количество зарядов ресурса. */
 export const RESOURCE_COUNT_MAX = 99;
 
+/** Минимальное число зарядов, возвращаемых отдыхом. */
+export const RESOURCE_RECOVERY_AMOUNT_MIN = 1;
+
 /** Максимальная длина короткой подписи ресурса. */
 export const RESOURCE_SHORT_LABEL_MAX_LENGTH = 4;
+
+/** Заголовки окна ресурса класса: добавление и правка. */
+export const CLASS_RESOURCE_MODAL_TITLES: Record<'add' | 'edit', string> = {
+  add: 'Новый ресурс',
+  edit: 'Ресурс класса',
+};
 
 /** Подсказки полей ресурса класса: пример вместо подставленного текста. */
 export const RESOURCE_PLACEHOLDERS: Record<'name' | 'shortLabel', string> = {
@@ -508,11 +549,14 @@ export const RESOURCE_PLACEHOLDERS: Record<'name' | 'shortLabel', string> = {
 /**
  * Заготовка нового ресурса класса (без идентификатора). Подписи пустые —
  * пример показывает плейсхолдер, чтобы не стирать текст перед вводом своего.
+ * Восстановление по умолчанию — продолжительный отдых целиком: так работает
+ * большинство классовых счётчиков.
  */
 export const NEW_CLASS_RESOURCE: Omit<CharacterClassResource, 'id'> = {
   name: '',
   shortLabel: '',
-  recovery: 'long-rest',
+  shortRest: { mode: 'none', amount: RESOURCE_RECOVERY_AMOUNT_MIN },
+  longRest: { mode: 'all', amount: RESOURCE_RECOVERY_AMOUNT_MIN },
   current: 1,
   max: 1,
 };
@@ -1075,7 +1119,7 @@ export const LONG_REST_LABELS: Record<
 > = {
   title: 'Продолжительный отдых',
   intro:
-    'Продолжительный отдых — не меньше 8 часов, из них минимум 6 часов сна, а остальное время — необременительные занятия. По его окончании персонаж восстанавливает все хиты, все кости хитов, все ячейки заклинаний и счётчики умений.',
+    'Продолжительный отдых — не меньше 8 часов, из них минимум 6 часов сна, а остальное время — необременительные занятия. По его окончании персонаж восстанавливает все хиты, все кости хитов, все ячейки заклинаний и заряды счётчиков умений.',
   rulesTitle: 'Правила продолжительного отдыха',
   hitPointsTitle: 'Хиты',
   hitPointsRecovery: 'Восстановятся полностью.',
@@ -1100,7 +1144,7 @@ export const LONG_REST_RULES: string[] = [
   'Прерванный час боя, ходьбы или другой утомительной деятельности обнуляет отдых: его придётся начинать заново.',
   'По окончании отдыха восстанавливаются все хиты и все потраченные ячейки заклинаний.',
   'Все потраченные кости хитов возвращаются: в редакции 2024 года отдых возвращает их полностью, а не половину.',
-  'Возвращаются счётчики умений и с продолжительным, и с коротким восстановлением.',
+  'Счётчикам умений возвращается столько зарядов, сколько задано им на продолжительный отдых: обычно это все заряды.',
   'Временные хиты держатся до конца продолжительного отдыха и пропадают вместе с ним.',
   'За одни сутки можно получить пользу только от одного продолжительного отдыха.',
 ];
@@ -1112,7 +1156,7 @@ export const SHORT_REST_RULES: string[] = [
   'В конце отдыха тратится любое количество оставшихся костей хитов. За каждую кость бросается её номинал и прибавляется модификатор Телосложения — столько хитов и восстанавливается, но не меньше нуля за кость.',
   'Сколько костей бросить дальше, решается после каждого броска.',
   'Потраченные кости хитов возвращает только продолжительный отдых.',
-  'Умения и ячейки с восстановлением «короткий отдых» возвращаются по окончании отдыха.',
+  'По окончании отдыха возвращаются ячейки договора колдуна, а счётчикам умений — столько зарядов, сколько задано им на короткий отдых.',
 ];
 
 /** Каталог брони для настройки владения: группы, пункт «вся группа» и виды. */

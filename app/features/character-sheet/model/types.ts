@@ -107,8 +107,19 @@ export type RollMode = 'normal' | 'advantage' | 'disadvantage';
 /** Способ прироста максимума хитов за взятые уровни в модалке опыта. */
 export type HitPointsGainMode = 'average' | 'roll' | 'max';
 
-/** Тип восстановления ресурса класса. */
+/** Вид отдыха, восстанавливающего ресурсы и ячейки. */
 export type ResourceRecovery = 'short-rest' | 'long-rest';
+
+/** Сколько зарядов возвращает отдых: ничего, все или заданное число. */
+export type ResourceRecoveryMode = 'none' | 'all' | 'amount';
+
+/** Восстановление ресурса на одном виде отдыха. */
+export interface ResourceRecoveryRule {
+  mode: ResourceRecoveryMode;
+
+  /** Число возвращаемых зарядов; учитывается только при режиме `amount`. */
+  amount: number;
+}
 
 /** Ресурс класса (счётчик). */
 export interface CharacterClassResource {
@@ -118,9 +129,37 @@ export interface CharacterClassResource {
   /** Короткая подпись для строки на листе (например, «НС»). */
   shortLabel: string;
 
-  recovery: ResourceRecovery;
+  /** Что возвращает короткий отдых. */
+  shortRest: ResourceRecoveryRule;
+
+  /** Что возвращает продолжительный отдых. */
+  longRest: ResourceRecoveryRule;
+
   current: number;
   max: number;
+}
+
+/** Правило восстановления ресурса как поле формы и строка панели. */
+export interface ResourceRecoveryField {
+  /** Ключ правила в ресурсе класса. */
+  key: 'shortRest' | 'longRest';
+
+  /** Вид отдыха, к которому относится правило. */
+  rest: ResourceRecovery;
+}
+
+/** Компактная пометка восстановления ресурса в строке панели листа. */
+export interface ClassResourceRecoveryBadge {
+  /** Вид отдыха — он же ключ строки. */
+  rest: ResourceRecovery;
+
+  icon: string;
+
+  /** Короткая подпись: «все» или число зарядов. */
+  text: string;
+
+  /** Подсказка целиком: «Короткий отдых: 1 заряд». */
+  hint: string;
 }
 
 /** Класс доспеха персонажа. */

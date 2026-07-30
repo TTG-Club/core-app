@@ -6,6 +6,9 @@ import type {
   CharacterSheetListItem,
   CharacterSheetListPage,
   FeatureDescriptionNode,
+  ResourceRecovery,
+  ResourceRecoveryMode,
+  ResourceRecoveryRule,
   SavedCharacterSheet,
   SavedCharacterSheetListPage,
 } from './types';
@@ -18,6 +21,7 @@ import {
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
   LEGACY_NOTE_ID,
+  RESOURCE_RECOVERY_AMOUNT_MIN,
   SHEET_NOTE_LABELS,
 } from './constants';
 import { DEFAULT_CHARACTER } from './mock';
@@ -314,14 +318,55 @@ const extraHitDieSchema = hitDieSchema.extend({
   id: z.string(),
 });
 
-const classResourceSchema = z.object({
-  id: z.string(),
-  name: z.string().catch(''),
-  shortLabel: z.string().catch(''),
-  recovery: z.enum(['short-rest', 'long-rest']).catch('long-rest'),
-  current: z.coerce.number().catch(0),
-  max: z.coerce.number().catch(0),
+const resourceRecoveryRuleSchema = z.object({
+  mode: z.enum(['none', 'all', 'amount']).catch('none'),
+  amount: z.coerce.number().catch(RESOURCE_RECOVERY_AMOUNT_MIN),
 });
+
+/**
+ * Правила восстановления ресурса: раздельные порции появились позже одного
+ * поля `recovery`, где отдых возвращал ресурс целиком. У старых листов
+ * продолжительный отдых возвращал всё всегда, а короткий — только ресурсам,
+ * отмеченным коротким отдыхом.
+ *
+ * @param rule правило записи листа.
+ * @param recovery легаси-вид отдыха записи листа.
+ * @param isShortRest собирается ли правило короткого отдыха.
+ * @returns правило восстановления ресурса.
+ */
+function toResourceRecoveryRule(
+  rule: ResourceRecoveryRule | undefined,
+  recovery: ResourceRecovery | undefined,
+  isShortRest: boolean,
+): ResourceRecoveryRule {
+  if (rule) {
+    return rule;
+  }
+
+  const mode: ResourceRecoveryMode =
+    !isShortRest || recovery === 'short-rest' ? 'all' : 'none';
+
+  return { mode, amount: RESOURCE_RECOVERY_AMOUNT_MIN };
+}
+
+const classResourceSchema = z
+  .object({
+    id: z.string(),
+    name: z.string().catch(''),
+    shortLabel: z.string().catch(''),
+    // Легаси-поле одного вида отдыха: у листов до раздельных порций оно
+    // задавало, возвращает ли ресурс короткий отдых.
+    recovery: z.enum(['short-rest', 'long-rest']).optional().catch(undefined),
+    shortRest: resourceRecoveryRuleSchema.optional().catch(undefined),
+    longRest: resourceRecoveryRuleSchema.optional().catch(undefined),
+    current: z.coerce.number().catch(0),
+    max: z.coerce.number().catch(0),
+  })
+  .transform(({ recovery, shortRest, longRest, ...resource }) => ({
+    ...resource,
+    shortRest: toResourceRecoveryRule(shortRest, recovery, true),
+    longRest: toResourceRecoveryRule(longRest, recovery, false),
+  }));
 
 // Листы до появления ссылок на инструменты хранят владения строками: такая
 // запись читается без ссылки, а url подставится при следующей правке владений.

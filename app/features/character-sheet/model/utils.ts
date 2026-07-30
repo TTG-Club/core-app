@@ -35,6 +35,7 @@ import type {
   ClassFeatureRow,
   ClassFeatureSummary,
   ClassOption,
+  ClassResourceRecoveryBadge,
   ClassSummary,
   ClassTableColumn,
   CustomArmorType,
@@ -68,6 +69,8 @@ import type {
   PrimarySpeed,
   ProficiencyCatalogGroup,
   ResourceRecovery,
+  ResourceRecoveryMode,
+  ResourceRecoveryRule,
   RollMode,
   SavingThrowRow,
   SkillRow,
@@ -187,7 +190,13 @@ import {
   PREPARED_SPELLS_MAX,
   PREPARED_SPELLS_MIN,
   PREPARED_SPELLS_VALUE_SEPARATOR,
+  RESOURCE_CHARGE_FORMS,
   RESOURCE_COUNT_MAX,
+  RESOURCE_RECOVERY_ALL_LABEL,
+  RESOURCE_RECOVERY_ALL_SHORT_LABEL,
+  RESOURCE_RECOVERY_AMOUNT_MIN,
+  RESOURCE_RECOVERY_FIELDS,
+  RESOURCE_RECOVERY_ICONS,
   RESOURCE_RECOVERY_LABELS,
   RESOURCE_SHORT_LABEL_MAX_LENGTH,
   ROLL_MODE_DICE_COUNT,
@@ -1799,14 +1808,15 @@ export function getLongRestHitDiceRecovery(
 
 /**
  * Что вернёт продолжительный отдых, кроме хитов и костей: ячейки заклинаний и
- * все счётчики умений — и с продолжительным, и с коротким восстановлением.
+ * счётчики умений с восстановлением на продолжительном отдыхе.
  *
  * @param character персонаж.
  * @returns подписи восстанавливаемого; пустой список — восстанавливать нечего.
  */
 export function getLongRestRecoveryLabels(character: Character): string[] {
-  const resourceLabels = character.classResources.map(
-    (resource) => resource.name,
+  const resourceLabels = getResourceRecoveryLabels(
+    character.classResources,
+    'long-rest',
   );
 
   return getSpellSlotRows(character).length > 0
@@ -2097,16 +2107,197 @@ export function adjustHealthForConstitution(
 }
 
 /**
- * Что вернёт короткий отдых, кроме хитов: ресурсы класса с восстановлением
- * «короткий отдых» и ячейки заклинаний договора колдуна.
+ * Правило восстановления ресурса для вида отдыха.
+ *
+ * @param resource ресурс класса.
+ * @param rest вид отдыха.
+ * @returns правило восстановления на этом отдыхе.
+ */
+export function getResourceRecoveryRule(
+  resource: CharacterClassResource,
+  rest: ResourceRecovery,
+): ResourceRecoveryRule {
+  return rest === 'short-rest' ? resource.shortRest : resource.longRest;
+}
+
+/**
+ * Сколько зарядов вернёт правило восстановления: «все заряды» — до максимума,
+ * «своё число» — заданное количество (выше максимума оно не поднимет).
+ *
+ * @param rule правило восстановления.
+ * @param max максимум зарядов ресурса.
+ * @returns число возвращаемых зарядов.
+ */
+export function getResourceRecoveryAmount(
+  rule: ResourceRecoveryRule,
+  max: number,
+): number {
+  if (rule.mode === 'none') {
+    return 0;
+  }
+
+  return rule.mode === 'all' ? max : clamp(Math.trunc(rule.amount), 0, max);
+}
+
+/**
+ * Подпись правила восстановления: «все заряды» либо число зарядов. Пустая
+ * строка — отдых ресурс не возвращает.
+ *
+ * @param rule правило восстановления.
+ * @returns подпись правила.
+ */
+export function getResourceRecoveryLabel(rule: ResourceRecoveryRule): string {
+  if (rule.mode === 'none') {
+    return '';
+  }
+
+  return rule.mode === 'all'
+    ? RESOURCE_RECOVERY_ALL_LABEL
+    : `${rule.amount} ${getPlural(rule.amount, RESOURCE_CHARGE_FORMS)}`;
+}
+
+/**
+ * Независимая копия ресурса для формы: правила восстановления копируются
+ * отдельно, иначе поля формы правили бы запись листа до сохранения.
+ *
+ * @param resource ресурс класса.
+ * @returns копия ресурса без общих с исходником вложенных объектов.
+ */
+export function toClassResourceDraft(
+  resource: CharacterClassResource,
+): CharacterClassResource {
+  return {
+    ...resource,
+    shortRest: { ...resource.shortRest },
+    longRest: { ...resource.longRest },
+  };
+}
+
+/**
+ * Приведение правила восстановления к допустимым значениям: число зарядов —
+ * целое не меньше минимума и не больше максимума ресурса.
+ *
+ * @param rule правило восстановления.
+ * @param max максимум зарядов ресурса.
+ * @returns правило с допустимым числом зарядов.
+ */
+export function normalizeResourceRecoveryRule(
+  rule: ResourceRecoveryRule,
+  max: number,
+): ResourceRecoveryRule {
+  return {
+    mode: rule.mode,
+    amount: clamp(
+      Math.trunc(rule.amount),
+      RESOURCE_RECOVERY_AMOUNT_MIN,
+      Math.max(RESOURCE_RECOVERY_AMOUNT_MIN, max),
+    ),
+  };
+}
+
+/**
+ * Пометки восстановления ресурса для строки панели: по одной на вид отдыха,
+ * который возвращает заряды. Пустой список — ресурс отдыхом не восстанавливается.
+ *
+ * @param resource ресурс класса.
+ * @returns пометки восстановления в порядке «короткий, продолжительный».
+ */
+export function getResourceRecoveryBadges(
+  resource: CharacterClassResource,
+): ClassResourceRecoveryBadge[] {
+  return RESOURCE_RECOVERY_FIELDS.filter(
+    (field) => resource[field.key].mode !== 'none',
+  ).map((field) => {
+    const rule = resource[field.key];
+
+    return {
+      rest: field.rest,
+      icon: RESOURCE_RECOVERY_ICONS[field.rest],
+      text:
+        rule.mode === 'all'
+          ? RESOURCE_RECOVERY_ALL_SHORT_LABEL
+          : String(rule.amount),
+      hint: `${RESOURCE_RECOVERY_LABELS[field.rest]}: ${getResourceRecoveryLabel(rule)}`,
+    };
+  });
+}
+
+/**
+ * Восстановление ресурса одной строкой: виды отдыха, возвращающие заряды, с
+ * количеством. Пустая строка — ресурс отдыхом не восстанавливается.
+ *
+ * @param resource ресурс класса.
+ * @returns строка для подсказки и PDF.
+ */
+export function getResourceRecoverySummary(
+  resource: CharacterClassResource,
+): string {
+  return getResourceRecoveryBadges(resource)
+    .map((badge) => badge.hint)
+    .join(' · ');
+}
+
+/**
+ * Ресурсы класса после отдыха: каждому возвращается столько зарядов, сколько
+ * задано его правилом для этого вида отдыха, но не выше максимума.
+ *
+ * @param resources ресурсы класса.
+ * @param rest вид отдыха.
+ * @returns ресурсы с обновлённым остатком зарядов.
+ */
+export function restoreClassResources(
+  resources: CharacterClassResource[],
+  rest: ResourceRecovery,
+): CharacterClassResource[] {
+  return resources.map((resource) => {
+    const restored = getResourceRecoveryAmount(
+      getResourceRecoveryRule(resource, rest),
+      resource.max,
+    );
+
+    return {
+      ...resource,
+      current: clamp(resource.current + restored, 0, resource.max),
+    };
+  });
+}
+
+/**
+ * Подписи ресурсов, которые вернёт отдых: название и сколько зарядов
+ * возвращается. Ресурсы, которых этот отдых не касается, в список не входят.
+ *
+ * @param resources ресурсы класса.
+ * @param rest вид отдыха.
+ * @returns подписи вида «Ярость: все заряды».
+ */
+function getResourceRecoveryLabels(
+  resources: CharacterClassResource[],
+  rest: ResourceRecovery,
+): string[] {
+  return resources
+    .map((resource) => ({
+      name: resource.name,
+      rule: getResourceRecoveryRule(resource, rest),
+    }))
+    .filter((recovery) => recovery.rule.mode !== 'none')
+    .map(
+      (recovery) =>
+        `${recovery.name}: ${getResourceRecoveryLabel(recovery.rule)}`,
+    );
+}
+
+/**
+ * Что вернёт короткий отдых, кроме хитов: ресурсы класса с восстановлением на
+ * коротком отдыхе и ячейки заклинаний договора колдуна.
  *
  * @param character персонаж.
  * @returns подписи восстанавливаемого; пустой список — восстанавливать нечего.
  */
 export function getShortRestRecoveryLabels(character: Character): string[] {
-  const resourceLabels = character.classResources
-    .filter((resource) => resource.recovery === 'short-rest')
-    .map((resource) => resource.name);
+  const resourceLabels = getResourceRecoveryLabels(
+    character.classResources,
+    'short-rest',
+  );
 
   const hasPactSlots = getSpellSlotRows(character).some(
     (row) => row.recovery === 'short-rest',
@@ -3746,12 +3937,17 @@ export function deriveClassResources(
       continue;
     }
 
+    // Таблица класса знает только вид отдыха, поэтому ресурс возвращается
+    // целиком: точные порции игрок задаёт в настройке ресурсов сам.
+    const shortRestMode: ResourceRecoveryMode =
+      column.resourceRecovery === 'SHORT_REST' ? 'all' : 'none';
+
     resources.push({
       id: `class:res:${column.name}`,
       name: column.name,
       shortLabel: column.name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
-      recovery:
-        column.resourceRecovery === 'SHORT_REST' ? 'short-rest' : 'long-rest',
+      shortRest: { mode: shortRestMode, amount: RESOURCE_RECOVERY_AMOUNT_MIN },
+      longRest: { mode: 'all', amount: RESOURCE_RECOVERY_AMOUNT_MIN },
       current: max,
       max,
     });
@@ -4072,8 +4268,9 @@ export function mergeCharacterFeatures(
 /**
  * Слияние ресурсов класса при повышении уровня: максимум берётся новый, а
  * потраченное сохраняется — прибавка максимума приходит непотраченной, как
- * новые кости хитов. Ресурсы без пары среди новых (добавленные вручную) не
- * трогаются.
+ * новые кости хитов. Правила восстановления остаются как есть: таблица класса
+ * знает только вид отдыха и затёрла бы порции, настроенные игроком вручную.
+ * Ресурсы без пары среди новых (добавленные вручную) не трогаются.
  *
  * @param current ресурсы листа.
  * @param incoming ресурсы, пересчитанные на новый уровень.
@@ -4102,7 +4299,6 @@ export function mergeClassResources(
       ...resource,
       name: next.name,
       shortLabel: next.shortLabel,
-      recovery: next.recovery,
       max: next.max,
       current: clamp(resource.current + gain, 0, next.max),
     };

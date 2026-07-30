@@ -5,6 +5,7 @@ export { default as SheetArmorClassModal } from './SheetArmorClassModal.vue';
 export { default as SheetAvatar } from './SheetAvatar.vue';
 export { default as SheetBackgroundWizardModal } from './SheetBackgroundWizardModal.vue';
 export { default as SheetChoiceSelect } from './SheetChoiceSelect.vue';
+export { default as SheetClassResourceModal } from './SheetClassResourceModal.vue';
 export { default as SheetClassResourcesModal } from './SheetClassResourcesModal.vue';
 export { default as SheetClassResourcesPanel } from './SheetClassResourcesPanel.vue';
 export { default as SheetClassWizardModal } from './SheetClassWizardModal.vue';

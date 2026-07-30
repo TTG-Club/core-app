@@ -49,6 +49,7 @@ import {
   LEVEL_MIN,
   RESOURCE_COUNT_MAX,
   RESOURCE_COUNT_MIN,
+  RESOURCE_RECOVERY_AMOUNT_MIN,
   RESOURCE_SHORT_LABEL_MAX_LENGTH,
   SPEED_VALUE_MAX,
   VISION_DISTANCE_MAX,
@@ -271,8 +272,8 @@ function toCurrency(coins: Record<string, number>): CharacterCurrency {
 }
 
 /**
- * Счётчики листа из ресурсов LSS. Восстановление коротким отдыхом важнее:
- * счётчик с обоими флагами возвращается уже на коротком.
+ * Счётчики листа из ресурсов LSS. Флаги отдыха там независимы и означают полное
+ * восстановление, поэтому каждый переносится в своё правило.
  *
  * @param resources ресурсы персонажа LSS.
  * @returns счётчики листа.
@@ -295,7 +296,14 @@ function toClassResources(resources: LssResource[]): CharacterClassResource[] {
       id: crypto.randomUUID(),
       name: resource.name,
       shortLabel: resource.name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
-      recovery: resource.shortRest ? 'short-rest' : 'long-rest',
+      shortRest: {
+        mode: resource.shortRest ? 'all' : 'none',
+        amount: RESOURCE_RECOVERY_AMOUNT_MIN,
+      },
+      longRest: {
+        mode: resource.longRest ? 'all' : 'none',
+        amount: RESOURCE_RECOVERY_AMOUNT_MIN,
+      },
       current: clamp(Math.trunc(resource.current), RESOURCE_COUNT_MIN, max),
       max,
     });
