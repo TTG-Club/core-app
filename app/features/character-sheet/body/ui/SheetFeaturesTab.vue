@@ -1,14 +1,24 @@
 <script setup lang="ts">
-  import type { CharacterFeature } from '../../model';
+  import type {
+    CharacterFeature,
+    FeatureOriginGroup,
+    FeatureTabFilter,
+  } from '../../model';
 
   import { MarkupRender } from '~ui/markup';
 
   import { useCharacterSheet } from '../../composables';
   import {
+    FEATURE_ORIGIN_GROUP_HINTS,
     FEATURE_ORIGIN_LABELS,
+    getFeatureOriginGroups,
     getFeaturesAddMenuItems,
+    getFilterChipClass,
+    matchesFeatureFilter,
     SHEET_FEATURE_ROW_LABELS,
+    SHEET_FILTER_LABELS,
     SHEET_TAB_EMPTY_LABELS,
+    sortFeaturesByOriginGroup,
   } from '../../model';
 
   const props = defineProps<{
@@ -22,9 +32,9 @@
     'remove-feature': [featureId: string];
   }>();
 
-  // Добавление, правка и удаление особенностей меняют лист: без прав кнопки
-  // прячутся, а карточки остаются на прежних местах.
-  const { editControlClass } = useCharacterSheet();
+  // Добавление, правка и удаление особенностей меняют лист: без прав кнопка
+  // «Добавить» прячется, а строчные кнопки правки и вовсе не разъезжаются.
+  const { canEdit, editControlClass } = useCharacterSheet();
 
   const addMenuItems = getFeaturesAddMenuItems({
     onAddFeature: () => emit('add-feature'),
@@ -52,27 +62,123 @@
   }
 
   /**
-   * Цвета бейджа происхождения: вид — зелёный, подвид — синий, класс — жёлтый,
-   * черта — акцентный.
+   * Цвета бейджа происхождения: вид — зелёный, подвид — синий, класс —
+   * основной цвет темы, черта — акцентный.
    */
   const ORIGIN_BADGE_COLORS = {
     species: 'success',
     lineage: 'info',
-    class: 'warning',
+    class: 'primary',
     feat: 'secondary',
     none: 'neutral',
   } as const;
 
   /**
-   * Кнопки правки строки: с мышью проявляются по наведению на строку, а на
-   * сенсорном экране ховера нет — там они видны всегда, иначе правку и удаление
-   * особенности с телефона не найти.
+   * Колонка кнопок правки строки: пока на строку не навели, она схлопнута в
+   * нулевую ширину — место под ней занимает название.
    */
   const ROW_ACTIONS_CLASS =
-    'relative flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover/feature:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100';
+    'grid shrink-0 grid-cols-[0fr] transition-[grid-template-columns] duration-200';
 
+  /**
+   * Наведение (или переход с клавиатуры) раздвигает колонку, и название уступает
+   * кнопкам место. На сенсорном экране ховера нет — там кнопки развёрнуты
+   * всегда, иначе правку и удаление особенности с телефона не найти.
+   */
+  const ROW_ACTIONS_REVEAL_CLASS =
+    'group-hover/feature:grid-cols-[1fr] focus-within:grid-cols-[1fr] pointer-coarse:grid-cols-[1fr]';
+
+  /**
+   * Внутренняя обёртка кнопок: `overflow-hidden` обнуляет минимальную ширину
+   * ячейки грида (без него `0fr` не схлопнется под содержимое), а прозрачность
+   * убирает кнопки из виду, пока колонка ещё разъезжается.
+   */
+  const ROW_ACTIONS_INNER_CLASS =
+    'flex items-center gap-1 overflow-hidden pl-2 opacity-0 transition-opacity duration-200 group-hover/feature:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100';
+
+  /**
+   * Без прав на правку (лист чужой или заперт замком) колонка не разъезжается
+   * вовсе: раздвигать строку ради пустоты на месте спрятанных кнопок незачем.
+   */
+  const rowActionsClass = computed(() =>
+    canEdit.value
+      ? `${ROW_ACTIONS_CLASS} ${ROW_ACTIONS_REVEAL_CLASS}`
+      : ROW_ACTIONS_CLASS,
+  );
+
+  /** Отмеченные чипами источники; пусто — список не сужается. */
+  const pickedOrigins = ref(new Set<FeatureOriginGroup>());
+
+  /** Источники, которые вкладка уже показывает: по ним и отбирают. */
+  const availableOrigins = computed(() =>
+    getFeatureOriginGroups(props.features),
+  );
+
+  /**
+   * Действующий отбор: источники считаются от доступных, поэтому выбор, которого
+   * в списке уже нет (особенность убрали вместе с последним её источником), сам
+   * собой перестаёт сужать список.
+   */
+  const featureFilter = computed<FeatureTabFilter>(() => ({
+    origins: availableOrigins.value.filter((originGroup) =>
+      pickedOrigins.value.has(originGroup),
+    ),
+  }));
+
+  /** Список сужен: отбор есть что сбросить. */
+  const hasActiveFilter = computed(
+    () => featureFilter.value.origins.length > 0,
+  );
+
+  /** Ряд отбора: одного источника на весь список мало, отбирать нечего. */
+  const hasFilterControls = computed(() => availableOrigins.value.length > 1);
+
+  /**
+   * Чипы источников, которые есть в списке: подпись целиком («Вид», «Черта») —
+   * ряд коротких слов помещается и на узком листе. Чипы набираются по одному,
+   * повторное нажатие снимает источник с отбора.
+   */
+  const originChips = computed(() =>
+    availableOrigins.value.map((originGroup) => {
+      const isPicked = featureFilter.value.origins.includes(originGroup);
+
+      return {
+        originGroup,
+        label: FEATURE_ORIGIN_LABELS[originGroup],
+        tooltip: FEATURE_ORIGIN_GROUP_HINTS[originGroup],
+        isPicked,
+        chipClass: getFilterChipClass(isPicked),
+      };
+    }),
+  );
+
+  /** Нажатие на чип источника: тем же чипом источник с отбора и снимается. */
+  function handleOriginPick(originGroup: FeatureOriginGroup) {
+    if (pickedOrigins.value.has(originGroup)) {
+      pickedOrigins.value.delete(originGroup);
+
+      return;
+    }
+
+    pickedOrigins.value.add(originGroup);
+  }
+
+  /** Нажатие на «Сбросить»: список возвращается целиком. */
+  function handleFilterReset() {
+    pickedOrigins.value.clear();
+  }
+
+  /**
+   * Список идёт группами источников, а не тем порядком, в котором особенности
+   * попали в лист: вид, класс, черты, свои записи. Вперемешку их читать
+   * невозможно — особенности вида оказывались между умениями класса.
+   */
   const displayRows = computed(() =>
-    props.features.map((feature) => {
+    sortFeaturesByOriginGroup(
+      props.features.filter((feature) =>
+        matchesFeatureFilter(feature, featureFilter.value),
+      ),
+    ).map((feature) => {
       const isExpanded = expandedIds.value.has(feature.id);
 
       return {
@@ -86,48 +192,98 @@
       };
     }),
   );
+
+  /**
+   * Подпись пустого места вкладки: пустой список либо отбор, под который ничего
+   * не подошло; '' — списку есть что показать.
+   */
+  const emptyLabel = computed(() => {
+    if (!props.features.length) {
+      return SHEET_TAB_EMPTY_LABELS.features;
+    }
+
+    return displayRows.value.length ? '' : SHEET_FILTER_LABELS.empty;
+  });
 </script>
 
 <template>
   <div class="flex flex-col gap-3 pt-2">
-    <div class="flex justify-end">
-      <UDropdownMenu
-        :items="addMenuItems"
-        :content="{ align: 'end' }"
+    <!-- Отбор стоит в одном ряду с «Добавить»: своей строки ряд из нескольких
+      коротких чипов не стоит. Чипы идут от самого списка — источника, которого
+      в нём нет, нет и среди чипов -->
+    <div class="flex flex-wrap items-center gap-2">
+      <div
+        v-if="hasFilterControls"
+        class="flex flex-wrap items-center gap-x-1.5 gap-y-2"
       >
-        <UButton
-          icon="tabler:plus"
-          label="Добавить"
-          trailing-icon="tabler:chevron-down"
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          :class="editControlClass"
-        />
-      </UDropdownMenu>
+        <UTooltip
+          v-for="originChip in originChips"
+          :key="originChip.originGroup"
+          :text="originChip.tooltip"
+        >
+          <button
+            type="button"
+            :class="originChip.chipClass"
+            :aria-pressed="originChip.isPicked"
+            @click.left.exact.prevent="handleOriginPick(originChip.originGroup)"
+          >
+            {{ originChip.label }}
+          </button>
+        </UTooltip>
+
+        <!-- Сброс появляется только при отборе: пустой кнопке в ряду делать
+          нечего -->
+        <UTooltip
+          v-if="hasActiveFilter"
+          :text="SHEET_FILTER_LABELS.resetHint"
+        >
+          <UButton
+            icon="tabler:filter-off"
+            :label="SHEET_FILTER_LABELS.reset"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            @click.left.exact.prevent="handleFilterReset"
+          />
+        </UTooltip>
+      </div>
+
+      <div class="ml-auto">
+        <UDropdownMenu
+          :items="addMenuItems"
+          :content="{ align: 'end' }"
+        >
+          <UButton
+            icon="tabler:plus"
+            label="Добавить"
+            trailing-icon="tabler:chevron-down"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            :class="editControlClass"
+          />
+        </UDropdownMenu>
+      </div>
     </div>
 
     <template v-if="displayRows.length">
       <div
         v-for="feature in displayRows"
         :key="feature.id"
-        class="flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-warning/60"
+        class="flex flex-col rounded-lg border border-default/50 bg-elevated/20 transition-colors hover:border-primary/60"
       >
-        <div
-          class="group/feature relative flex w-full items-center gap-2 px-3 py-2"
-        >
-          <!-- Кнопка-раскрытие растянута на всю строку: разворачивают описание
-            и стрелка, и поля строки, и пустое место у названия. Кнопки правки
-            идут в разметке после неё и позиционированы — остаются сверху. -->
+        <div class="group/feature flex w-full items-center">
+          <!-- Раскрытие описания повешено на две настоящие кнопки — название с
+            пустым местом строки и стрелку. Растянутого на всю строку
+            прозрачного слоя тут нет: кнопки правки стоят между ними, и слой
+            пришлось бы перекрывать позиционированием, а поверх него нажатия по
+            стрелке уже не доходили. -->
           <button
             type="button"
-            class="absolute inset-0 cursor-pointer rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            class="flex min-w-0 grow cursor-pointer items-center gap-3 rounded-lg py-2 pl-3 text-left focus-visible:outline-2 focus-visible:outline-primary"
             :aria-expanded="feature.isExpanded"
-            :aria-label="`Особенность: ${feature.name}`"
             @click.left.exact.prevent="toggleFeature(feature.id)"
-          />
-
-          <div class="flex min-w-0 grow items-center gap-3">
+          >
             <UBadge
               v-if="feature.showBadge"
               size="sm"
@@ -138,47 +294,62 @@
               {{ feature.originLabel }}
             </UBadge>
 
-            <span class="grow truncate text-sm font-medium text-highlighted">
+            <span
+              class="min-w-0 grow truncate text-sm font-medium text-highlighted"
+            >
               {{ feature.name }}
             </span>
+
+            <span
+              v-if="feature.choice"
+              class="shrink-0 text-xs text-primary"
+            >
+              {{ feature.choice }}
+            </span>
+          </button>
+
+          <div :class="rowActionsClass">
+            <div :class="ROW_ACTIONS_INNER_CLASS">
+              <UButton
+                icon="tabler:pencil"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                square
+                :class="editControlClass"
+                :aria-label="`Редактировать особенность: ${feature.name}`"
+                @click.left.exact.prevent="handleEditClick(feature.id)"
+              />
+
+              <UButton
+                icon="tabler:trash"
+                color="error"
+                variant="ghost"
+                size="xs"
+                square
+                :class="editControlClass"
+                :aria-label="`Удалить особенность: ${feature.name}`"
+                @click.left.exact.prevent="handleRemove(feature.id)"
+              />
+            </div>
           </div>
 
-          <span
-            v-if="feature.choice"
-            class="shrink-0 text-xs text-warning"
+          <!-- Стрелка повторяет действие кнопки с названием, поэтому из обхода
+            с клавиатуры и от скринридера скрыта: иначе одна и та же особенность
+            занимала бы две остановки табом. -->
+          <button
+            type="button"
+            tabindex="-1"
+            aria-hidden="true"
+            class="flex shrink-0 cursor-pointer items-center rounded-lg py-2 pr-3 pl-2"
+            @click.left.exact.prevent="toggleFeature(feature.id)"
           >
-            {{ feature.choice }}
-          </span>
-
-          <div :class="ROW_ACTIONS_CLASS">
-            <UButton
-              icon="tabler:pencil"
-              color="neutral"
-              variant="ghost"
-              size="xs"
-              square
-              :class="editControlClass"
-              :aria-label="`Редактировать особенность: ${feature.name}`"
-              @click.left.exact.prevent="handleEditClick(feature.id)"
+            <UIcon
+              name="tabler:chevron-down"
+              class="size-4 text-muted transition-transform"
+              :class="feature.chevronClass"
             />
-
-            <UButton
-              icon="tabler:trash"
-              color="error"
-              variant="ghost"
-              size="xs"
-              square
-              :class="editControlClass"
-              :aria-label="`Удалить особенность: ${feature.name}`"
-              @click.left.exact.prevent="handleRemove(feature.id)"
-            />
-          </div>
-
-          <UIcon
-            name="tabler:chevron-down"
-            class="size-4 shrink-0 text-muted transition-transform"
-            :class="feature.chevronClass"
-          />
+          </button>
         </div>
 
         <div
@@ -206,7 +377,7 @@
               {{ SHEET_FEATURE_ROW_LABELS.choice }}
             </span>
 
-            <span class="font-medium text-warning">{{ feature.choice }}</span>
+            <span class="font-medium text-primary">{{ feature.choice }}</span>
           </div>
 
           <MarkupRender
@@ -225,11 +396,13 @@
       </div>
     </template>
 
+    <!-- Пустое место объявляет о себе подписью: пустой список особенностей либо
+      отбор, под который ничего не подошло -->
     <div
-      v-else
+      v-if="emptyLabel"
       class="flex h-64 items-center justify-center rounded-lg border border-dashed border-default text-sm text-dimmed"
     >
-      {{ SHEET_TAB_EMPTY_LABELS.features }}
+      {{ emptyLabel }}
     </div>
   </div>
 </template>

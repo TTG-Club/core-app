@@ -16,7 +16,7 @@
     props.rows.map((row) => ({
       ...row,
       icon: row.proficient ? 'tabler:circle-filled' : 'tabler:circle',
-      iconClass: row.proficient ? 'text-warning' : 'text-muted',
+      iconClass: row.proficient ? 'text-primary' : 'text-muted',
     })),
   );
 </script>
@@ -27,7 +27,7 @@
       <div
         v-for="row in displayRows"
         :key="row.key"
-        class="relative flex items-center gap-2 rounded border border-transparent bg-default/30 px-2 py-1.5 transition-colors hover:border-warning/60 hover:bg-accented/40"
+        class="relative flex items-center gap-2 rounded border border-transparent bg-default/30 px-2 py-1.5 transition-colors hover:border-primary/60 hover:bg-accented/40"
       >
         <button
           type="button"
@@ -37,7 +37,7 @@
         >
           <UIcon
             :name="row.icon"
-            class="size-3 shrink-0 transition-colors hover:text-warning"
+            class="size-3 shrink-0 transition-colors hover:text-primary"
             :class="row.iconClass"
           />
         </button>

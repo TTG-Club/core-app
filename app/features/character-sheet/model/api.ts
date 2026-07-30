@@ -4,7 +4,9 @@ import type {
   CharacterInventoryItem,
   CharacterSheetDetail,
   CharacterSheetListPage,
+  FeatSummary,
   FeatureDescriptionNode,
+  ItemSummary,
   SavedCharacterSheet,
   SavedCharacterSheetListPage,
 } from './types';
@@ -22,10 +24,22 @@ import {
   CHARACTER_SHEET_API_PATH,
   CHARACTER_SHEET_SAVED_API_PATH,
   CHARACTER_SHEET_SHARED_API_PATH,
+  FEATS_DETAIL_BASE_PATH,
+  ITEMS_DETAIL_BASE_PATH,
+  ITEMS_RAW_DETAIL_PATH_SUFFIX,
   SHEET_UNKNOWN_ERROR_MESSAGE,
   SPELLS_DETAIL_BASE_PATH,
+  SPELLS_RAW_DETAIL_PATH_SUFFIX,
 } from './constants';
-import { parseCatalogDescription, parseCatalogSpellDetail } from './schemas';
+import {
+  parseCatalogDescription,
+  parseCatalogSpellDetail,
+  parseFeatDetail,
+  parseItemArmor,
+  parseItemDetail,
+  parseItemWeapon,
+  parseSpellDamageFormulas,
+} from './schemas';
 import { getInventoryItemDetailPath } from './utils';
 
 /**
@@ -47,6 +61,26 @@ export function getSheetErrorMessage(error: unknown): string {
   }
 
   return SHEET_UNKNOWN_ERROR_MESSAGE;
+}
+
+/**
+ * Загружает и валидирует детальную информацию о черте из каталога.
+ *
+ * @param featUrl URL черты в каталоге.
+ * @returns разобранная черта или null, если ответ не соответствует контракту.
+ */
+export async function fetchFeatDetail(
+  featUrl: string,
+): Promise<FeatSummary | null> {
+  const response = await $fetch<unknown>(
+    `${FEATS_DETAIL_BASE_PATH}/${featUrl}`,
+    {
+      method: 'GET',
+      retry: 0,
+    },
+  );
+
+  return parseFeatDetail(response);
 }
 
 /**
@@ -200,6 +234,65 @@ export async function fetchInventoryItemDescription(
 }
 
 /**
+ * Боевые параметры предмета (доспех, оружие) из «сырого» ответа раздела:
+ * публичная деталь их не отдаёт, а без чисел не посчитать ни КД, ни бонус
+ * атаки. Ошибку глотаем — предмет добавится без боевых данных.
+ *
+ * @param itemUrl слаг предмета в каталоге.
+ * @param summary разобранная деталь предмета (категория и типы — для щита).
+ * @returns параметры доспеха и оружия.
+ */
+async function fetchItemCombatStats(
+  itemUrl: string,
+  summary: ItemSummary,
+): Promise<Pick<ItemSummary, 'armor' | 'weapon'>> {
+  try {
+    const response = await $fetch<unknown>(
+      `${ITEMS_DETAIL_BASE_PATH}/${itemUrl}/${ITEMS_RAW_DETAIL_PATH_SUFFIX}`,
+      { method: 'GET', retry: 0 },
+    );
+
+    // Разбираем только профиль своей категории: редактор шлёт заготовки
+    // armor/weapon даже у чужих категорий (пустые объекты), поэтому чужой
+    // профиль дал бы ложные КД/атаку.
+    return {
+      armor:
+        summary.category === 'ARMOR' ? parseItemArmor(response, summary) : null,
+      weapon: summary.category === 'WEAPON' ? parseItemWeapon(response) : null,
+    };
+  } catch {
+    return { armor: null, weapon: null };
+  }
+}
+
+/**
+ * Деталь предмета раздела «Предметы» вместе с боевыми параметрами доспеха и
+ * оружия. Общая для модалки добавления предметов и импорта чужого листа.
+ *
+ * @param itemUrl слаг предмета в каталоге.
+ * @returns деталь предмета; null — ответ не распознан.
+ */
+export async function fetchItemSummary(
+  itemUrl: string,
+): Promise<ItemSummary | null> {
+  const response = await $fetch<unknown>(
+    `${ITEMS_DETAIL_BASE_PATH}/${itemUrl}`,
+    { method: 'GET', retry: 0 },
+  );
+
+  const summary = parseItemDetail(response);
+
+  if (
+    !summary
+    || (summary.category !== 'ARMOR' && summary.category !== 'WEAPON')
+  ) {
+    return summary;
+  }
+
+  return { ...summary, ...(await fetchItemCombatStats(itemUrl, summary)) };
+}
+
+/**
  * Характеристики и описание каталожного заклинания из раздела «Заклинания» —
  * то же, чего не хватает своей копии. Отказ запроса, как и у предмета, не
  * срывает копирование.
@@ -219,6 +312,29 @@ export async function fetchCatalogSpellDetail(
     return parseCatalogSpellDetail(response);
   } catch {
     return null;
+  }
+}
+
+/**
+ * Формулы урона каталожного заклинания. Публичная деталь их не отдаёт — как и
+ * боевые числа предметов, они лежат в «сыром» ответе раздела. Отказ запроса не
+ * ломает вкладку: заклинание останется без плитки урона.
+ *
+ * @param spellUrl слаг заклинания в каталоге.
+ * @returns формулы урона; пустой список — урона нет или он не загрузился.
+ */
+export async function fetchSpellDamageFormulas(
+  spellUrl: string,
+): Promise<string[]> {
+  try {
+    const response = await $fetch<unknown>(
+      `${SPELLS_DETAIL_BASE_PATH}/${spellUrl}/${SPELLS_RAW_DETAIL_PATH_SUFFIX}`,
+      { method: 'GET', retry: 0 },
+    );
+
+    return parseSpellDamageFormulas(response);
+  } catch {
+    return [];
   }
 }
 

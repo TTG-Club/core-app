@@ -2,11 +2,7 @@
   import type { CharacterClassResource } from '../../model';
 
   import { useCharacterSheet } from '../../composables';
-  import {
-    RESOURCE_RECOVERY_ICONS,
-    RESOURCE_RECOVERY_LABELS,
-    SHEET_EMPTY_LABELS,
-  } from '../../model';
+  import { getResourceRecoveryBadges, SHEET_EMPTY_LABELS } from '../../model';
   import SheetPanel from './SheetPanel.vue';
 
   const props = defineProps<{
@@ -61,8 +57,7 @@
   const displayRows = computed(() =>
     props.resources.map((resource) => ({
       ...resource,
-      recoveryIcon: RESOURCE_RECOVERY_ICONS[resource.recovery],
-      recoveryLabel: RESOURCE_RECOVERY_LABELS[resource.recovery],
+      recoveryBadges: getResourceRecoveryBadges(resource),
       isMinusDisabled: resource.current <= 0,
       isPlusDisabled: resource.current >= resource.max,
     })),
@@ -85,7 +80,7 @@
       >
         <UIcon
           name="tabler:settings"
-          class="size-3.5 text-muted transition-colors hover:text-warning"
+          class="size-3.5 text-muted transition-colors hover:text-primary"
         />
       </button>
     </template>
@@ -95,7 +90,7 @@
         <div
           v-for="row in displayRows"
           :key="row.id"
-          class="flex items-center gap-1.5 rounded bg-default/30 px-2 py-1.5"
+          class="flex flex-wrap items-center gap-1.5 rounded bg-default/30 px-2 py-1.5"
         >
           <UTooltip :text="row.name">
             <span
@@ -134,15 +129,24 @@
             @click.left.exact.prevent="handleAdjust(row.id, 1)"
           />
 
-          <UTooltip
-            :text="row.recoveryLabel"
-            class="ml-auto"
-          >
-            <UIcon
-              :name="row.recoveryIcon"
-              class="size-4 text-muted"
-            />
-          </UTooltip>
+          <div class="ml-auto flex items-center gap-1.5">
+            <UTooltip
+              v-for="badge in row.recoveryBadges"
+              :key="badge.rest"
+              :text="badge.hint"
+            >
+              <span class="flex cursor-help items-center gap-0.5 text-muted">
+                <UIcon
+                  :name="badge.icon"
+                  class="size-4 shrink-0"
+                />
+
+                <span class="text-[10px] leading-none font-bold">
+                  {{ badge.text }}
+                </span>
+              </span>
+            </UTooltip>
+          </div>
         </div>
       </template>
 

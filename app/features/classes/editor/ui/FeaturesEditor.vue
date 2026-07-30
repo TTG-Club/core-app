@@ -54,6 +54,7 @@
       additional: '',
       hideInSubclasses: false,
       abilityImprovement: false,
+      fightingStyleChoice: false,
       scaling: [],
       options: [],
       abilityBonus: {
@@ -138,7 +139,7 @@
             />
 
             <UFormField
-              class="col-span-full md:col-span-18"
+              class="col-span-full md:col-span-12"
               label="Подсказка"
               name="additional"
             >
@@ -155,6 +156,17 @@
             >
               <UCheckbox
                 v-model="feat.abilityImprovement"
+                description="Да"
+              />
+            </UFormField>
+
+            <UFormField
+              class="col-span-full md:col-span-6"
+              label="Даёт выбор боевого стиля?"
+              name="fightingStyleChoice"
+            >
+              <UCheckbox
+                v-model="feat.fightingStyleChoice"
                 description="Да"
               />
             </UFormField>

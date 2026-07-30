@@ -1,9 +1,18 @@
 import type { ComputedRef, Ref } from 'vue';
 import type { LocationQuery } from 'vue-router';
 
-import type { Filter, FilterGroups } from '~infrastructure/filter';
+import type {
+  Filter,
+  FilterGroup,
+  FilterGroups,
+  FilterItem,
+} from '~infrastructure/filter';
 
-import type { SpellCatalogItem, SpellClassOption } from '../model';
+import type {
+  SpellCatalogItem,
+  SpellCatalogPreset,
+  SpellClassOption,
+} from '../model';
 
 import {
   buildSearchQuery,
@@ -59,6 +68,63 @@ const RITUAL_GROUP_KEY = 'ritual';
 const FLAG_VALUE_ID = '1';
 
 /**
+ * Отмечает выбранными значения группы, прошедшие проверку. Остальные значения
+ * не трогаются: пресет только доставляет выбор, а не сбрасывает чужой.
+ *
+ * @param group группа фильтра.
+ * @param isPreset значение входит в пресет.
+ * @returns копия группы с проставленным выбором.
+ */
+function selectGroupItems(
+  group: FilterGroup,
+  isPreset: (filterItem: FilterItem) => boolean,
+): FilterGroup {
+  return {
+    ...group,
+    values: getGroupItems(group).map((filterItem) =>
+      isPreset(filterItem) ? { ...filterItem, selected: true } : filterItem,
+    ),
+  };
+}
+
+/**
+ * Проставляет пресет в загруженных фильтрах: доступные персонажу круги и его
+ * класс. Класс сопоставляется строго по слагу — им же сервер помечает значения
+ * группы `className`; совпадения нет (класс не заклинатель, скрыт настройкой
+ * источников) — группа остаётся нетронутой.
+ *
+ * @param filter фильтры из ответа сервера.
+ * @param preset начальный выбор кругов и класса.
+ * @returns копия фильтров с проставленным выбором.
+ */
+function applyCatalogPreset(
+  filter: Filter,
+  preset: SpellCatalogPreset,
+): Filter {
+  const presetLevelIds = new Set(preset.levels.map(String));
+
+  return {
+    ...filter,
+    filters: filter.filters.map((group) => {
+      if (group.key === LEVEL_GROUP_KEY && presetLevelIds.size) {
+        return selectGroupItems(group, (filterItem) =>
+          presetLevelIds.has(String(filterItem.id)),
+        );
+      }
+
+      if (group.key === CLASS_GROUP_KEY && preset.classUrl) {
+        return selectGroupItems(
+          group,
+          (filterItem) => String(filterItem.id) === preset.classUrl,
+        );
+      }
+
+      return group;
+    }),
+  };
+}
+
+/**
  * Постраничный поиск по каталогу заклинаний для модалки добавления.
  *
  * Повторяет подход раздела «Заклинания»: фильтры и поиск уходят на сервер,
@@ -67,8 +133,13 @@ const FLAG_VALUE_ID = '1';
  * Состояние фильтра одно на быстрые чипы и дровер «Все фильтры»: чипы — это
  * ярлыки к группам `level`/`className`/`concentration`/`ritual`, поэтому выбор
  * в дровере подсвечивает чипы и наоборот.
+ *
+ * @param preset начальный выбор кругов и класса; не задан — каталог открывается
+ * без фильтров.
  */
-export function useSpellCatalogSearch(): SpellCatalogSearch {
+export function useSpellCatalogSearch(
+  preset?: SpellCatalogPreset,
+): SpellCatalogSearch {
   const searchTerm = ref('');
 
   const filterState = ref<Filter | undefined>(undefined);
@@ -419,7 +490,7 @@ export function useSpellCatalogSearch(): SpellCatalogSearch {
    * Первая загрузка каталога. Ждёт фильтры: их ответ несёт глобальный выбор
    * источников (профиль → «Настройка источников»), иначе первая выдача пришла
    * бы по всем книгам. Ошибка фильтров каталог не блокирует — тогда поиск идёт
-   * без ограничения по источникам.
+   * без ограничения по источникам (и без пресета: проставлять его не во что).
    */
   async function loadInitialPage(): Promise<void> {
     await filtersRequest;
@@ -427,7 +498,9 @@ export function useSpellCatalogSearch(): SpellCatalogSearch {
     // Рабочая копия фильтра инициализируется из загруженных дефолтов один раз;
     // дальнейшие правки иммутабельны, поэтому кешированный ответ не мутируется.
     if (filtersRequest.data.value) {
-      filterState.value = filtersRequest.data.value;
+      filterState.value = preset
+        ? applyCatalogPreset(filtersRequest.data.value, preset)
+        : filtersRequest.data.value;
     }
 
     await reload();

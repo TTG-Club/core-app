@@ -21,10 +21,17 @@
 
   const imageUploaded = defineModel<string>();
 
-  const { uploadImage, removeImage } = useImageUpload({
+  // Наружу отдаём состояние загрузки: пока файл жмётся и льётся в S3, форма
+  // может заблокировать сабмит — иначе запись сохранится без «догоняющей»
+  // картинки (гонка «прикрепил и сразу опубликовал»).
+  const uploadingModel = defineModel<boolean>('uploading', { default: false });
+
+  const { isUploading, uploadImage, removeImage } = useImageUpload({
     section: () => section,
     maxSize: () => maxSize,
   });
+
+  syncRef(isUploading, uploadingModel, { direction: 'ltr' });
 
   /**
    * Загрузка выбранного (или перетащенного) файла.
@@ -75,6 +82,19 @@
     multiple: false,
     onDrop: (files) => handleFiles(files || []),
   });
+
+  /**
+   * Клик по дропзоне. Пока идёт загрузка, диалог выбора не открываем:
+   * `uploadImage` всё равно отбросит параллельный файл, а так дропзона
+   * честно выглядит занятой.
+   */
+  function handleDropZoneClick(): void {
+    if (isUploading.value) {
+      return;
+    }
+
+    openDialog();
+  }
 </script>
 
 <template>
@@ -86,9 +106,24 @@
         'rounded-lg border-2 border-dashed border-default hover:border-primary',
         isOverDropZone ? 'hover:border-primary' : undefined,
       ]"
-      @click.left.exact.prevent="() => openDialog()"
+      @click.left.exact.prevent="handleDropZoneClick"
     >
-      <span class="text-sm">
+      <span
+        v-if="isUploading"
+        class="flex items-center justify-center gap-2 text-sm"
+      >
+        <UIcon
+          name="tabler:loader-2"
+          class="size-4 animate-spin"
+        />
+
+        Загружаю изображение…
+      </span>
+
+      <span
+        v-else
+        class="text-sm"
+      >
         Перетащи или нажми сюда, чтобы загрузить картинку в форматах: .webp,
         .jpg, .jpeg, .png
       </span>

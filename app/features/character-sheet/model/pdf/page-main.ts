@@ -18,28 +18,30 @@ import {
   ABILITY_LABELS,
   ARMOR_PROFICIENCY_GROUPS,
   LANGUAGE_PROFICIENCY_GROUPS,
-  RESOURCE_RECOVERY_LABELS,
   SHEET_EMPTY_LABELS,
-  TOOL_PROFICIENCY_GROUPS,
   WEAPON_PROFICIENCY_GROUPS,
 } from '../constants';
 import {
   collapseProficiencies,
   getAbilityRows,
   getArmorClassValue,
+  getCharacterProficiencyBonus,
   getClassDisplayName,
   getFormattedBonus,
   getHitDicePools,
+  getInitiativeBonus,
   getPrimarySpeed,
-  getProficiencyBonus,
+  getResourceRecoverySummary,
   getSavingThrowRows,
   getSkillValue,
   getSpeciesDisplayName,
   getSpeedRows,
   getSpellcastingBreakdown,
+  getToolNames,
   getVisionRows,
   getWeaponAttackBonus,
   getWeaponDamage,
+  isMissingInventoryItem,
 } from '../utils';
 import {
   PDF_ABILITY_BOX_HEIGHT,
@@ -442,10 +444,7 @@ function drawProficienciesPanel(
     },
     {
       label: PDF_LABELS.toolProficiency,
-      values: collapseProficiencies(
-        proficiencies.tools,
-        TOOL_PROFICIENCY_GROUPS,
-      ),
+      values: getToolNames(proficiencies.tools),
     },
     {
       label: PDF_LABELS.languageProficiency,
@@ -548,7 +547,7 @@ function drawCombatTiles(
     },
     {
       label: PDF_LABELS.initiative,
-      value: getFormattedModifier(character.abilities.dexterity),
+      value: getFormattedBonus(getInitiativeBonus(character)),
     },
     {
       label: PDF_LABELS.speed,
@@ -562,7 +561,7 @@ function drawCombatTiles(
   const secondRow: CombatTile[] = [
     {
       label: PDF_LABELS.proficiencyBonus,
-      value: getFormattedBonus(getProficiencyBonus(character.level)),
+      value: getFormattedBonus(getCharacterProficiencyBonus(character)),
     },
     {
       label: PDF_LABELS.size,
@@ -774,8 +773,10 @@ function drawWeaponsPanel(
 
       const contentLeft = options.left + PDF_PANEL_PADDING;
 
+      // Оружия, которого не осталось (количество — ноль), в списке атак нет:
+      // им нельзя атаковать и на самом листе.
       const rows = character.inventory
-        .filter((item) => item.weapon !== null)
+        .filter((item) => item.weapon !== null && !isMissingInventoryItem(item))
         .map((item) => {
           const weapon = item.weapon;
 
@@ -784,7 +785,9 @@ function drawWeaponsPanel(
           }
 
           const attack = getWeaponAttackBonus(character, weapon);
-          const damage = getWeaponDamage(character, weapon);
+          // Урон печатаем по нынешнему хвату: универсальное оружие, взятое
+          // двумя руками, и на бумаге катит свою большую кость.
+          const damage = getWeaponDamage(character, weapon, item.twoHanded);
 
           return [
             item.name,
@@ -1018,10 +1021,10 @@ function drawClassResourcesPanel(
 
         cursor += PDF_ROW_HEIGHT;
 
-        // Способ восстановления — отдельной строкой: в скобках после названия он
-        // обрезался, а знать его нужно на каждом отдыхе.
+        // Восстановление — отдельной строкой: в скобках после названия оно
+        // обрезалось, а знать его нужно на каждом отдыхе.
         drawTextLine(page, {
-          text: RESOURCE_RECOVERY_LABELS[resource.recovery],
+          text: getResourceRecoverySummary(resource),
           left: contentLeft,
           top: cursor - 3,
           font: context.fonts.italic,

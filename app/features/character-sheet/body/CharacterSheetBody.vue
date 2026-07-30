@@ -5,9 +5,9 @@
     ProficiencyGroupKey,
     SavingThrowRow,
     SkillRow,
+    SpellDamageRoll,
   } from '../model';
 
-  import { useDiceRollHandler } from '~dice-roller/composables';
   import { ConfirmDialog } from '~initiative/ui-kit';
 
   import {
@@ -21,11 +21,11 @@
   import {
     ABILITY_LABELS,
     ARMOR_PROFICIENCY_GROUPS,
+    EMPTY_DAMAGE_ROLL_SOURCE,
     getAvailableInnateSpells,
     getWeaponAttackBonus,
-    getWeaponDamage,
+    getWeaponDamageSource,
     LANGUAGE_PROFICIENCY_GROUPS,
-    TOOL_PROFICIENCY_GROUPS,
   } from '../model';
   import CharacterSheetSkeleton from './CharacterSheetSkeleton.vue';
   import {
@@ -39,6 +39,7 @@
     SheetCurrencyModal,
     SheetCustomItemModal,
     SheetCustomSpellModal,
+    SheetDamageModal,
     SheetExperienceModal,
     SheetFeatAddModal,
     SheetFeatureAddModal,
@@ -53,6 +54,7 @@
     SheetMagicItemAddModal,
     SheetNameModal,
     SheetNoteModal,
+    SheetPreparedSpellsModal,
     SheetProficienciesPanel,
     SheetProficiencyGroupsModal,
     SheetRollModal,
@@ -68,6 +70,7 @@
     SheetSpellAddModal,
     SheetSpellcastingModal,
     SheetStatTile,
+    SheetToolProficienciesModal,
     SheetVisionModal,
     SheetWeaponProficienciesModal,
   } from './ui';
@@ -96,6 +99,7 @@
     savingThrowRows,
     skillRows,
     formattedProficiencyBonus,
+    initiativeBonus,
     formattedInitiative,
     armorClassValue,
     spellcastingBreakdown,
@@ -103,15 +107,20 @@
     totalWeight,
     carryingCapacity,
     setAbilityScore,
+    spendSpellSlot,
     toggleSavingThrowProficiency,
+    toggleSpellPrepared,
     toggleSpellSlot,
     cycleSkillProficiency,
     adjustClassResource,
     adjustInventoryItemQuantity,
     toggleInventoryItemEquipped,
+    toggleInventoryItemTwoHanded,
+    copyInnateSpellToSheet,
     copyInventoryItemToSheet,
     copySpellToSheet,
     removeFeature,
+    removeInnateSpell,
     removeInventoryItem,
     removeNote,
     removeSpell,
@@ -170,9 +179,6 @@
   const overlay = useOverlay();
 
   const toast = useToast();
-
-  // Урон оружия катится напрямую дайс-роллером — без модалки режимов броска.
-  const { handleRoll } = useDiceRollHandler();
 
   // Статус автосохранения пишет автосейв контейнера (страница/панель/drawer),
   // тело листа лишь показывает его в шапке.
@@ -311,6 +317,14 @@
     props: {
       title: '',
       modifier: 0,
+      ability: 'strength',
+    },
+  });
+
+  const damageModal = overlay.create(SheetDamageModal, {
+    props: {
+      title: '',
+      damage: EMPTY_DAMAGE_ROLL_SOURCE,
     },
   });
 
@@ -333,6 +347,8 @@
   const weaponProficienciesModal = overlay.create(
     SheetWeaponProficienciesModal,
   );
+
+  const toolProficienciesModal = overlay.create(SheetToolProficienciesModal);
 
   const speciesWizardModal = overlay.create(SheetSpeciesWizardModal);
 
@@ -384,6 +400,8 @@
 
   const spellcastingModal = overlay.create(SheetSpellcastingModal);
 
+  const preparedSpellsModal = overlay.create(SheetPreparedSpellsModal);
+
   const itemAddModal = overlay.create(SheetItemAddModal);
 
   const magicItemAddModal = overlay.create(SheetMagicItemAddModal);
@@ -408,6 +426,7 @@
     rollModal.open({
       title: `Проверка: ${ABILITY_LABELS[abilityKey]}`,
       modifier: getModifier(character.value.abilities[abilityKey]),
+      ability: abilityKey,
     });
   }
 
@@ -524,11 +543,7 @@
     }
 
     if (group === 'tools') {
-      proficiencyGroupsModal.open({
-        title: 'Владение инструментами',
-        target: 'tools',
-        groups: TOOL_PROFICIENCY_GROUPS,
-      });
+      toolProficienciesModal.open();
     }
 
     if (group === 'languages') {
@@ -543,7 +558,8 @@
   function handleInitiativeRoll() {
     rollModal.open({
       title: 'Инициатива',
-      modifier: getModifier(character.value.abilities.dexterity),
+      modifier: initiativeBonus.value,
+      ability: 'dexterity',
       actionLabel: 'Бросить инициативу',
     });
   }
@@ -552,6 +568,7 @@
     rollModal.open({
       title: `Спасбросок: ${ABILITY_LABELS[row.key]}`,
       modifier: row.value,
+      ability: row.key,
       actionLabel: 'Бросить спасбросок',
     });
   }
@@ -560,6 +577,7 @@
     rollModal.open({
       title: `Проверка: ${row.name}`,
       modifier: row.value,
+      ability: row.ability,
     });
   }
 
@@ -568,26 +586,49 @@
       return;
     }
 
+    const attack = getWeaponAttackBonus(character.value, inventoryItem.weapon);
+
     rollModal.open({
       title: `Атака: ${inventoryItem.name}`,
-      modifier: getWeaponAttackBonus(character.value, inventoryItem.weapon)
-        .value,
+      modifier: attack.value,
+      ability: attack.ability,
       actionLabel: 'Бросить атаку',
     });
   }
 
-  // Урон катится сразу: режимов преимущества у него нет, а доп. бонус к урону
-  // всегда можно докинуть в самом дайс-роллере.
   function handleItemDamageRoll(inventoryItem: CharacterInventoryItem) {
     const damage = inventoryItem.weapon
-      ? getWeaponDamage(character.value, inventoryItem.weapon)
+      ? getWeaponDamageSource(
+          character.value,
+          inventoryItem.weapon,
+          inventoryItem.twoHanded,
+        )
       : null;
 
     if (!damage) {
       return;
     }
 
-    handleRoll(damage.formula);
+    damageModal.open({ title: `Урон: ${inventoryItem.name}`, damage });
+  }
+
+  /**
+   * Бросок урона заклинанием: кроме кубов тратится ячейка его круга — бросок и
+   * есть накладывание. Ячейка уходит только после подтверждённого броска: окно
+   * настройки можно и закрыть, ничего не бросив. Заговорам и кругам, которых
+   * класс не даёт, тратить нечего.
+   */
+  async function handleSpellDamageRoll(roll: SpellDamageRoll) {
+    const isRolled = await damageModal.open({
+      title: roll.title,
+      damage: roll.damage,
+    }).result;
+
+    if (!isRolled) {
+      return;
+    }
+
+    spendSpellSlot(roll.level);
   }
 
   function handleVisionEdit() {
@@ -706,12 +747,24 @@
     void copySpellToSheet(spellUrl);
   }
 
+  function handleInnateSpellCopy(spellUrl: string) {
+    void copyInnateSpellToSheet(spellUrl);
+  }
+
   function handleSpellcastingEdit() {
     if (!ensureEditable()) {
       return;
     }
 
     spellcastingModal.open();
+  }
+
+  function handlePreparedSpellsEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    preparedSpellsModal.open();
   }
 
   function handleSettingsEdit() {
@@ -871,11 +924,11 @@
 
       <div class="relative flex items-center justify-center py-1">
         <div
-          class="h-px w-full bg-linear-to-r from-transparent via-warning/40 to-transparent"
+          class="h-px w-full bg-linear-to-r from-transparent via-primary/40 to-transparent"
         />
 
         <div
-          class="absolute size-2 rotate-45 border border-warning bg-default"
+          class="absolute size-2 rotate-45 border border-primary bg-default"
         />
       </div>
 
@@ -1010,9 +1063,11 @@
           @edit-spell="handleSpellEdit"
           @copy-spell="handleSpellCopy"
           @edit-spellcasting="handleSpellcastingEdit"
+          @edit-prepared-spells="handlePreparedSpellsEdit"
           @edit-currency="handleCurrencyEdit"
           @adjust-item-quantity="adjustInventoryItemQuantity"
           @toggle-item-equip="toggleInventoryItemEquipped"
+          @toggle-item-two-handed="toggleInventoryItemTwoHanded"
           @roll-item-attack="handleItemAttackRoll"
           @roll-item-damage="handleItemDamageRoll"
           @edit-feature="handleFeatureEdit"
@@ -1022,6 +1077,10 @@
           @remove-feature="removeFeature"
           @remove-item="removeInventoryItem"
           @remove-spell="removeSpell"
+          @copy-innate-spell="handleInnateSpellCopy"
+          @remove-innate-spell="removeInnateSpell"
+          @roll-spell-damage="handleSpellDamageRoll"
+          @toggle-spell-prepared="toggleSpellPrepared"
           @toggle-spell-slot="toggleSpellSlot"
         >
           <template #main>

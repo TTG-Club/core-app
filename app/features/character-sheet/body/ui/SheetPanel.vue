@@ -11,7 +11,7 @@
 
   const frameClass = computed(() => [
     props.interactive
-      ? 'transition-colors hover:border-warning/60 hover:bg-elevated/40'
+      ? 'transition-colors hover:border-primary/60 hover:bg-elevated/40'
       : undefined,
 
     // Свой @container только с короткой подписью: подпись переключаем по
@@ -43,12 +43,16 @@
       <slot name="title" />
 
       <template v-if="shortTitle">
-        <!-- Обе подписи в разметке: полная упирается в углы узкой плитки,
-          поэтому ниже 11rem показываем короткую. Скринридеру название группы
-          читается полностью в любом состоянии — из sr-only-дубля -->
-        <span class="@max-[11rem]:hidden">{{ title }}</span>
+        <!-- Обе подписи в разметке: полная в узкой плитке переносится на вторую
+          строку и разрывает обводку, поэтому короткую показываем только там, где
+          полная уже не влезает. Порог мерится по внутренней ширине рамки (так
+          работает container-query), а самой длинной подписи листа («Класс
+          доспеха») хватает 6.75rem вместе с отбивкой легенды — 7rem даёт запас
+          на другой шрифт. Скринридеру название группы читается полностью в
+          любом состоянии — из sr-only-дубля -->
+        <span class="whitespace-nowrap @max-[7rem]:hidden">{{ title }}</span>
 
-        <span class="@min-[11rem]:hidden">
+        <span class="@min-[7rem]:hidden">
           <span aria-hidden="true">{{ shortTitle }}</span>
 
           <span class="sr-only">{{ title }}</span>

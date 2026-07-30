@@ -6,13 +6,13 @@
   import { useCatalogSourceQuery, useCharacterSheet } from '../../composables';
   import {
     buildFeatFeature,
-    FEATS_DETAIL_BASE_PATH,
+    FEAT_SOURCES_ASYNC_DATA_KEY,
     FEATS_FILTERS_PATH,
     FEATS_SEARCH_PATH,
     FEATS_SELECT_PATH,
+    fetchFeatDetail,
     getFeatUrlFromFeatureId,
     parseFeatCatalog,
-    parseFeatDetail,
     parseRepeatableFeatUrls,
     SHEET_SEARCH_LABELS,
   } from '../../model';
@@ -45,7 +45,7 @@
   // черты из отключённых книг. Запрос ждём до списка: иначе первая выдача
   // пришла бы по всем источникам и мигнула лишними строками.
   const { sourceQuery } = await useCatalogSourceQuery(
-    'character-sheet:feat-sources',
+    FEAT_SOURCES_ASYNC_DATA_KEY,
     FEATS_FILTERS_PATH,
   );
 
@@ -211,16 +211,6 @@
     }
 
     draftUrls.value = nextUrls;
-  }
-
-  /** Загружает деталь черты по url; null — ответ не распознан. */
-  async function fetchFeatDetail(url: string): Promise<FeatSummary | null> {
-    const response = await $fetch<unknown>(`${FEATS_DETAIL_BASE_PATH}/${url}`, {
-      method: 'GET',
-      retry: 0,
-    });
-
-    return parseFeatDetail(response);
   }
 
   async function handleApply() {
@@ -391,7 +381,7 @@
               <UIcon
                 v-if="feat.isSelected"
                 name="tabler:check"
-                class="relative z-10 size-4 shrink-0 text-warning"
+                class="relative z-10 size-4 shrink-0 text-primary"
               />
             </div>
           </div>

@@ -68,53 +68,73 @@
     spell: SpellDrawer,
   } as const;
 
-  const url = node.attrs?.url?.toString();
-
-  if (!url) {
-    throw new Error(
-      `[Markup] Section link must have url: ${JSON.stringify(node)}`,
-    );
-  }
-
   // Type guard с использованием ключей из маппинга
   function isSectionLinkType(type: string): type is SectionLinkType {
     return type in DRAWER_COMPONENT_MAP;
   }
 
-  if (!isSectionLinkType(node.type)) {
-    throw new Error(`[Markup] Unknown section link type: ${node.type}`);
-  }
+  const url = node.attrs?.url?.toString() ?? '';
 
-  const sectionType: SectionLinkType = node.type;
-  const component: DrawerComponent = DRAWER_COMPONENT_MAP[sectionType];
+  const sectionType = isSectionLinkType(node.type) ? node.type : null;
 
   const overlay = useOverlay();
 
-  // Решение циклической зависимости через let и колбэк
-  const drawer: ReturnType<typeof overlay.create<DrawerComponent>> =
-    overlay.create(component, {
-      props: {
-        url,
-        onClose: () => {
-          drawer.close();
+  /**
+   * Дровер раздела: заводим его только под настоящую ссылку с адресом.
+   *
+   * @param component дровер того раздела, на который ведёт ссылка.
+   * @param drawerUrl адрес страницы раздела.
+   * @returns управление созданным дровером.
+   */
+  function createDrawer(component: DrawerComponent, drawerUrl: string) {
+    // Решение циклической зависимости через let и колбэк
+    const sectionDrawer: ReturnType<typeof overlay.create<DrawerComponent>> =
+      overlay.create(component, {
+        props: {
+          url: drawerUrl,
+          onClose: () => {
+            sectionDrawer.close();
+          },
         },
-      },
-      destroyOnClose: true,
-    });
+        destroyOnClose: true,
+      });
+
+    return sectionDrawer;
+  }
+
+  const drawer =
+    sectionType && url
+      ? createDrawer(DRAWER_COMPONENT_MAP[sectionType], url)
+      : null;
+
+  /**
+   * Ссылка без адреса раздела (её легко написать руками: `{@spell Огненный
+   * шар}` без `|url:`) или с незнакомым типом рисуется обычным текстом. Бросать
+   * тут нельзя: компонент разворачивается ВНЕ try/catch `MarkupRender`, и
+   * ошибка обрывает отрисовку целого описания, а не одной ссылки — блок с
+   * разметкой просто не появляется на экране. Так же рассуждает MarkupHeading
+   * про неверный `level:`.
+   */
+  if (!drawer) {
+    consola.warn(
+      `[Markup] Section link is rendered as plain text: ${JSON.stringify(node)}`,
+    );
+  }
 
   const isOpened = computed(() => {
-    if (import.meta.server) {
+    if (import.meta.server || !drawer) {
       return false;
     }
 
     return overlay.isOpen(drawer.id);
   });
 
-  const path = computed(() => MARKER_URL_MAP[sectionType]);
-  const to = computed(() => `/${path.value}/${url}`);
+  const to = computed(() =>
+    sectionType && url ? `/${MARKER_URL_MAP[sectionType]}/${url}` : '',
+  );
 
   function handleClick() {
-    drawer.open();
+    drawer?.open();
   }
 
   const children = computed(() =>
@@ -124,6 +144,7 @@
 
 <template>
   <ULink
+    v-if="drawer"
     :to="to"
     target="_self"
     :is-opened="isOpened"
@@ -135,4 +156,12 @@
       :key="index"
     />
   </ULink>
+
+  <template v-else>
+    <component
+      :is="vnode"
+      v-for="(vnode, index) in children"
+      :key="index"
+    />
+  </template>
 </template>

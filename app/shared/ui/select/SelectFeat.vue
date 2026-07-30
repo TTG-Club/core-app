@@ -43,6 +43,12 @@
       multiple?: boolean;
       categories?: Array<string>;
       excludeUrls?: Array<string>;
+      /**
+       * Идентификаторы разрешённых источников (`['PHB']`). Эндпоинт `/select`
+       * по источникам не фильтрует, поэтому отбор идёт на клиенте. Пустой
+       * список означает, что ограничения нет.
+       */
+      sources?: Array<string>;
       max?: number;
     }>(),
     {
@@ -50,6 +56,7 @@
       multiple: false,
       categories: undefined,
       excludeUrls: () => [],
+      sources: () => [],
       max: undefined,
     },
   );
@@ -67,6 +74,21 @@
 
   const excludeKey = computed<string>(() => props.excludeUrls.join(','));
 
+  const sourcesKey = computed<string>(() => props.sources.join(','));
+
+  /** Черта уже выбрана в модели (одиночный или множественный выбор). */
+  function isSelectedUrl(featUrl: string): boolean {
+    if (typeof model.value === 'string') {
+      return model.value === featUrl;
+    }
+
+    if (Array.isArray(model.value)) {
+      return model.value.includes(featUrl);
+    }
+
+    return false;
+  }
+
   const requestCategories = computed<string | undefined>(() => {
     if (categoriesList.value.length === 0) {
       return undefined;
@@ -76,7 +98,7 @@
   });
 
   const asyncDataKey = computed<string>(() => {
-    return `feats-select:${categoriesKey.value}:${excludeKey.value}`;
+    return `feats-select:${categoriesKey.value}:${excludeKey.value}:${sourcesKey.value}`;
   });
 
   const { data, status, refresh } = await useAsyncData<Array<FeatSelectItem>>(
@@ -95,23 +117,23 @@
       );
 
       const excluded = new Set(props.excludeUrls);
+      const allowedSources = new Set(props.sources);
 
       return featLinks
         .filter((feat) => {
-          if (!excluded.has(feat.url)) {
+          // если значение уже выбрано — оставляем его видимым
+          if (isSelectedUrl(feat.url)) {
             return true;
           }
 
-          // если значение уже выбрано — оставляем его видимым
-          if (typeof model.value === 'string') {
-            return model.value === feat.url;
+          if (
+            allowedSources.size > 0
+            && !allowedSources.has(feat.source.name.label)
+          ) {
+            return false;
           }
 
-          if (Array.isArray(model.value)) {
-            return model.value.includes(feat.url);
-          }
-
-          return false;
+          return !excluded.has(feat.url);
         })
         .map((feat) => {
           const sourceLabel = feat.source.name.label;
@@ -133,7 +155,7 @@
         });
     },
     {
-      watch: [searchQuery, categoriesKey, excludeKey],
+      watch: [searchQuery, categoriesKey, excludeKey, sourcesKey],
       dedupe: 'defer',
       lazy: true,
       default: () => [],

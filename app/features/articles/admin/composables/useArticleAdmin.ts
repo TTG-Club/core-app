@@ -70,18 +70,20 @@ export function useArticleAdmin(): {
         //
         // `preview ?? ''` — бэк возвращает пустой анонс из `/raw` как `null`
         // (при `@NotNull` на PUT это 400): нормализуем, чтобы эхо `null` из
-        // `/raw` не роняло PUT. Флаги публикации при простом переключении
-        // активности — всегда false: повторно постить в соцсети при
-        // снятии/возврате не нужно.
+        // `/raw` не роняло PUT. Флаги публикации эхо-каем как есть (только
+        // страхуем null у записей до миграции): их обнуление навсегда отключало
+        // бы синхронизацию уже опубликованного поста (долив обложки, правки).
+        // Дубля при этом не будет — повторный пост бэк отсекает по отметке
+        // об отправке (vkPostedAt и аналоги), а не по флагу.
         body: {
           ...raw,
           draft: false,
           active,
           accessibleByLink: active ? false : raw.accessibleByLink,
           preview: raw.preview ?? '',
-          publishToTelegram: false,
-          publishToDiscord: false,
-          publishToVk: false,
+          publishToTelegram: raw.publishToTelegram ?? false,
+          publishToDiscord: raw.publishToDiscord ?? false,
+          publishToVk: raw.publishToVk ?? false,
         },
       });
 

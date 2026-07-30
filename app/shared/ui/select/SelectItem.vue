@@ -31,8 +31,14 @@
 
   const excludeKey = computed<string>(() => props.excludeUrls.join(','));
 
+  // Ключ уникален для каждого экземпляра: на одной странице селектов предметов
+  // может быть несколько (например, строки стартового снаряжения класса), и общий
+  // ключ означал бы общее состояние useAsyncData — ответ соседнего селекта,
+  // запрошенный без поисковой строки, затирал бы отфильтрованный список.
+  const instanceId = useId();
+
   const asyncDataKey = computed<string>(
-    () => `items-select:${excludeKey.value}`,
+    () => `items-select:${instanceId}:${excludeKey.value}`,
   );
 
   const { data, status, refresh } = await useAsyncData<Array<ItemSelectItem>>(
@@ -77,7 +83,9 @@
     },
     {
       watch: [searchQuery, excludeKey],
-      dedupe: 'defer',
+      // cancel, а не defer: при defer запрос с новой поисковой строкой просто
+      // отбрасывается, если предыдущий ещё в полёте, и список остаётся нефильтрованным.
+      dedupe: 'cancel',
       lazy: true,
       default: () => [],
     },

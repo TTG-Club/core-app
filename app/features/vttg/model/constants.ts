@@ -4,6 +4,7 @@ import type {
   CarouselCard,
   FaqItem,
   FeatureItem,
+  VttgDownloadPlatform,
   VttgHeading,
   VttgHighlight,
 } from './types';
@@ -13,6 +14,38 @@ export const VTTG_SEO = {
   description:
     'VTTG — онлайн-платформа для игры в D&D 5e. Карты, броски кубиков, интеграция с ttg.club.',
 } as const;
+
+/** Эндпоинт последней сборки десктопного VTTG (версия + ссылка на установщик). */
+export const VTTG_DESKTOP_RELEASE_API_PATH = '/api/vttg/desktop/latest';
+
+/** Ключ useAsyncData последней сборки — общий, чтобы запрос ушёл один на страницу. */
+export const VTTG_DESKTOP_RELEASE_DATA_KEY = 'vttg-desktop-release';
+
+/**
+ * Платформы, на которых можно запустить VTTG. Готова только сборка под Windows —
+ * её версию и ссылку отдаёт канал обновлений. VDS и macOS ещё впереди, поэтому
+ * их кнопки выключены с пометкой «скоро».
+ */
+export const VTTG_DOWNLOAD_PLATFORMS: VttgDownloadPlatform[] = [
+  {
+    id: 'windows',
+    name: 'Windows',
+    icon: 'tabler:brand-windows',
+    ready: true,
+  },
+  {
+    id: 'vds',
+    name: 'VDS',
+    icon: 'tabler:server',
+    ready: false,
+  },
+  {
+    id: 'mac',
+    name: 'macOS',
+    icon: 'tabler:brand-apple',
+    ready: false,
+  },
+];
 
 export const VTTG_HERO_BACKGROUND = '/s3/vttgw/main-bg.webp';
 export const VTTG_HERO_VIDEO = '/s3/vttgw/video.webm';

@@ -14,7 +14,7 @@ export const DEFAULT_CHARACTER: Character = {
   size: null,
   features: [],
   spells: [],
-  spellcasting: { ability: null },
+  spellcasting: { ability: null, prepared: { custom: null, bonus: 0 } },
   spellSlots: [],
   characterClass: null,
   characterBackground: null,
@@ -23,7 +23,7 @@ export const DEFAULT_CHARACTER: Character = {
   inspiration: false,
   armorClass: {
     base: 10,
-    ability: 'dexterity',
+    abilities: ['dexterity'],
     natural: false,
     custom: false,
   },
@@ -96,5 +96,9 @@ export const DEFAULT_CHARACTER: Character = {
   customCurrencies: [],
   inventory: [],
   notes: [],
-  settings: { weaponAttackAbility: null },
+  settings: {
+    weaponAttackAbility: null,
+    customProficiencyBonus: 0,
+    customInitiativeBonus: 0,
+  },
 };

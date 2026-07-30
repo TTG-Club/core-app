@@ -107,8 +107,19 @@ export type RollMode = 'normal' | 'advantage' | 'disadvantage';
 /** Способ прироста максимума хитов за взятые уровни в модалке опыта. */
 export type HitPointsGainMode = 'average' | 'roll' | 'max';
 
-/** Тип восстановления ресурса класса. */
+/** Вид отдыха, восстанавливающего ресурсы и ячейки. */
 export type ResourceRecovery = 'short-rest' | 'long-rest';
+
+/** Сколько зарядов возвращает отдых: ничего, все или заданное число. */
+export type ResourceRecoveryMode = 'none' | 'all' | 'amount';
+
+/** Восстановление ресурса на одном виде отдыха. */
+export interface ResourceRecoveryRule {
+  mode: ResourceRecoveryMode;
+
+  /** Число возвращаемых зарядов; учитывается только при режиме `amount`. */
+  amount: number;
+}
 
 /** Ресурс класса (счётчик). */
 export interface CharacterClassResource {
@@ -118,9 +129,37 @@ export interface CharacterClassResource {
   /** Короткая подпись для строки на листе (например, «НС»). */
   shortLabel: string;
 
-  recovery: ResourceRecovery;
+  /** Что возвращает короткий отдых. */
+  shortRest: ResourceRecoveryRule;
+
+  /** Что возвращает продолжительный отдых. */
+  longRest: ResourceRecoveryRule;
+
   current: number;
   max: number;
+}
+
+/** Правило восстановления ресурса как поле формы и строка панели. */
+export interface ResourceRecoveryField {
+  /** Ключ правила в ресурсе класса. */
+  key: 'shortRest' | 'longRest';
+
+  /** Вид отдыха, к которому относится правило. */
+  rest: ResourceRecovery;
+}
+
+/** Компактная пометка восстановления ресурса в строке панели листа. */
+export interface ClassResourceRecoveryBadge {
+  /** Вид отдыха — он же ключ строки. */
+  rest: ResourceRecovery;
+
+  icon: string;
+
+  /** Короткая подпись: «все» или число зарядов. */
+  text: string;
+
+  /** Подсказка целиком: «Короткий отдых: 1 заряд». */
+  hint: string;
 }
 
 /** Класс доспеха персонажа. */
@@ -128,8 +167,12 @@ export interface CharacterArmorClass {
   /** Базовое значение КД без модификатора характеристики. */
   base: number;
 
-  /** Характеристика, чей модификатор прибавляется; null — без модификатора. */
-  ability: AbilityKey | null;
+  /**
+   * Характеристики, чьи модификаторы прибавляются к КД; пустой список — без
+   * модификаторов. По правилам это Ловкость, но безброневая защита варвара и
+   * монаха и песнь клинка добавляют вторую характеристику.
+   */
+  abilities: AbilityKey[];
 
   /** Природная ли броня. */
   natural: boolean;
@@ -187,6 +230,12 @@ export interface InventoryWeapon {
 
   /** Урон оружия; null — справочник его не отдал. */
   damage: InventoryWeaponDamage | null;
+
+  /**
+   * Урон свойства «Универсальное» — кость побольше, если взять оружие двумя
+   * руками; null — свойства у оружия нет (или лист сохранён до его появления).
+   */
+  versatileDamage: InventoryWeaponDamage | null;
 }
 
 /** Разбор бонуса атаки оружием. */
@@ -216,6 +265,46 @@ export interface WeaponDamage {
   typeLabel: string;
 }
 
+/** Группа костей урона одного номинала («2к6»). */
+export interface DamageDiceGroup {
+  /** Количество костей. */
+  count: number;
+
+  /** Номинал кости (6 — к6). */
+  faces: number;
+}
+
+/**
+ * Исходные данные броска урона для модалки настройки. Собирается и из оружия,
+ * и из заклинания: модалка не знает, откуда пришёл бросок, — ей нужны кости,
+ * бонусы и характеристика, чтобы дать их поменять.
+ */
+export interface DamageRollSource {
+  /** Нотация костей базового урона без бонусов («1к8», «8к6»). */
+  diceNotation: string;
+
+  /** Бонус урона, не зависящий от характеристики (собственный бонус оружия). */
+  flatBonus: number;
+
+  /** Характеристика, чей модификатор идёт в урон; null — модификатора нет. */
+  ability: AbilityKey | null;
+
+  /** Сколько раз модификатор характеристики входит в базовый урон. */
+  abilityModifierCount: number;
+
+  /** Название типа урона («Рубящий»); пустая строка — тип не указан. */
+  typeLabel: string;
+}
+
+/** Вклад одной характеристики в класс доспеха. */
+export interface ArmorClassAbilityBonus {
+  /** Характеристика, чей модификатор идёт в КД. */
+  ability: AbilityKey;
+
+  /** Модификатор характеристики. */
+  modifier: number;
+}
+
 /** Разбор итогового класса доспеха для модалки настройки. */
 export interface ArmorClassBreakdown {
   /** Итоговое значение КД. */
@@ -227,7 +316,11 @@ export interface ArmorClassBreakdown {
   /** Название учтённой брони; null — без брони (безброневой КД). */
   bodyArmorName: string | null;
 
-  /** КД тела: лучшая надетая броня либо безброневой `10 + Ловкость`. */
+  /**
+   * КД тела: лучшая надетая броня либо безброневой `10 + Ловкость`. В ручном
+   * режиме — само базовое значение, без модификаторов характеристик: они идут
+   * отдельными строками в `extraAbilities`.
+   */
   bodyArmorValue: number;
 
   /** Фактически применённый бонус Ловкости. */
@@ -238,6 +331,13 @@ export interface ArmorClassBreakdown {
 
   /** Бонус к КД от надетого щита; 0 — щита нет. */
   shieldBonus: number;
+
+  /**
+   * Характеристики КД, кроме Ловкости: их модификаторы идут сверх доспеха, ведь
+   * правило доспеха ограничивает только Ловкость. В ручном режиме — все
+   * выбранные характеристики.
+   */
+  extraAbilities: ArmorClassAbilityBonus[];
 }
 
 /** Ключ типа зрения. */
@@ -319,6 +419,22 @@ export interface CharacterSkill {
   proficiency: SkillProficiencyLevel;
 }
 
+/**
+ * Владение инструментом. В отличие от прочих владений хранится не строкой:
+ * инструменты живут в разделе «Предметы», и ссылка на предмет нужна, чтобы
+ * открыть его описание в дровере прямо из листа.
+ */
+export interface CharacterToolProficiency {
+  /** Подпись инструмента (она же попадает в PDF). */
+  name: string;
+
+  /**
+   * Относительный url предмета каталога (`thieves-tools-phb`); null —
+   * инструмента нет на сайте (свой инструмент игрока) либо он не распознан.
+   */
+  url: string | null;
+}
+
 /** Владения персонажа. */
 export interface CharacterProficiencies {
   /** Броня и снаряжение. */
@@ -331,7 +447,7 @@ export interface CharacterProficiencies {
   weaponMasteries: string[];
 
   /** Инструменты. */
-  tools: string[];
+  tools: CharacterToolProficiency[];
 
   /** Языки. */
   languages: string[];
@@ -339,6 +455,9 @@ export interface CharacterProficiencies {
 
 /** Ключ группы владений персонажа. */
 export type ProficiencyGroupKey = keyof CharacterProficiencies;
+
+/** Ключ группы владений, хранящейся плоским списком названий. */
+export type PlainProficiencyGroupKey = Exclude<ProficiencyGroupKey, 'tools'>;
 
 /** Группа каталога владений: пункт «вся группа целиком» и отдельные виды. */
 export interface ProficiencyCatalogGroup {
@@ -362,9 +481,37 @@ export interface WeaponProficiencyGroup extends ProficiencyCatalogGroup {
   key: 'simple' | 'martial';
 }
 
-/** Группа каталога инструментов в настройках владения. */
-export interface ToolProficiencyGroup extends ProficiencyCatalogGroup {
-  key: 'artisan' | 'gaming' | 'musical' | 'other';
+/**
+ * Признак оружия, которым проза владений класса сужает группу: «воинское оружие
+ * со свойством фехтовальное или лёгкое» (плут), «воинское рукопашное» (друид).
+ */
+export type WeaponTraitKey = 'finesse' | 'light' | 'melee' | 'ranged';
+
+/** Ключ группы каталога инструментов (категория раздела «Предметы»). */
+export type ToolProficiencyGroupKey =
+  | 'artisan'
+  | 'gaming'
+  | 'musical'
+  | 'other';
+
+/** Запись каталога инструментов: подпись и ссылка на предмет раздела. */
+export interface ToolCatalogEntry {
+  name: string;
+
+  /** url предмета каталога — по нему открывается описание. */
+  url: string;
+}
+
+/**
+ * Группа каталога инструментов для модалки владения. Своего списка инструментов
+ * у листа нет: группы целиком собираются из раздела «Предметы».
+ */
+export interface ToolCatalogGroup {
+  key: ToolProficiencyGroupKey;
+  title: string;
+
+  /** Виды инструментов группы. */
+  items: ToolCatalogEntry[];
 }
 
 /** Группа каталога языков в настройках владения. */
@@ -393,6 +540,39 @@ export interface CharacterInnateSpell {
   requiredLevel: number;
 }
 
+/** Черновик особенности или умения в форме создания своего вида или класса. */
+export interface CustomFeatureDraft {
+  /**
+   * Идентификатор строки формы; он же становится частью id особенности листа,
+   * поэтому две особенности с одинаковым названием не схлопываются.
+   */
+  id: string;
+
+  name: string;
+
+  /** Описание в хранимой разметке редактора. */
+  description: string;
+}
+
+/**
+ * Черновик строки «тип + дистанция» в форме своего вида: передвижение и зрение
+ * заводятся по одному нужному типу, а не всем списком сразу.
+ */
+export interface DistanceRowDraft {
+  /** Идентификатор строки формы; он же ключ списка. */
+  id: string;
+
+  /**
+   * Тип передвижения или зрения. Строкой, а не объединением ключей: строки
+   * общие для обоих списков, а сужение до точного набора делают
+   * `buildSpeedValuesFromRows` и `buildVisionValuesFromRows`.
+   */
+  key: string;
+
+  /** Дистанция в футах. */
+  value: number;
+}
+
 /** Выбранный класс персонажа. */
 export interface CharacterClass {
   url: string;
@@ -413,6 +593,22 @@ export interface CharacterClass {
 
   /** Номинал кости хитов класса (например, 10). */
   hitDie: number;
+
+  /**
+   * Прогрессия числа подготовленных заклинаний из таблицы класса и подкласса;
+   * пусто — класс подготовку не считает либо лист сохранён до появления поля
+   * (тогда число подготовленных заклинаний задаётся вручную).
+   */
+  preparedSpells: PreparedSpellsScaling[];
+}
+
+/** Число подготовленных заклинаний, доступное с указанного уровня. */
+export interface PreparedSpellsScaling {
+  /** Уровень персонажа, с которого действует значение. */
+  level: number;
+
+  /** Сколько заклинаний можно подготовить начиная с этого уровня. */
+  value: number;
 }
 
 /** Режим распределения прибавок к характеристикам от предыстории. */
@@ -432,6 +628,12 @@ export interface CharacterBackground {
 
 /** Происхождение особенности персонажа; none — добавлена вручную без источника. */
 export type FeatureOrigin = 'species' | 'lineage' | 'class' | 'feat' | 'none';
+
+/**
+ * Группа отбора особенностей по источнику: подвид отбирается вместе с видом —
+ * отдельного чипа под него на вкладке нет.
+ */
+export type FeatureOriginGroup = Exclude<FeatureOrigin, 'lineage'>;
 
 /** Узел описания особенности (элемент верхнего уровня разметки сайта). */
 export type FeatureDescriptionNode = string | SimpleTextNode | MarkerNode;
@@ -458,6 +660,12 @@ export interface CharacterFeature {
 
   /** Выбор игрока в особенности (например, цвет драконорождённого). */
   choice: string | null;
+}
+
+/** Отбор особенностей на вкладке особенностей. */
+export interface FeatureTabFilter {
+  /** Отобранные группы источников; пусто — список не сужается. */
+  origins: FeatureOriginGroup[];
 }
 
 /** Черта каталога в модалке добавления (ссылка из поиска раздела «Черты»). */
@@ -508,6 +716,13 @@ export interface CharacterSpell {
 
   /** Ритуальное заклинание; нет у записей, добавленных до этого поля. */
   ritual?: boolean;
+
+  /**
+   * Заклинание подготовлено (помечено значком на вкладке); нет у записей,
+   * добавленных до этого поля. Заговоры и врождённые заклинания подготовки не
+   * требуют, поэтому флага у них не бывает.
+   */
+  prepared?: boolean;
 
   /** Время накладывания; только у своих заклинаний. */
   castingTime?: string;
@@ -582,11 +797,61 @@ export interface CustomSpellDraft {
   description: FeatureDescriptionNode[];
 }
 
+/**
+ * Разбор одного броска урона заклинания из формул справочника
+ * (`8к6@dmg.fire`). Модификаторы характеристик в урон заклинания сами по себе
+ * не идут, поэтому формула — это то, что записал справочник.
+ */
+export interface SpellDamage {
+  /** Формула броска для дайс-роллера («8к6»). */
+  formula: string;
+
+  /**
+   * Нотация костей урона до подстановки модификатора заклинательной
+   * характеристики («8к6»): модалка настройки подставляет его сама, чтобы дать
+   * выбрать другую характеристику.
+   */
+  diceNotation: string;
+
+  /** Сколько раз модификатор заклинательной характеристики входит в формулу. */
+  abilityModifierCount: number;
+
+  /** Названия типов урона через «/» («Огненный»); '' — тип не распознан. */
+  typeLabel: string;
+
+  /**
+   * Условие, при котором катится именно этот бросок («Цель с полными хитами»);
+   * '' — условия нет. У заклинания бывает несколько взаимоисключающих формул.
+   */
+  conditionLabel: string;
+}
+
+/** Бросок урона заклинанием со всем, что нужно окну настройки и накладыванию. */
+export interface SpellDamageRoll {
+  /** Заголовок окна настройки («Урон: Огненный шар»). */
+  title: string;
+
+  /** Разбор броска урона. */
+  damage: DamageRollSource;
+
+  /** Круг заклинания: при броске тратится его ячейка. */
+  level: number;
+}
+
 /** Группа заклинаний одного круга для списка с разделителями. */
 export interface CharacterSpellGroup {
   level: number;
   label: string;
   spells: CharacterSpell[];
+}
+
+/** Отбор заклинаний на вкладке заклинаний. */
+export interface SpellTabFilter {
+  /** Показывать только подготовленные заклинания. */
+  preparedOnly: boolean;
+
+  /** Отобранные круги заклинаний; пусто — круги не сужаются. */
+  levels: number[];
 }
 
 /** Заклинание каталога в модалке добавления (расширенная ссылка). */
@@ -603,6 +868,19 @@ export interface SpellClassOption {
   name: string;
 }
 
+/**
+ * Начальный выбор фильтров каталога заклинаний по персонажу: круги, доступные
+ * на его уровне класса, и сам класс. Считается от листа, поэтому смена уровня
+ * или класса сразу меняет и пресет.
+ */
+export interface SpellCatalogPreset {
+  /** Доступные круги (0 — заговоры); пусто — класс заклинаний не даёт. */
+  levels: number[];
+
+  /** Слаг класса (он же id значения фильтра `className`); '' — класса нет. */
+  classUrl: string;
+}
+
 /** Настройки заклинательства персонажа. */
 export interface CharacterSpellcasting {
   /**
@@ -610,6 +888,41 @@ export interface CharacterSpellcasting {
    * персонажа).
    */
   ability: AbilityKey | null;
+
+  /** Настройка числа подготовленных заклинаний. */
+  prepared: CharacterPreparedSpells;
+}
+
+/** Настройка числа подготовленных заклинаний. */
+export interface CharacterPreparedSpells {
+  /**
+   * Своё число подготовленных заклинаний; null — считается по таблице класса.
+   */
+  custom: number | null;
+
+  /** Бонус к числу из таблицы класса (в режиме подсчёта по классу). */
+  bonus: number;
+}
+
+/** Разбор числа подготовленных заклинаний для вкладки и модалки настройки. */
+export interface PreparedSpellsBreakdown {
+  /**
+   * Итоговое число подготовленных заклинаний; null — не определено (класс его
+   * не считает, а своё значение не задано).
+   */
+  value: number | null;
+
+  /** Сколько заклинаний книги отмечено подготовленными сейчас. */
+  count: number;
+
+  /** Число из таблицы класса на текущем уровне; null — класс его не даёт. */
+  classValue: number | null;
+
+  /** Взято своё число: подсчёт по таблице класса выключен. */
+  custom: boolean;
+
+  /** Бонус к числу из таблицы класса. */
+  bonus: number;
 }
 
 /** Потраченные ячейки заклинаний одного круга. */
@@ -655,6 +968,16 @@ export interface CharacterSettings {
    * Фехтовальное и дальнобойное оружие всё равно бьёт от Ловкости.
    */
   weaponAttackAbility: AbilityKey | null;
+
+  /**
+   * Свой бонус мастерства сверх бонуса по уровню (0 — нет). Складывается с
+   * бонусом по уровню везде, где тот участвует: спасброски, навыки, атака
+   * оружием, заклинательство.
+   */
+  customProficiencyBonus: number;
+
+  /** Свой бонус к инициативе сверх модификатора Ловкости (0 — нет). */
+  customInitiativeBonus: number;
 }
 
 /** Разбор заклинательства для вкладки заклинаний и модалки настройки. */
@@ -676,6 +999,9 @@ export interface SpellcastingBreakdown {
 
   /** Бонус на попадание атакой заклинанием. */
   attackBonus: number;
+
+  /** Число подготовленных заклинаний с разбором его источников. */
+  prepared: PreparedSpellsBreakdown;
 }
 
 /** Опция автокомплита выбора вида. */
@@ -737,6 +1063,23 @@ export interface ClassFeatureSummary {
 
   /** Особенность подкласса (а не базового класса). */
   isSubclass: boolean;
+
+  /** Умение даёт выбор одной черты категории «Боевой стиль». */
+  fightingStyleChoice: boolean;
+
+  /**
+   * Умение даёт выбор черты за улучшение характеристик (D&D 2024 «Улучшение
+   * характеристик»): игрок берёт черту, а черта «Улучшение характеристик» ещё и
+   * распределяет прибавки к характеристикам.
+   */
+  abilityImprovement: boolean;
+
+  /**
+   * Уровни повторного получения умения из таблицы прогрессии: справочник даёт
+   * умение один раз, а повторы (у улучшения характеристик — 6, 8, 12 …) кладёт
+   * в `scaling`.
+   */
+  scalingLevels: number[];
 }
 
 /** Колонка таблицы прогрессии класса (для вывода ресурсов). */
@@ -810,6 +1153,12 @@ export interface ClassChoice {
 
   /** Явные опции из прозы; пусто — резолвятся по типу в визарде. */
   listed: string[];
+
+  /**
+   * Группы каталога инструментов, из которых идёт выбор («один вид ремесленных
+   * инструментов»); пусто — выбор из всего каталога. Только для `kind: 'tool'`.
+   */
+  toolGroups?: ToolProficiencyGroupKey[];
 }
 
 /** Контекст резолюции опций выбора (навыки/языки/инструменты) в визарде. */
@@ -853,6 +1202,39 @@ export interface ClassFeatureRow {
 
   /** Распознанный выбор внутри умения; null — свободный текст. */
   choice: ClassChoice | null;
+
+  /** Умение даёт выбор черты за улучшение характеристик. */
+  abilityImprovement: boolean;
+}
+
+/** Опция черты для выбора за классовое улучшение характеристик. */
+export interface FeatSelectOption {
+  url: string;
+  name: string;
+
+  /** Категория черты (`GENERAL`, `ORIGIN`, `FIGHTING_STYLE`, …). */
+  category: string;
+
+  /** Подпись источника черты; '' — не задан. */
+  sourceLabel: string;
+
+  /** Черту можно брать несколько раз. */
+  repeatability: boolean;
+
+  /** Характеристики, среди которых распределяется прибавка; пусто — черта их не даёт. */
+  abilities: AbilityKey[];
+
+  /** Сколько +1 к характеристикам даёт черта (у «Улучшения характеристик» — 2); 0 — не даёт. */
+  abilityIncreaseCount: number;
+}
+
+/** Выбор черты за классовое улучшение характеристик на шаге мастера. */
+export interface LevelUpFeatChoice {
+  /** URL выбранной черты; '' — не выбрана. */
+  featUrl: string;
+
+  /** Характеристики для улучшения (по одному +1 за элемент; null — слот не заполнен). */
+  abilities: (AbilityKey | null)[];
 }
 
 /** Черновик одного шага мастера повышения уровня — один взятый уровень. */
@@ -871,6 +1253,9 @@ export interface LevelUpStepDraft {
 
   /** Свободный текст выбора по идентификатору умения. */
   notes: Record<string, string>;
+
+  /** Выбор черты за улучшение характеристик по идентификатору умения. */
+  featChoices: Record<string, LevelUpFeatChoice>;
 }
 
 /** Шаг мастера повышения уровня, готовый к отрисовке. */
@@ -906,6 +1291,12 @@ export interface LevelUpPayload {
   /** Ресурсы класса, пересчитанные на новый уровень. */
   classResources: CharacterClassResource[];
 
+  /**
+   * Прогрессия подготовленных заклинаний класса и подкласса: мастер грузит
+   * деталь класса, поэтому обновляет её и у листов, сохранённых без неё.
+   */
+  preparedSpells: PreparedSpellsScaling[];
+
   /** Выбранный в мастере подкласс; null — подкласс не менялся. */
   subclass: {
     url: string;
@@ -918,6 +1309,12 @@ export interface LevelUpPayload {
 
   /** Языки, выбранные в умениях уровней. */
   languages: string[];
+
+  /**
+   * Прибавки к характеристикам от выбранных за улучшение характеристик черт.
+   * Применяются с потолком в 20 (значение выше 20 выбор не поднимает).
+   */
+  abilityIncreases: Partial<Record<AbilityKey, number>>;
 }
 
 /** Опция предыстории в списке визарда. */
@@ -944,8 +1341,8 @@ export interface BackgroundSummary {
   /** Навыки прозой. */
   skillsText: string;
 
-  /** Фиксированные инструменты (применяются как есть). */
-  toolFixed: string[];
+  /** Фиксированные инструменты со ссылками каталога (применяются как есть). */
+  toolFixed: CharacterToolProficiency[];
 
   /** Выбор инструмента; null — инструмент фиксирован. */
   toolChoice: ClassChoice | null;
@@ -1013,6 +1410,12 @@ export interface CharacterInventoryItem {
 
   /** Доспех надет — учитывается в автоподсчёте класса доспеха. */
   equipped: boolean;
+
+  /**
+   * Универсальное оружие взято двумя руками — урон катится по большей кости.
+   * У остального снаряжения хват значения не имеет и остаётся false.
+   */
+  twoHanded: boolean;
 
   /**
    * Описание в разметке сайта; только у своих предметов (у каталожных оно
@@ -1137,6 +1540,23 @@ export interface MagicItemCatalogItem {
 
   /** Подпись источника; '' — не задан. */
   sourceLabel: string;
+}
+
+/** Варианты группировки каталога магических предметов в модалке добавления. */
+export type MagicItemCatalogGrouping = 'RARITY' | 'CATEGORY' | 'NONE';
+
+/** Порядок предметов внутри группы каталога: выбора нет, только по названию. */
+export type MagicItemCatalogSorting = 'NAME';
+
+/** Группа каталога магических предметов для списка с разделителями. */
+export interface MagicItemCatalogGroup<TItem extends MagicItemCatalogItem> {
+  /** Значение поля группировки; '' — предметы без значения. */
+  key: string;
+
+  /** Подпись разделителя; '' — разделитель не нужен (без группировки). */
+  label: string;
+
+  items: TItem[];
 }
 
 /** Деталь предмета из ответа API (нужные листу поля). */
@@ -1280,11 +1700,21 @@ export interface CharacterSheetListItem {
 
 /** Список листов пользователя с серверными лимитами. */
 export interface CharacterSheetListPage {
-  /** Максимум активных листов (серверный, в будущем зависит от подписки). */
+  /** Максимум активных листов (серверный, зависит от действующей подписки). */
   limit: number;
+
+  /**
+   * Максимум активных листов по подписке; 0 — сервер поле не прислал. Равен
+   * `limit`, когда подписка уже действует: по этому равенству и понятно,
+   * предлагать её или нет.
+   */
+  subscriberLimit: number;
 
   /** Максимум листов в истории удалённых; 0 — сервер лимит не прислал. */
   historyLimit: number;
+
+  /** Глубина истории по подписке; 0 — сервер поле не прислал. */
+  subscriberHistoryLimit: number;
 
   /** Число активных (неудалённых) листов. */
   count: number;
@@ -1315,8 +1745,14 @@ export interface SavedCharacterSheet {
 
 /** Список сохранённых чужих листов с серверным лимитом. */
 export interface SavedCharacterSheetListPage {
-  /** Максимум сохранённых ссылок (серверный, в будущем зависит от подписки). */
+  /** Максимум сохранённых ссылок (серверный, зависит от действующей подписки). */
   limit: number;
+
+  /**
+   * Максимум сохранённых ссылок по подписке; 0 — сервер поле не прислал. Равен
+   * `limit`, когда подписка уже действует.
+   */
+  subscriberLimit: number;
 
   /** Число сохранённых записей, включая ставшие недоступными. */
   count: number;
@@ -1378,6 +1814,10 @@ export interface SavingThrowRow {
 /** Строка списка навыков. */
 export interface SkillRow {
   name: string;
+
+  /** Характеристика навыка: модалка броска даёт подменить её на другую. */
+  ability: AbilityKey;
+
   abilityLabel: string;
   proficiency: SkillProficiencyLevel;
 

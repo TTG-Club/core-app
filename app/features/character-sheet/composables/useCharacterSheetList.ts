@@ -26,6 +26,8 @@ import {
   SHEET_IMPORT_PARSE_ERROR,
   SHEET_IMPORT_SIZE_ERROR,
   SHEET_IMPORT_SUCCESS_TITLE,
+  SHEET_IMPORT_WARNINGS_DURATION,
+  SHEET_IMPORT_WARNINGS_TITLE,
   SHEET_SHARED_COPY_ERROR_TITLE,
   SHEET_SHARED_COPY_SUCCESS_TITLE,
   updateCharacterSheet,
@@ -80,18 +82,44 @@ function getCopyName(name: string, existingNames: string[]): string {
   return `${copyName} ${copyNumber}`;
 }
 
+/** Персонаж из выбранного файла и всё, о чём импорт должен предупредить. */
+interface ImportedSheetSource {
+  character: Character;
+
+  /** Что перенести не удалось (только у файлов чужих форматов). */
+  warnings: string[];
+}
+
 /**
- * Разбор персонажа из выбранного JSON-файла. Ни битый JSON, ни посторонний
- * файл наружу ошибкой не выходят — вызывающий код объясняет отказ тостом.
+ * Разбор персонажа из выбранного JSON-файла: сперва наш экспорт, затем чужие
+ * форматы (Long Story Short). Конвертер чужого формата грузится отдельным
+ * чанком — в основном бандле он не нужен. Ни битый JSON, ни посторонний файл
+ * наружу ошибкой не выходят: вызывающий код объясняет отказ тостом.
  *
  * @param file файл, выбранный пользователем.
  * @returns персонаж из файла; null — в файле не лист персонажа.
  */
-async function readCharacterFromFile(file: File): Promise<Character | null> {
-  try {
-    const content: unknown = JSON.parse(await file.text());
+async function readCharacterFromFile(
+  file: File,
+): Promise<ImportedSheetSource | null> {
+  let content: unknown;
 
-    return parseImportedCharacter(content);
+  try {
+    content = JSON.parse(await file.text());
+  } catch {
+    return null;
+  }
+
+  try {
+    return { character: parseImportedCharacter(content), warnings: [] };
+  } catch {
+    // Не наш формат — пробуем чужие.
+  }
+
+  try {
+    const { importExternalCharacter } = await import('../model/import');
+
+    return await importExternalCharacter(content);
   } catch {
     return null;
   }
@@ -99,7 +127,7 @@ async function readCharacterFromFile(file: File): Promise<Character | null> {
 
 /**
  * Список листов персонажей пользователя: активные, история удалённых и
- * серверный лимит активных листов (в будущем зависит от подписки, поэтому на
+ * серверный лимит активных листов (зависит от действующей подписки, поэтому на
  * клиенте не хардкодится).
  *
  * За один запрос (`includeDeleted=true`) получаем весь набор и делим его на
@@ -132,6 +160,19 @@ export function useCharacterSheetList() {
 
   const historyLimit = useState<number>(
     'character-sheet:list-history-limit',
+    () => 0,
+  );
+
+  // Лимиты по подписке приходят с сервера всегда, независимо от того, есть ли
+  // она у пользователя: по разнице с выданным лимитом и видно, предлагать ли
+  // подписку (числа на клиенте не хардкодятся).
+  const subscriberLimit = useState<number>(
+    'character-sheet:list-subscriber-limit',
+    () => 0,
+  );
+
+  const subscriberHistoryLimit = useState<number>(
+    'character-sheet:list-subscriber-history-limit',
     () => 0,
   );
 
@@ -184,6 +225,10 @@ export function useCharacterSheetList() {
 
   const canCreate = computed(() => activeSheets.value.length < limit.value);
 
+  // Подписку предлагаем, только если она реально поднимет лимит: у подписчика
+  // выданный лимит уже равен лимиту подписки, и подсказка ему не нужна.
+  const canRaiseLimit = computed(() => subscriberLimit.value > limit.value);
+
   /**
    * Показывает тост с ошибкой (текст берётся из ответа бэка).
    *
@@ -214,6 +259,27 @@ export function useCharacterSheetList() {
     });
   }
 
+  /**
+   * Показывает тост о том, что часть данных чужого формата на лист не
+   * переехала. Отдельным тостом, а не вместо успеха: лист создан, и открыть
+   * его предлагает предыдущий тост.
+   *
+   * @param warnings что перенести не удалось; пусто — тост не нужен.
+   */
+  function notifyImportWarnings(warnings: string[]): void {
+    if (!warnings.length) {
+      return;
+    }
+
+    toast.add({
+      title: SHEET_IMPORT_WARNINGS_TITLE,
+      description: warnings.join(' '),
+      color: 'warning',
+      icon: 'tabler:alert-triangle',
+      duration: SHEET_IMPORT_WARNINGS_DURATION,
+    });
+  }
+
   /** Загружает список листов (включая удалённые для истории) и лимит. */
   async function load(): Promise<void> {
     isLoading.value = true;
@@ -225,6 +291,8 @@ export function useCharacterSheetList() {
       sheets.value = page.sheets;
       limit.value = page.limit;
       historyLimit.value = page.historyLimit;
+      subscriberLimit.value = page.subscriberLimit;
+      subscriberHistoryLimit.value = page.subscriberHistoryLimit;
       isLoaded.value = true;
     } catch (error) {
       loadErrorMessage.value = getSheetErrorMessage(error);
@@ -459,8 +527,8 @@ export function useCharacterSheetList() {
       return null;
     }
 
-    const created = await createSheetFromDocument(source, {
-      name: source.name,
+    const created = await createSheetFromDocument(source.character, {
+      name: source.character.name,
       errorTitle: SHEET_IMPORT_ERROR_TITLE,
     });
 
@@ -469,6 +537,8 @@ export function useCharacterSheetList() {
         title: SHEET_IMPORT_SUCCESS_TITLE,
         icon: 'tabler:file-import',
       });
+
+      notifyImportWarnings(source.warnings);
     }
 
     return created;
@@ -570,7 +640,10 @@ export function useCharacterSheetList() {
     deletedSheets,
     limit,
     historyLimit,
+    subscriberLimit,
+    subscriberHistoryLimit,
     canCreate,
+    canRaiseLimit,
     isLoading,
     isMutating,
     loadErrorMessage,

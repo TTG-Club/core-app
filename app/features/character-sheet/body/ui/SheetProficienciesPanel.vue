@@ -4,13 +4,15 @@
     ProficiencyGroupKey,
   } from '../../model';
 
+  import { ItemDrawer } from '~items/drawer';
+
   import { useCharacterSheet } from '../../composables';
   import {
     ARMOR_PROFICIENCY_GROUPS,
     collapseProficiencies,
     LANGUAGE_PROFICIENCY_GROUPS,
     SHEET_EMPTY_LABELS,
-    TOOL_PROFICIENCY_GROUPS,
+    SHEET_TOOL_LABELS,
     WEAPON_MASTERY_ICON,
     WEAPON_PROFICIENCY_GROUPS,
   } from '../../model';
@@ -21,6 +23,12 @@
 
     /** Показывать ли на чипе значок мастерства оружием. */
     hasMastery: boolean;
+
+    /** Ссылка на предмет каталога; null — открывать нечего. */
+    url: string | null;
+
+    /** Правый отступ чипа: под кнопку описания он меньше. */
+    paddingClass: string;
   }
 
   interface ProficiencyGroupView {
@@ -30,6 +38,30 @@
 
     /** Есть ли у группы модалка настроек (шестерёнка на плашке). */
     hasSettings: boolean;
+  }
+
+  /**
+   * Чип владения. Ссылка есть только у инструментов — остальные группы хранят
+   * подписи каталогов владений, а не записи разделов сайта.
+   *
+   * @param name подпись владения.
+   * @param options дополнительные признаки чипа.
+   * @param options.hasMastery владение с мастерством оружия.
+   * @param options.url ссылка на предмет каталога.
+   * @returns чип владения для отрисовки.
+   */
+  function toProficiencyChip(
+    name: string,
+    options: { hasMastery?: boolean; url?: string | null } = {},
+  ): ProficiencyChip {
+    const url = options.url ?? null;
+
+    return {
+      name,
+      hasMastery: options.hasMastery ?? false,
+      url,
+      paddingClass: url ? 'pr-1' : 'pr-2.5',
+    };
   }
 
   const props = defineProps<{
@@ -44,6 +76,21 @@
   // прячется, а сама плашка остаётся прежней.
   const { editControlClass } = useCharacterSheet();
 
+  const overlay = useOverlay();
+
+  // Дровер описания инструмента; без destroyOnClose — повторный open() после
+  // закрытия иначе падает («Overlay not found»).
+  const toolPreviewDrawer = overlay.create(ItemDrawer, {
+    props: {
+      url: '',
+      onClose: () => toolPreviewDrawer.close(),
+    },
+  });
+
+  function handleToolPreview(toolUrl: string) {
+    toolPreviewDrawer.open({ url: toolUrl });
+  }
+
   const weaponChips = computed((): ProficiencyChip[] => {
     const collapsed = collapseProficiencies(
       props.proficiencies.weapons,
@@ -55,12 +102,14 @@
     const shownNames = new Set(collapsed);
 
     return [
-      ...collapsed.map((name) => ({ name, hasMastery: masteries.has(name) })),
+      ...collapsed.map((name) =>
+        toProficiencyChip(name, { hasMastery: masteries.has(name) }),
+      ),
       // Мастерство оружия, скрытого чипом «вся группа»: отдельного чипа
       // владения нет, поэтому добавляем чип ради значка мастерства.
       ...props.proficiencies.weaponMasteries
         .filter((name) => !shownNames.has(name))
-        .map((name) => ({ name, hasMastery: true })),
+        .map((name) => toProficiencyChip(name, { hasMastery: true })),
     ];
   });
 
@@ -71,7 +120,7 @@
       items: collapseProficiencies(
         props.proficiencies.armor,
         ARMOR_PROFICIENCY_GROUPS,
-      ).map((name) => ({ name, hasMastery: false })),
+      ).map((name) => toProficiencyChip(name)),
       hasSettings: true,
     },
     {
@@ -83,10 +132,9 @@
     {
       key: 'tools',
       title: 'Инструменты',
-      items: collapseProficiencies(
-        props.proficiencies.tools,
-        TOOL_PROFICIENCY_GROUPS,
-      ).map((name) => ({ name, hasMastery: false })),
+      items: props.proficiencies.tools.map((tool) =>
+        toProficiencyChip(tool.name, { url: tool.url }),
+      ),
       hasSettings: true,
     },
     {
@@ -95,7 +143,7 @@
       items: collapseProficiencies(
         props.proficiencies.languages,
         LANGUAGE_PROFICIENCY_GROUPS,
-      ).map((name) => ({ name, hasMastery: false })),
+      ).map((name) => toProficiencyChip(name)),
       hasSettings: true,
     },
   ]);
@@ -124,7 +172,7 @@
 
             <UIcon
               name="tabler:settings"
-              class="size-3.5 shrink-0 text-muted opacity-0 transition-opacity group-hover/header:text-warning group-hover/header:opacity-100 group-focus-visible/header:opacity-100"
+              class="size-3.5 shrink-0 text-muted opacity-0 transition-opacity group-hover/header:text-primary group-hover/header:opacity-100 group-focus-visible/header:opacity-100"
               :class="editControlClass"
             />
           </button>
@@ -144,7 +192,8 @@
           <span
             v-for="chip in group.items"
             :key="chip.name"
-            class="flex items-center gap-1 rounded border border-default bg-default/40 px-2.5 py-1 text-[11px] text-toned"
+            class="flex items-center gap-1 rounded border border-default bg-default/40 py-1 pl-2.5 text-[11px] text-toned"
+            :class="chip.paddingClass"
           >
             {{ chip.name }}
 
@@ -155,6 +204,21 @@
               <UIcon
                 :name="WEAPON_MASTERY_ICON"
                 class="size-3 text-success"
+              />
+            </UTooltip>
+
+            <UTooltip
+              v-if="chip.url"
+              :text="SHEET_TOOL_LABELS.preview"
+            >
+              <UButton
+                icon="tabler:layout-sidebar-right-expand"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                square
+                :aria-label="`${SHEET_TOOL_LABELS.preview}: ${chip.name}`"
+                @click.left.exact.prevent="handleToolPreview(chip.url)"
               />
             </UTooltip>
           </span>

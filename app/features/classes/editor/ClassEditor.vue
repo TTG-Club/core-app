@@ -2,7 +2,7 @@
   import type { ClassCreate, ClassLinkResponse } from '../model';
 
   import { ClassPreview } from '~classes/preview';
-  import { EditorBaseInfo } from '~ui/editor';
+  import { EditorBaseInfo, StartingEquipmentEditor } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { UploadGallery, UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
@@ -68,6 +68,7 @@
         skills: 0,
       },
       equipment: undefined,
+      startingEquipment: [],
       features: [],
       table: [],
       abilityTemplate: undefined,
@@ -142,6 +143,8 @@
         </UFormField>
       </div>
     </UCard>
+
+    <StartingEquipmentEditor v-model="state.startingEquipment" />
 
     <UCard variant="subtle">
       <template #header>

@@ -77,7 +77,7 @@
 
         <UButton
           label="Сохранить"
-          color="warning"
+          color="primary"
           @click.left.exact.prevent="handleSave"
         />
       </div>

@@ -22,14 +22,11 @@
   import { useCharacterSheet } from '../../composables';
   import {
     buildInventoryItem,
+    fetchItemSummary,
     getInventoryItemId,
-    ITEMS_DETAIL_BASE_PATH,
     ITEMS_FILTERS_PATH,
     ITEMS_SEARCH_PATH,
-    parseItemArmor,
     parseItemCatalog,
-    parseItemDetail,
-    parseItemWeapon,
   } from '../../model';
   import SheetSearchInput from './SheetSearchInput.vue';
 
@@ -296,63 +293,6 @@
     draftUrls.value = nextUrls;
   }
 
-  /**
-   * Дозагружает боевые параметры (доспех/оружие) из «сырого» ответа предмета:
-   * публичная деталь их не отдаёт, а для КД и бонуса атаки нужны числа из /raw.
-   * Ошибку глотаем — предмет добавится без боевых данных.
-   *
-   * @param itemUrl url предмета.
-   * @param summary разобранная деталь предмета (имя, типы — для признака щита).
-   * @returns параметры доспеха и оружия.
-   */
-  async function fetchItemCombatStats(itemUrl: string, summary: ItemSummary) {
-    try {
-      const response = await $fetch<unknown>(
-        `${ITEMS_DETAIL_BASE_PATH}/${itemUrl}/raw`,
-        {
-          method: 'GET',
-          retry: 0,
-        },
-      );
-
-      // Разбираем только профиль своей категории: редактор шлёт заготовки
-      // armor/weapon даже у чужих категорий (пустые объекты), поэтому чужой
-      // профиль дал бы ложные КД/атаку.
-      return {
-        armor:
-          summary.category === 'ARMOR'
-            ? parseItemArmor(response, summary)
-            : null,
-        weapon:
-          summary.category === 'WEAPON' ? parseItemWeapon(response) : null,
-      };
-    } catch {
-      return { armor: null, weapon: null };
-    }
-  }
-
-  /** Загружает деталь предмета по url; null — ответ не распознан. */
-  async function fetchItemDetail(itemUrl: string): Promise<ItemSummary | null> {
-    const response = await $fetch<unknown>(
-      `${ITEMS_DETAIL_BASE_PATH}/${itemUrl}`,
-      {
-        method: 'GET',
-        retry: 0,
-      },
-    );
-
-    const summary = parseItemDetail(response);
-
-    if (
-      !summary
-      || (summary.category !== 'ARMOR' && summary.category !== 'WEAPON')
-    ) {
-      return summary;
-    }
-
-    return { ...summary, ...(await fetchItemCombatStats(itemUrl, summary)) };
-  }
-
   async function handleApply() {
     const urls = [...draftUrls.value];
 
@@ -363,7 +303,7 @@
     isApplying.value = true;
 
     try {
-      const results = await Promise.allSettled(urls.map(fetchItemDetail));
+      const results = await Promise.allSettled(urls.map(fetchItemSummary));
 
       const inventoryItems: CharacterInventoryItem[] = results
         .map((result) => (result.status === 'fulfilled' ? result.value : null))
@@ -558,7 +498,7 @@
                 <UIcon
                   v-else-if="catalogRow.isSelected"
                   name="tabler:check"
-                  class="relative z-10 size-4 shrink-0 text-warning"
+                  class="relative z-10 size-4 shrink-0 text-primary"
                 />
               </div>
 

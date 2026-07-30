@@ -40,13 +40,13 @@ core-app/
 │   └── utils/                      # ⚡ Global utilities (auto-import)
 ├── server/                         # 🔒 Server-side (Nitro)
 │   ├── api/                        # HTTP handlers: catch-all proxy + auth/*, admin/*, user/*, bug-report, online
-│   ├── domain/                     # Server domains: s3 (model / service / utils), online (service only)
+│   ├── domain/                     # Server domains: s3 (model / service / utils), online (service only), vttg (service / utils)
 │   ├── middleware/                 # 001 validate/refresh token, 002 append auth header
 │   ├── routes/                     # manifest.json, online/heartbeat, s3 (upload/get/delete/copy)
 │   └── utils/                      # Service clients (auth/admin/subscriber/comments), secrets, JWT, proxy, display-name, image compression
 ├── shared/                         # 📦 Isomorphic shared (client + server)
 │   ├── consts/                     # Cookie/theme keys, durations, source platform (`SITE_5E24`)
-│   ├── types/                      # auth (JWT payload)
+│   ├── types/                      # auth (JWT payload), vttg (desktop release DTO)
 │   └── utils/                      # consola, env, faker, slug, plural, status message, sort, error response
 ├── modules/                        # 🧩 Nuxt modules
 │   └── auto-aliases.ts             # Auto-generation of ~domain aliases from app/features
@@ -105,12 +105,45 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 - Wizards for species / class / background; rolls go through `dice-roller`
   (universal `SheetRollModal`).
+- The background wizard also creates a homebrew one (`SheetCustomBackgroundModal`,
+  opened over the catalog list): name, a +2/+1 or +1/+1/+1 ability spread, two
+  skills, one tool from the catalog and an origin feat (category `ORIGIN` of
+  `/feats/select`, profile sources respected). It goes through the same
+  `setBackground` and is stored with a `custom:<uuid>` url, so it never mixes with
+  a catalog background.
+- The species wizard does the same for a homebrew species
+  (`SheetCustomSpeciesModal`, opened over the catalog list): name, size,
+  movement and vision as add-a-row lists (`SheetDistanceRows` — type select +
+  distance in feet, each type once, options from the `SPEED_*` / `VISION_*`
+  orders of the sheet's own modals; hover appears once a flying speed exists),
+  plus any number of features (name + `MarkupEditor` description).
+  It goes through the same `setSpecies` and is stored with a
+  `custom:<uuid>` url; features land with origin `species`, so re-picking a
+  species replaces them like catalog ones.
+- The class wizard does the same for a homebrew class (`SheetCustomClassModal`,
+  opened over the catalog list): name, an optional subclass name, hit die,
+  saving throws, skill proficiencies, a caster type
+  (`CUSTOM_CLASS_CASTER_TYPE_OPTIONS` — spell slots follow it) and any number of
+  features (name + `MarkupEditor` description). It goes through the same
+  `setClass` and is stored with a `custom:<uuid>` url; features land with origin
+  `class`, so re-picking a class replaces them like catalog ones. Armour, weapon
+  and tool proficiencies plus class resources are left to the sheet's own panels
+  — a homebrew class has no proficiency prose or table to derive them from.
+  Levelling one up falls back to the wizard's no-class path (average hit points,
+  no feature steps), since the level-up wizard resolves features by class url.
 - Level-up wizard inside the experience modal (`composables/useLevelUpWizard.ts`):
   one step per gained level with its own hit-point mode (average / roll / max),
   the class and subclass features of that level with their choices, and the
   subclass picker at level 3 filtered by the profile sources on the client
   (`/classes/{url}/subclasses` ignores `source`). Applied atomically by
   `applyLevelUp`, which keeps spent hit dice and class resources.
+- Every skill picker (`SheetChoiceSelect` in the class / species / background
+  wizards, in level-up features and in the homebrew class / background modals)
+  marks skills the character already has with a `SKILL_OWNED_HINTS` badge and
+  shows `SKILL_DUPLICATE_WARNING` once such a skill is picked again: under the
+  2024 rules a duplicate proficiency grants nothing and never turns into
+  Expertise. It stays selectable on purpose — a DM may still run the 2014
+  «take another proficiency instead» rule.
 - Debounced autosave, a server-side limit of active sheets, soft delete with
   restore history, and copy — `model/api.ts` covers
   `POST|GET|PUT|DELETE /…/{id}` plus `/{id}/restore` and `/{id}/share`.
@@ -120,6 +153,17 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 - JSON export (without the portrait link) and JSON import from the section
   controls.
+- The same import button also accepts a Long Story Short export (its character
+  document is a JSON string inside `data`). `model/import` is a lazily imported
+  sub-module (like `model/pdf`, so it stays out of the main bundle): `schema.ts`
+  parses the foreign file with catch-everything Zod, `tiptap.ts` rewrites its
+  TipTap texts into site markup (`{@list}` / `{@bold}` / `{@link}`), `convert.ts`
+  maps abilities, skills, hit points, resources, coins and text blocks (traits
+  and feats become sheet features, the rest become notes), and `catalog.ts`
+  matches class, subclass, species, background and every equipment line against
+  the site catalogs by name — anything not found stays a homebrew entry. Spells
+  cannot be carried over (the file keeps only LSS-internal ids), so the import
+  says so in a toast.
 - PDF export from the same action menu. `model/pdf` draws its own vector layout
   close to the official D&D 2024 sheet with Russian labels: main page,
   equipment, spells, and a reference section with full descriptions.
@@ -133,6 +177,14 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 **Content on the sheet**
 
+- Tool proficiencies are catalog-backed: the sheet keeps no tool list of its own,
+  `composables/useToolCatalog.ts` builds one from the «Предметы» section
+  (`itemType` = `ARTISAN_S_TOOLS` / `GAMING_SET` / `INSTRUMENT` / `TOOL`, group
+  titles taken from `/item/filters`, profile sources respected). A proficiency
+  stores `{ name, url }`, so its chip opens the item drawer; anything the site
+  does not have — including tools named in class or background prose — is kept as
+  the player's own entry without a link, and one can be typed in by hand in the
+  proficiency modal.
 - Character portrait uploaded to S3 (hover the avatar to add / replace /
   remove); the chosen file first goes through the `shared/ui/image-crop`
   square-crop editor.
@@ -147,19 +199,78 @@ modals), so its capabilities are listed here rather than squeezed into the table
   casting time / range / components / duration — from the section detail into
   the sheet document; it is edited afterwards by the same homebrew form. A
   copied magic item keeps its group while its kind stays «trinket».
+- The «Добавить магический предмет» catalog groups its rows the way the section
+  does, and the grouping is picked from a dropdown under the filter button (by
+  rarity in the dictionary order — the shared `useMagicItemRarityGroupOrder` —
+  by category, or none). State and menu come from the section infrastructure
+  (`~infrastructure/list-presentation`), so the choice survives reopening in
+  `localStorage`; only grouping is offered because the order inside a group is
+  always the Russian name.
+- The «Добавить заклинание» catalog opens preset to what the character can
+  actually learn: the class chip is picked by the class slug (the same id the
+  `className` filter group uses) and the level chips cover every circle the
+  class grants slots for at its level, cantrips included. Nothing is stored for
+  it — the preset is derived from `casterType` + level on every open, so a
+  level-up or level-down changes it by itself, and the usual filter reset drops
+  it when the player wants the whole catalog.
+- Innate spells granted by the species stand in their own «Врождённые» group and
+  have the same row menu: copying one moves it into the spell book as a `custom:`
+  record (editable afterwards), removing one drops it from
+  `species.innateSpells` so the next level-up does not bring it back. Both are
+  undone by picking the species again in the wizard.
 
 **Play**
 
 - Spell slots derived from the reference `casterType` of the class/subclass
   (full / half / third caster, warlock pact magic) plus the character level;
   spent by clicking the circles in each spell-level divider.
+- Prepared-spell count on the spells tab, next to the save DC / attack tile. The
+  reference class table has it as a column («Подг. закл.», matched by letters
+  because the wording is abbreviated differently per class and sometimes lives
+  only on the subclass), so its progression is snapshotted into the sheet by the
+  class wizard and refreshed by every level-up; the tile shows the value for the
+  current level. Clicking it opens the settings: either a custom number (the
+  class count is then ignored) or a bonus added to the class count. The tile
+  reads «marked / allowed» (`4 / 17`) and turns red when the allowance drops
+  below what is already marked.
+- Prepared spells marked by clicking the spell icon in the row — the same
+  gesture as equipping armour. Only the icon square lights up (the row itself
+  keeps its usual look), the flag lives in `spell.prepared`, and marking more
+  than the allowed number warns instead. Cantrips and innate spells are always
+  available, so their icon toggles nothing; with no allowance known (the class
+  gives none and no custom number is set) marking is unlimited.
+- Spell list narrowed by a chip row above the groups: «Подготовленные» plus one
+  chip per circle (cantrips as «З», the full name in the tooltip), several
+  circles at a time, and a reset button once anything is picked. Nothing is
+  stored — the chips are derived from what the list already shows
+  (`getSpellListLevels`: spell circles + circles with slots), so a circle the
+  character has not reached never appears and a pick that disappears stops
+  narrowing by itself. The prepared chip is skipped when there is nothing to
+  prepare (cantrips or innate spells only).
 - Weapon attack & damage rolled straight from their tiles in the equipment list
-  (damage dice come from the item `/raw` response).
+  (damage dice come from the item `/raw` response). A versatile weapon also
+  keeps the second roll of that response, and the row action menu switches its
+  grip — taken in two hands it rolls the bigger die on the tile, in the roll and
+  in the PDF attack table, and the row is marked with a «Двумя руками» badge.
+  Weapons added before the second roll was stored do not offer the switch until
+  they are added from the catalog again.
+- Spell damage rolled from the same kind of tile on the spells tab. The formulas
+  (`8к6@dmg.fire`) are not stored in the sheet: `composables/useSpellDamage.ts`
+  pulls them from the spell `/raw` response on demand and caches them per app,
+  so old sheets and innate spells get the tile too. A roll of a levelled spell
+  also spends a slot of its circle — cantrips and circles the class does not
+  grant spend nothing, and an exhausted circle warns instead.
 - Short & long rest from the header: short rest spends Hit Point Dice one by
   one, adding the Constitution modifier to every roll; long rest refills hit
   points, spell slots, feature counters and half the Hit Point Dice. The shared
   `SheetHitDiceSelect` picks which dice.
-- Sheet settings (weapon attack ability).
+- Sheet settings (`SheetSettingsModal`, opened from the sheet header and from the
+  list card) split into two tabs: «Атака оружием» (base attack ability) and
+  «Свои бонусы» — a custom proficiency bonus added on top of the one from the
+  level (it flows into saving throws, skills, weapon attacks and spellcasting via
+  `getCharacterProficiencyBonus`) and a custom initiative bonus added to the
+  Dexterity modifier (`getInitiativeBonus`, used by the tile, its roll and the
+  PDF). Sheets saved before the bonuses existed read them as `0`.
 
 **Sharing**
 
@@ -212,10 +323,10 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 ### 🌐 Landing & infrastructure
 
-| Domain           | Purpose                                                   | Sub-features                                                                          |
-| ---------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `vttg`           | Marketing landing for the VTTG virtual tabletop (`/vttg`) | `model`, `ui` (hero / features / FAQ / support / video sections)                      |
-| `infrastructure` | Cross-cutting app shell & chrome                          | `sidebar`, `search`, `filter`, `list-presentation`, `footer`, `cookie-consent`, `pwa` |
+| Domain           | Purpose                                                                      | Sub-features                                                                                                                                                              |
+| ---------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vttg`           | Marketing landing for the VTTG virtual tabletop (`/vttg`) + desktop download | `model`, `ui` (hero / features / FAQ / support / video sections, `VttgDownloadPlatforms`), `composables` (`useVttgDesktopRelease` — latest build from the update channel) |
+| `infrastructure` | Cross-cutting app shell & chrome                                             | `sidebar`, `search`, `filter`, `list-presentation`, `footer`, `cookie-consent`, `pwa`                                                                                     |
 
 ### Anatomy of a Feature (Example: `tokenator`)
 
@@ -317,18 +428,19 @@ imported via the auto-generated `~<domain>` alias (see
 Thin Nitro layer that proxies to external microservices and handles auth,
 uploads and presence.
 
-| Area                                    | Responsibility                                                                                                                                                                                                                                 |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `api/[...].ts`                          | Catch-all proxy (`getProxyPath`) → `subscriber-service` for `/api/subscriptions` & `/api/rewards`, `comments-service` for `/api/v1/comments`, otherwise `core-api`                                                                             |
-| `api/auth/*`                            | Sign-in/up, logout, me, email confirm, password reset/change, roles, admin users — proxied to **auth-service**                                                                                                                                 |
-| `api/admin/*`                           | Admin bug list/status, subscription grant/revoke/codes, comment hide/restore by author — ADMIN-gated proxies to bug-report, subscriber & comments services (the last via `X-Service-Token` internal API, not the user JWT)                     |
-| `api/bug-report*`                       | Create report (streams multipart), public stats, my count-by-status → external **bug-report** service                                                                                                                                          |
-| `api/user/comments/sync-name`           | Best-effort display-name sync: reads the name from core-api, then renames the author's comments through the comments internal API, scoped by `SOURCE_PLATFORM`                                                                                 |
-| `api/online`, `routes/online/heartbeat` | Presence heartbeat + stats via **online-app**                                                                                                                                                                                                  |
-| `domain/s3`, `routes/s3/*`              | S3 upload (image compression via sharp) / get / delete / copy (new key for a duplicated entity)                                                                                                                                                |
-| `routes/manifest.json`                  | Theme-aware PWA manifest from `runtimeConfig.pwa`                                                                                                                                                                                              |
-| `middleware/`                           | `001` verify access JWT + silent single-flight refresh, `002` inject `Bearer` from cookie                                                                                                                                                      |
-| `utils/`                                | Service clients (auth / auth-admin / subscriber-admin / comments-admin / bug-report), `displayName` + `commentsRename`, `getUser` / `getTokenFromRequest`, `secrets` (env accessor), JWT (jose), proxy, error normalization, image compression |
+| Area                                     | Responsibility                                                                                                                                                                                                                                 |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api/[...].ts`                           | Catch-all proxy (`getProxyPath`) → `subscriber-service` for `/api/subscriptions` & `/api/rewards`, `comments-service` for `/api/v1/comments`, otherwise `core-api`                                                                             |
+| `api/auth/*`                             | Sign-in/up, logout, me, email confirm, password reset/change, roles, admin users — proxied to **auth-service**                                                                                                                                 |
+| `api/admin/*`                            | Admin bug list/status, subscription grant/revoke/codes, comment hide/restore by author — ADMIN-gated proxies to bug-report, subscriber & comments services (the last via `X-Service-Token` internal API, not the user JWT)                     |
+| `api/bug-report*`                        | Create report (streams multipart), public stats, my count-by-status → external **bug-report** service                                                                                                                                          |
+| `api/user/comments/sync-name`            | Best-effort display-name sync: reads the name from core-api, then renames the author's comments through the comments internal API, scoped by `SOURCE_PLATFORM`                                                                                 |
+| `api/online`, `routes/online/heartbeat`  | Presence heartbeat + stats via **online-app**                                                                                                                                                                                                  |
+| `api/vttg/desktop/latest`, `domain/vttg` | Latest VTTG desktop build: reads `latest.yml` from the electron-updater channel (`runtimeConfig.vttg.desktopUpdateUrl`), returns version / size / installer link, cached by Nitro                                                              |
+| `domain/s3`, `routes/s3/*`               | S3 upload (image compression via sharp) / get / delete / copy (new key for a duplicated entity)                                                                                                                                                |
+| `routes/manifest.json`                   | Theme-aware PWA manifest from `runtimeConfig.pwa`                                                                                                                                                                                              |
+| `middleware/`                            | `001` verify access JWT + silent single-flight refresh, `002` inject `Bearer` from cookie                                                                                                                                                      |
+| `utils/`                                 | Service clients (auth / auth-admin / subscriber-admin / comments-admin / bug-report), `displayName` + `commentsRename`, `getUser` / `getTokenFromRequest`, `secrets` (env accessor), JWT (jose), proxy, error normalization, image compression |
 
 **Backend topology:** `core-api` (default), `auth-service` (auth), `subscriber-service`
 (subscriptions/rewards), `comments-service` (discussions, `NITRO_COMMENTS_API_URL`),

@@ -1,10 +1,14 @@
 import type {
+  AbilityKey,
   Character,
   CharacterNote,
   CharacterSheetDetail,
   CharacterSheetListItem,
   CharacterSheetListPage,
   FeatureDescriptionNode,
+  ResourceRecovery,
+  ResourceRecoveryMode,
+  ResourceRecoveryRule,
   SavedCharacterSheet,
   SavedCharacterSheetListPage,
 } from './types';
@@ -14,7 +18,10 @@ import { CasterType } from '~classes/model';
 
 import {
   DRAFT_CHARACTER_ID,
+  INVENTORY_QUANTITY_MAX,
+  INVENTORY_QUANTITY_MIN,
   LEGACY_NOTE_ID,
+  RESOURCE_RECOVERY_AMOUNT_MIN,
   SHEET_NOTE_LABELS,
 } from './constants';
 import { DEFAULT_CHARACTER } from './mock';
@@ -71,6 +78,17 @@ const characterClassSchema = z
     // для них он определяется по названию класса (см. `getClassCasterType`).
     casterType: z.nativeEnum(CasterType).nullable().catch(null),
     hitDie: z.coerce.number().catch(8),
+    // Листы, сохранённые до появления поля, приходят без прогрессии
+    // подготовленных заклинаний: она запишется при следующем выборе класса
+    // или повышении уровня.
+    preparedSpells: z
+      .array(
+        z.object({
+          level: z.coerce.number(),
+          value: z.coerce.number(),
+        }),
+      )
+      .catch([]),
   })
   .nullable()
   .catch(null);
@@ -109,6 +127,7 @@ const spellSchema = z.object({
   school: z.string().catch(''),
   concentration: z.boolean().optional(),
   ritual: z.boolean().optional(),
+  prepared: z.boolean().optional().catch(undefined),
   castingTime: z.string().optional().catch(undefined),
   range: z.string().optional().catch(undefined),
   components: z.string().optional().catch(undefined),
@@ -146,14 +165,29 @@ const spellSlotSchema = z.object({
 const spellcastingSchema = z
   .object({
     ability: abilityKeySchema.nullable().catch(null),
+    // Настройка подготовленных заклинаний появилась позже: у листов без неё
+    // число считается по таблице класса без бонуса.
+    prepared: z
+      .object({
+        custom: z.coerce.number().nullable().catch(null),
+        bonus: z.coerce.number().catch(0),
+      })
+      .catch(() => ({ ...DEFAULT_CHARACTER.spellcasting.prepared })),
   })
-  .catch(() => ({ ...DEFAULT_CHARACTER.spellcasting }));
+  .catch(() => ({
+    ...DEFAULT_CHARACTER.spellcasting,
+    prepared: { ...DEFAULT_CHARACTER.spellcasting.prepared },
+  }));
 
 // По умолчанию — правила D&D (легаси-листы без блока настроек): базовая
 // характеристика атаки оружием определяется свойствами оружия.
 const settingsSchema = z
   .object({
     weaponAttackAbility: abilityKeySchema.nullable().catch(null),
+    // Свои бонусы появились позже настройки атаки: у листов без них бонусы
+    // нулевые, то есть подсчёт идёт строго по правилам.
+    customProficiencyBonus: z.coerce.number().int().catch(0),
+    customInitiativeBonus: z.coerce.number().int().catch(0),
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.settings }));
 
@@ -164,17 +198,55 @@ const experienceSchema = z
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.experience }));
 
+/**
+ * Характеристики класса доспеха: список появился позже одиночного поля
+ * `ability`, поэтому у старых листов он собирается из него — так, чтобы уже
+ * посчитанный КД не поехал.
+ *
+ * @param abilities список характеристик записи листа.
+ * @param ability легаси-характеристика записи листа.
+ * @param custom взято ли ручное значение КД.
+ * @returns характеристики, чьи модификаторы идут в КД.
+ */
+function toArmorClassAbilities(
+  abilities: AbilityKey[] | undefined,
+  ability: AbilityKey | null | undefined,
+  custom: boolean,
+): AbilityKey[] {
+  if (abilities) {
+    return abilities;
+  }
+
+  // В ручном значении `null` означал «без модификатора», а отсутствие поля —
+  // запись до появления настройки: там работал дефолт листа.
+  if (custom && ability !== undefined) {
+    return ability ? [ability] : [];
+  }
+
+  // Автоподсчёт по доспеху всегда брал Ловкость и на `ability` не смотрел:
+  // перенос его значения поменял бы КД задним числом.
+  return [...DEFAULT_CHARACTER.armorClass.abilities];
+}
+
 const armorClassSchema = z
   .object({
     base: z.coerce.number().catch(DEFAULT_CHARACTER.armorClass.base),
-    ability: abilityKeySchema
-      .nullable()
-      .catch(DEFAULT_CHARACTER.armorClass.ability),
+    // Легаси-поле одной характеристики: `null` в нём означал «без модификатора»,
+    // а отсутствие — запись до появления настройки.
+    ability: abilityKeySchema.nullable().optional().catch(undefined),
+    abilities: z.array(abilityKeySchema).optional().catch(undefined),
     natural: z.boolean().catch(false),
     // По умолчанию — автоподсчёт по надетой броне (легаси-листы без поля).
     custom: z.boolean().catch(false),
   })
-  .catch(() => ({ ...DEFAULT_CHARACTER.armorClass }));
+  .catch(() => ({
+    ...DEFAULT_CHARACTER.armorClass,
+    abilities: [...DEFAULT_CHARACTER.armorClass.abilities],
+  }))
+  .transform(({ ability, abilities, ...armorClass }) => ({
+    ...armorClass,
+    abilities: toArmorClassAbilities(abilities, ability, armorClass.custom),
+  }));
 
 const speedSchema = z
   .object({
@@ -246,21 +318,72 @@ const extraHitDieSchema = hitDieSchema.extend({
   id: z.string(),
 });
 
-const classResourceSchema = z.object({
-  id: z.string(),
-  name: z.string().catch(''),
-  shortLabel: z.string().catch(''),
-  recovery: z.enum(['short-rest', 'long-rest']).catch('long-rest'),
-  current: z.coerce.number().catch(0),
-  max: z.coerce.number().catch(0),
+const resourceRecoveryRuleSchema = z.object({
+  mode: z.enum(['none', 'all', 'amount']).catch('none'),
+  amount: z.coerce.number().catch(RESOURCE_RECOVERY_AMOUNT_MIN),
 });
+
+/**
+ * Правила восстановления ресурса: раздельные порции появились позже одного
+ * поля `recovery`, где отдых возвращал ресурс целиком. У старых листов
+ * продолжительный отдых возвращал всё всегда, а короткий — только ресурсам,
+ * отмеченным коротким отдыхом.
+ *
+ * @param rule правило записи листа.
+ * @param recovery легаси-вид отдыха записи листа.
+ * @param isShortRest собирается ли правило короткого отдыха.
+ * @returns правило восстановления ресурса.
+ */
+function toResourceRecoveryRule(
+  rule: ResourceRecoveryRule | undefined,
+  recovery: ResourceRecovery | undefined,
+  isShortRest: boolean,
+): ResourceRecoveryRule {
+  if (rule) {
+    return rule;
+  }
+
+  const mode: ResourceRecoveryMode =
+    !isShortRest || recovery === 'short-rest' ? 'all' : 'none';
+
+  return { mode, amount: RESOURCE_RECOVERY_AMOUNT_MIN };
+}
+
+const classResourceSchema = z
+  .object({
+    id: z.string(),
+    name: z.string().catch(''),
+    shortLabel: z.string().catch(''),
+    // Легаси-поле одного вида отдыха: у листов до раздельных порций оно
+    // задавало, возвращает ли ресурс короткий отдых.
+    recovery: z.enum(['short-rest', 'long-rest']).optional().catch(undefined),
+    shortRest: resourceRecoveryRuleSchema.optional().catch(undefined),
+    longRest: resourceRecoveryRuleSchema.optional().catch(undefined),
+    current: z.coerce.number().catch(0),
+    max: z.coerce.number().catch(0),
+  })
+  .transform(({ recovery, shortRest, longRest, ...resource }) => ({
+    ...resource,
+    shortRest: toResourceRecoveryRule(shortRest, recovery, true),
+    longRest: toResourceRecoveryRule(longRest, recovery, false),
+  }));
+
+// Листы до появления ссылок на инструменты хранят владения строками: такая
+// запись читается без ссылки, а url подставится при следующей правке владений.
+const toolProficiencySchema = z.union([
+  z.string().transform((name) => ({ name, url: null })),
+  z.object({
+    name: z.string().catch(''),
+    url: z.string().nullable().catch(null),
+  }),
+]);
 
 const proficienciesSchema = z
   .object({
     armor: z.array(z.string()).catch([]),
     weapons: z.array(z.string()).catch([]),
     weaponMasteries: z.array(z.string()).catch([]),
-    tools: z.array(z.string()).catch([]),
+    tools: z.array(toolProficiencySchema).catch([]),
     languages: z.array(z.string()).catch([]),
   })
   .catch(() => structuredClone(DEFAULT_CHARACTER.proficiencies));
@@ -309,6 +432,9 @@ const inventoryWeaponSchema = z
     // Оружие из листов, сохранённых до появления урона, приходит без блока —
     // схема даёт null, и плитка урона просто не показывается.
     damage: inventoryWeaponDamageSchema,
+    // То же с уроном двумя руками: у листов, сохранённых до появления хвата,
+    // блока нет — переключать нечего, пока предмет не добавят заново.
+    versatileDamage: inventoryWeaponDamageSchema,
   })
   .nullable()
   .catch(null);
@@ -357,10 +483,19 @@ const inventoryItemSchema = z.object({
   typesLabel: z.string().catch(''),
   cost: z.string().catch(''),
   weight: z.coerce.number().catch(0),
-  quantity: z.coerce.number().catch(1),
+  // Ноль — рабочее состояние («Отсутствует»), а вот дробное и отрицательное
+  // количество запись листа держать не должна: строка показывала бы «−2», и
+  // предмет молча считался бы отсутствующим.
+  quantity: z.coerce
+    .number()
+    .int()
+    .min(INVENTORY_QUANTITY_MIN)
+    .max(INVENTORY_QUANTITY_MAX)
+    .catch(1),
   armor: inventoryArmorSchema,
   weapon: inventoryWeaponSchema,
   equipped: z.boolean().catch(false),
+  twoHanded: z.boolean().catch(false),
   // Описание есть только у своих предметов (`custom:<uuid>`): у каталожных оно
   // живёт в разделе-источнике, а не в листе.
   description: z.array(descriptionNodeSchema).optional().catch(undefined),
@@ -468,10 +603,14 @@ const sheetListItemSchema = z.object({
  * Схема списка листов. `limit` без `catch`: серверный лимит обязателен —
  * его отсутствие означает несовместимый ответ, а не «лимит 0». Глубина истории,
  * наоборот, с `catch`: бэк без этого поля просто не покажет её в подписи.
+ * Лимиты по подписке — тоже с `catch`: без них подсказка про подписку не
+ * показывается, а сам список работает как раньше.
  */
 const sheetListPageSchema = z.object({
   limit: z.number(),
+  subscriberLimit: z.coerce.number().catch(0),
   historyLimit: z.coerce.number().catch(0),
+  subscriberHistoryLimit: z.coerce.number().catch(0),
   count: z.coerce.number().catch(0),
   sheets: z.array(sheetListItemSchema).catch([]),
 });
@@ -538,7 +677,9 @@ export function parseCharacterSheetListPage(
 
   return {
     limit: page.limit,
+    subscriberLimit: page.subscriberLimit,
     historyLimit: page.historyLimit,
+    subscriberHistoryLimit: page.subscriberHistoryLimit,
     count: page.count,
     sheets,
   };
@@ -559,10 +700,11 @@ const savedSheetSchema = z.object({
 
 /**
  * Схема списка сохранённых листов. `limit`, как и у своих листов, без `catch`:
- * серверный лимит обязателен.
+ * серверный лимит обязателен, а лимит по подписке — нет.
  */
 const savedSheetListPageSchema = z.object({
   limit: z.number(),
+  subscriberLimit: z.coerce.number().catch(0),
   count: z.coerce.number().catch(0),
   sheets: z.array(savedSheetSchema).catch([]),
 });
@@ -627,6 +769,7 @@ export function parseSavedCharacterSheetListPage(
 
   return {
     limit: page.limit,
+    subscriberLimit: page.subscriberLimit,
     count: page.count,
     sheets: page.sheets.map(toSavedSheet),
   };

@@ -12,17 +12,19 @@ import type {
   CharacterHitDie,
   CharacterInventoryItem,
   CharacterNote,
+  CharacterPreparedSpells,
   CharacterSettings,
   CharacterSpecies,
   CharacterSpeed,
   CharacterSpell,
   CharacterSpellcasting,
+  CharacterToolProficiency,
   CharacterVision,
   CustomInventoryItemDraft,
   CustomSpellDraft,
   HitDiceAmount,
   LevelUpPayload,
-  ProficiencyGroupKey,
+  PlainProficiencyGroupKey,
 } from '../model';
 
 import { clamp, union } from 'es-toolkit';
@@ -34,6 +36,7 @@ import {
   adjustHealthForConstitution,
   adjustHealthForLevel,
   adjustHitDice,
+  applyAbilityIncreases,
   applySkillProficiencies,
   ARMOR_CLASS_BASE_MAX,
   ARMOR_CLASS_BASE_MIN,
@@ -48,43 +51,59 @@ import {
   fetchCatalogSpellDetail,
   fetchInventoryItemDescription,
   getAbilityRows,
-  getArmorClassBreakdown,
   getArmorClassValue,
   getCarryingCapacity,
+  getCharacterProficiencyBonus,
   getClassLevelHitPoints,
   getFormattedBonus,
+  getInitiativeBonus,
   getInventoryWeight,
   getNextLevelExperience,
-  getProficiencyBonus,
+  getPreparedSpellsLimitDescription,
   getSavingThrowRows,
   getSkillRows,
   getSpellcastingBreakdown,
   getSpellSlotRows,
+  getSpellSlotsEmptyDescription,
+  INNATE_SPELL_COPY_TOAST_DESCRIPTION,
   INVENTORY_COPY_TOAST_TITLE,
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
   isCustomInventoryItem,
   isCustomSpell,
+  isMissingInventoryItem,
+  isPreparableSpell,
+  isVersatileInventoryItem,
   LEVEL_MAX,
   LEVEL_MIN,
   mergeCharacterFeatures,
   mergeClassResources,
+  normalizeResourceRecoveryRule,
+  PREPARED_SPELLS_BONUS_MAX,
+  PREPARED_SPELLS_BONUS_MIN,
+  PREPARED_SPELLS_LIMIT_TOAST_TITLE,
+  PREPARED_SPELLS_MAX,
+  PREPARED_SPELLS_MIN,
   removeFeaturesAboveLevel,
   RESOURCE_COUNT_MAX,
   RESOURCE_COUNT_MIN,
   RESOURCE_SHORT_LABEL_MAX_LENGTH,
+  restoreClassResources,
   restoreHitDice,
   SHEET_HIDDEN_CONTROL_CLASS,
   SHEET_LOCKED_MESSAGE,
   SHEET_READONLY_MESSAGE,
   shiftClassHitDice,
   SKILL_PROFICIENCY_NEXT,
+  sortAbilityKeys,
   SPELL_COPY_TOAST_TITLE,
+  SPELL_SLOTS_EMPTY_TOAST_TITLE,
   toCopiedInventoryItem,
   toCopiedSpell,
   toCustomInventoryItem,
   toCustomSpell,
   toUpdatedCustomInventoryItem,
+  unionToolProficiencies,
   VISION_DISTANCE_MAX,
   VISION_DISTANCE_MIN,
 } from '../model';
@@ -235,18 +254,18 @@ export function useCharacterSheet() {
   const skillRows = computed(() => getSkillRows(character.value));
 
   const formattedProficiencyBonus = computed(() =>
-    getFormattedBonus(getProficiencyBonus(character.value.level)),
+    getFormattedBonus(getCharacterProficiencyBonus(character.value)),
   );
 
+  // Бонус инициативы нужен и плиткой, и модалкой броска, поэтому наружу уходит
+  // и число, и его подпись.
+  const initiativeBonus = computed(() => getInitiativeBonus(character.value));
+
   const formattedInitiative = computed(() =>
-    getFormattedModifier(character.value.abilities.dexterity),
+    getFormattedBonus(initiativeBonus.value),
   );
 
   const armorClassValue = computed(() => getArmorClassValue(character.value));
-
-  const armorClassBreakdown = computed(() =>
-    getArmorClassBreakdown(character.value),
-  );
 
   const spellcastingBreakdown = computed(() =>
     getSpellcastingBreakdown(character.value),
@@ -357,6 +376,8 @@ export function useCharacterSheet() {
             name: name || shortLabel,
             shortLabel:
               shortLabel || name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
+            shortRest: normalizeResourceRecoveryRule(resource.shortRest, max),
+            longRest: normalizeResourceRecoveryRule(resource.longRest, max),
             max,
             current: clamp(
               Math.trunc(resource.current),
@@ -455,6 +476,49 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Трата одной ячейки круга — по факту накладывания заклинания. Занимается
+   * первая свободная ячейка, как если бы игрок нажал на её кружок.
+   *
+   * Круги, которых класс не даёт (заговоры, незаклинатель), ячеек не тратят и
+   * молчат. На чужом листе трата тоже пропускается без предупреждения: бросок
+   * кубов зрителю никто не запрещает, а документ ему всё равно не сохранить.
+   *
+   * @param level круг заклинания.
+   */
+  function spendSpellSlot(level: number): void {
+    const row = spellSlotRows.value.find((slotRow) => slotRow.level === level);
+
+    if (!row || isReadonly.value) {
+      return;
+    }
+
+    // Ячейки круга кончились — молча пропустить нельзя: игрок ждёт, что счётчик
+    // сдвинется, и должен узнать, что тратить уже нечего.
+    if (row.used >= row.max) {
+      toast.add({
+        color: 'warning',
+        icon: 'tabler:sparkles',
+        title: SPELL_SLOTS_EMPTY_TOAST_TITLE,
+        description: getSpellSlotsEmptyDescription(level),
+      });
+
+      return;
+    }
+
+    // Хранится только трата, поэтому круг переписывается целиком.
+    const otherSlots = character.value.spellSlots.filter(
+      (slot) => slot.level !== level,
+    );
+
+    character.value = {
+      ...character.value,
+      spellSlots: [...otherSlots, { level, used: row.used + 1 }].sort(
+        (left, right) => left.level - right.level,
+      ),
+    };
+  }
+
+  /**
    * Установка класса доспеха с ограничением базового значения.
    *
    * @param armorClass новый класс доспеха персонажа.
@@ -473,6 +537,7 @@ export function useCharacterSheet() {
           ARMOR_CLASS_BASE_MIN,
           ARMOR_CLASS_BASE_MAX,
         ),
+        abilities: sortAbilityKeys(armorClass.abilities),
       },
     };
   }
@@ -559,32 +624,53 @@ export function useCharacterSheet() {
 
     const { characterClass } = character.value;
 
-    character.value = {
-      ...character.value,
-      level: clampedLevel,
-      experience: {
-        current: clamp(Math.trunc(payload.experience), 0, EXPERIENCE_MAX),
-        nextLevel: getNextLevelExperience(clampedLevel),
-      },
-      characterClass:
-        characterClass && payload.subclass
-          ? {
-              ...characterClass,
-              subclassUrl: payload.subclass.url,
-              subclassName: payload.subclass.name,
-              casterType: payload.subclass.casterType,
-            }
-          : characterClass,
-      hitDice:
-        classDie !== undefined && levelDelta !== 0
-          ? shiftClassHitDice(character.value.hitDice, classDie, levelDelta)
-          : character.value.hitDice,
-      health: adjustHealthForLevel(
+    const abilities = applyAbilityIncreases(
+      character.value.abilities,
+      payload.abilityIncreases,
+    );
+
+    // Прирост хитов за уровни считался по прежнему Телосложению, поэтому его
+    // прибавка от черты применяется отдельно — она поднимает максимум на всех
+    // уровнях, включая только что взятые.
+    const health = adjustHealthForConstitution(
+      adjustHealthForLevel(
         character.value.health,
         previousLevel,
         clampedLevel,
         payload.hitPointsGains,
       ),
+      clampedLevel,
+      character.value.abilities.constitution,
+      abilities.constitution,
+    );
+
+    character.value = {
+      ...character.value,
+      level: clampedLevel,
+      abilities,
+      experience: {
+        current: clamp(Math.trunc(payload.experience), 0, EXPERIENCE_MAX),
+        nextLevel: getNextLevelExperience(clampedLevel),
+      },
+      // Мастер грузит деталь класса, поэтому заодно обновляет прогрессию
+      // подготовленных заклинаний: у листов, собранных до её появления, она
+      // запишется первым же повышением уровня.
+      characterClass: characterClass
+        ? {
+            ...characterClass,
+            subclassUrl: payload.subclass?.url ?? characterClass.subclassUrl,
+            subclassName: payload.subclass?.name ?? characterClass.subclassName,
+            casterType: payload.subclass
+              ? payload.subclass.casterType
+              : characterClass.casterType,
+            preparedSpells: [...payload.preparedSpells],
+          }
+        : characterClass,
+      hitDice:
+        classDie !== undefined && levelDelta !== 0
+          ? shiftClassHitDice(character.value.hitDice, classDie, levelDelta)
+          : character.value.hitDice,
+      health,
       features: mergeCharacterFeatures(
         character.value.features,
         payload.features,
@@ -821,11 +907,12 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Завершение короткого отдыха: восстанавливаются ресурсы класса с типом
-   * «короткий отдых» и ячейки заклинаний договора колдуна (у остальных классов
-   * ячейки возвращает только продолжительный отдых). Кости хитов и хиты тратит
-   * {@link spendHitDice} — отдых их не возвращает. Игровое действие —
-   * блокировкой листа не ограничивается.
+   * Завершение короткого отдыха: ресурсам класса возвращается столько зарядов,
+   * сколько задано их правилом для короткого отдыха, и восстанавливаются ячейки
+   * заклинаний договора колдуна (у остальных классов ячейки возвращает только
+   * продолжительный отдых). Кости хитов и хиты тратит {@link spendHitDice} —
+   * отдых их не возвращает. Игровое действие — блокировкой листа не
+   * ограничивается.
    */
   function completeShortRest(): void {
     if (!ensureOwnSheet()) {
@@ -840,10 +927,9 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
-      classResources: character.value.classResources.map((resource) =>
-        resource.recovery === 'short-rest'
-          ? { ...resource, current: resource.max }
-          : resource,
+      classResources: restoreClassResources(
+        character.value.classResources,
+        'short-rest',
       ),
       // Хранится только трата ячеек, поэтому восстановление круга — это
       // удаление его записи из списка.
@@ -856,9 +942,10 @@ export function useCharacterSheet() {
   /**
    * Завершение продолжительного отдыха: хиты поднимаются до максимума, временные
    * хиты пропадают (держатся только до конца отдыха), возвращаются все ячейки
-   * заклинаний, все счётчики умений и все потраченные кости хитов — в редакции
-   * 2024 года отдых возвращает их полностью, а не половину. Игровое действие:
-   * запертый лист его разрешает, чужой — нет.
+   * заклинаний и все потраченные кости хитов — в редакции 2024 года отдых
+   * возвращает их полностью, а не половину. Счётчикам умений возвращается
+   * столько зарядов, сколько задано их правилом для продолжительного отдыха.
+   * Игровое действие: запертый лист его разрешает, чужой — нет.
    */
   function completeLongRest(): void {
     if (!ensureOwnSheet()) {
@@ -879,10 +966,10 @@ export function useCharacterSheet() {
         current: character.value.health.max,
         temporary: 0,
       },
-      classResources: character.value.classResources.map((resource) => ({
-        ...resource,
-        current: resource.max,
-      })),
+      classResources: restoreClassResources(
+        character.value.classResources,
+        'long-rest',
+      ),
       // Хранится только трата ячеек, поэтому пустой список — все ячейки на месте.
       spellSlots: [],
     };
@@ -993,7 +1080,7 @@ export function useCharacterSheet() {
     proficiencies: {
       armor: string[];
       weapons: string[];
-      tools: string[];
+      tools: CharacterToolProficiency[];
       languages: string[];
     };
     skills: { proficient: string[]; expertise: string[] };
@@ -1054,7 +1141,7 @@ export function useCharacterSheet() {
           character.value.proficiencies.weapons,
           payload.proficiencies.weapons,
         ),
-        tools: union(
+        tools: unionToolProficiencies(
           character.value.proficiencies.tools,
           payload.proficiencies.tools,
         ),
@@ -1101,7 +1188,7 @@ export function useCharacterSheet() {
     background: { url: string; name: string };
     abilityBonuses: Partial<Record<AbilityKey, number>>;
     skills: string[];
-    tools: string[];
+    tools: CharacterToolProficiency[];
     featUrl: string | null;
     featFeature: CharacterFeature | null;
   }): void {
@@ -1154,7 +1241,10 @@ export function useCharacterSheet() {
       ),
       proficiencies: {
         ...character.value.proficiencies,
-        tools: union(character.value.proficiencies.tools, payload.tools),
+        tools: unionToolProficiencies(
+          character.value.proficiencies.tools,
+          payload.tools,
+        ),
       },
       skills: applySkillProficiencies(
         character.value.skills,
@@ -1295,7 +1385,17 @@ export function useCharacterSheet() {
     character.value = {
       ...character.value,
       spells: character.value.spells.map((spell) =>
-        spell.url === spellUrl ? updatedSpell : spell,
+        spell.url === spellUrl
+          ? {
+              ...updatedSpell,
+              // Пометка подготовки формой не правится, поэтому переносится с
+              // прежней записи. Заговором заклинание становится
+              // неподготовленным: заговоры подготовки не требуют.
+              prepared: isPreparableSpell(updatedSpell)
+                ? editedSpell.prepared
+                : undefined,
+            }
+          : spell,
       ),
     };
   }
@@ -1367,7 +1467,93 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
-      spellcasting: { ability: spellcasting.ability },
+      spellcasting: {
+        ability: spellcasting.ability,
+        prepared: { ...spellcasting.prepared },
+      },
+    };
+  }
+
+  /**
+   * Установка настройки числа подготовленных заклинаний: своё число выключает
+   * подсчёт по таблице класса, бонус прибавляется к числу класса.
+   *
+   * @param prepared новая настройка подготовленных заклинаний.
+   */
+  function setPreparedSpells(prepared: CharacterPreparedSpells): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      spellcasting: {
+        ...character.value.spellcasting,
+        prepared: {
+          custom:
+            prepared.custom === null
+              ? null
+              : clamp(
+                  Math.trunc(prepared.custom),
+                  PREPARED_SPELLS_MIN,
+                  PREPARED_SPELLS_MAX,
+                ),
+          bonus: clamp(
+            Math.trunc(prepared.bonus),
+            PREPARED_SPELLS_BONUS_MIN,
+            PREPARED_SPELLS_BONUS_MAX,
+          ),
+        },
+      },
+    };
+  }
+
+  /**
+   * Пометка заклинания подготовленным по нажатию на его значок (как надевание
+   * доспеха в снаряжении). Больше числа из блока «Подготовленные» пометить
+   * нельзя — лишнее нажатие предупреждает и ничего не меняет. Предел неизвестен
+   * (класс его не даёт, своё число не задано) — пометок сколько угодно.
+   *
+   * Заговоры подготовки не требуют, поэтому их значок ничего не переключает.
+   * Игровое действие: запертый лист его разрешает, чужой — нет.
+   *
+   * @param spellUrl URL заклинания книги персонажа.
+   */
+  function toggleSpellPrepared(spellUrl: string): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    const currentSpell = character.value.spells.find(
+      (spell) => spell.url === spellUrl,
+    );
+
+    if (!currentSpell || !isPreparableSpell(currentSpell)) {
+      return;
+    }
+
+    const { value: limit, count } = spellcastingBreakdown.value.prepared;
+
+    // Предел уже выбран: молча пропустить нельзя — игрок ждёт, что значок
+    // загорится, и должен узнать, почему этого не произошло.
+    if (!currentSpell.prepared && limit !== null && count >= limit) {
+      toast.add({
+        color: 'warning',
+        icon: 'tabler:wand',
+        title: PREPARED_SPELLS_LIMIT_TOAST_TITLE,
+        description: getPreparedSpellsLimitDescription(limit),
+      });
+
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      spells: character.value.spells.map((spell) =>
+        spell.url === spellUrl
+          ? { ...spell, prepared: !spell.prepared }
+          : spell,
+      ),
     };
   }
 
@@ -1383,7 +1569,7 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
-      settings: { weaponAttackAbility: settings.weaponAttackAbility },
+      settings: { ...settings },
     };
   }
 
@@ -1400,6 +1586,96 @@ export function useCharacterSheet() {
     character.value = {
       ...character.value,
       spells: character.value.spells.filter((spell) => spell.url !== spellUrl),
+    };
+  }
+
+  /**
+   * Копия врождённого заклинания в книгу персонажа: запись перестаёт зависеть
+   * и от вида, и от раздела сайта — дальше её правит форма листа. Из группы
+   * врождённых заклинание при этом уходит, иначе оно осталось бы в листе
+   * дважды. Характеристики и описание дозагружаются из справочника: у вида их
+   * нет.
+   *
+   * @param spellUrl URL врождённого заклинания.
+   */
+  async function copyInnateSpellToSheet(spellUrl: string): Promise<void> {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const requestedInnateSpell = character.value.species?.innateSpells.find(
+      (innateSpell) => innateSpell.spell.url === spellUrl,
+    );
+
+    if (!requestedInnateSpell) {
+      return;
+    }
+
+    const detail = await fetchCatalogSpellDetail(spellUrl);
+
+    // Пока шёл запрос, вид могли сменить или заклинание убрать — перечитываем
+    // запись и отступаем, если её больше нет.
+    const species = character.value.species;
+
+    const currentInnateSpell = species?.innateSpells.find(
+      (innateSpell) => innateSpell.spell.url === spellUrl,
+    );
+
+    if (!species || !currentInnateSpell) {
+      return;
+    }
+
+    const ownSpell = toCopiedSpell(
+      `${CUSTOM_SPELL_URL_PREFIX}${crypto.randomUUID()}`,
+      currentInnateSpell.spell,
+      detail,
+    );
+
+    character.value = {
+      ...character.value,
+      species: {
+        ...species,
+        innateSpells: species.innateSpells.filter(
+          (innateSpell) => innateSpell.spell.url !== spellUrl,
+        ),
+      },
+      spells: [...character.value.spells, ownSpell],
+    };
+
+    toast.add({
+      color: 'success',
+      icon: 'tabler:copy',
+      title: SPELL_COPY_TOAST_TITLE,
+      description: INNATE_SPELL_COPY_TOAST_DESCRIPTION,
+    });
+  }
+
+  /**
+   * Удаление врождённого заклинания вида: запись выбрасывается из самого вида,
+   * иначе она вернулась бы на следующем повышении уровня. Заново получить её
+   * можно, ещё раз выбрав вид в мастере.
+   *
+   * @param spellUrl URL врождённого заклинания.
+   */
+  function removeInnateSpell(spellUrl: string): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const species = character.value.species;
+
+    if (!species) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      species: {
+        ...species,
+        innateSpells: species.innateSpells.filter(
+          (innateSpell) => innateSpell.spell.url !== spellUrl,
+        ),
+      },
     };
   }
 
@@ -1576,9 +1852,10 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Изменение количества предмета в пределах от одной штуки до максимума.
-   * Игровое действие (трата и пополнение расходников) — блокировкой листа не
-   * ограничивается; удаление предмета — отдельным экшеном.
+   * Изменение количества предмета в пределах от нуля до максимума. Игровое
+   * действие (трата и пополнение расходников) — блокировкой листа не
+   * ограничивается; удаление предмета — отдельным экшеном. Обнулённый доспех
+   * снимается: предмета у персонажа нет, и в КД он идти не должен.
    *
    * @param inventoryItemId идентификатор предмета инвентаря.
    * @param delta изменение количества.
@@ -1593,18 +1870,23 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
-      inventory: character.value.inventory.map((inventoryItem) =>
-        inventoryItem.id === inventoryItemId
-          ? {
-              ...inventoryItem,
-              quantity: clamp(
-                inventoryItem.quantity + delta,
-                INVENTORY_QUANTITY_MIN,
-                INVENTORY_QUANTITY_MAX,
-              ),
-            }
-          : inventoryItem,
-      ),
+      inventory: character.value.inventory.map((inventoryItem) => {
+        if (inventoryItem.id !== inventoryItemId) {
+          return inventoryItem;
+        }
+
+        const quantity = clamp(
+          inventoryItem.quantity + delta,
+          INVENTORY_QUANTITY_MIN,
+          INVENTORY_QUANTITY_MAX,
+        );
+
+        return {
+          ...inventoryItem,
+          quantity,
+          equipped: quantity > 0 && inventoryItem.equipped,
+        };
+      }),
     };
   }
 
@@ -1612,6 +1894,7 @@ export function useCharacterSheet() {
    * Надеть/снять доспех: переключает `equipped` у предмета, у которого есть
    * параметры доспеха. Игровое действие (смена брони по ходу игры) — блокировкой
    * листа не ограничивается. Итоговый КД пересчитывается автоматически.
+   * Отсутствующий доспех (количество — ноль) надеть нельзя.
    *
    * @param inventoryItemId идентификатор предмета инвентаря.
    */
@@ -1623,8 +1906,33 @@ export function useCharacterSheet() {
     character.value = {
       ...character.value,
       inventory: character.value.inventory.map((inventoryItem) =>
-        inventoryItem.id === inventoryItemId && inventoryItem.armor
+        inventoryItem.id === inventoryItemId
+        && inventoryItem.armor
+        && !isMissingInventoryItem(inventoryItem)
           ? { ...inventoryItem, equipped: !inventoryItem.equipped }
+          : inventoryItem,
+      ),
+    };
+  }
+
+  /**
+   * Смена хвата универсального оружия: взять его двумя руками (урон катится
+   * большей костью) или вернуть в одну. Игровое действие — блокировкой листа не
+   * ограничивается. У остального снаряжения хвата нет: переключать нечего.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   */
+  function toggleInventoryItemTwoHanded(inventoryItemId: string): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.map((inventoryItem) =>
+        inventoryItem.id === inventoryItemId
+        && isVersatileInventoryItem(inventoryItem)
+          ? { ...inventoryItem, twoHanded: !inventoryItem.twoHanded }
           : inventoryItem,
       ),
     };
@@ -1790,12 +2098,16 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Установка списка владений группы (броня, оружие или инструменты).
+   * Установка списка владений группы (броня, оружие, мастерство или языки).
+   * Инструменты хранятся записями со ссылкой — у них свой сеттер.
    *
    * @param group ключ группы владений.
    * @param items новый список владений группы.
    */
-  function setProficiencies(group: ProficiencyGroupKey, items: string[]): void {
+  function setProficiencies(
+    group: PlainProficiencyGroupKey,
+    items: string[],
+  ): void {
     if (!ensureEditable()) {
       return;
     }
@@ -1805,6 +2117,26 @@ export function useCharacterSheet() {
       proficiencies: {
         ...character.value.proficiencies,
         [group]: [...items],
+      },
+    };
+  }
+
+  /**
+   * Установка владений инструментами: помимо названия хранится ссылка на
+   * предмет каталога, чтобы его описание открывалось из листа.
+   *
+   * @param tools новый список владений инструментами.
+   */
+  function setToolProficiencies(tools: CharacterToolProficiency[]): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      proficiencies: {
+        ...character.value.proficiencies,
+        tools: tools.map((tool) => ({ ...tool })),
       },
     };
   }
@@ -1882,9 +2214,9 @@ export function useCharacterSheet() {
     savingThrowRows,
     skillRows,
     formattedProficiencyBonus,
+    initiativeBonus,
     formattedInitiative,
     armorClassValue,
-    armorClassBreakdown,
     spellcastingBreakdown,
     spellSlotRows,
     totalWeight,
@@ -1896,6 +2228,7 @@ export function useCharacterSheet() {
     adjustClassResource,
     adjustInventoryItemQuantity,
     toggleInventoryItemEquipped,
+    toggleInventoryItemTwoHanded,
     toggleInspiration,
     downloadCharacter,
     addFeature,
@@ -1905,9 +2238,11 @@ export function useCharacterSheet() {
     addInventoryItems,
     addCustomInventoryItem,
     addCustomSpell,
+    copyInnateSpellToSheet,
     copyInventoryItemToSheet,
     copySpellToSheet,
     removeFeature,
+    removeInnateSpell,
     removeInventoryItem,
     removeNote,
     removeSpell,
@@ -1920,12 +2255,14 @@ export function useCharacterSheet() {
     setCurrency,
     setName,
     setProficiencies,
+    setToolProficiencies,
     setProgress,
     setSettings,
     setSize,
     setSpecies,
     setSpells,
     setSpellcasting,
+    setPreparedSpells,
     setVision,
     setSpeed,
     setHealth,
@@ -1934,7 +2271,9 @@ export function useCharacterSheet() {
     spendHitDice,
     completeShortRest,
     completeLongRest,
+    spendSpellSlot,
     toggleSavingThrowProficiency,
+    toggleSpellPrepared,
     toggleSpellSlot,
     cycleSkillProficiency,
   };

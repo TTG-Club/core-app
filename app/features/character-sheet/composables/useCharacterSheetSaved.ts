@@ -33,6 +33,13 @@ export function useCharacterSheetSaved() {
 
   const limit = useState<number>('character-sheet:saved-limit', () => 0);
 
+  // Лимит по подписке приходит всегда: по разнице с выданным видно, предлагать
+  // ли подписку (числа на клиенте не хардкодятся) — как у своих листов.
+  const subscriberLimit = useState<number>(
+    'character-sheet:saved-subscriber-limit',
+    () => 0,
+  );
+
   const isLoaded = useState<boolean>(
     'character-sheet:saved-loaded',
     () => false,
@@ -59,6 +66,8 @@ export function useCharacterSheetSaved() {
   // сам, сервер считает их наравне с живыми.
   const canSave = computed(() => savedSheets.value.length < limit.value);
 
+  const canRaiseLimit = computed(() => subscriberLimit.value > limit.value);
+
   /**
    * Показывает тост с ошибкой (текст берётся из ответа бэка).
    *
@@ -84,6 +93,7 @@ export function useCharacterSheetSaved() {
 
       savedSheets.value = page.sheets;
       limit.value = page.limit;
+      subscriberLimit.value = page.subscriberLimit;
       isLoaded.value = true;
     } catch (error) {
       loadErrorMessage.value = getSheetErrorMessage(error);
@@ -173,7 +183,9 @@ export function useCharacterSheetSaved() {
   return {
     savedSheets,
     limit,
+    subscriberLimit,
     canSave,
+    canRaiseLimit,
     isLoading,
     isMutating,
     loadErrorMessage,

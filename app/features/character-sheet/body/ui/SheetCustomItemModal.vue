@@ -198,7 +198,7 @@
             :items="CUSTOM_INVENTORY_KIND_OPTIONS"
             orientation="horizontal"
             variant="list"
-            color="warning"
+            color="primary"
             :ui="{ fieldset: 'flex-wrap gap-y-2' }"
           />
 

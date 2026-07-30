@@ -1,5 +1,5 @@
 import type { AbilityKey } from '~/shared/types';
-import type { EditorBaseInfoState } from '~ui/editor';
+import type { EditorBaseInfoState, EquipmentOptionCreate } from '~ui/editor';
 
 import type { ClassResourceRecovery } from './detail';
 
@@ -34,6 +34,7 @@ export interface ClassFeatureCreate {
   additional: string;
   hideInSubclasses: boolean | undefined;
   abilityImprovement: boolean | undefined;
+  fightingStyleChoice: boolean | undefined;
   scaling: Array<ClassFeatureScalingCreate>;
   options: Array<ClassFeatureOptionCreate>;
   abilityBonus?: ClassFeatureAbilityBonusCreate;
@@ -99,6 +100,7 @@ export interface ClassCreate extends EditorBaseInfoState {
   proficiency: ClassProficiencyCreate;
   multiclassProficiency: ClassMulticlassProficiencyCreate;
   equipment: string | undefined;
+  startingEquipment: Array<EquipmentOptionCreate>;
   features: Array<ClassFeatureCreate>;
   table: Array<ClassColumnCreate>;
   casterType: string | undefined;

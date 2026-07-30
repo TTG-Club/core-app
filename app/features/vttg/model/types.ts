@@ -30,6 +30,18 @@ export interface VttgHeading {
   subtitle?: string;
 }
 
+/** Платформа, на которой можно запустить VTTG. */
+export interface VttgDownloadPlatform {
+  /** Идентификатор платформы. */
+  id: 'windows' | 'vds' | 'mac';
+  /** Название платформы для подписи кнопки. */
+  name: string;
+  /** Иконка платформы. */
+  icon: string;
+  /** Готова ли сборка — у неготовых кнопка выключена с пометкой «скоро». */
+  ready: boolean;
+}
+
 export const VIDEO_EXTENSIONS = ['.webm', '.mp4'] as const;
 
 export type VideoExtension = (typeof VIDEO_EXTENSIONS)[number];

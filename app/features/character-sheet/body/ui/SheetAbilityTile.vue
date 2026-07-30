@@ -11,7 +11,7 @@
    * тоном, каким плитка подсвечивается при наведении.
    */
   const ADJUST_BUTTON_CLASSES =
-    'rounded-full border border-warning/60 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100';
+    'rounded-full border border-primary/60 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100';
 
   const props = defineProps<{
     abilityRow: AbilityRow;
