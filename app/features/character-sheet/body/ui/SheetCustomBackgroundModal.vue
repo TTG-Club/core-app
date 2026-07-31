@@ -276,6 +276,9 @@
         ),
         featUrl: draftFeatUrl.value || null,
         featFeature,
+        // Стартового набора у своей предыстории нет — снаряжение собирается на
+        // вкладке «Снаряжение». Набор прошлой предыстории при этом снимается.
+        startingEquipment: null,
       });
 
       emit('close', true);

@@ -105,6 +105,21 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 - Wizards for species / class / background; rolls go through `dice-roller`
   (universal `SheetRollModal`).
+- The class and background wizards also hand out the starting equipment. The
+  reference `startingEquipment` field carries the official options («А», «Б»,
+  «В») as structured item lists plus coins, so the review step shows them as a
+  radio row (`SheetStartingEquipmentChoice`, first option preselected, «Не
+  добавлять» last) and applying pulls each catalog item through
+  `/item/{url}` — a weapon lands with its attack, a suit of armour with its AC —
+  while a line without a catalog slug becomes a homebrew row the player renames.
+  Items merge into the inventory by quantity instead of replacing it, and the
+  coins are added to the wallet, so re-picking a class never wipes what was
+  bought. What each source handed out is remembered on `characterClass` /
+  `characterBackground` (`startingEquipment`) and taken back the next time that
+  same source is picked — exactly the granted quantities and coins, so the set
+  never accumulates and anything bought on top survives. Sheets saved before the
+  field existed carry no record, so their first re-pick has nothing to take back.
+  Entries the reference has no structured data for simply show no picker.
 - The background wizard also creates a homebrew one (`SheetCustomBackgroundModal`,
   opened over the catalog list): name, a +2/+1 or +1/+1/+1 ability spread, two
   skills, one tool from the catalog and an origin feat (category `ORIGIN` of
