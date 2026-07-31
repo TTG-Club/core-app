@@ -75,7 +75,7 @@
       </UFormField>
 
       <UFormField
-        class="md:col-span-8"
+        class="md:col-span-6"
         label="Дистанция (нормальная)"
         name="weapon.range.normal"
       >
@@ -87,7 +87,7 @@
       </UFormField>
 
       <UFormField
-        class="md:col-span-8"
+        class="md:col-span-6"
         label="Дистанция (максимальная)"
         name="weapon.range.max"
       >
@@ -99,11 +99,24 @@
       </UFormField>
 
       <UFormField
-        class="md:col-span-8"
+        class="md:col-span-6"
         label="Тип боеприпаса"
         name="weapon.ammo"
       >
         <SelectAmmunition v-model="model.ammo" />
+      </UFormField>
+
+      <UFormField
+        class="md:col-span-6"
+        label="Боекомплект"
+        tooltip="Количество выстрелов до перезарядки (свойство «Боекомплект»)"
+        name="weapon.magazine"
+      >
+        <UInputNumber
+          v-model="model.magazine"
+          placeholder="Введи количество выстрелов"
+          :min="1"
+        />
       </UFormField>
 
       <UFormField

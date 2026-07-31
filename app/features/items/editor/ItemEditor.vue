@@ -31,6 +31,7 @@
       range: { normal: undefined, max: undefined },
       versatile: { diceCount: undefined, dice: undefined, bonus: undefined },
       ammo: undefined,
+      magazine: undefined,
       additional: undefined,
     };
   }
