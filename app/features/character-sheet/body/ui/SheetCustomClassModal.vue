@@ -113,6 +113,9 @@
       // выводит мастер каталога, у своего класса нет.
       classResources: [],
       features: buildCustomClassFeatures(draftFeatures.value, name),
+      // Стартового набора у своего класса нет — снаряжение собирается на
+      // вкладке «Снаряжение». Набор прошлого класса при этом снимается.
+      startingEquipment: null,
     });
 
     emit('close', true);

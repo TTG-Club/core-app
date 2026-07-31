@@ -265,6 +265,9 @@ async function resolveClass(
       ...detail.table,
       ...(subclass?.detail?.table ?? []),
     ]),
+    // Снаряжение приходит из чужого листа целиком, стартовым набором класса его
+    // никто не выдавал — снимать при смене класса нечего.
+    startingEquipment: null,
   };
 }
 
@@ -353,7 +356,13 @@ async function resolveBackground(
   const option = findByName(options, source.backgroundName);
 
   return option
-    ? { url: option.url, name: option.name, featUrl: null, abilityBonuses: {} }
+    ? {
+        url: option.url,
+        name: option.name,
+        featUrl: null,
+        abilityBonuses: {},
+        startingEquipment: null,
+      }
     : fallback;
 }
 

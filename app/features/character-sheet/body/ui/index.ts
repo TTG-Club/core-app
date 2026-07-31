@@ -59,6 +59,7 @@ export { default as SheetSpeedTile } from './SheetSpeedTile.vue';
 export { default as SheetSpellAddModal } from './SheetSpellAddModal.vue';
 export { default as SheetSpellcastingModal } from './SheetSpellcastingModal.vue';
 export { default as SheetSpellsTab } from './SheetSpellsTab.vue';
+export { default as SheetStartingEquipmentChoice } from './SheetStartingEquipmentChoice.vue';
 export { default as SheetStatTile } from './SheetStatTile.vue';
 export { default as SheetToolProficienciesModal } from './SheetToolProficienciesModal.vue';
 export { default as SheetVisionModal } from './SheetVisionModal.vue';

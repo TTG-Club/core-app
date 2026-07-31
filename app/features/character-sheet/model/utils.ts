@@ -38,6 +38,7 @@ import type {
   ClassResourceRecoveryBadge,
   ClassSummary,
   ClassTableColumn,
+  CurrencyKey,
   CustomArmorType,
   CustomFeatureDraft,
   CustomInventoryItemDraft,
@@ -53,6 +54,7 @@ import type {
   FeatureOrigin,
   FeatureOriginGroup,
   FeatureTabFilter,
+  GrantedStartingEquipment,
   HitDiceAmount,
   HitDicePool,
   HitDiceSelectPool,
@@ -84,6 +86,9 @@ import type {
   SpellSlotCircle,
   SpellSlotRow,
   SpellTabFilter,
+  StartingEquipmentGrant,
+  StartingEquipmentItem,
+  StartingEquipmentOption,
   ToolCatalogEntry,
   VisionKey,
   VisionRow,
@@ -134,6 +139,9 @@ import {
   CLASS_SPELL_PROGRESSIONS,
   CLASS_SPELLCASTING_ABILITIES,
   COINS_PER_WEIGHT_UNIT,
+  CURRENCY_AMOUNT_MAX,
+  CURRENCY_AMOUNT_MIN,
+  CURRENCY_LABELS,
   CURRENCY_ORDER,
   CUSTOM_ARMOR_TYPE_BY_DEXTERITY_MOD,
   CUSTOM_ARMOR_TYPE_META,
@@ -226,6 +234,8 @@ import {
   SPELL_SAVE_DC_BASE,
   SPELL_SLOT_FREE_LABEL,
   SPELL_SLOT_USED_LABEL,
+  STARTING_EQUIPMENT_CUSTOM_ID_SEGMENT,
+  STARTING_EQUIPMENT_LABELS,
   THIRD_CASTER_SUBCLASSES,
   TOOL_CATALOG_GROUP_ORDER,
   TOOL_MATCH_KEYWORDS,
@@ -651,6 +661,292 @@ export function buildMagicItemInventoryItem(
     weapon: null,
     equipped: false,
     twoHanded: false,
+  };
+}
+
+/**
+ * Название позиции стартового снаряжения с уточнением из справочника
+ * («Книга (по истории)»).
+ *
+ * @param item позиция варианта стартового снаряжения.
+ * @returns название для строки инвентаря и подписи варианта.
+ */
+function getStartingEquipmentItemName(item: StartingEquipmentItem): string {
+  return item.hint ? `${item.name} (${item.hint})` : item.name;
+}
+
+/**
+ * Подпись варианта стартового снаряжения: предметы с количеством и монеты в
+ * конце — ровно то, что попадёт на лист при выборе этого варианта.
+ *
+ * @param option вариант стартового снаряжения.
+ * @returns перечисление через запятую.
+ */
+export function getStartingEquipmentSummary(
+  option: StartingEquipmentOption,
+): string {
+  const parts = option.items.map((item) => {
+    const name = getStartingEquipmentItemName(item);
+
+    return item.quantity > 1
+      ? `${name} ${STARTING_EQUIPMENT_LABELS.quantityPrefix}${item.quantity}`
+      : name;
+  });
+
+  if (option.coins > 0) {
+    parts.push(`${option.coins} ${CURRENCY_LABELS[option.coinKey]}`);
+  }
+
+  return parts.join(', ') || STARTING_EQUIPMENT_LABELS.emptyOptionDescription;
+}
+
+/**
+ * Предмет инвентаря для позиции варианта стартового снаряжения. Каталожная
+ * позиция собирается из детали раздела «Предметы» (категория, вес, боевые
+ * параметры) и получает количество варианта; позиция, детали которой не
+ * загрузились, остаётся ссылкой на каталог с одним названием; позиции без
+ * ссылки (например, «музыкальный инструмент») становятся своим предметом листа
+ * — игрок заменит его настоящим.
+ *
+ * @param item позиция варианта стартового снаряжения.
+ * @param summary деталь предмета каталога; null — ссылки нет или она не загрузилась.
+ * @returns предмет инвентаря для вкладки «Снаряжение».
+ */
+export function buildStartingEquipmentItem(
+  item: StartingEquipmentItem,
+  summary: ItemSummary | null,
+): CharacterInventoryItem {
+  if (summary) {
+    return { ...buildInventoryItem(summary), quantity: item.quantity };
+  }
+
+  const name = getStartingEquipmentItemName(item);
+
+  if (item.url) {
+    return {
+      id: getInventoryItemId('item', item.url),
+      url: item.url,
+      name,
+      category: 'ITEM',
+      typesLabel: '',
+      cost: '',
+      weight: 0,
+      quantity: item.quantity,
+      armor: null,
+      weapon: null,
+      equipped: false,
+      twoHanded: false,
+    };
+  }
+
+  // Идентификатор своей позиции строится от названия, а не случайным: повторный
+  // выбор того же класса складывает количество вместо второй такой же строки.
+  const url = `${CUSTOM_INVENTORY_URL_PREFIX}${STARTING_EQUIPMENT_CUSTOM_ID_SEGMENT}${name.toLowerCase()}`;
+
+  return {
+    id: url,
+    url,
+    name,
+    category: 'ITEM',
+    typesLabel: '',
+    cost: '',
+    weight: 0,
+    quantity: item.quantity,
+    armor: null,
+    weapon: null,
+    equipped: false,
+    twoHanded: false,
+    description: [],
+  };
+}
+
+/**
+ * Слияние добавляемых предметов с инвентарём: уже лежащий в инвентаре предмет
+ * получает прибавку к количеству (стартовый набор и покупка одного и того же
+ * кинжала — одна строка), новый уходит в конец списка.
+ *
+ * @param inventory текущий инвентарь персонажа.
+ * @param addedItems добавляемые предметы (повторы внутри списка складываются).
+ * @returns новый инвентарь.
+ */
+export function mergeInventoryItems(
+  inventory: CharacterInventoryItem[],
+  addedItems: CharacterInventoryItem[],
+): CharacterInventoryItem[] {
+  const addedQuantities = new Map<string, number>();
+
+  for (const addedItem of addedItems) {
+    addedQuantities.set(
+      addedItem.id,
+      (addedQuantities.get(addedItem.id) ?? 0) + addedItem.quantity,
+    );
+  }
+
+  const merged = inventory.map((inventoryItem) => {
+    const addedQuantity = addedQuantities.get(inventoryItem.id);
+
+    if (addedQuantity === undefined) {
+      return inventoryItem;
+    }
+
+    addedQuantities.delete(inventoryItem.id);
+
+    return {
+      ...inventoryItem,
+      quantity: getClampedInteger(
+        inventoryItem.quantity + addedQuantity,
+        INVENTORY_QUANTITY_MIN,
+        INVENTORY_QUANTITY_MAX,
+      ),
+    };
+  });
+
+  // Оставшиеся в карте предметы — новые для инвентаря; ключ удаляется вместе с
+  // добавлением, поэтому повтор одного предмета в списке не даёт двух строк.
+  for (const addedItem of addedItems) {
+    const quantity = addedQuantities.get(addedItem.id);
+
+    if (quantity === undefined) {
+      continue;
+    }
+
+    addedQuantities.delete(addedItem.id);
+
+    merged.push({
+      ...addedItem,
+      quantity: getClampedInteger(
+        quantity,
+        INVENTORY_QUANTITY_MIN,
+        INVENTORY_QUANTITY_MAX,
+      ),
+    });
+  }
+
+  return merged;
+}
+
+/**
+ * Изменение количества одной денежной единицы кошелька; результат остаётся в
+ * допустимом диапазоне (снятие монет, которых уже потратили, уводит единицу в
+ * ноль, а не в минус).
+ *
+ * @param currency кошелёк персонажа.
+ * @param key денежная единица.
+ * @param delta прибавка (отрицательная — снятие).
+ * @returns новый кошелёк.
+ */
+function addCurrencyAmount(
+  currency: CharacterCurrency,
+  key: CurrencyKey,
+  delta: number,
+): CharacterCurrency {
+  const total = { ...currency };
+
+  total[key] = getClampedInteger(
+    currency[key] + delta,
+    CURRENCY_AMOUNT_MIN,
+    CURRENCY_AMOUNT_MAX,
+  );
+
+  return total;
+}
+
+/**
+ * Снятие выданного источником стартового снаряжения: у строк инвентаря
+ * вычитается ровно выданное количество, опустевшие строки уходят из списка.
+ * Купленное сверх набора остаётся — вычитается доля источника, а не вся строка.
+ *
+ * @param inventory текущий инвентарь персонажа.
+ * @param granted выданное снаряжение источника.
+ * @returns инвентарь без выданных предметов.
+ */
+function removeGrantedInventoryItems(
+  inventory: CharacterInventoryItem[],
+  granted: GrantedStartingEquipment,
+): CharacterInventoryItem[] {
+  const grantedQuantities = new Map<string, number>();
+
+  for (const item of granted.items) {
+    grantedQuantities.set(
+      item.id,
+      (grantedQuantities.get(item.id) ?? 0) + item.quantity,
+    );
+  }
+
+  return inventory
+    .map((inventoryItem) => {
+      const grantedQuantity = grantedQuantities.get(inventoryItem.id);
+
+      if (grantedQuantity === undefined) {
+        return inventoryItem;
+      }
+
+      return {
+        ...inventoryItem,
+        quantity: Math.max(inventoryItem.quantity - grantedQuantity, 0),
+      };
+    })
+    .filter(
+      (inventoryItem) =>
+        !grantedQuantities.has(inventoryItem.id) || inventoryItem.quantity > 0,
+    );
+}
+
+/**
+ * Пересчёт инвентаря и кошелька при смене стартового снаряжения источника:
+ * выданное прошлым выбором снимается, выданное новым — прибавляется. Оба шага
+ * идут вместе, поэтому повторный выбор того же класса или предыстории оставляет
+ * лист таким же, а не удваивает набор.
+ *
+ * @param inventory текущий инвентарь персонажа.
+ * @param currency текущий кошелёк персонажа.
+ * @param previous снаряжение, выданное прошлым выбором; null — не выдавалось.
+ * @param next снаряжение нового выбора; null — вариант не выбран.
+ * @returns инвентарь, кошелёк и запись выданного для листа.
+ */
+export function applyStartingEquipmentChange(
+  inventory: CharacterInventoryItem[],
+  currency: CharacterCurrency,
+  previous: GrantedStartingEquipment | null,
+  next: StartingEquipmentGrant | null,
+): {
+  inventory: CharacterInventoryItem[];
+  currency: CharacterCurrency;
+  granted: GrantedStartingEquipment | null;
+} {
+  const withoutPrevious = previous
+    ? removeGrantedInventoryItems(inventory, previous)
+    : inventory;
+
+  const currencyWithoutPrevious = previous
+    ? addCurrencyAmount(currency, previous.coinKey, -previous.coins)
+    : currency;
+
+  if (!next) {
+    return {
+      inventory: withoutPrevious,
+      currency: currencyWithoutPrevious,
+      granted: null,
+    };
+  }
+
+  return {
+    inventory: mergeInventoryItems(withoutPrevious, next.items),
+    currency: addCurrencyAmount(
+      currencyWithoutPrevious,
+      next.coinKey,
+      next.coins,
+    ),
+    // Запоминается то, что просил выдать источник: слияние могло досыпать
+    // количество к уже лежавшей строке, и снимать нужно ровно свою долю.
+    granted: {
+      items: next.items.map((item) => ({
+        id: item.id,
+        quantity: item.quantity,
+      })),
+      coins: next.coins,
+      coinKey: next.coinKey,
+    },
   };
 }
 

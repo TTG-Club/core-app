@@ -574,6 +574,30 @@ export interface DistanceRowDraft {
 }
 
 /** Выбранный класс персонажа. */
+/**
+ * Выданное источником стартовое снаряжение — то, что снимается с листа при
+ * смене класса или предыстории. Без этой записи повторный выбор копил бы
+ * предметы и монеты: инвентарь, в отличие от умений и владений, источник не
+ * переписывает целиком (купленное игроком должно остаться на месте).
+ */
+export interface GrantedStartingEquipment {
+  /** Строки инвентаря с выданным количеством. */
+  items: Array<{ id: string; quantity: number }>;
+
+  /** Выданное количество монет; 0 — монет не было. */
+  coins: number;
+
+  /** Денежная единица выданных монет. */
+  coinKey: CurrencyKey;
+}
+
+/** Стартовое снаряжение к выдаче листу: готовые предметы и монеты варианта. */
+export interface StartingEquipmentGrant {
+  items: CharacterInventoryItem[];
+  coins: number;
+  coinKey: CurrencyKey;
+}
+
 export interface CharacterClass {
   url: string;
   name: string;
@@ -600,6 +624,12 @@ export interface CharacterClass {
    * (тогда число подготовленных заклинаний задаётся вручную).
    */
   preparedSpells: PreparedSpellsScaling[];
+
+  /**
+   * Выданное классом стартовое снаряжение (для снятия при смене класса);
+   * null — не выдавалось, в том числе у листов, сохранённых до появления поля.
+   */
+  startingEquipment: GrantedStartingEquipment | null;
 }
 
 /** Число подготовленных заклинаний, доступное с указанного уровня. */
@@ -624,6 +654,12 @@ export interface CharacterBackground {
 
   /** Применённые прибавки к характеристикам (для отката при смене предыстории). */
   abilityBonuses: Partial<Record<AbilityKey, number>>;
+
+  /**
+   * Выданное предысторией стартовое снаряжение (для снятия при её смене);
+   * null — не выдавалось, в том числе у листов, сохранённых до появления поля.
+   */
+  startingEquipment: GrantedStartingEquipment | null;
 }
 
 /** Происхождение особенности персонажа; none — добавлена вручную без источника. */
@@ -1093,6 +1129,38 @@ export interface ClassTableColumn {
   scaling: Array<{ level: number; value: string }>;
 }
 
+/** Позиция варианта стартового снаряжения класса или предыстории. */
+export interface StartingEquipmentItem {
+  /** Слаг предмета в разделе «Предметы»; '' — позиции нет в каталоге. */
+  url: string;
+
+  /** Название позиции. */
+  name: string;
+
+  /** Уточнение из ответа (например, «по истории»); '' — нет. */
+  hint: string;
+
+  /** Количество штук. */
+  quantity: number;
+}
+
+/**
+ * Вариант стартового снаряжения («А», «Б», …) класса или предыстории: набор
+ * предметов и монеты, которые персонаж получает, выбрав именно его.
+ */
+export interface StartingEquipmentOption {
+  /** Метка варианта из ответа («А»); служит и значением переключателя. */
+  label: string;
+
+  items: StartingEquipmentItem[];
+
+  /** Количество монет варианта; 0 — монет нет. */
+  coins: number;
+
+  /** Денежная единица монет варианта. */
+  coinKey: CurrencyKey;
+}
+
 /** Деталь класса или подкласса из ответа API (нужные листу поля). */
 export interface ClassSummary {
   url: string;
@@ -1129,6 +1197,9 @@ export interface ClassSummary {
   table: ClassTableColumn[];
 
   features: ClassFeatureSummary[];
+
+  /** Варианты стартового снаряжения; пустой список — справочник их не даёт. */
+  startingEquipment: StartingEquipmentOption[];
 }
 
 /** Тип структурированного выбора внутри класса (селектор в визарде). */
@@ -1358,6 +1429,9 @@ export interface BackgroundSummary {
 
   /** Стартовое снаряжение в разметке (справка). */
   equipment: string[];
+
+  /** Варианты стартового снаряжения; пустой список — справочник их не даёт. */
+  startingEquipment: StartingEquipmentOption[];
 }
 
 /**

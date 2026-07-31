@@ -26,13 +26,23 @@ import type {
   SpeciesOption,
   SpeciesSummary,
   SpellCatalogItem,
+  StartingEquipmentItem,
+  StartingEquipmentOption,
 } from './types';
+
+import { clamp } from 'es-toolkit';
 
 import { z } from '~/utils/zod';
 import { CasterType } from '~classes/model';
 
 import { descriptionNodesSchema } from './character-schema';
-import { SPELL_COMPONENT_LABELS } from './constants';
+import {
+  CURRENCY_KEYS_BY_LABEL,
+  INVENTORY_QUANTITY_MAX,
+  SPELL_COMPONENT_LABELS,
+  STARTING_EQUIPMENT_DEFAULT_COIN_KEY,
+  STARTING_EQUIPMENT_LABELS,
+} from './constants';
 import {
   getClassToolChoice,
   isAbilityImprovementFeature,
@@ -812,6 +822,93 @@ const classFeatureSchema = z.object({
     .catch(null),
 });
 
+/**
+ * Схема позиции варианта стартового снаряжения. Каталожная позиция приходит со
+ * слагом и названием, а внекаталожная («музыкальный инструмент») — только
+ * описанием, поэтому пусто может быть любое поле.
+ */
+const startingEquipmentItemSchema = z.object({
+  url: z.string().nullable().catch(null),
+  name: z.string().nullable().catch(null),
+  quantity: z.coerce.number().nullable().catch(null),
+  description: z.string().nullable().catch(null),
+});
+
+/** Схема варианта стартового снаряжения («А», «Б», …). */
+const startingEquipmentOptionSchema = z.object({
+  label: z.string().catch(''),
+  items: z.array(startingEquipmentItemSchema).catch([]),
+  coins: z.coerce.number().nullable().catch(null),
+
+  /** Сокращение денежной единицы монет варианта («зм»). */
+  coin: z.string().nullable().catch(null),
+});
+
+/** Схема поля `startingEquipment` — одинакового у класса и предыстории. */
+const startingEquipmentSchema = z
+  .array(startingEquipmentOptionSchema)
+  .catch([]);
+
+/**
+ * Приведение позиции варианта стартового снаряжения к записи листа. Название
+ * берётся из каталожного поля, а у позиции без ссылки — из описания; описание
+ * при заполненном названии становится уточнением («Книга (по истории)»).
+ *
+ * @param item разобранная позиция варианта.
+ * @returns позиция для листа; null — названия нет ни в одном поле.
+ */
+function toStartingEquipmentItem(
+  item: z.infer<typeof startingEquipmentItemSchema>,
+): StartingEquipmentItem | null {
+  const catalogName = item.name?.trim() ?? '';
+  const description = item.description?.trim() ?? '';
+  const name = catalogName || description;
+
+  if (!name) {
+    return null;
+  }
+
+  return {
+    url: item.url?.trim() ?? '',
+    name,
+    hint: catalogName ? description : '',
+    // Количество приходит и пустым, и нулём — это всё одна штука.
+    quantity: clamp(Math.trunc(item.quantity || 1), 1, INVENTORY_QUANTITY_MAX),
+  };
+}
+
+/**
+ * Приведение поля `startingEquipment` к вариантам выбора. Варианты без
+ * предметов и без монет отбрасываются: выбирать в них нечего.
+ *
+ * @param input сырое значение поля из детального ответа.
+ * @returns варианты стартового снаряжения в порядке ответа.
+ */
+function toStartingEquipmentOptions(input: unknown): StartingEquipmentOption[] {
+  const options = startingEquipmentSchema.parse(input);
+
+  return options
+    .map((option, index) => {
+      const coinLabel = option.coin?.trim().toLowerCase() ?? '';
+
+      return {
+        // Метка — ещё и значение переключателя, поэтому пустая заменяется
+        // номером по порядку.
+        label:
+          option.label.trim()
+          || `${STARTING_EQUIPMENT_LABELS.optionFallbackLabel} ${index + 1}`,
+        items: option.items
+          .map(toStartingEquipmentItem)
+          .filter((item): item is StartingEquipmentItem => item !== null),
+        coins: Math.max(Math.trunc(option.coins ?? 0), 0),
+        coinKey:
+          CURRENCY_KEYS_BY_LABEL[coinLabel]
+          ?? STARTING_EQUIPMENT_DEFAULT_COIN_KEY,
+      };
+    })
+    .filter((option) => option.items.length > 0 || option.coins > 0);
+}
+
 /** Схема детального ответа класса или подкласса (нужные листу поля). */
 const classDetailSchema = z.object({
   url: z.string(),
@@ -837,6 +934,8 @@ const classDetailSchema = z.object({
   casterType: z.nativeEnum(CasterType).nullable().catch(null),
   table: z.array(classTableColumnSchema).catch([]),
   features: z.array(classFeatureSchema).catch([]),
+  // Разбирается отдельной функцией: то же поле есть и у предыстории.
+  startingEquipment: z.unknown(),
 });
 
 /**
@@ -885,6 +984,7 @@ function toClassSummary(
     proficiencyText: detail.proficiency,
     table,
     features,
+    startingEquipment: toStartingEquipmentOptions(detail.startingEquipment),
   };
 }
 
@@ -946,6 +1046,8 @@ const backgroundDetailSchema = z.object({
   feat: z.string().catch(''),
   toolProficiency: z.array(z.string()).catch([]),
   equipment: z.array(z.string()).catch([]),
+  // Разбирается отдельной функцией: то же поле есть и у класса.
+  startingEquipment: z.unknown(),
 });
 
 /**
@@ -1003,6 +1105,7 @@ export function parseBackgroundDetail(
     featName: feat.name,
     featSubchoice: feat.subchoice,
     equipment: detail.equipment,
+    startingEquipment: toStartingEquipmentOptions(detail.startingEquipment),
   };
 }
 

@@ -9,6 +9,7 @@ import type {
   ItemSummary,
   SavedCharacterSheet,
   SavedCharacterSheetListPage,
+  StartingEquipmentOption,
 } from './types';
 
 import { FetchError } from 'ofetch';
@@ -40,7 +41,10 @@ import {
   parseItemWeapon,
   parseSpellDamageFormulas,
 } from './schemas';
-import { getInventoryItemDetailPath } from './utils';
+import {
+  buildStartingEquipmentItem,
+  getInventoryItemDetailPath,
+} from './utils';
 
 /**
  * Человекочитаемое сообщение об ошибке запроса к листам персонажей.
@@ -290,6 +294,30 @@ export async function fetchItemSummary(
   }
 
   return { ...summary, ...(await fetchItemCombatStats(itemUrl, summary)) };
+}
+
+/**
+ * Предметы инвентаря для выбранного варианта стартового снаряжения. Позиции со
+ * ссылкой догружаются деталью раздела «Предметы» — иначе оружие не каталось бы
+ * атакой, а доспех не считался бы в класс доспеха. Отказ запроса не срывает
+ * применение класса или предыстории: такая позиция попадёт на лист одним
+ * названием.
+ *
+ * @param option выбранный вариант стартового снаряжения.
+ * @returns предметы инвентаря в порядке варианта.
+ */
+export async function buildStartingEquipmentItems(
+  option: StartingEquipmentOption,
+): Promise<CharacterInventoryItem[]> {
+  const summaries = await Promise.all(
+    option.items.map((item) =>
+      item.url ? fetchItemSummary(item.url).catch(() => null) : null,
+    ),
+  );
+
+  return option.items.map((item, index) =>
+    buildStartingEquipmentItem(item, summaries[index] ?? null),
+  );
 }
 
 /**

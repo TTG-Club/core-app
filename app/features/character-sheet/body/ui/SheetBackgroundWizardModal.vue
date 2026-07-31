@@ -5,6 +5,7 @@
     BackgroundOption,
     BackgroundSummary,
     CharacterFeature,
+    CharacterInventoryItem,
     ClassChoice,
   } from '../../model';
 
@@ -25,6 +26,7 @@
     BACKGROUNDS_FILTERS_PATH,
     BACKGROUNDS_SEARCH_PATH,
     buildFeatFeature,
+    buildStartingEquipmentItems,
     computeAbilityBonuses,
     CUSTOM_BACKGROUND_LABELS,
     FEATS_DETAIL_BASE_PATH,
@@ -36,10 +38,12 @@
     parseFeatDetail,
     resolveChoiceOptions,
     SHEET_SEARCH_LABELS,
+    STARTING_EQUIPMENT_SKIP_VALUE,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
   import SheetCustomBackgroundModal from './SheetCustomBackgroundModal.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
+  import SheetStartingEquipmentChoice from './SheetStartingEquipmentChoice.vue';
 
   type WizardStep = 'background' | 'review';
 
@@ -148,6 +152,9 @@
   /** Черновик выбора инструмента (id `background-tool`). */
   const selections = ref<Record<string, string[]>>({});
 
+  /** Метка выбранного варианта стартового снаряжения (или «не добавлять»). */
+  const startingEquipmentLabel = ref(STARTING_EQUIPMENT_SKIP_VALUE);
+
   const abilityMode = ref<AbilityBonusMode>('2-1');
 
   const plusTwoAbility = ref<AbilityKey | undefined>();
@@ -176,6 +183,16 @@
         rowClass: isSelected ? 'bg-elevated' : '',
       };
     }),
+  );
+
+  const startingEquipmentOptions = computed(
+    () => backgroundDetail.value?.startingEquipment ?? [],
+  );
+
+  const selectedStartingEquipmentOption = computed(() =>
+    startingEquipmentOptions.value.find(
+      (option) => option.label === startingEquipmentLabel.value,
+    ),
   );
 
   const abilityItems = computed(() =>
@@ -338,6 +355,13 @@
       abilityMode.value = '2-1';
       plusTwoAbility.value = undefined;
       plusOneAbility.value = undefined;
+
+      // Первый вариант снаряжения предлагается по умолчанию: лист чаще всего
+      // заполняется на создании персонажа, где набор предыстории нужен целиком.
+      startingEquipmentLabel.value =
+        backgroundDetail.value.startingEquipment[0]?.label
+        ?? STARTING_EQUIPMENT_SKIP_VALUE;
+
       step.value = 'review';
     } catch (error) {
       consola.error('Ошибка загрузки предыстории:', error);
@@ -361,6 +385,15 @@
     isApplying.value = true;
 
     try {
+      // Предметы выбранного варианта снаряжения догружаются до применения; их
+      // неудачные запросы гасятся внутри, поэтому шаг не бросает.
+      const startingEquipmentOption = selectedStartingEquipmentOption.value;
+
+      const startingEquipmentItems: CharacterInventoryItem[] =
+        startingEquipmentOption
+          ? await buildStartingEquipmentItems(startingEquipmentOption)
+          : [];
+
       let featFeature: CharacterFeature | null = null;
 
       if (detail.featUrl) {
@@ -395,6 +428,15 @@
         ]),
         featUrl: detail.featUrl,
         featFeature,
+        // Снаряжение применяется вместе с предысторией: лист сам снимет набор
+        // прошлого выбора, поэтому её смена не копит предметы и монеты.
+        startingEquipment: startingEquipmentOption
+          ? {
+              items: startingEquipmentItems,
+              coins: startingEquipmentOption.coins,
+              coinKey: startingEquipmentOption.coinKey,
+            }
+          : null,
       });
 
       emit('close');
@@ -493,8 +535,9 @@
           </div>
 
           <span class="text-xs text-muted">
-            При применении навыки, инструмент, черта происхождения и прибавки к
-            характеристикам сразу заполнят лист.
+            При применении навыки, инструмент, черта происхождения, прибавки к
+            характеристикам и выбранный вариант стартового снаряжения сразу
+            заполнят лист.
           </span>
         </template>
 
@@ -666,6 +709,12 @@
               </UTooltip>
             </div>
           </div>
+
+          <SheetStartingEquipmentChoice
+            v-if="startingEquipmentOptions.length"
+            v-model="startingEquipmentLabel"
+            :options="startingEquipmentOptions"
+          />
 
           <div
             v-if="backgroundDetail.equipment.length"
