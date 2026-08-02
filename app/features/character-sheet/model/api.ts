@@ -7,6 +7,7 @@ import type {
   FeatSummary,
   FeatureDescriptionNode,
   ItemSummary,
+  MagicItemSummary,
   SavedCharacterSheet,
   SavedCharacterSheetListPage,
   StartingEquipmentOption,
@@ -27,7 +28,8 @@ import {
   CHARACTER_SHEET_SHARED_API_PATH,
   FEATS_DETAIL_BASE_PATH,
   ITEMS_DETAIL_BASE_PATH,
-  ITEMS_RAW_DETAIL_PATH_SUFFIX,
+  MAGIC_ITEMS_DETAIL_BASE_PATH,
+  RAW_DETAIL_PATH_SUFFIX,
   SHEET_UNKNOWN_ERROR_MESSAGE,
   SPELLS_DETAIL_BASE_PATH,
   SPELLS_RAW_DETAIL_PATH_SUFFIX,
@@ -39,6 +41,7 @@ import {
   parseItemArmor,
   parseItemDetail,
   parseItemWeapon,
+  parseMagicItemRaw,
   parseSpellDamageFormulas,
 } from './schemas';
 import {
@@ -252,7 +255,7 @@ async function fetchItemCombatStats(
 ): Promise<Pick<ItemSummary, 'armor' | 'weapon'>> {
   try {
     const response = await $fetch<unknown>(
-      `${ITEMS_DETAIL_BASE_PATH}/${itemUrl}/${ITEMS_RAW_DETAIL_PATH_SUFFIX}`,
+      `${ITEMS_DETAIL_BASE_PATH}/${itemUrl}/${RAW_DETAIL_PATH_SUFFIX}`,
       { method: 'GET', retry: 0 },
     );
 
@@ -294,6 +297,41 @@ export async function fetchItemSummary(
   }
 
   return { ...summary, ...(await fetchItemCombatStats(itemUrl, summary)) };
+}
+
+/**
+ * Редкость и немагическая основа магического предмета: ни того, ни другого нет
+ * ни в поиске, ни в публичной детали — связанные предметы раздел отдаёт только
+ * в «сыром» ответе. Основу берём, лишь когда связь ровно одна: за «Оружием +1,
+ * +2 или +3» стоят три десятка предметов, и выбрать за игрока нечего. Ошибку
+ * глотаем — предмет добавится, как раньше, без цены и боевых параметров.
+ *
+ * @param magicItemUrl слаг магического предмета в каталоге.
+ * @returns редкость с основой; null — «сырой» ответ не загрузился.
+ */
+export async function fetchMagicItemSummary(
+  magicItemUrl: string,
+): Promise<MagicItemSummary | null> {
+  try {
+    const response = await $fetch<unknown>(
+      `${MAGIC_ITEMS_DETAIL_BASE_PATH}/${magicItemUrl}/${RAW_DETAIL_PATH_SUFFIX}`,
+      { method: 'GET', retry: 0 },
+    );
+
+    const { rarity, baseItemUrls, bonuses } = parseMagicItemRaw(response);
+    const [baseItemUrl] = baseItemUrls;
+
+    if (baseItemUrls.length !== 1 || !baseItemUrl) {
+      return { rarity, bonuses, baseItem: null };
+    }
+
+    // Деталь основы не загрузилась — редкость всё равно даёт цену по таблице.
+    const baseItem = await fetchItemSummary(baseItemUrl).catch(() => null);
+
+    return { rarity, bonuses, baseItem };
+  } catch {
+    return null;
+  }
 }
 
 /**

@@ -13,7 +13,7 @@ import type {
 } from '../types';
 import type { LssCharacter, LssWeapon } from './types';
 
-import { fetchItemSummary } from '../api';
+import { fetchItemSummary, fetchMagicItemSummary } from '../api';
 import {
   BACKGROUNDS_SEARCH_PATH,
   CLASSES_DETAIL_BASE_PATH,
@@ -585,7 +585,10 @@ async function toInventoryItem(
 
   if (magicItem) {
     return {
-      ...buildMagicItemInventoryItem(magicItem),
+      ...buildMagicItemInventoryItem(
+        magicItem,
+        await fetchMagicItemSummary(magicItem.url),
+      ),
       quantity: candidate.quantity,
     };
   }

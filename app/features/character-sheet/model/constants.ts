@@ -23,6 +23,7 @@ import type {
   MagicItemCatalogGrouping,
   MagicItemCatalogItem,
   MagicItemCatalogSorting,
+  MagicItemRarityKey,
   ResourceRecovery,
   ResourceRecoveryField,
   ResourceRecoveryMode,
@@ -619,6 +620,7 @@ export const ARMOR_CLASS_LABELS: Record<
   | 'armorTitle'
   | 'dexCappedHint'
   | 'shieldTitle'
+  | 'itemTitle'
   | 'totalTitle'
   | 'equipmentHint',
   string
@@ -643,6 +645,7 @@ export const ARMOR_CLASS_LABELS: Record<
   // а не из `ABILITY_LABELS` (там именительный: «Ловкость»).
   dexCappedHint: 'Модификатор Ловкости ограничен доспехом',
   shieldTitle: 'Щит',
+  itemTitle: 'Магические предметы',
   totalTitle: 'Итоговый КД',
   equipmentHint:
     'Надевайте доспехи и щит на вкладке «Снаряжение» — в зачёт идёт доспех с наибольшим КД, щит складывается сверху.',
@@ -2046,10 +2049,11 @@ export const ITEMS_FILTERS_PATH = '/api/v2/item/filters';
 export const ITEMS_DETAIL_BASE_PATH = '/api/v2/item';
 
 /**
- * Хвост пути «сырого» ответа предмета: числовой КД доспеха и урон оружия есть
- * только в нём (публичная деталь их не отдаёт).
+ * Хвост пути «сырого» ответа раздела: у предмета в нём числовой КД доспеха и
+ * урон оружия, у магического — редкость и связанные немагические предметы.
+ * Публичная деталь ни того, ни другого не отдаёт.
  */
-export const ITEMS_RAW_DETAIL_PATH_SUFFIX = 'raw';
+export const RAW_DETAIL_PATH_SUFFIX = 'raw';
 
 /** Эндпоинт поиска магических предметов (раздел «Магические предметы»). */
 export const MAGIC_ITEMS_SEARCH_PATH = '/api/v2/magic-items/search';
@@ -2059,6 +2063,43 @@ export const MAGIC_ITEMS_DETAIL_BASE_PATH = '/api/v2/magic-items';
 
 /** Эндпоинт фильтров магических предметов. */
 export const MAGIC_ITEMS_FILTERS_PATH = '/api/v2/magic-items/filters';
+
+/**
+ * Редкость «редкость варьируется»: под такой записью раздел держит сразу
+ * несколько предметов («Оружие +1, +2 или +3»), поэтому ни цены магии, ни одной
+ * немагической основы у неё нет — в лист её не добавляют.
+ */
+export const MAGIC_ITEM_VARIES_RARITY: MagicItemRarityKey = 'VARIES';
+
+/**
+ * Цена магии по редкости в золотых монетах — её прибавляют к стоимости
+ * немагической основы. Редкости без цены (варьируется, не определена) в
+ * таблице нет, артефакт бесценен.
+ */
+export const MAGIC_ITEM_RARITY_COSTS: Partial<
+  Record<MagicItemRarityKey, number>
+> = {
+  COMMON: 100,
+  UNCOMMON: 400,
+  RARE: 4000,
+  VERY_RARE: 40000,
+  LEGENDARY: 200000,
+};
+
+/** Подпись стоимости артефакта: цены у него нет. */
+export const MAGIC_ITEM_ARTIFACT_COST_LABEL = 'Бесценный';
+
+/**
+ * Стоимость денежной единицы в золотых монетах: справочник отдаёт цены
+ * предметов в разных монетах («5 см»), а цена магии задана в золоте.
+ */
+export const CURRENCY_GOLD_RATES: Record<CurrencyKey, number> = {
+  copper: 0.01,
+  silver: 0.1,
+  electrum: 0.5,
+  gold: 1,
+  platinum: 10,
+};
 
 /** Подписи групп каталога для предметов без значения поля группировки. */
 export const MAGIC_ITEM_CATALOG_EMPTY_GROUP_LABELS: Record<

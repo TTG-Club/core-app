@@ -453,6 +453,9 @@ const inventoryWeaponSchema = z
     category: z.enum(['simple', 'martial']).catch('simple'),
     ranged: z.boolean().catch(false),
     finesse: z.boolean().catch(false),
+    // Листы, сохранённые до появления магических бонусов, поля не содержат:
+    // ноль означает обычное оружие, поэтому доливать нечего.
+    attackBonus: z.coerce.number().catch(0),
     // Оружие из листов, сохранённых до появления урона, приходит без блока —
     // схема даёт null, и плитка урона просто не показывается.
     damage: inventoryWeaponDamageSchema,
@@ -517,6 +520,8 @@ const inventoryItemSchema = z.object({
     .max(INVENTORY_QUANTITY_MAX)
     .catch(1),
   armor: inventoryArmorSchema,
+  // Плоский бонус к КД предмета без брони; у листов до его появления — ноль.
+  armorClassBonus: z.coerce.number().catch(0),
   weapon: inventoryWeaponSchema,
   equipped: z.boolean().catch(false),
   twoHanded: z.boolean().catch(false),

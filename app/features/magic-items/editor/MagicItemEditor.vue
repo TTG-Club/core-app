@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { MagicItemCreate } from '~magic-items/model';
 
+  import { MAGIC_ITEM_BONUS_NONE } from '~magic-items/model';
   import { MagicItemPreview } from '~magic-items/preview';
   import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
@@ -12,6 +13,7 @@
 
   import {
     MagicItemAttunement,
+    MagicItemBonuses,
     MagicItemCategory,
     MagicItemRarity,
   } from './ui';
@@ -47,6 +49,11 @@
       consumable: false,
       image: undefined,
       items: [],
+      bonuses: {
+        attack: MAGIC_ITEM_BONUS_NONE,
+        damage: MAGIC_ITEM_BONUS_NONE,
+        armorClass: MAGIC_ITEM_BONUS_NONE,
+      },
       tags: [],
     };
   }
@@ -123,8 +130,9 @@
         </h2>
       </template>
 
-      <div class="grid grid-cols-1 gap-4">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
         <UFormField
+          class="col-span-full"
           label="Связанные предметы"
           help="Выбери обычные предметы, на основе которых создан магический. Их вес и стоимость используются при экспорте в VTTG и для фильтра. Можно выбрать несколько."
           name="items"
@@ -134,6 +142,8 @@
             multiple
           />
         </UFormField>
+
+        <MagicItemBonuses v-model="state.bonuses" />
       </div>
     </UCard>
 

@@ -22,6 +22,7 @@ import type {
   ItemCatalogItem,
   ItemSummary,
   MagicItemCatalogItem,
+  MagicItemRawDetail,
   SpeciesFeatureSummary,
   SpeciesOption,
   SpeciesSummary,
@@ -34,6 +35,10 @@ import { clamp } from 'es-toolkit';
 
 import { z } from '~/utils/zod';
 import { CasterType } from '~classes/model';
+import {
+  EMPTY_MAGIC_ITEM_BONUSES,
+  MAGIC_ITEM_BONUS_NONE,
+} from '~magic-items/model';
 
 import { descriptionNodesSchema } from './character-schema';
 import {
@@ -455,6 +460,59 @@ export function parseMagicItemCatalog(input: unknown): MagicItemCatalogItem[] {
   }));
 }
 
+/**
+ * Схема «сырого» ответа магического предмета: редкость приходит значением
+ * справочника, связанные немагические предметы — списком слагов. Форма — как у
+ * формы редактора магических предметов (`MagicItemCreate`).
+ */
+const magicItemRawSchema = z
+  .object({
+    rarity: z
+      .object({
+        type: z
+          .enum([
+            'COMMON',
+            'UNCOMMON',
+            'RARE',
+            'VERY_RARE',
+            'LEGENDARY',
+            'ARTIFACT',
+            'VARIES',
+            'UNKNOWN',
+          ])
+          .catch('UNKNOWN'),
+      })
+      .nullable()
+      .catch(null),
+    items: z.array(z.string()).catch([]),
+    // Записи, сохранённые до появления полей бонусов, приходят без блока.
+    bonuses: z
+      .object({
+        attack: z.coerce.number().catch(MAGIC_ITEM_BONUS_NONE),
+        damage: z.coerce.number().catch(MAGIC_ITEM_BONUS_NONE),
+        armorClass: z.coerce.number().catch(MAGIC_ITEM_BONUS_NONE),
+      })
+      .nullable()
+      .catch(null),
+  })
+  .catch({ rarity: null, items: [], bonuses: null });
+
+/**
+ * Валидация «сырого» ответа `GET /api/v2/magic-items/{url}/raw`.
+ *
+ * @param input сырой ответ магического предмета.
+ * @returns редкость и связанные немагические предметы.
+ */
+export function parseMagicItemRaw(input: unknown): MagicItemRawDetail {
+  const parsed = magicItemRawSchema.parse(input);
+
+  return {
+    rarity: parsed.rarity?.type ?? 'UNKNOWN',
+    baseItemUrls: parsed.items,
+    bonuses: parsed.bonuses ?? EMPTY_MAGIC_ITEM_BONUSES,
+  };
+}
+
 /** Схема детального ответа предмета (нужные листу поля). */
 const itemDetailSchema = z.object({
   url: z.string(),
@@ -697,6 +755,8 @@ export function parseItemWeapon(input: unknown): InventoryWeapon | null {
     finesse: weapon.properties.some((property) =>
       /фехтов|finesse/i.test(property),
     ),
+    // Немагическое оружие своего бонуса к атаке не имеет: его даёт только магия.
+    attackBonus: MAGIC_ITEM_BONUS_NONE,
     damage,
     // Свойство «Универсальное» распознаём по самому броску, а не по строке в
     // `properties`: без второй кости переключать хват всё равно нечем.

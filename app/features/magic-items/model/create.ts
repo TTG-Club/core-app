@@ -10,6 +10,13 @@ export interface MagicItemCreate extends EditorBaseInfoState {
   rarity: MagicItemRarity;
   category: MagicItemCategory;
   items: Array<string>; // связанные немагические предметы (url) для веса/стоимости и фильтра
+  bonuses: MagicItemBonuses; // что магия добавляет поверх немагического предмета
+}
+
+export interface MagicItemBonuses {
+  attack: number; // бонус к броскам атаки; 0 — нет
+  damage: number; // бонус к урону; 0 — нет
+  armorClass: number; // бонус к КД; 0 — нет
 }
 
 export interface MagicItemAttunement {

@@ -213,14 +213,41 @@ modals), so its capabilities are listed here rather than squeezed into the table
   and combat parameters, and pulls the description — for a spell also its
   casting time / range / components / duration — from the section detail into
   the sheet document; it is edited afterwards by the same homebrew form. A
-  copied magic item keeps its group while its kind stays «trinket».
+  copied magic item keeps its group, and its kind follows the parameters it
+  carries — «trinket» unless a mundane base gave it weapon or armour data.
 - The «Добавить магический предмет» catalog groups its rows the way the section
   does, and the grouping is picked from a dropdown under the filter button (by
   rarity in the dictionary order — the shared `useMagicItemRarityGroupOrder` —
   by category, or none). State and menu come from the section infrastructure
   (`~infrastructure/list-presentation`), so the choice survives reopening in
   `localStorage`; only grouping is offered because the order inside a group is
-  always the Russian name.
+  always the Russian name. Entries whose rarity varies («Оружие +1, +2 или +3»)
+  are left out of the list — one such record stands for a whole family of items,
+  so neither a price nor a single mundane base can be pinned to it. The rarity
+  dictionary is what maps the search's Russian rarity label to `VARIES`, so the
+  list waits for it in every grouping, not only «По редкости».
+- A magic item is priced by its rarity — `MAGIC_ITEM_RARITY_COSTS`, read from
+  `/magic-items/{url}/raw` together with the editor's «Связанные предметы», since
+  neither the search nor the public detail carries them. Built on exactly **one**
+  mundane item, it also takes that item's weight and combat parameters — a magic
+  shield is equippable and counts towards AC, a magic weapon rolls attack and
+  damage — and adds the base price converted to gold through
+  `CURRENCY_GOLD_RATES` (a rare dagger of poison: 4000 + 2 = «4002 зм»). Several
+  links or none leave weight and combat data empty, but the rarity price stands
+  on its own («Сумка хранения» → «400 зм»). An artifact is «Бесценный»; a rarity
+  with no price in the table falls back to the base item's own cost, and with no
+  base to fall back to the cost stays empty. LSS import goes through the same
+  `fetchMagicItemSummary`.
+- The workshop editor also carries three numeric bonuses per magic item
+  (`MagicItemBonuses` — «Бонус к атаке» / «к урону» / «к КД»), and the sheet lays
+  them over the mundane base: the attack bonus becomes `InventoryWeapon.attackBonus`
+  and joins proficiency + ability in `getWeaponAttackBonus`, the damage bonus is
+  folded into the weapon's own `damage.bonus` (both grips), and the AC bonus goes
+  into `armor.baseArmorClass` so a magic shield still competes as a shield. An item
+  with no armour base keeps its AC bonus in `CharacterInventoryItem.armorClassBonus`
+  — a flat term the AC breakdown sums over every equipped item («Магические
+  предметы» row), because a cloak and a ring of protection stack rather than
+  compete. Sheets saved before the fields existed read them as `0`.
 - The «Добавить заклинание» catalog opens preset to what the character can
   actually learn: the class chip is picked by the class slug (the same id the
   `className` filter group uses) and the level chips cover every circle the

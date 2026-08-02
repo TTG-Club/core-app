@@ -1,6 +1,7 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
 
 import type { Level } from '~/shared/types';
+import type { MagicItemBonuses } from '~magic-items/model';
 import type { RenderNode } from '~ui/markup';
 
 import type {
@@ -62,10 +63,13 @@ import type {
   InventoryArmor,
   InventoryItemOrigin,
   InventoryWeapon,
+  InventoryWeaponDamage,
   ItemSummary,
   MagicItemCatalogGroup,
   MagicItemCatalogGrouping,
   MagicItemCatalogItem,
+  MagicItemRarityKey,
+  MagicItemSummary,
   PreparedSpellsBreakdown,
   PreparedSpellsScaling,
   PrimarySpeed,
@@ -109,6 +113,10 @@ import {
   THIRD_CASTER_SPELL_SLOTS,
 } from '~classes/model';
 import {
+  EMPTY_MAGIC_ITEM_BONUSES,
+  MAGIC_ITEM_BONUS_NONE,
+} from '~magic-items/model';
+import {
   getNodeText,
   isBlockNode,
   isMarkerNode,
@@ -141,6 +149,8 @@ import {
   COINS_PER_WEIGHT_UNIT,
   CURRENCY_AMOUNT_MAX,
   CURRENCY_AMOUNT_MIN,
+  CURRENCY_GOLD_RATES,
+  CURRENCY_KEYS_BY_LABEL,
   CURRENCY_LABELS,
   CURRENCY_ORDER,
   CUSTOM_ARMOR_TYPE_BY_DEXTERITY_MOD,
@@ -185,7 +195,9 @@ import {
   ITEMS_DETAIL_BASE_PATH,
   LEVEL_MIN,
   LEVEL_XP_THRESHOLDS,
+  MAGIC_ITEM_ARTIFACT_COST_LABEL,
   MAGIC_ITEM_CATALOG_EMPTY_GROUP_LABELS,
+  MAGIC_ITEM_RARITY_COSTS,
   MAGIC_ITEMS_DETAIL_BASE_PATH,
   NEW_CUSTOM_INVENTORY_ITEM,
   ORIGIN_FEAT_CATEGORY,
@@ -627,6 +639,7 @@ export function buildInventoryItem(
     weight: summary.weight,
     quantity: 1,
     armor: summary.armor,
+    armorClassBonus: MAGIC_ITEM_BONUS_NONE,
     weapon: summary.weapon,
     equipped: false,
     twoHanded: false,
@@ -634,19 +647,159 @@ export function buildInventoryItem(
 }
 
 /**
+ * Стоимость в золотых монетах из подписи справочника («10 зм», «5 см»).
+ *
+ * @param costText подпись стоимости из ответа API.
+ * @returns стоимость в золотых; null — подпись не распознана («варьируется»).
+ */
+export function parseItemCostInGold(costText: string): number | null {
+  const costMatch = /(\d+(?:[.,]\d+)?)\s*([^\s\d]+)/.exec(costText);
+
+  if (!costMatch?.[1] || !costMatch[2]) {
+    return null;
+  }
+
+  const currencyKey = CURRENCY_KEYS_BY_LABEL[costMatch[2].toLowerCase()];
+
+  if (!currencyKey) {
+    return null;
+  }
+
+  return (
+    Number(costMatch[1].replace(',', '.')) * CURRENCY_GOLD_RATES[currencyKey]
+  );
+}
+
+/**
+ * Подпись стоимости в золотых монетах. Дробная часть остаётся, только если она
+ * есть: медные и серебряные цены основы дают доли золотого.
+ *
+ * @param gold стоимость в золотых монетах.
+ * @returns подпись для строки инвентаря («410 зм»).
+ */
+function getGoldCostLabel(gold: number): string {
+  const rounded = Math.round(gold * 100) / 100;
+
+  return `${String(rounded).replace('.', ',')} ${CURRENCY_LABELS.gold.toLowerCase()}`;
+}
+
+/**
+ * Стоимость магического предмета: цена магии по редкости плюс стоимость
+ * немагической основы, если она есть. Артефакт бесценен; у редкости без цены в
+ * таблице (не определена) остаётся одна основа, а нераспознанная цена основы
+ * («варьируется») — одна цена магии.
+ *
+ * @param rarity редкость магического предмета.
+ * @param baseItem деталь немагической основы; null — основы нет.
+ * @returns подпись стоимости; '' — посчитать не из чего.
+ */
+export function getMagicItemCost(
+  rarity: MagicItemRarityKey,
+  baseItem: ItemSummary | null,
+): string {
+  if (rarity === 'ARTIFACT') {
+    return MAGIC_ITEM_ARTIFACT_COST_LABEL;
+  }
+
+  const rarityCost = MAGIC_ITEM_RARITY_COSTS[rarity];
+  const baseCost = baseItem ? parseItemCostInGold(baseItem.cost) : null;
+
+  if (rarityCost === undefined) {
+    return baseCost === null ? '' : getGoldCostLabel(baseCost);
+  }
+
+  return getGoldCostLabel(rarityCost + (baseCost ?? 0));
+}
+
+/**
+ * Урон основы с магической надбавкой: бонус к урону складывается с собственным
+ * бонусом оружия из справочника.
+ *
+ * @param damage урон немагической основы; null — справочник его не отдал.
+ * @param damageBonus бонус к урону от магии.
+ * @returns урон с надбавкой; null — урона у основы нет.
+ */
+function getMagicWeaponDamage(
+  damage: InventoryWeaponDamage | null,
+  damageBonus: number,
+): InventoryWeaponDamage | null {
+  if (!damage) {
+    return null;
+  }
+
+  return { ...damage, bonus: damage.bonus + damageBonus };
+}
+
+/**
+ * Оружие магического предмета: параметры немагической основы плюс бонусы магии
+ * к атаке и урону (у универсального оружия — в обоих бросках).
+ *
+ * @param weapon оружие немагической основы; null — основа не оружие.
+ * @param bonuses бонусы магического предмета.
+ * @returns параметры оружия для строки инвентаря; null — оружия нет.
+ */
+function getMagicItemWeapon(
+  weapon: InventoryWeapon | null,
+  bonuses: MagicItemBonuses,
+): InventoryWeapon | null {
+  if (!weapon) {
+    return null;
+  }
+
+  return {
+    ...weapon,
+    attackBonus: weapon.attackBonus + bonuses.attack,
+    damage: getMagicWeaponDamage(weapon.damage, bonuses.damage),
+    versatileDamage: getMagicWeaponDamage(
+      weapon.versatileDamage,
+      bonuses.damage,
+    ),
+  };
+}
+
+/**
+ * Доспех магического предмета: бонус к КД входит в базовое значение основы —
+ * так магический щит остаётся щитом и правило «в зачёт идёт лучший» работает
+ * по итоговому числу.
+ *
+ * @param armor доспех немагической основы; null — основа не доспех.
+ * @param armorClassBonus бонус к КД от магии.
+ * @returns параметры доспеха для строки инвентаря; null — доспеха нет.
+ */
+function getMagicItemArmor(
+  armor: InventoryArmor | null,
+  armorClassBonus: number,
+): InventoryArmor | null {
+  if (!armor) {
+    return null;
+  }
+
+  return { ...armor, baseArmorClass: armor.baseArmorClass + armorClassBonus };
+}
+
+/**
  * Сборка предмета инвентаря из ссылки каталога магических предметов: категория
- * и редкость известны прямо из поиска, поэтому деталь не запрашивается; вес и
- * стоимость у магических предметов раздел не отдаёт.
+ * и редкость известны прямо из поиска, а своих веса и стоимости раздел не
+ * отдаёт. Цена берётся по редкости из таблицы, и предмет, сделанный на основе
+ * ровно одного немагического, добавляет к ней цену основы, а заодно забирает её
+ * вес и боевые параметры. Бонусы мастерской ложатся поверх основы; бонус к КД
+ * предмета без брони (плащ защиты) становится плоской надбавкой.
  *
  * @param catalogItem магический предмет каталога.
+ * @param summary редкость, бонусы и немагическая основа; null — «сырой» ответ не загрузился.
  * @returns предмет инвентаря для вкладки «Снаряжение».
  */
 export function buildMagicItemInventoryItem(
   catalogItem: MagicItemCatalogItem,
+  summary: MagicItemSummary | null,
 ): CharacterInventoryItem {
   const typesLabel = [capitalize(catalogItem.category), catalogItem.rarity]
     .filter(Boolean)
     .join(', ');
+
+  const bonuses = summary?.bonuses ?? EMPTY_MAGIC_ITEM_BONUSES;
+  const baseItem = summary?.baseItem ?? null;
+  const armor = getMagicItemArmor(baseItem?.armor ?? null, bonuses.armorClass);
 
   return {
     id: getInventoryItemId('magic-item', catalogItem.url),
@@ -654,11 +807,13 @@ export function buildMagicItemInventoryItem(
     name: catalogItem.name,
     category: 'MAGIC_ITEM',
     typesLabel,
-    cost: '',
-    weight: 0,
+    cost: summary ? getMagicItemCost(summary.rarity, baseItem) : '',
+    weight: baseItem?.weight ?? 0,
     quantity: 1,
-    armor: null,
-    weapon: null,
+    armor,
+    // Бонус доспешной основы уже вошёл в её КД — второй раз он не считается.
+    armorClassBonus: armor ? MAGIC_ITEM_BONUS_NONE : bonuses.armorClass,
+    weapon: getMagicItemWeapon(baseItem?.weapon ?? null, bonuses),
     equipped: false,
     twoHanded: false,
   };
@@ -733,6 +888,7 @@ export function buildStartingEquipmentItem(
       weight: 0,
       quantity: item.quantity,
       armor: null,
+      armorClassBonus: MAGIC_ITEM_BONUS_NONE,
       weapon: null,
       equipped: false,
       twoHanded: false,
@@ -753,6 +909,7 @@ export function buildStartingEquipmentItem(
     weight: 0,
     quantity: item.quantity,
     armor: null,
+    armorClassBonus: MAGIC_ITEM_BONUS_NONE,
     weapon: null,
     equipped: false,
     twoHanded: false,
@@ -1116,6 +1273,9 @@ function getCustomInventoryWeapon(
     category: draft.weaponCategory,
     ranged: draft.ranged,
     finesse: draft.finesse,
+    // Бонус к атаке форма не задаёт — он приходит от магии каталожного предмета,
+    // и копии его сохраняет `toUpdatedCustomInventoryItem`.
+    attackBonus: MAGIC_ITEM_BONUS_NONE,
     // Второй бросок форма не задаёт: у своего оружия свойства «Универсальное»
     // нет — копии каталожного его сохраняет `toUpdatedCustomInventoryItem`.
     versatileDamage: null,
@@ -1224,6 +1384,9 @@ export function toCustomInventoryItem(
     weight: getDraftWeight(draft.weight),
     quantity,
     armor: getCustomInventoryArmor(draft),
+    // Плоский бонус к КД форма не задаёт: он приходит от магии каталожного
+    // предмета, и копии его возвращает `toUpdatedCustomInventoryItem`.
+    armorClassBonus: MAGIC_ITEM_BONUS_NONE,
     weapon: getCustomInventoryWeapon(draft),
     // Надетым остаётся только доспех: у оружия и безделушки параметров доспеха
     // нет, и в подсчёт КД они не идут. Форма может обнулить количество — тогда
@@ -1266,6 +1429,32 @@ function withKeptVersatileGrip(
 }
 
 /**
+ * Возврат магических бонусов правленому предмету: бонус к атаке и плоский бонус
+ * к КД форма не показывает, и без этого правка копии меча +1 молча отобрала бы у
+ * него магию. Бонус к урону в форме есть — он уже сложен в костях урона.
+ *
+ * @param updatedItem предмет, собранный из значений формы.
+ * @param editedItem предмет до правки.
+ * @returns предмет с сохранёнными бонусами магии.
+ */
+function withKeptMagicBonuses(
+  updatedItem: CharacterInventoryItem,
+  editedItem: CharacterInventoryItem,
+): CharacterInventoryItem {
+  const attackBonus = editedItem.weapon?.attackBonus ?? MAGIC_ITEM_BONUS_NONE;
+
+  return {
+    ...updatedItem,
+    armorClassBonus: editedItem.armorClassBonus,
+    // Оружие могли переделать в доспех или безделушку — бонусу атаки там негде
+    // жить.
+    weapon: updatedItem.weapon
+      ? { ...updatedItem.weapon, attackBonus }
+      : updatedItem.weapon,
+  };
+}
+
+/**
  * Правка своего предмета формой листа. Группу задаёт форма (вид предмета плюс
  * магическая пометка), но скопированному магическому предмету, оставшемуся
  * безделушкой, сохраняем подпись типов из каталога («Чудесный предмет, редкий»)
@@ -1286,7 +1475,10 @@ export function toUpdatedCustomInventoryItem(
   );
 
   const updatedItem = draftItem
-    ? withKeptVersatileGrip(draftItem, editedItem)
+    ? withKeptMagicBonuses(
+        withKeptVersatileGrip(draftItem, editedItem),
+        editedItem,
+      )
     : null;
 
   if (
@@ -1548,6 +1740,7 @@ export function getArmorClassBreakdown(
       dexBonus: 0,
       dexCapped: false,
       shieldBonus: 0,
+      itemBonus: 0,
       extraAbilities: abilityBonuses,
     };
   }
@@ -1613,14 +1806,25 @@ export function getArmorClassBreakdown(
     }
   }
 
+  // Плащ и кольцо защиты бронёй не являются и по правилам складываются друг с
+  // другом, поэтому их бонусы суммируются, а не соревнуются за лучший.
+  const itemBonus = character.inventory.reduce(
+    (total, item) =>
+      item.equipped && !isMissingInventoryItem(item)
+        ? total + item.armorClassBonus
+        : total,
+    0,
+  );
+
   return {
-    value: bodyArmorValue + shieldBonus + extraBonus,
+    value: bodyArmorValue + shieldBonus + itemBonus + extraBonus,
     custom: false,
     bodyArmorName,
     bodyArmorValue,
     dexBonus,
     dexCapped,
     shieldBonus,
+    itemBonus,
     extraAbilities,
   };
 }
@@ -1665,9 +1869,10 @@ export function getWeaponAttackBonus(
 
   const value =
     getCharacterProficiencyBonus(character)
-    + getModifier(character.abilities[ability]);
+    + getModifier(character.abilities[ability])
+    + weapon.attackBonus;
 
-  return { value, ability };
+  return { value, ability, weaponBonus: weapon.attackBonus };
 }
 
 /**
