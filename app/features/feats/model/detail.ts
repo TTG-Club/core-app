@@ -10,5 +10,11 @@ export interface FeatDetailResponse {
   prerequisite: string;
   source: SourceResponse;
   description: Array<string>;
+  backgrounds?: Array<FeatDetailBackgroundItem>;
   updatedAt: string;
+}
+
+export interface FeatDetailBackgroundItem {
+  url: string;
+  name: string;
 }

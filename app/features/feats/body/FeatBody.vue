@@ -1,7 +1,12 @@
 <script setup lang="ts">
   import type { FeatDetailResponse } from '~feats/model';
 
-  import { DescriptionsBlock, StatsBlock, TopBar } from './ui';
+  import {
+    AffiliationBlock,
+    DescriptionsBlock,
+    StatsBlock,
+    TopBar,
+  } from './ui';
 
   defineProps<{
     feat: FeatDetailResponse;
@@ -22,6 +27,13 @@
 
       <div class="flex flex-auto flex-col gap-3">
         <DescriptionsBlock :description="feat.description" />
+
+        <AffiliationBlock
+          v-if="feat.backgrounds"
+          :items="feat.backgrounds"
+          label="Предыстории"
+          section="backgrounds"
+        />
       </div>
     </div>
   </div>
