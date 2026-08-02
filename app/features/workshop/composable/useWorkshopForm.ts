@@ -3,8 +3,11 @@ import type { FetchResponse } from 'ofetch';
 import type { FormErrorEvent } from '#ui/types';
 
 import { cloneDeep, isEqual, toMerged } from 'es-toolkit';
+import { FetchError } from 'ofetch';
 
 import { useEntityRevisions } from '../revision/composable';
+
+const SUBMIT_ERROR_DESCRIPTION = 'При попытке отправить форму произошла ошибка';
 
 export interface WorkshopFormOptions<T> {
   actionUrl: string;
@@ -34,6 +37,31 @@ export interface WorkshopFormOptions<T> {
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+/**
+ * Достаёт объяснение ошибки сохранения из ответа бэкенда.
+ *
+ * Бэкенд отдаёт `{ status, error, message }`, и на 4xx в `message` лежит текст
+ * для пользователя («Предмет с url ... уже существует»). На 5xx туда попадает
+ * технический текст (SQL, стек), поэтому наружу отдаём общую формулировку.
+ */
+function getSubmitErrorDescription(error: unknown): string {
+  if (!(error instanceof FetchError)) {
+    return SUBMIT_ERROR_DESCRIPTION;
+  }
+
+  const status = error.statusCode ?? 0;
+
+  if (status < 400 || status >= 500) {
+    return SUBMIT_ERROR_DESCRIPTION;
+  }
+
+  const message = error.data?.message;
+
+  return typeof message === 'string' && message.trim().length > 0
+    ? message
+    : SUBMIT_ERROR_DESCRIPTION;
 }
 
 /**
@@ -176,7 +204,7 @@ export function useWorkshopForm<T extends { url: string }>(
     } catch (error) {
       $toast.add({
         title: 'Ошибка сохранения',
-        description: 'При попытке отправить форму произошла ошибка',
+        description: getSubmitErrorDescription(error),
         color: 'error',
       });
 
@@ -188,12 +216,9 @@ export function useWorkshopForm<T extends { url: string }>(
 
   async function onResponse({ response }: { response: FetchResponse<string> }) {
     if (!response.ok) {
-      $toast.add({
-        title: 'Ошибка сохранения',
-        description: 'При попытке отправить форму произошла ошибка',
-        color: 'error',
-      });
-
+      // Тост не показываем: `$fetch` следом бросит FetchError, и его поймает
+      // catch в onSubmit — там же есть тело ответа с текстом ошибки. Иначе
+      // пользователь получал два одинаковых тоста на одну неудачу.
       consola.error('[useWorkshopForm] Error on response');
 
       return;
