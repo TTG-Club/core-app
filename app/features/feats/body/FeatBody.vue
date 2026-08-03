@@ -1,12 +1,9 @@
 <script setup lang="ts">
   import type { FeatDetailResponse } from '~feats/model';
 
-  import {
-    AffiliationBlock,
-    DescriptionsBlock,
-    StatsBlock,
-    TopBar,
-  } from './ui';
+  import { AffiliationBlock } from '~ui/affiliation';
+
+  import { DescriptionsBlock, StatsBlock, TopBar } from './ui';
 
   defineProps<{
     feat: FeatDetailResponse;

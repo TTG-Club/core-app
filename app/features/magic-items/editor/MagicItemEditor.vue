@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { MagicItemCreate } from '~magic-items/model';
 
-  import { MAGIC_ITEM_BONUS_NONE } from '~magic-items/model';
+  import { EMPTY_MAGIC_ITEM_BONUSES } from '~magic-items/model';
   import { MagicItemPreview } from '~magic-items/preview';
   import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
@@ -49,11 +49,8 @@
       consumable: false,
       image: undefined,
       items: [],
-      bonuses: {
-        attack: MAGIC_ITEM_BONUS_NONE,
-        damage: MAGIC_ITEM_BONUS_NONE,
-        armorClass: MAGIC_ITEM_BONUS_NONE,
-      },
+      // Копия, а не сама константа: форма правит бонусы на месте.
+      bonuses: { ...EMPTY_MAGIC_ITEM_BONUSES },
       tags: [],
     };
   }

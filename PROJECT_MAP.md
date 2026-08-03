@@ -402,13 +402,14 @@ imported via the auto-generated `~<domain>` alias (see
 
 ---
 
-## 🎨 Shared UI Kit (`app/shared/ui/` — 28 components)
+## 🎨 Shared UI Kit (`app/shared/ui/` — 29 components)
 
 **UI Components Priority:** Nuxt UI → `shared/ui` → `features/*/ui`
 
 | Component         | Purpose                                                                                |
 | ----------------- | -------------------------------------------------------------------------------------- |
 | `action`          | Inline titled action block (markup)                                                    |
+| `affiliation`     | Comma-separated links to related entities (spell classes, feat backgrounds)            |
 | `animated-number` | Count-up animated number                                                               |
 | `card`            | Workshop entity card                                                                   |
 | `collapse`        | Collapsible / accordion primitive                                                      |

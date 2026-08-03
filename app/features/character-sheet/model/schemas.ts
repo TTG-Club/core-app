@@ -938,6 +938,38 @@ function toStartingEquipmentItem(
 }
 
 /**
+ * Уникальная метка варианта: метка служит и значением переключателя, поэтому
+ * пустая заменяется номером по порядку, а повтор — номером в скобках. Иначе
+ * второй вариант с той же меткой выбрать было бы нечем — переключатель нашёл
+ * бы первый.
+ *
+ * @param label метка варианта из ответа (может быть пустой).
+ * @param index номер варианта среди непустых.
+ * @param usedLabels уже занятые метки; пополняется выбранной.
+ * @returns метка, которой ещё нет среди вариантов.
+ */
+function getUniqueStartingEquipmentLabel(
+  label: string,
+  index: number,
+  usedLabels: Set<string>,
+): string {
+  const baseLabel =
+    label || `${STARTING_EQUIPMENT_LABELS.optionFallbackLabel} ${index + 1}`;
+
+  let uniqueLabel = baseLabel;
+  let suffix = index + 1;
+
+  while (usedLabels.has(uniqueLabel)) {
+    uniqueLabel = `${baseLabel} (${suffix})`;
+    suffix += 1;
+  }
+
+  usedLabels.add(uniqueLabel);
+
+  return uniqueLabel;
+}
+
+/**
  * Приведение поля `startingEquipment` к вариантам выбора. Варианты без
  * предметов и без монет отбрасываются: выбирать в них нечего.
  *
@@ -946,27 +978,32 @@ function toStartingEquipmentItem(
  */
 function toStartingEquipmentOptions(input: unknown): StartingEquipmentOption[] {
   const options = startingEquipmentSchema.parse(input);
+  const usedLabels = new Set<string>();
 
-  return options
-    .map((option, index) => {
-      const coinLabel = option.coin?.trim().toLowerCase() ?? '';
+  return (
+    options
+      .map((option) => {
+        const coinLabel = option.coin?.trim().toLowerCase() ?? '';
 
-      return {
-        // Метка — ещё и значение переключателя, поэтому пустая заменяется
-        // номером по порядку.
-        label:
-          option.label.trim()
-          || `${STARTING_EQUIPMENT_LABELS.optionFallbackLabel} ${index + 1}`,
-        items: option.items
-          .map(toStartingEquipmentItem)
-          .filter((item): item is StartingEquipmentItem => item !== null),
-        coins: Math.max(Math.trunc(option.coins ?? 0), 0),
-        coinKey:
-          CURRENCY_KEYS_BY_LABEL[coinLabel]
-          ?? STARTING_EQUIPMENT_DEFAULT_COIN_KEY,
-      };
-    })
-    .filter((option) => option.items.length > 0 || option.coins > 0);
+        return {
+          label: option.label.trim(),
+          items: option.items
+            .map(toStartingEquipmentItem)
+            .filter((item): item is StartingEquipmentItem => item !== null),
+          coins: Math.max(Math.trunc(option.coins ?? 0), 0),
+          coinKey:
+            CURRENCY_KEYS_BY_LABEL[coinLabel]
+            ?? STARTING_EQUIPMENT_DEFAULT_COIN_KEY,
+        };
+      })
+      .filter((option) => option.items.length > 0 || option.coins > 0)
+      // Нумерация идёт по непустым вариантам, поэтому метки назначаются после
+      // отсева: иначе в списке из двух строк мог бы оказаться «Вариант 3».
+      .map((option, index) => ({
+        ...option,
+        label: getUniqueStartingEquipmentLabel(option.label, index, usedLabels),
+      }))
+  );
 }
 
 /** Схема детального ответа класса или подкласса (нужные листу поля). */

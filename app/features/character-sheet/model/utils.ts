@@ -648,12 +648,18 @@ export function buildInventoryItem(
 
 /**
  * Стоимость в золотых монетах из подписи справочника («10 зм», «5 см»).
+ * Разряды числа справочник разделяет пробелом («1 500 зм»), в том числе
+ * неразрывным, поэтому пробелы внутри числа склеиваются: иначе у латных
+ * доспехов читалось бы 500 вместо 1500.
  *
  * @param costText подпись стоимости из ответа API.
  * @returns стоимость в золотых; null — подпись не распознана («варьируется»).
  */
 export function parseItemCostInGold(costText: string): number | null {
-  const costMatch = /(\d+(?:[.,]\d+)?)\s*([^\s\d]+)/.exec(costText);
+  // Класс `\s` покрывает и обычный пробел, и неразрывный — им справочник
+  // разделяет разряды числа. После пробела внутри числа цифра обязательна,
+  // иначе разделитель разрядов и пробел перед монетой стали бы разменными.
+  const costMatch = /(\d+(?:\s\d+)*(?:[.,]\d+)?)\s*([^\s\d]+)/.exec(costText);
 
   if (!costMatch?.[1] || !costMatch[2]) {
     return null;
@@ -665,9 +671,11 @@ export function parseItemCostInGold(costText: string): number | null {
     return null;
   }
 
-  return (
-    Number(costMatch[1].replace(',', '.')) * CURRENCY_GOLD_RATES[currencyKey]
-  );
+  const amount = Number(costMatch[1].replace(/\s/g, '').replace(',', '.'));
+
+  return Number.isFinite(amount)
+    ? amount * CURRENCY_GOLD_RATES[currencyKey]
+    : null;
 }
 
 /**
@@ -1445,7 +1453,11 @@ function withKeptMagicBonuses(
 
   return {
     ...updatedItem,
-    armorClassBonus: editedItem.armorClassBonus,
+    // Плащ защиты могли переделать в доспех: у доспеха бонус входит в его КД,
+    // как при сборке из каталога, иначе он посчитался бы в защите дважды.
+    armorClassBonus: updatedItem.armor
+      ? MAGIC_ITEM_BONUS_NONE
+      : editedItem.armorClassBonus,
     // Оружие могли переделать в доспех или безделушку — бонусу атаки там негде
     // жить.
     weapon: updatedItem.weapon
