@@ -22,6 +22,11 @@
     ADMIN_DASHBOARD_TOKENATOR_TITLE,
   } from '~admin/dashboard/model';
   import {
+    MAILING_PAGE_DESCRIPTION,
+    MAILING_PAGE_TITLE,
+    MAILING_ROUTE,
+  } from '~admin/mailing/model';
+  import {
     ADMIN_ONLINE_STATS_API_URL,
     ADMIN_ONLINE_STATS_DATA_KEY,
     parseAdminOnlineStats,
@@ -247,6 +252,27 @@
 
           <div class="text-sm text-muted">
             {{ ADMIN_DASHBOARD_ARTICLES_DESCRIPTION }}
+          </div>
+        </UCard>
+
+        <UCard variant="subtle">
+          <template #header>
+            <div class="flex items-center justify-between gap-2">
+              <h2 class="truncate text-base text-highlighted">
+                {{ MAILING_PAGE_TITLE }}
+              </h2>
+
+              <UButton
+                size="sm"
+                :to="MAILING_ROUTE"
+              >
+                {{ ADMIN_DASHBOARD_CONFIGURE_LABEL }}
+              </UButton>
+            </div>
+          </template>
+
+          <div class="text-sm text-muted">
+            {{ MAILING_PAGE_DESCRIPTION }}
           </div>
         </UCard>
       </div>
