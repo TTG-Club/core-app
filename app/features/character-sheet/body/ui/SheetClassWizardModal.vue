@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type {
     CharacterFeature,
+    CharacterInventoryItem,
     ClassChoice,
     ClassOption,
     ClassSummary,
@@ -19,6 +20,7 @@
     ABILITY_LABELS,
     buildClassFeatures,
     buildFeatFeature,
+    buildStartingEquipmentItems,
     CLASS_SOURCES_ASYNC_DATA_KEY,
     CLASSES_DETAIL_BASE_PATH,
     CLASSES_FILTERS_PATH,
@@ -50,12 +52,14 @@
     resolveChoiceOptions,
     SHEET_SEARCH_LABELS,
     SKILL_DUPLICATE_WARNING,
+    STARTING_EQUIPMENT_SKIP_VALUE,
     SUBCLASS_SELECTION_MIN_LEVEL,
     unionToolProficiencies,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
   import SheetCustomClassModal from './SheetCustomClassModal.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
+  import SheetStartingEquipmentChoice from './SheetStartingEquipmentChoice.vue';
 
   type WizardStep = 'class' | 'review';
 
@@ -165,6 +169,9 @@
 
   /** Выбранные черты боевого стиля по id классового умения. */
   const fightingStyleSelections = ref<Record<string, string>>({});
+
+  /** Метка выбранного варианта стартового снаряжения (или «не добавлять»). */
+  const startingEquipmentLabel = ref(STARTING_EQUIPMENT_SKIP_VALUE);
 
   const isApplying = shallowRef(false);
 
@@ -308,6 +315,18 @@
       level.value,
     );
   });
+
+  // Стартовое снаряжение даёт только базовый класс: у подкласса своего набора
+  // нет.
+  const startingEquipmentOptions = computed(
+    () => classDetail.value?.startingEquipment ?? [],
+  );
+
+  const selectedStartingEquipmentOption = computed(() =>
+    startingEquipmentOptions.value.find(
+      (option) => option.label === startingEquipmentLabel.value,
+    ),
+  );
 
   // Выборы уровня класса (владение навыками/инструментами) из прозы владений.
   const classChoices = computed<ClassChoice[]>(() => {
@@ -565,6 +584,13 @@
       choices.value = {};
       selections.value = {};
       fightingStyleSelections.value = {};
+
+      // Первый вариант снаряжения предлагается по умолчанию: лист чаще всего
+      // заполняется на создании персонажа, где набор класса нужен целиком.
+      startingEquipmentLabel.value =
+        classDetail.value.startingEquipment[0]?.label
+        ?? STARTING_EQUIPMENT_SKIP_VALUE;
+
       step.value = 'review';
     } catch (error) {
       consola.error('Ошибка загрузки класса:', error);
@@ -616,16 +642,12 @@
     );
   }
 
-  /** Применяет выбранный класс и все связанные с ним выборы к листу. */
-  async function handleApply() {
-    const base = classDetail.value;
-
-    if (!base || isApplyDisabled.value) {
-      return;
-    }
-
-    isApplying.value = true;
-
+  /**
+   * Загрузка выборов мастера и применение класса к листу.
+   *
+   * @param base деталь выбранного класса.
+   */
+  async function applyClass(base: ClassSummary) {
     // Под `try` только загрузка черт: ошибка сети не должна выглядеть как сбой
     // применения класса, а применение ниже — синхронное и не бросает.
     let fightingStyleFeatures: Array<FightingStyleSelection>;
@@ -638,9 +660,16 @@
       showFightingStyleError();
 
       return;
-    } finally {
-      isApplying.value = false;
     }
+
+    // Предметы выбранного варианта снаряжения догружаются до применения; их
+    // неудачные запросы гасятся внутри, поэтому шаг не бросает.
+    const startingEquipmentOption = selectedStartingEquipmentOption.value;
+
+    const startingEquipmentItems: CharacterInventoryItem[] =
+      startingEquipmentOption
+        ? await buildStartingEquipmentItems(startingEquipmentOption)
+        : [];
 
     const matched = matchClassProficiencies(base.proficiencyText);
 
@@ -732,9 +761,35 @@
         ),
         ...fightingStyleFeatures.map((selection) => selection.feature),
       ],
+      // Снаряжение применяется вместе с классом: лист сам снимет набор прошлого
+      // выбора, поэтому повторный выбор класса не копит предметы и монеты.
+      startingEquipment: startingEquipmentOption
+        ? {
+            items: startingEquipmentItems,
+            coins: startingEquipmentOption.coins,
+            coinKey: startingEquipmentOption.coinKey,
+          }
+        : null,
     });
 
     emit('close');
+  }
+
+  /** Применяет выбранный класс и все связанные с ним выборы к листу. */
+  async function handleApply() {
+    const base = classDetail.value;
+
+    if (!base || isApplyDisabled.value) {
+      return;
+    }
+
+    isApplying.value = true;
+
+    try {
+      await applyClass(base);
+    } finally {
+      isApplying.value = false;
+    }
   }
 
   function handleCancel() {
@@ -935,7 +990,8 @@
           <span class="text-xs text-muted">
             Класс с подклассами разворачивается стрелкой — подкласс
             необязателен. При применении кость хитов, хиты, спасброски,
-            владения, ресурсы и умения по текущему уровню сразу заполнят лист.
+            владения, ресурсы, умения по текущему уровню и выбранный вариант
+            стартового снаряжения сразу заполнят лист.
           </span>
         </template>
 
@@ -1052,6 +1108,12 @@
               />
             </div>
           </div>
+
+          <SheetStartingEquipmentChoice
+            v-if="startingEquipmentOptions.length"
+            v-model="startingEquipmentLabel"
+            :options="startingEquipmentOptions"
+          />
 
           <div class="flex flex-col gap-2">
             <span

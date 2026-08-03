@@ -23,6 +23,7 @@ import type {
   MagicItemCatalogGrouping,
   MagicItemCatalogItem,
   MagicItemCatalogSorting,
+  MagicItemRarityKey,
   ResourceRecovery,
   ResourceRecoveryField,
   ResourceRecoveryMode,
@@ -431,6 +432,22 @@ export const CURRENCY_NAMES: Record<CurrencyKey, string> = {
   platinum: 'Платиновые монеты',
 };
 
+/**
+ * Денежная единица по сокращению из справочника: варианты стартового
+ * снаряжения приходят с подписью монеты («зм»), а не с ключом кошелька.
+ * Собирается из подписей ряда валют, чтобы список единиц оставался один.
+ */
+export const CURRENCY_KEYS_BY_LABEL: Partial<Record<string, CurrencyKey>> =
+  Object.fromEntries(
+    CURRENCY_ORDER.map((key) => [CURRENCY_LABELS[key].toLowerCase(), key]),
+  );
+
+/**
+ * Денежная единица варианта стартового снаряжения, если сокращение в ответе не
+ * узнано: у стартовых наборов это всегда золото.
+ */
+export const STARTING_EQUIPMENT_DEFAULT_COIN_KEY: CurrencyKey = 'gold';
+
 /** Минимальное количество денежной единицы. */
 export const CURRENCY_AMOUNT_MIN = 0;
 
@@ -603,6 +620,7 @@ export const ARMOR_CLASS_LABELS: Record<
   | 'armorTitle'
   | 'dexCappedHint'
   | 'shieldTitle'
+  | 'itemTitle'
   | 'totalTitle'
   | 'equipmentHint',
   string
@@ -627,6 +645,7 @@ export const ARMOR_CLASS_LABELS: Record<
   // а не из `ABILITY_LABELS` (там именительный: «Ловкость»).
   dexCappedHint: 'Модификатор Ловкости ограничен доспехом',
   shieldTitle: 'Щит',
+  itemTitle: 'Магические предметы',
   totalTitle: 'Итоговый КД',
   equipmentHint:
     'Надевайте доспехи и щит на вкладке «Снаряжение» — в зачёт идёт доспех с наибольшим КД, щит складывается сверху.',
@@ -2030,10 +2049,11 @@ export const ITEMS_FILTERS_PATH = '/api/v2/item/filters';
 export const ITEMS_DETAIL_BASE_PATH = '/api/v2/item';
 
 /**
- * Хвост пути «сырого» ответа предмета: числовой КД доспеха и урон оружия есть
- * только в нём (публичная деталь их не отдаёт).
+ * Хвост пути «сырого» ответа раздела: у предмета в нём числовой КД доспеха и
+ * урон оружия, у магического — редкость и связанные немагические предметы.
+ * Публичная деталь ни того, ни другого не отдаёт.
  */
-export const ITEMS_RAW_DETAIL_PATH_SUFFIX = 'raw';
+export const RAW_DETAIL_PATH_SUFFIX = 'raw';
 
 /** Эндпоинт поиска магических предметов (раздел «Магические предметы»). */
 export const MAGIC_ITEMS_SEARCH_PATH = '/api/v2/magic-items/search';
@@ -2043,6 +2063,43 @@ export const MAGIC_ITEMS_DETAIL_BASE_PATH = '/api/v2/magic-items';
 
 /** Эндпоинт фильтров магических предметов. */
 export const MAGIC_ITEMS_FILTERS_PATH = '/api/v2/magic-items/filters';
+
+/**
+ * Редкость «редкость варьируется»: под такой записью раздел держит сразу
+ * несколько предметов («Оружие +1, +2 или +3»), поэтому ни цены магии, ни одной
+ * немагической основы у неё нет — в лист её не добавляют.
+ */
+export const MAGIC_ITEM_VARIES_RARITY: MagicItemRarityKey = 'VARIES';
+
+/**
+ * Цена магии по редкости в золотых монетах — её прибавляют к стоимости
+ * немагической основы. Редкости без цены (варьируется, не определена) в
+ * таблице нет, артефакт бесценен.
+ */
+export const MAGIC_ITEM_RARITY_COSTS: Partial<
+  Record<MagicItemRarityKey, number>
+> = {
+  COMMON: 100,
+  UNCOMMON: 400,
+  RARE: 4000,
+  VERY_RARE: 40000,
+  LEGENDARY: 200000,
+};
+
+/** Подпись стоимости артефакта: цены у него нет. */
+export const MAGIC_ITEM_ARTIFACT_COST_LABEL = 'Бесценный';
+
+/**
+ * Стоимость денежной единицы в золотых монетах: справочник отдаёт цены
+ * предметов в разных монетах («5 см»), а цена магии задана в золоте.
+ */
+export const CURRENCY_GOLD_RATES: Record<CurrencyKey, number> = {
+  copper: 0.01,
+  silver: 0.1,
+  electrum: 0.5,
+  gold: 1,
+  platinum: 10,
+};
 
 /** Подписи групп каталога для предметов без значения поля группировки. */
 export const MAGIC_ITEM_CATALOG_EMPTY_GROUP_LABELS: Record<
@@ -2114,6 +2171,36 @@ export const INVENTORY_QUANTITY_MIN = 0;
 
 /** Максимальное количество одного предмета в инвентаре. */
 export const INVENTORY_QUANTITY_MAX = 999;
+
+/**
+ * Идентификатор позиции стартового снаряжения, которой нет в каталоге. Она
+ * заводится как свой предмет листа, но с устойчивым идентификатором от
+ * названия: повторный выбор того же класса складывает количество, а не плодит
+ * одинаковые строки, как случайный `uuid`.
+ */
+export const STARTING_EQUIPMENT_CUSTOM_ID_SEGMENT = 'starting:';
+
+/**
+ * Значение переключателя «не добавлять» стартовое снаряжение. Отдельная строка,
+ * а не пустая: пустое значение переключатель считает несделанным выбором и не
+ * подсвечивает строку. С метками вариантов («А», «Б») она не столкнётся.
+ */
+export const STARTING_EQUIPMENT_SKIP_VALUE = 'skip';
+
+/** Подписи блока стартового снаряжения в мастерах класса и предыстории. */
+export const STARTING_EQUIPMENT_LABELS = {
+  title: 'Стартовое снаряжение',
+  hint: 'Предметы варианта попадут в «Снаряжение», монеты — в кошелёк.',
+  skipLabel: 'Не добавлять',
+  skipDescription: 'Снаряжение и кошелёк останутся как есть',
+  emptyOptionDescription: 'Без предметов',
+
+  /** Подпись варианта без метки в ответе; к ней добавляется номер по порядку. */
+  optionFallbackLabel: 'Вариант',
+
+  /** Приставка количества в подписи предмета («Кинжал ×2»). */
+  quantityPrefix: '×',
+};
 
 /** Подписи кнопки доспеха в строке инвентаря по его текущему состоянию. */
 export const INVENTORY_EQUIP_ACTION_LABELS: Record<

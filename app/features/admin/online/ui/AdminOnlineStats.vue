@@ -1,18 +1,26 @@
 <script setup lang="ts">
-  import type { AdminOnlineStatsResponse } from '../model';
+  import type {
+    AdminOnlineCounters,
+    AdminOnlineSiteCard,
+    AdminOnlineStatsResponse,
+  } from '../model';
 
   import {
     ADMIN_ONLINE_STATS_DESCRIPTION,
     ADMIN_ONLINE_STATS_EMPTY_TEXT,
-    ADMIN_ONLINE_STATS_ERROR_TEXT,
+    ADMIN_ONLINE_STATS_EMPTY_VALUE,
     ADMIN_ONLINE_STATS_GUESTS_LABEL,
     ADMIN_ONLINE_STATS_MINUTES_LABEL,
+    ADMIN_ONLINE_STATS_PLACEHOLDER_SITE_IDS,
     ADMIN_ONLINE_STATS_REFRESH_LABEL,
     ADMIN_ONLINE_STATS_REGISTERED_LABEL,
     ADMIN_ONLINE_STATS_SITE_LABEL,
     ADMIN_ONLINE_STATS_SUMMARY_LABEL,
     ADMIN_ONLINE_STATS_TITLE,
     ADMIN_ONLINE_STATS_TOTAL_LABEL,
+    ADMIN_ONLINE_STATS_VTTG_GUESTS_LABEL,
+    ADMIN_ONLINE_STATS_VTTG_SITE_ID,
+    ADMIN_ONLINE_STATS_VTTG_SITE_LABEL,
     ADMIN_ONLINE_STATS_WINDOW_LABEL,
   } from '../model';
 
@@ -28,16 +36,67 @@
 
   const slots = useSlots();
 
+  // Скелетон только пока ответа ждём: после ошибки ждать нечего — там прочерки.
+  const isPending = computed(
+    () => props.isLoading || (!props.hasError && !props.stats),
+  );
+
+  /**
+   * Приводит счётчик к строке: без данных ставим прочерк, ноль остаётся нулём.
+   */
+  function formatCounter(value: number | undefined): string {
+    return typeof value === 'number'
+      ? String(value)
+      : ADMIN_ONLINE_STATS_EMPTY_VALUE;
+  }
+
+  /**
+   * Собирает карточку площадки: VTTG — десктопное приложение со своей
+   * аудиторией, поэтому у него подписи «Приложение» и «Игроков», у сайтов
+   * остаются «Сайт» и «Гостей».
+   */
+  function createSiteCard(
+    siteId: string,
+    counters: AdminOnlineCounters | null,
+  ): AdminOnlineSiteCard {
+    const isApp = siteId === ADMIN_ONLINE_STATS_VTTG_SITE_ID;
+
+    return {
+      guests: formatCounter(counters?.guests),
+      guestsLabel: isApp
+        ? ADMIN_ONLINE_STATS_VTTG_GUESTS_LABEL
+        : ADMIN_ONLINE_STATS_GUESTS_LABEL,
+      registered: formatCounter(counters?.registered),
+      siteId,
+      siteLabel: isApp
+        ? ADMIN_ONLINE_STATS_VTTG_SITE_LABEL
+        : ADMIN_ONLINE_STATS_SITE_LABEL,
+      total: formatCounter(counters?.total),
+    };
+  }
+
+  // Без данных сетка не схлопывается: остаётся каркас из известных площадок, а
+  // числа показываем скелетоном (ждём ответ) или прочерком (ответа не будет).
+  const siteCards = computed<AdminOnlineSiteCard[]>(() =>
+    props.stats
+      ? props.stats.sites.map((siteStats) =>
+          createSiteCard(siteStats.siteId, siteStats),
+        )
+      : ADMIN_ONLINE_STATS_PLACEHOLDER_SITE_IDS.map((siteId) =>
+          createSiteCard(siteId, null),
+        ),
+  );
+
+  const summaryTotal = computed(() => formatCounter(props.stats?.total.total));
+
   // Сетку карточек держим отдельно от ответа online-app: в неё через слот
   // добавляются карточки другой статистики (листы персонажа), и падение
   // online-app не должно их прятать.
-  const hasCards = computed(
-    () => !!props.stats?.sites.length || !!slots.default,
-  );
+  const hasCards = computed(() => !!siteCards.value.length || !!slots.default);
 
   // Сообщение показываем, когда online-app ответил без сайтов, — даже если сетка
   // рендерится ради карточек из слота, иначе пропажу online-данных не заметить.
-  // При ошибке хватает алерта, при загрузке говорить «сайтов нет» рано.
+  // При ошибке и загрузке говорить «сайтов нет» рано: там каркас с прочерками.
   const hasEmptySites = computed(
     () => !props.hasError && !!props.stats && !props.stats.sites.length,
   );
@@ -74,19 +133,14 @@
       </UButton>
     </div>
 
-    <UAlert
-      v-if="hasError"
-      color="error"
-      variant="subtle"
-      icon="tabler:alert-triangle"
-      :description="ADMIN_ONLINE_STATS_ERROR_TEXT"
-    />
+    <div class="flex flex-wrap items-center gap-3 text-sm text-muted">
+      <USkeleton
+        v-if="isPending"
+        class="h-5 w-28 rounded-full"
+      />
 
-    <div
-      v-else-if="stats"
-      class="flex flex-wrap items-center gap-3 text-sm text-muted"
-    >
       <UBadge
+        v-else-if="stats"
         color="neutral"
         variant="subtle"
       >
@@ -95,9 +149,14 @@
         {{ ADMIN_ONLINE_STATS_MINUTES_LABEL }}
       </UBadge>
 
-      <span>
+      <USkeleton
+        v-if="isPending"
+        class="h-5 w-24"
+      />
+
+      <span v-else>
         {{ ADMIN_ONLINE_STATS_SUMMARY_LABEL }}:
-        {{ stats.total.total }}
+        {{ summaryTotal }}
       </span>
     </div>
 
@@ -113,23 +172,30 @@
       class="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4"
     >
       <UCard
-        v-for="siteStats in stats?.sites ?? []"
-        :key="siteStats.siteId"
+        v-for="card in siteCards"
+        :key="card.siteId"
         variant="subtle"
       >
         <dl class="space-y-3 text-sm">
           <div class="flex items-center justify-between gap-4">
-            <dt class="text-muted">{{ ADMIN_ONLINE_STATS_SITE_LABEL }}</dt>
+            <dt class="text-muted">{{ card.siteLabel }}</dt>
 
             <dd class="font-semibold text-highlighted">
-              {{ siteStats.siteId }}
+              {{ card.siteId }}
             </dd>
           </div>
 
           <div class="flex items-center justify-between gap-4">
-            <dt class="text-muted">{{ ADMIN_ONLINE_STATS_GUESTS_LABEL }}</dt>
+            <dt class="text-muted">{{ card.guestsLabel }}</dt>
 
-            <dd class="font-medium text-default">{{ siteStats.guests }}</dd>
+            <dd class="font-medium text-default">
+              <USkeleton
+                v-if="isPending"
+                class="h-5 w-10"
+              />
+
+              <template v-else>{{ card.guests }}</template>
+            </dd>
           </div>
 
           <div class="flex items-center justify-between gap-4">
@@ -138,7 +204,12 @@
             </dt>
 
             <dd class="font-medium text-default">
-              {{ siteStats.registered }}
+              <USkeleton
+                v-if="isPending"
+                class="h-5 w-10"
+              />
+
+              <template v-else>{{ card.registered }}</template>
             </dd>
           </div>
 
@@ -150,7 +221,12 @@
             </dt>
 
             <dd class="text-lg font-semibold text-primary">
-              {{ siteStats.total }}
+              <USkeleton
+                v-if="isPending"
+                class="h-7 w-12"
+              />
+
+              <template v-else>{{ card.total }}</template>
             </dd>
           </div>
         </dl>

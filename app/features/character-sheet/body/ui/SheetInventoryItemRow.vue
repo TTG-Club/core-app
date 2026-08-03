@@ -203,10 +203,14 @@
   // и катить им атаку с уроном нельзя.
   const isMissing = computed(() => isMissingInventoryItem(props.inventoryItem));
 
-  // Экипировать можно только доспехи (оружие — нет). Иконку доспеха с данными
-  // о КД можно нажать, чтобы надеть/снять. Смотрим на параметры, а не на группу:
-  // свой магический доспех лежит среди магических предметов.
-  const isEquippable = computed(() => props.inventoryItem.armor !== null);
+  // Экипировать можно только то, что влияет на КД: доспехи и предметы со своим
+  // плоским бонусом (плащ защиты). Оружие — нет. Смотрим на параметры, а не на
+  // группу: свой магический доспех лежит среди магических предметов.
+  const isEquippable = computed(
+    () =>
+      props.inventoryItem.armor !== null
+      || props.inventoryItem.armorClassBonus !== 0,
+  );
 
   const isEquipped = computed(
     () => isEquippable.value && props.inventoryItem.equipped,
@@ -303,10 +307,16 @@
       getCharacterProficiencyBonus(character.value),
     )}`;
 
+    const tooltipParts = [masteryPart, getAbilityPart(attack.ability)];
+
+    if (attack.weaponBonus !== 0) {
+      tooltipParts.push(`оружие ${getFormattedBonus(attack.weaponBonus)}`);
+    }
+
     return {
       label: INVENTORY_STAT_LABELS.attack,
       value: getFormattedBonus(attack.value),
-      tooltip: `Бонус атаки = ${masteryPart} + ${getAbilityPart(attack.ability)}`,
+      tooltip: `Бонус атаки = ${tooltipParts.join(' + ')}`,
       accent: true,
       roll: getStatRoll('attack'),
     };

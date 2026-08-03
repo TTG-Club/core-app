@@ -189,6 +189,17 @@
               {{ getFormattedBonus(breakdown.shieldBonus) }}
             </span>
           </div>
+
+          <div
+            v-if="breakdown.itemBonus !== 0"
+            class="flex items-center justify-between gap-4 text-sm"
+          >
+            <span class="text-toned">{{ ARMOR_CLASS_LABELS.itemTitle }}</span>
+
+            <span class="text-toned">
+              {{ getFormattedBonus(breakdown.itemBonus) }}
+            </span>
+          </div>
         </template>
 
         <div

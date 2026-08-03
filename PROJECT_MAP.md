@@ -105,6 +105,21 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 - Wizards for species / class / background; rolls go through `dice-roller`
   (universal `SheetRollModal`).
+- The class and background wizards also hand out the starting equipment. The
+  reference `startingEquipment` field carries the official options («А», «Б»,
+  «В») as structured item lists plus coins, so the review step shows them as a
+  radio row (`SheetStartingEquipmentChoice`, first option preselected, «Не
+  добавлять» last) and applying pulls each catalog item through
+  `/item/{url}` — a weapon lands with its attack, a suit of armour with its AC —
+  while a line without a catalog slug becomes a homebrew row the player renames.
+  Items merge into the inventory by quantity instead of replacing it, and the
+  coins are added to the wallet, so re-picking a class never wipes what was
+  bought. What each source handed out is remembered on `characterClass` /
+  `characterBackground` (`startingEquipment`) and taken back the next time that
+  same source is picked — exactly the granted quantities and coins, so the set
+  never accumulates and anything bought on top survives. Sheets saved before the
+  field existed carry no record, so their first re-pick has nothing to take back.
+  Entries the reference has no structured data for simply show no picker.
 - The background wizard also creates a homebrew one (`SheetCustomBackgroundModal`,
   opened over the catalog list): name, a +2/+1 or +1/+1/+1 ability spread, two
   skills, one tool from the catalog and an origin feat (category `ORIGIN` of
@@ -198,14 +213,41 @@ modals), so its capabilities are listed here rather than squeezed into the table
   and combat parameters, and pulls the description — for a spell also its
   casting time / range / components / duration — from the section detail into
   the sheet document; it is edited afterwards by the same homebrew form. A
-  copied magic item keeps its group while its kind stays «trinket».
+  copied magic item keeps its group, and its kind follows the parameters it
+  carries — «trinket» unless a mundane base gave it weapon or armour data.
 - The «Добавить магический предмет» catalog groups its rows the way the section
   does, and the grouping is picked from a dropdown under the filter button (by
   rarity in the dictionary order — the shared `useMagicItemRarityGroupOrder` —
   by category, or none). State and menu come from the section infrastructure
   (`~infrastructure/list-presentation`), so the choice survives reopening in
   `localStorage`; only grouping is offered because the order inside a group is
-  always the Russian name.
+  always the Russian name. Entries whose rarity varies («Оружие +1, +2 или +3»)
+  are left out of the list — one such record stands for a whole family of items,
+  so neither a price nor a single mundane base can be pinned to it. The rarity
+  dictionary is what maps the search's Russian rarity label to `VARIES`, so the
+  list waits for it in every grouping, not only «По редкости».
+- A magic item is priced by its rarity — `MAGIC_ITEM_RARITY_COSTS`, read from
+  `/magic-items/{url}/raw` together with the editor's «Связанные предметы», since
+  neither the search nor the public detail carries them. Built on exactly **one**
+  mundane item, it also takes that item's weight and combat parameters — a magic
+  shield is equippable and counts towards AC, a magic weapon rolls attack and
+  damage — and adds the base price converted to gold through
+  `CURRENCY_GOLD_RATES` (a rare dagger of poison: 4000 + 2 = «4002 зм»). Several
+  links or none leave weight and combat data empty, but the rarity price stands
+  on its own («Сумка хранения» → «400 зм»). An artifact is «Бесценный»; a rarity
+  with no price in the table falls back to the base item's own cost, and with no
+  base to fall back to the cost stays empty. LSS import goes through the same
+  `fetchMagicItemSummary`.
+- The workshop editor also carries three numeric bonuses per magic item
+  (`MagicItemBonuses` — «Бонус к атаке» / «к урону» / «к КД»), and the sheet lays
+  them over the mundane base: the attack bonus becomes `InventoryWeapon.attackBonus`
+  and joins proficiency + ability in `getWeaponAttackBonus`, the damage bonus is
+  folded into the weapon's own `damage.bonus` (both grips), and the AC bonus goes
+  into `armor.baseArmorClass` so a magic shield still competes as a shield. An item
+  with no armour base keeps its AC bonus in `CharacterInventoryItem.armorClassBonus`
+  — a flat term the AC breakdown sums over every equipped item («Магические
+  предметы» row), because a cloak and a ring of protection stack rather than
+  compete. Sheets saved before the fields existed read them as `0`.
 - The «Добавить заклинание» catalog opens preset to what the character can
   actually learn: the class chip is picked by the class slug (the same id the
   `className` filter group uses) and the level chips cover every circle the
@@ -293,13 +335,13 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 ### 📰 Content & publishing
 
-| Domain     | Purpose                                                                                                                                    | Sub-features                                                                                                                                                                                                                                       |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `articles` | News/article publishing (`NEWS`/`ARTICLE`; draft·active·scheduled·link-access flags); markup content. Public `/articles`, `/news`          | `admin`, `body`, `card`, `drawer`, `editor`, `link`, `listing`, `preview`, `model`                                                                                                                                                                 |
-| `home`     | Landing-page building blocks composed on `pages/index.vue`                                                                                 | `news`, `articles` (separate index block from `news`), `sections`, `banners` (VTTG campaign), `tools` (compact tools card, role-gated items), `community`, `counters`, `greetings`, `recent-changes`, `background`, `social-links`, `link-to-5e14` |
-| `workshop` | Content-creation admin (`/workshop/*`, ADMIN or MODERATOR): reusable form engine + section entry cards + revision history                  | `composable` (`useWorkshopForm`), `section`, `revision`                                                                                                                                                                                            |
-| `roadmap`  | Project roadmap (`/roadmap`): feature cards with community ratings + admin editor                                                          | `feature`, `detail`, `editor`, `preview`, `types`                                                                                                                                                                                                  |
-| `comments` | Threaded discussions on wiki & article pages via external **comments-service**; public read, auth to post, soft-delete tombstones, reports | `section` (page block + feed), `admin` (moderation rows), `composables`, `model`                                                                                                                                                                   |
+| Domain     | Purpose                                                                                                                                    | Sub-features                                                                                                                                                                                                                                                               |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `articles` | News/article publishing (`NEWS`/`ARTICLE`; draft·active·scheduled·link-access flags); markup content. Public `/articles`, `/news`          | `admin`, `body`, `card`, `drawer`, `editor`, `link`, `listing`, `preview`, `model`                                                                                                                                                                                         |
+| `home`     | Landing-page building blocks composed on `pages/index.vue`                                                                                 | `news`, `articles` (separate index block from `news`), `sections`, `banners` (VTTG promo card above the tools block), `tools` (compact tools card, role-gated items), `community`, `counters`, `greetings`, `recent-changes`, `background`, `social-links`, `link-to-5e14` |
+| `workshop` | Content-creation admin (`/workshop/*`, ADMIN or MODERATOR): reusable form engine + section entry cards + revision history                  | `composable` (`useWorkshopForm`), `section`, `revision`                                                                                                                                                                                                                    |
+| `roadmap`  | Project roadmap (`/roadmap`): feature cards with community ratings + admin editor                                                          | `feature`, `detail`, `editor`, `preview`, `types`                                                                                                                                                                                                                          |
+| `comments` | Threaded discussions on wiki & article pages via external **comments-service**; public read, auth to post, soft-delete tombstones, reports | `section` (page block + feed), `admin` (moderation rows), `composables`, `model`                                                                                                                                                                                           |
 
 ### 🛡️ Admin & moderation
 
@@ -323,10 +365,10 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 ### 🌐 Landing & infrastructure
 
-| Domain           | Purpose                                                                      | Sub-features                                                                                                                                                              |
-| ---------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `vttg`           | Marketing landing for the VTTG virtual tabletop (`/vttg`) + desktop download | `model`, `ui` (hero / features / FAQ / support / video sections, `VttgDownloadPlatforms`), `composables` (`useVttgDesktopRelease` — latest build from the update channel) |
-| `infrastructure` | Cross-cutting app shell & chrome                                             | `sidebar`, `search`, `filter`, `list-presentation`, `footer`, `cookie-consent`, `pwa`                                                                                     |
+| Domain           | Purpose                                                                      | Sub-features                                                                                                                                                                                                                                |
+| ---------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vttg`           | Marketing landing for the VTTG virtual tabletop (`/vttg`) + desktop download | `model`, `ui` (hero / features / FAQ / video sections, `VttgDownloadModal` — early-access notice behind the hero «Скачать» button, `VttgDownloadPlatforms`), `composables` (`useVttgDesktopRelease` — latest build from the update channel) |
+| `infrastructure` | Cross-cutting app shell & chrome                                             | `sidebar`, `search`, `filter`, `list-presentation`, `footer`, `cookie-consent`, `pwa`                                                                                                                                                       |
 
 ### Anatomy of a Feature (Example: `tokenator`)
 
@@ -360,13 +402,14 @@ imported via the auto-generated `~<domain>` alias (see
 
 ---
 
-## 🎨 Shared UI Kit (`app/shared/ui/` — 28 components)
+## 🎨 Shared UI Kit (`app/shared/ui/` — 29 components)
 
 **UI Components Priority:** Nuxt UI → `shared/ui` → `features/*/ui`
 
 | Component         | Purpose                                                                                |
 | ----------------- | -------------------------------------------------------------------------------------- |
 | `action`          | Inline titled action block (markup)                                                    |
+| `affiliation`     | Comma-separated links to related entities (spell classes, feat backgrounds)            |
 | `animated-number` | Count-up animated number                                                               |
 | `card`            | Workshop entity card                                                                   |
 | `collapse`        | Collapsible / accordion primitive                                                      |

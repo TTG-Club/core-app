@@ -22,17 +22,32 @@ import type {
   ItemCatalogItem,
   ItemSummary,
   MagicItemCatalogItem,
+  MagicItemRawDetail,
   SpeciesFeatureSummary,
   SpeciesOption,
   SpeciesSummary,
   SpellCatalogItem,
+  StartingEquipmentItem,
+  StartingEquipmentOption,
 } from './types';
+
+import { clamp } from 'es-toolkit';
 
 import { z } from '~/utils/zod';
 import { CasterType } from '~classes/model';
+import {
+  EMPTY_MAGIC_ITEM_BONUSES,
+  MAGIC_ITEM_BONUS_NONE,
+} from '~magic-items/model';
 
 import { descriptionNodesSchema } from './character-schema';
-import { SPELL_COMPONENT_LABELS } from './constants';
+import {
+  CURRENCY_KEYS_BY_LABEL,
+  INVENTORY_QUANTITY_MAX,
+  SPELL_COMPONENT_LABELS,
+  STARTING_EQUIPMENT_DEFAULT_COIN_KEY,
+  STARTING_EQUIPMENT_LABELS,
+} from './constants';
 import {
   getClassToolChoice,
   isAbilityImprovementFeature,
@@ -445,6 +460,59 @@ export function parseMagicItemCatalog(input: unknown): MagicItemCatalogItem[] {
   }));
 }
 
+/**
+ * Схема «сырого» ответа магического предмета: редкость приходит значением
+ * справочника, связанные немагические предметы — списком слагов. Форма — как у
+ * формы редактора магических предметов (`MagicItemCreate`).
+ */
+const magicItemRawSchema = z
+  .object({
+    rarity: z
+      .object({
+        type: z
+          .enum([
+            'COMMON',
+            'UNCOMMON',
+            'RARE',
+            'VERY_RARE',
+            'LEGENDARY',
+            'ARTIFACT',
+            'VARIES',
+            'UNKNOWN',
+          ])
+          .catch('UNKNOWN'),
+      })
+      .nullable()
+      .catch(null),
+    items: z.array(z.string()).catch([]),
+    // Записи, сохранённые до появления полей бонусов, приходят без блока.
+    bonuses: z
+      .object({
+        attack: z.coerce.number().catch(MAGIC_ITEM_BONUS_NONE),
+        damage: z.coerce.number().catch(MAGIC_ITEM_BONUS_NONE),
+        armorClass: z.coerce.number().catch(MAGIC_ITEM_BONUS_NONE),
+      })
+      .nullable()
+      .catch(null),
+  })
+  .catch({ rarity: null, items: [], bonuses: null });
+
+/**
+ * Валидация «сырого» ответа `GET /api/v2/magic-items/{url}/raw`.
+ *
+ * @param input сырой ответ магического предмета.
+ * @returns редкость и связанные немагические предметы.
+ */
+export function parseMagicItemRaw(input: unknown): MagicItemRawDetail {
+  const parsed = magicItemRawSchema.parse(input);
+
+  return {
+    rarity: parsed.rarity?.type ?? 'UNKNOWN',
+    baseItemUrls: parsed.items,
+    bonuses: parsed.bonuses ?? EMPTY_MAGIC_ITEM_BONUSES,
+  };
+}
+
 /** Схема детального ответа предмета (нужные листу поля). */
 const itemDetailSchema = z.object({
   url: z.string(),
@@ -687,6 +755,8 @@ export function parseItemWeapon(input: unknown): InventoryWeapon | null {
     finesse: weapon.properties.some((property) =>
       /фехтов|finesse/i.test(property),
     ),
+    // Немагическое оружие своего бонуса к атаке не имеет: его даёт только магия.
+    attackBonus: MAGIC_ITEM_BONUS_NONE,
     damage,
     // Свойство «Универсальное» распознаём по самому броску, а не по строке в
     // `properties`: без второй кости переключать хват всё равно нечем.
@@ -812,6 +882,130 @@ const classFeatureSchema = z.object({
     .catch(null),
 });
 
+/**
+ * Схема позиции варианта стартового снаряжения. Каталожная позиция приходит со
+ * слагом и названием, а внекаталожная («музыкальный инструмент») — только
+ * описанием, поэтому пусто может быть любое поле.
+ */
+const startingEquipmentItemSchema = z.object({
+  url: z.string().nullable().catch(null),
+  name: z.string().nullable().catch(null),
+  quantity: z.coerce.number().nullable().catch(null),
+  description: z.string().nullable().catch(null),
+});
+
+/** Схема варианта стартового снаряжения («А», «Б», …). */
+const startingEquipmentOptionSchema = z.object({
+  label: z.string().catch(''),
+  items: z.array(startingEquipmentItemSchema).catch([]),
+  coins: z.coerce.number().nullable().catch(null),
+
+  /** Сокращение денежной единицы монет варианта («зм»). */
+  coin: z.string().nullable().catch(null),
+});
+
+/** Схема поля `startingEquipment` — одинакового у класса и предыстории. */
+const startingEquipmentSchema = z
+  .array(startingEquipmentOptionSchema)
+  .catch([]);
+
+/**
+ * Приведение позиции варианта стартового снаряжения к записи листа. Название
+ * берётся из каталожного поля, а у позиции без ссылки — из описания; описание
+ * при заполненном названии становится уточнением («Книга (по истории)»).
+ *
+ * @param item разобранная позиция варианта.
+ * @returns позиция для листа; null — названия нет ни в одном поле.
+ */
+function toStartingEquipmentItem(
+  item: z.infer<typeof startingEquipmentItemSchema>,
+): StartingEquipmentItem | null {
+  const catalogName = item.name?.trim() ?? '';
+  const description = item.description?.trim() ?? '';
+  const name = catalogName || description;
+
+  if (!name) {
+    return null;
+  }
+
+  return {
+    url: item.url?.trim() ?? '',
+    name,
+    hint: catalogName ? description : '',
+    // Количество приходит и пустым, и нулём — это всё одна штука.
+    quantity: clamp(Math.trunc(item.quantity || 1), 1, INVENTORY_QUANTITY_MAX),
+  };
+}
+
+/**
+ * Уникальная метка варианта: метка служит и значением переключателя, поэтому
+ * пустая заменяется номером по порядку, а повтор — номером в скобках. Иначе
+ * второй вариант с той же меткой выбрать было бы нечем — переключатель нашёл
+ * бы первый.
+ *
+ * @param label метка варианта из ответа (может быть пустой).
+ * @param index номер варианта среди непустых.
+ * @param usedLabels уже занятые метки; пополняется выбранной.
+ * @returns метка, которой ещё нет среди вариантов.
+ */
+function getUniqueStartingEquipmentLabel(
+  label: string,
+  index: number,
+  usedLabels: Set<string>,
+): string {
+  const baseLabel =
+    label || `${STARTING_EQUIPMENT_LABELS.optionFallbackLabel} ${index + 1}`;
+
+  let uniqueLabel = baseLabel;
+  let suffix = index + 1;
+
+  while (usedLabels.has(uniqueLabel)) {
+    uniqueLabel = `${baseLabel} (${suffix})`;
+    suffix += 1;
+  }
+
+  usedLabels.add(uniqueLabel);
+
+  return uniqueLabel;
+}
+
+/**
+ * Приведение поля `startingEquipment` к вариантам выбора. Варианты без
+ * предметов и без монет отбрасываются: выбирать в них нечего.
+ *
+ * @param input сырое значение поля из детального ответа.
+ * @returns варианты стартового снаряжения в порядке ответа.
+ */
+function toStartingEquipmentOptions(input: unknown): StartingEquipmentOption[] {
+  const options = startingEquipmentSchema.parse(input);
+  const usedLabels = new Set<string>();
+
+  return (
+    options
+      .map((option) => {
+        const coinLabel = option.coin?.trim().toLowerCase() ?? '';
+
+        return {
+          label: option.label.trim(),
+          items: option.items
+            .map(toStartingEquipmentItem)
+            .filter((item): item is StartingEquipmentItem => item !== null),
+          coins: Math.max(Math.trunc(option.coins ?? 0), 0),
+          coinKey:
+            CURRENCY_KEYS_BY_LABEL[coinLabel]
+            ?? STARTING_EQUIPMENT_DEFAULT_COIN_KEY,
+        };
+      })
+      .filter((option) => option.items.length > 0 || option.coins > 0)
+      // Нумерация идёт по непустым вариантам, поэтому метки назначаются после
+      // отсева: иначе в списке из двух строк мог бы оказаться «Вариант 3».
+      .map((option, index) => ({
+        ...option,
+        label: getUniqueStartingEquipmentLabel(option.label, index, usedLabels),
+      }))
+  );
+}
+
 /** Схема детального ответа класса или подкласса (нужные листу поля). */
 const classDetailSchema = z.object({
   url: z.string(),
@@ -837,6 +1031,8 @@ const classDetailSchema = z.object({
   casterType: z.nativeEnum(CasterType).nullable().catch(null),
   table: z.array(classTableColumnSchema).catch([]),
   features: z.array(classFeatureSchema).catch([]),
+  // Разбирается отдельной функцией: то же поле есть и у предыстории.
+  startingEquipment: z.unknown(),
 });
 
 /**
@@ -885,6 +1081,7 @@ function toClassSummary(
     proficiencyText: detail.proficiency,
     table,
     features,
+    startingEquipment: toStartingEquipmentOptions(detail.startingEquipment),
   };
 }
 
@@ -946,6 +1143,8 @@ const backgroundDetailSchema = z.object({
   feat: z.string().catch(''),
   toolProficiency: z.array(z.string()).catch([]),
   equipment: z.array(z.string()).catch([]),
+  // Разбирается отдельной функцией: то же поле есть и у класса.
+  startingEquipment: z.unknown(),
 });
 
 /**
@@ -1003,6 +1202,7 @@ export function parseBackgroundDetail(
     featName: feat.name,
     featSubchoice: feat.subchoice,
     equipment: detail.equipment,
+    startingEquipment: toStartingEquipmentOptions(detail.startingEquipment),
   };
 }
 

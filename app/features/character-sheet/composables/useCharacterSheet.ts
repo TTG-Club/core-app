@@ -25,6 +25,7 @@ import type {
   HitDiceAmount,
   LevelUpPayload,
   PlainProficiencyGroupKey,
+  StartingEquipmentGrant,
 } from '../model';
 
 import { clamp, union } from 'es-toolkit';
@@ -38,6 +39,7 @@ import {
   adjustHitDice,
   applyAbilityIncreases,
   applySkillProficiencies,
+  applyStartingEquipmentChange,
   ARMOR_CLASS_BASE_MAX,
   ARMOR_CLASS_BASE_MIN,
   CATALOG_COPY_TOAST_DESCRIPTION,
@@ -1072,9 +1074,12 @@ export function useCharacterSheet() {
    * @param payload.skills.expertise навыки для экспертизы.
    * @param payload.classResources ресурсы класса из отмеченных колонок.
    * @param payload.features классовые особенности по уровню.
+   * @param payload.startingEquipment выбранный вариант стартового снаряжения; null — не выдавать.
    */
   function setClass(payload: {
-    characterClass: CharacterClass;
+    // Запись выданного снаряжения ведёт сам лист, поэтому мастер её не
+    // заполняет — он присылает только сам выбранный вариант.
+    characterClass: Omit<CharacterClass, 'startingEquipment'>;
     savingThrows: AbilityKey[];
     hitDie: number;
     proficiencies: {
@@ -1086,6 +1091,7 @@ export function useCharacterSheet() {
     skills: { proficient: string[]; expertise: string[] };
     classResources: CharacterClassResource[];
     features: CharacterFeature[];
+    startingEquipment: StartingEquipmentGrant | null;
   }): void {
     if (!ensureEditable()) {
       return;
@@ -1118,11 +1124,25 @@ export function useCharacterSheet() {
       (resource) => !resource.id.startsWith('class:res:'),
     );
 
+    // Инвентарь класс не переписывает: снимается ровно выданный прошлым выбором
+    // набор, поверх ложится новый. Купленное игроком остаётся на месте.
+    const startingEquipment = applyStartingEquipmentChange(
+      character.value.inventory,
+      character.value.currency,
+      character.value.characterClass?.startingEquipment ?? null,
+      payload.startingEquipment,
+    );
+
     // Владения класса объединяются с уже указанными без дублей (`union`),
     // навыки применяются через общий помощник (экспертиза перекрывает владение).
     character.value = {
       ...character.value,
-      characterClass: { ...payload.characterClass },
+      characterClass: {
+        ...payload.characterClass,
+        startingEquipment: startingEquipment.granted,
+      },
+      inventory: startingEquipment.inventory,
+      currency: startingEquipment.currency,
       savingThrowProficiencies: [...payload.savingThrows],
       hitDice: [{ die: payload.hitDie, current: level, max: level }],
       health: {
@@ -1183,6 +1203,7 @@ export function useCharacterSheet() {
    * @param payload.tools владения инструментами (фикс + выбранный).
    * @param payload.featUrl URL черты происхождения; null — нет.
    * @param payload.featFeature особенность черты; null — не добавлять.
+   * @param payload.startingEquipment выбранный вариант стартового снаряжения; null — не выдавать.
    */
   function setBackground(payload: {
     background: { url: string; name: string };
@@ -1191,6 +1212,7 @@ export function useCharacterSheet() {
     tools: CharacterToolProficiency[];
     featUrl: string | null;
     featFeature: CharacterFeature | null;
+    startingEquipment: StartingEquipmentGrant | null;
   }): void {
     if (!ensureEditable()) {
       return;
@@ -1224,6 +1246,15 @@ export function useCharacterSheet() {
       (feature) => feature.id !== previousFeatId && feature.id !== newFeatId,
     );
 
+    // Как и у класса: снимается ровно выданный прошлой предысторией набор,
+    // поверх ложится новый — купленное игроком не трогается.
+    const startingEquipment = applyStartingEquipmentChange(
+      character.value.inventory,
+      character.value.currency,
+      previous?.startingEquipment ?? null,
+      payload.startingEquipment,
+    );
+
     character.value = {
       ...character.value,
       characterBackground: {
@@ -1231,7 +1262,10 @@ export function useCharacterSheet() {
         name: payload.background.name,
         featUrl: payload.featUrl,
         abilityBonuses: { ...payload.abilityBonuses },
+        startingEquipment: startingEquipment.granted,
       },
+      inventory: startingEquipment.inventory,
+      currency: startingEquipment.currency,
       abilities,
       health: adjustHealthForConstitution(
         character.value.health,

@@ -26,9 +26,11 @@
   import { useCharacterSheet } from '../../composables';
   import {
     buildMagicItemInventoryItem,
+    fetchMagicItemSummary,
     getInventoryItemId,
     getMagicItemCatalogGroups,
     MAGIC_ITEM_CATALOG_PRESENTATION_CONFIG,
+    MAGIC_ITEM_VARIES_RARITY,
     MAGIC_ITEMS_FILTERS_PATH,
     MAGIC_ITEMS_SEARCH_PATH,
     parseMagicItemCatalog,
@@ -130,15 +132,17 @@
   );
 
   // Порядок групп редкости задаёт словарь: по алфавиту он не строится.
-  const { order: rarityOrder, pending: isRarityPending } =
-    useMagicItemRarityGroupOrder();
+  const {
+    order: rarityOrder,
+    labelsByValue: rarityLabelsByValue,
+    pending: isRarityPending,
+  } = useMagicItemRarityGroupOrder();
 
-  // Словарь редкостей ждём вместе с каталогом, иначе группы успевают
-  // перестроиться из алфавитного порядка в словарный на глазах у пользователя.
+  // Словарь редкостей ждём вместе с каталогом: без него не построить ни группы
+  // в порядке словаря, ни отсев записей с варьируемой редкостью — иначе список
+  // перестраивается на глазах у пользователя.
   const isListLoading = computed(
-    () =>
-      listStatus.value === 'pending'
-      || (presentation.grouping.value === 'RARITY' && isRarityPending.value),
+    () => listStatus.value === 'pending' || isRarityPending.value,
   );
 
   const isListError = computed(() => listStatus.value === 'error');
@@ -163,10 +167,23 @@
     );
   }
 
+  // За записью с варьируемой редкостью («Оружие +1, +2 или +3») стоит сразу
+  // несколько предметов: ни цены магии, ни одной немагической основы у неё нет,
+  // поэтому на лист её не добавляют.
+  const selectableMagicItems = computed<MagicItemCatalogItem[]>(() => {
+    const variesLabel = rarityLabelsByValue.value[MAGIC_ITEM_VARIES_RARITY];
+
+    const list = magicItemsList.value ?? [];
+
+    return variesLabel
+      ? list.filter((catalogItem) => catalogItem.rarity !== variesLabel)
+      : list;
+  });
+
   const filteredMagicItems = computed<MagicItemCatalogItem[]>(() => {
     const query = searchTerm.value.trim().toLowerCase();
 
-    const list = magicItemsList.value ?? [];
+    const list = selectableMagicItems.value;
 
     if (!query) {
       return list;
@@ -310,7 +327,11 @@
     () => `Выбрано: ${draftMagicItems.value.size}`,
   );
 
-  const isApplyDisabled = computed(() => !draftMagicItems.value.size);
+  const isApplying = ref(false);
+
+  const isApplyDisabled = computed(
+    () => !draftMagicItems.value.size || isApplying.value,
+  );
 
   function toggleMagicItem(catalogRow: MagicItemCatalogRow) {
     if (catalogRow.isAdded) {
@@ -335,16 +356,34 @@
     draftMagicItems.value = nextItems;
   }
 
-  // Деталь не нужна: категория и редкость есть прямо в ответе поиска.
-  function handleApply() {
+  // Категория и подпись редкости есть прямо в ответе поиска, а вот её значение
+  // (по нему цена) и немагическая основа — только в «сыром» ответе детали.
+  async function handleApply() {
     const catalogItems = [...draftMagicItems.value.values()];
 
-    if (!catalogItems.length) {
+    if (!catalogItems.length || isApplying.value) {
       return;
     }
 
-    addInventoryItems(catalogItems.map(buildMagicItemInventoryItem));
-    emit('close');
+    isApplying.value = true;
+
+    try {
+      const summaries = await Promise.all(
+        catalogItems.map((catalogItem) =>
+          fetchMagicItemSummary(catalogItem.url),
+        ),
+      );
+
+      addInventoryItems(
+        catalogItems.map((catalogItem, index) =>
+          buildMagicItemInventoryItem(catalogItem, summaries[index] ?? null),
+        ),
+      );
+
+      emit('close');
+    } finally {
+      isApplying.value = false;
+    }
   }
 
   function handleCancel() {
@@ -613,6 +652,7 @@
           <UButton
             label="Добавить"
             color="primary"
+            :loading="isApplying"
             :disabled="isApplyDisabled"
             @click.left.exact.prevent="handleApply"
           />

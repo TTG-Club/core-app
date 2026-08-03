@@ -18,8 +18,17 @@ export function useMagicItemRarityGroupOrder() {
     () => new Set(data.value.map((option) => option.label)),
   );
 
+  // Поиск раздела отдаёт редкость подписью, а не значением справочника —
+  // сопоставить её с конкретной редкостью можно только через словарь.
+  const labelsByValue = computed<Partial<Record<string, string>>>(() =>
+    Object.fromEntries(
+      data.value.map((option) => [option.value, option.label]),
+    ),
+  );
+
   return {
     order,
+    labelsByValue,
     pending,
     error,
   };

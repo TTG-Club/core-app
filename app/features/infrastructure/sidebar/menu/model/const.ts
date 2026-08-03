@@ -1,5 +1,7 @@
 import type { MenuSection } from './types';
 
+import { Role } from '~/shared/types';
+
 export const MENU_SECTIONS: Array<MenuSection> = [
   {
     label: 'Персонаж',
@@ -99,6 +101,16 @@ export const MENU_SECTIONS: Array<MenuSection> = [
     ],
   },
   {
+    label: 'Virtual TTG',
+    icon: 'menu/filled/information',
+    items: [
+      {
+        href: '/vttg',
+        label: 'Информация',
+      },
+    ],
+  },
+  {
     label: 'Другое',
     icon: 'menu/filled/workshop',
     items: [
@@ -114,6 +126,7 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         href: '/roadmap',
         label: 'Дорожная карта',
         disabled: false,
+        roles: [Role.ADMIN],
       },
       {
         href: 'https://5e14.ttg.club/',

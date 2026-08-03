@@ -68,6 +68,28 @@ const descriptionNodeSchema = z.custom<FeatureDescriptionNode>(
  */
 export const descriptionNodesSchema = z.array(descriptionNodeSchema).catch([]);
 
+/**
+ * Схема выданного стартового снаряжения. Листы, сохранённые до появления поля,
+ * приходят без него: снимать при смене класса или предыстории нечего.
+ */
+const grantedStartingEquipmentSchema = z
+  .object({
+    items: z
+      .array(
+        z.object({
+          id: z.string(),
+          quantity: z.coerce.number().catch(0),
+        }),
+      )
+      .catch([]),
+    coins: z.coerce.number().catch(0),
+    coinKey: z
+      .enum(['copper', 'silver', 'electrum', 'gold', 'platinum'])
+      .catch('gold'),
+  })
+  .nullable()
+  .catch(null);
+
 const characterClassSchema = z
   .object({
     url: z.string(),
@@ -89,6 +111,7 @@ const characterClassSchema = z
         }),
       )
       .catch([]),
+    startingEquipment: grantedStartingEquipmentSchema,
   })
   .nullable()
   .catch(null);
@@ -101,6 +124,7 @@ const characterBackgroundSchema = z
     abilityBonuses: z
       .partialRecord(abilityKeySchema, z.coerce.number())
       .catch({}),
+    startingEquipment: grantedStartingEquipmentSchema,
   })
   .nullable()
   .catch(null);
@@ -429,6 +453,9 @@ const inventoryWeaponSchema = z
     category: z.enum(['simple', 'martial']).catch('simple'),
     ranged: z.boolean().catch(false),
     finesse: z.boolean().catch(false),
+    // Листы, сохранённые до появления магических бонусов, поля не содержат:
+    // ноль означает обычное оружие, поэтому доливать нечего.
+    attackBonus: z.coerce.number().catch(0),
     // Оружие из листов, сохранённых до появления урона, приходит без блока —
     // схема даёт null, и плитка урона просто не показывается.
     damage: inventoryWeaponDamageSchema,
@@ -493,6 +520,8 @@ const inventoryItemSchema = z.object({
     .max(INVENTORY_QUANTITY_MAX)
     .catch(1),
   armor: inventoryArmorSchema,
+  // Плоский бонус к КД предмета без брони; у листов до его появления — ноль.
+  armorClassBonus: z.coerce.number().catch(0),
   weapon: inventoryWeaponSchema,
   equipped: z.boolean().catch(false),
   twoHanded: z.boolean().catch(false),
