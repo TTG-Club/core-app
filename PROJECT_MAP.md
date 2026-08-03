@@ -365,10 +365,10 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 ### 🌐 Landing & infrastructure
 
-| Domain           | Purpose                                                                      | Sub-features                                                                                                                                                              |
-| ---------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `vttg`           | Marketing landing for the VTTG virtual tabletop (`/vttg`) + desktop download | `model`, `ui` (hero / features / FAQ / support / video sections, `VttgDownloadPlatforms`), `composables` (`useVttgDesktopRelease` — latest build from the update channel) |
-| `infrastructure` | Cross-cutting app shell & chrome                                             | `sidebar`, `search`, `filter`, `list-presentation`, `footer`, `cookie-consent`, `pwa`                                                                                     |
+| Domain           | Purpose                                                                      | Sub-features                                                                                                                                                                                                                                |
+| ---------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vttg`           | Marketing landing for the VTTG virtual tabletop (`/vttg`) + desktop download | `model`, `ui` (hero / features / FAQ / video sections, `VttgDownloadModal` — early-access notice behind the hero «Скачать» button, `VttgDownloadPlatforms`), `composables` (`useVttgDesktopRelease` — latest build from the update channel) |
+| `infrastructure` | Cross-cutting app shell & chrome                                             | `sidebar`, `search`, `filter`, `list-presentation`, `footer`, `cookie-consent`, `pwa`                                                                                                                                                       |
 
 ### Anatomy of a Feature (Example: `tokenator`)
 

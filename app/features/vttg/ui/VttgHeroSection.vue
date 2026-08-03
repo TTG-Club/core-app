@@ -1,14 +1,45 @@
 <script setup lang="ts">
+  import { USER_TOKEN_COOKIE } from '#shared/consts';
+  import { AuthModal } from '~user/auth-modal';
+
   import {
     CAROUSEL_CARDS,
     VTTG_CAROUSEL_HEADING,
     VTTG_HERO_BACKGROUND,
     VTTG_HERO_CONTENT,
-    VTTG_HERO_LINKS,
+    VTTG_HERO_DEMO_LINK,
+    VTTG_HERO_DOWNLOAD_BUTTON,
     VTTG_HERO_VIDEO,
   } from '../model';
+  import VttgDownloadModal from './VttgDownloadModal.vue';
   import VttgSectionHeading from './VttgSectionHeading.vue';
   import VttgVideoPlayer from './VttgVideoPlayer.vue';
+
+  const overlay = useOverlay();
+
+  const downloadModal = overlay.create(VttgDownloadModal);
+
+  const isAuthOpen = ref(false);
+
+  // Вход меняет куку токена, а её значение кэшируется с момента гидрации: без
+  // сброса окно «Скачать» и после входа звало бы войти снова. Цикла нет —
+  // вотчер трогает только кэш куки, на своё условие он не влияет.
+  watch(isAuthOpen, () => {
+    refreshCookie(USER_TOKEN_COOKIE);
+  });
+
+  /**
+   * Скачивание пока закрыто, поэтому кнопка показывает условия раннего доступа.
+   * Гостю окно возвращает просьбу о входе — открываем окно авторизации вместо
+   * него, чтобы модалки не наслаивались друг на друга.
+   */
+  async function handleDownloadClick() {
+    const needsSignIn = await downloadModal.open().result;
+
+    if (needsSignIn) {
+      isAuthOpen.value = true;
+    }
+  }
 </script>
 
 <template>
@@ -66,15 +97,14 @@
         class="vttg-hero__anim vttg-hero__anim--4 mt-10 flex flex-wrap items-center justify-center gap-4"
       >
         <UButton
-          v-for="link in VTTG_HERO_LINKS"
-          :key="link.label"
-          v-bind="link"
-          :class="[
-            'vttg-hero-button',
-            link.color === 'primary'
-              ? 'vttg-hero-button--primary'
-              : 'vttg-hero-button--support',
-          ]"
+          v-bind="VTTG_HERO_DEMO_LINK"
+          class="vttg-hero-button--primary vttg-hero-button"
+        />
+
+        <UButton
+          v-bind="VTTG_HERO_DOWNLOAD_BUTTON"
+          class="vttg-hero-button--secondary vttg-hero-button"
+          @click.left.exact.prevent="handleDownloadClick"
         />
       </div>
 
@@ -159,6 +189,8 @@
         </UCarousel>
       </div>
     </section>
+
+    <AuthModal v-model="isAuthOpen" />
   </div>
 </template>
 

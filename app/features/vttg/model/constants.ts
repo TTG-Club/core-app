@@ -57,25 +57,62 @@ export const VTTG_HERO_CONTENT = {
   descriptionTrail: 'Карты, кубики, персонажи — всё в одном месте.',
 } as const;
 
-export const VTTG_HERO_LINKS: ButtonProps[] = [
-  {
-    label: 'Попробовать Demo',
-    icon: 'tabler:player-play',
-    size: 'xl',
+/** Кнопка первого экрана: демо-стол открывается в новой вкладке. */
+export const VTTG_HERO_DEMO_LINK: ButtonProps = {
+  label: 'Попробовать Demo',
+  icon: 'tabler:player-play',
+  size: 'xl',
+  color: 'primary',
+  to: 'http://demo.ttg.club:30000/play',
+  target: '_blank',
+};
+
+/**
+ * Кнопка «Скачать» на первом экране. Ссылки у неё нет: открытая загрузка ещё
+ * не началась, поэтому по клику открывается окно с условиями раннего доступа.
+ */
+export const VTTG_HERO_DOWNLOAD_BUTTON: ButtonProps = {
+  label: 'Скачать',
+  icon: 'tabler:download',
+  size: 'xl',
+  color: 'neutral',
+  variant: 'subtle',
+};
+
+/** Раздел личного кабинета, где активируется код и лежат награды кампании. */
+export const VTTG_ACTIVATION_ROUTE = '/user/profile/activation';
+
+/** Содержимое окна «Скачать»: кому сборка доступна до релиза и что делать. */
+export const VTTG_DOWNLOAD_NOTICE = {
+  title: 'Скачивание пока закрыто',
+  paragraphs: [
+    'Открытый доступ к загрузке появится после релиза проекта.',
+    'Сейчас скачать приложение могут только участники кампании по сбору средств, получившие ранний доступ.',
+  ],
+  hint: 'Ранний доступ открывается кодом в личном кабинете — там же видно, что входит в набор, и появляются кнопки скачивания для нужной платформы.',
+  guestHint:
+    'Награды кампании привязаны к аккаунту: войдите, чтобы активировать код и получить ссылки на скачивание.',
+  closeLabel: 'Понятно',
+  action: {
+    label: 'Перейти в личный кабинет',
+    icon: 'tabler:ticket',
     color: 'primary',
-    to: 'http://demo.ttg.club:30000/play',
-    target: '_blank',
+    to: VTTG_ACTIVATION_ROUTE,
   },
-  {
-    label: 'Поддержать проект',
-    icon: 'tabler:heart',
-    size: 'xl',
-    color: 'neutral',
-    to: 'https://crowdrepublic.ru/projects/1073013',
-    target: '_blank',
-    variant: 'subtle',
+  guestAction: {
+    label: 'Войти',
+    icon: 'tabler:user',
+    color: 'primary',
   },
-];
+} satisfies {
+  title: string;
+  paragraphs: string[];
+  hint: string;
+  guestHint: string;
+  closeLabel: string;
+  action: ButtonProps;
+  guestAction: ButtonProps;
+};
 
 export const CAROUSEL_CARDS: CarouselCard[] = [
   {
@@ -187,6 +224,11 @@ export const FEATURE_ITEMS: FeatureItem[] = [
 
 export const FAQ_ITEMS: FaqItem[] = [
   {
+    label: 'Как скачать VTTG?',
+    content:
+      'Открытая загрузка появится после релиза проекта. Сейчас скачать приложение могут только пользователи, получившие ранний доступ в кампании по сбору средств: активируйте полученный код в личном кабинете, в разделе «Подписка / Коды». Там же можно посмотреть, что входит в ваш набор, и скачать сборку для нужной платформы.',
+  },
+  {
     label: 'Нужно ли устанавливать что-то на компьютер?',
     content:
       'Да, но только Мастеру игры. Вы устанавливаете приложение на свой компьютер — оно выступает в роли локального сервера и хранит все карты, миры и ассеты, обеспечивая полный контроль над вашими данными. Игрокам же ничего скачивать не нужно: они просто переходят по вашей ссылке-приглашению и играют прямо в браузере.',
@@ -232,22 +274,4 @@ export const VTTG_FEATURES_MORE: VttgHighlight = {
   title: 'И многое другое',
   description:
     'Система плейлистов, готовая система пресетов звуковых эффектов, система освещения, система заклинаний, автоматизация и многое другое.',
-};
-
-export const VTTG_SUPPORT = {
-  title: 'Поддержите проект',
-  description:
-    'Ваша поддержка поможет нам полностью реализовать продукт и сделать его лучше и масштабнее для всех игроков.',
-  action: {
-    label: 'Поддержать проект',
-    icon: 'tabler:heart',
-    color: 'primary',
-    size: 'xl',
-    to: 'https://crowdrepublic.ru/projects/1073013',
-    target: '_blank',
-  },
-} satisfies {
-  title: string;
-  description: string;
-  action: ButtonProps;
 };

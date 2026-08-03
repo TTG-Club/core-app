@@ -111,7 +111,7 @@ body {
   }
 }
 
-@utility vttg-hero-button--support {
+@utility vttg-hero-button--secondary {
   border: 1px solid color-mix(in oklch, var(--vttg-gold) 35%, transparent) !important;
 
   color: var(--vttg-gold) !important;
@@ -119,40 +119,6 @@ body {
   background: color-mix(in oklch, var(--vttg-gold) 10%, transparent) !important;
   backdrop-filter: blur(8px);
   box-shadow: 0 4px 12px color-mix(in oklch, var(--vttg-gold) 10%, transparent) !important;
-
-  &:hover {
-    transform: translateY(-2px);
-
-    border-color: var(--vttg-gold) !important;
-
-    color: var(--ui-text-highlighted) !important;
-
-    background: color-mix(
-      in oklch,
-      var(--vttg-gold) 20%,
-      transparent
-    ) !important;
-    box-shadow: 0 0 20px color-mix(in oklch, var(--vttg-gold) 25%, transparent) !important;
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-}
-
-@utility vttg-support-button {
-  border: 1px solid color-mix(in oklch, var(--vttg-gold) 35%, transparent) !important;
-  border-radius: 0.75rem;
-
-  font-weight: 600;
-  color: var(--vttg-gold) !important;
-  letter-spacing: 0.05em;
-
-  background: color-mix(in oklch, var(--vttg-gold) 10%, transparent) !important;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 4px 12px color-mix(in oklch, var(--vttg-gold) 10%, transparent) !important;
-
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover {
     transform: translateY(-2px);
