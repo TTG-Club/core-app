@@ -112,6 +112,90 @@ export function getCommentsSecrets() {
   };
 }
 
+/** Настройки SMTP для исходящей почты сайта. */
+export interface MailSecrets {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  password: string;
+  /** Значение заголовка From целиком, например `"TTG Club" <support@ttg.club>`. */
+  from: string;
+  /** Адрес отправителя без имени — идёт в конверт письма (проверка SPF). */
+  senderAddress: string;
+  /** Адрес для ответов; совпадает с адресом отправителя. */
+  replyTo: string;
+}
+
+/**
+ * Порт неявного TLS: соединение шифруется сразу, без STARTTLS. Он же порт по
+ * умолчанию, если `SPRING_MAIL_PORT` не задан.
+ */
+const IMPLICIT_TLS_PORT = 465;
+
+/**
+ * Достаёт «голый» адрес из значения заголовка From: `"TTG" &lt;a@b.ru&gt;` → `a@b.ru`.
+ * Нужен для конверта письма и Reply-To — там имя отправителя недопустимо.
+ *
+ * @param from значение заголовка From
+ * @param fallback адрес, если в строке нет угловых скобок
+ */
+function extractEmailAddress(from: string, fallback: string): string {
+  const match = /<([^>]+)>/.exec(from);
+
+  return match?.[1]?.trim() || (from.includes('@') ? from.trim() : fallback);
+}
+
+/**
+ * Возвращает настройки SMTP или `null`, если почта не сконфигурирована.
+ *
+ * Имена переменных намеренно те же, что у auth-service (`SPRING_MAIL_*`,
+ * `APP_MAIL_FROM`): почта одна на все сервисы, и в Dokploy её настройки
+ * подставляются из общего окружения одним и тем же набором переменных.
+ *
+ * В отличие от остальных секретов не бросает исключение: почта нужна только
+ * инструменту рассылки, и её отсутствие не должно ронять весь сервер —
+ * вызывающий код отвечает понятной ошибкой «SMTP не настроен».
+ */
+export function getMailSecrets(): MailSecrets | null {
+  const {
+    SPRING_MAIL_HOST: host = '',
+    SPRING_MAIL_PORT: port = '',
+    SPRING_MAIL_SSL_ENABLE: sslEnable = '',
+    SPRING_MAIL_USERNAME: user = '',
+    SPRING_MAIL_PASSWORD: password = '',
+    APP_MAIL_FROM: from = '',
+  } = process.env;
+
+  if (!host || !user || !password) {
+    return null;
+  }
+
+  const parsedPort = Number.parseInt(port, 10);
+
+  const resolvedPort = Number.isFinite(parsedPort)
+    ? parsedPort
+    : IMPLICIT_TLS_PORT;
+
+  const resolvedFrom = from || user;
+  const senderAddress = extractEmailAddress(resolvedFrom, user);
+
+  return {
+    host,
+    port: resolvedPort,
+    // Как в auth-service: значение переменной решает, а если её нет — шифруем
+    // сразу только на 465, на остальных портах TLS поднимается через STARTTLS.
+    secure: sslEnable
+      ? sslEnable === 'true'
+      : resolvedPort === IMPLICIT_TLS_PORT,
+    user,
+    password,
+    from: resolvedFrom,
+    senderAddress,
+    replyTo: senderAddress,
+  };
+}
+
 /**
  * Возвращает настройки внешнего сервиса баг-репортов.
  */
