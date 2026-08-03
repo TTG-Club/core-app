@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import { ref, useTemplateRef } from 'vue';
-
   const props = defineProps<{
     src: string;
     poster?: string;
@@ -40,7 +38,7 @@
     <div
       v-if="!hasStarted"
       class="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/40 transition-colors hover:bg-black/50"
-      @click="handlePlayClick"
+      @click.left.exact.prevent="handlePlayClick"
     >
       <UButton
         icon="tabler:player-play-filled"
