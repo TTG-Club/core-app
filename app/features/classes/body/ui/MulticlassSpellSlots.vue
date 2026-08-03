@@ -1,8 +1,6 @@
 <script setup lang="ts">
   import type { Level } from '~/shared/types';
 
-  import { computed } from 'vue';
-
   import { LEVELS } from '~/shared/consts';
 
   import {

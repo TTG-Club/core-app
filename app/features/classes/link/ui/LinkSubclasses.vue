@@ -22,6 +22,6 @@
     size="md"
     color="neutral"
     variant="soft"
-    @click.left.exact.prevent="drawer.open()"
+    @click.left.exact.prevent.stop="drawer.open()"
   />
 </template>

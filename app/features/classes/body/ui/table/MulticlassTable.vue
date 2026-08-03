@@ -17,7 +17,6 @@
   } from '@tanstack/vue-table';
   import { useDebounceFn } from '@vueuse/core';
   import { maxBy, omit, orderBy } from 'es-toolkit';
-  import { computed, h, ref, withModifiers } from 'vue';
 
   import { ULink } from '#components';
   import { LEVELS } from '~/shared/consts';

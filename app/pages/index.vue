@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { HomeArticles } from '~home/articles';
   import { HomeBackground } from '~home/background';
-  import { VttgCampaignBanner } from '~home/banners';
+  import { VttgPromoCard } from '~home/banners';
   import { HomeCommunity } from '~home/community';
   import { HomeNews } from '~home/news';
   import { HomeRecentChanges } from '~home/recent-changes';
@@ -34,15 +34,13 @@
 
       <SearchPanel />
 
-      <VttgCampaignBanner />
-
       <HomeSections />
 
       <!--
         На мобильном (< xl) колонки-обёртки схлопываются в display:contents, все
         блоки становятся прямыми флекс-элементами и выстраиваются одной колонкой в
-        порядке order-*: инструменты → Новости → соцсети → статистика онлайн →
-        Статьи → Обновления. На xl колонки восстанавливаются (xl:flex) — раскладка десктопа
+        порядке order-*: промо VTTG → инструменты → Новости → соцсети →
+        статистика онлайн → Статьи → Обновления. На xl колонки восстанавливаются (xl:flex) — раскладка десктопа
         прежняя, трёхколоночная.
       -->
       <div class="flex w-full flex-col gap-3 xl:flex-row xl:items-start">
@@ -53,6 +51,8 @@
 
         <!-- Навигация по сайту и обновления -->
         <div class="contents xl:flex xl:w-1/3 xl:flex-col xl:gap-3 2xl:w-1/3">
+          <VttgPromoCard class="order-0" />
+
           <HomeTools class="order-1 xl:order-0" />
 
           <HomeArticles class="order-5 xl:order-0" />

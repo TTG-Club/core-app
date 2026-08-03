@@ -1,2 +1,2 @@
 export * from './model';
-export { default as VttgCampaignBanner } from './VttgCampaignBanner.vue';
+export { default as VttgPromoCard } from './VttgPromoCard.vue';

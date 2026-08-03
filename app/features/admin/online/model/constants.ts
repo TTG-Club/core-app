@@ -15,6 +15,13 @@ export const ADMIN_ONLINE_STATS_SITE_LABEL = 'Сайт';
 
 export const ADMIN_ONLINE_STATS_GUESTS_LABEL = 'Гостей';
 
+/** VTTG — десктопное приложение, а не сайт, поэтому подписи у него свои. */
+export const ADMIN_ONLINE_STATS_VTTG_SITE_ID = 'vttg';
+
+export const ADMIN_ONLINE_STATS_VTTG_SITE_LABEL = 'Приложение';
+
+export const ADMIN_ONLINE_STATS_VTTG_GUESTS_LABEL = 'Игроков';
+
 export const ADMIN_ONLINE_STATS_REGISTERED_LABEL = 'Пользователей';
 
 export const ADMIN_ONLINE_STATS_TOTAL_LABEL = 'Всего';
@@ -23,8 +30,19 @@ export const ADMIN_ONLINE_STATS_SUMMARY_LABEL = 'Всего';
 
 export const ADMIN_ONLINE_STATS_REFRESH_LABEL = 'Обновить';
 
-export const ADMIN_ONLINE_STATS_ERROR_TEXT =
-  'Не удалось загрузить статистику онлайн.';
+/**
+ * Каркас сетки: карточки этих площадок держим на месте всегда — и пока данных
+ * нет, и когда online-app упал. Реальный ответ их заменяет, так что расхождение
+ * со списком бэкенда живёт ровно до первого успешного запроса.
+ */
+export const ADMIN_ONLINE_STATS_PLACEHOLDER_SITE_IDS = [
+  '5e14',
+  '5e24',
+  ADMIN_ONLINE_STATS_VTTG_SITE_ID,
+];
+
+/** Значение, которого нет: числа не выдумываем, ставим прочерк. */
+export const ADMIN_ONLINE_STATS_EMPTY_VALUE = '—';
 
 export const ADMIN_ONLINE_STATS_EMPTY_TEXT =
   'Online-app пока не вернул сайты для отображения.';
