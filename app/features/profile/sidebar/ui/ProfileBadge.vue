@@ -35,8 +35,8 @@
       <!-- Значок профиля (перк PROFILE_BADGE) — слева от имени -->
       <UIcon
         v-if="hasProfileBadge"
-        name="tabler:rosette-discount-check-filled"
-        class="size-7 shrink-0 text-warning"
+        name="ttg:vttg-backing"
+        class="size-10 shrink-0 text-warning"
         aria-hidden="true"
       />
 
