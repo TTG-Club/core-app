@@ -12,8 +12,13 @@
     (e: 'close'): void;
   }>();
 
+  // Ключ отличается от ключа `SpeciesLineages`: тот тянет полные детали
+  // происхождений, а дровер — короткие ссылки. С общим ключом Nuxt оставлял
+  // обработчик того, кто смонтировался первым, и второй получал чужую форму
+  // ответа: открыв сперва дровер, детальник вида показывал происхождения без
+  // описаний и умений — в ссылках этих полей нет.
   const { data, status } = await useAsyncData(
-    computed(() => `species-${url}-lineages`),
+    computed(() => `species-${url}-lineages-links`),
     () =>
       $fetch<Array<SpeciesLinkResponse>>(
         `/api/v2/species/${url}/lineages/search`,
