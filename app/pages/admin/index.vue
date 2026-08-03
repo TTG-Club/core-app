@@ -24,6 +24,7 @@
   import {
     ADMIN_ONLINE_STATS_API_URL,
     ADMIN_ONLINE_STATS_DATA_KEY,
+    parseAdminOnlineStats,
   } from '~admin/online/model';
   import { AdminOnlineStats } from '~admin/online/ui';
   import {
@@ -43,7 +44,7 @@
     status: onlineStatsStatus,
   } = await useAsyncData<AdminOnlineStatsResponse>(
     ADMIN_ONLINE_STATS_DATA_KEY,
-    () => $fetch<AdminOnlineStatsResponse>(ADMIN_ONLINE_STATS_API_URL),
+    async () => parseAdminOnlineStats(await $fetch(ADMIN_ONLINE_STATS_API_URL)),
   );
 
   const requestFetch = useRequestFetch();

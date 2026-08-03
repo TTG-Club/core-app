@@ -13,3 +13,16 @@ export interface AdminOnlineStatsResponse {
   total: AdminOnlineCounters;
   windowMinutes: number;
 }
+
+/**
+ * Карточка сетки: площадка известна всегда (в каркасе — из констант), а числа
+ * уже приведены к строке — без данных там прочерк, шаблону считать нечего.
+ */
+export interface AdminOnlineSiteCard {
+  guests: string;
+  guestsLabel: string;
+  registered: string;
+  siteId: string;
+  siteLabel: string;
+  total: string;
+}
