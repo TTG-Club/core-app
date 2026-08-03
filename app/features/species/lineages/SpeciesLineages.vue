@@ -8,14 +8,23 @@
     url: SpeciesDetailResponse['url'];
   }>();
 
-  const { data: lineages } = await useAsyncData(`species-${url}-lineages`, () =>
-    $fetch<Array<SpeciesDetailResponse>>(`/api/v2/species/${url}/lineages`),
+  // Ключ реактивный: в детальнике и дровере компонент переиспользуется при
+  // переходе между видами, и со статичным ключом список остаётся от вида,
+  // открытого первым.
+  const { data: lineages, status } = await useAsyncData(
+    computed(() => `species-${url}-lineages`),
+    () =>
+      $fetch<Array<SpeciesDetailResponse>>(`/api/v2/species/${url}/lineages`),
   );
+
+  // При смене ключа Nuxt переносит данные прошлого вида в новый ключ, поэтому
+  // до ответа список прячем — иначе мелькают чужие происхождения.
+  const isLoading = computed(() => status.value === 'pending');
 </script>
 
 <template>
   <div
-    v-if="lineages?.length"
+    v-if="!isLoading && lineages?.length"
     class="flex flex-col gap-4"
   >
     <h3 class="text-xl font-semibold">Происхождения</h3>
