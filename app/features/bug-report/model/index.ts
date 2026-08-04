@@ -5,6 +5,7 @@ export type {
   BugReportResponse,
   BugReportStatsResponse,
   BugReportStatus,
+  BugReportStatusUpdatePayload,
   BugReportUserFixedCount,
   DrawingTool,
   PageBugReportResponse,
@@ -14,6 +15,7 @@ export type {
 } from './types';
 
 export {
+  ADMIN_BUG_SELECTED_DATA_KEY,
   ADMIN_BUGS_API_URL,
   ADMIN_BUGS_CONFIGURE_LABEL,
   ADMIN_BUGS_DEFAULT_PAGE_SIZE,
@@ -56,6 +58,7 @@ export {
   BUG_REPORT_SUBMIT_SUCCESS_TITLE,
   DEFAULT_BRUSH_COLOR,
   DEFAULT_BRUSH_SIZE,
+  getAdminBugApiUrl,
   getAdminBugStatusApiUrl,
   getBugReportStatusColor,
   MAX_UNDO_STEPS,
@@ -63,3 +66,5 @@ export {
   SELECTION_CONTEXT_LENGTH,
   SOURCE_PLATFORM,
 } from './constants';
+
+export { applyBugStatusPatch } from './utils';

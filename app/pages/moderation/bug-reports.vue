@@ -2,8 +2,10 @@
   import type { WritableComputedRef } from 'vue';
 
   import type {
+    BugReportResponse,
     BugReportStatsResponse,
     BugReportStatus,
+    BugReportStatusUpdatePayload,
     PageBugReportResponse,
   } from '~bug-report/model';
 
@@ -12,6 +14,7 @@
     AdminBugReportRow,
   } from '~bug-report/admin/ui';
   import {
+    ADMIN_BUG_SELECTED_DATA_KEY,
     ADMIN_BUGS_API_URL,
     ADMIN_BUGS_DEFAULT_PAGE_SIZE,
     ADMIN_BUGS_DEFAULT_SORT,
@@ -25,10 +28,12 @@
     ADMIN_BUGS_STAT_TOTAL_LABEL,
     ADMIN_BUGS_STATS_DATA_KEY,
     ADMIN_BUGS_STATUS_ALL_LABEL,
+    applyBugStatusPatch,
     BUG_REPORT_DETAIL_DATE_FORMAT,
     BUG_REPORT_PLATFORM_LABELS,
     BUG_REPORT_STATS_API_URL,
     BUG_REPORT_STATUS_LABELS,
+    getAdminBugApiUrl,
   } from '~bug-report/model';
 
   const { isSplitActive } = useLayoutWidth();
@@ -181,12 +186,36 @@
     statusFilter.value = status;
   }
 
-  // Выбранный баг на основе ID из списка
-  const selectedBug = computed(() => {
+  // Выбранный баг на основе ID из текущей страницы списка
+  const selectedBugFromList = computed(() => {
     return resolvedBugsList.value.find(
       (bugReport) => bugReport.id === selectedBugId.value,
     );
   });
+
+  // Догрузка бага по ID из URL: по прямой ссылке баг может отсутствовать
+  // в загруженной странице списка (другая страница пагинации или фильтры)
+  const { data: fetchedSelectedBug } =
+    await useAsyncData<BugReportResponse | null>(
+      ADMIN_BUG_SELECTED_DATA_KEY,
+      () => {
+        if (!selectedBugId.value || selectedBugFromList.value) {
+          return Promise.resolve(null);
+        }
+
+        return requestFetch<BugReportResponse>(
+          getAdminBugApiUrl(selectedBugId.value),
+        );
+      },
+      {
+        watch: [selectedBugId, bugsData],
+      },
+    );
+
+  // Выбранный баг: из списка либо догруженный по ID
+  const selectedBug = computed(
+    () => selectedBugFromList.value ?? fetchedSelectedBug.value ?? undefined,
+  );
 
   const { format } = useDayjs();
 
@@ -245,31 +274,24 @@
    *
    * @param payload Данные об обновлении статуса.
    */
-  function handleBugStatusUpdate(payload: {
-    id: string;
-    status: BugReportStatus;
-    statusUpdatedAt: string;
-    statusUpdatedBy?: string | null;
-    statusComment?: string;
-  }): void {
+  function handleBugStatusUpdate(payload: BugReportStatusUpdatePayload): void {
+    // Баг, догруженный по ID, обновляем отдельно — в списке его может не быть
+    const loadedBug = fetchedSelectedBug.value;
+
+    if (loadedBug && loadedBug.id === payload.id) {
+      fetchedSelectedBug.value = applyBugStatusPatch(loadedBug, payload);
+    }
+
     if (!bugsData.value) {
       return;
     }
 
     bugsData.value = {
       ...bugsData.value,
-      content: bugsData.value.content.map((item) => {
-        if (item.id === payload.id) {
-          return {
-            ...item,
-            status: payload.status,
-            statusUpdatedAt: payload.statusUpdatedAt,
-            statusUpdatedBy: payload.statusUpdatedBy,
-            statusComment: payload.statusComment,
-          };
-        }
-
-        return item;
+      content: bugsData.value.content.map((bugReport) => {
+        return bugReport.id === payload.id
+          ? applyBugStatusPatch(bugReport, payload)
+          : bugReport;
       }),
     };
   }
