@@ -1,6 +1,11 @@
 import type { NavigationItem } from './types';
 
 import {
+  MAILING_NAVIGATION_ICON,
+  MAILING_PAGE_TITLE,
+  MAILING_ROUTE,
+} from '~admin/mailing/model';
+import {
   ADMIN_USERS_NAVIGATION_ICON,
   ADMIN_USERS_NAVIGATION_LABEL,
 } from '~admin/users/model';
@@ -34,6 +39,11 @@ export const ADMIN_NAVIGATION_ITEMS: NavigationItem[] = [
     label: 'Статьи / Новости',
     icon: 'tabler:news',
     to: ARTICLES_ADMIN_ROUTE,
+  },
+  {
+    label: MAILING_PAGE_TITLE,
+    icon: MAILING_NAVIGATION_ICON,
+    to: MAILING_ROUTE,
   },
 ];
 
