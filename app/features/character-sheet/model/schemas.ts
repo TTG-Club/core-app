@@ -494,22 +494,53 @@ const magicItemRawSchema = z
       })
       .nullable()
       .catch(null),
+    attunement: z
+      .object({ requires: z.boolean().catch(false) })
+      .nullable()
+      .catch(null),
+    // Старое плоское поле зарядов раздела: у большинства записей заполнено
+    // только оно, поэтому оно и остаётся запасным источником максимума.
+    charges: z.coerce.number().nullable().catch(null),
+    // Механика влияния на лист; записи до её появления приходят без блока.
+    mechanics: z
+      .object({
+        resource: z
+          .object({ maxCharges: z.coerce.number().nullable().catch(null) })
+          .nullable()
+          .catch(null),
+      })
+      .nullable()
+      .catch(null),
   })
-  .catch({ rarity: null, items: [], bonuses: null });
+  .catch({
+    rarity: null,
+    items: [],
+    bonuses: null,
+    attunement: null,
+    charges: null,
+    mechanics: null,
+  });
 
 /**
  * Валидация «сырого» ответа `GET /api/v2/magic-items/{url}/raw`.
  *
  * @param input сырой ответ магического предмета.
- * @returns редкость и связанные немагические предметы.
+ * @returns редкость, связанные немагические предметы и состояние для листа.
  */
 export function parseMagicItemRaw(input: unknown): MagicItemRawDetail {
   const parsed = magicItemRawSchema.parse(input);
+
+  // Максимум зарядов мастерская задаёт в механике, но заполнена она пока не
+  // везде — у остальных записей заряды лежат в старом плоском поле раздела.
+  const maxCharges =
+    parsed.mechanics?.resource?.maxCharges ?? parsed.charges ?? 0;
 
   return {
     rarity: parsed.rarity?.type ?? 'UNKNOWN',
     baseItemUrls: parsed.items,
     bonuses: parsed.bonuses ?? EMPTY_MAGIC_ITEM_BONUSES,
+    requiresAttunement: parsed.attunement?.requires ?? false,
+    maxCharges: Math.max(0, Math.trunc(maxCharges)),
   };
 }
 

@@ -5,6 +5,7 @@
     AbilityKey,
     CharacterInventoryItem,
     InventoryArmor,
+    InventoryCharges,
     InventoryStatRollKind,
     InventoryWeapon,
   } from '../../model';
@@ -21,7 +22,13 @@
     getInventoryItemMenuItems,
     getWeaponAttackBonus,
     getWeaponDamage,
+    INVENTORY_ACTIVE_BADGE_HINT,
+    INVENTORY_ACTIVE_BADGE_LABEL,
+    INVENTORY_ATTUNED_BADGE_HINT,
+    INVENTORY_ATTUNED_BADGE_LABEL,
     INVENTORY_CATEGORY_ICONS,
+    INVENTORY_CHARGES_HINT_LABELS,
+    INVENTORY_CHARGES_SPEND_LABEL,
     INVENTORY_EQUIP_ACTION_LABELS,
     INVENTORY_MISSING_BADGE_HINT,
     INVENTORY_MISSING_BADGE_LABEL,
@@ -30,17 +37,28 @@
     INVENTORY_STAT_LABELS,
     INVENTORY_TWO_HANDED_BADGE_HINT,
     INVENTORY_TWO_HANDED_BADGE_LABEL,
+    isActivatableInventoryItem,
+    isAttunableInventoryItem,
     isCustomInventoryItem,
+    isEquippableInventoryItem,
     isMissingInventoryItem,
     isVersatileInventoryItem,
     SHEET_ROLL_HINT_LABEL,
     WEIGHT_UNIT_LABEL,
   } from '../../model';
 
-  /** Бросок с плитки: вид броска и подпись кнопки для скринридера. */
-  interface StatRoll {
-    kind: InventoryStatRollKind;
+  /**
+   * Действие плитки: нажатие катит бросок оружия или тратит заряд предмета.
+   * Плитка с действием становится кнопкой, без него остаётся справочной.
+   */
+  interface StatAction {
+    /** Подпись кнопки для скринридера. */
     ariaLabel: string;
+
+    /** Чем нажатие обернётся — добавляется к тултипу плитки. */
+    hint: string;
+
+    run: () => void;
   }
 
   /** Плитка параметра предмета: короткая подпись, значение и опции показа. */
@@ -54,8 +72,8 @@
     /** Акцентная (тёплая) заливка — для боевого параметра (КД/атака). */
     accent?: boolean;
 
-    /** Бросок по нажатию: плитка становится кнопкой (атака и урон оружия). */
-    roll?: StatRoll;
+    /** Действие по нажатию: плитка становится кнопкой. */
+    action?: StatAction;
   }
 
   /** Плитка параметра с разрешёнными классами оформления. */
@@ -63,7 +81,7 @@
     label: string;
     value: string;
     tooltip: string;
-    roll: StatRoll | null;
+    action: StatAction | null;
     containerClass: string;
     valueClass: string;
     labelClass: string;
@@ -98,25 +116,25 @@
     'flex shrink-0 grow basis-0 flex-col items-center rounded border px-2 py-0.5 whitespace-nowrap @xl:grow-0 @xl:basis-auto';
 
   /**
-   * Дополняет плитку классами оформления по признаку акцента и броска (логика
+   * Дополняет плитку классами оформления по признаку акцента и действия (логика
    * вынесена из шаблона).
    *
    * @param stat исходная плитка параметра.
-   * @param rollable броски разрешены; false — плитка остаётся справочной
-   *   (предмета не осталось, катить им нечего).
+   * @param interactive действия разрешены; false — плитка остаётся справочной
+   *   (предмета не осталось, ни катить им, ни тратить его заряды нечего).
    * @returns плитка с разрешёнными классами.
    */
-  function decorateStat(stat: ItemStat, rollable: boolean): DecoratedStat {
+  function decorateStat(stat: ItemStat, interactive: boolean): DecoratedStat {
     const classes = stat.accent ? ACCENT_STAT_CLASSES : PLAIN_STAT_CLASSES;
     const tooltip = stat.tooltip ?? '';
-    const roll = rollable ? (stat.roll ?? null) : null;
+    const action = interactive ? (stat.action ?? null) : null;
 
     return {
       label: stat.label,
       value: stat.value,
-      tooltip: roll ? `${tooltip} · ${SHEET_ROLL_HINT_LABEL}` : tooltip,
-      roll,
-      containerClass: roll
+      tooltip: action ? `${tooltip} · ${action.hint}` : tooltip,
+      action,
+      containerClass: action
         ? `${classes.container} ${ROLL_STAT_CLASS}`
         : classes.container,
       valueClass: classes.value,
@@ -135,6 +153,10 @@
     'remove': [];
     'adjust': [delta: number];
     'toggle-equip': [];
+    'toggle-attuned': [];
+    'toggle-active': [];
+    'spend-charge': [];
+    'restore-charges': [];
     'toggle-two-handed': [];
     'roll-attack': [];
     'roll-damage': [];
@@ -171,22 +193,6 @@
     () => isVersatile.value && props.inventoryItem.twoHanded,
   );
 
-  // Правка и удаление — под многоточием: строка и без них плотная (иконка,
-  // название, плитки, «+/−»), а два разных набора кнопок ломали бы её ритм.
-  // Каталожный предмет правится в своём разделе — вместо правки ему предлагается
-  // копия в лист, после которой он становится своим.
-  const menuItems = computed<Array<DropdownMenuItem>>(() =>
-    getInventoryItemMenuItems({
-      onToggleGrip: isVersatile.value
-        ? () => emit('toggle-two-handed')
-        : undefined,
-      twoHanded: isTwoHanded.value,
-      onEdit: isCustom.value ? () => emit('edit') : undefined,
-      onCopy: isCustom.value ? undefined : () => emit('copy'),
-      onRemove: () => emit('remove'),
-    }),
-  );
-
   const openLabel = computed(() =>
     isCustom.value
       ? `Развернуть предмет: ${props.inventoryItem.name}`
@@ -203,17 +209,64 @@
   // и катить им атаку с уроном нельзя.
   const isMissing = computed(() => isMissingInventoryItem(props.inventoryItem));
 
-  // Экипировать можно только то, что влияет на КД: доспехи и предметы со своим
-  // плоским бонусом (плащ защиты). Оружие — нет. Смотрим на параметры, а не на
-  // группу: свой магический доспех лежит среди магических предметов.
-  const isEquippable = computed(
-    () =>
-      props.inventoryItem.armor !== null
-      || props.inventoryItem.armorClassBonus !== 0,
+  const isEquippable = computed(() =>
+    isEquippableInventoryItem(props.inventoryItem),
   );
 
   const isEquipped = computed(
     () => isEquippable.value && props.inventoryItem.equipped,
+  );
+
+  // Настройку предлагает сам предмет: у каталожной записи её называет раздел, у
+  // своей — взяться ей неоткуда, пока форма о ней не спрашивает.
+  const isAttunable = computed(() =>
+    isAttunableInventoryItem(props.inventoryItem),
+  );
+
+  const isAttuned = computed(
+    () => isAttunable.value && props.inventoryItem.attuned,
+  );
+
+  const isActivatable = computed(() =>
+    isActivatableInventoryItem(props.inventoryItem),
+  );
+
+  const isActive = computed(
+    () => isActivatable.value && props.inventoryItem.active,
+  );
+
+  const charges = computed(() => props.inventoryItem.charges);
+
+  // Правка и удаление — под многоточием: строка и без них плотная (иконка,
+  // название, плитки, «+/−»), а два разных набора кнопок ломали бы её ритм.
+  // Каталожный предмет правится в своём разделе — вместо правки ему предлагается
+  // копия в лист, после которой он становится своим.
+  const menuItems = computed<Array<DropdownMenuItem>>(() =>
+    getInventoryItemMenuItems({
+      onToggleGrip: isVersatile.value
+        ? () => emit('toggle-two-handed')
+        : undefined,
+      twoHanded: isTwoHanded.value,
+      // Игровые действия магии отбирает отсутствующий предмет: настраиваться,
+      // включать и заряжать нечего, пока его у персонажа нет.
+      onToggleAttunement:
+        isAttunable.value && !isMissing.value
+          ? () => emit('toggle-attuned')
+          : undefined,
+      attuned: isAttuned.value,
+      onToggleActive:
+        isActivatable.value && !isMissing.value
+          ? () => emit('toggle-active')
+          : undefined,
+      active: isActive.value,
+      onRestoreCharges:
+        charges.value && !isMissing.value
+          ? () => emit('restore-charges')
+          : undefined,
+      onEdit: isCustom.value ? () => emit('edit') : undefined,
+      onCopy: isCustom.value ? undefined : () => emit('copy'),
+      onRemove: () => emit('remove'),
+    }),
   );
 
   const equipActionLabel = computed(() =>
@@ -291,11 +344,35 @@
     )}`;
   }
 
-  /** Бросок плитки с подписью кнопки для скринридера. */
-  function getStatRoll(kind: InventoryStatRollKind): StatRoll {
+  /** Бросок плитки оружия с подписью кнопки для скринридера. */
+  function getStatRoll(kind: InventoryStatRollKind): StatAction {
     return {
-      kind,
       ariaLabel: `${INVENTORY_ROLL_KIND_LABELS[kind]}: ${props.inventoryItem.name}`,
+      hint: SHEET_ROLL_HINT_LABEL,
+      run: () =>
+        kind === 'attack' ? emit('roll-attack') : emit('roll-damage'),
+    };
+  }
+
+  /**
+   * Плитка зарядов: остаток из максимума, нажатие тратит один. На нуле плитка
+   * теряет акцент и действие — тратить нечего, восстановление ждёт в меню.
+   */
+  function getChargesStat(itemCharges: InventoryCharges): ItemStat {
+    const isEmpty = itemCharges.current <= 0;
+
+    return {
+      label: INVENTORY_STAT_LABELS.charges,
+      value: `${itemCharges.current}/${itemCharges.max}`,
+      tooltip: isEmpty ? INVENTORY_CHARGES_HINT_LABELS.empty : '',
+      accent: !isEmpty,
+      action: isEmpty
+        ? undefined
+        : {
+            ariaLabel: `${INVENTORY_CHARGES_SPEND_LABEL}: ${props.inventoryItem.name}`,
+            hint: INVENTORY_CHARGES_HINT_LABELS.spend,
+            run: () => emit('spend-charge'),
+          },
     };
   }
 
@@ -318,7 +395,7 @@
       value: getFormattedBonus(attack.value),
       tooltip: `Бонус атаки = ${tooltipParts.join(' + ')}`,
       accent: true,
-      roll: getStatRoll('attack'),
+      action: getStatRoll('attack'),
     };
   }
 
@@ -349,7 +426,7 @@
       value: damage.formula,
       tooltip: `${INVENTORY_STAT_LABELS.damage} = ${tooltipParts.join(' + ')}${typePart}`,
       accent: true,
-      roll: getStatRoll('damage'),
+      action: getStatRoll('damage'),
     };
   }
 
@@ -363,23 +440,31 @@
 
   /**
    * Плитки параметров предмета: боевой параметр (КД доспеха или атака и урон
-   * оружия) по самим параметрам, стоимость и вес, если известны. У оружия
-   * плитка урона занимает место цены — в бою она нужнее, а ряд не растёт.
+   * оружия) по самим параметрам, заряды, стоимость и вес, если известны. У
+   * оружия плитка урона занимает место цены — в бою она нужнее, а ряд не растёт;
+   * заряды её вытесняют по той же причине.
    */
   const displayStats = computed<DecoratedStat[]>(() => {
     const stats: ItemStat[] = [];
 
     const { armor, weapon, cost, weight } = props.inventoryItem;
 
+    const weaponStats = armor || !weapon ? [] : getWeaponStats(weapon);
+
     if (armor) {
       stats.push(getArmorStat(armor));
-    } else if (weapon) {
-      stats.push(...getWeaponStats(weapon));
+    } else {
+      stats.push(...weaponStats);
     }
 
-    const hasDamageStat = stats.some((stat) => stat.roll?.kind === 'damage');
+    if (charges.value) {
+      stats.push(getChargesStat(charges.value));
+    }
 
-    if (cost && !hasDamageStat) {
+    // Цена уступает место урону и зарядам: в бою нужны они, а ряд не растёт.
+    const hasCombatStat = weaponStats.length > 1 || Boolean(charges.value);
+
+    if (cost && !hasCombatStat) {
       stats.push({ label: INVENTORY_STAT_LABELS.cost, value: cost });
     }
 
@@ -427,16 +512,6 @@
     }
 
     emit('toggle-equip');
-  }
-
-  function handleStatRoll(rollKind: InventoryStatRollKind) {
-    if (rollKind === 'attack') {
-      emit('roll-attack');
-
-      return;
-    }
-
-    emit('roll-damage');
   }
 </script>
 
@@ -515,6 +590,36 @@
               Надет
             </UBadge>
 
+            <!-- Настройка и включение стоят рядом с «Надет»: это состояния
+              одного предмета, и игрок читает их одной строкой -->
+            <UTooltip
+              v-if="isAttuned"
+              :text="INVENTORY_ATTUNED_BADGE_HINT"
+            >
+              <UBadge
+                size="sm"
+                color="primary"
+                variant="subtle"
+                class="relative z-10 shrink-0"
+              >
+                {{ INVENTORY_ATTUNED_BADGE_LABEL }}
+              </UBadge>
+            </UTooltip>
+
+            <UTooltip
+              v-if="isActive"
+              :text="INVENTORY_ACTIVE_BADGE_HINT"
+            >
+              <UBadge
+                size="sm"
+                color="success"
+                variant="subtle"
+                class="relative z-10 shrink-0"
+              >
+                {{ INVENTORY_ACTIVE_BADGE_LABEL }}
+              </UBadge>
+            </UTooltip>
+
             <!-- Хват стоит там же, где «Надет»: у оружия своего значка нет, а
               без него выросшая кость урона выглядела бы ошибкой листа -->
             <UTooltip
@@ -585,14 +690,15 @@
           :text="stat.tooltip"
           :disabled="!stat.tooltip"
         >
-          <!-- Плитки атаки и урона оружия — кнопки: нажатие катит их формулу. -->
+          <!-- Плитки с действием — кнопки: атака и урон катят свою формулу,
+            заряды тратят один. -->
           <button
-            v-if="stat.roll"
+            v-if="stat.action"
             type="button"
             class="transition-colors"
             :class="[STAT_LAYOUT_CLASSES, stat.containerClass]"
-            :aria-label="stat.roll.ariaLabel"
-            @click.left.exact.prevent="handleStatRoll(stat.roll.kind)"
+            :aria-label="stat.action.ariaLabel"
+            @click.left.exact.prevent="stat.action.run()"
           >
             <span
               class="text-xs font-bold"

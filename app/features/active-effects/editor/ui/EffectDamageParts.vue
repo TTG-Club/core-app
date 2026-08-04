@@ -1,29 +1,29 @@
 <script setup lang="ts">
-  import type { SpellEffectDamagePart } from '../../model';
+  import type { EffectDamagePart } from '../../model';
 
   import {
-    createEmptySpellEffectDamagePart,
-    SPELL_EFFECT_DAMAGE_TARGET_OPTIONS,
-    SPELL_EFFECT_DAMAGE_TYPE_OPTIONS,
+    createEmptyEffectDamagePart,
+    EFFECT_DAMAGE_TARGET_OPTIONS,
+    EFFECT_DAMAGE_TYPE_OPTIONS,
   } from '../../model';
 
   const { addLabel = 'Добавить урон' } = defineProps<{
     addLabel?: string;
   }>();
 
-  const model = defineModel<Array<SpellEffectDamagePart>>({
+  const model = defineModel<Array<EffectDamagePart>>({
     default: () => [],
   });
 
   function addPart() {
-    model.value = [...model.value, createEmptySpellEffectDamagePart()];
+    model.value = [...model.value, createEmptyEffectDamagePart()];
   }
 
   function removePart(index: number) {
     model.value = model.value.filter((_, position) => position !== index);
   }
 
-  function isHealing(part: SpellEffectDamagePart): boolean {
+  function isHealing(part: EffectDamagePart): boolean {
     return part.formula.includes('@heal');
   }
 </script>
@@ -52,7 +52,7 @@
       >
         <USelect
           v-model="part.type"
-          :items="SPELL_EFFECT_DAMAGE_TYPE_OPTIONS"
+          :items="EFFECT_DAMAGE_TYPE_OPTIONS"
           :disabled="isHealing(part)"
           placeholder="Тип"
           clearable
@@ -66,7 +66,7 @@
       >
         <USelect
           v-model="part.target"
-          :items="SPELL_EFFECT_DAMAGE_TARGET_OPTIONS"
+          :items="EFFECT_DAMAGE_TARGET_OPTIONS"
           class="w-full"
         />
       </UFormField>

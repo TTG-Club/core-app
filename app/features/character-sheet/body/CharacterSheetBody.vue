@@ -115,6 +115,10 @@
     adjustClassResource,
     adjustInventoryItemQuantity,
     toggleInventoryItemEquipped,
+    toggleInventoryItemAttuned,
+    toggleInventoryItemActive,
+    adjustInventoryItemCharges,
+    restoreInventoryItemCharges,
     toggleInventoryItemTwoHanded,
     copyInnateSpellToSheet,
     copyInventoryItemToSheet,
@@ -579,6 +583,11 @@
       modifier: row.value,
       ability: row.ability,
     });
+  }
+
+  /** Трата одного заряда предмета нажатием на плитку зарядов. */
+  function handleItemChargeSpend(inventoryItemId: string) {
+    adjustInventoryItemCharges(inventoryItemId, -1);
   }
 
   function handleItemAttackRoll(inventoryItem: CharacterInventoryItem) {
@@ -1067,6 +1076,10 @@
           @edit-currency="handleCurrencyEdit"
           @adjust-item-quantity="adjustInventoryItemQuantity"
           @toggle-item-equip="toggleInventoryItemEquipped"
+          @toggle-item-attuned="toggleInventoryItemAttuned"
+          @toggle-item-active="toggleInventoryItemActive"
+          @spend-item-charge="handleItemChargeSpend"
+          @restore-item-charges="restoreInventoryItemCharges"
           @toggle-item-two-handed="toggleInventoryItemTwoHanded"
           @roll-item-attack="handleItemAttackRoll"
           @roll-item-damage="handleItemDamageRoll"

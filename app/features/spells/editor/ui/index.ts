@@ -1,4 +1,3 @@
-export { default as SpellActiveEffects } from './SpellActiveEffects.vue';
 export { default as SpellCastingTimes } from './SpellCastingTimes.vue';
 export { default as SpellComponents } from './SpellComponents.vue';
 export { default as SpellDamageFormulas } from './SpellDamageFormulas.vue';

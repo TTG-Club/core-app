@@ -1,10 +1,11 @@
 <script setup lang="ts">
   import type { SpellCreate } from '~spells/model';
 
+  import { ActiveEffects } from '~active-effects/editor';
+  import { normalizeActiveEffects } from '~active-effects/model';
   import {
     createEmptySpellEffect,
     normalizeLoadedSpell,
-    normalizeSpellActiveEffects,
     normalizeSpellEffect,
   } from '~spells/model';
   import { SpellPreview } from '~spells/preview';
@@ -24,7 +25,6 @@
   import { WorkshopEditorFormControls } from '~workshop/revision/ui';
 
   import {
-    SpellActiveEffects,
     SpellCastingTimes,
     SpellComponents,
     SpellDurations,
@@ -85,7 +85,7 @@
         return {
           ...formState,
           effect: normalizedEffect ?? createEmptySpellEffect(),
-          activeEffects: normalizeSpellActiveEffects(formState.activeEffects),
+          activeEffects: normalizeActiveEffects(formState.activeEffects),
         };
       },
     });
@@ -154,7 +154,7 @@
       :level="state.level"
     />
 
-    <SpellActiveEffects v-model="state.activeEffects" />
+    <ActiveEffects v-model="state.activeEffects" />
 
     <UCard variant="subtle">
       <template #header>

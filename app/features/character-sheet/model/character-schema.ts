@@ -466,6 +466,22 @@ const inventoryWeaponSchema = z
   .nullable()
   .catch(null);
 
+/**
+ * Заряды предмета. Остаток не выше максимума: иначе правка максимума в разделе
+ * оставила бы на листе больше зарядов, чем предмет вмещает.
+ */
+const inventoryChargesSchema = z
+  .object({
+    current: z.coerce.number().int().min(0).catch(0),
+    max: z.coerce.number().int().min(0).catch(0),
+  })
+  .transform((charges) => ({
+    ...charges,
+    current: Math.min(charges.current, charges.max),
+  }))
+  .nullable()
+  .catch(null);
+
 const noteSchema = z.object({
   id: z.string(),
   title: z.string().catch(''),
@@ -525,6 +541,12 @@ const inventoryItemSchema = z.object({
   weapon: inventoryWeaponSchema,
   equipped: z.boolean().catch(false),
   twoHanded: z.boolean().catch(false),
+  // Состояние магии; у листов до его появления — настройки нет, предмет
+  // выключен, зарядов не заведено.
+  requiresAttunement: z.boolean().catch(false),
+  attuned: z.boolean().catch(false),
+  active: z.boolean().catch(false),
+  charges: inventoryChargesSchema,
   // Описание есть только у своих предметов (`custom:<uuid>`): у каталожных оно
   // живёт в разделе-источнике, а не в листе.
   description: z.array(descriptionNodeSchema).optional().catch(undefined),
