@@ -318,17 +318,20 @@ export async function fetchMagicItemSummary(
       { method: 'GET', retry: 0 },
     );
 
-    const { rarity, baseItemUrls, bonuses } = parseMagicItemRaw(response);
+    const { rarity, baseItemUrls, bonuses, requiresAttunement, maxCharges } =
+      parseMagicItemRaw(response);
+
+    const summary = { rarity, bonuses, requiresAttunement, maxCharges };
     const [baseItemUrl] = baseItemUrls;
 
     if (baseItemUrls.length !== 1 || !baseItemUrl) {
-      return { rarity, bonuses, baseItem: null };
+      return { ...summary, baseItem: null };
     }
 
     // Деталь основы не загрузилась — редкость всё равно даёт цену по таблице.
     const baseItem = await fetchItemSummary(baseItemUrl).catch(() => null);
 
-    return { rarity, bonuses, baseItem };
+    return { ...summary, baseItem };
   } catch {
     return null;
   }

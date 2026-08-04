@@ -1,7 +1,13 @@
 <script setup lang="ts">
   import type { MagicItemCreate } from '~magic-items/model';
 
-  import { EMPTY_MAGIC_ITEM_BONUSES } from '~magic-items/model';
+  import {
+    createEmptyMagicItemMechanics,
+    EMPTY_MAGIC_ITEM_BONUSES,
+    getMagicItemChargesField,
+    normalizeLoadedMagicItem,
+    normalizeMagicItemMechanics,
+  } from '~magic-items/model';
   import { MagicItemPreview } from '~magic-items/preview';
   import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
@@ -15,6 +21,7 @@
     MagicItemAttunement,
     MagicItemBonuses,
     MagicItemCategory,
+    MagicItemMechanics,
     MagicItemRarity,
   } from './ui';
 
@@ -51,6 +58,7 @@
       items: [],
       // Копия, а не сама константа: форма правит бонусы на месте.
       bonuses: { ...EMPTY_MAGIC_ITEM_BONUSES },
+      mechanics: createEmptyMagicItemMechanics(),
       tags: [],
     };
   }
@@ -60,6 +68,19 @@
       actionUrl: '/api/v2/magic-items',
       getInitialState,
       revisionEntityType: REVISION_ENTITY_TYPES.MAGIC_ITEM,
+      normalizeLoaded: normalizeLoadedMagicItem,
+      // Пустая механика уходит как `null`: иначе у каждого предмета появлялся
+      // бы блок-пустышка, а лист считал бы, что ему есть что применять. В самой
+      // форме поле остаётся объектом — его правят полями, а не целиком.
+      transformBeforeSubmit: (formState) => ({
+        ...formState,
+        mechanics: formState.mechanics
+          ? normalizeMagicItemMechanics(formState.mechanics)
+          : null,
+        // Отдельного поля зарядов в форме нет: их задаёт механика, а сюда число
+        // едет ради фильтра каталога «с зарядами».
+        charges: getMagicItemChargesField(formState.mechanics),
+      }),
     });
 </script>
 
@@ -102,21 +123,6 @@
             />
           </UFormField>
         </div>
-
-        <UFormField
-          class="md:col-span-16 lg:col-span-8"
-          label="Количество зарядов"
-          help="Введите количество зарядов магического предмета (если есть)"
-          name="charges"
-        >
-          <UInput
-            v-model="state.charges"
-            type="number"
-            placeholder="Введи количество зарядов"
-            min="0"
-            step="1"
-          />
-        </UFormField>
       </div>
     </UCard>
 
@@ -143,6 +149,11 @@
         <MagicItemBonuses v-model="state.bonuses" />
       </div>
     </UCard>
+
+    <MagicItemMechanics
+      v-if="state.mechanics"
+      v-model="state.mechanics"
+    />
 
     <UCard variant="subtle">
       <template #header>

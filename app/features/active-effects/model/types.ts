@@ -1,10 +1,12 @@
 /**
- * Модель «Активных эффектов» заклинания, совместимая с системой Active Effects
- * приложения VTTG (Virtual TTG Club). Структура повторяет `ActiveEffect` из
- * `@vtt/shared` один-в-один, чтобы экспорт заклинаний в VTTG был
- * pass-through без преобразования словарей: характеристики хранятся полными
- * именами (`strength`…`charisma`), ключи состояний/режимов/флагов — в тех же
- * строковых значениях, что и в VTTG.
+ * Модель «Активных эффектов», совместимая с системой Active Effects приложения
+ * VTTG (Virtual TTG Club). Одна и та же у всего, что меняет числа на листе
+ * персонажа: заклинаний и магических предметов.
+ *
+ * Структура повторяет `ActiveEffect` из `@vtt/shared` один-в-один, чтобы экспорт
+ * в VTTG был pass-through без преобразования словарей: характеристики хранятся
+ * полными именами (`strength`…`charisma`), ключи состояний/режимов/флагов — в
+ * тех же строковых значениях, что и в VTTG.
  *
  * Зеркало: vttg/packages/shared/src/system/dnd/activeEffectTypes.ts
  */
@@ -12,7 +14,7 @@
 import { z } from 'zod';
 
 /** Характеристика D&D 5e (полное имя — словарь VTTG). */
-export type SpellEffectAbility =
+export type EffectAbility =
   | 'strength'
   | 'dexterity'
   | 'constitution'
@@ -21,7 +23,7 @@ export type SpellEffectAbility =
   | 'charisma';
 
 /** Режим применения числового изменения (change). */
-export type SpellEffectChangeMode =
+export type EffectChangeMode =
   | 'add'
   | 'multiply'
   | 'override'
@@ -29,8 +31,8 @@ export type SpellEffectChangeMode =
   | 'downgrade'
   | 'custom';
 
-/** Источник эффекта. Для эффектов заклинания всегда `spell`. */
-export type SpellEffectOrigin =
+/** Источник эффекта: чем он выдан — заклинанием, предметом, особенностью. */
+export type EffectOrigin =
   | 'item'
   | 'spell'
   | 'feature'
@@ -39,7 +41,7 @@ export type SpellEffectOrigin =
   | 'area';
 
 /** Тип длительности эффекта. */
-export type SpellEffectDurationType =
+export type EffectDurationType =
   | 'permanent'
   | 'rounds'
   | 'minutes'
@@ -48,7 +50,7 @@ export type SpellEffectDurationType =
   | 'special';
 
 /** Ключ состояния D&D 5e (PHB 2024). */
-export type SpellEffectConditionKey =
+export type EffectConditionKey =
   | 'blinded'
   | 'charmed'
   | 'deafened'
@@ -66,44 +68,44 @@ export type SpellEffectConditionKey =
   | 'unconscious';
 
 /** Куда применяется эффект. */
-export type SpellEffectTarget = 'self' | 'target';
+export type EffectTarget = 'self' | 'target';
 
 /** Кого задевает аура. */
-export type SpellEffectAuraTarget = 'allies' | 'enemies' | 'all';
+export type EffectAuraTarget = 'allies' | 'enemies' | 'all';
 
 /** Триггер срабатывания эффекта области/ауры. */
-export type SpellEffectAreaTrigger = 'stay' | 'enter' | 'exit';
+export type EffectAreaTrigger = 'stay' | 'enter' | 'exit';
 
 /** Что делает успешный спасбросок при наложении эффекта. */
-export type SpellEffectSaveOutcome = 'negate' | 'half';
+export type EffectSaveOutcome = 'negate' | 'half';
 
 /** Момент периодического спасброска/урона. */
-export type SpellEffectSaveTiming = 'startOfTurn' | 'endOfTurn';
+export type EffectSaveTiming = 'startOfTurn' | 'endOfTurn';
 
 /**
  * Цель части урона/лечения внутри эффекта.
  * `selected` — выбранная цель, `self` — носитель, `choose` — отдельная цель.
  */
-export type SpellEffectDamagePartTarget = 'selected' | 'self' | 'choose';
+export type EffectDamagePartTarget = 'selected' | 'self' | 'choose';
 
 /** Одна часть урона/лечения эффекта (подмножество DamagePart из VTTG). */
-export interface SpellEffectDamagePart {
+export interface EffectDamagePart {
   /** Формула (напр. "2к8@dmg.poison", "1к4@heal"). */
   formula: string;
   /** Тип урона (для лечения не используется). */
   type?: string;
   /** Цель части (по умолчанию `selected`). */
-  target?: SpellEffectDamagePartTarget;
+  target?: EffectDamagePartTarget;
   /** Применять часть только если по носителю нанесён урон (>0). */
   requiresDamage?: boolean;
 }
 
 /** Одно числовое изменение, вносимое эффектом. */
-export interface SpellEffectChange {
+export interface EffectChange {
   /** Какой параметр модифицировать (напр. "armorClass", "ability.strength"). */
   key: string;
   /** Как модифицировать. */
-  mode: SpellEffectChangeMode;
+  mode: EffectChangeMode;
   /** Числовое значение или формула с @-переменными. */
   value: string;
   /** Опциональное условие (напр. "roll.hasAdvantage === true"). */
@@ -113,8 +115,8 @@ export interface SpellEffectChange {
 }
 
 /** Длительность эффекта. */
-export interface SpellEffectDuration {
-  type: SpellEffectDurationType;
+export interface EffectDuration {
+  type: EffectDurationType;
   /** Начальное количество единиц (для rounds/minutes/hours/days). */
   value?: number;
   /** Оставшееся количество (для rounds, декрементируется в VTTG). */
@@ -122,11 +124,11 @@ export interface SpellEffectDuration {
 }
 
 /** Настройки ауры эффекта. */
-export interface SpellEffectAura {
+export interface EffectAura {
   /** Радиус в футах. */
   radius: number;
   /** Кого задевает аура. */
-  target: SpellEffectAuraTarget;
+  target: EffectAuraTarget;
   /** Применяется ли эффект к создателю ауры. */
   applyToSelf: boolean;
   /** Отображать ли радиус ауры на сцене. */
@@ -134,30 +136,28 @@ export interface SpellEffectAura {
 }
 
 /** Спасбросок при наложении эффекта (в момент попадания атакой/областью). */
-export interface SpellEffectSave {
-  ability: SpellEffectAbility;
+export interface EffectSave {
+  ability: EffectAbility;
   dc: number;
-  onSuccess: SpellEffectSaveOutcome;
+  onSuccess: EffectSaveOutcome;
 }
 
 /** Периодический спасбросок для снятия эффекта. */
-export interface SpellEffectRecurringSave {
-  ability: SpellEffectAbility;
+export interface EffectRecurringSave {
+  ability: EffectAbility;
   /** Сложность (`0` = подставить Сл кастера при наложении в VTTG). */
   dc: number;
-  timing: SpellEffectSaveTiming;
+  timing: EffectSaveTiming;
 }
 
 /** Периодический урон (DoT): наносится каждый ход, пока эффект активен. */
-export interface SpellEffectRecurringDamage {
-  damageParts: SpellEffectDamagePart[];
-  timing: SpellEffectSaveTiming;
+export interface EffectRecurringDamage {
+  damageParts: EffectDamagePart[];
+  timing: EffectSaveTiming;
 }
 
-/**
- * Активный эффект заклинания — полная структура VTTG `ActiveEffect`.
- */
-export interface SpellActiveEffect {
+/** Активный эффект — полная структура VTTG `ActiveEffect`. */
+export interface ActiveEffect {
   /** Уникальный идентификатор эффекта. */
   id: string;
   /** Название эффекта. */
@@ -169,42 +169,42 @@ export interface SpellActiveEffect {
   /** Отключён ли эффект (временно деактивирован, но не удалён). */
   disabled: boolean;
   /** Источник эффекта. */
-  origin: SpellEffectOrigin;
+  origin: EffectOrigin;
   /** ID объекта-источника. */
   originId?: string;
   /** Переносится ли эффект с предмета на актора при экипировке. */
   transfer: boolean;
   /** Длительность эффекта. */
-  duration: SpellEffectDuration;
+  duration: EffectDuration;
   /** Числовые модификаторы. */
-  changes: SpellEffectChange[];
+  changes: EffectChange[];
   /** Булевы флаги (помеха, преимущество, иммунитеты и т.д.). */
   flags: string[];
   /** Настройки ауры (если эффект транслируется на других). */
-  aura?: SpellEffectAura;
+  aura?: EffectAura;
   /** Триггер для эффектов области/ауры. */
-  areaTrigger?: SpellEffectAreaTrigger;
+  areaTrigger?: EffectAreaTrigger;
   /** Цель применения эффекта (`self` по умолчанию). */
-  effectTarget?: SpellEffectTarget;
+  effectTarget?: EffectTarget;
   /** Ключ стандартного состояния D&D 5e, если эффект его представляет. */
-  conditionKey?: SpellEffectConditionKey;
+  conditionKey?: EffectConditionKey;
   /** Спасбросок при наложении. */
-  applySave?: SpellEffectSave;
+  applySave?: EffectSave;
   /** Накладывать эффект-состояние даже при успешном спасброске. */
   applyOnSuccess?: boolean;
   /** Урон при наложении эффекта. */
-  damageParts?: SpellEffectDamagePart[];
+  damageParts?: EffectDamagePart[];
   /** Периодический спасбросок для снятия эффекта. */
-  recurringSave?: SpellEffectRecurringSave;
+  recurringSave?: EffectRecurringSave;
   /** Периодический урон (DoT). */
-  recurringDamage?: SpellEffectRecurringDamage;
+  recurringDamage?: EffectRecurringDamage;
 }
 
 /** Приоритет по умолчанию для нового изменения. */
-export const DEFAULT_SPELL_EFFECT_CHANGE_PRIORITY = 20;
+export const DEFAULT_EFFECT_CHANGE_PRIORITY = 20;
 
 /** Иконка эффекта по умолчанию. */
-export const DEFAULT_SPELL_EFFECT_ICON = 'tabler:sparkles';
+export const DEFAULT_EFFECT_ICON = 'tabler:sparkles';
 
 /** Генерирует уникальный id эффекта. */
 function generateEffectId(): string {
@@ -215,15 +215,22 @@ function generateEffectId(): string {
   return `effect-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-/** Создаёт пустой активный эффект заклинания с дефолтами VTTG. */
-export function createEmptySpellActiveEffect(): SpellActiveEffect {
+/**
+ * Создаёт пустой активный эффект с дефолтами VTTG.
+ *
+ * @param origin чем эффект выдан; по умолчанию заклинанием.
+ * @returns новый эффект.
+ */
+export function createEmptyActiveEffect(
+  origin: EffectOrigin = 'spell',
+): ActiveEffect {
   return {
     id: generateEffectId(),
     name: 'Новый эффект',
     description: '',
-    icon: DEFAULT_SPELL_EFFECT_ICON,
+    icon: DEFAULT_EFFECT_ICON,
     disabled: false,
-    origin: 'spell',
+    origin,
     transfer: false,
     duration: { type: 'permanent' },
     changes: [],
@@ -233,18 +240,18 @@ export function createEmptySpellActiveEffect(): SpellActiveEffect {
 }
 
 /** Создаёт пустое числовое изменение. */
-export function createEmptySpellEffectChange(): SpellEffectChange {
+export function createEmptyEffectChange(): EffectChange {
   return {
     key: 'armorClass',
     mode: 'add',
     value: '1',
     condition: '',
-    priority: DEFAULT_SPELL_EFFECT_CHANGE_PRIORITY,
+    priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
   };
 }
 
 /** Создаёт пустую часть урона эффекта. */
-export function createEmptySpellEffectDamagePart(): SpellEffectDamagePart {
+export function createEmptyEffectDamagePart(): EffectDamagePart {
   return {
     formula: '',
     target: 'selected',
@@ -252,17 +259,17 @@ export function createEmptySpellEffectDamagePart(): SpellEffectDamagePart {
 }
 
 /** Флаг по умолчанию для нового элемента списка флагов. */
-export const DEFAULT_SPELL_EFFECT_FLAG = 'vision.blinded';
+export const DEFAULT_EFFECT_FLAG = 'vision.blinded';
 
 /** Дефолтный спасбросок при включении соответствующих блоков эффекта. */
-export const DEFAULT_SPELL_EFFECT_SAVE: SpellEffectSave = {
+export const DEFAULT_EFFECT_SAVE: EffectSave = {
   ability: 'wisdom',
   dc: 13,
   onSuccess: 'negate',
 };
 
 /** Дефолтные параметры ауры при её включении. */
-export const DEFAULT_SPELL_EFFECT_AURA: SpellEffectAura = {
+export const DEFAULT_EFFECT_AURA: EffectAura = {
   radius: 10,
   target: 'allies',
   applyToSelf: true,
@@ -270,9 +277,7 @@ export const DEFAULT_SPELL_EFFECT_AURA: SpellEffectAura = {
 };
 
 /** Нормализует часть урона эффекта: trim формулы, сброс пустых полей. */
-function normalizeSpellEffectDamagePart(
-  part: SpellEffectDamagePart,
-): SpellEffectDamagePart {
+function normalizeEffectDamagePart(part: EffectDamagePart): EffectDamagePart {
   const formula = part.formula.trim();
   const isHealing = formula.includes('@heal');
 
@@ -285,24 +290,22 @@ function normalizeSpellEffectDamagePart(
 }
 
 /** Отбрасывает части без формулы и нормализует оставшиеся. */
-function normalizeSpellEffectDamageParts(
-  parts: SpellEffectDamagePart[] | undefined,
-): SpellEffectDamagePart[] | undefined {
+function normalizeEffectDamageParts(
+  parts: EffectDamagePart[] | undefined,
+): EffectDamagePart[] | undefined {
   if (!parts?.length) {
     return undefined;
   }
 
   const cleaned = parts
     .filter((part) => part.formula.trim().length > 0)
-    .map(normalizeSpellEffectDamagePart);
+    .map(normalizeEffectDamagePart);
 
   return cleaned.length > 0 ? cleaned : undefined;
 }
 
 /** Нормализует одно изменение: trim ключа/значения, пустое условие → undefined. */
-function normalizeSpellEffectChange(
-  change: SpellEffectChange,
-): SpellEffectChange {
+function normalizeEffectChange(change: EffectChange): EffectChange {
   const condition = change.condition?.trim();
 
   return {
@@ -320,25 +323,22 @@ function normalizeSpellEffectChange(
  * - очищает части урона без формулы;
  * - сбрасывает `aura`/`effectTarget` во взаимоисключающих режимах.
  */
-function normalizeSpellActiveEffect(
-  effect: SpellActiveEffect,
-): SpellActiveEffect {
+function normalizeActiveEffect(effect: ActiveEffect): ActiveEffect {
   const changes = effect.changes
-    .map(normalizeSpellEffectChange)
+    .map(normalizeEffectChange)
     .filter((change) => change.key.length > 0 && change.value.length > 0);
 
   const flags = effect.flags
     .map((flag) => flag.trim())
     .filter((flag) => flag.length > 0);
 
-  const damageParts = normalizeSpellEffectDamageParts(effect.damageParts);
+  const damageParts = normalizeEffectDamageParts(effect.damageParts);
 
   const recurringDamage = effect.recurringDamage
     ? {
         timing: effect.recurringDamage.timing,
         damageParts:
-          normalizeSpellEffectDamageParts(effect.recurringDamage.damageParts)
-          ?? [],
+          normalizeEffectDamageParts(effect.recurringDamage.damageParts) ?? [],
       }
     : undefined;
 
@@ -362,15 +362,15 @@ function normalizeSpellActiveEffect(
  * Нормализует массив активных эффектов перед сохранением.
  * Отбрасывает эффекты без названия.
  */
-export function normalizeSpellActiveEffects(
-  effects: SpellActiveEffect[] | undefined,
-): SpellActiveEffect[] {
+export function normalizeActiveEffects(
+  effects: ActiveEffect[] | undefined,
+): ActiveEffect[] {
   if (!effects?.length) {
     return [];
   }
 
   return effects
-    .map(normalizeSpellActiveEffect)
+    .map(normalizeActiveEffect)
     .filter((effect) => effect.name.length > 0);
 }
 
@@ -379,13 +379,13 @@ export function normalizeSpellActiveEffects(
 // без приведений типов. Закрытые наборы значений описаны через `z.enum`,
 // открытые (флаги, ключи изменений, типы урона) — как строки.
 
-const durationSchema: z.ZodType<SpellEffectDuration> = z.object({
+const durationSchema: z.ZodType<EffectDuration> = z.object({
   type: z.enum(['permanent', 'rounds', 'minutes', 'hours', 'days', 'special']),
   value: z.number().optional(),
   remaining: z.number().optional(),
 });
 
-const changeSchema: z.ZodType<SpellEffectChange> = z.object({
+const changeSchema: z.ZodType<EffectChange> = z.object({
   key: z.string(),
   mode: z.enum([
     'add',
@@ -400,14 +400,14 @@ const changeSchema: z.ZodType<SpellEffectChange> = z.object({
   priority: z.number(),
 });
 
-const damagePartSchema: z.ZodType<SpellEffectDamagePart> = z.object({
+const damagePartSchema: z.ZodType<EffectDamagePart> = z.object({
   formula: z.string(),
   type: z.string().optional(),
   target: z.enum(['selected', 'self', 'choose']).optional(),
   requiresDamage: z.boolean().optional(),
 });
 
-const auraSchema: z.ZodType<SpellEffectAura> = z.object({
+const auraSchema: z.ZodType<EffectAura> = z.object({
   radius: z.number(),
   target: z.enum(['allies', 'enemies', 'all']),
   applyToSelf: z.boolean(),
@@ -423,24 +423,24 @@ const abilitySchema = z.enum([
   'charisma',
 ]);
 
-const saveSchema: z.ZodType<SpellEffectSave> = z.object({
+const saveSchema: z.ZodType<EffectSave> = z.object({
   ability: abilitySchema,
   dc: z.number(),
   onSuccess: z.enum(['negate', 'half']),
 });
 
-const recurringSaveSchema: z.ZodType<SpellEffectRecurringSave> = z.object({
+const recurringSaveSchema: z.ZodType<EffectRecurringSave> = z.object({
   ability: abilitySchema,
   dc: z.number(),
   timing: z.enum(['startOfTurn', 'endOfTurn']),
 });
 
-const recurringDamageSchema: z.ZodType<SpellEffectRecurringDamage> = z.object({
+const recurringDamageSchema: z.ZodType<EffectRecurringDamage> = z.object({
   damageParts: z.array(damagePartSchema),
   timing: z.enum(['startOfTurn', 'endOfTurn']),
 });
 
-const activeEffectSchema: z.ZodType<SpellActiveEffect> = z.object({
+const activeEffectSchema: z.ZodType<ActiveEffect> = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string(),
@@ -486,14 +486,12 @@ const activeEffectSchema: z.ZodType<SpellActiveEffect> = z.object({
  * Валидирует каждый эффект Zod-схемой и отбрасывает некорректные,
  * чтобы одна битая запись не обнулила весь список.
  */
-export function normalizeLoadedSpellActiveEffects(
-  raw: unknown,
-): SpellActiveEffect[] {
+export function normalizeLoadedActiveEffects(raw: unknown): ActiveEffect[] {
   if (!Array.isArray(raw)) {
     return [];
   }
 
-  const effects: SpellActiveEffect[] = [];
+  const effects: ActiveEffect[] = [];
 
   for (const item of raw) {
     const parsed = activeEffectSchema.safeParse(item);

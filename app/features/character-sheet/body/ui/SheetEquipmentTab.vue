@@ -40,6 +40,10 @@
     'remove-item': [inventoryItemId: string];
     'adjust-quantity': [inventoryItemId: string, delta: number];
     'toggle-equip': [inventoryItemId: string];
+    'toggle-attuned': [inventoryItemId: string];
+    'toggle-active': [inventoryItemId: string];
+    'spend-charge': [inventoryItemId: string];
+    'restore-charges': [inventoryItemId: string];
     'toggle-two-handed': [inventoryItemId: string];
     'roll-attack': [inventoryItem: CharacterInventoryItem];
     'roll-damage': [inventoryItem: CharacterInventoryItem];
@@ -206,6 +210,10 @@
           @remove="handleRemoveRequest(inventoryItem)"
           @adjust="(delta) => handleQuantityAdjust(inventoryItem.id, delta)"
           @toggle-equip="emit('toggle-equip', inventoryItem.id)"
+          @toggle-attuned="emit('toggle-attuned', inventoryItem.id)"
+          @toggle-active="emit('toggle-active', inventoryItem.id)"
+          @spend-charge="emit('spend-charge', inventoryItem.id)"
+          @restore-charges="emit('restore-charges', inventoryItem.id)"
           @toggle-two-handed="emit('toggle-two-handed', inventoryItem.id)"
           @roll-attack="emit('roll-attack', inventoryItem)"
           @roll-damage="emit('roll-damage', inventoryItem)"

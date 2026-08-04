@@ -1,15 +1,15 @@
 <script setup lang="ts">
   import {
-    DEFAULT_SPELL_EFFECT_FLAG,
-    SPELL_EFFECT_FLAG_LABEL_MAP,
-    SPELL_EFFECT_FLAG_OPTIONS,
+    DEFAULT_EFFECT_FLAG,
+    EFFECT_FLAG_LABEL_MAP,
+    EFFECT_FLAG_OPTIONS,
   } from '../../model';
-  import SpellEffectLibraryInput from './SpellEffectLibraryInput.vue';
+  import EffectLibraryInput from './EffectLibraryInput.vue';
 
   const model = defineModel<Array<string>>({ default: () => [] });
 
   function addFlag() {
-    model.value = [...model.value, DEFAULT_SPELL_EFFECT_FLAG];
+    model.value = [...model.value, DEFAULT_EFFECT_FLAG];
   }
 
   function removeFlag(index: number) {
@@ -23,7 +23,7 @@
   }
 
   function getFlagLabel(flag: string): string | undefined {
-    return SPELL_EFFECT_FLAG_LABEL_MAP[flag];
+    return EFFECT_FLAG_LABEL_MAP[flag];
   }
 </script>
 
@@ -55,9 +55,9 @@
       class="flex flex-col gap-1 rounded-lg border border-default bg-elevated/50 p-3"
     >
       <div class="flex items-center gap-2">
-        <SpellEffectLibraryInput
+        <EffectLibraryInput
           :model-value="flag"
-          :options="SPELL_EFFECT_FLAG_OPTIONS"
+          :options="EFFECT_FLAG_OPTIONS"
           placeholder="Напр.: vision.blinded"
           @update:model-value="updateFlag(index, $event)"
         />

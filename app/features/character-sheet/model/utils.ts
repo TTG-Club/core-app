@@ -61,6 +61,7 @@ import type {
   HitDiceSelectPool,
   HitPointsGainMode,
   InventoryArmor,
+  InventoryCharges,
   InventoryItemOrigin,
   InventoryWeapon,
   InventoryWeaponDamage,
@@ -175,6 +176,7 @@ import {
   DAMAGE_TYPE_LABELS,
   DARKVISION_PARSE_FALLBACK,
   DEFAULT_ARMOR_CLASS_ABILITY,
+  DEFAULT_INVENTORY_MAGIC_STATE,
   DEFAULT_ROLL_DICE_FACES,
   DEFAULT_WEAPON_ATTACK_ABILITY,
   DICE_NOTATION_LETTER,
@@ -186,12 +188,15 @@ import {
   HIT_DICE_ROLL_COUNT,
   HIT_POINTS_LEVEL_GAIN_MIN,
   INNATE_SPELL_REMOVE_MENU_LABEL,
+  INVENTORY_ACTIVE_MENU_LABELS,
+  INVENTORY_ATTUNEMENT_MENU_LABELS,
   INVENTORY_CATEGORY_ORDER,
   INVENTORY_CATEGORY_TITLES,
   INVENTORY_GRIP_MENU_LABELS,
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
   INVENTORY_REMOVE_MENU_LABEL,
+  INVENTORY_RESTORE_CHARGES_MENU_LABEL,
   ITEMS_DETAIL_BASE_PATH,
   LEVEL_MIN,
   LEVEL_XP_THRESHOLDS,
@@ -643,6 +648,8 @@ export function buildInventoryItem(
     weapon: summary.weapon,
     equipped: false,
     twoHanded: false,
+    // Настройка и заряды бывают только у магии — раздел «Предметы» их не знает.
+    ...DEFAULT_INVENTORY_MAGIC_STATE,
   };
 }
 
@@ -766,6 +773,18 @@ function getMagicItemWeapon(
 }
 
 /**
+ * Заряды предмета для записи инвентаря: свежий предмет заряжен полностью.
+ *
+ * @param maxCharges максимум зарядов из каталога.
+ * @returns заряды предмета; null — зарядов у него нет.
+ */
+function getInventoryCharges(maxCharges: number): InventoryCharges | null {
+  const max = Math.max(0, Math.trunc(maxCharges));
+
+  return max > 0 ? { current: max, max } : null;
+}
+
+/**
  * Доспех магического предмета: бонус к КД входит в базовое значение основы —
  * так магический щит остаётся щитом и правило «в зачёт идёт лучший» работает
  * по итоговому числу.
@@ -824,6 +843,12 @@ export function buildMagicItemInventoryItem(
     weapon: getMagicItemWeapon(baseItem?.weapon ?? null, bonuses),
     equipped: false,
     twoHanded: false,
+    ...DEFAULT_INVENTORY_MAGIC_STATE,
+    // Настройка — свойство предмета: настроиться игрок решает сам, но
+    // предлагать это лист должен только там, где настройка вообще нужна.
+    requiresAttunement: summary?.requiresAttunement ?? false,
+    // Свежий предмет попадает на лист заряженным полностью.
+    charges: getInventoryCharges(summary?.maxCharges ?? 0),
   };
 }
 
@@ -900,6 +925,7 @@ export function buildStartingEquipmentItem(
       weapon: null,
       equipped: false,
       twoHanded: false,
+      ...DEFAULT_INVENTORY_MAGIC_STATE,
     };
   }
 
@@ -921,6 +947,7 @@ export function buildStartingEquipmentItem(
     weapon: null,
     equipped: false,
     twoHanded: false,
+    ...DEFAULT_INVENTORY_MAGIC_STATE,
     description: [],
   };
 }
@@ -1157,6 +1184,51 @@ export function isVersatileInventoryItem(
 }
 
 /**
+ * Можно ли предмет надеть. Доспех и щит идут в подсчёт класса доспеха, предмет
+ * со своим плоским бонусом (плащ защиты) — тоже, а остальной магии отметка
+ * нужна, чтобы кольцо и амулет вообще можно было носить: их свойства работают
+ * только на надетом предмете. Обычному оружию и снаряжению надеваться некуда.
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns true — предмет надевается.
+ */
+export function isEquippableInventoryItem(
+  inventoryItem: CharacterInventoryItem,
+): boolean {
+  return (
+    inventoryItem.armor !== null
+    || inventoryItem.armorClassBonus !== MAGIC_ITEM_BONUS_NONE
+    || inventoryItem.category === 'MAGIC_ITEM'
+  );
+}
+
+/**
+ * Настраивается ли персонаж на предмет: настройку требует сам предмет, и лист
+ * предлагает её только там, где каталог её назвал.
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns true — на предмет можно настроиться.
+ */
+export function isAttunableInventoryItem(
+  inventoryItem: CharacterInventoryItem,
+): boolean {
+  return inventoryItem.requiresAttunement;
+}
+
+/**
+ * Можно ли предмет включить. Включение — про магию: у обычного снаряжения
+ * свойств, которые работают не всегда, нет.
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns true — предмет включается.
+ */
+export function isActivatableInventoryItem(
+  inventoryItem: CharacterInventoryItem,
+): boolean {
+  return inventoryItem.category === 'MAGIC_ITEM';
+}
+
+/**
  * Путь детального ответа каталога для предмета инвентаря: магические предметы
  * живут в своём разделе.
  *
@@ -1357,7 +1429,7 @@ function getDraftWeight(weight: number): number {
  *
  * @param url URL предмета (`custom:` + идентификатор); он же его id.
  * @param draft значения формы.
- * @param equipped доспех надет (сохраняется при редактировании).
+ * @param equipped предмет надет (сохраняется при редактировании).
  * @returns предмет инвентаря; null — название пустое.
  */
 export function toCustomInventoryItem(
@@ -1396,13 +1468,19 @@ export function toCustomInventoryItem(
     // предмета, и копии его возвращает `toUpdatedCustomInventoryItem`.
     armorClassBonus: MAGIC_ITEM_BONUS_NONE,
     weapon: getCustomInventoryWeapon(draft),
-    // Надетым остаётся только доспех: у оружия и безделушки параметров доспеха
-    // нет, и в подсчёт КД они не идут. Форма может обнулить количество — тогда
-    // доспех снимается вместе с ним.
-    equipped: draft.kind === 'armor' && equipped && quantity > 0,
+    // Надетым остаётся то, что надевают: доспех и любой магический предмет
+    // (кольцо и плащ доспехом не являются, но носятся). У обычного оружия и
+    // безделушки отметке взяться неоткуда. Форма может обнулить количество —
+    // тогда предмет снимается вместе с ним.
+    equipped:
+      (draft.kind === 'armor' || draft.magic) && equipped && quantity > 0,
     // Хват формой не задаётся: универсальным бывает только каталожное оружие, и
     // его копии хват возвращает `toUpdatedCustomInventoryItem`.
     twoHanded: false,
+    // Настройка, включение и заряды формой не задаются: у каталожной копии их
+    // возвращает `toUpdatedCustomInventoryItem`, а свой предмет заводится без
+    // них.
+    ...DEFAULT_INVENTORY_MAGIC_STATE,
     description: [...draft.description],
   };
 }
@@ -1467,6 +1545,33 @@ function withKeptMagicBonuses(
 }
 
 /**
+ * Возврат состояния магии правленому предмету: настройки, включения и зарядов
+ * форма не показывает, и без этого правка названия жезла обнуляла бы его
+ * заряды. Снятая в форме магическая пометка это состояние стирает — у обычного
+ * предмета настраиваться не на что и заряжать нечего.
+ *
+ * @param updatedItem предмет, собранный из значений формы.
+ * @param editedItem предмет до правки.
+ * @returns предмет с сохранённым состоянием магии.
+ */
+function withKeptMagicState(
+  updatedItem: CharacterInventoryItem,
+  editedItem: CharacterInventoryItem,
+): CharacterInventoryItem {
+  if (updatedItem.category !== 'MAGIC_ITEM') {
+    return { ...updatedItem, ...DEFAULT_INVENTORY_MAGIC_STATE };
+  }
+
+  return {
+    ...updatedItem,
+    requiresAttunement: editedItem.requiresAttunement,
+    attuned: editedItem.attuned,
+    active: editedItem.active,
+    charges: editedItem.charges,
+  };
+}
+
+/**
  * Правка своего предмета формой листа. Группу задаёт форма (вид предмета плюс
  * магическая пометка), но скопированному магическому предмету, оставшемуся
  * безделушкой, сохраняем подпись типов из каталога («Чудесный предмет, редкий»)
@@ -1487,8 +1592,11 @@ export function toUpdatedCustomInventoryItem(
   );
 
   const updatedItem = draftItem
-    ? withKeptMagicBonuses(
-        withKeptVersatileGrip(draftItem, editedItem),
+    ? withKeptMagicState(
+        withKeptMagicBonuses(
+          withKeptVersatileGrip(draftItem, editedItem),
+          editedItem,
+        ),
         editedItem,
       )
     : null;
@@ -6234,14 +6342,29 @@ export interface InventoryItemMenuOptions extends SheetEntryMenuOptions {
 
   /** Оружие уже взято двумя руками — пункт предлагает вернуть его в одну. */
   twoHanded: boolean;
+
+  /** Настройка на предмет; не передан — предмет её не требует. */
+  onToggleAttunement?: () => void;
+
+  /** Персонаж уже настроен — пункт предлагает снять настройку. */
+  attuned: boolean;
+
+  /** Включение предмета; не передан — включать нечего (немагический предмет). */
+  onToggleActive?: () => void;
+
+  /** Предмет уже включён — пункт предлагает выключить его. */
+  active: boolean;
+
+  /** Восстановление зарядов; не передан — зарядов у предмета нет. */
+  onRestoreCharges?: () => void;
 }
 
 /**
  * Пункты меню строки снаряжения. Действия убраны под многоточие, а не стоят
  * кнопками в строке: у каталожного предмета их два, у своего — тоже два, но
- * другие, и трейлинг соседних строк не выравнивался бы. Смена хвата стоит
- * первой: это игровое действие, к нему возвращаются в бою, а правка и удаление
- * меняют саму запись.
+ * другие, и трейлинг соседних строк не выравнивался бы. Игровые действия (хват,
+ * настройка, включение, заряды) идут первыми: к ним возвращаются в бою, а правка
+ * и удаление меняют саму запись.
  *
  * @param options обработчики пунктов.
  * @returns пункты для `UDropdownMenu`.
@@ -6250,21 +6373,47 @@ export function getInventoryItemMenuItems(
   options: InventoryItemMenuOptions,
 ): DropdownMenuItem[] {
   const items = getSheetEntryMenuItems(options, INVENTORY_REMOVE_MENU_LABEL);
+  const gameItems: DropdownMenuItem[] = [];
 
-  if (!options.onToggleGrip) {
-    return items;
-  }
-
-  return [
-    {
+  if (options.onToggleGrip) {
+    gameItems.push({
       label: options.twoHanded
         ? INVENTORY_GRIP_MENU_LABELS.oneHanded
         : INVENTORY_GRIP_MENU_LABELS.twoHanded,
       icon: 'tabler:sword',
       onSelect: options.onToggleGrip,
-    },
-    ...items,
-  ];
+    });
+  }
+
+  if (options.onToggleAttunement) {
+    gameItems.push({
+      label: options.attuned
+        ? INVENTORY_ATTUNEMENT_MENU_LABELS.unattune
+        : INVENTORY_ATTUNEMENT_MENU_LABELS.attune,
+      icon: 'tabler:sparkles',
+      onSelect: options.onToggleAttunement,
+    });
+  }
+
+  if (options.onToggleActive) {
+    gameItems.push({
+      label: options.active
+        ? INVENTORY_ACTIVE_MENU_LABELS.deactivate
+        : INVENTORY_ACTIVE_MENU_LABELS.activate,
+      icon: 'tabler:player-play',
+      onSelect: options.onToggleActive,
+    });
+  }
+
+  if (options.onRestoreCharges) {
+    gameItems.push({
+      label: INVENTORY_RESTORE_CHARGES_MENU_LABEL,
+      icon: 'tabler:battery-charging',
+      onSelect: options.onRestoreCharges,
+    });
+  }
+
+  return [...gameItems, ...items];
 }
 
 /**
