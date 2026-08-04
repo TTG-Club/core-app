@@ -54,6 +54,9 @@ export interface RedemptionCodeResponse {
 /** Производный статус кода для отображения и фильтра. */
 export type CodeStatus = 'active' | 'redeemed' | 'disabled';
 
+/** Значение фильтра списка по статусу: конкретный статус или «все». */
+export type CodeStatusFilterValue = CodeStatus | 'all';
+
 /**
  * Локальное состояние формы выпуска кодов.
  * Поля includeSubscription/subscriptionMonths/subscriptionType разворачиваются

@@ -1,19 +1,33 @@
 <script setup lang="ts">
   import type {
+    CodeStatusFilterValue,
     CreateCodesRequest,
     RedemptionCodeResponse,
   } from '~admin/subscriptions/model';
 
   import { useSubscriptionCodes } from '~admin/subscriptions/composables';
   import {
+    CODE_STATUS_FILTER_ALL,
     CODE_STATUS_FILTER_OPTIONS,
+    CODES_CREATE_BUTTON_LABEL,
+    CODES_EMPTY_FILTERED_TEXT,
+    CODES_EMPTY_TEXT,
+    CODES_LIST_DATA_KEY,
+    CODES_LIST_SKELETON_COUNT,
+    CODES_LOAD_ERROR_TEXT,
+    CODES_PAGE_SEO_TITLE,
+    CODES_PAGE_TITLE,
+    CODES_RETRY_BUTTON_LABEL,
+    CODES_SEARCH_CLEAR_LABEL,
+    CODES_SEARCH_PLACEHOLDER,
+    codesSearchEmptyText,
     getCodeStatus,
     SUBSCRIPTION_CODES_API_PATH,
   } from '~admin/subscriptions/model';
   import { CodeRow, CodesPanel } from '~admin/subscriptions/ui';
 
   useSeoMeta({
-    title: 'Промокоды: Настройки',
+    title: CODES_PAGE_SEO_TITLE,
   });
 
   const { isSplitActive } = useLayoutWidth();
@@ -31,7 +45,7 @@
     error,
     refresh,
   } = await useAsyncData<RedemptionCodeResponse[]>(
-    'admin-subscription-codes',
+    CODES_LIST_DATA_KEY,
     () => requestFetch(SUBSCRIPTION_CODES_API_PATH),
     { default: () => [], server: false },
   );
@@ -66,17 +80,43 @@
     });
   }
 
-  // Фильтр списка по статусу.
-  const statusFilter = ref<string>('all');
+  // Фильтр списка по статусу и поиск по коду/пометке/логину активировавшего.
+  const statusFilter = ref<CodeStatusFilterValue>(CODE_STATUS_FILTER_ALL);
+  const search = ref('');
+
+  const trimmedSearch = computed(() => search.value.trim());
 
   const filteredCodes = computed(() => {
-    const list = codes.value ?? [];
+    let list = codes.value ?? [];
 
-    if (statusFilter.value === 'all') {
+    if (statusFilter.value !== CODE_STATUS_FILTER_ALL) {
+      list = list.filter((code) => getCodeStatus(code) === statusFilter.value);
+    }
+
+    const query = trimmedSearch.value.toLowerCase();
+
+    if (!query) {
       return list;
     }
 
-    return list.filter((code) => getCodeStatus(code) === statusFilter.value);
+    return list.filter(
+      (code) =>
+        code.code.toLowerCase().includes(query)
+        || code.label?.toLowerCase().includes(query)
+        || code.redeemedBy?.toLowerCase().includes(query),
+    );
+  });
+
+  const emptyMessage = computed(() => {
+    if (!codes.value?.length) {
+      return CODES_EMPTY_TEXT;
+    }
+
+    if (trimmedSearch.value) {
+      return codesSearchEmptyText(trimmedSearch.value);
+    }
+
+    return CODES_EMPTY_FILTERED_TEXT;
   });
 
   // Мутации.
@@ -121,7 +161,7 @@
   <div>
     <NuxtLayout
       name="section"
-      title="Промокоды"
+      :title="CODES_PAGE_TITLE"
     >
       <!-- Управление -->
       <template #controls>
@@ -131,8 +171,30 @@
             block
             @click.left.exact.prevent="openCreate"
           >
-            Создать код
+            {{ CODES_CREATE_BUTTON_LABEL }}
           </UButton>
+
+          <UInput
+            v-model="search"
+            icon="tabler:search"
+            :placeholder="CODES_SEARCH_PLACEHOLDER"
+            class="w-full"
+            :ui="{ trailing: 'pe-0.5' }"
+          >
+            <template
+              v-if="search"
+              #trailing
+            >
+              <UButton
+                icon="tabler:x"
+                variant="link"
+                color="neutral"
+                size="sm"
+                :aria-label="CODES_SEARCH_CLEAR_LABEL"
+                @click.left.exact.prevent="search = ''"
+              />
+            </template>
+          </UInput>
 
           <USelectMenu
             v-model="statusFilter"
@@ -151,7 +213,7 @@
           class="space-y-2"
         >
           <USkeleton
-            v-for="index in 6"
+            v-for="index in CODES_LIST_SKELETON_COUNT"
             :key="index"
             class="h-14 w-full rounded-xl"
           />
@@ -161,7 +223,7 @@
           v-else-if="hasCodesError"
           class="flex flex-col items-center gap-3 py-12 text-center"
         >
-          <p class="text-sm text-error">Не удалось загрузить коды</p>
+          <p class="text-sm text-error">{{ CODES_LOAD_ERROR_TEXT }}</p>
 
           <UButton
             icon="tabler:refresh"
@@ -170,7 +232,7 @@
             size="sm"
             @click.left.exact.prevent="() => refresh()"
           >
-            Повторить
+            {{ CODES_RETRY_BUTTON_LABEL }}
           </UButton>
         </div>
 
@@ -192,11 +254,7 @@
           v-else
           class="py-12 text-center text-secondary"
         >
-          {{
-            codes?.length
-              ? 'Нет кодов с таким статусом'
-              : 'Кодов пока нет — создайте первый'
-          }}
+          {{ emptyMessage }}
         </div>
       </template>
 
