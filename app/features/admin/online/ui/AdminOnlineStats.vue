@@ -54,6 +54,11 @@
    * Собирает карточку площадки: VTTG — десктопное приложение со своей
    * аудиторией, поэтому у него подписи «Приложение» и «Игроков», у сайтов
    * остаются «Сайт» и «Гостей».
+   *
+   * У VTTG `guests` с бэкенда — это все подключённые к приложению, включая
+   * зарегистрированных, а `total` суммирует их с `registered` повторно. Поэтому
+   * для карточки приложения счётчики пересчитываем: «Игроков» = guests −
+   * registered, «Всего» = исходный guests.
    */
   function createSiteCard(
     siteId: string,
@@ -61,17 +66,26 @@
   ): AdminOnlineSiteCard {
     const isApp = siteId === ADMIN_ONLINE_STATS_VTTG_SITE_ID;
 
+    const counts: AdminOnlineCounters | null =
+      isApp && counters
+        ? {
+            guests: Math.max(0, counters.guests - counters.registered),
+            registered: counters.registered,
+            total: counters.guests,
+          }
+        : counters;
+
     return {
-      guests: formatCounter(counters?.guests),
+      guests: formatCounter(counts?.guests),
       guestsLabel: isApp
         ? ADMIN_ONLINE_STATS_VTTG_GUESTS_LABEL
         : ADMIN_ONLINE_STATS_GUESTS_LABEL,
-      registered: formatCounter(counters?.registered),
+      registered: formatCounter(counts?.registered),
       siteId,
       siteLabel: isApp
         ? ADMIN_ONLINE_STATS_VTTG_SITE_LABEL
         : ADMIN_ONLINE_STATS_SITE_LABEL,
-      total: formatCounter(counters?.total),
+      total: formatCounter(counts?.total),
     };
   }
 

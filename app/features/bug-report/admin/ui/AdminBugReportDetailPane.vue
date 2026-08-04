@@ -1,5 +1,8 @@
 <script setup lang="ts">
-  import type { BugReportResponse, BugReportStatus } from '../../model';
+  import type {
+    BugReportResponse,
+    BugReportStatusUpdatePayload,
+  } from '../../model';
 
   import { MODERATION_BUGS_ROUTE } from '~moderation/model';
   import { UiDetailPane } from '~ui/detail-pane';
@@ -26,28 +29,14 @@
     /** Событие закрытия панели */
     'close': [];
     /** Событие обновления статуса */
-    'update-status': [
-      payload: {
-        id: string;
-        status: BugReportStatus;
-        statusUpdatedAt: string;
-        statusUpdatedBy?: string | null;
-        statusComment?: string;
-      },
-    ];
+    'update-status': [payload: BugReportStatusUpdatePayload];
   }>();
 
   function handleClose(): void {
     emit('close');
   }
 
-  function handleUpdateStatus(payload: {
-    id: string;
-    status: BugReportStatus;
-    statusUpdatedAt: string;
-    statusUpdatedBy?: string | null;
-    statusComment?: string;
-  }): void {
+  function handleUpdateStatus(payload: BugReportStatusUpdatePayload): void {
     emit('update-status', payload);
   }
 </script>

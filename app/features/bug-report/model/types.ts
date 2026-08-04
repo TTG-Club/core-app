@@ -97,6 +97,24 @@ export interface BugReportResponse {
   selectedText?: string;
 }
 
+/** Данные об обновлении статуса баг-репорта (событие компонентов админки) */
+export interface BugReportStatusUpdatePayload {
+  /** Уникальный идентификатор бага */
+  id: string;
+
+  /** Новый статус бага */
+  status: BugReportStatus;
+
+  /** Дата изменения статуса */
+  statusUpdatedAt: string;
+
+  /** Логин пользователя, изменившего статус (null — не менялся) */
+  statusUpdatedBy?: string | null;
+
+  /** Комментарий при изменении статуса */
+  statusComment?: string;
+}
+
 /** Цвет кисти для рисования на скриншоте */
 export interface BrushColor {
   /** Уникальное название цвета */

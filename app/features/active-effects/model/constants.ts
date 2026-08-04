@@ -1,22 +1,22 @@
 /**
- * Справочники для редактора активных эффектов заклинания.
+ * Справочники для редактора активных эффектов.
  * Значения (`value`) совпадают со словарями VTTG, чтобы экспорт был
  * pass-through. Зеркало: vttg/.../activeEffectTypes.ts + consts.
  */
 
 import type {
-  SpellEffectAbility,
-  SpellEffectAreaTrigger,
-  SpellEffectAuraTarget,
-  SpellEffectChange,
-  SpellEffectChangeMode,
-  SpellEffectConditionKey,
-  SpellEffectDamagePartTarget,
-  SpellEffectDurationType,
-  SpellEffectOrigin,
-  SpellEffectSaveOutcome,
-  SpellEffectSaveTiming,
-} from './effect';
+  EffectAbility,
+  EffectAreaTrigger,
+  EffectAuraTarget,
+  EffectChange,
+  EffectChangeMode,
+  EffectConditionKey,
+  EffectDamagePartTarget,
+  EffectDurationType,
+  EffectOrigin,
+  EffectSaveOutcome,
+  EffectSaveTiming,
+} from './types';
 
 interface Option<Value extends string> {
   label: string;
@@ -24,9 +24,7 @@ interface Option<Value extends string> {
 }
 
 /** Режимы применения числового изменения. */
-export const SPELL_EFFECT_CHANGE_MODE_OPTIONS: Array<
-  Option<SpellEffectChangeMode>
-> = [
+export const EFFECT_CHANGE_MODE_OPTIONS: Array<Option<EffectChangeMode>> = [
   { label: 'Добавить (+)', value: 'add' },
   { label: 'Умножить (×)', value: 'multiply' },
   { label: 'Перезаписать (=)', value: 'override' },
@@ -36,7 +34,7 @@ export const SPELL_EFFECT_CHANGE_MODE_OPTIONS: Array<
 ];
 
 /** Источники эффекта. */
-export const SPELL_EFFECT_ORIGIN_OPTIONS: Array<Option<SpellEffectOrigin>> = [
+export const EFFECT_ORIGIN_OPTIONS: Array<Option<EffectOrigin>> = [
   { label: 'Заклинание', value: 'spell' },
   { label: 'Предмет', value: 'item' },
   { label: 'Особенность', value: 'feature' },
@@ -46,9 +44,7 @@ export const SPELL_EFFECT_ORIGIN_OPTIONS: Array<Option<SpellEffectOrigin>> = [
 ];
 
 /** Типы длительности. */
-export const SPELL_EFFECT_DURATION_OPTIONS: Array<
-  Option<SpellEffectDurationType>
-> = [
+export const EFFECT_DURATION_OPTIONS: Array<Option<EffectDurationType>> = [
   { label: 'Постоянно', value: 'permanent' },
   { label: 'Раунды', value: 'rounds' },
   { label: 'Минуты', value: 'minutes' },
@@ -58,7 +54,7 @@ export const SPELL_EFFECT_DURATION_OPTIONS: Array<
 ];
 
 /** Типы длительности, у которых есть числовое значение. */
-export const SPELL_EFFECT_DURATION_WITH_VALUE: SpellEffectDurationType[] = [
+export const EFFECT_DURATION_WITH_VALUE: EffectDurationType[] = [
   'rounds',
   'minutes',
   'hours',
@@ -66,7 +62,7 @@ export const SPELL_EFFECT_DURATION_WITH_VALUE: SpellEffectDurationType[] = [
 ];
 
 /** Характеристики (полные имена — словарь VTTG). */
-export const SPELL_EFFECT_ABILITY_OPTIONS: Array<Option<SpellEffectAbility>> = [
+export const EFFECT_ABILITY_OPTIONS: Array<Option<EffectAbility>> = [
   { label: 'Сила', value: 'strength' },
   { label: 'Ловкость', value: 'dexterity' },
   { label: 'Телосложение', value: 'constitution' },
@@ -76,49 +72,39 @@ export const SPELL_EFFECT_ABILITY_OPTIONS: Array<Option<SpellEffectAbility>> = [
 ];
 
 /** Цель применения эффекта. */
-export const SPELL_EFFECT_TARGET_OPTIONS = [
+export const EFFECT_TARGET_OPTIONS = [
   { label: 'Себе', value: 'self' as const },
   { label: 'Цели', value: 'target' as const },
 ];
 
 /** Момент периодического спасброска/урона. */
-export const SPELL_EFFECT_SAVE_TIMING_OPTIONS: Array<
-  Option<SpellEffectSaveTiming>
-> = [
+export const EFFECT_SAVE_TIMING_OPTIONS: Array<Option<EffectSaveTiming>> = [
   { label: 'В конце хода цели', value: 'endOfTurn' },
   { label: 'В начале хода цели', value: 'startOfTurn' },
 ];
 
 /** Результат успешного спасброска при наложении. */
-export const SPELL_EFFECT_SAVE_OUTCOME_OPTIONS: Array<
-  Option<SpellEffectSaveOutcome>
-> = [
+export const EFFECT_SAVE_OUTCOME_OPTIONS: Array<Option<EffectSaveOutcome>> = [
   { label: 'Отменяет эффект', value: 'negate' },
   { label: 'Половина урона', value: 'half' },
 ];
 
 /** Триггеры области/ауры. */
-export const SPELL_EFFECT_AREA_TRIGGER_OPTIONS: Array<
-  Option<SpellEffectAreaTrigger>
-> = [
+export const EFFECT_AREA_TRIGGER_OPTIONS: Array<Option<EffectAreaTrigger>> = [
   { label: 'Пока внутри', value: 'stay' },
   { label: 'При входе', value: 'enter' },
   { label: 'При выходе', value: 'exit' },
 ];
 
 /** Кого задевает аура. */
-export const SPELL_EFFECT_AURA_TARGET_OPTIONS: Array<
-  Option<SpellEffectAuraTarget>
-> = [
+export const EFFECT_AURA_TARGET_OPTIONS: Array<Option<EffectAuraTarget>> = [
   { label: 'Только союзники', value: 'allies' },
   { label: 'Только враги', value: 'enemies' },
   { label: 'Все существа', value: 'all' },
 ];
 
 /** Ключи стандартных состояний D&D 5e. */
-export const SPELL_EFFECT_CONDITION_OPTIONS: Array<
-  Option<SpellEffectConditionKey>
-> = [
+export const EFFECT_CONDITION_OPTIONS: Array<Option<EffectConditionKey>> = [
   { label: 'Ослеплён', value: 'blinded' },
   { label: 'Очарован', value: 'charmed' },
   { label: 'Оглохший', value: 'deafened' },
@@ -137,7 +123,7 @@ export const SPELL_EFFECT_CONDITION_OPTIONS: Array<
 ];
 
 /** Типы урона (ключи — словарь VTTG, lowercase). */
-export const SPELL_EFFECT_DAMAGE_TYPE_OPTIONS: Array<Option<string>> = [
+export const EFFECT_DAMAGE_TYPE_OPTIONS: Array<Option<string>> = [
   { label: 'Рубящий', value: 'slashing' },
   { label: 'Колющий', value: 'piercing' },
   { label: 'Дробящий', value: 'bludgeoning' },
@@ -154,8 +140,8 @@ export const SPELL_EFFECT_DAMAGE_TYPE_OPTIONS: Array<Option<string>> = [
 ];
 
 /** Цель части урона эффекта. */
-export const SPELL_EFFECT_DAMAGE_TARGET_OPTIONS: Array<
-  Option<SpellEffectDamagePartTarget>
+export const EFFECT_DAMAGE_TARGET_OPTIONS: Array<
+  Option<EffectDamagePartTarget>
 > = [
   { label: 'Выбранная цель', value: 'selected' },
   { label: 'На себя', value: 'self' },
@@ -163,7 +149,7 @@ export const SPELL_EFFECT_DAMAGE_TARGET_OPTIONS: Array<
 ];
 
 /** Библиотека ключей атрибутов (для поля change.key). */
-export const SPELL_EFFECT_TARGET_KEY_SUGGESTIONS: Array<Option<string>> = [
+export const EFFECT_TARGET_KEY_SUGGESTIONS: Array<Option<string>> = [
   { value: 'armorClass', label: 'Класс брони (AC)' },
   { value: 'initiative', label: 'Инициатива (бонус)' },
   { value: 'proficiencyBonus', label: 'Бонус мастерства' },
@@ -213,7 +199,7 @@ export const SPELL_EFFECT_TARGET_KEY_SUGGESTIONS: Array<Option<string>> = [
 ];
 
 /** Библиотека значений/формул (для поля change.value). */
-export const SPELL_EFFECT_VALUE_SUGGESTIONS: Array<Option<string>> = [
+export const EFFECT_VALUE_SUGGESTIONS: Array<Option<string>> = [
   { value: '@mod.spell', label: 'Модификатор заклинательной хар-ки' },
   { value: '@mod.str', label: 'Модификатор Силы' },
   { value: '@mod.dex', label: 'Модификатор Ловкости' },
@@ -234,7 +220,7 @@ export const SPELL_EFFECT_VALUE_SUGGESTIONS: Array<Option<string>> = [
 ];
 
 /** Библиотека условий (для поля change.condition). */
-export const SPELL_EFFECT_CONDITION_EXPR_SUGGESTIONS: Array<Option<string>> = [
+export const EFFECT_CONDITION_EXPR_SUGGESTIONS: Array<Option<string>> = [
   { value: 'roll.hasAdvantage === true', label: 'Бросок: с преимуществом' },
   { value: 'roll.hasDisadvantage === true', label: 'Бросок: с помехой' },
   { value: 'roll.isCritical === true', label: 'Бросок: критическое попадание' },
@@ -261,7 +247,7 @@ export const SPELL_EFFECT_CONDITION_EXPR_SUGGESTIONS: Array<Option<string>> = [
 ];
 
 const DEFENSIBLE_DAMAGE_TYPES: Array<Option<string>> =
-  SPELL_EFFECT_DAMAGE_TYPE_OPTIONS;
+  EFFECT_DAMAGE_TYPE_OPTIONS;
 
 /** Статические флаги (нечисловые эффекты). */
 const STATIC_FLAG_OPTIONS: Array<Option<string>> = [
@@ -337,25 +323,24 @@ const DAMAGE_DEFENSE_FLAG_OPTIONS: Array<Option<string>> =
   ]);
 
 /** Полная библиотека флагов (статические + защиты от урона). */
-export const SPELL_EFFECT_FLAG_OPTIONS: Array<Option<string>> = [
+export const EFFECT_FLAG_OPTIONS: Array<Option<string>> = [
   ...STATIC_FLAG_OPTIONS,
   ...DAMAGE_DEFENSE_FLAG_OPTIONS,
 ];
 
 /** Карта label по значению флага — для подписи под выбранным флагом. */
-export const SPELL_EFFECT_FLAG_LABEL_MAP: Record<string, string> =
-  Object.fromEntries(
-    SPELL_EFFECT_FLAG_OPTIONS.map((option) => [option.value, option.label]),
-  );
+export const EFFECT_FLAG_LABEL_MAP: Record<string, string> = Object.fromEntries(
+  EFFECT_FLAG_OPTIONS.map((option) => [option.value, option.label]),
+);
 
 /** Готовый шаблон стандартного состояния D&D 5e для быстрого заполнения. */
-export interface SpellEffectConditionTemplate {
-  key: SpellEffectConditionKey;
+export interface EffectConditionTemplate {
+  key: EffectConditionKey;
   name: string;
   icon: string;
   description: string;
   flags: string[];
-  changes: SpellEffectChange[];
+  changes: EffectChange[];
 }
 
 /**
@@ -363,163 +348,162 @@ export interface SpellEffectConditionTemplate {
  * `CONDITION_EFFECT_TEMPLATES` + `CONDITIONS` из VTTG. Истощение исключено:
  * его модификаторы зависят от уровня и собираются в VTTG динамически.
  */
-export const SPELL_EFFECT_CONDITION_TEMPLATES: SpellEffectConditionTemplate[] =
-  [
-    {
-      key: 'blinded',
-      name: 'Ослеплённый',
-      icon: 'tabler:eye-off',
-      description:
-        'Автоматический провал проверок, требующих зрение. Броски атаки против вас с преимуществом, ваши — с помехой.',
-      flags: [
-        'attack.disadvantage',
-        'attacksAgainst.advantage',
-        'vision.blinded',
-      ],
-      changes: [],
-    },
-    {
-      key: 'charmed',
-      name: 'Очарованный',
-      icon: 'tabler:heart',
-      description:
-        'Нельзя атаковать или вредить очаровавшему. Очаровавший имеет преимущество на социальные проверки против вас.',
-      flags: [],
-      changes: [],
-    },
-    {
-      key: 'deafened',
-      name: 'Оглохший',
-      icon: 'tabler:ear-off',
-      description:
-        'Не можете слышать. Автоматический провал проверок, требующих слух.',
-      flags: [],
-      changes: [],
-    },
-    {
-      key: 'frightened',
-      name: 'Испуганный',
-      icon: 'tabler:mood-sad',
-      description:
-        'Помеха на проверки характеристик и броски атаки, пока источник страха в зоне видимости. Нельзя добровольно приблизиться к источнику.',
-      flags: ['attack.disadvantage', 'abilityCheck.disadvantage'],
-      changes: [],
-    },
-    {
-      key: 'grappled',
-      name: 'Схваченный',
-      icon: 'tabler:hand-stop',
-      description:
-        'Скорость равна 0. Перемещение того, кто схватил, стоит дополнительно.',
-      flags: ['speed.zero'],
-      changes: [],
-    },
-    {
-      key: 'incapacitated',
-      name: 'Недееспособный',
-      icon: 'tabler:ban',
-      description:
-        'Нет действий, бонусных действий и реакций. Нет концентрации. Нельзя говорить. Помеха на инициативу.',
-      flags: ['incapacitated', 'initiative.disadvantage'],
-      changes: [],
-    },
-    {
-      key: 'invisible',
-      name: 'Невидимый',
-      icon: 'tabler:eye-closed',
-      description:
-        'Преимущество на инициативу. Атаки против вас с помехой, ваши — с преимуществом. Не подвержены эффектам, требующим видимость цели.',
-      flags: [
-        'attack.advantage',
-        'attacksAgainst.disadvantage',
-        'initiative.advantage',
-        'vision.invisible',
-      ],
-      changes: [],
-    },
-    {
-      key: 'paralyzed',
-      name: 'Парализованный',
-      icon: 'tabler:user-minus',
-      description:
-        'Недееспособен. Скорость 0. Автопровал спасбросков СИЛ и ЛОВ. Атаки по вам с преимуществом. Крит в пределах 5 фт.',
-      flags: [
-        'incapacitated',
-        'speed.zero',
-        'save.autoFail.strength',
-        'save.autoFail.dexterity',
-        'attacksAgainst.advantage',
-      ],
-      changes: [],
-    },
-    {
-      key: 'petrified',
-      name: 'Окаменевший',
-      icon: 'tabler:diamond',
-      description:
-        'Превращение в камень. Недееспособен. Скорость 0. Автопровал спасбросков СИЛ и ЛОВ. Атаки с преимуществом. Сопротивление всему урону. Иммунитет к яду.',
-      flags: [
-        'incapacitated',
-        'speed.zero',
-        'save.autoFail.strength',
-        'save.autoFail.dexterity',
-        'attacksAgainst.advantage',
-      ],
-      changes: [],
-    },
-    {
-      key: 'poisoned',
-      name: 'Отравленный',
-      icon: 'tabler:droplet',
-      description: 'Помеха на броски атаки и проверки характеристик.',
-      flags: ['attack.disadvantage', 'abilityCheck.disadvantage'],
-      changes: [],
-    },
-    {
-      key: 'prone',
-      name: 'Лежащий ничком',
-      icon: 'tabler:download',
-      description:
-        'Передвижение только ползком или подъём (½ скорости). Помеха на ваши атаки. Преимущество атак в пределах 5 фт, иначе помеха.',
-      flags: ['attack.disadvantage'],
-      changes: [],
-    },
-    {
-      key: 'restrained',
-      name: 'Опутанный',
-      icon: 'tabler:link',
-      description:
-        'Скорость 0, не может быть увеличена. Атаки по вам с преимуществом, ваши — с помехой.',
-      flags: ['speed.zero', 'attack.disadvantage', 'attacksAgainst.advantage'],
-      changes: [],
-    },
-    {
-      key: 'stunned',
-      name: 'Ошеломлённый',
-      icon: 'tabler:bolt',
-      description:
-        'Недееспособен. Автопровал спасбросков СИЛ и ЛОВ. Атаки по вам с преимуществом.',
-      flags: [
-        'incapacitated',
-        'save.autoFail.strength',
-        'save.autoFail.dexterity',
-        'attacksAgainst.advantage',
-      ],
-      changes: [],
-    },
-    {
-      key: 'unconscious',
-      name: 'Бессознательный',
-      icon: 'tabler:zzz',
-      description:
-        'Недееспособен + лежащий ничком. Скорость 0. Автопровал СИЛ и ЛОВ. Атаки с преимуществом. Крит в пределах 5 фт. Не осознаёте окружение.',
-      flags: [
-        'incapacitated',
-        'speed.zero',
-        'save.autoFail.strength',
-        'save.autoFail.dexterity',
-        'attacksAgainst.advantage',
-      ],
-      changes: [],
-    },
-  ];
+export const EFFECT_CONDITION_TEMPLATES: EffectConditionTemplate[] = [
+  {
+    key: 'blinded',
+    name: 'Ослеплённый',
+    icon: 'tabler:eye-off',
+    description:
+      'Автоматический провал проверок, требующих зрение. Броски атаки против вас с преимуществом, ваши — с помехой.',
+    flags: [
+      'attack.disadvantage',
+      'attacksAgainst.advantage',
+      'vision.blinded',
+    ],
+    changes: [],
+  },
+  {
+    key: 'charmed',
+    name: 'Очарованный',
+    icon: 'tabler:heart',
+    description:
+      'Нельзя атаковать или вредить очаровавшему. Очаровавший имеет преимущество на социальные проверки против вас.',
+    flags: [],
+    changes: [],
+  },
+  {
+    key: 'deafened',
+    name: 'Оглохший',
+    icon: 'tabler:ear-off',
+    description:
+      'Не можете слышать. Автоматический провал проверок, требующих слух.',
+    flags: [],
+    changes: [],
+  },
+  {
+    key: 'frightened',
+    name: 'Испуганный',
+    icon: 'tabler:mood-sad',
+    description:
+      'Помеха на проверки характеристик и броски атаки, пока источник страха в зоне видимости. Нельзя добровольно приблизиться к источнику.',
+    flags: ['attack.disadvantage', 'abilityCheck.disadvantage'],
+    changes: [],
+  },
+  {
+    key: 'grappled',
+    name: 'Схваченный',
+    icon: 'tabler:hand-stop',
+    description:
+      'Скорость равна 0. Перемещение того, кто схватил, стоит дополнительно.',
+    flags: ['speed.zero'],
+    changes: [],
+  },
+  {
+    key: 'incapacitated',
+    name: 'Недееспособный',
+    icon: 'tabler:ban',
+    description:
+      'Нет действий, бонусных действий и реакций. Нет концентрации. Нельзя говорить. Помеха на инициативу.',
+    flags: ['incapacitated', 'initiative.disadvantage'],
+    changes: [],
+  },
+  {
+    key: 'invisible',
+    name: 'Невидимый',
+    icon: 'tabler:eye-closed',
+    description:
+      'Преимущество на инициативу. Атаки против вас с помехой, ваши — с преимуществом. Не подвержены эффектам, требующим видимость цели.',
+    flags: [
+      'attack.advantage',
+      'attacksAgainst.disadvantage',
+      'initiative.advantage',
+      'vision.invisible',
+    ],
+    changes: [],
+  },
+  {
+    key: 'paralyzed',
+    name: 'Парализованный',
+    icon: 'tabler:user-minus',
+    description:
+      'Недееспособен. Скорость 0. Автопровал спасбросков СИЛ и ЛОВ. Атаки по вам с преимуществом. Крит в пределах 5 фт.',
+    flags: [
+      'incapacitated',
+      'speed.zero',
+      'save.autoFail.strength',
+      'save.autoFail.dexterity',
+      'attacksAgainst.advantage',
+    ],
+    changes: [],
+  },
+  {
+    key: 'petrified',
+    name: 'Окаменевший',
+    icon: 'tabler:diamond',
+    description:
+      'Превращение в камень. Недееспособен. Скорость 0. Автопровал спасбросков СИЛ и ЛОВ. Атаки с преимуществом. Сопротивление всему урону. Иммунитет к яду.',
+    flags: [
+      'incapacitated',
+      'speed.zero',
+      'save.autoFail.strength',
+      'save.autoFail.dexterity',
+      'attacksAgainst.advantage',
+    ],
+    changes: [],
+  },
+  {
+    key: 'poisoned',
+    name: 'Отравленный',
+    icon: 'tabler:droplet',
+    description: 'Помеха на броски атаки и проверки характеристик.',
+    flags: ['attack.disadvantage', 'abilityCheck.disadvantage'],
+    changes: [],
+  },
+  {
+    key: 'prone',
+    name: 'Лежащий ничком',
+    icon: 'tabler:download',
+    description:
+      'Передвижение только ползком или подъём (½ скорости). Помеха на ваши атаки. Преимущество атак в пределах 5 фт, иначе помеха.',
+    flags: ['attack.disadvantage'],
+    changes: [],
+  },
+  {
+    key: 'restrained',
+    name: 'Опутанный',
+    icon: 'tabler:link',
+    description:
+      'Скорость 0, не может быть увеличена. Атаки по вам с преимуществом, ваши — с помехой.',
+    flags: ['speed.zero', 'attack.disadvantage', 'attacksAgainst.advantage'],
+    changes: [],
+  },
+  {
+    key: 'stunned',
+    name: 'Ошеломлённый',
+    icon: 'tabler:bolt',
+    description:
+      'Недееспособен. Автопровал спасбросков СИЛ и ЛОВ. Атаки по вам с преимуществом.',
+    flags: [
+      'incapacitated',
+      'save.autoFail.strength',
+      'save.autoFail.dexterity',
+      'attacksAgainst.advantage',
+    ],
+    changes: [],
+  },
+  {
+    key: 'unconscious',
+    name: 'Бессознательный',
+    icon: 'tabler:zzz',
+    description:
+      'Недееспособен + лежащий ничком. Скорость 0. Автопровал СИЛ и ЛОВ. Атаки с преимуществом. Крит в пределах 5 фт. Не осознаёте окружение.',
+    flags: [
+      'incapacitated',
+      'speed.zero',
+      'save.autoFail.strength',
+      'save.autoFail.dexterity',
+      'attacksAgainst.advantage',
+    ],
+    changes: [],
+  },
+];

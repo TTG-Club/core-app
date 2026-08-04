@@ -18,6 +18,7 @@ import type {
   FeatureOriginGroup,
   HitPointsGainMode,
   InventoryItemCategory,
+  InventoryMagicState,
   InventoryStatRollKind,
   LanguageProficiencyGroup,
   MagicItemCatalogGrouping,
@@ -2212,6 +2213,65 @@ export const INVENTORY_EQUIP_ACTION_LABELS: Record<
 };
 
 /**
+ * Состояние магии у только что заведённой записи инвентаря: настройки нет,
+ * предмет выключен, зарядов не заведено. Каталожная запись перекрывает его
+ * данными раздела, своя — остаётся с ним.
+ */
+export const DEFAULT_INVENTORY_MAGIC_STATE: InventoryMagicState = {
+  requiresAttunement: false,
+  attuned: false,
+  active: false,
+  charges: null,
+};
+
+/**
+ * Подписи пунктов меню о настройке — по действию, которое пункт выполнит (а не
+ * по нынешнему состоянию).
+ */
+export const INVENTORY_ATTUNEMENT_MENU_LABELS: Record<
+  'attune' | 'unattune',
+  string
+> = {
+  attune: 'Настроиться',
+  unattune: 'Снять настройку',
+};
+
+/** Подписи пунктов меню о включении предмета — по действию пункта. */
+export const INVENTORY_ACTIVE_MENU_LABELS: Record<
+  'activate' | 'deactivate',
+  string
+> = {
+  activate: 'Включить',
+  deactivate: 'Выключить',
+};
+
+/** Подпись пункта меню о восстановлении зарядов предмета. */
+export const INVENTORY_RESTORE_CHARGES_MENU_LABEL = 'Восстановить заряды';
+
+/** Значок предмета, на который персонаж настроен. */
+export const INVENTORY_ATTUNED_BADGE_LABEL = 'Настроен';
+
+/** Подсказка значка «Настроен»: настройка занимает одну из трёх ячеек. */
+export const INVENTORY_ATTUNED_BADGE_HINT =
+  'Персонаж настроен на предмет; настроиться можно не более чем на три предмета';
+
+/** Значок включённого предмета. */
+export const INVENTORY_ACTIVE_BADGE_LABEL = 'Включён';
+
+/** Подсказка значка «Включён»: чем он отличается от «Надет». */
+export const INVENTORY_ACTIVE_BADGE_HINT =
+  'Свойство предмета включено вручную; надетым предмет при этом быть не обязан';
+
+/** Подсказка плитки зарядов: что делает нажатие и когда оно недоступно. */
+export const INVENTORY_CHARGES_HINT_LABELS = {
+  spend: 'нажми, чтобы потратить заряд',
+  empty: 'Заряды закончились — восстанови их в меню предмета',
+};
+
+/** Подпись броска зарядов для скринридера. */
+export const INVENTORY_CHARGES_SPEND_LABEL = 'Потратить заряд';
+
+/**
  * Подписи пункта меню о смене хвата универсального оружия — по хвату, в который
  * его после нажатия возьмут (а не по нынешнему).
  */
@@ -2239,13 +2299,14 @@ export const INVENTORY_MISSING_BADGE_HINT =
 
 /** Короткие подписи плиток параметров предмета в строке инвентаря. */
 export const INVENTORY_STAT_LABELS: Record<
-  'armorClass' | 'attack' | 'damage' | 'cost',
+  'armorClass' | 'attack' | 'damage' | 'cost' | 'charges',
   string
 > = {
   armorClass: 'КД',
   attack: 'Атака',
   damage: 'Урон',
   cost: 'Цена',
+  charges: 'Заряды',
 };
 
 /** Подписи броска с плитки оружия для скринридера. */

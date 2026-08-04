@@ -1,5 +1,6 @@
 import type {
   CodeStatus,
+  CodeStatusFilterValue,
   CreateCodesFormState,
   CreateCodesRequest,
   RedemptionCodeResponse,
@@ -224,13 +225,58 @@ export function getCodeStatus(code: RedemptionCodeResponse): CodeStatus {
   return 'active';
 }
 
-/** Опции фильтра списка по статусу ('all' — без фильтра). */
+/** Значение фильтра по статусу, при котором фильтрация отключена («Все»). */
+export const CODE_STATUS_FILTER_ALL = 'all';
+
+/** Опции фильтра списка по статусу. */
 export const CODE_STATUS_FILTER_OPTIONS: Array<{
   label: string;
-  value: string;
+  value: CodeStatusFilterValue;
 }> = [
-  { label: 'Все', value: 'all' },
+  { label: 'Все', value: CODE_STATUS_FILTER_ALL },
   { label: 'Активные', value: 'active' },
   { label: 'Активированные', value: 'redeemed' },
   { label: 'Деактивированные', value: 'disabled' },
 ];
+
+/** Ключ кеша списка кодов на странице админки. */
+export const CODES_LIST_DATA_KEY = 'admin-subscription-codes';
+
+/** Заголовок страницы промокодов в админке. */
+export const CODES_PAGE_TITLE = 'Промокоды';
+
+/** SEO-заголовок страницы промокодов. */
+export const CODES_PAGE_SEO_TITLE = 'Промокоды: Настройки';
+
+/** Подпись кнопки открытия формы выпуска кодов. */
+export const CODES_CREATE_BUTTON_LABEL = 'Создать код';
+
+/** Плейсхолдер поиска по списку кодов. */
+export const CODES_SEARCH_PLACEHOLDER = 'Поиск по коду или пометке';
+
+/** Доступная подпись кнопки очистки поиска. */
+export const CODES_SEARCH_CLEAR_LABEL = 'Очистить поиск';
+
+/** Текст ошибки загрузки списка кодов. */
+export const CODES_LOAD_ERROR_TEXT = 'Не удалось загрузить коды';
+
+/** Подпись кнопки повторной загрузки списка. */
+export const CODES_RETRY_BUTTON_LABEL = 'Повторить';
+
+/** Текст пустого списка, когда кодов ещё не выпускали. */
+export const CODES_EMPTY_TEXT = 'Кодов пока нет — создайте первый';
+
+/** Текст пустого списка при активном фильтре по статусу. */
+export const CODES_EMPTY_FILTERED_TEXT = 'Нет кодов с таким статусом';
+
+/** Количество строк-скелетонов при загрузке списка кодов. */
+export const CODES_LIST_SKELETON_COUNT = 6;
+
+/**
+ * Текст пустого списка, когда по поисковому запросу ничего не нашлось.
+ *
+ * @param query Поисковый запрос без внешних пробелов.
+ */
+export function codesSearchEmptyText(query: string): string {
+  return `По запросу «${query}» ничего не найдено`;
+}

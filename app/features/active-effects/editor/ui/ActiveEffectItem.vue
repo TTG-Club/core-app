@@ -2,38 +2,38 @@
   import type { DropdownMenuItem } from '@nuxt/ui';
 
   import type {
-    SpellActiveEffect,
-    SpellEffectAbility,
-    SpellEffectAreaTrigger,
-    SpellEffectAuraTarget,
-    SpellEffectConditionTemplate,
-    SpellEffectDamagePart,
-    SpellEffectSaveOutcome,
-    SpellEffectSaveTiming,
+    ActiveEffect,
+    EffectAbility,
+    EffectAreaTrigger,
+    EffectAuraTarget,
+    EffectConditionTemplate,
+    EffectDamagePart,
+    EffectSaveOutcome,
+    EffectSaveTiming,
   } from '../../model';
 
   import {
-    DEFAULT_SPELL_EFFECT_AURA,
-    DEFAULT_SPELL_EFFECT_SAVE,
-    SPELL_EFFECT_ABILITY_OPTIONS,
-    SPELL_EFFECT_AREA_TRIGGER_OPTIONS,
-    SPELL_EFFECT_AURA_TARGET_OPTIONS,
-    SPELL_EFFECT_CONDITION_TEMPLATES,
-    SPELL_EFFECT_DURATION_OPTIONS,
-    SPELL_EFFECT_DURATION_WITH_VALUE,
-    SPELL_EFFECT_SAVE_OUTCOME_OPTIONS,
-    SPELL_EFFECT_SAVE_TIMING_OPTIONS,
-    SPELL_EFFECT_TARGET_OPTIONS,
+    DEFAULT_EFFECT_AURA,
+    DEFAULT_EFFECT_SAVE,
+    EFFECT_ABILITY_OPTIONS,
+    EFFECT_AREA_TRIGGER_OPTIONS,
+    EFFECT_AURA_TARGET_OPTIONS,
+    EFFECT_CONDITION_TEMPLATES,
+    EFFECT_DURATION_OPTIONS,
+    EFFECT_DURATION_WITH_VALUE,
+    EFFECT_SAVE_OUTCOME_OPTIONS,
+    EFFECT_SAVE_TIMING_OPTIONS,
+    EFFECT_TARGET_OPTIONS,
   } from '../../model';
-  import SpellEffectChanges from './SpellEffectChanges.vue';
-  import SpellEffectDamageParts from './SpellEffectDamageParts.vue';
-  import SpellEffectFlags from './SpellEffectFlags.vue';
+  import EffectChanges from './EffectChanges.vue';
+  import EffectDamageParts from './EffectDamageParts.vue';
+  import EffectFlags from './EffectFlags.vue';
 
-  const model = defineModel<SpellActiveEffect>({ required: true });
+  const model = defineModel<ActiveEffect>({ required: true });
 
   // Заполняет форму данными стандартного состояния D&D 5e, сохраняя id и
   // текущую цель эффекта (как в редакторе эффектов VTTG).
-  function applyConditionTemplate(template: SpellEffectConditionTemplate) {
+  function applyConditionTemplate(template: EffectConditionTemplate) {
     model.value = {
       ...model.value,
       name: template.name,
@@ -51,7 +51,7 @@
 
   const conditionTemplateItems = computed<Array<Array<DropdownMenuItem>>>(
     () => [
-      SPELL_EFFECT_CONDITION_TEMPLATES.map((template) => ({
+      EFFECT_CONDITION_TEMPLATES.map((template) => ({
         label: template.name,
         icon: template.icon,
         onSelect: () => applyConditionTemplate(template),
@@ -65,7 +65,7 @@
   ];
 
   const hasDurationValue = computed(() =>
-    SPELL_EFFECT_DURATION_WITH_VALUE.includes(model.value.duration.type),
+    EFFECT_DURATION_WITH_VALUE.includes(model.value.duration.type),
   );
 
   // Инвертированный флаг для переключателя «Активен» (хранится как disabled).
@@ -81,7 +81,7 @@
     get: () => !!model.value.aura,
     set: (enabled) => {
       if (enabled) {
-        model.value.aura = { ...DEFAULT_SPELL_EFFECT_AURA };
+        model.value.aura = { ...DEFAULT_EFFECT_AURA };
         model.value.effectTarget = 'self';
       } else {
         model.value.aura = undefined;
@@ -97,8 +97,8 @@
     }
   }
 
-  const auraTarget = computed<SpellEffectAuraTarget>({
-    get: () => model.value.aura?.target ?? DEFAULT_SPELL_EFFECT_AURA.target,
+  const auraTarget = computed<EffectAuraTarget>({
+    get: () => model.value.aura?.target ?? DEFAULT_EFFECT_AURA.target,
     set: (value) => {
       if (model.value.aura) {
         model.value.aura.target = value;
@@ -106,7 +106,7 @@
     },
   });
 
-  const areaTrigger = computed<SpellEffectAreaTrigger>({
+  const areaTrigger = computed<EffectAreaTrigger>({
     get: () => model.value.areaTrigger ?? 'stay',
     set: (value) => {
       model.value.areaTrigger = value === 'stay' ? undefined : value;
@@ -129,15 +129,12 @@
   const hasApplySave = computed({
     get: () => model.value.applySave !== undefined,
     set: (enabled) => {
-      model.value.applySave = enabled
-        ? { ...DEFAULT_SPELL_EFFECT_SAVE }
-        : undefined;
+      model.value.applySave = enabled ? { ...DEFAULT_EFFECT_SAVE } : undefined;
     },
   });
 
-  const applySaveAbility = computed<SpellEffectAbility>({
-    get: () =>
-      model.value.applySave?.ability ?? DEFAULT_SPELL_EFFECT_SAVE.ability,
+  const applySaveAbility = computed<EffectAbility>({
+    get: () => model.value.applySave?.ability ?? DEFAULT_EFFECT_SAVE.ability,
     set: (value) => {
       if (model.value.applySave) {
         model.value.applySave.ability = value;
@@ -146,7 +143,7 @@
   });
 
   const applySaveDc = computed<number>({
-    get: () => model.value.applySave?.dc ?? DEFAULT_SPELL_EFFECT_SAVE.dc,
+    get: () => model.value.applySave?.dc ?? DEFAULT_EFFECT_SAVE.dc,
     set: (value) => {
       if (model.value.applySave) {
         model.value.applySave.dc = value;
@@ -154,9 +151,9 @@
     },
   });
 
-  const applySaveOnSuccess = computed<SpellEffectSaveOutcome>({
+  const applySaveOnSuccess = computed<EffectSaveOutcome>({
     get: () =>
-      model.value.applySave?.onSuccess ?? DEFAULT_SPELL_EFFECT_SAVE.onSuccess,
+      model.value.applySave?.onSuccess ?? DEFAULT_EFFECT_SAVE.onSuccess,
     set: (value) => {
       if (model.value.applySave) {
         model.value.applySave.onSuccess = value;
@@ -172,7 +169,7 @@
   });
 
   // --- Урон при наложении ---
-  const damageParts = computed<Array<SpellEffectDamagePart>>({
+  const damageParts = computed<Array<EffectDamagePart>>({
     get: () => model.value.damageParts ?? [],
     set: (parts) => {
       model.value.damageParts = parts.length > 0 ? parts : undefined;
@@ -186,18 +183,17 @@
       model.value.recurringSave = enabled
         ? {
             ability:
-              model.value.applySave?.ability
-              ?? DEFAULT_SPELL_EFFECT_SAVE.ability,
-            dc: model.value.applySave?.dc ?? DEFAULT_SPELL_EFFECT_SAVE.dc,
+              model.value.applySave?.ability ?? DEFAULT_EFFECT_SAVE.ability,
+            dc: model.value.applySave?.dc ?? DEFAULT_EFFECT_SAVE.dc,
             timing: 'endOfTurn',
           }
         : undefined;
     },
   });
 
-  const recurringAbility = computed<SpellEffectAbility>({
+  const recurringAbility = computed<EffectAbility>({
     get: () =>
-      model.value.recurringSave?.ability ?? DEFAULT_SPELL_EFFECT_SAVE.ability,
+      model.value.recurringSave?.ability ?? DEFAULT_EFFECT_SAVE.ability,
     set: (value) => {
       if (model.value.recurringSave) {
         model.value.recurringSave.ability = value;
@@ -206,7 +202,7 @@
   });
 
   const recurringDc = computed<number>({
-    get: () => model.value.recurringSave?.dc ?? DEFAULT_SPELL_EFFECT_SAVE.dc,
+    get: () => model.value.recurringSave?.dc ?? DEFAULT_EFFECT_SAVE.dc,
     set: (value) => {
       if (model.value.recurringSave) {
         model.value.recurringSave.dc = value;
@@ -214,7 +210,7 @@
     },
   });
 
-  const recurringTiming = computed<SpellEffectSaveTiming>({
+  const recurringTiming = computed<EffectSaveTiming>({
     get: () => model.value.recurringSave?.timing ?? 'endOfTurn',
     set: (value) => {
       if (model.value.recurringSave) {
@@ -233,7 +229,7 @@
     },
   });
 
-  const recurringDamageParts = computed<Array<SpellEffectDamagePart>>({
+  const recurringDamageParts = computed<Array<EffectDamagePart>>({
     get: () => model.value.recurringDamage?.damageParts ?? [],
     set: (parts) => {
       if (model.value.recurringDamage) {
@@ -242,7 +238,7 @@
     },
   });
 
-  const recurringDamageTiming = computed<SpellEffectSaveTiming>({
+  const recurringDamageTiming = computed<EffectSaveTiming>({
     get: () => model.value.recurringDamage?.timing ?? 'startOfTurn',
     set: (value) => {
       if (model.value.recurringDamage) {
@@ -306,7 +302,7 @@
         >
           <USelect
             :model-value="model.effectTarget ?? 'self'"
-            :items="SPELL_EFFECT_TARGET_OPTIONS"
+            :items="EFFECT_TARGET_OPTIONS"
             :disabled="isAura"
             class="w-full"
             @update:model-value="handleEffectTargetChange"
@@ -341,7 +337,7 @@
         >
           <USelect
             v-model="model.duration.type"
-            :items="SPELL_EFFECT_DURATION_OPTIONS"
+            :items="EFFECT_DURATION_OPTIONS"
             class="w-full"
           />
         </UFormField>
@@ -376,7 +372,7 @@
           >
             <USelect
               v-model="auraTarget"
-              :items="SPELL_EFFECT_AURA_TARGET_OPTIONS"
+              :items="EFFECT_AURA_TARGET_OPTIONS"
               class="w-full"
             />
           </UFormField>
@@ -397,11 +393,11 @@
         </template>
 
         <div class="col-span-full">
-          <SpellEffectFlags v-model="model.flags" />
+          <EffectFlags v-model="model.flags" />
         </div>
 
         <div class="col-span-full">
-          <SpellEffectChanges v-model="model.changes" />
+          <EffectChanges v-model="model.changes" />
         </div>
       </div>
     </template>
@@ -422,7 +418,7 @@
           <UFormField label="Триггер ауры">
             <USelect
               v-model="areaTrigger"
-              :items="SPELL_EFFECT_AREA_TRIGGER_OPTIONS"
+              :items="EFFECT_AREA_TRIGGER_OPTIONS"
               class="w-full"
             />
           </UFormField>
@@ -455,7 +451,7 @@
             >
               <USelect
                 v-model="applySaveAbility"
-                :items="SPELL_EFFECT_ABILITY_OPTIONS"
+                :items="EFFECT_ABILITY_OPTIONS"
                 class="w-full"
               />
             </UFormField>
@@ -476,7 +472,7 @@
             >
               <USelect
                 v-model="applySaveOnSuccess"
-                :items="SPELL_EFFECT_SAVE_OUTCOME_OPTIONS"
+                :items="EFFECT_SAVE_OUTCOME_OPTIONS"
                 class="w-full"
               />
             </UFormField>
@@ -514,7 +510,7 @@
             гейтится им (на успехе: нет урона либо половина).
           </p>
 
-          <SpellEffectDamageParts v-model="damageParts" />
+          <EffectDamageParts v-model="damageParts" />
         </div>
 
         <!-- Периодический спасбросок -->
@@ -540,7 +536,7 @@
             >
               <USelect
                 v-model="recurringAbility"
-                :items="SPELL_EFFECT_ABILITY_OPTIONS"
+                :items="EFFECT_ABILITY_OPTIONS"
                 class="w-full"
               />
             </UFormField>
@@ -561,7 +557,7 @@
             >
               <USelect
                 v-model="recurringTiming"
-                :items="SPELL_EFFECT_SAVE_TIMING_OPTIONS"
+                :items="EFFECT_SAVE_TIMING_OPTIONS"
                 class="w-full"
               />
             </UFormField>
@@ -588,12 +584,12 @@
             <UFormField label="Когда наносится">
               <USelect
                 v-model="recurringDamageTiming"
-                :items="SPELL_EFFECT_SAVE_TIMING_OPTIONS"
+                :items="EFFECT_SAVE_TIMING_OPTIONS"
                 class="w-full md:w-1/3"
               />
             </UFormField>
 
-            <SpellEffectDamageParts v-model="recurringDamageParts" />
+            <EffectDamageParts v-model="recurringDamageParts" />
           </div>
         </div>
       </div>

@@ -72,6 +72,10 @@
     'edit-currency': [];
     'adjust-item-quantity': [inventoryItemId: string, delta: number];
     'toggle-item-equip': [inventoryItemId: string];
+    'toggle-item-attuned': [inventoryItemId: string];
+    'toggle-item-active': [inventoryItemId: string];
+    'spend-item-charge': [inventoryItemId: string];
+    'restore-item-charges': [inventoryItemId: string];
     'toggle-item-two-handed': [inventoryItemId: string];
     'roll-item-attack': [inventoryItem: CharacterInventoryItem];
     'roll-item-damage': [inventoryItem: CharacterInventoryItem];
@@ -123,6 +127,22 @@
 
   function handleItemEquipToggle(inventoryItemId: string) {
     emit('toggle-item-equip', inventoryItemId);
+  }
+
+  function handleItemAttunedToggle(inventoryItemId: string) {
+    emit('toggle-item-attuned', inventoryItemId);
+  }
+
+  function handleItemActiveToggle(inventoryItemId: string) {
+    emit('toggle-item-active', inventoryItemId);
+  }
+
+  function handleItemChargeSpend(inventoryItemId: string) {
+    emit('spend-item-charge', inventoryItemId);
+  }
+
+  function handleItemChargesRestore(inventoryItemId: string) {
+    emit('restore-item-charges', inventoryItemId);
   }
 
   function handleItemTwoHandedToggle(inventoryItemId: string) {
@@ -861,6 +881,10 @@
             @remove-item="handleItemRemove"
             @adjust-quantity="handleItemQuantityAdjust"
             @toggle-equip="handleItemEquipToggle"
+            @toggle-attuned="handleItemAttunedToggle"
+            @toggle-active="handleItemActiveToggle"
+            @spend-charge="handleItemChargeSpend"
+            @restore-charges="handleItemChargesRestore"
             @toggle-two-handed="handleItemTwoHandedToggle"
             @roll-attack="handleItemAttackRoll"
             @roll-damage="handleItemDamageRoll"

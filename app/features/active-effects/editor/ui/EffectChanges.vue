@@ -1,19 +1,19 @@
 <script setup lang="ts">
-  import type { SpellEffectChange } from '../../model';
+  import type { EffectChange } from '../../model';
 
   import {
-    createEmptySpellEffectChange,
-    SPELL_EFFECT_CHANGE_MODE_OPTIONS,
-    SPELL_EFFECT_CONDITION_EXPR_SUGGESTIONS,
-    SPELL_EFFECT_TARGET_KEY_SUGGESTIONS,
-    SPELL_EFFECT_VALUE_SUGGESTIONS,
+    createEmptyEffectChange,
+    EFFECT_CHANGE_MODE_OPTIONS,
+    EFFECT_CONDITION_EXPR_SUGGESTIONS,
+    EFFECT_TARGET_KEY_SUGGESTIONS,
+    EFFECT_VALUE_SUGGESTIONS,
   } from '../../model';
-  import SpellEffectLibraryInput from './SpellEffectLibraryInput.vue';
+  import EffectLibraryInput from './EffectLibraryInput.vue';
 
-  const model = defineModel<Array<SpellEffectChange>>({ default: () => [] });
+  const model = defineModel<Array<EffectChange>>({ default: () => [] });
 
   function addChange() {
-    model.value = [...model.value, createEmptySpellEffectChange()];
+    model.value = [...model.value, createEmptyEffectChange()];
   }
 
   function removeChange(index: number) {
@@ -52,9 +52,9 @@
         label="Ключ атрибута"
         class="col-span-full md:col-span-8"
       >
-        <SpellEffectLibraryInput
+        <EffectLibraryInput
           v-model="change.key"
-          :options="SPELL_EFFECT_TARGET_KEY_SUGGESTIONS"
+          :options="EFFECT_TARGET_KEY_SUGGESTIONS"
           placeholder="Напр.: armorClass"
         />
       </UFormField>
@@ -65,7 +65,7 @@
       >
         <USelect
           v-model="change.mode"
-          :items="SPELL_EFFECT_CHANGE_MODE_OPTIONS"
+          :items="EFFECT_CHANGE_MODE_OPTIONS"
           class="w-full"
         />
       </UFormField>
@@ -74,9 +74,9 @@
         label="Значение"
         class="col-span-full md:col-span-7"
       >
-        <SpellEffectLibraryInput
+        <EffectLibraryInput
           v-model="change.value"
-          :options="SPELL_EFFECT_VALUE_SUGGESTIONS"
+          :options="EFFECT_VALUE_SUGGESTIONS"
           placeholder="+2, 1к4, @mod.spell"
         />
       </UFormField>
@@ -105,9 +105,9 @@
         label="Условие"
         class="col-span-full"
       >
-        <SpellEffectLibraryInput
+        <EffectLibraryInput
           v-model="change.condition"
-          :options="SPELL_EFFECT_CONDITION_EXPR_SUGGESTIONS"
+          :options="EFFECT_CONDITION_EXPR_SUGGESTIONS"
           placeholder="Напр.: roll.hasAdvantage === true"
         />
       </UFormField>

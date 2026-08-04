@@ -71,8 +71,11 @@ import {
   INVENTORY_COPY_TOAST_TITLE,
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
+  isActivatableInventoryItem,
+  isAttunableInventoryItem,
   isCustomInventoryItem,
   isCustomSpell,
+  isEquippableInventoryItem,
   isMissingInventoryItem,
   isPreparableSpell,
   isVersatileInventoryItem,
@@ -1925,10 +1928,11 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Надеть/снять доспех: переключает `equipped` у предмета, у которого есть
-   * параметры доспеха. Игровое действие (смена брони по ходу игры) — блокировкой
-   * листа не ограничивается. Итоговый КД пересчитывается автоматически.
-   * Отсутствующий доспех (количество — ноль) надеть нельзя.
+   * Надеть/снять предмет: переключает `equipped` у того, что вообще надевается
+   * — доспеха, щита, плаща защиты и любого магического предмета (кольцо и амулет
+   * бронёй не являются, но носятся). Игровое действие (смена брони по ходу игры)
+   * — блокировкой листа не ограничивается. Итоговый КД пересчитывается
+   * автоматически. Отсутствующий предмет (количество — ноль) надеть нельзя.
    *
    * @param inventoryItemId идентификатор предмета инвентаря.
    */
@@ -1941,9 +1945,120 @@ export function useCharacterSheet() {
       ...character.value,
       inventory: character.value.inventory.map((inventoryItem) =>
         inventoryItem.id === inventoryItemId
-        && inventoryItem.armor
+        && isEquippableInventoryItem(inventoryItem)
         && !isMissingInventoryItem(inventoryItem)
           ? { ...inventoryItem, equipped: !inventoryItem.equipped }
+          : inventoryItem,
+      ),
+    };
+  }
+
+  /**
+   * Настроиться на предмет или снять настройку. Игровое действие — блокировкой
+   * листа не ограничивается. Предлагается только там, где каталог назвал
+   * настройку обязательной; отсутствующий предмет настройки не держит.
+   *
+   * Лимит в три настроенных предмета лист не сторожит: игрок сам решает, что
+   * снять, а мастер — что разрешить сверх правила.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   */
+  function toggleInventoryItemAttuned(inventoryItemId: string): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.map((inventoryItem) =>
+        inventoryItem.id === inventoryItemId
+        && isAttunableInventoryItem(inventoryItem)
+        && !isMissingInventoryItem(inventoryItem)
+          ? { ...inventoryItem, attuned: !inventoryItem.attuned }
+          : inventoryItem,
+      ),
+    };
+  }
+
+  /**
+   * Включить или выключить магический предмет — для свойств, которые работают
+   * не постоянно. Игровое действие — блокировкой листа не ограничивается.
+   * Отсутствующий предмет включать нечем.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   */
+  function toggleInventoryItemActive(inventoryItemId: string): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.map((inventoryItem) =>
+        inventoryItem.id === inventoryItemId
+        && isActivatableInventoryItem(inventoryItem)
+        && !isMissingInventoryItem(inventoryItem)
+          ? { ...inventoryItem, active: !inventoryItem.active }
+          : inventoryItem,
+      ),
+    };
+  }
+
+  /**
+   * Трата и возврат зарядов предмета. Игровое действие — блокировкой листа не
+   * ограничивается. Остаток держится в пределах от нуля до максимума: за
+   * границы его не уводят ни быстрые нажатия, ни правка предмета в разделе.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   * @param delta изменение остатка зарядов.
+   */
+  function adjustInventoryItemCharges(
+    inventoryItemId: string,
+    delta: number,
+  ): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.map((inventoryItem) => {
+        if (inventoryItem.id !== inventoryItemId || !inventoryItem.charges) {
+          return inventoryItem;
+        }
+
+        const { current, max } = inventoryItem.charges;
+
+        return {
+          ...inventoryItem,
+          charges: { current: clamp(current + delta, 0, max), max },
+        };
+      }),
+    };
+  }
+
+  /**
+   * Восстановление всех зарядов предмета (рассвет, отдых). Игровое действие —
+   * блокировкой листа не ограничивается.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   */
+  function restoreInventoryItemCharges(inventoryItemId: string): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.map((inventoryItem) =>
+        inventoryItem.id === inventoryItemId && inventoryItem.charges
+          ? {
+              ...inventoryItem,
+              charges: {
+                ...inventoryItem.charges,
+                current: inventoryItem.charges.max,
+              },
+            }
           : inventoryItem,
       ),
     };
@@ -2262,6 +2377,10 @@ export function useCharacterSheet() {
     adjustClassResource,
     adjustInventoryItemQuantity,
     toggleInventoryItemEquipped,
+    toggleInventoryItemAttuned,
+    toggleInventoryItemActive,
+    adjustInventoryItemCharges,
+    restoreInventoryItemCharges,
     toggleInventoryItemTwoHanded,
     toggleInspiration,
     downloadCharacter,

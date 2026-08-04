@@ -49,6 +49,15 @@ export const ADMIN_BUGS_API_URL = '/api/admin/bugs';
 export { SOURCE_PLATFORM } from '#shared/consts';
 
 /**
+ * Возвращает URL для получения одного баг-репорта по ID (админка).
+ *
+ * @param bugId Уникальный идентификатор бага.
+ */
+export function getAdminBugApiUrl(bugId: string): string {
+  return `${ADMIN_BUGS_API_URL}/${bugId}`;
+}
+
+/**
  * Возвращает URL для обновления статуса баг-репорта.
  *
  * @param bugId Уникальный идентификатор бага.
@@ -78,6 +87,9 @@ export const ADMIN_BUGS_EMPTY_TEXT = 'Баг-репорты не найдены'
 
 /** Ключ кеша сводной статистики баг-репортов в админке */
 export const ADMIN_BUGS_STATS_DATA_KEY = 'admin-bugs-stats';
+
+/** Ключ кеша баг-репорта, догруженного по ID из ссылки, в админке */
+export const ADMIN_BUG_SELECTED_DATA_KEY = 'admin-bug-selected';
 
 /** Подпись стата «всего найдено багов» в шапке админки */
 export const ADMIN_BUGS_STAT_TOTAL_LABEL = 'Всего найдено';

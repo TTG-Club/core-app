@@ -2,6 +2,7 @@
   import type {
     BugReportResponse,
     BugReportStatus,
+    BugReportStatusUpdatePayload,
     ParsedSelection,
   } from '../../model';
 
@@ -35,15 +36,7 @@
 
   const emit = defineEmits<{
     /** Событие успешного обновления статуса */
-    'update-status': [
-      payload: {
-        id: string;
-        status: BugReportStatus;
-        statusUpdatedAt: string;
-        statusUpdatedBy?: string | null;
-        statusComment?: string;
-      },
-    ];
+    'update-status': [payload: BugReportStatusUpdatePayload];
   }>();
 
   const requestFetch = useRequestFetch();
