@@ -1,4 +1,8 @@
-import type { SpellSaveEffect, SpellTargetType } from './create';
+import type {
+  SpellDamageFormulaTarget,
+  SpellSaveEffect,
+  SpellTargetType,
+} from './create';
 
 interface SpellSelectOption<Value extends string> {
   label: string;
@@ -103,10 +107,16 @@ export const SPELL_DAMAGE_FORMULA_MODIFIER_TAGS = [
   { label: 'Уровень', value: 'level' },
 ];
 
-export const SPELL_DAMAGE_FORMULA_TARGET_OPTIONS = [
+/**
+ * Цель части урона. Значения — словарь VTTG (`DamagePartTarget`); в формулу
+ * они не пишутся, а хранятся в `SpellEffect.damageFormulaTargets`.
+ */
+export const SPELL_DAMAGE_FORMULA_TARGET_OPTIONS: Array<
+  SpellSelectOption<SpellDamageFormulaTarget>
+> = [
   { label: 'Выбранная цель', value: 'selected' },
-  { label: 'На себя', value: 'target.self' },
-  { label: 'Указать отдельно', value: 'target.separate' },
+  { label: 'На себя', value: 'self' },
+  { label: 'Указать отдельно', value: 'choose' },
 ];
 
 export const SPELL_DAMAGE_FORMULA_TOOLS = [
@@ -118,4 +128,5 @@ export const SPELL_DAMAGE_FORMULA_TOOLS = [
 ];
 
 export const DEFAULT_SPELL_DAMAGE_FORMULA_TOOL = 'modifier';
-export const DEFAULT_SPELL_DAMAGE_FORMULA_TARGET = 'selected';
+export const DEFAULT_SPELL_DAMAGE_FORMULA_TARGET: SpellDamageFormulaTarget =
+  'selected';
