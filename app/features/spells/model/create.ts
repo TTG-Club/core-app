@@ -4,7 +4,12 @@ import type { EditorBaseInfoState } from '~ui/editor';
 
 import { normalizeLoadedActiveEffects } from '~active-effects/model';
 
-import { SPELL_DAMAGE_TYPE_TAGS, SPELL_HEALING_TYPE_TAGS } from './constants';
+import {
+  DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
+  SPELL_DAMAGE_FORMULA_TARGET_OPTIONS,
+  SPELL_DAMAGE_TYPE_TAGS,
+  SPELL_HEALING_TYPE_TAGS,
+} from './constants';
 
 /**
  * Тип цели заклинания.
@@ -34,6 +39,23 @@ export interface SpellAreaOfEffect {
  * Зеркало `SpellProjectiles.targetDistribution` из VTTG.
  */
 export type SpellProjectileDistribution = 'any' | 'single' | 'distinct';
+
+/**
+ * Цель части урона/лечения. Зеркало `DamagePartTarget` из VTTG:
+ * `selected` — выбранная цель (дефолт), `self` — заклинатель,
+ * `choose` — отдельная цель, указывается перед броском.
+ */
+export type SpellDamageFormulaTarget = 'selected' | 'self' | 'choose';
+
+/**
+ * Часть урона в редакторе: формула и её цель. В `SpellEffect` хранится двумя
+ * параллельными массивами (`damageFormulas` + `damageFormulaTargets`), потому
+ * что справочник отдаёт формулы плоским списком строк.
+ */
+export interface SpellDamageFormulaPart {
+  formula: string;
+  target: SpellDamageFormulaTarget;
+}
 
 /**
  * Порог уровня персонажа → полное число снарядов (для заговоров).
@@ -69,6 +91,7 @@ export interface SpellEffect {
   autoHit?: boolean;
   projectiles?: SpellProjectiles;
   damageFormulas?: string[];
+  damageFormulaTargets?: SpellDamageFormulaTarget[]; // цели частей урона, по индексам damageFormulas
   damageFormula?: string;
   damageTypes?: string[];
   healingTypes?: string[];
@@ -152,6 +175,7 @@ export function createEmptySpellEffect(): SpellEffect {
     autoHit: false,
     projectiles: undefined,
     damageFormulas: [],
+    damageFormulaTargets: [],
     damageFormula: undefined,
     damageTypes: [],
     healingTypes: [],
@@ -274,6 +298,133 @@ function migrateSpellEffectHealingFormulas(effect: SpellEffect): SpellEffect {
 }
 
 /**
+ * Legacy-теги цели, которые редактор писал прямо в формулу урона. Ни один
+ * потребитель их не понимает: VTTG знает только `@target.full`/`@target.notFull`,
+ * а лист персонажа выбрасывает формулу с незнакомым тегом целиком.
+ */
+const LEGACY_DAMAGE_TARGET_TAGS: Array<{
+  tag: string;
+  target: SpellDamageFormulaTarget;
+}> = [
+  { tag: '@target.self', target: 'self' },
+  { tag: '@target.separate', target: 'choose' },
+];
+
+const LEGACY_DAMAGE_TARGET_TAG_PATTERN = /@target\.(?:self|separate)\b/g;
+
+/**
+ * Проверяет, что значение — цель части урона из словаря VTTG.
+ */
+export function isSpellDamageFormulaTarget(
+  value: unknown,
+): value is SpellDamageFormulaTarget {
+  return SPELL_DAMAGE_FORMULA_TARGET_OPTIONS.some(
+    (option) => option.value === value,
+  );
+}
+
+/**
+ * Создаёт пустую часть урона для редактора.
+ */
+export function createEmptySpellDamageFormulaPart(): SpellDamageFormulaPart {
+  return {
+    formula: '',
+    target: DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
+  };
+}
+
+/**
+ * Собирает части урона редактора из параллельных массивов SpellEffect.
+ *
+ * @param effect воздействие заклинания.
+ * @returns части урона в порядке формул; цель без пары — `selected`.
+ */
+export function getSpellDamageFormulaParts(
+  effect: SpellEffect,
+): SpellDamageFormulaPart[] {
+  const damageFormulaTargets = effect.damageFormulaTargets ?? [];
+
+  return (effect.damageFormulas ?? []).map((formula, index) => ({
+    formula,
+    target: damageFormulaTargets[index] ?? DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
+  }));
+}
+
+/**
+ * Раскладывает части урона редактора обратно в параллельные массивы
+ * SpellEffect одним обновлением — иначе формулы и цели разъезжаются по индексам.
+ *
+ * @param effect воздействие заклинания.
+ * @param parts части урона из редактора.
+ * @returns новое воздействие с обновлёнными формулами и целями.
+ */
+export function applySpellDamageFormulaParts(
+  effect: SpellEffect,
+  parts: SpellDamageFormulaPart[],
+): SpellEffect {
+  return {
+    ...effect,
+    damageFormulas: parts.map((part) => part.formula),
+    damageFormulaTargets: parts.map((part) => part.target),
+  };
+}
+
+/**
+ * Восстанавливает цели частей урона из загруженного с сервера raw-значения.
+ * Незнакомое значение заменяется дефолтом, чтобы не сбить выравнивание по
+ * индексам формул.
+ */
+function normalizeLoadedSpellDamageFormulaTargets(
+  raw: unknown,
+): SpellDamageFormulaTarget[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  // Array.isArray сужает unknown до any[], поэтому элементы читаются через
+  // явно типизированный unknown-массив.
+  const rawTargets: Array<unknown> = raw;
+
+  return rawTargets.map((target) =>
+    isSpellDamageFormulaTarget(target)
+      ? target
+      : DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
+  );
+}
+
+/**
+ * Возвращает цель, зашитую legacy-тегом в формулу урона.
+ */
+function getLegacyDamageFormulaTarget(
+  formula: string,
+): SpellDamageFormulaTarget | undefined {
+  return LEGACY_DAMAGE_TARGET_TAGS.find(({ tag }) => formula.includes(tag))
+    ?.target;
+}
+
+/**
+ * Мигрирует legacy-теги цели из формул урона в отдельное поле
+ * `damageFormulaTargets` и выравнивает его по длине списка формул.
+ */
+function migrateSpellEffectDamageTargets(effect: SpellEffect): SpellEffect {
+  const damageFormulas = effect.damageFormulas ?? [];
+  const damageFormulaTargets = effect.damageFormulaTargets ?? [];
+
+  return {
+    ...effect,
+    damageFormulas: damageFormulas.map((formula) =>
+      formula.replace(LEGACY_DAMAGE_TARGET_TAG_PATTERN, '').trim(),
+    ),
+    damageFormulaTargets: damageFormulas.map(
+      (formula, index) =>
+        getLegacyDamageFormulaTarget(formula)
+        ?? damageFormulaTargets[index]
+        ?? DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
+    ),
+  };
+}
+
+/**
  * Мигрирует старые формулы урона SpellEffect к новому формату массивов формул.
  */
 function migrateSpellEffectDamageFormulas(effect: SpellEffect): SpellEffect {
@@ -311,8 +462,8 @@ function migrateSpellEffectDamageFormulas(effect: SpellEffect): SpellEffect {
 export function normalizeSpellEffect(
   effect: SpellEffect,
 ): SpellEffect | undefined {
-  const migratedEffect = migrateSpellEffectHealingFormulas(
-    migrateSpellEffectDamageFormulas(effect),
+  const migratedEffect = migrateSpellEffectDamageTargets(
+    migrateSpellEffectHealingFormulas(migrateSpellEffectDamageFormulas(effect)),
   );
 
   const normalized: SpellEffect = {};
@@ -365,6 +516,18 @@ export function normalizeSpellEffect(
     && migratedEffect.damageFormulas.length > 0
   ) {
     normalized.damageFormulas = migratedEffect.damageFormulas;
+
+    const damageFormulaTargets = migratedEffect.damageFormulaTargets ?? [];
+
+    // Цели пишутся, только если хоть одна часть уходит не в выбранную цель:
+    // `selected` — дефолт VTTG, хранить его в справочнике незачем.
+    const hasCustomTarget = damageFormulaTargets.some(
+      (target) => target !== DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
+    );
+
+    if (hasCustomTarget) {
+      normalized.damageFormulaTargets = damageFormulaTargets;
+    }
   }
 
   if (migratedEffect.savingThrows && migratedEffect.savingThrows.length > 0) {
@@ -463,21 +626,26 @@ export function normalizeLoadedSpell(
   if (result.effect && isRecord(result.effect)) {
     const rawEffect = result.effect;
 
-    result.effect = migrateSpellEffectHealingFormulas(
-      migrateSpellEffectDamageFormulas({
-        ...createEmptySpellEffect(),
-        ...rawEffect,
-        areaOfEffect:
-          rawEffect.areaOfEffect && isRecord(rawEffect.areaOfEffect)
-            ? {
-                type: undefined,
-                value1: undefined,
-                value2: undefined,
-                ...rawEffect.areaOfEffect,
-              }
-            : createEmptySpellEffect().areaOfEffect,
-        projectiles: normalizeLoadedSpellProjectiles(rawEffect.projectiles),
-      }),
+    result.effect = migrateSpellEffectDamageTargets(
+      migrateSpellEffectHealingFormulas(
+        migrateSpellEffectDamageFormulas({
+          ...createEmptySpellEffect(),
+          ...rawEffect,
+          damageFormulaTargets: normalizeLoadedSpellDamageFormulaTargets(
+            rawEffect.damageFormulaTargets,
+          ),
+          areaOfEffect:
+            rawEffect.areaOfEffect && isRecord(rawEffect.areaOfEffect)
+              ? {
+                  type: undefined,
+                  value1: undefined,
+                  value2: undefined,
+                  ...rawEffect.areaOfEffect,
+                }
+              : createEmptySpellEffect().areaOfEffect,
+          projectiles: normalizeLoadedSpellProjectiles(rawEffect.projectiles),
+        }),
+      ),
     );
   } else {
     // Миграция старых записей без effect
