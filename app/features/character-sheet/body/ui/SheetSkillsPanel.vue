@@ -1,7 +1,10 @@
 <script setup lang="ts">
   import type { SkillRow } from '../../model';
 
+  import { useCharacterSheet } from '../../composables';
   import {
+    SHEET_REVEAL_CONTROL_CLASS,
+    SHEET_SKILL_SETTINGS_LABELS,
     SKILL_PROFICIENCY_ICONS,
     SKILL_PROFICIENCY_LABELS,
   } from '../../model';
@@ -14,7 +17,12 @@
   const emit = defineEmits<{
     cycle: [skillName: string];
     roll: [row: SkillRow];
+    settings: [];
   }>();
+
+  // Шестерёнка ведёт в настройку навыков (правка листа): без прав она прячется,
+  // а сам список навыков остаётся прежним.
+  const { editControlClass } = useCharacterSheet();
 
   const displayRows = computed(() =>
     props.rows.map((row) => ({
@@ -27,7 +35,25 @@
 </script>
 
 <template>
-  <SheetPanel title="Навыки">
+  <SheetPanel
+    title="Навыки"
+    class="group"
+  >
+    <template #title-actions>
+      <button
+        type="button"
+        class="cursor-pointer rounded-full bg-default p-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+        :class="[SHEET_REVEAL_CONTROL_CLASS, editControlClass]"
+        :aria-label="SHEET_SKILL_SETTINGS_LABELS.open"
+        @click.left.exact.prevent="emit('settings')"
+      >
+        <UIcon
+          name="tabler:settings"
+          class="size-3.5 text-muted transition-colors hover:text-primary"
+        />
+      </button>
+    </template>
+
     <div class="flex flex-col gap-0.5">
       <div
         v-for="row in displayRows"
@@ -68,7 +94,25 @@
             {{ row.name }}
           </span>
 
-          <span class="shrink-0 text-sm font-bold text-highlighted">
+          <!-- Значение со своими бонусами не сходится с характеристикой строки:
+            пунктир зовёт навести и прочитать разбор. `z-10` поднимает подпись
+            над растяжкой кнопки броска — иначе наведение до неё не дойдёт -->
+          <UTooltip
+            v-if="row.bonusHint"
+            :text="row.bonusHint"
+            :content="{ side: 'top' }"
+          >
+            <span
+              class="z-10 shrink-0 text-sm font-bold text-highlighted underline decoration-dotted underline-offset-2"
+            >
+              {{ row.formattedModifier }}
+            </span>
+          </UTooltip>
+
+          <span
+            v-else
+            class="shrink-0 text-sm font-bold text-highlighted"
+          >
             {{ row.formattedModifier }}
           </span>
 

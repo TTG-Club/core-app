@@ -6,10 +6,13 @@ import type {
   ArmorDexterityMod,
   ArmorProficiencyGroup,
   CharacterClassResource,
+  CharacterCustomBonus,
   CharacterCustomCurrency,
   CurrencyKey,
   CustomArmorType,
   CustomArmorTypeMeta,
+  CustomBonusKind,
+  CustomBonusSource,
   CustomInventoryItemDraft,
   CustomInventoryKind,
   CustomSpellField,
@@ -726,12 +729,12 @@ export const CUSTOM_BONUS_FORMAT_OPTIONS: Intl.NumberFormatOptions = {
   signDisplay: 'exceptZero',
 };
 
-/** Пояснение к своему бонусу мастерства. */
+/** Пояснение к своим бонусам мастерства. */
 export const CUSTOM_PROFICIENCY_BONUS_HINT =
-  'Складывается с бонусом по уровню везде, где тот участвует: спасброски, навыки, атака оружием, заклинательство.';
+  'Складываются с бонусом по уровню везде, где тот участвует: спасброски, навыки, атака оружием, заклинательство.';
 
-/** Пояснение к своему бонусу инициативы. */
-export const CUSTOM_INITIATIVE_BONUS_HINT = `Складывается с модификатором характеристики «${ABILITY_LABELS.dexterity}» в плитке инициативы и в её броске.`;
+/** Пояснение к своим бонусам инициативы. */
+export const CUSTOM_INITIATIVE_BONUS_HINT = `Складываются с модификатором характеристики «${ABILITY_LABELS.dexterity}» в плитке инициативы и в её броске.`;
 
 /** Подписи модалки настроек листа. */
 export const SHEET_SETTINGS_LABELS = {
@@ -744,8 +747,15 @@ export const SHEET_SETTINGS_LABELS = {
   attackFormulaHint:
     'Бонус атаки = бонус мастерства + модификатор характеристики.',
   initiativeTitle: 'Инициатива',
-  customBonusTitle: 'Свой бонус',
+  customBonusesTitle: 'Свои бонусы',
+  customBonusAdd: 'Добавить бонус',
+  customBonusRemove: 'Удалить бонус',
+  customBonusLabelPlaceholder: 'Откуда бонус',
+  customBonusSourcePlaceholder: 'Источник',
   levelProficiencyBonusTitle: 'По уровню',
+  // Полные подписи итогов в плитку не влезают, поэтому на ней короткое «Итог»,
+  // а полная подпись уходит в подсказку.
+  totalTitle: 'Итог',
   totalProficiencyBonusTitle: 'Итоговый бонус мастерства',
   totalInitiativeTitle: 'Итоговая инициатива',
 };
@@ -794,6 +804,9 @@ export const SKILL_PROFICIENCY_MULTIPLIERS: Record<
   expertise: 2,
 };
 
+/** Основа пассивного значения навыка: к ней прибавляется значение навыка. */
+export const PASSIVE_SKILL_BASE = 10;
+
 /** Пометки навыка, которым персонаж уже владеет, в списках выбора. */
 export const SKILL_OWNED_HINTS: Record<SkillProficiencyLevel, string> = {
   none: '',
@@ -811,6 +824,83 @@ export const SKILL_OWNED_HINTS: Record<SkillProficiencyLevel, string> = {
 export const SKILL_DUPLICATE_WARNING =
   'Такие навыки у персонажа уже есть: по правилам 2024 повторное владение '
   + 'ничего не даёт и компетенцию не выдаёт — лучше выбрать другие навыки.';
+
+/** Подписи видов своего бонуса. */
+export const CUSTOM_BONUS_KIND_LABELS: Record<CustomBonusKind, string> = {
+  ability: 'Характеристика',
+  flat: 'Своё число',
+};
+
+/** Источник своего бонуса «своё число» в общем селекторе источников. */
+export const CUSTOM_BONUS_FLAT_SOURCE = 'flat';
+
+/**
+ * Варианты источника своего бонуса: своё число и все характеристики одним
+ * списком — так строка бонуса обходится одним селектором вместо пары
+ * «вид + характеристика».
+ */
+export const CUSTOM_BONUS_SOURCE_OPTIONS: Array<{
+  label: string;
+  value: CustomBonusSource;
+}> = [
+  { label: CUSTOM_BONUS_KIND_LABELS.flat, value: CUSTOM_BONUS_FLAT_SOURCE },
+  ...ABILITY_OPTIONS,
+];
+
+/** Подпись бонуса-числа без своей пометки в разборе значения. */
+export const CUSTOM_FLAT_BONUS_LABEL = 'Свой бонус';
+
+/** Максимальная длина пометки источника своего бонуса. */
+export const CUSTOM_BONUS_LABEL_MAX_LENGTH = 40;
+
+/**
+ * Заготовка нового своего бонуса: чаще всего добавляют ровно «+1» от предмета,
+ * поэтому вид по умолчанию — своё число.
+ */
+export const NEW_CUSTOM_BONUS: Omit<CharacterCustomBonus, 'id'> = {
+  kind: 'flat',
+  ability: 'strength',
+  value: 1,
+  label: '',
+};
+
+/** Максимальная длина названия своего навыка. */
+export const CUSTOM_SKILL_NAME_MAX_LENGTH = 40;
+
+/**
+ * Сколько своих навыков разрешено завести. Предел не от правил, а от места:
+ * навыки печатаются в PDF под своей характеристикой, и десяток лишних строк
+ * панель характеристик ещё выдерживает.
+ */
+export const CUSTOM_SKILLS_MAX = 10;
+
+/** Характеристика нового своего навыка по умолчанию. */
+export const DEFAULT_CUSTOM_SKILL_ABILITY: AbilityKey = 'intelligence';
+
+/** Подписи модалки настройки навыков. */
+export const SHEET_SKILL_SETTINGS_LABELS = {
+  title: 'Настройка навыков',
+  open: 'Настроить навыки',
+  hint:
+    'Характеристика задаёт модификатор навыка, к нему добавляется бонус '
+    + 'мастерства по уровню владения. Дополнительные бонусы складываются '
+    + 'сверху — их сколько угодно.',
+  abilityPlaceholder: 'Характеристика',
+  proficiency: 'Владение навыком',
+  resetSkill: 'Вернуть навык к правилам',
+  addBonus: 'Добавить бонус',
+  passive: 'Пассивное',
+  customTitle: 'Свой навык',
+  customHint:
+    'Навыка нет в правилах: он встанет в общий список по алфавиту и попадёт '
+    + 'в PDF наравне с остальными.',
+  customNamePlaceholder: 'Название навыка',
+  customAdd: 'Добавить навык',
+  customRemove: 'Удалить свой навык',
+  customBadge: 'Свой',
+  customDuplicate: 'Навык с таким названием уже есть',
+  customLimit: `Своих навыков не больше ${CUSTOM_SKILLS_MAX}`,
+} as const;
 
 /** Множитель грузоподъёмности от значения Силы. */
 export const CARRYING_CAPACITY_MULTIPLIER = 15;
@@ -988,6 +1078,58 @@ export const HIT_POINT_STEP_BUTTONS: Array<{
   { step: 5, label: '+5', color: 'success' },
 ];
 
+/** Уровень истощения, на котором истощения нет. */
+export const EXHAUSTION_LEVEL_MIN = 0;
+
+/** Смертельный уровень истощения (PHB 2024). */
+export const EXHAUSTION_LEVEL_MAX = 6;
+
+/** Насколько каждый уровень истощения снижает проверки к20. */
+export const EXHAUSTION_D20_PENALTY_PER_LEVEL = 2;
+
+/** На сколько футов каждый уровень истощения снижает скорость. */
+export const EXHAUSTION_SPEED_PENALTY_PER_LEVEL = 5;
+
+/** Сколько уровней истощения снимает продолжительный отдых (PHB 2024). */
+export const EXHAUSTION_LONG_REST_RECOVERY = 1;
+
+/** Деления блока истощения: уровни от первого до смертельного. */
+export const EXHAUSTION_LEVELS: number[] = Array.from(
+  { length: EXHAUSTION_LEVEL_MAX },
+  (_unused, index) => index + 1,
+);
+
+/** Подписи блока истощения. */
+export const EXHAUSTION_LABELS: Record<
+  | 'title'
+  | 'level'
+  | 'none'
+  | 'death'
+  | 'd20Effect'
+  | 'speedEffect'
+  | 'feet'
+  | 'rulesTitle',
+  string
+> = {
+  title: 'Истощение',
+  level: 'Уровень',
+  none: 'Истощения нет.',
+  death: 'Персонаж умирает.',
+  d20Effect: 'ко всем проверкам к20',
+  speedEffect: 'скорость',
+  feet: 'футов',
+  rulesTitle: 'Правила истощения',
+};
+
+/** Пункты правил истощения (D&D 2024) для справки в блоке. */
+export const EXHAUSTION_RULES: string[] = [
+  'Истощение накапливается: каждый новый источник добавляет 1 уровень, а не заменяет прежний.',
+  'Каждый уровень снижает все проверки к20 на 2: проверки характеристик, броски атаки и спасброски.',
+  'Каждый уровень снижает все скорости персонажа на 5 футов.',
+  'На 6 уровне истощения персонаж умирает.',
+  'Продолжительный отдых снимает 1 уровень истощения; на нулевом уровне состояние заканчивается.',
+];
+
 /**
  * Минимальный прирост максимума хитов за уровень: даже с отрицательным
  * модификатором Телосложения уровень даёт хотя бы один хит (правило D&D 2024).
@@ -1139,12 +1281,15 @@ export const LONG_REST_LABELS: Record<
   | 'fullDice'
   | 'recoveryTitle'
   | 'temporaryNote'
+  | 'exhaustionTitle'
+  | 'exhaustionRecovery'
   | 'close'
   | 'finish'
   | 'finishedTitle'
   | 'finishedHitPoints'
   | 'finishedDice'
-  | 'finishedRecovery',
+  | 'finishedRecovery'
+  | 'finishedExhaustion',
   string
 > = {
   title: 'Продолжительный отдых',
@@ -1160,12 +1305,15 @@ export const LONG_REST_LABELS: Record<
   fullDice: 'Все кости хитов на месте — возвращать нечего.',
   recoveryTitle: 'Вернётся по окончании отдыха',
   temporaryNote: 'Временные хиты пропадают в конце отдыха.',
+  exhaustionTitle: 'Истощение',
+  exhaustionRecovery: 'Отдых снимет 1 уровень истощения.',
   close: 'Закрыть',
   finish: 'Завершить отдых',
   finishedTitle: 'Продолжительный отдых завершён',
   finishedHitPoints: 'Хиты восстановлены полностью.',
   finishedDice: 'Возвращено костей хитов',
   finishedRecovery: 'Вернулись',
+  finishedExhaustion: 'Новый уровень истощения',
 };
 
 /** Пункты правил продолжительного отдыха (D&D 2024) для справки в модалке. */
@@ -1176,6 +1324,7 @@ export const LONG_REST_RULES: string[] = [
   'Все потраченные кости хитов возвращаются: в редакции 2024 года отдых возвращает их полностью, а не половину.',
   'Счётчикам умений возвращается столько зарядов, сколько задано им на продолжительный отдых: обычно это все заряды.',
   'Временные хиты держатся до конца продолжительного отдыха и пропадают вместе с ним.',
+  'Отдых снимает 1 уровень истощения.',
   'За одни сутки можно получить пользу только от одного продолжительного отдыха.',
 ];
 

@@ -1,6 +1,7 @@
 import type {
   AbilityKey,
   Character,
+  CharacterCustomBonus,
   CharacterNote,
   CharacterSheetDetail,
   CharacterSheetListItem,
@@ -18,9 +19,12 @@ import { CasterType } from '~classes/model';
 
 import {
   DRAFT_CHARACTER_ID,
+  EXHAUSTION_LEVEL_MAX,
+  EXHAUSTION_LEVEL_MIN,
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
   LEGACY_NOTE_ID,
+  NEW_CUSTOM_BONUS,
   RESOURCE_RECOVERY_AMOUNT_MIN,
   SHEET_NOTE_LABELS,
 } from './constants';
@@ -203,17 +207,82 @@ const spellcastingSchema = z
     prepared: { ...DEFAULT_CHARACTER.spellcasting.prepared },
   }));
 
+// Запись своего бонуса общая для навыков и настроек листа: вид, обе стороны
+// источника (характеристика и число) и пометка игрока.
+const customBonusSchema = z.object({
+  id: z.string(),
+  kind: z.enum(['ability', 'flat']).catch(NEW_CUSTOM_BONUS.kind),
+  ability: abilityKeySchema.catch(NEW_CUSTOM_BONUS.ability),
+  value: z.coerce.number().int().catch(0),
+  label: z.string().catch(''),
+});
+
+/**
+ * Свои бонусы настроек: сперва это было одно число, поэтому у листов без
+ * списка ненулевое легаси-значение переезжает в него одной записью-числом, а
+ * нулевое просто пропадает — бонуса не было.
+ *
+ * @param bonuses список своих бонусов записи листа.
+ * @param legacyValue легаси-число одного бонуса записи листа.
+ * @returns свои бонусы настроек листа.
+ */
+function toCustomBonuses(
+  bonuses: CharacterCustomBonus[] | undefined,
+  legacyValue: number | undefined,
+): CharacterCustomBonus[] {
+  if (bonuses) {
+    return bonuses;
+  }
+
+  if (!legacyValue) {
+    return [];
+  }
+
+  return [{ ...NEW_CUSTOM_BONUS, id: crypto.randomUUID(), value: legacyValue }];
+}
+
 // По умолчанию — правила D&D (легаси-листы без блока настроек): базовая
 // характеристика атаки оружием определяется свойствами оружия.
 const settingsSchema = z
   .object({
     weaponAttackAbility: abilityKeySchema.nullable().catch(null),
-    // Свои бонусы появились позже настройки атаки: у листов без них бонусы
-    // нулевые, то есть подсчёт идёт строго по правилам.
-    customProficiencyBonus: z.coerce.number().int().catch(0),
-    customInitiativeBonus: z.coerce.number().int().catch(0),
+    // Легаси-поля одного своего бонуса: списками они стали позже, а отсутствие
+    // и списка, и числа означает подсчёт строго по правилам.
+    customProficiencyBonus: z.coerce.number().int().optional().catch(undefined),
+    customInitiativeBonus: z.coerce.number().int().optional().catch(undefined),
+    customProficiencyBonuses: z
+      .array(customBonusSchema)
+      .optional()
+      .catch(undefined),
+    customInitiativeBonuses: z
+      .array(customBonusSchema)
+      .optional()
+      .catch(undefined),
   })
-  .catch(() => ({ ...DEFAULT_CHARACTER.settings }));
+  .catch(() => ({
+    ...DEFAULT_CHARACTER.settings,
+    customProficiencyBonuses: [],
+    customInitiativeBonuses: [],
+  }))
+  .transform(
+    ({
+      customProficiencyBonus,
+      customInitiativeBonus,
+      customProficiencyBonuses,
+      customInitiativeBonuses,
+      ...settings
+    }) => ({
+      ...settings,
+      customProficiencyBonuses: toCustomBonuses(
+        customProficiencyBonuses,
+        customProficiencyBonus,
+      ),
+      customInitiativeBonuses: toCustomBonuses(
+        customInitiativeBonuses,
+        customInitiativeBonus,
+      ),
+    }),
+  );
 
 const experienceSchema = z
   .object({
@@ -314,6 +383,9 @@ const skillSchema = z.object({
   name: z.string(),
   ability: abilityKeySchema,
   proficiency: skillProficiencySchema.catch('none'),
+  // Свои бонусы навыка появились позже самих навыков: у листов без них навык
+  // считается строго по правилам.
+  bonuses: z.array(customBonusSchema).catch([]),
 });
 
 const levelHitPointsSchema = z.object({
@@ -329,6 +401,15 @@ const healthSchema = z
     // Листы до появления учёта прироста записей не имеют: снижение уровня у них
     // максимум не тронет, пока уровни не будут взяты заново.
     levelGains: z.array(levelHitPointsSchema).catch([]),
+    // Листы, сохранённые до появления истощения, читаются с нулевым уровнем.
+    // Уровень вне границ правил (правка файла руками) тоже сбрасывается в ноль:
+    // дальше он живёт в подсчётах отдыха и подписях, где допустимы только 0…6.
+    exhaustion: z.coerce
+      .number()
+      .int()
+      .min(EXHAUSTION_LEVEL_MIN)
+      .max(EXHAUSTION_LEVEL_MAX)
+      .catch(EXHAUSTION_LEVEL_MIN),
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.health }));
 

@@ -30,6 +30,7 @@ import {
   SHEET_IMPORT_WARNINGS_TITLE,
   SHEET_SHARED_COPY_ERROR_TITLE,
   SHEET_SHARED_COPY_SUCCESS_TITLE,
+  toStoredSettings,
   updateCharacterSheet,
 } from '../model';
 import { useCharacterSheet } from './useCharacterSheet';
@@ -570,7 +571,9 @@ export function useCharacterSheetList() {
 
     isMutating.value = true;
 
-    const next: Character = { ...target, settings };
+    // Чистка своих бонусов та же, что у открытого листа: у него её делает
+    // `setSettings`, а сюда документ уходит на бэк напрямую.
+    const next: Character = { ...target, settings: toStoredSettings(settings) };
 
     try {
       await updateCharacterSheet(next.id, next);

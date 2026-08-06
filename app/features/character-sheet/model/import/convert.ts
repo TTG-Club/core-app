@@ -45,6 +45,7 @@ import {
   CURRENCY_AMOUNT_MAX,
   CURRENCY_AMOUNT_MIN,
   DRAFT_CHARACTER_ID,
+  EXHAUSTION_LEVEL_MIN,
   HIT_POINTS_MAX,
   LEVEL_MAX,
   LEVEL_MIN,
@@ -193,6 +194,9 @@ function toSkills(skills: Record<string, number>): CharacterSkill[] {
   return DEFAULT_CHARACTER.skills.map((skill) => ({
     ...skill,
     proficiency: levels.get(skill.name) ?? 'none',
+    // Свой список, а не ссылка на список заготовки: правки бонусов не должны
+    // доставаться заодно всем следующим импортам.
+    bonuses: [],
   }));
 }
 
@@ -716,6 +720,8 @@ export function convertLssCharacter(source: LssCharacter): Character {
       // Прирост максимума по уровням LSS не хранит: снижение уровня на листе
       // такой максимум не тронет, пока уровни не будут взяты заново.
       levelGains: [],
+      // Истощение LSS не хранит — импортированный лист приходит без него.
+      exhaustion: EXHAUSTION_LEVEL_MIN,
     },
     hitDice: toHitDice(source, level),
     armorClass:

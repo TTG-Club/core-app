@@ -41,6 +41,7 @@
     SheetCustomItemModal,
     SheetCustomSpellModal,
     SheetDamageModal,
+    SheetExhaustionPanel,
     SheetExperienceModal,
     SheetFeatAddModal,
     SheetFeatureAddModal,
@@ -67,6 +68,7 @@
     SheetShortRestModal,
     SheetSizeModal,
     SheetSkillsPanel,
+    SheetSkillsSettingsModal,
     SheetSpeciesWizardModal,
     SheetSpeedModal,
     SheetSpeedTile,
@@ -115,6 +117,7 @@
     toggleSpellPrepared,
     toggleSpellSlot,
     cycleSkillProficiency,
+    setExhaustion,
     adjustClassResource,
     adjustInventoryItemQuantity,
     toggleInventoryItemEquipped,
@@ -341,6 +344,8 @@
 
   const classResourcesModal = overlay.create(SheetClassResourcesModal);
 
+  const skillsSettingsModal = overlay.create(SheetSkillsSettingsModal);
+
   const currencyModal = overlay.create(SheetCurrencyModal);
 
   const proficiencyGroupsModal = overlay.create(SheetProficiencyGroupsModal, {
@@ -534,6 +539,14 @@
     }
 
     classResourcesModal.open();
+  }
+
+  function handleSkillsSettings() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    skillsSettingsModal.open();
   }
 
   function handleCurrencyEdit() {
@@ -978,9 +991,9 @@
           display:contents: все блоки становятся прямыми элементами сетки.
           Четыре плитки показателей без order-* всплывают наверх (2×2, а с @md —
           одной строкой), остальные блоки растягиваются на всю ширину и идут в
-          порядке order-*: здоровье → ресурсы класса → навыки → спасброски →
-          владения. На sm колонки восстанавливаются — двухколоночная раскладка
-          прежняя.
+          порядке order-*: здоровье → истощение → ресурсы класса → навыки →
+          спасброски → владения. На sm колонки восстанавливаются —
+          двухколоночная раскладка прежняя.
         -->
         <div class="grid grid-cols-2 gap-4 max-sm:@md:grid-cols-4">
           <div class="flex flex-col gap-4 max-sm:contents">
@@ -1008,16 +1021,22 @@
               @edit="handleHealthEdit"
             />
 
+            <SheetExhaustionPanel
+              :level="character.health.exhaustion"
+              class="max-sm:order-2 max-sm:col-span-full"
+              @select="setExhaustion"
+            />
+
             <SheetSavingThrowsPanel
               :rows="savingThrowRows"
-              class="max-sm:order-4 max-sm:col-span-full"
+              class="max-sm:order-5 max-sm:col-span-full"
               @roll="handleSavingThrowRoll"
               @toggle="toggleSavingThrowProficiency"
             />
 
             <SheetProficienciesPanel
               :proficiencies="character.proficiencies"
-              class="max-sm:order-5 max-sm:col-span-full"
+              class="max-sm:order-6 max-sm:col-span-full"
               @edit="handleProficienciesEdit"
             />
           </div>
@@ -1039,16 +1058,17 @@
 
             <SheetClassResourcesPanel
               :resources="character.classResources"
-              class="max-sm:order-2 max-sm:col-span-full"
+              class="max-sm:order-3 max-sm:col-span-full"
               @adjust="adjustClassResource"
               @edit="handleClassResourcesEdit"
             />
 
             <SheetSkillsPanel
               :rows="skillRows"
-              class="grow max-sm:order-3 max-sm:col-span-full"
+              class="grow max-sm:order-4 max-sm:col-span-full"
               @cycle="cycleSkillProficiency"
               @roll="handleSkillRoll"
+              @settings="handleSkillsSettings"
             />
           </div>
         </div>

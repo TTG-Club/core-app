@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import { useCharacterSheet } from '../../composables';
   import {
+    EXHAUSTION_LEVEL_MIN,
+    EXHAUSTION_LONG_REST_RECOVERY,
     getHitDicePools,
     getLongRestHitDiceRecovery,
     getLongRestRecoveryLabels,
@@ -50,6 +52,18 @@
     getLongRestRecoveryLabels(character.value),
   );
 
+  /** Уровень истощения после отдыха: он снимает один уровень (PHB 2024). */
+  const exhaustionAfterRest = computed(() =>
+    Math.max(
+      EXHAUSTION_LEVEL_MIN,
+      health.value.exhaustion - EXHAUSTION_LONG_REST_RECOVERY,
+    ),
+  );
+
+  const hasExhaustion = computed(
+    () => health.value.exhaustion > EXHAUSTION_LEVEL_MIN,
+  );
+
   /** Описание тоста об окончании отдыха: что именно вернулось персонажу. */
   const finishDescription = computed(() => {
     const parts = [LONG_REST_LABELS.finishedHitPoints];
@@ -57,6 +71,12 @@
     if (restoredDiceTotal.value > 0) {
       parts.push(
         `${LONG_REST_LABELS.finishedDice}: ${restoredDiceTotal.value}.`,
+      );
+    }
+
+    if (hasExhaustion.value) {
+      parts.push(
+        `${LONG_REST_LABELS.finishedExhaustion}: ${exhaustionAfterRest.value}.`,
       );
     }
 
@@ -179,6 +199,44 @@
             <template v-if="health.temporary > 0">
               {{ LONG_REST_LABELS.temporaryNote }}
             </template>
+          </span>
+        </div>
+
+        <!-- Истощение показывается только тем, у кого оно есть: отдых снимает
+          один уровень -->
+        <div
+          v-if="hasExhaustion"
+          class="flex flex-col gap-2 rounded-lg bg-elevated/40 p-3"
+        >
+          <div class="flex items-end justify-between gap-3">
+            <div class="flex flex-col gap-1">
+              <span
+                class="text-[10px] font-bold tracking-wider text-muted uppercase"
+              >
+                {{ LONG_REST_LABELS.exhaustionTitle }}
+              </span>
+
+              <span
+                class="text-2xl leading-none font-bold text-warning tabular-nums"
+              >
+                {{ health.exhaustion }}
+              </span>
+            </div>
+
+            <span
+              class="flex items-center gap-1 text-sm font-bold text-success"
+            >
+              <UIcon
+                name="tabler:arrow-down"
+                class="size-4"
+              />
+
+              {{ exhaustionAfterRest }}
+            </span>
+          </div>
+
+          <span class="border-t border-default/50 pt-2 text-[10px] text-dimmed">
+            {{ LONG_REST_LABELS.exhaustionRecovery }}
           </span>
         </div>
 

@@ -15,6 +15,7 @@ import type {
   CharacterPersonality,
   CharacterPreparedSpells,
   CharacterSettings,
+  CharacterSkill,
   CharacterSpecies,
   CharacterSpeed,
   CharacterSpell,
@@ -50,6 +51,9 @@ import {
   CUSTOM_SPELL_URL_PREFIX,
   DEFAULT_CHARACTER,
   downloadCharacterJson,
+  EXHAUSTION_LEVEL_MAX,
+  EXHAUSTION_LEVEL_MIN,
+  EXHAUSTION_LONG_REST_RECOVERY,
   EXPERIENCE_MAX,
   fetchCatalogSpellDetail,
   fetchInventoryItemDescription,
@@ -108,12 +112,29 @@ import {
   toCopiedSpell,
   toCustomInventoryItem,
   toCustomSpell,
+  toStoredCustomBonuses,
+  toStoredSettings,
   toTrimmedPersonality,
   toUpdatedCustomInventoryItem,
   unionToolProficiencies,
   VISION_DISTANCE_MAX,
   VISION_DISTANCE_MIN,
 } from '../model';
+
+/**
+ * Приведение навыка к записи листа: название своего навыка обрезается по краям,
+ * свои бонусы чистятся тем же правилом, что и бонусы настроек листа.
+ *
+ * @param skill навык из черновика модалки.
+ * @returns навык для записи в лист.
+ */
+function toStoredSkill(skill: CharacterSkill): CharacterSkill {
+  return {
+    ...skill,
+    name: skill.name.trim(),
+    bonuses: toStoredCustomBonuses(skill.bonuses),
+  };
+}
 
 /**
  * Приведение количества денежной единицы к целому в допустимом диапазоне.
@@ -849,6 +870,31 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Установка уровня истощения (PHB 2024): уровни накопительные, шестой —
+   * смертельный, ниже нуля уровень не опускается. Игровое действие —
+   * блокировкой листа не ограничивается.
+   *
+   * @param level новый уровень истощения.
+   */
+  function setExhaustion(level: number): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      health: {
+        ...character.value.health,
+        exhaustion: clamp(
+          Math.trunc(level),
+          EXHAUSTION_LEVEL_MIN,
+          EXHAUSTION_LEVEL_MAX,
+        ),
+      },
+    };
+  }
+
+  /**
    * Установка костей хитов: оставшееся количество не превышает максимум.
    *
    * @param hitDice кости хитов из классов.
@@ -952,7 +998,8 @@ export function useCharacterSheet() {
    * заклинаний и все потраченные кости хитов — в редакции 2024 года отдых
    * возвращает их полностью, а не половину. Счётчикам умений возвращается
    * столько зарядов, сколько задано их правилом для продолжительного отдыха.
-   * Игровое действие: запертый лист его разрешает, чужой — нет.
+   * Отдых снимает один уровень истощения. Игровое действие: запертый лист его
+   * разрешает, чужой — нет.
    */
   function completeLongRest(): void {
     if (!ensureOwnSheet()) {
@@ -972,6 +1019,10 @@ export function useCharacterSheet() {
         ...character.value.health,
         current: character.value.health.max,
         temporary: 0,
+        exhaustion: Math.max(
+          EXHAUSTION_LEVEL_MIN,
+          character.value.health.exhaustion - EXHAUSTION_LONG_REST_RECOVERY,
+        ),
       },
       classResources: restoreClassResources(
         character.value.classResources,
@@ -1597,7 +1648,9 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Установка настроек листа (правил подсчёта).
+   * Установка настроек листа (правил подсчёта). Свои бонусы чистятся перед
+   * записью: пустое поле ввода отдаёт `NaN`, а бонусы мастерства входят в
+   * каждое второе число листа.
    *
    * @param settings новые настройки листа.
    */
@@ -1608,7 +1661,7 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
-      settings: { ...settings },
+      settings: toStoredSettings(settings),
     };
   }
 
@@ -2333,6 +2386,23 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Установка навыков целиком: модалка настройки правит характеристики навыков
+   * и их дополнительные бонусы, а уровни владения приходят из неё как есть.
+   *
+   * @param skills навыки из черновика модалки.
+   */
+  function setSkills(skills: CharacterSkill[]): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      skills: skills.map(toStoredSkill),
+    };
+  }
+
+  /**
    * Установка кошелька: количества стандартных монет ограничиваются диапазоном;
    * пользовательские валюты обрезаются по краям, их количество ограничивается, а
    * записи без сокращения (нечего показать в ряду) отбрасываются.
@@ -2430,6 +2500,7 @@ export function useCharacterSheet() {
     setName,
     setPersonality,
     setProficiencies,
+    setSkills,
     setToolProficiencies,
     setProgress,
     setSettings,
@@ -2442,6 +2513,7 @@ export function useCharacterSheet() {
     setSpeed,
     setHealth,
     setHitPoints,
+    setExhaustion,
     setHitDice,
     spendHitDice,
     completeShortRest,

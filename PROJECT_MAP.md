@@ -318,15 +318,50 @@ modals), so its capabilities are listed here rather than squeezed into the table
   grant spend nothing, and an exhausted circle warns instead.
 - Short & long rest from the header: short rest spends Hit Point Dice one by
   one, adding the Constitution modifier to every roll; long rest refills hit
-  points, spell slots, feature counters and half the Hit Point Dice. The shared
-  `SheetHitDiceSelect` picks which dice.
+  points, spell slots, feature counters and every spent Hit Point Die (the 2024
+  rules return all of them, not half), and removes one Exhaustion level. The
+  shared `SheetHitDiceSelect` picks which dice.
+- Exhaustion sits in its own panel right below the health one
+  (`SheetExhaustionPanel`): six steps, a click sets that level and a click on
+  the current one drops it by one (`setExhaustion`, a play action — a locked
+  sheet still allows it, a shared one does not). Each step spells out what it
+  costs (`getExhaustionSummary`: −2 per level on every D20 test, −5 ft of Speed
+  per level, death on the sixth) and the panel header opens the rule list. The
+  penalties are shown, not applied to the rolls and the speed tile. The level
+  lives in `health.exhaustion`, so it is saved by the usual autosave and sheets
+  stored before it read as `0`.
+- Skill settings (`SheetSkillsSettingsModal`, opened by the gear next to the
+  «Навыки» panel title — revealed on hover and always visible below `lg`, like
+  every other edit control of the sheet): every skill gets its ability picked
+  (the roll, the passive value and the PDF follow it), its proficiency level
+  cycled and any number of `CharacterCustomBonus` rows on top
+  (`SheetCustomBonusRows` again). A changed skill is outlined and can be reset
+  to the rules in one click (`getDefaultSkillAbility`), and in the panel its
+  modifier is underlined with a tooltip breaking the value down
+  (`getSkillBonusHint`: ability + proficiency + every bonus). The bonuses live
+  in `skill.bonuses` and flow through `getSkillValue`, so they reach the roll,
+  the passive value and the PDF; sheets saved before them read an empty list.
+- The same modal adds skills of your own (a name plus an ability, up to
+  `CUSTOM_SKILLS_MAX` — the PDF prints them under their ability and the panel
+  there is not endless). A custom skill lands in the shared list sorted by name
+  (`sortSkillsByName`), behaves like any other one — proficiency, bonuses, roll,
+  passive value, PDF — and is told apart by its name alone: whatever is not in
+  the sheet template is custom (`isCustomSkill`), so the row offers deletion
+  instead of a reset. Names are compared loosely (case, «ё», spacing) so the
+  same skill cannot be added twice.
 - Sheet settings (`SheetSettingsModal`, opened from the sheet header and from the
   list card) split into two tabs: «Атака оружием» (base attack ability) and
-  «Свои бонусы» — a custom proficiency bonus added on top of the one from the
-  level (it flows into saving throws, skills, weapon attacks and spellcasting via
-  `getCharacterProficiencyBonus`) and a custom initiative bonus added to the
-  Dexterity modifier (`getInitiativeBonus`, used by the tile, its roll and the
-  PDF). Sheets saved before the bonuses existed read them as `0`.
+  «Свои бонусы» — unlimited bonus rows (`SheetCustomBonusRows`) for the
+  proficiency bonus, added on top of the one from the level (it flows into saving
+  throws, skills, weapon attacks and spellcasting via
+  `getCharacterProficiencyBonus`), and for initiative, added to the Dexterity
+  modifier (`getInitiativeBonus`, used by the tile, its roll and the PDF). A row
+  is one `CharacterCustomBonus` — the record skills use as well: an optional
+  label plus a source that is either a flat number or an ability, whose modifier
+  is then taken automatically and follows the ability afterwards
+  (`getCustomBonusesValue`). Sheets saved with the earlier single number migrate
+  it into one number row; sheets saved before the bonuses existed read them as an
+  empty list.
 
 **Sharing**
 

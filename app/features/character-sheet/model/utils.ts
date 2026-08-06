@@ -17,6 +17,8 @@ import type {
   CharacterClass,
   CharacterClassResource,
   CharacterCurrency,
+  CharacterCustomBonus,
+  CharacterExhaustionEffects,
   CharacterExtraHitDie,
   CharacterFeature,
   CharacterHealth,
@@ -25,6 +27,7 @@ import type {
   CharacterInventoryItem,
   CharacterLevelHitPoints,
   CharacterPersonality,
+  CharacterSettings,
   CharacterSkill,
   CharacterSpecies,
   CharacterSpeed,
@@ -42,6 +45,7 @@ import type {
   ClassTableColumn,
   CurrencyKey,
   CustomArmorType,
+  CustomBonusSource,
   CustomFeatureDraft,
   CustomInventoryItemDraft,
   CustomInventoryKind,
@@ -82,6 +86,7 @@ import type {
   ResourceRecoveryRule,
   RollMode,
   SavingThrowRow,
+  SkillBreakdownPart,
   SkillRow,
   SpeciesFeatureSummary,
   SpeciesSummary,
@@ -159,7 +164,11 @@ import {
   CUSTOM_ARMOR_TYPE_BY_DEXTERITY_MOD,
   CUSTOM_ARMOR_TYPE_META,
   CUSTOM_BACKGROUND_URL_PREFIX,
+  CUSTOM_BONUS_FLAT_SOURCE,
+  CUSTOM_BONUS_MAX,
+  CUSTOM_BONUS_MIN,
   CUSTOM_CLASS_URL_PREFIX,
+  CUSTOM_FLAT_BONUS_LABEL,
   CUSTOM_INVENTORY_KIND_CATEGORIES,
   CUSTOM_INVENTORY_URL_PREFIX,
   CUSTOM_ITEM_WEIGHT_MAX,
@@ -182,6 +191,11 @@ import {
   DEFAULT_ROLL_DICE_FACES,
   DEFAULT_WEAPON_ATTACK_ABILITY,
   DICE_NOTATION_LETTER,
+  EXHAUSTION_D20_PENALTY_PER_LEVEL,
+  EXHAUSTION_LABELS,
+  EXHAUSTION_LEVEL_MAX,
+  EXHAUSTION_LEVEL_MIN,
+  EXHAUSTION_SPEED_PENALTY_PER_LEVEL,
   FEATURE_ORIGIN_GROUP_ORDER,
   FEATURE_ORIGIN_LABELS,
   FILTER_CHIP_CLASS,
@@ -209,6 +223,7 @@ import {
   NEW_CUSTOM_INVENTORY_ITEM,
   ORIGIN_FEAT_CATEGORY,
   PACT_SPELL_SLOTS_LABEL,
+  PASSIVE_SKILL_BASE,
   PERSONALITY_EMPTY_VALUE,
   PERSONALITY_TEXT_FIELDS,
   PREPARED_SPELLS_COLUMN_KEYWORD,
@@ -242,6 +257,7 @@ import {
   SHEET_UNARMORED_LABEL,
   SIZE_LABEL_WORDS,
   SKILL_OWNED_HINTS,
+  SKILL_PROFICIENCY_LABELS,
   SKILL_PROFICIENCY_MULTIPLIERS,
   SPEED_PARSE_FALLBACK,
   SPEED_PRIMARY_ORDER,
@@ -274,6 +290,7 @@ import {
   WEAPON_TRAIT_MATCH_KEYWORDS,
   WEIGHT_DECIMALS,
 } from './constants';
+import { DEFAULT_CHARACTER } from './mock';
 
 /**
  * Форматирование готового бонуса со знаком.
@@ -305,12 +322,15 @@ export function getProficiencyBonus(level: number): number {
 export function getCharacterProficiencyBonus(character: Character): number {
   return (
     getProficiencyBonus(character.level)
-    + character.settings.customProficiencyBonus
+    + getCustomBonusesValue(
+      character,
+      character.settings.customProficiencyBonuses,
+    )
   );
 }
 
 /**
- * Бонус инициативы: модификатор Ловкости плюс свой бонус из настроек.
+ * Бонус инициативы: модификатор Ловкости плюс свои бонусы из настроек.
  *
  * @param character персонаж.
  * @returns итоговый бонус инициативы.
@@ -318,7 +338,10 @@ export function getCharacterProficiencyBonus(character: Character): number {
 export function getInitiativeBonus(character: Character): number {
   return (
     getModifier(character.abilities.dexterity)
-    + character.settings.customInitiativeBonus
+    + getCustomBonusesValue(
+      character,
+      character.settings.customInitiativeBonuses,
+    )
   );
 }
 
@@ -373,7 +396,279 @@ export function getSkillValue(
     getCharacterProficiencyBonus(character)
     * SKILL_PROFICIENCY_MULTIPLIERS[skill.proficiency];
 
-  return modifier + Math.floor(proficiencyPart);
+  return (
+    modifier
+    + Math.floor(proficiencyPart)
+    + getCustomBonusesValue(character, skill.bonuses)
+  );
+}
+
+/**
+ * Характеристика навыка по правилам: список навыков любого листа заведён из
+ * заготовки, поэтому подменённой характеристике всегда есть куда откатиться.
+ *
+ * @param skillName название навыка.
+ * @returns характеристика навыка по правилам; null — навыка нет в заготовке.
+ */
+export function getDefaultSkillAbility(skillName: string): AbilityKey | null {
+  const defaultSkill = DEFAULT_CHARACTER.skills.find(
+    (skill) => skill.name === skillName,
+  );
+
+  return defaultSkill?.ability ?? null;
+}
+
+/**
+ * Свой навык игрока: в заготовке листа такого названия нет, значит правилами
+ * он не задан. Отдельного признака в документе не нужно — список навыков по
+ * правилам закрыт и известен заранее.
+ *
+ * @param skillName название навыка.
+ * @returns `true`, если навык заведён игроком.
+ */
+export function isCustomSkill(skillName: string): boolean {
+  return getDefaultSkillAbility(skillName) === null;
+}
+
+/**
+ * Есть ли уже навык с таким названием. Сравнение нестрогое (регистр, «ё»,
+ * лишние пробелы): «ловкость рук» и «Ловкость  Рук» — один и тот же навык, а
+ * два одноимённых навыка сломали бы правку по названию.
+ *
+ * @param skills навыки персонажа.
+ * @param name проверяемое название.
+ * @returns `true`, если навык с таким названием уже есть.
+ */
+export function hasSkillName(skills: CharacterSkill[], name: string): boolean {
+  const key = normalizeCatalogName(name);
+
+  return skills.some((skill) => normalizeCatalogName(skill.name) === key);
+}
+
+/**
+ * Свой навык из введённого названия: владения и своих бонусов у нового навыка
+ * нет — их игрок задаёт в той же модалке.
+ *
+ * @param name название навыка.
+ * @param ability характеристика навыка.
+ * @returns свой навык для списка навыков листа.
+ */
+export function toCustomSkill(
+  name: string,
+  ability: AbilityKey,
+): CharacterSkill {
+  return {
+    name: name.trim(),
+    ability,
+    proficiency: 'none',
+    bonuses: [],
+  };
+}
+
+/**
+ * Навыки по алфавиту: свой навык встаёт среди навыков по правилам, а не в
+ * хвост списка — и в панели листа, и в PDF его ищут по алфавиту.
+ *
+ * @param skills навыки персонажа.
+ * @returns навыки, отсортированные по названию.
+ */
+export function sortSkillsByName(skills: CharacterSkill[]): CharacterSkill[] {
+  return [...skills].sort((left, right) =>
+    left.name.localeCompare(right.name, 'ru'),
+  );
+}
+
+/**
+ * Приведение своих бонусов к записи листа: числа округляются и ограничиваются
+ * допустимым диапазоном, пометки источников обрезаются по краям. Очищенное
+ * поле ввода отдаёт `NaN`, а свои бонусы входят в бонус мастерства — без этой
+ * подстраховки `NaN` разошёлся бы по всему листу: спасброски, навыки, атаки и
+ * сложность спасбросков от заклинаний стали бы пустыми.
+ *
+ * @param bonuses свои бонусы из черновика формы.
+ * @returns свои бонусы для записи в лист.
+ */
+export function toStoredCustomBonuses(
+  bonuses: CharacterCustomBonus[],
+): CharacterCustomBonus[] {
+  return bonuses.map((bonus) => ({
+    ...bonus,
+    value: Number.isFinite(bonus.value)
+      ? clamp(Math.trunc(bonus.value), CUSTOM_BONUS_MIN, CUSTOM_BONUS_MAX)
+      : 0,
+    label: bonus.label.trim(),
+  }));
+}
+
+/**
+ * Приведение настроек листа к записи: своим бонусам мастерства и инициативы
+ * нужна та же чистка, что и бонусам навыка.
+ *
+ * @param settings настройки из черновика модалки.
+ * @returns настройки для записи в лист.
+ */
+export function toStoredSettings(
+  settings: CharacterSettings,
+): CharacterSettings {
+  return {
+    ...settings,
+    customProficiencyBonuses: toStoredCustomBonuses(
+      settings.customProficiencyBonuses,
+    ),
+    customInitiativeBonuses: toStoredCustomBonuses(
+      settings.customInitiativeBonuses,
+    ),
+  };
+}
+
+/**
+ * Источник своего бонуса одним значением — для селектора, где своё число и
+ * характеристики стоят общим списком.
+ *
+ * @param bonus свой бонус.
+ * @returns источник бонуса.
+ */
+export function getCustomBonusSource(
+  bonus: CharacterCustomBonus,
+): CustomBonusSource {
+  return bonus.kind === 'ability' ? bonus.ability : CUSTOM_BONUS_FLAT_SOURCE;
+}
+
+/**
+ * Смена источника своего бонуса: вид и характеристика берутся из выбранного
+ * источника, а своё число остаётся нетронутым — оно ждёт возврата к нему.
+ *
+ * @param bonus свой бонус.
+ * @param source выбранный источник бонуса.
+ * @returns бонус с новым источником.
+ */
+export function withCustomBonusSource(
+  bonus: CharacterCustomBonus,
+  source: CustomBonusSource,
+): CharacterCustomBonus {
+  return source === CUSTOM_BONUS_FLAT_SOURCE
+    ? { ...bonus, kind: 'flat' }
+    : { ...bonus, kind: 'ability', ability: source };
+}
+
+/**
+ * Значение одного своего бонуса: модификатор выбранной характеристики либо
+ * своё число.
+ *
+ * @param character персонаж.
+ * @param bonus свой бонус.
+ * @returns вклад бонуса в итоговое значение.
+ */
+export function getCustomBonusValue(
+  character: Character,
+  bonus: CharacterCustomBonus,
+): number {
+  if (bonus.kind === 'ability') {
+    return getModifier(character.abilities[bonus.ability]);
+  }
+
+  return bonus.value;
+}
+
+/**
+ * Сумма своих бонусов сверх правил.
+ *
+ * @param character персонаж.
+ * @param bonuses свои бонусы.
+ * @returns суммарный вклад своих бонусов.
+ */
+export function getCustomBonusesValue(
+  character: Character,
+  bonuses: CharacterCustomBonus[],
+): number {
+  return bonuses.reduce(
+    (sum, bonus) => sum + getCustomBonusValue(character, bonus),
+    0,
+  );
+}
+
+/**
+ * Подпись источника бонуса: своя пометка игрока, а без неё — характеристика
+ * или общее название своего бонуса.
+ *
+ * @param bonus свой бонус.
+ * @returns подпись источника бонуса.
+ */
+export function getCustomBonusLabel(bonus: CharacterCustomBonus): string {
+  if (bonus.label) {
+    return bonus.label;
+  }
+
+  return bonus.kind === 'ability'
+    ? ABILITY_LABELS[bonus.ability]
+    : CUSTOM_FLAT_BONUS_LABEL;
+}
+
+/**
+ * Разбор значения навыка на слагаемые: характеристика, бонус мастерства по
+ * уровню владения и каждый свой бонус. Владения нет — бонуса мастерства в
+ * разборе тоже нет, показывать нулевую строку незачем.
+ *
+ * @param character персонаж.
+ * @param skill навык персонажа.
+ * @returns слагаемые значения навыка в порядке подсчёта.
+ */
+export function getSkillBreakdown(
+  character: Character,
+  skill: CharacterSkill,
+): SkillBreakdownPart[] {
+  const proficiencyPart = Math.floor(
+    getCharacterProficiencyBonus(character)
+      * SKILL_PROFICIENCY_MULTIPLIERS[skill.proficiency],
+  );
+
+  const proficiencyParts: SkillBreakdownPart[] =
+    skill.proficiency === 'none'
+      ? []
+      : [
+          {
+            id: 'proficiency',
+            label: SKILL_PROFICIENCY_LABELS[skill.proficiency],
+            formattedValue: getFormattedBonus(proficiencyPart),
+          },
+        ];
+
+  return [
+    {
+      id: 'ability',
+      label: ABILITY_LABELS[skill.ability],
+      formattedValue: getFormattedBonus(
+        getModifier(character.abilities[skill.ability]),
+      ),
+    },
+    ...proficiencyParts,
+    ...skill.bonuses.map((bonus) => ({
+      id: bonus.id,
+      label: getCustomBonusLabel(bonus),
+      formattedValue: getFormattedBonus(getCustomBonusValue(character, bonus)),
+    })),
+  ];
+}
+
+/**
+ * Подсказка к значению навыка со своими бонусами: без разбора итог не сходится
+ * с характеристикой строки. Навык по правилам объяснять нечего — у него `null`.
+ *
+ * @param character персонаж.
+ * @param skill навык персонажа.
+ * @returns разбор значения строкой или null.
+ */
+export function getSkillBonusHint(
+  character: Character,
+  skill: CharacterSkill,
+): string | null {
+  if (!skill.bonuses.length) {
+    return null;
+  }
+
+  return getSkillBreakdown(character, skill)
+    .map((part) => `${part.label} ${part.formattedValue}`)
+    .join(' · ');
 }
 
 /**
@@ -466,7 +761,8 @@ export function getSkillRows(character: Character): SkillRow[] {
       proficiency: skill.proficiency,
       value,
       formattedModifier: getFormattedBonus(value),
-      passiveValue: 10 + value,
+      passiveValue: PASSIVE_SKILL_BASE + value,
+      bonusHint: getSkillBonusHint(character, skill),
     };
   });
 }
@@ -2730,6 +3026,55 @@ export function adjustHealthForConstitution(
       amount: Math.max(HIT_POINTS_LEVEL_GAIN_MIN, gain.amount + modifierDelta),
     })),
   };
+}
+
+/**
+ * Что даёт уровень истощения по правилам 2024 года: каждый уровень снижает все
+ * проверки к20 на 2 и все скорости на 5 футов, шестой уровень — смертельный.
+ *
+ * @param level уровень истощения (значения вне границ обрезаются).
+ * @returns эффекты уровня истощения.
+ */
+export function getExhaustionEffects(
+  level: number,
+): CharacterExhaustionEffects {
+  const currentLevel = clamp(
+    Math.trunc(level),
+    EXHAUSTION_LEVEL_MIN,
+    EXHAUSTION_LEVEL_MAX,
+  );
+
+  return {
+    level: currentLevel,
+    d20Penalty: currentLevel * EXHAUSTION_D20_PENALTY_PER_LEVEL,
+    speedPenalty: currentLevel * EXHAUSTION_SPEED_PENALTY_PER_LEVEL,
+    isLethal: currentLevel === EXHAUSTION_LEVEL_MAX,
+  };
+}
+
+/**
+ * Строка эффектов уровня истощения для подписи блока и подсказок делений:
+ * нулевой уровень — истощения нет, шестой — смерть, остальные — штраф к
+ * проверкам к20 и снижение скорости.
+ *
+ * @param level уровень истощения.
+ * @returns описание эффектов уровня.
+ */
+export function getExhaustionSummary(level: number): string {
+  const effects = getExhaustionEffects(level);
+
+  if (effects.level === EXHAUSTION_LEVEL_MIN) {
+    return EXHAUSTION_LABELS.none;
+  }
+
+  if (effects.isLethal) {
+    return EXHAUSTION_LABELS.death;
+  }
+
+  return [
+    `−${effects.d20Penalty} ${EXHAUSTION_LABELS.d20Effect}`,
+    `${EXHAUSTION_LABELS.speedEffect} −${effects.speedPenalty} ${EXHAUSTION_LABELS.feet}`,
+  ].join(', ');
 }
 
 /**

@@ -1,15 +1,17 @@
 <script setup lang="ts">
-  import type { AbilityKey, Character } from '../../model';
+  import type {
+    AbilityKey,
+    Character,
+    CharacterCustomBonus,
+  } from '../../model';
 
   import { useCharacterSheetList } from '../../composables';
   import {
     ABILITY_LABELS,
-    CUSTOM_BONUS_FORMAT_OPTIONS,
-    CUSTOM_BONUS_MAX,
-    CUSTOM_BONUS_MIN,
     CUSTOM_INITIATIVE_BONUS_HINT,
     CUSTOM_PROFICIENCY_BONUS_HINT,
     DEFAULT_WEAPON_ATTACK_ABILITY,
+    getCustomBonusesValue,
     getFormattedBonus,
     getProficiencyBonus,
     SHEET_SETTINGS_LABELS,
@@ -20,6 +22,7 @@
     WEAPON_ATTACK_ABILITY_OPTIONS,
     WEAPON_ATTACK_FINESSE_HINT,
   } from '../../model';
+  import SheetCustomBonusSection from './SheetCustomBonusSection.vue';
 
   // Модалка открывается и из шапки листа, и из карточки списка, поэтому
   // персонаж приходит пропом, а сохранение идёт через список: он сам решает,
@@ -38,12 +41,18 @@
     AbilityKey | typeof WEAPON_ATTACK_ABILITY_AUTO
   >(props.character.settings.weaponAttackAbility ?? WEAPON_ATTACK_ABILITY_AUTO);
 
-  const draftProficiencyBonus = ref(
-    props.character.settings.customProficiencyBonus,
+  // Строки правятся на месте, поэтому черновик берёт копии записей: пока не
+  // нажато «Применить», настройки листа остаются прежними.
+  const draftProficiencyBonuses = ref<CharacterCustomBonus[]>(
+    props.character.settings.customProficiencyBonuses.map((bonus) => ({
+      ...bonus,
+    })),
   );
 
-  const draftInitiativeBonus = ref(
-    props.character.settings.customInitiativeBonus,
+  const draftInitiativeBonuses = ref<CharacterCustomBonus[]>(
+    props.character.settings.customInitiativeBonuses.map((bonus) => ({
+      ...bonus,
+    })),
   );
 
   /**
@@ -76,14 +85,14 @@
     getProficiencyBonus(props.character.level),
   );
 
-  const formattedLevelProficiencyBonus = computed(() =>
-    getFormattedBonus(levelProficiencyBonus.value),
-  );
-
   // Итоги считаются от черновика, а не от сохранённых настроек: числа в модалке
   // меняются сразу, ещё до «Применить».
+  const customProficiencyBonus = computed(() =>
+    getCustomBonusesValue(props.character, draftProficiencyBonuses.value),
+  );
+
   const proficiencyBonus = computed(
-    () => levelProficiencyBonus.value + draftProficiencyBonus.value,
+    () => levelProficiencyBonus.value + customProficiencyBonus.value,
   );
 
   const formattedProficiencyBonus = computed(() =>
@@ -114,14 +123,6 @@
     getModifier(props.character.abilities.dexterity),
   );
 
-  const dexterityModifierLabel = computed(() =>
-    getAbilityModifierLabel('dexterity'),
-  );
-
-  const formattedInitiativeBonus = computed(() =>
-    getFormattedBonus(dexterityModifier.value + draftInitiativeBonus.value),
-  );
-
   const isSaving = ref(false);
 
   async function handleApply() {
@@ -132,8 +133,14 @@
         draftWeaponAbility.value === WEAPON_ATTACK_ABILITY_AUTO
           ? null
           : draftWeaponAbility.value,
-      customProficiencyBonus: draftProficiencyBonus.value,
-      customInitiativeBonus: draftInitiativeBonus.value,
+      // Копии, а не сами черновики: модалка остаётся открытой при ошибке
+      // сохранения, и её правки не должны править уже сохранённые настройки.
+      customProficiencyBonuses: draftProficiencyBonuses.value.map((bonus) => ({
+        ...bonus,
+      })),
+      customInitiativeBonuses: draftInitiativeBonuses.value.map((bonus) => ({
+        ...bonus,
+      })),
     });
 
     isSaving.value = false;
@@ -233,90 +240,28 @@
         </template>
 
         <template #custom-bonuses>
-          <div class="flex flex-col gap-3">
-            <h3 class="text-sm font-semibold text-highlighted">
-              {{ SHEET_SETTINGS_LABELS.proficiencyBonusTitle }}
-            </h3>
+          <div class="flex flex-col gap-4">
+            <SheetCustomBonusSection
+              v-model="draftProficiencyBonuses"
+              :character="character"
+              :title="SHEET_SETTINGS_LABELS.proficiencyBonusTitle"
+              :base-label="SHEET_SETTINGS_LABELS.levelProficiencyBonusTitle"
+              :base-value="levelProficiencyBonus"
+              :total-label="SHEET_SETTINGS_LABELS.totalProficiencyBonusTitle"
+              :hint="CUSTOM_PROFICIENCY_BONUS_HINT"
+            />
 
-            <div class="flex items-center justify-between gap-4">
-              <span class="text-sm text-toned">
-                {{ SHEET_SETTINGS_LABELS.customBonusTitle }}
-              </span>
+            <USeparator />
 
-              <UInputNumber
-                v-model="draftProficiencyBonus"
-                :min="CUSTOM_BONUS_MIN"
-                :max="CUSTOM_BONUS_MAX"
-                :format-options="CUSTOM_BONUS_FORMAT_OPTIONS"
-                class="w-48"
-              />
-            </div>
-
-            <div class="flex items-center justify-between gap-4 text-sm">
-              <span class="text-toned">
-                {{ SHEET_SETTINGS_LABELS.levelProficiencyBonusTitle }}
-              </span>
-
-              <span class="text-toned">
-                {{ formattedLevelProficiencyBonus }}
-              </span>
-            </div>
-
-            <div class="flex items-center justify-between gap-4 text-sm">
-              <span class="text-toned">
-                {{ SHEET_SETTINGS_LABELS.totalProficiencyBonusTitle }}
-              </span>
-
-              <span class="font-semibold text-highlighted">
-                {{ formattedProficiencyBonus }}
-              </span>
-            </div>
-
-            <p class="text-xs text-dimmed">
-              {{ CUSTOM_PROFICIENCY_BONUS_HINT }}
-            </p>
-
-            <USeparator class="my-1" />
-
-            <h3 class="text-sm font-semibold text-highlighted">
-              {{ SHEET_SETTINGS_LABELS.initiativeTitle }}
-            </h3>
-
-            <div class="flex items-center justify-between gap-4">
-              <span class="text-sm text-toned">
-                {{ SHEET_SETTINGS_LABELS.customBonusTitle }}
-              </span>
-
-              <UInputNumber
-                v-model="draftInitiativeBonus"
-                :min="CUSTOM_BONUS_MIN"
-                :max="CUSTOM_BONUS_MAX"
-                :format-options="CUSTOM_BONUS_FORMAT_OPTIONS"
-                class="w-48"
-              />
-            </div>
-
-            <div class="flex items-center justify-between gap-4 text-sm">
-              <span class="text-toned">
-                {{ SHEET_SETTINGS_LABELS.abilityModifierTitle }}
-              </span>
-
-              <span class="text-toned">{{ dexterityModifierLabel }}</span>
-            </div>
-
-            <div class="flex items-center justify-between gap-4 text-sm">
-              <span class="text-toned">
-                {{ SHEET_SETTINGS_LABELS.totalInitiativeTitle }}
-              </span>
-
-              <span class="font-semibold text-highlighted">
-                {{ formattedInitiativeBonus }}
-              </span>
-            </div>
-
-            <p class="text-xs text-dimmed">
-              {{ CUSTOM_INITIATIVE_BONUS_HINT }}
-            </p>
+            <SheetCustomBonusSection
+              v-model="draftInitiativeBonuses"
+              :character="character"
+              :title="SHEET_SETTINGS_LABELS.initiativeTitle"
+              :base-label="ABILITY_LABELS.dexterity"
+              :base-value="dexterityModifier"
+              :total-label="SHEET_SETTINGS_LABELS.totalInitiativeTitle"
+              :hint="CUSTOM_INITIATIVE_BONUS_HINT"
+            />
           </div>
         </template>
       </UTabs>

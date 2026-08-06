@@ -18,6 +18,7 @@ import {
   ABILITY_LABELS,
   ARMOR_PROFICIENCY_GROUPS,
   LANGUAGE_PROFICIENCY_GROUPS,
+  PASSIVE_SKILL_BASE,
   SHEET_EMPTY_LABELS,
   WEAPON_PROFICIENCY_GROUPS,
 } from '../constants';
@@ -950,8 +951,8 @@ function drawSensesPanel(
   // Пассивная внимательность живёт здесь, а не плиткой: подпись целиком в узкую
   // плитку не влезает, а по смыслу это тоже про восприятие.
   const passivePerception = perceptionSkill
-    ? 10 + getSkillValue(character, perceptionSkill)
-    : 10 + getModifier(character.abilities.wisdom);
+    ? PASSIVE_SKILL_BASE + getSkillValue(character, perceptionSkill)
+    : PASSIVE_SKILL_BASE + getModifier(character.abilities.wisdom);
 
   return drawPanel(
     context,
