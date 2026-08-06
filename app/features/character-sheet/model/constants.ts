@@ -2951,6 +2951,20 @@ export const LANGUAGE_PROFICIENCY_GROUPS: LanguageProficiencyGroup[] = [
   },
 ];
 
+/** Подписи блока своего языка в модалке владения языками. */
+export const SHEET_LANGUAGE_LABELS = {
+  customTitle: 'Свой язык',
+  customHint:
+    'Языка нет в списке — впишите название, оно попадёт в лист как есть.',
+  customPlaceholder: 'Название языка',
+  customEmpty: 'Своих языков пока нет',
+  addCustom: 'Добавить',
+  removeCustom: 'Удалить язык',
+};
+
+/** Ограничение длины названия своего языка. */
+export const CUSTOM_LANGUAGE_NAME_MAX_LENGTH = 80;
+
 /** Иконка колонки владения оружием. */
 export const WEAPON_PROFICIENCY_ICON = 'tabler:circle-filled';
 
