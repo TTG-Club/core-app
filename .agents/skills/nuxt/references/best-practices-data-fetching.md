@@ -115,6 +115,35 @@ const { data: post } = await useAsyncData(
 </script>
 ```
 
+### ⚠️ Reusable Components: Keys MUST Be Reactive
+
+A template literal is evaluated **once** during `setup`. That is safe on pages
+(Nuxt remounts them when a route param changes), but **not** in a component that
+is reused with a new prop — a drawer or a split-panel detail view. The key never
+changes, no request is made, and the component keeps showing the data of
+whatever was opened first.
+
+```vue
+<script setup lang="ts">
+const { url } = defineProps<{ url: string }>()
+
+// ❌ Key is frozen at setup — a reused component keeps stale data
+const { data } = await useAsyncData(`item-${url}-children`, () =>
+  fetchChildren(url),
+)
+
+// ✅ Key is reactive — changing the prop triggers a refetch
+const { data: children, status } = await useAsyncData(
+  computed(() => `item-${url}-children`),
+  () => fetchChildren(url),
+)
+
+// On key change Nuxt seeds the new key with the previous key's data, so hide
+// the list while the request is in flight — otherwise foreign data flashes.
+const isLoading = computed(() => status.value === 'pending')
+</script>
+```
+
 ## Handle Loading States Properly
 
 ```vue

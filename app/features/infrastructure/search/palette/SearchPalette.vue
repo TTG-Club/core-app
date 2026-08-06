@@ -17,7 +17,7 @@
   const searchTerm = shallowRef('');
   const searchQuery = refDebounced(searchTerm, 700);
 
-  const { data, status } = await useAsyncData(
+  const { data: searchResult, status } = await useAsyncData(
     computed(
       () =>
         `full-text-search${
@@ -52,7 +52,7 @@
   );
 
   const groups = computed(() => {
-    if (!data.value?.items?.length) {
+    if (!searchResult.value?.items?.length) {
       return [];
     }
 
@@ -60,7 +60,7 @@
       id: type,
       label: getTypeNameBySearchItem(type),
       ignoreFilter: true,
-      items: data.value.items
+      items: searchResult.value.items
         .filter((item) => item.type === type)
         .map((item) => ({
           label: item.name.rus,
@@ -113,12 +113,12 @@
         </template>
 
         <template
-          v-if="data.items && data.total"
+          v-if="searchResult.items && searchResult.total"
           #footer
         >
           <div class="flex items-center justify-between gap-2 text-xs">
             <span class="text-secondary">
-              Показано {{ data.filtered }} из {{ data.total }}
+              Показано {{ searchResult.filtered }} из {{ searchResult.total }}
             </span>
           </div>
         </template>
