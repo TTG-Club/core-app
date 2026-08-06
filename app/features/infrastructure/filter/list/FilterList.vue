@@ -3,6 +3,7 @@
 
   import {
     getAvailableGroupItems,
+    getSearchedGroupItems,
     hasTouchedItem,
     isGroupDependentOn,
   } from '../utils';
@@ -28,14 +29,27 @@
     return groupIndex === 0 ? 'top' : 'bottom';
   }
 
-  /** Определяет видимость группы в обычном режиме и режиме предпросмотра. */
-  function isGroupVisible(items: FilterItems, isPreview: boolean): boolean {
+  const { preview = false, search = '' } = defineProps<{
+    preview?: boolean;
+    search?: string;
+  }>();
+
+  /**
+   * Определяет видимость группы в обычном режиме и режиме предпросмотра.
+   *
+   * При активном поиске пустой набор означает, что не подошло ни одно значение группы и её название — показывать такую группу нечем. Без поиска поведение прежнее: группа без доступных значений остаётся на месте.
+   */
+  function isGroupVisible(
+    items: FilterItems,
+    isPreview: boolean,
+    isSearching: boolean,
+  ): boolean {
+    if (isSearching && items.length === 0) {
+      return false;
+    }
+
     return !isPreview || hasTouchedItem(items);
   }
-
-  const { preview = false } = defineProps<{
-    preview?: boolean;
-  }>();
 
   const filter = defineModel<FilterGroups>({
     required: true,
@@ -52,6 +66,18 @@
     return preview ? 'standalone' : getGroupPosition(itemIndex, groupLength);
   }
 
+  /** Значения группы, доступные каскадом зависимостей и подходящие под поиск. Поиск применяется поверх каскада, чтобы не показать значение, которое зависимая группа уже скрыла. */
+  function getVisibleGroupItems(
+    group: FilterGroup,
+    groups: FilterGroups,
+  ): FilterItems {
+    return getSearchedGroupItems(
+      group,
+      getAvailableGroupItems(group, groups),
+      search,
+    );
+  }
+
   const groupedFilters = computed(() => {
     const displayGroups: DisplayGroup[][] = [];
     const groups = filter.value;
@@ -64,17 +90,17 @@
         continue;
       }
 
-      const availableItems = getAvailableGroupItems(group, groups);
+      const availableItems = getVisibleGroupItems(group, groups);
 
       if (nextGroup && isGroupDependentOn(nextGroup, group.key)) {
-        const nextAvailableItems = getAvailableGroupItems(nextGroup, groups);
+        const nextAvailableItems = getVisibleGroupItems(nextGroup, groups);
         const combinedGroups: DisplayGroup[] = [];
 
-        if (isGroupVisible(availableItems, preview)) {
+        if (isGroupVisible(availableItems, preview, !!search)) {
           combinedGroups.push({ group, index: i, availableItems });
         }
 
-        if (isGroupVisible(nextAvailableItems, preview)) {
+        if (isGroupVisible(nextAvailableItems, preview, !!search)) {
           combinedGroups.push({
             group: nextGroup,
             index: i + 1,
@@ -89,7 +115,7 @@
         // Зависимая группа уже отрисована в паре с текущей — пропускаем её,
         // чтобы не вывести повторно на следующей итерации.
         i++;
-      } else if (isGroupVisible(availableItems, preview)) {
+      } else if (isGroupVisible(availableItems, preview, !!search)) {
         displayGroups.push([{ group, index: i, availableItems }]);
       }
     }
