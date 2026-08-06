@@ -12,6 +12,7 @@ import type {
   CharacterHitDie,
   CharacterInventoryItem,
   CharacterNote,
+  CharacterPersonality,
   CharacterPreparedSpells,
   CharacterSettings,
   CharacterSpecies,
@@ -107,6 +108,7 @@ import {
   toCopiedSpell,
   toCustomInventoryItem,
   toCustomSpell,
+  toTrimmedPersonality,
   toUpdatedCustomInventoryItem,
   unionToolProficiencies,
   VISION_DISTANCE_MAX,
@@ -2231,6 +2233,25 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Установка личности персонажа: приметы, мировоззрение и подробное описание.
+   * Правят её две модалки, каждая своей частью, поэтому обе присылают личность
+   * целиком — поверх текущей. Пробелы по краям снимаются: строка из одних
+   * пробелов выглядела бы на плитке заполненным полем.
+   *
+   * @param personality личность персонажа целиком.
+   */
+  function setPersonality(personality: CharacterPersonality): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      personality: toTrimmedPersonality(personality),
+    };
+  }
+
+  /**
    * Установка размера персонажа.
    *
    * @param size русская подпись размера; null — размер не указан.
@@ -2407,6 +2428,7 @@ export function useCharacterSheet() {
     setClass,
     setCurrency,
     setName,
+    setPersonality,
     setProficiencies,
     setToolProficiencies,
     setProgress,

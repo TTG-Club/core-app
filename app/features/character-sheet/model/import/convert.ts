@@ -11,6 +11,7 @@ import type {
   CharacterFeature,
   CharacterHitDie,
   CharacterNote,
+  CharacterPersonality,
   CharacterSkill,
   CharacterSpecies,
   CharacterSpellSlot,
@@ -76,6 +77,7 @@ import {
   LSS_NOTE_ID_PREFIX,
   LSS_NOTES_KEY_PATTERN,
   LSS_NOTES_TITLE,
+  LSS_PERSONALITY_DETAIL_KEYS,
   LSS_SIZE_LABELS,
   LSS_SKILL_EXPERTISE_VALUE,
   LSS_SKILL_NAMES,
@@ -526,20 +528,53 @@ function toFeatures(texts: LssTextBlock[]): CharacterFeature[] {
 }
 
 /**
- * Заметка «О персонаже»: мировоззрение, имя игрока и внешность — полей под них
- * на листе нет, а терять их при импорте не хочется.
+ * Подписи шапки, у которых на листе есть своё поле. Множество строк, а не сам
+ * типизированный список: подписи проверяются по «сырому» ключу LSS.
+ */
+const FIELD_BACKED_DETAIL_KEYS = new Set<string>(LSS_PERSONALITY_DETAIL_KEYS);
+
+/**
+ * Личность персонажа из подписей шапки LSS: мировоззрение и приметы ложатся в
+ * одноимённые поля листа — ключи LSS с нашими совпадают. Подробного описания в
+ * шапке нет: прозу LSS держит текстовыми блоками, и она остаётся заметками.
  *
  * @param source персонаж LSS.
- * @returns заметка листа; null — подписи не заполнены.
+ * @returns личность персонажа.
+ */
+function toPersonality(source: LssCharacter): CharacterPersonality {
+  const personality = { ...DEFAULT_CHARACTER.personality };
+
+  for (const field of LSS_PERSONALITY_DETAIL_KEYS) {
+    const detail = source.details.find((row) => row.key === field);
+
+    if (detail) {
+      personality[field] = detail.value;
+    }
+  }
+
+  return personality;
+}
+
+/**
+ * Заметка «О персонаже»: подписи шапки, которым поля на листе не нашлось —
+ * сейчас это имя игрока. Приметы и мировоззрение сюда не попадают: они уходят
+ * во вкладку «Личность».
+ *
+ * @param source персонаж LSS.
+ * @returns заметка листа; null — таких подписей в файле нет.
  */
 function toDetailsNote(source: LssCharacter): CharacterNote | null {
-  if (!source.details.length) {
+  const details = source.details.filter(
+    (detail) => !FIELD_BACKED_DETAIL_KEYS.has(detail.key),
+  );
+
+  if (!details.length) {
     return null;
   }
 
-  // Списком, а не абзацами: подписей до восьми, и каждая абзацем растянула бы
-  // заметку на весь экран.
-  const items = source.details.map((detail) => ({
+  // Списком, а не абзацами: подписей может быть несколько, и каждая абзацем
+  // растянула бы заметку на весь экран.
+  const items = details.map((detail) => ({
     type: 'li',
     content: [
       { type: 'bold', content: [`${detail.label}:`] },
@@ -738,5 +773,6 @@ export function convertLssCharacter(source: LssCharacter): Character {
     spellSlots: toSpellSlots(source.spellSlots, source.pactSpellSlots),
     features: toFeatures(source.texts),
     notes: toNotes(source),
+    personality: toPersonality(source),
   };
 }

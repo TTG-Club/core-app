@@ -17,6 +17,7 @@
     matchesFeatureFilter,
     SHEET_FEATURE_ROW_LABELS,
     SHEET_FILTER_LABELS,
+    SHEET_REVEAL_CONTROL_CLASS,
     SHEET_TAB_EMPTY_LABELS,
     sortFeaturesByOriginGroup,
   } from '../../model';
@@ -82,19 +83,20 @@
 
   /**
    * Наведение (или переход с клавиатуры) раздвигает колонку, и название уступает
-   * кнопкам место. На сенсорном экране ховера нет — там кнопки развёрнуты
-   * всегда, иначе правку и удаление особенности с телефона не найти.
+   * кнопкам место. Ниже `lg` (1024px) колонка развёрнута всегда — тот же порог,
+   * что и у остальных кнопок правки листа (см. {@link SHEET_REVEAL_CONTROL_CLASS}):
+   * на узком экране ховера может не быть вовсе, и правку с удалением особенности
+   * иначе не найти.
    */
   const ROW_ACTIONS_REVEAL_CLASS =
-    'group-hover/feature:grid-cols-[1fr] focus-within:grid-cols-[1fr] pointer-coarse:grid-cols-[1fr]';
+    'group-hover/feature:grid-cols-[1fr] focus-within:grid-cols-[1fr] max-lg:grid-cols-[1fr]';
 
   /**
    * Внутренняя обёртка кнопок: `overflow-hidden` обнуляет минимальную ширину
    * ячейки грида (без него `0fr` не схлопнется под содержимое), а прозрачность
    * убирает кнопки из виду, пока колонка ещё разъезжается.
    */
-  const ROW_ACTIONS_INNER_CLASS =
-    'flex items-center gap-1 overflow-hidden pl-2 opacity-0 transition-opacity duration-200 group-hover/feature:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100';
+  const ROW_ACTIONS_INNER_CLASS = `flex items-center gap-1 overflow-hidden pl-2 opacity-0 transition-opacity duration-200 group-hover/feature:opacity-100 focus-within:opacity-100 ${SHEET_REVEAL_CONTROL_CLASS}`;
 
   /**
    * Без прав на правку (лист чужой или заперт замком) колонка не разъезжается

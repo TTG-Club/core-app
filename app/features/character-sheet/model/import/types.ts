@@ -47,6 +47,9 @@ export interface LssSpellSlot {
 
 /** Подпись персонажа из шапки LSS (возраст, рост, мировоззрение). */
 export interface LssDetailRow {
+  /** Ключ поля в шапке LSS (`alignment`, `age`) — по нему идёт разбор. */
+  key: string;
+
   label: string;
   value: string;
 }
@@ -74,7 +77,10 @@ export interface LssCharacter {
   level: number;
   experience: number;
 
-  /** Подписи шапки, которым на нашем листе нет полей (возраст, рост, глаза). */
+  /**
+   * Подписи шапки: приметы и мировоззрение уходят в личность персонажа,
+   * остальное (имя игрока) — в заметку, поля под него на листе нет.
+   */
   details: LssDetailRow[];
 
   /** Значения характеристик по кодам LSS (`str`). */

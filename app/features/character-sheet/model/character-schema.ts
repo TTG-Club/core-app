@@ -518,6 +518,22 @@ const notesSchema = z
     typeof notes === 'string' ? toLegacyNotes(notes) : notes,
   );
 
+// Личность появилась позже остальных блоков: у листов без неё все поля пустые.
+// Каждое поле со своим `catch` — чужое значение (число из другого редактора,
+// пропавшее поле) обнуляет только себя, а не всю личность целиком.
+const personalitySchema = z
+  .object({
+    alignment: z.string().catch(''),
+    age: z.string().catch(''),
+    height: z.string().catch(''),
+    weight: z.string().catch(''),
+    eyes: z.string().catch(''),
+    hair: z.string().catch(''),
+    skin: z.string().catch(''),
+    description: z.string().catch(''),
+  })
+  .catch(() => ({ ...DEFAULT_CHARACTER.personality }));
+
 const inventoryItemSchema = z.object({
   id: z.string(),
   url: z.string().catch(''),
@@ -585,6 +601,7 @@ const characterSchema = z.object({
   customCurrencies: z.array(customCurrencySchema).catch([]),
   inventory: z.array(inventoryItemSchema).catch([]),
   notes: notesSchema,
+  personality: personalitySchema,
   settings: settingsSchema,
 });
 

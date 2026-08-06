@@ -25,6 +25,7 @@ import type {
   MagicItemCatalogItem,
   MagicItemCatalogSorting,
   MagicItemRarityKey,
+  PersonalityTextField,
   ResourceRecovery,
   ResourceRecoveryField,
   ResourceRecoveryMode,
@@ -193,6 +194,15 @@ export const SHEET_READONLY_MESSAGE =
  * режиме правок — ничего не съезжает.
  */
 export const SHEET_HIDDEN_CONTROL_CLASS = 'invisible';
+
+/**
+ * Класс кнопки правки, которую на широком экране проявляет наведение: ниже `lg`
+ * (1024px) она видна всегда. Порог по ширине окна, а не по типу указателя
+ * (`pointer-coarse`): узкому окну кнопка нужна одинаково — и на планшете с
+ * телефоном, где ховера нет вовсе, и на десктопе с мышью, где лист открыт в
+ * половину экрана.
+ */
+export const SHEET_REVEAL_CONTROL_CLASS = 'max-lg:opacity-100';
 
 /** Подпись и подсказка режима просмотра в шапке чужого листа. */
 export const SHEET_READONLY_LABELS: Record<'badge' | 'tooltip', string> = {
@@ -2819,6 +2829,7 @@ export const SHEET_TABS: SheetTab[] = [
   SHEET_DEFAULT_TAB,
   { slot: 'spells', label: 'Заклинания' },
   { slot: 'features', label: 'Особенности' },
+  { slot: 'personality', label: 'Личность' },
   { slot: 'notes', label: 'Заметки' },
 ];
 
@@ -3035,6 +3046,51 @@ export const SHEET_NOTE_LABELS: Record<
   untitled: 'Без названия',
   legacyTitle: 'Заметки',
 };
+
+/** Свободные поля вкладки «Личность» — порядок плиток и полей формы. */
+export const PERSONALITY_TEXT_FIELDS: PersonalityTextField[] = [
+  { key: 'age', label: 'Возраст', placeholder: '27 лет' },
+  { key: 'height', label: 'Рост', placeholder: '178 см' },
+  { key: 'weight', label: 'Вес', placeholder: '74 кг' },
+  { key: 'eyes', label: 'Цвет глаз', placeholder: 'Серо-зелёные' },
+  { key: 'hair', label: 'Цвет волос', placeholder: 'Русые' },
+  { key: 'skin', label: 'Кожа', placeholder: 'Смуглая' },
+];
+
+/**
+ * Предел длины свободного поля «Личности». Приметы — это пара слов; всё, что
+ * длиннее, место на плитке уже не находит и относится к подробному описанию.
+ */
+export const PERSONALITY_FIELD_MAX_LENGTH = 40;
+
+/** Значение незаполненной плитки «Личности». */
+export const PERSONALITY_EMPTY_VALUE = '—';
+
+/** Подписи вкладки «Личность» и её модалок. */
+export const SHEET_PERSONALITY_LABELS = {
+  appearanceTitle: 'Приметы',
+  alignmentField: 'Мировоззрение',
+  alignmentUnknown: 'Записано на листе (в справочнике такого нет):',
+  editAppearance: 'Изменить приметы',
+  appearanceModalTitle: 'Приметы персонажа',
+  backgroundTitle: 'Предыстория',
+  backgroundHint: 'Подставляется с листа: меняется вместе с выбором в шапке',
+  backgroundSelect: 'Выбрать предысторию',
+  backgroundChange: 'Сменить предысторию',
+  backgroundPreview: 'Открыть описание',
+  backgroundCustomHint: 'Своя предыстория — описания в справочнике у неё нет.',
+  descriptionTitle: 'Подробное описание',
+  descriptionModalTitle: 'Подробное описание персонажа',
+  editDescription: 'Изменить подробное описание',
+  addDescription: 'Добавить описание',
+  descriptionEmpty:
+    'Расскажите о персонаже: характер, привычки, прошлое, цели и связи.',
+  descriptionPlaceholder:
+    'Внешность, характер, привычки, прошлое, цели, страхи, отношения с другими…',
+  reset: 'Сбросить',
+  cancel: 'Отмена',
+  apply: 'Применить',
+} as const;
 
 /**
  * Скелетон листа: сколько плашек рисовать в блоках, длина которых зависит от

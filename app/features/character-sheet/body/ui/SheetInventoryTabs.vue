@@ -7,6 +7,7 @@
     CharacterFeature,
     CharacterInventoryItem,
     CharacterSpell,
+    PersonalityFieldKey,
     SheetTab,
     SheetTabSlot,
     SpellcastingBreakdown,
@@ -32,6 +33,7 @@
   import SheetEquipmentTab from './SheetEquipmentTab.vue';
   import SheetFeaturesTab from './SheetFeaturesTab.vue';
   import SheetNotesTab from './SheetNotesTab.vue';
+  import SheetPersonalityTab from './SheetPersonalityTab.vue';
   import SheetSpellsTab from './SheetSpellsTab.vue';
 
   const props = defineProps<{
@@ -84,6 +86,9 @@
     'add-note': [];
     'edit-note': [noteId: string];
     'remove-note': [noteId: string];
+    'edit-personality': [field: PersonalityFieldKey | null];
+    'edit-personality-description': [];
+    'edit-background': [];
     'remove-item': [inventoryItemId: string];
     'remove-spell': [spellUrl: string];
     'copy-innate-spell': [spellUrl: string];
@@ -231,6 +236,18 @@
 
   function handleNoteRemove(noteId: string) {
     emit('remove-note', noteId);
+  }
+
+  function handlePersonalityEdit(field: PersonalityFieldKey | null) {
+    emit('edit-personality', field);
+  }
+
+  function handlePersonalityDescriptionEdit() {
+    emit('edit-personality-description');
+  }
+
+  function handleBackgroundEdit() {
+    emit('edit-background');
   }
 
   // Подписи разделов всегда полные — сокращений нет. Когда ряд не помещается
@@ -917,6 +934,13 @@
             @add-feat="handleFeatAdd"
             @edit-feature="handleFeatureEdit"
             @remove-feature="handleFeatureRemove"
+          />
+
+          <SheetPersonalityTab
+            v-else-if="activeSlot === 'personality'"
+            @edit-appearance="handlePersonalityEdit"
+            @edit-description="handlePersonalityDescriptionEdit"
+            @edit-background="handleBackgroundEdit"
           />
 
           <SheetNotesTab

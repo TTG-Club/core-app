@@ -2,6 +2,7 @@
   import type {
     AbilityKey,
     CharacterInventoryItem,
+    PersonalityFieldKey,
     ProficiencyGroupKey,
     SavingThrowRow,
     SkillRow,
@@ -54,6 +55,8 @@
     SheetMagicItemAddModal,
     SheetNameModal,
     SheetNoteModal,
+    SheetPersonalityDescriptionModal,
+    SheetPersonalityModal,
     SheetPreparedSpellsModal,
     SheetProficienciesPanel,
     SheetProficiencyGroupsModal,
@@ -392,6 +395,18 @@
     },
   });
 
+  // Одна модалка на все приметы: поле, с которого начали правку, получает
+  // курсор — null означает вход карандашом, без выделенного поля.
+  const personalityModal = overlay.create(SheetPersonalityModal, {
+    props: {
+      field: null,
+    },
+  });
+
+  const personalityDescriptionModal = overlay.create(
+    SheetPersonalityDescriptionModal,
+  );
+
   const spellAddModal = overlay.create(SheetSpellAddModal);
 
   // Одна модалка на добавление и редактирование своего заклинания: URL пустой —
@@ -722,6 +737,22 @@
     }
 
     noteModal.open({ noteId });
+  }
+
+  function handlePersonalityEdit(field: PersonalityFieldKey | null) {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    personalityModal.open({ field });
+  }
+
+  function handlePersonalityDescriptionEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    personalityDescriptionModal.open();
   }
 
   function handleSpellAdd() {
@@ -1087,6 +1118,9 @@
           @add-note="handleNoteAdd"
           @edit-note="handleNoteEdit"
           @remove-note="removeNote"
+          @edit-personality="handlePersonalityEdit"
+          @edit-personality-description="handlePersonalityDescriptionEdit"
+          @edit-background="handleBackgroundEdit"
           @remove-feature="removeFeature"
           @remove-item="removeInventoryItem"
           @remove-spell="removeSpell"

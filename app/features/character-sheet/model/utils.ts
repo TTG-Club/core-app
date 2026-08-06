@@ -24,6 +24,7 @@ import type {
   CharacterInventoryGroup,
   CharacterInventoryItem,
   CharacterLevelHitPoints,
+  CharacterPersonality,
   CharacterSkill,
   CharacterSpecies,
   CharacterSpeed,
@@ -71,6 +72,7 @@ import type {
   MagicItemCatalogItem,
   MagicItemRarityKey,
   MagicItemSummary,
+  PersonalityFieldRow,
   PreparedSpellsBreakdown,
   PreparedSpellsScaling,
   PrimarySpeed,
@@ -207,6 +209,8 @@ import {
   NEW_CUSTOM_INVENTORY_ITEM,
   ORIGIN_FEAT_CATEGORY,
   PACT_SPELL_SLOTS_LABEL,
+  PERSONALITY_EMPTY_VALUE,
+  PERSONALITY_TEXT_FIELDS,
   PREPARED_SPELLS_COLUMN_KEYWORD,
   PREPARED_SPELLS_COLUMN_PREFIX,
   PREPARED_SPELLS_COUNT_HINT,
@@ -231,6 +235,7 @@ import {
   SHEET_DOWNLOAD_PDF_HINT,
   SHEET_DOWNLOAD_PDF_LABEL,
   SHEET_PDF_MIME_TYPE,
+  SHEET_PERSONALITY_LABELS,
   SHEET_PLURAL_FORMS,
   SHEET_SAVE_SHARED_LABELS,
   SHEET_SHARE_ACTIVE_HINT,
@@ -6452,4 +6457,61 @@ export function getInnateSpellMenuItems(
  */
 export function getInventoryRemoveDescription(name: string): string {
   return `«${name}» исчезнет из снаряжения — вернуть его можно только заново добавив.`;
+}
+
+/**
+ * Личность без пробелов по краям полей. Поля правятся вводом от руки, и строка
+ * из одних пробелов считалась бы заполненной: плитка показывала бы пустоту
+ * вместо прочерка, а описание — рамку без текста.
+ *
+ * @param personality личность персонажа из формы.
+ * @returns личность, готовая к записи в лист.
+ */
+export function toTrimmedPersonality(
+  personality: CharacterPersonality,
+): CharacterPersonality {
+  return {
+    alignment: personality.alignment.trim(),
+    age: personality.age.trim(),
+    height: personality.height.trim(),
+    weight: personality.weight.trim(),
+    eyes: personality.eyes.trim(),
+    hair: personality.hair.trim(),
+    skin: personality.skin.trim(),
+    description: personality.description.trim(),
+  };
+}
+
+/**
+ * Плитки примет на вкладке «Личность»: мировоззрение и свободные поля в одном
+ * ряду. Незаполненные поля не пропускаются, а показывают прочерк — ряд плиток
+ * заодно подсказывает, что о персонаже ещё можно записать.
+ *
+ * @param personality личность персонажа.
+ * @returns плитки в порядке отрисовки.
+ */
+export function getPersonalityRows(
+  personality: CharacterPersonality,
+): PersonalityFieldRow[] {
+  const rows: PersonalityFieldRow[] = [
+    {
+      key: 'alignment',
+      label: SHEET_PERSONALITY_LABELS.alignmentField,
+      value: personality.alignment || PERSONALITY_EMPTY_VALUE,
+      filled: Boolean(personality.alignment),
+    },
+  ];
+
+  for (const field of PERSONALITY_TEXT_FIELDS) {
+    const value = personality[field.key].trim();
+
+    rows.push({
+      key: field.key,
+      label: field.label,
+      value: value || PERSONALITY_EMPTY_VALUE,
+      filled: Boolean(value),
+    });
+  }
+
+  return rows;
 }

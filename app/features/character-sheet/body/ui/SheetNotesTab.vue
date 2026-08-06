@@ -5,6 +5,7 @@
   import {
     parseStoredMarkupNodes,
     SHEET_NOTE_LABELS,
+    SHEET_REVEAL_CONTROL_CLASS,
     SHEET_TAB_EMPTY_LABELS,
   } from '../../model';
 
@@ -106,7 +107,7 @@
             size="xs"
             square
             class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/note:opacity-100 focus-visible:opacity-100"
-            :class="editControlClass"
+            :class="[SHEET_REVEAL_CONTROL_CLASS, editControlClass]"
             :aria-label="`Редактировать заметку: ${note.title}`"
             @click.left.exact.prevent="handleEdit(note.id)"
           />
@@ -118,7 +119,7 @@
             size="xs"
             square
             class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/note:opacity-100 focus-visible:opacity-100"
-            :class="editControlClass"
+            :class="[SHEET_REVEAL_CONTROL_CLASS, editControlClass]"
             :aria-label="`Удалить заметку: ${note.title}`"
             @click.left.exact.prevent="handleRemove(note.id)"
           />

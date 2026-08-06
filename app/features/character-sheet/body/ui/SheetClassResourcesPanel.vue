@@ -2,7 +2,11 @@
   import type { CharacterClassResource } from '../../model';
 
   import { useCharacterSheet } from '../../composables';
-  import { getResourceRecoveryBadges, SHEET_EMPTY_LABELS } from '../../model';
+  import {
+    getResourceRecoveryBadges,
+    SHEET_EMPTY_LABELS,
+    SHEET_REVEAL_CONTROL_CLASS,
+  } from '../../model';
   import SheetPanel from './SheetPanel.vue';
 
   const props = defineProps<{
@@ -74,7 +78,7 @@
       <button
         type="button"
         class="cursor-pointer rounded-full bg-default p-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-        :class="editControlClass"
+        :class="[SHEET_REVEAL_CONTROL_CLASS, editControlClass]"
         aria-label="Настроить ресурсы класса"
         @click.left.exact.prevent="handleEditClick"
       >

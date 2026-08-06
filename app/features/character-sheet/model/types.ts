@@ -1777,6 +1777,65 @@ export interface CharacterNote {
   content: string;
 }
 
+/** Ключ короткого поля вкладки «Личность». */
+export type PersonalityFieldKey =
+  | 'alignment'
+  | 'age'
+  | 'height'
+  | 'weight'
+  | 'eyes'
+  | 'hair'
+  | 'skin';
+
+/** Ключ свободного поля «Личности» — всё, кроме мировоззрения из словаря. */
+export type PersonalityTextFieldKey = Exclude<PersonalityFieldKey, 'alignment'>;
+
+/** Свободное поле «Личности»: подпись плитки и подсказка ввода. */
+export interface PersonalityTextField {
+  key: PersonalityTextFieldKey;
+  label: string;
+  placeholder: string;
+}
+
+/** Плитка короткого поля на вкладке «Личность». */
+export interface PersonalityFieldRow {
+  key: PersonalityFieldKey;
+  label: string;
+
+  /** Значение поля либо прочерк, когда игрок его не заполнил. */
+  value: string;
+
+  /** Поле заполнено: прочерк показывается приглушённым. */
+  filled: boolean;
+}
+
+/** Личность персонажа: приметы, мировоззрение и подробное описание. */
+export interface CharacterPersonality {
+  /** Мировоззрение (русская подпись словаря); '' — не выбрано. */
+  alignment: string;
+
+  /** Возраст; '' — не указан. */
+  age: string;
+
+  /** Рост; '' — не указан. */
+  height: string;
+
+  /** Вес; '' — не указан. */
+  weight: string;
+
+  /** Цвет глаз; '' — не указан. */
+  eyes: string;
+
+  /** Цвет волос; '' — не указан. */
+  hair: string;
+
+  /** Цвет кожи; '' — не указан. */
+  skin: string;
+
+  /** Подробное описание в хранимой форме редактора `MarkupEditor`; '' — пусто. */
+  description: string;
+}
+
 /** Персонаж на листе персонажа. */
 export interface Character {
   id: string;
@@ -1854,6 +1913,9 @@ export interface Character {
 
   /** Заметки игрока отдельными записями. */
   notes: CharacterNote[];
+
+  /** Личность персонажа: приметы, мировоззрение и подробное описание. */
+  personality: CharacterPersonality;
 
   /** Настройки листа (правила подсчёта). */
   settings: CharacterSettings;
@@ -1964,6 +2026,7 @@ export type SheetTabSlot =
   | 'equipment'
   | 'spells'
   | 'features'
+  | 'personality'
   | 'notes';
 
 /** Вкладка правой панели листа персонажа. */

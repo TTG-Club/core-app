@@ -96,6 +96,16 @@ export const DEFAULT_CHARACTER: Character = {
   customCurrencies: [],
   inventory: [],
   notes: [],
+  personality: {
+    alignment: '',
+    age: '',
+    height: '',
+    weight: '',
+    eyes: '',
+    hair: '',
+    skin: '',
+    description: '',
+  },
   settings: {
     weaponAttackAbility: null,
     customProficiencyBonus: 0,

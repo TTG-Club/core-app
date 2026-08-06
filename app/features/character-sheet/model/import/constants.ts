@@ -1,4 +1,9 @@
-import type { AbilityKey, CurrencyKey, WeaponCategory } from '../types';
+import type {
+  AbilityKey,
+  CurrencyKey,
+  PersonalityFieldKey,
+  WeaponCategory,
+} from '../types';
 
 /** Название формата-источника: показывается в тосте после импорта. */
 export const LSS_SOURCE_LABEL = 'Long Story Short';
@@ -144,6 +149,21 @@ export const LSS_UNKNOWN_TEXT_TITLE = 'Из листа LSS';
 
 /** Заголовок заметки с подписями шапки, которым на листе нет полей. */
 export const LSS_DETAILS_NOTE_TITLE = 'О персонаже';
+
+/**
+ * Подписи шапки LSS, у которых на листе есть своё поле личности: ключи там
+ * совпадают с нашими, поэтому карта не нужна — по этим ключам приметы уходят
+ * во вкладку «Личность», а всё остальное (имя игрока) остаётся заметкой.
+ */
+export const LSS_PERSONALITY_DETAIL_KEYS: PersonalityFieldKey[] = [
+  'alignment',
+  'age',
+  'height',
+  'weight',
+  'eyes',
+  'hair',
+  'skin',
+];
 
 /**
  * Подписи полей шапки LSS для заметки «О персонаже». Порядок ключей — порядок

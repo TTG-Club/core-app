@@ -173,15 +173,20 @@ modals), so its capabilities are listed here rather than squeezed into the table
   sub-module (like `model/pdf`, so it stays out of the main bundle): `schema.ts`
   parses the foreign file with catch-everything Zod, `tiptap.ts` rewrites its
   TipTap texts into site markup (`{@list}` / `{@bold}` / `{@link}`), `convert.ts`
-  maps abilities, skills, hit points, resources, coins and text blocks (traits
-  and feats become sheet features, the rest become notes), and `catalog.ts`
+  maps abilities, skills, hit points, resources, coins, the header details
+  (alignment and appearance go straight into `personality`, the LSS keys being
+  the same as ours; only what has no field of its own — the player's name —
+  still becomes the «О персонаже» note) and text blocks (traits and feats become
+  sheet features, the rest become notes), and `catalog.ts`
   matches class, subclass, species, background and every equipment line against
   the site catalogs by name — anything not found stays a homebrew entry. Spells
   cannot be carried over (the file keeps only LSS-internal ids), so the import
   says so in a toast.
 - PDF export from the same action menu. `model/pdf` draws its own vector layout
   close to the official D&D 2024 sheet with Russian labels: main page,
-  equipment, spells, and a reference section with full descriptions.
+  personality (appearance boxes and the long description — the page is skipped
+  when nothing is filled in), equipment, spells, and a reference section with
+  full descriptions.
   Descriptions of catalog spells and items are not stored in the sheet document,
   so `model/pdf/catalog.ts` fetches them on export — batched, cached per page
   load, and best-effort (a failed request only costs one reference entry).
@@ -260,6 +265,15 @@ modals), so its capabilities are listed here rather than squeezed into the table
   record (editable afterwards), removing one drops it from
   `species.innateSpells` so the next level-up does not bring it back. Both are
   undone by picking the species again in the wizard.
+- The «Личность» tab holds the person rather than the build: seven appearance
+  tiles (alignment from the `alignments` dictionary plus age, height, weight,
+  eyes, hair and skin as free text — clicking a tile opens the form with the
+  caret already in that field), the background pulled from
+  `characterBackground` on its own with its ability bonuses and a drawer for the
+  catalog description (a homebrew one has no page to open, and an empty panel
+  offers the same wizard the header does), and a long description in site markup
+  edited by `MarkupEditor`. It all lives in `Character.personality`; sheets saved
+  before the block existed read every field as empty.
 
 **Play**
 

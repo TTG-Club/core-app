@@ -185,6 +185,16 @@ export const PDF_HEALTH_BOX_HEIGHT = 34;
 /** Высота бокса монеты на странице снаряжения. */
 export const PDF_COIN_BOX_HEIGHT = 32;
 
+/** Высота бокса приметы на странице личности. */
+export const PDF_PERSONALITY_BOX_HEIGHT = 30;
+
+/**
+ * Боксов примет в ряду. Четыре, а не все семь: подписи полные, а значения вроде
+ * «Хаотично-нейтральный» в бокс шириной с седьмую часть страницы не влезают —
+ * их пришлось бы обрезать.
+ */
+export const PDF_PERSONALITY_COLUMNS = 4;
+
 /** Ширина столбца с кружком подготовки заклинания. */
 export const PDF_SPELL_MARK_COLUMN_WIDTH = 14;
 
@@ -241,6 +251,8 @@ export const PDF_TITLES = {
   proficiencies: 'Владения',
   senses: 'Зрение и передвижение',
   features: 'Особенности',
+  personality: 'Личность',
+  personalityDescription: 'Подробное описание',
   equipment: 'Снаряжение',
   coins: 'Монеты',
   notes: 'Заметки',
