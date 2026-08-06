@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { SpeedUnit } from '../../model';
+
   import {
     EXHAUSTION_LABELS,
     EXHAUSTION_LEVEL_MAX,
@@ -31,6 +33,9 @@
   const props = defineProps<{
     /** Текущий уровень истощения персонажа. */
     level: number;
+
+    /** Единица скоростей листа: в ней считается снижение скорости. */
+    speedUnit: SpeedUnit;
   }>();
 
   const emit = defineEmits<{
@@ -47,13 +52,15 @@
     EXHAUSTION_LEVELS.map((stepLevel) => ({
       level: stepLevel,
       isFilled: stepLevel <= effects.value.level,
-      hint: getExhaustionSummary(stepLevel),
+      hint: getExhaustionSummary(stepLevel, props.speedUnit),
       label: `${EXHAUSTION_LABELS.level} ${stepLevel}`,
       stepClass: getStepClass(stepLevel, effects.value.level),
     })),
   );
 
-  const summary = computed(() => getExhaustionSummary(props.level));
+  const summary = computed(() =>
+    getExhaustionSummary(props.level, props.speedUnit),
+  );
 
   const summaryClass = computed(() => {
     if (effects.value.isLethal) {

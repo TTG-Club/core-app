@@ -3,17 +3,26 @@
     AbilityKey,
     Character,
     CharacterCustomBonus,
+    CustomBonusSource,
+    ProficiencyBaseSource,
   } from '../../model';
 
   import { useCharacterSheetList } from '../../composables';
   import {
     ABILITY_LABELS,
+    CUSTOM_BONUS_FLAT_SOURCE,
+    CUSTOM_BONUS_SOURCE_OPTIONS,
     CUSTOM_INITIATIVE_BONUS_HINT,
     CUSTOM_PROFICIENCY_BONUS_HINT,
+    DEFAULT_INITIATIVE_ABILITY,
     DEFAULT_WEAPON_ATTACK_ABILITY,
+    EXHAUSTION_LABELS,
     getCustomBonusesValue,
+    getExhaustionD20Penalty,
     getFormattedBonus,
     getProficiencyBonus,
+    PROFICIENCY_BASE_LEVEL_SOURCE,
+    PROFICIENCY_BASE_OPTIONS,
     SHEET_SETTINGS_LABELS,
     SHEET_SETTINGS_TABS,
     SHEET_SETTINGS_WEAPON_TAB,
@@ -55,6 +64,45 @@
     })),
   );
 
+  const levelProficiencyBonus = computed(() =>
+    getProficiencyBonus(props.character.level),
+  );
+
+  // Характеристика инициативы нужна и черновику, и его источнику, поэтому
+  // считается до них: чтение `.value` у ref в том же месте теряет реактивность.
+  const initialInitiativeAbility =
+    props.character.settings.initiativeAbility ?? DEFAULT_INITIATIVE_ABILITY;
+
+  // Черновики основы держат источник и своё число врозь: у бонусов ровно так же
+  // — переключение источника не теряет введённое, пока игрок примеряет основу.
+  const draftProficiencyBaseSource = ref<ProficiencyBaseSource>(
+    props.character.settings.customProficiencyBase === null
+      ? PROFICIENCY_BASE_LEVEL_SOURCE
+      : CUSTOM_BONUS_FLAT_SOURCE,
+  );
+
+  // Своё число заводится от значения по правилам: игроку чаще нужно поправить
+  // его на единицу-другую, а не набирать с нуля.
+  const draftProficiencyBaseValue = ref(
+    props.character.settings.customProficiencyBase
+      ?? getProficiencyBonus(props.character.level),
+  );
+
+  // Характеристика инициативы живёт отдельно от источника: со своим числом
+  // выбранная характеристика ждёт возврата к ней.
+  const draftInitiativeAbility = ref<AbilityKey>(initialInitiativeAbility);
+
+  const draftInitiativeBaseSource = ref<CustomBonusSource>(
+    props.character.settings.customInitiativeBase === null
+      ? initialInitiativeAbility
+      : CUSTOM_BONUS_FLAT_SOURCE,
+  );
+
+  const draftInitiativeBaseValue = ref(
+    props.character.settings.customInitiativeBase
+      ?? getModifier(props.character.abilities[initialInitiativeAbility]),
+  );
+
   /**
    * Подпись модификатора характеристики: название и значение — одинаково в
    * разборе атаки и инициативы.
@@ -81,18 +129,64 @@
       : draftWeaponAbility.value,
   );
 
-  const levelProficiencyBonus = computed(() =>
-    getProficiencyBonus(props.character.level),
+  // Источник основы инициативы и выбранная характеристика ходят парой: выбор
+  // характеристики запоминается, чтобы своё число не стирало её насовсем.
+  const initiativeBaseSource = computed<CustomBonusSource>({
+    get: () => draftInitiativeBaseSource.value,
+    set: (source) => {
+      draftInitiativeBaseSource.value = source;
+
+      if (source !== CUSTOM_BONUS_FLAT_SOURCE) {
+        draftInitiativeAbility.value = source;
+      }
+    },
+  });
+
+  const isProficiencyBaseCustom = computed(
+    () => draftProficiencyBaseSource.value === CUSTOM_BONUS_FLAT_SOURCE,
   );
+
+  const isInitiativeBaseCustom = computed(
+    () => draftInitiativeBaseSource.value === CUSTOM_BONUS_FLAT_SOURCE,
+  );
+
+  /**
+   * Введённое своё значение основы: очищенное поле отдаёт NaN, а в плитках он
+   * расползся бы по всем числам раздела.
+   *
+   * @param value значение поля ввода.
+   * @returns значение основы.
+   */
+  function toBaseValue(value: number): number {
+    return Number.isFinite(value) ? value : 0;
+  }
 
   // Итоги считаются от черновика, а не от сохранённых настроек: числа в модалке
   // меняются сразу, ещё до «Применить».
+  const proficiencyBase = computed(() =>
+    isProficiencyBaseCustom.value
+      ? toBaseValue(draftProficiencyBaseValue.value)
+      : levelProficiencyBonus.value,
+  );
+
+  const initiativeBase = computed(() =>
+    isInitiativeBaseCustom.value
+      ? toBaseValue(draftInitiativeBaseValue.value)
+      : getModifier(props.character.abilities[draftInitiativeAbility.value]),
+  );
+
+  // Истощение снимает своё с инициативы уже на листе — в разборе оно стоит
+  // отдельной плиткой, иначе итог настроек разошёлся бы с плиткой листа.
+  const exhaustionPenalty = computed(() =>
+    getExhaustionD20Penalty(props.character),
+  );
+
   const customProficiencyBonus = computed(() =>
     getCustomBonusesValue(props.character, draftProficiencyBonuses.value),
   );
 
   const proficiencyBonus = computed(
-    () => levelProficiencyBonus.value + customProficiencyBonus.value,
+    () => proficiencyBase.value + customProficiencyBonus.value,
   );
 
   const formattedProficiencyBonus = computed(() =>
@@ -119,10 +213,6 @@
     ),
   );
 
-  const dexterityModifier = computed(() =>
-    getModifier(props.character.abilities.dexterity),
-  );
-
   const isSaving = ref(false);
 
   async function handleApply() {
@@ -133,6 +223,20 @@
         draftWeaponAbility.value === WEAPON_ATTACK_ABILITY_AUTO
           ? null
           : draftWeaponAbility.value,
+      // Основа по правилам хранится как `null`: иначе своё число застыло бы
+      // на бонусе того уровня, на котором его вписали.
+      customProficiencyBase: isProficiencyBaseCustom.value
+        ? draftProficiencyBaseValue.value
+        : null,
+      // Ловкость — характеристика инициативы по правилам, поэтому в документ
+      // она уходит тем же `null`, что и у листов без настройки.
+      initiativeAbility:
+        draftInitiativeAbility.value === DEFAULT_INITIATIVE_ABILITY
+          ? null
+          : draftInitiativeAbility.value,
+      customInitiativeBase: isInitiativeBaseCustom.value
+        ? draftInitiativeBaseValue.value
+        : null,
       // Копии, а не сами черновики: модалка остаётся открытой при ошибке
       // сохранения, и её правки не должны править уже сохранённые настройки.
       customProficiencyBonuses: draftProficiencyBonuses.value.map((bonus) => ({
@@ -243,10 +347,12 @@
           <div class="flex flex-col gap-4">
             <SheetCustomBonusSection
               v-model="draftProficiencyBonuses"
+              v-model:base-source="draftProficiencyBaseSource"
+              v-model:base-custom-value="draftProficiencyBaseValue"
               :character="character"
               :title="SHEET_SETTINGS_LABELS.proficiencyBonusTitle"
-              :base-label="SHEET_SETTINGS_LABELS.levelProficiencyBonusTitle"
-              :base-value="levelProficiencyBonus"
+              :base-items="PROFICIENCY_BASE_OPTIONS"
+              :base-value="proficiencyBase"
               :total-label="SHEET_SETTINGS_LABELS.totalProficiencyBonusTitle"
               :hint="CUSTOM_PROFICIENCY_BONUS_HINT"
             />
@@ -255,10 +361,14 @@
 
             <SheetCustomBonusSection
               v-model="draftInitiativeBonuses"
+              v-model:base-source="initiativeBaseSource"
+              v-model:base-custom-value="draftInitiativeBaseValue"
               :character="character"
               :title="SHEET_SETTINGS_LABELS.initiativeTitle"
-              :base-label="ABILITY_LABELS.dexterity"
-              :base-value="dexterityModifier"
+              :base-items="CUSTOM_BONUS_SOURCE_OPTIONS"
+              :base-value="initiativeBase"
+              :penalty-label="EXHAUSTION_LABELS.title"
+              :penalty-value="exhaustionPenalty"
               :total-label="SHEET_SETTINGS_LABELS.totalInitiativeTitle"
               :hint="CUSTOM_INITIATIVE_BONUS_HINT"
             />

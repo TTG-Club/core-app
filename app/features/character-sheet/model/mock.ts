@@ -184,7 +184,10 @@ export const DEFAULT_CHARACTER: Character = {
   },
   settings: {
     weaponAttackAbility: null,
+    customProficiencyBase: null,
     customProficiencyBonuses: [],
+    initiativeAbility: null,
+    customInitiativeBase: null,
     customInitiativeBonuses: [],
   },
 };

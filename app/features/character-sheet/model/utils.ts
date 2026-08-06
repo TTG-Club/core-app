@@ -92,6 +92,7 @@ import type {
   SpeciesSummary,
   SpeedRow,
   SpeedTypeKey,
+  SpeedUnit,
   SpellcastingBreakdown,
   SpellCatalogPreset,
   SpellDamage,
@@ -108,7 +109,7 @@ import type {
   WeaponDamage,
 } from './types';
 
-import { capitalize, clamp, upperFirst } from 'es-toolkit';
+import { capitalize, clamp, mapValues, upperFirst } from 'es-toolkit';
 
 import { LEVELS } from '~/shared/consts';
 import {
@@ -187,6 +188,7 @@ import {
   DAMAGE_TYPE_LABELS,
   DARKVISION_PARSE_FALLBACK,
   DEFAULT_ARMOR_CLASS_ABILITY,
+  DEFAULT_INITIATIVE_ABILITY,
   DEFAULT_INVENTORY_MAGIC_STATE,
   DEFAULT_ROLL_DICE_FACES,
   DEFAULT_WEAPON_ATTACK_ABILITY,
@@ -195,6 +197,7 @@ import {
   EXHAUSTION_LABELS,
   EXHAUSTION_LEVEL_MAX,
   EXHAUSTION_LEVEL_MIN,
+  EXHAUSTION_SPEED_PENALTY_BY_UNIT,
   EXHAUSTION_SPEED_PENALTY_PER_LEVEL,
   FEATURE_ORIGIN_GROUP_ORDER,
   FEATURE_ORIGIN_LABELS,
@@ -313,15 +316,29 @@ export function getProficiencyBonus(level: number): number {
 }
 
 /**
- * Бонус мастерства листа: бонус по уровню плюс свой бонус из настроек. Считать
- * бонус мастерства персонажа нужно именно так — везде, где он участвует.
+ * Основа бонуса мастерства: своё значение из настроек, а без него — бонус по
+ * уровню персонажа.
+ *
+ * @param character персонаж.
+ * @returns основа бонуса мастерства.
+ */
+export function getBaseProficiencyBonus(character: Character): number {
+  return (
+    character.settings.customProficiencyBase
+    ?? getProficiencyBonus(character.level)
+  );
+}
+
+/**
+ * Бонус мастерства листа: основа плюс свои бонусы из настроек. Считать бонус
+ * мастерства персонажа нужно именно так — везде, где он участвует.
  *
  * @param character персонаж.
  * @returns итоговый бонус мастерства.
  */
 export function getCharacterProficiencyBonus(character: Character): number {
   return (
-    getProficiencyBonus(character.level)
+    getBaseProficiencyBonus(character)
     + getCustomBonusesValue(
       character,
       character.settings.customProficiencyBonuses,
@@ -330,18 +347,46 @@ export function getCharacterProficiencyBonus(character: Character): number {
 }
 
 /**
- * Бонус инициативы: модификатор Ловкости плюс свои бонусы из настроек.
+ * Характеристика инициативы: своя из настроек, а без неё — Ловкость по
+ * правилам.
+ *
+ * @param character персонаж.
+ * @returns характеристика, чей модификатор идёт в инициативу.
+ */
+export function getInitiativeAbility(character: Character): AbilityKey {
+  return character.settings.initiativeAbility ?? DEFAULT_INITIATIVE_ABILITY;
+}
+
+/**
+ * Основа инициативы: своё значение из настроек, а без него — модификатор
+ * характеристики инициативы.
+ *
+ * @param character персонаж.
+ * @returns основа инициативы.
+ */
+export function getBaseInitiativeBonus(character: Character): number {
+  return (
+    character.settings.customInitiativeBase
+    ?? getModifier(character.abilities[getInitiativeAbility(character)])
+  );
+}
+
+/**
+ * Бонус инициативы: основа плюс свои бонусы из настроек.
  *
  * @param character персонаж.
  * @returns итоговый бонус инициативы.
  */
 export function getInitiativeBonus(character: Character): number {
   return (
-    getModifier(character.abilities.dexterity)
+    getBaseInitiativeBonus(character)
     + getCustomBonusesValue(
       character,
       character.settings.customInitiativeBonuses,
     )
+    // Инициатива в редакции 2024 — проверка характеристики, а значит бросок
+    // к20 со штрафом истощения.
+    - getExhaustionD20Penalty(character)
   );
 }
 
@@ -370,7 +415,10 @@ export function getSavingThrowValue(
   character: Character,
   ability: AbilityKey,
 ): number {
-  const modifier = getModifier(character.abilities[ability]);
+  // Спасбросок — бросок к20, поэтому истощение снимает с него свой штраф.
+  const modifier =
+    getModifier(character.abilities[ability])
+    - getExhaustionD20Penalty(character);
 
   if (!character.savingThrowProficiencies.includes(ability)) {
     return modifier;
@@ -400,6 +448,9 @@ export function getSkillValue(
     modifier
     + Math.floor(proficiencyPart)
     + getCustomBonusesValue(character, skill.bonuses)
+    // Проверка навыка — бросок к20; пассивное значение считается от неё же,
+    // поэтому истощение опускает и его.
+    - getExhaustionD20Penalty(character)
   );
 }
 
@@ -501,6 +552,23 @@ export function toStoredCustomBonuses(
 }
 
 /**
+ * Приведение своего значения основы к записи листа: чистка та же, что у своих
+ * бонусов, а `null` (счёт по правилам) остаётся собой.
+ *
+ * @param base своё значение основы из черновика формы.
+ * @returns своё значение основы для записи в лист.
+ */
+export function toStoredCustomBase(base: number | null): number | null {
+  if (base === null) {
+    return null;
+  }
+
+  return Number.isFinite(base)
+    ? clamp(Math.trunc(base), CUSTOM_BONUS_MIN, CUSTOM_BONUS_MAX)
+    : 0;
+}
+
+/**
  * Приведение настроек листа к записи: своим бонусам мастерства и инициативы
  * нужна та же чистка, что и бонусам навыка.
  *
@@ -512,9 +580,11 @@ export function toStoredSettings(
 ): CharacterSettings {
   return {
     ...settings,
+    customProficiencyBase: toStoredCustomBase(settings.customProficiencyBase),
     customProficiencyBonuses: toStoredCustomBonuses(
       settings.customProficiencyBonuses,
     ),
+    customInitiativeBase: toStoredCustomBase(settings.customInitiativeBase),
     customInitiativeBonuses: toStoredCustomBonuses(
       settings.customInitiativeBonuses,
     ),
@@ -567,7 +637,11 @@ export function getCustomBonusValue(
     return getModifier(character.abilities[bonus.ability]);
   }
 
-  return bonus.value;
+  // Записанный бонус уже приведён `toStoredCustomBonuses`, но черновики форм
+  // считаются этой же функцией: очищенное поле ввода отдаёт NaN, и без
+  // подстраховки он расползся бы по всему предпросмотру — значению навыка,
+  // плиткам разбора и итогам.
+  return Number.isFinite(bonus.value) ? bonus.value : 0;
 }
 
 /**
@@ -633,6 +707,21 @@ export function getSkillBreakdown(
           },
         ];
 
+  // Истощение снимает своё с каждой проверки: без строки разбора значение
+  // навыка не сходилось бы ни с характеристикой, ни с владением.
+  const exhaustionPenalty = getExhaustionD20Penalty(character);
+
+  const exhaustionParts: SkillBreakdownPart[] =
+    exhaustionPenalty === 0
+      ? []
+      : [
+          {
+            id: 'exhaustion',
+            label: EXHAUSTION_LABELS.title,
+            formattedValue: getFormattedBonus(-exhaustionPenalty),
+          },
+        ];
+
   return [
     {
       id: 'ability',
@@ -647,6 +736,7 @@ export function getSkillBreakdown(
       label: getCustomBonusLabel(bonus),
       formattedValue: getFormattedBonus(getCustomBonusValue(character, bonus)),
     })),
+    ...exhaustionParts,
   ];
 }
 
@@ -662,7 +752,7 @@ export function getSkillBonusHint(
   character: Character,
   skill: CharacterSkill,
 ): string | null {
-  if (!skill.bonuses.length) {
+  if (!skill.bonuses.length && getExhaustionD20Penalty(character) === 0) {
     return null;
   }
 
@@ -2291,7 +2381,8 @@ export function getWeaponAttackBonus(
   const value =
     getCharacterProficiencyBonus(character)
     + getModifier(character.abilities[ability])
-    + weapon.attackBonus;
+    + weapon.attackBonus
+    - getExhaustionD20Penalty(character);
 
   return { value, ability, weaponBonus: weapon.attackBonus };
 }
@@ -3055,12 +3146,15 @@ export function getExhaustionEffects(
 /**
  * Строка эффектов уровня истощения для подписи блока и подсказок делений:
  * нулевой уровень — истощения нет, шестой — смерть, остальные — штраф к
- * проверкам к20 и снижение скорости.
+ * проверкам к20 и снижение скорости. Снижение считается в единицах листа,
+ * поэтому строка сходится с числами плитки скорости; дорожные мили и
+ * километры истощение не трогает, и про скорость там не пишется.
  *
  * @param level уровень истощения.
+ * @param unit единица измерения скоростей листа.
  * @returns описание эффектов уровня.
  */
-export function getExhaustionSummary(level: number): string {
+export function getExhaustionSummary(level: number, unit: SpeedUnit): string {
   const effects = getExhaustionEffects(level);
 
   if (effects.level === EXHAUSTION_LEVEL_MIN) {
@@ -3071,10 +3165,85 @@ export function getExhaustionSummary(level: number): string {
     return EXHAUSTION_LABELS.death;
   }
 
+  const d20Part = `−${effects.d20Penalty} ${EXHAUSTION_LABELS.d20Effect}`;
+
+  const speedPenalty = effects.level * EXHAUSTION_SPEED_PENALTY_BY_UNIT[unit];
+
+  if (speedPenalty === 0) {
+    return d20Part;
+  }
+
   return [
-    `−${effects.d20Penalty} ${EXHAUSTION_LABELS.d20Effect}`,
-    `${EXHAUSTION_LABELS.speedEffect} −${effects.speedPenalty} ${EXHAUSTION_LABELS.feet}`,
+    d20Part,
+    `${EXHAUSTION_LABELS.speedEffect} −${speedPenalty} ${SPEED_UNIT_SHORT_LABELS[unit]}`,
   ].join(', ');
+}
+
+/**
+ * Штраф истощения к броскам к20 (PHB 2024): каждый уровень снимает 2 с проверок
+ * характеристик и навыков, спасбросков, атак оружием и заклинаниями. Сложность
+ * спасброска от заклинаний — не бросок к20, её истощение не трогает.
+ *
+ * @param character персонаж.
+ * @returns штраф к броскам к20 (положительное число, его вычитают).
+ */
+export function getExhaustionD20Penalty(character: Character): number {
+  return getExhaustionEffects(character.health.exhaustion).d20Penalty;
+}
+
+/**
+ * Снижение каждой скорости истощением в единицах листа персонажа.
+ *
+ * @param character персонаж.
+ * @returns снижение скорости (положительное число, его вычитают).
+ */
+export function getExhaustionSpeedPenalty(character: Character): number {
+  return (
+    getExhaustionEffects(character.health.exhaustion).level
+    * EXHAUSTION_SPEED_PENALTY_BY_UNIT[character.speed.unit]
+  );
+}
+
+/**
+ * Скорости персонажа с учётом истощения — именно их показывает лист и печатает
+ * PDF. Ниже нуля скорость не опускается, а нулевая так и остаётся нулевой:
+ * ноль означает, что такой скорости у персонажа нет. Правка скоростей идёт по
+ * записанным значениям (`character.speed`), а не по этим.
+ *
+ * @param character персонаж.
+ * @returns скорости с применённым истощением.
+ */
+export function getEffectiveSpeed(character: Character): CharacterSpeed {
+  const penalty = getExhaustionSpeedPenalty(character);
+
+  if (penalty === 0) {
+    return character.speed;
+  }
+
+  const values = mapValues(character.speed.values, (value) =>
+    value > 0 ? Math.max(0, value - penalty) : value,
+  );
+
+  return { ...character.speed, values };
+}
+
+/**
+ * Значение проверки характеристики: её модификатор со штрафом истощения. Сам
+ * модификатор истощение не трогает — он идёт ещё и в КД, хиты и сложность
+ * спасбросков от заклинаний, где штрафа к20 нет.
+ *
+ * @param character персонаж.
+ * @param ability ключ характеристики.
+ * @returns значение проверки характеристики.
+ */
+export function getAbilityCheckValue(
+  character: Character,
+  ability: AbilityKey,
+): number {
+  return (
+    getModifier(character.abilities[ability])
+    - getExhaustionD20Penalty(character)
+  );
 }
 
 /**
@@ -4206,7 +4375,10 @@ export function getSpellcastingBreakdown(
     abilityModifier,
     proficiencyBonus,
     saveDc: SPELL_SAVE_DC_BASE + proficiencyBonus + abilityModifier,
-    attackBonus: proficiencyBonus + abilityModifier,
+    // Сложность спасброска — не бросок к20, истощение её не трогает, а вот
+    // атака заклинанием — бросок.
+    attackBonus:
+      proficiencyBonus + abilityModifier - getExhaustionD20Penalty(character),
     prepared: getPreparedSpellsBreakdown(character),
   };
 }

@@ -271,6 +271,7 @@ export const PDF_LABELS = {
   speed: 'Скорость',
   proficiencyBonus: 'Бонус мастерства',
   size: 'Размер',
+  exhaustion: 'Истощение',
   savingThrow: 'Спасбросок',
   currentHits: 'Текущие',
   maxHits: 'Максимум',

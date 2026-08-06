@@ -326,10 +326,20 @@ modals), so its capabilities are listed here rather than squeezed into the table
   the current one drops it by one (`setExhaustion`, a play action — a locked
   sheet still allows it, a shared one does not). Each step spells out what it
   costs (`getExhaustionSummary`: −2 per level on every D20 test, −5 ft of Speed
-  per level, death on the sixth) and the panel header opens the rule list. The
-  penalties are shown, not applied to the rolls and the speed tile. The level
+  per level, death on the sixth) and the panel header opens the rule list.
+- Exhaustion is applied, not just displayed. The D20 penalty
+  (`getExhaustionD20Penalty`) is subtracted once per roll at each site that
+  produces one — skills (so passive scores drop too), saving throws, initiative
+  (a Dexterity check in 2024), weapon and spell attacks, and the ability-check
+  roll (`getAbilityCheckValue`; the ability modifier itself stays intact, it also
+  feeds AC, hit points and the spell save DC, which are not D20 tests). The
+  Speed penalty gives `getEffectiveSpeed` — what the tile and the PDF show, while
+  the speed editor keeps writing the stored values; it counts in the sheet's own
+  unit (`EXHAUSTION_SPEED_PENALTY_BY_UNIT`: 5 ft = 1.5 m, road miles and
+  kilometres untouched). The skill hint and the initiative section of the sheet
+  settings show the penalty as its own line, so the numbers add up. The level
   lives in `health.exhaustion`, so it is saved by the usual autosave and sheets
-  stored before it read as `0`.
+  stored before it read as `0`; the PDF prints it as a combat tile.
 - Skill settings (`SheetSkillsSettingsModal`, opened by the gear next to the
   «Навыки» panel title — revealed on hover and always visible below `lg`, like
   every other edit control of the sheet): every skill gets its ability picked
@@ -351,17 +361,30 @@ modals), so its capabilities are listed here rather than squeezed into the table
   same skill cannot be added twice.
 - Sheet settings (`SheetSettingsModal`, opened from the sheet header and from the
   list card) split into two tabs: «Атака оружием» (base attack ability) and
-  «Свои бонусы» — unlimited bonus rows (`SheetCustomBonusRows`) for the
-  proficiency bonus, added on top of the one from the level (it flows into saving
-  throws, skills, weapon attacks and spellcasting via
-  `getCharacterProficiencyBonus`), and for initiative, added to the Dexterity
-  modifier (`getInitiativeBonus`, used by the tile, its roll and the PDF). A row
-  is one `CharacterCustomBonus` — the record skills use as well: an optional
-  label plus a source that is either a flat number or an ability, whose modifier
-  is then taken automatically and follows the ability afterwards
+  «Свои бонусы». The second tab holds two identical sections
+  (`SheetCustomBonusSection`) — proficiency bonus and initiative — each showing
+  three tiles (base · own bonuses · total) over the editable bonus rows.
+- Section base: the base tile is also its own control, so nothing is shown twice
+  — the tile is a button captioned with the current source, and a pencil revealed
+  on hover (`SHEET_REVEAL_CONTROL_CLASS`, as on the sheet panels) opens a popover
+  with the source and the value. By default the proficiency bonus is derived from
+  the level and initiative from the Dexterity modifier, but the popover swaps
+  either one for a flat number (`customProficiencyBase`,
+  `customInitiativeBase`), and initiative can be based on any other ability
+  (`initiativeAbility`) — `null` in all three means «по правилам», so old sheets
+  keep counting as before. Read them via `getBaseProficiencyBonus` /
+  `getInitiativeAbility` / `getBaseInitiativeBonus`, never by hand.
+- Section bonuses: unlimited rows (`SheetCustomBonusRows`) added on top of the
+  base, so the proficiency total flows into saving throws, skills, weapon attacks
+  and spellcasting (`getCharacterProficiencyBonus`) and the initiative total into
+  the tile, its roll and the PDF (`getInitiativeBonus`). A row is one
+  `CharacterCustomBonus` — the record skills use as well: an optional label plus
+  a source that is either a flat number or an ability, whose modifier is then
+  taken automatically and follows the ability afterwards
   (`getCustomBonusesValue`). Sheets saved with the earlier single number migrate
   it into one number row; sheets saved before the bonuses existed read them as an
-  empty list.
+  empty list. Drafts are cleaned on save (`toStoredSettings`): a cleared input
+  reads as `NaN`, and the proficiency bonus would spread it across the sheet.
 
 **Sharing**
 

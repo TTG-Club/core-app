@@ -246,6 +246,11 @@ function toCustomBonuses(
 const settingsSchema = z
   .object({
     weaponAttackAbility: abilityKeySchema.nullable().catch(null),
+    // Своё значение основы и характеристика инициативы появились позже: без
+    // них основа считается по правилам (уровень и Ловкость).
+    customProficiencyBase: z.coerce.number().int().nullable().catch(null),
+    initiativeAbility: abilityKeySchema.nullable().catch(null),
+    customInitiativeBase: z.coerce.number().int().nullable().catch(null),
     // Легаси-поля одного своего бонуса: списками они стали позже, а отсутствие
     // и списка, и числа означает подсчёт строго по правилам.
     customProficiencyBonus: z.coerce.number().int().optional().catch(undefined),

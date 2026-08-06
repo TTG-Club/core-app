@@ -23,6 +23,7 @@
     ABILITY_LABELS,
     ARMOR_PROFICIENCY_GROUPS,
     EMPTY_DAMAGE_ROLL_SOURCE,
+    getAbilityCheckValue,
     getAvailableInnateSpells,
     getWeaponAttackBonus,
     getWeaponDamageSource,
@@ -103,6 +104,7 @@
     abilityRows,
     savingThrowRows,
     skillRows,
+    effectiveSpeed,
     formattedProficiencyBonus,
     initiativeBonus,
     formattedInitiative,
@@ -449,7 +451,7 @@
   function handleAbilityRoll(abilityKey: AbilityKey) {
     rollModal.open({
       title: `Проверка: ${ABILITY_LABELS[abilityKey]}`,
-      modifier: getModifier(character.value.abilities[abilityKey]),
+      modifier: getAbilityCheckValue(character.value, abilityKey),
       ability: abilityKey,
     });
   }
@@ -1023,6 +1025,7 @@
 
             <SheetExhaustionPanel
               :level="character.health.exhaustion"
+              :speed-unit="character.speed.unit"
               class="max-sm:order-2 max-sm:col-span-full"
               @select="setExhaustion"
             />
@@ -1044,7 +1047,7 @@
           <div class="flex flex-col gap-4 max-sm:contents">
             <div class="grid grid-cols-2 gap-4 max-sm:contents">
               <SheetSpeedTile
-                :speed="character.speed"
+                :speed="effectiveSpeed"
                 @edit="handleSpeedEdit"
               />
 

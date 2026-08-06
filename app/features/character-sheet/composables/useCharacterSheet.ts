@@ -62,6 +62,7 @@ import {
   getCarryingCapacity,
   getCharacterProficiencyBonus,
   getClassLevelHitPoints,
+  getEffectiveSpeed,
   getFormattedBonus,
   getInitiativeBonus,
   getInventoryWeight,
@@ -292,6 +293,10 @@ export function useCharacterSheet() {
   const formattedInitiative = computed(() =>
     getFormattedBonus(initiativeBonus.value),
   );
+
+  // Скорости листа показываются с истощением, а правятся записанные — поэтому
+  // наружу уходит отдельное производное значение, а не `character.speed`.
+  const effectiveSpeed = computed(() => getEffectiveSpeed(character.value));
 
   const armorClassValue = computed(() => getArmorClassValue(character.value));
 
@@ -2456,6 +2461,7 @@ export function useCharacterSheet() {
     formattedProficiencyBonus,
     initiativeBonus,
     formattedInitiative,
+    effectiveSpeed,
     armorClassValue,
     spellcastingBreakdown,
     spellSlotRows,

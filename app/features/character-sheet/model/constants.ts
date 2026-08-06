@@ -29,6 +29,7 @@ import type {
   MagicItemCatalogSorting,
   MagicItemRarityKey,
   PersonalityTextField,
+  ProficiencyBaseSource,
   ResourceRecovery,
   ResourceRecoveryField,
   ResourceRecoveryMode,
@@ -729,12 +730,19 @@ export const CUSTOM_BONUS_FORMAT_OPTIONS: Intl.NumberFormatOptions = {
   signDisplay: 'exceptZero',
 };
 
-/** Пояснение к своим бонусам мастерства. */
-export const CUSTOM_PROFICIENCY_BONUS_HINT =
-  'Складываются с бонусом по уровню везде, где тот участвует: спасброски, навыки, атака оружием, заклинательство.';
+/** Характеристика инициативы по правилам. */
+export const DEFAULT_INITIATIVE_ABILITY: AbilityKey = 'dexterity';
 
-/** Пояснение к своим бонусам инициативы. */
-export const CUSTOM_INITIATIVE_BONUS_HINT = `Складываются с модификатором характеристики «${ABILITY_LABELS.dexterity}» в плитке инициативы и в её броске.`;
+/** Источник основы бонуса мастерства «расчёт по уровню». */
+export const PROFICIENCY_BASE_LEVEL_SOURCE = 'level';
+
+/** Пояснение к разделу бонуса мастерства. */
+export const CUSTOM_PROFICIENCY_BONUS_HINT =
+  'Идёт в спасброски, навыки, атаку оружием и заклинательство.';
+
+/** Пояснение к разделу инициативы. */
+export const CUSTOM_INITIATIVE_BONUS_HINT =
+  'Показывается в плитке инициативы и в её броске.';
 
 /** Подписи модалки настроек листа. */
 export const SHEET_SETTINGS_LABELS = {
@@ -747,6 +755,9 @@ export const SHEET_SETTINGS_LABELS = {
   attackFormulaHint:
     'Бонус атаки = бонус мастерства + модификатор характеристики.',
   initiativeTitle: 'Инициатива',
+  baseEditTitle: 'Настроить основу',
+  baseSourceTitle: 'Источник',
+  baseValueTitle: 'Значение',
   customBonusesTitle: 'Свои бонусы',
   customBonusAdd: 'Добавить бонус',
   customBonusRemove: 'Удалить бонус',
@@ -845,6 +856,22 @@ export const CUSTOM_BONUS_SOURCE_OPTIONS: Array<{
 }> = [
   { label: CUSTOM_BONUS_KIND_LABELS.flat, value: CUSTOM_BONUS_FLAT_SOURCE },
   ...ABILITY_OPTIONS,
+];
+
+/**
+ * Варианты основы бонуса мастерства: расчёт по уровню персонажа либо своё
+ * число вместо него. Характеристики здесь ни при чём — бонус мастерства от них
+ * не зависит, поэтому список свой, а не общий с бонусами.
+ */
+export const PROFICIENCY_BASE_OPTIONS: Array<{
+  label: string;
+  value: ProficiencyBaseSource;
+}> = [
+  {
+    label: SHEET_SETTINGS_LABELS.levelProficiencyBonusTitle,
+    value: PROFICIENCY_BASE_LEVEL_SOURCE,
+  },
+  { label: CUSTOM_BONUS_KIND_LABELS.flat, value: CUSTOM_BONUS_FLAT_SOURCE },
 ];
 
 /** Подпись бонуса-числа без своей пометки в разборе значения. */
@@ -1090,6 +1117,18 @@ export const EXHAUSTION_D20_PENALTY_PER_LEVEL = 2;
 /** На сколько футов каждый уровень истощения снижает скорость. */
 export const EXHAUSTION_SPEED_PENALTY_PER_LEVEL = 5;
 
+/**
+ * Снижение скорости за уровень истощения в единицах листа. Правило записано в
+ * футах, в метрах те же 5 футов — это клетка, полтора метра. Мили и километры
+ * — дорожная скорость, боевой штраф её не трогает.
+ */
+export const EXHAUSTION_SPEED_PENALTY_BY_UNIT: Record<SpeedUnit, number> = {
+  feet: EXHAUSTION_SPEED_PENALTY_PER_LEVEL,
+  meters: 1.5,
+  miles: 0,
+  kilometers: 0,
+};
+
 /** Сколько уровней истощения снимает продолжительный отдых (PHB 2024). */
 export const EXHAUSTION_LONG_REST_RECOVERY = 1;
 
@@ -1107,7 +1146,6 @@ export const EXHAUSTION_LABELS: Record<
   | 'death'
   | 'd20Effect'
   | 'speedEffect'
-  | 'feet'
   | 'rulesTitle',
   string
 > = {
@@ -1117,7 +1155,6 @@ export const EXHAUSTION_LABELS: Record<
   death: 'Персонаж умирает.',
   d20Effect: 'ко всем проверкам к20',
   speedEffect: 'скорость',
-  feet: 'футов',
   rulesTitle: 'Правила истощения',
 };
 

@@ -28,6 +28,8 @@ import {
   getArmorClassValue,
   getCharacterProficiencyBonus,
   getClassDisplayName,
+  getEffectiveSpeed,
+  getExhaustionEffects,
   getFormattedBonus,
   getHitDicePools,
   getInitiativeBonus,
@@ -539,7 +541,8 @@ function drawCombatTiles(
   options: PdfSlot,
 ): number {
   const tileWidth = (options.width - PDF_GAP * 2) / 3;
-  const primarySpeed = getPrimarySpeed(character.speed);
+  // Скорость печатается с истощением — как и на самом листе.
+  const primarySpeed = getPrimarySpeed(getEffectiveSpeed(character));
 
   const firstRow: CombatTile[] = [
     {
@@ -568,6 +571,12 @@ function drawCombatTiles(
       label: PDF_LABELS.size,
       value: character.size ?? PDF_EMPTY_VALUE,
       valueSize: PDF_FONT_SIZES.mediumValue,
+    },
+    // Третья плитка ряда была пустой: истощение встаёт в неё, а его эффекты
+    // уже сидят в числах листа — отдельной строкой их печатать незачем.
+    {
+      label: PDF_LABELS.exhaustion,
+      value: String(getExhaustionEffects(character.health.exhaustion).level),
     },
   ];
 
@@ -940,7 +949,7 @@ function drawSensesPanel(
     (row) => row.formattedValue !== null,
   );
 
-  const speedRows = getSpeedRows(character.speed).filter(
+  const speedRows = getSpeedRows(getEffectiveSpeed(character)).filter(
     (row) => row.value > 0,
   );
 
