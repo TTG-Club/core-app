@@ -359,6 +359,14 @@ modals), so its capabilities are listed here rather than squeezed into the table
   the sheet template is custom (`isCustomSkill`), so the row offers deletion
   instead of a reset. Names are compared loosely (case, «ё», spacing) so the
   same skill cannot be added twice.
+- Hovering an ability tile (or reaching it with the keyboard) highlights every
+  skill that ability feeds: its own ones and those taking a
+  `CharacterCustomBonus` of the «ability modifier» kind from it
+  (`SkillRow.bonusAbilities`). Only the row's own ability also gets its label
+  coloured, so a highlight coming through a bonus is still told apart. The tile
+  reads its element through the component ref (`useElementHover`, `onLongPress`),
+  which is why `SheetPanel` must stay single-root — a comment before its
+  `fieldset` makes the root a fragment in dev builds and quietly kills both.
 - Saving-throw settings (`SheetSavingThrowsSettingsModal`, opened by the gear
   next to the «Спасброски» panel title — the same reveal-on-hover control the
   skills panel has): each of the six gets its ability picked, its proficiency

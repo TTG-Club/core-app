@@ -461,6 +461,14 @@
     });
   }
 
+  // Характеристика под курсором: пока плитка наведена, её навыки подсвечены в
+  // списке — так видно, на что влияет значение, ещё до открытия настроек.
+  const highlightedAbility = ref<AbilityKey | null>(null);
+
+  function handleAbilityHighlight(abilityKey: AbilityKey | null) {
+    highlightedAbility.value = abilityKey;
+  }
+
   function handleAbilityAdjust(abilityKey: AbilityKey, delta: number) {
     if (!ensureEditable()) {
       return;
@@ -1084,6 +1092,7 @@
 
             <SheetSkillsPanel
               :rows="skillRows"
+              :highlighted-ability="highlightedAbility"
               class="grow max-sm:order-4 max-sm:col-span-full"
               @cycle="cycleSkillProficiency"
               @roll="handleSkillRoll"
@@ -1105,6 +1114,7 @@
             @roll="handleAbilityRoll"
             @settings="handleAbilityEdit"
             @adjust="handleAbilityAdjust"
+            @highlight="handleAbilityHighlight"
           />
         </div>
 

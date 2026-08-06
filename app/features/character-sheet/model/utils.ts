@@ -993,6 +993,24 @@ export function getSavingThrowRows(character: Character): SavingThrowRow[] {
 }
 
 /**
+ * Характеристики, от которых навык получает свои бонусы: только вид
+ * «модификатор характеристики», без повторов и без характеристики самого
+ * навыка — она в строке и так есть.
+ *
+ * @param skill навык персонажа.
+ * @returns характеристики-источники бонусов навыка.
+ */
+function getSkillBonusAbilities(skill: CharacterSkill): AbilityKey[] {
+  const abilities = skill.bonuses
+    .filter(
+      (bonus) => bonus.kind === 'ability' && bonus.ability !== skill.ability,
+    )
+    .map((bonus) => bonus.ability);
+
+  return [...new Set(abilities)];
+}
+
+/**
  * Строки списка навыков.
  *
  * @param character персонаж.
@@ -1005,6 +1023,7 @@ export function getSkillRows(character: Character): SkillRow[] {
     return {
       name: skill.name,
       ability: skill.ability,
+      bonusAbilities: getSkillBonusAbilities(skill),
       abilityLabel: ABILITY_SHORT_LABELS[skill.ability],
       proficiency: skill.proficiency,
       value,

@@ -11,7 +11,17 @@
     roll: [abilityKey: AbilityKey];
     settings: [abilityKey: AbilityKey];
     adjust: [abilityKey: AbilityKey, delta: number];
+    highlight: [abilityKey: AbilityKey | null];
   }>();
+
+  /**
+   * Наведение на плитку — запрос подсветить связанные с характеристикой навыки;
+   * уход курсора гасит подсветку целиком, а не «свою» характеристику: курсор
+   * может уже быть на соседней плитке, и её `highlight` придёт следом.
+   */
+  function handleTileHighlight(abilityKey: AbilityKey, isActive: boolean) {
+    emit('highlight', isActive ? abilityKey : null);
+  }
 </script>
 
 <template>
@@ -28,6 +38,7 @@
         @roll="emit('roll', row.key)"
         @settings="emit('settings', row.key)"
         @adjust="emit('adjust', row.key, $event)"
+        @highlight="handleTileHighlight(row.key, $event)"
       />
     </div>
   </div>

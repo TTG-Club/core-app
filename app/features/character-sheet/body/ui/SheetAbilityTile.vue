@@ -21,6 +21,7 @@
     roll: [];
     settings: [];
     adjust: [delta: number];
+    highlight: [isActive: boolean];
   }>();
 
   // Быстрая правка ± — действие редактирования: у запертого и у чужого листа
@@ -51,6 +52,23 @@
     },
     { delay: 500 },
   );
+
+  // Наведение подсвечивает навыки этой характеристики. Через `unrefElement`: ref
+  // смотрит на компонент рамки, а слушателям нужен её корневой элемент.
+  //
+  // Без гейта по `(hover: hover)`: он отключал бы подсветку всюду, где браузер
+  // не сообщает о наведении — в том числе в эмуляции устройства в DevTools, — а
+  // спасал бы лишь от косметики: после тапа подсветка держится до касания в
+  // стороне, и всё это время поверх открыта модалка броска.
+  const isHovered = useElementHover(() => unrefElement(panelRef));
+
+  // Клавиатура доходит до плитки табом: фокус внутри неё подсвечивает навыки
+  // наравне с наведением, иначе связка была бы доступна только мышью.
+  const { focused: isFocusWithin } = useFocusWithin(panelRef);
+
+  const isHighlighted = computed(() => isHovered.value || isFocusWithin.value);
+
+  watch(isHighlighted, (highlighted) => emit('highlight', highlighted));
 
   function handleRollClick() {
     if (isLongPressTriggered) {

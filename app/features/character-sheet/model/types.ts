@@ -2222,6 +2222,13 @@ export interface SkillRow {
   /** Характеристика навыка: модалка броска даёт подменить её на другую. */
   ability: AbilityKey;
 
+  /**
+   * Характеристики, которые дают навыку свои бонусы (вид «модификатор
+   * характеристики»), кроме характеристики самого навыка. Список пуст, когда
+   * навык считается только от неё.
+   */
+  bonusAbilities: AbilityKey[];
+
   abilityLabel: string;
   proficiency: SkillProficiencyLevel;
 

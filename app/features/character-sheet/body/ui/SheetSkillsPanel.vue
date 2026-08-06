@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SkillRow } from '../../model';
+  import type { AbilityKey, SkillRow } from '../../model';
 
   import { useCharacterSheet } from '../../composables';
   import {
@@ -10,8 +10,25 @@
   } from '../../model';
   import SheetPanel from './SheetPanel.vue';
 
+  /**
+   * Подсветка навыков наведённой характеристики: мягкая заливка и внутренняя
+   * обводка, как у выделенной карточки листа. Обводка целиком лежит в этом
+   * классе и ничего не дублирует в базовом: держать в базовом прозрачный
+   * `ring-transparent` нельзя — в собранном CSS он идёт после цветной обводки
+   * и при равной специфичности всегда её перебивает. Раскладку обводка не
+   * двигает (это тень), поэтому появляться она может и без перехода.
+   */
+  const HIGHLIGHTED_ROW_CLASS =
+    'bg-primary/10 ring-1 ring-primary/50 ring-inset';
+
   const props = defineProps<{
     rows: SkillRow[];
+
+    /**
+     * Характеристика под курсором: её навыки подсвечиваются в списке. `null` —
+     * подсвечивать нечего.
+     */
+    highlightedAbility?: AbilityKey | null;
   }>();
 
   const emit = defineEmits<{
@@ -24,14 +41,31 @@
   // а сам список навыков остаётся прежним.
   const { editControlClass } = useCharacterSheet();
 
-  const displayRows = computed(() =>
-    props.rows.map((row) => ({
-      ...row,
-      icon: SKILL_PROFICIENCY_ICONS[row.proficiency],
-      iconClass: row.proficiency === 'none' ? 'text-muted' : 'text-primary',
-      proficiencyLabel: SKILL_PROFICIENCY_LABELS[row.proficiency],
-    })),
-  );
+  const displayRows = computed(() => {
+    const highlightedAbility = props.highlightedAbility ?? null;
+
+    return props.rows.map((row) => {
+      // Характеристика строки, а не правило навыка: в настройках её можно
+      // подменить, и подсвечивается то, от чего навык считается на самом деле.
+      const isMainAbility = row.ability === highlightedAbility;
+
+      // Свой бонус от другой характеристики тоже связывает её с навыком: строка
+      // подсвечивается, но подпись остаётся приглушённой — навык всё-таки не её.
+      const isHighlighted =
+        isMainAbility
+        || (highlightedAbility !== null
+          && row.bonusAbilities.includes(highlightedAbility));
+
+      return {
+        ...row,
+        icon: SKILL_PROFICIENCY_ICONS[row.proficiency],
+        iconClass: row.proficiency === 'none' ? 'text-muted' : 'text-primary',
+        proficiencyLabel: SKILL_PROFICIENCY_LABELS[row.proficiency],
+        rowClass: isHighlighted ? HIGHLIGHTED_ROW_CLASS : undefined,
+        abilityLabelClass: isMainAbility ? 'text-primary' : 'text-muted',
+      };
+    });
+  });
 </script>
 
 <template>
@@ -59,6 +93,7 @@
         v-for="row in displayRows"
         :key="row.name"
         class="relative flex items-center gap-3 rounded px-2 py-1.5 transition-colors hover:bg-accented/40"
+        :class="row.rowClass"
       >
         <UTooltip
           :text="row.proficiencyLabel"
@@ -85,7 +120,8 @@
           @click.left.exact.prevent="emit('roll', row)"
         >
           <span
-            class="w-8 shrink-0 text-left text-[10px] font-medium text-muted uppercase"
+            class="w-8 shrink-0 text-left text-[10px] font-medium uppercase transition-colors"
+            :class="row.abilityLabelClass"
           >
             {{ row.abilityLabel }}
           </span>
