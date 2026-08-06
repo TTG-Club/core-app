@@ -20,7 +20,14 @@ export const ADMIN_ONLINE_STATS_VTTG_SITE_ID = 'vttg';
 
 export const ADMIN_ONLINE_STATS_VTTG_SITE_LABEL = 'Приложение';
 
-export const ADMIN_ONLINE_STATS_VTTG_GUESTS_LABEL = 'Игроков';
+/**
+ * У приложения обе строки — подмножества итога, а не слагаемые: играющий под аккаунтом
+ * попадает в обе. «Из них» проговаривает это в подписи, чтобы числа не пытались сложить.
+ */
+export const ADMIN_ONLINE_STATS_VTTG_PLAYERS_LABEL = 'Из них играют в мирах';
+
+export const ADMIN_ONLINE_STATS_VTTG_REGISTERED_LABEL =
+  'Из них вошли в аккаунт';
 
 export const ADMIN_ONLINE_STATS_REGISTERED_LABEL = 'Пользователей';
 
