@@ -64,6 +64,7 @@
     SheetProficiencyGroupsModal,
     SheetRollModal,
     SheetSavingThrowsPanel,
+    SheetSavingThrowsSettingsModal,
     SheetSettingsModal,
     SheetShareModal,
     SheetShortRestModal,
@@ -348,6 +349,10 @@
 
   const skillsSettingsModal = overlay.create(SheetSkillsSettingsModal);
 
+  const savingThrowsSettingsModal = overlay.create(
+    SheetSavingThrowsSettingsModal,
+  );
+
   const currencyModal = overlay.create(SheetCurrencyModal);
 
   const proficiencyGroupsModal = overlay.create(SheetProficiencyGroupsModal, {
@@ -551,6 +556,14 @@
     skillsSettingsModal.open();
   }
 
+  function handleSavingThrowsSettings() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    savingThrowsSettingsModal.open();
+  }
+
   function handleCurrencyEdit() {
     if (!ensureEditable()) {
       return;
@@ -602,7 +615,9 @@
     rollModal.open({
       title: `Спасбросок: ${ABILITY_LABELS[row.key]}`,
       modifier: row.value,
-      ability: row.key,
+      // Характеристика строки, а не самого спасброска: от неё модалка считает
+      // подмену, а в подменённом спасброске это уже другая характеристика.
+      ability: row.ability,
       actionLabel: 'Бросить спасбросок',
     });
   }
@@ -1034,6 +1049,7 @@
               :rows="savingThrowRows"
               class="max-sm:order-5 max-sm:col-span-full"
               @roll="handleSavingThrowRoll"
+              @settings="handleSavingThrowsSettings"
               @toggle="toggleSavingThrowProficiency"
             />
 

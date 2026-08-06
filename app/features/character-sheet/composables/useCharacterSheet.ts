@@ -5,6 +5,7 @@ import type {
   CharacterClass,
   CharacterClassResource,
   CharacterCurrency,
+  CharacterCustomBonus,
   CharacterCustomCurrency,
   CharacterExtraHitDie,
   CharacterFeature,
@@ -14,6 +15,7 @@ import type {
   CharacterNote,
   CharacterPersonality,
   CharacterPreparedSpells,
+  CharacterSavingThrow,
   CharacterSettings,
   CharacterSkill,
   CharacterSpecies,
@@ -116,12 +118,14 @@ import {
   toCustomInventoryItem,
   toCustomSpell,
   toStoredCustomBonuses,
+  toStoredSavingThrows,
   toStoredSettings,
   toTrimmedPersonality,
   toUpdatedCustomInventoryItem,
   unionToolProficiencies,
   VISION_DISTANCE_MAX,
   VISION_DISTANCE_MIN,
+  withSavingThrowProficiencies,
 } from '../model';
 
 /**
@@ -366,16 +370,36 @@ export function useCharacterSheet() {
       return;
     }
 
-    const isProficient =
-      character.value.savingThrowProficiencies.includes(ability);
+    character.value = {
+      ...character.value,
+      savingThrows: character.value.savingThrows.map((savingThrow) =>
+        savingThrow.key === ability
+          ? { ...savingThrow, proficient: !savingThrow.proficient }
+          : savingThrow,
+      ),
+    };
+  }
+
+  /**
+   * Установка спасбросков целиком: модалка настройки правит характеристики
+   * спасбросков, их свои бонусы и общие бонусы листа, а владения приходят из
+   * неё как есть.
+   *
+   * @param savingThrows спасброски из черновика модалки.
+   * @param commonBonuses общие бонусы ко всем спасброскам из того же черновика.
+   */
+  function setSavingThrows(
+    savingThrows: CharacterSavingThrow[],
+    commonBonuses: CharacterCustomBonus[],
+  ): void {
+    if (!ensureEditable()) {
+      return;
+    }
 
     character.value = {
       ...character.value,
-      savingThrowProficiencies: isProficient
-        ? character.value.savingThrowProficiencies.filter(
-            (key) => key !== ability,
-          )
-        : [...character.value.savingThrowProficiencies, ability],
+      savingThrows: toStoredSavingThrows(savingThrows),
+      commonSavingThrowBonuses: toStoredCustomBonuses(commonBonuses),
     };
   }
 
@@ -554,7 +578,8 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Установка класса доспеха с ограничением базового значения.
+   * Установка класса доспеха с ограничением базового значения и своего предела
+   * бонуса Ловкости.
    *
    * @param armorClass новый класс доспеха персонажа.
    */
@@ -1214,7 +1239,12 @@ export function useCharacterSheet() {
       },
       inventory: startingEquipment.inventory,
       currency: startingEquipment.currency,
-      savingThrowProficiencies: [...payload.savingThrows],
+      // Класс переписывает только владения: подменённая характеристика
+      // спасброска и его свои бонусы переживают смену класса.
+      savingThrows: withSavingThrowProficiencies(
+        character.value.savingThrows,
+        payload.savingThrows,
+      ),
       hitDice: [{ die: payload.hitDie, current: level, max: level }],
       health: {
         ...character.value.health,
@@ -2516,6 +2546,7 @@ export function useCharacterSheet() {
     setName,
     setPersonality,
     setProficiencies,
+    setSavingThrows,
     setSkills,
     setToolProficiencies,
     setProgress,

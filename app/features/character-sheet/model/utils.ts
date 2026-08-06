@@ -11,6 +11,7 @@ import type {
   ArmorClassAbilityBonus,
   ArmorClassBreakdown,
   ArmorDexterityMod,
+  BonusBreakdownPart,
   CatalogSpellDetail,
   Character,
   CharacterAbilities,
@@ -27,6 +28,7 @@ import type {
   CharacterInventoryItem,
   CharacterLevelHitPoints,
   CharacterPersonality,
+  CharacterSavingThrow,
   CharacterSettings,
   CharacterSkill,
   CharacterSpecies,
@@ -86,7 +88,6 @@ import type {
   ResourceRecoveryRule,
   RollMode,
   SavingThrowRow,
-  SkillBreakdownPart,
   SkillRow,
   SpeciesFeatureSummary,
   SpeciesSummary,
@@ -249,6 +250,7 @@ import {
   RESOURCE_SHORT_LABEL_MAX_LENGTH,
   ROLL_MODE_DICE_COUNT,
   ROLL_MODE_DICE_SUFFIX,
+  SAVING_THROW_PROFICIENCY_LABELS,
   SHEET_COPY_LIMIT_HINT,
   SHEET_DOWNLOAD_JSON_LABEL,
   SHEET_DOWNLOAD_PDF_HINT,
@@ -405,27 +407,91 @@ export function getNextLevelExperience(level: number): number {
 }
 
 /**
- * Значение спасброска: модификатор характеристики плюс бонус мастерства при
- * владении.
+ * Значение спасброска: модификатор характеристики, бонус мастерства при
+ * владении, свои бонусы записи и общие бонусы ко всем спасброскам.
  *
  * @param character персонаж.
- * @param ability ключ характеристики.
+ * @param savingThrow спасбросок персонажа.
  * @returns значение спасброска.
  */
 export function getSavingThrowValue(
   character: Character,
-  ability: AbilityKey,
+  savingThrow: CharacterSavingThrow,
 ): number {
-  // Спасбросок — бросок к20, поэтому истощение снимает с него свой штраф.
-  const modifier =
-    getModifier(character.abilities[ability])
-    - getExhaustionD20Penalty(character);
+  const proficiencyPart = savingThrow.proficient
+    ? getCharacterProficiencyBonus(character)
+    : 0;
 
-  if (!character.savingThrowProficiencies.includes(ability)) {
-    return modifier;
-  }
+  return (
+    getModifier(character.abilities[savingThrow.ability])
+    + proficiencyPart
+    + getCustomBonusesValue(character, savingThrow.bonuses)
+    + getCustomBonusesValue(character, character.commonSavingThrowBonuses)
+    // Спасбросок — бросок к20, поэтому истощение снимает с него свой штраф.
+    - getExhaustionD20Penalty(character)
+  );
+}
 
-  return modifier + getCharacterProficiencyBonus(character);
+/**
+ * Спасбросок к правилам: характеристика своя же, без своих бонусов. Владение
+ * настройка не трогает — его даёт класс, а не подсчёт.
+ *
+ * @param savingThrow спасбросок персонажа.
+ * @returns спасбросок, считающийся по правилам.
+ */
+export function toDefaultSavingThrow(
+  savingThrow: CharacterSavingThrow,
+): CharacterSavingThrow {
+  return { ...savingThrow, ability: savingThrow.key, bonuses: [] };
+}
+
+/**
+ * Спасбросок отличается от правил: характеристика подменена или есть свои
+ * бонусы. Общие бонусы листа сюда не входят — они правятся своим блоком.
+ *
+ * @param savingThrow спасбросок персонажа.
+ * @returns `true`, если спасбросок считается не по правилам.
+ */
+export function isChangedSavingThrow(
+  savingThrow: CharacterSavingThrow,
+): boolean {
+  return (
+    savingThrow.ability !== savingThrow.key || savingThrow.bonuses.length > 0
+  );
+}
+
+/**
+ * Спасброски с владениями выбранных характеристик: остальное записей не
+ * касается — подменённая характеристика и свои бонусы переживают смену класса.
+ *
+ * @param savingThrows спасброски персонажа.
+ * @param abilities характеристики, спасбросками которых персонаж владеет.
+ * @returns спасброски с проставленным владением.
+ */
+export function withSavingThrowProficiencies(
+  savingThrows: CharacterSavingThrow[],
+  abilities: AbilityKey[],
+): CharacterSavingThrow[] {
+  return savingThrows.map((savingThrow) => ({
+    ...savingThrow,
+    proficient: abilities.includes(savingThrow.key),
+  }));
+}
+
+/**
+ * Приведение спасбросков к записи листа: своим бонусам нужна та же чистка, что
+ * и бонусам навыков и настроек.
+ *
+ * @param savingThrows спасброски из черновика модалки.
+ * @returns спасброски для записи в лист.
+ */
+export function toStoredSavingThrows(
+  savingThrows: CharacterSavingThrow[],
+): CharacterSavingThrow[] {
+  return savingThrows.map((savingThrow) => ({
+    ...savingThrow,
+    bonuses: toStoredCustomBonuses(savingThrow.bonuses),
+  }));
 }
 
 /**
@@ -691,13 +757,13 @@ export function getCustomBonusLabel(bonus: CharacterCustomBonus): string {
 export function getSkillBreakdown(
   character: Character,
   skill: CharacterSkill,
-): SkillBreakdownPart[] {
+): BonusBreakdownPart[] {
   const proficiencyPart = Math.floor(
     getCharacterProficiencyBonus(character)
       * SKILL_PROFICIENCY_MULTIPLIERS[skill.proficiency],
   );
 
-  const proficiencyParts: SkillBreakdownPart[] =
+  const proficiencyParts: BonusBreakdownPart[] =
     skill.proficiency === 'none'
       ? []
       : [
@@ -712,7 +778,7 @@ export function getSkillBreakdown(
   // навыка не сходилось бы ни с характеристикой, ни с владением.
   const exhaustionPenalty = getExhaustionD20Penalty(character);
 
-  const exhaustionParts: SkillBreakdownPart[] =
+  const exhaustionParts: BonusBreakdownPart[] =
     exhaustionPenalty === 0
       ? []
       : [
@@ -758,6 +824,95 @@ export function getSkillBonusHint(
   }
 
   return getSkillBreakdown(character, skill)
+    .map((part) => `${part.label} ${part.formattedValue}`)
+    .join(' · ');
+}
+
+/**
+ * Разбор значения спасброска на слагаемые: характеристика, бонус мастерства при
+ * владении, каждый свой бонус записи и каждый общий бонус листа. Владения нет —
+ * бонуса мастерства в разборе тоже нет, показывать нулевую строку незачем.
+ *
+ * @param character персонаж.
+ * @param savingThrow спасбросок персонажа.
+ * @returns слагаемые значения спасброска в порядке подсчёта.
+ */
+export function getSavingThrowBreakdown(
+  character: Character,
+  savingThrow: CharacterSavingThrow,
+): BonusBreakdownPart[] {
+  const proficiencyParts: BonusBreakdownPart[] = savingThrow.proficient
+    ? [
+        {
+          id: 'proficiency',
+          label: SAVING_THROW_PROFICIENCY_LABELS.proficient,
+          formattedValue: getFormattedBonus(
+            getCharacterProficiencyBonus(character),
+          ),
+        },
+      ]
+    : [];
+
+  // Истощение снимает своё с каждого броска к20: без строки разбора значение
+  // спасброска не сходилось бы ни с характеристикой, ни с владением.
+  const exhaustionPenalty = getExhaustionD20Penalty(character);
+
+  const exhaustionParts: BonusBreakdownPart[] =
+    exhaustionPenalty === 0
+      ? []
+      : [
+          {
+            id: 'exhaustion',
+            label: EXHAUSTION_LABELS.title,
+            formattedValue: getFormattedBonus(-exhaustionPenalty),
+          },
+        ];
+
+  return [
+    {
+      id: 'ability',
+      label: ABILITY_LABELS[savingThrow.ability],
+      formattedValue: getFormattedBonus(
+        getModifier(character.abilities[savingThrow.ability]),
+      ),
+    },
+    ...proficiencyParts,
+    ...[...savingThrow.bonuses, ...character.commonSavingThrowBonuses].map(
+      (bonus) => ({
+        id: bonus.id,
+        label: getCustomBonusLabel(bonus),
+        formattedValue: getFormattedBonus(
+          getCustomBonusValue(character, bonus),
+        ),
+      }),
+    ),
+    ...exhaustionParts,
+  ];
+}
+
+/**
+ * Подсказка к значению спасброска: без разбора итог не сходится ни с подписью
+ * строки, ни с характеристикой. Спасбросок по правилам объяснять нечего — у
+ * него `null`.
+ *
+ * @param character персонаж.
+ * @param savingThrow спасбросок персонажа.
+ * @returns разбор значения строкой или null.
+ */
+export function getSavingThrowBonusHint(
+  character: Character,
+  savingThrow: CharacterSavingThrow,
+): string | null {
+  const isPlain =
+    !isChangedSavingThrow(savingThrow)
+    && character.commonSavingThrowBonuses.length === 0
+    && getExhaustionD20Penalty(character) === 0;
+
+  if (isPlain) {
+    return null;
+  }
+
+  return getSavingThrowBreakdown(character, savingThrow)
     .map((part) => `${part.label} ${part.formattedValue}`)
     .join(' · ');
 }
@@ -822,15 +977,17 @@ export function getAbilityRows(character: Character): AbilityRow[] {
  * @returns строки для отображения спасбросков.
  */
 export function getSavingThrowRows(character: Character): SavingThrowRow[] {
-  return ABILITY_ORDER.map((key) => {
-    const value = getSavingThrowValue(character, key);
+  return character.savingThrows.map((savingThrow) => {
+    const value = getSavingThrowValue(character, savingThrow);
 
     return {
-      key,
-      label: `${ABILITY_SHORT_LABELS[key]}.`,
-      proficient: character.savingThrowProficiencies.includes(key),
+      key: savingThrow.key,
+      label: `${ABILITY_SHORT_LABELS[savingThrow.key]}.`,
+      ability: savingThrow.ability,
+      proficient: savingThrow.proficient,
       value,
       formattedValue: getFormattedBonus(value),
+      bonusHint: getSavingThrowBonusHint(character, savingThrow),
     };
   });
 }

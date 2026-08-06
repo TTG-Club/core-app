@@ -359,6 +359,23 @@ modals), so its capabilities are listed here rather than squeezed into the table
   the sheet template is custom (`isCustomSkill`), so the row offers deletion
   instead of a reset. Names are compared loosely (case, «ё», spacing) so the
   same skill cannot be added twice.
+- Saving-throw settings (`SheetSavingThrowsSettingsModal`, opened by the gear
+  next to the «Спасброски» panel title — the same reveal-on-hover control the
+  skills panel has): each of the six gets its ability picked, its proficiency
+  toggled and any number of `CharacterCustomBonus` rows on top, and above them
+  all sits a shared «Ко всем спасброскам» block whose bonuses count in every one
+  (`commonSavingThrowBonuses` — a cloak of protection or a paladin's aura is
+  entered once instead of six times). A changed saving throw is outlined and
+  reset to the rules in one click (`toDefaultSavingThrow`; proficiency is left
+  alone — it comes from the class, not from the maths), and in the panel its
+  value is underlined with a tooltip breaking it down
+  (`getSavingThrowBonusHint`: ability + proficiency + every bonus + exhaustion).
+  Everything flows through `getSavingThrowValue`, so the roll and the PDF follow
+  it. Storage moved from the flat `savingThrowProficiencies` list of abilities to
+  a `savingThrows` record per ability (`CharacterSavingThrow`); the legacy list is
+  migrated on read (`toSavingThrows` in `character-schema.ts`) and the records are
+  always six in sheet order. Picking a class rewrites only the proficiencies
+  (`withSavingThrowProficiencies`), so a swapped ability and its bonuses survive.
 - Sheet settings (`SheetSettingsModal`, opened from the sheet header and from the
   list card) split into two tabs: «Атака оружием» (base attack ability) and
   «Свои бонусы». The second tab holds two identical sections

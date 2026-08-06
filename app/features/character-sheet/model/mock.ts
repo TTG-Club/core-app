@@ -55,7 +55,48 @@ export const DEFAULT_CHARACTER: Character = {
     wisdom: 10,
     charisma: 10,
   },
-  savingThrowProficiencies: [],
+  // Шесть записей заведены сразу: спасброски правилами закрыты, поэтому список
+  // не растёт и не сокращается — меняются только владение, характеристика и
+  // свои бонусы записи.
+  savingThrows: [
+    {
+      key: 'strength',
+      ability: 'strength',
+      proficient: false,
+      bonuses: [],
+    },
+    {
+      key: 'dexterity',
+      ability: 'dexterity',
+      proficient: false,
+      bonuses: [],
+    },
+    {
+      key: 'constitution',
+      ability: 'constitution',
+      proficient: false,
+      bonuses: [],
+    },
+    {
+      key: 'intelligence',
+      ability: 'intelligence',
+      proficient: false,
+      bonuses: [],
+    },
+    {
+      key: 'wisdom',
+      ability: 'wisdom',
+      proficient: false,
+      bonuses: [],
+    },
+    {
+      key: 'charisma',
+      ability: 'charisma',
+      proficient: false,
+      bonuses: [],
+    },
+  ],
+  commonSavingThrowBonuses: [],
   skills: [
     {
       name: 'Акробатика',

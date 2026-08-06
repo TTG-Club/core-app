@@ -3,6 +3,7 @@ import type {
   Character,
   CharacterCustomBonus,
   CharacterNote,
+  CharacterSavingThrow,
   CharacterSheetDetail,
   CharacterSheetListItem,
   CharacterSheetListPage,
@@ -387,6 +388,42 @@ const abilitiesSchema = z
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.abilities }));
 
+const savingThrowSchema = z.object({
+  key: abilityKeySchema,
+  ability: abilityKeySchema,
+  proficient: z.boolean().catch(false),
+  bonuses: z.array(customBonusSchema).catch([]),
+});
+
+/**
+ * Спасброски листа: сперва они хранились одним списком характеристик, которыми
+ * персонаж владеет, поэтому у листов без записей владение переезжает из
+ * легаси-списка, а характеристика и свои бонусы заводятся по правилам. Записей
+ * всегда шесть и в порядке листа: документ мог потерять строку или сложить их
+ * иначе, а блок спасбросков и PDF читают их по порядку.
+ *
+ * @param savingThrows спасброски записи листа.
+ * @param legacyProficiencies легаси-список владений спасбросками записи листа.
+ * @returns спасброски листа.
+ */
+function toSavingThrows(
+  savingThrows: CharacterSavingThrow[] | undefined,
+  legacyProficiencies: AbilityKey[] | undefined,
+): CharacterSavingThrow[] {
+  return DEFAULT_CHARACTER.savingThrows.map(({ key, ability }) => {
+    const stored = savingThrows?.find((savingThrow) => savingThrow.key === key);
+
+    return (
+      stored ?? {
+        key,
+        ability,
+        proficient: legacyProficiencies?.includes(key) ?? false,
+        bonuses: [],
+      }
+    );
+  });
+}
+
 const skillSchema = z.object({
   name: z.string(),
   ability: abilityKeySchema,
@@ -658,41 +695,57 @@ const inventoryItemSchema = z.object({
 });
 
 /** Схема персонажа целиком (jsonb-документ листа). */
-const characterSchema = z.object({
-  id: z.string().catch(DEFAULT_CHARACTER.id),
-  name: z.string().catch(DEFAULT_CHARACTER.name),
-  avatarUrl: z.string().nullable().catch(null),
-  species: speciesSchema,
-  size: z.string().nullable().catch(null),
-  features: z.array(featureSchema).catch([]),
-  spells: z.array(spellSchema).catch([]),
-  spellcasting: spellcastingSchema,
-  spellSlots: z.array(spellSlotSchema).catch([]),
-  characterClass: characterClassSchema,
-  characterBackground: characterBackgroundSchema,
-  level: z.coerce.number().catch(DEFAULT_CHARACTER.level),
-  experience: experienceSchema,
-  inspiration: z.boolean().catch(false),
-  armorClass: armorClassSchema,
-  speed: speedSchema,
-  vision: visionSchema,
-  abilities: abilitiesSchema,
-  savingThrowProficiencies: z.array(abilityKeySchema).catch([]),
-  skills: z
-    .array(skillSchema)
-    .catch(() => structuredClone(DEFAULT_CHARACTER.skills)),
-  health: healthSchema,
-  hitDice: z.array(hitDieSchema).catch([]),
-  extraHitDice: z.array(extraHitDieSchema).catch([]),
-  classResources: z.array(classResourceSchema).catch([]),
-  proficiencies: proficienciesSchema,
-  currency: currencySchema,
-  customCurrencies: z.array(customCurrencySchema).catch([]),
-  inventory: z.array(inventoryItemSchema).catch([]),
-  notes: notesSchema,
-  personality: personalitySchema,
-  settings: settingsSchema,
-});
+const characterSchema = z
+  .object({
+    id: z.string().catch(DEFAULT_CHARACTER.id),
+    name: z.string().catch(DEFAULT_CHARACTER.name),
+    avatarUrl: z.string().nullable().catch(null),
+    species: speciesSchema,
+    size: z.string().nullable().catch(null),
+    features: z.array(featureSchema).catch([]),
+    spells: z.array(spellSchema).catch([]),
+    spellcasting: spellcastingSchema,
+    spellSlots: z.array(spellSlotSchema).catch([]),
+    characterClass: characterClassSchema,
+    characterBackground: characterBackgroundSchema,
+    level: z.coerce.number().catch(DEFAULT_CHARACTER.level),
+    experience: experienceSchema,
+    inspiration: z.boolean().catch(false),
+    armorClass: armorClassSchema,
+    speed: speedSchema,
+    vision: visionSchema,
+    abilities: abilitiesSchema,
+    // Легаси-поле: одним списком владений спасброски хранились до того, как у
+    // каждого появились своя характеристика и свои бонусы.
+    savingThrowProficiencies: z
+      .array(abilityKeySchema)
+      .optional()
+      .catch(undefined),
+    savingThrows: z.array(savingThrowSchema).optional().catch(undefined),
+    // Общие бонусы ко всем спасброскам появились вместе с записями; у листов до
+    // них общих бонусов попросту нет.
+    commonSavingThrowBonuses: z.array(customBonusSchema).catch([]),
+    skills: z
+      .array(skillSchema)
+      .catch(() => structuredClone(DEFAULT_CHARACTER.skills)),
+    health: healthSchema,
+    hitDice: z.array(hitDieSchema).catch([]),
+    extraHitDice: z.array(extraHitDieSchema).catch([]),
+    classResources: z.array(classResourceSchema).catch([]),
+    proficiencies: proficienciesSchema,
+    currency: currencySchema,
+    customCurrencies: z.array(customCurrencySchema).catch([]),
+    inventory: z.array(inventoryItemSchema).catch([]),
+    notes: notesSchema,
+    personality: personalitySchema,
+    settings: settingsSchema,
+  })
+  // Легаси-список владений спасбросками уходит из документа, как только тот
+  // разобран: дальше по листу ходят только сами записи спасбросков.
+  .transform(({ savingThrowProficiencies, savingThrows, ...character }) => ({
+    ...character,
+    savingThrows: toSavingThrows(savingThrows, savingThrowProficiencies),
+  }));
 
 /**
  * Валидация и нормализация документа персонажа. Идентификатором персонажа

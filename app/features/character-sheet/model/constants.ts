@@ -968,6 +968,39 @@ export const SHEET_SKILL_SETTINGS_LABELS = {
   customLimit: `Своих навыков не больше ${CUSTOM_SKILLS_MAX}`,
 } as const;
 
+/**
+ * Подписи владения спасброском: их два, а не четыре, как у навыка, — половины
+ * владения и компетенции у спасбросков в правилах нет.
+ */
+export const SAVING_THROW_PROFICIENCY_LABELS = {
+  proficient: 'Владение',
+  none: 'Нет владения',
+} as const;
+
+/** Значки владения спасброском: закрашенный кружок — владение. */
+export const SAVING_THROW_PROFICIENCY_ICONS = {
+  proficient: 'tabler:circle-filled',
+  none: 'tabler:circle',
+} as const;
+
+/** Подписи модалки настройки спасбросков. */
+export const SHEET_SAVING_THROW_SETTINGS_LABELS = {
+  title: 'Настройка спасбросков',
+  open: 'Настроить спасброски',
+  hint:
+    'Характеристика задаёт модификатор спасброска, при владении к нему '
+    + 'добавляется бонус мастерства. Дополнительные бонусы складываются '
+    + 'сверху — их сколько угодно.',
+  abilityPlaceholder: 'Характеристика',
+  proficiency: 'Владение спасброском',
+  resetSavingThrow: 'Вернуть спасбросок к правилам',
+  addBonus: 'Добавить бонус',
+  commonTitle: 'Ко всем спасброскам',
+  commonHint:
+    'Бонус идёт в каждый из шести спасбросков: так заводят плащ защиты или '
+    + 'ауру паладина, а не повторяют одно и то же шесть раз.',
+} as const;
+
 /** Множитель грузоподъёмности от значения Силы. */
 export const CARRYING_CAPACITY_MULTIPLIER = 15;
 

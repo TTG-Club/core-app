@@ -504,6 +504,31 @@ export interface CharacterCustomBonus {
   label: string;
 }
 
+/**
+ * Спасбросок персонажа. Записей всегда шесть — по одной на характеристику:
+ * спасброски, в отличие от навыков, правилами закрыты, и своих игрок не заводит.
+ */
+export interface CharacterSavingThrow {
+  /** Спасбросок какой характеристики: ключ записи и подпись строки. */
+  key: AbilityKey;
+
+  /**
+   * Характеристика, чей модификатор идёт в спасбросок. По правилам совпадает с
+   * `key`, но умения и предметы дают катить спасбросок от другой.
+   */
+  ability: AbilityKey;
+
+  /** Персонаж владеет спасброском: в счёт идёт бонус мастерства. */
+  proficient: boolean;
+
+  /**
+   * Свои бонусы спасброска сверх правил (пустой список — спасбросок считается
+   * по правилам). Бонусы, общие для всех шести, живут отдельно — в
+   * `commonSavingThrowBonuses` персонажа.
+   */
+  bonuses: CharacterCustomBonus[];
+}
+
 /** Навык персонажа. */
 export interface CharacterSkill {
   name: string;
@@ -517,8 +542,11 @@ export interface CharacterSkill {
   bonuses: CharacterCustomBonus[];
 }
 
-/** Слагаемое значения навыка для разбора: откуда взялась часть бонуса. */
-export interface SkillBreakdownPart {
+/**
+ * Слагаемое значения для разбора: откуда взялась часть бонуса. Одинаково у
+ * навыка и спасброска — обоим разбор нужен, чтобы итог сходился с подписью.
+ */
+export interface BonusBreakdownPart {
   /** Ключ строки разбора: часть по правилам или идентификатор бонуса. */
   id: string;
 
@@ -2000,8 +2028,14 @@ export interface Character {
 
   abilities: CharacterAbilities;
 
-  /** Характеристики, спасбросками которых персонаж владеет. */
-  savingThrowProficiencies: AbilityKey[];
+  /** Спасброски: владение, характеристика и свои бонусы каждого из шести. */
+  savingThrows: CharacterSavingThrow[];
+
+  /**
+   * Свои бонусы ко всем спасброскам сразу (плащ защиты, аура паладина): идут в
+   * каждый из шести сверх его собственных бонусов.
+   */
+  commonSavingThrowBonuses: CharacterCustomBonus[];
 
   skills: CharacterSkill[];
   health: CharacterHealth;
@@ -2163,12 +2197,22 @@ export interface AbilityRow {
 export interface SavingThrowRow {
   key: AbilityKey;
   label: string;
+
+  /** Характеристика спасброска: модалка броска даёт подменить её на другую. */
+  ability: AbilityKey;
+
   proficient: boolean;
 
   /** Числовое значение спасброска для броска кубов. */
   value: number;
 
   formattedValue: string;
+
+  /**
+   * Разбор значения для подсказки; null — спасбросок считается по правилам, и
+   * объяснять в блоке нечего.
+   */
+  bonusHint: string | null;
 }
 
 /** Строка списка навыков. */

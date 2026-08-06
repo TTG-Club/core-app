@@ -12,6 +12,7 @@ import type {
   CharacterHitDie,
   CharacterNote,
   CharacterPersonality,
+  CharacterSavingThrow,
   CharacterSkill,
   CharacterSpecies,
   CharacterSpellSlot,
@@ -65,6 +66,7 @@ import {
   buildCustomSpeciesUrl,
   getCharacterFeatureId,
   getNextLevelExperience,
+  withSavingThrowProficiencies,
 } from '../utils';
 import {
   LSS_ABILITY_KEYS,
@@ -147,15 +149,21 @@ function toAbilities(abilities: Record<string, number>): CharacterAbilities {
 }
 
 /**
- * Характеристики, спасбросками которых персонаж владеет.
+ * Спасброски листа: сами записи остаются нашими, из файла берётся только
+ * владение — своей характеристики и своих бонусов у спасброска в LSS нет.
  *
  * @param codes коды характеристик LSS.
- * @returns ключи характеристик листа.
+ * @returns спасброски персонажа.
  */
-function toSavingThrows(codes: string[]): AbilityKey[] {
-  return codes
+function toSavingThrows(codes: string[]): CharacterSavingThrow[] {
+  const abilities = codes
     .map((code) => LSS_ABILITY_KEYS[code])
     .filter((key): key is AbilityKey => Boolean(key));
+
+  return withSavingThrowProficiencies(
+    structuredClone(DEFAULT_CHARACTER.savingThrows),
+    abilities,
+  );
 }
 
 /**
@@ -711,7 +719,7 @@ export function convertLssCharacter(source: LssCharacter): Character {
     },
     inspiration: source.inspiration,
     abilities: toAbilities(source.abilities),
-    savingThrowProficiencies: toSavingThrows(source.saves),
+    savingThrows: toSavingThrows(source.saves),
     skills: toSkills(source.skills),
     health: {
       current: clamp(Math.trunc(source.health.current), 0, maxHitPoints),
