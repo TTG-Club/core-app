@@ -1,3 +1,5 @@
+import type { ButtonProps } from '@nuxt/ui';
+
 import type {
   Group,
   GroupKey,
@@ -19,6 +21,20 @@ export interface ListPresentationOption<TValue extends string> {
   label: string;
   value: TValue;
   apiValue: string;
+}
+
+export type ListViewMode = 'grid' | 'list';
+
+export type ListViewColumns = 1 | 3;
+
+// Кнопка переключателя вида: вариант из LIST_VIEW_MODE_OPTIONS плюс подсветка активного режима.
+export interface ListViewModeButton {
+  value: ListViewMode;
+  label: string;
+  icon: string;
+  isActive: boolean;
+  color: ButtonProps['color'];
+  variant: ButtonProps['variant'];
 }
 
 export type ListPresentationItemSort<TItem> = (

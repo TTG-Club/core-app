@@ -10,6 +10,7 @@
   import {
     useListPresentation,
     useListPresentationMenus,
+    useListViewMode,
   } from '~infrastructure/list-presentation/composable';
   import { SpellBody } from '~spells/body';
   import { useSpellClassPagination } from '~spells/composable';
@@ -46,6 +47,8 @@
   const spells = ref<Array<SpellLinkResponse>>([]);
 
   const presentation = useListPresentation(SPELL_LIST_PRESENTATION_CONFIG);
+
+  const { columns: listColumns } = useListViewMode();
 
   const presentationMenus = useListPresentationMenus(
     SPELL_LIST_PRESENTATION_CONFIG,
@@ -384,6 +387,7 @@
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
         :presentation-menus="presentationMenus"
+        show-view-mode
       >
         <template #legend>
           <SpellLegend />
@@ -398,7 +402,7 @@
       >
         <PageGrid
           v-if="isLoading"
-          :columns="3"
+          :columns="listColumns"
         >
           <SkeletonLinkSmall
             v-for="index in 5"
@@ -419,6 +423,7 @@
           :reset-key="listResetKey"
           :separator-label="presentation.separatorLabel.value"
           :items="spells"
+          :columns="listColumns"
           :field="presentation.groupField.value"
           :group-sort="presentation.groupSort.value"
           :active-item-key="detailUrl"

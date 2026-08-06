@@ -7,6 +7,7 @@
   import { GlossaryBody } from '~glossary/body';
   import { GlossaryLink } from '~glossary/link';
   import { FilterControls, useFilter } from '~infrastructure/filter';
+  import { useListViewMode } from '~infrastructure/list-presentation/composable';
   import { UiDetailPane } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
@@ -25,6 +26,8 @@
     isShowedPreview: isFilterPreviewShowed,
     defaults: filterDefaults,
   } = await useFilter('glossary', '/api/v2/glossary/filters');
+
+  const { columns: listColumns } = useListViewMode();
 
   const {
     data: glossaryItems,
@@ -82,6 +85,7 @@
         :defaults="filterDefaults"
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
+        show-view-mode
       >
       </FilterControls>
     </template>
@@ -93,7 +97,7 @@
       >
         <PageGrid
           v-if="status !== 'success' && status !== 'error'"
-          :columns="3"
+          :columns="listColumns"
         >
           <SkeletonLinkSmall
             v-for="index in 5"
@@ -104,6 +108,7 @@
         <GroupedList
           v-else-if="status === 'success' && glossaryItems?.length"
           :items="glossaryItems"
+          :columns="listColumns"
           :reset-key="listResetKey"
           field="tagCategory"
           :active-item-key="detailUrl"

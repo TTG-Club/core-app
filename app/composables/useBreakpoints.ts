@@ -1,15 +1,20 @@
 import { useBreakpoints as useBreakpointsComposition } from '@vueuse/core';
 
 /**
- * SM: 576px,
+ * XS: 480px,
+ * SM: 640px,
  * MD: 768px,
- * LG: 992px,
- * XL: 1200px,
- * XXL: 1400px,
+ * LG: 1024px,
+ * XL: 1280px,
+ * XXL: 1536px,
  */
 export const enum Breakpoint {
   /**
-   * 576px
+   * 480px
+   */
+  XS = 'XS',
+  /**
+   * 640px
    */
   SM = 'SM',
   /**
@@ -17,27 +22,29 @@ export const enum Breakpoint {
    */
   MD = 'MD',
   /**
-   * 992px
+   * 1024px
    */
   LG = 'LG',
   /**
-   * 1200px
+   * 1280px
    */
   XL = 'XL',
   /**
-   * 1400px
+   * 1536px
    */
   XXL = 'XXL',
 }
 
 /**
- * [Breakpoint.SM]: 576px,
+ * [Breakpoint.XS]: 480px,
+ * [Breakpoint.SM]: 640px,
  * [Breakpoint.MD]: 768px,
- * [Breakpoint.LG]: 992px,
- * [Breakpoint.XL]: 1200px,
- * [Breakpoint.XXL]: 1400px,
+ * [Breakpoint.LG]: 1024px,
+ * [Breakpoint.XL]: 1280px,
+ * [Breakpoint.XXL]: 1536px,
  */
 export const BREAKPOINTS: Record<Breakpoint, number> = {
+  [Breakpoint.XS]: 480,
   [Breakpoint.SM]: 640,
   [Breakpoint.MD]: 768,
   [Breakpoint.LG]: 1024,
@@ -62,7 +69,11 @@ export function useBreakpoints() {
     unref(composition.smaller(Breakpoint.XL)),
   );
 
-  const isXsOrLower = computed(() => unref(composition.smaller(Breakpoint.SM)));
+  const isXsOrLower = computed(() => unref(composition.smaller(Breakpoint.XS)));
+
+  const isXsOrGreater = computed(() =>
+    unref(composition.greaterOrEqual(Breakpoint.XS)),
+  );
 
   const isSmOrGreater = computed(() =>
     unref(composition.greaterOrEqual(Breakpoint.SM)),
@@ -91,6 +102,7 @@ export function useBreakpoints() {
     isDesktop,
     isMobileOrTablet,
     isXsOrLower,
+    isXsOrGreater,
     isSmOrGreater,
     isMdOrGreater,
     isLgOrGreater,

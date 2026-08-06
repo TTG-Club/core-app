@@ -5,6 +5,7 @@
   import {
     useListPresentation,
     useListPresentationMenus,
+    useListViewMode,
   } from '~infrastructure/list-presentation/composable';
   import { ItemBody } from '~items/body';
   import { ItemLink } from '~items/link';
@@ -43,6 +44,8 @@
   );
 
   const presentation = useListPresentation(itemListPresentationConfig);
+
+  const { columns: listColumns } = useListViewMode();
 
   const presentationMenus = useListPresentationMenus(
     itemListPresentationConfig,
@@ -122,6 +125,7 @@
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
         :presentation-menus="presentationMenus"
+        show-view-mode
       >
       </FilterControls>
     </template>
@@ -133,7 +137,7 @@
       >
         <PageGrid
           v-if="isLoading"
-          :columns="3"
+          :columns="listColumns"
         >
           <SkeletonLinkSmall
             v-for="index in 5"
@@ -144,6 +148,7 @@
         <GroupedList
           v-else-if="status === 'success' && items?.length"
           :items="items"
+          :columns="listColumns"
           :reset-key="listResetKey"
           :field="presentation.groupField.value"
           :group-sort="presentation.groupSort.value"

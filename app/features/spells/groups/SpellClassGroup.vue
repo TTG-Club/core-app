@@ -1,11 +1,11 @@
 <script setup lang="ts">
   import type { SpellClassPageGroup } from '../model';
 
+  import { useListViewMode } from '~infrastructure/list-presentation/composable';
   import { PageGrid } from '~ui/page';
 
   import { SpellLink } from '../link';
   import {
-    SPELL_CLASS_GROUP_COLUMNS,
     SPELL_CLASS_GROUP_LOADING_ICON,
     SPELL_CLASS_GROUP_RETRY_LABEL,
   } from '../model';
@@ -17,6 +17,8 @@
   const emit = defineEmits<{
     'load-more': [classKey: string];
   }>();
+
+  const { columns: listColumns } = useListViewMode();
 
   const loadMoreElement = useTemplateRef<HTMLElement>('loadMoreElement');
   const isLoadMoreVisible = useElementVisibility(loadMoreElement);
@@ -54,7 +56,7 @@
   <section class="flex flex-col gap-4">
     <USeparator>{{ group.label }}</USeparator>
 
-    <PageGrid :columns="SPELL_CLASS_GROUP_COLUMNS">
+    <PageGrid :columns="listColumns">
       <SpellLink
         v-for="spell in group.spells"
         :key="spell.url"

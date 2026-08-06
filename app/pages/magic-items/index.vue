@@ -8,6 +8,7 @@
   import {
     useListPresentation,
     useListPresentationMenus,
+    useListViewMode,
   } from '~infrastructure/list-presentation/composable';
   import { MagicItemBody } from '~magic-items/body';
   import { useMagicItemRarityGroupOrder } from '~magic-items/composable';
@@ -41,6 +42,8 @@
   );
 
   const presentation = useListPresentation(magicItemListPresentationConfig);
+
+  const { columns: listColumns } = useListViewMode();
 
   const presentationMenus = useListPresentationMenus(
     magicItemListPresentationConfig,
@@ -118,6 +121,7 @@
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
         :presentation-menus="presentationMenus"
+        show-view-mode
       >
         <template #legend>
           <MagicItemLegend />
@@ -132,7 +136,7 @@
       >
         <PageGrid
           v-if="isLoading"
-          :columns="3"
+          :columns="listColumns"
         >
           <SkeletonLinkSmall
             v-for="index in 5"
@@ -143,6 +147,7 @@
         <GroupedList
           v-else-if="status === 'success' && magicItems?.length"
           :items="magicItems"
+          :columns="listColumns"
           :reset-key="listResetKey"
           :field="presentation.groupField.value"
           :group-sort="presentation.groupSort.value"

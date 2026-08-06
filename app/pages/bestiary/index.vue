@@ -18,6 +18,7 @@
   import {
     useListPresentation,
     useListPresentationMenus,
+    useListViewMode,
   } from '~infrastructure/list-presentation/composable';
   import { UiDetailPane } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
@@ -71,6 +72,8 @@
   );
 
   const presentation = useListPresentation(bestiaryListPresentationConfig);
+
+  const { columns: listColumns } = useListViewMode();
 
   const presentationMenus = useListPresentationMenus(
     bestiaryListPresentationConfig,
@@ -372,6 +375,7 @@
         :is-pending="isFilterPending"
         :show-preview="isFilterPreviewShowed"
         :presentation-menus="presentationMenus"
+        show-view-mode
       />
     </template>
 
@@ -382,7 +386,7 @@
       >
         <PageGrid
           v-if="isLoading"
-          :columns="3"
+          :columns="listColumns"
         >
           <SkeletonLinkSmall
             v-for="index in 5"
@@ -395,6 +399,7 @@
           virtual
           :virtual-threshold="BESTIARY_LIST_PAGE_SIZE"
           :items="bestiary"
+          :columns="listColumns"
           :reset-key="listResetKey"
           :field="presentation.groupField.value"
           :separator-label="presentation.separatorLabel.value"

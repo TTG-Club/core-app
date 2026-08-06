@@ -2,6 +2,9 @@
 @import '@nuxt/ui';
 
 @theme {
+  /* В Tailwind нет брейкпоинта меньше sm, а тулбар списка нужно скрывать только на самых узких экранах. */
+  --breakpoint-xs: 30rem;
+
   --font-sans:
     'Open Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
     'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';

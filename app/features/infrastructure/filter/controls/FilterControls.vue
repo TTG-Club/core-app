@@ -5,6 +5,8 @@
 
   import { cloneDeep } from 'es-toolkit';
 
+  import { ListViewModeSwitch } from '~infrastructure/list-presentation/view-mode';
+
   import { FilterDrawer } from '../drawer';
   import { FILTER_CONTROLS_SEARCH_PLACEHOLDER } from '../model';
   import { FilterPreview } from '../preview';
@@ -30,11 +32,14 @@
     showPreview = false,
     defaults = undefined,
     presentationMenus = [],
+    showViewMode = false,
   } = defineProps<{
     isPending?: boolean;
     showPreview?: boolean;
     defaults?: Filter;
     presentationMenus?: Array<PresentationMenu>;
+    /** Переключатель сетки и списка. Включается только на разделах с компактными строками — там, где карточка умеет рисоваться в одну колонку. */
+    showViewMode?: boolean;
   }>();
 
   const search = defineModel<string>('search');
@@ -73,11 +78,6 @@
   // Меню «⋯» собирает «Поделиться» + группировку/сортировку — только на мобильном.
   const showOverflowMenu = computed(
     () => !isLarge.value && hasPresentationMenus.value,
-  );
-
-  // Второй ряд тулбара с меню представления — только на десктопе.
-  const showPresentationRow = computed(
-    () => isLarge.value && hasPresentationMenus.value,
   );
 
   const overflowItems = computed<Array<Array<DropdownMenuItem>>>(() => [
@@ -269,6 +269,11 @@
         @click.left.exact.prevent="share(urlForCopy)"
       />
 
+      <ListViewModeSwitch
+        v-if="showViewMode"
+        class="hidden shrink-0 xs:flex lg:hidden"
+      />
+
       <UDropdownMenu
         v-if="showOverflowMenu"
         :items="overflowItems"
@@ -284,7 +289,7 @@
     </div>
 
     <div
-      v-if="showPresentationRow"
+      v-if="hasPresentationMenus && isLarge"
       class="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-2"
     >
       <UDropdownMenu
@@ -303,6 +308,12 @@
         />
       </UDropdownMenu>
     </div>
+
+    <ListViewModeSwitch
+      v-if="showViewMode"
+      class="hidden w-full lg:flex"
+      block
+    />
 
     <ClientOnly>
       <template v-if="isLarge">
