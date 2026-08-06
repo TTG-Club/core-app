@@ -1,9 +1,7 @@
 <script setup lang="ts">
   import type { UserReward } from '../model';
 
-  import { useVttgDesktopRelease } from '~vttg/composables';
-  import { formatReleaseSummary } from '~vttg/model';
-  import { VttgDownloadPlatforms } from '~vttg/ui';
+  import { VttgDownloadBuilds } from '~vttg/ui';
 
   import {
     COSMETIC_PERKS,
@@ -18,8 +16,6 @@
     reward: UserReward;
   }>();
 
-  const { release, load: loadRelease } = useVttgDesktopRelease();
-
   const title = computed(
     () => props.reward.title || REWARD_PERK_LABELS[props.reward.perk],
   );
@@ -30,10 +26,10 @@
     () => props.reward.availability === 'COMING_SOON',
   );
 
-  // Ранний доступ — это сам VTTG: вместо одной ссылки показываем кнопки платформ,
-  // а версию берём из канала обновлений, а не из reward_resource, поэтому она
-  // всегда актуальная.
-  const needsRelease = computed(
+  // Ранний доступ — это сам VTTG: вместо одной ссылки показываем список сборок,
+  // а версии берём из канала обновлений, а не из reward_resource, поэтому они
+  // всегда актуальные и у каждой платформы своя.
+  const isEarlyAccess = computed(
     () => props.reward.perk === 'EARLY_ACCESS_DOWNLOAD' && !isComingSoon.value,
   );
 
@@ -48,21 +44,6 @@
 
   // Косметический перк — ссылки нет по дизайну, он просто применён к профилю.
   const isCosmetic = computed(() => COSMETIC_PERKS.has(props.reward.perk));
-
-  /** Подпись под названием: у раннего доступа — версия и вес сборки. */
-  const note = computed(() =>
-    needsRelease.value && release.value
-      ? formatReleaseSummary(release.value)
-      : props.reward.note,
-  );
-
-  // Версия нужна самой строке, поэтому просим манифест здесь же: `load` идемпотентен,
-  // блок платформ ниже запрашивает тот же ключ и лишнего запроса не будет.
-  onMounted(() => {
-    if (needsRelease.value) {
-      loadRelease();
-    }
-  });
 </script>
 
 <template>
@@ -80,15 +61,15 @@
         </p>
 
         <p
-          v-if="note"
+          v-if="reward.note"
           class="truncate text-xs text-muted"
         >
-          {{ note }}
+          {{ reward.note }}
         </p>
       </div>
 
-      <!-- Одиночное действие: у раннего доступа его заменяют кнопки платформ. -->
-      <template v-if="!needsRelease">
+      <!-- Одиночное действие: у раннего доступа его заменяет список сборок. -->
+      <template v-if="!isEarlyAccess">
         <UButton
           v-if="hasLink"
           :to="url!"
@@ -129,9 +110,9 @@
       </template>
     </div>
 
-    <VttgDownloadPlatforms
-      v-if="needsRelease"
-      class="mt-2.5 pl-8"
+    <VttgDownloadBuilds
+      v-if="isEarlyAccess"
+      class="mt-3"
     />
   </div>
 </template>

@@ -1,1 +1,1 @@
-export { useVttgDesktopRelease } from './useVttgDesktopRelease';
+export { useVttgBuilds } from './useVttgBuilds';
