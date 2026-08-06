@@ -3,6 +3,7 @@
     AbilityKey,
     CharacterInventoryItem,
     PersonalityFieldKey,
+    PreparedSpellKind,
     ProficiencyGroupKey,
     SavingThrowRow,
     SkillRow,
@@ -104,7 +105,7 @@
     ensureEditable,
     abilityRows,
     savingThrowRows,
-    skillRows,
+    skillGroups,
     effectiveSpeed,
     formattedProficiencyBonus,
     initiativeBonus,
@@ -431,7 +432,11 @@
 
   const spellcastingModal = overlay.create(SheetSpellcastingModal);
 
-  const preparedSpellsModal = overlay.create(SheetPreparedSpellsModal);
+  // Вид подготовки приходит нажатием на плитку: значение при создании — лишь
+  // отправная точка, `open()` подставляет нужное.
+  const preparedSpellsModal = overlay.create(SheetPreparedSpellsModal, {
+    props: { kind: 'spells' },
+  });
 
   const itemAddModal = overlay.create(SheetItemAddModal);
 
@@ -837,12 +842,12 @@
     spellcastingModal.open();
   }
 
-  function handlePreparedSpellsEdit() {
+  function handlePreparedSpellsEdit(kind: PreparedSpellKind) {
     if (!ensureEditable()) {
       return;
     }
 
-    preparedSpellsModal.open();
+    preparedSpellsModal.open({ kind });
   }
 
   function handleSettingsEdit() {
@@ -1091,7 +1096,7 @@
             />
 
             <SheetSkillsPanel
-              :rows="skillRows"
+              :groups="skillGroups"
               :highlighted-ability="highlightedAbility"
               class="grow max-sm:order-4 max-sm:col-span-full"
               @cycle="cycleSkillProficiency"

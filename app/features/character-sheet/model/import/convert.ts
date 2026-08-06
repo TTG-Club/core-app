@@ -676,8 +676,9 @@ export function convertLssCharacter(source: LssCharacter): Character {
         casterType: detectCasterType(source, level),
         hitDie: source.hitDice.die || LSS_DEFAULT_HIT_DIE,
         // Таблицы прогрессии у своего класса нет: число подготовленных
-        // заклинаний задаётся на вкладке заклинаний вручную.
+        // заклинаний и заговоров задаётся на вкладке заклинаний вручную.
         preparedSpells: [],
+        preparedCantrips: [],
         // Снаряжение чужого листа переносится как есть, стартовым набором его
         // никто не выдавал — снимать при смене класса нечего.
         startingEquipment: null,

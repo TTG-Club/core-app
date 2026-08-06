@@ -2,6 +2,7 @@
   import type {
     CharacterSpell,
     DamageRollSource,
+    PreparedSpellKind,
     SpellcastingBreakdown,
     SpellDamageRoll,
     SpellSlotRow,
@@ -18,12 +19,13 @@
     getFilterChipClass,
     getFormattedBonus,
     getInnateSpellMenuItems,
-    getPreparedSpellsCountHint,
+    getPreparedSpellsHint,
     getPreparedSpellsValue,
     getSpellGroupLabel,
     getSpellGroups,
     getSpellListLevels,
     getSpellMenuItems,
+    getSpellPreparedKind,
     getSpellsAddMenuItems,
     getSpellSlotCircles,
     getSpellSlotSummary,
@@ -31,11 +33,10 @@
     INNATE_SPELL_GROUP_LABEL,
     INNATE_SPELL_GROUP_LEVEL,
     isCustomSpell,
-    isPreparableSpell,
     matchesSpellFilter,
+    PREPARED_KIND_LABELS,
+    PREPARED_KINDS,
     PREPARED_SPELL_TOGGLE_LABELS,
-    PREPARED_SPELLS_HINTS,
-    PREPARED_SPELLS_LABEL,
     SHEET_FILTER_LABELS,
     SHEET_ROLL_HINT_LABEL,
     SHEET_TAB_EMPTY_LABELS,
@@ -97,7 +98,7 @@
   const UNPREPARED_ICON_CLASS =
     'border-default/50 bg-default/40 text-muted hover:border-primary/60';
 
-  /** Заклинание, которому подготовка не нужна (заговор, врождённое). */
+  /** Заклинание, которому подготовка не нужна (врождённое заклинание вида). */
   const PLAIN_ICON_CLASS = 'border-default/50 bg-default/40 text-muted';
 
   const props = defineProps<{
@@ -115,7 +116,7 @@
     'edit-spell': [spellUrl: string];
     'copy-spell': [spellUrl: string];
     'edit-spellcasting': [];
-    'edit-prepared-spells': [];
+    'edit-prepared-spells': [kind: PreparedSpellKind];
     'remove-spell': [spellUrl: string];
     'copy-innate-spell': [spellUrl: string];
     'remove-innate-spell': [spellUrl: string];
@@ -144,53 +145,48 @@
     getFormattedBonus(props.spellcasting.attackBonus),
   );
 
-  const preparedSpells = computed(() => props.spellcasting.prepared);
+  /**
+   * Плитки подготовки в шапке вкладки: заклинания книги и заговоры считаются
+   * порознь — у каждого своя колонка таблицы класса и свой предел, поэтому и
+   * плитки идут отдельные.
+   */
+  const preparedStats = computed(() =>
+    PREPARED_KINDS.map((kind) => {
+      const prepared =
+        kind === 'cantrips'
+          ? props.spellcasting.preparedCantrips
+          : props.spellcasting.prepared;
 
-  const preparedSpellsValue = computed(() =>
-    getPreparedSpellsValue(preparedSpells.value),
+      return {
+        kind,
+        labels: PREPARED_KIND_LABELS[kind],
+        value: getPreparedSpellsValue(prepared),
+        hint: getPreparedSpellsHint(prepared, kind),
+        // Отмеченных больше, чем можно держать: так бывает после снижения
+        // уровня или смены своего числа — значение об этом предупреждает
+        // цветом.
+        valueClass:
+          prepared.value !== null && prepared.count > prepared.value
+            ? 'text-error'
+            : 'text-highlighted',
+      };
+    }),
   );
 
   /**
-   * Отмеченных больше, чем можно держать: так бывает после снижения уровня или
-   * смены своего числа — значение блока об этом предупреждает цветом.
+   * Предел выбран целиком: пометить ещё одну запись этого вида уже нельзя.
+   *
+   * @param kind вид подготовки: заклинания книги либо заговоры.
+   * @returns true — предел достигнут.
    */
-  const preparedSpellsValueClass = computed(() =>
-    preparedSpells.value.value !== null
-    && preparedSpells.value.count > preparedSpells.value.value
-      ? 'text-error'
-      : 'text-highlighted',
-  );
+  function isPreparedLimitReached(kind: PreparedSpellKind): boolean {
+    const { value, count } =
+      kind === 'cantrips'
+        ? props.spellcasting.preparedCantrips
+        : props.spellcasting.prepared;
 
-  /** Предел выбран целиком: пометить ещё одно заклинание уже нельзя. */
-  const isPreparedLimitReached = computed(
-    () =>
-      preparedSpells.value.value !== null
-      && preparedSpells.value.count >= preparedSpells.value.value,
-  );
-
-  /**
-   * Подсказка блока подготовленных: сколько заклинаний отмечено и откуда взялось
-   * число — из таблицы класса (с бонусом, если он задан) либо указано вручную.
-   */
-  const preparedSpellsHint = computed(() => {
-    const { value, classValue, custom, bonus } = preparedSpells.value;
-
-    const countHint = getPreparedSpellsCountHint(preparedSpells.value);
-
-    if (custom) {
-      return `${countHint}. ${PREPARED_SPELLS_HINTS.custom}`;
-    }
-
-    if (classValue === null) {
-      return `${countHint}. ${PREPARED_SPELLS_HINTS.unknown}`;
-    }
-
-    if (bonus === 0) {
-      return `${countHint}. ${PREPARED_SPELLS_HINTS.auto}: ${classValue}`;
-    }
-
-    return `${countHint}. ${PREPARED_SPELLS_HINTS.auto}: ${classValue} ${getFormattedBonus(bonus)} = ${value}`;
-  });
+    return value !== null && count >= value;
+  }
 
   const overlay = useOverlay();
 
@@ -239,12 +235,10 @@
   );
 
   /**
-   * Подготовка касается не всякой книги: пока в ней одни заговоры (или только
+   * Подготовка касается только книги персонажа: пока в ней пусто (в списке одни
    * врождённые заклинания вида), помечать нечего — чипа отбора нет.
    */
-  const isPreparedFilterAvailable = computed(() =>
-    props.spells.some(isPreparableSpell),
-  );
+  const isPreparedFilterAvailable = computed(() => props.spells.length > 0);
 
   /** Кругов больше одного — есть между чем выбирать. */
   const hasLevelChips = computed(() => availableLevels.value.length > 1);
@@ -403,16 +397,14 @@
     spell: CharacterSpell,
     innate: boolean,
   ): PreparedIconState {
-    // Заговоры и врождённые заклинания доступны всегда: подготовка их не
-    // касается, значок у них обычный и ничего не переключает.
-    if (innate || !isPreparableSpell(spell)) {
+    // Врождённые заклинания вида доступны всегда: подготовка их не касается,
+    // значок у них обычный и ничего не переключает.
+    if (innate) {
       return {
         canPrepare: false,
         isPrepared: false,
         iconClass: PLAIN_ICON_CLASS,
-        tooltip: innate
-          ? PREPARED_SPELL_TOGGLE_LABELS.innate
-          : PREPARED_SPELL_TOGGLE_LABELS.cantrip,
+        tooltip: PREPARED_SPELL_TOGGLE_LABELS.innate,
         ariaLabel: '',
       };
     }
@@ -429,8 +421,9 @@
       iconClass: isPrepared ? PREPARED_ICON_CLASS : UNPREPARED_ICON_CLASS,
       // Предел выбран целиком — значок остаётся нажимаемым: подсказка и
       // предупреждение объясняют отказ понятнее, чем погашенная кнопка.
+      // Заговоры смотрят на свой предел, заклинания книги — на свой.
       tooltip:
-        !isPrepared && isPreparedLimitReached.value
+        !isPrepared && isPreparedLimitReached(getSpellPreparedKind(spell))
           ? `${label}. ${PREPARED_SPELL_TOGGLE_LABELS.limit}`
           : label,
       ariaLabel: `${label}: ${spell.name}`,
@@ -569,6 +562,11 @@
     emit('toggle-spell-prepared', spell.url);
   }
 
+  /** Нажатие на плитку подготовки: настройка числа своего вида подготовки. */
+  function handlePreparedEdit(kind: PreparedSpellKind) {
+    emit('edit-prepared-spells', kind);
+  }
+
   /**
    * Клик по строке: своё заклинание разворачивается прямо на листе (описание
    * хранится в нём), каталожное открывается дровером раздела.
@@ -629,34 +627,39 @@
           </UTooltip>
         </button>
 
-        <!-- Сколько заклинаний можно подготовить: число берётся из таблицы
-          класса, нажатие открывает настройку своего числа или бонуса к нему -->
-        <UTooltip :text="preparedSpellsHint">
+        <!-- Сколько можно подготовить: число берётся из таблицы класса, нажатие
+          открывает настройку своего числа или бонуса к нему. Заговоры считаются
+          отдельной плиткой — колонка таблицы класса у них своя -->
+        <UTooltip
+          v-for="preparedStat in preparedStats"
+          :key="preparedStat.kind"
+          :text="preparedStat.hint"
+        >
           <button
             type="button"
             :class="HEADER_STAT_CLASS"
-            aria-label="Настроить подготовленные заклинания"
-            @click.left.exact.prevent="emit('edit-prepared-spells')"
+            :aria-label="preparedStat.labels.ariaLabel"
+            @click.left.exact.prevent="handlePreparedEdit(preparedStat.kind)"
           >
             <span class="flex items-center gap-1.5">
               <!-- На узком ряду подпись занимает больше места, чем само число,
                 поэтому уступает значку: название остаётся в подсказке -->
               <UIcon
-                name="tabler:checklist"
+                :name="preparedStat.labels.icon"
                 class="size-4 shrink-0 text-muted @lg:hidden"
               />
 
               <span
                 class="hidden text-[10px] font-bold tracking-wider text-muted uppercase @lg:inline"
               >
-                {{ PREPARED_SPELLS_LABEL }}
+                {{ preparedStat.labels.stat }}
               </span>
 
               <span
                 class="text-sm font-bold"
-                :class="preparedSpellsValueClass"
+                :class="preparedStat.valueClass"
               >
-                {{ preparedSpellsValue }}
+                {{ preparedStat.value }}
               </span>
             </span>
           </button>
@@ -670,7 +673,6 @@
         <UButton
           icon="tabler:plus"
           label="Добавить"
-          trailing-icon="tabler:chevron-down"
           color="neutral"
           variant="ghost"
           size="sm"

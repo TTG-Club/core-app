@@ -27,6 +27,7 @@ import {
   CLASSES_FILTERS_PATH,
   collectChoiceSelections,
   collectFeatAbilityIncreases,
+  deriveCantripsScaling,
   deriveClassResources,
   derivePreparedSpellsScaling,
   FEAT_SOURCES_ASYNC_DATA_KEY,
@@ -995,6 +996,10 @@ export function useLevelUpWizard(): LevelUpWizard {
         level,
       ),
       preparedSpells: derivePreparedSpellsScaling([
+        ...base.table,
+        ...(subclassDetail.value?.table ?? []),
+      ]),
+      preparedCantrips: deriveCantripsScaling([
         ...base.table,
         ...(subclassDetail.value?.table ?? []),
       ]),

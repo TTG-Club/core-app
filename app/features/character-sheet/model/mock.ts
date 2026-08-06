@@ -14,7 +14,11 @@ export const DEFAULT_CHARACTER: Character = {
   size: null,
   features: [],
   spells: [],
-  spellcasting: { ability: null, prepared: { custom: null, bonus: 0 } },
+  spellcasting: {
+    ability: null,
+    prepared: { custom: null, bonus: 0 },
+    preparedCantrips: { custom: null, bonus: 0 },
+  },
   spellSlots: [],
   characterClass: null,
   characterBackground: null,
@@ -231,5 +235,6 @@ export const DEFAULT_CHARACTER: Character = {
     initiativeAbility: null,
     customInitiativeBase: null,
     customInitiativeBonuses: [],
+    groupSkillsByAbility: false,
   },
 };

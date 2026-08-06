@@ -86,9 +86,10 @@
         draftAbility.value === SPELLCASTING_ABILITY_AUTO
           ? null
           : draftAbility.value,
-      // Подготовленные заклинания правит своя модалка — здесь настройка
-      // переносится как есть.
+      // Подготовленные заклинания и заговоры правят свои модалки — здесь
+      // настройки переносятся как есть.
       prepared: character.value.spellcasting.prepared,
+      preparedCantrips: character.value.spellcasting.preparedCantrips,
     });
 
     emit('close');

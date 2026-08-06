@@ -99,9 +99,10 @@
         subclassName: subclassName || null,
         casterType: draftCasterType.value,
         hitDie: draftHitDie.value,
-        // Число подготовленных заклинаний свой класс не считает: таблицы у него
-        // нет, и на вкладке заклинаний оно задаётся вручную.
+        // Число подготовленных заклинаний и заговоров свой класс не считает:
+        // таблицы у него нет, и на вкладке заклинаний оно задаётся вручную.
         preparedSpells: [],
+        preparedCantrips: [],
       },
       savingThrows: draftSavingThrows.value,
       hitDie: draftHitDie.value,

@@ -29,6 +29,7 @@ import type {
   HitDiceAmount,
   LevelUpPayload,
   PlainProficiencyGroupKey,
+  PreparedSpellKind,
   StartingEquipmentGrant,
 } from '../model';
 
@@ -73,8 +74,10 @@ import {
   getNextLevelExperience,
   getPreparedSpellsLimitDescription,
   getSavingThrowRows,
+  getSkillRowGroups,
   getSkillRows,
   getSpellcastingBreakdown,
+  getSpellPreparedKind,
   getSpellSlotRows,
   getSpellSlotsEmptyDescription,
   INNATE_SPELL_COPY_TOAST_DESCRIPTION,
@@ -87,16 +90,15 @@ import {
   isCustomSpell,
   isEquippableInventoryItem,
   isMissingInventoryItem,
-  isPreparableSpell,
   isVersatileInventoryItem,
   LEVEL_MAX,
   LEVEL_MIN,
   mergeCharacterFeatures,
   mergeClassResources,
   normalizeResourceRecoveryRule,
+  PREPARED_KIND_LABELS,
   PREPARED_SPELLS_BONUS_MAX,
   PREPARED_SPELLS_BONUS_MIN,
-  PREPARED_SPELLS_LIMIT_TOAST_TITLE,
   PREPARED_SPELLS_MAX,
   PREPARED_SPELLS_MIN,
   removeFeaturesAboveLevel,
@@ -287,6 +289,15 @@ export function useCharacterSheet() {
   const savingThrowRows = computed(() => getSavingThrowRows(character.value));
 
   const skillRows = computed(() => getSkillRows(character.value));
+
+  // Панель навыков рисует группы, а не строки: без группировки это одна общая
+  // группа, поэтому разметка списка у обоих режимов одна.
+  const skillGroups = computed(() =>
+    getSkillRowGroups(
+      skillRows.value,
+      character.value.settings.groupSkillsByAbility,
+    ),
+  );
 
   const formattedProficiencyBonus = computed(() =>
     getFormattedBonus(getCharacterProficiencyBonus(character.value)),
@@ -732,6 +743,7 @@ export function useCharacterSheet() {
               ? payload.subclass.casterType
               : characterClass.casterType,
             preparedSpells: [...payload.preparedSpells],
+            preparedCantrips: [...payload.preparedCantrips],
           }
         : characterClass,
       hitDice:
@@ -1524,11 +1536,9 @@ export function useCharacterSheet() {
           ? {
               ...updatedSpell,
               // Пометка подготовки формой не правится, поэтому переносится с
-              // прежней записи. Заговором заклинание становится
-              // неподготовленным: заговоры подготовки не требуют.
-              prepared: isPreparableSpell(updatedSpell)
-                ? editedSpell.prepared
-                : undefined,
+              // прежней записи: сменившийся круг лишь переносит запись в другой
+              // счётчик подготовки.
+              prepared: editedSpell.prepared,
             }
           : spell,
       ),
@@ -1605,51 +1615,62 @@ export function useCharacterSheet() {
       spellcasting: {
         ability: spellcasting.ability,
         prepared: { ...spellcasting.prepared },
+        preparedCantrips: { ...spellcasting.preparedCantrips },
       },
     };
   }
 
   /**
-   * Установка настройки числа подготовленных заклинаний: своё число выключает
-   * подсчёт по таблице класса, бонус прибавляется к числу класса.
+   * Установка настройки числа подготовленных заклинаний либо заговоров (у них
+   * свой счётчик): своё число выключает подсчёт по таблице класса, бонус
+   * прибавляется к числу класса.
    *
-   * @param prepared новая настройка подготовленных заклинаний.
+   * @param prepared новая настройка подготовленных.
+   * @param kind вид подготовки: заклинания книги либо заговоры.
    */
-  function setPreparedSpells(prepared: CharacterPreparedSpells): void {
+  function setPreparedSpells(
+    prepared: CharacterPreparedSpells,
+    kind: PreparedSpellKind,
+  ): void {
     if (!ensureEditable()) {
       return;
     }
+
+    const stored: CharacterPreparedSpells = {
+      custom:
+        prepared.custom === null
+          ? null
+          : clamp(
+              Math.trunc(prepared.custom),
+              PREPARED_SPELLS_MIN,
+              PREPARED_SPELLS_MAX,
+            ),
+      bonus: clamp(
+        Math.trunc(prepared.bonus),
+        PREPARED_SPELLS_BONUS_MIN,
+        PREPARED_SPELLS_BONUS_MAX,
+      ),
+    };
 
     character.value = {
       ...character.value,
       spellcasting: {
         ...character.value.spellcasting,
-        prepared: {
-          custom:
-            prepared.custom === null
-              ? null
-              : clamp(
-                  Math.trunc(prepared.custom),
-                  PREPARED_SPELLS_MIN,
-                  PREPARED_SPELLS_MAX,
-                ),
-          bonus: clamp(
-            Math.trunc(prepared.bonus),
-            PREPARED_SPELLS_BONUS_MIN,
-            PREPARED_SPELLS_BONUS_MAX,
-          ),
-        },
+        ...(kind === 'cantrips'
+          ? { preparedCantrips: stored }
+          : { prepared: stored }),
       },
     };
   }
 
   /**
    * Пометка заклинания подготовленным по нажатию на его значок (как надевание
-   * доспеха в снаряжении). Больше числа из блока «Подготовленные» пометить
-   * нельзя — лишнее нажатие предупреждает и ничего не меняет. Предел неизвестен
-   * (класс его не даёт, своё число не задано) — пометок сколько угодно.
+   * доспеха в снаряжении). Больше числа из блока подготовки пометить нельзя —
+   * лишнее нажатие предупреждает и ничего не меняет. Предел неизвестен (класс
+   * его не даёт, своё число не задано) — пометок сколько угодно.
    *
-   * Заговоры подготовки не требуют, поэтому их значок ничего не переключает.
+   * Заговоры подготавливаются так же, но считаются своим счётчиком: у них своя
+   * колонка таблицы класса и свой предел.
    * Игровое действие: запертый лист его разрешает, чужой — нет.
    *
    * @param spellUrl URL заклинания книги персонажа.
@@ -1663,11 +1684,16 @@ export function useCharacterSheet() {
       (spell) => spell.url === spellUrl,
     );
 
-    if (!currentSpell || !isPreparableSpell(currentSpell)) {
+    if (!currentSpell) {
       return;
     }
 
-    const { value: limit, count } = spellcastingBreakdown.value.prepared;
+    const kind = getSpellPreparedKind(currentSpell);
+
+    const { value: limit, count } =
+      kind === 'cantrips'
+        ? spellcastingBreakdown.value.preparedCantrips
+        : spellcastingBreakdown.value.prepared;
 
     // Предел уже выбран: молча пропустить нельзя — игрок ждёт, что значок
     // загорится, и должен узнать, почему этого не произошло.
@@ -1675,8 +1701,8 @@ export function useCharacterSheet() {
       toast.add({
         color: 'warning',
         icon: 'tabler:wand',
-        title: PREPARED_SPELLS_LIMIT_TOAST_TITLE,
-        description: getPreparedSpellsLimitDescription(limit),
+        title: PREPARED_KIND_LABELS[kind].limitToastTitle,
+        description: getPreparedSpellsLimitDescription(limit, kind),
       });
 
       return;
@@ -2433,10 +2459,16 @@ export function useCharacterSheet() {
   /**
    * Установка навыков целиком: модалка настройки правит характеристики навыков
    * и их дополнительные бонусы, а уровни владения приходят из неё как есть.
+   * Группировка списка приходит оттуда же и пишется вместе с навыками — обе
+   * правки применяются одной кнопкой, значит и в лист уходят одной записью.
    *
    * @param skills навыки из черновика модалки.
+   * @param groupedByAbility выводить ли навыки группами по характеристикам.
    */
-  function setSkills(skills: CharacterSkill[]): void {
+  function setSkills(
+    skills: CharacterSkill[],
+    groupedByAbility: boolean,
+  ): void {
     if (!ensureEditable()) {
       return;
     }
@@ -2444,6 +2476,10 @@ export function useCharacterSheet() {
     character.value = {
       ...character.value,
       skills: skills.map(toStoredSkill),
+      settings: {
+        ...character.value.settings,
+        groupSkillsByAbility: groupedByAbility,
+      },
     };
   }
 
@@ -2498,6 +2534,7 @@ export function useCharacterSheet() {
     abilityRows,
     savingThrowRows,
     skillRows,
+    skillGroups,
     formattedProficiencyBonus,
     initiativeBonus,
     formattedInitiative,

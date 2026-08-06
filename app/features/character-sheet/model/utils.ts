@@ -79,6 +79,7 @@ import type {
   MagicItemRarityKey,
   MagicItemSummary,
   PersonalityFieldRow,
+  PreparedSpellKind,
   PreparedSpellsBreakdown,
   PreparedSpellsScaling,
   PrimarySpeed,
@@ -89,6 +90,7 @@ import type {
   RollMode,
   SavingThrowRow,
   SkillRow,
+  SkillRowGroup,
   SpeciesFeatureSummary,
   SpeciesSummary,
   SpeedRow,
@@ -150,6 +152,7 @@ import {
   ARMOR_MEDIUM_DEX_CAP,
   ARMOR_PROFICIENCY_GROUPS,
   CANTRIP_SPELL_LEVEL,
+  CANTRIPS_COLUMN_PREFIX,
   CARRYING_CAPACITY_MULTIPLIER,
   CARRYING_CAPACITY_SIZE_MULTIPLIERS,
   CATALOG_COPY_MENU_LABEL,
@@ -231,11 +234,10 @@ import {
   PASSIVE_SKILL_BASE,
   PERSONALITY_EMPTY_VALUE,
   PERSONALITY_TEXT_FIELDS,
+  PREPARED_KIND_LABELS,
   PREPARED_SPELLS_COLUMN_KEYWORD,
   PREPARED_SPELLS_COLUMN_PREFIX,
-  PREPARED_SPELLS_COUNT_HINT,
   PREPARED_SPELLS_EMPTY_VALUE,
-  PREPARED_SPELLS_LABEL,
   PREPARED_SPELLS_MAX,
   PREPARED_SPELLS_MIN,
   PREPARED_SPELLS_VALUE_SEPARATOR,
@@ -262,6 +264,7 @@ import {
   SHEET_SHARE_ACTIVE_HINT,
   SHEET_UNARMORED_LABEL,
   SIZE_LABEL_WORDS,
+  SKILL_GROUP_ALL_KEY,
   SKILL_OWNED_HINTS,
   SKILL_PROFICIENCY_LABELS,
   SKILL_PROFICIENCY_MULTIPLIERS,
@@ -1032,6 +1035,40 @@ export function getSkillRows(character: Character): SkillRow[] {
       bonusHint: getSkillBonusHint(character, skill),
     };
   });
+}
+
+/**
+ * Группы списка навыков. Без группировки список остаётся одной группой без
+ * подписи — так и панель, и модалка настройки рисуют его одним и тем же
+ * списком, без второй ветки разметки. С группировкой навыки идут в порядке
+ * характеристик, а внутри группы — в исходном порядке (по алфавиту, как их
+ * хранит лист); характеристику навыку даёт только его собственная, свои бонусы
+ * от других характеристик группу не задают. Характеристики без навыков
+ * пропускаются: у Телосложения по правилам их нет вовсе.
+ *
+ * Записи навыков берутся любые: панель листа группирует готовые строки, а
+ * модалка настройки — сами навыки черновика.
+ *
+ * @param rows записи навыков с характеристикой.
+ * @param groupedByAbility группировать ли навыки по характеристикам.
+ * @returns группы навыков для вывода.
+ */
+export function getSkillRowGroups<Row extends { ability: AbilityKey }>(
+  rows: Row[],
+  groupedByAbility: boolean,
+): Array<SkillRowGroup<Row>> {
+  if (!groupedByAbility) {
+    return [
+      { key: SKILL_GROUP_ALL_KEY, ability: null, title: null, rows: [...rows] },
+    ];
+  }
+
+  return ABILITY_ORDER.map((ability) => ({
+    key: ability,
+    ability,
+    title: ABILITY_LABELS[ability],
+    rows: rows.filter((row) => row.ability === ability),
+  })).filter((group) => group.rows.length > 0);
 }
 
 /**
@@ -3785,7 +3822,7 @@ export function getSpellListLevels(
 
 /**
  * Проходит ли заклинание отбор вкладки: подготовленное — только помеченное
- * значком (заговоры и врождённые подготовки не требуют, поэтому под таким
+ * значком (врождённые заклинания подготовки не требуют, поэтому под таким
  * отбором их не остаётся), круг — любой из отобранных.
  *
  * @param spell заклинание списка.
@@ -3796,7 +3833,7 @@ export function matchesSpellFilter(
   spell: CharacterSpell,
   filter: SpellTabFilter,
 ): boolean {
-  if (filter.preparedOnly && !(isPreparableSpell(spell) && spell.prepared)) {
+  if (filter.preparedOnly && !spell.prepared) {
     return false;
   }
 
@@ -3864,15 +3901,16 @@ export function isCustomSpell(spell: CharacterSpell): boolean {
 }
 
 /**
- * Требует ли заклинание подготовки: заговоры доступны всегда и в число
- * подготовленных не входят, поэтому пометить их нельзя. Врождённые заклинания
- * вида в книге персонажа не лежат — подготовка их тоже не касается.
+ * К какому счётчику подготовки относится заклинание книги: заговоры считаются
+ * отдельно от заклинаний кругов — их число задаёт своя колонка таблицы класса.
+ * Врождённые заклинания вида в книге персонажа не лежат, подготовка их не
+ * касается.
  *
  * @param spell заклинание книги персонажа.
- * @returns true — заклинание можно пометить подготовленным.
+ * @returns вид подготовки заклинания.
  */
-export function isPreparableSpell(spell: CharacterSpell): boolean {
-  return spell.level > CANTRIP_SPELL_LEVEL;
+export function getSpellPreparedKind(spell: CharacterSpell): PreparedSpellKind {
+  return spell.level === CANTRIP_SPELL_LEVEL ? 'cantrips' : 'spells';
 }
 
 /**
@@ -4416,18 +4454,33 @@ function isPreparedSpellsColumn(column: ClassTableColumn): boolean {
 }
 
 /**
- * Прогрессия числа подготовленных заклинаний из таблицы прогрессии. Таблицу
- * отдаёт справочник, поэтому лист запоминает её при выборе класса: колонка
- * бывает и у класса (заклинатели), и только у подкласса (мистический рыцарь).
- * Нечисловые значения колонки отбрасываются.
+ * Колонка таблицы класса с числом заговоров («Заговоры», «Заг.»): сравниваются
+ * только буквы названия. Колонка подготовленных заклинаний под неё не подходит —
+ * её название начинается с «подг».
+ *
+ * @param column колонка таблицы прогрессии класса.
+ * @returns колонка описывает число заговоров.
+ */
+function isCantripsColumn(column: ClassTableColumn): boolean {
+  return column.name
+    .toLowerCase()
+    .replace(NON_LETTER_PATTERN, '')
+    .startsWith(CANTRIPS_COLUMN_PREFIX);
+}
+
+/**
+ * Прогрессия числа из колонки таблицы прогрессии. Нечисловые значения колонки
+ * отбрасываются: справочник ставит в них прочерки и пометки.
  *
  * @param table таблица прогрессии класса и подкласса.
- * @returns записи «с уровня — столько заклинаний» по возрастанию уровня.
+ * @param matchColumn отбор нужной колонки по её названию.
+ * @returns записи «с уровня — столько» по возрастанию уровня.
  */
-export function derivePreparedSpellsScaling(
+function deriveColumnScaling(
   table: ClassTableColumn[],
+  matchColumn: (column: ClassTableColumn) => boolean,
 ): PreparedSpellsScaling[] {
-  const column = table.find(isPreparedSpellsColumn);
+  const column = table.find(matchColumn);
 
   if (!column) {
     return [];
@@ -4437,6 +4490,33 @@ export function derivePreparedSpellsScaling(
     .filter((entry) => INTEGER_VALUE_PATTERN.test(entry.value.trim()))
     .map((entry) => ({ level: entry.level, value: Number(entry.value) }))
     .sort((firstEntry, secondEntry) => firstEntry.level - secondEntry.level);
+}
+
+/**
+ * Прогрессия числа подготовленных заклинаний из таблицы прогрессии. Таблицу
+ * отдаёт справочник, поэтому лист запоминает её при выборе класса: колонка
+ * бывает и у класса (заклинатели), и только у подкласса (мистический рыцарь).
+ *
+ * @param table таблица прогрессии класса и подкласса.
+ * @returns записи «с уровня — столько заклинаний» по возрастанию уровня.
+ */
+export function derivePreparedSpellsScaling(
+  table: ClassTableColumn[],
+): PreparedSpellsScaling[] {
+  return deriveColumnScaling(table, isPreparedSpellsColumn);
+}
+
+/**
+ * Прогрессия числа заговоров из той же таблицы: заговоры подготавливаются
+ * наравне с заклинаниями, но их число задаёт своя колонка.
+ *
+ * @param table таблица прогрессии класса и подкласса.
+ * @returns записи «с уровня — столько заговоров» по возрастанию уровня.
+ */
+export function deriveCantripsScaling(
+  table: ClassTableColumn[],
+): PreparedSpellsScaling[] {
+  return deriveColumnScaling(table, isCantripsColumn);
 }
 
 /**
@@ -4463,23 +4543,31 @@ function getPreparedSpellsAtLevel(
 }
 
 /**
- * Разбор числа подготовленных заклинаний: сколько их даёт таблица класса на
- * текущем уровне, какой бонус к этому числу задан вручную и какое значение
- * выходит итогом. Своё число выключает подсчёт по классу целиком (бонус к нему
- * не прибавляется).
+ * Разбор числа подготовленных заклинаний (или заговоров — у них свой счётчик и
+ * своя колонка таблицы класса): сколько их даёт таблица класса на текущем
+ * уровне, какой бонус к этому числу задан вручную и какое значение выходит
+ * итогом. Своё число выключает подсчёт по классу целиком (бонус к нему не
+ * прибавляется).
  *
  * @param character персонаж.
+ * @param kind вид подготовки: заклинания книги либо заговоры.
  * @returns разбор для блока вкладки и модалки настройки.
  */
 export function getPreparedSpellsBreakdown(
   character: Character,
+  kind: PreparedSpellKind,
 ): PreparedSpellsBreakdown {
-  const { custom, bonus } = character.spellcasting.prepared;
+  const isCantrips = kind === 'cantrips';
 
-  const classValue = getPreparedSpellsAtLevel(
-    character.characterClass?.preparedSpells ?? [],
-    character.level,
-  );
+  const { custom, bonus } = isCantrips
+    ? character.spellcasting.preparedCantrips
+    : character.spellcasting.prepared;
+
+  const scaling = isCantrips
+    ? character.characterClass?.preparedCantrips
+    : character.characterClass?.preparedSpells;
+
+  const classValue = getPreparedSpellsAtLevel(scaling ?? [], character.level);
 
   // Класс подготовку не считает: бонус прибавлять не к чему, число остаётся
   // неопределённым, пока игрок не задаст своё.
@@ -4498,7 +4586,7 @@ export function getPreparedSpellsBreakdown(
   return {
     value: customValue ?? autoValue,
     count: character.spells.filter(
-      (spell) => isPreparableSpell(spell) && spell.prepared,
+      (spell) => spell.prepared && getSpellPreparedKind(spell) === kind,
     ).length,
     classValue,
     custom: custom !== null,
@@ -4526,31 +4614,72 @@ export function getPreparedSpellsValue(
 }
 
 /**
- * Начало подсказки блока подготовленных заклинаний: сколько отмечено и сколько
- * держать можно. Предел неизвестен — вместо числа прочерк.
+ * Начало подсказки блока подготовленных: сколько отмечено и сколько держать
+ * можно. Предел неизвестен — вместо числа прочерк.
  *
- * @param prepared разбор числа подготовленных заклинаний.
+ * @param prepared разбор числа подготовленных.
+ * @param kind вид подготовки: заклинания книги либо заговоры.
  * @returns строка вида «Подготовлено заклинаний: 4 из 17».
  */
 export function getPreparedSpellsCountHint(
   prepared: PreparedSpellsBreakdown,
+  kind: PreparedSpellKind,
 ): string {
   const limit =
     prepared.value === null
       ? PREPARED_SPELLS_EMPTY_VALUE
       : String(prepared.value);
 
-  return `${PREPARED_SPELLS_COUNT_HINT}: ${prepared.count} из ${limit}`;
+  return `${PREPARED_KIND_LABELS[kind].countHint}: ${prepared.count} из ${limit}`;
 }
 
 /**
- * Описание предупреждения о достигнутом пределе подготовленных заклинаний.
+ * Подсказка плитки подготовки: сколько отмечено и откуда взялось число — из
+ * таблицы класса (с бонусом, если он задан) либо указано вручную.
  *
- * @param limit сколько заклинаний можно держать подготовленными.
+ * @param prepared разбор числа подготовленных.
+ * @param kind вид подготовки: заклинания книги либо заговоры.
+ * @returns текст подсказки плитки шапки вкладки.
+ */
+export function getPreparedSpellsHint(
+  prepared: PreparedSpellsBreakdown,
+  kind: PreparedSpellKind,
+): string {
+  const { value, classValue, custom, bonus } = prepared;
+
+  const countHint = getPreparedSpellsCountHint(prepared, kind);
+
+  const { hints } = PREPARED_KIND_LABELS[kind];
+
+  if (custom) {
+    return `${countHint}. ${hints.custom}`;
+  }
+
+  if (classValue === null) {
+    return `${countHint}. ${hints.unknown}`;
+  }
+
+  if (bonus === 0) {
+    return `${countHint}. ${hints.auto}: ${classValue}`;
+  }
+
+  return `${countHint}. ${hints.auto}: ${classValue} ${getFormattedBonus(bonus)} = ${value}`;
+}
+
+/**
+ * Описание предупреждения о достигнутом пределе подготовленных.
+ *
+ * @param limit сколько можно держать подготовленными.
+ * @param kind вид подготовки: заклинания книги либо заговоры.
  * @returns текст тоста.
  */
-export function getPreparedSpellsLimitDescription(limit: number): string {
-  return `Подготовлено ${limit} из ${limit} — снимите подготовку с другого заклинания или измените число в блоке «${PREPARED_SPELLS_LABEL}».`;
+export function getPreparedSpellsLimitDescription(
+  limit: number,
+  kind: PreparedSpellKind,
+): string {
+  const { statFull } = PREPARED_KIND_LABELS[kind];
+
+  return `Подготовлено ${limit} из ${limit} — снимите подготовку с другой записи или измените число в блоке «${statFull}».`;
 }
 
 /**
@@ -4590,7 +4719,8 @@ export function getSpellcastingBreakdown(
     // атака заклинанием — бросок.
     attackBonus:
       proficiencyBonus + abilityModifier - getExhaustionD20Penalty(character),
-    prepared: getPreparedSpellsBreakdown(character),
+    prepared: getPreparedSpellsBreakdown(character, 'spells'),
+    preparedCantrips: getPreparedSpellsBreakdown(character, 'cantrips'),
   };
 }
 

@@ -38,6 +38,7 @@ import {
 import {
   buildInventoryItem,
   buildMagicItemInventoryItem,
+  deriveCantripsScaling,
   derivePreparedSpellsScaling,
   getSelectedCasterType,
   normalizeCatalogName,
@@ -262,6 +263,10 @@ async function resolveClass(
     casterType: getSelectedCasterType(detail, subclass?.detail ?? null),
     hitDie: detail.hitDie || fallback.hitDie,
     preparedSpells: derivePreparedSpellsScaling([
+      ...detail.table,
+      ...(subclass?.detail?.table ?? []),
+    ]),
+    preparedCantrips: deriveCantripsScaling([
       ...detail.table,
       ...(subclass?.detail?.table ?? []),
     ]),

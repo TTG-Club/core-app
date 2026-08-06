@@ -1,10 +1,11 @@
 <script setup lang="ts">
-  import type { AbilityKey, SkillRow } from '../../model';
+  import type { AbilityKey, SkillRow, SkillRowGroup } from '../../model';
 
   import { useCharacterSheet } from '../../composables';
   import {
     SHEET_REVEAL_CONTROL_CLASS,
     SHEET_SKILL_SETTINGS_LABELS,
+    SKILL_GROUP_LABEL_CLASS,
     SKILL_PROFICIENCY_ICONS,
     SKILL_PROFICIENCY_LABELS,
   } from '../../model';
@@ -22,7 +23,11 @@
     'bg-primary/10 ring-1 ring-primary/50 ring-inset';
 
   const props = defineProps<{
-    rows: SkillRow[];
+    /**
+     * Группы навыков. Без группировки список приходит одной группой без
+     * подписи — разметка строк у обоих режимов одна.
+     */
+    groups: SkillRowGroup[];
 
     /**
      * Характеристика под курсором: её навыки подсвечиваются в списке. `null` —
@@ -41,30 +46,47 @@
   // а сам список навыков остаётся прежним.
   const { editControlClass } = useCharacterSheet();
 
-  const displayRows = computed(() => {
+  const displayGroups = computed(() => {
     const highlightedAbility = props.highlightedAbility ?? null;
 
-    return props.rows.map((row) => {
-      // Характеристика строки, а не правило навыка: в настройках её можно
-      // подменить, и подсвечивается то, от чего навык считается на самом деле.
-      const isMainAbility = row.ability === highlightedAbility;
+    return props.groups.map((group) => ({
+      key: group.key,
+      title: group.title,
 
-      // Свой бонус от другой характеристики тоже связывает её с навыком: строка
-      // подсвечивается, но подпись остаётся приглушённой — навык всё-таки не её.
-      const isHighlighted =
-        isMainAbility
-        || (highlightedAbility !== null
-          && row.bonusAbilities.includes(highlightedAbility));
+      // С группировкой характеристику называет разделитель, поэтому в строках
+      // она не повторяется — иначе под «Ловкостью» каждая строка твердила бы
+      // «ЛОВ».
+      withAbilityLabel: group.ability === null,
 
-      return {
-        ...row,
-        icon: SKILL_PROFICIENCY_ICONS[row.proficiency],
-        iconClass: row.proficiency === 'none' ? 'text-muted' : 'text-primary',
-        proficiencyLabel: SKILL_PROFICIENCY_LABELS[row.proficiency],
-        rowClass: isHighlighted ? HIGHLIGHTED_ROW_CLASS : undefined,
-        abilityLabelClass: isMainAbility ? 'text-primary' : 'text-muted',
-      };
-    });
+      titleClass: `${SKILL_GROUP_LABEL_CLASS} ${
+        group.ability !== null && group.ability === highlightedAbility
+          ? 'text-primary'
+          : 'text-muted'
+      }`,
+
+      rows: group.rows.map((row) => {
+        // Характеристика строки, а не правило навыка: в настройках её можно
+        // подменить, и подсвечивается то, от чего навык считается на самом деле.
+        const isMainAbility = row.ability === highlightedAbility;
+
+        // Свой бонус от другой характеристики тоже связывает её с навыком:
+        // строка подсвечивается, но подпись остаётся приглушённой — навык
+        // всё-таки не её.
+        const isHighlighted =
+          isMainAbility
+          || (highlightedAbility !== null
+            && row.bonusAbilities.includes(highlightedAbility));
+
+        return {
+          ...row,
+          icon: SKILL_PROFICIENCY_ICONS[row.proficiency],
+          iconClass: row.proficiency === 'none' ? 'text-muted' : 'text-primary',
+          proficiencyLabel: SKILL_PROFICIENCY_LABELS[row.proficiency],
+          rowClass: isHighlighted ? HIGHLIGHTED_ROW_CLASS : undefined,
+          abilityLabelClass: isMainAbility ? 'text-primary' : 'text-muted',
+        };
+      }),
+    }));
   });
 </script>
 
@@ -89,74 +111,91 @@
     </template>
 
     <div class="flex flex-col gap-0.5">
-      <div
-        v-for="row in displayRows"
-        :key="row.name"
-        class="relative flex items-center gap-3 rounded px-2 py-1.5 transition-colors hover:bg-accented/40"
-        :class="row.rowClass"
+      <template
+        v-for="group in displayGroups"
+        :key="group.key"
       >
-        <UTooltip
-          :text="row.proficiencyLabel"
-          :content="{ side: 'top' }"
+        <!-- Разделитель группы: подпись слева, линия до края строки. Без
+          группировки группа одна и подписи у неё нет -->
+        <USeparator
+          v-if="group.title"
+          :label="group.title"
+          position="start"
+          class="px-2 pt-2 first:pt-0"
+          :ui="{ label: group.titleClass }"
+        />
+
+        <div
+          v-for="row in group.rows"
+          :key="row.name"
+          class="relative flex items-center gap-3 rounded px-2 py-1.5 transition-colors hover:bg-accented/40"
+          :class="row.rowClass"
         >
-          <button
-            type="button"
-            class="z-10 flex cursor-pointer items-center"
-            :aria-label="`Владение навыком: ${row.name}`"
-            @click.left.exact.prevent="emit('cycle', row.name)"
-          >
-            <UIcon
-              :name="row.icon"
-              class="size-3.5 shrink-0 transition-colors hover:text-primary"
-              :class="row.iconClass"
-            />
-          </button>
-        </UTooltip>
-
-        <button
-          type="button"
-          class="flex min-w-0 grow cursor-pointer items-center gap-3 after:absolute after:inset-0 after:cursor-pointer"
-          :aria-label="`Проверка: ${row.name}`"
-          @click.left.exact.prevent="emit('roll', row)"
-        >
-          <span
-            class="w-8 shrink-0 text-left text-[10px] font-medium uppercase transition-colors"
-            :class="row.abilityLabelClass"
-          >
-            {{ row.abilityLabel }}
-          </span>
-
-          <span class="min-w-0 grow truncate text-left text-sm text-toned">
-            {{ row.name }}
-          </span>
-
-          <!-- Значение со своими бонусами не сходится с характеристикой строки:
-            пунктир зовёт навести и прочитать разбор. `z-10` поднимает подпись
-            над растяжкой кнопки броска — иначе наведение до неё не дойдёт -->
           <UTooltip
-            v-if="row.bonusHint"
-            :text="row.bonusHint"
+            :text="row.proficiencyLabel"
             :content="{ side: 'top' }"
           >
+            <button
+              type="button"
+              class="z-10 flex cursor-pointer items-center"
+              :aria-label="`Владение навыком: ${row.name}`"
+              @click.left.exact.prevent="emit('cycle', row.name)"
+            >
+              <UIcon
+                :name="row.icon"
+                class="size-3.5 shrink-0 transition-colors hover:text-primary"
+                :class="row.iconClass"
+              />
+            </button>
+          </UTooltip>
+
+          <button
+            type="button"
+            class="flex min-w-0 grow cursor-pointer items-center gap-3 after:absolute after:inset-0 after:cursor-pointer"
+            :aria-label="`Проверка: ${row.name}`"
+            @click.left.exact.prevent="emit('roll', row)"
+          >
             <span
-              class="z-10 shrink-0 text-sm font-bold text-highlighted underline decoration-dotted underline-offset-2"
+              v-if="group.withAbilityLabel"
+              class="w-8 shrink-0 text-left text-[10px] font-medium uppercase transition-colors"
+              :class="row.abilityLabelClass"
+            >
+              {{ row.abilityLabel }}
+            </span>
+
+            <span class="min-w-0 grow truncate text-left text-sm text-toned">
+              {{ row.name }}
+            </span>
+
+            <!-- Значение со своими бонусами не сходится с характеристикой
+              строки: пунктир зовёт навести и прочитать разбор. `z-10` поднимает
+              подпись над растяжкой кнопки броска — иначе наведение до неё не
+              дойдёт -->
+            <UTooltip
+              v-if="row.bonusHint"
+              :text="row.bonusHint"
+              :content="{ side: 'top' }"
+            >
+              <span
+                class="z-10 shrink-0 text-sm font-bold text-highlighted underline decoration-dotted underline-offset-2"
+              >
+                {{ row.formattedModifier }}
+              </span>
+            </UTooltip>
+
+            <span
+              v-else
+              class="shrink-0 text-sm font-bold text-highlighted"
             >
               {{ row.formattedModifier }}
             </span>
-          </UTooltip>
 
-          <span
-            v-else
-            class="shrink-0 text-sm font-bold text-highlighted"
-          >
-            {{ row.formattedModifier }}
-          </span>
-
-          <span class="w-6 shrink-0 text-right text-xs text-dimmed">
-            {{ row.passiveValue }}
-          </span>
-        </button>
-      </div>
+            <span class="w-6 shrink-0 text-right text-xs text-dimmed">
+              {{ row.passiveValue }}
+            </span>
+          </button>
+        </div>
+      </template>
     </div>
   </SheetPanel>
 </template>

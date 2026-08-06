@@ -26,6 +26,7 @@
     CLASSES_FILTERS_PATH,
     CLASSES_SEARCH_PATH,
     CUSTOM_CLASS_LABELS,
+    deriveCantripsScaling,
     deriveClassResources,
     derivePreparedSpellsScaling,
     detectFeatureChoice,
@@ -728,8 +729,12 @@
         hitDie: base.hitDie,
         // Колонка подготовленных заклинаний бывает и у класса, и только у
         // подкласса (мистический рыцарь), поэтому таблицы просматриваются
-        // вместе.
+        // вместе. Колонка заговоров живёт в той же таблице.
         preparedSpells: derivePreparedSpellsScaling([
+          ...base.table,
+          ...(subclassDetail.value?.table ?? []),
+        ]),
+        preparedCantrips: deriveCantripsScaling([
           ...base.table,
           ...(subclassDetail.value?.table ?? []),
         ]),

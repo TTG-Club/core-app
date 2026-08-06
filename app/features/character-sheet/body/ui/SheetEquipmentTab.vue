@@ -169,7 +169,6 @@
         <UButton
           icon="tabler:plus"
           label="Добавить"
-          trailing-icon="tabler:chevron-down"
           color="neutral"
           variant="ghost"
           size="sm"

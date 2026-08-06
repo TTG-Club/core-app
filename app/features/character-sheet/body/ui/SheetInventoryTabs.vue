@@ -8,6 +8,7 @@
     CharacterInventoryItem,
     CharacterSpell,
     PersonalityFieldKey,
+    PreparedSpellKind,
     SheetTab,
     SheetTabSlot,
     SpellcastingBreakdown,
@@ -70,7 +71,7 @@
     'edit-spell': [spellUrl: string];
     'copy-spell': [spellUrl: string];
     'edit-spellcasting': [];
-    'edit-prepared-spells': [];
+    'edit-prepared-spells': [kind: PreparedSpellKind];
     'edit-currency': [];
     'adjust-item-quantity': [inventoryItemId: string, delta: number];
     'toggle-item-equip': [inventoryItemId: string];
@@ -182,8 +183,8 @@
     emit('edit-spellcasting');
   }
 
-  function handlePreparedSpellsEdit() {
-    emit('edit-prepared-spells');
+  function handlePreparedSpellsEdit(kind: PreparedSpellKind) {
+    emit('edit-prepared-spells', kind);
   }
 
   function handleSpellRemove(spellUrl: string) {

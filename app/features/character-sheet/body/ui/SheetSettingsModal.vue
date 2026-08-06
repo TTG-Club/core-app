@@ -237,6 +237,9 @@
       customInitiativeBase: isInitiativeBaseCustom.value
         ? draftInitiativeBaseValue.value
         : null,
+      // Группировку навыков задаёт своя модалка настройки навыков — здесь она
+      // идёт насквозь, чтобы сохранение настроек её не сбрасывало.
+      groupSkillsByAbility: props.character.settings.groupSkillsByAbility,
       // Копии, а не сами черновики: модалка остаётся открытой при ошибке
       // сохранения, и её правки не должны править уже сохранённые настройки.
       customProficiencyBonuses: draftProficiencyBonuses.value.map((bonus) => ({

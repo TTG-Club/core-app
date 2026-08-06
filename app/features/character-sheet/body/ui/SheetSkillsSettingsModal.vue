@@ -9,12 +9,14 @@
     DEFAULT_CUSTOM_SKILL_ABILITY,
     getDefaultSkillAbility,
     getFormattedBonus,
+    getSkillRowGroups,
     getSkillValue,
     hasSkillName,
     isCustomSkill,
     NEW_CUSTOM_BONUS,
     PASSIVE_SKILL_BASE,
     SHEET_SKILL_SETTINGS_LABELS,
+    SKILL_GROUP_LABEL_CLASS,
     SKILL_PROFICIENCY_ICONS,
     SKILL_PROFICIENCY_LABELS,
     SKILL_PROFICIENCY_NEXT,
@@ -49,6 +51,19 @@
     frameClass: string;
   }
 
+  /** Группа строк модалки: разделитель с характеристикой и её навыки. */
+  interface SkillSettingsGroup {
+    key: string;
+
+    /** Подпись разделителя; null — группировка выключена, разделителя нет. */
+    title: string | null;
+
+    rows: SkillSettingsRow[];
+  }
+
+  /** Подпись разделителя группы: в модалке она не подсвечивается. */
+  const GROUP_LABEL_CLASS = `${SKILL_GROUP_LABEL_CLASS} text-muted`;
+
   const emit = defineEmits<{
     close: [];
   }>();
@@ -64,6 +79,10 @@
     })),
   );
 
+  // Группировка правится тем же черновиком, что и навыки: список в модалке
+  // перестраивается сразу, и до «Применить» видно, каким он станет в листе.
+  const isGroupedByAbility = ref(character.value.settings.groupSkillsByAbility);
+
   // Итоги считаются от черновика, а не от листа: числа в модалке меняются
   // сразу, ещё до «Применить».
   const draftCharacter = computed<Character>(() => ({
@@ -71,33 +90,47 @@
     skills: draftSkills.value,
   }));
 
-  const displayRows = computed<SkillSettingsRow[]>(() =>
-    draftSkills.value.map((skill) => {
-      const value = getSkillValue(draftCharacter.value, skill);
+  /**
+   * Строка навыка со всем, что рисуется рядом с ним.
+   *
+   * @param skill навык черновика.
+   * @returns строка навыка для списка модалки.
+   */
+  function toDisplayRow(skill: CharacterSkill): SkillSettingsRow {
+    const value = getSkillValue(draftCharacter.value, skill);
 
-      const isCustom = isCustomSkill(skill.name);
+    const isCustom = isCustomSkill(skill.name);
 
-      // Свой навык «изменённым» не считается: сравнивать его не с чем, к
-      // правилам его не возвращают — его удаляют.
-      const isChanged =
-        !isCustom
-        && (skill.ability !== getDefaultSkillAbility(skill.name)
-          || skill.bonuses.length > 0);
+    // Свой навык «изменённым» не считается: сравнивать его не с чем, к
+    // правилам его не возвращают — его удаляют.
+    const isChanged =
+      !isCustom
+      && (skill.ability !== getDefaultSkillAbility(skill.name)
+        || skill.bonuses.length > 0);
 
-      return {
-        skill,
-        proficiencyIcon: SKILL_PROFICIENCY_ICONS[skill.proficiency],
-        proficiencyLabel: SKILL_PROFICIENCY_LABELS[skill.proficiency],
-        proficiencyClass:
-          skill.proficiency === 'none' ? 'text-muted' : 'text-primary',
-        formattedValue: getFormattedBonus(value),
-        passiveValue: PASSIVE_SKILL_BASE + value,
-        isCustom,
-        isChanged,
-        frameClass:
-          isCustom || isChanged ? 'border-primary/40' : 'border-default/50',
-      };
-    }),
+    return {
+      skill,
+      proficiencyIcon: SKILL_PROFICIENCY_ICONS[skill.proficiency],
+      proficiencyLabel: SKILL_PROFICIENCY_LABELS[skill.proficiency],
+      proficiencyClass:
+        skill.proficiency === 'none' ? 'text-muted' : 'text-primary',
+      formattedValue: getFormattedBonus(value),
+      passiveValue: PASSIVE_SKILL_BASE + value,
+      isCustom,
+      isChanged,
+      frameClass:
+        isCustom || isChanged ? 'border-primary/40' : 'border-default/50',
+    };
+  }
+
+  const displayGroups = computed<SkillSettingsGroup[]>(() =>
+    getSkillRowGroups(draftSkills.value, isGroupedByAbility.value).map(
+      (group) => ({
+        key: group.key,
+        title: group.title,
+        rows: group.rows.map(toDisplayRow),
+      }),
+    ),
   );
 
   const customName = ref('');
@@ -191,7 +224,7 @@
   }
 
   function handleApply(): void {
-    setSkills(draftSkills.value);
+    setSkills(draftSkills.value, isGroupedByAbility.value);
     emit('close');
   }
 
@@ -211,6 +244,15 @@
         <p class="text-xs text-dimmed">
           {{ SHEET_SKILL_SETTINGS_LABELS.hint }}
         </p>
+
+        <!-- Порядок вывода — такая же настройка списка, как своя строка ниже,
+          поэтому и рамка у них общая -->
+        <UCheckbox
+          v-model="isGroupedByAbility"
+          :label="SHEET_SKILL_SETTINGS_LABELS.groupTitle"
+          :description="SHEET_SKILL_SETTINGS_LABELS.groupHint"
+          class="rounded-lg border border-dashed border-default/70 p-2"
+        />
 
         <!-- Своя строка над списком: с восемнадцатью навыками добавление в
           хвосте пришлось бы искать прокруткой -->
@@ -268,124 +310,139 @@
           </p>
         </div>
 
-        <div
-          v-for="row in displayRows"
-          :key="row.skill.name"
-          class="flex flex-col gap-2 rounded-lg border bg-elevated/20 p-2 transition-colors"
-          :class="row.frameClass"
+        <template
+          v-for="group in displayGroups"
+          :key="group.key"
         >
-          <div class="flex flex-wrap items-center gap-2">
-            <UTooltip
-              :text="row.proficiencyLabel"
-              :content="{ side: 'top' }"
-            >
-              <button
-                type="button"
-                class="flex shrink-0 cursor-pointer items-center"
-                :aria-label="`${SHEET_SKILL_SETTINGS_LABELS.proficiency}: ${row.skill.name}`"
-                @click.left.exact.prevent="handleProficiencyCycle(row.skill)"
-              >
-                <UIcon
-                  :name="row.proficiencyIcon"
-                  class="size-4 shrink-0 transition-colors hover:text-primary"
-                  :class="row.proficiencyClass"
-                />
-              </button>
-            </UTooltip>
-
-            <span class="min-w-0 grow truncate text-sm text-toned">
-              {{ row.skill.name }}
-            </span>
-
-            <span
-              v-if="row.isCustom"
-              class="shrink-0 rounded border border-primary/40 px-1.5 text-[10px] font-bold tracking-wider text-primary uppercase"
-            >
-              {{ SHEET_SKILL_SETTINGS_LABELS.customBadge }}
-            </span>
-
-            <span
-              class="w-8 shrink-0 text-right text-sm font-bold text-highlighted tabular-nums"
-            >
-              {{ row.formattedValue }}
-            </span>
-
-            <UTooltip :text="SHEET_SKILL_SETTINGS_LABELS.passive">
-              <span class="w-6 text-right text-xs text-dimmed tabular-nums">
-                {{ row.passiveValue }}
-              </span>
-            </UTooltip>
-
-            <!-- Отдельная группа: на узкой модалке она переносится под
-              название целой строкой, а не рассыпается по краям -->
-            <div class="flex w-full items-center gap-2 sm:w-auto">
-              <USelect
-                v-model="row.skill.ability"
-                :items="ABILITY_OPTIONS"
-                size="sm"
-                class="min-w-0 grow sm:w-40 sm:grow-0"
-                :aria-label="`${SHEET_SKILL_SETTINGS_LABELS.abilityPlaceholder}: ${row.skill.name}`"
-              />
-
-              <!-- У своего навыка на месте возврата к правилам стоит удаление:
-                возвращать его не к чему -->
-              <UTooltip
-                v-if="row.isCustom"
-                :text="SHEET_SKILL_SETTINGS_LABELS.customRemove"
-              >
-                <UButton
-                  icon="tabler:trash"
-                  color="error"
-                  variant="ghost"
-                  size="xs"
-                  square
-                  :aria-label="`${SHEET_SKILL_SETTINGS_LABELS.customRemove}: ${row.skill.name}`"
-                  @click.left.exact.prevent="handleCustomRemove(row.skill)"
-                />
-              </UTooltip>
-
-              <UTooltip
-                v-else
-                :text="SHEET_SKILL_SETTINGS_LABELS.resetSkill"
-              >
-                <UButton
-                  icon="tabler:rotate"
-                  color="neutral"
-                  variant="ghost"
-                  size="xs"
-                  square
-                  :disabled="!row.isChanged"
-                  :aria-label="`${SHEET_SKILL_SETTINGS_LABELS.resetSkill}: ${row.skill.name}`"
-                  @click.left.exact.prevent="handleSkillReset(row.skill)"
-                />
-              </UTooltip>
-
-              <UTooltip :text="SHEET_SKILL_SETTINGS_LABELS.addBonus">
-                <UButton
-                  icon="tabler:plus"
-                  color="neutral"
-                  variant="subtle"
-                  size="xs"
-                  square
-                  :aria-label="`${SHEET_SKILL_SETTINGS_LABELS.addBonus}: ${row.skill.name}`"
-                  @click.left.exact.prevent="handleBonusAdd(row.skill)"
-                />
-              </UTooltip>
-            </div>
-          </div>
-
-          <!-- Строки бонусов — общий компонент настроек листа; у навыка без
-            бонусов он не рендерится вовсе, а первый бонус заводит плюс в шапке
-            строки: подпись пустого списка и своя кнопка «Добавить» в списке из
-            восемнадцати навыков только шумели бы -->
-          <SheetCustomBonusRows
-            v-if="row.skill.bonuses.length"
-            v-model="row.skill.bonuses"
-            :character="draftCharacter"
-            :with-add="false"
-            class="border-l-2 border-primary/40 pl-2"
+          <!-- Разделитель группы — как в самом листе; без группировки группа
+            одна и подписи у неё нет -->
+          <USeparator
+            v-if="group.title"
+            :label="group.title"
+            position="start"
+            class="pt-1"
+            :ui="{ label: GROUP_LABEL_CLASS }"
           />
-        </div>
+
+          <div
+            v-for="row in group.rows"
+            :key="row.skill.name"
+            class="flex flex-col gap-2 rounded-lg border bg-elevated/20 p-2 transition-colors"
+            :class="row.frameClass"
+          >
+            <div class="flex flex-wrap items-center gap-2">
+              <UTooltip
+                :text="row.proficiencyLabel"
+                :content="{ side: 'top' }"
+              >
+                <button
+                  type="button"
+                  class="flex shrink-0 cursor-pointer items-center"
+                  :aria-label="`${SHEET_SKILL_SETTINGS_LABELS.proficiency}: ${row.skill.name}`"
+                  @click.left.exact.prevent="handleProficiencyCycle(row.skill)"
+                >
+                  <UIcon
+                    :name="row.proficiencyIcon"
+                    class="size-4 shrink-0 transition-colors hover:text-primary"
+                    :class="row.proficiencyClass"
+                  />
+                </button>
+              </UTooltip>
+
+              <span class="min-w-0 grow truncate text-sm text-toned">
+                {{ row.skill.name }}
+              </span>
+
+              <span
+                v-if="row.isCustom"
+                class="shrink-0 rounded border border-primary/40 px-1.5 text-[10px] font-bold tracking-wider text-primary uppercase"
+              >
+                {{ SHEET_SKILL_SETTINGS_LABELS.customBadge }}
+              </span>
+
+              <span
+                class="w-8 shrink-0 text-right text-sm font-bold text-highlighted tabular-nums"
+              >
+                {{ row.formattedValue }}
+              </span>
+
+              <UTooltip :text="SHEET_SKILL_SETTINGS_LABELS.passive">
+                <span class="w-6 text-right text-xs text-dimmed tabular-nums">
+                  {{ row.passiveValue }}
+                </span>
+              </UTooltip>
+
+              <!-- Отдельная группа: на узкой модалке она переносится под
+                название целой строкой, а не рассыпается по краям -->
+              <div class="flex w-full items-center gap-2 sm:w-auto">
+                <USelect
+                  v-model="row.skill.ability"
+                  :items="ABILITY_OPTIONS"
+                  size="sm"
+                  class="min-w-0 grow sm:w-40 sm:grow-0"
+                  :aria-label="`${SHEET_SKILL_SETTINGS_LABELS.abilityPlaceholder}: ${row.skill.name}`"
+                />
+
+                <!-- У своего навыка на месте возврата к правилам стоит
+                  удаление: возвращать его не к чему -->
+                <UTooltip
+                  v-if="row.isCustom"
+                  :text="SHEET_SKILL_SETTINGS_LABELS.customRemove"
+                >
+                  <UButton
+                    icon="tabler:trash"
+                    color="error"
+                    variant="ghost"
+                    size="xs"
+                    square
+                    :aria-label="`${SHEET_SKILL_SETTINGS_LABELS.customRemove}: ${row.skill.name}`"
+                    @click.left.exact.prevent="handleCustomRemove(row.skill)"
+                  />
+                </UTooltip>
+
+                <UTooltip
+                  v-else
+                  :text="SHEET_SKILL_SETTINGS_LABELS.resetSkill"
+                >
+                  <UButton
+                    icon="tabler:rotate"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    square
+                    :disabled="!row.isChanged"
+                    :aria-label="`${SHEET_SKILL_SETTINGS_LABELS.resetSkill}: ${row.skill.name}`"
+                    @click.left.exact.prevent="handleSkillReset(row.skill)"
+                  />
+                </UTooltip>
+
+                <UTooltip :text="SHEET_SKILL_SETTINGS_LABELS.addBonus">
+                  <UButton
+                    icon="tabler:plus"
+                    color="neutral"
+                    variant="subtle"
+                    size="xs"
+                    square
+                    :aria-label="`${SHEET_SKILL_SETTINGS_LABELS.addBonus}: ${row.skill.name}`"
+                    @click.left.exact.prevent="handleBonusAdd(row.skill)"
+                  />
+                </UTooltip>
+              </div>
+            </div>
+
+            <!-- Строки бонусов — общий компонент настроек листа; у навыка без
+              бонусов он не рендерится вовсе, а первый бонус заводит плюс в
+              шапке строки: подпись пустого списка и своя кнопка «Добавить» в
+              списке из восемнадцати навыков только шумели бы -->
+            <SheetCustomBonusRows
+              v-if="row.skill.bonuses.length"
+              v-model="row.skill.bonuses"
+              :character="draftCharacter"
+              :with-add="false"
+              class="border-l-2 border-primary/40 pl-2"
+            />
+          </div>
+        </template>
       </div>
     </template>
 

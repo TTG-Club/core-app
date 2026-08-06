@@ -95,6 +95,16 @@ const grantedStartingEquipmentSchema = z
   .nullable()
   .catch(null);
 
+/** Прогрессия числа из колонки таблицы класса: подготовленные и заговоры. */
+const classScalingSchema = z
+  .array(
+    z.object({
+      level: z.coerce.number(),
+      value: z.coerce.number(),
+    }),
+  )
+  .catch([]);
+
 const characterClassSchema = z
   .object({
     url: z.string(),
@@ -107,15 +117,9 @@ const characterClassSchema = z
     hitDie: z.coerce.number().catch(8),
     // Листы, сохранённые до появления поля, приходят без прогрессии
     // подготовленных заклинаний: она запишется при следующем выборе класса
-    // или повышении уровня.
-    preparedSpells: z
-      .array(
-        z.object({
-          level: z.coerce.number(),
-          value: z.coerce.number(),
-        }),
-      )
-      .catch([]),
+    // или повышении уровня. То же и с прогрессией заговоров.
+    preparedSpells: classScalingSchema,
+    preparedCantrips: classScalingSchema,
     startingEquipment: grantedStartingEquipmentSchema,
   })
   .nullable()
@@ -189,23 +193,31 @@ const spellSlotSchema = z.object({
   used: z.coerce.number().catch(0),
 });
 
+/** Настройка числа подготовленных: одна и та же у заклинаний и заговоров. */
+const preparedSpellsSettingSchema = z.object({
+  custom: z.coerce.number().nullable().catch(null),
+  bonus: z.coerce.number().catch(0),
+});
+
 // По умолчанию — авто (легаси-листы без поля заклинательства): характеристика
 // определяется по классу.
 const spellcastingSchema = z
   .object({
     ability: abilityKeySchema.nullable().catch(null),
     // Настройка подготовленных заклинаний появилась позже: у листов без неё
-    // число считается по таблице класса без бонуса.
-    prepared: z
-      .object({
-        custom: z.coerce.number().nullable().catch(null),
-        bonus: z.coerce.number().catch(0),
-      })
-      .catch(() => ({ ...DEFAULT_CHARACTER.spellcasting.prepared })),
+    // число считается по таблице класса без бонуса. Настройка заговоров
+    // появилась ещё позже и ведёт себя так же.
+    prepared: preparedSpellsSettingSchema.catch(() => ({
+      ...DEFAULT_CHARACTER.spellcasting.prepared,
+    })),
+    preparedCantrips: preparedSpellsSettingSchema.catch(() => ({
+      ...DEFAULT_CHARACTER.spellcasting.preparedCantrips,
+    })),
   })
   .catch(() => ({
     ...DEFAULT_CHARACTER.spellcasting,
     prepared: { ...DEFAULT_CHARACTER.spellcasting.prepared },
+    preparedCantrips: { ...DEFAULT_CHARACTER.spellcasting.preparedCantrips },
   }));
 
 // Запись своего бонуса общая для навыков и настроек листа: вид, обе стороны
@@ -252,6 +264,9 @@ const settingsSchema = z
     customProficiencyBase: z.coerce.number().int().nullable().catch(null),
     initiativeAbility: abilityKeySchema.nullable().catch(null),
     customInitiativeBase: z.coerce.number().int().nullable().catch(null),
+    // Группировка навыков появилась позже: листы без неё выводят навыки общим
+    // списком по алфавиту, как и раньше.
+    groupSkillsByAbility: z.boolean().catch(false),
     // Легаси-поля одного своего бонуса: списками они стали позже, а отсутствие
     // и списка, и числа означает подсчёт строго по правилам.
     customProficiencyBonus: z.coerce.number().int().optional().catch(undefined),

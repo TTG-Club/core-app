@@ -280,29 +280,31 @@ modals), so its capabilities are listed here rather than squeezed into the table
 - Spell slots derived from the reference `casterType` of the class/subclass
   (full / half / third caster, warlock pact magic) plus the character level;
   spent by clicking the circles in each spell-level divider.
-- Prepared-spell count on the spells tab, next to the save DC / attack tile. The
-  reference class table has it as a column («Подг. закл.», matched by letters
-  because the wording is abbreviated differently per class and sometimes lives
-  only on the subclass), so its progression is snapshotted into the sheet by the
-  class wizard and refreshed by every level-up; the tile shows the value for the
-  current level. Clicking it opens the settings: either a custom number (the
-  class count is then ignored) or a bonus added to the class count. The tile
-  reads «marked / allowed» (`4 / 17`) and turns red when the allowance drops
-  below what is already marked.
+- Prepared counts on the spells tab, next to the save DC / attack tile: two
+  tiles, «Подготовленные» for circles 1+ and «Заговоры» for cantrips, since the
+  reference class table counts them in separate columns («Подг. закл.» and
+  «Заговоры», both matched by letters because the wording is abbreviated
+  differently per class and sometimes lives only on the subclass). Both
+  progressions are snapshotted into the sheet by the class wizard and refreshed
+  by every level-up; each tile shows the value for the current level. Clicking a
+  tile opens its own settings: either a custom number (the class count is then
+  ignored) or a bonus added to the class count. A tile reads «marked / allowed»
+  (`4 / 17`) and turns red when the allowance drops below what is already marked.
 - Prepared spells marked by clicking the spell icon in the row — the same
   gesture as equipping armour. Only the icon square lights up (the row itself
   keeps its usual look), the flag lives in `spell.prepared`, and marking more
-  than the allowed number warns instead. Cantrips and innate spells are always
-  available, so their icon toggles nothing; with no allowance known (the class
-  gives none and no custom number is set) marking is unlimited.
+  than the allowed number warns instead. Cantrips are prepared the same way but
+  counted against their own tile; innate species spells are always available, so
+  their icon toggles nothing. With no allowance known (the class gives none and
+  no custom number is set) marking is unlimited.
 - Spell list narrowed by a chip row above the groups: «Подготовленные» plus one
   chip per circle (cantrips as «З», the full name in the tooltip), several
   circles at a time, and a reset button once anything is picked. Nothing is
   stored — the chips are derived from what the list already shows
   (`getSpellListLevels`: spell circles + circles with slots), so a circle the
   character has not reached never appears and a pick that disappears stops
-  narrowing by itself. The prepared chip is skipped when there is nothing to
-  prepare (cantrips or innate spells only).
+  narrowing by itself. The prepared chip is skipped when the book is empty
+  (innate spells only) and keeps prepared cantrips alongside prepared spells.
 - Weapon attack & damage rolled straight from their tiles in the equipment list
   (damage dice come from the item `/raw` response). A versatile weapon also
   keeps the second roll of that response, and the row action menu switches its
