@@ -734,6 +734,9 @@ export function convertLssCharacter(source: LssCharacter): Character {
             ),
             abilities: [],
             natural: false,
+            // Ручное значение правило доспеха не считает — предел Ловкости
+            // такому листу не нужен.
+            dexLimit: null,
             // Значение из LSS учитывает и броню, и щит, поэтому автоподсчёт по
             // надетому снаряжению выключен: игрок включит его галкой.
             custom: true,

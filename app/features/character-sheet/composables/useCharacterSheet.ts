@@ -44,6 +44,8 @@ import {
   applyStartingEquipmentChange,
   ARMOR_CLASS_BASE_MAX,
   ARMOR_CLASS_BASE_MIN,
+  ARMOR_DEX_LIMIT_MAX,
+  ARMOR_DEX_LIMIT_MIN,
   CATALOG_COPY_TOAST_DESCRIPTION,
   CURRENCY_AMOUNT_MAX,
   CURRENCY_AMOUNT_MIN,
@@ -571,6 +573,14 @@ export function useCharacterSheet() {
           ARMOR_CLASS_BASE_MAX,
         ),
         abilities: sortAbilityKeys(armorClass.abilities),
+        dexLimit:
+          armorClass.dexLimit === null
+            ? null
+            : clamp(
+                Math.trunc(armorClass.dexLimit),
+                ARMOR_DEX_LIMIT_MIN,
+                ARMOR_DEX_LIMIT_MAX,
+              ),
       },
     };
   }

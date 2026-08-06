@@ -334,6 +334,9 @@ const armorClassSchema = z
     ability: abilityKeySchema.nullable().optional().catch(undefined),
     abilities: z.array(abilityKeySchema).optional().catch(undefined),
     natural: z.boolean().catch(false),
+    // Свой предел бонуса Ловкости от доспеха; у листов до его появления поля
+    // нет — предел берётся по правилу доспеха.
+    dexLimit: z.coerce.number().int().nullable().catch(null),
     // По умолчанию — автоподсчёт по надетой броне (легаси-листы без поля).
     custom: z.boolean().catch(false),
   })

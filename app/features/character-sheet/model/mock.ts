@@ -25,6 +25,7 @@ export const DEFAULT_CHARACTER: Character = {
     base: 10,
     abilities: ['dexterity'],
     natural: false,
+    dexLimit: null,
     custom: false,
   },
   speed: {

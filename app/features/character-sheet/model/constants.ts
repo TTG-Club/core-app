@@ -47,6 +47,7 @@ import type {
 } from './types';
 
 import bytes from 'bytes';
+import { range } from 'es-toolkit';
 
 import { CasterType } from '~classes/model';
 
@@ -605,6 +606,31 @@ export const UNARMORED_ARMOR_CLASS_BASE = 10;
 /** Максимальный бонус Ловкости к КД средней брони (штраф по Ловкости). */
 export const ARMOR_MEDIUM_DEX_CAP = 2;
 
+/** Минимальный свой предел бонуса Ловкости от доспеха. */
+export const ARMOR_DEX_LIMIT_MIN = 0;
+
+/** Максимальный свой предел бонуса Ловкости от доспеха. */
+export const ARMOR_DEX_LIMIT_MAX = 10;
+
+/** Значение варианта «по правилу доспеха» в выборе предела Ловкости. */
+export const ARMOR_DEX_LIMIT_RULE_VALUE = 'rule';
+
+/**
+ * Варианты предела бонуса Ловкости: правило доспеха и свои значения. Готовый
+ * список вместо галки с полем ввода — вся настройка умещается в одну строку, а
+ * подписи вариантов заодно объясняют, что предел делает.
+ */
+export const ARMOR_DEX_LIMIT_OPTIONS: Array<{ label: string; value: string }> =
+  [
+    { label: 'По правилу доспеха', value: ARMOR_DEX_LIMIT_RULE_VALUE },
+    ...range(ARMOR_DEX_LIMIT_MIN, ARMOR_DEX_LIMIT_MAX + 1).map((limit) => ({
+      // Название характеристики в родительном падеже, поэтому подпись текстом,
+      // а не из `ABILITY_LABELS` (там именительный: «Ловкость»).
+      label: limit === 0 ? 'Без Ловкости' : `Не больше +${limit}`,
+      value: String(limit),
+    })),
+  ];
+
 /** Подпись «без доспеха» для разбора класса доспеха. */
 export const SHEET_UNARMORED_LABEL = 'Без доспеха';
 
@@ -632,8 +658,11 @@ export const ARMOR_CLASS_LABELS: Record<
   | 'abilitiesCustomEmptyHint'
   | 'armorTypeTitle'
   | 'naturalArmor'
+  | 'dexLimitTitle'
   | 'armorTitle'
   | 'dexCappedHint'
+  | 'dexLimitedHint'
+  | 'dexCappedOf'
   | 'shieldTitle'
   | 'itemTitle'
   | 'totalTitle'
@@ -646,7 +675,12 @@ export const ARMOR_CLASS_LABELS: Record<
   valueTitle: 'Значение',
   abilitiesTitle: 'Характеристики',
   abilitiesPlaceholder: 'Без модификаторов',
-  abilitiesArmorHint: `Модификаторы этих характеристик идут в КД. ${ABILITY_LABELS.dexterity} учитывается по правилу надетого доспеха (средний ограничивает бонус, тяжёлый не даёт его вовсе), остальные складываются сверху — как безброневая защита варвара и монаха или песнь клинка.`,
+  // Про Ловкость подсказка молчит: её правило целиком объясняет строка предела,
+  // а дублировать его абзацем — растить модалку на ровном месте. Подсказка
+  // стоит под обеими строками, поэтому «этих» в ней заменено на «выбранные»:
+  // указывать на строку через одну было бы неверно.
+  abilitiesArmorHint:
+    'Выбранные характеристики идут в КД сверх доспеха — как безброневая защита варвара и монаха или песнь клинка.',
   abilitiesArmorEmptyHint:
     'Ни одна характеристика в КД не идёт — считается только доспех со щитом.',
   abilitiesCustomHint:
@@ -655,10 +689,15 @@ export const ARMOR_CLASS_LABELS: Record<
     'Ни одна характеристика не прибавляется — КД равен значению.',
   armorTypeTitle: 'Тип доспеха',
   naturalArmor: 'Природный доспех',
+  dexLimitTitle: 'Предел Ловкости',
   armorTitle: 'Доспех',
-  // Подпись в родительном падеже, поэтому название характеристики здесь текстом,
-  // а не из `ABILITY_LABELS` (там именительный: «Ловкость»).
-  dexCappedHint: 'Модификатор Ловкости ограничен доспехом',
+  // Подписи в родительном падеже, поэтому название характеристики здесь
+  // текстом, а не из `ABILITY_LABELS` (там именительный: «Ловкость»).
+  dexCappedHint: 'Ловкость ограничена доспехом',
+  dexLimitedHint: 'Ловкость ограничена своим пределом',
+  // Склейка «применённый бонус из полного модификатора»: одно число игрок читал
+  // как предел, а это то, что дошло до КД.
+  dexCappedOf: 'из',
   shieldTitle: 'Щит',
   itemTitle: 'Магические предметы',
   totalTitle: 'Итоговый КД',

@@ -144,6 +144,7 @@ import {
   ALL_SPELL_SLOTS_LABEL,
   ARMOR_CLASS_BASE_MAX,
   ARMOR_CLASS_BASE_MIN,
+  ARMOR_CLASS_LABELS,
   ARMOR_MATCH_KEYWORDS,
   ARMOR_MEDIUM_DEX_CAP,
   ARMOR_PROFICIENCY_GROUPS,
@@ -2162,16 +2163,23 @@ export function getSpeedRows(speed: CharacterSpeed): SpeedRow[] {
 /**
  * Вклад модификатора Ловкости в КД по правилу доспеха: лёгкая — модификатор
  * целиком, средняя — не больше +2 (штраф по Ловкости), тяжёлая и щит — без
- * Ловкости.
+ * Ловкости. Свой предел листа заменяет правило доспеха целиком: игрок задаёт
+ * его умениями вроде «Воина в средних доспехах» или под свой доспех.
  *
  * @param mode правило применения модификатора Ловкости.
  * @param dexModifier модификатор Ловкости персонажа.
+ * @param dexLimit свой предел бонуса Ловкости; null — по правилу доспеха.
  * @returns применяемый бонус Ловкости.
  */
 function getArmorDexBonus(
   mode: ArmorDexterityMod,
   dexModifier: number,
+  dexLimit: number | null,
 ): number {
+  if (dexLimit !== null) {
+    return Math.min(dexModifier, dexLimit);
+  }
+
   if (mode === 'none') {
     return 0;
   }
@@ -2220,12 +2228,32 @@ export function getUnarmoredArmorClassLabel(abilities: AbilityKey[]): string {
 }
 
 /**
+ * Подпись урезанной Ловкости для разбора КД: сколько модификатора дошло до КД
+ * из полного и кто урезал — правило доспеха или свой предел листа. Одно число в
+ * скобках игрок читал как предел, хотя это применённый бонус.
+ *
+ * @param breakdown разбор класса доспеха.
+ * @returns подпись урезанного модификатора Ловкости.
+ */
+export function getArmorDexCappedLabel(breakdown: ArmorClassBreakdown): string {
+  const reason = breakdown.dexLimited
+    ? ARMOR_CLASS_LABELS.dexLimitedHint
+    : ARMOR_CLASS_LABELS.dexCappedHint;
+
+  const applied = getFormattedBonus(breakdown.dexBonus);
+  const full = getFormattedBonus(breakdown.dexModifier);
+
+  return `${reason}: ${applied} ${ARMOR_CLASS_LABELS.dexCappedOf} ${full}`;
+}
+
+/**
  * Разбор итогового класса доспеха. В ручном режиме (`custom`) — базовое значение
  * плюс модификаторы выбранных характеристик. В автоматическом — по надетой
  * броне: тело даёт лучшая надетая броня (или безброневой `10 + Ловкость`), щит
  * складывается сверху (в зачёт — лучший щит); модификатор Ловкости учитывается
- * по правилу брони, а остальные выбранные характеристики (безброневая защита,
- * песнь клинка) прибавляются к итогу целиком.
+ * по правилу брони (или по своему пределу листа, если он задан), а остальные
+ * выбранные характеристики (безброневая защита, песнь клинка) прибавляются к
+ * итогу целиком.
  *
  * @param character персонаж.
  * @returns разбор класса доспеха для листа и модалки.
@@ -2233,7 +2261,7 @@ export function getUnarmoredArmorClassLabel(abilities: AbilityKey[]): string {
 export function getArmorClassBreakdown(
   character: Character,
 ): ArmorClassBreakdown {
-  const { base, abilities, custom } = character.armorClass;
+  const { base, abilities, custom, dexLimit } = character.armorClass;
 
   const abilityBonuses = getArmorClassAbilityBonuses(character, abilities);
 
@@ -2249,7 +2277,9 @@ export function getArmorClassBreakdown(
       bodyArmorName: null,
       bodyArmorValue: base,
       dexBonus: 0,
+      dexModifier: 0,
       dexCapped: false,
+      dexLimited: false,
       shieldBonus: 0,
       itemBonus: 0,
       extraAbilities: abilityBonuses,
@@ -2296,6 +2326,7 @@ export function getArmorClassBreakdown(
     const armorDexBonus = getArmorDexBonus(
       item.armor.dexterityMod,
       dexModifier,
+      dexLimit,
     );
 
     const effectiveValue = item.armor.baseArmorClass + armorDexBonus;
@@ -2333,7 +2364,11 @@ export function getArmorClassBreakdown(
     bodyArmorName,
     bodyArmorValue,
     dexBonus,
+    dexModifier,
     dexCapped,
+    // Свой предел заменяет правило доспеха целиком, поэтому при заданном
+    // пределе урезал Ловкость именно он.
+    dexLimited: dexCapped && dexLimit !== null,
     shieldBonus,
     itemBonus,
     extraAbilities,
