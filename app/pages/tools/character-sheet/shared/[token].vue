@@ -4,7 +4,10 @@
     CharacterSheetSkeleton,
   } from '~character-sheet/body';
   import { useCharacterSheetLoader } from '~character-sheet/composables';
-  import { CHARACTER_SHEET_TITLE } from '~character-sheet/model';
+  import {
+    CHARACTER_SHEET_ROUTE,
+    CHARACTER_SHEET_TITLE,
+  } from '~character-sheet/model';
   import { UiResult } from '~ui/result';
 
   // Без definePageMeta с `auth`: страница открывается кем угодно, включая
@@ -30,6 +33,15 @@
   const { status, load } = useCharacterSheetLoader(shareToken, {
     shared: true,
   });
+
+  /**
+   * Закрытие чужого листа возвращает к списку листов — там же лежит раздел
+   * «Другие листы», из которого этот лист и открывают. Анониму, пришедшему по
+   * ссылке, список объяснит, зачем нужен вход.
+   */
+  function handleClose() {
+    navigateTo(CHARACTER_SHEET_ROUTE);
+  }
 </script>
 
 <template>
@@ -65,7 +77,7 @@
 
       <CharacterSheetBody
         v-else
-        :can-close="false"
+        @close="handleClose"
       />
 
       <template #fallback>

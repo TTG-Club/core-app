@@ -6,10 +6,13 @@ import type {
   ArmorDexterityMod,
   ArmorProficiencyGroup,
   CharacterClassResource,
+  CharacterCustomBonus,
   CharacterCustomCurrency,
   CurrencyKey,
   CustomArmorType,
   CustomArmorTypeMeta,
+  CustomBonusKind,
+  CustomBonusSource,
   CustomInventoryItemDraft,
   CustomInventoryKind,
   CustomSpellField,
@@ -17,6 +20,7 @@ import type {
   FeatureOrigin,
   FeatureOriginGroup,
   HitPointsGainMode,
+  InventoryItemBonus,
   InventoryItemCategory,
   InventoryMagicState,
   InventoryStatRollKind,
@@ -25,6 +29,10 @@ import type {
   MagicItemCatalogItem,
   MagicItemCatalogSorting,
   MagicItemRarityKey,
+  PersonalityTextField,
+  PreparedKindLabels,
+  PreparedSpellKind,
+  ProficiencyBaseSource,
   ResourceRecovery,
   ResourceRecoveryField,
   ResourceRecoveryMode,
@@ -42,6 +50,7 @@ import type {
 } from './types';
 
 import bytes from 'bytes';
+import { range } from 'es-toolkit';
 
 import { CasterType } from '~classes/model';
 
@@ -193,6 +202,15 @@ export const SHEET_READONLY_MESSAGE =
  * режиме правок — ничего не съезжает.
  */
 export const SHEET_HIDDEN_CONTROL_CLASS = 'invisible';
+
+/**
+ * Класс кнопки правки, которую на широком экране проявляет наведение: ниже `lg`
+ * (1024px) она видна всегда. Порог по ширине окна, а не по типу указателя
+ * (`pointer-coarse`): узкому окну кнопка нужна одинаково — и на планшете с
+ * телефоном, где ховера нет вовсе, и на десктопе с мышью, где лист открыт в
+ * половину экрана.
+ */
+export const SHEET_REVEAL_CONTROL_CLASS = 'max-lg:opacity-100';
 
 /** Подпись и подсказка режима просмотра в шапке чужого листа. */
 export const SHEET_READONLY_LABELS: Record<'badge' | 'tooltip', string> = {
@@ -477,6 +495,18 @@ export const LEVEL_MIN = 1;
 /** Максимальный уровень персонажа. */
 export const LEVEL_MAX = 20;
 
+/** Начало идентификаторов классовых умений (дальше — url класса и ключ умения). */
+export const CLASS_FEATURE_ID_PREFIX = 'class:';
+
+/** Разделитель классов в подписи мультикласса («Паладин 3 · Волшебник 2»). */
+export const CLASSES_LABEL_SEPARATOR = ' · ';
+
+/**
+ * Начало идентификаторов производных ресурсов класса (дальше — url класса и
+ * название колонки таблицы прогрессии).
+ */
+export const CLASS_RESOURCE_ID_PREFIX = 'class:res:';
+
 /** Максимальное значение опыта. */
 export const EXPERIENCE_MAX = 999999;
 
@@ -591,6 +621,31 @@ export const UNARMORED_ARMOR_CLASS_BASE = 10;
 /** Максимальный бонус Ловкости к КД средней брони (штраф по Ловкости). */
 export const ARMOR_MEDIUM_DEX_CAP = 2;
 
+/** Минимальный свой предел бонуса Ловкости от доспеха. */
+export const ARMOR_DEX_LIMIT_MIN = 0;
+
+/** Максимальный свой предел бонуса Ловкости от доспеха. */
+export const ARMOR_DEX_LIMIT_MAX = 10;
+
+/** Значение варианта «по правилу доспеха» в выборе предела Ловкости. */
+export const ARMOR_DEX_LIMIT_RULE_VALUE = 'rule';
+
+/**
+ * Варианты предела бонуса Ловкости: правило доспеха и свои значения. Готовый
+ * список вместо галки с полем ввода — вся настройка умещается в одну строку, а
+ * подписи вариантов заодно объясняют, что предел делает.
+ */
+export const ARMOR_DEX_LIMIT_OPTIONS: Array<{ label: string; value: string }> =
+  [
+    { label: 'По правилу доспеха', value: ARMOR_DEX_LIMIT_RULE_VALUE },
+    ...range(ARMOR_DEX_LIMIT_MIN, ARMOR_DEX_LIMIT_MAX + 1).map((limit) => ({
+      // Название характеристики в родительном падеже, поэтому подпись текстом,
+      // а не из `ABILITY_LABELS` (там именительный: «Ловкость»).
+      label: limit === 0 ? 'Без Ловкости' : `Не больше +${limit}`,
+      value: String(limit),
+    })),
+  ];
+
 /** Подпись «без доспеха» для разбора класса доспеха. */
 export const SHEET_UNARMORED_LABEL = 'Без доспеха';
 
@@ -618,8 +673,11 @@ export const ARMOR_CLASS_LABELS: Record<
   | 'abilitiesCustomEmptyHint'
   | 'armorTypeTitle'
   | 'naturalArmor'
+  | 'dexLimitTitle'
   | 'armorTitle'
   | 'dexCappedHint'
+  | 'dexLimitedHint'
+  | 'dexCappedOf'
   | 'shieldTitle'
   | 'itemTitle'
   | 'totalTitle'
@@ -632,7 +690,12 @@ export const ARMOR_CLASS_LABELS: Record<
   valueTitle: 'Значение',
   abilitiesTitle: 'Характеристики',
   abilitiesPlaceholder: 'Без модификаторов',
-  abilitiesArmorHint: `Модификаторы этих характеристик идут в КД. ${ABILITY_LABELS.dexterity} учитывается по правилу надетого доспеха (средний ограничивает бонус, тяжёлый не даёт его вовсе), остальные складываются сверху — как безброневая защита варвара и монаха или песнь клинка.`,
+  // Про Ловкость подсказка молчит: её правило целиком объясняет строка предела,
+  // а дублировать его абзацем — растить модалку на ровном месте. Подсказка
+  // стоит под обеими строками, поэтому «этих» в ней заменено на «выбранные»:
+  // указывать на строку через одну было бы неверно.
+  abilitiesArmorHint:
+    'Выбранные характеристики идут в КД сверх доспеха — как безброневая защита варвара и монаха или песнь клинка.',
   abilitiesArmorEmptyHint:
     'Ни одна характеристика в КД не идёт — считается только доспех со щитом.',
   abilitiesCustomHint:
@@ -641,10 +704,15 @@ export const ARMOR_CLASS_LABELS: Record<
     'Ни одна характеристика не прибавляется — КД равен значению.',
   armorTypeTitle: 'Тип доспеха',
   naturalArmor: 'Природный доспех',
+  dexLimitTitle: 'Предел Ловкости',
   armorTitle: 'Доспех',
-  // Подпись в родительном падеже, поэтому название характеристики здесь текстом,
-  // а не из `ABILITY_LABELS` (там именительный: «Ловкость»).
-  dexCappedHint: 'Модификатор Ловкости ограничен доспехом',
+  // Подписи в родительном падеже, поэтому название характеристики здесь
+  // текстом, а не из `ABILITY_LABELS` (там именительный: «Ловкость»).
+  dexCappedHint: 'Ловкость ограничена доспехом',
+  dexLimitedHint: 'Ловкость ограничена своим пределом',
+  // Склейка «применённый бонус из полного модификатора»: одно число игрок читал
+  // как предел, а это то, что дошло до КД.
+  dexCappedOf: 'из',
   shieldTitle: 'Щит',
   itemTitle: 'Магические предметы',
   totalTitle: 'Итоговый КД',
@@ -716,12 +784,19 @@ export const CUSTOM_BONUS_FORMAT_OPTIONS: Intl.NumberFormatOptions = {
   signDisplay: 'exceptZero',
 };
 
-/** Пояснение к своему бонусу мастерства. */
-export const CUSTOM_PROFICIENCY_BONUS_HINT =
-  'Складывается с бонусом по уровню везде, где тот участвует: спасброски, навыки, атака оружием, заклинательство.';
+/** Характеристика инициативы по правилам. */
+export const DEFAULT_INITIATIVE_ABILITY: AbilityKey = 'dexterity';
 
-/** Пояснение к своему бонусу инициативы. */
-export const CUSTOM_INITIATIVE_BONUS_HINT = `Складывается с модификатором характеристики «${ABILITY_LABELS.dexterity}» в плитке инициативы и в её броске.`;
+/** Источник основы бонуса мастерства «расчёт по уровню». */
+export const PROFICIENCY_BASE_LEVEL_SOURCE = 'level';
+
+/** Пояснение к разделу бонуса мастерства. */
+export const CUSTOM_PROFICIENCY_BONUS_HINT =
+  'Идёт в спасброски, навыки, атаку оружием и заклинательство.';
+
+/** Пояснение к разделу инициативы. */
+export const CUSTOM_INITIATIVE_BONUS_HINT =
+  'Показывается в плитке инициативы и в её броске.';
 
 /** Подписи модалки настроек листа. */
 export const SHEET_SETTINGS_LABELS = {
@@ -734,8 +809,18 @@ export const SHEET_SETTINGS_LABELS = {
   attackFormulaHint:
     'Бонус атаки = бонус мастерства + модификатор характеристики.',
   initiativeTitle: 'Инициатива',
-  customBonusTitle: 'Свой бонус',
+  baseEditTitle: 'Настроить основу',
+  baseSourceTitle: 'Источник',
+  baseValueTitle: 'Значение',
+  customBonusesTitle: 'Свои бонусы',
+  customBonusAdd: 'Добавить бонус',
+  customBonusRemove: 'Удалить бонус',
+  customBonusLabelPlaceholder: 'Откуда бонус',
+  customBonusSourcePlaceholder: 'Источник',
   levelProficiencyBonusTitle: 'По уровню',
+  // Полные подписи итогов в плитку не влезают, поэтому на ней короткое «Итог»,
+  // а полная подпись уходит в подсказку.
+  totalTitle: 'Итог',
   totalProficiencyBonusTitle: 'Итоговый бонус мастерства',
   totalInitiativeTitle: 'Итоговая инициатива',
 };
@@ -784,6 +869,9 @@ export const SKILL_PROFICIENCY_MULTIPLIERS: Record<
   expertise: 2,
 };
 
+/** Основа пассивного значения навыка: к ней прибавляется значение навыка. */
+export const PASSIVE_SKILL_BASE = 10;
+
 /** Пометки навыка, которым персонаж уже владеет, в списках выбора. */
 export const SKILL_OWNED_HINTS: Record<SkillProficiencyLevel, string> = {
   none: '',
@@ -801,6 +889,152 @@ export const SKILL_OWNED_HINTS: Record<SkillProficiencyLevel, string> = {
 export const SKILL_DUPLICATE_WARNING =
   'Такие навыки у персонажа уже есть: по правилам 2024 повторное владение '
   + 'ничего не даёт и компетенцию не выдаёт — лучше выбрать другие навыки.';
+
+/** Подписи видов своего бонуса. */
+export const CUSTOM_BONUS_KIND_LABELS: Record<CustomBonusKind, string> = {
+  ability: 'Характеристика',
+  flat: 'Своё число',
+};
+
+/** Источник своего бонуса «своё число» в общем селекторе источников. */
+export const CUSTOM_BONUS_FLAT_SOURCE = 'flat';
+
+/**
+ * Варианты источника своего бонуса: своё число и все характеристики одним
+ * списком — так строка бонуса обходится одним селектором вместо пары
+ * «вид + характеристика».
+ */
+export const CUSTOM_BONUS_SOURCE_OPTIONS: Array<{
+  label: string;
+  value: CustomBonusSource;
+}> = [
+  { label: CUSTOM_BONUS_KIND_LABELS.flat, value: CUSTOM_BONUS_FLAT_SOURCE },
+  ...ABILITY_OPTIONS,
+];
+
+/**
+ * Варианты основы бонуса мастерства: расчёт по уровню персонажа либо своё
+ * число вместо него. Характеристики здесь ни при чём — бонус мастерства от них
+ * не зависит, поэтому список свой, а не общий с бонусами.
+ */
+export const PROFICIENCY_BASE_OPTIONS: Array<{
+  label: string;
+  value: ProficiencyBaseSource;
+}> = [
+  {
+    label: SHEET_SETTINGS_LABELS.levelProficiencyBonusTitle,
+    value: PROFICIENCY_BASE_LEVEL_SOURCE,
+  },
+  { label: CUSTOM_BONUS_KIND_LABELS.flat, value: CUSTOM_BONUS_FLAT_SOURCE },
+];
+
+/** Подпись бонуса-числа без своей пометки в разборе значения. */
+export const CUSTOM_FLAT_BONUS_LABEL = 'Свой бонус';
+
+/** Максимальная длина пометки источника своего бонуса. */
+export const CUSTOM_BONUS_LABEL_MAX_LENGTH = 40;
+
+/**
+ * Заготовка нового своего бонуса: чаще всего добавляют ровно «+1» от предмета,
+ * поэтому вид по умолчанию — своё число.
+ */
+export const NEW_CUSTOM_BONUS: Omit<CharacterCustomBonus, 'id'> = {
+  kind: 'flat',
+  ability: 'strength',
+  value: 1,
+  label: '',
+};
+
+/** Максимальная длина названия своего навыка. */
+export const CUSTOM_SKILL_NAME_MAX_LENGTH = 40;
+
+/**
+ * Сколько своих навыков разрешено завести. Предел не от правил, а от места:
+ * навыки печатаются в PDF под своей характеристикой, и десяток лишних строк
+ * панель характеристик ещё выдерживает.
+ */
+export const CUSTOM_SKILLS_MAX = 10;
+
+/** Характеристика нового своего навыка по умолчанию. */
+export const DEFAULT_CUSTOM_SKILL_ABILITY: AbilityKey = 'intelligence';
+
+/** Подписи модалки настройки навыков. */
+export const SHEET_SKILL_SETTINGS_LABELS = {
+  title: 'Настройка навыков',
+  open: 'Настроить навыки',
+  hint:
+    'Характеристика задаёт модификатор навыка, к нему добавляется бонус '
+    + 'мастерства по уровню владения. Дополнительные бонусы складываются '
+    + 'сверху — их сколько угодно.',
+  abilityPlaceholder: 'Характеристика',
+  proficiency: 'Владение навыком',
+  resetSkill: 'Вернуть навык к правилам',
+  addBonus: 'Добавить бонус',
+  passive: 'Пассивное',
+  customTitle: 'Свой навык',
+  customHint:
+    'Навыка нет в правилах: он встанет в общий список по алфавиту и попадёт '
+    + 'в PDF наравне с остальными.',
+  customNamePlaceholder: 'Название навыка',
+  customAdd: 'Добавить навык',
+  customRemove: 'Удалить свой навык',
+  customBadge: 'Свой',
+  customDuplicate: 'Навык с таким названием уже есть',
+  customLimit: `Своих навыков не больше ${CUSTOM_SKILLS_MAX}`,
+  groupTitle: 'Группировать по характеристикам',
+  groupHint:
+    'Навыки встанут группами под своими характеристиками — как в PDF. '
+    + 'Группу задаёт характеристика самого навыка: дополнительные бонусы от '
+    + 'других характеристик в счёт не идут.',
+} as const;
+
+/**
+ * Ключ общей группы навыков: без группировки список выводится одной группой без
+ * разделителя, и характеристики у неё нет.
+ */
+export const SKILL_GROUP_ALL_KEY = 'all';
+
+/**
+ * Подпись разделителя группы навыков (слот `label` у `USeparator`): мелкие
+ * прописные, как у групп снаряжения. Цвет добавляется на месте — в списке листа
+ * подпись подсвечивается вместе с группой. Общая константа: разделитель рисуют
+ * и панель навыков, и модалка их настройки.
+ */
+export const SKILL_GROUP_LABEL_CLASS =
+  'text-[10px] font-bold tracking-wider uppercase transition-colors';
+
+/**
+ * Подписи владения спасброском: их два, а не четыре, как у навыка, — половины
+ * владения и компетенции у спасбросков в правилах нет.
+ */
+export const SAVING_THROW_PROFICIENCY_LABELS = {
+  proficient: 'Владение',
+  none: 'Нет владения',
+} as const;
+
+/** Значки владения спасброском: закрашенный кружок — владение. */
+export const SAVING_THROW_PROFICIENCY_ICONS = {
+  proficient: 'tabler:circle-filled',
+  none: 'tabler:circle',
+} as const;
+
+/** Подписи модалки настройки спасбросков. */
+export const SHEET_SAVING_THROW_SETTINGS_LABELS = {
+  title: 'Настройка спасбросков',
+  open: 'Настроить спасброски',
+  hint:
+    'Характеристика задаёт модификатор спасброска, при владении к нему '
+    + 'добавляется бонус мастерства. Дополнительные бонусы складываются '
+    + 'сверху — их сколько угодно.',
+  abilityPlaceholder: 'Характеристика',
+  proficiency: 'Владение спасброском',
+  resetSavingThrow: 'Вернуть спасбросок к правилам',
+  addBonus: 'Добавить бонус',
+  commonTitle: 'Ко всем спасброскам',
+  commonHint:
+    'Бонус идёт в каждый из шести спасбросков: так заводят плащ защиты или '
+    + 'ауру паладина, а не повторяют одно и то же шесть раз.',
+} as const;
 
 /** Множитель грузоподъёмности от значения Силы. */
 export const CARRYING_CAPACITY_MULTIPLIER = 15;
@@ -821,8 +1055,64 @@ export const CARRYING_CAPACITY_SIZE_MULTIPLIERS: Record<string, number> = {
   исполинский: 8,
 };
 
+/**
+ * Размеры в выборе поправки грузоподъёмности по возрастанию категорий.
+ * «Исполинский» в список не входит — это та же категория, что «Громадный», и
+ * двумя одинаковыми вариантами выбор только запутался бы.
+ */
+export const CARRYING_CAPACITY_SIZE_LABELS = [
+  'Крошечный',
+  'Маленький',
+  'Средний',
+  'Большой',
+  'Огромный',
+  'Громадный',
+];
+
+/** Значение варианта «как у персонажа» в выборе размера для подсчёта. */
+export const CARRYING_CAPACITY_SIZE_AUTO = 'auto';
+
+/** Минимальное своё значение предела переносимого веса (в фунтах). */
+export const CARRYING_CAPACITY_MIN = 0;
+
+/** Максимальное своё значение предела переносимого веса (в фунтах). */
+export const CARRYING_CAPACITY_MAX = 10_000;
+
+/** Минимальный свой бонус к грузоподъёмности (в фунтах). */
+export const CARRYING_CAPACITY_BONUS_MIN = -10_000;
+
+/** Максимальный свой бонус к грузоподъёмности (в фунтах). */
+export const CARRYING_CAPACITY_BONUS_MAX = 10_000;
+
 /** Единица измерения веса инвентаря. */
 export const WEIGHT_UNIT_LABEL = 'фнт.';
+
+/** Подписи настройки грузоподъёмности. */
+export const CARRYING_CAPACITY_LABELS = {
+  title: 'Грузоподъёмность',
+  open: 'Настроить грузоподъёмность',
+  customToggle: 'Использовать своё значение',
+  customToggleHint: 'Предел задаётся числом, а не считается по Силе и размеру',
+  valueTitle: 'Предел, фнт.',
+  sizeTitle: 'Размер для подсчёта',
+  sizeAuto: 'Как у персонажа',
+  sizeAutoUnknown: 'Как у персонажа (размер не указан)',
+  bonusTitle: 'Свой бонус, фнт.',
+  sizeBonusTitle: 'Поправка на размер',
+  ruleTitle: 'По правилам',
+  bonusRowTitle: 'Свой бонус',
+  totalTitle: 'Предел переносимого веса',
+  ruleHint:
+    'По правилам предел равен значению Силы, умноженному на 15: у Крошечного '
+    + 'он вдвое меньше, а с Большого удваивается на каждую категорию размера.',
+  sizeHint:
+    'Размер для подсчёта задаётся отдельно от размера персонажа — так работает '
+    + '«Мощное телосложение»: существо считается на категорию крупнее только '
+    + 'для переносимого веса.',
+  bonusHint:
+    'Свой бонус складывается с пределом в обоих режимах: отрицательный — '
+    + 'уменьшает его.',
+} as const;
 
 /** Названия типов передвижения. */
 export const SPEED_TYPE_LABELS: Record<SpeedTypeKey, string> = {
@@ -978,6 +1268,68 @@ export const HIT_POINT_STEP_BUTTONS: Array<{
   { step: 5, label: '+5', color: 'success' },
 ];
 
+/** Уровень истощения, на котором истощения нет. */
+export const EXHAUSTION_LEVEL_MIN = 0;
+
+/** Смертельный уровень истощения (PHB 2024). */
+export const EXHAUSTION_LEVEL_MAX = 6;
+
+/** Насколько каждый уровень истощения снижает проверки к20. */
+export const EXHAUSTION_D20_PENALTY_PER_LEVEL = 2;
+
+/** На сколько футов каждый уровень истощения снижает скорость. */
+export const EXHAUSTION_SPEED_PENALTY_PER_LEVEL = 5;
+
+/**
+ * Снижение скорости за уровень истощения в единицах листа. Правило записано в
+ * футах, в метрах те же 5 футов — это клетка, полтора метра. Мили и километры
+ * — дорожная скорость, боевой штраф её не трогает.
+ */
+export const EXHAUSTION_SPEED_PENALTY_BY_UNIT: Record<SpeedUnit, number> = {
+  feet: EXHAUSTION_SPEED_PENALTY_PER_LEVEL,
+  meters: 1.5,
+  miles: 0,
+  kilometers: 0,
+};
+
+/** Сколько уровней истощения снимает продолжительный отдых (PHB 2024). */
+export const EXHAUSTION_LONG_REST_RECOVERY = 1;
+
+/** Деления блока истощения: уровни от первого до смертельного. */
+export const EXHAUSTION_LEVELS: number[] = Array.from(
+  { length: EXHAUSTION_LEVEL_MAX },
+  (_unused, index) => index + 1,
+);
+
+/** Подписи блока истощения. */
+export const EXHAUSTION_LABELS: Record<
+  | 'title'
+  | 'level'
+  | 'none'
+  | 'death'
+  | 'd20Effect'
+  | 'speedEffect'
+  | 'rulesTitle',
+  string
+> = {
+  title: 'Истощение',
+  level: 'Уровень',
+  none: 'Истощения нет.',
+  death: 'Персонаж умирает.',
+  d20Effect: 'ко всем проверкам к20',
+  speedEffect: 'скорость',
+  rulesTitle: 'Правила истощения',
+};
+
+/** Пункты правил истощения (D&D 2024) для справки в блоке. */
+export const EXHAUSTION_RULES: string[] = [
+  'Истощение накапливается: каждый новый источник добавляет 1 уровень, а не заменяет прежний.',
+  'Каждый уровень снижает все проверки к20 на 2: проверки характеристик, броски атаки и спасброски.',
+  'Каждый уровень снижает все скорости персонажа на 5 футов.',
+  'На 6 уровне истощения персонаж умирает.',
+  'Продолжительный отдых снимает 1 уровень истощения; на нулевом уровне состояние заканчивается.',
+];
+
 /**
  * Минимальный прирост максимума хитов за уровень: даже с отрицательным
  * модификатором Телосложения уровень даёт хотя бы один хит (правило D&D 2024).
@@ -1129,12 +1481,15 @@ export const LONG_REST_LABELS: Record<
   | 'fullDice'
   | 'recoveryTitle'
   | 'temporaryNote'
+  | 'exhaustionTitle'
+  | 'exhaustionRecovery'
   | 'close'
   | 'finish'
   | 'finishedTitle'
   | 'finishedHitPoints'
   | 'finishedDice'
-  | 'finishedRecovery',
+  | 'finishedRecovery'
+  | 'finishedExhaustion',
   string
 > = {
   title: 'Продолжительный отдых',
@@ -1150,12 +1505,15 @@ export const LONG_REST_LABELS: Record<
   fullDice: 'Все кости хитов на месте — возвращать нечего.',
   recoveryTitle: 'Вернётся по окончании отдыха',
   temporaryNote: 'Временные хиты пропадают в конце отдыха.',
+  exhaustionTitle: 'Истощение',
+  exhaustionRecovery: 'Отдых снимет 1 уровень истощения.',
   close: 'Закрыть',
   finish: 'Завершить отдых',
   finishedTitle: 'Продолжительный отдых завершён',
   finishedHitPoints: 'Хиты восстановлены полностью.',
   finishedDice: 'Возвращено костей хитов',
   finishedRecovery: 'Вернулись',
+  finishedExhaustion: 'Новый уровень истощения',
 };
 
 /** Пункты правил продолжительного отдыха (D&D 2024) для справки в модалке. */
@@ -1166,6 +1524,7 @@ export const LONG_REST_RULES: string[] = [
   'Все потраченные кости хитов возвращаются: в редакции 2024 года отдых возвращает их полностью, а не половину.',
   'Счётчикам умений возвращается столько зарядов, сколько задано им на продолжительный отдых: обычно это все заряды.',
   'Временные хиты держатся до конца продолжительного отдыха и пропадают вместе с ним.',
+  'Отдых снимает 1 уровень истощения.',
   'За одни сутки можно получить пользу только от одного продолжительного отдыха.',
 ];
 
@@ -1248,7 +1607,7 @@ const MARTIAL_WEAPON_ITEMS = [
   'Скимитар',
   'Короткий меч',
   'Трезубец',
-  'Боевой клевец',
+  'Боевая кирка',
   'Боевой молот',
   'Кнут',
   'Духовая трубка',
@@ -1623,8 +1982,14 @@ export const SPELL_SLOT_USED_LABEL = 'потрачена';
 /** Подпись кружка свободной ячейки заклинаний (для скринридера). */
 export const SPELL_SLOT_FREE_LABEL = 'свободна';
 
-/** Подпись блока подготовленных заклинаний на вкладке заклинаний. */
-export const PREPARED_SPELLS_LABEL = 'Подготовленные';
+/**
+ * Пометка ячеек Магии договора: у мультикласса они существуют отдельно от
+ * общих ячеек и возвращаются коротким отдыхом.
+ */
+export const PACT_SPELL_SLOT_LABEL = 'договора';
+
+/** Подпись ряда кружков ячеек договора в разделителе круга заклинаний. */
+export const PACT_SPELL_SLOTS_ROW_LABEL = 'Договор';
 
 /** Значение блока, когда число подготовленных заклинаний не определено. */
 export const PREPARED_SPELLS_EMPTY_VALUE = '—';
@@ -1651,61 +2016,89 @@ export const PREPARED_SPELLS_COLUMN_PREFIX = 'подг';
 /** Обязательная часть названия той же колонки (отсекает «Подготовка» и т. п.). */
 export const PREPARED_SPELLS_COLUMN_KEYWORD = 'закл';
 
+/**
+ * Начало названия колонки таблицы класса с числом заговоров. Справочник пишет
+ * её и целиком («Заговоры»), и сокращённо («Заг.»), поэтому сравниваются только
+ * буквы названия.
+ */
+export const CANTRIPS_COLUMN_PREFIX = 'заг';
+
 /** Разделитель «подготовлено / всего можно» в блоке подготовленных. */
 export const PREPARED_SPELLS_VALUE_SEPARATOR = ' / ';
 
 /** Подписи значка подготовки в строке заклинания. */
 export const PREPARED_SPELL_TOGGLE_LABELS: Record<
-  'prepare' | 'unprepare' | 'cantrip' | 'innate' | 'limit',
+  'prepare' | 'unprepare' | 'innate' | 'limit',
   string
 > = {
   prepare: 'Подготовить',
   unprepare: 'Снять подготовку',
-  cantrip: 'Заговор подготавливать не нужно — он всегда доступен',
   innate: 'Врождённое заклинание подготавливать не нужно',
-  limit: 'Больше заклинаний подготовить нельзя',
+  limit: 'Больше подготовить нельзя',
 };
 
-/** Начало подсказки блока подготовленных: сколько заклинаний отмечено. */
-export const PREPARED_SPELLS_COUNT_HINT = 'Подготовлено заклинаний';
+/** Виды подготовки по порядку плиток в шапке вкладки заклинаний. */
+export const PREPARED_KINDS: PreparedSpellKind[] = ['spells', 'cantrips'];
 
-/** Заголовок предупреждения о достигнутом пределе подготовленных заклинаний. */
-export const PREPARED_SPELLS_LIMIT_TOAST_TITLE =
-  'Предел подготовленных заклинаний';
-
-/** Подсказки блока подготовленных заклинаний на вкладке заклинаний. */
-export const PREPARED_SPELLS_HINTS: Record<
-  'auto' | 'custom' | 'unknown',
-  string
+/**
+ * Подписи блока и модалки подготовки по её виду: заговоры считаются отдельным
+ * счётчиком со своей колонкой таблицы класса, поэтому и подписи у них свои.
+ */
+export const PREPARED_KIND_LABELS: Record<
+  PreparedSpellKind,
+  PreparedKindLabels
 > = {
-  auto: 'Подготовленных заклинаний по таблице класса',
-  custom: 'Своё число подготовленных заклинаний: подсчёт по классу выключен',
-  unknown:
-    'Класс не даёт числа подготовленных заклинаний — нажмите, чтобы задать своё',
+  spells: {
+    // Ряд шапки узкий, а рядом ещё две плитки: подпись сокращена по правилу
+    // «отсечение до согласной», целиком слово даёт подсказка плитки.
+    stat: 'Подгот.',
+    statFull: 'Подготовленные',
+    icon: 'tabler:checklist',
+    ariaLabel: 'Настроить подготовленные заклинания',
+    title: 'Подготовленные заклинания',
+    customValue: 'Число заклинаний',
+    unknownClassValue:
+      'Класс не даёт числа подготовленных заклинаний. Если оно должно быть, выберите класс заново или повысьте уровень — лист запомнит таблицу класса.',
+    countHint: 'Подготовлено заклинаний',
+    hints: {
+      auto: 'Подготовленных заклинаний по таблице класса',
+      custom:
+        'Своё число подготовленных заклинаний: подсчёт по классу выключен',
+      unknown:
+        'Класс не даёт числа подготовленных заклинаний — нажмите, чтобы задать своё',
+    },
+    limitToastTitle: 'Предел подготовленных заклинаний',
+  },
+  cantrips: {
+    // «Заговоры» и так короче любой осмысленной сокращённой формы.
+    stat: 'Заговоры',
+    statFull: 'Заговоры',
+    icon: 'tabler:sparkles',
+    ariaLabel: 'Настроить подготовленные заговоры',
+    title: 'Подготовленные заговоры',
+    customValue: 'Число заговоров',
+    unknownClassValue:
+      'Класс не даёт числа заговоров. Если оно должно быть, выберите класс заново или повысьте уровень — лист запомнит таблицу класса.',
+    countHint: 'Подготовлено заговоров',
+    hints: {
+      auto: 'Заговоров по таблице класса',
+      custom: 'Своё число заговоров: подсчёт по классу выключен',
+      unknown: 'Класс не даёт числа заговоров — нажмите, чтобы задать своё',
+    },
+    limitToastTitle: 'Предел подготовленных заговоров',
+  },
 };
 
-/** Подписи модалки настройки подготовленных заклинаний. */
+/** Подписи модалки настройки, общие для заклинаний и заговоров. */
 export const PREPARED_SPELLS_LABELS: Record<
-  | 'title'
-  | 'customToggle'
-  | 'customHint'
-  | 'customValue'
-  | 'classValue'
-  | 'bonus'
-  | 'total'
-  | 'unknownClassValue'
-  | 'autoHint',
+  'customToggle' | 'customHint' | 'classValue' | 'bonus' | 'total' | 'autoHint',
   string
 > = {
-  title: 'Подготовленные заклинания',
   customToggle: 'Использовать своё число',
   customHint: 'Иначе число считается по таблице класса',
-  customValue: 'Число заклинаний',
   classValue: 'Число из таблицы класса',
   bonus: 'Бонус к числу класса',
   total: 'Всего можно подготовить',
-  unknownClassValue:
-    'Класс не даёт числа подготовленных заклинаний. Если оно должно быть, выберите класс заново или повысьте уровень — лист запомнит таблицу класса.',
   autoHint:
     'Число берётся из таблицы класса на текущем уровне; бонус прибавляется к нему (например, от черты или предмета).',
 };
@@ -1729,7 +2122,8 @@ export const SPELL_FILTER_LABELS: Record<
   string
 > = {
   prepared: 'Подготовленные',
-  preparedHint: 'Оставить в списке только заклинания, помеченные значком',
+  preparedHint:
+    'Оставить в списке только заклинания и заговоры, помеченные значком',
   cantrip: 'З',
 };
 
@@ -1744,6 +2138,9 @@ export const FILTER_CHIP_IDLE_CLASS =
 /** Выбранный чип отбора: горит тёплым, как отмеченное значком заклинание. */
 export const FILTER_CHIP_SELECTED_CLASS =
   'border-warning bg-warning/10 text-warning';
+
+/** Заголовок модалки заклинательства; у мультикласса дополняется классом. */
+export const SPELLCASTING_MODAL_TITLE = 'Заклинательство';
 
 /**
  * Подписи чисел заклинательства: в узкую плитку вкладки идёт короткая, полное
@@ -1781,8 +2178,65 @@ export const CLASSES_DETAIL_BASE_PATH = '/api/v2/classes';
 /** Эндпоинт фильтров классов — источник глобальной настройки источников. */
 export const CLASSES_FILTERS_PATH = '/api/v2/classes/filters';
 
-/** Минимальный уровень персонажа для выбора подкласса (D&D 2024 — 3-й). */
+/** Минимальный уровень В КЛАССЕ для выбора подкласса (D&D 2024 — 3-й). */
 export const SUBCLASS_SELECTION_MIN_LEVEL = 3;
+
+/**
+ * Значение характеристики, необходимое для взятия уровня во втором классе
+ * (правило мультиклассирования D&D 2024).
+ */
+export const MULTICLASS_ABILITY_REQUIREMENT = 13;
+
+/** Начало подсказки о невыполненных требованиях мультиклассирования. */
+export const MULTICLASS_REQUIREMENT_WARNING_PREFIX =
+  'По правилам мультиклассирования для этого класса нужно:';
+
+/** Подписи окна классов персонажа. */
+export const CLASSES_MODAL_LABELS = {
+  title: 'Классы персонажа',
+  add: 'Добавить класс',
+  choose: 'Выбрать класс',
+  close: 'Закрыть',
+  edit: 'Изменить',
+  levelSuffix: 'уровень',
+  remove: 'Удалить',
+  totalLevel: 'Общий уровень',
+  empty: 'Класс пока не выбран.',
+  levelLimit:
+    'Общий уровень персонажа не может превышать 20 — сперва снизьте уровень другого класса.',
+  removeDescription:
+    'Удалить класс? С листа уйдут его умения, счётчики и кости хитов, а максимум хитов вернётся к записанному до него. Выборы, сделанные в его умениях, восстановить будет нельзя.',
+  removeConfirm: 'Удалить',
+  removeCancel: 'Отмена',
+  hint: 'Общий уровень персонажа — сумма уровней его классов. Бонус мастерства и опыт считаются по нему.',
+} as const;
+
+/** Подписи мастера выбора класса, зависящие от режима (выбор или добавление). */
+export const CLASS_WIZARD_LABELS = {
+  primaryTitle: 'Выбор класса',
+  addTitle: 'Добавление класса',
+  addHint:
+    'Класс добавится первым уровнем — общий уровень персонажа вырастет на единицу. Дальше его поднимают в окне опыта и уровня.',
+  addSubclassHint: 'Подкласс выбирается с {level} уровня в классе.',
+} as const;
+
+/** Сокращение уровня в подписях («3 ур.»). */
+export const LEVEL_SHORT_SUFFIX = 'ур.';
+
+/**
+ * Подписи блока владений при мультиклассировании. Справочник урезанного набора
+ * не отдаёт (поле `multiclassProficiency` у классов пустое), поэтому лист
+ * ничего не выдаёт сам и предупреждает об этом.
+ */
+export const MULTICLASS_PROFICIENCY_LABELS = {
+  title: 'Владения при мультиклассировании',
+  hint: 'Второй класс по правилам 2024 даёт лишь часть своих владений, а справочник этот список не отдаёт — лист их не выдаёт. Ниже полный набор класса: отметьте нужное на панели владений вручную.',
+  armor: 'Доспехи',
+  weapon: 'Оружие',
+  tool: 'Инструменты',
+  skill: 'Навыки',
+  empty: 'Нет',
+} as const;
 
 /** Эндпоинт поиска предысторий (раздел «Предыстории»). */
 export const BACKGROUNDS_SEARCH_PATH = '/api/v2/backgrounds/search';
@@ -2163,6 +2617,25 @@ export const INVENTORY_CATEGORY_ICONS: Record<InventoryItemCategory, string> = {
 };
 
 /**
+ * Иконки кнопки «надеть» по виду предмета: щит у доспеха, меч у оружия и искры
+ * у прочей магии (кольцо, амулет, плащ). Одним щитом на всё надеваемое строка
+ * не обходится: магический меч и безделушка доспехом не становятся, а кнопка
+ * называла их им.
+ *
+ * Состояние «надет» кнопка показывает подсветкой и значком «Надет» у названия;
+ * парная иконка есть только там, где она нашлась в наборе — меча с галочкой в
+ * нём нет.
+ */
+export const INVENTORY_EQUIP_ICONS: Record<
+  CustomInventoryKind,
+  { equipped: string; idle: string }
+> = {
+  weapon: { equipped: 'tabler:sword', idle: 'tabler:sword' },
+  armor: { equipped: 'tabler:shield-check', idle: 'tabler:shield' },
+  trinket: { equipped: 'tabler:sparkles-filled', idle: 'tabler:sparkles' },
+};
+
+/**
  * Минимальное количество одного предмета в инвентаре. Ноль разрешён: у
  * потраченного расходника запись остаётся в списке (её не приходится искать в
  * каталоге заново), но предмет считается отсутствующим — его нельзя надеть,
@@ -2255,6 +2728,16 @@ export const INVENTORY_ATTUNED_BADGE_LABEL = 'Настроен';
 export const INVENTORY_ATTUNED_BADGE_HINT =
   'Персонаж настроен на предмет; настроиться можно не более чем на три предмета';
 
+/** Значок предмета, который требует настройки, но ещё не настроен. */
+export const INVENTORY_ATTUNEMENT_BADGE_LABEL = 'Нужна настройка';
+
+/**
+ * Подсказка значка «Нужна настройка»: пока настройки нет, пассивные бонусы
+ * предмета в лист не идут.
+ */
+export const INVENTORY_ATTUNEMENT_BADGE_HINT =
+  'Предмет требует настройки: его бонусы не работают, пока персонаж на него не настроен — настройка в меню предмета';
+
 /** Значок включённого предмета. */
 export const INVENTORY_ACTIVE_BADGE_LABEL = 'Включён';
 
@@ -2296,6 +2779,32 @@ export const INVENTORY_MISSING_BADGE_LABEL = 'Отсутствует';
 /** Подсказка значка «Отсутствует»: что именно запрещает нулевое количество. */
 export const INVENTORY_MISSING_BADGE_HINT =
   'Предмета не осталось: его нельзя надеть, им нельзя атаковать и бросать урон';
+
+/**
+ * Подписи вклада снаряжения в характеристику: плитка показывает значение с
+ * бонусами предметов, а правится записанное — без пояснения числа расходятся.
+ */
+export const ABILITY_ITEM_BONUS_LABELS = {
+  /** Хвост подсказки плитки: «18 = 16 +2 от снаряжения». */
+  hint: 'от снаряжения',
+
+  /** Пояснение в модалке правки значения. */
+  modalHint: 'Снаряжение добавляет к характеристике',
+};
+
+/** Подписи бонусов предмета для сводки в его строке. */
+export const INVENTORY_BONUS_LABELS = {
+  title: 'Бонусы',
+  attack: 'Попадание',
+  extraDamage: 'Дополнительный урон',
+
+  /** Пояснение под сводкой, пока бонусы не работают. */
+  inactiveHint: 'Бонусы заработают, когда предмет будет надет',
+
+  /** То же для предмета, которому нужна ещё и настройка. */
+  attunementHint:
+    'Бонусы заработают, когда предмет будет надет, а персонаж настроен на него',
+};
 
 /** Короткие подписи плиток параметров предмета в строке инвентаря. */
 export const INVENTORY_STAT_LABELS: Record<
@@ -2568,6 +3077,82 @@ export const CUSTOM_ITEM_WEIGHT_STEP = 0.5;
 /** Знаков после запятой в весе предмета (вес бывает дробным — 0,5 фунта). */
 export const WEIGHT_DECIMALS = 1;
 
+/** Приставки подписей целей, которым нужен ключ: без них «Сила» неоднозначна. */
+export const INVENTORY_BONUS_TARGET_PREFIXES: Record<
+  'ability' | 'ability-check' | 'skill' | 'saving-throw' | 'speed',
+  string
+> = {
+  'ability': 'Характеристика',
+  'ability-check': 'Проверки',
+  'skill': 'Навык',
+  'saving-throw': 'Спасбросок',
+  'speed': 'Скорость',
+};
+
+/** Подписи целей бонуса, которые говорят сами за себя. */
+export const INVENTORY_BONUS_TARGET_LABELS: Record<
+  | 'all-saving-throws'
+  | 'all-speeds'
+  | 'armor-class'
+  | 'initiative'
+  | 'spell-attack'
+  | 'spell-save-dc',
+  string
+> = {
+  'all-saving-throws': 'Все спасброски',
+  'all-speeds': 'Все скорости',
+  'armor-class': 'Класс доспеха',
+  'spell-save-dc': 'Сложность заклинаний',
+  'spell-attack': 'Атака заклинанием',
+  'initiative': 'Инициатива',
+};
+
+/** Заголовки групп в селекторе цели бонуса. */
+export const INVENTORY_BONUS_GROUP_LABELS = {
+  abilities: 'Характеристики',
+  checks: 'Проверки характеристик',
+  skills: 'Навыки',
+  savingThrows: 'Спасброски',
+  speeds: 'Скорости',
+  other: 'Прочее',
+};
+
+/** Разделитель вида цели и её ключа в значении селектора (`ability:strength`). */
+export const INVENTORY_BONUS_TARGET_SEPARATOR = ':';
+
+/** Цель бонуса по умолчанию у только что добавленной строки. */
+export const NEW_INVENTORY_BONUS: Omit<InventoryItemBonus, 'id'> = {
+  kind: 'ability',
+  key: 'strength',
+  value: 1,
+};
+
+/** Подписи списка бонусов в форме своего предмета. */
+export const INVENTORY_BONUS_ROW_LABELS = {
+  add: 'Добавить бонус',
+  remove: 'Убрать бонус',
+  targetPlaceholder: 'Куда идёт бонус',
+  searchPlaceholder: 'Поиск цели',
+};
+
+/** Минимальный бонус предмета: у проклятых предметов он отрицательный. */
+export const ITEM_BONUS_MIN = -10;
+
+/** Максимальный бонус предмета. */
+export const ITEM_BONUS_MAX = 10;
+
+/** Минимальная прибавка предмета к скорости (сапоги бывают и с помехой). */
+export const ITEM_SPEED_BONUS_MIN = -60;
+
+/** Максимальная прибавка предмета к скорости. */
+export const ITEM_SPEED_BONUS_MAX = 120;
+
+/** Минимум зарядов предмета (0 — зарядов у него нет). */
+export const INVENTORY_CHARGES_MIN = 0;
+
+/** Максимум зарядов предмета. */
+export const INVENTORY_CHARGES_MAX = 99;
+
 /** Заготовка формы своего предмета (значения по умолчанию). */
 export const NEW_CUSTOM_INVENTORY_ITEM: CustomInventoryItemDraft = {
   kind: 'weapon',
@@ -2585,7 +3170,129 @@ export const NEW_CUSTOM_INVENTORY_ITEM: CustomInventoryItemDraft = {
   damageDiceFaces: 6,
   damageBonus: 0,
   damageType: '',
+  versatile: false,
+  versatileDiceCount: 1,
+  versatileDiceFaces: 8,
+  attackBonus: 0,
+  extraDamageDiceCount: 0,
+  extraDamageDiceFaces: 6,
+  extraDamageType: '',
+  bonuses: [],
+  requiresAttunement: false,
+  maxCharges: 0,
   description: [],
+};
+
+/** Подписи полей формы своего предмета. */
+export const CUSTOM_ITEM_FIELD_LABELS = {
+  createTitle: 'Свой предмет',
+  editTitle: 'Редактирование предмета',
+  createAction: 'Добавить',
+  editAction: 'Сохранить',
+  kind: 'Что за предмет',
+  name: 'Название',
+  namePlaceholder: 'Название предмета',
+  quantity: 'Количество',
+  weaponCategory: 'Категория',
+  damageType: 'Тип урона',
+  damageTypePlaceholder: 'Не указан',
+  damage: 'Урон',
+  damageHint:
+    'Модификатор характеристики лист добавит сам; ноль костей — оружие без броска урона.',
+  armorType: 'Тип доспеха',
+
+  /** Продолжение подсказки типа доспеха: что делать с ним на листе. */
+  armorHint:
+    'Надеть доспех можно кнопкой в строке снаряжения — класс доспеха пересчитается сам.',
+  cost: 'Стоимость',
+  costPlaceholder: 'Например: 75 зм',
+  weight: `Вес, ${WEIGHT_UNIT_LABEL}`,
+  description: 'Описание',
+  descriptionPlaceholder: 'Опиши предмет',
+};
+
+/** Значение и слот вкладки основных параметров своего предмета. */
+export const CUSTOM_ITEM_MAIN_TAB = 'main';
+
+/** Значение и слот вкладки магических свойств своего предмета. */
+export const CUSTOM_ITEM_MAGIC_TAB = 'magic';
+
+/**
+ * Вкладки формы своего предмета: боевые и бытовые параметры отдельно от магии —
+ * форма со всеми полями сразу не читалась, а магия нужна не каждому предмету.
+ */
+export const CUSTOM_ITEM_TABS = [
+  {
+    label: 'Основное',
+    value: CUSTOM_ITEM_MAIN_TAB,
+    slot: CUSTOM_ITEM_MAIN_TAB,
+    icon: 'tabler:backpack',
+  },
+  {
+    label: 'Магические свойства',
+    value: CUSTOM_ITEM_MAGIC_TAB,
+    slot: CUSTOM_ITEM_MAGIC_TAB,
+    icon: 'tabler:sparkles',
+  },
+];
+
+/** Заголовки блоков параметров на вкладке «Основное». */
+export const CUSTOM_ITEM_SECTION_LABELS = {
+  weapon: 'Параметры оружия',
+  armor: 'Параметры доспеха',
+  properties: 'Свойства оружия',
+};
+
+/**
+ * Заготовка предмета для предпросмотра бонусов в форме: она никогда не попадает
+ * в лист, но сборка записи требует и ссылки, и названия.
+ */
+export const CUSTOM_ITEM_PREVIEW_URL = `${CUSTOM_INVENTORY_URL_PREFIX}preview`;
+
+/** Название предмета-заготовки для предпросмотра бонусов. */
+export const CUSTOM_ITEM_PREVIEW_NAME = 'Предмет';
+
+/** Подписи блока магии в форме своего предмета. */
+export const CUSTOM_ITEM_MAGIC_LABELS = {
+  hint: 'Пассивные бонусы работают, пока предмет надет; предмету с настройкой — пока персонаж на него настроен. Надеть и настроиться можно в строке снаряжения и в её меню.',
+
+  /** Подпись переключателя, открывающего поля вкладки. */
+  enable: CUSTOM_MAGIC_ITEM_LABEL,
+
+  /** Что даёт переключатель, кроме самих полей. */
+  enableHint: `Предмет попадёт в группу «${INVENTORY_CATEGORY_TITLES.MAGIC_ITEM}», а поля вкладки станут доступны.`,
+
+  /** Заголовок карточки с настройкой и зарядами. */
+  attunementSection: 'Настройка и заряды',
+
+  /** Заголовок карточки с бонусами оружия. */
+  weaponSection: 'Бонусы оружия',
+
+  /** Заголовок карточки с бонусами, которые предмет даёт самому листу. */
+  sheetSection: 'Бонусы листа',
+
+  /** Заголовок сводки того, что предмет даёт листу. */
+  summary: 'Что даёт предмет',
+
+  /** Подпись пустой сводки. */
+  summaryEmpty: 'Пока ничего — заполните бонусы выше.',
+
+  attunement: 'Требует настройки',
+  charges: 'Зарядов, максимум',
+  chargesHint: 'Ноль — зарядов у предмета нет.',
+  attackBonus: 'Бонус к попаданию',
+  extraDamage: 'Дополнительный урон',
+  extraDamageHint:
+    'Кости сверх основного урона со своим типом (например, 2к6 огнём). Ноль костей — дополнительного урона нет.',
+  bonusesHint:
+    'Бонус на строку: выберите цель (характеристика, навык, спасбросок, скорость, класс доспеха) и величину. Прибавка к КД доспеха тоже задаётся здесь.',
+};
+
+/** Подписи свойства «Универсальное» в форме своего оружия. */
+export const CUSTOM_ITEM_VERSATILE_LABELS = {
+  label: 'Универсальное',
+  damage: 'Урон двумя руками',
+  hint: 'Универсальным оружием можно бить двумя руками — тогда урон катится большей костью. Хват переключается в меню предмета.',
 };
 
 /** Обозначение кости в формуле броска (русская нотация дайс-роллера). */
@@ -2755,6 +3462,20 @@ export const LANGUAGE_PROFICIENCY_GROUPS: LanguageProficiencyGroup[] = [
   },
 ];
 
+/** Подписи блока своего языка в модалке владения языками. */
+export const SHEET_LANGUAGE_LABELS = {
+  customTitle: 'Свой язык',
+  customHint:
+    'Языка нет в списке — впишите название, оно попадёт в лист как есть.',
+  customPlaceholder: 'Название языка',
+  customEmpty: 'Своих языков пока нет',
+  addCustom: 'Добавить',
+  removeCustom: 'Удалить язык',
+};
+
+/** Ограничение длины названия своего языка. */
+export const CUSTOM_LANGUAGE_NAME_MAX_LENGTH = 80;
+
 /** Иконка колонки владения оружием. */
 export const WEAPON_PROFICIENCY_ICON = 'tabler:circle-filled';
 
@@ -2819,6 +3540,7 @@ export const SHEET_TABS: SheetTab[] = [
   SHEET_DEFAULT_TAB,
   { slot: 'spells', label: 'Заклинания' },
   { slot: 'features', label: 'Особенности' },
+  { slot: 'personality', label: 'Личность' },
   { slot: 'notes', label: 'Заметки' },
 ];
 
@@ -2982,7 +3704,13 @@ export const LEVEL_UP_WIZARD_LABELS: Record<
   | 'retry'
   | 'next'
   | 'back'
-  | 'apply',
+  | 'apply'
+  | 'classLevelsTitle'
+  | 'classLevelsHint'
+  | 'totalLevel'
+  | 'skipPreparation'
+  | 'skipPreparationHint'
+  | 'stepClassPrefix',
   string
 > = {
   progressStep: 'Уровень и опыт',
@@ -3006,6 +3734,14 @@ export const LEVEL_UP_WIZARD_LABELS: Record<
   next: 'Далее',
   back: 'Назад',
   apply: 'Применить',
+  classLevelsTitle: 'Уровни классов',
+  classLevelsHint:
+    'Уровень поднимается у каждого класса отдельно; общий уровень персонажа — их сумма (правило D&D).',
+  totalLevel: 'Общий уровень',
+  skipPreparation: 'Пропустить подготовку',
+  skipPreparationHint:
+    'Уровень поднимется сразу, без выбора умений и броска на хиты: максимум вырастет на среднее значение кости класса. Умения новых уровней при этом не добавятся — их можно взять позже, выбрав класс заново.',
+  stepClassPrefix: 'Класс',
 };
 
 /** Подписи вкладки «Заметки» и модалки заметки. */
@@ -3035,6 +3771,51 @@ export const SHEET_NOTE_LABELS: Record<
   untitled: 'Без названия',
   legacyTitle: 'Заметки',
 };
+
+/** Свободные поля вкладки «Личность» — порядок плиток и полей формы. */
+export const PERSONALITY_TEXT_FIELDS: PersonalityTextField[] = [
+  { key: 'age', label: 'Возраст', placeholder: '27 лет' },
+  { key: 'height', label: 'Рост', placeholder: '178 см' },
+  { key: 'weight', label: 'Вес', placeholder: '74 кг' },
+  { key: 'eyes', label: 'Цвет глаз', placeholder: 'Серо-зелёные' },
+  { key: 'hair', label: 'Цвет волос', placeholder: 'Русые' },
+  { key: 'skin', label: 'Кожа', placeholder: 'Смуглая' },
+];
+
+/**
+ * Предел длины свободного поля «Личности». Приметы — это пара слов; всё, что
+ * длиннее, место на плитке уже не находит и относится к подробному описанию.
+ */
+export const PERSONALITY_FIELD_MAX_LENGTH = 40;
+
+/** Значение незаполненной плитки «Личности». */
+export const PERSONALITY_EMPTY_VALUE = '—';
+
+/** Подписи вкладки «Личность» и её модалок. */
+export const SHEET_PERSONALITY_LABELS = {
+  appearanceTitle: 'Приметы',
+  alignmentField: 'Мировоззрение',
+  alignmentUnknown: 'Записано на листе (в справочнике такого нет):',
+  editAppearance: 'Изменить приметы',
+  appearanceModalTitle: 'Приметы персонажа',
+  backgroundTitle: 'Предыстория',
+  backgroundHint: 'Подставляется с листа: меняется вместе с выбором в шапке',
+  backgroundSelect: 'Выбрать предысторию',
+  backgroundChange: 'Сменить предысторию',
+  backgroundPreview: 'Открыть описание',
+  backgroundCustomHint: 'Своя предыстория — описания в справочнике у неё нет.',
+  descriptionTitle: 'Подробное описание',
+  descriptionModalTitle: 'Подробное описание персонажа',
+  editDescription: 'Изменить подробное описание',
+  addDescription: 'Добавить описание',
+  descriptionEmpty:
+    'Расскажите о персонаже: характер, привычки, прошлое, цели и связи.',
+  descriptionPlaceholder:
+    'Внешность, характер, привычки, прошлое, цели, страхи, отношения с другими…',
+  reset: 'Сбросить',
+  cancel: 'Отмена',
+  apply: 'Применить',
+} as const;
 
 /**
  * Скелетон листа: сколько плашек рисовать в блоках, длина которых зависит от

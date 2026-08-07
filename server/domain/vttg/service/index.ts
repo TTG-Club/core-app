@@ -1,1 +1,1 @@
-export { getVttgDesktopRelease } from './vttgReleaseService';
+export { getVttgBuilds } from './vttgReleaseService';

@@ -11,11 +11,13 @@
 
   import { useCharacterSheet } from '../../composables';
   import {
+    CARRYING_CAPACITY_LABELS,
     getEquipmentAddMenuItems,
     getInventoryGroups,
     getInventoryRemoveDescription,
     INVENTORY_REMOVE_CONFIRM_LABEL,
     INVENTORY_REMOVE_CONFIRM_TITLE,
+    SHEET_REVEAL_CONTROL_CLASS,
     SHEET_TAB_EMPTY_LABELS,
     WEIGHT_UNIT_LABEL,
   } from '../../model';
@@ -37,6 +39,7 @@
     'edit-item': [inventoryItemId: string];
     'copy-item': [inventoryItemId: string];
     'edit-currency': [];
+    'edit-carrying-capacity': [];
     'remove-item': [inventoryItemId: string];
     'adjust-quantity': [inventoryItemId: string, delta: number];
     'toggle-equip': [inventoryItemId: string];
@@ -140,27 +143,40 @@
     окна — в дровере и правой панели лист бывает узким и на широком экране -->
   <div class="@container flex flex-col gap-4 pt-2">
     <div class="flex flex-wrap items-center justify-between gap-2">
-      <div
-        class="flex items-center gap-1.5 text-sm"
-        :class="weightColorClass"
-      >
-        <UIcon
-          name="tabler:weight"
-          class="size-4 shrink-0"
-        />
+      <!-- Ряд веса — кнопка настройки предела: цвет перегруза важнее подсветки
+        по наведению, поэтому на интерактивность указывает карандаш -->
+      <UTooltip :text="CARRYING_CAPACITY_LABELS.open">
+        <button
+          type="button"
+          class="group flex cursor-pointer items-center gap-1.5 text-sm"
+          :class="weightColorClass"
+          :aria-label="CARRYING_CAPACITY_LABELS.open"
+          @click.left.exact.prevent="emit('edit-carrying-capacity')"
+        >
+          <UIcon
+            name="tabler:weight"
+            class="size-4 shrink-0"
+          />
 
-        <span>
-          <!-- В узкой колонке от подписи остаётся одно «Вес»: рядом стоит
-            кнопка «Добавить», и полный вариант переносит ряд на две строки.
-            Двоеточие входит в обе подписи — тогда пробел между ними ни на что
-            не влияет, какой бы вариант ни был скрыт -->
-          <span class="hidden @md:inline">Переносимый вес:</span>
+          <span>
+            <!-- В узкой колонке от подписи остаётся одно «Вес»: рядом стоит
+              кнопка «Добавить», и полный вариант переносит ряд на две строки.
+              Двоеточие входит в обе подписи — тогда пробел между ними ни на что
+              не влияет, какой бы вариант ни был скрыт -->
+            <span class="hidden @md:inline">Переносимый вес:</span>
 
-          <span class="@md:hidden">Вес:</span>
+            <span class="@md:hidden">Вес:</span>
 
-          {{ totalWeight }} / {{ carryingCapacity }} {{ WEIGHT_UNIT_LABEL }}
-        </span>
-      </div>
+            {{ totalWeight }} / {{ carryingCapacity }} {{ WEIGHT_UNIT_LABEL }}
+          </span>
+
+          <UIcon
+            name="tabler:pencil"
+            class="size-3 shrink-0 text-muted opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+            :class="[SHEET_REVEAL_CONTROL_CLASS, editControlClass]"
+          />
+        </button>
+      </UTooltip>
 
       <UDropdownMenu
         :items="addMenuItems"
@@ -169,7 +185,6 @@
         <UButton
           icon="tabler:plus"
           label="Добавить"
-          trailing-icon="tabler:chevron-down"
           color="neutral"
           variant="ghost"
           size="sm"

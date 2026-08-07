@@ -11,6 +11,8 @@ import type {
   CharacterFeature,
   CharacterHitDie,
   CharacterNote,
+  CharacterPersonality,
+  CharacterSavingThrow,
   CharacterSkill,
   CharacterSpecies,
   CharacterSpellSlot,
@@ -44,6 +46,7 @@ import {
   CURRENCY_AMOUNT_MAX,
   CURRENCY_AMOUNT_MIN,
   DRAFT_CHARACTER_ID,
+  EXHAUSTION_LEVEL_MIN,
   HIT_POINTS_MAX,
   LEVEL_MAX,
   LEVEL_MIN,
@@ -63,6 +66,7 @@ import {
   buildCustomSpeciesUrl,
   getCharacterFeatureId,
   getNextLevelExperience,
+  withSavingThrowProficiencies,
 } from '../utils';
 import {
   LSS_ABILITY_KEYS,
@@ -76,6 +80,7 @@ import {
   LSS_NOTE_ID_PREFIX,
   LSS_NOTES_KEY_PATTERN,
   LSS_NOTES_TITLE,
+  LSS_PERSONALITY_DETAIL_KEYS,
   LSS_SIZE_LABELS,
   LSS_SKILL_EXPERTISE_VALUE,
   LSS_SKILL_NAMES,
@@ -144,15 +149,21 @@ function toAbilities(abilities: Record<string, number>): CharacterAbilities {
 }
 
 /**
- * Характеристики, спасбросками которых персонаж владеет.
+ * Спасброски листа: сами записи остаются нашими, из файла берётся только
+ * владение — своей характеристики и своих бонусов у спасброска в LSS нет.
  *
  * @param codes коды характеристик LSS.
- * @returns ключи характеристик листа.
+ * @returns спасброски персонажа.
  */
-function toSavingThrows(codes: string[]): AbilityKey[] {
-  return codes
+function toSavingThrows(codes: string[]): CharacterSavingThrow[] {
+  const abilities = codes
     .map((code) => LSS_ABILITY_KEYS[code])
     .filter((key): key is AbilityKey => Boolean(key));
+
+  return withSavingThrowProficiencies(
+    structuredClone(DEFAULT_CHARACTER.savingThrows),
+    abilities,
+  );
 }
 
 /**
@@ -191,6 +202,9 @@ function toSkills(skills: Record<string, number>): CharacterSkill[] {
   return DEFAULT_CHARACTER.skills.map((skill) => ({
     ...skill,
     proficiency: levels.get(skill.name) ?? 'none',
+    // Свой список, а не ссылка на список заготовки: правки бонусов не должны
+    // доставаться заодно всем следующим импортам.
+    bonuses: [],
   }));
 }
 
@@ -337,8 +351,10 @@ function toSpellSlots(
     }
   }
 
+  // Импортируемый лист остаётся одноклассовым, поэтому все траты обычные:
+  // у чистого колдуна его ячейки и есть Магия договора.
   return [...usedByLevel.entries()]
-    .map(([level, used]) => ({ level, used }))
+    .map(([level, used]) => ({ level, used, kind: 'standard' as const }))
     .sort((left, right) => left.level - right.level);
 }
 
@@ -526,20 +542,53 @@ function toFeatures(texts: LssTextBlock[]): CharacterFeature[] {
 }
 
 /**
- * Заметка «О персонаже»: мировоззрение, имя игрока и внешность — полей под них
- * на листе нет, а терять их при импорте не хочется.
+ * Подписи шапки, у которых на листе есть своё поле. Множество строк, а не сам
+ * типизированный список: подписи проверяются по «сырому» ключу LSS.
+ */
+const FIELD_BACKED_DETAIL_KEYS = new Set<string>(LSS_PERSONALITY_DETAIL_KEYS);
+
+/**
+ * Личность персонажа из подписей шапки LSS: мировоззрение и приметы ложатся в
+ * одноимённые поля листа — ключи LSS с нашими совпадают. Подробного описания в
+ * шапке нет: прозу LSS держит текстовыми блоками, и она остаётся заметками.
  *
  * @param source персонаж LSS.
- * @returns заметка листа; null — подписи не заполнены.
+ * @returns личность персонажа.
+ */
+function toPersonality(source: LssCharacter): CharacterPersonality {
+  const personality = { ...DEFAULT_CHARACTER.personality };
+
+  for (const field of LSS_PERSONALITY_DETAIL_KEYS) {
+    const detail = source.details.find((row) => row.key === field);
+
+    if (detail) {
+      personality[field] = detail.value;
+    }
+  }
+
+  return personality;
+}
+
+/**
+ * Заметка «О персонаже»: подписи шапки, которым поля на листе не нашлось —
+ * сейчас это имя игрока. Приметы и мировоззрение сюда не попадают: они уходят
+ * во вкладку «Личность».
+ *
+ * @param source персонаж LSS.
+ * @returns заметка листа; null — таких подписей в файле нет.
  */
 function toDetailsNote(source: LssCharacter): CharacterNote | null {
-  if (!source.details.length) {
+  const details = source.details.filter(
+    (detail) => !FIELD_BACKED_DETAIL_KEYS.has(detail.key),
+  );
+
+  if (!details.length) {
     return null;
   }
 
-  // Списком, а не абзацами: подписей до восьми, и каждая абзацем растянула бы
-  // заметку на весь экран.
-  const items = source.details.map((detail) => ({
+  // Списком, а не абзацами: подписей может быть несколько, и каждая абзацем
+  // растянула бы заметку на весь экран.
+  const items = details.map((detail) => ({
     type: 'li',
     content: [
       { type: 'bold', content: [`${detail.label}:`] },
@@ -624,13 +673,18 @@ export function convertLssCharacter(source: LssCharacter): Character {
     ? {
         url: buildCustomClassUrl(),
         name: source.className,
+        // Мультикласс LSS не размечает — весь уровень персонажа идёт классу.
+        level,
         subclassUrl: null,
         subclassName: source.subclassName || null,
         casterType: detectCasterType(source, level),
         hitDie: source.hitDice.die || LSS_DEFAULT_HIT_DIE,
+        spellcastingAbility:
+          LSS_ABILITY_KEYS[source.spellcastingAbility] ?? null,
         // Таблицы прогрессии у своего класса нет: число подготовленных
-        // заклинаний задаётся на вкладке заклинаний вручную.
+        // заклинаний и заговоров задаётся на вкладке заклинаний вручную.
         preparedSpells: [],
+        preparedCantrips: [],
         // Снаряжение чужого листа переносится как есть, стартовым набором его
         // никто не выдавал — снимать при смене класса нечего.
         startingEquipment: null,
@@ -664,6 +718,7 @@ export function convertLssCharacter(source: LssCharacter): Character {
     species,
     size: LSS_SIZE_LABELS[source.size] ?? null,
     characterClass,
+    additionalClasses: [],
     characterBackground,
     level,
     experience: {
@@ -672,7 +727,7 @@ export function convertLssCharacter(source: LssCharacter): Character {
     },
     inspiration: source.inspiration,
     abilities: toAbilities(source.abilities),
-    savingThrowProficiencies: toSavingThrows(source.saves),
+    savingThrows: toSavingThrows(source.saves),
     skills: toSkills(source.skills),
     health: {
       current: clamp(Math.trunc(source.health.current), 0, maxHitPoints),
@@ -681,6 +736,8 @@ export function convertLssCharacter(source: LssCharacter): Character {
       // Прирост максимума по уровням LSS не хранит: снижение уровня на листе
       // такой максимум не тронет, пока уровни не будут взяты заново.
       levelGains: [],
+      // Истощение LSS не хранит — импортированный лист приходит без него.
+      exhaustion: EXHAUSTION_LEVEL_MIN,
     },
     hitDice: toHitDice(source, level),
     armorClass:
@@ -693,6 +750,9 @@ export function convertLssCharacter(source: LssCharacter): Character {
             ),
             abilities: [],
             natural: false,
+            // Ручное значение правило доспеха не считает — предел Ловкости
+            // такому листу не нужен.
+            dexLimit: null,
             // Значение из LSS учитывает и броню, и щит, поэтому автоподсчёт по
             // надетому снаряжению выключен: игрок включит его галкой.
             custom: true,
@@ -731,12 +791,11 @@ export function convertLssCharacter(source: LssCharacter): Character {
       tools: toToolProficiencies(source.texts),
     },
     currency: toCurrency(source.coins),
-    spellcasting: {
-      ...structuredClone(DEFAULT_CHARACTER.spellcasting),
-      ability: LSS_ABILITY_KEYS[source.spellcastingAbility] ?? null,
-    },
+    // Заклинательная характеристика живёт при классе — она попала туда выше.
+    spellcasting: structuredClone(DEFAULT_CHARACTER.spellcasting),
     spellSlots: toSpellSlots(source.spellSlots, source.pactSpellSlots),
     features: toFeatures(source.texts),
     notes: toNotes(source),
+    personality: toPersonality(source),
   };
 }

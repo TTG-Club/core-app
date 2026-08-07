@@ -4,28 +4,61 @@
   import { useCharacterSheet } from '../../composables';
   import {
     ABILITY_LABELS,
+    getAbilityModifier,
+    getCharacterClasses,
     getCharacterProficiencyBonus,
     getClassSpellcastingAbility,
     getFormattedBonus,
+    getInventoryBonusValue,
     SPELL_SAVE_DC_BASE,
     SPELLCASTING_ABILITY_AUTO,
     SPELLCASTING_ABILITY_OPTIONS,
+    SPELLCASTING_MODAL_TITLE,
     SPELLCASTING_STAT_LABELS,
   } from '../../model';
+
+  const { classUrl } = defineProps<{
+    /** Класс, чью заклинательную характеристику настраивают. */
+    classUrl: string;
+  }>();
 
   const emit = defineEmits<{
     close: [];
   }>();
 
-  const { character, setSpellcasting } = useCharacterSheet();
+  const { character, setSpellcastingAbility } = useCharacterSheet();
 
-  const draftAbility = ref<AbilityKey | typeof SPELLCASTING_ABILITY_AUTO>(
-    character.value.spellcasting.ability ?? SPELLCASTING_ABILITY_AUTO,
+  /** Настраиваемый класс: у мультикласса характеристика своя у каждого. */
+  const targetClass = computed(
+    () =>
+      getCharacterClasses(character.value).find(
+        (entry) => entry.url === classUrl,
+      ) ?? null,
   );
 
-  // Характеристика, определяемая по классу (для режима «Авто»).
+  /**
+   * Начальное значение селектора: заданная игроком характеристика класса либо
+   * «Авто». Вынесено в функцию — читать `.value` computed'а прямо в корне setup
+   * нельзя (`vue/no-ref-object-reactivity-loss`).
+   *
+   * @returns значение селектора характеристики.
+   */
+  function getInitialAbility(): AbilityKey | typeof SPELLCASTING_ABILITY_AUTO {
+    return targetClass.value?.spellcastingAbility ?? SPELLCASTING_ABILITY_AUTO;
+  }
+
+  const draftAbility = ref<AbilityKey | typeof SPELLCASTING_ABILITY_AUTO>(
+    getInitialAbility(),
+  );
+
+  // Характеристика, определяемая по названию класса (для режима «Авто»).
   const autoAbility = computed(() =>
-    getClassSpellcastingAbility(character.value.characterClass),
+    targetClass.value
+      ? getClassSpellcastingAbility({
+          ...targetClass.value,
+          spellcastingAbility: null,
+        })
+      : null,
   );
 
   const isAuto = computed(
@@ -50,16 +83,31 @@
 
   const abilityModifier = computed(() =>
     effectiveAbility.value
-      ? getModifier(character.value.abilities[effectiveAbility.value])
+      ? getAbilityModifier(character.value, effectiveAbility.value)
       : 0,
   );
 
+  // Жезл боевого мага и прочая магия прибавляют к заклинательству: без них
+  // предпросмотр модалки разошёлся бы с плитками вкладки заклинаний.
+  const itemSaveDcBonus = computed(() =>
+    getInventoryBonusValue(character.value, 'spell-save-dc'),
+  );
+
+  const itemAttackBonus = computed(() =>
+    getInventoryBonusValue(character.value, 'spell-attack'),
+  );
+
   const saveDc = computed(
-    () => SPELL_SAVE_DC_BASE + proficiencyBonus.value + abilityModifier.value,
+    () =>
+      SPELL_SAVE_DC_BASE
+      + proficiencyBonus.value
+      + abilityModifier.value
+      + itemSaveDcBonus.value,
   );
 
   const attackBonus = computed(
-    () => proficiencyBonus.value + abilityModifier.value,
+    () =>
+      proficiencyBonus.value + abilityModifier.value + itemAttackBonus.value,
   );
 
   const abilityModifierLabel = computed(() => {
@@ -80,16 +128,20 @@
     getFormattedBonus(attackBonus.value),
   );
 
+  // У мультикласса окно открывается на конкретный класс — его и подписываем.
+  const modalTitle = computed(() =>
+    targetClass.value
+      ? `${SPELLCASTING_MODAL_TITLE}: ${targetClass.value.name}`
+      : SPELLCASTING_MODAL_TITLE,
+  );
+
   function handleApply() {
-    setSpellcasting({
-      ability:
-        draftAbility.value === SPELLCASTING_ABILITY_AUTO
-          ? null
-          : draftAbility.value,
-      // Подготовленные заклинания правит своя модалка — здесь настройка
-      // переносится как есть.
-      prepared: character.value.spellcasting.prepared,
-    });
+    setSpellcastingAbility(
+      classUrl,
+      draftAbility.value === SPELLCASTING_ABILITY_AUTO
+        ? null
+        : draftAbility.value,
+    );
 
     emit('close');
   }
@@ -100,7 +152,7 @@
 </script>
 
 <template>
-  <UModal title="Заклинательство">
+  <UModal :title="modalTitle">
     <template #body>
       <div class="flex flex-col gap-3">
         <div class="flex items-center justify-between gap-4">

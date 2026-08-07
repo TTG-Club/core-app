@@ -2,8 +2,10 @@
   import type {
     CharacterSpell,
     DamageRollSource,
+    PreparedSpellKind,
     SpellcastingBreakdown,
     SpellDamageRoll,
+    SpellSlotKind,
     SpellSlotRow,
     SpellTabFilter,
   } from '../../model';
@@ -18,12 +20,13 @@
     getFilterChipClass,
     getFormattedBonus,
     getInnateSpellMenuItems,
-    getPreparedSpellsCountHint,
+    getPreparedSpellsHint,
     getPreparedSpellsValue,
     getSpellGroupLabel,
     getSpellGroups,
     getSpellListLevels,
     getSpellMenuItems,
+    getSpellPreparedKind,
     getSpellsAddMenuItems,
     getSpellSlotCircles,
     getSpellSlotSummary,
@@ -31,11 +34,11 @@
     INNATE_SPELL_GROUP_LABEL,
     INNATE_SPELL_GROUP_LEVEL,
     isCustomSpell,
-    isPreparableSpell,
     matchesSpellFilter,
+    PACT_SPELL_SLOTS_ROW_LABEL,
+    PREPARED_KIND_LABELS,
+    PREPARED_KINDS,
     PREPARED_SPELL_TOGGLE_LABELS,
-    PREPARED_SPELLS_HINTS,
-    PREPARED_SPELLS_LABEL,
     SHEET_FILTER_LABELS,
     SHEET_ROLL_HINT_LABEL,
     SHEET_TAB_EMPTY_LABELS,
@@ -97,7 +100,7 @@
   const UNPREPARED_ICON_CLASS =
     'border-default/50 bg-default/40 text-muted hover:border-primary/60';
 
-  /** Заклинание, которому подготовка не нужна (заговор, врождённое). */
+  /** Заклинание, которому подготовка не нужна (врождённое заклинание вида). */
   const PLAIN_ICON_CLASS = 'border-default/50 bg-default/40 text-muted';
 
   const props = defineProps<{
@@ -114,14 +117,14 @@
     'add-custom-spell': [];
     'edit-spell': [spellUrl: string];
     'copy-spell': [spellUrl: string];
-    'edit-spellcasting': [];
-    'edit-prepared-spells': [];
+    'edit-spellcasting': [classUrl: string];
+    'edit-prepared-spells': [kind: PreparedSpellKind];
     'remove-spell': [spellUrl: string];
     'copy-innate-spell': [spellUrl: string];
     'remove-innate-spell': [spellUrl: string];
     'roll-spell-damage': [roll: SpellDamageRoll];
     'toggle-spell-prepared': [spellUrl: string];
-    'toggle-spell-slot': [level: number, index: number];
+    'toggle-spell-slot': [level: number, index: number, kind: SpellSlotKind];
   }>();
 
   // Пополнение книги, правка и удаление заклинаний меняют лист: без прав кнопки
@@ -140,57 +143,82 @@
     onAddCustomSpell: () => emit('add-custom-spell'),
   });
 
-  const formattedAttackBonus = computed(() =>
-    getFormattedBonus(props.spellcasting.attackBonus),
-  );
+  /**
+   * Цвет кружка ячейки: ячейки договора колдуна отличаются от обычных — они
+   * возвращаются коротким отдыхом, и путать их нельзя.
+   *
+   * @param used ячейка потрачена.
+   * @param kind вид ячеек.
+   * @returns классы кружка.
+   */
+  function getSlotCircleClass(used: boolean, kind: SpellSlotKind): string {
+    if (kind === 'pact') {
+      return used
+        ? 'border-secondary bg-secondary'
+        : 'border-secondary/50 hover:border-secondary';
+    }
 
-  const preparedSpells = computed(() => props.spellcasting.prepared);
+    return used
+      ? 'border-primary bg-primary'
+      : 'border-default hover:border-primary';
+  }
 
-  const preparedSpellsValue = computed(() =>
-    getPreparedSpellsValue(preparedSpells.value),
+  /**
+   * Заклинательство по классам: у мультикласса характеристика своя у каждого,
+   * поэтому Сл спасброска и бонус атаки идут отдельными плитками. Подпись
+   * класса появляется только у мультикласса — одному классу она ни к чему.
+   */
+  const spellcastingStats = computed(() =>
+    props.spellcasting.rows.map((row) => ({
+      classUrl: row.classUrl,
+      className: props.spellcasting.rows.length > 1 ? row.className : '',
+      saveDc: row.saveDc,
+      attackBonus: getFormattedBonus(row.attackBonus),
+    })),
   );
 
   /**
-   * Отмеченных больше, чем можно держать: так бывает после снижения уровня или
-   * смены своего числа — значение блока об этом предупреждает цветом.
+   * Плитки подготовки в шапке вкладки: заклинания книги и заговоры считаются
+   * порознь — у каждого своя колонка таблицы класса и свой предел, поэтому и
+   * плитки идут отдельные.
    */
-  const preparedSpellsValueClass = computed(() =>
-    preparedSpells.value.value !== null
-    && preparedSpells.value.count > preparedSpells.value.value
-      ? 'text-error'
-      : 'text-highlighted',
-  );
+  const preparedStats = computed(() =>
+    PREPARED_KINDS.map((kind) => {
+      const prepared =
+        kind === 'cantrips'
+          ? props.spellcasting.preparedCantrips
+          : props.spellcasting.prepared;
 
-  /** Предел выбран целиком: пометить ещё одно заклинание уже нельзя. */
-  const isPreparedLimitReached = computed(
-    () =>
-      preparedSpells.value.value !== null
-      && preparedSpells.value.count >= preparedSpells.value.value,
+      return {
+        kind,
+        labels: PREPARED_KIND_LABELS[kind],
+        value: getPreparedSpellsValue(prepared),
+        hint: getPreparedSpellsHint(prepared, kind),
+        // Отмеченных больше, чем можно держать: так бывает после снижения
+        // уровня или смены своего числа — значение об этом предупреждает
+        // цветом.
+        valueClass:
+          prepared.value !== null && prepared.count > prepared.value
+            ? 'text-error'
+            : 'text-highlighted',
+      };
+    }),
   );
 
   /**
-   * Подсказка блока подготовленных: сколько заклинаний отмечено и откуда взялось
-   * число — из таблицы класса (с бонусом, если он задан) либо указано вручную.
+   * Предел выбран целиком: пометить ещё одну запись этого вида уже нельзя.
+   *
+   * @param kind вид подготовки: заклинания книги либо заговоры.
+   * @returns true — предел достигнут.
    */
-  const preparedSpellsHint = computed(() => {
-    const { value, classValue, custom, bonus } = preparedSpells.value;
+  function isPreparedLimitReached(kind: PreparedSpellKind): boolean {
+    const { value, count } =
+      kind === 'cantrips'
+        ? props.spellcasting.preparedCantrips
+        : props.spellcasting.prepared;
 
-    const countHint = getPreparedSpellsCountHint(preparedSpells.value);
-
-    if (custom) {
-      return `${countHint}. ${PREPARED_SPELLS_HINTS.custom}`;
-    }
-
-    if (classValue === null) {
-      return `${countHint}. ${PREPARED_SPELLS_HINTS.unknown}`;
-    }
-
-    if (bonus === 0) {
-      return `${countHint}. ${PREPARED_SPELLS_HINTS.auto}: ${classValue}`;
-    }
-
-    return `${countHint}. ${PREPARED_SPELLS_HINTS.auto}: ${classValue} ${getFormattedBonus(bonus)} = ${value}`;
-  });
+    return value !== null && count >= value;
+  }
 
   const overlay = useOverlay();
 
@@ -220,9 +248,17 @@
     expandedUrls.value.add(spellUrl);
   }
 
-  const slotRowByLevel = computed(
-    () => new Map(props.spellSlots.map((row) => [row.level, row])),
-  );
+  // На круг бывает два ряда: обычные ячейки и ячейки договора колдуна — у
+  // мультикласса они существуют порознь и возвращаются разным отдыхом.
+  const slotRowsByLevel = computed(() => {
+    const rowsByLevel = new Map<number, SpellSlotRow[]>();
+
+    for (const row of props.spellSlots) {
+      rowsByLevel.set(row.level, [...(rowsByLevel.get(row.level) ?? []), row]);
+    }
+
+    return rowsByLevel;
+  });
 
   /** Отмечен чип «Подготовленные». */
   const isPreparedOnlyPicked = ref(false);
@@ -239,12 +275,10 @@
   );
 
   /**
-   * Подготовка касается не всякой книги: пока в ней одни заговоры (или только
+   * Подготовка касается только книги персонажа: пока в ней пусто (в списке одни
    * врождённые заклинания вида), помечать нечего — чипа отбора нет.
    */
-  const isPreparedFilterAvailable = computed(() =>
-    props.spells.some(isPreparableSpell),
-  );
+  const isPreparedFilterAvailable = computed(() => props.spells.length > 0);
 
   /** Кругов больше одного — есть между чем выбирать. */
   const hasLevelChips = computed(() => availableLevels.value.length > 1);
@@ -403,16 +437,14 @@
     spell: CharacterSpell,
     innate: boolean,
   ): PreparedIconState {
-    // Заговоры и врождённые заклинания доступны всегда: подготовка их не
-    // касается, значок у них обычный и ничего не переключает.
-    if (innate || !isPreparableSpell(spell)) {
+    // Врождённые заклинания вида доступны всегда: подготовка их не касается,
+    // значок у них обычный и ничего не переключает.
+    if (innate) {
       return {
         canPrepare: false,
         isPrepared: false,
         iconClass: PLAIN_ICON_CLASS,
-        tooltip: innate
-          ? PREPARED_SPELL_TOGGLE_LABELS.innate
-          : PREPARED_SPELL_TOGGLE_LABELS.cantrip,
+        tooltip: PREPARED_SPELL_TOGGLE_LABELS.innate,
         ariaLabel: '',
       };
     }
@@ -429,8 +461,9 @@
       iconClass: isPrepared ? PREPARED_ICON_CLASS : UNPREPARED_ICON_CLASS,
       // Предел выбран целиком — значок остаётся нажимаемым: подсказка и
       // предупреждение объясняют отказ понятнее, чем погашенная кнопка.
+      // Заговоры смотрят на свой предел, заклинания книги — на свой.
       tooltip:
-        !isPrepared && isPreparedLimitReached.value
+        !isPrepared && isPreparedLimitReached(getSpellPreparedKind(spell))
           ? `${label}. ${PREPARED_SPELL_TOGGLE_LABELS.limit}`
           : label,
       ariaLabel: `${label}: ${spell.name}`,
@@ -469,24 +502,29 @@
       : regularGroups;
 
     return groups.map((group) => {
-      const slotRow = group.innate
-        ? undefined
-        : slotRowByLevel.value.get(group.level);
+      const slotRows = group.innate
+        ? []
+        : (slotRowsByLevel.value.get(group.level) ?? []);
 
       return {
         ...group,
         // Кружки ячеек живут в разделителе круга: у заговоров ячеек нет, у
-        // класса-незаклинателя их нет ни у одного круга.
-        circles: slotRow
-          ? getSpellSlotCircles(slotRow).map((circle) => ({
-              ...circle,
-              level: slotRow.level,
-              circleClass: circle.used
-                ? 'border-primary bg-primary'
-                : 'border-default hover:border-primary',
-            }))
-          : [],
-        slotsLabel: slotRow ? getSpellSlotSummary(slotRow) : '',
+        // класса-незаклинателя их нет ни у одного круга. Ячейки договора идут
+        // отдельной группой со своей подписью и цветом.
+        slotGroups: slotRows.map((slotRow) => ({
+          kind: slotRow.kind,
+          label:
+            slotRow.kind === 'pact'
+              ? PACT_SPELL_SLOTS_ROW_LABEL
+              : SPELL_SLOTS_LABEL,
+          summary: getSpellSlotSummary(slotRow),
+          circles: getSpellSlotCircles(slotRow).map((circle) => ({
+            ...circle,
+            level: slotRow.level,
+            kind: slotRow.kind,
+            circleClass: getSlotCircleClass(circle.used, slotRow.kind),
+          })),
+        })),
         spells: group.spells.map((spell) => {
           const isCustom = isCustomSpell(spell);
           const isExpanded = isCustom && expandedUrls.value.has(spell.url);
@@ -550,7 +588,8 @@
 
   type DisplaySpell = (typeof displayGroups.value)[number]['spells'][number];
 
-  type DisplayCircle = (typeof displayGroups.value)[number]['circles'][number];
+  type DisplayCircle =
+    (typeof displayGroups.value)[number]['slotGroups'][number]['circles'][number];
 
   type DisplayDamageStat = DisplaySpell['damageStats'][number];
 
@@ -561,12 +600,17 @@
 
   /** Нажатие на кружок ячейки: трата до него включительно либо возврат. */
   function handleSlotToggle(circle: DisplayCircle) {
-    emit('toggle-spell-slot', circle.level, circle.index);
+    emit('toggle-spell-slot', circle.level, circle.index, circle.kind);
   }
 
   /** Нажатие на значок заклинания: пометка подготовленным либо снятие пометки. */
   function handlePreparedToggle(spell: DisplaySpell) {
     emit('toggle-spell-prepared', spell.url);
+  }
+
+  /** Нажатие на плитку подготовки: настройка числа своего вида подготовки. */
+  function handlePreparedEdit(kind: PreparedSpellKind) {
+    emit('edit-prepared-spells', kind);
   }
 
   /**
@@ -590,12 +634,23 @@
       окна — лист бывает узким и на широком экране (дровер, правая панель) -->
     <div class="@container flex flex-wrap items-center justify-between gap-2">
       <div class="flex flex-wrap items-center gap-2">
+        <!-- У мультикласса заклинательство считается по каждому классу
+          отдельно: своя характеристика — свои Сл и бонус атаки -->
         <button
+          v-for="stat in spellcastingStats"
+          :key="stat.classUrl"
           type="button"
           :class="HEADER_STAT_CLASS"
           aria-label="Настроить заклинательство"
-          @click.left.exact.prevent="emit('edit-spellcasting')"
+          @click.left.exact.prevent="emit('edit-spellcasting', stat.classUrl)"
         >
+          <span
+            v-if="stat.className"
+            class="max-w-24 truncate text-[10px] font-bold tracking-wider text-muted uppercase"
+          >
+            {{ stat.className }}
+          </span>
+
           <!-- Подписи чисел в плитке короткие, чтобы ряд помещался на узком
             листе; полное название показывает подсказка по наведению -->
           <UTooltip :text="SPELLCASTING_STAT_LABELS.saveDc.full">
@@ -607,7 +662,7 @@
               </span>
 
               <span class="text-sm font-bold text-highlighted">
-                {{ spellcasting.saveDc }}
+                {{ stat.saveDc }}
               </span>
             </span>
           </UTooltip>
@@ -623,40 +678,45 @@
               </span>
 
               <span class="text-sm font-bold text-highlighted">
-                {{ formattedAttackBonus }}
+                {{ stat.attackBonus }}
               </span>
             </span>
           </UTooltip>
         </button>
 
-        <!-- Сколько заклинаний можно подготовить: число берётся из таблицы
-          класса, нажатие открывает настройку своего числа или бонуса к нему -->
-        <UTooltip :text="preparedSpellsHint">
+        <!-- Сколько можно подготовить: число берётся из таблицы класса, нажатие
+          открывает настройку своего числа или бонуса к нему. Заговоры считаются
+          отдельной плиткой — колонка таблицы класса у них своя -->
+        <UTooltip
+          v-for="preparedStat in preparedStats"
+          :key="preparedStat.kind"
+          :text="preparedStat.hint"
+        >
           <button
             type="button"
             :class="HEADER_STAT_CLASS"
-            aria-label="Настроить подготовленные заклинания"
-            @click.left.exact.prevent="emit('edit-prepared-spells')"
+            :aria-label="preparedStat.labels.ariaLabel"
+            @click.left.exact.prevent="handlePreparedEdit(preparedStat.kind)"
           >
             <span class="flex items-center gap-1.5">
               <!-- На узком ряду подпись занимает больше места, чем само число,
                 поэтому уступает значку: название остаётся в подсказке -->
               <UIcon
-                name="tabler:checklist"
+                :name="preparedStat.labels.icon"
                 class="size-4 shrink-0 text-muted @lg:hidden"
               />
 
               <span
                 class="hidden text-[10px] font-bold tracking-wider text-muted uppercase @lg:inline"
               >
-                {{ PREPARED_SPELLS_LABEL }}
+                {{ preparedStat.labels.stat }}
               </span>
 
               <span
                 class="text-sm font-bold"
-                :class="preparedSpellsValueClass"
+                :class="preparedStat.valueClass"
               >
-                {{ preparedSpellsValue }}
+                {{ preparedStat.value }}
               </span>
             </span>
           </button>
@@ -670,7 +730,6 @@
         <UButton
           icon="tabler:plus"
           label="Добавить"
-          trailing-icon="tabler:chevron-down"
           color="neutral"
           variant="ghost"
           size="sm"
@@ -767,19 +826,20 @@
             закрашенные потрачены, пустые остались. Нажатие тратит ячейки по
             кружок включительно, повторное — возвращает их -->
           <UTooltip
-            v-if="group.circles.length"
-            :text="group.slotsLabel"
+            v-for="slotGroup in group.slotGroups"
+            :key="slotGroup.kind"
+            :text="slotGroup.summary"
           >
             <div class="flex shrink-0 items-center gap-1.5">
               <span
                 class="text-[10px] font-bold tracking-wider text-muted uppercase"
               >
-                {{ SPELL_SLOTS_LABEL }}
+                {{ slotGroup.label }}
               </span>
 
               <span class="flex items-center gap-1">
                 <button
-                  v-for="circle in group.circles"
+                  v-for="circle in slotGroup.circles"
                   :key="circle.index"
                   type="button"
                   class="relative size-3.5 cursor-pointer rounded-full border transition-colors after:absolute after:-inset-1"

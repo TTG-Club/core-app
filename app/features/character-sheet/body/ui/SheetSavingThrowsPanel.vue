@@ -1,6 +1,12 @@
 <script setup lang="ts">
   import type { AbilityKey, SavingThrowRow } from '../../model';
 
+  import { useCharacterSheet } from '../../composables';
+  import {
+    SAVING_THROW_PROFICIENCY_ICONS,
+    SHEET_REVEAL_CONTROL_CLASS,
+    SHEET_SAVING_THROW_SETTINGS_LABELS,
+  } from '../../model';
   import SheetPanel from './SheetPanel.vue';
 
   const props = defineProps<{
@@ -9,20 +15,45 @@
 
   const emit = defineEmits<{
     roll: [row: SavingThrowRow];
+    settings: [];
     toggle: [abilityKey: AbilityKey];
   }>();
+
+  // Шестерёнка ведёт в настройку спасбросков (правка листа): без прав она
+  // прячется, а сами спасброски остаются на месте.
+  const { editControlClass } = useCharacterSheet();
 
   const displayRows = computed(() =>
     props.rows.map((row) => ({
       ...row,
-      icon: row.proficient ? 'tabler:circle-filled' : 'tabler:circle',
+      icon: row.proficient
+        ? SAVING_THROW_PROFICIENCY_ICONS.proficient
+        : SAVING_THROW_PROFICIENCY_ICONS.none,
       iconClass: row.proficient ? 'text-primary' : 'text-muted',
     })),
   );
 </script>
 
 <template>
-  <SheetPanel title="Спасброски">
+  <SheetPanel
+    title="Спасброски"
+    class="group"
+  >
+    <template #title-actions>
+      <button
+        type="button"
+        class="cursor-pointer rounded-full bg-default p-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+        :class="[SHEET_REVEAL_CONTROL_CLASS, editControlClass]"
+        :aria-label="SHEET_SAVING_THROW_SETTINGS_LABELS.open"
+        @click.left.exact.prevent="emit('settings')"
+      >
+        <UIcon
+          name="tabler:settings"
+          class="size-3.5 text-muted transition-colors hover:text-primary"
+        />
+      </button>
+    </template>
+
     <div class="grid grid-flow-col grid-cols-2 grid-rows-3 gap-2">
       <div
         v-for="row in displayRows"
@@ -32,7 +63,7 @@
         <button
           type="button"
           class="z-10 flex cursor-pointer items-center"
-          :aria-label="`Владение спасброском: ${row.label}`"
+          :aria-label="`${SHEET_SAVING_THROW_SETTINGS_LABELS.proficiency}: ${row.label}`"
           @click.left.exact.prevent="emit('toggle', row.key)"
         >
           <UIcon
@@ -50,7 +81,23 @@
         >
           <span class="text-xs text-toned">{{ row.label }}</span>
 
+          <!-- Значение со своими бонусами не сходится с характеристикой строки:
+            пунктир зовёт навести и прочитать разбор. `z-10` поднимает значение
+            над растяжкой кнопки броска — иначе наведение до него не дойдёт -->
+          <UTooltip
+            v-if="row.bonusHint"
+            :text="row.bonusHint"
+            :content="{ side: 'top' }"
+          >
+            <span
+              class="z-10 ml-auto rounded border border-default/50 bg-default/60 px-1.5 text-sm font-bold text-highlighted underline decoration-dotted underline-offset-2"
+            >
+              {{ row.formattedValue }}
+            </span>
+          </UTooltip>
+
           <span
+            v-else
             class="ml-auto rounded border border-default/50 bg-default/60 px-1.5 text-sm font-bold text-highlighted"
           >
             {{ row.formattedValue }}

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-  import type { CharacterPreparedSpells } from '../../model';
+  import type { CharacterPreparedSpells, PreparedSpellKind } from '../../model';
 
   import { useCharacterSheet } from '../../composables';
   import {
     getFormattedBonus,
     getPreparedSpellsBreakdown,
+    PREPARED_KIND_LABELS,
     PREPARED_SPELLS_BONUS_MAX,
     PREPARED_SPELLS_BONUS_MIN,
     PREPARED_SPELLS_EMPTY_VALUE,
@@ -13,13 +14,23 @@
     PREPARED_SPELLS_MIN,
   } from '../../model';
 
+  const props = defineProps<{
+    /** Что настраивается: заклинания книги либо заговоры (свой счётчик). */
+    kind: PreparedSpellKind;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
   const { character, setPreparedSpells } = useCharacterSheet();
 
-  const savedBreakdown = getPreparedSpellsBreakdown(character.value);
+  const kindLabels = computed(() => PREPARED_KIND_LABELS[props.kind]);
+
+  const savedBreakdown = getPreparedSpellsBreakdown(
+    character.value,
+    props.kind,
+  );
 
   const draftCustom = ref(savedBreakdown.custom);
 
@@ -43,13 +54,18 @@
   // Итог считается тем же разбором, что и блок вкладки: черновик подставляется
   // в персонажа, а не пересчитывается формулой заново.
   const draftBreakdown = computed(() =>
-    getPreparedSpellsBreakdown({
-      ...character.value,
-      spellcasting: {
-        ...character.value.spellcasting,
-        prepared: draftPrepared.value,
+    getPreparedSpellsBreakdown(
+      {
+        ...character.value,
+        spellcasting: {
+          ...character.value.spellcasting,
+          ...(props.kind === 'cantrips'
+            ? { preparedCantrips: draftPrepared.value }
+            : { prepared: draftPrepared.value }),
+        },
       },
-    }),
+      props.kind,
+    ),
   );
 
   const totalLabel = computed(() =>
@@ -66,7 +82,7 @@
   );
 
   function handleApply() {
-    setPreparedSpells(draftPrepared.value);
+    setPreparedSpells(draftPrepared.value, props.kind);
 
     emit('close');
   }
@@ -77,7 +93,7 @@
 </script>
 
 <template>
-  <UModal :title="PREPARED_SPELLS_LABELS.title">
+  <UModal :title="kindLabels.title">
     <template #body>
       <div class="flex flex-col gap-3">
         <UCheckbox
@@ -93,7 +109,7 @@
           class="flex items-center justify-between gap-4"
         >
           <span class="text-sm text-toned">
-            {{ PREPARED_SPELLS_LABELS.customValue }}
+            {{ kindLabels.customValue }}
           </span>
 
           <UInputNumber
@@ -131,7 +147,7 @@
             v-if="draftBreakdown.classValue === null"
             class="text-xs text-dimmed"
           >
-            {{ PREPARED_SPELLS_LABELS.unknownClassValue }}
+            {{ kindLabels.unknownClassValue }}
           </p>
 
           <p

@@ -1,10 +1,14 @@
 import type {
   AbilityKey,
   Character,
+  CharacterClass,
+  CharacterCustomBonus,
   CharacterNote,
+  CharacterSavingThrow,
   CharacterSheetDetail,
   CharacterSheetListItem,
   CharacterSheetListPage,
+  CharacterSpellcasting,
   FeatureDescriptionNode,
   ResourceRecovery,
   ResourceRecoveryMode,
@@ -13,14 +17,23 @@ import type {
   SavedCharacterSheetListPage,
 } from './types';
 
+import { clamp } from 'es-toolkit';
+
 import { z } from '~/utils/zod';
 import { CasterType } from '~classes/model';
 
 import {
+  CLASS_FEATURE_ID_PREFIX,
+  CLASS_RESOURCE_ID_PREFIX,
   DRAFT_CHARACTER_ID,
+  EXHAUSTION_LEVEL_MAX,
+  EXHAUSTION_LEVEL_MIN,
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
   LEGACY_NOTE_ID,
+  LEVEL_MAX,
+  LEVEL_MIN,
+  NEW_CUSTOM_BONUS,
   RESOURCE_RECOVERY_AMOUNT_MIN,
   SHEET_NOTE_LABELS,
 } from './constants';
@@ -90,31 +103,46 @@ const grantedStartingEquipmentSchema = z
   .nullable()
   .catch(null);
 
-const characterClassSchema = z
-  .object({
-    url: z.string(),
-    name: z.string().catch(''),
-    subclassUrl: z.string().nullable().catch(null),
-    subclassName: z.string().nullable().catch(null),
-    // Листы, сохранённые до появления поля, приходят без типа заклинательства:
-    // для них он определяется по названию класса (см. `getClassCasterType`).
-    casterType: z.nativeEnum(CasterType).nullable().catch(null),
-    hitDie: z.coerce.number().catch(8),
-    // Листы, сохранённые до появления поля, приходят без прогрессии
-    // подготовленных заклинаний: она запишется при следующем выборе класса
-    // или повышении уровня.
-    preparedSpells: z
-      .array(
-        z.object({
-          level: z.coerce.number(),
-          value: z.coerce.number(),
-        }),
-      )
-      .catch([]),
-    startingEquipment: grantedStartingEquipmentSchema,
-  })
-  .nullable()
-  .catch(null);
+/** Прогрессия числа из колонки таблицы класса: подготовленные и заговоры. */
+const classScalingSchema = z
+  .array(
+    z.object({
+      level: z.coerce.number(),
+      value: z.coerce.number(),
+    }),
+  )
+  .catch([]);
+
+const classEntrySchema = z.object({
+  url: z.string(),
+  name: z.string().catch(''),
+  // Листы, сохранённые до мультикласса, уровня в классе не имеют: 0 — метка
+  // «неизвестен», нормализация ниже выводит его из общего уровня персонажа.
+  level: z.coerce.number().catch(0),
+  subclassUrl: z.string().nullable().catch(null),
+  subclassName: z.string().nullable().catch(null),
+  // Листы, сохранённые до появления поля, приходят без типа заклинательства:
+  // для них он определяется по названию класса (см. `getClassCasterType`).
+  casterType: z.nativeEnum(CasterType).nullable().catch(null),
+  hitDie: z.coerce.number().catch(8),
+  // Листы до мультикласса хранили заклинательную характеристику одну на весь
+  // лист (`spellcasting.ability`) — нормализация переносит её в основной класс.
+  spellcastingAbility: abilityKeySchema.nullable().catch(null),
+  // Листы, сохранённые до появления поля, приходят без прогрессии
+  // подготовленных заклинаний: она запишется при следующем выборе класса
+  // или повышении уровня. То же и с прогрессией заговоров.
+  preparedSpells: classScalingSchema,
+  preparedCantrips: classScalingSchema,
+  startingEquipment: grantedStartingEquipmentSchema,
+});
+
+const characterClassSchema = classEntrySchema.nullable().catch(null);
+
+// Битая запись выпадает поодиночке (null отфильтровывается нормализацией):
+// один испорченный класс не должен уносить весь мультикласс.
+const additionalClassesSchema = z
+  .array(classEntrySchema.nullable().catch(null))
+  .catch([]);
 
 const characterBackgroundSchema = z
   .object({
@@ -182,38 +210,123 @@ const speciesSchema = z
 const spellSlotSchema = z.object({
   level: z.coerce.number(),
   used: z.coerce.number().catch(0),
+  // Листы до мультикласса ячеек договора отдельно не хранили: у них все траты
+  // обычные (у чистого колдуна обычные ячейки и есть договор).
+  kind: z.enum(['standard', 'pact']).catch('standard'),
+});
+
+/** Настройка числа подготовленных: одна и та же у заклинаний и заговоров. */
+const preparedSpellsSettingSchema = z.object({
+  custom: z.coerce.number().nullable().catch(null),
+  bonus: z.coerce.number().catch(0),
 });
 
 // По умолчанию — авто (легаси-листы без поля заклинательства): характеристика
-// определяется по классу.
+// определяется по классу. Поле `ability` — легаси: до мультикласса оно было
+// одно на весь лист, теперь живёт у класса и снимается нормализацией.
 const spellcastingSchema = z
   .object({
-    ability: abilityKeySchema.nullable().catch(null),
+    ability: abilityKeySchema.nullable().optional().catch(undefined),
     // Настройка подготовленных заклинаний появилась позже: у листов без неё
-    // число считается по таблице класса без бонуса.
-    prepared: z
-      .object({
-        custom: z.coerce.number().nullable().catch(null),
-        bonus: z.coerce.number().catch(0),
-      })
-      .catch(() => ({ ...DEFAULT_CHARACTER.spellcasting.prepared })),
+    // число считается по таблице класса без бонуса. Настройка заговоров
+    // появилась ещё позже и ведёт себя так же.
+    prepared: preparedSpellsSettingSchema.catch(() => ({
+      ...DEFAULT_CHARACTER.spellcasting.prepared,
+    })),
+    preparedCantrips: preparedSpellsSettingSchema.catch(() => ({
+      ...DEFAULT_CHARACTER.spellcasting.preparedCantrips,
+    })),
   })
   .catch(() => ({
     ...DEFAULT_CHARACTER.spellcasting,
     prepared: { ...DEFAULT_CHARACTER.spellcasting.prepared },
+    preparedCantrips: { ...DEFAULT_CHARACTER.spellcasting.preparedCantrips },
   }));
+
+// Запись своего бонуса общая для навыков и настроек листа: вид, обе стороны
+// источника (характеристика и число) и пометка игрока.
+const customBonusSchema = z.object({
+  id: z.string(),
+  kind: z.enum(['ability', 'flat']).catch(NEW_CUSTOM_BONUS.kind),
+  ability: abilityKeySchema.catch(NEW_CUSTOM_BONUS.ability),
+  value: z.coerce.number().int().catch(0),
+  label: z.string().catch(''),
+});
+
+/**
+ * Свои бонусы настроек: сперва это было одно число, поэтому у листов без
+ * списка ненулевое легаси-значение переезжает в него одной записью-числом, а
+ * нулевое просто пропадает — бонуса не было.
+ *
+ * @param bonuses список своих бонусов записи листа.
+ * @param legacyValue легаси-число одного бонуса записи листа.
+ * @returns свои бонусы настроек листа.
+ */
+function toCustomBonuses(
+  bonuses: CharacterCustomBonus[] | undefined,
+  legacyValue: number | undefined,
+): CharacterCustomBonus[] {
+  if (bonuses) {
+    return bonuses;
+  }
+
+  if (!legacyValue) {
+    return [];
+  }
+
+  return [{ ...NEW_CUSTOM_BONUS, id: crypto.randomUUID(), value: legacyValue }];
+}
 
 // По умолчанию — правила D&D (легаси-листы без блока настроек): базовая
 // характеристика атаки оружием определяется свойствами оружия.
 const settingsSchema = z
   .object({
     weaponAttackAbility: abilityKeySchema.nullable().catch(null),
-    // Свои бонусы появились позже настройки атаки: у листов без них бонусы
-    // нулевые, то есть подсчёт идёт строго по правилам.
-    customProficiencyBonus: z.coerce.number().int().catch(0),
-    customInitiativeBonus: z.coerce.number().int().catch(0),
+    // Своё значение основы и характеристика инициативы появились позже: без
+    // них основа считается по правилам (уровень и Ловкость).
+    customProficiencyBase: z.coerce.number().int().nullable().catch(null),
+    initiativeAbility: abilityKeySchema.nullable().catch(null),
+    customInitiativeBase: z.coerce.number().int().nullable().catch(null),
+    // Группировка навыков появилась позже: листы без неё выводят навыки общим
+    // списком по алфавиту, как и раньше.
+    groupSkillsByAbility: z.boolean().catch(false),
+    // Легаси-поля одного своего бонуса: списками они стали позже, а отсутствие
+    // и списка, и числа означает подсчёт строго по правилам.
+    customProficiencyBonus: z.coerce.number().int().optional().catch(undefined),
+    customInitiativeBonus: z.coerce.number().int().optional().catch(undefined),
+    customProficiencyBonuses: z
+      .array(customBonusSchema)
+      .optional()
+      .catch(undefined),
+    customInitiativeBonuses: z
+      .array(customBonusSchema)
+      .optional()
+      .catch(undefined),
   })
-  .catch(() => ({ ...DEFAULT_CHARACTER.settings }));
+  .catch(() => ({
+    ...DEFAULT_CHARACTER.settings,
+    customProficiencyBonuses: [],
+    customInitiativeBonuses: [],
+  }))
+  .transform(
+    ({
+      customProficiencyBonus,
+      customInitiativeBonus,
+      customProficiencyBonuses,
+      customInitiativeBonuses,
+      ...settings
+    }) => ({
+      ...settings,
+      customProficiencyBonuses: toCustomBonuses(
+        customProficiencyBonuses,
+        customProficiencyBonus,
+      ),
+      customInitiativeBonuses: toCustomBonuses(
+        customInitiativeBonuses,
+        customInitiativeBonus,
+      ),
+    }),
+  );
 
 const experienceSchema = z
   .object({
@@ -260,6 +373,9 @@ const armorClassSchema = z
     ability: abilityKeySchema.nullable().optional().catch(undefined),
     abilities: z.array(abilityKeySchema).optional().catch(undefined),
     natural: z.boolean().catch(false),
+    // Свой предел бонуса Ловкости от доспеха; у листов до его появления поля
+    // нет — предел берётся по правилу доспеха.
+    dexLimit: z.coerce.number().int().nullable().catch(null),
     // По умолчанию — автоподсчёт по надетой броне (легаси-листы без поля).
     custom: z.boolean().catch(false),
   })
@@ -310,15 +426,57 @@ const abilitiesSchema = z
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.abilities }));
 
+const savingThrowSchema = z.object({
+  key: abilityKeySchema,
+  ability: abilityKeySchema,
+  proficient: z.boolean().catch(false),
+  bonuses: z.array(customBonusSchema).catch([]),
+});
+
+/**
+ * Спасброски листа: сперва они хранились одним списком характеристик, которыми
+ * персонаж владеет, поэтому у листов без записей владение переезжает из
+ * легаси-списка, а характеристика и свои бонусы заводятся по правилам. Записей
+ * всегда шесть и в порядке листа: документ мог потерять строку или сложить их
+ * иначе, а блок спасбросков и PDF читают их по порядку.
+ *
+ * @param savingThrows спасброски записи листа.
+ * @param legacyProficiencies легаси-список владений спасбросками записи листа.
+ * @returns спасброски листа.
+ */
+function toSavingThrows(
+  savingThrows: CharacterSavingThrow[] | undefined,
+  legacyProficiencies: AbilityKey[] | undefined,
+): CharacterSavingThrow[] {
+  return DEFAULT_CHARACTER.savingThrows.map(({ key, ability }) => {
+    const stored = savingThrows?.find((savingThrow) => savingThrow.key === key);
+
+    return (
+      stored ?? {
+        key,
+        ability,
+        proficient: legacyProficiencies?.includes(key) ?? false,
+        bonuses: [],
+      }
+    );
+  });
+}
+
 const skillSchema = z.object({
   name: z.string(),
   ability: abilityKeySchema,
   proficiency: skillProficiencySchema.catch('none'),
+  // Свои бонусы навыка появились позже самих навыков: у листов без них навык
+  // считается строго по правилам.
+  bonuses: z.array(customBonusSchema).catch([]),
 });
 
 const levelHitPointsSchema = z.object({
   level: z.coerce.number(),
   amount: z.coerce.number().catch(0),
+  // Листы до мультикласса класс прироста не отмечали: нормализация приписывает
+  // такие записи основному классу — до второго класса они все его и были.
+  classUrl: z.string().nullable().catch(null),
 });
 
 const healthSchema = z
@@ -329,6 +487,15 @@ const healthSchema = z
     // Листы до появления учёта прироста записей не имеют: снижение уровня у них
     // максимум не тронет, пока уровни не будут взяты заново.
     levelGains: z.array(levelHitPointsSchema).catch([]),
+    // Листы, сохранённые до появления истощения, читаются с нулевым уровнем.
+    // Уровень вне границ правил (правка файла руками) тоже сбрасывается в ноль:
+    // дальше он живёт в подсчётах отдыха и подписях, где допустимы только 0…6.
+    exhaustion: z.coerce
+      .number()
+      .int()
+      .min(EXHAUSTION_LEVEL_MIN)
+      .max(EXHAUSTION_LEVEL_MAX)
+      .catch(EXHAUSTION_LEVEL_MIN),
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.health }));
 
@@ -448,6 +615,15 @@ const inventoryWeaponDamageSchema = z
   .nullable()
   .catch(null);
 
+const inventoryExtraDamageSchema = z
+  .object({
+    diceCount: z.coerce.number().catch(0),
+    diceFaces: z.coerce.number().catch(0),
+    type: z.string().catch(''),
+  })
+  .nullable()
+  .catch(null);
+
 const inventoryWeaponSchema = z
   .object({
     category: z.enum(['simple', 'martial']).catch('simple'),
@@ -462,9 +638,45 @@ const inventoryWeaponSchema = z
     // То же с уроном двумя руками: у листов, сохранённых до появления хвата,
     // блока нет — переключать нечего, пока предмет не добавят заново.
     versatileDamage: inventoryWeaponDamageSchema,
+    // И то же с дополнительным уроном: у листов до его появления блока нет —
+    // оружие катит один свой бросок.
+    extraDamage: inventoryExtraDamageSchema,
   })
   .nullable()
   .catch(null);
+
+/**
+ * Пассивный бонус предмета. Вид цели закрыт списком модели: незнакомая строка
+ * означает запись из другой версии листа, и такой бонус отбрасывается целиком —
+ * иначе он молча ушёл бы не в ту цель.
+ */
+const inventoryBonusSchema = z
+  .object({
+    id: z.string().catch(() => crypto.randomUUID()),
+    kind: z.enum([
+      'ability',
+      'ability-check',
+      'skill',
+      'saving-throw',
+      'all-saving-throws',
+      'speed',
+      'all-speeds',
+      'armor-class',
+      'spell-save-dc',
+      'spell-attack',
+      'initiative',
+    ]),
+    key: z.string().catch(''),
+    value: z.coerce.number().catch(0),
+  })
+  .nullable()
+  .catch(null);
+
+/** Бонусы предмета: у листов, сохранённых до их появления, список пуст. */
+const inventoryBonusesSchema = z
+  .array(inventoryBonusSchema)
+  .catch([])
+  .transform((bonuses) => bonuses.filter((bonus) => bonus !== null));
 
 /**
  * Заряды предмета. Остаток не выше максимума: иначе правка максимума в разделе
@@ -511,12 +723,38 @@ function toLegacyNotes(notes: string): CharacterNote[] {
   ];
 }
 
+// Настройка грузоподъёмности появилась позже снаряжения: у листов без неё
+// предел считается по правилам от Силы и размера персонажа, без бонуса.
+const carryingCapacitySchema = z
+  .object({
+    size: z.string().nullable().catch(null),
+    custom: z.coerce.number().nullable().catch(null),
+    bonus: z.coerce.number().catch(0),
+  })
+  .catch(() => ({ ...DEFAULT_CHARACTER.carryingCapacity }));
+
 const notesSchema = z
   .union([z.array(noteSchema), z.string()])
   .catch([])
   .transform((notes) =>
     typeof notes === 'string' ? toLegacyNotes(notes) : notes,
   );
+
+// Личность появилась позже остальных блоков: у листов без неё все поля пустые.
+// Каждое поле со своим `catch` — чужое значение (число из другого редактора,
+// пропавшее поле) обнуляет только себя, а не всю личность целиком.
+const personalitySchema = z
+  .object({
+    alignment: z.string().catch(''),
+    age: z.string().catch(''),
+    height: z.string().catch(''),
+    weight: z.string().catch(''),
+    eyes: z.string().catch(''),
+    hair: z.string().catch(''),
+    skin: z.string().catch(''),
+    description: z.string().catch(''),
+  })
+  .catch(() => ({ ...DEFAULT_CHARACTER.personality }));
 
 const inventoryItemSchema = z.object({
   id: z.string(),
@@ -541,6 +779,7 @@ const inventoryItemSchema = z.object({
   weapon: inventoryWeaponSchema,
   equipped: z.boolean().catch(false),
   twoHanded: z.boolean().catch(false),
+  bonuses: inventoryBonusesSchema,
   // Состояние магии; у листов до его появления — настройки нет, предмет
   // выключен, зарядов не заведено.
   requiresAttunement: z.boolean().catch(false),
@@ -552,41 +791,205 @@ const inventoryItemSchema = z.object({
   description: z.array(descriptionNodeSchema).optional().catch(undefined),
 });
 
+/**
+ * Форма листа сразу после разбора схемой: классы могут быть без уровня, среди
+ * дополнительных попадаются выпавшие записи, а заклинательная характеристика
+ * ещё лежит легаси-полем на всём листе.
+ */
+type ParsedCharacter = Omit<Character, 'additionalClasses' | 'spellcasting'> & {
+  additionalClasses: (CharacterClass | null)[];
+  spellcasting: CharacterSpellcasting & { ability?: AbilityKey | null };
+};
+
+/**
+ * Идентификатор с url класса вместо прежнего сквозного. Ключи умений и названия
+ * колонок в справочнике повторяются между классами, поэтому в мультиклассе они
+ * разнесены по классам; листы, сохранённые до этого, разносятся здесь.
+ *
+ * @param id идентификатор умения или ресурса.
+ * @param prefix начало идентификаторов этого вида.
+ * @param classUrls url всех классов листа.
+ * @param primaryClassUrl url основного класса — ему достаются легаси-записи.
+ * @returns идентификатор с url класса.
+ */
+function toScopedClassId(
+  id: string,
+  prefix: string,
+  classUrls: Set<string>,
+  primaryClassUrl: string,
+): string {
+  if (!id.startsWith(prefix)) {
+    return id;
+  }
+
+  const rest = id.slice(prefix.length);
+
+  const [firstSegment = ''] = rest.split(':');
+
+  // Идентификатор уже разнесён по классам — второй раз url не приписываем.
+  return classUrls.has(firstSegment)
+    ? id
+    : `${prefix}${primaryClassUrl}:${rest}`;
+}
+
+/**
+ * Приведение листа к мультиклассовой форме: классы получают свои уровни, общий
+ * уровень становится их суммой, легаси-идентификаторы умений и ресурсов
+ * разносятся по классам, а заклинательная характеристика листа переезжает в
+ * основной класс.
+ *
+ * @param character лист сразу после разбора схемой.
+ * @returns лист в нынешней форме.
+ */
+function normalizeCharacterClasses(character: ParsedCharacter): Character {
+  const { ability: legacySpellcastingAbility, ...spellcasting } =
+    character.spellcasting;
+
+  // Дубли по url схлопываются: один класс дважды — это битый документ, а не
+  // мультикласс (уровни в одном классе не складываются).
+  const seenUrls = new Set<string>();
+
+  const parsedClasses = [
+    character.characterClass,
+    ...character.additionalClasses,
+  ].filter((entry): entry is CharacterClass => {
+    if (!entry || seenUrls.has(entry.url)) {
+      return false;
+    }
+
+    seenUrls.add(entry.url);
+
+    return true;
+  });
+
+  const [primary, ...additional] = parsedClasses;
+
+  if (!primary) {
+    return {
+      ...character,
+      spellcasting,
+      characterClass: null,
+      additionalClasses: [],
+      level: clamp(Math.trunc(character.level), LEVEL_MIN, LEVEL_MAX),
+    };
+  }
+
+  // Уровень дополнительного класса без значения — единица: раньше их не было
+  // вовсе, а битую запись честнее считать одним уровнем, чем нулём.
+  const normalizedAdditional = additional.map((entry) => ({
+    ...entry,
+    level: clamp(Math.trunc(entry.level) || 1, LEVEL_MIN, LEVEL_MAX),
+  }));
+
+  const additionalLevels = normalizedAdditional.reduce(
+    (sum, entry) => sum + entry.level,
+    0,
+  );
+
+  // Лист до мультикласса уровня в классе не хранил: весь общий уровень был
+  // уровнем единственного класса, поэтому дополнительные из него вычитаются.
+  const primaryLevel = clamp(
+    Math.trunc(primary.level) || Math.trunc(character.level) - additionalLevels,
+    LEVEL_MIN,
+    LEVEL_MAX,
+  );
+
+  const classUrls = new Set(parsedClasses.map((entry) => entry.url));
+
+  const scopeFeatureId = (id: string) =>
+    toScopedClassId(id, CLASS_FEATURE_ID_PREFIX, classUrls, primary.url);
+
+  return {
+    ...character,
+    spellcasting,
+    characterClass: {
+      ...primary,
+      level: primaryLevel,
+      spellcastingAbility:
+        primary.spellcastingAbility ?? legacySpellcastingAbility ?? null,
+    },
+    additionalClasses: normalizedAdditional,
+    level: clamp(primaryLevel + additionalLevels, LEVEL_MIN, LEVEL_MAX),
+    features: character.features.map((feature) => ({
+      ...feature,
+      id: scopeFeatureId(feature.id),
+    })),
+    classResources: character.classResources.map((resource) => ({
+      ...resource,
+      id: toScopedClassId(
+        resource.id,
+        CLASS_RESOURCE_ID_PREFIX,
+        classUrls,
+        primary.url,
+      ),
+    })),
+    health: {
+      ...character.health,
+      levelGains: character.health.levelGains.map((gain) => ({
+        ...gain,
+        classUrl: gain.classUrl ?? primary.url,
+      })),
+    },
+  };
+}
+
 /** Схема персонажа целиком (jsonb-документ листа). */
-const characterSchema = z.object({
-  id: z.string().catch(DEFAULT_CHARACTER.id),
-  name: z.string().catch(DEFAULT_CHARACTER.name),
-  avatarUrl: z.string().nullable().catch(null),
-  species: speciesSchema,
-  size: z.string().nullable().catch(null),
-  features: z.array(featureSchema).catch([]),
-  spells: z.array(spellSchema).catch([]),
-  spellcasting: spellcastingSchema,
-  spellSlots: z.array(spellSlotSchema).catch([]),
-  characterClass: characterClassSchema,
-  characterBackground: characterBackgroundSchema,
-  level: z.coerce.number().catch(DEFAULT_CHARACTER.level),
-  experience: experienceSchema,
-  inspiration: z.boolean().catch(false),
-  armorClass: armorClassSchema,
-  speed: speedSchema,
-  vision: visionSchema,
-  abilities: abilitiesSchema,
-  savingThrowProficiencies: z.array(abilityKeySchema).catch([]),
-  skills: z
-    .array(skillSchema)
-    .catch(() => structuredClone(DEFAULT_CHARACTER.skills)),
-  health: healthSchema,
-  hitDice: z.array(hitDieSchema).catch([]),
-  extraHitDice: z.array(extraHitDieSchema).catch([]),
-  classResources: z.array(classResourceSchema).catch([]),
-  proficiencies: proficienciesSchema,
-  currency: currencySchema,
-  customCurrencies: z.array(customCurrencySchema).catch([]),
-  inventory: z.array(inventoryItemSchema).catch([]),
-  notes: notesSchema,
-  settings: settingsSchema,
-});
+const characterSchema = z
+  .object({
+    id: z.string().catch(DEFAULT_CHARACTER.id),
+    name: z.string().catch(DEFAULT_CHARACTER.name),
+    avatarUrl: z.string().nullable().catch(null),
+    species: speciesSchema,
+    size: z.string().nullable().catch(null),
+    features: z.array(featureSchema).catch([]),
+    spells: z.array(spellSchema).catch([]),
+    spellcasting: spellcastingSchema,
+    spellSlots: z.array(spellSlotSchema).catch([]),
+    characterClass: characterClassSchema,
+    additionalClasses: additionalClassesSchema,
+    characterBackground: characterBackgroundSchema,
+    level: z.coerce.number().catch(DEFAULT_CHARACTER.level),
+    experience: experienceSchema,
+    inspiration: z.boolean().catch(false),
+    armorClass: armorClassSchema,
+    speed: speedSchema,
+    vision: visionSchema,
+    abilities: abilitiesSchema,
+    // Легаси-поле: одним списком владений спасброски хранились до того, как у
+    // каждого появились своя характеристика и свои бонусы.
+    savingThrowProficiencies: z
+      .array(abilityKeySchema)
+      .optional()
+      .catch(undefined),
+    savingThrows: z.array(savingThrowSchema).optional().catch(undefined),
+    // Общие бонусы ко всем спасброскам появились вместе с записями; у листов до
+    // них общих бонусов попросту нет.
+    commonSavingThrowBonuses: z.array(customBonusSchema).catch([]),
+    skills: z
+      .array(skillSchema)
+      .catch(() => structuredClone(DEFAULT_CHARACTER.skills)),
+    health: healthSchema,
+    hitDice: z.array(hitDieSchema).catch([]),
+    extraHitDice: z.array(extraHitDieSchema).catch([]),
+    classResources: z.array(classResourceSchema).catch([]),
+    proficiencies: proficienciesSchema,
+    currency: currencySchema,
+    customCurrencies: z.array(customCurrencySchema).catch([]),
+    inventory: z.array(inventoryItemSchema).catch([]),
+    carryingCapacity: carryingCapacitySchema,
+    notes: notesSchema,
+    personality: personalitySchema,
+    settings: settingsSchema,
+  })
+  // Легаси-список владений спасбросками уходит из документа, как только тот
+  // разобран: дальше по листу ходят только сами записи спасбросков. Тем же
+  // проходом лист приводится к мультиклассовой форме.
+  .transform(({ savingThrowProficiencies, savingThrows, ...character }) =>
+    normalizeCharacterClasses({
+      ...character,
+      savingThrows: toSavingThrows(savingThrows, savingThrowProficiencies),
+    }),
+  );
 
 /**
  * Валидация и нормализация документа персонажа. Идентификатором персонажа

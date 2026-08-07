@@ -459,13 +459,15 @@ export default defineNuxtConfig({
       apiUrl: '',
       siteId: '5e24',
     },
-    // Канал обновлений десктопного VTTG (S3 за CDN). Отсюда приложение качает
-    // обновления — см. `publish` в vttg/packages/electron/electron-builder.config.cjs.
-    // Сайт читает из того же места манифест latest.yml, поэтому версия и ссылка
-    // на установщик в кабинете обновляются сами после каждого релиза.
-    // Переопределяется через NUXT_VTTG_DESKTOP_UPDATE_URL.
+    // Корень канала обновлений VTTG (S3 за CDN). Внутри две папки: `desktop/` —
+    // артефакты Electron и манифесты electron-updater (см. `publish` в
+    // vttg/packages/electron/electron-builder.config.cjs), `server/` — архивы
+    // серверной Node-сборки и Docker-образа со своими JSON-манифестами.
+    // Сайт читает те же манифесты, что и само приложение, поэтому версии и
+    // ссылки в кабинете обновляются сами после каждого релиза.
+    // Переопределяется через NUXT_VTTG_UPDATE_BASE_URL.
     vttg: {
-      desktopUpdateUrl: 'https://update-v.ttg.club/vttg/desktop/',
+      updateBaseUrl: 'https://update-v.ttg.club/vttg/',
     },
   },
 });

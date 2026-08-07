@@ -3,6 +3,7 @@
 
   import type { ArticleDetailedResponse } from '../model';
 
+  import { UiGallery } from '~ui/gallery';
   import { getNodeText, MarkupRender } from '~ui/markup';
 
   import { ARTICLE_FALLBACK_IMAGE, toArticleMarkup } from '../model';
@@ -10,10 +11,6 @@
   const { article } = defineProps<{
     article: ArticleDetailedResponse;
   }>();
-
-  const coverImage = computed(
-    () => article.previewImageUrl || ARTICLE_FALLBACK_IMAGE,
-  );
 
   // toArticleMarkup разворачивает возможную сырую JSON-строку описания в узлы (см.
   // хелпер). Каст к RenderNode безопасен в рантайме: parse() возвращает плоский
@@ -41,10 +38,23 @@
   -->
   <article :class="$style.container">
     <div :class="$style.body">
-      <img
-        :src="coverImage"
+      <!--
+        Обложку открываем в лайтбоксе (как галереи классов/видов). Заглушку
+        увеличивать нечего — она остаётся обычной картинкой без zoom-курсора.
+      -->
+      <UiGallery
+        v-if="article.previewImageUrl"
+        :preview="article.previewImageUrl"
         :alt="article.title"
+        disable-square
         :class="$style.cover"
+      />
+
+      <img
+        v-else
+        :src="ARTICLE_FALLBACK_IMAGE"
+        :alt="article.title"
+        :class="[$style.cover, $style.coverImage]"
       />
 
       <div :class="$style.text">
@@ -79,15 +89,23 @@
   }
 
   .cover {
-    aspect-ratio: 16 / 9;
     width: 100%;
-    border-radius: 12px;
-    object-fit: cover;
 
     @container (width > 800px) {
       flex-shrink: 0;
       width: 320px;
     }
+  }
+
+  // Картинку внутри UiGallery пропом не достать — правим вложенный <img>
+  // (модуль не scoped, селектор потомка работает). Для заглушки тот же набор
+  // вешаем прямо на <img> через .coverImage.
+  .coverImage,
+  .cover img {
+    aspect-ratio: 16 / 9;
+    width: 100%;
+    border-radius: 12px;
+    object-fit: cover;
   }
 
   .text {

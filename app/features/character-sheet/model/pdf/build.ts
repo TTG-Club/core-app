@@ -10,13 +10,14 @@ import { loadPdfFonts } from './fonts';
 import { drawPdfFooters } from './layout';
 import { drawEquipmentPage } from './page-equipment';
 import { drawMainPage } from './page-main';
+import { drawPersonalityPage } from './page-personality';
 import { drawReferencePage } from './page-reference';
 import { drawSpellsPage } from './page-spells';
 
 /**
- * Сборка PDF листа персонажа: первая страница — основной лист, дальше
+ * Сборка PDF листа персонажа: первая страница — основной лист, дальше личность,
  * снаряжение, заклинания и справочник с полными описаниями. Страницы, которым
- * нечего показать (нет заклинаний, нет описаний), не создаются.
+ * нечего показать (пустая личность, нет заклинаний, нет описаний), не создаются.
  *
  * Всё, что есть в документе листа, считается теми же функциями, что и лист на
  * сайте, поэтому экспорт одинаково работает и из открытого листа, и из карточки
@@ -53,6 +54,7 @@ export async function buildCharacterSheetPdf(
   };
 
   drawMainPage(context, character);
+  drawPersonalityPage(context, character);
   drawEquipmentPage(context, character);
   drawSpellsPage(context, character);
   drawReferencePage(context, character, descriptions);

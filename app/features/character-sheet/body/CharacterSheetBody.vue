@@ -2,6 +2,8 @@
   import type {
     AbilityKey,
     CharacterInventoryItem,
+    PersonalityFieldKey,
+    PreparedSpellKind,
     ProficiencyGroupKey,
     SavingThrowRow,
     SkillRow,
@@ -22,6 +24,7 @@
     ABILITY_LABELS,
     ARMOR_PROFICIENCY_GROUPS,
     EMPTY_DAMAGE_ROLL_SOURCE,
+    getAbilityCheckValue,
     getAvailableInnateSpells,
     getWeaponAttackBonus,
     getWeaponDamageSource,
@@ -33,13 +36,15 @@
     SheetAbilityModal,
     SheetArmorClassModal,
     SheetBackgroundWizardModal,
+    SheetCarryingCapacityModal,
+    SheetClassesModal,
     SheetClassResourcesModal,
     SheetClassResourcesPanel,
-    SheetClassWizardModal,
     SheetCurrencyModal,
     SheetCustomItemModal,
     SheetCustomSpellModal,
     SheetDamageModal,
+    SheetExhaustionPanel,
     SheetExperienceModal,
     SheetFeatAddModal,
     SheetFeatureAddModal,
@@ -54,16 +59,20 @@
     SheetMagicItemAddModal,
     SheetNameModal,
     SheetNoteModal,
+    SheetPersonalityDescriptionModal,
+    SheetPersonalityModal,
     SheetPreparedSpellsModal,
     SheetProficienciesPanel,
     SheetProficiencyGroupsModal,
     SheetRollModal,
     SheetSavingThrowsPanel,
+    SheetSavingThrowsSettingsModal,
     SheetSettingsModal,
     SheetShareModal,
     SheetShortRestModal,
     SheetSizeModal,
     SheetSkillsPanel,
+    SheetSkillsSettingsModal,
     SheetSpeciesWizardModal,
     SheetSpeedModal,
     SheetSpeedTile,
@@ -97,7 +106,8 @@
     ensureEditable,
     abilityRows,
     savingThrowRows,
-    skillRows,
+    skillGroups,
+    effectiveSpeed,
     formattedProficiencyBonus,
     initiativeBonus,
     formattedInitiative,
@@ -112,6 +122,7 @@
     toggleSpellPrepared,
     toggleSpellSlot,
     cycleSkillProficiency,
+    setExhaustion,
     adjustClassResource,
     adjustInventoryItemQuantity,
     toggleInventoryItemEquipped,
@@ -338,7 +349,15 @@
 
   const classResourcesModal = overlay.create(SheetClassResourcesModal);
 
+  const skillsSettingsModal = overlay.create(SheetSkillsSettingsModal);
+
+  const savingThrowsSettingsModal = overlay.create(
+    SheetSavingThrowsSettingsModal,
+  );
+
   const currencyModal = overlay.create(SheetCurrencyModal);
+
+  const carryingCapacityModal = overlay.create(SheetCarryingCapacityModal);
 
   const proficiencyGroupsModal = overlay.create(SheetProficiencyGroupsModal, {
     props: {
@@ -356,7 +375,9 @@
 
   const speciesWizardModal = overlay.create(SheetSpeciesWizardModal);
 
-  const classWizardModal = overlay.create(SheetClassWizardModal);
+  // Клик по классу в шапке открывает СПИСОК классов персонажа: оттуда класс
+  // меняют, добавляют второй (мультикласс) и удаляют ненужный.
+  const classesModal = overlay.create(SheetClassesModal);
 
   const backgroundWizardModal = overlay.create(SheetBackgroundWizardModal);
 
@@ -392,6 +413,18 @@
     },
   });
 
+  // Одна модалка на все приметы: поле, с которого начали правку, получает
+  // курсор — null означает вход карандашом, без выделенного поля.
+  const personalityModal = overlay.create(SheetPersonalityModal, {
+    props: {
+      field: null,
+    },
+  });
+
+  const personalityDescriptionModal = overlay.create(
+    SheetPersonalityDescriptionModal,
+  );
+
   const spellAddModal = overlay.create(SheetSpellAddModal);
 
   // Одна модалка на добавление и редактирование своего заклинания: URL пустой —
@@ -402,9 +435,15 @@
     },
   });
 
-  const spellcastingModal = overlay.create(SheetSpellcastingModal);
+  const spellcastingModal = overlay.create(SheetSpellcastingModal, {
+    props: { classUrl: '' },
+  });
 
-  const preparedSpellsModal = overlay.create(SheetPreparedSpellsModal);
+  // Вид подготовки приходит нажатием на плитку: значение при создании — лишь
+  // отправная точка, `open()` подставляет нужное.
+  const preparedSpellsModal = overlay.create(SheetPreparedSpellsModal, {
+    props: { kind: 'spells' },
+  });
 
   const itemAddModal = overlay.create(SheetItemAddModal);
 
@@ -429,9 +468,17 @@
   function handleAbilityRoll(abilityKey: AbilityKey) {
     rollModal.open({
       title: `Проверка: ${ABILITY_LABELS[abilityKey]}`,
-      modifier: getModifier(character.value.abilities[abilityKey]),
+      modifier: getAbilityCheckValue(character.value, abilityKey),
       ability: abilityKey,
     });
+  }
+
+  // Характеристика под курсором: пока плитка наведена, её навыки подсвечены в
+  // списке — так видно, на что влияет значение, ещё до открытия настроек.
+  const highlightedAbility = ref<AbilityKey | null>(null);
+
+  function handleAbilityHighlight(abilityKey: AbilityKey | null) {
+    highlightedAbility.value = abilityKey;
   }
 
   function handleAbilityAdjust(abilityKey: AbilityKey, delta: number) {
@@ -521,12 +568,36 @@
     classResourcesModal.open();
   }
 
+  function handleSkillsSettings() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    skillsSettingsModal.open();
+  }
+
+  function handleSavingThrowsSettings() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    savingThrowsSettingsModal.open();
+  }
+
   function handleCurrencyEdit() {
     if (!ensureEditable()) {
       return;
     }
 
     currencyModal.open();
+  }
+
+  function handleCarryingCapacityEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    carryingCapacityModal.open();
   }
 
   function handleProficienciesEdit(group: ProficiencyGroupKey) {
@@ -572,7 +643,9 @@
     rollModal.open({
       title: `Спасбросок: ${ABILITY_LABELS[row.key]}`,
       modifier: row.value,
-      ability: row.key,
+      // Характеристика строки, а не самого спасброска: от неё модалка считает
+      // подмену, а в подменённом спасброске это уже другая характеристика.
+      ability: row.ability,
       actionLabel: 'Бросить спасбросок',
     });
   }
@@ -665,7 +738,7 @@
       return;
     }
 
-    classWizardModal.open();
+    classesModal.open();
   }
 
   function handleBackgroundEdit() {
@@ -724,6 +797,22 @@
     noteModal.open({ noteId });
   }
 
+  function handlePersonalityEdit(field: PersonalityFieldKey | null) {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    personalityModal.open({ field });
+  }
+
+  function handlePersonalityDescriptionEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    personalityDescriptionModal.open();
+  }
+
   function handleSpellAdd() {
     if (!ensureEditable()) {
       return;
@@ -760,20 +849,20 @@
     void copyInnateSpellToSheet(spellUrl);
   }
 
-  function handleSpellcastingEdit() {
+  function handleSpellcastingEdit(classUrl: string) {
     if (!ensureEditable()) {
       return;
     }
 
-    spellcastingModal.open();
+    spellcastingModal.open({ classUrl });
   }
 
-  function handlePreparedSpellsEdit() {
+  function handlePreparedSpellsEdit(kind: PreparedSpellKind) {
     if (!ensureEditable()) {
       return;
     }
 
-    preparedSpellsModal.open();
+    preparedSpellsModal.open({ kind });
   }
 
   function handleSettingsEdit() {
@@ -947,9 +1036,9 @@
           display:contents: все блоки становятся прямыми элементами сетки.
           Четыре плитки показателей без order-* всплывают наверх (2×2, а с @md —
           одной строкой), остальные блоки растягиваются на всю ширину и идут в
-          порядке order-*: здоровье → ресурсы класса → навыки → спасброски →
-          владения. На sm колонки восстанавливаются — двухколоночная раскладка
-          прежняя.
+          порядке order-*: здоровье → истощение → ресурсы класса → навыки →
+          спасброски → владения. На sm колонки восстанавливаются —
+          двухколоночная раскладка прежняя.
         -->
         <div class="grid grid-cols-2 gap-4 max-sm:@md:grid-cols-4">
           <div class="flex flex-col gap-4 max-sm:contents">
@@ -977,16 +1066,24 @@
               @edit="handleHealthEdit"
             />
 
+            <SheetExhaustionPanel
+              :level="character.health.exhaustion"
+              :speed-unit="character.speed.unit"
+              class="max-sm:order-2 max-sm:col-span-full"
+              @select="setExhaustion"
+            />
+
             <SheetSavingThrowsPanel
               :rows="savingThrowRows"
-              class="max-sm:order-4 max-sm:col-span-full"
+              class="max-sm:order-5 max-sm:col-span-full"
               @roll="handleSavingThrowRoll"
+              @settings="handleSavingThrowsSettings"
               @toggle="toggleSavingThrowProficiency"
             />
 
             <SheetProficienciesPanel
               :proficiencies="character.proficiencies"
-              class="max-sm:order-5 max-sm:col-span-full"
+              class="max-sm:order-6 max-sm:col-span-full"
               @edit="handleProficienciesEdit"
             />
           </div>
@@ -994,7 +1091,7 @@
           <div class="flex flex-col gap-4 max-sm:contents">
             <div class="grid grid-cols-2 gap-4 max-sm:contents">
               <SheetSpeedTile
-                :speed="character.speed"
+                :speed="effectiveSpeed"
                 @edit="handleSpeedEdit"
               />
 
@@ -1008,16 +1105,18 @@
 
             <SheetClassResourcesPanel
               :resources="character.classResources"
-              class="max-sm:order-2 max-sm:col-span-full"
+              class="max-sm:order-3 max-sm:col-span-full"
               @adjust="adjustClassResource"
               @edit="handleClassResourcesEdit"
             />
 
             <SheetSkillsPanel
-              :rows="skillRows"
-              class="grow max-sm:order-3 max-sm:col-span-full"
+              :groups="skillGroups"
+              :highlighted-ability="highlightedAbility"
+              class="grow max-sm:order-4 max-sm:col-span-full"
               @cycle="cycleSkillProficiency"
               @roll="handleSkillRoll"
+              @settings="handleSkillsSettings"
             />
           </div>
         </div>
@@ -1035,6 +1134,7 @@
             @roll="handleAbilityRoll"
             @settings="handleAbilityEdit"
             @adjust="handleAbilityAdjust"
+            @highlight="handleAbilityHighlight"
           />
         </div>
 
@@ -1074,6 +1174,7 @@
           @edit-spellcasting="handleSpellcastingEdit"
           @edit-prepared-spells="handlePreparedSpellsEdit"
           @edit-currency="handleCurrencyEdit"
+          @edit-carrying-capacity="handleCarryingCapacityEdit"
           @adjust-item-quantity="adjustInventoryItemQuantity"
           @toggle-item-equip="toggleInventoryItemEquipped"
           @toggle-item-attuned="toggleInventoryItemAttuned"
@@ -1087,6 +1188,9 @@
           @add-note="handleNoteAdd"
           @edit-note="handleNoteEdit"
           @remove-note="removeNote"
+          @edit-personality="handlePersonalityEdit"
+          @edit-personality-description="handlePersonalityDescriptionEdit"
+          @edit-background="handleBackgroundEdit"
           @remove-feature="removeFeature"
           @remove-item="removeInventoryItem"
           @remove-spell="removeSpell"

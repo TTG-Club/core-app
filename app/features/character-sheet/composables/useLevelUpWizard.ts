@@ -2,16 +2,20 @@ import type { ComputedRef, Ref } from 'vue';
 
 import type {
   AbilityKey,
+  CharacterClass,
+  CharacterClassResource,
   CharacterFeature,
   ClassChoice,
   ClassOption,
   ClassSummary,
   FeatSelectOption,
   HitPointsGainMode,
+  LevelUpClassPatch,
   LevelUpFeatChoice,
   LevelUpPayload,
   LevelUpStepDraft,
   LevelUpStepView,
+  LevelUpTarget,
 } from '../model';
 
 import { useDiceRoller } from '~dice-roller/composables';
@@ -27,6 +31,7 @@ import {
   CLASSES_FILTERS_PATH,
   collectChoiceSelections,
   collectFeatAbilityIncreases,
+  deriveCantripsScaling,
   deriveClassResources,
   derivePreparedSpellsScaling,
   FEAT_SOURCES_ASYNC_DATA_KEY,
@@ -35,6 +40,7 @@ import {
   fetchFeatDetail,
   filterClassOptionsBySources,
   getAbilityImprovementFeatOptions,
+  getCharacterClasses,
   getChoiceSkillHints,
   getFeatUrlFromFeatureId,
   getHitDieFormula,
@@ -58,29 +64,67 @@ import { useLazyCatalogSourceQuery } from './useCatalogSourceQuery';
 import { useCharacterSheet } from './useCharacterSheet';
 import { useToolCatalog } from './useToolCatalog';
 
+/** Загруженные справочные данные класса, взятые в мастере. */
+interface LoadedClass {
+  /** Класс на листе — из него берутся кость хитов и уже выбранный подкласс. */
+  entry: CharacterClass;
+
+  /** Деталь класса из справочника. */
+  detail: ClassSummary;
+
+  /** Деталь подкласса; null — подкласс не выбран. */
+  subclass: ClassSummary | null;
+
+  /** Подклассы для выбора; пусто — выбор не нужен либо список не загрузился. */
+  subclassOptions: ClassOption[];
+
+  /**
+   * Уровень В КЛАССЕ, на котором мастер предлагает подкласс; null — подкласс уже
+   * выбран либо взятые уровни до порога не дотягивают.
+   */
+  subclassStepLevel: number | null;
+}
+
 /**
  * Черновики шагов по взятым уровням: прирост хитов по умолчанию средний — так
- * повышение проходит без бросков, если игрок не хочет их делать.
+ * повышение проходит без бросков, если игрок не хочет их делать. Шаги идут по
+ * классам в порядке их следования на листе, внутри класса — по возрастанию
+ * уровня; общий уровень персонажа растёт сквозным счётом.
  *
- * @param previousLevel уровень до повышения.
- * @param targetLevel новый уровень персонажа.
- * @returns черновики шагов по возрастанию уровня.
+ * @param targets повышения уровня по классам.
+ * @param previousLevel общий уровень персонажа до повышения.
+ * @returns черновики шагов по порядку.
  */
 function buildLevelDrafts(
+  targets: LevelUpTarget[],
   previousLevel: number,
-  targetLevel: number,
 ): LevelUpStepDraft[] {
-  return Array.from(
-    { length: targetLevel - previousLevel },
-    (_, index): LevelUpStepDraft => ({
-      level: previousLevel + index + 1,
-      gainMode: 'average',
-      roll: null,
-      selections: {},
-      notes: {},
-      featChoices: {},
-    }),
-  );
+  const drafts: LevelUpStepDraft[] = [];
+
+  let level = previousLevel;
+
+  for (const target of targets) {
+    for (
+      let classLevel = target.from + 1;
+      classLevel <= target.to;
+      classLevel++
+    ) {
+      level += 1;
+
+      drafts.push({
+        classUrl: target.classUrl,
+        classLevel,
+        level,
+        gainMode: 'average',
+        roll: null,
+        selections: {},
+        notes: {},
+        featChoices: {},
+      });
+    }
+  }
+
+  return drafts;
 }
 
 /**
@@ -114,6 +158,19 @@ function pickKnownEntries<Value>(
   );
 }
 
+/**
+ * Ключ подготовленных шагов: по нему возврат на форму и обратно не пересобирает
+ * броски и выборы, а смена цели повышения — пересобирает.
+ *
+ * @param targets повышения уровня по классам.
+ * @returns ключ цели.
+ */
+function getTargetsKey(targets: LevelUpTarget[]): string {
+  return targets
+    .map((target) => `${target.classUrl}:${target.from}-${target.to}`)
+    .join('|');
+}
+
 interface LevelUpWizard {
   /** Шаги мастера: по одному на каждый взятый уровень. */
   steps: ComputedRef<LevelUpStepView[]>;
@@ -121,22 +178,22 @@ interface LevelUpWizard {
   /** Черновики шагов: состояние контролов уровня (правятся только экшенами). */
   drafts: ComputedRef<LevelUpStepDraft[]>;
 
-  /** Идёт загрузка деталей класса. */
+  /** Идёт загрузка деталей классов. */
   isLoading: Ref<boolean>;
 
   /** Детали класса загрузить не удалось — шаги недоступны. */
   hasLoadError: Ref<boolean>;
 
-  /** Подклассы, разрешённые источниками профиля. */
-  subclassOptions: ComputedRef<ClassOption[]>;
+  /** Подклассы класса шага, разрешённые источниками профиля. */
+  subclassOptions: (index: number) => ClassOption[];
 
   isSubclassLoading: Ref<boolean>;
 
   /** Список подклассов загрузить не удалось — выбор не обязателен. */
   hasSubclassError: Ref<boolean>;
 
-  /** URL подкласса, выбранного в мастере; null — выбора не было. */
-  selectedSubclassUrl: Ref<string | null>;
+  /** URL подкласса, выбранного в мастере для класса шага; null — выбора не было. */
+  selectedSubclassUrl: (index: number) => string | null;
 
   /** Черты каталога загружаются — селектор выбора черты ещё пуст. */
   isFeatsLoading: Ref<boolean>;
@@ -144,7 +201,7 @@ interface LevelUpWizard {
   /** Список черт загрузить не удалось — выбор черты недоступен. */
   hasFeatsError: Ref<boolean>;
 
-  prepare: (targetLevel: number) => Promise<boolean>;
+  prepare: (targets: LevelUpTarget[]) => Promise<boolean>;
   reset: () => void;
   setGainMode: (index: number, mode: HitPointsGainMode) => void;
   rollHitDie: (index: number) => void;
@@ -157,7 +214,7 @@ interface LevelUpWizard {
     slot: number,
     ability: AbilityKey | null,
   ) => void;
-  selectSubclass: (subclassUrl: string) => Promise<void>;
+  selectSubclass: (index: number, subclassUrl: string) => Promise<void>;
   choiceOptions: (choice: ClassChoice) => string[];
 
   /** Пометки опций пикера: навыки, которыми персонаж уже владеет. */
@@ -173,18 +230,16 @@ interface LevelUpWizard {
 
   /**
    * Сборка итога мастера: догружает описания выбранных черт, поэтому
-   * асинхронна. null — деталь класса не загружена или черта не догрузилась.
+   * асинхронна. null — детали классов не загружены или черта не догрузилась.
    */
-  buildPayload: (
-    level: number,
-    experience: number,
-  ) => Promise<LevelUpPayload | null>;
+  buildPayload: (experience: number) => Promise<LevelUpPayload | null>;
 }
 
 /**
  * Мастер повышения уровня: по шагу на каждый взятый уровень с собственным
  * приростом хитов, умениями класса и подкласса этого уровня и выбором подкласса
- * на пороговом уровне.
+ * на пороговом уровне В КЛАССЕ. У мультикласса уровни разных классов идут
+ * шагами подряд, каждый со своим классом.
  *
  * Состояние живёт с экземпляром модалки (обычные `ref`, не `useState`): мастер
  * открывается заново на каждое повышение.
@@ -212,11 +267,8 @@ export function useLevelUpWizard(): LevelUpWizard {
   const { selectedSourceIds: selectedFeatSourceIds, load: loadFeatSources } =
     useLazyCatalogSourceQuery(FEAT_SOURCES_ASYNC_DATA_KEY, FEATS_FILTERS_PATH);
 
-  const classDetail = ref<ClassSummary | null>(null);
-
-  const subclassDetail = ref<ClassSummary | null>(null);
-
-  const subclassCatalog = ref<ClassOption[]>([]);
+  /** Загруженные классы по их URL. */
+  const loadedClasses = ref<Record<string, LoadedClass>>({});
 
   const drafts = ref<LevelUpStepDraft[]>([]);
 
@@ -228,7 +280,8 @@ export function useLevelUpWizard(): LevelUpWizard {
 
   const hasSubclassError = ref(false);
 
-  const selectedSubclassUrl = ref<string | null>(null);
+  /** Выбранные в мастере подклассы по URL класса. */
+  const selectedSubclasses = ref<Record<string, string>>({});
 
   /** Черты каталога для выбора за улучшение характеристик. */
   const featCatalog = ref<FeatSelectOption[]>([]);
@@ -237,14 +290,12 @@ export function useLevelUpWizard(): LevelUpWizard {
 
   const hasFeatsError = ref(false);
 
-  /** Уровень, под который уже собраны шаги: возврат «Назад» их не пересобирает. */
-  const preparedLevel = ref<number | null>(null);
+  /** Цель, под которую уже собраны шаги: возврат «Назад» их не пересобирает. */
+  const preparedKey = ref<string | null>(null);
 
   const constitutionModifier = computed(() =>
     getModifier(character.value.abilities.constitution),
   );
-
-  const hitDie = computed(() => character.value.characterClass?.hitDie ?? 0);
 
   const skillNames = computed(() =>
     character.value.skills.map((skill) => skill.name),
@@ -266,27 +317,6 @@ export function useLevelUpWizard(): LevelUpWizard {
   const { getToolNamesForGroups, load: loadToolCatalog } = useToolCatalog();
 
   void loadToolCatalog();
-
-  /**
-   * Уровень, на котором мастер предлагает подкласс: первый взятый уровень не
-   * ниже порогового. Лист, переваливший порог без подкласса, получает выбор на
-   * первом же шаге, а не теряет его совсем.
-   */
-  const subclassStepLevel = computed<number | null>(() => {
-    if (character.value.characterClass?.subclassUrl) {
-      return null;
-    }
-
-    const step = drafts.value.find(
-      (draft) => draft.level >= SUBCLASS_SELECTION_MIN_LEVEL,
-    );
-
-    return step?.level ?? null;
-  });
-
-  const subclassOptions = computed(() =>
-    filterClassOptionsBySources(subclassCatalog.value, selectedSourceIds.value),
-  );
 
   /** Url черт, уже взятых на листе: повторно они не предлагаются. */
   const takenFeatUrls = computed(
@@ -325,28 +355,38 @@ export function useLevelUpWizard(): LevelUpWizard {
   );
 
   const steps = computed<LevelUpStepView[]>(() =>
-    drafts.value.map((draft, index) => ({
-      index,
-      level: draft.level,
-      features: classDetail.value
-        ? getLevelFeatureRows(
-            classDetail.value,
-            subclassDetail.value,
-            draft.level,
-            skillNames.value,
-          )
-        : [],
-      isSubclassStep: draft.level === subclassStepLevel.value,
-      hitPointsGain:
-        hitDie.value > 0
-          ? getHitPointsGainForMode(
-              draft.gainMode,
-              hitDie.value,
-              constitutionModifier.value,
-              draft.roll?.rolled ?? null,
+    drafts.value.map((draft, index) => {
+      const loaded = loadedClasses.value[draft.classUrl];
+
+      const hitDie = loaded?.entry.hitDie ?? 0;
+
+      return {
+        index,
+        level: draft.level,
+        classUrl: draft.classUrl,
+        className: loaded?.entry.name ?? '',
+        classLevel: draft.classLevel,
+        hitDie,
+        features: loaded
+          ? getLevelFeatureRows(
+              loaded.detail,
+              loaded.subclass,
+              draft.classLevel,
+              skillNames.value,
             )
-          : 0,
-    })),
+          : [],
+        isSubclassStep: draft.classLevel === loaded?.subclassStepLevel,
+        hitPointsGain:
+          hitDie > 0
+            ? getHitPointsGainForMode(
+                draft.gainMode,
+                hitDie,
+                constitutionModifier.value,
+                draft.roll?.rolled ?? null,
+              )
+            : 0,
+      };
+    }),
   );
 
   /** Навыки, выбранные во владение в этом мастере, — опции для компетентности. */
@@ -372,10 +412,10 @@ export function useLevelUpWizard(): LevelUpWizard {
    * поэтому список отбирается на клиенте по настройке профиля.
    *
    * @param classUrl URL базового класса.
+   * @returns опции подклассов; пусто — загрузить не удалось.
    */
-  async function loadSubclasses(classUrl: string): Promise<void> {
+  async function loadSubclasses(classUrl: string): Promise<ClassOption[]> {
     isSubclassLoading.value = true;
-    hasSubclassError.value = false;
 
     try {
       const [response] = await Promise.all([
@@ -386,10 +426,12 @@ export function useLevelUpWizard(): LevelUpWizard {
         loadSources(),
       ]);
 
-      subclassCatalog.value = parseClassOptions(response, true);
+      return parseClassOptions(response, true);
     } catch (error) {
       consola.error('Ошибка загрузки подклассов:', error);
       hasSubclassError.value = true;
+
+      return [];
     } finally {
       isSubclassLoading.value = false;
     }
@@ -420,56 +462,95 @@ export function useLevelUpWizard(): LevelUpWizard {
   }
 
   /**
-   * Подготовка шагов: грузит деталь класса, деталь уже выбранного подкласса и,
-   * если подкласс ещё не выбран, список подклассов.
+   * Загрузка справочных данных одного класса, уровень в котором растёт.
    *
-   * @param targetLevel новый уровень персонажа.
-   * @returns true — шаги готовы; false — класса нет либо загрузка не удалась.
+   * @param target повышение уровня в классе.
+   * @returns загруженный класс; null — класса нет на листе либо ответ битый.
    */
-  async function prepare(targetLevel: number): Promise<boolean> {
-    const characterClass = character.value.characterClass;
+  async function loadClass(target: LevelUpTarget): Promise<LoadedClass | null> {
+    const entry = getCharacterClasses(character.value).find(
+      (characterClass) => characterClass.url === target.classUrl,
+    );
 
-    if (!characterClass || targetLevel <= character.value.level) {
+    if (!entry) {
+      return null;
+    }
+
+    const [detail, subclass] = await Promise.all([
+      fetchClassDetail(entry.url),
+      entry.subclassUrl ? fetchClassDetail(entry.subclassUrl) : null,
+    ]);
+
+    if (!detail) {
+      return null;
+    }
+
+    // Подкласс предлагается на первом взятом уровне не ниже порогового: класс,
+    // переваливший порог без подкласса, получает выбор на первом же шаге, а не
+    // теряет его совсем.
+    const subclassStepLevel = entry.subclassUrl
+      ? null
+      : (Array.from(
+          { length: target.to - target.from },
+          (_step, index) => target.from + index + 1,
+        ).find((classLevel) => classLevel >= SUBCLASS_SELECTION_MIN_LEVEL)
+        ?? null);
+
+    return {
+      entry,
+      detail,
+      subclass,
+      subclassOptions:
+        subclassStepLevel === null ? [] : await loadSubclasses(entry.url),
+      subclassStepLevel,
+    };
+  }
+
+  /**
+   * Подготовка шагов: грузит детали классов, уровень в которых растёт, детали
+   * уже выбранных подклассов и, если подкласс ещё не выбран, списки подклассов.
+   *
+   * @param targets повышения уровня по классам.
+   * @returns true — шаги готовы; false — классов нет либо загрузка не удалась.
+   */
+  async function prepare(targets: LevelUpTarget[]): Promise<boolean> {
+    const growing = targets.filter((target) => target.to > target.from);
+
+    if (!growing.length) {
       return false;
     }
 
+    const key = getTargetsKey(growing);
+
     // Шаги под эту цель уже собраны: возврат с шага на форму и обратно не
     // должен стирать броски и выборы.
-    if (preparedLevel.value === targetLevel && classDetail.value) {
+    if (preparedKey.value === key) {
       return true;
     }
 
     isLoading.value = true;
     hasLoadError.value = false;
+    hasSubclassError.value = false;
 
     try {
-      const [base, subclass] = await Promise.all([
-        fetchClassDetail(characterClass.url),
-        characterClass.subclassUrl
-          ? fetchClassDetail(characterClass.subclassUrl)
-          : Promise.resolve(null),
-      ]);
+      const loaded = await Promise.all(growing.map(loadClass));
 
-      if (!base) {
+      if (loaded.includes(null)) {
         showLoadError();
         hasLoadError.value = true;
 
         return false;
       }
 
-      classDetail.value = base;
-      subclassDetail.value = subclass;
-      selectedSubclassUrl.value = null;
-      subclassCatalog.value = [];
-      drafts.value = buildLevelDrafts(character.value.level, targetLevel);
-      preparedLevel.value = targetLevel;
+      loadedClasses.value = Object.fromEntries(
+        loaded
+          .filter((entry): entry is LoadedClass => entry !== null)
+          .map((entry) => [entry.entry.url, entry]),
+      );
 
-      if (
-        !characterClass.subclassUrl
-        && targetLevel >= SUBCLASS_SELECTION_MIN_LEVEL
-      ) {
-        await loadSubclasses(characterClass.url);
-      }
+      selectedSubclasses.value = {};
+      drafts.value = buildLevelDrafts(growing, character.value.level);
+      preparedKey.value = key;
 
       // Каталог черт нужен только когда взятые уровни дают улучшение
       // характеристик: иначе лишний запрос на каждое повышение.
@@ -496,11 +577,9 @@ export function useLevelUpWizard(): LevelUpWizard {
   /** Сброс шагов: цель повышения изменилась или мастер закрыт. */
   function reset(): void {
     drafts.value = [];
-    classDetail.value = null;
-    subclassDetail.value = null;
-    subclassCatalog.value = [];
-    selectedSubclassUrl.value = null;
-    preparedLevel.value = null;
+    loadedClasses.value = {};
+    selectedSubclasses.value = {};
+    preparedKey.value = null;
     hasLoadError.value = false;
     hasSubclassError.value = false;
     featCatalog.value = [];
@@ -537,16 +616,18 @@ export function useLevelUpWizard(): LevelUpWizard {
    * @param index номер шага.
    */
   function rollHitDie(index: number): void {
-    if (hitDie.value <= 0) {
+    const hitDie = steps.value[index]?.hitDie ?? 0;
+
+    if (hitDie <= 0) {
       return;
     }
 
-    const rolled = rollValue(getHitDieFormula(hitDie.value));
+    const rolled = rollValue(getHitDieFormula(hitDie));
 
     updateDraft(index, {
       roll: {
         id: crypto.randomUUID(),
-        label: getHitDieLabel(hitDie.value),
+        label: getHitDieLabel(hitDie),
         rolled,
         formattedModifier: getFormattedModifier(
           character.value.abilities.constitution,
@@ -666,14 +747,53 @@ export function useLevelUpWizard(): LevelUpWizard {
   }
 
   /**
+   * Подклассы класса шага, разрешённые источниками профиля.
+   *
+   * @param index номер шага.
+   * @returns опции подклассов.
+   */
+  function subclassOptions(index: number): ClassOption[] {
+    const classUrl = drafts.value[index]?.classUrl;
+
+    return filterClassOptionsBySources(
+      classUrl ? (loadedClasses.value[classUrl]?.subclassOptions ?? []) : [],
+      selectedSourceIds.value,
+    );
+  }
+
+  /**
+   * Подкласс, выбранный в мастере для класса шага.
+   *
+   * @param index номер шага.
+   * @returns URL подкласса; null — выбора не было.
+   */
+  function selectedSubclassUrl(index: number): string | null {
+    const classUrl = drafts.value[index]?.classUrl;
+
+    return classUrl ? (selectedSubclasses.value[classUrl] ?? null) : null;
+  }
+
+  /**
    * Выбор подкласса на его шаге: догружает деталь, после чего шаги пересобирают
    * умения подкласса. Выборы, чьи умения исчезли вместе с прежним подклассом,
    * снимаются.
    *
+   * @param index номер шага.
    * @param subclassUrl URL выбранного подкласса.
    */
-  async function selectSubclass(subclassUrl: string): Promise<void> {
-    if (selectedSubclassUrl.value === subclassUrl) {
+  async function selectSubclass(
+    index: number,
+    subclassUrl: string,
+  ): Promise<void> {
+    const classUrl = drafts.value[index]?.classUrl;
+
+    const loaded = classUrl ? loadedClasses.value[classUrl] : undefined;
+
+    if (
+      !classUrl
+      || !loaded
+      || selectedSubclasses.value[classUrl] === subclassUrl
+    ) {
       return;
     }
 
@@ -688,8 +808,16 @@ export function useLevelUpWizard(): LevelUpWizard {
         return;
       }
 
-      subclassDetail.value = detail;
-      selectedSubclassUrl.value = subclassUrl;
+      loadedClasses.value = {
+        ...loadedClasses.value,
+        [classUrl]: { ...loaded, subclass: detail },
+      };
+
+      selectedSubclasses.value = {
+        ...selectedSubclasses.value,
+        [classUrl]: subclassUrl,
+      };
+
       pruneSelections();
     } catch (error) {
       consola.error('Ошибка загрузки подкласса:', error);
@@ -834,7 +962,7 @@ export function useLevelUpWizard(): LevelUpWizard {
       return false;
     }
 
-    if (hitDie.value > 0 && draft.gainMode === 'roll' && !draft.roll) {
+    if (step.hitDie > 0 && draft.gainMode === 'roll' && !draft.roll) {
       return false;
     }
 
@@ -854,8 +982,8 @@ export function useLevelUpWizard(): LevelUpWizard {
 
     return !(
       step.isSubclassStep
-      && subclassOptions.value.length > 0
-      && !selectedSubclassUrl.value
+      && subclassOptions(index).length > 0
+      && !selectedSubclassUrl(index)
     );
   }
 
@@ -879,7 +1007,7 @@ export function useLevelUpWizard(): LevelUpWizard {
         .map(([featureId, choice]) => ({
           featureId,
           featUrl: choice.featUrl,
-          level: draft.level,
+          level: draft.classLevel,
         })),
     );
 
@@ -910,22 +1038,20 @@ export function useLevelUpWizard(): LevelUpWizard {
   }
 
   /**
-   * Сборка итога мастера. Умения берутся за взятые уровни; выбранный здесь
-   * подкласс приносит и свои умения более ранних уровней. Выбранные черты
-   * догружаются из справочника, поэтому сборка асинхронна.
+   * Сборка итога мастера. Умения берутся за взятые уровни каждого класса;
+   * выбранный здесь подкласс приносит и свои умения более ранних уровней.
+   * Выбранные черты догружаются из справочника, поэтому сборка асинхронна.
    *
-   * @param level новый уровень персонажа.
    * @param experience суммарный опыт персонажа.
-   * @returns итог для листа; null — деталь класса не загружена либо черту
+   * @returns итог для листа; null — детали классов не загружены либо черту
    *   загрузить не удалось.
    */
   async function buildPayload(
-    level: number,
     experience: number,
   ): Promise<LevelUpPayload | null> {
-    const base = classDetail.value;
+    const loaded = Object.values(loadedClasses.value);
 
-    if (!base) {
+    if (!loaded.length) {
       return null;
     }
 
@@ -964,41 +1090,74 @@ export function useLevelUpWizard(): LevelUpWizard {
       ...featChoiceLabels,
     };
 
-    const levelFeatures = drafts.value.flatMap((draft) =>
-      buildLevelClassFeatures(base, subclassDetail.value, draft.level, choices),
-    );
+    // Новые уровни классов: у каждого — максимальный взятый в мастере уровень.
+    const classLevels: Record<string, number> = {};
 
-    const chosenSubclass =
-      selectedSubclassUrl.value && subclassDetail.value
-        ? {
-            url: selectedSubclassUrl.value,
-            name: subclassDetail.value.name,
-            casterType: getSelectedCasterType(base, subclassDetail.value),
-          }
-        : null;
+    for (const draft of drafts.value) {
+      classLevels[draft.classUrl] = Math.max(
+        classLevels[draft.classUrl] ?? 0,
+        draft.classLevel,
+      );
+    }
 
-    const classFeatures =
-      chosenSubclass && subclassDetail.value
-        ? mergeCharacterFeatures(
-            levelFeatures,
-            buildSubclassFeatures(subclassDetail.value, level, choices),
-          )
-        : levelFeatures;
+    const classPatches: Record<string, LevelUpClassPatch> = {};
+
+    const classFeatures: CharacterFeature[] = [];
+    const classResources: CharacterClassResource[] = [];
+
+    for (const entry of loaded) {
+      const { detail, subclass } = entry;
+
+      const table = [...detail.table, ...(subclass?.table ?? [])];
+
+      const level = classLevels[entry.entry.url] ?? entry.entry.level;
+
+      const levelFeatures = drafts.value
+        .filter((draft) => draft.classUrl === entry.entry.url)
+        .flatMap((draft) =>
+          buildLevelClassFeatures(detail, subclass, draft.classLevel, choices),
+        );
+
+      const chosenSubclassUrl = selectedSubclasses.value[entry.entry.url];
+
+      // Подкласс, выбранный прямо здесь, приносит и умения более ранних уровней.
+      classFeatures.push(
+        ...(chosenSubclassUrl && subclass
+          ? mergeCharacterFeatures(
+              levelFeatures,
+              buildSubclassFeatures(entry.entry.url, subclass, level, choices),
+            )
+          : levelFeatures),
+      );
+
+      classResources.push(
+        ...deriveClassResources(entry.entry.url, table, level),
+      );
+
+      classPatches[entry.entry.url] = {
+        subclass:
+          chosenSubclassUrl && subclass
+            ? {
+                url: chosenSubclassUrl,
+                name: subclass.name,
+                casterType: getSelectedCasterType(detail, subclass),
+              }
+            : null,
+        preparedSpells: derivePreparedSpellsScaling(table),
+        preparedCantrips: deriveCantripsScaling(table),
+      };
+    }
 
     return {
-      level,
       experience,
-      hitPointsGains: steps.value.map((step) => step.hitPointsGain),
+      classLevels,
+      hitPointsGains: steps.value.map((step) => ({
+        classUrl: step.classUrl,
+        amount: step.hitPointsGain,
+      })),
+      classPatches,
       features: [...classFeatures, ...featFeatures],
-      classResources: deriveClassResources(
-        [...base.table, ...(subclassDetail.value?.table ?? [])],
-        level,
-      ),
-      preparedSpells: derivePreparedSpellsScaling([
-        ...base.table,
-        ...(subclassDetail.value?.table ?? []),
-      ]),
-      subclass: chosenSubclass,
+      classResources,
       skills: {
         proficient: [...new Set(proficientSkills)],
         expertise: [...new Set(expertiseSkills)],

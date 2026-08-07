@@ -18,6 +18,7 @@
     getLevelHitPointsGain,
     HIT_POINTS_GAIN_MODE_LABELS,
     isHitPointsGainMode,
+    LEVEL_SHORT_SUFFIX,
     LEVEL_UP_HIT_POINTS_LABELS,
     LEVEL_UP_WIZARD_LABELS,
     SKILL_DUPLICATE_WARNING,
@@ -183,6 +184,23 @@
 
 <template>
   <div class="flex flex-col gap-4">
+    <!-- У мультикласса шаги разных классов идут подряд, поэтому у каждого
+      подписано, чей это уровень -->
+    <div
+      v-if="step.className"
+      class="flex flex-wrap items-baseline gap-x-2 text-sm"
+    >
+      <span class="text-muted"
+        >{{ LEVEL_UP_WIZARD_LABELS.stepClassPrefix }}:</span
+      >
+
+      <span class="font-bold text-highlighted">{{ step.className }}</span>
+
+      <span class="text-xs text-dimmed">
+        {{ step.classLevel }} {{ LEVEL_SHORT_SUFFIX }}
+      </span>
+    </div>
+
     <div
       v-if="isHitPointsVisible"
       class="flex flex-col gap-2"

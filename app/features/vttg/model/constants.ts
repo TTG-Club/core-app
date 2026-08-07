@@ -4,7 +4,8 @@ import type {
   CarouselCard,
   FaqItem,
   FeatureItem,
-  VttgDownloadPlatform,
+  VttgBuildDescriptor,
+  VttgBuildGroup,
   VttgHeading,
   VttgHighlight,
 } from './types';
@@ -15,35 +16,80 @@ export const VTTG_SEO = {
     'VTTG — онлайн-платформа для игры в D&D 5e. Карты, броски кубиков, интеграция с ttg.club.',
 } as const;
 
-/** Эндпоинт последней сборки десктопного VTTG (версия + ссылка на установщик). */
-export const VTTG_DESKTOP_RELEASE_API_PATH = '/api/vttg/desktop/latest';
+/** Эндпоинт сборок VTTG (версия, вес и ссылки по каждой платформе). */
+export const VTTG_BUILDS_API_PATH = '/api/vttg/builds';
 
-/** Ключ useAsyncData последней сборки — общий, чтобы запрос ушёл один на страницу. */
-export const VTTG_DESKTOP_RELEASE_DATA_KEY = 'vttg-desktop-release';
+/** Ключ useAsyncData сборок — общий, чтобы запрос ушёл один на страницу. */
+export const VTTG_BUILDS_DATA_KEY = 'vttg-builds';
+
+/** Тексты блока загрузок: подписи состояний и кнопки повтора запроса. */
+export const VTTG_BUILDS_TEXT = {
+  comingSoon: 'Скоро',
+  loadError: 'Не удалось получить список сборок.',
+  retry: 'Повторить',
+} as const;
+
+/** Группы блока загрузок в порядке отображения. */
+export const VTTG_BUILD_GROUPS: VttgBuildGroup[] = [
+  {
+    id: 'desktop',
+    label: 'Приложение на компьютер',
+    hint: 'Ставится Мастеру, игроки заходят по ссылке в браузере.',
+  },
+  {
+    id: 'server',
+    label: 'Сервер для постоянной игры',
+    hint: 'Работает без Мастера за компьютером — на VDS или в контейнере.',
+  },
+];
 
 /**
- * Платформы, на которых можно запустить VTTG. Готова только сборка под Windows —
- * её версию и ссылку отдаёт канал обновлений. VDS и macOS ещё впереди, поэтому
- * их кнопки выключены с пометкой «скоро».
+ * Сборки VTTG в порядке отображения. Здесь только название и иконка: готова ли
+ * сборка и какой у неё версии — каждый раз решает канал обновлений, поэтому
+ * платформа зажигается сама, как только CI зальёт её манифест.
  */
-export const VTTG_DOWNLOAD_PLATFORMS: VttgDownloadPlatform[] = [
+export const VTTG_BUILDS: VttgBuildDescriptor[] = [
   {
-    id: 'windows',
+    id: 'windows-x64',
+    group: 'desktop',
     name: 'Windows',
     icon: 'tabler:brand-windows',
-    ready: true,
   },
   {
-    id: 'vds',
-    name: 'VDS',
-    icon: 'tabler:server',
-    ready: false,
-  },
-  {
-    id: 'mac',
-    name: 'macOS',
+    id: 'mac-arm64',
+    group: 'desktop',
+    name: 'macOS (Apple Silicon)',
     icon: 'tabler:brand-apple',
-    ready: false,
+  },
+  {
+    id: 'linux-x64',
+    group: 'desktop',
+    name: 'Linux x64',
+    icon: 'tabler:brand-ubuntu',
+  },
+  {
+    id: 'linux-arm64',
+    group: 'desktop',
+    name: 'Linux ARM64',
+    icon: 'tabler:brand-ubuntu',
+  },
+  {
+    id: 'server-linux-x64',
+    group: 'server',
+    name: 'Linux x64',
+    icon: 'tabler:server',
+  },
+  {
+    id: 'server-linux-arm64',
+    group: 'server',
+    name: 'Linux ARM64',
+    icon: 'tabler:server',
+  },
+  {
+    id: 'docker',
+    group: 'server',
+    name: 'Docker',
+    icon: 'tabler:brand-docker',
   },
 ];
 

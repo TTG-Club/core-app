@@ -8,7 +8,11 @@
     ARMOR_CLASS_BASE_MAX,
     ARMOR_CLASS_BASE_MIN,
     ARMOR_CLASS_LABELS,
+    ARMOR_DEX_LIMIT_OPTIONS,
+    ARMOR_DEX_LIMIT_RULE_VALUE,
+    DEFAULT_ARMOR_CLASS_ABILITY,
     getArmorClassBreakdown,
+    getArmorDexCappedLabel,
     getFormattedBonus,
     getUnarmoredArmorClassLabel,
     toSelectedAbilityKeys,
@@ -30,6 +34,8 @@
 
   const draftCustom = ref(character.value.armorClass.custom);
 
+  const draftDexLimit = ref<number | null>(character.value.armorClass.dexLimit);
+
   // Персонаж черновика: и ручной, и автоматический предпросмотр считаются той же
   // утилитой, что и лист, — расхождению правил взяться негде.
   const draftCharacter = computed(() => ({
@@ -38,6 +44,7 @@
       base: draftBase.value,
       abilities: draftAbilities.value,
       natural: draftNatural.value,
+      dexLimit: draftDexLimit.value,
       custom: draftCustom.value,
     },
   }));
@@ -64,9 +71,20 @@
       ?? getUnarmoredArmorClassLabel(draftAbilities.value),
   );
 
-  const dexCappedHint = computed(
+  const dexCappedHint = computed(() => getArmorDexCappedLabel(breakdown.value));
+
+  // Предел режет только бонус Ловкости от доспеха: без Ловкости в характеристиках
+  // и в ручном режиме настройке нечего ограничивать.
+  const showDexLimit = computed(
     () =>
-      `${ARMOR_CLASS_LABELS.dexCappedHint} (${getFormattedBonus(breakdown.value.dexBonus)})`,
+      !draftCustom.value
+      && draftAbilities.value.includes(DEFAULT_ARMOR_CLASS_ABILITY),
+  );
+
+  const dexLimitValue = computed(() =>
+    draftDexLimit.value === null
+      ? ARMOR_DEX_LIMIT_RULE_VALUE
+      : String(draftDexLimit.value),
   );
 
   // В ручном режиме без выбранных характеристик между настройками и итогом
@@ -79,11 +97,20 @@
     draftAbilities.value = toSelectedAbilityKeys(value);
   }
 
+  // Числом в списке заданы только свои пределы, поэтому нечисловое значение —
+  // это вариант «по правилу доспеха» (`null` в записи листа).
+  function handleDexLimit(value: unknown): void {
+    const limit = Number(value);
+
+    draftDexLimit.value = Number.isInteger(limit) ? limit : null;
+  }
+
   function handleApply() {
     setArmorClass({
       base: draftBase.value,
       abilities: draftAbilities.value,
       natural: draftNatural.value,
+      dexLimit: draftDexLimit.value,
       custom: draftCustom.value,
     });
 
@@ -137,6 +164,22 @@
             multiple
             class="w-56"
             @update:model-value="handleAbilities"
+          />
+        </div>
+
+        <div
+          v-if="showDexLimit"
+          class="flex items-center justify-between gap-4"
+        >
+          <span class="text-sm text-toned">
+            {{ ARMOR_CLASS_LABELS.dexLimitTitle }}
+          </span>
+
+          <USelect
+            :model-value="dexLimitValue"
+            :items="ARMOR_DEX_LIMIT_OPTIONS"
+            class="w-56"
+            @update:model-value="handleDexLimit"
           />
         </div>
 

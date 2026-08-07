@@ -248,11 +248,12 @@ function toSpellSlots(
 }
 
 /**
- * Подписи шапки, которым на нашем листе нет полей: мировоззрение, игрок и
- * внешность. Пустые значения пропускаются.
+ * Подписи шапки LSS: мировоззрение, имя игрока и внешность. Ключи остаются
+ * «родными» — раскладывает их по полям листа `convert.ts`. Пустые значения
+ * пропускаются.
  *
  * @param values значения полей по ключам LSS.
- * @returns строки для заметки «О персонаже».
+ * @returns подписи шапки в порядке `LSS_DETAIL_LABELS`.
  */
 function toDetailRows(values: Record<string, string>): LssDetailRow[] {
   const rows: LssDetailRow[] = [];
@@ -261,7 +262,7 @@ function toDetailRows(values: Record<string, string>): LssDetailRow[] {
     const value = values[key]?.trim();
 
     if (value) {
-      rows.push({ label, value });
+      rows.push({ key, label, value });
     }
   }
 

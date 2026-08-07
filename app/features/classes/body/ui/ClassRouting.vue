@@ -57,14 +57,23 @@
   const overlay = useOverlay();
 
   const multiclassDrawer = overlay.create(MulticlassDrawer, {
-    props: {
+    destroyOnClose: true,
+  });
+
+  /**
+   * Пропсы передаются в `open`, а не в `create`: `useOverlay` запоминает
+   * переданные при создании пропсы снимком, а компонент переиспользуется при
+   * inline-навигации между классами (drawer и сплит-панель). Со снимком дровер
+   * открывался бы с классом, который открыли первым.
+   */
+  function openMulticlassDrawer(): void {
+    multiclassDrawer.open({
       url, // URL текущей страницы (подкласса, если есть)
       name,
       parent, // Основной класс, если текущий - подкласс
       onClose: () => multiclassDrawer.close(),
-    },
-    destroyOnClose: true,
-  });
+    });
+  }
 
   const route = useRoute();
   const router = useRouter();
@@ -257,7 +266,7 @@
       variant="soft"
       color="primary"
       size="md"
-      @click.left.exact.prevent.stop="multiclassDrawer.open()"
+      @click.left.exact.prevent.stop="openMulticlassDrawer"
     >
       <div class="flex flex-col items-start leading-tight">
         <span class="text-left text-xs text-secondary"> Создать </span>

@@ -93,15 +93,22 @@
       characterClass: {
         url: buildCustomClassUrl(),
         name,
+        // Свой класс собирается основным и берёт весь уровень персонажа: его
+        // уровень поднимают в окне опыта, как и у каталожного.
+        level: character.value.characterClass?.level ?? character.value.level,
         // Ссылки на раздел у своего подкласса нет: он остаётся только названием
         // в шапке листа.
         subclassUrl: null,
         subclassName: subclassName || null,
         casterType: draftCasterType.value,
         hitDie: draftHitDie.value,
-        // Число подготовленных заклинаний свой класс не считает: таблицы у него
-        // нет, и на вкладке заклинаний оно задаётся вручную.
+        // Названия своего класса в карте заклинательных характеристик нет —
+        // игрок задаёт её на вкладке заклинаний.
+        spellcastingAbility: null,
+        // Число подготовленных заклинаний и заговоров свой класс не считает:
+        // таблицы у него нет, и на вкладке заклинаний оно задаётся вручную.
         preparedSpells: [],
+        preparedCantrips: [],
       },
       savingThrows: draftSavingThrows.value,
       hitDie: draftHitDie.value,
