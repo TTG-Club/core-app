@@ -36,6 +36,7 @@
     SheetAbilityModal,
     SheetArmorClassModal,
     SheetBackgroundWizardModal,
+    SheetCarryingCapacityModal,
     SheetClassResourcesModal,
     SheetClassResourcesPanel,
     SheetClassWizardModal,
@@ -356,6 +357,8 @@
 
   const currencyModal = overlay.create(SheetCurrencyModal);
 
+  const carryingCapacityModal = overlay.create(SheetCarryingCapacityModal);
+
   const proficiencyGroupsModal = overlay.create(SheetProficiencyGroupsModal, {
     props: {
       title: '',
@@ -583,6 +586,14 @@
     }
 
     currencyModal.open();
+  }
+
+  function handleCarryingCapacityEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    carryingCapacityModal.open();
   }
 
   function handleProficienciesEdit(group: ProficiencyGroupKey) {
@@ -1159,6 +1170,7 @@
           @edit-spellcasting="handleSpellcastingEdit"
           @edit-prepared-spells="handlePreparedSpellsEdit"
           @edit-currency="handleCurrencyEdit"
+          @edit-carrying-capacity="handleCarryingCapacityEdit"
           @adjust-item-quantity="adjustInventoryItemQuantity"
           @toggle-item-equip="toggleInventoryItemEquipped"
           @toggle-item-attuned="toggleInventoryItemAttuned"

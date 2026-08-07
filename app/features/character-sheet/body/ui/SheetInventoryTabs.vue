@@ -73,6 +73,7 @@
     'edit-spellcasting': [];
     'edit-prepared-spells': [kind: PreparedSpellKind];
     'edit-currency': [];
+    'edit-carrying-capacity': [];
     'adjust-item-quantity': [inventoryItemId: string, delta: number];
     'toggle-item-equip': [inventoryItemId: string];
     'toggle-item-attuned': [inventoryItemId: string];
@@ -121,6 +122,10 @@
 
   function handleCurrencyEdit() {
     emit('edit-currency');
+  }
+
+  function handleCarryingCapacityEdit() {
+    emit('edit-carrying-capacity');
   }
 
   function handleItemRemove(inventoryItemId: string) {
@@ -896,6 +901,7 @@
             @edit-item="handleItemEdit"
             @copy-item="handleItemCopy"
             @edit-currency="handleCurrencyEdit"
+            @edit-carrying-capacity="handleCarryingCapacityEdit"
             @remove-item="handleItemRemove"
             @adjust-quantity="handleItemQuantityAdjust"
             @toggle-equip="handleItemEquipToggle"

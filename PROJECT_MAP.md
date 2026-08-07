@@ -213,6 +213,18 @@ modals), so its capabilities are listed here rather than squeezed into the table
 - Homebrew equipment added by the same kind of form (weapon / armor / trinket,
   each with its own fields — custom armor is equippable and adds to AC, custom
   weapons roll attack & damage).
+- The carried-weight row of the equipment tab is also the way into its limit
+  (`SheetCarryingCapacityModal`, opened by the row itself — a pencil revealed on
+  hover, like every other edit control of the sheet). By the rules the limit is
+  Strength × 15 with a size correction (`CARRYING_CAPACITY_SIZE_MULTIPLIERS`),
+  and the modal offers three ways to bend it: a flat number instead of the
+  calculation, a bonus in pounds on top of it (a negative one lowers the limit)
+  and a size to count the correction by other than the character's own — that is
+  «Мощное телосложение», carrying as one category larger without being it. All
+  three live in `Character.carryingCapacity`, where `null` / `null` / `0` means
+  «по правилам», so sheets saved before the setting count exactly as they did.
+  The row, the modal preview and the PDF all read
+  `getCarryingCapacityBreakdown`, so the number cannot diverge between them.
 - Catalog rows on the equipment and spells tabs can be copied into the sheet
   from the row action menu. The `custom:` copy keeps quantity, equipped state
   and combat parameters, and pulls the description — for a spell also its

@@ -12,6 +12,7 @@ import type {
   ArmorClassBreakdown,
   ArmorDexterityMod,
   BonusBreakdownPart,
+  CarryingCapacityBreakdown,
   CatalogSpellDetail,
   Character,
   CharacterAbilities,
@@ -153,7 +154,10 @@ import {
   ARMOR_PROFICIENCY_GROUPS,
   CANTRIP_SPELL_LEVEL,
   CANTRIPS_COLUMN_PREFIX,
+  CARRYING_CAPACITY_LABELS,
   CARRYING_CAPACITY_MULTIPLIER,
+  CARRYING_CAPACITY_SIZE_AUTO,
+  CARRYING_CAPACITY_SIZE_LABELS,
   CARRYING_CAPACITY_SIZE_MULTIPLIERS,
   CATALOG_COPY_MENU_LABEL,
   CHARACTER_FILE_NAME_FALLBACK,
@@ -2003,7 +2007,11 @@ function getClampedNumber(value: number, min: number, max: number): number {
  * @param max верхняя граница.
  * @returns целое значение в пределах диапазона.
  */
-function getClampedInteger(value: number, min: number, max: number): number {
+export function getClampedInteger(
+  value: number,
+  min: number,
+  max: number,
+): number {
   return Math.trunc(getClampedNumber(value, min, max));
 }
 
@@ -2297,22 +2305,111 @@ export function getCustomInventoryItemDraft(
 }
 
 /**
+ * Поправка грузоподъёмности на размер. Неизвестный или неуказанный размер
+ * считаем средним — так лист вёл себя до появления поправки.
+ *
+ * @param size подпись размера; null — не указан.
+ * @returns множитель грузоподъёмности.
+ */
+function getCarryingCapacitySizeMultiplier(size: string | null): number {
+  return (
+    CARRYING_CAPACITY_SIZE_MULTIPLIERS[size?.trim().toLowerCase() ?? ''] ?? 1
+  );
+}
+
+/**
  * Грузоподъёмность персонажа: Сила × 15 с поправкой на размер (правила 2024).
- * Неизвестный или неуказанный размер считаем средним — так лист вёл себя до
- * появления поправки.
  *
  * @param strength значение Силы.
  * @param size подпись размера персонажа; null — не указан.
  * @returns грузоподъёмность в фунтах.
  */
-export function getCarryingCapacity(
-  strength: number,
-  size: string | null = null,
-): number {
-  const sizeMultiplier =
-    CARRYING_CAPACITY_SIZE_MULTIPLIERS[size?.trim().toLowerCase() ?? ''] ?? 1;
+function getCarryingCapacity(strength: number, size: string | null): number {
+  return (
+    strength
+    * CARRYING_CAPACITY_MULTIPLIER
+    * getCarryingCapacitySizeMultiplier(size)
+  );
+}
 
-  return strength * CARRYING_CAPACITY_MULTIPLIER * sizeMultiplier;
+/**
+ * Подпись поправки на размер: множитель с русской запятой, чтобы «×0,5»
+ * читалось как в тексте правил.
+ *
+ * @param multiplier множитель грузоподъёмности.
+ * @returns подпись множителя.
+ */
+export function getCarryingCapacityMultiplierLabel(multiplier: number): string {
+  return `×${multiplier.toLocaleString('ru-RU')}`;
+}
+
+/**
+ * Варианты размера для подсчёта грузоподъёмности: размер персонажа и каждая
+ * категория со своей поправкой в подписи — так видно, во сколько раз меняется
+ * предел.
+ *
+ * @param size размер персонажа; null — не указан.
+ * @returns варианты выбора размера для подсчёта.
+ */
+export function getCarryingCapacitySizeOptions(
+  size: string | null,
+): Array<{ label: string; value: string }> {
+  const autoLabel = size
+    ? `${CARRYING_CAPACITY_LABELS.sizeAuto} (${size.toLowerCase()})`
+    : CARRYING_CAPACITY_LABELS.sizeAutoUnknown;
+
+  return [
+    { label: autoLabel, value: CARRYING_CAPACITY_SIZE_AUTO },
+    ...CARRYING_CAPACITY_SIZE_LABELS.map((sizeLabel) => ({
+      label: `${sizeLabel} · ${getCarryingCapacityMultiplierLabel(
+        getCarryingCapacitySizeMultiplier(sizeLabel),
+      )}`,
+      value: sizeLabel,
+    })),
+  ];
+}
+
+/**
+ * Разбор предела переносимого веса: расчёт по правилам (Сила × 15 с поправкой
+ * на размер) либо своё значение листа, а сверху — свой бонус. Ниже нуля предел
+ * не опускается: отрицательный предел не значил бы ничего сверх пустых рук.
+ *
+ * @param character персонаж.
+ * @returns разбор грузоподъёмности для листа и модалки настройки.
+ */
+export function getCarryingCapacityBreakdown(
+  character: Character,
+): CarryingCapacityBreakdown {
+  const { size, custom, bonus } = character.carryingCapacity;
+
+  // Размер для подсчёта задаётся отдельно от размера персонажа: «Мощное
+  // телосложение» считает существо крупнее только для переносимого веса.
+  const capacitySize = size ?? character.size;
+
+  const strength = character.abilities.strength;
+
+  const ruleValue = getCarryingCapacity(strength, capacitySize);
+
+  const base = custom ?? ruleValue;
+
+  return {
+    value: Math.max(0, base + bonus),
+    custom: custom !== null,
+    strength,
+    sizeMultiplier: getCarryingCapacitySizeMultiplier(capacitySize),
+    ruleValue,
+    bonus,
+  };
+}
+
+/**
+ * Предел переносимого веса с учётом настроек листа.
+ *
+ * @param character персонаж.
+ * @returns грузоподъёмность в фунтах.
+ */
+export function getCarryingCapacityValue(character: Character): number {
+  return getCarryingCapacityBreakdown(character).value;
 }
 
 /**

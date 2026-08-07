@@ -7,7 +7,7 @@ import {
   WEIGHT_UNIT_LABEL,
 } from '../constants';
 import {
-  getCarryingCapacity,
+  getCarryingCapacityValue,
   getInventoryGroups,
   getInventoryWeight,
   parseStoredMarkupNodes,
@@ -122,10 +122,7 @@ export function drawEquipmentPage(
 
   const carried = getInventoryWeight(character.inventory, character.currency);
 
-  const capacity = getCarryingCapacity(
-    character.abilities.strength,
-    character.size,
-  );
+  const capacity = getCarryingCapacityValue(character);
 
   const columns = getEquipmentColumns();
 

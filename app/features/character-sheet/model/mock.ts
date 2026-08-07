@@ -217,6 +217,11 @@ export const DEFAULT_CHARACTER: Character = {
   },
   customCurrencies: [],
   inventory: [],
+  carryingCapacity: {
+    size: null,
+    custom: null,
+    bonus: 0,
+  },
   notes: [],
   personality: {
     alignment: '',

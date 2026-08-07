@@ -652,6 +652,16 @@ function toLegacyNotes(notes: string): CharacterNote[] {
   ];
 }
 
+// Настройка грузоподъёмности появилась позже снаряжения: у листов без неё
+// предел считается по правилам от Силы и размера персонажа, без бонуса.
+const carryingCapacitySchema = z
+  .object({
+    size: z.string().nullable().catch(null),
+    custom: z.coerce.number().nullable().catch(null),
+    bonus: z.coerce.number().catch(0),
+  })
+  .catch(() => ({ ...DEFAULT_CHARACTER.carryingCapacity }));
+
 const notesSchema = z
   .union([z.array(noteSchema), z.string()])
   .catch([])
@@ -751,6 +761,7 @@ const characterSchema = z
     currency: currencySchema,
     customCurrencies: z.array(customCurrencySchema).catch([]),
     inventory: z.array(inventoryItemSchema).catch([]),
+    carryingCapacity: carryingCapacitySchema,
     notes: notesSchema,
     personality: personalitySchema,
     settings: settingsSchema,

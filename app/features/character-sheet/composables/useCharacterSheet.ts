@@ -2,6 +2,7 @@ import type {
   AbilityKey,
   Character,
   CharacterArmorClass,
+  CharacterCarryingCapacity,
   CharacterClass,
   CharacterClassResource,
   CharacterCurrency,
@@ -49,6 +50,10 @@ import {
   ARMOR_CLASS_BASE_MIN,
   ARMOR_DEX_LIMIT_MAX,
   ARMOR_DEX_LIMIT_MIN,
+  CARRYING_CAPACITY_BONUS_MAX,
+  CARRYING_CAPACITY_BONUS_MIN,
+  CARRYING_CAPACITY_MAX,
+  CARRYING_CAPACITY_MIN,
   CATALOG_COPY_TOAST_DESCRIPTION,
   CURRENCY_AMOUNT_MAX,
   CURRENCY_AMOUNT_MIN,
@@ -64,8 +69,9 @@ import {
   fetchInventoryItemDescription,
   getAbilityRows,
   getArmorClassValue,
-  getCarryingCapacity,
+  getCarryingCapacityValue,
   getCharacterProficiencyBonus,
+  getClampedInteger,
   getClassLevelHitPoints,
   getEffectiveSpeed,
   getFormattedBonus,
@@ -328,10 +334,7 @@ export function useCharacterSheet() {
   );
 
   const carryingCapacity = computed(() =>
-    getCarryingCapacity(
-      character.value.abilities.strength,
-      character.value.size,
-    ),
+    getCarryingCapacityValue(character.value),
   );
 
   /**
@@ -617,6 +620,40 @@ export function useCharacterSheet() {
                 ARMOR_DEX_LIMIT_MIN,
                 ARMOR_DEX_LIMIT_MAX,
               ),
+      },
+    };
+  }
+
+  /**
+   * Установка настройки грузоподъёмности с ограничением своего значения и
+   * бонуса.
+   *
+   * @param capacity новая настройка предела переносимого веса.
+   */
+  function setCarryingCapacity(capacity: CharacterCarryingCapacity): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    // Числа приходят из полей модалки, поэтому клампятся общей утилитой форм:
+    // очищенное поле отдаёт NaN, и без подстраховки он ушёл бы в документ.
+    character.value = {
+      ...character.value,
+      carryingCapacity: {
+        size: capacity.size,
+        custom:
+          capacity.custom === null
+            ? null
+            : getClampedInteger(
+                capacity.custom,
+                CARRYING_CAPACITY_MIN,
+                CARRYING_CAPACITY_MAX,
+              ),
+        bonus: getClampedInteger(
+          capacity.bonus,
+          CARRYING_CAPACITY_BONUS_MIN,
+          CARRYING_CAPACITY_BONUS_MAX,
+        ),
       },
     };
   }
@@ -2546,6 +2583,7 @@ export function useCharacterSheet() {
     carryingCapacity,
     setAbilityScore,
     setArmorClass,
+    setCarryingCapacity,
     setAvatar,
     setClassResources,
     adjustClassResource,
