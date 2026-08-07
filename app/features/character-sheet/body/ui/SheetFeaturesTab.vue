@@ -301,9 +301,14 @@
               {{ feature.name }}
             </span>
 
+            <!-- Выбор умения бывает списком через запятую (несколько навыков,
+              языков, черт), поэтому в строке он ужимается многоточием и занимает
+              не больше половины ширины: несжимаемым он выезжал за карточку и
+              ложился поверх кнопок правки. Целиком выбор читается в раскрытом
+              описании ниже. -->
             <span
               v-if="feature.choice"
-              class="shrink-0 text-xs text-primary"
+              class="max-w-1/2 min-w-0 truncate text-xs text-primary"
             >
               {{ feature.choice }}
             </span>
@@ -357,28 +362,32 @@
           v-if="feature.isExpanded"
           class="flex flex-col gap-2 border-t border-default/50 px-3 py-2"
         >
+          <!-- Строки источника и выбора переносятся: длинный список выбора
+            иначе тянул бы раскрытый блок за края карточки -->
           <div
             v-if="feature.originName"
-            class="flex items-baseline gap-1 text-xs"
+            class="flex flex-wrap items-baseline gap-x-1 text-xs"
           >
             <span class="text-muted">
               {{ SHEET_FEATURE_ROW_LABELS.origin }}
             </span>
 
-            <span class="font-medium text-default">
+            <span class="min-w-0 font-medium wrap-break-word text-default">
               {{ feature.originName }}
             </span>
           </div>
 
           <div
             v-if="feature.choice"
-            class="flex items-baseline gap-1 text-xs"
+            class="flex flex-wrap items-baseline gap-x-1 text-xs"
           >
             <span class="text-muted">
               {{ SHEET_FEATURE_ROW_LABELS.choice }}
             </span>
 
-            <span class="font-medium text-primary">{{ feature.choice }}</span>
+            <span class="min-w-0 font-medium wrap-break-word text-primary">
+              {{ feature.choice }}
+            </span>
           </div>
 
           <MarkupRender
