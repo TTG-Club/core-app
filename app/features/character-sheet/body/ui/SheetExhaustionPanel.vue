@@ -9,6 +9,7 @@
     EXHAUSTION_RULES,
     getExhaustionEffects,
     getExhaustionSummary,
+    SHEET_TITLE_ACTION_CLASS,
   } from '../../model';
   import SheetPanel from './SheetPanel.vue';
 
@@ -87,22 +88,25 @@
 </script>
 
 <template>
-  <SheetPanel :title="EXHAUSTION_LABELS.title">
+  <SheetPanel
+    :title="EXHAUSTION_LABELS.title"
+    persistent-actions
+  >
     <template #title-actions>
       <UPopover :ui="{ content: 'max-w-80 p-3' }">
-        <!-- Кнопка справки повторяет шестерёнку соседних панелей: подложка
-          `bg-default` разрывает под собой обводку рамки. Клик вешает сам
-          поповер — своего обработчика у неё нет -->
+        <!-- Кнопка справки повторяет шестерёнку соседних панелей, но видна
+          всегда: подсказку по правилам искать наведением незачем. Клик вешает
+          сам поповер — своего обработчика у неё нет -->
         <button
           type="button"
-          class="cursor-pointer rounded-full bg-default p-0.5"
+          :class="SHEET_TITLE_ACTION_CLASS"
           :aria-label="EXHAUSTION_LABELS.rulesTitle"
         >
-          <!-- Залитый значок, а не контурный: буква вырезана из заливки и
-            читается за счёт подложки кнопки, поэтому «i» видно даже в 3.5 -->
+          <!-- Залитый значок, а не контурный: у контурного на 3.5 буква «i»
+            сливается с обводкой кружка -->
           <UIcon
             name="tabler:info-circle-filled"
-            class="size-3.5 text-muted transition-colors hover:text-primary"
+            class="size-3.5"
           />
         </button>
 

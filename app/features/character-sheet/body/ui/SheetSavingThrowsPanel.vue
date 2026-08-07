@@ -4,8 +4,9 @@
   import { useCharacterSheet } from '../../composables';
   import {
     SAVING_THROW_PROFICIENCY_ICONS,
-    SHEET_REVEAL_CONTROL_CLASS,
     SHEET_SAVING_THROW_SETTINGS_LABELS,
+    SHEET_TITLE_ACTION_CLASS,
+    SHEET_TITLE_ACTION_REVEAL_CLASS,
   } from '../../model';
   import SheetPanel from './SheetPanel.vue';
 
@@ -35,21 +36,21 @@
 </script>
 
 <template>
-  <SheetPanel
-    title="Спасброски"
-    class="group"
-  >
+  <SheetPanel title="Спасброски">
     <template #title-actions>
       <button
         type="button"
-        class="cursor-pointer rounded-full bg-default p-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-        :class="[SHEET_REVEAL_CONTROL_CLASS, editControlClass]"
+        :class="[
+          SHEET_TITLE_ACTION_CLASS,
+          SHEET_TITLE_ACTION_REVEAL_CLASS,
+          editControlClass,
+        ]"
         :aria-label="SHEET_SAVING_THROW_SETTINGS_LABELS.open"
         @click.left.exact.prevent="emit('settings')"
       >
         <UIcon
           name="tabler:settings"
-          class="size-3.5 text-muted transition-colors hover:text-primary"
+          class="size-3.5"
         />
       </button>
     </template>

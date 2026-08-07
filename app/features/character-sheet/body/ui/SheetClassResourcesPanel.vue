@@ -5,7 +5,8 @@
   import {
     getResourceRecoveryBadges,
     SHEET_EMPTY_LABELS,
-    SHEET_REVEAL_CONTROL_CLASS,
+    SHEET_TITLE_ACTION_CLASS,
+    SHEET_TITLE_ACTION_REVEAL_CLASS,
   } from '../../model';
   import SheetPanel from './SheetPanel.vue';
 
@@ -72,19 +73,21 @@
   <SheetPanel
     ref="panel"
     title="Ресурсы класса"
-    class="group"
   >
     <template #title-actions>
       <button
         type="button"
-        class="cursor-pointer rounded-full bg-default p-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-        :class="[SHEET_REVEAL_CONTROL_CLASS, editControlClass]"
+        :class="[
+          SHEET_TITLE_ACTION_CLASS,
+          SHEET_TITLE_ACTION_REVEAL_CLASS,
+          editControlClass,
+        ]"
         aria-label="Настроить ресурсы класса"
         @click.left.exact.prevent="handleEditClick"
       >
         <UIcon
           name="tabler:settings"
-          class="size-3.5 text-muted transition-colors hover:text-primary"
+          class="size-3.5"
         />
       </button>
     </template>

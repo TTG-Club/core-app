@@ -213,6 +213,23 @@ export const SHEET_HIDDEN_CONTROL_CLASS = 'invisible';
 export const SHEET_REVEAL_CONTROL_CLASS = 'max-lg:opacity-100';
 
 /**
+ * Кнопка действия в заголовке панели (шестерёнка настроек, карандаш правки,
+ * справка). Значок в цвете акцента и без подложки: кнопка стоит в потоке
+ * легенды, обводку рамки под ней разрывает сама легенда, а приглушённый серый
+ * на 14 пикселях терялся — значок должен бросаться в глаза.
+ */
+export const SHEET_TITLE_ACTION_CLASS =
+  'flex cursor-pointer items-center text-primary transition-colors hover:text-highlighted';
+
+/**
+ * Действие заголовка, которое проявляет наведение на панель: ниже `lg` (1024px)
+ * оно видно всегда — тот же порог, что и у {@link SHEET_REVEAL_CONTROL_CLASS}.
+ * Прозрачность гасит значок, пока колонка действий ещё разъезжается
+ * (см. `SheetPanel`).
+ */
+export const SHEET_TITLE_ACTION_REVEAL_CLASS = `opacity-0 transition-opacity duration-200 group-hover/panel:opacity-100 focus-visible:opacity-100 ${SHEET_REVEAL_CONTROL_CLASS}`;
+
+/**
  * Плитка-кнопка в шапке вкладки листа (заклинательство, подготовленные
  * заклинания, переносимый вес): открывает настройку своего значения. Класс
  * общий, чтобы шапки вкладок выглядели одинаково — плитка узнаётся по рамке и

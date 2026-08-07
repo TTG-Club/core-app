@@ -13,7 +13,8 @@
     parseStoredMarkupNodes,
     SHEET_EMPTY_LABELS,
     SHEET_PERSONALITY_LABELS,
-    SHEET_REVEAL_CONTROL_CLASS,
+    SHEET_TITLE_ACTION_CLASS,
+    SHEET_TITLE_ACTION_REVEAL_CLASS,
   } from '../../model';
   import SheetPanel from './SheetPanel.vue';
 
@@ -116,21 +117,21 @@
 
 <template>
   <div class="flex flex-col gap-3 pt-2">
-    <SheetPanel
-      :title="SHEET_PERSONALITY_LABELS.appearanceTitle"
-      class="group/appearance"
-    >
+    <SheetPanel :title="SHEET_PERSONALITY_LABELS.appearanceTitle">
       <template #title-actions>
         <button
           type="button"
-          class="cursor-pointer rounded-full bg-default p-0.5 opacity-0 transition-opacity group-hover/appearance:opacity-100 focus-visible:opacity-100"
-          :class="[SHEET_REVEAL_CONTROL_CLASS, editControlClass]"
+          :class="[
+            SHEET_TITLE_ACTION_CLASS,
+            SHEET_TITLE_ACTION_REVEAL_CLASS,
+            editControlClass,
+          ]"
           :aria-label="SHEET_PERSONALITY_LABELS.editAppearance"
           @click.left.exact.prevent="handleAppearanceEdit"
         >
           <UIcon
             name="tabler:pencil"
-            class="size-3.5 text-muted transition-colors hover:text-primary"
+            class="size-3.5"
           />
         </button>
       </template>
@@ -169,21 +170,21 @@
       </div>
     </SheetPanel>
 
-    <SheetPanel
-      :title="SHEET_PERSONALITY_LABELS.backgroundTitle"
-      class="group/background"
-    >
+    <SheetPanel :title="SHEET_PERSONALITY_LABELS.backgroundTitle">
       <template #title-actions>
         <button
           type="button"
-          class="cursor-pointer rounded-full bg-default p-0.5 opacity-0 transition-opacity group-hover/background:opacity-100 focus-visible:opacity-100"
-          :class="[SHEET_REVEAL_CONTROL_CLASS, editControlClass]"
+          :class="[
+            SHEET_TITLE_ACTION_CLASS,
+            SHEET_TITLE_ACTION_REVEAL_CLASS,
+            editControlClass,
+          ]"
           :aria-label="SHEET_PERSONALITY_LABELS.backgroundChange"
           @click.left.exact.prevent="handleBackgroundEdit"
         >
           <UIcon
             name="tabler:pencil"
-            class="size-3.5 text-muted transition-colors hover:text-primary"
+            class="size-3.5"
           />
         </button>
       </template>
@@ -256,21 +257,21 @@
       </div>
     </SheetPanel>
 
-    <SheetPanel
-      :title="SHEET_PERSONALITY_LABELS.descriptionTitle"
-      class="group/description"
-    >
+    <SheetPanel :title="SHEET_PERSONALITY_LABELS.descriptionTitle">
       <template #title-actions>
         <button
           type="button"
-          class="cursor-pointer rounded-full bg-default p-0.5 opacity-0 transition-opacity group-hover/description:opacity-100 focus-visible:opacity-100"
-          :class="[SHEET_REVEAL_CONTROL_CLASS, editControlClass]"
+          :class="[
+            SHEET_TITLE_ACTION_CLASS,
+            SHEET_TITLE_ACTION_REVEAL_CLASS,
+            editControlClass,
+          ]"
           :aria-label="SHEET_PERSONALITY_LABELS.editDescription"
           @click.left.exact.prevent="handleDescriptionEdit"
         >
           <UIcon
             name="tabler:pencil"
-            class="size-3.5 text-muted transition-colors hover:text-primary"
+            class="size-3.5"
           />
         </button>
       </template>
