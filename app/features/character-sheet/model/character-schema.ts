@@ -1,12 +1,14 @@
 import type {
   AbilityKey,
   Character,
+  CharacterClass,
   CharacterCustomBonus,
   CharacterNote,
   CharacterSavingThrow,
   CharacterSheetDetail,
   CharacterSheetListItem,
   CharacterSheetListPage,
+  CharacterSpellcasting,
   FeatureDescriptionNode,
   ResourceRecovery,
   ResourceRecoveryMode,
@@ -15,16 +17,22 @@ import type {
   SavedCharacterSheetListPage,
 } from './types';
 
+import { clamp } from 'es-toolkit';
+
 import { z } from '~/utils/zod';
 import { CasterType } from '~classes/model';
 
 import {
+  CLASS_FEATURE_ID_PREFIX,
+  CLASS_RESOURCE_ID_PREFIX,
   DRAFT_CHARACTER_ID,
   EXHAUSTION_LEVEL_MAX,
   EXHAUSTION_LEVEL_MIN,
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
   LEGACY_NOTE_ID,
+  LEVEL_MAX,
+  LEVEL_MIN,
   NEW_CUSTOM_BONUS,
   RESOURCE_RECOVERY_AMOUNT_MIN,
   SHEET_NOTE_LABELS,
@@ -105,25 +113,36 @@ const classScalingSchema = z
   )
   .catch([]);
 
-const characterClassSchema = z
-  .object({
-    url: z.string(),
-    name: z.string().catch(''),
-    subclassUrl: z.string().nullable().catch(null),
-    subclassName: z.string().nullable().catch(null),
-    // Листы, сохранённые до появления поля, приходят без типа заклинательства:
-    // для них он определяется по названию класса (см. `getClassCasterType`).
-    casterType: z.nativeEnum(CasterType).nullable().catch(null),
-    hitDie: z.coerce.number().catch(8),
-    // Листы, сохранённые до появления поля, приходят без прогрессии
-    // подготовленных заклинаний: она запишется при следующем выборе класса
-    // или повышении уровня. То же и с прогрессией заговоров.
-    preparedSpells: classScalingSchema,
-    preparedCantrips: classScalingSchema,
-    startingEquipment: grantedStartingEquipmentSchema,
-  })
-  .nullable()
-  .catch(null);
+const classEntrySchema = z.object({
+  url: z.string(),
+  name: z.string().catch(''),
+  // Листы, сохранённые до мультикласса, уровня в классе не имеют: 0 — метка
+  // «неизвестен», нормализация ниже выводит его из общего уровня персонажа.
+  level: z.coerce.number().catch(0),
+  subclassUrl: z.string().nullable().catch(null),
+  subclassName: z.string().nullable().catch(null),
+  // Листы, сохранённые до появления поля, приходят без типа заклинательства:
+  // для них он определяется по названию класса (см. `getClassCasterType`).
+  casterType: z.nativeEnum(CasterType).nullable().catch(null),
+  hitDie: z.coerce.number().catch(8),
+  // Листы до мультикласса хранили заклинательную характеристику одну на весь
+  // лист (`spellcasting.ability`) — нормализация переносит её в основной класс.
+  spellcastingAbility: abilityKeySchema.nullable().catch(null),
+  // Листы, сохранённые до появления поля, приходят без прогрессии
+  // подготовленных заклинаний: она запишется при следующем выборе класса
+  // или повышении уровня. То же и с прогрессией заговоров.
+  preparedSpells: classScalingSchema,
+  preparedCantrips: classScalingSchema,
+  startingEquipment: grantedStartingEquipmentSchema,
+});
+
+const characterClassSchema = classEntrySchema.nullable().catch(null);
+
+// Битая запись выпадает поодиночке (null отфильтровывается нормализацией):
+// один испорченный класс не должен уносить весь мультикласс.
+const additionalClassesSchema = z
+  .array(classEntrySchema.nullable().catch(null))
+  .catch([]);
 
 const characterBackgroundSchema = z
   .object({
@@ -191,6 +210,9 @@ const speciesSchema = z
 const spellSlotSchema = z.object({
   level: z.coerce.number(),
   used: z.coerce.number().catch(0),
+  // Листы до мультикласса ячеек договора отдельно не хранили: у них все траты
+  // обычные (у чистого колдуна обычные ячейки и есть договор).
+  kind: z.enum(['standard', 'pact']).catch('standard'),
 });
 
 /** Настройка числа подготовленных: одна и та же у заклинаний и заговоров. */
@@ -200,10 +222,11 @@ const preparedSpellsSettingSchema = z.object({
 });
 
 // По умолчанию — авто (легаси-листы без поля заклинательства): характеристика
-// определяется по классу.
+// определяется по классу. Поле `ability` — легаси: до мультикласса оно было
+// одно на весь лист, теперь живёт у класса и снимается нормализацией.
 const spellcastingSchema = z
   .object({
-    ability: abilityKeySchema.nullable().catch(null),
+    ability: abilityKeySchema.nullable().optional().catch(undefined),
     // Настройка подготовленных заклинаний появилась позже: у листов без неё
     // число считается по таблице класса без бонуса. Настройка заговоров
     // появилась ещё позже и ведёт себя так же.
@@ -451,6 +474,9 @@ const skillSchema = z.object({
 const levelHitPointsSchema = z.object({
   level: z.coerce.number(),
   amount: z.coerce.number().catch(0),
+  // Листы до мультикласса класс прироста не отмечали: нормализация приписывает
+  // такие записи основному классу — до второго класса они все его и были.
+  classUrl: z.string().nullable().catch(null),
 });
 
 const healthSchema = z
@@ -765,6 +791,148 @@ const inventoryItemSchema = z.object({
   description: z.array(descriptionNodeSchema).optional().catch(undefined),
 });
 
+/**
+ * Форма листа сразу после разбора схемой: классы могут быть без уровня, среди
+ * дополнительных попадаются выпавшие записи, а заклинательная характеристика
+ * ещё лежит легаси-полем на всём листе.
+ */
+type ParsedCharacter = Omit<Character, 'additionalClasses' | 'spellcasting'> & {
+  additionalClasses: (CharacterClass | null)[];
+  spellcasting: CharacterSpellcasting & { ability?: AbilityKey | null };
+};
+
+/**
+ * Идентификатор с url класса вместо прежнего сквозного. Ключи умений и названия
+ * колонок в справочнике повторяются между классами, поэтому в мультиклассе они
+ * разнесены по классам; листы, сохранённые до этого, разносятся здесь.
+ *
+ * @param id идентификатор умения или ресурса.
+ * @param prefix начало идентификаторов этого вида.
+ * @param classUrls url всех классов листа.
+ * @param primaryClassUrl url основного класса — ему достаются легаси-записи.
+ * @returns идентификатор с url класса.
+ */
+function toScopedClassId(
+  id: string,
+  prefix: string,
+  classUrls: Set<string>,
+  primaryClassUrl: string,
+): string {
+  if (!id.startsWith(prefix)) {
+    return id;
+  }
+
+  const rest = id.slice(prefix.length);
+
+  const [firstSegment = ''] = rest.split(':');
+
+  // Идентификатор уже разнесён по классам — второй раз url не приписываем.
+  return classUrls.has(firstSegment)
+    ? id
+    : `${prefix}${primaryClassUrl}:${rest}`;
+}
+
+/**
+ * Приведение листа к мультиклассовой форме: классы получают свои уровни, общий
+ * уровень становится их суммой, легаси-идентификаторы умений и ресурсов
+ * разносятся по классам, а заклинательная характеристика листа переезжает в
+ * основной класс.
+ *
+ * @param character лист сразу после разбора схемой.
+ * @returns лист в нынешней форме.
+ */
+function normalizeCharacterClasses(character: ParsedCharacter): Character {
+  const { ability: legacySpellcastingAbility, ...spellcasting } =
+    character.spellcasting;
+
+  // Дубли по url схлопываются: один класс дважды — это битый документ, а не
+  // мультикласс (уровни в одном классе не складываются).
+  const seenUrls = new Set<string>();
+
+  const parsedClasses = [
+    character.characterClass,
+    ...character.additionalClasses,
+  ].filter((entry): entry is CharacterClass => {
+    if (!entry || seenUrls.has(entry.url)) {
+      return false;
+    }
+
+    seenUrls.add(entry.url);
+
+    return true;
+  });
+
+  const [primary, ...additional] = parsedClasses;
+
+  if (!primary) {
+    return {
+      ...character,
+      spellcasting,
+      characterClass: null,
+      additionalClasses: [],
+      level: clamp(Math.trunc(character.level), LEVEL_MIN, LEVEL_MAX),
+    };
+  }
+
+  // Уровень дополнительного класса без значения — единица: раньше их не было
+  // вовсе, а битую запись честнее считать одним уровнем, чем нулём.
+  const normalizedAdditional = additional.map((entry) => ({
+    ...entry,
+    level: clamp(Math.trunc(entry.level) || 1, LEVEL_MIN, LEVEL_MAX),
+  }));
+
+  const additionalLevels = normalizedAdditional.reduce(
+    (sum, entry) => sum + entry.level,
+    0,
+  );
+
+  // Лист до мультикласса уровня в классе не хранил: весь общий уровень был
+  // уровнем единственного класса, поэтому дополнительные из него вычитаются.
+  const primaryLevel = clamp(
+    Math.trunc(primary.level) || Math.trunc(character.level) - additionalLevels,
+    LEVEL_MIN,
+    LEVEL_MAX,
+  );
+
+  const classUrls = new Set(parsedClasses.map((entry) => entry.url));
+
+  const scopeFeatureId = (id: string) =>
+    toScopedClassId(id, CLASS_FEATURE_ID_PREFIX, classUrls, primary.url);
+
+  return {
+    ...character,
+    spellcasting,
+    characterClass: {
+      ...primary,
+      level: primaryLevel,
+      spellcastingAbility:
+        primary.spellcastingAbility ?? legacySpellcastingAbility ?? null,
+    },
+    additionalClasses: normalizedAdditional,
+    level: clamp(primaryLevel + additionalLevels, LEVEL_MIN, LEVEL_MAX),
+    features: character.features.map((feature) => ({
+      ...feature,
+      id: scopeFeatureId(feature.id),
+    })),
+    classResources: character.classResources.map((resource) => ({
+      ...resource,
+      id: toScopedClassId(
+        resource.id,
+        CLASS_RESOURCE_ID_PREFIX,
+        classUrls,
+        primary.url,
+      ),
+    })),
+    health: {
+      ...character.health,
+      levelGains: character.health.levelGains.map((gain) => ({
+        ...gain,
+        classUrl: gain.classUrl ?? primary.url,
+      })),
+    },
+  };
+}
+
 /** Схема персонажа целиком (jsonb-документ листа). */
 const characterSchema = z
   .object({
@@ -778,6 +946,7 @@ const characterSchema = z
     spellcasting: spellcastingSchema,
     spellSlots: z.array(spellSlotSchema).catch([]),
     characterClass: characterClassSchema,
+    additionalClasses: additionalClassesSchema,
     characterBackground: characterBackgroundSchema,
     level: z.coerce.number().catch(DEFAULT_CHARACTER.level),
     experience: experienceSchema,
@@ -813,11 +982,14 @@ const characterSchema = z
     settings: settingsSchema,
   })
   // Легаси-список владений спасбросками уходит из документа, как только тот
-  // разобран: дальше по листу ходят только сами записи спасбросков.
-  .transform(({ savingThrowProficiencies, savingThrows, ...character }) => ({
-    ...character,
-    savingThrows: toSavingThrows(savingThrows, savingThrowProficiencies),
-  }));
+  // разобран: дальше по листу ходят только сами записи спасбросков. Тем же
+  // проходом лист приводится к мультиклассовой форме.
+  .transform(({ savingThrowProficiencies, savingThrows, ...character }) =>
+    normalizeCharacterClasses({
+      ...character,
+      savingThrows: toSavingThrows(savingThrows, savingThrowProficiencies),
+    }),
+  );
 
 /**
  * Валидация и нормализация документа персонажа. Идентификатором персонажа

@@ -351,8 +351,10 @@ function toSpellSlots(
     }
   }
 
+  // Импортируемый лист остаётся одноклассовым, поэтому все траты обычные:
+  // у чистого колдуна его ячейки и есть Магия договора.
   return [...usedByLevel.entries()]
-    .map(([level, used]) => ({ level, used }))
+    .map(([level, used]) => ({ level, used, kind: 'standard' as const }))
     .sort((left, right) => left.level - right.level);
 }
 
@@ -671,10 +673,14 @@ export function convertLssCharacter(source: LssCharacter): Character {
     ? {
         url: buildCustomClassUrl(),
         name: source.className,
+        // Мультикласс LSS не размечает — весь уровень персонажа идёт классу.
+        level,
         subclassUrl: null,
         subclassName: source.subclassName || null,
         casterType: detectCasterType(source, level),
         hitDie: source.hitDice.die || LSS_DEFAULT_HIT_DIE,
+        spellcastingAbility:
+          LSS_ABILITY_KEYS[source.spellcastingAbility] ?? null,
         // Таблицы прогрессии у своего класса нет: число подготовленных
         // заклинаний и заговоров задаётся на вкладке заклинаний вручную.
         preparedSpells: [],
@@ -712,6 +718,7 @@ export function convertLssCharacter(source: LssCharacter): Character {
     species,
     size: LSS_SIZE_LABELS[source.size] ?? null,
     characterClass,
+    additionalClasses: [],
     characterBackground,
     level,
     experience: {
@@ -784,10 +791,8 @@ export function convertLssCharacter(source: LssCharacter): Character {
       tools: toToolProficiencies(source.texts),
     },
     currency: toCurrency(source.coins),
-    spellcasting: {
-      ...structuredClone(DEFAULT_CHARACTER.spellcasting),
-      ability: LSS_ABILITY_KEYS[source.spellcastingAbility] ?? null,
-    },
+    // Заклинательная характеристика живёт при классе — она попала туда выше.
+    spellcasting: structuredClone(DEFAULT_CHARACTER.spellcasting),
     spellSlots: toSpellSlots(source.spellSlots, source.pactSpellSlots),
     features: toFeatures(source.texts),
     notes: toNotes(source),

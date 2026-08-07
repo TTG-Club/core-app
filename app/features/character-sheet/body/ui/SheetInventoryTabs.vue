@@ -13,6 +13,7 @@
     SheetTabSlot,
     SpellcastingBreakdown,
     SpellDamageRoll,
+    SpellSlotKind,
     SpellSlotRow,
   } from '../../model';
 
@@ -70,7 +71,7 @@
     'add-custom-spell': [];
     'edit-spell': [spellUrl: string];
     'copy-spell': [spellUrl: string];
-    'edit-spellcasting': [];
+    'edit-spellcasting': [classUrl: string];
     'edit-prepared-spells': [kind: PreparedSpellKind];
     'edit-currency': [];
     'edit-carrying-capacity': [];
@@ -97,7 +98,7 @@
     'remove-innate-spell': [spellUrl: string];
     'roll-spell-damage': [roll: SpellDamageRoll];
     'toggle-spell-prepared': [spellUrl: string];
-    'toggle-spell-slot': [level: number, index: number];
+    'toggle-spell-slot': [level: number, index: number, kind: SpellSlotKind];
   }>();
 
   function handleItemAdd() {
@@ -184,8 +185,8 @@
     emit('copy-spell', spellUrl);
   }
 
-  function handleSpellcastingEdit() {
-    emit('edit-spellcasting');
+  function handleSpellcastingEdit(classUrl: string) {
+    emit('edit-spellcasting', classUrl);
   }
 
   function handlePreparedSpellsEdit(kind: PreparedSpellKind) {
@@ -212,8 +213,12 @@
     emit('toggle-spell-prepared', spellUrl);
   }
 
-  function handleSpellSlotToggle(level: number, index: number) {
-    emit('toggle-spell-slot', level, index);
+  function handleSpellSlotToggle(
+    level: number,
+    index: number,
+    kind: SpellSlotKind,
+  ) {
+    emit('toggle-spell-slot', level, index, kind);
   }
 
   function handleFeatureAdd() {

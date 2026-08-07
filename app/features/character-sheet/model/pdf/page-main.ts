@@ -27,7 +27,7 @@ import {
   getAbilityRows,
   getArmorClassValue,
   getCharacterProficiencyBonus,
-  getClassDisplayName,
+  getClassesDisplayLabel,
   getEffectiveSpeed,
   getExhaustionEffects,
   getFormattedBonus,
@@ -202,7 +202,7 @@ function drawMainHeader(
     : SHEET_EMPTY_LABELS.species;
 
   const characterClass = character.characterClass
-    ? `${getClassDisplayName(character.characterClass)} ${character.level}`
+    ? getClassesDisplayLabel(character)
     : SHEET_EMPTY_LABELS.className;
 
   const background =

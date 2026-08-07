@@ -10,7 +10,7 @@
   import {
     CHARACTER_SHEET_SHARED_ROUTE,
     downloadCharacterJson,
-    getClassDisplayName,
+    getClassesDisplayLabel,
     getDisplayLevel,
     getSavedSheetActionMenuItems,
     getSpeciesDisplayName,
@@ -64,7 +64,7 @@
 
   const classLabel = computed(() =>
     sheet.data?.characterClass
-      ? getClassDisplayName(sheet.data.characterClass)
+      ? getClassesDisplayLabel(sheet.data)
       : SHEET_EMPTY_LABELS.className,
   );
 

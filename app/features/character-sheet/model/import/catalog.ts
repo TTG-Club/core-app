@@ -257,11 +257,13 @@ async function resolveClass(
   return {
     url: option.url,
     name: option.name,
+    level: fallback.level,
     subclassUrl: subclass?.option.url ?? null,
     // Подкласс, которого нет в каталоге, остаётся названием из файла.
     subclassName: subclass?.option.name ?? fallback.subclassName,
     casterType: getSelectedCasterType(detail, subclass?.detail ?? null),
     hitDie: detail.hitDie || fallback.hitDie,
+    spellcastingAbility: fallback.spellcastingAbility,
     preparedSpells: derivePreparedSpellsScaling([
       ...detail.table,
       ...(subclass?.detail?.table ?? []),

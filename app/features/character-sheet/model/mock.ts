@@ -15,12 +15,12 @@ export const DEFAULT_CHARACTER: Character = {
   features: [],
   spells: [],
   spellcasting: {
-    ability: null,
     prepared: { custom: null, bonus: 0 },
     preparedCantrips: { custom: null, bonus: 0 },
   },
   spellSlots: [],
   characterClass: null,
+  additionalClasses: [],
   characterBackground: null,
   level: 1,
   experience: { current: 0, nextLevel: 300 },

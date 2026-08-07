@@ -5,6 +5,7 @@
     PreparedSpellKind,
     SpellcastingBreakdown,
     SpellDamageRoll,
+    SpellSlotKind,
     SpellSlotRow,
     SpellTabFilter,
   } from '../../model';
@@ -34,6 +35,7 @@
     INNATE_SPELL_GROUP_LEVEL,
     isCustomSpell,
     matchesSpellFilter,
+    PACT_SPELL_SLOTS_ROW_LABEL,
     PREPARED_KIND_LABELS,
     PREPARED_KINDS,
     PREPARED_SPELL_TOGGLE_LABELS,
@@ -115,14 +117,14 @@
     'add-custom-spell': [];
     'edit-spell': [spellUrl: string];
     'copy-spell': [spellUrl: string];
-    'edit-spellcasting': [];
+    'edit-spellcasting': [classUrl: string];
     'edit-prepared-spells': [kind: PreparedSpellKind];
     'remove-spell': [spellUrl: string];
     'copy-innate-spell': [spellUrl: string];
     'remove-innate-spell': [spellUrl: string];
     'roll-spell-damage': [roll: SpellDamageRoll];
     'toggle-spell-prepared': [spellUrl: string];
-    'toggle-spell-slot': [level: number, index: number];
+    'toggle-spell-slot': [level: number, index: number, kind: SpellSlotKind];
   }>();
 
   // Пополнение книги, правка и удаление заклинаний меняют лист: без прав кнопки
@@ -141,8 +143,38 @@
     onAddCustomSpell: () => emit('add-custom-spell'),
   });
 
-  const formattedAttackBonus = computed(() =>
-    getFormattedBonus(props.spellcasting.attackBonus),
+  /**
+   * Цвет кружка ячейки: ячейки договора колдуна отличаются от обычных — они
+   * возвращаются коротким отдыхом, и путать их нельзя.
+   *
+   * @param used ячейка потрачена.
+   * @param kind вид ячеек.
+   * @returns классы кружка.
+   */
+  function getSlotCircleClass(used: boolean, kind: SpellSlotKind): string {
+    if (kind === 'pact') {
+      return used
+        ? 'border-secondary bg-secondary'
+        : 'border-secondary/50 hover:border-secondary';
+    }
+
+    return used
+      ? 'border-primary bg-primary'
+      : 'border-default hover:border-primary';
+  }
+
+  /**
+   * Заклинательство по классам: у мультикласса характеристика своя у каждого,
+   * поэтому Сл спасброска и бонус атаки идут отдельными плитками. Подпись
+   * класса появляется только у мультикласса — одному классу она ни к чему.
+   */
+  const spellcastingStats = computed(() =>
+    props.spellcasting.rows.map((row) => ({
+      classUrl: row.classUrl,
+      className: props.spellcasting.rows.length > 1 ? row.className : '',
+      saveDc: row.saveDc,
+      attackBonus: getFormattedBonus(row.attackBonus),
+    })),
   );
 
   /**
@@ -216,9 +248,17 @@
     expandedUrls.value.add(spellUrl);
   }
 
-  const slotRowByLevel = computed(
-    () => new Map(props.spellSlots.map((row) => [row.level, row])),
-  );
+  // На круг бывает два ряда: обычные ячейки и ячейки договора колдуна — у
+  // мультикласса они существуют порознь и возвращаются разным отдыхом.
+  const slotRowsByLevel = computed(() => {
+    const rowsByLevel = new Map<number, SpellSlotRow[]>();
+
+    for (const row of props.spellSlots) {
+      rowsByLevel.set(row.level, [...(rowsByLevel.get(row.level) ?? []), row]);
+    }
+
+    return rowsByLevel;
+  });
 
   /** Отмечен чип «Подготовленные». */
   const isPreparedOnlyPicked = ref(false);
@@ -462,24 +502,29 @@
       : regularGroups;
 
     return groups.map((group) => {
-      const slotRow = group.innate
-        ? undefined
-        : slotRowByLevel.value.get(group.level);
+      const slotRows = group.innate
+        ? []
+        : (slotRowsByLevel.value.get(group.level) ?? []);
 
       return {
         ...group,
         // Кружки ячеек живут в разделителе круга: у заговоров ячеек нет, у
-        // класса-незаклинателя их нет ни у одного круга.
-        circles: slotRow
-          ? getSpellSlotCircles(slotRow).map((circle) => ({
-              ...circle,
-              level: slotRow.level,
-              circleClass: circle.used
-                ? 'border-primary bg-primary'
-                : 'border-default hover:border-primary',
-            }))
-          : [],
-        slotsLabel: slotRow ? getSpellSlotSummary(slotRow) : '',
+        // класса-незаклинателя их нет ни у одного круга. Ячейки договора идут
+        // отдельной группой со своей подписью и цветом.
+        slotGroups: slotRows.map((slotRow) => ({
+          kind: slotRow.kind,
+          label:
+            slotRow.kind === 'pact'
+              ? PACT_SPELL_SLOTS_ROW_LABEL
+              : SPELL_SLOTS_LABEL,
+          summary: getSpellSlotSummary(slotRow),
+          circles: getSpellSlotCircles(slotRow).map((circle) => ({
+            ...circle,
+            level: slotRow.level,
+            kind: slotRow.kind,
+            circleClass: getSlotCircleClass(circle.used, slotRow.kind),
+          })),
+        })),
         spells: group.spells.map((spell) => {
           const isCustom = isCustomSpell(spell);
           const isExpanded = isCustom && expandedUrls.value.has(spell.url);
@@ -543,7 +588,8 @@
 
   type DisplaySpell = (typeof displayGroups.value)[number]['spells'][number];
 
-  type DisplayCircle = (typeof displayGroups.value)[number]['circles'][number];
+  type DisplayCircle =
+    (typeof displayGroups.value)[number]['slotGroups'][number]['circles'][number];
 
   type DisplayDamageStat = DisplaySpell['damageStats'][number];
 
@@ -554,7 +600,7 @@
 
   /** Нажатие на кружок ячейки: трата до него включительно либо возврат. */
   function handleSlotToggle(circle: DisplayCircle) {
-    emit('toggle-spell-slot', circle.level, circle.index);
+    emit('toggle-spell-slot', circle.level, circle.index, circle.kind);
   }
 
   /** Нажатие на значок заклинания: пометка подготовленным либо снятие пометки. */
@@ -588,12 +634,23 @@
       окна — лист бывает узким и на широком экране (дровер, правая панель) -->
     <div class="@container flex flex-wrap items-center justify-between gap-2">
       <div class="flex flex-wrap items-center gap-2">
+        <!-- У мультикласса заклинательство считается по каждому классу
+          отдельно: своя характеристика — свои Сл и бонус атаки -->
         <button
+          v-for="stat in spellcastingStats"
+          :key="stat.classUrl"
           type="button"
           :class="HEADER_STAT_CLASS"
           aria-label="Настроить заклинательство"
-          @click.left.exact.prevent="emit('edit-spellcasting')"
+          @click.left.exact.prevent="emit('edit-spellcasting', stat.classUrl)"
         >
+          <span
+            v-if="stat.className"
+            class="max-w-24 truncate text-[10px] font-bold tracking-wider text-muted uppercase"
+          >
+            {{ stat.className }}
+          </span>
+
           <!-- Подписи чисел в плитке короткие, чтобы ряд помещался на узком
             листе; полное название показывает подсказка по наведению -->
           <UTooltip :text="SPELLCASTING_STAT_LABELS.saveDc.full">
@@ -605,7 +662,7 @@
               </span>
 
               <span class="text-sm font-bold text-highlighted">
-                {{ spellcasting.saveDc }}
+                {{ stat.saveDc }}
               </span>
             </span>
           </UTooltip>
@@ -621,7 +678,7 @@
               </span>
 
               <span class="text-sm font-bold text-highlighted">
-                {{ formattedAttackBonus }}
+                {{ stat.attackBonus }}
               </span>
             </span>
           </UTooltip>
@@ -769,19 +826,20 @@
             закрашенные потрачены, пустые остались. Нажатие тратит ячейки по
             кружок включительно, повторное — возвращает их -->
           <UTooltip
-            v-if="group.circles.length"
-            :text="group.slotsLabel"
+            v-for="slotGroup in group.slotGroups"
+            :key="slotGroup.kind"
+            :text="slotGroup.summary"
           >
             <div class="flex shrink-0 items-center gap-1.5">
               <span
                 class="text-[10px] font-bold tracking-wider text-muted uppercase"
               >
-                {{ SPELL_SLOTS_LABEL }}
+                {{ slotGroup.label }}
               </span>
 
               <span class="flex items-center gap-1">
                 <button
-                  v-for="circle in group.circles"
+                  v-for="circle in slotGroup.circles"
                   :key="circle.index"
                   type="button"
                   class="relative size-3.5 cursor-pointer rounded-full border transition-colors after:absolute after:-inset-1"

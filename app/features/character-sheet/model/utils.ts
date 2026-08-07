@@ -36,6 +36,7 @@ import type {
   CharacterSpeed,
   CharacterSpell,
   CharacterSpellGroup,
+  CharacterSpellSlot,
   CharacterToolProficiency,
   CharacterVision,
   ChoiceOptionContext,
@@ -79,6 +80,7 @@ import type {
   InventoryWeapon,
   InventoryWeaponDamage,
   ItemSummary,
+  LevelUpHitPointsGain,
   MagicItemCatalogGroup,
   MagicItemCatalogGrouping,
   MagicItemCatalogItem,
@@ -103,9 +105,11 @@ import type {
   SpeedTypeKey,
   SpeedUnit,
   SpellcastingBreakdown,
+  SpellcastingClassRow,
   SpellCatalogPreset,
   SpellDamage,
   SpellSlotCircle,
+  SpellSlotKind,
   SpellSlotRow,
   SpellTabFilter,
   StartingEquipmentGrant,
@@ -167,8 +171,11 @@ import {
   CATALOG_COPY_MENU_LABEL,
   CHARACTER_FILE_NAME_FALLBACK,
   CLASS_FEAT_CHOICE_ID_SEGMENTS,
+  CLASS_FEATURE_ID_PREFIX,
+  CLASS_RESOURCE_ID_PREFIX,
   CLASS_SPELL_PROGRESSIONS,
   CLASS_SPELLCASTING_ABILITIES,
+  CLASSES_LABEL_SEPARATOR,
   COINS_PER_WEIGHT_UNIT,
   CURRENCY_AMOUNT_MAX,
   CURRENCY_AMOUNT_MIN,
@@ -241,14 +248,18 @@ import {
   ITEM_SPEED_BONUS_MAX,
   ITEM_SPEED_BONUS_MIN,
   ITEMS_DETAIL_BASE_PATH,
+  LEVEL_MAX,
   LEVEL_MIN,
   LEVEL_XP_THRESHOLDS,
   MAGIC_ITEM_ARTIFACT_COST_LABEL,
   MAGIC_ITEM_CATALOG_EMPTY_GROUP_LABELS,
   MAGIC_ITEM_RARITY_COSTS,
   MAGIC_ITEMS_DETAIL_BASE_PATH,
+  MULTICLASS_ABILITY_REQUIREMENT,
+  MULTICLASS_REQUIREMENT_WARNING_PREFIX,
   NEW_CUSTOM_INVENTORY_ITEM,
   ORIGIN_FEAT_CATEGORY,
+  PACT_SPELL_SLOT_LABEL,
   PACT_SPELL_SLOTS_LABEL,
   PASSIVE_SKILL_BASE,
   PERSONALITY_EMPTY_VALUE,
@@ -3906,22 +3917,29 @@ export function getLevelHitPointsGain(
  * кости, каждый следующий — её среднее значение; модификатор Телосложения
  * прибавляется на каждом уровне (правило D&D 2024).
  *
+ * @param classUrl URL класса, которому принадлежит прирост.
  * @param die номинал кости хитов класса.
- * @param level уровень персонажа.
+ * @param level уровень персонажа В ЭТОМ классе.
  * @param modifier модификатор Телосложения.
+ * @param isFirstClass класс взят первым (максимум кости на первом уровне даёт
+ *   только он; второй класс мультикласса получает среднее и на своём первом
+ *   уровне — правило D&D 2024).
  * @returns прирост максимума хитов по уровням.
  */
 export function getClassLevelHitPoints(
+  classUrl: string,
   die: number,
   level: number,
   modifier: number,
+  isFirstClass = true,
 ): CharacterLevelHitPoints[] {
   const levels = Math.max(0, Math.trunc(level));
 
   return Array.from({ length: levels }, (_, index) => ({
     level: index + 1,
+    classUrl,
     amount:
-      index === 0
+      index === 0 && isFirstClass
         ? getLevelHitPointsGain(die, modifier)
         : getLevelHitPointsGain(getHitDieAverage(die), modifier),
   }));
@@ -3940,7 +3958,9 @@ export function getClassMaxHitPoints(
   level: number,
   modifier: number,
 ): number {
-  return getTotalLevelHitPoints(getClassLevelHitPoints(die, level, modifier));
+  return getTotalLevelHitPoints(
+    getClassLevelHitPoints('', die, level, modifier),
+  );
 }
 
 /**
@@ -3954,31 +3974,27 @@ function getTotalLevelHitPoints(gains: CharacterLevelHitPoints[]): number {
 }
 
 /**
- * Учёт хитов за взятые уровни: прирост записывается по уровням, максимум и
- * текущие хиты растут на его сумму. Записи уровней с теми же номерами
- * заменяются — уровень мог быть взят заново после понижения.
+ * Учёт хитов за взятые уровни: прирост дописывается записями, максимум и
+ * текущие хиты растут на его сумму. Номер уровня в записи — общий уровень
+ * персонажа после взятия, класс — чей это уровень.
  *
  * @param health здоровье персонажа.
- * @param previousLevel уровень до повышения.
+ * @param previousLevel общий уровень до повышения.
  * @param gains прирост максимума хитов за каждый взятый уровень по порядку.
  * @returns новое здоровье персонажа.
  */
-function applyLevelHitPoints(
+export function applyLevelHitPoints(
   health: CharacterHealth,
   previousLevel: number,
-  gains: number[],
+  gains: LevelUpHitPointsGain[],
 ): CharacterHealth {
-  const addedGains = gains.map((amount, index) => ({
+  const addedGains = gains.map((gain, index) => ({
     level: previousLevel + index + 1,
-    amount: Math.max(0, Math.trunc(amount)),
+    classUrl: gain.classUrl,
+    amount: Math.max(0, Math.trunc(gain.amount)),
   }));
 
-  const addedLevels = new Set(addedGains.map((gain) => gain.level));
-
-  const levelGains = [
-    ...health.levelGains.filter((gain) => !addedLevels.has(gain.level)),
-    ...addedGains,
-  ].sort((left, right) => left.level - right.level);
+  const levelGains = [...health.levelGains, ...addedGains];
 
   const total = getTotalLevelHitPoints(addedGains);
 
@@ -3993,42 +4009,74 @@ function applyLevelHitPoints(
 }
 
 /**
- * Сколько максимума хитов дали уровни выше указанного — столько вернёт
- * снижение уровня.
+ * Записи прироста, которые заберёт снижение уровней классов: у каждого класса
+ * снимаются последние по счёту записи — ровно столько, на сколько падает его
+ * уровень. Номер уровня в записи — общий уровень персонажа, поэтому у
+ * мультикласса отбор идёт по классу и порядку, а не по номеру.
+ *
+ * @param levelGains записи прироста максимума хитов.
+ * @param removedByClass сколько уровней снимается у каждого класса.
+ * @returns снимаемые записи прироста.
+ */
+function getRemovedLevelGains(
+  levelGains: CharacterLevelHitPoints[],
+  removedByClass: Record<string, number>,
+): Set<CharacterLevelHitPoints> {
+  const removed = new Set<CharacterLevelHitPoints>();
+
+  for (const [classUrl, count] of Object.entries(removedByClass)) {
+    if (count <= 0) {
+      continue;
+    }
+
+    const classGains = levelGains.filter((gain) => gain.classUrl === classUrl);
+
+    for (const gain of classGains.slice(-count)) {
+      removed.add(gain);
+    }
+  }
+
+  return removed;
+}
+
+/**
+ * Сколько максимума хитов вернёт снижение уровней классов.
  *
  * @param health здоровье персонажа.
- * @param level новый уровень персонажа.
+ * @param removedByClass сколько уровней снимается у каждого класса.
  * @returns прирост, записанный за снимаемые уровни.
  */
 export function getLevelHitPointsLoss(
   health: CharacterHealth,
-  level: number,
+  removedByClass: Record<string, number>,
 ): number {
-  return getTotalLevelHitPoints(
-    health.levelGains.filter((gain) => gain.level > level),
-  );
+  return getTotalLevelHitPoints([
+    ...getRemovedLevelGains(health.levelGains, removedByClass),
+  ]);
 }
 
 /**
- * Снятие хитов за уровни выше нового: максимум уменьшается на записанный за них
- * прирост, записи этих уровней удаляются, текущие хиты обрезаются новым
- * максимумом. Уровни без записи максимум не двигают.
+ * Снятие хитов за снимаемые уровни классов: максимум уменьшается на записанный
+ * за них прирост, записи удаляются, текущие хиты обрезаются новым максимумом.
+ * Уровни без записи максимум не двигают.
  *
  * @param health здоровье персонажа.
- * @param level новый уровень персонажа.
+ * @param removedByClass сколько уровней снимается у каждого класса.
  * @returns новое здоровье персонажа.
  */
-function removeLevelHitPoints(
+export function removeLevelHitPoints(
   health: CharacterHealth,
-  level: number,
+  removedByClass: Record<string, number>,
 ): CharacterHealth {
-  const levelGains = health.levelGains.filter((gain) => gain.level <= level);
+  const removed = getRemovedLevelGains(health.levelGains, removedByClass);
 
-  const loss = getLevelHitPointsLoss(health, level);
-
-  if (loss === 0) {
-    return { ...health, levelGains };
+  if (!removed.size) {
+    return health;
   }
+
+  const levelGains = health.levelGains.filter((gain) => !removed.has(gain));
+
+  const loss = getTotalLevelHitPoints([...removed]);
 
   const max = Math.max(0, health.max - loss);
 
@@ -4038,34 +4086,6 @@ function removeLevelHitPoints(
     current: clamp(health.current, 0, max),
     levelGains,
   };
-}
-
-/**
- * Пересчёт здоровья при смене уровня: взятые уровни дописывают прирост в
- * максимум и текущие хиты, снятые — возвращают записанный за них прирост.
- * Уровень без изменений здоровье не трогает.
- *
- * @param health здоровье персонажа.
- * @param previousLevel уровень до смены.
- * @param nextLevel новый уровень персонажа.
- * @param gains прирост максимума хитов за каждый взятый уровень по порядку.
- * @returns новое здоровье персонажа.
- */
-export function adjustHealthForLevel(
-  health: CharacterHealth,
-  previousLevel: number,
-  nextLevel: number,
-  gains: number[],
-): CharacterHealth {
-  if (nextLevel > previousLevel) {
-    return applyLevelHitPoints(health, previousLevel, gains);
-  }
-
-  if (nextLevel < previousLevel) {
-    return removeLevelHitPoints(health, nextLevel);
-  }
-
-  return health;
 }
 
 /**
@@ -4978,8 +4998,11 @@ export function getClassSpellcastingAbility(
     return null;
   }
 
+  // Заданная игроком характеристика класса перекрывает карту по названию: у
+  // своего класса названия в карте нет вовсе.
   return (
-    CLASS_SPELLCASTING_ABILITIES[normalizeCatalogName(characterClass.name)]
+    characterClass.spellcastingAbility
+    ?? CLASS_SPELLCASTING_ABILITIES[normalizeCatalogName(characterClass.name)]
     ?? null
   );
 }
@@ -5109,37 +5132,176 @@ function getSpellSlotMaximums(casterType: CasterType, level: number): number[] {
 }
 
 /**
- * Ряды ячеек заклинаний персонажа: максимум круга считается по классу и уровню,
- * трата берётся с листа и обрезается по максимуму (уровень мог измениться после
- * траты). Круги без ячеек в результат не входят.
+ * Новые уровни классов с клампом и без превышения общего максимума: лишние
+ * уровни срезаются у последних классов, чтобы сумма влезла в 20 (правило D&D).
  *
- * @param character персонаж.
- * @returns ряды ячеек по возрастанию круга.
+ * @param classes классы персонажа.
+ * @param levels желаемые уровни по URL класса; класса без записи не трогает.
+ * @returns уровни классов по URL.
  */
-export function getSpellSlotRows(character: Character): SpellSlotRow[] {
-  const casterType = getClassCasterType(character.characterClass);
+export function getClampedClassLevels(
+  classes: CharacterClass[],
+  levels: Record<string, number>,
+): Record<string, number> {
+  const result: Record<string, number> = {};
 
-  if (!casterType) {
-    return [];
+  let remaining = LEVEL_MAX;
+
+  for (const characterClass of classes) {
+    const requested = clamp(
+      Math.trunc(levels[characterClass.url] ?? characterClass.level),
+      LEVEL_MIN,
+      LEVEL_MAX,
+    );
+
+    const level = clamp(requested, LEVEL_MIN, Math.max(LEVEL_MIN, remaining));
+
+    result[characterClass.url] = level;
+    remaining -= level;
   }
 
+  return result;
+}
+
+/**
+ * Уровень заклинателя мультикласса (правило D&D 2024): полные заклинатели дают
+ * весь свой уровень, половинные (паладин, следопыт) — половину с округлением
+ * ВВЕРХ, треть-заклинатели (мистический рыцарь, мистический ловкач) — треть с
+ * округлением ВНИЗ. Округление разное не по недосмотру: таблицы прогрессии 2024
+ * ложатся именно так (паладин 5 = заклинатель 3, ловкач 5 = заклинатель 1).
+ * Колдун в счёт не идёт: его Магия договора существует отдельно от общих ячеек.
+ *
+ * Сверено с `spellcastingLevel` из `POST /api/v2/multiclass` по 170 сочетаниям
+ * классов PHB.
+ *
+ * @param classes классы персонажа.
+ * @returns уровень для таблицы ячеек мультикласса; 0 — ячеек нет.
+ */
+export function getMulticlassSpellcastingLevel(
+  classes: CharacterClass[],
+): number {
+  return classes.reduce((total, characterClass) => {
+    const casterType = getClassCasterType(characterClass);
+
+    const level = Math.max(0, Math.trunc(characterClass.level));
+
+    if (casterType === CasterType.FULL) {
+      return total + level;
+    }
+
+    if (casterType === CasterType.HALF) {
+      return total + Math.ceil(level / 2);
+    }
+
+    if (casterType === CasterType.THIRD) {
+      return total + Math.floor(level / 3);
+    }
+
+    return total;
+  }, 0);
+}
+
+/**
+ * Суммарный уровень колдуна: по нему считаются ячейки договора. У мультикласса
+ * они существуют отдельно от общих — и по количеству, и по отдыху.
+ *
+ * @param classes классы персонажа.
+ * @returns уровень для таблиц договора; 0 — колдуна среди классов нет.
+ */
+export function getPactCasterLevel(classes: CharacterClass[]): number {
+  return classes.reduce(
+    (total, characterClass) =>
+      getClassCasterType(characterClass) === CasterType.PACT
+        ? total + Math.max(0, Math.trunc(characterClass.level))
+        : total,
+    0,
+  );
+}
+
+/**
+ * Ряды ячеек одного вида: максимум по таблице, трата берётся с листа и
+ * обрезается по максимуму (уровень мог измениться после траты). Круги без ячеек
+ * в результат не входят.
+ *
+ * @param maximums количество ячеек по кругам (индекс — круг минус 1).
+ * @param kind вид ячеек: обычные либо договор колдуна.
+ * @param spellSlots траты с листа.
+ * @returns ряды ячеек по возрастанию круга.
+ */
+function toSpellSlotRows(
+  maximums: number[],
+  kind: SpellSlotKind,
+  spellSlots: CharacterSpellSlot[],
+): SpellSlotRow[] {
   // Ячейки договора колдуна возвращаются коротким отдыхом, обычные — только
   // продолжительным.
   const recovery: ResourceRecovery =
-    casterType === CasterType.PACT ? 'short-rest' : 'long-rest';
+    kind === 'pact' ? 'short-rest' : 'long-rest';
 
   const usedByLevel = new Map(
-    character.spellSlots.map((slot) => [slot.level, slot.used]),
+    spellSlots
+      .filter((slot) => slot.kind === kind)
+      .map((slot) => [slot.level, slot.used]),
   );
 
-  return getSpellSlotMaximums(casterType, character.level)
+  return maximums
     .map((max, index) => ({
       level: index + 1,
       max,
       used: clamp(usedByLevel.get(index + 1) ?? 0, 0, max),
       recovery,
+      kind,
     }))
     .filter((row) => row.max > 0);
+}
+
+/**
+ * Ряды ячеек заклинаний персонажа. Один класс считается по своей таблице
+ * (у колдуна это сразу ячейки договора), мультикласс — по таблице
+ * мультиклассового заклинателя, а уровни колдуна дают отдельные ряды договора
+ * сверх неё (правило D&D 2024).
+ *
+ * @param character персонаж.
+ * @returns ряды ячеек: сперва обычные по возрастанию круга, затем договор.
+ */
+export function getSpellSlotRows(character: Character): SpellSlotRow[] {
+  const classes = getCharacterClasses(character);
+
+  if (classes.length <= 1) {
+    const casterType = getClassCasterType(classes[0] ?? null);
+
+    if (!casterType) {
+      return [];
+    }
+
+    // Единственный колдун — весь его запас и есть договор: считается по своей
+    // таблице, а не по мультиклассовой.
+    const kind: SpellSlotKind =
+      casterType === CasterType.PACT ? 'pact' : 'standard';
+
+    return toSpellSlotRows(
+      getSpellSlotMaximums(casterType, character.level),
+      kind,
+      character.spellSlots,
+    );
+  }
+
+  const standardRows = toSpellSlotRows(
+    getSpellSlotMaximums(
+      CasterType.MULTICLASS,
+      getMulticlassSpellcastingLevel(classes),
+    ),
+    'standard',
+    character.spellSlots,
+  );
+
+  const pactRows = toSpellSlotRows(
+    getSpellSlotMaximums(CasterType.PACT, getPactCasterLevel(classes)),
+    'pact',
+    character.spellSlots,
+  );
+
+  return [...standardRows, ...pactRows];
 }
 
 /**
@@ -5150,13 +5312,15 @@ export function getSpellSlotRows(character: Character): SpellSlotRow[] {
  * @returns кружки по порядку с подписями для скринридера.
  */
 export function getSpellSlotCircles(row: SpellSlotRow): SpellSlotCircle[] {
+  const kindLabel = row.kind === 'pact' ? ` ${PACT_SPELL_SLOT_LABEL}` : '';
+
   return Array.from({ length: row.max }, (_slot, index) => {
     const used = index < row.used;
 
     return {
       index,
       used,
-      label: `${getSpellLevelLabel(row.level)}, ячейка ${index + 1}: ${
+      label: `${getSpellLevelLabel(row.level)}, ячейка${kindLabel} ${index + 1}: ${
         used ? SPELL_SLOT_USED_LABEL : SPELL_SLOT_FREE_LABEL
       }`,
     };
@@ -5172,7 +5336,9 @@ export function getSpellSlotCircles(row: SpellSlotRow): SpellSlotCircle[] {
 export function getSpellSlotSummary(row: SpellSlotRow): string {
   const free = row.max - row.used;
 
-  return `Свободно ячеек: ${free} из ${row.max} · ${RESOURCE_RECOVERY_LABELS[row.recovery]}`;
+  const kindLabel = row.kind === 'pact' ? ` ${PACT_SPELL_SLOT_LABEL}` : '';
+
+  return `Свободно ячеек${kindLabel}: ${free} из ${row.max} · ${RESOURCE_RECOVERY_LABELS[row.recovery]}`;
 }
 
 /**
@@ -5351,11 +5517,22 @@ export function getPreparedSpellsBreakdown(
     ? character.spellcasting.preparedCantrips
     : character.spellcasting.prepared;
 
-  const scaling = isCantrips
-    ? character.characterClass?.preparedCantrips
-    : character.characterClass?.preparedSpells;
+  // У мультикласса каждый класс готовит по своей таблице и своему уровню в нём,
+  // поэтому числа складываются. Классы без колонки подготовки в сумму не входят
+  // — иначе плитка показала бы число, которого таблицы не дают.
+  const classValue = getCharacterClasses(character).reduce<number | null>(
+    (total, characterClass) => {
+      const value = getPreparedSpellsAtLevel(
+        isCantrips
+          ? characterClass.preparedCantrips
+          : characterClass.preparedSpells,
+        characterClass.level,
+      );
 
-  const classValue = getPreparedSpellsAtLevel(scaling ?? [], character.level);
+      return value === null ? total : (total ?? 0) + value;
+    },
+    null,
+  );
 
   // Класс подготовку не считает: бонус прибавлять не к чему, число остаётся
   // неопределённым, пока игрок не задаст своё.
@@ -5471,6 +5648,63 @@ export function getPreparedSpellsLimitDescription(
 }
 
 /**
+ * Заклинательство каждого класса персонажа: по правилам 2024 у мультикласса
+ * характеристика своя у каждого класса, поэтому Сл спасброска и бонус атаки
+ * считаются порознь. Классы-незаклинатели в строки не попадают — им нечего
+ * показывать; исключение — единственный класс листа: без строки блок
+ * заклинательства исчез бы вовсе, а игрок мог захотеть задать характеристику
+ * вручную.
+ *
+ * @param character персонаж.
+ * @returns строки заклинательства по классам.
+ */
+export function getSpellcastingRows(
+  character: Character,
+): SpellcastingClassRow[] {
+  const classes = getCharacterClasses(character);
+
+  const proficiencyBonus = getCharacterProficiencyBonus(character);
+
+  // Жезл боевого мага и прочая магия прибавляют к заклинательству, пока предмет
+  // надет (и настроен, если он этого требует). Предмет один на персонажа,
+  // поэтому его прибавка идёт каждому классу.
+  const itemSaveDcBonus = getInventoryBonusValue(character, 'spell-save-dc');
+  const itemAttackBonus = getInventoryBonusValue(character, 'spell-attack');
+
+  const d20Penalty = getExhaustionD20Penalty(character);
+
+  return classes
+    .filter(
+      (characterClass) =>
+        classes.length === 1 || getClassCasterType(characterClass) !== null,
+    )
+    .map((characterClass) => {
+      const ability = getClassSpellcastingAbility(characterClass);
+
+      const abilityModifier = ability
+        ? getAbilityModifier(character, ability)
+        : 0;
+
+      return {
+        classUrl: characterClass.url,
+        className: characterClass.name,
+        ability,
+        auto: characterClass.spellcastingAbility === null,
+        abilityModifier,
+        saveDc:
+          SPELL_SAVE_DC_BASE
+          + proficiencyBonus
+          + abilityModifier
+          + itemSaveDcBonus,
+        // Сложность спасброска — не бросок к20, истощение её не трогает, а вот
+        // атака заклинанием — бросок.
+        attackBonus:
+          proficiencyBonus + abilityModifier + itemAttackBonus - d20Penalty,
+      };
+    });
+}
+
+/**
  * Разбор заклинательства: сложность спасброска от заклинаний и бонус на
  * попадание атакой заклинанием. Заклинательная характеристика — заданная
  * вручную либо (при null) определяемая по классу. Если характеристика не
@@ -5479,41 +5713,38 @@ export function getPreparedSpellsLimitDescription(
  * Сложность спасброска — `8 + бонус мастерства + модификатор характеристики`;
  * бонус атаки — `бонус мастерства + модификатор характеристики` (D&D 2024).
  *
+ * Числа верхнего уровня (`saveDc`, `attackBonus`) — у первого класса-заклинателя:
+ * ими пользуются PDF и подсказки, где строка одна. Полный разбор мультикласса —
+ * в `rows`.
+ *
  * @param character персонаж.
  * @returns разбор заклинательства для вкладки и модалки настройки.
  */
 export function getSpellcastingBreakdown(
   character: Character,
 ): SpellcastingBreakdown {
-  const explicitAbility = character.spellcasting.ability;
-  const auto = explicitAbility === null;
-
-  const ability =
-    explicitAbility ?? getClassSpellcastingAbility(character.characterClass);
-
-  const abilityModifier = ability ? getAbilityModifier(character, ability) : 0;
+  const rows = getSpellcastingRows(character);
 
   const proficiencyBonus = getCharacterProficiencyBonus(character);
 
-  // Жезл боевого мага и прочая магия прибавляют к заклинательству, пока предмет
-  // надет (и настроен, если он этого требует).
-  const itemSaveDcBonus = getInventoryBonusValue(character, 'spell-save-dc');
-  const itemAttackBonus = getInventoryBonusValue(character, 'spell-attack');
+  const [primaryRow] = rows;
 
   return {
-    ability,
-    auto,
-    abilityModifier,
+    ability: primaryRow?.ability ?? null,
+    auto: primaryRow?.auto ?? true,
+    abilityModifier: primaryRow?.abilityModifier ?? 0,
     proficiencyBonus,
     saveDc:
-      SPELL_SAVE_DC_BASE + proficiencyBonus + abilityModifier + itemSaveDcBonus,
-    // Сложность спасброска — не бросок к20, истощение её не трогает, а вот
-    // атака заклинанием — бросок.
+      primaryRow?.saveDc
+      ?? SPELL_SAVE_DC_BASE
+        + proficiencyBonus
+        + getInventoryBonusValue(character, 'spell-save-dc'),
     attackBonus:
-      proficiencyBonus
-      + abilityModifier
-      + itemAttackBonus
-      - getExhaustionD20Penalty(character),
+      primaryRow?.attackBonus
+      ?? proficiencyBonus
+        + getInventoryBonusValue(character, 'spell-attack')
+        - getExhaustionD20Penalty(character),
+    rows,
     prepared: getPreparedSpellsBreakdown(character, 'spells'),
     preparedCantrips: getPreparedSpellsBreakdown(character, 'cantrips'),
   };
@@ -5639,6 +5870,88 @@ export function getCharacterFeatureId(
   featureUrl: string,
 ): string {
   return `${origin}:${featureUrl}`;
+}
+
+/**
+ * Начало идентификаторов классовых умений одного класса. Ключи умений в
+ * справочнике НЕ уникальны между классами (`ispolzovanie-zaklinanij` есть и у
+ * паладина, и у волшебника), поэтому в мультиклассе они разнесены по url класса.
+ *
+ * @param classUrl URL класса.
+ * @returns префикс идентификаторов умений класса.
+ */
+export function getClassFeatureIdPrefix(classUrl: string): string {
+  return `${CLASS_FEATURE_ID_PREFIX}${classUrl}:`;
+}
+
+/**
+ * Идентификатор классового умения.
+ *
+ * @param classUrl URL класса, который даёт умение.
+ * @param featureKey ключ умения из справочника.
+ * @returns устойчивый идентификатор умения на листе.
+ */
+export function getClassFeatureId(
+  classUrl: string,
+  featureKey: string,
+): string {
+  return `${getClassFeatureIdPrefix(classUrl)}${featureKey}`;
+}
+
+/**
+ * Начало идентификаторов производных ресурсов одного класса. Названия колонок
+ * таблиц тоже повторяются между классами («Подг. закл.»), поэтому и они
+ * разнесены по url класса.
+ *
+ * @param classUrl URL класса.
+ * @returns префикс идентификаторов ресурсов класса.
+ */
+export function getClassResourceIdPrefix(classUrl: string): string {
+  return `${CLASS_RESOURCE_ID_PREFIX}${classUrl}:`;
+}
+
+/**
+ * Идентификатор производного ресурса класса.
+ *
+ * @param classUrl URL класса.
+ * @param columnName название колонки таблицы прогрессии.
+ * @returns устойчивый идентификатор ресурса на листе.
+ */
+export function getClassResourceId(
+  classUrl: string,
+  columnName: string,
+): string {
+  return `${getClassResourceIdPrefix(classUrl)}${columnName}`;
+}
+
+/**
+ * Классы персонажа по порядку: основной, затем дополнительные. Мультиклассовые
+ * подсчёты (уровень, ячейки, кости хитов) ходят только через эту функцию, чтобы
+ * не разбираться с «основной плюс остальные» на каждом месте.
+ *
+ * @param character персонаж.
+ * @returns классы персонажа; пусто — класс не выбран.
+ */
+export function getCharacterClasses(character: Character): CharacterClass[] {
+  return character.characterClass
+    ? [character.characterClass, ...character.additionalClasses]
+    : [...character.additionalClasses];
+}
+
+/**
+ * Общий уровень персонажа — сумма уровней его классов (правило D&D).
+ *
+ * @param classes классы персонажа.
+ * @returns общий уровень в границах правил.
+ */
+export function getTotalClassLevel(classes: CharacterClass[]): number {
+  const total = classes.reduce(
+    (sum, characterClass) =>
+      sum + Math.max(0, Math.trunc(characterClass.level)),
+    0,
+  );
+
+  return clamp(total, LEVEL_MIN, LEVEL_MAX);
 }
 
 /**
@@ -5933,6 +6246,51 @@ export function parseAbilityKeys(text: string): AbilityKey[] {
 }
 
 /**
+ * Требования к характеристикам для взятия уровня в классе (правило D&D 2024):
+ * значение 13 в каждой из ключевых характеристик класса. Список берётся из
+ * прозы `primaryCharacteristics` справочника — так же его выводит бэкенд для
+ * инструмента мультикласса.
+ *
+ * @param character персонаж.
+ * @param primaryCharacteristics проза ключевых характеристик класса.
+ * @returns характеристики, которых персонажу не хватает; пусто — требования
+ *   выполнены либо класс их не называет.
+ */
+export function getUnmetMulticlassRequirements(
+  character: Character,
+  primaryCharacteristics: string,
+): AbilityKey[] {
+  return parseAbilityKeys(primaryCharacteristics).filter(
+    (ability) =>
+      getEffectiveAbilityScore(character, ability)
+      < MULTICLASS_ABILITY_REQUIREMENT,
+  );
+}
+
+/**
+ * Подсказка о невыполненных требованиях мультиклассирования.
+ *
+ * @param abilities характеристики, которых не хватает.
+ * @returns текст предупреждения; пустая строка — требования выполнены.
+ */
+export function getMulticlassRequirementWarning(
+  abilities: AbilityKey[],
+): string {
+  if (!abilities.length) {
+    return '';
+  }
+
+  const list = abilities
+    .map(
+      (ability) =>
+        `${ABILITY_LABELS[ability]} ${MULTICLASS_ABILITY_REQUIREMENT}`,
+    )
+    .join(', ');
+
+  return `${MULTICLASS_REQUIREMENT_WARNING_PREFIX} ${list}.`;
+}
+
+/**
  * Сегменты прозы владений по группам каталога: сегмент группы тянется от её
  * ключевого слова до упоминания следующей группы. Так уточнение остаётся при
  * своей группе — в «Простое оружие, воинское оружие со свойством лёгкое»
@@ -6207,11 +6565,13 @@ function getColumnValueAtLevel(
  * уровне должно быть целым числом в допустимом диапазоне. Значения игрок затем
  * правит вручную.
  *
+ * @param classUrl URL класса — названия колонок повторяются между классами.
  * @param table таблица прогрессии класса.
- * @param level уровень персонажа.
+ * @param level уровень персонажа В ЭТОМ классе.
  * @returns ресурсы класса с устойчивыми идентификаторами.
  */
 export function deriveClassResources(
+  classUrl: string,
   table: ClassTableColumn[],
   level: number,
 ): CharacterClassResource[] {
@@ -6240,7 +6600,7 @@ export function deriveClassResources(
       column.resourceRecovery === 'SHORT_REST' ? 'all' : 'none';
 
     resources.push({
-      id: `class:res:${column.name}`,
+      id: getClassResourceId(classUrl, column.name),
       name: column.name,
       shortLabel: column.name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
       shortRest: { mode: shortRestMode, amount: RESOURCE_RECOVERY_AMOUNT_MIN },
@@ -6269,11 +6629,11 @@ export function toDescriptionNodes(node: RenderNode): FeatureDescriptionNode[] {
  * Берутся особенности с уровнем не выше уровня персонажа: базовый класс даёт
  * особенности без пометки подкласса, подкласс — с пометкой. Дубли по ключу
  * отбрасываются. Выбор игрока подставляется по идентификатору особенности
- * (`class:key`).
+ * (`class:<url класса>:<ключ>`).
  *
  * @param base деталь базового класса.
  * @param subclass деталь подкласса; null — подкласс не выбран.
- * @param level уровень персонажа.
+ * @param level уровень персонажа В ЭТОМ классе.
  * @param choices выборы игрока по идентификаторам особенностей.
  * @returns классовые особенности для вкладки «Особенности».
  */
@@ -6319,17 +6679,20 @@ export function buildLevelClassFeatures(
 /**
  * Особенность листа из описания особенности класса.
  *
+ * @param classUrl URL класса — ключи умений в справочнике повторяются между
+ *   классами, поэтому идентификатор разнесён по классам.
  * @param summary особенность из ответа класса.
  * @param originName название источника (класса или подкласса).
  * @param choices выборы игрока по идентификаторам особенностей.
  * @returns особенность персонажа.
  */
 function toCharacterFeature(
+  classUrl: string,
   summary: ClassFeatureSummary,
   originName: string,
   choices: Record<string, string>,
 ): CharacterFeature {
-  const id = getCharacterFeatureId('class', summary.key);
+  const id = getClassFeatureId(classUrl, summary.key);
 
   const choice = choices[id]?.trim();
 
@@ -6346,8 +6709,8 @@ function toCharacterFeature(
 
 /**
  * Общая сборка классовых особенностей по предикату уровня: дубли по ключу
- * отбрасываются, идентификатор — `class:<key>`, выбор игрока подставляется по
- * нему же.
+ * отбрасываются, идентификатор — `class:<url класса>:<key>`, выбор игрока
+ * подставляется по нему же.
  *
  * @param base деталь базового класса.
  * @param subclass деталь подкласса; null — подкласс не выбран.
@@ -6380,7 +6743,7 @@ function collectClassFeatures(
 
       seenKeys.add(summary.key);
 
-      features.push(toCharacterFeature(summary, originName, choices));
+      features.push(toCharacterFeature(base.url, summary, originName, choices));
     }
   };
 
@@ -6398,19 +6761,23 @@ function collectClassFeatures(
  * выбирается позже порогового уровня: вместе с ним персонаж получает и умения
  * более ранних уровней подкласса.
  *
+ * @param classUrl URL базового класса — умения подкласса лежат под ним.
  * @param subclass деталь подкласса.
- * @param level уровень персонажа.
+ * @param level уровень персонажа В ЭТОМ классе.
  * @param choices выборы игрока по идентификаторам особенностей.
  * @returns умения подкласса.
  */
 export function buildSubclassFeatures(
+  classUrl: string,
   subclass: ClassSummary,
   level: number,
   choices: Record<string, string>,
 ): CharacterFeature[] {
   return subclass.features
     .filter((summary) => summary.isSubclass && summary.level <= level)
-    .map((summary) => toCharacterFeature(summary, subclass.name, choices));
+    .map((summary) =>
+      toCharacterFeature(classUrl, summary, subclass.name, choices),
+    );
 }
 
 /**
@@ -6450,7 +6817,7 @@ export function getLevelFeatureRows(
         continue;
       }
 
-      const baseId = getCharacterFeatureId('class', summary.key);
+      const baseId = getClassFeatureId(base.url, summary.key);
 
       // Каждый уровень улучшения характеристик — свой выбор, поэтому в
       // идентификатор строки идёт уровень: иначе выборы разных уровней
@@ -6605,37 +6972,47 @@ export function mergeClassResources(
 }
 
 /**
- * Умения, полученные выше указанного уровня, — их забирает снижение уровня.
- * Уровень проставлен у классовых умений и у черт, взятых за классовое улучшение
- * характеристик, поэтому уходят и они. Записи без уровня (умения вида, черты,
- * добавленные вручную, и листы до учёта уровня) не трогаются.
+ * Умения класса, полученные выше указанного уровня В ЭТОМ КЛАССЕ, — их забирает
+ * снижение его уровня. Уровень проставлен у классовых умений и у черт, взятых
+ * за классовое улучшение характеристик, поэтому уходят и они. Умения других
+ * классов, вида и добавленные вручную не трогаются.
  *
  * @param features особенности листа.
- * @param level новый уровень персонажа.
+ * @param classLevels новые уровни классов по их URL.
  * @returns умения снимаемых уровней.
  */
 export function getFeaturesAboveLevel(
   features: CharacterFeature[],
-  level: number,
+  classLevels: Record<string, number>,
 ): CharacterFeature[] {
-  return features.filter(
-    (feature) => feature.level !== null && feature.level > level,
-  );
+  return features.filter((feature) => {
+    if (feature.level === null) {
+      return false;
+    }
+
+    const classUrl = Object.keys(classLevels).find((url) =>
+      feature.id.startsWith(getClassFeatureIdPrefix(url)),
+    );
+
+    return (
+      classUrl !== undefined && feature.level > (classLevels[classUrl] ?? 0)
+    );
+  });
 }
 
 /**
- * Снятие классовых умений за уровни выше указанного.
+ * Снятие классовых умений за уровни выше нового уровня их класса.
  *
  * @param features особенности листа.
- * @param level новый уровень персонажа.
+ * @param classLevels новые уровни классов по их URL.
  * @returns особенности без умений снятых уровней.
  */
 export function removeFeaturesAboveLevel(
   features: CharacterFeature[],
-  level: number,
+  classLevels: Record<string, number>,
 ): CharacterFeature[] {
   const removedIds = new Set(
-    getFeaturesAboveLevel(features, level).map((feature) => feature.id),
+    getFeaturesAboveLevel(features, classLevels).map((feature) => feature.id),
   );
 
   if (!removedIds.size) {
@@ -6643,6 +7020,40 @@ export function removeFeaturesAboveLevel(
   }
 
   return features.filter((feature) => !removedIds.has(feature.id));
+}
+
+/**
+ * Снятие всего, что дал класс: его умения и производные ресурсы. Ручные записи
+ * и записи других классов остаются на месте.
+ *
+ * @param features особенности листа.
+ * @param classUrl URL снимаемого класса.
+ * @returns особенности без умений этого класса.
+ */
+export function removeClassFeatures(
+  features: CharacterFeature[],
+  classUrl: string,
+): CharacterFeature[] {
+  const prefix = getClassFeatureIdPrefix(classUrl);
+
+  return features.filter((feature) => !feature.id.startsWith(prefix));
+}
+
+/**
+ * Снятие производных ресурсов класса (`class:res:<url>:*`); заведённые вручную
+ * счётчики и ресурсы других классов остаются.
+ *
+ * @param resources ресурсы листа.
+ * @param classUrl URL класса.
+ * @returns ресурсы без производных ресурсов этого класса.
+ */
+export function removeClassResources(
+  resources: CharacterClassResource[],
+  classUrl: string,
+): CharacterClassResource[] {
+  const prefix = getClassResourceIdPrefix(classUrl);
+
+  return resources.filter((resource) => !resource.id.startsWith(prefix));
 }
 
 /**
@@ -6728,6 +7139,85 @@ export function getClassDisplayName(characterClass: CharacterClass): string {
   return characterClass.subclassName
     ? `${characterClass.name} (${characterClass.subclassName})`
     : characterClass.name;
+}
+
+/**
+ * Подпись классов персонажа с уровнем каждого («Паладин (Клятва преданности) 3
+ * · Волшебник 2»). У одноклассового персонажа выходит прежняя строка шапки.
+ *
+ * @param character персонаж.
+ * @returns подпись классов; пустая строка — класс не выбран.
+ */
+export function getClassesDisplayLabel(character: Character): string {
+  return getCharacterClasses(character)
+    .map(
+      (characterClass) =>
+        `${getClassDisplayName(characterClass)} ${characterClass.level}`,
+    )
+    .join(CLASSES_LABEL_SEPARATOR);
+}
+
+/**
+ * Кости хитов, которые дают классы персонажа: номиналы сводятся вместе (два
+ * класса с к8 дают одну запись), количество — уровень в классе.
+ *
+ * @param classes классы персонажа.
+ * @returns максимум костей по номиналам, по убыванию номинала.
+ */
+export function getClassHitDiceMaximums(
+  classes: CharacterClass[],
+): Array<{ die: number; max: number }> {
+  const maxByDie = new Map<number, number>();
+
+  for (const characterClass of classes) {
+    const die = Math.trunc(characterClass.hitDie);
+
+    if (die <= 0) {
+      continue;
+    }
+
+    const level = Math.max(0, Math.trunc(characterClass.level));
+
+    maxByDie.set(die, (maxByDie.get(die) ?? 0) + level);
+  }
+
+  return [...maxByDie.entries()]
+    .map(([die, max]) => ({ die, max }))
+    .sort((left, right) => right.die - left.die);
+}
+
+/**
+ * Пересборка костей хитов под уровни классов: максимум каждого номинала
+ * становится суммой уровней классов с этой костью, потраченные кости остаются
+ * потраченными (остаток обрезается новым максимумом, а прибавка приходит
+ * непотраченной). Номиналы, которых у классов нет, с листа уходят.
+ *
+ * @param hitDice кости хитов листа.
+ * @param classes классы персонажа.
+ * @returns новый список костей хитов.
+ */
+export function syncClassHitDice(
+  hitDice: CharacterHitDie[],
+  classes: CharacterClass[],
+): CharacterHitDie[] {
+  const currentByDie = new Map(
+    hitDice.map((hitDie) => [hitDie.die, hitDie] as const),
+  );
+
+  return getClassHitDiceMaximums(classes).map(({ die, max }) => {
+    const existing = currentByDie.get(die);
+
+    if (!existing) {
+      return { die, current: max, max };
+    }
+
+    const spent = Math.max(
+      0,
+      existing.max - clamp(existing.current, 0, existing.max),
+    );
+
+    return { die, current: clamp(max - spent, 0, max), max };
+  });
 }
 
 /**

@@ -37,9 +37,9 @@
     SheetArmorClassModal,
     SheetBackgroundWizardModal,
     SheetCarryingCapacityModal,
+    SheetClassesModal,
     SheetClassResourcesModal,
     SheetClassResourcesPanel,
-    SheetClassWizardModal,
     SheetCurrencyModal,
     SheetCustomItemModal,
     SheetCustomSpellModal,
@@ -375,7 +375,9 @@
 
   const speciesWizardModal = overlay.create(SheetSpeciesWizardModal);
 
-  const classWizardModal = overlay.create(SheetClassWizardModal);
+  // Клик по классу в шапке открывает СПИСОК классов персонажа: оттуда класс
+  // меняют, добавляют второй (мультикласс) и удаляют ненужный.
+  const classesModal = overlay.create(SheetClassesModal);
 
   const backgroundWizardModal = overlay.create(SheetBackgroundWizardModal);
 
@@ -433,7 +435,9 @@
     },
   });
 
-  const spellcastingModal = overlay.create(SheetSpellcastingModal);
+  const spellcastingModal = overlay.create(SheetSpellcastingModal, {
+    props: { classUrl: '' },
+  });
 
   // Вид подготовки приходит нажатием на плитку: значение при создании — лишь
   // отправная точка, `open()` подставляет нужное.
@@ -734,7 +738,7 @@
       return;
     }
 
-    classWizardModal.open();
+    classesModal.open();
   }
 
   function handleBackgroundEdit() {
@@ -845,12 +849,12 @@
     void copyInnateSpellToSheet(spellUrl);
   }
 
-  function handleSpellcastingEdit() {
+  function handleSpellcastingEdit(classUrl: string) {
     if (!ensureEditable()) {
       return;
     }
 
-    spellcastingModal.open();
+    spellcastingModal.open({ classUrl });
   }
 
   function handlePreparedSpellsEdit(kind: PreparedSpellKind) {

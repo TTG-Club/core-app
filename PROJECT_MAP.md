@@ -146,12 +146,41 @@ modals), so its capabilities are listed here rather than squeezed into the table
   — a homebrew class has no proficiency prose or table to derive them from.
   Levelling one up falls back to the wizard's no-class path (average hit points,
   no feature steps), since the level-up wizard resolves features by class url.
+- Multiclassing per the 2024 rules. The sheet keeps a primary class
+  (`characterClass`) plus `additionalClasses`, each with its own `level`; the
+  character level is their sum, and proficiency bonus and experience follow it.
+  Clicking the class in the header opens the class list (`SheetClassesModal`) —
+  edit the primary one, add another (`SheetClassWizardModal` in `add` mode:
+  classes already taken are filtered out, the level is 1, no starting equipment)
+  or drop one (inline confirmation; a nested `ConfirmDialog` would sit under the
+  outer modal's `aria-hidden`). Removing a class takes back its features,
+  resources, hit dice and the maximum hit points recorded for it —
+  `health.levelGains` entries carry a `classUrl` for exactly that.
+  Feature keys and table column names repeat across classes in the reference, so
+  ids are scoped by class url (`class:<classUrl>:<key>`,
+  `class:res:<classUrl>:<name>`); sheets saved before multiclassing are migrated
+  in `normalizeCharacterClasses` (`character-schema.ts`), which also derives the
+  primary class level and moves the sheet-wide spellcasting ability onto it.
+  Spell slots follow the multiclass caster level — full classes in full, half
+  casters rounded **up**, third casters rounded **down** (verified against the
+  `spellcastingLevel` of `POST /api/v2/multiclass`); a warlock's Pact Magic stays
+  separate (`SpellSlotRow.kind`, its own circles in the level divider, returned by
+  a short rest). Save DC and attack bonus are computed per caster class
+  (`getSpellcastingRows`), so the spells tab shows one tile per class. The
+  reduced multiclass proficiency set is not granted: `multiclassProficiency` is
+  empty for every class in the reference, so the wizard only shows the class's
+  own prose for the player to tick manually, and the «13 in the ability»
+  requirement warns instead of blocking.
 - Level-up wizard inside the experience modal (`composables/useLevelUpWizard.ts`):
   one step per gained level with its own hit-point mode (average / roll / max),
   the class and subclass features of that level with their choices, and the
-  subclass picker at level 3 filtered by the profile sources on the client
-  (`/classes/{url}/subclasses` ignores `source`). Applied atomically by
-  `applyLevelUp`, which keeps spent hit dice and class resources.
+  subclass picker at level 3 **in that class** filtered by the profile sources on
+  the client (`/classes/{url}/subclasses` ignores `source`). With several classes
+  the steps run class by class, each with its own hit die. The experience modal
+  lists a level per class (each capped by what is left of 20) and offers
+  «Пропустить подготовку» — the level is applied straight away through
+  `setClassLevels` with average hit points and no feature steps. Applied
+  atomically by `applyLevelUp`, which keeps spent hit dice and class resources.
 - Every skill picker (`SheetChoiceSelect` in the class / species / background
   wizards, in level-up features and in the homebrew class / background modals)
   marks skills the character already has with a `SKILL_OWNED_HINTS` badge and

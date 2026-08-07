@@ -1052,6 +1052,9 @@ const classDetailSchema = z.object({
     })
     .catch({ label: '', maxValue: 0 }),
   savingThrows: z.string().catch(''),
+  // Ключевые характеристики прозой («Харизма и Сила») — из них выводится
+  // требование мультиклассирования «13 в характеристике».
+  primaryCharacteristics: z.string().catch(''),
   proficiency: z
     .object({
       armor: z.string().catch(''),
@@ -1112,6 +1115,7 @@ function toClassSummary(
     hitDieLabel: detail.hitDice.label,
     savingThrowsText: detail.savingThrows,
     savingThrows: parseAbilityKeys(detail.savingThrows),
+    primaryCharacteristics: detail.primaryCharacteristics,
     proficiencyText: detail.proficiency,
     table,
     features,

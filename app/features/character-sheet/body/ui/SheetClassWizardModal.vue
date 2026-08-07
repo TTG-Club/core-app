@@ -22,6 +22,7 @@
     buildFeatFeature,
     buildStartingEquipmentItems,
     CLASS_SOURCES_ASYNC_DATA_KEY,
+    CLASS_WIZARD_LABELS,
     CLASSES_DETAIL_BASE_PATH,
     CLASSES_FILTERS_PATH,
     CLASSES_SEARCH_PATH,
@@ -38,16 +39,22 @@
     FIGHTING_STYLE_FEAT_CATEGORIES,
     FIGHTING_STYLE_FEATURE_ID_SEGMENT,
     FIGHTING_STYLE_INVALID_RESPONSE_ERROR,
-    getCharacterFeatureId,
+    getCharacterClasses,
     getChoiceSkillHints,
+    getClassFeatureId,
     getClassMaxHitPoints,
     getClassSkillChoice,
     getClassToolChoice,
+    getHitDieAverage,
+    getLevelHitPointsGain,
+    getMulticlassRequirementWarning,
     getSelectedCasterType,
     getToolNames,
+    getUnmetMulticlassRequirements,
     LANGUAGE_PROFICIENCY_GROUPS,
     matchClassProficiencies,
     matchToolProficiencies,
+    MULTICLASS_PROFICIENCY_LABELS,
     parseClassDetail,
     parseClassOptions,
     resolveChoiceOptions,
@@ -76,6 +83,14 @@
     feature: CharacterFeature;
   }
 
+  const { mode = 'primary' } = defineProps<{
+    /**
+     * `primary` — выбор (или замена) основного класса, `add` — добавление
+     * класса мультикласса первым уровнем.
+     */
+    mode?: 'primary' | 'add';
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
@@ -84,7 +99,33 @@
 
   const overlay = useOverlay();
 
-  const { character, setClass } = useCharacterSheet();
+  const { character, setClass, addClass } = useCharacterSheet();
+
+  const isAddMode = computed(() => mode === 'add');
+
+  const modalTitle = computed(() =>
+    isAddMode.value
+      ? CLASS_WIZARD_LABELS.addTitle
+      : CLASS_WIZARD_LABELS.primaryTitle,
+  );
+
+  /**
+   * Подсказка режима добавления: порог подкласса считается по уровню В КЛАССЕ,
+   * поэтому число подставляется в шаблон подписи.
+   */
+  const addModeHint = computed(
+    () =>
+      `${CLASS_WIZARD_LABELS.addHint} ${CLASS_WIZARD_LABELS.addSubclassHint.replace(
+        '{level}',
+        String(SUBCLASS_SELECTION_MIN_LEVEL),
+      )}`,
+  );
+
+  /** Классы, уже взятые персонажем: повторно их не предлагаем. */
+  const takenClassUrls = computed(
+    () =>
+      new Set(getCharacterClasses(character.value).map((entry) => entry.url)),
+  );
 
   // Дровер описания класса/подкласса с сайта; без destroyOnClose — повторный
   // open() после закрытия иначе падает («Overlay not found»).
@@ -114,7 +155,14 @@
 
   const step = ref<WizardStep>('class');
 
-  const level = computed(() => character.value.level);
+  // Уровень, на который собирается класс: основной берёт свой прежний уровень
+  // (у листа без класса — весь уровень персонажа), добавляемый начинается с
+  // первого — дальше его поднимает мастер повышения.
+  const level = computed(() =>
+    isAddMode.value
+      ? 1
+      : (character.value.characterClass?.level ?? character.value.level),
+  );
 
   // Источники берутся из глобальной настройки профиля — визард не показывает
   // классы из отключённых книг. Запрос ждём до списка: иначе первая выдача
@@ -208,7 +256,11 @@
   const filteredOptions = computed(() => {
     const query = searchTerm.value.trim().toLowerCase();
 
-    const list = classList.value ?? [];
+    // Класс, уровни в котором уже есть, добавляют не вторым слотом, а
+    // повышением уровня — из списка добавления он уходит.
+    const list = (classList.value ?? []).filter(
+      (option) => !isAddMode.value || !takenClassUrls.value.has(option.url),
+    );
 
     if (!query) {
       return list;
@@ -269,15 +321,31 @@
 
   // Хиты, которые получит лист при применении: первый уровень — максимум кости,
   // следующие — среднее; модификатор Телосложения входит в каждый уровень.
-  const maxHitPointsPreview = computed(() =>
-    classDetail.value
-      ? getClassMaxHitPoints(
-          classDetail.value.hitDie,
-          level.value,
-          getModifier(character.value.abilities.constitution),
+  const maxHitPointsPreview = computed(() => {
+    if (!classDetail.value) {
+      return 0;
+    }
+
+    const modifier = getModifier(character.value.abilities.constitution);
+
+    // Второй класс максимума кости на своём первом уровне не даёт (правило
+    // 2024) — только среднее, и прибавляется оно к уже набранным хитам.
+    if (isAddMode.value) {
+      return (
+        character.value.health.max
+        + getLevelHitPointsGain(
+          getHitDieAverage(classDetail.value.hitDie),
+          modifier,
         )
-      : 0,
-  );
+      );
+    }
+
+    return getClassMaxHitPoints(
+      classDetail.value.hitDie,
+      level.value,
+      modifier,
+    );
+  });
 
   const savingThrowLabels = computed(() =>
     (classDetail.value?.savingThrows ?? []).map((key) => ABILITY_LABELS[key]),
@@ -312,6 +380,7 @@
     }
 
     return deriveClassResources(
+      classDetail.value.url,
       [...classDetail.value.table, ...(subclassDetail.value?.table ?? [])],
       level.value,
     );
@@ -319,8 +388,10 @@
 
   // Стартовое снаряжение даёт только базовый класс: у подкласса своего набора
   // нет.
-  const startingEquipmentOptions = computed(
-    () => classDetail.value?.startingEquipment ?? [],
+  // Стартовое снаряжение выдаёт только первый класс персонажа (правило 2024),
+  // поэтому у добавляемого выбора набора нет.
+  const startingEquipmentOptions = computed(() =>
+    isAddMode.value ? [] : (classDetail.value?.startingEquipment ?? []),
   );
 
   const selectedStartingEquipmentOption = computed(() =>
@@ -333,7 +404,9 @@
   const classChoices = computed<ClassChoice[]>(() => {
     const base = classDetail.value;
 
-    if (!base) {
+    // Владения второго класса лист не выдаёт (урезанного набора справочник не
+    // отдаёт), поэтому и выбирать их в мастере добавления нечего.
+    if (!base || isAddMode.value) {
       return [];
     }
 
@@ -406,7 +479,7 @@
 
         seenKeys.add(feature.key);
 
-        const id = getCharacterFeatureId('class', feature.key);
+        const id = getClassFeatureId(base.url, feature.key);
 
         rows.push({
           id,
@@ -435,6 +508,62 @@
     }
 
     return rows;
+  });
+
+  /**
+   * Требование мультиклассирования: 13 в ключевых характеристиках класса
+   * (D&D 2024). Предупреждение не блокирует — лист инструмент, а не судья.
+   */
+  const requirementWarning = computed(() => {
+    if (!isAddMode.value || !classDetail.value) {
+      return '';
+    }
+
+    return getMulticlassRequirementWarning(
+      getUnmetMulticlassRequirements(
+        character.value,
+        classDetail.value.primaryCharacteristics,
+      ),
+    );
+  });
+
+  /**
+   * Полный набор владений класса — справкой. Урезанный набор мультикласса
+   * справочник не отдаёт (`multiclassProficiency` пустой у всех классов),
+   * поэтому лист их не выдаёт: игрок отмечает нужное на панели владений.
+   */
+  const multiclassProficiencyRows = computed(() => {
+    const proficiency = classDetail.value?.proficiencyText;
+
+    if (!isAddMode.value || !proficiency) {
+      return [];
+    }
+
+    return [
+      {
+        key: 'armor',
+        label: MULTICLASS_PROFICIENCY_LABELS.armor,
+        value: proficiency.armor,
+      },
+      {
+        key: 'weapon',
+        label: MULTICLASS_PROFICIENCY_LABELS.weapon,
+        value: proficiency.weapon,
+      },
+      {
+        key: 'tool',
+        label: MULTICLASS_PROFICIENCY_LABELS.tool,
+        value: proficiency.tool,
+      },
+      {
+        key: 'skill',
+        label: MULTICLASS_PROFICIENCY_LABELS.skill,
+        value: proficiency.skill,
+      },
+    ].map((row) => ({
+      ...row,
+      value: row.value.trim() || MULTICLASS_PROFICIENCY_LABELS.empty,
+    }));
   });
 
   const isNextDisabled = computed(() => !selectedClass.value);
@@ -719,26 +848,65 @@
       featureChoices[control.id] = values.join(', ');
     }
 
-    setClass({
-      characterClass: {
-        url: base.url,
-        name: base.name,
-        subclassUrl: selectedSubclass.value?.url ?? null,
-        subclassName: subclassDetail.value?.name ?? null,
-        casterType: getSelectedCasterType(base, subclassDetail.value),
+    const characterClass = {
+      url: base.url,
+      name: base.name,
+      level: level.value,
+      subclassUrl: selectedSubclass.value?.url ?? null,
+      subclassName: subclassDetail.value?.name ?? null,
+      casterType: getSelectedCasterType(base, subclassDetail.value),
+      hitDie: base.hitDie,
+      // Характеристика определяется по названию класса, пока игрок не задал
+      // свою на вкладке заклинаний.
+      spellcastingAbility: null,
+      // Колонка подготовленных заклинаний бывает и у класса, и только у
+      // подкласса (мистический рыцарь), поэтому таблицы просматриваются
+      // вместе. Колонка заговоров живёт в той же таблице.
+      preparedSpells: derivePreparedSpellsScaling([
+        ...base.table,
+        ...(subclassDetail.value?.table ?? []),
+      ]),
+      preparedCantrips: deriveCantripsScaling([
+        ...base.table,
+        ...(subclassDetail.value?.table ?? []),
+      ]),
+    };
+
+    const features = [
+      ...buildClassFeatures(
+        base,
+        subclassDetail.value,
+        level.value,
+        featureChoices,
+      ),
+      ...fightingStyleFeatures.map((selection) => selection.feature),
+    ];
+
+    const skills = {
+      proficient: [...new Set(proficientSkills)],
+      expertise: [...new Set(expertiseSkills)],
+    };
+
+    // Урезанный набор владений мультикласса справочник не отдаёт, поэтому
+    // добавленный класс не выдаёт ни брони с оружием, ни навыков прозы —
+    // только то, что игрок выбрал сам в умениях уровня.
+    if (isAddMode.value) {
+      addClass({
+        characterClass,
         hitDie: base.hitDie,
-        // Колонка подготовленных заклинаний бывает и у класса, и только у
-        // подкласса (мистический рыцарь), поэтому таблицы просматриваются
-        // вместе. Колонка заговоров живёт в той же таблице.
-        preparedSpells: derivePreparedSpellsScaling([
-          ...base.table,
-          ...(subclassDetail.value?.table ?? []),
-        ]),
-        preparedCantrips: deriveCantripsScaling([
-          ...base.table,
-          ...(subclassDetail.value?.table ?? []),
-        ]),
-      },
+        skills,
+        languages: chosenLanguages,
+        classResources: derivedResources.value,
+        features,
+      });
+
+      emit('close');
+
+      return;
+    }
+
+    setClass({
+      characterClass,
       savingThrows: base.savingThrows,
       hitDie: base.hitDie,
       proficiencies: {
@@ -752,20 +920,9 @@
         ),
         languages: chosenLanguages,
       },
-      skills: {
-        proficient: [...new Set(proficientSkills)],
-        expertise: [...new Set(expertiseSkills)],
-      },
+      skills,
       classResources: derivedResources.value,
-      features: [
-        ...buildClassFeatures(
-          base,
-          subclassDetail.value,
-          level.value,
-          featureChoices,
-        ),
-        ...fightingStyleFeatures.map((selection) => selection.feature),
-      ],
+      features,
       // Снаряжение применяется вместе с классом: лист сам снимет набор прошлого
       // выбора, поэтому повторный выбор класса не копит предметы и монеты.
       startingEquipment: startingEquipmentOption
@@ -804,7 +961,7 @@
 
 <template>
   <UModal
-    title="Выбор класса"
+    :title="modalTitle"
     :ui="{ content: 'sm:max-w-2xl' }"
   >
     <template #body>
@@ -992,7 +1149,17 @@
             </span>
           </div>
 
-          <span class="text-xs text-muted">
+          <span
+            v-if="isAddMode"
+            class="text-xs text-muted"
+          >
+            {{ addModeHint }}
+          </span>
+
+          <span
+            v-else
+            class="text-xs text-muted"
+          >
             Класс с подклассами разворачивается стрелкой — подкласс
             необязателен. При применении кость хитов, хиты, спасброски,
             владения, ресурсы, умения по текущему уровню и выбранный вариант
@@ -1001,6 +1168,14 @@
         </template>
 
         <template v-else>
+          <UAlert
+            v-if="requirementWarning"
+            color="warning"
+            variant="subtle"
+            icon="tabler:alert-triangle"
+            :description="requirementWarning"
+          />
+
           <div class="flex flex-wrap items-center gap-2 text-sm">
             <span class="text-muted">Класс:</span>
 
@@ -1032,7 +1207,10 @@
               </span>
             </div>
 
-            <div class="flex flex-col gap-1">
+            <div
+              v-if="!isAddMode"
+              class="flex flex-col gap-1"
+            >
               <span
                 class="text-[10px] font-bold tracking-wider text-muted uppercase"
               >
@@ -1061,7 +1239,32 @@
           </div>
 
           <div
-            v-if="proficiencyChips.length"
+            v-if="multiclassProficiencyRows.length"
+            class="flex flex-col gap-2 rounded-md bg-elevated/40 p-3"
+          >
+            <span
+              class="text-[10px] font-bold tracking-wider text-muted uppercase"
+            >
+              {{ MULTICLASS_PROFICIENCY_LABELS.title }}
+            </span>
+
+            <span class="text-xs text-dimmed">
+              {{ MULTICLASS_PROFICIENCY_LABELS.hint }}
+            </span>
+
+            <div
+              v-for="row in multiclassProficiencyRows"
+              :key="row.key"
+              class="flex flex-col gap-0.5"
+            >
+              <span class="text-xs text-muted">{{ row.label }}</span>
+
+              <span class="text-sm text-toned">{{ row.value }}</span>
+            </div>
+          </div>
+
+          <div
+            v-else-if="proficiencyChips.length"
             class="flex flex-col gap-1"
           >
             <span
