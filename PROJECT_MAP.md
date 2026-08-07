@@ -212,7 +212,24 @@ modals), so its capabilities are listed here rather than squeezed into the table
   expandable card on the spells tab).
 - Homebrew equipment added by the same kind of form (weapon / armor / trinket,
   each with its own fields — custom armor is equippable and adds to AC, custom
-  weapons roll attack & damage).
+  weapons roll attack & damage). The form is split in two tabs: «Основное» holds
+  the mundane parameters (a versatile weapon also names the two-handed die, which
+  switches the grip from the row menu), «Магические свойства» everything a magic
+  item does. That tab is gated by a switch — its fields stay visible and go
+  disabled while the item is not magic, rather than appearing out of nowhere —
+  and holds the attunement requirement, the charge pool, the weapon's own to-hit
+  bonus and extra damage dice with their own type, plus the item's passive
+  bonuses. Those are added one row at a time: a searchable target (any ability
+  score, ability checks, any skill of this sheet including the player's own, one
+  saving throw or all six, one movement speed or all of them, AC, initiative,
+  spell save DC, spell attack) and a value; a live summary at the bottom of the
+  tab shows what the item will hand the sheet. Passive bonuses count while the
+  item is equipped, and an item that requires attunement only while attuned —
+  the row badges say «Настроен» / «Нужна настройка». Ability bonuses reach every
+  derived number through `getEffectiveAbilities` / `getAbilityModifier`, while
+  the score written on the sheet stays what the ability modal edits (the tile
+  shows the total and explains it in its tooltip); hit points are the one thing
+  a Constitution item does not move, since the sheet stores them as a number.
 - The carried-weight row of the equipment tab is also the way into its limit
   (`SheetCarryingCapacityModal`, opened by the row itself — a pencil revealed on
   hover, like every other edit control of the sheet). By the rules the limit is
@@ -264,7 +281,11 @@ modals), so its capabilities are listed here rather than squeezed into the table
   with no armour base keeps its AC bonus in `CharacterInventoryItem.armorClassBonus`
   — a flat term the AC breakdown sums over every equipped item («Магические
   предметы» row), because a cloak and a ring of protection stack rather than
-  compete. Sheets saved before the fields existed read them as `0`.
+  compete. Homebrew items keep the same bonus in an `armor-class` row instead, and
+  `getInventoryItemArmorClassBonus` reads both; on a suit of armour it joins that
+  armour's own value so the «best armour wins» comparison stays honest, and an
+  item that requires attunement contributes nothing until it is attuned. Sheets
+  saved before the fields existed read them as `0`.
 - The «Добавить заклинание» catalog opens preset to what the character can
   actually learn: the class chip is picked by the class slug (the same id the
   `className` filter group uses) and the level chips cover every circle the

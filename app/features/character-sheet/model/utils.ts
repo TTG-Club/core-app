@@ -69,7 +69,12 @@ import type {
   HitDiceSelectPool,
   HitPointsGainMode,
   InventoryArmor,
+  InventoryBonusSource,
+  InventoryBonusTargetGroup,
+  InventoryBonusTargetKind,
+  InventoryBonusTargetOption,
   InventoryCharges,
+  InventoryItemBonus,
   InventoryItemOrigin,
   InventoryWeapon,
   InventoryWeaponDamage,
@@ -218,6 +223,11 @@ import {
   INNATE_SPELL_REMOVE_MENU_LABEL,
   INVENTORY_ACTIVE_MENU_LABELS,
   INVENTORY_ATTUNEMENT_MENU_LABELS,
+  INVENTORY_BONUS_GROUP_LABELS,
+  INVENTORY_BONUS_LABELS,
+  INVENTORY_BONUS_TARGET_LABELS,
+  INVENTORY_BONUS_TARGET_PREFIXES,
+  INVENTORY_BONUS_TARGET_SEPARATOR,
   INVENTORY_CATEGORY_ORDER,
   INVENTORY_CATEGORY_TITLES,
   INVENTORY_GRIP_MENU_LABELS,
@@ -225,6 +235,10 @@ import {
   INVENTORY_QUANTITY_MIN,
   INVENTORY_REMOVE_MENU_LABEL,
   INVENTORY_RESTORE_CHARGES_MENU_LABEL,
+  ITEM_BONUS_MAX,
+  ITEM_BONUS_MIN,
+  ITEM_SPEED_BONUS_MAX,
+  ITEM_SPEED_BONUS_MIN,
   ITEMS_DETAIL_BASE_PATH,
   LEVEL_MIN,
   LEVEL_XP_THRESHOLDS,
@@ -357,6 +371,193 @@ export function getCharacterProficiencyBonus(character: Character): number {
 }
 
 /**
+ * Работают ли сейчас пассивные бонусы предмета. Бонус даёт надетый предмет,
+ * которого у персонажа не ноль, а предмету с настройкой нужна ещё и сама
+ * настройка — ненастроенный магический предмет по правилам 2024 не работает.
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns true — бонусы предмета идут в лист.
+ */
+function isActiveBonusItem(inventoryItem: CharacterInventoryItem): boolean {
+  return (
+    inventoryItem.equipped
+    && !isMissingInventoryItem(inventoryItem)
+    && (!inventoryItem.requiresAttunement || inventoryItem.attuned)
+  );
+}
+
+/**
+ * Подходит ли бонус предмета под цель. Ключ сверяется, только когда цель его
+ * требует: «Все спасброски» и «Класс доспеха» уточнения не имеют.
+ *
+ * @param bonus бонус предмета.
+ * @param kind вид цели.
+ * @param key ключ цели (характеристика, скорость, название навыка); '' — цель
+ *   уточнения не требует.
+ * @returns true — бонус идёт в эту цель.
+ */
+function isMatchingBonus(
+  bonus: InventoryItemBonus,
+  kind: InventoryBonusTargetKind,
+  key: string,
+): boolean {
+  return bonus.kind === kind && (!key || bonus.key === key);
+}
+
+/**
+ * Сумма бонусов одного предмета для цели — считается и по неработающему
+ * предмету (сводка в его строке показывает, что он даст).
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @param kind вид цели.
+ * @param key ключ цели; '' — цель уточнения не требует.
+ * @returns суммарная прибавка предмета.
+ */
+function getItemBonusValue(
+  inventoryItem: CharacterInventoryItem,
+  kind: InventoryBonusTargetKind,
+  key = '',
+): number {
+  return inventoryItem.bonuses.reduce(
+    (total, bonus) =>
+      isMatchingBonus(bonus, kind, key) ? total + bonus.value : total,
+    0,
+  );
+}
+
+/**
+ * Суммарная прибавка работающего снаряжения к цели: её лист и добавляет к
+ * своему значению.
+ *
+ * @param character персонаж.
+ * @param kind вид цели.
+ * @param key ключ цели; '' — цель уточнения не требует.
+ * @returns суммарная прибавка снаряжения.
+ */
+export function getInventoryBonusValue(
+  character: Character,
+  kind: InventoryBonusTargetKind,
+  key = '',
+): number {
+  return character.inventory.reduce(
+    (total, item) =>
+      isActiveBonusItem(item)
+        ? total + getItemBonusValue(item, kind, key)
+        : total,
+    0,
+  );
+}
+
+/**
+ * Предметы, дающие бонус в нужную цель, — строками разбора значения: без них
+ * итог не сходится ни с характеристикой, ни с владением.
+ *
+ * @param character персонаж.
+ * @param kind вид цели.
+ * @param key ключ цели; '' — цель уточнения не требует.
+ * @returns вклады предметов; пустой список — таких предметов нет.
+ */
+export function getInventoryBonusSources(
+  character: Character,
+  kind: InventoryBonusTargetKind,
+  key = '',
+): InventoryBonusSource[] {
+  return character.inventory
+    .filter(isActiveBonusItem)
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      value: getItemBonusValue(item, kind, key),
+    }))
+    .filter((source) => source.value !== 0);
+}
+
+/**
+ * Прибавка снаряжения к спасброску характеристики: свои бонусы спасброска и
+ * общие «ко всем спасброскам» складываются.
+ *
+ * @param character персонаж.
+ * @param ability характеристика спасброска.
+ * @returns прибавка снаряжения к спасброску.
+ */
+export function getInventorySavingThrowBonus(
+  character: Character,
+  ability: AbilityKey,
+): number {
+  return (
+    getInventoryBonusValue(character, 'saving-throw', ability)
+    + getInventoryBonusValue(character, 'all-saving-throws')
+  );
+}
+
+/**
+ * Вклады предметов в спасбросок: адресные и общие вместе, в одном списке
+ * разбора.
+ *
+ * @param character персонаж.
+ * @param ability характеристика спасброска.
+ * @returns вклады предметов в спасбросок.
+ */
+export function getInventorySavingThrowSources(
+  character: Character,
+  ability: AbilityKey,
+): InventoryBonusSource[] {
+  return [
+    ...getInventoryBonusSources(character, 'saving-throw', ability),
+    ...getInventoryBonusSources(character, 'all-saving-throws'),
+  ];
+}
+
+/**
+ * Значения характеристик с бонусами снаряжения — именно их показывает лист и
+ * от них считаются модификаторы. Правка характеристик идёт по записанным
+ * значениям (`character.abilities`), а не по этим.
+ *
+ * @param character персонаж.
+ * @returns значения характеристик с бонусами предметов.
+ */
+export function getEffectiveAbilities(
+  character: Character,
+): CharacterAbilities {
+  return mapValues(
+    character.abilities,
+    (score, key) => score + getInventoryBonusValue(character, 'ability', key),
+  );
+}
+
+/**
+ * Значение одной характеристики с бонусами снаряжения.
+ *
+ * @param character персонаж.
+ * @param ability ключ характеристики.
+ * @returns значение характеристики.
+ */
+export function getEffectiveAbilityScore(
+  character: Character,
+  ability: AbilityKey,
+): number {
+  return (
+    character.abilities[ability]
+    + getInventoryBonusValue(character, 'ability', ability)
+  );
+}
+
+/**
+ * Модификатор характеристики с бонусами снаряжения — им считаются все значения
+ * листа: спасброски, навыки, КД, атаки и заклинательство.
+ *
+ * @param character персонаж.
+ * @param ability ключ характеристики.
+ * @returns модификатор характеристики.
+ */
+export function getAbilityModifier(
+  character: Character,
+  ability: AbilityKey,
+): number {
+  return getModifier(getEffectiveAbilityScore(character, ability));
+}
+
+/**
  * Характеристика инициативы: своя из настроек, а без неё — Ловкость по
  * правилам.
  *
@@ -377,7 +578,7 @@ export function getInitiativeAbility(character: Character): AbilityKey {
 export function getBaseInitiativeBonus(character: Character): number {
   return (
     character.settings.customInitiativeBase
-    ?? getModifier(character.abilities[getInitiativeAbility(character)])
+    ?? getAbilityModifier(character, getInitiativeAbility(character))
   );
 }
 
@@ -394,6 +595,7 @@ export function getInitiativeBonus(character: Character): number {
       character,
       character.settings.customInitiativeBonuses,
     )
+    + getInventoryBonusValue(character, 'initiative')
     // Инициатива в редакции 2024 — проверка характеристики, а значит бросок
     // к20 со штрафом истощения.
     - getExhaustionD20Penalty(character)
@@ -430,10 +632,12 @@ export function getSavingThrowValue(
     : 0;
 
   return (
-    getModifier(character.abilities[savingThrow.ability])
+    getAbilityModifier(character, savingThrow.ability)
     + proficiencyPart
     + getCustomBonusesValue(character, savingThrow.bonuses)
     + getCustomBonusesValue(character, character.commonSavingThrowBonuses)
+    // Плащ защиты и подобные предметы: и адресные бонусы, и «ко всем сразу».
+    + getInventorySavingThrowBonus(character, savingThrow.key)
     // Спасбросок — бросок к20, поэтому истощение снимает с него свой штраф.
     - getExhaustionD20Penalty(character)
   );
@@ -512,7 +716,7 @@ export function getSkillValue(
   character: Character,
   skill: CharacterSkill,
 ): number {
-  const modifier = getModifier(character.abilities[skill.ability]);
+  const modifier = getAbilityModifier(character, skill.ability);
 
   const proficiencyPart =
     getCharacterProficiencyBonus(character)
@@ -522,6 +726,8 @@ export function getSkillValue(
     modifier
     + Math.floor(proficiencyPart)
     + getCustomBonusesValue(character, skill.bonuses)
+    // Перчатки вора и подобные предметы прибавляют к проверкам своего навыка.
+    + getInventoryBonusValue(character, 'skill', skill.name)
     // Проверка навыка — бросок к20; пассивное значение считается от неё же,
     // поэтому истощение опускает и его.
     - getExhaustionD20Penalty(character)
@@ -708,7 +914,7 @@ export function getCustomBonusValue(
   bonus: CharacterCustomBonus,
 ): number {
   if (bonus.kind === 'ability') {
-    return getModifier(character.abilities[bonus.ability]);
+    return getAbilityModifier(character, bonus.ability);
   }
 
   // Записанный бонус уже приведён `toStoredCustomBonuses`, но черновики форм
@@ -801,7 +1007,7 @@ export function getSkillBreakdown(
       id: 'ability',
       label: ABILITY_LABELS[skill.ability],
       formattedValue: getFormattedBonus(
-        getModifier(character.abilities[skill.ability]),
+        getAbilityModifier(character, skill.ability),
       ),
     },
     ...proficiencyParts,
@@ -810,6 +1016,13 @@ export function getSkillBreakdown(
       label: getCustomBonusLabel(bonus),
       formattedValue: getFormattedBonus(getCustomBonusValue(character, bonus)),
     })),
+    ...getInventoryBonusSources(character, 'skill', skill.name).map(
+      (source) => ({
+        id: source.id,
+        label: source.name,
+        formattedValue: getFormattedBonus(source.value),
+      }),
+    ),
     ...exhaustionParts,
   ];
 }
@@ -880,7 +1093,7 @@ export function getSavingThrowBreakdown(
       id: 'ability',
       label: ABILITY_LABELS[savingThrow.ability],
       formattedValue: getFormattedBonus(
-        getModifier(character.abilities[savingThrow.ability]),
+        getAbilityModifier(character, savingThrow.ability),
       ),
     },
     ...proficiencyParts,
@@ -891,6 +1104,15 @@ export function getSavingThrowBreakdown(
         formattedValue: getFormattedBonus(
           getCustomBonusValue(character, bonus),
         ),
+      }),
+    ),
+    // Предмет в разборе назван по имени: игрок должен видеть, что именно
+    // прибавляет к спасброску, а не безымянную строку «снаряжение».
+    ...getInventorySavingThrowSources(character, savingThrow.key).map(
+      (source) => ({
+        id: source.id,
+        label: source.name,
+        formattedValue: getFormattedBonus(source.value),
       }),
     ),
     ...exhaustionParts,
@@ -913,6 +1135,7 @@ export function getSavingThrowBonusHint(
   const isPlain =
     !isChangedSavingThrow(savingThrow)
     && character.commonSavingThrowBonuses.length === 0
+    && getInventorySavingThrowSources(character, savingThrow.key).length === 0
     && getExhaustionD20Penalty(character) === 0;
 
   if (isPlain) {
@@ -968,12 +1191,17 @@ export function toSelectedAbilityKeys(value: unknown): AbilityKey[] {
  * @returns строки для отображения характеристик.
  */
 export function getAbilityRows(character: Character): AbilityRow[] {
+  const abilities = getEffectiveAbilities(character);
+
   return ABILITY_ORDER.map((key) => ({
     key,
     label: ABILITY_LABELS[key],
     shortLabel: ABILITY_SHORT_LABELS[key],
-    score: character.abilities[key],
-    formattedModifier: getFormattedModifier(character.abilities[key]),
+    score: abilities[key],
+    formattedModifier: getFormattedModifier(abilities[key]),
+    // Плитка показывает значение с бонусами предметов, а правится записанное:
+    // без разницы игрок не понял бы, почему в модалке другое число.
+    itemBonus: abilities[key] - character.abilities[key],
   }));
 }
 
@@ -1257,6 +1485,8 @@ export function buildInventoryItem(
     weapon: summary.weapon,
     equipped: false,
     twoHanded: false,
+    // Пассивные бонусы есть только у своих предметов: их задаёт форма листа.
+    bonuses: [],
     // Настройка и заряды бывают только у магии — раздел «Предметы» их не знает.
     ...DEFAULT_INVENTORY_MAGIC_STATE,
   };
@@ -1452,6 +1682,8 @@ export function buildMagicItemInventoryItem(
     weapon: getMagicItemWeapon(baseItem?.weapon ?? null, bonuses),
     equipped: false,
     twoHanded: false,
+    // Пассивные бонусы есть только у своих предметов: их задаёт форма листа.
+    bonuses: [],
     ...DEFAULT_INVENTORY_MAGIC_STATE,
     // Настройка — свойство предмета: настроиться игрок решает сам, но
     // предлагать это лист должен только там, где настройка вообще нужна.
@@ -1534,6 +1766,7 @@ export function buildStartingEquipmentItem(
       weapon: null,
       equipped: false,
       twoHanded: false,
+      bonuses: [],
       ...DEFAULT_INVENTORY_MAGIC_STATE,
     };
   }
@@ -1556,6 +1789,8 @@ export function buildStartingEquipmentItem(
     weapon: null,
     equipped: false,
     twoHanded: false,
+    // Пассивные бонусы есть только у своих предметов: их задаёт форма листа.
+    bonuses: [],
     ...DEFAULT_INVENTORY_MAGIC_STATE,
     description: [],
   };
@@ -1808,7 +2043,200 @@ export function isEquippableInventoryItem(
     inventoryItem.armor !== null
     || inventoryItem.armorClassBonus !== MAGIC_ITEM_BONUS_NONE
     || inventoryItem.category === 'MAGIC_ITEM'
+    // Свой предмет бывает и немагическим (наручи мастера-оружейника): пока его
+    // не надеть, заданные ему бонусы в лист не пойдут.
+    || hasInventoryItemBonuses(inventoryItem)
   );
+}
+
+/**
+ * Даёт ли предмет хоть какой-нибудь пассивный бонус листу.
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns true — у предмета есть пассивные бонусы.
+ */
+export function hasInventoryItemBonuses(
+  inventoryItem: CharacterInventoryItem,
+): boolean {
+  return inventoryItem.bonuses.length > 0;
+}
+
+/**
+ * Составное значение цели для селектора формы: вид и ключ в одной строке, ведь
+ * селект отдаёт одно значение.
+ *
+ * @param kind вид цели.
+ * @param key ключ цели; '' — цель уточнения не требует.
+ * @returns значение варианта селектора.
+ */
+export function toInventoryBonusTargetValue(
+  kind: InventoryBonusTargetKind,
+  key: string,
+): string {
+  return `${kind}${INVENTORY_BONUS_TARGET_SEPARATOR}${key}`;
+}
+
+/**
+ * Разбор значения селектора обратно в цель бонуса. Название навыка может
+ * содержать двоеточие, поэтому ключом считается всё после ПЕРВОГО разделителя.
+ *
+ * @param value значение варианта селектора.
+ * @returns цель бонуса; null — значение не разбирается.
+ */
+export function parseInventoryBonusTarget(
+  value: string,
+): { kind: InventoryBonusTargetKind; key: string } | null {
+  const separatorIndex = value.indexOf(INVENTORY_BONUS_TARGET_SEPARATOR);
+
+  if (separatorIndex < 0) {
+    return null;
+  }
+
+  const kind = value.slice(0, separatorIndex);
+
+  if (!isInventoryBonusTargetKind(kind)) {
+    return null;
+  }
+
+  return { kind, key: value.slice(separatorIndex + 1) };
+}
+
+/**
+ * Проверка, что строка — известный вид цели бонуса: значения селектора приходят
+ * нетипизированными, а в запись листа должен попасть только known-вид.
+ *
+ * @param candidate проверяемое значение.
+ * @returns true — значение является видом цели.
+ */
+function isInventoryBonusTargetKind(
+  candidate: string,
+): candidate is InventoryBonusTargetKind {
+  return (
+    candidate in INVENTORY_BONUS_TARGET_PREFIXES
+    || candidate in INVENTORY_BONUS_TARGET_LABELS
+  );
+}
+
+/**
+ * Подпись цели бонуса: у целей с уточнением — «Спасбросок: Ловкость», у
+ * остальных — их собственное название.
+ *
+ * @param kind вид цели.
+ * @param key ключ цели; '' — цель уточнения не требует.
+ * @returns подпись цели.
+ */
+export function getInventoryBonusTargetLabel(
+  kind: InventoryBonusTargetKind,
+  key: string,
+): string {
+  if (kind === 'skill') {
+    return `${INVENTORY_BONUS_TARGET_PREFIXES.skill}: ${key}`;
+  }
+
+  if (kind === 'speed') {
+    const speedLabel = isSpeedTypeKey(key) ? SPEED_TYPE_LABELS[key] : key;
+
+    return `${INVENTORY_BONUS_TARGET_PREFIXES.speed}: ${speedLabel}`;
+  }
+
+  if (
+    kind === 'ability'
+    || kind === 'ability-check'
+    || kind === 'saving-throw'
+  ) {
+    const abilityLabel = isAbilityKey(key) ? ABILITY_LABELS[key] : key;
+
+    return `${INVENTORY_BONUS_TARGET_PREFIXES[kind]}: ${abilityLabel}`;
+  }
+
+  return INVENTORY_BONUS_TARGET_LABELS[kind];
+}
+
+/**
+ * Проверка, что значение — ключ скорости передвижения.
+ *
+ * @param candidate проверяемое значение.
+ * @returns true — значение является ключом скорости.
+ */
+function isSpeedTypeKey(candidate: string): candidate is SpeedTypeKey {
+  return candidate in SPEED_TYPE_LABELS;
+}
+
+/**
+ * Вариант цели для селектора формы: значение и подпись одной цели.
+ *
+ * @param kind вид цели.
+ * @param key ключ цели; '' — цель уточнения не требует.
+ * @returns вариант цели бонуса.
+ */
+function toInventoryBonusTargetOption(
+  kind: InventoryBonusTargetKind,
+  key: string,
+): InventoryBonusTargetOption {
+  return {
+    value: toInventoryBonusTargetValue(kind, key),
+    label: getInventoryBonusTargetLabel(kind, key),
+  };
+}
+
+/**
+ * Варианты цели бонуса для селектора формы, сгруппированные по смыслу. Навыки
+ * берутся из самого листа: свои навыки игрока усиливаются наравне с навыками
+ * по правилам.
+ *
+ * @param character персонаж.
+ * @returns группы вариантов цели бонуса.
+ */
+export function getInventoryBonusTargetGroups(
+  character: Character,
+): InventoryBonusTargetGroup[] {
+  return [
+    {
+      label: INVENTORY_BONUS_GROUP_LABELS.abilities,
+      items: ABILITY_ORDER.map((ability) =>
+        toInventoryBonusTargetOption('ability', ability),
+      ),
+    },
+    {
+      label: INVENTORY_BONUS_GROUP_LABELS.checks,
+      items: ABILITY_ORDER.map((ability) =>
+        toInventoryBonusTargetOption('ability-check', ability),
+      ),
+    },
+    {
+      label: INVENTORY_BONUS_GROUP_LABELS.savingThrows,
+      items: [
+        toInventoryBonusTargetOption('all-saving-throws', ''),
+        ...ABILITY_ORDER.map((ability) =>
+          toInventoryBonusTargetOption('saving-throw', ability),
+        ),
+      ],
+    },
+    {
+      label: INVENTORY_BONUS_GROUP_LABELS.skills,
+      items: character.skills.map((skill) =>
+        toInventoryBonusTargetOption('skill', skill.name),
+      ),
+    },
+    {
+      label: INVENTORY_BONUS_GROUP_LABELS.speeds,
+      items: [
+        toInventoryBonusTargetOption('all-speeds', ''),
+        ...SPEED_PRIMARY_ORDER.map((speedKey) =>
+          toInventoryBonusTargetOption('speed', speedKey),
+        ),
+      ],
+    },
+    {
+      label: INVENTORY_BONUS_GROUP_LABELS.other,
+      items: [
+        toInventoryBonusTargetOption('armor-class', ''),
+        toInventoryBonusTargetOption('initiative', ''),
+        toInventoryBonusTargetOption('spell-save-dc', ''),
+        toInventoryBonusTargetOption('spell-attack', ''),
+      ],
+    },
+  ];
 }
 
 /**
@@ -1835,6 +2263,65 @@ export function isActivatableInventoryItem(
   inventoryItem: CharacterInventoryItem,
 ): boolean {
   return inventoryItem.category === 'MAGIC_ITEM';
+}
+
+/**
+ * Сводка магии предмета для его строки: что именно он даёт листу. Собирается из
+ * всех его надбавок — и боевых (попадание, дополнительный урон, класс доспеха),
+ * и пассивных, — потому что игрок читает их одним списком.
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns подписи бонусов; пустой список — предмет ничего не даёт.
+ */
+export function getInventoryItemBonusLabels(
+  inventoryItem: CharacterInventoryItem,
+): string[] {
+  const labels: string[] = [];
+
+  const attackBonus =
+    inventoryItem.weapon?.attackBonus ?? MAGIC_ITEM_BONUS_NONE;
+
+  if (attackBonus !== MAGIC_ITEM_BONUS_NONE) {
+    labels.push(
+      `${INVENTORY_BONUS_LABELS.attack} ${getFormattedBonus(attackBonus)}`,
+    );
+  }
+
+  const extraDamage = inventoryItem.weapon?.extraDamage;
+
+  if (extraDamage && extraDamage.diceCount > 0) {
+    const damageTypeLabel = DAMAGE_TYPE_LABELS[extraDamage.type] ?? '';
+
+    const notation = `${extraDamage.diceCount}${DICE_NOTATION_LETTER}${extraDamage.diceFaces}`;
+
+    labels.push(
+      [INVENTORY_BONUS_LABELS.extraDamage, notation, damageTypeLabel]
+        .filter(Boolean)
+        .join(' '),
+    );
+  }
+
+  if (inventoryItem.armorClassBonus !== MAGIC_ITEM_BONUS_NONE) {
+    labels.push(
+      `${INVENTORY_BONUS_TARGET_LABELS['armor-class']} ${getFormattedBonus(
+        inventoryItem.armorClassBonus,
+      )}`,
+    );
+  }
+
+  for (const bonus of inventoryItem.bonuses) {
+    if (bonus.value === 0) {
+      continue;
+    }
+
+    labels.push(
+      `${getInventoryBonusTargetLabel(bonus.kind, bonus.key)} ${getFormattedBonus(
+        bonus.value,
+      )}`,
+    );
+  }
+
+  return labels;
 }
 
 /**
@@ -1958,30 +2445,120 @@ function getCustomInventoryWeapon(
     DAMAGE_DICE_COUNT_MAX,
   );
 
+  const bonus = getClampedInteger(
+    draft.damageBonus,
+    DAMAGE_BONUS_MIN,
+    DAMAGE_BONUS_MAX,
+  );
+
+  const versatileDiceCount = getClampedInteger(
+    draft.versatileDiceCount,
+    DAMAGE_DICE_COUNT_MIN,
+    DAMAGE_DICE_COUNT_MAX,
+  );
+
+  const extraDiceCount = getClampedInteger(
+    draft.extraDamageDiceCount,
+    DAMAGE_DICE_COUNT_MIN,
+    DAMAGE_DICE_COUNT_MAX,
+  );
+
   return {
     category: draft.weaponCategory,
     ranged: draft.ranged,
     finesse: draft.finesse,
-    // Бонус к атаке форма не задаёт — он приходит от магии каталожного предмета,
-    // и копии его сохраняет `toUpdatedCustomInventoryItem`.
-    attackBonus: MAGIC_ITEM_BONUS_NONE,
-    // Второй бросок форма не задаёт: у своего оружия свойства «Универсальное»
-    // нет — копии каталожного его сохраняет `toUpdatedCustomInventoryItem`.
-    versatileDamage: null,
+    // Бонус к попаданию и дополнительный урон даёт магия: у обычного оружия
+    // блок магии в форме скрыт, и его значения в предмет не идут.
+    attackBonus: draft.magic
+      ? getClampedInteger(draft.attackBonus, ITEM_BONUS_MIN, ITEM_BONUS_MAX)
+      : MAGIC_ITEM_BONUS_NONE,
+    // Второй бросок есть только у универсального оружия; тип урона и
+    // собственный бонус у обоих хватов общие — по правилам меняется лишь кость.
+    versatileDamage:
+      draft.versatile && versatileDiceCount > 0
+        ? {
+            diceCount: versatileDiceCount,
+            diceFaces: draft.versatileDiceFaces,
+            bonus,
+            type: draft.damageType,
+          }
+        : null,
+    extraDamage:
+      draft.magic && extraDiceCount > 0
+        ? {
+            diceCount: extraDiceCount,
+            diceFaces: draft.extraDamageDiceFaces,
+            type: draft.extraDamageType,
+          }
+        : null,
     damage:
       diceCount > 0
         ? {
             diceCount,
             diceFaces: draft.damageDiceFaces,
-            bonus: getClampedInteger(
-              draft.damageBonus,
-              DAMAGE_BONUS_MIN,
-              DAMAGE_BONUS_MAX,
-            ),
+            bonus,
             type: draft.damageType,
           }
         : null,
   };
+}
+
+/**
+ * Пассивные бонусы предмета из значений формы. null — предмет ничего не даёт:
+ * пустой блок в записи листа только мешал бы отличать «бонусов нет» от
+ * «бонусы обнулены».
+ *
+ * @param draft значения формы своего предмета.
+ * @returns пассивные бонусы предмета или null.
+ */
+function getCustomInventoryBonuses(
+  draft: CustomInventoryItemDraft,
+): InventoryItemBonus[] {
+  // Бонусы задаёт вкладка магии, и снятая пометка их отменяет: иначе
+  // выключенные поля продолжали бы считаться в листе.
+  if (!draft.magic) {
+    return [];
+  }
+
+  return (
+    draft.bonuses
+      .map((bonus) => ({
+        ...bonus,
+        value: getClampedInteger(
+          bonus.value,
+          getInventoryBonusMin(bonus.kind),
+          getInventoryBonusMax(bonus.kind),
+        ),
+      }))
+      // Нулевая строка — незаполненная: она ничего не даёт, но занимала бы место
+      // и в сводке предмета, и в разборе значений листа.
+      .filter((bonus) => bonus.value !== 0)
+  );
+}
+
+/**
+ * Нижняя граница величины бонуса: у скоростей она считается в футах, поэтому
+ * шире, чем у прибавок к броскам.
+ *
+ * @param kind вид цели бонуса.
+ * @returns минимальное значение бонуса.
+ */
+export function getInventoryBonusMin(kind: InventoryBonusTargetKind): number {
+  return kind === 'speed' || kind === 'all-speeds'
+    ? ITEM_SPEED_BONUS_MIN
+    : ITEM_BONUS_MIN;
+}
+
+/**
+ * Верхняя граница величины бонуса.
+ *
+ * @param kind вид цели бонуса.
+ * @returns максимальное значение бонуса.
+ */
+export function getInventoryBonusMax(kind: InventoryBonusTargetKind): number {
+  return kind === 'speed' || kind === 'all-speeds'
+    ? ITEM_SPEED_BONUS_MAX
+    : ITEM_BONUS_MAX;
 }
 
 /**
@@ -2077,8 +2654,8 @@ export function toCustomInventoryItem(
     weight: getDraftWeight(draft.weight),
     quantity,
     armor: getCustomInventoryArmor(draft),
-    // Плоский бонус к КД форма не задаёт: он приходит от магии каталожного
-    // предмета, и копии его возвращает `toUpdatedCustomInventoryItem`.
+    // Своя запись держит прибавку к КД строкой бонусов, как и все остальные
+    // прибавки; поле остаётся каталожным записям, где раздел отдаёт его числом.
     armorClassBonus: MAGIC_ITEM_BONUS_NONE,
     weapon: getCustomInventoryWeapon(draft),
     // Надетым остаётся то, что надевают: доспех и любой магический предмет
@@ -2087,81 +2664,47 @@ export function toCustomInventoryItem(
     // тогда предмет снимается вместе с ним.
     equipped:
       (draft.kind === 'armor' || draft.magic) && equipped && quantity > 0,
-    // Хват формой не задаётся: универсальным бывает только каталожное оружие, и
-    // его копии хват возвращает `toUpdatedCustomInventoryItem`.
+    // Хват начинается с одной руки: взять универсальное оружие двумя предлагает
+    // меню предмета, а правку хвата сохраняет `toUpdatedCustomInventoryItem`.
     twoHanded: false,
-    // Настройка, включение и заряды формой не задаются: у каталожной копии их
-    // возвращает `toUpdatedCustomInventoryItem`, а свой предмет заводится без
-    // них.
+    bonuses: getCustomInventoryBonuses(draft),
+    // Включение и настройка — состояние игрока, форма задаёт только само
+    // требование настройки и запас зарядов; свежий предмет заряжен полностью.
+    // Немагическому предмету ни то, ни другое не нужно.
     ...DEFAULT_INVENTORY_MAGIC_STATE,
+    requiresAttunement: draft.magic && draft.requiresAttunement,
+    charges: draft.magic ? getInventoryCharges(draft.maxCharges) : null,
     description: [...draft.description],
   };
 }
 
 /**
- * Возврат свойства «Универсальное» правленому предмету: второго броска в форме
- * нет, и без этого правка копии каталожного меча молча отбирала бы у него хват
- * двумя руками. Кости обычного урона при этом остаются такими, как их задали в
- * форме, — редактируется именно она.
+ * Возврат хвата правленому предмету: сам второй бросок задаёт форма, но брать
+ * оружие двумя руками игрок решает в бою — правка описания меча не должна
+ * перекладывать его в одну руку. Переставшее быть универсальным оружие хват
+ * теряет: катить им по большей кости больше нечем.
  *
  * @param updatedItem предмет, собранный из значений формы.
  * @param editedItem предмет до правки.
- * @returns предмет с сохранённым вторым броском и хватом.
+ * @returns предмет с сохранённым хватом.
  */
 function withKeptVersatileGrip(
   updatedItem: CharacterInventoryItem,
   editedItem: CharacterInventoryItem,
 ): CharacterInventoryItem {
-  const versatileDamage = editedItem.weapon?.versatileDamage ?? null;
-
-  // Оружие могли переделать в доспех или безделушку — хвату там взяться не от
-  // чего.
-  if (!updatedItem.weapon || !versatileDamage) {
+  if (!updatedItem.weapon?.versatileDamage) {
     return updatedItem;
   }
 
-  return {
-    ...updatedItem,
-    weapon: { ...updatedItem.weapon, versatileDamage },
-    twoHanded: editedItem.twoHanded,
-  };
+  return { ...updatedItem, twoHanded: editedItem.twoHanded };
 }
 
 /**
- * Возврат магических бонусов правленому предмету: бонус к атаке и плоский бонус
- * к КД форма не показывает, и без этого правка копии меча +1 молча отобрала бы у
- * него магию. Бонус к урону в форме есть — он уже сложен в костях урона.
- *
- * @param updatedItem предмет, собранный из значений формы.
- * @param editedItem предмет до правки.
- * @returns предмет с сохранёнными бонусами магии.
- */
-function withKeptMagicBonuses(
-  updatedItem: CharacterInventoryItem,
-  editedItem: CharacterInventoryItem,
-): CharacterInventoryItem {
-  const attackBonus = editedItem.weapon?.attackBonus ?? MAGIC_ITEM_BONUS_NONE;
-
-  return {
-    ...updatedItem,
-    // Плащ защиты могли переделать в доспех: у доспеха бонус входит в его КД,
-    // как при сборке из каталога, иначе он посчитался бы в защите дважды.
-    armorClassBonus: updatedItem.armor
-      ? MAGIC_ITEM_BONUS_NONE
-      : editedItem.armorClassBonus,
-    // Оружие могли переделать в доспех или безделушку — бонусу атаки там негде
-    // жить.
-    weapon: updatedItem.weapon
-      ? { ...updatedItem.weapon, attackBonus }
-      : updatedItem.weapon,
-  };
-}
-
-/**
- * Возврат состояния магии правленому предмету: настройки, включения и зарядов
- * форма не показывает, и без этого правка названия жезла обнуляла бы его
- * заряды. Снятая в форме магическая пометка это состояние стирает — у обычного
- * предмета настраиваться не на что и заряжать нечего.
+ * Возврат состояния магии правленому предмету: настройка, включение и остаток
+ * зарядов — состояние игрока, а не значения формы, и правка названия жезла не
+ * должна его обнулять. Само требование настройки и запас зарядов задаёт форма,
+ * поэтому остаток обрезается новым максимумом, а снятое требование снимает и
+ * настройку.
  *
  * @param updatedItem предмет, собранный из значений формы.
  * @param editedItem предмет до правки.
@@ -2171,16 +2714,22 @@ function withKeptMagicState(
   updatedItem: CharacterInventoryItem,
   editedItem: CharacterInventoryItem,
 ): CharacterInventoryItem {
-  if (updatedItem.category !== 'MAGIC_ITEM') {
-    return { ...updatedItem, ...DEFAULT_INVENTORY_MAGIC_STATE };
-  }
+  const charges = updatedItem.charges
+    ? {
+        ...updatedItem.charges,
+        current: clamp(
+          editedItem.charges?.current ?? updatedItem.charges.max,
+          0,
+          updatedItem.charges.max,
+        ),
+      }
+    : null;
 
   return {
     ...updatedItem,
-    requiresAttunement: editedItem.requiresAttunement,
-    attuned: editedItem.attuned,
-    active: editedItem.active,
-    charges: editedItem.charges,
+    attuned: updatedItem.requiresAttunement && editedItem.attuned,
+    active: isActivatableInventoryItem(updatedItem) && editedItem.active,
+    charges,
   };
 }
 
@@ -2206,10 +2755,7 @@ export function toUpdatedCustomInventoryItem(
 
   const updatedItem = draftItem
     ? withKeptMagicState(
-        withKeptMagicBonuses(
-          withKeptVersatileGrip(draftItem, editedItem),
-          editedItem,
-        ),
+        withKeptVersatileGrip(draftItem, editedItem),
         editedItem,
       )
     : null;
@@ -2267,6 +2813,35 @@ function getCustomArmorType(armor: InventoryArmor | null): CustomArmorType {
 }
 
 /**
+ * Строки бонусов для формы. Каталожная копия держит прибавку к КД полем, а
+ * форма правит её строкой, поэтому поле разворачивается в строку — иначе
+ * правка копии плаща защиты молча отобрала бы у него защиту.
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns строки бонусов для формы.
+ */
+function getCustomInventoryBonusRows(
+  inventoryItem: CharacterInventoryItem,
+): InventoryItemBonus[] {
+  const armorClassRows: InventoryItemBonus[] =
+    inventoryItem.armorClassBonus === MAGIC_ITEM_BONUS_NONE
+      ? []
+      : [
+          {
+            id: crypto.randomUUID(),
+            kind: 'armor-class',
+            key: '',
+            value: inventoryItem.armorClassBonus,
+          },
+        ];
+
+  return [
+    ...armorClassRows,
+    ...inventoryItem.bonuses.map((bonus) => ({ ...bonus })),
+  ];
+}
+
+/**
  * Значения формы своего предмета из записи инвентаря — для редактирования.
  * Незаполненные для этого вида поля берутся из заготовки: игрок может сменить
  * вид предмета прямо в форме, и они должны быть осмысленными.
@@ -2277,7 +2852,10 @@ function getCustomArmorType(armor: InventoryArmor | null): CustomArmorType {
 export function getCustomInventoryItemDraft(
   inventoryItem: CharacterInventoryItem,
 ): CustomInventoryItemDraft {
-  const { armor, weapon } = inventoryItem;
+  const { armor, weapon, charges } = inventoryItem;
+
+  const versatileDamage = weapon?.versatileDamage ?? null;
+  const extraDamage = weapon?.extraDamage ?? null;
 
   return {
     ...NEW_CUSTOM_INVENTORY_ITEM,
@@ -2300,6 +2878,25 @@ export function getCustomInventoryItemDraft(
       weapon?.damage?.diceFaces ?? NEW_CUSTOM_INVENTORY_ITEM.damageDiceFaces,
     damageBonus: weapon?.damage?.bonus ?? NEW_CUSTOM_INVENTORY_ITEM.damageBonus,
     damageType: weapon?.damage?.type ?? NEW_CUSTOM_INVENTORY_ITEM.damageType,
+    // Универсальность узнаётся по самому второму броску — отдельного признака у
+    // оружия нет, как и у каталожного.
+    versatile: versatileDamage !== null,
+    versatileDiceCount:
+      versatileDamage?.diceCount
+      ?? NEW_CUSTOM_INVENTORY_ITEM.versatileDiceCount,
+    versatileDiceFaces:
+      versatileDamage?.diceFaces
+      ?? NEW_CUSTOM_INVENTORY_ITEM.versatileDiceFaces,
+    attackBonus: weapon?.attackBonus ?? NEW_CUSTOM_INVENTORY_ITEM.attackBonus,
+    extraDamageDiceCount:
+      extraDamage?.diceCount ?? NEW_CUSTOM_INVENTORY_ITEM.extraDamageDiceCount,
+    extraDamageDiceFaces:
+      extraDamage?.diceFaces ?? NEW_CUSTOM_INVENTORY_ITEM.extraDamageDiceFaces,
+    extraDamageType:
+      extraDamage?.type ?? NEW_CUSTOM_INVENTORY_ITEM.extraDamageType,
+    bonuses: getCustomInventoryBonusRows(inventoryItem),
+    requiresAttunement: inventoryItem.requiresAttunement,
+    maxCharges: charges?.max ?? NEW_CUSTOM_INVENTORY_ITEM.maxCharges,
     description: [...(inventoryItem.description ?? [])],
   };
 }
@@ -2515,7 +3112,7 @@ function getArmorClassAbilityBonuses(
 ): ArmorClassAbilityBonus[] {
   return sortAbilityKeys(abilities).map((ability) => ({
     ability,
-    modifier: getModifier(character.abilities[ability]),
+    modifier: getAbilityModifier(character, ability),
   }));
 }
 
@@ -2554,6 +3151,38 @@ export function getArmorDexCappedLabel(breakdown: ArmorClassBreakdown): string {
   const full = getFormattedBonus(breakdown.dexModifier);
 
   return `${reason}: ${applied} ${ARMOR_CLASS_LABELS.dexCappedOf} ${full}`;
+}
+
+/**
+ * Магическая надбавка к КД самого доспеха: у каталожной записи она уже входит в
+ * значение брони, у своей — лежит отдельным полем, и без настройки (если предмет
+ * её требует) не работает. Она идёт в сравнение «в зачёт лучшая броня», а не
+ * плоской прибавкой поверх: иначе слабый доспех с большой надбавкой прибавлял бы
+ * к чужому КД.
+ *
+ * @param inventoryItem надетый доспех или щит.
+ * @returns надбавка к КД доспеха; 0 — её нет или она не работает.
+ */
+function getArmorMagicBonus(inventoryItem: CharacterInventoryItem): number {
+  return isActiveBonusItem(inventoryItem)
+    ? getInventoryItemArmorClassBonus(inventoryItem)
+    : 0;
+}
+
+/**
+ * Прибавка предмета к классу доспеха: у каталожной записи она пришла полем
+ * из раздела, у своей — строкой бонусов.
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns прибавка предмета к КД.
+ */
+export function getInventoryItemArmorClassBonus(
+  inventoryItem: CharacterInventoryItem,
+): number {
+  return (
+    inventoryItem.armorClassBonus
+    + getItemBonusValue(inventoryItem, 'armor-class')
+  );
 }
 
 /**
@@ -2614,7 +3243,9 @@ export function getArmorClassBreakdown(
   // Группа предмета здесь не важна: доспех со своей магической пометкой лежит
   // среди магических предметов, но КД считается по тем же параметрам `armor`.
   // Отсутствующий доспех (количество — ноль) в зачёт не идёт, даже если остался
-  // помеченным надетым в старой записи листа.
+  // помеченным надетым в старой записи листа. Сам доспех работает и без
+  // настройки (это всё ещё латы), а вот его магическая надбавка — нет: она идёт
+  // в зачёт по тем же правилам, что и остальные пассивные бонусы.
   const equippedArmor = character.inventory.filter(
     (item): item is CharacterInventoryItem & { armor: InventoryArmor } =>
       item.equipped && item.armor !== null && !isMissingInventoryItem(item),
@@ -2639,7 +3270,8 @@ export function getArmorClassBreakdown(
       dexLimit,
     );
 
-    const effectiveValue = item.armor.baseArmorClass + armorDexBonus;
+    const effectiveValue =
+      item.armor.baseArmorClass + getArmorMagicBonus(item) + armorDexBonus;
 
     if (effectiveValue >= bodyArmorValue) {
       bodyArmorName = item.name;
@@ -2653,17 +3285,20 @@ export function getArmorClassBreakdown(
   let shieldBonus = 0;
 
   for (const item of equippedArmor) {
-    if (item.armor.shield && item.armor.baseArmorClass > shieldBonus) {
-      shieldBonus = item.armor.baseArmorClass;
+    const shieldValue = item.armor.baseArmorClass + getArmorMagicBonus(item);
+
+    if (item.armor.shield && shieldValue > shieldBonus) {
+      shieldBonus = shieldValue;
     }
   }
 
   // Плащ и кольцо защиты бронёй не являются и по правилам складываются друг с
-  // другом, поэтому их бонусы суммируются, а не соревнуются за лучший.
+  // другом, поэтому их бонусы суммируются, а не соревнуются за лучший. Надбавка
+  // самой брони сюда не идёт — она уже учтена в её значении.
   const itemBonus = character.inventory.reduce(
     (total, item) =>
-      item.equipped && !isMissingInventoryItem(item)
-        ? total + item.armorClassBonus
+      item.armor === null && isActiveBonusItem(item)
+        ? total + getInventoryItemArmorClassBonus(item)
         : total,
     0,
   );
@@ -2725,7 +3360,7 @@ export function getWeaponAttackBonus(
 
   const value =
     getCharacterProficiencyBonus(character)
-    + getModifier(character.abilities[ability])
+    + getAbilityModifier(character, ability)
     + weapon.attackBonus
     - getExhaustionD20Penalty(character);
 
@@ -2777,19 +3412,36 @@ export function getWeaponDamage(
 
   const diceNotation = `${damage.diceCount}${DICE_NOTATION_LETTER}${damage.diceFaces}`;
 
-  const totalBonus = damage.bonus + getModifier(character.abilities[ability]);
+  // Дополнительный урон катится вместе с основным одной формулой: у него свой
+  // тип, но отдельного броска правила не требуют.
+  const extraDamage = weapon.extraDamage;
+
+  const extraNotation =
+    extraDamage && extraDamage.diceCount > 0
+      ? `${extraDamage.diceCount}${DICE_NOTATION_LETTER}${extraDamage.diceFaces}`
+      : '';
+
+  const diceFormula = extraNotation
+    ? `${diceNotation}+${extraNotation}`
+    : diceNotation;
+
+  const totalBonus = damage.bonus + getAbilityModifier(character, ability);
 
   const sign = totalBonus < 0 ? '-' : '+';
 
   return {
     formula:
       totalBonus === 0
-        ? diceNotation
-        : `${diceNotation}${sign}${Math.abs(totalBonus)}`,
+        ? diceFormula
+        : `${diceFormula}${sign}${Math.abs(totalBonus)}`,
     diceNotation,
     weaponBonus: damage.bonus,
     ability,
     typeLabel: DAMAGE_TYPE_LABELS[damage.type] ?? '',
+    extraNotation,
+    extraTypeLabel: extraDamage
+      ? (DAMAGE_TYPE_LABELS[extraDamage.type] ?? '')
+      : '',
   };
 }
 
@@ -2814,13 +3466,22 @@ export function getWeaponDamageSource(
     return null;
   }
 
+  // Дополнительный урон уходит в модалку своей группой костей (её нотация
+  // разбирается в отдельную строку): игрок видит обе кости и может поправить
+  // любую. Тип у него свой, поэтому в подписи типы перечисляются через плюс.
+  const typeLabel = damage.extraTypeLabel
+    ? [damage.typeLabel, damage.extraTypeLabel].filter(Boolean).join(' + ')
+    : damage.typeLabel;
+
   return {
-    diceNotation: damage.diceNotation,
+    diceNotation: damage.extraNotation
+      ? `${damage.diceNotation}+${damage.extraNotation}`
+      : damage.diceNotation,
     flatBonus: damage.weaponBonus,
     ability: damage.ability,
     // Модификатор характеристики входит в урон оружия ровно один раз.
     abilityModifierCount: 1,
-    typeLabel: damage.typeLabel,
+    typeLabel,
   };
 }
 
@@ -2951,8 +3612,8 @@ export function getSwappedRollModifier(
 ): number {
   return (
     modifier
-    - getModifier(character.abilities[baseAbility])
-    + getModifier(character.abilities[ability])
+    - getAbilityModifier(character, baseAbility)
+    + getAbilityModifier(character, ability)
   );
 }
 
@@ -3561,13 +4222,21 @@ export function getExhaustionSpeedPenalty(character: Character): number {
 export function getEffectiveSpeed(character: Character): CharacterSpeed {
   const penalty = getExhaustionSpeedPenalty(character);
 
-  if (penalty === 0) {
-    return character.speed;
-  }
+  // Прибавка «ко всем скоростям» идёт к каждому способу передвижения, которым
+  // персонаж владеет (сапоги скорости), а адресная — только к своему (крылатые
+  // сапоги). Нулевой скорости не прибавляет ни та, ни другая: ноль означает,
+  // что такого передвижения у персонажа нет.
+  const commonBonus = getInventoryBonusValue(character, 'all-speeds');
 
-  const values = mapValues(character.speed.values, (value) =>
-    value > 0 ? Math.max(0, value - penalty) : value,
-  );
+  const values = mapValues(character.speed.values, (value, key) => {
+    if (value <= 0) {
+      return value;
+    }
+
+    const bonus = commonBonus + getInventoryBonusValue(character, 'speed', key);
+
+    return Math.max(0, value + bonus - penalty);
+  });
 
   return { ...character.speed, values };
 }
@@ -3586,7 +4255,9 @@ export function getAbilityCheckValue(
   ability: AbilityKey,
 ): number {
   return (
-    getModifier(character.abilities[ability])
+    getAbilityModifier(character, ability)
+    // Предмет может усиливать сами проверки, не трогая значение характеристики.
+    + getInventoryBonusValue(character, 'ability-check', ability)
     - getExhaustionD20Penalty(character)
   );
 }
@@ -4800,22 +5471,29 @@ export function getSpellcastingBreakdown(
   const ability =
     explicitAbility ?? getClassSpellcastingAbility(character.characterClass);
 
-  const abilityModifier = ability
-    ? getModifier(character.abilities[ability])
-    : 0;
+  const abilityModifier = ability ? getAbilityModifier(character, ability) : 0;
 
   const proficiencyBonus = getCharacterProficiencyBonus(character);
+
+  // Жезл боевого мага и прочая магия прибавляют к заклинательству, пока предмет
+  // надет (и настроен, если он этого требует).
+  const itemSaveDcBonus = getInventoryBonusValue(character, 'spell-save-dc');
+  const itemAttackBonus = getInventoryBonusValue(character, 'spell-attack');
 
   return {
     ability,
     auto,
     abilityModifier,
     proficiencyBonus,
-    saveDc: SPELL_SAVE_DC_BASE + proficiencyBonus + abilityModifier,
+    saveDc:
+      SPELL_SAVE_DC_BASE + proficiencyBonus + abilityModifier + itemSaveDcBonus,
     // Сложность спасброска — не бросок к20, истощение её не трогает, а вот
     // атака заклинанием — бросок.
     attackBonus:
-      proficiencyBonus + abilityModifier - getExhaustionD20Penalty(character),
+      proficiencyBonus
+      + abilityModifier
+      + itemAttackBonus
+      - getExhaustionD20Penalty(character),
     prepared: getPreparedSpellsBreakdown(character, 'spells'),
     preparedCantrips: getPreparedSpellsBreakdown(character, 'cantrips'),
   };

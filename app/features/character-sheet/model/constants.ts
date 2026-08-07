@@ -20,6 +20,7 @@ import type {
   FeatureOrigin,
   FeatureOriginGroup,
   HitPointsGainMode,
+  InventoryItemBonus,
   InventoryItemCategory,
   InventoryMagicState,
   InventoryStatRollKind,
@@ -2627,6 +2628,16 @@ export const INVENTORY_ATTUNED_BADGE_LABEL = 'Настроен';
 export const INVENTORY_ATTUNED_BADGE_HINT =
   'Персонаж настроен на предмет; настроиться можно не более чем на три предмета';
 
+/** Значок предмета, который требует настройки, но ещё не настроен. */
+export const INVENTORY_ATTUNEMENT_BADGE_LABEL = 'Нужна настройка';
+
+/**
+ * Подсказка значка «Нужна настройка»: пока настройки нет, пассивные бонусы
+ * предмета в лист не идут.
+ */
+export const INVENTORY_ATTUNEMENT_BADGE_HINT =
+  'Предмет требует настройки: его бонусы не работают, пока персонаж на него не настроен — настройка в меню предмета';
+
 /** Значок включённого предмета. */
 export const INVENTORY_ACTIVE_BADGE_LABEL = 'Включён';
 
@@ -2668,6 +2679,32 @@ export const INVENTORY_MISSING_BADGE_LABEL = 'Отсутствует';
 /** Подсказка значка «Отсутствует»: что именно запрещает нулевое количество. */
 export const INVENTORY_MISSING_BADGE_HINT =
   'Предмета не осталось: его нельзя надеть, им нельзя атаковать и бросать урон';
+
+/**
+ * Подписи вклада снаряжения в характеристику: плитка показывает значение с
+ * бонусами предметов, а правится записанное — без пояснения числа расходятся.
+ */
+export const ABILITY_ITEM_BONUS_LABELS = {
+  /** Хвост подсказки плитки: «18 = 16 +2 от снаряжения». */
+  hint: 'от снаряжения',
+
+  /** Пояснение в модалке правки значения. */
+  modalHint: 'Снаряжение добавляет к характеристике',
+};
+
+/** Подписи бонусов предмета для сводки в его строке. */
+export const INVENTORY_BONUS_LABELS = {
+  title: 'Бонусы',
+  attack: 'Попадание',
+  extraDamage: 'Дополнительный урон',
+
+  /** Пояснение под сводкой, пока бонусы не работают. */
+  inactiveHint: 'Бонусы заработают, когда предмет будет надет',
+
+  /** То же для предмета, которому нужна ещё и настройка. */
+  attunementHint:
+    'Бонусы заработают, когда предмет будет надет, а персонаж настроен на него',
+};
 
 /** Короткие подписи плиток параметров предмета в строке инвентаря. */
 export const INVENTORY_STAT_LABELS: Record<
@@ -2940,6 +2977,82 @@ export const CUSTOM_ITEM_WEIGHT_STEP = 0.5;
 /** Знаков после запятой в весе предмета (вес бывает дробным — 0,5 фунта). */
 export const WEIGHT_DECIMALS = 1;
 
+/** Приставки подписей целей, которым нужен ключ: без них «Сила» неоднозначна. */
+export const INVENTORY_BONUS_TARGET_PREFIXES: Record<
+  'ability' | 'ability-check' | 'skill' | 'saving-throw' | 'speed',
+  string
+> = {
+  'ability': 'Характеристика',
+  'ability-check': 'Проверки',
+  'skill': 'Навык',
+  'saving-throw': 'Спасбросок',
+  'speed': 'Скорость',
+};
+
+/** Подписи целей бонуса, которые говорят сами за себя. */
+export const INVENTORY_BONUS_TARGET_LABELS: Record<
+  | 'all-saving-throws'
+  | 'all-speeds'
+  | 'armor-class'
+  | 'initiative'
+  | 'spell-attack'
+  | 'spell-save-dc',
+  string
+> = {
+  'all-saving-throws': 'Все спасброски',
+  'all-speeds': 'Все скорости',
+  'armor-class': 'Класс доспеха',
+  'spell-save-dc': 'Сложность заклинаний',
+  'spell-attack': 'Атака заклинанием',
+  'initiative': 'Инициатива',
+};
+
+/** Заголовки групп в селекторе цели бонуса. */
+export const INVENTORY_BONUS_GROUP_LABELS = {
+  abilities: 'Характеристики',
+  checks: 'Проверки характеристик',
+  skills: 'Навыки',
+  savingThrows: 'Спасброски',
+  speeds: 'Скорости',
+  other: 'Прочее',
+};
+
+/** Разделитель вида цели и её ключа в значении селектора (`ability:strength`). */
+export const INVENTORY_BONUS_TARGET_SEPARATOR = ':';
+
+/** Цель бонуса по умолчанию у только что добавленной строки. */
+export const NEW_INVENTORY_BONUS: Omit<InventoryItemBonus, 'id'> = {
+  kind: 'ability',
+  key: 'strength',
+  value: 1,
+};
+
+/** Подписи списка бонусов в форме своего предмета. */
+export const INVENTORY_BONUS_ROW_LABELS = {
+  add: 'Добавить бонус',
+  remove: 'Убрать бонус',
+  targetPlaceholder: 'Куда идёт бонус',
+  searchPlaceholder: 'Поиск цели',
+};
+
+/** Минимальный бонус предмета: у проклятых предметов он отрицательный. */
+export const ITEM_BONUS_MIN = -10;
+
+/** Максимальный бонус предмета. */
+export const ITEM_BONUS_MAX = 10;
+
+/** Минимальная прибавка предмета к скорости (сапоги бывают и с помехой). */
+export const ITEM_SPEED_BONUS_MIN = -60;
+
+/** Максимальная прибавка предмета к скорости. */
+export const ITEM_SPEED_BONUS_MAX = 120;
+
+/** Минимум зарядов предмета (0 — зарядов у него нет). */
+export const INVENTORY_CHARGES_MIN = 0;
+
+/** Максимум зарядов предмета. */
+export const INVENTORY_CHARGES_MAX = 99;
+
 /** Заготовка формы своего предмета (значения по умолчанию). */
 export const NEW_CUSTOM_INVENTORY_ITEM: CustomInventoryItemDraft = {
   kind: 'weapon',
@@ -2957,7 +3070,129 @@ export const NEW_CUSTOM_INVENTORY_ITEM: CustomInventoryItemDraft = {
   damageDiceFaces: 6,
   damageBonus: 0,
   damageType: '',
+  versatile: false,
+  versatileDiceCount: 1,
+  versatileDiceFaces: 8,
+  attackBonus: 0,
+  extraDamageDiceCount: 0,
+  extraDamageDiceFaces: 6,
+  extraDamageType: '',
+  bonuses: [],
+  requiresAttunement: false,
+  maxCharges: 0,
   description: [],
+};
+
+/** Подписи полей формы своего предмета. */
+export const CUSTOM_ITEM_FIELD_LABELS = {
+  createTitle: 'Свой предмет',
+  editTitle: 'Редактирование предмета',
+  createAction: 'Добавить',
+  editAction: 'Сохранить',
+  kind: 'Что за предмет',
+  name: 'Название',
+  namePlaceholder: 'Название предмета',
+  quantity: 'Количество',
+  weaponCategory: 'Категория',
+  damageType: 'Тип урона',
+  damageTypePlaceholder: 'Не указан',
+  damage: 'Урон',
+  damageHint:
+    'Модификатор характеристики лист добавит сам; ноль костей — оружие без броска урона.',
+  armorType: 'Тип доспеха',
+
+  /** Продолжение подсказки типа доспеха: что делать с ним на листе. */
+  armorHint:
+    'Надеть доспех можно кнопкой в строке снаряжения — класс доспеха пересчитается сам.',
+  cost: 'Стоимость',
+  costPlaceholder: 'Например: 75 зм',
+  weight: `Вес, ${WEIGHT_UNIT_LABEL}`,
+  description: 'Описание',
+  descriptionPlaceholder: 'Опиши предмет',
+};
+
+/** Значение и слот вкладки основных параметров своего предмета. */
+export const CUSTOM_ITEM_MAIN_TAB = 'main';
+
+/** Значение и слот вкладки магических свойств своего предмета. */
+export const CUSTOM_ITEM_MAGIC_TAB = 'magic';
+
+/**
+ * Вкладки формы своего предмета: боевые и бытовые параметры отдельно от магии —
+ * форма со всеми полями сразу не читалась, а магия нужна не каждому предмету.
+ */
+export const CUSTOM_ITEM_TABS = [
+  {
+    label: 'Основное',
+    value: CUSTOM_ITEM_MAIN_TAB,
+    slot: CUSTOM_ITEM_MAIN_TAB,
+    icon: 'tabler:backpack',
+  },
+  {
+    label: 'Магические свойства',
+    value: CUSTOM_ITEM_MAGIC_TAB,
+    slot: CUSTOM_ITEM_MAGIC_TAB,
+    icon: 'tabler:sparkles',
+  },
+];
+
+/** Заголовки блоков параметров на вкладке «Основное». */
+export const CUSTOM_ITEM_SECTION_LABELS = {
+  weapon: 'Параметры оружия',
+  armor: 'Параметры доспеха',
+  properties: 'Свойства оружия',
+};
+
+/**
+ * Заготовка предмета для предпросмотра бонусов в форме: она никогда не попадает
+ * в лист, но сборка записи требует и ссылки, и названия.
+ */
+export const CUSTOM_ITEM_PREVIEW_URL = `${CUSTOM_INVENTORY_URL_PREFIX}preview`;
+
+/** Название предмета-заготовки для предпросмотра бонусов. */
+export const CUSTOM_ITEM_PREVIEW_NAME = 'Предмет';
+
+/** Подписи блока магии в форме своего предмета. */
+export const CUSTOM_ITEM_MAGIC_LABELS = {
+  hint: 'Пассивные бонусы работают, пока предмет надет; предмету с настройкой — пока персонаж на него настроен. Надеть и настроиться можно в строке снаряжения и в её меню.',
+
+  /** Подпись переключателя, открывающего поля вкладки. */
+  enable: CUSTOM_MAGIC_ITEM_LABEL,
+
+  /** Что даёт переключатель, кроме самих полей. */
+  enableHint: `Предмет попадёт в группу «${INVENTORY_CATEGORY_TITLES.MAGIC_ITEM}», а поля вкладки станут доступны.`,
+
+  /** Заголовок карточки с настройкой и зарядами. */
+  attunementSection: 'Настройка и заряды',
+
+  /** Заголовок карточки с бонусами оружия. */
+  weaponSection: 'Бонусы оружия',
+
+  /** Заголовок карточки с бонусами, которые предмет даёт самому листу. */
+  sheetSection: 'Бонусы листа',
+
+  /** Заголовок сводки того, что предмет даёт листу. */
+  summary: 'Что даёт предмет',
+
+  /** Подпись пустой сводки. */
+  summaryEmpty: 'Пока ничего — заполните бонусы выше.',
+
+  attunement: 'Требует настройки',
+  charges: 'Зарядов, максимум',
+  chargesHint: 'Ноль — зарядов у предмета нет.',
+  attackBonus: 'Бонус к попаданию',
+  extraDamage: 'Дополнительный урон',
+  extraDamageHint:
+    'Кости сверх основного урона со своим типом (например, 2к6 огнём). Ноль костей — дополнительного урона нет.',
+  bonusesHint:
+    'Бонус на строку: выберите цель (характеристика, навык, спасбросок, скорость, класс доспеха) и величину. Прибавка к КД доспеха тоже задаётся здесь.',
+};
+
+/** Подписи свойства «Универсальное» в форме своего оружия. */
+export const CUSTOM_ITEM_VERSATILE_LABELS = {
+  label: 'Универсальное',
+  damage: 'Урон двумя руками',
+  hint: 'Универсальным оружием можно бить двумя руками — тогда урон катится большей костью. Хват переключается в меню предмета.',
 };
 
 /** Обозначение кости в формуле броска (русская нотация дайс-роллера). */

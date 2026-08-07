@@ -589,6 +589,15 @@ const inventoryWeaponDamageSchema = z
   .nullable()
   .catch(null);
 
+const inventoryExtraDamageSchema = z
+  .object({
+    diceCount: z.coerce.number().catch(0),
+    diceFaces: z.coerce.number().catch(0),
+    type: z.string().catch(''),
+  })
+  .nullable()
+  .catch(null);
+
 const inventoryWeaponSchema = z
   .object({
     category: z.enum(['simple', 'martial']).catch('simple'),
@@ -603,9 +612,45 @@ const inventoryWeaponSchema = z
     // То же с уроном двумя руками: у листов, сохранённых до появления хвата,
     // блока нет — переключать нечего, пока предмет не добавят заново.
     versatileDamage: inventoryWeaponDamageSchema,
+    // И то же с дополнительным уроном: у листов до его появления блока нет —
+    // оружие катит один свой бросок.
+    extraDamage: inventoryExtraDamageSchema,
   })
   .nullable()
   .catch(null);
+
+/**
+ * Пассивный бонус предмета. Вид цели закрыт списком модели: незнакомая строка
+ * означает запись из другой версии листа, и такой бонус отбрасывается целиком —
+ * иначе он молча ушёл бы не в ту цель.
+ */
+const inventoryBonusSchema = z
+  .object({
+    id: z.string().catch(() => crypto.randomUUID()),
+    kind: z.enum([
+      'ability',
+      'ability-check',
+      'skill',
+      'saving-throw',
+      'all-saving-throws',
+      'speed',
+      'all-speeds',
+      'armor-class',
+      'spell-save-dc',
+      'spell-attack',
+      'initiative',
+    ]),
+    key: z.string().catch(''),
+    value: z.coerce.number().catch(0),
+  })
+  .nullable()
+  .catch(null);
+
+/** Бонусы предмета: у листов, сохранённых до их появления, список пуст. */
+const inventoryBonusesSchema = z
+  .array(inventoryBonusSchema)
+  .catch([])
+  .transform((bonuses) => bonuses.filter((bonus) => bonus !== null));
 
 /**
  * Заряды предмета. Остаток не выше максимума: иначе правка максимума в разделе
@@ -708,6 +753,7 @@ const inventoryItemSchema = z.object({
   weapon: inventoryWeaponSchema,
   equipped: z.boolean().catch(false),
   twoHanded: z.boolean().catch(false),
+  bonuses: inventoryBonusesSchema,
   // Состояние магии; у листов до его появления — настройки нет, предмет
   // выключен, зарядов не заведено.
   requiresAttunement: z.boolean().catch(false),

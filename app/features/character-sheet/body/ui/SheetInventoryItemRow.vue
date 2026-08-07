@@ -17,8 +17,10 @@
     ABILITY_LABELS,
     ARMOR_DEXTERITY_HINT_LABELS,
     CUSTOM_INVENTORY_BADGE_HINT,
+    getAbilityModifier,
     getCharacterProficiencyBonus,
     getFormattedBonus,
+    getInventoryItemBonusLabels,
     getInventoryItemMenuItems,
     getWeaponAttackBonus,
     getWeaponDamage,
@@ -26,6 +28,9 @@
     INVENTORY_ACTIVE_BADGE_LABEL,
     INVENTORY_ATTUNED_BADGE_HINT,
     INVENTORY_ATTUNED_BADGE_LABEL,
+    INVENTORY_ATTUNEMENT_BADGE_HINT,
+    INVENTORY_ATTUNEMENT_BADGE_LABEL,
+    INVENTORY_BONUS_LABELS,
     INVENTORY_CATEGORY_ICONS,
     INVENTORY_CHARGES_HINT_LABELS,
     INVENTORY_CHARGES_SPEND_LABEL,
@@ -227,6 +232,28 @@
     () => isAttunable.value && props.inventoryItem.attuned,
   );
 
+  // Настройки ждёт предмет, который её требует, но ещё не получил: его бонусы
+  // в лист не идут, и значок об этом предупреждает.
+  const isAttunementRequired = computed(
+    () => isAttunable.value && !props.inventoryItem.attuned,
+  );
+
+  const bonusLabels = computed(() =>
+    getInventoryItemBonusLabels(props.inventoryItem),
+  );
+
+  // Пока предмет не надет (а требующий настройки — не настроен), его бонусы
+  // только записаны: подпись под сводкой говорит, чего им не хватает.
+  const bonusHint = computed(() => {
+    if (isEquipped.value && !isAttunementRequired.value) {
+      return '';
+    }
+
+    return isAttunable.value
+      ? INVENTORY_BONUS_LABELS.attunementHint
+      : INVENTORY_BONUS_LABELS.inactiveHint;
+  });
+
   const isActivatable = computed(() =>
     isActivatableInventoryItem(props.inventoryItem),
   );
@@ -339,8 +366,8 @@
 
   /** Слагаемое подсказки с модификатором характеристики («Сила +3»). */
   function getAbilityPart(abilityKey: AbilityKey): string {
-    return `${ABILITY_LABELS[abilityKey]} ${getFormattedModifier(
-      character.value.abilities[abilityKey],
+    return `${ABILITY_LABELS[abilityKey]} ${getFormattedBonus(
+      getAbilityModifier(character.value, abilityKey),
     )}`;
   }
 
@@ -412,6 +439,14 @@
     }
 
     const tooltipParts = [damage.diceNotation];
+
+    // Дополнительный урон катится той же формулой, поэтому в разборе он стоит
+    // рядом с костями оружия — со своим типом, чтобы не путать с основным.
+    if (damage.extraNotation) {
+      tooltipParts.push(
+        [damage.extraNotation, damage.extraTypeLabel].filter(Boolean).join(' '),
+      );
+    }
 
     if (damage.weaponBonus !== 0) {
       tooltipParts.push(`оружие ${getFormattedBonus(damage.weaponBonus)}`);
@@ -591,7 +626,22 @@
             </UBadge>
 
             <!-- Настройка и включение стоят рядом с «Надет»: это состояния
-              одного предмета, и игрок читает их одной строкой -->
+              одного предмета, и игрок читает их одной строкой. Пока настройки
+              нет, вместо неё стоит предупреждение — бонусы предмета молчат -->
+            <UTooltip
+              v-if="isAttunementRequired"
+              :text="INVENTORY_ATTUNEMENT_BADGE_HINT"
+            >
+              <UBadge
+                size="sm"
+                color="warning"
+                variant="subtle"
+                class="relative z-10 shrink-0"
+              >
+                {{ INVENTORY_ATTUNEMENT_BADGE_LABEL }}
+              </UBadge>
+            </UTooltip>
+
             <UTooltip
               v-if="isAttuned"
               :text="INVENTORY_ATTUNED_BADGE_HINT"
@@ -794,6 +844,36 @@
       v-if="isExpanded"
       class="flex flex-col gap-2 border-t border-default/50 px-3 py-2"
     >
+      <!-- Сводка магии стоит над описанием: она короткая и отвечает на главный
+        вопрос — что предмет даёт листу -->
+      <div
+        v-if="bonusLabels.length"
+        class="flex flex-col gap-1"
+      >
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="text-[10px] font-bold text-muted uppercase">
+            {{ INVENTORY_BONUS_LABELS.title }}
+          </span>
+
+          <UBadge
+            v-for="bonusLabel in bonusLabels"
+            :key="bonusLabel"
+            size="sm"
+            color="neutral"
+            variant="subtle"
+          >
+            {{ bonusLabel }}
+          </UBadge>
+        </div>
+
+        <span
+          v-if="bonusHint"
+          class="text-xs text-dimmed"
+        >
+          {{ bonusHint }}
+        </span>
+      </div>
+
       <MarkupRender
         v-if="descriptionNodes.length"
         :render-node="descriptionNodes"

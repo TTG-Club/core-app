@@ -792,6 +792,9 @@ export function parseItemWeapon(input: unknown): InventoryWeapon | null {
     // Свойство «Универсальное» распознаём по самому броску, а не по строке в
     // `properties`: без второй кости переключать хват всё равно нечем.
     versatileDamage: parseWeaponVersatileDamage(weapon.versatile, damage),
+    // Дополнительный урон своего типа справочник предметов не отдаёт: его даёт
+    // магия, и на листе он появляется только у своего предмета.
+    extraDamage: null,
   };
 }
 

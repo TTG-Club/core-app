@@ -15,6 +15,7 @@
     DAMAGE_ROLL_ACTION_LABEL,
     DAMAGE_ROLL_DICE_COUNT_MIN,
     DEFAULT_DAMAGE_DICE_FACES,
+    getAbilityModifier,
     getDamageFormula,
     getFormattedBonus,
     parseDamageNotation,
@@ -79,7 +80,7 @@
 
   const abilityModifier = computed(() =>
     abilityKey.value
-      ? getModifier(character.value.abilities[abilityKey.value])
+      ? getAbilityModifier(character.value, abilityKey.value)
       : 0,
   );
 

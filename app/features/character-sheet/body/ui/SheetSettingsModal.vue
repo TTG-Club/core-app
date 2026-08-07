@@ -17,6 +17,7 @@
     DEFAULT_INITIATIVE_ABILITY,
     DEFAULT_WEAPON_ATTACK_ABILITY,
     EXHAUSTION_LABELS,
+    getAbilityModifier,
     getCustomBonusesValue,
     getExhaustionD20Penalty,
     getFormattedBonus,
@@ -100,7 +101,7 @@
 
   const draftInitiativeBaseValue = ref(
     props.character.settings.customInitiativeBase
-      ?? getModifier(props.character.abilities[initialInitiativeAbility]),
+      ?? getAbilityModifier(props.character, initialInitiativeAbility),
   );
 
   /**
@@ -112,7 +113,7 @@
    */
   function getAbilityModifierLabel(ability: AbilityKey): string {
     return `${ABILITY_LABELS[ability]} · ${getFormattedBonus(
-      getModifier(props.character.abilities[ability]),
+      getAbilityModifier(props.character, ability),
     )}`;
   }
 
@@ -172,7 +173,7 @@
   const initiativeBase = computed(() =>
     isInitiativeBaseCustom.value
       ? toBaseValue(draftInitiativeBaseValue.value)
-      : getModifier(props.character.abilities[draftInitiativeAbility.value]),
+      : getAbilityModifier(props.character, draftInitiativeAbility.value),
   );
 
   // Истощение снимает своё с инициативы уже на листе — в разборе оно стоит
@@ -194,7 +195,7 @@
   );
 
   const weaponAbilityModifier = computed(() =>
-    getModifier(props.character.abilities[effectiveWeaponAbility.value]),
+    getAbilityModifier(props.character, effectiveWeaponAbility.value),
   );
 
   const weaponAbilityModifierLabel = computed(() =>

@@ -4,9 +4,11 @@
   import { useCharacterSheet } from '../../composables';
   import {
     ABILITY_LABELS,
+    getAbilityModifier,
     getCharacterProficiencyBonus,
     getClassSpellcastingAbility,
     getFormattedBonus,
+    getInventoryBonusValue,
     SPELL_SAVE_DC_BASE,
     SPELLCASTING_ABILITY_AUTO,
     SPELLCASTING_ABILITY_OPTIONS,
@@ -50,16 +52,31 @@
 
   const abilityModifier = computed(() =>
     effectiveAbility.value
-      ? getModifier(character.value.abilities[effectiveAbility.value])
+      ? getAbilityModifier(character.value, effectiveAbility.value)
       : 0,
   );
 
+  // Жезл боевого мага и прочая магия прибавляют к заклинательству: без них
+  // предпросмотр модалки разошёлся бы с плитками вкладки заклинаний.
+  const itemSaveDcBonus = computed(() =>
+    getInventoryBonusValue(character.value, 'spell-save-dc'),
+  );
+
+  const itemAttackBonus = computed(() =>
+    getInventoryBonusValue(character.value, 'spell-attack'),
+  );
+
   const saveDc = computed(
-    () => SPELL_SAVE_DC_BASE + proficiencyBonus.value + abilityModifier.value,
+    () =>
+      SPELL_SAVE_DC_BASE
+      + proficiencyBonus.value
+      + abilityModifier.value
+      + itemSaveDcBonus.value,
   );
 
   const attackBonus = computed(
-    () => proficiencyBonus.value + abilityModifier.value,
+    () =>
+      proficiencyBonus.value + abilityModifier.value + itemAttackBonus.value,
   );
 
   const abilityModifierLabel = computed(() => {
