@@ -1,4 +1,4 @@
-import type { Character } from '../types';
+import type { Character, CharacterInventoryItem } from '../types';
 import type { PdfBuildContext, PdfTableColumn } from './types';
 
 import {
@@ -7,12 +7,13 @@ import {
   WEIGHT_UNIT_LABEL,
 } from '../constants';
 import {
-  getCarryingCapacity,
+  getCarryingCapacityValue,
   getInventoryGroups,
   getInventoryWeight,
   parseStoredMarkupNodes,
 } from '../utils';
 import {
+  PDF_ATTUNEMENT_MARKS,
   PDF_COIN_BOX_HEIGHT,
   PDF_CONTENT_WIDTH,
   PDF_EQUIPMENT_COLUMN_RATIOS,
@@ -35,6 +36,25 @@ import {
   drawValueBox,
 } from './layout';
 import { toPdfHeadingBlock, toPdfTextBlocks } from './markup-text';
+
+/**
+ * Название предмета для таблицы: предмету с настройкой она приписывается прямо
+ * к названию — на бумаге сверяться с меню листа не с чем.
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns название предмета для строки таблицы.
+ */
+function getEquipmentItemName(inventoryItem: CharacterInventoryItem): string {
+  if (!inventoryItem.requiresAttunement) {
+    return inventoryItem.name;
+  }
+
+  const mark = inventoryItem.attuned
+    ? PDF_ATTUNEMENT_MARKS.attuned
+    : PDF_ATTUNEMENT_MARKS.required;
+
+  return `${inventoryItem.name} (${mark})`;
+}
 
 /**
  * Столбцы таблицы снаряжения.
@@ -122,10 +142,7 @@ export function drawEquipmentPage(
 
   const carried = getInventoryWeight(character.inventory, character.currency);
 
-  const capacity = getCarryingCapacity(
-    character.abilities.strength,
-    character.size,
-  );
+  const capacity = getCarryingCapacityValue(character);
 
   const columns = getEquipmentColumns();
 
@@ -168,7 +185,7 @@ export function drawEquipmentPage(
       }
 
       drawTableRow(context, flow, columns, [
-        item.name,
+        getEquipmentItemName(item),
         String(item.quantity),
         item.weight ? `${item.weight} ${WEIGHT_UNIT_LABEL}` : '',
         item.cost,

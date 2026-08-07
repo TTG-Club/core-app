@@ -1,6 +1,13 @@
-import type { VttgDesktopRelease } from '#shared/types';
+import type { VttgBuild, VttgBuildFile } from '#shared/types';
 
-import type { VttgDownloadPlatform } from './types';
+/** Подписи форматов файлов — как их называют сами платформы. */
+const BUILD_FORMAT_LABELS: Record<string, string> = {
+  'exe': 'Установщик',
+  'dmg': 'Образ DMG',
+  'appimage': 'AppImage',
+  'deb': 'Пакет DEB',
+  'tar.gz': 'Архив',
+};
 
 /** Единицы размера файла: индекс совпадает со степенью 1024. */
 const FILE_SIZE_UNITS = ['byte', 'kilobyte', 'megabyte', 'gigabyte'] as const;
@@ -37,27 +44,43 @@ export function formatFileSize(size: number): string {
 }
 
 /**
- * Подпись сборки для интерфейса — `Версия 0.9.273 · 219,3 МБ`. Вес показываем
- * только если он есть в манифесте: перед скачиванием установщика это важнее,
- * чем дата релиза.
+ * Подпись сборки для интерфейса — `Версия 0.9.273 · 219,3 МБ`. Версия у каждой
+ * платформы своя, поэтому подпись собирается по конкретной сборке. Вес
+ * показываем только если он есть в манифесте: перед скачиванием это важнее,
+ * чем дата релиза; когда файлов несколько — вес уходит на кнопки.
  *
- * @param release последняя сборка десктопного VTTG.
+ * @param build сборка из канала обновлений.
+ * @returns подпись или `null`, если сборки в канале ещё нет.
  */
-export function formatReleaseSummary(release: VttgDesktopRelease): string {
-  const version = `Версия ${release.version}`;
-  const size = release.size ? formatFileSize(release.size) : '';
+export function formatBuildSummary(
+  build: VttgBuild | undefined,
+): string | null {
+  if (!build?.version) {
+    return null;
+  }
+
+  const version = `Версия ${build.version}`;
+  const single = build.files.length === 1 ? build.files[0] : undefined;
+  const size = single?.size ? formatFileSize(single.size) : '';
 
   return size ? `${version} · ${size}` : version;
 }
 
 /**
- * Подпись кнопки платформы: у готовой сборки зовёт скачать, у остальных — сама
- * говорит, что платформа впереди.
+ * Подпись кнопки файла. Когда файл у сборки один, кнопка просто зовёт скачать;
+ * когда их несколько (у Linux — AppImage и deb), кнопка называет формат, иначе
+ * их не различить.
  *
- * @param platform платформа из `VTTG_DOWNLOAD_PLATFORMS`.
+ * @param file файл сборки.
+ * @param isSingle единственный ли он у сборки.
  */
-export function formatPlatformLabel(platform: VttgDownloadPlatform): string {
-  return platform.ready
-    ? `Скачать для ${platform.name}`
-    : `${platform.name} — скоро`;
+export function formatBuildFileLabel(
+  file: VttgBuildFile,
+  isSingle: boolean,
+): string {
+  if (isSingle) {
+    return 'Скачать';
+  }
+
+  return BUILD_FORMAT_LABELS[file.format.toLowerCase()] ?? file.format;
 }

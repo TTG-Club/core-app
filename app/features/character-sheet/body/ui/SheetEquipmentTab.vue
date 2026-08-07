@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import type {
+    AttunementBreakdown,
     CharacterCurrency,
     CharacterCustomCurrency,
     CharacterInventoryItem,
@@ -11,11 +12,16 @@
 
   import { useCharacterSheet } from '../../composables';
   import {
+    ATTUNEMENT_LABELS,
+    CARRYING_CAPACITY_LABELS,
+    getAttunementHint,
+    getAttunementValue,
     getEquipmentAddMenuItems,
     getInventoryGroups,
     getInventoryRemoveDescription,
     INVENTORY_REMOVE_CONFIRM_LABEL,
     INVENTORY_REMOVE_CONFIRM_TITLE,
+    SHEET_HEADER_STAT_CLASS,
     SHEET_TAB_EMPTY_LABELS,
     WEIGHT_UNIT_LABEL,
   } from '../../model';
@@ -28,6 +34,9 @@
     inventory: CharacterInventoryItem[];
     totalWeight: number;
     carryingCapacity: number;
+
+    /** Разбор предела настройки на магические предметы (плитка шапки). */
+    attunement: AttunementBreakdown;
   }>();
 
   const emit = defineEmits<{
@@ -37,6 +46,8 @@
     'edit-item': [inventoryItemId: string];
     'copy-item': [inventoryItemId: string];
     'edit-currency': [];
+    'edit-carrying-capacity': [];
+    'edit-attunement': [];
     'remove-item': [inventoryItemId: string];
     'adjust-quantity': [inventoryItemId: string, delta: number];
     'toggle-equip': [inventoryItemId: string];
@@ -128,10 +139,32 @@
 
   const displayGroups = computed(() => getInventoryGroups(props.inventory));
 
-  // Красный при перегрузе (переносимый вес больше грузоподъёмности), иначе
-  // приглушённый — как у прочих статусных подписей листа.
-  const weightColorClass = computed(() =>
-    props.totalWeight > props.carryingCapacity ? 'text-error' : 'text-muted',
+  /** Переносимый вес больше грузоподъёмности: персонаж перегружен. */
+  const isOverloaded = computed(
+    () => props.totalWeight > props.carryingCapacity,
+  );
+
+  // Перегруз виден по цвету: и число, и значок краснеют. Значок красим тоже —
+  // в узкой колонке подписи у плитки нет, и он остаётся единственной пометкой
+  // того, о каком числе речь.
+  const weightValueClass = computed(() =>
+    isOverloaded.value ? 'text-error' : 'text-highlighted',
+  );
+
+  const weightIconClass = computed(() =>
+    isOverloaded.value ? 'text-error' : 'text-muted',
+  );
+
+  const attunementValue = computed(() => getAttunementValue(props.attunement));
+
+  const attunementHint = computed(() => getAttunementHint(props.attunement));
+
+  // Настроено больше, чем можно: так бывает после снижения предела или смены
+  // характеристики основы — значение об этом предупреждает цветом.
+  const attunementValueClass = computed(() =>
+    props.attunement.count > props.attunement.value
+      ? 'text-error'
+      : 'text-highlighted',
   );
 </script>
 
@@ -140,26 +173,78 @@
     окна — в дровере и правой панели лист бывает узким и на широком экране -->
   <div class="@container flex flex-col gap-4 pt-2">
     <div class="flex flex-wrap items-center justify-between gap-2">
-      <div
-        class="flex items-center gap-1.5 text-sm"
-        :class="weightColorClass"
-      >
-        <UIcon
-          name="tabler:weight"
-          class="size-4 shrink-0"
-        />
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Переносимый вес — такая же плитка-кнопка настройки, как числа
+          заклинательства и подготовки в шапке вкладки заклинаний: на
+          интерактивность указывает потепление рамки, поэтому карандаш плитке не
+          нужен -->
+        <UTooltip :text="CARRYING_CAPACITY_LABELS.statHint">
+          <button
+            type="button"
+            :class="SHEET_HEADER_STAT_CLASS"
+            :aria-label="CARRYING_CAPACITY_LABELS.open"
+            @click.left.exact.prevent="emit('edit-carrying-capacity')"
+          >
+            <span class="flex items-center gap-1.5">
+              <!-- В узкой колонке подпись занимает больше места, чем само
+                число, и уступает значку: рядом стоит кнопка «Добавить», а от
+                полного названия ряд переносится на две строки. Название
+                остаётся в подсказке плитки -->
+              <UIcon
+                name="tabler:weight"
+                class="size-4 shrink-0 @lg:hidden"
+                :class="weightIconClass"
+              />
 
-        <span>
-          <!-- В узкой колонке от подписи остаётся одно «Вес»: рядом стоит
-            кнопка «Добавить», и полный вариант переносит ряд на две строки.
-            Двоеточие входит в обе подписи — тогда пробел между ними ни на что
-            не влияет, какой бы вариант ни был скрыт -->
-          <span class="hidden @md:inline">Переносимый вес:</span>
+              <span
+                class="hidden text-[10px] font-bold tracking-wider text-muted uppercase @lg:inline"
+              >
+                {{ CARRYING_CAPACITY_LABELS.stat }}
+              </span>
 
-          <span class="@md:hidden">Вес:</span>
+              <span
+                class="text-xs font-bold whitespace-nowrap"
+                :class="weightValueClass"
+              >
+                {{ totalWeight }} / {{ carryingCapacity }}
+                {{ WEIGHT_UNIT_LABEL }}
+              </span>
+            </span>
+          </button>
+        </UTooltip>
 
-          {{ totalWeight }} / {{ carryingCapacity }} {{ WEIGHT_UNIT_LABEL }}
-        </span>
+        <!-- Настройка на предметы: сколько настроено из предела. По правилам
+          2024 предел — три предмета, но лист даёт задать своё число или считать
+          его от характеристики, поэтому плитка ведёт в ту же настройку, что и
+          вес -->
+        <UTooltip :text="attunementHint">
+          <button
+            type="button"
+            :class="SHEET_HEADER_STAT_CLASS"
+            :aria-label="ATTUNEMENT_LABELS.open"
+            @click.left.exact.prevent="emit('edit-attunement')"
+          >
+            <span class="flex items-center gap-1.5">
+              <UIcon
+                :name="ATTUNEMENT_LABELS.icon"
+                class="size-4 shrink-0 text-muted @lg:hidden"
+              />
+
+              <span
+                class="hidden text-[10px] font-bold tracking-wider text-muted uppercase @lg:inline"
+              >
+                {{ ATTUNEMENT_LABELS.stat }}
+              </span>
+
+              <span
+                class="text-xs font-bold whitespace-nowrap"
+                :class="attunementValueClass"
+              >
+                {{ attunementValue }}
+              </span>
+            </span>
+          </button>
+        </UTooltip>
       </div>
 
       <UDropdownMenu
@@ -169,7 +254,6 @@
         <UButton
           icon="tabler:plus"
           label="Добавить"
-          trailing-icon="tabler:chevron-down"
           color="neutral"
           variant="ghost"
           size="sm"

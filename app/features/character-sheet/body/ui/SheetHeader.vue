@@ -4,7 +4,7 @@
   import type { Character, SheetSaveStatus } from '../../model';
 
   import {
-    getClassDisplayName,
+    getClassesDisplayLabel,
     getSheetActionMenuItems,
     getSpeciesDisplayName,
     getVisionRows,
@@ -158,10 +158,11 @@
       : SHEET_EMPTY_LABELS.species,
   );
 
-  const classLabel = computed(() =>
-    props.character.characterClass
-      ? `${getClassDisplayName(props.character.characterClass)} ${props.character.level}`
-      : SHEET_EMPTY_LABELS.className,
+  // У мультикласса в строке перечислены все классы со своими уровнями
+  // («Паладин 3 · Волшебник 2»); общий уровень живёт в полосе опыта ниже.
+  const classLabel = computed(
+    () =>
+      getClassesDisplayLabel(props.character) || SHEET_EMPTY_LABELS.className,
   );
 
   const backgroundLabel = computed(

@@ -14,7 +14,7 @@
   import {
     CHARACTER_SHEET_ROUTE,
     downloadCharacterJson,
-    getClassDisplayName,
+    getClassesDisplayLabel,
     getDisplayLevel,
     getSheetActionMenuItems,
     getSpeciesDisplayName,
@@ -76,7 +76,7 @@
 
   const classLabel = computed(() =>
     character.characterClass
-      ? getClassDisplayName(character.characterClass)
+      ? getClassesDisplayLabel(character)
       : SHEET_EMPTY_LABELS.className,
   );
 

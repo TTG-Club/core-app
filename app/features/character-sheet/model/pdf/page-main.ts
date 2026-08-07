@@ -18,6 +18,7 @@ import {
   ABILITY_LABELS,
   ARMOR_PROFICIENCY_GROUPS,
   LANGUAGE_PROFICIENCY_GROUPS,
+  PASSIVE_SKILL_BASE,
   SHEET_EMPTY_LABELS,
   WEAPON_PROFICIENCY_GROUPS,
 } from '../constants';
@@ -26,7 +27,9 @@ import {
   getAbilityRows,
   getArmorClassValue,
   getCharacterProficiencyBonus,
-  getClassDisplayName,
+  getClassesDisplayLabel,
+  getEffectiveSpeed,
+  getExhaustionEffects,
   getFormattedBonus,
   getHitDicePools,
   getInitiativeBonus,
@@ -199,7 +202,7 @@ function drawMainHeader(
     : SHEET_EMPTY_LABELS.species;
 
   const characterClass = character.characterClass
-    ? `${getClassDisplayName(character.characterClass)} ${character.level}`
+    ? getClassesDisplayLabel(character)
     : SHEET_EMPTY_LABELS.className;
 
   const background =
@@ -538,7 +541,8 @@ function drawCombatTiles(
   options: PdfSlot,
 ): number {
   const tileWidth = (options.width - PDF_GAP * 2) / 3;
-  const primarySpeed = getPrimarySpeed(character.speed);
+  // Скорость печатается с истощением — как и на самом листе.
+  const primarySpeed = getPrimarySpeed(getEffectiveSpeed(character));
 
   const firstRow: CombatTile[] = [
     {
@@ -567,6 +571,12 @@ function drawCombatTiles(
       label: PDF_LABELS.size,
       value: character.size ?? PDF_EMPTY_VALUE,
       valueSize: PDF_FONT_SIZES.mediumValue,
+    },
+    // Третья плитка ряда была пустой: истощение встаёт в неё, а его эффекты
+    // уже сидят в числах листа — отдельной строкой их печатать незачем.
+    {
+      label: PDF_LABELS.exhaustion,
+      value: String(getExhaustionEffects(character.health.exhaustion).level),
     },
   ];
 
@@ -939,7 +949,7 @@ function drawSensesPanel(
     (row) => row.formattedValue !== null,
   );
 
-  const speedRows = getSpeedRows(character.speed).filter(
+  const speedRows = getSpeedRows(getEffectiveSpeed(character)).filter(
     (row) => row.value > 0,
   );
 
@@ -950,8 +960,8 @@ function drawSensesPanel(
   // Пассивная внимательность живёт здесь, а не плиткой: подпись целиком в узкую
   // плитку не влезает, а по смыслу это тоже про восприятие.
   const passivePerception = perceptionSkill
-    ? 10 + getSkillValue(character, perceptionSkill)
-    : 10 + getModifier(character.abilities.wisdom);
+    ? PASSIVE_SKILL_BASE + getSkillValue(character, perceptionSkill)
+    : PASSIVE_SKILL_BASE + getModifier(character.abilities.wisdom);
 
   return drawPanel(
     context,

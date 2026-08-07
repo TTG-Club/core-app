@@ -3,9 +3,12 @@
 
   import { useCharacterSheet } from '../../composables';
   import {
+    ABILITY_ITEM_BONUS_LABELS,
     ABILITY_LABELS,
     ABILITY_SCORE_MAX,
     ABILITY_SCORE_MIN,
+    getFormattedBonus,
+    getInventoryBonusValue,
   } from '../../model';
 
   const props = defineProps<{
@@ -22,8 +25,23 @@
 
   const draftScore = ref(character.value.abilities[props.abilityKey]);
 
+  // Правится записанное значение, а лист считает его вместе с бонусами
+  // снаряжения — модификатор в модалке показывается по итоговому, иначе он
+  // разошёлся бы с плиткой.
+  const itemBonus = computed(() =>
+    getInventoryBonusValue(character.value, 'ability', props.abilityKey),
+  );
+
   const formattedDraftModifier = computed(() =>
-    getFormattedModifier(draftScore.value),
+    getFormattedModifier(draftScore.value + itemBonus.value),
+  );
+
+  const itemBonusHint = computed(() =>
+    itemBonus.value === 0
+      ? ''
+      : `${ABILITY_ITEM_BONUS_LABELS.modalHint} ${getFormattedBonus(
+          itemBonus.value,
+        )}: итог ${draftScore.value + itemBonus.value}`,
   );
 
   function handleSave() {
@@ -64,6 +82,13 @@
           </span>
         </div>
       </div>
+
+      <span
+        v-if="itemBonusHint"
+        class="mt-2 block text-xs text-dimmed"
+      >
+        {{ itemBonusHint }}
+      </span>
     </template>
 
     <template #footer>

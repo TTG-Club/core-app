@@ -1,8 +1,11 @@
 <script setup lang="ts">
+  import type { SelectMenuItem, TabsItem } from '@nuxt/ui';
+
   import type {
     CustomArmorType,
     CustomInventoryItemDraft,
     CustomInventoryKind,
+    InventoryItemBonus,
     WeaponCategory,
   } from '../../model';
 
@@ -15,11 +18,18 @@
     CUSTOM_ARMOR_TYPE_META,
     CUSTOM_ARMOR_TYPE_OPTIONS,
     CUSTOM_INVENTORY_KIND_OPTIONS,
+    CUSTOM_ITEM_FIELD_LABELS,
+    CUSTOM_ITEM_MAGIC_LABELS,
+    CUSTOM_ITEM_MAIN_TAB,
+    CUSTOM_ITEM_PREVIEW_NAME,
+    CUSTOM_ITEM_PREVIEW_URL,
+    CUSTOM_ITEM_SECTION_LABELS,
+    CUSTOM_ITEM_TABS,
+    CUSTOM_ITEM_VERSATILE_LABELS,
     CUSTOM_ITEM_WEIGHT_MAX,
     CUSTOM_ITEM_WEIGHT_MIN,
     CUSTOM_ITEM_WEIGHT_STEP,
-    CUSTOM_MAGIC_ITEM_HINT,
-    CUSTOM_MAGIC_ITEM_LABEL,
+    CUSTOM_WEAPON_PROPERTY_LABELS,
     DAMAGE_BONUS_MAX,
     DAMAGE_BONUS_MIN,
     DAMAGE_DICE_COUNT_MAX,
@@ -27,13 +37,27 @@
     DAMAGE_DIE_OPTIONS,
     DAMAGE_TYPE_OPTIONS,
     getCustomInventoryItemDraft,
+    getInventoryBonusMax,
+    getInventoryBonusMin,
+    getInventoryBonusTargetGroups,
+    getInventoryItemBonusLabels,
+    INVENTORY_BONUS_ROW_LABELS,
+    INVENTORY_CHARGES_MAX,
+    INVENTORY_CHARGES_MIN,
     INVENTORY_QUANTITY_MAX,
     INVENTORY_QUANTITY_MIN,
+    ITEM_BONUS_MAX,
+    ITEM_BONUS_MIN,
     NEW_CUSTOM_INVENTORY_ITEM,
+    NEW_INVENTORY_BONUS,
+    parseDamageTypeValue,
+    parseInventoryBonusTarget,
     parseStoredMarkupNodes,
+    toCustomInventoryItem,
+    toDamageTypeValue,
+    toInventoryBonusTargetValue,
     WEAPON_ATTACK_FINESSE_HINT,
     WEAPON_CATEGORY_OPTIONS,
-    WEIGHT_UNIT_LABEL,
   } from '../../model';
 
   // Идентификатор редактируемого предмета; null — форма создаёт новый. Сам
@@ -90,11 +114,35 @@
 
   const draftDamageBonus = ref(initialDraft.damageBonus);
 
-  // undefined вместо '' — пустая строка в качестве значения селекта запрещена,
-  // а незаполненный тип урона должен показывать подсказку поля.
-  const draftDamageType = ref<string | undefined>(
-    initialDraft.damageType || undefined,
+  // Тип урона живёт в форме значением селектора: пустая строка ему запрещена, а
+  // «не указан» — такой же вариант списка, которым выбранный тип и сбрасывается.
+  const draftDamageType = ref(toDamageTypeValue(initialDraft.damageType));
+
+  const draftVersatile = ref(initialDraft.versatile);
+
+  const draftVersatileDiceCount = ref(initialDraft.versatileDiceCount);
+
+  const draftVersatileDiceFaces = ref(initialDraft.versatileDiceFaces);
+
+  const draftAttackBonus = ref(initialDraft.attackBonus);
+
+  const draftExtraDamageDiceCount = ref(initialDraft.extraDamageDiceCount);
+
+  const draftExtraDamageDiceFaces = ref(initialDraft.extraDamageDiceFaces);
+
+  const draftExtraDamageType = ref(
+    toDamageTypeValue(initialDraft.extraDamageType),
   );
+
+  // Бонусы заводятся построчно: у предмета их бывает и ноль, и полдесятка, а
+  // цель у каждой своя — от характеристики до конкретной скорости.
+  const draftBonuses = ref<InventoryItemBonus[]>(
+    initialDraft.bonuses.map((bonus) => ({ ...bonus })),
+  );
+
+  const draftRequiresAttunement = ref(initialDraft.requiresAttunement);
+
+  const draftMaxCharges = ref(initialDraft.maxCharges);
 
   // Описание сидируем хранимой формой (JSON-массив узлов) — редактор развернёт
   // её в исходник через `toMarkupSource`. Пустое описание — пустой редактор.
@@ -108,9 +156,13 @@
   // заголовку и подписи кнопки не нужна.
   const isEditing = Boolean(editedItem);
 
-  const modalTitle = isEditing ? 'Редактирование предмета' : 'Свой предмет';
+  const modalTitle = isEditing
+    ? CUSTOM_ITEM_FIELD_LABELS.editTitle
+    : CUSTOM_ITEM_FIELD_LABELS.createTitle;
 
-  const applyLabel = isEditing ? 'Сохранить' : 'Добавить';
+  const applyLabel = isEditing
+    ? CUSTOM_ITEM_FIELD_LABELS.editAction
+    : CUSTOM_ITEM_FIELD_LABELS.createAction;
 
   const isApplyDisabled = computed(() => !draftName.value.trim());
 
@@ -118,8 +170,13 @@
 
   const isArmor = computed(() => draftKind.value === 'armor');
 
+  // Подсказка типа доспеха и то, что с ним делать на листе, читаются одной
+  // фразой — собирать её в шаблоне значило бы держать текст в разметке.
   const armorHint = computed(
-    () => CUSTOM_ARMOR_TYPE_META[draftArmorType.value].hint,
+    () =>
+      `${CUSTOM_ARMOR_TYPE_META[draftArmorType.value].hint}. ${
+        CUSTOM_ITEM_FIELD_LABELS.armorHint
+      }`,
   );
 
   // Щит не заменяет броню, а складывается с ней — подпись поля это проговаривает,
@@ -128,8 +185,93 @@
     () => CUSTOM_ARMOR_TYPE_META[draftArmorType.value].armorClassLabel,
   );
 
-  // Единица измерения веса общая для всего листа — подпись поля её повторяет.
-  const weightLabel = `Вес, ${WEIGHT_UNIT_LABEL}`;
+  // Цели сгруппированы по смыслу, а плоский список с заголовками — та форма,
+  // в которой их принимает селект.
+  const bonusTargetItems = computed<SelectMenuItem[]>(() =>
+    getInventoryBonusTargetGroups(character.value).flatMap<SelectMenuItem>(
+      (group) => [{ type: 'label', label: group.label }, ...group.items],
+    ),
+  );
+
+  /**
+   * Составное значение цели строки — им селект и обменивается с формой.
+   *
+   * @param bonus строка бонуса.
+   * @returns значение варианта селектора.
+   */
+  function getBonusTarget(bonus: InventoryItemBonus): string {
+    return toInventoryBonusTargetValue(bonus.kind, bonus.key);
+  }
+
+  /** Добавление строки бонуса: цель и величина правятся в самой строке. */
+  function handleBonusAdd() {
+    draftBonuses.value = [
+      ...draftBonuses.value,
+      { ...NEW_INVENTORY_BONUS, id: crypto.randomUUID() },
+    ];
+  }
+
+  /**
+   * Удаление строки бонуса.
+   *
+   * @param bonusId идентификатор строки.
+   */
+  function handleBonusRemove(bonusId: string) {
+    draftBonuses.value = draftBonuses.value.filter(
+      (bonus) => bonus.id !== bonusId,
+    );
+  }
+
+  /**
+   * Смена цели строки: селект отдаёт значение нетипизированным, поэтому цель
+   * разбирается моделью, а неразобранное значение строку не трогает.
+   *
+   * @param bonusId идентификатор строки.
+   * @param target значение варианта селектора.
+   */
+  function handleBonusTarget(bonusId: string, target: unknown) {
+    const parsedTarget =
+      typeof target === 'string' ? parseInventoryBonusTarget(target) : null;
+
+    if (!parsedTarget) {
+      return;
+    }
+
+    draftBonuses.value = draftBonuses.value.map((bonus) =>
+      bonus.id === bonusId ? { ...bonus, ...parsedTarget } : bonus,
+    );
+  }
+
+  /** Поля вкладки «Магические свойства» — они же идут в предпросмотр сводки. */
+  type MagicDraftFields = Pick<
+    CustomInventoryItemDraft,
+    | 'bonuses'
+    | 'extraDamageDiceCount'
+    | 'extraDamageDiceFaces'
+    | 'extraDamageType'
+    | 'magic'
+    | 'maxCharges'
+    | 'requiresAttunement'
+  >;
+
+  /**
+   * Значения вкладки магии отдельной функцией: сводка «что даёт предмет»
+   * пересобирается на каждое их изменение, а разбор описания в ней не нужен —
+   * иначе разметка перечитывалась бы на каждое нажатие в редакторе.
+   *
+   * @returns магические поля черновика.
+   */
+  function getMagicFields(): MagicDraftFields {
+    return {
+      magic: draftMagic.value,
+      extraDamageDiceCount: draftExtraDamageDiceCount.value,
+      extraDamageDiceFaces: draftExtraDamageDiceFaces.value,
+      extraDamageType: parseDamageTypeValue(draftExtraDamageType.value),
+      bonuses: draftBonuses.value.map((bonus) => ({ ...bonus })),
+      requiresAttunement: draftRequiresAttunement.value,
+      maxCharges: draftMaxCharges.value,
+    };
+  }
 
   /**
    * Значения формы для экшена листа: обрезкой строк, приведением чисел к
@@ -140,9 +282,9 @@
    */
   function getDraft(): CustomInventoryItemDraft {
     return {
+      ...getMagicFields(),
       kind: draftKind.value,
       name: draftName.value,
-      magic: draftMagic.value,
       cost: draftCost.value,
       weight: draftWeight.value,
       quantity: draftQuantity.value,
@@ -154,11 +296,50 @@
       damageDiceCount: draftDamageDiceCount.value,
       damageDiceFaces: draftDamageDiceFaces.value,
       damageBonus: draftDamageBonus.value,
-      damageType: draftDamageType.value ?? '',
+      damageType: parseDamageTypeValue(draftDamageType.value),
+      attackBonus: draftAttackBonus.value,
+      versatile: draftVersatile.value,
+      versatileDiceCount: draftVersatileDiceCount.value,
+      versatileDiceFaces: draftVersatileDiceFaces.value,
       description: parseStoredMarkupNodes(draftDescription.value),
     };
   }
 
+  // Сводка собирается той же сборкой записи, что и сохранение: так в ней видно
+  // ровно то, что попадёт на лист, — с клампами и отброшенными нулями. Бонус к
+  // попаданию задаётся на вкладке основного, но даёт его предмет — и в сводке
+  // «что даёт предмет» он нужен наравне с магическими надбавками.
+  const bonusLabels = computed(() => {
+    const previewItem = toCustomInventoryItem(CUSTOM_ITEM_PREVIEW_URL, {
+      ...NEW_CUSTOM_INVENTORY_ITEM,
+      ...getMagicFields(),
+      kind: draftKind.value,
+      name: CUSTOM_ITEM_PREVIEW_NAME,
+      attackBonus: draftAttackBonus.value,
+    });
+
+    return previewItem ? getInventoryItemBonusLabels(previewItem) : [];
+  });
+
+  // Число бонусов стоит значком на вкладке: с закрытой вкладки видно, что
+  // магия у предмета заполнена.
+  const tabItems = computed<TabsItem[]>(() =>
+    CUSTOM_ITEM_TABS.map((tab) => ({
+      ...tab,
+      badge:
+        tab.value === CUSTOM_ITEM_MAIN_TAB || !bonusLabels.value.length
+          ? undefined
+          : bonusLabels.value.length,
+    })),
+  );
+
+  // Выключенные поля читаются бледнее — так вкладка сразу говорит, что магия у
+  // предмета не включена, а не просто пуста.
+  const magicLabelClass = computed(() =>
+    draftMagic.value ? 'text-muted' : 'text-dimmed',
+  );
+
+  /** Применение формы: новый предмет добавляется, правленый — обновляется. */
   function handleApply() {
     if (isApplyDisabled.value) {
       return;
@@ -173,6 +354,7 @@
     emit('close');
   }
 
+  /** Закрытие формы без сохранения. */
   function handleCancel() {
     emit('close');
   }
@@ -184,216 +366,503 @@
     :ui="{ content: 'sm:max-w-2xl' }"
   >
     <template #body>
-      <div class="flex flex-col gap-3">
-        <div class="flex flex-col gap-1">
-          <span class="text-[10px] font-bold text-muted uppercase">
-            Что за предмет
-          </span>
-
-          <!-- Вид предмета решает, какие параметры вообще нужны: оружию — урон
-            и категория, доспеху — КД, безделушке — ничего сверх общего. В узкой
-            форме ряд видов переносится, а не выжимает подписи -->
-          <URadioGroup
-            v-model="draftKind"
-            :items="CUSTOM_INVENTORY_KIND_OPTIONS"
-            orientation="horizontal"
-            variant="list"
-            color="primary"
-            :ui="{ fieldset: 'flex-wrap gap-y-2' }"
-          />
-
-          <!-- Магическим бывает предмет любого вида, поэтому пометка стоит
-            отдельно от него: она меняет только группу в снаряжении, а урон и
-            класс доспеха остаются при предмете -->
-          <UCheckbox
-            v-model="draftMagic"
-            :label="CUSTOM_MAGIC_ITEM_LABEL"
-            class="pt-1"
-          />
-
-          <span class="text-xs text-dimmed">{{ CUSTOM_MAGIC_ITEM_HINT }}</span>
-        </div>
-
-        <!-- Количество уезжает на вторую строку, пока форма узкая: рядом с ним
-          названию предмета остаётся слишком мало места -->
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_9rem]">
-          <div class="flex min-w-0 flex-col gap-1">
-            <span class="text-[10px] font-bold text-muted uppercase">
-              Название
-            </span>
-
-            <UInput
-              v-model="draftName"
-              placeholder="Название предмета"
-            />
-          </div>
-
-          <div class="flex min-w-0 flex-col gap-1">
-            <span class="text-[10px] font-bold text-muted uppercase">
-              Количество
-            </span>
-
-            <UInputNumber
-              v-model="draftQuantity"
-              :min="INVENTORY_QUANTITY_MIN"
-              :max="INVENTORY_QUANTITY_MAX"
-            />
-          </div>
-        </div>
-
-        <template v-if="isWeapon">
-          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div class="flex min-w-0 flex-col gap-1">
+      <!-- Две вкладки вместо одной длинной формы: у большинства предметов магии
+        нет, и их параметры не должны тонуть среди её полей -->
+      <UTabs
+        :items="tabItems"
+        :default-value="CUSTOM_ITEM_MAIN_TAB"
+        :ui="{ root: 'flex flex-col gap-4' }"
+      >
+        <template #main>
+          <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-1">
               <span class="text-[10px] font-bold text-muted uppercase">
-                Категория
+                {{ CUSTOM_ITEM_FIELD_LABELS.kind }}
               </span>
 
-              <USelect
-                v-model="draftWeaponCategory"
-                :items="WEAPON_CATEGORY_OPTIONS"
+              <!-- Вид предмета решает, какие параметры вообще нужны: оружию —
+                урон и категория, доспеху — КД, безделушке — ничего сверх
+                общего. В узкой форме ряд видов переносится, а не выжимает
+                подписи -->
+              <URadioGroup
+                v-model="draftKind"
+                :items="CUSTOM_INVENTORY_KIND_OPTIONS"
+                orientation="horizontal"
+                variant="list"
+                color="primary"
+                :ui="{ fieldset: 'flex-wrap gap-y-2' }"
               />
             </div>
 
-            <div class="flex min-w-0 flex-col gap-1">
-              <span class="text-[10px] font-bold text-muted uppercase">
-                Тип урона
-              </span>
+            <!-- Количество уезжает на вторую строку, пока форма узкая: рядом с
+              ним названию предмета остаётся слишком мало места -->
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_9rem]">
+              <div class="flex min-w-0 flex-col gap-1">
+                <span class="text-[10px] font-bold text-muted uppercase">
+                  {{ CUSTOM_ITEM_FIELD_LABELS.name }}
+                </span>
 
-              <USelect
-                v-model="draftDamageType"
-                :items="DAMAGE_TYPE_OPTIONS"
-                placeholder="Не указан"
-              />
-            </div>
-          </div>
-
-          <div class="flex flex-col gap-1">
-            <span class="text-[10px] font-bold text-muted uppercase">
-              Урон
-            </span>
-
-            <!-- Кости и собственный бонус — две группы: в узкой форме они
-              переносятся целиком, а не рвут формулу посреди «+» -->
-            <div class="flex flex-wrap items-center gap-x-2 gap-y-2">
-              <div class="flex items-center gap-2">
-                <UInputNumber
-                  v-model="draftDamageDiceCount"
-                  :min="DAMAGE_DICE_COUNT_MIN"
-                  :max="DAMAGE_DICE_COUNT_MAX"
-                  class="w-26"
-                />
-
-                <USelect
-                  v-model="draftDamageDiceFaces"
-                  :items="DAMAGE_DIE_OPTIONS"
-                  class="w-22"
+                <UInput
+                  v-model="draftName"
+                  :placeholder="CUSTOM_ITEM_FIELD_LABELS.namePlaceholder"
                 />
               </div>
 
-              <div class="flex items-center gap-2">
-                <span class="text-sm text-muted">+</span>
+              <div class="flex min-w-0 flex-col gap-1">
+                <span class="text-[10px] font-bold text-muted uppercase">
+                  {{ CUSTOM_ITEM_FIELD_LABELS.quantity }}
+                </span>
 
                 <UInputNumber
-                  v-model="draftDamageBonus"
-                  :min="DAMAGE_BONUS_MIN"
-                  :max="DAMAGE_BONUS_MAX"
-                  class="w-26"
+                  v-model="draftQuantity"
+                  :min="INVENTORY_QUANTITY_MIN"
+                  :max="INVENTORY_QUANTITY_MAX"
                 />
               </div>
             </div>
 
-            <span class="text-xs text-dimmed">
-              Модификатор характеристики лист добавит сам; ноль костей — оружие
-              без броска урона.
-            </span>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-4">
-            <UCheckbox
-              v-model="draftRanged"
-              label="Дальнобойное"
-            />
-
-            <UCheckbox
-              v-model="draftFinesse"
-              label="Фехтовальное"
-            />
-          </div>
-
-          <span class="text-xs text-dimmed">
-            {{ WEAPON_ATTACK_FINESSE_HINT }}
-          </span>
-        </template>
-
-        <template v-if="isArmor">
-          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div class="flex min-w-0 flex-col gap-1">
+            <!-- Параметры вида собраны в карточку с заголовком: так видно, где
+              кончается общее и начинается «оружейное» -->
+            <div
+              v-if="isWeapon"
+              class="flex flex-col gap-3 rounded-lg border border-default/60 p-3"
+            >
               <span class="text-[10px] font-bold text-muted uppercase">
-                Тип доспеха
+                {{ CUSTOM_ITEM_SECTION_LABELS.weapon }}
               </span>
 
-              <USelect
-                v-model="draftArmorType"
-                :items="CUSTOM_ARMOR_TYPE_OPTIONS"
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div class="flex min-w-0 flex-col gap-1">
+                  <span class="text-[10px] font-bold text-muted uppercase">
+                    {{ CUSTOM_ITEM_FIELD_LABELS.weaponCategory }}
+                  </span>
+
+                  <USelect
+                    v-model="draftWeaponCategory"
+                    :items="WEAPON_CATEGORY_OPTIONS"
+                  />
+                </div>
+
+                <div class="flex min-w-0 flex-col gap-1">
+                  <span class="text-[10px] font-bold text-muted uppercase">
+                    {{ CUSTOM_ITEM_FIELD_LABELS.damageType }}
+                  </span>
+
+                  <USelect
+                    v-model="draftDamageType"
+                    :items="DAMAGE_TYPE_OPTIONS"
+                  />
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <span class="text-[10px] font-bold text-muted uppercase">
+                  {{ CUSTOM_ITEM_FIELD_LABELS.damage }}
+                </span>
+
+                <!-- Кости и собственный бонус — две группы: в узкой форме они
+                  переносятся целиком, а не рвут формулу посреди «+» -->
+                <div class="flex flex-wrap items-center gap-x-2 gap-y-2">
+                  <div class="flex items-center gap-2">
+                    <UInputNumber
+                      v-model="draftDamageDiceCount"
+                      :min="DAMAGE_DICE_COUNT_MIN"
+                      :max="DAMAGE_DICE_COUNT_MAX"
+                      class="w-26"
+                    />
+
+                    <USelect
+                      v-model="draftDamageDiceFaces"
+                      :items="DAMAGE_DIE_OPTIONS"
+                      class="w-22"
+                    />
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm text-muted">+</span>
+
+                    <UInputNumber
+                      v-model="draftDamageBonus"
+                      :min="DAMAGE_BONUS_MIN"
+                      :max="DAMAGE_BONUS_MAX"
+                      class="w-26"
+                    />
+                  </div>
+                </div>
+
+                <span class="text-xs text-dimmed">
+                  {{ CUSTOM_ITEM_FIELD_LABELS.damageHint }}
+                </span>
+              </div>
+
+              <!-- Собственный бонус к попаданию стоит рядом с уроном, а не в
+                магии: чаще его даёт магическое оружие, но задать его игроку
+                бывает нужно и обычному — например, мастерски выкованному -->
+              <div class="flex flex-col gap-1">
+                <span class="text-[10px] font-bold text-muted uppercase">
+                  {{ CUSTOM_ITEM_FIELD_LABELS.attackBonus }}
+                </span>
+
+                <UInputNumber
+                  v-model="draftAttackBonus"
+                  :min="ITEM_BONUS_MIN"
+                  :max="ITEM_BONUS_MAX"
+                  class="w-26"
+                />
+
+                <span class="text-xs text-dimmed">
+                  {{ CUSTOM_ITEM_FIELD_LABELS.attackBonusHint }}
+                </span>
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <span class="text-[10px] font-bold text-muted uppercase">
+                  {{ CUSTOM_ITEM_SECTION_LABELS.properties }}
+                </span>
+
+                <div class="flex flex-wrap items-center gap-4">
+                  <UCheckbox
+                    v-model="draftRanged"
+                    :label="CUSTOM_WEAPON_PROPERTY_LABELS.ranged"
+                  />
+
+                  <UCheckbox
+                    v-model="draftFinesse"
+                    :label="CUSTOM_WEAPON_PROPERTY_LABELS.finesse"
+                  />
+
+                  <!-- Хват двумя руками даёт именно «Универсальное»: у
+                    остального оружия вторая рука урон не меняет -->
+                  <UCheckbox
+                    v-model="draftVersatile"
+                    :label="CUSTOM_ITEM_VERSATILE_LABELS.label"
+                  />
+                </div>
+
+                <span class="text-xs text-dimmed">
+                  {{ WEAPON_ATTACK_FINESSE_HINT }}
+                </span>
+              </div>
+
+              <div
+                v-if="draftVersatile"
+                class="flex flex-col gap-1"
+              >
+                <span class="text-[10px] font-bold text-muted uppercase">
+                  {{ CUSTOM_ITEM_VERSATILE_LABELS.damage }}
+                </span>
+
+                <div class="flex items-center gap-2">
+                  <UInputNumber
+                    v-model="draftVersatileDiceCount"
+                    :min="DAMAGE_DICE_COUNT_MIN"
+                    :max="DAMAGE_DICE_COUNT_MAX"
+                    class="w-26"
+                  />
+
+                  <USelect
+                    v-model="draftVersatileDiceFaces"
+                    :items="DAMAGE_DIE_OPTIONS"
+                    class="w-22"
+                  />
+                </div>
+
+                <span class="text-xs text-dimmed">
+                  {{ CUSTOM_ITEM_VERSATILE_LABELS.hint }}
+                </span>
+              </div>
+            </div>
+
+            <div
+              v-if="isArmor"
+              class="flex flex-col gap-3 rounded-lg border border-default/60 p-3"
+            >
+              <span class="text-[10px] font-bold text-muted uppercase">
+                {{ CUSTOM_ITEM_SECTION_LABELS.armor }}
+              </span>
+
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div class="flex min-w-0 flex-col gap-1">
+                  <span class="text-[10px] font-bold text-muted uppercase">
+                    {{ CUSTOM_ITEM_FIELD_LABELS.armorType }}
+                  </span>
+
+                  <USelect
+                    v-model="draftArmorType"
+                    :items="CUSTOM_ARMOR_TYPE_OPTIONS"
+                  />
+                </div>
+
+                <div class="flex min-w-0 flex-col gap-1">
+                  <span class="text-[10px] font-bold text-muted uppercase">
+                    {{ armorClassLabel }}
+                  </span>
+
+                  <UInputNumber
+                    v-model="draftArmorClass"
+                    :min="ARMOR_CLASS_BASE_MIN"
+                    :max="ARMOR_CLASS_BASE_MAX"
+                  />
+                </div>
+              </div>
+
+              <span class="text-xs text-dimmed">{{ armorHint }}</span>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div class="flex min-w-0 flex-col gap-1">
+                <span class="text-[10px] font-bold text-muted uppercase">
+                  {{ CUSTOM_ITEM_FIELD_LABELS.cost }}
+                </span>
+
+                <UInput
+                  v-model="draftCost"
+                  :placeholder="CUSTOM_ITEM_FIELD_LABELS.costPlaceholder"
+                />
+              </div>
+
+              <div class="flex min-w-0 flex-col gap-1">
+                <span class="text-[10px] font-bold text-muted uppercase">
+                  {{ CUSTOM_ITEM_FIELD_LABELS.weight }}
+                </span>
+
+                <UInputNumber
+                  v-model="draftWeight"
+                  :min="CUSTOM_ITEM_WEIGHT_MIN"
+                  :max="CUSTOM_ITEM_WEIGHT_MAX"
+                  :step="CUSTOM_ITEM_WEIGHT_STEP"
+                />
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <span class="text-[10px] font-bold text-muted uppercase">
+                {{ CUSTOM_ITEM_FIELD_LABELS.description }}
+              </span>
+
+              <MarkupEditor
+                v-model="draftDescription"
+                :placeholder="CUSTOM_ITEM_FIELD_LABELS.descriptionPlaceholder"
+              />
+            </div>
+          </div>
+        </template>
+
+        <template #magic>
+          <div class="flex flex-col gap-4">
+            <!-- Переключатель открывает поля вкладки: они остаются на виду и
+              выключенными, чтобы было понятно, что предмету можно задать, — а
+              не появлялись из ниоткуда вместе с галкой -->
+            <div class="rounded-lg bg-elevated/40 p-3">
+              <USwitch
+                v-model="draftMagic"
+                :label="CUSTOM_ITEM_MAGIC_LABELS.enable"
+                :description="CUSTOM_ITEM_MAGIC_LABELS.enableHint"
               />
             </div>
 
-            <div class="flex min-w-0 flex-col gap-1">
-              <span class="text-[10px] font-bold text-muted uppercase">
-                {{ armorClassLabel }}
+            <!-- Дальше вкладка идёт одинаковыми карточками: настройка, бонусы
+              оружия и бонусы листа — так поля не сливаются в один столбец -->
+            <div
+              class="flex flex-col gap-3 rounded-lg border border-default/60 p-3"
+            >
+              <span
+                class="text-[10px] font-bold uppercase"
+                :class="magicLabelClass"
+              >
+                {{ CUSTOM_ITEM_MAGIC_LABELS.attunementSection }}
               </span>
 
-              <UInputNumber
-                v-model="draftArmorClass"
-                :min="ARMOR_CLASS_BASE_MIN"
-                :max="ARMOR_CLASS_BASE_MAX"
+              <UCheckbox
+                v-model="draftRequiresAttunement"
+                :label="CUSTOM_ITEM_MAGIC_LABELS.attunement"
+                :disabled="!draftMagic"
               />
+
+              <div class="flex min-w-0 flex-col gap-1">
+                <span
+                  class="text-[10px] font-bold uppercase"
+                  :class="magicLabelClass"
+                >
+                  {{ CUSTOM_ITEM_MAGIC_LABELS.charges }}
+                </span>
+
+                <UInputNumber
+                  v-model="draftMaxCharges"
+                  :min="INVENTORY_CHARGES_MIN"
+                  :max="INVENTORY_CHARGES_MAX"
+                  :disabled="!draftMagic"
+                  class="w-40"
+                />
+
+                <span class="text-xs text-dimmed">
+                  {{ CUSTOM_ITEM_MAGIC_LABELS.chargesHint }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Дополнительный урон нужен только оружию: у плаща и кольца
+              своего броска урона нет, и пустые поля сбивали бы с толку сильнее,
+              чем их отсутствие -->
+            <div
+              v-if="isWeapon"
+              class="flex flex-col gap-3 rounded-lg border border-default/60 p-3"
+            >
+              <span
+                class="text-[10px] font-bold uppercase"
+                :class="magicLabelClass"
+              >
+                {{ CUSTOM_ITEM_MAGIC_LABELS.weaponSection }}
+              </span>
+
+              <div class="flex flex-col gap-1">
+                <span class="text-[10px] text-dimmed uppercase">
+                  {{ CUSTOM_ITEM_MAGIC_LABELS.extraDamage }}
+                </span>
+
+                <div class="flex flex-wrap items-center gap-2">
+                  <UInputNumber
+                    v-model="draftExtraDamageDiceCount"
+                    :min="DAMAGE_DICE_COUNT_MIN"
+                    :max="DAMAGE_DICE_COUNT_MAX"
+                    :disabled="!draftMagic"
+                    class="w-26"
+                  />
+
+                  <USelect
+                    v-model="draftExtraDamageDiceFaces"
+                    :items="DAMAGE_DIE_OPTIONS"
+                    :disabled="!draftMagic"
+                    class="w-22"
+                  />
+
+                  <USelect
+                    v-model="draftExtraDamageType"
+                    :items="DAMAGE_TYPE_OPTIONS"
+                    :disabled="!draftMagic"
+                    class="min-w-0 grow basis-40"
+                  />
+                </div>
+
+                <span class="text-xs text-dimmed">
+                  {{ CUSTOM_ITEM_MAGIC_LABELS.extraDamageHint }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Бонусы заводятся по одному: цель выбирается из общего списка
+              (характеристика, проверка, навык, спасбросок, скорость, защита),
+              поэтому форма не растёт под каждую новую цель -->
+            <div
+              class="flex flex-col gap-3 rounded-lg border border-default/60 p-3"
+            >
+              <span
+                class="text-[10px] font-bold uppercase"
+                :class="magicLabelClass"
+              >
+                {{ CUSTOM_ITEM_MAGIC_LABELS.sheetSection }}
+              </span>
+
+              <div
+                v-for="bonus in draftBonuses"
+                :key="bonus.id"
+                class="flex flex-wrap items-center gap-2"
+              >
+                <USelectMenu
+                  :model-value="getBonusTarget(bonus)"
+                  :items="bonusTargetItems"
+                  value-key="value"
+                  :placeholder="INVENTORY_BONUS_ROW_LABELS.targetPlaceholder"
+                  :search-input="{
+                    placeholder: INVENTORY_BONUS_ROW_LABELS.searchPlaceholder,
+                  }"
+                  :disabled="!draftMagic"
+                  class="min-w-0 grow basis-48"
+                  @update:model-value="handleBonusTarget(bonus.id, $event)"
+                />
+
+                <UInputNumber
+                  v-model="bonus.value"
+                  :min="getInventoryBonusMin(bonus.kind)"
+                  :max="getInventoryBonusMax(bonus.kind)"
+                  :disabled="!draftMagic"
+                  class="w-32 shrink-0"
+                />
+
+                <!-- Корзина красная, как во всех остальных списках листа -->
+                <UTooltip :text="INVENTORY_BONUS_ROW_LABELS.remove">
+                  <UButton
+                    icon="tabler:trash"
+                    color="error"
+                    variant="ghost"
+                    size="xs"
+                    square
+                    :disabled="!draftMagic"
+                    class="shrink-0"
+                    :aria-label="INVENTORY_BONUS_ROW_LABELS.remove"
+                    @click.left.exact.prevent="handleBonusRemove(bonus.id)"
+                  />
+                </UTooltip>
+              </div>
+
+              <!-- Кнопка во всю ширину с пунктиром: она же место будущей
+                строки, поэтому пустому списку отдельной подписи не нужно -->
+              <UButton
+                :label="INVENTORY_BONUS_ROW_LABELS.add"
+                icon="tabler:plus"
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                block
+                :disabled="!draftMagic"
+                class="border border-dashed border-default hover:border-primary hover:text-primary"
+                @click.left.exact.prevent="handleBonusAdd"
+              />
+
+              <span class="text-xs text-dimmed">
+                {{ CUSTOM_ITEM_MAGIC_LABELS.bonusesHint }}
+              </span>
+            </div>
+
+            <!-- Сводка внизу вкладки: числа в полях разрозненны, а здесь видно
+              ровно то, что предмет добавит листу -->
+            <div class="flex flex-col gap-2 rounded-lg bg-elevated/40 p-3">
+              <span
+                class="text-[10px] font-bold uppercase"
+                :class="magicLabelClass"
+              >
+                {{ CUSTOM_ITEM_MAGIC_LABELS.summary }}
+              </span>
+
+              <div
+                v-if="bonusLabels.length"
+                class="flex flex-wrap items-center gap-1.5"
+              >
+                <UBadge
+                  v-for="bonusLabel in bonusLabels"
+                  :key="bonusLabel"
+                  size="sm"
+                  color="primary"
+                  variant="subtle"
+                >
+                  {{ bonusLabel }}
+                </UBadge>
+              </div>
+
+              <span
+                v-else
+                class="text-xs text-dimmed"
+              >
+                {{ CUSTOM_ITEM_MAGIC_LABELS.summaryEmpty }}
+              </span>
+
+              <span class="text-xs text-dimmed">
+                {{ CUSTOM_ITEM_MAGIC_LABELS.hint }}
+              </span>
             </div>
           </div>
-
-          <span class="text-xs text-dimmed">
-            {{ armorHint }}. Надеть доспех можно кнопкой в строке снаряжения —
-            класс доспеха пересчитается сам.
-          </span>
         </template>
-
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div class="flex min-w-0 flex-col gap-1">
-            <span class="text-[10px] font-bold text-muted uppercase">
-              Стоимость
-            </span>
-
-            <UInput
-              v-model="draftCost"
-              placeholder="Например: 75 зм"
-            />
-          </div>
-
-          <div class="flex min-w-0 flex-col gap-1">
-            <span class="text-[10px] font-bold text-muted uppercase">
-              {{ weightLabel }}
-            </span>
-
-            <UInputNumber
-              v-model="draftWeight"
-              :min="CUSTOM_ITEM_WEIGHT_MIN"
-              :max="CUSTOM_ITEM_WEIGHT_MAX"
-              :step="CUSTOM_ITEM_WEIGHT_STEP"
-            />
-          </div>
-        </div>
-
-        <div class="flex flex-col gap-1">
-          <span class="text-[10px] font-bold text-muted uppercase">
-            Описание
-          </span>
-
-          <MarkupEditor
-            v-model="draftDescription"
-            placeholder="Опиши предмет"
-          />
-        </div>
-      </div>
+      </UTabs>
     </template>
 
     <template #footer>

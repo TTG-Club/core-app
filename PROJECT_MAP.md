@@ -46,7 +46,7 @@ core-app/
 │   └── utils/                      # Service clients (auth/admin/subscriber/comments), secrets, JWT, proxy, display-name, image compression
 ├── shared/                         # 📦 Isomorphic shared (client + server)
 │   ├── consts/                     # Cookie/theme keys, durations, source platform (`SITE_5E24`), mailing limits & placeholders
-│   ├── types/                      # auth (JWT payload), vttg (desktop release DTO), mailing (send report)
+│   ├── types/                      # auth (JWT payload), vttg (build DTO), mailing (send report)
 │   └── utils/                      # consola, env, faker, slug, plural, status message, sort, error response, mailing labels
 ├── modules/                        # 🧩 Nuxt modules
 │   └── auto-aliases.ts             # Auto-generation of ~domain aliases from app/features
@@ -146,12 +146,41 @@ modals), so its capabilities are listed here rather than squeezed into the table
   — a homebrew class has no proficiency prose or table to derive them from.
   Levelling one up falls back to the wizard's no-class path (average hit points,
   no feature steps), since the level-up wizard resolves features by class url.
+- Multiclassing per the 2024 rules. The sheet keeps a primary class
+  (`characterClass`) plus `additionalClasses`, each with its own `level`; the
+  character level is their sum, and proficiency bonus and experience follow it.
+  Clicking the class in the header opens the class list (`SheetClassesModal`) —
+  edit the primary one, add another (`SheetClassWizardModal` in `add` mode:
+  classes already taken are filtered out, the level is 1, no starting equipment)
+  or drop one (inline confirmation; a nested `ConfirmDialog` would sit under the
+  outer modal's `aria-hidden`). Removing a class takes back its features,
+  resources, hit dice and the maximum hit points recorded for it —
+  `health.levelGains` entries carry a `classUrl` for exactly that.
+  Feature keys and table column names repeat across classes in the reference, so
+  ids are scoped by class url (`class:<classUrl>:<key>`,
+  `class:res:<classUrl>:<name>`); sheets saved before multiclassing are migrated
+  in `normalizeCharacterClasses` (`character-schema.ts`), which also derives the
+  primary class level and moves the sheet-wide spellcasting ability onto it.
+  Spell slots follow the multiclass caster level — full classes in full, half
+  casters rounded **up**, third casters rounded **down** (verified against the
+  `spellcastingLevel` of `POST /api/v2/multiclass`); a warlock's Pact Magic stays
+  separate (`SpellSlotRow.kind`, its own circles in the level divider, returned by
+  a short rest). Save DC and attack bonus are computed per caster class
+  (`getSpellcastingRows`), so the spells tab shows one tile per class. The
+  reduced multiclass proficiency set is not granted: `multiclassProficiency` is
+  empty for every class in the reference, so the wizard only shows the class's
+  own prose for the player to tick manually, and the «13 in the ability»
+  requirement warns instead of blocking.
 - Level-up wizard inside the experience modal (`composables/useLevelUpWizard.ts`):
   one step per gained level with its own hit-point mode (average / roll / max),
   the class and subclass features of that level with their choices, and the
-  subclass picker at level 3 filtered by the profile sources on the client
-  (`/classes/{url}/subclasses` ignores `source`). Applied atomically by
-  `applyLevelUp`, which keeps spent hit dice and class resources.
+  subclass picker at level 3 **in that class** filtered by the profile sources on
+  the client (`/classes/{url}/subclasses` ignores `source`). With several classes
+  the steps run class by class, each with its own hit die. The experience modal
+  lists a level per class (each capped by what is left of 20) and offers
+  «Пропустить подготовку» — the level is applied straight away through
+  `setClassLevels` with average hit points and no feature steps. Applied
+  atomically by `applyLevelUp`, which keeps spent hit dice and class resources.
 - Every skill picker (`SheetChoiceSelect` in the class / species / background
   wizards, in level-up features and in the homebrew class / background modals)
   marks skills the character already has with a `SKILL_OWNED_HINTS` badge and
@@ -173,15 +202,20 @@ modals), so its capabilities are listed here rather than squeezed into the table
   sub-module (like `model/pdf`, so it stays out of the main bundle): `schema.ts`
   parses the foreign file with catch-everything Zod, `tiptap.ts` rewrites its
   TipTap texts into site markup (`{@list}` / `{@bold}` / `{@link}`), `convert.ts`
-  maps abilities, skills, hit points, resources, coins and text blocks (traits
-  and feats become sheet features, the rest become notes), and `catalog.ts`
+  maps abilities, skills, hit points, resources, coins, the header details
+  (alignment and appearance go straight into `personality`, the LSS keys being
+  the same as ours; only what has no field of its own — the player's name —
+  still becomes the «О персонаже» note) and text blocks (traits and feats become
+  sheet features, the rest become notes), and `catalog.ts`
   matches class, subclass, species, background and every equipment line against
   the site catalogs by name — anything not found stays a homebrew entry. Spells
   cannot be carried over (the file keeps only LSS-internal ids), so the import
   says so in a toast.
 - PDF export from the same action menu. `model/pdf` draws its own vector layout
   close to the official D&D 2024 sheet with Russian labels: main page,
-  equipment, spells, and a reference section with full descriptions.
+  personality (appearance boxes and the long description — the page is skipped
+  when nothing is filled in), equipment, spells, and a reference section with
+  full descriptions.
   Descriptions of catalog spells and items are not stored in the sheet document,
   so `model/pdf/catalog.ts` fetches them on export — batched, cached per page
   load, and best-effort (a failed request only costs one reference entry).
@@ -207,7 +241,47 @@ modals), so its capabilities are listed here rather than squeezed into the table
   expandable card on the spells tab).
 - Homebrew equipment added by the same kind of form (weapon / armor / trinket,
   each with its own fields — custom armor is equippable and adds to AC, custom
-  weapons roll attack & damage).
+  weapons roll attack & damage). The form is split in two tabs: «Основное» holds
+  the mundane parameters (a versatile weapon also names the two-handed die, which
+  switches the grip from the row menu), «Магические свойства» everything a magic
+  item does. That tab is gated by a switch — its fields stay visible and go
+  disabled while the item is not magic, rather than appearing out of nowhere —
+  and holds the attunement requirement, the charge pool, the weapon's own to-hit
+  bonus and extra damage dice with their own type, plus the item's passive
+  bonuses. Those are added one row at a time: a searchable target (any ability
+  score, ability checks, any skill of this sheet including the player's own, one
+  saving throw or all six, one movement speed or all of them, AC, initiative,
+  spell save DC, spell attack) and a value; a live summary at the bottom of the
+  tab shows what the item will hand the sheet. Passive bonuses count while the
+  item is equipped, and an item that requires attunement only while attuned —
+  the row badges say «Настроен» / «Нужна настройка». Ability bonuses reach every
+  derived number through `getEffectiveAbilities` / `getAbilityModifier`, while
+  the score written on the sheet stays what the ability modal edits (the tile
+  shows the total and explains it in its tooltip); hit points are the one thing
+  a Constitution item does not move, since the sheet stores them as a number.
+- The carried-weight row of the equipment tab is also the way into its limit
+  (`SheetCarryingCapacityModal`, opened by the row itself — a pencil revealed on
+  hover, like every other edit control of the sheet). By the rules the limit is
+  Strength × 15 with a size correction (`CARRYING_CAPACITY_SIZE_MULTIPLIERS`),
+  and the modal offers three ways to bend it: a flat number instead of the
+  calculation, a bonus in pounds on top of it (a negative one lowers the limit)
+  and a size to count the correction by other than the character's own — that is
+  «Мощное телосложение», carrying as one category larger without being it. All
+  three live in `Character.carryingCapacity`, where `null` / `null` / `0` means
+  «по правилам», so sheets saved before the setting count exactly as they did.
+  The row, the modal preview and the PDF all read
+  `getCarryingCapacityBreakdown`, so the number cannot diverge between them.
+- Next to the carried weight stands the attunement tile: how many items are
+  attuned out of how many may be («2 / 3»), the same shape the prepared-spells
+  tiles have on the spells tab. It opens `SheetAttunementModal`, where the 2024
+  limit of three items bends the way the weight limit does — a flat number
+  instead of the calculation, an ability whose modifier becomes the base instead
+  of the rule (home rules and artificer-like features), and a bonus on top of
+  the base. All three live in `Character.attunement`, where `null` / `null` /
+  `0` means «по правилам», so sheets saved before the setting count exactly as
+  they did. Attuning past the limit is refused with a toast, the way preparing
+  one spell too many is; the tile, the modal preview and that guard all read
+  `getAttunementBreakdown`, so the number cannot diverge between them.
 - Catalog rows on the equipment and spells tabs can be copied into the sheet
   from the row action menu. The `custom:` copy keeps quantity, equipped state
   and combat parameters, and pulls the description — for a spell also its
@@ -247,7 +321,11 @@ modals), so its capabilities are listed here rather than squeezed into the table
   with no armour base keeps its AC bonus in `CharacterInventoryItem.armorClassBonus`
   — a flat term the AC breakdown sums over every equipped item («Магические
   предметы» row), because a cloak and a ring of protection stack rather than
-  compete. Sheets saved before the fields existed read them as `0`.
+  compete. Homebrew items keep the same bonus in an `armor-class` row instead, and
+  `getInventoryItemArmorClassBonus` reads both; on a suit of armour it joins that
+  armour's own value so the «best armour wins» comparison stays honest, and an
+  item that requires attunement contributes nothing until it is attuned. Sheets
+  saved before the fields existed read them as `0`.
 - The «Добавить заклинание» catalog opens preset to what the character can
   actually learn: the class chip is picked by the class slug (the same id the
   `className` filter group uses) and the level chips cover every circle the
@@ -260,35 +338,46 @@ modals), so its capabilities are listed here rather than squeezed into the table
   record (editable afterwards), removing one drops it from
   `species.innateSpells` so the next level-up does not bring it back. Both are
   undone by picking the species again in the wizard.
+- The «Личность» tab holds the person rather than the build: seven appearance
+  tiles (alignment from the `alignments` dictionary plus age, height, weight,
+  eyes, hair and skin as free text — clicking a tile opens the form with the
+  caret already in that field), the background pulled from
+  `characterBackground` on its own with its ability bonuses and a drawer for the
+  catalog description (a homebrew one has no page to open, and an empty panel
+  offers the same wizard the header does), and a long description in site markup
+  edited by `MarkupEditor`. It all lives in `Character.personality`; sheets saved
+  before the block existed read every field as empty.
 
 **Play**
 
 - Spell slots derived from the reference `casterType` of the class/subclass
   (full / half / third caster, warlock pact magic) plus the character level;
   spent by clicking the circles in each spell-level divider.
-- Prepared-spell count on the spells tab, next to the save DC / attack tile. The
-  reference class table has it as a column («Подг. закл.», matched by letters
-  because the wording is abbreviated differently per class and sometimes lives
-  only on the subclass), so its progression is snapshotted into the sheet by the
-  class wizard and refreshed by every level-up; the tile shows the value for the
-  current level. Clicking it opens the settings: either a custom number (the
-  class count is then ignored) or a bonus added to the class count. The tile
-  reads «marked / allowed» (`4 / 17`) and turns red when the allowance drops
-  below what is already marked.
+- Prepared counts on the spells tab, next to the save DC / attack tile: two
+  tiles, «Подготовленные» for circles 1+ and «Заговоры» for cantrips, since the
+  reference class table counts them in separate columns («Подг. закл.» and
+  «Заговоры», both matched by letters because the wording is abbreviated
+  differently per class and sometimes lives only on the subclass). Both
+  progressions are snapshotted into the sheet by the class wizard and refreshed
+  by every level-up; each tile shows the value for the current level. Clicking a
+  tile opens its own settings: either a custom number (the class count is then
+  ignored) or a bonus added to the class count. A tile reads «marked / allowed»
+  (`4 / 17`) and turns red when the allowance drops below what is already marked.
 - Prepared spells marked by clicking the spell icon in the row — the same
   gesture as equipping armour. Only the icon square lights up (the row itself
   keeps its usual look), the flag lives in `spell.prepared`, and marking more
-  than the allowed number warns instead. Cantrips and innate spells are always
-  available, so their icon toggles nothing; with no allowance known (the class
-  gives none and no custom number is set) marking is unlimited.
+  than the allowed number warns instead. Cantrips are prepared the same way but
+  counted against their own tile; innate species spells are always available, so
+  their icon toggles nothing. With no allowance known (the class gives none and
+  no custom number is set) marking is unlimited.
 - Spell list narrowed by a chip row above the groups: «Подготовленные» plus one
   chip per circle (cantrips as «З», the full name in the tooltip), several
   circles at a time, and a reset button once anything is picked. Nothing is
   stored — the chips are derived from what the list already shows
   (`getSpellListLevels`: spell circles + circles with slots), so a circle the
   character has not reached never appears and a pick that disappears stops
-  narrowing by itself. The prepared chip is skipped when there is nothing to
-  prepare (cantrips or innate spells only).
+  narrowing by itself. The prepared chip is skipped when the book is empty
+  (innate spells only) and keeps prepared cantrips alongside prepared spells.
 - Weapon attack & damage rolled straight from their tiles in the equipment list
   (damage dice come from the item `/raw` response). A versatile weapon also
   keeps the second roll of that response, and the row action menu switches its
@@ -304,15 +393,98 @@ modals), so its capabilities are listed here rather than squeezed into the table
   grant spend nothing, and an exhausted circle warns instead.
 - Short & long rest from the header: short rest spends Hit Point Dice one by
   one, adding the Constitution modifier to every roll; long rest refills hit
-  points, spell slots, feature counters and half the Hit Point Dice. The shared
-  `SheetHitDiceSelect` picks which dice.
+  points, spell slots, feature counters and every spent Hit Point Die (the 2024
+  rules return all of them, not half), and removes one Exhaustion level. The
+  shared `SheetHitDiceSelect` picks which dice.
+- Exhaustion sits in its own panel right below the health one
+  (`SheetExhaustionPanel`): six steps, a click sets that level and a click on
+  the current one drops it by one (`setExhaustion`, a play action — a locked
+  sheet still allows it, a shared one does not). Each step spells out what it
+  costs (`getExhaustionSummary`: −2 per level on every D20 test, −5 ft of Speed
+  per level, death on the sixth) and the panel header opens the rule list.
+- Exhaustion is applied, not just displayed. The D20 penalty
+  (`getExhaustionD20Penalty`) is subtracted once per roll at each site that
+  produces one — skills (so passive scores drop too), saving throws, initiative
+  (a Dexterity check in 2024), weapon and spell attacks, and the ability-check
+  roll (`getAbilityCheckValue`; the ability modifier itself stays intact, it also
+  feeds AC, hit points and the spell save DC, which are not D20 tests). The
+  Speed penalty gives `getEffectiveSpeed` — what the tile and the PDF show, while
+  the speed editor keeps writing the stored values; it counts in the sheet's own
+  unit (`EXHAUSTION_SPEED_PENALTY_BY_UNIT`: 5 ft = 1.5 m, road miles and
+  kilometres untouched). The skill hint and the initiative section of the sheet
+  settings show the penalty as its own line, so the numbers add up. The level
+  lives in `health.exhaustion`, so it is saved by the usual autosave and sheets
+  stored before it read as `0`; the PDF prints it as a combat tile.
+- Skill settings (`SheetSkillsSettingsModal`, opened by the gear next to the
+  «Навыки» panel title — revealed on hover and always visible below `lg`, like
+  every other edit control of the sheet): every skill gets its ability picked
+  (the roll, the passive value and the PDF follow it), its proficiency level
+  cycled and any number of `CharacterCustomBonus` rows on top
+  (`SheetCustomBonusRows` again). A changed skill is outlined and can be reset
+  to the rules in one click (`getDefaultSkillAbility`), and in the panel its
+  modifier is underlined with a tooltip breaking the value down
+  (`getSkillBonusHint`: ability + proficiency + every bonus). The bonuses live
+  in `skill.bonuses` and flow through `getSkillValue`, so they reach the roll,
+  the passive value and the PDF; sheets saved before them read an empty list.
+- The same modal adds skills of your own (a name plus an ability, up to
+  `CUSTOM_SKILLS_MAX` — the PDF prints them under their ability and the panel
+  there is not endless). A custom skill lands in the shared list sorted by name
+  (`sortSkillsByName`), behaves like any other one — proficiency, bonuses, roll,
+  passive value, PDF — and is told apart by its name alone: whatever is not in
+  the sheet template is custom (`isCustomSkill`), so the row offers deletion
+  instead of a reset. Names are compared loosely (case, «ё», spacing) so the
+  same skill cannot be added twice.
+- Hovering an ability tile (or reaching it with the keyboard) highlights every
+  skill that ability feeds: its own ones and those taking a
+  `CharacterCustomBonus` of the «ability modifier» kind from it
+  (`SkillRow.bonusAbilities`). Only the row's own ability also gets its label
+  coloured, so a highlight coming through a bonus is still told apart. The tile
+  reads its element through the component ref (`useElementHover`, `onLongPress`),
+  which is why `SheetPanel` must stay single-root — a comment before its
+  `fieldset` makes the root a fragment in dev builds and quietly kills both.
+- Saving-throw settings (`SheetSavingThrowsSettingsModal`, opened by the gear
+  next to the «Спасброски» panel title — the same reveal-on-hover control the
+  skills panel has): each of the six gets its ability picked, its proficiency
+  toggled and any number of `CharacterCustomBonus` rows on top, and above them
+  all sits a shared «Ко всем спасброскам» block whose bonuses count in every one
+  (`commonSavingThrowBonuses` — a cloak of protection or a paladin's aura is
+  entered once instead of six times). A changed saving throw is outlined and
+  reset to the rules in one click (`toDefaultSavingThrow`; proficiency is left
+  alone — it comes from the class, not from the maths), and in the panel its
+  value is underlined with a tooltip breaking it down
+  (`getSavingThrowBonusHint`: ability + proficiency + every bonus + exhaustion).
+  Everything flows through `getSavingThrowValue`, so the roll and the PDF follow
+  it. Storage moved from the flat `savingThrowProficiencies` list of abilities to
+  a `savingThrows` record per ability (`CharacterSavingThrow`); the legacy list is
+  migrated on read (`toSavingThrows` in `character-schema.ts`) and the records are
+  always six in sheet order. Picking a class rewrites only the proficiencies
+  (`withSavingThrowProficiencies`), so a swapped ability and its bonuses survive.
 - Sheet settings (`SheetSettingsModal`, opened from the sheet header and from the
   list card) split into two tabs: «Атака оружием» (base attack ability) and
-  «Свои бонусы» — a custom proficiency bonus added on top of the one from the
-  level (it flows into saving throws, skills, weapon attacks and spellcasting via
-  `getCharacterProficiencyBonus`) and a custom initiative bonus added to the
-  Dexterity modifier (`getInitiativeBonus`, used by the tile, its roll and the
-  PDF). Sheets saved before the bonuses existed read them as `0`.
+  «Свои бонусы». The second tab holds two identical sections
+  (`SheetCustomBonusSection`) — proficiency bonus and initiative — each showing
+  three tiles (base · own bonuses · total) over the editable bonus rows.
+- Section base: the base tile is also its own control, so nothing is shown twice
+  — the tile is a button captioned with the current source, and a pencil revealed
+  on hover (`SHEET_REVEAL_CONTROL_CLASS`, as on the sheet panels) opens a popover
+  with the source and the value. By default the proficiency bonus is derived from
+  the level and initiative from the Dexterity modifier, but the popover swaps
+  either one for a flat number (`customProficiencyBase`,
+  `customInitiativeBase`), and initiative can be based on any other ability
+  (`initiativeAbility`) — `null` in all three means «по правилам», so old sheets
+  keep counting as before. Read them via `getBaseProficiencyBonus` /
+  `getInitiativeAbility` / `getBaseInitiativeBonus`, never by hand.
+- Section bonuses: unlimited rows (`SheetCustomBonusRows`) added on top of the
+  base, so the proficiency total flows into saving throws, skills, weapon attacks
+  and spellcasting (`getCharacterProficiencyBonus`) and the initiative total into
+  the tile, its roll and the PDF (`getInitiativeBonus`). A row is one
+  `CharacterCustomBonus` — the record skills use as well: an optional label plus
+  a source that is either a flat number or an ability, whose modifier is then
+  taken automatically and follows the ability afterwards
+  (`getCustomBonusesValue`). Sheets saved with the earlier single number migrate
+  it into one number row; sheets saved before the bonuses existed read them as an
+  empty list. Drafts are cleaned on save (`toStoredSettings`): a cleared input
+  reads as `NaN`, and the proficiency bonus would spread it across the sheet.
 
 **Sharing**
 
@@ -365,10 +537,10 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 ### 🌐 Landing & infrastructure
 
-| Domain           | Purpose                                                                      | Sub-features                                                                                                                                                                                                                                |
-| ---------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `vttg`           | Marketing landing for the VTTG virtual tabletop (`/vttg`) + desktop download | `model`, `ui` (hero / features / FAQ / video sections, `VttgDownloadModal` — early-access notice behind the hero «Скачать» button, `VttgDownloadPlatforms`), `composables` (`useVttgDesktopRelease` — latest build from the update channel) |
-| `infrastructure` | Cross-cutting app shell & chrome                                             | `sidebar`, `search`, `filter`, `list-presentation`, `footer`, `cookie-consent`, `pwa`                                                                                                                                                       |
+| Domain           | Purpose                                                                     | Sub-features                                                                                                                                                                                                                                                               |
+| ---------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vttg`           | Marketing landing for the VTTG virtual tabletop (`/vttg`) + build downloads | `model`, `ui` (hero / features / FAQ / video sections, `VttgDownloadModal` — early-access notice behind the hero «Скачать» button, `VttgDownloadBuilds` — per-platform rows with their own version), `composables` (`useVttgBuilds` — every build from the update channel) |
+| `infrastructure` | Cross-cutting app shell & chrome                                            | `sidebar`, `search`, `filter`, `list-presentation`, `footer`, `cookie-consent`, `pwa`                                                                                                                                                                                      |
 
 ### Anatomy of a Feature (Example: `tokenator`)
 
@@ -471,20 +643,20 @@ imported via the auto-generated `~<domain>` alias (see
 Thin Nitro layer that proxies to external microservices and handles auth,
 uploads and presence.
 
-| Area                                     | Responsibility                                                                                                                                                                                                                                                                                                |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `api/[...].ts`                           | Catch-all proxy (`getProxyPath`) → `subscriber-service` for `/api/subscriptions` & `/api/rewards`, `comments-service` for `/api/v1/comments`, otherwise `core-api`                                                                                                                                            |
-| `api/auth/*`                             | Sign-in/up, logout, me, email confirm, password reset/change, roles, admin users — proxied to **auth-service**                                                                                                                                                                                                |
-| `api/admin/*`                            | Admin bug list/status, subscription grant/revoke/codes, comment hide/restore by author — ADMIN-gated proxies to bug-report, subscriber & comments services (the last via `X-Service-Token` internal API, not the user JWT)                                                                                    |
-| `api/admin/mailing/*`                    | Bulk promo-code mailing (ADMIN-only): issues one code per address through the subscriber admin API and sends a personal letter over SMTP (`utils/mailer`, `utils/mailingTemplate`, SMTP env shared with auth-service: `SPRING_MAIL_*` + `APP_MAIL_FROM`); `test` sends a sample letter without issuing a code |
-| `api/bug-report*`                        | Create report (streams multipart), public stats, my count-by-status → external **bug-report** service                                                                                                                                                                                                         |
-| `api/user/comments/sync-name`            | Best-effort display-name sync: reads the name from core-api, then renames the author's comments through the comments internal API, scoped by `SOURCE_PLATFORM`                                                                                                                                                |
-| `api/online`, `routes/online/heartbeat`  | Presence heartbeat + stats via **online-app**                                                                                                                                                                                                                                                                 |
-| `api/vttg/desktop/latest`, `domain/vttg` | Latest VTTG desktop build: reads `latest.yml` from the electron-updater channel (`runtimeConfig.vttg.desktopUpdateUrl`), returns version / size / installer link, cached by Nitro                                                                                                                             |
-| `domain/s3`, `routes/s3/*`               | S3 upload (image compression via sharp) / get / delete / copy (new key for a duplicated entity)                                                                                                                                                                                                               |
-| `routes/manifest.json`                   | Theme-aware PWA manifest from `runtimeConfig.pwa`                                                                                                                                                                                                                                                             |
-| `middleware/`                            | `001` verify access JWT + silent single-flight refresh, `002` inject `Bearer` from cookie                                                                                                                                                                                                                     |
-| `utils/`                                 | Service clients (auth / auth-admin / subscriber-admin / comments-admin / bug-report), `displayName` + `commentsRename`, `getUser` / `getTokenFromRequest`, `secrets` (env accessor), JWT (jose), proxy, error normalization, image compression                                                                |
+| Area                                    | Responsibility                                                                                                                                                                                                                                                                                                                                                                    |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api/[...].ts`                          | Catch-all proxy (`getProxyPath`) → `subscriber-service` for `/api/subscriptions` & `/api/rewards`, `comments-service` for `/api/v1/comments`, otherwise `core-api`                                                                                                                                                                                                                |
+| `api/auth/*`                            | Sign-in/up, logout, me, email confirm, password reset/change, roles, admin users — proxied to **auth-service**                                                                                                                                                                                                                                                                    |
+| `api/admin/*`                           | Admin bug list/status, subscription grant/revoke/codes, comment hide/restore by author — ADMIN-gated proxies to bug-report, subscriber & comments services (the last via `X-Service-Token` internal API, not the user JWT)                                                                                                                                                        |
+| `api/admin/mailing/*`                   | Bulk promo-code mailing (ADMIN-only): issues one code per address through the subscriber admin API and sends a personal letter over SMTP (`utils/mailer`, `utils/mailingTemplate`, SMTP env shared with auth-service: `SPRING_MAIL_*` + `APP_MAIL_FROM`); `test` sends a sample letter without issuing a code                                                                     |
+| `api/bug-report*`                       | Create report (streams multipart), public stats, my count-by-status → external **bug-report** service                                                                                                                                                                                                                                                                             |
+| `api/user/comments/sync-name`           | Best-effort display-name sync: reads the name from core-api, then renames the author's comments through the comments internal API, scoped by `SOURCE_PLATFORM`                                                                                                                                                                                                                    |
+| `api/online`, `routes/online/heartbeat` | Presence heartbeat + stats via **online-app**                                                                                                                                                                                                                                                                                                                                     |
+| `api/vttg/builds`, `domain/vttg`        | All VTTG builds: reads every manifest of the update channel (`runtimeConfig.vttg.updateBaseUrl`) — electron-updater `latest*.yml` for desktop, `latest-node-linux-*.json` / `latest-docker.json` for server — and returns version / size / download links per platform, cached by Nitro. A missing manifest (platform not released yet) yields an empty build instead of an error |
+| `domain/s3`, `routes/s3/*`              | S3 upload (image compression via sharp) / get / delete / copy (new key for a duplicated entity)                                                                                                                                                                                                                                                                                   |
+| `routes/manifest.json`                  | Theme-aware PWA manifest from `runtimeConfig.pwa`                                                                                                                                                                                                                                                                                                                                 |
+| `middleware/`                           | `001` verify access JWT + silent single-flight refresh, `002` inject `Bearer` from cookie                                                                                                                                                                                                                                                                                         |
+| `utils/`                                | Service clients (auth / auth-admin / subscriber-admin / comments-admin / bug-report), `displayName` + `commentsRename`, `getUser` / `getTokenFromRequest`, `secrets` (env accessor), JWT (jose), proxy, error normalization, image compression                                                                                                                                    |
 
 **Backend topology:** `core-api` (default), `auth-service` (auth), `subscriber-service`
 (subscriptions/rewards), `comments-service` (discussions, `NITRO_COMMENTS_API_URL`),

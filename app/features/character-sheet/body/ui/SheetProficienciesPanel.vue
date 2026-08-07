@@ -12,6 +12,7 @@
     collapseProficiencies,
     LANGUAGE_PROFICIENCY_GROUPS,
     SHEET_EMPTY_LABELS,
+    SHEET_REVEAL_CONTROL_CLASS,
     SHEET_TOOL_LABELS,
     WEAPON_MASTERY_ICON,
     WEAPON_PROFICIENCY_GROUPS,
@@ -172,8 +173,8 @@
 
             <UIcon
               name="tabler:settings"
-              class="size-3.5 shrink-0 text-muted opacity-0 transition-opacity group-hover/header:text-primary group-hover/header:opacity-100 group-focus-visible/header:opacity-100"
-              :class="editControlClass"
+              class="size-3.5 shrink-0 text-primary opacity-0 transition-opacity group-hover/header:opacity-100 group-focus-visible/header:opacity-100"
+              :class="[SHEET_REVEAL_CONTROL_CLASS, editControlClass]"
             />
           </button>
 

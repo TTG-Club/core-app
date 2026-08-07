@@ -2,6 +2,7 @@
   import type {
     AdminOnlineCounters,
     AdminOnlineSiteCard,
+    AdminOnlineSiteCardRow,
     AdminOnlineStatsResponse,
   } from '../model';
 
@@ -18,11 +19,13 @@
     ADMIN_ONLINE_STATS_SUMMARY_LABEL,
     ADMIN_ONLINE_STATS_TITLE,
     ADMIN_ONLINE_STATS_TOTAL_LABEL,
-    ADMIN_ONLINE_STATS_VTTG_GUESTS_LABEL,
+    ADMIN_ONLINE_STATS_VTTG_PLAYERS_LABEL,
+    ADMIN_ONLINE_STATS_VTTG_REGISTERED_LABEL,
     ADMIN_ONLINE_STATS_VTTG_SITE_ID,
     ADMIN_ONLINE_STATS_VTTG_SITE_LABEL,
     ADMIN_ONLINE_STATS_WINDOW_LABEL,
   } from '../model';
+  import AdminOnlineStatsRow from './AdminOnlineStatsRow.vue';
 
   const props = defineProps<{
     hasError: boolean;
@@ -51,14 +54,67 @@
   }
 
   /**
-   * Собирает карточку площадки: VTTG — десктопное приложение со своей
-   * аудиторией, поэтому у него подписи «Приложение» и «Игроков», у сайтов
-   * остаются «Сайт» и «Гостей».
-   *
-   * У VTTG `guests` с бэкенда — это все подключённые к приложению, включая
-   * зарегистрированных, а `total` суммирует их с `registered` повторно. Поэтому
-   * для карточки приложения счётчики пересчитываем: «Игроков» = guests −
-   * registered, «Всего» = исходный guests.
+   * Собирает строки карточки сайта: гости и вошедшие в аккаунт — непересекающиеся
+   * наборы ключей, поэтому итог внизу и есть их сумма.
+   */
+  function createSiteRows(
+    counters: AdminOnlineCounters | null,
+  ): AdminOnlineSiteCardRow[] {
+    return [
+      {
+        divider: 'none',
+        isTotal: false,
+        label: ADMIN_ONLINE_STATS_GUESTS_LABEL,
+        value: formatCounter(counters?.guests),
+      },
+      {
+        divider: 'none',
+        isTotal: false,
+        label: ADMIN_ONLINE_STATS_REGISTERED_LABEL,
+        value: formatCounter(counters?.registered),
+      },
+      {
+        divider: 'above',
+        isTotal: true,
+        label: ADMIN_ONLINE_STATS_TOTAL_LABEL,
+        value: formatCounter(counters?.total),
+      },
+    ];
+  }
+
+  /**
+   * Собирает строки карточки приложения: VTTG шлёт один ключ на человека, поэтому итог —
+   * это люди, а «в мирах» и «с аккаунтом» лишь признаки этих же людей. Играющий под
+   * аккаунтом попадает в обе строки, складывать их нельзя — итог поэтому стоит первым.
+   */
+  function createAppRows(
+    counters: AdminOnlineCounters | null,
+  ): AdminOnlineSiteCardRow[] {
+    return [
+      {
+        divider: 'below',
+        isTotal: true,
+        label: ADMIN_ONLINE_STATS_TOTAL_LABEL,
+        value: formatCounter(counters?.total),
+      },
+      {
+        divider: 'none',
+        isTotal: false,
+        label: ADMIN_ONLINE_STATS_VTTG_PLAYERS_LABEL,
+        value: formatCounter(counters?.players),
+      },
+      {
+        divider: 'none',
+        isTotal: false,
+        label: ADMIN_ONLINE_STATS_VTTG_REGISTERED_LABEL,
+        value: formatCounter(counters?.registered),
+      },
+    ];
+  }
+
+  /**
+   * Собирает карточку площадки: VTTG — десктопное приложение со своей аудиторией,
+   * поэтому у него подпись «Приложение» и свой набор строк, у сайтов остаётся «Сайт».
    */
   function createSiteCard(
     siteId: string,
@@ -66,26 +122,12 @@
   ): AdminOnlineSiteCard {
     const isApp = siteId === ADMIN_ONLINE_STATS_VTTG_SITE_ID;
 
-    const counts: AdminOnlineCounters | null =
-      isApp && counters
-        ? {
-            guests: Math.max(0, counters.guests - counters.registered),
-            registered: counters.registered,
-            total: counters.guests,
-          }
-        : counters;
-
     return {
-      guests: formatCounter(counts?.guests),
-      guestsLabel: isApp
-        ? ADMIN_ONLINE_STATS_VTTG_GUESTS_LABEL
-        : ADMIN_ONLINE_STATS_GUESTS_LABEL,
-      registered: formatCounter(counts?.registered),
+      rows: isApp ? createAppRows(counters) : createSiteRows(counters),
       siteId,
       siteLabel: isApp
         ? ADMIN_ONLINE_STATS_VTTG_SITE_LABEL
         : ADMIN_ONLINE_STATS_SITE_LABEL,
-      total: formatCounter(counts?.total),
     };
   }
 
@@ -199,50 +241,12 @@
             </dd>
           </div>
 
-          <div class="flex items-center justify-between gap-4">
-            <dt class="text-muted">{{ card.guestsLabel }}</dt>
-
-            <dd class="font-medium text-default">
-              <USkeleton
-                v-if="isPending"
-                class="h-5 w-10"
-              />
-
-              <template v-else>{{ card.guests }}</template>
-            </dd>
-          </div>
-
-          <div class="flex items-center justify-between gap-4">
-            <dt class="text-muted">
-              {{ ADMIN_ONLINE_STATS_REGISTERED_LABEL }}
-            </dt>
-
-            <dd class="font-medium text-default">
-              <USkeleton
-                v-if="isPending"
-                class="h-5 w-10"
-              />
-
-              <template v-else>{{ card.registered }}</template>
-            </dd>
-          </div>
-
-          <div
-            class="flex items-center justify-between gap-4 border-t border-default pt-3"
-          >
-            <dt class="font-medium text-default">
-              {{ ADMIN_ONLINE_STATS_TOTAL_LABEL }}
-            </dt>
-
-            <dd class="text-lg font-semibold text-primary">
-              <USkeleton
-                v-if="isPending"
-                class="h-7 w-12"
-              />
-
-              <template v-else>{{ card.total }}</template>
-            </dd>
-          </div>
+          <AdminOnlineStatsRow
+            v-for="row in card.rows"
+            :key="row.label"
+            :is-pending="isPending"
+            :row="row"
+          />
         </dl>
       </UCard>
 

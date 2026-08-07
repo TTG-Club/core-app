@@ -2,15 +2,19 @@
   import type { TabsItem } from '@nuxt/ui';
 
   import type {
+    AttunementBreakdown,
     CharacterCurrency,
     CharacterCustomCurrency,
     CharacterFeature,
     CharacterInventoryItem,
     CharacterSpell,
+    PersonalityFieldKey,
+    PreparedSpellKind,
     SheetTab,
     SheetTabSlot,
     SpellcastingBreakdown,
     SpellDamageRoll,
+    SpellSlotKind,
     SpellSlotRow,
   } from '../../model';
 
@@ -32,6 +36,7 @@
   import SheetEquipmentTab from './SheetEquipmentTab.vue';
   import SheetFeaturesTab from './SheetFeaturesTab.vue';
   import SheetNotesTab from './SheetNotesTab.vue';
+  import SheetPersonalityTab from './SheetPersonalityTab.vue';
   import SheetSpellsTab from './SheetSpellsTab.vue';
 
   const props = defineProps<{
@@ -40,6 +45,9 @@
     inventory: CharacterInventoryItem[];
     totalWeight: number;
     carryingCapacity: number;
+
+    /** Разбор предела настройки на магические предметы (плитка снаряжения). */
+    attunement: AttunementBreakdown;
     features: CharacterFeature[];
     spells: CharacterSpell[];
     innateSpells: CharacterSpell[];
@@ -67,9 +75,11 @@
     'add-custom-spell': [];
     'edit-spell': [spellUrl: string];
     'copy-spell': [spellUrl: string];
-    'edit-spellcasting': [];
-    'edit-prepared-spells': [];
+    'edit-spellcasting': [classUrl: string];
+    'edit-prepared-spells': [kind: PreparedSpellKind];
     'edit-currency': [];
+    'edit-carrying-capacity': [];
+    'edit-attunement': [];
     'adjust-item-quantity': [inventoryItemId: string, delta: number];
     'toggle-item-equip': [inventoryItemId: string];
     'toggle-item-attuned': [inventoryItemId: string];
@@ -84,13 +94,16 @@
     'add-note': [];
     'edit-note': [noteId: string];
     'remove-note': [noteId: string];
+    'edit-personality': [field: PersonalityFieldKey | null];
+    'edit-personality-description': [];
+    'edit-background': [];
     'remove-item': [inventoryItemId: string];
     'remove-spell': [spellUrl: string];
     'copy-innate-spell': [spellUrl: string];
     'remove-innate-spell': [spellUrl: string];
     'roll-spell-damage': [roll: SpellDamageRoll];
     'toggle-spell-prepared': [spellUrl: string];
-    'toggle-spell-slot': [level: number, index: number];
+    'toggle-spell-slot': [level: number, index: number, kind: SpellSlotKind];
   }>();
 
   function handleItemAdd() {
@@ -115,6 +128,14 @@
 
   function handleCurrencyEdit() {
     emit('edit-currency');
+  }
+
+  function handleCarryingCapacityEdit() {
+    emit('edit-carrying-capacity');
+  }
+
+  function handleAttunementEdit() {
+    emit('edit-attunement');
   }
 
   function handleItemRemove(inventoryItemId: string) {
@@ -173,12 +194,12 @@
     emit('copy-spell', spellUrl);
   }
 
-  function handleSpellcastingEdit() {
-    emit('edit-spellcasting');
+  function handleSpellcastingEdit(classUrl: string) {
+    emit('edit-spellcasting', classUrl);
   }
 
-  function handlePreparedSpellsEdit() {
-    emit('edit-prepared-spells');
+  function handlePreparedSpellsEdit(kind: PreparedSpellKind) {
+    emit('edit-prepared-spells', kind);
   }
 
   function handleSpellRemove(spellUrl: string) {
@@ -201,8 +222,12 @@
     emit('toggle-spell-prepared', spellUrl);
   }
 
-  function handleSpellSlotToggle(level: number, index: number) {
-    emit('toggle-spell-slot', level, index);
+  function handleSpellSlotToggle(
+    level: number,
+    index: number,
+    kind: SpellSlotKind,
+  ) {
+    emit('toggle-spell-slot', level, index, kind);
   }
 
   function handleFeatureAdd() {
@@ -231,6 +256,18 @@
 
   function handleNoteRemove(noteId: string) {
     emit('remove-note', noteId);
+  }
+
+  function handlePersonalityEdit(field: PersonalityFieldKey | null) {
+    emit('edit-personality', field);
+  }
+
+  function handlePersonalityDescriptionEdit() {
+    emit('edit-personality-description');
+  }
+
+  function handleBackgroundEdit() {
+    emit('edit-background');
   }
 
   // Подписи разделов всегда полные — сокращений нет. Когда ряд не помещается
@@ -872,12 +909,15 @@
             :inventory="inventory"
             :total-weight="totalWeight"
             :carrying-capacity="carryingCapacity"
+            :attunement="attunement"
             @add-item="handleItemAdd"
             @add-magic-item="handleMagicItemAdd"
             @add-custom-item="handleCustomItemAdd"
             @edit-item="handleItemEdit"
             @copy-item="handleItemCopy"
             @edit-currency="handleCurrencyEdit"
+            @edit-carrying-capacity="handleCarryingCapacityEdit"
+            @edit-attunement="handleAttunementEdit"
             @remove-item="handleItemRemove"
             @adjust-quantity="handleItemQuantityAdjust"
             @toggle-equip="handleItemEquipToggle"
@@ -917,6 +957,13 @@
             @add-feat="handleFeatAdd"
             @edit-feature="handleFeatureEdit"
             @remove-feature="handleFeatureRemove"
+          />
+
+          <SheetPersonalityTab
+            v-else-if="activeSlot === 'personality'"
+            @edit-appearance="handlePersonalityEdit"
+            @edit-description="handlePersonalityDescriptionEdit"
+            @edit-background="handleBackgroundEdit"
           />
 
           <SheetNotesTab

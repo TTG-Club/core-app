@@ -2,9 +2,12 @@ import type {
   AbilityKey,
   Character,
   CharacterArmorClass,
+  CharacterAttunement,
+  CharacterCarryingCapacity,
   CharacterClass,
   CharacterClassResource,
   CharacterCurrency,
+  CharacterCustomBonus,
   CharacterCustomCurrency,
   CharacterExtraHitDie,
   CharacterFeature,
@@ -12,19 +15,24 @@ import type {
   CharacterHitDie,
   CharacterInventoryItem,
   CharacterNote,
+  CharacterPersonality,
   CharacterPreparedSpells,
+  CharacterSavingThrow,
   CharacterSettings,
+  CharacterSkill,
   CharacterSpecies,
   CharacterSpeed,
   CharacterSpell,
-  CharacterSpellcasting,
   CharacterToolProficiency,
   CharacterVision,
   CustomInventoryItemDraft,
   CustomSpellDraft,
   HitDiceAmount,
+  LevelUpHitPointsGain,
   LevelUpPayload,
   PlainProficiencyGroupKey,
+  PreparedSpellKind,
+  SpellSlotKind,
   StartingEquipmentGrant,
 } from '../model';
 
@@ -35,13 +43,20 @@ import {
   ABILITY_SCORE_MAX,
   ABILITY_SCORE_MIN,
   adjustHealthForConstitution,
-  adjustHealthForLevel,
   adjustHitDice,
   applyAbilityIncreases,
+  applyLevelHitPoints,
   applySkillProficiencies,
   applyStartingEquipmentChange,
   ARMOR_CLASS_BASE_MAX,
   ARMOR_CLASS_BASE_MIN,
+  ARMOR_DEX_LIMIT_MAX,
+  ARMOR_DEX_LIMIT_MIN,
+  ATTUNEMENT_LABELS,
+  CARRYING_CAPACITY_BONUS_MAX,
+  CARRYING_CAPACITY_BONUS_MIN,
+  CARRYING_CAPACITY_MAX,
+  CARRYING_CAPACITY_MIN,
   CATALOG_COPY_TOAST_DESCRIPTION,
   CURRENCY_AMOUNT_MAX,
   CURRENCY_AMOUNT_MIN,
@@ -49,24 +64,37 @@ import {
   CUSTOM_SPELL_URL_PREFIX,
   DEFAULT_CHARACTER,
   downloadCharacterJson,
+  EXHAUSTION_LEVEL_MAX,
+  EXHAUSTION_LEVEL_MIN,
+  EXHAUSTION_LONG_REST_RECOVERY,
   EXPERIENCE_MAX,
   fetchCatalogSpellDetail,
   fetchInventoryItemDescription,
   getAbilityRows,
   getArmorClassValue,
-  getCarryingCapacity,
+  getAttunementBreakdown,
+  getAttunementLimitDescription,
+  getCarryingCapacityValue,
+  getCharacterClasses,
   getCharacterProficiencyBonus,
+  getClampedClassLevels,
+  getClampedInteger,
   getClassLevelHitPoints,
+  getEffectiveSpeed,
   getFormattedBonus,
   getInitiativeBonus,
   getInventoryWeight,
   getNextLevelExperience,
   getPreparedSpellsLimitDescription,
   getSavingThrowRows,
+  getSkillRowGroups,
   getSkillRows,
   getSpellcastingBreakdown,
+  getSpellPreparedKind,
   getSpellSlotRows,
   getSpellSlotsEmptyDescription,
+  getStoredAttunement,
+  getTotalClassLevel,
   INNATE_SPELL_COPY_TOAST_DESCRIPTION,
   INVENTORY_COPY_TOAST_TITLE,
   INVENTORY_QUANTITY_MAX,
@@ -77,19 +105,21 @@ import {
   isCustomSpell,
   isEquippableInventoryItem,
   isMissingInventoryItem,
-  isPreparableSpell,
   isVersatileInventoryItem,
   LEVEL_MAX,
   LEVEL_MIN,
   mergeCharacterFeatures,
   mergeClassResources,
   normalizeResourceRecoveryRule,
+  PREPARED_KIND_LABELS,
   PREPARED_SPELLS_BONUS_MAX,
   PREPARED_SPELLS_BONUS_MIN,
-  PREPARED_SPELLS_LIMIT_TOAST_TITLE,
   PREPARED_SPELLS_MAX,
   PREPARED_SPELLS_MIN,
+  removeClassFeatures,
+  removeClassResources,
   removeFeaturesAboveLevel,
+  removeLevelHitPoints,
   RESOURCE_COUNT_MAX,
   RESOURCE_COUNT_MIN,
   RESOURCE_SHORT_LABEL_MAX_LENGTH,
@@ -98,20 +128,40 @@ import {
   SHEET_HIDDEN_CONTROL_CLASS,
   SHEET_LOCKED_MESSAGE,
   SHEET_READONLY_MESSAGE,
-  shiftClassHitDice,
   SKILL_PROFICIENCY_NEXT,
   sortAbilityKeys,
   SPELL_COPY_TOAST_TITLE,
   SPELL_SLOTS_EMPTY_TOAST_TITLE,
+  syncClassHitDice,
   toCopiedInventoryItem,
   toCopiedSpell,
   toCustomInventoryItem,
   toCustomSpell,
+  toStoredCustomBonuses,
+  toStoredSavingThrows,
+  toStoredSettings,
+  toTrimmedPersonality,
   toUpdatedCustomInventoryItem,
   unionToolProficiencies,
   VISION_DISTANCE_MAX,
   VISION_DISTANCE_MIN,
+  withSavingThrowProficiencies,
 } from '../model';
+
+/**
+ * Приведение навыка к записи листа: название своего навыка обрезается по краям,
+ * свои бонусы чистятся тем же правилом, что и бонусы настроек листа.
+ *
+ * @param skill навык из черновика модалки.
+ * @returns навык для записи в лист.
+ */
+function toStoredSkill(skill: CharacterSkill): CharacterSkill {
+  return {
+    ...skill,
+    name: skill.name.trim(),
+    bonuses: toStoredCustomBonuses(skill.bonuses),
+  };
+}
 
 /**
  * Приведение количества денежной единицы к целому в допустимом диапазоне.
@@ -258,6 +308,15 @@ export function useCharacterSheet() {
 
   const skillRows = computed(() => getSkillRows(character.value));
 
+  // Панель навыков рисует группы, а не строки: без группировки это одна общая
+  // группа, поэтому разметка списка у обоих режимов одна.
+  const skillGroups = computed(() =>
+    getSkillRowGroups(
+      skillRows.value,
+      character.value.settings.groupSkillsByAbility,
+    ),
+  );
+
   const formattedProficiencyBonus = computed(() =>
     getFormattedBonus(getCharacterProficiencyBonus(character.value)),
   );
@@ -269,6 +328,10 @@ export function useCharacterSheet() {
   const formattedInitiative = computed(() =>
     getFormattedBonus(initiativeBonus.value),
   );
+
+  // Скорости листа показываются с истощением, а правятся записанные — поэтому
+  // наружу уходит отдельное производное значение, а не `character.speed`.
+  const effectiveSpeed = computed(() => getEffectiveSpeed(character.value));
 
   const armorClassValue = computed(() => getArmorClassValue(character.value));
 
@@ -283,11 +346,10 @@ export function useCharacterSheet() {
   );
 
   const carryingCapacity = computed(() =>
-    getCarryingCapacity(
-      character.value.abilities.strength,
-      character.value.size,
-    ),
+    getCarryingCapacityValue(character.value),
   );
+
+  const attunement = computed(() => getAttunementBreakdown(character.value));
 
   /**
    * Установка значения характеристики с ограничением допустимого диапазона.
@@ -336,16 +398,36 @@ export function useCharacterSheet() {
       return;
     }
 
-    const isProficient =
-      character.value.savingThrowProficiencies.includes(ability);
+    character.value = {
+      ...character.value,
+      savingThrows: character.value.savingThrows.map((savingThrow) =>
+        savingThrow.key === ability
+          ? { ...savingThrow, proficient: !savingThrow.proficient }
+          : savingThrow,
+      ),
+    };
+  }
+
+  /**
+   * Установка спасбросков целиком: модалка настройки правит характеристики
+   * спасбросков, их свои бонусы и общие бонусы листа, а владения приходят из
+   * неё как есть.
+   *
+   * @param savingThrows спасброски из черновика модалки.
+   * @param commonBonuses общие бонусы ко всем спасброскам из того же черновика.
+   */
+  function setSavingThrows(
+    savingThrows: CharacterSavingThrow[],
+    commonBonuses: CharacterCustomBonus[],
+  ): void {
+    if (!ensureEditable()) {
+      return;
+    }
 
     character.value = {
       ...character.value,
-      savingThrowProficiencies: isProficient
-        ? character.value.savingThrowProficiencies.filter(
-            (key) => key !== ability,
-          )
-        : [...character.value.savingThrowProficiencies, ability],
+      savingThrows: toStoredSavingThrows(savingThrows),
+      commonSavingThrowBonuses: toStoredCustomBonuses(commonBonuses),
     };
   }
 
@@ -450,13 +532,21 @@ export function useCharacterSheet() {
    *
    * @param level круг ячейки.
    * @param index порядковый номер кружка в круге (с нуля).
+   * @param kind вид ячеек: обычные либо договор колдуна (у мультикласса они
+   *   существуют порознь).
    */
-  function toggleSpellSlot(level: number, index: number): void {
+  function toggleSpellSlot(
+    level: number,
+    index: number,
+    kind: SpellSlotKind = 'standard',
+  ): void {
     if (!ensureOwnSheet()) {
       return;
     }
 
-    const row = spellSlotRows.value.find((slotRow) => slotRow.level === level);
+    const row = spellSlotRows.value.find(
+      (slotRow) => slotRow.level === level && slotRow.kind === kind,
+    );
 
     if (!row) {
       return;
@@ -466,14 +556,14 @@ export function useCharacterSheet() {
 
     // Хранится только трата: круги без потраченных ячеек в документе не нужны.
     const otherSlots = character.value.spellSlots.filter(
-      (slot) => slot.level !== level,
+      (slot) => slot.level !== level || slot.kind !== kind,
     );
 
     character.value = {
       ...character.value,
       spellSlots:
         used > 0
-          ? [...otherSlots, { level, used }].sort(
+          ? [...otherSlots, { level, used, kind }].sort(
               (left, right) => left.level - right.level,
             )
           : otherSlots,
@@ -491,15 +581,22 @@ export function useCharacterSheet() {
    * @param level круг заклинания.
    */
   function spendSpellSlot(level: number): void {
-    const row = spellSlotRows.value.find((slotRow) => slotRow.level === level);
+    const rows = spellSlotRows.value.filter(
+      (slotRow) => slotRow.level === level,
+    );
 
-    if (!row || isReadonly.value) {
+    if (!rows.length || isReadonly.value) {
       return;
     }
 
+    // У мультикласса колдуна круг бывает и обычным, и договорным: тратится
+    // первая ячейка со свободным местом, договор — в последнюю очередь (его
+    // возвращает короткий отдых, поэтому он дороже).
+    const row = rows.find((slotRow) => slotRow.used < slotRow.max);
+
     // Ячейки круга кончились — молча пропустить нельзя: игрок ждёт, что счётчик
     // сдвинется, и должен узнать, что тратить уже нечего.
-    if (row.used >= row.max) {
+    if (!row) {
       toast.add({
         color: 'warning',
         icon: 'tabler:sparkles',
@@ -512,19 +609,21 @@ export function useCharacterSheet() {
 
     // Хранится только трата, поэтому круг переписывается целиком.
     const otherSlots = character.value.spellSlots.filter(
-      (slot) => slot.level !== level,
+      (slot) => slot.level !== level || slot.kind !== row.kind,
     );
 
     character.value = {
       ...character.value,
-      spellSlots: [...otherSlots, { level, used: row.used + 1 }].sort(
-        (left, right) => left.level - right.level,
-      ),
+      spellSlots: [
+        ...otherSlots,
+        { level, used: row.used + 1, kind: row.kind },
+      ].sort((left, right) => left.level - right.level),
     };
   }
 
   /**
-   * Установка класса доспеха с ограничением базового значения.
+   * Установка класса доспеха с ограничением базового значения и своего предела
+   * бонуса Ловкости.
    *
    * @param armorClass новый класс доспеха персонажа.
    */
@@ -543,41 +642,204 @@ export function useCharacterSheet() {
           ARMOR_CLASS_BASE_MAX,
         ),
         abilities: sortAbilityKeys(armorClass.abilities),
+        dexLimit:
+          armorClass.dexLimit === null
+            ? null
+            : clamp(
+                Math.trunc(armorClass.dexLimit),
+                ARMOR_DEX_LIMIT_MIN,
+                ARMOR_DEX_LIMIT_MAX,
+              ),
       },
     };
   }
 
   /**
-   * Установка уровня и суммарного опыта; порог следующего уровня берётся из
-   * таблицы опыта D&D. Кости хитов класса следуют за уровнем: новые уровни
-   * добавляют непотраченные кости, снижение уровня их забирает. Прирост хитов
-   * за повышение считает модалка опыта (среднее, бросок или максимум кости с
-   * модификатором Телосложения) — здесь он поднимает максимум и текущие хиты и
-   * записывается по уровням, чтобы снижение уровня вернуло ровно его.
+   * Установка настройки грузоподъёмности с ограничением своего значения и
+   * бонуса.
    *
-   * Снижение уровня забирает и классовые умения снятых уровней — на листе
-   * остаются только те, что персонаж на новом уровне действительно имеет.
+   * @param capacity новая настройка предела переносимого веса.
+   */
+  function setCarryingCapacity(capacity: CharacterCarryingCapacity): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    // Числа приходят из полей модалки, поэтому клампятся общей утилитой форм:
+    // очищенное поле отдаёт NaN, и без подстраховки он ушёл бы в документ.
+    character.value = {
+      ...character.value,
+      carryingCapacity: {
+        size: capacity.size,
+        custom:
+          capacity.custom === null
+            ? null
+            : getClampedInteger(
+                capacity.custom,
+                CARRYING_CAPACITY_MIN,
+                CARRYING_CAPACITY_MAX,
+              ),
+        bonus: getClampedInteger(
+          capacity.bonus,
+          CARRYING_CAPACITY_BONUS_MIN,
+          CARRYING_CAPACITY_BONUS_MAX,
+        ),
+      },
+    };
+  }
+
+  /**
+   * Установка настройки предела настроенных предметов: своё число выключает
+   * подсчёт, характеристика задаёт основу вместо правила, бонус прибавляется к
+   * основе подсчёта.
    *
-   * @param level новый уровень персонажа.
+   * @param nextAttunement новая настройка предела.
+   */
+  function setAttunement(nextAttunement: CharacterAttunement): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      attunement: getStoredAttunement(nextAttunement),
+    };
+  }
+
+  /**
+   * Применение новых уровней классов к листу одним изменением: общий уровень
+   * становится их суммой, порог опыта берётся из таблицы D&D, кости хитов
+   * пересобираются под уровни классов (потраченные остаются потраченными),
+   * прирост хитов дописывается за каждый взятый уровень, а снижение уровня
+   * возвращает записанный за него максимум и забирает умения снятых уровней
+   * ЭТОГО класса.
+   *
+   * @param levels новые уровни классов по URL.
+   * @param experience суммарный опыт персонажа.
+   * @param hitPointsGains прирост максимума хитов за каждый взятый уровень.
+   * @param patch дополнительные изменения листа (умения, ресурсы, классы).
+   * @returns новый документ листа.
+   */
+  function withClassLevels(
+    levels: Record<string, number>,
+    experience: number,
+    hitPointsGains: LevelUpHitPointsGain[],
+    patch: Partial<Character> = {},
+  ): Character {
+    const source = { ...character.value, ...patch };
+
+    const classes = getCharacterClasses(source);
+
+    const clampedLevels = getClampedClassLevels(classes, levels);
+
+    // Сколько уровней снимается у каждого класса: по ним возвращается максимум
+    // хитов и уходят умения.
+    const removedByClass = Object.fromEntries(
+      classes.map((characterClass) => [
+        characterClass.url,
+        Math.max(
+          0,
+          characterClass.level - (clampedLevels[characterClass.url] ?? 0),
+        ),
+      ]),
+    );
+
+    const hasRemoved = Object.values(removedByClass).some((count) => count > 0);
+
+    const withLevels = (characterClass: CharacterClass): CharacterClass => ({
+      ...characterClass,
+      level: clampedLevels[characterClass.url] ?? characterClass.level,
+    });
+
+    const characterClass = source.characterClass
+      ? withLevels(source.characterClass)
+      : null;
+
+    const additionalClasses = source.additionalClasses.map(withLevels);
+
+    const nextLevel = getTotalClassLevel(
+      characterClass
+        ? [characterClass, ...additionalClasses]
+        : additionalClasses,
+    );
+
+    // Снятие и прибавка идут подряд, а не по очереди: в одном окне игрок может
+    // снизить уровень одного класса и поднять другому — иначе прирост за взятые
+    // уровни потерялся бы.
+    const healthAfterRemoval = hasRemoved
+      ? removeLevelHitPoints(source.health, removedByClass)
+      : source.health;
+
+    // Записи нумеруются общим уровнем персонажа, поэтому отсчёт идёт от того,
+    // что осталось после снятия.
+    const levelAfterRemoval = Math.max(0, nextLevel - hitPointsGains.length);
+
+    const health = hitPointsGains.length
+      ? applyLevelHitPoints(
+          healthAfterRemoval,
+          levelAfterRemoval,
+          hitPointsGains,
+        )
+      : healthAfterRemoval;
+
+    return {
+      ...source,
+      characterClass,
+      additionalClasses,
+      level: nextLevel,
+      experience: {
+        current: clamp(Math.trunc(experience), 0, EXPERIENCE_MAX),
+        nextLevel: getNextLevelExperience(nextLevel),
+      },
+      hitDice: syncClassHitDice(
+        source.hitDice,
+        characterClass
+          ? [characterClass, ...additionalClasses]
+          : additionalClasses,
+      ),
+      health,
+      features: hasRemoved
+        ? removeFeaturesAboveLevel(source.features, clampedLevels)
+        : source.features,
+    };
+  }
+
+  /**
+   * Установка уровней классов и суммарного опыта без мастера подготовки:
+   * «Пропустить подготовку» и понижение уровня. Умения и счётчики новых уровней
+   * при этом не выдаются — их добавит повторный выбор класса или следующее
+   * повышение через мастер.
+   *
+   * @param levels новые уровни классов по URL.
    * @param experience суммарный опыт персонажа.
    * @param hitPointsGains прирост максимума хитов за каждый взятый уровень.
    */
-  function setProgress(
-    level: number,
+  function setClassLevels(
+    levels: Record<string, number>,
     experience: number,
-    hitPointsGains: number[] = [],
+    hitPointsGains: LevelUpHitPointsGain[] = [],
   ): void {
     if (!ensureEditable()) {
       return;
     }
 
+    character.value = withClassLevels(levels, experience, hitPointsGains);
+  }
+
+  /**
+   * Установка общего уровня и опыта у листа БЕЗ класса: уровень хранится сам по
+   * себе, суммировать нечего. Лист с классом уровень так не меняет — там за него
+   * отвечает `setClassLevels`.
+   *
+   * @param level новый уровень персонажа.
+   * @param experience суммарный опыт персонажа.
+   */
+  function setProgress(level: number, experience: number): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
     const clampedLevel = clamp(Math.trunc(level), LEVEL_MIN, LEVEL_MAX);
-
-    const previousLevel = character.value.level;
-
-    const levelDelta = clampedLevel - previousLevel;
-
-    const classDie = character.value.characterClass?.hitDie;
 
     character.value = {
       ...character.value,
@@ -586,27 +848,13 @@ export function useCharacterSheet() {
         current: clamp(Math.trunc(experience), 0, EXPERIENCE_MAX),
         nextLevel: getNextLevelExperience(clampedLevel),
       },
-      hitDice:
-        classDie !== undefined && levelDelta !== 0
-          ? shiftClassHitDice(character.value.hitDice, classDie, levelDelta)
-          : character.value.hitDice,
-      health: adjustHealthForLevel(
-        character.value.health,
-        previousLevel,
-        clampedLevel,
-        hitPointsGains,
-      ),
-      features:
-        levelDelta < 0
-          ? removeFeaturesAboveLevel(character.value.features, clampedLevel)
-          : character.value.features,
     };
   }
 
   /**
    * Применение итога мастера повышения уровня одним изменением документа:
-   * уровень с опытом, хиты по каждому взятому уровню, умения и ресурсы новых
-   * уровней, выбранный подкласс и выборы внутри умений.
+   * уровни классов с опытом, хиты по каждому взятому уровню, умения и ресурсы
+   * новых уровней, выбранные подклассы и выборы внутри умений.
    *
    * В отличие от выбора класса здоровье и кости хитов не пересобираются с нуля:
    * броски на хиты и потраченные кости сохраняются. Ячейки заклинаний и бонус
@@ -619,82 +867,70 @@ export function useCharacterSheet() {
       return;
     }
 
-    const clampedLevel = clamp(Math.trunc(payload.level), LEVEL_MIN, LEVEL_MAX);
-
-    const previousLevel = character.value.level;
-
-    const levelDelta = clampedLevel - previousLevel;
-
-    const classDie = character.value.characterClass?.hitDie;
-
-    const { characterClass } = character.value;
-
     const abilities = applyAbilityIncreases(
       character.value.abilities,
       payload.abilityIncreases,
     );
 
-    // Прирост хитов за уровни считался по прежнему Телосложению, поэтому его
-    // прибавка от черты применяется отдельно — она поднимает максимум на всех
-    // уровнях, включая только что взятые.
-    const health = adjustHealthForConstitution(
-      adjustHealthForLevel(
-        character.value.health,
-        previousLevel,
-        clampedLevel,
-        payload.hitPointsGains,
-      ),
-      clampedLevel,
-      character.value.abilities.constitution,
-      abilities.constitution,
+    // Мастер грузит деталь класса, поэтому заодно обновляет подкласс и
+    // прогрессии подготовки: у листов, собранных до их появления, они запишутся
+    // первым же повышением уровня.
+    const withPatch = (characterClass: CharacterClass): CharacterClass => {
+      const patch = payload.classPatches[characterClass.url];
+
+      if (!patch) {
+        return characterClass;
+      }
+
+      return {
+        ...characterClass,
+        subclassUrl: patch.subclass?.url ?? characterClass.subclassUrl,
+        subclassName: patch.subclass?.name ?? characterClass.subclassName,
+        casterType: patch.subclass
+          ? patch.subclass.casterType
+          : characterClass.casterType,
+        preparedSpells: [...patch.preparedSpells],
+        preparedCantrips: [...patch.preparedCantrips],
+      };
+    };
+
+    const withLevels = withClassLevels(
+      payload.classLevels,
+      payload.experience,
+      payload.hitPointsGains,
+      {
+        characterClass: character.value.characterClass
+          ? withPatch(character.value.characterClass)
+          : null,
+        additionalClasses: character.value.additionalClasses.map(withPatch),
+      },
     );
 
     character.value = {
-      ...character.value,
-      level: clampedLevel,
+      ...withLevels,
       abilities,
-      experience: {
-        current: clamp(Math.trunc(payload.experience), 0, EXPERIENCE_MAX),
-        nextLevel: getNextLevelExperience(clampedLevel),
-      },
-      // Мастер грузит деталь класса, поэтому заодно обновляет прогрессию
-      // подготовленных заклинаний: у листов, собранных до её появления, она
-      // запишется первым же повышением уровня.
-      characterClass: characterClass
-        ? {
-            ...characterClass,
-            subclassUrl: payload.subclass?.url ?? characterClass.subclassUrl,
-            subclassName: payload.subclass?.name ?? characterClass.subclassName,
-            casterType: payload.subclass
-              ? payload.subclass.casterType
-              : characterClass.casterType,
-            preparedSpells: [...payload.preparedSpells],
-          }
-        : characterClass,
-      hitDice:
-        classDie !== undefined && levelDelta !== 0
-          ? shiftClassHitDice(character.value.hitDice, classDie, levelDelta)
-          : character.value.hitDice,
-      health,
-      features: mergeCharacterFeatures(
-        character.value.features,
-        payload.features,
+      // Прирост хитов за уровни считался по прежнему Телосложению, поэтому его
+      // прибавка от черты применяется отдельно — она поднимает максимум на всех
+      // уровнях, включая только что взятые.
+      health: adjustHealthForConstitution(
+        withLevels.health,
+        withLevels.level,
+        character.value.abilities.constitution,
+        abilities.constitution,
       ),
+      features: mergeCharacterFeatures(withLevels.features, payload.features),
       classResources: mergeClassResources(
-        character.value.classResources,
+        withLevels.classResources,
         payload.classResources,
       ),
       skills: applySkillProficiencies(
-        character.value.skills,
+        withLevels.skills,
         payload.skills.proficient,
         payload.skills.expertise,
       ),
       proficiencies: {
-        ...character.value.proficiencies,
-        languages: union(
-          character.value.proficiencies.languages,
-          payload.languages,
-        ),
+        ...withLevels.proficiencies,
+        languages: union(withLevels.proficiencies.languages, payload.languages),
       },
     };
   }
@@ -847,6 +1083,31 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Установка уровня истощения (PHB 2024): уровни накопительные, шестой —
+   * смертельный, ниже нуля уровень не опускается. Игровое действие —
+   * блокировкой листа не ограничивается.
+   *
+   * @param level новый уровень истощения.
+   */
+  function setExhaustion(level: number): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      health: {
+        ...character.value.health,
+        exhaustion: clamp(
+          Math.trunc(level),
+          EXHAUSTION_LEVEL_MIN,
+          EXHAUSTION_LEVEL_MAX,
+        ),
+      },
+    };
+  }
+
+  /**
    * Установка костей хитов: оставшееся количество не превышает максимум.
    *
    * @param hitDice кости хитов из классов.
@@ -924,10 +1185,12 @@ export function useCharacterSheet() {
       return;
     }
 
-    const shortRestLevels = new Set(
+    // Отбор по виду, а не по кругу: у мультикласса колдуна тот же круг бывает и
+    // обычным (возвращается только продолжительным отдыхом), и договорным.
+    const shortRestKinds = new Set(
       spellSlotRows.value
         .filter((row) => row.recovery === 'short-rest')
-        .map((row) => row.level),
+        .map((row) => row.kind),
     );
 
     character.value = {
@@ -939,7 +1202,7 @@ export function useCharacterSheet() {
       // Хранится только трата ячеек, поэтому восстановление круга — это
       // удаление его записи из списка.
       spellSlots: character.value.spellSlots.filter(
-        (slot) => !shortRestLevels.has(slot.level),
+        (slot) => !shortRestKinds.has(slot.kind),
       ),
     };
   }
@@ -950,7 +1213,8 @@ export function useCharacterSheet() {
    * заклинаний и все потраченные кости хитов — в редакции 2024 года отдых
    * возвращает их полностью, а не половину. Счётчикам умений возвращается
    * столько зарядов, сколько задано их правилом для продолжительного отдыха.
-   * Игровое действие: запертый лист его разрешает, чужой — нет.
+   * Отдых снимает один уровень истощения. Игровое действие: запертый лист его
+   * разрешает, чужой — нет.
    */
   function completeLongRest(): void {
     if (!ensureOwnSheet()) {
@@ -970,6 +1234,10 @@ export function useCharacterSheet() {
         ...character.value.health,
         current: character.value.health.max,
         temporary: 0,
+        exhaustion: Math.max(
+          EXHAUSTION_LEVEL_MIN,
+          character.value.health.exhaustion - EXHAUSTION_LONG_REST_RECOVERY,
+        ),
       },
       classResources: restoreClassResources(
         character.value.classResources,
@@ -1100,31 +1368,63 @@ export function useCharacterSheet() {
       return;
     }
 
-    const { level } = character.value;
+    const previousClass = character.value.characterClass;
 
-    // Класс пересобирает здоровье целиком, поэтому и раскладка прироста по
-    // уровням переписывается: снижение уровня вернёт ровно её значения.
-    const levelGains = getClassLevelHitPoints(
-      payload.hitDie,
-      level,
-      getModifier(character.value.abilities.constitution),
+    const { additionalClasses } = character.value;
+
+    const level = clamp(
+      Math.trunc(payload.characterClass.level),
+      LEVEL_MIN,
+      Math.max(LEVEL_MIN, LEVEL_MAX - getTotalClassLevel(additionalClasses)),
     );
+
+    const characterClass: CharacterClass = {
+      ...payload.characterClass,
+      level,
+      startingEquipment: null,
+    };
+
+    const modifier = getModifier(character.value.abilities.constitution);
+
+    // Основной класс пересобирает свою долю здоровья целиком: его записи
+    // прироста переписываются, чужие (второго класса) остаются на месте.
+    const levelGains = [
+      ...getClassLevelHitPoints(
+        characterClass.url,
+        payload.hitDie,
+        level,
+        modifier,
+      ),
+      ...character.value.health.levelGains.filter(
+        (gain) =>
+          gain.classUrl !== characterClass.url
+          && gain.classUrl !== previousClass?.url,
+      ),
+    ];
 
     const maxHitPoints = levelGains.reduce(
       (total, gain) => total + gain.amount,
       0,
     );
 
-    // Классовые особенности заменяются целиком (id `class:*`); добавленные
-    // вручную сохраняются.
-    const preservedFeatures = character.value.features.filter(
-      (feature) => !feature.id.startsWith('class:'),
+    // Умения прежнего основного класса и нового заменяются целиком; умения
+    // второго класса и добавленные вручную сохраняются.
+    const preservedFeatures = removeClassFeatures(
+      previousClass
+        ? removeClassFeatures(character.value.features, previousClass.url)
+        : character.value.features,
+      characterClass.url,
     );
 
-    // Производные ресурсы (id `class:res:*`) заменяются значениями выбранного
-    // класса и подкласса; добавленные вручную ресурсы сохраняются.
-    const preservedResources = character.value.classResources.filter(
-      (resource) => !resource.id.startsWith('class:res:'),
+    // То же с производными ресурсами (`class:res:<url>:*`).
+    const preservedResources = removeClassResources(
+      previousClass
+        ? removeClassResources(
+            character.value.classResources,
+            previousClass.url,
+          )
+        : character.value.classResources,
+      characterClass.url,
     );
 
     // Инвентарь класс не переписывает: снимается ровно выданный прошлым выбором
@@ -1132,7 +1432,7 @@ export function useCharacterSheet() {
     const startingEquipment = applyStartingEquipmentChange(
       character.value.inventory,
       character.value.currency,
-      character.value.characterClass?.startingEquipment ?? null,
+      previousClass?.startingEquipment ?? null,
       payload.startingEquipment,
     );
 
@@ -1141,13 +1441,34 @@ export function useCharacterSheet() {
     character.value = {
       ...character.value,
       characterClass: {
-        ...payload.characterClass,
+        ...characterClass,
         startingEquipment: startingEquipment.granted,
+      },
+      level: getTotalClassLevel([characterClass, ...additionalClasses]),
+      experience: {
+        ...character.value.experience,
+        nextLevel: getNextLevelExperience(
+          getTotalClassLevel([characterClass, ...additionalClasses]),
+        ),
       },
       inventory: startingEquipment.inventory,
       currency: startingEquipment.currency,
-      savingThrowProficiencies: [...payload.savingThrows],
-      hitDice: [{ die: payload.hitDie, current: level, max: level }],
+      // Класс переписывает только владения: подменённая характеристика
+      // спасброска и его свои бонусы переживают смену класса.
+      savingThrows: withSavingThrowProficiencies(
+        character.value.savingThrows,
+        payload.savingThrows,
+      ),
+      // Свежий класс выдаёт свои кости непотраченными; кости второго класса
+      // (другого номинала) сохраняют трату.
+      hitDice: syncClassHitDice(character.value.hitDice, [
+        characterClass,
+        ...additionalClasses,
+      ]).map((hitDie) =>
+        hitDie.die === payload.hitDie
+          ? { ...hitDie, current: hitDie.max }
+          : hitDie,
+      ),
       health: {
         ...character.value.health,
         max: maxHitPoints,
@@ -1186,6 +1507,170 @@ export function useCharacterSheet() {
         })),
         ...preservedFeatures,
       ],
+    };
+  }
+
+  /**
+   * Добавление второго и следующего класса мультикласса на первом его уровне.
+   * По правилам D&D 2024 добавленный класс НЕ даёт ни стартового снаряжения, ни
+   * максимума кости хитов на своём первом уровне (это привилегия первого
+   * класса), а урезанный набор владений справочник не отдаёт — их игрок
+   * отмечает вручную. Общий уровень персонажа растёт на единицу.
+   *
+   * @param payload класс и производные от него значения листа.
+   * @param payload.characterClass добавляемый класс с подклассом.
+   * @param payload.hitDie номинал кости хитов класса.
+   * @param payload.skills выбранные навыки (владение и экспертиза).
+   * @param payload.skills.proficient навыки для владения.
+   * @param payload.skills.expertise навыки для экспертизы.
+   * @param payload.languages выбранные в умениях языки.
+   * @param payload.classResources ресурсы класса из отмеченных колонок.
+   * @param payload.features классовые особенности первого уровня.
+   */
+  function addClass(payload: {
+    characterClass: Omit<CharacterClass, 'startingEquipment'>;
+    hitDie: number;
+    skills: { proficient: string[]; expertise: string[] };
+    languages: string[];
+    classResources: CharacterClassResource[];
+    features: CharacterFeature[];
+  }): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const classes = getCharacterClasses(character.value);
+
+    // Класс уже на листе либо общий уровень исчерпан — добавлять нечего.
+    if (
+      !character.value.characterClass
+      || classes.some((entry) => entry.url === payload.characterClass.url)
+      || getTotalClassLevel(classes) >= LEVEL_MAX
+    ) {
+      return;
+    }
+
+    const level = clamp(
+      Math.trunc(payload.characterClass.level),
+      LEVEL_MIN,
+      LEVEL_MAX - getTotalClassLevel(classes),
+    );
+
+    const characterClass: CharacterClass = {
+      ...payload.characterClass,
+      level,
+      // Стартового снаряжения второй класс не даёт (правило 2024), поэтому и
+      // снимать при его удалении нечего.
+      startingEquipment: null,
+    };
+
+    const modifier = getModifier(character.value.abilities.constitution);
+
+    const hitPointsGains = getClassLevelHitPoints(
+      characterClass.url,
+      payload.hitDie,
+      level,
+      modifier,
+      false,
+    ).map((gain) => ({ classUrl: characterClass.url, amount: gain.amount }));
+
+    const withLevels = withClassLevels(
+      { [characterClass.url]: level },
+      character.value.experience.current,
+      hitPointsGains,
+      {
+        additionalClasses: [
+          ...character.value.additionalClasses,
+          characterClass,
+        ],
+      },
+    );
+
+    character.value = {
+      ...withLevels,
+      skills: applySkillProficiencies(
+        withLevels.skills,
+        payload.skills.proficient,
+        payload.skills.expertise,
+      ),
+      proficiencies: {
+        ...withLevels.proficiencies,
+        languages: union(withLevels.proficiencies.languages, payload.languages),
+      },
+      classResources: [...withLevels.classResources, ...payload.classResources],
+      features: [
+        ...payload.features.map((feature) => ({
+          ...feature,
+          description: [...feature.description],
+        })),
+        ...withLevels.features,
+      ],
+    };
+  }
+
+  /**
+   * Удаление класса с листа: уходят его умения, производные счётчики и кости
+   * хитов, а максимум хитов возвращается к записанному до него. Владения,
+   * навыки и языки, однажды выданные классом, остаются — лист не помнит, кто их
+   * дал, а снимать чужое опаснее, чем оставить лишнее (правится панелью
+   * владений). Удаление основного класса делает основным следующий.
+   *
+   * @param classUrl URL удаляемого класса.
+   */
+  function removeClass(classUrl: string): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const removed = getCharacterClasses(character.value).find(
+      (entry) => entry.url === classUrl,
+    );
+
+    if (!removed) {
+      return;
+    }
+
+    // Снаряжение выдаёт только основной класс — снимаем ровно его набор.
+    const startingEquipment = applyStartingEquipmentChange(
+      character.value.inventory,
+      character.value.currency,
+      removed.startingEquipment,
+      null,
+    );
+
+    // Основной класс уходит — его место занимает следующий по порядку.
+    const [promoted = null, ...additionalClasses] = getCharacterClasses(
+      character.value,
+    ).filter((entry) => entry.url !== classUrl);
+
+    const characterClass = promoted;
+
+    const remainingClasses = characterClass
+      ? [characterClass, ...additionalClasses]
+      : additionalClasses;
+
+    const level = getTotalClassLevel(remainingClasses);
+
+    character.value = {
+      ...character.value,
+      characterClass,
+      additionalClasses,
+      inventory: startingEquipment.inventory,
+      currency: startingEquipment.currency,
+      level,
+      experience: {
+        ...character.value.experience,
+        nextLevel: getNextLevelExperience(level),
+      },
+      hitDice: syncClassHitDice(character.value.hitDice, remainingClasses),
+      health: removeLevelHitPoints(character.value.health, {
+        [classUrl]: removed.level,
+      }),
+      features: removeClassFeatures(character.value.features, classUrl),
+      classResources: removeClassResources(
+        character.value.classResources,
+        classUrl,
+      ),
     };
   }
 
@@ -1426,11 +1911,9 @@ export function useCharacterSheet() {
           ? {
               ...updatedSpell,
               // Пометка подготовки формой не правится, поэтому переносится с
-              // прежней записи. Заговором заклинание становится
-              // неподготовленным: заговоры подготовки не требуют.
-              prepared: isPreparableSpell(updatedSpell)
-                ? editedSpell.prepared
-                : undefined,
+              // прежней записи: сменившийся круг лишь переносит запись в другой
+              // счётчик подготовки.
+              prepared: editedSpell.prepared,
             }
           : spell,
       ),
@@ -1493,65 +1976,85 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Установка настроек заклинательства (заклинательной характеристики).
+   * Установка заклинательной характеристики класса: у мультикласса она своя у
+   * каждого класса, поэтому хранится при нём, а не на всём листе.
    *
-   * @param spellcasting новые настройки заклинательства.
+   * @param classUrl URL класса.
+   * @param ability заклинательная характеристика; null — авто по названию класса.
    */
-  function setSpellcasting(spellcasting: CharacterSpellcasting): void {
+  function setSpellcastingAbility(
+    classUrl: string,
+    ability: AbilityKey | null,
+  ): void {
     if (!ensureEditable()) {
       return;
     }
 
+    const withAbility = (characterClass: CharacterClass): CharacterClass =>
+      characterClass.url === classUrl
+        ? { ...characterClass, spellcastingAbility: ability }
+        : characterClass;
+
     character.value = {
       ...character.value,
-      spellcasting: {
-        ability: spellcasting.ability,
-        prepared: { ...spellcasting.prepared },
-      },
+      characterClass: character.value.characterClass
+        ? withAbility(character.value.characterClass)
+        : null,
+      additionalClasses: character.value.additionalClasses.map(withAbility),
     };
   }
 
   /**
-   * Установка настройки числа подготовленных заклинаний: своё число выключает
-   * подсчёт по таблице класса, бонус прибавляется к числу класса.
+   * Установка настройки числа подготовленных заклинаний либо заговоров (у них
+   * свой счётчик): своё число выключает подсчёт по таблице класса, бонус
+   * прибавляется к числу класса.
    *
-   * @param prepared новая настройка подготовленных заклинаний.
+   * @param prepared новая настройка подготовленных.
+   * @param kind вид подготовки: заклинания книги либо заговоры.
    */
-  function setPreparedSpells(prepared: CharacterPreparedSpells): void {
+  function setPreparedSpells(
+    prepared: CharacterPreparedSpells,
+    kind: PreparedSpellKind,
+  ): void {
     if (!ensureEditable()) {
       return;
     }
+
+    const stored: CharacterPreparedSpells = {
+      custom:
+        prepared.custom === null
+          ? null
+          : clamp(
+              Math.trunc(prepared.custom),
+              PREPARED_SPELLS_MIN,
+              PREPARED_SPELLS_MAX,
+            ),
+      bonus: clamp(
+        Math.trunc(prepared.bonus),
+        PREPARED_SPELLS_BONUS_MIN,
+        PREPARED_SPELLS_BONUS_MAX,
+      ),
+    };
 
     character.value = {
       ...character.value,
       spellcasting: {
         ...character.value.spellcasting,
-        prepared: {
-          custom:
-            prepared.custom === null
-              ? null
-              : clamp(
-                  Math.trunc(prepared.custom),
-                  PREPARED_SPELLS_MIN,
-                  PREPARED_SPELLS_MAX,
-                ),
-          bonus: clamp(
-            Math.trunc(prepared.bonus),
-            PREPARED_SPELLS_BONUS_MIN,
-            PREPARED_SPELLS_BONUS_MAX,
-          ),
-        },
+        ...(kind === 'cantrips'
+          ? { preparedCantrips: stored }
+          : { prepared: stored }),
       },
     };
   }
 
   /**
    * Пометка заклинания подготовленным по нажатию на его значок (как надевание
-   * доспеха в снаряжении). Больше числа из блока «Подготовленные» пометить
-   * нельзя — лишнее нажатие предупреждает и ничего не меняет. Предел неизвестен
-   * (класс его не даёт, своё число не задано) — пометок сколько угодно.
+   * доспеха в снаряжении). Больше числа из блока подготовки пометить нельзя —
+   * лишнее нажатие предупреждает и ничего не меняет. Предел неизвестен (класс
+   * его не даёт, своё число не задано) — пометок сколько угодно.
    *
-   * Заговоры подготовки не требуют, поэтому их значок ничего не переключает.
+   * Заговоры подготавливаются так же, но считаются своим счётчиком: у них своя
+   * колонка таблицы класса и свой предел.
    * Игровое действие: запертый лист его разрешает, чужой — нет.
    *
    * @param spellUrl URL заклинания книги персонажа.
@@ -1565,11 +2068,16 @@ export function useCharacterSheet() {
       (spell) => spell.url === spellUrl,
     );
 
-    if (!currentSpell || !isPreparableSpell(currentSpell)) {
+    if (!currentSpell) {
       return;
     }
 
-    const { value: limit, count } = spellcastingBreakdown.value.prepared;
+    const kind = getSpellPreparedKind(currentSpell);
+
+    const { value: limit, count } =
+      kind === 'cantrips'
+        ? spellcastingBreakdown.value.preparedCantrips
+        : spellcastingBreakdown.value.prepared;
 
     // Предел уже выбран: молча пропустить нельзя — игрок ждёт, что значок
     // загорится, и должен узнать, почему этого не произошло.
@@ -1577,8 +2085,8 @@ export function useCharacterSheet() {
       toast.add({
         color: 'warning',
         icon: 'tabler:wand',
-        title: PREPARED_SPELLS_LIMIT_TOAST_TITLE,
-        description: getPreparedSpellsLimitDescription(limit),
+        title: PREPARED_KIND_LABELS[kind].limitToastTitle,
+        description: getPreparedSpellsLimitDescription(limit, kind),
       });
 
       return;
@@ -1595,7 +2103,9 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Установка настроек листа (правил подсчёта).
+   * Установка настроек листа (правил подсчёта). Свои бонусы чистятся перед
+   * записью: пустое поле ввода отдаёт `NaN`, а бонусы мастерства входят в
+   * каждое второе число листа.
    *
    * @param settings новые настройки листа.
    */
@@ -1606,7 +2116,7 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
-      settings: { ...settings },
+      settings: toStoredSettings(settings),
     };
   }
 
@@ -1958,13 +2468,44 @@ export function useCharacterSheet() {
    * листа не ограничивается. Предлагается только там, где каталог назвал
    * настройку обязательной; отсутствующий предмет настройки не держит.
    *
-   * Лимит в три настроенных предмета лист не сторожит: игрок сам решает, что
-   * снять, а мастер — что разрешить сверх правила.
+   * Больше предела из плитки снаряжения настроиться нельзя — лишнее нажатие
+   * предупреждает и ничего не меняет. Нужно больше настроек, чем даёт правило
+   * (три предмета), — предел поднимается в его настройке.
    *
    * @param inventoryItemId идентификатор предмета инвентаря.
    */
   function toggleInventoryItemAttuned(inventoryItemId: string): void {
     if (!ensureOwnSheet()) {
+      return;
+    }
+
+    const currentItem = character.value.inventory.find(
+      (inventoryItem) => inventoryItem.id === inventoryItemId,
+    );
+
+    if (!currentItem) {
+      return;
+    }
+
+    const { value: limit, count } = attunement.value;
+
+    // Предел уже занят: молча пропустить нельзя — игрок ждёт, что предмет
+    // настроится, и должен узнать, почему этого не произошло. Предупреждаем
+    // только там, где настройка вообще предлагается: у прочих предметов
+    // нажатию и без предела делать нечего.
+    if (
+      !currentItem.attuned
+      && isAttunableInventoryItem(currentItem)
+      && !isMissingInventoryItem(currentItem)
+      && count >= limit
+    ) {
+      toast.add({
+        color: 'warning',
+        icon: ATTUNEMENT_LABELS.icon,
+        title: ATTUNEMENT_LABELS.limitToastTitle,
+        description: getAttunementLimitDescription(limit),
+      });
+
       return;
     }
 
@@ -2231,6 +2772,25 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Установка личности персонажа: приметы, мировоззрение и подробное описание.
+   * Правят её две модалки, каждая своей частью, поэтому обе присылают личность
+   * целиком — поверх текущей. Пробелы по краям снимаются: строка из одних
+   * пробелов выглядела бы на плитке заполненным полем.
+   *
+   * @param personality личность персонажа целиком.
+   */
+  function setPersonality(personality: CharacterPersonality): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      personality: toTrimmedPersonality(personality),
+    };
+  }
+
+  /**
    * Установка размера персонажа.
    *
    * @param size русская подпись размера; null — размер не указан.
@@ -2312,6 +2872,33 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Установка навыков целиком: модалка настройки правит характеристики навыков
+   * и их дополнительные бонусы, а уровни владения приходят из неё как есть.
+   * Группировка списка приходит оттуда же и пишется вместе с навыками — обе
+   * правки применяются одной кнопкой, значит и в лист уходят одной записью.
+   *
+   * @param skills навыки из черновика модалки.
+   * @param groupedByAbility выводить ли навыки группами по характеристикам.
+   */
+  function setSkills(
+    skills: CharacterSkill[],
+    groupedByAbility: boolean,
+  ): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      skills: skills.map(toStoredSkill),
+      settings: {
+        ...character.value.settings,
+        groupSkillsByAbility: groupedByAbility,
+      },
+    };
+  }
+
+  /**
    * Установка кошелька: количества стандартных монет ограничиваются диапазоном;
    * пользовательские валюты обрезаются по краям, их количество ограничивается, а
    * записи без сокращения (нечего показать в ряду) отбрасываются.
@@ -2362,16 +2949,21 @@ export function useCharacterSheet() {
     abilityRows,
     savingThrowRows,
     skillRows,
+    skillGroups,
     formattedProficiencyBonus,
     initiativeBonus,
     formattedInitiative,
+    effectiveSpeed,
     armorClassValue,
     spellcastingBreakdown,
     spellSlotRows,
     totalWeight,
     carryingCapacity,
+    attunement,
     setAbilityScore,
     setArmorClass,
+    setCarryingCapacity,
+    setAttunement,
     setAvatar,
     setClassResources,
     adjustClassResource,
@@ -2405,21 +2997,28 @@ export function useCharacterSheet() {
     updateCustomSpell,
     setBackground,
     setClass,
+    addClass,
+    removeClass,
+    setClassLevels,
     setCurrency,
     setName,
+    setPersonality,
     setProficiencies,
+    setSavingThrows,
+    setSkills,
     setToolProficiencies,
     setProgress,
     setSettings,
     setSize,
     setSpecies,
     setSpells,
-    setSpellcasting,
+    setSpellcastingAbility,
     setPreparedSpells,
     setVision,
     setSpeed,
     setHealth,
     setHitPoints,
+    setExhaustion,
     setHitDice,
     spendHitDice,
     completeShortRest,

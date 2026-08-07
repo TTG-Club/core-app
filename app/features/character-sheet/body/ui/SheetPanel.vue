@@ -1,4 +1,18 @@
 <script setup lang="ts">
+  /**
+   * Рамка блока листа.
+   *
+   * Обводка непрозрачным `border-default`: своей заливки у панели нет, и рамка
+   * читается только за счёт контраста с фоном страницы. Приглушённый бордер
+   * остаётся у внутренних элементов — там их отделяет ещё и заливка.
+   *
+   * ВАЖНО: перед `fieldset` в шаблоне не должно быть ничего, даже комментария.
+   * Дев-сборка Vue комментарии сохраняет, корень панели становится фрагментом, и
+   * `$el` у неё — якорь фрагмента, а не сам элемент. Всё, что достаёт элемент по
+   * ссылке на компонент (`onLongPress` здесь и в ресурсах класса,
+   * `useElementHover` в плитке характеристики), тогда молча вешается на пустой
+   * узел — и ломается только разработка, потому что прод комментарии вырезает.
+   */
   const props = defineProps<{
     title?: string;
     /** Короткая подпись: подменяет `title`, когда рамка слишком узкая. */
@@ -7,7 +21,37 @@
     centerTitle?: boolean;
     /** Подсветка всего блока при наведении (для кликабельных блоков). */
     interactive?: boolean;
+    /** Действия заголовка видны всегда, а не проявляются по наведению. */
+    persistentActions?: boolean;
   }>();
+
+  /**
+   * Обёртка действий заголовка: колонка грида в потоке легенды. Обводку рамки
+   * под действиями разрывает сама легенда, поэтому подложка под значком не
+   * нужна — в отличие от прежней абсолютной раскладки, где кнопка стояла прямо
+   * на линии рамки и закрывала её собой.
+   *
+   * Без прав на правку кнопка помечена `invisible` — тогда колонки нет вовсе:
+   * раздвигать обводку ради пустого места незачем.
+   */
+  const TITLE_ACTIONS_CLASS =
+    'inline-grid align-middle transition-[grid-template-columns] duration-200 has-[.invisible]:hidden';
+
+  /**
+   * Наведение (или переход с клавиатуры) раздвигает колонку, и в обводке рамки
+   * появляется место под кнопку. Схлопнутая колонка (`0fr`) дыры в обводке не
+   * оставляет. Ниже `lg` (1024px) колонка раскрыта всегда — тот же порог, что и
+   * у остальных кнопок правки листа (см. `SHEET_REVEAL_CONTROL_CLASS`): на узком
+   * экране ховера может не быть вовсе.
+   */
+  const TITLE_ACTIONS_REVEAL_CLASS =
+    'grid-cols-[0fr] group-hover/panel:grid-cols-[1fr] focus-within:grid-cols-[1fr] max-lg:grid-cols-[1fr]';
+
+  const titleActionsClass = computed(() =>
+    props.persistentActions
+      ? `${TITLE_ACTIONS_CLASS} grid-cols-[1fr]`
+      : `${TITLE_ACTIONS_CLASS} ${TITLE_ACTIONS_REVEAL_CLASS}`,
+  );
 
   const frameClass = computed(() => [
     props.interactive
@@ -26,11 +70,8 @@
 </script>
 
 <template>
-  <!-- Обводка непрозрачным `border-default`: своей заливки у панели нет, и
-    рамка читается только за счёт контраста с фоном страницы. Приглушённый
-    бордер остаётся у внутренних элементов — там их отделяет ещё и заливка -->
   <fieldset
-    class="relative min-w-0 rounded-lg border border-default px-3 pt-1 pb-3"
+    class="group/panel relative min-w-0 rounded-lg border border-default px-3 pt-1 pb-3"
     :class="frameClass"
   >
     <!-- Слот заголовка нужен скелетону: там на месте подписи серая плашка,
@@ -61,13 +102,17 @@
 
       <template v-else>{{ title }}</template>
 
-      <!-- Абсолютное позиционирование: скрытые действия не расширяют легенду
-        и не оставляют дыру в обводке рамки -->
+      <!-- Действия в потоке легенды: подпись сама разрывает под ними обводку
+        рамки. `overflow-hidden` внутренней обёртки обнуляет минимальную ширину
+        ячейки — без него `0fr` не схлопнется под содержимое, а отбивка внутри
+        неё исчезает вместе со схлопнутой колонкой -->
       <span
         v-if="$slots['title-actions']"
-        class="absolute top-1/2 left-full mt-px flex -translate-y-1/2 items-center"
+        :class="titleActionsClass"
       >
-        <slot name="title-actions" />
+        <span class="flex items-center gap-1 overflow-hidden pl-1.5">
+          <slot name="title-actions" />
+        </span>
       </span>
     </legend>
 

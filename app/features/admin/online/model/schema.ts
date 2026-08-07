@@ -4,6 +4,8 @@ import * as z from 'zod';
 
 const adminOnlineCountersSchema = z.object({
   guests: z.number().int().nonnegative(),
+  // Пока online-app не обновлён, числа играющих в ответе нет — карточка покажет прочерк.
+  players: z.number().int().nonnegative().optional(),
   registered: z.number().int().nonnegative(),
   total: z.number().int().nonnegative(),
 });

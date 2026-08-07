@@ -17,6 +17,7 @@
     matchesFeatureFilter,
     SHEET_FEATURE_ROW_LABELS,
     SHEET_FILTER_LABELS,
+    SHEET_REVEAL_CONTROL_CLASS,
     SHEET_TAB_EMPTY_LABELS,
     sortFeaturesByOriginGroup,
   } from '../../model';
@@ -82,19 +83,20 @@
 
   /**
    * Наведение (или переход с клавиатуры) раздвигает колонку, и название уступает
-   * кнопкам место. На сенсорном экране ховера нет — там кнопки развёрнуты
-   * всегда, иначе правку и удаление особенности с телефона не найти.
+   * кнопкам место. Ниже `lg` (1024px) колонка развёрнута всегда — тот же порог,
+   * что и у остальных кнопок правки листа (см. {@link SHEET_REVEAL_CONTROL_CLASS}):
+   * на узком экране ховера может не быть вовсе, и правку с удалением особенности
+   * иначе не найти.
    */
   const ROW_ACTIONS_REVEAL_CLASS =
-    'group-hover/feature:grid-cols-[1fr] focus-within:grid-cols-[1fr] pointer-coarse:grid-cols-[1fr]';
+    'group-hover/feature:grid-cols-[1fr] focus-within:grid-cols-[1fr] max-lg:grid-cols-[1fr]';
 
   /**
    * Внутренняя обёртка кнопок: `overflow-hidden` обнуляет минимальную ширину
    * ячейки грида (без него `0fr` не схлопнется под содержимое), а прозрачность
    * убирает кнопки из виду, пока колонка ещё разъезжается.
    */
-  const ROW_ACTIONS_INNER_CLASS =
-    'flex items-center gap-1 overflow-hidden pl-2 opacity-0 transition-opacity duration-200 group-hover/feature:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100';
+  const ROW_ACTIONS_INNER_CLASS = `flex items-center gap-1 overflow-hidden pl-2 opacity-0 transition-opacity duration-200 group-hover/feature:opacity-100 focus-within:opacity-100 ${SHEET_REVEAL_CONTROL_CLASS}`;
 
   /**
    * Без прав на правку (лист чужой или заперт замком) колонка не разъезжается
@@ -256,7 +258,6 @@
           <UButton
             icon="tabler:plus"
             label="Добавить"
-            trailing-icon="tabler:chevron-down"
             color="neutral"
             variant="ghost"
             size="sm"
@@ -300,9 +301,14 @@
               {{ feature.name }}
             </span>
 
+            <!-- Выбор умения бывает списком через запятую (несколько навыков,
+              языков, черт), поэтому в строке он ужимается многоточием и занимает
+              не больше половины ширины: несжимаемым он выезжал за карточку и
+              ложился поверх кнопок правки. Целиком выбор читается в раскрытом
+              описании ниже. -->
             <span
               v-if="feature.choice"
-              class="shrink-0 text-xs text-primary"
+              class="max-w-1/2 min-w-0 truncate text-xs text-primary"
             >
               {{ feature.choice }}
             </span>
@@ -356,28 +362,32 @@
           v-if="feature.isExpanded"
           class="flex flex-col gap-2 border-t border-default/50 px-3 py-2"
         >
+          <!-- Строки источника и выбора переносятся: длинный список выбора
+            иначе тянул бы раскрытый блок за края карточки -->
           <div
             v-if="feature.originName"
-            class="flex items-baseline gap-1 text-xs"
+            class="flex flex-wrap items-baseline gap-x-1 text-xs"
           >
             <span class="text-muted">
               {{ SHEET_FEATURE_ROW_LABELS.origin }}
             </span>
 
-            <span class="font-medium text-default">
+            <span class="min-w-0 font-medium wrap-break-word text-default">
               {{ feature.originName }}
             </span>
           </div>
 
           <div
             v-if="feature.choice"
-            class="flex items-baseline gap-1 text-xs"
+            class="flex flex-wrap items-baseline gap-x-1 text-xs"
           >
             <span class="text-muted">
               {{ SHEET_FEATURE_ROW_LABELS.choice }}
             </span>
 
-            <span class="font-medium text-primary">{{ feature.choice }}</span>
+            <span class="min-w-0 font-medium wrap-break-word text-primary">
+              {{ feature.choice }}
+            </span>
           </div>
 
           <MarkupRender

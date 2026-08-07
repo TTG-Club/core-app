@@ -17,7 +17,7 @@
   // обработчик того, кто смонтировался первым, и второй получал чужую форму
   // ответа: открыв сперва дровер, детальник вида показывал происхождения без
   // описаний и умений — в ссылках этих полей нет.
-  const { data, status } = await useAsyncData(
+  const { data: lineageLinks, status } = await useAsyncData(
     computed(() => `species-${url}-lineages-links`),
     () =>
       $fetch<Array<SpeciesLinkResponse>>(
@@ -42,7 +42,7 @@
   >
     <div class="@container grid gap-3">
       <SpeciesLink
-        v-for="link in data"
+        v-for="link in lineageLinks"
         :key="link.url"
         :species="link"
         hide-image-on-mobile
