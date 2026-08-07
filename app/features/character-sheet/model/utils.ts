@@ -230,6 +230,7 @@ import {
   INVENTORY_BONUS_TARGET_SEPARATOR,
   INVENTORY_CATEGORY_ORDER,
   INVENTORY_CATEGORY_TITLES,
+  INVENTORY_EQUIP_ICONS,
   INVENTORY_GRIP_MENU_LABELS,
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
@@ -2047,6 +2048,25 @@ export function isEquippableInventoryItem(
     // не надеть, заданные ему бонусы в лист не пойдут.
     || hasInventoryItemBonuses(inventoryItem)
   );
+}
+
+/**
+ * Иконка кнопки «надеть»: её выбирает вид предмета, а не сам факт надевания —
+ * щит на магическом мече говорил бы о предмете неправду. Вид берём тот же, что
+ * и форма своего предмета: магическая группа его не выдаёт, зато выдают
+ * параметры оружия и доспеха.
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @param equipped предмет надет.
+ * @returns имя иконки.
+ */
+export function getInventoryEquipIcon(
+  inventoryItem: CharacterInventoryItem,
+  equipped: boolean,
+): string {
+  const icons = INVENTORY_EQUIP_ICONS[getCustomInventoryKind(inventoryItem)];
+
+  return equipped ? icons.equipped : icons.idle;
 }
 
 /**

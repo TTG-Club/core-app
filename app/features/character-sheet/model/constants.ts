@@ -2536,6 +2536,25 @@ export const INVENTORY_CATEGORY_ICONS: Record<InventoryItemCategory, string> = {
 };
 
 /**
+ * Иконки кнопки «надеть» по виду предмета: щит у доспеха, меч у оружия и искры
+ * у прочей магии (кольцо, амулет, плащ). Одним щитом на всё надеваемое строка
+ * не обходится: магический меч и безделушка доспехом не становятся, а кнопка
+ * называла их им.
+ *
+ * Состояние «надет» кнопка показывает подсветкой и значком «Надет» у названия;
+ * парная иконка есть только там, где она нашлась в наборе — меча с галочкой в
+ * нём нет.
+ */
+export const INVENTORY_EQUIP_ICONS: Record<
+  CustomInventoryKind,
+  { equipped: string; idle: string }
+> = {
+  weapon: { equipped: 'tabler:sword', idle: 'tabler:sword' },
+  armor: { equipped: 'tabler:shield-check', idle: 'tabler:shield' },
+  trinket: { equipped: 'tabler:sparkles-filled', idle: 'tabler:sparkles' },
+};
+
+/**
  * Минимальное количество одного предмета в инвентаре. Ноль разрешён: у
  * потраченного расходника запись остаётся в списке (её не приходится искать в
  * каталоге заново), но предмет считается отсутствующим — его нельзя надеть,

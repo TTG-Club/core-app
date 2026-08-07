@@ -20,6 +20,7 @@
     getAbilityModifier,
     getCharacterProficiencyBonus,
     getFormattedBonus,
+    getInventoryEquipIcon,
     getInventoryItemBonusLabels,
     getInventoryItemMenuItems,
     getWeaponAttackBonus,
@@ -309,8 +310,11 @@
     isMissing.value ? INVENTORY_MISSING_BADGE_HINT : equipActionLabel.value,
   );
 
+  // Иконку кнопки выбирает вид предмета: меч у оружия, щит у доспеха, искры у
+  // прочей магии. Надет он или нет, кнопка говорит подсветкой — парная иконка
+  // в наборе нашлась не для каждого вида.
   const equipIcon = computed(() =>
-    isEquipped.value ? 'tabler:shield-check' : 'tabler:shield',
+    getInventoryEquipIcon(props.inventoryItem, isEquipped.value),
   );
 
   const equipButtonClass = computed(() => {
