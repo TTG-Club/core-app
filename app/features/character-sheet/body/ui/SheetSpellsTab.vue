@@ -40,6 +40,7 @@
     PREPARED_KINDS,
     PREPARED_SPELL_TOGGLE_LABELS,
     SHEET_FILTER_LABELS,
+    SHEET_HEADER_STAT_CLASS,
     SHEET_ROLL_HINT_LABEL,
     SHEET_TAB_EMPTY_LABELS,
     SPELL_DAMAGE_ROLL_HINT_LABEL,
@@ -78,10 +79,6 @@
 
   /** Разделитель частей подсказки плитки урона (формула, тип, условие). */
   const DAMAGE_TOOLTIP_SEPARATOR = ' · ';
-
-  /** Плитка-кнопка шапки вкладки: открывает настройку своих значений. */
-  const HEADER_STAT_CLASS =
-    'flex h-7 cursor-pointer items-center gap-3 rounded-lg border border-default/50 bg-elevated/20 px-3 transition-colors hover:border-primary/60';
 
   /** Квадрат со значком заклинания в начале строки. */
   const SPELL_ICON_CLASS =
@@ -640,7 +637,7 @@
           v-for="stat in spellcastingStats"
           :key="stat.classUrl"
           type="button"
-          :class="HEADER_STAT_CLASS"
+          :class="SHEET_HEADER_STAT_CLASS"
           aria-label="Настроить заклинательство"
           @click.left.exact.prevent="emit('edit-spellcasting', stat.classUrl)"
         >
@@ -661,7 +658,7 @@
                 {{ SPELLCASTING_STAT_LABELS.saveDc.short }}
               </span>
 
-              <span class="text-sm font-bold text-highlighted">
+              <span class="text-xs font-bold text-highlighted">
                 {{ stat.saveDc }}
               </span>
             </span>
@@ -677,7 +674,7 @@
                 {{ SPELLCASTING_STAT_LABELS.attack.short }}
               </span>
 
-              <span class="text-sm font-bold text-highlighted">
+              <span class="text-xs font-bold text-highlighted">
                 {{ stat.attackBonus }}
               </span>
             </span>
@@ -694,7 +691,7 @@
         >
           <button
             type="button"
-            :class="HEADER_STAT_CLASS"
+            :class="SHEET_HEADER_STAT_CLASS"
             :aria-label="preparedStat.labels.ariaLabel"
             @click.left.exact.prevent="handlePreparedEdit(preparedStat.kind)"
           >
@@ -713,7 +710,7 @@
               </span>
 
               <span
-                class="text-sm font-bold"
+                class="text-xs font-bold"
                 :class="preparedStat.valueClass"
               >
                 {{ preparedStat.value }}

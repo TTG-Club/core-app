@@ -17,7 +17,7 @@
     getInventoryRemoveDescription,
     INVENTORY_REMOVE_CONFIRM_LABEL,
     INVENTORY_REMOVE_CONFIRM_TITLE,
-    SHEET_REVEAL_CONTROL_CLASS,
+    SHEET_HEADER_STAT_CLASS,
     SHEET_TAB_EMPTY_LABELS,
     WEIGHT_UNIT_LABEL,
   } from '../../model';
@@ -131,10 +131,20 @@
 
   const displayGroups = computed(() => getInventoryGroups(props.inventory));
 
-  // Красный при перегрузе (переносимый вес больше грузоподъёмности), иначе
-  // приглушённый — как у прочих статусных подписей листа.
-  const weightColorClass = computed(() =>
-    props.totalWeight > props.carryingCapacity ? 'text-error' : 'text-muted',
+  /** Переносимый вес больше грузоподъёмности: персонаж перегружен. */
+  const isOverloaded = computed(
+    () => props.totalWeight > props.carryingCapacity,
+  );
+
+  // Перегруз виден по цвету: и число, и значок краснеют. Значок красим тоже —
+  // в узкой колонке подписи у плитки нет, и он остаётся единственной пометкой
+  // того, о каком числе речь.
+  const weightValueClass = computed(() =>
+    isOverloaded.value ? 'text-error' : 'text-highlighted',
+  );
+
+  const weightIconClass = computed(() =>
+    isOverloaded.value ? 'text-error' : 'text-muted',
   );
 </script>
 
@@ -143,38 +153,41 @@
     окна — в дровере и правой панели лист бывает узким и на широком экране -->
   <div class="@container flex flex-col gap-4 pt-2">
     <div class="flex flex-wrap items-center justify-between gap-2">
-      <!-- Ряд веса — кнопка настройки предела: цвет перегруза важнее подсветки
-        по наведению, поэтому на интерактивность указывает карандаш -->
-      <UTooltip :text="CARRYING_CAPACITY_LABELS.open">
+      <!-- Переносимый вес — такая же плитка-кнопка настройки, как числа
+        заклинательства и подготовки в шапке вкладки заклинаний: на
+        интерактивность указывает потепление рамки, поэтому карандаш плитке не
+        нужен -->
+      <UTooltip :text="CARRYING_CAPACITY_LABELS.statHint">
         <button
           type="button"
-          class="group flex cursor-pointer items-center gap-1.5 text-sm"
-          :class="weightColorClass"
+          :class="SHEET_HEADER_STAT_CLASS"
           :aria-label="CARRYING_CAPACITY_LABELS.open"
           @click.left.exact.prevent="emit('edit-carrying-capacity')"
         >
-          <UIcon
-            name="tabler:weight"
-            class="size-4 shrink-0"
-          />
+          <span class="flex items-center gap-1.5">
+            <!-- В узкой колонке подпись занимает больше места, чем само число,
+              и уступает значку: рядом стоит кнопка «Добавить», а от полного
+              названия ряд переносится на две строки. Название остаётся в
+              подсказке плитки -->
+            <UIcon
+              name="tabler:weight"
+              class="size-4 shrink-0 @md:hidden"
+              :class="weightIconClass"
+            />
 
-          <span>
-            <!-- В узкой колонке от подписи остаётся одно «Вес»: рядом стоит
-              кнопка «Добавить», и полный вариант переносит ряд на две строки.
-              Двоеточие входит в обе подписи — тогда пробел между ними ни на что
-              не влияет, какой бы вариант ни был скрыт -->
-            <span class="hidden @md:inline">Переносимый вес:</span>
+            <span
+              class="hidden text-[10px] font-bold tracking-wider text-muted uppercase @md:inline"
+            >
+              {{ CARRYING_CAPACITY_LABELS.stat }}
+            </span>
 
-            <span class="@md:hidden">Вес:</span>
-
-            {{ totalWeight }} / {{ carryingCapacity }} {{ WEIGHT_UNIT_LABEL }}
+            <span
+              class="text-xs font-bold whitespace-nowrap"
+              :class="weightValueClass"
+            >
+              {{ totalWeight }} / {{ carryingCapacity }} {{ WEIGHT_UNIT_LABEL }}
+            </span>
           </span>
-
-          <UIcon
-            name="tabler:pencil"
-            class="size-3 shrink-0 text-muted opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
-            :class="[SHEET_REVEAL_CONTROL_CLASS, editControlClass]"
-          />
         </button>
       </UTooltip>
 

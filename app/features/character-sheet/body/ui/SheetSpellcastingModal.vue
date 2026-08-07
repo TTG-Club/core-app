@@ -188,6 +188,8 @@
 
         <USeparator class="my-1" />
 
+        <!-- Итоговые числа: подписи берём полные — плитки модалки широкие, а
+          подсказки по наведению у них нет, и расшифровать сокращение негде -->
         <div class="grid grid-cols-2 gap-3">
           <div
             class="flex flex-col items-center gap-1 rounded-lg border border-default/50 bg-elevated/20 p-3"
@@ -195,7 +197,7 @@
             <span
               class="text-[10px] font-bold tracking-wider text-muted uppercase"
             >
-              {{ SPELLCASTING_STAT_LABELS.saveDc.short }}
+              {{ SPELLCASTING_STAT_LABELS.saveDc.full }}
             </span>
 
             <span class="text-2xl leading-none font-bold text-highlighted">
