@@ -1,4 +1,9 @@
 <script setup lang="ts">
+  import type {
+    SpellDamageFormulaPart,
+    SpellDamageFormulaTarget,
+  } from '../../model';
+
   import { isEqual } from 'es-toolkit';
 
   import { DictionaryService } from '~/shared/api';
@@ -6,9 +11,10 @@
   import {
     appendSpellDamageFormulaModifier,
     appendSpellDamageFormulaTag,
-    DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
+    createEmptySpellDamageFormulaPart,
     DEFAULT_SPELL_DAMAGE_FORMULA_TOOL,
     incrementSpellDamageFormulaDice,
+    isSpellDamageFormulaTarget,
     SPELL_DAMAGE_FORMULA_CONDITION_TAGS,
     SPELL_DAMAGE_FORMULA_DICE,
     SPELL_DAMAGE_FORMULA_HEALING_TAGS,
@@ -18,10 +24,12 @@
     SPELL_DAMAGE_TYPE_TAGS,
   } from '../../model';
 
-  const DAMAGE_TARGET_TAG_PATTERN = /@target\.(self|separate)\b/g;
+  const model = defineModel<Array<SpellDamageFormulaPart>>({ required: true });
 
-  const model = defineModel<Array<string>>({ required: true });
-  const formulaRows = ref<Array<string>>(['']);
+  const formulaRows = ref<Array<SpellDamageFormulaPart>>([
+    createEmptySpellDamageFormulaPart(),
+  ]);
+
   const activeToolByRow = ref<Record<number, string>>({});
 
   const { data: damageTypes, status } = await useAsyncData(
@@ -32,22 +40,28 @@
 
   const damageTypeItems = computed(() => damageTypes.value ?? []);
 
-  function normalizeFormulaRows(rows: Array<string>): Array<string> {
-    return rows.map((row) => row.trim()).filter(Boolean);
+  function normalizeFormulaRows(
+    rows: Array<SpellDamageFormulaPart>,
+  ): Array<SpellDamageFormulaPart> {
+    return rows
+      .map((row) => ({ ...row, formula: row.formula.trim() }))
+      .filter((row) => row.formula);
   }
 
   watch(
     model,
-    (damageFormulas) => {
+    (damageFormulaParts) => {
       const normalizedRows = normalizeFormulaRows(formulaRows.value);
 
       // Цикл синхронизации завершается здесь: пустые локальные строки нужны только UI,
       // а модель хранит только непустые формулы.
-      if (isEqual(normalizedRows, damageFormulas)) {
+      if (isEqual(normalizedRows, damageFormulaParts)) {
         return;
       }
 
-      formulaRows.value = damageFormulas.length ? [...damageFormulas] : [''];
+      formulaRows.value = damageFormulaParts.length
+        ? damageFormulaParts.map((part) => ({ ...part }))
+        : [createEmptySpellDamageFormulaPart()];
     },
     { immediate: true },
   );
@@ -60,8 +74,11 @@
     return activeToolByRow.value[rowIndex] ?? DEFAULT_SPELL_DAMAGE_FORMULA_TOOL;
   }
 
-  function saveFormulaRows(rows: Array<string>): void {
-    formulaRows.value = rows.length ? rows : [''];
+  function saveFormulaRows(rows: Array<SpellDamageFormulaPart>): void {
+    formulaRows.value = rows.length
+      ? rows
+      : [createEmptySpellDamageFormulaPart()];
+
     model.value = normalizeFormulaRows(rows);
   }
 
@@ -70,9 +87,9 @@
     updateFormula: (formula: string) => string,
   ): void {
     const rows = [...formulaRows.value];
-    const formula = rows[rowIndex] ?? '';
+    const row = rows[rowIndex] ?? createEmptySpellDamageFormulaPart();
 
-    rows[rowIndex] = updateFormula(formula);
+    rows[rowIndex] = { ...row, formula: updateFormula(row.formula) };
     saveFormulaRows(rows);
   }
 
@@ -84,31 +101,18 @@
     updateFormula(rowIndex, typeof modelValue === 'string' ? modelValue : '');
   }
 
-  function getDamageTarget(formula: string): string {
-    if (formula.includes('@target.self')) {
-      return 'target.self';
-    }
-
-    if (formula.includes('@target.separate')) {
-      return 'target.separate';
-    }
-
-    return DEFAULT_SPELL_DAMAGE_FORMULA_TARGET;
-  }
-
-  function updateDamageTarget(rowIndex: number, target: string): void {
+  /**
+   * Меняет цель части урона. В формулу цель не пишется: VTTG понимает в ней
+   * только теги `@target.full`/`@target.notFull`, а сама цель — отдельное поле.
+   */
+  function updateDamageTarget(
+    rowIndex: number,
+    target: SpellDamageFormulaTarget,
+  ): void {
     const rows = [...formulaRows.value];
-    const formula = rows[rowIndex] ?? '';
+    const row = rows[rowIndex] ?? createEmptySpellDamageFormulaPart();
 
-    const formulaWithoutTarget = formula
-      .replace(DAMAGE_TARGET_TAG_PATTERN, '')
-      .trim();
-
-    rows[rowIndex] =
-      target === DEFAULT_SPELL_DAMAGE_FORMULA_TARGET
-        ? formulaWithoutTarget
-        : `${formulaWithoutTarget}@${target}`.trim();
-
+    rows[rowIndex] = { ...row, target };
     saveFormulaRows(rows);
   }
 
@@ -116,7 +120,7 @@
     rowIndex: number,
     modelValue: unknown,
   ): void {
-    if (typeof modelValue !== 'string') {
+    if (!isSpellDamageFormulaTarget(modelValue)) {
       return;
     }
 
@@ -148,14 +152,14 @@
   function addFormula(rowIndex: number): void {
     const rows = [...formulaRows.value];
 
-    rows.splice(rowIndex + 1, 0, '');
+    rows.splice(rowIndex + 1, 0, createEmptySpellDamageFormulaPart());
     saveFormulaRows(rows);
   }
 
   function clearFormula(rowIndex: number): void {
     const rows = [...formulaRows.value];
 
-    rows[rowIndex] = '';
+    rows[rowIndex] = createEmptySpellDamageFormulaPart();
     saveFormulaRows(rows);
   }
 
@@ -181,7 +185,7 @@
 <template>
   <div class="col-span-full grid gap-3">
     <UFormField
-      v-for="(formula, rowIndex) in formulaRows"
+      v-for="(row, rowIndex) in formulaRows"
       :key="rowIndex"
       :label="`Урон, часть ${rowIndex + 1}`"
       :name="`effect.damageFormulas.${rowIndex}`"
@@ -189,7 +193,7 @@
       <div class="rounded-lg border border-default bg-muted p-3">
         <div class="flex flex-col gap-3">
           <UInput
-            :model-value="formula"
+            :model-value="row.formula"
             placeholder="Например: 8d6@dmg.fire"
             @update:model-value="handleFormulaInput(rowIndex, $event)"
           />
@@ -284,7 +288,7 @@
             :name="`effect.damageFormulaTargets.${rowIndex}`"
           >
             <USelect
-              :model-value="getDamageTarget(formula)"
+              :model-value="row.target"
               :items="SPELL_DAMAGE_FORMULA_TARGET_OPTIONS"
               @update:model-value="handleDamageTargetInput(rowIndex, $event)"
             />
@@ -306,7 +310,7 @@
               size="xs"
               variant="subtle"
               color="error"
-              :disabled="!formula"
+              :disabled="!row.formula"
               @click.left.exact.prevent="clearFormula(rowIndex)"
             >
               Очистить

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SpellEffect } from '../../model';
+  import type { SpellDamageFormulaPart, SpellEffect } from '../../model';
 
   import {
     SelectAbilities,
@@ -9,6 +9,8 @@
   } from '~ui/select';
 
   import {
+    applySpellDamageFormulaParts,
+    getSpellDamageFormulaParts,
     SPELL_SAVE_EFFECT_OPTIONS,
     SPELL_TARGET_TYPE_OPTIONS,
   } from '../../model';
@@ -21,13 +23,13 @@
 
   const model = defineModel<SpellEffect>({ required: true });
 
-  const damageFormulas = computed<Array<string>>({
-    get: () => model.value.damageFormulas ?? [],
+  // Формулы и их цели хранятся двумя параллельными массивами, но редактируются
+  // как один список частей — иначе два отдельных обновления модели разъезжаются
+  // по индексам.
+  const damageFormulaParts = computed<Array<SpellDamageFormulaPart>>({
+    get: () => getSpellDamageFormulaParts(model.value),
     set: (value) => {
-      model.value = {
-        ...model.value,
-        damageFormulas: value,
-      };
+      model.value = applySpellDamageFormulaParts(model.value, value);
     },
   });
 
@@ -151,7 +153,7 @@
         :hint="projectileHint"
       />
 
-      <SpellDamageFormulas v-model="damageFormulas" />
+      <SpellDamageFormulas v-model="damageFormulaParts" />
 
       <!-- Спасброски -->
       <UFormField
