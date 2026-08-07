@@ -11,11 +11,13 @@ import type {
   ArmorClassAbilityBonus,
   ArmorClassBreakdown,
   ArmorDexterityMod,
+  AttunementBreakdown,
   BonusBreakdownPart,
   CarryingCapacityBreakdown,
   CatalogSpellDetail,
   Character,
   CharacterAbilities,
+  CharacterAttunement,
   CharacterClass,
   CharacterClassResource,
   CharacterCurrency,
@@ -161,6 +163,13 @@ import {
   ARMOR_MATCH_KEYWORDS,
   ARMOR_MEDIUM_DEX_CAP,
   ARMOR_PROFICIENCY_GROUPS,
+  ATTUNEMENT_BONUS_MAX,
+  ATTUNEMENT_BONUS_MIN,
+  ATTUNEMENT_LABELS,
+  ATTUNEMENT_MAX,
+  ATTUNEMENT_MIN,
+  ATTUNEMENT_RULE_LIMIT,
+  ATTUNEMENT_VALUE_SEPARATOR,
   CANTRIP_SPELL_LEVEL,
   CANTRIPS_COLUMN_PREFIX,
   CARRYING_CAPACITY_LABELS,
@@ -3064,6 +3073,124 @@ export function getCarryingCapacityBreakdown(
  */
 export function getCarryingCapacityValue(character: Character): number {
   return getCarryingCapacityBreakdown(character).value;
+}
+
+/**
+ * Разбор предела настройки на магические предметы: сколько предметов настроено
+ * сейчас, из чего сложился предел (правило 2024, модификатор характеристики или
+ * своё число) и какой бонус к нему задан. Своё число выключает подсчёт целиком —
+ * бонус к нему не прибавляется.
+ *
+ * @param character персонаж.
+ * @returns разбор для плитки вкладки снаряжения и модалки настройки.
+ */
+export function getAttunementBreakdown(
+  character: Character,
+): AttunementBreakdown {
+  const { custom, ability, bonus } = character.attunement;
+
+  const abilityModifier = ability ? getAbilityModifier(character, ability) : 0;
+
+  const baseValue = ability ? abilityModifier : ATTUNEMENT_RULE_LIMIT;
+
+  // Своё число клампится и здесь, а не только в экшене: документ мог прийти
+  // импортом руками, а схема числа не обрезает.
+  const value =
+    custom === null
+      ? getClampedInteger(baseValue + bonus, ATTUNEMENT_MIN, ATTUNEMENT_MAX)
+      : getClampedInteger(custom, ATTUNEMENT_MIN, ATTUNEMENT_MAX);
+
+  return {
+    value,
+    // Считаются те же предметы, у которых в строке горит значок «Настроен»:
+    // отсутствующий предмет (количество — ноль) настройку не теряет, иначе
+    // плитка расходилась бы со списком.
+    count: character.inventory.filter(
+      (inventoryItem) =>
+        isAttunableInventoryItem(inventoryItem) && inventoryItem.attuned,
+    ).length,
+    custom: custom !== null,
+    ability,
+    abilityModifier,
+    baseValue,
+    bonus,
+  };
+}
+
+/**
+ * Значение плитки настройки на предметы: сколько настроено из того, сколько
+ * можно («2 / 3»).
+ *
+ * @param attunement разбор предела настройки.
+ * @returns строка плитки вкладки снаряжения.
+ */
+export function getAttunementValue(attunement: AttunementBreakdown): string {
+  return `${attunement.count}${ATTUNEMENT_VALUE_SEPARATOR}${attunement.value}`;
+}
+
+/**
+ * Подсказка плитки настройки на предметы: сколько настроено и откуда взялся
+ * предел — правило, модификатор характеристики (с бонусом, если он задан) либо
+ * своё число.
+ *
+ * @param attunement разбор предела настройки.
+ * @returns текст подсказки плитки вкладки снаряжения.
+ */
+export function getAttunementHint(attunement: AttunementBreakdown): string {
+  const { value, count, custom, ability, baseValue, bonus } = attunement;
+
+  const { countHint, openHint, hints } = ATTUNEMENT_LABELS;
+
+  const headHint = `${countHint}: ${count} из ${value}`;
+
+  if (custom) {
+    return `${headHint}. ${hints.custom} — ${openHint}`;
+  }
+
+  const baseHint = ability
+    ? `${hints.ability} «${ABILITY_LABELS[ability]}»`
+    : hints.rule;
+
+  const baseLabel =
+    bonus === 0
+      ? String(baseValue)
+      : `${baseValue} ${getFormattedBonus(bonus)} = ${value}`;
+
+  return `${headHint}. ${baseHint}: ${baseLabel} — ${openHint}`;
+}
+
+/**
+ * Описание предупреждения о достигнутом пределе настройки на предметы.
+ *
+ * @param limit сколько предметов можно держать настроенными.
+ * @returns текст тоста.
+ */
+export function getAttunementLimitDescription(limit: number): string {
+  return `Настроено ${limit} из ${limit} — снимите настройку с другого предмета или измените предел в плитке «${ATTUNEMENT_LABELS.stat}».`;
+}
+
+/**
+ * Настройка предела настройки на предметы с очисткой чисел формы: очищенное
+ * поле ввода отдаёт `NaN`, а предел входит в проверку каждой новой настройки.
+ *
+ * @param attunement настройка из модалки.
+ * @returns настройка для записи листа.
+ */
+export function getStoredAttunement(
+  attunement: CharacterAttunement,
+): CharacterAttunement {
+  return {
+    custom:
+      attunement.custom === null
+        ? null
+        : getClampedInteger(attunement.custom, ATTUNEMENT_MIN, ATTUNEMENT_MAX),
+    ability: attunement.ability,
+    bonus: getClampedInteger(
+      attunement.bonus,
+      ATTUNEMENT_BONUS_MIN,
+      ATTUNEMENT_BONUS_MAX,
+    ),
+  };
 }
 
 /**

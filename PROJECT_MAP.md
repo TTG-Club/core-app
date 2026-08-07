@@ -271,6 +271,17 @@ modals), so its capabilities are listed here rather than squeezed into the table
   «по правилам», so sheets saved before the setting count exactly as they did.
   The row, the modal preview and the PDF all read
   `getCarryingCapacityBreakdown`, so the number cannot diverge between them.
+- Next to the carried weight stands the attunement tile: how many items are
+  attuned out of how many may be («2 / 3»), the same shape the prepared-spells
+  tiles have on the spells tab. It opens `SheetAttunementModal`, where the 2024
+  limit of three items bends the way the weight limit does — a flat number
+  instead of the calculation, an ability whose modifier becomes the base instead
+  of the rule (home rules and artificer-like features), and a bonus on top of
+  the base. All three live in `Character.attunement`, where `null` / `null` /
+  `0` means «по правилам», so sheets saved before the setting count exactly as
+  they did. Attuning past the limit is refused with a toast, the way preparing
+  one spell too many is; the tile, the modal preview and that guard all read
+  `getAttunementBreakdown`, so the number cannot diverge between them.
 - Catalog rows on the equipment and spells tabs can be copied into the sheet
   from the row action menu. The `custom:` copy keeps quantity, equipped state
   and combat parameters, and pulls the description — for a spell also its

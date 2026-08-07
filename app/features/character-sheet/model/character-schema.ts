@@ -733,6 +733,16 @@ const carryingCapacitySchema = z
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.carryingCapacity }));
 
+// Настройка предела настройки на предметы появилась позже снаряжения: у листов
+// без неё предел считается по правилам 2024 (три предмета) без бонуса.
+const attunementSchema = z
+  .object({
+    custom: z.coerce.number().nullable().catch(null),
+    ability: abilityKeySchema.nullable().catch(null),
+    bonus: z.coerce.number().catch(0),
+  })
+  .catch(() => ({ ...DEFAULT_CHARACTER.attunement }));
+
 const notesSchema = z
   .union([z.array(noteSchema), z.string()])
   .catch([])
@@ -977,6 +987,7 @@ const characterSchema = z
     customCurrencies: z.array(customCurrencySchema).catch([]),
     inventory: z.array(inventoryItemSchema).catch([]),
     carryingCapacity: carryingCapacitySchema,
+    attunement: attunementSchema,
     notes: notesSchema,
     personality: personalitySchema,
     settings: settingsSchema,

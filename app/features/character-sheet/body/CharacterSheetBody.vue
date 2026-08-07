@@ -35,6 +35,7 @@
     SheetAbilitiesRow,
     SheetAbilityModal,
     SheetArmorClassModal,
+    SheetAttunementModal,
     SheetBackgroundWizardModal,
     SheetCarryingCapacityModal,
     SheetClassesModal,
@@ -116,6 +117,7 @@
     spellSlotRows,
     totalWeight,
     carryingCapacity,
+    attunement,
     setAbilityScore,
     spendSpellSlot,
     toggleSavingThrowProficiency,
@@ -359,6 +361,8 @@
 
   const carryingCapacityModal = overlay.create(SheetCarryingCapacityModal);
 
+  const attunementModal = overlay.create(SheetAttunementModal);
+
   const proficiencyGroupsModal = overlay.create(SheetProficiencyGroupsModal, {
     props: {
       title: '',
@@ -598,6 +602,14 @@
     }
 
     carryingCapacityModal.open();
+  }
+
+  function handleAttunementEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    attunementModal.open();
   }
 
   function handleProficienciesEdit(group: ProficiencyGroupKey) {
@@ -1152,6 +1164,7 @@
           :inventory="character.inventory"
           :total-weight="totalWeight"
           :carrying-capacity="carryingCapacity"
+          :attunement="attunement"
           :features="character.features"
           :spells="character.spells"
           :innate-spells="availableInnateSpells"
@@ -1175,6 +1188,7 @@
           @edit-prepared-spells="handlePreparedSpellsEdit"
           @edit-currency="handleCurrencyEdit"
           @edit-carrying-capacity="handleCarryingCapacityEdit"
+          @edit-attunement="handleAttunementEdit"
           @adjust-item-quantity="adjustInventoryItemQuantity"
           @toggle-item-equip="toggleInventoryItemEquipped"
           @toggle-item-attuned="toggleInventoryItemAttuned"

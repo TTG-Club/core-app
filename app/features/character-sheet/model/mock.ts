@@ -222,6 +222,11 @@ export const DEFAULT_CHARACTER: Character = {
     custom: null,
     bonus: 0,
   },
+  attunement: {
+    custom: null,
+    ability: null,
+    bonus: 0,
+  },
   notes: [],
   personality: {
     alignment: '',

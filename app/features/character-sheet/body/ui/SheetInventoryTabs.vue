@@ -2,6 +2,7 @@
   import type { TabsItem } from '@nuxt/ui';
 
   import type {
+    AttunementBreakdown,
     CharacterCurrency,
     CharacterCustomCurrency,
     CharacterFeature,
@@ -44,6 +45,9 @@
     inventory: CharacterInventoryItem[];
     totalWeight: number;
     carryingCapacity: number;
+
+    /** Разбор предела настройки на магические предметы (плитка снаряжения). */
+    attunement: AttunementBreakdown;
     features: CharacterFeature[];
     spells: CharacterSpell[];
     innateSpells: CharacterSpell[];
@@ -75,6 +79,7 @@
     'edit-prepared-spells': [kind: PreparedSpellKind];
     'edit-currency': [];
     'edit-carrying-capacity': [];
+    'edit-attunement': [];
     'adjust-item-quantity': [inventoryItemId: string, delta: number];
     'toggle-item-equip': [inventoryItemId: string];
     'toggle-item-attuned': [inventoryItemId: string];
@@ -127,6 +132,10 @@
 
   function handleCarryingCapacityEdit() {
     emit('edit-carrying-capacity');
+  }
+
+  function handleAttunementEdit() {
+    emit('edit-attunement');
   }
 
   function handleItemRemove(inventoryItemId: string) {
@@ -900,6 +909,7 @@
             :inventory="inventory"
             :total-weight="totalWeight"
             :carrying-capacity="carryingCapacity"
+            :attunement="attunement"
             @add-item="handleItemAdd"
             @add-magic-item="handleMagicItemAdd"
             @add-custom-item="handleCustomItemAdd"
@@ -907,6 +917,7 @@
             @copy-item="handleItemCopy"
             @edit-currency="handleCurrencyEdit"
             @edit-carrying-capacity="handleCarryingCapacityEdit"
+            @edit-attunement="handleAttunementEdit"
             @remove-item="handleItemRemove"
             @adjust-quantity="handleItemQuantityAdjust"
             @toggle-equip="handleItemEquipToggle"

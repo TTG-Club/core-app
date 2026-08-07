@@ -2,6 +2,7 @@ import type {
   AbilityKey,
   Character,
   CharacterArmorClass,
+  CharacterAttunement,
   CharacterCarryingCapacity,
   CharacterClass,
   CharacterClassResource,
@@ -51,6 +52,7 @@ import {
   ARMOR_CLASS_BASE_MIN,
   ARMOR_DEX_LIMIT_MAX,
   ARMOR_DEX_LIMIT_MIN,
+  ATTUNEMENT_LABELS,
   CARRYING_CAPACITY_BONUS_MAX,
   CARRYING_CAPACITY_BONUS_MIN,
   CARRYING_CAPACITY_MAX,
@@ -70,6 +72,8 @@ import {
   fetchInventoryItemDescription,
   getAbilityRows,
   getArmorClassValue,
+  getAttunementBreakdown,
+  getAttunementLimitDescription,
   getCarryingCapacityValue,
   getCharacterClasses,
   getCharacterProficiencyBonus,
@@ -89,6 +93,7 @@ import {
   getSpellPreparedKind,
   getSpellSlotRows,
   getSpellSlotsEmptyDescription,
+  getStoredAttunement,
   getTotalClassLevel,
   INNATE_SPELL_COPY_TOAST_DESCRIPTION,
   INVENTORY_COPY_TOAST_TITLE,
@@ -343,6 +348,8 @@ export function useCharacterSheet() {
   const carryingCapacity = computed(() =>
     getCarryingCapacityValue(character.value),
   );
+
+  const attunement = computed(() => getAttunementBreakdown(character.value));
 
   /**
    * Установка значения характеристики с ограничением допустимого диапазона.
@@ -678,6 +685,24 @@ export function useCharacterSheet() {
           CARRYING_CAPACITY_BONUS_MAX,
         ),
       },
+    };
+  }
+
+  /**
+   * Установка настройки предела настроенных предметов: своё число выключает
+   * подсчёт, характеристика задаёт основу вместо правила, бонус прибавляется к
+   * основе подсчёта.
+   *
+   * @param nextAttunement новая настройка предела.
+   */
+  function setAttunement(nextAttunement: CharacterAttunement): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      attunement: getStoredAttunement(nextAttunement),
     };
   }
 
@@ -2443,13 +2468,44 @@ export function useCharacterSheet() {
    * листа не ограничивается. Предлагается только там, где каталог назвал
    * настройку обязательной; отсутствующий предмет настройки не держит.
    *
-   * Лимит в три настроенных предмета лист не сторожит: игрок сам решает, что
-   * снять, а мастер — что разрешить сверх правила.
+   * Больше предела из плитки снаряжения настроиться нельзя — лишнее нажатие
+   * предупреждает и ничего не меняет. Нужно больше настроек, чем даёт правило
+   * (три предмета), — предел поднимается в его настройке.
    *
    * @param inventoryItemId идентификатор предмета инвентаря.
    */
   function toggleInventoryItemAttuned(inventoryItemId: string): void {
     if (!ensureOwnSheet()) {
+      return;
+    }
+
+    const currentItem = character.value.inventory.find(
+      (inventoryItem) => inventoryItem.id === inventoryItemId,
+    );
+
+    if (!currentItem) {
+      return;
+    }
+
+    const { value: limit, count } = attunement.value;
+
+    // Предел уже занят: молча пропустить нельзя — игрок ждёт, что предмет
+    // настроится, и должен узнать, почему этого не произошло. Предупреждаем
+    // только там, где настройка вообще предлагается: у прочих предметов
+    // нажатию и без предела делать нечего.
+    if (
+      !currentItem.attuned
+      && isAttunableInventoryItem(currentItem)
+      && !isMissingInventoryItem(currentItem)
+      && count >= limit
+    ) {
+      toast.add({
+        color: 'warning',
+        icon: ATTUNEMENT_LABELS.icon,
+        title: ATTUNEMENT_LABELS.limitToastTitle,
+        description: getAttunementLimitDescription(limit),
+      });
+
       return;
     }
 
@@ -2903,9 +2959,11 @@ export function useCharacterSheet() {
     spellSlotRows,
     totalWeight,
     carryingCapacity,
+    attunement,
     setAbilityScore,
     setArmorClass,
     setCarryingCapacity,
+    setAttunement,
     setAvatar,
     setClassResources,
     adjustClassResource,
