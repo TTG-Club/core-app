@@ -2,6 +2,7 @@
   import type { MagicItemDetailResponse } from '~magic-items/model';
 
   import { MagicItemBody } from '~magic-items/body';
+  import { getMagicItemMarkdown } from '~magic-items/model';
   import { UiDrawer } from '~ui/drawer';
 
   const { url } = defineProps<{
@@ -25,6 +26,10 @@
   const isError = computed(() => status.value === 'error');
   const urlForCopy = computed(() => `${getOrigin()}/magic-items/${url}`);
   const editUrl = computed(() => `/workshop/magic-items/${url}`);
+
+  const markdown = computed(() =>
+    detail.value ? getMagicItemMarkdown(detail.value) : '',
+  );
 </script>
 
 <template>
@@ -34,6 +39,7 @@
     :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
+    :markdown
     :is-loading
     :is-error
     copy-title

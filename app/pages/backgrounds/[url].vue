@@ -2,6 +2,7 @@
   import type { BackgroundDetailResponse } from '~backgrounds/model';
 
   import { BackgroundBody } from '~backgrounds/body';
+  import { getBackgroundMarkdown } from '~backgrounds/model';
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
@@ -14,6 +15,10 @@
       $fetch<BackgroundDetailResponse>(
         `/api/v2/backgrounds/${route.params.url}`,
       ),
+  );
+
+  const markdown = computed(() =>
+    background.value ? getBackgroundMarkdown(background.value) : '',
   );
 
   useSeoMeta({
@@ -59,6 +64,7 @@
       <PageActions
         :edit-url="editUrl"
         :close-url="{ name: 'backgrounds' }"
+        :markdown
       />
     </template>
 

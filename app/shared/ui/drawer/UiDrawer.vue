@@ -14,6 +14,7 @@
     source = undefined,
     url = undefined,
     editUrl = undefined,
+    markdown = undefined,
     dateTime = undefined,
     dateTimeFormat = undefined,
     dismissible = undefined,
@@ -25,6 +26,8 @@
     isError?: boolean;
     url?: string;
     editUrl?: string;
+    /** Готовый Markdown сущности; без него кнопка копирования не показывается. */
+    markdown?: string;
     copyTitle?: boolean;
     dateTime?: string | number | Date | Dayjs | null;
     dateTimeFormat?: string;
@@ -130,6 +133,7 @@
           <DrawerActions
             :edit-url="editUrl"
             :url
+            :markdown
             @close="$emit('close')"
           />
         </template>

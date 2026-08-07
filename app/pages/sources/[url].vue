@@ -2,6 +2,7 @@
   import type { SourceDetailResponse } from '~sources/types';
 
   import { SourceBody } from '~sources/body';
+  import { getSourceMarkdown } from '~sources/types';
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
@@ -11,6 +12,10 @@
   const { data: source } = await useAsyncData(
     `source-${route.params.url}`,
     () => $fetch<SourceDetailResponse>(`/api/v2/source/${route.params.url}`),
+  );
+
+  const markdown = computed(() =>
+    source.value ? getSourceMarkdown(source.value) : '',
   );
 
   useSeoMeta({
@@ -54,6 +59,7 @@
     <template #actions>
       <PageActions
         :edit-url="editUrl"
+        :markdown
         @close="navigateTo({ name: 'sources' })"
       />
     </template>

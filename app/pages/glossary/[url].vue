@@ -2,6 +2,7 @@
   import type { GlossaryDetailResponse } from '~glossary/model';
 
   import { GlossaryBody } from '~glossary/body';
+  import { getGlossaryMarkdown } from '~glossary/model';
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
@@ -12,6 +13,10 @@
     `glossary-${route.params.url}`,
     () =>
       $fetch<GlossaryDetailResponse>(`/api/v2/glossary/${route.params.url}`),
+  );
+
+  const markdown = computed(() =>
+    glossary.value ? getGlossaryMarkdown(glossary.value) : '',
   );
 
   useSeoMeta({
@@ -56,6 +61,7 @@
       <PageActions
         :edit-url="editUrl"
         :close-url="{ name: 'glossary' }"
+        :markdown
       />
     </template>
 

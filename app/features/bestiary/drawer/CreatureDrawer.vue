@@ -2,6 +2,7 @@
   import type { CreatureDetailResponse } from '~bestiary/model';
 
   import { CreatureBody } from '~bestiary/body';
+  import { getCreatureMarkdown } from '~bestiary/model';
   import { UiDrawer } from '~ui/drawer';
 
   const { url } = defineProps<{
@@ -25,6 +26,10 @@
   const isError = computed(() => status.value === 'error');
   const urlForCopy = computed(() => `${getOrigin()}/bestiary/${url}`);
   const editUrl = computed(() => `/workshop/bestiary/${url}`);
+
+  const markdown = computed(() =>
+    detail.value ? getCreatureMarkdown(detail.value) : '',
+  );
 </script>
 
 <template>
@@ -34,6 +39,7 @@
     :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
+    :markdown
     :is-loading
     :is-error
     copy-title

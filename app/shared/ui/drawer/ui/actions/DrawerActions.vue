@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { CopyButton } from '~ui/copy-button';
+  import { CopyButton, CopyMarkdownButton } from '~ui/copy-button';
 
   defineEmits<{
     (e: 'close'): void;
@@ -8,6 +8,8 @@
   defineProps<{
     url?: string;
     editUrl?: string;
+    /** Готовый Markdown сущности; без него кнопка копирования не показывается. */
+    markdown?: string;
   }>();
 
   const { canEditEntities } = useUserRoles();
@@ -42,6 +44,12 @@
       size="sm"
     />
   </UTooltip>
+
+  <CopyMarkdownButton
+    v-if="markdown"
+    :text="markdown"
+    size="sm"
+  />
 
   <CopyButton
     v-if="url"

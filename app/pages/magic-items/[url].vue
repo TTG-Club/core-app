@@ -2,6 +2,7 @@
   import type { MagicItemDetailResponse } from '~magic-items/model';
 
   import { MagicItemBody } from '~magic-items/body';
+  import { getMagicItemMarkdown } from '~magic-items/model';
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
@@ -14,6 +15,10 @@
       $fetch<MagicItemDetailResponse>(
         `/api/v2/magic-items/${route.params.url}`,
       ),
+  );
+
+  const markdown = computed(() =>
+    magicItem.value ? getMagicItemMarkdown(magicItem.value) : '',
   );
 
   useSeoMeta({
@@ -60,6 +65,7 @@
       <PageActions
         :edit-url="editUrl"
         :close-url="{ name: 'magic-items' }"
+        :markdown
       />
     </template>
 

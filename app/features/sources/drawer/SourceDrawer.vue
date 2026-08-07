@@ -2,6 +2,7 @@
   import type { SourceDetailResponse } from '~sources/types';
 
   import { SourceBody } from '~sources/body';
+  import { getSourceMarkdown } from '~sources/types';
   import { UiDrawer } from '~ui/drawer';
 
   const { url } = defineProps<{
@@ -25,6 +26,10 @@
   const isError = computed(() => status.value === 'error');
   const urlForCopy = computed(() => `${getOrigin()}/sources/${url}`);
   const editUrl = computed(() => `/workshop/sources/${url}`);
+
+  const markdown = computed(() =>
+    detail.value ? getSourceMarkdown(detail.value) : '',
+  );
 </script>
 
 <template>
@@ -34,6 +39,7 @@
     :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
+    :markdown
     :is-loading
     :is-error
     copy-title

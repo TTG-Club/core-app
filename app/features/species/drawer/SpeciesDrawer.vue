@@ -2,6 +2,7 @@
   import type { SpeciesDetailResponse } from '~species/model';
 
   import { SpeciesBody } from '~species/body';
+  import { getSpeciesMarkdown } from '~species/model';
   import { UiDrawer } from '~ui/drawer';
 
   const { url } = defineProps<{
@@ -25,6 +26,10 @@
   const isError = computed(() => status.value === 'error');
   const urlForCopy = computed(() => `${getOrigin()}/species/${url}`);
   const editUrl = computed(() => `/workshop/species/${url}`);
+
+  const markdown = computed(() =>
+    detail.value ? getSpeciesMarkdown(detail.value) : '',
+  );
 </script>
 
 <template>
@@ -34,6 +39,7 @@
     :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
+    :markdown
     :is-loading
     :is-error
     copy-title
