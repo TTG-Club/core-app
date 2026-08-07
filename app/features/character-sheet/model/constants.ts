@@ -2853,15 +2853,25 @@ export const DAMAGE_TYPE_LABELS: Record<string, string> = {
 };
 
 /**
+ * Значение варианта «тип урона не указан». Пустая строка в качестве значения
+ * селекта запрещена, а хранится незаполненный тип именно ею — поэтому у выбора
+ * есть собственное значение пустоты.
+ */
+export const DAMAGE_TYPE_NONE = 'none';
+
+/**
  * Варианты типа урона своего оружия: подписи берутся из справочника типов
  * урона, порядок — по алфавиту. Ключ `FAIR` — дубль огненного урона из старых
- * записей справочника, в выборе он не нужен.
+ * записей справочника, в выборе он не нужен. Первым идёт «не указан» — иначе
+ * выбранный тип нечем сбросить.
  */
-export const DAMAGE_TYPE_OPTIONS: Array<{ label: string; value: string }> =
-  Object.entries(DAMAGE_TYPE_LABELS)
+export const DAMAGE_TYPE_OPTIONS: Array<{ label: string; value: string }> = [
+  { label: 'Не указан', value: DAMAGE_TYPE_NONE },
+  ...Object.entries(DAMAGE_TYPE_LABELS)
     .filter(([type]) => type !== 'FAIR')
     .map(([type, label]) => ({ label, value: type }))
-    .sort((left, right) => left.label.localeCompare(right.label, 'ru'));
+    .sort((left, right) => left.label.localeCompare(right.label, 'ru')),
+];
 
 /** Префикс тега типа урона в формулах заклинаний (`8к6@dmg.fire`). */
 export const SPELL_DAMAGE_TYPE_TAG_PREFIX = 'dmg.';
@@ -3195,10 +3205,14 @@ export const CUSTOM_ITEM_FIELD_LABELS = {
   quantity: 'Количество',
   weaponCategory: 'Категория',
   damageType: 'Тип урона',
-  damageTypePlaceholder: 'Не указан',
   damage: 'Урон',
   damageHint:
     'Модификатор характеристики лист добавит сам; ноль костей — оружие без броска урона.',
+  attackBonus: 'Бонус к попаданию',
+
+  /** Что в бонус к попаданию входит, а что лист посчитает без него. */
+  attackBonusHint:
+    'Бонус мастерства и модификатор характеристики лист добавит сам — здесь только собственный бонус оружия (например, «+1» у магического).',
   armorType: 'Тип доспеха',
 
   /** Продолжение подсказки типа доспеха: что делать с ним на листе. */
@@ -3265,7 +3279,7 @@ export const CUSTOM_ITEM_MAGIC_LABELS = {
   /** Заголовок карточки с настройкой и зарядами. */
   attunementSection: 'Настройка и заряды',
 
-  /** Заголовок карточки с бонусами оружия. */
+  /** Заголовок карточки с бонусами оружия, которые даёт только магия. */
   weaponSection: 'Бонусы оружия',
 
   /** Заголовок карточки с бонусами, которые предмет даёт самому листу. */
@@ -3280,7 +3294,6 @@ export const CUSTOM_ITEM_MAGIC_LABELS = {
   attunement: 'Требует настройки',
   charges: 'Зарядов, максимум',
   chargesHint: 'Ноль — зарядов у предмета нет.',
-  attackBonus: 'Бонус к попаданию',
   extraDamage: 'Дополнительный урон',
   extraDamageHint:
     'Кости сверх основного урона со своим типом (например, 2к6 огнём). Ноль костей — дополнительного урона нет.',

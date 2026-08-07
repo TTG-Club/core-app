@@ -207,6 +207,7 @@ import {
   DAMAGE_DICE_COUNT_MAX,
   DAMAGE_DICE_COUNT_MIN,
   DAMAGE_TYPE_LABELS,
+  DAMAGE_TYPE_NONE,
   DARKVISION_PARSE_FALLBACK,
   DEFAULT_ARMOR_CLASS_ABILITY,
   DEFAULT_INITIATIVE_ABILITY,
@@ -2498,11 +2499,14 @@ function getCustomInventoryWeapon(
     category: draft.weaponCategory,
     ranged: draft.ranged,
     finesse: draft.finesse,
-    // Бонус к попаданию и дополнительный урон даёт магия: у обычного оружия
-    // блок магии в форме скрыт, и его значения в предмет не идут.
-    attackBonus: draft.magic
-      ? getClampedInteger(draft.attackBonus, ITEM_BONUS_MIN, ITEM_BONUS_MAX)
-      : MAGIC_ITEM_BONUS_NONE,
+    // Собственный бонус к попаданию есть у любого оружия: чаще его даёт магия,
+    // но задать его игрок должен уметь и без неё. Дополнительный урон остаётся
+    // магическим — у обычного оружия его поля в форме выключены.
+    attackBonus: getClampedInteger(
+      draft.attackBonus,
+      ITEM_BONUS_MIN,
+      ITEM_BONUS_MAX,
+    ),
     // Второй бросок есть только у универсального оружия; тип урона и
     // собственный бонус у обоих хватов общие — по правилам меняется лишь кость.
     versatileDamage:
@@ -2870,6 +2874,28 @@ function getCustomInventoryBonusRows(
     ...armorClassRows,
     ...inventoryItem.bonuses.map((bonus) => ({ ...bonus })),
   ];
+}
+
+/**
+ * Значение селектора типа урона из хранимого типа: пустого значения у селекта
+ * нет, поэтому незаполненный тип показывается вариантом «не указан».
+ *
+ * @param damageType хранимый тип урона; пустая строка — тип не указан.
+ * @returns значение варианта селектора.
+ */
+export function toDamageTypeValue(damageType: string): string {
+  return damageType || DAMAGE_TYPE_NONE;
+}
+
+/**
+ * Хранимый тип урона из значения селектора: вариантом «не указан» игрок
+ * сбрасывает выбранный тип.
+ *
+ * @param selectValue значение варианта селектора.
+ * @returns тип урона; пустая строка — тип не указан.
+ */
+export function parseDamageTypeValue(selectValue: string): string {
+  return selectValue === DAMAGE_TYPE_NONE ? '' : selectValue;
 }
 
 /**

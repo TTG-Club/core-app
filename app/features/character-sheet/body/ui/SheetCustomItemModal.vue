@@ -50,9 +50,11 @@
     ITEM_BONUS_MIN,
     NEW_CUSTOM_INVENTORY_ITEM,
     NEW_INVENTORY_BONUS,
+    parseDamageTypeValue,
     parseInventoryBonusTarget,
     parseStoredMarkupNodes,
     toCustomInventoryItem,
+    toDamageTypeValue,
     toInventoryBonusTargetValue,
     WEAPON_ATTACK_FINESSE_HINT,
     WEAPON_CATEGORY_OPTIONS,
@@ -112,11 +114,9 @@
 
   const draftDamageBonus = ref(initialDraft.damageBonus);
 
-  // undefined вместо '' — пустая строка в качестве значения селекта запрещена,
-  // а незаполненный тип урона должен показывать подсказку поля.
-  const draftDamageType = ref<string | undefined>(
-    initialDraft.damageType || undefined,
-  );
+  // Тип урона живёт в форме значением селектора: пустая строка ему запрещена, а
+  // «не указан» — такой же вариант списка, которым выбранный тип и сбрасывается.
+  const draftDamageType = ref(toDamageTypeValue(initialDraft.damageType));
 
   const draftVersatile = ref(initialDraft.versatile);
 
@@ -130,8 +130,8 @@
 
   const draftExtraDamageDiceFaces = ref(initialDraft.extraDamageDiceFaces);
 
-  const draftExtraDamageType = ref<string | undefined>(
-    initialDraft.extraDamageType || undefined,
+  const draftExtraDamageType = ref(
+    toDamageTypeValue(initialDraft.extraDamageType),
   );
 
   // Бонусы заводятся построчно: у предмета их бывает и ноль, и полдесятка, а
@@ -245,7 +245,6 @@
   /** Поля вкладки «Магические свойства» — они же идут в предпросмотр сводки. */
   type MagicDraftFields = Pick<
     CustomInventoryItemDraft,
-    | 'attackBonus'
     | 'bonuses'
     | 'extraDamageDiceCount'
     | 'extraDamageDiceFaces'
@@ -265,10 +264,9 @@
   function getMagicFields(): MagicDraftFields {
     return {
       magic: draftMagic.value,
-      attackBonus: draftAttackBonus.value,
       extraDamageDiceCount: draftExtraDamageDiceCount.value,
       extraDamageDiceFaces: draftExtraDamageDiceFaces.value,
-      extraDamageType: draftExtraDamageType.value ?? '',
+      extraDamageType: parseDamageTypeValue(draftExtraDamageType.value),
       bonuses: draftBonuses.value.map((bonus) => ({ ...bonus })),
       requiresAttunement: draftRequiresAttunement.value,
       maxCharges: draftMaxCharges.value,
@@ -298,7 +296,8 @@
       damageDiceCount: draftDamageDiceCount.value,
       damageDiceFaces: draftDamageDiceFaces.value,
       damageBonus: draftDamageBonus.value,
-      damageType: draftDamageType.value ?? '',
+      damageType: parseDamageTypeValue(draftDamageType.value),
+      attackBonus: draftAttackBonus.value,
       versatile: draftVersatile.value,
       versatileDiceCount: draftVersatileDiceCount.value,
       versatileDiceFaces: draftVersatileDiceFaces.value,
@@ -307,13 +306,16 @@
   }
 
   // Сводка собирается той же сборкой записи, что и сохранение: так в ней видно
-  // ровно то, что попадёт на лист, — с клампами и отброшенными нулями.
+  // ровно то, что попадёт на лист, — с клампами и отброшенными нулями. Бонус к
+  // попаданию задаётся на вкладке основного, но даёт его предмет — и в сводке
+  // «что даёт предмет» он нужен наравне с магическими надбавками.
   const bonusLabels = computed(() => {
     const previewItem = toCustomInventoryItem(CUSTOM_ITEM_PREVIEW_URL, {
       ...NEW_CUSTOM_INVENTORY_ITEM,
       ...getMagicFields(),
       kind: draftKind.value,
       name: CUSTOM_ITEM_PREVIEW_NAME,
+      attackBonus: draftAttackBonus.value,
     });
 
     return previewItem ? getInventoryItemBonusLabels(previewItem) : [];
@@ -449,9 +451,6 @@
                   <USelect
                     v-model="draftDamageType"
                     :items="DAMAGE_TYPE_OPTIONS"
-                    :placeholder="
-                      CUSTOM_ITEM_FIELD_LABELS.damageTypePlaceholder
-                    "
                   />
                 </div>
               </div>
@@ -493,6 +492,26 @@
 
                 <span class="text-xs text-dimmed">
                   {{ CUSTOM_ITEM_FIELD_LABELS.damageHint }}
+                </span>
+              </div>
+
+              <!-- Собственный бонус к попаданию стоит рядом с уроном, а не в
+                магии: чаще его даёт магическое оружие, но задать его игроку
+                бывает нужно и обычному — например, мастерски выкованному -->
+              <div class="flex flex-col gap-1">
+                <span class="text-[10px] font-bold text-muted uppercase">
+                  {{ CUSTOM_ITEM_FIELD_LABELS.attackBonus }}
+                </span>
+
+                <UInputNumber
+                  v-model="draftAttackBonus"
+                  :min="ITEM_BONUS_MIN"
+                  :max="ITEM_BONUS_MAX"
+                  class="w-26"
+                />
+
+                <span class="text-xs text-dimmed">
+                  {{ CUSTOM_ITEM_FIELD_LABELS.attackBonusHint }}
                 </span>
               </div>
 
@@ -682,8 +701,9 @@
               </div>
             </div>
 
-            <!-- Бонусы боя нужны только оружию: у плаща и кольца попадания нет,
-              и пустые поля сбивали бы с толку сильнее, чем их отсутствие -->
+            <!-- Дополнительный урон нужен только оружию: у плаща и кольца
+              своего броска урона нет, и пустые поля сбивали бы с толку сильнее,
+              чем их отсутствие -->
             <div
               v-if="isWeapon"
               class="flex flex-col gap-3 rounded-lg border border-default/60 p-3"
@@ -694,20 +714,6 @@
               >
                 {{ CUSTOM_ITEM_MAGIC_LABELS.weaponSection }}
               </span>
-
-              <div class="flex min-w-0 flex-col gap-1">
-                <span class="text-[10px] text-dimmed uppercase">
-                  {{ CUSTOM_ITEM_MAGIC_LABELS.attackBonus }}
-                </span>
-
-                <UInputNumber
-                  v-model="draftAttackBonus"
-                  :min="ITEM_BONUS_MIN"
-                  :max="ITEM_BONUS_MAX"
-                  :disabled="!draftMagic"
-                  class="w-26"
-                />
-              </div>
 
               <div class="flex flex-col gap-1">
                 <span class="text-[10px] text-dimmed uppercase">
@@ -733,9 +739,6 @@
                   <USelect
                     v-model="draftExtraDamageType"
                     :items="DAMAGE_TYPE_OPTIONS"
-                    :placeholder="
-                      CUSTOM_ITEM_FIELD_LABELS.damageTypePlaceholder
-                    "
                     :disabled="!draftMagic"
                     class="min-w-0 grow basis-40"
                   />
