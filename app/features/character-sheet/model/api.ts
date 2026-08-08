@@ -460,6 +460,26 @@ export async function saveSharedCharacterSheet(
 }
 
 /**
+ * Текущие хиты чужого листа, сохранённого по ссылке: их отмечает мастер боя в
+ * трекере инициативы. Пишется только `health.current` — максимум лист считает
+ * сам, остальной документ остаётся владельца. Отозванная ссылка или удалённый
+ * лист — 404.
+ *
+ * @param savedId идентификатор сохранённой записи.
+ * @param current текущие хиты персонажа.
+ */
+export async function updateSavedCharacterSheetHitPoints(
+  savedId: string,
+  current: number,
+): Promise<void> {
+  await $fetch(`${CHARACTER_SHEET_SAVED_API_PATH}/${savedId}/health`, {
+    method: 'PATCH',
+    body: { current },
+    retry: 0,
+  });
+}
+
+/**
  * Удаление сохранённой ссылки. Сам лист остаётся у владельца.
  *
  * @param savedId идентификатор сохранённой записи.

@@ -1,6 +1,9 @@
 <script setup lang="ts">
+  import type { SheetPlayerOption } from '~initiative/model';
+
   import CreatureAddForm from './CreatureAddForm.vue';
   import PlayerAddForm from './PlayerAddForm.vue';
+  import SheetPlayerAddForm from './SheetPlayerAddForm.vue';
 
   const {
     open = false,
@@ -10,6 +13,7 @@
     canAddCreature,
     remainingCreatures,
     isMutating = false,
+    linkedSheetIds,
   } = defineProps<{
     open?: boolean;
     playerCount: number;
@@ -18,16 +22,24 @@
     canAddCreature: boolean;
     remainingCreatures: number;
     isMutating?: boolean;
+
+    /** Листы, персонажи которых уже стоят в бою. */
+    linkedSheetIds: Set<string>;
   }>();
 
   const emit = defineEmits<{
     'update:open': [value: boolean];
     'add-player': [name: string, bonus: number, armorClass: number];
+    'add-sheet-player': [option: SheetPlayerOption];
     'add-creatures': [url: string, count: number, name?: string];
   }>();
 
   function onAddPlayer(name: string, bonus: number, armorClass: number): void {
     emit('add-player', name, bonus, armorClass);
+  }
+
+  function onAddSheetPlayer(option: SheetPlayerOption): void {
+    emit('add-sheet-player', option);
   }
 
   function onAddCreatures(url: string, count: number, name?: string): void {
@@ -51,6 +63,14 @@
       v-if="open"
       class="grid items-start gap-4 md:grid-cols-5"
     >
+      <SheetPlayerAddForm
+        class="md:col-span-5"
+        :disabled="!canAddPlayer"
+        :loading="isMutating"
+        :linked-sheet-ids="linkedSheetIds"
+        @add="onAddSheetPlayer"
+      />
+
       <PlayerAddForm
         class="md:col-span-2"
         :count="playerCount"
