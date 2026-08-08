@@ -2,7 +2,11 @@
   import type { ListViewModeButton } from '../model';
 
   import { useListViewMode } from '../composable';
-  import { LIST_VIEW_MODE_OPTIONS } from '../model';
+  import {
+    LIST_VIEW_MODE_COLORS,
+    LIST_VIEW_MODE_OPTIONS,
+    LIST_VIEW_MODE_VARIANTS,
+  } from '../model';
 
   const { block = false } = defineProps<{
     block?: boolean;
@@ -10,17 +14,16 @@
 
   const { viewMode } = useListViewMode();
 
-  // Активный режим подсвечивается заливкой, неактивный остаётся нейтральным —
-  // так пара кнопок читается как переключатель, а не как два независимых действия.
   const viewModeButtons = computed<Array<ListViewModeButton>>(() =>
     LIST_VIEW_MODE_OPTIONS.map((option) => {
       const isActive = option.value === viewMode.value;
+      const state = isActive ? 'active' : 'inactive';
 
       return {
         ...option,
         isActive,
-        color: isActive ? 'primary' : 'neutral',
-        variant: isActive ? 'solid' : 'subtle',
+        color: LIST_VIEW_MODE_COLORS[state],
+        variant: LIST_VIEW_MODE_VARIANTS[state],
       };
     }),
   );

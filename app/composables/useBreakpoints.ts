@@ -71,10 +71,6 @@ export function useBreakpoints() {
 
   const isXsOrLower = computed(() => unref(composition.smaller(Breakpoint.XS)));
 
-  const isXsOrGreater = computed(() =>
-    unref(composition.greaterOrEqual(Breakpoint.XS)),
-  );
-
   const isSmOrGreater = computed(() =>
     unref(composition.greaterOrEqual(Breakpoint.SM)),
   );
@@ -102,7 +98,6 @@ export function useBreakpoints() {
     isDesktop,
     isMobileOrTablet,
     isXsOrLower,
-    isXsOrGreater,
     isSmOrGreater,
     isMdOrGreater,
     isLgOrGreater,

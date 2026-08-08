@@ -8,7 +8,8 @@ import type {
 } from '~ui/grouped-list';
 
 // Контракт группировки — общий с GroupedList, который его исполняет.
-// Единый источник правды живёт в ~ui/grouped-list, здесь только доменные псевдонимы.
+// Единый источник правды живёт в ~ui/grouped-list, здесь только доменные
+// псевдонимы.
 export type ListPresentationGroupKey = GroupKey;
 
 export type ListPresentationSeparatorLabel = SeparatorLabel;
@@ -27,7 +28,8 @@ export type ListViewMode = 'grid' | 'list';
 
 export type ListViewColumns = 1 | 3;
 
-// Кнопка переключателя вида: вариант из LIST_VIEW_MODE_OPTIONS плюс подсветка активного режима.
+// Кнопка переключателя вида: вариант из LIST_VIEW_MODE_OPTIONS плюс подсветка
+// активного режима.
 export interface ListViewModeButton {
   value: ListViewMode;
   label: string;

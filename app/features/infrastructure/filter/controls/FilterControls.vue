@@ -38,7 +38,10 @@
     showPreview?: boolean;
     defaults?: Filter;
     presentationMenus?: Array<PresentationMenu>;
-    /** Переключатель сетки и списка. Включается только на разделах с компактными строками — там, где карточка умеет рисоваться в одну колонку. */
+    /**
+     * Переключатель сетки и списка. Включается только на разделах с компактными
+     * строками — там, где карточка умеет рисоваться в одну колонку.
+     */
     showViewMode?: boolean;
   }>();
 
@@ -78,6 +81,11 @@
   // Меню «⋯» собирает «Поделиться» + группировку/сортировку — только на мобильном.
   const showOverflowMenu = computed(
     () => !isLarge.value && hasPresentationMenus.value,
+  );
+
+  // Второй ряд тулбара с меню представления — только на десктопе.
+  const showPresentationRow = computed(
+    () => isLarge.value && hasPresentationMenus.value,
   );
 
   const overflowItems = computed<Array<Array<DropdownMenuItem>>>(() => [
@@ -289,7 +297,7 @@
     </div>
 
     <div
-      v-if="hasPresentationMenus && isLarge"
+      v-if="showPresentationRow"
       class="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-2"
     >
       <UDropdownMenu

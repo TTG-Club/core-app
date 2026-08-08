@@ -1,3 +1,7 @@
+import type { ButtonProps } from '@nuxt/ui';
+
+import type { ListViewColumns, ListViewMode } from './types';
+
 export const LIST_PRESENTATION_GROUPING_STORAGE_SUFFIX = 'list-grouping';
 export const LIST_PRESENTATION_SORTING_STORAGE_SUFFIX = 'list-sorting';
 
@@ -6,17 +10,31 @@ export const LIST_PRESENTATION_SORTING_LABEL = 'Сортировка';
 export const LIST_PRESENTATION_GROUPING_ICON = 'tabler:category';
 export const LIST_PRESENTATION_SORTING_ICON = 'tabler:sort-ascending';
 
-// Режим отображения общий для всех разделов, поэтому ключ не привязан к sectionKey, в отличие от группировки и сортировки.
+// Режим отображения общий для всех разделов, поэтому ключ не привязан к
+// sectionKey, в отличие от группировки и сортировки.
 export const LIST_VIEW_MODE_STORAGE_KEY = 'ui:list-view-mode';
 
-export const LIST_VIEW_MODE_DEFAULT = 'grid';
+export const LIST_VIEW_MODE_DEFAULT: ListViewMode = 'grid';
 
-// Сетка ограничена тремя колонками — столько же было захардкожено на страницах разделов до появления переключателя и стоит дефолтом в GroupedList.
-export const LIST_VIEW_MODE_GRID_COLUMNS = 3;
+// Сетка ограничена тремя колонками — столько же было захардкожено на страницах
+// разделов до появления переключателя и стоит дефолтом в GroupedList.
+export const LIST_VIEW_MODE_GRID_COLUMNS: ListViewColumns = 3;
 
-export const LIST_VIEW_MODE_LIST_COLUMNS = 1;
+export const LIST_VIEW_MODE_LIST_COLUMNS: ListViewColumns = 1;
 
 export const LIST_VIEW_MODE_OPTIONS = [
   { value: 'grid', label: 'Сеткой', icon: 'tabler:layout-grid' },
   { value: 'list', label: 'Списком', icon: 'tabler:list' },
 ] as const;
+
+// Активный режим подсвечивается заливкой, неактивный остаётся нейтральным — так
+// пара кнопок читается как переключатель, а не как два независимых действия.
+export const LIST_VIEW_MODE_COLORS = {
+  active: 'primary',
+  inactive: 'neutral',
+} as const satisfies Record<string, ButtonProps['color']>;
+
+export const LIST_VIEW_MODE_VARIANTS = {
+  active: 'solid',
+  inactive: 'subtle',
+} as const satisfies Record<string, ButtonProps['variant']>;
