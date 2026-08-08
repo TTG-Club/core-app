@@ -627,6 +627,17 @@ modals), so its capabilities are listed here rather than squeezed into the table
 | `vttg`           | Marketing landing for the VTTG virtual tabletop (`/vttg`) + build downloads | `model`, `ui` (hero / features / FAQ / video sections, `VttgDownloadModal` — early-access notice behind the hero «Скачать» button, `VttgDownloadBuilds` — per-platform rows with their own version), `composables` (`useVttgBuilds` — every build from the update channel) |
 | `infrastructure` | Cross-cutting app shell & chrome                                            | `sidebar`, `search`, `filter`, `list-presentation`, `footer`, `cookie-consent`, `pwa`                                                                                                                                                                                      |
 
+- `list-presentation` carries the third axis of a section list next to grouping
+  and sorting: `view-mode` toggles the catalog between a card grid and a compact
+  one-column list. Unlike grouping and sorting the choice is shared by every
+  section, so it is stored under one key (`list-presentation:view-mode`) rather
+  than per `sectionKey`, and it is offered only where a compact row makes sense —
+  `classes`, `sources` and `species` keep their image cards. Switching columns
+  changes the list height several times over, so `GroupedList` keeps the card
+  under the viewport top in place (`restoreListScrollAnchor` in
+  `useSectionListScroll`); the same path covers a window resize, a tablet
+  rotation and opening the detail pane.
+
 ### Anatomy of a Feature (Example: `tokenator`)
 
 ```

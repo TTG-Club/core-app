@@ -28,6 +28,9 @@ export type ListViewMode = 'grid' | 'list';
 
 export type ListViewColumns = 1 | 3;
 
+/** Состояние кнопки переключателя, по нему выбирается оформление. */
+export type ListViewModeState = 'active' | 'inactive';
+
 // Кнопка переключателя вида: вариант из LIST_VIEW_MODE_OPTIONS плюс подсветка
 // активного режима.
 export interface ListViewModeButton {

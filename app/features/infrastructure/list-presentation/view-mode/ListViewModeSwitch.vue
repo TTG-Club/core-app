@@ -1,14 +1,16 @@
 <script setup lang="ts">
-  import type { ListViewModeButton } from '../model';
+  import type { ListViewModeButton, ListViewModeState } from '../model';
 
   import { useListViewMode } from '../composable';
   import {
     LIST_VIEW_MODE_COLORS,
+    LIST_VIEW_MODE_GROUP_LABEL,
     LIST_VIEW_MODE_OPTIONS,
     LIST_VIEW_MODE_VARIANTS,
   } from '../model';
 
   const { block = false } = defineProps<{
+    /** Растягивает пару кнопок на всю ширину — для отдельного ряда на десктопе. */
     block?: boolean;
   }>();
 
@@ -17,7 +19,7 @@
   const viewModeButtons = computed<Array<ListViewModeButton>>(() =>
     LIST_VIEW_MODE_OPTIONS.map((option) => {
       const isActive = option.value === viewMode.value;
-      const state = isActive ? 'active' : 'inactive';
+      const state: ListViewModeState = isActive ? 'active' : 'inactive';
 
       return {
         ...option,
@@ -30,7 +32,10 @@
 </script>
 
 <template>
-  <UFieldGroup>
+  <UFieldGroup
+    role="group"
+    :aria-label="LIST_VIEW_MODE_GROUP_LABEL"
+  >
     <UButton
       v-for="button in viewModeButtons"
       :key="button.value"

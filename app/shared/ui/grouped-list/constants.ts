@@ -16,6 +16,11 @@ export const GROUPED_LIST_DEFAULT_SEPARATOR_HEIGHT = 31;
 // Отступ сверху для разделителей, которые идут не первыми (визуальный зазор от предыдущего списка).
 export const GROUPED_LIST_DEFAULT_SEPARATOR_TOP_OFFSET = 18;
 
+// Сколько кадров доводить позицию скролла после смены числа колонок: ширина
+// контейнера приходит от ResizeObserver отдельным тиком, и первый пересчёт
+// смещений может опираться на прежнюю раскладку.
+export const GROUPED_LIST_ANCHOR_SETTLE_FRAMES = 5;
+
 // Отступ от нижней границы экрана для расчета видимой области.
 export const GROUPED_LIST_DEFAULT_BOTTOM_OFFSET = 32;
 

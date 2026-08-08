@@ -14,6 +14,7 @@
   import { PageGrid } from '~ui/page';
 
   import {
+    GROUPED_LIST_ANCHOR_SETTLE_FRAMES,
     GROUPED_LIST_COLUMN_BREAKPOINTS,
     GROUPED_LIST_DEFAULT_BOTTOM_OFFSET,
     GROUPED_LIST_DEFAULT_COLUMNS,
@@ -637,6 +638,103 @@
     },
     { immediate: true },
   );
+
+  /**
+   * Карточка под верхом вьюпорта и отступ до верха её строки. Дельта обязательна:
+   * без неё якорь превращается в «прижать строку к верху экрана», и обратное
+   * переключение не вернуло бы на прежнее место.
+   */
+  const viewportAnchor = shallowRef<{
+    itemKey: string;
+    topDelta: number;
+  } | null>(null);
+
+  // Якорь снимается на скролле, а не в момент смены раскладки: `columns` —
+  // проп, и к первому же watcher'у строки пересчитаны под новое число колонок.
+  // Поэтому же следим за `windowScrollTop`, а не за смещениями строк: их
+  // пересчёт означает, что раскладка уже новая, и якорь прежней был бы потерян.
+  watch(
+    windowScrollTop,
+    () => {
+      if (!virtualContainerElement.value) {
+        return;
+      }
+
+      const containerTop =
+        windowScrollTop.value
+        + virtualContainerElement.value.getBoundingClientRect().top;
+
+      // Последняя строка, начинающаяся не ниже верха вьюпорта, — она его и
+      // пересекает.
+      const anchorRow = visibleVirtualRows.value.findLast(
+        ({ row, top }) =>
+          row.type === 'items' && containerTop + top <= windowScrollTop.value,
+      );
+
+      const anchorItem =
+        anchorRow?.row.type === 'items' ? anchorRow.row.items[0] : undefined;
+
+      if (!anchorRow || !anchorItem) {
+        viewportAnchor.value = null;
+
+        return;
+      }
+
+      viewportAnchor.value = {
+        itemKey: getItemKey(anchorItem),
+        topDelta: windowScrollTop.value - (containerTop + anchorRow.top),
+      };
+    },
+    { flush: 'sync' },
+  );
+
+  // При смене числа колонок высота списка меняется кратно, а позиция скролла
+  // остаётся прежней — пользователь оказывается в другой части каталога.
+  // Возвращаем под вьюпорт ту же карточку.
+  //
+  // Колонки меняет и ширина контейнера, поэтому переключатель, ресайз окна,
+  // поворот планшета и панель детали идут одним путём.
+  watch(activeVirtualColumns, () => {
+    const anchor = viewportAnchor.value;
+
+    if (!anchor) {
+      return;
+    }
+
+    // Смещения строк зависят от ширины контейнера, а она приходит от
+    // ResizeObserver отдельным тиком: сразу после смены колонок расчёт ещё может
+    // опираться на прежнюю раскладку. Доводим позицию, пока она меняется, но не
+    // дольше нескольких кадров — раскладка успевает устояться за один-два.
+    let framesLeft = GROUPED_LIST_ANCHOR_SETTLE_FRAMES;
+    let previousScrollTop = -1;
+
+    const applyAnchor = () => {
+      // Позицию берём расчётом, а не из DOM: после смены раскладки карточка
+      // может быть не отрисована.
+      const itemScrollTop = getVirtualItemScrollTop(anchor.itemKey);
+
+      if (itemScrollTop === undefined) {
+        return;
+      }
+
+      const scrollTop = Math.max(0, itemScrollTop + anchor.topDelta);
+
+      if (scrollTop === previousScrollTop) {
+        return;
+      }
+
+      previousScrollTop = scrollTop;
+      window.scrollTo({ behavior: 'instant', top: scrollTop });
+
+      framesLeft -= 1;
+
+      if (framesLeft > 0) {
+        requestAnimationFrame(applyAnchor);
+      }
+    };
+
+    requestAnimationFrame(applyAnchor);
+  });
 
   // Скролл к началу списка только при смене фильтра/поиска (resetKey).
   // Изменение колонок при ресайзе не должно вызывать прокрутку.
