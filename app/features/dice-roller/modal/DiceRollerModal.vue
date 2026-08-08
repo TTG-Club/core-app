@@ -160,7 +160,7 @@
   >
     <div
       v-if="isOpen"
-      class="fixed inset-x-4 top-4 bottom-20 md:inset-auto md:right-4 md:bottom-20 md:w-96"
+      class="fixed inset-x-4 top-4 bottom-20 fixed-scrollbar-offset md:inset-auto md:right-4 md:bottom-20 md:w-96"
     >
       <div
         class="relative flex flex-col overflow-hidden rounded-md border border-default bg-elevated shadow-2xl backdrop-blur-md"
