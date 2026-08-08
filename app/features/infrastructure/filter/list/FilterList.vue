@@ -29,6 +29,10 @@
     return groupIndex === 0 ? 'top' : 'bottom';
   }
 
+  const emit = defineEmits<{
+    (event: 'update:empty', value: boolean): void;
+  }>();
+
   const { preview = false, search = '' } = defineProps<{
     preview?: boolean;
     search?: string;
@@ -37,18 +41,16 @@
   /**
    * Определяет видимость группы в обычном режиме и режиме предпросмотра.
    *
-   * При активном поиске пустой набор означает, что не подошло ни одно значение группы и её название — показывать такую группу нечем. Без поиска поведение прежнее: группа без доступных значений остаётся на месте.
+   * При активном поиске пустой набор означает, что не подошло ни одно значение
+   * группы и её название — показывать такую группу нечем. Без поиска поведение
+   * прежнее: группа без доступных значений остаётся на месте.
    */
-  function isGroupVisible(
-    items: FilterItems,
-    isPreview: boolean,
-    isSearching: boolean,
-  ): boolean {
-    if (isSearching && items.length === 0) {
+  function isGroupVisible(items: FilterItems): boolean {
+    if (search && items.length === 0) {
       return false;
     }
 
-    return !isPreview || hasTouchedItem(items);
+    return !preview || hasTouchedItem(items);
   }
 
   const filter = defineModel<FilterGroups>({
@@ -66,7 +68,11 @@
     return preview ? 'standalone' : getGroupPosition(itemIndex, groupLength);
   }
 
-  /** Значения группы, доступные каскадом зависимостей и подходящие под поиск. Поиск применяется поверх каскада, чтобы не показать значение, которое зависимая группа уже скрыла. */
+  /**
+   * Значения группы, доступные каскадом зависимостей и подходящие под поиск.
+   * Поиск применяется поверх каскада, чтобы не показать значение, которое
+   * зависимая группа уже скрыла.
+   */
   function getVisibleGroupItems(
     group: FilterGroup,
     groups: FilterGroups,
@@ -96,11 +102,11 @@
         const nextAvailableItems = getVisibleGroupItems(nextGroup, groups);
         const combinedGroups: DisplayGroup[] = [];
 
-        if (isGroupVisible(availableItems, preview, !!search)) {
+        if (isGroupVisible(availableItems)) {
           combinedGroups.push({ group, index: i, availableItems });
         }
 
-        if (isGroupVisible(nextAvailableItems, preview, !!search)) {
+        if (isGroupVisible(nextAvailableItems)) {
           combinedGroups.push({
             group: nextGroup,
             index: i + 1,
@@ -115,13 +121,22 @@
         // Зависимая группа уже отрисована в паре с текущей — пропускаем её,
         // чтобы не вывести повторно на следующей итерации.
         i++;
-      } else if (isGroupVisible(availableItems, preview, !!search)) {
+      } else if (isGroupVisible(availableItems)) {
         displayGroups.push([{ group, index: i, availableItems }]);
       }
     }
 
     return displayGroups;
   });
+
+  // Пустоту знает только этот компонент — перебор групп живёт здесь. Дровер
+  // показывает по ней пустое состояние, поэтому признак уходит наружу событием,
+  // а не считается там заново.
+  watch(
+    () => groupedFilters.value.length === 0,
+    (isEmpty) => emit('update:empty', isEmpty),
+    { immediate: true },
+  );
 
   /** Обновляет группу фильтров без мутации массива верхнего уровня. */
   function handleGroupUpdate(index: number, updatedGroup: FilterGroup): void {
