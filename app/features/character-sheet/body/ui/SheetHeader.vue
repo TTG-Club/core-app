@@ -61,6 +61,7 @@
     'duplicate': [];
     'expand': [];
     'remove': [];
+    'edit-ability-scores': [];
     'edit-background': [];
     'edit-class': [];
     'edit-name': [];
@@ -95,6 +96,7 @@
       onDuplicate: () => emit('duplicate'),
       onRemove: () => emit('remove'),
       onSettings: () => emit('edit-settings'),
+      onAbilityScores: () => emit('edit-ability-scores'),
       onShare: () => emit('share'),
     }),
   );
