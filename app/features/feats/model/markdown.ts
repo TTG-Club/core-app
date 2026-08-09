@@ -1,6 +1,6 @@
 import type { FeatDetailResponse } from './detail';
 
-import { buildMarkdownEntity, joinStat } from '~ui/markup';
+import { buildMarkdownEntity, escapeMarkdown, joinStat } from '~ui/markup';
 
 /**
  * Собирает черту в Markdown формата Homebrewery.
@@ -14,10 +14,12 @@ export function getFeatMarkdown(feat: FeatDetailResponse): string {
     nameEng: feat.name.eng,
     subtitle: feat.category,
     stats: [
-      ['Требование', feat.prerequisite],
+      ['Требование', escapeMarkdown(feat.prerequisite)],
       [
         'Предыстории',
-        joinStat(feat.backgrounds?.map((item) => item.name) ?? []),
+        joinStat(
+          feat.backgrounds?.map((item) => escapeMarkdown(item.name)) ?? [],
+        ),
       ],
     ],
     source: feat.source,

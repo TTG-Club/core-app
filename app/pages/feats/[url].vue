@@ -13,9 +13,13 @@
     $fetch<FeatDetailResponse>(`/api/v2/feats/${route.params.url}`),
   );
 
-  const markdown = computed(() =>
-    feat.value ? getFeatMarkdown(feat.value) : '',
-  );
+  // Геттер, а не готовая строка: сборка Markdown разбирает всю
+  // разметку сущности, поэтому откладывается до клика по кнопке.
+  const markdown = computed(() => {
+    const entity = feat.value;
+
+    return entity ? () => getFeatMarkdown(entity) : undefined;
+  });
 
   useSeoMeta({
     title: getSeoTitle,

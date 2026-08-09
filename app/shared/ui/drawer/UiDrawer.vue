@@ -26,8 +26,12 @@
     isError?: boolean;
     url?: string;
     editUrl?: string;
-    /** Готовый Markdown сущности; без него кнопка копирования не показывается. */
-    markdown?: string;
+    /**
+     * Геттер Markdown сущности; пока сущность не загружена — `undefined`, и
+     * кнопка копирования не показывается. Именно геттер, а не строка: сборка
+     * разбирает всю разметку сущности и идёт по клику, а не на рендер.
+     */
+    markdown?: () => string;
     copyTitle?: boolean;
     dateTime?: string | number | Date | Dayjs | null;
     dateTimeFormat?: string;

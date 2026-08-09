@@ -1,11 +1,12 @@
 import type { SpeciesDetailResponse } from './types';
 
-import { buildMarkdownEntity, toMarkdown } from '~ui/markup';
+import { buildMarkdownEntity, escapeMarkdown, toMarkdown } from '~ui/markup';
 
 /**
  * Собирает вид в Markdown формата Homebrewery.
  *
- * Умения вида приходят отдельным списком, а не частью описания, поэтому каждое выводится своим подзаголовком после основного текста.
+ * Умения вида приходят отдельным списком, а не частью описания, поэтому
+ * каждое выводится своим подзаголовком после основного текста.
  *
  * @param species - Вид с бэкенда
  * @returns Markdown-текст вида
@@ -18,15 +19,15 @@ export function getSpeciesMarkdown(species: SpeciesDetailResponse): string {
     nameEng: species.name.eng,
     subtitle: species.parent?.name.rus,
     stats: [
-      ['Тип существа', type],
-      ['Размер', size],
-      ['Скорость', speed],
+      ['Тип существа', escapeMarkdown(type)],
+      ['Размер', escapeMarkdown(size)],
+      ['Скорость', escapeMarkdown(speed)],
     ],
     source: species.source,
     description: species.description,
     extra: (species.features ?? []).map((feature) =>
       [
-        feature.name.rus ? `##### ${feature.name.rus}` : '',
+        feature.name.rus ? `##### ${escapeMarkdown(feature.name.rus)}` : '',
         toMarkdown(feature.description),
       ]
         .filter(Boolean)

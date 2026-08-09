@@ -15,9 +15,13 @@
       $fetch<GlossaryDetailResponse>(`/api/v2/glossary/${route.params.url}`),
   );
 
-  const markdown = computed(() =>
-    glossary.value ? getGlossaryMarkdown(glossary.value) : '',
-  );
+  // Геттер, а не готовая строка: сборка Markdown разбирает всю
+  // разметку сущности, поэтому откладывается до клика по кнопке.
+  const markdown = computed(() => {
+    const entity = glossary.value;
+
+    return entity ? () => getGlossaryMarkdown(entity) : undefined;
+  });
 
   useSeoMeta({
     title: getSeoTitle,

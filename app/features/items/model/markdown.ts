@@ -1,6 +1,6 @@
 import type { ItemDetailResponse } from './detail';
 
-import { buildMarkdownEntity } from '~ui/markup';
+import { buildMarkdownEntity, escapeMarkdown } from '~ui/markup';
 
 /**
  * Собирает предмет снаряжения в Markdown формата Homebrewery.
@@ -13,10 +13,12 @@ export function getItemMarkdown(item: ItemDetailResponse): string {
     name: item.name.rus,
     nameEng: item.name.eng,
     subtitle: item.subtitle,
+    // Значения приходят сырой строкой из API и разметкой не являются:
+    // звёздочка или бэктик в них уехали бы в Homebrewery как разметка.
     stats: [
-      ['Тип', item.types],
-      ['Стоимость', item.cost],
-      ['Вес', item.weight],
+      ['Тип', escapeMarkdown(item.types)],
+      ['Стоимость', escapeMarkdown(item.cost)],
+      ['Вес', escapeMarkdown(item.weight)],
     ],
     source: item.source,
     description: item.description,

@@ -1,6 +1,6 @@
 import type { SourceDetailResponse } from './detail';
 
-import { buildMarkdownEntity, joinStat } from '~ui/markup';
+import { buildMarkdownEntity, escapeMarkdown, joinStat } from '~ui/markup';
 
 /**
  * Собирает источник в Markdown формата Homebrewery.
@@ -16,11 +16,23 @@ export function getSourceMarkdown(source: SourceDetailResponse): string {
     stats: [
       [
         'Издатель',
-        joinStat([source.publisher?.name, source.publisher?.date], ', '),
+        joinStat(
+          [
+            escapeMarkdown(source.publisher?.name),
+            escapeMarkdown(source.publisher?.date),
+          ],
+          ', ',
+        ),
       ],
       [
         'Перевод',
-        joinStat([source.translation?.authors, source.translation?.date], ', '),
+        joinStat(
+          [
+            escapeMarkdown(source.translation?.authors),
+            escapeMarkdown(source.translation?.date),
+          ],
+          ', ',
+        ),
       ],
     ],
     source: source.source,

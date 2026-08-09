@@ -15,9 +15,13 @@
       $fetch<CreatureDetailResponse>(`/api/v2/bestiary/${route.params.url}`),
   );
 
-  const markdown = computed(() =>
-    creature.value ? getCreatureMarkdown(creature.value) : '',
-  );
+  // Геттер, а не готовая строка: сборка Markdown разбирает всю
+  // разметку сущности, поэтому откладывается до клика по кнопке.
+  const markdown = computed(() => {
+    const entity = creature.value;
+
+    return entity ? () => getCreatureMarkdown(entity) : undefined;
+  });
 
   useSeoMeta({
     title: getSeoTitle,

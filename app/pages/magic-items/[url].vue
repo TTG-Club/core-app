@@ -17,9 +17,13 @@
       ),
   );
 
-  const markdown = computed(() =>
-    magicItem.value ? getMagicItemMarkdown(magicItem.value) : '',
-  );
+  // Геттер, а не готовая строка: сборка Markdown разбирает всю
+  // разметку сущности, поэтому откладывается до клика по кнопке.
+  const markdown = computed(() => {
+    const entity = magicItem.value;
+
+    return entity ? () => getMagicItemMarkdown(entity) : undefined;
+  });
 
   useSeoMeta({
     title: getSeoTitle,

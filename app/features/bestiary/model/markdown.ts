@@ -6,7 +6,14 @@ import type {
   CreatureDetailResponse,
 } from './detail';
 
-import { buildMarkdownEntity, joinStat, toMarkdown } from '~ui/markup';
+import {
+  buildMarkdownEntity,
+  buildStatsBlock,
+  escapeMarkdown,
+  joinStat,
+  toInlineValue,
+  toMarkdown,
+} from '~ui/markup';
 
 /** Подписи характеристик в порядке строк таблицы. */
 const ABILITY_LABELS: Array<[keyof CreatureAbilitiesResponse, string]> = [
@@ -27,10 +34,21 @@ const ACTION_BLOCK_LABELS = {
   legendary: 'Легендарные действия',
 } as const;
 
+/** Подписи свойств в разделе про вид существа. */
+const SECTION_LABELS = {
+  habitats: 'Места обитания',
+  treasures: 'Сокровища',
+} as const;
+
+/** Запасное название блока логова: у части существ `lair.name` пустое. */
+const LAIR_FALLBACK_NAME = 'Логово';
+
 /**
  * Собирает существо в Markdown формата Homebrewery.
  *
- * Статблок объёмнее шапки прочих разделов: за свойствами идёт таблица характеристик, затем однотипные блоки черт, действий, реакций и легендарных действий, а в конце — логово и раздел про вид существа.
+ * Статблок объёмнее шапки прочих разделов: за свойствами идёт таблица
+ * характеристик, затем однотипные блоки черт, действий, реакций и
+ * легендарных действий, а в конце — логово и раздел про вид существа.
  *
  * @param creature - Существо с бэкенда
  * @returns Markdown-текст существа
@@ -60,49 +78,70 @@ export function getCreatureMarkdown(creature: CreatureDetailResponse): string {
 function getStats(creature: CreatureDetailResponse): MarkdownStat[] {
   const { initiative, hit } = creature;
 
+  // Значения, кроме снаряжения, приходят сырой строкой из API и разметкой не
+  // являются: звёздочка или бэктик в них уехали бы в Homebrewery как разметка.
   return [
-    ['КД', creature.ac],
-    ['Инициатива', joinStat([initiative?.value, wrap(initiative?.label)], ' ')],
+    ['КД', escapeMarkdown(creature.ac)],
+    [
+      'Инициатива',
+      joinStat(
+        [
+          escapeMarkdown(initiative.value),
+          toParenthesized(escapeMarkdown(initiative.label)),
+        ],
+        ' ',
+      ),
+    ],
     [
       'Хиты',
-      joinStat([String(hit?.hit ?? ''), wrap(hit?.formula), hit?.text], ' '),
+      joinStat(
+        [
+          // `hit` — число, экранировать в нём нечего.
+          String(hit.hit),
+          toParenthesized(escapeMarkdown(hit.formula)),
+          escapeMarkdown(hit.text),
+        ],
+        ' ',
+      ),
     ],
-    // В `speed` попадают лишние пробелы («80 фт. , лазая»), поэтому строка нормализуется.
+    // В `speed` попадают лишние пробелы («80 фт. , лазая»), поэтому строка
+    // нормализуется.
     [
       'Скорость',
-      creature.speed?.replace(/\s+([,;])/g, '$1').replace(/\s{2,}/g, ' '),
+      escapeMarkdown(
+        creature.speed.replace(/\s+([,;])/g, '$1').replace(/\s{2,}/g, ' '),
+      ),
     ],
     ['Навыки', joinStat((creature.skills ?? []).map(toSkill))],
-    ['Уязвимости', creature.vulnerability],
-    ['Сопротивления', creature.resistance],
-    ['Иммунитеты', creature.immunity],
-    ['Снаряжение', toInline(creature.equipments)],
-    ['Чувства', creature.sense],
-    ['Языки', creature.languages],
-    ['ПО', creature.cr],
+    ['Уязвимости', escapeMarkdown(creature.vulnerability)],
+    ['Сопротивления', escapeMarkdown(creature.resistance)],
+    ['Иммунитеты', escapeMarkdown(creature.immunity)],
+    ['Снаряжение', toInlineValue(creature.equipments)],
+    ['Чувства', escapeMarkdown(creature.sense)],
+    ['Языки', escapeMarkdown(creature.languages)],
+    ['ПО', escapeMarkdown(creature.cr)],
   ];
 }
 
 /** Навык строкой «Скрытность +6». */
 function toSkill(skill: { label: string; value: string }): string {
-  return joinStat([skill.label, skill.value], ' ');
+  return joinStat(
+    [escapeMarkdown(skill.label), escapeMarkdown(skill.value)],
+    ' ',
+  );
 }
 
-/** Оборачивает значение в скобки; пустое остаётся пустым, чтобы не рисовать «()». */
-function wrap(value: string | undefined | null): string {
+/**
+ * Оборачивает значение в скобки; пустое остаётся пустым, чтобы не рисовать
+ * «()».
+ */
+function toParenthesized(value: string | undefined | null): string {
   return value ? `(${value})` : '';
-}
-
-/** Значение свойства всегда однострочное: перенос разорвал бы строку `**Ключ** :: Значение`. */
-function toInline(value: unknown): string {
-  return toMarkdown(value)
-    .replace(/\s*\n\s*/g, ' ')
-    .trim();
 }
 
 /** Характеристики таблицей: значение, модификатор и спасбросок по каждой. */
 function getAbilitiesTable(abilities: CreatureAbilitiesResponse): string {
-  const rows = ABILITY_LABELS.filter(([key]) => abilities?.[key]).map(
+  const rows = ABILITY_LABELS.filter(([key]) => abilities[key]).map(
     ([key, label]) => {
       const { value, mod, sav } = abilities[key];
 
@@ -133,20 +172,28 @@ function getActionBlock(
   return `##### ${label}\n\n${items.map(toActionItem).join('\n\n')}`;
 }
 
-/** Пункт блока: жирно-курсивное название и описание следом. Переносы внутри описания сохраняются — у некоторых действий там список (например перечень заклинаний по частоте). Безымянный пункт остаётся одним описанием, без пустого выделения. */
+/**
+ * Пункт блока: жирно-курсивное название и описание следом. Переносы внутри
+ * описания сохраняются — у некоторых действий там список (например перечень
+ * заклинаний по частоте). Безымянный пункт остаётся одним описанием, без
+ * пустого выделения.
+ */
 function toActionItem(item: CreatureActionResponse): string {
   const description = toMarkdown(item.description).trim();
 
-  return item.name?.rus
-    ? `***${item.name.rus}.*** ${description}`
+  return item.name.rus
+    ? `***${escapeMarkdown(item.name.rus)}.*** ${description}`
     : description;
 }
 
-/** Легендарные действия: вводный абзац из ответа идёт перед списком самих действий. */
+/**
+ * Легендарные действия: вводный абзац из ответа идёт перед списком самих
+ * действий.
+ */
 function getLegendary(creature: CreatureDetailResponse): string {
   const { legendary } = creature;
 
-  if (!legendary?.actions?.length) {
+  if (!legendary.actions?.length) {
     return '';
   }
 
@@ -163,14 +210,14 @@ function getLegendary(creature: CreatureDetailResponse): string {
 function getLair(creature: CreatureDetailResponse): string {
   const { lair } = creature;
 
-  if (!lair?.effects?.length && !lair?.description?.length) {
+  if (!lair.effects?.length && !lair.description?.length) {
     return '';
   }
 
   return [
-    `##### ${lair.name || 'Логово'}`,
+    `##### ${escapeMarkdown(lair.name) || LAIR_FALLBACK_NAME}`,
     toMarkdown(lair.description),
-    ...(lair.effects ?? []).map(toActionItem),
+    ...lair.effects.map(toActionItem),
     toMarkdown(lair.ending),
   ]
     .filter(Boolean)
@@ -181,22 +228,20 @@ function getLair(creature: CreatureDetailResponse): string {
 function getSection(creature: CreatureDetailResponse): string {
   const { section } = creature;
 
-  if (!section?.description?.length) {
+  if (!section.description?.length) {
     return '';
   }
 
-  const stats = [
-    ['Места обитания', section.habitats],
-    ['Сокровища', section.treasures],
-  ]
-    .filter(([, value]) => value)
-    .map(([label, value]) => `**${label}** :: ${value}`)
-    .join('\n');
+  const stats = buildStatsBlock([
+    [SECTION_LABELS.habitats, escapeMarkdown(section.habitats)],
+    [SECTION_LABELS.treasures, escapeMarkdown(section.treasures)],
+  ]);
 
-  // Название раздела бывает пустым (например у `gallows-speaker-rhw`) — тогда заголовок не рисуется, иначе получилась бы строка из одних решёток.
+  // Название раздела бывает пустым (например у `gallows-speaker-rhw`) —
+  // тогда заголовок не рисуется, иначе получилась бы строка из одних решёток.
   return [
-    section.name.rus ? `##### ${section.name.rus}` : '',
-    section.subtitle ? `*${section.subtitle}*` : '',
+    section.name.rus ? `##### ${escapeMarkdown(section.name.rus)}` : '',
+    section.subtitle ? `*${escapeMarkdown(section.subtitle)}*` : '',
     stats,
     toMarkdown(section.description),
   ]
