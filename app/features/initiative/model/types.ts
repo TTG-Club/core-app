@@ -19,6 +19,24 @@ export interface TrackerParticipant {
   initiativeRoll?: number;
   initiativeTotal?: number;
   creatureUrl?: string;
+
+  /** Текущие хиты; не задано — существо на полных, у игрока хитов нет. */
+  currentHitPoints?: number;
+
+  /** Максимум хитов, заданный мастером; не задано — среднее из статблока. */
+  maxHitPoints?: number;
+
+  /** КД игрока; не задано — не задан (у существа берётся из статблока). */
+  armorClass?: number;
+
+  /** Цвет иконки; не задано — цвет по умолчанию. */
+  color?: ParticipantColor;
+
+  /** Привязка игрока к листу персонажа; не задано — заведён вручную. */
+  sheetLink?: ParticipantSheetLink;
+
+  /** Наложенные состояния. */
+  conditions: Array<ParticipantCondition>;
 }
 
 /**
@@ -31,6 +49,12 @@ export interface TrackerDetailed {
   status: TrackerStatus;
   statusName: string;
   round: number;
+
+  /**
+   * Новая инициатива каждый раунд: в начале раунда бэк сам перебрасывает её
+   * всем живым участникам и передаёт ход первому по новому порядку.
+   */
+  rerollEachRound: boolean;
   currentParticipantId?: string;
   /** Приходит ЕДИНСТВЕННЫЙ раз — в ответе на создание анонимного трекера. */
   accessKey?: string;
@@ -46,14 +70,21 @@ export interface TrackerListItem {
   status: TrackerStatus;
   statusName: string;
   round: number;
+
+  /** Новая инициатива каждый раунд. */
+  rerollEachRound: boolean;
+
   deleted: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-/** Тело запроса создания/переименования трекера. */
-export interface TrackerNameRequest {
-  name: string;
+/** Тело запроса создания/правки трекера — применяются присланные поля. */
+export interface TrackerUpdateRequest {
+  name?: string;
+
+  /** Новая инициатива каждый раунд; поля нет — опция не меняется. */
+  rerollEachRound?: boolean;
 }
 
 /** Добавление игрока (по одному). */
@@ -61,6 +92,16 @@ export interface AddPlayerRequest {
   type: 'PLAYER';
   name: string;
   initiativeBonus?: number;
+
+  /** Хиты игрока — приходят с листа персонажа. */
+  currentHitPoints?: number;
+  maxHitPoints?: number;
+
+  /** КД игрока: задаёт мастер или лист персонажа. */
+  armorClass?: number;
+
+  /** Привязка к листу персонажа. */
+  sheetLink?: ParticipantSheetLink;
 }
 
 /** Добавление существ из бестиария (пачкой). */
@@ -80,6 +121,14 @@ export interface UpdateParticipantRequest {
   initiativeBonus?: number;
   initiativeRoll?: number;
   dead?: boolean;
+  currentHitPoints?: number;
+  maxHitPoints?: number;
+  armorClass?: number;
+  color?: ParticipantColor;
+  sheetLink?: ParticipantSheetLink;
+
+  /** Состояния целиком: присланный список заменяет прежний, пустой — снимает все. */
+  conditions?: Array<ParticipantCondition>;
 }
 
 /** Слот единственного анонимного трекера в localStorage. */
@@ -93,6 +142,142 @@ export interface CreatureOption {
   url: string;
   label: string;
   challengeRating: string;
+}
+
+/**
+ * Состояние участника: пятнадцать состояний PHB 2024 и частые эффекты боя,
+ * которые состояниями по правилам не являются, но мастеру их отмечать так же
+ * нужно (концентрация, ускорение, увеличение и прочее).
+ */
+export type ConditionKey =
+  | 'blinded'
+  | 'charmed'
+  | 'deafened'
+  | 'exhaustion'
+  | 'frightened'
+  | 'grappled'
+  | 'incapacitated'
+  | 'invisible'
+  | 'paralyzed'
+  | 'petrified'
+  | 'poisoned'
+  | 'prone'
+  | 'restrained'
+  | 'stunned'
+  | 'unconscious'
+  | 'concentration'
+  | 'hasted'
+  | 'slowed'
+  | 'enlarged'
+  | 'reduced'
+  | 'polymorphed';
+
+/** Состояние в справочнике: подпись и иконка. */
+export interface ConditionOption {
+  label: string;
+  icon: string;
+}
+
+/**
+ * Момент, когда состояние спадает само: на границе раунда (у всех разом), в
+ * начале или в конце хода того, на кого оно наложено. «Начало раунда» и «конец
+ * раунда» — один и тот же момент, поэтому вариант один.
+ */
+export type ConditionExpiry = 'round-end' | 'turn-start' | 'turn-end';
+
+/** Состояние, наложенное на участника трекера. */
+export interface ParticipantCondition {
+  key: ConditionKey;
+
+  /**
+   * Раунд, к которому состояние спадает само (раунд наложения плюс
+   * длительность); `null` — держится, пока мастер не снимет его вручную.
+   */
+  expiresAtRound: number | null;
+
+  /** Когда именно спадает состояние с вышедшим сроком. */
+  expiresOn: ConditionExpiry;
+}
+
+/**
+ * Цвет иконки участника без картинки. Значения — семантические цвета темы: свои
+ * оттенки в проекте не заводятся, а этих хватает, чтобы отряд различался в
+ * ленте боя. `secondary` в палитру не берём: в теме он сведён к той же серой
+ * шкале, что и `neutral`, и два образца были бы неотличимы.
+ */
+export type ParticipantColor =
+  | 'neutral'
+  | 'primary'
+  | 'success'
+  | 'info'
+  | 'warning'
+  | 'error';
+
+/** Откуда взят лист персонажа: свой лист или сохранённый чужой по ссылке. */
+export type SheetPlayerSource = 'own' | 'saved';
+
+/**
+ * Лист персонажа как вариант добавления игрока. Числа посчитаны заранее (лист
+ * считает их сам), поэтому трекеру не нужен весь документ персонажа.
+ */
+export interface SheetPlayerOption {
+  /** Идентификатор листа — им же вариант выбирается в селекте. */
+  sheetId: string;
+  source: SheetPlayerSource;
+
+  /** Имя персонажа, обрезанное до предела имени участника. */
+  name: string;
+
+  /** Подпись варианта: классы с уровнями либо общий уровень персонажа. */
+  subtitle: string;
+
+  /** Бонус инициативы листа в допустимых для трекера пределах. */
+  initiativeBonus: number;
+
+  /** Класс доспеха листа в допустимых для трекера пределах. */
+  armorClass: number;
+
+  /** Максимум хитов листа; `0` — на листе хиты не заданы. */
+  maxHitPoints: number;
+
+  /** Текущие хиты листа. */
+  currentHitPoints: number;
+
+  /** Аватар персонажа; null — не загружен. */
+  avatarUrl: string | null;
+
+  /** Токен ссылки «поделиться»; null — свой лист, он открывается по id. */
+  shareToken: string | null;
+
+  /**
+   * Идентификатор сохранённой записи чужого листа — им мастер пишет в него
+   * текущие хиты. `null` — свой лист (пишется по своему id).
+   */
+  savedId?: string | null;
+}
+
+/**
+ * Привязка участника к листу персонажа: хранится у участника на сервере
+ * (jsonb-колонка), сам справочник листов серверу трекера не нужен — набор полей
+ * задаёт фронт, а строке от них нужны аватар, ссылка на лист и адрес записи
+ * хитов.
+ */
+export interface ParticipantSheetLink {
+  sheetId: string;
+  source: SheetPlayerSource;
+
+  /** Токен ссылки «поделиться»; null — свой лист. */
+  shareToken: string | null;
+
+  /**
+   * Идентификатор сохранённой записи чужого листа — по нему пишутся его текущие
+   * хиты. `null` — свой лист; поля нет — привязка сделана до появления записи
+   * хитов в чужой лист, и хиты в него не уйдут, пока игрока не добавят заново.
+   */
+  savedId?: string | null;
+
+  /** Аватар персонажа; null — не загружен. */
+  avatarUrl: string | null;
 }
 
 /**

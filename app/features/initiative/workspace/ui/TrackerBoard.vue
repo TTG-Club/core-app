@@ -1,5 +1,9 @@
 <script setup lang="ts">
   import type {
+    ConditionExpiry,
+    ConditionKey,
+    ParticipantColor,
+    SheetPlayerOption,
     TrackerParticipant,
     UpdateParticipantRequest,
   } from '~initiative/model';
@@ -22,9 +26,7 @@
     canAddCreature,
     remainingCreatures,
     isMutating = false,
-    currentHitPoints = undefined,
-    maxHitPoints = undefined,
-    armorClasses = undefined,
+    linkedSheetIds,
   } = defineProps<{
     participants: Array<TrackerParticipant>;
     isActive?: boolean;
@@ -36,15 +38,14 @@
     canAddCreature: boolean;
     remainingCreatures: number;
     isMutating?: boolean;
-    currentHitPoints?: Record<string, number>;
-    /** Прокинутые максимумы хитов (нет записи — среднее из статблока). */
-    maxHitPoints?: Record<string, number>;
-    /** КД игроков (нет записи — не задан). */
-    armorClasses?: Record<string, number>;
+
+    /** Листы, персонажи которых уже стоят в бою. */
+    linkedSheetIds: Set<string>;
   }>();
 
   const emit = defineEmits<{
     'add-player': [name: string, bonus: number, armorClass: number];
+    'add-sheet-player': [option: SheetPlayerOption];
     'add-creatures': [url: string, count: number, name?: string];
     'edit-participant': [id: string, patch: UpdateParticipantRequest];
     'remove-participant': [id: string];
@@ -53,6 +54,14 @@
     'set-hit-points': [id: string, value: number];
     'set-max-hit-points': [id: string, value: number];
     'set-armor-class': [id: string, value: number];
+    'set-color': [id: string, value: ParticipantColor];
+    'add-condition': [
+      id: string,
+      key: ConditionKey,
+      rounds: number,
+      expiry: ConditionExpiry,
+    ];
+    'remove-condition': [id: string, key: ConditionKey];
     'roll': [];
     'roll-creatures': [];
     'start': [];
@@ -78,6 +87,10 @@
 
   function onAddPlayer(name: string, bonus: number, armorClass: number): void {
     emit('add-player', name, bonus, armorClass);
+  }
+
+  function onAddSheetPlayer(option: SheetPlayerOption): void {
+    emit('add-sheet-player', option);
   }
 
   function onAddCreatures(url: string, count: number, name?: string): void {
@@ -113,6 +126,23 @@
 
   function onSetArmorClass(id: string, value: number): void {
     emit('set-armor-class', id, value);
+  }
+
+  function onSetColor(id: string, value: ParticipantColor): void {
+    emit('set-color', id, value);
+  }
+
+  function onAddCondition(
+    id: string,
+    key: ConditionKey,
+    rounds: number,
+    expiry: ConditionExpiry,
+  ): void {
+    emit('add-condition', id, key, rounds, expiry);
+  }
+
+  function onRemoveCondition(id: string, key: ConditionKey): void {
+    emit('remove-condition', id, key);
   }
 
   function confirmReset(): void {
@@ -224,7 +254,9 @@
       :can-add-creature="canAddCreature"
       :remaining-creatures="remainingCreatures"
       :is-mutating="isMutating"
+      :linked-sheet-ids="linkedSheetIds"
       @add-player="onAddPlayer"
+      @add-sheet-player="onAddSheetPlayer"
       @add-creatures="onAddCreatures"
     />
 
@@ -240,9 +272,7 @@
         :is-current="isActive && isCurrent(participant)"
         :order="index + 1"
         :disabled="isMutating"
-        :current-hit-points="currentHitPoints?.[participant.id]"
-        :max-hit-points-override="maxHitPoints?.[participant.id]"
-        :player-armor-class="armorClasses?.[participant.id]"
+        :round="round"
         @edit="onEditParticipant"
         @remove="onRemoveParticipant"
         @roll="onRollParticipant"
@@ -250,6 +280,9 @@
         @set-hit-points="onSetHitPoints"
         @set-max-hit-points="onSetMaxHitPoints"
         @set-armor-class="onSetArmorClass"
+        @set-color="onSetColor"
+        @add-condition="onAddCondition"
+        @remove-condition="onRemoveCondition"
       />
     </div>
 

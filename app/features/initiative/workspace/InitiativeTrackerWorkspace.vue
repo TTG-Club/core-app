@@ -34,12 +34,12 @@
     canAddPlayer,
     canAddCreature,
     remainingCreatures,
-    currentHitPoints,
-    maxHitPoints,
-    armorClasses,
+    linkedSheetIds,
     load,
     rename,
+    setRerollEachRound,
     addPlayer,
+    addSheetPlayer,
     addCreatures,
     editParticipant,
     deleteParticipant,
@@ -55,6 +55,9 @@
     setHitPoints,
     setMaxHitPoints,
     setArmorClass,
+    setParticipantColor,
+    addCondition,
+    removeCondition,
   } = useTrackerWorkspace(() => id);
 
   onMounted(load);
@@ -184,6 +187,7 @@
         :is-anonymous="isAnonymous"
         :is-mutating="isMutating"
         @rename="rename"
+        @set-reroll="setRerollEachRound"
         @remove="handleRemove"
         @create-new="handleReplace"
         @create-another="handleCreateAnother"
@@ -200,10 +204,9 @@
         :can-add-creature="canAddCreature"
         :remaining-creatures="remainingCreatures"
         :is-mutating="isMutating"
-        :current-hit-points="currentHitPoints"
-        :max-hit-points="maxHitPoints"
-        :armor-classes="armorClasses"
+        :linked-sheet-ids="linkedSheetIds"
         @add-player="addPlayer"
+        @add-sheet-player="addSheetPlayer"
         @add-creatures="addCreatures"
         @edit-participant="editParticipant"
         @remove-participant="deleteParticipant"
@@ -212,6 +215,9 @@
         @set-hit-points="setHitPoints"
         @set-max-hit-points="setMaxHitPoints"
         @set-armor-class="setArmorClass"
+        @set-color="setParticipantColor"
+        @add-condition="addCondition"
+        @remove-condition="removeCondition"
         @roll="roll"
         @roll-creatures="rollCreatures"
         @start="startCombat"

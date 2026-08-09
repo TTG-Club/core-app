@@ -4,6 +4,8 @@
   import {
     INITIATIVE_TOOL_ROUTE,
     MAX_TRACKER_NAME_LENGTH,
+    REROLL_EACH_ROUND_HINT,
+    REROLL_EACH_ROUND_LABEL,
     TRACKER_STATUS_BADGE,
   } from '~initiative/model';
   import { ConfirmDialog } from '~initiative/ui-kit';
@@ -20,6 +22,7 @@
 
   const emit = defineEmits<{
     'rename': [name: string];
+    'set-reroll': [value: boolean];
     'remove': [];
     'create-new': [];
     'create-another': [];
@@ -63,6 +66,14 @@
 
     emit('rename', name);
     isRenameOpen.value = false;
+  }
+
+  /**
+   * Переключает переброс инициативы каждый раунд.
+   * @param value Новое состояние переключателя.
+   */
+  function onRerollChange(value: boolean): void {
+    emit('set-reroll', value);
   }
 
   function confirmDelete(): void {
@@ -124,7 +135,19 @@
       Раунд {{ tracker.round }}
     </UBadge>
 
-    <div class="ml-auto flex flex-wrap justify-end gap-1">
+    <div class="ml-auto flex flex-wrap items-center justify-end gap-1">
+      <!-- Переброс держит бэк: опция живёт у трекера, и на переходе раунда он
+           сам катает инициативу заново. -->
+      <UTooltip :text="REROLL_EACH_ROUND_HINT">
+        <USwitch
+          class="mr-2"
+          :model-value="tracker.rerollEachRound"
+          :label="REROLL_EACH_ROUND_LABEL"
+          :disabled="isMutating"
+          @update:model-value="onRerollChange"
+        />
+      </UTooltip>
+
       <UButton
         v-if="!isAnonymous"
         icon="tabler:plus"

@@ -2,6 +2,7 @@ import type {
   AddParticipantRequest,
   TrackerDetailed,
   TrackerListItem,
+  TrackerUpdateRequest,
   UpdateParticipantRequest,
 } from './types';
 
@@ -99,19 +100,20 @@ export async function fetchTracker(
 }
 
 /**
- * Переименовать трекер.
+ * Изменить трекер: имя и/или опцию «новая инициатива каждый раунд». Применяются
+ * только присланные поля — пропущенные бэк не трогает.
  * @param id Идентификатор трекера.
- * @param name Новое имя.
+ * @param body Поля для изменения.
  * @param accessKey Ключ доступа анонимного трекера (если есть).
  */
-export async function renameTracker(
+export async function updateTracker(
   id: string,
-  name: string,
+  body: TrackerUpdateRequest,
   accessKey?: string,
 ): Promise<TrackerDetailed> {
   const response = await $fetch(`${INITIATIVE_API_PATH}/${id}`, {
     method: 'PUT',
-    body: { name },
+    body,
     headers: trackerHeaders(accessKey),
     retry: 0,
   });

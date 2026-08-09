@@ -2,11 +2,17 @@ import type { MaybeRefOrGetter } from 'vue';
 
 import type {
   AddParticipantRequest,
+  ConditionExpiry,
+  ConditionKey,
+  ParticipantColor,
+  SheetPlayerOption,
   TrackerDetailed,
+  TrackerParticipant,
   UpdateParticipantRequest,
 } from '~initiative/model';
 
 import {
+  ADD_SHEET_PLAYER_ERROR_TITLE,
   addParticipants,
   countParticipantsByType,
   deleteTracker,
@@ -18,17 +24,18 @@ import {
   nextTurn,
   previousTurn,
   removeParticipant,
-  renameTracker,
   rollParticipant as requestRollParticipant,
+  REROLL_EACH_ROUND_ERROR_TITLE,
   resetTracker,
   rollInitiative,
   startTracker,
+  toParticipantSheetLink,
   updateParticipant,
+  updateTracker,
 } from '~initiative/model';
 
-import { useArmorClass } from './useArmorClass';
-import { useHitPoints } from './useHitPoints';
 import { useInitiativeStorage } from './useInitiativeStorage';
+import { useSheetHitPointsSync } from './useSheetHitPointsSync';
 
 /**
  * Состояние одного трекера и все действия над ним.
@@ -74,19 +81,190 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
 
   const canAddCreature = computed(() => remainingCreatures.value > 0);
 
-  const {
-    currentByParticipant,
-    maxByParticipant,
-    setHitPoints,
-    setMaxHitPoints,
-  } = useHitPoints(
-    () => trackerId.value,
-    () => participants.value,
-  );
+  const { syncHitPoints } = useSheetHitPointsSync();
 
-  const { armorClassByParticipant, setArmorClass } = useArmorClass(
-    () => trackerId.value,
-    () => participants.value,
+  /**
+   * Участник по идентификатору — состояние боя правится поверх того, что уже
+   * пришло с сервера.
+   * @param participantId Идентификатор участника.
+   */
+  function findParticipant(
+    participantId: string,
+  ): TrackerParticipant | undefined {
+    return participants.value.find(
+      (participant) => participant.id === participantId,
+    );
+  }
+
+  /**
+   * Записывает текущие хиты участника: в трекер — всегда, а игроку, собранному
+   * из листа персонажа, — ещё и в сам лист (только текущие: максимум считает
+   * лист, и трекер его не трогает). Свой лист правится напрямую, чужой — по
+   * сохранённой ссылке, поэтому мастер ведёт хиты и своих персонажей, и тех,
+   * чьи листы ему прислали.
+   * @param participantId Идентификатор участника.
+   * @param value Новое значение хитов.
+   */
+  async function setHitPoints(
+    participantId: string,
+    value: number,
+  ): Promise<void> {
+    const currentHitPoints = Math.max(0, value);
+    const link = findParticipant(participantId)?.sheetLink;
+
+    // Отказ трекера — ничего дальше: иначе лист персонажа получил бы урон,
+    // которого в бою нет, а существо было бы помечено повержённым при живых
+    // хитах на сервере.
+    if (!(await editParticipant(participantId, { currentHitPoints }))) {
+      return;
+    }
+
+    if (link) {
+      syncHitPoints(link, currentHitPoints);
+    }
+
+    await syncDeadByHitPoints(participantId, currentHitPoints);
+  }
+
+  /**
+   * Прокидывает максимум хитов существа: он же ставит текущие «на полных»,
+   * поэтому существо, помеченное повержённым, возвращается в бой.
+   * @param participantId Идентификатор участника.
+   * @param value Прокинутый максимум хитов.
+   */
+  async function setMaxHitPoints(
+    participantId: string,
+    value: number,
+  ): Promise<void> {
+    const maxHitPoints = Math.max(1, value);
+
+    const isUpdated = await editParticipant(participantId, {
+      maxHitPoints,
+      currentHitPoints: maxHitPoints,
+    });
+
+    if (isUpdated) {
+      await syncDeadByHitPoints(participantId, maxHitPoints);
+    }
+  }
+
+  /**
+   * Задаёт КД игрока (у существа КД своё, из статблока).
+   * @param participantId Идентификатор участника.
+   * @param value Новое значение КД.
+   */
+  function setArmorClass(
+    participantId: string,
+    value: number,
+  ): Promise<boolean> {
+    return editParticipant(participantId, { armorClass: value });
+  }
+
+  /**
+   * Задаёт цвет иконки участника.
+   * @param participantId Идентификатор участника.
+   * @param value Новый цвет.
+   */
+  function setParticipantColor(
+    participantId: string,
+    value: ParticipantColor,
+  ): Promise<boolean> {
+    return editParticipant(participantId, { color: value });
+  }
+
+  /**
+   * Накладывает состояние. Повторное наложение того же состояния не плодит
+   * записей — обновляется его длительность. Срок считается от текущего раунда, а
+   * снимает состояние с вышедшим сроком бэк — в выбранный момент хода.
+   * @param participantId Идентификатор участника.
+   * @param key Ключ состояния.
+   * @param rounds Длительность в раундах; `0` — до снятия вручную.
+   * @param expiresOn Момент, когда состояние с вышедшим сроком спадает.
+   */
+  function addCondition(
+    participantId: string,
+    key: ConditionKey,
+    rounds: number,
+    expiresOn: ConditionExpiry,
+  ): Promise<boolean> {
+    const participant = findParticipant(participantId);
+
+    if (!participant) {
+      return Promise.resolve(false);
+    }
+
+    const round = tracker.value?.round ?? 0;
+
+    // Бой не начат — считать раунды не от чего, состояние держится до снятия.
+    const expiresAtRound = rounds > 0 && round > 0 ? round + rounds : null;
+
+    const rest = participant.conditions.filter(
+      (condition) => condition.key !== key,
+    );
+
+    return editParticipant(participantId, {
+      conditions: [...rest, { key, expiresAtRound, expiresOn }],
+    });
+  }
+
+  /**
+   * Снимает состояние с участника.
+   * @param participantId Идентификатор участника.
+   * @param key Ключ состояния.
+   */
+  function removeCondition(
+    participantId: string,
+    key: ConditionKey,
+  ): Promise<boolean> {
+    const participant = findParticipant(participantId);
+
+    if (!participant) {
+      return Promise.resolve(false);
+    }
+
+    return editParticipant(participantId, {
+      conditions: participant.conditions.filter(
+        (condition) => condition.key !== key,
+      ),
+    });
+  }
+
+  /**
+   * Ведёт признак «повержен» по хитам существа: ноль и ниже — выбывает из
+   * очереди хода, снова больше нуля — возвращается. Игроков не трогаем: на нуле
+   * персонаж не выбывает, а падает без сознания, и его судьбу решает мастер.
+   * @param participantId Идентификатор участника.
+   * @param hitPoints Новое значение хитов.
+   */
+  async function syncDeadByHitPoints(
+    participantId: string,
+    hitPoints: number,
+  ): Promise<void> {
+    const participant = findParticipant(participantId);
+
+    if (!participant || participant.type !== 'CREATURE') {
+      return;
+    }
+
+    const isDefeated = hitPoints <= 0;
+
+    // Лишний PUT не шлём: хиты правят часто, а признак меняется на переходе
+    // через ноль.
+    if (isDefeated === participant.dead) {
+      return;
+    }
+
+    await setDead(participantId, isDefeated);
+  }
+
+  /** Листы, уже стоящие в бою — форма выбора помечает их, чтобы не дублировать. */
+  const linkedSheetIds = computed(
+    () =>
+      new Set(
+        participants.value.flatMap((participant) =>
+          participant.sheetLink ? [participant.sheetLink.sheetId] : [],
+        ),
+      ),
   );
 
   /**
@@ -172,52 +350,82 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
    */
   function rename(name: string): Promise<boolean> {
     return runMutation(
-      () => renameTracker(trackerId.value, name, accessKey.value),
+      () => updateTracker(trackerId.value, { name }, accessKey.value),
       'Не удалось переименовать трекер',
     );
   }
 
   /**
-   * Добавляет игрока и сохраняет заданный мастером КД локально: на бэке КД
-   * игроков нет, поэтому оно живёт в localStorage по id участника. Сам id берём
-   * из ответа диффом по прежним id — в ответе появляется ровно один новый игрок.
+   * Включает или выключает переброс инициативы в начале каждого раунда. Сам
+   * переброс делает бэк на переходе раунда — трекеру достаточно хранить опцию.
+   * @param value Новое состояние опции.
+   */
+  function setRerollEachRound(value: boolean): Promise<boolean> {
+    return runMutation(
+      () =>
+        updateTracker(
+          trackerId.value,
+          { rerollEachRound: value },
+          accessKey.value,
+        ),
+      REROLL_EACH_ROUND_ERROR_TITLE,
+    );
+  }
+
+  /**
+   * Добавляет игрока с заданным мастером КД — одним запросом, вместе с ним.
    * @param name Имя игрока.
    * @param initiativeBonus Бонус инициативы.
    * @param armorClass Класс доспеха, заданный мастером.
    */
-  async function addPlayer(
+  function addPlayer(
     name: string,
     initiativeBonus: number,
     armorClass: number,
   ): Promise<boolean> {
-    const knownIds = new Set(
-      participants.value.map((participant) => participant.id),
-    );
-
-    const isAdded = await runMutation(
+    return runMutation(
       () =>
         addParticipants(
           trackerId.value,
-          { type: 'PLAYER', name, initiativeBonus },
+          { type: 'PLAYER', name, initiativeBonus, armorClass },
           accessKey.value,
         ),
       'Не удалось добавить игрока',
     );
+  }
 
-    if (!isAdded) {
-      return false;
-    }
+  /**
+   * Добавляет игрока из листа персонажа: имя, бонус, КД, хиты и привязка к листу
+   * уходят одним запросом — id нового участника для этого не нужен. Лист без
+   * максимума хитов (персонаж только собирается) хиты не задаёт: плитка
+   * останется прочерком, как у игрока, заведённого вручную.
+   * @param option Выбранный лист персонажа.
+   */
+  function addSheetPlayer(option: SheetPlayerOption): Promise<boolean> {
+    const hitPoints =
+      option.maxHitPoints > 0
+        ? {
+            maxHitPoints: option.maxHitPoints,
+            currentHitPoints: option.currentHitPoints,
+          }
+        : {};
 
-    const addedPlayer = participants.value.find(
-      (participant) =>
-        participant.type === 'PLAYER' && !knownIds.has(participant.id),
+    return runMutation(
+      () =>
+        addParticipants(
+          trackerId.value,
+          {
+            type: 'PLAYER',
+            name: option.name,
+            initiativeBonus: option.initiativeBonus,
+            armorClass: option.armorClass,
+            sheetLink: toParticipantSheetLink(option),
+            ...hitPoints,
+          },
+          accessKey.value,
+        ),
+      ADD_SHEET_PLAYER_ERROR_TITLE,
     );
-
-    if (addedPlayer) {
-      setArmorClass(addedPlayer.id, armorClass);
-    }
-
-    return true;
   }
 
   /**
@@ -392,7 +600,8 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
   }
 
   /**
-   * Завершает бой: броски очищаются, состав сохраняется, статус — PREPARING.
+   * Завершает бой: броски и состояния очищаются, повержённые оживают, состав
+   * сохраняется, статус — PREPARING. Всё это делает бэк одним запросом.
    */
   function reset(): Promise<boolean> {
     return runMutation(
@@ -446,13 +655,13 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
     canAddPlayer,
     canAddCreature,
     remainingCreatures,
-    currentHitPoints: currentByParticipant,
-    maxHitPoints: maxByParticipant,
-    armorClasses: armorClassByParticipant,
+    linkedSheetIds,
 
     load,
     rename,
+    setRerollEachRound,
     addPlayer,
+    addSheetPlayer,
     addCreatures,
     editParticipant,
     deleteParticipant,
@@ -468,5 +677,8 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
     setHitPoints,
     setMaxHitPoints,
     setArmorClass,
+    setParticipantColor,
+    addCondition,
+    removeCondition,
   };
 }
