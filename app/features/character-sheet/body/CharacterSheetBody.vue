@@ -34,6 +34,7 @@
   import {
     SheetAbilitiesRow,
     SheetAbilityModal,
+    SheetAbilityScoresModal,
     SheetArmorClassModal,
     SheetAttunementModal,
     SheetBackgroundWizardModal,
@@ -316,6 +317,10 @@
     },
   });
 
+  // Набор характеристик целиком (как в калькуляторе) — в отличие от модалки
+  // одной характеристики, ему нечего передавать: всё нужное он берёт из листа.
+  const abilityScoresModal = overlay.create(SheetAbilityScoresModal);
+
   const speedModal = overlay.create(SheetSpeedModal);
 
   const healthModal = overlay.create(SheetHealthModal);
@@ -467,6 +472,14 @@
     }
 
     abilityModal.open({ abilityKey });
+  }
+
+  function handleAbilityScoresEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    abilityScoresModal.open();
   }
 
   function handleAbilityRoll(abilityKey: AbilityKey) {
@@ -1018,6 +1031,7 @@
         @copy-shared="handleCopyShared"
         @save-link="handleSaveLink"
         @expand="handleExpand"
+        @edit-ability-scores="handleAbilityScoresEdit"
         @edit-background="handleBackgroundEdit"
         @edit-class="handleClassEdit"
         @edit-name="handleNameEdit"

@@ -12,7 +12,13 @@
 
   const props = defineProps<{
     selectedClassUrl?: string;
-    classAbilityTemplate: number[];
+
+    /**
+     * Шаблон распределения от класса. Не передан — кнопки шаблона нет вовсе:
+     * там, где класс рядом не выбирают (лист персонажа), она осталась бы
+     * навсегда неактивной.
+     */
+    classAbilityTemplate?: number[];
   }>();
 
   const model = defineModel<AbilityScores>({ required: true });
@@ -84,7 +90,9 @@
   }
 
   const isClassTemplateButtonDisabled = computed(() => {
-    return !props.selectedClassUrl || props.classAbilityTemplate.length === 0;
+    return (
+      !props.selectedClassUrl || (props.classAbilityTemplate?.length ?? 0) === 0
+    );
   });
 
   function applyClassTemplate() {
@@ -101,7 +109,7 @@
         continue;
       }
 
-      const value = props.classAbilityTemplate[index];
+      const value = props.classAbilityTemplate?.[index];
 
       if (value === undefined) {
         continue;
@@ -133,6 +141,7 @@
       </div>
 
       <UButton
+        v-if="classAbilityTemplate"
         :disabled="isClassTemplateButtonDisabled"
         variant="subtle"
         color="neutral"
