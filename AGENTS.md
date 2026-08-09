@@ -95,6 +95,14 @@ Always import feature components using the domain alias (e.g.,
 - **Validation:** All external data (API, input) is `unknown` by default. Use
   `Zod` to validate before usage!
 - **State Management:** Avoid `provide/inject` — use Pinia or Composables.
+  - **`createSharedComposable` vs `createGlobalState`:** pick by lifetime. Use
+    `createSharedComposable` when the state belongs to mounted consumers and
+    must die with the last of them (overlays, subscriptions, anything holding a
+    DOM handle) — on the last `onScopeDispose` the scope stops and the next call
+    builds a fresh instance. Use `createGlobalState` when the state must outlive
+    any unmount (settings, caches, user preferences). If the source of truth is
+    already persistent (`useLocalStorage`), the composable around it only shares
+    a reactive reference — that is still the first case.
 - **Rendering:** Pure frontend features (calculators, dice rollers) must
   strictly be wrapped in `<ClientOnly>`.
 - **Documentation (JSDoc):** All functions (especially in `utils.ts`) must have
