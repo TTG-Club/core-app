@@ -1,5 +1,6 @@
 export { default as SheetAbilitiesRow } from './SheetAbilitiesRow.vue';
 export { default as SheetAbilityModal } from './SheetAbilityModal.vue';
+export { default as SheetAbilityScoresModal } from './SheetAbilityScoresModal.vue';
 export { default as SheetAbilityTile } from './SheetAbilityTile.vue';
 export { default as SheetArmorClassModal } from './SheetArmorClassModal.vue';
 export { default as SheetAttunementModal } from './SheetAttunementModal.vue';
