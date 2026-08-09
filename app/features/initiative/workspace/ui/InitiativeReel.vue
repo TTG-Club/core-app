@@ -1,8 +1,12 @@
 <script setup lang="ts">
-  import type { TrackerParticipant } from '~initiative/model';
+  import type { ParticipantColor, TrackerParticipant } from '~initiative/model';
 
-  import { useCreatureSummaries } from '~initiative/composables';
-  import { PARTICIPANT_TYPE_ICON } from '~initiative/model';
+  import { useParticipantAvatars } from '~initiative/composables';
+  import {
+    DEFAULT_PARTICIPANT_COLOR,
+    PARTICIPANT_COLOR_CLASS,
+    PARTICIPANT_TYPE_ICON,
+  } from '~initiative/model';
 
   const {
     participants,
@@ -14,7 +18,7 @@
     round: number;
   }>();
 
-  const { imageFor, dropImage } = useCreatureSummaries(() => participants);
+  const { avatarFor, dropAvatar } = useParticipantAvatars(() => participants);
 
   /** Шаг между центрами соседних токенов, px. */
   const STEP = 96;
@@ -133,19 +137,41 @@
     return PARTICIPANT_TYPE_ICON[participant.type];
   }
 
+  /**
+   * Цвет иконки участника: без записи — цвет по умолчанию.
+   * @param cell Ячейка токена.
+   */
+  function colorFor(cell: TokenCell): ParticipantColor {
+    return cell.participant.color ?? DEFAULT_PARTICIPANT_COLOR;
+  }
+
   // Классы токена вынесены из шаблона (per-item в v-for, поэтому функции, а не
-  // computed): текущий крупнее и подсвечен, поверженный — приглушён.
+  // computed): текущий крупнее и подсвечен, поверженный — приглушён, а свой
+  // цвет участника заменяет подсветку — иначе выбранный цвет пропадал бы ровно
+  // на том ходу, где боец и нужен заметнее всего.
   function tokenRingClass(cell: TokenCell): Array<string | false> {
+    const color = colorFor(cell);
+    const isColored = color !== DEFAULT_PARTICIPANT_COLOR;
+
     return [
-      cell.isCurrent
-        ? 'size-20 border-primary bg-primary/10 shadow-lg'
-        : 'size-14 border-default bg-elevated',
+      cell.isCurrent ? 'size-20 shadow-lg' : 'size-14',
+      cell.isCurrent && !isColored
+        ? 'border-primary bg-primary/10'
+        : PARTICIPANT_COLOR_CLASS[color].surface,
       cell.participant.dead && 'opacity-40 grayscale',
     ];
   }
 
-  function tokenIconClass(cell: TokenCell): string {
-    return cell.isCurrent ? 'size-8 text-primary' : 'size-6 text-secondary';
+  function tokenIconClass(cell: TokenCell): Array<string> {
+    const color = colorFor(cell);
+    const isColored = color !== DEFAULT_PARTICIPANT_COLOR;
+
+    return [
+      cell.isCurrent ? 'size-8' : 'size-6',
+      cell.isCurrent && !isColored
+        ? 'text-primary'
+        : PARTICIPANT_COLOR_CLASS[color].content,
+    ];
   }
 
   function tokenBadgeClass(cell: TokenCell): string {
@@ -233,12 +259,12 @@
                   :class="tokenRingClass(cell)"
                 >
                   <img
-                    v-if="imageFor(cell.participant)"
-                    :src="imageFor(cell.participant)"
+                    v-if="avatarFor(cell.participant)"
+                    :src="avatarFor(cell.participant)"
                     alt=""
                     loading="lazy"
                     class="absolute inset-0 size-full rounded-full object-cover"
-                    @error="dropImage(cell.participant.creatureUrl)"
+                    @error="dropAvatar(cell.participant)"
                   />
 
                   <UIcon
