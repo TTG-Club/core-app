@@ -1,11 +1,5 @@
 <script setup lang="ts" generic="T extends { url: string }">
-  import type {
-    Group,
-    GroupKey,
-    GroupSort,
-    GroupSortOrdered,
-    SeparatorLabel,
-  } from './types';
+  import type { Group, GroupKey, GroupSort, SeparatorLabel } from './types';
   import type { ItemsRow, ListRow } from './utils';
 
   import { get, upperFirst } from 'es-toolkit/compat';
@@ -15,7 +9,6 @@
 
   import {
     GROUPED_LIST_ANCHOR_SETTLE_FRAMES,
-    GROUPED_LIST_COLUMN_BREAKPOINTS,
     GROUPED_LIST_DEFAULT_BOTTOM_OFFSET,
     GROUPED_LIST_DEFAULT_COLUMNS,
     GROUPED_LIST_DEFAULT_OVERSCAN,
@@ -25,7 +18,14 @@
     GROUPED_LIST_DEFAULT_VIRTUAL_THRESHOLD,
     GROUPED_LIST_GRID_CLASSES,
   } from './constants';
-  import { chunkItems, flattenGroupTree } from './utils';
+  import {
+    chunkItems,
+    flattenGroupTree,
+    getColumnCount,
+    getComparableKey,
+    sortKeysAuto,
+    sortKeysOrdered,
+  } from './utils';
 
   interface Props {
     items: Array<T>;
@@ -83,88 +83,6 @@
   const isScrollPositionRestored = ref(false);
 
   const { isSplitActive } = useLayoutWidth();
-
-  /**
-   * Возвращает количество колонок для текущей ширины контейнера.
-   */
-  function getColumnCount(containerWidth: number, maxColumns: number): number {
-    return GROUPED_LIST_COLUMN_BREAKPOINTS.reduce((columnCount, breakpoint) => {
-      if (containerWidth >= breakpoint.width) {
-        return Math.min(breakpoint.columns, maxColumns);
-      }
-
-      return columnCount;
-    }, 1);
-  }
-
-  function getComparableKey(rawKey: string): GroupKey {
-    if (!rawKey.length) {
-      return rawKey;
-    }
-
-    const numericKey = Number(rawKey);
-
-    return Number.isNaN(numericKey) ? rawKey : numericKey;
-  }
-
-  function sortKeysAuto(keys: Array<GroupKey>): Array<GroupKey> {
-    return [...keys].sort((a, b) => {
-      if (typeof a === 'number' && typeof b === 'number') {
-        return a - b;
-      }
-
-      return sortString(String(a), String(b));
-    });
-  }
-
-  function sortKeysOrdered(
-    keys: Array<GroupKey>,
-    sortConfig: GroupSortOrdered,
-  ): Array<GroupKey> {
-    const orderIndexByKeyText = new Map<string, number>();
-
-    Array.from(sortConfig.order).forEach((key, index) => {
-      orderIndexByKeyText.set(String(key), index);
-    });
-
-    const knownKeys: Array<GroupKey> = [];
-    const unknownKeys: Array<GroupKey> = [];
-
-    keys.forEach((key) => {
-      if (orderIndexByKeyText.has(String(key))) {
-        knownKeys.push(key);
-      } else {
-        unknownKeys.push(key);
-      }
-    });
-
-    const sortedKnown = [...knownKeys].sort((a, b) => {
-      const aIndex = orderIndexByKeyText.get(String(a));
-      const bIndex = orderIndexByKeyText.get(String(b));
-
-      if (aIndex === undefined && bIndex === undefined) {
-        return 0;
-      }
-
-      if (aIndex === undefined) {
-        return 1;
-      }
-
-      if (bIndex === undefined) {
-        return -1;
-      }
-
-      return aIndex - bIndex;
-    });
-
-    const unknownPolicy = sortConfig.unknown ?? 'after';
-
-    if (unknownPolicy === 'before') {
-      return [...sortKeysAuto(unknownKeys), ...sortedKnown];
-    }
-
-    return [...sortedKnown, ...sortKeysAuto(unknownKeys)];
-  }
 
   function sortGroupKeys(keys: Array<GroupKey>): Array<GroupKey> {
     if (groupSort.mode === 'comparator') {
@@ -459,25 +377,46 @@
       });
   });
 
-  function getVirtualItemScrollTop(itemKey: string): number | undefined {
+  /**
+   * Верх виртуального контейнера в координатах документа. `undefined`, пока
+   * контейнер не смонтирован.
+   */
+  function getContainerDocumentTop(): number | undefined {
     if (!virtualContainerElement.value) {
       return undefined;
     }
 
-    const rowIndex = virtualRows.value.findIndex((virtualRow) => {
+    return (
+      windowScrollTop.value
+      + virtualContainerElement.value.getBoundingClientRect().top
+    );
+  }
+
+  /**
+   * Индекс виртуальной строки, содержащей элемент с данным ключом. `-1`, если
+   * элемент не найден.
+   */
+  function findVirtualRowIndexByItemKey(itemKey: string): number {
+    return virtualRows.value.findIndex((virtualRow) => {
       return (
         virtualRow.type === 'items'
         && virtualRow.items.some((item) => getItemKey(item) === itemKey)
       );
     });
+  }
+
+  function getVirtualItemScrollTop(itemKey: string): number | undefined {
+    const containerDocumentTop = getContainerDocumentTop();
+
+    if (containerDocumentTop === undefined) {
+      return undefined;
+    }
+
+    const rowIndex = findVirtualRowIndexByItemKey(itemKey);
 
     if (rowIndex < 0) {
       return undefined;
     }
-
-    const containerDocumentTop =
-      windowScrollTop.value
-      + virtualContainerElement.value.getBoundingClientRect().top;
 
     return Math.max(
       0,
@@ -548,16 +487,13 @@
       return false;
     }
 
-    if (!virtualContainerElement.value) {
+    const containerDocumentTop = getContainerDocumentTop();
+
+    if (containerDocumentTop === undefined) {
       return false;
     }
 
-    const rowIndex = virtualRows.value.findIndex((virtualRow) => {
-      return (
-        virtualRow.type === 'items'
-        && virtualRow.items.some((item) => getItemKey(item) === itemKey)
-      );
-    });
+    const rowIndex = findVirtualRowIndexByItemKey(itemKey);
 
     if (rowIndex < 0) {
       return false;
@@ -567,10 +503,6 @@
     const container = scrollContainer.value;
 
     if (container === window) {
-      const containerDocumentTop =
-        windowScrollTop.value
-        + virtualContainerElement.value.getBoundingClientRect().top;
-
       window.scrollTo({
         top: Math.max(0, containerDocumentTop + rowOffset),
         behavior: 'instant',
@@ -656,13 +588,11 @@
   watch(
     windowScrollTop,
     () => {
-      if (!virtualContainerElement.value) {
+      const containerTop = getContainerDocumentTop();
+
+      if (containerTop === undefined) {
         return;
       }
-
-      const containerTop =
-        windowScrollTop.value
-        + virtualContainerElement.value.getBoundingClientRect().top;
 
       // Последняя строка, начинающаяся не ниже верха вьюпорта, — она его и
       // пересекает.
@@ -743,13 +673,11 @@
     () => {
       isScrollPositionRestored.value = false;
 
-      if (!virtualContainerElement.value) {
+      const documentTop = getContainerDocumentTop();
+
+      if (documentTop === undefined) {
         return;
       }
-
-      const documentTop =
-        windowScrollTop.value
-        + virtualContainerElement.value.getBoundingClientRect().top;
 
       window.scrollTo({
         top: Math.max(0, documentTop),

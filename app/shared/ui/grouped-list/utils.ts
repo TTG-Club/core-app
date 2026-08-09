@@ -1,4 +1,6 @@
-import type { GroupNode } from './types';
+import type { GroupKey, GroupNode, GroupSortOrdered } from './types';
+
+import { GROUPED_LIST_COLUMN_BREAKPOINTS } from './constants';
 
 /** Строка списка с разделителем группы. */
 export interface SeparatorRow {
@@ -43,6 +45,116 @@ export function flattenGroupTree<TItem>(
 
     return [...ownRows, ...flattenGroupTree(node.children)];
   });
+}
+
+/**
+ * Возвращает количество колонок для текущей ширины контейнера.
+ *
+ * @param containerWidth ширина контейнера списка в пикселях.
+ * @param maxColumns верхний предел колонок из пропа компонента.
+ * @returns количество колонок по брейкпоинтам, не больше `maxColumns`.
+ */
+export function getColumnCount(
+  containerWidth: number,
+  maxColumns: number,
+): number {
+  return GROUPED_LIST_COLUMN_BREAKPOINTS.reduce((columnCount, breakpoint) => {
+    if (containerWidth >= breakpoint.width) {
+      return Math.min(breakpoint.columns, maxColumns);
+    }
+
+    return columnCount;
+  }, 1);
+}
+
+/**
+ * Приводит текстовый ключ группы к сравнимому виду: числовые строки становятся
+ * числами, остальные остаются строками.
+ *
+ * @param rawKey исходный текстовый ключ группы.
+ * @returns ключ для сортировки — число либо исходная строка.
+ */
+export function getComparableKey(rawKey: string): GroupKey {
+  if (!rawKey.length) {
+    return rawKey;
+  }
+
+  const numericKey = Number(rawKey);
+
+  return Number.isNaN(numericKey) ? rawKey : numericKey;
+}
+
+/**
+ * Сортирует ключи групп: числа по возрастанию, строки по алфавиту.
+ *
+ * @param keys ключи групп.
+ * @returns новый отсортированный массив ключей.
+ */
+export function sortKeysAuto(keys: Array<GroupKey>): Array<GroupKey> {
+  return [...keys].sort((a, b) => {
+    if (typeof a === 'number' && typeof b === 'number') {
+      return a - b;
+    }
+
+    return sortString(String(a), String(b));
+  });
+}
+
+/**
+ * Сортирует ключи групп по заданному порядку. Ключи вне порядка добавляются
+ * до или после известных согласно `sortConfig.unknown`.
+ *
+ * @param keys ключи групп.
+ * @param sortConfig порядок ключей и политика для неизвестных.
+ * @returns новый отсортированный массив ключей.
+ */
+export function sortKeysOrdered(
+  keys: Array<GroupKey>,
+  sortConfig: GroupSortOrdered,
+): Array<GroupKey> {
+  const orderIndexByKeyText = new Map<string, number>();
+
+  Array.from(sortConfig.order).forEach((key, index) => {
+    orderIndexByKeyText.set(String(key), index);
+  });
+
+  const knownKeys: Array<GroupKey> = [];
+  const unknownKeys: Array<GroupKey> = [];
+
+  keys.forEach((key) => {
+    if (orderIndexByKeyText.has(String(key))) {
+      knownKeys.push(key);
+    } else {
+      unknownKeys.push(key);
+    }
+  });
+
+  const sortedKnown = [...knownKeys].sort((a, b) => {
+    const aIndex = orderIndexByKeyText.get(String(a));
+    const bIndex = orderIndexByKeyText.get(String(b));
+
+    if (aIndex === undefined && bIndex === undefined) {
+      return 0;
+    }
+
+    if (aIndex === undefined) {
+      return 1;
+    }
+
+    if (bIndex === undefined) {
+      return -1;
+    }
+
+    return aIndex - bIndex;
+  });
+
+  const unknownPolicy = sortConfig.unknown ?? 'after';
+
+  if (unknownPolicy === 'before') {
+    return [...sortKeysAuto(unknownKeys), ...sortedKnown];
+  }
+
+  return [...sortedKnown, ...sortKeysAuto(unknownKeys)];
 }
 
 /**
