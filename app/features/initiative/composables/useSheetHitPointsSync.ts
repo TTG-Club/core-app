@@ -117,6 +117,22 @@ export function useSheetHitPointsSync() {
 
   const flushSoon = useDebounceFn(flush, SHEET_HIT_POINTS_SYNC_DELAY);
 
+  // Дебаунс не должен съедать последний урон: мастер отмечает «−5» и тут же
+  // уходит на статблок или прячет вкладку — дописываем накопленное сразу, не
+  // дожидаясь паузы. Совсем закрытую вкладку так не спасти: браузер обрывает
+  // запрос, и хиты доедут со следующей правкой.
+  const visibility = useDocumentVisibility();
+
+  watch(visibility, (state) => {
+    if (state === 'hidden') {
+      void flush();
+    }
+  });
+
+  onScopeDispose(() => {
+    void flush();
+  });
+
   /**
    * Ставит хиты листа в очередь записи (последнее значение вытесняет прежнее).
    * @param link Привязка участника к листу персонажа.

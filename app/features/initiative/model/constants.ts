@@ -92,20 +92,27 @@ export const CONDITION_KEYS: Array<ConditionKey> = [
 export const DEFAULT_CONDITION_EXPIRY: ConditionExpiry = 'turn-start';
 
 /**
- * Варианты момента снятия состояния для переключателя. «Начало раунда» отдельным
- * вариантом не идёт: это тот же миг, что и конец предыдущего.
+ * Подписи моментов снятия состояния. «Начало раунда» отдельной подписью не идёт:
+ * это тот же миг, что и конец предыдущего.
  */
+export const CONDITION_EXPIRY_LABEL: Record<ConditionExpiry, string> = {
+  'turn-start': 'В начале своего хода',
+  'turn-end': 'В конце своего хода',
+  'round-end': 'На границе раунда',
+};
+
+/** Варианты момента снятия состояния для переключателя (в порядке показа). */
 export const CONDITION_EXPIRY_OPTIONS: Array<{
   value: ConditionExpiry;
   label: string;
 }> = [
-  { value: 'turn-start', label: 'В начале своего хода' },
-  { value: 'turn-end', label: 'В конце своего хода' },
-  { value: 'round-end', label: 'На границе раунда' },
+  { value: 'turn-start', label: CONDITION_EXPIRY_LABEL['turn-start'] },
+  { value: 'turn-end', label: CONDITION_EXPIRY_LABEL['turn-end'] },
+  { value: 'round-end', label: CONDITION_EXPIRY_LABEL['round-end'] },
 ];
 
-/** Минимальная длительность состояния в раундах. */
-export const MIN_CONDITION_ROUNDS = 1;
+/** Минимальная длительность состояния в раундах: `0` — до снятия вручную. */
+export const MIN_CONDITION_ROUNDS = 0;
 
 /** Максимальная длительность состояния в раундах. */
 export const MAX_CONDITION_ROUNDS = 100;
@@ -115,7 +122,6 @@ export const DEFAULT_CONDITION_ROUNDS = 0;
 
 /** Тексты блока состояний участника. */
 export const CONDITION_LABELS = {
-  title: 'Состояния',
   add: 'Наложить состояние',
   remove: 'Снять состояние',
   rounds: 'Раундов',
@@ -130,13 +136,14 @@ export const CONDITION_ROUNDS_PLURAL: [string, string, string] = [
   'раунда',
   'раундов',
 ];
+
+/** Цвет иконки участника по умолчанию. */
 export const DEFAULT_PARTICIPANT_COLOR: ParticipantColor = 'neutral';
 
 /** Порядок цветов в палитре выбора. */
 export const PARTICIPANT_COLORS: Array<ParticipantColor> = [
   'neutral',
   'primary',
-  'secondary',
   'success',
   'info',
   'warning',
@@ -147,7 +154,6 @@ export const PARTICIPANT_COLORS: Array<ParticipantColor> = [
 export const PARTICIPANT_COLOR_LABEL: Record<ParticipantColor, string> = {
   neutral: 'Без цвета',
   primary: 'Основной',
-  secondary: 'Дополнительный',
   success: 'Зелёный',
   info: 'Синий',
   warning: 'Оранжевый',
@@ -165,10 +171,6 @@ export const PARTICIPANT_COLOR_CLASS: Record<
 > = {
   neutral: { surface: 'border-default bg-elevated', content: 'text-secondary' },
   primary: { surface: 'border-primary bg-primary/15', content: 'text-primary' },
-  secondary: {
-    surface: 'border-secondary bg-secondary/15',
-    content: 'text-secondary',
-  },
   success: { surface: 'border-success bg-success/15', content: 'text-success' },
   info: { surface: 'border-info bg-info/15', content: 'text-info' },
   warning: { surface: 'border-warning bg-warning/15', content: 'text-warning' },
@@ -255,6 +257,7 @@ export const SHEET_PLAYER_FORM_LABELS = {
   search: 'Найти персонажа…',
   empty: 'Нет доступных листов персонажей',
   error: 'Не удалось загрузить листы персонажей',
+  limit: 'Лимит игроков исчерпан — уберите кого-нибудь из боя',
   added: 'уже в бою',
   level: 'Уровень',
   refresh: 'Обновить список листов',

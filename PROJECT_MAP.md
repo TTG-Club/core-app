@@ -159,11 +159,13 @@ optional duration in rounds and, for a timed one, the moment it drops — in the
 start of its owner's turn (default), in the end of it, or on the round boundary
 («начало» and «конец» of a round name the same instant, so that is one option).
 A timed condition stores not the remaining rounds but the round it drops on, so
-it survives a reload and a turn rolled back, and the backend removes it at the
-matching moment of `nextTurn` — the same server that moves the turn, so two open
-screens cannot disagree. Finishing the fight («Пересоздать бой») clears the
-conditions along with the rolls, since the backend revives the defeated at the
-same moment; hit points it leaves alone — the end of a fight does not heal.
+a reload cannot lose count of it, and the backend removes it at the matching
+moment of `nextTurn` — the same server that moves the turn, so two open screens
+cannot disagree. `prevTurn` only rewinds the pointer and the round: a condition
+already dropped is not brought back, and the master re-applies it by hand.
+Finishing the fight («Пересоздать бой») clears the conditions along with the
+rolls, since the backend revives the defeated at the same moment; hit points it
+leaves alone — the end of a fight does not heal.
 
 #### `character-sheet` in detail
 

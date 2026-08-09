@@ -7,6 +7,7 @@
 
   import {
     CONDITION_CATALOG,
+    CONDITION_EXPIRY_LABEL,
     CONDITION_EXPIRY_OPTIONS,
     CONDITION_KEYS,
     CONDITION_LABELS,
@@ -14,6 +15,7 @@
     DEFAULT_CONDITION_EXPIRY,
     DEFAULT_CONDITION_ROUNDS,
     MAX_CONDITION_ROUNDS,
+    MIN_CONDITION_ROUNDS,
   } from '~initiative/model';
 
   const {
@@ -36,11 +38,15 @@
   const isAddOpen = ref(false);
 
   // Длительность и момент снятия задаются один раз на открытие палитры: мастер
-  // накладывает «на два раунда» сразу нескольким участникам подряд.
-  const rounds = ref(DEFAULT_CONDITION_ROUNDS);
+  // накладывает «на два раунда» сразу нескольким участникам подряд. Очищенное
+  // поле `UInputNumber` отдаёт `undefined` — это та же «длительность по
+  // умолчанию», то есть до снятия вручную.
+  const rounds = ref<number | undefined>(DEFAULT_CONDITION_ROUNDS);
   const expiry = ref<ConditionExpiry>(DEFAULT_CONDITION_EXPIRY);
 
-  const isTimed = computed(() => rounds.value > 0);
+  const roundsValue = computed(() => rounds.value ?? DEFAULT_CONDITION_ROUNDS);
+
+  const isTimed = computed(() => roundsValue.value > 0);
 
   const appliedKeys = computed(
     () => new Set(conditions.map((condition) => condition.key)),
@@ -59,12 +65,9 @@
 
     const left = Math.max(0, condition.expiresAtRound - round);
     const noun = getPlural(left, CONDITION_ROUNDS_PLURAL);
+    const moment = CONDITION_EXPIRY_LABEL[condition.expiresOn];
 
-    const moment = CONDITION_EXPIRY_OPTIONS.find(
-      (option) => option.value === condition.expiresOn,
-    );
-
-    return `${label} · ещё ${left} ${noun} · ${moment?.label ?? ''}`;
+    return `${label} · ещё ${left} ${noun} · ${moment}`;
   }
 
   /**
@@ -74,7 +77,7 @@
   function add(key: ConditionKey): void {
     isAddOpen.value = false;
 
-    emit('add', key, rounds.value, expiry.value);
+    emit('add', key, roundsValue.value, expiry.value);
   }
 
   /**
@@ -124,7 +127,7 @@
           >
             <UInputNumber
               v-model="rounds"
-              :min="DEFAULT_CONDITION_ROUNDS"
+              :min="MIN_CONDITION_ROUNDS"
               :max="MAX_CONDITION_ROUNDS"
               class="w-full"
             />

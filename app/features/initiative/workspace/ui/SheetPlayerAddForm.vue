@@ -71,21 +71,25 @@
     () => Boolean(selectedOption.value) && !isSelectDisabled.value,
   );
 
-  // Под полем всегда одна строка: сперва отказ загрузки, затем пустой список,
-  // иначе — подсказка о том, что перенесётся с листа.
-  const note = computed(() => {
+  // Под полем всегда одна строка: сперва отказ загрузки, затем исчерпанный
+  // лимит игроков (иначе поле выглядело бы отключённым без объяснения), затем
+  // пустой список, иначе — подсказка о том, что перенесётся с листа.
+  const note = computed<{ text: string; toneClass: string }>(() => {
     if (hasError.value) {
-      return SHEET_PLAYER_FORM_LABELS.error;
+      return { text: SHEET_PLAYER_FORM_LABELS.error, toneClass: 'text-error' };
     }
 
-    return isEmpty.value
-      ? SHEET_PLAYER_FORM_LABELS.empty
-      : SHEET_PLAYER_FORM_LABELS.hint;
-  });
+    if (disabled) {
+      return { text: SHEET_PLAYER_FORM_LABELS.limit, toneClass: 'text-error' };
+    }
 
-  const noteClass = computed(() =>
-    hasError.value ? 'text-error' : 'text-muted',
-  );
+    return {
+      text: isEmpty.value
+        ? SHEET_PLAYER_FORM_LABELS.empty
+        : SHEET_PLAYER_FORM_LABELS.hint,
+      toneClass: 'text-muted',
+    };
+  });
 
   function submit(): void {
     const option = selectedOption.value;
@@ -191,9 +195,9 @@
 
     <p
       class="text-xs"
-      :class="noteClass"
+      :class="note.toneClass"
     >
-      {{ note }}
+      {{ note.text }}
     </p>
   </form>
 </template>

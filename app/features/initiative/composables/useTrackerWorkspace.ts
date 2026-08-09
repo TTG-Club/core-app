@@ -112,7 +112,12 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
     const currentHitPoints = Math.max(0, value);
     const link = findParticipant(participantId)?.sheetLink;
 
-    await editParticipant(participantId, { currentHitPoints });
+    // Отказ трекера — ничего дальше: иначе лист персонажа получил бы урон,
+    // которого в бою нет, а существо было бы помечено повержённым при живых
+    // хитах на сервере.
+    if (!(await editParticipant(participantId, { currentHitPoints }))) {
+      return;
+    }
 
     if (link) {
       syncHitPoints(link, currentHitPoints);
@@ -133,12 +138,14 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
   ): Promise<void> {
     const maxHitPoints = Math.max(1, value);
 
-    await editParticipant(participantId, {
+    const isUpdated = await editParticipant(participantId, {
       maxHitPoints,
       currentHitPoints: maxHitPoints,
     });
 
-    await syncDeadByHitPoints(participantId, maxHitPoints);
+    if (isUpdated) {
+      await syncDeadByHitPoints(participantId, maxHitPoints);
+    }
   }
 
   /**
@@ -168,10 +175,11 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
   /**
    * Накладывает состояние. Повторное наложение того же состояния не плодит
    * записей — обновляется его длительность. Срок считается от текущего раунда, а
-   * спадает состояние на ходу самого участника (это делает бэк).
+   * снимает состояние с вышедшим сроком бэк — в выбранный момент хода.
    * @param participantId Идентификатор участника.
    * @param key Ключ состояния.
    * @param rounds Длительность в раундах; `0` — до снятия вручную.
+   * @param expiresOn Момент, когда состояние с вышедшим сроком спадает.
    */
   function addCondition(
     participantId: string,
