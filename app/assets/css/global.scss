@@ -67,11 +67,11 @@ body,
 }
 
 html {
-  --scrollbar-width: 0;
+  --app-scrollbar-width: 0;
 
-  &[style*='overflow:hidden'],
-  &[style*='overflow: hidden'] {
-    padding-right: var(--scrollbar-width);
+  // `data-scroll-locked` ставит плагин `scrollbarWidth.ts` — он же единственное место, где определяется, что скролл заблокирован. Утилита `fixed-scrollbar-offset` в `tailwind.css` опирается на тот же атрибут.
+  &[data-scroll-locked] {
+    padding-right: var(--app-scrollbar-width);
   }
 }
 
