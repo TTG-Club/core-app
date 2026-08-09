@@ -8337,7 +8337,6 @@ export function getSheetActionMenuItems(
     actions.push({
       label: ABILITY_SCORES_LABELS.menu,
       icon: 'tabler:dice-6',
-      description: ABILITY_SCORES_LABELS.menuHint,
       onSelect: options.onAbilityScores,
     });
   }

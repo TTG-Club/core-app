@@ -176,7 +176,7 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 - Wizards for species / class / background; rolls go through `dice-roller`
   (universal `SheetRollModal`).
-- «Набор характеристик» in the sheet action menu (`SheetAbilityScoresModal`) sets
+- «Калькулятор характеристик» in the sheet action menu (`SheetAbilityScoresModal`) sets
   all six scores the way `/calculators/abilities` does. The three generators
   (random roll / standard array / point buy) plus the resulting summary live in
   one component of the calculator domain — `CalculatorAbilityScores`
