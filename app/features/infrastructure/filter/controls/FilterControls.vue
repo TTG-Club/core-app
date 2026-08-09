@@ -6,6 +6,7 @@
   import { cloneDeep } from 'es-toolkit';
 
   import { FilterDrawer } from '../drawer';
+  import { FILTER_CONTROLS_SEARCH_PLACEHOLDER } from '../model';
   import { FilterPreview } from '../preview';
   import {
     getGroupItems,
@@ -225,7 +226,7 @@
   <div class="flex gap-2 lg:flex-col lg:gap-4">
     <UInput
       v-model="localSearch"
-      placeholder="Поиск..."
+      :placeholder="FILTER_CONTROLS_SEARCH_PLACEHOLDER"
       allow-clear
       :ui="{ trailing: 'pe-0.5' }"
     >

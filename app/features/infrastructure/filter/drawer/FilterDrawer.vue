@@ -3,7 +3,16 @@
 
   import { cloneDeep } from 'es-toolkit';
 
+  import { UiResult } from '~ui/result';
+
   import { FilterList } from '../list';
+  import {
+    FILTER_DRAWER_SEARCH_PLACEHOLDER,
+    FILTER_SEARCH_DEBOUNCE,
+    FILTER_SEARCH_EMPTY_SUBTITLE,
+    FILTER_SEARCH_EMPTY_TITLE,
+  } from '../model';
+  import { isFilterSearchable } from '../utils';
 
   defineEmits<{
     (event: 'save', value: FilterGroups): void;
@@ -18,6 +27,20 @@
   const opened = defineModel<boolean>();
 
   const cloned = ref<FilterGroups>(cloneDeep(groups));
+  const search = ref('');
+  const isEmpty = ref(false);
+
+  // Поле остаётся на `search`, чтобы ввод не тормозил, а список считается по
+  // дебаунснутому значению.
+  const debouncedSearch = refDebounced(search, FILTER_SEARCH_DEBOUNCE);
+
+  const isSearchable = computed(() => isFilterSearchable(groups));
+
+  // Пустое состояние только для непустого запроса: без него пустой список
+  // означает, что фильтры ещё не пришли, а не что ничего не нашлось.
+  const showEmptyResult = computed(
+    () => isSearchable.value && !!debouncedSearch.value && isEmpty.value,
+  );
 
   watch(opened, (value) => {
     if (!value) {
@@ -25,6 +48,9 @@
     }
 
     cloned.value = cloneDeep(groups);
+    // Поиск — способ навигации по списку, а не часть состояния фильтра: забытый
+    // запрос показал бы при следующем открытии треть групп без видимой причины.
+    search.value = '';
   });
 </script>
 
@@ -37,7 +63,35 @@
     }"
   >
     <template #body>
-      <FilterList v-model="cloned" />
+      <!-- Блок растянут на padding скроллящегося body во все стороны: иначе -->
+      <!-- содержимое просвечивало бы над прилипшим полем и по бокам. Пары -->
+      <!-- «отрицательный отступ + padding» гасят друг друга в покое и дают фон, -->
+      <!-- когда блок прилипает; `top` тянет ровно на тот же padding, чтобы поле -->
+      <!-- встало вплотную к краю. Отступы вокруг поля равны gap-6 списка. -->
+      <div
+        v-if="isSearchable"
+        class="sticky -top-4 z-10 -mx-4 -mt-4 bg-default px-4 pt-4 pb-6 sm:-top-6 sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-6"
+      >
+        <UInput
+          v-model="search"
+          :placeholder="FILTER_DRAWER_SEARCH_PLACEHOLDER"
+          icon="tabler:search"
+          allow-clear
+        />
+      </div>
+
+      <UiResult
+        v-if="showEmptyResult"
+        status="info"
+        :title="FILTER_SEARCH_EMPTY_TITLE"
+        :sub-title="FILTER_SEARCH_EMPTY_SUBTITLE"
+      />
+
+      <FilterList
+        v-model="cloned"
+        :search="debouncedSearch"
+        @update:empty="isEmpty = $event"
+      />
     </template>
 
     <template #footer>
