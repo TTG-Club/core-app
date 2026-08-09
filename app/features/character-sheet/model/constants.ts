@@ -52,6 +52,7 @@ import type {
 import bytes from 'bytes';
 import { range } from 'es-toolkit';
 
+import { AbilityKey as ApiAbilityKey } from '~/shared/types';
 import { CasterType } from '~classes/model';
 
 /** Название инструмента «Лист персонажа». */
@@ -444,6 +445,19 @@ export const ABILITY_SHORT_LABELS: Record<AbilityKey, string> = {
   intelligence: 'Инт',
   wisdom: 'Мдр',
   charisma: 'Хар',
+};
+
+/**
+ * Ключи характеристик в формате API и калькулятора (`STRENGTH`) — обратное
+ * соответствие к `parseApiAbilityKey`.
+ */
+export const API_ABILITY_KEYS: Record<AbilityKey, ApiAbilityKey> = {
+  strength: ApiAbilityKey.STRENGTH,
+  dexterity: ApiAbilityKey.DEXTERITY,
+  constitution: ApiAbilityKey.CONSTITUTION,
+  intelligence: ApiAbilityKey.INTELLIGENCE,
+  wisdom: ApiAbilityKey.WISDOM,
+  charisma: ApiAbilityKey.CHARISMA,
 };
 
 /** Варианты характеристик для селектов листа — в порядке отображения. */
@@ -849,6 +863,22 @@ export const SHEET_SETTINGS_LABELS = {
   totalTitle: 'Итог',
   totalProficiencyBonusTitle: 'Итоговый бонус мастерства',
   totalInitiativeTitle: 'Итоговая инициатива',
+};
+
+/** Подписи набора характеристик (калькулятор в листе персонажа). */
+export const ABILITY_SCORES_LABELS = {
+  menu: 'Набор характеристик',
+  menuHint: 'Случайный бросок, стандартный набор или покупка значений',
+  title: 'Набор характеристик',
+  description:
+    'Соберите значения как в калькуляторе характеристик и запишите их в лист',
+  current: 'Сейчас в листе',
+  incompleteHint: 'Назначьте значения всем шести характеристикам',
+  backgroundBonusPrefix: 'Предыстория',
+  backgroundHint:
+    'Прибавки предыстории уже входят в значения листа, поэтому они добавляются к набору сами.',
+  apply: 'Записать в лист',
+  cancel: 'Отмена',
 };
 
 /** Минимальное значение характеристики. */

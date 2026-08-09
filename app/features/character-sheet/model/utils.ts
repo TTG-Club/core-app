@@ -155,6 +155,9 @@ import {
   ABILITY_IMPROVEMENT_SCORE_MAX,
   ABILITY_LABELS,
   ABILITY_ORDER,
+  ABILITY_SCORE_MAX,
+  ABILITY_SCORE_MIN,
+  ABILITY_SCORES_LABELS,
   ABILITY_SHORT_LABELS,
   ALL_SPELL_SLOTS_LABEL,
   ARMOR_CLASS_BASE_MAX,
@@ -7740,6 +7743,42 @@ export function parseApiAbilityKey(value: string): AbilityKey | null {
 }
 
 /**
+ * Характеристики листа из набора калькулятора: ключи приводятся к ключам листа
+ * (`STRENGTH` → `strength`), к базовому значению добавляются прибавки
+ * предыстории — лист хранит характеристики уже вместе с ними, — и результат
+ * ограничивается диапазоном листа. Характеристика, которой в наборе нет,
+ * остаётся прежней.
+ *
+ * @param abilities текущие характеристики листа.
+ * @param scores набор значений калькулятора (ключи в верхнем регистре).
+ * @param bonuses прибавки предыстории к характеристикам.
+ * @returns характеристики листа с записанным набором.
+ */
+export function getScoresAbilities(
+  abilities: CharacterAbilities,
+  scores: Record<string, number>,
+  bonuses: Partial<Record<AbilityKey, number>>,
+): CharacterAbilities {
+  const result = { ...abilities };
+
+  for (const [apiKey, score] of Object.entries(scores)) {
+    const key = parseApiAbilityKey(apiKey);
+
+    if (!key) {
+      continue;
+    }
+
+    result[key] = clamp(
+      Math.trunc(score) + (bonuses[key] ?? 0),
+      ABILITY_SCORE_MIN,
+      ABILITY_SCORE_MAX,
+    );
+  }
+
+  return result;
+}
+
+/**
  * Запасное распознавание умения, дающего черту за улучшение характеристик:
  * по названию либо по ссылке на черту «Улучшение характеристик» в описании.
  *
@@ -8224,6 +8263,12 @@ export interface SheetActionMenuOptions {
   onSettings: () => void;
 
   /**
+   * Открытие набора характеристик; не передан — пункта в меню нет. В карточке
+   * списка лист не открыт, и записывать набор было бы некуда.
+   */
+  onAbilityScores?: () => void;
+
+  /**
    * Открытие модалки «Поделиться»; не передан — пункта в меню нет. Так меню
    * чужого листа и мест без управления доступом остаётся без лишнего действия.
    */
@@ -8285,6 +8330,15 @@ export function getSheetActionMenuItems(
       // по ссылке, нельзя узнать, не заглянув в модалку.
       description: options.isShared ? SHEET_SHARE_ACTIVE_HINT : undefined,
       onSelect: options.onShare,
+    });
+  }
+
+  if (!options.isLocked && options.onAbilityScores) {
+    actions.push({
+      label: ABILITY_SCORES_LABELS.menu,
+      icon: 'tabler:dice-6',
+      description: ABILITY_SCORES_LABELS.menuHint,
+      onSelect: options.onAbilityScores,
     });
   }
 
