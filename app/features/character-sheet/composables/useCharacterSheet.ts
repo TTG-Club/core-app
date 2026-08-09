@@ -1,6 +1,7 @@
 import type {
   AbilityKey,
   Character,
+  CharacterAbilities,
   CharacterArmorClass,
   CharacterAttunement,
   CharacterCarryingCapacity,
@@ -385,6 +386,40 @@ export function useCharacterSheet() {
               clampedScore,
             )
           : character.value.health,
+    };
+  }
+
+  /**
+   * Запись всех шести характеристик разом (набор из калькулятора). Одной
+   * правкой, а не шестью подряд: иначе промежуточные значения Телосложения
+   * двигали бы хиты туда-сюда.
+   *
+   * @param abilities новые значения характеристик.
+   */
+  function setAbilityScores(abilities: CharacterAbilities): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const clampedAbilities = { ...abilities };
+
+    for (const ability of ABILITY_ORDER) {
+      clampedAbilities[ability] = clamp(
+        Math.trunc(abilities[ability]),
+        ABILITY_SCORE_MIN,
+        ABILITY_SCORE_MAX,
+      );
+    }
+
+    character.value = {
+      ...character.value,
+      abilities: clampedAbilities,
+      health: adjustHealthForConstitution(
+        character.value.health,
+        character.value.level,
+        character.value.abilities.constitution,
+        clampedAbilities.constitution,
+      ),
     };
   }
 
@@ -2961,6 +2996,7 @@ export function useCharacterSheet() {
     carryingCapacity,
     attunement,
     setAbilityScore,
+    setAbilityScores,
     setArmorClass,
     setCarryingCapacity,
     setAttunement,

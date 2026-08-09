@@ -176,6 +176,17 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 - Wizards for species / class / background; rolls go through `dice-roller`
   (universal `SheetRollModal`).
+- «Набор характеристик» in the sheet action menu (`SheetAbilityScoresModal`) sets
+  all six scores the way `/calculators/abilities` does. The three generators
+  (random roll / standard array / point buy) plus the resulting summary live in
+  one component of the calculator domain — `CalculatorAbilityScores`
+  (`~calculator/abilities`) — used by the calculator page and the sheet alike;
+  the sheet passes its background ability bonuses as a bonus source, so they are
+  shown in the summary and added on apply (the sheet stores scores together with
+  them). Applying goes through `setAbilityScores` — one edit, so Constitution
+  moves the hit points once. The set is written only when all six are assigned,
+  and the class template button of the standard array is hidden where no class
+  is picked next to it.
 - The class and background wizards also hand out the starting equipment. The
   reference `startingEquipment` field carries the official options («А», «Б»,
   «В») as structured item lists plus coins, so the review step shows them as a
