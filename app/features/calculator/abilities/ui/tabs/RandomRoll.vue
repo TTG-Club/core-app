@@ -262,7 +262,7 @@
       <div
         v-for="(rollValue, index) in localState.rolls"
         :key="index"
-        class="bg-card flex flex-col gap-3 rounded-xl border border-default p-3 transition-colors"
+        class="flex flex-col gap-3 rounded-xl border border-default bg-elevated p-3 transition-colors"
         :class="{
           'border-success bg-success/5':
             !isAnimating && rollValue === RANDOM_ROLL_MAX_RESULT,

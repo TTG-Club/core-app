@@ -31,7 +31,7 @@
       return `${baseClass} border-error bg-error/5`;
     }
 
-    return `${baseClass} bg-card`;
+    return `${baseClass} bg-elevated`;
   }
 
   const totalBase = computed(() =>

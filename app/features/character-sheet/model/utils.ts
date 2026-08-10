@@ -1,6 +1,6 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
 
-import type { Level } from '~/shared/types';
+import type { AbilityKey as ApiAbilityKey, Level } from '~/shared/types';
 import type { MagicItemBonuses } from '~magic-items/model';
 import type { RenderNode } from '~ui/markup';
 
@@ -155,11 +155,10 @@ import {
   ABILITY_IMPROVEMENT_SCORE_MAX,
   ABILITY_LABELS,
   ABILITY_ORDER,
-  ABILITY_SCORE_MAX,
-  ABILITY_SCORE_MIN,
   ABILITY_SCORES_LABELS,
   ABILITY_SHORT_LABELS,
   ALL_SPELL_SLOTS_LABEL,
+  API_ABILITY_KEYS,
   ARMOR_CLASS_BASE_MAX,
   ARMOR_CLASS_BASE_MIN,
   ARMOR_CLASS_LABELS,
@@ -7743,36 +7742,32 @@ export function parseApiAbilityKey(value: string): AbilityKey | null {
 }
 
 /**
- * Характеристики листа из набора калькулятора: ключи приводятся к ключам листа
- * (`STRENGTH` → `strength`), к базовому значению добавляются прибавки
- * предыстории — лист хранит характеристики уже вместе с ними, — и результат
- * ограничивается диапазоном листа. Характеристика, которой в наборе нет,
- * остаётся прежней.
+ * Характеристики листа из набора калькулятора: ключи набора приводятся к ключам
+ * листа (`STRENGTH` → `strength`) по `API_ABILITY_KEYS`, а к базовому значению
+ * добавляются прибавки предыстории — лист хранит характеристики уже вместе с
+ * ними. Характеристика, которой в наборе нет, остаётся прежней. Диапазон здесь
+ * не ограничивается: обрезка живёт в `setAbilityScores`, единой точке записи.
  *
  * @param abilities текущие характеристики листа.
  * @param scores набор значений калькулятора (ключи в верхнем регистре).
  * @param bonuses прибавки предыстории к характеристикам.
  * @returns характеристики листа с записанным набором.
  */
-export function getScoresAbilities(
+export function getAbilitiesFromScores(
   abilities: CharacterAbilities,
-  scores: Record<string, number>,
+  scores: Partial<Record<ApiAbilityKey, number>>,
   bonuses: Partial<Record<AbilityKey, number>>,
 ): CharacterAbilities {
   const result = { ...abilities };
 
-  for (const [apiKey, score] of Object.entries(scores)) {
-    const key = parseApiAbilityKey(apiKey);
+  for (const key of ABILITY_ORDER) {
+    const score = scores[API_ABILITY_KEYS[key]];
 
-    if (!key) {
+    if (score === undefined) {
       continue;
     }
 
-    result[key] = clamp(
-      Math.trunc(score) + (bonuses[key] ?? 0),
-      ABILITY_SCORE_MIN,
-      ABILITY_SCORE_MAX,
-    );
+    result[key] = score + (bonuses[key] ?? 0);
   }
 
   return result;

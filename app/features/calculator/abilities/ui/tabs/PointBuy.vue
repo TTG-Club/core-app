@@ -218,7 +218,7 @@
       <div
         v-for="key in ABILITY_KEYS"
         :key="key"
-        class="bg-card flex flex-col gap-2 rounded-xl border border-default p-3"
+        class="flex flex-col gap-2 rounded-xl border border-default bg-elevated p-3"
       >
         <div class="flex items-baseline justify-between gap-2">
           <div class="font-semibold">{{ ABILITY_LABELS[key] }}</div>

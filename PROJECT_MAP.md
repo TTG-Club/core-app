@@ -184,9 +184,12 @@ modals), so its capabilities are listed here rather than squeezed into the table
   the sheet passes its background ability bonuses as a bonus source, so they are
   shown in the summary and added on apply (the sheet stores scores together with
   them). Applying goes through `setAbilityScores` — one edit, so Constitution
-  moves the hit points once. The set is written only when all six are assigned,
-  and the class template button of the standard array is hidden where no class
-  is picked next to it.
+  moves the hit points once, and the only place where the range is clamped. The
+  set is written only when all six are assigned, and the class template button
+  of the standard array is hidden where no class is picked next to it. The set
+  replaces all six values outright: level-up ability increases are baked into
+  `abilities` and kept in no separate ledger, so they cannot be carried over —
+  the modal says so before applying.
 - The class and background wizards also hand out the starting equipment. The
   reference `startingEquipment` field carries the official options («А», «Б»,
   «В») as structured item lists plus coins, so the review step shows them as a
